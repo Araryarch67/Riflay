@@ -213,6 +213,7 @@
 				33CC10EB2044A3C60003C045 /* Resources */,
 				33CC110E2044A8840003C045 /* Bundle Framework */,
 				3399D490228B24CF009A79C7 /* ShellScript */,
+				A1B2C3D4E5F60718293A4B5C /* Riflay audio plugins bridge */,
 			);
 			buildRules = (
 			);
@@ -338,6 +339,26 @@
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
 			shellScript = "\"$FLUTTER_ROOT\"/packages/flutter_tools/bin/macos_assemble.sh && touch Flutter/ephemeral/tripwire";
+		};
+		A1B2C3D4E5F60718293A4B5C /* Riflay audio plugins bridge */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"$(SRCROOT)/../linux/carla_bridge/riflay_carla.cc",
+			);
+			name = "Riflay audio plugins bridge";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(TARGET_BUILD_DIR)/$(FRAMEWORKS_FOLDER_PATH)/libriflay_carla.dylib",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "set -e\n# Riflay: the audio plugins bridge (linux/carla_bridge), one source for every desktop. It loads Carla when a song\n# starts; the app builds and runs without it.\nout=\"$TARGET_BUILD_DIR/$FRAMEWORKS_FOLDER_PATH\"\nmkdir -p \"$out\"\narchs=\"\"\nfor a in $ARCHS; do archs=\"$archs -arch $a\"; done\nxcrun clang++ -dynamiclib -std=c++17 -O2 -Wall -Werror -fvisibility=hidden $archs \\\n  -mmacosx-version-min=\"$MACOSX_DEPLOYMENT_TARGET\" -install_name @rpath/libriflay_carla.dylib \\\n  \"$SRCROOT/../linux/carla_bridge/riflay_carla.cc\" -o \"$out/libriflay_carla.dylib\"\ncodesign --force --sign - \"$out/libriflay_carla.dylib\"\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 

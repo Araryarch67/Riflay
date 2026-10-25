@@ -71,6 +71,16 @@ if(TARGET flutter_inappwebview_windows_plugin)
 endif()
 
 
+# Audio plugins through Carla: the LADSPA bridge mpv's filter chain loads
+# (shared with Linux and macOS, see ../linux/carla_bridge/riflay_carla.cc). It
+# loads Carla when a song starts, so building and running need none.
+add_library(riflay_carla MODULE "${CMAKE_CURRENT_SOURCE_DIR}/../linux/carla_bridge/riflay_carla.cc")
+target_compile_features(riflay_carla PRIVATE cxx_std_17)
+target_compile_options(riflay_carla PRIVATE /W3 /EHsc)
+target_compile_definitions(riflay_carla PRIVATE _CRT_SECURE_NO_WARNINGS NOMINMAX)
+set_target_properties(riflay_carla PROPERTIES PREFIX "")
+add_dependencies(${BINARY_NAME} riflay_carla)
+
 # === Installation ===
 # Support files are copied into place next to the executable, so that it can
 # run in place. This is done instead of making a separate bundle (as on Linux)
@@ -105,6 +115,9 @@ if(PLUGIN_BUNDLED_LIBRARIES)
     DESTINATION "${INSTALL_BUNDLE_LIB_DIR}"
     COMPONENT Runtime)
 endif()
+
+install(TARGETS riflay_carla LIBRARY DESTINATION "${INSTALL_BUNDLE_LIB_DIR}"
+  COMPONENT Runtime)
 
 # Copy the native assets provided by the build.dart from all packages.
 set(NATIVE_ASSETS_DIR "${PROJECT_BUILD_DIR}native_assets/windows/")
