@@ -858,13 +858,16 @@ class PlayerController extends ChangeNotifier {
       if (found != null) {
         final (disc, song) = found;
         // DoP needs the DSD itself; DST-compressed discs play as PCM.
-        if (audio.dopActive && !disc.area.dst) return DopAudioSource(SacdDsd(disc, song), tag: t);
+        if (audio.dopActive && !disc.area.dst) {
+          final dsd = SacdDsd(disc, song);
+          if (audio.dopFits(dsd.bitRate)) return DopAudioSource(dsd, tag: t);
+        }
         return SacdAudioSource(disc, song, tag: t);
       }
     }
     if (audio.dopActive && !t.isCueTrack && t.path != null && DsdFile.isDsdPath(t.path!)) {
       final dsd = DsdFile.read(t.path!);
-      if (dsd != null) return DopAudioSource(dsd, tag: t);
+      if (dsd != null && audio.dopFits(dsd.bitRate)) return DopAudioSource(dsd, tag: t);
     }
     if (t.isRemote) {
       final local = downloadedCopy(t);

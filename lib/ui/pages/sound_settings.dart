@@ -164,6 +164,8 @@ class AdvancedAudioSettings extends StatelessWidget {
       builder: (context, _) {
         final locked = audio.bitPerfect;
         final dopReady = audio.bitPerfect && audio.bypassesMixer;
+        final android = Platform.isAndroid;
+        final usbName = audio.usb.device?.name;
         return SettingsCard(
           children: [
             Theme(
@@ -174,7 +176,7 @@ class AdvancedAudioSettings extends StatelessWidget {
                 subtitle: Text(
                   locked
                       ? 'Bit-perfect mode is on'
-                      : AudioEngine.hasOutputChoice
+                      : AudioEngine.hasOutputChoice || audio.hasBitPerfect
                       ? 'Output device, bit-perfect, sample rate, room correction'
                       : 'Sample rate, resampler, buffer, signal path',
                   style: muted,
@@ -207,12 +209,28 @@ class AdvancedAudioSettings extends StatelessWidget {
                           ],
                         ),
                       ),
-                    if (AudioEngine.hasOutputChoice)
+                    // Android routes media to a plugged-in USB DAC by itself: say which one, no picker.
+                    if (android && audio.usb.supported)
+                      ListTile(
+                        leading: const Icon(Icons.speaker_rounded),
+                        title: const Text('Output device'),
+                        subtitle: Text(
+                          usbName == null ? 'Your phone\'s own output' : '$usbName (USB DAC)',
+                          style: muted,
+                        ),
+                      ),
+                    if (audio.hasBitPerfect)
                       SwitchListTile(
                         secondary: const Icon(Icons.verified_outlined),
                         title: const Text('Bit-perfect mode'),
                         subtitle: Text(
-                          Platform.isMacOS
+                          android
+                              ? usbName == null
+                                    ? 'Plug in a USB DAC to play bit-perfect'
+                                    : 'Sends the file to your USB DAC untouched: no equalizer, leveling or resampling. '
+                                          'Other apps and system sounds are muted on the DAC, and the phone\'s volume keys stop working: '
+                                          'use your DAC\'s volume, since lowering Riflay\'s own volume changes the sound.'
+                              : Platform.isMacOS
                               ? 'No equalizer, leveling or resampling in Riflay, and your DAC follows each song\'s sample rate. '
                                     'Volume still works; at 100% nothing is changed. Other apps keep playing, so macOS still mixes the sound: '
                                     'turn on Exclusive mode too to send the file to your DAC untouched.'
@@ -223,10 +241,10 @@ class AdvancedAudioSettings extends StatelessWidget {
                                     'Takes over your DAC so the system mixer can\'t resample. Meanwhile other apps play through another output.',
                           style: muted,
                         ),
-                        value: audio.bitPerfect,
-                        onChanged: audio.setBitPerfect,
+                        value: audio.bitPerfectWanted,
+                        onChanged: android && usbName == null ? null : audio.setBitPerfect,
                       ),
-                    if (AudioEngine.hasOutputChoice)
+                    if (audio.hasBitPerfect)
                       SwitchListTile(
                         secondary: const Icon(Icons.graphic_eq_rounded),
                         title: const Text('Native DSD (DoP)'),
@@ -235,6 +253,8 @@ class AdvancedAudioSettings extends StatelessWidget {
                               ? 'Sends DSD files to your DAC as DSD instead of converting them. '
                                     'Only for DACs that support DoP: others play a faint hiss, so turn it off then. '
                                     'The volume stays at 100% for DSD songs; use your DAC\'s.'
+                              : android
+                              ? 'Needs Bit-perfect mode and a USB DAC that takes 176.4 kHz or higher'
                               : AudioEngine.hasExclusiveMode
                               ? 'Needs Bit-perfect mode and Exclusive mode'
                               : 'Needs Bit-perfect mode',

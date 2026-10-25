@@ -158,6 +158,19 @@ class _SignalPathSheet extends StatelessWidget {
                 'Something between Riflay and your DAC changes the samples, so the DAC can\'t see the DSD. '
                     'Choose a direct output in Settings › Advanced audio.',
               )
+            : p.bitPerfect && p.usbDacName != null
+            ? (
+                'Bit-perfect',
+                AppColors.accent,
+                'USB DAC, bit-perfect (Android 14): every sample reaches ${p.usbDacName} exactly as it is stored in the file.',
+              )
+            : p.usbDacName != null && p.untouched == false && p.inRate != p.outRate
+            ? (
+                'Not bit-perfect',
+                AppColors.textPrimary,
+                '${p.usbDacName} doesn\'t take ${SignalPath.formatRate(p.inRate)}, so Android plays it at '
+                    '${SignalPath.formatRate(p.outRate)} instead.',
+              )
             : p.bitPerfect
             ? ('Bit-perfect', AppColors.accent, 'Every sample reaches your DAC exactly as it is stored in the file.')
             : p.untouched && p.mixerResamples
@@ -291,8 +304,13 @@ String outputName(SignalPath p) {
     'wasapi' => p.exclusive ? 'WASAPI exclusive' : 'WASAPI shared',
     'asio' => 'ASIO',
     'coreaudio' => 'Core Audio',
+    'opensles' || 'audiotrack' || 'aaudio' =>
+      p.usbDacName != null
+          ? 'USB DAC${p.usbBitPerfect ? ', bit-perfect (Android 14)' : ' (Android mixer)'} · ${p.usbDacName}'
+          : 'Android mixer',
     final o => o,
   };
+  if (p.usbDacName != null) return api;
   return p.device == 'auto' || p.device.isEmpty ? api : '$api · ${p.device.split('/').last}';
 }
 

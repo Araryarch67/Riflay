@@ -19,6 +19,7 @@ import io.flutter.plugin.common.MethodChannel
 class MainActivity : AudioServiceActivity() {
     private var pending: MethodChannel.Result? = null
     private var multicastLock: WifiManager.MulticastLock? = null
+    private var usbDac: UsbDac? = null
 
     // Settings > Appearance > Window opacity below 100%: the home-screen wallpaper shows behind the app.
     // A translucent window and a transparent Flutter surface cost frame time, so they are only used then.
@@ -48,6 +49,7 @@ class MainActivity : AudioServiceActivity() {
     // (picked files are copies the system may clear).
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        usbDac = UsbDac(this, flutterEngine.dartExecutor.binaryMessenger)
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "riflay/window").setMethodCallHandler { call, result ->
             val on = call.arguments as? Boolean
             if (call.method != "setSeeThrough" || on == null) return@setMethodCallHandler result.notImplemented()
@@ -85,6 +87,7 @@ class MainActivity : AudioServiceActivity() {
     // The activity is recreated when see-through turns on or off: a search's lock goes with the old one.
     override fun onDestroy() {
         multicastLock?.takeIf { it.isHeld }?.release()
+        usbDac?.dispose()
         super.onDestroy()
     }
 
