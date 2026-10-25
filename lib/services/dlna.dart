@@ -14,6 +14,8 @@ import 'package:just_audio/just_audio.dart';
 import 'package:xml/xml.dart';
 
 import 'ffmpeg.dart';
+import 'flac_stream.dart';
+import 'pcm_decoder.dart';
 
 /// A TV, speaker or receiver on the network that plays what it's handed
 /// (a UPnP AV / DLNA MediaRenderer).
@@ -395,16 +397,17 @@ class CastStream extends CastMedia {
   final StreamAudioSource source;
 }
 
-/// A file converted to FLAC on the fly by ffmpeg, for formats renderers
-/// rarely play (DSD, APE, WavPack, Opus...) and slices of cue-sheet albums.
+/// A file converted to FLAC on the fly (decoded by libmpv, or ffmpeg where
+/// that can't be), for formats renderers rarely play (DSD, APE, WavPack,
+/// Opus...) and slices of cue-sheet albums.
 /// Can't be byte-seeked; seeking starts a new conversion at [start].
 class CastTranscode extends CastMedia {
-  const CastTranscode(this.path, {this.start = Duration.zero, this.end, this.maxRate, this.input})
+  const CastTranscode(this.path, {this.start = Duration.zero, this.end, this.maxRate, this.source})
     : super('audio/flac');
   final String path;
 
   /// Bytes to convert instead of reading [path] (an SACD song, built on the fly).
-  final Stream<List<int>> Function()? input;
+  final StreamAudioSource? source;
   final Duration start;
   final Duration? end;
 
@@ -428,10 +431,10 @@ class CastServer {
   final _art = <String, ({Uint8List bytes, String mime})>{};
   final _random = math.Random.secure();
 
-  /// FFmpeg conversions running, by item: a renderer asking again (or anyone
-  /// else holding the link) replaces its conversion instead of starting
-  /// another process each time.
-  final _transcodes = <String, Process>{};
+  /// Conversions running, by item (each as the function that stops it): a
+  /// renderer asking again (or anyone else holding the link) replaces its
+  /// conversion instead of starting another each time.
+  final _transcodes = <String, Future<void> Function()>{};
   static const _maxTranscodes = 2;
 
   Future<int> _port(InternetAddress host) async {
@@ -488,8 +491,8 @@ class CastServer {
     _boundTo = null;
     _media.clear();
     _art.clear();
-    for (final p in _transcodes.values) {
-      p.kill();
+    for (final stop in _transcodes.values) {
+      unawaited(stop());
     }
     _transcodes.clear();
   }
@@ -523,7 +526,6 @@ class CastServer {
   }
 
   /// "bytes=a-b" / "bytes=a-" against [total]; null when absent or unusable.
-  @visibleForTesting
   static ({int start, int end})? parseRange(String? header, int total) {
     final m = RegExp(r'^bytes=(\d*)-(\d*)$').firstMatch(header?.trim() ?? '');
     if (m == null || total == 0) return null;
@@ -570,34 +572,50 @@ class CastServer {
       case CastTranscode():
         res.headers.set(HttpHeaders.acceptRangesHeader, 'none');
         if (!head) {
-          final ffmpeg = await Process.start(await Ffmpeg.executable(), [
-            '-hide_banner', '-loglevel', 'error', //
-            if (media.start > Duration.zero) ...['-ss', '${media.start.inMilliseconds / 1000}'],
-            '-i', media.input == null ? media.path : 'pipe:0',
-            if (media.end != null) ...['-t', '${(media.end! - media.start).inMilliseconds / 1000}'],
-            '-map', '0:a:0', '-map_metadata', '-1',
-            if (media.maxRate != null) ...['-af', 'aresample=resampler=soxr:osr=${media.maxRate}'],
-            '-c:a', 'flac', '-sample_fmt', 's32', '-bits_per_raw_sample', '24', '-f', 'flac', 'pipe:1',
-          ]);
-          _transcodes.remove(token)?.kill();
+          final (flac, stop) = await _convert(media);
+          _transcodes.remove(token)?.call();
           while (_transcodes.length >= _maxTranscodes) {
-            _transcodes.remove(_transcodes.keys.first)?.kill();
+            _transcodes.remove(_transcodes.keys.first)?.call();
           }
-          _transcodes[token] = ffmpeg;
-          ffmpeg.stderr.drain<void>().ignore();
-          if (media.input case final input?) {
-            // Ends early when FFmpeg stops reading (the renderer hung up).
-            ffmpeg.stdin.addStream(input()).then((_) => ffmpeg.stdin.close(), onError: (Object _) {}).ignore();
-          }
+          _transcodes[token] = stop;
           try {
-            await res.addStream(ffmpeg.stdout);
+            await res.addStream(flac);
           } finally {
-            ffmpeg.kill();
-            if (_transcodes[token] == ffmpeg) _transcodes.remove(token);
+            unawaited(stop());
+            if (_transcodes[token] == stop) _transcodes.remove(token);
           }
         }
     }
     await res.close();
+  }
+
+  /// [media] as a FLAC stream, and how to stop making it. libmpv decodes
+  /// (phones can't run ffmpeg) and [FlacStream] packs the samples at 24 bits;
+  /// where mpv can't write to a pipe (Windows) ffmpeg does both.
+  Future<(Stream<List<int>>, Future<void> Function())> _convert(CastTranscode media) async {
+    if (MpvPcm.supported) {
+      final input = media.source != null ? PcmInput.stream(media.source!) : PcmInput.file(media.path);
+      final pcm = await MpvPcm.decode(input, start: media.start, end: media.end, maxRate: media.maxRate, bits: 32);
+      return (FlacStream.encode(pcm.data, rate: pcm.rate, channels: pcm.channels, bits: 24), pcm.cancel);
+    }
+    final ffmpeg = await Process.start(await Ffmpeg.executable(), [
+      '-hide_banner', '-loglevel', 'error', //
+      if (media.start > Duration.zero) ...['-ss', '${media.start.inMilliseconds / 1000}'],
+      '-i', media.source == null ? media.path : 'pipe:0',
+      if (media.end != null) ...['-t', '${(media.end! - media.start).inMilliseconds / 1000}'],
+      '-map', '0:a:0', '-map_metadata', '-1',
+      if (media.maxRate != null) ...['-af', 'aresample=resampler=soxr:osr=${media.maxRate}'],
+      '-c:a', 'flac', '-sample_fmt', 's32', '-bits_per_raw_sample', '24', '-f', 'flac', 'pipe:1',
+    ]);
+    ffmpeg.stderr.drain<void>().ignore();
+    if (media.source case final bytes?) {
+      // Ends early when FFmpeg stops reading (the renderer hung up).
+      Future(() async {
+        await ffmpeg.stdin.addStream((await bytes.request()).stream);
+        await ffmpeg.stdin.close();
+      }).catchError((Object _) {}).ignore();
+    }
+    return (ffmpeg.stdout, () async => ffmpeg.kill());
   }
 
   /// Sets status and length headers for a whole or partial reply; null after

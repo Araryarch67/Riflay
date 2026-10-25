@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:media_kit/media_kit.dart';
 import 'package:riflay/services/airplay.dart';
 
 /// A shairport-sync built for classic AirPlay (`--without-airplay-2`, with
@@ -11,6 +12,8 @@ import 'package:riflay/services/airplay.dart';
 final _shairport = Platform.environment['SHAIRPORT'];
 
 void main() {
+  setUpAll(MediaKit.ensureInitialized);
+
   test('ALAC frames carry the samples as they are', () {
     final pcm = Uint8List.fromList(List.generate(352 * 4, (i) => (i * 37) & 0xFF));
     final frame = alacFrame(pcm);
@@ -104,10 +107,7 @@ general = { name = "Test Speaker $port"; port = $port; mdns_backend = "tinysvcmd
         final session = AirPlaySession(device, onEnded: ended.complete, onError: errors.add, latencyFrames: 22050);
         await session.connect();
         await session.setMetadata(title: 'Tone', artist: 'Test');
-        await session.load(
-          const AirPlaySource(input: 'pipe:0').copyWithPath(wav),
-          duration: const Duration(seconds: 3),
-        );
+        await session.load(AirPlaySource(path: wav), duration: const Duration(seconds: 3));
         expect(session.playing, isTrue);
         await Future<void>.delayed(const Duration(seconds: 1));
         expect(session.position.inMilliseconds, inInclusiveRange(300, 900), reason: 'plays 0.5 s behind');
@@ -132,10 +132,6 @@ general = { name = "Test Speaker $port"; port = $port; mdns_backend = "tinysvcmd
       });
     }
   });
-}
-
-extension on AirPlaySource {
-  AirPlaySource copyWithPath(String path) => AirPlaySource(input: path, start: start, end: end);
 }
 
 /// The samples of a 16-bit WAV.

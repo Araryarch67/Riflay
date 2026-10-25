@@ -2,9 +2,12 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 
 import 'airplay.dart';
 import 'dlna.dart';
+import 'ffmpeg.dart';
+import 'pcm_decoder.dart';
 
 /// One song to play on a renderer.
 class CastItem {
@@ -89,8 +92,13 @@ class Cast extends ChangeNotifier {
 
   static bool _never() => false;
 
-  /// Whether AirPlay can be offered (it needs the `ffmpeg` command to decode).
+  /// Whether AirPlay can be offered (it needs a decoder: see [canConvert]).
   final bool Function() airPlay;
+
+  /// Whether this device can decode audio for AirPlay and for TVs that don't
+  /// play a format: libmpv where it can write to a pipe, else the `ffmpeg`
+  /// command (found or fetched on first use).
+  static bool get canConvert => MpvPcm.supported || Ffmpeg.available;
 
   /// The song played to its end on the renderer.
   final VoidCallback onEnded;
@@ -135,7 +143,12 @@ class Cast extends ChangeNotifier {
       return done.future;
     }
 
-    await Future.wait(sources.map(follow));
+    await _MulticastLock.acquire();
+    try {
+      await Future.wait(sources.map(follow));
+    } finally {
+      await _MulticastLock.release();
+    }
     _searches.clear();
     _searching = false;
     notifyListeners();
@@ -375,19 +388,13 @@ class Cast extends ChangeNotifier {
     }
   }
 
-  /// The FFmpeg input for [media]: AirPlay sends decoded audio.
+  /// What AirPlay decodes for [media]: it sends decoded audio.
   static AirPlaySource _airPlaySource(CastMedia media) => switch (media) {
-    CastFile(:final path) => AirPlaySource(input: path),
-    CastStream(:final source) => AirPlaySource(
-      input: 'pipe:0',
-      stdin: () async* {
-        final r = await source.request();
-        yield* r.stream;
-      },
-    ),
+    CastFile(:final path) => AirPlaySource(path: path),
+    CastStream(:final source) => AirPlaySource(source: source),
     CastTranscode() => AirPlaySource(
-      input: media.input == null ? media.path : 'pipe:0',
-      stdin: media.input,
+      path: media.source == null ? media.path : null,
+      source: media.source,
       start: media.start,
       end: media.end,
     ),
@@ -521,5 +528,25 @@ class Cast extends ChangeNotifier {
     _control?.close();
     _server.close();
     super.dispose();
+  }
+}
+
+/// Android's Wi-Fi drops multicast packets (mDNS answers) unless an app holds
+/// a multicast lock; MainActivity takes and gives it back. Elsewhere this
+/// does nothing.
+abstract final class _MulticastLock {
+  static const _channel = MethodChannel('riflay/multicast');
+
+  static Future<void> acquire() => _call('acquire');
+
+  static Future<void> release() => _call('release');
+
+  static Future<void> _call(String method) async {
+    if (!Platform.isAndroid) return;
+    try {
+      await _channel.invokeMethod<void>(method);
+    } catch (e) {
+      debugPrint('Multicast lock: $e');
+    }
   }
 }
