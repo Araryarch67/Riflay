@@ -28,7 +28,7 @@ lib/
   services/
     player_controller.dart     Queue, shuffle (done in Dart, see below), autoplay, library
     library_store.dart         The library's own file (library.json), read and written in an isolate
-    openmusic_data.dart        First start on a computer: brings over what OpenMusic (the old name) kept
+    legacy_data.dart           First start on a computer: brings over what OpenMusic (the old name) kept
     private_files.dart         The app's 0700 folder; atomic writes, 0600 secrets (the Google session)
     audio_engine.dart          Every mpv audio setting + SignalPath read-back
     lyrics.dart                .lrc / embedded tag, then YouTube Music, LRCLIB, Better Lyrics, NetEase, lyrics.ovh
