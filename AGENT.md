@@ -32,7 +32,8 @@ lib/
     private_files.dart         The app's 0700 folder; atomic writes, 0600 secrets (the Google session)
     audio_engine.dart          Every mpv audio setting + SignalPath read-back
     lyrics.dart                .lrc / embedded tag, then YouTube Music, LRCLIB, Better Lyrics, NetEase, lyrics.ovh
-    metadata.dart              Tag reading, cover art, tag editor (FLAC and MP4 in-process, others via ffmpeg)
+    metadata.dart              Tag reading, cover art, tag editor (all in-process; Matroska via ffmpeg)
+    tag_writer.dart            Tag edits for MP3, Ogg, WAV, AIFF, WavPack, APE: only the edited fields change
     dlna.dart                  DLNA / UPnP: SSDP search, AVTransport control, the LAN server the TV fetches from
     cast.dart                  A cast session (DLNA or AirPlay): follows position, pause, a song's end
     airplay.dart               AirPlay 1 (RAOP) sender: mDNS search, RTSP, ALAC over RTP, timing, RSA/AES
@@ -182,7 +183,7 @@ test/                          Unit and widget tests
 | `just_audio_media_kit` | Exposes the libmpv player (hook + `activePlayer`) |
 | `media_kit_libs_macos_audio`, `media_kit_libs_ios_audio` | Their podspecs use `Mpv.xcframework` from `tool/build_libmpv_apple.sh` instead of media_kit's download |
 | `media_kit_libs_android_audio` | Android's `libmpv.so` from `tool/build_libmpv_android.sh` (the FFmpeg filters crossfeed, room correction and Virtual speakers need) instead of media_kit's downloaded one; media_kit's helper library is kept as it was |
-| `audio_metadata_reader` | Its FLAC and MP4 writers dropped ReplayGain, lyrics, disc numbers and unknown tags (MP4 freeform `----` atoms) on every save; ours keep them |
+| `audio_metadata_reader` | Its FLAC and MP4 writers dropped ReplayGain, lyrics, disc numbers and unknown tags (MP4 freeform `----` atoms) on every save; ours keep them. WAV and AIFF read the disc number from an ID3 chunk |
 | `flutter_inappwebview_linux` | Stub: the real one links WPE WebKit; Linux sign-in uses `linux/login_helper` instead |
 
 Mark every change in vendored code with a `Riflay:` comment.

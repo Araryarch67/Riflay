@@ -14,6 +14,7 @@ import 'package:path_provider/path_provider.dart';
 
 import '../models/track.dart';
 import 'ffmpeg.dart';
+import 'tag_writer.dart';
 
 /// Editable tags of one file.
 class TagEdit {
@@ -92,15 +93,13 @@ abstract final class Metadata {
 
   /// FLAC and MP4/M4A (AAC, ALAC) are written in-process: the bundled writers
   /// keep every other tag, including ReplayGain and other freeform MP4 atoms
-  /// that ffmpeg's MP4 muxer would drop. Other formats go through the `ffmpeg`
-  /// command (installed, or fetched on first use: [Ffmpeg]): a stream copy that
-  /// only changes the tags it is told to.
+  /// that ffmpeg's MP4 muxer would drop. MP3, Ogg, WAV, AIFF, WavPack and APE
+  /// go through [TagWriter], also in-process, on every platform. Only Matroska
+  /// (and a layout [TagWriter] turns down, like ID3v2.2) needs the `ffmpeg`
+  /// command, on a computer (installed, or fetched on first use: [Ffmpeg]).
   static const _inProcess = {'flac', 'm4a', 'm4b', 'mp4'};
 
-  static const _ffmpegWritable = {'mp3', 'ogg', 'oga', 'opus', 'wav', 'aiff', 'aif', 'wv', 'mka'};
-
-  /// Formats where ffmpeg can also replace the embedded cover.
-  static const _ffmpegCover = {'mp3'};
+  static const _ffmpegWritable = {'mka'};
 
   /// Looks for `ffmpeg` once at startup so [canEditTags] can answer synchronously.
   static Future<void> probeTagTools() => Ffmpeg.probe();
@@ -114,11 +113,13 @@ abstract final class Metadata {
     final path = t.path;
     if (path == null || t.isCueTrack) return false;
     final ext = _ext(path);
-    return _inProcess.contains(ext) || (Ffmpeg.available && _ffmpegWritable.contains(ext));
+    return _inProcess.contains(ext) ||
+        TagWriter.formats.contains(ext) ||
+        (Ffmpeg.available && _ffmpegWritable.contains(ext));
   }
 
   /// Whether "Change cover" can be offered for [t].
-  static bool canEditCover(Track t) => _inProcess.contains(_ext(t.path!)) || _ffmpegCover.contains(_ext(t.path!));
+  static bool canEditCover(Track t) => _inProcess.contains(_ext(t.path!)) || TagWriter.formats.contains(_ext(t.path!));
 
   static Future<TagEdit> readTags(Track track) {
     final path = track.path!;
@@ -145,6 +146,14 @@ abstract final class Metadata {
     try {
       if (_inProcess.contains(_ext(path))) {
         await Isolate.run(() => _writeInProcess(path, temp, edit));
+      } else if (TagWriter.formats.contains(_ext(path))) {
+        try {
+          await Isolate.run(() => _writeWithTagWriter(path, temp, edit));
+        } on UnsupportedTagLayout catch (e) {
+          if (!Ffmpeg.available) rethrow;
+          debugPrint('Tag editor: $e, trying ffmpeg');
+          await _writeWithFfmpeg(path, temp, edit);
+        }
       } else {
         await _writeWithFfmpeg(path, temp, edit);
       }
@@ -184,8 +193,16 @@ abstract final class Metadata {
     }
   }
 
+  static void _writeWithTagWriter(String path, File temp, TagEdit edit) {
+    TagWriter.write(path, temp, edit);
+    final check = readMetadata(temp);
+    if (check.title != edit.title || check.discNumber != edit.discNumber) {
+      throw const FileSystemException('The new info didn\'t save correctly; the file was left as it was');
+    }
+  }
+
   static Future<void> _writeWithFfmpeg(String path, File temp, TagEdit edit) async {
-    final cover = edit.cover != null && _ffmpegCover.contains(_ext(path));
+    final cover = edit.cover != null && _ext(path) == 'mp3';
     File? coverFile;
     if (cover) {
       coverFile = File('${temp.path}.${edit.coverMime == 'image/png' ? 'png' : 'jpg'}')..writeAsBytesSync(edit.cover!);

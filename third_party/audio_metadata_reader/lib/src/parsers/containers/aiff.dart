@@ -217,6 +217,11 @@ class AiffParser extends TagParser<RiffMetadata> {
       metadata.trackNumber = id3.trackNumber;
     }
 
+    // Riflay: the disc number too (the tag editor writes it there).
+    if (id3.discNumber != null) {
+      metadata.discNumber = id3.discNumber;
+    }
+
     if (_hasText(id3.publisher)) {
       metadata.publisher = id3.publisher;
     }

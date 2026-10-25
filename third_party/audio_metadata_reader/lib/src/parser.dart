@@ -204,7 +204,7 @@ AudioMetadata readMetadata(File track, {bool getImage = false}) {
         trackNumber: riffMetadata.trackNumber,
         trackTotal: null,
         year: riffMetadata.year,
-        discNumber: null,
+        discNumber: riffMetadata.discNumber, // Riflay: from an ID3 chunk
       );
 
       newMetadata.pictures = riffMetadata.pictures;
@@ -230,7 +230,7 @@ AudioMetadata readMetadata(File track, {bool getImage = false}) {
         trackNumber: aiffMetadata.trackNumber,
         trackTotal: null,
         year: aiffMetadata.year,
-        discNumber: null,
+        discNumber: aiffMetadata.discNumber, // Riflay: from an ID3 chunk
       );
 
       newMetadata.pictures = aiffMetadata.pictures;

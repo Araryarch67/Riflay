@@ -41,6 +41,9 @@ class RiffMetadata extends ParserTag {
   /// Track number.
   int? trackNumber;
 
+  /// Riflay: disc number, from an embedded ID3 tag (INFO has none).
+  int? discNumber;
+
   /// Encoder or software used.
   String? encoder;
 
