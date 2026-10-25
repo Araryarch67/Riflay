@@ -523,7 +523,6 @@ class CastServer {
   }
 
   /// "bytes=a-b" / "bytes=a-" against [total]; null when absent or unusable.
-  @visibleForTesting
   static ({int start, int end})? parseRange(String? header, int total) {
     final m = RegExp(r'^bytes=(\d*)-(\d*)$').firstMatch(header?.trim() ?? '');
     if (m == null || total == 0) return null;
