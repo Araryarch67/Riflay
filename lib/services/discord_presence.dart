@@ -23,6 +23,9 @@ class DiscordPresence {
   /// Discord allows 5 activity updates per 20 s; stay comfortably under that.
   static const _minInterval = Duration(seconds: 4);
 
+  /// Where the "Download Riflay" button leads: the newest release, files for every OS.
+  static const downloadUrl = 'https://github.com/Araryarch67/Riflay/releases/latest';
+
   _IpcConnection? _conn;
   bool _connecting = false;
   DateTime _lastSent = DateTime(0);
@@ -78,10 +81,11 @@ class DiscordPresence {
         'large_image': cover ?? 'openmusic',
         'large_text': _clip(t.album ?? 'Riflay'),
       },
-      if (listenUrl != null)
-        'buttons': [
-          {'label': 'Listen on YouTube Music', 'url': listenUrl},
-        ],
+      // Discord allows two buttons; friends who like the music can get the app.
+      'buttons': [
+        if (listenUrl != null) {'label': 'Listen on YouTube Music', 'url': listenUrl},
+        {'label': 'Download Riflay', 'url': downloadUrl},
+      ],
     };
   }
 

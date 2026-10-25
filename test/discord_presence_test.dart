@@ -149,7 +149,12 @@ void main() {
     final ts = activity['timestamps'] as Map;
     expect((ts['end'] as int) - (ts['start'] as int), const Duration(minutes: 4, seconds: 41).inMilliseconds);
     expect((activity['assets'] as Map)['large_image'], startsWith('https://i.ytimg.com/vi/kJQP7kiw5Fk/'));
-    expect(((activity['buttons'] as List).single as Map)['url'], 'https://music.youtube.com/watch?v=kJQP7kiw5Fk');
+    expect(
+      [for (final b in activity['buttons'] as List) (b as Map)['label']],
+      ['Listen on YouTube Music', 'Download Riflay'],
+    );
+    expect(((activity['buttons'] as List).first as Map)['url'], 'https://music.youtube.com/watch?v=kJQP7kiw5Fk');
+    expect(((activity['buttons'] as List).last as Map)['url'], 'https://github.com/Araryarch67/Riflay/releases/latest');
 
     // Pausing clears the presence (sent after the rate-limit window).
     presence.update(track: track, playing: false, position: const Duration(seconds: 31));
