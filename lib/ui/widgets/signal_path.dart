@@ -166,21 +166,27 @@ class _SignalPathSheet extends StatelessWidget {
                 AppColors.textPrimary,
                 'Riflay leaves the sound alone, but the system mixer runs your DAC at '
                     '${SignalPath.formatRate(p.dac!.rate)} instead of ${SignalPath.formatRate(p.inRate)}. '
-                    'Turn on Bit-perfect mode in Settings › Advanced audio to send it as it is.',
+                    '${AudioEngine.hasRoutePicker ? 'iPhone, iPad and Bluetooth outputs run at one fixed rate; a USB DAC usually follows each song.' : 'Turn on Bit-perfect mode in Settings › Advanced audio to send it as it is.'}',
               )
             : p.untouched && p.viaSystemMixer
             ? (
                 'Lossless to the system mixer',
                 AppColors.textPrimary,
                 'Nothing in Riflay changes the sound, but the system mixer may resample it. '
-                    '${AudioEngine.hasExclusiveMode ? 'For bit-perfect, turn on Bit-perfect mode and Exclusive mode in Settings › Advanced audio (other apps go silent meanwhile).' : 'For bit-perfect, turn on Bit-perfect mode in Settings › Advanced audio.'}',
+                    '${AudioEngine.hasRoutePicker
+                        ? 'iOS always mixes the sound, so it is never bit-perfect here.'
+                        : AudioEngine.hasExclusiveMode
+                        ? 'For bit-perfect, turn on Bit-perfect mode and Exclusive mode in Settings › Advanced audio (other apps go silent meanwhile).'
+                        : 'For bit-perfect, turn on Bit-perfect mode in Settings › Advanced audio.'}',
               )
             : p.isDsd
             ? (
                 'DSD converted to PCM',
                 AppColors.textPrimary,
-                'DSD is decoded to high-rate PCM. To send it to your DAC as DSD, turn on Bit-perfect mode'
-                    '${AudioEngine.hasExclusiveMode ? ', Exclusive mode' : ''} and Native DSD (DoP) in Settings › Advanced audio.',
+                AudioEngine.hasRoutePicker
+                    ? 'DSD is decoded to high-rate PCM. iOS can\'t send DSD to a DAC as DSD.'
+                    : 'DSD is decoded to high-rate PCM. To send it to your DAC as DSD, turn on Bit-perfect mode'
+                          '${AudioEngine.hasExclusiveMode ? ', Exclusive mode' : ''} and Native DSD (DoP) in Settings › Advanced audio.',
               )
             : (
                 'Processed',
@@ -291,6 +297,7 @@ String outputName(SignalPath p) {
     'wasapi' => p.exclusive ? 'WASAPI exclusive' : 'WASAPI shared',
     'asio' => 'ASIO',
     'coreaudio' => 'Core Audio',
+    'audiounit' => 'iOS audio session (system mixer)',
     final o => o,
   };
   return p.device == 'auto' || p.device.isEmpty ? api : '$api · ${p.device.split('/').last}';

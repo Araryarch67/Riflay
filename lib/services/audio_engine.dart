@@ -11,6 +11,7 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'ios_route.dart';
 import 'linux_alsa.dart';
 
 /// How loudness differences between songs are evened out (mpv `replaygain`).
@@ -348,12 +349,26 @@ class AudioEngine extends ChangeNotifier {
     JustAudioMediaKit.title = 'Riflay';
     JustAudioMediaKit.volumeOverride = _volumeTo;
     JustAudioMediaKit.onPlayerCreated = (p) => unawaited(_applyAll(p));
+    if (hasRoutePicker) _iosRoute.current().then((r) => route = r);
   }
 
   static bool get supported =>
       Platform.isLinux || Platform.isWindows || Platform.isAndroid || Platform.isMacOS || Platform.isIOS;
 
   /// Android and iOS offer no device choice or exclusive output: the system mixer plays everything.
+  /// iOS has no device list but lets the user pick the route (speaker, Bluetooth, AirPlay, a USB DAC) with
+  /// the system picker, and Riflay asks it to run that output at each song's rate.
+  static bool get hasRoutePicker => Platform.isIOS;
+
+  /// Where iOS sends the sound now, kept current by the route change notification.
+  AudioRoute? route;
+  late final IosRoute _iosRoute = IosRoute(
+    onChanged: (r) {
+      route = r;
+      notifyListeners();
+    },
+  );
+
   static bool get hasOutputChoice => !Platform.isAndroid && !Platform.isIOS;
 
   /// Whether the OS output can be opened exclusively by mpv's own option
@@ -984,6 +999,7 @@ class AudioEngine extends ChangeNotifier {
       final applied = Completer<void>();
       p.onLoadHooks.add(() async {
         await applied.future;
+        if (hasRoutePicker) await _matchRate(p);
         if (_chainSent != filterChain) await _setChain(p);
       });
       try {
@@ -992,6 +1008,33 @@ class AudioEngine extends ChangeNotifier {
       } finally {
         applied.complete();
       }
+    }
+  }
+
+  /// iOS: before a song opens the output, asks the session for the song's rate (or the fixed output
+  /// rate), so a USB DAC switches to it instead of iOS's mixer resampling everything to 48 kHz.
+  /// Only a request: the speaker and most Bluetooth keep their own rate, and [route] says which.
+  Future<void> _matchRate(NativePlayer p) async {
+    try {
+      final rate = preferredRate(outputRate: outputRate, songRate: await _headerRate(await _read(p, 'path')));
+      if (rate != null) route = await _iosRoute.prefer(rate) ?? route;
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Matching the output rate failed: $e');
+    }
+  }
+
+  static Future<int?> _headerRate(String path) async {
+    if (path.isEmpty || path.startsWith('http')) return null;
+    try {
+      final f = await File(path).open();
+      try {
+        return parseSourceRate(await f.read(64 * 1024));
+      } finally {
+        await f.close();
+      }
+    } catch (_) {
+      return null;
     }
   }
 
@@ -1307,9 +1350,16 @@ class AudioEngine extends ChangeNotifier {
     if (LinuxAlsa.supported) {
       card = LinuxAlsa.byMpvName(device) ?? (output == 'pipewire' || output == 'pulse' ? await _behind(device) : null);
     }
+    // iOS: what the session really runs at (iOS's mixer resamples to it, in float).
+    final iosOut = hasRoutePicker ? await _iosRoute.current() : null;
+    if (iosOut != null) route = iosOut;
     return SignalPath(
-      dac: card == null ? null : LinuxAlsa.hwParams(card),
-      dacName: card?.name,
+      dac: iosOut == null
+          ? card == null
+                ? null
+                : LinuxAlsa.hwParams(card)
+          : HwParams(format: 'FLOAT_LE', rate: iosOut.rate, channels: iosOut.channels),
+      dacName: iosOut?.name ?? card?.name,
       sourceBits: _bitsCache[file] ??= await _sourceBits(file),
       codec: await g('audio-codec-name'),
       container: await g('file-format'),

@@ -1,7 +1,10 @@
 import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 
 import '../../services/audio_engine.dart';
@@ -176,6 +179,8 @@ class AdvancedAudioSettings extends StatelessWidget {
                       ? 'Bit-perfect mode is on'
                       : AudioEngine.hasOutputChoice
                       ? 'Output device, bit-perfect, sample rate, room correction'
+                      : AudioEngine.hasRoutePicker
+                      ? 'Output, sample rate, resampler, buffer, signal path'
                       : 'Sample rate, resampler, buffer, signal path',
                   style: muted,
                 ),
@@ -186,6 +191,19 @@ class AdvancedAudioSettings extends StatelessWidget {
                 },
                 children: [
                   for (final row in [
+                    if (AudioEngine.hasRoutePicker)
+                      SettingTile(
+                        icon: Icons.speaker_rounded,
+                        title: const Text('Output'),
+                        subtitle: Text(
+                          '${audio.route?.name.isNotEmpty == true ? audio.route!.name : 'iPhone'}'
+                          '${audio.route == null ? '' : ' · ${SignalPath.formatRate(audio.route!.rate)}'}. '
+                          'A USB DAC follows each song\'s sample rate; the speaker and Bluetooth keep one rate. '
+                          'iOS always mixes the sound, so it can\'t be bit-perfect here.',
+                          style: muted,
+                        ),
+                        control: const RoutePickerButton(),
+                      ),
                     if (AudioEngine.hasOutputChoice)
                       SettingTile(
                         icon: Icons.speaker_rounded,
@@ -415,6 +433,21 @@ class SettingsDivider extends StatelessWidget {
 
 /// A settings row whose control sits on the right, or under the text when
 /// the window is too narrow for both side by side.
+/// Apple's route picker (iPhone speaker, Bluetooth, AirPlay, a USB DAC): the system button, tapped as usual.
+class RoutePickerButton extends StatelessWidget {
+  const RoutePickerButton({super.key});
+
+  @override
+  Widget build(BuildContext context) => SizedBox.square(
+    dimension: 44,
+    child: UiKitView(
+      viewType: 'riflay/route-picker',
+      creationParamsCodec: const StandardMessageCodec(),
+      gestureRecognizers: {Factory<OneSequenceGestureRecognizer>(() => EagerGestureRecognizer())},
+    ),
+  );
+}
+
 class SettingTile extends StatelessWidget {
   const SettingTile({super.key, required this.title, this.subtitle, required this.control, this.icon, this.leading});
 
