@@ -812,8 +812,8 @@ class _MiniProgressState extends State<_MiniProgress> {
 }
 
 /// Desktop expanded player: the cover art (and lyrics beside it, if asked)
-/// fills the space above the player bar, inside the window or with the
-/// window full screen (Esc, F11 or the bar's buttons leave).
+/// fills the space above the player bar, inside the window (under the title
+/// bar) or with the window full screen (Esc, F11 or the bar's buttons leave).
 final fullScreenPlayer = ValueNotifier<bool>(false);
 
 /// Whether the window fills the screen too.

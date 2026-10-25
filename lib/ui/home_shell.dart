@@ -58,6 +58,26 @@ class _HomeShellState extends State<HomeShell> {
   bool _hasTrack = false;
 
   @override
+  void initState() {
+    super.initState();
+    _history.addListener(_followLocation);
+  }
+
+  String? _location;
+
+  /// A page opened from the title bar (or the player bar's links) would open
+  /// under the expanded player, unseen: it steps aside.
+  void _followLocation() {
+    if (_history.location == _location) return;
+    _location = _history.location;
+    _leaveExpandedPlayer();
+  }
+
+  void _leaveExpandedPlayer() {
+    if (fullScreenPlayer.value) showExpandedPlayer(false);
+  }
+
+  @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     final c = PlayerScope.identity(context);
@@ -83,6 +103,7 @@ class _HomeShellState extends State<HomeShell> {
   @override
   void dispose() {
     _player?.removeListener(_followTrack);
+    _history.removeListener(_followLocation);
     _errors?.cancel();
     _searchFocus.dispose();
     _search.dispose();
@@ -116,6 +137,7 @@ class _HomeShellState extends State<HomeShell> {
 
   void _goHome() {
     if (_compact) return _selectTab(_Tab.home);
+    _leaveExpandedPlayer();
     if (_history.location != Locations.home) _history.open(const HomePage(), Locations.home);
   }
 
@@ -127,6 +149,7 @@ class _HomeShellState extends State<HomeShell> {
 
   /// The search page, fed by the title bar's box (opened as soon as you type).
   void _showSearchResults() {
+    _leaveExpandedPlayer();
     if (_history.location == Locations.search) return;
     final typing = _search.focus.hasFocus;
     _history.open(SearchPage(input: _search), Locations.search);
@@ -372,7 +395,8 @@ class _HomeShellState extends State<HomeShell> {
       const SingleActivator(LogicalKeyboardKey.keyV, control: true): _pasteLink,
       const SingleActivator(LogicalKeyboardKey.keyV, meta: true): _pasteLink,
       if (!compact) ...{
-        const SingleActivator(LogicalKeyboardKey.f11): () => setFullScreenPlayer(!fullScreenPlayer.value),
+        // From the expanded player too: on to full screen.
+        const SingleActivator(LogicalKeyboardKey.f11): () => setFullScreenPlayer(!windowFullScreen.value),
         const SingleActivator(LogicalKeyboardKey.escape): () => setFullScreenPlayer(false),
       },
     };
@@ -452,9 +476,10 @@ class _HomeShellState extends State<HomeShell> {
             bottom: false,
             child: Column(
               children: [
+                // Only full screen hides it: the expanded player inside the window keeps the title bar.
                 if (hasCustomTitleBar)
                   ValueListenableBuilder(
-                    valueListenable: fullScreenPlayer,
+                    valueListenable: windowFullScreen,
                     builder: (context, full, bar) => full ? const SizedBox.shrink() : bar!,
                     child: _titleBar(),
                   ),

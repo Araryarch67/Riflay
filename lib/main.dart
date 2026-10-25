@@ -15,7 +15,7 @@ import 'services/appearance.dart';
 import 'services/media_session.dart';
 import 'services/player_controller.dart';
 import 'ui/home_shell.dart';
-import 'ui/player_panels.dart' show MiniPlayerWindow, fullScreenPlayer, miniPlayer;
+import 'ui/player_panels.dart' show MiniPlayerWindow, miniPlayer, windowFullScreen;
 import 'ui/theme.dart';
 import 'ui/widgets/title_bar.dart';
 
@@ -173,10 +173,10 @@ class _DesktopFrame extends StatelessWidget {
       color: AppColors.background,
       child: Column(
         children: [
-          // Hidden while the player fills the screen.
+          // Hidden while the player fills the screen (the expanded player inside the window keeps it).
           ListenableBuilder(
-            listenable: Listenable.merge([fullScreenPlayer, titleBarInShell]),
-            builder: (context, bar) => fullScreenPlayer.value || titleBarInShell.value ? const SizedBox.shrink() : bar!,
+            listenable: Listenable.merge([windowFullScreen, titleBarInShell]),
+            builder: (context, bar) => windowFullScreen.value || titleBarInShell.value ? const SizedBox.shrink() : bar!,
             child: const AppTitleBar(),
           ),
           Expanded(
