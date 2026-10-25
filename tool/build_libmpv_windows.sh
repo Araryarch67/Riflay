@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Builds libmpv-2.dll for Windows on Linux (mingw-w64), with Riflay's ASIO
 # audio output (third_party/mpv_asio) and the FFmpeg filters the app uses
-# (equalizer, crossfeed, afir, amovie). It replaces the DLL media_kit ships,
+# (equalizer, crossfeed, afir, amovie, and ladspa for audio plugins through
+# Carla, see linux/carla_bridge). It replaces the DLL media_kit ships,
 # which has neither.
 #
 #   tool/build_libmpv_windows.sh            -> windows/libmpv/libmpv-2.dll
@@ -94,20 +95,29 @@ if ! stamp libass; then
   done_ libass
 fi
 
-if ! stamp ffmpeg; then
+if ! stamp ffmpeg-ladspa; then
   rm -rf "$root/build/ffmpeg" && mkdir -p "$root/build/ffmpeg"
+  # The ladspa filter (audio plugins) needs ladspa.h and dlopen, which mingw lacks: third_party/ladspa has the
+  # header and a dlfcn.h over LoadLibrary. The filter also only takes a path that starts with '/' or '.', so
+  # a drive letter ("C:/...") is accepted too (a one-line patch, applied once).
+  if ! grep -q "Riflay:" "$root/src/ffmpeg/libavfilter/af_ladspa.c"; then
+    sed -i "s|if (s->dl_name\[0\] == '/' \|\| s->dl_name\[0\] == '.') {|if (s->dl_name[0] == '/' \|\| s->dl_name[0] == '.' \|\| s->dl_name[1] == ':') { /* Riflay: or a drive letter */|" \
+      "$root/src/ffmpeg/libavfilter/af_ladspa.c"
+    grep -q "Riflay:" "$root/src/ffmpeg/libavfilter/af_ladspa.c"
+  fi
   # Playback only: no encoders, muxers, devices or hardware video. https
   # through Windows' own TLS (schannel), as media_kit's build does.
   (cd "$root/build/ffmpeg" && "$root/src/ffmpeg/configure" --prefix="$prefix" --target-os=mingw32 \
     --arch=x86_64 --cross-prefix=$host- --pkg-config=pkg-config --enable-static --disable-shared \
     --disable-programs --disable-doc --disable-debug --disable-encoders --disable-muxers --disable-devices \
     --disable-avdevice --disable-postproc --disable-hwaccels --disable-indevs --disable-outdevs \
-    --enable-schannel --enable-network --disable-autodetect --enable-w32threads \
+    --enable-schannel --enable-network --disable-autodetect --enable-w32threads --enable-ladspa \
+    --extra-cflags="-I$project/third_party/ladspa -I$project/third_party/ladspa/win" \
     --disable-videotoolbox --disable-vaapi --disable-vdpau --disable-cuda --disable-cuvid \
     --disable-nvenc --disable-nvdec --disable-d3d11va --disable-dxva2 --disable-mediafoundation \
-    --enable-filter=equalizer,crossfeed,afir,amovie,volume,aresample,anull >/dev/null &&
+    --enable-filter=equalizer,crossfeed,afir,amovie,volume,aresample,anull,ladspa >/dev/null &&
     make -j"$jobs" install >/dev/null)
-  done_ ffmpeg
+  done_ ffmpeg-ladspa
 fi
 
 if ! stamp mpv-patched; then
