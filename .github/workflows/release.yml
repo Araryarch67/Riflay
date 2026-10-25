@@ -93,6 +93,16 @@ jobs:
       - name: Version from the tag
         shell: bash
         run: echo "BUILD_ARGS=$(tool/ci_version.sh)" >> "$GITHUB_ENV"
+      - name: Audio plugins work (Carla)
+        # Carla is a zip to unpack anywhere; the app looks in Downloads, Program Files... The test plays a tone
+        # through the app's bridge and Carla's own gain plugin and measures -6 dB.
+        shell: pwsh
+        run: |
+          $zip = "$env:RUNNER_TEMP\carla.zip"
+          Invoke-WebRequest https://github.com/falkTX/Carla/releases/download/v2.5.10/Carla-2.5.10-win64.zip -OutFile $zip
+          if ((Get-FileHash $zip -Algorithm SHA256).Hash -ne '56264CD860B3E6E7B29221FB1E46D7D8A288FB001500F830BCD739EC7B115650') { throw 'Carla download changed' }
+          Expand-Archive $zip "$env:USERPROFILE\Downloads"
+          flutter test integration_test/plugins_test.dart -d windows
       - name: Build
         shell: bash
         run: flutter build windows --release $BUILD_ARGS
@@ -175,6 +185,16 @@ jobs:
       - name: Sound settings work on this libmpv
         # Renders a song through each setting into files and measures it: nothing is heard.
         run: flutter test integration_test/dsp_test.dart -d macos
+      - name: Audio plugins work (Carla)
+        # Carla has no Homebrew cask; its official disk image, checked against the release's SHA-256.
+        # The test plays a tone through the app's bridge and Carla's own gain plugin and measures -6 dB.
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/carla.dmg" https://github.com/falkTX/Carla/releases/download/v2.5.10/Carla-2.5.10-macOS-universal.dmg
+          echo "a30e98409974493ade18f598566628369fee67f179a84e1c2cc3ae46a71808b1  $RUNNER_TEMP/carla.dmg" | shasum -a 256 -c
+          hdiutil attach "$RUNNER_TEMP/carla.dmg" -nobrowse -readonly -mountpoint /Volumes/CarlaDisk
+          cp -R /Volumes/CarlaDisk/Carla.app /Applications/
+          hdiutil detach /Volumes/CarlaDisk
+          flutter test integration_test/plugins_test.dart -d macos
       - name: FFmpeg is fetched on first use (AirPlay, TV conversions, tag editor)
         run: |
           brew uninstall --ignore-dependencies ffmpeg 2>/dev/null || true

@@ -2,7 +2,9 @@
 # Builds Mpv.xcframework for macOS (arm64 + x86_64) and iOS (devices, and the
 # Simulator on arm64 + x86_64), with the FFmpeg filters the app uses:
 # equalizer, volume, crossfeed, afir and amovie (room correction), headphone
-# (Virtual speakers), alimiter (clip protection in Exclusive mode). media_kit's
+# (Virtual speakers), alimiter (clip protection in Exclusive mode), ladspa (audio
+# plugins through Carla, see linux/carla_bridge; third_party/ladspa has its
+# header). media_kit's
 # macOS and iOS builds have only equalizer and aresample. Same mpv and FFmpeg
 # as the Windows and Android builds.
 #
@@ -142,13 +144,13 @@ EOF
     rm -rf "$work/ffmpeg" && mkdir -p "$work/ffmpeg"
     (cd "$work/ffmpeg" && "$root/src/ffmpeg/configure" --prefix="$prefix" --target-os=darwin \
       --arch=$ffarch --enable-cross-compile --cc="$cc" --cxx="$cxx" --pkg-config=pkg-config \
-      --pkg-config-flags=--static --extra-cflags="$flags -I$prefix/include" \
+      --pkg-config-flags=--static --extra-cflags="$flags -I$prefix/include -I$project/third_party/ladspa" --enable-ladspa \
       --extra-ldflags="$flags -L$prefix/lib" --enable-static --disable-shared --enable-pic \
       --disable-programs --disable-doc --disable-debug --disable-encoders --disable-muxers --disable-devices \
       --disable-avdevice --disable-postproc --disable-hwaccels --disable-indevs --disable-outdevs \
       --disable-autodetect --enable-network --enable-zlib --enable-mbedtls --enable-version3 \
       --disable-decoders --enable-decoder="$audio_decoders" --disable-filters \
-      --enable-filter=abuffer,abuffersink,aformat,anull,aresample,volume,equalizer,crossfeed,afir,amovie,headphone,pan,alimiter \
+      --enable-filter=abuffer,abuffersink,aformat,anull,aresample,volume,equalizer,crossfeed,afir,amovie,headphone,pan,alimiter,ladspa \
       >/dev/null && make -j"$jobs" install >/dev/null)
     done_ ffmpeg
   fi
