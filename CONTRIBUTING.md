@@ -1,4 +1,4 @@
-# Contributing to OpenMusic
+# Contributing to Riflay
 
 Thanks for helping. A few things make reviews quick.
 
@@ -12,7 +12,7 @@ Thanks for helping. A few things make reviews quick.
 
 ## Who we build for
 
-OpenMusic's users are not technical. A feature should work with zero setup and
+Riflay's users are not technical. A feature should work with zero setup and
 one obvious control. Power-user options belong under *Settings › Advanced
 audio*. The look follows streaming apps: dark, colour only from cover art.
 
@@ -36,4 +36,4 @@ audio*. The look follows streaming apps: dark, colour only from cover art.
 ## License
 
 By contributing you agree that your contributions are licensed under the
-[GNU AGPL v3.0](LICENSE), like the rest of OpenMusic.
+[GNU AGPL v3.0](LICENSE), like the rest of Riflay.

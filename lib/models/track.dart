@@ -197,7 +197,7 @@ class Collection {
 
   final CollectionKind kind;
 
-  /// The OpenMusic playlist's id (kind [CollectionKind.playlist]).
+  /// The Riflay playlist's id (kind [CollectionKind.playlist]).
   final String? id;
   final String title;
   final String subtitle;
@@ -221,7 +221,7 @@ enum CollectionKind {
   final String label;
 }
 
-/// A playlist made in OpenMusic, kept on this device. It can mix songs from
+/// A playlist made in Riflay, kept on this device. It can mix songs from
 /// the library (play offline) and YouTube Music songs (stream online).
 class UserPlaylist {
   const UserPlaylist({required this.id, required this.name, required this.tracks, required this.createdAt});

@@ -4,10 +4,10 @@ project(runner LANGUAGES CXX)
 
 # The name of the executable created for the application. Change this to change
 # the on-disk name of your application.
-set(BINARY_NAME "openmusic")
+set(BINARY_NAME "riflay")
 # The unique GTK application identifier for this application. See:
 # https://wiki.gnome.org/HowDoI/ChooseApplicationID
-set(APPLICATION_ID "dev.openmusic.openmusic")
+set(APPLICATION_ID "dev.riflay.riflay")
 
 # Explicitly opt in to modern CMake behaviors to avoid warnings with recent
 # versions of CMake.
@@ -59,7 +59,7 @@ add_subdirectory("runner")
 
 # Optional YouTube Music sign-in window; see login_helper/CMakeLists.txt.
 add_subdirectory("login_helper")
-# Audio plugins through Carla; see carla_bridge/openmusic_carla.cc.
+# Audio plugins through Carla; see carla_bridge/riflay_carla.cc.
 add_subdirectory("carla_bridge")
 
 # Run the Flutter tool portions of the build. This must not be removed.
@@ -100,14 +100,14 @@ install(TARGETS ${BINARY_NAME} RUNTIME DESTINATION "${CMAKE_INSTALL_PREFIX}"
   COMPONENT Runtime)
 
 # Installed here, after the bundle is wiped, rather than from login_helper/.
-if(TARGET openmusic_login)
-  install(TARGETS openmusic_login RUNTIME DESTINATION "${CMAKE_INSTALL_PREFIX}"
+if(TARGET riflay_login)
+  install(TARGETS riflay_login RUNTIME DESTINATION "${CMAKE_INSTALL_PREFIX}"
     COMPONENT Runtime)
 endif()
-install(TARGETS openmusic_carla LIBRARY DESTINATION "${INSTALL_BUNDLE_LIB_DIR}"
+install(TARGETS riflay_carla LIBRARY DESTINATION "${INSTALL_BUNDLE_LIB_DIR}"
   COMPONENT Runtime)
 
-install(FILES "runner/openmusic.png" DESTINATION "${INSTALL_BUNDLE_DATA_DIR}"
+install(FILES "runner/riflay.png" DESTINATION "${INSTALL_BUNDLE_DATA_DIR}"
   COMPONENT Runtime)
 
 install(FILES "${FLUTTER_ICU_DATA_FILE}" DESTINATION "${INSTALL_BUNDLE_DATA_DIR}"

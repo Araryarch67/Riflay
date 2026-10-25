@@ -15,11 +15,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:just_audio_media_kit/just_audio_media_kit.dart';
 import 'package:media_kit/media_kit.dart' show NativePlayer;
-import 'package:openmusic/main.dart';
-import 'package:openmusic/models/track.dart';
-import 'package:openmusic/services/player_controller.dart';
-import 'package:openmusic/ui/shell_scope.dart';
-import 'package:openmusic/ui/widgets/page_scaffold.dart';
+import 'package:riflay/main.dart';
+import 'package:riflay/models/track.dart';
+import 'package:riflay/services/player_controller.dart';
+import 'package:riflay/ui/shell_scope.dart';
+import 'package:riflay/ui/widgets/page_scaffold.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// User + system CPU time of this process so far (all threads), from /proc.
@@ -74,7 +74,7 @@ void main() {
     tester.view.physicalSize = const Size(2560, 1600);
     tester.view.devicePixelRatio = 1.6;
     addTearDown(tester.view.reset);
-    await tester.pumpWidget(OpenMusicApp(controller: c));
+    await tester.pumpWidget(RiflayApp(controller: c));
     while (c.scanning) {
       await tester.pump(const Duration(milliseconds: 100));
     }

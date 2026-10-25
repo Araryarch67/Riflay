@@ -333,7 +333,7 @@ class Appearance extends ChangeNotifier {
 
   double get textScale => textSize / defaultTextSize;
 
-  /// A font from the device's font folders ([SystemFonts]); null is OpenMusic's own (Figtree).
+  /// A font from the device's font folders ([SystemFonts]); null is Riflay's own (Figtree).
   String? fontFamily;
   List<String> _fontFiles = const [];
 
@@ -402,7 +402,7 @@ class Appearance extends ChangeNotifier {
   Future<void> setBlur(double v) => _set(() => blur = v);
   Future<void> setWindowOpacity(double v) => _set(() => windowOpacity = v);
 
-  /// Draws the app in [font] (null: back to OpenMusic's own). False when its files couldn't be loaded.
+  /// Draws the app in [font] (null: back to Riflay's own). False when its files couldn't be loaded.
   Future<bool> setFont(FontFamilyFiles? font) async {
     if (font != null && !await SystemFonts.load(font.family, font.files)) return false;
     await _set(() {

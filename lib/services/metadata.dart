@@ -141,7 +141,7 @@ abstract final class Metadata {
   static Future<Track> writeTags(Track track, TagEdit edit) async {
     final path = track.path!;
     final dot = path.lastIndexOf('.');
-    final temp = File('${path.substring(0, dot)}.openmusic-tmp${path.substring(dot)}');
+    final temp = File('${path.substring(0, dot)}.riflay-tmp${path.substring(dot)}');
     try {
       if (_inProcess.contains(_ext(path))) {
         await Isolate.run(() => _writeInProcess(path, temp, edit));
@@ -348,7 +348,7 @@ abstract final class Metadata {
     }
   }
 
-  static const _coverHeaders = {'User-Agent': 'OpenMusic (https://github.com/Araryarch67/openmusic)'};
+  static const _coverHeaders = {'User-Agent': 'Riflay (https://github.com/Araryarch67/Riflay)'};
 
   /// Looks up the front cover of [album] by [artist] on MusicBrainz and
   /// downloads it from the Cover Art Archive. Null when nothing is found;

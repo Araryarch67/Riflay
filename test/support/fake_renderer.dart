@@ -6,7 +6,7 @@ import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
-import 'package:openmusic/services/dlna.dart';
+import 'package:riflay/services/dlna.dart';
 import 'package:xml/xml.dart';
 
 const fakeDescription = '''<?xml version="1.0"?>

@@ -7,7 +7,7 @@ import 'package:path/path.dart' as p;
 /// Linux sign-in window (linux/login_helper): Google's own login page in a
 /// WebKitGTK window, which hands the YouTube Music session back on stdout.
 abstract final class DesktopLogin {
-  static const _name = 'openmusic_login';
+  static const _name = 'riflay_login';
 
   /// The helper next to the app binary; null when it was not built (no
   /// webkit2gtk-4.1 at build time) or on other platforms.

@@ -11,10 +11,10 @@
 # statically into one libmpv.so per ABI. Needs the Android NDK (the version
 # Flutter uses, found under $ANDROID_HOME/ndk or ~/Android/Sdk/ndk), meson,
 # ninja, nasm, cmake, pkg-config, curl. Work files go to
-# ~/.cache/openmusic-build/libmpv-android.
+# ~/.cache/riflay-build/libmpv-android.
 set -euo pipefail
 project=$(cd "$(dirname "$0")/.." && pwd)
-root=${OPENMUSIC_BUILD_DIR:-${XDG_CACHE_HOME:-$HOME/.cache}/openmusic-build}/libmpv-android
+root=${RIFLAY_BUILD_DIR:-${XDG_CACHE_HOME:-$HOME/.cache}/riflay-build}/libmpv-android
 mkdir -p "$root/src" "$root/build"
 jobs=$(nproc)
 api=24 # Flutter's minSdkVersion

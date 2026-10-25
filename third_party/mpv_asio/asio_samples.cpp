@@ -2,7 +2,7 @@
 
 #include <cstring>
 
-namespace openmusic_asio {
+namespace riflay_asio {
 
 bool IsSupported(int asio_sample_type) {
   switch (static_cast<AsioSampleType>(asio_sample_type)) {
@@ -88,4 +88,4 @@ void Encode(AsioSampleType type, const int32_t* src, size_t stride, size_t frame
   }
 }
 
-}  // namespace openmusic_asio
+}  // namespace riflay_asio

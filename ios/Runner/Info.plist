@@ -4,7 +4,7 @@
 <dict>
 	<!-- Casting: finds TVs and speakers on the local network (DLNA's SSDP and AirPlay's Bonjour). -->
 	<key>NSLocalNetworkUsageDescription</key>
-	<string>OpenMusic looks for TVs and speakers on your network so you can play music on them.</string>
+	<string>Riflay looks for TVs and speakers on your network so you can play music on them.</string>
 	<key>NSBonjourServices</key>
 	<array>
 		<string>_raop._tcp</string>
@@ -22,7 +22,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>OpenMusic</string>
+	<string>Riflay</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -30,7 +30,7 @@
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>openmusic</string>
+	<string>riflay</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>

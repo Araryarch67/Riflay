@@ -53,7 +53,7 @@ class Buffer {
     // it makes the read faster
     // no need to use the buffer
     if (size > _bufferSize) {
-      // OpenMusic: a size read from the file is checked against what the file
+      // Riflay: a size read from the file is checked against what the file
       // still holds before anything is allocated. A crafted block claiming
       // gigabytes (a picture, a chunk) made the reader allocate that much, and
       // the app run out of memory showing its cover.

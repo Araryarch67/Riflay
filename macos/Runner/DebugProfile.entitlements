@@ -2,7 +2,7 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<!-- No App Sandbox: OpenMusic is downloaded, not from the App Store, and does what the
+	<!-- No App Sandbox: Riflay is downloaded, not from the App Store, and does what the
 	     sandbox forbids, as it does on Linux and Windows: it runs the yt-dlp and FFmpeg it
 	     downloads, keeps reading the music folders it scans after a restart, writes tags back
 	     into music files, and talks to Discord over its local socket. -->

@@ -3,7 +3,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:openmusic/services/system_fonts.dart';
+import 'package:riflay/services/system_fonts.dart';
 
 /// A font file holding nothing but a `name` table with [names] (name id → text), as Windows writes them.
 Uint8List _font(Map<int, String> names) {

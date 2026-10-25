@@ -96,7 +96,7 @@ abstract final class Ffmpeg {
     if (source == null) throw StateError('FFmpeg isn\'t installed. Install it to use this.');
     onDownload?.call('Getting this ready: a one-time download (about 40 MB)…');
     final target = await _localFile();
-    final work = await Directory.systemTemp.createTemp('openmusic-ffmpeg');
+    final work = await Directory.systemTemp.createTemp('riflay-ffmpeg');
     try {
       Future<bool> attempt(String url, {String? checksumUrl}) async {
         final archive = File(p.join(work.path, p.basename(url)));

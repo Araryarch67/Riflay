@@ -7,7 +7,7 @@ import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:openmusic/services/dop.dart';
+import 'package:riflay/services/dop.dart';
 
 /// Channel [c]'s [i]-th DSD byte in the test files, MSB-first.
 int _byte(int c, int i) => (i * 31 + c * 101 + (i >> 8)) & 0xFF;

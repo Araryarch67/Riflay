@@ -13,10 +13,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:just_audio_media_kit/just_audio_media_kit.dart';
 import 'package:media_kit/media_kit.dart' show NativePlayer;
-import 'package:openmusic/main.dart';
-import 'package:openmusic/models/track.dart';
-import 'package:openmusic/services/player_controller.dart';
-import 'package:openmusic/ui/widgets/shelf.dart';
+import 'package:riflay/main.dart';
+import 'package:riflay/models/track.dart';
+import 'package:riflay/services/player_controller.dart';
+import 'package:riflay/ui/widgets/shelf.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 // Popular, long-lived uploads on YouTube Music.
@@ -51,7 +51,7 @@ void main() {
       final app = PlayerController();
       await app.load();
       final sw = Stopwatch()..start();
-      await tester.pumpWidget(OpenMusicApp(controller: app));
+      await tester.pumpWidget(RiflayApp(controller: app));
       while (find.byType(Shelf).evaluate().isEmpty) {
         if (sw.elapsed > const Duration(seconds: 30)) fail('$label: no shelves after 30 s');
         await tester.pump(const Duration(milliseconds: 5));

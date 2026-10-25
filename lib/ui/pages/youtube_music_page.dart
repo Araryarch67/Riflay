@@ -30,7 +30,7 @@ Future<void> signInToYoutubeMusic(BuildContext context) async {
     ShellScope.of(context).open(const YoutubeMusicLoginPage());
   } else {
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Signing in needs WebKitGTK (webkit2gtk-4.1). Install it and restart OpenMusic.')),
+      const SnackBar(content: Text('Signing in needs WebKitGTK (webkit2gtk-4.1). Install it and restart Riflay.')),
     );
   }
 }

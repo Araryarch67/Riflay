@@ -12,7 +12,7 @@ typedef ImportedPlaylist = ({String title, String? youtubeId, UserPlaylist? loca
 
 /// "Import a playlist": asks for a Spotify, Apple Music or Deezer link, finds
 /// its songs in YouTube Music and saves them as a playlist: in the YouTube
-/// Music library when signed in, as an OpenMusic playlist otherwise.
+/// Music library when signed in, as a Riflay playlist otherwise.
 /// Returns the playlist once the user asks to open it.
 Future<ImportedPlaylist?> askToImportPlaylist(BuildContext context) async {
   final c = PlayerScope.read(context);
@@ -38,7 +38,7 @@ Future<ImportedPlaylist?> askToImportPlaylist(BuildContext context) async {
 }
 
 /// Signed in: a YouTube Music playlist (the songs go in 100 at a time).
-/// Otherwise an OpenMusic playlist of the streamed songs.
+/// Otherwise a Riflay playlist of the streamed songs.
 Future<ImportedPlaylist> _save(PlayerController c, String title, List<Track> tracks) async {
   if (!c.ytMusic.canEdit) return (title: title, youtubeId: null, local: c.createPlaylist(title, tracks: tracks));
   final id = await c.ytMusic.createPlaylist(title, tracks: tracks.take(100).toList());
@@ -64,7 +64,7 @@ class PlaylistImportDialog extends StatefulWidget {
 
   final String? initial;
 
-  /// Where it's saved: the YouTube Music library, or OpenMusic playlists.
+  /// Where it's saved: the YouTube Music library, or Riflay playlists.
   final bool signedIn;
   final Future<ForeignPlaylist> Function(String link) read;
   final Future<List<Track>> Function(String query) search;
@@ -175,7 +175,7 @@ class _PlaylistImportDialogState extends State<PlaylistImportDialog> {
               Text(
                 signedIn
                     ? 'It becomes a playlist in your YouTube Music library.'
-                    : 'It becomes an OpenMusic playlist of YouTube Music songs.',
+                    : 'It becomes a Riflay playlist of YouTube Music songs.',
                 style: secondary,
               ),
               const SizedBox(height: 16),

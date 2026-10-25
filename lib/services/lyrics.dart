@@ -318,8 +318,8 @@ abstract final class LyricsService {
       // served to anyone), so ask for a song that can't be cached.
       final res = await (client ?? _http).get(
         Uri.https('api.betterlyrics.org', '/getLyrics', {
-          's': 'openmusic key check ${DateTime.now().microsecondsSinceEpoch}',
-          'a': 'openmusic',
+          's': 'riflay key check ${DateTime.now().microsecondsSinceEpoch}',
+          'a': 'riflay',
           'd': '1',
         }),
         headers: {..._headers, 'X-API-Key': key},
@@ -448,7 +448,7 @@ abstract final class LyricsService {
     return null;
   }
 
-  static const _headers = {'User-Agent': 'OpenMusic (https://github.com/Araryarch67/openmusic)'};
+  static const _headers = {'User-Agent': 'Riflay (https://github.com/Araryarch67/Riflay)'};
 
   /// "Song (Official Video) [HD]" → "Song".
   static String _cleanTitle(String t) => t

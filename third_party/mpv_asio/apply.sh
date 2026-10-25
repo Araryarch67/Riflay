@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Adds the ASIO audio output to an mpv source tree (used by
-# tool/build_libmpv_windows.sh). Usage: apply.sh <mpv-src> <openmusic-root>
+# tool/build_libmpv_windows.sh). Usage: apply.sh <mpv-src> <riflay-root>
 set -euo pipefail
 mpv=$1
 here=$(cd "$(dirname "$0")" && pwd)
@@ -30,7 +30,7 @@ def patch(path, old, new):
 patch("meson_options.txt",
       "option('wasapi', type: 'feature', value: 'auto', description: 'WASAPI audio output')\n",
       "option('wasapi', type: 'feature', value: 'auto', description: 'WASAPI audio output')\n"
-      "option('asio', type: 'feature', value: 'auto', description: 'ASIO audio output (OpenMusic)')\n")
+      "option('asio', type: 'feature', value: 'auto', description: 'ASIO audio output (Riflay)')\n")
 
 patch("meson.build",
       "                     'audio/out/ao_wasapi_utils.c')\nendif\n",

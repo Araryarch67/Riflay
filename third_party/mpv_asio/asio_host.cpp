@@ -25,7 +25,7 @@ bool loadAsioDriver(char* name);
 
 namespace {
 
-using openmusic_asio::AsioSampleType;
+using riflay_asio::AsioSampleType;
 
 constexpr int kMaxChannels = 8;
 constexpr int kCommonRates[] = {44100, 48000, 88200, 96000, 176400, 192000, 352800, 384000};
@@ -118,12 +118,12 @@ void Fill(long index) {
     owner_fill(ctx, planes, frames);
   } else {
     for (int c = 0; c < active_channels; ++c) {
-      std::memset(planes[c], 0, static_cast<size_t>(frames) * (direct ? openmusic_asio::SampleBytes(type) : 4));
+      std::memset(planes[c], 0, static_cast<size_t>(frames) * (direct ? riflay_asio::SampleBytes(type) : 4));
     }
   }
   if (!direct) {
     for (int c = 0; c < active_channels; ++c) {
-      openmusic_asio::Encode(type, scratch[c].data(), 1, static_cast<size_t>(frames), buffers[c].buffers[index]);
+      riflay_asio::Encode(type, scratch[c].data(), 1, static_cast<size_t>(frames), buffers[c].buffers[index]);
     }
   }
   if (output_ready) ASIOOutputReady();
@@ -231,7 +231,7 @@ int Open(const std::string& name, int channels, int rate, asio_host_info* info, 
     ASIOChannelInfo channel = {};
     channel.channel = c;
     channel.isInput = ASIOFalse;
-    if (ASIOGetChannelInfo(&channel) != ASE_OK || !openmusic_asio::IsSupported(channel.type)) {
+    if (ASIOGetChannelInfo(&channel) != ASE_OK || !riflay_asio::IsSupported(channel.type)) {
       Fail(error, error_size, "the ASIO driver uses a sample format this player can't write (type " +
                                   std::to_string(channel.type) + ")");
       ExitDriver();

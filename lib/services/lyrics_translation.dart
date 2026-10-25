@@ -150,7 +150,7 @@ abstract final class LyricsTranslation {
         Uri.https('unison.betterlyrics.org', '/translate'),
         headers: const {
           'content-type': 'application/json',
-          'User-Agent': 'OpenMusic (https://github.com/Araryarch67/openmusic)',
+          'User-Agent': 'Riflay (https://github.com/Araryarch67/Riflay)',
         },
         body: jsonEncode({'lines': lines, 'to': to}),
       );

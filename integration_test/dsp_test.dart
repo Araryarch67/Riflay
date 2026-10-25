@@ -17,8 +17,8 @@ import 'package:integration_test/integration_test.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:just_audio_media_kit/just_audio_media_kit.dart';
 import 'package:media_kit/media_kit.dart' show NativePlayer;
-import 'package:openmusic/services/audio_engine.dart';
-import 'package:openmusic/services/player_controller.dart';
+import 'package:riflay/services/audio_engine.dart';
+import 'package:riflay/services/player_controller.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 

@@ -23,11 +23,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:just_audio_media_kit/just_audio_media_kit.dart';
 import 'package:media_kit/media_kit.dart' show NativePlayer;
-import 'package:openmusic/main.dart';
-import 'package:openmusic/models/track.dart';
-import 'package:openmusic/services/player_controller.dart';
-import 'package:openmusic/ui/shell_scope.dart';
-import 'package:openmusic/ui/widgets/page_scaffold.dart';
+import 'package:riflay/main.dart';
+import 'package:riflay/models/track.dart';
+import 'package:riflay/services/player_controller.dart';
+import 'package:riflay/ui/shell_scope.dart';
+import 'package:riflay/ui/widgets/page_scaffold.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 const _taggedOnly = 8000;
@@ -183,7 +183,7 @@ void main() {
     tester.view.devicePixelRatio = 1.6;
     addTearDown(tester.view.reset);
     sw = Stopwatch()..start();
-    await tester.pumpWidget(OpenMusicApp(controller: c));
+    await tester.pumpWidget(RiflayApp(controller: c));
     report('first frame ms', sw.elapsedMilliseconds);
     final real = [
       for (final t in c.library)

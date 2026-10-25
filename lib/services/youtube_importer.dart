@@ -103,12 +103,12 @@ class YoutubeImporter extends ChangeNotifier {
   static bool looksLikeYoutubeUrl(String text) =>
       VideoId.parseVideoId(text.trim()) != null || PlaylistId.parsePlaylistId(text.trim()) != null;
 
-  /// Where downloads live: ~/Documents/OpenMusic/YouTube on desktop, the app's
+  /// Where downloads live: ~/Documents/Riflay/YouTube on desktop, the app's
   /// private documents folder on mobile.
   static Future<Directory> downloadsDir() async {
     final docs = await getApplicationDocumentsDirectory();
     final mobile = Platform.isAndroid || Platform.isIOS;
-    final dir = Directory(mobile ? p.join(docs.path, 'YouTube') : p.join(docs.path, 'OpenMusic', 'YouTube'));
+    final dir = Directory(mobile ? p.join(docs.path, 'YouTube') : p.join(docs.path, 'Riflay', 'YouTube'));
     return dir.create(recursive: true);
   }
 

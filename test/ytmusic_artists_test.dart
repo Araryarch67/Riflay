@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
-import 'package:openmusic/services/ytmusic_web.dart';
+import 'package:riflay/services/ytmusic_web.dart';
 
 /// Answers every request with [reply]; nothing leaves the machine.
 YtMusicWeb fake(Map<String, dynamic> reply) => YtMusicWeb(

@@ -48,7 +48,7 @@ class AppearanceSettings extends StatelessWidget {
             leading: const Icon(Icons.font_download_outlined),
             title: const Text('Font'),
             subtitle: Text(
-              look.fontFamily ?? '${AppFont.ownName} (OpenMusic\'s own)',
+              look.fontFamily ?? '${AppFont.ownName} (Riflay\'s own)',
               style: muted,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
@@ -149,7 +149,7 @@ Future<void> _pickFont(BuildContext context) async {
   }
 }
 
-/// Every font family in the device's font folders, searchable; OpenMusic's own first.
+/// Every font family in the device's font folders, searchable; Riflay's own first.
 class _FontDialog extends StatefulWidget {
   const _FontDialog();
 
@@ -215,7 +215,7 @@ class _FontDialogState extends State<_FontDialog> {
                       if (q.isEmpty || AppFont.ownName.toLowerCase().contains(q))
                         row(
                           AppFont.ownName,
-                          'OpenMusic\'s own font',
+                          'Riflay\'s own font',
                           current == null,
                           () => Navigator.pop(context, (null,)),
                         ),

@@ -73,10 +73,10 @@ class DiscordPresence {
       'state': _clip(t.artist),
       'timestamps': {'start': start, 'end': ?(duration == null ? null : start + duration.inMilliseconds)},
       'assets': {
-        // Remote URLs work as images; local files fall back to an art asset
-        // named "openmusic" uploaded in the Discord developer portal.
+        // Remote URLs work as images; local files fall back to the logo, an art
+        // asset in the Discord developer portal still named after the app's old name.
         'large_image': cover ?? 'openmusic',
-        'large_text': _clip(t.album ?? 'OpenMusic'),
+        'large_text': _clip(t.album ?? 'Riflay'),
       },
       if (listenUrl != null)
         'buttons': [

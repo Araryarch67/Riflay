@@ -28,7 +28,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
   Win32Window::Point origin(10, 10);
   // Dart (window_manager) sizes it to the screen and centres it before it shows.
   Win32Window::Size size(1280, 820);
-  if (!window.Create(L"openmusic", origin, size)) {
+  if (!window.Create(L"Riflay", origin, size)) {
     return EXIT_FAILURE;
   }
   window.SetQuitOnClose(true);

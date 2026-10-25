@@ -147,7 +147,7 @@ class FlacWriter extends BaseMetadataWriter<VorbisMetadata> {
     writeComment("LOCATION", metadata.location);
     writeComment("CONTACT", metadata.contact);
     writeComment("ISRC", metadata.isrc);
-    // OpenMusic: keep everything else the parser read, so editing a title
+    // Riflay: keep everything else the parser read, so editing a title
     // doesn't wipe ReplayGain, lyrics, disc numbers or custom tags.
     writeComment("ACTOR", metadata.actor);
     writeComment("COMPOSER", metadata.composer);

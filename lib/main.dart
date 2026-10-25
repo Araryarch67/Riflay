@@ -13,6 +13,7 @@ import 'package:window_manager/window_manager.dart';
 
 import 'services/appearance.dart';
 import 'services/media_session.dart';
+import 'services/openmusic_data.dart';
 import 'services/player_controller.dart';
 import 'ui/home_shell.dart';
 import 'ui/player_panels.dart' show MiniPlayerWindow, miniPlayer, windowFullScreen;
@@ -21,6 +22,8 @@ import 'ui/widgets/title_bar.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // Before anything reads the settings or writes into the app's folder.
+  await OpenMusicData.bringOver();
   if (kDebugMode) await _logErrorsToFile();
   // just_audio has no native Linux/Windows backend; route those through libmpv.
   // Android, macOS and iOS too: libmpv gives them the equalizer, Virtual
@@ -39,7 +42,7 @@ Future<void> main() async {
     await windowManager.ensureInitialized();
     await windowManager.waitUntilReadyToShow(
       WindowOptions(
-        title: 'OpenMusic',
+        title: 'Riflay',
         // Opens in the middle of the screen, sized to it (tiling WMs place it themselves).
         size: await _startSize(),
         center: true,
@@ -58,7 +61,7 @@ Future<void> main() async {
   final controller = PlayerController();
   await controller.load();
   await MediaSession.start(controller);
-  runApp(OpenMusicApp(controller: controller));
+  runApp(RiflayApp(controller: controller));
 }
 
 /// A window that suits the screen: 85% of its height (up to 960), about
@@ -91,8 +94,8 @@ Future<void> _logErrorsToFile() async {
   };
 }
 
-class OpenMusicApp extends StatefulWidget {
-  const OpenMusicApp({super.key, required this.controller, this.theme});
+class RiflayApp extends StatefulWidget {
+  const RiflayApp({super.key, required this.controller, this.theme});
 
   final PlayerController controller;
 
@@ -100,10 +103,10 @@ class OpenMusicApp extends StatefulWidget {
   final ThemeData? theme;
 
   @override
-  State<OpenMusicApp> createState() => _OpenMusicAppState();
+  State<RiflayApp> createState() => _RiflayAppState();
 }
 
-class _OpenMusicAppState extends State<OpenMusicApp> {
+class _RiflayAppState extends State<RiflayApp> {
   final _appearance = Appearance.instance;
 
   @override
@@ -139,7 +142,7 @@ class _OpenMusicAppState extends State<OpenMusicApp> {
     return PlayerScope(
       controller: widget.controller,
       child: MaterialApp(
-        title: 'OpenMusic',
+        title: 'Riflay',
         debugShowCheckedModeBanner: false,
         // On desktop the frame paints the (maybe see-through) window
         // background once; pages on top mustn't stack a second layer.

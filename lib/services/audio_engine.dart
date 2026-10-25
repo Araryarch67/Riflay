@@ -155,7 +155,7 @@ class SignalPath {
   final double volume;
 
   /// [volume] is mpv's own, applied to the output's samples (float through
-  /// the system mixer) rather than by OpenMusic's 64-bit float filter.
+  /// the system mixer) rather than by Riflay's 64-bit float filter.
   final bool volumeAtOutput;
 
   /// Clip protection is last before the output ([AudioEngine.clipGuardActive]). It
@@ -280,7 +280,7 @@ class SignalPath {
 /// equalizer, crossfeed, room correction and Virtual speakers are lavfi filters,
 /// Mono audio mpv's own channel conversion, leveling mpv's ReplayGain, and
 /// output/exclusive/rate/resampler are AO options. Every platform's libmpv has
-/// the FFmpeg filters these need: Linux's system one, and OpenMusic's own
+/// the FFmpeg filters these need: Linux's system one, and Riflay's own
 /// builds elsewhere (tool/build_libmpv_*.sh). What an OS can't offer (a device
 /// choice on Android) has its `has…` flag.
 class AudioEngine extends ChangeNotifier {
@@ -292,7 +292,7 @@ class AudioEngine extends ChangeNotifier {
     JustAudioMediaKit.bufferSize = 8 << 20;
     // mpv's `title`: the app's name in Windows' volume mixer (media_kit's default is "JustAudioMediaKit").
     // PulseAudio / PipeWire take `audio-client-name` instead (see [_applyProps]).
-    JustAudioMediaKit.title = 'OpenMusic';
+    JustAudioMediaKit.title = 'Riflay';
     JustAudioMediaKit.volumeOverride = _volumeTo;
     JustAudioMediaKit.onPlayerCreated = (p) => unawaited(_applyAll(p));
   }
@@ -375,10 +375,10 @@ class AudioEngine extends ChangeNotifier {
   /// run in the filter chain through the bundled LADSPA bridge.
   bool plugins = false;
 
-  /// The bridge in the app bundle (Linux): `lib/libopenmusic_carla.so`.
+  /// The bridge in the app bundle (Linux): `lib/libriflay_carla.so`.
   static String? get pluginBridge {
     if (!Platform.isLinux) return null;
-    final path = '${File(Platform.resolvedExecutable).parent.path}/lib/libopenmusic_carla.so';
+    final path = '${File(Platform.resolvedExecutable).parent.path}/lib/libriflay_carla.so';
     return File(path).existsSync() ? path : null;
   }
 
@@ -399,7 +399,7 @@ class AudioEngine extends ChangeNotifier {
   static String get pluginsProject {
     final env = Platform.environment;
     final config = (env['XDG_CONFIG_HOME'] ?? '').isNotEmpty ? env['XDG_CONFIG_HOME']! : '${env['HOME']}/.config';
-    return '$config/openmusic/plugins.carxp';
+    return '$config/riflay/plugins.carxp';
   }
 
   bool get pluginsActive => plugins && !bitPerfect && hasPlugins && File(pluginsProject).existsSync();
@@ -902,7 +902,7 @@ class AudioEngine extends ChangeNotifier {
         if (preamp < 0) '@preamp:lavfi=[volume=volume=${n(preamp)}dB]',
         '@eq:lavfi=[${bands.where((b) => b.gain.abs() > 0.05).map((b) => 'equalizer=f=${n(b.frequency)}:t=q:w=${n(b.q)}:g=${n(b.gain)}').join(',')}]',
       ],
-      if (pluginsActive) '@plugins:lavfi=[ladspa=file=${pluginBridge!.replaceAll(':', '\\:')}:plugin=openmusic_carla]',
+      if (pluginsActive) '@plugins:lavfi=[ladspa=file=${pluginBridge!.replaceAll(':', '\\:')}:plugin=riflay_carla]',
       if (virtualSpeakersActive) _virtualSpeakersChain,
       if (crossfeedActive) '@crossfeed:lavfi=[crossfeed=strength=${n(0.1 + crossfeed * 0.6)}:range=0.5]',
       // After the stereo stages: what's left is one channel.
@@ -962,7 +962,7 @@ class AudioEngine extends ChangeNotifier {
       'af': filterChain,
       'audio-device': _openedDevice!,
       // The app's name in the Linux mixers (PulseAudio / PipeWire); mpv's default is "mpv".
-      'audio-client-name': 'OpenMusic',
+      'audio-client-name': 'Riflay',
       // macOS, shared: in bit-perfect mode the DAC follows each song's rate, so Core Audio's mixer
       // doesn't resample (Exclusive mode takes the device's own format anyway).
       if (Platform.isMacOS) 'coreaudio-change-physical-format': bitPerfect ? 'yes' : 'no',

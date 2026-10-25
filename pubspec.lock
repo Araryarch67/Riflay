@@ -39,7 +39,7 @@ packages:
       path: "third_party/audio_metadata_reader"
       relative: true
     source: path
-    version: "1.8.1+openmusic"
+    version: "1.8.1+riflay"
   audio_service:
     dependency: "direct main"
     description:
@@ -504,7 +504,7 @@ packages:
       path: "third_party/just_audio_media_kit"
       relative: true
     source: path
-    version: "2.1.0+openmusic"
+    version: "2.1.0+riflay"
   just_audio_platform_interface:
     dependency: transitive
     description:

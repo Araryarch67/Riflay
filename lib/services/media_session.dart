@@ -39,9 +39,9 @@ class MediaSession extends BaseAudioHandler with SeekHandler {
       return await AudioService.init(
         builder: () => MediaSession._(c),
         config: const AudioServiceConfig(
-          androidNotificationChannelId: 'dev.openmusic.openmusic.playback',
+          androidNotificationChannelId: 'dev.riflay.riflay.playback',
           // Also the player's name in MPRIS (Linux media widgets).
-          androidNotificationChannelName: 'OpenMusic',
+          androidNotificationChannelName: 'Riflay',
           androidNotificationIcon: 'mipmap/ic_launcher_monochrome',
           androidNotificationOngoing: true,
           androidStopForegroundOnPause: true,

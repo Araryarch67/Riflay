@@ -9,7 +9,7 @@ import '../services/ytmusic_web.dart';
 import 'theme.dart';
 
 /// Marks the songs below as rows of a playlist the user can edit (an
-/// OpenMusic playlist or their own YouTube Music one), so each song's menu
+/// Riflay playlist or their own YouTube Music one), so each song's menu
 /// can offer "Remove from this playlist".
 class PlaylistEditScope extends InheritedWidget {
   const PlaylistEditScope({super.key, required this.canRemove, required this.remove, required super.child});
@@ -86,7 +86,7 @@ class _PlaylistNameDialog extends StatefulWidget {
 class _PlaylistNameDialogState extends State<_PlaylistNameDialog> {
   late final name = TextEditingController(text: widget.initialTitle);
   late var privacy = widget.initialPrivacy;
-  var home = PlaylistHome.openMusic;
+  var home = PlaylistHome.riflay;
 
   @override
   void dispose() {
@@ -124,9 +124,9 @@ class _PlaylistNameDialogState extends State<_PlaylistNameDialog> {
               SegmentedButton<PlaylistHome>(
                 segments: const [
                   ButtonSegment(
-                    value: PlaylistHome.openMusic,
+                    value: PlaylistHome.riflay,
                     icon: Icon(Icons.offline_pin_outlined),
-                    label: Text('OpenMusic'),
+                    label: Text('Riflay'),
                   ),
                   ButtonSegment(
                     value: PlaylistHome.youtubeMusic,
@@ -139,7 +139,7 @@ class _PlaylistNameDialogState extends State<_PlaylistNameDialog> {
               ),
               const SizedBox(height: 8),
               Text(
-                home == PlaylistHome.openMusic
+                home == PlaylistHome.riflay
                     ? 'Kept on this device. Can mix your own files and YouTube Music songs.'
                     : 'Saved to your YouTube Music account, on all your devices.',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
@@ -171,9 +171,9 @@ class _PlaylistNameDialogState extends State<_PlaylistNameDialog> {
 }
 
 /// Where a new playlist goes.
-enum PlaylistHome { openMusic, youtubeMusic }
+enum PlaylistHome { riflay, youtubeMusic }
 
-/// "New playlist": an OpenMusic playlist on this device by default. Signed in,
+/// "New playlist": a Riflay playlist on this device by default. Signed in,
 /// it can be made in YouTube Music instead, but only when every song is from
 /// YouTube Music (files from this device can't go there).
 Future<void> createPlaylist(BuildContext context, {List<Track> tracks = const []}) async {
@@ -199,7 +199,7 @@ Future<void> createPlaylist(BuildContext context, {List<Track> tracks = const []
   );
 }
 
-/// "Add to playlist": OpenMusic playlists, then (for YouTube songs, signed in)
+/// "Add to playlist": Riflay playlists, then (for YouTube songs, signed in)
 /// the YouTube Music ones, each marked with where it lives.
 Future<void> addToPlaylist(BuildContext context, List<Track> tracks) async {
   final c = PlayerScope.read(context);
@@ -227,7 +227,7 @@ Future<void> addToPlaylist(BuildContext context, List<Track> tracks) async {
             child: ListTile(
               leading: const Icon(Icons.queue_music_rounded),
               title: Text(p.name, maxLines: 1, overflow: TextOverflow.ellipsis),
-              subtitle: Text('OpenMusic • ${p.tracks.length} songs', style: text.bodySmall),
+              subtitle: Text('Riflay • ${p.tracks.length} songs', style: text.bodySmall),
             ),
           ),
         for (final p in remote)

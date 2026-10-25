@@ -91,7 +91,7 @@ abstract final class Dlna {
         'MAN: "ssdp:discover"\r\n'
         'MX: 2\r\n'
         'ST: $_rendererType\r\n'
-        'USER-AGENT: OpenMusic UPnP/1.1\r\n\r\n',
+        'USER-AGENT: Riflay UPnP/1.1\r\n\r\n',
       );
       List<NetworkInterface> interfaces;
       try {

@@ -13,7 +13,7 @@ import 'downloads_page.dart';
 import 'youtube_music_page.dart';
 import '../widgets/menus.dart';
 
-/// One Home for everything: your files, your OpenMusic playlists and your
+/// One Home for everything: your files, your Riflay playlists and your
 /// YouTube Music library side by side, then YouTube Music's own shelves.
 /// Streamed songs carry a cloud mark; everything else plays offline.
 class HomePage extends StatelessWidget {
@@ -151,7 +151,7 @@ class HomePage extends StatelessWidget {
                 return MediaCard(
                   track: p.tracks.firstOrNull,
                   title: p.name,
-                  subtitle: 'OpenMusic • ${p.tracks.length} songs',
+                  subtitle: 'Riflay • ${p.tracks.length} songs',
                   onTap: () => shell.openCollection(c.playlistCollection(p)),
                   onPlay: p.tracks.isEmpty ? null : () => c.playCollection(c.playlistCollection(p)),
                 );

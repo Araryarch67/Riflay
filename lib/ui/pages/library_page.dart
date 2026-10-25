@@ -15,7 +15,7 @@ import '../widgets/menus.dart';
 
 enum LibraryFilter { playlists, albums, artists }
 
-/// "Your Library": OpenMusic playlists, YouTube Music (liked songs and
+/// "Your Library": Riflay playlists, YouTube Music (liked songs and
 /// playlists, marked with a cloud) and the files on this device, in one list.
 /// Used both as the phone tab and (with [dense]) inside the desktop sidebar.
 class LibraryList extends StatefulWidget {
@@ -389,7 +389,7 @@ class _LibraryRow extends StatelessWidget {
                                   CollectionKind.allSongs ||
                                   CollectionKind.youtube ||
                                   CollectionKind.remote => 'Playlist • ${collection.subtitle}',
-                                  CollectionKind.playlist => 'Playlist • OpenMusic • ${collection.subtitle}',
+                                  CollectionKind.playlist => 'Playlist • Riflay • ${collection.subtitle}',
                                   CollectionKind.album => 'Album • ${collection.subtitle}',
                                   CollectionKind.artist => 'Artist',
                                 },

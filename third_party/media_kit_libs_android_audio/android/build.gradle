@@ -38,7 +38,7 @@ android {
         minSdkVersion 16
     }
 
-    // OpenMusic: libmpv.so comes from src/main/jniLibs (tool/build_libmpv_android.sh, with the
+    // Riflay: libmpv.so comes from src/main/jniLibs (tool/build_libmpv_android.sh, with the
     // FFmpeg filters the app uses) instead of media_kit's downloaded jars; the jars' helper
     // library is kept there as it was.
 }

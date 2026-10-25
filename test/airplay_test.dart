@@ -3,7 +3,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:openmusic/services/airplay.dart';
+import 'package:riflay/services/airplay.dart';
 
 /// A shairport-sync built for classic AirPlay (`--without-airplay-2`, with
 /// `--with-tinysvcmdns` and `--with-stdout`): the speaker these tests send to.

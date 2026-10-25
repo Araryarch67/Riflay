@@ -6,7 +6,7 @@
 #include <cstddef>
 #include <cstdint>
 
-namespace openmusic_asio {
+namespace riflay_asio {
 
 // The ASIO sample types a host has to write (values from asio.h).
 enum class AsioSampleType : int {
@@ -31,4 +31,4 @@ int SampleBytes(AsioSampleType type);
 // take (e.g. the low 8 bits for a 24-bit device).
 void Encode(AsioSampleType type, const int32_t* src, size_t stride, size_t frames, void* dst);
 
-}  // namespace openmusic_asio
+}  // namespace riflay_asio

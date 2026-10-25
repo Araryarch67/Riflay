@@ -3,7 +3,7 @@
 # Run `pod lib lint media_kit_libs_ios_audio.podspec` to validate before publishing.
 #
 Pod::Spec.new do |s|
-  # OpenMusic: Mpv.xcframework is OpenMusic's own libmpv (tool/build_libmpv_apple.sh: the FFmpeg
+  # Riflay: Mpv.xcframework is Riflay's own libmpv (tool/build_libmpv_apple.sh: the FFmpeg
   # filters the app uses) instead of media_kit's download, which has none. Built here when missing.
   here = File.realpath(__dir__)
   unless File.exist?(File.join(here, 'Frameworks', 'Mpv.xcframework'))

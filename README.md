@@ -1,22 +1,23 @@
 <div align="center">
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="assets/icon/openmusic-transparent.svg">
-  <img src="assets/icon/openmusic-transparent-light.svg" width="128" height="128" alt="OpenMusic logo">
+  <source media="(prefers-color-scheme: dark)" srcset="assets/icon/riflay-transparent.svg">
+  <img src="assets/icon/riflay-transparent-light.svg" width="128" height="128" alt="Riflay logo">
 </picture>
 
-# OpenMusic
+# Riflay
 
 **Your own music and YouTube Music in one player, with hi-fi audio.**
 
 A free, open-source music player for Linux, Windows, macOS, Android and iOS, built with Flutter.
+Formerly OpenMusic.
 
 [![License: AGPL v3](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)](LICENSE)
 [![Flutter](https://img.shields.io/badge/Flutter-3-02569B?logo=flutter&logoColor=white)](https://flutter.dev)
 ![Platforms](https://img.shields.io/badge/platforms-Linux%20%7C%20Windows%20%7C%20macOS%20%7C%20Android%20%7C%20iOS-555)
 [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
-![OpenMusic home](docs/screenshots/home.webp)
+![Riflay home](docs/screenshots/home.webp)
 
 </div>
 
@@ -79,8 +80,8 @@ A free, open-source music player for Linux, Windows, macOS, Android and iOS, bui
 You need the [Flutter SDK](https://docs.flutter.dev/get-started/install) (stable channel), plus the usual desktop toolchain (Linux: `clang`, `cmake`, `ninja`, `pkg-config`, GTK 3 and `libmpv` headers).
 
 ```sh
-git clone https://github.com/Araryarch67/OpenMusic.git
-cd OpenMusic
+git clone https://github.com/Araryarch67/Riflay.git
+cd Riflay
 flutter pub get
 flutter run -d linux          # or: windows, macos, android, ios
 flutter build linux --release # build/linux/x64/release/bundle/
@@ -92,13 +93,13 @@ After pulling changes that add packages, quit and run `flutter run` again; hot r
 
 ## YouTube Music
 
-Everything public works without an account. **Sign in with Google** opens Google's own sign-in page, in its own window on Linux and inside the app elsewhere. Once it lands on YouTube Music, the session is kept in the app's private storage on your device. OpenMusic never sees your password, and nothing is sent anywhere except to YouTube Music itself.
+Everything public works without an account. **Sign in with Google** opens Google's own sign-in page, in its own window on Linux and inside the app elsewhere. Once it lands on YouTube Music, the session is kept in the app's private storage on your device. Riflay never sees your password, and nothing is sent anywhere except to YouTube Music itself.
 
 Changes you make (likes, playlists) go through YouTube Music's own API, so they show up in the official apps too.
 
 ## Audio
 
-Every platform plays through [libmpv](https://mpv.io), with OpenMusic's own build of it where the stock one lacks filters (Windows, Android, macOS, iOS; see `tool/build_libmpv_*.sh`). So the sound settings are the same everywhere:
+Every platform plays through [libmpv](https://mpv.io), with Riflay's own build of it where the stock one lacks filters (Windows, Android, macOS, iOS; see `tool/build_libmpv_*.sh`). So the sound settings are the same everywhere:
 
 | | |
 |---|---|
@@ -127,7 +128,7 @@ Nothing else needs installing. FFmpeg (for the tag editor's MP3 / Ogg / WAV…, 
 
 The macOS app isn't signed by Apple: the first time, open it from System Settings › Privacy & Security › **Open Anyway**. The iOS `.ipa` is unsigned too; sideload it with AltStore or Sideloadly.
 
-Debug builds append every Flutter error with its full stack trace to `<app support dir>/errors.log` (on Linux, `~/.local/share/dev.openmusic.openmusic/errors.log`).
+Debug builds append every Flutter error with its full stack trace to `<app support dir>/errors.log` (on Linux, `~/.local/share/dev.riflay.riflay/errors.log`).
 
 ## Contributing
 
@@ -135,7 +136,7 @@ Bug reports, ideas and pull requests are welcome. Start with **[CONTRIBUTING.md]
 
 ## Acknowledgements
 
-OpenMusic stands on the shoulders of:
+Riflay stands on the shoulders of:
 
 - [mpv](https://mpv.io) / [media_kit](https://github.com/media-kit/media-kit) and [just_audio](https://github.com/ryanheise/just_audio) for playback
 - [FFmpeg](https://ffmpeg.org) for decoding, filters and resampling (with [SoX's resampler](https://sourceforge.net/projects/soxr/))
@@ -145,11 +146,11 @@ OpenMusic stands on the shoulders of:
 - [audio_metadata_reader](https://github.com/ClementBeal/audio_metadata_reader) for tags
 - Bill Gardner and Keith Martin's [KEMAR HRTF measurements](https://sound.media.mit.edu/resources/KEMAR.html) (MIT Media Lab) for Virtual speakers
 
-OpenMusic is not affiliated with YouTube, Google or Discord.
+Riflay is not affiliated with YouTube, Google or Discord.
 
 ## License
 
-OpenMusic is free software: you can redistribute it and/or modify it under the terms of the **GNU Affero General Public License v3.0** as published by the Free Software Foundation. See [LICENSE](LICENSE).
+Riflay is free software: you can redistribute it and/or modify it under the terms of the **GNU Affero General Public License v3.0** as published by the Free Software Foundation. See [LICENSE](LICENSE).
 
 If you run a modified version for others over a network, the AGPL asks you to offer them its source too.
 

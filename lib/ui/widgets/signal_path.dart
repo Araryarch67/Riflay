@@ -155,7 +155,7 @@ class _SignalPathSheet extends StatelessWidget {
             ? (
                 'DoP is being changed',
                 Theme.of(context).colorScheme.error,
-                'Something between OpenMusic and your DAC changes the samples, so the DAC can\'t see the DSD. '
+                'Something between Riflay and your DAC changes the samples, so the DAC can\'t see the DSD. '
                     'Choose a direct output in Settings › Advanced audio.',
               )
             : p.bitPerfect
@@ -164,7 +164,7 @@ class _SignalPathSheet extends StatelessWidget {
             ? (
                 'Resampled by the system mixer',
                 AppColors.textPrimary,
-                'OpenMusic leaves the sound alone, but the system mixer runs your DAC at '
+                'Riflay leaves the sound alone, but the system mixer runs your DAC at '
                     '${SignalPath.formatRate(p.dac!.rate)} instead of ${SignalPath.formatRate(p.inRate)}. '
                     'Turn on Bit-perfect mode in Settings › Advanced audio to send it as it is.',
               )
@@ -172,7 +172,7 @@ class _SignalPathSheet extends StatelessWidget {
             ? (
                 'Lossless to the system mixer',
                 AppColors.textPrimary,
-                'Nothing in OpenMusic changes the sound, but the system mixer may resample it. '
+                'Nothing in Riflay changes the sound, but the system mixer may resample it. '
                     '${AudioEngine.hasExclusiveMode ? 'For bit-perfect, turn on Bit-perfect mode and Exclusive mode in Settings › Advanced audio (other apps go silent meanwhile).' : 'For bit-perfect, turn on Bit-perfect mode in Settings › Advanced audio.'}',
               )
             : p.isDsd

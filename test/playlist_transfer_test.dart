@@ -3,8 +3,8 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
-import 'package:openmusic/models/track.dart';
-import 'package:openmusic/services/playlist_transfer.dart';
+import 'package:riflay/models/track.dart';
+import 'package:riflay/services/playlist_transfer.dart';
 
 /// Serves canned pages by URL; nothing leaves the machine.
 PlaylistTransfer fake(Map<String, http.Response Function()> pages) => PlaylistTransfer(
