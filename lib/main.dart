@@ -58,6 +58,8 @@ Future<void> main() async {
     );
   }
 
+  await Appearance.instance.applyWindow();
+
   final controller = PlayerController();
   await controller.load();
   await MediaSession.start(controller);

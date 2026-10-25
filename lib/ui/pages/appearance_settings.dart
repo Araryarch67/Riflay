@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -107,7 +109,7 @@ class AppearanceSettings extends StatelessWidget {
             _SliderTile(
               icon: Icons.opacity_rounded,
               title: 'Window opacity',
-              subtitle: 'Below 100% the desktop shows through; compositors that blur windows (Hyprland, KDE) blur it',
+              subtitle: Platform.isAndroid ? 'Below 100% your wallpaper shows through' : 'Below 100% the desktop shows through, blurred where the system can (Windows 11, macOS, Hyprland, KDE)',
               value: look.windowOpacity,
               min: 0.5,
               max: 1,
