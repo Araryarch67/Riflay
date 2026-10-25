@@ -48,7 +48,7 @@ Filename: "{app}\riflay.exe"; Description: "{cm:LaunchProgram,Riflay}"; Flags: n
 
 [Code]
 const
-  // OpenMusic, as Riflay was called before 2.0, installed under an id of its own.
+  // OpenMusic, as Riflay was called before (up to 1.11.1), installed under an id of its own.
   OldAppUninstallKey = 'Software\Microsoft\Windows\CurrentVersion\Uninstall\{6F1D2C7E-4B9A-4E8B-9E7A-0C3F5B2A9D41}_is1';
 
 // OpenMusic goes first, so the Start menu doesn't keep both. Its settings, library

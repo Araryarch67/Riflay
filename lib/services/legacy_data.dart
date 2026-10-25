@@ -5,7 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
-/// Riflay was called OpenMusic before 2.0, under other app ids, so its files
+/// Riflay was called OpenMusic (up to 1.11.1), under other app ids, so its files
 /// live in other folders. On a computer, Riflay's first start brings them
 /// over: settings, library, playlists, the YouTube Music sign-in, the room
 /// correction file and the plugins project are copied, and the downloads
