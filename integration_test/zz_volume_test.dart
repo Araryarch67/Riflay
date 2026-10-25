@@ -21,11 +21,11 @@ import 'package:integration_test/integration_test.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:just_audio_media_kit/just_audio_media_kit.dart';
 import 'package:media_kit/media_kit.dart' show NativePlayer;
-import 'package:openmusic/main.dart';
-import 'package:openmusic/models/track.dart';
-import 'package:openmusic/services/appearance.dart';
-import 'package:openmusic/services/player_controller.dart';
-import 'package:openmusic/ui/widgets/controls.dart';
+import 'package:riflay/main.dart';
+import 'package:riflay/models/track.dart';
+import 'package:riflay/services/appearance.dart';
+import 'package:riflay/services/player_controller.dart';
+import 'package:riflay/ui/widgets/controls.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// [seconds] of a 1 kHz sine at −6 dBFS, 16-bit stereo 48 kHz.
@@ -352,7 +352,7 @@ void main() {
   testWidgets('volume controls, the level kept for next time, and the ⋯ menu', (tester) async {
     final c = PlayerController();
     await c.load();
-    await tester.pumpWidget(OpenMusicApp(controller: c));
+    await tester.pumpWidget(RiflayApp(controller: c));
     await tester.pump(const Duration(seconds: 2));
 
     final slider = find.descendant(of: find.byType(VolumeSlider), matching: find.byType(Slider));
