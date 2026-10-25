@@ -233,6 +233,8 @@ class _IpcConnection {
         0,
       ).timeout(const Duration(seconds: 2));
       final conn = _IpcConnection._(socket.add, socket.destroy);
+      // A write after Discord hung up fails here, not in send(): listen does the cleanup.
+      socket.done.ignore();
       socket.listen(conn._onData, onDone: () => conn._onClosed(onClosed), onError: (_) => conn._onClosed(onClosed));
       return conn;
     } catch (_) {

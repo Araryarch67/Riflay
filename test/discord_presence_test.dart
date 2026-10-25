@@ -49,6 +49,7 @@ class FakeDiscord {
     final server = await ServerSocket.bind(InternetAddress(path, type: InternetAddressType.unix), 0);
     final fake = FakeDiscord._(path, server.close);
     server.listen((client) {
+      client.done.ignore();
       var buf = <int>[];
       client.listen((data) {
         buf = [...buf, ...data];
@@ -61,7 +62,8 @@ class FakeDiscord {
           fake._frame(op, json);
           client.add(_reply(op, json));
         }
-      });
+        // The app may already have hung up (dispose, pause): a late reply then fails to write.
+      }, onError: (Object _) {});
     });
     return fake;
   }
