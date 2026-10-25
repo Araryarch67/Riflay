@@ -164,10 +164,7 @@ abstract final class FlacStream {
       extra++;
     }
     final lead = (0xFF00 >> (extra + 1)) & 0xFF;
-    return [
-      lead | (n >> (6 * extra)),
-      for (var i = extra - 1; i >= 0; i--) 0x80 | ((n >> (6 * i)) & 0x3F),
-    ];
+    return [lead | (n >> (6 * extra)), for (var i = extra - 1; i >= 0; i--) 0x80 | ((n >> (6 * i)) & 0x3F)];
   }
 
   static final _crc8Table = Uint8List.fromList([

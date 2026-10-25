@@ -1,3 +1,7 @@
+// StreamAudioSource.request is just_audio's documented byte-stream API (see
+// youtube_audio_source.dart); AirPlay reads a song's bytes through it.
+// ignore_for_file: experimental_member_use
+
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -6,10 +10,12 @@ import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
+import 'package:just_audio/just_audio.dart';
 import 'package:multicast_dns/multicast_dns.dart';
 import 'package:pointycastle/export.dart' show AESEngine, CBCBlockCipher, KeyParameter, ParametersWithIV;
 
 import 'ffmpeg.dart';
+import 'pcm_decoder.dart';
 
 /// A speaker that takes classic AirPlay (RAOP): AirPort Express, AirPlay
 /// receivers in amplifiers and speakers, shairport-sync.
@@ -217,13 +223,15 @@ Uint8List _rsaOaep(Uint8List message, math.Random random) {
   return Uint8List.fromList([for (var i = 0; i < k; i++) int.parse(c.substring(i * 2, i * 2 + 2), radix: 16)]);
 }
 
-/// Where a song's audio comes from: an FFmpeg input (a path or `pipe:0`
-/// fed by [stdin]), and how far in to start.
+/// Where a song's audio comes from: a file ([path]) or bytes ([source], a
+/// YouTube stream or an SACD song built on the fly), and the slice of it to
+/// play ([start] to [end], in the song).
 class AirPlaySource {
-  const AirPlaySource({required this.input, this.stdin, this.start = Duration.zero, this.end});
+  const AirPlaySource({this.path, this.source, this.start = Duration.zero, this.end})
+    : assert((path == null) != (source == null), 'a path or a source');
 
-  final String input;
-  final Stream<List<int>> Function()? stdin;
+  final String? path;
+  final StreamAudioSource? source;
   final Duration start;
   final Duration? end;
 }
@@ -447,7 +455,7 @@ class AirPlaySession {
 
   AirPlaySource? _source;
   Duration? _duration;
-  Process? _ffmpeg;
+  Future<void> Function()? _stopDecoder;
   int _generation = 0;
 
   bool _playing = false;
@@ -544,8 +552,7 @@ class AirPlaySession {
   Future<void> _flush() async {
     _generation++;
     _playing = false;
-    _ffmpeg?.kill();
-    _ffmpeg = null;
+    _stopDecoding();
     if (_uri != null) {
       await _guard(() => _request('FLUSH', _uri!, headers: {'RTP-Info': 'seq=$_seq;rtptime=$_rtptime'}));
     }
@@ -564,25 +571,55 @@ class AirPlaySession {
     });
   }
 
-  Future<void> _stream(AirPlaySource source, Duration from, int generation) async {
-    final start = source.start + from;
+  /// Stops whatever is decoding the song being sent (null when nothing is).
+  Future<void>? _stopDecoding() {
+    final stop = _stopDecoder;
+    _stopDecoder = null;
+    return stop?.call();
+  }
+
+  /// The song as 44.1 kHz 16-bit stereo, and how to stop producing it: libmpv
+  /// where it can write to a pipe (phones have no ffmpeg), ffmpeg otherwise.
+  Future<(Stream<List<int>>, Future<void> Function())> _decode(AirPlaySource source, Duration start) async {
+    if (MpvPcm.supported) {
+      final input = source.source != null ? PcmInput.stream(source.source!) : PcmInput.file(source.path!);
+      final pcm = await MpvPcm.decode(input, start: start, end: source.end, rate: _rate, bits: 16);
+      return (pcm.data, pcm.cancel);
+    }
     final ffmpeg = await Process.start(await Ffmpeg.executable(), [
       '-hide_banner', '-loglevel', 'error', //
       if (start > Duration.zero) ...['-ss', '${start.inMilliseconds / 1000}'],
-      '-i', source.input,
+      '-i', source.source != null ? 'pipe:0' : source.path!,
       if (source.end != null) ...['-t', '${(source.end! - start).inMilliseconds / 1000}'],
       '-map', '0:a:0', '-f', 's16le', '-ar', '$_rate', '-ac', '2', 'pipe:1',
     ]);
+    ffmpeg.stderr.drain<void>().ignore();
+    if (source.source case final bytes?) {
+      Future(() async {
+        await ffmpeg.stdin.addStream((await bytes.request()).stream);
+        await ffmpeg.stdin.close();
+      }).catchError((Object _) {}).ignore();
+    }
+    return (ffmpeg.stdout, () async => ffmpeg.kill());
+  }
+
+  Future<void> _stream(AirPlaySource source, Duration from, int generation) async {
+    final start = source.start + from;
+    final (pcm, stop) = await _decode(source, start);
     if (generation != _generation) {
-      ffmpeg.kill();
+      await stop();
       return;
     }
-    _ffmpeg = ffmpeg;
-    ffmpeg.stderr.drain<void>().ignore();
-    if (source.stdin case final input?) {
-      ffmpeg.stdin.addStream(input()).then((_) => ffmpeg.stdin.close(), onError: (Object _) {}).ignore();
+    _stopDecoder = stop;
+    try {
+      await _send(pcm, generation);
+    } finally {
+      // Whatever ended the sending (the song, a seek, an error) ends the decoder too.
+      unawaited(stop());
     }
+  }
 
+  Future<void> _send(Stream<List<int>> pcm, int generation) async {
     const packetBytes = _framesPerPacket * 4;
     final pending = BytesBuilder(copy: false);
     final clock = Stopwatch()..start();
@@ -609,7 +646,7 @@ class AirPlaySession {
       frames += pcm.length ~/ 4;
     }
 
-    await for (final chunk in ffmpeg.stdout) {
+    await for (final chunk in pcm) {
       if (generation != _generation) return;
       pending.add(chunk);
       while (pending.length >= packetBytes) {
@@ -674,7 +711,7 @@ class AirPlaySession {
     _closed = true;
     _generation++;
     _playing = false;
-    _ffmpeg?.kill();
+    final stopping = _stopDecoding();
     if (_uri != null && _rtsp != null) {
       try {
         await _request('TEARDOWN', _uri!).timeout(const Duration(seconds: 2));
@@ -687,6 +724,7 @@ class AirPlaySession {
     _control?.close();
     _timing?.close();
     await _rtspReplies.close();
+    await stopping?.timeout(const Duration(seconds: 5), onTimeout: () {});
   }
 }
 

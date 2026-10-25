@@ -1041,7 +1041,7 @@ class PlayerController extends ChangeNotifier {
 
   late final Cast cast = Cast(
     onEnded: _castEnded,
-    airPlay: () => Metadata.hasFfmpeg,
+    airPlay: () => Cast.canConvert,
     onError: (message) {
       _errors.add(message);
       // The device went away: carry on here, from where it was.
@@ -1117,9 +1117,9 @@ class PlayerController extends ChangeNotifier {
     final CastMedia Function(Duration) media;
     final sacd = SacdDisc.isSacdTrack(t) ? SacdDisc.find(t) : null;
     if (sacd != null) {
-      // No renderer plays DSD: FFmpeg turns the song (as DSDIFF) into FLAC.
+      // No renderer plays DSD: the song (as DSDIFF) is converted to FLAC.
       final source = SacdAudioSource(sacd.$1, sacd.$2);
-      media = (from) => CastTranscode(path!, start: from, maxRate: 176400, input: () => source.bytes(0, source.length));
+      media = (from) => CastTranscode(path!, start: from, maxRate: 176400, source: source);
     } else if (path == null) {
       // Most TVs and speakers can't decode Opus, so YouTube songs go as AAC.
       final source = YoutubeAudioSource(t.videoId!, yt: youtube.client, aac: true);
@@ -1127,8 +1127,8 @@ class PlayerController extends ChangeNotifier {
     } else {
       final ext = path.split('.').last.toLowerCase();
       final direct = _castMimes[ext];
-      if ((direct != null && !t.isCueTrack) || !Metadata.hasFfmpeg) {
-        // Without ffmpeg, the device may still know the format.
+      if ((direct != null && !t.isCueTrack) || !Cast.canConvert) {
+        // Without a decoder, the device may still know the format.
         media = (_) => CastFile(path, direct ?? 'audio/${ext == 'ogg' || ext == 'oga' ? 'ogg' : ext}');
       } else {
         final dsd = ext == 'dsf' || ext == 'dff';

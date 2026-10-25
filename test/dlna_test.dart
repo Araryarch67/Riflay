@@ -8,6 +8,7 @@ import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:just_audio/just_audio.dart';
+import 'package:media_kit/media_kit.dart';
 import 'package:riflay/services/cast.dart';
 import 'package:riflay/services/dlna.dart';
 import 'package:riflay/services/youtube_stream.dart';
@@ -43,6 +44,8 @@ Future<void> _until(bool Function() done, {Duration timeout = const Duration(sec
 }
 
 void main() {
+  setUpAll(MediaKit.ensureInitialized);
+
   group('protocol', () {
     test('search replies: renderers only, with an http LOCATION', () {
       const reply =
@@ -244,6 +247,38 @@ void main() {
       // The renderer counts from the new start: 0:00:01 there is 0:00:04 in the song.
       tv.position = const Duration(seconds: 1);
       await _until(() => cast.position >= const Duration(seconds: 4));
+    });
+
+    test('bytes from a source (an SACD song) are converted to FLAC too, resampled above maxRate', () async {
+      final wav = '${dir.path}/src.wav';
+      final made = await Process.run('ffmpeg', [
+        '-loglevel', 'error', '-f', 'lavfi', '-i', 'sine=d=3:sample_rate=96000', '-ac', '2', wav, //
+      ]);
+      if (made.exitCode != 0) return markTestSkipped('ffmpeg not available');
+      final source = _BytesSource(File(wav).readAsBytesSync());
+      await cast.load(
+        CastItem(
+          key: 'bytes',
+          media: (from) => CastTranscode('unused', start: from, maxRate: 48000, source: source),
+          title: 'From bytes',
+          duration: const Duration(seconds: 3),
+        ),
+      );
+      final f = File('${dir.path}/bytes.flac')..writeAsBytesSync(tv.fetched!);
+      final probe = await Process.run('ffprobe', [
+        '-v',
+        'error',
+        '-show_entries',
+        'stream=codec_name,sample_rate,channels,bits_per_raw_sample',
+        '-of',
+        'csv=p=0',
+        f.path, //
+      ]);
+      expect((probe.stdout as String).trim(), startsWith('flac,48000,2'));
+      final pcm = await Process.run('ffmpeg', [
+        '-v', 'error', '-i', f.path, '-f', 's16le', '-ac', '1', '-ar', '1000', '-', //
+      ], stdoutEncoding: null);
+      expect((pcm.stdout as List<int>).length ~/ 2, closeTo(3000, 100), reason: 'the whole song');
     });
 
     test('a renderer that stops answering ends the session', () async {
