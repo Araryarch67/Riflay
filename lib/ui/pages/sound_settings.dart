@@ -3,8 +3,10 @@ import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../services/audio_engine.dart';
+import '../../services/carla_locator.dart';
 import '../../services/player_controller.dart';
 import '../shell_scope.dart';
 import '../theme.dart';
@@ -258,25 +260,42 @@ class AdvancedAudioSettings extends StatelessWidget {
                         value: audio.exclusive,
                         onChanged: audio.setExclusive,
                       ),
-                    if (AudioEngine.hasPlugins)
-                      SettingTile(
-                        icon: Icons.extension_outlined,
-                        title: const Text('Audio plugins'),
-                        subtitle: Text(
-                          locked ? 'Off while bit-perfect mode is on' : 'VST, LV2 and CLAP plugins, set up in Carla: add them there and save, and they play here',
-                          style: muted,
+                    if (AudioEngine.pluginBridge != null)
+                      if (AudioEngine.hasPlugins)
+                        SettingTile(
+                          icon: Icons.extension_outlined,
+                          title: const Text('Audio plugins'),
+                          subtitle: Text(
+                            locked ? 'Off while bit-perfect mode is on' : 'VST, LV2 and CLAP plugins, set up in Carla: add them there and save, and they play here',
+                            style: muted,
+                          ),
+                          control: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              TextButton(
+                                onPressed: locked ? null : audio.editPlugins,
+                                child: const Text('Edit in Carla'),
+                              ),
+                              Switch(value: audio.plugins && !locked, onChanged: locked ? null : audio.setPlugins),
+                            ],
+                          ),
+                        )
+                      else
+                        SettingTile(
+                          icon: Icons.extension_outlined,
+                          title: const Text('Audio plugins'),
+                          subtitle: Text(
+                            Platform.isWindows
+                                ? 'Needs Carla, a free program that holds your VST, LV2 and CLAP plugins. Download it, unzip it in your '
+                                      'Downloads or Program Files folder, then reopen this page.'
+                                : 'Needs Carla, a free program that holds your VST, LV2 and CLAP plugins. Install it, then reopen this page.',
+                            style: muted,
+                          ),
+                          control: TextButton(
+                            onPressed: () => launchUrl(Uri.parse(CarlaLocator.downloadPage)),
+                            child: const Text('Install Carla'),
+                          ),
                         ),
-                        control: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            TextButton(
-                              onPressed: locked ? null : audio.editPlugins,
-                              child: const Text('Edit in Carla'),
-                            ),
-                            Switch(value: audio.plugins && !locked, onChanged: locked ? null : audio.setPlugins),
-                          ],
-                        ),
-                      ),
                     SettingTile(
                       icon: Icons.surround_sound_rounded,
                       title: const Text('Room correction'),
