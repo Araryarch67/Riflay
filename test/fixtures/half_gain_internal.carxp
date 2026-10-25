@@ -1,0 +1,17 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!DOCTYPE CARLA-PROJECT>
+<CARLA-PROJECT VERSION='2.5'>
+ <!-- Carla's own "Audio Gain" (stereo) at 0.5: -6 dB. Needs no plugin installed, so it runs on a plain Carla
+      (the Windows and macOS checks); half_gain.carxp does the same with LSP's LV2 limiter. -->
+ <Plugin>
+  <Info>
+   <Type>Internal</Type>
+   <Name>Audio Gain (Stereo)</Name>
+   <Label>audiogain_s</Label>
+  </Info>
+  <Data>
+   <Active>Yes</Active>
+   <Parameter><Index>0</Index><Name>Gain</Name><Value>0.5</Value></Parameter>
+  </Data>
+ </Plugin>
+</CARLA-PROJECT>

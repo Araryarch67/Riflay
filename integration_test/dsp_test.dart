@@ -10,7 +10,6 @@
 import 'dart:async';
 import 'dart:io';
 import 'dart:math' as math;
-import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
@@ -22,94 +21,7 @@ import 'package:riflay/services/player_controller.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// A 16-bit stereo 48 kHz WAV of [frames] frames; [sample] gives (left, right) in −1..1.
-/// [float]: 32-bit float instead, which holds samples past full scale (as Opus and AAC decode).
-File _wav(String path, int frames, (double, double) Function(int i) sample, {bool float = false}) {
-  final width = float ? 4 : 2;
-  final data = ByteData(44 + frames * 2 * width);
-  void tag(int at, String s) {
-    for (var i = 0; i < s.length; i++) {
-      data.setUint8(at + i, s.codeUnitAt(i));
-    }
-  }
-
-  tag(0, 'RIFF');
-  data.setUint32(4, 36 + frames * 2 * width, Endian.little);
-  tag(8, 'WAVE');
-  tag(12, 'fmt ');
-  data
-    ..setUint32(16, 16, Endian.little)
-    ..setUint16(20, float ? 3 : 1, Endian.little)
-    ..setUint16(22, 2, Endian.little)
-    ..setUint32(24, 48000, Endian.little)
-    ..setUint32(28, 48000 * 2 * width, Endian.little)
-    ..setUint16(32, 2 * width, Endian.little)
-    ..setUint16(34, 8 * width, Endian.little);
-  tag(36, 'data');
-  data.setUint32(40, frames * 2 * width, Endian.little);
-  for (var i = 0; i < frames; i++) {
-    final (l, r) = sample(i);
-    final at = 44 + i * 2 * width;
-    if (float) {
-      data
-        ..setFloat32(at, l, Endian.little)
-        ..setFloat32(at + 4, r, Endian.little);
-    } else {
-      data
-        ..setInt16(at, (l * 32767).round(), Endian.little)
-        ..setInt16(at + 2, (r * 32767).round(), Endian.little);
-    }
-  }
-  return File(path)..writeAsBytesSync(data.buffer.asUint8List());
-}
-
-/// What mpv wrote: its rate, each channel's RMS in dBFS over the second half
-/// (what was filtered before a change may still sit in the output's buffer),
-/// and the peak there, in dBFS.
-({int rate, List<double> db, double peak}) _measure(File wav) {
-  final b = ByteData.sublistView(wav.readAsBytesSync());
-  var at = 12;
-  int? format, bits, channels, rate;
-  while (at + 8 <= b.lengthInBytes) {
-    final id = String.fromCharCodes(Uint8List.sublistView(b, at, at + 4));
-    final size = b.getUint32(at + 4, Endian.little);
-    if (id == 'fmt ') {
-      format = b.getUint16(at + 8, Endian.little);
-      channels = b.getUint16(at + 10, Endian.little);
-      rate = b.getUint32(at + 12, Endian.little);
-      bits = b.getUint16(at + 22, Endian.little);
-      if (format == 0xFFFE) format = b.getUint16(at + 32, Endian.little); // extensible: the subformat GUID
-    } else if (id == 'data') {
-      final end = size == 0 || size == 0xFFFFFFFF ? b.lengthInBytes : math.min(at + 8 + size, b.lengthInBytes);
-      final step = bits! ~/ 8, frame = step * channels!;
-      final start = at + 8 + (end - at - 8) ~/ 2 ~/ frame * frame;
-      final sums = List.filled(channels, 0.0);
-      var n = 0;
-      var peak = 0.0;
-      for (var i = start; i + frame <= end; i += frame, n++) {
-        for (var c = 0; c < channels; c++) {
-          final p = i + c * step;
-          final v = switch ((format, bits)) {
-            (3, 32) => b.getFloat32(p, Endian.little),
-            (3, 64) => b.getFloat64(p, Endian.little),
-            (1, 16) => b.getInt16(p, Endian.little) / 32768,
-            (1, 32) => b.getInt32(p, Endian.little) / 2147483648,
-            _ => throw StateError('unexpected WAV format $format/$bits'),
-          };
-          sums[c] += v * v;
-          peak = math.max(peak, v.abs());
-        }
-      }
-      return (
-        rate: rate!,
-        db: [for (final s in sums) s == 0 ? -200.0 : 10 * math.log(s / n) / math.ln10],
-        peak: peak == 0 ? -200.0 : 20 * math.log(peak) / math.ln10,
-      );
-    }
-    at += 8 + size + (size & 1);
-  }
-  throw StateError('no data in ${wav.path}');
-}
+import 'wav_util.dart';
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
@@ -122,10 +34,10 @@ void main() {
     final dir = ((await getTemporaryDirectory())..createSync(recursive: true)).createTempSync('om-dsp');
     addTearDown(() => dir.deleteSync(recursive: true));
     // 440 Hz on the left only, at −6 dBFS (−9 dBFS RMS).
-    final song = _wav('${dir.path}/left.wav', 48000 * 4, (i) => (0.5 * math.sin(2 * math.pi * 440 * i / 48000), 0));
+    final song = writeWav('${dir.path}/left.wav', 48000 * 4, (i) => (0.5 * math.sin(2 * math.pi * 440 * i / 48000), 0));
     // A unit impulse, in a folder whose name FFmpeg's graph syntax would take apart unescaped.
     final odd = Directory("${dir.path}/O'Brien [IR], a;b")..createSync();
-    final dirac = _wav('${odd.path}/dirac.wav', 480, (i) => i == 0 ? (1, 1) : (0, 0));
+    final dirac = writeWav('${odd.path}/dirac.wav', 480, (i) => i == 0 ? (1, 1) : (0, 0));
 
     final c = PlayerController();
     await c.load();
@@ -188,7 +100,7 @@ void main() {
       }
       await step('stop after', c.player.stop); // closes (and finishes) the WAV
       await tester.pump(const Duration(milliseconds: 300));
-      final m = _measure(File(out));
+      final m = measureWav(File(out));
       // ignore: avoid_print
       print('DSP $name: ${m.db.map((d) => d.toStringAsFixed(2)).join(' / ')} dB at ${m.rate} Hz, ${stages[name]}');
       return m;
@@ -239,7 +151,7 @@ void main() {
     if (AudioEngine.hasExclusiveMode) {
       // Exclusive mode: mpv turns the sound into the DAC's integer format itself, where a sample past
       // full scale would be cut off flat. A tone 3.5 dB past it, as a loud song decoded from Opus can be.
-      final hot = _wav(
+      final hot = writeWav(
         '${dir.path}/hot.wav',
         48000 * 4,
         (i) => (1.5 * math.sin(2 * math.pi * 440 * i / 48000), 0),

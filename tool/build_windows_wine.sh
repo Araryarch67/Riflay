@@ -114,6 +114,9 @@ x86_64-w64-mingw32-g++ -municode -mwindows -static $([[ -n ${DEBUG_SYMBOLS:-} ]]
 libmpv=$project/windows/libmpv/libmpv-2.dll
 [[ -f $libmpv ]] || { echo "missing $libmpv: run tool/build_libmpv_windows.sh" >&2; exit 1; }
 cp "$engine/windows-x64-release/flutter_windows.dll" "$libmpv" "$out/"
+# The audio plugins bridge (windows/CMakeLists.txt builds it with MSVC).
+x86_64-w64-mingw32-g++ -shared -std=c++17 -O2 -Wall -Werror -static -s \
+  -o "$out/riflay_carla.dll" "$project/linux/carla_bridge/riflay_carla.cc"
 cp "$work/app.so" "$engine/linux-x64/icudtl.dat" "$out/data/"  # ICU data is the same file on every OS
 rm -rf "$out/data/flutter_assets"
 cp -r "$work/flutter_assets" "$out/data/flutter_assets"

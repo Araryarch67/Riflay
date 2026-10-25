@@ -1,26 +1,42 @@
-// A LADSPA plugin that runs the user's audio plugins (VST2, LV2, CLAP, ...)
-// through Carla, so they can sit in mpv's filter chain like the equalizer:
+// A LADSPA plugin that runs the user's audio plugins (VST2, VST3, LV2, CLAP,
+// ...) through Carla, so they can sit in mpv's filter chain like the equalizer:
 //
 //   af=lavfi=[ladspa=file=<bundle>/lib/libriflay_carla.so:plugin=riflay_carla]
 //
 // Each instance starts Carla's "rack" (a native plugin that hosts plugins in
 // series) and loads the project the user made in Carla's own window:
-// $RIFLAY_PLUGINS, or $XDG_CONFIG_HOME/riflay/plugins.carxp.
+// $RIFLAY_PLUGINS, or the app's folder (Linux $XDG_CONFIG_HOME/riflay,
+// macOS ~/Library/Application Support/dev.riflay.riflay, Windows
+// %APPDATA%\dev.riflay\riflay) + plugins.carxp.
 //
-// Carla is loaded with dlopen when an instance starts, so neither building
+// One source for Linux (.so), macOS (.dylib) and Windows (.dll, mingw). Carla
+// is loaded when an instance starts (dlopen / LoadLibrary), so neither building
 // nor running the app needs it; without it (or without a project) the audio
-// passes through untouched. Only the few Carla declarations used are
+// passes through untouched. Where Carla lives: $RIFLAY_CARLA_LIBS, the folder
+// named in carla_dir.txt next to the project (the app writes it where Carla
+// has no fixed place, Windows), then the usual install places. Only the few Carla declarations used are
 // repeated below (their layout is fixed by Carla's ABI, CarlaNative.h).
 
+#ifdef _WIN32
+#include <windows.h>
+#else
 #include <dlfcn.h>
+#endif
 #include <sys/stat.h>
 
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <fstream>
 #include <string>
 #include <vector>
+
+#ifdef _WIN32
+#define RIFLAY_EXPORT __declspec(dllexport)
+#else
+#define RIFLAY_EXPORT __attribute__((visibility("default")))
+#endif
 
 // ── LADSPA (ladspa.h, version 1.1) ─────────────────────────────────────────
 
@@ -132,6 +148,60 @@ namespace {
 
 constexpr uint32_t kBlock = 4096;
 
+#ifdef _WIN32
+constexpr char kSep = '\\';
+constexpr const char* kLibExt = ".dll";
+void* openLib(const std::string& path) {
+  std::string p = path;
+  for (char& c : p) {
+    if (c == '/') c = '\\';
+  }
+  // The altered search path lets Carla's own DLLs resolve from its folder.
+  return reinterpret_cast<void*>(LoadLibraryExA(p.c_str(), nullptr, LOAD_WITH_ALTERED_SEARCH_PATH));
+}
+void* symbol(void* lib, const char* name) {
+  return reinterpret_cast<void*>(GetProcAddress(static_cast<HMODULE>(lib), name));
+}
+bool fileExists(const std::string& path) {
+  // UTF-8 in, since the user's name may not be ASCII.
+  const int n = MultiByteToWideChar(CP_UTF8, 0, path.c_str(), -1, nullptr, 0);
+  if (n <= 0) return false;
+  std::wstring w(static_cast<size_t>(n), L'\0');
+  MultiByteToWideChar(CP_UTF8, 0, path.c_str(), -1, &w[0], n);
+  return GetFileAttributesW(w.c_str()) != INVALID_FILE_ATTRIBUTES;
+}
+#else
+constexpr char kSep = '/';
+#ifdef __APPLE__
+constexpr const char* kLibExt = ".dylib";
+#else
+constexpr const char* kLibExt = ".so";
+#endif
+void* openLib(const std::string& path) { return dlopen(path.c_str(), RTLD_NOW | RTLD_GLOBAL); }
+void* symbol(void* lib, const char* name) { return dlsym(lib, name); }
+bool fileExists(const std::string& path) {
+  struct stat st;
+  return stat(path.c_str(), &st) == 0;
+}
+#endif
+
+std::string env(const char* name) {
+  const char* v = getenv(name);
+  return v ? v : "";
+}
+
+// The folder the project, and carla_dir.txt, live in.
+std::string appFolder() {
+#if defined(_WIN32)
+  return env("APPDATA") + "\\dev.riflay\\riflay";
+#elif defined(__APPLE__)
+  return env("HOME") + "/Library/Application Support/dev.riflay.riflay";
+#else
+  const std::string x = env("XDG_CONFIG_HOME");
+  return (!x.empty() ? x : env("HOME") + "/.config") + "/riflay";
+#endif
+}
+
 struct CarlaLib {
   const NativePluginDescriptor* (*rack)() = nullptr;
   CarlaHostHandle (*hostHandle)(const NativePluginDescriptor*, NativePluginHandle) = nullptr;
@@ -147,29 +217,47 @@ const CarlaLib& carla() {
   static CarlaLib lib = [] {
     CarlaLib l;
     std::vector<std::string> dirs;
-    if (const char* d = getenv("RIFLAY_CARLA_LIBS")) dirs.emplace_back(d);
+    if (const std::string d = env("RIFLAY_CARLA_LIBS"); !d.empty()) dirs.push_back(d);
+    {
+      std::ifstream f(appFolder() + kSep + "carla_dir.txt");
+      std::string d;
+      if (f && std::getline(f, d)) {
+        while (!d.empty() && (d.back() == '\r' || d.back() == '\n' || d.back() == ' ')) d.pop_back();
+        if (!d.empty()) dirs.push_back(d);
+      }
+    }
+#if defined(_WIN32)
+    for (const char* v : {"ProgramFiles", "LOCALAPPDATA"}) {
+      if (const std::string base = env(v); !base.empty()) dirs.push_back(base + "\\Carla");
+    }
+#elif defined(__APPLE__)
+    dirs.emplace_back("/Applications/Carla.app/Contents/MacOS");
+    dirs.push_back(env("HOME") + "/Applications/Carla.app/Contents/MacOS");
+#else
     for (const char* d : {"/usr/lib/carla", "/usr/lib64/carla", "/usr/local/lib/carla", "/usr/lib/x86_64-linux-gnu/carla"})
       dirs.emplace_back(d);
+#endif
     for (const auto& dir : dirs) {
-      void* native = dlopen((dir + "/libcarla_native-plugin.so").c_str(), RTLD_NOW | RTLD_GLOBAL);
+      void* native = openLib(dir + kSep + "libcarla_native-plugin" + kLibExt);
       if (!native) continue;
-      void* host = dlopen((dir + "/libcarla_host-plugin.so").c_str(), RTLD_NOW | RTLD_GLOBAL);
+      void* host = openLib(dir + kSep + "libcarla_host-plugin" + kLibExt);
       if (!host) continue;
-      l.rack = reinterpret_cast<decltype(l.rack)>(dlsym(native, "carla_get_native_rack_plugin"));
-      l.hostHandle = reinterpret_cast<decltype(l.hostHandle)>(dlsym(native, "carla_create_native_plugin_host_handle"));
-      l.freeHostHandle = reinterpret_cast<decltype(l.freeHostHandle)>(dlsym(native, "carla_host_handle_free"));
-      l.loadProject = reinterpret_cast<decltype(l.loadProject)>(dlsym(host, "carla_load_project"));
-      l.lastError = reinterpret_cast<decltype(l.lastError)>(dlsym(host, "carla_get_last_error"));
-      l.pluginCount = reinterpret_cast<decltype(l.pluginCount)>(dlsym(host, "carla_get_current_plugin_count"));
-      // Carla looks for its resources next to its libraries' share dir.
+      l.rack = reinterpret_cast<decltype(l.rack)>(symbol(native, "carla_get_native_rack_plugin"));
+      l.hostHandle = reinterpret_cast<decltype(l.hostHandle)>(symbol(native, "carla_create_native_plugin_host_handle"));
+      l.freeHostHandle = reinterpret_cast<decltype(l.freeHostHandle)>(symbol(native, "carla_host_handle_free"));
+      l.loadProject = reinterpret_cast<decltype(l.loadProject)>(symbol(host, "carla_load_project"));
+      l.lastError = reinterpret_cast<decltype(l.lastError)>(symbol(host, "carla_get_last_error"));
+      l.pluginCount = reinterpret_cast<decltype(l.pluginCount)>(symbol(host, "carla_get_current_plugin_count"));
+      // Carla's resources: in its own folder (macOS app, Windows zip), or the distro's share folder (Linux).
+      l.resources = dir + kSep + "resources";
+#if !defined(_WIN32) && !defined(__APPLE__)
       for (const char* r : {"/usr/share/carla/resources", "/usr/local/share/carla/resources"}) {
-        struct stat st;
-        if (stat(r, &st) == 0) {
+        if (fileExists(r)) {
           l.resources = r;
           break;
         }
       }
-      if (l.resources.empty()) l.resources = dir + "/resources";
+#endif
       l.ok = l.rack && l.hostHandle && l.loadProject;
       if (l.ok) break;
     }
@@ -180,14 +268,8 @@ const CarlaLib& carla() {
 }
 
 std::string projectPath() {
-  if (const char* p = getenv("RIFLAY_PLUGINS")) return p;
-  std::string base;
-  if (const char* x = getenv("XDG_CONFIG_HOME"); x && *x) {
-    base = x;
-  } else if (const char* h = getenv("HOME")) {
-    base = std::string(h) + "/.config";
-  }
-  return base + "/riflay/plugins.carxp";
+  if (const std::string p = env("RIFLAY_PLUGINS"); !p.empty()) return p;
+  return appFolder() + kSep + "plugins.carxp";
 }
 
 struct Instance {
@@ -217,11 +299,10 @@ LADSPA_Handle instantiate(const LADSPA_Descriptor*, unsigned long rate) {
   auto* in = new Instance;
   in->rate = static_cast<double>(rate);
   in->time.playing = true;
+  const std::string project = projectPath();
+  if (!fileExists(project)) return in;  // nothing set up yet: pass through
   const CarlaLib& lib = carla();
   if (!lib.ok) return in;
-  const std::string project = projectPath();
-  struct stat st;
-  if (stat(project.c_str(), &st) != 0) return in;  // nothing set up yet: pass through
 
   in->hostDesc = NativeHostDescriptor{in,        lib.resources.c_str(), "Riflay", 0,          bufferSize, sampleRate,
                                       isOffline, timeInfo,              writeMidi,   uiParameter, uiProgram,  uiCustom,
@@ -316,6 +397,6 @@ const LADSPA_Descriptor kDescriptor = {
 
 }  // namespace
 
-extern "C" __attribute__((visibility("default"))) const LADSPA_Descriptor* ladspa_descriptor(unsigned long index) {
+extern "C" RIFLAY_EXPORT const LADSPA_Descriptor* ladspa_descriptor(unsigned long index) {
   return index == 0 ? &kDescriptor : nullptr;
 }

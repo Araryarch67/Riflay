@@ -11,6 +11,7 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'carla_locator.dart';
 import 'ios_route.dart';
 import 'linux_alsa.dart';
 import 'usb_dac.dart';
@@ -480,32 +481,17 @@ class AudioEngine extends ChangeNotifier {
   /// run in the filter chain through the bundled LADSPA bridge.
   bool plugins = false;
 
-  /// The bridge in the app bundle (Linux): `lib/libriflay_carla.so`.
-  static String? get pluginBridge {
-    if (!Platform.isLinux) return null;
-    final path = '${File(Platform.resolvedExecutable).parent.path}/lib/libriflay_carla.so';
-    return File(path).existsSync() ? path : null;
-  }
-
-  static const _carlaDirs = [
-    '/usr/lib/carla',
-    '/usr/lib64/carla',
-    '/usr/local/lib/carla',
-    '/usr/lib/x86_64-linux-gnu/carla',
-  ];
+  /// The LADSPA bridge shipped with the app (null where there is none).
+  static String? get pluginBridge => CarlaLocator.bridge;
 
   /// Whether Carla is installed (the bridge loads it when a song starts).
-  static bool get carlaInstalled => _carlaDirs.any((d) => File('$d/libcarla_native-plugin.so').existsSync());
+  static bool get carlaInstalled => CarlaLocator.installed;
 
-  /// Plugins can be offered: Linux, the bridge in the bundle and Carla installed.
+  /// Plugins can run: the bridge in the app and Carla installed.
   static bool get hasPlugins => pluginBridge != null && carlaInstalled;
 
   /// The Carla project the bridge loads (it reads the same place).
-  static String get pluginsProject {
-    final env = Platform.environment;
-    final config = (env['XDG_CONFIG_HOME'] ?? '').isNotEmpty ? env['XDG_CONFIG_HOME']! : '${env['HOME']}/.config';
-    return '$config/riflay/plugins.carxp';
-  }
+  static String get pluginsProject => CarlaLocator.project;
 
   bool get pluginsActive => plugins && !bitPerfect && hasPlugins && File(pluginsProject).existsSync();
 
@@ -526,7 +512,7 @@ class AudioEngine extends ChangeNotifier {
     _projectWatch ??= project.parent.watch().where((e) => e.path == project.path).listen((_) {
       if (pluginsActive) _changed();
     });
-    await Process.start('carla', [project.path], mode: ProcessStartMode.detached);
+    await Process.start(CarlaLocator.executable, [project.path], mode: ProcessStartMode.detached);
     if (!plugins) await setPlugins(true);
   }
 
@@ -1020,7 +1006,7 @@ class AudioEngine extends ChangeNotifier {
         if (preamp < 0) '@preamp:lavfi=[volume=volume=${n(preamp)}dB]',
         '@eq:lavfi=[${bands.where((b) => b.gain.abs() > 0.05).map((b) => 'equalizer=f=${n(b.frequency)}:t=q:w=${n(b.q)}:g=${n(b.gain)}').join(',')}]',
       ],
-      if (pluginsActive) '@plugins:lavfi=[ladspa=file=${pluginBridge!.replaceAll(':', '\\:')}:plugin=riflay_carla]',
+      if (pluginsActive) _lavfi('plugins', 'ladspa=file=${graphPath(pluginBridge!)}:plugin=riflay_carla'),
       if (virtualSpeakersActive) _virtualSpeakersChain,
       if (crossfeedActive) '@crossfeed:lavfi=[crossfeed=strength=${n(0.1 + crossfeed * 0.6)}:range=0.5]',
       // After the stereo stages: what's left is one channel.
