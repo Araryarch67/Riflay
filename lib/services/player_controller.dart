@@ -149,13 +149,51 @@ class PlayerController extends ChangeNotifier {
 
   String? _presenceKey;
 
+  /// "FLAC · 24-bit / 96 kHz" of the current song for the Discord presence, once mpv has it.
+  String? _quality;
+  bool _qualityComplete = false;
+  String? _qualityFor;
+  Timer? _qualityTimer;
+  int _qualityReads = 0;
+
   void _updatePresence({bool force = false}) {
     final track = currentTrack;
+    if (track?.id != _qualityFor) {
+      _quality = null;
+      _qualityComplete = false;
+      _qualityFor = track?.id;
+      _qualityReads = 0;
+      _qualityTimer?.cancel();
+    }
     // Skip no-op updates (playerStateStream fires on every buffering change).
-    final key = '${track?.id}|$isPlaying|$duration';
-    if (key == _presenceKey && !force) return;
-    _presenceKey = key;
-    discord.update(track: track, playing: isPlaying, position: position, duration: duration);
+    final key = '${track?.id}|$isPlaying|$duration|$_quality';
+    if (key != _presenceKey || force) {
+      _presenceKey = key;
+      discord.update(track: track, playing: isPlaying, position: position, duration: duration, quality: _quality);
+    }
+    if (track != null && isPlaying) _watchQuality();
+  }
+
+  /// mpv knows a song's format and bitrate only once it plays (YouTube's bitrate a little later), so
+  /// the signal path is read at 1, 4 and 10 s into a song instead of polled, stopping at the first full label.
+  void _watchQuality() {
+    if (!discord.enabled || !DiscordPresence.supported || !AudioEngine.supported) return;
+    if ((_qualityTimer?.isActive ?? false) || _qualityComplete || _qualityReads >= 3) return;
+    final wait = Duration(seconds: const [1, 3, 6][_qualityReads]);
+    final id = _qualityFor;
+    _qualityTimer = Timer(wait, () async {
+      _qualityReads++;
+      final path = await audio.signalPath();
+      if (id != _qualityFor) return;
+      _qualityComplete = path?.qualityComplete ?? false;
+      final label = path?.qualityText;
+      if (label != null && label != _quality) {
+        _quality = label;
+        _updatePresence(force: true);
+      } else if (isPlaying) {
+        _watchQuality();
+      }
+    });
   }
 
   static const _playlistsKey = 'playlists.v1';
@@ -1170,6 +1208,7 @@ class PlayerController extends ChangeNotifier {
   @override
   void dispose() {
     _disposed = true;
+    _qualityTimer?.cancel();
     // A level set in the last half second is still kept.
     if (_saveVolume?.isActive ?? false) {
       _saveVolume!.cancel();

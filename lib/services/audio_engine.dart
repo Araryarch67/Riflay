@@ -268,6 +268,59 @@ class SignalPath {
     return '$f / ${formatRate(rate)}';
   }
 
+  /// The short quality line shown outside the app (Discord): "FLAC · 24-bit / 96 kHz" for lossless,
+  /// "Opus · 160 kbps" for lossy, "DSD64" for DSD. Unknown parts are left out, never guessed;
+  /// null when not even the format is known. Pure, so it is tested without mpv.
+  static String? qualityLabel({
+    required String codec,
+    String container = '',
+    String inFormat = '',
+    int inRate = 0,
+    int? sourceBits,
+    int? bitrate,
+    int? dopBitRate,
+  }) {
+    // DSD over DoP reaches mpv as PCM, so the DoP rate is what tells.
+    if (dopBitRate != null) return 'DSD${dopBitRate ~/ 44100}';
+    if (codec.startsWith('dsd_')) return inRate > 0 ? 'DSD${inRate * 8 ~/ 44100}' : 'DSD';
+    if (codec == 'dst') return 'DST';
+    if (codec.isEmpty) return null;
+    final name = switch (codec) {
+      'flac' => 'FLAC',
+      'alac' => 'ALAC',
+      'wavpack' => 'WavPack',
+      'ape' => 'APE',
+      'tta' => 'TTA',
+      'opus' => 'Opus',
+      'vorbis' => 'Vorbis',
+      'aac' => 'AAC',
+      'mp3' || 'mp3float' => 'MP3',
+      final c when c.startsWith('pcm_') => container == 'aiff' ? 'AIFF' : 'WAV',
+      final c => c.toUpperCase(),
+    };
+    if (_lossless.contains(codec) || codec.startsWith('pcm_')) {
+      final float = _isFloat(inFormat);
+      final bits = float ? bitsOf(inFormat) : sourceBits ?? bitsOf(inFormat);
+      final parts = [if (bits != null) float ? '$bits-bit float' : '$bits-bit', if (inRate > 0) formatRate(inRate)];
+      return parts.isEmpty ? name : '$name · ${parts.join(' / ')}';
+    }
+    return bitrate == null || bitrate <= 0 ? name : '$name · ${(bitrate / 1000).round()} kbps';
+  }
+
+  /// [qualityLabel] for what is playing now.
+  String? get qualityText => qualityLabel(
+    codec: codec,
+    container: container,
+    inFormat: inFormat,
+    inRate: inRate,
+    sourceBits: sourceBits,
+    bitrate: bitrate,
+    dopBitRate: dopBitRate,
+  );
+
+  /// Nothing more will be learnt: a lossy song's bitrate arrives later than its codec.
+  bool get qualityComplete => lossless || (bitrate ?? 0) > 0;
+
   static String formatRate(int rate) {
     final k = rate / 1000;
     return '${k == k.roundToDouble() ? k.toStringAsFixed(0) : k.toStringAsFixed(1)} kHz';

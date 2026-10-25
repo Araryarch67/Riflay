@@ -164,4 +164,35 @@ void main() {
     presence.dispose();
     await fake.close();
   });
+
+  test('the state line carries the audio quality, and a later update adds it', () async {
+    final fake = await FakeDiscord.start();
+    final presence = DiscordPresence('1561368591297941655', socketPaths: () => [fake.path]);
+    final track = Track.youtube(videoId: 'kJQP7kiw5Fk', title: 'Despacito', artist: 'Luis Fonsi');
+
+    presence.update(track: track, playing: true, position: Duration.zero);
+    await fake.waitForFrames(2);
+    expect(((fake.frames[1].$2['args'] as Map)['activity'] as Map)['state'], 'Luis Fonsi');
+
+    // mpv reports the format a moment after the song starts.
+    presence.update(track: track, playing: true, position: Duration.zero, quality: 'FLAC · 24-bit / 96 kHz');
+    await fake.waitForFrames(3);
+    expect(((fake.frames[2].$2['args'] as Map)['activity'] as Map)['state'], 'Luis Fonsi · FLAC · 24-bit / 96 kHz');
+
+    presence.dispose();
+    await fake.close();
+  });
+
+  test('without an artist the state line is just the quality', () async {
+    final fake = await FakeDiscord.start();
+    final presence = DiscordPresence('1561368591297941655', socketPaths: () => [fake.path]);
+    final track = Track.youtube(videoId: 'kJQP7kiw5Fk', title: 'Despacito', artist: '');
+
+    presence.update(track: track, playing: true, position: Duration.zero, quality: 'Opus · 160 kbps');
+    await fake.waitForFrames(2);
+    expect(((fake.frames[1].$2['args'] as Map)['activity'] as Map)['state'], 'Opus · 160 kbps');
+
+    presence.dispose();
+    await fake.close();
+  });
 }
