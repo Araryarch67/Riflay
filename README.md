@@ -51,7 +51,7 @@ Formerly OpenMusic.
 | **Volume leveling** | ReplayGain, per song or per album |
 | **Gapless** | No silence between songs that flow into each other |
 | **Bit-perfect and DSD** | The file to your DAC untouched, native DSD (DoP), exclusive mode |
-| **Audio plugins** | VST, LV2 and CLAP through Carla (Linux) |
+| **Audio plugins** | VST, LV2 and CLAP through Carla (Linux, Windows, macOS) |
 | **Signal path** | What happens to every sample, from file to speaker |
 | **Play on TVs and speakers** | DLNA / UPnP and AirPlay |
 | **Downloads** | YouTube songs and playlists, offline |
@@ -104,7 +104,7 @@ Every platform plays through [libmpv](https://mpv.io), with Riflay's own build o
 | | |
 |---|---|
 | **Playback** (Settings) | Equalizer with presets and automatic headroom, volume leveling (ReplayGain per song or album), gapless playback, **Virtual speakers** (MIT's KEMAR HRTF: two speakers at ±30°), headphone crossfeed, **Mono audio** (both ears, left only or right only) |
-| **Hi-fi audio** | Room correction (an impulse response); output sample rate; SoX resampler; buffer size. On desktop also: output device, including direct ALSA hardware on Linux; **bit-perfect mode**; **exclusive mode** (WASAPI on Windows, Core Audio hog mode on macOS); **Native DSD (DoP)** for DSF, DSDIFF and SACD songs; **ASIO** on Windows; **audio plugins** through [Carla](https://kx.studio/Applications:Carla) on Linux |
+| **Hi-fi audio** | Room correction (an impulse response); output sample rate; SoX resampler; buffer size. On desktop also: output device, including direct ALSA hardware on Linux; **bit-perfect mode**; **exclusive mode** (WASAPI on Windows, Core Audio hog mode on macOS); **Native DSD (DoP)** for DSF, DSDIFF and SACD songs; **ASIO** on Windows; **audio plugins** through [Carla](https://kx.studio/Applications:Carla). On Android 14 and later with a USB DAC: **bit-perfect mode** and **Native DSD (DoP)**. On iOS: the output picker, and a USB DAC follows each song's sample rate |
 | **Play on** | DLNA / UPnP renderers and classic AirPlay speakers, found on the network. Files the device can't play (DSD, cue-sheet songs, WavPack...) are converted to FLAC on the fly, YouTube songs go as AAC; AirPlay gets ALAC |
 | **Signal path** | Source codec and stored bit depth → decoder → every DSP stage → volume → resampler → output device, with a verdict: *Bit-perfect*, *Lossless to the system mixer* or *Processed* |
 
@@ -115,16 +115,30 @@ Not yet tried on real hardware: ASIO, exclusive mode, and casting to real TVs an
 | | Linux | Windows | macOS | Android | iOS |
 |---|---|---|---|---|---|
 | Sound settings, signal path | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Output device, bit-perfect, DSD, exclusive | ✓ | ✓ | ✓ | – | – |
-| Add a folder | ✓ | ✓ | ✓ | ✓ | – |
-| AirPlay, TV conversions, tag editor for MP3 / Ogg… (FFmpeg) | ✓ | ✓ | ✓ | – | – |
-| Discord | ✓ | ✓ | ✓ | – | – |
-| Audio plugins (Carla), see-through window | ✓ | – | – | – | – |
-| ASIO | – | ✓ | – | – | – |
+| Output device, bit-perfect, DSD, exclusive | ✓ | ✓ | ✓ | partial¹, untested | partial², untested |
+| ASIO | not needed³ | ✓ | not needed³ | – | – |
+| Add a folder | ✓ | ✓ | ✓ | ✓ | ✓, untested |
+| Tag editor, cover art | ✓ | ✓ | ✓ | partial⁴ | ✓, untested |
+| AirPlay | ✓ | ✓ | untested | untested | partial⁵, untested |
+| Play on TVs (DLNA), with conversions | ✓ | ✓ | untested | untested | partial⁵, untested |
+| Discord | ✓ | ✓ | ✓ | –⁶ | –⁶ |
+| Audio plugins (Carla) | ✓ | ✓⁷ | ✓⁷ | –⁷ | –⁷ |
+| See-through window | ✓ | untested⁸ | untested⁸ | ✓⁸ | –⁸ |
 
-Android and iOS give apps no device choice or exclusive output, no Discord connection and no way to run FFmpeg; iOS apps can't scan a folder outside their own. YouTube streams through YouTube's player API everywhere, with yt-dlp (desktop) or a built-in extractor (phones) as the fallback; yt-dlp needs a JavaScript runtime (Deno or Node) for some YouTube challenges.
+✓ works and has been checked (tests, CI on that OS, an emulator or Wine). **untested** means it is built for that OS but nobody has tried it on a real device yet: tell us how it goes.
 
-Nothing else needs installing. FFmpeg (for the tag editor's MP3 / Ogg / WAV…, AirPlay and formats a TV can't play) is a system one when there is one; otherwise the official static build (gyan.dev on Windows, johnvansickle.com on Linux, Martin Riedl's on macOS, about 40 MB) is downloaded the first time it's needed, checked against its published checksum and kept in the app's folder.
+1. Android 14 and later with a USB DAC: Bit-perfect mode sends the song to the DAC untouched through Android's bit-perfect USB output, and Native DSD goes as DoP when the DAC takes 176.4 kHz. Android picks the output itself (a plugged-in USB DAC), so there is no picker or exclusive mode.
+2. Pick the output (speaker, Bluetooth, AirPlay, a USB DAC) with the system picker; a USB DAC follows each song's sample rate (FLAC, WAV, AIFF, WavPack). iOS always mixes, so it is never bit-perfect, and DSD plays as PCM.
+3. ASIO is a Windows driver standard. Linux and macOS have the same direct path to the DAC built in: Bit-perfect mode (ALSA's hardware device) and Exclusive mode (Core Audio's hog mode), in the row above.
+4. Songs added with **Add songs** can be edited. Songs read in place from a folder are read-only to apps since Android 11. Matroska (.mka) tags are edited on computers only.
+5. Playing and converting work; finding speakers and TVs on the network normally needs a multicast permission from Apple that a sideloaded app can't have. AirPlay sends 44.1 kHz / 16-bit everywhere (AirPlay 1).
+6. Phones give other apps no connection to Discord.
+7. Carla is a separate free download: unzip it into Downloads or Program Files on Windows, put Carla.app in Applications on macOS. Android has no plugin standard, and iOS's AUv3 plugins aren't supported yet.
+8. A blur behind the window on Windows 11 and macOS (plain see-through on Windows 10); the home-screen wallpaper on Android; iOS doesn't let apps show the wallpaper.
+
+YouTube streams through YouTube's player API everywhere, with yt-dlp (desktop) or a built-in extractor (phones) as the fallback; yt-dlp needs a JavaScript runtime (Deno or Node) for some YouTube challenges.
+
+Nothing else needs installing. Converting for AirPlay and TVs, and the tag editor, work inside Riflay (libmpv and its own tag writers). FFmpeg is used only by AirPlay and TV conversions on Windows and for Matroska tags on computers: a system one when there is one; otherwise the official static build (gyan.dev on Windows, johnvansickle.com on Linux, Martin Riedl's on macOS, about 40 MB) is downloaded the first time it's needed, checked against its published checksum and kept in the app's folder.
 
 The macOS app isn't signed by Apple: the first time, open it from System Settings › Privacy & Security › **Open Anyway**. The iOS `.ipa` is unsigned too; sideload it with AltStore or Sideloadly.
 
