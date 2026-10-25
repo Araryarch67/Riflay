@@ -236,6 +236,13 @@ class _SignalPathSheet extends StatelessWidget {
                       : '${(20 * math.log(p.volume / 100) / math.ln10).toStringAsFixed(1)} dB (${p.volumePrecision})',
                   changes: (p.volume - 100).abs() >= 0.01,
                 ),
+                if (p.clipGuard)
+                  _Stage(
+                    title: 'Clip protection',
+                    value: 'Softens any peak past full scale instead of cutting it off',
+                    // Nothing in an untouched song reaches past full scale.
+                    changes: !p.untouched,
+                  ),
                 if (p.inRate != p.outRate)
                   _Stage(
                     title: 'Resampled',

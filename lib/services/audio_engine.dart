@@ -123,6 +123,7 @@ class SignalPath {
     required this.filters,
     required this.volume,
     this.volumeAtOutput = false,
+    this.clipGuard = false,
     required this.leveling,
     required this.bitrate,
     this.sourceBits,
@@ -156,6 +157,11 @@ class SignalPath {
   /// [volume] is mpv's own, applied to the output's samples (float through
   /// the system mixer) rather than by OpenMusic's 64-bit float filter.
   final bool volumeAtOutput;
+
+  /// Clip protection is last before the output ([AudioEngine.clipGuardActive]). It
+  /// isn't in [filters]: it changes only samples past full scale, which an integer
+  /// source never has, so it doesn't make a song less [untouched].
+  final bool clipGuard;
 
   /// The arithmetic [volume] is applied in.
   String get volumePrecision => !volumeAtOutput || outFormat.startsWith('double')
@@ -675,6 +681,19 @@ class AudioEngine extends ChangeNotifier {
 
   bool get _volumeActive => _volume < 0.99999 && _dop == null && !_volumeAtOutput;
 
+  /// Clip protection: a look-ahead limiter at full scale, last in [filterChain].
+  ///
+  /// Where mpv feeds the DAC itself (Exclusive mode, ASIO, a card held
+  /// directly), it converts to the DAC's integer format, which holds nothing
+  /// past full scale: such a sample is cut off flat, heard as crackling. Songs
+  /// decoded from Opus or AAC (YouTube) go past it now and then, and so can the
+  /// equalizer, leveling or a plugin. Through the system mixer the sound stays
+  /// float, and Windows' and macOS' mixers soften it themselves.
+  ///
+  /// Samples within full scale pass exactly as they were, so an untouched
+  /// lossless song stays bit-perfect; Bit-perfect mode leaves it out all the same.
+  bool get clipGuardActive => hasOutputChoice && !bitPerfect && !_volumeAtOutput;
+
   @visibleForTesting
   set debugVolume(double v) => _volume = v;
 
@@ -776,11 +795,55 @@ class AudioEngine extends ChangeNotifier {
   bool get convolutionActive => convolution && impulsePath != null && !bitPerfect;
   VolumeLeveling get effectiveLeveling => bitPerfect ? VolumeLeveling.off : leveling;
 
-  /// Lowered so boosted bands can't clip: the loudest band ends at 0 dB.
+  /// Lowered so boosted bands can't clip: the curve's loudest point ends at
+  /// 0 dB. Neighbouring bands overlap, so that point is above the loudest band
+  /// when boosts sit side by side (Bass boost's +6 and +5 dB make +7.1 at 32 Hz).
   double get preamp {
     if (!eqActive) return 0;
-    final peak = bands.map((b) => b.gain).reduce((a, b) => a > b ? a : b);
-    return peak > 0 ? -peak : 0;
+    if (!identical(_peakOf, bands)) {
+      _peakOf = bands;
+      _peak = peakGain(bands);
+    }
+    return _peak > 0 ? -_peak : 0;
+  }
+
+  List<EqBand>? _peakOf;
+  double _peak = 0;
+
+  /// The highest point, in dB, of [bands]' combined response from 20 Hz to
+  /// 20 kHz, as FFmpeg's `equalizer` makes them (RBJ peaking filters), at the
+  /// two common rates.
+  @visibleForTesting
+  static double peakGain(List<EqBand> bands) {
+    final on = bands.where((b) => b.gain.abs() > 0.05).toList();
+    // 1/100 octave steps, and each band's own centre.
+    final freqs = [
+      for (var i = 0; i < 1000; i++) 20 * math.pow(2, i / 100).toDouble(),
+      for (final b in on) b.frequency,
+    ];
+    var peak = 1.0;
+    for (final rate in const [44100, 48000]) {
+      final filters = [
+        for (final b in on)
+          () {
+            final w0 = 2 * math.pi * b.frequency / rate, alpha = math.sin(w0) / (2 * b.q);
+            final a = math.pow(10, b.gain / 40).toDouble(), c = -2 * math.cos(w0);
+            return (1 + alpha * a, c, 1 - alpha * a, 1 + alpha / a, 1 - alpha / a);
+          }(),
+      ];
+      for (final f in freqs) {
+        final cos1 = math.cos(2 * math.pi * f / rate), cos2 = 2 * cos1 * cos1 - 1;
+        // |c0 + c1 z⁻¹ + c2 z⁻²|² on the unit circle.
+        double power(double c0, double c1, double c2) =>
+            c0 * c0 + c1 * c1 + c2 * c2 + 2 * c1 * (c0 + c2) * cos1 + 2 * c0 * c2 * cos2;
+        var gain = 1.0; // power
+        for (final (b0, c, b2, a0, a2) in filters) {
+          gain *= power(b0, c, b2) / power(a0, c, a2);
+        }
+        if (gain > peak) peak = gain;
+      }
+    }
+    return 10 * math.log(peak) / math.ln10;
   }
 
   /// A file name as an FFmpeg filter option inside a filter graph: escaped once
@@ -844,8 +907,12 @@ class AudioEngine extends ChangeNotifier {
       if (crossfeedActive) '@crossfeed:lavfi=[crossfeed=strength=${n(0.1 + crossfeed * 0.6)}:range=0.5]',
       // After the stereo stages: what's left is one channel.
       if (monoActive) _monoChain,
-      // Last, so nothing after it can clip what it lowered.
+      // After the stages that add gain, so none can clip what it lowered.
       if (_volumeActive) '@volume:lavfi=[volume=volume=${_volume.toStringAsFixed(6)}:precision=double]',
+      // Past the volume: at a lower level nothing reaches full scale, and it has nothing to do.
+      // `latency` keeps its look-ahead from delaying the song and lets it hand on the song's
+      // last milliseconds at the end (gapless); `level=0`, or it would raise everything to the limit.
+      if (clipGuardActive) '@limiter:lavfi=[alimiter=limit=1:level=0:latency=1]',
       // Float output for mpv's volume (lossless: the system mixer works in float anyway).
       if (_volumeAtOutput) '@output:format=format=double',
     ].join(',');
@@ -1203,8 +1270,11 @@ class AudioEngine extends ChangeNotifier {
       device: device,
       exclusive: await g('audio-exclusive') == 'yes',
       filters: [
-        // Volume has its own stage and the float output is the Output's format; the rest are in order.
-        for (final m in RegExp(r'@(\w+):').allMatches(af).where((m) => m[1] != 'volume' && m[1] != 'output'))
+        // Volume and clip protection have their own stages, and the float output is the Output's
+        // format; the rest are in order.
+        for (final m in RegExp(
+          r'@(\w+):',
+        ).allMatches(af).where((m) => !const {'volume', 'limiter', 'output'}.contains(m[1])))
           switch (m[1]) {
             'eq' => 'Equalizer',
             'preamp' => 'Equalizer headroom',
@@ -1221,6 +1291,7 @@ class AudioEngine extends ChangeNotifier {
       // DoP holds the volume at 100% (the filter is left out).
       volume: _dop == null ? 100 * _volume : 100,
       volumeAtOutput: _volumeAtOutput,
+      clipGuard: af.contains('@limiter:'),
       leveling: effectiveLeveling != VolumeLeveling.off,
       bitrate: int.tryParse(await g('audio-bitrate')),
       dopBitRate: _dop?.bitRate,

@@ -23,8 +23,10 @@ import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// A 16-bit stereo 48 kHz WAV of [frames] frames; [sample] gives (left, right) in −1..1.
-File _wav(String path, int frames, (double, double) Function(int i) sample) {
-  final data = ByteData(44 + frames * 4);
+/// [float]: 32-bit float instead, which holds samples past full scale (as Opus and AAC decode).
+File _wav(String path, int frames, (double, double) Function(int i) sample, {bool float = false}) {
+  final width = float ? 4 : 2;
+  final data = ByteData(44 + frames * 2 * width);
   void tag(int at, String s) {
     for (var i = 0; i < s.length; i++) {
       data.setUint8(at + i, s.codeUnitAt(i));
@@ -32,31 +34,39 @@ File _wav(String path, int frames, (double, double) Function(int i) sample) {
   }
 
   tag(0, 'RIFF');
-  data.setUint32(4, 36 + frames * 4, Endian.little);
+  data.setUint32(4, 36 + frames * 2 * width, Endian.little);
   tag(8, 'WAVE');
   tag(12, 'fmt ');
   data
     ..setUint32(16, 16, Endian.little)
-    ..setUint16(20, 1, Endian.little)
+    ..setUint16(20, float ? 3 : 1, Endian.little)
     ..setUint16(22, 2, Endian.little)
     ..setUint32(24, 48000, Endian.little)
-    ..setUint32(28, 48000 * 4, Endian.little)
-    ..setUint16(32, 4, Endian.little)
-    ..setUint16(34, 16, Endian.little);
+    ..setUint32(28, 48000 * 2 * width, Endian.little)
+    ..setUint16(32, 2 * width, Endian.little)
+    ..setUint16(34, 8 * width, Endian.little);
   tag(36, 'data');
-  data.setUint32(40, frames * 4, Endian.little);
+  data.setUint32(40, frames * 2 * width, Endian.little);
   for (var i = 0; i < frames; i++) {
     final (l, r) = sample(i);
-    data
-      ..setInt16(44 + i * 4, (l * 32767).round(), Endian.little)
-      ..setInt16(46 + i * 4, (r * 32767).round(), Endian.little);
+    final at = 44 + i * 2 * width;
+    if (float) {
+      data
+        ..setFloat32(at, l, Endian.little)
+        ..setFloat32(at + 4, r, Endian.little);
+    } else {
+      data
+        ..setInt16(at, (l * 32767).round(), Endian.little)
+        ..setInt16(at + 2, (r * 32767).round(), Endian.little);
+    }
   }
   return File(path)..writeAsBytesSync(data.buffer.asUint8List());
 }
 
-/// What mpv wrote: its rate, and each channel's RMS in dBFS over the second half
-/// (what was filtered before a change may still sit in the output's buffer).
-({int rate, List<double> db}) _measure(File wav) {
+/// What mpv wrote: its rate, each channel's RMS in dBFS over the second half
+/// (what was filtered before a change may still sit in the output's buffer),
+/// and the peak there, in dBFS.
+({int rate, List<double> db, double peak}) _measure(File wav) {
   final b = ByteData.sublistView(wav.readAsBytesSync());
   var at = 12;
   int? format, bits, channels, rate;
@@ -75,6 +85,7 @@ File _wav(String path, int frames, (double, double) Function(int i) sample) {
       final start = at + 8 + (end - at - 8) ~/ 2 ~/ frame * frame;
       final sums = List.filled(channels, 0.0);
       var n = 0;
+      var peak = 0.0;
       for (var i = start; i + frame <= end; i += frame, n++) {
         for (var c = 0; c < channels; c++) {
           final p = i + c * step;
@@ -86,9 +97,14 @@ File _wav(String path, int frames, (double, double) Function(int i) sample) {
             _ => throw StateError('unexpected WAV format $format/$bits'),
           };
           sums[c] += v * v;
+          peak = math.max(peak, v.abs());
         }
       }
-      return (rate: rate!, db: [for (final s in sums) s == 0 ? -200.0 : 10 * math.log(s / n) / math.ln10]);
+      return (
+        rate: rate!,
+        db: [for (final s in sums) s == 0 ? -200.0 : 10 * math.log(s / n) / math.ln10],
+        peak: peak == 0 ? -200.0 : 20 * math.log(peak) / math.ln10,
+      );
     }
     at += 8 + size + (size & 1);
   }
@@ -133,8 +149,12 @@ void main() {
     var n = 0;
     final stages = <String, List<String>>{};
 
-    /// Plays the song through mpv with [change] made first; what came out.
-    Future<({int rate, List<double> db})> render(String name, Future<void> Function() change) async {
+    /// Plays [input] (the test song) through mpv with [change] made first; what came out.
+    Future<({int rate, List<double> db, double peak})> render(
+      String name,
+      Future<void> Function() change, {
+      File? input,
+    }) async {
       out = '${dir.path}/out${n++}.wav';
       // Each step in real time: in the test's fake time, a player call that waits on a
       // timer inside just_audio or media_kit never returns (it hung about one run in seven).
@@ -143,7 +163,7 @@ void main() {
       );
       await step('stop', c.player.stop); // a new mpv player, writing to [out]
       await step('the settings', change);
-      await step('loading', () => c.player.setAudioSource(AudioSource.file(song.path)));
+      await step('loading', () => c.player.setAudioSource(AudioSource.file((input ?? song).path)));
       await tester.pump(const Duration(milliseconds: 300));
       // Not awaited: just_audio's play() returns only when playback stops, and a stall must fail here.
       unawaited(c.player.play());
@@ -215,6 +235,26 @@ void main() {
     });
     expect(corrected.db[0], closeTo(dry.db[0], 0.5), reason: 'a unit impulse leaves the sound as it is');
     expect(stages['room correction'], contains('Room correction (dirac)'), reason: 'the graph opened the odd path');
+
+    if (AudioEngine.hasExclusiveMode) {
+      // Exclusive mode: mpv turns the sound into the DAC's integer format itself, where a sample past
+      // full scale would be cut off flat. A tone 3.5 dB past it, as a loud song decoded from Opus can be.
+      final hot = _wav(
+        '${dir.path}/hot.wav',
+        48000 * 4,
+        (i) => (1.5 * math.sin(2 * math.pi * 440 * i / 48000), 0),
+        float: true,
+      );
+      final guarded = await render('clip protection', () async {
+        await c.audio.setConvolution(false);
+        await c.audio.setExclusive(true);
+      }, input: hot);
+      expect(guarded.peak, lessThan(0.01), reason: 'lowered to full scale, not past it');
+      expect(guarded.db[0], closeTo(-3.01, 0.3), reason: 'a sine right at full scale');
+      final untouched = await render('clip protection, quiet song', () async {}, input: song);
+      expect(untouched.db[0], closeTo(dry.db[0], 0.01), reason: 'nothing past full scale: the sound as it was');
+      await tester.runAsync(() => c.audio.setExclusive(false));
+    }
 
     c.dispose();
   });

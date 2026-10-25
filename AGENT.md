@@ -96,7 +96,9 @@ test/                          Unit and widget tests
   `tool/build_libmpv_android.sh` (committed `.so` files in the vendored
   `media_kit_libs_android_audio`) and `tool/build_libmpv_apple.sh` (built on a
   Mac, by CI or by the podspec on first build; not committed). Change one and
-  the others should follow: same mpv, same FFmpeg, same filter list.
+  the others should follow: same mpv, same FFmpeg, same filter list. One
+  exception: `alimiter` (clip protection) is only used where mpv feeds the DAC
+  itself, which Android never does, so Android's build leaves it out.
 - `third_party/just_audio_media_kit` is vendored (public domain) to expose the
   mpv player: `JustAudioMediaKit.onPlayerCreated` and `.activePlayer`.
   just_audio recreates the platform player after `stop()`, so settings are
@@ -122,6 +124,15 @@ test/                          Unit and widget tests
   off; Virtual speakers turn crossfeed off.
 - **Bit-perfect mode** must bypass every stage you add: check `bitPerfect` in
   your getter (see `eqActive`, `crossfeedActive`, `effectiveLeveling`).
+- Clip protection (`@limiter`, FFmpeg's `alimiter`) is last in the chain
+  wherever mpv itself feeds the DAC (Exclusive mode, ASIO, a direct ALSA card;
+  `clipGuardActive`). The DAC's integer format cuts off anything past full
+  scale, and Opus / AAC decodes, EQ boosts, leveling and plugins get there; it
+  lowers those peaks instead and passes everything within full scale exactly.
+  Through the system mixer the sound stays float and the mixer handles it.
+- The equalizer's headroom (`preamp`) comes from the curve's highest point
+  (`peakGain`, the bands' combined RBJ response), not the loudest band:
+  neighbouring boosts add up.
 - media_kit has no `setShuffleOrder`, so shuffle is done in Dart
   (`PlayerController._ordered`, `_shuffledFrom`). Never call just_audio's
   `shuffle()` / `setShuffleModeEnabled`.

@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math' as math;
+import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -306,8 +307,8 @@ FILE "album.wav" WAVE
       );
       await a.applyPreset('Bass boost');
       expect(a.eqActive, isTrue);
-      expect(a.preamp, -6);
-      expect(a.filterChain, startsWith('@preamp:lavfi=[volume=volume=-6.00dB],@eq:lavfi=[equalizer=f=31.00'));
+      expect(a.preamp, closeTo(-7.14, 0.01), reason: 'the +6 and +5 dB bands overlap: +7.1 dB at 32 Hz');
+      expect(a.filterChain, startsWith('@preamp:lavfi=[volume=volume=-7.14dB],@eq:lavfi=[equalizer=f=31.00'));
       expect(a.filterChain, isNot(contains('f=1000.00')), reason: 'flat bands are left out');
       await a.setCrossfeed(0.5);
       expect(a.filterChain, contains('@crossfeed:lavfi=[crossfeed=strength=0.40'));
@@ -344,6 +345,98 @@ FILE "album.wav" WAVE
       final b = AudioEngine()..bitPerfect = true;
       expect(b.exclusiveOutput, isFalse, reason: 'Linux has no exclusive option; a direct card does it');
       expect(b.bypassesMixer, isTrue);
+    });
+
+    test('equalizer headroom follows the whole curve, not the loudest band', () {
+      List<EqBand> curve(List<double> gains) => [
+        for (var i = 0; i < gains.length; i++) EqBand(defaultEqFrequencies[i], gains[i]),
+      ];
+      expect(AudioEngine.peakGain(curve(eqPresets['Flat']!)), closeTo(0, 1e-9));
+      expect(AudioEngine.peakGain(curve(eqPresets['Bass cut']!)), closeTo(0, 0.01), reason: 'cuts need no headroom');
+      expect(AudioEngine.peakGain(curve(eqPresets['Pop']!)), closeTo(5.12, 0.01), reason: '+3, +4, +3 side by side');
+      final lone = AudioEngine.peakGain(curve([0, 0, 0, 0, 0, 5, 0, 0, 0, 0]));
+      expect(lone, closeTo(5, 0.01), reason: 'one band peaks at its own gain');
+    });
+
+    test('clip protection: last, only where mpv feeds the DAC itself', () {
+      addTearDown(() => debugDefaultTargetPlatformOverride = null);
+      String last(AudioEngine a) => a.filterChain.split(',').last;
+      const limiter = '@limiter:lavfi=[alimiter=limit=1:level=0:latency=1]';
+
+      debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+      final w = AudioEngine();
+      expect(w.clipGuardActive, isFalse, reason: 'shared: Windows\' mixer gets float and softens peaks itself');
+      expect(w.filterChain, isNot(contains('@limiter:')));
+      w.exclusive = true;
+      expect(w.clipGuardActive, isTrue, reason: 'exclusive: mpv converts to the DAC\'s integer format');
+      expect(w.filterChain, limiter);
+      w.debugVolume = 0.5;
+      expect(w.filterChain, '@volume:lavfi=[volume=volume=0.500000:precision=double],$limiter');
+      w.bitPerfect = true;
+      expect(w.filterChain, isNot(contains('@limiter:')), reason: 'bit-perfect mode adds nothing');
+      final asio = AudioEngine()..device = 'asio/Focusrite USB ASIO';
+      expect(last(asio), limiter);
+
+      debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
+      expect(last(AudioEngine()..exclusive = true), limiter, reason: 'Core Audio hog mode');
+
+      debugDefaultTargetPlatformOverride = TargetPlatform.linux;
+      expect(AudioEngine().clipGuardActive, isFalse, reason: 'PipeWire gets float');
+      final card = AudioEngine()..device = 'alsa/hw:CARD=DAC,DEV=0';
+      expect(last(card), limiter, reason: 'a card held directly');
+    });
+
+    test('clip protection: peaks past full scale are softened, everything else passes exactly (through mpv)', () async {
+      final dir = Directory.systemTemp.createTempSync('clip');
+      addTearDown(() => dir.deleteSync(recursive: true));
+      // Like a loud song decoded from Opus: float, a 100 Hz tone, and every 0.1 s a short 3 kHz burst on top
+      // that goes 3.5 dB past full scale.
+      final loud = '${dir.path}/loud.wav';
+      final ok = await Process.run('ffmpeg', [
+        '-loglevel', 'error', '-f', 'lavfi', '-i', //
+        "aevalsrc='0.7*sin(2*PI*100*t)+0.8*sin(2*PI*3000*t)*lt(mod(t,0.1),0.01)':s=48000:d=2:c=stereo",
+        '-c:a', 'pcm_f32le', loud,
+      ]);
+      if (ok.exitCode != 0) return markTestSkipped('ffmpeg not available');
+      // A 16-bit song at full scale: within full scale already, it must come out bit for bit.
+      final cd = '${dir.path}/cd.wav';
+      await Process.run('ffmpeg', [
+        '-loglevel', 'error', '-f', 'lavfi', '-i', 'anoisesrc=d=1:r=44100:a=1:c=white:seed=7', //
+        '-ac', '2', '-c:a', 'pcm_s16le', cd,
+      ]);
+
+      /// mpv's 16-bit output, like a DAC in Exclusive mode, as samples.
+      Future<Int16List> render(String chain, String input) async {
+        final out = '${dir.path}/out.raw';
+        final r = await Process.run('mpv', [
+          '--no-config', '--ao=pcm', '--ao-pcm-file=$out', '--ao-pcm-waveheader=no', '--audio-format=s16', //
+          if (chain.isNotEmpty) '--af=$chain', input,
+        ]);
+        expect(r.exitCode, 0, reason: '${r.stderr}');
+        return File(out).readAsBytesSync().buffer.asInt16List();
+      }
+
+      // Flat tops: a channel held at full scale from one sample to the next (a peak lowered to full scale
+      // only touches it).
+      int flat(Int16List s) => [
+        for (var i = 2; i < s.length; i++)
+          if ((s[i] == 32767 || s[i] == -32768) && s[i - 2] == s[i]) i,
+      ].length;
+      final direct = AudioEngine()..device = 'alsa/hw:CARD=DAC,DEV=0';
+      expect(direct.clipGuardActive, isTrue);
+
+      final cut = await render('', loud);
+      final guarded = await render(direct.filterChain, loud);
+      // ignore: avoid_print
+      print('samples cut off at full scale: ${flat(cut)} without clip protection, ${flat(guarded)} with it');
+      expect(flat(cut), greaterThan(1000), reason: 'the peaks are there to be cut off');
+      expect(flat(guarded), lessThan(10), reason: 'they are lowered to full scale instead');
+      expect(guarded.length, cut.length, reason: 'nothing delayed or lost (gapless)');
+
+      final dry = await render('', cd);
+      final passed = await render(direct.filterChain, cd);
+      expect(passed.length, dry.length);
+      expect(listEquals(passed, dry), isTrue, reason: 'nothing past full scale, nothing changed');
     });
 
     test('the filter chain really changes the sound (measured through mpv)', () async {
