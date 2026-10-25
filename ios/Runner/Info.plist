@@ -15,6 +15,9 @@
 	</array>
 	<key>UISupportsDocumentBrowser</key>
 	<true/>
+	<!-- Riflay's Documents folder shows up in the Files app, so music can be dropped straight into it. -->
+	<key>UIFileSharingEnabled</key>
+	<true/>
 	<key>LSSupportsOpeningDocumentsInPlace</key>
 	<true/>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
