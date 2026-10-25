@@ -4,10 +4,10 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:openmusic/main.dart';
-import 'package:openmusic/models/track.dart';
-import 'package:openmusic/services/player_controller.dart';
-import 'package:openmusic/ui/player_panels.dart';
+import 'package:riflay/main.dart';
+import 'package:riflay/models/track.dart';
+import 'package:riflay/services/player_controller.dart';
+import 'package:riflay/ui/player_panels.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Lays the whole app out at many window and phone sizes and fails on any
@@ -15,7 +15,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 void main() {
   late Directory music;
   setUpAll(() {
-    music = Directory.systemTemp.createTempSync('openmusic-overflow');
+    music = Directory.systemTemp.createTempSync('riflay-overflow');
     for (final name in ['Jairo - Paradise', 'Codfish - Boots', 'D-low - Poison Dagger', 'Osis - Rise']) {
       File('${music.path}/$name.flac').writeAsBytesSync(const []);
     }
@@ -52,7 +52,7 @@ void main() {
       }
     };
     try {
-      await tester.pumpWidget(OpenMusicApp(controller: c));
+      await tester.pumpWidget(RiflayApp(controller: c));
       await tester.pump(const Duration(milliseconds: 500));
       if (desktopBar != null) expect(find.byType(DesktopPlayerBar), desktopBar ? findsOneWidget : findsNothing);
     } finally {

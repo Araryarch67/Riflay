@@ -18,11 +18,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:just_audio_media_kit/just_audio_media_kit.dart';
 import 'package:media_kit/media_kit.dart' show NativePlayer;
-import 'package:openmusic/main.dart';
-import 'package:openmusic/models/track.dart';
-import 'package:openmusic/services/player_controller.dart';
-import 'package:openmusic/ui/shell_scope.dart';
-import 'package:openmusic/ui/widgets/page_scaffold.dart';
+import 'package:riflay/main.dart';
+import 'package:riflay/models/track.dart';
+import 'package:riflay/services/player_controller.dart';
+import 'package:riflay/ui/shell_scope.dart';
+import 'package:riflay/ui/widgets/page_scaffold.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Budgets, in profile mode. A frame has 16.7 ms at 60 Hz; build is only part of it.
@@ -75,7 +75,15 @@ void main() {
     final files = <String>[];
     for (var a = 1; a <= 12; a++) {
       final cover = '${dir.path}/cover$a.jpg';
-      await _ffmpeg(['-f', 'lavfi', '-i', 'color=c=0x${(a * 20).toRadixString(16).padLeft(2, '0')}4080:s=1000x1000', '-frames:v', '1', cover]);
+      await _ffmpeg([
+        '-f',
+        'lavfi',
+        '-i',
+        'color=c=0x${(a * 20).toRadixString(16).padLeft(2, '0')}4080:s=1000x1000',
+        '-frames:v',
+        '1',
+        cover,
+      ]);
       await Future.wait([
         for (var t = 1; t <= 10; t++)
           () async {
@@ -109,7 +117,7 @@ void main() {
     tester.view.physicalSize = const Size(2560, 1600);
     tester.view.devicePixelRatio = 1.6;
     addTearDown(tester.view.reset);
-    await tester.pumpWidget(OpenMusicApp(controller: c));
+    await tester.pumpWidget(RiflayApp(controller: c));
     await c.playCollection(c.allSongs);
 
     var notifies = 0;
@@ -204,10 +212,8 @@ void main() {
     final out = File('build/perf/${DateTime.now().toIso8601String().split('.').first.replaceAll(':', '-')}.json');
     out.parent.createSync(recursive: true);
     out.writeAsStringSync(
-      const JsonEncoder.withIndent('  ').convert({
-        'mode': kProfileMode ? 'profile' : 'debug',
-        for (final r in results) r.label: r.toJson(),
-      }),
+      const JsonEncoder.withIndent('  ')
+          .convert({'mode': kProfileMode ? 'profile' : 'debug', for (final r in results) r.label: r.toJson()}),
     );
 
     expect(

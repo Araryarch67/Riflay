@@ -4,15 +4,19 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:openmusic/models/track.dart';
-import 'package:openmusic/services/discord_presence.dart';
+import 'package:riflay/models/track.dart';
+import 'package:riflay/services/discord_presence.dart';
 
 /// Discord's answer to a message: READY for the handshake, a reply for every command.
 List<int> _reply(int op, Map<String, dynamic> json) {
   final body = utf8.encode(
     jsonEncode(
       op == 0
-          ? {'cmd': 'DISPATCH', 'evt': 'READY', 'data': {'v': 1}}
+          ? {
+              'cmd': 'DISPATCH',
+              'evt': 'READY',
+              'data': {'v': 1},
+            }
           : {'cmd': json['cmd'], 'evt': null, 'nonce': json['nonce'], 'data': {}},
     ),
   );
@@ -86,8 +90,12 @@ while ($true) {
 """;
 
   static Future<FakeDiscord> _pipe() async {
-    final name = 'openmusic-test-discord-$pid';
-    final proc = await Process.start('powershell', ['-NoProfile', '-Command', _pipeServer.replaceFirst('PIPE_NAME', name)]);
+    final name = 'riflay-test-discord-$pid';
+    final proc = await Process.start('powershell', [
+      '-NoProfile',
+      '-Command',
+      _pipeServer.replaceFirst('PIPE_NAME', name),
+    ]);
     final listening = Completer<void>();
     late final FakeDiscord fake;
     fake = FakeDiscord._(r'\\?\pipe\' + name, () async {

@@ -1,4 +1,4 @@
-package dev.openmusic.openmusic
+package dev.riflay.riflay
 
 import android.Manifest
 import android.content.pm.PackageManager
@@ -19,7 +19,7 @@ class MainActivity : AudioServiceActivity() {
     // (picked files are copies the system may clear).
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
-        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "openmusic/music_permission").setMethodCallHandler { call, result ->
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "riflay/music_permission").setMethodCallHandler { call, result ->
             if (call.method != "request") return@setMethodCallHandler result.notImplemented()
             if (checkSelfPermission(musicPermission) == PackageManager.PERMISSION_GRANTED) return@setMethodCallHandler result.success(true)
             pending?.success(false)

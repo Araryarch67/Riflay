@@ -9,9 +9,9 @@ import 'dart:io';
 import 'package:audio_metadata_reader/audio_metadata_reader.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
-import 'package:openmusic/models/track.dart';
-import 'package:openmusic/services/ffmpeg.dart';
-import 'package:openmusic/services/metadata.dart';
+import 'package:riflay/models/track.dart';
+import 'package:riflay/services/ffmpeg.dart';
+import 'package:riflay/services/metadata.dart';
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
@@ -44,9 +44,9 @@ void main() {
     expect(made!.exitCode, 0, reason: '${made.stderr}');
 
     final track = Track.fromUri(Uri.file(mp3));
-    await tester.runAsync(() => Metadata.writeTags(track, TagEdit(title: 'After', artist: 'OpenMusic')));
+    await tester.runAsync(() => Metadata.writeTags(track, TagEdit(title: 'After', artist: 'Riflay')));
     final tags = readMetadata(File(mp3));
     expect(tags.title, 'After');
-    expect(tags.artist, 'OpenMusic');
+    expect(tags.artist, 'Riflay');
   });
 }

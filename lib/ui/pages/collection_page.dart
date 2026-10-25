@@ -199,7 +199,7 @@ class CollectionPage extends StatelessWidget {
       },
     );
     if (playlistId == null) return page;
-    // An OpenMusic playlist: every song in it can be taken out.
+    // A Riflay playlist: every song in it can be taken out.
     return PlaylistEditScope(
       canRemove: (t) => tracks.any((x) => x.id == t.id),
       remove: (context, t) async {
@@ -354,7 +354,7 @@ class _ColumnHeader extends StatelessWidget {
   }
 }
 
-/// Rename / delete for an OpenMusic playlist.
+/// Rename / delete for a Riflay playlist.
 class _PlaylistMenu extends StatelessWidget {
   const _PlaylistMenu({required this.id, required this.name});
 

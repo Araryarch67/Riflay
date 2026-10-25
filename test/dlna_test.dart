@@ -8,9 +8,9 @@ import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:just_audio/just_audio.dart';
-import 'package:openmusic/services/cast.dart';
-import 'package:openmusic/services/dlna.dart';
-import 'package:openmusic/services/youtube_stream.dart';
+import 'package:riflay/services/cast.dart';
+import 'package:riflay/services/dlna.dart';
+import 'package:riflay/services/youtube_stream.dart';
 import 'package:xml/xml.dart';
 
 import 'support/fake_renderer.dart';

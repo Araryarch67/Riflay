@@ -3,13 +3,13 @@ import 'dart:typed_data';
 
 import 'package:audio_metadata_reader/audio_metadata_reader.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:openmusic/models/track.dart';
-import 'package:openmusic/services/metadata.dart';
+import 'package:riflay/models/track.dart';
+import 'package:riflay/services/metadata.dart';
 
 /// Files someone made to hurt the app: the size fields in them lie.
 void main() {
   late Directory dir;
-  setUp(() => dir = Directory.systemTemp.createTempSync('openmusic-hostile'));
+  setUp(() => dir = Directory.systemTemp.createTempSync('riflay-hostile'));
   tearDown(() => dir.deleteSync(recursive: true));
 
   /// "fLaC", a STREAMINFO block, then a PICTURE block whose MIME type claims [mimeLength] bytes.

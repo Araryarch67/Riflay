@@ -21,8 +21,8 @@ abstract final class PrivateFiles {
   static Future<Directory> dir() async {
     final d = await getApplicationSupportDirectory();
     await d.create(recursive: true);
-    // Only the app's own folder (…/dev.openmusic.openmusic), never a shared one a test points it at.
-    if (_posix && _locked.add(d.path) && p.basename(d.path).toLowerCase().contains('openmusic')) {
+    // Only the app's own folder (…/dev.riflay.riflay), never a shared one a test points it at.
+    if (_posix && _locked.add(d.path) && p.basename(d.path).toLowerCase().contains('riflay')) {
       await _chmod('700', d.path);
     }
     return d;

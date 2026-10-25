@@ -9,7 +9,7 @@
 
 #include "asio_samples.h"
 
-using namespace openmusic_asio;
+using namespace riflay_asio;
 
 static int failures = 0;
 #define CHECK(cond)                                       \

@@ -1,6 +1,6 @@
 // A minimal ASIO driver for the ASIO output's end-to-end test under Wine
 // (tool/test_asio_wine.sh): two outputs at 44.1 or 48 kHz, in the sample format
-// OPENMUSIC_TEST_ASIO_TYPE names (an ASIOSampleType, Int16LSB by default), a 512-frame
+// RIFLAY_TEST_ASIO_TYPE names (an ASIOSampleType, Int16LSB by default), a 512-frame
 // double buffer switched by a timer thread in real time, like a sound card's
 // clock would. It keeps what the host wrote, so the test can check the samples
 // really arrived (TestDriverStats).
@@ -71,7 +71,7 @@ class Driver : public IASIO {
   }
 
   ASIOBool init(void*) override { return ASIOTrue; }
-  void getDriverName(char* name) override { std::strcpy(name, "OpenMusic Test"); }
+  void getDriverName(char* name) override { std::strcpy(name, "Riflay Test"); }
   long getDriverVersion() override { return 1; }
   void getErrorMessage(char* s) override { std::strcpy(s, ""); }
 
@@ -212,7 +212,7 @@ class Driver : public IASIO {
   long channels_ = 0;
   double rate_ = 44100.0;
   const ASIOSampleType type_ = [] {
-    const char* t = std::getenv("OPENMUSIC_TEST_ASIO_TYPE");
+    const char* t = std::getenv("RIFLAY_TEST_ASIO_TYPE");
     return static_cast<ASIOSampleType>(t ? std::atoi(t) : ASIOSTInt16LSB);
   }();
   int32_t samples_[kOutputs][2][kFrames] = {};  // room for the widest supported type

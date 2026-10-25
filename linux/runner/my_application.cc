@@ -27,7 +27,7 @@ static void my_application_activate(GApplication* application) {
 
   // The app draws its own title bar (lib/ui/widgets/title_bar.dart), so the
   // window is created undecorated: no GTK header bar or server-side frame.
-  gtk_window_set_title(window, "OpenMusic");
+  gtk_window_set_title(window, "Riflay");
   gtk_window_set_decorated(window, FALSE);
 
   gtk_window_set_default_size(window, 1280, 800);
@@ -47,7 +47,7 @@ static void my_application_activate(GApplication* application) {
   if (exe != nullptr) {
     g_autofree gchar* dir = g_path_get_dirname(exe);
     g_autofree gchar* icon =
-        g_build_filename(dir, "data", "openmusic.png", nullptr);
+        g_build_filename(dir, "data", "riflay.png", nullptr);
     gtk_window_set_icon_from_file(window, icon, nullptr);
   }
 

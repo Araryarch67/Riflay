@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Builds libmpv-2.dll for Windows on Linux (mingw-w64), with OpenMusic's ASIO
+# Builds libmpv-2.dll for Windows on Linux (mingw-w64), with Riflay's ASIO
 # audio output (third_party/mpv_asio) and the FFmpeg filters the app uses
 # (equalizer, crossfeed, afir, amovie). It replaces the DLL media_kit ships,
 # which has neither.
@@ -8,10 +8,10 @@
 #
 # Sources are pinned and checked against SHA-256 sums; everything builds
 # statically into the one DLL. Needs x86_64-w64-mingw32-gcc, meson, ninja,
-# nasm, pkg-config, curl. Work files go to ~/.cache/openmusic-build.
+# nasm, pkg-config, curl. Work files go to ~/.cache/riflay-build.
 set -euo pipefail
 project=$(cd "$(dirname "$0")/.." && pwd)
-root=${OPENMUSIC_BUILD_DIR:-${XDG_CACHE_HOME:-$HOME/.cache}/openmusic-build}/libmpv
+root=${RIFLAY_BUILD_DIR:-${XDG_CACHE_HOME:-$HOME/.cache}/riflay-build}/libmpv
 prefix=$root/prefix
 mkdir -p "$root/src" "$root/build" "$prefix"
 jobs=$(nproc)
@@ -111,7 +111,7 @@ if ! stamp ffmpeg; then
 fi
 
 if ! stamp mpv-patched; then
-  # OpenMusic's ASIO output, plus the ASIO SDK host files it builds on.
+  # Riflay's ASIO output, plus the ASIO SDK host files it builds on.
   "$project/third_party/mpv_asio/apply.sh" "$root/src/mpv" "$project"
   done_ mpv-patched
 fi

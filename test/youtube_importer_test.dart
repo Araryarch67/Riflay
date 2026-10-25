@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:openmusic/services/youtube_importer.dart';
+import 'package:riflay/services/youtube_importer.dart';
 
 void main() {
   group('parseTitle', () {

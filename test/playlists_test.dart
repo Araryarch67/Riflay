@@ -4,8 +4,8 @@ import 'dart:io';
 import 'package:flutter/services.dart';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:openmusic/models/track.dart';
-import 'package:openmusic/services/player_controller.dart';
+import 'package:riflay/models/track.dart';
+import 'package:riflay/services/player_controller.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 Track _yt(String id) => Track.youtube(videoId: id, title: 'Song $id', artist: 'Artist');
@@ -18,7 +18,7 @@ void main() {
     (_) async => Directory.systemTemp.path,
   );
 
-  test('OpenMusic playlists mix local and YouTube songs, and persist', () async {
+  test('Riflay playlists mix local and YouTube songs, and persist', () async {
     final local = Track.fromUri(Uri.file('/music/Band - Local Song.flac'));
     SharedPreferences.setMockInitialValues({
       'library.v1': jsonEncode([local.toJson()]),

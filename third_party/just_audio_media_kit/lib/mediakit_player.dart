@@ -15,7 +15,7 @@ class MediaKitPlayer extends AudioPlayerPlatform {
   /// `package:media_kit`'s [Player]
   late final Player _player;
 
-  /// OpenMusic: the underlying player, for mpv properties just_audio doesn't model.
+  /// Riflay: the underlying player, for mpv properties just_audio doesn't model.
   Player get mpv => _player;
 
   /// The subscriptions that have to be disposed
@@ -128,7 +128,7 @@ class MediaKitPlayer extends AudioPlayerPlatform {
         _updatePlaybackEvent();
       }),
       _player.stream.volume.listen((volume) {
-        // OpenMusic: the app applies the volume and reports it (mpv's may stay at 100%).
+        // Riflay: the app applies the volume and reports it (mpv's may stay at 100%).
         if (JustAudioMediaKit.volumeOverride != null) return;
         _dataController.add(PlayerDataMessage(volume: volume / 100.0));
       }),
@@ -175,7 +175,7 @@ class MediaKitPlayer extends AudioPlayerPlatform {
         _dataController.add(PlayerDataMessage(speed: rate));
       }),
       _player.stream.log.listen((event) {
-        // OpenMusic: a skipped song's network read being cancelled is expected,
+        // Riflay: a skipped song's network read being cancelled is expected,
         // and audio-only libmpv builds (Android) lack media_kit's video/subtitle
         // properties; neither is an error.
         if (event.text.contains('Immediate exit requested') ||
@@ -296,7 +296,7 @@ class MediaKitPlayer extends AudioPlayerPlatform {
 
   @override
   Future<SetVolumeResponse> setVolume(SetVolumeRequest request) async {
-    // OpenMusic: the app owns the volume (see JustAudioMediaKit.volumeOverride).
+    // Riflay: the app owns the volume (see JustAudioMediaKit.volumeOverride).
     final override = JustAudioMediaKit.volumeOverride;
     if (override != null) {
       await override(_player);
@@ -308,7 +308,7 @@ class MediaKitPlayer extends AudioPlayerPlatform {
         .then((value) => SetVolumeResponse());
   }
 
-  // OpenMusic: just_audio sends this on Android; mpv's audio output picks its
+  // Riflay: just_audio sends this on Android; mpv's audio output picks its
   // own stream type, and audio focus is handled by just_audio in Dart.
   @override
   Future<SetAndroidAudioAttributesResponse> setAndroidAudioAttributes(
@@ -359,7 +359,7 @@ class MediaKitPlayer extends AudioPlayerPlatform {
       final start = _currentMedia?.start;
       var nativePosition = position;
       if (start != null) nativePosition += start;
-      // OpenMusic: after a jump the new file isn't open yet (state.duration is
+      // Riflay: after a jump the new file isn't open yet (state.duration is
       // still the old song's), so mpv rejects a seek. A new song starts at its
       // beginning anyway; any other position waits for the new duration.
       if (jumped && nativePosition == Duration.zero) {
@@ -389,7 +389,7 @@ class MediaKitPlayer extends AudioPlayerPlatform {
 
       if (length == 0 || length == 1) continue;
 
-      // OpenMusic: the new item is the last one (length - 1; moving "length"
+      // Riflay: the new item is the last one (length - 1; moving "length"
       // made mpv refuse every insert), and each following child goes after
       // the previous one so the inserted songs keep their order.
       final target = request.index + i;

@@ -1,5 +1,5 @@
 /*
- * ASIO audio output for mpv, from OpenMusic.
+ * ASIO audio output for mpv, from Riflay.
  *
  * This file is free software: you can redistribute it and/or modify it under
  * the terms of the GNU General Public License as published by the Free
@@ -126,7 +126,7 @@ static void list_devs(struct ao *ao, struct ao_device_list *list)
 }
 
 const struct ao_driver audio_out_asio = {
-    .description = "ASIO audio output (OpenMusic)",
+    .description = "ASIO audio output (Riflay)",
     .name        = "asio",
     .init        = init,
     .uninit      = uninit,

@@ -1,10 +1,10 @@
 # Project-level configuration.
 cmake_minimum_required(VERSION 3.14)
-project(openmusic LANGUAGES CXX)
+project(riflay LANGUAGES CXX)
 
 # The name of the executable created for the application. Change this to change
 # the on-disk name of your application.
-set(BINARY_NAME "openmusic")
+set(BINARY_NAME "riflay")
 
 # Explicitly opt in to modern CMake behaviors to avoid warnings with recent
 # versions of CMake.
@@ -94,7 +94,7 @@ install(FILES "${FLUTTER_ICU_DATA_FILE}" DESTINATION "${INSTALL_BUNDLE_DATA_DIR}
 install(FILES "${FLUTTER_LIBRARY}" DESTINATION "${INSTALL_BUNDLE_LIB_DIR}"
   COMPONENT Runtime)
 
-# OpenMusic's own libmpv instead of media_kit's: it has the ASIO output and the
+# Riflay's own libmpv instead of media_kit's: it has the ASIO output and the
 # FFmpeg filters the app uses (crossfeed, room correction). Built with
 # tool/build_libmpv_windows.sh from third_party/mpv_asio.
 list(FILTER PLUGIN_BUNDLED_LIBRARIES EXCLUDE REGEX "libmpv-2\\.dll$")

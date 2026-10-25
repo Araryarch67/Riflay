@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
-import 'package:openmusic/services/lyrics_translation.dart';
+import 'package:riflay/services/lyrics_translation.dart';
 
 void main() {
   http.Response json(Object o) => http.Response.bytes(utf8.encode(jsonEncode(o)), 200);

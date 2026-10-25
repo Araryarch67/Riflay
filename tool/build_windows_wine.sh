@@ -10,7 +10,7 @@
 #
 #   tool/build_windows_wine.sh [out-dir]    (default: build/windows-wine)
 #   DEBUG_SYMBOLS=1 tool/build_windows_wine.sh ...   (for winedbg backtraces)
-#   wine <out-dir>/openmusic.exe
+#   wine <out-dir>/riflay.exe
 #
 # Works on a copy of the project so the project's own build/ isn't touched.
 # Needs flutter, x86_64-w64-mingw32-g++ and wine, and windows/libmpv/libmpv-2.dll.
@@ -43,7 +43,7 @@ mkdir -p "$work/programfiles"
   --source "file://$src/.dart_tool/flutter_build/dart_plugin_registrant.dart" \
   --source package:flutter/src/dart_plugin_registrant.dart \
   -Dflutter.dart_plugin_registrant="file://$src/.dart_tool/flutter_build/dart_plugin_registrant.dart" \
-  package:openmusic/main.dart >/dev/null)
+  package:riflay/main.dart >/dev/null)
 # Dart-only plugins (shared_preferences, path_provider, file picker) register from here.
 grep -q SharedPreferencesWindows "$src/.dart_tool/flutter_build/dart_plugin_registrant.dart"
 
@@ -105,16 +105,16 @@ sed 's#\\\\#/#g' "$src/windows/runner/Runner.rc" >"$src/windows/runner/Runner.wi
 objs+=("$work/obj/runner_rc.o")
 
 mkdir -p "$out/data"
-x86_64-w64-mingw32-g++ -municode -mwindows -static $([[ -n ${DEBUG_SYMBOLS:-} ]] || echo -s) -o "$out/openmusic.exe" "${objs[@]}" \
+x86_64-w64-mingw32-g++ -municode -mwindows -static $([[ -n ${DEBUG_SYMBOLS:-} ]] || echo -s) -o "$out/riflay.exe" "${objs[@]}" \
   "$engine/windows-x64-release/flutter_windows.dll" \
   -ldwmapi -lole32 -luuid -loleaut32 -lshlwapi -lshell32 -luser32 -lgdi32 -ladvapi32 -lshcore -lwinmm
 
 # ── Bundle ────────────────────────────────────────────────────────────────
-# OpenMusic's own libmpv, as the real build bundles it (windows/CMakeLists.txt).
+# Riflay's own libmpv, as the real build bundles it (windows/CMakeLists.txt).
 libmpv=$project/windows/libmpv/libmpv-2.dll
 [[ -f $libmpv ]] || { echo "missing $libmpv: run tool/build_libmpv_windows.sh" >&2; exit 1; }
 cp "$engine/windows-x64-release/flutter_windows.dll" "$libmpv" "$out/"
 cp "$work/app.so" "$engine/linux-x64/icudtl.dat" "$out/data/"  # ICU data is the same file on every OS
 rm -rf "$out/data/flutter_assets"
 cp -r "$work/flutter_assets" "$out/data/flutter_assets"
-echo "Built $out/openmusic.exe"
+echo "Built $out/riflay.exe"

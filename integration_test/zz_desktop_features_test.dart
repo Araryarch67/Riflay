@@ -15,13 +15,13 @@ import 'package:integration_test/integration_test.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:just_audio_media_kit/just_audio_media_kit.dart';
 import 'package:media_kit/media_kit.dart' show NativePlayer, Player;
-import 'package:openmusic/models/track.dart';
-import 'package:openmusic/services/appearance.dart';
-import 'package:openmusic/services/audio_engine.dart';
-import 'package:openmusic/services/player_controller.dart';
-import 'package:openmusic/services/system_fonts.dart';
-import 'package:openmusic/ui/theme.dart';
-import 'package:openmusic/services/ytdlp.dart';
+import 'package:riflay/models/track.dart';
+import 'package:riflay/services/appearance.dart';
+import 'package:riflay/services/audio_engine.dart';
+import 'package:riflay/services/player_controller.dart';
+import 'package:riflay/services/system_fonts.dart';
+import 'package:riflay/ui/theme.dart';
+import 'package:riflay/services/ytdlp.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// [seconds] of a 1 kHz sine at −6 dBFS, 16-bit stereo 48 kHz.
@@ -216,7 +216,7 @@ void main() {
     await c.audio.setEqEnabled(false);
   });
 
-  testWidgets('Windows\' volume mixer names the app OpenMusic, not mpv', (tester) async {
+  testWidgets('Windows\' volume mixer names the app Riflay, not mpv', (tester) async {
     if (!Platform.isWindows) return;
     // The real output (WASAPI), muted: the volume filter at 0 sends silence.
     await c.setVolume(0);
@@ -237,7 +237,7 @@ void main() {
     ];
     debugPrint('FEATURES mixer: $ours (pid $pid) ${r.stderr}');
     expect(ours, isNotEmpty, reason: 'this app has an audio session');
-    expect(ours, everyElement('OpenMusic'));
+    expect(ours, everyElement('Riflay'));
   });
 
   testWidgets('fonts from the font folders: found, and the app draws with the one picked', (tester) async {
@@ -248,7 +248,7 @@ void main() {
     expect(await Appearance.instance.setFont(pick), isTrue);
     expect(buildAppTheme(fontFamily: Appearance.instance.fontFamily).textTheme.bodyMedium?.fontFamily, pick.family);
     await Appearance.instance.setFont(null);
-    expect(Appearance.instance.fontFamily, isNull, reason: 'back to OpenMusic\'s own');
+    expect(Appearance.instance.fontFamily, isNull, reason: 'back to Riflay\'s own');
   });
 
   testWidgets('yt-dlp resolves a song on this OS', (tester) async {

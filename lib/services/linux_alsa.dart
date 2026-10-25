@@ -140,7 +140,7 @@ abstract final class LinuxAlsa {
   }
 }
 
-/// Holds a sound card for OpenMusic alone.
+/// Holds a sound card for Riflay alone.
 ///
 /// PipeWire keeps every card open, so opening the raw device would fail with
 /// "busy". Like JACK, ask it to step aside through the standard D-Bus device
@@ -162,11 +162,11 @@ class CardReservation {
     final defaultSink = await _defaultSinkName();
     Process p;
     try {
-      // `cat` waits on our stdin: when OpenMusic exits (even killed), the pipe
+      // `cat` waits on our stdin: when Riflay exits (even killed), the pipe
       // closes, cat returns and the reservation ends with it.
       p = await Process.start('sh', [
         '-c',
-        'pw-reserve -n Audio$card -r -a OpenMusic -p 10 & r=\$!; trap "kill \$r 2>/dev/null" EXIT INT TERM; '
+        'pw-reserve -n Audio$card -r -a Riflay -p 10 & r=\$!; trap "kill \$r 2>/dev/null" EXIT INT TERM; '
             'cat >/dev/null',
       ]);
     } catch (_) {

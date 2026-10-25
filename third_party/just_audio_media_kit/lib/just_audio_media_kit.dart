@@ -48,18 +48,18 @@ class JustAudioMediaKit extends JustAudioPlatform {
   /// [the related issue](https://github.com/Pato05/just_audio_media_kit/issues/11) for more information
   static bool prefetchPlaylist = false;
 
-  /// OpenMusic: called with each new libmpv player once it is ready, so the
+  /// Riflay: called with each new libmpv player once it is ready, so the
   /// app can apply its audio settings (filters, output device, gapless...).
   /// just_audio recreates the platform player after stop(), so this can run
   /// more than once per AudioPlayer.
   static void Function(Player player)? onPlayerCreated;
 
-  /// OpenMusic: when set, the app owns the volume (a 64-bit float filter, or
+  /// Riflay: when set, the app owns the volume (a 64-bit float filter, or
   /// mpv's own volume on a float output): just_audio's setVolume applies the
   /// app's level to the player instead of the one just_audio asked for.
   static Future<void> Function(Player player)? volumeOverride;
 
-  /// OpenMusic: the libmpv player currently backing playback, if any.
+  /// Riflay: the libmpv player currently backing playback, if any.
   static Player? get activePlayer => _active;
   static Player? _active;
 

@@ -6,8 +6,8 @@ import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:openmusic/services/dop.dart';
-import 'package:openmusic/services/sacd.dart';
+import 'package:riflay/services/dop.dart';
+import 'package:riflay/services/sacd.dart';
 
 import 'support/sacd_iso_writer.dart';
 
@@ -167,7 +167,7 @@ void main() {
     late List<Uint8List> dstFrames;
     late String original;
     setUpAll(() async {
-      original = '${Directory.systemTemp.path}/openmusic-dst-64fs44-2ch.dff';
+      original = '${Directory.systemTemp.path}/riflay-dst-64fs44-2ch.dff';
       if (!File(original).existsSync()) {
         final c = HttpClient();
         try {

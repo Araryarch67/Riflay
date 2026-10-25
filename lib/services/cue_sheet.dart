@@ -26,7 +26,10 @@ abstract final class CueSheet {
       final arg = line.substring(space + 1).trim();
       switch (cmd) {
         case 'FILE':
-          file = _resolve(dir, _unquote(arg.substring(0, arg.lastIndexOf(' ') < 0 ? arg.length : arg.lastIndexOf(' '))));
+          file = _resolve(
+            dir,
+            _unquote(arg.substring(0, arg.lastIndexOf(' ') < 0 ? arg.length : arg.lastIndexOf(' '))),
+          );
         case 'TRACK':
           if (!arg.toUpperCase().endsWith('AUDIO') || file == null) {
             current = null;

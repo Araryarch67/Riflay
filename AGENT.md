@@ -1,11 +1,11 @@
 # AGENT.md
 
-Guide for coding agents (and people) working on OpenMusic. Read it before
+Guide for coding agents (and people) working on Riflay. Read it before
 changing code.
 
 ## Who it's for
 
-OpenMusic's users are **not technical**. Every feature must work with zero
+Riflay's users are **not technical**. Every feature must work with zero
 setup and one obvious control:
 
 - YouTube Music sign-in is a single **Sign in with Google** button. Never add
@@ -28,6 +28,7 @@ lib/
   services/
     player_controller.dart     Queue, shuffle (done in Dart, see below), autoplay, library
     library_store.dart         The library's own file (library.json), read and written in an isolate
+    openmusic_data.dart        First start on a computer: brings over what OpenMusic (the old name) kept
     private_files.dart         The app's 0700 folder; atomic writes, 0600 secrets (the Google session)
     audio_engine.dart          Every mpv audio setting + SignalPath read-back
     lyrics.dart                .lrc / embedded tag, then YouTube Music, LRCLIB, Better Lyrics, NetEase, lyrics.ovh
@@ -60,15 +61,15 @@ test/                          Unit and widget tests
 ## Library model
 
 - There is no "source" switch: Home, Search and Library always show files on
-  this device, OpenMusic playlists and YouTube Music together.
+  this device, Riflay playlists and YouTube Music together.
 - `Track.isRemote` (has a `videoId`) means it streams. Mark those with
   `SourceMark` / `MediaCard(online: true)`. `PlayerController.downloadedCopy`
   finds a downloaded file for a YouTube song; `_sourceFor` plays that instead,
   so `isOffline(track)` is what the UI should show.
-- OpenMusic playlists are `UserPlaylist` (in `models/track.dart`), stored in
+- Riflay playlists are `UserPlaylist` (in `models/track.dart`), stored in
   SharedPreferences (`playlists.v1`) and shown as `CollectionKind.playlist`.
 - Song menus get "Remove from this playlist" from a `PlaylistEditScope` above
-  them (OpenMusic playlists and the user's own YouTube Music playlists).
+  them (Riflay playlists and the user's own YouTube Music playlists).
 - Menus use `useRootNavigator: true`, and their actions use the navigator's
   context (`host` in `_TrackMenu`): the row may be rebuilt away while the
   menu is open.
@@ -91,7 +92,7 @@ test/                          Unit and widget tests
 
 - just_audio everywhere, with libmpv as its backend on **every platform**
   through `just_audio_media_kit`. Linux uses the system libmpv; the others use
-  OpenMusic's own builds, which have the FFmpeg filters the sound settings
+  Riflay's own builds, which have the FFmpeg filters the sound settings
   need: `tool/build_libmpv_windows.sh` (committed DLL),
   `tool/build_libmpv_android.sh` (committed `.so` files in the vendored
   `media_kit_libs_android_audio`) and `tool/build_libmpv_apple.sh` (built on a
@@ -184,7 +185,7 @@ test/                          Unit and widget tests
 | `audio_metadata_reader` | Its FLAC and MP4 writers dropped ReplayGain, lyrics, disc numbers and unknown tags (MP4 freeform `----` atoms) on every save; ours keep them |
 | `flutter_inappwebview_linux` | Stub: the real one links WPE WebKit; Linux sign-in uses `linux/login_helper` instead |
 
-Mark every change in vendored code with an `OpenMusic:` comment.
+Mark every change in vendored code with a `Riflay:` comment.
 
 ## Running and testing
 

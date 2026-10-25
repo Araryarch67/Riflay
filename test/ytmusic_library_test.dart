@@ -6,8 +6,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
-import 'package:openmusic/models/track.dart';
-import 'package:openmusic/services/youtube_music_account.dart';
+import 'package:riflay/models/track.dart';
+import 'package:riflay/services/youtube_music_account.dart';
 
 Track yt(String id) => Track.youtube(videoId: id, title: 'Song $id', artist: 'Artist');
 
@@ -147,7 +147,7 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   late Directory dir;
   setUp(() {
-    dir = Directory.systemTemp.createTempSync('openmusic-ytlib');
+    dir = Directory.systemTemp.createTempSync('riflay-ytlib');
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(
       const MethodChannel('plugins.flutter.io/path_provider'),
       (_) async => dir.path,

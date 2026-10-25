@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:openmusic/main.dart';
-import 'package:openmusic/services/player_controller.dart';
+import 'package:riflay/main.dart';
+import 'package:riflay/services/player_controller.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
@@ -17,7 +17,7 @@ void main() {
       return null;
     });
 
-    await tester.pumpWidget(OpenMusicApp(controller: PlayerController()));
+    await tester.pumpWidget(RiflayApp(controller: PlayerController()));
     await tester.pump();
     // The search box in the desktop title bar.
     final field = find.widgetWithText(TextField, 'What do you want to play?').first;

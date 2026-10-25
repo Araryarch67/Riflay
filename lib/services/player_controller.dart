@@ -414,7 +414,7 @@ class PlayerController extends ChangeNotifier {
   /// Everything imported from YouTube, newest first.
   Collection? get youtubeDownloads => _views.youtubeDownloads;
 
-  // ── OpenMusic playlists ──────────────────────────────────────────────────
+  // ── Riflay playlists ──────────────────────────────────────────────────
 
   List<UserPlaylist> _playlists = [];
   List<UserPlaylist> get playlists => List.unmodifiable(_playlists);
@@ -709,7 +709,7 @@ class PlayerController extends ChangeNotifier {
     return scanFolder(dir);
   }
 
-  static const _musicPermission = MethodChannel('openmusic/music_permission');
+  static const _musicPermission = MethodChannel('riflay/music_permission');
 
   /// Adds every song, cue sheet and SACD image under [dir].
   Future<int> scanFolder(String dir) async {
@@ -1149,7 +1149,7 @@ class PlayerController extends ChangeNotifier {
 
   bool _disposed = false;
 
-  /// Bumped whenever the library or the OpenMusic playlists changed, for views
+  /// Bumped whenever the library or the Riflay playlists changed, for views
   /// that show only those (the library list, a collection's songs): they then
   /// skip the far more frequent changes of what's playing.
   final libraryRevision = ValueNotifier<int>(0);

@@ -29,7 +29,7 @@ struct Played {
 static Played DriverStats() {
   using Fn = void (*)(uint64_t*, int*, uint64_t*);
   auto fn = reinterpret_cast<Fn>(
-      reinterpret_cast<void*>(GetProcAddress(GetModuleHandleW(L"openmusic_test_asio.dll"), "TestDriverStats")));
+      reinterpret_cast<void*>(GetProcAddress(GetModuleHandleW(L"riflay_test_asio.dll"), "TestDriverStats")));
   Played p;
   if (fn) fn(&p.frames, &p.peak, &p.mismatched);
   return p;
@@ -123,7 +123,7 @@ int main(int argc, char** argv) {
   }
   mpv = mpv_create();
   // What AudioEngine sets for an ASIO output.
-  Set("audio-device", "asio/OpenMusic Test");
+  Set("audio-device", "asio/Riflay Test");
   Set("audio-samplerate", "0");
   Set("volume", "100");
   Set("vid", "no");
@@ -132,8 +132,8 @@ int main(int argc, char** argv) {
 
   // 0. The driver is listed the way the app shows it.
   const std::string devices = Get("audio-device-list");
-  CHECK(devices.find("\"name\":\"asio/OpenMusic Test\"") != std::string::npos);
-  CHECK(devices.find("\"description\":\"ASIO: OpenMusic Test\"") != std::string::npos);
+  CHECK(devices.find("\"name\":\"asio/Riflay Test\"") != std::string::npos);
+  CHECK(devices.find("\"description\":\"ASIO: Riflay Test\"") != std::string::npos);
 
   // 1. 16-bit / 44.1 kHz: s16 straight into the driver's Int16 buffers, every
   // sample intact, in real time, and mpv stays responsive meanwhile.
@@ -144,7 +144,7 @@ int main(int argc, char** argv) {
               r.seconds, r.out_format.c_str(), r.out_rate.c_str(),
               static_cast<unsigned long long>(after.frames - before.frames), after.peak, r.slowest_read_ms);
   // What mpv must write for the driver's format: its own where mpv has it.
-  const char* type = getenv("OPENMUSIC_TEST_ASIO_TYPE");
+  const char* type = getenv("RIFLAY_TEST_ASIO_TYPE");
   const std::string want_format = !type || std::string(type) == "16" ? "s16p"
                                   : std::string(type) == "19"        ? "floatp"
                                                                      : "s32p";

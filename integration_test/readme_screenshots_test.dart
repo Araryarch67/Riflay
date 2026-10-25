@@ -18,11 +18,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:just_audio_media_kit/just_audio_media_kit.dart';
 import 'package:media_kit/media_kit.dart' show NativePlayer;
-import 'package:openmusic/main.dart';
-import 'package:openmusic/models/track.dart';
-import 'package:openmusic/services/player_controller.dart';
-import 'package:openmusic/ui/player_panels.dart';
-import 'package:openmusic/ui/widgets/signal_path.dart';
+import 'package:riflay/main.dart';
+import 'package:riflay/models/track.dart';
+import 'package:riflay/services/player_controller.dart';
+import 'package:riflay/ui/player_panels.dart';
+import 'package:riflay/ui/widgets/signal_path.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 const shots = String.fromEnvironment('SHOTS');
@@ -40,7 +40,7 @@ void main() {
     final flac = '${dir.path}/Studio Session.flac';
     await Process.run('ffmpeg', [
       '-loglevel', 'error', '-y', '-f', 'lavfi', '-i', 'anullsrc=r=96000:cl=stereo', '-t', '600', //
-      '-sample_fmt', 's32', '-metadata', 'title=Studio Session', '-metadata', 'artist=OpenMusic',
+      '-sample_fmt', 's32', '-metadata', 'title=Studio Session', '-metadata', 'artist=Riflay',
       '-metadata', 'album=Hi-Res Test', '-c:a', 'flac', flac,
     ]);
     // Played directly, not added to the library, so Home stays about real music.
@@ -48,7 +48,7 @@ void main() {
       id: Uri.file(flac).toString(),
       uri: Uri.file(flac),
       title: 'Studio Session',
-      artist: 'OpenMusic',
+      artist: 'Riflay',
       album: 'Hi-Res Test',
     );
     // Discord off: the real one, if running, would show these songs on the user's profile.
@@ -67,7 +67,7 @@ void main() {
 
     tester.view.physicalSize = const Size(1440, 900);
     tester.view.devicePixelRatio = 1;
-    await tester.pumpWidget(RepaintBoundary(child: OpenMusicApp(controller: c)));
+    await tester.pumpWidget(RepaintBoundary(child: RiflayApp(controller: c)));
 
     Future<void> settle([int ms = 600]) async {
       for (var i = 0; i < ms ~/ 100; i++) {
@@ -127,7 +127,7 @@ void main() {
       FocusManager.instance.primaryFocus?.unfocus();
       await settle();
 
-      // An OpenMusic playlist mixing artists.
+      // A Riflay playlist mixing artists.
       await tester.tap(find.text('Beatbox mix').first);
       await settle();
       await tester.tap(find.byTooltip('Shuffle play'));

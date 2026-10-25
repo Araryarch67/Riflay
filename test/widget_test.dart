@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:openmusic/models/track.dart';
+import 'package:riflay/models/track.dart';
 
 void main() {
   test('parses artist and title from filename', () {

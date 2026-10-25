@@ -4,7 +4,7 @@ import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
-import 'package:openmusic/services/metadata.dart';
+import 'package:riflay/services/metadata.dart';
 
 void main() {
   http.Response groups(List<Map<String, Object>> g) => http.Response(jsonEncode({'release-groups': g}), 200);
@@ -19,7 +19,7 @@ void main() {
         asked.add(req.url.toString());
         if (req.url.host == 'musicbrainz.org') {
           expect(req.url.queryParameters['query'], r'releasegroup:"Discovery" AND artist:"Daft \"Punk\""');
-          expect(req.headers['User-Agent'], contains('OpenMusic'));
+          expect(req.headers['User-Agent'], contains('Riflay'));
           return groups([
             {'id': 'no-art', 'score': 100},
             {'id': 'has-art', 'score': 95},

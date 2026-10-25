@@ -2,9 +2,9 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:openmusic/models/track.dart';
-import 'package:openmusic/services/playlist_transfer.dart';
-import 'package:openmusic/ui/playlist_import.dart';
+import 'package:riflay/models/track.dart';
+import 'package:riflay/services/playlist_transfer.dart';
+import 'package:riflay/ui/playlist_import.dart';
 
 const link = 'https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M';
 

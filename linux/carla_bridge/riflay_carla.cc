@@ -1,11 +1,11 @@
 // A LADSPA plugin that runs the user's audio plugins (VST2, LV2, CLAP, ...)
 // through Carla, so they can sit in mpv's filter chain like the equalizer:
 //
-//   af=lavfi=[ladspa=file=<bundle>/lib/libopenmusic_carla.so:plugin=openmusic_carla]
+//   af=lavfi=[ladspa=file=<bundle>/lib/libriflay_carla.so:plugin=riflay_carla]
 //
 // Each instance starts Carla's "rack" (a native plugin that hosts plugins in
 // series) and loads the project the user made in Carla's own window:
-// $OPENMUSIC_PLUGINS, or $XDG_CONFIG_HOME/openmusic/plugins.carxp.
+// $RIFLAY_PLUGINS, or $XDG_CONFIG_HOME/riflay/plugins.carxp.
 //
 // Carla is loaded with dlopen when an instance starts, so neither building
 // nor running the app needs it; without it (or without a project) the audio
@@ -147,7 +147,7 @@ const CarlaLib& carla() {
   static CarlaLib lib = [] {
     CarlaLib l;
     std::vector<std::string> dirs;
-    if (const char* d = getenv("OPENMUSIC_CARLA_LIBS")) dirs.emplace_back(d);
+    if (const char* d = getenv("RIFLAY_CARLA_LIBS")) dirs.emplace_back(d);
     for (const char* d : {"/usr/lib/carla", "/usr/lib64/carla", "/usr/local/lib/carla", "/usr/lib/x86_64-linux-gnu/carla"})
       dirs.emplace_back(d);
     for (const auto& dir : dirs) {
@@ -173,21 +173,21 @@ const CarlaLib& carla() {
       l.ok = l.rack && l.hostHandle && l.loadProject;
       if (l.ok) break;
     }
-    if (!l.ok) fprintf(stderr, "openmusic_carla: Carla not found; passing audio through\n");
+    if (!l.ok) fprintf(stderr, "riflay_carla: Carla not found; passing audio through\n");
     return l;
   }();
   return lib;
 }
 
 std::string projectPath() {
-  if (const char* p = getenv("OPENMUSIC_PLUGINS")) return p;
+  if (const char* p = getenv("RIFLAY_PLUGINS")) return p;
   std::string base;
   if (const char* x = getenv("XDG_CONFIG_HOME"); x && *x) {
     base = x;
   } else if (const char* h = getenv("HOME")) {
     base = std::string(h) + "/.config";
   }
-  return base + "/openmusic/plugins.carxp";
+  return base + "/riflay/plugins.carxp";
 }
 
 struct Instance {
@@ -223,19 +223,19 @@ LADSPA_Handle instantiate(const LADSPA_Descriptor*, unsigned long rate) {
   struct stat st;
   if (stat(project.c_str(), &st) != 0) return in;  // nothing set up yet: pass through
 
-  in->hostDesc = NativeHostDescriptor{in,        lib.resources.c_str(), "OpenMusic", 0,          bufferSize, sampleRate,
+  in->hostDesc = NativeHostDescriptor{in,        lib.resources.c_str(), "Riflay", 0,          bufferSize, sampleRate,
                                       isOffline, timeInfo,              writeMidi,   uiParameter, uiProgram,  uiCustom,
                                       uiClosed,  uiFile,                uiFile,      dispatch};
   in->desc = lib.rack();
   in->plugin = in->desc ? in->desc->instantiate(&in->hostDesc) : nullptr;
   if (!in->plugin) {
-    fprintf(stderr, "openmusic_carla: Carla's rack didn't start\n");
+    fprintf(stderr, "riflay_carla: Carla's rack didn't start\n");
     in->desc = nullptr;
     return in;
   }
   in->host = lib.hostHandle(in->desc, in->plugin);
   if (!in->host || !lib.loadProject(in->host, project.c_str())) {
-    fprintf(stderr, "openmusic_carla: can't load %s: %s\n", project.c_str(),
+    fprintf(stderr, "riflay_carla: can't load %s: %s\n", project.c_str(),
             in->host && lib.lastError ? lib.lastError(in->host) : "?");
   }
   return in;
@@ -294,10 +294,10 @@ const LADSPA_PortRangeHint kHints[4] = {};
 
 const LADSPA_Descriptor kDescriptor = {
     0x4F4D4331,  // "OMC1"
-    "openmusic_carla",
+    "riflay_carla",
     0,
-    "OpenMusic audio plugins (Carla)",
-    "OpenMusic",
+    "Riflay audio plugins (Carla)",
+    "Riflay",
     "GPL-3.0-or-later",
     4,
     kPorts,

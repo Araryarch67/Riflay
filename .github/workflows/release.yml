@@ -1,4 +1,4 @@
-# Builds OpenMusic for Android, Windows, Linux, macOS and iOS and attaches the
+# Builds Riflay for Android, Windows, Linux, macOS and iOS and attaches the
 # files to a GitHub release. Runs when a version tag is pushed (`git tag v1.2.0
 # && git push origin v1.2.0`), or by hand from the Actions tab (then the files
 # are only kept as workflow artifacts, no release is made; `platforms` picks
@@ -71,10 +71,10 @@ jobs:
           flutter build apk --release $BUILD_ARGS
           flutter build apk --release --split-per-abi -P force-version-code-ignoring-abi=true $BUILD_ARGS
           mkdir -p dist
-          cp build/app/outputs/flutter-apk/app-release.apk dist/OpenMusic-android.apk
-          cp build/app/outputs/flutter-apk/app-arm64-v8a-release.apk dist/OpenMusic-android-arm64.apk
-          cp build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk dist/OpenMusic-android-arm32.apk
-          cp build/app/outputs/flutter-apk/app-x86_64-release.apk dist/OpenMusic-android-x86_64.apk
+          cp build/app/outputs/flutter-apk/app-release.apk dist/Riflay-android.apk
+          cp build/app/outputs/flutter-apk/app-arm64-v8a-release.apk dist/Riflay-android-arm64.apk
+          cp build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk dist/Riflay-android-arm32.apk
+          cp build/app/outputs/flutter-apk/app-x86_64-release.apk dist/Riflay-android-x86_64.apk
       - uses: actions/upload-artifact@v7
         with:
           name: android
@@ -107,13 +107,13 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force dist | Out-Null
-          Compress-Archive -Path build/windows/x64/runner/Release/* -DestinationPath dist/OpenMusic-windows-x64.zip
+          Compress-Archive -Path build/windows/x64/runner/Release/* -DestinationPath dist/Riflay-windows-x64.zip
       - name: Installer
         shell: bash
         run: |
           choco install innosetup --no-progress -y > /dev/null
           "/c/Program Files (x86)/Inno Setup 6/ISCC.exe" -Q "-DAppVersion=$(tool/ci_app_version.sh)" \
-            "-DSourceDir=$PWD/build/windows/x64/runner/Release" "-DOutputDir=$PWD/dist" windows/installer/openmusic.iss
+            "-DSourceDir=$PWD/build/windows/x64/runner/Release" "-DOutputDir=$PWD/dist" windows/installer/riflay.iss
       - uses: actions/upload-artifact@v7
         with:
           name: windows
@@ -140,11 +140,11 @@ jobs:
       - name: Archive
         run: |
           mkdir -p dist
-          tar -C build/linux/x64/release -czf dist/OpenMusic-linux-x64.tar.gz --transform 's,^bundle,OpenMusic,' bundle
+          tar -C build/linux/x64/release -czf dist/Riflay-linux-x64.tar.gz --transform 's,^bundle,Riflay,' bundle
       - name: .deb
-        run: linux/packaging/build_deb.sh "$(tool/ci_app_version.sh)" dist/OpenMusic-linux-amd64.deb
+        run: linux/packaging/build_deb.sh "$(tool/ci_app_version.sh)" dist/Riflay-linux-amd64.deb
       - name: AppImage
-        run: linux/packaging/build_appimage.sh dist/OpenMusic-linux-x86_64.AppImage
+        run: linux/packaging/build_appimage.sh dist/Riflay-linux-x86_64.AppImage
       - uses: actions/upload-artifact@v7
         with:
           name: linux
@@ -183,13 +183,13 @@ jobs:
         run: flutter build macos --release $BUILD_ARGS
       - name: .dmg and .zip
         run: |
-          app=build/macos/Build/Products/Release/OpenMusic.app
+          app=build/macos/Build/Products/Release/Riflay.app
           codesign --force --deep --sign - "$app"
           mkdir -p dist dmg
           cp -R "$app" dmg/
           ln -s /Applications dmg/Applications
-          hdiutil create -volname OpenMusic -srcfolder dmg -ov -format UDZO dist/OpenMusic-macos.dmg
-          ditto -c -k --keepParent "$app" dist/OpenMusic-macos.zip
+          hdiutil create -volname Riflay -srcfolder dmg -ov -format UDZO dist/Riflay-macos.dmg
+          ditto -c -k --keepParent "$app" dist/Riflay-macos.zip
       - uses: actions/upload-artifact@v7
         with:
           name: macos
@@ -231,7 +231,7 @@ jobs:
         run: |
           mkdir -p dist/Payload
           cp -R build/ios/iphoneos/Runner.app dist/Payload/
-          (cd dist && zip -qr OpenMusic-ios-unsigned.ipa Payload && rm -rf Payload)
+          (cd dist && zip -qr Riflay-ios-unsigned.ipa Payload && rm -rf Payload)
       - uses: actions/upload-artifact@v7
         with:
           name: ios
@@ -253,19 +253,24 @@ jobs:
           files: dist/*
           generate_release_notes: true
           body: |
+            **Coming from OpenMusic?** Riflay is its new name. On a computer, Riflay brings over your settings,
+            library, playlists, YouTube Music sign-in and downloads the first time it starts (the Windows installer
+            and the `.deb` also remove OpenMusic). On Android and iOS it installs as a new app: remove OpenMusic
+            yourself, and sign in again.
+
             ### Which file?
 
-            **Android** (7.0 and later, up to Android 16): take **OpenMusic-android.apk**; it runs on every phone.
+            **Android** (7.0 and later, up to Android 16): take **Riflay-android.apk**; it runs on every phone.
             The smaller ones are for one kind of processor only: `arm64` fits almost every phone from the last
             years; `arm32` only old 32-bit phones (newer phones refuse it as "not compatible"); `x86_64` is for
             emulators and Chromebooks.
 
-            **Windows**: `OpenMusic-windows-x64-setup.exe` installs it; the `.zip` runs without installing.
+            **Windows**: `Riflay-windows-x64-setup.exe` installs it; the `.zip` runs without installing.
             **Linux**: the `.AppImage` runs anywhere; `.deb` for Debian / Ubuntu; `.tar.gz` is the plain bundle.
 
-            **macOS** (12 Monterey and later, Apple Silicon and Intel): open `OpenMusic-macos.dmg` and drag OpenMusic
+            **macOS** (12 Monterey and later, Apple Silicon and Intel): open `Riflay-macos.dmg` and drag Riflay
             to Applications. It isn't signed by Apple, so the first time macOS refuses to open it: go to System
             Settings › Privacy & Security, scroll down and choose **Open Anyway**.
 
-            **iOS** (15 and later): `OpenMusic-ios-unsigned.ipa` isn't signed, so an iPhone won't install it as it is.
+            **iOS** (15 and later): `Riflay-ios-unsigned.ipa` isn't signed, so an iPhone won't install it as it is.
             Sideload it with AltStore or Sideloadly, which sign it with your own Apple ID.

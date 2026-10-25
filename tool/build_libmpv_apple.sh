@@ -13,10 +13,10 @@
 # Runs on a Mac with Xcode (CI builds it on GitHub's macOS runners). Sources
 # are pinned and checked against SHA-256 sums; everything builds statically
 # into one framework that exports only mpv's API. Needs meson, ninja, nasm,
-# cmake, pkg-config (Homebrew). Work files go to ~/.cache/openmusic-build.
+# cmake, pkg-config (Homebrew). Work files go to ~/.cache/riflay-build.
 set -euo pipefail
 project=$(cd "$(dirname "$0")/.." && pwd)
-root=${OPENMUSIC_BUILD_DIR:-${XDG_CACHE_HOME:-$HOME/.cache}/openmusic-build}/libmpv-apple
+root=${RIFLAY_BUILD_DIR:-${XDG_CACHE_HOME:-$HOME/.cache}/riflay-build}/libmpv-apple
 mkdir -p "$root/src" "$root/build"
 jobs=$(sysctl -n hw.ncpu)
 # The app's deployment targets (Runner.xcodeproj).

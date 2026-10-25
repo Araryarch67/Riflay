@@ -123,7 +123,7 @@ class _AppTitleBarState extends State<AppTitleBar> with WindowListener {
                     const SizedBox(width: 8),
                     Flexible(
                       child: Text(
-                        'OpenMusic',
+                        'Riflay',
                         maxLines: 1,
                         overflow: TextOverflow.clip,
                         style: text.labelLarge?.copyWith(color: AppColors.textSecondary, fontWeight: FontWeight.w700),

@@ -3,9 +3,9 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
-import 'package:openmusic/models/track.dart';
-import 'package:openmusic/services/lyrics.dart';
-import 'package:openmusic/services/ytmusic_web.dart';
+import 'package:riflay/models/track.dart';
+import 'package:riflay/services/lyrics.dart';
+import 'package:riflay/services/ytmusic_web.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// A watch page whose Lyrics tab is [browseId], or one without lyrics.

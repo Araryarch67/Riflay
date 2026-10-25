@@ -68,7 +68,7 @@ JSON.stringify((() => {
                         Text(
                           _checking
                               ? 'Checking the session…'
-                              : 'Google handles the sign-in. OpenMusic only keeps the session.',
+                              : 'Google handles the sign-in. Riflay only keeps the session.',
                           style: text.bodySmall?.copyWith(color: AppColors.textSecondary),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,

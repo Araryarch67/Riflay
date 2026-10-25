@@ -6,13 +6,13 @@ import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
-import 'package:openmusic/models/track.dart';
-import 'package:openmusic/services/audio_engine.dart';
-import 'package:openmusic/services/cue_sheet.dart';
-import 'package:openmusic/services/linux_alsa.dart';
-import 'package:openmusic/services/lyrics.dart';
-import 'package:openmusic/services/metadata.dart';
-import 'package:openmusic/services/player_controller.dart';
+import 'package:riflay/models/track.dart';
+import 'package:riflay/services/audio_engine.dart';
+import 'package:riflay/services/cue_sheet.dart';
+import 'package:riflay/services/linux_alsa.dart';
+import 'package:riflay/services/lyrics.dart';
+import 'package:riflay/services/metadata.dart';
+import 'package:riflay/services/player_controller.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// A 1x1 PNG, for cover tests.

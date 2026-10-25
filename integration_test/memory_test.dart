@@ -16,11 +16,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:just_audio_media_kit/just_audio_media_kit.dart';
 import 'package:media_kit/media_kit.dart' show NativePlayer;
-import 'package:openmusic/main.dart';
-import 'package:openmusic/models/track.dart';
-import 'package:openmusic/services/player_controller.dart';
-import 'package:openmusic/ui/shell_scope.dart';
-import 'package:openmusic/ui/widgets/page_scaffold.dart';
+import 'package:riflay/main.dart';
+import 'package:riflay/models/track.dart';
+import 'package:riflay/services/player_controller.dart';
+import 'package:riflay/ui/shell_scope.dart';
+import 'package:riflay/ui/widgets/page_scaffold.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 Future<void> _ffmpeg(List<String> args) async {
@@ -55,7 +55,15 @@ void main() {
     final files = <String>[];
     for (var a = 1; a <= 12; a++) {
       final cover = '${dir.path}/cover$a.jpg';
-      await _ffmpeg(['-f', 'lavfi', '-i', 'color=c=0x${(a * 20).toRadixString(16).padLeft(2, '0')}4080:s=1000x1000', '-frames:v', '1', cover]);
+      await _ffmpeg([
+        '-f',
+        'lavfi',
+        '-i',
+        'color=c=0x${(a * 20).toRadixString(16).padLeft(2, '0')}4080:s=1000x1000',
+        '-frames:v',
+        '1',
+        cover,
+      ]);
       await Future.wait([
         for (var t = 1; t <= 10; t++)
           () async {
@@ -96,7 +104,7 @@ void main() {
     tester.view.physicalSize = const Size(2560, 1600);
     tester.view.devicePixelRatio = 1.6;
     addTearDown(tester.view.reset);
-    await tester.pumpWidget(OpenMusicApp(controller: c));
+    await tester.pumpWidget(RiflayApp(controller: c));
 
     Future<void> run(Duration d) async {
       final sw = Stopwatch()..start();
@@ -109,7 +117,9 @@ void main() {
     Future<void> sample(String label) async {
       await run(const Duration(seconds: 2));
       results[label] = _memory();
-      debugPrint('MEM $label: ${results[label]!.entries.map((e) => '${e.key} ${e.value.toStringAsFixed(1)} MiB').join(', ')}');
+      debugPrint(
+        'MEM $label: ${results[label]!.entries.map((e) => '${e.key} ${e.value.toStringAsFixed(1)} MiB').join(', ')}',
+      );
     }
 
     await run(const Duration(seconds: 8)); // covers decoded, home settled
@@ -142,14 +152,13 @@ void main() {
     await sample('after scrolling 120 songs');
     await c.player.stop();
 
-    final out = File('build/perf/memory-${DateTime.now().toIso8601String().split('.').first.replaceAll(':', '-')}.json');
+    final out = File(
+      'build/perf/memory-${DateTime.now().toIso8601String().split('.').first.replaceAll(':', '-')}.json',
+    );
     out.parent.createSync(recursive: true);
     out.writeAsStringSync(
-      const JsonEncoder.withIndent('  ').convert({
-        'os': Platform.operatingSystem,
-        'mode': kProfileMode ? 'profile' : 'debug',
-        ...results,
-      }),
+      const JsonEncoder.withIndent('  ')
+          .convert({'os': Platform.operatingSystem, 'mode': kProfileMode ? 'profile' : 'debug', ...results}),
     );
   }, timeout: const Timeout(Duration(minutes: 5)));
 }

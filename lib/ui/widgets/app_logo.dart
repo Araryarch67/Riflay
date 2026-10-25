@@ -4,8 +4,8 @@ import 'package:flutter/material.dart';
 
 import '../theme.dart';
 
-/// OpenMusic's mark, drawn from the same shapes as the app icon
-/// (assets/icon/openmusic-transparent.svg). The light parts take the theme's
+/// Riflay's mark, drawn from the same shapes as the app icon
+/// (assets/icon/riflay-transparent.svg). The light parts take the theme's
 /// text colour, so the mark reads on light themes too; the orange stays.
 class AppLogo extends StatelessWidget {
   const AppLogo({super.key, this.size = 16});

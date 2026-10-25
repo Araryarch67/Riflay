@@ -17,10 +17,10 @@ void main() {
   setUpAll(() async {
     if (!ready) return;
     dir = Directory.systemTemp.createTempSync('plugins');
-    bridge = '${dir.path}/libopenmusic_carla.so';
+    bridge = '${dir.path}/libriflay_carla.so';
     final r = await Process.run('g++', [
       '-shared', '-fPIC', '-std=c++17', '-O2', '-Wall', '-Werror', '-fvisibility=hidden', //
-      'linux/carla_bridge/openmusic_carla.cc', '-ldl', '-o', bridge,
+      'linux/carla_bridge/riflay_carla.cc', '-ldl', '-o', bridge,
     ]);
     expect(r.exitCode, 0, reason: '${r.stderr}');
   });
@@ -30,7 +30,7 @@ void main() {
 
   /// Mean level (dB) and an MD5 of 2 s of a 1 kHz tone through [filter].
   Future<({double mean, String md5})> run(String filter, {String? project}) async {
-    final env = {'OPENMUSIC_PLUGINS': project ?? '${dir.path}/none.carxp'};
+    final env = {'RIFLAY_PLUGINS': project ?? '${dir.path}/none.carxp'};
     final input = ['-hide_banner', '-f', 'lavfi', '-i', 'sine=f=1000:d=2,aformat=channel_layouts=stereo'];
     final level = await Process.run('ffmpeg', [
       ...input,
@@ -46,7 +46,7 @@ void main() {
     return (mean: double.parse(mean![1]!), md5: (hash.stdout as String).trim());
   }
 
-  String plugin() => 'ladspa=file=$bridge:plugin=openmusic_carla';
+  String plugin() => 'ladspa=file=$bridge:plugin=riflay_carla';
 
   test('runs the plugins of a Carla project in the filter chain', () async {
     if (!ready) return markTestSkipped('needs Carla and lsp-plugins (LV2)');
