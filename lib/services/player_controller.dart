@@ -20,6 +20,7 @@ import 'discord_presence.dart';
 import 'dlna.dart';
 import 'dop.dart';
 import 'ffmpeg.dart';
+import 'ios_folders.dart';
 import 'library_store.dart';
 import 'lyrics.dart';
 import 'lyrics_translation.dart';
@@ -382,8 +383,8 @@ class PlayerController extends ChangeNotifier {
   bool get shuffle => _shuffled;
   LoopMode get loopMode => player.loopMode;
 
-  /// Folder scanning needs real filesystem paths, which mobile sandboxes don't expose.
-  bool get canScanFolders => Platform.isLinux || Platform.isWindows || Platform.isMacOS || Platform.isAndroid;
+  /// Every platform reads a picked folder in place (iOS through a bookmark kept by `FolderAccess.swift`).
+  bool get canScanFolders => true;
 
   // ── Derived library views ────────────────────────────────────────────────
   //
@@ -580,15 +581,23 @@ class PlayerController extends ChangeNotifier {
     // Side by side: the library (its own file, read in the background), the
     // YouTube Music session and the audio settings.
     final library = LibraryStore.load(prefs);
-    await Future.wait([library, ytMusic.load(), audio.load()]);
+    // iOS: picked folders have to be reopened before any of their songs can be read.
+    final folders = Platform.isIOS ? IosFolders.restore() : Future.value(const <String, String>{});
+    await Future.wait([library, folders, ytMusic.load(), audio.load()]);
     // iOS moves the app's folder on updates; elsewhere downloads stay put.
-    _library = Platform.isIOS ? await Future.wait((await library).map(YoutubeImporter.relocate)) : await library;
+    _library = Platform.isIOS
+        ? await Future.wait(IosFolders.repoint(await library, await folders).map(YoutubeImporter.relocate))
+        : await library;
     _recentIds = prefs.getStringList(_recentKey) ?? [];
     try {
       _playlists = [
         for (final j in jsonDecode(prefs.getString(_playlistsKey) ?? '[]') as List)
           UserPlaylist.fromJson((j as Map).cast()),
       ];
+      if (Platform.isIOS) {
+        final moved = await folders;
+        _playlists = [for (final p in _playlists) p.copyWith(tracks: IosFolders.repoint(p.tracks, moved))];
+      }
       _recentRemote = {
         for (final j in jsonDecode(prefs.getString(_recentRemoteKey) ?? '[]') as List)
           if (Track.fromJson((j as Map).cast()) case final t) t.id: t,
@@ -704,7 +713,9 @@ class PlayerController extends ChangeNotifier {
     if (Platform.isAndroid && await _musicPermission.invokeMethod<bool>('request') != true) {
       throw const MusicPermissionDenied();
     }
-    final dir = await FilePicker.getDirectoryPath(dialogTitle: 'Add music folder');
+    final dir = Platform.isIOS
+        ? await IosFolders.pick()
+        : await FilePicker.getDirectoryPath(dialogTitle: 'Add music folder');
     if (dir == null) return 0;
     return scanFolder(dir);
   }
