@@ -12,6 +12,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'linux_alsa.dart';
+import 'usb_dac.dart';
 
 /// How loudness differences between songs are evened out (mpv `replaygain`).
 enum VolumeLeveling {
@@ -130,6 +131,8 @@ class SignalPath {
     this.dac,
     this.dacName,
     this.dopBitRate,
+    this.usbDacName,
+    this.usbBitPerfect = false,
   });
 
   final String codec;
@@ -182,6 +185,13 @@ class SignalPath {
 
   bool get isDop => dopBitRate != null;
 
+  /// Android: the USB DAC the sound goes to, when one is plugged in and bit-perfect mode is on.
+  final String? usbDacName;
+
+  /// Android 14: the DAC gets the song in exactly the format Android's mixer was set to, so the
+  /// mixer passes it through untouched. False when the DAC lacks the song's rate or bit depth.
+  final bool usbBitPerfect;
+
   /// What the sound card is really being fed (Linux reads it from the kernel).
   final HwParams? dac;
   final String? dacName;
@@ -223,23 +233,26 @@ class SignalPath {
   static bool _isFloat(String f) => f.startsWith('float') || f.startsWith('double');
 
   /// Mixed by the OS (PipeWire / PulseAudio / shared WASAPI) rather than sent to the DAC as-is.
-  bool get viaSystemMixer => switch (output) {
-    'pipewire' ||
-    'pulse' ||
-    'jack' ||
-    'openal' ||
-    'sdl' ||
-    'opensles' ||
-    'audiotrack' ||
-    'aaudio' ||
-    'audiounit' => true,
-    // Shared mode goes through Windows' / macOS's mixer (its volume, effects and rate).
-    'wasapi' || 'coreaudio' => !exclusive,
-    // mpv hands an exclusive Core Audio output to this driver (hog mode, the DAC's own format).
-    'coreaudio_exclusive' => false,
-    'alsa' => !RegExp(r'^alsa/(hw|plughw|front|iec958|hdmi|usbstream):').hasMatch(device) || device.contains('plughw'),
-    _ => false,
-  };
+  bool get viaSystemMixer => usbBitPerfect
+      ? false
+      : switch (output) {
+          'pipewire' ||
+          'pulse' ||
+          'jack' ||
+          'openal' ||
+          'sdl' ||
+          'opensles' ||
+          'audiotrack' ||
+          'aaudio' ||
+          'audiounit' => true,
+          // Shared mode goes through Windows' / macOS's mixer (its volume, effects and rate).
+          'wasapi' || 'coreaudio' => !exclusive,
+          // mpv hands an exclusive Core Audio output to this driver (hog mode, the DAC's own format).
+          'coreaudio_exclusive' => false,
+          'alsa' =>
+            !RegExp(r'^alsa/(hw|plughw|front|iec958|hdmi|usbstream):').hasMatch(device) || device.contains('plughw'),
+          _ => false,
+        };
 
   /// The decoded samples reach the output untouched: same rate, channels and
   /// sample values (an integer format may be padded wider, which is lossless).
@@ -408,8 +421,11 @@ class AudioEngine extends ChangeNotifier {
 
   /// The sound reaches the DAC without the OS mixer in between: Exclusive mode
   /// or an ASIO driver on Windows, a direct card (Bit-perfect mode's) on Linux.
-  bool get bypassesMixer =>
-      hasExclusiveMode ? exclusive || device.startsWith('asio/') : bitPerfect || device.startsWith('alsa/');
+  bool get bypassesMixer => Platform.isAndroid
+      ? bitPerfect
+      : hasExclusiveMode
+      ? exclusive || device.startsWith('asio/')
+      : bitPerfect || device.startsWith('alsa/');
 
   /// Null follows each song's own rate.
   int? outputRate;
@@ -417,12 +433,33 @@ class AudioEngine extends ChangeNotifier {
 
   /// Bit-perfect mode leaves the rate alone, except through Windows' shared
   /// mixer: mpv still converts to the mixer's rate there, so with this resampler.
-  bool get hqResamplerActive => hqResampler && !(bitPerfect && bypassesMixer);
+  bool get hqResamplerActive => hqResampler && !(bitPerfect && bypassesMixer && !Platform.isAndroid);
 
   /// Everything off: nothing in the player touches the samples. On Linux the
   /// output goes straight to the card; on Windows that takes [exclusive] too. The
   /// player's volume still works (the DAC may have none): untouched at 100%, 64-bit float below.
-  bool bitPerfect = false;
+  bool bitPerfectWanted = false;
+
+  /// [bitPerfectWanted], and on Android only while a USB DAC is plugged in: there the switch is
+  /// Android 14's bit-perfect USB output, and without a DAC nothing can be bit-perfect.
+  bool get bitPerfect => bitPerfectWanted && (!Platform.isAndroid || androidUsb);
+
+  set bitPerfect(bool v) => bitPerfectWanted = v;
+
+  /// Android 14+ with a USB DAC that takes bit-perfect formats.
+  bool get androidUsb => Platform.isAndroid && usb.supported && usb.device != null;
+
+  /// Whether Bit-perfect mode can be offered here: a computer's own output choice, or Android 14+.
+  bool get hasBitPerfect => hasOutputChoice || (Platform.isAndroid && usb.supported);
+
+  /// Android's USB DAC (bit-perfect mixer attributes), see [_syncMixer].
+  final usb = UsbDac();
+
+  /// The mixer format set for the song that plays; null when bit-perfect is off or no format fits.
+  MixerChoice? _mixer;
+
+  /// What the DAC is set to for the playing song (shown in the signal path).
+  MixerChoice? get mixerChoice => _mixer;
 
   /// Audio plugins (VST2, LV2, CLAP, LADSPA...) set up in Carla's window and
   /// run in the filter chain through the bundled LADSPA bridge.
@@ -484,7 +521,15 @@ class AudioEngine extends ChangeNotifier {
   bool nativeDsd = false;
 
   /// Whether DSD files are sent as DoP right now (a mixer in between would destroy it).
-  bool get dopActive => nativeDsd && bitPerfect && bypassesMixer && hasOutputChoice;
+  bool get dopActive =>
+      nativeDsd &&
+      bitPerfect &&
+      bypassesMixer &&
+      (hasOutputChoice || (Platform.isAndroid && usb.device?.dopCapable == true));
+
+  /// Whether a DSD file of [bitRate] can go out as DoP: Android's DAC must take its PCM rate
+  /// (176.4 kHz for DSD64, 352.8 kHz for DSD128) as 32-bit; a computer's output takes any.
+  bool dopFits(int bitRate) => !Platform.isAndroid || (usb.device?.takesDop(bitRate) ?? false);
 
   DsdPlayback? _dop;
 
@@ -527,6 +572,10 @@ class AudioEngine extends ChangeNotifier {
   // ── Persistence ─────────────────────────────────────────────────────────
 
   Future<void> load() async {
+    if (Platform.isAndroid) {
+      await usb.init();
+      usb.addListener(_onUsb);
+    }
     final raw = (await SharedPreferences.getInstance()).getString(_key);
     if (raw == null) return;
     try {
@@ -545,7 +594,7 @@ class AudioEngine extends ChangeNotifier {
       exclusive = j['exclusive'] as bool? ?? exclusive;
       outputRate = j['outputRate'] as int?;
       hqResampler = j['hqResampler'] as bool? ?? hqResampler;
-      bitPerfect = j['bitPerfect'] as bool? ?? bitPerfect;
+      bitPerfectWanted = j['bitPerfect'] as bool? ?? bitPerfectWanted;
       nativeDsd = j['nativeDsd'] as bool? ?? nativeDsd;
       plugins = j['plugins'] as bool? ?? plugins;
       impulsePath = j['impulsePath'] as String?;
@@ -553,7 +602,7 @@ class AudioEngine extends ChangeNotifier {
       convolution = (j['convolution'] as bool? ?? false) && impulsePath != null && File(impulsePath!).existsSync();
       if (!hasOutputChoice) {
         device = 'auto';
-        bitPerfect = false;
+        if (!Platform.isAndroid) bitPerfectWanted = false;
         exclusive = false;
       }
     } catch (e) {
@@ -597,7 +646,7 @@ class AudioEngine extends ChangeNotifier {
       'exclusive': exclusive,
       'outputRate': outputRate,
       'hqResampler': hqResampler,
-      'bitPerfect': bitPerfect,
+      'bitPerfect': bitPerfectWanted,
       'nativeDsd': nativeDsd,
       'plugins': plugins,
       'impulsePath': impulsePath,
@@ -623,8 +672,9 @@ class AudioEngine extends ChangeNotifier {
         await _save();
         final p = _native;
         if (p != null) {
+          final mixerMoved = Platform.isAndroid && await _syncMixer(p);
           final volumeMoved = await _applyProps(p);
-          if (reopen || volumeMoved) await p.command(['ao-reload']);
+          if (reopen || volumeMoved || mixerMoved) await p.command(['ao-reload']);
         }
       } catch (e) {
         debugPrint('Applying audio settings failed: $e');
@@ -656,7 +706,7 @@ class AudioEngine extends ChangeNotifier {
   Future<void> setExclusive(bool v) => _set(() => exclusive = v, reopen: true);
   Future<void> setOutputRate(int? v) => _set(() => outputRate = v, reopen: true);
   Future<void> setHqResampler(bool v) => _set(() => hqResampler = v);
-  Future<void> setBitPerfect(bool v) => _set(() => bitPerfect = v, reopen: true);
+  Future<void> setBitPerfect(bool v) => _set(() => bitPerfectWanted = v, reopen: true);
   Future<void> setNativeDsd(bool v) => _set(() => nativeDsd = v, reopen: true);
 
   Future<void> setEqEnabled(bool v) => _set(() => eqEnabled = v);
@@ -971,8 +1021,54 @@ class AudioEngine extends ChangeNotifier {
     ].join(',');
   }
 
+  /// A DAC was plugged in or pulled out: bit-perfect starts or stops with it.
+  void _onUsb() {
+    notifyListeners();
+    if (bitPerfectWanted) _changed(reopenOutput: true).ignore();
+  }
+
+  StreamSubscription<AudioParams>? _paramsSub;
+  Future<void> _mixerBusy = Future.value();
+
+  /// Android bit-perfect: sets the DAC's mixer attributes to what the playing song needs, and
+  /// returns whether that changed (the output must then reopen). It reads the decoded format from mpv
+  /// because a song's rate is only known once it is open.
+  Future<bool> _syncMixer(NativePlayer p) async {
+    final before = _mixer;
+    final dac = usb.device;
+    MixerChoice? choice;
+    if (bitPerfect && dac != null) {
+      final rate = int.tryParse(await _read(p, 'audio-params/samplerate')) ?? 0;
+      if (rate == 0) return false; // nothing decoded yet: the next song's parameters call again
+      final bits = SignalPath.bitsOf(await _read(p, 'audio-params/format')) ?? 32;
+      choice = chooseMixer(dac.formats, rate: rate, bits: bits);
+      if (choice != null && !await usb.prefer(choice.format)) choice = null;
+    }
+    if (choice == null) await usb.clear();
+    _mixer = choice;
+    return choice != before;
+  }
+
+  /// Each song that opens may need other mixer attributes (its rate), so follow what mpv decodes.
+  void _followSong(Player player, NativePlayer p) {
+    if (!Platform.isAndroid) return;
+    _paramsSub?.cancel();
+    _paramsSub = player.stream.audioParams.listen((_) {
+      _mixerBusy = _mixerBusy
+          .then((_) async {
+            if (_disposed || !identical(_native, p)) return;
+            if (await _syncMixer(p)) {
+              await _applyProps(p);
+              await p.command(['ao-reload']);
+            }
+          })
+          .catchError((Object e) => debugPrint('Following the song\'s format failed: $e'));
+    });
+  }
+
   Future<void> _applyAll(Player player) async {
     if (player.platform case final NativePlayer p) {
+      _followSong(player, p);
       // A level sent to the running filter is lost when the next song's filters
       // are built from `af`, and the song would start at the old level. Before a
       // song loads (no filters run then), `af` gets the current one. That also puts
@@ -1020,7 +1116,13 @@ class AudioEngine extends ChangeNotifier {
       // doesn't resample (Exclusive mode takes the device's own format anyway).
       if (Platform.isMacOS) 'coreaudio-change-physical-format': bitPerfect ? 'yes' : 'no',
       'audio-exclusive': exclusiveOutput ? 'yes' : 'no',
-      'audio-samplerate': bitPerfect ? '0' : '${outputRate ?? 0}',
+      'audio-samplerate': _mixer != null
+          ? '${_mixer!.format.rate}'
+          : bitPerfect
+          ? '0'
+          : '${outputRate ?? 0}',
+      // Android bit-perfect: the exact format of the mixer attributes, so the track matches them.
+      if (Platform.isAndroid) 'audio-format': _mixer?.format.mpvFormat ?? 'no',
       // Only used when the rate has to change; keeps the default otherwise.
       'audio-swresample-o': hqResamplerActive ? await _hqResampler() : '',
       // 100 where the filter applies the volume: mpv must not scale samples too.
@@ -1116,6 +1218,8 @@ class AudioEngine extends ChangeNotifier {
   @override
   void dispose() {
     _disposed = true;
+    _paramsSub?.cancel();
+    if (Platform.isAndroid) usb.clear().ignore();
     _chainSync?.cancel();
     _projectWatch?.cancel();
     _releaseCard();
@@ -1348,6 +1452,8 @@ class AudioEngine extends ChangeNotifier {
       leveling: effectiveLeveling != VolumeLeveling.off,
       bitrate: int.tryParse(await g('audio-bitrate')),
       dopBitRate: _dop?.bitRate,
+      usbDacName: androidUsb && bitPerfect ? usb.device!.name : null,
+      usbBitPerfect: _mixer?.bitPerfect ?? false,
     );
   }
 }
