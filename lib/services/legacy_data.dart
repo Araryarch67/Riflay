@@ -12,9 +12,9 @@ import 'package:path_provider/path_provider.dart';
 /// folder (`Documents/OpenMusic`) becomes `Documents/Riflay`. Paths saved in
 /// them are pointed at the new places. Android and iOS keep each app's files
 /// to itself, so a phone starts afresh.
-abstract final class OpenMusicData {
+abstract final class LegacyData {
   static const _oldId = 'dev.openmusic.openmusic';
-  static const _marker = '.from-openmusic';
+  static const _marker = '.from-old-name';
 
   /// Runs once, before anything reads the settings. Never throws: a failure
   /// only means starting afresh, as on a phone.
@@ -34,11 +34,11 @@ abstract final class OpenMusicData {
       if (Platform.isMacOS) await _bringOverMacPreferences(old.path, support.path);
       if (Platform.isLinux) await _bringOverPluginsProject();
     } catch (e) {
-      debugPrint('Bringing over OpenMusic\'s data: $e');
+      debugPrint('Bringing over the old app\'s data: $e');
     }
   }
 
-  /// OpenMusic's support folder beside Riflay's [support]: `…/dev.openmusic.openmusic`
+  /// The old app's support folder beside Riflay's [support]: `…/dev.openmusic.openmusic`
   /// on Linux and macOS, `…\dev.openmusic\openmusic` on Windows (company \ product).
   @visibleForTesting
   static String oldSupportPath(String support, {bool? windows}) => (windows ?? Platform.isWindows)

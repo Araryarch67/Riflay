@@ -13,7 +13,7 @@ import 'package:window_manager/window_manager.dart';
 
 import 'services/appearance.dart';
 import 'services/media_session.dart';
-import 'services/openmusic_data.dart';
+import 'services/legacy_data.dart';
 import 'services/player_controller.dart';
 import 'ui/home_shell.dart';
 import 'ui/player_panels.dart' show MiniPlayerWindow, miniPlayer, windowFullScreen;
@@ -23,7 +23,7 @@ import 'ui/widgets/title_bar.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   // Before anything reads the settings or writes into the app's folder.
-  await OpenMusicData.bringOver();
+  await LegacyData.bringOver();
   if (kDebugMode) await _logErrorsToFile();
   // just_audio has no native Linux/Windows backend; route those through libmpv.
   // Android, macOS and iOS too: libmpv gives them the equalizer, Virtual

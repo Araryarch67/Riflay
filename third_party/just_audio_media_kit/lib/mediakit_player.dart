@@ -87,6 +87,14 @@ class MediaKitPlayer extends AudioPlayerPlatform {
         _updatePlaybackEvent();
       }),
       _player.stream.buffering.listen((isBuffering) {
+        // Riflay: at the end of the last song mpv pauses (keep-open), and its
+        // core-idle can arrive after eof-reached, as "buffering". The song is
+        // done, not buffering; a seek or a new file clears state.completed.
+        if (isBuffering &&
+            _processingState == ProcessingStateMessage.completed &&
+            _player.state.completed) {
+          return;
+        }
         final start = _currentMedia?.start;
         if (!isBuffering && start != null && _bufferedPosition <= start) {
           // Not ready yet, will be triggered by _player.stream.buffer

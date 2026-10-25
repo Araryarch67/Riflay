@@ -3,16 +3,16 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
-import 'package:riflay/services/openmusic_data.dart';
+import 'package:riflay/services/legacy_data.dart';
 
 void main() {
-  test('OpenMusic\'s folder sits beside Riflay\'s', () {
+  test('The old app\'s folder sits beside Riflay\'s', () {
     expect(
-      OpenMusicData.oldSupportPath('/home/me/.local/share/dev.riflay.riflay', windows: false),
+      LegacyData.oldSupportPath('/home/me/.local/share/dev.riflay.riflay', windows: false),
       '/home/me/.local/share/dev.openmusic.openmusic',
     );
     expect(
-      OpenMusicData.oldSupportPath(r'C:\Users\Me\AppData\Roaming\dev.riflay\riflay', windows: true),
+      LegacyData.oldSupportPath(r'C:\Users\Me\AppData\Roaming\dev.riflay\riflay', windows: true),
       r'C:\Users\Me\AppData\Roaming\dev.openmusic\openmusic',
     );
   });
@@ -22,16 +22,16 @@ void main() {
     final settings = jsonEncode({
       'flutter.audio.v1': jsonEncode({'impulsePath': '$from/room.wav'}),
     });
-    final moved = OpenMusicData.repoint(settings, from, to, windows: false);
+    final moved = LegacyData.repoint(settings, from, to, windows: false);
     expect((jsonDecode(jsonDecode(moved)['flutter.audio.v1'] as String) as Map)['impulsePath'], '$to/room.wav');
 
     final id = Uri.file('$from/YouTube/My Song.m4a').toString();
     expect(
-      OpenMusicData.repoint('{"id":"$id"}', from, to, windows: false),
+      LegacyData.repoint('{"id":"$id"}', from, to, windows: false),
       contains(Uri.file('$to/YouTube/My Song.m4a').toString()),
     );
     expect(
-      OpenMusicData.repoint('"/home/me/Documents/OpenMusicOld/a.flac"', from, to, windows: false),
+      LegacyData.repoint('"/home/me/Documents/OpenMusicOld/a.flac"', from, to, windows: false),
       '"/home/me/Documents/OpenMusicOld/a.flac"',
       reason: 'only what is inside the folder',
     );
@@ -42,7 +42,7 @@ void main() {
       'path': '$wFrom\\YouTube\\a.m4a',
       'id': Uri.file('$wFrom\\YouTube\\a.m4a', windows: true).toString(),
     });
-    final w = jsonDecode(OpenMusicData.repoint(wSettings, wFrom, wTo, windows: true)) as Map;
+    final w = jsonDecode(LegacyData.repoint(wSettings, wFrom, wTo, windows: true)) as Map;
     expect((jsonDecode(w['flutter.audio.v1'] as String) as Map)['impulsePath'], '$wTo\\YouTube\\a.m4a');
     expect(w['path'], '$wTo\\YouTube\\a.m4a');
     expect(w['id'], Uri.file('$wTo\\YouTube\\a.m4a', windows: true).toString());
@@ -60,7 +60,7 @@ void main() {
     tearDown(() => root.deleteSync(recursive: true));
 
     Future<void> run() =>
-        OpenMusicData.bringOverFrom(old, support, oldDownloads: oldDownloads.parent, downloads: downloads);
+        LegacyData.bringOverFrom(old, support, oldDownloads: oldDownloads.parent, downloads: downloads);
 
     test('settings, library, sign-in and downloads come along, once', () async {
       final song = File(p.join(oldDownloads.path, 'Song.m4a'))..writeAsStringSync('audio');
@@ -97,7 +97,7 @@ void main() {
       final copied = File(p.join(support.path, 'youtube_music_account.json'));
       expect(copied.readAsStringSync(), '{"cookie":"x"}');
       if (!Platform.isWindows) expect(copied.statSync().modeString(), 'rw-------', reason: 'the sign-in stays private');
-      expect(old.existsSync(), isTrue, reason: 'OpenMusic\'s own copy is left alone');
+      expect(old.existsSync(), isTrue, reason: 'the old app\'s own copy is left alone');
 
       // A second start changes nothing, even after Riflay saved new settings.
       File(p.join(support.path, 'shared_preferences.json')).writeAsStringSync('{"new":true}');
