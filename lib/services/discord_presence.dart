@@ -41,11 +41,17 @@ class DiscordPresence {
     }
   }
 
-  /// Shows [track] as playing from [position], or clears the presence when
+  /// Shows [track] as playing from [position] ([quality]: "FLAC · 24-bit / 96 kHz"), or clears the presence when
   /// [track] is null or paused.
-  void update({required Track? track, required bool playing, required Duration position, Duration? duration}) {
+  void update({
+    required Track? track,
+    required bool playing,
+    required Duration position,
+    Duration? duration,
+    String? quality,
+  }) {
     if (!supported || !_enabled) return;
-    _wanted = track == null || !playing ? null : _activity(track, position, duration);
+    _wanted = track == null || !playing ? null : _activity(track, position, duration, quality);
     // Nothing shown yet and nothing to show: don't wake Discord up just to clear.
     if (_wanted == null && _conn == null) {
       _pending?.cancel();
@@ -60,7 +66,7 @@ class DiscordPresence {
     _pending = Timer(wait.isNegative ? Duration.zero : wait, () => _send(_wanted));
   }
 
-  Map<String, dynamic> _activity(Track t, Duration position, Duration? duration) {
+  Map<String, dynamic> _activity(Track t, Duration position, Duration? duration, String? quality) {
     final now = DateTime.now().millisecondsSinceEpoch;
     final start = now - position.inMilliseconds;
     final videoId = t.videoId ?? _videoIdFrom(t.sourceUrl);
@@ -70,7 +76,8 @@ class DiscordPresence {
       'type': 2, // "Listening to"
       'status_display_type': 2, // member list shows the song title, not the app name
       'details': _clip(t.title),
-      'state': _clip(t.artist),
+      // The quality sits on the always-visible line, for audiophile bragging.
+      'state': _clip([if (t.artist.trim().isNotEmpty) t.artist.trim(), ?quality].join(' · ')),
       'timestamps': {'start': start, 'end': ?(duration == null ? null : start + duration.inMilliseconds)},
       'assets': {
         // Remote URLs work as images; local files fall back to the logo, an art
