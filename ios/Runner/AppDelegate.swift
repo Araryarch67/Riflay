@@ -4,6 +4,7 @@ import UIKit
 @main
 @objc class AppDelegate: FlutterAppDelegate, FlutterImplicitEngineDelegate {
   private let folders = FolderAccess()
+  private let route = AudioRoute()
 
   override func application(
     _ application: UIApplication,
@@ -16,6 +17,9 @@ import UIKit
     GeneratedPluginRegistrant.register(with: engineBridge.pluginRegistry)
     if let messenger = engineBridge.pluginRegistry.registrar(forPlugin: "FolderAccess")?.messenger() {
       folders.register(with: messenger)
+    }
+    if let registrar = engineBridge.pluginRegistry.registrar(forPlugin: "AudioRoute") {
+      route.register(with: registrar)
     }
   }
 }
