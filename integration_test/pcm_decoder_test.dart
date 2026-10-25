@@ -6,6 +6,10 @@
 //
 // On a desktop, run it in a headless session with a throwaway app-data
 // directory (see AGENT.md). Windows has no MpvPcm.
+//
+// Don't point PIPEWIRE_REMOTE at a socket that isn't there: every Player makes mpv probe the audio devices, and with
+// PipeWire unreachable libpipewire sometimes sticks in pw_thread_loop_stop, which freezes the Dart thread for good
+// (about one Player in 50). Use a PipeWire of its own (an empty one is enough) or the real one.
 // ignore_for_file: experimental_member_use
 import 'dart:async';
 import 'dart:io';
@@ -141,10 +145,11 @@ void main() {
 
   File save(String name, Uint8List bytes) => File('${dir.path}/$name')..writeAsBytesSync(bytes);
 
-  List<String> fifos() => [
-    for (final f in Directory(dir.parent.path).listSync())
-      if (f.path.contains('riflay-pcm-')) f.path,
-  ];
+  // Only this process's own pipes: another run's leftovers (or a running app's) are not this test's business.
+  List<String> fifos() {
+    final own = Directory(MpvPcm.fifoDirectoryIn(dir.parent.path));
+    return own.existsSync() ? [for (final f in own.listSync()) f.path] : [];
+  }
 
   test('a 16-bit file decodes bit for bit, and the pipe is gone afterwards', () async {
     if (!MpvPcm.supported) return markTestSkipped('MpvPcm is not used on this platform');
@@ -265,6 +270,21 @@ void main() {
       throwsA(anything),
     );
     expect(fifos(), isEmpty);
+  });
+
+  test('what a dead process left behind is swept, and this process\'s folder is not', () async {
+    if (!MpvPcm.supported) return markTestSkipped('MpvPcm is not used on this platform');
+    final temp = dir.parent.path;
+    // Beyond any pid_max: no such process.
+    final stale = Directory('$temp/riflay-pcm-4194303')..createSync();
+    File('${stale.path}/abcd').writeAsStringSync('x');
+    final unrelated = Directory('$temp/riflay-pcm-keep-me')..createSync();
+    final own = Directory(MpvPcm.fifoDirectoryIn(temp))..createSync(recursive: true);
+    MpvPcm.sweepStale(temp);
+    expect(stale.existsSync(), isFalse);
+    expect(unrelated.existsSync(), isTrue);
+    expect(own.existsSync(), isTrue);
+    unrelated.deleteSync();
   });
 
   test('a byte source goes through the loopback server, from an offset', () async {

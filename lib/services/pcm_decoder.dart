@@ -91,6 +91,51 @@ abstract final class MpvPcm {
     return PcmStream._(session, session.rate, session.bits, session.channels);
   }
 
+  /// Where this process keeps its pipes under [temp]: a folder of its own, so a crash leaves one stale folder that the
+  /// next start can recognise (see [sweepStale]) instead of loose files nobody owns.
+  @visibleForTesting
+  static String fifoDirectoryIn(String temp) => '$temp/riflay-pcm-$pid';
+
+  static final _folder = RegExp(r'^riflay-pcm-(\d+)$');
+  static final _loosePipe = RegExp(r'^riflay-pcm-[0-9a-f]+$');
+  static bool _swept = false;
+
+  /// Removes what earlier runs left in [temp]: the folders of processes that are gone, and the loose pipes that older
+  /// versions made there. Runs once per process, before the first decode.
+  @visibleForTesting
+  static void sweepStale(String temp) {
+    _swept = true;
+    try {
+      for (final e in Directory(temp).listSync(followLinks: false)) {
+        final name = e.uri.pathSegments.lastWhere((s) => s.isNotEmpty, orElse: () => '');
+        try {
+          if (e is Directory) {
+            final owner = int.tryParse(_folder.firstMatch(name)?.group(1) ?? '');
+            if (owner != null && owner != pid && !_alive(owner)) e.deleteSync(recursive: true);
+          } else if (_loosePipe.hasMatch(name) &&
+              FileSystemEntity.typeSync(e.path, followLinks: false) == FileSystemEntityType.pipe &&
+              DateTime.now().difference(e.statSync().modified) > const Duration(hours: 1)) {
+            e.deleteSync();
+          }
+        } catch (_) {} // not ours to remove, or already gone
+      }
+    } catch (e) {
+      debugPrint('PCM decoder: $e');
+    }
+  }
+
+  /// This process's pipe folder, made (and the stale ones of dead processes swept) on first use.
+  static Future<String> _directory() async {
+    String temp;
+    try {
+      temp = (await getTemporaryDirectory()).path;
+    } catch (_) {
+      temp = Directory.systemTemp.path; // no plugin (unit tests)
+    }
+    if (!_swept) sweepStale(temp);
+    return (Directory(fifoDirectoryIn(temp))..createSync(recursive: true)).path;
+  }
+
   /// The `af` graph that keeps a song's rate if it is at most [maxRate] and
   /// otherwise lets libavfilter pick the closest rate that is allowed.
   @visibleForTesting
@@ -123,6 +168,40 @@ void _mkfifo(String path) {
   }
 }
 
+typedef _OpenNative = Int32 Function(Pointer<Utf8>, Int32);
+typedef _Open = int Function(Pointer<Utf8>, int);
+typedef _CloseNative = Int32 Function(Int32);
+typedef _Close = int Function(int);
+typedef _KillNative = Int32 Function(Int32, Int32);
+typedef _Kill = int Function(int, int);
+
+/// Opens and at once closes the write end of the pipe at [path] without ever blocking, which completes a reader's
+/// blocked `open`. False when no reader is waiting (the open fails with ENXIO).
+///
+/// `File.open(mode: writeOnly)` would do the same, but if the reader is not there it blocks an IO thread for good.
+bool _pokeWriter(String path) {
+  final lib = DynamicLibrary.process();
+  final open = lib.lookupFunction<_OpenNative, _Open>('open');
+  final close = lib.lookupFunction<_CloseNative, _Close>('close');
+  const writeOnly = 1; // O_WRONLY
+  final nonBlock = Platform.isMacOS || Platform.isIOS ? 0x4 : 0x800; // O_NONBLOCK
+  final name = path.toNativeUtf8();
+  try {
+    final fd = open(name, writeOnly | nonBlock);
+    if (fd < 0) return false;
+    close(fd);
+    return true;
+  } finally {
+    calloc.free(name);
+  }
+}
+
+/// Whether the process [pid] is still running.
+bool _alive(int pid) {
+  if (Platform.isLinux || Platform.isAndroid) return Directory('/proc/$pid').existsSync();
+  return DynamicLibrary.process().lookupFunction<_KillNative, _Kill>('kill')(pid, 0) == 0;
+}
+
 /// One decode: the mpv player, the pipe, the reader and, for byte sources, the loopback server.
 class _Session {
   final out = StreamController<Uint8List>();
@@ -130,6 +209,7 @@ class _Session {
   Player? _player;
   String? _fifo;
   RandomAccessFile? _reader;
+  Future<RandomAccessFile>? _opening; // the reader's open, until it is assigned to [_reader]
   _SourceServer? _server;
   Future<void>? _pump;
   Future<void>? _stopping;
@@ -155,19 +235,15 @@ class _Session {
     required int bits,
     required Duration timeout,
   }) async {
-    String dir;
-    try {
-      dir = (await getTemporaryDirectory()).path;
-    } catch (_) {
-      dir = Directory.systemTemp.path; // no plugin (unit tests)
-    }
-    final fifo = _fifo = '$dir/riflay-pcm-${math.Random.secure().nextInt(1 << 32).toRadixString(16)}';
+    final dir = await MpvPcm._directory();
+    final fifo = _fifo = '$dir/${math.Random.secure().nextInt(1 << 32).toRadixString(16)}';
     _mkfifo(fifo);
 
-    // Blocks (on an IO thread) until mpv opens its end, which it does when the first audio is decoded.
-    final opened = File(fifo).open();
+    // Blocks (on an IO thread) until mpv opens its end, which it does when the first audio is decoded. Whatever
+    // happens meanwhile, [_abandonReader] can always complete it, so this never outlives the session.
     final reader = Completer<RandomAccessFile>();
-    opened.then(reader.complete, onError: reader.completeError);
+    _opening = reader.future;
+    File(fifo).open().then(reader.complete, onError: reader.completeError);
 
     final failure = Completer<void>();
     final url = switch (input) {
@@ -207,10 +283,13 @@ class _Session {
       if (rate != null) 'audio-samplerate': '$rate',
       if (rate == null && maxRate != null) 'af': MpvPcm.rateFilter(maxRate),
     };
-    for (final e in props.entries) {
-      await native.setProperty(e.key, e.value);
-    }
-    await player.open(Media(url, start: start > Duration.zero ? start : null, end: end), play: true);
+    // Setting up the player is bounded too: the replies come from mpv, which may be wedged.
+    await (() async {
+      for (final e in props.entries) {
+        await native.setProperty(e.key, e.value);
+      }
+      await player.open(Media(url, start: start > Duration.zero ? start : null, end: end), play: true);
+    })().timeout(timeout, onTimeout: () => throw const FileSystemException('Couldn\'t decode: mpv did not start'));
 
     final timer = Timer(timeout, () {
       debugPrint('PCM decoder: mpv never opened its output');
@@ -218,34 +297,42 @@ class _Session {
     });
     try {
       final first = await Future.any<RandomAccessFile?>([reader.future, failure.future.then((_) => null)]);
-      if (first == null) {
-        // Nothing will come: open the pipe's other end so the blocked open returns, then give up.
-        await _unblock(fifo);
-        _reader = await reader.future.timeout(const Duration(seconds: 2), onTimeout: () => throw 'no pipe');
-        throw const FileSystemException('Couldn\'t decode');
-      }
+      // Nothing will come: the caller's [stop] frees the blocked open.
+      if (first == null) throw const FileSystemException('Couldn\'t decode');
       _reader = first;
+      _opening = null;
     } finally {
       timer.cancel();
     }
-    await _readHeader();
+    await _readHeader(timeout);
   }
 
-  /// Opening a FIFO for writing completes a reader's blocked open.
-  Future<void> _unblock(String fifo) async {
-    try {
-      await (await File(fifo).open(mode: FileMode.writeOnly)).close();
-    } catch (e) {
-      debugPrint('PCM decoder: $e');
+  /// Frees a reader whose open is still waiting for mpv's end: pokes the pipe from the other side (never blocking)
+  /// until the open returns, then closes what it returned.
+  Future<void> _abandonReader() async {
+    final opened = _opening, fifo = _fifo;
+    _opening = null;
+    if (opened == null || fifo == null) return;
+    var settled = false;
+    final closed = opened.then<void>((f) async {
+      settled = true;
+      await f.close();
+    }, onError: (Object _) => settled = true);
+    for (var i = 0; i < 60 && !settled; i++) {
+      _pokeWriter(fifo);
+      await Future.any<void>([closed, Future<void>.delayed(const Duration(milliseconds: 50))]);
     }
+    if (!settled) debugPrint('PCM decoder: the pipe never opened for reading');
   }
 
   /// Reads the WAVE header mpv puts first (RIFF, `fmt `, then `data`), whatever size it is.
-  Future<void> _readHeader() async {
+  Future<void> _readHeader(Duration timeout) async {
     final buf = BytesBuilder(copy: false);
     var bytes = Uint8List(0);
     while (true) {
-      final chunk = await _reader!.read(4096);
+      final chunk = await _reader!
+          .read(4096)
+          .timeout(timeout, onTimeout: () => throw const FileSystemException('Couldn\'t decode: no audio'));
       if (chunk.isEmpty) throw const FileSystemException('Couldn\'t decode: no audio');
       buf.add(chunk);
       bytes = buf.toBytes();
@@ -339,12 +426,19 @@ class _Session {
       _startPump();
       await _pump!.timeout(const Duration(seconds: 10), onTimeout: _release);
     } else {
-      // Never got as far as a reader; a blocked open may still be waiting for a writer.
-      if (_fifo case final fifo?) await _unblock(fifo);
+      // Never got as far as a reader; its open may still be waiting for a writer.
+      await _abandonReader();
       await _release();
     }
-    await disposed;
-    await _server?.close();
+    await disposed?.timeout(
+      const Duration(seconds: 10),
+      onTimeout: () => debugPrint('PCM decoder: the player did not dispose'),
+    );
+    try {
+      await _server?.close().timeout(const Duration(seconds: 2));
+    } catch (e) {
+      debugPrint('PCM decoder: $e');
+    }
     _server = null;
     if (!out.isClosed) unawaited(out.close());
   }
@@ -357,7 +451,8 @@ class _Session {
     final reader = _reader;
     _reader = null;
     try {
-      await reader?.close();
+      // A read that mpv never answers would hold the close for good.
+      await reader?.close().timeout(const Duration(seconds: 2));
     } catch (_) {}
     final fifo = _fifo;
     _fifo = null;
