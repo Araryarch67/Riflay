@@ -16,6 +16,7 @@ import 'services/layout_prefs.dart';
 import 'services/media_session.dart';
 import 'services/legacy_data.dart';
 import 'services/player_controller.dart';
+import 'services/stay_awake.dart';
 import 'ui/home_shell.dart';
 import 'ui/player_panels.dart' show MiniPlayerWindow, miniPlayer, windowFullScreen;
 import 'ui/theme.dart';
@@ -65,6 +66,7 @@ Future<void> main() async {
   final controller = PlayerController();
   await controller.load();
   await MediaSession.start(controller);
+  await StayAwake.start(controller);
   runApp(RiflayApp(controller: controller));
 }
 

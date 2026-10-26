@@ -50,6 +50,7 @@ class MainActivity : AudioServiceActivity() {
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
         usbDac = UsbDac(this, flutterEngine.dartExecutor.binaryMessenger)
+        PowerControl(applicationContext, flutterEngine.dartExecutor.binaryMessenger)
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "riflay/window").setMethodCallHandler { call, result ->
             val on = call.arguments as? Boolean
             if (call.method != "setSeeThrough" || on == null) return@setMethodCallHandler result.notImplemented()
