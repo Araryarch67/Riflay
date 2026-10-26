@@ -14,6 +14,7 @@ import 'package:window_manager/window_manager.dart';
 import 'services/appearance.dart';
 import 'services/layout_prefs.dart';
 import 'services/media_session.dart';
+import 'services/metadata.dart';
 import 'services/legacy_data.dart';
 import 'services/player_controller.dart';
 import 'services/stay_awake.dart';
@@ -121,18 +122,46 @@ class _RiflayAppState extends State<RiflayApp> {
     super.initState();
     _appearance.addListener(_restyle);
     _layout.addListener(_restyle);
+    widget.controller.addListener(_syncTint);
+    _syncTint();
   }
 
   @override
   void dispose() {
     _appearance.removeListener(_restyle);
     _layout.removeListener(_restyle);
+    widget.controller.removeListener(_syncTint);
     super.dispose();
+  }
+
+  String? _tintTrack;
+
+  /// "Colours from what's playing: Whole app": follows the current song's cover colour (the same cached
+  /// extraction the player uses, so a cover is never read twice). Nothing playing: the theme's own colours.
+  void _syncTint() {
+    final track = widget.controller.currentTrack;
+    if (_appearance.coverMode != CoverColorMode.app || track == null) {
+      _tintTrack = null;
+      _appearance.setCoverTint(null);
+      return;
+    }
+    if (_tintTrack == track.id) return;
+    _tintTrack = track.id;
+    Color? usable(Color c) => c == Metadata.fallbackAccent ? null : c;
+    final cached = Metadata.cachedAccent(track);
+    if (cached != null) {
+      _appearance.setCoverTint(usable(cached));
+      return;
+    }
+    Metadata.accent(track).then((c) {
+      if (mounted && _tintTrack == track.id) _appearance.setCoverTint(usable(c));
+    });
   }
 
   /// Widgets read [AppColors] directly rather than through an inherited
   /// widget, so a new accent or opacity repaints the whole tree (state kept).
   void _restyle() {
+    _syncTint();
     setState(() {});
     void rebuild(Element e) {
       e.markNeedsBuild();

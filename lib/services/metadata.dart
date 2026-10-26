@@ -479,6 +479,8 @@ abstract final class Metadata {
       }
       final hsl = HSLColor.fromColor(Color.fromARGB(255, r ~/ n, g ~/ n, b ~/ n));
       // Keep it rich enough to read as a colour against black, but never neon.
+      // A grey cover stays grey: forcing colour into it would tint everything red.
+      if (hsl.saturation < 0.08) return hsl.withLightness(hsl.lightness.clamp(0.3, 0.45)).toColor();
       return hsl
           .withSaturation(hsl.saturation.clamp(0.35, 0.8))
           .withLightness(hsl.lightness.clamp(0.3, 0.45))

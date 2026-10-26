@@ -2,10 +2,14 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/animation.dart' show Curves;
+import 'package:flutter/painting.dart' show HSLColor;
 import 'package:flutter/foundation.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'color_tools.dart';
 import 'system_fonts.dart';
 
 /// Every colour of one theme: surfaces from the window down to hover, text, and the theme's own accent.
@@ -40,6 +44,87 @@ class AppPalette {
 
   /// Dark text on light surfaces.
   final bool light;
+
+  /// A whole palette from one background colour, and optionally a text colour: panels, cards, hover and
+  /// menus step away from the background, and the text greys are kept readable (4.5:1 on the lightest
+  /// surface) on dark and light backgrounds alike.
+  factory AppPalette.derive(Color background, {Color? text, Color? accent}) {
+    const white = Color(0xFFFFFFFF), black = Color(0xFF000000);
+    final light = text != null
+        ? text.computeLuminance() < background.computeLuminance()
+        : contrastRatio(black, background) > contrastRatio(white, background);
+    Color mix(Color to, double t) => Color.lerp(background, to, t)!;
+    final panel = light ? mix(white, 0.55) : mix(white, 0.04);
+    final elevated = light ? mix(white, 0.3) : mix(white, 0.08);
+    final hover = light ? mix(black, 0.06) : mix(white, 0.14);
+    final menu = light ? mix(white, 0.4) : mix(white, 0.11);
+    // The surface text has to read on: the one furthest from the text.
+    final worst = hover;
+    final primary = ensureContrast(text ?? (light ? mix(black, 0.88) : mix(white, 0.94)), worst, 4.5, !light);
+    final secondary = ensureContrast(Color.lerp(primary, panel, 0.35)!, worst, 4.5, !light);
+    final muted = ensureContrast(Color.lerp(primary, panel, 0.55)!, worst, 3, !light);
+    final acc = ensureContrast(accent ?? (light ? const Color(0xFF0B7F6D) : const Color(0xFF2EE6C5)), panel, 4.5);
+    return AppPalette(
+      background: background,
+      panel: panel,
+      elevated: elevated,
+      hover: hover,
+      menu: menu,
+      textPrimary: primary,
+      textSecondary: secondary,
+      textMuted: muted,
+      accent: acc,
+      onAccent: onColorFor(acc),
+      light: light,
+    );
+  }
+
+  /// This palette washed with [cover] ([amount] 0 to 1 of the full wash), for "Colours from what's playing:
+  /// Whole app". Surfaces move toward the cover's hue, the accent becomes the cover's colour, and text is
+  /// nudged to stay readable (4.5:1, or what the theme itself had when that was lower).
+  AppPalette tinted(Color cover, double amount, [double? accentAmount]) {
+    if (amount <= 0) return this;
+    final hsl = HSLColor.fromColor(cover);
+    // On light themes the wash is a pale version of the cover, so surfaces stay light.
+    final wash = light ? hsl.withLightness(0.78).toColor() : cover;
+    final u = amount;
+    final k = light ? 1.3 : 1.0;
+    Color mix(Color base, double f) => Color.lerp(base, wash, (f * k * u).clamp(0.0, 0.5))!;
+    final bg = mix(background, 0.12);
+    final pn = mix(panel, 0.18);
+    final el = mix(elevated, 0.24);
+    final ho = mix(hover, 0.3);
+    final mn = mix(menu, 0.22);
+    // Text has to read on every surface: check the one furthest from it (the lightest on dark themes).
+    final surfaces = [bg, pn, el, ho, mn];
+    surfaces.sort((a, b) => a.computeLuminance().compareTo(b.computeLuminance()));
+    final worst = light ? surfaces.first : surfaces.last;
+    final baseSurfaces = [background, panel, elevated, hover, menu]
+      ..sort((a, b) => a.computeLuminance().compareTo(b.computeLuminance()));
+    final baseWorst = light ? baseSurfaces.first : baseSurfaces.last;
+    Color text(Color base) {
+      final had = contrastRatio(base, baseWorst);
+      return ensureContrast(base, worst, had < 4.5 ? had : 4.5, !light);
+    }
+
+    // A grey cover keeps the theme's own accent: a grey accent would be a step backwards.
+    final colourful = hsl.saturation >= 0.1;
+    final lifted = colourful ? ensureContrast(cover, worst, 4.5, !light) : accent;
+    final acc = Color.lerp(accent, lifted, (accentAmount ?? u).clamp(0.0, 1.0))!;
+    return AppPalette(
+      background: bg,
+      panel: pn,
+      elevated: el,
+      hover: ho,
+      menu: mn,
+      textPrimary: text(textPrimary),
+      textSecondary: text(textSecondary),
+      textMuted: text(textMuted),
+      accent: acc,
+      onAccent: onColorFor(acc),
+      light: light,
+    );
+  }
 }
 
 /// The colour schemes in Settings › Appearance, from their authors' palettes.
@@ -255,6 +340,23 @@ enum ThemeChoice {
       accent: Color(0xFFEBBCBA), // rose
       onAccent: Color(0xFF191724),
     ),
+  ),
+
+  /// Your own: a background colour (and optionally a text colour); [Appearance.palette] derives the rest.
+  custom(
+    'Custom',
+    AppPalette(
+      background: Color(0xFF14161B),
+      panel: Color(0xFF1A1D23),
+      elevated: Color(0xFF21242B),
+      hover: Color(0xFF2B2F37),
+      menu: Color(0xFF262A31),
+      textPrimary: Color(0xFFEFF0F2),
+      textSecondary: Color(0xFFA9ACB3),
+      textMuted: Color(0xFF7C8089),
+      accent: Color(0xFF2EE6C5),
+      onAccent: Color(0xFF00201B),
+    ),
   );
 
   const ThemeChoice(this.label, this.palette);
@@ -272,12 +374,25 @@ enum AccentChoice {
   violet('Violet', Color(0xFFB18CFF), Color(0xFF1E0D45)),
   pink('Pink', Color(0xFFFF6FAE), Color(0xFF3D0020)),
   orange('Orange', Color(0xFFFF9F43), Color(0xFF3A1A00)),
-  white('White', Color(0xFFFFFFFF), Color(0xFF000000));
+  white('White', Color(0xFFFFFFFF), Color(0xFF000000)),
+
+  /// A colour of your own ([Appearance.customAccent]).
+  custom('Custom…', Color(0x00000000), Color(0x00000000));
 
   const AccentChoice(this.label, this.color, this.onColor);
   final String label;
   final Color color;
   final Color onColor;
+}
+
+/// Where the colour of the playing song's cover shows up.
+enum CoverColorMode {
+  off('Off'),
+  player('Player only'),
+  app('Whole app');
+
+  const CoverColorMode(this.label);
+  final String label;
 }
 
 /// What fills the phone's Now Playing page behind the cover.
@@ -304,14 +419,132 @@ class Appearance extends ChangeNotifier {
 
   AccentChoice accent = AccentChoice.theme;
 
-  AppPalette get palette => theme.palette;
+  /// The accent picked with "Custom…".
+  Color customAccent = const Color(0xFF4C9AFF);
+
+  /// The custom theme: a background colour, and a text colour (null: worked out from the background).
+  Color customBackground = const Color(0xFF14161B);
+  Color? customText;
+
+  /// The theme as picked, before any wash from the playing song.
+  AppPalette get basePalette => theme == ThemeChoice.custom
+      ? AppPalette.derive(customBackground, text: customText, accent: _pickedAccent)
+      : theme.palette;
+
+  Color? get _pickedAccent => switch (accent) {
+    AccentChoice.theme => null,
+    AccentChoice.custom => customAccent,
+    _ => accent.color,
+  };
+
+  AppPalette? _palette;
+
+  /// Every colour in use: [basePalette], the accent picked, and in [CoverColorMode.app] the wash of the
+  /// playing song's cover. Cached until something changes.
+  AppPalette get palette => _palette ??= _buildPalette();
+
+  AppPalette _buildPalette() {
+    var p = basePalette;
+    final picked = _pickedAccent;
+    if (picked != null && theme != ThemeChoice.custom) {
+      final on = accent == AccentChoice.custom ? onColorFor(picked) : accent.onColor;
+      p = AppPalette(
+        background: p.background,
+        panel: p.panel,
+        elevated: p.elevated,
+        hover: p.hover,
+        menu: p.menu,
+        textPrimary: p.textPrimary,
+        textSecondary: p.textSecondary,
+        textMuted: p.textMuted,
+        accent: picked,
+        onAccent: on,
+        light: p.light,
+      );
+    }
+    final c = _washColor;
+    if (coverMode != CoverColorMode.app || c == null) return p;
+    return p.tinted(c, _washAmount * (0.25 + 0.75 * coverStrength), _washAmount);
+  }
 
   /// The accent in use: the theme's own, or the one picked.
-  Color get accentColor => accent == AccentChoice.theme ? palette.accent : accent.color;
-  Color get onAccentColor => accent == AccentChoice.theme ? palette.onAccent : accent.onColor;
+  Color get accentColor => palette.accent;
+  Color get onAccentColor => palette.onAccent;
 
-  /// Tint pages and the player with the colour of the cover art.
-  bool coverColors = true;
+  /// Where the colour of the playing song's cover shows up.
+  CoverColorMode coverMode = CoverColorMode.player;
+
+  /// How strongly "Whole app" tints (0 subtle, 1 strong).
+  double coverStrength = 0.5;
+
+  /// Whether the player and pages are tinted with the cover's colour.
+  bool get coverColors => coverMode != CoverColorMode.off;
+
+  // The wash of "Whole app" animates between songs: from -> to over [washTime], easing in and out.
+  // A null colour is "no song / no colour", which fades the wash out.
+  Color? _washFrom;
+  Color? _washTo;
+  double _washT = 1;
+  Duration? _washStart;
+  bool _washRunning = false;
+  Color? _lastTarget;
+  static const washTime = Duration(milliseconds: 500);
+
+  /// The colour the wash is at right now, and how much of it applies (0 to 1).
+  Color? get _washColor => _washFrom != null && _washTo != null ? Color.lerp(_washFrom, _washTo, _ease) : (_washTo ?? _washFrom);
+  double get _washAmount => _washFrom == null && _washTo == null
+      ? 0
+      : _washFrom == null
+      ? _ease
+      : _washTo == null
+      ? 1 - _ease
+      : 1;
+  double get _ease => Curves.easeInOut.transform(_washT);
+
+  /// The cover colour of the song now playing, or null when nothing is (or it has no artwork). Fades to
+  /// it over about half a second; the tree is only restyled in a dozen steps rather than every frame.
+  void setCoverTint(Color? color) {
+    if (color == _lastTarget) return;
+    _lastTarget = color;
+    if (coverMode != CoverColorMode.app) {
+      // Not shown: just remember it, so switching on later doesn't fade from nothing.
+      _washFrom = null;
+      _washTo = color;
+      _washT = 1;
+      return;
+    }
+    _washFrom = _washColor == null || _washAmount < 0.01 ? null : _washColor;
+    _washTo = color;
+    if (_washFrom == null && _washTo == null) return;
+    _washT = 0;
+    _washStart = null;
+    if (!_washRunning) {
+      _washRunning = true;
+      SchedulerBinding.instance.scheduleFrameCallback(_washFrame);
+    }
+  }
+
+  var _lastStep = -1;
+
+  void _washFrame(Duration now) {
+    _washStart ??= now;
+    final t = ((now - _washStart!).inMicroseconds / washTime.inMicroseconds).clamp(0.0, 1.0);
+    _washT = t;
+    // About 12 steps over the fade: each one restyles the whole app.
+    final step = (t * 12).floor();
+    if (step != _lastStep || t >= 1) {
+      _lastStep = step;
+      _palette = null;
+      notifyListeners();
+    }
+    if (t >= 1) {
+      _washRunning = false;
+      _lastStep = -1;
+      _washFrom = null;
+      return;
+    }
+    SchedulerBinding.instance.scheduleFrameCallback(_washFrame);
+  }
 
   NowPlayingBackground nowPlaying = NowPlayingBackground.color;
 
@@ -368,7 +601,16 @@ class Appearance extends ChangeNotifier {
       final j = jsonDecode(raw) as Map<String, dynamic>;
       theme = ThemeChoice.values.asNameMap()[j['theme']] ?? theme;
       accent = AccentChoice.values.asNameMap()[j['accent']] ?? accent;
-      coverColors = j['coverColors'] as bool? ?? coverColors;
+      // Saved by older versions as on/off: on was "Player only".
+      coverMode =
+          CoverColorMode.values.asNameMap()[j['coverMode']] ??
+          ((j['coverColors'] as bool? ?? true) ? CoverColorMode.player : CoverColorMode.off);
+      coverStrength = (j['coverStrength'] as num?)?.toDouble().clamp(0, 1) ?? coverStrength;
+      customAccent = Color(j['customAccent'] as int? ?? customAccent.toARGB32());
+      customBackground = Color(j['customBackground'] as int? ?? customBackground.toARGB32());
+      final text = j['customText'] as int?;
+      customText = text == null ? null : Color(text);
+      _palette = null;
       nowPlaying = NowPlayingBackground.values.asNameMap()[j['nowPlaying']] ?? nowPlaying;
       glass = j['glass'] as bool? ?? glass;
       blur = (j['blur'] as num?)?.toDouble().clamp(4, 48) ?? blur;
@@ -392,6 +634,7 @@ class Appearance extends ChangeNotifier {
 
   Future<void> _set(VoidCallback change) async {
     change();
+    _palette = null;
     notifyListeners();
     unawaited(applyWindow());
     await (await SharedPreferences.getInstance()).setString(
@@ -400,6 +643,11 @@ class Appearance extends ChangeNotifier {
         'theme': theme.name,
         'accent': accent.name,
         'coverColors': coverColors,
+        'coverMode': coverMode.name,
+        'coverStrength': coverStrength,
+        'customAccent': customAccent.toARGB32(),
+        'customBackground': customBackground.toARGB32(),
+        'customText': customText?.toARGB32(),
         'nowPlaying': nowPlaying.name,
         'glass': glass,
         'blur': blur,
@@ -417,7 +665,57 @@ class Appearance extends ChangeNotifier {
     accent = AccentChoice.theme;
   });
   Future<void> setAccent(AccentChoice v) => _set(() => accent = v);
-  Future<void> setCoverColors(bool v) => _set(() => coverColors = v);
+  Future<void> setCoverMode(CoverColorMode v) => _set(() {
+    coverMode = v;
+    // Switching "Whole app" on fades the playing song's colour in from the theme's own.
+    final target = _lastTarget;
+    _lastTarget = null;
+    _washFrom = null;
+    _washTo = null;
+    _washT = 1;
+    setCoverTint(target);
+  });
+  Future<void> setCoverStrength(double v) => _set(() => coverStrength = v.clamp(0, 1));
+
+  /// Picks a colour of your own as the accent.
+  Future<void> setCustomAccent(Color v) => _set(() {
+    customAccent = v;
+    accent = AccentChoice.custom;
+  });
+
+  /// The custom theme's background; also switches to it.
+  Future<void> setCustomBackground(Color v) => _set(() {
+    customBackground = v;
+    theme = ThemeChoice.custom;
+  });
+
+  /// The custom theme's text colour; null works it out from the background.
+  Future<void> setCustomText(Color? v) => _set(() {
+    customText = v;
+    theme = ThemeChoice.custom;
+  });
+
+  /// Everything on this page back to how a fresh install looks.
+  Future<void> reset() async {
+    await setFont(null);
+    await _set(() {
+      theme = ThemeChoice.standard;
+      accent = AccentChoice.theme;
+      customAccent = const Color(0xFF4C9AFF);
+      customBackground = const Color(0xFF14161B);
+      customText = null;
+      coverMode = CoverColorMode.player;
+      coverStrength = 0.5;
+      nowPlaying = NowPlayingBackground.color;
+      glass = false;
+      blur = 24;
+      windowOpacity = 1;
+      textSize = defaultTextSize;
+      _washFrom = null;
+      _washTo = null;
+      _washT = 1;
+    });
+  }
   Future<void> setNowPlaying(NowPlayingBackground v) => _set(() => nowPlaying = v);
   Future<void> setGlass(bool v) => _set(() => glass = v);
   Future<void> setBlur(double v) => _set(() => blur = v);
