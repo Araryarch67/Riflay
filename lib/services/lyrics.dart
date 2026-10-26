@@ -3,8 +3,11 @@ import 'dart:io';
 import 'dart:isolate';
 
 import 'package:audio_metadata_reader/audio_metadata_reader.dart';
+import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:xml/xml.dart';
 
@@ -17,6 +20,20 @@ class LyricLine {
 
   final Duration time;
   final String text;
+}
+
+/// What [Lyrics.check] found.
+class LrcCheck {
+  const LrcCheck.timed() : timed = true, problem = null;
+  const LrcCheck.plain() : timed = false, problem = null;
+  const LrcCheck.invalid(String this.problem) : timed = false;
+
+  final bool timed;
+
+  /// One calm sentence for the person, null when the lyrics are fine.
+  final String? problem;
+
+  bool get ok => problem == null;
 }
 
 /// Lyrics for a song: timed lines when available, plain text otherwise.
@@ -82,6 +99,39 @@ class Lyrics {
     return Lyrics(lines: lines, source: source);
   }
 
+  /// Checks lyrics a person typed or loaded before they are kept. Text with
+  /// no timestamps is fine (plain lyrics); timestamps must be written as
+  /// `[mm:ss.xx]` with seconds under 60, and, when the song's [length] is
+  /// known, can't all fall long after it ends.
+  static LrcCheck check(String text, {Duration? length}) {
+    if (text.trim().isEmpty) return const LrcCheck.invalid('Add some lyrics first.');
+    const bad = LrcCheck.invalid(
+      'Some of the times in these lyrics aren\'t written correctly. Start each line with a time like [01:23.45].',
+    );
+    final full = RegExp(r'^(\[\d+:\d+(?:[.:]\d+)?\])+');
+    var stamps = 0;
+    var latest = Duration.zero;
+    for (final raw in const LineSplitter().convert(text)) {
+      final line = raw.trim();
+      // [ar:Artist], [ti:Title] and friends are not times.
+      if (!RegExp(r'^\[\d').hasMatch(line)) continue;
+      final lead = full.firstMatch(line);
+      if (lead == null) return bad;
+      for (final m in _stamp.allMatches(lead[0]!)) {
+        final seconds = double.parse(m[2]!.replaceFirst(':', '.'));
+        if (seconds >= 60) return bad;
+        final t = Duration(milliseconds: (int.parse(m[1]!) * 60000 + seconds * 1000).round());
+        if (t > latest) latest = t;
+        stamps++;
+      }
+    }
+    if (stamps == 0) return const LrcCheck.plain();
+    if (length != null && length > Duration.zero && latest > length + const Duration(seconds: 15)) {
+      return const LrcCheck.invalid('These times run past the end of the song. Check that the lyrics belong to it.');
+    }
+    return const LrcCheck.timed();
+  }
+
   /// Parses TTML (Apple Music style, as Better Lyrics serves it): one `<p>` per
   /// line, with word or syllable `<span>`s. Background vocals and
   /// translations are left out.
@@ -131,6 +181,9 @@ class Lyrics {
 abstract final class LyricsService {
   static final _cache = <String, Future<Lyrics>>{};
 
+  /// Forget what was found for [track], so the next look reads its lyrics again.
+  static void forget(Track track) => _cache.remove(track.id);
+
   /// [Lyrics.none] when there are none; throws when no source could be
   /// reached (that isn't cached, so the next try asks again).
   static Future<Lyrics> forTrack(Track track) {
@@ -156,6 +209,11 @@ abstract final class LyricsService {
   }
 
   static Future<({Lyrics lyrics, bool missed})> _find(Track track) async {
+    // Lyrics the person added to a song always win over any other source.
+    if (await UserLyrics.read(track) case final text?) {
+      final mine = Lyrics.parse(text, source: 'Your lyrics');
+      if (!mine.isEmpty) return (lyrics: mine, missed: false);
+    }
     final path = track.path;
     if (path != null) {
       final local = await Isolate.run(() => _local(path));
@@ -514,5 +572,58 @@ abstract final class LyricsService {
     }
     if (plain == null) return null;
     return Lyrics(plain: plain, source: 'LRCLIB');
+  }
+}
+
+/// Lyrics a person added to a downloaded song, kept in the app's own folder
+/// (never inside the audio file, never touched by online sources). One file
+/// per YouTube video, so the streamed and the downloaded copy of a song share them.
+abstract final class UserLyrics {
+  /// Tests point this at a folder of their own.
+  @visibleForTesting
+  static Directory? dirOverride;
+
+  static Future<Directory> _dir() async {
+    if (dirOverride case final dir?) return dir;
+    final base = await getApplicationSupportDirectory();
+    return Directory(p.join(base.path, 'my-lyrics'));
+  }
+
+  static final _videoUrl = RegExp(r'[?&]v=([A-Za-z0-9_-]{11})');
+
+  /// The file's name stem for [track]: its video id, or a hash of its id.
+  static String keyOf(Track track) {
+    final id = track.videoId ?? _videoUrl.firstMatch(track.sourceUrl ?? '')?[1];
+    return id ?? sha1.convert(utf8.encode(track.id)).toString();
+  }
+
+  static Future<File> _file(Track track) async => File(p.join((await _dir()).path, '${keyOf(track)}.lrc'));
+
+  /// The text the person saved, null if there is none.
+  static Future<String?> read(Track track) async {
+    try {
+      final file = await _file(track);
+      if (!await file.exists()) return null;
+      final text = await file.readAsString();
+      return text.trim().isEmpty ? null : text;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static Future<void> save(Track track, String text) async {
+    final file = await _file(track);
+    await file.parent.create(recursive: true);
+    // Aside and renamed: a write cut short never replaces good lyrics.
+    final part = File('${file.path}.part');
+    await part.writeAsString(text.trim());
+    await part.rename(file.path);
+    LyricsService.forget(track);
+  }
+
+  static Future<void> remove(Track track) async {
+    final file = await _file(track);
+    if (await file.exists()) await file.delete();
+    LyricsService.forget(track);
   }
 }

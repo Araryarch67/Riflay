@@ -29,7 +29,7 @@ import '../services/youtube_importer.dart';
 import 'widgets/smooth_scroll.dart';
 import 'widgets/title_bar.dart';
 
-enum _Tab { home, search, library }
+enum _Tab { home, search, library, downloads }
 
 /// Root layout.
 ///  * < 700px: bottom tabs + floating mini player, full-screen now playing.
@@ -117,6 +117,13 @@ class _HomeShellState extends State<HomeShell> {
 
   /// Desktop: a new step in the one history. Phone: a page on the current tab.
   void _open(Widget page, {String? location}) {
+    // Downloads is a tab of its own on a phone.
+    if (_compact && page is DownloadsPage) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _selectTab(_Tab.downloads);
+      });
+      return;
+    }
     final where = location ?? _locationOf(page);
     if (!_compact) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _history.open(page, where));
@@ -356,6 +363,7 @@ class _HomeShellState extends State<HomeShell> {
       _Tab.home => const HomePage(),
       _Tab.search => SearchPage(focusNode: _searchFocus),
       _Tab.library => const LibraryPage(),
+      _Tab.downloads => const DownloadsPage(),
     }),
   );
 
@@ -695,12 +703,15 @@ class _Sidebar extends StatelessWidget {
       return collapsed ? Tooltip(message: label, child: row) : row;
     }
 
-    // With the title bar, Home and search sit in it and Downloads / Settings in its ⋯ menu.
+    // With the title bar, Home and search sit in it and Settings in its ⋯ menu (which lists
+    // Downloads too); Downloads always has its own entry here.
     final navItems = [
       if (!inTitleBar) ...[
         item(Locations.home, Icons.home_outlined, Icons.home_rounded, 'Home', onHome),
         item(Locations.search, Icons.search_rounded, Icons.manage_search_rounded, 'Search', onSearch),
-        _DownloadsLink(collapsed: collapsed, selected: location == Locations.downloads),
+      ],
+      _DownloadsLink(collapsed: collapsed, selected: location == Locations.downloads),
+      if (!inTitleBar) ...[
         item(Locations.settings, Icons.settings_outlined, Icons.settings_rounded, 'Settings', () {
           if (location != Locations.settings) ShellScope.of(context).open(const SettingsPage());
         }),
@@ -949,7 +960,44 @@ const _tabItems = [
   (tab: _Tab.home, icon: Icons.home_outlined, selected: Icons.home_rounded, label: 'Home'),
   (tab: _Tab.search, icon: Icons.search_rounded, selected: Icons.manage_search_rounded, label: 'Search'),
   (tab: _Tab.library, icon: Icons.library_music_outlined, selected: Icons.library_music_rounded, label: 'Your Library'),
+  (tab: _Tab.downloads, icon: Icons.download_outlined, selected: Icons.download_rounded, label: 'Downloads'),
 ];
+
+/// A tab's icon. Downloads wears a progress ring while songs are being saved.
+class _TabIcon extends StatelessWidget {
+  const _TabIcon({required this.tab, required this.icon, required this.selected});
+
+  final _Tab tab;
+  final IconData icon;
+  final bool selected;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = selected ? AppColors.textPrimary : AppColors.textSecondary;
+    if (tab != _Tab.downloads) return Icon(icon, color: color);
+    final youtube = PlayerScope.read(context).youtube;
+    return ListenableBuilder(
+      listenable: youtube,
+      builder: (context, _) {
+        final progress = youtube.activeProgress;
+        return SizedBox.square(
+          dimension: 24,
+          child: progress == null
+              ? Icon(icon, color: color)
+              : Padding(
+                  padding: const EdgeInsets.all(1.5),
+                  child: CircularProgressIndicator(
+                    value: progress == 0 ? null : progress,
+                    strokeWidth: 2.2,
+                    color: AppColors.accent,
+                    backgroundColor: AppColors.hover,
+                  ),
+                ),
+        );
+      },
+    );
+  }
+}
 
 /// The phone's tabs as a rail down the left, for a phone held sideways.
 class _SideTabs extends StatelessWidget {
@@ -981,10 +1029,7 @@ class _SideTabs extends StatelessWidget {
                       width: width,
                       child: Column(
                         children: [
-                          Icon(
-                            tab == i.tab ? i.selected : i.icon,
-                            color: tab == i.tab ? AppColors.textPrimary : AppColors.textSecondary,
-                          ),
+                          _TabIcon(tab: i.tab, icon: tab == i.tab ? i.selected : i.icon, selected: tab == i.tab),
                           const SizedBox(height: 4),
                           Text(
                             i.label,
@@ -1041,10 +1086,7 @@ class _BottomBar extends StatelessWidget {
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(
-                              tab == i.tab ? i.selected : i.icon,
-                              color: tab == i.tab ? AppColors.textPrimary : AppColors.textSecondary,
-                            ),
+                            _TabIcon(tab: i.tab, icon: tab == i.tab ? i.selected : i.icon, selected: tab == i.tab),
                             const SizedBox(height: 4),
                             Text(
                               i.label,

@@ -836,6 +836,17 @@ class PlayerController extends ChangeNotifier {
     await _save();
   }
 
+  /// Keeps [updated] in the library in place of the song with its id, for edits
+  /// the file itself can't hold (a downloaded song's title in a format with no tag writer).
+  Future<void> replaceTrack(Track updated) async {
+    final i = _library.indexWhere((t) => t.id == updated.id);
+    if (i < 0) return;
+    _library = [..._library]..[i] = updated;
+    _libraryEdits++;
+    notifyListeners();
+    await _save();
+  }
+
   Future<void> removeTrack(Track track) async {
     _library = _library.where((t) => t.id != track.id).toList();
     notifyListeners();

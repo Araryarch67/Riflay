@@ -6,6 +6,7 @@ import '../services/player_controller.dart';
 import '../services/youtube_importer.dart';
 import '../services/youtube_music_account.dart';
 import '../services/ytmusic_web.dart';
+import 'download_options.dart';
 import 'theme.dart';
 
 /// Marks the songs below as rows of a playlist the user can edit (an
@@ -576,9 +577,12 @@ class DownloadButton extends StatelessWidget {
           tooltip: job?.status == DownloadStatus.failed ? 'Download failed, try again' : 'Download',
           iconSize: size,
           color: job?.status == DownloadStatus.failed ? Theme.of(context).colorScheme.error : color,
-          onPressed: () {
-            c.youtube.enqueueTracks([track]);
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Downloading ${track.title}…')));
+          onPressed: () async {
+            final messenger = ScaffoldMessenger.of(context);
+            final choice = await chooseDownload(context);
+            if (choice == null) return;
+            c.youtube.enqueueTracks([track], choice: choice);
+            messenger.showSnackBar(SnackBar(content: Text('Downloading ${track.title}…')));
           },
           icon: Icon(job?.status == DownloadStatus.failed ? Icons.error_outline_rounded : Icons.download_rounded),
         );

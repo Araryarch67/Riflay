@@ -44,6 +44,8 @@ lib/
     youtube_music_account.dart Session, library, discover pages, playlist edits, likes, radio
     youtube_audio_source.dart  Streams YouTube audio in ranged chunks (yt-dlp resolves URLs)
     ytdlp.dart                 Finds / downloads yt-dlp, resolves and caches stream URLs
+    download_prefs.dart        Settings › Downloads (format, quality, folder), and pickForDownload: which stream a download takes
+    download_edit.dart         Editing a downloaded song: title, album, cover (never the artist); lyrics live in lyrics.dart's UserLyrics
     ffmpeg.dart                Finds / downloads ffmpeg (tag editor, AirPlay, casting conversions)
     system_fonts.dart          Fonts from the device's font folders (Settings › Appearance › Font)
     desktop_login.dart         Runs linux/login_helper (WebKitGTK Google sign-in window)

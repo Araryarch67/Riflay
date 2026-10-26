@@ -3,8 +3,11 @@ import 'package:flutter/material.dart';
 import '../../models/track.dart';
 import '../../services/audio_engine.dart';
 import '../../services/layout_prefs.dart';
+import '../../services/download_edit.dart';
 import '../../services/metadata.dart';
 import '../../services/player_controller.dart';
+import '../download_editor.dart';
+import '../download_options.dart';
 import '../shell_scope.dart';
 import '../tag_editor.dart';
 import '../../services/youtube_music_account.dart';
@@ -191,6 +194,14 @@ class TrackMenuButton extends StatelessWidget {
     messenger.showSnackBar(SnackBar(content: Text(done), duration: const Duration(seconds: 2)));
   }
 
+  /// Queues [tracks] for download. A plain tap follows Settings (and asks only if
+  /// "Ask every time" is on); [force] always asks, for "Download as…".
+  static Future<void> download(BuildContext host, PlayerController c, List<Track> tracks, {bool force = false}) async {
+    final choice = await chooseDownload(host, force: force);
+    if (choice == null) return;
+    c.youtube.enqueueTracks(tracks, choice: choice);
+  }
+
   final Track track;
   final bool visible;
   final Color? color;
@@ -217,6 +228,8 @@ class TrackMenuButton extends StatelessWidget {
           final editScope = PlaylistEditScope.maybeOf(context);
           final artist = openArtist(host, c, track);
           final album = c.albumOf(track);
+          // A song downloaded from YouTube, or the download of a streamed one: "Edit" with the artist locked.
+          final downloaded = track.isRemote ? c.downloadedCopy(track) : (DownloadEdit.isDownload(track) ? track : null);
           return [
             PopupMenuItem(
               onTap: () => _queued(host, c.playNext([track]), 'Plays next'),
@@ -261,13 +274,28 @@ class TrackMenuButton extends StatelessWidget {
                 onTap: () => c.startRadio(track),
                 child: const MenuRow(leading: Icon(Icons.radio_rounded), title: Text('Start radio')),
               ),
-              if (c.downloadedCopy(track) == null)
+              if (c.downloadedCopy(track) == null) ...[
                 PopupMenuItem(
-                  onTap: () => c.youtube.enqueueTracks([track]),
+                  onTap: () => download(host, c, [track]),
                   child: const MenuRow(leading: Icon(Icons.download_rounded), title: Text('Download for offline')),
                 ),
+                PopupMenuItem(
+                  onTap: () => download(host, c, [track], force: true),
+                  child: const MenuRow(leading: Icon(Icons.tune_rounded), title: Text('Download as…')),
+                ),
+              ],
+              if (downloaded != null)
+                PopupMenuItem(
+                  onTap: () => showDownloadEditor(host, downloaded, compact: shell.compact),
+                  child: const MenuRow(leading: Icon(Icons.edit_outlined), title: Text('Edit')),
+                ),
             ] else ...[
-              if (Metadata.canEditTags(track))
+              if (downloaded != null)
+                PopupMenuItem(
+                  onTap: () => showDownloadEditor(host, downloaded, compact: shell.compact),
+                  child: const MenuRow(leading: Icon(Icons.edit_outlined), title: Text('Edit')),
+                )
+              else if (Metadata.canEditTags(track))
                 PopupMenuItem(
                   onTap: () => showTagEditor(host, track),
                   child: const MenuRow(leading: Icon(Icons.edit_outlined), title: Text('Edit info')),

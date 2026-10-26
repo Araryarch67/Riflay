@@ -1,13 +1,8 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../../services/discord_presence.dart';
 import '../../services/lyrics.dart';
 import '../../services/player_controller.dart';
-import '../../services/youtube_importer.dart';
-import '../../services/ytdlp.dart';
 import '../navigation.dart';
 import '../shell_scope.dart';
 import '../shortcuts.dart';
@@ -16,6 +11,7 @@ import '../widgets/page_scaffold.dart';
 import '../../services/audio_engine.dart';
 import 'appearance_settings.dart';
 import 'layout_settings.dart';
+import 'download_settings.dart';
 import 'sound_settings.dart';
 import 'youtube_music_page.dart';
 
@@ -26,7 +22,7 @@ enum SettingsTopic {
   layout('Layout', Icons.dashboard_customize_outlined, 'Shapes, sizes, what the player shows'),
   playback('Playback', Icons.play_circle_outline_rounded, 'Autoplay, equalizer, Virtual speakers, mono audio'),
   advanced('Hi-fi audio', Icons.tune_rounded, 'Output device, bit-perfect mode, sample rate'),
-  downloads('Downloads', Icons.download_rounded, 'Where songs are saved, YouTube downloader'),
+  downloads('Downloads', Icons.download_rounded, 'Format, quality, where songs are saved'),
   integrations('Integrations', Icons.extension_outlined, 'Discord, lyrics services');
 
   const SettingsTopic(this.label, this.icon, this.summary);
@@ -101,16 +97,6 @@ class SettingsTopicPage extends StatefulWidget {
 }
 
 class _SettingsTopicPageState extends State<SettingsTopicPage> {
-  late final Future<String?> _ytdlp = _ytdlpVersion();
-  late final Future<Directory> _downloads = YoutubeImporter.downloadsDir();
-
-  static Future<String?> _ytdlpVersion() async {
-    final exe = await YtDlp.executable();
-    if (exe == null) return null;
-    final r = await Process.run(exe, ['--version']);
-    return r.exitCode == 0 ? '${(r.stdout as String).trim()} ($exe)' : null;
-  }
-
   @override
   Widget build(BuildContext context) {
     final c = PlayerScope.of(context);
@@ -157,39 +143,7 @@ class _SettingsTopicPageState extends State<SettingsTopicPage> {
       SettingsTopic.layout => const LayoutSettings(),
       SettingsTopic.playback => const PlaybackSettings(),
       SettingsTopic.advanced => const AdvancedAudioSettings(),
-      SettingsTopic.downloads => SettingsCard(
-        children: [
-          FutureBuilder<Directory>(
-            future: _downloads,
-            builder: (context, snap) => ListTile(
-              leading: const Icon(Icons.folder_rounded),
-              title: const Text('Downloads folder'),
-              subtitle: Text(snap.data?.path ?? '…', style: muted),
-              trailing: snap.hasData && !Platform.isIOS && !Platform.isAndroid
-                  ? IconButton(
-                      tooltip: 'Open folder',
-                      onPressed: () => launchUrl(Uri.directory(snap.data!.path)),
-                      icon: const Icon(Icons.folder_open_rounded),
-                    )
-                  : null,
-            ),
-          ),
-          if (YtDlp.supported)
-            FutureBuilder<String?>(
-              future: _ytdlp,
-              builder: (context, snap) => ListTile(
-                leading: const Icon(Icons.download_rounded),
-                title: const Text('YouTube downloader (yt-dlp)'),
-                subtitle: Text(
-                  snap.connectionState != ConnectionState.done
-                      ? 'Checking…'
-                      : snap.data ?? 'Not available. Install it (e.g. pacman -S yt-dlp) for YouTube downloads.',
-                  style: muted,
-                ),
-              ),
-            ),
-        ],
-      ),
+      SettingsTopic.downloads => const DownloadSettings(),
       SettingsTopic.integrations => SettingsCard(
         children: [
           if (DiscordPresence.supported)

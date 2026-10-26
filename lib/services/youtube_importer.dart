@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as p;
@@ -8,6 +9,8 @@ import 'package:path_provider/path_provider.dart';
 import 'package:youtube_explode_dart/youtube_explode_dart.dart';
 
 import '../models/track.dart';
+import 'download_prefs.dart';
+import 'ffmpeg.dart';
 import 'ranged_download.dart';
 import 'youtube_stream.dart';
 import 'ytdlp.dart';
@@ -22,7 +25,11 @@ class DownloadJob {
     required this.channel,
     required this.thumbnailUrl,
     this.knownNames = false,
+    this.choice,
   });
+
+  /// The format and quality asked for; null follows Settings when the download starts.
+  DownloadChoice? choice;
 
   final String videoId;
   final String title;
@@ -36,7 +43,7 @@ class DownloadJob {
   DownloadStatus status = DownloadStatus.queued;
   double progress = 0;
 
-  /// e.g. "Opus · 160 kbps", known once the stream is picked.
+  /// What the saved file really is, e.g. "Opus · 160 kbps", known once the stream is picked.
   String? quality;
 
   /// File size once the stream is resolved, and how much of it has arrived.
@@ -56,6 +63,11 @@ class DownloadJob {
   Track? track;
 
   bool get isActive => status == DownloadStatus.queued || status == DownloadStatus.downloading;
+}
+
+/// The download was held back because the phone is on mobile data and the user turned that off.
+class _OnMobileData implements Exception {
+  const _OnMobileData();
 }
 
 /// What a pasted link resolved to, shown before the user commits to downloading.
@@ -106,6 +118,14 @@ class YoutubeImporter extends ChangeNotifier {
   /// Where downloads live: ~/Documents/Riflay/YouTube on desktop, the app's
   /// private documents folder on mobile.
   static Future<Directory> downloadsDir() async {
+    // A folder the user chose (computers); the default if it can't be used any more.
+    if (DownloadPrefs.instance.folder case final chosen? when !Platform.isAndroid && !Platform.isIOS) {
+      try {
+        return await Directory(chosen).create(recursive: true);
+      } catch (e) {
+        debugPrint('Downloads folder $chosen unusable: $e');
+      }
+    }
     final docs = await getApplicationDocumentsDirectory();
     final mobile = Platform.isAndroid || Platform.isIOS;
     final dir = Directory(mobile ? p.join(docs.path, 'YouTube') : p.join(docs.path, 'Riflay', 'YouTube'));
@@ -127,13 +147,19 @@ class YoutubeImporter extends ChangeNotifier {
 
   /// Queues videos for download; ones already queued or downloaded are skipped.
   /// Returns how many were newly queued.
-  int enqueue(List<Video> videos) => _enqueue([
+  int enqueue(List<Video> videos, {DownloadChoice? choice}) => _enqueue([
     for (final v in videos)
-      DownloadJob(videoId: v.id.value, title: v.title, channel: v.author, thumbnailUrl: v.thumbnails.highResUrl),
+      DownloadJob(
+        videoId: v.id.value,
+        title: v.title,
+        channel: v.author,
+        thumbnailUrl: v.thumbnails.highResUrl,
+        choice: choice,
+      ),
   ]);
 
   /// Saves streamed YouTube Music songs for offline playback.
-  int enqueueTracks(List<Track> tracks) => _enqueue([
+  int enqueueTracks(List<Track> tracks, {DownloadChoice? choice}) => _enqueue([
     for (final t in tracks.where((t) => t.isRemote))
       DownloadJob(
         videoId: t.videoId!,
@@ -141,6 +167,7 @@ class YoutubeImporter extends ChangeNotifier {
         channel: t.artist,
         thumbnailUrl: t.artworkUrl ?? 'https://i.ytimg.com/vi/${t.videoId}/hqdefault.jpg',
         knownNames: true,
+        choice: choice,
       ),
   ]);
 
@@ -209,45 +236,99 @@ class YoutubeImporter extends ChangeNotifier {
     }
   }
 
-  /// Exact size and quality of what a download would fetch. Also warms the
-  /// cache, so a download started right after skips resolving.
-  Future<({int? size, String quality})?> peekAudio(String videoId) async {
+  /// Exact size and quality of what a download would fetch.
+  Future<({int? size, String quality})?> peekAudio(String videoId, {DownloadChoice? choice}) async {
     try {
-      final r = await YoutubeStream.best(videoId);
+      await DownloadPrefs.instance.load();
+      final r = await _resolveAudio(videoId, choice ?? DownloadPrefs.instance.choice);
       return (size: r.size, quality: r.quality);
     } catch (_) {
       return null;
     }
   }
 
-  /// Best audio as (url, size, file extension, quality label).
-  Future<({Uri url, int? size, String ext, String quality})> _resolveAudio(String videoId) async {
+  /// The audio to fetch: URL, size, file extension and what the saved file will be.
+  /// [reencodeKbps] is set when the stream is converted down after it arrives.
+  Future<({Uri url, int? size, String ext, String quality, int? reencodeKbps})> _resolveAudio(
+    String videoId,
+    DownloadChoice choice,
+  ) async {
+    final canReencode = Ffmpeg.available;
     // YouTube's player API (yt-dlp on desktop if refused), then the in-app extractor.
     try {
-      final r = await YoutubeStream.best(videoId);
-      return (url: r.url, size: r.size, ext: r.ext == 'webm' ? 'webm' : 'm4a', quality: r.quality);
+      final r = await YoutubeStream.forDownload(videoId, choice, canReencode: canReencode);
+      final kbps = r.reencodeKbps ?? r.audio.kbps;
+      return (
+        url: r.audio.url,
+        size: r.audio.size,
+        ext: r.audio.ext == 'webm' ? 'webm' : 'm4a',
+        quality: describeAudio(opus: r.audio.isOpus, kbps: kbps),
+        reencodeKbps: r.reencodeKbps,
+      );
     } catch (e) {
       if (YtDlp.supported) rethrow;
       debugPrint('YouTube stream lookup failed, trying youtube_explode: $e');
     }
     final manifest = await _yt.videos.streams.getManifest(videoId);
-    final stream = pickBestAudio(manifest.audioOnly);
-    if (stream == null) throw StateError('No playable audio stream for this video.');
+    final pick = pickForDownload(
+      [for (final s in manifest.audioOnly) AudioCandidate.fromExplode(s, processed: _isDrcOrDubbed(s))],
+      choice,
+      canReencode: canReencode,
+    );
+    if (pick == null) throw StateError('No playable audio stream for this video.');
+    final stream = pick.candidate.ref! as AudioOnlyStreamInfo;
     return (
       url: stream.url,
       size: stream.size.totalBytes,
       ext: stream.container == StreamContainer.webM ? 'webm' : 'm4a',
-      quality: describe(stream),
+      quality: pick.label,
+      reencodeKbps: pick.reencodeKbps,
     );
+  }
+
+  /// Phones only, and only if the user turned mobile data off for downloads.
+  static Future<bool> _blockedByMobileData() async {
+    if (!Platform.isAndroid && !Platform.isIOS) return false;
+    await DownloadPrefs.instance.load();
+    if (DownloadPrefs.instance.mobileData) return false;
+    try {
+      final now = await Connectivity().checkConnectivity();
+      final cellular = now.contains(ConnectivityResult.mobile);
+      final other = now.any((c) => c == ConnectivityResult.wifi || c == ConnectivityResult.ethernet);
+      return cellular && !other;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Converts [input] down to [kbps] in the same codec, replacing it. Returns the new file.
+  static Future<File> _reencode(File input, {required bool opus, required int kbps}) async {
+    final out = File('${input.path}.small${p.extension(input.path)}');
+    final r = await Process.run(await Ffmpeg.executable(), [
+      '-hide_banner', '-loglevel', 'error', '-y', '-i', input.path, '-vn', //
+      ...opus
+          ? ['-c:a', 'libopus', '-b:a', '${kbps}k']
+          : ['-c:a', 'aac', '-b:a', '${kbps}k', '-movflags', '+faststart'],
+      out.path,
+    ]);
+    if (r.exitCode != 0 || !out.existsSync() || out.lengthSync() == 0) {
+      if (out.existsSync()) out.deleteSync();
+      throw StateError('ffmpeg could not convert the download: ${r.stderr}');
+    }
+    await input.delete();
+    return out.rename(input.path);
   }
 
   Future<void> _download(DownloadJob job) async {
     notifyListeners();
-    final dir = await downloadsDir();
     File? partFile;
     try {
+      await DownloadPrefs.instance.load();
+      if (await _blockedByMobileData()) throw const _OnMobileData();
+      final dir = await downloadsDir();
+      final choice = job.choice ??= DownloadPrefs.instance.choice;
       // Metadata and the stream URL resolve in parallel.
-      final (video, audio) = await (_yt.videos.get(job.videoId), _resolveAudio(job.videoId)).wait;
+      final (video, audio) = await (_yt.videos.get(job.videoId), _resolveAudio(job.videoId, choice)).wait;
       job.quality = audio.quality;
       // Stored byte-for-byte as YouTube serves it: re-encoding could only lose quality.
       final audioFile = File(p.join(dir.path, '${job.videoId}.${audio.ext}'));
@@ -293,6 +374,10 @@ class YoutubeImporter extends ChangeNotifier {
         rethrow;
       }
       await partFile.rename(audioFile.path);
+      if (audio.reencodeKbps case final kbps?) {
+        await _reencode(audioFile, opus: audio.quality.startsWith('Opus'), kbps: kbps);
+        job.totalBytes = audioFile.lengthSync();
+      }
       await thumbnail;
 
       // YouTube Music already named the song; only a bare video title needs guessing.
@@ -372,6 +457,7 @@ class YoutubeImporter extends ChangeNotifier {
       // Subclass first: VideoUnavailableException extends VideoUnplayableException.
       VideoUnavailableException() => 'This video is unavailable.',
       VideoUnplayableException() => 'This video can\'t be played (private, age-restricted or region-locked).',
+      _OnMobileData() => 'Mobile data downloads are off. Connect to Wi-Fi, or allow them in Settings.',
       SocketException() || http.ClientException() || TimeoutException() => 'No internet connection. Try again.',
       _ => 'Couldn\'t download this song. Try again later.',
     };
