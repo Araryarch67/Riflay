@@ -20,6 +20,7 @@ import 'pages/settings_page.dart';
 import 'navigation.dart';
 import 'player_panels.dart';
 import 'shell_scope.dart';
+import 'widgets/power_settings.dart';
 import 'shortcuts.dart';
 import 'theme.dart';
 import 'youtube_import.dart';
@@ -97,6 +98,7 @@ class _HomeShellState extends State<HomeShell> {
   /// rebuilt the whole window, several times a song; whatever shows what's
   /// playing listens on its own.
   void _followTrack() {
+    PowerSettings.offerOnce(context, _player!);
     final has = _player!.currentTrack != null;
     if (has != _hasTrack) setState(() => _hasTrack = has);
   }

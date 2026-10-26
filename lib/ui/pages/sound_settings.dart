@@ -14,6 +14,7 @@ import '../../services/player_controller.dart';
 import '../shell_scope.dart';
 import '../theme.dart';
 import '../widgets/menus.dart';
+import '../widgets/power_settings.dart';
 import '../widgets/signal_path.dart';
 import 'equalizer_page.dart';
 
@@ -129,6 +130,7 @@ class PlaybackSettings extends StatelessWidget {
                 ),
               ),
             ],
+            ...PowerSettings.rows(context),
           ],
         );
       },
