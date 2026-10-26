@@ -4,6 +4,7 @@ import 'package:youtube_explode_dart/youtube_explode_dart.dart' show Video;
 
 import '../services/player_controller.dart';
 import '../services/youtube_importer.dart';
+import 'download_options.dart';
 import 'theme.dart';
 import 'widgets/controls.dart';
 
@@ -123,13 +124,16 @@ class _ImportFormState extends State<_ImportForm> {
     }
   }
 
-  void _download() {
+  Future<void> _download() async {
     final videos = switch (_preview) {
       VideoPreview(:final video) => [video],
       PlaylistPreview(:final videos) => videos,
       null => <Video>[],
     };
-    final queued = PlayerScope.read(context).youtube.enqueue(videos);
+    final youtube = PlayerScope.read(context).youtube;
+    final choice = await chooseDownload(context);
+    if (choice == null || !mounted) return;
+    final queued = youtube.enqueue(videos, choice: choice);
     Navigator.of(context).pop(queued > 0);
   }
 

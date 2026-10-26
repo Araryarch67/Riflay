@@ -1,10 +1,14 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../models/track.dart';
 import '../../services/player_controller.dart';
+import '../download_options.dart';
 import '../shell_scope.dart';
 import '../theme.dart';
 import '../widgets/controls.dart';
+import '../widgets/editable_title.dart';
 import '../widgets/page_scaffold.dart';
 import '../widgets/shelf.dart';
 import '../widgets/track_row.dart';
@@ -13,9 +17,12 @@ import '../widgets/menus.dart';
 
 /// Album / artist / "All Songs" page with a colour-washed header.
 class CollectionPage extends StatelessWidget {
-  const CollectionPage({super.key, required this.collection, this.actions = const []});
+  const CollectionPage({super.key, required this.collection, this.actions = const [], this.onRename});
 
   final Collection collection;
+
+  /// Makes the title rename in place (Riflay playlists always can; this is for others, like owned YouTube Music ones).
+  final Future<void> Function(String name)? onRename;
 
   /// Extra buttons next to Play / Shuffle (e.g. editing one of your playlists).
   final List<Widget> actions;
@@ -80,7 +87,11 @@ class CollectionPage extends StatelessWidget {
           title: live.title,
           slivers: [
             SliverToBoxAdapter(
-              child: _Header(collection: live, accent: headerColor),
+              child: _Header(
+                collection: live,
+                accent: headerColor,
+                onRename: playlistId != null ? (name) => c.renamePlaylist(playlistId, name) : onRename,
+              ),
             ),
             SliverToBoxAdapter(
               child: Padding(
@@ -138,9 +149,12 @@ class CollectionPage extends StatelessWidget {
                       const Spacer(),
                       IconButton(
                         tooltip: 'Download all for offline',
-                        onPressed: () {
-                          final n = c.youtube.enqueueTracks(tracks);
-                          ScaffoldMessenger.of(context).showSnackBar(
+                        onPressed: () async {
+                          final messenger = ScaffoldMessenger.of(context);
+                          final choice = await chooseDownload(context);
+                          if (choice == null) return;
+                          final n = c.youtube.enqueueTracks(tracks, choice: choice);
+                          messenger.showSnackBar(
                             SnackBar(content: Text(n == 0 ? 'Already downloaded' : 'Downloading $n songs…')),
                           );
                         },
@@ -239,10 +253,11 @@ class CollectionPage extends StatelessWidget {
 }
 
 class _Header extends StatelessWidget {
-  const _Header({required this.collection, required this.accent});
+  const _Header({required this.collection, required this.accent, this.onRename});
 
   final Collection collection;
   final Color accent;
+  final FutureOr<void> Function(String name)? onRename;
 
   @override
   Widget build(BuildContext context) {
@@ -274,24 +289,33 @@ class _Header extends StatelessWidget {
         : collection.title.length > 24
         ? 40.0
         : 64.0;
+    final titleStyle = text.displaySmall?.copyWith(
+      fontSize: titleSize,
+      fontWeight: FontWeight.w900,
+      letterSpacing: -1.5,
+      height: 1.05,
+    );
     final info = Column(
       crossAxisAlignment: shell.compact ? CrossAxisAlignment.center : CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
         if (!shell.compact) Text(collection.kind.label, style: text.labelLarge?.copyWith(fontWeight: FontWeight.w600)),
         const SizedBox(height: 4),
-        Text(
-          collection.title,
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-          textAlign: shell.compact ? TextAlign.center : TextAlign.start,
-          style: text.displaySmall?.copyWith(
-            fontSize: titleSize,
-            fontWeight: FontWeight.w900,
-            letterSpacing: -1.5,
-            height: 1.05,
+        if (onRename != null)
+          EditableTitle(
+            title: collection.title,
+            onRename: onRename!,
+            textAlign: shell.compact ? TextAlign.center : TextAlign.start,
+            style: titleStyle,
+          )
+        else
+          Text(
+            collection.title,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            textAlign: shell.compact ? TextAlign.center : TextAlign.start,
+            style: titleStyle,
           ),
-        ),
         const SizedBox(height: 12),
         Text(meta, style: text.bodyMedium?.copyWith(color: AppColors.textPrimary.withValues(alpha: 0.8))),
       ],

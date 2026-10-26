@@ -362,13 +362,15 @@ class _LibraryPlaylistPageState extends State<LibraryPlaylistPage> {
   }
 
   Future<void> _rename() async {
-    final account = _account;
-    final messenger = ScaffoldMessenger.of(context);
     final answer = await askPlaylistName(context, initialTitle: _title, askPrivacy: false);
-    if (answer == null) return;
+    if (answer != null) await _renameTo(answer.title);
+  }
+
+  Future<void> _renameTo(String title) async {
+    final messenger = ScaffoldMessenger.of(context);
     try {
-      await account.renamePlaylist(widget.playlist.id, answer.title);
-      if (mounted) setState(() => _title = answer.title);
+      await _account.renamePlaylist(widget.playlist.id, title);
+      if (mounted) setState(() => _title = title);
     } catch (e) {
       messenger.showSnackBar(SnackBar(content: Text(YoutubeMusicAccount.describe(e))));
     }
@@ -468,6 +470,7 @@ class _LibraryPlaylistPageState extends State<LibraryPlaylistPage> {
       },
       child: CollectionPage(
         collection: collection,
+        onRename: d.owned ? _renameTo : null,
         actions: [
           if (d.owned)
             PopupMenuButton<VoidCallback>(

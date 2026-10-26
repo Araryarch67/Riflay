@@ -248,6 +248,12 @@ abstract final class Metadata {
   /// Tracks on the same album share one cover lookup.
   static String _artKey(Track t) => t.albumKey ?? t.id;
 
+  /// Drops the cover remembered for [track] (and its album), after it was changed on disk.
+  static void forgetArtwork(Track track) {
+    _forgetArtwork(_artKey(track));
+    _accents.remove(_artKey(track));
+  }
+
   static void _forgetArtwork(String key) => _cachedArtworkBytes -= _artwork.remove(key)?.length ?? 0;
 
   static Future<Uint8List?> artwork(Track track) {

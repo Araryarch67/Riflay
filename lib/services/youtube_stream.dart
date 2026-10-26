@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'download_prefs.dart';
 import 'ytdlp.dart';
 
 /// Finds a YouTube song's audio stream with one request to YouTube's player
@@ -152,6 +153,64 @@ abstract final class YoutubeStream {
   }
 
   static Future<ResolvedAudio> _player(String videoId, {bool aac = false, bool freshVisitor = false}) async {
+    final j = await _playerResponse(videoId, freshVisitor: freshVisitor);
+    final best = pickBest(_adaptiveFormats(j), aacOnly: aac);
+    if (best == null) throw StateError('No audio stream for this song.');
+    return _resolvedFrom(best, j);
+  }
+
+  static List<Map<String, dynamic>> _adaptiveFormats(Map<String, dynamic> j) =>
+      ((j['streamingData'] as Map<String, dynamic>?)?['adaptiveFormats'] as List? ?? const [])
+          .cast<Map<String, dynamic>>();
+
+  static ResolvedAudio _resolvedFrom(Map<String, dynamic> best, Map<String, dynamic> j) {
+    final url = Uri.parse(best['url'] as String);
+    final mime = best['mimeType'] as String;
+    final loudness = (j['playerConfig'] as Map<String, dynamic>?)?['audioConfig'] as Map<String, dynamic>?;
+    return ResolvedAudio(
+      url: url,
+      formatId: '${best['itag']}',
+      ext: mime.startsWith('audio/webm') ? 'webm' : 'm4a',
+      codec: RegExp(r'codecs="([^"]+)"').firstMatch(mime)?.group(1) ?? '',
+      kbps: (((best['averageBitrate'] ?? best['bitrate']) as num?)?.toDouble() ?? 0) ~/ 1000,
+      size: int.tryParse(best['contentLength'] as String? ?? '') ?? int.tryParse(url.queryParameters['clen'] ?? ''),
+      resolvedAt: DateTime.now(),
+      via: 'YouTube player API',
+      loudness: (loudness?['trackAbsoluteLoudnessLkfs'] as num?)?.toDouble(),
+      loudnessTarget: (loudness?['loudnessTargetLkfs'] as num?)?.toDouble(),
+    );
+  }
+
+  /// The stream a download of [choice] fetches (the player API, then yt-dlp
+  /// where there is one), and the bitrate to convert it down to, if any.
+  /// Not cached: a download resolves once and fetches at once.
+  static Future<({ResolvedAudio audio, int? reencodeKbps})> forDownload(
+    String videoId,
+    DownloadChoice choice, {
+    required bool canReencode,
+  }) async {
+    try {
+      Map<String, dynamic> j;
+      try {
+        j = await _playerResponse(videoId);
+      } catch (_) {
+        j = await _playerResponse(videoId, freshVisitor: true);
+      }
+      final pick = pickForDownload(
+        [for (final f in _adaptiveFormats(j)) ?AudioCandidate.fromPlayer(f)],
+        choice,
+        canReencode: canReencode,
+      );
+      if (pick == null) throw StateError('No audio stream for this song.');
+      return (audio: _resolvedFrom(pick.candidate.ref! as Map<String, dynamic>, j), reencodeKbps: pick.reencodeKbps);
+    } catch (e) {
+      if (!YtDlp.supported) rethrow;
+      debugPrint('YouTube player API failed for $videoId, using yt-dlp: $e');
+      return YtDlp.forDownload(videoId, choice, canReencode: canReencode);
+    }
+  }
+
+  static Future<Map<String, dynamic>> _playerResponse(String videoId, {bool freshVisitor = false}) async {
     final visitor = await _visitorData(videoId, fresh: freshVisitor);
     final res = await _http
         .post(
@@ -182,25 +241,7 @@ abstract final class YoutubeStream {
         (playability?['reason'] as String?) ?? 'This song can\'t be played (${playability?['status']}).',
       );
     }
-    final formats = ((j['streamingData'] as Map<String, dynamic>?)?['adaptiveFormats'] as List? ?? const [])
-        .cast<Map<String, dynamic>>();
-    final best = pickBest(formats, aacOnly: aac);
-    if (best == null) throw StateError('No audio stream for this song.');
-    final url = Uri.parse(best['url'] as String);
-    final mime = best['mimeType'] as String;
-    final loudness = (j['playerConfig'] as Map<String, dynamic>?)?['audioConfig'] as Map<String, dynamic>?;
-    return ResolvedAudio(
-      url: url,
-      formatId: '${best['itag']}',
-      ext: mime.startsWith('audio/webm') ? 'webm' : 'm4a',
-      codec: RegExp(r'codecs="([^"]+)"').firstMatch(mime)?.group(1) ?? '',
-      kbps: (((best['averageBitrate'] ?? best['bitrate']) as num?)?.toDouble() ?? 0) ~/ 1000,
-      size: int.tryParse(best['contentLength'] as String? ?? '') ?? int.tryParse(url.queryParameters['clen'] ?? ''),
-      resolvedAt: DateTime.now(),
-      via: 'YouTube player API',
-      loudness: (loudness?['trackAbsoluteLoudnessLkfs'] as num?)?.toDouble(),
-      loudnessTarget: (loudness?['loudnessTargetLkfs'] as num?)?.toDouble(),
-    );
+    return j;
   }
 
   /// Highest-bitrate original audio: Opus wins near-ties (better per bit),

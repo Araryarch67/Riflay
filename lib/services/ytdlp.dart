@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:crypto/crypto.dart';
@@ -6,6 +7,8 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
+
+import 'download_prefs.dart';
 
 /// A directly fetchable audio stream, as resolved by yt-dlp.
 class ResolvedAudio {
@@ -177,6 +180,48 @@ abstract final class YtDlp {
   static void invalidate(String videoId) => _resolved
     ..remove(videoId)
     ..remove('aac:$videoId');
+
+  /// The stream a download of [choice] fetches, picked from every audio
+  /// format yt-dlp lists, and the bitrate to convert it down to, if any.
+  static Future<({ResolvedAudio audio, int? reencodeKbps})> forDownload(
+    String videoId,
+    DownloadChoice choice, {
+    required bool canReencode,
+  }) async {
+    final exe = await executable();
+    if (exe == null) throw StateError('yt-dlp is not available on this device.');
+    final r = await Process.run(exe, [
+      '--no-warnings',
+      '--no-playlist',
+      '-J',
+      '--',
+      'https://www.youtube.com/watch?v=$videoId',
+    ], stdoutEncoding: utf8);
+    if (r.exitCode != 0) throw StateError(_lastError(r.stderr as String));
+    final info = jsonDecode(r.stdout as String) as Map<String, dynamic>;
+    final formats = (info['formats'] as List).cast<Map<String, dynamic>>();
+    final pick = pickForDownload(
+      [for (final f in formats) ?AudioCandidate.fromYtDlp(f)],
+      choice,
+      canReencode: canReencode,
+    );
+    if (pick == null) throw StateError('No audio stream for this song.');
+    final f = pick.candidate.ref! as Map<String, dynamic>;
+    final url = Uri.parse(f['url'] as String);
+    return (
+      audio: ResolvedAudio(
+        formatId: pick.candidate.id,
+        ext: pick.opus ? 'webm' : 'm4a',
+        codec: pick.opus ? 'opus' : 'mp4a',
+        kbps: pick.candidate.kbps,
+        size: int.tryParse(url.queryParameters['clen'] ?? '') ?? (f['filesize'] ?? f['filesize_approx']) as int?,
+        url: url,
+        resolvedAt: DateTime.now(),
+        via: 'yt-dlp',
+      ),
+      reencodeKbps: pick.reencodeKbps,
+    );
+  }
 
   static Future<ResolvedAudio> _run(String videoId, bool aac) async {
     final exe = await executable();
