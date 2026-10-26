@@ -8,6 +8,7 @@ import 'package:flutter/services.dart';
 
 import '../models/track.dart';
 import '../services/appearance.dart';
+import '../services/layout_prefs.dart';
 import '../services/player_controller.dart';
 import 'pages/collection_page.dart';
 import 'pages/downloads_page.dart';
@@ -213,8 +214,8 @@ class _HomeShellState extends State<HomeShell> {
   static Route<void> _route(Widget page, {String? location}) => PageRouteBuilder(
     // The page rides along so Forward can rebuild it after Back.
     settings: RouteSettings(name: location, arguments: page),
-    transitionDuration: const Duration(milliseconds: 220),
-    reverseTransitionDuration: const Duration(milliseconds: 180),
+    transitionDuration: LayoutPrefs.dur(const Duration(milliseconds: 220)),
+    reverseTransitionDuration: LayoutPrefs.dur(const Duration(milliseconds: 180)),
     pageBuilder: (_, _, _) => page,
     transitionsBuilder: (_, anim, _, child) => FadeTransition(
       opacity: CurvedAnimation(parent: anim, curve: Curves.easeOut),
@@ -327,8 +328,8 @@ class _HomeShellState extends State<HomeShell> {
   void _openNowPlaying() {
     _pushPhoneRoute(
       PageRouteBuilder(
-        transitionDuration: const Duration(milliseconds: 320),
-        reverseTransitionDuration: const Duration(milliseconds: 260),
+        transitionDuration: LayoutPrefs.dur(const Duration(milliseconds: 320)),
+        reverseTransitionDuration: LayoutPrefs.dur(const Duration(milliseconds: 260)),
         pageBuilder: (_, _, _) => _scoped(const NowPlayingPage()),
         transitionsBuilder: (_, anim, _, child) => SlideTransition(
           position: Tween(

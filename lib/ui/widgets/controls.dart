@@ -7,6 +7,7 @@ import 'package:just_audio/just_audio.dart';
 
 import '../../models/track.dart';
 import '../../services/appearance.dart';
+import '../../services/layout_prefs.dart';
 import '../../services/metadata.dart';
 import '../../services/player_controller.dart';
 import '../shortcuts.dart';
@@ -51,18 +52,19 @@ class Artwork extends StatelessWidget {
       child = FutureBuilder<Uint8List?>(
         future: Metadata.artwork(t),
         builder: (context, snap) =>
-            AnimatedSwitcher(duration: const Duration(milliseconds: 250), child: _image(context, snap.data, t)),
+            AnimatedSwitcher(duration: LayoutPrefs.dur(const Duration(milliseconds: 250)), child: _image(context, snap.data, t)),
       );
     }
+    final r = LayoutPrefs.radius(radius);
     return SizedBox(
       width: size,
       height: size,
       // ClipRRect / ClipOval have fast paths; a generic ClipPath per cover made scrolling heavy.
       child: circle
           ? ClipOval(child: child)
-          : radius == 0
+          : r == 0
           ? child
-          : ClipRRect(borderRadius: BorderRadius.circular(radius), child: child),
+          : ClipRRect(borderRadius: BorderRadius.circular(r), child: child),
     );
   }
 
@@ -238,8 +240,12 @@ class _SeekBarState extends State<SeekBar> {
           onExit: (_) => setState(() => _hovering = false),
           child: SliderTheme(
             data: SliderTheme.of(context).copyWith(
+              trackHeight: LayoutPrefs.instance.progressBar.height,
               activeTrackColor: active && widget.inline ? AppColors.accent : AppColors.textPrimary,
-              thumbShape: RoundSliderThumbShape(enabledThumbRadius: active || !widget.inline ? 6 : 0, elevation: 0),
+              thumbShape: RoundSliderThumbShape(
+                enabledThumbRadius: active || !widget.inline ? (LayoutPrefs.instance.progressBar == ProgressBarStyle.thick ? 8 : 6) : 0,
+                elevation: 0,
+              ),
               padding: EdgeInsets.zero,
             ),
             child: SizedBox(
@@ -319,7 +325,10 @@ class PlayButton extends StatelessWidget {
           height: size,
           decoration: BoxDecoration(
             color: onPressed == null ? color.withValues(alpha: 0.4) : color,
-            shape: BoxShape.circle,
+            shape: LayoutPrefs.instance.playButton == PlayButtonShape.circle ? BoxShape.circle : BoxShape.rectangle,
+            borderRadius: LayoutPrefs.instance.playButton == PlayButtonShape.circle
+                ? null
+                : BorderRadius.circular(size * 0.3),
           ),
           child: loading
               ? Padding(
@@ -327,14 +336,16 @@ class PlayButton extends StatelessWidget {
                   child: CircularProgressIndicator(strokeWidth: 2.5, color: iconColor),
                 )
               : AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 180),
-                  transitionBuilder: (child, anim) => ScaleTransition(
-                    scale: Tween(
-                      begin: 0.6,
-                      end: 1.0,
-                    ).animate(CurvedAnimation(parent: anim, curve: Curves.easeOutBack)),
-                    child: FadeTransition(opacity: anim, child: child),
-                  ),
+                  duration: LayoutPrefs.dur(const Duration(milliseconds: 180)),
+                  transitionBuilder: (child, anim) => LayoutPrefs.moves
+                      ? ScaleTransition(
+                          scale: Tween(
+                            begin: 0.6,
+                            end: 1.0,
+                          ).animate(CurvedAnimation(parent: anim, curve: Curves.easeOutBack)),
+                          child: FadeTransition(opacity: anim, child: child),
+                        )
+                      : FadeTransition(opacity: anim, child: child),
                   child: Icon(
                     playing ? Icons.pause_rounded : Icons.play_arrow_rounded,
                     key: ValueKey(playing),
@@ -367,14 +378,14 @@ class _PressableState extends State<_Pressable> {
     final enabled = widget.onPressed != null;
     return MouseRegion(
       cursor: enabled ? SystemMouseCursors.click : MouseCursor.defer,
-      onEnter: (_) => enabled ? setState(() => _scale = 1.06) : null,
+      onEnter: (_) => enabled && LayoutPrefs.moves ? setState(() => _scale = 1.06) : null,
       onExit: (_) => setState(() => _scale = 1),
       child: GestureDetector(
-        onTapDown: (_) => enabled ? setState(() => _scale = 0.94) : null,
+        onTapDown: (_) => enabled && LayoutPrefs.moves ? setState(() => _scale = 0.94) : null,
         onTapCancel: () => setState(() => _scale = 1),
         onTapUp: (_) => setState(() => _scale = 1),
         onTap: widget.onPressed,
-        child: AnimatedScale(scale: _scale, duration: const Duration(milliseconds: 120), child: widget.child),
+        child: AnimatedScale(scale: _scale, duration: LayoutPrefs.dur(const Duration(milliseconds: 120)), child: widget.child),
       ),
     );
   }
@@ -590,19 +601,19 @@ class _MediaCardState extends State<MediaCard> {
       onEnter: (_) => setState(() => _hover = true),
       onExit: (_) => setState(() => _hover = false),
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 160),
+        duration: LayoutPrefs.dur(const Duration(milliseconds: 160)),
         decoration: BoxDecoration(
           color: _hover ? AppColors.hover : AppColors.hover.withValues(alpha: 0),
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: LayoutPrefs.corner(8),
         ),
         child: Material(
           type: MaterialType.transparency,
           child: InkWell(
             onTap: widget.onTap,
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: LayoutPrefs.corner(8),
             hoverColor: Colors.transparent,
             child: Padding(
-              padding: const EdgeInsets.all(10),
+              padding: EdgeInsets.all(LayoutPrefs.dense(10, 6)),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: widget.circle ? CrossAxisAlignment.center : CrossAxisAlignment.start,
@@ -615,7 +626,7 @@ class _MediaCardState extends State<MediaCard> {
                           child: DecoratedBox(
                             decoration: BoxDecoration(
                               shape: widget.circle ? BoxShape.circle : BoxShape.rectangle,
-                              borderRadius: widget.circle ? null : BorderRadius.circular(6),
+                              borderRadius: widget.circle ? null : LayoutPrefs.corner(6),
                               boxShadow: const [
                                 BoxShadow(color: Color(0x66000000), blurRadius: 24, offset: Offset(0, 4)),
                               ],
@@ -628,10 +639,10 @@ class _MediaCardState extends State<MediaCard> {
                             right: 8,
                             bottom: 8,
                             child: AnimatedSlide(
-                              duration: const Duration(milliseconds: 180),
-                              offset: _hover ? Offset.zero : const Offset(0, 0.25),
+                              duration: LayoutPrefs.dur(const Duration(milliseconds: 180)),
+                              offset: _hover || !LayoutPrefs.moves ? Offset.zero : const Offset(0, 0.25),
                               child: AnimatedOpacity(
-                                duration: const Duration(milliseconds: 180),
+                                duration: LayoutPrefs.dur(const Duration(milliseconds: 180)),
                                 opacity: _hover ? 1 : 0,
                                 child: PlayButton(
                                   playing: false,
@@ -646,7 +657,7 @@ class _MediaCardState extends State<MediaCard> {
                       ],
                     ),
                   ),
-                  const SizedBox(height: 10),
+                  SizedBox(height: LayoutPrefs.dense(10, 6)),
                   Text(
                     widget.title,
                     maxLines: 1,
@@ -700,7 +711,7 @@ class CoverMosaic extends StatelessWidget {
       width: size,
       height: size,
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(radius),
+        borderRadius: LayoutPrefs.corner(radius),
         child: GridView.count(
           crossAxisCount: 2,
           physics: const NeverScrollableScrollPhysics(),

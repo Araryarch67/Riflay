@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../../models/track.dart';
+import '../../services/layout_prefs.dart';
 import '../../services/lyrics.dart';
 import '../../services/lyrics_translation.dart';
 import '../../services/player_controller.dart';
@@ -300,12 +301,18 @@ class _Message extends StatelessWidget {
 
 TextStyle? _lineStyle(BuildContext context) {
   final compact = ShellScope.of(context).compact;
-  return (compact ? Theme.of(context).textTheme.headlineSmall : Theme.of(context).textTheme.headlineMedium)?.copyWith(
+  final base = compact ? Theme.of(context).textTheme.headlineSmall : Theme.of(context).textTheme.headlineMedium;
+  final scale = LayoutPrefs.instance.lyricsSize.scale;
+  return base?.copyWith(
+    fontSize: scale == 1 || base.fontSize == null ? null : base.fontSize! * scale,
     fontWeight: FontWeight.w800,
     height: 1.25,
     letterSpacing: -0.3,
   );
 }
+
+bool get _centred => LayoutPrefs.instance.lyricsAlign == LyricsAlign.centre;
+TextAlign get _textAlign => _centred ? TextAlign.center : TextAlign.start;
 
 class _Source extends StatelessWidget {
   const _Source(this.lyrics);
@@ -317,6 +324,7 @@ class _Source extends StatelessWidget {
     padding: const EdgeInsets.only(top: 32, bottom: 48),
     child: Text(
       'Lyrics from ${lyrics.source}',
+      textAlign: _textAlign,
       style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.white54),
     ),
   );
@@ -345,14 +353,14 @@ class _PlainLyricsState extends State<_PlainLyrics> with _Extras {
         padding: EdgeInsets.symmetric(horizontal: ShellScope.of(context).compact ? 24 : 40, vertical: 24),
         children: [
           if (extras == null)
-            Text(lyrics.plain!, style: style)
+            Text(lyrics.plain!, style: style, textAlign: _textAlign)
           else
             for (var i = 0; i < lines.length; i++) ...[
-              Text(lines[i], style: style),
+              Text(lines[i], style: style, textAlign: _textAlign),
               if (extraFor(i) case final extra?)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 6),
-                  child: Text(extra, style: _extraStyle(context)?.copyWith(color: Colors.white70)),
+                  child: Text(extra, style: _extraStyle(context)?.copyWith(color: Colors.white70), textAlign: _textAlign),
                 ),
             ],
           _Source(lyrics),
@@ -420,7 +428,7 @@ class _SyncedLyricsState extends State<_SyncedLyrics> with _Extras {
       Scrollable.ensureVisible(
         ctx,
         alignment: 0.35,
-        duration: const Duration(milliseconds: 350),
+        duration: LayoutPrefs.dur(const Duration(milliseconds: 350)),
         curve: Curves.easeOutCubic,
       );
     });
@@ -445,7 +453,7 @@ class _SyncedLyricsState extends State<_SyncedLyrics> with _Extras {
             controller: _scroll,
             padding: EdgeInsets.fromLTRB(pad, 24, pad, 0),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: _centred ? CrossAxisAlignment.stretch : CrossAxisAlignment.start,
               children: [
                 for (var i = 0; i < lines.length; i++)
                   _Line(
@@ -457,7 +465,9 @@ class _SyncedLyricsState extends State<_SyncedLyrics> with _Extras {
                         ? Colors.white
                         : i < at
                         ? Colors.white.withValues(alpha: 0.75)
-                        : Colors.black.withValues(alpha: 0.55),
+                        : LayoutPrefs.instance.dimUnsungLyrics
+                        ? Colors.black.withValues(alpha: 0.55)
+                        : Colors.white.withValues(alpha: 0.75),
                     onTap: () {
                       _userScrolledAt = DateTime(0);
                       c.seek(lines[i].time);
@@ -510,20 +520,20 @@ class _LineState extends State<_Line> {
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 8),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: _centred ? CrossAxisAlignment.stretch : CrossAxisAlignment.start,
           children: [
             AnimatedDefaultTextStyle(
-              duration: const Duration(milliseconds: 200),
+              duration: LayoutPrefs.dur(const Duration(milliseconds: 200)),
               style: (widget.style ?? const TextStyle()).copyWith(color: _hover ? Colors.white : widget.color),
-              child: Text(widget.text),
+              child: Text(widget.text, textAlign: _textAlign),
             ),
             if (widget.extra case final extra?)
               AnimatedDefaultTextStyle(
-                duration: const Duration(milliseconds: 200),
+                duration: LayoutPrefs.dur(const Duration(milliseconds: 200)),
                 style: (_extraStyle(context) ?? const TextStyle()).copyWith(
                   color: (_hover ? Colors.white : widget.color).withValues(alpha: 0.8),
                 ),
-                child: Padding(padding: const EdgeInsets.only(top: 2), child: Text(extra)),
+                child: Padding(padding: const EdgeInsets.only(top: 2), child: Text(extra, textAlign: _textAlign)),
               ),
           ],
         ),

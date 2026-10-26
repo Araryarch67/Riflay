@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 
+import '../../services/layout_prefs.dart';
 import '../theme.dart';
 
 /// Menus and pickers share one look: a dark rounded card with a hairline
 /// border, compact rows with an icon.
 BorderSide get _menuBorder => BorderSide(color: AppColors.border);
-final menuShape = RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: _menuBorder);
+RoundedRectangleBorder get menuShape => RoundedRectangleBorder(borderRadius: LayoutPrefs.corner(12), side: _menuBorder);
 
 /// One row of a popup menu: icon and label, sized for both mouse and touch.
 class MenuRow extends StatelessWidget {

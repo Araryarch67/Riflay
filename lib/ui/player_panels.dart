@@ -8,6 +8,7 @@ import 'package:window_manager/window_manager.dart';
 import '../models/track.dart';
 import '../services/appearance.dart';
 import '../services/audio_engine.dart';
+import '../services/layout_prefs.dart';
 import '../services/player_controller.dart';
 import 'shell_scope.dart';
 import 'cast_picker.dart';
@@ -108,7 +109,7 @@ class _MiniPlayerState extends State<MiniPlayer> {
           padding: const EdgeInsets.fromLTRB(8, 0, 8, 6),
           child: GlassPanel(
             color: Color.lerp(accent, Colors.black, 0.45)!,
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: LayoutPrefs.corner(8),
             child: InkWell(
               onTap: widget.onOpen,
               onLongPress: () => _more(context, c),
@@ -535,11 +536,11 @@ class NowPlayingSidePanel extends StatelessWidget {
                     ),
                   ],
                   const SizedBox(height: 12),
-                  const QualityBadge(),
+                  if (LayoutPrefs.instance.showQualityBadge) const QualityBadge(),
                   const SizedBox(height: 16),
                   if (next != null)
                     Container(
-                      decoration: BoxDecoration(color: AppColors.elevated, borderRadius: BorderRadius.circular(8)),
+                      decoration: BoxDecoration(color: AppColors.elevated, borderRadius: LayoutPrefs.corner(8)),
                       padding: const EdgeInsets.fromLTRB(8, 12, 8, 8),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -603,7 +604,7 @@ class NowPlayingPage extends StatelessWidget {
                   ),
                 ),
               AnimatedContainer(
-                duration: const Duration(milliseconds: 500),
+                duration: LayoutPrefs.dur(const Duration(milliseconds: 500)),
                 decoration: BoxDecoration(
                   color: look == NowPlayingBackground.black ? Colors.black : null,
                   gradient: switch (look) {
@@ -628,7 +629,8 @@ class NowPlayingPage extends StatelessWidget {
                     builder: (context, constraints) {
                       // Leave room for the controls; never let the cover push them off-screen.
                       // On very short windows the cover (then the quality badge) makes way.
-                      final showBadge = constraints.maxHeight >= 480;
+                      final showBadge = constraints.maxHeight >= 480 && LayoutPrefs.instance.showQualityBadge;
+                      final largeCover = LayoutPrefs.instance.phoneCover == PhoneCoverSize.large;
                       final narrow = constraints.maxWidth < 320;
                       // A phone held sideways: the cover goes beside the controls.
                       final sideways = constraints.maxWidth > constraints.maxHeight && constraints.maxHeight < 480;
@@ -737,14 +739,20 @@ class NowPlayingPage extends StatelessWidget {
                           ),
                         );
                       }
-                      final art = math.min(constraints.maxWidth - 48, constraints.maxHeight - (showBadge ? 376 : 340));
+                      final art = largeCover
+                          ? math.min(constraints.maxWidth - 24, constraints.maxHeight - (showBadge ? 340 : 304))
+                          : math.min(constraints.maxWidth - 48, constraints.maxHeight - (showBadge ? 376 : 340));
                       return Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 24),
                         child: Column(
                           children: [
                             topBar,
                             const Spacer(),
-                            if (art >= 96) cover(art),
+                            // The large cover runs 12 px into the page's margin on each side.
+                            if (art >= 96)
+                              largeCover
+                                  ? SizedBox(height: art, child: OverflowBox(maxWidth: art, child: cover(art)))
+                                  : cover(art),
                             const Spacer(),
                             info,
                             const SizedBox(height: 16),
@@ -777,13 +785,13 @@ class _TrackSwitcher extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => AnimatedSwitcher(
-    duration: const Duration(milliseconds: 260),
+    duration: LayoutPrefs.dur(const Duration(milliseconds: 260)),
     switchInCurve: Curves.easeOutCubic,
     switchOutCurve: Curves.easeInCubic,
     layoutBuilder: (current, previous) => Stack(alignment: Alignment.centerLeft, children: [...previous, ?current]),
     transitionBuilder: (child, anim) => FadeTransition(
       opacity: anim,
-      child: slide
+      child: slide && LayoutPrefs.moves
           ? SlideTransition(
               position: Tween(begin: const Offset(0, 0.15), end: Offset.zero).animate(anim),
               child: child,
@@ -882,7 +890,7 @@ class _FullScreenPlayerState extends State<FullScreenPlayer> {
             child: NowPlayingCover(
               child: DecoratedBox(
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: LayoutPrefs.corner(12),
                   boxShadow: const [BoxShadow(color: Color(0x73000000), blurRadius: 40, offset: Offset(0, 16))],
                 ),
                 child: _TrackSwitcher(

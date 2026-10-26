@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../models/track.dart';
 import '../../services/audio_engine.dart';
+import '../../services/layout_prefs.dart';
 import '../../services/metadata.dart';
 import '../../services/player_controller.dart';
 import '../shell_scope.dart';
@@ -87,17 +88,17 @@ class _TrackRowState extends State<TrackRow> {
       onExit: (_) => setState(() => _hover = false),
       child: Material(
         color: _hover ? AppColors.tile : Colors.transparent,
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: LayoutPrefs.corner(6),
         child: InkWell(
-          borderRadius: BorderRadius.circular(6),
+          borderRadius: LayoutPrefs.corner(6),
           hoverColor: Colors.transparent,
           onTap: isCurrent && wide && _hover ? c.togglePlay : widget.onTap,
           child: Padding(
-            padding: EdgeInsets.symmetric(horizontal: wide ? 12 : 4, vertical: 6),
+            padding: EdgeInsets.symmetric(horizontal: wide ? 12 : 4, vertical: LayoutPrefs.dense(6, 2)),
             child: Row(
               children: [
                 if (leading != null) ...[leading, const SizedBox(width: 12)],
-                if (widget.showArtwork) ...[Artwork(track: t, size: wide ? 40 : 48), const SizedBox(width: 12)],
+                if (widget.showArtwork) ...[Artwork(track: t, size: LayoutPrefs.dense(wide ? 40 : 48, wide ? 34 : 40)), const SizedBox(width: 12)],
                 Expanded(
                   flex: 5,
                   child: Column(
