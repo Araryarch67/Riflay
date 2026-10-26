@@ -8,6 +8,8 @@ Future<bool> listed() async {
   return (out.stdout as String).contains('Playing music');
 }
 
+/// Takes a real logind lock on this machine, so it only runs when asked:
+/// `RIFLAY_SYSTEM_TESTS=1 flutter test test/linux_idle_inhibitor_test.dart`.
 void main() {
   test('logind idle lock appears while held and is gone after release', () async {
     final idle = LinuxIdleInhibitor();
@@ -19,5 +21,8 @@ void main() {
     }
     await Future<void>.delayed(const Duration(milliseconds: 300));
     expect(await listed(), isFalse);
-  }, skip: !Platform.isLinux || !Directory('/run/systemd/system').existsSync());
+  }, skip:
+        !Platform.isLinux ||
+        !Directory('/run/systemd/system').existsSync() ||
+        Platform.environment['RIFLAY_SYSTEM_TESTS'] != '1');
 }
