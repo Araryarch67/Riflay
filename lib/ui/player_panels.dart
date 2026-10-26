@@ -350,7 +350,7 @@ class DesktopPlayerBar extends StatelessWidget {
 }
 
 /// The player bar's ⋯: the now-playing side panel, the mini player, the
-/// expanded player and full screen.
+/// expanded player and full screen, then Stats for nerds and Signal path.
 class _ViewsMenu extends StatelessWidget {
   const _ViewsMenu({required this.hasTrack, required this.sidePanelOpen, required this.onToggleSidePanel});
 
@@ -376,7 +376,7 @@ class _ViewsMenu extends StatelessWidget {
       return PopupMenuButton<VoidCallback>(
         // Over the whole window, so a click anywhere closes it.
         useRootNavigator: true,
-        tooltip: 'More views',
+        tooltip: 'More options',
         icon: Icon(Icons.more_horiz_rounded, size: 22, color: expanded || full ? AppColors.accent : null),
         onSelected: (open) => open(),
         itemBuilder: (_) => [
@@ -402,6 +402,11 @@ class _ViewsMenu extends StatelessWidget {
               () => setFullScreenPlayer(!full),
               on: full,
             ),
+          if (hasTrack && AudioEngine.supported) ...[
+            const PopupMenuDivider(),
+            for (final e in NowPlayingCover.menuItems())
+              PopupMenuItem(onTap: () => NowPlayingCover.handle(context, e.value), child: e.child),
+          ],
         ],
       );
     },
@@ -489,6 +494,7 @@ class NowPlayingSidePanel extends StatelessWidget {
                           style: text.titleMedium?.copyWith(fontWeight: FontWeight.w700),
                         ),
                       ),
+                      TrackMenuButton(track: track, nowPlaying: true),
                       IconButton(tooltip: 'Close', onPressed: onClose, icon: const Icon(Icons.close_rounded, size: 20)),
                     ],
                   ),
@@ -703,7 +709,7 @@ class NowPlayingPage extends StatelessWidget {
                           if (track != null) ...[
                             DownloadButton(track: track, size: 26, color: Colors.white),
                             LikeButton(track: track, size: 28, color: Colors.white),
-                            TrackMenuButton(track: track, color: Colors.white),
+                            TrackMenuButton(track: track, color: Colors.white, nowPlaying: true),
                           ],
                         ],
                       );
@@ -913,6 +919,7 @@ class _FullScreenPlayerState extends State<FullScreenPlayer> {
                   ),
                 ),
                 LikeButton(track: track, size: 26),
+                TrackMenuButton(track: track, nowPlaying: true),
               ],
             ),
           ),

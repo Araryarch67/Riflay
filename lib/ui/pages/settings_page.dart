@@ -10,6 +10,7 @@ import '../../services/youtube_importer.dart';
 import '../../services/ytdlp.dart';
 import '../navigation.dart';
 import '../shell_scope.dart';
+import '../shortcuts.dart';
 import '../theme.dart';
 import '../widgets/page_scaffold.dart';
 import '../../services/audio_engine.dart';
@@ -71,6 +72,14 @@ class SettingsPage extends StatelessWidget {
                 ),
                 trailing: const Icon(Icons.chevron_right_rounded),
                 onTap: () => shell.open(SettingsTopicPage(topic: t), location: Locations.settingsTopic(t.name)),
+              ),
+            if (hasKeyboardShortcuts)
+              ListTile(
+                leading: const SizedBox.square(dimension: 36, child: Icon(Icons.keyboard_outlined)),
+                title: const Text('Keyboard shortcuts'),
+                subtitle: Text('Play, skip, search and more without the mouse', style: muted),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: () => showShortcutsDialog(context),
               ),
           ],
         ),
