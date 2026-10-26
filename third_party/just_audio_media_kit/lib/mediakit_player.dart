@@ -155,6 +155,13 @@ class MediaKitPlayer extends AudioPlayerPlatform {
         _updatePlaybackEvent();
       }),
       _player.stream.error.listen((error) {
+        // Riflay: the sound output failing (a device that is busy or can't take the format, a
+        // filter that won't build) says nothing about the song. mpv keeps playing it without
+        // sound, so don't report it as a failed song: the app would skip to the next one.
+        if (isOutputError(error)) {
+          _logger.warning('Audio output problem, the song goes on: $error');
+          return;
+        }
         final errorUri = RegExp(r'Failed to open (.*)\.').firstMatch(error)?[1];
         if (errorUri == null || errorUri == _currentMedia?.uri) {
           _processingState = ProcessingStateMessage.idle;
@@ -196,6 +203,13 @@ class MediaKitPlayer extends AudioPlayerPlatform {
       }),
     ];
   }
+
+  /// Whether an mpv error line is about the audio output or the audio filter chain, not the
+  /// song: those come from reopening the output after a setting changed.
+  static bool isOutputError(String error) => RegExp(
+        r'audio (device|output|driver|filter)|initialize audio|no sound|audio reinit|reinit(iali[sz]ing)? audio|audio resampl',
+        caseSensitive: false,
+      ).hasMatch(error);
 
   void _updateDuration(Duration duration) {
     final start = _currentMedia?.start;

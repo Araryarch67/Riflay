@@ -549,7 +549,7 @@ class AudioEngine extends ChangeNotifier {
     if (_native case final p?) {
       _setChain(p).then((_) {
         // The output would otherwise stay in the volume filter's float format.
-        if (v != null && volumeWasOn) return p.command(['ao-reload']);
+        if (v != null && volumeWasOn) return _reloadOutput(p);
       }).ignore();
     }
   }
@@ -675,7 +675,7 @@ class AudioEngine extends ChangeNotifier {
         if (p != null) {
           final mixerMoved = Platform.isAndroid && await _syncMixer(p);
           final volumeMoved = await _applyProps(p);
-          if (reopen || volumeMoved || mixerMoved) await p.command(['ao-reload']);
+          if (reopen || volumeMoved || mixerMoved) await _reloadOutput(p);
         }
       } catch (e) {
         debugPrint('Applying audio settings failed: $e');
@@ -867,7 +867,7 @@ class AudioEngine extends ChangeNotifier {
           await _setChain(p);
           // Back at 100%: the output still runs in the volume filter's 64-bit float
           // until it reopens, so bit-perfect mode would stay not bit-perfect.
-          if (inChain && !_volumeActive && bitPerfect) await p.command(['ao-reload']);
+          if (inChain && !_volumeActive && bitPerfect) await _reloadOutput(p);
         }
       }
     } catch (e) {
@@ -1050,6 +1050,28 @@ class AudioEngine extends ChangeNotifier {
     return choice != before;
   }
 
+  /// Reopens mpv's audio output, and keeps the song where it was. A reopen drops what was already
+  /// handed to the old output (and when the new one can't open, the playback clock is off too),
+  /// so the song would jump ahead by a buffer's worth, or a paused one would creep on. If it did,
+  /// seek back to where it should be: a short dropout, never another place or another song.
+  Future<void> _reloadOutput(NativePlayer p) async {
+    Future<double?> time() async => double.tryParse(await _read(p, 'time-pos'));
+    final song = await _read(p, 'playlist-pos');
+    final before = await time();
+    final paused = await _read(p, 'pause') == 'yes';
+    final speed = double.tryParse(await _read(p, 'speed')) ?? 1;
+    final clock = Stopwatch()..start();
+    await p.command(['ao-reload']);
+    if (before == null || song.isEmpty) return;
+    await Future<void>.delayed(const Duration(milliseconds: 400));
+    if (_disposed || !identical(_native, p) || await _read(p, 'playlist-pos') != song) return;
+    final expected = before + (paused ? 0 : clock.elapsedMilliseconds / 1000 * speed);
+    final now = await time();
+    if (now != null && (now - expected).abs() > 0.5) {
+      await p.command(['seek', expected.toStringAsFixed(3), 'absolute+exact']);
+    }
+  }
+
   /// Each song that opens may need other mixer attributes (its rate), so follow what mpv decodes.
   void _followSong(Player player, NativePlayer p) {
     if (!Platform.isAndroid) return;
@@ -1060,7 +1082,7 @@ class AudioEngine extends ChangeNotifier {
             if (_disposed || !identical(_native, p)) return;
             if (await _syncMixer(p)) {
               await _applyProps(p);
-              await p.command(['ao-reload']);
+              await _reloadOutput(p);
             }
           })
           .catchError((Object e) => debugPrint('Following the song\'s format failed: $e'));
@@ -1136,6 +1158,10 @@ class AudioEngine extends ChangeNotifier {
       'replaygain': effectiveLeveling.mpv,
       'replaygain-clip': 'no',
       'replaygain-fallback': '0',
+      // An output that can't open (busy device, a format or exclusive mode it can't take) must not
+      // end the song: with no audio output mpv treats an audio file as finished and moves on to the
+      // next one. The null output keeps it going, silently and in time, from the same place.
+      'audio-fallback-to-null': 'yes',
       'audio-buffer': buffer.seconds.toString(),
       'af': filterChain,
       'audio-device': _openedDevice!,
