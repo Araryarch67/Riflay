@@ -10,6 +10,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../services/audio_engine.dart';
 import '../../services/carla_locator.dart';
+import '../../services/layout_prefs.dart';
 import '../../services/player_controller.dart';
 import '../shell_scope.dart';
 import '../theme.dart';
@@ -449,7 +450,7 @@ class SettingsCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Material(
     color: AppColors.elevated,
-    borderRadius: BorderRadius.circular(12),
+    borderRadius: LayoutPrefs.corner(12),
     clipBehavior: Clip.antiAlias,
     child: ListTileTheme(
       iconColor: AppColors.textSecondary,

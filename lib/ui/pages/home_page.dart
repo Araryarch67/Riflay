@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../../services/layout_prefs.dart';
 import '../../services/player_controller.dart';
 import '../../services/youtube_music_account.dart';
 import '../shell_scope.dart';
@@ -86,6 +87,108 @@ class HomePage extends StatelessWidget {
         ),
     ].take(shell.compact ? 6 : 8).toList();
 
+    // Home's sections, in the order and with the ones switched on in Settings › Layout.
+    final sections = <HomeSection, List<Widget>>{
+      HomeSection.quickPicks: [
+        if (quickPicks.isNotEmpty)
+          SliverPadding(
+            padding: EdgeInsets.symmetric(horizontal: pad),
+            sliver: SliverGrid.builder(
+              gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+                maxCrossAxisExtent: shell.compact ? 260 : 360,
+                mainAxisExtent: LayoutPrefs.dense(shell.compact ? 56 : 64, shell.compact ? 48 : 52),
+                mainAxisSpacing: LayoutPrefs.dense(8, 4),
+                crossAxisSpacing: LayoutPrefs.dense(8, 4),
+              ),
+              itemCount: quickPicks.length,
+              itemBuilder: (_, i) => quickPicks[i],
+            ),
+          ),
+        if (!account.isSignedIn) const SliverToBoxAdapter(child: SignInBanner()),
+      ],
+      HomeSection.recentlyPlayed: [
+        if (recent.isNotEmpty)
+          _shelf('Recently played', recent.length, (i) {
+            final t = recent[i];
+            return MediaCard(
+              track: t,
+              title: t.title,
+              subtitle: t.artist,
+              online: !c.isOffline(t),
+              onTap: () => c.playList(recent, i, from: 'Recently played'),
+              onPlay: () => c.playList(recent, i, from: 'Recently played'),
+            );
+          }),
+      ],
+      HomeSection.playlists: [
+        if (playlists.isNotEmpty || remotePlaylists.isNotEmpty)
+          _shelf('Your playlists', playlists.length + remotePlaylists.length, (i) {
+            if (i < playlists.length) {
+              final p = playlists[i];
+              return MediaCard(
+                track: p.tracks.firstOrNull,
+                title: p.name,
+                subtitle: 'Riflay • ${p.tracks.length} songs',
+                onTap: () => shell.openCollection(c.playlistCollection(p)),
+                onPlay: p.tracks.isEmpty ? null : () => c.playCollection(c.playlistCollection(p)),
+              );
+            }
+            final p = remotePlaylists[i - playlists.length];
+            return MediaCard(
+              track: playlistCover(p),
+              title: p.title,
+              subtitle: p.count == 0 ? 'YouTube Music' : 'YouTube Music • ${p.count} songs',
+              online: true,
+              onTap: () => openRemotePlaylist(context, p),
+            );
+          }),
+      ],
+      HomeSection.albums: [
+        if (albums.isNotEmpty)
+          _shelf('Your albums', albums.length, (i) {
+            final a = albums[i];
+            return MediaCard(
+              track: a.cover,
+              title: a.title,
+              subtitle: a.subtitle,
+              onTap: () => shell.openCollection(a),
+              onPlay: () => c.playCollection(a),
+            );
+          }),
+      ],
+      HomeSection.artists: [
+        if (artists.isNotEmpty)
+          _shelf('Artists', artists.length, (i) {
+            final a = artists[i];
+            return MediaCard(
+              track: a.cover,
+              title: a.title,
+              subtitle: 'Artist',
+              circle: true,
+              onTap: () => shell.openCollection(a),
+              onPlay: () => c.playCollection(a),
+            );
+          }),
+      ],
+      HomeSection.discover: [
+        if (c.library.isEmpty) const SliverToBoxAdapter(child: _AddYourMusic()),
+        const DiscoverShelves(),
+      ],
+      HomeSection.recentlyAdded: [
+        if (c.library.isNotEmpty)
+          _shelf('Recently added', math.min(20, c.recentlyAdded.length), (i) {
+            final t = c.recentlyAdded[i];
+            return MediaCard(
+              track: t,
+              title: t.title,
+              subtitle: t.artist,
+              onTap: () => c.playList(c.recentlyAdded, i, from: 'Recently added'),
+              onPlay: () => c.playList(c.recentlyAdded, i, from: 'Recently added'),
+            );
+          }, onShowAll: () => shell.openCollection(c.allSongs)),
+      ],
+    };
+
     return AccentBuilder(
       track: c.currentTrack ?? recent.firstOrNull,
       builder: (context, accent) => PageScaffold(
@@ -116,91 +219,10 @@ class HomePage extends StatelessWidget {
               ),
             ),
           ),
-          if (quickPicks.isNotEmpty)
-            SliverPadding(
-              padding: EdgeInsets.symmetric(horizontal: pad),
-              sliver: SliverGrid.builder(
-                gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
-                  maxCrossAxisExtent: shell.compact ? 260 : 360,
-                  mainAxisExtent: shell.compact ? 56 : 64,
-                  mainAxisSpacing: 8,
-                  crossAxisSpacing: 8,
-                ),
-                itemCount: quickPicks.length,
-                itemBuilder: (_, i) => quickPicks[i],
-              ),
-            ),
-          if (!account.isSignedIn) const SliverToBoxAdapter(child: SignInBanner()),
-          // The cards are made as they're shown: albums and artists can be thousands.
-          if (recent.isNotEmpty)
-            _shelf('Recently played', recent.length, (i) {
-              final t = recent[i];
-              return MediaCard(
-                track: t,
-                title: t.title,
-                subtitle: t.artist,
-                online: !c.isOffline(t),
-                onTap: () => c.playList(recent, i, from: 'Recently played'),
-                onPlay: () => c.playList(recent, i, from: 'Recently played'),
-              );
-            }),
-          if (playlists.isNotEmpty || remotePlaylists.isNotEmpty)
-            _shelf('Your playlists', playlists.length + remotePlaylists.length, (i) {
-              if (i < playlists.length) {
-                final p = playlists[i];
-                return MediaCard(
-                  track: p.tracks.firstOrNull,
-                  title: p.name,
-                  subtitle: 'Riflay • ${p.tracks.length} songs',
-                  onTap: () => shell.openCollection(c.playlistCollection(p)),
-                  onPlay: p.tracks.isEmpty ? null : () => c.playCollection(c.playlistCollection(p)),
-                );
-              }
-              final p = remotePlaylists[i - playlists.length];
-              return MediaCard(
-                track: playlistCover(p),
-                title: p.title,
-                subtitle: p.count == 0 ? 'YouTube Music' : 'YouTube Music • ${p.count} songs',
-                online: true,
-                onTap: () => openRemotePlaylist(context, p),
-              );
-            }),
-          if (albums.isNotEmpty)
-            _shelf('Your albums', albums.length, (i) {
-              final a = albums[i];
-              return MediaCard(
-                track: a.cover,
-                title: a.title,
-                subtitle: a.subtitle,
-                onTap: () => shell.openCollection(a),
-                onPlay: () => c.playCollection(a),
-              );
-            }),
-          if (artists.isNotEmpty)
-            _shelf('Artists', artists.length, (i) {
-              final a = artists[i];
-              return MediaCard(
-                track: a.cover,
-                title: a.title,
-                subtitle: 'Artist',
-                circle: true,
-                onTap: () => shell.openCollection(a),
-                onPlay: () => c.playCollection(a),
-              );
-            }),
-          if (c.library.isEmpty) const SliverToBoxAdapter(child: _AddYourMusic()),
-          const DiscoverShelves(),
-          if (c.library.isNotEmpty)
-            _shelf('Recently added', math.min(20, c.recentlyAdded.length), (i) {
-              final t = c.recentlyAdded[i];
-              return MediaCard(
-                track: t,
-                title: t.title,
-                subtitle: t.artist,
-                onTap: () => c.playList(c.recentlyAdded, i, from: 'Recently added'),
-                onPlay: () => c.playList(c.recentlyAdded, i, from: 'Recently added'),
-              );
-            }, onShowAll: () => shell.openCollection(c.allSongs)),
+          for (final section in LayoutPrefs.instance.homeShown) ...sections[section]!,
+          // The invitation to add songs stays even when YouTube Music's shelves are switched off.
+          if (c.library.isEmpty && LayoutPrefs.instance.homeHidden.contains(HomeSection.discover))
+            const SliverToBoxAdapter(child: _AddYourMusic()),
         ],
       ),
     );
@@ -224,7 +246,7 @@ class _AddYourMusic extends StatelessWidget {
       padding: EdgeInsets.fromLTRB(pad, 16, pad, 0),
       child: Container(
         padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(color: AppColors.elevated, borderRadius: BorderRadius.circular(8)),
+        decoration: BoxDecoration(color: AppColors.elevated, borderRadius: LayoutPrefs.corner(8)),
         child: Wrap(
           spacing: 12,
           runSpacing: 12,
@@ -275,7 +297,7 @@ class _QuickTileState extends State<QuickTile> {
       onExit: (_) => setState(() => _hover = false),
       child: Material(
         color: _hover ? AppColors.textPrimary.withValues(alpha: 0.16) : AppColors.tile,
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: LayoutPrefs.corner(6),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: widget.onTap,
@@ -295,7 +317,7 @@ class _QuickTileState extends State<QuickTile> {
               if (widget.onPlay != null)
                 AnimatedOpacity(
                   opacity: _hover ? 1 : 0,
-                  duration: const Duration(milliseconds: 150),
+                  duration: LayoutPrefs.dur(const Duration(milliseconds: 150)),
                   child: Padding(
                     padding: const EdgeInsets.only(right: 8),
                     child: PlayButton(

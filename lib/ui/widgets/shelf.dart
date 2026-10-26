@@ -2,11 +2,12 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../../services/layout_prefs.dart';
 import '../shell_scope.dart';
 import 'page_scaffold.dart';
 
 /// Extra height a [MediaCard] needs below its square artwork (padding + two text lines).
-const _cardChrome = 70.0;
+double get _cardChrome => LayoutPrefs.dense(70, 62);
 const _minCardWidth = 168.0;
 const _maxCardWidth = 240.0;
 
@@ -38,14 +39,15 @@ class Shelf extends StatelessWidget {
       builder: (context, constraints) {
         const hPad = 14.0;
         final available = constraints.maxWidth - hPad * 2;
-        final columns = math.max(2, (available / _minCardWidth).floor());
+        final columns = math.max(2, (available / (_minCardWidth * LayoutPrefs.instance.coverSize.scale)).floor());
         final overflow = count > columns;
         void showAll() =>
             onShowAll != null ? onShowAll!() : shell.open(CardGridPage.builder(title: title, count: count, card: card));
 
         final header = SectionTitle(title, onShowAll: shell.compact || overflow || onShowAll != null ? showAll : null);
         if (shell.compact) {
-          final cardWidth = (available / 2.4).clamp(132.0, 180.0);
+          final size = LayoutPrefs.instance.coverSize.scale;
+          final cardWidth = (available / 2.4 * size).clamp(132.0 * size, 180.0 * size);
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -113,7 +115,7 @@ class CardGridPage extends StatelessWidget {
           builder: (context, constraints) {
             final hPad = shell.compact ? 6.0 : 14.0;
             final available = constraints.crossAxisExtent - hPad * 2;
-            final minWidth = shell.compact ? 140.0 : _minCardWidth;
+            final minWidth = (shell.compact ? 140.0 : _minCardWidth) * LayoutPrefs.instance.coverSize.scale;
             final columns = math.max(2, (available / minWidth).floor());
             final cardWidth = math.min(available / columns, _maxCardWidth * 1.5);
             return SliverPadding(

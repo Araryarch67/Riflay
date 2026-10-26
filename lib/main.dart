@@ -12,6 +12,7 @@ import 'package:just_audio_media_kit/just_audio_media_kit.dart';
 import 'package:window_manager/window_manager.dart';
 
 import 'services/appearance.dart';
+import 'services/layout_prefs.dart';
 import 'services/media_session.dart';
 import 'services/legacy_data.dart';
 import 'services/player_controller.dart';
@@ -37,6 +38,7 @@ Future<void> main() async {
     ], await rootBundle.loadString('assets/audio/HRIR-NOTICE.txt'));
   });
   await Appearance.instance.load();
+  await LayoutPrefs.instance.load();
 
   if (hasCustomTitleBar) {
     await windowManager.ensureInitialized();
@@ -110,16 +112,19 @@ class RiflayApp extends StatefulWidget {
 
 class _RiflayAppState extends State<RiflayApp> {
   final _appearance = Appearance.instance;
+  final _layout = LayoutPrefs.instance;
 
   @override
   void initState() {
     super.initState();
     _appearance.addListener(_restyle);
+    _layout.addListener(_restyle);
   }
 
   @override
   void dispose() {
     _appearance.removeListener(_restyle);
+    _layout.removeListener(_restyle);
     super.dispose();
   }
 
@@ -140,7 +145,7 @@ class _RiflayAppState extends State<RiflayApp> {
     // Decoded images: covers are decoded at their on-screen size, so 40 MiB
     // still holds a few hundred (Flutter's default is 100 MiB).
     PaintingBinding.instance.imageCache.maximumSizeBytes = 40 << 20;
-    final theme = widget.theme ?? buildAppTheme(fontFamily: _appearance.fontFamily);
+    final theme = _layout.themed(widget.theme ?? buildAppTheme(fontFamily: _appearance.fontFamily));
     return PlayerScope(
       controller: widget.controller,
       child: MaterialApp(
@@ -152,6 +157,7 @@ class _RiflayAppState extends State<RiflayApp> {
         builder: (context, child) {
           final scaled = MediaQuery(
             data: MediaQuery.of(context).copyWith(
+              disableAnimations: LayoutPrefs.effectiveMotion != Motion.full,
               textScaler: TextScaler.linear(MediaQuery.textScalerOf(context).scale(1) * _appearance.textScale),
             ),
             child: child!,

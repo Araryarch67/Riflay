@@ -15,6 +15,7 @@ import '../theme.dart';
 import '../widgets/page_scaffold.dart';
 import '../../services/audio_engine.dart';
 import 'appearance_settings.dart';
+import 'layout_settings.dart';
 import 'sound_settings.dart';
 import 'youtube_music_page.dart';
 
@@ -22,6 +23,7 @@ import 'youtube_music_page.dart';
 enum SettingsTopic {
   account('Account', Icons.person_outline_rounded, 'YouTube Music sign-in'),
   appearance('Appearance', Icons.palette_outlined, 'Theme, accent colour, background, text size'),
+  layout('Layout', Icons.dashboard_customize_outlined, 'Shapes, sizes, what the player shows'),
   playback('Playback', Icons.play_circle_outline_rounded, 'Autoplay, equalizer, Virtual speakers, mono audio'),
   advanced('Hi-fi audio', Icons.tune_rounded, 'Output device, bit-perfect mode, sample rate'),
   downloads('Downloads', Icons.download_rounded, 'Where songs are saved, YouTube downloader'),
@@ -152,6 +154,7 @@ class _SettingsTopicPageState extends State<SettingsTopicPage> {
         },
       ),
       SettingsTopic.appearance => const AppearanceSettings(),
+      SettingsTopic.layout => const LayoutSettings(),
       SettingsTopic.playback => const PlaybackSettings(),
       SettingsTopic.advanced => const AdvancedAudioSettings(),
       SettingsTopic.downloads => SettingsCard(
