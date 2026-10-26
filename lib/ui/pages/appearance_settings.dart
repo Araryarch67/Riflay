@@ -4,8 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../services/appearance.dart';
+import '../../services/color_tools.dart';
 import '../../services/system_fonts.dart';
 import '../theme.dart';
+import '../widgets/color_picker.dart';
 import '../widgets/menus.dart';
 import 'sound_settings.dart';
 
@@ -34,6 +36,43 @@ class AppearanceSettings extends StatelessWidget {
               ),
             ),
           ),
+          if (look.theme == ThemeChoice.custom) ...[
+            ListTile(
+              leading: const Icon(Icons.format_color_fill_rounded),
+              title: const Text('Background colour'),
+              subtitle: Text('Panels, cards and menus are worked out from it', style: muted),
+              trailing: _ColorButton(
+                color: look.customBackground,
+                label: 'Background colour',
+                onTap: () async {
+                  final c = await showColorPicker(context, title: 'Background colour', initial: look.customBackground);
+                  if (c != null) look.setCustomBackground(c);
+                },
+              ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.text_fields_rounded),
+              title: const Text('Text colour'),
+              subtitle: Text(
+                look.customText == null ? 'Chosen to suit the background' : 'Lightened or darkened where it would be hard to read',
+                style: muted,
+              ),
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (look.customText != null) TextButton(onPressed: () => look.setCustomText(null), child: const Text('Automatic')),
+                  _ColorButton(
+                    color: look.palette.textPrimary,
+                    label: 'Text colour',
+                    onTap: () async {
+                      final c = await showColorPicker(context, title: 'Text colour', initial: look.palette.textPrimary);
+                      if (c != null) look.setCustomText(c);
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ],
           ListTile(
             leading: const Icon(Icons.palette_outlined),
             title: const Text('Accent colour'),
@@ -71,13 +110,34 @@ class AppearanceSettings extends StatelessWidget {
               ],
             ),
           ),
-          SwitchListTile(
-            secondary: const Icon(Icons.format_color_fill_rounded),
+          SettingTile(
+            icon: Icons.format_color_fill_rounded,
             title: const Text('Colours from cover art'),
-            subtitle: Text('Tint pages and the player with the colour of what\'s playing', style: muted),
-            value: look.coverColors,
-            onChanged: look.setCoverColors,
+            subtitle: Text(
+              switch (look.coverMode) {
+                CoverColorMode.off => 'Colours stay as the theme has them',
+                CoverColorMode.player => 'Tint the player and pages with the colour of what\'s playing',
+                CoverColorMode.app => 'The whole app takes the colour of what\'s playing',
+              },
+              style: muted,
+            ),
+            control: OptionPicker<CoverColorMode>(
+              value: look.coverMode,
+              onChanged: look.setCoverMode,
+              options: [for (final v in CoverColorMode.values) (v, v.label)],
+            ),
           ),
+          if (look.coverMode == CoverColorMode.app)
+            _SliderTile(
+              icon: Icons.opacity_rounded,
+              title: 'Strength',
+              subtitle: 'How much the colour shows in backgrounds and panels',
+              value: look.coverStrength,
+              min: 0,
+              max: 1,
+              label: (v) => v < 0.34 ? 'Subtle' : (v < 0.67 ? 'Medium' : 'Strong'),
+              onChanged: look.setCoverStrength,
+            ),
           SettingTile(
             icon: Icons.wallpaper_rounded,
             title: const Text('Now playing background'),
@@ -129,6 +189,13 @@ class AppearanceSettings extends StatelessWidget {
               max: Appearance.maxTextSize.round(),
               unit: 'px',
               onChanged: (v) => look.setTextSize(v.toDouble()),
+            ),
+          ),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+              child: TextButton(onPressed: look.reset, child: const Text('Reset to default')),
             ),
           ),
         ],
@@ -256,7 +323,9 @@ class _ThemeCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final p = choice.palette;
+    final p = choice == ThemeChoice.custom
+        ? AppPalette.derive(Appearance.instance.customBackground, text: Appearance.instance.customText)
+        : choice.palette;
     final text = Theme.of(context).textTheme;
     Widget line(double width, Color color) => Container(
       width: width,
@@ -348,20 +417,33 @@ class _Swatch extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // "Theme" shows the current theme's own accent.
-    final palette = Appearance.instance.palette;
-    final color = choice == AccentChoice.theme ? palette.accent : choice.color;
-    final onColor = choice == AccentChoice.theme ? palette.onAccent : choice.onColor;
-    return _swatch(color, onColor);
+    final look = Appearance.instance;
+    final palette = look.basePalette;
+    final color = switch (choice) {
+      AccentChoice.theme => palette.accent,
+      AccentChoice.custom => look.customAccent,
+      _ => choice.color,
+    };
+    final onColor = switch (choice) {
+      AccentChoice.theme => palette.onAccent,
+      AccentChoice.custom => onColorFor(look.customAccent),
+      _ => choice.onColor,
+    };
+    return _swatch(context, color, onColor);
   }
 
-  Widget _swatch(Color color, Color onColor) => Tooltip(
+  Widget _swatch(BuildContext context, Color color, Color onColor) => Tooltip(
     message: choice.label,
     child: Semantics(
       button: true,
       selected: selected,
       label: '${choice.label} accent',
       child: InkResponse(
-        onTap: () => Appearance.instance.setAccent(choice),
+        onTap: () async {
+          if (choice != AccentChoice.custom) return Appearance.instance.setAccent(choice);
+          final c = await showColorPicker(context, title: 'Accent colour', initial: Appearance.instance.customAccent);
+          if (c != null) Appearance.instance.setCustomAccent(c);
+        },
         radius: 22,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 160),
@@ -376,7 +458,37 @@ class _Swatch extends StatelessWidget {
               ? Icon(Icons.check_rounded, size: 18, color: onColor)
               : choice == AccentChoice.theme
               ? Icon(Icons.auto_awesome_rounded, size: 14, color: onColor)
+              : choice == AccentChoice.custom
+              ? Icon(Icons.colorize_rounded, size: 16, color: onColor)
               : null,
+        ),
+      ),
+    ),
+  );
+}
+
+/// A round colour chip that opens the picker.
+class _ColorButton extends StatelessWidget {
+  const _ColorButton({required this.color, required this.label, required this.onTap});
+
+  final Color color;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    button: true,
+    label: label,
+    child: InkResponse(
+      onTap: onTap,
+      radius: 22,
+      child: Container(
+        width: 32,
+        height: 32,
+        decoration: BoxDecoration(
+          color: color,
+          shape: BoxShape.circle,
+          border: Border.all(color: AppColors.textSecondary, width: 2),
         ),
       ),
     ),

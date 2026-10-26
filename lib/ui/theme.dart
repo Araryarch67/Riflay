@@ -71,6 +71,7 @@ ThemeData buildAppTheme({String? fontFamily}) {
     // (which also kicks off the font download) rather than its TextTheme type.
     fontFamily: fontFamily ?? GoogleFonts.figtree().fontFamily,
   );
+  final wholeApp = Appearance.instance.coverMode == CoverColorMode.app;
   final text = base.textTheme.apply(bodyColor: AppColors.textPrimary, displayColor: AppColors.textPrimary);
   return base.copyWith(
     textTheme: text,
@@ -78,10 +79,11 @@ ThemeData buildAppTheme({String? fontFamily}) {
     appBarTheme: const AppBarTheme(backgroundColor: Colors.transparent, elevation: 0, scrolledUnderElevation: 0),
     sliderTheme: SliderThemeData(
       trackHeight: 4,
-      activeTrackColor: AppColors.textPrimary,
+      // Whole-app cover colours: sliders take the cover's accent too.
+      activeTrackColor: wholeApp ? AppColors.accent : AppColors.textPrimary,
       inactiveTrackColor: AppColors.textPrimary.withValues(alpha: 0.3),
-      thumbColor: AppColors.textPrimary,
-      overlayColor: AppColors.textPrimary.withValues(alpha: 0.12),
+      thumbColor: wholeApp ? AppColors.accent : AppColors.textPrimary,
+      overlayColor: (wholeApp ? AppColors.accent : AppColors.textPrimary).withValues(alpha: 0.12),
       thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6, elevation: 0),
       overlayShape: const RoundSliderOverlayShape(overlayRadius: 14),
       trackShape: const RoundedRectSliderTrackShape(),
@@ -134,5 +136,14 @@ ThemeData buildAppTheme({String? fontFamily}) {
     ),
     dividerTheme: DividerThemeData(color: AppColors.hover, thickness: 1, space: 1),
     listTileTheme: ListTileThemeData(iconColor: AppColors.textSecondary),
+    dialogTheme: wholeApp ? DialogThemeData(backgroundColor: AppColors.menu, surfaceTintColor: Colors.transparent) : null,
+    textSelectionTheme: wholeApp
+        ? TextSelectionThemeData(
+            cursorColor: AppColors.accent,
+            selectionColor: AppColors.accent.withValues(alpha: 0.35),
+            selectionHandleColor: AppColors.accent,
+          )
+        : null,
+    progressIndicatorTheme: wholeApp ? ProgressIndicatorThemeData(color: AppColors.accent) : null,
   );
 }
