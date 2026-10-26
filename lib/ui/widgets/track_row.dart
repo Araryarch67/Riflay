@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../models/track.dart';
+import '../../services/audio_engine.dart';
 import '../../services/metadata.dart';
 import '../../services/player_controller.dart';
 import '../shell_scope.dart';
@@ -11,6 +12,7 @@ import '../ytmusic_edit.dart';
 import '../theme.dart';
 import 'controls.dart';
 import 'menus.dart';
+import 'stats_for_nerds.dart';
 
 /// One song in a list: number (or play icon on hover), cover, title, album, duration.
 class TrackRow extends StatefulWidget {
@@ -180,7 +182,7 @@ VoidCallback? openArtist(BuildContext host, PlayerController c, Track track) {
 
 /// The ⋯ menu of a song: play next, add to playlist, like, download, go to artist…
 class TrackMenuButton extends StatelessWidget {
-  const TrackMenuButton({super.key, required this.track, this.visible = true, this.color});
+  const TrackMenuButton({super.key, required this.track, this.visible = true, this.color, this.nowPlaying = false});
 
   static Future<void> _queued(BuildContext context, Future<void> change, String done) async {
     final messenger = ScaffoldMessenger.of(context);
@@ -191,6 +193,9 @@ class TrackMenuButton extends StatelessWidget {
   final Track track;
   final bool visible;
   final Color? color;
+
+  /// In a now-playing view: adds Stats for nerds and Signal path.
+  final bool nowPlaying;
 
   @override
   Widget build(BuildContext context) {
@@ -273,6 +278,11 @@ class TrackMenuButton extends StatelessWidget {
                   title: Text('Remove from library'),
                 ),
               ),
+            ],
+            if (nowPlaying && AudioEngine.supported) ...[
+              const PopupMenuDivider(),
+              for (final e in NowPlayingCover.menuItems())
+                PopupMenuItem(onTap: () => NowPlayingCover.handle(host, e.value), child: e.child),
             ],
           ];
         },

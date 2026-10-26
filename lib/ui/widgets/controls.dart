@@ -9,6 +9,7 @@ import '../../models/track.dart';
 import '../../services/appearance.dart';
 import '../../services/metadata.dart';
 import '../../services/player_controller.dart';
+import '../shortcuts.dart';
 import '../theme.dart';
 
 String formatDuration(Duration? d) {
@@ -309,33 +310,39 @@ class PlayButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = this.color ?? AppColors.inverse;
     final iconColor = this.iconColor ?? AppColors.onInverse;
-    return _Pressable(
-      onPressed: onPressed,
-      child: Container(
-        width: size,
-        height: size,
-        decoration: BoxDecoration(
-          color: onPressed == null ? color.withValues(alpha: 0.4) : color,
-          shape: BoxShape.circle,
+    return Tooltip(
+      message: tipWith(playing ? 'Pause' : 'Play', AppAction.playPause),
+      child: _Pressable(
+        onPressed: onPressed,
+        child: Container(
+          width: size,
+          height: size,
+          decoration: BoxDecoration(
+            color: onPressed == null ? color.withValues(alpha: 0.4) : color,
+            shape: BoxShape.circle,
+          ),
+          child: loading
+              ? Padding(
+                  padding: EdgeInsets.all(size * 0.3),
+                  child: CircularProgressIndicator(strokeWidth: 2.5, color: iconColor),
+                )
+              : AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 180),
+                  transitionBuilder: (child, anim) => ScaleTransition(
+                    scale: Tween(
+                      begin: 0.6,
+                      end: 1.0,
+                    ).animate(CurvedAnimation(parent: anim, curve: Curves.easeOutBack)),
+                    child: FadeTransition(opacity: anim, child: child),
+                  ),
+                  child: Icon(
+                    playing ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                    key: ValueKey(playing),
+                    color: iconColor,
+                    size: size * 0.6,
+                  ),
+                ),
         ),
-        child: loading
-            ? Padding(
-                padding: EdgeInsets.all(size * 0.3),
-                child: CircularProgressIndicator(strokeWidth: 2.5, color: iconColor),
-              )
-            : AnimatedSwitcher(
-                duration: const Duration(milliseconds: 180),
-                transitionBuilder: (child, anim) => ScaleTransition(
-                  scale: Tween(begin: 0.6, end: 1.0).animate(CurvedAnimation(parent: anim, curve: Curves.easeOutBack)),
-                  child: FadeTransition(opacity: anim, child: child),
-                ),
-                child: Icon(
-                  playing ? Icons.pause_rounded : Icons.play_arrow_rounded,
-                  key: ValueKey(playing),
-                  color: iconColor,
-                  size: size * 0.6,
-                ),
-              ),
       ),
     );
   }
@@ -398,7 +405,7 @@ class TransportControls extends StatelessWidget {
         ),
         if (!large) const SizedBox(width: 8),
         IconButton(
-          tooltip: 'Previous',
+          tooltip: tipWith('Previous', AppAction.previous),
           iconSize: skipSize,
           color: AppColors.textPrimary,
           onPressed: hasQueue ? c.previous : null,
@@ -413,7 +420,7 @@ class TransportControls extends StatelessWidget {
         ),
         if (!large) const SizedBox(width: 8),
         IconButton(
-          tooltip: 'Next',
+          tooltip: tipWith('Next', AppAction.next),
           iconSize: skipSize,
           color: AppColors.textPrimary,
           onPressed: c.hasNext ? c.next : null,

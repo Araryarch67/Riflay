@@ -23,6 +23,32 @@ class NowPlayingCover extends StatelessWidget {
 
   final Widget child;
 
+  /// The menu's entries; [handle] runs the one picked. Also in the ⋯ menu of
+  /// the now-playing views, so it isn't only behind a right-click.
+  static List<PopupMenuItem<String>> menuItems() => [
+    PopupMenuItem(
+      value: 'stats',
+      child: MenuRow(
+        leading: const Icon(Icons.query_stats_rounded),
+        title: Text(statsForNerds.value ? 'Hide stats for nerds' : 'Stats for nerds'),
+      ),
+    ),
+    const PopupMenuItem(
+      value: 'path',
+      child: MenuRow(leading: Icon(Icons.graphic_eq_rounded), title: Text('Signal path')),
+    ),
+  ];
+
+  /// Does what the picked [menuItems] entry says.
+  static Future<void> handle(BuildContext context, String? choice) async {
+    switch (choice) {
+      case 'stats':
+        statsForNerds.value = !statsForNerds.value;
+      case 'path':
+        await showSignalPath(context);
+    }
+  }
+
   static Future<void> _menu(BuildContext context, Offset at) async {
     final overlay = Overlay.of(context).context.findRenderObject()! as RenderBox;
     final choice = await showMenu<String>(
@@ -30,27 +56,10 @@ class NowPlayingCover extends StatelessWidget {
       position: RelativeRect.fromRect(at & Size.zero, Offset.zero & overlay.size),
       color: AppColors.menu,
       shape: menuShape,
-      items: [
-        PopupMenuItem(
-          value: 'stats',
-          child: MenuRow(
-            leading: const Icon(Icons.query_stats_rounded),
-            title: Text(statsForNerds.value ? 'Hide stats for nerds' : 'Stats for nerds'),
-          ),
-        ),
-        const PopupMenuItem(
-          value: 'path',
-          child: MenuRow(leading: Icon(Icons.graphic_eq_rounded), title: Text('Signal path')),
-        ),
-      ],
+      items: menuItems(),
     );
     if (!context.mounted) return;
-    switch (choice) {
-      case 'stats':
-        statsForNerds.value = !statsForNerds.value;
-      case 'path':
-        await showSignalPath(context);
-    }
+    await handle(context, choice);
   }
 
   @override

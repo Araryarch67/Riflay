@@ -20,6 +20,7 @@ import 'pages/settings_page.dart';
 import 'navigation.dart';
 import 'player_panels.dart';
 import 'shell_scope.dart';
+import 'shortcuts.dart';
 import 'theme.dart';
 import 'youtube_import.dart';
 import '../services/youtube_importer.dart';
@@ -380,25 +381,22 @@ class _HomeShellState extends State<HomeShell> {
       });
     }
 
-    final shortcuts = <ShortcutActivator, VoidCallback>{
-      const SingleActivator(LogicalKeyboardKey.space): c.togglePlay,
-      const SingleActivator(LogicalKeyboardKey.mediaPlayPause): c.togglePlay,
-      const SingleActivator(LogicalKeyboardKey.mediaTrackNext): c.next,
-      const SingleActivator(LogicalKeyboardKey.mediaTrackPrevious): c.previous,
-      const SingleActivator(LogicalKeyboardKey.arrowRight, control: true): c.next,
-      const SingleActivator(LogicalKeyboardKey.arrowLeft, control: true): c.previous,
-      const SingleActivator(LogicalKeyboardKey.arrowUp, control: true): () => c.nudgeVolume(0.05),
-      const SingleActivator(LogicalKeyboardKey.arrowDown, control: true): () => c.nudgeVolume(-0.05),
-      const SingleActivator(LogicalKeyboardKey.keyK, control: true): _goSearch,
-      const SingleActivator(LogicalKeyboardKey.arrowLeft, alt: true): _history.back,
-      const SingleActivator(LogicalKeyboardKey.arrowRight, alt: true): _history.forward,
-      const SingleActivator(LogicalKeyboardKey.keyV, control: true): _pasteLink,
-      const SingleActivator(LogicalKeyboardKey.keyV, meta: true): _pasteLink,
-      if (!compact) ...{
+    final shortcuts = {
+      ...bindShortcuts({
+        AppAction.playPause: c.togglePlay,
+        AppAction.next: c.next,
+        AppAction.previous: c.previous,
+        AppAction.volumeUp: () => c.nudgeVolume(0.05),
+        AppAction.volumeDown: () => c.nudgeVolume(-0.05),
+        AppAction.search: _goSearch,
+        AppAction.back: _history.back,
+        AppAction.forward: _history.forward,
+        AppAction.pasteLink: _pasteLink,
         // From the expanded player too: on to full screen.
-        const SingleActivator(LogicalKeyboardKey.f11): () => setFullScreenPlayer(!windowFullScreen.value),
-        const SingleActivator(LogicalKeyboardKey.escape): () => setFullScreenPlayer(false),
-      },
+        AppAction.fullScreen: () => setFullScreenPlayer(!windowFullScreen.value),
+        if (hasKeyboardShortcuts) AppAction.help: () => showShortcutsDialog(context),
+      }, compact: compact),
+      if (!compact) const SingleActivator(LogicalKeyboardKey.escape): () => setFullScreenPlayer(false),
     };
 
     // Phone only: one stack per bottom tab, fading between tabs. The hidden
