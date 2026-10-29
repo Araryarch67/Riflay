@@ -193,6 +193,7 @@ class HomePage extends StatelessWidget {
       track: c.currentTrack ?? recent.firstOrNull,
       builder: (context, accent) => PageScaffold(
         gradientColor: accent,
+        brand: true,
         actions: [
           if (c.scanning)
             const Padding(
