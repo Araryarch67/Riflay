@@ -21,11 +21,12 @@ project=$(cd "$(dirname "$0")/.." && pwd)
 root=${RIFLAY_BUILD_DIR:-${XDG_CACHE_HOME:-$HOME/.cache}/riflay-build}/libmpv-apple
 mkdir -p "$root/src" "$root/build"
 jobs=$(sysctl -n hw.ncpu)
-# Build tools write to this log instead of the terminal; when a step fails, its end is shown.
+# Build tools write to this log instead of the terminal; when a step fails, its errors and its end are shown.
 log=$root/build.log
 : >"$log"
 set -E
-trap 'echo "libmpv build failed; the end of $log:" >&2; tail -n 150 "$log" >&2' ERR
+trap 'echo "libmpv build failed. Errors in $log:" >&2; grep -n -E "error:|FAILED:|ERROR:|Error " "$log" | head -n 60 >&2 || true
+  echo "The end of $log:" >&2; tail -n 60 "$log" >&2' ERR
 # The app's deployment targets (Runner.xcodeproj).
 macos_min=12.0
 ios_min=15.0
