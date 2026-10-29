@@ -21,6 +21,11 @@ project=$(cd "$(dirname "$0")/.." && pwd)
 root=${RIFLAY_BUILD_DIR:-${XDG_CACHE_HOME:-$HOME/.cache}/riflay-build}/libmpv-apple
 mkdir -p "$root/src" "$root/build"
 jobs=$(sysctl -n hw.ncpu)
+# Build tools write to this log instead of the terminal; when a step fails, its end is shown.
+log=$root/build.log
+: >"$log"
+set -E
+trap 'echo "libmpv build failed; the end of $log:" >&2; tail -n 150 "$log" >&2' ERR
 # The app's deployment targets (Runner.xcodeproj).
 macos_min=12.0
 ios_min=15.0
@@ -123,8 +128,8 @@ EOF
     shift
     stamp "$name" && return
     rm -rf "$work/$name"
-    meson setup "$work/$name" "$root/src/$name" --cross-file "$cross" --buildtype=release "$@" >/dev/null
-    ninja -C "$work/$name" install >/dev/null
+    meson setup "$work/$name" "$root/src/$name" --cross-file "$cross" --buildtype=release "$@" >>"$log" 2>&1
+    ninja -C "$work/$name" install >>"$log" 2>&1
     done_ "$name"
   }
 
@@ -134,8 +139,8 @@ EOF
       -DCMAKE_SYSTEM_NAME=Darwin -DCMAKE_C_COMPILER="$cc" -DCMAKE_C_FLAGS="$flags" \
       -DCMAKE_OSX_SYSROOT="$sysroot" -DCMAKE_OSX_ARCHITECTURES=$arch -DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY \
       -DCMAKE_INSTALL_PREFIX="$prefix" -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
-      -DENABLE_TESTING=OFF -DENABLE_PROGRAMS=OFF -DUSE_SHARED_MBEDTLS_LIBRARY=OFF >/dev/null
-    ninja -C "$work/mbedtls" install >/dev/null
+      -DENABLE_TESTING=OFF -DENABLE_PROGRAMS=OFF -DUSE_SHARED_MBEDTLS_LIBRARY=OFF >>"$log" 2>&1
+    ninja -C "$work/mbedtls" install >>"$log" 2>&1
     done_ mbedtls
   fi
   meson_dep freetype -Dbrotli=disabled -Dbzip2=disabled -Dharfbuzz=disabled -Dpng=disabled -Dzlib=disabled
@@ -147,7 +152,7 @@ EOF
     rm -rf "$work/libass" && mkdir -p "$work/libass"
     (cd "$work/libass" && CC="$cc $flags" "$root/src/libass/configure" --host=$host --prefix="$prefix" \
       --enable-static --disable-shared --with-pic --disable-asm --disable-fontconfig --disable-coretext \
-      --disable-require-system-font-provider >/dev/null && make -j"$jobs" install >/dev/null)
+      --disable-require-system-font-provider >>"$log" 2>&1 && make -j"$jobs" install >>"$log" 2>&1)
     done_ libass
   fi
 
@@ -162,7 +167,7 @@ EOF
       --disable-autodetect --enable-network --enable-zlib --enable-mbedtls --enable-version3 \
       --disable-decoders --enable-decoder="$audio_decoders" --disable-filters \
       --enable-filter=abuffer,abuffersink,aformat,anull,aresample,volume,equalizer,crossfeed,afir,amovie,headphone,pan,alimiter,ladspa \
-      >/dev/null && make -j"$jobs" install >/dev/null)
+      >>"$log" 2>&1 && make -j"$jobs" install >>"$log" 2>&1)
     done_ ffmpeg
   fi
 
@@ -242,7 +247,7 @@ for os in ${*:-macos ios}; do
       framework "$root/out/macos" macos macos-arm64 macos-x86_64
       dest=$project/third_party/media_kit_libs_macos_audio/macos/Frameworks
       rm -rf "$dest/Mpv.xcframework" && mkdir -p "$dest"
-      xcodebuild -create-xcframework -framework "$root/out/macos/Mpv.framework" -output "$dest/Mpv.xcframework" >/dev/null
+      xcodebuild -create-xcframework -framework "$root/out/macos/Mpv.framework" -output "$dest/Mpv.xcframework" >>"$log" 2>&1
       ;;
     ios)
       build_slice ios-arm64
@@ -253,7 +258,7 @@ for os in ${*:-macos ios}; do
       dest=$project/third_party/media_kit_libs_ios_audio/ios/Frameworks
       rm -rf "$dest/Mpv.xcframework" && mkdir -p "$dest"
       xcodebuild -create-xcframework -framework "$root/out/ios/Mpv.framework" \
-        -framework "$root/out/iossim/Mpv.framework" -output "$dest/Mpv.xcframework" >/dev/null
+        -framework "$root/out/iossim/Mpv.framework" -output "$dest/Mpv.xcframework" >>"$log" 2>&1
       ;;
     *) echo "unknown target: $os (macos, ios)" >&2 && exit 1 ;;
   esac
