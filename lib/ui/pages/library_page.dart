@@ -8,6 +8,7 @@ import '../shell_scope.dart';
 import '../theme.dart';
 import '../widgets/controls.dart';
 import 'settings_page.dart';
+import 'spotify_page.dart';
 import 'youtube_music_page.dart';
 import '../widgets/smooth_scroll.dart';
 import '../navigation.dart';
@@ -80,6 +81,13 @@ class _LibraryListState extends State<LibraryList> {
           title: 'Import a playlist',
           subtitle: 'From Spotify, Apple Music or Deezer',
           onTap: () => importPlaylist(context),
+        ),
+        _SimpleRow(
+          collapsed: widget.collapsed,
+          art: const _IconArt(Icons.library_music_outlined),
+          title: 'Spotify library',
+          subtitle: 'Import your playlists, albums and artists',
+          onTap: () => ShellScope.of(context).open(const SpotifyPage(), location: Locations.spotify),
         ),
         for (final p in c.playlists) _LibraryRow(collection: c.playlistCollection(p), collapsed: widget.collapsed),
         if (online != null) ...[

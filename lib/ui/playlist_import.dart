@@ -29,7 +29,7 @@ Future<ImportedPlaylist?> askToImportPlaylist(BuildContext context) async {
         read: transfer.read,
         search: c.ytMusic.searchSongs,
         videos: c.ytMusic.searchVideos,
-        save: (title, tracks) => _save(c, title, tracks),
+        save: (title, tracks) => saveImportedPlaylist(c, title, tracks),
       ),
     );
   } finally {
@@ -37,9 +37,10 @@ Future<ImportedPlaylist?> askToImportPlaylist(BuildContext context) async {
   }
 }
 
-/// Signed in: a YouTube Music playlist (the songs go in 100 at a time).
-/// Otherwise a Riflay playlist of the streamed songs.
-Future<ImportedPlaylist> _save(PlayerController c, String title, List<Track> tracks) async {
+/// Saves matched songs as a playlist. Signed in: a YouTube Music playlist (the
+/// songs go in 100 at a time). Otherwise a Riflay playlist of the streamed songs.
+/// Shared by the link importer and the Spotify library import.
+Future<ImportedPlaylist> saveImportedPlaylist(PlayerController c, String title, List<Track> tracks) async {
   if (!c.ytMusic.canEdit) return (title: title, youtubeId: null, local: c.createPlaylist(title, tracks: tracks));
   final id = await c.ytMusic.createPlaylist(title, tracks: tracks.take(100).toList());
   for (var i = 100; i < tracks.length; i += 100) {

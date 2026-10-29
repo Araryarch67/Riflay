@@ -49,12 +49,16 @@ lib/
     ffmpeg.dart                Finds / downloads ffmpeg (tag editor, AirPlay, casting conversions)
     system_fonts.dart          Fonts from the device's font folders (Settings › Appearance › Font)
     desktop_login.dart         Runs linux/login_helper (WebKitGTK Google sign-in window)
+    spotify_session.dart       Spotify sign-in (Beta): the web player's own token, caught in a WebView / linux/spotify_helper
+    spotify_library.dart       Spotify library over the web player's GraphQL (hashes read from its bundle)
+    spotify_account.dart       Spotify session, token refresh, what was imported; spotify_import.dart runs an import
   ui/
     home_shell.dart            Layouts: phone tabs / desktop sidebar + one history
     navigation.dart            DesktopHistory (Back/Forward), Locations, sidebar highlight
     pages/                     One file per screen; sound_settings.dart, equalizer_page.dart…
     widgets/                   Shared widgets: controls, page_scaffold, smooth_scroll, signal_path
 linux/login_helper/            C++ GTK3 + webkit2gtk-4.1 sign-in helper
+linux/spotify_helper/          The same for Spotify; --refresh gets a new token without a window
 linux/carla_bridge/            LADSPA plugin that runs a Carla project in mpv's filter chain (audio plugins)
 third_party/                   Vendored packages (see below)
 integration_test/              Real-engine tests, run in headless Weston
