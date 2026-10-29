@@ -46,6 +46,24 @@ class ShellScope extends InheritedWidget {
   /// Null where folders can't be scanned (mobile).
   final VoidCallback? addFolder;
 
+  /// The same scope around [child]: for what is built in a route of its own (a sheet),
+  /// outside the shell's tree.
+  Widget wrap(Widget child) => ShellScope(
+    compact: compact,
+    width: width,
+    history: history,
+    open: open,
+    openCollection: openCollection,
+    openQueue: openQueue,
+    openNowPlaying: openNowPlaying,
+    openLyrics: openLyrics,
+    openDownloads: openDownloads,
+    importFromYoutube: importFromYoutube,
+    addFiles: addFiles,
+    addFolder: addFolder,
+    child: child,
+  );
+
   static ShellScope of(BuildContext context) => context.dependOnInheritedWidgetOfExactType<ShellScope>()!;
 
   @override

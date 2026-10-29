@@ -131,12 +131,17 @@ class AudioCandidate {
     required this.kbps,
     this.processed = false,
     this.sizeBytes,
+    this.lengthMs,
     this.ref,
   });
 
   final String id;
   final bool opus;
   final int kbps;
+
+  /// How long the stream runs, when the lister says (player API `approxDurationMs`); with [kbps] it gives a size
+  /// when [sizeBytes] is missing.
+  final int? lengthMs;
 
   /// The stream's exact size when the lister says it (player API `contentLength`, yt-dlp `filesize`).
   final int? sizeBytes;
@@ -157,6 +162,7 @@ class AudioCandidate {
       opus: mime.contains('opus'),
       kbps: (((f['averageBitrate'] ?? f['bitrate']) as num?) ?? 0) ~/ 1000,
       sizeBytes: int.tryParse('${f['contentLength'] ?? ''}'),
+      lengthMs: int.tryParse('${f['approxDurationMs'] ?? ''}'),
       processed:
           f['isDrc'] == true || (f['xtags'] as String? ?? '').contains('drc') || track?['audioIsDefault'] == false,
       ref: f,
@@ -297,10 +303,21 @@ int? estimateDownloadBytes(Iterable<AudioCandidate> all, DownloadChoice c, {requ
   if (pick == null) return null;
   final stream = pick.candidate;
   final convert = pick.convert;
-  if (convert == null) return stream.sizeBytes;
+  if (convert == null) {
+    if (stream.sizeBytes != null) return stream.sizeBytes;
+    // No size listed: the length and the bitrate give it.
+    final ms = stream.lengthMs;
+    return ms != null && ms > 0 && stream.kbps > 0 ? (ms / 1000 * stream.kbps * 1000 / 8).round() : null;
+  }
   final size = stream.sizeBytes;
-  if (size == null || size <= 0 || stream.kbps <= 0) return null;
-  final seconds = size * 8 / (stream.kbps * 1000);
+  final double seconds;
+  if (size != null && size > 0 && stream.kbps > 0) {
+    seconds = size * 8 / (stream.kbps * 1000);
+  } else if (stream.lengthMs != null && stream.lengthMs! > 0) {
+    seconds = stream.lengthMs! / 1000;
+  } else {
+    return null;
+  }
   return switch (convert) {
     Reencode(:final kbps) || ToMp3(:final kbps) => (seconds * kbps * 1000 / 8).round(),
     ToFlac(:final quality) => estimateFlacBytes(

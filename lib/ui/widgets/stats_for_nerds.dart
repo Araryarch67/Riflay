@@ -79,7 +79,11 @@ class NowPlayingCover extends StatelessWidget {
               const Positioned.fill(
                 child: Padding(
                   padding: EdgeInsets.all(8),
-                  child: Align(alignment: Alignment.topLeft, child: _StatsPanel()),
+                  // Its own layer: the once-a-second numbers don't repaint the cover under them.
+                  child: Align(
+                    alignment: Alignment.topLeft,
+                    child: RepaintBoundary(child: _StatsPanel()),
+                  ),
                 ),
               ),
           ],

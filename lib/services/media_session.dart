@@ -61,9 +61,13 @@ class MediaSession extends BaseAudioHandler with SeekHandler {
   /// Swiped away from Recents: the session is put away until something plays.
   bool _closed = false;
 
+  /// Whether the session says "playing". At the end of the queue just_audio keeps `playing` on although
+  /// nothing sounds; the system must then offer Play (which starts the queue over), not Pause.
+  bool get _playing => _c.isPlaying && (_c.casting || _c.player.processingState != ProcessingState.completed);
+
   void _onController() {
     if (_c.currentTrack?.id != _shownId) _publishItem();
-    if (_c.isPlaying != _shownPlaying) _publishState();
+    if (_playing != _shownPlaying) _publishState();
   }
 
   Future<void> _publishItem() async {
@@ -88,7 +92,7 @@ class MediaSession extends BaseAudioHandler with SeekHandler {
 
   void _publishState() {
     final p = _c.player;
-    final playing = _c.isPlaying;
+    final playing = _playing;
     if (playing) _closed = false;
     // Android's service forgets the song when it's stopped and started again,
     // which left a notification with only the app's name. Starting to play

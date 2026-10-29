@@ -10,12 +10,30 @@ import 'package:audio_metadata_reader/audio_metadata_reader.dart';
 import 'package:crypto/crypto.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:image/image.dart' as img;
 import 'package:path_provider/path_provider.dart';
 
 import '../models/track.dart';
 import 'cover_palette.dart';
 import 'ffmpeg.dart';
 import 'tag_writer.dart';
+
+/// Who is waiting for a cover. A widget that leaves (scrolled away) cancels
+/// its request; a cover nobody waits for any more is not read from its file.
+class ArtworkRequest {
+  bool _cancelled = false;
+  bool get cancelled => _cancelled;
+  void cancel() => _cancelled = true;
+}
+
+class _PendingArt {
+  final requests = <ArtworkRequest>{};
+  late Future<Uint8List?> future;
+  bool dropped = false;
+
+  /// Asked for only by widgets that have since gone.
+  bool get abandoned => requests.isNotEmpty && requests.every((r) => r.cancelled);
+}
 
 /// Editable tags of one file.
 class TagEdit {
@@ -46,7 +64,7 @@ abstract final class Metadata {
   static var _cachedArtworkBytes = 0;
 
   static final _artwork = <String, Uint8List?>{};
-  static final _pendingArtwork = <String, Future<Uint8List?>>{};
+  static final _pendingArtwork = <String, _PendingArt>{};
   static final _accents = <String, Color>{};
   static final _pendingAccents = <String, Future<Color>>{};
   static final _coverColors = <String, CoverColors?>{};
@@ -297,27 +315,103 @@ abstract final class Metadata {
     _coverColors.remove(_artKey(track));
   }
 
-  static void _forgetArtwork(String key) => _cachedArtworkBytes -= _artwork.remove(key)?.length ?? 0;
+  static void _forgetArtwork(String key) {
+    _cachedArtworkBytes -= _artwork.remove(key)?.length ?? 0;
+    _thumbBytes -= _thumbs.remove(key)?.length ?? 0;
+  }
 
-  static Future<Uint8List?> artwork(Track track) {
+  /// Covers asked for by [artwork] with a [ArtworkRequest] that was cancelled
+  /// before their file was read are skipped, and counted nowhere.
+  static Future<Uint8List?> artwork(Track track, {ArtworkRequest? request}) {
     final key = _artKey(track);
     if (_artwork.containsKey(key)) return Future.value(_artwork[key]);
-    return _pendingArtwork[key] ??= _loadArtwork(track).then((bytes) {
+    final pending = _pendingArtwork[key];
+    if (pending != null) {
+      if (request != null) pending.requests.add(request);
+      return pending.future;
+    }
+    final entry = _PendingArt();
+    if (request != null) entry.requests.add(request);
+    _pendingArtwork[key] = entry;
+    entry.future = _loadArtwork(track, entry).then((bytes) {
       _pendingArtwork.remove(key);
+      // Nobody wanted it any more: not remembered as "has no cover".
+      if (entry.dropped) return null;
       _artwork[key] = bytes;
       _cachedArtworkBytes += bytes?.length ?? 0;
       while (_cachedArtworkBytes > _maxCachedArtworkBytes && _artwork.length > 1) {
-        _forgetArtwork(_artwork.keys.first);
+        _cachedArtworkBytes -= _artwork.remove(_artwork.keys.first)?.length ?? 0;
       }
       return bytes;
     });
+    return entry.future;
   }
 
-  static Future<Uint8List?> _loadArtwork(Track track) {
+  /// Longest side of the small covers lists and the mini player paint.
+  static const thumbnailSide = 256;
+  static const _maxThumbBytes = 12 << 20;
+  static var _thumbBytes = 0;
+
+  /// Least recently used first.
+  static final _thumbs = <String, Uint8List?>{};
+  static final _pendingThumbs = <String, Future<Uint8List?>>{};
+
+  /// Covers cut down by [thumbnail] since start (tests).
+  @visibleForTesting
+  static int thumbnailsMade = 0;
+
+  /// Cover files read since start (tests).
+  @visibleForTesting
+  static int coversRead = 0;
+
+  static Uint8List? cachedThumbnail(Track track) {
+    final key = _artKey(track);
+    final t = _thumbs.remove(key);
+    if (t != null || _thumbs.containsKey(key)) _thumbs[key] = t;
+    return t;
+  }
+
+  static bool hasCachedThumbnail(Track track) => _thumbs.containsKey(_artKey(track));
+
+  /// The cover at about [thumbnailSide] px, made once (in an isolate) and
+  /// remembered, so a list of covers doesn't decode full-size pictures again.
+  static Future<Uint8List?> thumbnail(Track track, {ArtworkRequest? request}) {
+    final key = _artKey(track);
+    if (_thumbs.containsKey(key)) return Future.value(cachedThumbnail(track));
+    return _pendingThumbs[key] ??= artwork(track, request: request).then((full) async {
+      Uint8List? small;
+      if (full != null) {
+        try {
+          small = await Isolate.run(() => _shrink(full));
+          thumbnailsMade++;
+        } catch (_) {
+          small = full;
+        }
+      }
+      _pendingThumbs.remove(key);
+      _thumbs[key] = small;
+      _thumbBytes += small?.length ?? 0;
+      while (_thumbBytes > _maxThumbBytes && _thumbs.length > 1) {
+        _thumbBytes -= _thumbs.remove(_thumbs.keys.first)?.length ?? 0;
+      }
+      return small;
+    });
+  }
+
+  static Uint8List _shrink(Uint8List full) {
+    final image = img.decodeImage(full);
+    if (image == null || (image.width <= thumbnailSide && image.height <= thumbnailSide)) return full;
+    final small = image.width >= image.height
+        ? img.copyResize(image, height: thumbnailSide, interpolation: img.Interpolation.average)
+        : img.copyResize(image, width: thumbnailSide, interpolation: img.Interpolation.average);
+    return Uint8List.fromList(img.encodeJpg(small, quality: 88));
+  }
+
+  static Future<Uint8List?> _loadArtwork(Track track, _PendingArt entry) {
     final path = track.path;
     if (path == null) return _networkArtwork(track.artworkUrl);
     final done = Completer<Uint8List?>();
-    _fileArtQueue.add((path, done));
+    _fileArtQueue.add((path, done, entry));
     if (_fileArtReaders < 2) {
       _fileArtReaders++;
       // After this frame: the rows that scrolled into view all ask first.
@@ -327,20 +421,32 @@ abstract final class Metadata {
   }
 
   /// Covers waiting to be read from their files.
-  static final _fileArtQueue = <(String, Completer<Uint8List?>)>[];
+  static final _fileArtQueue = <(String, Completer<Uint8List?>, _PendingArt)>[];
   static int _fileArtReaders = 0;
 
   /// Reads the queue a batch per isolate, not a cover per isolate: a list
   /// scrolling into view asks for twenty at once, and starting an isolate
-  /// cost the UI thread about as much as reading the cover did.
+  /// cost the UI thread about as much as reading the cover did. Covers whose
+  /// widgets are gone (scrolled far away, page closed) are not read.
   static Future<void> _readFileArt() async {
     try {
       while (_fileArtQueue.isNotEmpty) {
-        final batch = _fileArtQueue.take(8).toList();
-        _fileArtQueue.removeRange(0, batch.length);
+        final taken = _fileArtQueue.take(8).toList();
+        _fileArtQueue.removeRange(0, taken.length);
+        final batch = <(String, Completer<Uint8List?>, _PendingArt)>[];
+        for (final e in taken) {
+          if (e.$3.abandoned) {
+            e.$3.dropped = true;
+            e.$2.complete(null);
+          } else {
+            batch.add(e);
+          }
+        }
+        if (batch.isEmpty) continue;
+        coversRead += batch.length;
         List<Uint8List?> found;
         try {
-          found = await _readCovers([for (final (path, _) in batch) path]);
+          found = await _readCovers([for (final (path, _, _) in batch) path]);
         } catch (_) {
           found = List.filled(batch.length, null);
         }

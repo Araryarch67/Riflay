@@ -29,6 +29,9 @@ String formatTotal(Iterable<Track> tracks) {
 }
 
 /// Cover art from the file's tags, with a tinted placeholder while loading / if missing.
+///
+/// Anything up to about [Metadata.thumbnailSide] px is drawn from a small
+/// thumbnail made once per cover, not from the full-size embedded picture.
 class Artwork extends StatelessWidget {
   const Artwork({super.key, required this.track, this.size, this.radius = 4, this.circle = false, this.icon});
 
@@ -46,16 +49,25 @@ class Artwork extends StatelessWidget {
     Widget child;
     if (t == null) {
       child = _placeholder(null);
-    } else if (Metadata.hasCachedArtwork(t)) {
-      child = _image(context, Metadata.cachedArtwork(t), t);
     } else {
-      child = FutureBuilder<Uint8List?>(
-        future: Metadata.artwork(t),
-        builder: (context, snap) => AnimatedSwitcher(
-          duration: LayoutPrefs.dur(const Duration(milliseconds: 250)),
-          child: _image(context, snap.data, t),
-        ),
-      );
+      final dpr = MediaQuery.devicePixelRatioOf(context);
+      final fixed = size;
+      if (fixed != null) {
+        child = _CoverImage(track: t, width: (fixed * dpr).round(), placeholder: _placeholder);
+      } else {
+        // Filling the parent: decoded at the size it's drawn, not a guess. A card
+        // is smaller than 300 dp (less memory), the full player's cover larger (sharp).
+        child = LayoutBuilder(
+          // Keyed like the image, so the cover still fades in over the placeholder.
+          key: ValueKey(t.albumKey ?? t.id),
+          builder: (context, c) {
+            final side = c.biggest.shortestSide.isFinite ? c.biggest.shortestSide : 300.0;
+            // In 64 px steps, so a window being resized doesn't decode every cover again at each width.
+            final px = ((side * dpr / 64).ceil() * 64).clamp(64, 4096);
+            return _CoverImage(track: t, width: px, placeholder: _placeholder);
+          },
+        );
+      }
     }
     final r = LayoutPrefs.radius(radius);
     return SizedBox(
@@ -67,33 +79,6 @@ class Artwork extends StatelessWidget {
           : r == 0
           ? child
           : ClipRRect(borderRadius: BorderRadius.circular(r), child: child),
-    );
-  }
-
-  Widget _image(BuildContext context, Uint8List? bytes, Track t) {
-    if (bytes == null) return _placeholder(t);
-    final dpr = MediaQuery.devicePixelRatioOf(context);
-    Widget image(int width) => Image(
-      key: ValueKey(t.albumKey ?? t.id),
-      image: ResizeImage(MemoryImage(bytes), width: width, allowUpscaling: false),
-      fit: BoxFit.cover,
-      width: double.infinity,
-      height: double.infinity,
-      gaplessPlayback: true,
-      errorBuilder: (_, _, _) => _placeholder(t),
-    );
-    final fixed = size;
-    if (fixed != null) return image((fixed * dpr).round());
-    // Filling the parent: decoded at the size it's drawn, not a guess. A card
-    // is smaller than 300 dp (less memory), the full player's cover larger (sharp).
-    return LayoutBuilder(
-      // Keyed like the image, so the cover still fades in over the placeholder.
-      key: ValueKey(t.albumKey ?? t.id),
-      builder: (context, c) {
-        final side = c.biggest.shortestSide.isFinite ? c.biggest.shortestSide : 300.0;
-        // In 64 px steps, so a window being resized doesn't decode every cover again at each width.
-        return image(((side * dpr / 64).ceil() * 64).clamp(64, 4096));
-      },
     );
   }
 
@@ -109,6 +94,86 @@ class Artwork extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// One cover, [width] px wide on screen. Asks for its picture and, when it
+/// goes away before the file was read, takes the request back.
+class _CoverImage extends StatefulWidget {
+  const _CoverImage({required this.track, required this.width, required this.placeholder});
+
+  final Track track;
+  final int width;
+  final Widget Function(Track?) placeholder;
+
+  @override
+  State<_CoverImage> createState() => _CoverImageState();
+}
+
+class _CoverImageState extends State<_CoverImage> {
+  ArtworkRequest? _request;
+  Future<Uint8List?>? _future;
+
+  bool get _small => widget.width <= Metadata.thumbnailSide * 5 ~/ 4;
+
+  Uint8List? _ready() => _small ? Metadata.cachedThumbnail(widget.track) : Metadata.cachedArtwork(widget.track);
+
+  bool get _isReady => _small ? Metadata.hasCachedThumbnail(widget.track) : Metadata.hasCachedArtwork(widget.track);
+
+  void _ask() {
+    _request?.cancel();
+    _request = null;
+    _future = null;
+    if (_isReady) return;
+    final request = _request = ArtworkRequest();
+    _future = _small
+        ? Metadata.thumbnail(widget.track, request: request)
+        : Metadata.artwork(widget.track, request: request);
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _ask();
+  }
+
+  @override
+  void didUpdateWidget(_CoverImage old) {
+    super.didUpdateWidget(old);
+    final key = widget.track.albumKey ?? widget.track.id;
+    if (key != (old.track.albumKey ?? old.track.id) || (old.width <= Metadata.thumbnailSide * 5 ~/ 4) != _small) {
+      _ask();
+    }
+  }
+
+  @override
+  void dispose() {
+    _request?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = widget.track;
+    if (_isReady) return _image(_ready(), t);
+    return FutureBuilder<Uint8List?>(
+      future: _future,
+      builder: (context, snap) =>
+          AnimatedSwitcher(duration: LayoutPrefs.dur(const Duration(milliseconds: 250)), child: _image(snap.data, t)),
+    );
+  }
+
+  Widget _image(Uint8List? bytes, Track t) {
+    if (bytes == null) return widget.placeholder(t);
+    return Image(
+      key: ValueKey(t.albumKey ?? t.id),
+      image: ResizeImage(MemoryImage(bytes), width: widget.width, allowUpscaling: false),
+      fit: BoxFit.cover,
+      width: double.infinity,
+      height: double.infinity,
+      gaplessPlayback: true,
+      errorBuilder: (_, _, _) => widget.placeholder(t),
     );
   }
 }
@@ -408,8 +473,24 @@ class TransportControls extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final c = PlayerScope.of(context);
-    final hasQueue = c.hasQueue;
+    final c = PlayerScope.read(context);
+    // Only what the buttons show: a song change, a library batch or a position
+    // tick no longer rebuilds them.
+    return PlayerSelect<_TransportState>(
+      select: (c) => (
+        shuffle: c.shuffle,
+        loop: c.loopMode,
+        hasQueue: c.hasQueue,
+        hasNext: c.hasNext,
+        canPlay: c.canPlay,
+        playing: c.showsPlaying,
+        loading: large && c.isBuffering && c.showsPlaying,
+      ),
+      builder: (context, t, _) => _transport(c, t),
+    );
+  }
+
+  Widget _transport(PlayerController c, _TransportState t) {
     final skipSize = large ? 40.0 : 26.0;
     final modeSize = large ? 26.0 : 20.0;
     final row = Row(
@@ -417,46 +498,46 @@ class TransportControls extends StatelessWidget {
       mainAxisAlignment: large ? MainAxisAlignment.spaceBetween : MainAxisAlignment.center,
       children: [
         ModeButton(
-          tooltip: c.shuffle ? 'Disable shuffle' : 'Enable shuffle',
-          active: c.shuffle,
+          tooltip: t.shuffle ? 'Disable shuffle' : 'Enable shuffle',
+          active: t.shuffle,
           size: modeSize,
           icon: Icons.shuffle_rounded,
-          onPressed: hasQueue ? c.toggleShuffle : null,
+          onPressed: t.hasQueue ? c.toggleShuffle : null,
         ),
         if (!large) const SizedBox(width: 8),
         IconButton(
           tooltip: tipWith('Previous', AppAction.previous),
           iconSize: skipSize,
           color: AppColors.textPrimary,
-          onPressed: hasQueue ? c.previous : null,
+          onPressed: t.hasQueue ? c.previous : null,
           icon: const Icon(Icons.skip_previous_rounded),
         ),
         if (!large) const SizedBox(width: 8),
         PlayButton(
           size: large ? 68 : 34,
-          playing: c.isPlaying,
-          loading: large && c.isBuffering && c.isPlaying,
-          onPressed: c.canPlay ? c.togglePlay : null,
+          playing: t.playing,
+          loading: t.loading,
+          onPressed: t.canPlay ? c.togglePlay : null,
         ),
         if (!large) const SizedBox(width: 8),
         IconButton(
           tooltip: tipWith('Next', AppAction.next),
           iconSize: skipSize,
           color: AppColors.textPrimary,
-          onPressed: c.hasNext ? c.next : null,
+          onPressed: t.hasNext ? c.next : null,
           icon: const Icon(Icons.skip_next_rounded),
         ),
         if (!large) const SizedBox(width: 8),
         ModeButton(
-          tooltip: switch (c.loopMode) {
+          tooltip: switch (t.loop) {
             LoopMode.off => 'Enable repeat',
             LoopMode.all => 'Enable repeat one',
             LoopMode.one => 'Disable repeat',
           },
-          active: c.loopMode != LoopMode.off,
+          active: t.loop != LoopMode.off,
           size: modeSize,
-          icon: c.loopMode == LoopMode.one ? Icons.repeat_one_rounded : Icons.repeat_rounded,
-          onPressed: hasQueue ? c.cycleLoopMode : null,
+          icon: t.loop == LoopMode.one ? Icons.repeat_one_rounded : Icons.repeat_rounded,
+          onPressed: t.hasQueue ? c.cycleLoopMode : null,
         ),
       ],
     );
@@ -472,6 +553,16 @@ class TransportControls extends StatelessWidget {
     );
   }
 }
+
+typedef _TransportState = ({
+  bool shuffle,
+  LoopMode loop,
+  bool hasQueue,
+  bool hasNext,
+  bool canPlay,
+  bool playing,
+  bool loading,
+});
 
 /// Toggle icon with the little active dot underneath.
 /// A toggle (shuffle, repeat): accent-coloured with a dot underneath while on.
@@ -522,53 +613,62 @@ class VolumeSlider extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final c = PlayerScope.of(context);
-    // While casting, the device's volume (the controller rebuilds this on change).
-    return ValueListenableBuilder<double>(
-      valueListenable: c.volumeLevel,
-      builder: (context, level, _) {
+    final c = PlayerScope.read(context);
+    // While casting, the device's volume (the controller notifies on change);
+    // otherwise the level notifier alone drives it.
+    return PlayerSelect<({bool casting, double device, bool canSet, bool dop})>(
+      select: (c) => (
+        casting: c.casting,
+        device: c.casting ? c.volume : 0,
+        canSet: c.canSetVolume,
         // DoP must reach the DAC untouched: its volume is the one to use.
-        final dop = !c.casting && c.audio.dopPlaying != null;
-        final volume = dop ? 1.0 : (c.casting ? c.volume : level);
-        final setVolume = c.canSetVolume && !dop ? c.setVolume : null;
-        final row = Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            IconButton(
-              tooltip: volume == 0 ? 'Unmute' : 'Mute',
-              iconSize: 20,
-              onPressed: setVolume == null ? null : c.toggleMute,
-              icon: Icon(
-                volume == 0
-                    ? Icons.volume_off_rounded
-                    : volume < 0.5
-                    ? Icons.volume_down_rounded
-                    : Icons.volume_up_rounded,
+        dop: !c.casting && c.audio.dopPlaying != null,
+      ),
+      builder: (context, v, _) => ValueListenableBuilder<double>(
+        valueListenable: c.volumeLevel,
+        builder: (context, level, _) {
+          final dop = v.dop;
+          final volume = dop ? 1.0 : (v.casting ? v.device : level);
+          final setVolume = v.canSet && !dop ? c.setVolume : null;
+          final row = Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              IconButton(
+                tooltip: volume == 0 ? 'Unmute' : 'Mute',
+                iconSize: 20,
+                onPressed: setVolume == null ? null : c.toggleMute,
+                icon: Icon(
+                  volume == 0
+                      ? Icons.volume_off_rounded
+                      : volume < 0.5
+                      ? Icons.volume_down_rounded
+                      : Icons.volume_up_rounded,
+                ),
               ),
-            ),
-            SizedBox(
-              width: 104,
-              child: SliderTheme(
-                // Horizontal padding keeps the thumb (and its hover halo) off the window edge at 100%.
-                data: SliderTheme.of(context).copyWith(padding: const EdgeInsets.symmetric(horizontal: 8)),
-                child: Listener(
-                  onPointerSignal: (e) {
-                    if (e is PointerScrollEvent && setVolume != null) {
-                      c.nudgeVolume(e.scrollDelta.dy < 0 ? 0.05 : -0.05);
-                    }
-                  },
-                  child: Slider(
-                    value: volume.clamp(0, 1),
-                    onChangeStart: setVolume == null ? null : (_) => c.volumeDragStarted(),
-                    onChanged: setVolume,
+              SizedBox(
+                width: 104,
+                child: SliderTheme(
+                  // Horizontal padding keeps the thumb (and its hover halo) off the window edge at 100%.
+                  data: SliderTheme.of(context).copyWith(padding: const EdgeInsets.symmetric(horizontal: 8)),
+                  child: Listener(
+                    onPointerSignal: (e) {
+                      if (e is PointerScrollEvent && setVolume != null) {
+                        c.nudgeVolume(e.scrollDelta.dy < 0 ? 0.05 : -0.05);
+                      }
+                    },
+                    child: Slider(
+                      value: volume.clamp(0, 1),
+                      onChangeStart: setVolume == null ? null : (_) => c.volumeDragStarted(),
+                      onChanged: setVolume,
+                    ),
                   ),
                 ),
               ),
-            ),
-          ],
-        );
-        return dop ? Tooltip(message: 'DSD goes to your DAC as it is: use the DAC\'s volume', child: row) : row;
-      },
+            ],
+          );
+          return dop ? Tooltip(message: 'DSD goes to your DAC as it is: use the DAC\'s volume', child: row) : row;
+        },
+      ),
     );
   }
 }
@@ -776,13 +876,17 @@ class GlassPanel extends StatelessWidget {
     if (!look.glass) {
       return Material(color: color, borderRadius: borderRadius, clipBehavior: Clip.antiAlias, child: child);
     }
-    return ClipRRect(
-      borderRadius: borderRadius,
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: look.blur, sigmaY: look.blur),
-        child: Material(
-          color: color.withValues(alpha: color.a * 0.55),
-          child: child,
+    // Its own layer: what happens inside (a progress line ticking) does not
+    // re-blur what is behind, and a colour step repaints only this panel.
+    return RepaintBoundary(
+      child: ClipRRect(
+        borderRadius: borderRadius,
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: look.blur, sigmaY: look.blur),
+          child: Material(
+            color: color.withValues(alpha: color.a * 0.55),
+            child: child,
+          ),
         ),
       ),
     );

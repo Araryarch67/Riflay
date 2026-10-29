@@ -8,6 +8,7 @@ import 'package:riflay/services/download_prefs.dart';
 import 'package:riflay/services/mp4_mux.dart';
 import 'package:riflay/services/video_download.dart';
 import 'package:riflay/services/webm_mux.dart';
+import 'package:riflay/services/youtube_stream.dart';
 import 'package:riflay/services/youtube_importer.dart';
 import 'package:riflay/ui/download_options.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -22,6 +23,11 @@ VideoCandidate _v(int h, VideoCodec codec, {int fps = 30, int kbps = 1000, int? 
       sizeBytes: size,
       webm: webm ?? codec == VideoCodec.vp9,
     );
+
+extension on AudioCandidate {
+  AudioCandidate copyWithKbps(int k) =>
+      AudioCandidate(id: id, opus: opus, kbps: k, sizeBytes: sizeBytes, lengthMs: lengthMs);
+}
 
 const _aac = AudioCandidate(id: '140', opus: false, kbps: 130, sizeBytes: 4000000);
 const _opus = AudioCandidate(id: '251', opus: true, kbps: 128, sizeBytes: 3900000);
@@ -45,6 +51,17 @@ final _typical = VideoFormats(
 );
 
 extension on VideoCandidate {
+  VideoCandidate copyWithKbps(int k) => VideoCandidate(
+    id: id,
+    height: height,
+    codec: codec,
+    fps: fps,
+    kbps: k,
+    sizeBytes: sizeBytes,
+    lengthMs: lengthMs,
+    webm: webm,
+  );
+
   VideoCandidate copyProgressive() => VideoCandidate(
     id: id,
     height: height,
@@ -577,6 +594,110 @@ void main() {
     }, skip: skip);
   });
 
+  group('sizes come from the listing, never from a request per stream', () {
+    test('contentLength is the exact size; the length and bitrate give one when it is missing', () {
+      final exact = VideoCandidate.fromPlayer({
+        'itag': 137,
+        'url': 'https://example.invalid/v',
+        'mimeType': 'video/mp4; codecs="avc1.640028"',
+        'height': 1080,
+        'bitrate': 3000000,
+        'contentLength': '80000000',
+        'approxDurationMs': '250000',
+      })!;
+      expect(exact.sizeBytes, 80000000);
+      final bare = VideoCandidate.fromPlayer({
+        'itag': 137,
+        'url': 'https://example.invalid/v',
+        'mimeType': 'video/mp4; codecs="avc1.640028"',
+        'height': 1080,
+        'bitrate': 3000000,
+        'approxDurationMs': '250000',
+      })!;
+      expect(bare.sizeBytes, isNull);
+      expect(bare.lengthMs, 250000);
+      final audio = AudioCandidate.fromPlayer({
+        'itag': 140,
+        'url': 'https://example.invalid/a',
+        'mimeType': 'audio/mp4; codecs="mp4a.40.2"',
+        'bitrate': 128000,
+        'approxDurationMs': '250000',
+      })!;
+      final e = estimateVideoDownload(
+        VideoFormats([bare.copyWithKbps(3000)], [audio.copyWithKbps(128)]),
+        const DownloadChoice.video(VideoContainer.mp4),
+        ffmpeg: false,
+      )!;
+      expect(e.exact, isFalse);
+      // 250 s at 3000 + 128 kbps.
+      expect(e.bytes, 250 * (3000 + 128) * 1000 ~/ 8);
+    });
+  });
+
+  group('the music video lookup', () {
+    // Each step takes 100 ms; the visitor id is only paid for by whoever asks first.
+    Future<(int, VideoFormats?)> run({required bool sequential, required String video}) async {
+      var visitor = false;
+      Future<void> warm() async {
+        if (visitor) return;
+        await Future<void>.delayed(const Duration(milliseconds: 100));
+        visitor = true;
+      }
+
+      final sw = Stopwatch()..start();
+      final f = await YoutubeStream.lookUpMusicVideo(
+        'song',
+        sequential: sequential,
+        warm: warm,
+        findVideo: (_) async {
+          await Future<void>.delayed(const Duration(milliseconds: 100));
+          return video;
+        },
+        formatsOf: (id) async {
+          await warm();
+          await Future<void>.delayed(const Duration(milliseconds: 100));
+          return _typical;
+        },
+      );
+      return (sw.elapsedMilliseconds, f);
+    }
+
+    test('overlapping the steps is faster than doing them one after another', () async {
+      final seq = await run(sequential: true, video: 'other');
+      final par = await run(sequential: false, video: 'other');
+      debugPrint('music video lookup, fakes: sequential ${seq.$1} ms, parallel ${par.$1} ms');
+      expect(seq.$2, isNotNull);
+      expect(par.$2, isNotNull);
+      expect(seq.$1, greaterThanOrEqualTo(300));
+      expect(par.$1, lessThan(seq.$1 - 50), reason: 'the visitor id is made ready while the video id is looked up');
+    });
+
+    test('a song that is its own video needs no second round', () async {
+      final seq = await run(sequential: true, video: 'song');
+      final par = await run(sequential: false, video: 'song');
+      debugPrint('own video, fakes: sequential ${seq.$1} ms, parallel ${par.$1} ms');
+      expect(par.$1, lessThan(seq.$1 - 80));
+    });
+
+    test('no music video is null, and a failed lookup is thrown', () async {
+      Future<VideoFormats> never(String _) async => _typical;
+      expect(await YoutubeStream.lookUpMusicVideo('s', findVideo: (_) async => null, formatsOf: never), isNull);
+      expect(
+        YoutubeStream.lookUpMusicVideo('s', findVideo: (_) async => throw StateError('offline'), formatsOf: never),
+        throwsStateError,
+      );
+      expect(
+        await YoutubeStream.lookUpMusicVideo(
+          's',
+          findVideo: (_) async => 'v',
+          formatsOf: (_) async => const VideoFormats([], []),
+        ),
+        isNull,
+        reason: 'a video with no usable picture streams offers nothing',
+      );
+    });
+  });
+
   group('the download dialog', () {
     Future<Future<DownloadChoice?>> open(
       WidgetTester tester, {
@@ -709,6 +830,18 @@ void main() {
       await tester.pump();
       expect(find.byType(CircularProgressIndicator), findsNothing);
       expect(chip('720p'), findsOneWidget);
+    });
+
+    testWidgets('Audio shows at once; a failed video lookup says so calmly', (tester) async {
+      final video = Completer<VideoFormats?>();
+      await open(tester, initial: const DownloadChoice(DownloadFormat.opus), video: video.future);
+      expect(find.text('Opus'), findsOneWidget, reason: 'never blocked on the video lookup');
+      expect(find.text("Couldn't look up video sizes."), findsNothing);
+      video.completeError(StateError('offline'));
+      await tester.pump();
+      await tester.pump();
+      expect(find.text("Couldn't look up video sizes."), findsOneWidget);
+      expect(find.text('Opus'), findsOneWidget);
     });
 
     testWidgets('AV1-only sizes are marked and need ffmpeg', (tester) async {

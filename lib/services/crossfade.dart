@@ -250,7 +250,9 @@ class Crossfader {
       case _Phase.idle:
         if (_failedFor == up.current.id || DateTime.now().isBefore(_notBefore)) return const Duration(seconds: 1);
         if (CrossfadeRules.shouldPrepare(plan, position)) {
-          await _prepare(plan, up);
+          // Not awaited: loading the second player can take long, or never end when the user pauses or skips
+          // meanwhile and it is closed under way. The ticks must go on to notice that (see [_prepare]).
+          unawaited(_prepare(plan, up));
           return const Duration(milliseconds: 20);
         }
         // Wake in time: half the way there, so a seek is noticed within a second.
@@ -289,28 +291,31 @@ class Crossfader {
       } finally {
         audio.secondaryPlayerRequested();
       }
+      if (_aborted(up, tail)) return; // closed while it loaded: nothing else to set up on it
       // Silent from the first sample: its volume is set before it plays.
       await audio.setSecondaryGain(0);
-      if (_aborted(up)) return;
+      if (_aborted(up, tail)) return;
 
       // Start it when the main player reaches the spot it waits at, then bring it exactly in step
       // by looking at both players' own clocks.
       var latency = 0.06; // how long a seek or start takes before sound; learned below
       var m = await audio.mainTimePos();
       var t = await audio.secondaryTimePos();
+      if (_aborted(up, tail)) return; // the clocks are the current second player's: not this one's if it is dropped
       if (m == null || t == null) throw StateError('no clock');
       if (t - m < latency) {
         await audio.secondarySeek(m + 0.5);
         t = m + 0.5;
       }
       await Future<void>.delayed(Duration(milliseconds: ((t - m - latency) * 1000).round().clamp(0, 2000)));
-      if (_aborted(up)) return;
+      if (_aborted(up, tail)) return;
       unawaited(tail.play().catchError((Object _) {}));
 
       for (var attempt = 0; attempt < 6; attempt++) {
         await Future<void>.delayed(const Duration(milliseconds: 150));
-        if (_aborted(up)) return;
+        if (_aborted(up, tail)) return;
         final measured = await _offset();
+        if (_aborted(up, tail)) return;
         if (measured == null) throw StateError('no clock');
         final (off, m) = measured; // positive: the tail is ahead
         if (off.abs() <= _tolerance) {
@@ -350,8 +355,11 @@ class Crossfader {
     return (offsets[offsets.length ~/ 2], at!);
   }
 
-  bool _aborted(({Track current, Track next, int nextIndex}) up) {
-    if (_phase != _Phase.preparing || _disposed) return true;
+  /// Whether getting [tail] ready is over: it was dropped (a pause, a skip or a seek closed it, maybe for another
+  /// attempt's sake) or the song or the playing state changed.
+  bool _aborted(({Track current, Track next, int nextIndex}) up, AudioPlayer tail) {
+    if (_disposed || !identical(_tail, tail)) return true;
+    if (_phase != _Phase.preparing) return true;
     final gone = !main.playing || upcoming()?.current.id != up.current.id;
     if (gone) _cancel();
     return gone;

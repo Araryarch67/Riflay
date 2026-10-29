@@ -35,6 +35,7 @@ class VideoCandidate {
     this.fps = 30,
     this.kbps = 0,
     this.sizeBytes,
+    this.lengthMs,
     this.webm = false,
     this.progressive = false,
     this.ref,
@@ -48,6 +49,10 @@ class VideoCandidate {
 
   /// The stream's exact size when the lister says it.
   final int? sizeBytes;
+
+  /// How long the stream runs, when the lister says (player API `approxDurationMs`); with [kbps] it gives a size
+  /// when [sizeBytes] is missing.
+  final int? lengthMs;
 
   /// The stream is a WebM file (VP9); otherwise an MP4 (H.264, and YouTube's AV1).
   final bool webm;
@@ -73,6 +78,7 @@ class VideoCandidate {
       fps: (f['fps'] as num?)?.toInt() ?? 30,
       kbps: (((f['averageBitrate'] ?? f['bitrate']) as num?) ?? 0) ~/ 1000,
       sizeBytes: int.tryParse('${f['contentLength'] ?? ''}'),
+      lengthMs: int.tryParse('${f['approxDurationMs'] ?? ''}'),
       webm: mime.startsWith('video/webm'),
       progressive: list.length > 1 || codecs.contains('mp4a'),
       ref: f,
@@ -227,6 +233,9 @@ VideoCandidate? pickProgressive(VideoFormats f) {
   double? seconds;
   if (a.sizeBytes != null && a.kbps > 0) seconds = a.sizeBytes! * 8 / (a.kbps * 1000);
   if (seconds == null && v.sizeBytes != null && v.kbps > 0) seconds = v.sizeBytes! * 8 / (v.kbps * 1000);
+  // No size from either: the length the lister gives (never a request per stream).
+  final ms = v.lengthMs ?? a.lengthMs;
+  if (seconds == null && ms != null && ms > 0) seconds = ms / 1000;
   if (seconds == null) return null;
   final video = v.sizeBytes ?? (v.kbps > 0 ? (seconds * v.kbps * 1000 / 8).round() : null);
   final audio = a.sizeBytes ?? (a.kbps > 0 ? (seconds * a.kbps * 1000 / 8).round() : null);

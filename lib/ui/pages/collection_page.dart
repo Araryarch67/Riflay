@@ -113,7 +113,7 @@ class CollectionPage extends StatelessWidget {
                     PlayerSelect<(bool, bool, bool)>(
                       select: (c) {
                         final here = c.isPlayingFrom(live);
-                        return (here, here && c.isPlaying, here && c.shuffle);
+                        return (here, here && c.showsPlaying, here && c.shuffle);
                       },
                       builder: (context, s, _) {
                         final (playingHere, playing, shuffled) = s;
@@ -194,6 +194,19 @@ class CollectionPage extends StatelessWidget {
                 reorderPlaylist: playlistId,
                 controller: c,
                 itemCount: rows.length,
+                prototype:
+                    playlistId == null &&
+                        !multiDisc &&
+                        tracks.isNotEmpty &&
+                        tracks.every((t) => t.isRemote == tracks.first.isRemote)
+                    ? TrackRow(
+                        track: tracks.first,
+                        index: 1,
+                        showArtwork: live.kind != CollectionKind.album,
+                        showAlbum: live.kind != CollectionKind.album,
+                        onTap: () {},
+                      )
+                    : null,
                 itemBuilder: (context, r) {
                   final i = rows[r];
                   // Multi-disc albums: a "Disc 2" heading where each disc starts.
@@ -268,8 +281,15 @@ class CollectionPage extends StatelessWidget {
     required PlayerController controller,
     required int itemCount,
     required Widget Function(BuildContext, int) itemBuilder,
+    Widget? prototype,
   }) {
-    if (reorderPlaylist == null) return SliverList.builder(itemCount: itemCount, itemBuilder: itemBuilder);
+    if (reorderPlaylist == null) {
+      // Every row the same height (no disc headings; all local or all streamed, which decides the download button):
+      // laid out from one measured row instead of each one, so a long list scrolls and jumps without measuring.
+      return prototype == null
+          ? SliverList.builder(itemCount: itemCount, itemBuilder: itemBuilder)
+          : SliverPrototypeExtentList.builder(itemCount: itemCount, itemBuilder: itemBuilder, prototypeItem: prototype);
+    }
     return SliverReorderableList(
       itemCount: itemCount,
       itemBuilder: itemBuilder,

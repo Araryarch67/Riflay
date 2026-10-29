@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../models/track.dart';
@@ -51,12 +52,27 @@ class TrackRow extends StatefulWidget {
   final bool showAlbum;
   final bool showArtwork;
 
+  /// Row bodies built, and hover-only leaf rebuilds, for tests.
+  @visibleForTesting
+  static int debugRowBuilds = 0;
+  @visibleForTesting
+  static int debugHoverBuilds = 0;
+
   @override
   State<TrackRow> createState() => _TrackRowState();
 }
 
 class _TrackRowState extends State<TrackRow> {
-  bool _hover = false;
+  /// Whether the pointer is over the row. Only the few things that show it listen
+  /// ([_Hovering]): moving over a long list used to rebuild each row it crossed,
+  /// cover, texts and menu button included.
+  final _hover = ValueNotifier<bool>(false);
+
+  @override
+  void dispose() {
+    _hover.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -67,13 +83,14 @@ class _TrackRowState extends State<TrackRow> {
     return PlayerSelect<(bool, bool, bool)>(
       select: (c) {
         final current = c.currentTrack?.id == t.id;
-        return (current, current && c.isPlaying, t.isRemote && !c.isOffline(t));
+        return (current, current && c.showsPlaying, t.isRemote && !c.isOffline(t));
       },
       builder: (context, s, _) => _row(context, isCurrent: s.$1, playing: s.$2, online: s.$3),
     );
   }
 
   Widget _row(BuildContext context, {required bool isCurrent, required bool playing, required bool online}) {
+    TrackRow.debugRowBuilds++;
     final c = PlayerScope.read(context);
     final shell = ShellScope.of(context);
     final text = Theme.of(context).textTheme;
@@ -85,119 +102,153 @@ class _TrackRowState extends State<TrackRow> {
       leading = SizedBox(
         width: 32,
         child: Center(
-          child: isCurrent && !_hover
-              ? EqualizerIcon(playing: playing, size: 14)
-              : _hover
-              ? Icon(playing ? Icons.pause_rounded : Icons.play_arrow_rounded, color: AppColors.textPrimary, size: 20)
-              : Text(
-                  '${widget.index}',
+          child: _Hovering(
+            hover: _hover,
+            builder: (context, hover, _) => isCurrent && !hover
+                ? EqualizerIcon(playing: playing, size: 14)
+                : hover
+                ? Icon(playing ? Icons.pause_rounded : Icons.play_arrow_rounded, color: AppColors.textPrimary, size: 20)
+                : Text(
+                    '${widget.index}',
+                    style: text.bodyMedium?.copyWith(
+                      color: AppColors.textSecondary,
+                      fontFeatures: const [FontFeature.tabularFigures()],
+                    ),
+                  ),
+          ),
+        ),
+      );
+    }
+
+    final body = LayoutBuilder(
+      builder: (context, box) => Padding(
+        padding: EdgeInsets.symmetric(horizontal: wide ? 12 : 4, vertical: LayoutPrefs.dense(6, 2)),
+        child: Row(
+          children: [
+            if (leading != null) ...[leading, const SizedBox(width: 12)],
+            if (widget.showArtwork) ...[
+              Artwork(track: t, size: LayoutPrefs.dense(wide ? 40 : 48, wide ? 34 : 40)),
+              const SizedBox(width: 12),
+            ],
+            Expanded(
+              flex: 5,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    t.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: text.bodyLarge?.copyWith(
+                      color: isCurrent ? AppColors.accent : AppColors.textPrimary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Row(
+                    children: [
+                      if (isCurrent && !wide) ...[EqualizerIcon(playing: playing, size: 10), const SizedBox(width: 6)],
+                      // YouTube songs: cloud = streams, green pin = downloaded, plays offline.
+                      if (t.isRemote) ...[SourceMark(online: online, size: 14), const SizedBox(width: 4)],
+                      Flexible(
+                        child: Text(
+                          t.artist,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: text.bodyMedium?.copyWith(color: AppColors.textSecondary),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            if (wide && widget.showAlbum && shell.width > 900) ...[
+              const SizedBox(width: 16),
+              Expanded(
+                flex: 4,
+                child: Text(
+                  t.album ?? '',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: text.bodyMedium?.copyWith(color: AppColors.textSecondary),
+                ),
+              ),
+            ],
+            if (wide)
+              SizedBox(
+                width: 56,
+                child: Text(
+                  t.duration == null ? '' : formatDuration(t.duration),
+                  textAlign: TextAlign.right,
                   style: text.bodyMedium?.copyWith(
                     color: AppColors.textSecondary,
                     fontFeatures: const [FontFeature.tabularFigures()],
                   ),
                 ),
+              ),
+            // Streamed songs: download right here (ring while it runs, a check once saved). Under 300 px an
+            // icon-only one; on a row too narrow even for that, only the menu has it.
+            if (t.isRemote && downloadButtonFor(box.maxWidth) != RowDownload.none)
+              downloadButtonFor(box.maxWidth) == RowDownload.compact
+                  ? SizedBox.square(
+                      dimension: 40,
+                      child: FittedBox(child: DownloadButton(track: t)),
+                    )
+                  : DownloadButton(track: t),
+            // Shown on hover on a wide row; the button itself is made once.
+            if (wide)
+              _Hovering(
+                hover: _hover,
+                child: TrackMenuButton(track: t),
+                builder: (context, hover, child) => Opacity(opacity: hover ? 1 : 0, child: child),
+              )
+            else
+              TrackMenuButton(track: t),
+          ],
         ),
-      );
-    }
+      ),
+    );
 
     return MouseRegion(
-      onEnter: (_) => setState(() => _hover = true),
-      onExit: (_) => setState(() => _hover = false),
-      child: Material(
-        color: _hover ? AppColors.tile : Colors.transparent,
-        borderRadius: LayoutPrefs.corner(6),
-        child: InkWell(
+      onEnter: (_) => _hover.value = true,
+      onExit: (_) => _hover.value = false,
+      // The only part that changes with hover: the tint and what a tap does.
+      child: _Hovering(
+        hover: _hover,
+        child: body,
+        builder: (context, hover, child) => Material(
+          color: hover ? AppColors.tile : Colors.transparent,
           borderRadius: LayoutPrefs.corner(6),
-          hoverColor: Colors.transparent,
-          onTap: isCurrent && wide && _hover ? c.togglePlay : widget.onTap,
-          child: LayoutBuilder(
-            builder: (context, box) => Padding(
-              padding: EdgeInsets.symmetric(horizontal: wide ? 12 : 4, vertical: LayoutPrefs.dense(6, 2)),
-              child: Row(
-                children: [
-                  if (leading != null) ...[leading, const SizedBox(width: 12)],
-                  if (widget.showArtwork) ...[
-                    Artwork(track: t, size: LayoutPrefs.dense(wide ? 40 : 48, wide ? 34 : 40)),
-                    const SizedBox(width: 12),
-                  ],
-                  Expanded(
-                    flex: 5,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          t.title,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: text.bodyLarge?.copyWith(
-                            color: isCurrent ? AppColors.accent : AppColors.textPrimary,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Row(
-                          children: [
-                            if (isCurrent && !wide) ...[
-                              EqualizerIcon(playing: playing, size: 10),
-                              const SizedBox(width: 6),
-                            ],
-                            // YouTube songs: cloud = streams, green pin = downloaded, plays offline.
-                            if (t.isRemote) ...[SourceMark(online: online, size: 14), const SizedBox(width: 4)],
-                            Flexible(
-                              child: Text(
-                                t.artist,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: text.bodyMedium?.copyWith(color: AppColors.textSecondary),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                  if (wide && widget.showAlbum && shell.width > 900) ...[
-                    const SizedBox(width: 16),
-                    Expanded(
-                      flex: 4,
-                      child: Text(
-                        t.album ?? '',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: text.bodyMedium?.copyWith(color: AppColors.textSecondary),
-                      ),
-                    ),
-                  ],
-                  if (wide)
-                    SizedBox(
-                      width: 56,
-                      child: Text(
-                        t.duration == null ? '' : formatDuration(t.duration),
-                        textAlign: TextAlign.right,
-                        style: text.bodyMedium?.copyWith(
-                          color: AppColors.textSecondary,
-                          fontFeatures: const [FontFeature.tabularFigures()],
-                        ),
-                      ),
-                    ),
-                  // Streamed songs: download right here (ring while it runs, a check once saved). Under 300 px an
-                  // icon-only one; on a row too narrow even for that, only the menu has it.
-                  if (t.isRemote && downloadButtonFor(box.maxWidth) != RowDownload.none)
-                    downloadButtonFor(box.maxWidth) == RowDownload.compact
-                        ? SizedBox.square(
-                            dimension: 40,
-                            child: FittedBox(child: DownloadButton(track: t)),
-                          )
-                        : DownloadButton(track: t),
-                  TrackMenuButton(track: t, visible: !wide || _hover),
-                ],
-              ),
-            ),
+          child: InkWell(
+            borderRadius: LayoutPrefs.corner(6),
+            hoverColor: Colors.transparent,
+            onTap: isCurrent && wide && hover ? c.togglePlay : widget.onTap,
+            child: child,
           ),
         ),
       ),
     );
   }
+}
+
+/// A small leaf that rebuilds with the row's hover and nothing else.
+class _Hovering extends StatelessWidget {
+  const _Hovering({required this.hover, required this.builder, this.child});
+
+  final ValueListenable<bool> hover;
+  final Widget? child;
+  final Widget Function(BuildContext context, bool hover, Widget? child) builder;
+
+  @override
+  Widget build(BuildContext context) => ValueListenableBuilder<bool>(
+    valueListenable: hover,
+    child: child,
+    builder: (context, value, child) {
+      TrackRow.debugHoverBuilds++;
+      return builder(context, value, child);
+    },
+  );
 }
 
 /// Opens [track]'s artist: YouTube Music's page for a streamed song (all of

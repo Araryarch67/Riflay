@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/foundation.dart' show defaultTargetPlatform;
 import 'package:flutter/gestures.dart';
@@ -8,7 +7,6 @@ import 'package:flutter/services.dart';
 
 import '../models/track.dart';
 import '../services/download_notifications.dart';
-import '../services/appearance.dart';
 import '../services/layout_prefs.dart';
 import '../services/player_controller.dart';
 import '../services/wrap.dart';
@@ -31,10 +29,9 @@ import 'youtube_import.dart';
 import '../services/youtube_links.dart';
 import '../services/listen_together/listen_together.dart';
 import 'pages/listen_together_page.dart';
-import 'widgets/smooth_scroll.dart';
+import 'shell/desktop_sidebar.dart';
+import 'shell/phone_navigation.dart';
 import 'widgets/title_bar.dart';
-
-enum _Tab { home, search, library, downloads }
 
 /// Root layout.
 ///  * < 700px: bottom tabs + floating mini player, full-screen now playing.
@@ -48,13 +45,13 @@ class HomeShell extends StatefulWidget {
 }
 
 class _HomeShellState extends State<HomeShell> {
-  _Tab _tab = _Tab.home;
+  PhoneTab _tab = PhoneTab.home;
   bool _sidePanel = true;
   final _searchFocus = FocusNode();
 
   /// The title bar's search box (desktop); the phone tab has its own.
   final _search = SearchInput();
-  final _navigators = {for (final t in _Tab.values) t: GlobalKey<NavigatorState>()};
+  final _navigators = {for (final t in PhoneTab.values) t: GlobalKey<NavigatorState>()};
 
   NavigatorState? get _nav => _navigators[_tab]!.currentState;
 
@@ -140,10 +137,13 @@ class _HomeShellState extends State<HomeShell> {
 
   /// Desktop: a new step in the one history. Phone: a page on the current tab.
   void _open(Widget page, {String? location}) {
-    // Downloads is a tab of its own on a phone.
-    if (_compact && page is DownloadsPage) {
+    // Downloads and Settings are tabs of their own on a phone.
+    final tab = !_compact
+        ? null
+        : (page is DownloadsPage ? PhoneTab.downloads : (page is SettingsPage ? PhoneTab.settings : null));
+    if (tab != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) _selectTab(_Tab.downloads);
+        if (mounted) _selectTab(tab);
       });
       return;
     }
@@ -171,13 +171,13 @@ class _HomeShellState extends State<HomeShell> {
   }
 
   void _goHome() {
-    if (_compact) return _selectTab(_Tab.home);
+    if (_compact) return _selectTab(PhoneTab.home);
     _leaveExpandedPlayer();
     if (_history.location != Locations.home) _history.open(const HomePage(), Locations.home);
   }
 
   void _goSearch() {
-    if (_compact) return _selectTab(_Tab.search);
+    if (_compact) return _selectTab(PhoneTab.search);
     _showSearchResults();
     WidgetsBinding.instance.addPostFrameCallback((_) => _search.focus.requestFocus());
   }
@@ -198,7 +198,7 @@ class _HomeShellState extends State<HomeShell> {
     leading: Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        _MoreMenu(
+        TitleBarMenu(
           onDownloads: () => _open(const DownloadsPage()),
           onListen: () => _open(const ListenTogetherPage(), location: Locations.listen),
           onSettings: _openSettings,
@@ -266,13 +266,13 @@ class _HomeShellState extends State<HomeShell> {
     ),
   );
 
-  void _selectTab(_Tab tab) {
+  void _selectTab(PhoneTab tab) {
     if (tab == _tab) {
       _nav?.popUntil((r) => r.isFirst);
     } else {
       setState(() => _tab = tab);
     }
-    if (tab == _Tab.search) {
+    if (tab == PhoneTab.search) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _searchFocus.requestFocus());
     }
   }
@@ -385,13 +385,14 @@ class _HomeShellState extends State<HomeShell> {
     onGenerateRoute: (_) => _route(const HomePage(), location: Locations.home),
   );
 
-  Widget _tabNavigator(_Tab tab) => Navigator(
+  Widget _tabNavigator(PhoneTab tab) => Navigator(
     key: _navigators[tab],
     onGenerateRoute: (_) => _route(switch (tab) {
-      _Tab.home => const HomePage(),
-      _Tab.search => SearchPage(focusNode: _searchFocus),
-      _Tab.library => const LibraryPage(),
-      _Tab.downloads => const DownloadsPage(),
+      PhoneTab.home => const HomePage(),
+      PhoneTab.search => SearchPage(focusNode: _searchFocus),
+      PhoneTab.library => const LibraryPage(),
+      PhoneTab.downloads => const DownloadsPage(),
+      PhoneTab.settings => const SettingsPage(),
     }),
   );
 
@@ -446,7 +447,7 @@ class _HomeShellState extends State<HomeShell> {
       index: _tab.index,
       child: IndexedStack(
         index: _tab.index,
-        children: [for (final t in _Tab.values) TickerMode(enabled: t == _tab, child: _tabNavigator(t))],
+        children: [for (final t in PhoneTab.values) TickerMode(enabled: t == _tab, child: _tabNavigator(t))],
       ),
     );
 
@@ -455,7 +456,7 @@ class _HomeShellState extends State<HomeShell> {
       // Sideways the tabs move to a rail on the left, leaving the height to the pages.
       final sideways = width > size.height && size.height < 500;
       final insets = MediaQuery.paddingOf(context);
-      _contentWidth = sideways ? width - _SideTabs.width - insets.left - insets.right : width;
+      _contentWidth = sideways ? width - PhoneSideTabs.width - insets.left - insets.right : width;
       // The desktop history stays alive (hidden) while the window is narrow,
       // so widening it again returns to the same page.
       final pages = Stack(
@@ -474,7 +475,7 @@ class _HomeShellState extends State<HomeShell> {
           body: sideways
               ? Row(
                   children: [
-                    _SideTabs(tab: _tab, onSelect: _selectTab),
+                    PhoneSideTabs(tab: _tab, onSelect: _selectTab),
                     Expanded(
                       // The rail took the left inset; a camera cutout on the right stays clear.
                       child: SafeArea(
@@ -487,7 +488,7 @@ class _HomeShellState extends State<HomeShell> {
                   ],
                 )
               : pages,
-          bottomNavigationBar: _BottomBar(
+          bottomNavigationBar: PhoneBottomBar(
             mini: MiniPlayer(onOpen: _openNowPlaying),
             tab: _tab,
             onSelect: _selectTab,
@@ -540,7 +541,7 @@ class _HomeShellState extends State<HomeShell> {
                             width: sidebarWidth,
                             child: ListenableBuilder(
                               listenable: _history,
-                              builder: (context, _) => _Sidebar(
+                              builder: (context, _) => DesktopSidebar(
                                 collapsed: !expanded,
                                 location: _history.location,
                                 onHome: _goHome,
@@ -551,11 +552,11 @@ class _HomeShellState extends State<HomeShell> {
                             ),
                           ),
                           const SizedBox(width: 8),
-                          Expanded(child: _Panel(child: _desktopNavigator())),
+                          Expanded(child: ShellPanel(child: _desktopNavigator())),
                           if (expanded)
-                            _SlidingPanel(
+                            SlidingPanel(
                               open: sideOpen,
-                              child: _Panel(
+                              child: ShellPanel(
                                 child: NowPlayingSidePanel(onClose: () => setState(() => _sidePanel = false)),
                               ),
                             ),
@@ -634,539 +635,4 @@ class _FadeOnChangeState extends State<_FadeOnChange> with SingleTickerProviderS
     opacity: CurvedAnimation(parent: _fade, curve: Curves.easeOut),
     child: widget.child,
   );
-}
-
-/// The now-playing side panel, sliding open and shut instead of popping.
-class _SlidingPanel extends StatelessWidget {
-  const _SlidingPanel({required this.open, required this.child});
-
-  static const width = 332.0;
-  static const gap = 8.0;
-
-  final bool open;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) => TweenAnimationBuilder<double>(
-    tween: Tween(end: open ? 1 : 0),
-    duration: const Duration(milliseconds: 280),
-    curve: Curves.easeOutCubic,
-    builder: (context, t, child) => t == 0
-        ? const SizedBox.shrink()
-        : SizedBox(
-            width: (width + gap) * t,
-            child: ClipRect(
-              child: OverflowBox(
-                alignment: Alignment.centerLeft,
-                minWidth: width + gap,
-                maxWidth: width + gap,
-                child: Opacity(opacity: t, child: child),
-              ),
-            ),
-          ),
-    child: Padding(
-      padding: const EdgeInsets.only(left: gap),
-      child: child,
-    ),
-  );
-}
-
-class _Panel extends StatelessWidget {
-  const _Panel({required this.child});
-
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) => ClipRRect(
-    borderRadius: BorderRadius.circular(8),
-    // Material (not ColoredBox) so ink splashes from InkWells inside stay visible.
-    child: Material(color: AppColors.panel, child: child),
-  );
-}
-
-class _Sidebar extends StatelessWidget {
-  const _Sidebar({
-    required this.collapsed,
-    required this.location,
-    required this.onHome,
-    required this.onSearch,
-    this.inTitleBar = false,
-  });
-
-  final bool collapsed;
-  final bool inTitleBar;
-
-  /// What's on screen, so its entry can be highlighted.
-  final String location;
-  final VoidCallback onHome;
-  final VoidCallback onSearch;
-
-  @override
-  Widget build(BuildContext context) {
-    final text = Theme.of(context).textTheme;
-    Widget item(String where, IconData icon, IconData selectedIcon, String label, VoidCallback onTap) {
-      final selected = location == where;
-      final color = selected ? AppColors.textPrimary : AppColors.textSecondary;
-      final row = InkWell(
-        borderRadius: BorderRadius.circular(6),
-        hoverColor: Colors.transparent,
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          child: Row(
-            mainAxisAlignment: collapsed ? MainAxisAlignment.center : MainAxisAlignment.start,
-            children: [
-              Icon(selected ? selectedIcon : icon, color: color, size: 26),
-              if (!collapsed) ...[
-                const SizedBox(width: 18),
-                Flexible(
-                  child: Text(
-                    label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: text.titleMedium?.copyWith(color: color, fontWeight: FontWeight.w700),
-                  ),
-                ),
-              ],
-            ],
-          ),
-        ),
-      );
-      return collapsed ? Tooltip(message: label, child: row) : row;
-    }
-
-    // With the title bar, Home and search sit in it and Settings in its ⋯ menu (which lists
-    // Downloads too); Downloads always has its own entry here.
-    final navItems = [
-      if (!inTitleBar) ...[
-        item(Locations.home, Icons.home_outlined, Icons.home_rounded, 'Home', onHome),
-        item(Locations.search, Icons.search_rounded, Icons.manage_search_rounded, 'Search', onSearch),
-      ],
-      _DownloadsLink(collapsed: collapsed, selected: location == Locations.downloads),
-      item(Locations.listen, Icons.group_outlined, Icons.group_rounded, 'Listen together', () {
-        if (location != Locations.listen) {
-          ShellScope.of(context).open(const ListenTogetherPage(), location: Locations.listen);
-        }
-      }),
-      if (!inTitleBar) ...[
-        item(Locations.settings, Icons.settings_outlined, Icons.settings_rounded, 'Settings', () {
-          if (location != Locations.settings) ShellScope.of(context).open(const SettingsPage());
-        }),
-      ],
-    ];
-
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        // Short windows can't fit the nav and a usable library list: collapse into
-        // one scrolling panel and reach the library through a link instead.
-        if (constraints.maxHeight < 440) {
-          return _Panel(
-            child: SmoothScroll(
-              builder: (context, scroll) => ListView(
-                controller: scroll,
-                padding: const EdgeInsets.all(8),
-                children: [
-                  ...navItems,
-                  _NavLink(
-                    collapsed: collapsed,
-                    icon: Icons.video_library_outlined,
-                    label: 'Your Library',
-                    onTap: () => ShellScope.of(context).open(const LibraryPage()),
-                  ),
-                ],
-              ),
-            ),
-          );
-        }
-        return Column(
-          children: [
-            if (navItems.isNotEmpty) ...[
-              _Panel(
-                child: Padding(
-                  padding: const EdgeInsets.all(8),
-                  child: Column(children: navItems),
-                ),
-              ),
-              const SizedBox(height: 8),
-            ],
-            Expanded(
-              child: _Panel(child: LibraryList(dense: true, collapsed: collapsed)),
-            ),
-          ],
-        );
-      },
-    );
-  }
-}
-
-/// Sidebar entry that opens a page (rather than switching tab).
-class _NavLink extends StatelessWidget {
-  const _NavLink({required this.collapsed, required this.icon, required this.label, required this.onTap});
-
-  final bool collapsed;
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final text = Theme.of(context).textTheme;
-    final row = InkWell(
-      borderRadius: BorderRadius.circular(6),
-      hoverColor: Colors.transparent,
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        child: Row(
-          mainAxisAlignment: collapsed ? MainAxisAlignment.center : MainAxisAlignment.start,
-          children: [
-            Icon(icon, color: AppColors.textSecondary, size: 26),
-            if (!collapsed) ...[
-              const SizedBox(width: 18),
-              Expanded(
-                child: Text(
-                  label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: text.titleMedium?.copyWith(color: AppColors.textSecondary, fontWeight: FontWeight.w700),
-                ),
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-    return collapsed ? Tooltip(message: label, child: row) : row;
-  }
-}
-
-/// The title bar's ⋯ button: Downloads and Settings. A ring around it shows
-/// downloads in progress.
-class _MoreMenu extends StatelessWidget {
-  const _MoreMenu({required this.onDownloads, required this.onListen, required this.onSettings});
-
-  final VoidCallback onDownloads;
-  final VoidCallback onListen;
-  final VoidCallback onSettings;
-
-  @override
-  Widget build(BuildContext context) {
-    final c = PlayerScope.read(context);
-    final text = Theme.of(context).textTheme;
-    return ListenableBuilder(
-      listenable: c.youtube,
-      builder: (context, _) {
-        final progress = c.youtube.activeProgress;
-        // Compact, like a desktop app's menu: short rows, small text and icons.
-        PopupMenuItem<VoidCallback> entry(IconData icon, String label, VoidCallback onTap, {Widget? trailing}) =>
-            PopupMenuItem(
-              value: onTap,
-              height: 34,
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              textStyle: text.bodyMedium?.copyWith(fontSize: 13, color: AppColors.textPrimary),
-              child: Row(
-                children: [
-                  Icon(icon, size: 17, color: AppColors.textSecondary),
-                  const SizedBox(width: 10),
-                  Expanded(child: Text(label)),
-                  ?trailing,
-                ],
-              ),
-            );
-        return PopupMenuButton<VoidCallback>(
-          // Over the whole window, so a click anywhere closes it.
-          useRootNavigator: true,
-          tooltip: 'More',
-          position: PopupMenuPosition.under,
-          constraints: const BoxConstraints(minWidth: 180),
-          menuPadding: const EdgeInsets.symmetric(vertical: 4),
-          onSelected: (open) => open(),
-          style: IconButton.styleFrom(
-            foregroundColor: AppColors.textPrimary,
-            minimumSize: const Size(36, 36),
-            fixedSize: const Size(36, 36),
-            padding: EdgeInsets.zero,
-          ),
-          icon: Stack(
-            alignment: Alignment.center,
-            children: [
-              if (progress != null)
-                SizedBox.square(
-                  dimension: 28,
-                  child: CircularProgressIndicator(
-                    value: progress == 0 ? null : progress,
-                    strokeWidth: 2,
-                    color: AppColors.accent,
-                    backgroundColor: AppColors.hover,
-                  ),
-                ),
-              const Icon(Icons.more_horiz_rounded, size: 24),
-            ],
-          ),
-          itemBuilder: (context) => [
-            entry(
-              Icons.download_rounded,
-              'Downloads',
-              onDownloads,
-              trailing: progress == null
-                  ? null
-                  : Text(
-                      '${c.youtube.activeCount}',
-                      style: text.labelSmall?.copyWith(color: AppColors.accent, fontWeight: FontWeight.w700),
-                    ),
-            ),
-            entry(Icons.group_outlined, 'Listen together', onListen),
-            entry(Icons.settings_outlined, 'Settings', onSettings),
-          ],
-        );
-      },
-    );
-  }
-}
-
-/// Sidebar entry for YouTube downloads, with a progress ring while busy.
-class _DownloadsLink extends StatelessWidget {
-  const _DownloadsLink({required this.collapsed, required this.selected});
-
-  final bool collapsed;
-  final bool selected;
-
-  @override
-  Widget build(BuildContext context) {
-    final c = PlayerScope.read(context);
-    final shell = ShellScope.of(context);
-    final text = Theme.of(context).textTheme;
-    return ListenableBuilder(
-      listenable: c.youtube,
-      builder: (context, _) {
-        final progress = c.youtube.activeProgress;
-        final row = InkWell(
-          borderRadius: BorderRadius.circular(6),
-          hoverColor: Colors.transparent,
-          onTap: selected ? null : shell.openDownloads,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            child: Row(
-              mainAxisAlignment: collapsed ? MainAxisAlignment.center : MainAxisAlignment.start,
-              children: [
-                SizedBox.square(
-                  dimension: 26,
-                  child: progress == null
-                      ? Icon(
-                          Icons.download_rounded,
-                          color: selected ? AppColors.textPrimary : AppColors.textSecondary,
-                          size: 26,
-                        )
-                      : Padding(
-                          padding: const EdgeInsets.all(3),
-                          child: CircularProgressIndicator(
-                            value: progress == 0 ? null : progress,
-                            strokeWidth: 2.5,
-                            color: AppColors.accent,
-                            backgroundColor: AppColors.hover,
-                          ),
-                        ),
-                ),
-                if (!collapsed) ...[
-                  const SizedBox(width: 18),
-                  Expanded(
-                    child: Text(
-                      'Downloads',
-                      style: text.titleMedium?.copyWith(
-                        color: selected ? AppColors.textPrimary : AppColors.textSecondary,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                  if (progress != null)
-                    Text(
-                      '${c.youtube.activeCount}',
-                      style: text.labelLarge?.copyWith(color: AppColors.accent, fontWeight: FontWeight.w700),
-                    ),
-                ],
-              ],
-            ),
-          ),
-        );
-        return collapsed ? Tooltip(message: 'Downloads', child: row) : row;
-      },
-    );
-  }
-}
-
-/// Phone bottom area: mini player floating over a fade-to-black tab bar.
-const _tabItems = [
-  (tab: _Tab.home, icon: Icons.home_outlined, selected: Icons.home_rounded, label: 'Home'),
-  (tab: _Tab.search, icon: Icons.search_rounded, selected: Icons.manage_search_rounded, label: 'Search'),
-  (tab: _Tab.library, icon: Icons.library_music_outlined, selected: Icons.library_music_rounded, label: 'Your Library'),
-  (tab: _Tab.downloads, icon: Icons.download_outlined, selected: Icons.download_rounded, label: 'Downloads'),
-];
-
-/// A tab's icon. Downloads wears a progress ring while songs are being saved.
-class _TabIcon extends StatelessWidget {
-  const _TabIcon({required this.tab, required this.icon, required this.selected});
-
-  final _Tab tab;
-  final IconData icon;
-  final bool selected;
-
-  @override
-  Widget build(BuildContext context) {
-    final color = selected ? AppColors.textPrimary : AppColors.textSecondary;
-    if (tab != _Tab.downloads) return Icon(icon, color: color);
-    final youtube = PlayerScope.read(context).youtube;
-    return ListenableBuilder(
-      listenable: youtube,
-      builder: (context, _) {
-        final progress = youtube.activeProgress;
-        return SizedBox.square(
-          dimension: 24,
-          child: progress == null
-              ? Icon(icon, color: color)
-              : Padding(
-                  padding: const EdgeInsets.all(1.5),
-                  child: CircularProgressIndicator(
-                    value: progress == 0 ? null : progress,
-                    strokeWidth: 2.2,
-                    color: AppColors.accent,
-                    backgroundColor: AppColors.hover,
-                  ),
-                ),
-        );
-      },
-    );
-  }
-}
-
-/// The phone's tabs as a rail down the left, for a phone held sideways.
-class _SideTabs extends StatelessWidget {
-  const _SideTabs({required this.tab, required this.onSelect});
-
-  static const width = 88.0;
-
-  final _Tab tab;
-  final ValueChanged<_Tab> onSelect;
-
-  @override
-  Widget build(BuildContext context) {
-    final text = Theme.of(context).textTheme;
-    return SafeArea(
-      right: false,
-      child: SizedBox(
-        width: width,
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          child: Column(
-            children: [
-              for (final i in _tabItems)
-                InkResponse(
-                  onTap: () => onSelect(i.tab),
-                  radius: 36,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    child: SizedBox(
-                      width: width,
-                      child: Column(
-                        children: [
-                          _TabIcon(tab: i.tab, icon: tab == i.tab ? i.selected : i.icon, selected: tab == i.tab),
-                          const SizedBox(height: 4),
-                          Text(
-                            i.label,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: text.labelSmall?.copyWith(
-                              color: tab == i.tab ? AppColors.textPrimary : AppColors.textSecondary,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _BottomBar extends StatelessWidget {
-  const _BottomBar({required this.mini, required this.tab, required this.onSelect, this.showTabs = true});
-
-  final Widget mini;
-  final _Tab tab;
-  final ValueChanged<_Tab> onSelect;
-
-  /// Off when the tabs sit in [_SideTabs] instead.
-  final bool showTabs;
-
-  @override
-  Widget build(BuildContext context) {
-    final text = Theme.of(context).textTheme;
-    final glass = Appearance.instance.glass;
-    final bar = SafeArea(
-      top: false,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          mini,
-          if (showTabs)
-            Row(
-              children: [
-                for (final i in _tabItems)
-                  Expanded(
-                    child: InkResponse(
-                      onTap: () => onSelect(i.tab),
-                      radius: 36,
-                      child: Padding(
-                        padding: const EdgeInsets.only(top: 8, bottom: 6),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            _TabIcon(tab: i.tab, icon: tab == i.tab ? i.selected : i.icon, selected: tab == i.tab),
-                            const SizedBox(height: 4),
-                            Text(
-                              i.label,
-                              style: text.labelSmall?.copyWith(
-                                color: tab == i.tab ? AppColors.textPrimary : AppColors.textSecondary,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-        ],
-      ),
-    );
-    if (glass) {
-      // Frosted: the page shows through, blurred, behind both the mini player and the tabs.
-      return ClipRect(
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: Appearance.instance.blur, sigmaY: Appearance.instance.blur),
-          child: ColoredBox(color: AppColors.solidBackground.withValues(alpha: 0.55), child: bar),
-        ),
-      );
-    }
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            AppColors.solidBackground.withValues(alpha: 0),
-            AppColors.solidBackground.withValues(alpha: 0.9),
-            AppColors.solidBackground,
-          ],
-          stops: const [0, 0.35, 1],
-        ),
-      ),
-      child: bar,
-    );
-  }
 }

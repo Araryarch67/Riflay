@@ -29,9 +29,6 @@ import 'ui/widgets/title_bar.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  // Before anything reads the settings or writes into the app's folder.
-  await LegacyData.bringOver();
-  if (kDebugMode) await _logErrorsToFile();
   // just_audio has no native Linux/Windows backend; route those through libmpv.
   // Android, macOS and iOS too: libmpv gives them the equalizer, Virtual
   // speakers, ReplayGain, gapless, the signal path and decoders (ALAC,
@@ -43,40 +40,70 @@ Future<void> main() async {
       'KEMAR HRTF data (Virtual speakers)',
     ], await rootBundle.loadString('assets/audio/HRIR-NOTICE.txt'));
   });
-  await Appearance.instance.load();
-  await LayoutPrefs.instance.load();
+  // The typeface asks to be credited too.
+  LicenseRegistry.addLicense(() async* {
+    yield LicenseEntryWithLineBreaks(['Figtree'], await rootBundle.loadString('assets/fonts/OFL.txt'));
+  });
 
-  if (hasCustomTitleBar) {
-    await windowManager.ensureInitialized();
-    await windowManager.waitUntilReadyToShow(
-      WindowOptions(
-        title: 'Riflay',
-        // Opens in the middle of the screen, sized to it (tiling WMs place it themselves).
-        size: await _startSize(),
-        center: true,
-        minimumSize: const Size(320, 420),
-        // Linux: the window has an alpha channel; Flutter paints the background.
-        backgroundColor: Platform.isLinux ? Colors.transparent : AppColors.background,
-        titleBarStyle: TitleBarStyle.hidden,
-      ),
+  // Independent of each other: the old data is brought over (it must land before the settings are read),
+  // while the window's manager starts and the screen is measured.
+  Size? startSize;
+  await Future.wait([
+    LegacyData.bringOver(),
+    if (kDebugMode) _logErrorsToFile(),
+    if (hasCustomTitleBar)
       () async {
-        await windowManager.show();
-        await windowManager.focus();
-      },
-    );
-  }
+        await windowManager.ensureInitialized();
+        startSize = await _startSize();
+      }(),
+  ]);
+  await Future.wait([Appearance.instance.load(), LayoutPrefs.instance.load()]);
 
-  await Appearance.instance.applyWindow();
+  // The window opens (sized, centred, in the theme's colour) while the player loads behind it.
+  final windowShown = _showWindow(startSize);
+  final windowSettled = windowShown.then((_) => Appearance.instance.applyWindow());
 
   final controller = PlayerController();
   await controller.load();
-  await MediaSession.start(controller);
-  await StayAwake.start(controller);
-  await controller.youtube.restoreQueue();
-  DownloadNotifications.attach(controller.youtube);
-  // Keeps the listening history (on this device only), then announces a monthly Wrap that is due.
-  PlayHistory.instance.start(controller).then((_) => WrapNotifier.instance.run(PlayHistory.instance)).ignore();
+  await windowSettled;
   runApp(RiflayApp(controller: controller));
+  // Nothing here is needed to draw the first frame; it starts right after it. The media session must exist
+  // before anything can be played, and playing needs a tap on that first frame.
+  WidgetsBinding.instance.addPostFrameCallback((_) => unawaited(_startServices(controller)));
+}
+
+Future<void> _showWindow(Size? size) async {
+  if (!hasCustomTitleBar) return;
+  await windowManager.waitUntilReadyToShow(
+    WindowOptions(
+      title: 'Riflay',
+      // Opens in the middle of the screen, sized to it (tiling WMs place it themselves).
+      size: size ?? const Size(1280, 820),
+      center: true,
+      minimumSize: const Size(320, 420),
+      // Linux: the window has an alpha channel; Flutter paints the background.
+      backgroundColor: Platform.isLinux ? Colors.transparent : AppColors.background,
+      titleBarStyle: TitleBarStyle.hidden,
+    ),
+    () async {
+      await windowManager.show();
+      await windowManager.focus();
+    },
+  );
+}
+
+/// Media controls, wake locks, the download queue, notifications and the listening history.
+Future<void> _startServices(PlayerController controller) async {
+  await Future.wait(
+    [
+      MediaSession.start(controller),
+      StayAwake.start(controller),
+      // Notifications watch the queue, so they attach once it is restored.
+      controller.youtube.restoreQueue().then((_) => DownloadNotifications.attach(controller.youtube)),
+      // Keeps the listening history (on this device only), then announces a monthly Wrap that is due.
+      PlayHistory.instance.start(controller).then((_) => WrapNotifier.instance.run(PlayHistory.instance)),
+    ].map((f) => f.catchError((Object e) => debugPrint('Start-up task failed: $e'))),
+  );
 }
 
 /// A window that suits the screen: 85% of its height (up to 960), about
@@ -198,17 +225,15 @@ class _RiflayAppState extends State<RiflayApp> with WidgetsBindingObserver {
     });
   }
 
-  /// Widgets read [AppColors] directly rather than through an inherited
-  /// widget, so a new accent or opacity repaints the whole tree (state kept).
+  /// A palette, accent, font or layout change. The theme is rebuilt once per distinct set of settings (a cache
+  /// answers repeats) and handed to [MaterialApp], which has no animation of its own here ([Appearance] fades
+  /// the colours itself); widgets that read colours through [AppColors.of] or [Theme] follow by dependency.
+  /// Widgets that still read [AppColors] statically are rebuilt by [restyleTree], which leaves out everything
+  /// that cannot show a colour.
   void _restyle() {
     _syncTint();
     setState(() {});
-    void rebuild(Element e) {
-      e.markNeedsBuild();
-      e.visitChildren(rebuild);
-    }
-
-    (context as Element).visitChildren(rebuild);
+    restyleTree(context as Element);
   }
 
   @override
@@ -216,15 +241,19 @@ class _RiflayAppState extends State<RiflayApp> with WidgetsBindingObserver {
     // Decoded images: covers are decoded at their on-screen size, so 40 MiB
     // still holds a few hundred (Flutter's default is 100 MiB).
     PaintingBinding.instance.imageCache.maximumSizeBytes = 40 << 20;
-    final theme = _layout.themed(widget.theme ?? buildAppTheme(fontFamily: _appearance.fontFamily));
+    final theme = widget.theme == null ? appThemeNow(desktopFrame: hasCustomTitleBar) : _layout.themed(widget.theme!);
     return PlayerScope(
       controller: widget.controller,
       child: MaterialApp(
         title: 'Riflay',
         debugShowCheckedModeBanner: false,
+        // The colours already ease in [Appearance]; a second animation here would run them twice.
+        themeAnimationDuration: Duration.zero,
         // On desktop the frame paints the (maybe see-through) window
         // background once; pages on top mustn't stack a second layer.
-        theme: hasCustomTitleBar ? theme.copyWith(scaffoldBackgroundColor: Colors.transparent) : theme,
+        theme: widget.theme != null && hasCustomTitleBar
+            ? theme.copyWith(scaffoldBackgroundColor: Colors.transparent)
+            : theme,
         builder: (context, child) {
           final scaled = MediaQuery(
             data: MediaQuery.of(context).copyWith(
@@ -234,7 +263,10 @@ class _RiflayAppState extends State<RiflayApp> with WidgetsBindingObserver {
             child: child!,
           );
           // The title bar sits above every route (including full-screen ones like Now Playing).
-          return hasCustomTitleBar ? _DesktopFrame(child: scaled) : scaled;
+          return AppColorsScope(
+            colors: AppColorsScope.current(),
+            child: hasCustomTitleBar ? _DesktopFrame(child: scaled) : scaled,
+          );
         },
         home: const HomeShell(),
       ),
@@ -252,7 +284,7 @@ class _DesktopFrame extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final frame = ColoredBox(
-      color: AppColors.background,
+      color: AppColors.of(context).background,
       child: Column(
         children: [
           // Hidden while the player fills the screen (the expanded player inside the window keeps it).

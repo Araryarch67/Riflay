@@ -151,6 +151,14 @@ class MediaKitPlayer extends AudioPlayerPlatform {
             // is not looping (technically this shouldn't be fired if the player is looping)
             _player.state.playlistMode == PlaylistMode.none) {
           _processingState = ProcessingStateMessage.completed;
+        } else if (!completed &&
+            _processingState == ProcessingStateMessage.completed) {
+          // Riflay: the song was started again from its end (Play at the end of the queue, a single song
+          // sought back to the start): no new file is opened, so nothing else moves the state on, and it stayed
+          // "completed" while playing. The app then took its Pause for a Play at the end.
+          _processingState = _player.state.buffering
+              ? ProcessingStateMessage.buffering
+              : ProcessingStateMessage.ready;
         }
         _errorCode = null;
         _errorMessage = null;

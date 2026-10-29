@@ -112,6 +112,31 @@ void main() {
     expect(colorOf(tester, 'Line 0'), isNot(_white));
   });
 
+  testWidgets('moving to the next line rebuilds two lines, not all of them', (tester) async {
+    await pump(tester, _long(), length: const Duration(seconds: 120), start: const Duration(seconds: 1));
+    final first = lyricLineBuilds;
+    expect(first, greaterThanOrEqualTo(1));
+
+    // Line 0 -> 1: the old and the new current line.
+    var before = lyricLineBuilds;
+    ticks.add(const Duration(seconds: 3));
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(lyricLineBuilds - before, 2);
+    expect(colorOf(tester, 'Line 1'), _white);
+
+    // Line 1 -> 2, the same.
+    before = lyricLineBuilds;
+    ticks.add(const Duration(seconds: 6));
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(lyricLineBuilds - before, 2);
+
+    // A tick inside the same line builds nothing.
+    before = lyricLineBuilds;
+    ticks.add(const Duration(seconds: 7));
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(lyricLineBuilds - before, 0);
+  });
+
   testWidgets('long press and double tap select nothing', (tester) async {
     await pump(tester, _short(), length: const Duration(seconds: 30), start: const Duration(seconds: 1));
     final before = litCount(tester, 6);

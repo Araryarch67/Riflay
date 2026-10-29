@@ -144,6 +144,9 @@ class _LibraryListState extends State<LibraryList> {
             location: Locations.remotePlaylist(a.id),
             onTap: () => openRemotePlaylist(context, a),
           ),
+    ];
+    // The two invitations are taller than a row, so they sit apart from the rows' fixed height.
+    final prompts = <Widget>[
       if (!widget.collapsed && !account.isSignedIn && show(LibraryFilter.playlists))
         Padding(
           padding: const EdgeInsets.fromLTRB(8, 16, 8, 0),
@@ -187,7 +190,8 @@ class _LibraryListState extends State<LibraryList> {
                     ),
                   ),
                 ),
-                if (!widget.dense)
+                // The phone layout has Settings as a tab of its own.
+                if (!widget.dense && !shell.compact)
                   IconButton(
                     tooltip: 'Settings',
                     onPressed: () => shell.open(const SettingsPage()),
@@ -251,16 +255,50 @@ class _LibraryListState extends State<LibraryList> {
             ),
           Expanded(
             child: SmoothScroll(
-              builder: (context, scroll) => ListView.builder(
-                controller: scroll,
-                padding: EdgeInsets.fromLTRB(8, 0, 8, (widget.dense ? 8 : 16) + MediaQuery.paddingOf(context).bottom),
-                itemCount: rows.length + local.length + after.length,
-                itemBuilder: (context, i) => i < rows.length
-                    ? rows[i]
-                    : i < rows.length + local.length
-                    ? _LibraryRow(collection: local[i - rows.length], collapsed: widget.collapsed)
-                    : after[i - rows.length - local.length],
-              ),
+              builder: (context, scroll) {
+                final count = rows.length + local.length + after.length;
+                return CustomScrollView(
+                  controller: scroll,
+                  slivers: [
+                    SliverPadding(
+                      padding: EdgeInsets.fromLTRB(
+                        8,
+                        0,
+                        8,
+                        prompts.isEmpty ? (widget.dense ? 8 : 16) + MediaQuery.paddingOf(context).bottom : 0,
+                      ),
+                      // Every row is 48 px of art in padding, so the list is laid out from one measured row.
+                      sliver: count == 0
+                          ? null
+                          : SliverPrototypeExtentList.builder(
+                              itemCount: count,
+                              prototypeItem: _SimpleRow(
+                                collapsed: widget.collapsed,
+                                art: const _IconArt(Icons.add_rounded),
+                                title: 'New playlist',
+                                subtitle: 'Mix your own songs and YouTube Music',
+                                onTap: () {},
+                              ),
+                              itemBuilder: (context, i) => i < rows.length
+                                  ? rows[i]
+                                  : i < rows.length + local.length
+                                  ? _LibraryRow(collection: local[i - rows.length], collapsed: widget.collapsed)
+                                  : after[i - rows.length - local.length],
+                            ),
+                    ),
+                    if (prompts.isNotEmpty)
+                      SliverPadding(
+                        padding: EdgeInsets.fromLTRB(
+                          8,
+                          0,
+                          8,
+                          (widget.dense ? 8 : 16) + MediaQuery.paddingOf(context).bottom,
+                        ),
+                        sliver: SliverList.list(children: prompts),
+                      ),
+                  ],
+                );
+              },
             ),
           ),
         ],
@@ -380,7 +418,7 @@ class _LibraryRow extends StatelessWidget {
     // Only what this row shows: whether its collection is what's playing.
     select: (c) {
       final here = c.isPlayingFrom(collection);
-      return (here, here && c.isPlaying);
+      return (here, here && c.showsPlaying);
     },
     builder: (context, s, _) => _row(context, playingHere: s.$1, playing: s.$2),
   );

@@ -1,3 +1,5 @@
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
 
 import '../../services/layout_prefs.dart';
@@ -37,6 +39,36 @@ class MarqueeText extends StatefulWidget {
 
   @override
   State<MarqueeText> createState() => _MarqueeTextState();
+
+  /// How often a line of text had to be measured (tests).
+  @visibleForTesting
+  static int measurements = 0;
+
+  /// Forgets the measured widths (tests).
+  @visibleForTesting
+  static void clearMeasurements() => _sizes.clear();
+
+  /// Measured size per (text, style, text scale, direction), least recently used first:
+  /// the same title is laid out once, not on each build.
+  static final _sizes = <(String, TextStyle, double, TextDirection), Size>{};
+
+  static Size _measure(String text, TextStyle style, TextScaler scaler, TextDirection direction) {
+    final key = (text, style, scaler.scale(10), direction);
+    final known = _sizes.remove(key);
+    if (known != null) return _sizes[key] = known;
+    measurements++;
+    final painter = TextPainter(
+      text: TextSpan(text: text, style: style),
+      maxLines: 1,
+      textDirection: direction,
+      textScaler: scaler,
+    )..layout();
+    final size = Size(painter.width, painter.height);
+    painter.dispose();
+    _sizes[key] = size;
+    if (_sizes.length > 128) _sizes.remove(_sizes.keys.first);
+    return size;
+  }
 }
 
 class _MarqueeTextState extends State<MarqueeText> with SingleTickerProviderStateMixin {
@@ -44,6 +76,22 @@ class _MarqueeTextState extends State<MarqueeText> with SingleTickerProviderStat
 
   /// Width of the text the controller is running for; null when still.
   double? _running;
+
+  /// The edge fade, made again only when the width or the left fade changes.
+  ui.Shader? _shader;
+  (double, bool)? _shaderFor;
+
+  ui.Shader _fadeShader(Rect rect, bool leftFade) {
+    final key = (rect.width, leftFade);
+    if (_shaderFor == key && _shader != null) return _shader!;
+    _shader?.dispose();
+    _shaderFor = key;
+    final fade = widget.fade / rect.width;
+    return _shader = LinearGradient(
+      colors: [leftFade ? Colors.transparent : Colors.white, Colors.white, Colors.white, Colors.transparent],
+      stops: [0, fade, 1 - fade, 1],
+    ).createShader(Rect.fromLTWH(0, 0, rect.width, rect.height));
+  }
 
   @override
   void didUpdateWidget(MarqueeText old) {
@@ -59,6 +107,7 @@ class _MarqueeTextState extends State<MarqueeText> with SingleTickerProviderStat
 
   @override
   void dispose() {
+    _shader?.dispose();
     _controller.dispose();
     super.dispose();
   }
@@ -92,15 +141,14 @@ class _MarqueeTextState extends State<MarqueeText> with SingleTickerProviderStat
     final still = !LayoutPrefs.moves || MediaQuery.disableAnimationsOf(context);
     return LayoutBuilder(
       builder: (context, box) {
-        final painter = TextPainter(
-          text: TextSpan(text: widget.text, style: style),
-          maxLines: 1,
-          textDirection: Directionality.of(context),
-          textScaler: MediaQuery.textScalerOf(context),
-        )..layout();
-        final width = painter.width;
-        final height = painter.height;
-        painter.dispose();
+        final size = MarqueeText._measure(
+          widget.text,
+          style,
+          MediaQuery.textScalerOf(context),
+          Directionality.of(context),
+        );
+        final width = size.width;
+        final height = size.height;
 
         if (still || !box.hasBoundedWidth || width <= box.maxWidth) {
           if (_running != null) _stop();
@@ -128,33 +176,27 @@ class _MarqueeTextState extends State<MarqueeText> with SingleTickerProviderStat
             ],
           ),
         );
-        final fade = widget.fade / box.maxWidth;
         return Semantics(
           label: widget.text,
           excludeSemantics: true,
           child: SizedBox(
             width: box.maxWidth,
             height: height,
-            child: ClipRect(
-              child: AnimatedBuilder(
-                animation: _controller,
-                child: strip,
-                builder: (context, child) {
-                  final dx = _offset(_controller.value, width);
-                  return ShaderMask(
-                    blendMode: BlendMode.dstIn,
-                    shaderCallback: (rect) => LinearGradient(
-                      colors: [
-                        dx > 0 ? Colors.transparent : Colors.white,
-                        Colors.white,
-                        Colors.white,
-                        Colors.transparent,
-                      ],
-                      stops: [0, fade, 1 - fade, 1],
-                    ).createShader(rect),
-                    child: Transform.translate(offset: Offset(-dx, 0), child: child),
-                  );
-                },
+            // Its own layer: only the moving text repaints, not what is around it.
+            child: RepaintBoundary(
+              child: ClipRect(
+                child: AnimatedBuilder(
+                  animation: _controller,
+                  child: strip,
+                  builder: (context, child) {
+                    final dx = _offset(_controller.value, width);
+                    return ShaderMask(
+                      blendMode: BlendMode.dstIn,
+                      shaderCallback: (rect) => _fadeShader(rect, dx > 0),
+                      child: Transform.translate(offset: Offset(-dx, 0), child: child),
+                    );
+                  },
+                ),
               ),
             ),
           ),

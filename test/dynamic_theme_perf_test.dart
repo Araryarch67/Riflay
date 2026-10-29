@@ -13,6 +13,7 @@ import 'package:riflay/services/cover_palette.dart';
 import 'package:riflay/services/metadata.dart';
 import 'package:riflay/services/player_controller.dart';
 import 'package:riflay/ui/home_shell.dart';
+import 'package:riflay/ui/theme.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// A 1000 x 1000 JPEG of a diagonal gradient with some noise (so it does not compress to nothing).
@@ -104,6 +105,21 @@ void main() {
     a.setCoverColors(const CoverColors(Color(0xFF203080), Color(0xFF40C0FF)));
     await tester.pump(const Duration(milliseconds: 700));
     await tester.pump(const Duration(milliseconds: 700));
+
+    // What one restyle marks for rebuilding: the old sweep took every element, the new one only the
+    // widgets that can read a colour on their own.
+    var everything = 0;
+    void count(Element e) {
+      everything++;
+      e.visitChildren(count);
+    }
+
+    final root = tester.element(find.byType(HomeShell));
+    root.visitChildren(count);
+    final swept = restyleTree(root);
+    await tester.pump();
+    debugPrint('PERF one restyle marks $swept of $everything elements (before: $everything)');
+    expect(swept, lessThan(everything * 0.35), reason: 'a restyle no longer rebuilds the whole tree');
 
     // The transition to a second cover, in 60 fps frames.
     final before = a.palette;

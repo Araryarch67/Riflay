@@ -1,13 +1,17 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 import '../services/appearance.dart';
+import '../services/layout_prefs.dart';
 
 /// Colour tokens of the theme picked in Settings › Look & feel › Appearance ([ThemeChoice]).
 abstract final class AppColors {
   static AppPalette get _p => Appearance.instance.palette;
+
+  /// The colours for a widget that should be rebuilt when they change (and only then).
+  static AppColorsView of(BuildContext context) =>
+      (context.dependOnInheritedWidgetOfExactType<AppColorsScope>()?.colors) ?? AppColorsScope.current();
 
   /// Whether the theme is light (dark text on light surfaces).
   static bool get light => _p.light;
@@ -50,6 +54,264 @@ abstract final class AppColors {
   static Color sink(Color color, double amount) => Color.lerp(color, _p.background, _p.light ? 0.75 : amount)!;
 }
 
+/// The colours as one snapshot, read through a context ([AppColors.of]) so the widget rebuilds when they change
+/// and only then. The static [AppColors] getters give the same values to code that has no context.
+@immutable
+class AppColorsView {
+  const AppColorsView(this.palette, this.windowOpacity, this.highContrast);
+
+  final AppPalette palette;
+  final double windowOpacity;
+  final bool highContrast;
+
+  bool get light => palette.light;
+  Color get background => palette.background.withValues(alpha: windowOpacity);
+  Color get panel => palette.panel.withValues(alpha: windowOpacity);
+  Color get solidBackground => palette.background;
+  Color get elevated => palette.elevated;
+  Color get hover => palette.hover;
+  Color get menu => palette.menu;
+  Color get textPrimary => palette.textPrimary;
+  Color get textSecondary => palette.textSecondary;
+  Color get textMuted => palette.textMuted;
+  Color get tile => palette.textPrimary.withValues(alpha: 0.08);
+  Color get border => palette.textPrimary.withValues(alpha: highContrast ? 0.28 : 0.10);
+  Color get divider => palette.textPrimary.withValues(alpha: highContrast ? 0.18 : 0.06);
+  Color get accent => palette.accent;
+  Color get onAccent => palette.onAccent;
+
+  @override
+  bool operator ==(Object other) =>
+      other is AppColorsView &&
+      other.palette == palette &&
+      other.windowOpacity == windowOpacity &&
+      other.highContrast == highContrast;
+
+  @override
+  int get hashCode => Object.hash(palette, windowOpacity, highContrast);
+}
+
+/// Hands [AppColorsView] down the tree. Widgets that read it through [AppColors.of] are rebuilt when the
+/// colours change, nothing else is.
+class AppColorsScope extends InheritedWidget {
+  const AppColorsScope({super.key, required this.colors, required super.child});
+
+  final AppColorsView colors;
+
+  /// The colours now in use, from [Appearance].
+  static AppColorsView current() {
+    final a = Appearance.instance;
+    return AppColorsView(a.palette, a.windowOpacity, a.highContrast);
+  }
+
+  @override
+  bool updateShouldNotify(AppColorsScope old) => old.colors != colors;
+}
+
+/// Marks a subtree that reads no colour, neither through [AppColors] nor statically: a palette change skips it
+/// (see [restyleTree]). Wrap pure artwork or lists of pictures.
+class ColorFree extends StatelessWidget {
+  const ColorFree({super.key, required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => child;
+}
+
+/// Rebuilds what may read [AppColors] statically after a palette change. Only widgets that run a `build`
+/// (stateless, stateful, builders) can have a colour in their output; render objects, inherited and proxy
+/// widgets hold the same configuration and gain nothing from a rebuild, so they are left alone, as is
+/// anything under a [ColorFree]. Widgets that read colours through a context are rebuilt by the framework.
+/// Returns how many elements were marked.
+int restyleTree(Element root) {
+  var marked = 0;
+  void visit(Element e) {
+    if (e.widget is ColorFree) return;
+    if ((e is StatelessElement || e is StatefulElement) && !_frameworkOnly(e.widget.runtimeType)) {
+      e.markNeedsBuild();
+      marked++;
+    }
+    e.visitChildren(visit);
+  }
+
+  root.visitChildren(visit);
+  return marked;
+}
+
+/// Widgets of Flutter itself that take their colours from [Theme]/[DefaultTextStyle]/[IconTheme] (which the
+/// framework updates by dependency) and run no Riflay code: a colour handed to them in a constructor comes
+/// from a parent's `build`, and that parent is rebuilt. Rebuilding them again is the bulk of a whole-tree sweep.
+const _frameworkWidgets = {
+  'Material',
+  'InkWell',
+  'InkResponse',
+  'Ink',
+  'Text',
+  'Icon',
+  'IconButton',
+  'Focus',
+  'GestureDetector',
+  'RawGestureDetector',
+  'Actions',
+  'DefaultTextStyle',
+  'AnimatedDefaultTextStyle',
+  'DefaultSelectionStyle',
+  'IconTheme',
+  'Theme',
+  'AnimatedTheme',
+  'CupertinoTheme',
+  'Tooltip',
+  'RawTooltip',
+  'ListTile',
+  'Scaffold',
+  'AppBar',
+  'TextButton',
+  'FilledButton',
+  'ElevatedButton',
+  'OutlinedButton',
+  'MouseRegion',
+  'Semantics',
+  'FocusTraversalGroup',
+  'Scrollable',
+  'Scrollbar',
+  'Switch',
+  'Slider',
+  'Checkbox',
+  'Radio',
+  'TextField',
+  'EditableText',
+  'Container',
+  'OverlayPortal',
+  'AnimatedSwitcher',
+  'KeyedSubtree',
+  'SlideTransition',
+  'ScaleTransition',
+  'FadeTransition',
+  'RotationTransition',
+  'SizeTransition',
+  'AnimatedPhysicalModel',
+  'AutomaticKeepAlive',
+  'TickerMode',
+  'Shortcuts',
+  'RestorationScope',
+  'RawChip',
+  'FilterChip',
+  'Chip',
+  'ActionChip',
+  'ChoiceChip',
+  'InputChip',
+  'PopupMenuButton',
+  'Card',
+  'Divider',
+  'Dialog',
+  'AlertDialog',
+  'SwitchListTile',
+  'CheckboxListTile',
+  'RadioListTile',
+  'ExpansionTile',
+  'CircleAvatar',
+  'Image',
+  'SelectionArea',
+  'AnimatedContainer',
+  'AnimatedOpacity',
+  'AnimatedPadding',
+  'AnimatedAlign',
+  'AnimatedSize',
+  'Hero',
+  'Visibility',
+  'ListView',
+  'GridView',
+  'CustomScrollView',
+  'SingleChildScrollView',
+  'ScrollConfiguration',
+  'Overlay',
+  'Navigator',
+  'SafeArea',
+  'Title',
+  '_InkResponseStateWidget',
+  '_ParentInkResponseProvider',
+  '_ShapeBorderPaint',
+  '_MaterialInterior',
+  '_SelectableIconButton',
+  '_IconButtonM3',
+  '_SelectionKeepAlive',
+  '_OverlayEntryWidget',
+  '_OutlinedButtonWithIconChild',
+  '_FilledButtonWithIconChild',
+  '_TextButtonWithIconChild',
+  '_ElevatedButtonWithIconChild',
+};
+final _frameworkTypes = <Type, bool>{};
+bool _frameworkOnly(Type t) => _frameworkTypes[t] ??= _frameworkWidgets.contains(t.toString().split('<').first);
+
+/// What [buildAppTheme] was last asked for, so a repeat (a palette that comes back, a restyle that changed
+/// nothing a theme reads) is answered without building [ThemeData] again.
+@immutable
+class _ThemeKey {
+  const _ThemeKey(this.palette, this.opacity, this.highContrast, this.wholeApp, this.font, this.corners, this.motion);
+
+  final AppPalette palette;
+  final double opacity;
+  final bool highContrast;
+  final bool wholeApp;
+  final String? font;
+  final CornerStyle corners;
+  final Motion motion;
+
+  @override
+  bool operator ==(Object other) =>
+      other is _ThemeKey &&
+      other.palette == palette &&
+      other.opacity == opacity &&
+      other.highContrast == highContrast &&
+      other.wholeApp == wholeApp &&
+      other.font == font &&
+      other.corners == corners &&
+      other.motion == motion;
+
+  @override
+  int get hashCode => Object.hash(palette, opacity, highContrast, wholeApp, font, corners, motion);
+}
+
+final _themes = <_ThemeKey, ThemeData>{};
+
+/// How many themes were built and how many answered from the cache (for tests).
+({int built, int cached}) get themeCacheStats => (built: _themesBuilt, cached: _themesCached);
+int _themesBuilt = 0;
+int _themesCached = 0;
+
+/// The app's theme for the colours, font and layout settings now in use, built once per combination.
+/// [desktopFrame]: the window paints the background, so pages are see-through.
+ThemeData appThemeNow({bool desktopFrame = false}) {
+  final a = Appearance.instance;
+  final l = LayoutPrefs.instance;
+  final key = _ThemeKey(
+    a.palette,
+    a.windowOpacity,
+    a.highContrast,
+    a.followsCover,
+    a.fontFamily,
+    l.corners,
+    LayoutPrefs.effectiveMotion,
+  );
+  final hit = _themes.remove(key);
+  if (hit != null) {
+    _themes[key] = hit; // most recent last
+    _themesCached++;
+    return desktopFrame ? _transparent(hit) : hit;
+  }
+  _themesBuilt++;
+  final built = l.themed(buildAppTheme(fontFamily: a.fontFamily));
+  // A fade passes through a dozen colours it never returns to: keep a few.
+  if (_themes.length >= 8) _themes.remove(_themes.keys.first);
+  _themes[key] = built;
+  return desktopFrame ? _transparent(built) : built;
+}
+
+final _transparentOf = Expando<ThemeData>('transparent theme');
+ThemeData _transparent(ThemeData t) => _transparentOf[t] ??= t.copyWith(scaffoldBackgroundColor: Colors.transparent);
+
 bool get _desktop => Platform.isLinux || Platform.isWindows || Platform.isMacOS;
 
 ThemeData buildAppTheme({String? fontFamily}) {
@@ -67,9 +329,8 @@ ThemeData buildAppTheme({String? fontFamily}) {
     ),
     scaffoldBackgroundColor: AppColors.background,
     splashFactory: InkSparkle.splashFactory,
-    // google_fonts 9 builds on package:material_ui, so only take the family name
-    // (which also kicks off the font download) rather than its TextTheme type.
-    fontFamily: fontFamily ?? GoogleFonts.figtree().fontFamily,
+    // Riflay's own typeface is bundled (assets/fonts); a font picked in Settings comes from the device.
+    fontFamily: fontFamily ?? 'Figtree',
   );
   final wholeApp = Appearance.instance.followsCover;
   final text = base.textTheme.apply(bodyColor: AppColors.textPrimary, displayColor: AppColors.textPrimary);

@@ -86,4 +86,21 @@ void main() {
     expect(_strip, findsNothing);
     expect(_animating(tester), isFalse);
   });
+
+  testWidgets('the width of a title is measured once, not on every tick', (tester) async {
+    MarqueeText.clearMeasurements();
+    final before = MarqueeText.measurements;
+    await tester.pumpWidget(_host(_long));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 4));
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(_shift(tester), greaterThan(0));
+    expect(MarqueeText.measurements - before, 1);
+    // The same title elsewhere (another bar, another page) reuses the width.
+    await tester.pumpWidget(_host(_long));
+    expect(MarqueeText.measurements - before, 1);
+    // A new title is a new measurement.
+    await tester.pumpWidget(_host('$_long!'));
+    expect(MarqueeText.measurements - before, 2);
+  });
 }

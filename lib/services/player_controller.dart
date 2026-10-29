@@ -89,6 +89,8 @@ class PlayerController extends ChangeNotifier {
     _subs.add(player.positionDiscontinuityStream.listen((_) => _updatePresence(force: true)));
     // Plays count towards the YouTube Music history (signed in, setting on).
     _subs.add(ytMusic.reportPlaysOf(player, () => currentTrack));
+    // Lets a song's music-video formats be looked up ahead with its audio ones.
+    YoutubeStream.musicVideoIdLookup = (id) async => (await ytMusic.musicVideo(id))?.videoId;
   }
 
   String? _formatsFor;
@@ -267,7 +269,9 @@ class PlayerController extends ChangeNotifier {
   /// What rules a crossfade out beyond the Settings (which [AudioEngine.crossfadeActive] covers).
   bool _crossfadeBlocked() {
     // Repeat one has no next song; "End of this song" must end at the song's end; a TV plays by itself.
-    if (casting || player.loopMode == LoopMode.one || sleep.mode == SleepMode.endOfSong) return true;
+    // A Listen together guest follows the host, who decides what comes next: jumping ahead to the next song
+    // here would look like the guest choosing a song of their own (and they would be taken out of the session).
+    if (casting || holdAutoplay || player.loopMode == LoopMode.one || sleep.mode == SleepMode.endOfSong) return true;
     if (!audio.dopActive) return false;
     final up = _crossfadeUpcoming();
     bool dsd(Track t) => SacdDisc.isSacdTrack(t) || (t.path != null && DsdFile.isDsdPath(t.path!));
@@ -372,6 +376,10 @@ class PlayerController extends ChangeNotifier {
   bool get canPlay => player.audioSources.isNotEmpty || _library.isNotEmpty;
 
   bool get isPlaying => casting ? cast.playing : player.playing;
+
+  /// What a play/pause button should show: [isPlaying] stays true at the end of the queue, where nothing is heard.
+  bool get showsPlaying =>
+      casting ? cast.playing : player.playing && player.processingState != ProcessingState.completed;
   bool get isBuffering => casting
       ? cast.loading
       : player.processingState == ProcessingState.loading || player.processingState == ProcessingState.buffering;
@@ -383,7 +391,14 @@ class PlayerController extends ChangeNotifier {
 
   Future<void> seek(Duration to) => casting ? cast.seek(to) : player.seek(to);
 
-  Future<void> play() => _play();
+  /// Plays. At the end of the queue (nothing left to play) it starts the queue over, as [togglePlay] does:
+  /// the media keys and the system's Play button call this, and would otherwise do nothing.
+  Future<void> play() async {
+    if (!casting && player.audioSources.isNotEmpty && player.processingState == ProcessingState.completed) {
+      await player.seek(Duration.zero, index: 0);
+    }
+    return _play();
+  }
 
   Future<void> pause() => casting ? cast.pause() : player.pause();
 

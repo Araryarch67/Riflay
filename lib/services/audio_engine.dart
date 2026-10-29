@@ -1271,12 +1271,20 @@ class AudioEngine extends ChangeNotifier {
   };
 
   /// The next player just_audio creates is the crossfade's, not the app's.
-  void expectSecondaryPlayer() => JustAudioMediaKit.secondaryRequestedAt = DateTime.now();
+  void expectSecondaryPlayer() {
+    _secondaryWanted = true;
+    JustAudioMediaKit.secondaryRequestedAt = DateTime.now();
+  }
+
+  /// A second player is wanted and not yet closed. A player created after [releaseSecondary] (a load that was
+  /// still going when the crossfade dropped it) is not used: it would stand in for the live one.
+  bool _secondaryWanted = false;
 
   /// The second player is created (or the attempt failed): the next one is the app's again.
   void secondaryPlayerRequested() => JustAudioMediaKit.secondaryRequestedAt = null;
 
   Future<void> _applySecondary(Player player) async {
+    if (!_secondaryWanted) return;
     _secondary = player;
     _secondaryGain = 0;
     if (player.platform case final NativePlayer p) {
@@ -1324,24 +1332,35 @@ class AudioEngine extends ChangeNotifier {
     final p = _secondaryNative;
     if (p == null) return;
     final level = _volumeAtOutput ? _volume : 1.0;
-    await p.setProperty('volume', (100 * math.pow(level * _secondaryGain * _sleepGain, 1 / 3)).toStringAsFixed(6));
+    final volume = (100 * math.pow(level * _secondaryGain * _sleepGain, 1 / 3)).toStringAsFixed(6);
+    // A player that is being closed may never answer: the fade must not wait for it.
+    await p.setProperty('volume', volume).timeout(_secondaryTimeout, onTimeout: () {});
   }
+
+  static const _secondaryTimeout = Duration(seconds: 2);
 
   /// Seconds into the file, from mpv's own clock; null when it has none yet.
   static Future<double?> _clock(NativePlayer? p) async {
     if (p == null) return null;
-    return double.tryParse(await p.getProperty('time-pos'));
+    // A second player that is being closed may never answer (then there is no clock).
+    final at = await p.getProperty('time-pos').timeout(_secondaryTimeout, onTimeout: () => '');
+    return double.tryParse(at);
   }
 
   Future<double?> mainTimePos() => _clock(_native);
   Future<double?> secondaryTimePos() => _clock(_secondaryNative);
 
   Future<void> secondarySeek(double seconds) async {
-    await _secondaryNative?.command(['seek', seconds.toStringAsFixed(3), 'absolute+exact']);
+    await _secondaryNative
+        ?.command(['seek', seconds.toStringAsFixed(3), 'absolute+exact'])
+        .timeout(_secondaryTimeout, onTimeout: () {});
   }
 
   /// The second player is being closed.
-  void releaseSecondary() => _secondary = null;
+  void releaseSecondary() {
+    _secondary = null;
+    _secondaryWanted = false;
+  }
 
   /// An mpv property of the main or the crossfade's player, for tests.
   @visibleForTesting

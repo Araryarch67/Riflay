@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../../models/track.dart';
 import '../../services/layout_prefs.dart';
 import '../../services/player_controller.dart';
 import '../../services/youtube_music_account.dart';
@@ -31,13 +32,26 @@ class HomePage extends StatelessWidget {
         : 'Good evening';
   }
 
+  /// Home's bodies built, for tests: a song starting or pausing must not add to it.
+  @visibleForTesting
+  static int debugBuilds = 0;
+
+  /// The ids of what was played last, in order: a change here (and not each song change) redraws "Recently played".
+  static String _recentKey(PlayerController c) => c.recentlyPlayed.map((t) => t.id).join('\u0000');
+
   @override
-  Widget build(BuildContext context) => VisiblePlayerBuilder(
-    builder: (context, c) =>
-        ListenableBuilder(listenable: c.ytMusic, builder: (context, _) => _build(context, c, c.ytMusic.libraryNow)),
-  );
+  Widget build(BuildContext context) {
+    // The library, the YouTube Music account and Layout settings, not each change of what's playing
+    // (a song starting, play / pause): what shows that is a small leaf below.
+    final c = PlayerScope.identity(context);
+    return ListenableBuilder(
+      listenable: Listenable.merge([c.libraryRevision, c.ytMusic, LayoutPrefs.instance]),
+      builder: (context, _) => _build(context, c, c.ytMusic.libraryNow),
+    );
+  }
 
   Widget _build(BuildContext context, PlayerController c, YoutubeMusicLibrary? online) {
+    debugBuilds++;
     final shell = ShellScope.of(context);
     final text = Theme.of(context).textTheme;
     final pad = shell.compact ? 16.0 : 24.0;
@@ -45,7 +59,6 @@ class HomePage extends StatelessWidget {
 
     final albums = c.albums;
     final artists = c.artists;
-    final recent = c.recentlyPlayed;
     final liked = online == null || online.liked.isEmpty ? null : likedCollection(online.liked);
     final playlists = c.playlists;
     final remotePlaylists = online?.playlists ?? const <RemotePlaylist>[];
@@ -107,18 +120,25 @@ class HomePage extends StatelessWidget {
         if (!account.isSignedIn) const SliverToBoxAdapter(child: SignInBanner()),
       ],
       HomeSection.recentlyPlayed: [
-        if (recent.isNotEmpty)
-          _shelf('Recently played', recent.length, (i) {
-            final t = recent[i];
-            return MediaCard(
-              track: t,
-              title: t.title,
-              subtitle: t.artist,
-              online: !c.isOffline(t),
-              onTap: () => c.playList(recent, i, from: 'Recently played'),
-              onPlay: () => c.playList(recent, i, from: 'Recently played'),
-            );
-          }),
+        // What was played changes with each song, but the shelf only when the list does.
+        PlayerSelect<String>(
+          select: _recentKey,
+          builder: (context, _, _) {
+            final recent = c.recentlyPlayed;
+            if (recent.isEmpty) return const SliverToBoxAdapter(child: SizedBox.shrink());
+            return _shelf('Recently played', recent.length, (i) {
+              final t = recent[i];
+              return MediaCard(
+                track: t,
+                title: t.title,
+                subtitle: t.artist,
+                online: !c.isOffline(t),
+                onTap: () => c.playList(recent, i, from: 'Recently played'),
+                onPlay: () => c.playList(recent, i, from: 'Recently played'),
+              );
+            });
+          },
+        ),
       ],
       HomeSection.playlists: [
         if (playlists.isNotEmpty || remotePlaylists.isNotEmpty)
@@ -189,42 +209,50 @@ class HomePage extends StatelessWidget {
       ],
     };
 
-    return AccentBuilder(
-      track: c.currentTrack ?? recent.firstOrNull,
-      builder: (context, accent) => PageScaffold(
-        gradientColor: accent,
-        brand: true,
-        actions: [
-          if (c.scanning)
-            const Padding(
-              padding: EdgeInsets.all(12),
-              child: SizedBox.square(dimension: 18, child: CircularProgressIndicator(strokeWidth: 2)),
-            ),
-          IconButton(
-            tooltip: 'Refresh',
-            onPressed: () {
-              account.discover(refresh: true);
-              if (account.isSignedIn) account.library(refresh: true);
-            },
-            icon: const Icon(Icons.refresh_rounded),
+    final slivers = <Widget>[
+      SliverToBoxAdapter(
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(pad, 0, pad, 16),
+          child: Text(
+            _greeting(),
+            style: text.headlineMedium?.copyWith(fontWeight: FontWeight.w800, letterSpacing: -0.8),
           ),
-          if (shell.compact) ...[const DownloadsButton(), _AddMenu(shell: shell)],
-        ],
-        slivers: [
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: EdgeInsets.fromLTRB(pad, 0, pad, 16),
-              child: Text(
-                _greeting(),
-                style: text.headlineMedium?.copyWith(fontWeight: FontWeight.w800, letterSpacing: -0.8),
-              ),
-            ),
-          ),
-          for (final section in LayoutPrefs.instance.homeShown) ...sections[section]!,
-          // The invitation to add songs stays even when YouTube Music's shelves are switched off.
-          if (c.library.isEmpty && LayoutPrefs.instance.homeHidden.contains(HomeSection.discover))
-            const SliverToBoxAdapter(child: _AddYourMusic()),
-        ],
+        ),
+      ),
+      for (final section in LayoutPrefs.instance.homeShown) ...sections[section]!,
+      // The invitation to add songs stays even when YouTube Music's shelves are switched off.
+      if (c.library.isEmpty && LayoutPrefs.instance.homeHidden.contains(HomeSection.discover))
+        const SliverToBoxAdapter(child: _AddYourMusic()),
+    ];
+    final actions = <Widget>[
+      PlayerSelect<bool>(
+        select: (c) => c.scanning,
+        builder: (context, scanning, _) => scanning
+            ? const Padding(
+                padding: EdgeInsets.all(12),
+                child: SizedBox.square(dimension: 18, child: CircularProgressIndicator(strokeWidth: 2)),
+              )
+            : const SizedBox.shrink(),
+      ),
+      IconButton(
+        tooltip: 'Refresh',
+        onPressed: () {
+          account.discover(refresh: true);
+          if (account.isSignedIn) account.library(refresh: true);
+        },
+        icon: const Icon(Icons.refresh_rounded),
+      ),
+      if (shell.compact) ...[const DownloadsButton(), _AddMenu(shell: shell)],
+    ];
+
+    // The header's colour follows the cover of what plays (or was played last). Only this leaf is redrawn when
+    // that changes; the sections above are the same widgets as before and are not rebuilt.
+    return PlayerSelect<Track?>(
+      select: (c) => c.currentTrack ?? c.recentlyPlayed.firstOrNull,
+      builder: (context, track, _) => AccentBuilder(
+        track: track,
+        builder: (context, accent) =>
+            PageScaffold(gradientColor: accent, brand: true, actions: actions, slivers: slivers),
       ),
     );
   }

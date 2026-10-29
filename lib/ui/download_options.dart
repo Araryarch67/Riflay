@@ -20,6 +20,8 @@ Future<DownloadChoice?> chooseDownload(BuildContext context, {bool force = false
   if (!force && !prefs.askEveryTime) return prefs.choice;
   if (!context.mounted) return null;
   // Looked up once, here: the dialog's builder can run again.
+  final c = context.getInheritedWidgetOfExactType<PlayerScope>()?.notifier;
+  if (c != null) YoutubeStream.musicVideoIdLookup ??= (id) async => (await c.ytMusic.musicVideo(id))?.videoId;
   final candidates = videoId == null ? null : YoutubeStream.downloadCandidates(videoId);
   final video = videoId == null ? null : _videoOf(context, videoId);
   // The dialog reports a failed lookup itself; until it is on screen nobody listens yet.
@@ -32,22 +34,11 @@ Future<DownloadChoice?> chooseDownload(BuildContext context, {bool force = false
   );
 }
 
-/// What the song's music video offers, or null when it has none (then the dialog only offers Audio).
+/// What the song's music video offers, or null when it has none (then the dialog only offers Audio). One cached
+/// lookup, shared with the one made ahead; a failure is thrown, for the dialog to say.
 Future<VideoFormats?>? _videoOf(BuildContext context, String videoId) {
-  final c = context.getInheritedWidgetOfExactType<PlayerScope>()?.notifier;
-  if (c == null) return null;
-  return () async {
-    try {
-      final mv = await c.ytMusic.musicVideo(videoId);
-      if (mv == null) return null;
-      final formats = await YoutubeStream.videoFormats(mv.videoId);
-      return formats.isEmpty ? null : formats;
-    } catch (e) {
-      // No lookup, no video offered: the song still downloads as audio.
-      debugPrint('music video lookup for $videoId failed: $e');
-      return null;
-    }
-  }();
+  if (YoutubeStream.musicVideoIdLookup == null) return null;
+  return YoutubeStream.musicVideoFormats(videoId);
 }
 
 /// Pick a format and quality for one download.
@@ -93,6 +84,7 @@ class _DownloadOptionsDialogState extends State<DownloadOptionsDialog> {
   };
   VideoFormats? _videoFormats;
   late bool _videoLoading = widget.video != null;
+  bool _videoFailed = false;
 
   late var _format = widget.initial.format;
   late var _flac = widget.initial.flac;
@@ -137,6 +129,7 @@ class _DownloadOptionsDialogState extends State<DownloadOptionsDialog> {
         if (mounted) {
           setState(() {
             _videoLoading = false;
+            _videoFailed = true;
             _kind = DownloadKind.audio;
           });
         }
@@ -313,6 +306,7 @@ class _DownloadOptionsDialogState extends State<DownloadOptionsDialog> {
                 ),
                 const SizedBox(height: 16),
               ],
+              if (_videoFailed) ...[Text("Couldn't look up video sizes.", style: muted), const SizedBox(height: 12)],
               if (_kind == DownloadKind.video)
                 ..._videoSection(text, muted)
               else ...[

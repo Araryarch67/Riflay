@@ -218,6 +218,85 @@ abstract final class YoutubeStream {
     return VideoFormats(l.videos, l.candidates);
   }
 
+  /// Finds the music video that goes with a song (its video id), or null when it has none. Set by the app, whose
+  /// YouTube Music client knows the pairs a signed-in account gets; without it no video is offered.
+  static Future<String?> Function(String songId)? musicVideoIdLookup;
+
+  static final _videoLookups = <String, Future<_VideoLookup>>{};
+
+  /// What the music video of the song [songId] offers (picture and sound streams), or null when it has none.
+  /// Cached like [downloadCandidates] (ten minutes, and while no URL is about to expire); a call while one is
+  /// running shares it. Throws when the lookup fails.
+  static Future<VideoFormats?> musicVideoFormats(String songId) async => (await _videoLookup(songId)).formats;
+
+  /// The lookup behind [musicVideoFormats]. The slow parts overlap: while YouTube Music is asked for the video's
+  /// id, the visitor id is made ready ([warm]), and the song's own formats are looked up too (they are cached by
+  /// the audio prefetch), because a song that is itself a video is the very video wanted: its sizes are then there
+  /// the moment the id comes back. [sequential] does it one after the other, for the timing tests.
+  @visibleForTesting
+  static Future<VideoFormats?> lookUpMusicVideo(
+    String songId, {
+    required Future<String?> Function(String songId) findVideo,
+    required Future<VideoFormats> Function(String videoId) formatsOf,
+    Future<void> Function()? warm,
+    bool sequential = false,
+  }) async {
+    if (sequential) {
+      final id = await findVideo(songId);
+      if (id == null) return null;
+      await warm?.call();
+      final formats = await formatsOf(id);
+      return formats.isEmpty ? null : formats;
+    }
+    final own = formatsOf(songId);
+    own.ignore(); // only awaited when the song is its own video
+    final found = findVideo(songId);
+    if (warm != null) {
+      // Not waited for: it only has to be under way while the id is looked up.
+      warm().then<void>((_) {}, onError: (Object _) {});
+    }
+    final id = await found;
+    if (id == null) return null;
+    final formats = await (id == songId ? own : formatsOf(id));
+    return formats.isEmpty ? null : formats;
+  }
+
+  static Future<_VideoLookup> _videoLookup(String songId) {
+    final cached = _videoLookups[songId];
+    if (cached != null) {
+      return cached.then(
+        (l) => listingFresh(l.at, l.urls, DateTime.now()) ? l : _fetchVideoLookup(songId),
+        onError: (Object _) => _fetchVideoLookup(songId),
+      );
+    }
+    return _fetchVideoLookup(songId);
+  }
+
+  static Future<_VideoLookup> _fetchVideoLookup(String songId) {
+    final find = musicVideoIdLookup;
+    final future = find == null
+        ? Future.value(_VideoLookup(null, DateTime.now()))
+        : lookUpMusicVideo(
+            songId,
+            findVideo: find,
+            formatsOf: videoFormats,
+            warm: () => _visitorData(songId),
+          ).then((f) => _VideoLookup(f, DateTime.now()));
+    _videoLookups
+      ..remove(songId)
+      ..[songId] = future;
+    while (_videoLookups.length > _listingCap) {
+      _videoLookups.remove(_videoLookups.keys.first);
+    }
+    future.then<void>(
+      (_) {},
+      onError: (Object _) {
+        if (identical(_videoLookups[songId], future)) _videoLookups.remove(songId);
+      },
+    );
+    return future;
+  }
+
   /// Whether to look formats up ahead without being asked. A phone does only on Wi-Fi or ethernet (the lookup
   /// costs data and battery); anything else always does. [batterySaver] is false when it can't be told.
   static bool shouldPrefetchAhead({required bool phone, required bool unmetered, bool batterySaver = false}) =>
@@ -247,6 +326,11 @@ abstract final class YoutubeStream {
   static void prefetchDownloadCandidates(String videoId) {
     try {
       downloadCandidates(videoId).then<void>((_) {}, onError: (Object e) => debugPrint('format prefetch failed: $e'));
+      // The music video's formats too, so the Video sizes of the picker are there as it opens.
+      if (musicVideoIdLookup != null) {
+        musicVideoFormats(videoId)
+            .then<void>((_) {}, onError: (Object e) => debugPrint('music video prefetch failed: $e'));
+      }
     } catch (_) {}
   }
 
@@ -439,6 +523,19 @@ class _Listing {
 
   Iterable<Uri> get urls => [
     for (final c in [...candidates.map((c) => c.ref), ...videos.map((v) => v.ref)])
+      if (c is Map && c['url'] is String) Uri.parse(c['url'] as String),
+  ];
+}
+
+/// What the music video of one song offers, and when it was looked up; [formats] is null when it has no video.
+class _VideoLookup {
+  _VideoLookup(this.formats, this.at);
+
+  final VideoFormats? formats;
+  final DateTime at;
+
+  Iterable<Uri> get urls => [
+    for (final c in [...?formats?.videos.map((v) => v.ref), ...?formats?.audios.map((a) => a.ref)])
       if (c is Map && c['url'] is String) Uri.parse(c['url'] as String),
   ];
 }

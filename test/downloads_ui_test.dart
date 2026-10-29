@@ -34,7 +34,7 @@ Future<void> _app(WidgetTester tester, Size size) async {
 void main() {
   testWidgets('phone: Downloads is its own bottom tab and opens the downloads page', (tester) async {
     await _app(tester, const Size(400, 800));
-    for (final label in ['Home', 'Search', 'Your Library', 'Downloads']) {
+    for (final label in ['Home', 'Search', 'Library', 'Downloads', 'Settings']) {
       expect(find.text(label), findsWidgets, reason: 'tab $label');
     }
     expect(find.textContaining('Nothing downloading'), findsNothing);
