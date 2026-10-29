@@ -59,6 +59,8 @@ add_subdirectory("runner")
 
 # Optional YouTube Music sign-in window; see login_helper/CMakeLists.txt.
 add_subdirectory("login_helper")
+# Optional Spotify sign-in window; see spotify_helper/CMakeLists.txt.
+add_subdirectory("spotify_helper")
 # Audio plugins through Carla; see carla_bridge/riflay_carla.cc.
 add_subdirectory("carla_bridge")
 
@@ -102,6 +104,10 @@ install(TARGETS ${BINARY_NAME} RUNTIME DESTINATION "${CMAKE_INSTALL_PREFIX}"
 # Installed here, after the bundle is wiped, rather than from login_helper/.
 if(TARGET riflay_login)
   install(TARGETS riflay_login RUNTIME DESTINATION "${CMAKE_INSTALL_PREFIX}"
+    COMPONENT Runtime)
+endif()
+if(TARGET riflay_spotify)
+  install(TARGETS riflay_spotify RUNTIME DESTINATION "${CMAKE_INSTALL_PREFIX}"
     COMPONENT Runtime)
 endif()
 install(TARGETS riflay_carla LIBRARY DESTINATION "${INSTALL_BUNDLE_LIB_DIR}"

@@ -2,16 +2,28 @@ import 'package:flutter/material.dart';
 
 import '../shell_scope.dart';
 import '../theme.dart';
+import 'app_logo.dart';
 import 'smooth_scroll.dart';
+import 'title_bar.dart' show hasCustomTitleBar;
 
 /// Scrolling page with a top colour wash and a sticky title bar that fades in on scroll.
 class PageScaffold extends StatefulWidget {
-  const PageScaffold({super.key, required this.slivers, this.gradientColor, this.title, this.actions = const []});
+  const PageScaffold({
+    super.key,
+    required this.slivers,
+    this.gradientColor,
+    this.title,
+    this.actions = const [],
+    this.brand = false,
+  });
 
   final List<Widget> slivers;
   final Color? gradientColor;
   final String? title;
   final List<Widget> actions;
+
+  /// The app's mark and name at the left of the bar, on phones (desktop windows have it in the title bar).
+  final bool brand;
 
   @override
   State<PageScaffold> createState() => _PageScaffoldState();
@@ -44,7 +56,8 @@ class _PageScaffoldState extends State<PageScaffold> {
     final canPop = ModalRoute.of(context)?.canPop ?? false;
     // Desktop: Back / Forward live in the title bar; the bar here only carries the title.
     final history = shell.history;
-    final showBar = history != null || canPop || widget.actions.isNotEmpty;
+    final brand = widget.brand && shell.compact && !hasCustomTitleBar;
+    final showBar = history != null || canPop || widget.actions.isNotEmpty || brand;
     final barOpacity = ((_offset - 180) / 80).clamp(0.0, 1.0);
     const barHeight = 56.0;
     final topInset = shell.compact ? MediaQuery.paddingOf(context).top : 0.0;
@@ -111,6 +124,15 @@ class _PageScaffoldState extends State<PageScaffold> {
                           icon: const Icon(Icons.chevron_left_rounded),
                         ),
                       const SizedBox(width: 8),
+                      if (brand) ...[
+                        const AppLogo(size: 22),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Riflay',
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(fontWeight: FontWeight.w800, letterSpacing: -0.3),
+                        ),
+                      ],
                       Expanded(
                         child: IgnorePointer(
                           child: Opacity(

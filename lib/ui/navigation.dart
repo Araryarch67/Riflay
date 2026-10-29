@@ -13,6 +13,7 @@ abstract final class Locations {
   static const listen = 'listen';
   static const settings = 'settings';
   static const library = 'library';
+  static const spotify = 'spotify';
 
   static String settingsTopic(String name) => 'settings:$name';
   static String collection(Collection c) => 'collection:${c.kind.name}:${c.title}';
