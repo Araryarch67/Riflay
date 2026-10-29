@@ -38,7 +38,7 @@ Riflay is a free, open-source music player for Linux, Windows, macOS, Android an
 |---|---|
 | **One library** | Local files, playlists and YouTube Music in a single library |
 | **Format support** | FLAC, ALAC, WAV, AIFF, MP3, AAC, Ogg, Opus, WavPack, APE, DSD, SACD ISO and cue sheets |
-| **YouTube Music** | Fully usable without an account. Sign in with Google to sync likes, playlists and history |
+| **YouTube Music** | Fully usable without an account. Sign in with Google to sync likes, playlists and history. Moods & genres, new releases, save albums and playlists to your library |
 | **Synced lyrics** | Line by line, with pronunciation and translation |
 | **Playlists** | Combine local files with YouTube songs. Import from Spotify, Apple Music or Deezer |
 | **Autoplay and radio** | Plays similar songs when the queue ends |
@@ -53,6 +53,7 @@ Riflay is a free, open-source music player for Linux, Windows, macOS, Android an
 | **Audio plugins** | VST, LV2 and CLAP through Carla (Linux, Windows, macOS) |
 | **Signal path** | Shows every processing stage from file to speaker |
 | **Play on TVs and speakers** | DLNA / UPnP and AirPlay |
+| **Listen together** | Friends play along with your YouTube songs, in sync. On the same Wi-Fi, or anywhere with a code (beta: connects through free public servers, end-to-end encrypted) |
 | **Tag editor** | Preserves ReplayGain and custom tags |
 | **Customization** | Catppuccin, Nord, Gruvbox, Dracula or your own colors. Any font and accent. Cover-art colors in the player or the whole app |
 | **Layout options** | Corners, spacing, cover size, Home sections, player and lyrics looks, animations |

@@ -60,6 +60,8 @@ dependencies:
   wakelock_plus: ^1.8.0
   dbus: ^0.7.15
   connectivity_plus: ^7.3.1
+  mqtt_client: ^10.14.0
+  typed_data: ^1.4.0
 
 dependency_overrides:
   # The real Linux implementation of flutter_inappwebview links WPE WebKit,

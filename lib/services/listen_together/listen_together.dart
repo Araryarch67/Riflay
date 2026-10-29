@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 
 import '../../models/track.dart';
 import '../player_controller.dart';
+import 'internet.dart';
 import 'lan.dart';
 import 'protocol.dart';
 import 'transport.dart';
@@ -80,10 +81,16 @@ class ListenTogether extends ChangeNotifier {
 
   final PlayerController player;
 
-  // Internet mode needs a relay server; planned for later.
-  static bool get internetAvailable => false;
+  /// Over the internet through public MQTT brokers (no server of ours). Shipped as Beta.
+  static bool get internetAvailable => true;
 
-  static const _internetUnavailable = 'Listening together over the internet isn\'t available yet.';
+  /// Which kind of session a code someone typed belongs to: 10 characters is the internet, 6 is the same Wi-Fi.
+  /// Null when it is neither.
+  static ListenMode? modeForCode(String input) => switch (normalizeCode(input)?.length) {
+    internetCodeLength => ListenMode.internet,
+    6 => ListenMode.wifi,
+    _ => null,
+  };
 
   ListenRole _role = ListenRole.none;
   ListenMode? _mode;
@@ -167,10 +174,11 @@ class ListenTogether extends ChangeNotifier {
 
   Future<void> host({required ListenMode mode, required String name}) async {
     if (_role != ListenRole.none || _busy) return;
-    if (mode == ListenMode.internet) _fail(_internetUnavailable);
     _busy = true;
     _problem = null;
-    final transport = LanHostTransport(name: name);
+    final ListenHostTransport transport = mode == ListenMode.internet
+        ? InternetHostTransport()
+        : LanHostTransport(name: name);
     try {
       await transport.start();
     } catch (e) {
@@ -179,7 +187,11 @@ class ListenTogether extends ChangeNotifier {
         await transport.stop();
       } catch (_) {}
       _busy = false;
-      _fail('Couldn\'t start a session. Check that you\'re connected to Wi-Fi.');
+      _fail(
+        mode == ListenMode.internet
+            ? const InternetUnreachable().message
+            : 'Couldn\'t start a session. Check that you\'re connected to Wi-Fi.',
+      );
     }
     _busy = false;
     _transport = transport;
@@ -325,15 +337,23 @@ class ListenTogether extends ChangeNotifier {
 
   Stream<List<FoundSession>> findNearby() => LanDiscovery.find();
 
+  /// Joins by code. The kind of session comes from the code itself ([modeForCode]); [mode] is ignored.
   Future<void> join({required String code, required String name, ListenMode mode = ListenMode.wifi}) async {
     if (_role != ListenRole.none || _busy) return;
-    if (mode == ListenMode.internet) _fail(_internetUnavailable);
+    final normalized = normalizeCode(code);
+    final over = normalized != null && normalized.length == internetCodeLength ? ListenMode.internet : ListenMode.wifi;
     _busy = true;
     _problem = null;
     notifyListeners();
     final ListenGuestConnection conn;
     try {
-      conn = await LanGuestConnection.connect(code);
+      conn = over == ListenMode.internet
+          ? await InternetGuestConnection.connect(normalized!)
+          : await LanGuestConnection.connect(code);
+    } on InternetException catch (e) {
+      debugPrint('Listen together: can\'t join: $e');
+      _busy = false;
+      _fail(e.message);
     } catch (e) {
       debugPrint('Listen together: can\'t join: $e');
       _busy = false;
@@ -342,8 +362,8 @@ class ListenTogether extends ChangeNotifier {
     final welcome = _welcome = Completer<Welcome>();
     _conn = conn;
     _ownName = name;
-    _code = normalizeLanCode(code);
-    _mode = mode;
+    _code = over == ListenMode.internet ? formatInternetCode(normalized!) : normalizeLanCode(code);
+    _mode = over;
     _lastVideoId = player.currentTrack?.videoId;
     _subs.add(
       conn.incoming.listen(
@@ -365,7 +385,7 @@ class ListenTogether extends ChangeNotifier {
       _hostName = w.hostName;
       _listeners = w.guests;
       _suggestionsAllowed = w.suggestionsAllowed;
-      _joinLink = lanJoinLink(_code!);
+      _joinLink = over == ListenMode.internet ? internetJoinLink(normalized!) : lanJoinLink(_code!);
       _watchOwnChanges();
       _startPings();
       notifyListeners();
@@ -425,8 +445,13 @@ class ListenTogether extends ChangeNotifier {
   void _onHostGone() {
     if (_role == ListenRole.none && _conn == null) return;
     if (_role == ListenRole.guest) {
+      final internet = _mode == ListenMode.internet;
       unawaited(_teardown());
-      _setProblem('Lost the connection to the host. Join again to keep listening.');
+      _setProblem(
+        internet
+            ? 'The session ended or the connection dropped.'
+            : 'Lost the connection to the host. Join again to keep listening.',
+      );
     }
   }
 

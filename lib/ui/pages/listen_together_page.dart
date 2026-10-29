@@ -88,6 +88,7 @@ class _ListenTogetherPageState extends State<ListenTogetherPage> {
   final _code = TextEditingController();
   bool _busy = false;
   String? _error;
+  ListenMode _mode = ListenMode.wifi;
 
   StreamSubscription<List<FoundSession>>? _search;
   List<FoundSession> _nearby = const [];
@@ -101,6 +102,7 @@ class _ListenTogetherPageState extends State<ListenTogetherPage> {
         .then((p) {
           final saved = p.getString('listen.name');
           if (saved != null && saved.trim().isNotEmpty && mounted) _name.text = saved;
+          if (p.getString('listen.mode') == 'internet' && mounted) setState(() => _mode = ListenMode.internet);
         })
         .catchError((Object _) {});
   }
@@ -169,7 +171,14 @@ class _ListenTogetherPageState extends State<ListenTogetherPage> {
     if (mounted) setState(() => _busy = false);
   }
 
-  Future<void> _start() => _run(() => _session!.host(mode: ListenMode.wifi, name: _who));
+  Future<void> _setMode(ListenMode mode) async {
+    setState(() => _mode = mode);
+    try {
+      (await SharedPreferences.getInstance()).setString('listen.mode', mode.name);
+    } catch (_) {}
+  }
+
+  Future<void> _start() => _run(() => _session!.host(mode: _mode, name: _who));
 
   Future<void> _join(String code) => _run(() => _session!.join(code: code, name: _who));
 
@@ -201,7 +210,20 @@ class _ListenTogetherPageState extends State<ListenTogetherPage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Listen together', style: text.headlineMedium?.copyWith(fontWeight: FontWeight.w800)),
+                        Row(
+                          children: [
+                            Flexible(
+                              child: Text(
+                                'Listen together',
+                                style: text.headlineMedium?.copyWith(fontWeight: FontWeight.w800),
+                              ),
+                            ),
+                            if (session.role == ListenRole.host && session.mode == ListenMode.internet) ...[
+                              const SizedBox(width: 10),
+                              const BetaBadge(),
+                            ],
+                          ],
+                        ),
                         const SizedBox(height: 16),
                         body,
                         if (problem != null) ...[
@@ -234,11 +256,12 @@ class _ListenTogetherPageState extends State<ListenTogetherPage> {
   Widget _idle(BuildContext context) {
     final text = Theme.of(context).textTheme;
     final muted = text.bodyMedium?.copyWith(color: AppColors.textSecondary);
-    final canCode = _code.text.trim().length == 6;
+    final canCode = ListenTogether.modeForCode(_code.text.trim()) != null;
+    final internet = _mode == ListenMode.internet;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Play YouTube songs together. Everyone needs to be on the same Wi-Fi.', style: muted),
+        Text('Play YouTube songs together with friends.', style: muted),
         const SizedBox(height: 20),
         TextField(
           controller: _name,
@@ -247,6 +270,32 @@ class _ListenTogetherPageState extends State<ListenTogetherPage> {
           onChanged: (_) => setState(() {}),
           onSubmitted: (_) => _saveName(),
           decoration: const InputDecoration(labelText: 'Your name', counterText: ''),
+        ),
+        const SizedBox(height: 20),
+        SizedBox(
+          width: double.infinity,
+          child: SegmentedButton<ListenMode>(
+            showSelectedIcon: false,
+            segments: const [
+              ButtonSegment(value: ListenMode.wifi, label: Text('Same Wi-Fi')),
+              ButtonSegment(
+                value: ListenMode.internet,
+                label: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [Text('Anywhere'), SizedBox(width: 8), BetaBadge()],
+                ),
+              ),
+            ],
+            selected: {_mode},
+            onSelectionChanged: _busy ? null : (v) => _setMode(v.first),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          internet
+              ? "Connects through free public servers. Everything is encrypted, but it's new and can sometimes fail to connect."
+              : 'Everyone needs to be on the same Wi-Fi.',
+          style: muted,
         ),
         const SizedBox(height: 20),
         SizedBox(
@@ -265,6 +314,8 @@ class _ListenTogetherPageState extends State<ListenTogetherPage> {
         const SizedBox(height: 32),
         Text('Join', style: text.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
         const SizedBox(height: 12),
+        Text('On this Wi-Fi', style: text.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+        const SizedBox(height: 8),
         if (_nearby.isEmpty)
           Text('Looking for sessions on this network…', style: muted)
         else
@@ -288,13 +339,13 @@ class _ListenTogetherPageState extends State<ListenTogetherPage> {
             Expanded(
               child: TextField(
                 controller: _code,
-                maxLength: 6,
+                maxLength: 11,
                 textCapitalization: TextCapitalization.characters,
-                inputFormatters: [FilteringTextInputFormatter.allow(RegExp('[A-Za-z0-9]')), _UpperCase()],
-                style: const TextStyle(letterSpacing: 6, fontWeight: FontWeight.w700),
+                inputFormatters: [FilteringTextInputFormatter.allow(RegExp('[A-Za-z0-9-]')), _UpperCase()],
+                style: const TextStyle(letterSpacing: 4, fontWeight: FontWeight.w700),
                 onChanged: (_) => setState(() {}),
                 onSubmitted: (_) => canCode && !_busy ? _join(_code.text.trim()) : null,
-                decoration: const InputDecoration(hintText: 'ABC123', counterText: ''),
+                decoration: const InputDecoration(hintText: 'ABC123 or ABCDE-FGHJK', counterText: ''),
               ),
             ),
             const SizedBox(width: 12),
@@ -320,10 +371,14 @@ class _ListenTogetherPageState extends State<ListenTogetherPage> {
     final muted = text.bodyMedium?.copyWith(color: AppColors.textSecondary);
     final code = s.code ?? '';
     final link = s.joinLink;
+    final internet = s.mode == ListenMode.internet;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Friends on the same Wi-Fi can join with this code.', style: muted),
+        Text(
+          internet ? 'Friends anywhere can join with this code.' : 'Friends on the same Wi-Fi can join with this code.',
+          style: muted,
+        ),
         const SizedBox(height: 16),
         Row(
           children: [
@@ -331,8 +386,9 @@ class _ListenTogetherPageState extends State<ListenTogetherPage> {
               child: FittedBox(
                 fit: BoxFit.scaleDown,
                 child: SelectableText(
-                  _spaced(code),
-                  style: text.displaySmall?.copyWith(fontWeight: FontWeight.w800, letterSpacing: 4),
+                  internet ? code : _spaced(code),
+                  maxLines: 1,
+                  style: text.displaySmall?.copyWith(fontWeight: FontWeight.w800, letterSpacing: internet ? 2 : 4),
                 ),
               ),
             ),
@@ -389,7 +445,19 @@ class _ListenTogetherPageState extends State<ListenTogetherPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Listening with $host', style: text.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
+        Row(
+          children: [
+            Flexible(
+              child: Text(
+                'Listening with $host',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: text.titleLarge?.copyWith(fontWeight: FontWeight.w800),
+              ),
+            ),
+            if (s.mode == ListenMode.internet) ...[const SizedBox(width: 8), const BetaBadge()],
+          ],
+        ),
         const SizedBox(height: 16),
         if (now == null)
           Text('Waiting for $host to play something.', style: muted)
@@ -470,6 +538,26 @@ class _SongTile extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// A quiet outlined "Beta" pill.
+class BetaBadge extends StatelessWidget {
+  const BetaBadge({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 1),
+      decoration: BoxDecoration(
+        border: Border.all(color: AppColors.textMuted),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        'Beta',
+        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.textSecondary, height: 1.3),
       ),
     );
   }
