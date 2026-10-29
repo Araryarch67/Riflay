@@ -29,19 +29,30 @@ ios_min=15.0
 sources=(
   "ffmpeg https://ffmpeg.org/releases/ffmpeg-6.1.1.tar.xz 8684f4b00f94b85461884c3719382f1261f0d9eb3d59640a1f4ac0873616f968"
   "mbedtls https://github.com/Mbed-TLS/mbedtls/releases/download/mbedtls-3.6.2/mbedtls-3.6.2.tar.bz2 8b54fb9bcf4d5a7078028e0520acddefb7900b3e66fec7f7175bb5b7d85ccdca"
-  "freetype https://download.savannah.gnu.org/releases/freetype/freetype-2.13.2.tar.xz 12991c4e55c506dd7f9b765933e62fd2be2e06d421505d7950a132e4f1bb484d"
+  "freetype https://download.savannah.gnu.org/releases/freetype/freetype-2.13.2.tar.xz|https://downloads.sourceforge.net/project/freetype/freetype2/2.13.2/freetype-2.13.2.tar.xz 12991c4e55c506dd7f9b765933e62fd2be2e06d421505d7950a132e4f1bb484d"
   "fribidi https://github.com/fribidi/fribidi/releases/download/v1.0.13/fribidi-1.0.13.tar.xz 7fa16c80c81bd622f7b198d31356da139cc318a63fc7761217af4130903f54a2"
   "harfbuzz https://github.com/harfbuzz/harfbuzz/releases/download/8.3.0/harfbuzz-8.3.0.tar.xz 109501eaeb8bde3eadb25fab4164e993fbace29c3d775bcaa1c1e58e2f15f847"
   "libass https://github.com/libass/libass/releases/download/0.17.1/libass-0.17.1.tar.xz f0da0bbfba476c16ae3e1cfd862256d30915911f7abaa1b16ce62ee653192784"
   "mpv https://github.com/mpv-player/mpv/archive/652a1dd90711839acdccc08004056d25514ef2d8.tar.gz 926dce4dfb918cbbac603ad5d453d453d0036d1e00e77baaf5d76ca99ce7a419"
 )
 
-fetch() { # name url sha256
-  local name=$1 url=$2 sum=$3
+fetch() { # name url[|mirror...] sha256
+  local name=$1 urls=$2 sum=$3
   local file=$root/dl/$name-$sum
   if [[ ! -d $root/src/$name ]]; then
     mkdir -p "$root/dl" "$root/src/$name"
-    [[ -f $file ]] || curl -fsSL -o "$file" "$url"
+    if [[ ! -f $file ]]; then
+      # Release servers sometimes reset connections from CI machines: retry, then try the next mirror.
+      local url ok=
+      IFS='|' read -ra list <<< "$urls"
+      for url in "${list[@]}"; do
+        if curl -fsSL --retry 5 --retry-all-errors --retry-delay 10 --connect-timeout 30 -o "$file.part" "$url"; then
+          mv "$file.part" "$file" && ok=1 && break
+        fi
+        echo "Couldn't download $url, trying the next source" >&2
+      done
+      [[ -n $ok ]] || { echo "Couldn't download $name" >&2; exit 1; }
+    fi
     echo "$sum  $file" | shasum -a 256 -c --quiet
     tar -xf "$file" -C "$root/src/$name" --strip-components=1
   fi
