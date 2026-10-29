@@ -193,8 +193,9 @@ EOF
     # which needs gl-cocoa).
     outputs="-Dcocoa=enabled -Dcoreaudio=enabled -Daudiounit=disabled -Dgl=enabled -Dgl-cocoa=enabled -Dplain-gl=enabled -Dvideotoolbox-gl=enabled -Dios-gl=disabled"
   else
-    # The same on iOS with OpenGL ES (ios-gl takes the VideoToolbox frames).
-    outputs="-Dcocoa=disabled -Dcoreaudio=disabled -Daudiounit=enabled -Dgl=enabled -Dgl-cocoa=disabled -Dplain-gl=enabled -Dvideotoolbox-gl=enabled -Dios-gl=enabled"
+    # The same on iOS with OpenGL ES. VideoToolbox decodes; its frames are copied for GL (videotoolbox-gl builds
+    # macOS-only IOSurface code in this mpv).
+    outputs="-Dcocoa=disabled -Dcoreaudio=disabled -Daudiounit=enabled -Dgl=enabled -Dgl-cocoa=disabled -Dplain-gl=enabled -Dvideotoolbox-gl=disabled -Dios-gl=enabled"
   fi
   # What the video output and VideoToolbox link against (the static libraries' own list may not carry it over).
   local video_frameworks="-framework VideoToolbox -framework CoreMedia -framework CoreVideo -framework CoreFoundation"
