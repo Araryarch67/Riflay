@@ -52,11 +52,21 @@ class LrcCheck {
 
 /// Lyrics for a song: timed lines when available, plain text otherwise.
 class Lyrics {
-  const Lyrics({this.lines = const [], this.plain, this.instrumental = false, required this.source});
+  const Lyrics({
+    this.lines = const [],
+    this.plain,
+    this.instrumental = false,
+    required this.source,
+    this.otherVersion = false,
+  });
 
   final List<LyricLine> lines;
   final String? plain;
   final bool instrumental;
+
+  /// Timed for another recording of the song (a different length, such as a
+  /// music video with an intro): the lines may come early or late.
+  final bool otherVersion;
 
   /// Where they came from, shown under the lyrics ("LRCLIB", "Embedded in the file"...).
   final String source;
@@ -509,7 +519,7 @@ abstract final class LyricsService {
           same = match.song;
           // Timed lines only fit the same recording; another one gets the words alone.
           if (await search(match.song) case final l?) {
-            return (lyrics: match.sameLength ? l : _unsynced(l), missed: false);
+            return (lyrics: match.sameLength ? l : _otherVersion(l), missed: false);
           }
         }
       } catch (e) {
@@ -540,10 +550,9 @@ abstract final class LyricsService {
   static bool _timed(Lyrics? l) =>
       l != null && l.lines.where((line) => line.text.isNotEmpty).length >= (l.source == 'LRCLIB' ? 4 : 1);
 
-  /// Lines of another recording, as words without times.
-  static Lyrics _unsynced(Lyrics l) => l.plain != null
-      ? Lyrics(plain: l.plain, source: l.source)
-      : Lyrics(plain: [for (final line in l.lines) line.text].join('\n').trim(), source: l.source);
+  /// Lines of another recording: still timed, marked so the person can nudge them into place.
+  static Lyrics _otherVersion(Lyrics l) =>
+      Lyrics(lines: l.lines, plain: l.plain, instrumental: l.instrumental, source: l.source, otherVersion: l.synced);
 
   /// The song YouTube Music's catalogue has under the upload's words: its
   /// title has to be in the upload's title, and the artist named there or the
@@ -882,6 +891,36 @@ abstract final class UserLyrics {
   }
 }
 
+/// How much later (or, negative, earlier) the person wants a song's timed
+/// lyrics, kept per song: another version of a song can start sooner or later.
+abstract final class LyricsTiming {
+  static final _shifts = <String, ValueNotifier<Duration>>{};
+
+  static String _key(Track track) => 'lyrics.shift.${UserLyrics.keyOf(track)}';
+
+  /// The shift for [track]; zero until the saved one is read.
+  static ValueNotifier<Duration> of(Track track) {
+    final key = _key(track);
+    if (_shifts[key] case final known?) return known;
+    final shift = _shifts[key] = ValueNotifier(Duration.zero);
+    SharedPreferences.getInstance().then((prefs) {
+      if (prefs.getInt(key) case final ms?) shift.value = Duration(milliseconds: ms);
+    }, onError: (Object e) => debugPrint('Lyrics timing: could not read: $e'));
+    return shift;
+  }
+
+  static Future<void> set(Track track, Duration shift) async {
+    of(track).value = shift;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final key = _key(track);
+      shift == Duration.zero ? await prefs.remove(key) : await prefs.setInt(key, shift.inMilliseconds);
+    } catch (e) {
+      debugPrint('Lyrics timing: could not save: $e');
+    }
+  }
+}
+
 /// Lyrics found online, kept on disk so the next look (even after a restart)
 /// doesn't ask the sites again. One JSON file per song; the newest few hundred stay.
 abstract final class LyricsCache {
@@ -905,6 +944,7 @@ abstract final class LyricsCache {
     'source': l.source,
     'plain': l.plain,
     'instrumental': l.instrumental,
+    if (l.otherVersion) 'otherVersion': true,
     'lines': [
       for (final line in l.lines)
         {
@@ -923,6 +963,7 @@ abstract final class LyricsCache {
     source: j['source'] as String? ?? '',
     plain: j['plain'] as String?,
     instrumental: j['instrumental'] == true,
+    otherVersion: j['otherVersion'] == true,
     lines: [
       for (final line in (j['lines'] as List? ?? const []).cast<Map<String, dynamic>>())
         LyricLine(

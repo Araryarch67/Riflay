@@ -141,7 +141,7 @@ void main() {
     expect(l.source, 'YouTube Music (Musixmatch)');
   });
 
-  test('another recording of the song gets its words, without times that wouldn\'t fit', () async {
+  test('another recording of the song keeps its times, marked as another version', () async {
     final other = Track.youtube(
       videoId: 'upload00002',
       title: upload.title,
@@ -149,8 +149,9 @@ void main() {
       duration: const Duration(minutes: 3, seconds: 40), // 30 s longer: a live take
     );
     final l = await http.runWithClient(() => LyricsService.forTrack(other), () => _services(catalogue('3:10')));
-    expect(l.synced, isFalse);
-    expect(l.plain, contains('I walk a lonely road'));
+    expect(l.synced, isTrue);
+    expect(l.otherVersion, isTrue, reason: 'the lines may run early or late: the person can shift them');
+    expect(l.lines.map((x) => x.text), contains('I walk a lonely road'));
   });
 
   test('a song with only a few words still has lyrics', () async {

@@ -172,7 +172,7 @@ class _LyricsLoaderState extends State<_LyricsLoader> {
         );
       }
       return FadeIn(
-        child: lyrics.synced ? _SyncedLyrics(lyrics: lyrics) : _PlainLyrics(lyrics: lyrics),
+        child: lyrics.synced ? _SyncedLyrics(track: widget.track, lyrics: lyrics) : _PlainLyrics(lyrics: lyrics),
       );
     },
   );
@@ -235,11 +235,13 @@ class LyricsExtrasButtonsState extends State<LyricsExtrasButtons> {
             icon: const Icon(Icons.more_vert_rounded),
             onSelected: (v) => switch (v) {
               'copy' => copyLyrics(context, l),
+              'timing' => showLyricsTiming(context, widget.track),
               'use' => useMyLyricsFile(context, widget.track),
               _ => removeMyLyrics(context, widget.track),
             },
             itemBuilder: (_) => [
               if (has) const PopupMenuItem(value: 'copy', child: Text('Copy lyrics')),
+              if (l.synced) const PopupMenuItem(value: 'timing', child: Text('Adjust timing')),
               const PopupMenuItem(value: 'use', child: Text('Use my lyrics file')),
               if (l.source == _userLyricsSource) const PopupMenuItem(value: 'remove', child: Text('Remove my lyrics')),
             ],
@@ -320,6 +322,88 @@ Future<void> removeMyLyrics(BuildContext context, Track track) async {
   } catch (e) {
     debugPrint('Remove lyrics: $e');
     messenger?.showSnackBar(const SnackBar(content: Text('Couldn\'t remove your lyrics.')));
+  }
+}
+
+/// "Earlier" / "Later" for a song's timed lyrics, saved for that song.
+Future<void> showLyricsTiming(BuildContext context, Track track) => showModalBottomSheet<void>(
+  context: context,
+  useRootNavigator: true,
+  useSafeArea: true,
+  backgroundColor: AppColors.elevated,
+  shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
+  builder: (context) => LyricsTimingSheet(track: track),
+);
+
+/// The controls of [showLyricsTiming]: half a second a step.
+class LyricsTimingSheet extends StatelessWidget {
+  const LyricsTimingSheet({super.key, required this.track});
+
+  final Track track;
+
+  static const step = Duration(milliseconds: 500);
+
+  /// "On time", "1.5 s later", "0.5 s earlier".
+  static String describe(Duration shift) {
+    if (shift == Duration.zero) return 'On time';
+    final seconds = (shift.inMilliseconds.abs() / 1000).toStringAsFixed(1);
+    return shift.isNegative ? '$seconds s earlier' : '$seconds s later';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    final shift = LyricsTiming.of(track);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
+      child: ValueListenableBuilder<Duration>(
+        valueListenable: shift,
+        builder: (context, now, _) => Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text('Adjust timing', style: text.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
+            const SizedBox(height: 4),
+            Text(
+              'If the lyrics come too early or too late, move them until they match the song.',
+              style: text.bodySmall?.copyWith(color: Colors.white70),
+            ),
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => LyricsTiming.set(track, shift.value - step),
+                    child: const Text('Earlier'),
+                  ),
+                ),
+                Expanded(
+                  child: Text(
+                    describe(now),
+                    key: const ValueKey('lyrics-timing'),
+                    textAlign: TextAlign.center,
+                    style: text.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+                  ),
+                ),
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => LyricsTiming.set(track, shift.value + step),
+                    child: const Text('Later'),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Align(
+              child: TextButton(
+                onPressed: now == Duration.zero ? null : () => LyricsTiming.set(track, Duration.zero),
+                child: const Text('Reset'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 
@@ -507,8 +591,9 @@ class _PlainLyricsState extends State<_PlainLyrics> with _Extras {
 
 /// The synced lyrics of the playing song, wired to the player.
 class _SyncedLyrics extends StatefulWidget {
-  const _SyncedLyrics({required this.lyrics});
+  const _SyncedLyrics({required this.track, required this.lyrics});
 
+  final Track track;
   final Lyrics lyrics;
 
   @override
@@ -517,18 +602,21 @@ class _SyncedLyrics extends StatefulWidget {
 
 class _SyncedLyricsState extends State<_SyncedLyrics> {
   late final PlayerController _c = PlayerScope.read(context);
-  late final Stream<Duration> _ticks = _c.positionUpdates();
-  late final Stream<Duration> _smooth = _c.smoothPosition();
+  // The person's shift for this song: lyrics a second later are where the song was a second ago.
+  late final ValueNotifier<Duration> _shift = LyricsTiming.of(widget.track);
+  late final Stream<Duration> _ticks = _c.positionUpdates().map((p) => p - _shift.value);
+  late final Stream<Duration> _smooth = _c.smoothPosition().map((p) => p - _shift.value);
 
   @override
   Widget build(BuildContext context) => SyncedLyricsView(
     lyrics: widget.lyrics,
     ticks: _ticks,
     smoothTicks: _smooth,
-    position: () => _c.position,
+    position: () => _c.position - _shift.value,
     length: () => _c.currentTrack?.duration ?? _c.duration,
     onSeek: (to) {
-      _c.seek(to);
+      final at = to + _shift.value;
+      _c.seek(at.isNegative ? Duration.zero : at);
       if (!_c.isPlaying) _c.play();
     },
   );
@@ -707,6 +795,16 @@ class _SyncedLyricsViewState extends State<SyncedLyricsView> with _Extras {
                     child: Column(
                       crossAxisAlignment: _centred ? CrossAxisAlignment.stretch : CrossAxisAlignment.start,
                       children: [
+                        if (widget.lyrics.otherVersion)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 16),
+                            child: Text(
+                              'Timed for another version of this song. If they run early or late, use Adjust timing in the menu.',
+                              key: const ValueKey('lyrics-other-version'),
+                              textAlign: _textAlign,
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.white54),
+                            ),
+                          ),
                         for (var i = 0; i < lines.length; i++)
                           _Line(
                             key: _keys[i],

@@ -5,6 +5,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:riflay/models/track.dart';
 import 'package:riflay/services/layout_prefs.dart';
 import 'package:riflay/services/lyrics.dart';
@@ -286,5 +287,39 @@ void main() {
       await tester.pump();
       expect(await tester.runAsync(() => UserLyrics.read(track)), isNull);
     });
+  });
+  testWidgets('lyrics timed for another version say so', (tester) async {
+    await pump(
+      tester,
+      const Lyrics(lines: [LyricLine(Duration(seconds: 1), 'Line 0')], source: 'Kugou', otherVersion: true),
+    );
+    expect(find.byKey(const ValueKey('lyrics-other-version')), findsOneWidget);
+  });
+
+  testWidgets('Adjust timing moves a song\'s lyrics half a second a step, and keeps it', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final track = Track.youtube(videoId: 'shift000001', title: 'Song', artist: 'Artist');
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(body: LyricsTimingSheet(track: track)),
+      ),
+    );
+    String shown() => tester.widget<Text>(find.byKey(const ValueKey('lyrics-timing'))).data!;
+    expect(shown(), 'On time');
+    await tester.tap(find.text('Later'));
+    await tester.tap(find.text('Later'));
+    await tester.pump();
+    expect(shown(), '1.0 s later');
+    await tester.tap(find.text('Earlier'));
+    await tester.tap(find.text('Earlier'));
+    await tester.tap(find.text('Earlier'));
+    await tester.pump();
+    expect(shown(), '0.5 s earlier');
+    expect(LyricsTiming.of(track).value, const Duration(milliseconds: -500));
+    final prefs = await tester.runAsync(SharedPreferences.getInstance);
+    expect(prefs!.getInt('lyrics.shift.shift000001'), -500);
+    await tester.tap(find.text('Reset'));
+    await tester.pump();
+    expect(shown(), 'On time');
   });
 }
