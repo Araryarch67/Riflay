@@ -76,7 +76,12 @@ class _DownloadSettingsState extends State<DownloadSettings> {
                   value: _prefs.format,
                   options: [
                     for (final f in DownloadFormat.values)
-                      if (!f.lossless || YoutubeImporter.canMakeFlac || _prefs.format.lossless) (f, f.label),
+                      if (switch (f) {
+                        DownloadFormat.flac => YoutubeImporter.canMakeFlac || _prefs.format == f,
+                        DownloadFormat.mp3 => YoutubeImporter.canMakeMp3 || _prefs.format == f,
+                        _ => true,
+                      })
+                        (f, f.label),
                   ],
                   onChanged: _prefs.setFormat,
                 ),
@@ -99,7 +104,7 @@ class _DownloadSettingsState extends State<DownloadSettings> {
                   subtitle: Text(_bitrateAbout(_prefs.kbpsFor(_prefs.format)), style: muted),
                   control: OptionPicker<int?>(
                     value: _prefs.kbpsFor(_prefs.format),
-                    options: [for (final k in _prefs.format.bitrates) (k, bitrateLabel(k))],
+                    options: [for (final k in _prefs.format.bitrates) (k, bitrateLabelFor(_prefs.format, k))],
                     onChanged: (k) => _prefs.setKbps(_prefs.format, k),
                   ),
                 ),

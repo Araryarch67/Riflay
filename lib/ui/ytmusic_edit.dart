@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../models/track.dart';
+import '../services/download_prefs.dart';
 import '../services/player_controller.dart';
 import '../services/youtube_importer.dart';
 import '../services/youtube_music_account.dart';
@@ -575,18 +576,40 @@ class DownloadButton extends StatelessWidget {
             ),
           );
         }
-        return IconButton(
-          tooltip: job?.status == DownloadStatus.failed ? 'Download failed, try again' : 'Download',
-          iconSize: size,
-          color: job?.status == DownloadStatus.failed ? Theme.of(context).colorScheme.error : color,
-          onPressed: () async {
-            final messenger = ScaffoldMessenger.of(context);
-            final choice = await chooseDownload(context);
-            if (choice == null) return;
-            c.youtube.enqueueTracks([track], choice: choice);
-            messenger.showSnackBar(SnackBar(content: Text('Downloading ${track.title}…')));
-          },
-          icon: Icon(job?.status == DownloadStatus.failed ? Icons.error_outline_rounded : Icons.download_rounded),
+        final failed = job?.status == DownloadStatus.failed;
+        final prefs = DownloadPrefs.instance..load().ignore();
+        // Hold: download now in the saved format, never asking. The tooltip stays hover-only so a touch
+        // long-press means this, not "show the tooltip".
+        return ListenableBuilder(
+          listenable: prefs,
+          builder: (context, _) => Tooltip(
+            message: failed
+                ? 'Download failed, try again'
+                : 'Download\nHold to download now as ${describeChoice(prefs.choice)}',
+            triggerMode: TooltipTriggerMode.manual,
+            child: GestureDetector(
+              behavior: HitTestBehavior.deferToChild,
+              onLongPress: () async {
+                final messenger = ScaffoldMessenger.of(context);
+                await prefs.load();
+                final choice = prefs.choice;
+                c.youtube.enqueueTracks([track], choice: choice);
+                messenger.showSnackBar(SnackBar(content: Text('Downloading in ${describeChoice(choice)}…')));
+              },
+              child: IconButton(
+                iconSize: size,
+                color: failed ? Theme.of(context).colorScheme.error : color,
+                onPressed: () async {
+                  final messenger = ScaffoldMessenger.of(context);
+                  final choice = await chooseDownload(context, videoId: track.videoId);
+                  if (choice == null) return;
+                  c.youtube.enqueueTracks([track], choice: choice);
+                  messenger.showSnackBar(SnackBar(content: Text('Downloading ${track.title}…')));
+                },
+                icon: Icon(failed ? Icons.error_outline_rounded : Icons.download_rounded),
+              ),
+            ),
+          ),
         );
       },
     );

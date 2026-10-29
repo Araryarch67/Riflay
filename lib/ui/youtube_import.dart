@@ -5,6 +5,7 @@ import 'package:youtube_explode_dart/youtube_explode_dart.dart' show Video;
 import '../services/download_prefs.dart';
 import '../services/player_controller.dart';
 import '../services/youtube_importer.dart';
+import '../services/youtube_links.dart';
 import 'download_options.dart';
 import 'theme.dart';
 import 'widgets/controls.dart';
@@ -80,7 +81,7 @@ class _ImportFormState extends State<_ImportForm> {
   /// Saves a step: if the clipboard already holds a YouTube link, use it.
   Future<void> _pasteIfYoutube() async {
     final text = (await Clipboard.getData(Clipboard.kTextPlain))?.text?.trim();
-    if (!mounted || text == null || _url.text.isNotEmpty || !YoutubeImporter.looksLikeYoutubeUrl(text)) return;
+    if (!mounted || text == null || _url.text.isNotEmpty || !YoutubeLinks.looksLikeLink(text)) return;
     _url.text = text;
     _resolve();
   }
@@ -99,10 +100,12 @@ class _ImportFormState extends State<_ImportForm> {
       setState(() => _preview = _error = null);
       return;
     }
-    if (!YoutubeImporter.looksLikeYoutubeUrl(text)) {
+    // The paste field also takes a bare video id; clipboard auto-detect never does.
+    final link = YoutubeLinks.parse(text, allowBareId: true);
+    if (link == null) {
       setState(() {
         _preview = null;
-        _error = 'Paste a youtube.com or youtu.be link to a video or playlist.';
+        _error = 'Paste a YouTube link to a video or playlist.';
       });
       return;
     }
@@ -111,7 +114,7 @@ class _ImportFormState extends State<_ImportForm> {
       _error = null;
     });
     try {
-      final preview = await PlayerScope.read(context).youtube.resolve(text);
+      final preview = await PlayerScope.read(context).youtube.resolve(link.canonicalUrl);
       if (!mounted || lookup != _lookup) return;
       setState(() => _preview = preview);
     } catch (e) {
@@ -162,7 +165,7 @@ class _ImportFormState extends State<_ImportForm> {
             textInputAction: TextInputAction.go,
             onSubmitted: (_) => _resolve(),
             onChanged: (v) {
-              if (YoutubeImporter.looksLikeYoutubeUrl(v)) _resolve();
+              if (YoutubeLinks.looksLikeLink(v)) _resolve();
             },
             decoration: InputDecoration(
               hintText: 'https://youtube.com/watch?v=…',

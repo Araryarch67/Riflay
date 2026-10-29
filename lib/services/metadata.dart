@@ -29,6 +29,10 @@ class TagEdit {
   int? discNumber;
   String? genre;
 
+  /// A free comment (a download's YouTube link). Unlike the fields above, null keeps whatever the file has.
+  /// Written for Ogg/Opus and MP3; the in-process M4A and FLAC writers have no comment field.
+  String? comment;
+
   /// New front cover (replaces every embedded picture); null keeps the current one.
   Uint8List? cover;
   String coverMime = 'image/jpeg';
@@ -172,6 +176,25 @@ abstract final class Metadata {
     _accents.remove(_artKey(updated));
     _coverColors.remove(_artKey(updated));
     return updated;
+  }
+
+  /// Writes [edit] into the file at [path] (a download that was just made), on a copy that replaces it only
+  /// when it reads back right. Nothing else about the file changes. Throws when it can't be tagged.
+  static Future<void> tagFile(String path, TagEdit edit) async {
+    final dot = path.lastIndexOf('.');
+    final temp = File('${path.substring(0, dot)}.riflay-tmp${path.substring(dot)}');
+    try {
+      if (_inProcess.contains(_ext(path))) {
+        await Isolate.run(() => _writeInProcess(path, temp, edit));
+      } else if (TagWriter.formats.contains(_ext(path))) {
+        await Isolate.run(() => _writeWithTagWriter(path, temp, edit));
+      } else {
+        throw UnsupportedTagLayout('.${_ext(path)}');
+      }
+      await temp.rename(path);
+    } finally {
+      if (temp.existsSync()) temp.deleteSync();
+    }
   }
 
   static void _writeInProcess(String path, File temp, TagEdit edit) {

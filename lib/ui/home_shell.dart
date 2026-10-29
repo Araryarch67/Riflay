@@ -25,7 +25,7 @@ import 'widgets/power_settings.dart';
 import 'shortcuts.dart';
 import 'theme.dart';
 import 'youtube_import.dart';
-import '../services/youtube_importer.dart';
+import '../services/youtube_links.dart';
 import '../services/listen_together/listen_together.dart';
 import 'pages/listen_together_page.dart';
 import 'widgets/smooth_scroll.dart';
@@ -317,7 +317,7 @@ class _HomeShellState extends State<HomeShell> {
   /// Ctrl/Cmd+V anywhere outside a text field: a copied YouTube link opens the importer.
   Future<void> _pasteLink() async {
     final text = (await Clipboard.getData(Clipboard.kTextPlain))?.text?.trim();
-    if (text != null && YoutubeImporter.looksLikeYoutubeUrl(text)) await _importFromYoutube(url: text);
+    if (text != null && YoutubeLinks.looksLikeLink(text)) await _importFromYoutube(url: text);
   }
 
   /// Full-screen routes of the phone layout (now playing, queue, lyrics).

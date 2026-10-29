@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../models/track.dart';
 import '../../services/player_controller.dart';
 import '../../services/youtube_music_account.dart';
+import '../../services/youtube_video_search.dart';
 import '../../services/ytmusic_web.dart' show WebResultKind;
 import 'youtube_music_page.dart' show openRemotePlaylist, playlistCover;
 import '../shell_scope.dart';
@@ -80,12 +81,23 @@ class _SearchPageState extends State<SearchPage> {
   WebResultKind? _filter;
   Future<List<RemotePlaylist>>? _only;
 
+  /// "Videos": plain YouTube instead of YouTube Music songs.
+  bool _videos = false;
+  YoutubeVideoSearch? _videoSearch;
+  List<Track> _videoTracks = const [];
+  bool _videoLoading = false;
+  bool _videoFailed = false;
+  bool _videoLoadingMore = false;
+  bool _videoEnd = false;
+  int _videoRun = 0;
+
   /// The last results shown: they stay (dimmed) while the next query loads, instead of flashing a spinner.
   List<Track> _shown = const [];
 
   @override
   void dispose() {
     _debounce?.cancel();
+    _videoSearch?.dispose();
     if (widget.input case final input?) {
       input.controller.removeListener(_fromBar);
       input.submitted.removeListener(_submittedFromBar);
@@ -100,7 +112,12 @@ class _SearchPageState extends State<SearchPage> {
     _debounce?.cancel();
     final q = value.trim();
     if (q.length < 2) {
-      setState(() => _youtube = _all = _only = null);
+      _videoRun++;
+      setState(() {
+        _youtube = _all = _only = null;
+        _videoTracks = const [];
+        _videoLoading = false;
+      });
       return;
     }
     // Debounced: only hit YouTube once typing pauses.
@@ -122,10 +139,75 @@ class _SearchPageState extends State<SearchPage> {
   }
 
   void _searchYoutube(String q) {
+    if (_videos) return _searchVideos(q);
     final c = PlayerScope.read(context);
     _youtube = c.searchYoutube(q);
     _all = c.ytMusic.search(q);
     _only = _filter == null || _filter == WebResultKind.song ? null : c.ytMusic.searchOnly(q, _filter!);
+  }
+
+  void _searchVideos(String q) {
+    final run = ++_videoRun;
+    final search = _videoSearch ??= YoutubeVideoSearch();
+    _videoLoading = true;
+    _videoFailed = false;
+    _videoLoadingMore = false;
+    _videoEnd = false;
+    search
+        .search(q)
+        .then(
+          (tracks) {
+            if (!mounted || run != _videoRun) return;
+            setState(() {
+              _videoTracks = tracks;
+              _videoLoading = false;
+              _videoEnd = !search.hasMore;
+            });
+          },
+          onError: (Object e) {
+            debugPrint('Video search failed: $e');
+            if (!mounted || run != _videoRun) return;
+            setState(() {
+              _videoTracks = const [];
+              _videoLoading = false;
+              _videoFailed = true;
+            });
+          },
+        );
+  }
+
+  /// The end of the list scrolled into view: fetch the next page.
+  Future<void> _moreVideos() async {
+    final search = _videoSearch;
+    if (search == null || _videoLoadingMore || _videoLoading || _videoEnd) return;
+    _videoLoadingMore = true;
+    final run = _videoRun;
+    try {
+      final more = await search.more();
+      if (!mounted || run != _videoRun) return;
+      setState(() {
+        _videoTracks = [..._videoTracks, ...more];
+        _videoEnd = more.isEmpty || !search.hasMore;
+      });
+    } catch (e) {
+      debugPrint('More videos failed: $e');
+      if (mounted && run == _videoRun) setState(() => _videoEnd = true);
+    } finally {
+      if (run == _videoRun) _videoLoadingMore = false;
+    }
+  }
+
+  void _setVideos(bool videos) {
+    if (videos == _videos) return;
+    setState(() {
+      _videos = videos;
+      final q = _query.trim();
+      if (q.length >= 2) {
+        _searchYoutube(q);
+      } else {
+        _videoRun++;
+      }
+    });
   }
 
   void _setFilter(WebResultKind? f) {
@@ -175,20 +257,35 @@ class _SearchPageState extends State<SearchPage> {
                   ),
                 if (searching) ...[
                   if (widget.input == null) const SizedBox(height: 16),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      for (final (label, kind) in const [
-                        ('All', null),
-                        ('Songs', WebResultKind.song),
-                        ('Artists', WebResultKind.artist),
-                        ('Albums', WebResultKind.album),
-                        ('Playlists', WebResultKind.playlist),
-                      ])
-                        FilterChip(label: Text(label), selected: _filter == kind, onSelected: (_) => _setFilter(kind)),
+                  SegmentedButton<bool>(
+                    showSelectedIcon: false,
+                    segments: const [
+                      ButtonSegment(value: false, label: Text('Songs')),
+                      ButtonSegment(value: true, label: Text('Videos')),
                     ],
+                    selected: {_videos},
+                    onSelectionChanged: (s) => _setVideos(s.first),
                   ),
+                  if (!_videos) const SizedBox(height: 12),
+                  if (!_videos)
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        for (final (label, kind) in const [
+                          ('All', null),
+                          ('Songs', WebResultKind.song),
+                          ('Artists', WebResultKind.artist),
+                          ('Albums', WebResultKind.album),
+                          ('Playlists', WebResultKind.playlist),
+                        ])
+                          FilterChip(
+                            label: Text(label),
+                            selected: _filter == kind,
+                            onSelected: (_) => _setFilter(kind),
+                          ),
+                      ],
+                    ),
                 ],
               ],
             ),
@@ -229,6 +326,8 @@ class _SearchPageState extends State<SearchPage> {
               ),
             ),
           ],
+        ] else if (_videos) ...[
+          ..._videoResults(context),
         ] else if (_filter == WebResultKind.song) ...[
           ..._youtubeResults(context),
         ] else if (_filter != null) ...[
@@ -440,6 +539,73 @@ class _SearchPageState extends State<SearchPage> {
         );
       },
     );
+  }
+
+  /// "Videos": plain YouTube results as playable rows, the next page loading as the end comes into view.
+  List<Widget> _videoResults(BuildContext context) {
+    final c = PlayerScope.read(context);
+    final shell = ShellScope.of(context);
+    final pad = shell.compact ? 16.0 : 24.0;
+    final tracks = _videoTracks;
+    Widget note(String message) => SliverToBoxAdapter(
+      child: Padding(
+        padding: EdgeInsets.symmetric(horizontal: pad, vertical: 8),
+        child: Text(message, style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary)),
+      ),
+    );
+    const spinner = Padding(
+      padding: EdgeInsets.symmetric(vertical: 16),
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: SizedBox.square(dimension: 20, child: CircularProgressIndicator(strokeWidth: 2)),
+      ),
+    );
+    if (_query.trim().length < 2) return const [];
+    if (_videoLoading && tracks.isEmpty) {
+      return [
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: pad),
+            child: spinner,
+          ),
+        ),
+      ];
+    }
+    if (tracks.isEmpty) {
+      return [note(_videoFailed ? 'YouTube search failed. Check your connection.' : 'No YouTube videos found.')];
+    }
+    final tail = !_videoEnd && !_videoLoading;
+    return [
+      if (_videoLoading) const SliverToBoxAdapter(child: LinearProgressIndicator(minHeight: 2)),
+      SliverOpacity(
+        opacity: _videoLoading ? 0.5 : 1,
+        sliver: SliverPadding(
+          padding: EdgeInsets.symmetric(horizontal: shell.compact ? 12 : 16),
+          sliver: SliverList.builder(
+            itemCount: tracks.length + (tail ? 1 : 0),
+            itemBuilder: (context, i) {
+              if (i >= tracks.length) {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (mounted) _moreVideos();
+                });
+                return Padding(
+                  padding: EdgeInsets.symmetric(horizontal: pad - 12),
+                  child: spinner,
+                );
+              }
+              return _maybeFade(
+                i,
+                TrackRow(
+                  track: tracks[i],
+                  showAlbum: false,
+                  onTap: () => c.playList(tracks, i, from: 'YouTube videos'),
+                ),
+              );
+            },
+          ),
+        ),
+      ),
+    ];
   }
 
   List<Widget> _youtubeResults(BuildContext context) {

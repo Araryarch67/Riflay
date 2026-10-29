@@ -58,6 +58,7 @@ class PlayerController extends ChangeNotifier {
             _castFollow();
             _followDop();
             _prefetchNext();
+            _prefetchDownloadFormats();
             _recordRecent();
             _updatePresence();
             MemoryTrim.schedule();
@@ -77,6 +78,19 @@ class PlayerController extends ChangeNotifier {
     _subs.add(player.positionDiscontinuityStream.listen((_) => _updatePresence(force: true)));
     // Plays count towards the YouTube Music history (signed in, setting on).
     _subs.add(ytMusic.reportPlaysOf(player, () => currentTrack));
+  }
+
+  String? _formatsFor;
+
+  /// A few seconds into a YouTube song, looks up its download formats, so the picker is ready when tapped.
+  void _prefetchDownloadFormats() {
+    final t = currentTrack;
+    final id = t != null && t.isRemote ? t.videoId : null;
+    if (id == null || id == _formatsFor) return;
+    _formatsFor = id;
+    Timer(const Duration(seconds: 3), () {
+      if (_formatsFor == id && currentTrack?.videoId == id) YoutubeStream.prefetchDownloadCandidates(id);
+    });
   }
 
   static const _autoplayKey = 'autoplay.v1';

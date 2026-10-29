@@ -17,6 +17,7 @@ import 'services/layout_prefs.dart';
 import 'services/media_session.dart';
 import 'services/metadata.dart';
 import 'services/legacy_data.dart';
+import 'services/download_notifications.dart';
 import 'services/player_controller.dart';
 import 'services/stay_awake.dart';
 import 'ui/home_shell.dart';
@@ -69,6 +70,7 @@ Future<void> main() async {
   await controller.load();
   await MediaSession.start(controller);
   await StayAwake.start(controller);
+  DownloadNotifications.attach(controller.youtube);
   runApp(RiflayApp(controller: controller));
 }
 

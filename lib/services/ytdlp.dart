@@ -181,13 +181,8 @@ abstract final class YtDlp {
     ..remove(videoId)
     ..remove('aac:$videoId');
 
-  /// The stream a download of [choice] fetches, picked from every audio
-  /// format yt-dlp lists, and what to convert it into afterwards (null keeps it as is).
-  static Future<({ResolvedAudio audio, Conversion? convert})> forDownload(
-    String videoId,
-    DownloadChoice choice, {
-    required bool canReencode,
-  }) async {
+  /// Every audio stream yt-dlp lists for [videoId] (one process, a few seconds).
+  static Future<List<AudioCandidate>> listFormats(String videoId) async {
     final exe = await executable();
     if (exe == null) throw StateError('yt-dlp is not available on this device.');
     final r = await Process.run(exe, [
@@ -200,27 +195,35 @@ abstract final class YtDlp {
     if (r.exitCode != 0) throw StateError(_lastError(r.stderr as String));
     final info = jsonDecode(r.stdout as String) as Map<String, dynamic>;
     final formats = (info['formats'] as List).cast<Map<String, dynamic>>();
-    final pick = pickForDownload(
-      [for (final f in formats) ?AudioCandidate.fromYtDlp(f)],
-      choice,
-      canReencode: canReencode,
-    );
-    if (pick == null) throw StateError('No audio stream for this song.');
-    final f = pick.candidate.ref! as Map<String, dynamic>;
+    return [for (final f in formats) ?AudioCandidate.fromYtDlp(f)];
+  }
+
+  /// The stream a [listFormats] candidate stands for.
+  static ResolvedAudio resolvedFrom(AudioCandidate c) {
+    final f = c.ref! as Map<String, dynamic>;
     final url = Uri.parse(f['url'] as String);
-    return (
-      audio: ResolvedAudio(
-        formatId: pick.candidate.id,
-        ext: pick.opus ? 'webm' : 'm4a',
-        codec: pick.opus ? 'opus' : 'mp4a',
-        kbps: pick.candidate.kbps,
-        size: int.tryParse(url.queryParameters['clen'] ?? '') ?? (f['filesize'] ?? f['filesize_approx']) as int?,
-        url: url,
-        resolvedAt: DateTime.now(),
-        via: 'yt-dlp',
-      ),
-      convert: pick.convert,
+    return ResolvedAudio(
+      formatId: c.id,
+      ext: c.opus ? 'webm' : 'm4a',
+      codec: c.opus ? 'opus' : 'mp4a',
+      kbps: c.kbps,
+      size: int.tryParse(url.queryParameters['clen'] ?? '') ?? c.sizeBytes,
+      url: url,
+      resolvedAt: DateTime.now(),
+      via: 'yt-dlp',
     );
+  }
+
+  /// The stream a download of [choice] fetches, picked from every audio
+  /// format yt-dlp lists, and what to convert it into afterwards (null keeps it as is).
+  static Future<({ResolvedAudio audio, Conversion? convert})> forDownload(
+    String videoId,
+    DownloadChoice choice, {
+    required bool canReencode,
+  }) async {
+    final pick = pickForDownload(await listFormats(videoId), choice, canReencode: canReencode);
+    if (pick == null) throw StateError('No audio stream for this song.');
+    return (audio: resolvedFrom(pick.candidate), convert: pick.convert);
   }
 
   static Future<ResolvedAudio> _run(String videoId, bool aac) async {
