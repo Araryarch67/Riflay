@@ -1,3 +1,4 @@
+require 'fileutils'
 #
 # To learn more about a Podspec see http://guides.cocoapods.org/syntax/podspec.html.
 # Run `pod lib lint media_kit_libs_macos_audio.podspec` to validate before publishing.
@@ -9,6 +10,20 @@ Pod::Spec.new do |s|
   unless File.exist?(File.join(here, 'Frameworks', 'Mpv.xcframework'))
     script = File.expand_path('../../../tool/build_libmpv_apple.sh', here)
     system(script, 'macos') or raise "Building libmpv failed; run #{script} macos"
+  end
+
+  # media_kit_video links Mpv.framework from Frameworks/.symlinks/mpv/<platform>, the layout media_kit's own
+  # packages make: one relative link per slice of the xcframework (ios-arm64 -> ios, ...-simulator -> ios-simulator).
+  links = File.join(here, 'Frameworks', '.symlinks', 'mpv')
+  Dir.glob(File.join(here, 'Frameworks', 'Mpv.xcframework', '*')).select { |d| File.directory?(d) }.each do |slice|
+    slug = File.basename(slice)
+    parts = slug.split('-')
+    name = [parts[0], parts[2]].compact.join('-')
+    link = File.join(links, name)
+    next if File.symlink?(link) && File.exist?(link)
+    FileUtils.mkdir_p(links)
+    FileUtils.rm_f(link)
+    File.symlink(File.join('..', '..', 'Mpv.xcframework', slug), link)
   end
 
   s.name             = 'media_kit_libs_macos_audio'
