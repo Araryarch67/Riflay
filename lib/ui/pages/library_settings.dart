@@ -72,7 +72,9 @@ class LibrarySettings extends StatelessWidget {
                     title: const Text('Find songs you have twice'),
                     subtitle: Text('The same song in different files, so you can keep the best one.', style: muted),
                     trailing: const Icon(Icons.chevron_right_rounded),
-                    onTap: () => shell.open(const DuplicatesPage(), location: Locations.settingsTopic('library')),
+                    // Its own location: the shell skips opening a page at the location already on screen.
+                    onTap: () =>
+                        shell.open(const DuplicatesPage(), location: Locations.settingsTopic('library/duplicates')),
                   ),
                 ],
               ),

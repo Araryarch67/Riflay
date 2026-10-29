@@ -34,50 +34,111 @@ Riflay is a free, open-source music player for Linux, Windows, macOS, Android an
 
 ## Features
 
+Features marked (Beta) are still being tested; **Settings › Beta features** switches each of them off.
+
+### Library & YouTube Music
+
 | Feature | Description |
 |---|---|
 | **One library** | Local files, playlists and YouTube Music in a single library |
 | **Format support** | FLAC, ALAC, WAV, AIFF, MP3, AAC, Ogg, Opus, WavPack, APE, DSD, SACD ISO and cue sheets |
 | **YouTube Music** | Fully usable without an account. Sign in with Google to sync likes, playlists and history. Moods & genres, new releases, save albums and playlists to your library |
-| **Video mode** | Watch the music video of a YouTube song, in step with it: one Song / Video switch on the player (beta). Fetched only when picked, and back to the song alone when the screen is off |
+| **Video mode** (Beta) | Watch the music video of a YouTube song, in step with it: one Song / Video switch on the player. Fetched only when picked, and back to the song alone when the screen is off. Downloaded videos play offline |
 | **Synced lyrics** | Word by word where the source times each word, otherwise line by line; pronunciation, translation, copy, your own .lrc files, and saved with downloads |
 | **Playlists** | Combine local files with YouTube songs, and drag songs into any order. Import from Spotify, Apple Music or Deezer |
-| **Downloads** | Shows how much space your downloads use, and finds downloaded songs whose file was deleted so you can download them again or remove them |
+| **Spotify import** (Beta) | Sign in to Spotify and bring your playlists, albums and artists over |
+| **Smart playlists** | Most played, Not played for a while, Recently added, Recently played and Lossless, kept up to date for you |
+| **A library that keeps up** | Music folders are watched: new songs are added, and songs you delete or move are taken out, without adding the folder again (phones check each time you open Riflay). Settings › Library |
+| **Duplicate finder** | "Songs you have twice" lists the same song in several files and keeps the best copy of each. Settings › Library |
+| **Tag editor** | Preserves ReplayGain and custom tags |
 | **Autoplay and radio** | Plays similar songs when the queue ends |
+
+### Sound
+
+| Feature | Description |
+|---|---|
 | **Equalizer** | 10-band parametric, with presets and automatic headroom to prevent clipping |
+| **Crossfade** | The end of a song fades into the next, 1 to 12 seconds. Songs that follow each other on an album play without a fade. Off in bit-perfect and exclusive modes |
+| **Gapless playback** | No silence between consecutive tracks |
+| **Volume leveling** | ReplayGain, per song or per album |
 | **Virtual speakers** | Simulates two front-facing speakers on headphones (HRTF) |
 | **Mono audio** | Mixes both channels to one or both ears. For headphones with a dead side |
 | **Crossfeed** | Softens stereo separation on headphones |
 | **Room correction** | Applies an impulse response, for example from REW |
-| **Volume leveling** | ReplayGain, per song or per album |
-| **Gapless playback** | No silence between consecutive tracks |
 | **Bit-perfect and DSD** | Sends the file to the DAC untouched, native DSD (DoP), exclusive mode |
 | **Audio plugins** | VST, LV2 and CLAP through Carla (Linux, Windows, macOS) |
 | **Signal path** | Shows every processing stage from file to speaker |
-| **Play on TVs and speakers** | DLNA / UPnP and AirPlay |
-| **Listen together** | Friends play along with your YouTube songs, in sync. On the same Wi-Fi, or anywhere with a code (beta: connects through free public servers, end-to-end encrypted) |
-| **Tag editor** | Preserves ReplayGain and custom tags |
+
+### Downloads
+
+| Feature | Description |
+|---|---|
+| **Audio downloads** | Opus, M4A, MP3 or FLAC, at the bitrate you pick, with the size of each choice shown before you download |
+| **Video downloads** | A song's music video as MP4 (H.264, up to 1080p) or WebM (VP9, up to 4K), with the size of each resolution shown. The picture and sound are joined without re-encoding |
+| **Resumable downloads** | A download that was interrupted continues where it stopped, and retries when the network drops. Notifications show progress, with Cancel and Retry |
+| **Your downloads** | Shows how much space your downloads use, and finds downloaded songs whose file was deleted so you can download them again or remove them |
 | **Convert to FLAC** (Beta) | Turns a downloaded or lossy song into a FLAC from its menu, or a whole playlist at once, keeping tags and cover. Your own files are kept beside it |
-| **Customization** | Catppuccin, Nord, Gruvbox, Dracula or your own colors. Any font and accent. Light, dark or match your system, for every theme. Dynamic theme (beta) follows the cover of what's playing, local or YouTube. Cover-art colors in the player or the whole app, with adjustable strength. High contrast |
+
+### Together
+
+| Feature | Description |
+|---|---|
+| **Listen together** | Friends play along with your YouTube songs, in sync. On the same Wi-Fi with a short code, or **Anywhere** (Beta) with a longer one: it connects through free public servers, end-to-end encrypted |
+| **Play on TVs and speakers** | DLNA / UPnP and AirPlay |
+
+### Look & feel
+
+| Feature | Description |
+|---|---|
+| **Themes** | Catppuccin, Nord, Gruvbox, Dracula or your own colors. Any font and accent. Light, dark or match your system, for every theme. High contrast |
+| **Dynamic theme** (Beta) | Follows the cover of what's playing, local or YouTube. Cover-art colors in the player or the whole app, with adjustable strength |
 | **Layout options** | Corners, spacing, cover size, Home sections, player and lyrics looks, animations |
 | **Adaptive layouts** | Phone, tablet and desktop. Mini and full-screen player |
+
+### Everyday
+
+| Feature | Description |
+|---|---|
+| **Sleep timer** | Stop the music in 15 to 90 minutes, at the end of the song, or after a time you choose. The volume fades down first |
+| **Listening stats** | Your top songs, artists and albums by month, year or all time. Kept on this device, and switched off in Settings › Privacy |
+| **Riflay Wrap** | A recap of each finished month, once you have used Riflay for 30 days, as cards you can save as images |
 | **Background playback** | Keeps playing with the screen off. Optionally keeps the screen on, or the computer awake, while playing |
 | **System integration** | Lock screen, notification, Control Center, MPRIS, media keys, Discord |
 | **Fast** | A YouTube song starts in about 0.3 s |
 
 ## Screenshots
 
-| Search: local music and YouTube Music | A playlist mixing artists |
+| Home | A playlist mixing artists |
 |---|---|
-| ![Search](docs/screenshots/search.webp) | ![Playlist](docs/screenshots/playlist.webp) |
-| **Synced lyrics** | **Equalizer** |
-| ![Lyrics](docs/screenshots/lyrics.webp) | ![Equalizer](docs/screenshots/equalizer.webp) |
+| ![Home](docs/screenshots/home.webp) | ![Playlist](docs/screenshots/playlist.webp) |
+| **Smart playlists in the library** | **Synced lyrics, word by word** |
+| ![Smart playlists](docs/screenshots/smart-playlists.webp) | ![Lyrics](docs/screenshots/lyrics.webp) |
+| **Listening stats** | **Downloads: a video and a song on their way** |
+| ![Listening stats](docs/screenshots/stats.webp) | ![Downloads](docs/screenshots/downloads.webp) |
+| **Download as: audio or video, with sizes** | **Download settings** |
+| ![Download as](docs/screenshots/download-as.webp) | ![Download settings](docs/screenshots/settings-downloads.webp) |
+| **Listen together** | **Songs you have twice** |
+| ![Listen together](docs/screenshots/listen-together.webp) | ![Duplicate finder](docs/screenshots/duplicates.webp) |
+| **Sleep timer** | **Crossfade** |
+| ![Sleep timer](docs/screenshots/sleep-timer.webp) | ![Crossfade](docs/screenshots/settings-crossfade.webp) |
+| **Virtual speakers and Mono audio** | **Equalizer** |
+| ![Playback settings](docs/screenshots/sound.webp) | ![Equalizer](docs/screenshots/equalizer.webp) |
+| **Signal path** | **Dynamic theme (Beta)** |
+| ![Signal path](docs/screenshots/signal-path.webp) | ![Dynamic theme](docs/screenshots/dynamic-theme.webp) |
 | **Full-screen player** | **Settings** |
 | ![Full-screen player](docs/screenshots/fullscreen.webp) | ![Settings](docs/screenshots/settings.webp) |
-| **Virtual speakers and Mono audio** | **Signal path** |
-| ![Playback settings](docs/screenshots/sound.webp) | ![Signal path](docs/screenshots/signal-path.webp) |
-| **Download settings** | **On a phone** |
-| ![Download settings](docs/screenshots/settings-downloads.webp) | <img src="docs/screenshots/phone.webp" alt="Phone" width="280"> |
+| **Beta features** | |
+| ![Beta features](docs/screenshots/settings-beta.webp) | |
+
+On a phone:
+
+| Home | Now playing |
+|---|---|
+| <img src="docs/screenshots/phone-home.webp" alt="Phone home" width="280"> | <img src="docs/screenshots/phone.webp" alt="Phone now playing" width="280"> |
+| **A Riflay Wrap card** | |
+| <img src="docs/screenshots/wrap.webp" alt="Riflay Wrap card" width="200"> | |
+
+The pictures show a made-up library of generated songs.
 
 ## Build from source
 
@@ -128,7 +189,7 @@ Not yet verified on real hardware: ASIO, exclusive mode, and casting to physical
 | Discord | ✓ | ✓ | ✓ | N/A⁶ | N/A⁶ |
 | Audio plugins (Carla) | ✓ | ✓⁷ | ✓⁷ | N/A⁷ | N/A⁷ |
 | See-through window | ✓ | untested⁸ | untested⁸ | ✓⁸ | N/A⁸ |
-| Video mode (beta) | ✓ | untested | not yet⁹ | not yet⁹ | not yet⁹ |
+| Video mode (Beta) | ✓ | untested | untested⁹ | untested⁹ | untested⁹ |
 
 ✓ means the feature works and has been verified (tests, CI on that OS, an emulator or Wine). **untested** means it is built for that OS but has not yet been tried on a real device; reports from real devices are welcome.
 
@@ -140,7 +201,7 @@ Not yet verified on real hardware: ASIO, exclusive mode, and casting to physical
 6. Phones give other apps no connection to Discord.
 7. Carla is a separate free download: unzip it into Downloads or Program Files on Windows, put Carla.app in Applications on macOS. Android has no plugin standard, and iOS's AUv3 plugins are not supported yet.
 8. A blur behind the window on Windows 11 and macOS (plain transparency on Windows 10); the home-screen wallpaper on Android. iOS does not let apps show the wallpaper.
-9. Riflay's own player builds for these systems carry sound decoders only, so the Song / Video switch stays hidden there until they are built with video decoders. Video mode shows songs that are videos on YouTube Music, and with a signed-in account also the music video YouTube Music pairs with a song.
+9. Riflay's own player builds for these systems carry H.264 and VP9 video decoders (hardware decoding where the device has it), but Video mode has not been tried on a real device yet. Phones get a lighter stream. Video mode shows songs that are videos on YouTube Music, and with a signed-in account also the music video YouTube Music pairs with a song.
 
 YouTube streams through YouTube's player API everywhere, with yt-dlp (desktop) or a built-in extractor (phones) as the fallback. yt-dlp needs a JavaScript runtime (Deno or Node) for some YouTube challenges.
 
