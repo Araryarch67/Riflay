@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:path/path.dart' as p;
 
 import '../models/track.dart';
@@ -51,41 +52,56 @@ abstract final class SmartPlaylists {
   }
 
   /// Every list that has songs, keyed by [SmartList], for [library] and [history] as of [now].
-  static Map<SmartList, Collection> compute(List<Track> library, PlayHistory history, {DateTime? now}) {
-    now ??= DateTime.now();
+  static Map<SmartList, Collection> compute(List<Track> library, PlayHistory history, {DateTime? now}) =>
+      _build(library, history, now ?? DateTime.now(), {...SmartList.values});
+
+  /// The lists named in [which].
+  static Map<SmartList, Collection> _build(
+    List<Track> library,
+    PlayHistory? history,
+    DateTime now,
+    Set<SmartList> which,
+  ) {
     final nowSec = now.millisecondsSinceEpoch ~/ 1000;
-    final byId = {for (final t in library) t.id: t};
+    final byId = which.contains(SmartList.mostPlayed) || which.contains(SmartList.recentlyPlayed)
+        ? {for (final t in library) t.id: t}
+        : const <String, Track>{};
     Track trackFor(SongInfo s) => byId[s.key] ?? s.toTrack();
 
-    final played = history.songs.toList();
+    final played = history == null ? const <(SongInfo, int, int)>[] : history.songs.toList();
     final lists = <SmartList, List<Track>>{
-      SmartList.mostPlayed: [
-        for (final (s, _, _)
-            in (played.where((e) => e.$2 > 0).toList()..sort((a, b) {
-                  final byPlays = b.$2.compareTo(a.$2);
-                  return byPlays != 0 ? byPlays : b.$3.compareTo(a.$3);
-                }))
-                .take(limit))
-          trackFor(s),
-      ],
-      SmartList.recentlyPlayed: [
-        for (final (s, _, _) in (played.where((e) => e.$2 > 0).toList()..sort((a, b) => b.$3.compareTo(a.$3))).take(
-          limit,
-        ))
-          trackFor(s),
-      ],
-      SmartList.notPlayedForAWhile: _notPlayed(library, history, nowSec),
-      SmartList.recentlyAdded: [
-        for (final t
-            in (library.where((t) => t.addedAt > 0).toList()..sort((a, b) => b.addedAt.compareTo(a.addedAt))).take(
-              limit,
-            ))
-          t,
-      ],
-      SmartList.lossless: [
-        for (final t in library)
-          if (isLossless(t)) t,
-      ],
+      if (which.contains(SmartList.mostPlayed))
+        SmartList.mostPlayed: [
+          for (final (s, _, _)
+              in (played.where((e) => e.$2 > 0).toList()..sort((a, b) {
+                    final byPlays = b.$2.compareTo(a.$2);
+                    return byPlays != 0 ? byPlays : b.$3.compareTo(a.$3);
+                  }))
+                  .take(limit))
+            trackFor(s),
+        ],
+      if (which.contains(SmartList.recentlyPlayed))
+        SmartList.recentlyPlayed: [
+          for (final (s, _, _) in (played.where((e) => e.$2 > 0).toList()..sort((a, b) => b.$3.compareTo(a.$3))).take(
+            limit,
+          ))
+            trackFor(s),
+        ],
+      if (which.contains(SmartList.notPlayedForAWhile) && history != null)
+        SmartList.notPlayedForAWhile: _notPlayed(library, history, nowSec),
+      if (which.contains(SmartList.recentlyAdded))
+        SmartList.recentlyAdded: [
+          for (final t
+              in (library.where((t) => t.addedAt > 0).toList()..sort((a, b) => b.addedAt.compareTo(a.addedAt))).take(
+                limit,
+              ))
+            t,
+        ],
+      if (which.contains(SmartList.lossless))
+        SmartList.lossless: [
+          for (final t in library)
+            if (isLossless(t)) t,
+        ],
     };
     return {
       for (final e in lists.entries)
@@ -114,16 +130,82 @@ abstract final class SmartPlaylists {
     return [for (final e in idle) e.$1];
   }
 
-  static (int, int, Map<SmartList, Collection>)? _cache;
+  /// How many times a list was worked out (tests count these to see cache hits).
+  @visibleForTesting
+  static int computations = 0;
 
-  /// [compute] for the live app, redone only when the library, the history or the day changed.
+  // Two caches: the lists made from the library alone (a play doesn't touch them) and the ones that also
+  // read the listening history (a library change only swaps song versions, but they are cheap to redo).
+  static (int, Map<SmartList, Collection>)? _libraryPart;
+  static (int, Map<SmartList, Collection>)? _historyPart;
+  static Map<SmartList, Collection>? _merged;
+  static (int, int)? _mergedKey;
+
+  /// [compute] for the live app, redone only when the library, the history or the day changed. A play redoes
+  /// only the lists that read the history; lists whose songs came out the same are handed back as they were,
+  /// so what shows them can tell nothing changed.
   static Map<SmartList, Collection> of(PlayerController c, PlayHistory history) {
     final day = DateTime.now().millisecondsSinceEpoch ~/ 86400000;
-    final key = Object.hash(c.libraryRevision.value, history.revision, day, identityHashCode(c));
-    final cached = _cache;
-    if (cached != null && cached.$1 == key && cached.$2 == history.revision) return cached.$3;
-    final value = compute(c.library, history);
-    _cache = (key, history.revision, value);
-    return value;
+    final libKey = Object.hash(c.libraryRevision.value, day, identityHashCode(c));
+    final histKey = Object.hash(libKey, history.revision);
+    if (_mergedKey == (libKey, histKey) && _merged != null) return _merged!;
+    var lib = _libraryPart;
+    if (lib == null || lib.$1 != libKey) {
+      final fresh = _libraryLists(c.library);
+      lib = (libKey, _reuse(lib?.$2, fresh));
+      _libraryPart = lib;
+    }
+    var hist = _historyPart;
+    if (hist == null || hist.$1 != histKey) {
+      computations++;
+      final fresh = _historyLists(c.library, history, DateTime.now());
+      hist = (histKey, _reuse(hist?.$2, fresh));
+      _historyPart = hist;
+    }
+    final merged = {for (final l in SmartList.values) l: ?(lib.$2[l] ?? hist.$2[l])};
+    _mergedKey = (libKey, histKey);
+    return _merged = merged;
+  }
+
+  /// Forgets what was worked out (a test starting afresh).
+  @visibleForTesting
+  static void resetCache() {
+    _libraryPart = _historyPart = null;
+    _merged = null;
+    _mergedKey = null;
+    computations = 0;
+  }
+
+  static Map<SmartList, Collection> _libraryLists(List<Track> library) {
+    computations++;
+    return _build(library, null, DateTime.now(), {SmartList.recentlyAdded, SmartList.lossless});
+  }
+
+  static Map<SmartList, Collection> _historyLists(List<Track> library, PlayHistory history, DateTime now) {
+    return _build(library, history, now, {
+      SmartList.mostPlayed,
+      SmartList.recentlyPlayed,
+      SmartList.notPlayedForAWhile,
+    });
+  }
+
+  /// [next], but a list with exactly the songs (same objects, same order) the [prev] one had stays [prev]'s.
+  static Map<SmartList, Collection> _reuse(Map<SmartList, Collection>? prev, Map<SmartList, Collection> next) {
+    if (prev == null) return next;
+    return {
+      for (final e in next.entries)
+        e.key: switch (prev[e.key]) {
+          final old? when old.subtitle == e.value.subtitle && _sameSongs(old.tracks, e.value.tracks) => old,
+          _ => e.value,
+        },
+    };
+  }
+
+  static bool _sameSongs(List<Track> a, List<Track> b) {
+    if (a.length != b.length) return false;
+    for (var i = 0; i < a.length; i++) {
+      if (!identical(a[i], b[i])) return false;
+    }
+    return true;
   }
 }

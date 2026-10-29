@@ -345,6 +345,9 @@ class FolderWatch extends ChangeNotifier with WidgetsBindingObserver {
   static const pollInterval = Duration(minutes: 3);
   static const _tick = Duration(seconds: 2);
 
+  /// The first look after launch waits this long, so it doesn't compete with the first frames.
+  static const firstLookDelay = Duration(seconds: 8);
+
   static bool get isPhone => Platform.isAndroid || Platform.isIOS;
 
   PlayerController? _c;
@@ -394,8 +397,12 @@ class FolderWatch extends ChangeNotifier with WidgetsBindingObserver {
       return; // no Flutter binding (a plain unit test): nothing to watch
     }
     w._apply();
-    // Things that changed while the app was closed.
-    if (w._enabled) unawaited(w.checkNow());
+    // Things that changed while the app was closed; looked at once the app is up and the first frames are done.
+    if (w._enabled) {
+      Timer(firstLookDelay, () {
+        if (w._enabled) unawaited(w.checkNow());
+      });
+    }
   }
 
   Future<void> setKeepUpToDate(bool on) async {
@@ -583,7 +590,12 @@ class FolderWatch extends ChangeNotifier with WidgetsBindingObserver {
       _excluded.removeAll(stale);
       unawaited(_saveExcluded());
     }
-    final plan = planSync(root: dir, disk: disk, previous: before, library: c.library, excluded: _excluded);
+    // Off the UI isolate: the diff reads the whole library and may check files for existence. Plain data goes in.
+    final library = c.library.toList(growable: false);
+    final excluded = Set<String>.of(_excluded);
+    final plan = await Isolate.run(
+      () => planSync(root: dir, disk: disk, previous: before, library: library, excluded: excluded),
+    );
     if (plan.isEmpty) return 0;
     try {
       await c.applyFolderChanges(plan);

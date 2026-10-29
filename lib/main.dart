@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 import 'dart:math' as math;
+import 'dart:ui' show AppExitResponse;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -169,6 +170,20 @@ class _RiflayAppState extends State<RiflayApp> with WidgetsBindingObserver {
     _layout.removeListener(_restyle);
     widget.controller.removeListener(_syncTint);
     super.dispose();
+  }
+
+  // Library changes are saved after a short pause; write them before the system may end the app.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused || state == AppLifecycleState.detached) {
+      unawaited(widget.controller.flushSaves());
+    }
+  }
+
+  @override
+  Future<AppExitResponse> didRequestAppExit() async {
+    await widget.controller.flushSaves();
+    return AppExitResponse.exit;
   }
 
   @override

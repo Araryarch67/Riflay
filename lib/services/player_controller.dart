@@ -6,7 +6,7 @@ import 'dart:isolate';
 import 'dart:math' as math;
 
 import 'package:file_picker/file_picker.dart';
-import 'package:flutter/foundation.dart' show ValueListenable, listEquals;
+import 'package:flutter/foundation.dart' show ValueListenable, listEquals, visibleForTesting;
 import 'package:flutter/services.dart' show MethodChannel;
 import 'package:flutter/widgets.dart';
 import 'package:just_audio/just_audio.dart';
@@ -34,6 +34,9 @@ import 'youtube_audio_source.dart';
 import 'youtube_music_account.dart';
 import 'youtube_importer.dart';
 import 'youtube_stream.dart';
+import 'library_views.dart';
+
+export '../ui/player_scope.dart';
 
 /// Android: "Add folder" was refused the permission to read music.
 class MusicPermissionDenied implements Exception {
@@ -520,12 +523,36 @@ class PlayerController extends ChangeNotifier {
 
   /// Bumped on in-place library edits; replacing [_library] invalidates by identity.
   int _libraryEdits = 0;
-  _LibraryViews? _cachedViews;
+  LibraryViews? _cachedViews;
 
-  _LibraryViews get _views {
+  /// Songs replaced in place since [_cachedViews] was made (their versions then, and now). Tag-only changes
+  /// like these are folded into the views instead of rebuilding them.
+  final Map<String, Track> _editedOld = {};
+  final Map<String, Track> _editedNow = {};
+
+  /// Puts [t] in place of the library's song at [i] (same list, same order).
+  void _replaceAt(int i, Track t) {
+    final was = _library[i];
+    _editedOld.putIfAbsent(was.id, () => was);
+    _editedNow[was.id] = t;
+    _library[i] = t;
+    _libraryEdits++;
+  }
+
+  LibraryViews get _views {
     final v = _cachedViews;
-    if (v != null && identical(v.tracks, _library) && v.edits == _libraryEdits) return v;
-    return _cachedViews = _LibraryViews(_library, _libraryEdits);
+    if (v != null && identical(v.tracks, _library)) {
+      if (v.edits == _libraryEdits) return v;
+      if (_editedNow.isNotEmpty) {
+        final next = v.patched(_libraryEdits, Map.of(_editedNow), Map.of(_editedOld));
+        _editedOld.clear();
+        _editedNow.clear();
+        return _cachedViews = next;
+      }
+    }
+    _editedOld.clear();
+    _editedNow.clear();
+    return _cachedViews = LibraryViews(_library, _libraryEdits);
   }
 
   List<Track> get recentlyAdded => _views.recentlyAdded;
@@ -743,12 +770,8 @@ class PlayerController extends ChangeNotifier {
     discord.enabled = prefs.getBool(_discordKey) ?? true;
     _autoplay = prefs.getBool(_autoplayKey) ?? true;
     final loop = LoopMode.values.asNameMap()[prefs.getString(_loopKey)];
-    if (loop != null && loop != LoopMode.off) await player.setLoopMode(loop);
     final level = prefs.getDouble(_volumeKey);
-    if (level != null) {
-      _level.value = level.clamp(0, 1);
-      await _playAt(_level.value);
-    }
+    if (level != null) _level.value = level.clamp(0, 1);
     Ffmpeg.onDownload = _errors.add;
     unawaited(Metadata.probeTagTools().then((_) => notifyListeners()));
     unawaited(LyricsTranslation.load());
@@ -757,11 +780,59 @@ class PlayerController extends ChangeNotifier {
     _dopWasActive = audio.dopActive;
     audio.addListener(_onAudioSettings);
     notifyListeners();
+    // The player's own loop mode and volume are not needed before the first frame; they follow it.
+    unawaited(_applyPlayerSettings(loop, level));
     unawaited(_enrichUntagged());
     unawaited(FolderWatch.start(this)); // keeps the music folders up to date (folder_watch.dart)
   }
 
-  Future<void> _save() async => LibraryStore.save(await SharedPreferences.getInstance(), _library);
+  Future<void> _applyPlayerSettings(LoopMode? loop, double? level) async {
+    try {
+      if (loop != null && loop != LoopMode.off) await player.setLoopMode(loop);
+      if (level != null) await _playAt(_level.value);
+    } catch (e) {
+      debugPrint('Restoring loop mode / volume failed: $e');
+    }
+    if (!_disposed) notifyListeners();
+  }
+
+  Future<void> _save() async {
+    _saveTimer?.cancel();
+    _saveTimer = null;
+    _savePending = false;
+    return LibraryStore.save(await SharedPreferences.getInstance(), _library);
+  }
+
+  Timer? _saveTimer;
+  bool _savePending = false;
+
+  /// How long small library changes (a corrected length) wait, so a run of them is one save.
+  static const saveDelay = Duration(seconds: 2);
+
+  /// [_save] after [saveDelay]; more changes meanwhile ride along.
+  void _saveSoon() {
+    _savePending = true;
+    _saveTimer ??= Timer(saveDelay, () {
+      _saveTimer = null;
+      if (_savePending && !_disposed) _save().ignore();
+    });
+  }
+
+  @visibleForTesting
+  void saveSoon() => _saveSoon();
+
+  /// Writes any save that is still waiting (app exit, before a shutdown).
+  Future<void> flushSaves() async {
+    if (_recentsTimer != null) {
+      _recentsTimer!.cancel();
+      _recentsTimer = null;
+      await _storeRecents();
+    }
+    if (_savePending) await _save();
+  }
+
+  /// Library saves skipped for waiting ones, for tests.
+  bool get savePending => _savePending;
 
   /// Only counts tracks that actually start playing, not ones the queue passes through while loading.
   void _recordRecent() {
@@ -776,10 +847,23 @@ class PlayerController extends ChangeNotifier {
         current.id: current,
       };
     }
-    SharedPreferences.getInstance().then((p) {
-      p.setStringList(_recentKey, _recentIds);
-      p.setString(_recentRemoteKey, jsonEncode([for (final t in _recentRemote.values) t.toJson()]));
+    _storeRecentsSoon();
+  }
+
+  Timer? _recentsTimer;
+
+  /// Coalesces recents writes: skipping through songs writes once.
+  void _storeRecentsSoon() {
+    _recentsTimer ??= Timer(const Duration(seconds: 1), () {
+      _recentsTimer = null;
+      _storeRecents().ignore();
     });
+  }
+
+  Future<void> _storeRecents() async {
+    final p = await SharedPreferences.getInstance();
+    await p.setStringList(_recentKey, _recentIds);
+    await p.setString(_recentRemoteKey, jsonEncode([for (final t in _recentRemote.values) t.toJson()]));
   }
 
   /// Tag-based durations are estimates (e.g. CBR MP3s without a Xing header);
@@ -793,10 +877,9 @@ class PlayerController extends ChangeNotifier {
     if (known != null && (known - actual).abs() < const Duration(seconds: 1)) return;
     final i = _library.indexWhere((t) => t.id == track.id);
     if (i < 0) return;
-    _library[i] = _library[i].copyWith(duration: actual);
-    _libraryEdits++;
+    _replaceAt(i, _library[i].copyWith(duration: actual));
     notifyListeners();
-    _save();
+    _saveSoon();
   }
 
   Future<int> pickFiles() async {
@@ -888,36 +971,52 @@ class PlayerController extends ChangeNotifier {
     return fresh.length;
   }
 
+  /// How far the tag scan is; for views that show progress, so they need not follow [libraryRevision].
+  final scanProgress = ValueNotifier<({int done, int total})>((done: 0, total: 0));
+
+  void _setProgress(int done, int total) {
+    if (!_disposed) scanProgress.value = (done: done, total: total);
+  }
+
+  /// How often the UI is told of new tags while they are being read.
+  static const scanNotifyEvery = Duration(seconds: 2);
+
+  /// The clock for the scan's throttles (tests set their own).
+  DateTime Function() now = DateTime.now;
+
   /// Reads embedded tags for any track that hasn't been scanned yet.
   Future<void> _enrichUntagged() async {
     if (_scanning) return;
     _scanning = true;
+    var pending = _library.where((t) => !t.tagged).toList();
+    _setProgress(0, pending.length);
     notifyListeners();
     try {
-      var pending = _library.where((t) => !t.tagged).toList();
       while (pending.isNotEmpty) {
         // Where each song sits, worked out again only if the library was replaced meanwhile.
         List<Track>? indexed;
         var at = <String, int>{};
-        var notified = DateTime.now();
+        var notified = now();
         await Metadata.enrichAll(pending, (batch) {
           if (!identical(indexed, _library)) {
             indexed = _library;
             at = {for (var i = 0; i < _library.length; i++) _library[i].id: i};
           }
           for (final t in batch) {
-            if (at[t.id] case final i?) _library[i] = t;
+            if (at[t.id] case final i?) _replaceAt(i, t);
           }
-          _libraryEdits++;
-          // A few times a second is plenty for the counts and covers filling in.
-          if (DateTime.now().difference(notified) > const Duration(milliseconds: 400)) {
-            notified = DateTime.now();
+          _setProgress(scanProgress.value.done + batch.length, scanProgress.value.total);
+          // Sorting and grouping the library again is the costly part, so the UI hears of the new tags every
+          // [scanNotifyEvery] and once at the end; progress has its own notifier.
+          if (now().difference(notified) >= scanNotifyEvery) {
+            notified = now();
             notifyListeners();
           }
         });
         await _save();
         // Pick up anything imported while we were scanning.
         pending = _library.where((t) => !t.tagged).toList();
+        _setProgress(0, pending.length);
       }
     } finally {
       _scanning = false;
@@ -929,8 +1028,11 @@ class PlayerController extends ChangeNotifier {
   Future<void> editTags(Track track, TagEdit edit) async {
     final updated = await Metadata.writeTags(track, edit);
     final i = _library.indexWhere((t) => t.id == track.id);
-    if (i >= 0) _library[i] = updated;
-    _libraryEdits++;
+    if (i >= 0) {
+      _replaceAt(i, updated);
+    } else {
+      _libraryEdits++;
+    }
     notifyListeners();
     await _save();
   }
@@ -1398,6 +1500,7 @@ class PlayerController extends ChangeNotifier {
   /// skip the far more frequent changes of what's playing.
   final libraryRevision = ValueNotifier<int>(0);
   (List<Track>, int, List<UserPlaylist>)? _revisionOf;
+  DateTime? _lastRevisionBump;
 
   /// Work started in [load] (tag tools probe, tag enrichment) can finish after dispose.
   @override
@@ -1405,8 +1508,16 @@ class PlayerController extends ChangeNotifier {
     if (_disposed) return;
     final seen = _revisionOf;
     if (seen == null || !identical(seen.$1, _library) || seen.$2 != _libraryEdits || !identical(seen.$3, _playlists)) {
-      _revisionOf = (_library, _libraryEdits, _playlists);
-      libraryRevision.value++;
+      // Tags arriving in a scan only change what songs say about themselves: those wait for the next
+      // [scanNotifyEvery] (and the end of the scan). Anything else is shown at once.
+      final onlyTags = seen != null && identical(seen.$1, _library) && identical(seen.$3, _playlists);
+      final at = now();
+      final last = _lastRevisionBump;
+      if (!(onlyTags && _scanning && last != null && at.difference(last) < scanNotifyEvery)) {
+        _revisionOf = (_library, _libraryEdits, _playlists);
+        _lastRevisionBump = at;
+        libraryRevision.value++;
+      }
     }
     super.notifyListeners();
   }
@@ -1434,6 +1545,11 @@ class PlayerController extends ChangeNotifier {
     audio.dispose();
     discord.dispose();
     libraryRevision.dispose();
+    scanProgress.dispose();
+    _recentsTimer?.cancel();
+    if (_recentsTimer != null) _storeRecents().ignore();
+    _saveTimer?.cancel();
+    if (_savePending) _save().ignore();
     _level.dispose();
     super.dispose();
   }
@@ -1463,242 +1579,4 @@ class _SleepHost implements SleepHost {
 
   @override
   Future<void> pause() => c.pause();
-}
-
-/// Makes the [PlayerController] available to the widget tree.
-class PlayerScope extends InheritedNotifier<PlayerController> {
-  PlayerScope({super.key, required PlayerController controller, required Widget child})
-    : super(
-        notifier: controller,
-        child: _PlayerIdentity(controller: controller, child: child),
-      );
-
-  /// The controller, rebuilding the caller on every change it notifies.
-  static PlayerController of(BuildContext context) =>
-      context.dependOnInheritedWidgetOfExactType<PlayerScope>()!.notifier!;
-
-  /// Access without subscribing to rebuilds (for callbacks).
-  static PlayerController read(BuildContext context) => context.getInheritedWidgetOfExactType<PlayerScope>()!.notifier!;
-
-  /// The controller, rebuilding the caller only if a different one takes its
-  /// place (tests do that): for widgets that listen to just part of it.
-  static PlayerController identity(BuildContext context) =>
-      context.dependOnInheritedWidgetOfExactType<_PlayerIdentity>()!.controller;
-}
-
-class _PlayerIdentity extends InheritedWidget {
-  const _PlayerIdentity({required this.controller, required super.child});
-
-  final PlayerController controller;
-
-  @override
-  bool updateShouldNotify(_PlayerIdentity old) => !identical(controller, old.controller);
-}
-
-/// [builder] again for each change the controller notifies, but only while
-/// this part of the screen can be seen. A page covered by another (its tickers
-/// are off: Home under an album, a hidden phone tab) was rebuilt and laid out
-/// for every song change all the same; now it catches up once it's uncovered.
-class VisiblePlayerBuilder extends StatefulWidget {
-  const VisiblePlayerBuilder({super.key, required this.builder});
-
-  final Widget Function(BuildContext context, PlayerController c) builder;
-
-  @override
-  State<VisiblePlayerBuilder> createState() => _VisiblePlayerBuilderState();
-}
-
-class _VisiblePlayerBuilderState extends State<VisiblePlayerBuilder> {
-  PlayerController? _c;
-  bool _visible = true;
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    final c = PlayerScope.identity(context);
-    if (!identical(c, _c)) {
-      _c?.removeListener(_changed);
-      _c = c..addListener(_changed);
-    }
-    // Runs again (and so builds) when the page is covered or uncovered.
-    _visible = TickerMode.valuesOf(context).enabled;
-  }
-
-  void _changed() {
-    if (_visible) setState(() {});
-  }
-
-  @override
-  void dispose() {
-    _c?.removeListener(_changed);
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) => widget.builder(context, _c!);
-}
-
-/// Rebuilds when [select] picks out something else from the controller, not
-/// on each of its changes. [PlayerController] notifies for everything (a song
-/// starting, play / pause, buffering, the library), several times a song; a
-/// song row only cares whether it is the one playing.
-class PlayerSelect<T> extends StatefulWidget {
-  const PlayerSelect({super.key, required this.select, required this.builder, this.child});
-
-  /// Compared with `==`: records of plain values work.
-  final T Function(PlayerController c) select;
-  final Widget Function(BuildContext context, T value, Widget? child) builder;
-  final Widget? child;
-
-  @override
-  State<PlayerSelect<T>> createState() => _PlayerSelectState<T>();
-}
-
-class _PlayerSelectState<T> extends State<PlayerSelect<T>> {
-  PlayerController? _c;
-  late T _value;
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    final c = PlayerScope.identity(context);
-    if (identical(c, _c)) return;
-    _c?.removeListener(_changed);
-    _c = c..addListener(_changed);
-    _value = widget.select(c);
-  }
-
-  @override
-  void didUpdateWidget(PlayerSelect<T> old) {
-    super.didUpdateWidget(old);
-    // What's selected may depend on the widget's own fields (a row's song).
-    _value = widget.select(_c!);
-  }
-
-  void _changed() {
-    final value = widget.select(_c!);
-    if (value != _value) setState(() => _value = value);
-  }
-
-  @override
-  void dispose() {
-    _c?.removeListener(_changed);
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) => widget.builder(context, _value, widget.child);
-}
-
-/// What the UI reads from one version of the library, each part worked out on
-/// first use. A new library (or an in-place edit) gets a new one.
-class _LibraryViews {
-  _LibraryViews(this.tracks, this.edits);
-
-  final List<Track> tracks;
-  final int edits;
-
-  late final List<Track> library = UnmodifiableListView(tracks);
-
-  late final Map<String, Track> byId = {for (final t in tracks) t.id: t};
-
-  /// Title, artist and album of each song in lower case, for search.
-  late final List<String> searchKeys = [
-    for (final t in tracks) '${t.title}\u0000${t.artist}\u0000${t.album ?? ''}'.toLowerCase(),
-  ];
-
-  late final Collection allSongs = Collection(
-    kind: CollectionKind.allSongs,
-    title: 'All Songs',
-    subtitle: '${tracks.length} ${tracks.length == 1 ? 'song' : 'songs'}',
-    tracks: _sortedBy(tracks, (t) => t.title.toLowerCase()),
-  );
-
-  late final List<Track> recentlyAdded = [...tracks]..sort((a, b) => b.addedAt.compareTo(a.addedAt));
-
-  late final Collection? youtubeDownloads = () {
-    final downloaded = tracks.where((t) => t.sourceUrl != null).toList()
-      ..sort((a, b) => b.addedAt.compareTo(a.addedAt));
-    if (downloaded.isEmpty) return null;
-    return Collection(
-      kind: CollectionKind.youtube,
-      title: 'From YouTube',
-      subtitle: '${downloaded.length} ${downloaded.length == 1 ? 'song' : 'songs'}',
-      tracks: downloaded,
-    );
-  }();
-
-  /// Video id → the first library file downloaded from it.
-  late final Map<String, Track> downloads = () {
-    final out = <String, Track>{};
-    for (final t in tracks) {
-      if (_videoIdOf(t.sourceUrl) case final id?) out.putIfAbsent(id, () => t);
-    }
-    return out;
-  }();
-
-  late final List<Collection> albums = () {
-    final groups = <String, List<Track>>{};
-    for (final t in tracks) {
-      final key = t.albumKey;
-      if (key != null) (groups[key] ??= []).add(t);
-    }
-    final albums = [
-      for (final group in groups.values)
-        Collection(
-          kind: CollectionKind.album,
-          title: group.first.album!,
-          subtitle: group.first.artist,
-          tracks: group..sort(compareAlbumOrder),
-        ),
-    ];
-    return _sortedBy(albums, (a) => a.title.toLowerCase());
-  }();
-
-  late final List<Collection> artists = () {
-    final groups = <String, List<Track>>{};
-    for (final t in tracks) {
-      if (t.artist != Track.unknownArtist) (groups[t.artist] ??= []).add(t);
-    }
-    return [
-      for (final e in groups.entries)
-        Collection(
-          kind: CollectionKind.artist,
-          title: e.key,
-          subtitle: '${e.value.length} ${e.value.length == 1 ? 'song' : 'songs'}',
-          tracks: e.value
-            ..sort((a, b) {
-              final byAlbum = (a.album ?? '').compareTo(b.album ?? '');
-              return byAlbum != 0 ? byAlbum : compareAlbumOrder(a, b);
-            }),
-        ),
-    ]..sort((a, b) => b.tracks.length.compareTo(a.tracks.length));
-  }();
-
-  late final Map<String, Collection> artistByName = {for (final a in artists) a.title: a};
-
-  late final List<Collection> albumsAndArtists = _sortedBy([...albums, ...artists], (c) => c.title.toLowerCase());
-
-  late final Map<String, Collection> albumOfTrack = {
-    for (final a in albums)
-      for (final t in a.tracks) t.id: a,
-  };
-
-  /// [items] sorted by [key], each key computed once; equal keys keep their order.
-  static List<T> _sortedBy<T>(List<T> items, String Function(T) key) {
-    final keys = [for (final i in items) key(i)];
-    final order = List<int>.generate(items.length, (i) => i)
-      ..sort((a, b) {
-        final c = keys[a].compareTo(keys[b]);
-        return c != 0 ? c : a - b;
-      });
-    return [for (final i in order) items[i]];
-  }
-
-  /// `watch?v=<id>` or `youtu.be/<id>`.
-  static String? _videoIdOf(String? url) {
-    final u = url == null ? null : Uri.tryParse(url);
-    if (u == null) return null;
-    return u.queryParameters['v'] ?? (u.host.endsWith('youtu.be') ? u.pathSegments.firstOrNull : null);
-  }
 }

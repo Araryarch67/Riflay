@@ -522,12 +522,28 @@ class PlayHistory extends ChangeNotifier {
     }
     _subs
       ..clear()
-      ..add(controller.player.positionStream.listen((_) => _poll()))
+      ..add(controller.player.positionStream.listen((_) => _pollThrottled()))
       ..add(controller.player.playerStateStream.listen((_) => _poll()))
       ..add(controller.player.sequenceStateStream.listen((_) => _poll()));
   }
 
+  /// How often position ticks (several a second) are looked at; changes of song or state are not held back.
+  static const pollEvery = Duration(seconds: 1);
+  DateTime? _lastPoll;
+
+  /// Clock for [pollEvery] (tests set their own).
+  @visibleForTesting
+  DateTime Function() clock = DateTime.now;
+
+  void _pollThrottled() {
+    final at = clock();
+    final last = _lastPoll;
+    if (last != null && at.difference(last) < pollEvery) return;
+    _poll();
+  }
+
   void _poll() {
+    _lastPoll = clock();
     final c = _controller;
     if (c == null || !_enabled) return;
     final plays = _tracker.tick(
