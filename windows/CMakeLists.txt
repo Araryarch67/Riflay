@@ -60,6 +60,27 @@ add_subdirectory("runner")
 # warns about (CMP0175); keep the old behaviour without the noise.
 set(CMAKE_POLICY_DEFAULT_CMP0175 OLD)
 
+# Video mode: media_kit_video draws through ANGLE (OpenGL ES over Direct3D 11)
+# and its CMake expects ${CMAKE_BINARY_DIR}/ANGLE (headers, import libraries
+# and DLLs), which only media_kit_libs_windows_video fetches. Riflay uses the
+# audio package plus its own libmpv, so fetch the very same prebuilt archive
+# here, before the plugins configure. The archive is pinned by SHA-256.
+set(ANGLE_SRC "${CMAKE_BINARY_DIR}/ANGLE")
+if(NOT EXISTS "${ANGLE_SRC}/libEGL.dll" OR NOT EXISTS "${ANGLE_SRC}/include/EGL/egl.h")
+  set(ANGLE_ARCHIVE "${CMAKE_BINARY_DIR}/ANGLE.7z")
+  file(DOWNLOAD
+    "https://github.com/alexmercerind/flutter-windows-ANGLE-OpenGL-ES/releases/download/v1.0.1/ANGLE.7z"
+    "${ANGLE_ARCHIVE}"
+    EXPECTED_HASH SHA256=cc5911bb15d596fd5a2b362613ad35b7093b427117269a7359054a65746a5f9a
+    TLS_VERIFY ON)
+  file(REMOVE_RECURSE "${ANGLE_SRC}")
+  file(MAKE_DIRECTORY "${ANGLE_SRC}")
+  file(ARCHIVE_EXTRACT INPUT "${ANGLE_ARCHIVE}" DESTINATION "${ANGLE_SRC}")
+  if(NOT EXISTS "${ANGLE_SRC}/include/EGL/egl.h")
+    message(FATAL_ERROR "ANGLE archive did not unpack to ${ANGLE_SRC}")
+  endif()
+endif()
+
 # Generated plugin build rules, which manage building the plugins and adding
 # them to the application.
 include(flutter/generated_plugins.cmake)
@@ -109,6 +130,11 @@ install(FILES "${FLUTTER_LIBRARY}" DESTINATION "${INSTALL_BUNDLE_LIB_DIR}"
 # tool/build_libmpv_windows.sh from third_party/mpv_asio.
 list(FILTER PLUGIN_BUNDLED_LIBRARIES EXCLUDE REGEX "libmpv-2\\.dll$")
 list(APPEND PLUGIN_BUNDLED_LIBRARIES "${CMAKE_CURRENT_SOURCE_DIR}/libmpv/libmpv-2.dll")
+# media_kit_video links ANGLE, so these sit next to the exe (the same files
+# media_kit_libs_windows_video bundles).
+foreach(angle_dll libEGL libGLESv2 d3dcompiler_47 vk_swiftshader vulkan-1 zlib)
+  list(APPEND PLUGIN_BUNDLED_LIBRARIES "${ANGLE_SRC}/${angle_dll}.dll")
+endforeach()
 
 if(PLUGIN_BUNDLED_LIBRARIES)
   install(FILES "${PLUGIN_BUNDLED_LIBRARIES}"
