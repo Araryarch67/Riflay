@@ -562,7 +562,9 @@ class DownloadButton extends StatelessWidget {
                 alignment: Alignment.center,
                 children: [
                   CircularProgressIndicator(
-                    value: job.status == DownloadStatus.downloading && job.progress > 0 ? job.progress : null,
+                    value: job.status == DownloadStatus.downloading && job.progress > 0 && !job.converting
+                        ? job.progress
+                        : null,
                     strokeWidth: 2,
                     color: AppColors.accent,
                     backgroundColor: AppColors.textPrimary.withValues(alpha: 0.24),

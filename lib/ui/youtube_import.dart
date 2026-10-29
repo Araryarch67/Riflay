@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:youtube_explode_dart/youtube_explode_dart.dart' show Video;
 
+import '../services/download_prefs.dart';
 import '../services/player_controller.dart';
 import '../services/youtube_importer.dart';
 import 'download_options.dart';
@@ -250,12 +251,21 @@ class _PreviewCardState extends State<_PreviewCard> {
       case VideoPreview(:final video):
         final peek = await PlayerScope.read(context).youtube.peekAudio(video.id.value);
         if (peek == null) return null;
-        return [peek.quality, if (peek.size != null) formatBytes(peek.size!)].join(' • ');
+        return [
+          peek.quality,
+          if (peek.size case final size?) peek.approx ? 'About ${formatBytes(size)}' : formatBytes(size),
+        ].join(' • ');
       case PlaylistPreview(:final videos):
         final seconds = videos.fold(0, (sum, v) => sum + (v.duration?.inSeconds ?? 0));
         if (seconds == 0) return null;
-        // ~130 kbps Opus/AAC is what YouTube serves for most music.
-        return 'About ${formatBytes(seconds * 130000 / 8)} total';
+        final prefs = DownloadPrefs.instance;
+        await prefs.load();
+        final choice = prefs.choice;
+        final bytes = choice.format.lossless
+            ? estimateFlacBytes(Duration(seconds: seconds), choice.flac, compressed: YoutubeImporter.canReencode)
+            // ~130 kbps Opus/AAC is what YouTube serves for most music; a lower bitrate is about what it says.
+            : seconds * (choice.kbps ?? 130) * 1000 / 8;
+        return 'About ${formatBytes(bytes)} total';
     }
   }
 

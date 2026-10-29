@@ -110,7 +110,7 @@ void main() {
         expect(p.candidate.id, '251');
         expect(p.convert, const ToFlac(FlacQuality.standard));
         expect(p.ext, 'flac');
-        expect(p.label, 'FLAC · 16-bit / 48 kHz');
+        expect(p.label, 'FLAC · 16-bit / 48 kHz · from Opus 137 kbps');
         expect(p.reencodeKbps, isNull);
         expect(p.kbps, 137, reason: 'the stream it was made from');
       }
@@ -119,8 +119,11 @@ void main() {
     test('carries the chosen quality', () {
       final p = _pick(DownloadFormat.flac, null, flac: FlacQuality.hiRes)!;
       expect(p.convert, const ToFlac(FlacQuality.hiRes));
-      expect(p.label, 'FLAC · 24-bit / 48 kHz');
-      expect(_pick(DownloadFormat.flac, null, flac: FlacQuality.cd)!.label, 'FLAC · 16-bit / 44.1 kHz');
+      expect(p.label, 'FLAC · 24-bit / 48 kHz · from Opus 137 kbps');
+      expect(
+        _pick(DownloadFormat.flac, null, flac: FlacQuality.cd)!.label,
+        'FLAC · 16-bit / 44.1 kHz · from Opus 137 kbps',
+      );
     });
 
     test('falls back to AAC when there is no Opus', () {
@@ -192,5 +195,17 @@ void main() {
           .processed,
       isTrue,
     );
+  });
+
+  test('a FLAC label names the stream it was made from; its size is estimated from the length', () {
+    expect(describeFlac(FlacQuality.standard), 'FLAC · 16-bit / 48 kHz');
+    expect(
+      describeFlac(FlacQuality.cd, fromOpus: false, fromKbps: 130),
+      'FLAC · 16-bit / 44.1 kHz · from AAC 130 kbps',
+    );
+    const minute = Duration(minutes: 1);
+    expect(estimateFlacBytes(minute, FlacQuality.standard, compressed: false), 11520000);
+    expect(estimateFlacBytes(minute, FlacQuality.hiRes, compressed: false), 17280000);
+    expect(estimateFlacBytes(minute, FlacQuality.standard, compressed: true), 6912000);
   });
 }

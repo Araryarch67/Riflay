@@ -86,7 +86,7 @@ void main() {
       file.copySync('${out.path}/$name${file.path.substring(file.path.lastIndexOf('.'))}');
       if (choice.format.lossless) {
         expect(file.path, endsWith('.flac'));
-        expect(job.quality, describeFlac(choice.flac));
+        expect(job.quality, startsWith('${describeFlac(choice.flac)} · from '));
         expect(
           File(file.path.replaceAll('.flac', '.webm')).existsSync(),
           isFalse,

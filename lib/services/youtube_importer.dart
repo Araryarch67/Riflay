@@ -61,6 +61,9 @@ class DownloadJob {
     return Duration(milliseconds: ((total - receivedBytes) / rate * 1000).round());
   }
 
+  /// The stream has arrived and is being converted (FLAC, or a lower bitrate): no progress to show.
+  bool converting = false;
+
   String? error;
   Track? track;
 
@@ -91,6 +94,7 @@ class _Audio {
     required this.ext,
     required this.quality,
     this.convert,
+    this.estimatedSize,
   });
 
   final Uri url;
@@ -109,6 +113,9 @@ class _Audio {
 
   /// Applied after the stream has arrived; null keeps it byte-for-byte.
   final Conversion? convert;
+
+  /// For FLAC: about how big the saved file will be.
+  final int? estimatedSize;
 }
 
 /// What a pasted link resolved to, shown before the user commits to downloading.
@@ -283,13 +290,14 @@ class YoutubeImporter extends ChangeNotifier {
     }
   }
 
-  /// Exact size and quality of what a download would fetch. For FLAC the size is null:
-  /// the stream's size says nothing about the lossless file made from it.
-  Future<({int? size, String quality})?> peekAudio(String videoId, {DownloadChoice? choice}) async {
+  /// Size and quality of what a download would save. Exact, except for FLAC, which is
+  /// estimated ([approx]): the stream's size says little about the lossless file made from it.
+  Future<({int? size, bool approx, String quality})?> peekAudio(String videoId, {DownloadChoice? choice}) async {
     try {
       await DownloadPrefs.instance.load();
       final r = await _resolveAudio(videoId, choice ?? DownloadPrefs.instance.choice);
-      return (size: r.convert is ToFlac ? null : r.size, quality: r.quality);
+      final flac = r.convert is ToFlac;
+      return (size: flac ? r.estimatedSize : r.size, approx: flac, quality: r.quality);
     } catch (_) {
       return null;
     }
@@ -309,6 +317,7 @@ class YoutubeImporter extends ChangeNotifier {
         ext: r.convert is ToFlac ? 'flac' : sourceExt,
         quality: _qualityOf(r.convert, opus: r.audio.isOpus, kbps: r.audio.kbps),
         convert: r.convert,
+        estimatedSize: _flacSize(r.convert, size: r.audio.size, kbps: r.audio.kbps),
       );
     } catch (e) {
       if (YtDlp.supported) rethrow;
@@ -329,11 +338,19 @@ class YoutubeImporter extends ChangeNotifier {
       ext: pick.ext == 'flac' ? 'flac' : (stream.container == StreamContainer.webM ? 'webm' : 'm4a'),
       quality: pick.label,
       convert: pick.convert,
+      estimatedSize: _flacSize(pick.convert, size: stream.size.totalBytes, kbps: pick.candidate.kbps),
     );
   }
 
+  /// The FLAC's likely size, from the stream's size and bitrate (which give the song's length).
+  static int? _flacSize(Conversion? convert, {required int? size, required int? kbps}) {
+    if (convert is! ToFlac || size == null || kbps == null || kbps <= 0) return null;
+    final length = Duration(milliseconds: size * 8 ~/ kbps);
+    return estimateFlacBytes(length, convert.quality, compressed: Ffmpeg.available);
+  }
+
   static String _qualityOf(Conversion? convert, {required bool opus, required int? kbps}) => switch (convert) {
-    ToFlac(:final quality) => describeFlac(quality),
+    ToFlac(:final quality) => describeFlac(quality, fromOpus: opus, fromKbps: kbps),
     Reencode(kbps: final target) => describeAudio(opus: opus, kbps: target),
     null => describeAudio(opus: opus, kbps: kbps),
   };
@@ -493,6 +510,10 @@ class YoutubeImporter extends ChangeNotifier {
       }
       downloaded = await partFile.rename(audioFile.path);
       var saved = audioFile;
+      if (audio.convert != null) {
+        job.converting = true;
+        notifyListeners();
+      }
       switch (audio.convert) {
         case Reencode(:final kbps):
           saved = await _reencode(audioFile, opus: audio.sourceExt == 'webm', kbps: kbps);
@@ -542,6 +563,7 @@ class YoutubeImporter extends ChangeNotifier {
           ..error = _friendlyError(e);
       }
     } finally {
+      job.converting = false;
       notifyListeners();
     }
   }

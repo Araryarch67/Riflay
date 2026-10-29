@@ -167,7 +167,7 @@ class AudioPick {
 
   /// e.g. "Opus · 138 kbps" or "FLAC · 16-bit / 48 kHz", for the downloads list.
   String get label => switch (convert) {
-    ToFlac(:final quality) => describeFlac(quality),
+    ToFlac(:final quality) => describeFlac(quality, fromOpus: opus, fromKbps: candidate.kbps),
     _ => describeAudio(opus: opus, kbps: kbps),
   };
 }
@@ -175,7 +175,20 @@ class AudioPick {
 String describeAudio({required bool opus, required int? kbps}) =>
     '${opus ? 'Opus' : 'AAC'}${kbps == null || kbps <= 0 ? '' : ' · $kbps kbps'}';
 
-String describeFlac(FlacQuality q) => 'FLAC · ${q.label}';
+/// e.g. "FLAC · 16-bit / 48 kHz · from Opus 137 kbps": the stream it was made from says how good it really is.
+String describeFlac(FlacQuality q, {bool? fromOpus, int? fromKbps}) {
+  final from = fromOpus == null
+      ? ''
+      : ' · from ${fromOpus ? 'Opus' : 'AAC'}${fromKbps == null || fromKbps <= 0 ? '' : ' $fromKbps kbps'}';
+  return 'FLAC · ${q.label}$from';
+}
+
+/// Roughly how big a FLAC of [length] at [q] comes out. [compressed] is ffmpeg's FLAC (a decoded lossy
+/// stream packs to a bit over half its raw size); without it [FlacStream] stores the samples as they are.
+int estimateFlacBytes(Duration length, FlacQuality q, {required bool compressed}) {
+  final raw = length.inMilliseconds / 1000 * q.rate * 2 * q.bits / 8;
+  return (compressed ? raw * 0.6 : raw).round();
+}
 
 /// Below this, a stream is taken for a broken one when the other format has a real one.
 const _brokenKbps = 32;
