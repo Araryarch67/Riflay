@@ -478,7 +478,6 @@ class YoutubeImporter extends ChangeNotifier {
   /// Makes [source] (a downloaded stream) into [target] (a .flac) at [q], by writing `<target>.part` and renaming it.
   /// Deletes [source] once the FLAC is in place. ffmpeg where there is one; otherwise libmpv decodes and
   /// [FlacStream] packs the samples (no compression, so those files are larger). Returns [target].
-  @visibleForTesting
   static Future<File> toFlac(File source, File target, FlacQuality q, {bool Function()? isCancelled}) async {
     final part = File('${target.path}.part');
     try {

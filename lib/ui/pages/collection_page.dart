@@ -3,8 +3,10 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../../models/track.dart';
+import '../../services/flac_convert.dart';
 import '../../services/player_controller.dart';
 import '../download_options.dart';
+import '../flac_convert_dialog.dart';
 import '../shell_scope.dart';
 import '../theme.dart';
 import '../widgets/controls.dart';
@@ -76,7 +78,10 @@ class CollectionPage extends StatelessWidget {
         : List<int>.generate(tracks.length, (i) => i);
     final text = Theme.of(context).textTheme;
     final playlistId = live.kind == CollectionKind.playlist ? live.id : null;
-    final actions = [...this.actions, if (playlistId != null) _PlaylistMenu(id: playlistId, name: live.title)];
+    final actions = [
+      ...this.actions,
+      if (playlistId != null) _PlaylistMenu(id: playlistId, name: live.title, tracks: tracks),
+    ];
 
     final page = AccentBuilder(
       track: live.cover,
@@ -418,14 +423,17 @@ class _ColumnHeader extends StatelessWidget {
 
 /// Rename / delete for a Riflay playlist.
 class _PlaylistMenu extends StatelessWidget {
-  const _PlaylistMenu({required this.id, required this.name});
+  const _PlaylistMenu({required this.id, required this.name, required this.tracks});
 
   final String id;
   final String name;
+  final List<Track> tracks;
 
   @override
   Widget build(BuildContext context) {
     final c = PlayerScope.read(context);
+    // A streamed song counts through its downloaded file.
+    final files = [for (final t in tracks) c.downloadedCopy(t) ?? t].where(FlacConvert.available).toList();
     return PopupMenuButton<VoidCallback>(
       // Over the whole window, so a click anywhere (sidebar included) closes it.
       useRootNavigator: true,
@@ -440,6 +448,11 @@ class _PlaylistMenu extends StatelessWidget {
           },
           child: const MenuRow(leading: Icon(Icons.edit_outlined), title: Text('Rename')),
         ),
+        if (files.isNotEmpty)
+          PopupMenuItem(
+            value: () => showFlacConvert(context, c, files),
+            child: const MenuRow(leading: Icon(Icons.graphic_eq_rounded), title: Text('Convert all to FLAC (Beta)')),
+          ),
         PopupMenuItem(
           value: () async {
             final history = ShellScope.of(context).history;

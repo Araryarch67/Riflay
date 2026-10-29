@@ -57,6 +57,7 @@ Riflay is a free, open-source music player for Linux, Windows, macOS, Android an
 | **Play on TVs and speakers** | DLNA / UPnP and AirPlay |
 | **Listen together** | Friends play along with your YouTube songs, in sync. On the same Wi-Fi, or anywhere with a code (beta: connects through free public servers, end-to-end encrypted) |
 | **Tag editor** | Preserves ReplayGain and custom tags |
+| **Convert to FLAC** (Beta) | Turns a downloaded or lossy song into a FLAC from its menu, or a whole playlist at once, keeping tags and cover. Your own files are kept beside it |
 | **Customization** | Catppuccin, Nord, Gruvbox, Dracula or your own colors. Any font and accent. Light, dark or match your system, for every theme. Dynamic theme (beta) follows the cover of what's playing, local or YouTube. Cover-art colors in the player or the whole app, with adjustable strength. High contrast |
 | **Layout options** | Corners, spacing, cover size, Home sections, player and lyrics looks, animations |
 | **Adaptive layouts** | Phone, tablet and desktop. Mini and full-screen player |
