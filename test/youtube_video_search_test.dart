@@ -37,8 +37,8 @@ void main() {
     final tracks = YoutubeVideoSearch.toTracks([
       video('aaaaaaaaaaa', 'Lofi radio', 'Chill', null, live: true),
       video('bbbbbbbbbbb', 'Live with length', 'Chill', const Duration(hours: 1), live: true),
-      video('ccccccccccc', 'A short', 'Someone', const Duration(seconds: 30)),
-      video('ddddddddddd', 'Exactly a minute', 'Someone', const Duration(seconds: 60)),
+      video('ccccccccccc', 'A short #shorts', 'Someone', const Duration(seconds: 30)),
+      video('ddddddddddd', 'Exactly a minute #short', 'Someone', const Duration(seconds: 60)),
       video('eeeeeeeeeee', 'No length', 'Someone', null),
       video('fffffffffff', 'Real video', 'Someone', const Duration(minutes: 4)),
     ]);
@@ -52,4 +52,34 @@ void main() {
     ]);
     expect(tracks.map((t) => t.title), ['Song 0', 'Song 1', 'Song 2']);
   });
+
+  Video withText(String id, String title, Duration d, {String description = ''}) => Video(
+    VideoId(id),
+    title,
+    'Someone',
+    ChannelId('UCuAXFkgsw1L7xaCfnd5JJOw'),
+    null,
+    null,
+    null,
+    description,
+    d,
+    ThumbnailSet(id),
+    null,
+    const Engagement(0, null, null),
+    false,
+  );
+
+  test('short songs are kept; only results tagged #shorts are hidden', () {
+    final tracks = YoutubeVideoSearch.toTracks([
+      withText('aaaaaaaaaa1', 'A 45 second song', d45),
+      withText('aaaaaaaaaa2', 'Funny cat #shorts', d45),
+      withText('aaaaaaaaaa3', 'Dance', d45, description: 'follow me #Shorts #fyp'),
+      withText('aaaaaaaaaa4', 'Trick #YouTubeShorts', d45),
+      withText('aaaaaaaaaa5', 'Long with #shorts tag', const Duration(minutes: 3)),
+      withText('aaaaaaaaaa6', 'Shorts of the year (words only)', d45),
+    ]);
+    expect(tracks.map((t) => t.videoId), ['aaaaaaaaaa1', 'aaaaaaaaaa5', 'aaaaaaaaaa6']);
+  });
 }
+
+const d45 = Duration(seconds: 45);

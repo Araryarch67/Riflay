@@ -306,6 +306,21 @@ extension CommonMetadataSetters on ParserTag {
     }
   }
 
+  /// Riflay: set the free comment. Written for MP4 (`©cmt`) and Vorbis (`COMMENT`);
+  /// other formats are left as they are.
+  void setComment(String? comment) {
+    switch (this) {
+      case Mp4Metadata m:
+        m.comment = comment;
+        break;
+      case VorbisMetadata m:
+        m.comment = comment == null ? <String>[] : [comment];
+        break;
+      default:
+        break;
+    }
+  }
+
   /// Replace genres.
   void setGenres(List<String> genres) {
     switch (this) {

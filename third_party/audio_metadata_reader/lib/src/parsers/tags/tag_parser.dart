@@ -81,6 +81,9 @@ class AudioMetadata {
   /// The lyric of the track. Can be nornal text or LRC
   String? lyrics;
 
+  /// Riflay: the free comment (`COMM`, `COMMENT`, `©cmt`, `ICMT`), when the file has one.
+  String? comment;
+
   /// The bitrate
   int? bitrate;
 
@@ -109,6 +112,7 @@ class AudioMetadata {
     this.discNumber,
     this.totalDisc,
     this.lyrics,
+    this.comment,
     this.bitrate,
     this.sampleRate,
     required this.file,

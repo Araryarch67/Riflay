@@ -603,8 +603,14 @@ class _SyncedLyricsState extends State<_SyncedLyrics> {
   late final PlayerController _c = PlayerScope.read(context);
   // The person's shift for this song: lyrics a second later are where the song was a second ago.
   late final ValueNotifier<Duration> _shift = LyricsTiming.of(widget.track);
-  late final Stream<Duration> _ticks = _c.positionUpdates().map((p) => p - _shift.value);
-  late final Stream<Duration> _smooth = _c.smoothPosition().map((p) => p - _shift.value);
+  late final Stream<Duration> _ticks = _c
+      .positionUpdates()
+      .map((p) => p - _shift.value)
+      .asBroadcastStream(onListen: (s) => s.resume(), onCancel: (s) => s.pause());
+  late final Stream<Duration> _smooth = _c
+      .smoothPosition()
+      .map((p) => p - _shift.value)
+      .asBroadcastStream(onListen: (s) => s.resume(), onCancel: (s) => s.pause());
 
   @override
   Widget build(BuildContext context) => SyncedLyricsView(

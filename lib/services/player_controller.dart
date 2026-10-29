@@ -89,7 +89,7 @@ class PlayerController extends ChangeNotifier {
     if (id == null || id == _formatsFor) return;
     _formatsFor = id;
     Timer(const Duration(seconds: 3), () {
-      if (_formatsFor == id && currentTrack?.videoId == id) YoutubeStream.prefetchDownloadCandidates(id);
+      if (_formatsFor == id && currentTrack?.videoId == id) YoutubeStream.prefetchDownloadCandidatesIfAllowed(id);
     });
   }
 

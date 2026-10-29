@@ -12,6 +12,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:xml/xml.dart';
 
 import '../models/track.dart';
+import 'beta_features.dart';
 import 'lyrics_sources.dart';
 import 'ytmusic_web.dart';
 
@@ -499,7 +500,7 @@ abstract final class LyricsService {
       if (wordTimed() case final l?) return l;
       // Timed lines are fine, but Musixmatch may time every word (Beta: it often
       // refuses, and then rests for a while without being asked).
-      found.add(await attempt(() => MoreLyrics.musixmatch(t)));
+      if (BetaFeatures.instance.isOn(BetaFeature.musixmatch)) found.add(await attempt(() => MoreLyrics.musixmatch(t)));
       if (wordTimed() case final l?) return l;
       if (timed() == null) found.add(await attempt(() => MoreLyrics.megalobiz(t)));
       return timed();

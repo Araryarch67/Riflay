@@ -736,6 +736,49 @@ class YtMusicWeb {
     return _tracksOf(res, limit);
   }
 
+  static final _albumYears = <String, int?>{};
+
+  /// The year an album (`MPRE…`) came out, from its page header ("Album • 2019"); null when it can't be told.
+  /// Remembered for the run: an album's songs are queued together.
+  Future<int?> albumYear(String browseId) async {
+    if (_albumYears.containsKey(browseId)) return _albumYears[browseId];
+    int? year;
+    try {
+      year = albumYearOf(await _send('browse', {'browseId': browseId}));
+    } catch (e) {
+      debugPrint('Album year: $e');
+      return null;
+    }
+    return _albumYears[browseId] = year;
+  }
+
+  /// The release year of the album named [album] by [artist]: the best matching search hit, then its page.
+  Future<int?> albumYearFor(String album, String artist) async {
+    final key = '${album.toLowerCase()}|${artist.toLowerCase()}';
+    if (_albumYears.containsKey(key)) return _albumYears[key];
+    int? year;
+    try {
+      final hits = await searchOnly('$album $artist', WebResultKind.album);
+      final named = hits.where((h) => h.title.toLowerCase() == album.toLowerCase());
+      final hit = named.where((h) => h.subtitle.toLowerCase().contains(artist.toLowerCase())).firstOrNull;
+      if (hit?.browseId case final id?) year = await albumYear(id);
+    } catch (e) {
+      debugPrint('Album year: $e');
+      return null;
+    }
+    return _albumYears[key] = year;
+  }
+
+  /// The year in an album page's header subtitle, or null.
+  @visibleForTesting
+  static int? albumYearOf(Map<String, dynamic> res) {
+    final header =
+        _asMap(_deepFind(res, 'musicResponsiveHeaderRenderer')) ?? _asMap(_deepFind(res, 'musicDetailHeaderRenderer'));
+    final subtitle = _text(header?['subtitle']);
+    final m = subtitle == null ? null : RegExp(r'\b(19|20)\d{2}\b').firstMatch(subtitle);
+    return m == null ? null : int.parse(m.group(0)!);
+  }
+
   /// Artists the account follows (YouTube Music's library "Subscriptions").
   Future<List<WebArtist>> followedArtists({int limit = 500}) async {
     final res = await _send('browse', const {'browseId': 'FEmusic_library_corpus_artists'});

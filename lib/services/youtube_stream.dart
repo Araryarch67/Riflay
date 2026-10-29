@@ -1,5 +1,7 @@
 import 'dart:convert';
+import 'dart:io';
 
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -207,6 +209,31 @@ abstract final class YoutubeStream {
   /// Every audio stream YouTube offers for [videoId] (sizes included), for the download picker and for
   /// [forDownload]. Cached for ten minutes; a call while one is running shares it.
   static Future<List<AudioCandidate>> downloadCandidates(String videoId) async => (await _listing(videoId)).candidates;
+
+  /// Whether to look formats up ahead without being asked. A phone does only on Wi-Fi or ethernet (the lookup
+  /// costs data and battery); anything else always does. [batterySaver] is false when it can't be told.
+  static bool shouldPrefetchAhead({required bool phone, required bool unmetered, bool batterySaver = false}) =>
+      !batterySaver && (!phone || unmetered);
+
+  /// [shouldPrefetchAhead] for this device right now; unknown connectivity counts as metered on a phone.
+  static Future<bool> prefetchAllowed() async {
+    final phone = Platform.isAndroid || Platform.isIOS;
+    if (!phone) return true;
+    try {
+      final now = await Connectivity().checkConnectivity();
+      return shouldPrefetchAhead(
+        phone: phone,
+        unmetered: now.any((c) => c == ConnectivityResult.wifi || c == ConnectivityResult.ethernet),
+      );
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// The automatic lookup after a song starts: only where [prefetchAllowed]. Never throws.
+  static Future<void> prefetchDownloadCandidatesIfAllowed(String videoId) async {
+    if (await prefetchAllowed()) prefetchDownloadCandidates(videoId);
+  }
 
   /// Looks [videoId]'s formats up ahead, so the picker opens ready. Never throws.
   static void prefetchDownloadCandidates(String videoId) {

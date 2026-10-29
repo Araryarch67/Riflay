@@ -1,14 +1,14 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:riflay/services/download_notifications.dart';
-import 'package:riflay/services/youtube_importer.dart' show DownloadStatus;
+import 'package:riflay/services/youtube_importer.dart' show DownloadPhase, DownloadStatus;
 
 JobSnapshot job(
   String id,
   DownloadStatus status, {
   double progress = 0,
-  bool converting = false,
+  DownloadPhase phase = DownloadPhase.downloading,
   String title = 'Song',
-}) => JobSnapshot(videoId: id, title: title, status: status, progress: progress, converting: converting);
+}) => JobSnapshot(videoId: id, title: title, status: status, progress: progress, phase: phase);
 
 void main() {
   group('noteFor', () {
@@ -23,7 +23,7 @@ void main() {
     });
 
     test('converting and just-started downloads have an indeterminate bar', () {
-      final c = noteFor(job('a', DownloadStatus.downloading, progress: 1, converting: true))!;
+      final c = noteFor(job('a', DownloadStatus.downloading, progress: 1, phase: DownloadPhase.converting))!;
       expect(c.body, 'Converting…');
       expect(c.indeterminate, isTrue);
       expect(c.percent, isNull);
@@ -122,6 +122,36 @@ void main() {
       expect(t.wait(9, t0), Duration.zero);
       t.allow(9, t0);
       expect(t.wait(9, t0.add(const Duration(seconds: 2))), Duration.zero);
+    });
+  });
+
+  group('finishing and taps', () {
+    test('remux and tagging say Finishing, not Converting', () {
+      final n = noteFor(job('a', DownloadStatus.downloading, progress: 1, phase: DownloadPhase.finishing))!;
+      expect(n.body, 'Finishing…');
+      expect(n.indeterminate, isTrue);
+    });
+
+    test('a tap on a notification opens Downloads, also when the shell registers late', () {
+      DownloadNotifications.resetTapsForTest();
+      var opened = 0;
+      DownloadNotifications.handleTap(payload: 'abcdefghijk');
+      DownloadNotifications.registerOpenDownloads(() => opened++);
+      expect(opened, 1, reason: 'the tap that launched the app is answered once the shell is there');
+      DownloadNotifications.handleTap(payload: 'abcdefghijk');
+      expect(opened, 2);
+      DownloadNotifications.registerOpenDownloads(null);
+      DownloadNotifications.resetTapsForTest();
+    });
+
+    test('Cancel and Retry buttons do not open Downloads', () {
+      DownloadNotifications.resetTapsForTest();
+      var opened = 0;
+      DownloadNotifications.registerOpenDownloads(() => opened++);
+      DownloadNotifications.handleTap(actionId: cancelAction, payload: 'abcdefghijk');
+      DownloadNotifications.handleTap(actionId: retryAction, payload: 'abcdefghijk');
+      expect(opened, 0);
+      DownloadNotifications.resetTapsForTest();
     });
   });
 }

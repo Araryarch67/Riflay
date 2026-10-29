@@ -32,6 +32,9 @@ class Mp4Metadata extends ParserTag {
   /// Unsynchronized lyrics text.
   String? lyrics;
 
+  /// Riflay: free comment (`©cmt`).
+  String? comment;
+
   /// Genre text value.
   String? genre;
 
@@ -59,6 +62,7 @@ class Mp4Metadata extends ParserTag {
     this.bitrate,
     this.discNumber,
     this.lyrics,
+    this.comment,
     this.genre,
     this.sampleRate,
     this.totalTracks,
@@ -79,6 +83,7 @@ class Mp4Metadata extends ParserTag {
         '  bitrate: $bitrate,\n'
         '  discNumber: $discNumber,\n'
         '  lyrics: $lyrics,\n'
+        '  comment: $comment,\n'
         '  genre: $genre,\n'
         '  sampleRate: $sampleRate,\n'
         '  totalTracks: $totalTracks,\n'

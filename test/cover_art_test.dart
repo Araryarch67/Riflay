@@ -1,85 +1,61 @@
-import 'dart:convert';
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:http/http.dart' as http;
-import 'package:http/testing.dart';
-import 'package:riflay/services/metadata.dart';
+import 'package:image/image.dart' as img;
+import 'package:riflay/services/cover_art.dart';
+
+bool _isJpeg(Uint8List b) => b.length > 3 && b[0] == 0xff && b[1] == 0xd8 && b[2] == 0xff;
+
+img.Image _decode(Uint8List b) => img.decodeJpg(b)!;
+
+/// A picture whose left half is red and right half is blue, so a centre crop is checkable.
+img.Image _split(int w, int h) {
+  final i = img.Image(width: w, height: h);
+  for (final p in i) {
+    p.setRgb(p.x < w ~/ 2 ? 255 : 0, 0, p.x < w ~/ 2 ? 0 : 255);
+  }
+  return i;
+}
 
 void main() {
-  http.Response groups(List<Map<String, Object>> g) => http.Response(jsonEncode({'release-groups': g}), 200);
-  final jpeg = Uint8List.fromList([0xFF, 0xD8, 0xFF, 0xE0]);
-
-  test('takes the first well-matched release group that has a front cover', () async {
-    final asked = <String>[];
-    final found = await Metadata.findCoverOnline(
-      'Daft "Punk"',
-      'Discovery',
-      client: MockClient((req) async {
-        asked.add(req.url.toString());
-        if (req.url.host == 'musicbrainz.org') {
-          expect(req.url.queryParameters['query'], r'releasegroup:"Discovery" AND artist:"Daft \"Punk\""');
-          expect(req.headers['User-Agent'], contains('Riflay'));
-          return groups([
-            {'id': 'no-art', 'score': 100},
-            {'id': 'has-art', 'score': 95},
-            {'id': 'weak', 'score': 40},
-          ]);
-        }
-        if (req.url.path.contains('no-art')) return http.Response('', 404);
-        return http.Response.bytes(jpeg, 200, headers: {'content-type': 'image/jpeg'});
-      }),
-    );
-    expect(found?.bytes, jpeg);
-    expect(found?.mime, 'image/jpeg');
-    expect(asked.last, 'https://coverartarchive.org/release-group/has-art/front-1200');
+  test('a 16:9 JPEG becomes a centred square JPEG', () async {
+    final wide = Uint8List.fromList(img.encodeJpg(_split(640, 360)));
+    final out = await CoverArt.squareJpeg(wide);
+    expect(_isJpeg(out), isTrue);
+    final i = _decode(out);
+    expect(i.width, 360);
+    expect(i.height, 360);
+    // The centre crop keeps the red/blue boundary in the middle.
+    expect(i.getPixel(20, 180).r, greaterThan(200));
+    expect(i.getPixel(340, 180).b, greaterThan(200));
   });
 
-  test('null when only weak matches come back', () async {
-    final found = await Metadata.findCoverOnline(
-      'Someone',
-      'Nothing',
-      client: MockClient((req) async {
-        if (req.url.host == 'musicbrainz.org') {
-          return groups([
-            {'id': 'x', 'score': 50},
-          ]);
-        }
-        fail('should not fetch art for a weak match');
-      }),
-    );
-    expect(found, isNull);
+  test('a PNG thumbnail comes out as a JPEG', () async {
+    final out = await CoverArt.squareJpeg(Uint8List.fromList(img.encodePng(_split(480, 360))));
+    expect(_isJpeg(out), isTrue);
+    expect(_decode(out).width, 360);
   });
 
-  test('asks MusicBrainz again when it is busy (503)', () async {
-    var searches = 0;
-    final found = await Metadata.findCoverOnline(
-      'Daft Punk',
-      'Discovery',
-      client: MockClient((req) async {
-        if (req.url.host != 'musicbrainz.org') {
-          return http.Response.bytes(jpeg, 200, headers: {'content-type': 'image/jpeg'});
-        }
-        if (++searches == 1) return http.Response('', 503);
-        return groups([
-          {'id': 'x', 'score': 100},
-        ]);
-      }),
-    );
-    expect(searches, 2);
-    expect(found?.bytes, jpeg);
+  test('a large image is scaled down to at most 1000 px', () async {
+    final out = await CoverArt.squareJpeg(Uint8List.fromList(img.encodeJpg(_split(2400, 1350))));
+    final i = _decode(out);
+    expect([i.width, i.height], [1000, 1000]);
+    final small = _decode(await CoverArt.squareJpeg(Uint8List.fromList(img.encodePng(_split(1200, 1200))), size: 500));
+    expect(small.width, 500);
   });
 
-  test('throws when MusicBrainz is down, so the UI can say so', () {
-    expect(
-      Metadata.findCoverOnline('a', 'b', client: MockClient((_) async => http.Response('', 503))),
-      throwsA(isA<Exception>()),
-    );
+  test('a square JPEG of a fitting size is passed through unchanged', () async {
+    final cover = File('test/fixtures/cover_square.jpg').readAsBytesSync();
+    expect(await CoverArt.squareJpeg(cover), cover);
   });
 
-  test('live: finds a real cover', () async {
-    final found = await Metadata.findCoverOnline('Daft Punk', 'Discovery', client: http.Client());
-    expect(found, isNotNull);
-    expect(found!.bytes.length, greaterThan(50000));
+  test('a square PNG is converted, not passed through', () async {
+    final png = Uint8List.fromList(img.encodePng(_split(300, 300)));
+    expect(_isJpeg(await CoverArt.squareJpeg(png)), isTrue);
+  });
+
+  test('something that is not an image is an error', () async {
+    await expectLater(CoverArt.squareJpeg(Uint8List.fromList([1, 2, 3, 4, 5])), throwsA(anything));
   });
 }

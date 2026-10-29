@@ -30,7 +30,7 @@ class TagEdit {
   String? genre;
 
   /// A free comment (a download's YouTube link). Unlike the fields above, null keeps whatever the file has.
-  /// Written for Ogg/Opus and MP3; the in-process M4A and FLAC writers have no comment field.
+  /// Written for every format the tag editor handles: ID3 COMM, Vorbis COMMENT (Ogg, Opus, FLAC), M4A ©cmt.
   String? comment;
 
   /// New front cover (replaces every embedded picture); null keeps the current one.
@@ -140,13 +140,14 @@ abstract final class Metadata {
         trackNumber: m.trackNumber,
         discNumber: m.discNumber,
         genre: m.genres.firstOrNull,
-      );
+      )..comment = m.comment;
     });
   }
 
   /// Writes [edit] into the file, safely: the change is made on a copy, which
   /// must come out readable before it replaces the original.
   static Future<Track> writeTags(Track track, TagEdit edit) async {
+    _sniffCover(edit);
     final path = track.path!;
     final dot = path.lastIndexOf('.');
     final temp = File('${path.substring(0, dot)}.riflay-tmp${path.substring(dot)}');
@@ -181,6 +182,7 @@ abstract final class Metadata {
   /// Writes [edit] into the file at [path] (a download that was just made), on a copy that replaces it only
   /// when it reads back right. Nothing else about the file changes. Throws when it can't be tagged.
   static Future<void> tagFile(String path, TagEdit edit) async {
+    _sniffCover(edit);
     final dot = path.lastIndexOf('.');
     final temp = File('${path.substring(0, dot)}.riflay-tmp${path.substring(dot)}');
     try {
@@ -194,6 +196,17 @@ abstract final class Metadata {
       await temp.rename(path);
     } finally {
       if (temp.existsSync()) temp.deleteSync();
+    }
+  }
+
+  /// The cover's MIME type from its bytes, not from what the caller said (a PNG saved as `.jpg` stays a PNG).
+  static void _sniffCover(TagEdit edit) {
+    final c = edit.cover;
+    if (c == null || c.length < 4) return;
+    if (c[0] == 0xff && c[1] == 0xd8) {
+      edit.coverMime = 'image/jpeg';
+    } else if (c[0] == 0x89 && c[1] == 0x50 && c[2] == 0x4e && c[3] == 0x47) {
+      edit.coverMime = 'image/png';
     }
   }
 
@@ -213,6 +226,7 @@ abstract final class Metadata {
         default:
       }
       m.setGenres([?edit.genre]);
+      if (edit.comment != null) m.setComment(edit.comment);
       if (edit.cover != null) m.setPictures([Picture(edit.cover!, edit.coverMime, PictureType.coverFront)]);
     });
     final check = readMetadata(temp);

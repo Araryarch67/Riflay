@@ -75,8 +75,8 @@ Riflay is a free, open-source music player for Linux, Windows, macOS, Android an
 | ![Full-screen player](docs/screenshots/fullscreen.webp) | ![Settings](docs/screenshots/settings.webp) |
 | **Virtual speakers and Mono audio** | **Signal path** |
 | ![Playback settings](docs/screenshots/sound.webp) | ![Signal path](docs/screenshots/signal-path.webp) |
-| **On a phone** | |
-| <img src="docs/screenshots/phone.webp" alt="Phone" width="280"> | |
+| **Download settings** | **On a phone** |
+| ![Download settings](docs/screenshots/settings-downloads.webp) | <img src="docs/screenshots/phone.webp" alt="Phone" width="280"> |
 
 ## Build from source
 

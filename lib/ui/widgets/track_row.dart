@@ -7,6 +7,7 @@ import '../../services/download_edit.dart';
 import '../../services/listen_together/listen_together.dart';
 import '../../services/metadata.dart';
 import '../../services/player_controller.dart';
+import '../../services/youtube_stream.dart';
 import '../download_editor.dart';
 import '../download_options.dart';
 import '../shell_scope.dart';
@@ -18,6 +19,16 @@ import '../theme.dart';
 import 'controls.dart';
 import 'menus.dart';
 import 'stats_for_nerds.dart';
+
+/// How a row of [width] px shows its download button.
+enum RowDownload { full, compact, none }
+
+/// Full from 300 px, an icon-only 40 px one from 240 px, none below.
+RowDownload downloadButtonFor(double width) => width >= 300
+    ? RowDownload.full
+    : width >= 240
+    ? RowDownload.compact
+    : RowDownload.none;
 
 /// One song in a list: number (or play icon on hover), cover, title, album, duration.
 class TrackRow extends StatefulWidget {
@@ -167,9 +178,15 @@ class _TrackRowState extends State<TrackRow> {
                         ),
                       ),
                     ),
-                  // Streamed songs: download right here (ring while it runs, a check once saved); on a row too
-                  // narrow for it, only the menu has it.
-                  if (t.isRemote && box.maxWidth >= 300) DownloadButton(track: t),
+                  // Streamed songs: download right here (ring while it runs, a check once saved). Under 300 px an
+                  // icon-only one; on a row too narrow even for that, only the menu has it.
+                  if (t.isRemote && downloadButtonFor(box.maxWidth) != RowDownload.none)
+                    downloadButtonFor(box.maxWidth) == RowDownload.compact
+                        ? SizedBox.square(
+                            dimension: 40,
+                            child: FittedBox(child: DownloadButton(track: t)),
+                          )
+                        : DownloadButton(track: t),
                   TrackMenuButton(track: t, visible: !wide || _hover),
                 ],
               ),
@@ -239,6 +256,8 @@ class TrackMenuButton extends StatelessWidget {
         // so actions run against the navigator's context, which outlives it.
         // Worked out when the menu opens, not for every row on every rebuild.
         itemBuilder: (_) {
+          // The menu is open: the download choices are likely next, so their formats are looked up now.
+          if (track.isRemote && track.videoId != null) YoutubeStream.prefetchDownloadCandidates(track.videoId!);
           final host = Navigator.of(context).context;
           final editScope = PlaylistEditScope.maybeOf(context);
           final artist = openArtist(host, c, track);

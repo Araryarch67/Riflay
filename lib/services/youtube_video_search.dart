@@ -13,8 +13,20 @@ class YoutubeVideoSearch {
   final _seen = <String>{};
   int _generation = 0;
 
-  /// Videos this short are taken for Shorts and left out.
+  /// Shorts are at most this long.
   static const shortsMaxLength = Duration(seconds: 60);
+
+  static final _shortsTag = RegExp(r'#\s?(shorts?|ytshorts?|youtubeshorts?)\b', caseSensitive: false);
+
+  /// Whether [v] is a Short. youtube_explode's search results carry no real signal (no URL, badge or true
+  /// thumbnail: its thumbnails are built from the id, and a "SHORTS" length label comes out as no length), so a
+  /// Short is a result of at most [shortsMaxLength] that tags itself #shorts in its title or description. Other
+  /// short results, real short songs, are kept.
+  static bool isShort(Video v) {
+    final d = v.duration;
+    if (d == null || d > shortsMaxLength) return false;
+    return _shortsTag.hasMatch(v.title) || _shortsTag.hasMatch(v.description);
+  }
 
   /// Pages skipped over while looking for something playable, so a page of only Shorts or live streams isn't the end.
   static const _maxEmptyPages = 3;
@@ -72,10 +84,10 @@ class YoutubeVideoSearch {
     if (_ownsClient) _yt.close();
   }
 
-  /// Search hits as songs: live streams and Shorts (and anything without a length) are dropped.
+  /// Search hits as songs: live streams, Shorts ([isShort]) and anything without a length are dropped.
   static List<Track> toTracks(Iterable<Video> videos) => [
     for (final v in videos)
-      if (!v.isLive && v.duration != null && v.duration! > shortsMaxLength)
+      if (!v.isLive && v.duration != null && v.duration! > Duration.zero && !isShort(v))
         Track.youtube(
           videoId: v.id.value,
           title: v.title,

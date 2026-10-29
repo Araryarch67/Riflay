@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../models/track.dart';
+import '../services/download_notifications.dart';
 import '../services/appearance.dart';
 import '../services/layout_prefs.dart';
 import '../services/player_controller.dart';
@@ -67,6 +68,10 @@ class _HomeShellState extends State<HomeShell> {
   void initState() {
     super.initState();
     _history.addListener(_followLocation);
+    // Tapping a download notification brings up the Downloads page.
+    DownloadNotifications.registerOpenDownloads(() {
+      if (mounted) _open(const DownloadsPage());
+    });
   }
 
   String? _location;
@@ -116,6 +121,7 @@ class _HomeShellState extends State<HomeShell> {
   void dispose() {
     _player?.removeListener(_followTrack);
     _history.removeListener(_followLocation);
+    DownloadNotifications.registerOpenDownloads(null);
     _errors?.cancel();
     _listenEvents?.cancel();
     _searchFocus.dispose();

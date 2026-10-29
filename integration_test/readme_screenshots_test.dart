@@ -20,6 +20,7 @@ import 'package:just_audio_media_kit/just_audio_media_kit.dart';
 import 'package:media_kit/media_kit.dart' show NativePlayer;
 import 'package:riflay/main.dart';
 import 'package:riflay/models/track.dart';
+import 'package:riflay/services/download_prefs.dart';
 import 'package:riflay/services/player_controller.dart';
 import 'package:riflay/ui/player_panels.dart';
 import 'package:riflay/ui/widgets/signal_path.dart';
@@ -144,10 +145,17 @@ void main() {
       await shot('lyrics');
 
       // Settings, then the equalizer.
-      await tester.tap(find.byTooltip('More'));
+      await tester.tap(find.byTooltip('More').first);
       await settle();
       await tester.tap(find.text('Settings').first);
       await shot('settings');
+      await DownloadPrefs.instance.setFolder('/tmp/Music/Riflay'); // not the real home folder in a picture
+      await tester.tap(find.text('Downloads').last);
+      await settle();
+      await shot('settings-downloads');
+      await DownloadPrefs.instance.setFolder(null);
+      await tester.tap(find.text('Settings').first); // the breadcrumb, back to the list
+      await settle();
       await tester.tap(find.text('Playback'));
       await settle();
       // Playback settings with Virtual speakers on.
@@ -180,7 +188,7 @@ void main() {
       // Desktop full-screen player.
       await c.playList(dlow, 0, from: 'D-low');
       await playing();
-      await tester.tap(find.byTooltip('More views'));
+      await tester.tap(find.byTooltip('More options'));
       await settle();
       await tester.tap(find.text('Full screen'));
       await settle(4000); // past the "Press Esc" hint

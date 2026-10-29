@@ -148,46 +148,50 @@ void main() {
     await expectTagged(mp3);
   });
 
-  group('square cover', () {
-    Future<Uint8List> jpeg(String size) async {
-      final out = '${dir.path}/c.jpg';
-      final r = await Process.run('ffmpeg', [
-        '-v',
-        'error',
-        '-y',
-        '-f',
-        'lavfi',
-        '-i',
-        'testsrc=s=$size',
-        '-frames:v',
-        '1',
-        out,
-      ]);
-      if (r.exitCode != 0) throw StateError('${r.stderr}');
-      return File(out).readAsBytesSync();
+  test('the link is read back as the comment in every format', () async {
+    for (final (fixture, ext) in [
+      ('test/fixtures/sine.m4a', 'm4a'),
+      ('test/fixtures/sine_frag.m4a', 'm4a'),
+      ('test/fixtures/sine.flac', 'flac'),
+      ('test/fixtures/sine.mp3', 'mp3'),
+      ('test/fixtures/sine.webm', 'opus'),
+    ]) {
+      final file = await tagged(fixture, ext);
+      expect(readMetadata(file).comment, _link, reason: fixture);
+      final tags = await Metadata.readTags(Track(id: file.path, uri: file.uri, title: '', artist: ''));
+      expect(tags.comment, _link, reason: fixture);
     }
+  });
 
-    test('a square JPEG is kept as it is', () async {
-      TestWidgetsFlutterBinding.ensureInitialized();
-      final r = await YoutubeImporter.squareCover(cover);
-      expect(r.bytes, cover);
-      expect(r.mime, 'image/jpeg');
-    });
+  test('an edit without a comment keeps the comment the file has', () async {
+    for (final (fixture, ext) in [
+      ('test/fixtures/sine.m4a', 'm4a'),
+      ('test/fixtures/sine.flac', 'flac'),
+      ('test/fixtures/sine.mp3', 'mp3'),
+      ('test/fixtures/sine.webm', 'opus'),
+    ]) {
+      final file = await tagged(fixture, ext);
+      await Metadata.tagFile(
+        file.path,
+        TagEdit(title: 'Other', artist: 'The Weeknd', album: 'After Hours', year: 2019),
+      );
+      final m = readMetadata(file);
+      expect(m.title, 'Other', reason: ext);
+      expect(m.comment, _link, reason: ext);
+    }
+  });
 
-    test('a 16:9 thumbnail is cropped to a centred square', () async {
-      TestWidgetsFlutterBinding.ensureInitialized();
-      final Uint8List wide;
-      try {
-        wide = await jpeg('640x360');
-      } on ProcessException {
-        markTestSkipped('ffmpeg is not installed');
-        return;
-      }
-      final r = await YoutubeImporter.squareCover(wide);
-      expect(r.mime, 'image/png');
-      final d = ByteData.sublistView(r.bytes);
-      expect(d.getUint32(16), 360);
-      expect(d.getUint32(20), 360);
-    });
+  test('a PNG cover is embedded as image/png even when saved as .jpg', () async {
+    final png = Uint8List.fromList([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 0]);
+    for (final (fixture, ext) in [
+      ('test/fixtures/sine.m4a', 'm4a'),
+      ('test/fixtures/sine.flac', 'flac'),
+      ('test/fixtures/sine.mp3', 'mp3'),
+    ]) {
+      final file = File('${dir.path}/p.$ext');
+      File(fixture).copySync(file.path);
+      await Metadata.tagFile(file.path, TagEdit(title: 'T')..cover = png);
+      expect(readMetadata(file, getImage: true).pictures.single.mimetype, 'image/png', reason: ext);
+    }
   });
 }

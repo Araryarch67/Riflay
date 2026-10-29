@@ -70,6 +70,7 @@ Future<void> main() async {
   await controller.load();
   await MediaSession.start(controller);
   await StayAwake.start(controller);
+  await controller.youtube.restoreQueue();
   DownloadNotifications.attach(controller.youtube);
   runApp(RiflayApp(controller: controller));
 }

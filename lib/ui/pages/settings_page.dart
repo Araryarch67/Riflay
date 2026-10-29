@@ -10,6 +10,7 @@ import '../theme.dart';
 import '../widgets/page_scaffold.dart';
 import '../../services/audio_engine.dart';
 import 'appearance_settings.dart';
+import 'beta_settings.dart';
 import 'layout_settings.dart';
 import 'download_settings.dart';
 import 'sound_settings.dart';
@@ -23,7 +24,8 @@ enum SettingsTopic {
   playback('Playback', Icons.play_circle_outline_rounded, 'Autoplay, equalizer, Virtual speakers, mono audio'),
   advanced('Hi-fi audio', Icons.tune_rounded, 'Output device, bit-perfect mode, sample rate'),
   downloads('Downloads', Icons.download_rounded, 'Format, quality, where songs are saved'),
-  integrations('Integrations', Icons.extension_outlined, 'Discord, lyrics services');
+  integrations('Integrations', Icons.extension_outlined, 'Discord, lyrics services'),
+  beta('Beta features', Icons.science_outlined, 'Switch features that are still being tested on or off');
 
   const SettingsTopic(this.label, this.icon, this.summary);
   final String label;
@@ -151,6 +153,7 @@ class _SettingsTopicPageState extends State<SettingsTopicPage> {
       SettingsTopic.playback => const PlaybackSettings(),
       SettingsTopic.advanced => const AdvancedAudioSettings(),
       SettingsTopic.downloads => const DownloadSettings(),
+      SettingsTopic.beta => const BetaSettings(),
       SettingsTopic.integrations => SettingsCard(
         children: [
           if (DiscordPresence.supported)

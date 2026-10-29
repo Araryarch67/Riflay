@@ -14,22 +14,20 @@ class JobSnapshot {
     required this.title,
     required this.status,
     this.progress = 0,
-    this.converting = false,
+    this.phase = DownloadPhase.downloading,
   });
 
-  factory JobSnapshot.of(DownloadJob job) => JobSnapshot(
-    videoId: job.videoId,
-    title: job.title,
-    status: job.status,
-    progress: job.progress,
-    converting: job.converting,
-  );
+  factory JobSnapshot.of(DownloadJob job) =>
+      JobSnapshot(videoId: job.videoId, title: job.title, status: job.status, progress: job.progress, phase: job.phase);
 
   final String videoId;
   final String title;
   final DownloadStatus status;
   final double progress;
-  final bool converting;
+  final DownloadPhase phase;
+
+  /// Past the download itself: converting or finishing, with no progress to show.
+  bool get busyAfterDownload => phase != DownloadPhase.downloading;
 
   bool get isActive => status == DownloadStatus.queued || status == DownloadStatus.downloading;
 }
@@ -123,11 +121,11 @@ NoteContent? noteFor(JobSnapshot job, {int? idOverride}) {
         videoId: job.videoId,
       );
     case DownloadStatus.downloading:
-      if (job.converting) {
+      if (job.busyAfterDownload) {
         return NoteContent(
           id: id,
           title: job.title,
-          body: 'Converting…',
+          body: job.phase.label,
           indeterminate: true,
           ongoing: true,
           actions: const [NoteAction(cancelAction, 'Cancel')],
@@ -167,8 +165,8 @@ NoteContent? summaryFor(List<JobSnapshot> jobs) {
   final active = jobs.where((j) => j.isActive).toList();
   if (active.isEmpty) return null;
   if (active.length == 1) return noteFor(active.single, idOverride: summaryNoteId);
-  final working = active.where((j) => j.status == DownloadStatus.downloading && !j.converting).toList();
-  final overall = active.fold<double>(0, (sum, j) => sum + (j.converting ? 1 : j.progress)) / active.length;
+  final working = active.where((j) => j.status == DownloadStatus.downloading && !j.busyAfterDownload).toList();
+  final overall = active.fold<double>(0, (sum, j) => sum + (j.busyAfterDownload ? 1 : j.progress)) / active.length;
   final pct = _percent(overall);
   final names = active.take(2).map((j) => j.title).join(', ');
   final more = active.length > 2 ? ' +${active.length - 2}' : '';
@@ -255,6 +253,7 @@ class DownloadNotifications {
   void _start() {
     _importer.addListener(_changed);
     _changed();
+    unawaited(_launchedByNote());
   }
 
   Future<void> _init() async {
@@ -323,16 +322,58 @@ class DownloadNotifications {
     }
   }
 
-  void _tapped(NotificationResponse r) {
-    final id = r.payload;
-    if (id == null || id.isEmpty) return;
-    final job = _importer.jobFor(id);
-    if (job == null) return;
-    switch (r.actionId) {
-      case cancelAction:
-        _importer.cancel(job);
-      case retryAction:
-        _importer.retry(job);
+  // ---- taps ----
+
+  static void Function()? _openDownloads;
+  static bool _openWhenReady = false;
+
+  /// The shell says how to show the Downloads page. A tap that came before it was ready (the app was started by
+  /// the notification) is answered now.
+  static void registerOpenDownloads(void Function()? open) {
+    _openDownloads = open;
+    if (open != null && _openWhenReady) {
+      _openWhenReady = false;
+      open();
+    }
+  }
+
+  /// A tap on a notification's body opens Downloads; its Cancel and Retry buttons act on the song.
+  @visibleForTesting
+  static void handleTap({String? actionId, String? payload, YoutubeImporter? importer}) {
+    if (actionId == cancelAction || actionId == retryAction) {
+      final job = payload == null || payload.isEmpty ? null : importer?.jobFor(payload);
+      if (job == null) return;
+      if (actionId == cancelAction) importer!.cancel(job);
+      if (actionId == retryAction) importer!.retry(job);
+      return;
+    }
+    if (_openDownloads case final open?) {
+      open();
+    } else {
+      _openWhenReady = true;
+    }
+  }
+
+  @visibleForTesting
+  static void resetTapsForTest() {
+    _openDownloads = null;
+    _openWhenReady = false;
+  }
+
+  void _tapped(NotificationResponse r) => handleTap(actionId: r.actionId, payload: r.payload, importer: _importer);
+
+  /// The app was started by tapping one of its notifications.
+  Future<void> _launchedByNote() async {
+    try {
+      await _init();
+      if (!_ready) return;
+      final details = await _plugin.getNotificationAppLaunchDetails();
+      if (details?.didNotificationLaunchApp ?? false) {
+        final r = details!.notificationResponse;
+        handleTap(actionId: r?.actionId, payload: r?.payload, importer: _importer);
+      }
+    } catch (e) {
+      debugPrint('Notification launch details: $e');
     }
   }
 

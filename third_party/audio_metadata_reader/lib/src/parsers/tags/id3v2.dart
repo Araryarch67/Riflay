@@ -491,6 +491,12 @@ class ID3v2Parser extends TagParser<Mp3Metadata> {
           final frame = TXXXFrame(content);
           metadata.customMetadata[frame.description] = frame.information;
         },
+      "COMM" => () {
+          final content = buffer.read(size);
+          final text = _getCommentText(content);
+          // Riflay: the first comment with text is the one players show.
+          if (text.isNotEmpty) metadata.comments.add(Comment('', text));
+        },
       "USLT" => () {
           final content = buffer.read(size);
           metadata.lyric = getUnsynchronisedLyric(content);
@@ -663,6 +669,52 @@ class ID3v2Parser extends TagParser<Mp3Metadata> {
     }
 
     return "";
+  }
+
+  /// Riflay: the text of a `COMM` frame: encoding, language, a short description, then the text.
+  String _getCommentText(Uint8List content) {
+    if (content.length < 5) return '';
+    final encoding = content[0];
+    final wide = encoding == 1 || encoding == 2;
+    var i = 4;
+    // Skip the description up to its terminator (one zero byte, or two on an even boundary for UTF-16).
+    if (wide) {
+      while (i + 1 < content.length && !(content[i] == 0 && content[i + 1] == 0)) {
+        i += 2;
+      }
+      i += 2;
+    } else {
+      while (i < content.length && content[i] != 0) {
+        i++;
+      }
+      i++;
+    }
+    if (i >= content.length) return '';
+    final rest = content.sublist(i);
+    String text;
+    switch (encoding) {
+      case 0:
+        text = latin1Decoder.convert(rest);
+      case 3:
+        text = utf8.decode(rest, allowMalformed: true);
+      default:
+        var little = true;
+        var from = 0;
+        if (rest.length >= 2 && rest[0] == 0xfe && rest[1] == 0xff) {
+          little = false;
+          from = 2;
+        } else if (rest.length >= 2 && rest[0] == 0xff && rest[1] == 0xfe) {
+          from = 2;
+        } else if (encoding == 2) {
+          little = false;
+        }
+        final units = <int>[
+          for (var j = from; j + 1 < rest.length; j += 2) little ? rest[j] | rest[j + 1] << 8 : rest[j] << 8 | rest[j + 1],
+        ];
+        text = String.fromCharCodes(units);
+    }
+    final end = text.indexOf('\u0000');
+    return (end >= 0 ? text.substring(0, end) : text).trim();
   }
 
   int? _parseYear(String year) {

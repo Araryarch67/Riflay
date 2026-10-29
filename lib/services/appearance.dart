@@ -9,6 +9,7 @@ import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'beta_features.dart';
 import 'color_tools.dart';
 import 'cover_palette.dart';
 import 'layout_prefs.dart';
@@ -46,6 +47,36 @@ class AppPalette {
 
   /// Dark text on light surfaces.
   final bool light;
+
+  @override
+  bool operator ==(Object other) =>
+      other is AppPalette &&
+      other.background == background &&
+      other.panel == panel &&
+      other.elevated == elevated &&
+      other.hover == hover &&
+      other.menu == menu &&
+      other.textPrimary == textPrimary &&
+      other.textSecondary == textSecondary &&
+      other.textMuted == textMuted &&
+      other.accent == accent &&
+      other.onAccent == onAccent &&
+      other.light == light;
+
+  @override
+  int get hashCode => Object.hash(
+    background,
+    panel,
+    elevated,
+    hover,
+    menu,
+    textPrimary,
+    textSecondary,
+    textMuted,
+    accent,
+    onAccent,
+    light,
+  );
 
   /// A whole palette from one background colour, and optionally a text colour: panels, cards, hover and
   /// menus step away from the background, and the text greys are kept readable (4.5:1 on the lightest
@@ -654,8 +685,7 @@ class Appearance extends ChangeNotifier {
   /// colours (a calm grey when nothing plays); custom is worked out from its colours.
   AppPalette paletteOf(ThemeChoice t) => switch (t) {
     ThemeChoice.custom => AppPalette.derive(customBackground, text: customText, accent: _pickedAccent),
-    ThemeChoice.dynamic =>
-      t == theme ? _dynamicPalette() : paletteFromCover(_dynTarget, light: isLight, strength: coverStrength),
+    ThemeChoice.dynamic => t == theme ? _dynamicPalette() : _targetPalette(),
     _ => t.paletteIn(light: isLight),
   };
 
@@ -665,12 +695,36 @@ class Appearance extends ChangeNotifier {
   late final _dynFade = _Fade(const Duration(milliseconds: 600), onStep: _fadeStep, onDone: () => _dynFrom = null);
 
   void _fadeStep() {
+    final shown = _palette;
     _palette = null;
+    // Every notification restyles the whole app: a step that lands on the colours already shown (two similar
+    // covers, or the first and last steps of the ease) costs nothing.
+    if (shown != null && palette == shown) {
+      _palette = shown;
+      return;
+    }
     notifyListeners();
   }
 
+  // The palette for the cover being faded to: worked out once, not at every step of the ease.
+  CoverColors? _toCover;
+  bool? _toLight;
+  double? _toStrength;
+  AppPalette? _toPalette;
+
+  AppPalette _targetPalette() {
+    final light = isLight;
+    if (_toPalette == null || _toCover != _dynTarget || _toLight != light || _toStrength != coverStrength) {
+      _toCover = _dynTarget;
+      _toLight = light;
+      _toStrength = coverStrength;
+      _toPalette = paletteFromCover(_dynTarget, light: light, strength: coverStrength);
+    }
+    return _toPalette!;
+  }
+
   AppPalette _dynamicPalette() {
-    final to = paletteFromCover(_dynTarget, light: isLight, strength: coverStrength);
+    final to = _targetPalette();
     final from = _dynFrom;
     if (from == null || !_dynFade.running || from.light != to.light) return to;
     // Text is checked again at every step: halfway between two readable palettes may not be.
@@ -843,10 +897,14 @@ class Appearance extends ChangeNotifier {
 
   Future<void> load() async {
     try {
+      await BetaFeatures.instance.load();
       final raw = (await SharedPreferences.getInstance()).getString(_key);
       if (raw == null) return;
       final j = jsonDecode(raw) as Map<String, dynamic>;
       theme = ThemeChoice.values.asNameMap()[j['theme']] ?? theme;
+      if (theme == ThemeChoice.dynamic && !BetaFeatures.instance.isOn(BetaFeature.dynamicTheme)) {
+        theme = ThemeChoice.standard;
+      }
       // Saves from before the mode existed: a light theme (Latte) stays light.
       brightness =
           ThemeBrightness.values.asNameMap()[j['brightness']] ??

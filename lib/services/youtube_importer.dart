@@ -1,6 +1,6 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
-import 'dart:ui' as ui;
 
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
@@ -10,19 +10,56 @@ import 'package:path_provider/path_provider.dart';
 import 'package:youtube_explode_dart/youtube_explode_dart.dart';
 
 import '../models/track.dart';
+import 'cover_art.dart';
 import 'download_prefs.dart';
 import 'ffmpeg.dart';
 import 'flac_stream.dart';
 import 'lyrics.dart';
 import 'pcm_decoder.dart';
+import 'private_files.dart';
 import 'metadata.dart';
 import 'ranged_download.dart';
 import 'youtube_links.dart';
 import 'youtube_stream.dart';
 import 'webm_opus.dart';
 import 'ytdlp.dart';
+import 'ytmusic_web.dart';
 
 enum DownloadStatus { queued, downloading, done, failed, cancelled }
+
+/// What a running download is doing. Only [converting] is a real conversion (FLAC, MP3, a lower bitrate);
+/// [finishing] is the quick remux and tagging at the end. Neither has progress to show.
+enum DownloadPhase {
+  downloading,
+  converting,
+  finishing;
+
+  /// The line a list or notification shows for this phase.
+  String get label => switch (this) {
+    downloading => 'Downloading',
+    converting => 'Converting…',
+    finishing => 'Finishing…',
+  };
+
+  /// The phase after the stream has arrived: a conversion converts; a plain save only remuxes and tags.
+  static DownloadPhase afterDownload(Conversion? convert) => convert == null ? finishing : converting;
+}
+
+/// Whether a partial file from an earlier run can be continued: only when the freshly resolved stream is the very
+/// same one (same itag, same size). Stream URLs expire, so the URL is always resolved again first.
+bool canResumePart({
+  required String? savedItag,
+  required int? savedSize,
+  required String? freshItag,
+  required int? freshSize,
+  required int partBytes,
+}) =>
+    partBytes > 0 &&
+    savedItag != null &&
+    savedItag == freshItag &&
+    savedSize != null &&
+    savedSize == freshSize &&
+    partBytes < savedSize;
 
 /// One video being turned into a library track.
 class DownloadJob {
@@ -70,13 +107,64 @@ class DownloadJob {
     return Duration(milliseconds: ((total - receivedBytes) / rate * 1000).round());
   }
 
-  /// The stream has arrived and is being converted (FLAC, or a lower bitrate): no progress to show.
-  bool converting = false;
+  DownloadPhase phase = DownloadPhase.downloading;
+
+  /// The stream has arrived and is being converted (FLAC, MP3, or a lower bitrate): no progress to show.
+  bool get converting => phase == DownloadPhase.converting;
 
   String? error;
   Track? track;
 
   bool get isActive => status == DownloadStatus.queued || status == DownloadStatus.downloading;
+
+  /// What is kept between runs; null for jobs that need no keeping (done, cancelled).
+  Map<String, dynamic>? toJson() {
+    if (status != DownloadStatus.queued && status != DownloadStatus.downloading && status != DownloadStatus.failed) {
+      return null;
+    }
+    return {
+      'videoId': videoId,
+      'title': title,
+      'channel': channel,
+      'thumbnailUrl': thumbnailUrl,
+      'knownNames': knownNames,
+      'album': album,
+      'status': status.name,
+      'error': error,
+      if (choice case final c?) 'choice': {'format': c.format.name, 'kbps': c.kbps, 'flac': c.flac.name},
+    };
+  }
+
+  /// A job kept by [toJson], as it starts a new run: a download that was running goes back to waiting;
+  /// a failed one stays failed (with Retry). Null for anything unreadable.
+  static DownloadJob? fromJson(Object? json) {
+    if (json is! Map) return null;
+    final id = json['videoId'], title = json['title'];
+    if (id is! String || !YoutubeImporter.isVideoId(id) || title is! String) return null;
+    DownloadChoice? choice;
+    if (json['choice'] case final Map c) {
+      final format = DownloadFormat.values.where((f) => f.name == c['format']).firstOrNull;
+      if (format != null) {
+        choice = DownloadChoice(
+          format,
+          kbps: c['kbps'] as int?,
+          flac: FlacQuality.values.where((q) => q.name == c['flac']).firstOrNull ?? FlacQuality.standard,
+        );
+      }
+    }
+    final failed = json['status'] == DownloadStatus.failed.name;
+    return DownloadJob(
+        videoId: id,
+        title: title,
+        channel: json['channel'] as String? ?? '',
+        thumbnailUrl: json['thumbnailUrl'] as String? ?? '',
+        knownNames: json['knownNames'] == true,
+        choice: choice,
+        album: json['album'] as String?,
+      )
+      ..status = failed ? DownloadStatus.failed : DownloadStatus.queued
+      ..error = failed ? (json['error'] as String? ?? 'Failed') : null;
+  }
 }
 
 /// The download was held back because the phone is on mobile data and the user turned that off.
@@ -151,10 +239,13 @@ class PlaylistPreview extends YoutubePreview {
 /// Resolves YouTube links and downloads their audio-only stream into the app's
 /// music folder, one job at a time.
 class YoutubeImporter extends ChangeNotifier {
-  YoutubeImporter({required this.onTrackReady});
+  YoutubeImporter({required this.onTrackReady, this.albumYearLookup, this._queueFile});
 
   /// Called with each finished track so it can be added to the library.
   final Future<void> Function(Track track) onTrackReady;
+
+  /// The year an album came out; YouTube Music's own page by default.
+  final Future<int?> Function(String album, String artist)? albumYearLookup;
 
   static const _maxPlaylistVideos = 200;
 
@@ -249,6 +340,101 @@ class YoutubeImporter extends ChangeNotifier {
   /// reach a file name.
   static final _videoId = RegExp(r'^[A-Za-z0-9_-]{11}$');
 
+  static bool isVideoId(String id) => _videoId.hasMatch(id);
+
+  // ---- the queue survives the app being closed ----
+
+  File? _queueFile;
+  YtMusicWeb? _web;
+  Timer? _saveTimer;
+  String? _saved;
+  bool _frozen = false;
+
+  /// The jobs worth keeping as JSON text.
+  static String encodeQueue(Iterable<DownloadJob> jobs) => jsonEncode({
+    'version': 1,
+    'jobs': [for (final j in jobs) ?j.toJson()],
+  });
+
+  /// The jobs [encodeQueue] kept, as a new run starts them. Unreadable text gives none.
+  static List<DownloadJob> decodeQueue(String text) {
+    try {
+      final root = jsonDecode(text);
+      final list = root is Map ? root['jobs'] : null;
+      if (list is! List) return const [];
+      final seen = <String>{};
+      return [
+        for (final item in list)
+          if (DownloadJob.fromJson(item) case final job? when seen.add(job.videoId)) job,
+      ];
+    } catch (_) {
+      return const [];
+    }
+  }
+
+  Future<File?> _file() async {
+    if (_queueFile != null) return _queueFile;
+    try {
+      return _queueFile = await PrivateFiles.file('download_queue.json');
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Brings back what an earlier run left: waiting and interrupted downloads start again, failed ones show Retry.
+  /// Half-written files are not continued (see [canResumePart]): the download starts clean.
+  Future<void> restoreQueue() async {
+    final file = await _file();
+    if (file == null) return;
+    try {
+      if (!file.existsSync()) return;
+      final jobs = decodeQueue(await file.readAsString());
+      _saved = encodeQueue(jobs);
+      for (final job in jobs) {
+        if (_jobs.any((j) => j.videoId == job.videoId)) continue;
+        _jobs.add(job);
+      }
+      if (jobs.isNotEmpty) {
+        notifyListeners();
+        unawaited(_drain());
+      }
+    } catch (e) {
+      debugPrint('Download queue: couldn\'t restore: $e');
+    }
+  }
+
+  void _scheduleSave() {
+    if (_frozen) return;
+    if (encodeQueue(_jobs) == _saved) return;
+    _saveTimer?.cancel();
+    _saveTimer = Timer(const Duration(milliseconds: 600), () => unawaited(_save()));
+  }
+
+  Future<void> _save() async {
+    _saveTimer?.cancel();
+    final text = encodeQueue(_jobs);
+    if (text == _saved) return;
+    final file = await _file();
+    if (file == null) return;
+    _saved = text;
+    try {
+      await PrivateFiles.write(file, text);
+    } catch (e) {
+      _saved = null;
+      debugPrint('Download queue: couldn\'t save: $e');
+    }
+  }
+
+  /// Writes the queue now (tests, and when the app is closing).
+  @visibleForTesting
+  Future<void> flushQueue() => _save();
+
+  @override
+  void notifyListeners() {
+    super.notifyListeners();
+    _scheduleSave();
+  }
+
   int _enqueue(List<DownloadJob> fresh) {
     var added = 0;
     for (final job in fresh.where((j) => _videoId.hasMatch(j.videoId))) {
@@ -295,7 +481,9 @@ class YoutubeImporter extends ChangeNotifier {
     while (_running < _parallelJobs) {
       final job = _jobs.where((j) => j.status == DownloadStatus.queued).firstOrNull;
       if (job == null) return;
-      job.status = DownloadStatus.downloading;
+      job
+        ..status = DownloadStatus.downloading
+        ..phase = DownloadPhase.downloading;
       _running++;
       unawaited(
         _download(job).whenComplete(() {
@@ -515,7 +703,13 @@ class YoutubeImporter extends ChangeNotifier {
         pcmBytes += chunk.length;
         return chunk;
       });
-      await for (final block in FlacStream.encode(counted, rate: pcm.rate, channels: pcm.channels, bits: q.bits)) {
+      await for (final block in FlacStream.encode(
+        counted,
+        rate: pcm.rate,
+        channels: pcm.channels,
+        bits: q.bits,
+        compression: FlacCompression.fast,
+      )) {
         if (isCancelled?.call() ?? false) throw const _Cancelled();
         await file.writeFrom(block);
       }
@@ -566,6 +760,7 @@ class YoutubeImporter extends ChangeNotifier {
       final names = job.knownNames ? (title: job.title, artist: job.channel) : parseTitle(video.title, video.author);
       // Looked up while the audio downloads, so the song has its lyrics offline too.
       final lyrics = _lyricsOf(job.videoId, names, video.duration);
+      final albumYear = job.album == null ? Future<int?>.value() : _albumYearOf(job.album!, names.artist);
       try {
         await rangedDownload(
           url: audio.url,
@@ -598,8 +793,8 @@ class YoutubeImporter extends ChangeNotifier {
       }
       downloaded = await partFile.rename(audioFile.path);
       var saved = audioFile;
-      // Converting, remuxing and tagging all show as "Converting…": there is no progress to report.
-      job.converting = true;
+      // Only a real conversion says "Converting…"; remuxing and tagging are "Finishing…". No progress either way.
+      job.phase = DownloadPhase.afterDownload(audio.convert);
       notifyListeners();
       bool cancelled() => job.status == DownloadStatus.cancelled;
       switch (audio.convert) {
@@ -619,8 +814,11 @@ class YoutubeImporter extends ChangeNotifier {
       }
       converted = saved;
       if (cancelled()) throw const _Cancelled();
+      job.phase = DownloadPhase.finishing;
+      notifyListeners();
       final cover = await thumbnail;
-      final year = video.uploadDate?.year;
+      // A song on an album is dated by the album; the upload's year is only for songs without one.
+      final year = job.album == null ? video.uploadDate?.year : await albumYear;
       await _tagFile(
         saved,
         TagEdit(title: names.title, artist: names.artist, album: job.album, year: year)
@@ -661,8 +859,19 @@ class YoutubeImporter extends ChangeNotifier {
           ..error = _friendlyError(e);
       }
     } finally {
-      job.converting = false;
+      job.phase = DownloadPhase.downloading;
       notifyListeners();
+    }
+  }
+
+  /// The year of [album] by [artist], or null when it can't be found in time.
+  Future<int?> _albumYearOf(String album, String artist) async {
+    try {
+      final lookup = albumYearLookup ?? (_web ??= YtMusicWeb.anonymous()).albumYearFor;
+      return await lookup(album, artist).timeout(const Duration(seconds: 15));
+    } catch (e) {
+      debugPrint('Download: no album year: $e');
+      return null;
     }
   }
 
@@ -748,54 +957,14 @@ class YoutubeImporter extends ChangeNotifier {
       try {
         final res = await http.get(Uri.parse(url));
         if (res.statusCode != 200 || res.bodyBytes.isEmpty) continue;
-        final cover = await squareCover(res.bodyBytes);
-        await File(path).writeAsBytes(cover.bytes);
-        return cover;
+        final jpeg = await CoverArt.squareJpeg(res.bodyBytes);
+        await File(path).writeAsBytes(jpeg);
+        return (bytes: jpeg, mime: 'image/jpeg');
       } catch (e) {
         debugPrint('Download: cover from $url failed: $e');
       }
     }
     return null;
-  }
-
-  /// [image] as a centred square no larger than [maxSide]. Already square (within 2%) JPEGs and PNGs of a fitting
-  /// size are returned as they are; anything else is cropped and comes back as a PNG.
-  @visibleForTesting
-  static Future<({Uint8List bytes, String mime})> squareCover(Uint8List image, {int maxSide = 1000}) async {
-    final png = image.length > 4 && image[0] == 0x89 && image[1] == 0x50;
-    final jpeg = image.length > 2 && image[0] == 0xff && image[1] == 0xd8;
-    final mime = png ? 'image/png' : 'image/jpeg';
-    final codec = await ui.instantiateImageCodec(image);
-    try {
-      final frame = await codec.getNextFrame();
-      final src = frame.image;
-      try {
-        final w = src.width, h = src.height;
-        final side = w < h ? w : h;
-        final square = (w - h).abs() <= side * 0.02;
-        if (square && side <= maxSide && (png || jpeg)) return (bytes: image, mime: mime);
-        final out = side < maxSide ? side : maxSide;
-        final recorder = ui.PictureRecorder();
-        ui.Canvas(recorder).drawImageRect(
-          src,
-          ui.Rect.fromLTWH((w - side) / 2, (h - side) / 2, side.toDouble(), side.toDouble()),
-          ui.Rect.fromLTWH(0, 0, out.toDouble(), out.toDouble()),
-          ui.Paint()..filterQuality = ui.FilterQuality.high,
-        );
-        final cropped = await recorder.endRecording().toImage(out, out);
-        try {
-          final data = await cropped.toByteData(format: ui.ImageByteFormat.png);
-          if (data == null) throw StateError('The cover couldn\'t be encoded.');
-          return (bytes: data.buffer.asUint8List(), mime: 'image/png');
-        } finally {
-          cropped.dispose();
-        }
-      } finally {
-        src.dispose();
-      }
-    } finally {
-      codec.dispose();
-    }
   }
 
   /// What the downloads list says, in plain words (yt-dlp's own errors only go to the log).
@@ -862,6 +1031,16 @@ class YoutubeImporter extends ChangeNotifier {
 
   @override
   void dispose() {
+    // Closing the app is not cancelling: what was waiting or running is kept for the next start.
+    _saveTimer?.cancel();
+    final text = encodeQueue(_jobs);
+    if (!_frozen && text != _saved && _queueFile != null) {
+      try {
+        PrivateFiles.writeSync(_queueFile!, text);
+      } catch (_) {}
+    }
+    _frozen = true;
+    _web?.close();
     for (final j in _jobs.where((j) => j.isActive)) {
       j.status = DownloadStatus.cancelled;
     }

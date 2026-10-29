@@ -6,6 +6,7 @@ import 'package:media_kit/media_kit.dart' hide Track;
 import 'package:media_kit_video/media_kit_video.dart';
 
 import '../models/track.dart';
+import 'beta_features.dart';
 import 'player_controller.dart';
 import 'youtube_stream.dart';
 import 'ytmusic_web.dart';
@@ -81,14 +82,22 @@ class VideoMode extends ChangeNotifier with WidgetsBindingObserver {
   final _asking = <String>{};
 
   /// The music video of [track], when it has one and this device can show it.
-  MusicVideo? videoOf(Track? track) => _canDecode ? _found[track?.videoId] : null;
+  MusicVideo? videoOf(Track? track) =>
+      _canDecode && BetaFeatures.instance.isOn(BetaFeature.videoMode) ? _found[track?.videoId] : null;
 
   /// Asks YouTube Music once whether [track] has a video (one small request,
   /// made when a Now Playing view shows the song; no video data).
   void lookUp(Track? track) {
     final id = track?.videoId;
     final c = _c;
-    if (id == null || c == null || !_canDecode || _found.containsKey(id) || !_asking.add(id)) return;
+    if (id == null ||
+        c == null ||
+        !_canDecode ||
+        !BetaFeatures.instance.isOn(BetaFeature.videoMode) ||
+        _found.containsKey(id) ||
+        !_asking.add(id)) {
+      return;
+    }
     c.ytMusic
         .musicVideo(id)
         .then(

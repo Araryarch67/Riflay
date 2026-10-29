@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../services/appearance.dart';
+import '../../services/beta_features.dart';
 import '../../services/color_tools.dart';
 import '../../services/system_fonts.dart';
 import '../theme.dart';
@@ -23,7 +24,7 @@ class AppearanceSettings extends StatelessWidget {
     final look = Appearance.instance;
     final muted = settingsMuted(context);
     return ListenableBuilder(
-      listenable: look,
+      listenable: Listenable.merge([look, BetaFeatures.instance]),
       builder: (context, _) => SettingsCard(
         children: [
           ListTile(leading: const Icon(Icons.dark_mode_outlined), title: const Text('Theme')),
@@ -39,7 +40,9 @@ class AppearanceSettings extends StatelessWidget {
                   spacing: gap,
                   runSpacing: gap,
                   children: [
-                    for (final t in ThemeChoice.values) _ThemeCard(choice: t, selected: look.theme == t, width: width),
+                    for (final t in ThemeChoice.values)
+                      if (t != ThemeChoice.dynamic || BetaFeatures.instance.isOn(BetaFeature.dynamicTheme))
+                        _ThemeCard(choice: t, selected: look.theme == t, width: width),
                   ],
                 );
               },

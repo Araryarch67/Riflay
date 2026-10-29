@@ -282,8 +282,8 @@ class _JobRow extends StatelessWidget {
       DownloadStatus.downloading =>
         job.quality == null
             ? 'Preparing…'
-            : job.converting
-            ? ['Converting…', job.quality].join(' • ')
+            : job.phase != DownloadPhase.downloading
+            ? [job.phase.label, job.quality].join(' • ')
             : [
                 job.quality,
                 if (job.totalBytes != null) '${formatBytes(job.receivedBytes)} of ${formatBytes(job.totalBytes!)}',
@@ -348,7 +348,7 @@ class _JobRow extends StatelessWidget {
                   if (job.status == DownloadStatus.downloading) ...[
                     const SizedBox(height: 6),
                     LinearProgressIndicator(
-                      value: job.quality == null || job.converting ? null : job.progress,
+                      value: job.quality == null || job.phase != DownloadPhase.downloading ? null : job.progress,
                       minHeight: 3,
                       color: AppColors.textPrimary,
                       backgroundColor: AppColors.hover,

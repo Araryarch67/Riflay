@@ -376,6 +376,7 @@ class Mp4Writer extends BaseMetadataWriter<Mp4Metadata> {
     "gnre",
     "©day",
     "©lyr",
+    "©cmt",
     "trkn",
     "disk",
   };
@@ -433,6 +434,9 @@ class Mp4Writer extends BaseMetadataWriter<Mp4Metadata> {
     }
     if (mp4metadata.lyrics != null) {
       ilstBuilder.add(_buildStringTag("©lyr", mp4metadata.lyrics!));
+    }
+    if (mp4metadata.comment != null) {
+      ilstBuilder.add(_buildStringTag("©cmt", mp4metadata.comment!));
     }
 
     if (mp4metadata.picture != null) {

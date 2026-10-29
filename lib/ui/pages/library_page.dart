@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../models/track.dart';
+import '../../services/beta_features.dart';
 import '../../services/player_controller.dart';
 import '../../services/youtube_music_account.dart';
 import '../ytmusic_edit.dart';
@@ -40,7 +41,7 @@ class _LibraryListState extends State<LibraryList> {
     // playing: this list sits in the sidebar the whole time.
     final c = PlayerScope.identity(context);
     return ListenableBuilder(
-      listenable: Listenable.merge([c.libraryRevision, c.ytMusic]),
+      listenable: Listenable.merge([c.libraryRevision, c.ytMusic, BetaFeatures.instance]),
       builder: (context, _) => _build(context, c, c.ytMusic.libraryNow),
     );
   }
@@ -82,13 +83,14 @@ class _LibraryListState extends State<LibraryList> {
           subtitle: 'From Spotify, Apple Music or Deezer',
           onTap: () => importPlaylist(context),
         ),
-        _SimpleRow(
-          collapsed: widget.collapsed,
-          art: const _IconArt(Icons.library_music_outlined),
-          title: 'Spotify library',
-          subtitle: 'Import your playlists, albums and artists',
-          onTap: () => ShellScope.of(context).open(const SpotifyPage(), location: Locations.spotify),
-        ),
+        if (BetaFeatures.instance.isOn(BetaFeature.spotify))
+          _SimpleRow(
+            collapsed: widget.collapsed,
+            art: const _IconArt(Icons.library_music_outlined),
+            title: 'Spotify library',
+            subtitle: 'Import your playlists, albums and artists',
+            onTap: () => ShellScope.of(context).open(const SpotifyPage(), location: Locations.spotify),
+          ),
         for (final p in c.playlists) _LibraryRow(collection: c.playlistCollection(p), collapsed: widget.collapsed),
         if (online != null) ...[
           if (online.liked.isNotEmpty)
