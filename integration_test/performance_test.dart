@@ -185,7 +185,8 @@ void main() {
     await measure('wheel scroll album', wheel);
     await openCollection(c.artists[1]);
     await measure('wheel scroll artist', wheel);
-    await open(find.text('Search'));
+    // Search lives in the title bar on desktop: typing there opens the Search page.
+    await open(find.byType(TextField));
     await tester.enterText(find.byType(TextField).first, 'Song');
     await run(const Duration(milliseconds: 800));
     FocusManager.instance.primaryFocus?.unfocus(); // closes the suggestions
