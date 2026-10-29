@@ -181,14 +181,71 @@ abstract final class YoutubeStream {
     );
   }
 
-  /// The stream a download of [choice] fetches (the player API, then yt-dlp
-  /// where there is one), and what to convert it into afterwards (null keeps it as is).
-  /// Not cached: a download resolves once and fetches at once.
-  static Future<({ResolvedAudio audio, Conversion? convert})> forDownload(
-    String videoId,
-    DownloadChoice choice, {
-    required bool canReencode,
-  }) async {
+  static const _listingLife = Duration(minutes: 10);
+  static const _expiryMargin = Duration(minutes: 5);
+  static const _listingCap = 40;
+
+  static final _listings = <String, Future<_Listing>>{};
+
+  /// When a googlevideo stream URL stops working (its `expire` parameter, seconds since the epoch); null if it has none.
+  static DateTime? urlExpiry(Uri url) {
+    final s = int.tryParse(url.queryParameters['expire'] ?? '');
+    return s == null ? null : DateTime.fromMillisecondsSinceEpoch(s * 1000);
+  }
+
+  /// Whether a listing fetched at [fetchedAt] can still be used at [now]: under ten minutes old, and none of its
+  /// [urls] expires within five minutes.
+  static bool listingFresh(DateTime fetchedAt, Iterable<Uri> urls, DateTime now) {
+    if (now.difference(fetchedAt) >= _listingLife) return false;
+    for (final u in urls) {
+      final e = urlExpiry(u);
+      if (e != null && e.difference(now) < _expiryMargin) return false;
+    }
+    return true;
+  }
+
+  /// Every audio stream YouTube offers for [videoId] (sizes included), for the download picker and for
+  /// [forDownload]. Cached for ten minutes; a call while one is running shares it.
+  static Future<List<AudioCandidate>> downloadCandidates(String videoId) async => (await _listing(videoId)).candidates;
+
+  /// Looks [videoId]'s formats up ahead, so the picker opens ready. Never throws.
+  static void prefetchDownloadCandidates(String videoId) {
+    try {
+      downloadCandidates(videoId).then<void>((_) {}, onError: (Object e) => debugPrint('format prefetch failed: $e'));
+    } catch (_) {}
+  }
+
+  static Future<_Listing> _listing(String videoId) {
+    final cached = _listings[videoId];
+    if (cached != null) {
+      return cached.then(
+        (l) => listingFresh(l.at, l.urls, DateTime.now()) ? l : _fetchListing(videoId),
+        onError: (Object _) => _fetchListing(videoId),
+      );
+    }
+    return _fetchListing(videoId);
+  }
+
+  static Future<_Listing> _fetchListing(String videoId) {
+    final future = _loadListing(videoId);
+    // Re-inserted, so the map stays oldest first; the oldest go when it grows.
+    _listings
+      ..remove(videoId)
+      ..[videoId] = future;
+    while (_listings.length > _listingCap) {
+      _listings.remove(_listings.keys.first);
+    }
+    // Failures aren't cached.
+    future.then<void>(
+      (_) {},
+      onError: (Object _) {
+        if (identical(_listings[videoId], future)) _listings.remove(videoId);
+      },
+    );
+    return future;
+  }
+
+  static Future<_Listing> _loadListing(String videoId) async {
     try {
       Map<String, dynamic> j;
       try {
@@ -196,18 +253,33 @@ abstract final class YoutubeStream {
       } catch (_) {
         j = await _playerResponse(videoId, freshVisitor: true);
       }
-      final pick = pickForDownload(
-        [for (final f in _adaptiveFormats(j)) ?AudioCandidate.fromPlayer(f)],
-        choice,
-        canReencode: canReencode,
-      );
-      if (pick == null) throw StateError('No audio stream for this song.');
-      return (audio: _resolvedFrom(pick.candidate.ref! as Map<String, dynamic>, j), convert: pick.convert);
+      final candidates = [for (final f in _adaptiveFormats(j)) ?AudioCandidate.fromPlayer(f)];
+      if (candidates.every((c) => c.processed)) throw StateError('No audio stream for this song.');
+      // Only the loudness block of the response is kept, not all of it.
+      return _Listing(candidates, DateTime.now(), {'playerConfig': j['playerConfig']});
     } catch (e) {
       if (!YtDlp.supported) rethrow;
       debugPrint('YouTube player API failed for $videoId, using yt-dlp: $e');
-      return YtDlp.forDownload(videoId, choice, canReencode: canReencode);
+      return _Listing(await YtDlp.listFormats(videoId), DateTime.now(), null);
     }
+  }
+
+  /// The stream a download of [choice] fetches (the player API, then yt-dlp
+  /// where there is one), and what to convert it into afterwards (null keeps it as is).
+  /// Reuses the formats [downloadCandidates] listed while they are fresh.
+  static Future<({ResolvedAudio audio, Conversion? convert})> forDownload(
+    String videoId,
+    DownloadChoice choice, {
+    required bool canReencode,
+  }) async {
+    final listing = await _listing(videoId);
+    final pick = pickForDownload(listing.candidates, choice, canReencode: canReencode);
+    if (pick == null) throw StateError('No audio stream for this song.');
+    final player = listing.player;
+    final audio = player != null
+        ? _resolvedFrom(pick.candidate.ref! as Map<String, dynamic>, player)
+        : YtDlp.resolvedFrom(pick.candidate);
+    return (audio: audio, convert: pick.convert);
   }
 
   static Future<Map<String, dynamic>> _playerResponse(String videoId, {bool freshVisitor = false}) async {
@@ -263,4 +335,20 @@ abstract final class YoutubeStream {
     final candidates = formats.where(usable).toList()..sort((a, b) => score(b).compareTo(score(a)));
     return candidates.firstOrNull;
   }
+}
+
+/// What was listed for one video, and when.
+class _Listing {
+  _Listing(this.candidates, this.at, this.player);
+
+  final List<AudioCandidate> candidates;
+  final DateTime at;
+
+  /// The player API's loudness block when the player API listed it; null for yt-dlp.
+  final Map<String, dynamic>? player;
+
+  Iterable<Uri> get urls => [
+    for (final c in candidates)
+      if (c.ref is Map && (c.ref! as Map)['url'] is String) Uri.parse((c.ref! as Map)['url'] as String),
+  ];
 }

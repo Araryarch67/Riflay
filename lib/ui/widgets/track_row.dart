@@ -97,77 +97,82 @@ class _TrackRowState extends State<TrackRow> {
           borderRadius: LayoutPrefs.corner(6),
           hoverColor: Colors.transparent,
           onTap: isCurrent && wide && _hover ? c.togglePlay : widget.onTap,
-          child: Padding(
-            padding: EdgeInsets.symmetric(horizontal: wide ? 12 : 4, vertical: LayoutPrefs.dense(6, 2)),
-            child: Row(
-              children: [
-                if (leading != null) ...[leading, const SizedBox(width: 12)],
-                if (widget.showArtwork) ...[
-                  Artwork(track: t, size: LayoutPrefs.dense(wide ? 40 : 48, wide ? 34 : 40)),
-                  const SizedBox(width: 12),
-                ],
-                Expanded(
-                  flex: 5,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        t.title,
+          child: LayoutBuilder(
+            builder: (context, box) => Padding(
+              padding: EdgeInsets.symmetric(horizontal: wide ? 12 : 4, vertical: LayoutPrefs.dense(6, 2)),
+              child: Row(
+                children: [
+                  if (leading != null) ...[leading, const SizedBox(width: 12)],
+                  if (widget.showArtwork) ...[
+                    Artwork(track: t, size: LayoutPrefs.dense(wide ? 40 : 48, wide ? 34 : 40)),
+                    const SizedBox(width: 12),
+                  ],
+                  Expanded(
+                    flex: 5,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          t.title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: text.bodyLarge?.copyWith(
+                            color: isCurrent ? AppColors.accent : AppColors.textPrimary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Row(
+                          children: [
+                            if (isCurrent && !wide) ...[
+                              EqualizerIcon(playing: playing, size: 10),
+                              const SizedBox(width: 6),
+                            ],
+                            // YouTube songs: cloud = streams, green pin = downloaded, plays offline.
+                            if (t.isRemote) ...[SourceMark(online: online, size: 14), const SizedBox(width: 4)],
+                            Flexible(
+                              child: Text(
+                                t.artist,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: text.bodyMedium?.copyWith(color: AppColors.textSecondary),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (wide && widget.showAlbum && shell.width > 900) ...[
+                    const SizedBox(width: 16),
+                    Expanded(
+                      flex: 4,
+                      child: Text(
+                        t.album ?? '',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: text.bodyLarge?.copyWith(
-                          color: isCurrent ? AppColors.accent : AppColors.textPrimary,
-                          fontWeight: FontWeight.w600,
+                        style: text.bodyMedium?.copyWith(color: AppColors.textSecondary),
+                      ),
+                    ),
+                  ],
+                  if (wide)
+                    SizedBox(
+                      width: 56,
+                      child: Text(
+                        t.duration == null ? '' : formatDuration(t.duration),
+                        textAlign: TextAlign.right,
+                        style: text.bodyMedium?.copyWith(
+                          color: AppColors.textSecondary,
+                          fontFeatures: const [FontFeature.tabularFigures()],
                         ),
                       ),
-                      const SizedBox(height: 2),
-                      Row(
-                        children: [
-                          if (isCurrent && !wide) ...[
-                            EqualizerIcon(playing: playing, size: 10),
-                            const SizedBox(width: 6),
-                          ],
-                          // YouTube songs: cloud = streams, green pin = downloaded, plays offline.
-                          if (t.isRemote) ...[SourceMark(online: online, size: 14), const SizedBox(width: 4)],
-                          Flexible(
-                            child: Text(
-                              t.artist,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: text.bodyMedium?.copyWith(color: AppColors.textSecondary),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                if (wide && widget.showAlbum && shell.width > 900) ...[
-                  const SizedBox(width: 16),
-                  Expanded(
-                    flex: 4,
-                    child: Text(
-                      t.album ?? '',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: text.bodyMedium?.copyWith(color: AppColors.textSecondary),
                     ),
-                  ),
+                  // Streamed songs: download right here (ring while it runs, a check once saved); on a row too
+                  // narrow for it, only the menu has it.
+                  if (t.isRemote && box.maxWidth >= 300) DownloadButton(track: t),
+                  TrackMenuButton(track: t, visible: !wide || _hover),
                 ],
-                if (wide)
-                  SizedBox(
-                    width: 56,
-                    child: Text(
-                      t.duration == null ? '' : formatDuration(t.duration),
-                      textAlign: TextAlign.right,
-                      style: text.bodyMedium?.copyWith(
-                        color: AppColors.textSecondary,
-                        fontFeatures: const [FontFeature.tabularFigures()],
-                      ),
-                    ),
-                  ),
-                TrackMenuButton(track: t, visible: !wide || _hover),
-              ],
+              ),
             ),
           ),
         ),
@@ -207,7 +212,7 @@ class TrackMenuButton extends StatelessWidget {
   /// Queues [tracks] for download. A plain tap follows Settings (and asks only if
   /// "Ask every time" is on); [force] always asks, for "Download as…".
   static Future<void> download(BuildContext host, PlayerController c, List<Track> tracks, {bool force = false}) async {
-    final choice = await chooseDownload(host, force: force);
+    final choice = await chooseDownload(host, force: force, videoId: tracks.length == 1 ? tracks.first.videoId : null);
     if (choice == null) return;
     c.youtube.enqueueTracks(tracks, choice: choice);
   }

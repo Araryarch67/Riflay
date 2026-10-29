@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:ui' as ui;
 
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
@@ -14,8 +15,11 @@ import 'ffmpeg.dart';
 import 'flac_stream.dart';
 import 'lyrics.dart';
 import 'pcm_decoder.dart';
+import 'metadata.dart';
 import 'ranged_download.dart';
+import 'youtube_links.dart';
 import 'youtube_stream.dart';
+import 'webm_opus.dart';
 import 'ytdlp.dart';
 
 enum DownloadStatus { queued, downloading, done, failed, cancelled }
@@ -29,6 +33,7 @@ class DownloadJob {
     required this.thumbnailUrl,
     this.knownNames = false,
     this.choice,
+    this.album,
   });
 
   /// The format and quality asked for; null follows Settings when the download starts.
@@ -42,6 +47,9 @@ class DownloadJob {
   /// Music song), not a video title and uploader that still need splitting.
   final bool knownNames;
   final String thumbnailUrl;
+
+  /// The album YouTube Music names for the song, if it does; goes in the file's tags.
+  final String? album;
 
   DownloadStatus status = DownloadStatus.queued;
   double progress = 0;
@@ -81,6 +89,11 @@ class _Cancelled implements Exception {
   const _Cancelled();
 }
 
+/// MP3 was chosen on a device without ffmpeg.
+class _NoMp3 implements Exception {
+  const _NoMp3();
+}
+
 /// FLAC was chosen on a device that can neither run ffmpeg nor decode with libmpv.
 class _NoFlac implements Exception {
   const _NoFlac();
@@ -106,7 +119,7 @@ class _Audio {
   /// The stream's own container ('webm' or 'm4a'): the file as downloaded.
   final String sourceExt;
 
-  /// The saved file's extension: [sourceExt], or 'flac'.
+  /// The saved file's extension: 'opus' for YouTube's Opus (remuxed out of its WebM), 'm4a', 'flac' or 'mp3'.
   final String ext;
 
   /// What the saved file is, e.g. "Opus · 96 kbps" or "FLAC · 16-bit / 48 kHz".
@@ -115,7 +128,7 @@ class _Audio {
   /// Applied after the stream has arrived; null keeps it byte-for-byte.
   final Conversion? convert;
 
-  /// For FLAC: about how big the saved file will be.
+  /// For FLAC and MP3: about how big the saved file will be.
   final int? estimatedSize;
 }
 
@@ -165,10 +178,12 @@ class YoutubeImporter extends ChangeNotifier {
   static bool get canReencode => Ffmpeg.available;
 
   /// Whether FLAC can be made: with ffmpeg, or on phones by libmpv decoding and [FlacStream] packing.
+  /// Whether MP3 can be made: it needs ffmpeg (installed, or fetched on first use).
+  static bool get canMakeMp3 => Ffmpeg.available;
+
   static bool get canMakeFlac => Ffmpeg.available || MpvPcm.supported;
 
-  static bool looksLikeYoutubeUrl(String text) =>
-      VideoId.parseVideoId(text.trim()) != null || PlaylistId.parsePlaylistId(text.trim()) != null;
+  static bool looksLikeYoutubeUrl(String text) => YoutubeLinks.looksLikeLink(text);
 
   /// Where downloads live: ~/Documents/Riflay/YouTube on desktop, the app's
   /// private documents folder on mobile.
@@ -190,11 +205,10 @@ class YoutubeImporter extends ChangeNotifier {
   /// Looks up a link. Pure playlist links (`/playlist?list=`) resolve to the whole
   /// playlist; watch links resolve to the single video even if they carry a list.
   Future<YoutubePreview> resolve(String url) async {
-    final text = url.trim();
-    final videoId = VideoId.parseVideoId(text);
-    if (videoId != null) return VideoPreview(await _yt.videos.get(videoId));
-    final playlistId = PlaylistId.parsePlaylistId(text);
-    if (playlistId == null) throw const FormatException('That doesn\'t look like a YouTube link.');
+    final link = YoutubeLinks.parse(url, allowBareId: true);
+    if (link is VideoLink) return VideoPreview(await _yt.videos.get(link.videoId));
+    if (link is! PlaylistLink) throw const FormatException('That doesn\'t look like a YouTube link.');
+    final playlistId = link.playlistId;
     final playlist = await _yt.playlists.get(playlistId);
     final videos = await _yt.playlists.getVideos(playlistId).take(_maxPlaylistVideos).toList();
     return PlaylistPreview(playlist, videos);
@@ -223,6 +237,7 @@ class YoutubeImporter extends ChangeNotifier {
         thumbnailUrl: t.artworkUrl ?? 'https://i.ytimg.com/vi/${t.videoId}/hqdefault.jpg',
         knownNames: true,
         choice: choice,
+        album: _clean(t.album),
       ),
   ]);
 
@@ -291,14 +306,14 @@ class YoutubeImporter extends ChangeNotifier {
     }
   }
 
-  /// Size and quality of what a download would save. Exact, except for FLAC, which is
-  /// estimated ([approx]): the stream's size says little about the lossless file made from it.
+  /// Size and quality of what a download would save. Exact, except for FLAC and MP3, which are
+  /// estimated ([approx]): the stream's size says little about the file made from it.
   Future<({int? size, bool approx, String quality})?> peekAudio(String videoId, {DownloadChoice? choice}) async {
     try {
       await DownloadPrefs.instance.load();
       final r = await _resolveAudio(videoId, choice ?? DownloadPrefs.instance.choice);
-      final flac = r.convert is ToFlac;
-      return (size: flac ? r.estimatedSize : r.size, approx: flac, quality: r.quality);
+      final made = r.convert is ToFlac || r.convert is ToMp3;
+      return (size: made ? r.estimatedSize : r.size, approx: made, quality: r.quality);
     } catch (_) {
       return null;
     }
@@ -315,10 +330,10 @@ class YoutubeImporter extends ChangeNotifier {
         url: r.audio.url,
         size: r.audio.size,
         sourceExt: sourceExt,
-        ext: r.convert is ToFlac ? 'flac' : sourceExt,
+        ext: _savedExt(r.convert, sourceExt),
         quality: _qualityOf(r.convert, opus: r.audio.isOpus, kbps: r.audio.kbps),
         convert: r.convert,
-        estimatedSize: _flacSize(r.convert, size: r.audio.size, kbps: r.audio.kbps),
+        estimatedSize: _madeSize(r.convert, size: r.audio.size, kbps: r.audio.kbps),
       );
     } catch (e) {
       if (YtDlp.supported) rethrow;
@@ -332,15 +347,38 @@ class YoutubeImporter extends ChangeNotifier {
     );
     if (pick == null) throw StateError('No playable audio stream for this video.');
     final stream = pick.candidate.ref! as AudioOnlyStreamInfo;
+    final sourceExt = stream.container == StreamContainer.webM ? 'webm' : 'm4a';
     return _Audio(
       url: stream.url,
       size: stream.size.totalBytes,
-      sourceExt: stream.container == StreamContainer.webM ? 'webm' : 'm4a',
-      ext: pick.ext == 'flac' ? 'flac' : (stream.container == StreamContainer.webM ? 'webm' : 'm4a'),
+      sourceExt: sourceExt,
+      ext: _savedExt(pick.convert, sourceExt),
       quality: pick.label,
       convert: pick.convert,
-      estimatedSize: _flacSize(pick.convert, size: stream.size.totalBytes, kbps: pick.candidate.kbps),
+      estimatedSize: _madeSize(pick.convert, size: stream.size.totalBytes, kbps: pick.candidate.kbps),
     );
+  }
+
+  /// The extension the saved file gets: YouTube's WebM Opus becomes an Ogg `.opus`.
+  static String _savedExt(Conversion? convert, String sourceExt) => switch (convert) {
+    ToFlac() => 'flac',
+    ToMp3() => 'mp3',
+    _ => sourceExt == 'webm' ? 'opus' : sourceExt,
+  };
+
+  static String? _clean(String? s) {
+    final t = s?.trim();
+    return t == null || t.isEmpty ? null : t;
+  }
+
+  /// The FLAC's or MP3's likely size.
+  static int? _madeSize(Conversion? convert, {required int? size, required int? kbps}) =>
+      _flacSize(convert, size: size, kbps: kbps) ?? _mp3Size(convert, size: size, kbps: kbps);
+
+  /// The MP3's size: the song's length (from the stream's size and bitrate) times the MP3's bitrate.
+  static int? _mp3Size(Conversion? convert, {required int? size, required int? kbps}) {
+    if (convert is! ToMp3 || size == null || kbps == null || kbps <= 0) return null;
+    return size * convert.kbps ~/ kbps;
   }
 
   /// The FLAC's likely size, from the stream's size and bitrate (which give the song's length).
@@ -352,6 +390,7 @@ class YoutubeImporter extends ChangeNotifier {
 
   static String _qualityOf(Conversion? convert, {required bool opus, required int? kbps}) => switch (convert) {
     ToFlac(:final quality) => describeFlac(quality, fromOpus: opus, fromKbps: kbps),
+    ToMp3(kbps: final target) => 'MP3 · $target kbps',
     Reencode(kbps: final target) => describeAudio(opus: opus, kbps: target),
     null => describeAudio(opus: opus, kbps: kbps),
   };
@@ -371,25 +410,68 @@ class YoutubeImporter extends ChangeNotifier {
     }
   }
 
-  /// Converts [input] down to [kbps] in the same codec, replacing it. Returns the new file.
+  /// Converts [input] down to [kbps] in the same codec, replacing it. Returns the new file: Opus comes out as an
+  /// Ogg `<id>.opus` (ffmpeg writes it directly), AAC replaces [input].
   static Future<File> _reencode(File input, {required bool opus, required int kbps}) async {
-    final out = File('${input.path}.small${p.extension(input.path)}');
+    final target = opus ? File(p.setExtension(input.path, '.opus')) : input;
+    final out = File('${target.path}.small.part');
     try {
       final r = await Process.run(await Ffmpeg.executable(), [
-        '-hide_banner', '-loglevel', 'error', '-y', '-i', input.path, '-vn', //
+        '-hide_banner', '-loglevel', 'error', '-y', '-i', input.path, '-map', '0:a:0', '-vn', '-map_metadata', '-1', //
         ...opus
-            ? ['-c:a', 'libopus', '-b:a', '${kbps}k']
-            : ['-c:a', 'aac', '-b:a', '${kbps}k', '-movflags', '+faststart'],
+            ? ['-c:a', 'libopus', '-b:a', '${kbps}k', '-f', 'opus']
+            : ['-c:a', 'aac', '-b:a', '${kbps}k', '-movflags', '+faststart', '-f', 'mp4'],
         out.path,
       ]);
       if (r.exitCode != 0 || !out.existsSync() || out.lengthSync() == 0) {
         throw StateError('ffmpeg could not convert the download: ${r.stderr}');
       }
-      await input.delete();
-      return await out.rename(input.path);
+      if (input.existsSync()) await input.delete();
+      return await out.rename(target.path);
     } catch (_) {
       if (out.existsSync()) out.deleteSync();
       rethrow;
+    }
+  }
+
+  /// Makes [source] (a downloaded stream) into [target] (an .mp3) at a constant [kbps], by writing `<target>.part`
+  /// and renaming it. Deletes [source] once the MP3 is in place. Needs ffmpeg. Returns [target].
+  @visibleForTesting
+  static Future<File> toMp3(File source, File target, int kbps) async {
+    final part = File('${target.path}.part');
+    try {
+      if (!Ffmpeg.available) throw const _NoMp3();
+      final r = await Process.run(await Ffmpeg.executable(), [
+        '-hide_banner', '-loglevel', 'error', '-y', '-i', source.path, '-map', '0:a:0', '-vn', '-map_metadata', '-1', //
+        '-c:a', 'libmp3lame', '-b:a', '${kbps}k', '-id3v2_version', '4', '-f', 'mp3', part.path,
+      ]);
+      if (r.exitCode != 0) throw StateError('ffmpeg could not make the MP3: ${r.stderr}');
+      if (!part.existsSync() || part.lengthSync() == 0) throw StateError('The MP3 came out empty.');
+      await part.rename(target.path);
+      if (source.path != target.path && source.existsSync()) await source.delete();
+      return target;
+    } catch (_) {
+      if (part.existsSync()) part.deleteSync();
+      rethrow;
+    }
+  }
+
+  /// YouTube's WebM Opus as an Ogg `.opus` file next to it (the packets are copied, not re-encoded); [webm] is
+  /// removed. If that can't be done the WebM is returned as it is: a download is never lost over its container.
+  @visibleForTesting
+  static Future<File> remuxOpus(File webm) async {
+    final target = File(p.setExtension(webm.path, '.opus'));
+    final part = File('${target.path}.part');
+    try {
+      await WebmOpus.remuxFile(webm.path, part.path);
+      if (!part.existsSync() || part.lengthSync() == 0) throw StateError('The Opus file came out empty.');
+      await part.rename(target.path);
+      await webm.delete();
+      return target;
+    } catch (e) {
+      debugPrint('Download: couldn\'t remux ${webm.path} to Opus, keeping the WebM: $e');
+      if (part.existsSync()) part.deleteSync();
+      return webm;
     }
   }
 
@@ -463,6 +545,7 @@ class YoutubeImporter extends ChangeNotifier {
       final dir = await downloadsDir();
       final choice = job.choice ??= DownloadPrefs.instance.choice;
       if (choice.format.lossless && !canMakeFlac) throw const _NoFlac();
+      if (choice.format == DownloadFormat.mp3 && !canMakeMp3) throw const _NoMp3();
       // Metadata and the stream URL resolve in parallel.
       final (video, audio) = await (_yt.videos.get(job.videoId), _resolveAudio(job.videoId, choice)).wait;
       job.quality = audio.quality;
@@ -478,7 +561,7 @@ class YoutubeImporter extends ChangeNotifier {
         ..totalBytes = audio.size
         ..receivedBytes = 0
         ..bytesPerSecond = null;
-      final thumbnail = _saveThumbnail(video, p.join(dir.path, '${job.videoId}.jpg'));
+      final thumbnail = _saveCover(video, job, p.join(dir.path, '${job.videoId}.jpg'));
       // YouTube Music already named the song; only a bare video title needs guessing.
       final names = job.knownNames ? (title: job.title, artist: job.channel) : parseTitle(video.title, video.author);
       // Looked up while the audio downloads, so the song has its lyrics offline too.
@@ -515,10 +598,10 @@ class YoutubeImporter extends ChangeNotifier {
       }
       downloaded = await partFile.rename(audioFile.path);
       var saved = audioFile;
-      if (audio.convert != null) {
-        job.converting = true;
-        notifyListeners();
-      }
+      // Converting, remuxing and tagging all show as "Converting…": there is no progress to report.
+      job.converting = true;
+      notifyListeners();
+      bool cancelled() => job.status == DownloadStatus.cancelled;
       switch (audio.convert) {
         case Reencode(:final kbps):
           saved = await _reencode(audioFile, opus: audio.sourceExt == 'webm', kbps: kbps);
@@ -527,21 +610,33 @@ class YoutubeImporter extends ChangeNotifier {
             audioFile,
             File(p.join(dir.path, '${job.videoId}.flac')),
             quality,
-            isCancelled: () => job.status == DownloadStatus.cancelled,
+            isCancelled: cancelled,
           );
+        case ToMp3(:final kbps):
+          saved = await toMp3(audioFile, File(p.join(dir.path, '${job.videoId}.mp3')), kbps);
         case null:
-          break;
+          if (audio.sourceExt == 'webm') saved = await remuxOpus(audioFile);
       }
       converted = saved;
-      if (job.status == DownloadStatus.cancelled) throw const _Cancelled();
-      if (audio.convert != null) job.totalBytes = saved.lengthSync();
-      await thumbnail;
+      if (cancelled()) throw const _Cancelled();
+      final cover = await thumbnail;
+      final year = video.uploadDate?.year;
+      await _tagFile(
+        saved,
+        TagEdit(title: names.title, artist: names.artist, album: job.album, year: year)
+          ..comment = video.url
+          ..cover = cover?.bytes
+          ..coverMime = cover?.mime ?? 'image/jpeg',
+      );
+      if (cancelled()) throw const _Cancelled();
+      job.totalBytes = saved.lengthSync();
       await _saveLyrics(await lyrics, saved.path);
       final track = Track(
         id: Uri.file(saved.path).toString(),
         uri: Uri.file(saved.path),
         title: names.title,
         artist: names.artist,
+        album: job.album,
         duration: video.duration,
         addedAt: DateTime.now().millisecondsSinceEpoch,
         tagged: true,
@@ -623,17 +718,83 @@ class YoutubeImporter extends ChangeNotifier {
     }
   }
 
-  static Future<void> _saveThumbnail(Video video, String path) async {
-    for (final url in [video.thumbnails.maxResUrl, video.thumbnails.highResUrl]) {
+  /// Tags a finished download. A file that can't be tagged is kept as it is: tags are never worth the song.
+  static Future<void> _tagFile(File file, TagEdit edit) async {
+    try {
+      await Metadata.tagFile(file.path, edit);
+    } catch (e) {
+      debugPrint('Download: couldn\'t tag ${file.path}: $e');
+    }
+  }
+
+  /// Googleusercontent / ggpht art can be asked for at any size and shape: ask for a big square.
+  static String _squareArt(String url) {
+    final uri = Uri.tryParse(url);
+    if (uri == null || !(uri.host.endsWith('googleusercontent.com') || uri.host.endsWith('ggpht.com'))) return url;
+    final base = url.split('?').first;
+    return RegExp(r'=[wsh]\d').hasMatch(base) ? base.replaceFirst(RegExp(r'=[^=/]*$'), '=w1000-h1000-l90-rj') : url;
+  }
+
+  /// The song's cover as a centred square, saved to [path] (also what [Metadata] finds next to the song) and returned
+  /// for the file's tags. YouTube Music's own square art when the song has it, else the video's thumbnail cropped.
+  static Future<({Uint8List bytes, String mime})?> _saveCover(Video video, DownloadJob job, String path) async {
+    final urls = <String>{
+      if (job.thumbnailUrl.isNotEmpty) _squareArt(job.thumbnailUrl),
+      video.thumbnails.maxResUrl,
+      video.thumbnails.highResUrl,
+      job.thumbnailUrl,
+    };
+    for (final url in urls) {
       try {
         final res = await http.get(Uri.parse(url));
-        if (res.statusCode == 200 && res.bodyBytes.isNotEmpty) {
-          await File(path).writeAsBytes(res.bodyBytes);
-          return;
-        }
-      } catch (_) {
-        // Cover art is optional.
+        if (res.statusCode != 200 || res.bodyBytes.isEmpty) continue;
+        final cover = await squareCover(res.bodyBytes);
+        await File(path).writeAsBytes(cover.bytes);
+        return cover;
+      } catch (e) {
+        debugPrint('Download: cover from $url failed: $e');
       }
+    }
+    return null;
+  }
+
+  /// [image] as a centred square no larger than [maxSide]. Already square (within 2%) JPEGs and PNGs of a fitting
+  /// size are returned as they are; anything else is cropped and comes back as a PNG.
+  @visibleForTesting
+  static Future<({Uint8List bytes, String mime})> squareCover(Uint8List image, {int maxSide = 1000}) async {
+    final png = image.length > 4 && image[0] == 0x89 && image[1] == 0x50;
+    final jpeg = image.length > 2 && image[0] == 0xff && image[1] == 0xd8;
+    final mime = png ? 'image/png' : 'image/jpeg';
+    final codec = await ui.instantiateImageCodec(image);
+    try {
+      final frame = await codec.getNextFrame();
+      final src = frame.image;
+      try {
+        final w = src.width, h = src.height;
+        final side = w < h ? w : h;
+        final square = (w - h).abs() <= side * 0.02;
+        if (square && side <= maxSide && (png || jpeg)) return (bytes: image, mime: mime);
+        final out = side < maxSide ? side : maxSide;
+        final recorder = ui.PictureRecorder();
+        ui.Canvas(recorder).drawImageRect(
+          src,
+          ui.Rect.fromLTWH((w - side) / 2, (h - side) / 2, side.toDouble(), side.toDouble()),
+          ui.Rect.fromLTWH(0, 0, out.toDouble(), out.toDouble()),
+          ui.Paint()..filterQuality = ui.FilterQuality.high,
+        );
+        final cropped = await recorder.endRecording().toImage(out, out);
+        try {
+          final data = await cropped.toByteData(format: ui.ImageByteFormat.png);
+          if (data == null) throw StateError('The cover couldn\'t be encoded.');
+          return (bytes: data.buffer.asUint8List(), mime: 'image/png');
+        } finally {
+          cropped.dispose();
+        }
+      } finally {
+        src.dispose();
+      }
+    } finally {
+      codec.dispose();
     }
   }
 
@@ -644,6 +805,7 @@ class YoutubeImporter extends ChangeNotifier {
       // Subclass first: VideoUnavailableException extends VideoUnplayableException.
       VideoUnavailableException() => 'This video is unavailable.',
       VideoUnplayableException() => 'This video can\'t be played (private, age-restricted or region-locked).',
+      _NoMp3() => 'MP3 downloads need ffmpeg, which isn\'t available here. Pick another format in Settings.',
       _NoFlac() => 'FLAC downloads aren\'t available on this device. Pick another format in Settings.',
       _OnMobileData() => 'Mobile data downloads are off. Connect to Wi-Fi, or allow them in Settings.',
       SocketException() || http.ClientException() || TimeoutException() => 'No internet connection. Try again.',

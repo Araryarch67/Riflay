@@ -263,6 +263,20 @@ class _Id3Tag {
       _set('TYER', _dated(edit.year, old));
       if (edit.year == null) frames.removeWhere((f) => f.id == 'TDAT' || f.id == 'TIME');
     }
+    if (edit.comment case final comment?) {
+      final text = _encodeText(comment);
+      final utf16 = text[0] == 1;
+      final at = frames.indexWhere((f) => f.id == 'COMM');
+      frames.removeWhere((f) => f.id == 'COMM');
+      // Encoding, language, an empty description, the text.
+      final body = Uint8List.fromList([
+        text[0],
+        ...'eng'.codeUnits,
+        ...(utf16 ? [0, 0] : [0]),
+        ...text.sublist(1),
+      ]);
+      frames.insert(at < 0 ? frames.length : at, _Id3Frame('COMM', 0, body));
+    }
     if (edit.cover case final cover?) {
       final at = frames.indexWhere((f) => f.id == 'APIC');
       frames.removeWhere((f) => f.id == 'APIC');
@@ -813,6 +827,7 @@ class _Ogg {
     set('DATE', _dated(edit.year, old('DATE') ?? old('YEAR')), also: {'YEAR'});
     set('TRACKNUMBER', _numbered(edit.trackNumber, old('TRACKNUMBER')));
     set('DISCNUMBER', _numbered(edit.discNumber, old('DISCNUMBER')));
+    if (edit.comment != null) set('COMMENT', edit.comment, also: {'DESCRIPTION'});
     if (edit.cover case final cover?) {
       // A FLAC picture block, base64: the standard way to put a cover in Ogg.
       final mime = ascii.encode(edit.coverMime);

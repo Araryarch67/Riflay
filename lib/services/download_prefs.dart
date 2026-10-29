@@ -9,6 +9,10 @@ enum DownloadFormat {
   flac(
     'FLAC',
     'Lossless file for players and libraries that want FLAC. YouTube\'s sound is kept exactly; it gets no better.',
+  ),
+  mp3(
+    'MP3',
+    'For older players and car stereos. Made from YouTube\'s audio, so it never sounds better than Opus or M4A.',
   );
 
   const DownloadFormat(this.label, this.about);
@@ -18,10 +22,21 @@ enum DownloadFormat {
   /// FLAC is made from the downloaded stream; the others are YouTube's own.
   bool get lossless => this == flac;
 
-  /// The bitrates offered for this format, best first; null is "Best available".
+  /// FLAC and MP3 are always made from the downloaded stream; Opus and M4A are YouTube's own unless a lower
+  /// bitrate is asked for.
+  bool get alwaysConverted => this == flac || this == mp3;
+
+  /// The bitrates offered for this format, best first; null is "Best available" (for MP3: [mp3BestKbps]).
   /// Empty for FLAC, which has [FlacQuality] instead.
-  List<int?> get bitrates => lossless ? const [] : const [null, 128, 96, 64, 48];
+  List<int?> get bitrates => switch (this) {
+    flac => const [],
+    mp3 => const [null, 160, 128, 96],
+    _ => const [null, 128, 96, 64, 48],
+  };
 }
+
+/// What "Best available" means for MP3: enough to keep everything YouTube's ~130-160 kbps Opus or AAC carries.
+const mp3BestKbps = 192;
 
 /// Bit depth and sample rate of a FLAC download.
 enum FlacQuality {
@@ -38,6 +53,10 @@ enum FlacQuality {
 
 /// "Best available" or "128 kbps", for pickers.
 String bitrateLabel(int? kbps) => kbps == null ? 'Best available' : '$kbps kbps';
+
+/// What a bitrate chip or picker entry says: "128 kbps", and for the best, "Best available" (MP3: "192 kbps (best)").
+String bitrateLabelFor(DownloadFormat f, int? kbps) =>
+    f == DownloadFormat.mp3 && kbps == null ? '$mp3BestKbps kbps (best)' : bitrateLabel(kbps);
 
 /// A format and quality for one download.
 class DownloadChoice {
@@ -64,11 +83,21 @@ class DownloadChoice {
 
 /// One audio-only stream a video offers, whichever service listed it.
 class AudioCandidate {
-  const AudioCandidate({required this.id, required this.opus, required this.kbps, this.processed = false, this.ref});
+  const AudioCandidate({
+    required this.id,
+    required this.opus,
+    required this.kbps,
+    this.processed = false,
+    this.sizeBytes,
+    this.ref,
+  });
 
   final String id;
   final bool opus;
   final int kbps;
+
+  /// The stream's exact size when the lister says it (player API `contentLength`, yt-dlp `filesize`).
+  final int? sizeBytes;
 
   /// "Stable volume" (DRC) or a dubbed track: not the original mix.
   final bool processed;
@@ -85,6 +114,7 @@ class AudioCandidate {
       id: '${f['itag']}',
       opus: mime.contains('opus'),
       kbps: (((f['averageBitrate'] ?? f['bitrate']) as num?) ?? 0) ~/ 1000,
+      sizeBytes: int.tryParse('${f['contentLength'] ?? ''}'),
       processed:
           f['isDrc'] == true || (f['xtags'] as String? ?? '').contains('drc') || track?['audioIsDefault'] == false,
       ref: f,
@@ -101,6 +131,7 @@ class AudioCandidate {
       id: id,
       opus: codec.startsWith('opus'),
       kbps: ((f['abr'] ?? f['tbr']) as num?)?.round() ?? 0,
+      sizeBytes: ((f['filesize'] ?? f['filesize_approx']) as num?)?.round(),
       processed: id.contains('drc') || (lang is num && lang < 0),
       ref: f,
     );
@@ -110,6 +141,7 @@ class AudioCandidate {
     id: '${s.tag}',
     opus: s.audioCodec.toLowerCase().contains('opus'),
     kbps: s.bitrate.kiloBitsPerSecond.round(),
+    sizeBytes: s.size.totalBytes,
     processed: processed,
     ref: s,
   );
@@ -142,6 +174,17 @@ class ToFlac extends Conversion {
   int get hashCode => quality.hashCode;
 }
 
+/// Encoded to MP3 at [kbps] (needs ffmpeg).
+class ToMp3 extends Conversion {
+  const ToMp3(this.kbps);
+  final int kbps;
+
+  @override
+  bool operator ==(Object other) => other is ToMp3 && other.kbps == kbps;
+  @override
+  int get hashCode => kbps.hashCode;
+}
+
 /// What [pickForDownload] decided.
 class AudioPick {
   const AudioPick(this.candidate, {this.convert});
@@ -163,11 +206,16 @@ class AudioPick {
   bool get opus => candidate.opus;
 
   /// The saved file's extension.
-  String get ext => convert is ToFlac ? 'flac' : (opus ? 'webm' : 'm4a');
+  String get ext => switch (convert) {
+    ToFlac() => 'flac',
+    ToMp3() => 'mp3',
+    _ => opus ? 'webm' : 'm4a',
+  };
 
   /// e.g. "Opus · 138 kbps" or "FLAC · 16-bit / 48 kHz", for the downloads list.
   String get label => switch (convert) {
     ToFlac(:final quality) => describeFlac(quality, fromOpus: opus, fromKbps: candidate.kbps),
+    ToMp3(:final kbps) => 'MP3 · $kbps kbps',
     _ => describeAudio(opus: opus, kbps: kbps),
   };
 }
@@ -189,6 +237,41 @@ int estimateFlacBytes(Duration length, FlacQuality q, {required bool compressed}
   final raw = length.inMilliseconds / 1000 * q.rate * 2 * q.bits / 8;
   return (compressed ? raw * 0.6 : raw).round();
 }
+
+/// The choice offered first, and tagged "Recommended": Opus at the best YouTube has (smallest file for the same sound).
+bool isRecommended(DownloadChoice c) => c.format == DownloadFormat.opus && c.kbps == null;
+
+/// The choice a picker preselects: the saved one, or the recommended one if the person never chose.
+const recommendedChoice = DownloadChoice(DownloadFormat.opus);
+
+/// Roughly how many bytes a download of [c] comes out at, from what the video offers; null when that isn't known.
+/// The stream's exact size when it is kept as it is; otherwise its length (size / bitrate) times the target bitrate,
+/// and for FLAC [estimateFlacBytes].
+int? estimateDownloadBytes(Iterable<AudioCandidate> all, DownloadChoice c, {required bool canReencode}) {
+  final pick = pickForDownload(all, c, canReencode: canReencode);
+  if (pick == null) return null;
+  final stream = pick.candidate;
+  final convert = pick.convert;
+  if (convert == null) return stream.sizeBytes;
+  final size = stream.sizeBytes;
+  if (size == null || size <= 0 || stream.kbps <= 0) return null;
+  final seconds = size * 8 / (stream.kbps * 1000);
+  return switch (convert) {
+    Reencode(:final kbps) || ToMp3(:final kbps) => (seconds * kbps * 1000 / 8).round(),
+    ToFlac(:final quality) => estimateFlacBytes(
+      Duration(milliseconds: (seconds * 1000).round()),
+      quality,
+      compressed: canReencode,
+    ),
+  };
+}
+
+/// "Downloading in MP3 · 192 kbps…", for the long-press download.
+String describeChoice(DownloadChoice c) => switch (c.format) {
+  DownloadFormat.flac => 'FLAC · ${c.flac.label}',
+  DownloadFormat.mp3 => 'MP3 · ${c.kbps ?? mp3BestKbps} kbps',
+  _ => '${c.format == DownloadFormat.opus ? 'Opus' : 'M4A'} · ${c.kbps == null ? 'best available' : '${c.kbps} kbps'}',
+};
 
 /// Below this, a stream is taken for a broken one when the other format has a real one.
 const _brokenKbps = 32;
@@ -219,6 +302,7 @@ AudioPick? pickForDownload(Iterable<AudioCandidate> all, DownloadChoice choice, 
   if (pool.first.kbps < _brokenKbps && other.isNotEmpty && other.first.kbps >= 96) pool = other;
   final best = pool.first;
   if (choice.format.lossless) return AudioPick(best, convert: ToFlac(choice.flac));
+  if (choice.format == DownloadFormat.mp3) return AudioPick(best, convert: ToMp3(choice.kbps ?? mp3BestKbps));
   final target = choice.kbps;
   if (target == null || target >= best.kbps * (1 - _closeEnough)) return AudioPick(best);
   AudioCandidate? near;

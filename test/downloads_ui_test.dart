@@ -6,9 +6,11 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:riflay/main.dart';
 import 'package:riflay/models/track.dart';
+import 'package:riflay/services/download_prefs.dart';
 import 'package:riflay/services/player_controller.dart';
 import 'package:riflay/ui/download_editor.dart';
 import 'package:riflay/ui/widgets/editable_title.dart';
+import 'package:riflay/ui/ytmusic_edit.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 Future<void> _app(WidgetTester tester, Size size) async {
@@ -199,6 +201,77 @@ void main() {
       await tester.testTextInput.receiveAction(TextInputAction.done);
       await tester.pump();
       expect(renamed, isEmpty);
+    });
+  });
+
+  group('download button', () {
+    final song = Track.youtube(videoId: 'dQw4w9WgXcQ', title: 'Never Gonna', artist: 'Rick');
+
+    Future<PlayerController> pumpButton(WidgetTester tester) async {
+      SharedPreferences.setMockInitialValues({'library.v1': jsonEncode(<Object>[])});
+      final prefs = DownloadPrefs.instance;
+      await tester.runAsync(() async {
+        await prefs.load();
+        await prefs.setFormat(DownloadFormat.m4a);
+        await prefs.setKbps(DownloadFormat.m4a, 96);
+        await prefs.setAskEveryTime(true);
+      });
+      addTearDown(() async {
+        await prefs.setAskEveryTime(false);
+        await prefs.setFormat(DownloadFormat.opus);
+        await prefs.setKbps(DownloadFormat.m4a, null);
+      });
+      final c = PlayerController();
+      await tester.runAsync(c.load);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: PlayerScope(
+              controller: c,
+              child: Center(child: DownloadButton(track: song)),
+            ),
+          ),
+        ),
+      );
+      return c;
+    }
+
+    testWidgets('a long press downloads at once in the saved format, without asking even on "Ask every time"', (
+      tester,
+    ) async {
+      final c = await pumpButton(tester);
+      await tester.longPress(find.byType(IconButton));
+      await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 50)));
+      await tester.pump();
+      expect(find.byType(AlertDialog), findsNothing);
+      final job = c.youtube.jobFor('dQw4w9WgXcQ');
+      expect(job, isNotNull);
+      expect(job!.choice, const DownloadChoice(DownloadFormat.m4a, kbps: 96));
+      expect(find.text('Downloading in M4A · 96 kbps…'), findsOneWidget);
+      c.youtube.cancel(job);
+      await tester.pump(const Duration(seconds: 5));
+    });
+
+    testWidgets('a tap asks when "Ask every time" is on, and downloads nothing until Download is pressed', (
+      tester,
+    ) async {
+      final c = await pumpButton(tester);
+      await tester.tap(find.byType(IconButton));
+      for (var i = 0; i < 4; i++) {
+        await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 50)));
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+      expect(find.text('Download as'), findsOneWidget);
+      expect(c.youtube.jobFor('dQw4w9WgXcQ'), isNull);
+      await tester.tap(find.text('Cancel'));
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(c.youtube.jobFor('dQw4w9WgXcQ'), isNull);
+    });
+
+    testWidgets('the tooltip says what a long press does', (tester) async {
+      await pumpButton(tester);
+      final tip = tester.widget<Tooltip>(find.byType(Tooltip));
+      expect(tip.message, contains('Hold to download now as M4A · 96 kbps'));
     });
   });
 }

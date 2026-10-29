@@ -77,6 +77,8 @@ void main() {
       ('m4a-best', const DownloadChoice(DownloadFormat.m4a)),
       ('opus-64', const DownloadChoice(DownloadFormat.opus, kbps: 64)),
       ('m4a-96', const DownloadChoice(DownloadFormat.m4a, kbps: 96)),
+      ('mp3-best', const DownloadChoice(DownloadFormat.mp3)),
+      ('mp3-128', const DownloadChoice(DownloadFormat.mp3, kbps: 128)),
       ('flac-standard', const DownloadChoice(DownloadFormat.flac)),
       ('flac-cd', const DownloadChoice(DownloadFormat.flac, flac: FlacQuality.cd)),
       ('flac-hires', const DownloadChoice(DownloadFormat.flac, flac: FlacQuality.hiRes)),
@@ -84,6 +86,30 @@ void main() {
       final job = await download('AM3DIzTpcw4', choice);
       final file = File(job.track!.path!);
       file.copySync('${out.path}/$name${file.path.substring(file.path.lastIndexOf('.'))}');
+      // Every download is a proper music file: Opus as Ogg Opus (never a .webm), tagged, with a square cover.
+      final ext = switch (choice.format) {
+        DownloadFormat.opus => '.opus',
+        DownloadFormat.m4a => '.m4a',
+        DownloadFormat.flac => '.flac',
+        DownloadFormat.mp3 => '.mp3',
+      };
+      expect(file.path, endsWith(ext));
+      expect(File(file.path.replaceAll(RegExp(r'\.\w+$'), '.webm')).existsSync(), isFalse);
+      expect(job.totalBytes, file.lengthSync());
+      final tags = Process.runSync('ffprobe', [
+        '-v',
+        'error',
+        '-show_entries',
+        'format_tags=title,artist:stream=codec_type',
+        '-of',
+        'default=nw=1',
+        file.path, //
+      ]);
+      // ignore: avoid_print
+      print('TAGS $choice: ${(tags.stdout as String).replaceAll('\n', ' ')}');
+      final cover = File(file.path.replaceAll(RegExp(r'\.\w+$'), '.jpg'));
+      expect(cover.existsSync(), isTrue, reason: 'the cover is saved next to the song');
+      if (choice.format == DownloadFormat.mp3) expect(job.quality, 'MP3 · ${choice.kbps ?? mp3BestKbps} kbps');
       if (choice.format.lossless) {
         expect(file.path, endsWith('.flac'));
         expect(job.quality, startsWith('${describeFlac(choice.flac)} · from '));

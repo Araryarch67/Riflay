@@ -58,6 +58,7 @@ dependencies:
   multicast_dns: ^0.3.3+1
   pointycastle: ^4.0.0
   wakelock_plus: ^1.8.0
+  flutter_local_notifications: 22.3.2
   dbus: ^0.7.15
   connectivity_plus: ^7.3.1
   mqtt_client: ^10.14.0

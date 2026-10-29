@@ -10,6 +10,8 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"/>
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <!-- Downloads keep going with the screen off: a data-sync foreground service (Android 14 needs the type permission). -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC"/>
     <!-- One-tap "let Riflay keep playing with the screen off" (Settings > Playback > Power). -->
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS"/>
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE"/>
@@ -53,6 +55,10 @@
                 <action android:name="android.media.browse.MediaBrowserService" />
             </intent-filter>
         </service>
+        <!-- Holds the process while songs download; flutter_local_notifications starts and stops it. -->
+        <service android:name="com.dexterous.flutterlocalnotifications.ForegroundService"
+            android:foregroundServiceType="dataSync"
+            android:exported="false" />
         <receiver android:name="com.ryanheise.audioservice.MediaButtonReceiver"
             android:exported="true" tools:ignore="Instantiatable">
             <intent-filter>
