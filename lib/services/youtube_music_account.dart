@@ -5,10 +5,13 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:http/http.dart' as http;
+import 'package:just_audio/just_audio.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/track.dart';
 import 'desktop_login.dart';
 import 'private_files.dart';
+import 'ytmusic_play_report.dart';
 import 'ytmusic_web.dart';
 
 class YoutubeMusicLibrary {
@@ -203,6 +206,11 @@ class YoutubeMusicAccount extends ChangeNotifier {
 
   Future<void> load() async {
     try {
+      _reportPlays = (await SharedPreferences.getInstance()).getBool(_reportPlaysKey) ?? true;
+    } catch (e) {
+      debugPrint('YouTube Music: play-report setting not read: $e');
+    }
+    try {
       final f = await _file();
       if (!f.existsSync()) return;
       final j = jsonDecode(await f.readAsString()) as Map<String, dynamic>;
@@ -256,6 +264,7 @@ class YoutubeMusicAccount extends ChangeNotifier {
       avatarUrl = profile.avatarUrl ?? avatarUrl;
       _forgetLibrary();
       _discover = _discovered = null; // another account's shelves
+      _saveStates.clear();
       await _save();
       return true;
     } catch (e) {
@@ -344,25 +353,117 @@ class YoutubeMusicAccount extends ChangeNotifier {
     final seen = <String>{};
     final out = [
       for (final shelf in pages.expand((p) => p))
-        if (seen.add(shelf.title.toLowerCase()))
-          RemoteShelf(
-            title: shelf.title,
-            tracks: _webTracks(shelf.tracks),
-            collections: [
-              for (final c in shelf.cards)
-                RemotePlaylist(
-                  id: c.browseId,
-                  browseId: c.browseId,
-                  title: c.title,
-                  subtitle: c.subtitle,
-                  count: 0,
-                  thumbnailUrl: c.thumbnailUrl,
-                ),
-            ],
-          ),
+        if (seen.add(shelf.title.toLowerCase())) _remoteShelf(shelf),
     ];
     if (out.isEmpty) throw const YtMusicWebError('YouTube Music returned nothing. Check your connection.');
     return out;
+  }
+
+  RemoteShelf _remoteShelf(WebShelf shelf) => RemoteShelf(
+    title: shelf.title,
+    tracks: _webTracks(shelf.tracks),
+    collections: [
+      for (final c in shelf.cards)
+        RemotePlaylist(
+          id: c.browseId,
+          browseId: c.browseId,
+          title: c.title,
+          subtitle: c.subtitle,
+          count: 0,
+          thumbnailUrl: c.thumbnailUrl,
+        ),
+    ],
+  );
+
+  // ── Moods & genres, new releases ────────────────────────────────────────
+
+  /// The mood and genre tiles; no sign-in needed.
+  Future<List<WebMoodGroup>> moodsAndGenres() => _browseClient.moodsAndGenres();
+
+  /// A mood or genre's playlists, in shelves.
+  Future<List<RemoteShelf>> moodShelves(String params) async => [
+    for (final s in await _browseClient.moodShelves(params)) _remoteShelf(s),
+  ];
+
+  /// New albums, singles and music videos.
+  Future<List<RemoteShelf>> newReleases() async => [
+    for (final s in await _browseClient.shelves('FEmusic_new_releases')) _remoteShelf(s),
+  ];
+
+  // ── Saving albums and playlists to the library ──────────────────────────
+
+  final _saveStates = <String, WebSaveState>{};
+
+  /// Whether the album / playlist at [browseId] is in the library; null when
+  /// signed out or when it can't be saved (your own playlists).
+  Future<WebSaveState?> saveState(String browseId) async {
+    if (!isSignedIn) return null;
+    final known = _saveStates[browseId];
+    if (known != null) return known;
+    try {
+      final state = await _webClient.saveState(browseId);
+      if (state != null) _saveStates[browseId] = state;
+      return state;
+    } catch (e) {
+      debugPrint('YouTube Music: save state not read: ${_describe(e)}');
+      return null;
+    }
+  }
+
+  /// Saves the album / playlist to the library, or removes it. The new state is
+  /// kept for [saveState] only once YouTube Music accepted it.
+  Future<void> setSaved(String browseId, WebSaveState state, bool saved) async {
+    await _editing((web) => web.saveToLibrary(state.playlistId, saved: saved));
+    _saveStates[browseId] = WebSaveState(playlistId: state.playlistId, saved: saved);
+    // Your playlists list changes with it.
+    if (_library != null) library(refresh: true).then<void>((_) {}, onError: (Object _) {});
+  }
+
+  // ── Play history ────────────────────────────────────────────────────────
+
+  static const _reportPlaysKey = 'ytmusic.reportPlays.v1';
+  bool _reportPlays = true;
+
+  /// Songs played here are added to the account's YouTube Music history, as the
+  /// official app does. Only when signed in.
+  bool get reportPlays => _reportPlays;
+
+  Future<void> setReportPlays(bool value) async {
+    _reportPlays = value;
+    notifyListeners();
+    try {
+      await (await SharedPreferences.getInstance()).setBool(_reportPlaysKey, value);
+    } catch (e) {
+      debugPrint('YouTube Music: play-report setting not saved: $e');
+    }
+  }
+
+  /// Tells YouTube Music [t] was played. Never throws: history is not worth
+  /// disturbing playback for.
+  Future<void> reportPlay(Track t) async {
+    final id = t.videoId;
+    if (!isSignedIn || !_reportPlays || !t.isRemote || id == null) return;
+    try {
+      await _webClient.reportPlay(id);
+    } catch (e) {
+      debugPrint('YouTube Music: play not reported: $e');
+    }
+  }
+
+  /// Watches [player]: each YouTube song that plays for 30 seconds (or ends)
+  /// is reported once. [current] says which song is playing.
+  StreamSubscription<Duration> reportPlaysOf(AudioPlayer player, Track? Function() current) {
+    final clock = PlayReportClock();
+    return player.positionStream.listen((position) {
+      final track = current();
+      final due = clock.tick(
+        trackId: track != null && track.isRemote ? track.id : null,
+        position: position,
+        playing: player.playing,
+        ended: player.processingState == ProcessingState.completed,
+      );
+      if (due && track != null) reportPlay(track).ignore();
+    });
   }
 
   /// Song search on YouTube Music itself (better matches than plain YouTube).
@@ -469,6 +570,7 @@ class YoutubeMusicAccount extends ChangeNotifier {
     _webUser = '0';
     _forgetLibrary();
     _discover = _discovered = null; // another account's shelves
+    _saveStates.clear();
     notifyListeners();
     await _save();
     if (hadSession) unawaited(_clearWebViewCookies());

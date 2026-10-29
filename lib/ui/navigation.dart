@@ -10,6 +10,7 @@ abstract final class Locations {
   static const home = 'home';
   static const search = 'search';
   static const downloads = 'downloads';
+  static const listen = 'listen';
   static const settings = 'settings';
   static const library = 'library';
 

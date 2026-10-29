@@ -4,6 +4,7 @@ import '../../models/track.dart';
 import '../../services/audio_engine.dart';
 import '../../services/layout_prefs.dart';
 import '../../services/download_edit.dart';
+import '../../services/listen_together/listen_together.dart';
 import '../../services/metadata.dart';
 import '../../services/player_controller.dart';
 import '../download_editor.dart';
@@ -101,7 +102,10 @@ class _TrackRowState extends State<TrackRow> {
             child: Row(
               children: [
                 if (leading != null) ...[leading, const SizedBox(width: 12)],
-                if (widget.showArtwork) ...[Artwork(track: t, size: LayoutPrefs.dense(wide ? 40 : 48, wide ? 34 : 40)), const SizedBox(width: 12)],
+                if (widget.showArtwork) ...[
+                  Artwork(track: t, size: LayoutPrefs.dense(wide ? 40 : 48, wide ? 34 : 40)),
+                  const SizedBox(width: 12),
+                ],
                 Expanded(
                   flex: 5,
                   child: Column(
@@ -194,6 +198,12 @@ class TrackMenuButton extends StatelessWidget {
     messenger.showSnackBar(SnackBar(content: Text(done), duration: const Duration(seconds: 2)));
   }
 
+  /// A guest of a session whose host takes suggestions.
+  static bool _canSuggest(PlayerController c) {
+    final s = ListenTogether.of(c);
+    return s.role == ListenRole.guest && s.suggestionsAllowed;
+  }
+
   /// Queues [tracks] for download. A plain tap follows Settings (and asks only if
   /// "Ask every time" is on); [force] always asks, for "Download as…".
   static Future<void> download(BuildContext host, PlayerController c, List<Track> tracks, {bool force = false}) async {
@@ -274,6 +284,14 @@ class TrackMenuButton extends StatelessWidget {
                 onTap: () => c.startRadio(track),
                 child: const MenuRow(leading: Icon(Icons.radio_rounded), title: Text('Start radio')),
               ),
+              if (_canSuggest(c))
+                PopupMenuItem(
+                  onTap: () => ListenTogether.of(c).suggest(track),
+                  child: MenuRow(
+                    leading: const Icon(Icons.group_add_outlined),
+                    title: Text('Suggest to ${ListenTogether.of(c).hostName ?? 'the host'}'),
+                  ),
+                ),
               if (c.downloadedCopy(track) == null) ...[
                 PopupMenuItem(
                   onTap: () => download(host, c, [track]),

@@ -26,6 +26,8 @@ import 'shortcuts.dart';
 import 'theme.dart';
 import 'youtube_import.dart';
 import '../services/youtube_importer.dart';
+import '../services/listen_together/listen_together.dart';
+import 'pages/listen_together_page.dart';
 import 'widgets/smooth_scroll.dart';
 import 'widgets/title_bar.dart';
 
@@ -57,6 +59,7 @@ class _HomeShellState extends State<HomeShell> {
   late final _history = DesktopHistory(routeBuilder: (page, location) => _route(page, location: location));
 
   StreamSubscription<String>? _errors;
+  StreamSubscription<String>? _listenEvents;
   PlayerController? _player;
   bool _hasTrack = false;
 
@@ -92,6 +95,11 @@ class _HomeShellState extends State<HomeShell> {
     _errors = c.errors.listen((message) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
     });
+    // "Ana joined" and the like, while a Listen together session is on.
+    _listenEvents?.cancel();
+    _listenEvents = ListenTogether.of(c).events.listen((message) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    });
   }
 
   /// All the shell itself needs from the player is whether a song is loaded
@@ -109,6 +117,7 @@ class _HomeShellState extends State<HomeShell> {
     _player?.removeListener(_followTrack);
     _history.removeListener(_followLocation);
     _errors?.cancel();
+    _listenEvents?.cancel();
     _searchFocus.dispose();
     _search.dispose();
     if (titleBarInShell.value) titleBarInShell.value = false;
@@ -137,6 +146,7 @@ class _HomeShellState extends State<HomeShell> {
     SearchPage() => Locations.search,
     SettingsPage() => Locations.settings,
     DownloadsPage() => Locations.downloads,
+    ListenTogetherPage() => Locations.listen,
     LibraryPage() => Locations.library,
     CollectionPage(:final collection) => Locations.collection(collection),
     _ => page.runtimeType.toString(),
@@ -174,7 +184,11 @@ class _HomeShellState extends State<HomeShell> {
     leading: Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        _MoreMenu(onDownloads: () => _open(const DownloadsPage()), onSettings: _openSettings),
+        _MoreMenu(
+          onDownloads: () => _open(const DownloadsPage()),
+          onListen: () => _open(const ListenTogetherPage(), location: Locations.listen),
+          onSettings: _openSettings,
+        ),
         const SizedBox(width: 4),
         HistoryButtons(history: _history),
       ],
@@ -691,9 +705,13 @@ class _Sidebar extends StatelessWidget {
               Icon(selected ? selectedIcon : icon, color: color, size: 26),
               if (!collapsed) ...[
                 const SizedBox(width: 18),
-                Text(
-                  label,
-                  style: text.titleMedium?.copyWith(color: color, fontWeight: FontWeight.w700),
+                Flexible(
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: text.titleMedium?.copyWith(color: color, fontWeight: FontWeight.w700),
+                  ),
                 ),
               ],
             ],
@@ -711,6 +729,11 @@ class _Sidebar extends StatelessWidget {
         item(Locations.search, Icons.search_rounded, Icons.manage_search_rounded, 'Search', onSearch),
       ],
       _DownloadsLink(collapsed: collapsed, selected: location == Locations.downloads),
+      item(Locations.listen, Icons.group_outlined, Icons.group_rounded, 'Listen together', () {
+        if (location != Locations.listen) {
+          ShellScope.of(context).open(const ListenTogetherPage(), location: Locations.listen);
+        }
+      }),
       if (!inTitleBar) ...[
         item(Locations.settings, Icons.settings_outlined, Icons.settings_rounded, 'Settings', () {
           if (location != Locations.settings) ShellScope.of(context).open(const SettingsPage());
@@ -806,9 +829,10 @@ class _NavLink extends StatelessWidget {
 /// The title bar's ⋯ button: Downloads and Settings. A ring around it shows
 /// downloads in progress.
 class _MoreMenu extends StatelessWidget {
-  const _MoreMenu({required this.onDownloads, required this.onSettings});
+  const _MoreMenu({required this.onDownloads, required this.onListen, required this.onSettings});
 
   final VoidCallback onDownloads;
+  final VoidCallback onListen;
   final VoidCallback onSettings;
 
   @override
@@ -877,6 +901,7 @@ class _MoreMenu extends StatelessWidget {
                       style: text.labelSmall?.copyWith(color: AppColors.accent, fontWeight: FontWeight.w700),
                     ),
             ),
+            entry(Icons.group_outlined, 'Listen together', onListen),
             entry(Icons.settings_outlined, 'Settings', onSettings),
           ],
         );

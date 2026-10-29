@@ -135,6 +135,13 @@ class _SettingsTopicPageState extends State<SettingsTopicPage> {
                         child: const Text('Sign in with Google'),
                       ),
               ),
+              if (account.isSignedIn)
+                SwitchListTile(
+                  title: const Text('Add songs you play to your YouTube Music history'),
+                  subtitle: Text('Like the official app, so YouTube Music keeps learning what you like.', style: muted),
+                  value: account.reportPlays,
+                  onChanged: account.setReportPlays,
+                ),
             ],
           );
         },

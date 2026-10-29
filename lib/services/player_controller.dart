@@ -75,6 +75,8 @@ class PlayerController extends ChangeNotifier {
     _subs.add(player.errorStream.listen(_onPlaybackError));
     // Seeks move the Discord progress bar; track/play-state changes are covered above.
     _subs.add(player.positionDiscontinuityStream.listen((_) => _updatePresence(force: true)));
+    // Plays count towards the YouTube Music history (signed in, setting on).
+    _subs.add(ytMusic.reportPlaysOf(player, () => currentTrack));
   }
 
   static const _autoplayKey = 'autoplay.v1';
@@ -98,10 +100,13 @@ class PlayerController extends ChangeNotifier {
   String? _autoplaySeed;
   bool _extending = false;
 
+  /// Set while following someone in Listen together: the host decides what plays next.
+  bool holdAutoplay = false;
+
   /// Near the end of the queue (last two songs), appends YouTube Music's
   /// "Up next" for the current song. Streamed songs only: radio needs a video id.
   void _maybeAutoplay() {
-    if (!_autoplay || _extending || player.loopMode != LoopMode.off) return;
+    if (!_autoplay || holdAutoplay || _extending || player.loopMode != LoopMode.off) return;
     final current = currentTrack;
     if (current == null || !current.isRemote || _autoplaySeed == current.id) return;
     final seq = player.sequenceState;

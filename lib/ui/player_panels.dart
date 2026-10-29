@@ -17,6 +17,7 @@ import 'widgets/controls.dart';
 import 'widgets/menus.dart';
 import 'widgets/signal_path.dart';
 import 'widgets/stats_for_nerds.dart';
+import 'pages/listen_together_page.dart';
 import 'pages/lyrics_page.dart';
 import 'ytmusic_edit.dart';
 import 'widgets/track_row.dart';
@@ -77,6 +78,7 @@ class _MiniPlayerState extends State<MiniPlayer> {
               item(Icons.queue_music_rounded, 'Queue', shell.openQueue),
               item(Icons.lyrics_outlined, 'Lyrics', shell.openLyrics),
               item(Icons.cast_rounded, 'Play on a device', () => showCastPicker(context)),
+              item(Icons.group_outlined, 'Listen together', () => openListenTogether(context)),
               if (AudioEngine.supported) item(Icons.graphic_eq_rounded, 'Signal path', () => showSignalPath(context)),
               if (AudioEngine.supported)
                 statsForNerds.value
@@ -332,6 +334,7 @@ class DesktopPlayerBar extends StatelessWidget {
                       icon: const Icon(Icons.queue_music_rounded, size: 20),
                     ),
                     const CastButton(size: 20),
+                    const ListenTogetherButton(size: 20),
                     // The bar spans the whole window, so its own width decides (not the content area's).
                     if (MediaQuery.sizeOf(context).width > 860) const VolumeSlider(),
                     _ViewsMenu(
@@ -672,6 +675,7 @@ class NowPlayingPage extends StatelessWidget {
                             icon: const Icon(Icons.queue_music_rounded),
                           ),
                           const CastButton(color: Colors.white),
+                          const ListenTogetherButton(color: Colors.white, closePlayer: true),
                         ],
                       );
                       Widget cover(double size) => NowPlayingCover(
@@ -751,7 +755,10 @@ class NowPlayingPage extends StatelessWidget {
                             // The large cover runs 12 px into the page's margin on each side.
                             if (art >= 96)
                               largeCover
-                                  ? SizedBox(height: art, child: OverflowBox(maxWidth: art, child: cover(art)))
+                                  ? SizedBox(
+                                      height: art,
+                                      child: OverflowBox(maxWidth: art, child: cover(art)),
+                                    )
                                   : cover(art),
                             const Spacer(),
                             info,

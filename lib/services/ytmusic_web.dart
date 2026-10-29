@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:isolate';
+import 'dart:math' as math;
 
 import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart' show debugPrint, visibleForTesting;
@@ -170,6 +171,34 @@ class WebShelf {
   final String title;
   final List<WebTrack> tracks;
   final List<WebCard> cards;
+}
+
+/// One mood or genre tile ("Chill", "Rock"); [params] opens its playlists.
+class WebMood {
+  const WebMood({required this.title, required this.params, this.color});
+
+  final String title;
+  final String params;
+
+  /// The tile's stripe colour as YouTube Music sends it (ARGB).
+  final int? color;
+}
+
+/// A titled group of [WebMood]s: "Moods & moments", "Genres".
+class WebMoodGroup {
+  const WebMoodGroup({required this.title, required this.moods});
+
+  final String title;
+  final List<WebMood> moods;
+}
+
+/// Whether an album or public playlist is in the signed-in library, and the
+/// playlist id that saving it goes by (an album's is its `OLAK5uy_…` id).
+class WebSaveState {
+  const WebSaveState({required this.playlistId, required this.saved});
+
+  final String playlistId;
+  final bool saved;
 }
 
 /// A song's lyrics from YouTube Music's Lyrics tab (licensed from LyricFind,
@@ -688,10 +717,12 @@ class YtMusicWeb {
   }
 
   /// The carousels of a browse page: `FEmusic_home` (personal when signed in),
-  /// `FEmusic_explore`, `FEmusic_charts`. Artist, mood and genre carousels are
-  /// left out; there is nothing in the app to open them with.
-  Future<List<WebShelf>> shelves(String browseId) async {
-    final res = await _send('browse', {'browseId': browseId});
+  /// `FEmusic_explore`, `FEmusic_charts`, `FEmusic_new_releases`, or a mood's
+  /// page (`FEmusic_moods_and_genres_category` with its [params]). Only songs,
+  /// albums and playlists are kept; mood tiles and artist carousels are left
+  /// out (moods have [moodsAndGenres]).
+  Future<List<WebShelf>> shelves(String browseId, {String? params}) async {
+    final res = await _send('browse', {'browseId': browseId, 'params': ?params});
     final out = <WebShelf>[];
     for (final node in _deepFindAll(res, 'musicCarouselShelfRenderer')) {
       final shelf = _asMap(node);
@@ -721,6 +752,113 @@ class YtMusicWeb {
       }
     }
     return out;
+  }
+
+  /// Moods and genres, as `FEmusic_moods_and_genres` groups them.
+  Future<List<WebMoodGroup>> moodsAndGenres() async =>
+      moodsOf(await _send('browse', const {'browseId': 'FEmusic_moods_and_genres'}));
+
+  @visibleForTesting
+  static List<WebMoodGroup> moodsOf(Map<String, dynamic> res) {
+    final out = <WebMoodGroup>[];
+    for (final node in _deepFindAll(res, 'gridRenderer')) {
+      final grid = _asMap(node);
+      final moods = <WebMood>[];
+      for (final item in _list(grid?['items'])) {
+        final b = _asMap(_asMap(item)?['musicNavigationButtonRenderer']);
+        final title = _text(b?['buttonText']);
+        final endpoint = _asMap(_at(b, const ['clickCommand', 'browseEndpoint']));
+        final params = endpoint?['params'];
+        if (title == null || endpoint?['browseId'] != 'FEmusic_moods_and_genres_category' || params is! String) {
+          continue;
+        }
+        final color = _at(b, const ['solid', 'leftStripeColor']);
+        moods.add(WebMood(title: title, params: params, color: color is int ? color : null));
+      }
+      if (moods.isEmpty) continue;
+      final title = _text(_at(grid, const ['header', 'gridHeaderRenderer', 'title']));
+      out.add(WebMoodGroup(title: title ?? 'Moods & genres', moods: moods));
+    }
+    return out;
+  }
+
+  /// A mood's page: its playlists, in shelves.
+  Future<List<WebShelf>> moodShelves(String params) => shelves('FEmusic_moods_and_genres_category', params: params);
+
+  // ── Saving to the library (signed in) ────────────────────────────────────
+  // Follows ytmusicapi's rate_playlist: `like/like` or `like/removelike` with
+  // `target: {playlistId}`; an album goes by its audioPlaylistId.
+
+  /// Whether the album or public playlist at [browseId] is saved, or null when
+  /// it can't be (the account's own playlists, artist pages).
+  Future<WebSaveState?> saveState(String browseId) async =>
+      saveStateOf(await _send('browse', {'browseId': browseId}), browseId);
+
+  @visibleForTesting
+  static WebSaveState? saveStateOf(Map<String, dynamic> res, String browseId) {
+    if (_deepFind(res, 'musicEditablePlaylistDetailHeaderRenderer') != null) return null;
+    final header = _asMap(_deepFind(res, 'musicResponsiveHeaderRenderer'));
+    if (header == null) return null;
+    // The bookmark button is the one with the BOOKMARK icons.
+    final toggle = _list(header['buttons'])
+        .map((b) => _asMap(_asMap(b)?['toggleButtonRenderer']))
+        .whereType<Map<String, dynamic>>()
+        .where((t) => '${_at(t, const ['defaultIcon', 'iconType'])}'.startsWith('BOOKMARK'))
+        .firstOrNull;
+    String? id;
+    for (final key in const ['defaultServiceEndpoint', 'toggledServiceEndpoint']) {
+      final target = _at(toggle, [key, 'likeEndpoint', 'target', 'playlistId']);
+      if (target is String && target.isNotEmpty) id = target;
+    }
+    id ??= browseId.startsWith('VL')
+        ? browseId.substring(2)
+        : _deepFindAll(header, 'playlistId').whereType<String>().where((p) => p.startsWith('OLAK5uy_')).firstOrNull;
+    if (id == null) return null;
+    return WebSaveState(playlistId: id, saved: toggle?['isToggled'] == true);
+  }
+
+  /// Saves an album or playlist to the library, or removes it.
+  Future<void> saveToLibrary(String playlistId, {required bool saved}) async {
+    await _send(saved ? 'like/like' : 'like/removelike', {
+      'target': {'playlistId': playlistId},
+    });
+  }
+
+  // ── Play history (signed in) ─────────────────────────────────────────────
+
+  static const _cpnAlphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
+
+  /// A random 16-character client playback nonce, as the web player makes.
+  @visibleForTesting
+  static String newCpn([math.Random? random]) {
+    final r = random ?? math.Random.secure();
+    return String.fromCharCodes([for (var i = 0; i < 16; i++) _cpnAlphabet.codeUnitAt(r.nextInt(64))]);
+  }
+
+  /// Adds [videoId] to the account's YouTube Music history, like ytmusicapi's
+  /// add_history_item: the signed-in `player` reply names a stats URL, and
+  /// fetching it with `ver=2`, `c=WEB_REMIX` and a random `cpn` counts a play.
+  Future<void> reportPlay(String videoId) async {
+    final player = await _send('player', {'videoId': videoId});
+    final base = _at(player, const ['playbackTracking', 'videostatsPlaybackUrl', 'baseUrl']);
+    if (base is! String || !base.startsWith('https://')) throw const YtMusicWebError('No play report address.');
+    final url = Uri.parse(base)
+        .replace(queryParameters: {...Uri.parse(base).queryParameters, 'ver': '2', 'c': 'WEB_REMIX', 'cpn': newCpn()});
+    final res = await _http
+        .get(
+          url,
+          headers: {
+            'user-agent': _ua,
+            'origin': _origin,
+            'x-origin': _origin,
+            'cookie': cookies,
+            'authorization': _authorization,
+            'x-goog-authuser': authUser,
+            if (visitorData.isNotEmpty) 'x-goog-visitor-id': visitorData,
+          },
+        )
+        .timeout(const Duration(seconds: 30));
+    if (res.statusCode >= 400) throw YtMusicWebError('Play report: HTTP ${res.statusCode}');
   }
 
   /// Everything matching [query]: the top result and a few songs, artists,

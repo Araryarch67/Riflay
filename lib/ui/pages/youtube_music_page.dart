@@ -10,6 +10,7 @@ import '../widgets/controls.dart';
 import '../widgets/page_scaffold.dart';
 import '../widgets/shelf.dart';
 import 'collection_page.dart';
+import 'ytm_browse_pages.dart';
 import 'youtube_music_login_page.dart';
 import '../widgets/smooth_scroll.dart';
 import '../navigation.dart';
@@ -79,7 +80,10 @@ void openRemotePlaylist(BuildContext context, RemotePlaylist p) {
     location: Locations.remotePlaylist(p.id),
     RemoteCollectionPage(
       title: p.title,
-      actions: [if (artistId != null) FollowButton(artistId: artistId, name: p.title)],
+      actions: [
+        if (artistId != null) FollowButton(artistId: artistId, name: p.title),
+        if (artistId == null && p.browseId != null) SaveToLibraryButton(browseId: p.browseId!),
+      ],
       load: () async => Collection(
         kind: CollectionKind.remote,
         title: p.title,
@@ -227,38 +231,40 @@ class DiscoverShelves extends StatelessWidget {
     );
   }
 
-  Widget _shelves(BuildContext context, PlayerController c, List<RemoteShelf> shelves) {
-    return SliverList.list(
-      children: [
-        for (final (si, shelf) in shelves.indexed)
-          FadeIn(
-            delay: Duration(milliseconds: 70 * (si < 5 ? si : 5)),
-            child: Shelf(
-              title: shelf.title,
-              cards: [
-                for (final (i, t) in shelf.tracks.indexed)
-                  MediaCard(
-                    track: t,
-                    title: t.title,
-                    subtitle: t.artist,
-                    online: !PlayerScope.read(context).isOffline(t),
-                    onTap: () => c.playList(shelf.tracks, i, from: shelf.title),
-                    onPlay: () => c.playList(shelf.tracks, i, from: shelf.title),
-                  ),
-                for (final p in shelf.collections)
-                  MediaCard(
-                    track: playlistCover(p),
-                    title: p.title,
-                    subtitle: p.subtitle ?? 'Playlist',
-                    online: true,
-                    onTap: () => openRemotePlaylist(context, p),
-                  ),
-              ],
-            ),
-          ),
-      ],
-    );
-  }
+  Widget _shelves(BuildContext context, PlayerController c, List<RemoteShelf> shelves) =>
+      SliverList.list(children: [const YtmBrowseLinks(), ...remoteShelfWidgets(context, c, shelves)]);
+}
+
+/// YouTube Music's carousels as widgets: songs play, albums and playlists open.
+List<Widget> remoteShelfWidgets(BuildContext context, PlayerController c, List<RemoteShelf> shelves) {
+  return [
+    for (final (si, shelf) in shelves.indexed)
+      FadeIn(
+        delay: Duration(milliseconds: 70 * (si < 5 ? si : 5)),
+        child: Shelf(
+          title: shelf.title,
+          cards: [
+            for (final (i, t) in shelf.tracks.indexed)
+              MediaCard(
+                track: t,
+                title: t.title,
+                subtitle: t.artist,
+                online: !c.isOffline(t),
+                onTap: () => c.playList(shelf.tracks, i, from: shelf.title),
+                onPlay: () => c.playList(shelf.tracks, i, from: shelf.title),
+              ),
+            for (final p in shelf.collections)
+              MediaCard(
+                track: playlistCover(p),
+                title: p.title,
+                subtitle: p.subtitle ?? 'Playlist',
+                online: true,
+                onTap: () => openRemotePlaylist(context, p),
+              ),
+          ],
+        ),
+      ),
+  ];
 }
 
 // ── Signed-in home ──────────────────────────────────────────────────────────
