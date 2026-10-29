@@ -161,6 +161,7 @@ Riflay builds on the work of:
 - [LRCLIB](https://lrclib.net), [Better Lyrics](https://betterlyrics.org), Kugou, NetEase Cloud Music, QQ Music, Musixmatch (Beta), [Megalobiz](https://www.megalobiz.com), [Genius](https://genius.com) and [lyrics.ovh](https://lyrics.ovh) for free lyrics
 - [audio_metadata_reader](https://github.com/ClementBeal/audio_metadata_reader) for tags
 - Bill Gardner and Keith Martin's [KEMAR HRTF measurements](https://sound.media.mit.edu/resources/KEMAR.html) (MIT Media Lab) for Virtual speakers
+- [akagi](https://github.com/z0orb/akagi), whose ideas inspired dragging songs into order in playlists and the Downloads page's storage overview (re-implemented, no code copied)
 
 Riflay is not affiliated with YouTube, Google or Discord.
 
