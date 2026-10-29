@@ -173,6 +173,9 @@ jobs:
           path: third_party/media_kit_libs_macos_audio/macos/Frameworks
           key: libmpv-macos-${{ hashFiles('tool/build_libmpv_apple.sh') }}
       - name: libmpv
+        # CMake 4 (macos-26) refuses projects that ask for compatibility with CMake < 3.5.
+        env:
+          CMAKE_POLICY_VERSION_MINIMUM: '3.5'
         run: |
           [[ -d third_party/media_kit_libs_macos_audio/macos/Frameworks/Mpv.xcframework ]] || tool/build_libmpv_apple.sh macos
       - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
@@ -228,6 +231,9 @@ jobs:
           path: third_party/media_kit_libs_ios_audio/ios/Frameworks
           key: libmpv-ios-${{ hashFiles('tool/build_libmpv_apple.sh') }}
       - name: libmpv
+        # CMake 4 (macos-26) refuses projects that ask for compatibility with CMake < 3.5.
+        env:
+          CMAKE_POLICY_VERSION_MINIMUM: '3.5'
         run: |
           [[ -d third_party/media_kit_libs_ios_audio/ios/Frameworks/Mpv.xcframework ]] || tool/build_libmpv_apple.sh ios
       - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
