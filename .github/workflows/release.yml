@@ -183,6 +183,10 @@ jobs:
           channel: stable
           flutter-version: ${{ env.FLUTTER_VERSION }}
           cache: true
+      - name: Plugins through CocoaPods
+        # flutter_inappwebview's Swift package targets macOS 10.14 and Xcode 26 rejects it there; through CocoaPods it
+        # builds for the app's own minimum (macos/Podfile).
+        run: flutter config --no-enable-swift-package-manager
       - name: Version from the tag
         run: echo "BUILD_ARGS=$(tool/ci_version.sh)" >> "$GITHUB_ENV"
       - name: Sound settings work on this libmpv
