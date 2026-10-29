@@ -57,7 +57,7 @@ class _FlacConvertDialogState extends State<FlacConvertDialog> {
     final muted = text.bodySmall?.copyWith(color: AppColors.textSecondary);
     final one = widget.count == 1;
     return AlertDialog(
-      title: const Text('Convert to FLAC (Beta)'),
+      title: const Text('Convert to FLAC'),
       content: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 420),
         child: SingleChildScrollView(

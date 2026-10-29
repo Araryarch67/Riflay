@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../../services/appearance.dart';
 import '../../services/beta_features.dart';
 import 'sound_settings.dart' show SettingsCard, settingsMuted;
 import 'listen_together_page.dart' show BetaBadge;
@@ -30,10 +29,6 @@ class BetaSettings extends StatelessWidget {
               value: beta.isOn(f),
               onChanged: (v) async {
                 await beta.set(f, v);
-                // Switching Dynamic off while it is the theme in use: back to the default theme.
-                if (!v && f == BetaFeature.dynamicTheme && Appearance.instance.theme == ThemeChoice.dynamic) {
-                  await Appearance.instance.setTheme(ThemeChoice.standard);
-                }
               },
             ),
         ],

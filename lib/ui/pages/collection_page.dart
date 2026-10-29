@@ -458,7 +458,7 @@ class _PlaylistMenu extends StatelessWidget {
         if (files.isNotEmpty)
           PopupMenuItem(
             value: () => showFlacConvert(context, c, files),
-            child: const MenuRow(leading: Icon(Icons.graphic_eq_rounded), title: Text('Convert all to FLAC (Beta)')),
+            child: const MenuRow(leading: Icon(Icons.graphic_eq_rounded), title: Text('Convert all to FLAC')),
           ),
         PopupMenuItem(
           value: () async {

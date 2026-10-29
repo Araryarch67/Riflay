@@ -902,9 +902,6 @@ class Appearance extends ChangeNotifier {
       if (raw == null) return;
       final j = jsonDecode(raw) as Map<String, dynamic>;
       theme = ThemeChoice.values.asNameMap()[j['theme']] ?? theme;
-      if (theme == ThemeChoice.dynamic && !BetaFeatures.instance.isOn(BetaFeature.dynamicTheme)) {
-        theme = ThemeChoice.standard;
-      }
       // Saves from before the mode existed: a light theme (Latte) stays light.
       brightness =
           ThemeBrightness.values.asNameMap()[j['brightness']] ??

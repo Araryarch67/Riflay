@@ -77,7 +77,7 @@ Features marked (Beta) are still being tested; **Settings › Beta features** sw
 | **Video downloads** | A song's music video as MP4 (H.264, up to 1080p) or WebM (VP9, up to 4K), with the size of each resolution shown. The picture and sound are joined without re-encoding |
 | **Resumable downloads** | A download that was interrupted continues where it stopped, and retries when the network drops. Notifications show progress, with Cancel and Retry |
 | **Your downloads** | Shows how much space your downloads use, and finds downloaded songs whose file was deleted so you can download them again or remove them |
-| **Convert to FLAC** (Beta) | Turns a downloaded or lossy song into a FLAC from its menu, or a whole playlist at once, keeping tags and cover. Your own files are kept beside it |
+| **Convert to FLAC** | Turns a downloaded or lossy song into a FLAC from its menu, or a whole playlist at once, keeping tags and cover. Your own files are kept beside it |
 
 ### Together
 
@@ -91,7 +91,7 @@ Features marked (Beta) are still being tested; **Settings › Beta features** sw
 | Feature | Description |
 |---|---|
 | **Themes** | Catppuccin, Nord, Gruvbox, Dracula or your own colors. Any font and accent. Light, dark or match your system, for every theme. High contrast |
-| **Dynamic theme** (Beta) | Follows the cover of what's playing, local or YouTube. Cover-art colors in the player or the whole app, with adjustable strength |
+| **Dynamic theme** | Follows the cover of what's playing, local or YouTube. Cover-art colors in the player or the whole app, with adjustable strength |
 | **Layout options** | Corners, spacing, cover size, Home sections, player and lyrics looks, animations |
 | **Adaptive layouts** | Phone, tablet and desktop. Mini and full-screen player |
 
@@ -123,7 +123,7 @@ Features marked (Beta) are still being tested; **Settings › Beta features** sw
 | ![Sleep timer](docs/screenshots/sleep-timer.webp) | ![Crossfade](docs/screenshots/settings-crossfade.webp) |
 | **Virtual speakers and Mono audio** | **Equalizer** |
 | ![Playback settings](docs/screenshots/sound.webp) | ![Equalizer](docs/screenshots/equalizer.webp) |
-| **Signal path** | **Dynamic theme (Beta)** |
+| **Signal path** | **Dynamic theme** |
 | ![Signal path](docs/screenshots/signal-path.webp) | ![Dynamic theme](docs/screenshots/dynamic-theme.webp) |
 | **Full-screen player** | **Settings** |
 | ![Full-screen player](docs/screenshots/fullscreen.webp) | ![Settings](docs/screenshots/settings.webp) |

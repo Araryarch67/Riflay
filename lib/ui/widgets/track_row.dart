@@ -357,7 +357,7 @@ class TrackMenuButton extends StatelessWidget {
             if (FlacConvert.available(convertible))
               PopupMenuItem(
                 onTap: () => showFlacConvert(host, c, [convertible]),
-                child: const MenuRow(leading: Icon(Icons.graphic_eq_rounded), title: Text('Convert to FLAC (Beta)')),
+                child: const MenuRow(leading: Icon(Icons.graphic_eq_rounded), title: Text('Convert to FLAC')),
               ),
             if (nowPlaying && AudioEngine.supported) ...[
               const PopupMenuDivider(),

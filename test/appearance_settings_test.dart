@@ -25,10 +25,10 @@ void main() {
     await tester.pump();
   }
 
-  testWidgets('Dynamic card has a Beta badge; choosing it hides Colours from cover art', (tester) async {
+  testWidgets('Dynamic card is no longer Beta; choosing it hides Colours from cover art', (tester) async {
     await open(tester);
     expect(find.text('Dynamic'), findsOneWidget);
-    expect(find.byType(BetaBadge), findsOneWidget);
+    expect(find.byType(BetaBadge), findsNothing);
     expect(find.text('Colours from cover art'), findsOneWidget);
     expect(find.text('Colour strength'), findsNothing);
 
