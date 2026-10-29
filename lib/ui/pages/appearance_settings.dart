@@ -9,10 +9,12 @@ import '../../services/system_fonts.dart';
 import '../theme.dart';
 import '../widgets/color_picker.dart';
 import '../widgets/menus.dart';
+import 'listen_together_page.dart' show BetaBadge;
 import 'sound_settings.dart';
 
-/// Settings › Appearance: theme, accent, font, cover colours, frosted glass,
-/// window transparency and text size.
+/// Settings › Appearance: theme (including Dynamic, which follows the playing
+/// song's cover), light / dark mode, accent, cover-art colours and their
+/// strength, high contrast, text size, font, frosted glass and window opacity.
 class AppearanceSettings extends StatelessWidget {
   const AppearanceSettings({super.key});
 
@@ -36,6 +38,11 @@ class AppearanceSettings extends StatelessWidget {
               ),
             ),
           ),
+          if (look.theme == ThemeChoice.dynamic)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(72, 0, 16, 8),
+              child: Text('Colours come from the cover of what\'s playing', style: muted),
+            ),
           if (look.theme == ThemeChoice.custom) ...[
             ListTile(
               leading: const Icon(Icons.format_color_fill_rounded),
@@ -54,13 +61,16 @@ class AppearanceSettings extends StatelessWidget {
               leading: const Icon(Icons.text_fields_rounded),
               title: const Text('Text colour'),
               subtitle: Text(
-                look.customText == null ? 'Chosen to suit the background' : 'Lightened or darkened where it would be hard to read',
+                look.customText == null
+                    ? 'Chosen to suit the background'
+                    : 'Lightened or darkened where it would be hard to read',
                 style: muted,
               ),
               trailing: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  if (look.customText != null) TextButton(onPressed: () => look.setCustomText(null), child: const Text('Automatic')),
+                  if (look.customText != null)
+                    TextButton(onPressed: () => look.setCustomText(null), child: const Text('Automatic')),
                   _ColorButton(
                     color: look.palette.textPrimary,
                     label: 'Text colour',
@@ -73,6 +83,17 @@ class AppearanceSettings extends StatelessWidget {
               ),
             ),
           ],
+          if (look.theme != ThemeChoice.custom)
+            SettingTile(
+              icon: Icons.brightness_6_outlined,
+              title: const Text('Mode'),
+              subtitle: Text('Light or dark, for every theme', style: muted),
+              control: OptionPicker<ThemeBrightness>(
+                value: look.brightness,
+                onChanged: look.setBrightness,
+                options: [for (final v in ThemeBrightness.values) (v, v.label)],
+              ),
+            ),
           ListTile(
             leading: const Icon(Icons.palette_outlined),
             title: const Text('Accent colour'),
@@ -83,6 +104,54 @@ class AppearanceSettings extends StatelessWidget {
                 runSpacing: 10,
                 children: [for (final a in AccentChoice.values) _Swatch(choice: a, selected: look.accent == a)],
               ),
+            ),
+          ),
+          if (look.theme != ThemeChoice.dynamic)
+            SettingTile(
+              icon: Icons.format_color_fill_rounded,
+              title: const Text('Colours from cover art'),
+              subtitle: Text(switch (look.coverMode) {
+                CoverColorMode.off => 'Colours stay as the theme has them',
+                CoverColorMode.player => 'Tint the player and pages with the colour of what\'s playing',
+                CoverColorMode.app => 'The whole app takes the colour of what\'s playing',
+              }, style: muted),
+              control: OptionPicker<CoverColorMode>(
+                value: look.coverMode,
+                onChanged: look.setCoverMode,
+                options: [for (final v in CoverColorMode.values) (v, v.label)],
+              ),
+            ),
+          if (look.followsCover)
+            _SliderTile(
+              icon: Icons.opacity_rounded,
+              title: 'Colour strength',
+              subtitle: 'How much of the cover\'s colour shows in backgrounds and panels',
+              value: look.coverStrength,
+              min: 0,
+              max: 1,
+              label: (v) => v < 0.34 ? 'Subtle' : (v < 0.67 ? 'Medium' : 'Strong'),
+              onChanged: look.setCoverStrength,
+            ),
+          SwitchListTile(
+            secondary: const Icon(Icons.contrast_rounded),
+            title: const Text('High contrast'),
+            subtitle: Text('Brighter text and clearer edges, easier to read', style: muted),
+            value: look.highContrast,
+            onChanged: look.setHighContrast,
+          ),
+          SettingTile(
+            icon: Icons.format_size_rounded,
+            title: const Text('Text size'),
+            subtitle: Text(
+              'Body text, in pixels; titles and labels grow with it. ${Appearance.defaultTextSize.round()} px is the default',
+              style: muted,
+            ),
+            control: _Stepper(
+              value: look.textSize.round(),
+              min: Appearance.minTextSize.round(),
+              max: Appearance.maxTextSize.round(),
+              unit: 'px',
+              onChanged: (v) => look.setTextSize(v.toDouble()),
             ),
           ),
           ListTile(
@@ -110,34 +179,6 @@ class AppearanceSettings extends StatelessWidget {
               ],
             ),
           ),
-          SettingTile(
-            icon: Icons.format_color_fill_rounded,
-            title: const Text('Colours from cover art'),
-            subtitle: Text(
-              switch (look.coverMode) {
-                CoverColorMode.off => 'Colours stay as the theme has them',
-                CoverColorMode.player => 'Tint the player and pages with the colour of what\'s playing',
-                CoverColorMode.app => 'The whole app takes the colour of what\'s playing',
-              },
-              style: muted,
-            ),
-            control: OptionPicker<CoverColorMode>(
-              value: look.coverMode,
-              onChanged: look.setCoverMode,
-              options: [for (final v in CoverColorMode.values) (v, v.label)],
-            ),
-          ),
-          if (look.coverMode == CoverColorMode.app)
-            _SliderTile(
-              icon: Icons.opacity_rounded,
-              title: 'Strength',
-              subtitle: 'How much the colour shows in backgrounds and panels',
-              value: look.coverStrength,
-              min: 0,
-              max: 1,
-              label: (v) => v < 0.34 ? 'Subtle' : (v < 0.67 ? 'Medium' : 'Strong'),
-              onChanged: look.setCoverStrength,
-            ),
           SettingTile(
             icon: Icons.wallpaper_rounded,
             title: const Text('Now playing background'),
@@ -176,21 +217,6 @@ class AppearanceSettings extends StatelessWidget {
               label: (v) => '${(v * 100).round()}%',
               onChanged: look.setWindowOpacity,
             ),
-          SettingTile(
-            icon: Icons.format_size_rounded,
-            title: const Text('Text size'),
-            subtitle: Text(
-              'Body text, in pixels; titles and labels grow with it. ${Appearance.defaultTextSize.round()} px is the default',
-              style: muted,
-            ),
-            control: _Stepper(
-              value: look.textSize.round(),
-              min: Appearance.minTextSize.round(),
-              max: Appearance.maxTextSize.round(),
-              unit: 'px',
-              onChanged: (v) => look.setTextSize(v.toDouble()),
-            ),
-          ),
           Align(
             alignment: Alignment.centerLeft,
             child: Padding(
@@ -323,9 +349,8 @@ class _ThemeCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final p = choice == ThemeChoice.custom
-        ? AppPalette.derive(Appearance.instance.customBackground, text: Appearance.instance.customText)
-        : choice.palette;
+    final p = Appearance.instance.paletteOf(choice);
+    final dynamicTheme = choice == ThemeChoice.dynamic;
     final text = Theme.of(context).textTheme;
     Widget line(double width, Color color) => Container(
       width: width,
@@ -335,7 +360,7 @@ class _ThemeCard extends StatelessWidget {
     return Semantics(
       button: true,
       selected: selected,
-      label: '${choice.label} theme',
+      label: dynamicTheme ? 'Dynamic theme, follows the song that is playing' : '${choice.label} theme',
       child: InkWell(
         onTap: () => Appearance.instance.setTheme(choice),
         borderRadius: BorderRadius.circular(12),
@@ -396,6 +421,7 @@ class _ThemeCard extends StatelessWidget {
                         ),
                       ),
                     ),
+                    if (dynamicTheme) ...[const SizedBox(width: 4), const BetaBadge()],
                     if (selected) Icon(Icons.check_circle_rounded, size: 16, color: AppColors.accent),
                   ],
                 ),

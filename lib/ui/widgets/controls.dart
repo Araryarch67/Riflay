@@ -51,8 +51,10 @@ class Artwork extends StatelessWidget {
     } else {
       child = FutureBuilder<Uint8List?>(
         future: Metadata.artwork(t),
-        builder: (context, snap) =>
-            AnimatedSwitcher(duration: LayoutPrefs.dur(const Duration(milliseconds: 250)), child: _image(context, snap.data, t)),
+        builder: (context, snap) => AnimatedSwitcher(
+          duration: LayoutPrefs.dur(const Duration(milliseconds: 250)),
+          child: _image(context, snap.data, t),
+        ),
       );
     }
     final r = LayoutPrefs.radius(radius);
@@ -125,7 +127,8 @@ class AccentBuilder extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = track;
     if (t == null) return builder(context, AppColors.elevated);
-    if (!Appearance.instance.coverColors) return builder(context, neutral);
+    final look = Appearance.instance;
+    if (!look.coverColors && look.theme != ThemeChoice.dynamic) return builder(context, neutral);
     final cached = Metadata.cachedAccent(t);
     if (cached != null) return builder(context, cached);
     return FutureBuilder<Color>(
@@ -243,7 +246,9 @@ class _SeekBarState extends State<SeekBar> {
               trackHeight: LayoutPrefs.instance.progressBar.height,
               activeTrackColor: active && widget.inline ? AppColors.accent : AppColors.textPrimary,
               thumbShape: RoundSliderThumbShape(
-                enabledThumbRadius: active || !widget.inline ? (LayoutPrefs.instance.progressBar == ProgressBarStyle.thick ? 8 : 6) : 0,
+                enabledThumbRadius: active || !widget.inline
+                    ? (LayoutPrefs.instance.progressBar == ProgressBarStyle.thick ? 8 : 6)
+                    : 0,
                 elevation: 0,
               ),
               padding: EdgeInsets.zero,
@@ -385,7 +390,11 @@ class _PressableState extends State<_Pressable> {
         onTapCancel: () => setState(() => _scale = 1),
         onTapUp: (_) => setState(() => _scale = 1),
         onTap: widget.onPressed,
-        child: AnimatedScale(scale: _scale, duration: LayoutPrefs.dur(const Duration(milliseconds: 120)), child: widget.child),
+        child: AnimatedScale(
+          scale: _scale,
+          duration: LayoutPrefs.dur(const Duration(milliseconds: 120)),
+          child: widget.child,
+        ),
       ),
     );
   }
