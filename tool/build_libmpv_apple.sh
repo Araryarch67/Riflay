@@ -32,7 +32,7 @@ ios_min=15.0
 
 # name url sha256
 sources=(
-  "ffmpeg https://ffmpeg.org/releases/ffmpeg-6.1.1.tar.xz 8684f4b00f94b85461884c3719382f1261f0d9eb3d59640a1f4ac0873616f968"
+  "ffmpeg https://ffmpeg.org/releases/ffmpeg-6.1.1.tar.xz|https://launchpad.net/ubuntu/+archive/primary/+sourcefiles/ffmpeg/7:6.1.1-3ubuntu5/ffmpeg_6.1.1.orig.tar.xz 8684f4b00f94b85461884c3719382f1261f0d9eb3d59640a1f4ac0873616f968"
   "mbedtls https://github.com/Mbed-TLS/mbedtls/releases/download/mbedtls-3.6.2/mbedtls-3.6.2.tar.bz2 8b54fb9bcf4d5a7078028e0520acddefb7900b3e66fec7f7175bb5b7d85ccdca"
   "freetype https://download.savannah.gnu.org/releases/freetype/freetype-2.13.2.tar.xz|https://downloads.sourceforge.net/project/freetype/freetype2/2.13.2/freetype-2.13.2.tar.xz 12991c4e55c506dd7f9b765933e62fd2be2e06d421505d7950a132e4f1bb484d"
   "fribidi https://github.com/fribidi/fribidi/releases/download/v1.0.13/fribidi-1.0.13.tar.xz 7fa16c80c81bd622f7b198d31356da139cc318a63fc7761217af4130903f54a2"
@@ -51,7 +51,7 @@ fetch() { # name url[|mirror...] sha256
       local url ok=
       IFS='|' read -ra list <<< "$urls"
       for url in "${list[@]}"; do
-        if curl -fsSL --retry 5 --retry-all-errors --retry-delay 10 --connect-timeout 30 -o "$file.part" "$url"; then
+        if curl -fsSL --retry 3 --retry-all-errors --retry-delay 5 --connect-timeout 20 -o "$file.part" "$url"; then
           mv "$file.part" "$file" && ok=1 && break
         fi
         echo "Couldn't download $url, trying the next source" >&2
