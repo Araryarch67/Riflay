@@ -13,6 +13,7 @@ import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 
 import '../models/track.dart';
+import 'cover_palette.dart';
 import 'ffmpeg.dart';
 import 'tag_writer.dart';
 
@@ -44,6 +45,8 @@ abstract final class Metadata {
   static final _pendingArtwork = <String, Future<Uint8List?>>{};
   static final _accents = <String, Color>{};
   static final _pendingAccents = <String, Future<Color>>{};
+  static final _coverColors = <String, CoverColors?>{};
+  static final _pendingCoverColors = <String, Future<CoverColors?>>{};
 
   /// Returns [track] with title/artist/album/duration filled from its tags.
   static Future<Track> enrich(Track track) =>
@@ -163,9 +166,11 @@ abstract final class Metadata {
     }
     _forgetArtwork(_artKey(track));
     _accents.remove(_artKey(track));
+    _coverColors.remove(_artKey(track));
     final updated = await enrich(track.copyWith(tagged: false));
     _forgetArtwork(_artKey(updated));
     _accents.remove(_artKey(updated));
+    _coverColors.remove(_artKey(updated));
     return updated;
   }
 
@@ -252,6 +257,7 @@ abstract final class Metadata {
   static void forgetArtwork(Track track) {
     _forgetArtwork(_artKey(track));
     _accents.remove(_artKey(track));
+    _coverColors.remove(_artKey(track));
   }
 
   static void _forgetArtwork(String key) => _cachedArtworkBytes -= _artwork.remove(key)?.length ?? 0;
@@ -461,6 +467,41 @@ abstract final class Metadata {
       _pendingAccents.remove(key);
       return _accents[key] = color;
     }();
+  }
+
+  /// The cover's colours if they were worked out already (null: not yet, or the cover has none).
+  static CoverColors? cachedCoverColors(Track track) => _coverColors[_artKey(track)];
+
+  /// The base and accent colours of the cover, for the Dynamic theme. The art is decoded once at 32 x 32
+  /// and looked at in an isolate; remembered per cover. Null when there is no art. Never throws.
+  static Future<CoverColors?> coverColors(Track track) {
+    final key = _artKey(track);
+    if (_coverColors.containsKey(key)) return Future.value(_coverColors[key]);
+    return _pendingCoverColors[key] ??= () async {
+      CoverColors? result;
+      try {
+        final bytes = await artwork(track);
+        final rgba = bytes == null ? null : await _smallPixels(bytes);
+        if (rgba != null) result = await Isolate.run(() => extractCoverColors(rgba));
+      } catch (e) {
+        debugPrint('Cover colours not read: $e');
+      }
+      _pendingCoverColors.remove(key);
+      return _coverColors[key] = result;
+    }();
+  }
+
+  static Future<Uint8List?> _smallPixels(Uint8List bytes) async {
+    try {
+      final codec = await ui.instantiateImageCodec(bytes, targetWidth: 32, targetHeight: 32);
+      final frame = await codec.getNextFrame();
+      final data = await frame.image.toByteData(format: ui.ImageByteFormat.rawRgba);
+      frame.image.dispose();
+      codec.dispose();
+      return data?.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
+    } catch (_) {
+      return null;
+    }
   }
 
   static Future<Color?> _averageColor(Uint8List bytes) async {

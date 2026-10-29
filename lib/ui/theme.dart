@@ -32,8 +32,8 @@ abstract final class AppColors {
   static Color get tile => _p.textPrimary.withValues(alpha: 0.08);
 
   /// Hairline borders and dividers.
-  static Color get border => _p.textPrimary.withValues(alpha: 0.10);
-  static Color get divider => _p.textPrimary.withValues(alpha: 0.06);
+  static Color get border => _p.textPrimary.withValues(alpha: Appearance.instance.highContrast ? 0.28 : 0.10);
+  static Color get divider => _p.textPrimary.withValues(alpha: Appearance.instance.highContrast ? 0.18 : 0.06);
 
   /// The strongest contrast: a filled button or the phone's search box (white on dark themes).
   static Color get inverse => _p.textPrimary;
@@ -71,7 +71,7 @@ ThemeData buildAppTheme({String? fontFamily}) {
     // (which also kicks off the font download) rather than its TextTheme type.
     fontFamily: fontFamily ?? GoogleFonts.figtree().fontFamily,
   );
-  final wholeApp = Appearance.instance.coverMode == CoverColorMode.app;
+  final wholeApp = Appearance.instance.followsCover;
   final text = base.textTheme.apply(bodyColor: AppColors.textPrimary, displayColor: AppColors.textPrimary);
   return base.copyWith(
     textTheme: text,
@@ -136,7 +136,9 @@ ThemeData buildAppTheme({String? fontFamily}) {
     ),
     dividerTheme: DividerThemeData(color: AppColors.hover, thickness: 1, space: 1),
     listTileTheme: ListTileThemeData(iconColor: AppColors.textSecondary),
-    dialogTheme: wholeApp ? DialogThemeData(backgroundColor: AppColors.menu, surfaceTintColor: Colors.transparent) : null,
+    dialogTheme: wholeApp
+        ? DialogThemeData(backgroundColor: AppColors.menu, surfaceTintColor: Colors.transparent)
+        : null,
     textSelectionTheme: wholeApp
         ? TextSelectionThemeData(
             cursorColor: AppColors.accent,

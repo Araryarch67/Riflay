@@ -11,6 +11,7 @@ import 'package:screen_retriever/screen_retriever.dart';
 import 'package:just_audio_media_kit/just_audio_media_kit.dart';
 import 'package:window_manager/window_manager.dart';
 
+import 'models/track.dart';
 import 'services/appearance.dart';
 import 'services/layout_prefs.dart';
 import 'services/media_session.dart';
@@ -113,13 +114,14 @@ class RiflayApp extends StatefulWidget {
   State<RiflayApp> createState() => _RiflayAppState();
 }
 
-class _RiflayAppState extends State<RiflayApp> {
+class _RiflayAppState extends State<RiflayApp> with WidgetsBindingObserver {
   final _appearance = Appearance.instance;
   final _layout = LayoutPrefs.instance;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _appearance.addListener(_restyle);
     _layout.addListener(_restyle);
     widget.controller.addListener(_syncTint);
@@ -128,18 +130,25 @@ class _RiflayAppState extends State<RiflayApp> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _appearance.removeListener(_restyle);
     _layout.removeListener(_restyle);
     widget.controller.removeListener(_syncTint);
     super.dispose();
   }
 
+  @override
+  void didChangePlatformBrightness() => _appearance.platformBrightnessChanged();
+
   String? _tintTrack;
+  String? _colorsTrack;
+  ThemeChoice? _colorsTheme;
 
   /// "Colours from what's playing: Whole app": follows the current song's cover colour (the same cached
   /// extraction the player uses, so a cover is never read twice). Nothing playing: the theme's own colours.
   void _syncTint() {
     final track = widget.controller.currentTrack;
+    _syncCoverColors(track);
     if (_appearance.coverMode != CoverColorMode.app || track == null) {
       _tintTrack = null;
       _appearance.setCoverTint(null);
@@ -155,6 +164,30 @@ class _RiflayAppState extends State<RiflayApp> {
     }
     Metadata.accent(track).then((c) {
       if (mounted && _tintTrack == track.id) _appearance.setCoverTint(usable(c));
+    });
+  }
+
+  /// The Dynamic theme follows the song's cover colours (null when nothing plays or it has no artwork).
+  void _syncCoverColors(Track? track) {
+    if (_colorsTheme != _appearance.theme) {
+      _colorsTheme = _appearance.theme;
+      _colorsTrack = null;
+    }
+    // Only the Dynamic theme needs them: other themes don't spend a decode per song.
+    if (track == null || _appearance.theme != ThemeChoice.dynamic) {
+      _colorsTrack = null;
+      _appearance.setCoverColors(null);
+      return;
+    }
+    if (_colorsTrack == track.id) return;
+    _colorsTrack = track.id;
+    final cached = Metadata.cachedCoverColors(track);
+    if (cached != null) {
+      _appearance.setCoverColors(cached);
+      return;
+    }
+    Metadata.coverColors(track).then((c) {
+      if (mounted && _colorsTrack == track.id) _appearance.setCoverColors(c);
     });
   }
 

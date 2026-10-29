@@ -10,6 +10,8 @@ import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'color_tools.dart';
+import 'cover_palette.dart';
+import 'layout_prefs.dart';
 import 'system_fonts.dart';
 
 /// Every colour of one theme: surfaces from the window down to hover, text, and the theme's own accent.
@@ -79,6 +81,58 @@ class AppPalette {
     );
   }
 
+  /// Colour by colour from [a] to [b] ([t] 0 to 1). Text is not re-checked: see [withReadableText].
+  static AppPalette lerp(AppPalette a, AppPalette b, double t) {
+    if (t <= 0) return a;
+    if (t >= 1) return b;
+    Color mix(Color x, Color y) => Color.lerp(x, y, t)!;
+    return AppPalette(
+      background: mix(a.background, b.background),
+      panel: mix(a.panel, b.panel),
+      elevated: mix(a.elevated, b.elevated),
+      hover: mix(a.hover, b.hover),
+      menu: mix(a.menu, b.menu),
+      textPrimary: mix(a.textPrimary, b.textPrimary),
+      textSecondary: mix(a.textSecondary, b.textSecondary),
+      textMuted: mix(a.textMuted, b.textMuted),
+      accent: mix(a.accent, b.accent),
+      onAccent: mix(a.onAccent, b.onAccent),
+      light: t < 0.5 ? a.light : b.light,
+    );
+  }
+
+  /// This palette with text moved just far enough to read on every surface: primary and secondary at
+  /// [text]:1, muted at [muted]:1, and the accent at [accent]:1; [onAccent] follows the accent.
+  AppPalette withReadableText({double text = 4.5, double muted = 3, double accent = 4.5}) {
+    // The surface text reads worst on: the lightest on dark themes, the darkest on light ones.
+    final surfaces = [background, panel, elevated, hover, menu]
+      ..sort((a, b) => a.computeLuminance().compareTo(b.computeLuminance()));
+    final worst = light ? surfaces.first : surfaces.last;
+    Color fix(Color c, double min) => ensureContrast(c, worst, min, !light);
+    final acc = fix(this.accent, accent);
+    var on = acc == this.accent ? onAccent : onColorFor(acc);
+    if (contrastRatio(on, acc) < 4.5) {
+      const white = Color(0xFFFFFFFF), black = Color(0xFF000000);
+      on = contrastRatio(black, acc) >= contrastRatio(white, acc) ? black : white;
+    }
+    return AppPalette(
+      background: background,
+      panel: panel,
+      elevated: elevated,
+      hover: hover,
+      menu: menu,
+      textPrimary: fix(textPrimary, text),
+      textSecondary: fix(textSecondary, text),
+      textMuted: fix(textMuted, muted),
+      accent: acc,
+      onAccent: on,
+      light: light,
+    );
+  }
+
+  /// This palette for "High contrast": primary and secondary text at 7:1, muted text and the accent at 4.5:1.
+  AppPalette withHighContrast() => withReadableText(text: 7, muted: 4.5, accent: 4.5);
+
   /// This palette washed with [cover] ([amount] 0 to 1 of the full wash), for "Colours from what's playing:
   /// Whole app". Surfaces move toward the cover's hue, the accent becomes the cover's colour, and text is
   /// nudged to stay readable (4.5:1, or what the theme itself had when that was lower).
@@ -144,6 +198,9 @@ enum ThemeChoice {
       onAccent: Color(0xFF00201B),
     ),
   ),
+
+  /// Follows the playing song's cover; this is only the calm stand-in for when nothing plays.
+  dynamic('Dynamic', neutralDarkPalette),
   monochrome(
     'Monochrome',
     AppPalette(
@@ -361,7 +418,98 @@ enum ThemeChoice {
 
   const ThemeChoice(this.label, this.palette);
   final String label;
+
+  /// The theme as its author drew it (dark or light as that theme naturally is).
   final AppPalette palette;
+
+  /// This theme in the requested brightness: its own sibling or official counterpart where one exists
+  /// (Catppuccin Latte, Everforest, Gruvbox Light, Rosé Pine Dawn, Tokyo Night Day), otherwise a palette
+  /// derived from its hue that keeps its accent. [custom] is never flipped: it keeps its own background.
+  AppPalette paletteIn({required bool light}) {
+    if (palette.light == light || this == custom) return palette;
+    final sibling = switch (this) {
+      catppuccinMocha || catppuccinMacchiato || catppuccinFrappe => catppuccinLatte.palette,
+      catppuccinLatte => catppuccinMocha.palette,
+      everforestDark => everforestLight.palette,
+      everforestLight => everforestDark.palette,
+      standard => _defaultLight,
+      gruvbox => _gruvboxLight,
+      rosePine => _rosePineDawn,
+      tokyoNight => _tokyoNightDay,
+      _ => null,
+    };
+    if (sibling != null) return sibling;
+    final hsl = HSLColor.fromColor(palette.panel);
+    final bg = hsl.withSaturation(hsl.saturation.clamp(0.0, 0.25)).withLightness(light ? 0.94 : 0.1).toColor();
+    return AppPalette.derive(bg, accent: palette.accent);
+  }
+}
+
+const _defaultLight = AppPalette(
+  background: Color(0xFFF1F1F1),
+  panel: Color(0xFFFFFFFF),
+  elevated: Color(0xFFF5F5F5),
+  hover: Color(0xFFE6E6E6),
+  menu: Color(0xFFFFFFFF),
+  textPrimary: Color(0xFF121212),
+  textSecondary: Color(0xFF4F4F4F),
+  textMuted: Color(0xFF6B6B6B),
+  accent: Color(0xFF0B7F6D),
+  onAccent: Color(0xFFFFFFFF),
+  light: true,
+);
+
+// Official light counterparts, each with its text moved to read (see [AppPalette.withReadableText]).
+final _gruvboxLight = const AppPalette(
+  background: Color(0xFFF9F5D7), // bg0_h
+  panel: Color(0xFFFBF1C7), // bg0
+  elevated: Color(0xFFF2E5BC), // bg0_s
+  hover: Color(0xFFD5C4A1), // bg2
+  menu: Color(0xFFEBDBB2), // bg1
+  textPrimary: Color(0xFF3C3836), // fg
+  textSecondary: Color(0xFF665C54), // fg3
+  textMuted: Color(0xFF7C6F64), // fg4
+  accent: Color(0xFFAF3A03), // orange
+  onAccent: Color(0xFFFBF1C7),
+  light: true,
+).withReadableText();
+
+final _rosePineDawn = const AppPalette(
+  background: Color(0xFFF2E9E1), // overlay
+  panel: Color(0xFFFAF4ED), // base
+  elevated: Color(0xFFFFFAF3), // surface
+  hover: Color(0xFFDFDAD9), // highlight med
+  menu: Color(0xFFFFFAF3),
+  textPrimary: Color(0xFF575279), // text
+  textSecondary: Color(0xFF797593), // subtle
+  textMuted: Color(0xFF9893A5), // muted
+  accent: Color(0xFFD7827E), // rose
+  onAccent: Color(0xFFFAF4ED),
+  light: true,
+).withReadableText();
+
+final _tokyoNightDay = const AppPalette(
+  background: Color(0xFFD0D5E3), // bg_dark
+  panel: Color(0xFFE1E2E7), // bg
+  elevated: Color(0xFFE9EAEF),
+  hover: Color(0xFFC4C8DA), // bg_highlight
+  menu: Color(0xFFE9EAEF),
+  textPrimary: Color(0xFF3760BF), // fg
+  textSecondary: Color(0xFF6172B0), // fg_dark
+  textMuted: Color(0xFF848CB5), // comment
+  accent: Color(0xFF2E7DE9), // blue
+  onAccent: Color(0xFFE1E2E7),
+  light: true,
+).withReadableText();
+
+/// Whether the app is drawn dark or light.
+enum ThemeBrightness {
+  dark('Dark'),
+  light('Light'),
+  system('Match system');
+
+  const ThemeBrightness(this.label);
+  final String label;
 }
 
 /// Accent colours to pick from in Settings › Appearance.
@@ -405,6 +553,58 @@ enum NowPlayingBackground {
   final String label;
 }
 
+/// Steps a 0 to 1 value over [time] on the frame clock, calling [onStep] about a dozen times (each one
+/// restyles the whole app, so not every frame) and [onDone] when it arrives.
+class _Fade {
+  _Fade(this.time, {required this.onStep, this.onDone});
+
+  final Duration time;
+  final VoidCallback onStep;
+  final VoidCallback? onDone;
+  double t = 1;
+  bool running = false;
+  Duration? _start;
+  int _last = -1;
+  int _run = 0;
+
+  /// [t] with easing.
+  double get eased => Curves.easeInOut.transform(t);
+
+  void start() {
+    t = 0;
+    _start = null;
+    _last = -1;
+    if (running) return;
+    running = true;
+    final run = ++_run;
+    SchedulerBinding.instance.scheduleFrameCallback((now) => _frame(now, run));
+  }
+
+  /// Arrives straight away; no further steps.
+  void stop() {
+    _run++;
+    running = false;
+    t = 1;
+  }
+
+  void _frame(Duration now, int run) {
+    if (run != _run) return;
+    _start ??= now;
+    t = ((now - _start!).inMicroseconds / time.inMicroseconds).clamp(0.0, 1.0);
+    final step = (t * 12).floor();
+    final done = t >= 1;
+    if (done) {
+      running = false;
+      onDone?.call();
+    }
+    if (step != _last || done) {
+      _last = step;
+      onStep();
+    }
+    if (!done) SchedulerBinding.instance.scheduleFrameCallback((now) => _frame(now, run));
+  }
+}
+
 /// How the app looks: accent, cover colours, frosted glass, window
 /// transparency and text size. One instance for the whole app ([instance]),
 /// loaded before the first frame so nothing flashes.
@@ -426,10 +626,83 @@ class Appearance extends ChangeNotifier {
   Color customBackground = const Color(0xFF14161B);
   Color? customText;
 
+  /// Dark, light, or whatever the system is set to. A custom theme keeps its own background colour in any
+  /// of them: brightness does not flip a colour you chose.
+  ThemeBrightness brightness = ThemeBrightness.dark;
+
+  /// Whether the app is light right now ([brightness], with "Match system" resolved).
+  bool get isLight => switch (brightness) {
+    ThemeBrightness.dark => false,
+    ThemeBrightness.light => true,
+    ThemeBrightness.system => PlatformDispatcher.instance.platformBrightness == Brightness.light,
+  };
+
+  /// Call when the system switches between light and dark.
+  void platformBrightnessChanged() {
+    if (brightness != ThemeBrightness.system) return;
+    _palette = null;
+    notifyListeners();
+  }
+
+  /// Stronger text and accent colours (7:1 for the main text), and clearer borders.
+  bool highContrast = false;
+
   /// The theme as picked, before any wash from the playing song.
-  AppPalette get basePalette => theme == ThemeChoice.custom
-      ? AppPalette.derive(customBackground, text: customText, accent: _pickedAccent)
-      : theme.palette;
+  AppPalette get basePalette => paletteOf(theme);
+
+  /// The palette a theme card previews: [t] in the brightness now in use. Dynamic shows the playing song's
+  /// colours (a calm grey when nothing plays); custom is worked out from its colours.
+  AppPalette paletteOf(ThemeChoice t) => switch (t) {
+    ThemeChoice.custom => AppPalette.derive(customBackground, text: customText, accent: _pickedAccent),
+    ThemeChoice.dynamic =>
+      t == theme ? _dynamicPalette() : paletteFromCover(_dynTarget, light: isLight, strength: coverStrength),
+    _ => t.paletteIn(light: isLight),
+  };
+
+  // The Dynamic theme eases from the palette on screen to the one for the new song.
+  CoverColors? _dynTarget;
+  AppPalette? _dynFrom;
+  late final _dynFade = _Fade(const Duration(milliseconds: 600), onStep: _fadeStep, onDone: () => _dynFrom = null);
+
+  void _fadeStep() {
+    _palette = null;
+    notifyListeners();
+  }
+
+  AppPalette _dynamicPalette() {
+    final to = paletteFromCover(_dynTarget, light: isLight, strength: coverStrength);
+    final from = _dynFrom;
+    if (from == null || !_dynFade.running || from.light != to.light) return to;
+    // Text is checked again at every step: halfway between two readable palettes may not be.
+    return AppPalette.lerp(from, to, _dynFade.eased).withReadableText();
+  }
+
+  /// The colours of the song now playing (null: nothing plays, or it has no artwork). With the Dynamic
+  /// theme the palette eases to them over about 600 ms, in a dozen steps; with reduced motion it jumps.
+  void setCoverColors(CoverColors? c) {
+    if (c == _dynTarget) return;
+    if (theme != ThemeChoice.dynamic) {
+      _dynTarget = c;
+      return;
+    }
+    final shown = _dynamicPalette();
+    _dynTarget = c;
+    if (LayoutPrefs.effectiveMotion != Motion.full) {
+      _dynFrom = null;
+      _dynFade.stop();
+      _palette = null;
+      notifyListeners();
+      return;
+    }
+    _dynFrom = shown;
+    _dynFade.start();
+  }
+
+  /// The colours the Dynamic theme is heading for.
+  CoverColors? get coverColorsNow => _dynTarget;
+
+  /// Whether the whole app follows the playing song: the Dynamic theme, or "Whole app" cover colours.
+  bool get followsCover => theme == ThemeChoice.dynamic || coverMode == CoverColorMode.app;
 
   Color? get _pickedAccent => switch (accent) {
     AccentChoice.theme => null,
@@ -463,8 +736,11 @@ class Appearance extends ChangeNotifier {
       );
     }
     final c = _washColor;
-    if (coverMode != CoverColorMode.app || c == null) return p;
-    return p.tinted(c, _washAmount * (0.25 + 0.75 * coverStrength), _washAmount);
+    // Dynamic already is the cover's colours: a wash on top would tint twice.
+    if (theme != ThemeChoice.dynamic && coverMode == CoverColorMode.app && c != null) {
+      p = p.tinted(c, _washAmount * (0.25 + 0.75 * coverStrength), _washAmount);
+    }
+    return highContrast ? p.withHighContrast() : p;
   }
 
   /// The accent in use: the theme's own, or the one picked.
@@ -484,22 +760,20 @@ class Appearance extends ChangeNotifier {
   // A null colour is "no song / no colour", which fades the wash out.
   Color? _washFrom;
   Color? _washTo;
-  double _washT = 1;
-  Duration? _washStart;
-  bool _washRunning = false;
   Color? _lastTarget;
   static const washTime = Duration(milliseconds: 500);
+  late final _washFade = _Fade(washTime, onStep: _fadeStep, onDone: () => _washFrom = null);
 
   /// The colour the wash is at right now, and how much of it applies (0 to 1).
-  Color? get _washColor => _washFrom != null && _washTo != null ? Color.lerp(_washFrom, _washTo, _ease) : (_washTo ?? _washFrom);
+  Color? get _washColor =>
+      _washFrom != null && _washTo != null ? Color.lerp(_washFrom, _washTo, _washFade.eased) : (_washTo ?? _washFrom);
   double get _washAmount => _washFrom == null && _washTo == null
       ? 0
       : _washFrom == null
-      ? _ease
+      ? _washFade.eased
       : _washTo == null
-      ? 1 - _ease
+      ? 1 - _washFade.eased
       : 1;
-  double get _ease => Curves.easeInOut.transform(_washT);
 
   /// The cover colour of the song now playing, or null when nothing is (or it has no artwork). Fades to
   /// it over about half a second; the tree is only restyled in a dozen steps rather than every frame.
@@ -510,40 +784,13 @@ class Appearance extends ChangeNotifier {
       // Not shown: just remember it, so switching on later doesn't fade from nothing.
       _washFrom = null;
       _washTo = color;
-      _washT = 1;
+      _washFade.t = 1;
       return;
     }
     _washFrom = _washColor == null || _washAmount < 0.01 ? null : _washColor;
     _washTo = color;
     if (_washFrom == null && _washTo == null) return;
-    _washT = 0;
-    _washStart = null;
-    if (!_washRunning) {
-      _washRunning = true;
-      SchedulerBinding.instance.scheduleFrameCallback(_washFrame);
-    }
-  }
-
-  var _lastStep = -1;
-
-  void _washFrame(Duration now) {
-    _washStart ??= now;
-    final t = ((now - _washStart!).inMicroseconds / washTime.inMicroseconds).clamp(0.0, 1.0);
-    _washT = t;
-    // About 12 steps over the fade: each one restyles the whole app.
-    final step = (t * 12).floor();
-    if (step != _lastStep || t >= 1) {
-      _lastStep = step;
-      _palette = null;
-      notifyListeners();
-    }
-    if (t >= 1) {
-      _washRunning = false;
-      _lastStep = -1;
-      _washFrom = null;
-      return;
-    }
-    SchedulerBinding.instance.scheduleFrameCallback(_washFrame);
+    _washFade.start();
   }
 
   NowPlayingBackground nowPlaying = NowPlayingBackground.color;
@@ -600,6 +847,11 @@ class Appearance extends ChangeNotifier {
       if (raw == null) return;
       final j = jsonDecode(raw) as Map<String, dynamic>;
       theme = ThemeChoice.values.asNameMap()[j['theme']] ?? theme;
+      // Saves from before the mode existed: a light theme (Latte) stays light.
+      brightness =
+          ThemeBrightness.values.asNameMap()[j['brightness']] ??
+          (theme.palette.light ? ThemeBrightness.light : ThemeBrightness.dark);
+      highContrast = j['highContrast'] as bool? ?? false;
       accent = AccentChoice.values.asNameMap()[j['accent']] ?? accent;
       // Saved by older versions as on/off: on was "Player only".
       coverMode =
@@ -642,6 +894,8 @@ class Appearance extends ChangeNotifier {
       jsonEncode({
         'theme': theme.name,
         'accent': accent.name,
+        'brightness': brightness.name,
+        'highContrast': highContrast,
         'coverColors': coverColors,
         'coverMode': coverMode.name,
         'coverStrength': coverStrength,
@@ -663,7 +917,16 @@ class Appearance extends ChangeNotifier {
   Future<void> setTheme(ThemeChoice v) => _set(() {
     theme = v;
     accent = AccentChoice.theme;
+    // Unless following the system, a theme comes in its own brightness (Latte: light). Dynamic and custom
+    // have none of their own, so they keep the one in use.
+    if (brightness != ThemeBrightness.system && v != ThemeChoice.dynamic && v != ThemeChoice.custom) {
+      brightness = v.palette.light ? ThemeBrightness.light : ThemeBrightness.dark;
+    }
+    _dynFrom = null;
+    _dynFade.stop();
   });
+  Future<void> setBrightness(ThemeBrightness v) => _set(() => brightness = v);
+  Future<void> setHighContrast(bool v) => _set(() => highContrast = v);
   Future<void> setAccent(AccentChoice v) => _set(() => accent = v);
   Future<void> setCoverMode(CoverColorMode v) => _set(() {
     coverMode = v;
@@ -672,7 +935,7 @@ class Appearance extends ChangeNotifier {
     _lastTarget = null;
     _washFrom = null;
     _washTo = null;
-    _washT = 1;
+    _washFade.stop();
     setCoverTint(target);
   });
   Future<void> setCoverStrength(double v) => _set(() => coverStrength = v.clamp(0, 1));
@@ -711,11 +974,16 @@ class Appearance extends ChangeNotifier {
       blur = 24;
       windowOpacity = 1;
       textSize = defaultTextSize;
+      brightness = ThemeBrightness.dark;
+      highContrast = false;
       _washFrom = null;
       _washTo = null;
-      _washT = 1;
+      _washFade.stop();
+      _dynFrom = null;
+      _dynFade.stop();
     });
   }
+
   Future<void> setNowPlaying(NowPlayingBackground v) => _set(() => nowPlaying = v);
   Future<void> setGlass(bool v) => _set(() => glass = v);
   Future<void> setBlur(double v) => _set(() => blur = v);
