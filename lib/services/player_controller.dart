@@ -529,6 +529,15 @@ class PlayerController extends ChangeNotifier {
     return p.copyWith(tracks: list);
   });
 
+  /// Moves one song of a Riflay playlist by dragging. [newIndex] is where it ends up in the finished list
+  /// (what a reorderable list's `onReorderItem` reports).
+  void movePlaylistTrack(String id, int oldIndex, int newIndex) {
+    final p = _playlists.where((p) => p.id == id).firstOrNull;
+    if (p == null || oldIndex < 0 || oldIndex >= p.tracks.length) return;
+    final to = newIndex.clamp(0, p.tracks.length - 1);
+    if (to != oldIndex) movePlaylistItem(id, oldIndex, to);
+  }
+
   static List<Track> _unique(List<Track> tracks) {
     final seen = <String>{};
     return [

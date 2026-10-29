@@ -177,7 +177,10 @@ class CollectionPage extends StatelessWidget {
             SliverPadding(
               padding: EdgeInsets.symmetric(horizontal: shell.compact ? 12 : 16),
               // Rows are built as they scroll into view: All Songs can hold thousands.
-              sliver: SliverList.builder(
+              sliver: _rowsSliver(
+                // Only Riflay playlists are yours to reorder; albums and YouTube Music ones keep their order.
+                reorderPlaylist: playlistId,
+                controller: c,
                 itemCount: rows.length,
                 itemBuilder: (context, r) {
                   final i = rows[r];
@@ -197,12 +200,30 @@ class CollectionPage extends StatelessWidget {
                       ),
                     );
                   }
-                  return TrackRow(
+                  final row = TrackRow(
                     track: tracks[i],
                     index: multiDisc ? (tracks[i].trackNumber ?? i + 1) : i + 1,
                     showArtwork: live.kind != CollectionKind.album,
                     showAlbum: live.kind != CollectionKind.album,
                     onTap: () => c.playCollection(live, index: i),
+                  );
+                  if (playlistId == null) return row;
+                  // The handle sits at the row's end; the list needs a key per song to follow it while dragging.
+                  return Row(
+                    key: ValueKey(tracks[i].id),
+                    children: [
+                      Expanded(child: row),
+                      ReorderableDragStartListener(
+                        index: i,
+                        child: MouseRegion(
+                          cursor: SystemMouseCursors.grab,
+                          child: Padding(
+                            padding: const EdgeInsets.all(8),
+                            child: Icon(Icons.drag_handle_rounded, size: 22, color: AppColors.textSecondary),
+                          ),
+                        ),
+                      ),
+                    ],
                   );
                 },
               ),
@@ -226,6 +247,23 @@ class CollectionPage extends StatelessWidget {
         );
       },
       child: page,
+    );
+  }
+
+  /// The song rows: a plain lazy list, or for a Riflay playlist a drag-to-reorder one (same sliver, so scrolling is unchanged).
+  Widget _rowsSliver({
+    required String? reorderPlaylist,
+    required PlayerController controller,
+    required int itemCount,
+    required Widget Function(BuildContext, int) itemBuilder,
+  }) {
+    if (reorderPlaylist == null) return SliverList.builder(itemCount: itemCount, itemBuilder: itemBuilder);
+    return SliverReorderableList(
+      itemCount: itemCount,
+      itemBuilder: itemBuilder,
+      onReorderItem: (from, to) => controller.movePlaylistTrack(reorderPlaylist, from, to),
+      // Handles are ours, so a long press on the row still opens its menu.
+      proxyDecorator: (child, _, _) => Material(color: AppColors.elevated, elevation: 6, child: child),
     );
   }
 

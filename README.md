@@ -40,7 +40,8 @@ Riflay is a free, open-source music player for Linux, Windows, macOS, Android an
 | **Format support** | FLAC, ALAC, WAV, AIFF, MP3, AAC, Ogg, Opus, WavPack, APE, DSD, SACD ISO and cue sheets |
 | **YouTube Music** | Fully usable without an account. Sign in with Google to sync likes, playlists and history. Moods & genres, new releases, save albums and playlists to your library |
 | **Synced lyrics** | Word by word where the source times each word, otherwise line by line; pronunciation, translation, copy, your own .lrc files, and saved with downloads |
-| **Playlists** | Combine local files with YouTube songs. Import from Spotify, Apple Music or Deezer |
+| **Playlists** | Combine local files with YouTube songs, and drag songs into any order. Import from Spotify, Apple Music or Deezer |
+| **Downloads** | Shows how much space your downloads use, and finds downloaded songs whose file was deleted so you can download them again or remove them |
 | **Autoplay and radio** | Plays similar songs when the queue ends |
 | **Equalizer** | 10-band parametric, with presets and automatic headroom to prevent clipping |
 | **Virtual speakers** | Simulates two front-facing speakers on headphones (HRTF) |

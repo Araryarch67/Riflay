@@ -1,5 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
+import '../../models/track.dart';
+import '../../services/download_files.dart';
 import '../../services/player_controller.dart';
 import '../../services/youtube_importer.dart';
 import '../shell_scope.dart';
@@ -55,6 +59,7 @@ class DownloadsPage extends StatelessWidget {
                 ),
               ),
             ),
+            const _DownloadedFiles(),
             if (jobs.isEmpty)
               SliverToBoxAdapter(
                 child: Padding(
@@ -76,6 +81,189 @@ class DownloadsPage extends StatelessWidget {
           ],
         );
       },
+    );
+  }
+}
+
+/// How much room the downloads take, and the songs whose file has gone missing.
+class _DownloadedFiles extends StatefulWidget {
+  const _DownloadedFiles();
+
+  @override
+  State<_DownloadedFiles> createState() => _DownloadedFilesState();
+}
+
+class _DownloadedFilesState extends State<_DownloadedFiles> {
+  PlayerController? _c;
+  DownloadScan? _scan;
+  int _scans = 0;
+  int _active = 0;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final c = PlayerScope.read(context);
+    if (identical(c, _c)) return;
+    _c?.libraryRevision.removeListener(_refresh);
+    _c?.youtube.removeListener(_onJobs);
+    _c = c
+      ..libraryRevision.addListener(_refresh)
+      ..youtube.addListener(_onJobs);
+    _active = c.youtube.activeCount;
+    _refresh();
+  }
+
+  @override
+  void dispose() {
+    _c?.libraryRevision.removeListener(_refresh);
+    _c?.youtube.removeListener(_onJobs);
+    super.dispose();
+  }
+
+  /// A finished download can put back a file the library already lists, which
+  /// doesn't change the library: look again whenever a job starts or ends, not
+  /// on every progress tick.
+  void _onJobs() {
+    final active = _c!.youtube.activeCount;
+    if (active == _active) return;
+    _active = active;
+    _refresh();
+  }
+
+  Future<void> _refresh() async {
+    final c = _c;
+    if (c == null) return;
+    final mine = ++_scans;
+    final scan = await scanDownloads(downloadedFrom(c.library));
+    // A newer look is under way, or the page is gone.
+    if (!mounted || mine != _scans) return;
+    setState(() => _scan = scan);
+  }
+
+  void _downloadAgain(List<Track> songs) {
+    final c = _c!;
+    for (final t in songs) {
+      final id = youtubeVideoIdOf(t.sourceUrl);
+      if (id == null) continue;
+      // A finished job of this song would make the importer skip it.
+      if (c.youtube.jobFor(id)?.status == DownloadStatus.done) c.youtube.clearFinished();
+      c.youtube.enqueueTracks([Track.youtube(videoId: id, title: t.title, artist: t.artist)]);
+    }
+  }
+
+  void _remove(List<Track> songs) {
+    for (final t in songs) {
+      unawaited(_c!.removeTrack(t));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scan = _scan;
+    if (scan == null) return const SliverToBoxAdapter(child: SizedBox.shrink());
+    final shell = ShellScope.of(context);
+    final text = Theme.of(context).textTheme;
+    final pad = shell.compact ? 16.0 : 24.0;
+    final missing = scan.missing;
+    return SliverMainAxisGroup(
+      slivers: [
+        if (scan.bytes > 0)
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(pad, 0, pad, 16),
+              child: Text(
+                'Downloads use ${formatFileSize(scan.bytes)}',
+                style: text.bodyLarge?.copyWith(color: AppColors.textSecondary),
+              ),
+            ),
+          ),
+        if (missing.isNotEmpty) ...[
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(pad, 8, pad, 4),
+              child: Wrap(
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: 8,
+                runSpacing: 4,
+                children: [
+                  Text('Missing files', style: text.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
+                  TextButton(onPressed: () => _downloadAgain(missing), child: const Text('Download all again')),
+                  TextButton(
+                    style: TextButton.styleFrom(foregroundColor: AppColors.textSecondary),
+                    onPressed: () => _remove(missing),
+                    child: const Text('Remove all from library'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(pad, 0, pad, 8),
+              child: Text(
+                "These songs are in your library, but their files aren't on this device any more.",
+                style: text.bodyMedium?.copyWith(color: AppColors.textSecondary),
+              ),
+            ),
+          ),
+          SliverPadding(
+            padding: EdgeInsets.fromLTRB(shell.compact ? 8 : 16, 0, shell.compact ? 8 : 16, 16),
+            sliver: SliverList.builder(
+              itemCount: missing.length,
+              itemBuilder: (context, i) => _MissingRow(
+                track: missing[i],
+                onDownload: () => _downloadAgain([missing[i]]),
+                onRemove: () => _remove([missing[i]]),
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _MissingRow extends StatelessWidget {
+  const _MissingRow({required this.track, required this.onDownload, required this.onRemove});
+
+  final Track track;
+  final VoidCallback onDownload;
+  final VoidCallback onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  track.title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: text.bodyLarge?.copyWith(fontWeight: FontWeight.w600),
+                ),
+                Text(
+                  track.artist,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: text.bodySmall?.copyWith(color: AppColors.textSecondary),
+                ),
+              ],
+            ),
+          ),
+          IconButton(tooltip: 'Download again', onPressed: onDownload, icon: const Icon(Icons.refresh_rounded)),
+          IconButton(
+            tooltip: 'Remove from library',
+            onPressed: onRemove,
+            icon: const Icon(Icons.remove_circle_outline_rounded),
+          ),
+        ],
+      ),
     );
   }
 }
