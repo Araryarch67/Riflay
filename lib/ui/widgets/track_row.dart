@@ -4,12 +4,14 @@ import '../../models/track.dart';
 import '../../services/audio_engine.dart';
 import '../../services/layout_prefs.dart';
 import '../../services/download_edit.dart';
+import '../../services/flac_convert.dart';
 import '../../services/listen_together/listen_together.dart';
 import '../../services/metadata.dart';
 import '../../services/player_controller.dart';
 import '../../services/youtube_stream.dart';
 import '../download_editor.dart';
 import '../download_options.dart';
+import '../flac_convert_dialog.dart';
 import '../shell_scope.dart';
 import '../tag_editor.dart';
 import '../../services/youtube_music_account.dart';
@@ -264,6 +266,8 @@ class TrackMenuButton extends StatelessWidget {
           final album = c.albumOf(track);
           // A song downloaded from YouTube, or the download of a streamed one: "Edit" with the artist locked.
           final downloaded = track.isRemote ? c.downloadedCopy(track) : (DownloadEdit.isDownload(track) ? track : null);
+          // A streamed song that was downloaded converts its file; one with no file has nothing to convert.
+          final convertible = downloaded ?? track;
           return [
             PopupMenuItem(
               onTap: () => _queued(host, c.playNext([track]), 'Plays next'),
@@ -350,6 +354,11 @@ class TrackMenuButton extends StatelessWidget {
                 ),
               ),
             ],
+            if (FlacConvert.available(convertible))
+              PopupMenuItem(
+                onTap: () => showFlacConvert(host, c, [convertible]),
+                child: const MenuRow(leading: Icon(Icons.graphic_eq_rounded), title: Text('Convert to FLAC (Beta)')),
+              ),
             if (nowPlaying && AudioEngine.supported) ...[
               const PopupMenuDivider(),
               for (final e in NowPlayingCover.menuItems())

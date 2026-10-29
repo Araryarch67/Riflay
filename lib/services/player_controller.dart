@@ -270,6 +270,9 @@ class PlayerController extends ChangeNotifier {
   /// Human-readable playback failures (a stream that wouldn't resolve, a file that's gone).
   Stream<String> get errors => _errors.stream;
 
+  /// Shows [message] in a SnackBar, the way playback failures are, for other long-running work (a FLAC conversion).
+  void notify(String message) => _errors.add(message);
+
   String? _lastError;
   DateTime _lastErrorAt = DateTime(0);
 
