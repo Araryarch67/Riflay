@@ -16,6 +16,7 @@ import '../../services/player_controller.dart';
 import '../shell_scope.dart';
 import '../theme.dart';
 import '../widgets/controls.dart';
+import '../widgets/marquee_text.dart';
 import '../widgets/smooth_scroll.dart';
 
 /// Lyrics of whatever is playing, following the song line by line.
@@ -66,10 +67,8 @@ class LyricsPage extends StatelessWidget {
                         children: [
                           Text('Lyrics', style: text.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
                           if (track != null)
-                            Text(
+                            MarqueeText(
                               '${track.title} · ${track.artist}',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
                               style: text.bodySmall?.copyWith(color: Colors.white70),
                             ),
                         ],

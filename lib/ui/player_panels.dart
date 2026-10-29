@@ -14,6 +14,7 @@ import 'shell_scope.dart';
 import 'cast_picker.dart';
 import 'theme.dart';
 import 'widgets/controls.dart';
+import 'widgets/marquee_text.dart';
 import 'widgets/menus.dart';
 import 'widgets/signal_path.dart';
 import 'widgets/stats_for_nerds.dart';
@@ -149,16 +150,12 @@ class _MiniPlayerState extends State<MiniPlayer> {
                                       child: Column(
                                         crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
-                                          Text(
+                                          MarqueeText(
                                             track.title,
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
                                             style: text.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
                                           ),
-                                          Text(
+                                          MarqueeText(
                                             track.artist,
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
                                             style: text.bodySmall?.copyWith(color: Colors.white70),
                                           ),
                                         ],
@@ -443,10 +440,8 @@ class _LinkTextState extends State<_LinkText> {
       onExit: (_) => setState(() => _hover = false),
       child: GestureDetector(
         onTap: widget.onTap,
-        child: Text(
+        child: MarqueeText(
           widget.text,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
           style: widget.style?.copyWith(
             decoration: _hover ? TextDecoration.underline : null,
             color: _hover ? AppColors.textPrimary : null,
@@ -695,17 +690,13 @@ class NowPlayingPage extends StatelessWidget {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(
+                                MarqueeText(
                                   track?.title ?? 'Nothing playing',
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
                                   style: text.headlineSmall?.copyWith(fontWeight: FontWeight.w800, letterSpacing: -0.5),
                                 ),
                                 const SizedBox(height: 2),
-                                Text(
+                                MarqueeText(
                                   track?.artist ?? '',
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
                                   style: text.titleMedium?.copyWith(color: Colors.white70),
                                 ),
                                 if (showBadge) ...[const SizedBox(height: 8), const QualityBadge(onDark: true)],
@@ -917,17 +908,13 @@ class _FullScreenPlayerState extends State<FullScreenPlayer> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
+                      MarqueeText(
                         track.title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
                         style: text.headlineSmall?.copyWith(fontWeight: FontWeight.w800, letterSpacing: -0.5),
                       ),
                       const SizedBox(height: 4),
-                      Text(
+                      MarqueeText(
                         next == null ? track.artist : '${track.artist}   ·   Next: ${next.title}',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
                         style: text.bodyLarge?.copyWith(color: AppColors.textSecondary),
                       ),
                     ],
@@ -1149,19 +1136,12 @@ class _MiniPlayerWindowState extends State<MiniPlayerWindow> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
+                    MarqueeText(
                       track?.title ?? 'Nothing playing',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
                       style: text.titleSmall?.copyWith(fontWeight: FontWeight.w700),
                     ),
                     if (track != null)
-                      Text(
-                        track.artist,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: text.bodySmall?.copyWith(color: AppColors.textSecondary),
-                      ),
+                      MarqueeText(track.artist, style: text.bodySmall?.copyWith(color: AppColors.textSecondary)),
                     AnimatedSize(
                       duration: const Duration(milliseconds: 160),
                       child: !_hover
