@@ -663,8 +663,19 @@ class YoutubeImporter extends ChangeNotifier {
   /// Also handles the reversed "Song - Artist" order when the channel names the artist.
   static ({String title, String artist}) parseTitle(String rawTitle, String channel) {
     var title = rawTitle.replaceAll(_noise, '').trim();
-    title = title.replaceFirst(RegExp(r'\s*\|.*$'), '').trim();
     final channelName = channel.replaceAll(_channelSuffix, '').trim();
+    // "Artist | Song" when the left side is the channel's own name; otherwise
+    // what follows a "|" is the channel's tagline ("Song | Official Audio").
+    final pipe = RegExp(r'\s*\|\s*').firstMatch(title);
+    if (pipe != null) {
+      final left = title.substring(0, pipe.start).trim();
+      final right = title.substring(pipe.end).replaceFirst(RegExp(r'\s*\|.*$'), '').trim();
+      final c = channelName.toLowerCase(), l = left.toLowerCase();
+      if (left.isNotEmpty && right.isNotEmpty && c.isNotEmpty && (c.contains(l) || l.contains(c))) {
+        return (title: right, artist: left);
+      }
+      title = left;
+    }
     final dash = RegExp(r'\s+[-–—]\s+').firstMatch(title);
     if (dash != null) {
       final left = title.substring(0, dash.start).trim();

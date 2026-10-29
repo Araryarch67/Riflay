@@ -3,6 +3,12 @@ import 'package:riflay/services/youtube_importer.dart';
 
 void main() {
   group('parseTitle', () {
+    test('"Artist | Song" when the left side is the channel', () {
+      final r = YoutubeImporter.parseTitle('Codfish | Boulevard of Broken Dreams', "Codfish - Boots n' cats!");
+      expect(r.title, 'Boulevard of Broken Dreams');
+      expect(r.artist, 'Codfish');
+    });
+
     test('splits "Artist - Song" and strips video noise', () {
       final r = YoutubeImporter.parseTitle('Daft Punk - Get Lucky (Official Music Video)', 'DaftPunkVEVO');
       expect(r.artist, 'Daft Punk');

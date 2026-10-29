@@ -466,13 +466,23 @@ class _PlainLyricsState extends State<_PlainLyrics> with _Extras {
 
   @override
   Widget build(BuildContext context) {
-    final style = _lineStyle(context)?.copyWith(color: Colors.white);
+    // Softer than a sung line: untimed lyrics all lit in white read as if every line were selected.
+    final style = _lineStyle(context)?.copyWith(color: Colors.white.withValues(alpha: 0.8));
     final lines = lyrics.plain!.split('\n');
     return SmoothScroll(
       builder: (context, scroll) => ListView(
         controller: scroll,
         padding: EdgeInsets.symmetric(horizontal: _isCompact(context) ? 24 : 40, vertical: 24),
         children: [
+          Padding(
+            padding: const EdgeInsets.only(bottom: 16),
+            child: Text(
+              'These lyrics don\'t follow the song.',
+              key: const ValueKey('lyrics-untimed'),
+              textAlign: _textAlign,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.white54),
+            ),
+          ),
           if (extras == null)
             Text(lyrics.plain!, style: style, textAlign: _textAlign)
           else
