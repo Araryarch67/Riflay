@@ -316,6 +316,52 @@ abstract final class YoutubeStream {
     return j;
   }
 
+  /// A video-only stream of [videoId] no taller than [maxHeight] (the player
+  /// API, then yt-dlp where there is one), for Video mode. Not cached: it is
+  /// asked for once each time Video is turned on.
+  static Future<ResolvedVideo> video(String videoId, {required int maxHeight}) async {
+    try {
+      Map<String, dynamic> j;
+      try {
+        j = await _playerResponse(videoId);
+      } catch (_) {
+        j = await _playerResponse(videoId, freshVisitor: true);
+      }
+      final best = pickVideo(_adaptiveFormats(j), maxHeight: maxHeight);
+      if (best == null) throw StateError('No video stream for this song.');
+      return ResolvedVideo(
+        url: Uri.parse(best['url'] as String),
+        height: (best['height'] as num?)?.toInt() ?? 0,
+        codec: RegExp(r'codecs="([^"]+)"').firstMatch(best['mimeType'] as String)?.group(1) ?? '',
+      );
+    } catch (e) {
+      if (!YtDlp.supported) rethrow;
+      debugPrint('YouTube player API failed for the video of $videoId, using yt-dlp: $e');
+      return YtDlp.resolveVideo(videoId, maxHeight: maxHeight);
+    }
+  }
+
+  /// The tallest video-only stream up to [maxHeight]. H.264 first: phones and
+  /// most computers decode it in hardware, so it costs the least battery;
+  /// then VP9. AV1 only when there is nothing else (software decoding is heavy).
+  static Map<String, dynamic>? pickVideo(List<Map<String, dynamic>> formats, {required int maxHeight}) {
+    int codec(String mime) => mime.contains('avc1')
+        ? 2
+        : mime.contains('vp9') || mime.contains('vp09')
+        ? 1
+        : 0;
+    final candidates = [
+      for (final f in formats)
+        if ((f['mimeType'] as String? ?? '').startsWith('video/') &&
+            f['url'] is String &&
+            ((f['height'] as num?)?.toInt() ?? 1 << 20) <= maxHeight)
+          f,
+    ];
+    int score(Map<String, dynamic> f) => (f['height'] as num).toInt() * 4 + codec(f['mimeType'] as String);
+    candidates.sort((a, b) => score(b).compareTo(score(a)));
+    return candidates.firstOrNull;
+  }
+
   /// Highest-bitrate original audio: Opus wins near-ties (better per bit),
   /// unless [aacOnly] (for TVs and speakers). Leaves out "stable volume" (DRC)
   /// and dubbed tracks, and streams needing a signature.

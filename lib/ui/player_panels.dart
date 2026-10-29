@@ -10,6 +10,7 @@ import '../services/appearance.dart';
 import '../services/audio_engine.dart';
 import '../services/layout_prefs.dart';
 import '../services/player_controller.dart';
+import '../services/video_mode.dart';
 import 'shell_scope.dart';
 import 'cast_picker.dart';
 import 'theme.dart';
@@ -23,6 +24,7 @@ import 'pages/lyrics_page.dart';
 import 'ytmusic_edit.dart';
 import 'widgets/track_row.dart';
 import 'widgets/smooth_scroll.dart';
+import 'widgets/video_mode.dart';
 
 /// Floating bar above the bottom tabs on phones, tinted with the cover colour.
 /// Swipe sideways to change song, down to close; long-press for more.
@@ -498,13 +500,17 @@ class NowPlayingSidePanel extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 8),
+                  Center(child: VideoModeSwitch(track: track)),
                   AspectRatio(
                     aspectRatio: 1,
                     child: NowPlayingCover(
-                      child: _TrackSwitcher(
-                        trackId: track.id,
-                        slide: false,
-                        child: Artwork(key: ValueKey(track.id), track: track, radius: 8),
+                      child: TrackVisual(
+                        track: track,
+                        cover: _TrackSwitcher(
+                          trackId: track.id,
+                          slide: false,
+                          child: Artwork(key: ValueKey(track.id), track: track, radius: 8),
+                        ),
                       ),
                     ),
                   ),
@@ -623,145 +629,169 @@ class NowPlayingPage extends StatelessWidget {
                   },
                 ),
                 child: SafeArea(
-                  child: LayoutBuilder(
-                    builder: (context, constraints) {
-                      // Leave room for the controls; never let the cover push them off-screen.
-                      // On very short windows the cover (then the quality badge) makes way.
-                      final showBadge = constraints.maxHeight >= 480 && LayoutPrefs.instance.showQualityBadge;
-                      final largeCover = LayoutPrefs.instance.phoneCover == PhoneCoverSize.large;
-                      final narrow = constraints.maxWidth < 320;
-                      // A phone held sideways: the cover goes beside the controls.
-                      final sideways = constraints.maxWidth > constraints.maxHeight && constraints.maxHeight < 480;
-                      final topBar = Row(
-                        children: [
-                          IconButton(
-                            tooltip: 'Close',
-                            color: Colors.white,
-                            onPressed: () => Navigator.of(context).pop(),
-                            icon: const Icon(Icons.keyboard_arrow_down_rounded, size: 30),
-                          ),
-                          Expanded(
-                            child: Column(
-                              children: [
-                                Text(
-                                  'PLAYING FROM',
-                                  style: text.labelSmall?.copyWith(letterSpacing: 1.2, color: Colors.white70),
-                                ),
-                                Text(
-                                  c.playingFrom ?? 'Your library',
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: text.labelLarge?.copyWith(fontWeight: FontWeight.w700),
-                                ),
-                              ],
-                            ),
-                          ),
-                          if (!narrow)
+                  child: ListenableBuilder(
+                    listenable: VideoMode.instance,
+                    builder: (context, _) => LayoutBuilder(
+                      builder: (context, constraints) {
+                        // Room for the Song / Video switch above the cover, when the song has a video.
+                        final hasVideo = VideoMode.instance.videoOf(track) != null;
+                        final showsVideo = hasVideo && VideoMode.instance.on;
+                        // Leave room for the controls; never let the cover push them off-screen.
+                        // On very short windows the cover (then the quality badge) makes way.
+                        final showBadge = constraints.maxHeight >= 480 && LayoutPrefs.instance.showQualityBadge;
+                        final largeCover = LayoutPrefs.instance.phoneCover == PhoneCoverSize.large;
+                        final narrow = constraints.maxWidth < 320;
+                        // A phone held sideways: the cover goes beside the controls.
+                        final sideways = constraints.maxWidth > constraints.maxHeight && constraints.maxHeight < 480;
+                        final topBar = Row(
+                          children: [
                             IconButton(
-                              tooltip: 'Lyrics',
+                              tooltip: 'Close',
                               color: Colors.white,
-                              onPressed: ShellScope.of(context).openLyrics,
-                              icon: const Icon(Icons.lyrics_outlined),
+                              onPressed: () => Navigator.of(context).pop(),
+                              icon: const Icon(Icons.keyboard_arrow_down_rounded, size: 30),
                             ),
-                          IconButton(
-                            tooltip: 'Queue',
-                            color: Colors.white,
-                            onPressed: ShellScope.of(context).openQueue,
-                            icon: const Icon(Icons.queue_music_rounded),
-                          ),
-                          const CastButton(color: Colors.white),
-                          const ListenTogetherButton(color: Colors.white, closePlayer: true),
-                        ],
-                      );
-                      Widget cover(double size) => NowPlayingCover(
-                        child: Hero(
-                          tag: 'now-playing-art',
-                          child: DecoratedBox(
-                            decoration: const BoxDecoration(
-                              boxShadow: [BoxShadow(color: Colors.black45, blurRadius: 32, offset: Offset(0, 12))],
+                            Expanded(
+                              child: Column(
+                                children: [
+                                  Text(
+                                    'PLAYING FROM',
+                                    style: text.labelSmall?.copyWith(letterSpacing: 1.2, color: Colors.white70),
+                                  ),
+                                  Text(
+                                    c.playingFrom ?? 'Your library',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: text.labelLarge?.copyWith(fontWeight: FontWeight.w700),
+                                  ),
+                                ],
+                              ),
                             ),
-                            child: Artwork(track: track, size: size, radius: 8),
+                            if (!narrow)
+                              IconButton(
+                                tooltip: 'Lyrics',
+                                color: Colors.white,
+                                onPressed: ShellScope.of(context).openLyrics,
+                                icon: const Icon(Icons.lyrics_outlined),
+                              ),
+                            IconButton(
+                              tooltip: 'Queue',
+                              color: Colors.white,
+                              onPressed: ShellScope.of(context).openQueue,
+                              icon: const Icon(Icons.queue_music_rounded),
+                            ),
+                            const CastButton(color: Colors.white),
+                            const ListenTogetherButton(color: Colors.white, closePlayer: true),
+                          ],
+                        );
+                        Widget cover(double size) => NowPlayingCover(
+                          child: Hero(
+                            tag: 'now-playing-art',
+                            child: DecoratedBox(
+                              // The video is wider than the square: a square shadow would show around it.
+                              decoration: BoxDecoration(
+                                boxShadow: showsVideo
+                                    ? null
+                                    : const [BoxShadow(color: Colors.black45, blurRadius: 32, offset: Offset(0, 12))],
+                              ),
+                              child: TrackVisual(
+                                track: track,
+                                cover: Artwork(track: track, size: size, radius: 8),
+                              ),
+                            ),
                           ),
-                        ),
-                      );
-                      final info = Row(
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                        );
+                        final info = Row(
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  MarqueeText(
+                                    track?.title ?? 'Nothing playing',
+                                    style: text.headlineSmall?.copyWith(
+                                      fontWeight: FontWeight.w800,
+                                      letterSpacing: -0.5,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  MarqueeText(
+                                    track?.artist ?? '',
+                                    style: text.titleMedium?.copyWith(color: Colors.white70),
+                                  ),
+                                  if (showBadge) ...[const SizedBox(height: 8), const QualityBadge(onDark: true)],
+                                ],
+                              ),
+                            ),
+                            if (track != null) ...[
+                              DownloadButton(track: track, size: 26, color: Colors.white),
+                              LikeButton(track: track, size: 28, color: Colors.white),
+                              TrackMenuButton(track: track, color: Colors.white, nowPlaying: true),
+                            ],
+                          ],
+                        );
+                        if (sideways) {
+                          final art = math.min(constraints.maxHeight - 32, constraints.maxWidth * 0.4);
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 24),
+                            child: Row(
                               children: [
-                                MarqueeText(
-                                  track?.title ?? 'Nothing playing',
-                                  style: text.headlineSmall?.copyWith(fontWeight: FontWeight.w800, letterSpacing: -0.5),
+                                if (art >= 96) ...[cover(art), const SizedBox(width: 32)],
+                                Expanded(
+                                  child: Column(
+                                    children: [
+                                      topBar,
+                                      const Spacer(),
+                                      VideoModeSwitch(track: track, onDark: true),
+                                      info,
+                                      const SizedBox(height: 8),
+                                      const SeekBar(),
+                                      const TransportControls(large: true),
+                                      const SizedBox(height: 8),
+                                    ],
+                                  ),
                                 ),
-                                const SizedBox(height: 2),
-                                MarqueeText(
-                                  track?.artist ?? '',
-                                  style: text.titleMedium?.copyWith(color: Colors.white70),
-                                ),
-                                if (showBadge) ...[const SizedBox(height: 8), const QualityBadge(onDark: true)],
                               ],
                             ),
-                          ),
-                          if (track != null) ...[
-                            DownloadButton(track: track, size: 26, color: Colors.white),
-                            LikeButton(track: track, size: 28, color: Colors.white),
-                            TrackMenuButton(track: track, color: Colors.white, nowPlaying: true),
-                          ],
-                        ],
-                      );
-                      if (sideways) {
-                        final art = math.min(constraints.maxHeight - 32, constraints.maxWidth * 0.4);
+                          );
+                        }
+                        final switchRoom = hasVideo ? 44 : 0;
+                        final art = largeCover
+                            ? math.min(
+                                constraints.maxWidth - 24,
+                                constraints.maxHeight - (showBadge ? 340 : 304) - switchRoom,
+                              )
+                            : math.min(
+                                constraints.maxWidth - 48,
+                                constraints.maxHeight - (showBadge ? 376 : 340) - switchRoom,
+                              );
                         return Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 24),
-                          child: Row(
+                          child: Column(
                             children: [
-                              if (art >= 96) ...[cover(art), const SizedBox(width: 32)],
-                              Expanded(
-                                child: Column(
-                                  children: [
-                                    topBar,
-                                    const Spacer(),
-                                    info,
-                                    const SizedBox(height: 8),
-                                    const SeekBar(),
-                                    const TransportControls(large: true),
-                                    const SizedBox(height: 8),
-                                  ],
-                                ),
-                              ),
+                              topBar,
+                              const Spacer(),
+                              VideoModeSwitch(track: track, onDark: true),
+                              // The large cover runs 12 px into the page's margin on each side.
+                              if (art >= 96)
+                                largeCover
+                                    ? SizedBox(
+                                        height: art,
+                                        child: OverflowBox(maxWidth: art, child: cover(art)),
+                                      )
+                                    : cover(art),
+                              const Spacer(),
+                              info,
+                              const SizedBox(height: 16),
+                              const SeekBar(),
+                              const SizedBox(height: 8),
+                              const TransportControls(large: true),
+                              const SizedBox(height: 24),
                             ],
                           ),
                         );
-                      }
-                      final art = largeCover
-                          ? math.min(constraints.maxWidth - 24, constraints.maxHeight - (showBadge ? 340 : 304))
-                          : math.min(constraints.maxWidth - 48, constraints.maxHeight - (showBadge ? 376 : 340));
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 24),
-                        child: Column(
-                          children: [
-                            topBar,
-                            const Spacer(),
-                            // The large cover runs 12 px into the page's margin on each side.
-                            if (art >= 96)
-                              largeCover
-                                  ? SizedBox(
-                                      height: art,
-                                      child: OverflowBox(maxWidth: art, child: cover(art)),
-                                    )
-                                  : cover(art),
-                            const Spacer(),
-                            info,
-                            const SizedBox(height: 16),
-                            const SeekBar(),
-                            const SizedBox(height: 8),
-                            const TransportControls(large: true),
-                            const SizedBox(height: 24),
-                          ],
-                        ),
-                      );
-                    },
+                      },
+                    ),
                   ),
                 ),
               ),
@@ -877,24 +907,33 @@ class _FullScreenPlayerState extends State<FullScreenPlayer> {
   Widget _cover(BuildContext context, Track track, Track? next, BoxConstraints box, {required double widthShare}) {
     final text = Theme.of(context).textTheme;
 
-    // Room for the title lines and "Next" under the cover.
-    final art = math.min(box.maxHeight - 150, box.maxWidth * widthShare).clamp(120.0, 900.0);
+    final hasVideo = VideoMode.instance.videoOf(track) != null;
+    final showsVideo = hasVideo && VideoMode.instance.on;
+    // Room for the title lines and "Next" under the cover (and the Song / Video switch above it).
+    final art = math.min(box.maxHeight - 150 - (hasVideo ? 44 : 0), box.maxWidth * widthShare).clamp(120.0, 900.0);
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
+          VideoModeSwitch(track: track),
           SizedBox.square(
             dimension: art,
             child: NowPlayingCover(
               child: DecoratedBox(
+                // The video is wider than the square: a square shadow would show around it.
                 decoration: BoxDecoration(
                   borderRadius: LayoutPrefs.corner(12),
-                  boxShadow: const [BoxShadow(color: Color(0x73000000), blurRadius: 40, offset: Offset(0, 16))],
+                  boxShadow: showsVideo
+                      ? null
+                      : const [BoxShadow(color: Color(0x73000000), blurRadius: 40, offset: Offset(0, 16))],
                 ),
-                child: _TrackSwitcher(
-                  trackId: track.id,
-                  slide: false,
-                  child: Artwork(key: ValueKey(track.id), track: track, radius: 12),
+                child: TrackVisual(
+                  track: track,
+                  cover: _TrackSwitcher(
+                    trackId: track.id,
+                    slide: false,
+                    child: Artwork(key: ValueKey(track.id), track: track, radius: 12),
+                  ),
                 ),
               ),
             ),
@@ -983,41 +1022,45 @@ class _FullScreenPlayerState extends State<FullScreenPlayer> {
                 Expanded(
                   child: track == null
                       ? Center(child: Text('Nothing is playing', style: text.titleMedium))
-                      : ValueListenableBuilder(
-                          valueListenable: expandedPlayerLyrics,
-                          builder: (context, lyrics, _) => LayoutBuilder(
-                            builder: (context, box) {
-                              if (!lyrics) return _cover(context, track, next, box, widthShare: 0.5);
-                              final lyricsView = Padding(
-                                padding: const EdgeInsets.only(top: 8),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                      : ListenableBuilder(
+                          // The Song / Video switch and the room it takes.
+                          listenable: Listenable.merge([expandedPlayerLyrics, VideoMode.instance]),
+                          builder: (context, _) => ValueListenableBuilder(
+                            valueListenable: expandedPlayerLyrics,
+                            builder: (context, lyrics, _) => LayoutBuilder(
+                              builder: (context, box) {
+                                if (!lyrics) return _cover(context, track, next, box, widthShare: 0.5);
+                                final lyricsView = Padding(
+                                  padding: const EdgeInsets.only(top: 8),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                                    children: [
+                                      Align(
+                                        alignment: Alignment.centerRight,
+                                        child: Padding(
+                                          padding: const EdgeInsets.only(right: 20),
+                                          child: LyricsExtrasButtons(key: ValueKey(track.id), track: track),
+                                        ),
+                                      ),
+                                      Expanded(child: LyricsView(track: track)),
+                                    ],
+                                  ),
+                                );
+                                // Too narrow for both: the lyrics alone.
+                                if (box.maxWidth < 900) return lyricsView;
+                                return Row(
                                   children: [
-                                    Align(
-                                      alignment: Alignment.centerRight,
-                                      child: Padding(
-                                        padding: const EdgeInsets.only(right: 20),
-                                        child: LyricsExtrasButtons(key: ValueKey(track.id), track: track),
+                                    Expanded(
+                                      flex: 5,
+                                      child: LayoutBuilder(
+                                        builder: (context, half) => _cover(context, track, next, half, widthShare: 0.8),
                                       ),
                                     ),
-                                    Expanded(child: LyricsView(track: track)),
+                                    Expanded(flex: 6, child: lyricsView),
                                   ],
-                                ),
-                              );
-                              // Too narrow for both: the lyrics alone.
-                              if (box.maxWidth < 900) return lyricsView;
-                              return Row(
-                                children: [
-                                  Expanded(
-                                    flex: 5,
-                                    child: LayoutBuilder(
-                                      builder: (context, half) => _cover(context, track, next, half, widthShare: 0.8),
-                                    ),
-                                  ),
-                                  Expanded(flex: 6, child: lyricsView),
-                                ],
-                              );
-                            },
+                                );
+                              },
+                            ),
                           ),
                         ),
                 ),

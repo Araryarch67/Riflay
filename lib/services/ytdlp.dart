@@ -49,6 +49,15 @@ class ResolvedAudio {
   bool get isFresh => DateTime.now().difference(resolvedAt) < const Duration(hours: 4);
 }
 
+/// A directly fetchable video-only stream (Video mode).
+class ResolvedVideo {
+  const ResolvedVideo({required this.url, required this.height, required this.codec});
+
+  final Uri url;
+  final int height;
+  final String codec;
+}
+
 /// Wraps the yt-dlp CLI, which keeps up with YouTube's anti-download changes
 /// (PO tokens, JS challenges) far faster than in-app extractors.
 ///
@@ -224,6 +233,30 @@ abstract final class YtDlp {
     final pick = pickForDownload(await listFormats(videoId), choice, canReencode: canReencode);
     if (pick == null) throw StateError('No audio stream for this song.');
     return (audio: resolvedFrom(pick.candidate), convert: pick.convert);
+  }
+
+  /// A video-only stream of [videoId] no taller than [maxHeight] (Video mode),
+  /// H.264 first as in [YoutubeStream.pickVideo].
+  static Future<ResolvedVideo> resolveVideo(String videoId, {required int maxHeight}) async {
+    final exe = await executable();
+    if (exe == null) throw StateError('yt-dlp is not available on this device.');
+    final h = '[height<=$maxHeight]';
+    final r = await Process.run(exe, [
+      '--no-warnings',
+      '--no-playlist',
+      '-f',
+      'bv$h[vcodec^=avc1]/bv$h[vcodec^=vp]/bv$h',
+      '-O',
+      '%(height)s|%(vcodec)s',
+      '-O',
+      '%(url)s',
+      '--',
+      'https://www.youtube.com/watch?v=$videoId',
+    ]);
+    if (r.exitCode != 0) throw StateError(_lastError(r.stderr as String));
+    final lines = (r.stdout as String).trim().split(RegExp(r'\r?\n'));
+    final f = lines.first.trim().split('|');
+    return ResolvedVideo(url: Uri.parse(lines.last.trim()), height: int.tryParse(f[0]) ?? 0, codec: f.last);
   }
 
   static Future<ResolvedAudio> _run(String videoId, bool aac) async {

@@ -969,6 +969,20 @@ class YoutubeMusicAccount extends ChangeNotifier {
     return _webTracks(rows.where((r) => r.videoId != seed.videoId).toList());
   }
 
+  /// The music video that goes with [videoId], if it has one; asked once per song.
+  Future<MusicVideo?> musicVideo(String videoId) {
+    final cached = _videos.remove(videoId);
+    final f = cached ?? _browseClient.musicVideo(videoId);
+    _videos[videoId] = f; // newest last
+    while (_videos.length > 32) {
+      _videos.remove(_videos.keys.first);
+    }
+    f.then<void>((_) {}, onError: (Object _) => _videos.remove(videoId));
+    return f;
+  }
+
+  final _videos = <String, Future<MusicVideo?>>{};
+
   /// Public albums and playlists opened lately: going back to one, or
   /// opening it again, shows it at once. (Library playlists can be edited,
   /// so those are always fetched.)

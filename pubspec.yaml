@@ -38,6 +38,8 @@ dependencies:
   just_audio_media_kit: ^2.1.0
   media_kit_libs_audio: ^1.0.7
   media_kit: ^1.2.6
+  # Video mode: the music video of a YouTube song, drawn by a second, muted mpv.
+  media_kit_video: ^2.0.1
   file_picker: ^13.1.0
   path: ^1.9.1
   shared_preferences: ^2.5.6

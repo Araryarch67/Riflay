@@ -39,6 +39,7 @@ Riflay is a free, open-source music player for Linux, Windows, macOS, Android an
 | **One library** | Local files, playlists and YouTube Music in a single library |
 | **Format support** | FLAC, ALAC, WAV, AIFF, MP3, AAC, Ogg, Opus, WavPack, APE, DSD, SACD ISO and cue sheets |
 | **YouTube Music** | Fully usable without an account. Sign in with Google to sync likes, playlists and history. Moods & genres, new releases, save albums and playlists to your library |
+| **Video mode** | Watch the music video of a YouTube song, in step with it: one Song / Video switch on the player (beta). Fetched only when picked, and back to the song alone when the screen is off |
 | **Synced lyrics** | Word by word where the source times each word, otherwise line by line; pronunciation, translation, copy, your own .lrc files, and saved with downloads |
 | **Playlists** | Combine local files with YouTube songs, and drag songs into any order. Import from Spotify, Apple Music or Deezer |
 | **Downloads** | Shows how much space your downloads use, and finds downloaded songs whose file was deleted so you can download them again or remove them |
@@ -126,6 +127,7 @@ Not yet verified on real hardware: ASIO, exclusive mode, and casting to physical
 | Discord | ✓ | ✓ | ✓ | N/A⁶ | N/A⁶ |
 | Audio plugins (Carla) | ✓ | ✓⁷ | ✓⁷ | N/A⁷ | N/A⁷ |
 | See-through window | ✓ | untested⁸ | untested⁸ | ✓⁸ | N/A⁸ |
+| Video mode (beta) | ✓ | untested | not yet⁹ | not yet⁹ | not yet⁹ |
 
 ✓ means the feature works and has been verified (tests, CI on that OS, an emulator or Wine). **untested** means it is built for that OS but has not yet been tried on a real device; reports from real devices are welcome.
 
@@ -137,6 +139,7 @@ Not yet verified on real hardware: ASIO, exclusive mode, and casting to physical
 6. Phones give other apps no connection to Discord.
 7. Carla is a separate free download: unzip it into Downloads or Program Files on Windows, put Carla.app in Applications on macOS. Android has no plugin standard, and iOS's AUv3 plugins are not supported yet.
 8. A blur behind the window on Windows 11 and macOS (plain transparency on Windows 10); the home-screen wallpaper on Android. iOS does not let apps show the wallpaper.
+9. Riflay's own player builds for these systems carry sound decoders only, so the Song / Video switch stays hidden there until they are built with video decoders. Video mode shows songs that are videos on YouTube Music, and with a signed-in account also the music video YouTube Music pairs with a song.
 
 YouTube streams through YouTube's player API everywhere, with yt-dlp (desktop) or a built-in extractor (phones) as the fallback. yt-dlp needs a JavaScript runtime (Deno or Node) for some YouTube challenges.
 

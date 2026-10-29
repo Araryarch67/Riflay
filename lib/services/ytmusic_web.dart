@@ -42,6 +42,38 @@ class WebTrack {
   );
 }
 
+/// A part of a song that a music video also has, at its own time in the video.
+class VideoSegment {
+  const VideoSegment({required this.songStart, required this.videoStart, required this.length});
+
+  final Duration songStart;
+  final Duration videoStart;
+  final Duration length;
+}
+
+/// The music video that goes with a song: the song itself when it is a video
+/// (YouTube Music's OMV / UGC), or its video counterpart, with the parts both
+/// share.
+class MusicVideo {
+  const MusicVideo({required this.videoId, this.segments = const []});
+
+  final String videoId;
+
+  /// Where the song's parts are in the video. Empty: the same timeline.
+  final List<VideoSegment> segments;
+
+  /// The point in the video that goes with [song], or null when the video
+  /// doesn't have that part (an intro or a scene that only the video has
+  /// moves the rest along).
+  Duration? videoTimeAt(Duration song) {
+    if (segments.isEmpty) return song;
+    for (final s in segments) {
+      if (song >= s.songStart && song < s.songStart + s.length) return s.videoStart + (song - s.songStart);
+    }
+    return null;
+  }
+}
+
 /// Who can see a playlist.
 enum PlaylistPrivacy {
   public('PUBLIC', 'Public'),
@@ -579,6 +611,46 @@ class YtMusicWeb {
       for (final item in _list(panel?['contents']))
         if (_asMap(_deepFind(item, 'playlistPanelVideoRenderer')) case final row?) ?_panelSong(row),
     ]);
+  }
+
+  /// The music video of [videoId], or null when it has none: the song is a
+  /// video itself, or YouTube Music pairs it with one (the Song / Video
+  /// switch; signed-in accounts get those pairs).
+  Future<MusicVideo?> musicVideo(String videoId) async =>
+      parseMusicVideo(await _send('next', {'videoId': videoId, 'isAudioOnly': true}), videoId);
+
+  /// Kinds of rows that are videos (official videos, uploads, official
+  /// visualisers), not a song's audio with its cover (`ATV`).
+  static const _videoTypes = {'MUSIC_VIDEO_TYPE_OMV', 'MUSIC_VIDEO_TYPE_UGC', 'MUSIC_VIDEO_TYPE_OFFICIAL_SOURCE_MUSIC'};
+
+  /// [musicVideo] from a `next` response.
+  @visibleForTesting
+  static MusicVideo? parseMusicVideo(Map<String, dynamic> next, String videoId) {
+    for (final item in _list(_asMap(_deepFind(next, 'playlistPanelRenderer'))?['contents'])) {
+      final wrapper = _asMap(_asMap(item)?['playlistPanelVideoWrapperRenderer']);
+      final row = _asMap(_deepFind(wrapper?['primaryRenderer'] ?? item, 'playlistPanelVideoRenderer'));
+      if (row?['videoId'] != videoId) continue;
+      if (_videoTypes.contains(_deepFind(row?['navigationEndpoint'], 'musicVideoType'))) {
+        return MusicVideo(videoId: videoId);
+      }
+      final counterpart = _asMap(_list(wrapper?['counterpart']).firstOrNull);
+      final video = _asMap(_deepFind(counterpart?['counterpartRenderer'], 'playlistPanelVideoRenderer'))?['videoId'];
+      if (video is! String) return null;
+      Duration ms(Object? v) => Duration(milliseconds: int.tryParse('${v ?? ''}') ?? 0);
+      return MusicVideo(
+        videoId: video,
+        segments: [
+          for (final s in _list(_asMap(counterpart?['segmentMap'])?['segment']))
+            if (_asMap(s) case final s?)
+              VideoSegment(
+                songStart: ms(s['primaryVideoStartTimeMilliseconds']),
+                videoStart: ms(s['counterpartVideoStartTimeMilliseconds']),
+                length: ms(s['durationMilliseconds']),
+              ),
+        ],
+      );
+    }
+    return null;
   }
 
   /// A queue row: "Artist • Album • Year" under the title.
