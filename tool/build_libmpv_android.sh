@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
-# Builds libmpv.so for Android (arm64-v8a, armeabi-v7a, x86_64) with the
-# FFmpeg filters the app uses: crossfeed, afir and amovie (room correction),
+# Builds libmpv.so for Android (arm64-v8a, armeabi-v7a, x86_64) with video
+# playback for Video mode (media_kit_video: mpv's OpenGL ES output on the
+# app's Surface, MediaCodec hardware decoding, h264 and vp9 in software as the
+# fallback) and the FFmpeg filters the app uses: crossfeed, afir and amovie (room correction),
 # headphone (Virtual speakers). media_kit's Android build has only equalizer,
 # volume and aresample. Same mpv and FFmpeg as the Windows build
 # (tool/build_libmpv_windows.sh); TLS through mbedtls, as media_kit's.
@@ -114,10 +116,11 @@ EOF
 
   if ! stamp ffmpeg; then
     rm -rf "$work/ffmpeg" && mkdir -p "$work/ffmpeg"
-    # Playback of music only: every audio decoder (the audio, PCM and ADPCM sections of FFmpeg's codec list) and
-    # demuxer, the filters mpv and the app use; no video, encoders, muxers or devices. Cover art is
-    # read by the app itself.
-    local audio_decoders
+    # Every audio decoder (the audio, PCM and ADPCM sections of FFmpeg's codec list) and demuxer, the filters
+    # mpv and the app use. Video only for Video mode: what YouTube serves under 720p (h264 and vp9; AV1 is left
+    # out, its software decoder is a library of its own) in software, and the same through MediaCodec. No
+    # encoders, muxers or devices. Cover art is read by the app itself.
+    local audio_decoders video_decoders=h264,vp9,h264_mediacodec,vp9_mediacodec
     audio_decoders=$(sed -n '/^\/\* audio codecs \*\//,/^\/\* subtitles \*\//p' "$root/src/ffmpeg/libavcodec/allcodecs.c" |
       grep -oE 'ff_[a-z0-9_]+_decoder' | sed 's/^ff_//; s/_decoder$//' | sort -u | paste -sd,)
     (cd "$work/ffmpeg" && "$root/src/ffmpeg/configure" --prefix="$prefix" --target-os=android \
@@ -128,13 +131,25 @@ EOF
       --disable-programs --disable-doc --disable-debug --disable-encoders --disable-muxers --disable-devices \
       --disable-avdevice --disable-postproc --disable-hwaccels --disable-indevs --disable-outdevs \
       --disable-autodetect --enable-network --enable-zlib --enable-mbedtls --enable-version3 \
-      --disable-vulkan --disable-mediacodec --disable-jni \
-      --disable-decoders --enable-decoder="$audio_decoders" --disable-filters \
+      --disable-vulkan --enable-jni --enable-mediacodec \
+      --disable-decoders --enable-decoder="$audio_decoders,$video_decoders" --disable-filters \
       --enable-filter=abuffer,abuffersink,aformat,anull,aresample,volume,equalizer,crossfeed,afir,amovie,headphone,pan \
       >/dev/null &&
       make -j"$jobs" install >/dev/null)
     done_ ffmpeg
   fi
+
+  # FFmpeg's MediaCodec (and mpv's use of it) needs the Java VM; libmpv.so is loaded by System.loadLibrary,
+  # which calls this.
+  cat >"$work/jni_onload.c" <<'EOF2'
+#include <jni.h>
+#include <libavcodec/jni.h>
+__attribute__((visibility("default"))) jint JNI_OnLoad(JavaVM *vm, void *reserved) {
+  av_jni_set_java_vm(vm, NULL);
+  return JNI_VERSION_1_6;
+}
+EOF2
+  "$cc" -fPIC -O2 -I"$prefix/include" -c "$work/jni_onload.c" -o "$work/jni_onload.o"
 
   rm -rf "$work/mpv"
   meson setup "$work/mpv" "$root/src/mpv" --cross-file "$cross" --buildtype=release \
@@ -142,11 +157,11 @@ EOF
     -Dlua=disabled -Djavascript=disabled -Dlibarchive=disabled -Dlibbluray=disabled -Ddvdnav=disabled \
     -Dcdda=disabled -Duchardet=disabled -Drubberband=disabled -Dlcms2=disabled -Dzimg=disabled \
     -Djpeg=disabled -Dlibplacebo=disabled -Dvulkan=disabled -Dshaderc=disabled -Dspirv-cross=disabled \
-    -Dgl=disabled -Degl-android=disabled -Dandroid-media-ndk=disabled -Dvapoursynth=disabled \
+    -Dgl=enabled -Degl-android=enabled -Dandroid-media-ndk=enabled -Dvapoursynth=disabled \
     -Dsdl2-audio=disabled -Dsdl2-video=disabled -Dopenal=disabled -Diconv=disabled \
     -Dopensles=enabled \
     `# Only mpv's API is exported: the static libraries' symbols stay inside.` \
-    -Dc_link_args="-static-libstdc++ -Wl,-soname,libmpv.so -Wl,--exclude-libs,ALL -Wl,--gc-sections" \
+    -Dc_link_args="$work/jni_onload.o -static-libstdc++ -Wl,-soname,libmpv.so -Wl,--exclude-libs,ALL -Wl,--gc-sections" \
     -Dcpp_link_args="-static-libstdc++"
   ninja -C "$work/mpv" | grep -E "error|FAILED" || true
   local built

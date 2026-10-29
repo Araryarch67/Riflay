@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 # Builds Mpv.xcframework for macOS (arm64 + x86_64) and iOS (devices, and the
-# Simulator on arm64 + x86_64), with the FFmpeg filters the app uses:
+# Simulator on arm64 + x86_64), with video playback for Video mode (media_kit_video
+# draws through mpv's OpenGL render API: OpenGL on macOS, OpenGL ES on iOS;
+# VideoToolbox hardware decoding, h264 and vp9 in software as the fallback) and
+# the FFmpeg filters the app uses:
 # equalizer, volume, crossfeed, afir and amovie (room correction), headphone
 # (Virtual speakers), alimiter (clip protection in Exclusive mode), ladspa (audio
 # plugins through Carla, see linux/carla_bridge; third_party/ladspa has its
@@ -85,7 +88,9 @@ if [[ ! -f $root/src/harfbuzz.patched ]]; then
 fi
 
 # Every audio decoder (the audio, PCM and ADPCM sections of FFmpeg's codec list); cover art is read
-# by the app itself.
+# by the app itself. Video only for Video mode: what YouTube serves under 720p (h264 and vp9; AV1 is left
+# out, its software decoder is a library of its own), in software and through VideoToolbox.
+video_decoders=h264,vp9
 audio_decoders=$(sed -n '/^\/\* audio codecs \*\//,/^\/\* subtitles \*\//p' "$root/src/ffmpeg/libavcodec/allcodecs.c" |
   grep -oE 'ff_[a-z0-9_]+_decoder' | sed 's/^ff_//; s/_decoder$//' | sort -u | paste -sd, -)
 
@@ -174,7 +179,8 @@ EOF
       --disable-programs --disable-doc --disable-debug --disable-encoders --disable-muxers --disable-devices \
       --disable-avdevice --disable-postproc --disable-hwaccels --disable-indevs --disable-outdevs \
       --disable-autodetect --enable-network --enable-zlib --enable-mbedtls --enable-version3 \
-      --disable-decoders --enable-decoder="$audio_decoders" --disable-filters \
+      --enable-videotoolbox --enable-hwaccel=h264_videotoolbox,vp9_videotoolbox \
+      --disable-decoders --enable-decoder="$audio_decoders,$video_decoders" --disable-filters \
       --enable-filter=abuffer,abuffersink,aformat,anull,aresample,volume,equalizer,crossfeed,afir,amovie,headphone,pan,alimiter,ladspa \
       >>"$log" 2>&1 && make -j"$jobs" install >>"$log" 2>&1)
     done_ ffmpeg
@@ -182,11 +188,17 @@ EOF
 
   local outputs
   if [[ $os == macos ]]; then
-    # mpv of 2023 needs Cocoa even without video (media-kit/libmpv-darwin-build found the same).
-    outputs="-Dcocoa=enabled -Dcoreaudio=enabled -Daudiounit=disabled"
+    # mpv of 2023 needs Cocoa even without video (media-kit/libmpv-darwin-build found the same). The
+    # render API draws with OpenGL (plain-gl) and takes VideoToolbox frames without a copy (videotoolbox-gl,
+    # which needs gl-cocoa).
+    outputs="-Dcocoa=enabled -Dcoreaudio=enabled -Daudiounit=disabled -Dgl=enabled -Dgl-cocoa=enabled -Dplain-gl=enabled -Dvideotoolbox-gl=enabled -Dios-gl=disabled"
   else
-    outputs="-Dcocoa=disabled -Dcoreaudio=disabled -Daudiounit=enabled"
+    # The same on iOS with OpenGL ES (ios-gl takes the VideoToolbox frames).
+    outputs="-Dcocoa=disabled -Dcoreaudio=disabled -Daudiounit=enabled -Dgl=enabled -Dgl-cocoa=disabled -Dplain-gl=enabled -Dvideotoolbox-gl=enabled -Dios-gl=enabled"
   fi
+  # What the video output and VideoToolbox link against (the static libraries' own list may not carry it over).
+  local video_frameworks="-framework VideoToolbox -framework CoreMedia -framework CoreVideo -framework CoreFoundation"
+  if [[ $os == macos ]]; then video_frameworks+=" -framework OpenGL"; else video_frameworks+=" -framework OpenGLES"; fi
   rm -rf "$work/mpv"
   # shellcheck disable=SC2086
   meson setup "$work/mpv" "$root/src/mpv" --cross-file "$cross" --buildtype=release \
@@ -194,14 +206,13 @@ EOF
     -Dlua=disabled -Djavascript=disabled -Dlibarchive=disabled -Dlibbluray=disabled -Ddvdnav=disabled \
     -Dcdda=disabled -Duchardet=disabled -Drubberband=disabled -Dlcms2=disabled -Dzimg=disabled \
     -Djpeg=disabled -Dlibplacebo=disabled -Dvulkan=disabled -Dshaderc=disabled -Dspirv-cross=disabled \
-    -Dgl=disabled -Dgl-cocoa=disabled -Dplain-gl=disabled -Dvideotoolbox-gl=disabled -Dios-gl=disabled \
     -Dswift-build=disabled -Dmacos-cocoa-cb=disabled -Dmacos-media-player=disabled -Dmacos-touchbar=disabled \
     -Dvapoursynth=disabled -Dsdl2-audio=disabled -Dsdl2-video=disabled -Dopenal=disabled -Diconv=disabled \
     $outputs \
     `# Only mpv's API is exported: the static libraries' symbols stay inside.` \
     `# libc++ for HarfBuzz, which is C++.` \
-    -Dc_link_args="-Wl,-exported_symbol,_mpv_* -Wl,-dead_strip -lc++" \
-    -Dobjc_link_args="-Wl,-exported_symbol,_mpv_* -Wl,-dead_strip -lc++"
+    -Dc_link_args="-Wl,-exported_symbol,_mpv_* -Wl,-dead_strip -lc++ $video_frameworks" \
+    -Dobjc_link_args="-Wl,-exported_symbol,_mpv_* -Wl,-dead_strip -lc++ $video_frameworks"
   ninja -C "$work/mpv" | grep -E "error|FAILED" || true
   local built
   built=$(find "$work/mpv" -maxdepth 1 -name 'libmpv*.dylib' -type f | head -1)

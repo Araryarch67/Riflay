@@ -138,6 +138,9 @@ void main() {
   test('a sound-only mpv build keeps the switch hidden', () {
     expect(VideoMode.decodesVideo('aac,alac,flac,mp3,opus,vorbis,wavpack'), isFalse);
     expect(VideoMode.decodesVideo('aac (AAC), h264 (H.264 / AVC), vp9 (Google VP9)'), isTrue);
+    expect(VideoMode.decodesVideo('aac (AAC), h264_mediacodec (H.264 Android MediaCodec decoder)'), isTrue);
+    // media_kit_video refuses to make a video output without h264.
+    expect(VideoMode.decodesVideo('aac (AAC), vp9 (Google VP9), libdav1d (AV1)'), isFalse);
   });
 
   testWidgets('the Song / Video switch shows only for a song with a video, marked Beta', (tester) async {

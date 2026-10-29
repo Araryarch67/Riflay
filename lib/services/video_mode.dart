@@ -45,9 +45,10 @@ class VideoMode extends ChangeNotifier with WidgetsBindingObserver {
 
   // ---- Which songs have a video ----
 
-  /// Whether this device's mpv can decode video at all. The Android and Apple
-  /// builds are made for sound only; they keep the switch hidden until a
-  /// build with video decoders comes along.
+  /// Whether this device's mpv can decode video at all. Riflay's Android and
+  /// Apple builds carry h264 and vp9 (tool/build_libmpv_android.sh and
+  /// tool/build_libmpv_apple.sh); a build of sound only, or an older one,
+  /// keeps the switch hidden.
   bool _canDecode = false;
   bool _probed = false;
 
@@ -74,8 +75,11 @@ class VideoMode extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   /// Whether mpv's `decoder-list` has a decoder for YouTube's video streams.
+  /// h264 is what media_kit_video itself looks for before it makes a video
+  /// output (and what YouTube serves at every size); without it the output
+  /// can't be made, whatever else is there.
   @visibleForTesting
-  static bool decodesVideo(String decoderList) => RegExp(r'\b(h264|vp9|libdav1d|av1)\b').hasMatch(decoderList);
+  static bool decodesVideo(String decoderList) => decoderList.contains('h264');
 
   /// Looked-up songs: the video, or null for none. Missing while not asked yet.
   final _found = <String, MusicVideo?>{};
