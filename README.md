@@ -219,14 +219,16 @@ Bug reports, feature requests and pull requests are welcome. Start with **[CONTR
 
 Riflay builds on the work of:
 
-- [mpv](https://mpv.io) / [media_kit](https://github.com/media-kit/media-kit) and [just_audio](https://github.com/ryanheise/just_audio) for playback
-- [FFmpeg](https://ffmpeg.org) for decoding, filters and resampling (with [SoX's resampler](https://sourceforge.net/projects/soxr/))
-- [yt-dlp](https://github.com/yt-dlp/yt-dlp) and [youtube_explode_dart](https://github.com/Hexer10/youtube_explode_dart) for YouTube audio
-- [ytmusicapi](https://github.com/sigma67/ytmusicapi), whose documentation of YouTube Music's API this app follows
-- [LRCLIB](https://lrclib.net), [Better Lyrics](https://betterlyrics.org), Kugou, NetEase Cloud Music, QQ Music, Musixmatch (Beta), [Megalobiz](https://www.megalobiz.com), [Genius](https://genius.com) and [lyrics.ovh](https://lyrics.ovh) for free lyrics
-- [audio_metadata_reader](https://github.com/ClementBeal/audio_metadata_reader) for tags
-- Bill Gardner and Keith Martin's [KEMAR HRTF measurements](https://sound.media.mit.edu/resources/KEMAR.html) (MIT Media Lab) for Virtual speakers
-- [akagi](https://github.com/z0orb/akagi), whose ideas inspired dragging songs into order in playlists and the Downloads page's storage overview (re-implemented, no code copied)
+| Project | Used for |
+|---|---|
+| [mpv](https://mpv.io) / [media_kit](https://github.com/media-kit/media-kit), [just_audio](https://github.com/ryanheise/just_audio) | Playback |
+| [FFmpeg](https://ffmpeg.org), with [SoX's resampler](https://sourceforge.net/projects/soxr/) | Decoding, filters and resampling |
+| [yt-dlp](https://github.com/yt-dlp/yt-dlp), [youtube_explode_dart](https://github.com/Hexer10/youtube_explode_dart) | YouTube audio |
+| [ytmusicapi](https://github.com/sigma67/ytmusicapi) | Its documentation of YouTube Music's API, which this app follows |
+| [LRCLIB](https://lrclib.net), [Better Lyrics](https://betterlyrics.org), Kugou, NetEase Cloud Music, QQ Music, Musixmatch (Beta), [Megalobiz](https://www.megalobiz.com), [Genius](https://genius.com), [lyrics.ovh](https://lyrics.ovh) | Free lyrics |
+| [audio_metadata_reader](https://github.com/ClementBeal/audio_metadata_reader) | Tags |
+| Bill Gardner and Keith Martin's [KEMAR HRTF measurements](https://sound.media.mit.edu/resources/KEMAR.html) (MIT Media Lab) | Virtual speakers |
+| [akagi](https://github.com/z0orb/akagi) | Ideas behind dragging songs into order in playlists and the Downloads page's storage overview (re-implemented, no code copied) |
 
 Riflay is not affiliated with YouTube, Google or Discord.
 
