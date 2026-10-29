@@ -14,7 +14,12 @@ enum BetaFeature {
     'Look for word-by-word lyrics on Musixmatch when other sources have none.',
   ),
   videoMode('video', 'Video mode', 'Watch a song\'s music video in the player, in step with the song.'),
-  dynamicTheme('dynamic_theme', 'Dynamic theme', 'A theme whose colours follow the cover of the song that is playing.');
+  dynamicTheme('dynamic_theme', 'Dynamic theme', 'A theme whose colours follow the cover of the song that is playing.'),
+  flacConvert(
+    'flac_convert',
+    'Convert to FLAC',
+    'Turn a downloaded or lossy song, or a whole playlist, into a FLAC file.',
+  );
 
   const BetaFeature(this.id, this.title, this.description);
 

@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
 
 import '../models/track.dart';
+import 'beta_features.dart';
 import 'download_prefs.dart';
 import 'metadata.dart';
 import 'player_controller.dart';
@@ -43,7 +44,8 @@ abstract final class FlacConvert {
   }
 
   /// Whether the menu should offer the conversion for [t]: a convertible file, and a device that can make FLAC.
-  static bool available(Track t) => YoutubeImporter.canMakeFlac && isConvertible(t);
+  static bool available(Track t) =>
+      BetaFeatures.instance.isOn(BetaFeature.flacConvert) && YoutubeImporter.canMakeFlac && isConvertible(t);
 
   /// Whether [t] is a file Riflay made (a download), which the FLAC replaces, rather than one the person added,
   /// which is kept. [downloadsDir] is the downloads folder; a download from an earlier folder has a [Track.sourceUrl].
