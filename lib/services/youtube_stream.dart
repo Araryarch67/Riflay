@@ -7,6 +7,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'download_prefs.dart';
+import 'video_download.dart';
 import 'ytdlp.dart';
 
 /// Finds a YouTube song's audio stream with one request to YouTube's player
@@ -210,6 +211,13 @@ abstract final class YoutubeStream {
   /// [forDownload]. Cached for ten minutes; a call while one is running shares it.
   static Future<List<AudioCandidate>> downloadCandidates(String videoId) async => (await _listing(videoId)).candidates;
 
+  /// Every picture and sound stream YouTube offers for [videoId], for the video download. Shares the cached
+  /// listing of [downloadCandidates].
+  static Future<VideoFormats> videoFormats(String videoId) async {
+    final l = await _listing(videoId);
+    return VideoFormats(l.videos, l.candidates);
+  }
+
   /// Whether to look formats up ahead without being asked. A phone does only on Wi-Fi or ethernet (the lookup
   /// costs data and battery); anything else always does. [batterySaver] is false when it can't be told.
   static bool shouldPrefetchAhead({required bool phone, required bool unmetered, bool batterySaver = false}) =>
@@ -282,12 +290,18 @@ abstract final class YoutubeStream {
       }
       final candidates = [for (final f in _adaptiveFormats(j)) ?AudioCandidate.fromPlayer(f)];
       if (candidates.every((c) => c.processed)) throw StateError('No audio stream for this song.');
+      final single = ((j['streamingData'] as Map<String, dynamic>?)?['formats'] as List? ?? const [])
+          .cast<Map<String, dynamic>>();
+      final videos = [
+        for (final f in [..._adaptiveFormats(j), ...single]) ?VideoCandidate.fromPlayer(f),
+      ];
       // Only the loudness block of the response is kept, not all of it.
-      return _Listing(candidates, DateTime.now(), {'playerConfig': j['playerConfig']});
+      return _Listing(candidates, DateTime.now(), {'playerConfig': j['playerConfig']}, videos);
     } catch (e) {
       if (!YtDlp.supported) rethrow;
       debugPrint('YouTube player API failed for $videoId, using yt-dlp: $e');
-      return _Listing(await YtDlp.listFormats(videoId), DateTime.now(), null);
+      final all = await YtDlp.listAllFormats(videoId);
+      return _Listing(all.audio, DateTime.now(), null, all.video);
     }
   }
 
@@ -412,16 +426,19 @@ abstract final class YoutubeStream {
 
 /// What was listed for one video, and when.
 class _Listing {
-  _Listing(this.candidates, this.at, this.player);
+  _Listing(this.candidates, this.at, this.player, [this.videos = const []]);
 
   final List<AudioCandidate> candidates;
+
+  /// The picture streams (video only, and the single-file ones).
+  final List<VideoCandidate> videos;
   final DateTime at;
 
   /// The player API's loudness block when the player API listed it; null for yt-dlp.
   final Map<String, dynamic>? player;
 
   Iterable<Uri> get urls => [
-    for (final c in candidates)
-      if (c.ref is Map && (c.ref! as Map)['url'] is String) Uri.parse((c.ref! as Map)['url'] as String),
+    for (final c in [...candidates.map((c) => c.ref), ...videos.map((v) => v.ref)])
+      if (c is Map && c['url'] is String) Uri.parse(c['url'] as String),
   ];
 }

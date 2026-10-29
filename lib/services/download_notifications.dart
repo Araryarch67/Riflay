@@ -337,6 +337,30 @@ class DownloadNotifications {
     }
   }
 
+  static void Function(String month)? _openWrap;
+  static String? _wrapWhenReady;
+
+  /// The shell says how to show a Wrap (by month key, `2026-03`). A tap that came before it was ready is answered now.
+  static void registerOpenWrap(void Function(String month)? open) {
+    _openWrap = open;
+    if (open != null && _wrapWhenReady != null) {
+      final month = _wrapWhenReady!;
+      _wrapWhenReady = null;
+      open(month);
+    }
+  }
+
+  /// The notification plugin, started and permitted, for the app's other notifications (the monthly Wrap). Null
+  /// where notifications are unavailable or were refused.
+  static Future<FlutterLocalNotificationsPlugin?> sharedPlugin() async {
+    final me = _instance;
+    if (me == null) return null;
+    await me._init();
+    if (!me._ready) return null;
+    await me._askPermission();
+    return me._allowed ? me._plugin : null;
+  }
+
   /// A tap on a notification's body opens Downloads; its Cancel and Retry buttons act on the song.
   @visibleForTesting
   static void handleTap({String? actionId, String? payload, YoutubeImporter? importer}) {
@@ -345,6 +369,15 @@ class DownloadNotifications {
       if (job == null) return;
       if (actionId == cancelAction) importer!.cancel(job);
       if (actionId == retryAction) importer!.retry(job);
+      return;
+    }
+    if (payload != null && payload.startsWith('wrap:')) {
+      final month = payload.substring(5);
+      if (_openWrap case final open?) {
+        open(month);
+      } else {
+        _wrapWhenReady = month;
+      }
       return;
     }
     if (_openDownloads case final open?) {
@@ -358,6 +391,8 @@ class DownloadNotifications {
   static void resetTapsForTest() {
     _openDownloads = null;
     _openWhenReady = false;
+    _openWrap = null;
+    _wrapWhenReady = null;
   }
 
   void _tapped(NotificationResponse r) => handleTap(actionId: r.actionId, payload: r.payload, importer: _importer);

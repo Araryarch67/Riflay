@@ -31,6 +31,8 @@ lib/
     legacy_data.dart           First start on a computer: brings over what OpenMusic (the old name) kept
     private_files.dart         The app's 0700 folder; atomic writes, 0600 secrets (the Google session)
     audio_engine.dart          Every mpv audio setting + SignalPath read-back
+    crossfade.dart             Crossfade: the rules (pure functions) and `Crossfader`, which runs it on a second mpv player
+    sleep_timer.dart           Sleep timer: wall-clock deadline, fade-down, pause (no player needed; tested with a fake clock)
     lyrics.dart                Your lyrics, .lrc / embedded tag, disk cache, then online (word-timed first): YouTube Music, LRCLIB, Better Lyrics, Kugou, NetEase, Musixmatch, QQ, Megalobiz, Genius, lyrics.ovh
     metadata.dart              Tag reading, cover art, tag editor (all in-process; Matroska via ffmpeg)
     tag_writer.dart            Tag edits for MP3, Ogg, WAV, AIFF, WavPack, APE: only the edited fields change
@@ -45,6 +47,8 @@ lib/
     youtube_audio_source.dart  Streams YouTube audio in ranged chunks (yt-dlp resolves URLs)
     ytdlp.dart                 Finds / downloads yt-dlp, resolves and caches stream URLs
     download_prefs.dart        Settings › Downloads (format, quality, folder), and pickForDownload: which stream a download takes
+    video_download.dart        Music-video downloads: stream picking (MP4 = H.264 + AAC, WebM = VP9 + Opus, AV1 only where nothing else), sizes, muxVideo
+    mp4_mux.dart / webm_mux.dart  Pure-Dart muxers (no re-encoding): YouTube's DASH fMP4 and WebM streams into one file; used where there is no ffmpeg
     download_edit.dart         Editing a downloaded song: title, album, cover (never the artist); lyrics live in lyrics.dart's UserLyrics
     ffmpeg.dart                Finds / downloads ffmpeg (tag editor, AirPlay, casting conversions)
     system_fonts.dart          Fonts from the device's font folders (Settings › Appearance › Font)
@@ -141,6 +145,16 @@ test/                          Unit and widget tests
 - The equalizer's headroom (`preamp`) comes from the curve's highest point
   (`peakGain`, the bands' combined RBJ response), not the loudest band:
   neighbouring boosts add up.
+- **Crossfade** (`crossfade.dart`) is not done by mpv: a second `AudioPlayer` (the
+  "tail", marked secondary through `JustAudioMediaKit.secondaryRequestedAt` so it never becomes
+  `activePlayer`) replays the ending song's last seconds silently, in step with the main player
+  (both mpv `time-pos` clocks are compared and corrected by seeks). At the fade the tail takes the
+  ending song over and fades out, while the main player jumps to the next song and fades in. So the
+  queue, now playing and media session are right at once, and nothing is handed back. The fades
+  are mpv `volume` factors (`AudioEngine.setCrossGain` / `setSleepGain` / `setSecondaryGain`) on top
+  of the user's level, which is never touched. Off in bit-perfect and exclusive/direct outputs, while
+  casting, with DSD/DoP, in repeat one and for "End of this song"; albums that flow keep gapless.
+  `integration_test/zz_crossfade_test.dart` runs it on two real libmpv players.
 - media_kit has no `setShuffleOrder`, so shuffle is done in Dart
   (`PlayerController._ordered`, `_shuffledFrom`). Never call just_audio's
   `shuffle()` / `setShuffleModeEnabled`.

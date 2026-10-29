@@ -12,7 +12,9 @@ import '../../services/audio_engine.dart';
 import 'appearance_settings.dart';
 import 'beta_settings.dart';
 import 'layout_settings.dart';
+import 'library_settings.dart';
 import 'download_settings.dart';
+import 'privacy_settings.dart';
 import 'sound_settings.dart';
 import 'youtube_music_page.dart';
 
@@ -23,7 +25,9 @@ enum SettingsTopic {
   layout('Layout', Icons.dashboard_customize_outlined, 'Shapes, sizes, what the player shows'),
   playback('Playback', Icons.play_circle_outline_rounded, 'Autoplay, equalizer, Virtual speakers, mono audio'),
   advanced('Hi-fi audio', Icons.tune_rounded, 'Output device, bit-perfect mode, sample rate'),
+  library('Library', Icons.library_music_outlined, 'Keep music folders up to date, find songs you have twice'),
   downloads('Downloads', Icons.download_rounded, 'Format, quality, where songs are saved'),
+  privacy('Privacy', Icons.lock_outline_rounded, 'Listening history kept on this device'),
   integrations('Integrations', Icons.extension_outlined, 'Discord, lyrics services'),
   beta('Beta features', Icons.science_outlined, 'Switch features that are still being tested on or off');
 
@@ -152,8 +156,10 @@ class _SettingsTopicPageState extends State<SettingsTopicPage> {
       SettingsTopic.layout => const LayoutSettings(),
       SettingsTopic.playback => const PlaybackSettings(),
       SettingsTopic.advanced => const AdvancedAudioSettings(),
+      SettingsTopic.library => const LibrarySettings(),
       SettingsTopic.downloads => const DownloadSettings(),
       SettingsTopic.beta => const BetaSettings(),
+      SettingsTopic.privacy => const PrivacySettings(),
       SettingsTopic.integrations => SettingsCard(
         children: [
           if (DiscordPresence.supported)

@@ -977,7 +977,13 @@ class YoutubeMusicAccount extends ChangeNotifier {
     while (_videos.length > 32) {
       _videos.remove(_videos.keys.first);
     }
-    f.then<void>((_) {}, onError: (Object _) => _videos.remove(videoId));
+    // A block, not `=> remove(...)`: that returned the failed future itself, which then went unhandled.
+    f.then<void>(
+      (_) {},
+      onError: (Object _) {
+        _videos.remove(videoId);
+      },
+    );
     return f;
   }
 

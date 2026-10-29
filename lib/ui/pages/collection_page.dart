@@ -4,7 +4,9 @@ import 'package:flutter/material.dart';
 
 import '../../models/track.dart';
 import '../../services/flac_convert.dart';
+import '../../services/play_history.dart';
 import '../../services/player_controller.dart';
+import '../../services/smart_playlists.dart';
 import '../download_options.dart';
 import '../flac_convert_dialog.dart';
 import '../shell_scope.dart';
@@ -36,7 +38,11 @@ class CollectionPage extends StatelessWidget {
     // the buttons and rows that show that follow it themselves.
     final c = PlayerScope.identity(context);
     return ListenableBuilder(
-      listenable: collection.id == likedMusicId ? Listenable.merge([c.libraryRevision, c.ytMusic]) : c.libraryRevision,
+      listenable: collection.id == likedMusicId
+          ? Listenable.merge([c.libraryRevision, c.ytMusic])
+          : collection.kind == CollectionKind.smart
+          ? Listenable.merge([c.libraryRevision, PlayHistory.instance])
+          : c.libraryRevision,
       builder: (context, _) => _build(context, c),
     );
   }
@@ -58,6 +64,7 @@ class CollectionPage extends StatelessWidget {
             ),
             _ => null,
           },
+          CollectionKind.smart => SmartPlaylists.of(c, PlayHistory.instance)[SmartList.byId(collection.id)],
           CollectionKind.playlist => c.playlistById(collection.id),
           CollectionKind.artist => c.artistNamed(collection.title),
           CollectionKind.album => c.albums.where((a) => a.title == collection.title).firstOrNull,

@@ -53,7 +53,10 @@ class MediaKitPlayer extends AudioPlayerPlatform {
     return medias[_player.state.playlist.index];
   }
 
-  MediaKitPlayer(super.id) {
+  /// Riflay: a crossfade's second player; the app sets its volume itself.
+  final bool secondary;
+
+  MediaKitPlayer(super.id, {this.secondary = false}) {
     _player = Player(
         configuration: PlayerConfiguration(
       pitch: JustAudioMediaKit.pitch,
@@ -319,6 +322,7 @@ class MediaKitPlayer extends AudioPlayerPlatform {
   @override
   Future<SetVolumeResponse> setVolume(SetVolumeRequest request) async {
     // Riflay: the app owns the volume (see JustAudioMediaKit.volumeOverride).
+    if (secondary) return SetVolumeResponse();
     final override = JustAudioMediaKit.volumeOverride;
     if (override != null) {
       await override(_player);

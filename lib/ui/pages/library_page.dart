@@ -2,12 +2,15 @@ import 'package:flutter/material.dart';
 
 import '../../models/track.dart';
 import '../../services/beta_features.dart';
+import '../../services/play_history.dart';
 import '../../services/player_controller.dart';
+import '../../services/smart_playlists.dart';
 import '../../services/youtube_music_account.dart';
 import '../ytmusic_edit.dart';
 import '../shell_scope.dart';
 import '../theme.dart';
 import '../widgets/controls.dart';
+import 'listening_stats_page.dart';
 import 'settings_page.dart';
 import 'spotify_page.dart';
 import 'youtube_music_page.dart';
@@ -41,7 +44,7 @@ class _LibraryListState extends State<LibraryList> {
     // playing: this list sits in the sidebar the whole time.
     final c = PlayerScope.identity(context);
     return ListenableBuilder(
-      listenable: Listenable.merge([c.libraryRevision, c.ytMusic, BetaFeatures.instance]),
+      listenable: Listenable.merge([c.libraryRevision, c.ytMusic, BetaFeatures.instance, PlayHistory.instance]),
       builder: (context, _) => _build(context, c, c.ytMusic.libraryNow),
     );
   }
@@ -108,6 +111,24 @@ class _LibraryListState extends State<LibraryList> {
         ],
         if (c.library.isNotEmpty) _LibraryRow(collection: c.allSongs, collapsed: widget.collapsed),
         if (c.youtubeDownloads case final d?) _LibraryRow(collection: d, collapsed: widget.collapsed),
+        for (final entry in SmartPlaylists.of(c, PlayHistory.instance).entries)
+          _SimpleRow(
+            collapsed: widget.collapsed,
+            art: _IconArt(_smartIcon(entry.key)),
+            title: entry.value.title,
+            subtitle: 'Smart playlist • ${entry.value.subtitle}',
+            location: Locations.collection(entry.value),
+            onTap: () => shell.openCollection(entry.value),
+          ),
+        if (!PlayHistory.instance.isEmpty)
+          _SimpleRow(
+            collapsed: widget.collapsed,
+            art: const _IconArt(Icons.insights_rounded),
+            title: 'Your listening stats',
+            subtitle: 'Top songs, artists and albums',
+            location: Locations.stats,
+            onTap: () => shell.open(const ListeningStatsPage(), location: Locations.stats),
+          ),
       ],
     ];
     // Albums and artists (there can be thousands) are made as they scroll into view.
@@ -247,6 +268,14 @@ class _LibraryListState extends State<LibraryList> {
     );
   }
 }
+
+IconData _smartIcon(SmartList l) => switch (l) {
+  SmartList.mostPlayed => Icons.trending_up_rounded,
+  SmartList.notPlayedForAWhile => Icons.history_toggle_off_rounded,
+  SmartList.recentlyAdded => Icons.library_add_outlined,
+  SmartList.recentlyPlayed => Icons.history_rounded,
+  SmartList.lossless => Icons.graphic_eq_rounded,
+};
 
 class _IconArt extends StatelessWidget {
   const _IconArt(this.icon);
@@ -399,6 +428,7 @@ class _LibraryRow extends StatelessWidget {
                                   CollectionKind.allSongs ||
                                   CollectionKind.youtube ||
                                   CollectionKind.remote => 'Playlist • ${collection.subtitle}',
+                                  CollectionKind.smart => 'Smart playlist • ${collection.subtitle}',
                                   CollectionKind.playlist => 'Playlist • Riflay • ${collection.subtitle}',
                                   CollectionKind.album => 'Album • ${collection.subtitle}',
                                   CollectionKind.artist => 'Artist',

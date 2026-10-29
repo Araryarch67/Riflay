@@ -59,6 +59,16 @@ class JustAudioMediaKit extends JustAudioPlatform {
   /// app's level to the player instead of the one just_audio asked for.
   static Future<void> Function(Player player)? volumeOverride;
 
+  /// Riflay: set just before a second AudioPlayer is first used (the crossfade's
+  /// tail). The next player created is then a secondary one: it is not
+  /// [activePlayer], the app's volume doesn't apply to it, and [onSecondaryCreated]
+  /// gets its libmpv player instead of [onPlayerCreated]. Expires after a few
+  /// seconds, so a failed load can't make the real player a secondary one.
+  static DateTime? secondaryRequestedAt;
+
+  /// Riflay: see [secondaryRequestedAt].
+  static void Function(Player player)? onSecondaryCreated;
+
   /// Riflay: the libmpv player currently backing playback, if any.
   static Player? get activePlayer => _active;
   static Player? _active;
@@ -107,11 +117,20 @@ class JustAudioMediaKit extends JustAudioPlatform {
     }
 
     _logger.fine('instantiating new player ${request.id}');
-    final player = MediaKitPlayer(request.id);
+    final requested = secondaryRequestedAt;
+    final secondary = requested != null &&
+        onSecondaryCreated != null &&
+        DateTime.now().difference(requested) < const Duration(seconds: 5);
+    if (secondary) secondaryRequestedAt = null;
+    final player = MediaKitPlayer(request.id, secondary: secondary);
     _players[request.id] = player;
     await player.ready();
-    _active = player.mpv;
-    onPlayerCreated?.call(player.mpv);
+    if (secondary) {
+      onSecondaryCreated!.call(player.mpv);
+    } else {
+      _active = player.mpv;
+      onPlayerCreated?.call(player.mpv);
+    }
     _logger.fine('player ready! (players: $_players)');
     return player;
   }

@@ -9,6 +9,7 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
 import 'download_prefs.dart';
+import 'video_download.dart';
 
 /// A directly fetchable audio stream, as resolved by yt-dlp.
 class ResolvedAudio {
@@ -191,7 +192,10 @@ abstract final class YtDlp {
     ..remove('aac:$videoId');
 
   /// Every audio stream yt-dlp lists for [videoId] (one process, a few seconds).
-  static Future<List<AudioCandidate>> listFormats(String videoId) async {
+  static Future<List<AudioCandidate>> listFormats(String videoId) async => (await listAllFormats(videoId)).audio;
+
+  /// [listFormats], with the picture streams too.
+  static Future<({List<AudioCandidate> audio, List<VideoCandidate> video})> listAllFormats(String videoId) async {
     final exe = await executable();
     if (exe == null) throw StateError('yt-dlp is not available on this device.');
     final r = await Process.run(exe, [
@@ -204,7 +208,10 @@ abstract final class YtDlp {
     if (r.exitCode != 0) throw StateError(_lastError(r.stderr as String));
     final info = jsonDecode(r.stdout as String) as Map<String, dynamic>;
     final formats = (info['formats'] as List).cast<Map<String, dynamic>>();
-    return [for (final f in formats) ?AudioCandidate.fromYtDlp(f)];
+    return (
+      audio: [for (final f in formats) ?AudioCandidate.fromYtDlp(f)],
+      video: [for (final f in formats) ?VideoCandidate.fromYtDlp(f)],
+    );
   }
 
   /// The stream a [listFormats] candidate stands for.

@@ -18,6 +18,7 @@ import 'widgets/controls.dart';
 import 'widgets/marquee_text.dart';
 import 'widgets/menus.dart';
 import 'widgets/signal_path.dart';
+import 'widgets/sleep_timer_button.dart';
 import 'widgets/stats_for_nerds.dart';
 import 'pages/listen_together_page.dart';
 import 'pages/lyrics_page.dart';
@@ -80,6 +81,7 @@ class _MiniPlayerState extends State<MiniPlayer> {
             children: [
               item(Icons.queue_music_rounded, 'Queue', shell.openQueue),
               item(Icons.lyrics_outlined, 'Lyrics', shell.openLyrics),
+              item(Icons.bedtime_outlined, 'Sleep timer', () => showSleepTimer(context)),
               item(Icons.cast_rounded, 'Play on a device', () => showCastPicker(context)),
               item(Icons.group_outlined, 'Listen together', () => openListenTogether(context)),
               if (AudioEngine.supported) item(Icons.graphic_eq_rounded, 'Signal path', () => showSignalPath(context)),
@@ -332,6 +334,7 @@ class DesktopPlayerBar extends StatelessWidget {
                       onPressed: shell.openQueue,
                       icon: const Icon(Icons.queue_music_rounded, size: 20),
                     ),
+                    const SleepTimerButton(size: 20),
                     const CastButton(size: 20),
                     const ListenTogetherButton(size: 20),
                     // The bar spans the whole window, so its own width decides (not the content area's).
@@ -680,6 +683,7 @@ class NowPlayingPage extends StatelessWidget {
                               onPressed: ShellScope.of(context).openQueue,
                               icon: const Icon(Icons.queue_music_rounded),
                             ),
+                            const SleepTimerButton(color: Colors.white, labelBelow: true),
                             const CastButton(color: Colors.white),
                             const ListenTogetherButton(color: Colors.white, closePlayer: true),
                           ],

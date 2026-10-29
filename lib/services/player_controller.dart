@@ -15,17 +15,20 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/track.dart';
 import 'audio_engine.dart';
 import 'cast.dart';
+import 'crossfade.dart';
 import 'cue_sheet.dart';
 import 'discord_presence.dart';
 import 'dlna.dart';
 import 'dop.dart';
 import 'ffmpeg.dart';
+import 'folder_watch.dart';
 import 'ios_folders.dart';
 import 'library_store.dart';
 import 'lyrics.dart';
 import 'lyrics_translation.dart';
 import 'metadata.dart';
 import 'sacd.dart';
+import 'sleep_timer.dart';
 import 'memory_trim.dart';
 import 'youtube_audio_source.dart';
 import 'youtube_music_account.dart';
@@ -42,6 +45,14 @@ class PlayerController extends ChangeNotifier {
   PlayerController() {
     // The first YouTube song then needs one request, not two.
     YoutubeStream.warmUp();
+    sleep.attach(_SleepHost(this));
+    _crossfader = Crossfader(
+      main: player,
+      audio: audio,
+      sourceFor: _sourceFor,
+      upcoming: _crossfadeUpcoming,
+      blocked: _crossfadeBlocked,
+    );
     _subs.add(
       // just_audio re-emits the sequence state with every position update
       // (several times a second); only a real queue / song change matters here.
@@ -222,6 +233,46 @@ class PlayerController extends ChangeNotifier {
   static const _maxRecent = 24;
 
   final AudioPlayer player = AudioPlayer();
+
+  // ── Sleep timer and crossfade (sleep_timer.dart, crossfade.dart) ──
+
+  /// "Stop the music in 30 minutes": fades the volume down and pauses.
+  final SleepTimer sleep = SleepTimer();
+
+  /// Overlaps the end of a song with the start of the next (Settings › Playback › Crossfade).
+  late final Crossfader _crossfader;
+
+  /// Whether one song is fading into the next right now.
+  bool get crossfading => _crossfader.fading;
+
+  /// The sleep timer's fade: a factor on the volume, so the user's own level is never touched.
+  void _setSleepFade(double gain) {
+    if (casting) return; // the TV or speaker has its own volume; the timer only pauses it
+    if (AudioEngine.supported) {
+      audio.setSleepGain(gain).ignore();
+    } else {
+      player.setVolume(gainOfLevel(_level.value) * gain).ignore();
+    }
+  }
+
+  /// The song playing and the one after it, for the crossfade; null at the end of the queue.
+  CrossfadeNext _crossfadeUpcoming() {
+    final seq = player.sequenceState;
+    final at = seq.currentIndex;
+    final i = _neighbour(1);
+    if (at == null || i == null || i == at || at >= seq.sequence.length) return null;
+    return (current: seq.sequence[at].tag as Track, next: seq.sequence[i].tag as Track, nextIndex: i);
+  }
+
+  /// What rules a crossfade out beyond the Settings (which [AudioEngine.crossfadeActive] covers).
+  bool _crossfadeBlocked() {
+    // Repeat one has no next song; "End of this song" must end at the song's end; a TV plays by itself.
+    if (casting || player.loopMode == LoopMode.one || sleep.mode == SleepMode.endOfSong) return true;
+    if (!audio.dopActive) return false;
+    final up = _crossfadeUpcoming();
+    bool dsd(Track t) => SacdDisc.isSacdTrack(t) || (t.path != null && DsdFile.isDsdPath(t.path!));
+    return up == null || dsd(up.current) || dsd(up.next);
+  }
 
   late final YoutubeImporter youtube = YoutubeImporter(onTrackReady: (t) => _addTracks([t]));
 
@@ -692,6 +743,7 @@ class PlayerController extends ChangeNotifier {
     audio.addListener(_onAudioSettings);
     notifyListeners();
     unawaited(_enrichUntagged());
+    unawaited(FolderWatch.start(this)); // keeps the music folders up to date (folder_watch.dart)
   }
 
   Future<void> _save() async => LibraryStore.save(await SharedPreferences.getInstance(), _library);
@@ -793,6 +845,7 @@ class PlayerController extends ChangeNotifier {
 
   /// Adds every song, cue sheet and SACD image under [dir].
   Future<int> scanFolder(String dir) async {
+    unawaited(FolderWatch.instance.remember(dir)); // from now on this folder is kept up to date
     final entries = Directory(dir).list(recursive: true, followLinks: false);
     final tracks = <Track>[];
     final cues = <File>[];
@@ -878,10 +931,91 @@ class PlayerController extends ChangeNotifier {
     await _save();
   }
 
-  Future<void> removeTrack(Track track) async {
-    _library = _library.where((t) => t.id != track.id).toList();
+  Future<void> removeTrack(Track track) => removeTracks([track]);
+
+  /// Takes songs out of the library (their files stay). A folder look must not bring them back.
+  Future<void> removeTracks(Iterable<Track> tracks) async {
+    final ids = {for (final t in tracks) t.id};
+    if (ids.isEmpty) return;
+    FolderWatch.instance.exclude([for (final t in tracks) t.path]);
+    _library = _library.where((t) => !ids.contains(t.id)).toList();
     notifyListeners();
     await _save();
+  }
+
+  // ── Folder watching and duplicates (folder_watch.dart, duplicate_finder.dart) ──
+
+  /// Applies what a look at a music folder found: new files, gone files, moved files and changed files.
+  Future<void> applyFolderChanges(FolderPlan plan) async {
+    if (plan.removedIds.isNotEmpty || plan.moved.isNotEmpty || plan.retagIds.isNotEmpty) {
+      _library = [
+        for (final t in _library)
+          if (!plan.removedIds.contains(t.id))
+            if (plan.moved[t.id] case final m?)
+              m
+            else if (plan.retagIds.contains(t.id))
+              t.copyWith(tagged: false)
+            else
+              t,
+      ];
+      notifyListeners();
+      await _save();
+      await swapTrackRefs(plan.moved);
+    }
+    final paths = plan.addedPaths;
+    final cues = [
+      for (final path in paths)
+        if (path.toLowerCase().endsWith('.cue')) File(path),
+    ];
+    final isos = [
+      for (final path in paths)
+        if (path.toLowerCase().endsWith('.iso')) path,
+    ];
+    final split = await _readCues(cues);
+    final songs = [
+      for (final path in paths)
+        if (Track.isAudioPath(path) && !split.covers.contains(path)) Track.fromUri(Uri.file(path)),
+    ];
+    final fresh = [...songs, ...split.tracks, ...await _readSacds(isos)];
+    // A whole-album file the library already lists as one song is now split by its new cue sheet.
+    if (split.tracks.isNotEmpty) {
+      final known = _library.map((t) => t.id).toSet();
+      if (split.tracks.any((t) => !known.contains(t.id))) {
+        final whole = {for (final c in split.covers) Uri.file(c).toString()};
+        _library = _library.where((t) => !whole.contains(t.id)).toList();
+      }
+    }
+    if (await _addTracks(fresh) == 0 && plan.retagIds.isNotEmpty) unawaited(_enrichUntagged());
+  }
+
+  /// Points playlists and "recently played" at [to] wherever they hold a song with the id in [to]'s keys: a
+  /// song that moved, or the copy kept in place of a duplicate. A playlist that has the new one already
+  /// doesn't get it twice.
+  Future<void> swapTrackRefs(Map<String, Track> to) async {
+    if (to.isEmpty) return;
+    var playlistsChanged = false;
+    _playlists = [
+      for (final pl in _playlists)
+        if (pl.tracks.any((t) => to.containsKey(t.id)))
+          () {
+            playlistsChanged = true;
+            final seen = <String>{};
+            return pl.copyWith(
+              tracks: [
+                for (final t in pl.tracks)
+                  if (seen.add((to[t.id] ?? t).id)) to[t.id] ?? t,
+              ],
+            );
+          }()
+        else
+          pl,
+    ];
+    final recent = {for (final id in _recentIds) to[id]?.id ?? id}.toList();
+    final recentChanged = !listEquals(recent, _recentIds);
+    _recentIds = recent;
+    if (playlistsChanged || recentChanged) notifyListeners();
+    if (playlistsChanged) await _savePlaylists();
+    if (recentChanged) (await SharedPreferences.getInstance()).setStringList(_recentKey, _recentIds);
   }
 
   // ── Playback ─────────────────────────────────────────────────────────────
@@ -1029,6 +1163,7 @@ class PlayerController extends ChangeNotifier {
 
   /// Stops and empties the queue: the mini player and the notification go away.
   Future<void> closePlayer() async {
+    sleep.cancel();
     await player.stop();
     await player.clearAudioSources();
     _ordered = const [];
@@ -1272,6 +1407,8 @@ class PlayerController extends ChangeNotifier {
     }
     MemoryTrim.stop();
     cast.dispose();
+    _crossfader.dispose();
+    sleep.dispose();
     for (final s in _subs) {
       s.cancel();
     }
@@ -1285,6 +1422,32 @@ class PlayerController extends ChangeNotifier {
     _level.dispose();
     super.dispose();
   }
+}
+
+/// Lets the [SleepTimer] read and control the player.
+class _SleepHost implements SleepHost {
+  _SleepHost(this.c);
+  final PlayerController c;
+
+  @override
+  bool get playing => c.isPlaying;
+
+  @override
+  String? get trackId => c.currentTrack?.id;
+
+  @override
+  Duration? get songRemaining {
+    final d = c.duration;
+    if (d == null || d <= const Duration(seconds: 1)) return null; // not known yet
+    final left = d - c.position;
+    return left.isNegative ? Duration.zero : left;
+  }
+
+  @override
+  void setFade(double gain) => c._setSleepFade(gain);
+
+  @override
+  Future<void> pause() => c.pause();
 }
 
 /// Makes the [PlayerController] available to the widget tree.

@@ -215,6 +215,9 @@ enum CollectionKind {
   album('Album'),
   youtube('Playlist'),
   remote('Playlist'),
+
+  /// A built-in list worked out from the library and the listening history (Most played…); not editable.
+  smart('Playlist'),
   artist('Artist');
 
   const CollectionKind(this.label);

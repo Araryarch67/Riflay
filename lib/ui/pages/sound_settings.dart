@@ -10,6 +10,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../services/audio_engine.dart';
 import '../../services/carla_locator.dart';
+import '../../services/crossfade.dart';
 import '../../services/layout_prefs.dart';
 import '../../services/player_controller.dart';
 import '../shell_scope.dart';
@@ -73,6 +74,51 @@ class PlaybackSettings extends StatelessWidget {
                 value: audio.gapless,
                 onChanged: audio.setGapless,
               ),
+              SwitchListTile(
+                secondary: const Icon(Icons.compare_arrows_rounded),
+                title: const Text('Crossfade'),
+                subtitle: Text(
+                  audio.crossfadeBlock ??
+                      'The end of a song fades into the start of the next. Off in bit-perfect and exclusive modes',
+                  style: muted,
+                ),
+                value: audio.crossfade,
+                onChanged: audio.crossfadeBlock != null ? null : audio.setCrossfade,
+              ),
+              if (audio.crossfade && audio.crossfadeBlock == null) ...[
+                SettingTile(
+                  icon: Icons.timelapse_rounded,
+                  title: const Text('Fade length'),
+                  control: SizedBox(
+                    width: 220,
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Slider(
+                            value: audio.crossfadeSeconds.toDouble(),
+                            min: CrossfadeRules.minSeconds.toDouble(),
+                            max: CrossfadeRules.maxSeconds.toDouble(),
+                            divisions: CrossfadeRules.maxSeconds - CrossfadeRules.minSeconds,
+                            label: '${audio.crossfadeSeconds} s',
+                            onChanged: (v) => audio.setCrossfadeSeconds(v.round()),
+                          ),
+                        ),
+                        SizedBox(width: 40, child: Text('${audio.crossfadeSeconds} s', style: muted)),
+                      ],
+                    ),
+                  ),
+                ),
+                SwitchListTile(
+                  secondary: const Icon(Icons.album_outlined),
+                  title: const Text('Skip for albums'),
+                  subtitle: Text(
+                    'Songs that follow each other on an album play without a fade, as the artist made them',
+                    style: muted,
+                  ),
+                  value: audio.crossfadeSkipAlbums,
+                  onChanged: audio.setCrossfadeSkipAlbums,
+                ),
+              ],
               SwitchListTile(
                 secondary: const Icon(Icons.spatial_audio_rounded),
                 title: const Text('Virtual speakers'),

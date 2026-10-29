@@ -7,7 +7,9 @@ import 'package:media_kit_video/media_kit_video.dart';
 
 import '../models/track.dart';
 import 'beta_features.dart';
+import 'download_files.dart';
 import 'player_controller.dart';
+import 'video_download.dart';
 import 'youtube_stream.dart';
 import 'ytmusic_web.dart';
 
@@ -85,9 +87,25 @@ class VideoMode extends ChangeNotifier with WidgetsBindingObserver {
   final _found = <String, MusicVideo?>{};
   final _asking = <String>{};
 
-  /// The music video of [track], when it has one and this device can show it.
-  MusicVideo? videoOf(Track? track) =>
-      _canDecode && BetaFeatures.instance.isOn(BetaFeature.videoMode) ? _found[track?.videoId] : null;
+  /// The downloaded music video that [track] is playing from, if it is: the file itself, or the downloaded copy of
+  /// a streamed song. Only that file, so the picture is the very recording the sound comes from.
+  File? localVideoOf(Track? track) {
+    final c = _c;
+    if (track == null || c == null) return null;
+    final path = track.isRemote ? c.downloadedCopy(track)?.path : track.path;
+    if (path == null || !isVideoFile(path)) return null;
+    return File(path);
+  }
+
+  /// The music video of [track], when it has one and this device can show it. A downloaded one is there
+  /// without asking YouTube Music, so it also works offline.
+  MusicVideo? videoOf(Track? track) {
+    if (!_canDecode || !BetaFeatures.instance.isOn(BetaFeature.videoMode)) return null;
+    if (localVideoOf(track) != null) {
+      return MusicVideo(videoId: track?.videoId ?? youtubeVideoIdOf(track?.sourceUrl) ?? track!.id);
+    }
+    return _found[track?.videoId];
+  }
 
   /// Asks YouTube Music once whether [track] has a video (one small request,
   /// made when a Now Playing view shows the song; no video data).
@@ -99,6 +117,7 @@ class VideoMode extends ChangeNotifier with WidgetsBindingObserver {
         !_canDecode ||
         !BetaFeatures.instance.isOn(BetaFeature.videoMode) ||
         _found.containsKey(id) ||
+        localVideoOf(track) != null ||
         !_asking.add(id)) {
       return;
     }
@@ -238,11 +257,18 @@ class VideoMode extends ChangeNotifier with WidgetsBindingObserver {
       await mpv.setProperty('cache-secs', '30');
       await mpv.setProperty('demuxer-max-bytes', '${32 << 20}');
       await mpv.setProperty('demuxer-max-back-bytes', '${8 << 20}');
-      final stream = await YoutubeStream.video(v.videoId, maxHeight: maxHeight);
-      if (!identical(player, _player)) return;
-      debugPrint('Video mode: ${v.videoId} at ${stream.height}p ${stream.codec}');
       final at = v.videoTimeAt(_c?.position ?? Duration.zero) ?? Duration.zero;
-      await player.open(Media(stream.url.toString(), start: at), play: false);
+      final local = localVideoOf(_c?.currentTrack);
+      if (local != null) {
+        // The downloaded file: no network, and the size it was saved at.
+        debugPrint('Video mode: ${v.videoId} from ${local.path}');
+        await player.open(Media(Uri.file(local.path).toString(), start: at), play: false);
+      } else {
+        final stream = await YoutubeStream.video(v.videoId, maxHeight: maxHeight);
+        if (!identical(player, _player)) return;
+        debugPrint('Video mode: ${v.videoId} at ${stream.height}p ${stream.codec}');
+        await player.open(Media(stream.url.toString(), start: at), play: false);
+      }
       await video.waitUntilFirstFrameRendered.timeout(const Duration(seconds: 25));
       if (!identical(player, _player)) return;
       _ready = true;

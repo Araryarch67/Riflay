@@ -11,6 +11,7 @@ import '../services/download_notifications.dart';
 import '../services/appearance.dart';
 import '../services/layout_prefs.dart';
 import '../services/player_controller.dart';
+import '../services/wrap.dart';
 import 'pages/collection_page.dart';
 import 'pages/downloads_page.dart';
 import 'pages/home_page.dart';
@@ -19,6 +20,7 @@ import 'pages/lyrics_page.dart';
 import 'pages/queue_page.dart';
 import 'pages/search_page.dart';
 import 'pages/settings_page.dart';
+import 'pages/wrap_page.dart';
 import 'navigation.dart';
 import 'player_panels.dart';
 import 'shell_scope.dart';
@@ -72,6 +74,11 @@ class _HomeShellState extends State<HomeShell> {
     DownloadNotifications.registerOpenDownloads(() {
       if (mounted) _open(const DownloadsPage());
     });
+    // Tapping "Your <Month> in music is ready" opens that Wrap.
+    DownloadNotifications.registerOpenWrap((key) {
+      final month = WrapMonth.parse(key);
+      if (mounted && month != null) _open(WrapPage(month: month), location: Locations.wrap);
+    });
   }
 
   String? _location;
@@ -122,6 +129,7 @@ class _HomeShellState extends State<HomeShell> {
     _player?.removeListener(_followTrack);
     _history.removeListener(_followLocation);
     DownloadNotifications.registerOpenDownloads(null);
+    DownloadNotifications.registerOpenWrap(null);
     _errors?.cancel();
     _listenEvents?.cancel();
     _searchFocus.dispose();

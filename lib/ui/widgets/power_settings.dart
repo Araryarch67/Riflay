@@ -66,7 +66,8 @@ class _PowerHeader extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(18, 16, 18, 6),
       child: Text(
         'Power',
-        style: Theme.of(context).textTheme.labelLarge?.copyWith(color: AppColors.textSecondary, fontWeight: FontWeight.w700),
+        style: Theme.of(context).textTheme.labelLarge
+            ?.copyWith(color: AppColors.textSecondary, fontWeight: FontWeight.w700),
       ),
     ),
   );

@@ -69,7 +69,10 @@ class _ColorPickerDialogState extends State<_ColorPickerDialog> {
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(color: AppColors.border),
                   ),
-                  child: Text('Aa', style: TextStyle(color: onColorFor(color), fontWeight: FontWeight.w700)),
+                  child: Text(
+                    'Aa',
+                    style: TextStyle(color: onColorFor(color), fontWeight: FontWeight.w700),
+                  ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -121,9 +124,7 @@ class _SaturationBrightness extends StatelessWidget {
         const height = 160.0;
         final width = c.maxWidth;
         void pick(Offset p) => onChanged(
-          hsv
-              .withSaturation((p.dx / width).clamp(0.0, 1.0))
-              .withValue((1 - p.dy / height).clamp(0.0, 1.0)),
+          hsv.withSaturation((p.dx / width).clamp(0.0, 1.0)).withValue((1 - p.dy / height).clamp(0.0, 1.0)),
         );
         return Semantics(
           label: 'Saturation and brightness',
@@ -209,7 +210,9 @@ class _HueBar extends StatelessWidget {
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(10),
                         gradient: LinearGradient(
-                          colors: [for (var h = 0; h <= 360; h += 60) HSVColor.fromAHSV(1, h.toDouble(), 1, 1).toColor()],
+                          colors: [
+                            for (var h = 0; h <= 360; h += 60) HSVColor.fromAHSV(1, h.toDouble(), 1, 1).toColor(),
+                          ],
                         ),
                       ),
                     ),

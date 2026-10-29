@@ -19,6 +19,8 @@ import 'pcm_decoder.dart';
 import 'private_files.dart';
 import 'metadata.dart';
 import 'ranged_download.dart';
+import 'video_download.dart';
+import 'webm_mux.dart' show MuxException, MuxTags;
 import 'youtube_links.dart';
 import 'youtube_stream.dart';
 import 'webm_opus.dart';
@@ -109,6 +111,15 @@ class DownloadJob {
 
   DownloadPhase phase = DownloadPhase.downloading;
 
+  /// Which stream the partial file on disk (`<id>.<ext>.part`) holds: its itag, size and container. Kept with the
+  /// job so an interrupted download can continue from it once the stream is resolved again.
+  String? partItag;
+  int? partSize;
+  String? partExt;
+
+  /// The same for a video download's two partial files, by role (`video`, `sound`): `<id>.<role>.<ext>.part`.
+  final Map<String, ({String itag, int size, String ext})> videoParts = {};
+
   /// The stream has arrived and is being converted (FLAC, MP3, or a lower bitrate): no progress to show.
   bool get converting => phase == DownloadPhase.converting;
 
@@ -131,7 +142,19 @@ class DownloadJob {
       'album': album,
       'status': status.name,
       'error': error,
-      if (choice case final c?) 'choice': {'format': c.format.name, 'kbps': c.kbps, 'flac': c.flac.name},
+      if (partItag != null && partSize != null && partExt != null)
+        'part': {'itag': partItag, 'size': partSize, 'ext': partExt},
+      if (videoParts.isNotEmpty)
+        'videoParts': {
+          for (final e in videoParts.entries) e.key: {'itag': e.value.itag, 'size': e.value.size, 'ext': e.value.ext},
+        },
+      if (choice case final c?)
+        'choice': {
+          'format': c.format.name,
+          'kbps': c.kbps,
+          'flac': c.flac.name,
+          if (c.container case final container?) ...{'container': container.name, 'height': c.height},
+        },
     };
   }
 
@@ -142,7 +165,12 @@ class DownloadJob {
     final id = json['videoId'], title = json['title'];
     if (id is! String || !YoutubeImporter.isVideoId(id) || title is! String) return null;
     DownloadChoice? choice;
-    if (json['choice'] case final Map c) {
+    if (json['choice'] case final Map c when VideoContainer.values.any((v) => v.name == c['container'])) {
+      choice = DownloadChoice.video(
+        VideoContainer.values.firstWhere((v) => v.name == c['container']),
+        height: c['height'] as int?,
+      );
+    } else if (json['choice'] case final Map c) {
       final format = DownloadFormat.values.where((f) => f.name == c['format']).firstOrNull;
       if (format != null) {
         choice = DownloadChoice(
@@ -163,7 +191,31 @@ class DownloadJob {
         album: json['album'] as String?,
       )
       ..status = failed ? DownloadStatus.failed : DownloadStatus.queued
-      ..error = failed ? (json['error'] as String? ?? 'Failed') : null;
+      ..error = failed ? (json['error'] as String? ?? 'Failed') : null
+      ..readPart(json['part'])
+      ..readVideoParts(json['videoParts']);
+  }
+
+  void readVideoParts(Object? parts) {
+    if (parts is! Map) return;
+    for (final role in const ['video', 'sound', 'single']) {
+      final part = parts[role];
+      if (part is! Map) continue;
+      final itag = part['itag'], size = part['size'], ext = part['ext'];
+      if (itag is String && size is int && (ext == 'webm' || ext == 'mp4' || ext == 'm4a')) {
+        videoParts[role] = (itag: itag, size: size, ext: ext as String);
+      }
+    }
+  }
+
+  void readPart(Object? part) {
+    if (part is! Map) return;
+    final itag = part['itag'], size = part['size'], ext = part['ext'];
+    if (itag is String && size is int && (ext == 'webm' || ext == 'm4a')) {
+      partItag = itag;
+      partSize = size;
+      partExt = ext as String;
+    }
   }
 }
 
@@ -195,11 +247,15 @@ class _Audio {
     required this.sourceExt,
     required this.ext,
     required this.quality,
+    this.itag,
     this.convert,
     this.estimatedSize,
   });
 
   final Uri url;
+
+  /// The stream's format id (YouTube's itag); null if the lister doesn't say.
+  final String? itag;
 
   /// Size of the stream as served (not of the converted file).
   final int? size;
@@ -382,7 +438,8 @@ class YoutubeImporter extends ChangeNotifier {
   }
 
   /// Brings back what an earlier run left: waiting and interrupted downloads start again, failed ones show Retry.
-  /// Half-written files are not continued (see [canResumePart]): the download starts clean.
+  /// An interrupted download continues from its partial file when the stream resolves to the same itag and size
+  /// (see [canResumePart]); otherwise it starts clean.
   Future<void> restoreQueue() async {
     final file = await _file();
     if (file == null) return;
@@ -439,7 +496,15 @@ class YoutubeImporter extends ChangeNotifier {
     var added = 0;
     for (final job in fresh.where((j) => _videoId.hasMatch(j.videoId))) {
       final existing = _jobs.where((j) => j.videoId == job.videoId).firstOrNull;
-      if (existing != null && existing.status != DownloadStatus.failed && existing.status != DownloadStatus.cancelled) {
+      // A finished audio download doesn't stop the same song being downloaded again as a video, or the reverse.
+      final otherKind =
+          existing?.status == DownloadStatus.done &&
+          job.choice != null &&
+          existing?.choice?.isVideo != job.choice!.isVideo;
+      if (existing != null &&
+          existing.status != DownloadStatus.failed &&
+          existing.status != DownloadStatus.cancelled &&
+          !otherKind) {
         continue;
       }
       _jobs.remove(existing);
@@ -460,14 +525,46 @@ class YoutubeImporter extends ChangeNotifier {
     unawaited(_drain());
   }
 
+  /// Removes the partial file a job left (and its state), and forgets what it held.
+  void _discardPartOf(DownloadJob job) {
+    final video = Map.of(job.videoParts);
+    job.videoParts.clear();
+    if (video.isNotEmpty) {
+      unawaited(() async {
+        try {
+          final dir = await downloadsDir();
+          for (final e in video.entries) {
+            discardPartial(File(p.join(dir.path, '${job.videoId}.${e.key}.${e.value.ext}.part')));
+          }
+        } catch (_) {}
+      }());
+    }
+    final ext = job.partExt;
+    job
+      ..partItag = null
+      ..partSize = null
+      ..partExt = null;
+    if (ext == null) return;
+    unawaited(() async {
+      try {
+        discardPartial(File(p.join((await downloadsDir()).path, '${job.videoId}.$ext.part')));
+      } catch (_) {}
+    }());
+  }
+
   void cancel(DownloadJob job) {
     if (!job.isActive) return;
     // The running download notices this between chunks and cleans up.
+    final waiting = job.status == DownloadStatus.queued;
     job.status = DownloadStatus.cancelled;
+    if (waiting) _discardPartOf(job);
     notifyListeners();
   }
 
   void clearFinished() {
+    for (final j in _jobs.where((j) => !j.isActive && (j.partExt != null || j.videoParts.isNotEmpty))) {
+      _discardPartOf(j);
+    }
     _jobs.removeWhere((j) => !j.isActive);
     notifyListeners();
   }
@@ -499,7 +596,9 @@ class YoutubeImporter extends ChangeNotifier {
   Future<({int? size, bool approx, String quality})?> peekAudio(String videoId, {DownloadChoice? choice}) async {
     try {
       await DownloadPrefs.instance.load();
-      final r = await _resolveAudio(videoId, choice ?? DownloadPrefs.instance.choice);
+      var asked = choice ?? DownloadPrefs.instance.choice;
+      if (asked.isVideo) asked = DownloadPrefs.instance.audioChoice;
+      final r = await _resolveAudio(videoId, asked);
       final made = r.convert is ToFlac || r.convert is ToMp3;
       return (size: made ? r.estimatedSize : r.size, approx: made, quality: r.quality);
     } catch (_) {
@@ -518,6 +617,7 @@ class YoutubeImporter extends ChangeNotifier {
         url: r.audio.url,
         size: r.audio.size,
         sourceExt: sourceExt,
+        itag: r.audio.formatId,
         ext: _savedExt(r.convert, sourceExt),
         quality: _qualityOf(r.convert, opus: r.audio.isOpus, kbps: r.audio.kbps),
         convert: r.convert,
@@ -540,6 +640,7 @@ class YoutubeImporter extends ChangeNotifier {
       url: stream.url,
       size: stream.size.totalBytes,
       sourceExt: sourceExt,
+      itag: '${stream.tag}',
       ext: _savedExt(pick.convert, sourceExt),
       quality: pick.label,
       convert: pick.convert,
@@ -727,6 +828,35 @@ class YoutubeImporter extends ChangeNotifier {
     }
   }
 
+  /// Waits between a dropped connection and the next try; the length is the number of tries.
+  @visibleForTesting
+  static List<Duration> retryDelays = const [Duration(seconds: 2), Duration(seconds: 6), Duration(seconds: 15)];
+
+  /// Decides whether [part] continues: only when [audio] is the very stream it holds (same itag, same size).
+  /// Otherwise it (and any partial of another container) is removed. Records what [part] will hold, and starts the
+  /// progress at what is already there. Returns whether [rangedDownload] should resume.
+  Future<bool> _prepareResume(DownloadJob job, _Audio audio, File part, Directory dir) async {
+    final oldExt = job.partExt;
+    if (oldExt != null && oldExt != audio.sourceExt) {
+      discardPartial(File(p.join(dir.path, '${job.videoId}.$oldExt.part')));
+    }
+    final have = part.existsSync() ? await partialBytes(part) : 0;
+    final ok = canResumePart(
+      savedItag: oldExt == audio.sourceExt ? job.partItag : null,
+      savedSize: job.partSize,
+      freshItag: audio.itag,
+      freshSize: audio.size,
+      partBytes: have,
+    );
+    if (!ok) discardPartial(part);
+    job
+      ..partItag = audio.itag
+      ..partSize = audio.size
+      ..partExt = audio.sourceExt;
+    notifyListeners();
+    return ok;
+  }
+
   Future<void> _download(DownloadJob job) async {
     notifyListeners();
     File? partFile;
@@ -736,11 +866,17 @@ class YoutubeImporter extends ChangeNotifier {
       await DownloadPrefs.instance.load();
       if (await _blockedByMobileData()) throw const _OnMobileData();
       final dir = await downloadsDir();
-      final choice = job.choice ??= DownloadPrefs.instance.choice;
+      var choice = job.choice ??= DownloadPrefs.instance.choice;
+      if (choice.isVideo) {
+        if (await _downloadVideo(job, choice, dir)) return;
+        // This song has no music video to save (or none that can be): it is saved as audio, as Settings says.
+        choice = job.choice = DownloadPrefs.instance.audioChoice;
+      }
       if (choice.format.lossless && !canMakeFlac) throw const _NoFlac();
       if (choice.format == DownloadFormat.mp3 && !canMakeMp3) throw const _NoMp3();
       // Metadata and the stream URL resolve in parallel.
-      final (video, audio) = await (_yt.videos.get(job.videoId), _resolveAudio(job.videoId, choice)).wait;
+      final (video, resolved) = await (_yt.videos.get(job.videoId), _resolveAudio(job.videoId, choice)).wait;
+      var audio = resolved;
       job.quality = audio.quality;
       // The stream is stored byte-for-byte as YouTube serves it unless a conversion was asked for.
       final audioFile = File(p.join(dir.path, '${job.videoId}.${audio.sourceExt}'));
@@ -750,6 +886,8 @@ class YoutubeImporter extends ChangeNotifier {
       var lastNotified = 0.0;
       var sampleBytes = 0;
       final sampleClock = Stopwatch()..start();
+      // What an earlier run left: continued only if it is the very same stream, otherwise removed.
+      var resume = await _prepareResume(job, audio, partFile, dir);
       job
         ..totalBytes = audio.size
         ..receivedBytes = 0
@@ -760,35 +898,51 @@ class YoutubeImporter extends ChangeNotifier {
       // Looked up while the audio downloads, so the song has its lyrics offline too.
       final lyrics = _lyricsOf(job.videoId, names, video.duration);
       final albumYear = job.album == null ? Future<int?>.value() : _albumYearOf(job.album!, names.artist);
-      try {
-        await rangedDownload(
-          url: audio.url,
-          out: partFile,
-          totalBytes: audio.size,
-          isCancelled: () => job.status == DownloadStatus.cancelled,
-          onProgress: (received, total) {
-            job
-              ..progress = received / total
-              ..totalBytes = total
-              ..receivedBytes = received;
-            // Exponential moving average over ~250 ms windows keeps the speed readout steady.
-            final elapsed = sampleClock.elapsedMicroseconds;
-            if (elapsed >= 250000) {
-              final rate = (received - sampleBytes) / (elapsed / 1e6);
-              job.bytesPerSecond = job.bytesPerSecond == null ? rate : job.bytesPerSecond! * 0.6 + rate * 0.4;
-              sampleBytes = received;
-              sampleClock.reset();
-            }
-            if (job.progress - lastNotified >= 0.01) {
-              lastNotified = job.progress;
-              notifyListeners();
-            }
-          },
-        );
-      } catch (_) {
-        // A stale cached URL is the usual cause; resolve fresh next time.
-        YoutubeStream.invalidateEverywhere(job.videoId);
-        rethrow;
+      for (var attempt = 0; ; attempt++) {
+        try {
+          await rangedDownload(
+            url: audio.url,
+            out: partFile,
+            totalBytes: audio.size,
+            resume: resume,
+            tag: audio.itag,
+            isCancelled: () => job.status == DownloadStatus.cancelled,
+            onProgress: (received, total) {
+              job
+                ..progress = received / total
+                ..totalBytes = total
+                ..receivedBytes = received;
+              if (sampleBytes > received) sampleBytes = received;
+              // Exponential moving average over ~250 ms windows keeps the speed readout steady.
+              final elapsed = sampleClock.elapsedMicroseconds;
+              if (elapsed >= 250000) {
+                final rate = (received - sampleBytes) / (elapsed / 1e6);
+                job.bytesPerSecond = job.bytesPerSecond == null ? rate : job.bytesPerSecond! * 0.6 + rate * 0.4;
+                sampleBytes = received;
+                sampleClock.reset();
+              }
+              if (job.progress - lastNotified >= 0.01) {
+                lastNotified = job.progress;
+                notifyListeners();
+              }
+            },
+          );
+          break;
+        } catch (e) {
+          // A stale cached URL is the usual cause; resolve fresh next time.
+          YoutubeStream.invalidateEverywhere(job.videoId);
+          if (e is DownloadCancelled || job.status == DownloadStatus.cancelled || attempt >= retryDelays.length) {
+            rethrow;
+          }
+          debugPrint('Download ${job.videoId}: interrupted, trying again (${attempt + 1}): $e');
+          await Future<void>.delayed(retryDelays[attempt]);
+          if (job.status == DownloadStatus.cancelled) throw const DownloadCancelled();
+          // The URL may have expired; the stream is resolved again and the partial file continues if it matches.
+          audio = await _resolveAudio(job.videoId, choice);
+          job.quality = audio.quality;
+          resume = await _prepareResume(job, audio, partFile, dir);
+          lastNotified = 0;
+        }
       }
       downloaded = await partFile.rename(audioFile.path);
       var saved = audioFile;
@@ -845,7 +999,14 @@ class YoutubeImporter extends ChangeNotifier {
         ..status = DownloadStatus.done;
       await onTrackReady(track);
     } catch (e) {
-      if (partFile != null && partFile.existsSync()) partFile.deleteSync();
+      // An interruption keeps the partial file for Retry (or the next start); a cancel removes it.
+      if (job.status == DownloadStatus.cancelled) {
+        if (partFile != null) discardPartial(partFile);
+        job
+          ..partItag = null
+          ..partSize = null
+          ..partExt = null;
+      }
       // Nothing half-made stays: the stream file and a finished FLAC of a job that didn't complete go too.
       if (job.track == null) {
         for (final f in [downloaded, converted]) {
@@ -861,6 +1022,293 @@ class YoutubeImporter extends ChangeNotifier {
       job.phase = DownloadPhase.downloading;
       notifyListeners();
     }
+  }
+
+  /// A stream to fetch for a video download: where, how big, which one, and its file type.
+  static ({Uri url, int? size, String itag, String ext}) _streamOf(
+    Object? ref, {
+    required String itag,
+    required int? size,
+    required String ext,
+  }) {
+    final url = Uri.parse((ref! as Map)['url'] as String);
+    return (url: url, size: int.tryParse(url.queryParameters['clen'] ?? '') ?? size, itag: itag, ext: ext);
+  }
+
+  /// Fetches [streams] (role → stream) at the same time into `<id>.<role>.<ext>.part` files and returns the files
+  /// once complete. One progress for all of them. An interrupted fetch tries again, with the streams resolved
+  /// afresh by [resolve]; partial files carry on where the same stream is still the one served.
+  Future<Map<String, File>> _fetchAll(
+    DownloadJob job,
+    Directory dir,
+    Future<Map<String, ({Uri url, int? size, String itag, String ext})>> Function() resolve,
+    Map<String, ({Uri url, int? size, String itag, String ext})> first,
+  ) async {
+    var streams = first;
+    final got = <String, int>{}, totals = <String, int>{};
+    var sampleBytes = 0;
+    final sampleClock = Stopwatch()..start();
+    var lastNotified = 0.0;
+    job
+      ..totalBytes = streams.values.every((s) => s.size != null)
+          ? streams.values.fold<int>(0, (a, s) => a + s.size!)
+          : null
+      ..receivedBytes = 0
+      ..progress = 0
+      ..bytesPerSecond = null;
+
+    File partOf(String role, String ext) => File(p.join(dir.path, '${job.videoId}.$role.$ext.part'));
+
+    for (var attempt = 0; ; attempt++) {
+      var abort = false;
+      try {
+        // What an earlier run left is continued only for the very same stream.
+        final resumes = <String, bool>{};
+        for (final e in streams.entries) {
+          final old = job.videoParts[e.key];
+          if (old != null && old.ext != e.value.ext) discardPartial(partOf(e.key, old.ext));
+          final part = partOf(e.key, e.value.ext);
+          final have = part.existsSync() ? await partialBytes(part) : 0;
+          final ok = canResumePart(
+            savedItag: old?.ext == e.value.ext ? old?.itag : null,
+            savedSize: old?.size,
+            freshItag: e.value.itag,
+            freshSize: e.value.size,
+            partBytes: have,
+          );
+          if (!ok) discardPartial(part);
+          resumes[e.key] = ok;
+          final size = e.value.size;
+          if (size == null) {
+            job.videoParts.remove(e.key);
+          } else {
+            job.videoParts[e.key] = (itag: e.value.itag, size: size, ext: e.value.ext);
+          }
+        }
+        notifyListeners();
+        got.clear();
+        totals.clear();
+
+        Future<void> fetch(String role, ({Uri url, int? size, String itag, String ext}) s) =>
+            rangedDownload(
+              url: s.url,
+              out: partOf(role, s.ext),
+              totalBytes: s.size,
+              // The picture is most of the bytes; the sound gets fewer connections.
+              workers: role == 'sound' ? 2 : 4,
+              resume: resumes[role] ?? false,
+              tag: s.itag,
+              isCancelled: () => abort || job.status == DownloadStatus.cancelled,
+              onProgress: (received, total) {
+                got[role] = received;
+                totals[role] = total;
+                if (totals.length < streams.length) return;
+                final all = got.values.fold(0, (a, b) => a + b), whole = totals.values.fold(0, (a, b) => a + b);
+                job
+                  ..progress = whole == 0 ? 0 : all / whole
+                  ..totalBytes = whole
+                  ..receivedBytes = all;
+                if (sampleBytes > all) sampleBytes = all;
+                final elapsed = sampleClock.elapsedMicroseconds;
+                if (elapsed >= 250000) {
+                  final rate = (all - sampleBytes) / (elapsed / 1e6);
+                  job.bytesPerSecond = job.bytesPerSecond == null ? rate : job.bytesPerSecond! * 0.6 + rate * 0.4;
+                  sampleBytes = all;
+                  sampleClock.reset();
+                }
+                if (job.progress - lastNotified >= 0.01) {
+                  lastNotified = job.progress;
+                  notifyListeners();
+                }
+              },
+            ).catchError((Object e) {
+              abort = true; // the other stream stops too
+              throw e;
+            });
+
+        await Future.wait([for (final e in streams.entries) fetch(e.key, e.value)], eagerError: true);
+        return {for (final e in streams.entries) e.key: partOf(e.key, e.value.ext)};
+      } catch (e) {
+        abort = true;
+        if (e is DownloadCancelled || job.status == DownloadStatus.cancelled || attempt >= retryDelays.length) {
+          rethrow;
+        }
+        debugPrint('Download ${job.videoId}: interrupted, trying again (${attempt + 1}): $e');
+        await Future<void>.delayed(retryDelays[attempt]);
+        if (job.status == DownloadStatus.cancelled) throw const DownloadCancelled();
+        // The URLs may have expired.
+        streams = await resolve();
+        lastNotified = 0;
+      }
+    }
+  }
+
+  /// Saves the song's music video (or, for a pasted link, the video itself) as one MP4 or WebM: the picture and the
+  /// sound stream are fetched at the same time and combined without re-encoding ([muxVideo]).
+  ///
+  /// Returns false, having done nothing, when the song has no music video, or the container asked for can't be made
+  /// from what the video offers: the caller then saves audio. Anything else that goes wrong marks the job failed
+  /// (and still returns true).
+  Future<bool> _downloadVideo(DownloadJob job, DownloadChoice choice, Directory dir) async {
+    var streamId = job.knownNames ? null : job.videoId;
+    if (job.knownNames) {
+      try {
+        final web = _web ??= YtMusicWeb.anonymous();
+        streamId = (await web.musicVideo(job.videoId).timeout(const Duration(seconds: 15)))?.videoId;
+      } catch (e) {
+        if (e is SocketException || e is http.ClientException) rethrow;
+        debugPrint('Download: no music video for ${job.videoId}: $e');
+      }
+    }
+    if (streamId == null) return false;
+    final id = streamId;
+    final useFfmpeg = Ffmpeg.available;
+    VideoFormats formats;
+    VideoPick? pick;
+    try {
+      formats = await YoutubeStream.videoFormats(id);
+      pick = pickVideoDownload(formats, choice, ffmpeg: useFfmpeg);
+    } catch (e) {
+      if (e is SocketException || e is http.ClientException || e is TimeoutException) rethrow;
+      debugPrint('Download: no video streams for $id: $e');
+      return false;
+    }
+    if (pick == null) return false;
+
+    Map<String, ({Uri url, int? size, String itag, String ext})> streamsOf(VideoPick p) => {
+      'video': _streamOf(p.video.ref, itag: p.video.id, size: p.video.sizeBytes, ext: p.video.ext),
+      'sound': _streamOf(p.audio.ref, itag: p.audio.id, size: p.audio.sizeBytes, ext: p.audio.opus ? 'webm' : 'm4a'),
+    };
+
+    var label = pick.label;
+    job.quality = label;
+    final container = pick.container;
+    final extension = container == VideoContainer.mp4 ? 'mp4' : 'webm';
+    final target = File(p.join(dir.path, '${job.videoId}.$extension'));
+    final made = <File>[];
+    try {
+      final videoInfo = _yt.videos.get(id);
+      final thumbnail = videoInfo.then((v) => _saveCover(v, job, p.join(dir.path, '${job.videoId}.jpg')));
+      final first = streamsOf(pick);
+      notifyListeners();
+      final parts = await _fetchAll(job, dir, () async {
+        final fresh = pickVideoDownload(await YoutubeStream.videoFormats(id), choice, ffmpeg: useFfmpeg);
+        if (fresh == null) throw StateError('No video stream for this song.');
+        job.quality = label = fresh.label;
+        pick = fresh;
+        return streamsOf(fresh);
+      }, first);
+      for (final e in parts.entries) {
+        final ext = p.extension(p.withoutExtension(e.value.path)); // ".mp4" of "<id>.video.mp4.part"
+        made.add(await e.value.rename(p.join(dir.path, '${job.videoId}.${e.key}$ext')));
+      }
+      job.videoParts.clear();
+      bool cancelled() => job.status == DownloadStatus.cancelled;
+      if (cancelled()) throw const _Cancelled();
+      job.phase = DownloadPhase.finishing;
+      notifyListeners();
+
+      final video = await videoInfo;
+      final names = job.knownNames ? (title: job.title, artist: job.channel) : parseTitle(video.title, video.author);
+      final lyrics = _lyricsOf(job.videoId, names, video.duration);
+      final cover = await thumbnail;
+      final year = job.album == null ? video.uploadDate?.year : await _albumYearOf(job.album!, names.artist);
+      final sourceUrl = 'https://www.youtube.com/watch?v=${job.videoId}';
+      final tags = MuxTags(
+        title: names.title,
+        artist: names.artist,
+        album: job.album,
+        year: year,
+        comment: sourceUrl,
+        cover: cover?.bytes,
+        coverMime: cover?.mime ?? 'image/jpeg',
+      );
+
+      var saved = target;
+      final out = File('${target.path}.mux.part');
+      try {
+        await muxVideo(
+          video: parts.keys.contains('video')
+              ? made.firstWhere((f) => p.basename(f.path).contains('.video.'))
+              : made.first,
+          audio: made.firstWhere((f) => p.basename(f.path).contains('.sound.')),
+          out: out,
+          container: container,
+          tags: tags,
+          useFfmpeg: Ffmpeg.installed || pick!.needsFfmpeg,
+        );
+        await out.rename(target.path);
+      } catch (e) {
+        if (out.existsSync()) out.deleteSync();
+        if (cancelled()) throw const _Cancelled();
+        // The one-file 360p MP4 still has picture and sound in it: better than losing the download.
+        final single = container == VideoContainer.mp4 ? pickProgressive(formats) : null;
+        if (single == null) rethrow;
+        debugPrint('Download ${job.videoId}: couldn\'t combine the streams ($e), saving the one-file version');
+        job
+          ..phase = DownloadPhase.downloading
+          ..quality = label = 'Video · MP4 · ${single.height}p · smaller, as the sizes couldn\'t be combined';
+        notifyListeners();
+        final got = await _fetchAll(job, dir, () async {
+          final fresh = pickProgressive(await YoutubeStream.videoFormats(id));
+          if (fresh == null) throw StateError('No video stream for this song.');
+          return {'single': _streamOf(fresh.ref, itag: fresh.id, size: fresh.sizeBytes, ext: 'mp4')};
+        }, {'single': _streamOf(single.ref, itag: single.id, size: single.sizeBytes, ext: 'mp4')});
+        job.videoParts.clear();
+        saved = await got['single']!.rename(target.path);
+        job.phase = DownloadPhase.finishing;
+        notifyListeners();
+        await _tagFile(
+          saved,
+          TagEdit(title: names.title, artist: names.artist, album: job.album, year: year)
+            ..comment = sourceUrl
+            ..cover = cover?.bytes
+            ..coverMime = cover?.mime ?? 'image/jpeg',
+        );
+      }
+      made
+        ..add(saved)
+        ..forEach((f) {
+          if (f.path != saved.path && f.existsSync()) f.deleteSync();
+        });
+      made.clear();
+      if (cancelled()) {
+        saved.deleteSync();
+        throw const _Cancelled();
+      }
+      made.add(saved);
+      job.totalBytes = saved.lengthSync();
+      await _saveLyrics(await lyrics, saved.path);
+      final track = Track(
+        id: Uri.file(saved.path).toString(),
+        uri: Uri.file(saved.path),
+        title: names.title,
+        artist: names.artist,
+        album: job.album,
+        duration: video.duration,
+        addedAt: DateTime.now().millisecondsSinceEpoch,
+        tagged: true,
+        sourceUrl: sourceUrl,
+      );
+      job
+        ..track = track
+        ..progress = 1
+        ..status = DownloadStatus.done;
+      await onTrackReady(track);
+    } catch (e) {
+      if (job.status == DownloadStatus.cancelled) _discardPartOf(job);
+      if (job.track == null) {
+        for (final f in [...made, target]) {
+          if (f.existsSync()) f.deleteSync();
+        }
+      }
+      if (job.status != DownloadStatus.cancelled) {
+        job
+          ..status = DownloadStatus.failed
+          ..error = _friendlyError(e);
+      }
+    }
+    return true;
   }
 
   /// The year of [album] by [artist], or null when it can't be found in time.
@@ -973,6 +1421,7 @@ class YoutubeImporter extends ChangeNotifier {
       // Subclass first: VideoUnavailableException extends VideoUnplayableException.
       VideoUnavailableException() => 'This video is unavailable.',
       VideoUnplayableException() => 'This video can\'t be played (private, age-restricted or region-locked).',
+      MuxException() => 'Couldn\'t combine the picture and the sound. Try again, or pick another size in Settings.',
       _NoMp3() => 'MP3 downloads need ffmpeg, which isn\'t available here. Pick another format in Settings.',
       _NoFlac() => 'FLAC downloads aren\'t available on this device. Pick another format in Settings.',
       _OnMobileData() => 'Mobile data downloads are off. Connect to Wi-Fi, or allow them in Settings.',

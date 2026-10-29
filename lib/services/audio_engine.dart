@@ -12,6 +12,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'carla_locator.dart';
+import 'crossfade.dart';
 import 'ios_route.dart';
 import 'linux_alsa.dart';
 import 'usb_dac.dart';
@@ -363,6 +364,7 @@ class AudioEngine extends ChangeNotifier {
     JustAudioMediaKit.title = 'Riflay';
     JustAudioMediaKit.volumeOverride = _volumeTo;
     JustAudioMediaKit.onPlayerCreated = (p) => unawaited(_applyAll(p));
+    JustAudioMediaKit.onSecondaryCreated = (p) => unawaited(_applySecondary(p));
     if (hasRoutePicker) _iosRoute.current().then((r) => route = r);
   }
 
@@ -393,6 +395,14 @@ class AudioEngine extends ChangeNotifier {
   static const _key = 'audio.v1';
 
   bool gapless = true;
+
+  /// Songs overlap for [crossfadeSeconds] when one changes to the next (see crossfade.dart).
+  bool crossfade = false;
+  int crossfadeSeconds = CrossfadeRules.defaultSeconds;
+
+  /// Songs that follow each other on one album keep their gapless change.
+  bool crossfadeSkipAlbums = true;
+
   VolumeLeveling leveling = VolumeLeveling.off;
   BufferSize buffer = BufferSize.balanced;
 
@@ -582,6 +592,12 @@ class AudioEngine extends ChangeNotifier {
     try {
       final j = jsonDecode(raw) as Map<String, dynamic>;
       gapless = j['gapless'] as bool? ?? gapless;
+      crossfade = j['crossfade'] as bool? ?? crossfade;
+      crossfadeSeconds = ((j['crossfadeSeconds'] as num?)?.round() ?? crossfadeSeconds).clamp(
+        CrossfadeRules.minSeconds,
+        CrossfadeRules.maxSeconds,
+      );
+      crossfadeSkipAlbums = j['crossfadeSkipAlbums'] as bool? ?? crossfadeSkipAlbums;
       leveling = VolumeLeveling.values.asNameMap()[j['leveling']] ?? leveling;
       buffer = BufferSize.values.asNameMap()[j['buffer']] ?? buffer;
       eqEnabled = j['eqEnabled'] as bool? ?? eqEnabled;
@@ -635,6 +651,9 @@ class AudioEngine extends ChangeNotifier {
     _key,
     jsonEncode({
       'gapless': gapless,
+      'crossfade': crossfade,
+      'crossfadeSeconds': crossfadeSeconds,
+      'crossfadeSkipAlbums': crossfadeSkipAlbums,
       'leveling': leveling.name,
       'buffer': buffer.name,
       'eqEnabled': eqEnabled,
@@ -693,6 +712,10 @@ class AudioEngine extends ChangeNotifier {
   // ── Setters used by the UI ──────────────────────────────────────────────
 
   Future<void> setGapless(bool v) => _set(() => gapless = v);
+  Future<void> setCrossfade(bool v) => _set(() => crossfade = v);
+  Future<void> setCrossfadeSeconds(int v) =>
+      _set(() => crossfadeSeconds = v.clamp(CrossfadeRules.minSeconds, CrossfadeRules.maxSeconds));
+  Future<void> setCrossfadeSkipAlbums(bool v) => _set(() => crossfadeSkipAlbums = v);
   Future<void> setLeveling(VolumeLeveling v) => _set(() => leveling = v);
   Future<void> setBuffer(BufferSize v) => _set(() => buffer = v, reopen: true);
   Future<void> setCrossfeed(double v) => _set(() => crossfeed = v);
@@ -781,7 +804,11 @@ class AudioEngine extends ChangeNotifier {
   bool? _volumeAtOutputApplied;
 
   /// mpv's `volume` for [_volume] (mpv's gain is the cube of volume / 100).
-  String get _mpvVolume => _volumeAtOutput ? (100 * math.pow(_volume, 1 / 3)).toStringAsFixed(6) : '100';
+  String get _mpvVolume {
+    if (!_volumeAtOutput && _fade >= 1) return '100';
+    final level = _volumeAtOutput ? _volume : 1.0;
+    return (100 * math.pow(level * _fade, 1 / 3)).toStringAsFixed(6);
+  }
 
   bool get _volumeActive => _volume < 0.99999 && _dop == null && !_volumeAtOutput;
 
@@ -1162,6 +1189,8 @@ class AudioEngine extends ChangeNotifier {
       // end the song: with no audio output mpv treats an audio file as finished and moves on to the
       // next one. The null output keeps it going, silently and in time, from the same place.
       'audio-fallback-to-null': 'yes',
+      // A downloaded music video plays as sound: its picture is neither decoded nor shown here.
+      'vid': 'no',
       'audio-buffer': buffer.seconds.toString(),
       'af': filterChain,
       'audio-device': _openedDevice!,
@@ -1192,6 +1221,132 @@ class AudioEngine extends ChangeNotifier {
     _volumeAtOutputApplied = _volumeAtOutput;
     return moved;
   }
+
+  // ── Fades and the crossfade's second player ────────────────────────────
+
+  /// Why crossfade can't run with the current output, in plain words; null when it can.
+  /// Two players would fight over a DAC held for one, and a crossfade changes the samples.
+  String? get crossfadeBlock =>
+      CrossfadeRules.blockedNote(bitPerfect: bitPerfect, direct: bypassesMixer || exclusiveOutput);
+
+  /// Crossfade is on and the output allows it.
+  bool get crossfadeActive => crossfade && crossfadeBlock == null;
+
+  // Two factors on top of the volume the user set: the crossfade's and the sleep timer's.
+  // Neither touches [_volume], so each leaves the volume exactly as it found it.
+  double _crossGain = 1;
+  double _sleepGain = 1;
+  double get _fade => _crossGain * _sleepGain;
+
+  /// The main player's share of the volume during a crossfade (0-1).
+  Future<void> setCrossGain(double gain) {
+    _crossGain = gain.clamp(0.0, 1.0);
+    return _applyFade();
+  }
+
+  /// The sleep timer's fade-down (0-1). Not used in bit-perfect mode, which leaves the samples alone.
+  Future<void> setSleepGain(double gain) {
+    _sleepGain = bitPerfect ? 1 : gain.clamp(0.0, 1.0);
+    return _applyFade();
+  }
+
+  Future<void> _applyFade() async {
+    // A DSD stream is held at 100%: scaling it would destroy it.
+    if (_dop != null) return;
+    try {
+      if (_native case final p?) await p.setProperty('volume', _mpvVolume);
+      await _applySecondaryVolume();
+    } catch (e) {
+      debugPrint('Applying a fade failed: $e');
+    }
+  }
+
+  // The crossfade's second player: a plain libmpv with the same settings as the main one.
+  Player? _secondary;
+  double _secondaryGain = 0;
+
+  NativePlayer? get _secondaryNative => switch (_secondary?.platform) {
+    final NativePlayer p => p,
+    _ => null,
+  };
+
+  /// The next player just_audio creates is the crossfade's, not the app's.
+  void expectSecondaryPlayer() => JustAudioMediaKit.secondaryRequestedAt = DateTime.now();
+
+  /// The second player is created (or the attempt failed): the next one is the app's again.
+  void secondaryPlayerRequested() => JustAudioMediaKit.secondaryRequestedAt = null;
+
+  Future<void> _applySecondary(Player player) async {
+    _secondary = player;
+    _secondaryGain = 0;
+    if (player.platform case final NativePlayer p) {
+      final applied = Completer<void>();
+      p.onLoadHooks.add(() => applied.future);
+      try {
+        final props = <String, String>{
+          'cache-on-disk': 'no',
+          'demuxer-max-bytes': '${JustAudioMediaKit.bufferSize}',
+          'demuxer-max-back-bytes': '${2 << 20}',
+          'gapless-audio': 'no',
+          'prefetch-playlist': 'no',
+          'replaygain': effectiveLeveling.mpv,
+          'replaygain-clip': 'no',
+          'replaygain-fallback': '0',
+          'audio-fallback-to-null': 'yes',
+          'vid': 'no',
+          'audio-buffer': buffer.seconds.toString(),
+          'af': filterChain,
+          'audio-device': _openedDevice ?? device,
+          'audio-client-name': 'Riflay',
+          'audio-exclusive': 'no',
+          'audio-samplerate': '${outputRate ?? 0}',
+          'audio-swresample-o': hqResamplerActive ? await _hqResampler() : '',
+          'volume': '0',
+        };
+        for (final e in props.entries) {
+          await p.setProperty(e.key, e.value);
+        }
+      } catch (e) {
+        debugPrint('Setting up the crossfade player failed: $e');
+      } finally {
+        applied.complete();
+      }
+    }
+  }
+
+  /// The second player's share of the volume (0-1), on top of the volume the user set.
+  Future<void> setSecondaryGain(double gain) {
+    _secondaryGain = gain.clamp(0.0, 1.0);
+    return _applySecondaryVolume();
+  }
+
+  Future<void> _applySecondaryVolume() async {
+    final p = _secondaryNative;
+    if (p == null) return;
+    final level = _volumeAtOutput ? _volume : 1.0;
+    await p.setProperty('volume', (100 * math.pow(level * _secondaryGain * _sleepGain, 1 / 3)).toStringAsFixed(6));
+  }
+
+  /// Seconds into the file, from mpv's own clock; null when it has none yet.
+  static Future<double?> _clock(NativePlayer? p) async {
+    if (p == null) return null;
+    return double.tryParse(await p.getProperty('time-pos'));
+  }
+
+  Future<double?> mainTimePos() => _clock(_native);
+  Future<double?> secondaryTimePos() => _clock(_secondaryNative);
+
+  Future<void> secondarySeek(double seconds) async {
+    await _secondaryNative?.command(['seek', seconds.toStringAsFixed(3), 'absolute+exact']);
+  }
+
+  /// The second player is being closed.
+  void releaseSecondary() => _secondary = null;
+
+  /// An mpv property of the main or the crossfade's player, for tests.
+  @visibleForTesting
+  Future<String?> debugProperty(String name, {bool secondary = false}) async =>
+      (secondary ? _secondaryNative : _native)?.getProperty(name);
 
   /// The mpv device to open. On Linux, bit-perfect mode goes straight to the
   /// sound card behind the chosen output (the system mixer would resample),

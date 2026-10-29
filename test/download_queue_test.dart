@@ -66,6 +66,30 @@ void main() {
     });
   });
 
+  group('partial file identity', () {
+    test('the stream a partial file holds is kept with the job', () {
+      final j = job(a, DownloadStatus.downloading)
+        ..partItag = '251'
+        ..partSize = 4096
+        ..partExt = 'webm';
+      final back = YoutubeImporter.decodeQueue(YoutubeImporter.encodeQueue([j])).single;
+      expect(back.partItag, '251');
+      expect(back.partSize, 4096);
+      expect(back.partExt, 'webm');
+    });
+
+    test('a job without one, or with a damaged one, has none', () {
+      expect(
+        YoutubeImporter.decodeQueue(YoutubeImporter.encodeQueue([job(a, DownloadStatus.queued)])).single.partItag,
+        isNull,
+      );
+      final text = '{"jobs":[{"videoId":"$a","title":"x","part":{"itag":251,"size":"big","ext":"../x"}}]}';
+      final back = YoutubeImporter.decodeQueue(text).single;
+      expect(back.partItag, isNull);
+      expect(back.partExt, isNull);
+    });
+  });
+
   group('phases', () {
     test('only a real conversion converts; a plain save finishes', () {
       expect(DownloadPhase.afterDownload(null), DownloadPhase.finishing);

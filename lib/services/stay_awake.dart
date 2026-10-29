@@ -252,13 +252,15 @@ class _WindowsPowerRequest implements IdleInhibitor {
   Future<void> acquire() async {
     if (_handle != null) return;
     final k = ffi.DynamicLibrary.open('kernel32.dll');
-    final create = k.lookupFunction<
-      ffi.Pointer<ffi.Void> Function(ffi.Pointer<ffi.Void>),
-      ffi.Pointer<ffi.Void> Function(ffi.Pointer<ffi.Void>)
-    >('PowerCreateRequest');
-    final set = k.lookupFunction<ffi.Int32 Function(ffi.Pointer<ffi.Void>, ffi.Int32), int Function(ffi.Pointer<ffi.Void>, int)>(
-      'PowerSetRequest',
-    );
+    final create = k
+        .lookupFunction<
+          ffi.Pointer<ffi.Void> Function(ffi.Pointer<ffi.Void>),
+          ffi.Pointer<ffi.Void> Function(ffi.Pointer<ffi.Void>)
+        >('PowerCreateRequest');
+    final set = k
+        .lookupFunction<ffi.Int32 Function(ffi.Pointer<ffi.Void>, ffi.Int32), int Function(ffi.Pointer<ffi.Void>, int)>(
+          'PowerSetRequest',
+        );
     // REASON_CONTEXT: Version 0, Flags POWER_REQUEST_CONTEXT_SIMPLE_STRING (1), then the string.
     final ctx = calloc<ffi.Uint8>(32);
     final reason = 'Riflay is playing music'.toNativeUtf16();
@@ -303,7 +305,9 @@ class _MacAssertion implements IdleInhibitor {
           ffi.Pointer<ffi.Void> Function(ffi.Pointer<ffi.Void>, ffi.Pointer<Utf8>, ffi.Uint32),
           ffi.Pointer<ffi.Void> Function(ffi.Pointer<ffi.Void>, ffi.Pointer<Utf8>, int)
         >('CFStringCreateWithCString');
-    final release = cf.lookupFunction<ffi.Void Function(ffi.Pointer<ffi.Void>), void Function(ffi.Pointer<ffi.Void>)>('CFRelease');
+    final release = cf.lookupFunction<ffi.Void Function(ffi.Pointer<ffi.Void>), void Function(ffi.Pointer<ffi.Void>)>(
+      'CFRelease',
+    );
     final create = io
         .lookupFunction<
           ffi.Int32 Function(ffi.Pointer<ffi.Void>, ffi.Uint32, ffi.Pointer<ffi.Void>, ffi.Pointer<ffi.Uint32>),
@@ -384,6 +388,19 @@ class BatteryExemption {
 
   /// True for makers whose phones close background music apps on their own.
   static bool isAggressive(String brand) => const {
-    'xiaomi', 'redmi', 'poco', 'oppo', 'realme', 'oneplus', 'vivo', 'iqoo', 'samsung', 'huawei', 'honor', 'infinix', 'tecno', 'itel',
+    'xiaomi',
+    'redmi',
+    'poco',
+    'oppo',
+    'realme',
+    'oneplus',
+    'vivo',
+    'iqoo',
+    'samsung',
+    'huawei',
+    'honor',
+    'infinix',
+    'tecno',
+    'itel',
   }.contains(brand);
 }

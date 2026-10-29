@@ -35,6 +35,28 @@ enum DownloadFormat {
   };
 }
 
+/// Whether a download is the song's sound alone or its music video too.
+enum DownloadKind {
+  audio('Audio'),
+  video('Video');
+
+  const DownloadKind(this.label);
+  final String label;
+}
+
+/// The file a music video is saved as.
+enum VideoContainer {
+  mp4('MP4', 'H.264 picture and AAC sound. Plays on nearly every phone, TV and computer.'),
+  webm('WebM', 'VP9 picture and Opus sound. Smaller files, and the tallest sizes; plays in Riflay and most computers.');
+
+  const VideoContainer(this.label, this.about);
+  final String label;
+  final String about;
+}
+
+/// The size a music video is recommended at (and the default): 1080p, or the best the video has below that.
+const recommendedVideoHeight = 1080;
+
 /// What "Best available" means for MP3: enough to keep everything YouTube's ~130-160 kbps Opus or AAC carries.
 const mp3BestKbps = 192;
 
@@ -60,7 +82,21 @@ String bitrateLabelFor(DownloadFormat f, int? kbps) =>
 
 /// A format and quality for one download.
 class DownloadChoice {
-  const DownloadChoice(this.format, {this.kbps, this.flac = FlacQuality.standard});
+  const DownloadChoice(this.format, {this.kbps, this.flac = FlacQuality.standard}) : container = null, height = null;
+
+  /// A music video in [container] at [height] pixels tall (null: the tallest, at the highest frame rate, there is).
+  const DownloadChoice.video(VideoContainer this.container, {this.height = recommendedVideoHeight})
+    : format = DownloadFormat.opus,
+      kbps = null,
+      flac = FlacQuality.standard;
+
+  /// Set for a video download; the audio fields below then mean nothing.
+  final VideoContainer? container;
+  final int? height;
+
+  bool get isVideo => container != null;
+
+  DownloadKind get kind => isVideo ? DownloadKind.video : DownloadKind.audio;
 
   final DownloadFormat format;
 
@@ -72,13 +108,19 @@ class DownloadChoice {
 
   @override
   bool operator ==(Object other) =>
-      other is DownloadChoice && other.format == format && (format.lossless ? other.flac == flac : other.kbps == kbps);
+      other is DownloadChoice &&
+      other.container == container &&
+      (isVideo
+          ? other.height == height
+          : other.format == format && (format.lossless ? other.flac == flac : other.kbps == kbps));
 
   @override
-  int get hashCode => Object.hash(format, format.lossless ? flac : kbps);
+  int get hashCode => isVideo ? Object.hash(container, height) : Object.hash(format, format.lossless ? flac : kbps);
 
   @override
-  String toString() => '${format.name}/${format.lossless ? flac.name : (kbps ?? 'best')}';
+  String toString() => isVideo
+      ? 'video/${container!.name}/${height ?? 'best'}'
+      : '${format.name}/${format.lossless ? flac.name : (kbps ?? 'best')}';
 }
 
 /// One audio-only stream a video offers, whichever service listed it.
@@ -239,10 +281,13 @@ int estimateFlacBytes(Duration length, FlacQuality q, {required bool compressed}
 }
 
 /// The choice offered first, and tagged "Recommended": Opus at the best YouTube has (smallest file for the same sound).
-bool isRecommended(DownloadChoice c) => c.format == DownloadFormat.opus && c.kbps == null;
+bool isRecommended(DownloadChoice c) => !c.isVideo && c.format == DownloadFormat.opus && c.kbps == null;
 
 /// The choice a picker preselects: the saved one, or the recommended one if the person never chose.
 const recommendedChoice = DownloadChoice(DownloadFormat.opus);
+
+/// The video choice a picker preselects when the person never chose one: MP4 at 1080p.
+const recommendedVideoChoice = DownloadChoice.video(VideoContainer.mp4);
 
 /// Roughly how many bytes a download of [c] comes out at, from what the video offers; null when that isn't known.
 /// The stream's exact size when it is kept as it is; otherwise its length (size / bitrate) times the target bitrate,
@@ -267,7 +312,11 @@ int? estimateDownloadBytes(Iterable<AudioCandidate> all, DownloadChoice c, {requ
 }
 
 /// "Downloading in MP3 · 192 kbps…", for the long-press download.
-String describeChoice(DownloadChoice c) => switch (c.format) {
+String describeChoice(DownloadChoice c) => c.isVideo
+    ? 'Video · ${c.container!.label} · ${c.height == null ? 'best available' : '${c.height}p'}'
+    : _describeAudioChoice(c);
+
+String _describeAudioChoice(DownloadChoice c) => switch (c.format) {
   DownloadFormat.flac => 'FLAC · ${c.flac.label}',
   DownloadFormat.mp3 => 'MP3 · ${c.kbps ?? mp3BestKbps} kbps',
   _ => '${c.format == DownloadFormat.opus ? 'Opus' : 'M4A'} · ${c.kbps == null ? 'best available' : '${c.kbps} kbps'}',
@@ -328,6 +377,13 @@ class DownloadPrefs extends ChangeNotifier {
 
   DownloadFormat format = DownloadFormat.opus;
 
+  /// Audio (the default) or the music video.
+  DownloadKind kind = DownloadKind.audio;
+  VideoContainer videoContainer = VideoContainer.mp4;
+
+  /// The size set per container; a missing entry is the recommended 1080p, 0 is "Best available".
+  final Map<VideoContainer, int> _height = {};
+
   /// Target bitrate per lossy format; a missing entry is "Best available".
   final Map<DownloadFormat, int> _kbps = {};
   FlacQuality flac = FlacQuality.standard;
@@ -342,7 +398,20 @@ class DownloadPrefs extends ChangeNotifier {
   /// The bitrate set for [f]; null for "Best available".
   int? kbpsFor(DownloadFormat f) => _kbps[f];
 
-  DownloadChoice get choice => DownloadChoice(format, kbps: kbpsFor(format), flac: flac);
+  /// The height set for [c]: null is "Best available".
+  int? heightFor(VideoContainer c) => switch (_height[c]) {
+    null => recommendedVideoHeight,
+    0 => null,
+    final h => h,
+  };
+
+  /// The audio choice, whatever [kind] is (what a song without a music video is saved as).
+  DownloadChoice get audioChoice => DownloadChoice(format, kbps: kbpsFor(format), flac: flac);
+
+  DownloadChoice get videoChoice => DownloadChoice.video(videoContainer, height: heightFor(videoContainer));
+
+  /// What a download follows: the video choice when Video is picked, else the audio one.
+  DownloadChoice get choice => kind == DownloadKind.video ? videoChoice : audioChoice;
 
   Future<void>? _loaded;
 
@@ -358,6 +427,12 @@ class DownloadPrefs extends ChangeNotifier {
     for (final f in DownloadFormat.values.where((f) => !f.lossless)) {
       final kbps = prefs.getInt('downloads.kbps.${f.name}') ?? legacy;
       if (kbps != null && f.bitrates.contains(kbps)) _kbps[f] = kbps;
+    }
+    kind = DownloadKind.values.asNameMap()[prefs.getString('downloads.kind')] ?? kind;
+    videoContainer = VideoContainer.values.asNameMap()[prefs.getString('downloads.video.container')] ?? videoContainer;
+    for (final c in VideoContainer.values) {
+      final h = prefs.getInt('downloads.video.height.${c.name}');
+      if (h != null && h >= 0) _height[c] = h;
     }
     flac = FlacQuality.values.asNameMap()[prefs.getString('downloads.flac')] ?? flac;
     askEveryTime = prefs.getBool('downloads.ask') ?? askEveryTime;
@@ -379,6 +454,22 @@ class DownloadPrefs extends ChangeNotifier {
       case final String s:
         await prefs.setString(key, s);
     }
+  }
+
+  Future<void> setKind(DownloadKind v) {
+    kind = v;
+    return _save('downloads.kind', v.name);
+  }
+
+  Future<void> setVideoContainer(VideoContainer v) {
+    videoContainer = v;
+    return _save('downloads.video.container', v.name);
+  }
+
+  /// [height] null is "Best available".
+  Future<void> setVideoHeight(VideoContainer c, int? height) {
+    _height[c] = height ?? 0;
+    return _save('downloads.video.height.${c.name}', height ?? 0);
   }
 
   Future<void> setFormat(DownloadFormat v) {

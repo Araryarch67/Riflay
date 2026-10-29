@@ -18,8 +18,10 @@ import 'services/media_session.dart';
 import 'services/metadata.dart';
 import 'services/legacy_data.dart';
 import 'services/download_notifications.dart';
+import 'services/play_history.dart';
 import 'services/player_controller.dart';
 import 'services/stay_awake.dart';
+import 'services/wrap_notifications.dart';
 import 'ui/home_shell.dart';
 import 'ui/player_panels.dart' show MiniPlayerWindow, miniPlayer, windowFullScreen;
 import 'ui/theme.dart';
@@ -72,6 +74,8 @@ Future<void> main() async {
   await StayAwake.start(controller);
   await controller.youtube.restoreQueue();
   DownloadNotifications.attach(controller.youtube);
+  // Keeps the listening history (on this device only), then announces a monthly Wrap that is due.
+  PlayHistory.instance.start(controller).then((_) => WrapNotifier.instance.run(PlayHistory.instance)).ignore();
   runApp(RiflayApp(controller: controller));
 }
 
