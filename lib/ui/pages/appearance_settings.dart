@@ -26,21 +26,28 @@ class AppearanceSettings extends StatelessWidget {
       listenable: look,
       builder: (context, _) => SettingsCard(
         children: [
-          ListTile(
-            leading: const Icon(Icons.dark_mode_outlined),
-            title: const Text('Theme'),
-            subtitle: Padding(
-              padding: const EdgeInsets.only(top: 12, bottom: 6),
-              child: Wrap(
-                spacing: 10,
-                runSpacing: 10,
-                children: [for (final t in ThemeChoice.values) _ThemeCard(choice: t, selected: look.theme == t)],
-              ),
+          ListTile(leading: const Icon(Icons.dark_mode_outlined), title: const Text('Theme')),
+          // The whole width, not under the tile's icon: two or more cards a row even on a phone.
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+            child: LayoutBuilder(
+              builder: (context, c) {
+                const gap = 10.0;
+                final columns = ((c.maxWidth + gap) / (_ThemeCard.minWidth + gap)).floor().clamp(2, 8);
+                final width = ((c.maxWidth - gap * (columns - 1)) / columns).floorToDouble();
+                return Wrap(
+                  spacing: gap,
+                  runSpacing: gap,
+                  children: [
+                    for (final t in ThemeChoice.values) _ThemeCard(choice: t, selected: look.theme == t, width: width),
+                  ],
+                );
+              },
             ),
           ),
           if (look.theme == ThemeChoice.dynamic)
             Padding(
-              padding: const EdgeInsets.fromLTRB(72, 0, 16, 8),
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
               child: Text('Colours come from the cover of what\'s playing', style: muted),
             ),
           if (look.theme == ThemeChoice.custom) ...[
@@ -342,10 +349,14 @@ class _FontDialogState extends State<_FontDialog> {
 
 /// A theme, previewed in its own colours: a panel with a card, two lines of text and its accent.
 class _ThemeCard extends StatelessWidget {
-  const _ThemeCard({required this.choice, required this.selected});
+  const _ThemeCard({required this.choice, required this.selected, required this.width});
 
   final ThemeChoice choice;
   final bool selected;
+  final double width;
+
+  /// Narrowest a card gets; the grid fits as many as this allows, at least two.
+  static const minWidth = 132.0;
 
   @override
   Widget build(BuildContext context) {
@@ -366,7 +377,7 @@ class _ThemeCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 160),
-          width: 132,
+          width: width,
           padding: const EdgeInsets.all(4),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(12),
