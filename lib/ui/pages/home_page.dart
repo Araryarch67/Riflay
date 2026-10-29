@@ -87,7 +87,7 @@ class HomePage extends StatelessWidget {
         ),
     ].take(shell.compact ? 6 : 8).toList();
 
-    // Home's sections, in the order and with the ones switched on in Settings › Layout.
+    // Home's sections, in the order and with the ones switched on in Settings › Look & feel › Layout.
     final sections = <HomeSection, List<Widget>>{
       HomeSection.quickPicks: [
         if (quickPicks.isNotEmpty)

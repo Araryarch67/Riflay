@@ -12,7 +12,7 @@ import '../theme.dart';
 import '../widgets/menus.dart';
 import 'sound_settings.dart';
 
-/// Settings › Downloads: what a download is saved as, and where.
+/// Settings › Library & downloads › Downloads: what a download is saved as, and where.
 class DownloadSettings extends StatefulWidget {
   const DownloadSettings({super.key});
 

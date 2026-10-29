@@ -29,7 +29,7 @@ Future<void> showFlacConvert(BuildContext context, PlayerController c, List<Trac
   await FlacConvert.convertAll(c, songs, quality);
 }
 
-/// Explains what "Convert to FLAC" does and picks the quality of the FLAC: the one chosen in Settings › Downloads
+/// Explains what "Convert to FLAC" does and picks the quality of the FLAC: the one chosen in Settings › Library & downloads › Downloads
 /// to start with.
 class FlacConvertDialog extends StatefulWidget {
   /// Creates the dialog for [count] songs.

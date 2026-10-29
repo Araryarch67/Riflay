@@ -11,7 +11,7 @@ import '../widgets/color_picker.dart';
 import '../widgets/menus.dart';
 import 'sound_settings.dart';
 
-/// Settings › Appearance: theme (including Dynamic, which follows the playing
+/// Settings › Look & feel › Appearance: theme (including Dynamic, which follows the playing
 /// song's cover), light / dark mode, accent, cover-art colours and their
 /// strength, high contrast, text size, font, frosted glass and window opacity.
 class AppearanceSettings extends StatelessWidget {

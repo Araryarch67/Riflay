@@ -156,7 +156,7 @@ class _SignalPathSheet extends StatelessWidget {
                 'DoP is being changed',
                 Theme.of(context).colorScheme.error,
                 'Something between Riflay and your DAC changes the samples, so the DAC can\'t see the DSD. '
-                    'Choose a direct output in Settings › Advanced audio.',
+                    'Choose a direct output in Settings › Sound › Hi-fi audio.',
               )
             : p.bitPerfect && p.usbDacName != null
             ? (
@@ -179,7 +179,7 @@ class _SignalPathSheet extends StatelessWidget {
                 AppColors.textPrimary,
                 'Riflay leaves the sound alone, but the system mixer runs your DAC at '
                     '${SignalPath.formatRate(p.dac!.rate)} instead of ${SignalPath.formatRate(p.inRate)}. '
-                    '${AudioEngine.hasRoutePicker ? 'iPhone, iPad and Bluetooth outputs run at one fixed rate; a USB DAC usually follows each song.' : 'Turn on Bit-perfect mode in Settings › Advanced audio to send it as it is.'}',
+                    '${AudioEngine.hasRoutePicker ? 'iPhone, iPad and Bluetooth outputs run at one fixed rate; a USB DAC usually follows each song.' : 'Turn on Bit-perfect mode in Settings › Sound › Hi-fi audio to send it as it is.'}',
               )
             : p.untouched && p.viaSystemMixer
             ? (
@@ -189,8 +189,8 @@ class _SignalPathSheet extends StatelessWidget {
                     '${AudioEngine.hasRoutePicker
                         ? 'iOS always mixes the sound, so it is never bit-perfect here.'
                         : AudioEngine.hasExclusiveMode
-                        ? 'For bit-perfect, turn on Bit-perfect mode and Exclusive mode in Settings › Advanced audio (other apps go silent meanwhile).'
-                        : 'For bit-perfect, turn on Bit-perfect mode in Settings › Advanced audio.'}',
+                        ? 'For bit-perfect, turn on Bit-perfect mode and Exclusive mode in Settings › Sound › Hi-fi audio (other apps go silent meanwhile).'
+                        : 'For bit-perfect, turn on Bit-perfect mode in Settings › Sound › Hi-fi audio.'}',
               )
             : p.isDsd
             ? (
@@ -199,7 +199,7 @@ class _SignalPathSheet extends StatelessWidget {
                 AudioEngine.hasRoutePicker
                     ? 'DSD is decoded to high-rate PCM. iOS can\'t send DSD to a DAC as DSD.'
                     : 'DSD is decoded to high-rate PCM. To send it to your DAC as DSD, turn on Bit-perfect mode'
-                          '${AudioEngine.hasExclusiveMode ? ', Exclusive mode' : ''} and Native DSD (DoP) in Settings › Advanced audio.',
+                          '${AudioEngine.hasExclusiveMode ? ', Exclusive mode' : ''} and Native DSD (DoP) in Settings › Sound › Hi-fi audio.',
               )
             : (
                 'Processed',

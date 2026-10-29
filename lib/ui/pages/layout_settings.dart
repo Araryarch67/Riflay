@@ -5,7 +5,7 @@ import '../theme.dart';
 import 'sound_settings.dart';
 import '../widgets/menus.dart';
 
-/// Settings › Layout: corners, density, cover size, Home's sections, what the
+/// Settings › Look & feel › Layout: corners, density, cover size, Home's sections, what the
 /// player shows, lyrics and motion. Every default is how the app has always looked.
 class LayoutSettings extends StatelessWidget {
   const LayoutSettings({super.key});

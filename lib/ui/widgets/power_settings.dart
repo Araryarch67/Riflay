@@ -9,7 +9,7 @@ import '../pages/sound_settings.dart' show SettingTile, settingsMuted;
 import '../theme.dart';
 import 'menus.dart';
 
-/// Settings › Playback › Power: keeping the screen on, keeping a computer awake
+/// Settings › Sound › Playback › Power: keeping the screen on, keeping a computer awake
 /// while music plays, and (Android) letting Riflay run with the screen off.
 class PowerSettings {
   const PowerSettings._();

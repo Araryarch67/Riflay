@@ -212,7 +212,7 @@ class AppPalette {
   }
 }
 
-/// The colour schemes in Settings › Appearance, from their authors' palettes.
+/// The colour schemes in Settings › Look & feel › Appearance, from their authors' palettes.
 enum ThemeChoice {
   standard(
     'Default',
@@ -543,7 +543,7 @@ enum ThemeBrightness {
   final String label;
 }
 
-/// Accent colours to pick from in Settings › Appearance.
+/// Accent colours to pick from in Settings › Look & feel › Appearance.
 enum AccentChoice {
   /// The theme's own accent (mauve for Catppuccin, green for Everforest...).
   theme('Theme', Color(0x00000000), Color(0x00000000)),

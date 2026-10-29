@@ -1,7 +1,7 @@
 // Which locks keep the device awake, decided from plain facts. No platform
 // code here, so it is unit tested; [StayAwake] applies the answer.
 
-/// Settings › Playback › Keep screen on.
+/// Settings › Sound › Playback › Keep screen on.
 enum KeepScreenOn {
   off('Off'),
   whilePlaying('While playing'),
@@ -25,7 +25,7 @@ class PowerFacts {
 
   final KeepScreenOn screen;
 
-  /// Settings › Playback › "Don't sleep while playing" (computers).
+  /// Settings › Sound › Playback › "Don't sleep while playing" (computers).
   final bool preventSleep;
   final bool playing;
 

@@ -403,17 +403,23 @@ void main() {
     expect(find.text('Downloads'), findsOneWidget);
     await tester.tap(find.text('Settings'));
     await tester.pump(const Duration(milliseconds: 800));
-    for (final topic in ['Account', 'Appearance', 'Playback', 'Hi-fi audio', 'Downloads', 'Integrations']) {
-      expect(find.text(topic), findsOneWidget, reason: '$topic is listed');
+    for (final group in ['Sound', 'Look & feel', 'Library & downloads', 'Accounts & services', 'Beta features']) {
+      expect(find.text(group), findsOneWidget, reason: '$group is listed');
     }
+    await tester.tap(find.text('Sound'));
+    await tester.pump(const Duration(milliseconds: 800));
     await tester.tap(find.text('Playback'));
     await tester.pump(const Duration(milliseconds: 800));
     expect(find.text('Equalizer'), findsOneWidget, reason: 'Playback has its own page');
     await tester.tap(find.byTooltip('Back'));
     await tester.pump(const Duration(milliseconds: 800));
-    expect(find.text('Hi-fi audio'), findsOneWidget, reason: 'Back returns to the list');
+    expect(find.text('Hi-fi audio'), findsOneWidget, reason: 'Back returns to the Sound page');
 
-    // The breadcrumb's "Settings" also returns to the list.
+    // The breadcrumb's "Settings" returns to the list; Look & feel lists Appearance.
+    await tester.tap(find.text('Settings'));
+    await tester.pump(const Duration(milliseconds: 800));
+    await tester.tap(find.text('Look & feel'));
+    await tester.pump(const Duration(milliseconds: 800));
     await tester.tap(find.text('Appearance'));
     await tester.pump(const Duration(milliseconds: 800));
     expect(find.text('Theme'), findsOneWidget, reason: 'Appearance has its own page');
@@ -433,13 +439,13 @@ void main() {
     await tester.pump(const Duration(milliseconds: 300));
     await tester.tap(find.text('Settings'));
     await tester.pump(const Duration(milliseconds: 800));
-    expect(find.text('Hi-fi audio'), findsOneWidget, reason: 'the breadcrumb opens the list');
+    expect(find.text('Sound'), findsOneWidget, reason: 'the breadcrumb opens the list');
 
     await tester.tap(find.byTooltip('More'));
     await tester.pump(const Duration(milliseconds: 500));
     await tester.tap(find.text('Downloads').last); // the menu's, over the Settings list
     await tester.pump(const Duration(milliseconds: 800));
-    expect(find.text('Hi-fi audio'), findsNothing, reason: 'Downloads replaced the Settings list');
+    expect(find.text('Sound'), findsNothing, reason: 'Downloads replaced the Settings list');
 
     await tester.pumpWidget(const SizedBox());
     c.dispose();

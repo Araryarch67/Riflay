@@ -120,7 +120,7 @@ void main() {
     });
   });
 
-  group('Settings › Playback', () {
+  group('Settings › Sound › Playback', () {
     onLinux('Crossfade is off; turning it on shows the length and "Skip for albums"', (tester) async {
       SharedPreferences.setMockInitialValues({});
       tester.view.physicalSize = const Size(900, 1600);

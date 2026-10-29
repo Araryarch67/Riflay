@@ -5,7 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../services/appearance.dart';
 
-/// Colour tokens of the theme picked in Settings › Appearance ([ThemeChoice]).
+/// Colour tokens of the theme picked in Settings › Look & feel › Appearance ([ThemeChoice]).
 abstract final class AppColors {
   static AppPalette get _p => Appearance.instance.palette;
 

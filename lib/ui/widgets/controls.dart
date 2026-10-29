@@ -761,7 +761,7 @@ class SourceMark extends StatelessWidget {
   );
 }
 
-/// A panel that turns to frosted glass when that's on in Settings ›
+/// A panel that turns to frosted glass when that's on in Settings › Look & feel ›
 /// Appearance: what scrolls behind shows through, blurred.
 class GlassPanel extends StatelessWidget {
   const GlassPanel({super.key, required this.color, required this.child, this.borderRadius = BorderRadius.zero});

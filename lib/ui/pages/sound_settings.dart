@@ -20,7 +20,7 @@ import '../widgets/power_settings.dart';
 import '../widgets/signal_path.dart';
 import 'equalizer_page.dart';
 
-/// Settings › Playback: the everyday sound options.
+/// Settings › Sound › Playback: the everyday sound options.
 class PlaybackSettings extends StatelessWidget {
   const PlaybackSettings({super.key});
 
@@ -185,7 +185,7 @@ class PlaybackSettings extends StatelessWidget {
   }
 }
 
-/// Settings › Advanced audio: DACs and hi-fi setups, folded until opened.
+/// Settings › Sound › Hi-fi audio: DACs and hi-fi setups, folded until opened.
 class AdvancedAudioSettings extends StatelessWidget {
   const AdvancedAudioSettings({super.key});
 

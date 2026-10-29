@@ -173,6 +173,8 @@ void main() {
       await settle();
       await tester.tap(find.text('Settings').first);
       await settle();
+      await tester.tap(find.text('Look & feel'));
+      await settle();
       await tester.tap(find.text('Layout'));
       await settle();
       tester.view.physicalSize = const Size(1280, 1500);

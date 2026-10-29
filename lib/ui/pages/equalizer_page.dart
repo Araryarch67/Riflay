@@ -42,7 +42,7 @@ class EqualizerPage extends StatelessWidget {
               padding: EdgeInsets.fromLTRB(pad, 0, pad, 16),
               child: Text(
                 audio.bitPerfect
-                    ? 'Bit-perfect mode is on, so the equalizer is bypassed. Turn it off in Settings › Advanced audio.'
+                    ? 'Bit-perfect mode is on, so the equalizer is bypassed. Turn it off in Settings › Sound › Hi-fi audio.'
                     : 'Pick a preset or drag the sliders. Tap a frequency to fine-tune it.',
                 style: text.bodyMedium?.copyWith(color: AppColors.textSecondary),
               ),

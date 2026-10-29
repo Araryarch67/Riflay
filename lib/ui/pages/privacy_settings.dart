@@ -7,7 +7,7 @@ import '../shell_scope.dart';
 import 'listening_stats_page.dart';
 import 'sound_settings.dart' show SettingsCard, settingsMuted;
 
-/// Settings › Privacy: the listening history kept on this device.
+/// Settings › Library & downloads › Listening history & Wrap: the listening history kept on this device.
 class PrivacySettings extends StatefulWidget {
   const PrivacySettings({super.key, this.history});
 

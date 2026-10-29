@@ -198,6 +198,7 @@ void main() {
     await measure('wheel scroll downloads', wheel);
     await open(find.byTooltip('More'));
     await open(find.text('Settings'));
+    await open(find.text('Sound'));
     await open(find.text('Playback'));
     await measure('wheel scroll settings', wheel);
     // Linux desktops with an accessibility bus (AT-SPI) turn Flutter's semantics

@@ -369,7 +369,7 @@ AudioPick? pickForDownload(Iterable<AudioCandidate> all, DownloadChoice choice, 
   return AudioPick(pool.last);
 }
 
-/// What the user set under Settings › Downloads.
+/// What the user set under Settings › Library & downloads › Downloads.
 class DownloadPrefs extends ChangeNotifier {
   DownloadPrefs();
 

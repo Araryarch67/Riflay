@@ -10,7 +10,7 @@ setup and one obvious control:
 
 - YouTube Music sign-in is a single **Sign in with Google** button. Never add
   "paste your cookies", OAuth client IDs, or browser pickers.
-- Power-user audio settings live under **Settings › Advanced audio**, folded
+- Power-user audio settings live under **Settings › Sound › Hi-fi audio**, folded
   away. Everyday ones (Equalizer, Volume leveling, Gapless, Virtual speakers,
   Crossfeed, Mono audio) sit above it in plain words.
 - UI looks like a streaming app: dark, the only colour comes from real cover
@@ -46,12 +46,12 @@ lib/
     youtube_music_account.dart Session, library, discover pages, playlist edits, likes, radio
     youtube_audio_source.dart  Streams YouTube audio in ranged chunks (yt-dlp resolves URLs)
     ytdlp.dart                 Finds / downloads yt-dlp, resolves and caches stream URLs
-    download_prefs.dart        Settings › Downloads (format, quality, folder), and pickForDownload: which stream a download takes
+    download_prefs.dart        Settings › Library & downloads › Downloads (format, quality, folder), and pickForDownload: which stream a download takes
     video_download.dart        Music-video downloads: stream picking (MP4 = H.264 + AAC, WebM = VP9 + Opus, AV1 only where nothing else), sizes, muxVideo
     mp4_mux.dart / webm_mux.dart  Pure-Dart muxers (no re-encoding): YouTube's DASH fMP4 and WebM streams into one file; used where there is no ffmpeg
     download_edit.dart         Editing a downloaded song: title, album, cover (never the artist); lyrics live in lyrics.dart's UserLyrics
     ffmpeg.dart                Finds / downloads ffmpeg (tag editor, AirPlay, casting conversions)
-    system_fonts.dart          Fonts from the device's font folders (Settings › Appearance › Font)
+    system_fonts.dart          Fonts from the device's font folders (Settings › Look & feel › Appearance › Font)
     desktop_login.dart         Runs linux/login_helper (WebKitGTK Google sign-in window)
     spotify_session.dart       Spotify sign-in (Beta): the web player's own token, caught in a WebView / linux/spotify_helper
     spotify_library.dart       Spotify library over the web player's GraphQL (hashes read from its bundle)

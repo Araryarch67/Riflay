@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../services/beta_features.dart';
 import '../../services/discord_presence.dart';
 import '../../services/lyrics.dart';
 import '../../services/player_controller.dart';
@@ -16,75 +17,262 @@ import 'library_settings.dart';
 import 'download_settings.dart';
 import 'privacy_settings.dart';
 import 'sound_settings.dart';
+import 'spotify_page.dart';
 import 'youtube_music_page.dart';
 
-/// One page of settings, opened from the list on [SettingsPage].
-enum SettingsTopic {
-  account('Account', Icons.person_outline_rounded, 'YouTube Music sign-in'),
-  appearance('Appearance', Icons.palette_outlined, 'Theme, accent colour, background, text size'),
-  layout('Layout', Icons.dashboard_customize_outlined, 'Shapes, sizes, what the player shows'),
-  playback('Playback', Icons.play_circle_outline_rounded, 'Autoplay, equalizer, Virtual speakers, mono audio'),
-  advanced('Hi-fi audio', Icons.tune_rounded, 'Output device, bit-perfect mode, sample rate'),
-  library('Library', Icons.library_music_outlined, 'Keep music folders up to date, find songs you have twice'),
-  downloads('Downloads', Icons.download_rounded, 'Format, quality, where songs are saved'),
-  privacy('Privacy', Icons.lock_outline_rounded, 'Listening history kept on this device'),
-  integrations('Integrations', Icons.extension_outlined, 'Discord, lyrics services'),
-  beta('Beta features', Icons.science_outlined, 'Switch features that are still being tested on or off');
+/// The few groups on the first Settings page; each opens a page that lists its [SettingsTopic]s.
+enum SettingsGroup {
+  sound('sound', 'Sound', Icons.graphic_eq_rounded, 'Equalizer, volume leveling, crossfade, hi-fi output'),
+  look('look', 'Look & feel', Icons.palette_outlined, 'Themes, colours, text size, what the screens show'),
+  library(
+    'library',
+    'Library & downloads',
+    Icons.library_music_outlined,
+    'Music folders, downloads, listening history',
+  ),
+  accounts(
+    'accounts',
+    'Accounts & services',
+    Icons.manage_accounts_outlined,
+    'YouTube Music, Spotify, Discord, lyrics',
+  );
 
-  const SettingsTopic(this.label, this.icon, this.summary);
+  const SettingsGroup(this.id, this.label, this.icon, this.summary);
+  final String id;
   final String label;
   final IconData icon;
   final String summary;
 
-  static List<SettingsTopic> get available => [
-    for (final t in values)
-      if (t != advanced || AudioEngine.supported) t,
+  /// This group's own page.
+  String get location => Locations.settingsTopic(id);
+
+  /// The sections shown on this group's page, in order, for what this device and the Beta switches allow.
+  List<SettingsTopic> get sections => [
+    for (final s in SettingsTopic.values)
+      if (s.group == this && s.available) s,
   ];
 }
 
-/// The list of settings pages.
+/// One page of settings, opened from the list on a [SettingsGroup] page.
+enum SettingsTopic {
+  playback(
+    SettingsGroup.sound,
+    'playback',
+    'Playback',
+    Icons.play_circle_outline_rounded,
+    'Equalizer, volume leveling, crossfade, Virtual speakers, mono audio',
+  ),
+  advanced(
+    SettingsGroup.sound,
+    'hifi',
+    'Hi-fi audio',
+    Icons.tune_rounded,
+    'Output device, bit-perfect mode, sample rate',
+  ),
+  appearance(
+    SettingsGroup.look,
+    'appearance',
+    'Appearance',
+    Icons.palette_outlined,
+    'Theme, accent colour, background, text size, font',
+  ),
+  layout(
+    SettingsGroup.look,
+    'layout',
+    'Layout',
+    Icons.dashboard_customize_outlined,
+    'Shapes, sizes, what the player shows',
+  ),
+  library(
+    SettingsGroup.library,
+    'library',
+    'Library',
+    Icons.folder_outlined,
+    'Keep music folders up to date, find songs you have twice',
+  ),
+  downloads(
+    SettingsGroup.library,
+    'downloads',
+    'Downloads',
+    Icons.download_rounded,
+    'Format, quality, where songs are saved',
+  ),
+  history(
+    SettingsGroup.library,
+    'history',
+    'Listening history & Wrap',
+    Icons.history_rounded,
+    'The history behind your stats, kept on this device',
+  ),
+  account(
+    SettingsGroup.accounts,
+    'youtube-music',
+    'YouTube Music account',
+    Icons.person_outline_rounded,
+    'Sign in with Google',
+  ),
+  spotify(
+    SettingsGroup.accounts,
+    'spotify',
+    'Spotify',
+    Icons.library_music_outlined,
+    'Bring your playlists, albums and artists over',
+  ),
+  integrations(
+    SettingsGroup.accounts,
+    'services',
+    'Discord & lyrics services',
+    Icons.extension_outlined,
+    'Show what you play on Discord, lyrics services',
+  );
+
+  const SettingsTopic(this.group, this.id, this.label, this.icon, this.summary);
+  final SettingsGroup group;
+  final String id;
+  final String label;
+  final IconData icon;
+  final String summary;
+
+  bool get available => switch (this) {
+    advanced => AudioEngine.supported,
+    spotify => BetaFeatures.instance.isOn(BetaFeature.spotify),
+    _ => true,
+  };
+
+  /// This section's own page, such as `settings:sound/playback`.
+  String get location => Locations.settingsTopic('${group.id}/$id');
+}
+
+/// Where each page of settings sits, to draw the "Settings › Sound › Playback" trail.
+class _Crumb {
+  const _Crumb(this.label, this.page, this.location);
+  final String label;
+  final Widget page;
+  final String location;
+}
+
+const _settingsCrumb = _Crumb('Settings', SettingsPage(), Locations.settings);
+
+/// A row that opens another page of settings: icon, title, one plain line, chevron.
+class _SettingsRow extends StatelessWidget {
+  const _SettingsRow({
+    required this.icon,
+    required this.title,
+    required this.summary,
+    required this.onTap,
+    this.leading,
+  });
+
+  final IconData icon;
+  final String title;
+  final String summary;
+  final VoidCallback onTap;
+  final Widget? leading;
+
+  @override
+  Widget build(BuildContext context) => ListTile(
+    leading: leading ?? SizedBox.square(dimension: 36, child: Icon(icon)),
+    title: Text(title),
+    subtitle: Text(summary, style: settingsMuted(context)),
+    trailing: const Icon(Icons.chevron_right_rounded),
+    onTap: onTap,
+  );
+}
+
+/// The first page of settings: a handful of groups, then Beta features.
 class SettingsPage extends StatelessWidget {
   const SettingsPage({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final c = PlayerScope.of(context);
     final shell = ShellScope.of(context);
-    final muted = settingsMuted(context);
     return _SettingsFrame(
       title: 'Settings',
+      child: SettingsCard(
+        children: [
+          for (final g in SettingsGroup.values)
+            _SettingsRow(
+              icon: g.icon,
+              title: g.label,
+              summary: g.summary,
+              onTap: () => shell.open(SettingsGroupPage(group: g), location: g.location),
+            ),
+          _SettingsRow(
+            icon: Icons.science_outlined,
+            title: 'Beta features',
+            summary: 'Switch features that are still being tested on or off',
+            onTap: () => shell.open(const SettingsBetaPage(), location: Locations.settingsTopic('beta')),
+          ),
+          if (hasKeyboardShortcuts)
+            _SettingsRow(
+              icon: Icons.keyboard_outlined,
+              title: 'Keyboard shortcuts',
+              summary: 'Play, skip, search and more without the mouse',
+              onTap: () => showShortcutsDialog(context),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Beta features: one page straight under Settings.
+class SettingsBetaPage extends StatelessWidget {
+  const SettingsBetaPage({super.key});
+
+  @override
+  Widget build(BuildContext context) =>
+      const _SettingsFrame(title: 'Beta features', crumbs: [_settingsCrumb], child: BetaSettings());
+}
+
+/// One group: its sections as rows, each opening its page.
+class SettingsGroupPage extends StatelessWidget {
+  const SettingsGroupPage({super.key, required this.group});
+
+  final SettingsGroup group;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = PlayerScope.of(context);
+    final shell = ShellScope.of(context);
+    return _SettingsFrame(
+      title: group.label,
+      crumbs: const [_settingsCrumb],
       child: ListenableBuilder(
-        listenable: c.ytMusic,
+        listenable: Listenable.merge([c.ytMusic, BetaFeatures.instance]),
         builder: (context, _) => SettingsCard(
           children: [
-            for (final t in SettingsTopic.available)
-              ListTile(
-                leading: t == SettingsTopic.account
-                    ? CircleAvatar(
-                        radius: 18,
-                        backgroundColor: AppColors.hover,
-                        foregroundImage: c.ytMusic.avatarUrl == null ? null : NetworkImage(c.ytMusic.avatarUrl!),
-                        child: Icon(t.icon, color: AppColors.textSecondary, size: 20),
-                      )
-                    : SizedBox.square(dimension: 36, child: Icon(t.icon)),
-                title: Text(t.label),
-                subtitle: Text(
-                  t == SettingsTopic.account && c.ytMusic.isSignedIn
+            for (final s in group.sections)
+              if (s == SettingsTopic.account)
+                _SettingsRow(
+                  icon: s.icon,
+                  title: s.label,
+                  summary: c.ytMusic.isSignedIn
                       ? 'Signed in as ${c.ytMusic.accountName ?? 'YouTube Music'}'
-                      : t.summary,
-                  style: muted,
+                      : s.summary,
+                  leading: CircleAvatar(
+                    radius: 18,
+                    backgroundColor: AppColors.hover,
+                    foregroundImage: c.ytMusic.avatarUrl == null ? null : NetworkImage(c.ytMusic.avatarUrl!),
+                    child: Icon(s.icon, color: AppColors.textSecondary, size: 20),
+                  ),
+                  onTap: () => shell.open(SettingsTopicPage(section: s), location: s.location),
+                )
+              else if (s == SettingsTopic.spotify)
+                // Spotify has its own page (sign-in and import); this opens the same one as the Library tab.
+                _SettingsRow(
+                  icon: s.icon,
+                  title: s.label,
+                  summary: s.summary,
+                  onTap: () => shell.open(const SpotifyPage(), location: Locations.spotify),
+                )
+              else
+                _SettingsRow(
+                  icon: s.icon,
+                  title: s.label,
+                  summary: s.summary,
+                  onTap: () => shell.open(SettingsTopicPage(section: s), location: s.location),
                 ),
-                trailing: const Icon(Icons.chevron_right_rounded),
-                onTap: () => shell.open(SettingsTopicPage(topic: t), location: Locations.settingsTopic(t.name)),
-              ),
-            if (hasKeyboardShortcuts)
-              ListTile(
-                leading: const SizedBox.square(dimension: 36, child: Icon(Icons.keyboard_outlined)),
-                title: const Text('Keyboard shortcuts'),
-                subtitle: Text('Play, skip, search and more without the mouse', style: muted),
-                trailing: const Icon(Icons.chevron_right_rounded),
-                onTap: () => showShortcutsDialog(context),
-              ),
           ],
         ),
       ),
@@ -92,115 +280,138 @@ class SettingsPage extends StatelessWidget {
   }
 }
 
-/// One settings topic on its own page.
-class SettingsTopicPage extends StatefulWidget {
-  const SettingsTopicPage({super.key, required this.topic});
+/// One section of settings on its own page.
+class SettingsTopicPage extends StatelessWidget {
+  const SettingsTopicPage({super.key, required this.section});
 
-  final SettingsTopic topic;
+  final SettingsTopic section;
 
-  @override
-  State<SettingsTopicPage> createState() => _SettingsTopicPageState();
-}
-
-class _SettingsTopicPageState extends State<SettingsTopicPage> {
   @override
   Widget build(BuildContext context) {
-    final c = PlayerScope.of(context);
-    final muted = settingsMuted(context);
-
-    final body = switch (widget.topic) {
-      SettingsTopic.account => ListenableBuilder(
-        listenable: c.ytMusic,
-        builder: (context, _) {
-          final account = c.ytMusic;
-          return SettingsCard(
-            children: [
-              // Stacks the button under the text on narrow windows.
-              SettingTile(
-                leading: CircleAvatar(
-                  radius: 20,
-                  backgroundColor: AppColors.hover,
-                  foregroundImage: account.avatarUrl == null ? null : NetworkImage(account.avatarUrl!),
-                  child: Icon(Icons.person_rounded, color: AppColors.textSecondary),
-                ),
-                title: Text(account.isSignedIn ? account.accountName ?? 'YouTube Music' : 'YouTube Music'),
-                subtitle: Text(
-                  account.isSignedIn
-                      ? 'Signed in. Your likes, playlists and followed artists are here.'
-                      : 'Not signed in. Search and the public home work without an account.',
-                  style: muted,
-                ),
-                control: account.isSignedIn
-                    ? TextButton(onPressed: account.signOut, child: const Text('Disconnect'))
-                    : FilledButton(
-                        style: FilledButton.styleFrom(
-                          backgroundColor: AppColors.inverse,
-                          foregroundColor: AppColors.onInverse,
-                        ),
-                        onPressed: account.connecting ? null : () => signInToYoutubeMusic(context),
-                        child: const Text('Sign in with Google'),
-                      ),
-              ),
-              if (account.isSignedIn)
-                SwitchListTile(
-                  title: const Text('Add songs you play to your YouTube Music history'),
-                  subtitle: Text('Like the official app, so YouTube Music keeps learning what you like.', style: muted),
-                  value: account.reportPlays,
-                  onChanged: account.setReportPlays,
-                ),
-            ],
-          );
-        },
-      ),
+    final body = switch (section) {
+      SettingsTopic.account => const _AccountSettings(),
       SettingsTopic.appearance => const AppearanceSettings(),
       SettingsTopic.layout => const LayoutSettings(),
       SettingsTopic.playback => const PlaybackSettings(),
       SettingsTopic.advanced => const AdvancedAudioSettings(),
       SettingsTopic.library => const LibrarySettings(),
       SettingsTopic.downloads => const DownloadSettings(),
-      SettingsTopic.beta => const BetaSettings(),
-      SettingsTopic.privacy => const PrivacySettings(),
-      SettingsTopic.integrations => SettingsCard(
-        children: [
-          if (DiscordPresence.supported)
-            SwitchListTile(
-              secondary: const Icon(Icons.discord),
-              title: const Text('Discord Rich Presence'),
-              subtitle: Text('Show what you\'re listening to on your Discord profile', style: muted),
-              value: c.discordEnabled,
-              onChanged: c.setDiscordEnabled,
-            ),
-          ListTile(
-            leading: const Icon(Icons.key_rounded),
-            title: const Text('Better Lyrics API key'),
-            subtitle: Text(
-              LyricsService.betterLyricsKey == null
-                  ? 'Optional. Lets Better Lyrics find lyrics it hasn\'t saved yet, if you have a key.'
-                  : 'Added. Better Lyrics can find lyrics it hasn\'t saved yet.',
-              style: muted,
-            ),
-            trailing: TextButton(
-              onPressed: () async {
-                await showDialog<void>(context: context, builder: (_) => const _BetterLyricsKeyDialog());
-                if (mounted) setState(() {});
-              },
-              child: Text(LyricsService.betterLyricsKey == null ? 'Add' : 'Change'),
-            ),
-          ),
-        ],
-      ),
+      SettingsTopic.history => const PrivacySettings(),
+      SettingsTopic.integrations => const _IntegrationsSettings(),
+      // Opened from its row as the Spotify page itself, so this body is never shown.
+      SettingsTopic.spotify => const SizedBox.shrink(),
     };
-
-    return _SettingsFrame(title: widget.topic.label, inTopic: true, child: body);
+    return _SettingsFrame(
+      title: section.label,
+      crumbs: [
+        _settingsCrumb,
+        _Crumb(section.group.label, SettingsGroupPage(group: section.group), section.group.location),
+      ],
+      child: body,
+    );
   }
 }
 
-/// A settings page: on topic pages a "Settings › Topic" breadcrumb, then the heading and [child].
+class _AccountSettings extends StatelessWidget {
+  const _AccountSettings();
+
+  @override
+  Widget build(BuildContext context) {
+    final account = PlayerScope.of(context).ytMusic;
+    final muted = settingsMuted(context);
+    return ListenableBuilder(
+      listenable: account,
+      builder: (context, _) => SettingsCard(
+        children: [
+          // Stacks the button under the text on narrow windows.
+          SettingTile(
+            leading: CircleAvatar(
+              radius: 20,
+              backgroundColor: AppColors.hover,
+              foregroundImage: account.avatarUrl == null ? null : NetworkImage(account.avatarUrl!),
+              child: Icon(Icons.person_rounded, color: AppColors.textSecondary),
+            ),
+            title: Text(account.isSignedIn ? account.accountName ?? 'YouTube Music' : 'YouTube Music'),
+            subtitle: Text(
+              account.isSignedIn
+                  ? 'Signed in. Your likes, playlists and followed artists are here.'
+                  : 'Not signed in. Search and the public home work without an account.',
+              style: muted,
+            ),
+            control: account.isSignedIn
+                ? TextButton(onPressed: account.signOut, child: const Text('Disconnect'))
+                : FilledButton(
+                    style: FilledButton.styleFrom(
+                      backgroundColor: AppColors.inverse,
+                      foregroundColor: AppColors.onInverse,
+                    ),
+                    onPressed: account.connecting ? null : () => signInToYoutubeMusic(context),
+                    child: const Text('Sign in with Google'),
+                  ),
+          ),
+          if (account.isSignedIn)
+            SwitchListTile(
+              title: const Text('Add songs you play to your YouTube Music history'),
+              subtitle: Text('Like the official app, so YouTube Music keeps learning what you like.', style: muted),
+              value: account.reportPlays,
+              onChanged: account.setReportPlays,
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _IntegrationsSettings extends StatefulWidget {
+  const _IntegrationsSettings();
+
+  @override
+  State<_IntegrationsSettings> createState() => _IntegrationsSettingsState();
+}
+
+class _IntegrationsSettingsState extends State<_IntegrationsSettings> {
+  @override
+  Widget build(BuildContext context) {
+    final c = PlayerScope.of(context);
+    final muted = settingsMuted(context);
+    return SettingsCard(
+      children: [
+        if (DiscordPresence.supported)
+          SwitchListTile(
+            secondary: const Icon(Icons.discord),
+            title: const Text('Discord Rich Presence'),
+            subtitle: Text('Show what you\'re listening to on your Discord profile', style: muted),
+            value: c.discordEnabled,
+            onChanged: c.setDiscordEnabled,
+          ),
+        ListTile(
+          leading: const Icon(Icons.key_rounded),
+          title: const Text('Better Lyrics API key'),
+          subtitle: Text(
+            LyricsService.betterLyricsKey == null
+                ? 'Optional. Lets Better Lyrics find lyrics it hasn\'t saved yet, if you have a key.'
+                : 'Added. Better Lyrics can find lyrics it hasn\'t saved yet.',
+            style: muted,
+          ),
+          trailing: TextButton(
+            onPressed: () async {
+              await showDialog<void>(context: context, builder: (_) => const _BetterLyricsKeyDialog());
+              if (mounted) setState(() {});
+            },
+            child: Text(LyricsService.betterLyricsKey == null ? 'Add' : 'Change'),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// A settings page: on inner pages a "Settings › Sound › Playback" trail, then the heading and [child].
 class _SettingsFrame extends StatelessWidget {
-  const _SettingsFrame({required this.title, required this.child, this.inTopic = false});
+  const _SettingsFrame({required this.title, required this.child, this.crumbs = const []});
 
   final String title;
-  final bool inTopic;
+  final List<_Crumb> crumbs;
   final Widget child;
 
   @override
@@ -221,7 +432,7 @@ class _SettingsFrame extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    if (inTopic) _Breadcrumb(current: title),
+                    if (crumbs.isNotEmpty) _Breadcrumb(crumbs: crumbs, current: title),
                     Text(title, style: text.headlineMedium?.copyWith(fontWeight: FontWeight.w800)),
                     const SizedBox(height: 24),
                     child,
@@ -236,38 +447,40 @@ class _SettingsFrame extends StatelessWidget {
   }
 }
 
-/// "Settings › Appearance": the first crumb opens the list of settings.
+/// "Settings › Sound › Playback": every crumb but the last opens that page.
 class _Breadcrumb extends StatelessWidget {
-  const _Breadcrumb({required this.current});
+  const _Breadcrumb({required this.crumbs, required this.current});
 
+  final List<_Crumb> crumbs;
   final String current;
 
   @override
   Widget build(BuildContext context) {
     final style = Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700);
+    final chevron = Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      child: Icon(Icons.chevron_right_rounded, size: 18, color: AppColors.textMuted),
+    );
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
       child: Semantics(
-        label: 'Settings, then $current',
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
+        label: '${[for (final c in crumbs) c.label].join(', then ')}, then $current',
+        child: Wrap(
+          crossAxisAlignment: WrapCrossAlignment.center,
           children: [
-            _CrumbLink(
-              label: 'Settings',
-              style: style,
-              onTap: () => ShellScope.of(context).open(const SettingsPage(), location: Locations.settings),
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-              child: Icon(Icons.chevron_right_rounded, size: 18, color: AppColors.textMuted),
-            ),
-            Flexible(
-              child: Text(
-                current,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: style?.copyWith(color: AppColors.textPrimary),
+            for (final c in crumbs) ...[
+              _CrumbLink(
+                label: c.label,
+                style: style,
+                onTap: () => ShellScope.of(context).open(c.page, location: c.location),
               ),
+              chevron,
+            ],
+            Text(
+              current,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: style?.copyWith(color: AppColors.textPrimary),
             ),
           ],
         ),

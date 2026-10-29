@@ -145,10 +145,12 @@ void main() {
     await tester.tap(find.text('Cancel'));
     await settle();
 
-    // Settings › Downloads.
+    // Settings › Library & downloads › Downloads.
     await tester.tap(find.byTooltip('More'));
     await settle();
     await tester.tap(find.text('Settings').last);
+    await settle();
+    await tester.tap(find.text('Library & downloads'));
     await settle();
     await tester.tap(find.text('Downloads').last);
     await settle();

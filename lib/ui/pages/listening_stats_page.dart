@@ -220,7 +220,7 @@ class _Empty extends StatelessWidget {
     child: Text(
       history.enabled
           ? 'Nothing here yet. Songs you listen to for 30 seconds or more will show up.'
-          : 'Your listening history is off. Turn it on in Settings, under Privacy.',
+          : 'Your listening history is off. Turn it on in Settings › Library & downloads › Listening history & Wrap.',
       style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary),
     ),
   );

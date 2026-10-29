@@ -48,8 +48,8 @@ Features marked (Beta) are still being tested; **Settings › Beta features** sw
 | **Playlists** | Combine local files with YouTube songs, and drag songs into any order. Import from Spotify, Apple Music or Deezer |
 | **Spotify import** (Beta) | Sign in to Spotify and bring your playlists, albums and artists over |
 | **Smart playlists** | Most played, Not played for a while, Recently added, Recently played and Lossless, kept up to date for you |
-| **A library that keeps up** | Music folders are watched: new songs are added, and songs you delete or move are taken out, without adding the folder again (phones check each time you open Riflay). Settings › Library |
-| **Duplicate finder** | "Songs you have twice" lists the same song in several files and keeps the best copy of each. Settings › Library |
+| **A library that keeps up** | Music folders are watched: new songs are added, and songs you delete or move are taken out, without adding the folder again (phones check each time you open Riflay). Settings › Library & downloads › Library |
+| **Duplicate finder** | "Songs you have twice" lists the same song in several files and keeps the best copy of each. Settings › Library & downloads › Library |
 | **Tag editor** | Preserves ReplayGain and custom tags |
 | **Autoplay and radio** | Plays similar songs when the queue ends |
 
@@ -100,7 +100,7 @@ Features marked (Beta) are still being tested; **Settings › Beta features** sw
 | Feature | Description |
 |---|---|
 | **Sleep timer** | Stop the music in 15 to 90 minutes, at the end of the song, or after a time you choose. The volume fades down first |
-| **Listening stats** | Your top songs, artists and albums by month, year or all time. Kept on this device, and switched off in Settings › Privacy |
+| **Listening stats** | Your top songs, artists and albums by month, year or all time. Kept on this device, and switched off in Settings › Library & downloads › Listening history & Wrap |
 | **Riflay Wrap** | A recap of each finished month, once you have used Riflay for 30 days, as cards you can save as images |
 | **Background playback** | Keeps playing with the screen off. Optionally keeps the screen on, or the computer awake, while playing |
 | **System integration** | Lock screen, notification, Control Center, MPRIS, media keys, Discord |
@@ -168,7 +168,7 @@ Every platform plays through [libmpv](https://mpv.io), using Riflay's own build 
 
 | Area | Details |
 |---|---|
-| **Playback** (Settings) | Equalizer with presets and automatic headroom, volume leveling (ReplayGain per song or album), gapless playback, **Virtual speakers** (MIT's KEMAR HRTF: two speakers at ±30°), headphone crossfeed, **Mono audio** (both ears, left only or right only) |
+| **Playback** (Settings › Sound) | Equalizer with presets and automatic headroom, volume leveling (ReplayGain per song or album), gapless playback, **Virtual speakers** (MIT's KEMAR HRTF: two speakers at ±30°), headphone crossfeed, **Mono audio** (both ears, left only or right only) |
 | **Hi-fi audio** | Room correction (an impulse response); output sample rate; SoX resampler; buffer size. On desktop also: output device, including direct ALSA hardware on Linux; **bit-perfect mode**; **exclusive mode** (WASAPI on Windows, Core Audio hog mode on macOS); **native DSD (DoP)** for DSF, DSDIFF and SACD songs; **ASIO** on Windows; **audio plugins** through [Carla](https://kx.studio/Applications:Carla). On Android 14 and later with a USB DAC: **bit-perfect mode** and **native DSD (DoP)**. On iOS: the output picker, and a USB DAC follows each song's sample rate |
 | **Play on** | DLNA / UPnP renderers and classic AirPlay speakers, found on the network. Files the device cannot play (DSD, cue-sheet songs, WavPack, ...) are converted to FLAC on the fly; YouTube songs are sent as AAC; AirPlay receives ALAC |
 | **Signal path** | Source codec and stored bit depth → decoder → every DSP stage → volume → resampler → output device, with a verdict: *Bit-perfect*, *Lossless to the system mixer* or *Processed* |

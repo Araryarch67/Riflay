@@ -166,8 +166,16 @@ Future<void> makeLibrary() async {
         final seconds = 150 + (a * 31 + i * 47) % 110;
         final ext = album.flac ? 'flac' : 'mp3';
         final tags = [
-          '-metadata', 'title=$title', '-metadata', 'artist=${album.artist}', '-metadata', 'album=${album.name}',
-          '-metadata', 'track=${i + 1}', '-metadata', 'date=${2019 + a}',
+          '-metadata',
+          'title=$title',
+          '-metadata',
+          'artist=${album.artist}',
+          '-metadata',
+          'album=${album.name}',
+          '-metadata',
+          'track=${i + 1}',
+          '-metadata',
+          'date=${2019 + a}',
         ];
         Future<void> encode(String to, {required bool lossless}) => ff([
           '-f', 'lavfi', '-i', 'anoisesrc=d=$seconds:c=pink:r=44100:a=0.2:seed=${a * 10 + i}',
@@ -184,7 +192,9 @@ Future<void> makeLibrary() async {
             final start = 12.0 + n * 5.2;
             final words = line.split(' ');
             final step = 4.4 / words.length;
-            out.writeln('[${stamp(start)}]${[for (final (w, word) in words.indexed) '<${stamp(start + w * step)}>$word'].join(' ')} <${stamp(start + 4.4)}>');
+            out.writeln(
+              '[${stamp(start)}]${[for (final (w, word) in words.indexed) '<${stamp(start + w * step)}>$word'].join(' ')} <${stamp(start + 4.4)}>',
+            );
           }
           File('$music/${album.artist} - ${album.name}/${two(i + 1)} $title.lrc').writeAsStringSync(out.toString());
         }
@@ -402,7 +412,9 @@ void main() {
       }
 
       await DownloadPrefs.instance.load();
-      await until(() => find.text('Recently played').evaluate().isNotEmpty || find.byTooltip('Home').evaluate().isNotEmpty);
+      await until(
+        () => find.text('Recently played').evaluate().isNotEmpty || find.byTooltip('Home').evaluate().isNotEmpty,
+      );
       await settle(3000);
 
       // Home with a song playing.
@@ -417,7 +429,16 @@ void main() {
         c.createPlaylist(
           'Slow evenings',
           tracks: [
-            for (final t in ['Lantern Row', 'Window Seat', 'Amber Hours', 'Harbor Clocks', 'Wool Blanket', 'Drift', 'Slow Tide Home', 'Greenhouse Rain'])
+            for (final t in [
+              'Lantern Row',
+              'Window Seat',
+              'Amber Hours',
+              'Harbor Clocks',
+              'Wool Blanket',
+              'Drift',
+              'Slow Tide Home',
+              'Greenhouse Rain',
+            ])
               song(t),
           ],
         );
@@ -471,7 +492,11 @@ void main() {
         await tester.tap(find.text('Your listening stats').first);
         await settle(2000);
         await shot('stats');
-        await tester.scrollUntilVisible(find.textContaining('in music').first, 400, scrollable: find.byType(Scrollable).last);
+        await tester.scrollUntilVisible(
+          find.textContaining('in music').first,
+          400,
+          scrollable: find.byType(Scrollable).last,
+        );
         await settle();
         await tester.tap(find.textContaining('in music').first);
         await settle(1500);
@@ -495,11 +520,13 @@ void main() {
         await shot('settings');
         // The folder is set before the page opens: it reads it once.
         await DownloadPrefs.instance.setFolder('/tmp/Music/Riflay');
+        await tester.tap(find.text('Library & downloads'));
+        await settle();
         await tester.tap(find.text('Downloads').last);
         await settle(1500);
         await shot('settings-downloads');
         await DownloadPrefs.instance.setFolder(null);
-        await tester.tap(find.text('Settings').first);
+        await tester.tap(find.text('Settings').first); // the trail's first step: back to the list
         await settle();
         await Scrollable.ensureVisible(tester.element(find.text('Beta features')), alignment: 0.5);
         await settle();
@@ -507,6 +534,8 @@ void main() {
         await settle();
         await shot('settings-beta');
         await tester.tap(find.text('Settings').first);
+        await settle();
+        await tester.tap(find.text('Sound'));
         await settle();
         await tester.tap(find.text('Playback'));
         await settle();
@@ -534,14 +563,17 @@ void main() {
         await settle();
       });
 
-      // Settings › Library, then the songs you have twice.
+      // Settings › Library & downloads › Library, then the songs you have twice.
       await step('duplicates', () async {
         await openMore('Settings');
+        await tester.tap(find.text('Library & downloads'));
+        await settle();
         await tester.tap(find.text('Library').first);
         await settle();
         // Opened straight through the shell: on a computer the tile opens it under the same history entry as
         // the page itself, which is a step the history skips.
-        ShellScope.of(tester.element(find.text('Find songs you have twice'))).open(const DuplicatesPage(), location: 'duplicates');
+        ShellScope.of(tester.element(find.text('Find songs you have twice')))
+            .open(const DuplicatesPage(), location: 'duplicates');
         await settle(3000);
         await shot('duplicates');
       });
@@ -549,8 +581,14 @@ void main() {
       // The Downloads page, with a music video and a song on their way.
       await step('downloads', () async {
         final file = await PrivateFiles.file('download_queue.json');
-        DownloadJob job(int i, String title, String channel, DownloadChoice choice) =>
-            DownloadJob(videoId: 'Riflay00${i}xx', title: title, channel: channel, thumbnailUrl: thumb(i), knownNames: true, choice: choice);
+        DownloadJob job(int i, String title, String channel, DownloadChoice choice) => DownloadJob(
+          videoId: 'Riflay00${i}xx',
+          title: title,
+          channel: channel,
+          thumbnailUrl: thumb(i),
+          knownNames: true,
+          choice: choice,
+        );
         final jobs = [
           job(1, 'Harbor Clocks', 'Pale Harbor', DownloadChoice.video(VideoContainer.mp4, height: 1080)),
           job(2, 'Late Bus', 'The Quiet Orchard', const DownloadChoice(DownloadFormat.opus)),

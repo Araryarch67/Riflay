@@ -1,4 +1,4 @@
-// "Colours from cover art: Whole app" and the custom colours of Settings › Appearance.
+// "Colours from cover art: Whole app" and the custom colours of Settings › Look & feel › Appearance.
 //
 // Plays songs with two different solid-ish covers in a throwaway library, measures how much a song
 // change costs in each mode (frame build times and app-wide restyles), and takes pictures when SHOTS is set:
@@ -103,7 +103,9 @@ void main() {
     await shot('1-default-nothing-playing');
 
     // Songs alternate between the red and blue albums.
-    final queue = [for (var t = 1; t <= 4; t++) ...[byTitle('Red song $t'), byTitle('Blue song $t')]];
+    final queue = [
+      for (var t = 1; t <= 4; t++) ...[byTitle('Red song $t'), byTitle('Blue song $t')],
+    ];
     await tester.runAsync(() => c.playList(queue, 0, from: 'Test'));
     await settle(1500);
 
@@ -170,12 +172,14 @@ void main() {
     await tester.runAsync(c.player.stop);
     await tester.runAsync(() => c.playList(const [], 0));
 
-    // ── Settings › Appearance ──
+    // ── Settings › Look & feel › Appearance ──
     await tester.runAsync(() => c.playList([byTitle('Green song 1')], 0, from: 'Test'));
     await settle(1200);
     await tester.tap(find.byTooltip('More'));
     await settle();
     await tester.tap(find.text('Settings').first);
+    await settle();
+    await tester.tap(find.text('Look & feel'));
     await settle();
     await tester.tap(find.text('Appearance'));
     await settle();

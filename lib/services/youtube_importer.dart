@@ -1421,10 +1421,11 @@ class YoutubeImporter extends ChangeNotifier {
       // Subclass first: VideoUnavailableException extends VideoUnplayableException.
       VideoUnavailableException() => 'This video is unavailable.',
       VideoUnplayableException() => 'This video can\'t be played (private, age-restricted or region-locked).',
-      MuxException() => 'Couldn\'t combine the picture and the sound. Try again, or pick another size in Settings.',
-      _NoMp3() => 'MP3 downloads need ffmpeg, which isn\'t available here. Pick another format in Settings.',
-      _NoFlac() => 'FLAC downloads aren\'t available on this device. Pick another format in Settings.',
-      _OnMobileData() => 'Mobile data downloads are off. Connect to Wi-Fi, or allow them in Settings.',
+      MuxException() => 'Couldn\'t combine the picture and the sound. Try again, or pick another size in Settings › Library & downloads › Downloads.',
+      _NoMp3() => 'MP3 downloads need ffmpeg, which isn\'t available here. Pick another format in Settings › Library & downloads › Downloads.',
+      _NoFlac() => 'FLAC downloads aren\'t available on this device. Pick another format in Settings › Library & downloads › Downloads.',
+      _OnMobileData() =>
+        'Mobile data downloads are off. Connect to Wi-Fi, or allow them in Settings › Library & downloads › Downloads.',
       SocketException() || http.ClientException() || TimeoutException() => 'No internet connection. Try again.',
       _ => 'Couldn\'t download this song. Try again later.',
     };

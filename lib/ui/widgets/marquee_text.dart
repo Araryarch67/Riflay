@@ -6,7 +6,7 @@ import '../../services/layout_prefs.dart';
 /// title can be read whole: it rests at the start for [pause], scrolls at
 /// [speed] logical pixels a second until a second copy (after [gap]) takes its
 /// place, and starts over. Text that fits stays still. With less motion
-/// (Settings › Layout › Motion, or the system's setting) it is cut off with an
+/// (Settings › Look & feel › Layout › Motion, or the system's setting) it is cut off with an
 /// ellipsis instead.
 ///
 /// Only for a few titles on screen (the player, the lyrics header), never for

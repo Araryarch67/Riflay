@@ -6,7 +6,7 @@ import '../shell_scope.dart';
 import 'duplicates_page.dart';
 import 'sound_settings.dart';
 
-/// Settings › Library: keeping the music folders up to date, and finding songs you have twice.
+/// Settings › Library & downloads › Library: keeping the music folders up to date, and finding songs you have twice.
 class LibrarySettings extends StatelessWidget {
   const LibrarySettings({super.key});
 
@@ -73,8 +73,10 @@ class LibrarySettings extends StatelessWidget {
                     subtitle: Text('The same song in different files, so you can keep the best one.', style: muted),
                     trailing: const Icon(Icons.chevron_right_rounded),
                     // Its own location: the shell skips opening a page at the location already on screen.
-                    onTap: () =>
-                        shell.open(const DuplicatesPage(), location: Locations.settingsTopic('library/duplicates')),
+                    onTap: () => shell.open(
+                      const DuplicatesPage(),
+                      location: Locations.settingsTopic('library/library/duplicates'),
+                    ),
                   ),
                 ],
               ),
