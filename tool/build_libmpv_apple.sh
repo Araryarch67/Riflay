@@ -76,6 +76,14 @@ if [[ ! -f $root/src/mpv.patched ]]; then
   touch "$root/src/mpv.patched"
 fi
 
+if [[ ! -f $root/src/harfbuzz.patched ]]; then
+  # Xcode 26's SDK links sincosf but no longer declares it, so harfbuzz 8.3 finds it and then can't compile the
+  # call; without it harfbuzz uses sinf and cosf, which give the same result.
+  perl -0pi -e "s/\n\s*\['sincosf'\],//" "$root/src/harfbuzz/meson.build"
+  grep -q "'sincosf'" "$root/src/harfbuzz/meson.build" && { echo "harfbuzz patch didn't apply" >&2; exit 1; }
+  touch "$root/src/harfbuzz.patched"
+fi
+
 # Every audio decoder (the audio, PCM and ADPCM sections of FFmpeg's codec list); cover art is read
 # by the app itself.
 audio_decoders=$(sed -n '/^\/\* audio codecs \*\//,/^\/\* subtitles \*\//p' "$root/src/ffmpeg/libavcodec/allcodecs.c" |
