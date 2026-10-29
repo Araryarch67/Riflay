@@ -182,9 +182,9 @@ abstract final class YoutubeStream {
   }
 
   /// The stream a download of [choice] fetches (the player API, then yt-dlp
-  /// where there is one), and the bitrate to convert it down to, if any.
+  /// where there is one), and what to convert it into afterwards (null keeps it as is).
   /// Not cached: a download resolves once and fetches at once.
-  static Future<({ResolvedAudio audio, int? reencodeKbps})> forDownload(
+  static Future<({ResolvedAudio audio, Conversion? convert})> forDownload(
     String videoId,
     DownloadChoice choice, {
     required bool canReencode,
@@ -202,7 +202,7 @@ abstract final class YoutubeStream {
         canReencode: canReencode,
       );
       if (pick == null) throw StateError('No audio stream for this song.');
-      return (audio: _resolvedFrom(pick.candidate.ref! as Map<String, dynamic>, j), reencodeKbps: pick.reencodeKbps);
+      return (audio: _resolvedFrom(pick.candidate.ref! as Map<String, dynamic>, j), convert: pick.convert);
     } catch (e) {
       if (!YtDlp.supported) rethrow;
       debugPrint('YouTube player API failed for $videoId, using yt-dlp: $e');

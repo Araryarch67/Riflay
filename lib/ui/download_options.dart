@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../services/download_prefs.dart';
+import '../services/youtube_importer.dart';
 import 'theme.dart';
 
 /// The format and quality to download with. Without [force] this follows
@@ -30,7 +31,12 @@ class DownloadOptionsDialog extends StatefulWidget {
 
 class _DownloadOptionsDialogState extends State<DownloadOptionsDialog> {
   late var _format = widget.initial.format;
-  late var _quality = widget.initial.quality;
+  late var _flac = widget.initial.flac;
+  // Each format keeps its own bitrate while switching around in the dialog.
+  late final _kbps = {
+    for (final f in DownloadFormat.values.where((f) => !f.lossless)) f: DownloadPrefs.instance.kbpsFor(f),
+    if (!widget.initial.format.lossless) widget.initial.format: widget.initial.kbps,
+  };
 
   @override
   Widget build(BuildContext context) {
@@ -53,34 +59,61 @@ class _DownloadOptionsDialogState extends State<DownloadOptionsDialog> {
                 child: Column(
                   children: [
                     for (final f in DownloadFormat.values)
-                      RadioListTile<DownloadFormat>(
-                        dense: true,
-                        contentPadding: EdgeInsets.zero,
-                        value: f,
-                        title: Text(f.label),
-                        subtitle: Text(f.about, style: muted),
-                      ),
+                      if (!f.lossless || YoutubeImporter.canMakeFlac || _format.lossless)
+                        RadioListTile<DownloadFormat>(
+                          dense: true,
+                          contentPadding: EdgeInsets.zero,
+                          value: f,
+                          title: Text(f.label),
+                          subtitle: Text(f.about, style: muted),
+                        ),
                   ],
                 ),
               ),
               const SizedBox(height: 8),
-              Text('Quality', style: text.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
-              RadioGroup<DownloadQuality>(
-                groupValue: _quality,
-                onChanged: (v) => setState(() => _quality = v ?? _quality),
-                child: Column(
+              Text(
+                _format.lossless ? 'Bit depth and sample rate' : 'Bitrate',
+                style: text.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: 8),
+              if (_format.lossless) ...[
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 4,
                   children: [
-                    for (final q in DownloadQuality.values)
-                      RadioListTile<DownloadQuality>(
-                        dense: true,
-                        contentPadding: EdgeInsets.zero,
-                        value: q,
-                        title: Text(q.label),
-                        subtitle: Text(q.about, style: muted),
+                    for (final q in FlacQuality.values)
+                      ChoiceChip(
+                        label: Text(q.label),
+                        selected: _flac == q,
+                        onSelected: (_) => setState(() => _flac = q),
                       ),
                   ],
                 ),
-              ),
+                const SizedBox(height: 8),
+                Text(_flac.about, style: muted),
+              ] else ...[
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 4,
+                  children: [
+                    for (final k in _format.bitrates)
+                      ChoiceChip(
+                        label: Text(bitrateLabel(k)),
+                        selected: _kbps[_format] == k,
+                        onSelected: (_) => setState(() => _kbps[_format] = k),
+                      ),
+                  ],
+                ),
+                if (_kbps[_format] != null) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    YoutubeImporter.canReencode
+                        ? 'Smaller files, with a little less full sound.'
+                        : 'Smaller files, with a little less full sound. Uses the closest version YouTube offers.',
+                    style: muted,
+                  ),
+                ],
+              ],
             ],
           ),
         ),
@@ -89,7 +122,7 @@ class _DownloadOptionsDialogState extends State<DownloadOptionsDialog> {
         TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancel')),
         FilledButton(
           style: FilledButton.styleFrom(backgroundColor: AppColors.inverse, foregroundColor: AppColors.onInverse),
-          onPressed: () => Navigator.of(context).pop(DownloadChoice(_format, _quality)),
+          onPressed: () => Navigator.of(context).pop(DownloadChoice(_format, kbps: _kbps[_format], flac: _flac)),
           child: const Text('Download'),
         ),
       ],

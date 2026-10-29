@@ -46,6 +46,12 @@ class _DownloadSettingsState extends State<DownloadSettings> {
     if (mounted) setState(() => _folder = YoutubeImporter.downloadsDir());
   }
 
+  static String _bitrateAbout(int? kbps) {
+    if (kbps == null) return 'The best sound YouTube has for each song.';
+    final base = 'Smaller files, with a little less full sound.';
+    return YoutubeImporter.canReencode ? base : '$base Uses the closest version YouTube offers.';
+  }
+
   @override
   Widget build(BuildContext context) {
     final muted = settingsMuted(context);
@@ -60,27 +66,47 @@ class _DownloadSettingsState extends State<DownloadSettings> {
               SettingTile(
                 icon: Icons.audio_file_outlined,
                 title: const Text('Format'),
-                subtitle: Text(_prefs.format.about, style: muted),
+                subtitle: Text(
+                  YoutubeImporter.canMakeFlac || _prefs.format.lossless
+                      ? _prefs.format.about
+                      : '${_prefs.format.about}\nFLAC isn\'t available on this device.',
+                  style: muted,
+                ),
                 control: OptionPicker<DownloadFormat>(
                   value: _prefs.format,
-                  options: [for (final f in DownloadFormat.values) (f, f.label)],
+                  options: [
+                    for (final f in DownloadFormat.values)
+                      if (!f.lossless || YoutubeImporter.canMakeFlac || _prefs.format.lossless) (f, f.label),
+                  ],
                   onChanged: _prefs.setFormat,
                 ),
               ),
-              SettingTile(
-                icon: Icons.high_quality_outlined,
-                title: const Text('Quality'),
-                subtitle: Text(_prefs.quality.about, style: muted),
-                control: OptionPicker<DownloadQuality>(
-                  value: _prefs.quality,
-                  options: [for (final q in DownloadQuality.values) (q, q.label)],
-                  onChanged: _prefs.setQuality,
+              if (_prefs.format.lossless)
+                SettingTile(
+                  icon: Icons.high_quality_outlined,
+                  title: const Text('Bit depth and sample rate'),
+                  subtitle: Text(_prefs.flac.about, style: muted),
+                  control: OptionPicker<FlacQuality>(
+                    value: _prefs.flac,
+                    options: [for (final q in FlacQuality.values) (q, q.label)],
+                    onChanged: _prefs.setFlac,
+                  ),
+                )
+              else
+                SettingTile(
+                  icon: Icons.high_quality_outlined,
+                  title: const Text('Bitrate'),
+                  subtitle: Text(_bitrateAbout(_prefs.kbpsFor(_prefs.format)), style: muted),
+                  control: OptionPicker<int?>(
+                    value: _prefs.kbpsFor(_prefs.format),
+                    options: [for (final k in _prefs.format.bitrates) (k, bitrateLabel(k))],
+                    onChanged: (k) => _prefs.setKbps(_prefs.format, k),
+                  ),
                 ),
-              ),
               SwitchListTile(
                 secondary: const Icon(Icons.help_outline_rounded),
                 title: const Text('Ask every time'),
-                subtitle: Text('Choose the format and quality each time you download a song.', style: muted),
+                subtitle: Text('Choose the format and sound quality each time you download a song.', style: muted),
                 value: _prefs.askEveryTime,
                 onChanged: _prefs.setAskEveryTime,
               ),

@@ -18,8 +18,15 @@ final _sample = <Map<String, dynamic>>[
 
 List<AudioCandidate> get _candidates => [for (final f in _sample) ?AudioCandidate.fromYtDlp(f)];
 
-AudioPick? _pick(DownloadFormat f, DownloadQuality q, {bool ffmpeg = true}) =>
-    pickForDownload(_candidates, DownloadChoice(f, q), canReencode: ffmpeg);
+AudioPick? _pick(DownloadFormat f, int? kbps, {bool ffmpeg = true, FlacQuality flac = FlacQuality.standard}) =>
+    pickForDownload(
+      _candidates,
+      DownloadChoice(f, kbps: kbps, flac: flac),
+      canReencode: ffmpeg,
+    );
+
+const _opus = DownloadFormat.opus;
+const _m4a = DownloadFormat.m4a;
 
 void main() {
   test('video streams, storyboards, stable-volume and dubbed copies are never candidates', () {
@@ -28,73 +35,127 @@ void main() {
     expect(usable, ['139', '140', '249', '250', '251']);
   });
 
-  test('best available keeps today\'s choice: the highest-bitrate stream of the format', () {
-    expect(_pick(DownloadFormat.opus, DownloadQuality.best)!.candidate.id, '251');
-    expect(_pick(DownloadFormat.m4a, DownloadQuality.best)!.candidate.id, '140');
-    expect(_pick(DownloadFormat.opus, DownloadQuality.best)!.reencodeKbps, isNull);
-  });
+  group('best available', () {
+    test('null kbps is the highest stream of the format, unconverted', () {
+      final o = _pick(_opus, null)!;
+      expect((o.candidate.id, o.convert, o.ext), ('251', null, 'webm'));
+      final m = _pick(_m4a, null)!;
+      expect((m.candidate.id, m.convert, m.ext), ('140', null, 'm4a'));
+    });
 
-  test('smaller steps take YouTube\'s own lower stream', () {
-    expect(_pick(DownloadFormat.opus, DownloadQuality.smaller)!.candidate.id, '250');
-    expect(_pick(DownloadFormat.opus, DownloadQuality.smallest)!.candidate.id, '249');
-    expect(_pick(DownloadFormat.m4a, DownloadQuality.smaller)!.candidate.id, '139');
-    expect(_pick(DownloadFormat.m4a, DownloadQuality.smallest)!.candidate.id, '139');
-    for (final f in DownloadFormat.values) {
-      for (final q in [DownloadQuality.smaller, DownloadQuality.smallest]) {
-        expect(_pick(f, q)!.reencodeKbps, isNull, reason: 'a native stream fits $f $q, so nothing is converted');
+    test('a target at or near the best is the best, never converted up', () {
+      for (final ffmpeg in [true, false]) {
+        expect(_pick(_opus, 128, ffmpeg: ffmpeg)!.candidate.id, '251');
+        expect(_pick(_opus, 128, ffmpeg: ffmpeg)!.convert, isNull);
+        expect(_pick(_m4a, 128, ffmpeg: ffmpeg)!.candidate.id, '140');
+        expect(_pick(_m4a, 128, ffmpeg: ffmpeg)!.convert, isNull);
       }
-    }
+      const quiet = [AudioCandidate(id: 'x', opus: false, kbps: 48)];
+      final pick = pickForDownload(quiet, const DownloadChoice(_m4a, kbps: 96), canReencode: true)!;
+      expect((pick.convert, pick.kbps), (null, 48));
+    });
   });
 
-  test('a result is never above what YouTube serves, or above the step\'s cap when a stream fits', () {
-    final served = _candidates.where((c) => !c.processed).map((c) => c.kbps).reduce((a, b) => a > b ? a : b);
-    for (final f in DownloadFormat.values) {
-      for (final q in DownloadQuality.values) {
-        final pick = _pick(f, q)!;
-        expect(pick.kbps, lessThanOrEqualTo(served));
-        if (q.capKbps != null) expect(pick.kbps, lessThanOrEqualTo(q.capKbps!));
-        expect(pick.opus, f == DownloadFormat.opus);
+  group('lower targets', () {
+    test('a served stream within 15% is used as it is', () {
+      final o = _pick(_opus, 48)!;
+      expect((o.candidate.id, o.convert), ('249', null));
+      final m = _pick(_m4a, 48)!;
+      expect((m.candidate.id, m.convert), ('139', null));
+    });
+
+    test('otherwise, with ffmpeg, the best stream is re-encoded to the target', () {
+      final o96 = _pick(_opus, 96)!;
+      expect((o96.candidate.id, o96.convert, o96.kbps, o96.ext), ('251', const Reencode(96), 96, 'webm'));
+      final o64 = _pick(_opus, 64)!;
+      expect((o64.candidate.id, o64.convert), ('251', const Reencode(64)));
+      final m96 = _pick(_m4a, 96)!;
+      expect((m96.candidate.id, m96.convert, m96.label), ('140', const Reencode(96), 'AAC · 96 kbps'));
+      final m64 = _pick(_m4a, 64)!;
+      expect((m64.candidate.id, m64.convert), ('140', const Reencode(64)));
+    });
+
+    test('without ffmpeg: the highest stream at or under the target, else the smallest', () {
+      expect(_pick(_opus, 96, ffmpeg: false)!.candidate.id, '250');
+      expect(_pick(_opus, 64, ffmpeg: false)!.candidate.id, '249');
+      expect(_pick(_m4a, 96, ffmpeg: false)!.candidate.id, '139');
+      expect(_pick(_m4a, 64, ffmpeg: false)!.candidate.id, '139');
+      for (final f in [_opus, _m4a]) {
+        for (final k in [null, 128, 96, 64, 48]) {
+          expect(_pick(f, k, ffmpeg: false)!.convert, isNull);
+        }
       }
-    }
+      const heavy = [AudioCandidate(id: 'a', opus: true, kbps: 160), AudioCandidate(id: 'b', opus: true, kbps: 128)];
+      final p = pickForDownload(heavy, const DownloadChoice(_opus, kbps: 96), canReencode: false)!;
+      expect((p.candidate.id, p.convert, p.kbps), ('b', null, 128), reason: 'smallest, and its honest bitrate');
+    });
+
+    test('a result is never above what YouTube serves', () {
+      for (final f in [_opus, _m4a]) {
+        for (final k in f.bitrates) {
+          for (final ffmpeg in [true, false]) {
+            final pick = _pick(f, k, ffmpeg: ffmpeg)!;
+            expect(pick.kbps, lessThanOrEqualTo(137));
+            expect(pick.opus, f == _opus);
+          }
+        }
+      }
+    });
   });
 
-  test('only when every stream is above the cap is one converted down, and only with ffmpeg', () {
-    const heavy = [AudioCandidate(id: 'a', opus: true, kbps: 160), AudioCandidate(id: 'b', opus: true, kbps: 128)];
-    const choice = DownloadChoice(DownloadFormat.opus, DownloadQuality.smaller);
-    final down = pickForDownload(heavy, choice, canReencode: true)!;
-    expect(down.candidate.id, 'b');
-    expect(down.reencodeKbps, 96);
-    expect(down.kbps, 96);
-    final noFfmpeg = pickForDownload(heavy, choice, canReencode: false)!;
-    expect(noFfmpeg.candidate.id, 'b');
-    expect(noFfmpeg.reencodeKbps, isNull);
-    expect(noFfmpeg.kbps, 128, reason: 'the honest bitrate of the file that is saved');
+  group('FLAC', () {
+    test('is made from the best stream, Opus first, whether or not ffmpeg is there', () {
+      for (final ffmpeg in [true, false]) {
+        final p = _pick(DownloadFormat.flac, 64, ffmpeg: ffmpeg)!;
+        expect(p.candidate.id, '251');
+        expect(p.convert, const ToFlac(FlacQuality.standard));
+        expect(p.ext, 'flac');
+        expect(p.label, 'FLAC · 16-bit / 48 kHz');
+        expect(p.reencodeKbps, isNull);
+        expect(p.kbps, 137, reason: 'the stream it was made from');
+      }
+    });
+
+    test('carries the chosen quality', () {
+      final p = _pick(DownloadFormat.flac, null, flac: FlacQuality.hiRes)!;
+      expect(p.convert, const ToFlac(FlacQuality.hiRes));
+      expect(p.label, 'FLAC · 24-bit / 48 kHz');
+      expect(_pick(DownloadFormat.flac, null, flac: FlacQuality.cd)!.label, 'FLAC · 16-bit / 44.1 kHz');
+    });
+
+    test('falls back to AAC when there is no Opus', () {
+      final p = pickForDownload(
+        _candidates.where((c) => !c.opus),
+        const DownloadChoice(DownloadFormat.flac),
+        canReencode: false,
+      )!;
+      expect((p.candidate.id, p.ext), ('140', 'flac'));
+    });
   });
 
-  test('a stream already under the cap is never converted up', () {
-    const quiet = [AudioCandidate(id: 'x', opus: false, kbps: 48)];
-    final pick = pickForDownload(
-      quiet,
-      const DownloadChoice(DownloadFormat.m4a, DownloadQuality.smaller),
-      canReencode: true,
-    )!;
-    expect(pick.reencodeKbps, isNull);
-    expect(pick.kbps, 48);
+  test('DownloadChoice equality ignores what does not apply to the format', () {
+    expect(const DownloadChoice(DownloadFormat.flac, kbps: 64), const DownloadChoice(DownloadFormat.flac, kbps: 96));
+    expect(
+      const DownloadChoice(DownloadFormat.flac, kbps: 64).hashCode,
+      const DownloadChoice(DownloadFormat.flac, kbps: 96).hashCode,
+    );
+    expect(
+      const DownloadChoice(DownloadFormat.flac),
+      isNot(const DownloadChoice(DownloadFormat.flac, flac: FlacQuality.hiRes)),
+    );
+    expect(const DownloadChoice(_opus, flac: FlacQuality.cd), const DownloadChoice(_opus, flac: FlacQuality.hiRes));
+    expect(const DownloadChoice(_opus, kbps: 96), isNot(const DownloadChoice(_opus, kbps: 64)));
+    expect(const DownloadChoice(_opus), isNot(const DownloadChoice(_opus, kbps: 128)));
+    expect(const DownloadChoice(_opus, kbps: 96), isNot(const DownloadChoice(_m4a, kbps: 96)));
   });
 
   test('the other format is used only when the video has none of the one asked for', () {
     final onlyAac = _candidates.where((c) => !c.opus);
-    final pick = pickForDownload(
-      onlyAac,
-      const DownloadChoice(DownloadFormat.opus, DownloadQuality.best),
-      canReencode: true,
-    )!;
+    final pick = pickForDownload(onlyAac, const DownloadChoice(_opus), canReencode: true)!;
     expect(pick.opus, isFalse);
     expect(pick.label, 'AAC · 130 kbps', reason: 'the list says what was really saved');
-    expect(
-      pickForDownload(const [], const DownloadChoice(DownloadFormat.opus, DownloadQuality.best), canReencode: true),
-      isNull,
-    );
+    expect(pickForDownload(const [], const DownloadChoice(_opus), canReencode: true), isNull);
+    expect(pickForDownload(const [], const DownloadChoice(DownloadFormat.flac), canReencode: true), isNull);
   });
 
   test('a near-silent Opus beside a normal AAC is not taken for the best', () {
@@ -103,29 +164,17 @@ void main() {
       AudioCandidate(id: '140', opus: false, kbps: 130),
       AudioCandidate(id: '139', opus: false, kbps: 49),
     ];
-    final best = pickForDownload(
-      odd,
-      const DownloadChoice(DownloadFormat.opus, DownloadQuality.best),
-      canReencode: true,
-    )!;
+    final best = pickForDownload(odd, const DownloadChoice(_opus), canReencode: true)!;
     expect(best.candidate.id, '140');
     expect(best.label, 'AAC · 130 kbps');
-    final small = pickForDownload(
-      odd,
-      const DownloadChoice(DownloadFormat.opus, DownloadQuality.smaller),
-      canReencode: true,
-    )!;
-    expect(small.candidate.id, '139');
+    final small = pickForDownload(odd, const DownloadChoice(_opus, kbps: 48), canReencode: true)!;
+    expect((small.candidate.id, small.convert), ('139', null));
+    final down = pickForDownload(odd, const DownloadChoice(_opus, kbps: 96), canReencode: true)!;
+    expect((down.candidate.id, down.convert), ('140', const Reencode(96)));
+    expect(pickForDownload(odd, const DownloadChoice(DownloadFormat.flac), canReencode: true)!.candidate.id, '140');
     // But a low Opus with no real AAC to prefer is left alone.
     const onlyLow = [AudioCandidate(id: '251', opus: true, kbps: 4), AudioCandidate(id: '139', opus: false, kbps: 49)];
-    expect(
-      pickForDownload(
-        onlyLow,
-        const DownloadChoice(DownloadFormat.opus, DownloadQuality.best),
-        canReencode: true,
-      )!.candidate.id,
-      '251',
-    );
+    expect(pickForDownload(onlyLow, const DownloadChoice(_opus), canReencode: true)!.candidate.id, '251');
   });
 
   test('the player API\'s formats are read the same way', () {

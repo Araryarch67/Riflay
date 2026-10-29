@@ -72,22 +72,36 @@ void main() {
       return job;
     }
 
-    for (final (format, quality) in [
-      (DownloadFormat.opus, DownloadQuality.best),
-      (DownloadFormat.m4a, DownloadQuality.best),
-      (DownloadFormat.opus, DownloadQuality.smallest),
-      (DownloadFormat.m4a, DownloadQuality.smaller),
+    for (final (name, choice) in [
+      ('opus-best', const DownloadChoice(DownloadFormat.opus)),
+      ('m4a-best', const DownloadChoice(DownloadFormat.m4a)),
+      ('opus-64', const DownloadChoice(DownloadFormat.opus, kbps: 64)),
+      ('m4a-96', const DownloadChoice(DownloadFormat.m4a, kbps: 96)),
+      ('flac-standard', const DownloadChoice(DownloadFormat.flac)),
+      ('flac-cd', const DownloadChoice(DownloadFormat.flac, flac: FlacQuality.cd)),
+      ('flac-hires', const DownloadChoice(DownloadFormat.flac, flac: FlacQuality.hiRes)),
     ]) {
-      final job = await download('AM3DIzTpcw4', DownloadChoice(format, quality));
+      final job = await download('AM3DIzTpcw4', choice);
       final file = File(job.track!.path!);
-      file.copySync('${out.path}/${format.name}-${quality.name}${file.path.substring(file.path.lastIndexOf('.'))}');
+      file.copySync('${out.path}/$name${file.path.substring(file.path.lastIndexOf('.'))}');
+      if (choice.format.lossless) {
+        expect(file.path, endsWith('.flac'));
+        expect(job.quality, describeFlac(choice.flac));
+        expect(
+          File(file.path.replaceAll('.flac', '.webm')).existsSync(),
+          isFalse,
+          reason: 'the stream file is removed',
+        );
+        expect(File('${file.path}.part').existsSync(), isFalse);
+        expect(job.totalBytes, file.lengthSync());
+      }
       // ignore: avoid_print
-      print('DOWNLOADED ${format.name}/${quality.name}: ${job.quality} -> ${file.lengthSync()} bytes');
+      print('DOWNLOADED $choice: ${job.quality} -> ${file.lengthSync()} bytes');
       c.youtube.clearFinished();
     }
     // Two rows for the list picture: one in each format.
-    await download('AM3DIzTpcw4', const DownloadChoice(DownloadFormat.opus, DownloadQuality.best));
-    await download('JESx2qFyupM', const DownloadChoice(DownloadFormat.m4a, DownloadQuality.best));
+    await download('AM3DIzTpcw4', const DownloadChoice(DownloadFormat.opus));
+    await download('JESx2qFyupM', const DownloadChoice(DownloadFormat.m4a));
     await settle(1000);
 
     // Desktop: Downloads in the sidebar, then its page.

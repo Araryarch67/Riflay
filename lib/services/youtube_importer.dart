@@ -11,6 +11,8 @@ import 'package:youtube_explode_dart/youtube_explode_dart.dart';
 import '../models/track.dart';
 import 'download_prefs.dart';
 import 'ffmpeg.dart';
+import 'flac_stream.dart';
+import 'pcm_decoder.dart';
 import 'ranged_download.dart';
 import 'youtube_stream.dart';
 import 'ytdlp.dart';
@@ -70,6 +72,45 @@ class _OnMobileData implements Exception {
   const _OnMobileData();
 }
 
+/// The job was cancelled while a file was being converted.
+class _Cancelled implements Exception {
+  const _Cancelled();
+}
+
+/// FLAC was chosen on a device that can neither run ffmpeg nor decode with libmpv.
+class _NoFlac implements Exception {
+  const _NoFlac();
+}
+
+/// What a download fetches and what it becomes.
+class _Audio {
+  const _Audio({
+    required this.url,
+    required this.size,
+    required this.sourceExt,
+    required this.ext,
+    required this.quality,
+    this.convert,
+  });
+
+  final Uri url;
+
+  /// Size of the stream as served (not of the converted file).
+  final int? size;
+
+  /// The stream's own container ('webm' or 'm4a'): the file as downloaded.
+  final String sourceExt;
+
+  /// The saved file's extension: [sourceExt], or 'flac'.
+  final String ext;
+
+  /// What the saved file is, e.g. "Opus · 96 kbps" or "FLAC · 16-bit / 48 kHz".
+  final String quality;
+
+  /// Applied after the stream has arrived; null keeps it byte-for-byte.
+  final Conversion? convert;
+}
+
 /// What a pasted link resolved to, shown before the user commits to downloading.
 sealed class YoutubePreview {
   const YoutubePreview();
@@ -111,6 +152,12 @@ class YoutubeImporter extends ChangeNotifier {
     if (active.isEmpty) return null;
     return active.fold(0.0, (sum, j) => sum + j.progress) / active.length;
   }
+
+  /// Whether a bitrate below the best stream's can be made (ffmpeg is there).
+  static bool get canReencode => Ffmpeg.available;
+
+  /// Whether FLAC can be made: with ffmpeg, or on phones by libmpv decoding and [FlacStream] packing.
+  static bool get canMakeFlac => Ffmpeg.available || MpvPcm.supported;
 
   static bool looksLikeYoutubeUrl(String text) =>
       VideoId.parseVideoId(text.trim()) != null || PlaylistId.parsePlaylistId(text.trim()) != null;
@@ -236,34 +283,32 @@ class YoutubeImporter extends ChangeNotifier {
     }
   }
 
-  /// Exact size and quality of what a download would fetch.
+  /// Exact size and quality of what a download would fetch. For FLAC the size is null:
+  /// the stream's size says nothing about the lossless file made from it.
   Future<({int? size, String quality})?> peekAudio(String videoId, {DownloadChoice? choice}) async {
     try {
       await DownloadPrefs.instance.load();
       final r = await _resolveAudio(videoId, choice ?? DownloadPrefs.instance.choice);
-      return (size: r.size, quality: r.quality);
+      return (size: r.convert is ToFlac ? null : r.size, quality: r.quality);
     } catch (_) {
       return null;
     }
   }
 
-  /// The audio to fetch: URL, size, file extension and what the saved file will be.
-  /// [reencodeKbps] is set when the stream is converted down after it arrives.
-  Future<({Uri url, int? size, String ext, String quality, int? reencodeKbps})> _resolveAudio(
-    String videoId,
-    DownloadChoice choice,
-  ) async {
+  /// The audio to fetch (URL, size, the stream's container), and what the saved file will be.
+  Future<_Audio> _resolveAudio(String videoId, DownloadChoice choice) async {
     final canReencode = Ffmpeg.available;
     // YouTube's player API (yt-dlp on desktop if refused), then the in-app extractor.
     try {
       final r = await YoutubeStream.forDownload(videoId, choice, canReencode: canReencode);
-      final kbps = r.reencodeKbps ?? r.audio.kbps;
-      return (
+      final sourceExt = r.audio.ext == 'webm' ? 'webm' : 'm4a';
+      return _Audio(
         url: r.audio.url,
         size: r.audio.size,
-        ext: r.audio.ext == 'webm' ? 'webm' : 'm4a',
-        quality: describeAudio(opus: r.audio.isOpus, kbps: kbps),
-        reencodeKbps: r.reencodeKbps,
+        sourceExt: sourceExt,
+        ext: r.convert is ToFlac ? 'flac' : sourceExt,
+        quality: _qualityOf(r.convert, opus: r.audio.isOpus, kbps: r.audio.kbps),
+        convert: r.convert,
       );
     } catch (e) {
       if (YtDlp.supported) rethrow;
@@ -277,14 +322,21 @@ class YoutubeImporter extends ChangeNotifier {
     );
     if (pick == null) throw StateError('No playable audio stream for this video.');
     final stream = pick.candidate.ref! as AudioOnlyStreamInfo;
-    return (
+    return _Audio(
       url: stream.url,
       size: stream.size.totalBytes,
-      ext: stream.container == StreamContainer.webM ? 'webm' : 'm4a',
+      sourceExt: stream.container == StreamContainer.webM ? 'webm' : 'm4a',
+      ext: pick.ext == 'flac' ? 'flac' : (stream.container == StreamContainer.webM ? 'webm' : 'm4a'),
       quality: pick.label,
-      reencodeKbps: pick.reencodeKbps,
+      convert: pick.convert,
     );
   }
+
+  static String _qualityOf(Conversion? convert, {required bool opus, required int? kbps}) => switch (convert) {
+    ToFlac(:final quality) => describeFlac(quality),
+    Reencode(kbps: final target) => describeAudio(opus: opus, kbps: target),
+    null => describeAudio(opus: opus, kbps: kbps),
+  };
 
   /// Phones only, and only if the user turned mobile data off for downloads.
   static Future<bool> _blockedByMobileData() async {
@@ -304,34 +356,100 @@ class YoutubeImporter extends ChangeNotifier {
   /// Converts [input] down to [kbps] in the same codec, replacing it. Returns the new file.
   static Future<File> _reencode(File input, {required bool opus, required int kbps}) async {
     final out = File('${input.path}.small${p.extension(input.path)}');
-    final r = await Process.run(await Ffmpeg.executable(), [
-      '-hide_banner', '-loglevel', 'error', '-y', '-i', input.path, '-vn', //
-      ...opus
-          ? ['-c:a', 'libopus', '-b:a', '${kbps}k']
-          : ['-c:a', 'aac', '-b:a', '${kbps}k', '-movflags', '+faststart'],
-      out.path,
-    ]);
-    if (r.exitCode != 0 || !out.existsSync() || out.lengthSync() == 0) {
+    try {
+      final r = await Process.run(await Ffmpeg.executable(), [
+        '-hide_banner', '-loglevel', 'error', '-y', '-i', input.path, '-vn', //
+        ...opus
+            ? ['-c:a', 'libopus', '-b:a', '${kbps}k']
+            : ['-c:a', 'aac', '-b:a', '${kbps}k', '-movflags', '+faststart'],
+        out.path,
+      ]);
+      if (r.exitCode != 0 || !out.existsSync() || out.lengthSync() == 0) {
+        throw StateError('ffmpeg could not convert the download: ${r.stderr}');
+      }
+      await input.delete();
+      return await out.rename(input.path);
+    } catch (_) {
       if (out.existsSync()) out.deleteSync();
-      throw StateError('ffmpeg could not convert the download: ${r.stderr}');
+      rethrow;
     }
-    await input.delete();
-    return out.rename(input.path);
+  }
+
+  /// Makes [source] (a downloaded stream) into [target] (a .flac) at [q], by writing `<target>.part` and renaming it.
+  /// Deletes [source] once the FLAC is in place. ffmpeg where there is one; otherwise libmpv decodes and
+  /// [FlacStream] packs the samples (no compression, so those files are larger). Returns [target].
+  @visibleForTesting
+  static Future<File> toFlac(File source, File target, FlacQuality q, {bool Function()? isCancelled}) async {
+    final part = File('${target.path}.part');
+    try {
+      if (Ffmpeg.available) {
+        final r = await Process.run(await Ffmpeg.executable(), [
+          '-hide_banner', '-loglevel', 'error', '-y', '-i', source.path, '-map', '0:a:0', '-vn', //
+          '-c:a', 'flac', '-ar', '${q.rate}',
+          ...q.bits == 16 ? ['-sample_fmt', 's16'] : ['-sample_fmt', 's32', '-bits_per_raw_sample', '24'],
+          '-f', 'flac', part.path,
+        ]);
+        if (r.exitCode != 0) throw StateError('ffmpeg could not make the FLAC: ${r.stderr}');
+      } else if (MpvPcm.supported) {
+        await _flacWithMpv(source, part, q, isCancelled: isCancelled);
+      } else {
+        throw const _NoFlac();
+      }
+      if (isCancelled?.call() ?? false) throw const _Cancelled();
+      if (!part.existsSync() || part.lengthSync() == 0) throw StateError('The FLAC came out empty.');
+      await part.rename(target.path);
+      if (source.path != target.path && source.existsSync()) await source.delete();
+      return target;
+    } catch (_) {
+      if (part.existsSync()) part.deleteSync();
+      rethrow;
+    }
+  }
+
+  static Future<void> _flacWithMpv(File source, File out, FlacQuality q, {bool Function()? isCancelled}) async {
+    final pcm = await MpvPcm.decode(PcmInput.file(source.path), rate: q.rate, bits: q.bits == 16 ? 16 : 32);
+    final file = await out.open(mode: FileMode.write);
+    var pcmBytes = 0;
+    try {
+      final counted = pcm.data.map((chunk) {
+        pcmBytes += chunk.length;
+        return chunk;
+      });
+      await for (final block in FlacStream.encode(counted, rate: pcm.rate, channels: pcm.channels, bits: q.bits)) {
+        if (isCancelled?.call() ?? false) throw const _Cancelled();
+        await file.writeFrom(block);
+      }
+      // FlacStream writes STREAMINFO with an unknown length, which leaves players without a duration or a seek bar.
+      // The length is known now, so put it in (STREAMINFO starts at byte 8; rate, channels, bits and the sample
+      // count are at byte 10 of it).
+      final samples = pcmBytes ~/ (pcm.channels * (q.bits == 16 ? 2 : 4));
+      final b = ByteData(8)
+        ..setUint32(0, (pcm.rate << 12) | ((pcm.channels - 1) << 9) | ((q.bits - 1) << 4) | ((samples >> 32) & 0xF))
+        ..setUint32(4, samples & 0xFFFFFFFF);
+      await file.setPosition(18);
+      await file.writeFrom(b.buffer.asUint8List());
+    } finally {
+      await pcm.cancel();
+      await file.close();
+    }
   }
 
   Future<void> _download(DownloadJob job) async {
     notifyListeners();
     File? partFile;
+    File? downloaded;
+    File? converted;
     try {
       await DownloadPrefs.instance.load();
       if (await _blockedByMobileData()) throw const _OnMobileData();
       final dir = await downloadsDir();
       final choice = job.choice ??= DownloadPrefs.instance.choice;
+      if (choice.format.lossless && !canMakeFlac) throw const _NoFlac();
       // Metadata and the stream URL resolve in parallel.
       final (video, audio) = await (_yt.videos.get(job.videoId), _resolveAudio(job.videoId, choice)).wait;
       job.quality = audio.quality;
-      // Stored byte-for-byte as YouTube serves it: re-encoding could only lose quality.
-      final audioFile = File(p.join(dir.path, '${job.videoId}.${audio.ext}'));
+      // The stream is stored byte-for-byte as YouTube serves it unless a conversion was asked for.
+      final audioFile = File(p.join(dir.path, '${job.videoId}.${audio.sourceExt}'));
       partFile = File('${audioFile.path}.part');
       notifyListeners();
 
@@ -373,18 +491,31 @@ class YoutubeImporter extends ChangeNotifier {
         YoutubeStream.invalidateEverywhere(job.videoId);
         rethrow;
       }
-      await partFile.rename(audioFile.path);
-      if (audio.reencodeKbps case final kbps?) {
-        await _reencode(audioFile, opus: audio.quality.startsWith('Opus'), kbps: kbps);
-        job.totalBytes = audioFile.lengthSync();
+      downloaded = await partFile.rename(audioFile.path);
+      var saved = audioFile;
+      switch (audio.convert) {
+        case Reencode(:final kbps):
+          saved = await _reencode(audioFile, opus: audio.sourceExt == 'webm', kbps: kbps);
+        case ToFlac(:final quality):
+          saved = await toFlac(
+            audioFile,
+            File(p.join(dir.path, '${job.videoId}.flac')),
+            quality,
+            isCancelled: () => job.status == DownloadStatus.cancelled,
+          );
+        case null:
+          break;
       }
+      converted = saved;
+      if (job.status == DownloadStatus.cancelled) throw const _Cancelled();
+      if (audio.convert != null) job.totalBytes = saved.lengthSync();
       await thumbnail;
 
       // YouTube Music already named the song; only a bare video title needs guessing.
       final names = job.knownNames ? (title: job.title, artist: job.channel) : parseTitle(video.title, video.author);
       final track = Track(
-        id: Uri.file(audioFile.path).toString(),
-        uri: Uri.file(audioFile.path),
+        id: Uri.file(saved.path).toString(),
+        uri: Uri.file(saved.path),
         title: names.title,
         artist: names.artist,
         duration: video.duration,
@@ -399,6 +530,12 @@ class YoutubeImporter extends ChangeNotifier {
       await onTrackReady(track);
     } catch (e) {
       if (partFile != null && partFile.existsSync()) partFile.deleteSync();
+      // Nothing half-made stays: the stream file and a finished FLAC of a job that didn't complete go too.
+      if (job.track == null) {
+        for (final f in [downloaded, converted]) {
+          if (f != null && f.existsSync()) f.deleteSync();
+        }
+      }
       if (job.status != DownloadStatus.cancelled) {
         job
           ..status = DownloadStatus.failed
@@ -457,6 +594,7 @@ class YoutubeImporter extends ChangeNotifier {
       // Subclass first: VideoUnavailableException extends VideoUnplayableException.
       VideoUnavailableException() => 'This video is unavailable.',
       VideoUnplayableException() => 'This video can\'t be played (private, age-restricted or region-locked).',
+      _NoFlac() => 'FLAC downloads aren\'t available on this device. Pick another format in Settings.',
       _OnMobileData() => 'Mobile data downloads are off. Connect to Wi-Fi, or allow them in Settings.',
       SocketException() || http.ClientException() || TimeoutException() => 'No internet connection. Try again.',
       _ => 'Couldn\'t download this song. Try again later.',

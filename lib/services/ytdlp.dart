@@ -182,8 +182,8 @@ abstract final class YtDlp {
     ..remove('aac:$videoId');
 
   /// The stream a download of [choice] fetches, picked from every audio
-  /// format yt-dlp lists, and the bitrate to convert it down to, if any.
-  static Future<({ResolvedAudio audio, int? reencodeKbps})> forDownload(
+  /// format yt-dlp lists, and what to convert it into afterwards (null keeps it as is).
+  static Future<({ResolvedAudio audio, Conversion? convert})> forDownload(
     String videoId,
     DownloadChoice choice, {
     required bool canReencode,
@@ -219,7 +219,7 @@ abstract final class YtDlp {
         resolvedAt: DateTime.now(),
         via: 'yt-dlp',
       ),
-      reencodeKbps: pick.reencodeKbps,
+      convert: pick.convert,
     );
   }
 

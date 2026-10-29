@@ -5,43 +5,61 @@ import 'package:youtube_explode_dart/youtube_explode_dart.dart' show AudioOnlySt
 /// The file type a download is saved as.
 enum DownloadFormat {
   opus('Opus', 'Smallest files for the same sound. Plays in Riflay and most players.'),
-  m4a('M4A (AAC)', 'The most widely supported. Plays on nearly every phone, TV and speaker.');
+  m4a('M4A (AAC)', 'The most widely supported. Plays on nearly every phone, TV and speaker.'),
+  flac(
+    'FLAC',
+    'Lossless file for players and libraries that want FLAC. YouTube\'s sound is kept exactly; it gets no better.',
+  );
 
   const DownloadFormat(this.label, this.about);
   final String label;
   final String about;
+
+  /// FLAC is made from the downloaded stream; the others are YouTube's own.
+  bool get lossless => this == flac;
+
+  /// The bitrates offered for this format, best first; null is "Best available".
+  /// Empty for FLAC, which has [FlacQuality] instead.
+  List<int?> get bitrates => lossless ? const [] : const [null, 128, 96, 64, 48];
 }
 
-/// How much quality a download keeps. YouTube serves one best stream per
-/// format and a few smaller ones; these steps never go above what it serves.
-enum DownloadQuality {
-  best('Best available', null, 'The best sound YouTube has for the song.'),
-  smaller('Smaller files', 96, 'Up to about 96 kbps. Saves space, sounds a little less full.'),
-  smallest('Smallest files', 64, 'Up to about 64 kbps. Saves the most space.');
+/// Bit depth and sample rate of a FLAC download.
+enum FlacQuality {
+  standard('16-bit / 48 kHz', 16, 48000, 'Same sample rate as YouTube\'s audio. Plays everywhere.'),
+  cd('16-bit / 44.1 kHz', 16, 44100, 'CD quality, for players and burners that want exactly that.'),
+  hiRes('24-bit / 48 kHz', 24, 48000, 'Larger files, for libraries kept at 24-bit.');
 
-  const DownloadQuality(this.label, this.capKbps, this.about);
+  const FlacQuality(this.label, this.bits, this.rate, this.about);
   final String label;
-
-  /// The highest bitrate this step allows; null for no limit.
-  final int? capKbps;
+  final int bits;
+  final int rate;
   final String about;
 }
 
+/// "Best available" or "128 kbps", for pickers.
+String bitrateLabel(int? kbps) => kbps == null ? 'Best available' : '$kbps kbps';
+
 /// A format and quality for one download.
 class DownloadChoice {
-  const DownloadChoice(this.format, this.quality);
+  const DownloadChoice(this.format, {this.kbps, this.flac = FlacQuality.standard});
 
   final DownloadFormat format;
-  final DownloadQuality quality;
+
+  /// Target bitrate for Opus and M4A; null for the best YouTube has. Ignored for FLAC.
+  final int? kbps;
+
+  /// Bit depth and sample rate for FLAC; ignored for the other formats.
+  final FlacQuality flac;
 
   @override
-  bool operator ==(Object other) => other is DownloadChoice && other.format == format && other.quality == quality;
+  bool operator ==(Object other) =>
+      other is DownloadChoice && other.format == format && (format.lossless ? other.flac == flac : other.kbps == kbps);
 
   @override
-  int get hashCode => Object.hash(format, quality);
+  int get hashCode => Object.hash(format, format.lossless ? flac : kbps);
 
   @override
-  String toString() => '${format.name}/${quality.name}';
+  String toString() => '${format.name}/${format.lossless ? flac.name : (kbps ?? 'best')}';
 }
 
 /// One audio-only stream a video offers, whichever service listed it.
@@ -97,43 +115,88 @@ class AudioCandidate {
   );
 }
 
+/// What a downloaded stream is turned into after it arrives.
+sealed class Conversion {
+  const Conversion();
+}
+
+/// The same codec at a lower bitrate (needs ffmpeg).
+class Reencode extends Conversion {
+  const Reencode(this.kbps);
+  final int kbps;
+
+  @override
+  bool operator ==(Object other) => other is Reencode && other.kbps == kbps;
+  @override
+  int get hashCode => kbps.hashCode;
+}
+
+/// Decoded and saved as FLAC (ffmpeg, or libmpv plus FlacStream where there is no ffmpeg).
+class ToFlac extends Conversion {
+  const ToFlac(this.quality);
+  final FlacQuality quality;
+
+  @override
+  bool operator ==(Object other) => other is ToFlac && other.quality == quality;
+  @override
+  int get hashCode => quality.hashCode;
+}
+
 /// What [pickForDownload] decided.
 class AudioPick {
-  const AudioPick(this.candidate, {this.reencodeKbps});
+  const AudioPick(this.candidate, {this.convert});
 
   final AudioCandidate candidate;
 
-  /// Set when nothing YouTube serves is small enough: the stream is converted
-  /// down to this bitrate after it arrives. Never above the stream's own.
-  final int? reencodeKbps;
+  /// Null keeps the stream byte-for-byte as YouTube serves it.
+  final Conversion? convert;
 
-  /// The bitrate the saved file really has.
+  /// Set when the stream is converted down to a lower bitrate. Never above the stream's own.
+  int? get reencodeKbps => switch (convert) {
+    Reencode(:final kbps) => kbps,
+    _ => null,
+  };
+
+  /// The bitrate of the saved file (for FLAC: the stream it was made from).
   int get kbps => reencodeKbps ?? candidate.kbps;
 
   bool get opus => candidate.opus;
 
-  /// e.g. "Opus · 138 kbps", for the downloads list.
-  String get label => describeAudio(opus: opus, kbps: kbps);
+  /// The saved file's extension.
+  String get ext => convert is ToFlac ? 'flac' : (opus ? 'webm' : 'm4a');
+
+  /// e.g. "Opus · 138 kbps" or "FLAC · 16-bit / 48 kHz", for the downloads list.
+  String get label => switch (convert) {
+    ToFlac(:final quality) => describeFlac(quality),
+    _ => describeAudio(opus: opus, kbps: kbps),
+  };
 }
 
 String describeAudio({required bool opus, required int? kbps}) =>
     '${opus ? 'Opus' : 'AAC'}${kbps == null || kbps <= 0 ? '' : ' · $kbps kbps'}';
 
-/// Chooses the stream for [choice] out of everything a video offers.
-///
-/// * The format asked for wins; the other one only if the video has none.
-/// * "Best available" is the highest bitrate. Smaller steps take the highest
-///   stream at or under their cap, YouTube's own lower stream where it has one.
-/// * Only when every stream is above the cap is one converted down (if
-///   [canReencode], i.e. ffmpeg is there). Nothing is ever converted up, and
-///   without ffmpeg the smallest stream is used as it is.
+String describeFlac(FlacQuality q) => 'FLAC · ${q.label}';
+
 /// Below this, a stream is taken for a broken one when the other format has a real one.
 const _brokenKbps = 32;
 
+/// A served stream this close to the bitrate asked for (either way) is used as it is.
+const _closeEnough = 0.15;
+
+/// Chooses the stream for [choice] out of everything a video offers.
+///
+/// * The format asked for wins; the other one only if the video has none.
+///   FLAC is made from the best stream, Opus first.
+/// * "Best available", or a bitrate at or near the best stream's, is the
+///   highest-bitrate stream. Nothing is ever converted up.
+/// * A lower bitrate takes YouTube's own stream when one is within 15% of it;
+///   otherwise the best stream is converted down to it (if [canReencode], i.e.
+///   ffmpeg is there). Without ffmpeg the highest stream at or under it is
+///   used as it is, or the smallest one.
 AudioPick? pickForDownload(Iterable<AudioCandidate> all, DownloadChoice choice, {required bool canReencode}) {
   final usable = all.where((c) => !c.processed).toList();
   if (usable.isEmpty) return null;
-  final wantOpus = choice.format == DownloadFormat.opus;
+  final wantOpus = choice.format != DownloadFormat.m4a;
   var pool = usable.where((c) => c.opus == wantOpus).toList();
   if (pool.isEmpty) pool = usable;
   pool.sort((a, b) => b.kbps.compareTo(a.kbps));
@@ -141,13 +204,23 @@ AudioPick? pickForDownload(Iterable<AudioCandidate> all, DownloadChoice choice, 
   // not what anyone asking for the best wants: take the other format then.
   final other = usable.where((c) => c.opus != pool.first.opus).toList()..sort((a, b) => b.kbps.compareTo(a.kbps));
   if (pool.first.kbps < _brokenKbps && other.isNotEmpty && other.first.kbps >= 96) pool = other;
-  final cap = choice.quality.capKbps;
-  if (cap == null) return AudioPick(pool.first);
+  final best = pool.first;
+  if (choice.format.lossless) return AudioPick(best, convert: ToFlac(choice.flac));
+  final target = choice.kbps;
+  if (target == null || target >= best.kbps * (1 - _closeEnough)) return AudioPick(best);
+  AudioCandidate? near;
   for (final c in pool) {
-    if (c.kbps <= cap) return AudioPick(c);
+    if ((c.kbps - target).abs() <= target * _closeEnough &&
+        (near == null || (c.kbps - target).abs() < (near.kbps - target).abs())) {
+      near = c;
+    }
   }
-  final smallest = pool.last;
-  return AudioPick(smallest, reencodeKbps: canReencode && smallest.kbps > cap ? cap : null);
+  if (near != null) return AudioPick(near);
+  if (canReencode) return AudioPick(best, convert: Reencode(target));
+  for (final c in pool) {
+    if (c.kbps <= target) return AudioPick(c);
+  }
+  return AudioPick(pool.last);
 }
 
 /// What the user set under Settings › Downloads.
@@ -157,7 +230,10 @@ class DownloadPrefs extends ChangeNotifier {
   static final instance = DownloadPrefs();
 
   DownloadFormat format = DownloadFormat.opus;
-  DownloadQuality quality = DownloadQuality.best;
+
+  /// Target bitrate per lossy format; a missing entry is "Best available".
+  final Map<DownloadFormat, int> _kbps = {};
+  FlacQuality flac = FlacQuality.standard;
   bool askEveryTime = false;
 
   /// A folder the user chose (computers); null keeps the default.
@@ -166,14 +242,27 @@ class DownloadPrefs extends ChangeNotifier {
   /// Phones: download on mobile data too.
   bool mobileData = true;
 
-  DownloadChoice get choice => DownloadChoice(format, quality);
+  /// The bitrate set for [f]; null for "Best available".
+  int? kbpsFor(DownloadFormat f) => _kbps[f];
+
+  DownloadChoice get choice => DownloadChoice(format, kbps: kbpsFor(format), flac: flac);
 
   Future<void>? _loaded;
 
   Future<void> load() => _loaded ??= () async {
     final prefs = await SharedPreferences.getInstance();
     format = DownloadFormat.values.asNameMap()[prefs.getString('downloads.format')] ?? format;
-    quality = DownloadQuality.values.asNameMap()[prefs.getString('downloads.quality')] ?? quality;
+    // Before bitrates: one "quality" step for both formats.
+    final legacy = switch (prefs.getString('downloads.quality')) {
+      'smaller' => 96,
+      'smallest' => 64,
+      _ => null,
+    };
+    for (final f in DownloadFormat.values.where((f) => !f.lossless)) {
+      final kbps = prefs.getInt('downloads.kbps.${f.name}') ?? legacy;
+      if (kbps != null && f.bitrates.contains(kbps)) _kbps[f] = kbps;
+    }
+    flac = FlacQuality.values.asNameMap()[prefs.getString('downloads.flac')] ?? flac;
     askEveryTime = prefs.getBool('downloads.ask') ?? askEveryTime;
     folder = prefs.getString('downloads.folder');
     mobileData = prefs.getBool('downloads.mobileData') ?? mobileData;
@@ -188,6 +277,8 @@ class DownloadPrefs extends ChangeNotifier {
         await prefs.remove(key);
       case final bool b:
         await prefs.setBool(key, b);
+      case final int i:
+        await prefs.setInt(key, i);
       case final String s:
         await prefs.setString(key, s);
     }
@@ -198,9 +289,20 @@ class DownloadPrefs extends ChangeNotifier {
     return _save('downloads.format', v.name);
   }
 
-  Future<void> setQuality(DownloadQuality v) {
-    quality = v;
-    return _save('downloads.quality', v.name);
+  /// [kbps] null is "Best available". Not for FLAC.
+  Future<void> setKbps(DownloadFormat f, int? kbps) {
+    assert(!f.lossless && f.bitrates.contains(kbps));
+    if (kbps == null) {
+      _kbps.remove(f);
+    } else {
+      _kbps[f] = kbps;
+    }
+    return _save('downloads.kbps.${f.name}', kbps);
+  }
+
+  Future<void> setFlac(FlacQuality v) {
+    flac = v;
+    return _save('downloads.flac', v.name);
   }
 
   Future<void> setAskEveryTime(bool v) {
