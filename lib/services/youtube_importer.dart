@@ -12,6 +12,7 @@ import '../models/track.dart';
 import 'download_prefs.dart';
 import 'ffmpeg.dart';
 import 'flac_stream.dart';
+import 'lyrics.dart';
 import 'pcm_decoder.dart';
 import 'ranged_download.dart';
 import 'youtube_stream.dart';
@@ -478,6 +479,10 @@ class YoutubeImporter extends ChangeNotifier {
         ..receivedBytes = 0
         ..bytesPerSecond = null;
       final thumbnail = _saveThumbnail(video, p.join(dir.path, '${job.videoId}.jpg'));
+      // YouTube Music already named the song; only a bare video title needs guessing.
+      final names = job.knownNames ? (title: job.title, artist: job.channel) : parseTitle(video.title, video.author);
+      // Looked up while the audio downloads, so the song has its lyrics offline too.
+      final lyrics = _lyricsOf(job.videoId, names, video.duration);
       try {
         await rangedDownload(
           url: audio.url,
@@ -531,9 +536,7 @@ class YoutubeImporter extends ChangeNotifier {
       if (job.status == DownloadStatus.cancelled) throw const _Cancelled();
       if (audio.convert != null) job.totalBytes = saved.lengthSync();
       await thumbnail;
-
-      // YouTube Music already named the song; only a bare video title needs guessing.
-      final names = job.knownNames ? (title: job.title, artist: job.channel) : parseTitle(video.title, video.author);
+      await _saveLyrics(await lyrics, saved.path);
       final track = Track(
         id: Uri.file(saved.path).toString(),
         uri: Uri.file(saved.path),
@@ -594,6 +597,31 @@ class YoutubeImporter extends ChangeNotifier {
 
   static String describe(AudioOnlyStreamInfo s) =>
       '${_isOpus(s) ? 'Opus' : 'AAC'} · ${s.bitrate.kiloBitsPerSecond.round()} kbps';
+
+  /// The song's lyrics as LRC text (word times kept), null when there are none or they couldn't be found in time.
+  static Future<String?> _lyricsOf(String videoId, ({String title, String artist}) names, Duration? length) async {
+    try {
+      final song = Track.youtube(videoId: videoId, title: names.title, artist: names.artist, duration: length);
+      final found = await LyricsService.forTrack(song).timeout(const Duration(seconds: 30));
+      return found.toLrc();
+    } catch (e) {
+      debugPrint('Download: no lyrics saved: $e');
+      return null;
+    }
+  }
+
+  /// Writes [lrc] next to the song (`song.lrc` beside `song.m4a`), where a file's own lyrics are read from.
+  static Future<void> _saveLyrics(String? lrc, String audioPath) async {
+    if (lrc == null || lrc.trim().isEmpty) return;
+    try {
+      final file = File(p.setExtension(audioPath, '.lrc'));
+      final part = File('${file.path}.part');
+      await part.writeAsString(lrc);
+      await part.rename(file.path);
+    } catch (e) {
+      debugPrint('Download: couldn\'t save lyrics: $e');
+    }
+  }
 
   static Future<void> _saveThumbnail(Video video, String path) async {
     for (final url in [video.thumbnails.maxResUrl, video.thumbnails.highResUrl]) {

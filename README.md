@@ -39,7 +39,7 @@ Riflay is a free, open-source music player for Linux, Windows, macOS, Android an
 | **One library** | Local files, playlists and YouTube Music in a single library |
 | **Format support** | FLAC, ALAC, WAV, AIFF, MP3, AAC, Ogg, Opus, WavPack, APE, DSD, SACD ISO and cue sheets |
 | **YouTube Music** | Fully usable without an account. Sign in with Google to sync likes, playlists and history. Moods & genres, new releases, save albums and playlists to your library |
-| **Synced lyrics** | Line by line, with pronunciation and translation |
+| **Synced lyrics** | Word by word where the source times each word, otherwise line by line; pronunciation, translation, copy, your own .lrc files, and saved with downloads |
 | **Playlists** | Combine local files with YouTube songs. Import from Spotify, Apple Music or Deezer |
 | **Autoplay and radio** | Plays similar songs when the queue ends |
 | **Equalizer** | 10-band parametric, with presets and automatic headroom to prevent clipping |
@@ -157,7 +157,7 @@ Riflay builds on the work of:
 - [FFmpeg](https://ffmpeg.org) for decoding, filters and resampling (with [SoX's resampler](https://sourceforge.net/projects/soxr/))
 - [yt-dlp](https://github.com/yt-dlp/yt-dlp) and [youtube_explode_dart](https://github.com/Hexer10/youtube_explode_dart) for YouTube audio
 - [ytmusicapi](https://github.com/sigma67/ytmusicapi), whose documentation of YouTube Music's API this app follows
-- [LRCLIB](https://lrclib.net), [Better Lyrics](https://betterlyrics.org), NetEase Cloud Music and [lyrics.ovh](https://lyrics.ovh) for free lyrics
+- [LRCLIB](https://lrclib.net), [Better Lyrics](https://betterlyrics.org), Kugou, NetEase Cloud Music, QQ Music, Musixmatch (Beta), [Megalobiz](https://www.megalobiz.com), [Genius](https://genius.com) and [lyrics.ovh](https://lyrics.ovh) for free lyrics
 - [audio_metadata_reader](https://github.com/ClementBeal/audio_metadata_reader) for tags
 - Bill Gardner and Keith Martin's [KEMAR HRTF measurements](https://sound.media.mit.edu/resources/KEMAR.html) (MIT Media Lab) for Virtual speakers
 
