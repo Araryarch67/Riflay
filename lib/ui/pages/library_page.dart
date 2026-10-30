@@ -71,7 +71,8 @@ class _LibraryListState extends State<LibraryList> {
           subtitle: 'Mix your own songs and YouTube Music',
           onTap: () => createPlaylist(context),
         ),
-        if (account.canEdit)
+        // The rail keeps New playlist; the one-off actions wait for the wide sidebar or the Library page.
+        if (account.canEdit && !widget.collapsed)
           _SimpleRow(
             collapsed: widget.collapsed,
             art: const _IconArt(Icons.group_add_outlined),
@@ -79,14 +80,15 @@ class _LibraryListState extends State<LibraryList> {
             subtitle: 'Paste a link from a friend',
             onTap: () => joinSharedPlaylist(context),
           ),
-        _SimpleRow(
-          collapsed: widget.collapsed,
-          art: const _IconArt(Icons.playlist_add_rounded),
-          title: 'Import a playlist',
-          subtitle: 'From Spotify, Apple Music or Deezer',
-          onTap: () => importPlaylist(context),
-        ),
-        if (BetaFeatures.instance.isOn(BetaFeature.spotify))
+        if (!widget.collapsed)
+          _SimpleRow(
+            collapsed: widget.collapsed,
+            art: const _IconArt(Icons.playlist_add_rounded),
+            title: 'Import a playlist',
+            subtitle: 'From Spotify, Apple Music or Deezer',
+            onTap: () => importPlaylist(context),
+          ),
+        if (BetaFeatures.instance.isOn(BetaFeature.spotify) && !widget.collapsed)
           _SimpleRow(
             collapsed: widget.collapsed,
             art: const _IconArt(Icons.library_music_outlined),
@@ -172,10 +174,13 @@ class _LibraryListState extends State<LibraryList> {
     final header = Padding(
       padding: EdgeInsets.fromLTRB(widget.collapsed ? 0 : 16, 12, widget.collapsed ? 0 : 8, 4),
       child: widget.collapsed
-          ? IconButton(
-              tooltip: 'New playlist',
-              onPressed: () => createPlaylist(context),
-              icon: const Icon(Icons.add_rounded),
+          // Centred over the rows; New playlist is already the first of them.
+          ? Center(
+              child: IconButton(
+                tooltip: 'Your Library',
+                onPressed: () => shell.open(const LibraryPage()),
+                icon: Icon(Icons.library_music_rounded, color: AppColors.textSecondary),
+              ),
             )
           : Row(
               children: [
@@ -316,17 +321,22 @@ IconData _smartIcon(SmartList l) => switch (l) {
 };
 
 class _IconArt extends StatelessWidget {
-  const _IconArt(this.icon);
+  const _IconArt(this.icon, {this.flat = false});
 
   final IconData icon;
+
+  /// Just the icon, no tile behind it: in the narrow rail a column of grey tiles reads as clutter.
+  final bool flat;
 
   @override
   Widget build(BuildContext context) => SizedBox.square(
     dimension: 48,
-    child: DecoratedBox(
-      decoration: BoxDecoration(color: AppColors.hover, borderRadius: BorderRadius.circular(4)),
-      child: Icon(icon, color: AppColors.textPrimary),
-    ),
+    child: flat
+        ? Icon(icon, color: AppColors.textSecondary)
+        : DecoratedBox(
+            decoration: BoxDecoration(color: AppColors.hover, borderRadius: BorderRadius.circular(4)),
+            child: Icon(icon, color: AppColors.textPrimary),
+          ),
   );
 }
 
@@ -361,7 +371,7 @@ class _SimpleRow extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.all(8),
         child: collapsed
-            ? Center(child: art)
+            ? Center(child: art is _IconArt ? _IconArt((art as _IconArt).icon, flat: true) : art)
             : Row(
                 children: [
                   art,
