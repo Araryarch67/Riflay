@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../services/appearance.dart';
 import '../services/layout_prefs.dart';
+import 'debug_switches.dart';
 
 /// Colour tokens of the theme picked in Settings › Look & feel › Appearance ([ThemeChoice]).
 abstract final class AppColors {
@@ -138,13 +139,15 @@ class ColorFree extends StatelessWidget implements ColorFreeSubtree {
 /// Returns how many elements were marked.
 int restyleTree(Element root) {
   var marked = 0;
+  // Every skip below can be turned off at once, to find a widget that is skipped but shows a colour.
+  final all = DebugSwitches.restyleAll;
   void visit(Element e, Type? parent, Type? grand) {
     final w = e.widget;
-    if (w is ColorFreeSubtree) return;
+    if (!all && w is ColorFreeSubtree) return;
     final t = w.runtimeType;
-    if ((e is StatelessElement || e is StatefulElement) && w is! ColorFreeSelf && !_frameworkOnly(t)) {
+    if ((e is StatelessElement || e is StatefulElement) && (all || w is! ColorFreeSelf && !_frameworkOnly(t))) {
       // The Builder inside every InkWell (Focus > Semantics > MouseRegion > Builder) runs no Riflay code.
-      if (!(identical(t, Builder) && identical(parent, MouseRegion) && identical(grand, Semantics))) {
+      if (all || !(identical(t, Builder) && identical(parent, MouseRegion) && identical(grand, Semantics))) {
         e.markNeedsBuild();
         marked++;
       }
@@ -153,6 +156,7 @@ int restyleTree(Element root) {
   }
 
   root.visitChildren((c) => visit(c, null, null));
+  DebugSwitches.log(() => 'rebuilt $marked widgets${all ? ' (RIFLAY_RESTYLE_ALL)' : ''}');
   return marked;
 }
 
@@ -322,6 +326,7 @@ ThemeData appThemeNow({bool desktopFrame = false}) {
     return desktopFrame ? _transparent(hit) : hit;
   }
   _themesBuilt++;
+  DebugSwitches.log(() => 'theme #$_themesBuilt built${a.fading ? ' at fade step ${a.fadeStep}' : ''}');
   AppColors._themeOverride = palette;
   final ThemeData built;
   try {
@@ -345,7 +350,7 @@ const _themeEvery = 3;
 
 AppPalette _themePalette(Appearance a) {
   final now = a.palette;
-  if (!a.fading) {
+  if (!a.fading || DebugSwitches.themeEveryStep) {
     _heldPalette = null;
     return now;
   }

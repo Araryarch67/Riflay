@@ -22,6 +22,12 @@ audio*. The look follows streaming apps: dark, colour only from cover art.
   endpoints, and the testing rules.
 - Match the surrounding code; run `dart format -l 120` on what you touch.
 - `flutter analyze` must be clean and `flutter test` must pass.
+- A colour that stays stale, a card that doesn't update or a page that is blank
+  for a frame may come from a rendering shortcut. Run with
+  `--dart-define=RIFLAY_NO_SHORTCUTS=true` to turn them all off, or one at a
+  time (`RIFLAY_RESTYLE_ALL`, `RIFLAY_THEME_EVERY_STEP`, `RIFLAY_NO_CARD_CACHE`,
+  `RIFLAY_NO_FIRST_FRAME_GATE`); `RIFLAY_LOG_RESTYLES=true` prints what each
+  theme change rebuilds. See `lib/ui/debug_switches.dart`.
 - New behaviour comes with a test. Integration tests run in a headless Weston
   with their own `XDG_DATA_HOME` (see AGENT.md); never against your real account.
 

@@ -10,6 +10,7 @@ import '../../services/appearance.dart';
 import '../../services/layout_prefs.dart';
 import '../../services/metadata.dart';
 import '../../services/player_controller.dart';
+import '../debug_switches.dart';
 import '../shortcuts.dart';
 import '../theme.dart';
 
@@ -742,6 +743,7 @@ class _MediaCardState extends State<MediaCard> {
     final text = Theme.of(context).textTheme;
     final l = LayoutPrefs.instance;
     final layout = (l.corners, l.density, LayoutPrefs.effectiveMotion);
+    if (DebugSwitches.noCardCache) return _content(text);
     if (_built == null || _layout != layout || !identical(_textTheme, text)) {
       _layout = layout;
       _textTheme = text;

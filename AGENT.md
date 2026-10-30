@@ -13,8 +13,12 @@ setup and one obvious control:
 - Power-user audio settings live under **Settings › Sound › Hi-fi audio**, folded
   away. Everyday ones (Equalizer, Volume leveling, Gapless, Virtual speakers,
   Crossfeed, Mono audio) sit above it in plain words.
-- UI looks like a streaming app: dark, the only colour comes from real cover
-  art (`AccentBuilder`), no decorative gradients, no emoji, no "AI" styling.
+- UI looks like a streaming app. Colours come from the theme picked in
+  **Settings › Look & feel › Appearance** (`ThemeChoice`: Default, Dynamic,
+  which follows the playing song's cover, Monochrome, Everblush, Nord,
+  Gruvbox, Dracula, Custom; dark, light or matching the system) and from real
+  cover art (`AccentBuilder`). No decorative gradients, no emoji, no "AI"
+  styling.
 - Error messages the user sees (SnackBars, error lines) are one calm, plain
   sentence: "Couldn't play Song", "No internet connection. Try again." Never
   append an exception, mpv / yt-dlp output, an HTTP code or a URL; those go
@@ -56,11 +60,28 @@ lib/
     spotify_session.dart       Spotify sign-in (Beta): the web player's own token, caught in a WebView / linux/spotify_helper
     spotify_library.dart       Spotify library over the web player's GraphQL (hashes read from its bundle)
     spotify_account.dart       Spotify session, token refresh, what was imported; spotify_import.dart runs an import
+    library_views.dart         LibraryViews: sorted lists, albums, artists and search keys, worked out once per library change
+    smart_playlists.dart       The built-in, self-updating lists in Library
+    folder_watch.dart          Picks up files added to or removed from the music folders
+    play_history.dart          What was played; listening_stats.dart and wrap.dart read it (Stats, monthly Wrap)
+    appearance.dart            Themes and palettes (AppPalette, ThemeChoice), accent, cover colours and their fades, window opacity
+    layout_prefs.dart          Corners, density and motion (Settings › Look & feel › Layout)
+    beta_features.dart         Features still in Beta, each switchable in Settings › Beta features
+    listen_together/           Listen together: one queue shared over the LAN or the internet
+    video_mode.dart            Video mode (Beta): a YouTube song's music video on Now Playing
+    youtube_stream.dart        A YouTube song's audio stream in one player request (yt-dlp is the fallback)
+    usb_dac.dart / linux_alsa.dart  Direct outputs: Android USB DACs, Linux ALSA cards
+    media_session.dart         System media controls (Android notification, Control Center, MPRIS)
+    discord_presence.dart      Discord Rich Presence over the local IPC socket
   ui/
     home_shell.dart            Layouts: phone tabs / desktop sidebar + one history
     navigation.dart            DesktopHistory (Back/Forward), Locations, sidebar highlight
-    pages/                     One file per screen; sound_settings.dart, equalizer_page.dart…
-    widgets/                   Shared widgets: controls, page_scaffold, smooth_scroll, signal_path
+    shell/                     Desktop sidebar, phone navigation, FirstFrameGate
+    player/                    Player bar, mini player, Now Playing, full screen, side panel
+    theme.dart                 AppColors, ThemeData from the palette, restyleTree (see Colours)
+    debug_switches.dart        Turns the rendering shortcuts off to debug them (see Debugging)
+    pages/                     One file per screen; sound_settings.dart, equalizer_page.dart…; search/ and lyrics/ hold their parts
+    widgets/                   Shared widgets: controls, track_row, menus, page_scaffold, smooth_scroll, signal_path
 linux/login_helper/            C++ GTK3 + webkit2gtk-4.1 sign-in helper
 linux/spotify_helper/          The same for Spotify; --refresh gets a new token without a window
 linux/carla_bridge/            LADSPA plugin that runs a Carla project in mpv's filter chain (audio plugins)
@@ -88,7 +109,8 @@ test/                          Unit and widget tests
   song when the queue is down to its last two songs.
 - The library is saved in its own file by `LibraryStore` (it moved out of
   SharedPreferences' `library.v1`), never encoded on the UI isolate.
-  Sorted lists, albums, artists and search keys come from `_LibraryViews`,
+  Sorted lists, albums, artists and search keys come from `LibraryViews`
+  (`services/library_views.dart`),
   worked out once per library change: add new derived views there, not as
   getters that sort `_library` on every call.
 - `PlayerController` notifies for everything (song change, play / pause,
@@ -205,12 +227,15 @@ test/                          Unit and widget tests
 | `media_kit_libs_android_audio` | Android's `libmpv.so` from `tool/build_libmpv_android.sh` (the FFmpeg filters crossfeed, room correction and Virtual speakers need) instead of media_kit's downloaded one; media_kit's helper library is kept as it was |
 | `audio_metadata_reader` | Its FLAC and MP4 writers dropped ReplayGain, lyrics, disc numbers and unknown tags (MP4 freeform `----` atoms) on every save; ours keep them. WAV and AIFF read the disc number from an ID3 chunk |
 | `flutter_inappwebview_linux` | Stub: the real one links WPE WebKit; Linux sign-in uses `linux/login_helper` instead |
+| `mpv_asio` | Riflay's ASIO audio output for mpv, patched into the Windows libmpv by `tool/build_libmpv_windows.sh` |
+| `asiosdk` | Steinberg's ASIO SDK, which `mpv_asio` builds against |
+| `ladspa` | The LADSPA header (and its Windows build bits) for `linux/carla_bridge` |
 
 Mark every change in vendored code with a `Riflay:` comment.
 
 ## Running and testing
 
-The Flutter SDK is at `~/development/flutter/bin/flutter` (not on PATH).
+CI pins the Flutter version in `.github/workflows/release.yml` (`FLUTTER_VERSION`); use the same one locally.
 
 ```sh
 flutter analyze                 # must be clean
@@ -272,6 +297,57 @@ same way (profile, headless, fresh process per run) and prints PSS / private /
 RSS at idle, playing a local FLAC, streaming YouTube and after scrolling.
 Compare medians of several complete runs; debug builds are meaningless here.
 
+## Colours and restyling
+
+- A palette change (a theme picked, the Dynamic theme following a new cover,
+  the "Whole app" wash) must not rebuild the whole app. New widgets read
+  colours with `AppColors.of(context)` (or `Theme.of`), which rebuild only
+  what depends on them. The static getters (`AppColors.accent`, …) still
+  work: `restyleTree` (called from `_restyle` in `main.dart`) marks every
+  widget that might read them.
+- `restyleTree` skips what can't show a colour: framework widgets
+  (`_frameworkWidgets` in `theme.dart`), anything under a widget that
+  implements `ColorFreeSubtree` (`ColorFree`, `Artwork`), and the own build
+  of a widget that implements `ColorFreeSelf` (`MediaCard`, `PlayButton`).
+  Mark a widget only when that is true: a static colour read in a skipped
+  build stays stale. Move the coloured part into a small widget that reads
+  `AppColors.of(context)` instead (see `_HoverFill` in `controls.dart`).
+- During a fade, `Appearance` notifies about a dozen times; the Material
+  theme (`appThemeNow`) moves only every third step, and the last step always
+  catches it up.
+- `MediaCard` keeps what it built until its track, text, layout or text theme
+  changes; add a field it shows to the check in `didUpdateWidget`.
+- `test/theme_restyle_test.dart` and `test/dynamic_theme_perf_test.dart`
+  guard both sides: colours follow, and a fade stays cheap.
+
+## Debugging
+
+- Debug builds write every error to `<app support dir>/errors.log`;
+  user-facing text stays calm and the details go to `debugPrint`.
+- The rendering shortcuts above can be turned off at launch to tell whether a
+  bug is theirs (`lib/ui/debug_switches.dart`):
+
+  ```sh
+  flutter run --dart-define=RIFLAY_NO_SHORTCUTS=true      # all of them
+  flutter run --dart-define=RIFLAY_RESTYLE_ALL=true       # ignore the colour-free marks
+  flutter run --dart-define=RIFLAY_THEME_EVERY_STEP=true  # theme follows every fade step
+  flutter run --dart-define=RIFLAY_NO_CARD_CACHE=true     # MediaCard builds every time
+  flutter run --dart-define=RIFLAY_NO_FIRST_FRAME_GATE=true
+  flutter run --dart-define=RIFLAY_LOG_RESTYLES=true      # print what each change rebuilds
+  ```
+
+  A bug that goes away with one of them on is in that shortcut. Tests can set
+  `DebugSwitches.*` directly and reset them in `tearDown`.
+- `themeCacheStats` (`theme.dart`) counts themes built and served from cache.
+
+## Releases
+
+1. Bump `version:` in `pubspec.yaml` (the `+` build number by one) and commit
+   it as `chore: <version>`.
+2. Tag and push: `git tag v<version> && git push origin main v<version>`.
+   `.github/workflows/release.yml` builds Android, Windows, Linux, macOS and
+   iOS and publishes the GitHub release with generated notes.
+
 ## Conventions
 
 - Match the surrounding code: comment *why*, not what; doc comments on public
@@ -280,7 +356,7 @@ Compare medians of several complete runs; debug builds are meaningless here.
   and never leaves a dead button. A control that can't act is disabled, never
   silently ignored.
 - Desktop navigation is one browser-style history (`DesktopHistory`): open
-  screens with `ShellScope.open(page, location: …)` so the sidebar can
+  screens with `ShellScope.of(context).open(page, location: …)` so the sidebar can
   highlight them. Phones keep one stack per bottom tab.
 - Wheel scrolling: give new vertical scroll views a `SmoothScrollController`
   (or wrap them in `SmoothScroll`).

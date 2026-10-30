@@ -1,5 +1,7 @@
 import 'package:flutter/widgets.dart';
 
+import '../debug_switches.dart';
+
 /// Builds [placeholder] for the first frame and [child] from the next one on.
 ///
 /// Start-up draws the window's frame (title bar, nav, player bar) first and fills the heavy sections in the
@@ -24,7 +26,7 @@ class FirstFrameGate extends StatefulWidget {
 }
 
 class _FirstFrameGateState extends State<FirstFrameGate> {
-  late bool _open = FirstFrameGate._opened;
+  late bool _open = FirstFrameGate._opened || DebugSwitches.noFirstFrameGate;
 
   @override
   void initState() {
