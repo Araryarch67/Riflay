@@ -162,4 +162,14 @@ void main() {
     await tester.pump(const Duration(milliseconds: 400));
     expect(await result, const DownloadChoice(DownloadFormat.mp3, kbps: 128));
   });
+
+  testWidgets('a saved Video choice with no song to look up (a playlist) starts on Audio, never spinning', (
+    tester,
+  ) async {
+    final result = await _open(tester, initial: const DownloadChoice.video(VideoContainer.mp4));
+    expect(find.byType(CircularProgressIndicator), findsNothing, reason: 'no lookup runs, so no size would come');
+    await tester.tap(find.text('Download'));
+    await tester.pump();
+    expect((await result)?.isVideo, isFalse);
+  });
 }

@@ -75,7 +75,9 @@ class DownloadOptionsDialog extends StatefulWidget {
 }
 
 class _DownloadOptionsDialogState extends State<DownloadOptionsDialog> {
-  late var _kind = widget.initial.kind;
+  // Video needs a song to look up; without one (a whole playlist) a saved Video choice starts on Audio, or the
+  // dialog would wait for sizes that never come.
+  late var _kind = widget.video == null ? DownloadKind.audio : widget.initial.kind;
   late var _container = widget.initial.container ?? DownloadPrefs.instance.videoContainer;
   // Each container keeps its own size while switching around in the dialog; null is "Best available".
   late final _heights = {
@@ -188,9 +190,9 @@ class _DownloadOptionsDialogState extends State<DownloadOptionsDialog> {
       widget.video != null && (_videoFormats != null || (_videoLoading && widget.initial.kind == DownloadKind.video));
 
   DownloadChoice _videoChoice() {
-    final formats = _videoFormats!;
+    final formats = _videoFormats;
     final height = _heights[_container];
-    if (height == null) return DownloadChoice.video(_container, height: null);
+    if (height == null || formats == null) return DownloadChoice.video(_container, height: height);
     // What is selected is the resolution the saved one lands on.
     final pick = pickVideoDownload(formats, DownloadChoice.video(_container, height: height), ffmpeg: _ffmpeg);
     return DownloadChoice.video(_container, height: pick?.video.height ?? height);
@@ -212,7 +214,8 @@ class _DownloadOptionsDialogState extends State<DownloadOptionsDialog> {
         : pickVideoDownload(formats!, DownloadChoice.video(_container, height: want), ffmpeg: _ffmpeg)?.video.height;
     Widget chipLabel(String name, String? size) {
       if (size != null) return Text('$name · $size');
-      if (formats != null) return Text(name);
+      // A spinner only while a lookup runs: with none (or a failed one), sizes never come.
+      if (formats != null || !_videoLoading) return Text(name);
       return Row(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -397,7 +400,7 @@ class _DownloadOptionsDialogState extends State<DownloadOptionsDialog> {
         FilledButton(
           style: FilledButton.styleFrom(backgroundColor: AppColors.inverse, foregroundColor: AppColors.onInverse),
           onPressed: _kind == DownloadKind.video
-              ? (_videoFormats == null ? null : () => Navigator.of(context).pop(_videoChoice()))
+              ? (_videoLoading ? null : () => Navigator.of(context).pop(_videoChoice()))
               : () => Navigator.of(context).pop(DownloadChoice(_format, kbps: _kbps[_format], flac: _flac)),
           child: const Text('Download'),
         ),

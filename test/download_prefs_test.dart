@@ -18,7 +18,7 @@ void main() {
     expect(p.kbpsFor(DownloadFormat.opus), isNull);
     expect(p.kbpsFor(DownloadFormat.m4a), isNull);
     expect(p.flac, FlacQuality.standard);
-    expect(p.askEveryTime, isFalse);
+    expect(p.askEveryTime, isTrue);
     expect(p.folder, isNull);
     expect(p.mobileData, isTrue);
     expect(p.choice, const DownloadChoice(DownloadFormat.opus));

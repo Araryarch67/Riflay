@@ -135,7 +135,8 @@ class _ImportFormState extends State<_ImportForm> {
       null => <Video>[],
     };
     final youtube = PlayerScope.read(context).youtube;
-    final choice = await chooseDownload(context);
+    // One video: its sizes are looked up while the dialog is open.
+    final choice = await chooseDownload(context, videoId: videos.length == 1 ? videos.single.id.value : null);
     if (choice == null || !mounted) return;
     final queued = youtube.enqueue(videos, choice: choice);
     Navigator.of(context).pop(queued > 0);

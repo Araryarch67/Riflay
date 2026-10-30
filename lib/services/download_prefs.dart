@@ -404,7 +404,9 @@ class DownloadPrefs extends ChangeNotifier {
   /// Target bitrate per lossy format; a missing entry is "Best available".
   final Map<DownloadFormat, int> _kbps = {};
   FlacQuality flac = FlacQuality.standard;
-  bool askEveryTime = false;
+
+  /// On until the user turns it off: each download asks for its format and size.
+  bool askEveryTime = true;
 
   /// A folder the user chose (computers); null keeps the default.
   String? folder;
