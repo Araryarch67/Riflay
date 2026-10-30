@@ -11,6 +11,7 @@ import 'package:path_provider/path_provider.dart';
 
 import '../models/track.dart';
 import '../platform/host.dart';
+import '../platform/network.dart';
 import 'metadata.dart';
 import 'player_controller.dart';
 
@@ -74,6 +75,8 @@ class MediaSession extends BaseAudioHandler with SeekHandler {
   Future<void> _publishItem() async {
     final t = _c.currentTrack;
     _shownId = t?.id;
+    // The web build's tab is named after the song too (a no-op in native builds).
+    pageTitle = t == null ? 'Riflay' : [t.title, if (t.artist.isNotEmpty) t.artist].join(' · ');
     if (t == null) return mediaItem.add(null);
     final item = MediaItem(
       id: t.id,

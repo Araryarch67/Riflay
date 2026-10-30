@@ -14,3 +14,7 @@ R runWithNetwork<R>(R Function() body) => http.runWithClient(body, () => ProxyCl
 
 /// Whether this browser plays YouTube's Opus streams (Safari before 17 does not); AAC is asked for otherwise.
 final bool playsOpus = web.HTMLAudioElement().canPlayType('audio/webm; codecs="opus"').isNotEmpty;
+
+/// The tab's title. Some browsers (Brave) name the song in the desktop's media controls after it rather than after
+/// the Media Session.
+set pageTitle(String title) => web.document.title = title;
