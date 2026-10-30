@@ -29,6 +29,7 @@ setup and one obvious control:
 
 ```
 lib/
+  platform/                    The seams between native and web builds (see Web build)
   models/track.dart            Track (local file, cue slice or YouTube song), Collection
   services/
     player_controller.dart     Queue, shuffle (done in Dart, see below), autoplay, library
@@ -225,6 +226,44 @@ test/                          Unit and widget tests
   `ACTION_MOVE_VIDEO_BEFORE`), `playlist/delete`, `like/like`, `like/removelike`.
 - Only playlists with `musicEditablePlaylistDetailHeaderRenderer` are the
   user's own; offer edits only for those.
+
+## Web build
+
+`flutter build web` builds Riflay Web: a YouTube Music streamer that talks to `tool/web_proxy`
+(browsers may not call InnerTube themselves). Native builds must behave exactly as before, so
+web differences live behind the seams in `lib/platform/`, never as `kIsWeb` checks spread
+through the code:
+
+- `host.dart` (`Host.isLinux`, `Host.environment`…): use it instead of `dart:io`'s `Platform`,
+  which throws in a browser. On the web everything is false, so OS-specific code just doesn't run.
+- `features.dart` (`Features.downloads`, `Features.casting`…): what this build offers. Hide a
+  control whose feature is off; a new native-only feature gets a flag here.
+- `mpv.dart`: media_kit's `NativePlayer`; on the web an interface nothing implements, so the
+  `player.platform case NativePlayer p` paths in `AudioEngine` skip. Import media_kit with
+  `hide NativePlayer` next to it. `AudioEngine.supported` is false there.
+- `native_calls.dart`: every `dart:ffi` call (`malloc_trim`, `mkfifo`, power requests, `Abi`).
+  `dart:ffi` doesn't compile for the web, so it must not be imported anywhere else.
+- `background.dart`: `inBackground` instead of `Isolate.run` (no isolates in a browser).
+- `network.dart`: `runWithNetwork` wraps `main`; on the web every `http.Client()` goes through
+  `ProxyClient`, which sends allowed hosts to `<proxy>/fetch/<host>/<path>` and renames the
+  headers a browser blocks (`User-Agent`, `Cookie`…) to `x-riflay-*`. `webAudioUri` makes a
+  YouTube song play from `<proxy>/audio/<videoId>`: an `<audio>` element needs a URL up front,
+  so the proxy looks the stream up itself (`lib/services/youtube_player_api.dart`, shared with
+  `youtube_stream.dart`) and serves it with Range in 1 MiB googlevideo requests.
+- `proxy_route.dart`: the allowed hosts, paths and headers. Plain Dart with no imports: the
+  proxy imports it (and `youtube_player_api.dart`) by file path. A new service the app calls
+  on the web needs its host here.
+
+Playback on the web is just_audio's own HTML backend (`JustAudioMediaKit.ensureInitialized`
+registers nothing there). Run it against a local proxy:
+
+```sh
+cd tool/web_proxy && dart run bin/server.dart &            # http://127.0.0.1:8787
+flutter run -d chrome --dart-define=RIFLAY_PROXY=http://127.0.0.1:8787/
+(cd tool/web_proxy && dart test)                            # proxy tests
+```
+
+`test/web_seams_test.dart` checks that the seams answer as before on native.
 
 ## Vendored packages (`third_party/`)
 
