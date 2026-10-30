@@ -157,6 +157,10 @@ class CardReservation {
   /// while the card is away and doesn't always switch back by itself.
   final String? _defaultSink;
 
+  /// The command that holds the reservation; tests put a stand-in here.
+  @visibleForTesting
+  static String Function(int card) reserveCommand = (card) => 'pw-reserve -n Audio$card -r -a Riflay -p 10';
+
   /// Null when it couldn't be had (no pw-reserve, or another program refused).
   static Future<CardReservation?> acquire(int card) async {
     final defaultSink = await _defaultSinkName();
@@ -166,8 +170,7 @@ class CardReservation {
       // closes, cat returns and the reservation ends with it.
       p = await Process.start('sh', [
         '-c',
-        'pw-reserve -n Audio$card -r -a Riflay -p 10 & r=\$!; trap "kill \$r 2>/dev/null" EXIT INT TERM; '
-            'cat >/dev/null',
+        '${reserveCommand(card)} & r=\$!; trap "kill \$r 2>/dev/null" EXIT INT TERM; cat >/dev/null',
       ]);
     } catch (_) {
       return null;
@@ -197,7 +200,18 @@ class CardReservation {
   }
 
   Future<void> release() async {
-    _process.kill();
+    // PipeWire probes the card again the moment it is handed back. A playback device still open then (mpv has not
+    // moved off it yet) is left out of the card's outputs until WirePlumber restarts: the speakers vanish and the
+    // system is left on "Dummy Output". So the card goes back only once nothing of it is open.
+    for (var i = 0; i < 30 && !playbackClosed(card); i++) {
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+    }
+    // Closing its stdin is what ends it: `cat` returns, the shell exits and its trap stops pw-reserve. A signal
+    // alone isn't enough: sh runs its trap only after `cat` returns, so the card stayed held until Riflay quit and
+    // the system sat on "Dummy Output" (and the next bit-perfect switch took another card as well).
+    await _process.stdin.close().catchError((Object _) {});
+    final ended = await _process.exitCode.timeout(const Duration(seconds: 2), onTimeout: () => -1);
+    if (ended == -1) _process.kill(ProcessSignal.sigkill);
     final wanted = _defaultSink;
     if (wanted == null) return;
     // PipeWire recreates the card's output (sometimes with a ".2" suffix) a moment later.
@@ -212,6 +226,22 @@ class CardReservation {
         return;
       }
     }
+  }
+
+  /// Whether every playback device of [card] is closed (`/proc/asound/cardN/pcmMp/subK/status` reads `closed`).
+  /// True when it can't be told, so a release never waits for nothing.
+  @visibleForTesting
+  static bool playbackClosed(int card, {String root = '/proc/asound'}) {
+    try {
+      for (final pcm in Directory('$root/card$card').listSync().whereType<Directory>()) {
+        if (!RegExp(r'/pcm\d+p$').hasMatch(pcm.path)) continue;
+        for (final sub in pcm.listSync().whereType<Directory>()) {
+          final status = File('${sub.path}/status');
+          if (status.existsSync() && status.readAsStringSync().trim() != 'closed') return false;
+        }
+      }
+    } catch (_) {}
+    return true;
   }
 
   static Future<String?> _defaultSinkName() async {
