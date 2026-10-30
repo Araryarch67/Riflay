@@ -57,7 +57,7 @@ lib/
     ffmpeg.dart                Finds / downloads ffmpeg (tag editor, AirPlay, casting conversions)
     system_fonts.dart          Fonts from the device's font folders (Settings › Look & feel › Appearance › Font)
     desktop_login.dart         Runs linux/login_helper (WebKitGTK Google sign-in window)
-    spotify_session.dart       Spotify sign-in (Beta): the web player's own token, caught in a WebView / linux/spotify_helper
+    spotify_session.dart       Spotify sign-in: the web player's own token, caught in a WebView / linux/spotify_helper
     spotify_library.dart       Spotify library over the web player's GraphQL (hashes read from its bundle)
     spotify_account.dart       Spotify session, token refresh, what was imported; spotify_import.dart runs an import
     library_views.dart         LibraryViews: sorted lists, albums, artists and search keys, worked out once per library change
@@ -342,8 +342,10 @@ Compare medians of several complete runs; debug builds are meaningless here.
 
 ## Releases
 
-1. Bump `version:` in `pubspec.yaml` (the `+` build number by one) and commit
-   it as `chore: <version>`.
+1. Bump `version:` in `pubspec.yaml` (the `+` build number by one) and
+   `appVersion` in `lib/app_version.dart` (shown in Settings › About;
+   `test/about_test.dart` fails when they differ), and commit them as
+   `chore: <version>`.
 2. Tag and push: `git tag v<version> && git push origin main v<version>`.
    `.github/workflows/release.yml` builds Android, Windows, Linux, macOS and
    iOS and publishes the GitHub release with generated notes.

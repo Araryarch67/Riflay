@@ -11,6 +11,7 @@ import '../theme.dart';
 import '../widgets/page_scaffold.dart';
 import '../../services/audio_engine.dart';
 import 'appearance_settings.dart';
+import 'about_settings.dart';
 import 'beta_settings.dart';
 import 'layout_settings.dart';
 import 'library_settings.dart';
@@ -135,7 +136,6 @@ enum SettingsTopic {
 
   bool get available => switch (this) {
     advanced => AudioEngine.supported,
-    spotify => BetaFeatures.instance.isOn(BetaFeature.spotify),
     _ => true,
   };
 
@@ -179,7 +179,7 @@ class _SettingsRow extends StatelessWidget {
   );
 }
 
-/// The first page of settings: a handful of groups, then Beta features.
+/// The first page of settings: a handful of groups, then Beta features and About.
 class SettingsPage extends StatelessWidget {
   const SettingsPage({super.key});
 
@@ -210,6 +210,12 @@ class SettingsPage extends StatelessWidget {
               summary: 'Play, skip, search and more without the mouse',
               onTap: () => showShortcutsDialog(context),
             ),
+          _SettingsRow(
+            icon: Icons.info_outline_rounded,
+            title: 'About',
+            summary: 'Version, what\'s new, reporting a problem, licences',
+            onTap: () => shell.open(const SettingsAboutPage(), location: Locations.settingsTopic('about')),
+          ),
         ],
       ),
     );
@@ -223,6 +229,15 @@ class SettingsBetaPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) =>
       const _SettingsFrame(title: 'Beta features', crumbs: [_settingsCrumb], child: BetaSettings());
+}
+
+/// About: one page straight under Settings.
+class SettingsAboutPage extends StatelessWidget {
+  const SettingsAboutPage({super.key});
+
+  @override
+  Widget build(BuildContext context) =>
+      const _SettingsFrame(title: 'About', crumbs: [_settingsCrumb], child: AboutSettings());
 }
 
 /// One group: its sections as rows, each opening its page.
