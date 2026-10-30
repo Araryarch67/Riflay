@@ -314,10 +314,10 @@ void main() {
       ),
     );
 
-    testWidgets('signed out: one sign-in button and the Beta badge', (t) async {
+    testWidgets('signed out: one sign-in button, no Beta badge any more', (t) async {
       await t.pumpWidget(app(SpotifyPage(account: FakeAccount(), youtubeSignedIn: true)));
       await t.pumpAndSettle();
-      expect(find.text('Beta'), findsOneWidget);
+      expect(find.text('Beta'), findsNothing);
       expect(find.text('Sign in with Spotify'), findsOneWidget);
       expect(find.byType(FilledButton), findsOneWidget);
       expect(find.textContaining('Copy your Spotify playlists'), findsOneWidget);
@@ -351,16 +351,10 @@ void main() {
       await t.pump();
       expect(button('Import 1').onPressed, isNotNull);
 
-      // Artists need YouTube Music.
-      await t.tap(find.text('Artists'));
-      await t.pumpAndSettle();
-      expect(find.text('Sign in to YouTube Music to follow these artists there.'), findsOneWidget);
-      expect(button('Import all').onPressed, isNull);
-      expect(t.widget<Checkbox>(find.byType(Checkbox)).onChanged, isNull);
+      // Artists aren't offered: following them in YouTube Music isn't safe yet.
+      expect(find.text('Artists'), findsNothing);
 
       // Import the playlist, then see the summary.
-      await t.tap(find.text('Playlists'));
-      await t.pumpAndSettle();
       await t.tap(find.text('Import 1'));
       await t.pumpAndSettle();
       expect(find.text('Imported 1 of 1'), findsOneWidget);

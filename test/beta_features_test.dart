@@ -19,7 +19,7 @@ void main() {
     b.addListener(() => notified++);
     await b.set(BetaFeature.musixmatch, false);
     expect(b.isOn(BetaFeature.musixmatch), isFalse);
-    expect(b.isOn(BetaFeature.spotify), isTrue);
+    expect(b.isOn(BetaFeature.videoMode), isTrue);
     expect(notified, greaterThan(0));
     expect((await SharedPreferences.getInstance()).getBool('beta.musixmatch'), isFalse);
 

@@ -59,7 +59,7 @@ class SpotifyLoginException implements Exception {
   String toString() => message;
 }
 
-/// Signing in through Spotify's own web player (Beta, unofficial). The player
+/// Signing in through Spotify's own web player (unofficial). The player
 /// fetches its access token itself, and the secret behind that request rotates,
 /// so Riflay never computes it: a script injected at document start keeps what
 /// the page fetches ([captureJs]) and the sign-in reads it back ([readJs]).

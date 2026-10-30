@@ -3,11 +3,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 /// A feature still in Beta that Settings › Beta features can switch off.
 enum BetaFeature {
-  spotify(
-    'spotify',
-    'Spotify sign-in and import',
-    'Sign in to Spotify and bring your playlists, albums and artists over.',
-  ),
   musixmatch(
     'musixmatch',
     'Musixmatch lyrics',

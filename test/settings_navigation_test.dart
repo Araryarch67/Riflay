@@ -2,7 +2,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:riflay/services/audio_engine.dart';
-import 'package:riflay/services/beta_features.dart';
 import 'package:riflay/services/player_controller.dart';
 import 'package:riflay/ui/navigation.dart';
 import 'package:riflay/ui/pages/settings_page.dart';
@@ -99,15 +98,13 @@ void main() {
     ]);
   });
 
-  onLinux('Spotify is listed only while its Beta switch is on', (tester) async {
+  onLinux('Spotify is listed under Accounts & services, no longer behind a Beta switch', (tester) async {
     final c = PlayerController();
-    await tester.runAsync(() => BetaFeatures.instance.set(BetaFeature.spotify, false));
-    addTearDown(() => BetaFeatures.instance.set(BetaFeature.spotify, true));
     await tester.pumpWidget(_app(c, []));
     await tester.tap(find.text('Accounts & services'));
     await tester.pumpAndSettle();
     expect(find.text('YouTube Music account'), findsOneWidget);
-    expect(find.text('Spotify'), findsNothing);
+    expect(find.text('Spotify'), findsWidgets);
   });
 
   onLinux('each section opens its page, with its own location and a trail back up', (tester) async {
@@ -160,7 +157,7 @@ void main() {
     await tester.tap(find.text('Beta features'));
     await tester.pumpAndSettle();
     expect(visited.last, 'settings:beta');
-    expect(find.text('Spotify sign-in and import'), findsOneWidget);
+    expect(find.text('Musixmatch lyrics'), findsOneWidget);
     await tester.tap(find.text('Settings'));
     await tester.pumpAndSettle();
 

@@ -88,7 +88,7 @@ class _LibraryListState extends State<LibraryList> {
             subtitle: 'From Spotify, Apple Music or Deezer',
             onTap: () => importPlaylist(context),
           ),
-        if (BetaFeatures.instance.isOn(BetaFeature.spotify) && !widget.collapsed)
+        if (!widget.collapsed)
           _SimpleRow(
             collapsed: widget.collapsed,
             art: const _IconArt(Icons.library_music_outlined),

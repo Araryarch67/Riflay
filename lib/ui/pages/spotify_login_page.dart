@@ -6,7 +6,7 @@ import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import '../../services/spotify_session.dart';
 import '../theme.dart';
 
-/// One-time Spotify sign-in in the app's own WebView (Beta). Spotify's login
+/// One-time Spotify sign-in in the app's own WebView. Spotify's login
 /// page lands on the web player, which fetches its own access token; a script
 /// injected at document start keeps it, and once a signed-in session is there
 /// it is handed back with Navigator.pop.

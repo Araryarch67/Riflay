@@ -9,7 +9,7 @@ import 'private_files.dart';
 import 'spotify_library.dart';
 import 'spotify_session.dart';
 
-/// The signed-in Spotify account (Beta): the web-player session kept in the
+/// The signed-in Spotify account: the web-player session kept in the
 /// app's private folder, fresh tokens on demand, and what was imported so far.
 ///
 /// Only the Spotify import page uses it; it is not part of the player.

@@ -11,14 +11,14 @@ import '../playlist_import.dart';
 import '../shell_scope.dart';
 import '../theme.dart';
 import '../widgets/page_scaffold.dart';
-import 'listen_together_page.dart' show BetaBadge;
 import 'spotify_login_page.dart';
 
 /// Builds the importer for a run. The default one writes to YouTube Music / Riflay.
 typedef SpotifyImporterBuilder = SpotifyImporter Function(BuildContext context, SpotifyLibraryClient client);
 
-/// "Spotify library" (Beta): signs in to Spotify's web player and copies the
-/// chosen playlists, Liked Songs, albums and artists into YouTube Music / Riflay.
+/// "Spotify library": signs in to Spotify's web player and copies the chosen
+/// playlists, Liked Songs and albums into YouTube Music / Riflay. Artists are left
+/// out: following them needs edits to the YouTube Music account that aren't safe yet.
 class SpotifyPage extends StatefulWidget {
   const SpotifyPage({super.key, this.account, this.importerFor, this.youtubeSignedIn});
 
@@ -62,7 +62,7 @@ class SpotifyPage extends StatefulWidget {
   State<SpotifyPage> createState() => _SpotifyPageState();
 }
 
-enum _Tab { playlists, albums, artists }
+enum _Tab { playlists, albums }
 
 class _Loaded {
   List<SpotifyItem>? items;
@@ -134,7 +134,6 @@ class _SpotifyPageState extends State<SpotifyPage> {
       final items = await switch (tab) {
         _Tab.playlists => client.playlists(),
         _Tab.albums => client.albums(),
-        _Tab.artists => client.artists(),
       };
       if (!mounted || generation != _generation) return;
       setState(() {
@@ -255,8 +254,6 @@ class _SpotifyPageState extends State<SpotifyPage> {
                 Flexible(
                   child: Text('Spotify', style: text.headlineMedium?.copyWith(fontWeight: FontWeight.w800)),
                 ),
-                const SizedBox(width: 10),
-                const BetaBadge(),
               ],
             ),
           ),
@@ -282,10 +279,7 @@ class _SpotifyPageState extends State<SpotifyPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'Copy your Spotify playlists, Liked Songs, albums and artists into Riflay.',
-                  style: text.bodyLarge,
-                ),
+                Text('Copy your Spotify playlists, Liked Songs and albums into Riflay.', style: text.bodyLarge),
                 const SizedBox(height: 8),
                 Text('Riflay only reads your library. It never changes your Spotify account.', style: muted),
                 const SizedBox(height: 24),
@@ -323,9 +317,6 @@ class _SpotifyPageState extends State<SpotifyPage> {
 
   List<SpotifyItem> get _items => _tabs[_tab]!.items ?? const [];
 
-  /// Artists can only be followed in a signed-in YouTube Music.
-  bool get _canPick => _tab != _Tab.artists || _youtubeSignedIn;
-
   List<SpotifyItem> get _chosen => [
     for (final i in _items)
       if (_selected.contains(i.uri)) i,
@@ -336,12 +327,7 @@ class _SpotifyPageState extends State<SpotifyPage> {
     final muted = text.bodySmall?.copyWith(color: AppColors.textSecondary);
     final state = _tabs[_tab]!;
     final youtube = _youtubeSignedIn;
-    final note = switch (_tab) {
-      _Tab.playlists ||
-      _Tab.albums => youtube ? 'Playlists go to your YouTube Music library.' : 'Playlists become Riflay playlists.',
-      _Tab.artists =>
-        youtube ? 'Artists are followed in YouTube Music.' : 'Sign in to YouTube Music to follow these artists there.',
-    };
+    final note = youtube ? 'Playlists go to your YouTube Music library.' : 'Playlists become Riflay playlists.';
     return [
       SliverToBoxAdapter(
         child: Padding(
@@ -369,7 +355,6 @@ class _SpotifyPageState extends State<SpotifyPage> {
             segments: const [
               ButtonSegment(value: _Tab.playlists, label: Text('Playlists')),
               ButtonSegment(value: _Tab.albums, label: Text('Albums')),
-              ButtonSegment(value: _Tab.artists, label: Text('Artists')),
             ],
             selected: {_tab},
             onSelectionChanged: (v) => _selectTab(v.first),
@@ -424,13 +409,10 @@ class _SpotifyPageState extends State<SpotifyPage> {
       if (item.kind != SpotifyItemKind.artist && item.kind != SpotifyItemKind.album && (item.count ?? 0) > 0)
         '${item.count} songs',
     ].join(' · ');
-    final enabled = _canPick;
     return CheckboxListTile(
       key: ValueKey(item.uri),
       value: _selected.contains(item.uri),
-      onChanged: enabled
-          ? (v) => setState(() => v == true ? _selected.add(item.uri) : _selected.remove(item.uri))
-          : null,
+      onChanged: (v) => setState(() => v == true ? _selected.add(item.uri) : _selected.remove(item.uri)),
       contentPadding: EdgeInsets.symmetric(horizontal: pad),
       controlAffinity: ListTileControlAffinity.trailing,
       secondary: _Cover(item),
@@ -451,7 +433,7 @@ class _SpotifyPageState extends State<SpotifyPage> {
     final chosen = _chosen;
     final state = _tabs[_tab]!;
     final all = state.items ?? const <SpotifyItem>[];
-    final ready = _canPick && state.error == null;
+    final ready = state.error == null;
     return Material(
       color: AppColors.elevated,
       child: SafeArea(
