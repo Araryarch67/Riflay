@@ -165,6 +165,13 @@ test/                          Unit and widget tests
   scale, and Opus / AAC decodes, EQ boosts, leveling and plugins get there; it
   lowers those peaks instead and passes everything within full scale exactly.
   Through the system mixer the sound stays float and the mixer handles it.
+- Resampling is Riflay's, not the system's: on Linux, when PipeWire runs at
+  one fixed rate (its default, `clock.allowed-rates = [ 48000 ]`), mpv converts
+  to it with SoX VHQ (`AudioEngine.soxrOptions`, passband widened to stay flat
+  to 21 kHz) and PipeWire passes the stream through; with several allowed rates
+  nothing resamples. mpv's converter always gets TPDF dither, which only acts
+  where bits are lost (a 16-bit output after EQ or volume).
+  `test/resampler_test.dart` measures it through the real mpv.
 - The equalizer's headroom (`preamp`) comes from the curve's highest point
   (`peakGain`, the bands' combined RBJ response), not the loudest band:
   neighbouring boosts add up.

@@ -97,6 +97,34 @@ abstract final class LinuxAlsa {
     return out;
   }
 
+  /// The one rate PipeWire runs every card at, or null when it follows each stream's rate.
+  ///
+  /// Out of the box PipeWire allows a single rate (`clock.allowed-rates = [ 48000 ]`) and resamples everything
+  /// else to it with its own resampler. Riflay then converts to that rate itself, with its high-quality resampler,
+  /// and PipeWire passes the stream through. With several allowed rates PipeWire switches to the song's own rate,
+  /// and nothing should resample at all.
+  static Future<int?> pipewireFixedRate() async {
+    try {
+      final r = await Process.run('pw-metadata', ['-n', 'settings', '0']);
+      if (r.exitCode != 0) return null;
+      return fixedRateOf(r.stdout as String);
+    } catch (_) {
+      return null; // no pw-metadata: not PipeWire
+    }
+  }
+
+  /// [pipewireFixedRate] from `pw-metadata -n settings 0`'s output.
+  @visibleForTesting
+  static int? fixedRateOf(String metadata) {
+    String? value(String key) => RegExp("key:'$key' value:'([^']*)'").firstMatch(metadata)?[1];
+    final forced = int.tryParse(value('clock.force-rate') ?? '') ?? 0;
+    if (forced > 0) return forced;
+    final allowed = RegExp(r'\d+').allMatches(value('clock.allowed-rates') ?? '').map((m) => int.parse(m[0]!)).toSet();
+    final rate = int.tryParse(value('clock.rate') ?? '');
+    if (allowed.length > 1 || rate == null || rate <= 0) return null;
+    return allowed.isEmpty ? rate : allowed.single;
+  }
+
   static AlsaOutput? byMpvName(String name) => outputs().where((o) => o.mpvName == name).firstOrNull;
 
   /// The card + device behind a PipeWire output: [node] is a PipeWire node name

@@ -208,8 +208,9 @@ class SignalPath {
     return d.rate == inRate && d.channels == inChannels && !d.isFloat && (d.bits ?? 0) >= need;
   }
 
-  /// The system mixer runs the card at another rate than the song's.
-  bool get mixerResamples => viaSystemMixer && dac != null && dac!.rate != inRate;
+  /// The system mixer runs the card at another rate than Riflay hands it (Riflay's own resampling, done before,
+  /// is its own step of the path).
+  bool get mixerResamples => viaSystemMixer && dac != null && dac!.rate != outRate;
 
   static const _lossless = {
     'flac', 'alac', 'wavpack', 'ape', 'tta', 'truehd', 'mlp', 'shorten', 'tak', //
@@ -1204,11 +1205,11 @@ class AudioEngine extends ChangeNotifier {
           ? '${_mixer!.format.rate}'
           : bitPerfect
           ? '0'
-          : '${outputRate ?? 0}',
+          : '${outputRate ?? await _systemMixerRate() ?? 0}',
       // Android bit-perfect: the exact format of the mixer attributes, so the track matches them.
       if (Platform.isAndroid) 'audio-format': _mixer?.format.mpvFormat ?? 'no',
       // Only used when the rate has to change; keeps the default otherwise.
-      'audio-swresample-o': hqResamplerActive ? await _hqResampler() : '',
+      'audio-swresample-o': await _swresampleOptions(),
       // 100 where the filter applies the volume: mpv must not scale samples too.
       'volume': _mpvVolume,
     };
@@ -1307,8 +1308,8 @@ class AudioEngine extends ChangeNotifier {
           'audio-device': _openedDevice ?? device,
           'audio-client-name': 'Riflay',
           'audio-exclusive': 'no',
-          'audio-samplerate': '${outputRate ?? 0}',
-          'audio-swresample-o': hqResamplerActive ? await _hqResampler() : '',
+          'audio-samplerate': '${outputRate ?? await _systemMixerRate() ?? 0}',
+          'audio-swresample-o': await _swresampleOptions(),
           'volume': '0',
         };
         for (final e in props.entries) {
@@ -1457,8 +1458,38 @@ class AudioEngine extends ChangeNotifier {
 
   static String? _resamplerOptions;
 
+  /// libswresample's options for SoX's resampler (see [_hqResampler]).
+  @visibleForTesting
+  static const soxrOptions = 'resampler=soxr,precision=28,cutoff=0.95';
+
+  /// What mpv's converter is told: the high-quality resampler (when on), and always TPDF dither, which only acts
+  /// where the sound loses bits (a 16-bit output after the equalizer or the volume): rounding to 16 bits without
+  /// it leaves distortion that follows the music; with it, a steady hiss far below hearing. Bit-perfect playback
+  /// at 100% converts nothing, so it is never dithered.
+  Future<String> _swresampleOptions() async =>
+      [if (hqResamplerActive) await _hqResampler(), 'dither_method=triangular_hp'].join(',');
+
+  /// Linux, through PipeWire: the one rate PipeWire runs at, so Riflay's resampler converts to it rather than
+  /// PipeWire's (see [LinuxAlsa.pipewireFixedRate]). Null elsewhere, with the resampler off, or when PipeWire
+  /// follows each song's rate. Asked once a minute at most: it spawns a process, and runs on settings changes.
+  Future<int?> _systemMixerRate() async {
+    if (!LinuxAlsa.supported || bypassesMixer || !hqResamplerActive) return null;
+    final at = _mixerRateAt;
+    if (at != null && DateTime.now().difference(at) < const Duration(minutes: 1)) return _mixerRate;
+    _mixerRateAt = DateTime.now();
+    return _mixerRate = await LinuxAlsa.pipewireFixedRate();
+  }
+
+  int? _mixerRate;
+  DateTime? _mixerRateAt;
+
   /// SoX's resampler where libswresample was built with it, otherwise
   /// libswresample's own filter at its highest quality settings.
+  ///
+  /// SoX's passband is widened (`cutoff=0.95`): its default rolls the top octave off (-8.5 dB at 20 kHz from
+  /// 44.1 kHz to 48 kHz), more than PipeWire's own resampler. At 0.95 it is flat to 21 kHz, its distortion stays
+  /// near -150 dB and what lies above the new rate's limit still stays out (-150 dB, where PipeWire lets a 25 kHz
+  /// tone of a 96 kHz file through at -96 dB). Measured with test tones through mpv; see test/resampler_test.dart.
   static Future<String> _hqResampler() async {
     if (_resamplerOptions != null) return _resamplerOptions!;
     var soxr = false;
@@ -1468,9 +1499,7 @@ class AudioEngine extends ChangeNotifier {
         soxr = (r.stdout as String).contains('--enable-libsoxr');
       } catch (_) {}
     }
-    return _resamplerOptions = soxr
-        ? 'resampler=soxr,precision=28'
-        : 'filter_size=64,phase_shift=10,cutoff=0.97,linear_interp=1';
+    return _resamplerOptions = soxr ? soxrOptions : 'filter_size=64,phase_shift=10,cutoff=0.97,linear_interp=1';
   }
 
   /// The resampler that is used whenever a rate change is needed.
