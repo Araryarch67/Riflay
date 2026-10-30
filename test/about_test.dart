@@ -22,7 +22,8 @@ void main() {
       ),
     );
     expect(find.text('Version $appVersion'), findsOneWidget);
-    expect(find.textContaining('Riflay $appVersion · ${Platform.operatingSystem}'), findsOneWidget);
+    expect(find.textContaining('Riflay $appVersion · '), findsOneWidget);
+    expect(find.textContaining(' #'), findsNothing, reason: 'no kernel build line');
     for (final row in ["What's new", 'Report a problem', 'Source code', 'Licence', 'Open-source licences']) {
       expect(find.text(row), findsOneWidget, reason: row);
     }

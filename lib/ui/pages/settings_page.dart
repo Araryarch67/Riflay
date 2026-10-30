@@ -117,7 +117,7 @@ enum SettingsTopic {
     'spotify',
     'Spotify',
     Icons.library_music_outlined,
-    'Bring your playlists, albums and artists over',
+    'Bring your playlists, Liked Songs and albums over',
   ),
   integrations(
     SettingsGroup.accounts,

@@ -12,8 +12,26 @@ import 'sound_settings.dart' show SettingsCard, settingsMuted;
 const _repo = 'https://github.com/Araryarch67/Riflay';
 
 /// What a bug report needs to say about this copy of Riflay: the version and the system it runs on.
-String aboutDetails() =>
-    'Riflay $appVersion · ${Platform.operatingSystem} ${Platform.operatingSystemVersion} · Dart ${Platform.version.split(' ').first}';
+String aboutDetails() => 'Riflay $appVersion · ${debugSystem ?? _system()} · Dart ${Platform.version.split(' ').first}';
+
+/// Stands in for the system in [aboutDetails] (screenshots show no real computer).
+@visibleForTesting
+String? debugSystem;
+
+/// "Linux 6.12.1-arch1-1", "Windows 11 Home 10.0 (Build 26100)", "Android 15": what the platform says, without
+/// Linux's build date and flags.
+String _system() {
+  final v = Platform.operatingSystemVersion.split(' #').first.trim();
+  final name = switch (Platform.operatingSystem) {
+    'linux' => 'Linux',
+    'windows' => 'Windows',
+    'macos' => 'macOS',
+    'ios' => 'iOS',
+    'android' => 'Android',
+    final other => other,
+  };
+  return v.startsWith(name) || v.startsWith('"') ? v : '$name $v';
+}
 
 /// Settings › About: the version, where the code and releases are, the licence, and the details for a bug report.
 class AboutSettings extends StatelessWidget {
