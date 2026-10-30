@@ -4,6 +4,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../platform/host.dart';
 import '../../services/download_prefs.dart';
 import '../../services/video_download.dart';
 import '../../services/youtube_importer.dart';
@@ -25,7 +26,7 @@ class _DownloadSettingsState extends State<DownloadSettings> {
   late Future<Directory> _folder = YoutubeImporter.downloadsDir();
   late final Future<String?> _ytdlp = _ytdlpVersion();
 
-  static bool get _phone => Platform.isAndroid || Platform.isIOS;
+  static bool get _phone => Host.isAndroid || Host.isIOS;
 
   @override
   void initState() {

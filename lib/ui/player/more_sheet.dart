@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../models/track.dart';
+import '../../platform/features.dart';
 import '../../services/audio_engine.dart';
 import '../../services/player_controller.dart';
 import '../../services/video_mode.dart';
@@ -148,7 +149,7 @@ class PlayerMoreSheet extends StatelessWidget {
               ]),
             group('Song', [
               tile(Icons.playlist_add_rounded, 'Add to playlist', then((host) => addToPlaylist(host, [track]))),
-              if (track.isRemote)
+              if (track.isRemote && Features.downloads)
                 ListenableBuilder(
                   listenable: c.youtube,
                   builder: (context, _) {
@@ -195,24 +196,26 @@ class PlayerMoreSheet extends StatelessWidget {
                   subtitle: sleep.active ? SleepTimerLabel.of(sleep) : null,
                 ),
               ),
-              ListenableBuilder(
-                listenable: c.cast,
-                builder: (context, _) {
-                  final target = c.cast.target;
-                  return tile(
-                    target == null ? Icons.cast_rounded : Icons.cast_connected_rounded,
-                    'Play on a device',
-                    then(showCastPicker),
-                    on: target != null,
-                    subtitle: target == null ? null : 'Playing on ${target.name}',
-                  );
-                },
-              ),
-              tile(
-                Icons.group_outlined,
-                'Listen together',
-                then((host) => openListenTogether(host, closePlayer: closePlayer)),
-              ),
+              if (Features.casting)
+                ListenableBuilder(
+                  listenable: c.cast,
+                  builder: (context, _) {
+                    final target = c.cast.target;
+                    return tile(
+                      target == null ? Icons.cast_rounded : Icons.cast_connected_rounded,
+                      'Play on a device',
+                      then(showCastPicker),
+                      on: target != null,
+                      subtitle: target == null ? null : 'Playing on ${target.name}',
+                    );
+                  },
+                ),
+              if (Features.listenTogether)
+                tile(
+                  Icons.group_outlined,
+                  'Listen together',
+                  then((host) => openListenTogether(host, closePlayer: closePlayer)),
+                ),
             ]),
             if (AudioEngine.supported)
               group('Sound', [

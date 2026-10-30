@@ -1,7 +1,8 @@
-import 'dart:isolate';
 import 'dart:typed_data';
 
 import 'package:image/image.dart' as img;
+
+import '../platform/background.dart';
 
 /// Cover art made fit for a file's tags.
 abstract final class CoverArt {
@@ -9,7 +10,7 @@ abstract final class CoverArt {
   /// A JPEG that already is square (within 2%) and no larger than [size] comes back as it is.
   /// The work runs off the UI isolate. Throws when [image] can't be decoded.
   static Future<Uint8List> squareJpeg(Uint8List image, {int size = 1000, int quality = 90}) =>
-      Isolate.run(() => _squareJpeg(image, size, quality));
+      inBackground(() => _squareJpeg(image, size, quality));
 
   static Uint8List _squareJpeg(Uint8List bytes, int size, int quality) {
     final jpeg = bytes.length > 3 && bytes[0] == 0xff && bytes[1] == 0xd8 && bytes[2] == 0xff;

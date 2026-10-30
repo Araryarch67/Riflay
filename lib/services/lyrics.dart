@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'dart:io';
-import 'dart:isolate';
 
 import 'package:audio_metadata_reader/audio_metadata_reader.dart';
 import 'package:crypto/crypto.dart';
@@ -12,6 +11,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:xml/xml.dart';
 
 import '../models/track.dart';
+import '../platform/background.dart';
 import 'beta_features.dart';
 import 'lyrics_sources.dart';
 import 'ytmusic_web.dart';
@@ -457,7 +457,7 @@ abstract final class LyricsService {
     }
     final path = track.path;
     if (path != null) {
-      final local = await Isolate.run(() => _local(path));
+      final local = await inBackground(() => _local(path));
       if (local != null && !local.isEmpty) return (lyrics: local, missed: false);
     }
     if (await LyricsCache.read(track) case final kept?) return (lyrics: kept, missed: false);

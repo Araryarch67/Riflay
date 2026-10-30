@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../../models/track.dart';
+import '../../platform/features.dart';
 import '../../services/flac_convert.dart';
 import '../../services/play_history.dart';
 import '../../services/player_controller.dart';
@@ -157,7 +158,7 @@ class CollectionPage extends StatelessWidget {
                         icon: const Icon(Icons.add_circle_outline_rounded),
                       ),
                     ],
-                    if (live.kind == CollectionKind.remote && tracks.isNotEmpty) ...[
+                    if (live.kind == CollectionKind.remote && tracks.isNotEmpty && Features.downloads) ...[
                       const Spacer(),
                       IconButton(
                         tooltip: 'Download all for offline',

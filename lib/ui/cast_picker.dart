@@ -1,7 +1,6 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 
+import '../platform/host.dart';
 import '../services/cast.dart';
 import '../services/player_controller.dart';
 import 'shell_scope.dart';
@@ -87,7 +86,7 @@ class _CastPickerState extends State<_CastPicker> {
     final cast = c.cast;
     final text = Theme.of(context).textTheme;
     final muted = text.bodySmall?.copyWith(color: AppColors.textSecondary);
-    final here = Platform.isAndroid || Platform.isIOS ? 'This phone' : 'This computer';
+    final here = Host.isAndroid || Host.isIOS ? 'This phone' : 'This computer';
 
     Widget tile({
       required IconData icon,
@@ -123,7 +122,7 @@ class _CastPickerState extends State<_CastPicker> {
           child: Text('Play on', style: text.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
         ),
         tile(
-          icon: Platform.isAndroid || Platform.isIOS ? Icons.smartphone_rounded : Icons.computer_rounded,
+          icon: Host.isAndroid || Host.isIOS ? Icons.smartphone_rounded : Icons.computer_rounded,
           name: here,
           selected: !c.casting,
           onTap: () => _pick(null),

@@ -6,11 +6,13 @@ import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:just_audio_media_kit/just_audio_media_kit.dart';
-import 'package:media_kit/media_kit.dart';
+import 'package:media_kit/media_kit.dart' hide NativePlayer;
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../platform/host.dart';
+import '../platform/mpv.dart';
 import 'carla_locator.dart';
 import 'crossfade.dart';
 import 'ios_route.dart';
@@ -369,13 +371,12 @@ class AudioEngine extends ChangeNotifier {
     if (hasRoutePicker) _iosRoute.current().then((r) => route = r);
   }
 
-  static bool get supported =>
-      Platform.isLinux || Platform.isWindows || Platform.isAndroid || Platform.isMacOS || Platform.isIOS;
+  static bool get supported => Host.isLinux || Host.isWindows || Host.isAndroid || Host.isMacOS || Host.isIOS;
 
   /// Android and iOS offer no device choice or exclusive output: the system mixer plays everything.
   /// iOS has no device list but lets the user pick the route (speaker, Bluetooth, AirPlay, a USB DAC) with
   /// the system picker, and Riflay asks it to run that output at each song's rate.
-  static bool get hasRoutePicker => Platform.isIOS;
+  static bool get hasRoutePicker => Host.isIOS;
 
   /// Where iOS sends the sound now, kept current by the route change notification.
   AudioRoute? route;
@@ -386,7 +387,7 @@ class AudioEngine extends ChangeNotifier {
     },
   );
 
-  static bool get hasOutputChoice => !Platform.isAndroid && !Platform.isIOS;
+  static bool get hasOutputChoice => !Host.isAndroid && !Host.isIOS;
 
   /// Whether the OS output can be opened exclusively by mpv's own option
   /// (WASAPI / CoreAudio). On Linux a direct ALSA device does the same.
@@ -448,7 +449,7 @@ class AudioEngine extends ChangeNotifier {
 
   /// The sound reaches the DAC without the OS mixer in between: Exclusive mode
   /// or an ASIO driver on Windows, a direct card (Bit-perfect mode's) on Linux.
-  bool get bypassesMixer => Platform.isAndroid
+  bool get bypassesMixer => Host.isAndroid
       ? bitPerfect
       : hasExclusiveMode
       ? exclusive || device.startsWith('asio/')
@@ -460,7 +461,7 @@ class AudioEngine extends ChangeNotifier {
 
   /// Bit-perfect mode leaves the rate alone, except through Windows' shared
   /// mixer: mpv still converts to the mixer's rate there, so with this resampler.
-  bool get hqResamplerActive => hqResampler && !(bitPerfect && bypassesMixer && !Platform.isAndroid);
+  bool get hqResamplerActive => hqResampler && !(bitPerfect && bypassesMixer && !Host.isAndroid);
 
   /// Everything off: nothing in the player touches the samples. On Linux the
   /// output goes straight to the card; on Windows that takes [exclusive] too. The
@@ -469,15 +470,15 @@ class AudioEngine extends ChangeNotifier {
 
   /// [bitPerfectWanted], and on Android only while a USB DAC is plugged in: there the switch is
   /// Android 14's bit-perfect USB output, and without a DAC nothing can be bit-perfect.
-  bool get bitPerfect => bitPerfectWanted && (!Platform.isAndroid || androidUsb);
+  bool get bitPerfect => bitPerfectWanted && (!Host.isAndroid || androidUsb);
 
   set bitPerfect(bool v) => bitPerfectWanted = v;
 
   /// Android 14+ with a USB DAC that takes bit-perfect formats.
-  bool get androidUsb => Platform.isAndroid && usb.supported && usb.device != null;
+  bool get androidUsb => Host.isAndroid && usb.supported && usb.device != null;
 
   /// Whether Bit-perfect mode can be offered here: a computer's own output choice, or Android 14+.
-  bool get hasBitPerfect => hasOutputChoice || (Platform.isAndroid && usb.supported);
+  bool get hasBitPerfect => hasOutputChoice || (Host.isAndroid && usb.supported);
 
   /// Android's USB DAC (bit-perfect mixer attributes), see [_syncMixer].
   final usb = UsbDac();
@@ -537,11 +538,11 @@ class AudioEngine extends ChangeNotifier {
       nativeDsd &&
       bitPerfect &&
       bypassesMixer &&
-      (hasOutputChoice || (Platform.isAndroid && usb.device?.dopCapable == true));
+      (hasOutputChoice || (Host.isAndroid && usb.device?.dopCapable == true));
 
   /// Whether a DSD file of [bitRate] can go out as DoP: Android's DAC must take its PCM rate
   /// (176.4 kHz for DSD64, 352.8 kHz for DSD128) as 32-bit; a computer's output takes any.
-  bool dopFits(int bitRate) => !Platform.isAndroid || (usb.device?.takesDop(bitRate) ?? false);
+  bool dopFits(int bitRate) => !Host.isAndroid || (usb.device?.takesDop(bitRate) ?? false);
 
   DsdPlayback? _dop;
 
@@ -584,7 +585,7 @@ class AudioEngine extends ChangeNotifier {
   // ── Persistence ─────────────────────────────────────────────────────────
 
   Future<void> load() async {
-    if (Platform.isAndroid) {
+    if (Host.isAndroid) {
       await usb.init();
       usb.addListener(_onUsb);
     }
@@ -620,7 +621,7 @@ class AudioEngine extends ChangeNotifier {
       convolution = (j['convolution'] as bool? ?? false) && impulsePath != null && File(impulsePath!).existsSync();
       if (!hasOutputChoice) {
         device = 'auto';
-        if (!Platform.isAndroid) bitPerfectWanted = false;
+        if (!Host.isAndroid) bitPerfectWanted = false;
         exclusive = false;
       }
     } catch (e) {
@@ -693,7 +694,7 @@ class AudioEngine extends ChangeNotifier {
         await _save();
         final p = _native;
         if (p != null) {
-          final mixerMoved = Platform.isAndroid && await _syncMixer(p);
+          final mixerMoved = Host.isAndroid && await _syncMixer(p);
           final volumeMoved = await _applyProps(p);
           if (reopen || volumeMoved || mixerMoved) await _reloadOutput(p);
         }
@@ -747,7 +748,7 @@ class AudioEngine extends ChangeNotifier {
     final base = file.path.split(RegExp(r'[/\\]')).last;
     final given = base.contains('.') ? base.split('.').last.toLowerCase() : '';
     final ext = RegExp(r'^[a-z0-9]{1,5}$').hasMatch(given) ? given : 'wav';
-    final copy = File('${into.path}${Platform.pathSeparator}impulse-${DateTime.now().millisecondsSinceEpoch}.$ext');
+    final copy = File('${into.path}${Host.pathSeparator}impulse-${DateTime.now().millisecondsSinceEpoch}.$ext');
     await file.copy(copy.path);
     final old = impulsePath;
     await _set(() {
@@ -1102,7 +1103,7 @@ class AudioEngine extends ChangeNotifier {
 
   /// Each song that opens may need other mixer attributes (its rate), so follow what mpv decodes.
   void _followSong(Player player, NativePlayer p) {
-    if (!Platform.isAndroid) return;
+    if (!Host.isAndroid) return;
     _paramsSub?.cancel();
     _paramsSub = player.stream.audioParams.listen((_) {
       _mixerBusy = _mixerBusy
@@ -1199,7 +1200,7 @@ class AudioEngine extends ChangeNotifier {
       'audio-client-name': 'Riflay',
       // macOS, shared: in bit-perfect mode the DAC follows each song's rate, so Core Audio's mixer
       // doesn't resample (Exclusive mode takes the device's own format anyway).
-      if (Platform.isMacOS) 'coreaudio-change-physical-format': bitPerfect ? 'yes' : 'no',
+      if (Host.isMacOS) 'coreaudio-change-physical-format': bitPerfect ? 'yes' : 'no',
       'audio-exclusive': exclusiveOutput ? 'yes' : 'no',
       'audio-samplerate': _mixer != null
           ? '${_mixer!.format.rate}'
@@ -1207,7 +1208,7 @@ class AudioEngine extends ChangeNotifier {
           ? '0'
           : '${outputRate ?? await _systemMixerRate() ?? 0}',
       // Android bit-perfect: the exact format of the mixer attributes, so the track matches them.
-      if (Platform.isAndroid) 'audio-format': _mixer?.format.mpvFormat ?? 'no',
+      if (Host.isAndroid) 'audio-format': _mixer?.format.mpvFormat ?? 'no',
       // Only used when the rate has to change; keeps the default otherwise.
       'audio-swresample-o': await _swresampleOptions(),
       // 100 where the filter applies the volume: mpv must not scale samples too.
@@ -1449,7 +1450,7 @@ class AudioEngine extends ChangeNotifier {
   void dispose() {
     _disposed = true;
     _paramsSub?.cancel();
-    if (Platform.isAndroid) usb.clear().ignore();
+    if (Host.isAndroid) usb.clear().ignore();
     _chainSync?.cancel();
     _projectWatch?.cancel();
     _releaseCard();
@@ -1493,7 +1494,7 @@ class AudioEngine extends ChangeNotifier {
   static Future<String> _hqResampler() async {
     if (_resamplerOptions != null) return _resamplerOptions!;
     var soxr = false;
-    if (Platform.isLinux) {
+    if (Host.isLinux) {
       try {
         final r = await Process.run('ffmpeg', ['-hide_banner', '-buildconf']);
         soxr = (r.stdout as String).contains('--enable-libsoxr');

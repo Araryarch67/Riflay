@@ -7,6 +7,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:path/path.dart' as p;
 
+import '../platform/host.dart';
+
 /// A signed-in Spotify web player session: the cookies that prove the login
 /// (`sp_dc` among them) plus the token and headers the player's own requests
 /// carry. The token is short-lived; the cookies are what [SpotifyLogin.refresh]
@@ -79,7 +81,7 @@ abstract final class SpotifyLogin {
   /// The helper next to the app binary; null when it was not built or on other
   /// platforms.
   static final String? helperPath = () {
-    if (!Platform.isLinux) return null;
+    if (!Host.isLinux) return null;
     final path = p.join(p.dirname(Platform.resolvedExecutable), _name);
     return File(path).existsSync() ? path : null;
   }();
@@ -87,12 +89,12 @@ abstract final class SpotifyLogin {
   /// Whether this build can show a Spotify sign-in at all. Under `flutter test`
   /// there is no WebView plugin.
   static bool get canSignIn {
-    if (Platform.isLinux) return helperPath != null;
-    return !Platform.environment.containsKey('FLUTTER_TEST');
+    if (Host.isLinux) return helperPath != null;
+    return !Host.environment.containsKey('FLUTTER_TEST');
   }
 
   /// Linux signs in through the helper window; the others in a page of the app.
-  static bool get signsInWithHelper => Platform.isLinux;
+  static bool get signsInWithHelper => Host.isLinux;
 
   /// Document-start hook that records, in `window.__riflaySpotify`, the token
   /// the web player fetches and the headers of its API calls. Identical to the
@@ -209,7 +211,7 @@ abstract final class SpotifyLogin {
   /// Null when Spotify no longer treats those cookies as signed in; throws
   /// [SpotifyLoginException] when Spotify couldn't be reached.
   static Future<SpotifySession?> refresh(String cookies) async {
-    if (Platform.isLinux) return _refreshWithHelper(cookies);
+    if (Host.isLinux) return _refreshWithHelper(cookies);
     return _refreshHeadless(cookies);
   }
 

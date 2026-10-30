@@ -1,12 +1,13 @@
 import 'dart:async';
 import 'dart:io';
-import 'dart:isolate';
 
 import 'package:flutter/widgets.dart';
 import 'package:path/path.dart' as p;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/track.dart';
+import '../platform/background.dart';
+import '../platform/host.dart';
 import 'ios_folders.dart';
 import 'player_controller.dart';
 
@@ -348,7 +349,7 @@ class FolderWatch extends ChangeNotifier with WidgetsBindingObserver {
   /// The first look after launch waits this long, so it doesn't compete with the first frames.
   static const firstLookDelay = Duration(seconds: 8);
 
-  static bool get isPhone => Platform.isAndroid || Platform.isIOS;
+  static bool get isPhone => Host.isAndroid || Host.isIOS;
 
   PlayerController? _c;
   bool _enabled = true;
@@ -382,7 +383,7 @@ class FolderWatch extends ChangeNotifier with WidgetsBindingObserver {
     final prefs = await SharedPreferences.getInstance();
     w._enabled = prefs.getBool(_enabledKey) ?? true;
     var folders = prefs.getStringList(_foldersKey) ?? const [];
-    if (Platform.isIOS && folders.isNotEmpty) {
+    if (Host.isIOS && folders.isNotEmpty) {
       // iOS can move an app's folders between launches; the library's songs were pointed at the new place.
       final moved = await IosFolders.restore();
       folders = [for (final f in folders) moved[f] ?? f];
@@ -580,7 +581,7 @@ class FolderWatch extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   Future<int> _lookAt(PlayerController c, String dir) async {
-    final disk = await Isolate.run(() => readSnapshotSync(dir));
+    final disk = await inBackground(() => readSnapshotSync(dir));
     if (disk == null) return 0; // not readable right now: change nothing
     final before = _previous[dir];
     _previous[dir] = disk;
@@ -593,7 +594,7 @@ class FolderWatch extends ChangeNotifier with WidgetsBindingObserver {
     // Off the UI isolate: the diff reads the whole library and may check files for existence. Plain data goes in.
     final library = c.library.toList(growable: false);
     final excluded = Set<String>.of(_excluded);
-    final plan = await Isolate.run(
+    final plan = await inBackground(
       () => planSync(root: dir, disk: disk, previous: before, library: library, excluded: excluded),
     );
     if (plan.isEmpty) return 0;

@@ -1,10 +1,10 @@
 import 'dart:async';
-import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
+import '../platform/host.dart';
 import 'youtube_importer.dart';
 
 /// What the notification code needs to know about one download.
@@ -247,8 +247,8 @@ class DownloadNotifications {
   bool _serviceOn = false;
   bool _backgroundTask = false;
 
-  bool get _android => !kIsWeb && Platform.isAndroid;
-  bool get _ios => !kIsWeb && Platform.isIOS;
+  bool get _android => !kIsWeb && Host.isAndroid;
+  bool get _ios => !kIsWeb && Host.isIOS;
 
   void _start() {
     _importer.addListener(_changed);
@@ -310,7 +310,7 @@ class DownloadNotifications {
         granted = await _plugin
             .resolvePlatformSpecificImplementation<IOSFlutterLocalNotificationsPlugin>()
             ?.requestPermissions(alert: true, sound: false, badge: false);
-      } else if (!kIsWeb && Platform.isMacOS) {
+      } else if (!kIsWeb && Host.isMacOS) {
         granted = await _plugin
             .resolvePlatformSpecificImplementation<MacOSFlutterLocalNotificationsPlugin>()
             ?.requestPermissions(alert: true, sound: false, badge: false);

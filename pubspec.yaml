@@ -67,6 +67,8 @@ dependencies:
   connectivity_plus: ^7.3.1
   mqtt_client: ^10.14.0
   typed_data: ^1.4.0
+  # The web build's one browser call (lib/platform/network_web.dart).
+  web: ^1.1.1
 
 dependency_overrides:
   # The real Linux implementation of flutter_inappwebview links WPE WebKit,

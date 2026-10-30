@@ -7,6 +7,7 @@ import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 
 import '../models/track.dart';
+import '../platform/host.dart';
 
 /// Discord Rich Presence over Discord's local IPC socket (no SDK, no network).
 ///
@@ -33,7 +34,7 @@ class DiscordPresence {
   Map<String, dynamic>? _wanted;
   bool _enabled = true;
 
-  static bool get supported => Platform.isLinux || Platform.isWindows || Platform.isMacOS;
+  static bool get supported => Host.isLinux || Host.isWindows || Host.isMacOS;
 
   bool get enabled => _enabled;
   set enabled(bool value) {
@@ -147,7 +148,7 @@ class DiscordPresence {
   }
 
   static Iterable<String> _candidatePaths() sync* {
-    if (Platform.isWindows) {
+    if (Host.isWindows) {
       for (var i = 0; i < 10; i++) {
         yield r'\\?\pipe\discord-ipc-'
             '$i';
@@ -157,7 +158,7 @@ class DiscordPresence {
     // Where Discord itself puts the socket: the first of these that is set. Not
     // every one of them: a shared /tmp is open to other accounts on the
     // machine, which could stand in for Discord there and hear what's playing.
-    final env = Platform.environment;
+    final env = Host.environment;
     final base = [
       env['XDG_RUNTIME_DIR'],
       env['TMPDIR'],
@@ -209,7 +210,7 @@ class _IpcConnection {
 
   static Future<_IpcConnection?> open(String path, {required void Function() onClosed}) async {
     try {
-      if (Platform.isWindows) {
+      if (Host.isWindows) {
         final pipe = await File(path).open(mode: FileMode.append);
         late final _IpcConnection conn;
         // A RandomAccessFile runs one operation at a time: a read left waiting for

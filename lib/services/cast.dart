@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
+import '../platform/host.dart';
 import 'airplay.dart';
 import 'dlna.dart';
 import 'ffmpeg.dart';
@@ -542,7 +543,7 @@ abstract final class _MulticastLock {
   static Future<void> release() => _call('release');
 
   static Future<void> _call(String method) async {
-    if (!Platform.isAndroid) return;
+    if (!Host.isAndroid) return;
     try {
       await _channel.invokeMethod<void>(method);
     } catch (e) {

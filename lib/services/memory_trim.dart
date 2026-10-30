@@ -1,7 +1,8 @@
 import 'dart:async';
-import 'dart:ffi';
-import 'dart:io';
-import 'dart:isolate';
+
+import '../platform/background.dart';
+import '../platform/host.dart';
+import '../platform/native_calls.dart';
 
 /// Hands memory freed by the engine, mpv and FFmpeg back to the OS.
 ///
@@ -11,19 +12,11 @@ import 'dart:isolate';
 /// a while in a big process, so it runs in a background isolate rather than
 /// on the UI thread. Linux (glibc) only; elsewhere this does nothing.
 abstract final class MemoryTrim {
-  static int Function(int)? _lookup() {
-    try {
-      return DynamicLibrary.process().lookupFunction<Int32 Function(IntPtr), int Function(int)>('malloc_trim');
-    } catch (_) {
-      return null; // not glibc (e.g. musl)
-    }
-  }
-
   // Not in widget tests either: their fake clock fails on timers left running.
   static final bool _available =
-      Platform.isLinux && !Platform.environment.containsKey('FLUTTER_TEST') && _lookup() != null;
+      Host.isLinux && !Host.environment.containsKey('FLUTTER_TEST') && lookupMallocTrim() != null;
 
-  static void _trim() => Isolate.run(() => _lookup()?.call(0)).ignore();
+  static void _trim() => inBackground(() => lookupMallocTrim()?.call(0)).ignore();
 
   static Timer? _soon;
   static Timer? _every;

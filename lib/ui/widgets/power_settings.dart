@@ -1,7 +1,6 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 
+import '../../platform/host.dart';
 import '../../services/player_controller.dart';
 import '../../services/power_policy.dart';
 import '../../services/stay_awake.dart';
@@ -84,7 +83,7 @@ class _ScreenRow extends StatelessWidget {
       icon: Icons.light_mode_outlined,
       title: const Text('Keep screen on'),
       subtitle: Text(
-        Platform.isIOS || Platform.isAndroid
+        Host.isIOS || Host.isAndroid
             ? 'Stops the screen from turning off by itself. Costs battery'
             : 'Stops the screen from turning off and locking by itself',
         style: settingsMuted(context),

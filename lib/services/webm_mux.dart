@@ -1,7 +1,8 @@
 import 'dart:convert';
 import 'dart:io';
-import 'dart:isolate';
 import 'dart:typed_data';
+
+import '../platform/background.dart';
 
 /// What a muxed video file carries besides its picture and sound: the song's name, artist, album, year, a note and
 /// the cover. Written into the file itself (WebM: Tags and an attachment; MP4: the `ilst` atoms).
@@ -51,7 +52,7 @@ class MuxException implements Exception {
 abstract final class WebmMux {
   /// Writes `[out]` from [video] and [audio]; the work runs off the calling isolate.
   static Future<void> muxFile({required String video, required String audio, required String out, MuxTags? tags}) =>
-      Isolate.run(() => muxFileSync(video: video, audio: audio, out: out, tags: tags));
+      inBackground(() => muxFileSync(video: video, audio: audio, out: out, tags: tags));
 
   /// [muxFile] on the calling isolate.
   static void muxFileSync({required String video, required String audio, required String out, MuxTags? tags}) {

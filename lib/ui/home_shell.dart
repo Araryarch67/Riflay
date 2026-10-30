@@ -188,7 +188,12 @@ class _HomeShellState extends State<HomeShell> {
     _leaveExpandedPlayer();
     if (_history.location == Locations.search) return;
     final typing = _search.focus.hasFocus;
-    _history.open(SearchPage(input: _search), Locations.search);
+    // Without a title bar (a tablet, a browser) the page has the box itself; the focus node still lets Search
+    // put the cursor in it.
+    _history.open(
+      hasCustomTitleBar ? SearchPage(input: _search) : SearchPage(focusNode: _search.focus),
+      Locations.search,
+    );
     // The new page takes keyboard focus once it's built; the next keystrokes belong in the box.
     if (typing) WidgetsBinding.instance.addPostFrameCallback((_) => _search.focus.requestFocus());
   }

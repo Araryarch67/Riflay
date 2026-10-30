@@ -8,6 +8,7 @@ import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
+import '../platform/host.dart';
 import 'download_prefs.dart';
 import 'video_download.dart';
 
@@ -66,7 +67,7 @@ class ResolvedVideo {
 /// manager), otherwise downloads the official standalone release once into the
 /// app's support folder.
 abstract final class YtDlp {
-  static bool get supported => Platform.isLinux || Platform.isWindows || Platform.isMacOS;
+  static bool get supported => Host.isLinux || Host.isWindows || Host.isMacOS;
 
   static Future<String?>? _exe;
 
@@ -81,16 +82,16 @@ abstract final class YtDlp {
   /// DRC ("stable volume") variants are re-processed, so skip them.
   static const _format = 'ba[acodec^=opus][format_id!*=drc]/ba[acodec^=mp4a][format_id!*=drc]/ba';
 
-  static String get _releaseAsset => Platform.isWindows
+  static String get _releaseAsset => Host.isWindows
       ? 'yt-dlp.exe'
-      : Platform.isMacOS
+      : Host.isMacOS
       ? 'yt-dlp_macos'
       : 'yt-dlp_linux';
 
   /// Path to a usable yt-dlp, downloading the official binary if none is installed.
   static Future<String?> executable() => _exe ??= () async {
     if (!supported) return null;
-    for (final candidate in ['yt-dlp', if (Platform.isWindows) 'yt-dlp.exe']) {
+    for (final candidate in ['yt-dlp', if (Host.isWindows) 'yt-dlp.exe']) {
       try {
         final r = await Process.run(candidate, ['--version']);
         if (r.exitCode == 0) return candidate;
@@ -146,7 +147,7 @@ abstract final class YtDlp {
       hash.close();
       await out.close();
       if (digest.value.toString() != expected) throw StateError('the download doesn\'t match its checksum');
-      if (!Platform.isWindows) await Process.run('chmod', ['755', part.path]);
+      if (!Host.isWindows) await Process.run('chmod', ['755', part.path]);
       await part.rename(to.path);
       return true;
     } catch (e) {

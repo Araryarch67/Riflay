@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-import 'dart:isolate';
 import 'dart:math' as math;
 import 'dart:typed_data';
 import 'dart:ui' as ui;
@@ -14,6 +13,8 @@ import 'package:image/image.dart' as img;
 import 'package:path_provider/path_provider.dart';
 
 import '../models/track.dart';
+import '../platform/background.dart';
+import '../platform/host.dart';
 import 'cover_palette.dart';
 import 'ffmpeg.dart';
 import 'tag_writer.dart';
@@ -72,7 +73,7 @@ abstract final class Metadata {
 
   /// Returns [track] with title/artist/album/duration filled from its tags.
   static Future<Track> enrich(Track track) =>
-      track.path == null ? Future.value(track.copyWith(tagged: true)) : Isolate.run(() => _enrichNow(track));
+      track.path == null ? Future.value(track.copyWith(tagged: true)) : inBackground(() => _enrichNow(track));
 
   /// [enrich] for many songs: batches of files are read in a few background
   /// isolates side by side (an isolate per file cost more than reading it).
@@ -95,7 +96,7 @@ abstract final class Metadata {
   /// A function of its own, so the isolate is sent the batch alone: a closure
   /// written inside [enrichAll] would carry `onBatch` (and the player behind it) along.
   static Future<List<Track>> _enrichBatch(List<Track> chunk) =>
-      Isolate.run(() => [for (final t in chunk) _enrichNow(t)]);
+      inBackground(() => [for (final t in chunk) _enrichNow(t)]);
 
   static Track _enrichNow(Track track) {
     final path = track.path;
@@ -148,7 +149,7 @@ abstract final class Metadata {
 
   static Future<TagEdit> readTags(Track track) {
     final path = track.path!;
-    return Isolate.run(() {
+    return inBackground(() {
       final m = readMetadata(File(path));
       return TagEdit(
         title: m.title,
@@ -171,10 +172,10 @@ abstract final class Metadata {
     final temp = File('${path.substring(0, dot)}.riflay-tmp${path.substring(dot)}');
     try {
       if (_inProcess.contains(_ext(path))) {
-        await Isolate.run(() => _writeInProcess(path, temp, edit));
+        await inBackground(() => _writeInProcess(path, temp, edit));
       } else if (TagWriter.formats.contains(_ext(path))) {
         try {
-          await Isolate.run(() => _writeWithTagWriter(path, temp, edit));
+          await inBackground(() => _writeWithTagWriter(path, temp, edit));
         } on UnsupportedTagLayout catch (e) {
           if (!Ffmpeg.available) rethrow;
           debugPrint('Tag editor: $e, trying ffmpeg');
@@ -205,9 +206,9 @@ abstract final class Metadata {
     final temp = File('${path.substring(0, dot)}.riflay-tmp${path.substring(dot)}');
     try {
       if (_inProcess.contains(_ext(path))) {
-        await Isolate.run(() => _writeInProcess(path, temp, edit));
+        await inBackground(() => _writeInProcess(path, temp, edit));
       } else if (TagWriter.formats.contains(_ext(path))) {
-        await Isolate.run(() => _writeWithTagWriter(path, temp, edit));
+        await inBackground(() => _writeWithTagWriter(path, temp, edit));
       } else {
         throw UnsupportedTagLayout('.${_ext(path)}');
       }
@@ -382,7 +383,7 @@ abstract final class Metadata {
       Uint8List? small;
       if (full != null) {
         try {
-          small = await Isolate.run(() => _shrink(full));
+          small = await inBackground(() => _shrink(full));
           thumbnailsMade++;
         } catch (_) {
           small = full;
@@ -459,7 +460,7 @@ abstract final class Metadata {
     }
   }
 
-  static Future<List<Uint8List?>> _readCovers(List<String> paths) => Isolate.run(
+  static Future<List<Uint8List?>> _readCovers(List<String> paths) => inBackground(
     () => [
       for (final path in paths)
         () {
@@ -480,7 +481,7 @@ abstract final class Metadata {
   /// without the network. Null where there is no cache folder (tests).
   static final Future<Directory?> _artDir = () async {
     try {
-      final dir = Directory('${(await getApplicationCacheDirectory()).path}${Platform.pathSeparator}artwork');
+      final dir = Directory('${(await getApplicationCacheDirectory()).path}${Host.pathSeparator}artwork');
       await dir.create(recursive: true);
       _pruneArtCache(dir).ignore();
       return dir;
@@ -502,7 +503,7 @@ abstract final class Metadata {
   static Future<Uint8List?> _networkArtwork(String? url) async {
     if (url == null) return null;
     final dir = await _artDir;
-    final file = dir == null ? null : File('${dir.path}${Platform.pathSeparator}${sha1.convert(url.codeUnits)}');
+    final file = dir == null ? null : File('${dir.path}${Host.pathSeparator}${sha1.convert(url.codeUnits)}');
     try {
       if (file != null && await file.exists()) return await file.readAsBytes();
     } catch (_) {}
@@ -584,7 +585,7 @@ abstract final class Metadata {
     final candidates = [
       for (final ext in ['jpg', 'jpeg', 'png', 'webp']) '$stem.$ext',
       for (final name in ['cover', 'folder', 'front', 'Cover', 'Folder', 'Front'])
-        for (final ext in ['jpg', 'png']) '$dir${Platform.pathSeparator}$name.$ext',
+        for (final ext in ['jpg', 'png']) '$dir${Host.pathSeparator}$name.$ext',
     ];
     for (final c in candidates) {
       final f = File(c);
@@ -625,7 +626,7 @@ abstract final class Metadata {
       try {
         final bytes = await artwork(track);
         final rgba = bytes == null ? null : await _smallPixels(bytes);
-        if (rgba != null) result = await Isolate.run(() => extractCoverColors(rgba));
+        if (rgba != null) result = await inBackground(() => extractCoverColors(rgba));
       } catch (e) {
         debugPrint('Cover colours not read: $e');
       }

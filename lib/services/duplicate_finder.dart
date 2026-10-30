@@ -1,9 +1,9 @@
 import 'dart:io';
-import 'dart:isolate';
 
 import 'package:path/path.dart' as p;
 
 import '../models/track.dart';
+import '../platform/background.dart';
 import 'flac_convert.dart';
 
 /// Songs that are the same recording in more than one file: a FLAC and an MP3 of it, a YouTube download and
@@ -274,7 +274,7 @@ List<DuplicateGroup> findDuplicates(
 /// File sizes, read on a background isolate. A path that can't be read has no entry.
 Future<Map<String, int>> readFileSizes(Iterable<String> paths) {
   final list = paths.toList();
-  return Isolate.run(() {
+  return inBackground(() {
     final sizes = <String, int>{};
     for (final path in list) {
       try {

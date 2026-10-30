@@ -1,10 +1,11 @@
 import 'dart:convert';
-import 'dart:isolate';
 import 'dart:math' as math;
 
 import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart' show debugPrint, visibleForTesting;
 import 'package:http/http.dart' as http;
+
+import '../platform/background.dart';
 
 /// A song row as YouTube Music returns it.
 class WebTrack {
@@ -366,7 +367,7 @@ class YtMusicWeb {
     // Pages run to a megabyte or two of JSON: decoded on the UI thread, that dropped frames.
     final decoded = bytes.length < 32 << 10
         ? jsonDecode(utf8.decode(bytes))
-        : await Isolate.run(() => jsonDecode(utf8.decode(bytes)));
+        : await inBackground(() => jsonDecode(utf8.decode(bytes)));
     if (decoded is! Map<String, dynamic>) {
       throw const YtMusicWebError('YouTube Music isn\'t answering right now. Try again later.');
     }

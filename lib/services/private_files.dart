@@ -4,6 +4,8 @@ import 'dart:io';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
+import '../platform/host.dart';
+
 /// The app's own folder (`getApplicationSupportDirectory`) and the files in
 /// it that only this user may read: the YouTube Music session, the library.
 ///
@@ -15,7 +17,7 @@ import 'package:path_provider/path_provider.dart';
 abstract final class PrivateFiles {
   static final _locked = <String>{};
 
-  static bool get _posix => Platform.isLinux || Platform.isMacOS;
+  static bool get _posix => Host.isLinux || Host.isMacOS;
 
   /// The support folder, created and locked down. Throws where there is none (widget tests).
   static Future<Directory> dir() async {

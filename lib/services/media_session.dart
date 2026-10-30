@@ -10,6 +10,7 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
 import '../models/track.dart';
+import '../platform/host.dart';
 import 'metadata.dart';
 import 'player_controller.dart';
 
@@ -34,7 +35,7 @@ class MediaSession extends BaseAudioHandler with SeekHandler {
 
   /// Starts the session; null where the platform has none (Windows).
   static Future<MediaSession?> start(PlayerController c) async {
-    if (Platform.isWindows) return null;
+    if (Host.isWindows) return null;
     try {
       return await AudioService.init(
         builder: () => MediaSession._(c),

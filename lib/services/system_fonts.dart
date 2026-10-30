@@ -1,10 +1,12 @@
 import 'dart:convert';
 import 'dart:io';
-import 'dart:isolate';
 
 import 'package:flutter/services.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
+
+import '../platform/background.dart';
+import '../platform/host.dart';
 
 /// One font family found on this device, with every file (weight, italic) that belongs to it.
 class FontFamilyFiles {
@@ -23,15 +25,15 @@ abstract final class SystemFonts {
       Directory(p.join((await getApplicationSupportDirectory()).path, 'fonts'));
 
   static List<String> get _osDirs {
-    final env = Platform.environment;
+    final env = Host.environment;
     final home = env['HOME'] ?? env['USERPROFILE'] ?? '';
-    if (Platform.isWindows) {
+    if (Host.isWindows) {
       return [
         p.join(env['WINDIR'] ?? r'C:\Windows', 'Fonts'),
         if (env['LOCALAPPDATA'] case final local?) p.join(local, 'Microsoft', 'Windows', 'Fonts'),
       ];
     }
-    if (Platform.isMacOS) {
+    if (Host.isMacOS) {
       return ['/System/Library/Fonts', '/Library/Fonts', p.join(home, 'Library', 'Fonts')];
     }
     final data = (env['XDG_DATA_HOME'] ?? '').isNotEmpty ? env['XDG_DATA_HOME']! : p.join(home, '.local', 'share');
@@ -41,7 +43,7 @@ abstract final class SystemFonts {
   /// Every family found, sorted by name. Reads only each file's name table, in another isolate.
   static Future<List<FontFamilyFiles>> scan() async {
     final dirs = [..._osDirs, (await appFontsDir()).path];
-    return Isolate.run(() => _scan(dirs));
+    return inBackground(() => _scan(dirs));
   }
 
   static List<FontFamilyFiles> _scan(List<String> dirs) {

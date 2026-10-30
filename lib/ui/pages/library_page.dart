@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../models/track.dart';
+import '../../platform/features.dart';
 import '../../services/beta_features.dart';
 import '../../services/play_history.dart';
 import '../../services/player_controller.dart';
@@ -80,7 +81,7 @@ class _LibraryListState extends State<LibraryList> {
             subtitle: 'Paste a link from a friend',
             onTap: () => joinSharedPlaylist(context),
           ),
-        if (!widget.collapsed)
+        if (!widget.collapsed && Features.playlistImport)
           _SimpleRow(
             collapsed: widget.collapsed,
             art: const _IconArt(Icons.playlist_add_rounded),
@@ -88,7 +89,7 @@ class _LibraryListState extends State<LibraryList> {
             subtitle: 'From Spotify, Apple Music or Deezer',
             onTap: () => importPlaylist(context),
           ),
-        if (!widget.collapsed)
+        if (!widget.collapsed && Features.playlistImport)
           _SimpleRow(
             collapsed: widget.collapsed,
             art: const _IconArt(Icons.library_music_outlined),
@@ -149,7 +150,7 @@ class _LibraryListState extends State<LibraryList> {
     ];
     // The two invitations are taller than a row, so they sit apart from the rows' fixed height.
     final prompts = <Widget>[
-      if (!widget.collapsed && !account.isSignedIn && show(LibraryFilter.playlists))
+      if (!widget.collapsed && !account.isSignedIn && Features.youtubeSignIn && show(LibraryFilter.playlists))
         Padding(
           padding: const EdgeInsets.fromLTRB(8, 16, 8, 0),
           child: _Prompt(
@@ -159,7 +160,7 @@ class _LibraryListState extends State<LibraryList> {
             onPressed: account.connecting ? null : () => signInToYoutubeMusic(context),
           ),
         ),
-      if (!widget.collapsed && c.library.isEmpty)
+      if (!widget.collapsed && c.library.isEmpty && Features.localLibrary)
         Padding(
           padding: const EdgeInsets.fromLTRB(8, 16, 8, 0),
           child: _Prompt(
@@ -238,7 +239,8 @@ class _LibraryListState extends State<LibraryList> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           header,
-          if (!widget.collapsed && constraints.maxHeight >= 300)
+          // Albums and artists are the device's own music (and the signed-in account's); the web build has playlists.
+          if (!widget.collapsed && constraints.maxHeight >= 300 && Features.localLibrary)
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
               child: Wrap(

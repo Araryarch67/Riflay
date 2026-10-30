@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:collection';
 import 'dart:convert';
 import 'dart:io';
-import 'dart:isolate';
 import 'dart:math' as math;
 
 import 'package:file_picker/file_picker.dart';
@@ -13,6 +12,9 @@ import 'package:just_audio/just_audio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/track.dart';
+import '../platform/background.dart';
+import '../platform/host.dart';
+import '../platform/network.dart';
 import 'audio_engine.dart';
 import 'cast.dart';
 import 'crossfade.dart';
@@ -100,6 +102,7 @@ class PlayerController extends ChangeNotifier {
 
   /// A few seconds into a YouTube song, looks up its download formats, so the picker is ready when tapped.
   void _prefetchDownloadFormats() {
+    if (Host.isWeb) return; // no downloads in a browser
     final t = currentTrack;
     final id = t != null && t.isRemote ? t.videoId : null;
     if (id == null || id == _formatsFor) return;
@@ -362,6 +365,7 @@ class PlayerController extends ChangeNotifier {
   /// Looks up the stream of the next two songs ahead of time, so skipping
   /// to a YouTube song doesn't wait. Cached, so repeats are free.
   void _prefetchNext() {
+    if (Host.isWeb) return; // the proxy looks songs up when the browser asks for them
     final seq = player.sequenceState;
     final at = seq.currentIndex;
     if (at == null) return;
@@ -744,10 +748,10 @@ class PlayerController extends ChangeNotifier {
     // YouTube Music session and the audio settings.
     final library = LibraryStore.load(prefs);
     // iOS: picked folders have to be reopened before any of their songs can be read.
-    final folders = Platform.isIOS ? IosFolders.restore() : Future.value(const <String, String>{});
+    final folders = Host.isIOS ? IosFolders.restore() : Future.value(const <String, String>{});
     await Future.wait([library, folders, ytMusic.load(), audio.load()]);
     // iOS moves the app's folder on updates; elsewhere downloads stay put.
-    _library = Platform.isIOS
+    _library = Host.isIOS
         ? await Future.wait(IosFolders.repoint(await library, await folders).map(YoutubeImporter.relocate))
         : await library;
     _recentIds = prefs.getStringList(_recentKey) ?? [];
@@ -756,7 +760,7 @@ class PlayerController extends ChangeNotifier {
         for (final j in jsonDecode(prefs.getString(_playlistsKey) ?? '[]') as List)
           UserPlaylist.fromJson((j as Map).cast()),
       ];
-      if (Platform.isIOS) {
+      if (Host.isIOS) {
         final moved = await folders;
         _playlists = [for (final p in _playlists) p.copyWith(tracks: IosFolders.repoint(p.tracks, moved))];
       }
@@ -773,7 +777,8 @@ class PlayerController extends ChangeNotifier {
     final level = prefs.getDouble(_volumeKey);
     if (level != null) _level.value = level.clamp(0, 1);
     Ffmpeg.onDownload = _errors.add;
-    unawaited(Metadata.probeTagTools().then((_) => notifyListeners()));
+    // A browser has no files, tag tools or music folders (see lib/platform/host.dart).
+    if (!Host.isWeb) unawaited(Metadata.probeTagTools().then((_) => notifyListeners()));
     unawaited(LyricsTranslation.load());
     unawaited(LyricsService.loadBetterLyricsKey());
     audio.addListener(notifyListeners);
@@ -782,6 +787,7 @@ class PlayerController extends ChangeNotifier {
     notifyListeners();
     // The player's own loop mode and volume are not needed before the first frame; they follow it.
     unawaited(_applyPlayerSettings(loop, level));
+    if (Host.isWeb) return;
     unawaited(_enrichUntagged());
     unawaited(FolderWatch.start(this)); // keeps the music folders up to date (folder_watch.dart)
   }
@@ -924,15 +930,15 @@ class PlayerController extends ChangeNotifier {
   /// Songs on SACD images; other ISOs (DVDs, data discs) are skipped.
   static Future<List<Track>> _readSacds(List<String> paths) async {
     if (paths.isEmpty) return const [];
-    return Isolate.run(() => [for (final p in paths) ...?SacdDisc.read(p)?.tracks()]);
+    return inBackground(() => [for (final p in paths) ...?SacdDisc.read(p)?.tracks()]);
   }
 
   Future<int> pickFolder() async {
     // Android: the songs are read where they are, which takes the permission to read music.
-    if (Platform.isAndroid && await _musicPermission.invokeMethod<bool>('request') != true) {
+    if (Host.isAndroid && await _musicPermission.invokeMethod<bool>('request') != true) {
       throw const MusicPermissionDenied();
     }
-    final dir = Platform.isIOS
+    final dir = Host.isIOS
         ? await IosFolders.pick()
         : await FilePicker.getDirectoryPath(dialogTitle: 'Add music folder');
     if (dir == null) return 0;
@@ -1165,6 +1171,8 @@ class PlayerController extends ChangeNotifier {
     if (t.isRemote) {
       final local = downloadedCopy(t);
       if (local != null) return AudioSource.uri(local.uri, tag: t);
+      // The web build plays straight from the proxy; it can't feed the browser's player a byte stream.
+      if (webAudioUri(t.videoId!) case final uri?) return AudioSource.uri(uri, tag: t);
       return YoutubeAudioSource(t.videoId!, yt: youtube.client, tag: t);
     }
     return t.isCueTrack

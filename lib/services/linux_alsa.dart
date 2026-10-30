@@ -4,6 +4,8 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 
+import '../platform/host.dart';
+
 /// A sound card output as the kernel lists it.
 class AlsaOutput {
   const AlsaOutput({required this.card, required this.device, required this.cardId, required this.name});
@@ -55,7 +57,7 @@ class HwParams {
 /// behind an output, asking PipeWire to let go of it, and reading back what
 /// the DAC receives.
 abstract final class LinuxAlsa {
-  static bool get supported => Platform.isLinux && Directory('/proc/asound').existsSync();
+  static bool get supported => Host.isLinux && Directory('/proc/asound').existsSync();
 
   static (DateTime, List<AlsaOutput>)? _outputs;
 

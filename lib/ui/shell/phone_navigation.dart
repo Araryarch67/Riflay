@@ -2,6 +2,7 @@ import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
 
+import '../../platform/features.dart';
 import '../../services/appearance.dart';
 import '../../services/layout_prefs.dart';
 import '../../services/player_controller.dart';
@@ -9,7 +10,16 @@ import '../theme.dart';
 
 /// The phone's tabs. Settings is one of them, so no page needs a gear of its own;
 /// Downloads keeps a tab because its ring shows songs being saved.
-enum PhoneTab { home, search, library, downloads, settings }
+enum PhoneTab {
+  home,
+  search,
+  library,
+  downloads,
+  settings;
+
+  /// Whether this build shows the tab.
+  bool get available => this != downloads || Features.downloads;
+}
 
 typedef _TabInfo = ({PhoneTab tab, IconData icon, IconData selected, String label});
 
@@ -86,35 +96,36 @@ class PhoneSideTabs extends StatelessWidget {
           child: Column(
             children: [
               for (final i in _tabItems)
-                Semantics(
-                  button: true,
-                  selected: tab == i.tab,
-                  child: InkResponse(
-                    onTap: () => onSelect(i.tab),
-                    radius: 36,
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      child: SizedBox(
-                        width: width,
-                        child: Column(
-                          children: [
-                            _TabIcon(info: i, selected: tab == i.tab),
-                            const SizedBox(height: 4),
-                            Text(
-                              i.label,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: text.labelSmall?.copyWith(
-                                color: tab == i.tab ? AppColors.textPrimary : AppColors.textSecondary,
-                                fontWeight: FontWeight.w600,
+                if (i.tab.available)
+                  Semantics(
+                    button: true,
+                    selected: tab == i.tab,
+                    child: InkResponse(
+                      onTap: () => onSelect(i.tab),
+                      radius: 36,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        child: SizedBox(
+                          width: width,
+                          child: Column(
+                            children: [
+                              _TabIcon(info: i, selected: tab == i.tab),
+                              const SizedBox(height: 4),
+                              Text(
+                                i.label,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: text.labelSmall?.copyWith(
+                                  color: tab == i.tab ? AppColors.textPrimary : AppColors.textSecondary,
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
                     ),
                   ),
-                ),
             ],
           ),
         ),
@@ -160,9 +171,18 @@ class PhoneBottomBar extends StatelessWidget {
     Widget cell(PhoneTab t) => Expanded(
       child: _BarTab(info: info(t), selected: tab == t, onTap: () => onSelect(t)),
     );
+    // Each side takes half of what the Home button leaves, however many tabs it has (the web build has no Downloads).
+    Widget side(List<PhoneTab> tabs) => Expanded(
+      child: Row(
+        children: [
+          for (final t in tabs)
+            if (t.available) cell(t),
+        ],
+      ),
+    );
     final row = Row(
       children: [
-        ..._left.map(cell),
+        side(_left),
         // Under the Home button: its dot, when Home is the tab shown.
         SizedBox(
           width: _hub + 24,
@@ -171,7 +191,7 @@ class PhoneBottomBar extends StatelessWidget {
             child: _Dot(on: tab == PhoneTab.home),
           ),
         ),
-        ..._right.map(cell),
+        side(_right),
       ],
     );
     final surface = _LiquidGlass(shape: shape, colors: colors, child: row);

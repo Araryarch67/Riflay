@@ -6,6 +6,7 @@ import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
+import '../../platform/host.dart';
 import 'transport.dart';
 
 /// Listen together over the same Wi-Fi: the host runs a small WebSocket server and announces itself with a
@@ -77,7 +78,7 @@ abstract final class LanMulticastLock {
   }
 
   static Future<void> _call(String method) async {
-    if (!Platform.isAndroid) return;
+    if (!Host.isAndroid) return;
     try {
       await _channel.invokeMethod<void>(method);
     } catch (e) {

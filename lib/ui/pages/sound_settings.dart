@@ -8,6 +8,7 @@ import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../platform/host.dart';
 import '../../services/audio_engine.dart';
 import '../../services/carla_locator.dart';
 import '../../services/crossfade.dart';
@@ -218,7 +219,7 @@ class AdvancedAudioSettings extends StatelessWidget {
       builder: (context, _) {
         final locked = audio.bitPerfect;
         final dopReady = audio.bitPerfect && audio.bypassesMixer;
-        final android = Platform.isAndroid;
+        final android = Host.isAndroid;
         final usbName = audio.usb.device?.name;
         return SettingsCard(
           children: [
@@ -299,7 +300,7 @@ class AdvancedAudioSettings extends StatelessWidget {
                                     : 'Sends the file to your USB DAC untouched: no equalizer, leveling or resampling. '
                                           'Other apps and system sounds are muted on the DAC, and the phone\'s volume keys stop working: '
                                           'use your DAC\'s volume, since lowering Riflay\'s own volume changes the sound.'
-                              : Platform.isMacOS
+                              : Host.isMacOS
                               ? 'No equalizer, leveling or resampling in Riflay, and your DAC follows each song\'s sample rate. '
                                     'Volume still works; at 100% nothing is changed. Other apps keep playing, so macOS still mixes the sound: '
                                     'turn on Exclusive mode too to send the file to your DAC untouched.'
@@ -337,7 +338,7 @@ class AdvancedAudioSettings extends StatelessWidget {
                         secondary: const Icon(Icons.lock_outline_rounded),
                         title: const Text('Exclusive mode'),
                         subtitle: Text(
-                          Platform.isMacOS
+                          Host.isMacOS
                               ? 'Takes over the device so macOS can\'t mix or resample: the DAC switches to each song\'s sample rate. '
                                     'Other apps go silent while Riflay plays.'
                               : 'Takes over the device so Windows\' mixer can\'t resample: the DAC switches to each song\'s sample rate. '
@@ -372,7 +373,7 @@ class AdvancedAudioSettings extends StatelessWidget {
                           icon: Icons.extension_outlined,
                           title: const Text('Audio plugins'),
                           subtitle: Text(
-                            Platform.isWindows
+                            Host.isWindows
                                 ? 'Needs Carla, a free program that holds your VST, LV2 and CLAP plugins. Download it, unzip it in your '
                                       'Downloads or Program Files folder, then reopen this page.'
                                 : 'Needs Carla, a free program that holds your VST, LV2 and CLAP plugins. Install it, then reopen this page.',

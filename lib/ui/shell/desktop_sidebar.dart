@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../platform/features.dart';
 import '../../services/player_controller.dart';
 import '../navigation.dart';
 import '../pages/library_page.dart';
@@ -116,12 +117,13 @@ class DesktopSidebar extends StatelessWidget {
       if (!inTitleBar) ...[
         item(Locations.home, Icons.home_outlined, Icons.home_rounded, 'Home', onHome),
         item(Locations.search, Icons.search_rounded, Icons.manage_search_rounded, 'Search', onSearch),
-        DownloadsLink(collapsed: collapsed, selected: location == Locations.downloads),
-        item(Locations.listen, Icons.group_outlined, Icons.group_rounded, 'Listen together', () {
-          if (location != Locations.listen) {
-            ShellScope.of(context).open(const ListenTogetherPage(), location: Locations.listen);
-          }
-        }),
+        if (Features.downloads) DownloadsLink(collapsed: collapsed, selected: location == Locations.downloads),
+        if (Features.listenTogether)
+          item(Locations.listen, Icons.group_outlined, Icons.group_rounded, 'Listen together', () {
+            if (location != Locations.listen) {
+              ShellScope.of(context).open(const ListenTogetherPage(), location: Locations.listen);
+            }
+          }),
         item(Locations.settings, Icons.settings_outlined, Icons.settings_rounded, 'Settings', () {
           if (location != Locations.settings) ShellScope.of(context).open(const SettingsPage());
         }),
@@ -280,18 +282,19 @@ class TitleBarMenu extends StatelessWidget {
             ],
           ),
           itemBuilder: (context) => [
-            entry(
-              Icons.download_rounded,
-              'Downloads',
-              onDownloads,
-              trailing: progress == null
-                  ? null
-                  : Text(
-                      '${c.youtube.activeCount}',
-                      style: text.labelSmall?.copyWith(color: AppColors.accent, fontWeight: FontWeight.w700),
-                    ),
-            ),
-            entry(Icons.group_outlined, 'Listen together', onListen),
+            if (Features.downloads)
+              entry(
+                Icons.download_rounded,
+                'Downloads',
+                onDownloads,
+                trailing: progress == null
+                    ? null
+                    : Text(
+                        '${c.youtube.activeCount}',
+                        style: text.labelSmall?.copyWith(color: AppColors.accent, fontWeight: FontWeight.w700),
+                      ),
+              ),
+            if (Features.listenTogether) entry(Icons.group_outlined, 'Listen together', onListen),
             entry(Icons.settings_outlined, 'Settings', onSettings),
           ],
         );
