@@ -48,19 +48,21 @@ void main() {
   });
 
   for (final width in const <double>[900, 1400]) {
-    testWidgets('desktop ${width.toInt()} wide: Downloads is always in the sidebar', (tester) async {
+    testWidgets('desktop ${width.toInt()} wide: Downloads opens from the title bar\'s menu, listed once', (
+      tester,
+    ) async {
       debugDefaultTargetPlatformOverride = TargetPlatform.linux;
       try {
         await _app(tester, Size(width, 800));
-        // Expanded: the word; collapsed: its tooltip.
-        final visible =
-            find.text('Downloads').evaluate().isNotEmpty || find.byTooltip('Downloads').evaluate().isNotEmpty;
-        expect(visible, isTrue);
-        await tester.tap(
-          find.text('Downloads').evaluate().isNotEmpty
-              ? find.text('Downloads').first
-              : find.byTooltip('Downloads').first,
-        );
+        // The ⋯ menu has it; the sidebar doesn't repeat it (nor Listen together).
+        expect(find.text('Downloads'), findsNothing);
+        expect(find.byTooltip('Downloads'), findsNothing);
+        expect(find.text('Listen together'), findsNothing);
+        await tester.tap(find.byTooltip('More'));
+        await tester.pumpAndSettle();
+        expect(find.text('Downloads'), findsOneWidget);
+        expect(find.text('Listen together'), findsOneWidget);
+        await tester.tap(find.text('Downloads'));
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 600));
         expect(find.textContaining('Nothing downloading'), findsOneWidget);

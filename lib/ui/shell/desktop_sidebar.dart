@@ -110,20 +110,18 @@ class DesktopSidebar extends StatelessWidget {
       return collapsed ? Tooltip(message: label, child: row) : row;
     }
 
-    // With the title bar, Home and search sit in it and Settings in its ⋯ menu (which lists
-    // Downloads too); Downloads always has its own entry here.
+    // With the title bar, Home and search sit in it and Downloads, Listen together and Settings in its ⋯ menu:
+    // the sidebar is then the library alone, nothing listed twice.
     final navItems = [
       if (!inTitleBar) ...[
         item(Locations.home, Icons.home_outlined, Icons.home_rounded, 'Home', onHome),
         item(Locations.search, Icons.search_rounded, Icons.manage_search_rounded, 'Search', onSearch),
-      ],
-      DownloadsLink(collapsed: collapsed, selected: location == Locations.downloads),
-      item(Locations.listen, Icons.group_outlined, Icons.group_rounded, 'Listen together', () {
-        if (location != Locations.listen) {
-          ShellScope.of(context).open(const ListenTogetherPage(), location: Locations.listen);
-        }
-      }),
-      if (!inTitleBar) ...[
+        DownloadsLink(collapsed: collapsed, selected: location == Locations.downloads),
+        item(Locations.listen, Icons.group_outlined, Icons.group_rounded, 'Listen together', () {
+          if (location != Locations.listen) {
+            ShellScope.of(context).open(const ListenTogetherPage(), location: Locations.listen);
+          }
+        }),
         item(Locations.settings, Icons.settings_outlined, Icons.settings_rounded, 'Settings', () {
           if (location != Locations.settings) ShellScope.of(context).open(const SettingsPage());
         }),
