@@ -7,7 +7,10 @@ import '../services/layout_prefs.dart';
 
 /// Colour tokens of the theme picked in Settings › Look & feel › Appearance ([ThemeChoice]).
 abstract final class AppColors {
-  static AppPalette get _p => Appearance.instance.palette;
+  static AppPalette get _p => _themeOverride ?? Appearance.instance.palette;
+
+  /// Set while [buildAppTheme] runs for a palette that is not the one in use (see [appThemeNow]).
+  static AppPalette? _themeOverride;
 
   /// The colours for a widget that should be rebuilt when they change (and only then).
   static AppColorsView of(BuildContext context) =>
@@ -43,8 +46,8 @@ abstract final class AppColors {
   static Color get inverse => _p.textPrimary;
   static Color get onInverse => _p.light ? _p.panel : _p.background;
 
-  static Color get accent => Appearance.instance.accentColor;
-  static Color get onAccent => Appearance.instance.onAccentColor;
+  static Color get accent => _p.accent;
+  static Color get onAccent => _p.onAccent;
 
   /// A cover's colour as a page header wash: strong on dark themes, soft on light ones
   /// (where the text over it is dark).
@@ -77,6 +80,8 @@ class AppColorsView {
   Color get tile => palette.textPrimary.withValues(alpha: 0.08);
   Color get border => palette.textPrimary.withValues(alpha: highContrast ? 0.28 : 0.10);
   Color get divider => palette.textPrimary.withValues(alpha: highContrast ? 0.18 : 0.06);
+  Color get inverse => palette.textPrimary;
+  Color get onInverse => palette.light ? palette.panel : palette.background;
   Color get accent => palette.accent;
   Color get onAccent => palette.onAccent;
 
@@ -108,9 +113,16 @@ class AppColorsScope extends InheritedWidget {
   bool updateShouldNotify(AppColorsScope old) => old.colors != colors;
 }
 
+/// Marks a widget that [restyleTree] has no use for. Implement [ColorFreeSubtree] on a widget whose whole subtree
+/// shows no colour read statically (anything coloured inside follows [AppColors.of] or [Theme] instead), or
+/// [ColorFreeSelf] on one whose own `build` reads none while its children may.
+abstract interface class ColorFreeSubtree {}
+
+abstract interface class ColorFreeSelf {}
+
 /// Marks a subtree that reads no colour, neither through [AppColors] nor statically: a palette change skips it
 /// (see [restyleTree]). Wrap pure artwork or lists of pictures.
-class ColorFree extends StatelessWidget {
+class ColorFree extends StatelessWidget implements ColorFreeSubtree {
   const ColorFree({super.key, required this.child});
 
   final Widget child;
@@ -126,16 +138,21 @@ class ColorFree extends StatelessWidget {
 /// Returns how many elements were marked.
 int restyleTree(Element root) {
   var marked = 0;
-  void visit(Element e) {
-    if (e.widget is ColorFree) return;
-    if ((e is StatelessElement || e is StatefulElement) && !_frameworkOnly(e.widget.runtimeType)) {
-      e.markNeedsBuild();
-      marked++;
+  void visit(Element e, Type? parent, Type? grand) {
+    final w = e.widget;
+    if (w is ColorFreeSubtree) return;
+    final t = w.runtimeType;
+    if ((e is StatelessElement || e is StatefulElement) && w is! ColorFreeSelf && !_frameworkOnly(t)) {
+      // The Builder inside every InkWell (Focus > Semantics > MouseRegion > Builder) runs no Riflay code.
+      if (!(identical(t, Builder) && identical(parent, MouseRegion) && identical(grand, Semantics))) {
+        e.markNeedsBuild();
+        marked++;
+      }
     }
-    e.visitChildren(visit);
+    e.visitChildren((c) => visit(c, t, parent));
   }
 
-  root.visitChildren(visit);
+  root.visitChildren((c) => visit(c, null, null));
   return marked;
 }
 
@@ -214,6 +231,8 @@ const _frameworkWidgets = {
   'Image',
   'SelectionArea',
   'AnimatedContainer',
+  'AnimatedScale',
+  'AnimatedSlide',
   'AnimatedOpacity',
   'AnimatedPadding',
   'AnimatedAlign',
@@ -286,8 +305,9 @@ int _themesCached = 0;
 ThemeData appThemeNow({bool desktopFrame = false}) {
   final a = Appearance.instance;
   final l = LayoutPrefs.instance;
+  final palette = _themePalette(a);
   final key = _ThemeKey(
-    a.palette,
+    palette,
     a.windowOpacity,
     a.highContrast,
     a.followsCover,
@@ -302,11 +322,40 @@ ThemeData appThemeNow({bool desktopFrame = false}) {
     return desktopFrame ? _transparent(hit) : hit;
   }
   _themesBuilt++;
-  final built = l.themed(buildAppTheme(fontFamily: a.fontFamily));
+  AppColors._themeOverride = palette;
+  final ThemeData built;
+  try {
+    built = l.themed(buildAppTheme(fontFamily: a.fontFamily));
+  } finally {
+    AppColors._themeOverride = null;
+  }
   // A fade passes through a dozen colours it never returns to: keep a few.
   if (_themes.length >= 8) _themes.remove(_themes.keys.first);
   _themes[key] = built;
   return desktopFrame ? _transparent(built) : built;
+}
+
+// Changing the theme rebuilds everything that asks Theme.of (every ink well, button and tile), far more than the
+// widgets that follow AppColors. While the Dynamic theme (or the "Whole app" wash) eases, the theme therefore
+// moves every third step and the colours the app reads itself every step; text and Material surfaces differ by
+// a few shades between two steps, so the ease looks the same.
+AppPalette? _heldPalette;
+int _heldStep = 0;
+const _themeEvery = 3;
+
+AppPalette _themePalette(Appearance a) {
+  final now = a.palette;
+  if (!a.fading) {
+    _heldPalette = null;
+    return now;
+  }
+  final held = _heldPalette;
+  if (held == null || held.light != now.light || a.fadeStep - _heldStep >= _themeEvery) {
+    _heldPalette = now;
+    _heldStep = a.fadeStep;
+    return now;
+  }
+  return held;
 }
 
 final _transparentOf = Expando<ThemeData>('transparent theme');

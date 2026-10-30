@@ -30,6 +30,7 @@ import '../services/youtube_links.dart';
 import '../services/listen_together/listen_together.dart';
 import 'pages/listen_together_page.dart';
 import 'shell/desktop_sidebar.dart';
+import 'shell/first_frame_gate.dart';
 import 'shell/phone_navigation.dart';
 import 'widgets/title_bar.dart';
 
@@ -248,12 +249,13 @@ class _HomeShellState extends State<HomeShell> {
     ),
   );
 
-  static Route<void> _route(Widget page, {String? location}) => PageRouteBuilder(
+  static Route<void> _route(Widget page, {String? location, bool firstFrame = false}) => PageRouteBuilder(
     // The page rides along so Forward can rebuild it after Back.
     settings: RouteSettings(name: location, arguments: page),
     transitionDuration: LayoutPrefs.dur(const Duration(milliseconds: 220)),
     reverseTransitionDuration: LayoutPrefs.dur(const Duration(milliseconds: 180)),
-    pageBuilder: (_, _, _) => page,
+    // The first page of the app waits for the window's frame to be drawn, then fills in.
+    pageBuilder: (_, _, _) => firstFrame ? FirstFrameGate(child: page) : page,
     transitionsBuilder: (_, anim, _, child) => FadeTransition(
       opacity: CurvedAnimation(parent: anim, curve: Curves.easeOut),
       child: SlideTransition(
@@ -382,7 +384,7 @@ class _HomeShellState extends State<HomeShell> {
   Widget _desktopNavigator() => Navigator(
     key: _history.navigatorKey,
     observers: [_history.observer],
-    onGenerateRoute: (_) => _route(const HomePage(), location: Locations.home),
+    onGenerateRoute: (_) => _route(const HomePage(), location: Locations.home, firstFrame: true),
   );
 
   Widget _tabNavigator(PhoneTab tab) => Navigator(

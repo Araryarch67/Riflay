@@ -32,7 +32,7 @@ String formatTotal(Iterable<Track> tracks) {
 ///
 /// Anything up to about [Metadata.thumbnailSide] px is drawn from a small
 /// thumbnail made once per cover, not from the full-size embedded picture.
-class Artwork extends StatelessWidget {
+class Artwork extends StatelessWidget implements ColorFreeSubtree {
   const Artwork({super.key, required this.track, this.size, this.radius = 4, this.circle = false, this.icon});
 
   final Track? track;
@@ -82,15 +82,28 @@ class Artwork extends StatelessWidget {
     );
   }
 
-  Widget _placeholder(Track? t) {
+  // The only colour in a cover is the placeholder's, and it follows the theme by itself ([AppColors.of]): a palette
+  // change leaves the covers (and their pictures) alone.
+  Widget _placeholder(Track? t) =>
+      _ArtPlaceholder(icon: icon ?? (circle ? Icons.person_outline_rounded : Icons.music_note_outlined));
+}
+
+class _ArtPlaceholder extends StatelessWidget {
+  const _ArtPlaceholder({required this.icon});
+
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
     return LayoutBuilder(
       builder: (context, c) => ColoredBox(
-        color: AppColors.hover,
+        color: colors.hover,
         child: Center(
           child: Icon(
-            icon ?? (circle ? Icons.person_outline_rounded : Icons.music_note_outlined),
+            icon,
             size: c.biggest.shortestSide.isFinite ? c.biggest.shortestSide * 0.38 : 24,
-            color: AppColors.textMuted,
+            color: colors.textMuted,
           ),
         ),
       ),
@@ -362,7 +375,7 @@ class _SeekBarState extends State<SeekBar> {
 }
 
 /// The big round play/pause button (white on the player, accent on headers).
-class PlayButton extends StatelessWidget {
+class PlayButton extends StatelessWidget implements ColorFreeSelf {
   const PlayButton({
     super.key,
     required this.playing,
@@ -384,8 +397,9 @@ class PlayButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = this.color ?? AppColors.inverse;
-    final iconColor = this.iconColor ?? AppColors.onInverse;
+    final colors = this.color == null || this.iconColor == null ? AppColors.of(context) : null;
+    final color = this.color ?? colors!.inverse;
+    final iconColor = this.iconColor ?? colors!.onInverse;
     return Tooltip(
       message: tipWith(playing ? 'Pause' : 'Play', AppAction.playPause),
       child: _Pressable(
@@ -430,7 +444,7 @@ class PlayButton extends StatelessWidget {
 }
 
 /// Grows slightly on hover and shrinks on press, like streaming-app buttons.
-class _Pressable extends StatefulWidget {
+class _Pressable extends StatefulWidget implements ColorFreeSelf {
   const _Pressable({required this.child, required this.onPressed});
 
   final Widget child;
@@ -674,7 +688,7 @@ class VolumeSlider extends StatelessWidget {
 }
 
 /// Square (or round, for artists) card used in horizontal shelves and grids.
-class MediaCard extends StatefulWidget {
+class MediaCard extends StatefulWidget implements ColorFreeSelf {
   const MediaCard({
     super.key,
     required this.track,
@@ -703,22 +717,55 @@ class MediaCard extends StatefulWidget {
 class _MediaCardState extends State<MediaCard> {
   bool _hover = false;
 
+  // A page that is rebuilt (a colour step, a song change) hands its cards new, equal widgets: the card keeps
+  // what it built until something it shows changes. Callbacks are read from [widget] when used.
+  Widget? _built;
+  Object? _layout;
+  TextTheme? _textTheme;
+
+  @override
+  void didUpdateWidget(MediaCard old) {
+    super.didUpdateWidget(old);
+    if (old.track?.id != widget.track?.id ||
+        old.track?.albumKey != widget.track?.albumKey ||
+        old.title != widget.title ||
+        old.subtitle != widget.subtitle ||
+        old.circle != widget.circle ||
+        old.online != widget.online ||
+        (old.onPlay == null) != (widget.onPlay == null)) {
+      _built = null;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
+    final l = LayoutPrefs.instance;
+    final layout = (l.corners, l.density, LayoutPrefs.effectiveMotion);
+    if (_built == null || _layout != layout || !identical(_textTheme, text)) {
+      _layout = layout;
+      _textTheme = text;
+      _built = _content(text);
+    }
+    return _built!;
+  }
+
+  Widget _content(TextTheme text) {
     return MouseRegion(
-      onEnter: (_) => setState(() => _hover = true),
-      onExit: (_) => setState(() => _hover = false),
-      child: AnimatedContainer(
-        duration: LayoutPrefs.dur(const Duration(milliseconds: 160)),
-        decoration: BoxDecoration(
-          color: _hover ? AppColors.hover : AppColors.hover.withValues(alpha: 0),
-          borderRadius: LayoutPrefs.corner(8),
-        ),
+      onEnter: (_) => setState(() {
+        _hover = true;
+        _built = null;
+      }),
+      onExit: (_) => setState(() {
+        _hover = false;
+        _built = null;
+      }),
+      child: _HoverFill(
+        hover: _hover,
         child: Material(
           type: MaterialType.transparency,
           child: InkWell(
-            onTap: widget.onTap,
+            onTap: () => widget.onTap(),
             borderRadius: LayoutPrefs.corner(8),
             hoverColor: Colors.transparent,
             child: Padding(
@@ -753,12 +800,8 @@ class _MediaCardState extends State<MediaCard> {
                               child: AnimatedOpacity(
                                 duration: LayoutPrefs.dur(const Duration(milliseconds: 180)),
                                 opacity: _hover ? 1 : 0,
-                                child: PlayButton(
-                                  playing: false,
-                                  size: 44,
-                                  color: AppColors.accent,
-                                  iconColor: AppColors.onAccent,
-                                  onPressed: widget.onPlay,
+                                child: _AccentPlayButton(
+                                  onPressed: widget.onPlay == null ? null : () => widget.onPlay!(),
                                 ),
                               ),
                             ),
@@ -780,12 +823,10 @@ class _MediaCardState extends State<MediaCard> {
                     children: [
                       if (widget.online) ...[const SourceMark(online: true, size: 13), const SizedBox(width: 4)],
                       Flexible(
-                        child: Text(
+                        child: _SecondaryText(
                           widget.subtitle,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
                           textAlign: widget.circle ? TextAlign.center : TextAlign.start,
-                          style: text.bodySmall?.copyWith(color: AppColors.textSecondary),
+                          style: text.bodySmall,
                         ),
                       ),
                     ],
@@ -798,6 +839,58 @@ class _MediaCardState extends State<MediaCard> {
       ),
     );
   }
+}
+
+// The three places a card shows a theme colour are small widgets of their own, reading it by context: a palette
+// change rebuilds these and leaves the card (and its cover) as it is.
+
+/// The card's background, which fills in on hover.
+class _HoverFill extends StatelessWidget {
+  const _HoverFill({required this.hover, required this.child});
+
+  final bool hover;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final fill = AppColors.of(context).hover;
+    return AnimatedContainer(
+      duration: LayoutPrefs.dur(const Duration(milliseconds: 160)),
+      decoration: BoxDecoration(color: hover ? fill : fill.withValues(alpha: 0), borderRadius: LayoutPrefs.corner(8)),
+      child: child,
+    );
+  }
+}
+
+/// The card's play button, in the accent colour.
+class _AccentPlayButton extends StatelessWidget {
+  const _AccentPlayButton({required this.onPressed});
+
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
+    return PlayButton(playing: false, size: 44, color: colors.accent, iconColor: colors.onAccent, onPressed: onPressed);
+  }
+}
+
+/// A line of secondary-coloured text.
+class _SecondaryText extends StatelessWidget {
+  const _SecondaryText(this.text, {required this.textAlign, required this.style});
+
+  final String text;
+  final TextAlign textAlign;
+  final TextStyle? style;
+
+  @override
+  Widget build(BuildContext context) => Text(
+    text,
+    maxLines: 1,
+    overflow: TextOverflow.ellipsis,
+    textAlign: textAlign,
+    style: style?.copyWith(color: AppColors.of(context).textSecondary),
+  );
 }
 
 /// 2x2 grid of distinct album covers, for collections that span many albums.

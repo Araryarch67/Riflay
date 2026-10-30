@@ -32,7 +32,9 @@ void main() {
     await LayoutPrefs.instance.load();
     final controller = silentController();
     sw = Stopwatch()..start();
-    await controller.load();
+    final loading = controller.load();
+    warmUpText(); // as main() does, while the library loads in its isolate
+    await loading;
     perf.report('controllerLoadMs', sw.elapsedMilliseconds);
     expect(controller.library.length, 8000);
 

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 import 'dart:math' as math;
+import 'dart:ui' as ui show ParagraphBuilder, ParagraphConstraints, ParagraphStyle, TextStyle;
 import 'dart:ui' show AppExitResponse;
 
 import 'package:flutter/foundation.dart';
@@ -65,12 +66,28 @@ Future<void> main() async {
   final windowSettled = windowShown.then((_) => Appearance.instance.applyWindow());
 
   final controller = PlayerController();
-  await controller.load();
+  // The library is read in another isolate: meanwhile this one gets the text engine ready.
+  final loading = controller.load();
+  warmUpText();
+  await loading;
   await windowSettled;
   runApp(RiflayApp(controller: controller));
   // Nothing here is needed to draw the first frame; it starts right after it. The media session must exist
   // before anything can be played, and playing needs a tap on that first frame.
   WidgetsBinding.instance.addPostFrameCallback((_) => unawaited(_startServices(controller)));
+}
+
+/// The first line of text laid out in a process makes the engine list the computer's fonts (a few dozen
+/// milliseconds). Doing it while the library loads in its isolate keeps it out of the first frame.
+void warmUpText() {
+  try {
+    final builder = ui.ParagraphBuilder(ui.ParagraphStyle())
+      ..pushStyle(ui.TextStyle(fontFamily: 'Figtree', fontSize: 14))
+      ..addText('Riflay');
+    builder.build().layout(const ui.ParagraphConstraints(width: 200));
+  } catch (e) {
+    debugPrint('Text warm-up skipped: $e');
+  }
 }
 
 Future<void> _showWindow(Size? size) async {

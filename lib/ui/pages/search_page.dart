@@ -49,8 +49,13 @@ class _SearchPageState extends State<SearchPage> {
     if (widget.input case final input?) {
       input.controller.addListener(_fromBar);
       input.submitted.addListener(_submittedFromBar);
-      // Opened by typing: pick up what's there already.
-      WidgetsBinding.instance.addPostFrameCallback((_) => _fromBar());
+      // Opened by typing: the first build already answers what's in the box (no empty page first).
+      // One letter has nothing to send to YouTube; longer text goes through the usual path.
+      if (_controller.text.trim().length < 2) {
+        _query = _localQuery = _controller.text;
+      } else {
+        WidgetsBinding.instance.addPostFrameCallback((_) => _fromBar());
+      }
     }
   }
 

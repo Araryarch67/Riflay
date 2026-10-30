@@ -8,6 +8,7 @@ import '../pages/settings_page.dart';
 import '../shell_scope.dart';
 import '../theme.dart';
 import '../widgets/smooth_scroll.dart';
+import 'first_frame_gate.dart';
 
 /// The now-playing side panel, sliding open and shut instead of popping.
 class SlidingPanel extends StatelessWidget {
@@ -164,7 +165,10 @@ class DesktopSidebar extends StatelessWidget {
               const SizedBox(height: 8),
             ],
             Expanded(
-              child: ShellPanel(child: LibraryList(dense: true, collapsed: collapsed)),
+              // The list (thousands of albums and artists behind it) fills in right after the first frame.
+              child: ShellPanel(
+                child: FirstFrameGate(child: LibraryList(dense: true, collapsed: collapsed)),
+              ),
             ),
           ],
         );

@@ -694,12 +694,18 @@ class Appearance extends ChangeNotifier {
   AppPalette? _dynFrom;
   late final _dynFade = _Fade(const Duration(milliseconds: 600), onStep: _fadeStep, onDone: () => _dynFrom = null);
 
+  /// Whether a colour ease is under way, and how many steps it has taken (for [appThemeNow]).
+  bool get fading => _dynFade.running || _washFade.running;
+  int fadeStep = 0;
+
   void _fadeStep() {
+    fadeStep++;
     final shown = _palette;
     _palette = null;
     // Every notification restyles the whole app: a step that lands on the colours already shown (two similar
-    // covers, or the first and last steps of the ease) costs nothing.
-    if (shown != null && palette == shown) {
+    // covers, or the first and last steps of the ease) costs nothing. Except the last one: the theme may still be
+    // a step or two behind (see appThemeNow), and catches up on it.
+    if (shown != null && palette == shown && fading) {
       _palette = shown;
       return;
     }
