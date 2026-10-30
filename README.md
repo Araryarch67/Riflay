@@ -127,14 +127,20 @@ Features marked (Beta) are still being tested; **Settings › Beta features** sw
 | ![Signal path](docs/screenshots/signal-path.webp) | ![Dynamic theme](docs/screenshots/dynamic-theme.webp) |
 | **Full-screen player** | **Settings** |
 | ![Full-screen player](docs/screenshots/fullscreen.webp) | ![Settings](docs/screenshots/settings.webp) |
-| **Beta features** | |
-| ![Beta features](docs/screenshots/settings-beta.webp) | |
+| **Themes and colours** | **About** |
+| ![Appearance](docs/screenshots/appearance.webp) | ![About](docs/screenshots/settings-about.webp) |
+| **Spotify import** | **Beta features** |
+| ![Spotify import](docs/screenshots/spotify.webp) | ![Beta features](docs/screenshots/settings-beta.webp) |
+| **A tablet-sized window** | |
+| ![Tablet-sized window](docs/screenshots/tablet.webp) | |
 
 On a phone:
 
 | Home | Now playing |
 |---|---|
 | <img src="docs/screenshots/phone-home.webp" alt="Phone home" width="280"> | <img src="docs/screenshots/phone.webp" alt="Phone now playing" width="280"> |
+| **Library** | **Settings** |
+| <img src="docs/screenshots/phone-library.webp" alt="Phone library" width="280"> | <img src="docs/screenshots/phone-settings.webp" alt="Phone settings" width="280"> |
 | **A Riflay Wrap card** | |
 | <img src="docs/screenshots/wrap.webp" alt="Riflay Wrap card" width="200"> | |
 

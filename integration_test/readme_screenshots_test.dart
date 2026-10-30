@@ -39,6 +39,7 @@ import 'package:riflay/services/private_files.dart';
 import 'package:riflay/services/video_download.dart';
 import 'package:riflay/services/youtube_importer.dart';
 import 'package:riflay/ui/download_options.dart';
+import 'package:riflay/ui/pages/about_settings.dart' show debugSystem;
 import 'package:riflay/ui/pages/duplicates_page.dart';
 import 'package:riflay/ui/player_panels.dart';
 import 'package:riflay/ui/shell_scope.dart';
@@ -637,7 +638,8 @@ void main() {
         set(5, (j) => j.status = DownloadStatus.queued);
         // ignore: invalid_use_of_protected_member
         c.youtube.notifyListeners();
-        await tester.tap(find.text('Downloads').first);
+        // Downloads sits in the title bar's ⋯ menu.
+        await openMore('Downloads');
         await settle(1500);
         await shot('downloads');
       });
@@ -682,9 +684,42 @@ void main() {
         await settle();
       });
 
+      // Settings › About, and the themes under Look & feel › Appearance.
+      await step('about-appearance', () async {
+        await openMore('Settings');
+        await Scrollable.ensureVisible(tester.element(find.text('About')), alignment: 0.5);
+        await settle();
+        debugSystem = 'Linux 6.12.1';
+        await tester.tap(find.text('About'));
+        await settle();
+        await shot('settings-about');
+        await tester.tap(find.text('Settings').first);
+        await settle();
+        await tester.tap(find.text('Look & feel'));
+        await settle();
+        await tester.tap(find.text('Appearance'));
+        await settle();
+        await shot('appearance');
+      });
+
+      // Spotify import, signed out (the picture shows no account).
+      await step('spotify', () async {
+        await openMore('Settings');
+        // Still on a Settings page from the last picture: its trail leads back to the list.
+        if (find.text('Accounts & services').evaluate().isEmpty) {
+          await tester.tap(find.text('Settings').first);
+          await settle();
+        }
+        await tester.tap(find.text('Accounts & services'));
+        await settle();
+        await tester.tap(find.text('Spotify').first);
+        await settle(1500);
+        await shot('spotify');
+      });
+
       // Listen together: hosting on this Wi-Fi.
       await step('listen-together', () async {
-        await tester.tap(find.text('Listen together').first);
+        await openMore('Listen together');
         await settle(1500);
         final session = ListenTogether.of(c);
         await tester.runAsync(() => session.host(mode: ListenMode.wifi, name: 'Ana'));
@@ -732,16 +767,35 @@ void main() {
         await settle();
       });
 
-      // Phone: home, then the full-screen player.
+      // A tablet-sized window: the library folds into a rail of covers.
+      await step('tablet', () async {
+        tester.view.physicalSize = const Size(1024, 768);
+        await tester.tap(find.byTooltip('Home').first);
+        await settle(1500);
+        await shot('tablet');
+        tester.view.physicalSize = const Size(1440, 900);
+        await settle();
+      });
+
+      // Phone: home, its Library and Settings tabs, then the full-screen player.
       await step('phone', () async {
         tester.view.devicePixelRatio = 2;
         tester.view.physicalSize = const Size(800, 1720);
         await c.playList(c.library.where((t) => t.album == 'Small Hours').toList(), 0, from: 'Small Hours');
         await playing();
         await settle(1500);
-        await tester.tap(find.text('Home').first);
+        // The tab bar's tabs are icons, named by their tooltips; Home is the round button in the middle.
+        await tester.tap(find.byTooltip('Home').last);
         await settle(1500);
         await shot('phone-home', pixelRatio: 2);
+        await tester.tap(find.byTooltip('Library').last);
+        await settle(1500);
+        await shot('phone-library', pixelRatio: 2);
+        await tester.tap(find.byTooltip('Settings').last);
+        await settle(1500);
+        await shot('phone-settings', pixelRatio: 2);
+        await tester.tap(find.byTooltip('Home').last);
+        await settle(1500);
         await tester.tap(find.byType(MiniPlayer));
         await shot('phone', pixelRatio: 2);
       });

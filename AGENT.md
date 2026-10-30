@@ -14,9 +14,10 @@ setup and one obvious control:
   away. Everyday ones (Equalizer, Volume leveling, Gapless, Virtual speakers,
   Crossfeed, Mono audio) sit above it in plain words.
 - UI looks like a streaming app. Colours come from the theme picked in
-  **Settings › Look & feel › Appearance** (`ThemeChoice`: Default, Dynamic,
-  which follows the playing song's cover, Monochrome, Everblush, Nord,
-  Gruvbox, Dracula, Custom; dark, light or matching the system) and from real
+  **Settings › Look & feel › Appearance** (`ThemeChoice`: Default; Dynamic,
+  which follows the playing song's cover; Monochrome; Catppuccin, Everforest,
+  Everblush, Nord, Gruvbox, Tokyo Night, Dracula, Rosé Pine; Custom; dark,
+  light or matching the system) and from real
   cover art (`AccentBuilder`). No decorative gradients, no emoji, no "AI"
   styling.
 - Error messages the user sees (SnackBars, error lines) are one calm, plain
