@@ -35,14 +35,14 @@ void main() {
   testWidgets('phone: Downloads is its own bottom tab and opens the downloads page', (tester) async {
     await _app(tester, const Size(400, 800));
     for (final label in ['Home', 'Search', 'Library', 'Downloads', 'Settings']) {
-      expect(find.text(label), findsWidgets, reason: 'tab $label');
+      expect(find.byTooltip(label), findsWidgets, reason: 'tab $label');
     }
     expect(find.textContaining('Nothing downloading'), findsNothing);
-    await tester.tap(find.text('Downloads').last);
+    await tester.tap(find.byTooltip('Downloads').last);
     await tester.pump(const Duration(milliseconds: 600));
     expect(find.textContaining('Nothing downloading'), findsOneWidget);
     // Back to Home with its tab.
-    await tester.tap(find.text('Home').last);
+    await tester.tap(find.byTooltip('Home').last);
     await tester.pump(const Duration(milliseconds: 600));
     expect(find.textContaining('Nothing downloading'), findsNothing);
   });

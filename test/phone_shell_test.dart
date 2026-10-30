@@ -60,15 +60,16 @@ Future<PlayerController> _panels(WidgetTester tester, Widget panel) async {
 void main() {
   testWidgets('phone: Home, Search, Library, Downloads and Settings are the tabs', (tester) async {
     await _app(tester, const Size(400, 800));
+    // Icon tabs, named by their tooltips; Home is the round button in the middle.
     for (final label in ['Home', 'Search', 'Library', 'Downloads', 'Settings']) {
-      expect(find.text(label), findsWidgets, reason: 'tab $label');
+      expect(find.byTooltip(label), findsWidgets, reason: 'tab $label');
     }
-    // No page has a gear of its own any more.
-    await tester.tap(find.text('Library').last);
+    // No page has a gear of its own any more: the tab is the only Settings.
+    await tester.tap(find.byTooltip('Library').last);
     await tester.pump(const Duration(milliseconds: 600));
-    expect(find.byTooltip('Settings'), findsNothing);
+    expect(find.byTooltip('Settings'), findsOneWidget);
 
-    await tester.tap(find.text('Settings').last);
+    await tester.tap(find.byTooltip('Settings').last);
     await tester.pump(const Duration(milliseconds: 600));
     expect(find.text('Sound'), findsWidgets);
     expect(find.text('Look & feel'), findsWidgets);
@@ -76,7 +77,7 @@ void main() {
 
   testWidgets('phone: the tab bar floats clear of the edges and survives large text', (tester) async {
     await _app(tester, const Size(360, 640));
-    final label = tester.getRect(find.text('Settings').last);
+    final label = tester.getRect(find.byTooltip('Settings').last);
     expect(label.right, lessThanOrEqualTo(352), reason: 'inside the bar\'s 8 px margin');
     expect(label.bottom, lessThanOrEqualTo(632), reason: 'above the bottom margin');
     expect(tester.takeException(), isNull);

@@ -130,15 +130,17 @@ void main() {
     await download('JESx2qFyupM', const DownloadChoice(DownloadFormat.m4a));
     await settle(1000);
 
-    // Desktop: Downloads in the sidebar, then its page.
+    // Desktop: Downloads from the title bar's ⋯ menu, then its page.
     await shot('desktop-sidebar-home');
+    await tester.tap(find.byTooltip('More'));
+    await settle();
     await tester.tap(find.text('Downloads').first);
     await settle();
     await shot('desktop-downloads-list');
 
     // The edit sheet for the m4a.
     final m4a = c.allSongs.tracks.firstWhere((t) => t.path!.endsWith('JESx2qFyupM.m4a'));
-    final ctx = tester.element(find.text('Downloads').first);
+    final ctx = tester.element(find.text('Downloads').last);
     showDownloadEditor(ctx, m4a, compact: false).ignore();
     await settle();
     await shot('desktop-edit-sheet');
@@ -156,11 +158,11 @@ void main() {
     await settle();
     await shot('desktop-settings-downloads');
 
-    // A phone: the four tabs, and the Downloads tab.
+    // A phone: the tab bar, and the Downloads tab.
     tester.view.physicalSize = const Size(400, 860);
     await settle(800);
     await shot('phone-home-tabs');
-    await tester.tap(find.text('Downloads').last);
+    await tester.tap(find.byTooltip('Downloads').last);
     await settle();
     await shot('phone-downloads-tab');
   }, timeout: const Timeout(Duration(minutes: 15)));
