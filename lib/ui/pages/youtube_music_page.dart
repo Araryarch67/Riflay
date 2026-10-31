@@ -29,7 +29,16 @@ Future<void> signInToYoutubeMusic(BuildContext context) async {
     final ok = await account.signInWithWindow();
     if (!ok && account.error != null) messenger.showSnackBar(SnackBar(content: Text(account.error!)));
   } else if (YoutubeMusicAccount.canSignInInWindow) {
-    ShellScope.of(context).open(const YoutubeMusicLoginPage());
+    final shell = ShellScope.of(context);
+    if (shell.compact) {
+      // Above the tab bar and mini player, which float over a tab's own pages and would cover Google's buttons.
+      Navigator.of(
+        context,
+        rootNavigator: true,
+      ).push(MaterialPageRoute<void>(builder: (_) => const YoutubeMusicLoginPage()));
+    } else {
+      shell.open(const YoutubeMusicLoginPage());
+    }
   } else {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Signing in needs WebKitGTK (webkit2gtk-4.1). Install it and restart Riflay.')),

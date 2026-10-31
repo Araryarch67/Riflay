@@ -173,8 +173,11 @@ class _SpotifyPageState extends State<SpotifyPage> {
     if (SpotifyLogin.signsInWithHelper) {
       await account.signInWithWindow();
     } else {
-      final session = await Navigator.of(context)
-          .push<SpotifySession>(MaterialPageRoute(builder: (_) => const SpotifyLoginPage()));
+      // On a phone, above the tab bar and mini player, which float over a tab's own pages.
+      final session = await Navigator.of(
+        context,
+        rootNavigator: ShellScope.of(context).compact,
+      ).push<SpotifySession>(MaterialPageRoute(builder: (_) => const SpotifyLoginPage()));
       if (session != null) await account.connect(session);
     }
   }
