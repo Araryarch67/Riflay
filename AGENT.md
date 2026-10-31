@@ -67,6 +67,7 @@ lib/
     folder_watch.dart          Picks up files added to or removed from the music folders
     play_history.dart          What was played; listening_stats.dart and wrap.dart read it (Stats, monthly Wrap)
     scrobbler.dart             Last.fm / ListenBrainz: when a play is a scrobble (ScrobbleTracker), a queue per service kept for offline listens
+    backup.dart                Backup & restore: preferences (no secrets), the listening history and my-lyrics in one JSON file
     appearance.dart            Themes and palettes (AppPalette, ThemeChoice), accent, cover colours and their fades, window opacity
     layout_prefs.dart          Corners, density and motion (Settings › Look & feel › Layout)
     beta_features.dart         Features still in Beta, each switchable in Settings › Beta features
@@ -424,3 +425,5 @@ Compare medians of several complete runs; debug builds are meaningless here.
 - Commits follow [Conventional Commits](https://www.conventionalcommits.org/)
   (`feat(audio): …`, `fix(ytmusic): …`). Don't commit unless asked.
 - Never commit secrets, cookies or session files.
+- A new preference that is a secret, or only makes sense on this one device,
+  goes in `Backup._kept` so backups leave it out and restores keep it.

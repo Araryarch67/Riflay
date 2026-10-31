@@ -76,7 +76,7 @@ void main() {
     final expected = {
       'Sound': ['Playback', if (AudioEngine.supported) 'Hi-fi audio'],
       'Look & feel': ['Appearance', 'Layout'],
-      'Library & downloads': ['Library', 'Downloads', 'Listening history & Wrap'],
+      'Library & downloads': ['Library', 'Downloads', 'Listening history & Wrap', 'Backup & restore'],
       'Accounts & services': [
         'YouTube Music account',
         'Spotify',

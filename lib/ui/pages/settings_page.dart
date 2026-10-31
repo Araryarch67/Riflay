@@ -12,6 +12,7 @@ import '../theme.dart';
 import '../widgets/page_scaffold.dart';
 import '../../services/audio_engine.dart';
 import 'appearance_settings.dart';
+import 'backup_settings.dart';
 import 'about_settings.dart';
 import 'beta_settings.dart';
 import 'layout_settings.dart';
@@ -31,7 +32,7 @@ enum SettingsGroup {
     'library',
     'Library & downloads',
     Icons.library_music_outlined,
-    'Music folders, downloads, listening history',
+    'Music folders, downloads, listening history, backups',
   ),
   accounts(
     'accounts',
@@ -111,6 +112,13 @@ enum SettingsTopic {
     'Listening history & Wrap',
     Icons.history_rounded,
     'The history behind your stats, kept on this device',
+  ),
+  backup(
+    SettingsGroup.library,
+    'backup',
+    'Backup & restore',
+    Icons.settings_backup_restore_rounded,
+    'Your settings, playlists and history in one file',
   ),
   account(
     SettingsGroup.accounts,
@@ -342,6 +350,7 @@ class SettingsTopicPage extends StatelessWidget {
       SettingsTopic.library => const LibrarySettings(),
       SettingsTopic.downloads => const DownloadSettings(),
       SettingsTopic.history => const PrivacySettings(),
+      SettingsTopic.backup => const BackupSettings(),
       SettingsTopic.integrations => const _IntegrationsSettings(),
       SettingsTopic.scrobbling => const ScrobbleSettings(),
       // Opened from its row as the Spotify page itself, so this body is never shown.

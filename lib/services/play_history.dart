@@ -511,6 +511,45 @@ class PlayHistory extends ChangeNotifier {
     await done;
   }
 
+  /// The whole history as its file holds it, for a backup.
+  Future<String> exportText() async {
+    await flush();
+    return encode(
+      HistoryData()
+        ..songs.addAll(_songs)
+        ..at.addAll(_at)
+        ..song.addAll(_song)
+        ..heard.addAll(_heard),
+    );
+  }
+
+  /// How many plays a history file's [text] holds.
+  static int playsIn(String text) => parse(text).plays;
+
+  /// Puts the history in [text] (a history file, from a backup) in place of this one, here and on disk.
+  Future<void> replaceWith(String text) async {
+    final data = parse(text);
+    _timer?.cancel();
+    _timer = null;
+    _pending.clear();
+    _tracker = PlayTracker();
+    _adopt(data);
+    _revision++;
+    notifyListeners();
+    final done = _io = _io.then((_) async {
+      final file = await _resolveFile();
+      if (file == null) return;
+      try {
+        await _writeAll(file, data);
+        _needsHeader = false;
+        _needsNewline = false;
+      } catch (e) {
+        debugPrint('Restoring the listening history failed: $e');
+      }
+    });
+    await done;
+  }
+
   // Following the player ────────────────────────────────────────────────────
 
   /// Loads the history and starts keeping plays of [controller]'s player.
