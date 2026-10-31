@@ -10,9 +10,11 @@ setup and one obvious control:
 
 - YouTube Music sign-in is a single **Sign in with Google** button. Never add
   "paste your cookies", OAuth client IDs, or browser pickers.
-- Power-user audio settings live under **Settings › Sound › Hi-fi audio**, folded
-  away. Everyday ones (Equalizer, Volume leveling, Gapless, Virtual speakers,
-  Crossfeed, Mono audio) sit above it in plain words.
+- Power-user audio settings live under **Settings › Sound › Output & quality**.
+  Everyday effects (Equalizer, Volume leveling, Crossfade, Virtual speakers,
+  Crossfeed, Mono audio) live in **Settings › Sound › Sound effects (DSP)**.
+  Autoplay and gapless live in **Settings › Sound › Playback**.
+  Power options live in **Settings › Power & background**.
 - UI looks like a streaming app. Colours come from the theme picked in
   **Settings › Look & feel › Appearance** (`ThemeChoice`: Default; Dynamic,
   which follows the playing song's cover; Monochrome; Catppuccin, Everforest,
@@ -72,9 +74,9 @@ lib/
     backup.dart                Backup & restore: preferences (no secrets), the listening history and my-lyrics in one JSON file
     appearance.dart            Themes and palettes (AppPalette, ThemeChoice), accent, cover colours and their fades, window opacity
     layout_prefs.dart          Corners, density and motion (Settings › Look & feel › Layout)
-    beta_features.dart         Features still in Beta, each switchable in Settings › Beta features
+    beta_features.dart         Optional feature preferences (legacy name); switches live in their respective settings pages
     listen_together/           Listen together: one queue shared over the LAN or the internet
-    video_mode.dart            Video mode (Beta): a YouTube song's music video on Now Playing
+    video_mode.dart            Video mode: a YouTube song's music video on Now Playing
     youtube_stream.dart        A YouTube song's audio stream in one player request (yt-dlp is the fallback)
     usb_dac.dart / linux_alsa.dart  Direct outputs: Android USB DACs, Linux ALSA cards
     media_session.dart         System media controls (Android notification, Control Center, MPRIS)

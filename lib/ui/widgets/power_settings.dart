@@ -8,17 +8,16 @@ import '../pages/sound_settings.dart' show SettingTile, settingsMuted;
 import '../theme.dart';
 import 'menus.dart';
 
-/// Settings › Sound › Playback › Power: keeping the screen on, keeping a computer awake
+/// Settings › Power & background: keeping the screen on, keeping a computer awake
 /// while music plays, and (Android) letting Riflay run with the screen off.
 class PowerSettings {
   const PowerSettings._();
 
-  /// The rows, to go at the end of the Playback card.
+  /// The controls shown on the dedicated Power & background page.
   static List<Widget> rows(BuildContext context) {
     final awake = StayAwake.instance;
     if (awake == null) return const [];
     return [
-      const _PowerHeader(),
       _ScreenRow(awake),
       if (StayAwake.isDesktop) _SleepRow(awake),
       if (BatteryExemption.supported) const BatteryTile(),
@@ -53,23 +52,6 @@ class PowerSettings {
   }
 
   static bool _offering = false;
-}
-
-class _PowerHeader extends StatelessWidget {
-  const _PowerHeader();
-
-  @override
-  Widget build(BuildContext context) => Align(
-    alignment: Alignment.centerLeft,
-    child: Padding(
-      padding: const EdgeInsets.fromLTRB(18, 16, 18, 6),
-      child: Text(
-        'Power',
-        style: Theme.of(context).textTheme.labelLarge
-            ?.copyWith(color: AppColors.textSecondary, fontWeight: FontWeight.w700),
-      ),
-    ),
-  );
 }
 
 class _ScreenRow extends StatelessWidget {

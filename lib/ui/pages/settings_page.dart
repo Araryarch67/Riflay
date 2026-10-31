@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../platform/features.dart';
+import '../../platform/host.dart';
+import '../widgets/power_settings.dart';
 import '../../services/beta_features.dart';
 import '../../services/discord_presence.dart';
 import '../../services/lyrics.dart';
@@ -26,7 +28,7 @@ import 'youtube_music_page.dart';
 
 /// The few groups on the first Settings page; each opens a page that lists its [SettingsTopic]s.
 enum SettingsGroup {
-  sound('sound', 'Sound', Icons.graphic_eq_rounded, 'Equalizer, volume leveling, crossfade, hi-fi output'),
+  sound('sound', 'Sound', Icons.graphic_eq_rounded, 'Playback, sound effects (DSP), output and quality'),
   look('look', 'Look & feel', Icons.palette_outlined, 'Themes, colours, text size, what the screens show'),
   library(
     'library',
@@ -69,12 +71,19 @@ enum SettingsTopic {
     'playback',
     'Playback',
     Icons.play_circle_outline_rounded,
-    'Equalizer, volume leveling, crossfade, Virtual speakers, mono audio',
+    'Autoplay and gapless playback',
+  ),
+  dsp(
+    SettingsGroup.sound,
+    'dsp',
+    'Sound effects (DSP)',
+    Icons.equalizer_rounded,
+    'Equalizer, volume leveling, crossfade, spatial audio and room correction',
   ),
   advanced(
     SettingsGroup.sound,
     'hifi',
-    'Hi-fi audio',
+    'Output & quality',
     Icons.tune_rounded,
     'Output device, bit-perfect mode, sample rate',
   ),
@@ -167,7 +176,7 @@ enum SettingsTopic {
   };
 
   bool get available => switch (this) {
-    advanced => AudioEngine.supported,
+    advanced || dsp => AudioEngine.supported,
     library => Features.localLibrary,
     downloads => Features.downloads,
     history => Features.listeningHistory,
@@ -237,6 +246,13 @@ class SettingsPage extends StatelessWidget {
                 summary: g.summary,
                 onTap: () => shell.open(SettingsGroupPage(group: g), location: g.location),
               ),
+          if (!Host.isWeb)
+            _SettingsRow(
+              icon: Icons.battery_saver_outlined,
+              title: 'Power & background',
+              summary: 'Screen timeout, sleep and background playback',
+              onTap: () => shell.open(const SettingsPowerPage(), location: Locations.settingsTopic('power')),
+            ),
           _SettingsRow(
             icon: Icons.group_outlined,
             title: 'Listen together',
@@ -260,6 +276,17 @@ class SettingsPage extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Power settings have their own destination, separate from sound processing.
+class SettingsPowerPage extends StatelessWidget {
+  const SettingsPowerPage({super.key});
+  @override
+  Widget build(BuildContext context) => _SettingsFrame(
+    title: 'Power & background',
+    crumbs: const [_settingsCrumb],
+    child: SettingsCard(children: PowerSettings.rows(context)),
+  );
 }
 
 /// About: one page straight under Settings.
@@ -339,6 +366,7 @@ class SettingsTopicPage extends StatelessWidget {
       SettingsTopic.appearance => const AppearanceSettings(),
       SettingsTopic.layout => const LayoutSettings(),
       SettingsTopic.playback => const PlaybackSettings(),
+      SettingsTopic.dsp => const DspSettings(),
       SettingsTopic.advanced => const AdvancedAudioSettings(),
       SettingsTopic.library => const LibrarySettings(),
       SettingsTopic.downloads => const DownloadSettings(),

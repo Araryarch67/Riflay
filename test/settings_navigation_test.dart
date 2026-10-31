@@ -3,6 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:riflay/services/audio_engine.dart';
 import 'package:riflay/services/player_controller.dart';
+import 'package:riflay/services/stay_awake.dart';
+import 'package:riflay/services/power_policy.dart';
+import 'package:riflay/ui/pages/sound_settings.dart';
 import 'package:riflay/ui/navigation.dart';
 import 'package:riflay/ui/pages/settings_page.dart';
 import 'package:riflay/ui/shell_scope.dart';
@@ -37,6 +40,11 @@ Widget _app(PlayerController c, List<String> visited, {bool compact = false}) {
   );
 }
 
+class _PowerTestBackend implements PowerBackend {
+  @override
+  Future<void> apply(PowerLocks from, PowerLocks to) async {}
+}
+
 void main() {
   // The test binding pretends to be Android; the hi-fi page is a desktop one.
   void onLinux(String name, Future<void> Function(WidgetTester tester) body) => testWidgets(name, (tester) async {
@@ -69,12 +77,50 @@ void main() {
     }
   });
 
+  onLinux('power has its own page and DSP owns crossfade and detailed controls', (tester) async {
+    final c = PlayerController();
+    final awake = await StayAwake.start(c, backend: _PowerTestBackend());
+    final visited = <String>[];
+    await tester.pumpWidget(_app(c, visited));
+    await tester.tap(find.text('Power & background'));
+    await tester.pumpAndSettle();
+    expect(visited.last, 'settings:power');
+    expect(find.text('Keep screen on'), findsOneWidget);
+    await tester.tap(find.text('Settings'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Sound'));
+    await tester.pumpAndSettle();
+    expect(find.text('Power & background'), findsNothing);
+    await tester.tap(find.text('Playback'));
+    await tester.pumpAndSettle();
+    expect(find.text('Autoplay'), findsOneWidget);
+    expect(find.text('Crossfade'), findsNothing);
+    expect(find.text('Keep screen on'), findsNothing);
+    await tester.tap(find.text('Sound'));
+    await tester.pumpAndSettle();
+    c.audio.virtualSpeakers = true;
+    c.audio.hrirPath = AudioEngine.hrirAsset;
+    await tester.tap(find.text('Sound effects (DSP)'));
+    await tester.pumpAndSettle();
+    expect(find.text('Crossfade'), findsOneWidget);
+    expect(find.text('Virtual speaker level'), findsOneWidget);
+    final level = find.ancestor(of: find.text('Virtual speaker level'), matching: find.byType(SettingTile));
+    tester.widget<Slider>(find.descendant(of: level, matching: find.byType(Slider))).onChanged!(-3);
+    await tester.pumpAndSettle();
+    expect(c.audio.virtualSpeakerGain, -3);
+    expect(find.text('-3.0 dB'), findsOneWidget);
+    awake.dispose();
+  });
+
   onLinux('each group lists its sections', (tester) async {
     final c = PlayerController();
     final visited = <String>[];
     await tester.pumpWidget(_app(c, visited));
     final expected = {
-      'Sound': ['Playback', if (AudioEngine.supported) 'Hi-fi audio'],
+      'Sound': [
+        'Playback',
+        if (AudioEngine.supported) ...['Sound effects (DSP)', 'Output & quality'],
+      ],
       'Look & feel': ['Appearance', 'Layout'],
       'Library & downloads': ['Library', 'Downloads', 'Listening history & Wrap', 'Backup & restore'],
       'Accounts & services': [
@@ -119,8 +165,9 @@ void main() {
 
     // group, section, something only that page shows, location
     final cases = [
-      ('Sound', 'Playback', 'Equalizer', 'settings:sound/playback'),
-      if (AudioEngine.supported) ('Sound', 'Hi-fi audio', 'Advanced audio', 'settings:sound/hifi'),
+      ('Sound', 'Playback', 'Gapless playback', 'settings:sound/playback'),
+      if (AudioEngine.supported) ('Sound', 'Sound effects (DSP)', 'Crossfade', 'settings:sound/dsp'),
+      if (AudioEngine.supported) ('Sound', 'Output & quality', 'Output sample rate', 'settings:sound/hifi'),
       ('Look & feel', 'Appearance', 'Theme', 'settings:look/appearance'),
       ('Look & feel', 'Layout', 'Motion', 'settings:look/layout'),
       ('Library & downloads', 'Library', 'Find songs you have twice', 'settings:library/library'),

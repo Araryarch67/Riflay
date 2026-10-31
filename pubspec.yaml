@@ -69,6 +69,9 @@ dependencies:
   typed_data: ^1.4.0
   # The web build's one browser call (lib/platform/network_web.dart).
   web: ^1.1.1
+  qr_flutter: ^4.1.0
+  mobile_scanner: ^7.4.3
+  zxing2: ^0.2.4
 
 dependency_overrides:
   # The real Linux implementation of flutter_inappwebview links WPE WebKit,

@@ -10,6 +10,7 @@ import '../../services/listen_together/protocol.dart';
 import '../../services/listen_together/transport.dart';
 import '../../services/player_controller.dart';
 import '../navigation.dart';
+import 'listen_qr.dart';
 import '../shell_scope.dart';
 import '../theme.dart';
 import '../widgets/controls.dart';
@@ -307,6 +308,12 @@ class _ListenTogetherPageState extends State<ListenTogetherPage> {
         const SizedBox(height: 32),
         Text('Join', style: text.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
         const SizedBox(height: 12),
+        OutlinedButton.icon(
+          onPressed: _busy ? null : _scan,
+          icon: const Icon(Icons.qr_code_scanner_rounded),
+          label: const Text('Scan QR code'),
+        ),
+        const SizedBox(height: 16),
         Text('On this Wi-Fi', style: text.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
         const SizedBox(height: 8),
         if (_nearby.isEmpty)
@@ -363,7 +370,6 @@ class _ListenTogetherPageState extends State<ListenTogetherPage> {
     final text = Theme.of(context).textTheme;
     final muted = text.bodyMedium?.copyWith(color: AppColors.textSecondary);
     final code = s.code ?? '';
-    final link = s.joinLink;
     final internet = s.mode == ListenMode.internet;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -385,21 +391,19 @@ class _ListenTogetherPageState extends State<ListenTogetherPage> {
                 ),
               ),
             ),
-            IconButton(
-              tooltip: 'Copy code',
-              onPressed: () => _copy('Code copied', code),
-              icon: const Icon(Icons.copy_rounded),
-            ),
           ],
         ),
-        if (link != null) ...[
-          const SizedBox(height: 4),
-          OutlinedButton.icon(
-            onPressed: () => _copy('Link copied', link.toString()),
-            icon: const Icon(Icons.link_rounded),
-            label: const Text('Copy invite link'),
-          ),
-        ],
+        const SizedBox(height: 8),
+        OutlinedButton.icon(
+          onPressed: code.isEmpty
+              ? null
+              : () => showDialog<void>(
+                  context: context,
+                  builder: (_) => ListenQrDialog(code: code),
+                ),
+          icon: const Icon(Icons.qr_code_rounded),
+          label: const Text('Show QR code'),
+        ),
         const SizedBox(height: 24),
         Text('Listening', style: text.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
         const SizedBox(height: 8),
@@ -494,9 +498,11 @@ class _ListenTogetherPageState extends State<ListenTogetherPage> {
 
   static String _spaced(String code) => code.split('').join(' ');
 
-  Future<void> _copy(String message, String value) async {
-    await Clipboard.setData(ClipboardData(text: value));
-    if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+  Future<void> _scan() async {
+    final code = await Navigator.of(context).push<String>(MaterialPageRoute(builder: (_) => const ListenQrScanner()));
+    if (!mounted || code == null) return;
+    _code.text = code;
+    await _join(code);
   }
 }
 

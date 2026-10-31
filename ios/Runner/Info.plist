@@ -2,6 +2,8 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>NSCameraUsageDescription</key>
+	<string>Riflay uses the camera to scan a listening session QR code.</string>
 	<!-- Casting: finds TVs and speakers on the local network (DLNA's SSDP and AirPlay's Bonjour). -->
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>Riflay looks for TVs and speakers on your network so you can play music on them.</string>

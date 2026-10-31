@@ -249,7 +249,7 @@ class PlayerController extends ChangeNotifier {
   /// "Stop the music in 30 minutes": fades the volume down and pauses.
   final SleepTimer sleep = SleepTimer();
 
-  /// Overlaps the end of a song with the start of the next (Settings › Sound › Playback › Crossfade).
+  /// Overlaps the end of a song with the start of the next (Settings › Sound › Sound effects (DSP) › Crossfade).
   late final Crossfader _crossfader;
 
   /// Whether one song is fading into the next right now.

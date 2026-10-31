@@ -120,14 +120,14 @@ void main() {
     });
   });
 
-  group('Settings › Sound › Playback', () {
+  group('Settings › Sound › Sound effects (DSP)', () {
     onLinux('Crossfade is off; turning it on shows the length and "Skip for albums"', (tester) async {
       SharedPreferences.setMockInitialValues({});
       tester.view.physicalSize = const Size(900, 1600);
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.reset);
       final c = PlayerController();
-      await tester.pumpWidget(_app(c, const PlaybackSettings()));
+      await tester.pumpWidget(_app(c, const DspSettings()));
       expect(find.text('Crossfade'), findsOneWidget, skip: !AudioEngine.supported);
       expect(c.audio.crossfade, isFalse);
       expect(find.text('Fade length'), findsNothing);
@@ -157,7 +157,7 @@ void main() {
       final c = PlayerController();
       c.audio.crossfade = true;
       c.audio.bitPerfectWanted = true;
-      await tester.pumpWidget(_app(c, const PlaybackSettings()));
+      await tester.pumpWidget(_app(c, const DspSettings()));
       expect(c.audio.bitPerfect, isTrue);
       expect(find.text('Off while bit-perfect mode is on'), findsWidgets);
       expect(find.text('Fade length'), findsNothing);

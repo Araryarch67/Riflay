@@ -415,6 +415,15 @@ class AudioEngine extends ChangeNotifier {
   /// Headphone crossfeed strength 0..1 (0 = off).
   double crossfeed = 0;
 
+  /// Stereo range of the crossfeed processor (0..1).
+  double crossfeedRange = 0.5;
+
+  /// Output trim for the virtual speaker simulation, in dB.
+  double virtualSpeakerGain = 0;
+
+  /// Output trim after applying the room correction impulse, in dB.
+  double convolutionGain = 0;
+
   /// Headphones play the song as two loudspeakers in front of the listener
   /// would sound: each ear hears both speakers, through the head-related
   /// impulse responses in [hrirAsset] (FFmpeg's `headphone` filter).
@@ -608,6 +617,9 @@ class AudioEngine extends ChangeNotifier {
       if (b != null && b.isNotEmpty) bands = [for (final x in b) EqBand.fromJson((x as Map).cast())];
       crossfeed = (j['crossfeed'] as num?)?.toDouble() ?? crossfeed;
       virtualSpeakers = j['virtualSpeakers'] as bool? ?? virtualSpeakers;
+      crossfeedRange = ((j['crossfeedRange'] as num?)?.toDouble() ?? 0.5).clamp(0, 1);
+      virtualSpeakerGain = ((j['virtualSpeakerGain'] as num?)?.toDouble() ?? 0).clamp(-12, 6);
+      convolutionGain = ((j['convolutionGain'] as num?)?.toDouble() ?? 0).clamp(-24, 0);
       mono = MonoAudio.values.asNameMap()[j['mono']] ?? mono;
       device = j['device'] as String? ?? device;
       exclusive = j['exclusive'] as bool? ?? exclusive;
@@ -663,6 +675,9 @@ class AudioEngine extends ChangeNotifier {
       'bands': [for (final b in bands) b.toJson()],
       'crossfeed': crossfeed,
       'virtualSpeakers': virtualSpeakers,
+      'crossfeedRange': crossfeedRange,
+      'virtualSpeakerGain': virtualSpeakerGain,
+      'convolutionGain': convolutionGain,
       'mono': mono.name,
       'device': device,
       'exclusive': exclusive,
@@ -720,7 +735,10 @@ class AudioEngine extends ChangeNotifier {
   Future<void> setCrossfadeSkipAlbums(bool v) => _set(() => crossfadeSkipAlbums = v);
   Future<void> setLeveling(VolumeLeveling v) => _set(() => leveling = v);
   Future<void> setBuffer(BufferSize v) => _set(() => buffer = v, reopen: true);
-  Future<void> setCrossfeed(double v) => _set(() => crossfeed = v);
+  Future<void> setCrossfeed(double v) => _set(() => crossfeed = v.clamp(0, 1));
+  Future<void> setCrossfeedRange(double v) => _set(() => crossfeedRange = v.clamp(0, 1));
+  Future<void> setVirtualSpeakerGain(double v) => _set(() => virtualSpeakerGain = v.clamp(-12, 6));
+  Future<void> setConvolutionGain(double v) => _set(() => convolutionGain = v.clamp(-24, 0));
   Future<void> setMono(MonoAudio v) => _set(() => mono = v);
   Future<void> setDevice(String v) => _set(() => device = v);
 
@@ -1017,7 +1035,7 @@ class AudioEngine extends ChangeNotifier {
   String get _virtualSpeakersChain {
     final rate = outputRate ?? _hrirRate;
     // `headphone` lowers by 3 dB per input channel; a resampled IR has rate / 48k more gain.
-    final gain = 6.0206 + 20 * math.log(_hrirRate / rate) / math.ln10;
+    final gain = 6.0206 + 20 * math.log(_hrirRate / rate) / math.ln10 + virtualSpeakerGain;
     final ir = 'amovie=filename=${graphPath(hrirPath!)}${rate == _hrirRate ? '' : ',aresample=$rate'}';
     return [
       'format=srate=$rate:channels=stereo',
@@ -1030,14 +1048,19 @@ class AudioEngine extends ChangeNotifier {
     String n(double v) => v.toStringAsFixed(2);
     return [
       // First: room correction applies to the signal as a whole.
-      if (convolutionActive) _lavfi('convolution', 'amovie=filename=${graphPath(impulsePath!)}[ir];[in][ir]afir[out]'),
+      if (convolutionActive)
+        _lavfi(
+          'convolution',
+          'amovie=filename=${graphPath(impulsePath!)}[ir];[in][ir]afir${convolutionGain == 0 ? '' : ',volume=volume=${n(convolutionGain)}dB'}[out]',
+        ),
       if (eqActive) ...[
         if (preamp < 0) '@preamp:lavfi=[volume=volume=${n(preamp)}dB]',
         '@eq:lavfi=[${bands.where((b) => b.gain.abs() > 0.05).map((b) => 'equalizer=f=${n(b.frequency)}:t=q:w=${n(b.q)}:g=${n(b.gain)}').join(',')}]',
       ],
       if (pluginsActive) _lavfi('plugins', 'ladspa=file=${graphPath(pluginBridge!)}:plugin=riflay_carla'),
       if (virtualSpeakersActive) _virtualSpeakersChain,
-      if (crossfeedActive) '@crossfeed:lavfi=[crossfeed=strength=${n(0.1 + crossfeed * 0.6)}:range=0.5]',
+      if (crossfeedActive)
+        '@crossfeed:lavfi=[crossfeed=strength=${n(0.1 + crossfeed * 0.6)}:range=${n(crossfeedRange)}]',
       // After the stereo stages: what's left is one channel.
       if (monoActive) _monoChain,
       // After the stages that add gain, so none can clip what it lowered.

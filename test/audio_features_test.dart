@@ -503,6 +503,9 @@ FILE "album.wav" WAVE
       // ignore: avoid_print
       print('dirac: ${(passed - dry).toStringAsFixed(2)} dB');
       expect((passed - dry).abs(), lessThan(1), reason: 'a unit impulse changes nothing');
+      await c.setConvolutionGain(-6);
+      final trimmed = await peakDb(c.filterChain);
+      expect(trimmed - passed, closeTo(-6, 0.15), reason: 'room-correction headroom changes actual audio');
 
       b.bitPerfect = true;
       expect(b.filterChain, isEmpty, reason: 'bit-perfect bypasses room correction');
@@ -621,6 +624,24 @@ FILE "album.wav" WAVE
         ..virtualSpeakers = true;
       final speakers = await measure(b.filterChain, left);
       final speakersLoud = await measure(b.filterChain, loud);
+      await b.setVirtualSpeakerGain(-6);
+      final trimmedSpeakers = await measure(b.filterChain, left);
+      for (final channel in [0, 1]) {
+        expect(
+          trimmedSpeakers.rms[channel] - speakers.rms[channel],
+          closeTo(-6, 0.15),
+          reason: 'virtual speaker trim changes actual output on both channels',
+        );
+      }
+      final crossfeed = AudioEngine()..crossfeed = 0.5;
+      final narrow = await measure(crossfeed.filterChain, left);
+      await crossfeed.setCrossfeedRange(1);
+      final wide = await measure(crossfeed.filterChain, left);
+      expect(
+        (wide.rms[1] - narrow.rms[1]).abs(),
+        greaterThan(0.05),
+        reason: 'crossfeed range changes the real stereo processing',
+      );
       // ignore: avoid_print
       print(
         'measured (L, R dB RMS): dry ${dry.rms}, mono both ${both.rms}, left ${toLeft.rms}, right ${toRight.rms}, '
@@ -640,17 +661,42 @@ FILE "album.wav" WAVE
       expect(speakersLoud.peak.reduce(math.max), lessThan(-0.05), reason: 'the HRIR\'s headroom: no clipping');
     });
 
+    test('new DSP parameters default safely, clamp input, and bypass in bit-perfect mode', () async {
+      final audio = AudioEngine();
+      expect(audio.crossfeedRange, 0.5);
+      expect(audio.virtualSpeakerGain, 0);
+      expect(audio.convolutionGain, 0);
+      await audio.setCrossfeedRange(2);
+      await audio.setVirtualSpeakerGain(-100);
+      await audio.setConvolutionGain(9);
+      expect(audio.crossfeedRange, 1);
+      expect(audio.virtualSpeakerGain, -12);
+      expect(audio.convolutionGain, 0);
+      audio.crossfeed = 0.5;
+      expect(audio.filterChain, contains('range=1.00'));
+      audio.bitPerfect = true;
+      expect(audio.filterChain, isNot(contains('@crossfeed')));
+      expect(audio.filterChain, isNot(contains('@hrtf')));
+      expect(audio.filterChain, isNot(contains('@convolution')));
+    });
+
     test('settings persist', () async {
       final a = AudioEngine();
       await a.applyPreset('Rock');
       await a.setLeveling(VolumeLeveling.album);
       await a.setOutputRate(96000);
+      await a.setCrossfeedRange(0.75);
+      await a.setVirtualSpeakerGain(-4);
+      await a.setConvolutionGain(-8);
       final b = AudioEngine();
       await b.load();
       expect(b.eqPreset, 'Rock');
       expect(b.bands[0].gain, 4);
       expect(b.leveling, VolumeLeveling.album);
       expect(b.outputRate, 96000);
+      expect(b.crossfeedRange, 0.75);
+      expect(b.virtualSpeakerGain, -4);
+      expect(b.convolutionGain, -8);
     });
   });
 
