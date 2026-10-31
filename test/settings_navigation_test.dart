@@ -77,7 +77,12 @@ void main() {
       'Sound': ['Playback', if (AudioEngine.supported) 'Hi-fi audio'],
       'Look & feel': ['Appearance', 'Layout'],
       'Library & downloads': ['Library', 'Downloads', 'Listening history & Wrap'],
-      'Accounts & services': ['YouTube Music account', 'Spotify', 'Discord & lyrics services'],
+      'Accounts & services': [
+        'YouTube Music account',
+        'Spotify',
+        'Last.fm & ListenBrainz',
+        'Discord & lyrics services',
+      ],
     };
     for (final MapEntry(key: group, value: rows) in expected.entries) {
       await tester.tap(find.text(group));

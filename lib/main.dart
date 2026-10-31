@@ -23,6 +23,7 @@ import 'services/metadata.dart';
 import 'services/legacy_data.dart';
 import 'services/download_notifications.dart';
 import 'services/play_history.dart';
+import 'services/scrobbler.dart';
 import 'services/player_controller.dart';
 import 'services/stay_awake.dart';
 import 'services/wrap_notifications.dart';
@@ -125,6 +126,8 @@ Future<void> _startServices(PlayerController controller) async {
       controller.youtube.restoreQueue().then((_) => DownloadNotifications.attach(controller.youtube)),
       // Keeps the listening history (on this device only), then announces a monthly Wrap that is due.
       PlayHistory.instance.start(controller).then((_) => WrapNotifier.instance.run(PlayHistory.instance)),
+      // Sends what is played to Last.fm / ListenBrainz, once an account is connected.
+      (Scrobbler.instance..onMessage = controller.notify).start(controller),
     ].map((f) => f.catchError((Object e) => debugPrint('Start-up task failed: $e'))),
   );
 }

@@ -66,6 +66,7 @@ lib/
     smart_playlists.dart       The built-in, self-updating lists in Library
     folder_watch.dart          Picks up files added to or removed from the music folders
     play_history.dart          What was played; listening_stats.dart and wrap.dart read it (Stats, monthly Wrap)
+    scrobbler.dart             Last.fm / ListenBrainz: when a play is a scrobble (ScrobbleTracker), a queue per service kept for offline listens
     appearance.dart            Themes and palettes (AppPalette, ThemeChoice), accent, cover colours and their fades, window opacity
     layout_prefs.dart          Corners, density and motion (Settings › Look & feel › Layout)
     beta_features.dart         Features still in Beta, each switchable in Settings › Beta features
@@ -382,6 +383,15 @@ Compare medians of several complete runs; debug builds are meaningless here.
   flutter run --dart-define=RIFLAY_NO_FIRST_FRAME_GATE=true
   flutter run --dart-define=RIFLAY_LOG_RESTYLES=true      # print what each change rebuilds
   ```
+
+  ```sh
+  flutter run --dart-define=RIFLAY_SCROBBLE_DRY_RUN=true  # print scrobbles instead of sending them
+  flutter run --dart-define=RIFLAY_LASTFM_KEY=… --dart-define=RIFLAY_LASTFM_SECRET=…
+  ```
+
+  Last.fm is only offered when the build has an API account's key and secret
+  (register one at last.fm/api/account/create); ListenBrainz needs nothing.
+  Neither is ever committed.
 
   A bug that goes away with one of them on is in that shortcut. Tests can set
   `DebugSwitches.*` directly and reset them in `tearDown`.
