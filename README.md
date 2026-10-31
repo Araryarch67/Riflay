@@ -101,7 +101,7 @@ Features marked (Beta) are still being tested; **Settings › Beta features** sw
 
 | Feature | Description |
 |---|---|
-| **Sleep timer** | Stop the music in 15 to 90 minutes, at the end of the song, or after a time you choose. The volume fades down first |
+| **Sleep timer** | Stop the music in 15 to 90 minutes, at the end of the song, after 2, 3 or 5 songs, or after a time you choose. The volume fades down first |
 | **Listening stats** | Your top songs, artists and albums by month, year or all time. Kept on this device, and switched off in Settings › Library & downloads › Listening history & Wrap |
 | **Riflay Wrap** | A recap of each finished month, once you have used Riflay for 30 days, as cards you can save as images |
 | **Background playback** | Keeps playing with the screen off. Optionally keeps the screen on, or the computer awake, while playing |

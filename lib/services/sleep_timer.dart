@@ -10,7 +10,7 @@ enum SleepMode {
   /// Pauses at a moment in time.
   countdown,
 
-  /// Pauses when the song that was playing ends.
+  /// Pauses when the song that was playing ends, or the last of a few more ([SleepTimer.songsLeft]).
   endOfSong,
 }
 
@@ -48,6 +48,9 @@ class SleepTimer extends ChangeNotifier {
   /// The choices in the menu, in minutes.
   static const presets = [15, 30, 45, 60, 90];
 
+  /// The "After 3 songs" choices: how many songs play, this one first.
+  static const songPresets = [2, 3, 5];
+
   /// How much "+10 min" adds.
   static const extension = Duration(minutes: 10);
 
@@ -64,6 +67,7 @@ class SleepTimer extends ChangeNotifier {
 
   SleepHost? _host;
   SleepMode _mode = SleepMode.off;
+  int _songs = 1;
   DateTime? _deadline;
   String? _armedTrack;
   Duration? _lastSongLeft;
@@ -78,6 +82,9 @@ class SleepTimer extends ChangeNotifier {
 
   SleepMode get mode => _mode;
   bool get active => _mode != SleepMode.off;
+
+  /// Songs still to end before the music stops, counting the one playing (0 unless waiting for songs).
+  int get songsLeft => _mode == SleepMode.endOfSong ? _songs : 0;
 
   /// When a countdown ends (null for the others).
   DateTime? get deadline => _mode == SleepMode.countdown ? _deadline : null;
@@ -96,6 +103,8 @@ class SleepTimer extends ChangeNotifier {
         final left = _deadline!.difference(now);
         return left.isNegative ? Duration.zero : left;
       case SleepMode.endOfSong:
+        // Only the last song's end is the timer's; until then there is nothing to fade towards.
+        if (_songs > 1) return null;
         final left = _host?.songRemaining;
         if (left == null) return null;
         return left.isNegative ? Duration.zero : left;
@@ -116,8 +125,9 @@ class SleepTimer extends ChangeNotifier {
     _begin(SleepMode.countdown, at);
   }
 
-  /// Pauses when the song now playing ends.
-  void startEndOfSong() {
+  /// Pauses when the song now playing ends, or with [songs] above 1, when that many songs (this one first) have.
+  void startEndOfSong([int songs = 1]) {
+    _songs = math.max(1, songs);
     _begin(SleepMode.endOfSong, null);
     _armedTrack = _host?.trackId;
     _lastSongLeft = _host?.songRemaining;
@@ -170,8 +180,15 @@ class SleepTimer extends ChangeNotifier {
     _lastTick = now;
 
     if (_mode == SleepMode.endOfSong && _songEnded(host)) {
-      unawaited(_finish());
-      return;
+      if (_songs <= 1) {
+        unawaited(_finish());
+        return;
+      }
+      // One down: the song playing now is the next to wait for.
+      _songs--;
+      _armedTrack = host.trackId;
+      _lastSongLeft = host.songRemaining;
+      notifyListeners();
     }
     final left = _left(now);
     if (left != null && left <= _margin) {

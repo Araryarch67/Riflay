@@ -64,10 +64,11 @@ class SleepTimerButton extends StatelessWidget {
   }
 }
 
-/// The words for the time left: "29:41", or "End of song".
+/// The words for the time left: "29:41", "End of song" or "3 songs".
 abstract final class SleepTimerLabel {
   static String of(SleepTimer sleep, {bool short = false}) {
     if (!sleep.active) return '';
+    if (sleep.songsLeft > 1) return short ? '${sleep.songsLeft} songs' : '${sleep.songsLeft} songs left';
     if (sleep.mode == SleepMode.endOfSong) return short ? 'Song end' : 'End of song';
     final left = sleep.remaining;
     return left == null ? '' : SleepTimer.clock(left);
@@ -129,12 +130,12 @@ class SleepTimerPanel extends StatelessWidget {
           if (sleep.active) ...[
             Padding(
               padding: const EdgeInsets.fromLTRB(24, 4, 24, 12),
-              child: Text(
-                sleep.mode == SleepMode.endOfSong
-                    ? 'The music stops when this song ends'
-                    : 'The music stops in ${SleepTimerLabel.of(sleep)}',
-                style: text.bodyMedium,
-              ),
+              child: Text(switch (sleep.songsLeft) {
+                0 => 'The music stops in ${SleepTimerLabel.of(sleep)}',
+                1 => 'The music stops when this song ends',
+                2 => 'The music stops after this song and one more',
+                final n => 'The music stops after this song and ${n - 1} more',
+              }, style: text.bodyMedium),
             ),
             ListTile(leading: const Icon(Icons.add_rounded), title: const Text('Add 10 minutes'), onTap: sleep.extend),
             ListTile(
@@ -157,6 +158,17 @@ class SleepTimerPanel extends StatelessWidget {
               leading: const Icon(Icons.music_note_rounded),
               title: const Text('End of this song'),
               onTap: () => closeAfter(sleep.startEndOfSong),
+            ),
+            ListTile(
+              leading: const Icon(Icons.queue_music_rounded),
+              title: const Text('After'),
+              trailing: Wrap(
+                spacing: 6,
+                children: [
+                  for (final n in SleepTimer.songPresets)
+                    ActionChip(label: Text('$n songs'), onPressed: () => closeAfter(() => sleep.startEndOfSong(n))),
+                ],
+              ),
             ),
             ListTile(
               leading: const Icon(Icons.edit_outlined),

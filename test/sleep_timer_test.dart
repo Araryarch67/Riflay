@@ -222,6 +222,47 @@ void main() {
     });
   });
 
+  group('after a few songs', () {
+    test('lets the first songs end at full volume, then fades and pauses at the end of the last', () async {
+      host.songRemaining = const Duration(minutes: 3);
+      timer.startEndOfSong(3);
+      expect(timer.songsLeft, 3);
+      expect(timer.remaining, isNull, reason: 'the time to the last song\'s end is not known');
+      // The end of the first song: no fade, no pause.
+      host.songRemaining = const Duration(milliseconds: 60);
+      timer.tick();
+      expect(host.lastFade, 1);
+      host
+        ..trackId = 'b'
+        ..songRemaining = const Duration(minutes: 4);
+      timer.tick();
+      expect(timer.songsLeft, 2);
+      host
+        ..trackId = 'c'
+        ..songRemaining = const Duration(minutes: 2);
+      timer.tick();
+      expect(timer.songsLeft, 1);
+      expect(host.pauses, 0);
+      host.songRemaining = const Duration(seconds: 4);
+      timer.tick();
+      expect(host.lastFade, closeTo(0.5, 0.05));
+      host.songRemaining = const Duration(milliseconds: 60);
+      timer.tick();
+      await Future<void>.delayed(Duration.zero);
+      expect(host.pauses, 1);
+      expect(timer.active, isFalse);
+      expect(timer.songsLeft, 0);
+    });
+
+    test('a seek inside a song does not count as its end', () {
+      host.songRemaining = const Duration(minutes: 1);
+      timer.startEndOfSong(2);
+      host.songRemaining = const Duration(minutes: 3);
+      timer.tick();
+      expect(timer.songsLeft, 2);
+    });
+  });
+
   group('curve and text', () {
     test('the fade curve goes from 1 to 0, gently at both ends', () {
       expect(SleepTimer.fadeCurve(1), 1);
