@@ -1,14 +1,14 @@
 import 'dart:async';
-import 'dart:ffi' as ffi;
 import 'dart:io';
 
 import 'package:dbus/dbus.dart';
-import 'package:ffi/ffi.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
+import '../platform/host.dart';
+import '../platform/native_calls.dart';
 import 'player_controller.dart';
 import 'power_policy.dart';
 
@@ -56,8 +56,8 @@ class StayAwake extends ChangeNotifier with WidgetsBindingObserver {
 
   PowerLocks get held => _held;
 
-  static bool get isPhone => Platform.isAndroid || Platform.isIOS;
-  static bool get isDesktop => Platform.isLinux || Platform.isWindows || Platform.isMacOS;
+  static bool get isPhone => Host.isAndroid || Host.isIOS;
+  static bool get isDesktop => Host.isLinux || Host.isWindows || Host.isMacOS;
 
   Future<void> _load() async {
     try {
@@ -153,10 +153,10 @@ abstract class PowerBackend {
   Future<void> apply(PowerLocks from, PowerLocks to);
 
   factory PowerBackend.forThisPlatform() {
-    if (Platform.isAndroid) return _AndroidBackend();
-    if (Platform.isLinux) return _DesktopBackend(LinuxIdleInhibitor());
-    if (Platform.isWindows) return _DesktopBackend(_WindowsPowerRequest());
-    if (Platform.isMacOS) return _DesktopBackend(_MacAssertion());
+    if (Host.isAndroid) return _AndroidBackend();
+    if (Host.isLinux) return _DesktopBackend(LinuxIdleInhibitor());
+    if (Host.isWindows) return _DesktopBackend(WindowsPowerRequest());
+    if (Host.isMacOS) return _DesktopBackend(MacAssertion());
     return _DesktopBackend(null);
   }
 }
@@ -243,110 +243,11 @@ class LinuxIdleInhibitor implements IdleInhibitor {
   }
 }
 
-/// Windows: a power request. Not SetThreadExecutionState, which belongs to an
-/// OS thread, and Dart may run this isolate on another one next time.
-class _WindowsPowerRequest implements IdleInhibitor {
-  ffi.Pointer<ffi.Void>? _handle;
-
-  @override
-  Future<void> acquire() async {
-    if (_handle != null) return;
-    final k = ffi.DynamicLibrary.open('kernel32.dll');
-    final create = k
-        .lookupFunction<
-          ffi.Pointer<ffi.Void> Function(ffi.Pointer<ffi.Void>),
-          ffi.Pointer<ffi.Void> Function(ffi.Pointer<ffi.Void>)
-        >('PowerCreateRequest');
-    final set = k
-        .lookupFunction<ffi.Int32 Function(ffi.Pointer<ffi.Void>, ffi.Int32), int Function(ffi.Pointer<ffi.Void>, int)>(
-          'PowerSetRequest',
-        );
-    // REASON_CONTEXT: Version 0, Flags POWER_REQUEST_CONTEXT_SIMPLE_STRING (1), then the string.
-    final ctx = calloc<ffi.Uint8>(32);
-    final reason = 'Riflay is playing music'.toNativeUtf16();
-    try {
-      ctx.cast<ffi.Uint32>()[1] = 1;
-      (ctx + 8).cast<ffi.IntPtr>().value = reason.address;
-      final h = create(ctx.cast());
-      // INVALID_HANDLE_VALUE
-      if (h.address == -1 || h.address == 0) throw StateError('PowerCreateRequest failed');
-      if (set(h, 1) == 0) throw StateError('PowerSetRequest failed'); // PowerRequestSystemRequired
-      _handle = h;
-    } finally {
-      calloc.free(reason);
-      calloc.free(ctx);
-    }
-  }
-
-  @override
-  Future<void> release() async {
-    final h = _handle;
-    _handle = null;
-    if (h == null) return;
-    final k = ffi.DynamicLibrary.open('kernel32.dll');
-    k.lookupFunction<ffi.Int32 Function(ffi.Pointer<ffi.Void>, ffi.Int32), int Function(ffi.Pointer<ffi.Void>, int)>(
-      'PowerClearRequest',
-    )(h, 1);
-    k.lookupFunction<ffi.Int32 Function(ffi.Pointer<ffi.Void>), int Function(ffi.Pointer<ffi.Void>)>('CloseHandle')(h);
-  }
-}
-
-/// macOS: an IOPMAssertion that prevents idle system sleep.
-class _MacAssertion implements IdleInhibitor {
-  int? _id;
-
-  @override
-  Future<void> acquire() async {
-    if (_id != null) return;
-    final cf = ffi.DynamicLibrary.open('/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation');
-    final io = ffi.DynamicLibrary.open('/System/Library/Frameworks/IOKit.framework/IOKit');
-    final makeString = cf
-        .lookupFunction<
-          ffi.Pointer<ffi.Void> Function(ffi.Pointer<ffi.Void>, ffi.Pointer<Utf8>, ffi.Uint32),
-          ffi.Pointer<ffi.Void> Function(ffi.Pointer<ffi.Void>, ffi.Pointer<Utf8>, int)
-        >('CFStringCreateWithCString');
-    final release = cf.lookupFunction<ffi.Void Function(ffi.Pointer<ffi.Void>), void Function(ffi.Pointer<ffi.Void>)>(
-      'CFRelease',
-    );
-    final create = io
-        .lookupFunction<
-          ffi.Int32 Function(ffi.Pointer<ffi.Void>, ffi.Uint32, ffi.Pointer<ffi.Void>, ffi.Pointer<ffi.Uint32>),
-          int Function(ffi.Pointer<ffi.Void>, int, ffi.Pointer<ffi.Void>, ffi.Pointer<ffi.Uint32>)
-        >('IOPMAssertionCreateWithName');
-    const utf8 = 0x08000100;
-    final type = 'PreventUserIdleSystemSleep'.toNativeUtf8();
-    final name = 'Riflay is playing music'.toNativeUtf8();
-    final out = calloc<ffi.Uint32>();
-    final cfType = makeString(ffi.nullptr, type, utf8);
-    final cfName = makeString(ffi.nullptr, name, utf8);
-    try {
-      // kIOPMAssertionLevelOn = 255
-      if (create(cfType, 255, cfName, out) != 0) throw StateError('IOPMAssertionCreateWithName failed');
-      _id = out.value;
-    } finally {
-      release(cfType);
-      release(cfName);
-      calloc.free(type);
-      calloc.free(name);
-      calloc.free(out);
-    }
-  }
-
-  @override
-  Future<void> release() async {
-    final id = _id;
-    _id = null;
-    if (id == null) return;
-    final io = ffi.DynamicLibrary.open('/System/Library/Frameworks/IOKit.framework/IOKit');
-    io.lookupFunction<ffi.Int32 Function(ffi.Uint32), int Function(int)>('IOPMAssertionRelease')(id);
-  }
-}
-
 /// Android's battery optimisation: whether Riflay is exempt, and the way to ask.
 class BatteryExemption {
   static const _channel = MethodChannel('riflay/power');
 
-  static bool get supported => Platform.isAndroid;
+  static bool get supported => Host.isAndroid;
 
   /// True when the system already lets Riflay run in the background freely.
   static Future<bool> isExempt() async {

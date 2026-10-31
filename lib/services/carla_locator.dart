@@ -3,6 +3,8 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
 
+import '../platform/host.dart';
+
 /// Where the pieces of audio plugins are on this computer: the bridge shipped
 /// with the app (`linux/carla_bridge`), Carla (the free plugin host the user
 /// installs themselves) and the project they set up in it. The bridge looks in
@@ -11,15 +13,15 @@ abstract final class CarlaLocator {
   /// Carla's download page. Riflay never fetches third-party programs on its own.
   static const downloadPage = 'https://github.com/falkTX/Carla/releases/latest';
 
-  static String get _lib => Platform.isWindows
+  static String get _lib => Host.isWindows
       ? 'libcarla_native-plugin.dll'
-      : (Platform.isMacOS ? 'libcarla_native-plugin.dylib' : 'libcarla_native-plugin.so');
+      : (Host.isMacOS ? 'libcarla_native-plugin.dylib' : 'libcarla_native-plugin.so');
 
   /// The bridge in the app: `lib/libriflay_carla.so` (Linux), `riflay_carla.dll`
   /// next to the exe (Windows), `Contents/Frameworks/libriflay_carla.dylib` (macOS).
   static String? get bridge {
     final exe = File(Platform.resolvedExecutable).parent;
-    final path = switch (Platform.operatingSystem) {
+    final path = switch (Host.operatingSystem) {
       'linux' => p.join(exe.path, 'lib', 'libriflay_carla.so'),
       'windows' => p.join(exe.path, 'riflay_carla.dll'),
       'macos' => p.join(exe.parent.path, 'Frameworks', 'libriflay_carla.dylib'),
@@ -30,7 +32,7 @@ abstract final class CarlaLocator {
 
   /// The app's own folder for the project, as the bridge works it out: the
   /// support folder on Windows and macOS, `~/.config/riflay` on Linux.
-  static String get folder => folderFor(Platform.operatingSystem, Platform.environment);
+  static String get folder => folderFor(Host.operatingSystem, Host.environment);
 
   @visibleForTesting
   static String folderFor(String os, Map<String, String> env) {
@@ -51,8 +53,8 @@ abstract final class CarlaLocator {
   /// Where Carla's libraries are looked for without a search: Linux packages
   /// and macOS' Carla.app.
   static List<String> get _fixedDirs {
-    final env = Platform.environment;
-    if (Platform.isMacOS) {
+    final env = Host.environment;
+    if (Host.isMacOS) {
       return ['/Applications/Carla.app/Contents/MacOS', '${env['HOME']}/Applications/Carla.app/Contents/MacOS'];
     }
     return const ['/usr/lib/carla', '/usr/lib64/carla', '/usr/local/lib/carla', '/usr/lib/x86_64-linux-gnu/carla'];
@@ -70,9 +72,9 @@ abstract final class CarlaLocator {
     final at = _lookedAt;
     if (at != null && DateTime.now().difference(at) < const Duration(seconds: 5)) return null;
     _lookedAt = DateTime.now();
-    _found = Platform.isWindows ? findOnWindows(Platform.environment) : _fixedDirs.where(_has).firstOrNull;
+    _found = Host.isWindows ? findOnWindows(Host.environment) : _fixedDirs.where(_has).firstOrNull;
     final dir = _found;
-    if (dir != null && Platform.isWindows) _tellBridge(dir);
+    if (dir != null && Host.isWindows) _tellBridge(dir);
     return dir;
   }
 
@@ -131,7 +133,7 @@ abstract final class CarlaLocator {
   static String get executable {
     final d = dir;
     if (d == null) return 'carla';
-    return Platform.isWindows ? p.join(d, 'Carla.exe') : (Platform.isMacOS ? p.join(d, 'Carla') : 'carla');
+    return Host.isWindows ? p.join(d, 'Carla.exe') : (Host.isMacOS ? p.join(d, 'Carla') : 'carla');
   }
 
   /// Whether Carla is installed.

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../models/track.dart';
+import '../../platform/features.dart';
 import '../../services/player_controller.dart';
 import '../../services/youtube_music_account.dart';
 import '../../services/desktop_login.dart';
@@ -148,6 +149,7 @@ class SignInBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (!Features.youtubeSignIn) return const SizedBox.shrink();
     final account = PlayerScope.of(context).ytMusic;
     final text = Theme.of(context).textTheme;
     final pad = ShellScope.of(context).compact ? 16.0 : 24.0;

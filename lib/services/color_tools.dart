@@ -12,7 +12,8 @@ double contrastRatio(Color a, Color b) {
 /// (black when false).
 Color ensureContrast(Color fg, Color bg, [double min = 4.5, bool? towardWhite]) {
   if (contrastRatio(fg, bg) >= min) return fg;
-  final lighter = towardWhite ?? contrastRatio(const Color(0xFFFFFFFF), bg) >= contrastRatio(const Color(0xFF000000), bg);
+  final lighter =
+      towardWhite ?? contrastRatio(const Color(0xFFFFFFFF), bg) >= contrastRatio(const Color(0xFF000000), bg);
   final hsl = HSLColor.fromColor(fg);
   for (var l = hsl.lightness; lighter ? l <= 1 : l >= 0; l += lighter ? 0.02 : -0.02) {
     final c = hsl.withLightness(l.clamp(0.0, 1.0)).toColor();

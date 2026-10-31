@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
 
 import 'package:flutter/animation.dart' show Curves;
 import 'package:flutter/painting.dart' show HSLColor;
@@ -9,6 +8,7 @@ import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../platform/host.dart';
 import 'beta_features.dart';
 import 'color_tools.dart';
 import 'cover_palette.dart';
@@ -881,7 +881,7 @@ class Appearance extends ChangeNotifier {
   /// Whether the window itself can be see-through. Linux (its window always has an alpha channel), and
   /// Windows, macOS and Android (their runners switch it on, see [applyWindow]). Not iOS: apps can't
   /// see the wallpaper there.
-  static bool get hasWindowOpacity => Platform.isLinux || Platform.isWindows || Platform.isMacOS || Platform.isAndroid;
+  static bool get hasWindowOpacity => Host.isLinux || Host.isWindows || Host.isMacOS || Host.isAndroid;
 
   static const _window = MethodChannel('riflay/window');
   bool? _seeThrough;
@@ -890,7 +890,7 @@ class Appearance extends ChangeNotifier {
   /// windows are cheaper, so Windows, macOS and Android only turn it on then; on Android that restarts
   /// the screen once (the music and the app's state carry on). Linux needs nothing.
   Future<void> applyWindow() async {
-    if (!hasWindowOpacity || Platform.isLinux) return;
+    if (!hasWindowOpacity || Host.isLinux) return;
     final on = windowOpacity < 1;
     if (on == _seeThrough) return;
     _seeThrough = on;

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../platform/features.dart';
 import '../../services/beta_features.dart';
 import '../../services/discord_presence.dart';
 import '../../services/lyrics.dart';
@@ -38,11 +39,16 @@ enum SettingsGroup {
     'YouTube Music, Spotify, Discord, lyrics',
   );
 
-  const SettingsGroup(this.id, this.label, this.icon, this.summary);
+  const SettingsGroup(this.id, this.label, this.icon, this._summary);
   final String id;
   final String label;
   final IconData icon;
-  final String summary;
+  final String _summary;
+
+  /// One plain line; where this build leaves sections out (the web build), the names of those it shows.
+  String get summary => sections.length == SettingsTopic.values.where((s) => s.group == this).length
+      ? _summary
+      : sections.map((s) => s.label).join(', ');
 
   /// This group's own page.
   String get location => Locations.settingsTopic(id);
@@ -127,15 +133,30 @@ enum SettingsTopic {
     'Show what you play on Discord, lyrics services',
   );
 
-  const SettingsTopic(this.group, this.id, this.label, this.icon, this.summary);
+  const SettingsTopic(this.group, this.id, this._label, this.icon, this._summary);
   final SettingsGroup group;
   final String id;
-  final String label;
+  final String _label;
+
+  /// The section's name; without Discord (the web build) the services section is about lyrics alone.
+  String get label => this == integrations && !DiscordPresence.supported ? 'Lyrics services' : _label;
   final IconData icon;
-  final String summary;
+  final String _summary;
+
+  /// One plain line. Without the sound engine (the web build) Playback has only Autoplay.
+  String get summary => switch (this) {
+    playback when !AudioEngine.supported => 'Autoplay',
+    integrations when !DiscordPresence.supported => 'A Better Lyrics key for word-by-word lyrics',
+    _ => _summary,
+  };
 
   bool get available => switch (this) {
     advanced => AudioEngine.supported,
+    library => Features.localLibrary,
+    downloads => Features.downloads,
+    history => Features.listeningHistory,
+    account => Features.youtubeSignIn,
+    spotify => Features.playlistImport,
     _ => true,
   };
 
@@ -191,12 +212,13 @@ class SettingsPage extends StatelessWidget {
       child: SettingsCard(
         children: [
           for (final g in SettingsGroup.values)
-            _SettingsRow(
-              icon: g.icon,
-              title: g.label,
-              summary: g.summary,
-              onTap: () => shell.open(SettingsGroupPage(group: g), location: g.location),
-            ),
+            if (g.sections.isNotEmpty)
+              _SettingsRow(
+                icon: g.icon,
+                title: g.label,
+                summary: g.summary,
+                onTap: () => shell.open(SettingsGroupPage(group: g), location: g.location),
+              ),
           _SettingsRow(
             icon: Icons.science_outlined,
             title: 'Beta features',

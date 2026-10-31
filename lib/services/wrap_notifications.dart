@@ -1,10 +1,9 @@
-import 'dart:io';
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timezone/timezone.dart' as tz;
 
+import '../platform/host.dart';
 import 'download_notifications.dart';
 import 'play_history.dart';
 import 'wrap.dart';
@@ -107,7 +106,7 @@ class SystemWrapSink implements WrapNoteSink {
   static const _id = 7100;
 
   @override
-  bool get canSchedule => !kIsWeb && (Platform.isAndroid || Platform.isIOS || Platform.isMacOS);
+  bool get canSchedule => !kIsWeb && (Host.isAndroid || Host.isIOS || Host.isMacOS);
 
   NotificationDetails get _details => const NotificationDetails(
     android: AndroidNotificationDetails(

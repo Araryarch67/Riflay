@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../models/track.dart';
+import '../platform/features.dart';
 import '../services/download_prefs.dart';
 import '../services/player_controller.dart';
 import '../services/youtube_importer.dart';
@@ -537,7 +538,7 @@ class DownloadButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = PlayerScope.of(context);
-    if (!track.isRemote) return const SizedBox.shrink();
+    if (!track.isRemote || !Features.downloads) return const SizedBox.shrink();
     return ListenableBuilder(
       listenable: c.youtube,
       builder: (context, _) {

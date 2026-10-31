@@ -1,8 +1,8 @@
 import 'dart:convert';
 import 'dart:io';
-import 'dart:isolate';
 import 'dart:typed_data';
 
+import '../platform/background.dart';
 import 'webm_mux.dart' show MuxException, MuxTags;
 
 /// Puts the video of one fragmented MP4 and the audio of another into a single MP4, without decoding or encoding
@@ -20,7 +20,7 @@ import 'webm_mux.dart' show MuxException, MuxTags;
 abstract final class Mp4Mux {
   /// Writes [out] from [video] and [audio]; the work runs off the calling isolate.
   static Future<void> muxFile({required String video, required String audio, required String out, MuxTags? tags}) =>
-      Isolate.run(() => muxFileSync(video: video, audio: audio, out: out, tags: tags));
+      inBackground(() => muxFileSync(video: video, audio: audio, out: out, tags: tags));
 
   /// [muxFile] on the calling isolate.
   static void muxFileSync({required String video, required String audio, required String out, MuxTags? tags}) {

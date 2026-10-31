@@ -1,7 +1,6 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 
+import '../platform/host.dart';
 import '../services/appearance.dart';
 import '../services/layout_prefs.dart';
 import 'debug_switches.dart';
@@ -366,7 +365,7 @@ AppPalette _themePalette(Appearance a) {
 final _transparentOf = Expando<ThemeData>('transparent theme');
 ThemeData _transparent(ThemeData t) => _transparentOf[t] ??= t.copyWith(scaffoldBackgroundColor: Colors.transparent);
 
-bool get _desktop => Platform.isLinux || Platform.isWindows || Platform.isMacOS;
+bool get _desktop => Host.isLinux || Host.isWindows || Host.isMacOS;
 
 ThemeData buildAppTheme({String? fontFamily}) {
   final brightness = AppColors.light ? Brightness.light : Brightness.dark;

@@ -14,6 +14,8 @@ import 'package:just_audio_media_kit/just_audio_media_kit.dart';
 import 'package:window_manager/window_manager.dart';
 
 import 'models/track.dart';
+import 'platform/network.dart';
+import 'platform/host.dart';
 import 'services/appearance.dart';
 import 'services/layout_prefs.dart';
 import 'services/media_session.dart';
@@ -29,7 +31,10 @@ import 'ui/player_panels.dart' show MiniPlayerWindow, miniPlayer, windowFullScre
 import 'ui/theme.dart';
 import 'ui/widgets/title_bar.dart';
 
-Future<void> main() async {
+// On the web every request the browser would block goes through Riflay's proxy (lib/platform/network.dart).
+Future<void> main() => runWithNetwork(_main);
+
+Future<void> _main() async {
   WidgetsFlutterBinding.ensureInitialized();
   // just_audio has no native Linux/Windows backend; route those through libmpv.
   // Android, macOS and iOS too: libmpv gives them the equalizer, Virtual
@@ -52,7 +57,7 @@ Future<void> main() async {
   Size? startSize;
   await Future.wait([
     LegacyData.bringOver(),
-    if (kDebugMode) _logErrorsToFile(),
+    if (kDebugMode && !Host.isWeb) _logErrorsToFile(),
     if (hasCustomTitleBar)
       () async {
         await windowManager.ensureInitialized();
@@ -100,7 +105,7 @@ Future<void> _showWindow(Size? size) async {
       center: true,
       minimumSize: const Size(320, 420),
       // Linux: the window has an alpha channel; Flutter paints the background.
-      backgroundColor: Platform.isLinux ? Colors.transparent : AppColors.background,
+      backgroundColor: Host.isLinux ? Colors.transparent : AppColors.background,
       titleBarStyle: TitleBarStyle.hidden,
     ),
     () async {
@@ -343,6 +348,6 @@ class _DesktopFrame extends StatelessWidget {
       ),
       child: frame,
     );
-    return Platform.isLinux ? DragToResizeArea(resizeEdgeSize: 6, child: withMini) : withMini;
+    return Host.isLinux ? DragToResizeArea(resizeEdgeSize: 6, child: withMini) : withMini;
   }
 }

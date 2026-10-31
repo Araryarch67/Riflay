@@ -1,7 +1,8 @@
 import 'dart:convert';
 import 'dart:io';
-import 'dart:isolate';
 import 'dart:typed_data';
+
+import '../platform/background.dart';
 
 /// The WebM file could not be turned into Ogg Opus (not Opus, lacing, damaged, cut off).
 class WebmOpusException implements Exception {
@@ -23,7 +24,7 @@ class WebmOpusException implements Exception {
 abstract final class WebmOpus {
   /// Reads [source] and writes the Ogg Opus file at [target] (replaced). The work runs off the calling isolate.
   static Future<void> remuxFile(String source, String target, {String vendor = 'Riflay'}) =>
-      Isolate.run(() => remuxFileSync(source, target, vendor: vendor));
+      inBackground(() => remuxFileSync(source, target, vendor: vendor));
 
   /// [remuxFile], on the calling isolate.
   static void remuxFileSync(String source, String target, {String vendor = 'Riflay'}) {

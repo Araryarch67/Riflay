@@ -5,6 +5,8 @@ import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
+import '../platform/host.dart';
+
 /// Riflay was called OpenMusic (up to 1.11.1), under other app ids, so its files
 /// live in other folders. On a computer, Riflay's first start brings them
 /// over: settings, library, playlists, the YouTube Music sign-in, the room
@@ -19,7 +21,7 @@ abstract final class LegacyData {
   /// Runs once, before anything reads the settings. Never throws: a failure
   /// only means starting afresh, as on a phone.
   static Future<void> bringOver() async {
-    if (!(Platform.isLinux || Platform.isWindows || Platform.isMacOS)) return;
+    if (!(Host.isLinux || Host.isWindows || Host.isMacOS)) return;
     try {
       final support = await getApplicationSupportDirectory();
       final old = Directory(oldSupportPath(support.path));
@@ -31,8 +33,8 @@ abstract final class LegacyData {
         oldDownloads: Directory(p.join(docs, 'OpenMusic')),
         downloads: Directory(p.join(docs, 'Riflay')),
       );
-      if (Platform.isMacOS) await _bringOverMacPreferences(old.path, support.path);
-      if (Platform.isLinux) await _bringOverPluginsProject();
+      if (Host.isMacOS) await _bringOverMacPreferences(old.path, support.path);
+      if (Host.isLinux) await _bringOverPluginsProject();
     } catch (e) {
       debugPrint('Bringing over the old app\'s data: $e');
     }
@@ -41,7 +43,7 @@ abstract final class LegacyData {
   /// The old app's support folder beside Riflay's [support]: `…/dev.openmusic.openmusic`
   /// on Linux and macOS, `…\dev.openmusic\openmusic` on Windows (company \ product).
   @visibleForTesting
-  static String oldSupportPath(String support, {bool? windows}) => (windows ?? Platform.isWindows)
+  static String oldSupportPath(String support, {bool? windows}) => (windows ?? Host.isWindows)
       ? p.windows.join(p.windows.dirname(p.windows.dirname(support)), 'dev.openmusic', 'openmusic')
       : p.join(p.dirname(support), _oldId);
 
@@ -83,7 +85,7 @@ abstract final class LegacyData {
   /// Every file under [from] into [to]. On Linux and macOS with `cp`, which
   /// keeps each file's mode: the sign-in stays readable by this user only.
   static Future<void> _copy(Directory from, Directory to) async {
-    if (!Platform.isWindows) {
+    if (!Host.isWindows) {
       final r = await Process.run('cp', ['-pR', '${from.path}/.', to.path]);
       if (r.exitCode == 0) return;
     }
@@ -103,7 +105,7 @@ abstract final class LegacyData {
   /// (settings keep JSON inside JSON), and as `file://` URIs (song ids).
   @visibleForTesting
   static String repoint(String text, String from, String to, {bool? windows}) {
-    final win = windows ?? Platform.isWindows;
+    final win = windows ?? Host.isWindows;
     final sep = win ? r'\' : '/';
     String escaped(String s) {
       final e = jsonEncode(s);
@@ -139,7 +141,7 @@ abstract final class LegacyData {
 
   /// Linux: the audio plugins project Carla edits (see AudioEngine.pluginsProject).
   static Future<void> _bringOverPluginsProject() async {
-    final env = Platform.environment;
+    final env = Host.environment;
     final config = (env['XDG_CONFIG_HOME'] ?? '').isNotEmpty ? env['XDG_CONFIG_HOME']! : '${env['HOME']}/.config';
     final old = Directory(p.join(config, 'openmusic')), now = Directory(p.join(config, 'riflay'));
     if (old.existsSync() && !now.existsSync()) await _copy(old, await now.create(recursive: true));

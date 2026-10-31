@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:ffi' show Abi;
 import 'dart:io';
 
 import 'package:crypto/crypto.dart';
@@ -7,6 +6,9 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
+
+import '../platform/host.dart';
+import '../platform/native_calls.dart';
 
 /// The `ffmpeg` command, for what libmpv can't do: writing tags into MP3 / Ogg
 /// files, and converting for AirPlay and TVs. A system one is used when
@@ -56,12 +58,12 @@ abstract final class Ffmpeg {
   }
 
   static Future<File> _localFile() async =>
-      File(p.join((await getApplicationSupportDirectory()).path, 'bin', Platform.isWindows ? 'ffmpeg.exe' : 'ffmpeg'));
+      File(p.join((await getApplicationSupportDirectory()).path, 'bin', Host.isWindows ? 'ffmpeg.exe' : 'ffmpeg'));
 
   /// Where the official builds live, with how to check them; null where none is offered.
   /// A null [checksumUrl] means the checksum sits next to the file [url] redirects to.
   static ({String url, String? checksumUrl, Hash hash, String? fallbackUrl})? get _source {
-    if (Platform.isWindows) {
+    if (Host.isWindows) {
       // gyan.dev, the builds ffmpeg.org links for Windows: the 7z is a third of the zip's size.
       // Windows' own tar opens 7z on recent versions; older ones take the zip.
       return (
@@ -71,20 +73,20 @@ abstract final class Ffmpeg {
         fallbackUrl: 'https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip',
       );
     }
-    if (Platform.isLinux) {
+    if (Host.isLinux) {
       // John Van Sickle's static builds, linked from ffmpeg.org for Linux.
-      final arch = switch (Abi.current()) {
-        Abi.linuxX64 => 'amd64',
-        Abi.linuxArm64 => 'arm64',
+      final arch = switch (currentAbi) {
+        'linux_x64' => 'amd64',
+        'linux_arm64' => 'arm64',
         _ => null,
       };
       if (arch == null) return null;
       final url = 'https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-$arch-static.tar.xz';
       return (url: url, checksumUrl: '$url.md5', hash: md5, fallbackUrl: null);
     }
-    if (Platform.isMacOS) {
+    if (Host.isMacOS) {
       // Martin Riedl's static builds, linked from ffmpeg.org for macOS: Apple Silicon or Intel.
-      final arch = Abi.current() == Abi.macosArm64 ? 'arm64' : 'amd64';
+      final arch = currentAbi == 'macos_arm64' ? 'arm64' : 'amd64';
       final url = 'https://ffmpeg.martin-riedl.de/redirect/latest/macos/$arch/release/ffmpeg.zip';
       return (url: url, checksumUrl: null, hash: sha256, fallbackUrl: null);
     }
@@ -118,9 +120,9 @@ abstract final class Ffmpeg {
         await target.parent.create(recursive: true);
         // Into place in one step: a copy cut short would otherwise be taken for ffmpeg from then on.
         final part = await exe.copy('${target.path}.part');
-        if (!Platform.isWindows) await Process.run('chmod', ['755', part.path]);
+        if (!Host.isWindows) await Process.run('chmod', ['755', part.path]);
         // Apple Silicon runs no unsigned code; an ad hoc signature is enough.
-        if (Platform.isMacOS) await Process.run('codesign', ['--force', '--sign', '-', part.path]);
+        if (Host.isMacOS) await Process.run('codesign', ['--force', '--sign', '-', part.path]);
         await part.rename(target.path);
         return true;
       }
@@ -144,7 +146,7 @@ abstract final class Ffmpeg {
 
   /// Windows' own bsdtar (Git's GNU tar on PATH can't open 7z or zip).
   static String get _tar =>
-      Platform.isWindows ? p.join(Platform.environment['WINDIR'] ?? r'C:\Windows', 'System32', 'tar.exe') : 'tar';
+      Host.isWindows ? p.join(Host.environment['WINDIR'] ?? r'C:\Windows', 'System32', 'tar.exe') : 'tar';
 
   /// Where [url] redirects to (a "latest" link), so its checksum file can be found next to it.
   /// Martin Riedl's redirect answers 404 about half the time (the files themselves don't), so

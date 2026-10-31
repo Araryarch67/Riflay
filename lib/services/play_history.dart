@@ -1,13 +1,13 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-import 'dart:isolate';
 
 import 'package:flutter/foundation.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/track.dart';
+import '../platform/background.dart';
 import 'player_controller.dart';
 import 'private_files.dart';
 import 'ytmusic_play_report.dart';
@@ -394,7 +394,7 @@ class PlayHistory extends ChangeNotifier {
   }
 
   // Static, so the isolate's closure doesn't carry the history (and its pending futures) with it.
-  static Future<(HistoryData, bool, bool)?> _read(File file) => Isolate.run(() => _readFile(file));
+  static Future<(HistoryData, bool, bool)?> _read(File file) => inBackground(() => _readFile(file));
 
   static (HistoryData, bool, bool)? _readFile(File file) {
     if (!file.existsSync()) return null;
@@ -403,7 +403,7 @@ class PlayHistory extends ChangeNotifier {
   }
 
   static Future<void> _writeAll(File file, HistoryData data) =>
-      Isolate.run(() => PrivateFiles.writeSync(file, encode(data)));
+      inBackground(() => PrivateFiles.writeSync(file, encode(data)));
 
   void _mergeLoaded(HistoryData data) {
     // Whatever was recorded while the file was being read goes after what was in it.

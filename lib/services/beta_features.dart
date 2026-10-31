@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../platform/features.dart';
+
 /// A feature still in Beta that Settings › Beta features can switch off.
 enum BetaFeature {
   musixmatch(
@@ -18,6 +20,9 @@ enum BetaFeature {
 
   /// One plain line.
   final String description;
+
+  /// Whether this build has the feature at all (the web build has no Video mode).
+  bool get available => this != videoMode || Features.videoMode;
 }
 
 /// Which Beta features are on. All are on until switched off, so nothing changes for current users.
@@ -32,7 +37,7 @@ class BetaFeatures extends ChangeNotifier {
   Future<void>? _loading;
 
   /// Whether [f] is on. Before [load] finishes everything reads as on.
-  bool isOn(BetaFeature f) => !_off.contains(f);
+  bool isOn(BetaFeature f) => f.available && !_off.contains(f);
 
   /// Reads the saved switches once; later calls share the first.
   Future<void> load() => _loading ??= _read();

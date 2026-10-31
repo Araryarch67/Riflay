@@ -14,6 +14,7 @@ import 'package:just_audio/just_audio.dart';
 import 'package:multicast_dns/multicast_dns.dart';
 import 'package:pointycastle/export.dart' show AESEngine, CBCBlockCipher, KeyParameter, ParametersWithIV;
 
+import '../platform/host.dart';
 import 'ffmpeg.dart';
 import 'pcm_decoder.dart';
 
@@ -59,7 +60,7 @@ abstract final class AirPlay {
   static Stream<AirPlayDevice> discover({Duration timeout = const Duration(seconds: 4)}) async* {
     final client = MDnsClient(
       rawDatagramSocketFactory: (host, int port, {bool reuseAddress = true, bool reusePort = true, int ttl = 255}) =>
-          RawDatagramSocket.bind(host, port, reuseAddress: true, reusePort: !Platform.isWindows, ttl: ttl),
+          RawDatagramSocket.bind(host, port, reuseAddress: true, reusePort: !Host.isWindows, ttl: ttl),
     );
     try {
       await client.start();

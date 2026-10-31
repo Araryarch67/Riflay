@@ -9,6 +9,7 @@ import 'package:just_audio/just_audio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/track.dart';
+import '../platform/host.dart';
 import 'desktop_login.dart';
 import 'private_files.dart';
 import 'ytmusic_play_report.dart';
@@ -514,7 +515,7 @@ class YoutubeMusicAccount extends ChangeNotifier {
 
   /// Google sign-in in an app window: the WebKitGTK helper on Linux, the
   /// in-app WebView page everywhere else.
-  static bool get canSignInInWindow => DesktopLogin.supported || !Platform.isLinux;
+  static bool get canSignInInWindow => DesktopLogin.supported || !Host.isLinux;
 
   /// Linux: runs the sign-in window and takes over its session. False when
   /// the window was closed early or the session didn't work ([error] says why).

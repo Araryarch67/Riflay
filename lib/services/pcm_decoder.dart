@@ -3,17 +3,18 @@
 // ignore_for_file: experimental_member_use
 
 import 'dart:async';
-import 'dart:ffi';
 import 'dart:io';
 import 'dart:math' as math;
 import 'dart:typed_data';
 
-import 'package:ffi/ffi.dart';
 import 'package:flutter/foundation.dart';
 import 'package:just_audio/just_audio.dart';
-import 'package:media_kit/media_kit.dart';
+import 'package:media_kit/media_kit.dart' hide NativePlayer;
 import 'package:path_provider/path_provider.dart';
 
+import '../platform/host.dart';
+import '../platform/mpv.dart';
+import '../platform/native_calls.dart';
 import 'dlna.dart' show CastServer;
 
 /// What [MpvPcm] decodes: a file (or URL) mpv opens itself, or bytes from a
@@ -57,7 +58,7 @@ class PcmStream {
 /// pipes of this kind, so it keeps using ffmpeg ([supported] is false).
 abstract final class MpvPcm {
   /// Whether [decode] works on this system.
-  static bool get supported => !Platform.isWindows;
+  static bool get supported => !Host.isWindows;
 
   /// Every rate renderers take, for [decode]'s `maxRate`.
   static const _rates = [8000, 11025, 12000, 16000, 22050, 24000, 32000, 44100, 48000, 88200, 96000, 176400, 192000];
@@ -111,7 +112,7 @@ abstract final class MpvPcm {
         try {
           if (e is Directory) {
             final owner = int.tryParse(_folder.firstMatch(name)?.group(1) ?? '');
-            if (owner != null && owner != pid && !_alive(owner)) e.deleteSync(recursive: true);
+            if (owner != null && owner != pid && !processAlive(owner)) e.deleteSync(recursive: true);
           } else if (_loosePipe.hasMatch(name) &&
               FileSystemEntity.typeSync(e.path, followLinks: false) == FileSystemEntityType.pipe &&
               DateTime.now().difference(e.statSync().modified) > const Duration(hours: 1)) {
@@ -149,59 +150,6 @@ abstract final class MpvPcm {
   }
 }
 
-typedef _MkfifoNative = Int32 Function(Pointer<Utf8>, Uint32);
-typedef _MkfifoNativeApple = Int32 Function(Pointer<Utf8>, Uint16);
-typedef _Mkfifo = int Function(Pointer<Utf8>, int);
-
-/// Makes a named pipe (a FIFO) at [path], owner-only.
-void _mkfifo(String path) {
-  final lib = DynamicLibrary.process();
-  // mode_t is 16 bits on Apple systems and 32 on Linux / Android.
-  final _Mkfifo call = Platform.isMacOS || Platform.isIOS
-      ? lib.lookupFunction<_MkfifoNativeApple, _Mkfifo>('mkfifo')
-      : lib.lookupFunction<_MkfifoNative, _Mkfifo>('mkfifo');
-  final name = path.toNativeUtf8();
-  try {
-    if (call(name, 384) != 0) throw FileSystemException('mkfifo failed', path); // 0600
-  } finally {
-    calloc.free(name);
-  }
-}
-
-typedef _OpenNative = Int32 Function(Pointer<Utf8>, Int32);
-typedef _Open = int Function(Pointer<Utf8>, int);
-typedef _CloseNative = Int32 Function(Int32);
-typedef _Close = int Function(int);
-typedef _KillNative = Int32 Function(Int32, Int32);
-typedef _Kill = int Function(int, int);
-
-/// Opens and at once closes the write end of the pipe at [path] without ever blocking, which completes a reader's
-/// blocked `open`. False when no reader is waiting (the open fails with ENXIO).
-///
-/// `File.open(mode: writeOnly)` would do the same, but if the reader is not there it blocks an IO thread for good.
-bool _pokeWriter(String path) {
-  final lib = DynamicLibrary.process();
-  final open = lib.lookupFunction<_OpenNative, _Open>('open');
-  final close = lib.lookupFunction<_CloseNative, _Close>('close');
-  const writeOnly = 1; // O_WRONLY
-  final nonBlock = Platform.isMacOS || Platform.isIOS ? 0x4 : 0x800; // O_NONBLOCK
-  final name = path.toNativeUtf8();
-  try {
-    final fd = open(name, writeOnly | nonBlock);
-    if (fd < 0) return false;
-    close(fd);
-    return true;
-  } finally {
-    calloc.free(name);
-  }
-}
-
-/// Whether the process [pid] is still running.
-bool _alive(int pid) {
-  if (Platform.isLinux || Platform.isAndroid) return Directory('/proc/$pid').existsSync();
-  return DynamicLibrary.process().lookupFunction<_KillNative, _Kill>('kill')(pid, 0) == 0;
-}
-
 /// One decode: the mpv player, the pipe, the reader and, for byte sources, the loopback server.
 class _Session {
   final out = StreamController<Uint8List>();
@@ -237,7 +185,7 @@ class _Session {
   }) async {
     final dir = await MpvPcm._directory();
     final fifo = _fifo = '$dir/${math.Random.secure().nextInt(1 << 32).toRadixString(16)}';
-    _mkfifo(fifo);
+    mkfifo(fifo);
 
     // Blocks (on an IO thread) until mpv opens its end, which it does when the first audio is decoded. Whatever
     // happens meanwhile, [_abandonReader] can always complete it, so this never outlives the session.
@@ -319,7 +267,7 @@ class _Session {
       await f.close();
     }, onError: (Object _) => settled = true);
     for (var i = 0; i < 60 && !settled; i++) {
-      _pokeWriter(fifo);
+      pokeWriter(fifo);
       await Future.any<void>([closed, Future<void>.delayed(const Duration(milliseconds: 50))]);
     }
     if (!settled) debugPrint('PCM decoder: the pipe never opened for reading');

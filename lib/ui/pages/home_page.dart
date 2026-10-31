@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../../models/track.dart';
+import '../../platform/features.dart';
 import '../../services/layout_prefs.dart';
 import '../../services/player_controller.dart';
 import '../../services/youtube_music_account.dart';
@@ -242,7 +243,10 @@ class HomePage extends StatelessWidget {
         },
         icon: const Icon(Icons.refresh_rounded),
       ),
-      if (shell.compact) ...[const DownloadsButton(), _AddMenu(shell: shell)],
+      if (shell.compact) ...[
+        if (Features.downloads) const DownloadsButton(),
+        if (Features.localLibrary) _AddMenu(shell: shell),
+      ],
     ];
 
     // The header's colour follows the cover of what plays (or was played last). Only this leaf is redrawn when
@@ -268,6 +272,7 @@ class _AddYourMusic extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (!Features.localLibrary) return const SizedBox.shrink();
     final shell = ShellScope.of(context);
     final text = Theme.of(context).textTheme;
     final pad = shell.compact ? 16.0 : 24.0;

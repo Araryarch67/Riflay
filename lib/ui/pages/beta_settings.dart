@@ -17,20 +17,21 @@ class BetaSettings extends StatelessWidget {
       builder: (context, _) => SettingsCard(
         children: [
           for (final f in BetaFeature.values)
-            SwitchListTile(
-              title: Row(
-                children: [
-                  Flexible(child: Text(f.title)),
-                  const SizedBox(width: 8),
-                  const BetaBadge(),
-                ],
+            if (f.available)
+              SwitchListTile(
+                title: Row(
+                  children: [
+                    Flexible(child: Text(f.title)),
+                    const SizedBox(width: 8),
+                    const BetaBadge(),
+                  ],
+                ),
+                subtitle: Text(f.description, style: muted),
+                value: beta.isOn(f),
+                onChanged: (v) async {
+                  await beta.set(f, v);
+                },
               ),
-              subtitle: Text(f.description, style: muted),
-              value: beta.isOn(f),
-              onChanged: (v) async {
-                await beta.set(f, v);
-              },
-            ),
         ],
       ),
     );

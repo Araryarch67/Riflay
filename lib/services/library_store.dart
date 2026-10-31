@@ -1,11 +1,11 @@
 import 'dart:convert';
 import 'dart:io';
-import 'dart:isolate';
 
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/track.dart';
+import '../platform/background.dart';
 import 'private_files.dart';
 
 /// The library on disk.
@@ -32,7 +32,7 @@ abstract final class LibraryStore {
   static Future<List<Track>> load(SharedPreferences prefs) async {
     final legacy = prefs.getString(_legacyKey);
     if (legacy != null) {
-      final tracks = await Isolate.run(() => _decode(legacy));
+      final tracks = await inBackground(() => _decode(legacy));
       // Moved the first time; the old value goes once the file is safely written.
       if (await _writeFile(tracks)) {
         await prefs.setBool(_movedKey, true);
@@ -44,7 +44,7 @@ abstract final class LibraryStore {
     final file = await _file();
     if (file == null) return [];
     try {
-      return await Isolate.run(() => file.existsSync() ? _decode(file.readAsStringSync()) : <Track>[]);
+      return await inBackground(() => file.existsSync() ? _decode(file.readAsStringSync()) : <Track>[]);
     } catch (e) {
       debugPrint('Library file unreadable, starting empty: $e');
       return [];
@@ -84,7 +84,7 @@ abstract final class LibraryStore {
     final file = await _file();
     if (file == null) return false;
     try {
-      await Isolate.run(() => PrivateFiles.writeSync(file, jsonEncode([for (final t in tracks) t.toJson()])));
+      await inBackground(() => PrivateFiles.writeSync(file, jsonEncode([for (final t in tracks) t.toJson()])));
       return true;
     } catch (e) {
       debugPrint('Saving the library failed: $e');

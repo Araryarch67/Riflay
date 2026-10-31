@@ -1,44 +1,23 @@
 import 'dart:convert';
-import 'dart:io';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../platform/host.dart';
 import 'download_prefs.dart';
 import 'video_download.dart';
+import 'youtube_player_api.dart';
 import 'ytdlp.dart';
 
 /// Finds a YouTube song's audio stream with one request to YouTube's player
 /// API (~0.2 s once warmed up). Desktop falls back to yt-dlp ([best]) when
 /// YouTube refuses it; phones, which have no yt-dlp, to youtube_explode.
 ///
-/// Asks YouTube's player API as the Apple Vision Pro app (`VISIONOS`), the
-/// client yt-dlp itself uses when it can't run JavaScript: its stream URLs
-/// need no signature deciphering and no PO token. URLs from the Android
-/// clients youtube_explode uses stop after the first megabyte (HTTP 403).
-///
-/// The request needs a visitor id from the watch page, or YouTube answers
-/// LOGIN_REQUIRED ("confirm you're not a bot").
+/// The requests and the stream choice are in `youtube_player_api.dart` (the web proxy sends the same ones). URLs
+/// from the Android clients youtube_explode uses stop after the first megabyte (HTTP 403).
 abstract final class YoutubeStream {
-  static const _ua =
-      'Mozilla/5.0 (Macintosh; Intel Mac OS X 15_7_3) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15';
-  static const _pageUa =
-      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36';
-
-  // Kept in step with yt-dlp's INNERTUBE_CLIENTS['visionos'].
-  static const _client = {
-    'clientName': 'VISIONOS',
-    'clientVersion': '1.02',
-    'deviceMake': 'Apple',
-    'deviceModel': 'RealityDevice17,1',
-    'userAgent': _ua,
-    'osName': 'visionOS',
-    'osVersion': '26.5.23O471',
-    'hl': 'en',
-  };
-
   static final _http = http.Client();
 
   static Future<String?>? _visitor;
@@ -87,23 +66,19 @@ abstract final class YoutubeStream {
     try {
       final res = await _http
           .post(
-            Uri.parse('https://www.youtube.com/youtubei/v1/visitor_id?prettyPrint=false'),
-            headers: {'content-type': 'application/json', 'user-agent': _pageUa},
-            body: jsonEncode({
-              'context': {
-                'client': {'clientName': 'WEB', 'clientVersion': '2.20251001.00.00', 'hl': 'en'},
-              },
-            }),
+            YoutubePlayerApi.visitorUrl,
+            headers: YoutubePlayerApi.visitorHeaders,
+            body: jsonEncode(YoutubePlayerApi.visitorBody),
           )
           .timeout(const Duration(seconds: 10));
-      final id = ((jsonDecode(res.body) as Map)['responseContext'] as Map?)?['visitorData'];
-      if (res.statusCode == 200 && id is String && id.isNotEmpty) return id;
+      final id = YoutubePlayerApi.visitorFrom(jsonDecode(res.body));
+      if (res.statusCode == 200 && id != null) return id;
     } catch (e) {
       debugPrint('visitor_id failed, reading the watch page: $e');
     }
     final page = await _http.get(
       Uri.parse('https://www.youtube.com/watch?v=$videoId&bpctr=9999999999&has_verified=1'),
-      headers: {'user-agent': _pageUa, 'accept-language': 'en-US,en;q=0.9'},
+      headers: {'user-agent': YoutubePlayerApi.pageUserAgent, 'accept-language': 'en-US,en;q=0.9'},
     );
     return RegExp(r'"VISITOR_DATA":"([^"]+)"').firstMatch(page.body)?.group(1);
   }
@@ -162,9 +137,7 @@ abstract final class YoutubeStream {
     return _resolvedFrom(best, j);
   }
 
-  static List<Map<String, dynamic>> _adaptiveFormats(Map<String, dynamic> j) =>
-      ((j['streamingData'] as Map<String, dynamic>?)?['adaptiveFormats'] as List? ?? const [])
-          .cast<Map<String, dynamic>>();
+  static List<Map<String, dynamic>> _adaptiveFormats(Map<String, dynamic> j) => YoutubePlayerApi.adaptiveFormats(j);
 
   static ResolvedAudio _resolvedFrom(Map<String, dynamic> best, Map<String, dynamic> j) {
     final url = Uri.parse(best['url'] as String);
@@ -191,10 +164,7 @@ abstract final class YoutubeStream {
   static final _listings = <String, Future<_Listing>>{};
 
   /// When a googlevideo stream URL stops working (its `expire` parameter, seconds since the epoch); null if it has none.
-  static DateTime? urlExpiry(Uri url) {
-    final s = int.tryParse(url.queryParameters['expire'] ?? '');
-    return s == null ? null : DateTime.fromMillisecondsSinceEpoch(s * 1000);
-  }
+  static DateTime? urlExpiry(Uri url) => YoutubePlayerApi.urlExpiry(url);
 
   /// Whether a listing fetched at [fetchedAt] can still be used at [now]: under ten minutes old, and none of its
   /// [urls] expires within five minutes.
@@ -304,7 +274,7 @@ abstract final class YoutubeStream {
 
   /// [shouldPrefetchAhead] for this device right now; unknown connectivity counts as metered on a phone.
   static Future<bool> prefetchAllowed() async {
-    final phone = Platform.isAndroid || Platform.isIOS;
+    final phone = Host.isAndroid || Host.isIOS;
     if (!phone) return true;
     try {
       final now = await Connectivity().checkConnectivity();
@@ -411,33 +381,14 @@ abstract final class YoutubeStream {
     final visitor = await _visitorData(videoId, fresh: freshVisitor);
     final res = await _http
         .post(
-          Uri.parse('https://www.youtube.com/youtubei/v1/player?prettyPrint=false'),
-          headers: {
-            'content-type': 'application/json',
-            'user-agent': _ua,
-            'origin': 'https://www.youtube.com',
-            'x-youtube-client-name': '101',
-            'x-youtube-client-version': '1.02',
-            'x-goog-visitor-id': ?visitor,
-          },
-          body: jsonEncode({
-            'context': {
-              'client': {..._client, 'visitorData': ?visitor},
-            },
-            'videoId': videoId,
-            'contentCheckOk': true,
-            'racyCheckOk': true,
-          }),
+          YoutubePlayerApi.playerUrl,
+          headers: YoutubePlayerApi.playerHeaders(visitor),
+          body: jsonEncode(YoutubePlayerApi.playerBody(videoId, visitor)),
         )
         .timeout(const Duration(seconds: 20));
     if (res.statusCode != 200) throw StateError('YouTube replied ${res.statusCode}');
     final j = jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>;
-    final playability = j['playabilityStatus'] as Map<String, dynamic>?;
-    if (playability?['status'] != 'OK') {
-      throw StateError(
-        (playability?['reason'] as String?) ?? 'This song can\'t be played (${playability?['status']}).',
-      );
-    }
+    if (YoutubePlayerApi.unplayable(j) case final reason?) throw StateError(reason);
     return j;
   }
 
@@ -487,25 +438,9 @@ abstract final class YoutubeStream {
     return candidates.firstOrNull;
   }
 
-  /// Highest-bitrate original audio: Opus wins near-ties (better per bit),
-  /// unless [aacOnly] (for TVs and speakers). Leaves out "stable volume" (DRC)
-  /// and dubbed tracks, and streams needing a signature.
-  static Map<String, dynamic>? pickBest(List<Map<String, dynamic>> formats, {required bool aacOnly}) {
-    bool usable(Map<String, dynamic> f) {
-      final mime = f['mimeType'] as String? ?? '';
-      if (!mime.startsWith('audio/') || f['url'] is! String) return false;
-      if (aacOnly && !mime.startsWith('audio/mp4')) return false;
-      if (f['isDrc'] == true || (f['xtags'] as String? ?? '').contains('drc')) return false;
-      final track = f['audioTrack'] as Map<String, dynamic>?;
-      return track == null || track['audioIsDefault'] != false;
-    }
-
-    int score(Map<String, dynamic> f) =>
-        ((f['averageBitrate'] ?? f['bitrate']) as num? ?? 0).toInt() +
-        ((f['mimeType'] as String).contains('opus') ? 16000 : 0);
-    final candidates = formats.where(usable).toList()..sort((a, b) => score(b).compareTo(score(a)));
-    return candidates.firstOrNull;
-  }
+  /// Highest-bitrate original audio (see [YoutubePlayerApi.pickBest]).
+  static Map<String, dynamic>? pickBest(List<Map<String, dynamic>> formats, {required bool aacOnly}) =>
+      YoutubePlayerApi.pickBest(formats, aacOnly: aacOnly);
 }
 
 /// What was listed for one video, and when.

@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../models/track.dart';
+import '../../platform/features.dart';
 import '../../services/audio_engine.dart';
 import '../../services/layout_prefs.dart';
 import '../../services/download_edit.dart';
@@ -371,7 +372,7 @@ class TrackMenuButton extends StatelessWidget {
                     title: Text('Suggest to ${ListenTogether.of(c).hostName ?? 'the host'}'),
                   ),
                 ),
-              if (c.downloadedCopy(track) == null) ...[
+              if (c.downloadedCopy(track) == null && Features.downloads) ...[
                 PopupMenuItem(
                   onTap: () => download(host, c, [track]),
                   child: const MenuRow(leading: Icon(Icons.download_rounded), title: Text('Download for offline')),

@@ -10,6 +10,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:youtube_explode_dart/youtube_explode_dart.dart';
 
 import '../models/track.dart';
+import '../platform/host.dart';
 import 'cover_art.dart';
 import 'download_prefs.dart';
 import 'ffmpeg.dart';
@@ -336,7 +337,7 @@ class YoutubeImporter extends ChangeNotifier {
   /// private documents folder on mobile.
   static Future<Directory> downloadsDir() async {
     // A folder the user chose (computers); the default if it can't be used any more.
-    if (DownloadPrefs.instance.folder case final chosen? when !Platform.isAndroid && !Platform.isIOS) {
+    if (DownloadPrefs.instance.folder case final chosen? when !Host.isAndroid && !Host.isIOS) {
       try {
         return await Directory(chosen).create(recursive: true);
       } catch (e) {
@@ -344,7 +345,7 @@ class YoutubeImporter extends ChangeNotifier {
       }
     }
     final docs = await getApplicationDocumentsDirectory();
-    final mobile = Platform.isAndroid || Platform.isIOS;
+    final mobile = Host.isAndroid || Host.isIOS;
     final dir = Directory(mobile ? p.join(docs.path, 'YouTube') : p.join(docs.path, 'Riflay', 'YouTube'));
     return dir.create(recursive: true);
   }
@@ -686,7 +687,7 @@ class YoutubeImporter extends ChangeNotifier {
 
   /// Phones only, and only if the user turned mobile data off for downloads.
   static Future<bool> _blockedByMobileData() async {
-    if (!Platform.isAndroid && !Platform.isIOS) return false;
+    if (!Host.isAndroid && !Host.isIOS) return false;
     await DownloadPrefs.instance.load();
     if (DownloadPrefs.instance.mobileData) return false;
     try {

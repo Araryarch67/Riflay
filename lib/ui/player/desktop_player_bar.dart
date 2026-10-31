@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../models/track.dart';
+import '../../platform/features.dart';
 import '../../services/audio_engine.dart';
 import '../../services/listen_together/listen_together.dart';
 import '../../services/player_controller.dart';
@@ -201,19 +202,21 @@ class _MoreMenu extends StatelessWidget {
               () => showSleepTimer(context),
               on: sleeping,
             ),
-            item(
-              device == null ? Icons.cast_rounded : Icons.cast_connected_rounded,
-              device == null ? 'Play on a device' : 'Playing on ${device.name}',
-              () => showCastPicker(context),
-              on: device != null,
-            ),
-            item(
-              Icons.group_outlined,
-              together ?? 'Listen together',
-              () => openListenTogether(context),
-              on: together != null,
-            ),
-            if (downloadable)
+            if (Features.casting)
+              item(
+                device == null ? Icons.cast_rounded : Icons.cast_connected_rounded,
+                device == null ? 'Play on a device' : 'Playing on ${device.name}',
+                () => showCastPicker(context),
+                on: device != null,
+              ),
+            if (Features.listenTogether)
+              item(
+                Icons.group_outlined,
+                together ?? 'Listen together',
+                () => openListenTogether(context),
+                on: together != null,
+              ),
+            if (downloadable && Features.downloads)
               item(
                 downloading ? Icons.downloading_rounded : Icons.download_rounded,
                 downloading ? 'Downloading…' : 'Download',
@@ -227,7 +230,8 @@ class _MoreMenu extends StatelessWidget {
                 toggle,
                 on: sidePanelOpen,
               ),
-            item(Icons.picture_in_picture_alt_rounded, 'Mini player', () => setMiniPlayer(true)),
+            if (Features.miniPlayer)
+              item(Icons.picture_in_picture_alt_rounded, 'Mini player', () => setMiniPlayer(true)),
             if (hasTrack || expanded)
               item(
                 expanded ? Icons.close_fullscreen_rounded : Icons.open_in_full_rounded,

@@ -65,7 +65,7 @@ class LyricsExtrasButtonsState extends State<LyricsExtrasButtons> {
             itemBuilder: (_) => [
               if (has) const PopupMenuItem(value: 'copy', child: Text('Copy lyrics')),
               if (l.synced) const PopupMenuItem(value: 'timing', child: Text('Adjust timing')),
-              const PopupMenuItem(value: 'use', child: Text('Use my lyrics file')),
+              if (Features.userLyrics) const PopupMenuItem(value: 'use', child: Text('Use my lyrics file')),
               if (l.source == _userLyricsSource) const PopupMenuItem(value: 'remove', child: Text('Remove my lyrics')),
             ],
           ),

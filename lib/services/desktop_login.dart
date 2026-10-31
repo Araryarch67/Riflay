@@ -4,6 +4,8 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
 
+import '../platform/host.dart';
+
 /// Linux sign-in window (linux/login_helper): Google's own login page in a
 /// WebKitGTK window, which hands the YouTube Music session back on stdout.
 abstract final class DesktopLogin {
@@ -12,7 +14,7 @@ abstract final class DesktopLogin {
   /// The helper next to the app binary; null when it was not built (no
   /// webkit2gtk-4.1 at build time) or on other platforms.
   static final String? helperPath = () {
-    if (!Platform.isLinux) return null;
+    if (!Host.isLinux) return null;
     final path = p.join(p.dirname(Platform.resolvedExecutable), _name);
     return File(path).existsSync() ? path : null;
   }();

@@ -1,7 +1,7 @@
-import 'dart:io';
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
+
+import '../platform/host.dart';
 
 /// Where iOS sends the sound now (the `riflay/route` channel, ios/Runner/AudioRoute.swift).
 class AudioRoute {
@@ -31,7 +31,7 @@ class IosRoute {
     });
   }
 
-  static bool get supported => Platform.isIOS;
+  static bool get supported => Host.isIOS;
 
   static const _channel = MethodChannel('riflay/route');
 

@@ -1,10 +1,10 @@
 import 'dart:async';
-import 'dart:io' show Platform;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../platform/host.dart';
 import '../../services/listen_together/listen_together.dart';
 import '../../services/listen_together/protocol.dart';
 import '../../services/listen_together/transport.dart';
@@ -109,7 +109,7 @@ class _ListenTogetherPageState extends State<ListenTogetherPage> {
 
   static String _defaultName() {
     try {
-      final user = Platform.environment['USER'] ?? Platform.environment['USERNAME'] ?? '';
+      final user = Host.environment['USER'] ?? Host.environment['USERNAME'] ?? '';
       if (user.isNotEmpty) return user[0].toUpperCase() + user.substring(1);
     } catch (_) {}
     return '';

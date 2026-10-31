@@ -2,9 +2,11 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/widgets.dart';
-import 'package:media_kit/media_kit.dart' hide Track;
+import 'package:media_kit/media_kit.dart' hide NativePlayer, Track;
 import 'package:media_kit_video/media_kit_video.dart';
 
+import '../platform/host.dart';
+import '../platform/mpv.dart';
 import '../models/track.dart';
 import 'beta_features.dart';
 import 'download_files.dart';
@@ -31,7 +33,7 @@ class VideoMode extends ChangeNotifier with WidgetsBindingObserver {
   static final instance = VideoMode._();
 
   /// Phones get a lighter stream: less data, less to decode.
-  static int get maxHeight => Platform.isAndroid || Platform.isIOS ? 480 : 720;
+  static int get maxHeight => Host.isAndroid || Host.isIOS ? 480 : 720;
 
   PlayerController? _c;
 
@@ -57,7 +59,7 @@ class VideoMode extends ChangeNotifier with WidgetsBindingObserver {
   Future<void> _probe() async {
     if (_probed) return;
     _probed = true;
-    if (Platform.isLinux || Platform.isWindows) {
+    if (Host.isLinux || Host.isWindows) {
       _canDecode = true;
       notifyListeners();
       return;

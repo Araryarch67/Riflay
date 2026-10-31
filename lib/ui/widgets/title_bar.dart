@@ -1,13 +1,12 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:window_manager/window_manager.dart';
 
+import '../../platform/host.dart';
 import '../theme.dart';
 import 'app_logo.dart';
 
 /// Desktop platforms draw their own title bar; mobile has none.
-bool get hasCustomTitleBar => Platform.isLinux || Platform.isWindows || Platform.isMacOS;
+bool get hasCustomTitleBar => Host.isLinux || Host.isWindows || Host.isMacOS;
 
 /// True while the desktop layout draws the title bar itself (with Back /
 /// Forward, Home and search in it); the app frame then leaves its plain one out.
@@ -91,10 +90,10 @@ class _AppTitleBarState extends State<AppTitleBar> with WindowListener {
             Positioned.fill(
               child: Row(
                 children: [
-                  SizedBox(width: Platform.isMacOS ? 80 : 12),
+                  SizedBox(width: Host.isMacOS ? 80 : 12),
                   ?widget.leading,
                   const Spacer(),
-                  if (!Platform.isMacOS) ..._windowButtons(),
+                  if (!Host.isMacOS) ..._windowButtons(),
                 ],
               ),
             ),
@@ -116,7 +115,7 @@ class _AppTitleBarState extends State<AppTitleBar> with WindowListener {
               onPanStart: (_) => windowManager.startDragging(),
               onDoubleTap: _toggleMaximize,
               child: Padding(
-                padding: EdgeInsets.only(left: Platform.isMacOS ? 80 : 14),
+                padding: EdgeInsets.only(left: Host.isMacOS ? 80 : 14),
                 child: Row(
                   children: [
                     const AppLogo(size: 16),
@@ -134,7 +133,7 @@ class _AppTitleBarState extends State<AppTitleBar> with WindowListener {
               ),
             ),
           ),
-          if (!Platform.isMacOS) ..._windowButtons(),
+          if (!Host.isMacOS) ..._windowButtons(),
         ],
       ),
     );
