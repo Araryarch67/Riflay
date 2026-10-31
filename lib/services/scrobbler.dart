@@ -730,7 +730,8 @@ class Scrobbler extends ChangeNotifier {
     }
     if (queued) {
       notifyListeners();
-      _background = _save().then((_) => send());
+      // Online, the listens are saved once, after they went out; a send already running saves them here.
+      _background = _sending ? _save() : send();
     }
   }
 
@@ -747,6 +748,8 @@ class Scrobbler extends ChangeNotifier {
     _retry?.cancel();
     _retry = null;
     var failed = false;
+    // Something was waiting, so the queue on disk changes whichever way the sending goes.
+    final had = _queues.values.any((q) => q.isNotEmpty);
     try {
       for (final s in services) {
         final q = _queues[s.id];
@@ -787,6 +790,7 @@ class Scrobbler extends ChangeNotifier {
     } else {
       _retryAfter = _firstRetry;
     }
+    if (!had) return;
     notifyListeners();
     await _save();
   }

@@ -551,13 +551,19 @@ class PlayHistory extends ChangeNotifier {
     for (var p = 0; p < _at.length; p++) {
       near.putIfAbsent(match(_songs[_song[p]]), () => []).add(_at[p]);
     }
+    for (final times in near.values) {
+      times.sort(); // nearly sorted already: plays kept while the file was loading go after it
+    }
     final rows = <(int, SongInfo, int)>[for (var p = 0; p < _at.length; p++) (_at[p], _songs[_song[p]], _heard[p])];
     var added = 0;
     for (final play in plays) {
+      // Sorted (the history is oldest first, and new times go in at their place), so a binary search finds the
+      // nearest play: a big import against a song played thousands of times stays quick.
       final times = near.putIfAbsent(match(play.song), () => []);
       // A play is kept when it ends; one brought in is dated by its start.
-      if (times.any((t) => t >= play.at - 120 && t <= play.at + play.heard + 600)) continue;
-      times.add(play.at);
+      final first = _lowerBound(times, play.at - 120);
+      if (first < times.length && times[first] <= play.at + play.heard + 600) continue;
+      times.insert(_lowerBound(times, play.at), play.at);
       rows.add((play.at, play.song, play.heard < 1 ? 1 : play.heard));
       added++;
     }
@@ -591,6 +597,20 @@ class PlayHistory extends ChangeNotifier {
     });
     await done;
     return added;
+  }
+
+  /// The first index of sorted [list] whose value is at least [value] (its length when there is none).
+  static int _lowerBound(List<int> list, int value) {
+    var lo = 0, hi = list.length;
+    while (lo < hi) {
+      final mid = (lo + hi) >> 1;
+      if (list[mid] < value) {
+        lo = mid + 1;
+      } else {
+        hi = mid;
+      }
+    }
+    return lo;
   }
 
   /// How many plays a history file's [text] holds.

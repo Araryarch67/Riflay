@@ -7,6 +7,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../app_version.dart';
+import '../platform/background.dart';
 import 'play_history.dart';
 
 /// A backup the user can keep and bring back: settings, playlists, the listening history and their own lyrics,
@@ -77,22 +78,28 @@ abstract final class Backup {
       };
       if (typed != null) saved[key] = typed;
     }
-    final lyrics = <String, String>{};
-    final dir = await _lyricsDir();
-    if (dir != null && dir.existsSync()) {
-      for (final f in dir.listSync().whereType<File>()) {
-        if (!f.path.endsWith('.lrc') || f.lengthSync() > _maxLyrics) continue;
-        lyrics[p.basename(f.path)] = await f.readAsString();
-      }
-    }
-    return jsonEncode({
+    final path = (await _lyricsDir())?.path;
+    final lyrics = path == null ? const <String, String>{} : await inBackground(() => _readLyrics(path));
+    final data = {
       'riflay_backup': format,
       'version': appVersion,
       'created': DateTime.now().toUtc().toIso8601String(),
       'prefs': saved,
       'history': await (history ?? PlayHistory.instance).exportText(),
       'lyrics': lyrics,
-    });
+    };
+    // The history alone can be a few megabytes of text.
+    return inBackground(() => jsonEncode(data));
+  }
+
+  /// The user's own lyrics files in [path], by name (run in the background).
+  static Map<String, String> _readLyrics(String path) {
+    final dir = Directory(path);
+    if (!dir.existsSync()) return const {};
+    return {
+      for (final f in dir.listSync().whereType<File>())
+        if (f.path.endsWith('.lrc') && f.lengthSync() <= _maxLyrics) p.basename(f.path): f.readAsStringSync(),
+    };
   }
 
   /// What a backup holds, to show before it is restored. Throws [FormatException] when [text] isn't a backup.

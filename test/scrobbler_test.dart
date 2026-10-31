@@ -257,6 +257,23 @@ void main() {
       expect(history.length, 2);
     });
 
+    test('the duplicate window holds at its edges, among many plays of one song', () async {
+      final history = PlayHistory();
+      final a = SongInfo.of(song('a'));
+      // Kept plays at 10,000, 20,000 … 1,000,000 (each dated when it ended).
+      await history.importPlays([for (var t = 10000; t <= 1000000; t += 10000) ImportedPlay(a, t, 1)]);
+      expect(history.length, 100);
+      final added = await history.importPlays([
+        ImportedPlay(a, 500120, 60), // 120 s after a kept play: the same one
+        ImportedPlay(a, 500121, 60), // 121 s after: a new play
+        ImportedPlay(a, 509340, 60), // ends 600 s before the next kept play: the same one
+        ImportedPlay(a, 1, 60), // before everything
+        ImportedPlay(a, 1, 60), // the same listen twice in one import
+      ]);
+      expect(added, 2);
+      expect(history.atSec(0), 1, reason: 'still oldest first');
+    });
+
     test('Last.fm pages through recent tracks and leaves out the one playing now', () async {
       final fm =
           LastFm(
