@@ -65,7 +65,7 @@ class _LyricsLoaderState extends State<_LyricsLoader> {
         );
       }
       final lyrics = snap.data;
-      if (lyrics == null) return const Center(child: CircularProgressIndicator(color: Colors.white));
+      if (lyrics == null) return const _LyricsSkeleton();
       if (lyrics.instrumental) return const _Message('This song is instrumental. Enjoy the music.');
       if (lyrics.isEmpty) {
         return _Message(
@@ -84,6 +84,81 @@ class _LyricsLoaderState extends State<_LyricsLoader> {
       );
     },
   );
+}
+
+/// While lyrics load: grey bars where the lines will be, the size and alignment of the real ones, softly pulsing
+/// (still when animations are off).
+class _LyricsSkeleton extends StatefulWidget {
+  const _LyricsSkeleton();
+
+  /// How wide each bar is, as a share of the width: uneven, like lines of a song.
+  static const widths = [0.72, 0.5, 0.86, 0.38, 0.64, 0.8, 0.46, 0.7, 0.58, 0.84, 0.42, 0.66];
+
+  @override
+  State<_LyricsSkeleton> createState() => _LyricsSkeletonState();
+}
+
+class _LyricsSkeletonState extends State<_LyricsSkeleton> with SingleTickerProviderStateMixin {
+  late final _pulse = AnimationController(vsync: this, duration: const Duration(milliseconds: 900));
+
+  @override
+  void initState() {
+    super.initState();
+    if (LayoutPrefs.moves) _pulse.repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _pulse.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final size = _lineStyle(context)?.fontSize ?? 24;
+    final pad = _isCompact(context) ? 24.0 : 40.0;
+    // A real line: its text (1.25 × the size) and 8 px above and below.
+    final bar = size * 0.72;
+    final gap = size * 1.25 - bar + 16;
+    return Semantics(
+      label: 'Loading lyrics',
+      child: ExcludeSemantics(
+        child: LayoutBuilder(
+          builder: (context, box) {
+            final width = box.maxWidth - pad * 2;
+            final count = box.hasBoundedHeight ? (box.maxHeight / (bar + gap)).ceil().clamp(1, 40) : 8;
+            // Never scrolled: only there so the last bar can run past the bottom (where the fade hides it).
+            return SingleChildScrollView(
+              physics: const NeverScrollableScrollPhysics(),
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(pad, 24 + 8, pad, 0),
+                child: AnimatedBuilder(
+                  animation: _pulse,
+                  builder: (context, _) => Column(
+                    crossAxisAlignment: _centred ? CrossAxisAlignment.center : CrossAxisAlignment.start,
+                    children: [
+                      for (var i = 0; i < count; i++)
+                        Padding(
+                          padding: EdgeInsets.only(bottom: gap),
+                          child: Container(
+                            width: width * _LyricsSkeleton.widths[i % _LyricsSkeleton.widths.length],
+                            height: bar,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.10 + 0.08 * _pulse.value),
+                              borderRadius: BorderRadius.circular(bar / 3),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
 }
 
 class _Message extends StatelessWidget {

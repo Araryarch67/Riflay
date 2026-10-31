@@ -313,6 +313,29 @@ void main() {
       expect(await tester.runAsync(() => UserLyrics.read(track)), isNull);
     });
   });
+  testWidgets('while lyrics load, grey lines stand in for them instead of a spinner', (tester) async {
+    final dir = Directory.systemTemp.createTempSync('lyrics_skeleton');
+    UserLyrics.dirOverride = dir;
+    addTearDown(() {
+      UserLyrics.dirOverride = null;
+      dir.deleteSync(recursive: true);
+    });
+    final track = Track.youtube(videoId: 'skeleton001', title: 'Song', artist: 'Artist');
+    LyricsService.forget(track);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SizedBox(height: 600, child: LyricsView(track: track)),
+        ),
+      ),
+    );
+    expect(find.bySemanticsLabel('Loading lyrics'), findsOneWidget);
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+    // Let the lookup give up, so nothing is left running.
+    await tester.pumpWidget(const SizedBox());
+    LyricsService.forget(track);
+  });
+
   testWidgets('lyrics timed for another version say so', (tester) async {
     await pump(
       tester,
