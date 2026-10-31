@@ -408,8 +408,12 @@ Compare medians of several complete runs; debug builds are meaningless here.
    `test/about_test.dart` fails when they differ), and commit them as
    `chore: <version>`.
 2. Tag and push: `git tag v<version> && git push origin main v<version>`.
-   `.github/workflows/release.yml` builds Android, Windows, Linux, macOS and
-   iOS and publishes the GitHub release with generated notes.
+   `.github/workflows/release.yml` builds Android, Windows and Linux and
+   publishes the GitHub release with a changelog (its notes are GitHub's
+   generated ones, the commits since the last release) and a download guide.
+   macOS and iOS are paused there for now, since their macOS runners took about
+   40 minutes and held every release back; they still build by hand from the
+   Actions tab (`platforms: macos, ios`).
 
 ## Conventions
 

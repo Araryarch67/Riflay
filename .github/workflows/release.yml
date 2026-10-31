@@ -1,8 +1,12 @@
-# Builds Riflay for Android, Windows, Linux, macOS and iOS and attaches the
-# files to a GitHub release. Runs when a version tag is pushed (`git tag v1.2.0
+# Builds Riflay for Android, Windows and Linux and attaches the files to a
+# GitHub release. Runs when a version tag is pushed (`git tag v1.2.0
 # && git push origin v1.2.0`), or by hand from the Actions tab (then the files
 # are only kept as workflow artifacts, no release is made; `platforms` picks
 # which builds run).
+#
+# macOS and iOS are paused for tag pushes for now: their macOS runners take
+# about 40 minutes and held every release back. They still run by hand from the
+# Actions tab (platforms: macos, ios).
 #
 # Android signing: add these repository secrets so every release is signed with
 # the same key (otherwise phones refuse to update over an earlier version):
@@ -161,7 +165,8 @@ jobs:
           path: dist/*
 
   macos:
-    if: github.event_name != 'workflow_dispatch' || inputs.platforms == 'all' || contains(inputs.platforms, 'macos')
+    # Paused for tag pushes: about 40 minutes of macOS runners. Run it by hand from the Actions tab.
+    if: github.event_name == 'workflow_dispatch' && (inputs.platforms == 'all' || contains(inputs.platforms, 'macos'))
     runs-on: macos-26
     steps:
       - uses: actions/checkout@v7
@@ -223,7 +228,8 @@ jobs:
           path: dist/*
 
   ios:
-    if: github.event_name != 'workflow_dispatch' || inputs.platforms == 'all' || contains(inputs.platforms, 'ios')
+    # Paused for tag pushes: about 40 minutes of macOS runners. Run it by hand from the Actions tab.
+    if: github.event_name == 'workflow_dispatch' && (inputs.platforms == 'all' || contains(inputs.platforms, 'ios'))
     runs-on: macos-26
     steps:
       - uses: actions/checkout@v7
@@ -269,38 +275,78 @@ jobs:
 
   release:
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: [android, windows, linux, macos, ios]
+    needs: [android, windows, linux] # not macos, ios: paused for tags (see above)
     runs-on: ubuntu-24.04
     permissions:
       contents: write
     steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # the commits since the last release, for the changelog
       - uses: actions/download-artifact@v8
         with:
           path: dist
           merge-multiple: true
+      - name: Changelog and download guide
+        # What changed since the last published release, then which file to take. GitHub's own
+        # generated notes only list pull requests, and most of this work is committed straight to main.
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          prev=$(gh api "repos/$REPO/releases/latest" --jq .tag_name 2>/dev/null || true)
+          if [ -z "$prev" ] || [ "$prev" = "$TAG" ]; then
+            prev=$(git describe --tags --abbrev=0 "$TAG^" 2>/dev/null || true)
+          fi
+          if [ -n "$prev" ]; then range="$prev..$TAG"; else range="$TAG"; fi
+          PREV="$prev" RANGE="$range" python3 - > changelog.md <<'PY'
+          import os, re, subprocess
+
+          subjects = subprocess.run(
+              ['git', 'log', '--no-merges', '--pretty=%s', os.environ['RANGE'], '--'],
+              capture_output=True, text=True, check=True).stdout.splitlines()
+          kinds = {'feat': 'New', 'fix': 'Fixed', 'perf': 'Faster'}
+          buckets = {'New': [], 'Fixed': [], 'Faster': [], 'Other': []}
+          for subject in subjects:
+              m = re.match(r'^(\w+)(?:\(([^)]*)\))?!?:\s*(.+)$', subject)
+              if not m:
+                  buckets['Other'].append(subject)
+                  continue
+              kind, scope, text = m.groups()
+              if kind in {'chore', 'ci', 'docs', 'test', 'style', 'build'} or scope in {'ci', 'test'}:
+                  continue
+              buckets[kinds.get(kind, 'Other')].append(text + (f' ({scope})' if scope else ''))
+          lines = []
+          for name, items in buckets.items():
+              if items:
+                  lines += [f'### {name}'] + [f'- {item}' for item in items] + ['']
+          prev = os.environ['PREV']
+          if prev:
+              lines.append(f"**Full Changelog**: https://github.com/{os.environ['REPO']}/compare/{prev}...{os.environ['TAG']}")
+          print('\n'.join(lines))
+          PY
+          cat > guide.md <<'GUIDE'
+          **Coming from OpenMusic?** Riflay is its new name. On a computer, Riflay brings over your settings,
+          library, playlists, YouTube Music sign-in and downloads the first time it starts (the Windows installer
+          and the `.deb` also remove OpenMusic). On Android it installs as a new app: remove OpenMusic yourself,
+          and sign in again.
+
+          ### Which file?
+
+          **Android** (7.0 and later, up to Android 16): take **Riflay-android.apk**; it runs on every phone.
+          The smaller ones are for one kind of processor only: `arm64` fits almost every phone from the last
+          years; `arm32` only old 32-bit phones (newer phones refuse it as "not compatible"); `x86_64` is for
+          emulators and Chromebooks.
+
+          **Windows**: `Riflay-windows-x64-setup.exe` installs it; the `.zip` runs without installing.
+          **Linux**: the `.AppImage` runs anywhere; `.deb` for Debian / Ubuntu; `.tar.gz` is the plain bundle.
+
+          **macOS and iOS** builds are paused for now: their CI builds took too long to hold every release
+          back. They will come back in a later version.
+          GUIDE
+          { cat changelog.md; echo; echo '---'; echo; cat guide.md; } > release.md
       - uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3
         with:
           files: dist/*
-          generate_release_notes: true
-          body: |
-            **Coming from OpenMusic?** Riflay is its new name. On a computer, Riflay brings over your settings,
-            library, playlists, YouTube Music sign-in and downloads the first time it starts (the Windows installer
-            and the `.deb` also remove OpenMusic). On Android and iOS it installs as a new app: remove OpenMusic
-            yourself, and sign in again.
-
-            ### Which file?
-
-            **Android** (7.0 and later, up to Android 16): take **Riflay-android.apk**; it runs on every phone.
-            The smaller ones are for one kind of processor only: `arm64` fits almost every phone from the last
-            years; `arm32` only old 32-bit phones (newer phones refuse it as "not compatible"); `x86_64` is for
-            emulators and Chromebooks.
-
-            **Windows**: `Riflay-windows-x64-setup.exe` installs it; the `.zip` runs without installing.
-            **Linux**: the `.AppImage` runs anywhere; `.deb` for Debian / Ubuntu; `.tar.gz` is the plain bundle.
-
-            **macOS** (12 Monterey and later, Apple Silicon and Intel): open `Riflay-macos.dmg` and drag Riflay
-            to Applications. It isn't signed by Apple, so the first time macOS refuses to open it: go to System
-            Settings › Privacy & Security, scroll down and choose **Open Anyway**.
-
-            **iOS** (15 and later): `Riflay-ios-unsigned.ipa` isn't signed, so an iPhone won't install it as it is.
-            Sideload it with AltStore or Sideloadly, which sign it with your own Apple ID.
+          body_path: release.md
