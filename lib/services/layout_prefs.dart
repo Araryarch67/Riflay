@@ -92,6 +92,24 @@ enum LyricsAlign {
   final String label;
 }
 
+/// How the phone's tab bar looks. [docked] ones sit on the bottom edge; the others hover a little above it.
+enum TabBarStyle {
+  classic('Classic', docked: true),
+  material('Material', docked: true),
+  underline('Underline', docked: true),
+  minimal('Minimal', docked: true),
+  text('Text only', docked: true),
+  floating('Floating'),
+  capsule('Capsule'),
+  dock('Dock'),
+  centre('Centre button'),
+  glass('Liquid glass');
+
+  const TabBarStyle(this.label, {this.docked = false});
+  final String label;
+  final bool docked;
+}
+
 /// The sections of Home, in today's order.
 enum HomeSection {
   quickPicks('Quick picks'),
@@ -128,6 +146,9 @@ class LayoutPrefs extends ChangeNotifier {
   ProgressBarStyle progressBar = ProgressBarStyle.thin;
   PlayButtonShape playButton = PlayButtonShape.circle;
   PhoneCoverSize phoneCover = PhoneCoverSize.normal;
+
+  /// The phone's tab bar: docked under the mini player like most music apps, by default.
+  TabBarStyle tabBar = TabBarStyle.classic;
   bool showQualityBadge = true;
 
   LyricsSize lyricsSize = LyricsSize.normal;
@@ -186,6 +207,7 @@ class LayoutPrefs extends ChangeNotifier {
     progressBar = pick(ProgressBarStyle.values, 'progressBar', d.progressBar);
     playButton = pick(PlayButtonShape.values, 'playButton', d.playButton);
     phoneCover = pick(PhoneCoverSize.values, 'phoneCover', d.phoneCover);
+    tabBar = pick(TabBarStyle.values, 'tabBar', d.tabBar);
     showQualityBadge = j['showQualityBadge'] as bool? ?? d.showQualityBadge;
     lyricsSize = pick(LyricsSize.values, 'lyricsSize', d.lyricsSize);
     lyricsAlign = pick(LyricsAlign.values, 'lyricsAlign', d.lyricsAlign);
@@ -208,6 +230,7 @@ class LayoutPrefs extends ChangeNotifier {
     'progressBar': progressBar.name,
     'playButton': playButton.name,
     'phoneCover': phoneCover.name,
+    'tabBar': tabBar.name,
     'showQualityBadge': showQualityBadge,
     'lyricsSize': lyricsSize.name,
     'lyricsAlign': lyricsAlign.name,
@@ -236,6 +259,7 @@ class LayoutPrefs extends ChangeNotifier {
   Future<void> setProgressBar(ProgressBarStyle v) => _set(() => progressBar = v);
   Future<void> setPlayButton(PlayButtonShape v) => _set(() => playButton = v);
   Future<void> setPhoneCover(PhoneCoverSize v) => _set(() => phoneCover = v);
+  Future<void> setTabBar(TabBarStyle v) => _set(() => tabBar = v);
   Future<void> setShowQualityBadge(bool v) => _set(() => showQualityBadge = v);
   Future<void> setLyricsSize(LyricsSize v) => _set(() => lyricsSize = v);
   Future<void> setLyricsAlign(LyricsAlign v) => _set(() => lyricsAlign = v);

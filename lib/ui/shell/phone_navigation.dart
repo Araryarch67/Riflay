@@ -134,9 +134,22 @@ class PhoneSideTabs extends StatelessWidget {
   }
 }
 
-/// The phone's bottom area: the mini player docked above a floating tab bar. Home is the raised round button in
-/// the middle, sitting in a notch cut into the bar; the other tabs are icons, and a dot marks the selected one.
-/// The bar is liquid glass: the page blurs and brightens behind it, under a light rim and sheen.
+/// The phone's bottom area: the mini player above the tab bar, in the style picked in Settings › Look & feel ›
+/// Layout ([TabBarStyle]). Docked styles run edge to edge on the app's background, down under the home indicator:
+///
+/// - Classic: an icon and a label per tab.
+/// - Material: the same, the selected icon in a soft accent pill (as Android's own bar).
+/// - Underline: labels with a short accent line over the selected tab.
+/// - Minimal: icons only, a dot under the selected one.
+/// - Text only: just the labels.
+///
+/// The others hover above the edge:
+///
+/// - Floating: a rounded bar of icons and labels, the selected icon in an accent pill.
+/// - Capsule: icons; the selected tab widens into an accent capsule with its name.
+/// - Dock: a small bar in the middle, icons only, the selected one in an accent circle.
+/// - Centre button: Home raised in the middle, in a notch cut into a plain bar.
+/// - Liquid glass: the same shape, the page blurring behind it.
 class PhoneBottomBar extends StatelessWidget {
   const PhoneBottomBar({
     super.key,
@@ -153,6 +166,419 @@ class PhoneBottomBar extends StatelessWidget {
   /// Off when the tabs sit in [PhoneSideTabs] instead.
   final bool showTabs;
 
+  @override
+  Widget build(BuildContext context) => ListenableBuilder(
+    listenable: LayoutPrefs.instance,
+    builder: (context, _) {
+      final style = LayoutPrefs.instance.tabBar;
+      if (showTabs && style.docked) {
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SafeArea(top: false, bottom: false, child: mini),
+            _DockedBar(style: style, tab: tab, onSelect: onSelect),
+          ],
+        );
+      }
+      return SafeArea(
+        top: false,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            mini,
+            if (showTabs)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
+                child: switch (style) {
+                  TabBarStyle.glass => _NotchBar(tab: tab, onSelect: onSelect, glass: true),
+                  TabBarStyle.centre => _NotchBar(tab: tab, onSelect: onSelect, glass: false),
+                  TabBarStyle.dock => Center(
+                    child: _DockBar(tab: tab, onSelect: onSelect),
+                  ),
+                  _ => _FloatingBar(style: style, tab: tab, onSelect: onSelect),
+                },
+              ),
+          ],
+        ),
+      );
+    },
+  );
+}
+
+_TabInfo _info(PhoneTab t) => _tabItems.firstWhere((i) => i.tab == t);
+
+/// Every tab this build shows, in order.
+Iterable<_TabInfo> get _shownTabs => _tabItems.where((i) => i.tab.available);
+
+/// One row of tabs drawn by [item], each as wide as the others, or with [wideSelected] the selected one twice as wide.
+Widget _tabRow(
+  PhoneTab tab,
+  ValueChanged<PhoneTab> onSelect,
+  Widget Function(_TabInfo info, bool selected) item, {
+  bool wideSelected = false,
+}) => Material(
+  type: MaterialType.transparency,
+  child: Row(
+    children: [
+      for (final i in _shownTabs)
+        Expanded(
+          flex: wideSelected && tab == i.tab ? 2 : 1,
+          child: _TabButton(
+            info: i,
+            selected: tab == i.tab,
+            onTap: () => onSelect(i.tab),
+            child: item(i, tab == i.tab),
+          ),
+        ),
+    ],
+  ),
+);
+
+/// The docked styles: flat, edge to edge, a hairline on top.
+class _DockedBar extends StatelessWidget {
+  const _DockedBar({required this.style, required this.tab, required this.onSelect});
+
+  final TabBarStyle style;
+  final PhoneTab tab;
+  final ValueChanged<PhoneTab> onSelect;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
+    final inset = MediaQuery.paddingOf(context);
+    final height = switch (style) {
+      TabBarStyle.material => 66.0,
+      TabBarStyle.minimal || TabBarStyle.text => 52.0,
+      _ => 58.0,
+    };
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: colors.solidBackground,
+        border: Border(top: BorderSide(color: colors.divider)),
+      ),
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(inset.left, 0, inset.right, inset.bottom),
+        child: SizedBox(
+          height: height,
+          child: _tabRow(tab, onSelect, (i, selected) {
+            return switch (style) {
+              TabBarStyle.material => _IconOverLabel(info: i, selected: selected, pill: true),
+              TabBarStyle.underline => _Underlined(info: i, selected: selected),
+              TabBarStyle.minimal => _IconAndDot(info: i, selected: selected),
+              TabBarStyle.text => Center(
+                child: _TabLabel(info: i, selected: selected, accent: true),
+              ),
+              _ => _IconOverLabel(info: i, selected: selected),
+            };
+          }),
+        ),
+      ),
+    );
+  }
+}
+
+/// Floating and Capsule: a rounded bar on the raised surface, a soft shadow under it.
+class _FloatingBar extends StatelessWidget {
+  const _FloatingBar({required this.style, required this.tab, required this.onSelect});
+
+  final TabBarStyle style;
+  final PhoneTab tab;
+  final ValueChanged<PhoneTab> onSelect;
+
+  @override
+  Widget build(BuildContext context) {
+    final capsule = style == TabBarStyle.capsule;
+    return _RaisedSurface(
+      radius: LayoutPrefs.corner(capsule ? 32 : 22),
+      child: SizedBox(
+        height: capsule ? 60 : 64,
+        child: _tabRow(
+          tab,
+          onSelect,
+          (i, selected) =>
+              capsule ? _Capsule(info: i, selected: selected) : _IconOverLabel(info: i, selected: selected, pill: true),
+          wideSelected: capsule,
+        ),
+      ),
+    );
+  }
+}
+
+/// Dock: only as wide as its icons, in the middle.
+class _DockBar extends StatelessWidget {
+  const _DockBar({required this.tab, required this.onSelect});
+
+  final PhoneTab tab;
+  final ValueChanged<PhoneTab> onSelect;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
+    return _RaisedSurface(
+      radius: LayoutPrefs.corner(30),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+        child: Material(
+          type: MaterialType.transparency,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (final i in _shownTabs)
+                SizedBox.square(
+                  dimension: 52,
+                  child: _TabButton(
+                    info: i,
+                    selected: tab == i.tab,
+                    onTap: () => onSelect(i.tab),
+                    child: Center(
+                      child: AnimatedContainer(
+                        duration: LayoutPrefs.dur(const Duration(milliseconds: 200)),
+                        curve: Curves.easeOut,
+                        width: 44,
+                        height: 44,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: tab == i.tab ? colors.accent : colors.accent.withValues(alpha: 0),
+                        ),
+                        child: _TabIcon(
+                          info: i,
+                          selected: tab == i.tab,
+                          color: tab == i.tab ? colors.onAccent : colors.textSecondary,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The plain raised surface the hovering bars sit on: the theme's raised colour, a hairline edge, a soft shadow.
+class _RaisedSurface extends StatelessWidget {
+  const _RaisedSurface({required this.radius, required this.child});
+
+  final BorderRadius radius;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: colors.elevated,
+        borderRadius: radius,
+        border: Border.all(color: colors.border),
+        boxShadow: const [BoxShadow(color: Color(0x40000000), blurRadius: 16, offset: Offset(0, 4))],
+      ),
+      child: ClipRRect(borderRadius: radius, child: child),
+    );
+  }
+}
+
+/// What every tab shares: one button named by its label, for screen readers and as a tooltip.
+class _TabButton extends StatelessWidget {
+  const _TabButton({required this.info, required this.selected, required this.onTap, required this.child});
+
+  final _TabInfo info;
+  final bool selected;
+  final VoidCallback onTap;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    button: true,
+    selected: selected,
+    label: info.label,
+    excludeSemantics: true,
+    child: Tooltip(
+      message: info.label,
+      child: InkResponse(onTap: onTap, radius: 32, child: child),
+    ),
+  );
+}
+
+/// A tab's name under or beside its icon. Large text grows it only so far, as Material's own navigation bar does,
+/// and a name still too wide for its tab shrinks to fit, so the icons all stay one size.
+class _TabLabel extends StatelessWidget {
+  const _TabLabel({required this.info, required this.selected, this.accent = false, this.color});
+
+  final _TabInfo info;
+  final bool selected;
+
+  /// The selected name in the accent colour, for styles with no icon to carry it.
+  final bool accent;
+  final Color? color;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
+    final style = Theme.of(context).textTheme.labelSmall?.copyWith(
+      color: color ?? (selected ? (accent ? colors.accent : colors.textPrimary) : colors.textSecondary),
+      fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+      fontSize: accent ? 13 : null,
+    );
+    return MediaQuery.withClampedTextScaling(
+      maxScaleFactor: 1.3,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 2),
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(info.label, maxLines: 1, style: style),
+        ),
+      ),
+    );
+  }
+}
+
+/// The selected icon is filled and in the accent colour; the others are outlines in the secondary text colour.
+Widget _icon(BuildContext context, _TabInfo info, bool selected) {
+  final colors = AppColors.of(context);
+  return _TabIcon(info: info, selected: selected, color: selected ? colors.accent : colors.textSecondary);
+}
+
+/// Classic, Material and Floating: an icon over its name; with [pill], an accent wash behind the selected icon.
+class _IconOverLabel extends StatelessWidget {
+  const _IconOverLabel({required this.info, required this.selected, this.pill = false});
+
+  final _TabInfo info;
+  final bool selected;
+  final bool pill;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
+    final icon = _icon(context, info, selected);
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        if (pill)
+          AnimatedContainer(
+            duration: LayoutPrefs.dur(const Duration(milliseconds: 200)),
+            curve: Curves.easeOut,
+            width: 56,
+            height: 30,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: colors.accent.withValues(alpha: selected ? 0.16 : 0),
+              borderRadius: BorderRadius.circular(15),
+            ),
+            child: icon,
+          )
+        else
+          icon,
+        const SizedBox(height: 4),
+        _TabLabel(info: info, selected: selected),
+      ],
+    );
+  }
+}
+
+/// Underline: the name, with a short accent line along the bar's top edge over the selected tab.
+class _Underlined extends StatelessWidget {
+  const _Underlined({required this.info, required this.selected});
+
+  final _TabInfo info;
+  final bool selected;
+
+  @override
+  Widget build(BuildContext context) => Stack(
+    children: [
+      Align(
+        alignment: Alignment.topCenter,
+        child: AnimatedContainer(
+          duration: LayoutPrefs.dur(const Duration(milliseconds: 200)),
+          curve: Curves.easeOut,
+          width: selected ? 28 : 0,
+          height: 3,
+          decoration: BoxDecoration(
+            color: AppColors.of(context).accent,
+            borderRadius: const BorderRadius.vertical(bottom: Radius.circular(3)),
+          ),
+        ),
+      ),
+      Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _icon(context, info, selected),
+            const SizedBox(height: 4),
+            _TabLabel(info: info, selected: selected),
+          ],
+        ),
+      ),
+    ],
+  );
+}
+
+/// Minimal: the icon alone, a dot under the selected one.
+class _IconAndDot extends StatelessWidget {
+  const _IconAndDot({required this.info, required this.selected});
+
+  final _TabInfo info;
+  final bool selected;
+
+  @override
+  Widget build(BuildContext context) => Column(
+    mainAxisAlignment: MainAxisAlignment.center,
+    children: [
+      _icon(context, info, selected),
+      const SizedBox(height: 5),
+      _Dot(on: selected),
+    ],
+  );
+}
+
+/// Capsule: the icon alone, or for the selected tab the icon and its name on an accent capsule.
+class _Capsule extends StatelessWidget {
+  const _Capsule({required this.info, required this.selected});
+
+  final _TabInfo info;
+  final bool selected;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
+    return Center(
+      child: AnimatedContainer(
+        duration: LayoutPrefs.dur(const Duration(milliseconds: 220)),
+        curve: Curves.easeOut,
+        height: 40,
+        padding: EdgeInsets.symmetric(horizontal: selected ? 10 : 0),
+        decoration: BoxDecoration(
+          color: selected ? colors.accent : colors.accent.withValues(alpha: 0),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _TabIcon(info: info, selected: selected, color: selected ? colors.onAccent : colors.textSecondary),
+            if (selected) ...[
+              const SizedBox(width: 6),
+              Flexible(
+                child: _TabLabel(info: info, selected: true, color: colors.onAccent),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Centre button and Liquid glass: Home raised in a notch in the middle of the bar, the other tabs as icons with a
+/// dot under the selected one. With [glass] the page blurs behind the bar; without, it is the plain raised surface.
+class _NotchBar extends StatelessWidget {
+  const _NotchBar({required this.tab, required this.onSelect, required this.glass});
+
+  final PhoneTab tab;
+  final ValueChanged<PhoneTab> onSelect;
+  final bool glass;
+
   static const _height = 60.0;
 
   /// The Home button's size, and how far it stands above the bar.
@@ -167,9 +593,8 @@ class PhoneBottomBar extends StatelessWidget {
     final colors = AppColors.of(context);
     final radius = LayoutPrefs.corner(28);
     final shape = _NotchedBar(radius: radius, hub: _hub, rise: _rise);
-    _TabInfo info(PhoneTab t) => _tabItems.firstWhere((i) => i.tab == t);
     Widget cell(PhoneTab t) => Expanded(
-      child: _BarTab(info: info(t), selected: tab == t, onTap: () => onSelect(t)),
+      child: _BarTab(info: _info(t), selected: tab == t, onTap: () => onSelect(t)),
     );
     // Each side takes half of what the Home button leaves, however many tabs it has (the web build has no Downloads).
     Widget side(List<PhoneTab> tabs) => Expanded(
@@ -194,8 +619,10 @@ class PhoneBottomBar extends StatelessWidget {
         side(_right),
       ],
     );
-    final surface = _LiquidGlass(shape: shape, colors: colors, child: row);
-    final bar = SizedBox(
+    final surface = glass
+        ? _LiquidGlass(shape: shape, colors: colors, child: row)
+        : _SolidNotched(shape: shape, colors: colors, child: row);
+    return SizedBox(
       height: _height + _rise,
       child: Stack(
         alignment: Alignment.topCenter,
@@ -205,16 +632,6 @@ class PhoneBottomBar extends StatelessWidget {
             top: 0,
             child: _HomeHub(size: _hub, selected: tab == PhoneTab.home, onTap: () => onSelect(PhoneTab.home)),
           ),
-        ],
-      ),
-    );
-    return SafeArea(
-      top: false,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          mini,
-          if (showTabs) Padding(padding: const EdgeInsets.fromLTRB(12, 0, 12, 10), child: bar),
         ],
       ),
     );
@@ -363,6 +780,47 @@ class _LiquidGlass extends StatelessWidget {
       ),
     );
   }
+}
+
+/// The notched bar without the glass: the theme's raised colour under a hairline, and the same shadow.
+class _SolidNotched extends StatelessWidget {
+  const _SolidNotched({required this.shape, required this.colors, required this.child});
+
+  final _NotchedBar shape;
+  final AppColorsView colors;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => CustomPaint(
+    painter: _GlassShadow(shape),
+    foregroundPainter: _Outline(shape, colors.border),
+    child: ClipPath(
+      clipper: shape,
+      child: ColoredBox(
+        color: colors.elevated,
+        child: Material(type: MaterialType.transparency, child: child),
+      ),
+    ),
+  );
+}
+
+class _Outline extends CustomPainter {
+  const _Outline(this.shape, this.color);
+
+  final _NotchedBar shape;
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) => canvas.drawPath(
+    shape.getClip(size),
+    Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1
+      ..color = color,
+  );
+
+  @override
+  bool shouldRepaint(_Outline old) => old.color != color || old.shape.shouldReclip(shape);
 }
 
 class _GlassShadow extends CustomPainter {

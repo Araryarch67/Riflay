@@ -94,7 +94,7 @@ Features marked (Beta) are still being tested; **Settings › Beta features** sw
 |---|---|
 | **Themes** | Catppuccin, Nord, Gruvbox, Dracula or your own colors. Any font and accent. Light, dark or match your system, for every theme. High contrast |
 | **Dynamic theme** | Follows the cover of what's playing, local or YouTube. Cover-art colors in the player or the whole app, with adjustable strength |
-| **Layout options** | Corners, spacing, cover size, Home sections, player and lyrics looks, animations |
+| **Layout options** | Corners, spacing, cover size, the phone's tab bar (ten looks, from a classic docked bar to Dock, Capsule and Liquid glass), Home sections, player and lyrics looks, animations |
 | **Adaptive layouts** | Phone, tablet and desktop. Mini and full-screen player |
 
 ### Everyday

@@ -43,6 +43,19 @@ class LayoutSettings extends StatelessWidget {
                 ),
               ),
               SettingTile(
+                icon: Icons.call_to_action_outlined,
+                title: const Text('Tab bar on phones'),
+                subtitle: Text(
+                  'Classic sits at the bottom edge; Floating and Liquid glass hover above it',
+                  style: muted,
+                ),
+                control: OptionPicker<TabBarStyle>(
+                  value: p.tabBar,
+                  onChanged: p.setTabBar,
+                  options: [for (final v in TabBarStyle.values) (v, v.label)],
+                ),
+              ),
+              SettingTile(
                 icon: Icons.photo_size_select_large_rounded,
                 title: const Text('Cover size in grids'),
                 subtitle: Text('The albums and playlists on Home and in "Show all"', style: muted),

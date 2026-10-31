@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:riflay/services/layout_prefs.dart';
 import 'package:riflay/main.dart';
 import 'package:riflay/models/track.dart';
 import 'package:riflay/services/player_controller.dart';
@@ -75,17 +76,26 @@ void main() {
     expect(find.text('Look & feel'), findsWidgets);
   });
 
-  testWidgets('phone: the tab bar floats clear of the edges and survives large text', (tester) async {
-    await _app(tester, const Size(360, 640));
-    final label = tester.getRect(find.byTooltip('Settings').last);
-    expect(label.right, lessThanOrEqualTo(352), reason: 'inside the bar\'s 8 px margin');
-    expect(label.bottom, lessThanOrEqualTo(632), reason: 'above the bottom margin');
-    expect(tester.takeException(), isNull);
-    tester.platformDispatcher.textScaleFactorTestValue = 2.0;
-    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
-    await tester.pump(const Duration(milliseconds: 400));
-    expect(tester.takeException(), isNull);
-  });
+  for (final style in TabBarStyle.values) {
+    testWidgets('phone: the ${style.label} tab bar fits the screen and survives large text', (tester) async {
+      LayoutPrefs.instance.tabBar = style;
+      addTearDown(() => LayoutPrefs.instance.tabBar = TabBarStyle.classic);
+      await _app(tester, const Size(360, 640));
+      final label = tester.getRect(find.byTooltip('Settings').last);
+      if (style.docked) {
+        expect(label.right, lessThanOrEqualTo(360));
+        expect(label.bottom, lessThanOrEqualTo(640));
+      } else {
+        expect(label.right, lessThanOrEqualTo(352), reason: 'inside the bar\'s 8 px margin');
+        expect(label.bottom, lessThanOrEqualTo(632), reason: 'above the bottom margin');
+      }
+      expect(tester.takeException(), isNull);
+      tester.platformDispatcher.textScaleFactorTestValue = 2.0;
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(tester.takeException(), isNull);
+    });
+  }
 
   testWidgets('play state and other controller changes leave the side panel and the bar alone', (tester) async {
     final c = await _panels(
