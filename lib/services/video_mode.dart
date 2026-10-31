@@ -15,7 +15,7 @@ import 'video_download.dart';
 import 'youtube_stream.dart';
 import 'ytmusic_web.dart';
 
-/// Video mode (Beta): a YouTube song's music video on the Now Playing views,
+/// Video mode: a YouTube song's music video on the Now Playing views,
 /// YouTube Music's Song / Video switch.
 ///
 /// The song keeps playing through the app's own player (equalizer, leveling,

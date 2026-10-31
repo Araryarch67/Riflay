@@ -24,7 +24,7 @@ String? debugSystem;
 /// "Linux 6.12.1-arch1-1", "Windows 11 Home 10.0 (Build 26100)", "Android 15": what the platform says, without
 /// Linux's build date and flags.
 String _system() {
-  final v = Host.operatingSystemVersion.split(' #').first.trim();
+  final v = systemVersionLabel(Host.operatingSystem, Host.operatingSystemVersion).split(' #').first.trim();
   final name = switch (Host.operatingSystem) {
     'linux' => 'Linux',
     'windows' => 'Windows',
@@ -36,6 +36,18 @@ String _system() {
   };
   if (v.isEmpty) return name;
   return v.startsWith(name) || v.startsWith('"') ? v : '$name $v';
+}
+
+/// Windows 11 retains NT 10.0; client builds from 22000 identify Windows 11.
+@visibleForTesting
+String systemVersionLabel(String os, String version) {
+  if (os != 'windows' || version.toLowerCase().contains('server')) return version;
+  final match = RegExp(r'(?:[Bb]uild[ .:]*(\d+)|10\.0\.(\d+))').firstMatch(version);
+  final build = int.tryParse(match?.group(1) ?? match?.group(2) ?? '');
+  if (build == null || build < 22000) return version;
+  if (version.contains('Windows 10')) return version.replaceFirst('Windows 10', 'Windows 11');
+  if (version.contains('Windows 11')) return version;
+  return 'Windows 11 ($version)';
 }
 
 /// Settings › About: the version, where the code and releases are, the licence, and the details for a bug report.

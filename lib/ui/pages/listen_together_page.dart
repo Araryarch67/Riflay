@@ -218,10 +218,6 @@ class _ListenTogetherPageState extends State<ListenTogetherPage> {
                                 style: text.headlineMedium?.copyWith(fontWeight: FontWeight.w800),
                               ),
                             ),
-                            if (session.role == ListenRole.host && session.mode == ListenMode.internet) ...[
-                              const SizedBox(width: 10),
-                              const BetaBadge(),
-                            ],
                           ],
                         ),
                         const SizedBox(height: 16),
@@ -280,10 +276,7 @@ class _ListenTogetherPageState extends State<ListenTogetherPage> {
               ButtonSegment(value: ListenMode.wifi, label: Text('Same Wi-Fi')),
               ButtonSegment(
                 value: ListenMode.internet,
-                label: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [Text('Anywhere'), SizedBox(width: 8), BetaBadge()],
-                ),
+                label: Row(mainAxisSize: MainAxisSize.min, children: [Text('Anywhere')]),
               ),
             ],
             selected: {_mode},
@@ -428,6 +421,13 @@ class _ListenTogetherPageState extends State<ListenTogetherPage> {
           onChanged: (v) => s.setSuggestionsAllowed(v),
         ),
         const SizedBox(height: 16),
+        SwitchListTile(
+          contentPadding: EdgeInsets.zero,
+          title: const Text('Let friends seek within songs'),
+          subtitle: const Text('Changes playback position for everyone'),
+          value: s.seekingAllowed,
+          onChanged: s.setSeekingAllowed,
+        ),
         Text('You pick the songs. Play any YouTube song and everyone follows.', style: muted),
         const SizedBox(height: 24),
         _leaveButton(s, 'End session'),
@@ -455,7 +455,6 @@ class _ListenTogetherPageState extends State<ListenTogetherPage> {
                 style: text.titleLarge?.copyWith(fontWeight: FontWeight.w800),
               ),
             ),
-            if (s.mode == ListenMode.internet) ...[const SizedBox(width: 8), const BetaBadge()],
           ],
         ),
         const SizedBox(height: 16),
@@ -477,6 +476,11 @@ class _ListenTogetherPageState extends State<ListenTogetherPage> {
           for (final song in s.upNext) _SongTile(song: song, size: 44),
         ],
         const SizedBox(height: 24),
+        Text(
+          s.seekingAllowed ? 'Use the player timeline to seek for everyone.' : 'Only the host can seek within songs.',
+          style: muted,
+        ),
+        const SizedBox(height: 16),
         _leaveButton(s, 'Leave'),
       ],
     );
@@ -538,26 +542,6 @@ class _SongTile extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-/// A quiet outlined "Beta" pill.
-class BetaBadge extends StatelessWidget {
-  const BetaBadge({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 1),
-      decoration: BoxDecoration(
-        border: Border.all(color: AppColors.textMuted),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Text(
-        'Beta',
-        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.textSecondary, height: 1.3),
       ),
     );
   }

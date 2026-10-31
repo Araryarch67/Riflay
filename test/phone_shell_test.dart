@@ -1,15 +1,31 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:riflay/services/layout_prefs.dart';
 import 'package:riflay/main.dart';
 import 'package:riflay/models/track.dart';
 import 'package:riflay/services/player_controller.dart';
 import 'package:riflay/ui/player_panels.dart';
+import 'package:riflay/services/lyrics.dart';
+import 'package:riflay/ui/pages/lyrics_page.dart';
+import 'package:riflay/ui/widgets/controls.dart';
 import 'package:riflay/ui/shell_scope.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+class _ControlPlayer extends PlayerController {
+  final track = Track(
+    id: 'control-test',
+    uri: Uri.parse('file:///control-test.mp3'),
+    title: 'Control test',
+    artist: 'Artist',
+  );
+  @override
+  Track get currentTrack => track;
+}
 
 Future<PlayerController> _app(WidgetTester tester, Size size) async {
   SharedPreferences.setMockInitialValues({'library.v1': jsonEncode(<Object>[])});
@@ -30,9 +46,9 @@ Future<PlayerController> _app(WidgetTester tester, Size size) async {
 }
 
 /// The two panels on their own, in the scope the shell gives them.
-Future<PlayerController> _panels(WidgetTester tester, Widget panel) async {
+Future<PlayerController> _panels(WidgetTester tester, Widget panel, {PlayerController? controller}) async {
   SharedPreferences.setMockInitialValues({'library.v1': jsonEncode(<Object>[])});
-  final c = PlayerController();
+  final c = controller ?? PlayerController();
   await tester.runAsync(c.load);
   await tester.pumpWidget(
     PlayerScope(
@@ -76,6 +92,68 @@ void main() {
     expect(find.text('Look & feel'), findsWidgets);
   });
 
+  testWidgets('lyrics and now playing keep shuffle and repeat at the same horizontal positions', (tester) async {
+    final player = _ControlPlayer();
+    final dir = Directory.systemTemp.createTempSync('riflay-control-test');
+    UserLyrics.dirOverride = dir;
+    addTearDown(() {
+      UserLyrics.dirOverride = null;
+      dir.deleteSync(recursive: true);
+    });
+    await tester.runAsync(() => UserLyrics.save(player.track, '[00:00.00]Lyrics'));
+    tester.view.physicalSize = const Size(400, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await _panels(tester, const NowPlayingPage(), controller: player);
+    await tester.pump();
+    final before = [
+      for (final element in find.byType(ModeButton).evaluate()) tester.getRect(find.byWidget(element.widget)),
+    ];
+    expect(before, hasLength(2));
+    await _panels(tester, const LyricsPage(fullScreen: true), controller: player);
+    await tester.pump();
+    final after = [
+      for (final element in find.byType(ModeButton).evaluate()) tester.getRect(find.byWidget(element.widget)),
+    ];
+    expect(after, hasLength(2));
+    for (var i = 0; i < 2; i++) {
+      expect(after[i].left, before[i].left);
+      expect(after[i].width, before[i].width);
+    }
+    await tester.pumpWidget(const SizedBox());
+    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 50)));
+    await tester.pump(const Duration(seconds: 1));
+  });
+
+  testWidgets('back pops Settings pages, returns Home, and requires two presses to exit', (tester) async {
+    await _app(tester, const Size(400, 800));
+    var exits = 0;
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.platform, (call) async {
+      if (call.method == 'SystemNavigator.pop') exits++;
+      return null;
+    });
+    addTearDown(() => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.platform, null));
+    await tester.tap(find.byTooltip('Settings').last);
+    await tester.pump(const Duration(milliseconds: 600));
+    await tester.tap(find.text('Look & feel'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 600));
+    await tester.binding.handlePopRoute();
+    await tester.pump(const Duration(milliseconds: 600));
+    expect(find.text('Sound'), findsWidgets);
+    expect(exits, 0);
+    await tester.binding.handlePopRoute();
+    await tester.pump(const Duration(milliseconds: 600));
+    expect(exits, 0);
+    await tester.binding.handlePopRoute();
+    await tester.pump();
+    expect(find.text('Press back again to exit'), findsOneWidget);
+    expect(exits, 0);
+    await tester.binding.handlePopRoute();
+    await tester.pump();
+    expect(exits, 1);
+  });
+
   for (final style in TabBarStyle.values) {
     testWidgets('phone: the ${style.label} tab bar fits the screen and survives large text', (tester) async {
       LayoutPrefs.instance.tabBar = style;
@@ -89,6 +167,9 @@ void main() {
         expect(label.right, lessThanOrEqualTo(352), reason: 'inside the bar\'s 8 px margin');
         expect(label.bottom, lessThanOrEqualTo(632), reason: 'above the bottom margin');
       }
+      final searchX = tester.getCenter(find.byTooltip('Search').last).dx;
+      expect(searchX, greaterThan(tester.getCenter(find.byTooltip('Library').last).dx));
+      expect(searchX, lessThan(tester.getCenter(find.byTooltip('Downloads').last).dx));
       expect(tester.takeException(), isNull);
       tester.platformDispatcher.textScaleFactorTestValue = 2.0;
       addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);

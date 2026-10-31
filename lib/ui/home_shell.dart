@@ -274,6 +274,7 @@ class _HomeShellState extends State<HomeShell> {
   );
 
   void _selectTab(PhoneTab tab) {
+    _lastExitBack = null;
     if (tab == _tab) {
       _nav?.popUntil((r) => r.isFirst);
     } else {
@@ -296,6 +297,31 @@ class _HomeShellState extends State<HomeShell> {
     } catch (e) {
       debugPrint('Adding music failed: $e');
       messenger.showSnackBar(const SnackBar(content: Text('Couldn\'t add that music')));
+    }
+  }
+
+  DateTime? _lastExitBack;
+
+  Future<void> _phoneBack() async {
+    if (await _nav?.maybePop() ?? false) {
+      _lastExitBack = null;
+      return;
+    }
+    if (_tab != PhoneTab.home) {
+      _lastExitBack = null;
+      _selectTab(PhoneTab.home);
+      return;
+    }
+    final now = DateTime.now();
+    if (_lastExitBack != null && now.difference(_lastExitBack!) < const Duration(seconds: 2)) {
+      _lastExitBack = null;
+      await SystemNavigator.pop();
+      return;
+    }
+    _lastExitBack = now;
+    if (mounted) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Press back again to exit'), duration: Duration(seconds: 2)));
     }
   }
 
@@ -458,7 +484,7 @@ class _HomeShellState extends State<HomeShell> {
       ),
     );
 
-    final Widget body;
+    Widget body;
     if (compact) {
       // Sideways the tabs move to a rail on the left, leaving the height to the pages.
       final sideways = width > size.height && size.height < 500;
@@ -576,6 +602,16 @@ class _HomeShellState extends State<HomeShell> {
             ),
           ),
         ),
+      );
+    }
+
+    if (_compact) {
+      body = PopScope(
+        canPop: false,
+        onPopInvokedWithResult: (didPop, result) {
+          if (!didPop) unawaited(_phoneBack());
+        },
+        child: body,
       );
     }
 

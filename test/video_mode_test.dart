@@ -5,7 +5,6 @@ import 'package:riflay/services/player_controller.dart';
 import 'package:riflay/services/video_mode.dart';
 import 'package:riflay/services/youtube_stream.dart';
 import 'package:riflay/services/ytmusic_web.dart';
-import 'package:riflay/ui/pages/listen_together_page.dart' show BetaBadge;
 import 'package:riflay/ui/widgets/video_mode.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -143,7 +142,7 @@ void main() {
     expect(VideoMode.decodesVideo('aac (AAC), vp9 (Google VP9), libdav1d (AV1)'), isFalse);
   });
 
-  testWidgets('the Song / Video switch shows only for a song with a video, marked Beta', (tester) async {
+  testWidgets('the Song / Video switch shows only for a song with a video, without a Beta badge', (tester) async {
     SharedPreferences.setMockInitialValues({});
     final controller = PlayerController();
     final song = Track.youtube(videoId: 'withvideo', title: 'S', artist: 'A');
@@ -170,12 +169,12 @@ void main() {
 
     await tester.pumpWidget(app(plain));
     expect(find.text('Video'), findsNothing);
-    expect(find.byType(BetaBadge), findsNothing);
+    expect(find.text('Beta'), findsNothing);
 
     await tester.pumpWidget(app(song));
     expect(find.text('Song'), findsOneWidget);
     expect(find.text('Video'), findsOneWidget);
-    expect(find.byType(BetaBadge), findsOneWidget);
+    expect(find.text('Beta'), findsNothing);
     expect(VideoMode.instance.on, isFalse);
 
     await tester.tap(find.text('Video'));

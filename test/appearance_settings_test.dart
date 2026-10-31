@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:riflay/services/appearance.dart';
 import 'package:riflay/ui/pages/appearance_settings.dart';
-import 'package:riflay/ui/pages/listen_together_page.dart' show BetaBadge;
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
@@ -28,7 +27,7 @@ void main() {
   testWidgets('Dynamic card is no longer Beta; choosing it hides Colours from cover art', (tester) async {
     await open(tester);
     expect(find.text('Dynamic'), findsOneWidget);
-    expect(find.byType(BetaBadge), findsNothing);
+    expect(find.text('Beta'), findsNothing);
     expect(find.text('Colours from cover art'), findsOneWidget);
     expect(find.text('Colour strength'), findsNothing);
 

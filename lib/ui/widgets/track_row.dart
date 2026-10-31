@@ -322,7 +322,10 @@ class TrackMenuButton extends StatelessWidget {
           final convertible = downloaded ?? track;
           return [
             PopupMenuItem(
-              onTap: () => _queued(host, c.playNext([track]), 'Plays next'),
+              enabled: ListenTogether.of(c).role != ListenRole.guest || (_canSuggest(c) && track.videoId != null),
+              onTap: () => _canSuggest(c)
+                  ? _queued(host, ListenTogether.of(c).suggest(track), 'Requested next song')
+                  : _queued(host, c.playNext([track]), 'Plays next'),
               child: const MenuRow(leading: Icon(Icons.playlist_play_rounded), title: Text('Play next')),
             ),
             PopupMenuItem(

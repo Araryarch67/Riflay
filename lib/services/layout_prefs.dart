@@ -148,7 +148,7 @@ class LayoutPrefs extends ChangeNotifier {
   PhoneCoverSize phoneCover = PhoneCoverSize.normal;
 
   /// The phone's tab bar: docked under the mini player like most music apps, by default.
-  TabBarStyle tabBar = TabBarStyle.classic;
+  TabBarStyle tabBar = TabBarStyle.capsule;
   bool showQualityBadge = true;
 
   LyricsSize lyricsSize = LyricsSize.normal;

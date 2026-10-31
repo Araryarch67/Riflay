@@ -5,7 +5,6 @@ import '../../models/track.dart';
 import '../../services/layout_prefs.dart';
 import '../../services/player_controller.dart';
 import '../../services/video_mode.dart';
-import '../pages/listen_together_page.dart' show BetaBadge;
 import '../theme.dart';
 
 /// YouTube Music's Song / Video switch, above the cover of the Now Playing
@@ -80,7 +79,6 @@ class VideoModeSwitch extends StatelessWidget {
                 child: Row(mainAxisSize: MainAxisSize.min, children: [segment('Song', false), segment('Video', true)]),
               ),
               const SizedBox(width: 8),
-              const BetaBadge(),
             ],
           ),
         );

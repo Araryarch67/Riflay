@@ -93,7 +93,7 @@ class LyricsPage extends StatelessWidget {
               ),
               if (fullScreen && track != null) ...[
                 const Padding(padding: EdgeInsets.symmetric(horizontal: 24), child: SeekBar()),
-                const TransportControls(large: true),
+                const Padding(padding: EdgeInsets.symmetric(horizontal: 24), child: TransportControls(large: true)),
                 const SizedBox(height: 16),
               ],
             ],

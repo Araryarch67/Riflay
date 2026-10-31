@@ -4,7 +4,7 @@ import '../../models/track.dart';
 
 /// Listen together: one person (the host) plays, everyone else (guests)
 /// follows. The host is the only source of truth; guests never change the
-/// shared playback themselves, they only ask ([Suggest]) when the host allows it.
+/// shared playback themselves; they send requests ([Suggest], [SeekRequest]) when the host allows it.
 ///
 /// Every message is one JSON object with a `t` (type) field, sent over a
 /// [ListenTransport] (same Wi-Fi, or the internet through a relay). Unknown
@@ -100,6 +100,7 @@ sealed class ListenMessage {
           hostName: json['name'] as String,
           guests: [for (final g in json['guests'] as List) g as String],
           suggestionsAllowed: json['suggest'] as bool,
+          seekingAllowed: json['seek'] as bool? ?? false,
         ),
         'state' => PlaybackState(
           track: SharedTrack.fromJson(json['track']),
@@ -113,6 +114,10 @@ sealed class ListenMessage {
         'suggest' => switch (SharedTrack.fromJson(json['track'])) {
           final track? => Suggest(track, from: json['from'] as String),
           null => null,
+        },
+        'seek' => switch (json['pos']) {
+          final int pos when pos >= 0 => SeekRequest(pos, videoId: json['videoId'] as String),
+          _ => null,
         },
         'guests' => Guests([for (final g in json['guests'] as List) g as String]),
         'bye' => Bye(reason: json['reason'] as String?),
@@ -144,17 +149,28 @@ class Hello extends ListenMessage {
 
 /// Host → one guest, reply to [Hello].
 class Welcome extends ListenMessage {
-  const Welcome({required this.hostName, required this.guests, required this.suggestionsAllowed});
+  const Welcome({
+    required this.hostName,
+    required this.guests,
+    required this.suggestionsAllowed,
+    this.seekingAllowed = false,
+  });
 
   final String hostName;
   final List<String> guests;
   final bool suggestionsAllowed;
+  final bool seekingAllowed;
 
   @override
   String get type => 'welcome';
 
   @override
-  Map<String, dynamic> body() => {'name': hostName, 'guests': guests, 'suggest': suggestionsAllowed};
+  Map<String, dynamic> body() => {
+    'name': hostName,
+    'guests': guests,
+    'suggest': suggestionsAllowed,
+    'seek': seekingAllowed,
+  };
 }
 
 /// Host → everyone: what is playing and where. Sent on every change (song,
@@ -261,4 +277,15 @@ class Bye extends ListenMessage {
 
   @override
   Map<String, dynamic> body() => {'reason': ?reason};
+}
+
+/// Guest asks the host to seek the current song; stale-song requests are ignored.
+class SeekRequest extends ListenMessage {
+  const SeekRequest(this.positionMs, {required this.videoId});
+  final int positionMs;
+  final String videoId;
+  @override
+  String get type => 'seek';
+  @override
+  Map<String, dynamic> body() => {'pos': positionMs, 'videoId': videoId};
 }

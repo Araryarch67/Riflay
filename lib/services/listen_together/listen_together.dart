@@ -73,7 +73,12 @@ class ClockSync {
 
 /// One session at a time: this device hosts it, or follows someone's. All state is here; the UI listens.
 class ListenTogether extends ChangeNotifier {
-  ListenTogether(this.player);
+  ListenTogether(this.player, {this.hostTransport, this.guestConnection});
+
+  @visibleForTesting
+  final ListenHostTransport Function(ListenMode, String)? hostTransport;
+  @visibleForTesting
+  final Future<ListenGuestConnection> Function(ListenMode, String)? guestConnection;
 
   static final _instances = Expando<ListenTogether>('ListenTogether');
 
@@ -81,7 +86,7 @@ class ListenTogether extends ChangeNotifier {
 
   final PlayerController player;
 
-  /// Over the internet through public MQTT brokers (no server of ours). Shipped as Beta.
+  /// Over the internet through public MQTT brokers (no server of ours). Available to all users.
   static bool get internetAvailable => true;
 
   /// Which kind of session a code someone typed belongs to: 10 characters is the internet, 6 is the same Wi-Fi.
@@ -100,6 +105,7 @@ class ListenTogether extends ChangeNotifier {
   String? _ownName;
   List<String> _listeners = const [];
   var _suggestionsAllowed = true;
+  var _seekingAllowed = false;
   SharedTrack? _hostTrack;
   List<SharedTrack> _upNext = const [];
   var _hostPlayingUnshareable = false;
@@ -115,6 +121,7 @@ class ListenTogether extends ChangeNotifier {
   String? get hostName => _hostName;
   List<String> get listeners => List.unmodifiable(_listeners);
   bool get suggestionsAllowed => _suggestionsAllowed;
+  bool get seekingAllowed => _seekingAllowed;
   SharedTrack? get hostTrack => _hostTrack;
   List<SharedTrack> get upNext => List.unmodifiable(_upNext);
   bool get hostPlayingUnshareable => _hostPlayingUnshareable;
@@ -176,9 +183,9 @@ class ListenTogether extends ChangeNotifier {
     if (_role != ListenRole.none || _busy) return;
     _busy = true;
     _problem = null;
-    final ListenHostTransport transport = mode == ListenMode.internet
-        ? InternetHostTransport()
-        : LanHostTransport(name: name);
+    final ListenHostTransport transport =
+        hostTransport?.call(mode, name) ??
+        (mode == ListenMode.internet ? InternetHostTransport() : LanHostTransport(name: name));
     try {
       await transport.start();
     } catch (e) {
@@ -203,6 +210,7 @@ class ListenTogether extends ChangeNotifier {
     _ownName = name;
     _listeners = const [];
     _suggestionsAllowed = true;
+    _seekingAllowed = false;
     _subs.add(transport.peers.listen(_onPeer, onDone: _onTransportEnded));
     final p = player.player;
     _subs.add(
@@ -263,7 +271,14 @@ class ListenTogether extends ChangeNotifier {
         if (_peers[peer] != null) return;
         final clean = name.trim().isEmpty ? 'Someone' : name.trim();
         _peers[peer] = clean.length > 30 ? clean.substring(0, 30) : clean;
-        peer.send(Welcome(hostName: _ownName!, guests: _guestNames, suggestionsAllowed: _suggestionsAllowed).encode());
+        peer.send(
+          Welcome(
+            hostName: _ownName!,
+            guests: _guestNames,
+            suggestionsAllowed: _suggestionsAllowed,
+            seekingAllowed: _seekingAllowed,
+          ).encode(),
+        );
         peer.send(_currentState().encode());
         _emit('${_peers[peer]} joined');
         _sendGuests();
@@ -274,6 +289,11 @@ class ListenTogether extends ChangeNotifier {
         if (from == null || !_suggestionsAllowed) return;
         unawaited(player.playNext([track.toTrack()]));
         _emit('$from suggested ${track.title}');
+      case SeekRequest(:final positionMs, :final videoId):
+        if (_peers[peer] == null || !_seekingAllowed || player.currentTrack?.videoId != videoId) return;
+        final duration = player.player.duration?.inMilliseconds ?? player.currentTrack?.duration?.inMilliseconds;
+        if (positionMs < 0 || (duration != null && positionMs > duration)) return;
+        unawaited(player.seek(Duration(milliseconds: positionMs)));
       case Bye():
         _drop(peer);
       default:
@@ -296,9 +316,44 @@ class ListenTogether extends ChangeNotifier {
     notifyListeners();
     for (final e in _peers.entries) {
       if (e.value != null) {
-        e.key.send(Welcome(hostName: _ownName!, guests: _guestNames, suggestionsAllowed: v).encode());
+        e.key.send(
+          Welcome(
+            hostName: _ownName!,
+            guests: _guestNames,
+            suggestionsAllowed: v,
+            seekingAllowed: _seekingAllowed,
+          ).encode(),
+        );
       }
     }
+  }
+
+  Future<void> setSeekingAllowed(bool value) async {
+    if (_role != ListenRole.host) return;
+    _seekingAllowed = value;
+    notifyListeners();
+    for (final e in _peers.entries) {
+      if (e.value != null) {
+        e.key.send(
+          Welcome(
+            hostName: _ownName!,
+            guests: _guestNames,
+            suggestionsAllowed: _suggestionsAllowed,
+            seekingAllowed: value,
+          ).encode(),
+        );
+      }
+    }
+  }
+
+  /// Returns true when a guest seek was handled (including a denied request).
+  bool requestSeek(Duration position) {
+    if (_role != ListenRole.guest) return false;
+    final id = _hostTrack?.videoId;
+    if (_seekingAllowed && id != null && position.inMilliseconds >= 0) {
+      _conn?.send(SeekRequest(position.inMilliseconds, videoId: id).encode());
+    }
+    return true;
   }
 
   PlaybackState _currentState() {
@@ -347,9 +402,11 @@ class ListenTogether extends ChangeNotifier {
     notifyListeners();
     final ListenGuestConnection conn;
     try {
-      conn = over == ListenMode.internet
-          ? await InternetGuestConnection.connect(normalized!)
-          : await LanGuestConnection.connect(code);
+      conn =
+          await guestConnection?.call(over, code) ??
+          (over == ListenMode.internet
+              ? await InternetGuestConnection.connect(normalized!)
+              : await LanGuestConnection.connect(code));
     } on InternetException catch (e) {
       debugPrint('Listen together: can\'t join: $e');
       _busy = false;
@@ -385,8 +442,10 @@ class ListenTogether extends ChangeNotifier {
       _hostName = w.hostName;
       _listeners = w.guests;
       _suggestionsAllowed = w.suggestionsAllowed;
+      _seekingAllowed = w.seekingAllowed;
       _joinLink = over == ListenMode.internet ? internetJoinLink(normalized!) : lanJoinLink(_code!);
       _watchOwnChanges();
+      if (_pending != null && !_applying) unawaited(_applyPending());
       _startPings();
       notifyListeners();
     } catch (e) {
@@ -423,6 +482,7 @@ class ListenTogether extends ChangeNotifier {
           _hostName = message.hostName;
           _listeners = message.guests;
           _suggestionsAllowed = message.suggestionsAllowed;
+          _seekingAllowed = message.seekingAllowed;
           notifyListeners();
         }
       case Guests(:final names):
@@ -431,9 +491,9 @@ class ListenTogether extends ChangeNotifier {
       case Pong():
         _clock.add(pingAtMs: message.pingAtMs, hostAtMs: message.hostAtMs, pongReceivedAtMs: _now());
       case PlaybackState():
-        if (_role != ListenRole.guest) return;
+        if (_role != ListenRole.guest && _welcome == null) return;
         _pending = message;
-        if (!_applying) unawaited(_applyPending());
+        if (_role == ListenRole.guest && !_applying) unawaited(_applyPending());
       case Bye():
         final host = _hostName ?? 'The host';
         _emit('$host ended the listening session');
@@ -486,18 +546,18 @@ class ListenTogether extends ChangeNotifier {
       await player.playList([shared.toTrack()], 0, from: 'Listening together');
       // The load took a while; the target is computed from the clock now, so it already includes that time.
       if (_pending != null) return; // a newer state arrived while loading
-      await player.seek(Duration(milliseconds: s.playing ? target() : s.positionMs));
+      await player.player.seek(Duration(milliseconds: s.playing ? target() : s.positionMs));
       if (!s.playing) await player.pause();
       return;
     }
     final here = player.position.inMilliseconds;
     if (s.playing) {
       final to = target();
-      if (ListenSync.driftTooBig(here, to)) await player.seek(Duration(milliseconds: to));
+      if (ListenSync.driftTooBig(here, to)) await player.player.seek(Duration(milliseconds: to));
       if (!player.isPlaying) unawaited(player.play());
     } else {
       if (player.isPlaying) await player.pause();
-      if (ListenSync.driftTooBig(here, s.positionMs)) await player.seek(Duration(milliseconds: s.positionMs));
+      if (ListenSync.driftTooBig(here, s.positionMs)) await player.player.seek(Duration(milliseconds: s.positionMs));
     }
   }
 

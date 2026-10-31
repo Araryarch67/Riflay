@@ -3,7 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../platform/features.dart';
 
-/// A feature still in Beta that Settings › Beta features can switch off.
+/// Optional player features, configured in their respective settings pages.
 enum BetaFeature {
   musixmatch(
     'musixmatch',
@@ -14,7 +14,7 @@ enum BetaFeature {
 
   const BetaFeature(this.id, this.title, this.description);
 
-  /// Stored as `beta.<id>`.
+  /// Stored as `features.<id>`; legacy beta keys are still read.
   final String id;
   final String title;
 
@@ -25,13 +25,13 @@ enum BetaFeature {
   bool get available => this != videoMode || Features.videoMode;
 }
 
-/// Which Beta features are on. All are on until switched off, so nothing changes for current users.
+/// Which optional features are on. All are on until switched off, so nothing changes for current users.
 class BetaFeatures extends ChangeNotifier {
   BetaFeatures();
 
   static final instance = BetaFeatures();
 
-  static String keyOf(BetaFeature f) => 'beta.${f.id}';
+  static String keyOf(BetaFeature f) => 'features.${f.id}';
 
   final _off = <BetaFeature>{};
   Future<void>? _loading;
@@ -49,11 +49,11 @@ class BetaFeatures extends ChangeNotifier {
         ..clear()
         ..addAll([
           for (final f in BetaFeature.values)
-            if (p.getBool(keyOf(f)) == false) f,
+            if ((p.getBool(keyOf(f)) ?? p.getBool('beta.${f.id}')) == false) f,
         ]);
       notifyListeners();
     } catch (e) {
-      debugPrint('Beta features not read: $e');
+      debugPrint('Feature preferences not read: $e');
     }
   }
 
@@ -65,7 +65,7 @@ class BetaFeatures extends ChangeNotifier {
     try {
       await (await SharedPreferences.getInstance()).setBool(keyOf(f), on);
     } catch (e) {
-      debugPrint('Beta feature not saved: $e');
+      debugPrint('Feature preference not saved: $e');
     }
   }
 

@@ -16,6 +16,7 @@ import '../platform/background.dart';
 import '../platform/host.dart';
 import '../platform/network.dart';
 import 'audio_engine.dart';
+import 'listen_together/listen_together.dart';
 import 'cast.dart';
 import 'crossfade.dart';
 import 'cue_sheet.dart';
@@ -397,7 +398,10 @@ class PlayerController extends ChangeNotifier {
 
   Duration? get duration => casting ? cast.duration ?? player.duration : player.duration;
 
-  Future<void> seek(Duration to) => casting ? cast.seek(to) : player.seek(to);
+  Future<void> seek(Duration to) async {
+    if (ListenTogether.of(this).requestSeek(to)) return;
+    await (casting ? cast.seek(to) : player.seek(to));
+  }
 
   /// Plays. At the end of the queue (nothing left to play) it starts the queue over, as [togglePlay] does:
   /// the media keys and the system's Play button call this, and would otherwise do nothing.
@@ -1270,6 +1274,13 @@ class PlayerController extends ChangeNotifier {
 
   /// Puts [tracks] right after the current song ("Play next").
   Future<void> playNext(List<Track> tracks) async {
+    final session = ListenTogether.of(this);
+    if (session.role == ListenRole.guest) {
+      for (final track in tracks) {
+        await session.suggest(track);
+      }
+      return;
+    }
     final current = currentTrack;
     final at = player.sequenceState.currentIndex;
     if (current == null || at == null) return playList(tracks, 0);

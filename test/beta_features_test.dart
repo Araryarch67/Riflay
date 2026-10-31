@@ -12,7 +12,7 @@ void main() {
     }
   });
 
-  test('a switch is saved as beta.<id> and read back', () async {
+  test('a switch is saved as features.<id> and read back', () async {
     SharedPreferences.setMockInitialValues({});
     final b = BetaFeatures();
     var notified = 0;
@@ -21,13 +21,24 @@ void main() {
     expect(b.isOn(BetaFeature.musixmatch), isFalse);
     expect(b.isOn(BetaFeature.videoMode), isTrue);
     expect(notified, greaterThan(0));
-    expect((await SharedPreferences.getInstance()).getBool('beta.musixmatch'), isFalse);
+    expect((await SharedPreferences.getInstance()).getBool('features.musixmatch'), isFalse);
 
     final again = BetaFeatures();
     await again.load();
     expect(again.isOn(BetaFeature.musixmatch), isFalse);
     await again.set(BetaFeature.musixmatch, true);
-    expect((await SharedPreferences.getInstance()).getBool('beta.musixmatch'), isTrue);
+    expect((await SharedPreferences.getInstance()).getBool('features.musixmatch'), isTrue);
+  });
+
+  test('legacy choices survive promotion and new preferences take precedence', () async {
+    SharedPreferences.setMockInitialValues({'beta.musixmatch': false});
+    final prefs = BetaFeatures();
+    await prefs.load();
+    expect(prefs.isOn(BetaFeature.musixmatch), isFalse);
+    await prefs.set(BetaFeature.musixmatch, true);
+    final restored = BetaFeatures();
+    await restored.load();
+    expect(restored.isOn(BetaFeature.musixmatch), isTrue);
   });
 
   test('keys are unique and every feature has a one-line description', () {

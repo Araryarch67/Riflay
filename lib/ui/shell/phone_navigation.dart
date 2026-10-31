@@ -25,8 +25,8 @@ typedef _TabInfo = ({PhoneTab tab, IconData icon, IconData selected, String labe
 
 const _tabItems = <_TabInfo>[
   (tab: PhoneTab.home, icon: Icons.home_outlined, selected: Icons.home_rounded, label: 'Home'),
-  (tab: PhoneTab.search, icon: Icons.search_rounded, selected: Icons.manage_search_rounded, label: 'Search'),
   (tab: PhoneTab.library, icon: Icons.library_music_outlined, selected: Icons.library_music_rounded, label: 'Library'),
+  (tab: PhoneTab.search, icon: Icons.search_rounded, selected: Icons.manage_search_rounded, label: 'Search'),
   (tab: PhoneTab.downloads, icon: Icons.download_outlined, selected: Icons.download_rounded, label: 'Downloads'),
   (tab: PhoneTab.settings, icon: Icons.settings_outlined, selected: Icons.settings_rounded, label: 'Settings'),
 ];
@@ -581,11 +581,11 @@ class _NotchBar extends StatelessWidget {
 
   static const _height = 60.0;
 
-  /// The Home button's size, and how far it stands above the bar.
+  /// The Search button's size, and how far it stands above the bar.
   static const _hub = 56.0;
   static const _rise = 34.0;
 
-  static const _left = [PhoneTab.search, PhoneTab.library];
+  static const _left = [PhoneTab.home, PhoneTab.library];
   static const _right = [PhoneTab.downloads, PhoneTab.settings];
 
   @override
@@ -596,7 +596,7 @@ class _NotchBar extends StatelessWidget {
     Widget cell(PhoneTab t) => Expanded(
       child: _BarTab(info: _info(t), selected: tab == t, onTap: () => onSelect(t)),
     );
-    // Each side takes half of what the Home button leaves, however many tabs it has (the web build has no Downloads).
+    // Each side takes half of what the Search button leaves, however many tabs it has (the web build has no Downloads).
     Widget side(List<PhoneTab> tabs) => Expanded(
       child: Row(
         children: [
@@ -608,12 +608,12 @@ class _NotchBar extends StatelessWidget {
     final row = Row(
       children: [
         side(_left),
-        // Under the Home button: its dot, when Home is the tab shown.
+        // Under the Search button: its dot, when Search is the tab shown.
         SizedBox(
           width: _hub + 24,
           child: Align(
             alignment: const Alignment(0, 0.62),
-            child: _Dot(on: tab == PhoneTab.home),
+            child: _Dot(on: tab == PhoneTab.search),
           ),
         ),
         side(_right),
@@ -630,7 +630,7 @@ class _NotchBar extends StatelessWidget {
           Positioned(left: 0, right: 0, bottom: 0, height: _height, child: surface),
           Positioned(
             top: 0,
-            child: _HomeHub(size: _hub, selected: tab == PhoneTab.home, onTap: () => onSelect(PhoneTab.home)),
+            child: _SearchHub(size: _hub, selected: tab == PhoneTab.search, onTap: () => onSelect(PhoneTab.search)),
           ),
         ],
       ),
@@ -689,9 +689,9 @@ class _Dot extends StatelessWidget {
   );
 }
 
-/// Home: the round accent button standing in the bar's notch.
-class _HomeHub extends StatelessWidget {
-  const _HomeHub({required this.size, required this.selected, required this.onTap});
+/// Search: the round accent button standing in the bar's notch.
+class _SearchHub extends StatelessWidget {
+  const _SearchHub({required this.size, required this.selected, required this.onTap});
 
   final double size;
   final bool selected;
@@ -704,7 +704,7 @@ class _HomeHub extends StatelessWidget {
       button: true,
       selected: selected,
       child: Tooltip(
-        message: 'Home',
+        message: 'Search',
         child: Material(
           color: colors.accent,
           shape: const CircleBorder(),
@@ -727,7 +727,11 @@ class _HomeHub extends StatelessWidget {
                   stops: [0, 0.55, 1],
                 ),
               ),
-              child: Icon(selected ? Icons.home_rounded : Icons.home_outlined, color: colors.onAccent, size: 28),
+              child: Icon(
+                selected ? Icons.manage_search_rounded : Icons.search_rounded,
+                color: colors.onAccent,
+                size: 28,
+              ),
             ),
           ),
         ),
@@ -885,7 +889,7 @@ class _GlassFace extends CustomPainter {
   bool shouldRepaint(_GlassFace old) => old.tint != tint || old.light != light || old.shape.shouldReclip(shape);
 }
 
-/// The bar's outline: a rounded rectangle with a smooth notch around the Home button.
+/// The bar's outline: a rounded rectangle with a smooth notch around the Search button.
 class _NotchedBar extends CustomClipper<Path> {
   const _NotchedBar({required this.radius, required this.hub, required this.rise});
 

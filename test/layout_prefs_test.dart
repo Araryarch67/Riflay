@@ -12,7 +12,8 @@ void main() {
     await p.reset();
   });
 
-  test('defaults are how the app has always looked', () {
+  test('defaults use capsule navigation and standard player appearance', () {
+    expect(p.tabBar, TabBarStyle.capsule);
     expect(p.corners, CornerStyle.rounded);
     expect(p.density, Density.comfortable);
     expect(p.coverSize, CoverSize.medium);

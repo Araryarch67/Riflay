@@ -56,11 +56,11 @@ void main() {
     }
   });
 
-  onLinux('the top level shows five groups, Beta features last', (tester) async {
+  onLinux('the top level shows groups followed by Listen together', (tester) async {
     final c = PlayerController();
     await tester.pumpWidget(_app(c, []));
     final titles = [
-      for (final t in ['Sound', 'Look & feel', 'Library & downloads', 'Accounts & services', 'Beta features'])
+      for (final t in ['Sound', 'Look & feel', 'Library & downloads', 'Accounts & services', 'Listen together'])
         tester.getTopLeft(find.text(t)).dy,
     ];
     expect(titles, orderedEquals([...titles]..sort()), reason: 'in this order');
@@ -151,24 +151,24 @@ void main() {
       await tester.tap(find.text('Settings'));
       await tester.pumpAndSettle();
       expect(visited.last, Locations.settings);
-      expect(find.text('Beta features'), findsOneWidget);
+      expect(find.text('Listen together'), findsOneWidget);
     }
   });
 
-  onLinux('Beta features sits under Settings, and every location is its own', (tester) async {
+  onLinux('Listen together sits under Settings, and every location is its own', (tester) async {
     final c = PlayerController();
     final visited = <String>[];
     await tester.pumpWidget(_app(c, visited));
-    await tester.tap(find.text('Beta features'));
+    await tester.tap(find.text('Listen together'));
     await tester.pumpAndSettle();
-    expect(visited.last, 'settings:beta');
-    expect(find.text('Musixmatch lyrics'), findsOneWidget);
-    await tester.tap(find.text('Settings'));
+    expect(visited.last, Locations.listen);
+    expect(find.text('Start a session'), findsWidgets);
+    await tester.pageBack();
     await tester.pumpAndSettle();
 
     final all = [
       Locations.settings,
-      'settings:beta',
+      Locations.listen,
       for (final g in SettingsGroup.values) g.location,
       for (final t in SettingsTopic.values) t.location,
     ];

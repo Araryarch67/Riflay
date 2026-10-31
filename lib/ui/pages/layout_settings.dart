@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../services/layout_prefs.dart';
+import '../../services/beta_features.dart';
 import '../theme.dart';
 import 'sound_settings.dart';
 import '../widgets/menus.dart';
@@ -15,10 +16,21 @@ class LayoutSettings extends StatelessWidget {
     final p = LayoutPrefs.instance;
     final muted = settingsMuted(context);
     return ListenableBuilder(
-      listenable: p,
+      listenable: Listenable.merge([p, BetaFeatures.instance]),
       builder: (context, _) => Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          if (BetaFeature.videoMode.available)
+            SettingsCard(
+              children: [
+                SwitchListTile(
+                  title: const Text('Video mode'),
+                  subtitle: const Text('Watch music videos in sync with the song'),
+                  value: BetaFeatures.instance.isOn(BetaFeature.videoMode),
+                  onChanged: (value) => BetaFeatures.instance.set(BetaFeature.videoMode, value),
+                ),
+              ],
+            ),
           const _Header('Shapes and sizes'),
           SettingsCard(
             children: [

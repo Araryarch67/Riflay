@@ -14,7 +14,7 @@ import '../../services/audio_engine.dart';
 import 'appearance_settings.dart';
 import 'backup_settings.dart';
 import 'about_settings.dart';
-import 'beta_settings.dart';
+import 'listen_together_page.dart';
 import 'layout_settings.dart';
 import 'library_settings.dart';
 import 'download_settings.dart';
@@ -55,7 +55,7 @@ enum SettingsGroup {
   /// This group's own page.
   String get location => Locations.settingsTopic(id);
 
-  /// The sections shown on this group's page, in order, for what this device and the Beta switches allow.
+  /// The sections shown on this group's page, in order, for what this device allows.
   List<SettingsTopic> get sections => [
     for (final s in SettingsTopic.values)
       if (s.group == this && s.available) s,
@@ -218,7 +218,7 @@ class _SettingsRow extends StatelessWidget {
   );
 }
 
-/// The first page of settings: a handful of groups, then Beta features and About.
+/// The first page of settings: a handful of groups, then Listen together and About.
 class SettingsPage extends StatelessWidget {
   const SettingsPage({super.key});
 
@@ -238,10 +238,10 @@ class SettingsPage extends StatelessWidget {
                 onTap: () => shell.open(SettingsGroupPage(group: g), location: g.location),
               ),
           _SettingsRow(
-            icon: Icons.science_outlined,
-            title: 'Beta features',
-            summary: 'Switch features that are still being tested on or off',
-            onTap: () => shell.open(const SettingsBetaPage(), location: Locations.settingsTopic('beta')),
+            icon: Icons.group_outlined,
+            title: 'Listen together',
+            summary: 'Host a session or join friends and manage sharing permissions',
+            onTap: () => shell.open(const ListenTogetherPage(), location: Locations.listen),
           ),
           if (hasKeyboardShortcuts)
             _SettingsRow(
@@ -260,15 +260,6 @@ class SettingsPage extends StatelessWidget {
       ),
     );
   }
-}
-
-/// Beta features: one page straight under Settings.
-class SettingsBetaPage extends StatelessWidget {
-  const SettingsBetaPage({super.key});
-
-  @override
-  Widget build(BuildContext context) =>
-      const _SettingsFrame(title: 'Beta features', crumbs: [_settingsCrumb], child: BetaSettings());
 }
 
 /// About: one page straight under Settings.
@@ -433,6 +424,15 @@ class _IntegrationsSettingsState extends State<_IntegrationsSettings> {
     final muted = settingsMuted(context);
     return SettingsCard(
       children: [
+        SwitchListTile(
+          title: const Text('Musixmatch lyrics'),
+          subtitle: const Text('Find word-by-word lyrics when other sources have none'),
+          value: BetaFeatures.instance.isOn(BetaFeature.musixmatch),
+          onChanged: (value) async {
+            await BetaFeatures.instance.set(BetaFeature.musixmatch, value);
+            if (mounted) setState(() {});
+          },
+        ),
         if (DiscordPresence.supported)
           SwitchListTile(
             secondary: const Icon(Icons.discord),
