@@ -43,6 +43,11 @@ void main() {
     await c.load();
     await c.setAutoplay(false);
     var out = '';
+    // 32-bit float: what a setting does to the sound is what's measured, not the output's dither.
+    // Written as 16-bit, mpv dithers the bits it loses, and that hiss (near -96 dB, silent channel
+    // or not) drowns the "nothing on the other side" checks. Exclusive mode below leaves the format
+    // to mpv again, the DAC's own integer format, where a sample past full scale is cut off.
+    String? pcmFormat = 'floatp';
     final apply = JustAudioMediaKit.onPlayerCreated!;
     JustAudioMediaKit.onPlayerCreated = (p) {
       apply(p);
@@ -53,6 +58,8 @@ void main() {
         await mpv.setProperty('ao', 'pcm');
         await mpv.setProperty('ao-pcm-file', file);
         await mpv.setProperty('ao-pcm-waveheader', 'yes');
+        final format = pcmFormat; // read when the song loads, after the step that may clear it
+        if (format != null) await mpv.setProperty('audio-format', format);
       }();
       mpv.onLoadHooks.add(() => silent);
     };
@@ -158,6 +165,7 @@ void main() {
         float: true,
       );
       final guarded = await render('clip protection', () async {
+        pcmFormat = null; // a new player, so mpv picks the format again: the DAC's own, cut off past full scale
         await c.audio.setConvolution(false);
         await c.audio.setExclusive(true);
       }, input: hot);
