@@ -53,7 +53,16 @@ Future<void> main(List<String> args) async {
   }
   handler = const Pipeline().addMiddleware(_health).addHandler(handler);
 
-  final server = await io.serve(handler, host, port);
+  final HttpServer server;
+  try {
+    server = await io.serve(handler, host, port);
+  } on SocketException catch (e) {
+    // Usually another proxy (or anything else) already on the port.
+    stderr.writeln(
+      'Couldn\'t listen on $host:$port: ${e.osError?.message ?? e.message}. Is the proxy already running?',
+    );
+    exit(1);
+  }
   server.autoCompress = false; // streams carry their own compression; ranges must stay byte-exact
   // Containers stop with SIGTERM; Ctrl+C sends SIGINT.
   for (final signal in [ProcessSignal.sigterm, ProcessSignal.sigint]) {
