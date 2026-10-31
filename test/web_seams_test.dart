@@ -40,6 +40,8 @@ void main() {
       expect(Features.videoMode, isTrue);
       expect(Features.miniPlayer, isTrue);
       expect(Features.listeningHistory, isTrue);
+      expect(Features.scrobbling, isTrue);
+      expect(Features.backup, isTrue);
     });
 
     test('no proxy: URLs stay as they are and songs stream the native way', () {

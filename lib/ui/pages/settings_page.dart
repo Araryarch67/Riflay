@@ -173,6 +173,8 @@ enum SettingsTopic {
     history => Features.listeningHistory,
     account => Features.youtubeSignIn,
     spotify => Features.playlistImport,
+    scrobbling => Features.scrobbling,
+    backup => Features.backup,
     _ => true,
   };
 

@@ -38,4 +38,10 @@ abstract final class Features {
 
   /// The listening history, Stats and the monthly Wrap (kept in a file on the device).
   static bool get listeningHistory => !Host.isWeb;
+
+  /// Last.fm and ListenBrainz (their sign-ins and queue are kept in files; the proxy doesn't carry their hosts).
+  static bool get scrobbling => !Host.isWeb;
+
+  /// Backup & restore (reads and writes the app's own files, then restarts it).
+  static bool get backup => !Host.isWeb;
 }

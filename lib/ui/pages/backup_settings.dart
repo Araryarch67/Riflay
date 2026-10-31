@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
+import '../../platform/host.dart';
 import '../../services/backup.dart';
 import 'sound_settings.dart' show SettingTile, SettingsCard, settingsMuted;
 
@@ -97,11 +98,11 @@ class _BackupSettingsState extends State<BackupSettings> {
       builder: (context) => AlertDialog(
         title: const Text('Backup restored'),
         content: Text(
-          Platform.isIOS
+          Host.isIOS
               ? 'Close Riflay from the app switcher and open it again to finish.'
               : 'Riflay closes now. Open it again to finish.',
         ),
-        actions: [FilledButton(onPressed: Platform.isIOS ? null : () => exit(0), child: const Text('Close Riflay'))],
+        actions: [FilledButton(onPressed: Host.isIOS ? null : () => exit(0), child: const Text('Close Riflay'))],
       ),
     );
   }
