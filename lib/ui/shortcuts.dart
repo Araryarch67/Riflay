@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart' show TargetPlatform, defaultTargetPlatf
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../platform/features.dart';
 import 'theme.dart';
 
 /// What a keyboard shortcut does. The shell maps each to a callback.
@@ -20,6 +21,9 @@ class AppShortcut {
 
   /// Only bound in the wide (desktop) layout.
   final bool wideLayoutOnly;
+
+  /// Whether this build has what the shortcut does (pasting a link downloads it, which the web build can't).
+  bool get available => action != AppAction.pasteLink || Features.downloads;
 }
 
 /// Every keyboard shortcut of the app. The shell binds these and the
@@ -82,7 +86,7 @@ String tipWith(String label, AppAction action) {
 /// (the wide-layout-only ones are left out when [compact]).
 Map<ShortcutActivator, VoidCallback> bindShortcuts(Map<AppAction, VoidCallback> actions, {required bool compact}) => {
   for (final s in appShortcuts)
-    if (actions[s.action] case final run? when !(compact && s.wideLayoutOnly))
+    if (actions[s.action] case final run? when s.available && !(compact && s.wideLayoutOnly))
       for (final a in s.activators) a: run,
 };
 
@@ -101,15 +105,16 @@ Future<void> showShortcutsDialog(BuildContext context) => showDialog<void>(
             mainAxisSize: MainAxisSize.min,
             children: [
               for (final s in appShortcuts)
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 6),
-                  child: Row(
-                    children: [
-                      Expanded(child: Text(s.label)),
-                      Text(_keysFor(s), style: text.bodyMedium?.copyWith(color: AppColors.textSecondary)),
-                    ],
+                if (s.available)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 6),
+                    child: Row(
+                      children: [
+                        Expanded(child: Text(s.label)),
+                        Text(_keysFor(s), style: text.bodyMedium?.copyWith(color: AppColors.textSecondary)),
+                      ],
+                    ),
                   ),
-                ),
             ],
           ),
         ),

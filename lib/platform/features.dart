@@ -9,6 +9,9 @@ abstract final class Features {
   /// Music folders, adding songs and folders, the tag editor, duplicates, converting to FLAC.
   static bool get localLibrary => !Host.isWeb;
 
+  /// Your own lyrics from an .lrc or .txt file (kept as a file on the device).
+  static bool get userLyrics => !Host.isWeb;
+
   /// Saving songs and videos for offline listening.
   static bool get downloads => !Host.isWeb;
 

@@ -9,4 +9,6 @@ abstract final class Host {
   static Map<String, String> get environment => const {};
   static String get pathSeparator => '/';
   static String get operatingSystem => 'web';
+  static String get operatingSystemVersion => '';
+  static String get dartVersion => '';
 }

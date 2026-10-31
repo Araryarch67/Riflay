@@ -70,11 +70,13 @@ class _LyricsLoaderState extends State<_LyricsLoader> {
       if (lyrics.isEmpty) {
         return _Message(
           'No lyrics found for this song.',
-          action: TextButton(
-            style: TextButton.styleFrom(foregroundColor: Colors.white),
-            onPressed: () => useMyLyricsFile(context, widget.track),
-            child: const Text('Use my lyrics file'),
-          ),
+          action: !Features.userLyrics
+              ? null
+              : TextButton(
+                  style: TextButton.styleFrom(foregroundColor: Colors.white),
+                  onPressed: () => useMyLyricsFile(context, widget.track),
+                  child: const Text('Use my lyrics file'),
+                ),
         );
       }
       return FadeIn(

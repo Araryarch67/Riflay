@@ -11,4 +11,8 @@ abstract final class Host {
   static Map<String, String> get environment => Platform.environment;
   static String get pathSeparator => Platform.pathSeparator;
   static String get operatingSystem => Platform.operatingSystem;
+  static String get operatingSystemVersion => Platform.operatingSystemVersion;
+
+  /// The Dart version ("3.13.5"); empty where there is none to read.
+  static String get dartVersion => Platform.version.split(' ').first;
 }

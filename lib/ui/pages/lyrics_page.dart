@@ -9,6 +9,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 
 import '../../models/track.dart';
+import '../../platform/features.dart';
 import '../../services/layout_prefs.dart';
 import '../../services/lyrics.dart';
 import '../../services/lyrics_translation.dart';
