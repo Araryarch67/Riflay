@@ -53,6 +53,7 @@ Features marked (Beta) are still being tested; **Settings › Beta features** sw
 | **Duplicate finder** | "Songs you have twice" lists the same song in several files and keeps the best copy of each. Settings › Library & downloads › Library |
 | **Tag editor** | Preserves ReplayGain and custom tags |
 | **Autoplay and radio** | Plays similar songs when the queue ends |
+| **Shuffle that feels random** | Shuffle keeps songs by the same artist apart, so two of theirs rarely play in a row |
 
 ### Sound
 

@@ -31,6 +31,7 @@ import 'lyrics_translation.dart';
 import 'metadata.dart';
 import 'sacd.dart';
 import 'sleep_timer.dart';
+import 'shuffle.dart';
 import 'memory_trim.dart';
 import 'youtube_audio_source.dart';
 import 'youtube_music_account.dart';
@@ -1208,10 +1209,10 @@ class PlayerController extends ChangeNotifier {
   }
 
   /// [first] followed by everything else in random order.
-  List<Track> _shuffledFrom(List<Track> tracks, int first) => [
+  List<Track> _shuffledFrom(List<Track> tracks, int first) => spreadArtists([
     tracks[first],
     ...([...tracks]..removeAt(first))..shuffle(_random),
-  ];
+  ]);
 
   Future<void> _load(List<Track> order, int index, {Duration? position}) async {
     try {

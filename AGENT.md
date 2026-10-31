@@ -192,7 +192,8 @@ test/                          Unit and widget tests
   `integration_test/zz_crossfade_test.dart` runs it on two real libmpv players.
 - media_kit has no `setShuffleOrder`, so shuffle is done in Dart
   (`PlayerController._ordered`, `_shuffledFrom`). Never call just_audio's
-  `shuffle()` / `setShuffleModeEnabled`.
+  `shuffle()` / `setShuffleModeEnabled`. A shuffled order goes through
+  `spreadArtists` (`services/shuffle.dart`), which keeps an artist's songs apart.
 
 ### Adding an audio feature (checklist)
 
