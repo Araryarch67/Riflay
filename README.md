@@ -46,7 +46,7 @@ Features marked (Beta) are still being tested; **Settings › Beta features** sw
 | **YouTube Music** | Fully usable without an account. Sign in with Google to sync likes, playlists and history. Moods & genres, new releases, save albums and playlists to your library |
 | **Video mode** (Beta) | Watch the music video of a YouTube song, in step with it: one Song / Video switch on the player. Fetched only when picked, and back to the song alone when the screen is off. Downloaded videos play offline |
 | **Synced lyrics** | Word by word where the source times each word, otherwise line by line; pronunciation, translation, copy, your own .lrc files, and saved with downloads |
-| **Playlists** | Combine local files with YouTube songs, and drag songs into any order. Import from Spotify, Apple Music or Deezer |
+| **Playlists** | Combine local files with YouTube songs, and drag songs into any order. Save what's in the queue as a playlist. Import from Spotify, Apple Music or Deezer |
 | **Spotify import** | Sign in to Spotify and bring your playlists, Liked Songs and albums over |
 | **Smart playlists** | Most played, Not played for a while, Recently added, Recently played and Lossless, kept up to date for you |
 | **A library that keeps up** | Music folders are watched: new songs are added, and songs you delete or move are taken out, without adding the folder again (phones check each time you open Riflay). Settings › Library & downloads › Library |

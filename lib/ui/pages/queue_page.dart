@@ -5,6 +5,7 @@ import '../shell_scope.dart';
 import '../theme.dart';
 import '../widgets/page_scaffold.dart';
 import '../widgets/track_row.dart';
+import '../ytmusic_edit.dart' show createPlaylist;
 
 class QueuePage extends StatelessWidget {
   const QueuePage({super.key});
@@ -28,7 +29,20 @@ class QueuePage extends StatelessWidget {
         SliverToBoxAdapter(
           child: Padding(
             padding: EdgeInsets.fromLTRB(pad, 0, pad, 8),
-            child: Text('Queue', style: text.headlineMedium?.copyWith(fontWeight: FontWeight.w800)),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text('Queue', style: text.headlineMedium?.copyWith(fontWeight: FontWeight.w800)),
+                ),
+                if (current != null)
+                  // The song playing and everything after it, autoplay included: what the page shows.
+                  TextButton.icon(
+                    onPressed: () => createPlaylist(context, tracks: [current, ...upNext]),
+                    icon: const Icon(Icons.playlist_add_rounded),
+                    label: const Text('Save as playlist'),
+                  ),
+              ],
+            ),
           ),
         ),
         if (current == null)
