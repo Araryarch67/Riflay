@@ -3,23 +3,29 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../services/play_history.dart';
 import '../../services/scrobbler.dart';
+import '../player_scope.dart';
 import '../theme.dart';
 import 'sound_settings.dart' show SettingTile, SettingsCard, settingsMuted;
 
 /// Settings › Accounts & services › Last.fm & ListenBrainz: where what you play is shared.
 class ScrobbleSettings extends StatelessWidget {
-  const ScrobbleSettings({super.key, this.scrobbler});
+  const ScrobbleSettings({super.key, this.scrobbler, this.history});
 
   /// The app's scrobbler by default.
   final Scrobbler? scrobbler;
 
+  /// The app's listening history by default.
+  final PlayHistory? history;
+
   @override
   Widget build(BuildContext context) {
     final s = scrobbler ?? Scrobbler.instance;
+    final history = this.history ?? PlayHistory.instance;
     final muted = settingsMuted(context);
     return ListenableBuilder(
-      listenable: s,
+      listenable: Listenable.merge([s, history]),
       builder: (context, _) => Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -60,6 +66,15 @@ class ScrobbleSettings extends StatelessWidget {
                 ),
             ],
           ),
+          if (s.services.any((x) => x.connected)) ...[
+            const SizedBox(height: 16),
+            SettingsCard(
+              children: [
+                for (final service in s.services)
+                  if (service.connected) _ImportTile(scrobbler: s, service: service, history: history),
+              ],
+            ),
+          ],
         ],
       ),
     );
@@ -70,6 +85,66 @@ class ScrobbleSettings extends StatelessWidget {
     final who = service.user == null ? 'Connected' : 'Connected as ${service.user}';
     final n = s.pending(service);
     return n == 0 ? who : '$who. $n ${n == 1 ? 'listen' : 'listens'} waiting to be sent.';
+  }
+}
+
+/// "Bring in your past listens" from [service] into the listening history.
+class _ImportTile extends StatelessWidget {
+  const _ImportTile({required this.scrobbler, required this.service, required this.history});
+
+  final Scrobbler scrobbler;
+  final ScrobbleService service;
+  final PlayHistory history;
+
+  Future<void> _import(BuildContext context) async {
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    void say(String m) => messenger?.showSnackBar(SnackBar(content: Text(m)));
+    try {
+      final added = await scrobbler.importHistory(
+        service,
+        history: history,
+        library: PlayerScope.read(context).library,
+      );
+      say(switch (added) {
+        0 => 'No new listens to bring in',
+        1 => '1 listen added to your history',
+        _ => '$added listens added to your history',
+      });
+    } on ScrobbleError catch (e) {
+      debugPrint('Import from ${service.label}: $e');
+      say(
+        e.signedOut
+            ? '${service.label} signed you out. Connect it again.'
+            : 'Couldn\'t reach ${service.label}. Try again.',
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final muted = settingsMuted(context);
+    final running = scrobbler.importing == service;
+    final busy = scrobbler.importing != null;
+    final String subtitle;
+    if (running) {
+      subtitle = 'Reading your listens: ${scrobbler.importRead} so far';
+    } else if (!history.enabled) {
+      subtitle = 'Turn on the listening history in Library & downloads first.';
+    } else {
+      subtitle =
+          'Adds the songs you played elsewhere to your stats, Wraps and Most played. Ones already here are skipped.';
+    }
+    return SettingTile(
+      icon: Icons.download_for_offline_outlined,
+      title: Text('Bring in your ${service.label} history'),
+      subtitle: Text(subtitle, style: muted),
+      control: running
+          ? TextButton(onPressed: scrobbler.cancelImport, child: const Text('Stop'))
+          : TextButton(
+              onPressed: busy || !history.enabled ? null : () => _import(context),
+              child: const Text('Bring in'),
+            ),
+    );
   }
 }
 

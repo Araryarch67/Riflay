@@ -9,6 +9,7 @@ import 'package:just_audio/just_audio.dart';
 
 import '../app_version.dart';
 import '../models/track.dart';
+import 'play_history.dart';
 import 'player_controller.dart';
 import 'private_files.dart';
 import 'ytmusic_play_report.dart';
@@ -214,6 +215,9 @@ abstract class ScrobbleService {
   /// Sends [batch] (at most [maxBatch]). Throws [ScrobbleError].
   Future<void> submit(List<Listen> batch);
 
+  /// The account's past listens, newest first, a page at a time. Throws [ScrobbleError].
+  Stream<List<Listen>> history();
+
   Map<String, dynamic> saveJson();
   void loadJson(Map<String, dynamic> j);
   void forget();
@@ -297,6 +301,53 @@ class ListenBrainz extends ScrobbleService {
     debugPrint('ListenBrainz answered ${r.statusCode}: ${r.body}');
     if (r.statusCode == 401) throw const ScrobbleError('ListenBrainz signed out', signedOut: true);
     throw ScrobbleError('ListenBrainz refused the listens', retry: r.statusCode == 429 || r.statusCode >= 500);
+  }
+
+  @override
+  Stream<List<Listen>> history() async* {
+    final t = token;
+    final name = user;
+    if (t == null || name == null) throw const ScrobbleError('Not connected', signedOut: true);
+    int? before;
+    while (true) {
+      final uri = Uri.parse('$base/1/user/${Uri.encodeComponent(name)}/listens')
+          .replace(queryParameters: {'count': '1000', if (before != null) 'max_ts': '$before'});
+      final r = await _withRetry(() async {
+        final r = await _send(() => _client.get(uri, headers: _headers(t)));
+        if (r.statusCode == 401) throw const ScrobbleError('ListenBrainz signed out', signedOut: true);
+        if (r.statusCode != 200) throw ScrobbleError('ListenBrainz answered ${r.statusCode}', retry: true);
+        return r;
+      });
+      final listens = (_json(r.body)['payload'] as Map?)?['listens'];
+      if (listens is! List || listens.isEmpty) return;
+      final page = <Listen>[];
+      int? oldest;
+      for (final l in listens.whereType<Map<String, dynamic>>()) {
+        final at = l['listened_at'];
+        final meta = l['track_metadata'];
+        if (at is! int || meta is! Map) continue;
+        oldest = oldest == null || at < oldest ? at : oldest;
+        final info = meta['additional_info'];
+        final ms = info is Map ? info['duration_ms'] : null;
+        final sec = info is Map ? info['duration'] : null;
+        final origin = info is Map ? info['origin_url'] as String? : null;
+        final artist = meta['artist_name'], title = meta['track_name'];
+        if (artist is! String || title is! String || artist.isEmpty || title.isEmpty) continue;
+        page.add(
+          Listen(
+            artist: artist,
+            title: title,
+            album: meta['release_name'] as String?,
+            startedAt: at,
+            duration: ms is int ? Duration(milliseconds: ms) : (sec is int ? Duration(seconds: sec) : null),
+            videoId: origin == null ? null : _videoId.firstMatch(origin)?[1],
+          ),
+        );
+      }
+      if (oldest == null || oldest == before) return;
+      yield page;
+      before = oldest;
+    }
   }
 
   @override
@@ -432,6 +483,42 @@ class LastFm extends ScrobbleService {
   }
 
   @override
+  Stream<List<Listen>> history() async* {
+    final name = user;
+    if (name == null) throw const ScrobbleError('Not connected', signedOut: true);
+    var pages = 1;
+    for (var page = 1; page <= pages; page++) {
+      final j = await _withRetry(
+        () => _call({'method': 'user.getRecentTracks', 'user': name, 'limit': '200', 'page': '$page'}, post: false),
+      );
+      final recent = j['recenttracks'];
+      if (recent is! Map) return;
+      pages = int.tryParse('${(recent['@attr'] as Map?)?['totalPages']}') ?? 1;
+      // One track comes back as an object, not a list.
+      final tracks = switch (recent['track']) {
+        final List<dynamic> l => l,
+        final Map<dynamic, dynamic> m => [m],
+        _ => const [],
+      };
+      yield [for (final t in tracks.whereType<Map<String, dynamic>>()) ?_recent(t)];
+    }
+  }
+
+  static Listen? _recent(Map<String, dynamic> t) {
+    if ((t['@attr'] as Map?)?['nowplaying'] == 'true') return null; // still playing: not a listen yet
+    final at = int.tryParse('${(t['date'] as Map?)?['uts']}');
+    String? text(Object? v) => switch (v) {
+      final Map<dynamic, dynamic> m when m['#text'] is String && (m['#text'] as String).isNotEmpty => m['#text'],
+      final String s when s.isNotEmpty => s,
+      _ => null,
+    };
+    final artist = text(t['artist']);
+    final title = text(t['name']);
+    if (at == null || artist == null || title == null) return null;
+    return Listen(artist: artist, title: title, album: text(t['album']), startedAt: at);
+  }
+
+  @override
   Map<String, dynamic> saveJson() => {'session': session, 'user': user};
 
   @override
@@ -445,6 +532,20 @@ class LastFm extends ScrobbleService {
     session = null;
     user = null;
     _token = null;
+  }
+}
+
+final _videoId = RegExp(r'[?&]v=([A-Za-z0-9_-]{11})');
+
+/// [request] again, up to 3 times with a growing wait, while it fails in a way worth retrying (busy, offline).
+Future<T> _withRetry<T>(Future<T> Function() request) async {
+  for (var attempt = 1; ; attempt++) {
+    try {
+      return await request();
+    } on ScrobbleError catch (e) {
+      if (!e.retry || attempt >= 3) rethrow;
+      await Future<void>.delayed(Duration(seconds: 2 * attempt));
+    }
   }
 }
 
@@ -688,6 +789,75 @@ class Scrobbler extends ChangeNotifier {
     }
     notifyListeners();
     await _save();
+  }
+
+  // Bringing past listens in ────────────────────────────────────────────────
+
+  /// The service whose past listens are being brought in, if any.
+  ScrobbleService? get importing => _importing;
+  ScrobbleService? _importing;
+
+  /// Listens read so far by the import in progress.
+  int get importRead => _importRead;
+  int _importRead = 0;
+  bool _cancelImport = false;
+
+  /// Plays brought in at most, newest first: the history keeps 150,000 in all.
+  static const maxImport = 100000;
+
+  /// A song of unknown length counts as this long in the stats.
+  static const _assumedLength = 210;
+
+  /// Brings [s]'s past listens into [history], matched to songs in [library] (by artist and title) where they
+  /// can be, otherwise to their YouTube video, otherwise as songs only the stats show. Returns how many plays were
+  /// added; ones already in the history are skipped, so running it again adds only what is new.
+  /// Throws [ScrobbleError].
+  Future<int> importHistory(ScrobbleService s, {required PlayHistory history, required List<Track> library}) async {
+    if (_importing != null) return 0;
+    _importing = s;
+    _importRead = 0;
+    _cancelImport = false;
+    notifyListeners();
+    try {
+      final byName = <String, Track>{};
+      for (final t in library) {
+        final key = '${SongInfo.normalize(t.artist)}|${SongInfo.normalize(t.title)}';
+        // A file on this device wins over a streamed copy of the same song.
+        if (!t.isRemote || !byName.containsKey(key)) byName[key] = t;
+      }
+      final plays = <ImportedPlay>[];
+      await for (final page in s.history()) {
+        for (final l in page) {
+          plays.add(_imported(l, byName));
+        }
+        _importRead += page.length;
+        notifyListeners();
+        if (_cancelImport || plays.length >= maxImport) break;
+      }
+      if (_cancelImport) return 0;
+      return await history.importPlays(plays);
+    } on ScrobbleError catch (e) {
+      if (e.signedOut) await disconnect(s);
+      rethrow;
+    } finally {
+      _importing = null;
+      notifyListeners();
+    }
+  }
+
+  /// Stops the import in progress after the page it is reading; nothing is added.
+  void cancelImport() => _cancelImport = true;
+
+  static ImportedPlay _imported(Listen l, Map<String, Track> byName) {
+    final local = byName['${SongInfo.normalize(l.artist)}|${SongInfo.normalize(l.title)}'];
+    final id = l.videoId;
+    final song = switch (local) {
+      final t? => SongInfo.of(t),
+      _ when id != null => SongInfo(key: 'yt:$id', title: l.title, artist: l.artist, album: l.album, videoId: id),
+      _ => SongInfo(key: SongInfo.importedKey(l.artist, l.title), title: l.title, artist: l.artist, album: l.album),
+    };
+    final length = local?.duration ?? l.duration;
+    return ImportedPlay(song, l.startedAt, length?.inSeconds ?? _assumedLength);
   }
 
   // Following the player ────────────────────────────────────────────────────

@@ -126,11 +126,21 @@ class _ListeningStatsPageState extends State<ListeningStatsPage> {
                           title: s.title,
                           subtitle: s.subtitle,
                           trailing: _plays(s.plays),
-                          onTap: () => c.playList(
-                            [for (final t in stats.topSongs) trackFor(t.sample)],
-                            i,
-                            from: 'Your top songs',
-                          ),
+                          onTap: () {
+                            if (s.sample.imported) {
+                              _playImported(context, c, s.sample, 'Your top songs');
+                              return;
+                            }
+                            final playable = [
+                              for (final t in stats.topSongs)
+                                if (!t.sample.imported) t.sample,
+                            ];
+                            c.playList(
+                              [for (final t in playable) trackFor(t)],
+                              playable.indexOf(s.sample),
+                              from: 'Your top songs',
+                            );
+                          },
                         ),
                     ],
                   ),
@@ -194,8 +204,28 @@ class _ListeningStatsPageState extends State<ListeningStatsPage> {
     if (open != null) {
       open();
     } else {
-      c.playList([sample], 0, from: item.title);
+      _playSample(context, c, sample, item.title);
     }
+  }
+
+  void _playSample(BuildContext context, PlayerController c, Track sample, String from) {
+    if (sample.id.startsWith('imported:')) {
+      _playImported(context, c, SongInfo.of(sample), from);
+    } else {
+      c.playList([sample], 0, from: from);
+    }
+  }
+
+  /// A song brought in from Last.fm or ListenBrainz with no file or video here: found on YouTube Music first.
+  Future<void> _playImported(BuildContext context, PlayerController c, SongInfo song, String from) async {
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    try {
+      final found = (await c.ytMusic.searchSongs('${song.artist} ${song.title}')).firstOrNull;
+      if (found != null) return await c.playList([found], 0, from: from);
+    } catch (e) {
+      debugPrint('Looking up ${song.title}: $e');
+    }
+    messenger?.showSnackBar(SnackBar(content: Text('Couldn\'t find ${song.title}')));
   }
 
   void _openAlbum(BuildContext context, PlayerController c, RankedItem item, Track sample) {
@@ -205,7 +235,7 @@ class _ListeningStatsPageState extends State<ListeningStatsPage> {
     if (album != null) {
       ShellScope.of(context).openCollection(album);
     } else {
-      c.playList([sample], 0, from: item.title);
+      _playSample(context, c, sample, item.title);
     }
   }
 }

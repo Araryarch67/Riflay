@@ -105,7 +105,7 @@ Features marked (Beta) are still being tested; **Settings › Beta features** sw
 | **Riflay Wrap** | A recap of each finished month, once you have used Riflay for 30 days, as cards you can save as images |
 | **Background playback** | Keeps playing with the screen off. Optionally keeps the screen on, or the computer awake, while playing |
 | **System integration** | Lock screen, notification, Control Center, MPRIS, media keys, Discord |
-| **Last.fm & ListenBrainz** | Songs you listen to are added to your profile there (scrobbling), with Now playing. Listens made offline are sent later. Settings › Accounts & services |
+| **Last.fm & ListenBrainz** | Songs you listen to are added to your profile there (scrobbling), with Now playing. Listens made offline are sent later, and your past listens there can be brought into your stats. Settings › Accounts & services |
 | **Backup & restore** | Your settings, playlists, listening history and your own lyrics in one file, to bring back on this device or a new one. Sign-ins are left out. Settings › Library & downloads |
 | **Fast** | A YouTube song starts in about 0.3 s |
 

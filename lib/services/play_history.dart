@@ -45,6 +45,15 @@ class SongInfo {
 
   static String _defaultArt(String videoId) => 'https://i.ytimg.com/vi/$videoId/hqdefault.jpg';
 
+  /// The key of a song brought in from Last.fm or ListenBrainz that matches nothing here: no file, no video.
+  static String importedKey(String artist, String title) => 'imported:${normalize(artist)}|${normalize(title)}';
+
+  /// Lower case, single spaces: how songs from elsewhere are matched to this library.
+  static String normalize(String s) => s.toLowerCase().replaceAll(RegExp(r'\s+'), ' ').trim();
+
+  /// Brought in from elsewhere with no file or video of its own, so it can't be played as it is.
+  bool get imported => key.startsWith('imported:');
+
   /// A track to show and play this song with when the library no longer has it.
   Track toTrack() {
     final id = videoId;
@@ -64,6 +73,14 @@ class SongInfo {
 
   @override
   int get hashCode => Object.hash(key, title, artist, album, videoId, artworkUrl);
+}
+
+/// A play from elsewhere for [PlayHistory.importPlays]: [at] (seconds since 1970) when it started, [heard] seconds.
+class ImportedPlay {
+  const ImportedPlay(this.song, this.at, this.heard);
+  final SongInfo song;
+  final int at;
+  final int heard;
 }
 
 /// A play that counted: [heard] of [track] was listened to.
@@ -521,6 +538,59 @@ class PlayHistory extends ChangeNotifier {
         ..song.addAll(_song)
         ..heard.addAll(_heard),
     );
+  }
+
+  /// Adds plays brought in from elsewhere (Last.fm, ListenBrainz), in time order among the ones here. A play that
+  /// is already here (the same song, around the same time: Riflay sent it there itself, or it was brought in
+  /// before) is skipped. Returns how many were added. Nothing is added while the history is off.
+  Future<int> importPlays(Iterable<ImportedPlay> plays) async {
+    if (!_enabled) return 0;
+    await flush();
+    String match(SongInfo s) => '${SongInfo.normalize(s.artist)}|${SongInfo.normalize(s.title)}';
+    final near = <String, List<int>>{};
+    for (var p = 0; p < _at.length; p++) {
+      near.putIfAbsent(match(_songs[_song[p]]), () => []).add(_at[p]);
+    }
+    final rows = <(int, SongInfo, int)>[for (var p = 0; p < _at.length; p++) (_at[p], _songs[_song[p]], _heard[p])];
+    var added = 0;
+    for (final play in plays) {
+      final times = near.putIfAbsent(match(play.song), () => []);
+      // A play is kept when it ends; one brought in is dated by its start.
+      if (times.any((t) => t >= play.at - 120 && t <= play.at + play.heard + 600)) continue;
+      times.add(play.at);
+      rows.add((play.at, play.song, play.heard < 1 ? 1 : play.heard));
+      added++;
+    }
+    if (added == 0) return 0;
+    rows.sort((a, b) => a.$1.compareTo(b.$1));
+    final data = HistoryData();
+    final index = <String, int>{};
+    for (final (at, info, heard) in rows) {
+      final i = index.putIfAbsent(info.key, () {
+        data.songs.add(info);
+        return data.songs.length - 1;
+      });
+      data.at.add(at);
+      data.song.add(i);
+      data.heard.add(heard);
+    }
+    final kept = data.plays > maxPlays ? trimmed(data, keepPlays) : data;
+    _adopt(kept);
+    _revision++;
+    notifyListeners();
+    final done = _io = _io.then((_) async {
+      final file = await _resolveFile();
+      if (file == null) return;
+      try {
+        await _writeAll(file, kept);
+        _needsHeader = false;
+        _needsNewline = false;
+      } catch (e) {
+        debugPrint('Saving imported plays failed: $e');
+      }
+    });
+    await done;
+    return added;
   }
 
   /// How many plays a history file's [text] holds.

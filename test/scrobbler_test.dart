@@ -6,7 +6,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:riflay/models/track.dart';
+import 'package:riflay/services/play_history.dart';
 import 'package:riflay/services/scrobbler.dart';
+import 'package:riflay/services/smart_playlists.dart';
 
 Track song(String name, {String artist = 'Artist', Duration? length = const Duration(minutes: 3)}) => Track(
   id: 'file:///music/$name.flac',
@@ -177,6 +179,126 @@ void main() {
       sc.handle([Scrobbled(Listen.of(song('a'), startedAt: start)!)]);
       expect(sc.pending(sc.listenBrainz), 0);
       sc.dispose();
+    });
+  });
+
+  group('bringing past listens in', () {
+    test('ListenBrainz pages back by time; songs match the library, a video, or stay stats-only', () async {
+      final asked = <String?>[];
+      final pages = {
+        null: [
+          {
+            'listened_at': 3000,
+            'track_metadata': {'artist_name': 'Artist', 'track_name': 'a'},
+          },
+          {
+            'listened_at': 2000,
+            'track_metadata': {
+              'artist_name': 'Band',
+              'track_name': 'Video song',
+              'additional_info': {'origin_url': 'https://music.youtube.com/watch?v=abcdefghijk', 'duration_ms': 200000},
+            },
+          },
+        ],
+        '2000': [
+          {
+            'listened_at': 1000,
+            'track_metadata': {'artist_name': 'Someone', 'track_name': 'Elsewhere'},
+          },
+        ],
+        '1000': <Object>[],
+      };
+      final sc = Scrobbler(
+        client: MockClient((r) async {
+          final before = r.url.queryParameters['max_ts'];
+          asked.add(before);
+          return http.Response(
+            jsonEncode({
+              'payload': {'listens': pages[before]},
+            }),
+            200,
+          );
+        }),
+      );
+      sc.listenBrainz
+        ..token = 'tok'
+        ..user = 'me';
+      final history = PlayHistory();
+      final library = [song('a')];
+      expect(await sc.importHistory(sc.listenBrainz, history: history, library: library), 3);
+      expect(asked, [null, '2000', '1000']);
+      expect(history.length, 3);
+      // Oldest first, as the history keeps them.
+      expect([for (var i = 0; i < 3; i++) history.atSec(i)], [1000, 2000, 3000]);
+      expect(history.playsOf(song('a').id), 1, reason: 'matched to the file in the library');
+      expect(history.playsOf('yt:abcdefghijk'), 1);
+      final other = history.songInfo(history.songIndex(0));
+      expect(other.imported, isTrue);
+
+      // Again: everything is already there.
+      expect(await sc.importHistory(sc.listenBrainz, history: history, library: library), 0);
+      expect(history.length, 3);
+
+      // Songs with nothing to play stay out of Most played.
+      final lists = SmartPlaylists.compute(library, history);
+      expect(lists[SmartList.mostPlayed]!.tracks.map((t) => t.id), isNot(contains(startsWith('imported:'))));
+      sc.dispose();
+    });
+
+    test('a play Riflay itself sent is not counted twice', () async {
+      final history = PlayHistory();
+      // Kept here when it ended (started at 10,000, 3 minutes long).
+      history.record(song('a'), const Duration(minutes: 3), at: DateTime.fromMillisecondsSinceEpoch(10180 * 1000));
+      final added = await history.importPlays([
+        ImportedPlay(SongInfo.of(song('a')), 10000, 180),
+        ImportedPlay(SongInfo.of(song('a')), 50000, 180),
+      ]);
+      expect(added, 1);
+      expect(history.length, 2);
+    });
+
+    test('Last.fm pages through recent tracks and leaves out the one playing now', () async {
+      final fm =
+          LastFm(
+              MockClient((r) async {
+                final page = r.url.queryParameters['page'];
+                return http.Response(
+                  jsonEncode({
+                    'recenttracks': {
+                      '@attr': {'totalPages': '2'},
+                      'track': page == '1'
+                          ? [
+                              {
+                                'artist': {'#text': 'Artist'},
+                                'name': 'now',
+                                '@attr': {'nowplaying': 'true'},
+                              },
+                              {
+                                'artist': {'#text': 'Artist'},
+                                'name': 'b',
+                                'album': {'#text': ''},
+                                'date': {'uts': '2000'},
+                              },
+                            ]
+                          // One track comes back as an object.
+                          : {
+                              'artist': {'#text': 'Artist'},
+                              'name': 'a',
+                              'album': {'#text': 'Album'},
+                              'date': {'uts': '1000'},
+                            },
+                    },
+                  }),
+                  200,
+                );
+              }),
+              apiKey: 'key',
+              secret: 'sec',
+            )
+            ..session = 'sk'
+            ..user = 'me';
+      final got = await fm.history().expand((p) => p).toList();
+      expect(got.map((l) => (l.title, l.startedAt, l.album)), [('b', 2000, null), ('a', 1000, 'Album')]);
     });
   });
 }

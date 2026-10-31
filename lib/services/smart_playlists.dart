@@ -73,7 +73,7 @@ abstract final class SmartPlaylists {
       if (which.contains(SmartList.mostPlayed))
         SmartList.mostPlayed: [
           for (final (s, _, _)
-              in (played.where((e) => e.$2 > 0).toList()..sort((a, b) {
+              in (played.where((e) => e.$2 > 0 && !e.$1.imported).toList()..sort((a, b) {
                     final byPlays = b.$2.compareTo(a.$2);
                     return byPlays != 0 ? byPlays : b.$3.compareTo(a.$3);
                   }))
@@ -82,9 +82,10 @@ abstract final class SmartPlaylists {
         ],
       if (which.contains(SmartList.recentlyPlayed))
         SmartList.recentlyPlayed: [
-          for (final (s, _, _) in (played.where((e) => e.$2 > 0).toList()..sort((a, b) => b.$3.compareTo(a.$3))).take(
-            limit,
-          ))
+          for (final (s, _, _)
+              in (played.where((e) => e.$2 > 0 && !e.$1.imported).toList()..sort((a, b) => b.$3.compareTo(a.$3))).take(
+                limit,
+              ))
             trackFor(s),
         ],
       if (which.contains(SmartList.notPlayedForAWhile) && history != null)

@@ -67,6 +67,8 @@ lib/
     folder_watch.dart          Picks up files added to or removed from the music folders
     play_history.dart          What was played; listening_stats.dart and wrap.dart read it (Stats, monthly Wrap)
     scrobbler.dart             Last.fm / ListenBrainz: when a play is a scrobble (ScrobbleTracker), a queue per service kept for offline listens
+                               importHistory brings past listens into PlayHistory.importPlays; a song matching no file
+                               or video gets an `imported:` key (SongInfo.imported): stats show it, smart playlists skip it
     backup.dart                Backup & restore: preferences (no secrets), the listening history and my-lyrics in one JSON file
     appearance.dart            Themes and palettes (AppPalette, ThemeChoice), accent, cover colours and their fades, window opacity
     layout_prefs.dart          Corners, density and motion (Settings › Look & feel › Layout)
