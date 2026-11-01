@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 
@@ -45,6 +46,13 @@ void main() {
           final image = await boundary.toImage();
           final bytes = await image.toByteData(format: ui.ImageByteFormat.rawRgba);
           final hash = sha256.convert(bytes!.buffer.asUint8List()).toString();
+          const shots = String.fromEnvironment('SHOTS');
+          if (shots.isNotEmpty) {
+            final png = await image.toByteData(format: ui.ImageByteFormat.png);
+            final folder = Directory(shots)..createSync(recursive: true);
+            await File('${folder.path}/${cover ? 'cover' : 'desktop'}-${style.name}.png')
+                .writeAsBytes(png!.buffer.asUint8List());
+          }
           image.dispose();
           return hash;
         });

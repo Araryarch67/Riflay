@@ -9,7 +9,7 @@ class VisualizerLevels extends ValueNotifier<List<double>> {
 
   static const samples = 64;
   double _level = 0;
-  int frame = 0;
+  double frame = 0;
   double backgroundEnergy = 0;
 
   static double amplitude(String metadata) {
@@ -29,6 +29,24 @@ class VisualizerLevels extends ValueNotifier<List<double>> {
 
   void clear() {
     _level = 0;
+    backgroundEnergy = 0;
     value = List.filled(samples, 0);
+  }
+
+  /// Smooth display updates at the screen's refresh rate without polling audio
+  /// more often. The exponential blend behaves the same at 60 and 120 Hz.
+  bool follow(VisualizerLevels source, Duration elapsed) {
+    final blend = 1 - math.exp(-elapsed.inMicroseconds / 45000);
+    var moving = false;
+    double approach(double from, double to) {
+      if ((to - from).abs() < 0.001) return to;
+      moving = true;
+      return from + (to - from) * blend;
+    }
+
+    frame = approach(frame, source.frame);
+    backgroundEnergy = approach(backgroundEnergy, source.backgroundEnergy);
+    value = List.generate(samples, (i) => approach(value[i], source.value[i]));
+    return moving;
   }
 }

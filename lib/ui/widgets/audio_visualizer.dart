@@ -69,39 +69,13 @@ class VisualizerCanvas extends StatelessWidget {
   Widget build(BuildContext context) {
     Widget? art = child;
     if (art != null && style.radial) {
-      art = style == VisualizerStyle.petals
-          ? ClipPath(clipper: const _PetalClipper(), child: art)
-          : ClipOval(child: art);
+      art = ClipOval(child: art);
     }
     return CustomPaint(
       foregroundPainter: _VisualizerPainter(levels, color, style, child != null, radius),
       child: child == null ? null : Padding(padding: const EdgeInsets.all(16), child: art),
     );
   }
-}
-
-Path _petalPath(Rect rect) {
-  final path = Path();
-  final base = rect.shortestSide / 2;
-  for (var i = 0; i <= 144; i++) {
-    final angle = i / 144 * math.pi * 2;
-    final radius = base * (0.95 + 0.04 * math.cos(angle * 12));
-    final point = rect.center + Offset(math.cos(angle), math.sin(angle)) * radius;
-    if (i == 0) {
-      path.moveTo(point.dx, point.dy);
-    } else {
-      path.lineTo(point.dx, point.dy);
-    }
-  }
-  return path..close();
-}
-
-class _PetalClipper extends CustomClipper<Path> {
-  const _PetalClipper();
-  @override
-  Path getClip(Size size) => _petalPath(Offset.zero & size);
-  @override
-  bool shouldReclip(_PetalClipper oldClipper) => false;
 }
 
 class _VisualizerPainter extends CustomPainter {
@@ -119,60 +93,93 @@ class _VisualizerPainter extends CustomPainter {
     ..strokeJoin = StrokeJoin.round
     ..style = fill ? PaintingStyle.fill : PaintingStyle.stroke;
 
+  // Interpolating the envelope keeps narrow beats visible without drawing the
+  // corners of the sample grid. These are RMS history samples, not FFT bins.
+  double sample(List<double> values, double t) {
+    final index = t.clamp(0.0, 1.0) * (values.length - 1);
+    final left = index.floor();
+    final right = math.min(left + 1, values.length - 1);
+    return values[left] + (values[right] - values[left]) * (index - left);
+  }
+
+  Path curve(List<Offset> points, {bool closed = false}) {
+    final path = Path()..moveTo(points.first.dx, points.first.dy);
+    Offset point(int i) => closed ? points[i % points.length] : points[i.clamp(0, points.length - 1)];
+    for (var i = 0; i < points.length - (closed ? 0 : 1); i++) {
+      final p0 = point(i - 1), p1 = point(i), p2 = point(i + 1), p3 = point(i + 2);
+      final c1 = p1 + (p2 - p0) / 6;
+      final c2 = p2 - (p3 - p1) / 6;
+      path.cubicTo(c1.dx, c1.dy, c2.dx, c2.dy, p2.dx, p2.dy);
+    }
+    if (closed) path.close();
+    return path;
+  }
+
   @override
   void paint(Canvas canvas, Size size) {
-    final values = levels.value;
-    if (size.isEmpty || values.every((v) => v < 0.001)) return;
+    if (size.isEmpty || levels.value.every((v) => v < 0.001)) return;
+    // Remove part of the sustained level so small musical changes still read
+    // as contours. Constant audio remains constant; silence stays empty.
+    final floor = levels.value.reduce(math.min) * 0.8;
+    final peak = levels.value.reduce(math.max);
+    final values = levels.value.map((v) => (v - floor) * peak / (peak - floor)).toList();
+    canvas.save();
+    canvas.clipRect(Offset.zero & size);
     if (style.radial) {
       _radial(canvas, size, values);
-      return;
-    }
-    if (border) {
+    } else if (border) {
       _border(canvas, size, values);
-      return;
+    } else {
+      _linear(canvas, size, values);
     }
-    _linear(canvas, size, values);
+    canvas.restore();
   }
 
   void _radial(Canvas canvas, Size size, List<double> values) {
     final center = (Offset.zero & size).center;
     final base = math.max(1.0, size.shortestSide / 2 - 16);
-    final energy = values.skip(values.length - 12).reduce((a, b) => a + b) / 12;
-    if (style == VisualizerStyle.pulse) {
-      for (var i = 0; i < 3; i++) {
-        canvas.drawCircle(
-          center,
-          base + 2 + energy * 3 + i * (3 + energy * 2),
-          pen(0.75 / (i + 1), width: i == 0 ? 2 + energy * 3 : 1),
-        );
+    // Mirror the same history around the artwork. Both ends of the contour
+    // meet with zero slope, rather than jumping at the oldest/newest sample.
+    double level(double t) => sample(values, (1 - math.cos(t * math.pi * 2)) / 2);
+    if (style == VisualizerStyle.petals || style == VisualizerStyle.orbit) {
+      final count = (base * 2 * math.pi / 7).floor().clamp(32, 120);
+      for (var i = 0; i < count; i++) {
+        final t = i / count;
+        final angle = t * math.pi * 2 - math.pi / 2;
+        final ray = Offset(math.cos(angle), math.sin(angle));
+        final amplitude = level(t);
+        if (style == VisualizerStyle.petals) {
+          canvas.drawLine(
+            center + ray * (base + 4),
+            center + ray * (base + 5 + amplitude * 9),
+            pen(0.35 + amplitude * 0.5, width: 2.2),
+          );
+        } else {
+          canvas.drawCircle(
+            center + ray * (base + 5 + amplitude * 8),
+            1.0 + amplitude * 0.65,
+            pen(0.4 + amplitude * 0.5, fill: true),
+          );
+        }
+      }
+      if (style == VisualizerStyle.orbit) {
+        final points = List.generate(64, (i) {
+          final t = i / 64;
+          final angle = t * math.pi * 2 - math.pi / 2;
+          return center + Offset(math.cos(angle), math.sin(angle)) * (base + 3 + level(t) * 3);
+        });
+        canvas.drawPath(curve(points, closed: true), pen(0.22, width: 1));
       }
       return;
     }
-    final phase = style == VisualizerStyle.orbit ? levels.frame * 0.012 : 0.0;
-    final contour = Path();
-    for (var i = 0; i <= 96; i++) {
-      final angle = i / 96 * 2 * math.pi + phase;
-      final ray = Offset(math.cos(angle), math.sin(angle));
-      final r = style == VisualizerStyle.petals ? base * (0.95 + 0.04 * math.cos(angle * 12)) : base;
-      final level = values[((i % 96) * values.length / 96).floor()];
-      final start = center + ray * (r + 2);
-      final end = center + ray * (r + 3 + level * 11);
-      if (style == VisualizerStyle.petals) {
-        canvas.drawLine(start, end, pen(0.85, width: (base / 65).clamp(1.4, 3.0)));
-      } else {
-        canvas.drawCircle(end, 1.0 + level * 1.5, pen(0.85, fill: true));
-      }
-      if (i == 0) {
-        contour.moveTo(start.dx, start.dy);
-      } else {
-        contour.lineTo(start.dx, start.dy);
-      }
-    }
-    canvas.drawPath(contour..close(), pen(0.3, width: 1.2));
-    if (style == VisualizerStyle.orbit) {
-      final point = center + Offset(math.cos(phase * 2), math.sin(phase * 2)) * (base + 8);
-      canvas.drawCircle(point, 7, pen(0.12, fill: true));
-      canvas.drawCircle(point, 3, pen(0.95, fill: true));
+    for (var layer = 1; layer >= 0; layer--) {
+      final points = List.generate(48, (i) {
+        final t = i / 48;
+        final angle = t * math.pi * 2 - math.pi / 2;
+        final amplitude = level(layer == 0 ? t : (t + 0.08) % 1);
+        return center + Offset(math.cos(angle), math.sin(angle)) * (base + 4 + layer * 3 + amplitude * 7);
+      });
+      canvas.drawPath(curve(points, closed: true), pen(layer == 0 ? 0.85 : 0.28, width: layer == 0 ? 1.8 : 1));
     }
   }
 
@@ -180,116 +187,113 @@ class _VisualizerPainter extends CustomPainter {
     final rect = (Offset.zero & size).deflate(16);
     if (rect.isEmpty) return;
     final metric = (Path()..addRRect(RRect.fromRectAndRadius(rect, Radius.circular(radius)))).computeMetrics().first;
-    final outside = Path(), inside = Path();
-    for (var i = 0; i <= 96; i++) {
-      final tangent = metric.getTangentForOffset(metric.length * (i % 96) / 96)!;
+    final count = (metric.length / 7).floor().clamp(32, 160);
+    final outer = <Offset>[], inner = <Offset>[];
+    for (var i = 0; i < count; i++) {
+      final t = i / count;
+      final tangent = metric.getTangentForOffset(metric.length * t)!;
       final normal = Offset(tangent.vector.dy, -tangent.vector.dx);
-      final level = values[((i % 96) * values.length / 96).floor()];
-      final length = level * 11;
+      final amplitude = sample(values, (1 - math.cos(t * math.pi * 2)) / 2);
+      final length = amplitude * 10;
       final start = tangent.position + normal * 3;
-      final end = tangent.position + normal * (3 + length);
+      final end = tangent.position + normal * (4 + length);
       switch (style) {
         case VisualizerStyle.bars:
-          canvas.drawLine(start, end, pen(0.85));
+          canvas.drawLine(start, end, pen(0.75, width: 2.5));
         case VisualizerStyle.mirror:
           canvas.drawLine(
-            tangent.position + normal * (9 - length * 0.5),
-            tangent.position + normal * (9 + length * 0.5),
-            pen(0.85),
+            tangent.position + normal * (8 - length * 0.45),
+            tangent.position + normal * (8 + length * 0.45),
+            pen(0.65, width: 2),
           );
         case VisualizerStyle.dots:
-          canvas.drawCircle(end, 1.2 + level, pen(0.85, fill: true));
-        case VisualizerStyle.peaks:
-          if (i < 96) {
-            final next = metric.getTangentForOffset(metric.length * ((i + 1) % 96) / 96)!;
-            final nextNormal = Offset(next.vector.dy, -next.vector.dx);
-            canvas.drawPath(
-              Path()
-                ..moveTo(start.dx, start.dy)
-                ..lineTo(end.dx, end.dy)
-                ..lineTo(next.position.dx + nextNormal.dx * 3, next.position.dy + nextNormal.dy * 3)
-                ..close(),
-              pen(0.65, fill: true),
-            );
-          }
+          canvas.drawCircle(end, 1.25, pen(0.45 + amplitude * 0.45, fill: true));
         default:
-          final inset = tangent.position + normal * (14 - length);
-          if (i == 0) {
-            outside.moveTo(end.dx, end.dy);
-            inside.moveTo(inset.dx, inset.dy);
-          } else {
-            outside.lineTo(end.dx, end.dy);
-            inside.lineTo(inset.dx, inset.dy);
-          }
+          outer.add(end);
+          inner.add(tangent.position + normal * (3 + length * 0.35));
       }
     }
-    if (style == VisualizerStyle.line || style == VisualizerStyle.wave || style == VisualizerStyle.twinWaves) {
-      outside.close();
-      if (style != VisualizerStyle.line) canvas.drawPath(outside, pen(0.18, width: 6));
-      canvas.drawPath(outside, pen(0.85));
-      if (style == VisualizerStyle.twinWaves) canvas.drawPath(inside..close(), pen(0.55, width: 1.5));
+    if (outer.isEmpty) return;
+    final outside = curve(outer, closed: true);
+    if (style == VisualizerStyle.wave || style == VisualizerStyle.peaks) {
+      final band = Path()
+        ..fillType = PathFillType.evenOdd
+        ..addPath(outside, Offset.zero)
+        ..addRRect(RRect.fromRectAndRadius(rect.inflate(2), Radius.circular(radius + 2)));
+      canvas.drawPath(band, pen(style == VisualizerStyle.wave ? 0.22 : 0.5, fill: true));
+    }
+    canvas.drawPath(outside, pen(0.8, width: style == VisualizerStyle.line ? 1.5 : 1.2));
+    if (style == VisualizerStyle.twinWaves) {
+      canvas.drawPath(curve(inner, closed: true), pen(0.35, width: 1));
     }
   }
 
   void _linear(Canvas canvas, Size size, List<double> values) {
-    final step = size.width / values.length;
+    final bounds = (Offset.zero & size).deflate(3);
+    final center = bounds.center.dy;
+    // Only the ends fade out. A fixed sine arch would turn every song into
+    // the same hill, concealing the dynamics in the measured history.
+    double envelope(double t) {
+      final edge = (math.min(t, 1 - t) / 0.09).clamp(0.0, 1.0);
+      return sample(values, t) * edge * edge * (3 - 2 * edge);
+    }
+
     if (style == VisualizerStyle.bars || style == VisualizerStyle.dots || style == VisualizerStyle.mirror) {
-      final stroke = (step * 0.6).clamp(1.0, 9.0);
-      for (var i = 0; i < values.length; i++) {
-        final height = values[i] * (size.height - 6) * math.sin(math.pi * (i + 0.5) / values.length);
-        final x = (i + 0.5) * step;
+      final count = (bounds.width / 9).floor().clamp(16, 80);
+      final step = bounds.width / count;
+      final width = (step * 0.38).clamp(1.5, 4.0);
+      for (var i = 0; i < count; i++) {
+        final t = (i + 0.5) / count;
+        final amplitude = envelope(t);
+        final height = math.max(width, amplitude * bounds.height * 0.85);
+        final x = bounds.left + (i + 0.5) * step;
         if (style == VisualizerStyle.dots) {
-          for (var y = 4.0; y < height; y += 7) {
-            canvas.drawCircle(Offset(x, size.height - y), 2, pen(0.8, fill: true));
+          for (var y = 0.0; y < height; y += 6) {
+            canvas.drawCircle(Offset(x, bounds.bottom - y - 2), 1.4, pen(0.3 + amplitude * 0.55, fill: true));
           }
         } else {
-          final baseline = style == VisualizerStyle.mirror ? size.height / 2 : size.height - 2;
-          canvas.drawLine(
-            Offset(x, baseline + (style == VisualizerStyle.mirror ? height / 2 : 0)),
-            Offset(x, baseline - (style == VisualizerStyle.mirror ? height / 2 : height)),
-            pen(0.8, width: stroke),
-          );
+          final baseline = style == VisualizerStyle.mirror ? center + height / 2 : bounds.bottom;
+          canvas.drawLine(Offset(x, baseline), Offset(x, baseline - height), pen(0.75, width: width));
         }
       }
       return;
     }
-    if (style == VisualizerStyle.peaks) {
-      final path = Path()..moveTo(0, size.height);
-      for (var i = 0; i < values.length; i++) {
-        final x = (i + 0.5) * step;
-        path.lineTo(x, size.height - values[i] * (size.height - 4));
-        path.lineTo(x + step / 2, size.height);
+
+    if (style == VisualizerStyle.line || style == VisualizerStyle.peaks) {
+      final points = List.generate(64, (i) {
+        final t = i / 63;
+        return Offset(bounds.left + bounds.width * t, bounds.bottom - envelope(t) * bounds.height * 0.85);
+      });
+      final path = curve(points);
+      if (style == VisualizerStyle.peaks) {
+        final fill = Path.from(path)
+          ..lineTo(bounds.right, bounds.bottom)
+          ..lineTo(bounds.left, bounds.bottom)
+          ..close();
+        canvas.drawPath(fill, pen(0.18, fill: true));
       }
-      canvas.drawPath(path..close(), pen(0.65, fill: true));
+      canvas.drawPath(path, pen(0.8, width: 1.6));
       return;
     }
+
+    final top = <Offset>[], bottom = <Offset>[];
     final twin = style == VisualizerStyle.twinWaves;
-    for (var layer = 0; layer < (style == VisualizerStyle.line ? 1 : 2); layer++) {
-      final baseline = twin ? size.height / 2 : size.height;
-      final path = Path()..moveTo(0, baseline);
-      for (var i = 0; i < values.length; i++) {
-        final index = layer == 0 ? i : values.length - 1 - i;
-        final x = size.width * i / (values.length - 1);
-        final height = values[index] * (size.height - 4) * math.sin(math.pi * i / (values.length - 1));
-        final y = baseline + height * (twin ? (layer == 0 ? -0.48 : 0.48) : (layer == 0 ? -1 : -0.65));
-        if (i == 0) {
-          path.lineTo(x, y);
-        } else {
-          final px = size.width * (i - 1) / (values.length - 1);
-          final previous = values[layer == 0 ? i - 1 : values.length - i];
-          final ph = previous * (size.height - 4) * math.sin(math.pi * (i - 1) / (values.length - 1));
-          final py = baseline + ph * (twin ? (layer == 0 ? -0.48 : 0.48) : (layer == 0 ? -1 : -0.65));
-          path.quadraticBezierTo(px, py, (px + x) / 2, (py + y) / 2);
-        }
-      }
-      if (style == VisualizerStyle.line || twin) {
-        canvas.drawPath(path, pen(twin ? 0.7 : 0.9, width: twin ? 2 : 2.5));
-      } else {
-        path.lineTo(size.width, baseline);
-        path.close();
-        canvas.drawPath(path, pen(layer == 0 ? 0.5 : 0.25, fill: true));
-      }
+    for (var i = 0; i < 64; i++) {
+      final t = i / 63;
+      final x = bounds.left + bounds.width * t;
+      final amplitude = envelope(t) * bounds.height * 0.42;
+      top.add(Offset(x, center - amplitude));
+      bottom.add(Offset(x, center + (twin ? envelope(1 - t) * bounds.height * 0.3 : amplitude * 0.65)));
     }
+    final upper = curve(top), lower = curve(bottom);
+    if (!twin) {
+      final ribbon = Path.from(upper)
+        ..extendWithPath(curve(bottom.reversed.toList()), Offset.zero)
+        ..close();
+      canvas.drawPath(ribbon, pen(0.14, fill: true));
+    }
+    canvas.drawPath(upper, pen(0.8, width: 1.6));
+    canvas.drawPath(lower, pen(twin ? 0.5 : 0.3, width: 1.2));
   }
 
   @override
