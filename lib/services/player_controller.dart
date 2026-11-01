@@ -365,17 +365,19 @@ class PlayerController extends ChangeNotifier {
     }
   }
 
-  /// Looks up the stream of the next two songs ahead of time, so skipping
-  /// to a YouTube song doesn't wait. Cached, so repeats are free.
+  /// Keeps only the current and next song cached, and starts the next download.
+  /// Untagged sources (for example an audio-engine probe) are not queue tracks.
   void _prefetchNext() {
     if (Host.isWeb) return; // the proxy looks songs up when the browser asks for them
     final seq = player.sequenceState;
     final at = seq.currentIndex;
     if (at == null) return;
-    YoutubeAudioSource.retainCache({for (final s in seq.sequence.skip(at).take(2)) ?(s.tag as Track).videoId});
+    YoutubeAudioSource.retainCache({
+      for (final s in seq.sequence.skip(at).take(2))
+        if (s.tag case final Track t) ?t.videoId,
+    });
     for (final s in seq.sequence.skip(at + 1).take(1)) {
-      final t = s.tag as Track;
-      if (t.isRemote && downloadedCopy(t) == null) _resolveAhead(t.videoId!);
+      if (s.tag case final Track t when t.isRemote && downloadedCopy(t) == null) _resolveAhead(t.videoId!);
     }
   }
 
