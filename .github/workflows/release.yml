@@ -295,7 +295,11 @@ jobs:
           REPO: ${{ github.repository }}
           TAG: ${{ github.ref_name }}
         run: |
-          prev=$(gh api "repos/$REPO/releases/latest" --jq .tag_name 2>/dev/null || true)
+          # A failed API call can print a JSON error to stdout (for example,
+          # 404 before the first release). Never use that output as a git ref.
+          if ! prev=$(gh api "repos/$REPO/releases/latest" --jq .tag_name 2>/dev/null); then
+            prev=''
+          fi
           if [ -z "$prev" ] || [ "$prev" = "$TAG" ]; then
             prev=$(git describe --tags --abbrev=0 "$TAG^" 2>/dev/null || true)
           fi
