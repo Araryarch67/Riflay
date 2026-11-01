@@ -19,4 +19,8 @@ For local release builds, set `ANDROID_KEYSTORE_PATH`, `ANDROID_KEYSTORE_PASSWOR
 
 v1.2.0 and earlier CI builds used temporary debug keys. v1.2.1 starts the persistent release identity. Users upgrading from an old signing identity must back up Riflay data, uninstall the old app, install v1.2.1 and restore their backup. Later releases signed with the persistent key can install as normal updates.
 
+## In-app updates
+
+Settings → About → Check for updates reads the latest stable GitHub release only when requested. On Android, it selects an APK for the device's ABI, checks its size and GitHub SHA-256 digest, and verifies that its package, signing identity and version match an update for this installation. The APK stays in the app's private cache and is shared read-only with Android's installer. Installation requires the user's permission and confirmation. Desktop clients open the release page for installation.
+
 See [Android app signing](https://developer.android.com/studio/publish/app-signing) for the platform's update and key-management rules.

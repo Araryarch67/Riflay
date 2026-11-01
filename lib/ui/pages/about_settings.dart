@@ -3,9 +3,11 @@ import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../app_version.dart';
+import '../../platform/features.dart';
 import '../../platform/host.dart';
 import '../theme.dart';
 import '../widgets/app_logo.dart';
+import '../widgets/app_update_tile.dart';
 import 'sound_settings.dart' show SettingsCard, settingsMuted;
 
 const _repo = 'https://github.com/Araryarch67/Riflay';
@@ -96,6 +98,7 @@ class AboutSettings extends StatelessWidget {
         ),
         SettingsCard(
           children: [
+            if (Features.appUpdates) const AppUpdateTile(),
             ListTile(
               leading: const Icon(Icons.info_outline_rounded),
               title: const Text('Version'),

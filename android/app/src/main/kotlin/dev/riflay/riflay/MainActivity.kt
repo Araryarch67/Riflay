@@ -2,6 +2,7 @@ package dev.riflay.riflay
 
 import android.Manifest
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.res.Resources
 import android.graphics.Color
@@ -20,6 +21,7 @@ class MainActivity : AudioServiceActivity() {
     private var pending: MethodChannel.Result? = null
     private var multicastLock: WifiManager.MulticastLock? = null
     private var usbDac: UsbDac? = null
+    private var appUpdater: AppUpdater? = null
 
     // Settings > Appearance > Window opacity below 100%: the home-screen wallpaper shows behind the app.
     // A translucent window and a transparent Flutter surface cost frame time, so they are only used then.
@@ -51,6 +53,7 @@ class MainActivity : AudioServiceActivity() {
         super.configureFlutterEngine(flutterEngine)
         usbDac = UsbDac(this, flutterEngine.dartExecutor.binaryMessenger)
         PowerControl(applicationContext, flutterEngine.dartExecutor.binaryMessenger)
+        appUpdater = AppUpdater(this, flutterEngine.dartExecutor.binaryMessenger)
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "riflay/window").setMethodCallHandler { call, result ->
             val on = call.arguments as? Boolean
             if (call.method != "setSeeThrough" || on == null) return@setMethodCallHandler result.notImplemented()
@@ -89,6 +92,7 @@ class MainActivity : AudioServiceActivity() {
     override fun onDestroy() {
         multicastLock?.takeIf { it.isHeld }?.release()
         usbDac?.dispose()
+        appUpdater?.dispose()
         super.onDestroy()
     }
 
@@ -97,6 +101,11 @@ class MainActivity : AudioServiceActivity() {
         if (requestCode != REQUEST) return
         pending?.success(grantResults.firstOrNull() == PackageManager.PERMISSION_GRANTED)
         pending = null
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        appUpdater?.onActivityResult(requestCode)
     }
 
     private companion object {

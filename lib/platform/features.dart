@@ -6,6 +6,9 @@ import 'host.dart';
 /// (`network.dart`) and has none of what needs the device itself: files, the mpv sound engine, a Google or Spotify
 /// session, the local network or other apps. Hide a control whose feature is off; never leave it dead.
 abstract final class Features {
+  /// On-demand release checks and native Android APK updates.
+  static bool get appUpdates => !Host.isWeb;
+
   /// Music folders, adding songs and folders, the tag editor, duplicates, converting to FLAC.
   static bool get localLibrary => !Host.isWeb;
 
