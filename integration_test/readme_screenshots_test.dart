@@ -22,6 +22,7 @@ import 'dart:math';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -35,6 +36,10 @@ import 'package:riflay/services/download_prefs.dart';
 import 'package:riflay/services/listen_together/listen_together.dart';
 import 'package:riflay/services/play_history.dart';
 import 'package:riflay/services/player_controller.dart';
+import 'package:riflay/services/layout_prefs.dart';
+import 'package:riflay/ui/widgets/title_bar.dart';
+import 'package:riflay/services/stay_awake.dart';
+import 'package:riflay/services/power_policy.dart';
 import 'package:riflay/services/private_files.dart';
 import 'package:riflay/services/video_download.dart';
 import 'package:riflay/services/youtube_importer.dart';
@@ -46,6 +51,11 @@ import 'package:riflay/ui/shell_scope.dart';
 import 'package:riflay/ui/widgets/signal_path.dart';
 import 'package:riflay/ui/widgets/sleep_timer_button.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+class _ScreenshotPower implements PowerBackend {
+  @override
+  Future<void> apply(PowerLocks from, PowerLocks to) async {}
+}
 
 const shots = String.fromEnvironment('SHOTS');
 
@@ -294,6 +304,8 @@ void main() {
     };
 
     await c.load();
+    await StayAwake.start(c, backend: _ScreenshotPower());
+    await LayoutPrefs.instance.setTabBar(TabBarStyle.capsule);
     await c.scanFolder(music);
 
     tester.view.physicalSize = const Size(1440, 900);
@@ -338,6 +350,8 @@ void main() {
     // One picture failing must not lose the others.
     final failed = <String>[];
     Future<void> step(String name, Future<void> Function() body) async {
+      const selected = String.fromEnvironment('SHOT_STEPS');
+      if (selected.isNotEmpty && !selected.split(',').contains(name)) return;
       try {
         await body();
       } catch (e, s) {
@@ -529,17 +543,18 @@ void main() {
         await DownloadPrefs.instance.setFolder(null);
         await tester.tap(find.text('Settings').first); // the trail's first step: back to the list
         await settle();
-        await Scrollable.ensureVisible(tester.element(find.text('Beta features')), alignment: 0.5);
+        await Scrollable.ensureVisible(tester.element(find.text('Power & background')), alignment: 0.5);
         await settle();
-        await tester.tap(find.text('Beta features'));
+        await tester.tap(find.text('Power & background'));
         await settle();
-        await shot('settings-beta');
+        await shot('settings-power');
         await tester.tap(find.text('Settings').first);
         await settle();
         await tester.tap(find.text('Sound'));
         await settle();
-        await tester.tap(find.text('Playback'));
+        await tester.tap(find.text('Sound effects (DSP)'));
         await settle();
+        await tester.ensureVisible(find.text('Virtual speakers'));
         await tester.tap(find.text('Virtual speakers'));
         await shot('sound');
         await tester.tap(find.text('Virtual speakers'));
@@ -725,6 +740,12 @@ void main() {
         await tester.runAsync(() => session.host(mode: ListenMode.wifi, name: 'Ana'));
         await settle(2000);
         await shot('listen-together');
+        await tester.ensureVisible(find.text('Show QR code'));
+        await tester.tap(find.text('Show QR code'));
+        await settle();
+        await shot('listen-qr');
+        await tester.tap(find.text('Close'));
+        await settle();
         await tester.runAsync(session.leave);
         await settle();
       });
@@ -779,6 +800,10 @@ void main() {
 
       // Phone: home, its Library and Settings tabs, then the full-screen player.
       await step('phone', () async {
+        debugDefaultTargetPlatformOverride = TargetPlatform.android;
+        debugCustomTitleBar = false;
+        await tester.pumpWidget(RepaintBoundary(child: RiflayApp(controller: c)));
+        await settle();
         tester.view.devicePixelRatio = 2;
         tester.view.physicalSize = const Size(800, 1720);
         await c.playList(c.library.where((t) => t.album == 'Small Hours').toList(), 0, from: 'Small Hours');
@@ -788,6 +813,12 @@ void main() {
         await tester.tap(find.byTooltip('Home').last);
         await settle(1500);
         await shot('phone-home', pixelRatio: 2);
+        for (final style in TabBarStyle.values) {
+          await LayoutPrefs.instance.setTabBar(style);
+          await shot('phone-bar-${style.name}', pixelRatio: 2);
+        }
+        await LayoutPrefs.instance.setTabBar(TabBarStyle.capsule);
+        await settle();
         await tester.tap(find.byTooltip('Library').last);
         await settle(1500);
         await shot('phone-library', pixelRatio: 2);
@@ -801,11 +832,14 @@ void main() {
       });
     } finally {
       debugPrint('SHOTS FAILED: $failed');
+      debugDefaultTargetPlatformOverride = null;
+      debugCustomTitleBar = null;
       JustAudioMediaKit.onPlayerCreated = apply;
       await c.player.stop();
       await server.close(force: true);
       dir.deleteSync(recursive: true);
     }
+    expect(failed, isEmpty);
   }
 
   testWidgets('README screenshots', (tester) async {

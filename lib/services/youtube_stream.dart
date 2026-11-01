@@ -126,7 +126,12 @@ abstract final class YoutubeStream {
     final key = aac ? 'aac:$videoId' : videoId;
     final future = _player(videoId, aac: aac).catchError((Object _) => _player(videoId, aac: aac, freshVisitor: true));
     _resolved[key] = future;
-    future.then<void>((_) {}, onError: (Object _) => _resolved.remove(key));
+    future.then<void>(
+      (_) {},
+      onError: (Object _) {
+        _resolved.remove(key);
+      },
+    );
     return future;
   }
 

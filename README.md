@@ -35,7 +35,7 @@ Riflay is a free, open-source music player for Linux, Windows, macOS, Android an
 
 ## Features
 
-Features marked (Beta) are still being tested; **Settings › Beta features** switches each of them off.
+Feature options live in their respective Settings pages. Power & background has its own page; sound processors and Crossfade are grouped under Sound effects (DSP).
 
 ### Library & YouTube Music
 
@@ -44,7 +44,7 @@ Features marked (Beta) are still being tested; **Settings › Beta features** sw
 | **One library** | Local files, playlists and YouTube Music in a single library |
 | **Format support** | FLAC, ALAC, WAV, AIFF, MP3, AAC, Ogg, Opus, WavPack, APE, DSD, SACD ISO and cue sheets |
 | **YouTube Music** | Fully usable without an account. Sign in with Google to sync likes, playlists and history. Moods & genres, new releases, save albums and playlists to your library |
-| **Video mode** (Beta) | Watch the music video of a YouTube song, in step with it: one Song / Video switch on the player. Fetched only when picked, and back to the song alone when the screen is off. Downloaded videos play offline |
+| **Video mode** | Watch the music video of a YouTube song, in step with it: one Song / Video switch on the player. Fetched only when picked, and back to the song alone when the screen is off. Downloaded videos play offline |
 | **Synced lyrics** | Word by word where the source times each word, otherwise line by line; pronunciation, translation, copy, your own .lrc files, and saved with downloads |
 | **Playlists** | Combine local files with YouTube songs, and drag songs into any order. Save what's in the queue as a playlist. Import from Spotify, Apple Music or Deezer |
 | **Spotify import** | Sign in to Spotify and bring your playlists, Liked Songs and albums over |
@@ -85,7 +85,7 @@ Features marked (Beta) are still being tested; **Settings › Beta features** sw
 
 | Feature | Description |
 |---|---|
-| **Listen together** | Friends play along with your YouTube songs, in sync. On the same Wi-Fi with a short code, or **Anywhere** (Beta) with a longer one: it connects through free public servers, end-to-end encrypted |
+| **Listen together** | Friends play along with your YouTube songs, in sync. Join by scanning a session QR code in Riflay. Hosts can allow song suggestions and seeking. On the same Wi-Fi with a short code, or **Anywhere** with a longer one: it connects through free public servers, end-to-end encrypted |
 | **Play on TVs and speakers** | DLNA / UPnP and AirPlay |
 
 ### Look & feel
@@ -108,6 +108,7 @@ Features marked (Beta) are still being tested; **Settings › Beta features** sw
 | **System integration** | Lock screen, notification, Control Center, MPRIS, media keys, Discord |
 | **Last.fm & ListenBrainz** | Songs you listen to are added to your profile there (scrobbling), with Now playing. Listens made offline are sent later, and your past listens there can be brought into your stats. Settings › Accounts & services |
 | **Backup & restore** | Your settings, playlists, listening history and your own lyrics in one file, to bring back on this device or a new one. Sign-ins are left out. Settings › Library & downloads |
+| **Streaming recovery** | Temporarily caches the current and next song; resumes interrupted audio without skipping missing data. Cached audio keeps playing offline, and temporary files are removed when no longer needed. |
 | **Fast** | A YouTube song starts in about 0.3 s |
 
 ## Screenshots
@@ -126,19 +127,19 @@ Features marked (Beta) are still being tested; **Settings › Beta features** sw
 | **Sleep timer** | **Crossfade** |
 | ![Sleep timer](docs/screenshots/sleep-timer.webp) | ![Crossfade](docs/screenshots/settings-crossfade.webp) |
 | **Virtual speakers and Mono audio** | **Equalizer** |
-| ![Playback settings](docs/screenshots/sound.webp) | ![Equalizer](docs/screenshots/equalizer.webp) |
+| ![Sound effects and DSP settings](docs/screenshots/sound.webp) | ![Equalizer](docs/screenshots/equalizer.webp) |
 | **Signal path** | **Dynamic theme** |
 | ![Signal path](docs/screenshots/signal-path.webp) | ![Dynamic theme](docs/screenshots/dynamic-theme.webp) |
 | **Full-screen player** | **Settings** |
 | ![Full-screen player](docs/screenshots/fullscreen.webp) | ![Settings](docs/screenshots/settings.webp) |
 | **Themes and colours** | **About** |
 | ![Appearance](docs/screenshots/appearance.webp) | ![About](docs/screenshots/settings-about.webp) |
-| **Spotify import** | **Beta features** |
-| ![Spotify import](docs/screenshots/spotify.webp) | ![Beta features](docs/screenshots/settings-beta.webp) |
+| **Spotify import** | **Power & background** |
+| ![Spotify import](docs/screenshots/spotify.webp) | ![Power and background settings](docs/screenshots/settings-power.webp) |
 | **A tablet-sized window** | |
 | ![Tablet-sized window](docs/screenshots/tablet.webp) | |
 
-On a phone:
+On a phone, with Capsule as the default bottom bar and Search in the middle:
 
 | Home | Now playing |
 |---|---|
@@ -147,6 +148,25 @@ On a phone:
 | <img src="docs/screenshots/phone-library.webp" alt="Phone library" width="280"> | <img src="docs/screenshots/phone-settings.webp" alt="Phone settings" width="280"> |
 | **A Riflay Wrap card** | |
 | <img src="docs/screenshots/wrap.webp" alt="Riflay Wrap card" width="200"> | |
+
+<details>
+<summary>All 10 mobile bottom bar styles</summary>
+
+Choose a style in **Settings › Look & feel › Layout**. Every style keeps Search in the middle.
+
+| Classic | Material |
+|---|---|
+| <img src="docs/screenshots/phone-bar-classic.webp" alt="Classic mobile bottom bar" width="240"> | <img src="docs/screenshots/phone-bar-material.webp" alt="Material mobile bottom bar" width="240"> |
+| **Underline** | **Minimal** |
+| <img src="docs/screenshots/phone-bar-underline.webp" alt="Underline mobile bottom bar" width="240"> | <img src="docs/screenshots/phone-bar-minimal.webp" alt="Minimal mobile bottom bar" width="240"> |
+| **Text only** | **Floating** |
+| <img src="docs/screenshots/phone-bar-text.webp" alt="Text only mobile bottom bar" width="240"> | <img src="docs/screenshots/phone-bar-floating.webp" alt="Floating mobile bottom bar" width="240"> |
+| **Capsule (default)** | **Dock** |
+| <img src="docs/screenshots/phone-bar-capsule.webp" alt="Capsule mobile bottom bar" width="240"> | <img src="docs/screenshots/phone-bar-dock.webp" alt="Dock mobile bottom bar" width="240"> |
+| **Centre button** | **Liquid glass** |
+| <img src="docs/screenshots/phone-bar-centre.webp" alt="Centre button mobile bottom bar" width="240"> | <img src="docs/screenshots/phone-bar-glass.webp" alt="Liquid glass mobile bottom bar" width="240"> |
+
+</details>
 
 The pictures show a made-up library of generated songs.
 
@@ -206,7 +226,7 @@ Every platform plays through [libmpv](https://mpv.io), using Riflay's own build 
 | Area | Details |
 |---|---|
 | **Playback** (Settings › Sound) | Equalizer with presets and automatic headroom, volume leveling (ReplayGain per song or album), gapless playback, **Virtual speakers** (MIT's KEMAR HRTF: two speakers at ±30°), headphone crossfeed, **Mono audio** (both ears, left only or right only) |
-| **Hi-fi audio** | Room correction (an impulse response); output sample rate; SoX resampler; buffer size. On desktop also: output device, including direct ALSA hardware on Linux; **bit-perfect mode**; **exclusive mode** (WASAPI on Windows, Core Audio hog mode on macOS); **native DSD (DoP)** for DSF, DSDIFF and SACD songs; **ASIO** on Windows; **audio plugins** through [Carla](https://kx.studio/Applications:Carla). On Android 14 and later with a USB DAC: **bit-perfect mode** and **native DSD (DoP)**. On iOS: the output picker, and a USB DAC follows each song's sample rate |
+| **Output & quality** | Output sample rate; SoX resampler; buffer size. On desktop also: output device, including direct ALSA hardware on Linux; **bit-perfect mode**; **exclusive mode** (WASAPI on Windows, Core Audio hog mode on macOS); **native DSD (DoP)** for DSF, DSDIFF and SACD songs; **ASIO** on Windows; **audio plugins** through [Carla](https://kx.studio/Applications:Carla). On Android 14 and later with a USB DAC: **bit-perfect mode** and **native DSD (DoP)**. On iOS: the output picker, and a USB DAC follows each song's sample rate |
 | **Play on** | DLNA / UPnP renderers and classic AirPlay speakers, found on the network. Files the device cannot play (DSD, cue-sheet songs, WavPack, ...) are converted to FLAC on the fly; YouTube songs are sent as AAC; AirPlay receives ALAC |
 | **Signal path** | Source codec and stored bit depth → decoder → every DSP stage → volume → resampler → output device, with a verdict: *Bit-perfect*, *Lossless to the system mixer* or *Processed* |
 
@@ -226,7 +246,7 @@ Not yet verified on real hardware: ASIO, exclusive mode, and casting to physical
 | Discord | ✓ | ✓ | ✓ | N/A⁶ | N/A⁶ |
 | Audio plugins (Carla) | ✓ | ✓⁷ | ✓⁷ | N/A⁷ | N/A⁷ |
 | See-through window | ✓ | untested⁸ | untested⁸ | ✓⁸ | N/A⁸ |
-| Video mode (Beta) | ✓ | untested | untested⁹ | untested⁹ | untested⁹ |
+| Video mode | ✓ | untested | untested⁹ | untested⁹ | untested⁹ |
 
 ✓ means the feature works and has been verified (tests, CI on that OS, an emulator or Wine). **untested** means it is built for that OS but has not yet been tried on a real device; reports from real devices are welcome.
 
@@ -262,7 +282,7 @@ Riflay builds on the work of:
 | [FFmpeg](https://ffmpeg.org), with [SoX's resampler](https://sourceforge.net/projects/soxr/) | Decoding, filters and resampling |
 | [yt-dlp](https://github.com/yt-dlp/yt-dlp), [youtube_explode_dart](https://github.com/Hexer10/youtube_explode_dart) | YouTube audio |
 | [ytmusicapi](https://github.com/sigma67/ytmusicapi) | Its documentation of YouTube Music's API, which this app follows |
-| [LRCLIB](https://lrclib.net), [Better Lyrics](https://betterlyrics.org), Kugou, NetEase Cloud Music, QQ Music, Musixmatch (Beta), [Megalobiz](https://www.megalobiz.com), [Genius](https://genius.com), [lyrics.ovh](https://lyrics.ovh) | Free lyrics |
+| [LRCLIB](https://lrclib.net), [Better Lyrics](https://betterlyrics.org), Kugou, NetEase Cloud Music, QQ Music, Musixmatch, [Megalobiz](https://www.megalobiz.com), [Genius](https://genius.com), [lyrics.ovh](https://lyrics.ovh) | Free lyrics |
 | [audio_metadata_reader](https://github.com/ClementBeal/audio_metadata_reader) | Tags |
 | Bill Gardner and Keith Martin's [KEMAR HRTF measurements](https://sound.media.mit.edu/resources/KEMAR.html) (MIT Media Lab) | Virtual speakers |
 | [akagi](https://github.com/z0orb/akagi) | Ideas behind dragging songs into order in playlists and the Downloads page's storage overview (re-implemented, no code copied) |

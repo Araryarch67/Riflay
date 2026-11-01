@@ -1004,7 +1004,12 @@ class YoutubeMusicAccount extends ChangeNotifier {
       final future = _browseClient.browseTracks(browseId, limit: _maxItems).then(_webTracks);
       _publicPages[browseId] = (DateTime.now(), future);
       if (_publicPages.length > 50) _publicPages.remove(_publicPages.keys.first);
-      future.then<void>((_) {}, onError: (Object _) => _publicPages.remove(browseId)); // retry next time
+      future.then<void>(
+        (_) {},
+        onError: (Object _) {
+          _publicPages.remove(browseId);
+        },
+      ); // retry next time
       return future;
     }
     return playlistTracks(p.id);

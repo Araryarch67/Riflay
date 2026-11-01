@@ -84,7 +84,8 @@ class PlayerController extends ChangeNotifier {
           }),
     );
     _subs.add(
-      player.playerStateStream.listen((_) {
+      player.playerStateStream.listen((state) {
+        if (state.processingState == ProcessingState.completed) YoutubeAudioSource.retainCache({});
         _recordRecent();
         _updatePresence();
         notifyListeners();
@@ -371,7 +372,8 @@ class PlayerController extends ChangeNotifier {
     final seq = player.sequenceState;
     final at = seq.currentIndex;
     if (at == null) return;
-    for (final s in seq.sequence.skip(at + 1).take(2)) {
+    YoutubeAudioSource.retainCache({for (final s in seq.sequence.skip(at).take(2)) ?(s.tag as Track).videoId});
+    for (final s in seq.sequence.skip(at + 1).take(1)) {
       final t = s.tag as Track;
       if (t.isRemote && downloadedCopy(t) == null) _resolveAhead(t.videoId!);
     }
@@ -379,7 +381,7 @@ class PlayerController extends ChangeNotifier {
 
   /// Looks a song's stream up in advance and fetches its first seconds, so it
   /// starts right away.
-  static void _resolveAhead(String videoId) => YoutubeAudioSource.preload(videoId).ignore();
+  void _resolveAhead(String videoId) => YoutubeAudioSource.preload(videoId, yt: youtube.client).ignore();
 
   /// Whether the play button has something to start: the queue, or the local library.
   bool get canPlay => player.audioSources.isNotEmpty || _library.isNotEmpty;
@@ -1303,6 +1305,7 @@ class PlayerController extends ChangeNotifier {
     sleep.cancel();
     await player.stop();
     await player.clearAudioSources();
+    await YoutubeAudioSource.clearCache();
     _ordered = const [];
     _autoplayed.clear();
     _autoplaySeed = null;
@@ -1559,6 +1562,7 @@ class PlayerController extends ChangeNotifier {
       s.cancel();
     }
     player.dispose();
+    unawaited(YoutubeAudioSource.clearCache().catchError((Object e) => debugPrint('Audio cache cleanup: $e')));
     _errors.close();
     youtube.dispose();
     ytMusic.dispose();

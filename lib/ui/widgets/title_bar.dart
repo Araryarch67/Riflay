@@ -6,7 +6,9 @@ import '../theme.dart';
 import 'app_logo.dart';
 
 /// Desktop platforms draw their own title bar; mobile has none.
-bool get hasCustomTitleBar => Host.isLinux || Host.isWindows || Host.isMacOS;
+@visibleForTesting
+bool? debugCustomTitleBar;
+bool get hasCustomTitleBar => debugCustomTitleBar ?? (Host.isLinux || Host.isWindows || Host.isMacOS);
 
 /// True while the desktop layout draws the title bar itself (with Back /
 /// Forward, Home and search in it); the app frame then leaves its plain one out.

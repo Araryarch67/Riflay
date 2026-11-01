@@ -342,6 +342,8 @@ void main() {
       const Lyrics(lines: [LyricLine(Duration(seconds: 1), 'Line 0')], source: 'Kugou', otherVersion: true),
     );
     expect(find.byKey(const ValueKey('lyrics-other-version')), findsOneWidget);
+    expect(find.textContaining('different recording of the same song'), findsOneWidget);
+    expect(find.textContaining('timing may not match'), findsOneWidget);
   });
 
   testWidgets('Adjust timing moves a song\'s lyrics half a second a step, and keeps it', (tester) async {

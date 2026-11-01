@@ -10,6 +10,7 @@ import 'package:http/http.dart' as http;
 import 'package:just_audio/just_audio.dart';
 import 'package:youtube_explode_dart/youtube_explode_dart.dart';
 
+import 'audio_stream_cache.dart';
 import 'youtube_importer.dart';
 import 'youtube_stream.dart';
 import 'ytdlp.dart';
@@ -39,16 +40,35 @@ class StreamStats {
 /// Byte ranges are fetched in chunks because googlevideo rejects very large
 /// single ranges.
 class YoutubeAudioSource extends StreamAudioSource {
-  YoutubeAudioSource(this.videoId, {required this.yt, this.aac = false, super.tag});
+  YoutubeAudioSource(
+    this.videoId, {
+    required this.yt,
+    this.aac = false,
+    super.tag,
+    this.client,
+    this.resolveAudio,
+    this.cacheAudio = true,
+  });
+
+  @visibleForTesting
+  final http.Client? client;
+  @visibleForTesting
+  final Future<ResolvedAudio> Function()? resolveAudio;
+
+  final bool cacheAudio;
+  static final _cache = AudioStreamCache<ResolvedAudio>();
+
+  static String _key(String id, bool aac) => aac ? 'aac:$id' : id;
+  static void retainCache(Set<String> ids) => _cache.retain({
+    for (final id in ids) ...[id, 'aac:$id'],
+  });
+  static Future<void> clearCache() => _cache.clear();
+  @visibleForTesting
+  static bool cacheCompleteFor(String id) => _cache.find(id)?.complete ?? false;
 
   static const _chunkSize = 1 << 20;
 
-  /// The first bytes of the next songs in the queue, fetched while the
-  /// current one plays ([preload]), so skipping starts without the network.
-  static final _heads = <String, ({int total, Uint8List bytes})>{};
-  static final _loadingHeads = <String, Future<void>>{};
-  static const _headSize = 256 << 10; // ~15 s of 128 kbps Opus
-  static final _headHttp = http.Client();
+  static final _preloads = <String, Future<void>>{};
 
   static final _stats = <String, StreamStats>{};
 
@@ -64,33 +84,30 @@ class YoutubeAudioSource extends StreamAudioSource {
     return s;
   }
 
-  /// Resolves [videoId] and fetches the start of its audio, once.
-  static Future<void> preload(String videoId) =>
-      _heads.containsKey(videoId) ? Future.value() : _loadingHeads[videoId] ??= _fetchHead(videoId);
+  /// Start one temporary background download of the next song. Playback reads
+  /// that same growing file, so prefetch and playback never download it twice.
+  static Future<void> preload(String videoId, {required YoutubeExplode yt}) {
+    if (_cache.find(videoId) != null) return Future.value();
+    return _preloads[videoId] ??= YoutubeAudioSource(videoId, yt: yt)._entry().then<void>((_) {}).whenComplete(() {
+      _preloads.remove(videoId);
+    });
+  }
 
-  static Future<void> _fetchHead(String videoId) async {
+  Future<CachedAudio<ResolvedAudio>?> _entry() async {
+    final key = _key(videoId, aac);
+    if (_cache.find(key) case final entry?) return entry;
+    final info = await _resolve();
+    if (info.size == null) return null;
     try {
-      final r = await YoutubeStream.best(videoId);
-      final total = r.size;
-      if (total == null) return;
-      final took = Stopwatch()..start();
-      final res = await _headHttp.get(
-        r.url,
-        headers: {'Range': 'bytes=0-${(_headSize < total ? _headSize : total) - 1}'},
+      return await _cache.open(
+        key,
+        metadata: info,
+        length: info.size!,
+        download: (cancelled) => _ranged(info, 0, info.size!, info.size!, aborted: cancelled),
       );
-      if (res.statusCode != 206 && res.statusCode != 200) return;
-      _statsFor(videoId)
-        ..stream = r
-        ..received += res.bodyBytes.length
-        .._count(res.bodyBytes.length, took.elapsed);
-      _heads[videoId] = (total: total, bytes: res.bodyBytes);
-      while (_heads.length > 4) {
-        _heads.remove(_heads.keys.first);
-      }
-    } catch (_) {
-      // Just a head start; playback fetches it normally.
-    } finally {
-      _loadingHeads.remove(videoId);
+    } on FileSystemException catch (e) {
+      debugPrint('Temporary audio cache unavailable: $e');
+      return null;
     }
   }
 
@@ -106,12 +123,12 @@ class YoutubeAudioSource extends StreamAudioSource {
 
   /// YouTube's player API (yt-dlp on desktop if refused), with
   /// youtube_explode as a last resort on phones. Always has a size.
-  Future<ResolvedAudio> _resolve() async => _statsFor(videoId).stream = await _find();
+  Future<ResolvedAudio> _resolve() async => _statsFor(videoId).stream = await (resolveAudio?.call() ?? _find());
 
   Future<ResolvedAudio> _find() async {
     try {
       final r = await YoutubeStream.best(videoId, aac: aac);
-      if (r.size != null) return r;
+      if ((r.size ?? 0) > 0) return r;
       if (YtDlp.supported) throw StateError('Unknown stream size for $videoId');
     } catch (e) {
       if (YtDlp.supported) rethrow;
@@ -134,7 +151,8 @@ class YoutubeAudioSource extends StreamAudioSource {
 
   @override
   Future<StreamAudioResponse> request([int? start, int? end]) async {
-    final info = await _resolve();
+    final cached = cacheAudio ? await _entry() : null;
+    final info = cached?.metadata ?? await _resolve();
     final total = info.size!;
     final from = start ?? 0;
     final to = (end ?? total).clamp(from, total);
@@ -143,70 +161,143 @@ class YoutubeAudioSource extends StreamAudioSource {
       contentLength: to - from,
       offset: from,
       contentType: info.mimeType,
-      stream: _ranged(info.url, from, to, total),
+      stream: cached != null && (cached.complete || from <= cached.available + _chunkSize)
+          ? _fromCache(cached, info, from, to, total)
+          : _ranged(info, from, to, total),
     );
+  }
+
+  Stream<List<int>> _fromCache(
+    CachedAudio<ResolvedAudio> cached,
+    ResolvedAudio info,
+    int from,
+    int to,
+    int total,
+  ) async* {
+    var position = from;
+    try {
+      await for (final bytes in cached.read(from, to)) {
+        position += bytes.length;
+        yield bytes;
+      }
+    } on FileSystemException catch (e) {
+      debugPrint('Audio cache read failed; resuming from network: $e');
+      yield* _ranged(info, position, to, total);
+    }
+  }
+
+  Future<http.StreamedResponse> _send(Uri uri, StreamCancellation cancel, {String? range}) async {
+    final timeout = Completer<void>();
+    final abort = Future.any([cancel.whenCancelled, timeout.future]);
+    final request = http.AbortableRequest('GET', uri, abortTrigger: abort);
+    if (range != null) request.headers['Range'] = range;
+    return (client ?? _http)
+        .send(request)
+        .timeout(
+          const Duration(seconds: 20),
+          onTimeout: () {
+            if (!timeout.isCompleted) timeout.complete();
+            throw TimeoutException('Timed out waiting for audio headers');
+          },
+        );
   }
 
   /// just_audio's proxy drops stream errors without a word (playback just
   /// stops), so say what went wrong here.
-  Stream<List<int>> _ranged(Uri url, int from, int to, int total) =>
-      _fetchRange(url, from, to, total).handleError((Object e, StackTrace st) {
-        debugPrint('YouTube stream $videoId failed at bytes $from-$to: $e');
-        Error.throwWithStackTrace(e, st);
+  Stream<List<int>> _ranged(ResolvedAudio info, int from, int to, int total, {Future<void>? aborted}) =>
+      cancellableAudio((cancel) async* {
+        aborted?.then((_) => cancel.cancel());
+        yield* _fetchRange(info, from, to, total, cancel);
       });
 
-  Stream<List<int>> _fetchRange(Uri url, int from, int to, int total) async* {
-    var source = url;
+  Stream<List<int>> _fetchRange(ResolvedAudio info, int from, int to, int total, StreamCancellation cancel) async* {
+    var source = info.url;
     var retried = false;
     var pos = from;
-    // From memory as far as the preloaded start of the file reaches.
-    final head = aac ? null : _heads[videoId];
-    if (head != null && head.total == total && pos < head.bytes.length) {
-      final end = head.bytes.length < to ? head.bytes.length : to;
-      yield Uint8List.sublistView(head.bytes, pos, end);
-      pos = end;
-    }
     var dropped = 0;
     final stats = _statsFor(videoId);
-    while (pos < to) {
+    while (pos < to && !cancel.cancelled) {
       final last = (pos + _chunkSize).clamp(0, to) - 1;
+      final before = pos;
       try {
-        final req = http.Request('GET', source)..headers['Range'] = 'bytes=$pos-$last';
         // Runs only while waiting for the network, not while the player isn't reading.
         final took = Stopwatch()..start();
         var got = 0;
-        final res = await _http.send(req);
+        final res = await _send(source, cancel, range: 'bytes=$pos-$last');
         if (res.statusCode != 200 && res.statusCode != 206) {
           await res.stream.drain<void>();
+          if (res.statusCode == 408 || res.statusCode == 429 || res.statusCode >= 500) {
+            throw http.ClientException('Temporary server response ${res.statusCode}', source);
+          }
           // Usually an expired or throttled URL: resolve a fresh one and retry once.
           if (!retried) {
             retried = true;
             YoutubeStream.invalidateEverywhere(videoId);
-            source = (await _resolve()).url;
+            final ResolvedAudio refreshed;
+            try {
+              refreshed = await _resolve();
+            } catch (_) {
+              retried = false;
+              throw http.ClientException('Temporary failure refreshing the stream URL', source);
+            }
+            // Resuming a different encoding mid-file corrupts the decoder's stream.
+            if (refreshed.size != total || refreshed.formatId != info.formatId || refreshed.ext != info.ext) {
+              throw const HttpException('The audio format changed while resuming');
+            }
+            source = refreshed.url;
             continue;
           }
-          throw http.ClientException('HTTP ${res.statusCode} while streaming $videoId', source);
+          throw http.ClientException('Temporary server response ${res.statusCode}', source);
         }
-        await for (final bytes in res.stream) {
-          got += bytes.length;
-          stats.received += bytes.length;
+        if (res.statusCode == 206) {
+          final range = RegExp(r'^bytes (\d+)-(\d+)/(\d+)$').firstMatch(res.headers['content-range'] ?? '');
+          if (range == null ||
+              int.parse(range[1]!) != pos ||
+              int.parse(range[3]!) != total ||
+              int.parse(range[2]!) < pos ||
+              int.parse(range[2]!) >= total) {
+            await res.stream.drain<void>();
+            throw const HttpException('The server returned a different byte range');
+          }
+        }
+        // A 200 response ignores Range and starts at byte zero. Discard its
+        // prefix and stop at the requested end, rather than duplicate audio.
+        var discard = res.statusCode == 200 ? pos : 0;
+        await for (final bytes in res.stream.timeout(const Duration(seconds: 20))) {
+          if (discard >= bytes.length) {
+            discard -= bytes.length;
+            continue;
+          }
+          final begin = discard;
+          discard = 0;
+          final length = (bytes.length - begin).clamp(0, last + 1 - pos);
+          if (length == 0) break;
+          final chunk = begin == 0 && length == bytes.length ? bytes : bytes.sublist(begin, begin + length);
+          got += length;
+          stats.received += length;
+          pos += length;
           took.stop();
-          yield bytes;
+          yield chunk;
           took.start();
-          pos += bytes.length;
+          if (pos > last) break;
         }
         stats._count(got, took.elapsed);
-        pos = last + 1;
+        // A response can end cleanly before the range is complete. Resume at
+        // the last byte actually delivered; jumping to last + 1 drops audio.
+        if (got == 0) throw http.ClientException('Empty audio response', source);
         dropped = 0;
-      } on http.ClientException catch (e) {
-        if (e.message.startsWith('HTTP ')) rethrow;
-        // The connection dropped mid-chunk: carry on from the last byte sent.
-        // (just_audio's proxy swallows stream errors, so playback would just stop.)
-        if (++dropped > 3) rethrow;
-        await Future<void>.delayed(Duration(milliseconds: 300 * dropped));
-      } on SocketException {
-        if (++dropped > 3) rethrow;
-        await Future<void>.delayed(Duration(milliseconds: 300 * dropped));
+        retried = false;
+      } catch (e) {
+        if (cancel.cancelled) return;
+        if (e is http.ClientException && e.message.startsWith('HTTP ')) rethrow;
+        if (e is! http.ClientException && e is! SocketException && e is! TimeoutException) rethrow;
+        // Only consecutive attempts with no progress exhaust the retry budget.
+        // Several short-lived connections can still deliver the complete song.
+        if (pos > before) dropped = 0;
+        dropped++;
+        final delay = Duration(milliseconds: (300 * (1 << dropped.clamp(0, 5))).clamp(300, 8000));
+        debugPrint('Audio reconnect: $videoId at byte $pos (attempt $dropped)');
+        await cancel.wait(delay);
       }
     }
   }
