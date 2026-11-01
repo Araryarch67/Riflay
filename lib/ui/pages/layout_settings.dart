@@ -101,7 +101,7 @@ class LayoutSettings extends StatelessWidget {
                 secondary: const Icon(Icons.graphic_eq_rounded),
                 title: const Text('Audio visualizer'),
                 subtitle: Text(
-                  'Waves below the desktop player and an animated cover border on phones. Paused for bit-perfect audio and reduced motion.',
+                  'Audio shapes beneath the player or around the cover. Paused for bit-perfect audio and reduced motion.',
                   style: muted,
                 ),
                 value: p.visualizer,

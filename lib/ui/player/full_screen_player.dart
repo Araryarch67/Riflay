@@ -76,6 +76,7 @@ class _FullScreenPlayerState extends State<FullScreenPlayer> {
 
     final hasVideo = VideoMode.instance.videoOf(track) != null;
     final showsVideo = hasVideo && VideoMode.instance.on;
+    final radial = LayoutPrefs.instance.visualizer && LayoutPrefs.instance.visualizerStyle.radial && !showsVideo;
     // Room for the title lines and "Next" under the cover (and the Song / Video switch above it).
     final art = math.min(box.maxHeight - 150 - (hasVideo ? 44 : 0), box.maxWidth * widthShare).clamp(120.0, 900.0);
     return Center(
@@ -89,17 +90,21 @@ class _FullScreenPlayerState extends State<FullScreenPlayer> {
               child: DecoratedBox(
                 // The video is wider than the square: a square shadow would show around it.
                 decoration: BoxDecoration(
-                  borderRadius: LayoutPrefs.corner(12),
+                  borderRadius: radial ? null : LayoutPrefs.corner(12),
+                  shape: radial ? BoxShape.circle : BoxShape.rectangle,
                   boxShadow: showsVideo
                       ? null
                       : const [BoxShadow(color: Color(0x73000000), blurRadius: 40, offset: Offset(0, 16))],
                 ),
                 child: TrackVisual(
                   track: track,
-                  cover: TrackSwitcher(
-                    trackId: track.id,
-                    slide: false,
-                    child: Artwork(key: ValueKey(track.id), track: track, radius: 12),
+                  cover: AudioVisualizer(
+                    radialOnly: true,
+                    child: TrackSwitcher(
+                      trackId: track.id,
+                      slide: false,
+                      child: Artwork(key: ValueKey(track.id), track: track, radius: 12),
+                    ),
                   ),
                 ),
               ),
@@ -237,7 +242,7 @@ class _FullScreenPlayerState extends State<FullScreenPlayer> {
                           ),
                         ),
                 ),
-                if (track != null) const AudioVisualizer(),
+                if (track != null) const AudioVisualizer(linearOnly: true),
               ],
             ),
             // Tells first-timers how to get out, then fades away.

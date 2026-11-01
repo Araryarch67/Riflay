@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../../models/track.dart';
@@ -42,37 +44,35 @@ class DesktopPlayerBar extends StatelessWidget {
             final compact = style == DesktopBarStyle.compact || style == DesktopBarStyle.capsule;
             final minimal = style == DesktopBarStyle.minimal;
             final track = now.track;
-            final info = _info(context, track, small: compact || minimal);
+            final textScale = MediaQuery.textScalerOf(context).scale(14) / 14;
+            final barHeight = compact
+                ? math.max(68.0, 36 * textScale + 30)
+                : minimal
+                ? math.max(64.0, 36 * textScale + 20)
+                : math.max(80.0, 36 * textScale + 16);
+            final info = _info(context, track, small: compact || minimal, withProgress: compact);
             final actions = _actions(context, track, width: box.maxWidth);
             const transport = FittedBox(fit: BoxFit.scaleDown, child: TransportControls());
             final Widget content;
             if (compact) {
               content = SizedBox(
-                height: 68,
+                height: barHeight,
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: Row(
                     children: [
                       const SizedBox(width: 244, child: transport),
                       const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            info,
-                            if (track != null) const SizedBox(height: 16, child: SeekBar(inline: true)),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(flex: 3, child: actions),
+                      Expanded(child: info),
+                      const SizedBox(width: 20),
+                      SizedBox(width: box.maxWidth > 860 ? 244 : 120, child: actions),
                     ],
                   ),
                 ),
               );
             } else {
               content = SizedBox(
-                height: minimal ? 64 : 80,
+                height: barHeight,
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(12, 0, 20, 0),
                   child: Column(
@@ -112,7 +112,7 @@ class DesktopPlayerBar extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: AppColors.panel,
                       borderRadius: BorderRadius.circular(
-                        style == DesktopBarStyle.capsule ? 40 : LayoutPrefs.radius(18),
+                        style == DesktopBarStyle.capsule ? barHeight / 2 : LayoutPrefs.radius(18),
                       ),
                       border: Border.all(color: AppColors.textSecondary.withValues(alpha: 0.15)),
                       boxShadow: const [BoxShadow(color: Color(0x33000000), blurRadius: 16, offset: Offset(0, 4))],
@@ -128,7 +128,7 @@ class DesktopPlayerBar extends StatelessWidget {
     ),
   );
 
-  Widget _info(BuildContext context, Track? track, {required bool small}) {
+  Widget _info(BuildContext context, Track? track, {required bool small, bool withProgress = false}) {
     final c = PlayerScope.read(context);
     final shell = ShellScope.of(context);
     final text = Theme.of(context).textTheme;
@@ -139,9 +139,23 @@ class DesktopPlayerBar extends StatelessWidget {
           : Row(
               key: ValueKey(track.id),
               children: [
-                Artwork(track: track, size: small ? 36 : 56),
-                SizedBox(width: small ? 10 : 14),
+                Artwork(
+                  track: track,
+                  size: withProgress
+                      ? 44
+                      : small
+                      ? 36
+                      : 56,
+                ),
+                SizedBox(
+                  width: withProgress
+                      ? 12
+                      : small
+                      ? 10
+                      : 14,
+                ),
                 Flexible(
+                  fit: withProgress ? FlexFit.tight : FlexFit.loose,
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -160,6 +174,10 @@ class DesktopPlayerBar extends StatelessWidget {
                         style: text.bodySmall?.copyWith(color: AppColors.textSecondary),
                         onTap: openArtist(context, c, track),
                       ),
+                      if (withProgress) ...[
+                        const SizedBox(height: 2),
+                        const SizedBox(height: 20, child: SeekBar(inline: true, compact: true)),
+                      ],
                     ],
                   ),
                 ),

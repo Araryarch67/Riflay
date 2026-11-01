@@ -280,10 +280,13 @@ class _EqualizerIconState extends State<EqualizerIcon> with SingleTickerProvider
 /// Seek slider with elapsed / total labels; drags locally and seeks on release.
 /// Playback position at display rate (just_audio interpolates between engine updates).
 class SeekBar extends StatefulWidget {
-  const SeekBar({super.key, this.inline = false});
+  const SeekBar({super.key, this.inline = false, this.compact = false});
 
   /// Labels either side of the bar (desktop) instead of underneath (mobile).
   final bool inline;
+
+  /// Tight timestamps aligned with the song text in a compact desktop bar.
+  final bool compact;
 
   @override
   State<SeekBar> createState() => _SeekBarState();
@@ -343,19 +346,26 @@ class _SeekBarState extends State<SeekBar> {
             ),
           ),
         );
-        final elapsed = Text(formatDuration(Duration(milliseconds: value.round())), style: style);
-        final total = Text(formatDuration(player.duration), style: style);
+        final elapsed = Text(formatDuration(Duration(milliseconds: value.round())), style: style, maxLines: 1);
+        final total = Text(formatDuration(player.duration), style: style, maxLines: 1);
         if (widget.inline) {
+          final timestampScale =
+              MediaQuery.textScalerOf(context).scale(style?.fontSize ?? 11) / (style?.fontSize ?? 11);
+          final timestampWidth =
+              (widget.compact ? ((player.duration?.inHours ?? 0) > 0 ? 52.0 : 34.0) : 44.0) * timestampScale;
           return Row(
             children: [
               SizedBox(
-                width: 44,
-                child: Align(alignment: Alignment.centerRight, child: elapsed),
+                width: timestampWidth,
+                child: Align(alignment: widget.compact ? Alignment.centerLeft : Alignment.centerRight, child: elapsed),
               ),
-              const SizedBox(width: 8),
+              SizedBox(width: widget.compact ? 6 : 8),
               Expanded(child: slider),
-              const SizedBox(width: 8),
-              SizedBox(width: 44, child: total),
+              SizedBox(width: widget.compact ? 6 : 8),
+              SizedBox(
+                width: timestampWidth,
+                child: Align(alignment: widget.compact ? Alignment.centerRight : Alignment.centerLeft, child: total),
+              ),
             ],
           );
         }

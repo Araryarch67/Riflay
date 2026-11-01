@@ -94,7 +94,7 @@ Feature options live in their respective Settings pages. Power & background has 
 |---|---|
 | **Themes** | Catppuccin, Nord, Gruvbox, Dracula or your own colors. Any font and accent. Light, dark or match your system, for every theme. High contrast. Components share the chosen scheme; Linux can follow [Matugen colors](docs/matugen/README.md) automatically |
 | **Player backgrounds** | Simple by default; optional Aurora, Silk, Orbits and Prism abstract backgrounds with a separate music-reactive switch. Only on Now Playing |
-| **Audio visualizer** | Optional Wave, Bars, Line and Dots, driven by the decoded audio: bottom waves on desktop and a compact cover border on phones. Stops when hidden or paused |
+| **Audio visualizer** | Ten optional styles: Wave, Bars, Line, Dots, Mirror, Twin waves, Pulse, Orbit, Petals and Peaks. Driven by decoded audio; linear shapes below the desktop player or radial shapes around its cover, with compact cover borders on phones. Stops when hidden or paused |
 | **Dynamic theme** | Follows the cover of what's playing, local or YouTube. Cover-art colors in the player or the whole app, with adjustable strength |
 | **Layout options** | Corners, spacing, cover size, the phone's tab bar (ten looks, from a classic docked bar to Dock, Capsule and Liquid glass), five desktop player bars, Home sections, player and lyrics looks, nine page transition presets (including Circular reveal), adjustable animation speed |
 | **Adaptive layouts** | Phone, tablet and desktop. Mini and full-screen player |
@@ -138,8 +138,8 @@ Feature options live in their respective Settings pages. Power & background has 
 | ![Appearance](docs/screenshots/appearance.webp) | ![About](docs/screenshots/settings-about.webp) |
 | **Spotify import** | **Power & background** |
 | ![Spotify import](docs/screenshots/spotify.webp) | ![Power and background settings](docs/screenshots/settings-power.webp) |
-| **A tablet-sized window** | |
-| ![Tablet-sized window](docs/screenshots/tablet.webp) | |
+| **A tablet-sized window** | **Join with a QR code** |
+| ![Tablet-sized window](docs/screenshots/tablet.webp) | ![Listen together QR](docs/screenshots/listen-qr.webp) |
 
 On a phone, with Capsule as the default bottom bar and Search in the middle:
 
@@ -180,8 +180,14 @@ Everything is optional in **Settings › Look & feel**. Backgrounds stay Simple 
 | Abstract Aurora | Abstract Silk |
 | --- | --- |
 | ![Aurora background](docs/screenshots/background-aurora.webp) | ![Silk background](docs/screenshots/background-silk.webp) |
+| Abstract Orbits | Abstract Prism |
+| ![Orbits background](docs/screenshots/background-orbits.webp) | ![Prism background](docs/screenshots/background-prism.webp) |
+| Classic desktop controls | Floating desktop controls |
+| ![Classic desktop player](docs/screenshots/desktop-bar-classic.webp) | ![Floating desktop player](docs/screenshots/desktop-bar-floating.webp) |
 | Compact desktop controls | Capsule desktop controls |
 | ![Compact desktop player](docs/screenshots/desktop-bar-compact.webp) | ![Capsule desktop player](docs/screenshots/desktop-bar-capsule.webp) |
+| Minimal desktop controls | |
+| ![Minimal desktop player](docs/screenshots/desktop-bar-minimal.webp) | |
 | Desktop visualizer | Mobile cover visualizer |
 | ![Desktop visualizer](docs/screenshots/visualizer-desktop-wave.webp) | ![Mobile visualizer](docs/screenshots/visualizer-phone-bars.webp) |
 | Matugen dark | Matugen light |
@@ -190,6 +196,26 @@ Everything is optional in **Settings › Look & feel**. Backgrounds stay Simple 
 **Circular reveal** is one of nine transition styles, with three speed options:
 
 ![Circular reveal transition](docs/screenshots/circular-reveal.webp)
+
+</details>
+
+<details>
+<summary>All 10 audio visualizer styles</summary>
+
+Select a style in **Settings › Look & feel › Layout › Now playing**. Pulse, Orbit and Petals surround the cover on desktop; the other styles sit below it. On phones, every style stays around the cover.
+
+| Style | Desktop | Mobile |
+| --- | --- | --- |
+| Wave | ![Wave on desktop](docs/screenshots/visualizer-desktop-wave.webp) | ![Wave on mobile](docs/screenshots/visualizer-phone-wave.webp) |
+| Bars | ![Bars on desktop](docs/screenshots/visualizer-desktop-bars.webp) | ![Bars on mobile](docs/screenshots/visualizer-phone-bars.webp) |
+| Line | ![Line on desktop](docs/screenshots/visualizer-desktop-line.webp) | ![Line on mobile](docs/screenshots/visualizer-phone-line.webp) |
+| Dots | ![Dots on desktop](docs/screenshots/visualizer-desktop-dots.webp) | ![Dots on mobile](docs/screenshots/visualizer-phone-dots.webp) |
+| Mirror | ![Mirror on desktop](docs/screenshots/visualizer-desktop-mirror.webp) | ![Mirror on mobile](docs/screenshots/visualizer-phone-mirror.webp) |
+| Twin waves | ![Twin waves on desktop](docs/screenshots/visualizer-desktop-twinWaves.webp) | ![Twin waves on mobile](docs/screenshots/visualizer-phone-twinWaves.webp) |
+| Pulse | ![Pulse on desktop](docs/screenshots/visualizer-desktop-pulse.webp) | ![Pulse on mobile](docs/screenshots/visualizer-phone-pulse.webp) |
+| Orbit | ![Orbit on desktop](docs/screenshots/visualizer-desktop-orbit.webp) | ![Orbit on mobile](docs/screenshots/visualizer-phone-orbit.webp) |
+| Petals | ![Petals on desktop](docs/screenshots/visualizer-desktop-petals.webp) | ![Petals on mobile](docs/screenshots/visualizer-phone-petals.webp) |
+| Peaks | ![Peaks on desktop](docs/screenshots/visualizer-desktop-peaks.webp) | ![Peaks on mobile](docs/screenshots/visualizer-phone-peaks.webp) |
 
 </details>
 

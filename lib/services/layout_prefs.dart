@@ -25,10 +25,17 @@ enum VisualizerStyle {
   wave('Wave'),
   bars('Bars'),
   line('Line'),
-  dots('Dots');
+  dots('Dots'),
+  mirror('Mirror'),
+  twinWaves('Twin waves'),
+  pulse('Pulse'),
+  orbit('Orbit'),
+  petals('Petals'),
+  peaks('Peaks');
 
   const VisualizerStyle(this.label);
   final String label;
+  bool get radial => this == pulse || this == orbit || this == petals;
 }
 
 /// How round the corners of covers, cards, menus and dialogs are.

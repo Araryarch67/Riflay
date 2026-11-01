@@ -162,6 +162,9 @@ class NowPlayingPage extends StatelessWidget {
                             child: DecoratedBox(
                               // The video is wider than the square: a square shadow would show around it.
                               decoration: BoxDecoration(
+                                shape: LayoutPrefs.instance.visualizer && LayoutPrefs.instance.visualizerStyle.radial
+                                    ? BoxShape.circle
+                                    : BoxShape.rectangle,
                                 boxShadow: showsVideo
                                     ? null
                                     : const [BoxShadow(color: Colors.black45, blurRadius: 32, offset: Offset(0, 12))],
