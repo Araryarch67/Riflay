@@ -14,7 +14,7 @@
 #   ANDROID_KEYSTORE_PASSWORD
 #   ANDROID_KEY_ALIAS
 #   ANDROID_KEY_PASSWORD
-# Without them the APK is signed with a throwaway debug key.
+# Android CI builds require these secrets and verify the release certificate.
 #
 # macOS and iOS are built without an Apple Developer ID: the macOS app is
 # signed ad hoc (Apple Silicon runs nothing unsigned) and the .ipa is unsigned,
@@ -59,8 +59,20 @@ jobs:
       - name: Version from the tag
         shell: bash
         run: echo "BUILD_ARGS=$(tool/ci_version.sh)" >> "$GITHUB_ENV"
+      - name: Require release signing
+        shell: bash
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          for name in KEYSTORE ANDROID_KEYSTORE_PASSWORD ANDROID_KEY_ALIAS ANDROID_KEY_PASSWORD; do
+            if [[ -z "${!name}" ]]; then
+              echo "::error::Missing Android release signing secret: $name"
+              exit 1
+            fi
+          done
       - name: Release key
-        if: env.KEYSTORE != ''
         run: |
           echo "$KEYSTORE" | base64 -d > "$RUNNER_TEMP/release.jks"
           echo "ANDROID_KEYSTORE_PATH=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
@@ -79,6 +91,19 @@ jobs:
           cp build/app/outputs/flutter-apk/app-arm64-v8a-release.apk dist/Riflay-android-arm64.apk
           cp build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk dist/Riflay-android-arm32.apk
           cp build/app/outputs/flutter-apk/app-x86_64-release.apk dist/Riflay-android-x86_64.apk
+      - name: Verify APK signing certificates
+        shell: bash
+        run: |
+          expected="$(openssl x509 -in android/release-certificate.pem -outform DER | sha256sum | cut -d ' ' -f 1)"
+          signers=("$ANDROID_HOME"/build-tools/*/apksigner)
+          for apk in dist/*.apk; do
+            actual="$("${signers[0]}" verify --print-certs "$apk" | sed -n 's/^Signer #1 certificate SHA-256 digest: //p')"
+            if [[ "$actual" != "$expected" ]]; then
+              echo "::error::Unexpected signing certificate: $apk"
+              exit 1
+            fi
+            echo "Verified release certificate: $apk"
+          done
       - uses: actions/upload-artifact@v7
         with:
           name: android
