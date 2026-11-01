@@ -124,7 +124,7 @@ void main() {
     await tester.runAsync(() async => c.dispose());
   });
 
-  testWidgets('desktop keeps playback modes in its menu and volume in narrow windows', (tester) async {
+  testWidgets('desktop keeps shuffle and repeat visible and volume available in narrow windows', (tester) async {
     SharedPreferences.setMockInitialValues({'discord.enabled': false});
     await LayoutPrefs.instance.reset();
     final c = _MenuPlayer();
@@ -134,24 +134,24 @@ void main() {
     addTearDown(tester.view.reset);
     await tester.pumpWidget(RiflayApp(controller: c));
     await tester.pump(const Duration(milliseconds: 500));
-    expect(find.descendant(of: find.byType(DesktopPlayerBar), matching: find.byType(ModeButton)), findsNothing);
-    await tester.tap(find.byTooltip('More options'));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 300));
-    expect(find.text('Shuffle'), findsOneWidget);
-    expect(find.text('Repeat off'), findsOneWidget);
-    expect(find.text('Lyrics'), findsOneWidget);
-    await tester.tap(find.text('Shuffle'));
+    expect(find.descendant(of: find.byType(DesktopPlayerBar), matching: find.byType(ModeButton)), findsNWidgets(2));
+    await tester.tap(find.byTooltip('Enable shuffle'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
     expect(c.shuffle, isTrue);
-    await tester.tap(find.byTooltip('More options'));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 300));
-    await tester.tap(find.text('Repeat off'));
+    expect(find.byTooltip('Disable shuffle'), findsOneWidget);
+    await tester.tap(find.byTooltip('Enable repeat'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
     expect(c.loopMode, LoopMode.all);
+    expect(find.byTooltip('Enable repeat one'), findsOneWidget);
+    await tester.tap(find.byTooltip('More options'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.text('Lyrics'), findsOneWidget);
+    await tester.tapAt(const Offset(400, 400));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
     await tester.tap(find.byTooltip('Volume'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));

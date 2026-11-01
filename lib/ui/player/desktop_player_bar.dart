@@ -1,7 +1,6 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
-import 'package:just_audio/just_audio.dart';
 
 import '../../models/track.dart';
 import '../../platform/features.dart';
@@ -55,7 +54,7 @@ class DesktopPlayerBar extends StatelessWidget {
                 : math.max(80.0, 36 * textScale + 16);
             final info = _info(context, track, small: compact || minimal, withProgress: compact);
             final actions = _actions(context, track, width: availableWidth);
-            const transport = FittedBox(fit: BoxFit.scaleDown, child: TransportControls(showModes: false));
+            const transport = FittedBox(fit: BoxFit.scaleDown, child: TransportControls());
             final Widget content;
             if (compact) {
               content = SizedBox(
@@ -64,7 +63,7 @@ class DesktopPlayerBar extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: Row(
                     children: [
-                      const SizedBox(width: 168, child: transport),
+                      const SizedBox(width: 244, child: transport),
                       const SizedBox(width: 16),
                       Expanded(child: info),
                       const SizedBox(width: 20),
@@ -248,7 +247,6 @@ class _MoreMenu extends StatelessWidget {
     final session = ListenTogether.of(c);
     return ListenableBuilder(
       listenable: Listenable.merge([
-        c,
         fullScreenPlayer,
         expandedPlayerLyrics,
         windowFullScreen,
@@ -285,30 +283,10 @@ class _MoreMenu extends StatelessWidget {
           icon: Icon(
             Icons.more_horiz_rounded,
             size: 22,
-            color:
-                expanded ||
-                    full ||
-                    sleeping ||
-                    device != null ||
-                    together != null ||
-                    c.shuffle ||
-                    c.loopMode != LoopMode.off
-                ? AppColors.accent
-                : null,
+            color: expanded || full || sleeping || device != null || together != null ? AppColors.accent : null,
           ),
           onSelected: (open) => open(),
           itemBuilder: (_) => [
-            item(Icons.shuffle_rounded, 'Shuffle', c.hasQueue ? c.toggleShuffle : null, on: c.shuffle),
-            item(
-              c.loopMode == LoopMode.one ? Icons.repeat_one_rounded : Icons.repeat_rounded,
-              switch (c.loopMode) {
-                LoopMode.off => 'Repeat off',
-                LoopMode.all => 'Repeat all',
-                LoopMode.one => 'Repeat one',
-              },
-              c.hasQueue ? c.cycleLoopMode : null,
-              on: c.loopMode != LoopMode.off,
-            ),
             item(
               Icons.lyrics_outlined,
               'Lyrics',

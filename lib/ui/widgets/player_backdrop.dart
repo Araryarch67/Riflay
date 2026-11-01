@@ -139,24 +139,21 @@ class _AbstractBackdrop extends CustomPainter {
           );
         }
       case NowPlayingBackground.orbits:
-        glow(Offset(size.width * 0.25, size.height * 0.32), longest * 0.55, colors[0], 0.28);
-        glow(Offset(size.width * 0.85, size.height * 0.8), longest * 0.5, colors[1], 0.2);
-        for (var i = 0; i < 4; i++) {
-          canvas.save();
-          canvas.translate(size.width * 0.5, size.height * 0.5);
-          canvas.rotate(phase * 0.3 + i * 0.65);
-          canvas.drawOval(
-            Rect.fromCenter(
-              center: Offset.zero,
-              width: longest * (0.7 + energy * 0.1),
-              height: longest * (0.22 + i * 0.06),
-            ),
-            Paint()
-              ..color = colors[i % 4].withValues(alpha: light ? 0.07 : 0.14)
-              ..style = PaintingStyle.stroke
-              ..strokeWidth = longest * 0.07,
+        // Opposing pools of light follow a slow orbit. Soft edges keep the
+        // artwork and lyrics in front, without drawing shapes across them.
+        for (var i = 0; i < 2; i++) {
+          final angle = phase * 0.18 + i * math.pi;
+          final center = Offset(
+            size.width * (0.5 + 0.28 * math.cos(angle)),
+            size.height * (0.48 + 0.16 * math.sin(angle)),
           );
-          canvas.restore();
+          glow(
+            center,
+            longest * (0.34 + energy * 0.035),
+            i == 0 ? cover : Color.lerp(cover, accent, 0.3)!,
+            light ? 0.14 : 0.28,
+            stretch: 1.25,
+          );
         }
       case NowPlayingBackground.prism:
         final center = Offset(
