@@ -18,7 +18,13 @@ class TrackSwitcher extends StatelessWidget {
     duration: LayoutPrefs.dur(const Duration(milliseconds: 260)),
     switchInCurve: Curves.easeOutCubic,
     switchOutCurve: Curves.easeInCubic,
-    layoutBuilder: (current, previous) => Stack(alignment: Alignment.centerLeft, children: [...previous, ?current]),
+    layoutBuilder: (current, previous) => Stack(
+      alignment: Alignment.centerLeft,
+      children: [
+        for (final child in previous) HeroMode(enabled: false, child: child),
+        ?current,
+      ],
+    ),
     transitionBuilder: (child, anim) => FadeTransition(
       opacity: anim,
       child: slide && LayoutPrefs.moves

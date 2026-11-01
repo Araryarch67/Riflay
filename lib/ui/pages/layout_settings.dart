@@ -94,27 +94,6 @@ class LayoutSettings extends StatelessWidget {
           const _Header('Now playing'),
           SettingsCard(
             children: [
-              SwitchListTile(
-                secondary: const Icon(Icons.graphic_eq_rounded),
-                title: const Text('Audio visualizer'),
-                subtitle: Text(
-                  'Audio shapes beneath the player or around the cover. Paused for bit-perfect audio and reduced motion.',
-                  style: muted,
-                ),
-                value: p.visualizer,
-                onChanged: p.setVisualizer,
-              ),
-              if (p.visualizer)
-                SettingTile(
-                  icon: Icons.multiline_chart_rounded,
-                  title: const Text('Visualizer style'),
-                  subtitle: Text('Follows the song and your theme color', style: muted),
-                  control: OptionPicker<VisualizerStyle>(
-                    value: p.visualizerStyle,
-                    onChanged: p.setVisualizerStyle,
-                    options: [for (final v in VisualizerStyle.values) (v, v.label)],
-                  ),
-                ),
               SettingTile(
                 icon: Icons.linear_scale_rounded,
                 title: const Text('Progress bar'),

@@ -170,7 +170,7 @@ EOF
     done_ libass
   fi
 
-  if ! stamp ffmpeg-visualizer; then
+  if ! stamp ffmpeg-spectrum; then
     rm -rf "$work/ffmpeg" && mkdir -p "$work/ffmpeg"
     (cd "$work/ffmpeg" && "$root/src/ffmpeg/configure" --prefix="$prefix" --target-os=darwin \
       --arch=$ffarch --enable-cross-compile --cc="$cc" --cxx="$cxx" --pkg-config=pkg-config \
@@ -181,9 +181,9 @@ EOF
       --disable-autodetect --enable-network --enable-zlib --enable-mbedtls --enable-version3 \
       --enable-videotoolbox --enable-hwaccel=h264_videotoolbox,vp9_videotoolbox \
       --disable-decoders --enable-decoder="$audio_decoders,$video_decoders" --disable-filters \
-      --enable-filter=astats,abuffer,abuffersink,aformat,anull,aresample,volume,equalizer,crossfeed,afir,amovie,headphone,pan,alimiter,ladspa \
+      --enable-filter=asplit,amerge,bandpass,astats,abuffer,abuffersink,aformat,anull,aresample,volume,equalizer,crossfeed,afir,amovie,headphone,pan,alimiter,ladspa \
       >>"$log" 2>&1 && make -j"$jobs" install >>"$log" 2>&1)
-    done_ ffmpeg-visualizer
+    done_ ffmpeg-spectrum
   fi
 
   local outputs

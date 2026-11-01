@@ -114,7 +114,7 @@ EOF
     done_ libass
   fi
 
-  if ! stamp ffmpeg-visualizer; then
+  if ! stamp ffmpeg-spectrum; then
     rm -rf "$work/ffmpeg" && mkdir -p "$work/ffmpeg"
     # Every audio decoder (the audio, PCM and ADPCM sections of FFmpeg's codec list) and demuxer, the filters
     # mpv and the app use. Video only for Video mode: what YouTube serves under 720p (h264 and vp9; AV1 is left
@@ -133,10 +133,10 @@ EOF
       --disable-autodetect --enable-network --enable-zlib --enable-mbedtls --enable-version3 \
       --disable-vulkan --enable-jni --enable-mediacodec \
       --disable-decoders --enable-decoder="$audio_decoders,$video_decoders" --disable-filters \
-      --enable-filter=astats,abuffer,abuffersink,aformat,anull,aresample,volume,equalizer,crossfeed,afir,amovie,headphone,pan \
+      --enable-filter=asplit,amerge,bandpass,astats,abuffer,abuffersink,aformat,anull,aresample,volume,equalizer,crossfeed,afir,amovie,headphone,pan \
       >/dev/null &&
       make -j"$jobs" install >/dev/null)
-    done_ ffmpeg-visualizer
+    done_ ffmpeg-spectrum
   fi
 
   # FFmpeg's MediaCodec (and mpv's use of it) needs the Java VM; libmpv.so is loaded by System.loadLibrary,

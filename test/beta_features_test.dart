@@ -3,13 +3,31 @@ import 'package:riflay/services/beta_features.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
-  test('everything is on by default', () async {
+  test('stable features default on and experimental audio analysis defaults off', () async {
     SharedPreferences.setMockInitialValues({});
     final b = BetaFeatures();
     await b.load();
     for (final f in BetaFeature.values) {
-      expect(b.isOn(f), isTrue);
+      expect(b.isOn(f), f.defaultOn);
     }
+  });
+
+  test('visualizer opt-in survives reload and old decoration preferences cannot enable it', () async {
+    SharedPreferences.setMockInitialValues({
+      'layout.v1': '{"visualizer":true}',
+      'appearance.v1': '{"reactiveBackground":true}',
+    });
+    final beta = BetaFeatures();
+    expect(beta.isOn(BetaFeature.audioVisualizer), isFalse);
+    await beta.load();
+    expect(beta.isOn(BetaFeature.audioVisualizer), isFalse);
+    await beta.set(BetaFeature.audioVisualizer, true);
+    final restored = BetaFeatures();
+    await restored.load();
+    expect(restored.isOn(BetaFeature.audioVisualizer), isTrue);
+    await restored.set(BetaFeature.audioVisualizer, false);
+    await restored.reload();
+    expect(restored.isOn(BetaFeature.audioVisualizer), isFalse);
   });
 
   test('a switch is saved as features.<id> and read back', () async {

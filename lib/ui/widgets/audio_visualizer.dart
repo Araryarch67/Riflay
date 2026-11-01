@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../../services/layout_prefs.dart';
+import '../../services/beta_features.dart';
 import '../../services/visualizer_levels.dart';
 import '../theme.dart';
 import 'audio_reactive_view.dart';
@@ -17,11 +18,11 @@ class AudioVisualizer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => ListenableBuilder(
-    listenable: LayoutPrefs.instance,
+    listenable: Listenable.merge([LayoutPrefs.instance, BetaFeatures.instance]),
     builder: (context, _) {
       final prefs = LayoutPrefs.instance;
       final style = prefs.visualizerStyle;
-      if (!prefs.visualizer ||
+      if (!prefs.visualizerEnabled ||
           !LayoutPrefs.moves ||
           MediaQuery.disableAnimationsOf(context) ||
           (child != null && !style.radial) ||
@@ -36,6 +37,8 @@ class AudioVisualizer extends StatelessWidget {
             color: AppColors.of(context).accent,
             style: style,
             radius: LayoutPrefs.radius(8),
+            radialMotion: prefs.visualizerRadius,
+            thickness: prefs.visualizerThickness,
             child: child,
           );
           return RepaintBoundary(
@@ -65,12 +68,16 @@ class VisualizerCanvas extends StatelessWidget {
     required this.color,
     required this.style,
     this.radius = 8,
+    this.radialMotion = 1.6,
+    this.thickness = 3,
     this.child,
   });
   final VisualizerLevels levels;
   final Color color;
   final VisualizerStyle style;
   final double radius;
+  final double radialMotion;
+  final double thickness;
   final Widget? child;
 
   @override
@@ -80,19 +87,24 @@ class VisualizerCanvas extends StatelessWidget {
       art = ClipOval(child: art);
     }
     return CustomPaint(
-      foregroundPainter: _VisualizerPainter(levels, color, style, child != null, radius),
-      child: child == null ? null : Padding(padding: EdgeInsets.all(style.radial ? 24 : 16), child: art),
+      foregroundPainter: _VisualizerPainter(levels, color, style, child != null, radius, radialMotion, thickness),
+      child: child == null
+          ? null
+          : Padding(padding: EdgeInsets.all(style.radial ? 10 + 22 * radialMotion + 2 * thickness : 16), child: art),
     );
   }
 }
 
 class _VisualizerPainter extends CustomPainter {
-  _VisualizerPainter(this.levels, this.color, this.style, this.border, this.radius) : super(repaint: levels);
+  _VisualizerPainter(this.levels, this.color, this.style, this.border, this.radius, this.radialMotion, this.thickness)
+    : super(repaint: levels);
   final VisualizerLevels levels;
   final Color color;
   final VisualizerStyle style;
   final bool border;
   final double radius;
+  final double radialMotion;
+  final double thickness;
 
   Paint pen(double opacity, {double width = 2, bool fill = false}) => Paint()
     ..color = color.withValues(alpha: opacity)
@@ -101,8 +113,7 @@ class _VisualizerPainter extends CustomPainter {
     ..strokeJoin = StrokeJoin.round
     ..style = fill ? PaintingStyle.fill : PaintingStyle.stroke;
 
-  // Interpolating the envelope keeps narrow beats visible without drawing the
-  // corners of the sample grid. These are RMS history samples, not FFT bins.
+  // Interpolate the current logarithmic frequency bands for curved styles.
   double sample(List<double> values, double t) {
     final index = t.clamp(0.0, 1.0) * (values.length - 1);
     final left = index.floor();
@@ -126,15 +137,9 @@ class _VisualizerPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     if (size.isEmpty || levels.value.every((v) => v < 0.001)) return;
-    // Remove part of the sustained level so small musical changes still read
-    // as contours. Constant audio remains constant; silence stays empty.
-    final floor = levels.value.reduce(math.min) * 0.95;
-    final peak = levels.value.reduce(math.max);
-    final values = levels.value.map((v) {
-      final contrast = (v - floor) * peak / (peak - floor);
-      // Give quiet passages enough visual weight in a compact player strip.
-      return (math.pow(contrast, 0.6) * 1.4).clamp(0.0, 1.0).toDouble();
-    }).toList();
+    // Frequency positions are fixed. Do not scroll history, subtract a moving
+    // floor, or normalize every frame to a full-height plateau.
+    final values = levels.value.map((v) => math.pow(v, 1.25).toDouble()).toList();
     canvas.save();
     canvas.clipRect(Offset.zero & size);
     if (style.radial) {
@@ -149,8 +154,9 @@ class _VisualizerPainter extends CustomPainter {
 
   void _radial(Canvas canvas, Size size, List<double> values) {
     final center = (Offset.zero & size).center;
-    final base = math.max(1.0, size.shortestSide / 2 - 24);
-    // Mirror the same history around the artwork. Both ends of the contour
+    final padding = 10 + 22 * radialMotion + 2 * thickness;
+    final base = math.max(1.0, size.shortestSide / 2 - padding);
+    // Mirror the spectrum around the artwork. Both ends of the contour
     // meet with zero slope, rather than jumping at the oldest/newest sample.
     double level(double t) => sample(values, (1 - math.cos(t * math.pi * 2)) / 2);
     if (style == VisualizerStyle.petals || style == VisualizerStyle.orbit) {
@@ -163,29 +169,31 @@ class _VisualizerPainter extends CustomPainter {
         if (style == VisualizerStyle.petals) {
           canvas.drawLine(
             center + ray * (base + 4),
-            center + ray * (base + 7 + amplitude * 14),
-            pen(0.55 + amplitude * 0.4, width: 4),
+            center + ray * (base + 7 + amplitude * 22 * radialMotion),
+            pen(0.55 + amplitude * 0.4, width: thickness),
           );
         } else {
           canvas.drawCircle(
-            center + ray * (base + 8 + amplitude * 10),
-            2.2 + amplitude,
+            center + ray * (base + 8 + amplitude * 22 * radialMotion),
+            thickness * (0.6 + amplitude * 0.4),
             pen(0.55 + amplitude * 0.4, fill: true),
           );
         }
       }
       return;
     }
-    final points = List.generate(64, (i) {
-      final t = i / 64;
+    final points = List.generate(96, (i) {
+      final t = i / 96;
       final angle = t * math.pi * 2 - math.pi / 2;
-      return center + Offset(math.cos(angle), math.sin(angle)) * (base + 10 + level(t) * 12);
+      final drive = (math.pow(level(t), 0.7) * 0.6 + levels.beat * 0.65).clamp(0.0, 1.0);
+      return center + Offset(math.cos(angle), math.sin(angle)) * (base + 6 + 22 * radialMotion * drive);
     });
-    final band = Path()
-      ..fillType = PathFillType.evenOdd
-      ..addPath(curve(points, closed: true), Offset.zero)
-      ..addOval(Rect.fromCircle(center: center, radius: base + 4));
-    canvas.drawPath(band, pen(0.8, fill: true));
+    final outline = curve(points, closed: true);
+    // A larger bass-driven expansion and a bold outline make Pulse readable
+    // around the artwork. The halo stays inside the space reserved above.
+    canvas.drawPath(outline, pen(0.12, width: thickness * 3));
+    canvas.drawPath(outline, pen(0.95, width: thickness));
+    canvas.drawCircle(center, base + 3, pen(0.18, width: math.max(1, thickness * 0.5)));
   }
 
   void _border(Canvas canvas, Size size, List<double> values) {
@@ -233,24 +241,29 @@ class _VisualizerPainter extends CustomPainter {
     }
   }
 
-  void _linear(Canvas canvas, Size size, List<double> values) {
+  void _linear(Canvas canvas, Size size, List<double> spectrum) {
+    // CAVA-style mirrored order: bass at both outer edges, treble in the
+    // middle. Heights still come directly from the measured frequency bands.
+    final values = [...spectrum, ...spectrum.reversed];
     final bounds = (Offset.zero & size).deflate(3);
     final center = bounds.center.dy;
-    // Only the ends fade out. A fixed sine arch would turn every song into
-    // the same hill, concealing the dynamics in the measured history.
-    double envelope(double t) {
-      final edge = (math.min(t, 1 - t) / 0.09).clamp(0.0, 1.0);
-      return sample(values, t) * edge * edge * (3 - 2 * edge);
-    }
+    double envelope(double t) => sample(values, t);
 
     if (style == VisualizerStyle.bars || style == VisualizerStyle.dots || style == VisualizerStyle.mirror) {
-      final count = (bounds.width / 12).floor().clamp(16, 48);
+      // Pair adjacent bands for a less crowded display. Keep their peak so
+      // a narrow bass or treble hit remains visible after grouping.
+      final grouped = List.generate(
+        (spectrum.length + 1) ~/ 2,
+        (i) => math.max(spectrum[i * 2], spectrum[math.min(i * 2 + 1, spectrum.length - 1)]),
+      );
+      final bars = [...grouped, ...grouped.reversed];
+      final count = bars.length;
       final step = bounds.width / count;
-      final width = (step * 0.58).clamp(3.0, 7.0);
+      final width = (step * 0.72).clamp(2.0, 14.0);
       for (var i = 0; i < count; i++) {
-        final t = (i + 0.5) / count;
-        final amplitude = envelope(t);
-        final height = math.max(width, amplitude * bounds.height * 0.85);
+        final amplitude = bars[i];
+        final height = amplitude * (bounds.height - 4);
+        if (height < 0.5) continue;
         final x = bounds.left + (i + 0.5) * step;
         if (style == VisualizerStyle.dots) {
           for (var y = 0.0; y < height; y += 8) {
@@ -258,7 +271,16 @@ class _VisualizerPainter extends CustomPainter {
           }
         } else {
           final baseline = style == VisualizerStyle.mirror ? center + height / 2 : bounds.bottom;
-          canvas.drawLine(Offset(x, baseline), Offset(x, baseline - height), pen(0.9, width: width));
+          final rect = Rect.fromLTWH(x - width / 2, baseline - height, width, height);
+          canvas.drawRRect(
+            RRect.fromRectAndRadius(rect, const Radius.circular(1.5)),
+            Paint()
+              ..shader = LinearGradient(
+                begin: Alignment.bottomCenter,
+                end: Alignment.topCenter,
+                colors: [color.withValues(alpha: 0.5), color],
+              ).createShader(bounds),
+          );
         }
       }
       return;
@@ -305,5 +327,11 @@ class _VisualizerPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_VisualizerPainter old) =>
-      old.levels != levels || old.color != color || old.border != border || old.radius != radius || old.style != style;
+      old.levels != levels ||
+      old.color != color ||
+      old.border != border ||
+      old.radius != radius ||
+      old.style != style ||
+      old.radialMotion != radialMotion ||
+      old.thickness != thickness;
 }

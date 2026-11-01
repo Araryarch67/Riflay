@@ -112,6 +112,18 @@ void main() {
     awake.dispose();
   });
 
+  onLinux('Beta Features opens its own page with audio analysis off by default', (tester) async {
+    final c = PlayerController();
+    final visited = <String>[];
+    await tester.pumpWidget(_app(c, visited));
+    await tester.tap(find.text('Beta Features'));
+    await tester.pumpAndSettle();
+    expect(visited.last, 'settings:beta');
+    final toggle = find.widgetWithText(SwitchListTile, 'Audio visualizer');
+    expect(tester.widget<SwitchListTile>(toggle).value, isFalse);
+    expect(find.text('Visualizer style'), findsNothing);
+  });
+
   onLinux('each group lists its sections', (tester) async {
     final c = PlayerController();
     final visited = <String>[];

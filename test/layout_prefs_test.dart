@@ -14,7 +14,7 @@ void main() {
 
   test('defaults use capsule navigation and standard player appearance', () {
     expect(p.visualizer, isFalse);
-    expect(p.visualizerStyle, VisualizerStyle.wave);
+    expect(p.visualizerStyle, VisualizerStyle.pulse);
     expect(p.tabBar, TabBarStyle.capsule);
     expect(p.corners, CornerStyle.rounded);
     expect(p.density, Density.comfortable);
@@ -42,7 +42,30 @@ void main() {
     await p.reset();
     expect(p.visualizer, isFalse);
     p.restore({'visualizerStyle': 'future-style'});
+    expect(p.visualizerStyle, VisualizerStyle.pulse);
+  });
+
+  test('old visualizer layouts migrate to Pulse; new choices still persist', () async {
+    p.restore({'visualizer': true, 'visualizerStyle': 'wave'});
+    expect(p.visualizerStyle, VisualizerStyle.pulse);
+    await p.setVisualizerStyle(VisualizerStyle.wave);
+    await p.load();
     expect(p.visualizerStyle, VisualizerStyle.wave);
+  });
+
+  test('visualizer radius and thickness persist, clamp and reset', () async {
+    await p.setVisualizerRadius(2.1);
+    await p.setVisualizerThickness(5.5);
+    await p.load();
+    expect(p.visualizerRadius, 2.1);
+    expect(p.visualizerThickness, 5.5);
+    await p.setVisualizerRadius(99);
+    await p.setVisualizerThickness(-1);
+    expect(p.visualizerRadius, 2.5);
+    expect(p.visualizerThickness, 1);
+    await p.reset();
+    expect(p.visualizerRadius, 1.6);
+    expect(p.visualizerThickness, 3);
   });
 
   test('corners scale one radius token', () async {

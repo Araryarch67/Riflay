@@ -1,14 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:riflay/services/beta_features.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:riflay/services/layout_prefs.dart';
 import 'package:riflay/ui/pages/layout_settings.dart';
+import 'package:riflay/ui/pages/beta_settings.dart';
 import 'package:riflay/ui/widgets/audio_visualizer.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   final prefs = LayoutPrefs.instance;
   setUp(() async {
-    SharedPreferences.setMockInitialValues({});
+    SharedPreferences.setMockInitialValues({'features.audioVisualizer': true});
+    await BetaFeatures.instance.reload();
     await prefs.reset();
   });
   tearDown(prefs.reset);
@@ -54,27 +57,45 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('settings exposes style choices only after enabling the visualizer', (tester) async {
+  testWidgets('legacy enabled decoration stays hidden until beta opt-in', (tester) async {
+    await prefs.setVisualizer(true);
+    await prefs.setVisualizerStyle(VisualizerStyle.orbit);
+    await tester.runAsync(() => BetaFeatures.instance.set(BetaFeature.audioVisualizer, false));
+    await tester.pumpWidget(const MaterialApp(home: AudioVisualizer(child: SizedBox.square(dimension: 200))));
+    expect(find.byType(VisualizerCanvas), findsNothing);
     await tester.pumpWidget(
       const MaterialApp(
         home: Scaffold(body: SingleChildScrollView(child: LayoutSettings())),
       ),
     );
+    expect(find.text('Audio visualizer'), findsNothing);
+    expect(find.text('Visualizer style'), findsNothing);
+  });
+
+  testWidgets('Beta Features owns visualizer opt-in and styles', (tester) async {
+    await tester.runAsync(() => BetaFeatures.instance.set(BetaFeature.audioVisualizer, false));
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(body: SingleChildScrollView(child: BetaSettings())),
+      ),
+    );
     expect(find.text('Visualizer style'), findsNothing);
     final toggle = find.widgetWithText(SwitchListTile, 'Audio visualizer');
     await tester.ensureVisible(toggle);
-    await tester.tap(toggle);
+    await tester.runAsync(() => tester.tap(toggle));
     await tester.pumpAndSettle();
     expect(prefs.visualizer, isTrue);
     expect(find.text('Visualizer style'), findsOneWidget);
-    await tester.ensureVisible(find.text('Wave'));
-    await tester.tap(find.text('Wave'));
+    expect(find.text('Radius movement'), findsOneWidget);
+    expect(find.text('Line thickness'), findsOneWidget);
+    await tester.ensureVisible(find.text('Pulse'));
+    await tester.tap(find.text('Pulse'));
     await tester.pumpAndSettle();
     for (final style in VisualizerStyle.values) {
       expect(find.text(style.label), findsWidgets);
     }
-    await tester.tap(find.text('Bars'));
+    await tester.tap(find.text('Wave'));
     await tester.pumpAndSettle();
-    expect(prefs.visualizerStyle, VisualizerStyle.bars);
+    expect(prefs.visualizerStyle, VisualizerStyle.wave);
   });
 }

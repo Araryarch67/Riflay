@@ -13,12 +13,14 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../platform/host.dart';
 import '../platform/mpv.dart';
+import 'beta_features.dart';
 import 'carla_locator.dart';
 import 'crossfade.dart';
 import 'ios_route.dart';
 import 'linux_alsa.dart';
 import 'usb_dac.dart';
 import 'visualizer_levels.dart';
+import 'visualizer_spectrum.dart';
 
 /// How loudness differences between songs are evened out (mpv `replaygain`).
 enum VolumeLeveling {
@@ -358,6 +360,7 @@ class SignalPath {
 /// choice on Android) has its `has…` flag.
 class AudioEngine extends ChangeNotifier {
   AudioEngine() {
+    BetaFeatures.instance.addListener(_onVisualizerBetaChanged);
     // Pitch control makes media_kit own the `af` property (scaletempo); the app needs it for EQ.
     JustAudioMediaKit.pitch = false;
     // mpv's read-ahead (media_kit: 32 MiB ahead and 32 MiB behind, per open
@@ -598,10 +601,31 @@ class AudioEngine extends ChangeNotifier {
   Timer? _visualizerTimer;
   bool _visualizerReading = false;
   Future<void> _visualizerSync = Future.value();
-  bool get visualizerActive => _visualizerUsers > 0 && !bitPerfect && _dop == null;
+  bool get visualizerActive =>
+      BetaFeatures.instance.isOn(BetaFeature.audioVisualizer) && _visualizerUsers > 0 && !bitPerfect && _dop == null;
 
-  static const visualizerFilter =
+  void _onVisualizerBetaChanged() {
+    if (!visualizerActive) visualizerLevels.clear();
+    if (_visualizerUsers > 0) _syncVisualizer();
+    notifyListeners();
+  }
+
+  static String get visualizerFilter => VisualizerSpectrum.filter();
+  ({int channels, String layout, int rate})? _visualizerFormat;
+  String get _currentVisualizerFilter {
+    final format = _visualizerFormat;
+    return format == null
+        ? _visualizerStandbyFilter
+        : VisualizerSpectrum.filter(channels: format.channels, layout: format.layout, rate: format.rate);
+  }
+
+  // A format-neutral meter while the decoder is opening the next song.
+  static const _visualizerStandbyFilter =
       '@visualizer:lavfi=[astats=metadata=1:reset=1:measure_perchannel=none:measure_overall=RMS_level]';
+
+  // This mpv build dereferences null when querying a metadata sub-key's type.
+  // Read the complete filter map and extract RMS in Dart instead.
+  static const visualizerMetadataProperty = 'af-metadata/visualizer';
 
   /// The caller releases its lease when hidden, paused, or disposed.
   VoidCallback watchVisualizer() {
@@ -629,7 +653,23 @@ class AudioEngine extends ChangeNotifier {
           if (_native case final p?) {
             // Only add/remove the meter: rebuilding the DSP chain would reset effects.
             if (visualizerActive) {
-              await p.command(['af', 'add', visualizerFilter]);
+              final raw = await p.getProperty('audio-params');
+              if (_disposed || !identical(p, _native) || !visualizerActive) return;
+              try {
+                final params = jsonDecode(raw) as Map<String, dynamic>;
+                final stereo = virtualSpeakersActive || crossfeedActive || monoActive;
+                final channels = stereo ? 2 : (params['channel-count'] as num?)?.toInt();
+                final layout = stereo ? 'stereo' : params['channels'] as String?;
+                final rate = (params['samplerate'] as num?)?.toInt();
+                if (channels != null && layout != null && rate != null) {
+                  // Validate before changing the audio graph; unknown layouts retain plain RMS only.
+                  VisualizerSpectrum.filter(channels: channels, layout: layout, rate: rate);
+                  _visualizerFormat = (channels: channels, layout: layout, rate: rate);
+                }
+              } catch (_) {
+                _visualizerFormat = null;
+              }
+              await p.command(['af', 'add', _currentVisualizerFilter]);
             } else {
               await p.command(['af', 'remove', '@visualizer']);
             }
@@ -645,8 +685,14 @@ class AudioEngine extends ChangeNotifier {
     if (p == null || _player?.state.playing != true || _player?.state.buffering == true) return;
     _visualizerReading = true;
     try {
-      final level = await p.getProperty('af-metadata/visualizer/lavfi.astats.Overall.RMS_level');
-      if (!_disposed && visualizerActive && identical(p, _native)) visualizerLevels.add(level);
+      if (_visualizerFormat == null) {
+        _syncVisualizer();
+        return;
+      }
+      final metadata = await p.getProperty(visualizerMetadataProperty);
+      if (!_disposed && visualizerActive && identical(p, _native) && _visualizerFormat != null) {
+        visualizerLevels.addMetadata(metadata, firstBandChannel: _visualizerFormat!.channels + 1);
+      }
     } catch (_) {
       // A player can be replaced or disposed while the asynchronous read runs.
     } finally {
@@ -1132,7 +1178,7 @@ class AudioEngine extends ChangeNotifier {
       // `latency` keeps its look-ahead from delaying the song and lets it hand on the song's
       // last milliseconds at the end (gapless); `level=0`, or it would raise everything to the limit.
       if (clipGuardActive) '@limiter:lavfi=[alimiter=limit=1:level=0:latency=1]',
-      if (visualizerActive) visualizerFilter,
+      if (visualizerActive) _currentVisualizerFilter,
       // Float output for mpv's volume (lossless: the system mixer works in float anyway).
       if (_volumeAtOutput) '@output:format=format=double',
     ].join(',');
@@ -1219,6 +1265,7 @@ class AudioEngine extends ChangeNotifier {
       final applied = Completer<void>();
       p.onLoadHooks.add(() async {
         await applied.future;
+        _visualizerFormat = null;
         if (hasRoutePicker) await _matchRate(p);
         if (_chainSent != filterChain) await _setChain(p);
       });
@@ -1536,6 +1583,7 @@ class AudioEngine extends ChangeNotifier {
   @override
   void dispose() {
     _disposed = true;
+    BetaFeatures.instance.removeListener(_onVisualizerBetaChanged);
     _visualizerTimer?.cancel();
     visualizerLevels.dispose();
     _paramsSub?.cancel();

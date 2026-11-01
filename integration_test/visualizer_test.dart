@@ -1,4 +1,5 @@
-// Run in headless Weston, isolated XDG_DATA_HOME, per AGENT.md. Null audio only.
+// Android: flutter test integration_test/visualizer_test.dart -d emulator-5554
+// Desktop runs use null audio; Android exercises its real audio output driver.
 import 'dart:async';
 import 'dart:io';
 import 'dart:math' as math;
@@ -12,6 +13,12 @@ import 'package:just_audio/just_audio.dart';
 import 'package:just_audio_media_kit/just_audio_media_kit.dart';
 import 'package:media_kit/media_kit.dart' show NativePlayer;
 import 'package:riflay/models/track.dart';
+import 'package:riflay/ui/player/now_playing_page.dart';
+import 'package:riflay/ui/pages/settings_page.dart';
+import 'package:riflay/ui/shell_scope.dart';
+import 'package:riflay/ui/theme.dart';
+import 'package:riflay/services/beta_features.dart';
+import 'package:riflay/services/visualizer_spectrum.dart';
 import 'package:riflay/services/layout_prefs.dart';
 import 'package:riflay/services/appearance.dart';
 import 'package:riflay/ui/widgets/player_backdrop.dart';
@@ -28,6 +35,9 @@ void main() {
   testWidgets('real decoded audio drives all styles; silence, pause, hidden and off stop metering', (tester) async {
     await tester.runAsync(() async {
       SharedPreferences.setMockInitialValues({'discord.enabled': false});
+      await BetaFeatures.instance.reload();
+      expect(BetaFeatures.instance.isOn(BetaFeature.audioVisualizer), isFalse);
+      await BetaFeatures.instance.set(BetaFeature.audioVisualizer, true);
       final folder = Directory.systemTemp.createTempSync('riflay-visualizer-test-');
       final source = writeWav('${folder.path}/levels.wav', 48000 * 12, (i) {
         final t = i / 48000;
@@ -42,7 +52,7 @@ void main() {
       JustAudioMediaKit.onPlayerCreated = (p) {
         original(p);
         final native = p.platform as NativePlayer;
-        final ready = native.setProperty('ao', 'null');
+        final ready = Platform.isAndroid ? Future<void>.value() : native.setProperty('ao', 'null');
         native.onLoadHooks.add(() => ready);
       };
       final prefs = LayoutPrefs.instance;
@@ -63,7 +73,7 @@ void main() {
                   key: capture,
                   child: const SizedBox(
                     width: 700,
-                    height: 400,
+                    height: 520,
                     child: Stack(
                       fit: StackFit.expand,
                       children: [
@@ -96,9 +106,16 @@ void main() {
         expect(c.audio.visualizerLevels.value, everyElement(lessThan(0.001)));
         await Future<void>.delayed(const Duration(seconds: 2));
         expect(
-          c.audio.visualizerLevels.value.where((v) => v > 0.3).length,
-          greaterThan(8),
+          c.audio.visualizerLevels.value.reduce(math.max),
+          greaterThan(0.3),
           reason: 'measured from decoded 440 Hz audio',
+        );
+        final measured = c.audio.visualizerLevels.value;
+        final dominant = measured.indexOf(measured.reduce(math.max));
+        expect(
+          VisualizerSpectrum.frequency(dominant, 48000),
+          inInclusiveRange(300, 600),
+          reason: 'a 440 Hz tone must light its frequency band, not scroll across the strip',
         );
         final native = JustAudioMediaKit.activePlayer!.platform as NativePlayer;
         final chain = await native.getProperty('af');
@@ -109,7 +126,7 @@ void main() {
           await tester.pump();
           await Future<void>.delayed(const Duration(milliseconds: 120));
           await tester.pump();
-          if (shots.isNotEmpty) {
+          if (shots.isNotEmpty && !Platform.isAndroid) {
             Directory(shots).createSync(recursive: true);
             final boundary = capture.currentContext!.findRenderObject()! as RenderRepaintBoundary;
             final image = await boundary.toImage();
@@ -143,6 +160,36 @@ void main() {
         expect(await native.getProperty('af'), isNot(contains('visualizer')));
         await look.setReactiveBackground(true);
         await tester.pump();
+        // Exercise reads racing with native filter removal/re-addition, seeks,
+        // route visibility, pause/resume and app backgrounding on the device.
+        for (var i = 0; i < 12; i++) {
+          await c.player.seek(const Duration(seconds: 3));
+          await BetaFeatures.instance.set(BetaFeature.audioVisualizer, false);
+          await tester.pump();
+          await Future<void>.delayed(const Duration(milliseconds: 60));
+          expect(await native.getProperty('af'), isNot(contains('visualizer')));
+          expect(c.audio.visualizerLevels.value, everyElement(0));
+          await BetaFeatures.instance.set(BetaFeature.audioVisualizer, true);
+          await prefs.setVisualizer(true);
+          await tester.pump();
+          await Future<void>.delayed(const Duration(milliseconds: 100));
+          await c.player.pause();
+          await Future<void>.delayed(const Duration(milliseconds: 60));
+          expect(await native.getProperty('af'), isNot(contains('visualizer')));
+          unawaited(c.player.play());
+          await tester.pumpWidget(view(visible: false));
+          await Future<void>.delayed(const Duration(milliseconds: 60));
+          await tester.pumpWidget(view());
+          tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+          await Future<void>.delayed(const Duration(milliseconds: 60));
+          expect(await native.getProperty('af'), isNot(contains('visualizer')));
+          tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+          await tester.pump();
+          await Future<void>.delayed(const Duration(milliseconds: 120));
+          expect('visualizer'.allMatches(await native.getProperty('af')).length, 1);
+          expect(tester.takeException(), isNull);
+        }
+        expect(await native.getProperty('ao'), Platform.isAndroid ? isNot('null') : 'null');
         await c.player.seek(const Duration(milliseconds: 11500));
         for (var i = 0; i < 80 && c.player.processingState != ProcessingState.completed; i++) {
           await Future<void>.delayed(const Duration(milliseconds: 50));
@@ -154,11 +201,71 @@ void main() {
           isNot(contains('visualizer')),
           reason: 'completed songs release analysis too',
         );
+        // Reload the short fixture for the player previews after completion.
+        await c.player.setAudioSources([AudioSource.uri(source.uri, tag: track)]);
+        unawaited(c.player.play());
+        // Render the actual phone player and Beta page as well as the meter harness.
+        Widget phone(Widget page) => PlayerScope(
+          controller: c,
+          child: MaterialApp(
+            theme: appThemeNow(),
+            home: ShellScope(
+              compact: true,
+              width: 400,
+              open: (_, {location}) {},
+              openCollection: (_) {},
+              openQueue: () {},
+              openNowPlaying: () {},
+              openLyrics: () {},
+              openDownloads: () {},
+              importFromYoutube: () {},
+              addFiles: () {},
+              addFolder: null,
+              child: RepaintBoundary(key: capture, child: page),
+            ),
+          ),
+        );
+        Future<void> capturePhone(String name) async {
+          if (shots.isEmpty) return;
+          if (Platform.isAndroid) {
+            debugPrint('ANDROID_SCREENSHOT_READY $name');
+            await Future<void>.delayed(const Duration(seconds: 4));
+            return;
+          }
+          final boundary = capture.currentContext!.findRenderObject()! as RenderRepaintBoundary;
+          final image = await boundary.toImage(pixelRatio: 2);
+          final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
+          await File('$shots/$name.png').writeAsBytes(bytes!.buffer.asUint8List());
+          image.dispose();
+        }
+
+        for (final style in [VisualizerStyle.bars, VisualizerStyle.pulse, VisualizerStyle.orbit]) {
+          await c.player.seek(const Duration(seconds: 3));
+          await prefs.setVisualizerStyle(style);
+          await tester.pumpWidget(phone(const NowPlayingPage()));
+          for (var frame = 0; frame < 30; frame++) {
+            await Future<void>.delayed(const Duration(milliseconds: 40));
+            await tester.pump();
+          }
+          expect(find.byType(VisualizerCanvas), findsWidgets);
+          expect(c.audio.visualizerLevels.value.any((v) => v > 0.3), isTrue);
+          expect(tester.takeException(), isNull);
+          await capturePhone('android-player-${style.name}');
+        }
+        await tester.pumpWidget(phone(const SettingsBetaPage()));
+        await tester.pump();
+        expect(find.text('Beta Features'), findsWidgets);
+        expect(find.text('Audio visualizer'), findsOneWidget);
+        expect(tester.takeException(), isNull);
+        await capturePhone('android-beta-features');
+        await tester.pumpWidget(view());
+        await Future<void>.delayed(const Duration(milliseconds: 150));
       } finally {
         await tester.pumpWidget(const SizedBox.shrink());
         await c.player.stop();
         c.dispose();
         JustAudioMediaKit.onPlayerCreated = original;
+        await BetaFeatures.instance.set(BetaFeature.audioVisualizer, false);
         await prefs.reset();
         await look.reset();
         folder.deleteSync(recursive: true);

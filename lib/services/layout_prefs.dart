@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'beta_features.dart';
 import 'page_motion.dart';
 export 'page_motion.dart' show PageMotionStyle, PageMotionSpeed;
 
@@ -188,7 +189,10 @@ class LayoutPrefs extends ChangeNotifier {
   DesktopBarStyle desktopBar = DesktopBarStyle.classic;
   bool showQualityBadge = true;
   bool visualizer = false;
-  VisualizerStyle visualizerStyle = VisualizerStyle.wave;
+  bool get visualizerEnabled => visualizer && BetaFeatures.instance.isOn(BetaFeature.audioVisualizer);
+  VisualizerStyle visualizerStyle = VisualizerStyle.pulse;
+  double visualizerRadius = 1.6;
+  double visualizerThickness = 3;
 
   LyricsSize lyricsSize = LyricsSize.normal;
   LyricsAlign lyricsAlign = LyricsAlign.left;
@@ -282,7 +286,11 @@ class LayoutPrefs extends ChangeNotifier {
     desktopBar = pick(DesktopBarStyle.values, 'desktopBar', d.desktopBar);
     showQualityBadge = j['showQualityBadge'] as bool? ?? d.showQualityBadge;
     visualizer = j['visualizer'] as bool? ?? d.visualizer;
-    visualizerStyle = pick(VisualizerStyle.values, 'visualizerStyle', d.visualizerStyle);
+    visualizerStyle = j['visualizerVersion'] == 3
+        ? pick(VisualizerStyle.values, 'visualizerStyle', d.visualizerStyle)
+        : VisualizerStyle.pulse;
+    visualizerRadius = (j['visualizerRadius'] as num?)?.toDouble().clamp(0.5, 2.5) ?? d.visualizerRadius;
+    visualizerThickness = (j['visualizerThickness'] as num?)?.toDouble().clamp(1, 8) ?? d.visualizerThickness;
     lyricsSize = pick(LyricsSize.values, 'lyricsSize', d.lyricsSize);
     lyricsAlign = pick(LyricsAlign.values, 'lyricsAlign', d.lyricsAlign);
     dimUnsungLyrics = j['dimUnsungLyrics'] as bool? ?? d.dimUnsungLyrics;
@@ -311,6 +319,9 @@ class LayoutPrefs extends ChangeNotifier {
     'showQualityBadge': showQualityBadge,
     'visualizer': visualizer,
     'visualizerStyle': visualizerStyle.name,
+    'visualizerVersion': 3,
+    'visualizerRadius': visualizerRadius,
+    'visualizerThickness': visualizerThickness,
     'lyricsSize': lyricsSize.name,
     'lyricsAlign': lyricsAlign.name,
     'dimUnsungLyrics': dimUnsungLyrics,
@@ -343,6 +354,8 @@ class LayoutPrefs extends ChangeNotifier {
   Future<void> setDesktopBar(DesktopBarStyle v) => _set(() => desktopBar = v);
   Future<void> setTabBar(TabBarStyle v) => _set(() => tabBar = v);
   Future<void> setVisualizerStyle(VisualizerStyle v) => _set(() => visualizerStyle = v);
+  Future<void> setVisualizerRadius(double v) => _set(() => visualizerRadius = v.clamp(0.5, 2.5));
+  Future<void> setVisualizerThickness(double v) => _set(() => visualizerThickness = v.clamp(1, 8));
   Future<void> setVisualizer(bool v) => _set(() => visualizer = v);
   Future<void> setShowQualityBadge(bool v) => _set(() => showQualityBadge = v);
   Future<void> setLyricsSize(LyricsSize v) => _set(() => lyricsSize = v);

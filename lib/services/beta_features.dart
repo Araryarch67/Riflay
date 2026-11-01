@@ -10,7 +10,12 @@ enum BetaFeature {
     'Musixmatch lyrics',
     'Look for word-by-word lyrics on Musixmatch when other sources have none.',
   ),
-  videoMode('video', 'Video mode', 'Watch a song\'s music video in the player, in step with the song.');
+  videoMode('video', 'Video mode', 'Watch a song\'s music video in the player, in step with the song.'),
+  audioVisualizer(
+    'audioVisualizer',
+    'Audio visualizer',
+    'Experimental audio shapes and music-reactive backgrounds. May be unstable on some devices.',
+  );
 
   const BetaFeature(this.id, this.title, this.description);
 
@@ -21,11 +26,17 @@ enum BetaFeature {
   /// One plain line.
   final String description;
 
+  bool get defaultOn => this != audioVisualizer;
+
   /// Whether this build has the feature at all (the web build has no Video mode).
-  bool get available => this != videoMode || Features.videoMode;
+  bool get available => switch (this) {
+    videoMode => Features.videoMode,
+    audioVisualizer => Features.audioVisualizer,
+    _ => true,
+  };
 }
 
-/// Which optional features are on. All are on until switched off, so nothing changes for current users.
+/// Optional features; experimental audio analysis requires explicit opt-in.
 class BetaFeatures extends ChangeNotifier {
   BetaFeatures();
 
@@ -33,10 +44,13 @@ class BetaFeatures extends ChangeNotifier {
 
   static String keyOf(BetaFeature f) => 'features.${f.id}';
 
-  final _off = <BetaFeature>{};
+  final _off = <BetaFeature>{
+    for (final f in BetaFeature.values)
+      if (!f.defaultOn) f,
+  };
   Future<void>? _loading;
 
-  /// Whether [f] is on. Before [load] finishes everything reads as on.
+  /// Whether [f] is on. Experimental features stay off until preferences load.
   bool isOn(BetaFeature f) => f.available && !_off.contains(f);
 
   /// Reads the saved switches once; later calls share the first.
@@ -49,7 +63,7 @@ class BetaFeatures extends ChangeNotifier {
         ..clear()
         ..addAll([
           for (final f in BetaFeature.values)
-            if ((p.getBool(keyOf(f)) ?? p.getBool('beta.${f.id}')) == false) f,
+            if ((p.getBool(keyOf(f)) ?? p.getBool('beta.${f.id}') ?? f.defaultOn) == false) f,
         ]);
       notifyListeners();
     } catch (e) {

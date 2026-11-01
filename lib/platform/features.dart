@@ -33,6 +33,9 @@ abstract final class Features {
   /// Video mode: a song's music video on Now Playing.
   static bool get videoMode => !Host.isWeb;
 
+  /// Native decoded audio analysis for experimental player decorations.
+  static bool get audioVisualizer => !Host.isWeb;
+
   /// The mini player, which shrinks the app's own window.
   static bool get miniPlayer => !Host.isWeb;
 

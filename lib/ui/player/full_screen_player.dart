@@ -76,7 +76,7 @@ class _FullScreenPlayerState extends State<FullScreenPlayer> {
 
     final hasVideo = VideoMode.instance.videoOf(track) != null;
     final showsVideo = hasVideo && VideoMode.instance.on;
-    final radial = LayoutPrefs.instance.visualizer && LayoutPrefs.instance.visualizerStyle.radial && !showsVideo;
+    final radial = LayoutPrefs.instance.visualizerEnabled && LayoutPrefs.instance.visualizerStyle.radial && !showsVideo;
     // Room for the title lines and "Next" under the cover (and the Song / Video switch above it).
     final art = math.min(box.maxHeight - 150 - (hasVideo ? 44 : 0), box.maxWidth * widthShare).clamp(120.0, 900.0);
     return Center(

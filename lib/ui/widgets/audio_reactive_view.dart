@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 
 import '../../services/audio_engine.dart';
+import '../../services/beta_features.dart';
 import '../../services/layout_prefs.dart';
 import '../../services/player_controller.dart';
 import '../../services/video_mode.dart';
@@ -122,6 +123,7 @@ class _AudioReactiveViewState extends State<AudioReactiveView>
     if (c == null || !_attached) return;
     final active =
         widget.enabled &&
+        BetaFeatures.instance.isOn(BetaFeature.audioVisualizer) &&
         LayoutPrefs.moves &&
         !_reduceMotion &&
         _visible &&

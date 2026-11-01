@@ -67,6 +67,7 @@ class YoutubeAudioSource extends StreamAudioSource {
   static bool cacheCompleteFor(String id) => _cache.find(id)?.complete ?? false;
 
   static const _chunkSize = 1 << 20;
+  static const _maxFailedAttempts = 6;
 
   static final _preloads = <String, Future<void>>{};
 
@@ -207,7 +208,12 @@ class YoutubeAudioSource extends StreamAudioSource {
   Stream<List<int>> _ranged(ResolvedAudio info, int from, int to, int total, {Future<void>? aborted}) =>
       cancellableAudio((cancel) async* {
         aborted?.then((_) => cancel.cancel());
-        yield* _fetchRange(info, from, to, total, cancel);
+        try {
+          yield* _fetchRange(info, from, to, total, cancel);
+        } catch (e) {
+          debugPrint('Audio stream failed: $videoId: ${e is http.ClientException ? e.message : e.runtimeType}');
+          rethrow;
+        }
       });
 
   Stream<List<int>> _fetchRange(ResolvedAudio info, int from, int to, int total, StreamCancellation cancel) async* {
@@ -247,7 +253,7 @@ class YoutubeAudioSource extends StreamAudioSource {
             source = refreshed.url;
             continue;
           }
-          throw http.ClientException('Temporary server response ${res.statusCode}', source);
+          throw http.ClientException('HTTP ${res.statusCode}: YouTube rejected the refreshed audio stream', source);
         }
         if (res.statusCode == 206) {
           final range = RegExp(r'^bytes (\d+)-(\d+)/(\d+)$').firstMatch(res.headers['content-range'] ?? '');
@@ -295,8 +301,13 @@ class YoutubeAudioSource extends StreamAudioSource {
         // Several short-lived connections can still deliver the complete song.
         if (pos > before) dropped = 0;
         dropped++;
+        if (dropped >= _maxFailedAttempts) {
+          throw http.ClientException('Audio connection failed after $dropped attempts without receiving data', source);
+        }
         final delay = Duration(milliseconds: (300 * (1 << dropped.clamp(0, 5))).clamp(300, 8000));
-        debugPrint('Audio reconnect: $videoId at byte $pos (attempt $dropped)');
+        debugPrint(
+          'Audio reconnect: $videoId at byte $pos (attempt $dropped): ${e is http.ClientException ? e.message : e.runtimeType}',
+        );
         await cancel.wait(delay);
       }
     }

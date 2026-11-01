@@ -15,9 +15,7 @@ void main() {
     testWidgets('ten styles paint distinct ${cover ? 'cover borders' : 'desktop forms'}', (tester) async {
       final levels = VisualizerLevels();
       addTearDown(levels.dispose);
-      for (var i = 0; i < 80; i++) {
-        levels.add('${-35 + 18 * math.sin(i * 0.31)}');
-      }
+      levels.addBands(List.generate(VisualizerLevels.samples, (i) => 0.3 + 0.25 * math.sin(i * 0.55)));
       final hashes = <String>{};
       for (final style in VisualizerStyle.values) {
         final key = GlobalKey();

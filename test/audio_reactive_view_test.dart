@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:riflay/services/beta_features.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:riflay/services/player_controller.dart';
 import 'package:riflay/services/layout_prefs.dart';
@@ -14,7 +15,8 @@ class _PlayingController extends PlayerController {
 
 void main() {
   setUp(() async {
-    SharedPreferences.setMockInitialValues({});
+    SharedPreferences.setMockInitialValues({'features.audioVisualizer': true});
+    await BetaFeatures.instance.reload();
     await LayoutPrefs.instance.reset();
   });
 

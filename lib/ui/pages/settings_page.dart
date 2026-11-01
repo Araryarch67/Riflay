@@ -4,6 +4,7 @@ import '../../platform/features.dart';
 import '../../platform/host.dart';
 import '../widgets/power_settings.dart';
 import '../../services/beta_features.dart';
+import 'beta_settings.dart';
 import '../../services/discord_presence.dart';
 import '../../services/lyrics.dart';
 import '../../services/player_controller.dart';
@@ -266,6 +267,13 @@ class SettingsPage extends StatelessWidget {
               summary: 'Play, skip, search and more without the mouse',
               onTap: () => showShortcutsDialog(context),
             ),
+          if (BetaFeature.audioVisualizer.available)
+            _SettingsRow(
+              icon: Icons.science_outlined,
+              title: 'Beta Features',
+              summary: 'Try experimental player features',
+              onTap: () => shell.open(const SettingsBetaPage(), location: Locations.settingsTopic('beta')),
+            ),
           _SettingsRow(
             icon: Icons.info_outline_rounded,
             title: 'About',
@@ -287,6 +295,14 @@ class SettingsPowerPage extends StatelessWidget {
     crumbs: const [_settingsCrumb],
     child: SettingsCard(children: PowerSettings.rows(context)),
   );
+}
+
+class SettingsBetaPage extends StatelessWidget {
+  const SettingsBetaPage({super.key});
+
+  @override
+  Widget build(BuildContext context) =>
+      const _SettingsFrame(title: 'Beta Features', crumbs: [_settingsCrumb], child: BetaSettings());
 }
 
 /// About: one page straight under Settings.

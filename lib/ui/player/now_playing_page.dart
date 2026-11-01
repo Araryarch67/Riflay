@@ -126,12 +126,12 @@ class NowPlayingPage extends StatelessWidget {
                         final largeCover = LayoutPrefs.instance.phoneCover == PhoneCoverSize.large;
                         final showStrip =
                             track != null &&
-                            LayoutPrefs.instance.visualizer &&
+                            LayoutPrefs.instance.visualizerEnabled &&
                             !LayoutPrefs.instance.visualizerStyle.radial &&
                             LayoutPrefs.moves &&
                             !MediaQuery.disableAnimationsOf(context) &&
                             !showsVideo;
-                        final stripHeight = showStrip && constraints.maxHeight >= 560 ? 64.0 : 0.0;
+                        final stripHeight = showStrip && constraints.maxHeight >= 560 ? 88.0 : 0.0;
                         // A phone held sideways: the cover goes beside the controls.
                         final sideways = constraints.maxWidth > constraints.maxHeight && constraints.maxHeight < 480;
                         final topBar = Row(
@@ -170,7 +170,7 @@ class NowPlayingPage extends StatelessWidget {
                             child: DecoratedBox(
                               // The video is wider than the square: a square shadow would show around it.
                               decoration: BoxDecoration(
-                                shape: LayoutPrefs.instance.visualizer && LayoutPrefs.instance.visualizerStyle.radial
+                                shape: LayoutPrefs.instance.visualizerEnabled && LayoutPrefs.instance.visualizerStyle.radial
                                     ? BoxShape.circle
                                     : BoxShape.rectangle,
                                 boxShadow: showsVideo
@@ -264,7 +264,7 @@ class NowPlayingPage extends StatelessWidget {
                                     : cover(art),
                               const Spacer(),
                               if (stripHeight > 0) ...[
-                                const AudioVisualizer(linearOnly: true, height: 56),
+                                const AudioVisualizer(linearOnly: true, height: 80),
                                 const SizedBox(height: 8),
                               ],
                               info,

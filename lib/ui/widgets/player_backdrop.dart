@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../../services/appearance.dart';
+import '../../services/beta_features.dart';
 import '../../services/layout_prefs.dart';
 import '../../services/visualizer_levels.dart';
 import '../theme.dart';
@@ -16,7 +17,7 @@ class PlayerBackdrop extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => ListenableBuilder(
-    listenable: Listenable.merge([Appearance.instance, LayoutPrefs.instance]),
+    listenable: Listenable.merge([Appearance.instance, LayoutPrefs.instance, BetaFeatures.instance]),
     builder: (context, _) {
       final look = Appearance.instance;
       if (!look.nowPlaying.isAbstract) return const SizedBox.shrink();
@@ -35,7 +36,12 @@ class PlayerBackdrop extends StatelessWidget {
           ),
         ),
       );
-      if (!look.reactiveBackground || !LayoutPrefs.moves || MediaQuery.disableAnimationsOf(context)) return paint(null);
+      if (!BetaFeatures.instance.isOn(BetaFeature.audioVisualizer) ||
+          !look.reactiveBackground ||
+          !LayoutPrefs.moves ||
+          MediaQuery.disableAnimationsOf(context)) {
+        return paint(null);
+      }
       return AudioReactiveView(builder: (context, levels) => paint(levels));
     },
   );

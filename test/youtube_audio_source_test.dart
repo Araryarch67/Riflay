@@ -127,6 +127,20 @@ void main() {
     expect(requests, 2);
   });
 
+  test('a permanently rejected refreshed URL fails promptly instead of buffering forever', () async {
+    var requests = 0;
+    final client = MockClient((_) async {
+      requests++;
+      return http.Response('Forbidden', 403);
+    });
+    final response = await source(100, client).request();
+    await expectLater(
+      response.stream.toList().timeout(const Duration(seconds: 2)),
+      throwsA(isA<http.ClientException>().having((e) => e.message, 'reason', contains('HTTP 403'))),
+    );
+    expect(requests, 2, reason: 'refresh the URL once, then report the refusal');
+  });
+
   test('a mismatched partial range never gets appended to the song', () async {
     final client = MockClient(
       (_) async => http.Response.bytes([1, 2, 3], 206, headers: {'content-range': 'bytes 0-2/100'}),
