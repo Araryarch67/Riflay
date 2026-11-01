@@ -327,12 +327,12 @@ Riflay builds on the work of:
 
 | Project | Used for |
 |---|---|
-| [mpv](https://mpv.io) / [media_kit](https://github.com/media-kit/media-kit), [just_audio](https://github.com/ryanheise/just_audio) | Playback |
-| [FFmpeg](https://ffmpeg.org), with [SoX's resampler](https://sourceforge.net/projects/soxr/) | Decoding, filters and resampling |
-| [yt-dlp](https://github.com/yt-dlp/yt-dlp), [youtube_explode_dart](https://github.com/Hexer10/youtube_explode_dart) | YouTube audio |
+| [mpv](https://mpv.io) / [media_kit](https://github.com/media-kit/media-kit) (LGPL-2.1-or-later), [just_audio](https://github.com/ryanheise/just_audio) (MIT) | Playback |
+| [FFmpeg](https://ffmpeg.org) (LGPL-2.1-or-later; some builds enable GPL components), with [SoX's resampler](https://sourceforge.net/projects/soxr/) (LGPL-2.1-or-later) | Decoding, filters and resampling |
+| [yt-dlp](https://github.com/yt-dlp/yt-dlp) (Unlicense), [youtube_explode_dart](https://github.com/Hexer10/youtube_explode_dart) (MIT) | YouTube audio |
 | [ytmusicapi](https://github.com/sigma67/ytmusicapi) | Its documentation of YouTube Music's API, which this app follows |
 | [LRCLIB](https://lrclib.net), [Better Lyrics](https://betterlyrics.org), Kugou, NetEase Cloud Music, QQ Music, Musixmatch, [Megalobiz](https://www.megalobiz.com), [Genius](https://genius.com), [lyrics.ovh](https://lyrics.ovh) | Free lyrics |
-| [audio_metadata_reader](https://github.com/ClementBeal/audio_metadata_reader) | Tags |
+| [audio_metadata_reader](https://github.com/ClementBeal/audio_metadata_reader) (MIT) | Tags |
 | Bill Gardner and Keith Martin's [KEMAR HRTF measurements](https://sound.media.mit.edu/resources/KEMAR.html) (MIT Media Lab) | Virtual speakers |
 | [akagi](https://github.com/z0orb/akagi) | Ideas behind dragging songs into order in playlists and the Downloads page's storage overview (re-implemented, no code copied) |
 
@@ -344,4 +344,4 @@ Riflay is free software: you can redistribute it and/or modify it under the term
 
 If you run a modified version for others over a network, the AGPL asks you to offer them its source too.
 
-Vendored packages in [`third_party/`](third_party) keep their own licenses (the Unlicense for `just_audio_media_kit`, MIT for `audio_metadata_reader` and the `media_kit_libs_*` packages, GPLv3 for Steinberg's `asiosdk`).
+Vendored packages in [`third_party/`](third_party) keep their own licenses: Unlicense for `just_audio_media_kit`, MIT for `audio_metadata_reader` and the `media_kit_libs_*` packages, and GPL-3.0-or-later or the Steinberg ASIO license for `asiosdk` (see its [license file](third_party/asiosdk/LICENSE.txt)). Flutter and Dart packages generally use MIT or BSD-3-Clause licenses; each package ships its own license in the dependency cache. Native dependencies and downloaded tools retain their upstream licenses; in particular, FFmpeg may be built with optional GPL components.
