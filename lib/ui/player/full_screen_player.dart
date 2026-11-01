@@ -92,7 +92,11 @@ class _FullScreenPlayerState extends State<FullScreenPlayer> {
                 decoration: BoxDecoration(
                   borderRadius: radial ? null : LayoutPrefs.corner(12),
                   shape: radial ? BoxShape.circle : BoxShape.rectangle,
-                  boxShadow: showsVideo
+                  boxShadow:
+                      showsVideo ||
+                          (LayoutPrefs.instance.visualizerEnabled &&
+                              (LayoutPrefs.instance.visualizerStyle == VisualizerStyle.pulse ||
+                                  LayoutPrefs.instance.visualizerStyle == VisualizerStyle.orbit))
                       ? null
                       : const [BoxShadow(color: Color(0x73000000), blurRadius: 40, offset: Offset(0, 16))],
                 ),

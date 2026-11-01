@@ -7,6 +7,7 @@ import '../../services/beta_features.dart';
 import '../../services/visualizer_levels.dart';
 import '../theme.dart';
 import 'audio_reactive_view.dart';
+import 'pulse_cover.dart';
 
 /// Optional player decoration. Disabled means the original child and layout.
 class AudioVisualizer extends StatelessWidget {
@@ -82,6 +83,16 @@ class VisualizerCanvas extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (style == VisualizerStyle.pulse || style == VisualizerStyle.orbit) {
+      return PulseCover(
+        levels: levels,
+        color: color,
+        movement: radialMotion,
+        thickness: thickness,
+        orbit: style == VisualizerStyle.orbit,
+        child: child,
+      );
+    }
     Widget? art = child;
     if (art != null && style.radial) {
       art = ClipOval(child: art);
@@ -159,41 +170,21 @@ class _VisualizerPainter extends CustomPainter {
     // Mirror the spectrum around the artwork. Both ends of the contour
     // meet with zero slope, rather than jumping at the oldest/newest sample.
     double level(double t) => sample(values, (1 - math.cos(t * math.pi * 2)) / 2);
-    if (style == VisualizerStyle.petals || style == VisualizerStyle.orbit) {
+    if (style == VisualizerStyle.petals) {
       final count = (base * 2 * math.pi / 10).floor().clamp(24, 80);
       for (var i = 0; i < count; i++) {
         final t = i / count;
         final angle = t * math.pi * 2 - math.pi / 2;
         final ray = Offset(math.cos(angle), math.sin(angle));
         final amplitude = level(t);
-        if (style == VisualizerStyle.petals) {
-          canvas.drawLine(
-            center + ray * (base + 4),
-            center + ray * (base + 7 + amplitude * 22 * radialMotion),
-            pen(0.55 + amplitude * 0.4, width: thickness),
-          );
-        } else {
-          canvas.drawCircle(
-            center + ray * (base + 8 + amplitude * 22 * radialMotion),
-            thickness * (0.6 + amplitude * 0.4),
-            pen(0.55 + amplitude * 0.4, fill: true),
-          );
-        }
+        canvas.drawLine(
+          center + ray * (base + 4),
+          center + ray * (base + 7 + amplitude * 22 * radialMotion),
+          pen(0.55 + amplitude * 0.4, width: thickness),
+        );
       }
       return;
     }
-    final points = List.generate(96, (i) {
-      final t = i / 96;
-      final angle = t * math.pi * 2 - math.pi / 2;
-      final drive = (math.pow(level(t), 0.7) * 0.6 + levels.beat * 0.65).clamp(0.0, 1.0);
-      return center + Offset(math.cos(angle), math.sin(angle)) * (base + 6 + 22 * radialMotion * drive);
-    });
-    final outline = curve(points, closed: true);
-    // A larger bass-driven expansion and a bold outline make Pulse readable
-    // around the artwork. The halo stays inside the space reserved above.
-    canvas.drawPath(outline, pen(0.12, width: thickness * 3));
-    canvas.drawPath(outline, pen(0.95, width: thickness));
-    canvas.drawCircle(center, base + 3, pen(0.18, width: math.max(1, thickness * 0.5)));
   }
 
   void _border(Canvas canvas, Size size, List<double> values) {
