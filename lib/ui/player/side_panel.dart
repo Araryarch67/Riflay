@@ -62,7 +62,7 @@ class NowPlayingSidePanel extends StatelessWidget {
           : SmoothScroll(
               builder: (context, scroll) => ListView(
                 controller: scroll,
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                padding: EdgeInsets.fromLTRB(16, 8, 16, 16 + MediaQuery.paddingOf(context).bottom),
                 children: [
                   Row(
                     children: [

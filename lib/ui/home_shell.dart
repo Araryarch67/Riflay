@@ -522,6 +522,7 @@ class _HomeShellState extends State<HomeShell> {
       _contentWidth = width - sidebarWidth - (sideOpen ? 340 : 0) - 24;
       body = _scoped(
         Scaffold(
+          extendBody: LayoutPrefs.instance.desktopBar.floats,
           // In the bottom slot so floating snackbars stack above the player instead of covering it.
           bottomNavigationBar: SafeArea(
             top: false,

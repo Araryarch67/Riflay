@@ -374,7 +374,7 @@ void main() {
     Future<void> openMore(String item) async {
       await tester.tap(find.byTooltip('More').first);
       await settle();
-      await tester.tap(find.text(item).first);
+      await tester.tap(find.text(item).hitTestable().first);
       await settle();
     }
 
@@ -480,10 +480,12 @@ void main() {
         await c.playList([lantern], 0, from: 'Dusk Signals');
         await playing();
         await c.player.seek(const Duration(seconds: 33));
-        await tester.tap(find.byTooltip('Lyrics'));
+        await tester.tap(find.byTooltip('More options'));
+        await settle();
+        await tester.tap(find.text('Lyrics'));
         await settle(5000);
         await shot('lyrics');
-        await tester.tap(find.byTooltip('Lyrics').first);
+        await tester.tap(find.byTooltip('Home').first);
         await settle();
       });
 

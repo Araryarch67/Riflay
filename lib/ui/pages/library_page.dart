@@ -65,37 +65,13 @@ class _LibraryListState extends State<LibraryList> {
 
     final rows = <Widget>[
       if (show(LibraryFilter.playlists)) ...[
-        _SimpleRow(
-          collapsed: widget.collapsed,
-          art: const _IconArt(Icons.add_rounded),
-          title: 'New playlist',
-          subtitle: 'Mix your own songs and YouTube Music',
-          onTap: () => createPlaylist(context),
-        ),
-        // The rail keeps New playlist; the one-off actions wait for the wide sidebar or the Library page.
-        if (account.canEdit && !widget.collapsed)
+        if (widget.collapsed)
           _SimpleRow(
-            collapsed: widget.collapsed,
-            art: const _IconArt(Icons.group_add_outlined),
-            title: 'Join a shared playlist',
-            subtitle: 'Paste a link from a friend',
-            onTap: () => joinSharedPlaylist(context),
-          ),
-        if (!widget.collapsed && Features.playlistImport)
-          _SimpleRow(
-            collapsed: widget.collapsed,
-            art: const _IconArt(Icons.playlist_add_rounded),
-            title: 'Import a playlist',
-            subtitle: 'From Spotify, Apple Music or Deezer',
-            onTap: () => importPlaylist(context),
-          ),
-        if (!widget.collapsed && Features.playlistImport)
-          _SimpleRow(
-            collapsed: widget.collapsed,
-            art: const _IconArt(Icons.library_music_outlined),
-            title: 'Spotify library',
-            subtitle: 'Import your playlists, albums and artists',
-            onTap: () => ShellScope.of(context).open(const SpotifyPage(), location: Locations.spotify),
+            collapsed: true,
+            art: const _IconArt(Icons.add_rounded),
+            title: 'New playlist',
+            subtitle: 'Mix your own songs and YouTube Music',
+            onTap: () => createPlaylist(context),
           ),
         for (final p in c.playlists) _LibraryRow(collection: c.playlistCollection(p), collapsed: widget.collapsed),
         if (online != null) ...[
@@ -150,7 +126,11 @@ class _LibraryListState extends State<LibraryList> {
     ];
     // The two invitations are taller than a row, so they sit apart from the rows' fixed height.
     final prompts = <Widget>[
-      if (!widget.collapsed && !account.isSignedIn && Features.youtubeSignIn && show(LibraryFilter.playlists))
+      if (!widget.dense &&
+          !widget.collapsed &&
+          !account.isSignedIn &&
+          Features.youtubeSignIn &&
+          show(LibraryFilter.playlists))
         Padding(
           padding: const EdgeInsets.fromLTRB(8, 16, 8, 0),
           child: _Prompt(
@@ -160,7 +140,7 @@ class _LibraryListState extends State<LibraryList> {
             onPressed: account.connecting ? null : () => signInToYoutubeMusic(context),
           ),
         ),
-      if (!widget.collapsed && c.library.isEmpty && Features.localLibrary)
+      if (!widget.dense && !widget.collapsed && c.library.isEmpty && Features.localLibrary)
         Padding(
           padding: const EdgeInsets.fromLTRB(8, 16, 8, 0),
           child: _Prompt(
@@ -214,6 +194,31 @@ class _LibraryListState extends State<LibraryList> {
                       value: () => createPlaylist(context),
                       child: const MenuRow(leading: Icon(Icons.playlist_add_rounded), title: Text('New playlist')),
                     ),
+                    if (account.canEdit)
+                      PopupMenuItem(
+                        value: () => joinSharedPlaylist(context),
+                        child: const MenuRow(
+                          leading: Icon(Icons.group_add_outlined),
+                          title: Text('Join a shared playlist'),
+                        ),
+                      ),
+                    if (Features.playlistImport) ...[
+                      PopupMenuItem(
+                        value: () => importPlaylist(context),
+                        child: const MenuRow(
+                          leading: Icon(Icons.playlist_add_rounded),
+                          title: Text('Import a playlist'),
+                        ),
+                      ),
+                      PopupMenuItem(
+                        value: () => shell.open(const SpotifyPage(), location: Locations.spotify),
+                        child: const MenuRow(
+                          leading: Icon(Icons.library_music_outlined),
+                          title: Text('Spotify library'),
+                        ),
+                      ),
+                    ],
+                    const PopupMenuDivider(),
                     PopupMenuItem(
                       value: shell.addFiles,
                       child: const MenuRow(leading: Icon(Icons.audio_file_outlined), title: Text('Add songs')),
@@ -267,6 +272,16 @@ class _LibraryListState extends State<LibraryList> {
                 return CustomScrollView(
                   controller: scroll,
                   slivers: [
+                    if (widget.dense && count == 0 && prompts.isEmpty)
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding: const EdgeInsets.all(24),
+                          child: Text(
+                            'Add songs or a playlist to start your library.',
+                            style: text.bodyMedium?.copyWith(color: AppColors.textSecondary),
+                          ),
+                        ),
+                      ),
                     SliverPadding(
                       padding: EdgeInsets.fromLTRB(
                         8,

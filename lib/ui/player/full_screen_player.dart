@@ -160,91 +160,98 @@ class _FullScreenPlayerState extends State<FullScreenPlayer> {
         child: Stack(
           children: [
             Positioned.fill(child: PlayerBackdrop(coverColor: accent)),
-            Column(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(32, 20, 20, 0),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          from ?? track?.album ?? 'Now playing',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: text.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-                        ),
-                      ),
-                      // Queue, volume etc. are in the player bar right below.
-                      if (track != null)
-                        ValueListenableBuilder(
-                          valueListenable: expandedPlayerLyrics,
-                          builder: (context, on, _) => LyricsToggleButton(
-                            on: on,
-                            icon: Icons.lyrics_outlined,
-                            tooltip: on ? 'Hide lyrics' : 'Lyrics',
-                            onPressed: () => expandedPlayerLyrics.value = !on,
+            Padding(
+              padding: EdgeInsets.only(bottom: MediaQuery.paddingOf(context).bottom),
+              child: Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(32, 20, 20, 0),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            from ?? track?.album ?? 'Now playing',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: text.titleMedium?.copyWith(fontWeight: FontWeight.w700),
                           ),
                         ),
-                      const SizedBox(width: 4),
-                      ValueListenableBuilder(
-                        valueListenable: windowFullScreen,
-                        builder: (context, full, _) => IconButton(
-                          tooltip: full ? 'Exit full screen' : 'Close expanded player',
-                          onPressed: () => showExpandedPlayer(false),
-                          icon: Icon(full ? Icons.fullscreen_exit_rounded : Icons.close_fullscreen_rounded),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Expanded(
-                  child: track == null
-                      ? Center(child: Text('Nothing is playing', style: text.titleMedium))
-                      : ListenableBuilder(
-                          // The Song / Video switch and the room it takes.
-                          listenable: Listenable.merge([expandedPlayerLyrics, VideoMode.instance]),
-                          builder: (context, _) => ValueListenableBuilder(
+                        // Queue, volume etc. are in the player bar right below.
+                        if (track != null)
+                          ValueListenableBuilder(
                             valueListenable: expandedPlayerLyrics,
-                            builder: (context, lyrics, _) => LayoutBuilder(
-                              builder: (context, box) {
-                                if (!lyrics) return _cover(context, track, next, box, widthShare: 0.5);
-                                final lyricsView = Padding(
-                                  padding: const EdgeInsets.only(top: 8),
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                                    children: [
-                                      Align(
-                                        alignment: Alignment.centerRight,
-                                        child: Padding(
-                                          padding: const EdgeInsets.only(right: 20),
-                                          child: LyricsExtrasButtons(key: ValueKey(track.id), track: track),
-                                        ),
-                                      ),
-                                      Expanded(child: LyricsView(track: track)),
-                                    ],
-                                  ),
-                                );
-                                // Too narrow for both: the lyrics alone.
-                                if (box.maxWidth < 900) return lyricsView;
-                                return Row(
-                                  children: [
-                                    Expanded(
-                                      flex: 5,
-                                      child: LayoutBuilder(
-                                        builder: (context, half) => _cover(context, track, next, half, widthShare: 0.8),
-                                      ),
-                                    ),
-                                    Expanded(flex: 6, child: lyricsView),
-                                  ],
-                                );
-                              },
+                            builder: (context, on, _) => LyricsToggleButton(
+                              on: on,
+                              icon: Icons.lyrics_outlined,
+                              tooltip: on ? 'Hide lyrics' : 'Lyrics',
+                              onPressed: () => expandedPlayerLyrics.value = !on,
                             ),
                           ),
+                        const SizedBox(width: 4),
+                        ValueListenableBuilder(
+                          valueListenable: windowFullScreen,
+                          builder: (context, full, _) => IconButton(
+                            tooltip: full ? 'Exit full screen' : 'Close expanded player',
+                            onPressed: () => showExpandedPlayer(false),
+                            icon: Icon(full ? Icons.fullscreen_exit_rounded : Icons.close_fullscreen_rounded),
+                          ),
                         ),
-                ),
-                if (track != null)
-                  const Padding(padding: EdgeInsets.fromLTRB(32, 8, 32, 16), child: AudioVisualizer(linearOnly: true)),
-              ],
+                      ],
+                    ),
+                  ),
+                  Expanded(
+                    child: track == null
+                        ? Center(child: Text('Nothing is playing', style: text.titleMedium))
+                        : ListenableBuilder(
+                            // The Song / Video switch and the room it takes.
+                            listenable: Listenable.merge([expandedPlayerLyrics, VideoMode.instance]),
+                            builder: (context, _) => ValueListenableBuilder(
+                              valueListenable: expandedPlayerLyrics,
+                              builder: (context, lyrics, _) => LayoutBuilder(
+                                builder: (context, box) {
+                                  if (!lyrics) return _cover(context, track, next, box, widthShare: 0.5);
+                                  final lyricsView = Padding(
+                                    padding: const EdgeInsets.only(top: 8),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                                      children: [
+                                        Align(
+                                          alignment: Alignment.centerRight,
+                                          child: Padding(
+                                            padding: const EdgeInsets.only(right: 20),
+                                            child: LyricsExtrasButtons(key: ValueKey(track.id), track: track),
+                                          ),
+                                        ),
+                                        Expanded(child: LyricsView(track: track)),
+                                      ],
+                                    ),
+                                  );
+                                  // Too narrow for both: the lyrics alone.
+                                  if (box.maxWidth < 900) return lyricsView;
+                                  return Row(
+                                    children: [
+                                      Expanded(
+                                        flex: 5,
+                                        child: LayoutBuilder(
+                                          builder: (context, half) =>
+                                              _cover(context, track, next, half, widthShare: 0.8),
+                                        ),
+                                      ),
+                                      Expanded(flex: 6, child: lyricsView),
+                                    ],
+                                  );
+                                },
+                              ),
+                            ),
+                          ),
+                  ),
+                  if (track != null)
+                    const Padding(
+                      padding: EdgeInsets.fromLTRB(32, 8, 32, 16),
+                      child: AudioVisualizer(linearOnly: true),
+                    ),
+                ],
+              ),
             ),
             // Tells first-timers how to get out, then fades away.
             Positioned(

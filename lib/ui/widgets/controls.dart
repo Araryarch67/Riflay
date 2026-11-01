@@ -489,9 +489,10 @@ class _PressableState extends State<_Pressable> {
 
 /// Shuffle / previous / play-pause / next / repeat.
 class TransportControls extends StatelessWidget {
-  const TransportControls({super.key, this.large = false});
+  const TransportControls({super.key, this.large = false, this.showModes = true});
 
   final bool large;
+  final bool showModes;
 
   @override
   Widget build(BuildContext context) {
@@ -519,14 +520,15 @@ class TransportControls extends StatelessWidget {
       mainAxisSize: large ? MainAxisSize.max : MainAxisSize.min,
       mainAxisAlignment: large ? MainAxisAlignment.spaceBetween : MainAxisAlignment.center,
       children: [
-        ModeButton(
-          tooltip: t.shuffle ? 'Disable shuffle' : 'Enable shuffle',
-          active: t.shuffle,
-          size: modeSize,
-          icon: Icons.shuffle_rounded,
-          onPressed: t.hasQueue ? c.toggleShuffle : null,
-        ),
-        if (!large) const SizedBox(width: 8),
+        if (showModes)
+          ModeButton(
+            tooltip: t.shuffle ? 'Disable shuffle' : 'Enable shuffle',
+            active: t.shuffle,
+            size: modeSize,
+            icon: Icons.shuffle_rounded,
+            onPressed: t.hasQueue ? c.toggleShuffle : null,
+          ),
+        if (!large && showModes) const SizedBox(width: 8),
         IconButton(
           tooltip: tipWith('Previous', AppAction.previous),
           iconSize: skipSize,
@@ -549,18 +551,19 @@ class TransportControls extends StatelessWidget {
           onPressed: t.hasNext ? c.next : null,
           icon: const Icon(Icons.skip_next_rounded),
         ),
-        if (!large) const SizedBox(width: 8),
-        ModeButton(
-          tooltip: switch (t.loop) {
-            LoopMode.off => 'Enable repeat',
-            LoopMode.all => 'Enable repeat one',
-            LoopMode.one => 'Disable repeat',
-          },
-          active: t.loop != LoopMode.off,
-          size: modeSize,
-          icon: t.loop == LoopMode.one ? Icons.repeat_one_rounded : Icons.repeat_rounded,
-          onPressed: t.hasQueue ? c.cycleLoopMode : null,
-        ),
+        if (!large && showModes) const SizedBox(width: 8),
+        if (showModes)
+          ModeButton(
+            tooltip: switch (t.loop) {
+              LoopMode.off => 'Enable repeat',
+              LoopMode.all => 'Enable repeat one',
+              LoopMode.one => 'Disable repeat',
+            },
+            active: t.loop != LoopMode.off,
+            size: modeSize,
+            icon: t.loop == LoopMode.one ? Icons.repeat_one_rounded : Icons.repeat_rounded,
+            onPressed: t.hasQueue ? c.cycleLoopMode : null,
+          ),
       ],
     );
     if (!large) return row;

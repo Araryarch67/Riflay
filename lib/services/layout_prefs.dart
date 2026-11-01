@@ -18,6 +18,9 @@ enum DesktopBarStyle {
 
   const DesktopBarStyle(this.label);
   final String label;
+
+  /// The player overlays the page, with room for the page to scroll behind it.
+  bool get floats => this == floating || this == capsule;
 }
 
 /// The same visual language in a player strip or a radial artwork surround.

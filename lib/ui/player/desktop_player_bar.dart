@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:just_audio/just_audio.dart';
 
 import '../../models/track.dart';
 import '../../platform/features.dart';
@@ -22,7 +23,7 @@ import 'full_screen_player.dart';
 import 'mini_window.dart';
 import 'player_common.dart';
 
-/// Desktop controls. Classic keeps the original layout; alternatives are opt-in.
+/// Desktop controls, full width or presented as a dock over the current page.
 class DesktopPlayerBar extends StatelessWidget {
   const DesktopPlayerBar({super.key, required this.sidePanelOpen, required this.onToggleSidePanel});
   final bool sidePanelOpen;
@@ -41,6 +42,8 @@ class DesktopPlayerBar extends StatelessWidget {
         final style = LayoutPrefs.instance.desktopBar;
         return LayoutBuilder(
           builder: (context, box) {
+            final dockWidth = style == DesktopBarStyle.capsule ? 1040.0 : 1120.0;
+            final availableWidth = style.floats ? math.min(box.maxWidth - 48, dockWidth) : box.maxWidth;
             final compact = style == DesktopBarStyle.compact || style == DesktopBarStyle.capsule;
             final minimal = style == DesktopBarStyle.minimal;
             final track = now.track;
@@ -51,8 +54,8 @@ class DesktopPlayerBar extends StatelessWidget {
                 ? math.max(64.0, 36 * textScale + 20)
                 : math.max(80.0, 36 * textScale + 16);
             final info = _info(context, track, small: compact || minimal, withProgress: compact);
-            final actions = _actions(context, track, width: box.maxWidth);
-            const transport = FittedBox(fit: BoxFit.scaleDown, child: TransportControls());
+            final actions = _actions(context, track, width: availableWidth);
+            const transport = FittedBox(fit: BoxFit.scaleDown, child: TransportControls(showModes: false));
             final Widget content;
             if (compact) {
               content = SizedBox(
@@ -61,11 +64,11 @@ class DesktopPlayerBar extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: Row(
                     children: [
-                      const SizedBox(width: 244, child: transport),
+                      const SizedBox(width: 168, child: transport),
                       const SizedBox(width: 16),
                       Expanded(child: info),
                       const SizedBox(width: 20),
-                      SizedBox(width: box.maxWidth > 860 ? 244 : 120, child: actions),
+                      SizedBox(width: availableWidth > 860 ? 244 : 120, child: actions),
                     ],
                   ),
                 ),
@@ -101,21 +104,26 @@ class DesktopPlayerBar extends StatelessWidget {
                 ),
               );
             }
-            if (style != DesktopBarStyle.floating && style != DesktopBarStyle.capsule) return content;
+            if (!style.floats) return content;
+            final colors = AppColors.of(context);
             return Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+              padding: const EdgeInsets.fromLTRB(24, 14, 24, 20),
               child: Align(
                 heightFactor: 1,
                 child: ConstrainedBox(
-                  constraints: BoxConstraints(maxWidth: style == DesktopBarStyle.capsule ? 1180 : 1400),
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: AppColors.panel,
+                  constraints: BoxConstraints(maxWidth: dockWidth),
+                  child: Material(
+                    key: const ValueKey('desktop-player-dock'),
+                    color: colors.elevated,
+                    elevation: 14,
+                    shadowColor: Colors.black.withValues(alpha: 0.5),
+                    surfaceTintColor: Colors.transparent,
+                    clipBehavior: Clip.antiAlias,
+                    shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(
                         style == DesktopBarStyle.capsule ? barHeight / 2 : LayoutPrefs.radius(18),
                       ),
-                      border: Border.all(color: AppColors.textSecondary.withValues(alpha: 0.15)),
-                      boxShadow: const [BoxShadow(color: Color(0x33000000), blurRadius: 16, offset: Offset(0, 4))],
+                      side: BorderSide(color: colors.textSecondary.withValues(alpha: 0.2)),
                     ),
                     child: content,
                   ),
@@ -195,28 +203,12 @@ class DesktopPlayerBar extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          ListenableBuilder(
-            listenable: Listenable.merge([fullScreenPlayer, expandedPlayerLyrics]),
-            builder: (context, _) {
-              final beside = fullScreenPlayer.value;
-              return IconButton(
-                tooltip: 'Lyrics',
-                color: beside && expandedPlayerLyrics.value ? AppColors.accent : null,
-                onPressed: track == null
-                    ? null
-                    : beside
-                    ? () => expandedPlayerLyrics.value = !expandedPlayerLyrics.value
-                    : shell.openLyrics,
-                icon: const Icon(Icons.lyrics_outlined, size: 20),
-              );
-            },
-          ),
           IconButton(
             tooltip: 'Queue',
             onPressed: shell.openQueue,
             icon: const Icon(Icons.queue_music_rounded, size: 20),
           ),
-          if (width > 860) const VolumeSlider(),
+          if (width > 860) const VolumeSlider() else const _VolumeMenu(),
           _MoreMenu(track: track, sidePanelOpen: sidePanelOpen, onToggleSidePanel: onToggleSidePanel),
         ],
       ),
@@ -224,10 +216,22 @@ class DesktopPlayerBar extends StatelessWidget {
   }
 }
 
-/// The player bar's ⋯: the sleep timer, Play on a device, Listen together and
-/// Download, then the views (the now-playing side panel, the mini player, the
-/// expanded player and full screen), then Stats for nerds and Signal path.
-/// Lit while a sleep timer, a device or a view is on.
+/// Volume remains available on narrow desktop windows without crowding the dock.
+class _VolumeMenu extends StatelessWidget {
+  const _VolumeMenu();
+
+  @override
+  Widget build(BuildContext context) => MenuAnchor(
+    builder: (context, menu, _) => IconButton(
+      tooltip: 'Volume',
+      onPressed: () => menu.isOpen ? menu.close() : menu.open(),
+      icon: const Icon(Icons.volume_up_rounded, size: 20),
+    ),
+    menuChildren: const [Padding(padding: EdgeInsets.all(12), child: VolumeSlider())],
+  );
+}
+
+/// Additional playback controls, views, devices and audio details in one place.
 class _MoreMenu extends StatelessWidget {
   const _MoreMenu({required this.track, required this.sidePanelOpen, required this.onToggleSidePanel});
 
@@ -243,16 +247,33 @@ class _MoreMenu extends StatelessWidget {
     final hasTrack = track != null;
     final session = ListenTogether.of(c);
     return ListenableBuilder(
-      listenable: Listenable.merge([fullScreenPlayer, windowFullScreen, c.sleep, c.cast, session, c.youtube]),
+      listenable: Listenable.merge([
+        c,
+        fullScreenPlayer,
+        expandedPlayerLyrics,
+        windowFullScreen,
+        c.sleep,
+        c.cast,
+        session,
+        c.youtube,
+      ]),
       builder: (context, _) {
         final expanded = fullScreenPlayer.value, full = windowFullScreen.value;
         final sleeping = c.sleep.active, device = c.cast.target, together = listenStatusLabel(session);
-        PopupMenuItem<VoidCallback> item(IconData icon, String label, VoidCallback onTap, {bool on = false}) =>
+        PopupMenuItem<VoidCallback> item(IconData icon, String label, VoidCallback? onTap, {bool on = false}) =>
             PopupMenuItem(
               value: onTap,
-              child: MenuRow(
-                leading: Icon(icon, color: on ? AppColors.accent : null),
-                title: Text(label),
+              enabled: onTap != null,
+              child: Row(
+                children: [
+                  Expanded(
+                    child: MenuRow(
+                      leading: Icon(icon, color: on ? AppColors.accent : null),
+                      title: Text(label),
+                    ),
+                  ),
+                  if (on) Icon(Icons.check_rounded, size: 18, color: AppColors.accent),
+                ],
               ),
             );
         final downloadable = track != null && track!.isRemote && c.downloadedCopy(track!) == null;
@@ -264,10 +285,41 @@ class _MoreMenu extends StatelessWidget {
           icon: Icon(
             Icons.more_horiz_rounded,
             size: 22,
-            color: expanded || full || sleeping || device != null || together != null ? AppColors.accent : null,
+            color:
+                expanded ||
+                    full ||
+                    sleeping ||
+                    device != null ||
+                    together != null ||
+                    c.shuffle ||
+                    c.loopMode != LoopMode.off
+                ? AppColors.accent
+                : null,
           ),
           onSelected: (open) => open(),
           itemBuilder: (_) => [
+            item(Icons.shuffle_rounded, 'Shuffle', c.hasQueue ? c.toggleShuffle : null, on: c.shuffle),
+            item(
+              c.loopMode == LoopMode.one ? Icons.repeat_one_rounded : Icons.repeat_rounded,
+              switch (c.loopMode) {
+                LoopMode.off => 'Repeat off',
+                LoopMode.all => 'Repeat all',
+                LoopMode.one => 'Repeat one',
+              },
+              c.hasQueue ? c.cycleLoopMode : null,
+              on: c.loopMode != LoopMode.off,
+            ),
+            item(
+              Icons.lyrics_outlined,
+              'Lyrics',
+              hasTrack
+                  ? (expanded
+                        ? () => expandedPlayerLyrics.value = !expandedPlayerLyrics.value
+                        : ShellScope.of(context).openLyrics)
+                  : null,
+              on: expanded && expandedPlayerLyrics.value,
+            ),
+            const PopupMenuDivider(),
             item(
               sleeping ? Icons.bedtime_rounded : Icons.bedtime_outlined,
               sleeping ? 'Sleep timer: ${SleepTimerLabel.of(c.sleep)}' : 'Sleep timer',

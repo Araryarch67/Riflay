@@ -70,10 +70,7 @@ class LayoutSettings extends StatelessWidget {
               SettingTile(
                 icon: Icons.view_stream_rounded,
                 title: const Text('Desktop player bar'),
-                subtitle: Text(
-                  'Classic, floating, capsule or a compact row with controls beside the song',
-                  style: muted,
-                ),
+                subtitle: Text('Full-width controls, a floating dock, or a compact row beside the song', style: muted),
                 control: OptionPicker<DesktopBarStyle>(
                   value: p.desktopBar,
                   onChanged: p.setDesktopBar,

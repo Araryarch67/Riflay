@@ -161,7 +161,9 @@ void main() {
       await shot('desktop-home-reordered');
       await set(look.reset);
 
-      await tester.tap(find.byTooltip('Lyrics').first);
+      await tester.tap(find.byTooltip('More options'));
+      await settle();
+      await tester.tap(find.text('Lyrics'));
       await settle(1500);
       await shot('desktop-lyrics-default');
       await set(() => look.setLyricsSize(LyricsSize.large));
