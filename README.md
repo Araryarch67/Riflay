@@ -325,16 +325,19 @@ Bug reports, feature requests and pull requests are welcome. Start with **[CONTR
 
 Riflay builds on the work of:
 
-| Project | Used for |
-|---|---|
-| [mpv](https://mpv.io) / [media_kit](https://github.com/media-kit/media-kit) (LGPL-2.1-or-later), [just_audio](https://github.com/ryanheise/just_audio) (MIT) | Playback |
-| [FFmpeg](https://ffmpeg.org) (LGPL-2.1-or-later; some builds enable GPL components), with [SoX's resampler](https://sourceforge.net/projects/soxr/) (LGPL-2.1-or-later) | Decoding, filters and resampling |
-| [yt-dlp](https://github.com/yt-dlp/yt-dlp) (Unlicense), [youtube_explode_dart](https://github.com/Hexer10/youtube_explode_dart) (MIT) | YouTube audio |
-| [ytmusicapi](https://github.com/sigma67/ytmusicapi) | Its documentation of YouTube Music's API, which this app follows |
-| [LRCLIB](https://lrclib.net), [Better Lyrics](https://betterlyrics.org), Kugou, NetEase Cloud Music, QQ Music, Musixmatch, [Megalobiz](https://www.megalobiz.com), [Genius](https://genius.com), [lyrics.ovh](https://lyrics.ovh) | Free lyrics |
-| [audio_metadata_reader](https://github.com/ClementBeal/audio_metadata_reader) (MIT) | Tags |
-| Bill Gardner and Keith Martin's [KEMAR HRTF measurements](https://sound.media.mit.edu/resources/KEMAR.html) (MIT Media Lab) | Virtual speakers |
-| [akagi](https://github.com/z0orb/akagi) | Ideas behind dragging songs into order in playlists and the Downloads page's storage overview (re-implemented, no code copied) |
+| Project | Used for | License |
+|---|---|---|
+| [mpv](https://mpv.io) / [media_kit](https://github.com/media-kit/media-kit) | Playback | LGPL-2.1-or-later |
+| [just_audio](https://github.com/ryanheise/just_audio) | Playback | MIT |
+| [FFmpeg](https://ffmpeg.org) | Decoding and filters | LGPL-2.1-or-later; some builds enable GPL components |
+| [SoX's resampler](https://sourceforge.net/projects/soxr/) | Resampling | LGPL-2.1-or-later |
+| [yt-dlp](https://github.com/yt-dlp/yt-dlp) | YouTube audio | Unlicense |
+| [youtube_explode_dart](https://github.com/Hexer10/youtube_explode_dart) | YouTube audio | MIT |
+| [ytmusicapi](https://github.com/sigma67/ytmusicapi) | Documentation of YouTube Music's API, which this app follows | MIT |
+| [LRCLIB](https://lrclib.net), [Better Lyrics](https://betterlyrics.org), Kugou, NetEase Cloud Music, QQ Music, Musixmatch, [Megalobiz](https://www.megalobiz.com), [Genius](https://genius.com), [lyrics.ovh](https://lyrics.ovh) | Free lyrics | Various; see each project |
+| [audio_metadata_reader](https://github.com/ClementBeal/audio_metadata_reader) | Tags | MIT |
+| Bill Gardner and Keith Martin's [KEMAR HRTF measurements](https://sound.media.mit.edu/resources/KEMAR.html) (MIT Media Lab) | Virtual speakers | MIT |
+| [akagi](https://github.com/z0orb/akagi) | Ideas behind playlist reordering and Downloads storage overview (re-implemented, no code copied) | MIT |
 
 Riflay is not affiliated with YouTube, Google or Discord.
 
