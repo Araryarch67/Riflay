@@ -10,8 +10,9 @@ import 'package:riflay/models/track.dart';
 import 'package:riflay/services/layout_prefs.dart';
 import 'package:riflay/services/lyrics.dart';
 import 'package:riflay/ui/pages/lyrics_page.dart';
+import 'package:riflay/ui/theme.dart';
 
-const _white = Colors.white;
+Color get _primary => AppColors.textPrimary;
 
 /// 6 lines, 5 s apart, for a 30 s song.
 Lyrics _short() => Lyrics(
@@ -91,7 +92,7 @@ void main() {
 
   bool lit(WidgetTester tester, String text) {
     final c = colorOf(tester, text)!;
-    return c == _white || c == _white.withValues(alpha: 0.75);
+    return c == _primary || c == _primary.withValues(alpha: 0.75);
   }
 
   int litCount(WidgetTester tester, int lines) =>
@@ -106,10 +107,10 @@ void main() {
 
     ticks.add(const Duration(seconds: 5));
     await tester.pump(const Duration(milliseconds: 400));
-    expect(colorOf(tester, 'Line 1'), _white);
+    expect(colorOf(tester, 'Line 1'), _primary);
     expect(lit(tester, 'Line 0'), isTrue); // sung before it
     expect([for (var i = 2; i < 6; i++) lit(tester, 'Line $i')], everyElement(isFalse));
-    expect(colorOf(tester, 'Line 0'), isNot(_white));
+    expect(colorOf(tester, 'Line 0'), isNot(_primary));
   });
 
   testWidgets('moving to the next line rebuilds two lines, not all of them', (tester) async {
@@ -122,7 +123,7 @@ void main() {
     ticks.add(const Duration(seconds: 3));
     await tester.pump(const Duration(milliseconds: 400));
     expect(lyricLineBuilds - before, 2);
-    expect(colorOf(tester, 'Line 1'), _white);
+    expect(colorOf(tester, 'Line 1'), _primary);
 
     // Line 1 -> 2, the same.
     before = lyricLineBuilds;
@@ -242,7 +243,7 @@ void main() {
     await mouse.addPointer(location: Offset.zero);
     await mouse.moveTo(spot);
     await tester.pump(const Duration(milliseconds: 400));
-    expect(colorOf(tester, 'Line 4'), _white);
+    expect(colorOf(tester, 'Line 4'), _primary);
   });
 
   testWidgets('scrolling away shows "Back to current line"; tapping it follows again', (tester) async {

@@ -38,7 +38,9 @@ class AppearanceSettings extends StatelessWidget {
                   spacing: gap,
                   runSpacing: gap,
                   children: [
-                    for (final t in ThemeChoice.values.where((t) => t != ThemeChoice.matugen || Host.isLinux))
+                    for (final t in ThemeChoice.values.where(
+                      (t) => t != ThemeChoice.standard && (t != ThemeChoice.matugen || Host.isLinux),
+                    ))
                       _ThemeCard(choice: t, selected: look.theme == t, width: width),
                   ],
                 );
@@ -230,17 +232,6 @@ class AppearanceSettings extends StatelessWidget {
               options: [for (final v in NowPlayingBackground.values) (v, v.label)],
             ),
           ),
-          if (look.nowPlaying.isAbstract)
-            SwitchListTile(
-              secondary: const Icon(Icons.graphic_eq_rounded),
-              title: const Text('Music-reactive background'),
-              subtitle: Text(
-                'Abstract shapes drift with the music. Stops when paused or hidden; stays still with reduced motion.',
-                style: muted,
-              ),
-              value: look.reactiveBackground,
-              onChanged: look.setReactiveBackground,
-            ),
           SwitchListTile(
             secondary: const Icon(Icons.blur_on_rounded),
             title: const Text('Frosted glass'),
@@ -258,10 +249,21 @@ class AppearanceSettings extends StatelessWidget {
               label: (v) => v.round().toString(),
               onChanged: look.setBlur,
             ),
+          if (Appearance.hasComponentOpacity)
+            _SliderTile(
+              icon: Icons.layers_outlined,
+              title: 'Component opacity',
+              subtitle: 'The entire desktop app: panels, cards, covers, controls, text and menus',
+              value: look.componentOpacity,
+              min: 0.3,
+              max: 1,
+              label: (v) => '${(v * 100).round()}%',
+              onChanged: look.setComponentOpacity,
+            ),
           if (Appearance.hasWindowOpacity)
             _SliderTile(
               icon: Icons.opacity_rounded,
-              title: 'Window opacity',
+              title: 'Background opacity',
               subtitle: Host.isAndroid ? 'Below 100% your wallpaper shows through' : 'Below 100% the desktop shows through, blurred where the system can (Windows 11, macOS, Hyprland, KDE)',
               value: look.windowOpacity,
               min: 0.5,
@@ -416,7 +418,7 @@ class _ThemeCard extends StatelessWidget {
     return Semantics(
       button: true,
       selected: selected,
-      label: dynamicTheme ? 'Dynamic theme, follows the song that is playing' : '${choice.label} theme',
+      label: dynamicTheme ? 'Default theme, follows the song that is playing' : '${choice.label} theme',
       child: InkWell(
         onTap: () => Appearance.instance.setTheme(choice),
         borderRadius: BorderRadius.circular(12),

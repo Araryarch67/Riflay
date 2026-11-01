@@ -33,6 +33,7 @@ import 'package:media_kit/media_kit.dart' show NativePlayer;
 import 'package:riflay/main.dart';
 import 'package:riflay/models/track.dart';
 import 'package:riflay/services/appearance.dart';
+import 'package:riflay/services/beta_features.dart';
 import 'package:riflay/services/download_prefs.dart';
 import 'package:riflay/services/listen_together/listen_together.dart';
 import 'package:riflay/services/play_history.dart';
@@ -294,7 +295,12 @@ void main() {
     String thumb(int i) => 'http://127.0.0.1:${server.port}/$i.jpg';
 
     // Discord off: the real one, if running, would show these songs on the user's profile.
-    SharedPreferences.setMockInitialValues({'discord.enabled': false, 'listen.name': 'Ana'});
+    SharedPreferences.setMockInitialValues({
+      'discord.enabled': false,
+      'listen.name': 'Ana',
+      'features.audioVisualizer': true,
+    });
+    await BetaFeatures.instance.reload();
 
     // No sound device: mpv's null output, and muted besides.
     final c = PlayerController();
@@ -776,7 +782,7 @@ void main() {
         await Appearance.instance.setTheme(ThemeChoice.dynamic);
         await settle(3000);
         await shot('dynamic-theme');
-        await Appearance.instance.setTheme(ThemeChoice.standard);
+        await Appearance.instance.setTheme(ThemeChoice.dynamic);
         await settle();
       });
 
@@ -845,7 +851,7 @@ void main() {
           await shot('desktop-bar-${style.name}');
         }
         await LayoutPrefs.instance.setDesktopBar(DesktopBarStyle.classic);
-        await Appearance.instance.setTheme(ThemeChoice.standard);
+        await Appearance.instance.setTheme(ThemeChoice.dynamic);
       });
 
       await step('theme-components', () async {
@@ -889,7 +895,7 @@ void main() {
         await shot('matugen-components-dark');
         await Appearance.instance.setBrightness(ThemeBrightness.light);
         await shot('matugen-components-light');
-        await Appearance.instance.setTheme(ThemeChoice.standard);
+        await Appearance.instance.setTheme(ThemeChoice.dynamic);
         await Appearance.instance.setMatugenPath(null);
         await tester.tap(find.byTooltip('Home').first);
       });

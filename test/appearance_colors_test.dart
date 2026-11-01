@@ -113,7 +113,7 @@ void main() {
       expect(a.accent, AccentChoice.custom);
       expect(a.palette.light, isTrue);
       await a.reset();
-      expect(a.theme, ThemeChoice.standard);
+      expect(a.theme, ThemeChoice.dynamic);
       expect(a.accent, AccentChoice.theme);
       expect(a.coverMode, CoverColorMode.player);
       expect(a.coverStrength, 0.5);

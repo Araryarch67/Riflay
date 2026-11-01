@@ -24,14 +24,16 @@ void main() {
     await tester.pump();
   }
 
-  testWidgets('Dynamic card is no longer Beta; choosing it hides Colours from cover art', (tester) async {
+  testWidgets('Default follows the cover and replaces the old theme choice', (tester) async {
+    await look.setTheme(ThemeChoice.nord);
     await open(tester);
-    expect(find.text('Dynamic'), findsOneWidget);
+    expect(find.text('Default'), findsOneWidget);
     expect(find.text('Beta'), findsNothing);
+    expect(find.text('Dynamic'), findsNothing);
     expect(find.text('Colours from cover art'), findsOneWidget);
     expect(find.text('Colour strength'), findsNothing);
 
-    await tester.tap(find.text('Dynamic'));
+    await tester.tap(find.text('Default'));
     await tester.pump();
     expect(look.theme, ThemeChoice.dynamic);
     expect(find.text('Colours from cover art'), findsNothing);
@@ -42,7 +44,8 @@ void main() {
   testWidgets('theme cards sit two to a row on a phone', (tester) async {
     await open(tester, width: 360);
     final first = tester.getRect(find.bySemanticsLabel(RegExp('^Default theme')));
-    final second = tester.getRect(find.bySemanticsLabel(RegExp('^Dynamic theme')));
+    final next = find.bySemanticsLabel(RegExp('^Matugen theme'));
+    final second = tester.getRect(next.evaluate().isNotEmpty ? next : find.bySemanticsLabel(RegExp('^Monochrome theme')));
     expect(second.top, first.top);
     expect(second.right, lessThanOrEqualTo(360 - 16 + 0.5));
     expect(tester.takeException(), isNull);

@@ -179,7 +179,7 @@ void main() {
     await a.setTheme(ThemeChoice.nord);
     final nord = appThemeNow();
     expect(nord, isNot(same(first)));
-    await a.setTheme(ThemeChoice.standard);
+    await a.setTheme(ThemeChoice.dynamic);
     expect(appThemeNow(), same(first), reason: 'a palette that comes back is not built again');
     expect(nord.colorScheme.primary, ThemeChoice.nord.palette.accent);
     expect(first.textTheme.bodyMedium?.fontFamily, 'Figtree', reason: 'the bundled typeface, not a download');

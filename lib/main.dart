@@ -303,10 +303,19 @@ class _RiflayAppState extends State<RiflayApp> with WidgetsBindingObserver {
             child: child!,
           );
           // The title bar sits above every route (including full-screen ones like Now Playing).
-          return AppColorsScope(
+          final content = AppColorsScope(
             colors: AppColorsScope.current(),
             child: hasCustomTitleBar ? _DesktopFrame(child: scaled) : scaled,
           );
+          // Above the Navigator and desktop frame: dialogs, menus, title bar,
+          // artwork, text and the mini player all share one compositing pass.
+          return Appearance.hasComponentOpacity
+              ? Opacity(
+                  key: const ValueKey('desktop-component-opacity'),
+                  opacity: _appearance.componentOpacity,
+                  child: content,
+                )
+              : content;
         },
         home: const HomeShell(),
       ),

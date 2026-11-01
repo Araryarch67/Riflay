@@ -210,7 +210,7 @@ void main() {
     await settle();
     await tester.tap(find.text('Reset to default'));
     await settle();
-    expect(look.theme, ThemeChoice.standard);
+    expect(look.theme, ThemeChoice.dynamic);
     expect(look.coverMode, CoverColorMode.player);
     await shot('7-after-reset');
     await tester.runAsync(c.player.stop);

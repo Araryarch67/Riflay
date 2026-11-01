@@ -225,8 +225,9 @@ class AppPalette {
 
 /// The colour schemes in Settings › Look & feel › Appearance, from their authors' palettes.
 enum ThemeChoice {
+  // Legacy preference and neutral fallback palette; omitted from the theme picker.
   standard(
-    'Default',
+    'Legacy',
     AppPalette(
       background: Color(0xFF000000),
       panel: Color(0xFF121212),
@@ -242,7 +243,7 @@ enum ThemeChoice {
   ),
 
   /// Follows the playing song's cover; this is only the calm stand-in for when nothing plays.
-  dynamic('Dynamic', neutralDarkPalette),
+  dynamic('Default', neutralDarkPalette),
   matugen('Matugen', neutralDarkPalette),
   monochrome(
     'Monochrome',
@@ -702,7 +703,7 @@ class Appearance extends ChangeNotifier {
 
   static const _key = 'appearance.v1';
 
-  ThemeChoice theme = ThemeChoice.standard;
+  ThemeChoice theme = ThemeChoice.dynamic;
 
   AccentChoice accent = AccentChoice.theme;
 
@@ -924,6 +925,10 @@ class Appearance extends ChangeNotifier {
   /// shows through, and a compositor that blurs windows (Hyprland, KDE) blurs it.
   double windowOpacity = 1;
 
+  /// Composites the entire desktop UI, including controls, artwork and text.
+  double componentOpacity = 1;
+  static bool get hasComponentOpacity => Host.isLinux || Host.isWindows || Host.isMacOS;
+
   /// Body text size in pixels (Material's default is 14); everything else scales with it.
   double textSize = defaultTextSize;
 
@@ -950,7 +955,7 @@ class Appearance extends ChangeNotifier {
   /// the screen once (the music and the app's state carry on). Linux needs nothing.
   Future<void> applyWindow() async {
     if (!hasWindowOpacity || Host.isLinux) return;
-    final on = windowOpacity < 1;
+    final on = windowOpacity < 1 || (hasComponentOpacity && componentOpacity < 1);
     if (on == _seeThrough) return;
     _seeThrough = on;
     try {
@@ -967,8 +972,9 @@ class Appearance extends ChangeNotifier {
       matugenPath = (await SharedPreferences.getInstance()).getString('appearance.matugenPath');
       if (raw == null) return;
       final j = jsonDecode(raw) as Map<String, dynamic>;
-      theme = ThemeChoice.values.asNameMap()[j['theme']] ?? theme;
-      if (theme == ThemeChoice.matugen && !Host.isLinux) theme = ThemeChoice.standard;
+      theme = ThemeChoice.values.asNameMap()[j['theme']] ?? ThemeChoice.dynamic;
+      if (theme == ThemeChoice.standard) theme = ThemeChoice.dynamic;
+      if (theme == ThemeChoice.matugen && !Host.isLinux) theme = ThemeChoice.dynamic;
       if (theme == ThemeChoice.matugen) await matugen.start(file: matugenPath);
       // Saves from before the mode existed: a light theme (Latte) stays light.
       brightness =
@@ -990,6 +996,7 @@ class Appearance extends ChangeNotifier {
       reactiveBackground = j['reactiveBackground'] as bool? ?? false;
       glass = j['glass'] as bool? ?? glass;
       blur = (j['blur'] as num?)?.toDouble().clamp(4, 48) ?? blur;
+      componentOpacity = hasComponentOpacity ? (j['componentOpacity'] as num?)?.toDouble().clamp(0.3, 1) ?? 1 : 1;
       windowOpacity = hasWindowOpacity ? (j['windowOpacity'] as num?)?.toDouble().clamp(0.5, 1) ?? 1 : 1;
       final size =
           (j['textSize'] as num?)?.toDouble() ??
@@ -1031,6 +1038,7 @@ class Appearance extends ChangeNotifier {
         'glass': glass,
         'blur': blur,
         'windowOpacity': windowOpacity,
+        'componentOpacity': componentOpacity,
         'textSize': textSize,
         'fontFamily': fontFamily,
         'fontFiles': _fontFiles,
@@ -1102,7 +1110,7 @@ class Appearance extends ChangeNotifier {
     await (await SharedPreferences.getInstance()).remove('appearance.matugenPath');
     await setFont(null);
     await _set(() {
-      theme = ThemeChoice.standard;
+      theme = ThemeChoice.dynamic;
       accent = AccentChoice.theme;
       customAccent = const Color(0xFF4C9AFF);
       customBackground = const Color(0xFF14161B);
@@ -1114,6 +1122,7 @@ class Appearance extends ChangeNotifier {
       glass = false;
       blur = 24;
       windowOpacity = 1;
+      componentOpacity = 1;
       textSize = defaultTextSize;
       brightness = ThemeBrightness.dark;
       highContrast = false;
@@ -1129,6 +1138,8 @@ class Appearance extends ChangeNotifier {
   Future<void> setNowPlaying(NowPlayingBackground v) => _set(() => nowPlaying = v);
   Future<void> setGlass(bool v) => _set(() => glass = v);
   Future<void> setBlur(double v) => _set(() => blur = v);
+  Future<void> setComponentOpacity(double v) =>
+      _set(() => componentOpacity = hasComponentOpacity ? v.clamp(0.3, 1) : 1);
   Future<void> setWindowOpacity(double v) => _set(() => windowOpacity = v);
 
   /// Draws the app in [font] (null: back to Riflay's own). False when its files couldn't be loaded.

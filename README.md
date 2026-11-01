@@ -94,8 +94,9 @@ Feature options live in their respective Settings pages. Power & background has 
 |---|---|
 | **Themes** | Catppuccin, Nord, Gruvbox, Dracula or your own colors. Any font and accent. Light, dark or match your system, for every theme. High contrast. Components share the chosen scheme; Linux can follow [Matugen colors](docs/matugen/README.md) automatically |
 | **Player backgrounds** | Simple by default; optional Aurora, Silk, Orbits and Prism abstract backgrounds with a separate music-reactive switch. Only on Now Playing |
-| **Audio visualizer** | Ten optional styles: Wave, Bars, Line, Dots, Mirror, Twin waves, Pulse, Orbit, Petals and Peaks. Driven by decoded audio, with filled waves and rounded bars in their own space below the cover. Radial styles surround the artwork. Stops when hidden or paused |
-| **Dynamic theme** | Follows the cover of what's playing, local or YouTube. Cover-art colors in the player or the whole app, with adjustable strength |
+| **Audio visualizer (Beta)** | Enable in **Settings → Beta Features** (off by default). Pulse by default, with adjustable radial movement and line thickness. Mirrored CAVA-style bars put bass at both edges and treble in the center, driven by 24 logarithmic frequency bands from decoded audio. Also Wave, Line, Dots, Mirror, Twin waves, Orbit, Petals and Peaks, with filled waves and rounded bars in their own space below the cover. Radial styles surround the artwork. Stops when hidden or paused |
+| **Desktop component opacity** | Fade the entire app together: title bar, cards, covers, controls, text, menus and dialogs. Adjustable from 30–100%, independently of background opacity |
+| **Default theme** | Follows the cover of what's playing, local or YouTube. Cover-art colors in the player or the whole app, with adjustable strength |
 | **Layout options** | Corners, spacing, cover size, the phone's tab bar (ten looks, from a classic docked bar to Dock, Capsule and Liquid glass), five desktop player bars including floating docks above the page, Home sections, player and lyrics looks, nine page transition presets (including Circular reveal), adjustable animation speed |
 | **Adaptive layouts** | Phone, tablet and desktop. Mini and full-screen player |
 
@@ -130,8 +131,8 @@ Feature options live in their respective Settings pages. Power & background has 
 | ![Sleep timer](docs/screenshots/sleep-timer.webp) | ![Crossfade](docs/screenshots/settings-crossfade.webp) |
 | **Virtual speakers and Mono audio** | **Equalizer** |
 | ![Sound effects and DSP settings](docs/screenshots/sound.webp) | ![Equalizer](docs/screenshots/equalizer.webp) |
-| **Signal path** | **Dynamic theme** |
-| ![Signal path](docs/screenshots/signal-path.webp) | ![Dynamic theme](docs/screenshots/dynamic-theme.webp) |
+| **Signal path** | **Default theme** |
+| ![Signal path](docs/screenshots/signal-path.webp) | ![Default theme](docs/screenshots/dynamic-theme.webp) |
 | **Full-screen player** | **Settings** |
 | ![Full-screen player](docs/screenshots/fullscreen.webp) | ![Settings](docs/screenshots/settings.webp) |
 | **Themes and colours** | **About** |
