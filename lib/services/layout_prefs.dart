@@ -20,7 +20,7 @@ enum DesktopBarStyle {
   final String label;
 }
 
-/// The same visual language, adapted to a desktop wave or a phone cover border.
+/// The same visual language in a player strip or a radial artwork surround.
 enum VisualizerStyle {
   wave('Wave'),
   bars('Bars'),

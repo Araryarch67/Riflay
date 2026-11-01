@@ -37,6 +37,23 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('linear visualizers preserve the artwork without a decorative border', (tester) async {
+    await prefs.setVisualizer(true);
+    for (final style in VisualizerStyle.values.where((style) => !style.radial)) {
+      await prefs.setVisualizerStyle(style);
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Center(
+            child: AudioVisualizer(child: SizedBox(key: ValueKey('art'), width: 200, height: 200)),
+          ),
+        ),
+      );
+      expect(tester.getSize(find.byKey(const ValueKey('art'))), const Size(200, 200));
+      expect(find.descendant(of: find.byType(AudioVisualizer), matching: find.byType(CustomPaint)), findsNothing);
+    }
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('settings exposes style choices only after enabling the visualizer', (tester) async {
     await tester.pumpWidget(
       const MaterialApp(

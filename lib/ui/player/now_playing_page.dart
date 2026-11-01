@@ -124,6 +124,14 @@ class NowPlayingPage extends StatelessWidget {
                         // On very short windows the cover (then the quality badge) makes way.
                         final showBadge = constraints.maxHeight >= 480 && LayoutPrefs.instance.showQualityBadge;
                         final largeCover = LayoutPrefs.instance.phoneCover == PhoneCoverSize.large;
+                        final showStrip =
+                            track != null &&
+                            LayoutPrefs.instance.visualizer &&
+                            !LayoutPrefs.instance.visualizerStyle.radial &&
+                            LayoutPrefs.moves &&
+                            !MediaQuery.disableAnimationsOf(context) &&
+                            !showsVideo;
+                        final stripHeight = showStrip && constraints.maxHeight >= 560 ? 64.0 : 0.0;
                         // A phone held sideways: the cover goes beside the controls.
                         final sideways = constraints.maxWidth > constraints.maxHeight && constraints.maxHeight < 480;
                         final topBar = Row(
@@ -232,8 +240,14 @@ class NowPlayingPage extends StatelessWidget {
                           );
                         }
                         final art = largeCover
-                            ? math.min(constraints.maxWidth - 24, constraints.maxHeight - (showBadge ? 364 : 328))
-                            : math.min(constraints.maxWidth - 48, constraints.maxHeight - (showBadge ? 400 : 364));
+                            ? math.min(
+                                constraints.maxWidth - 24,
+                                constraints.maxHeight - (showBadge ? 364 : 328) - stripHeight,
+                              )
+                            : math.min(
+                                constraints.maxWidth - 48,
+                                constraints.maxHeight - (showBadge ? 400 : 364) - stripHeight,
+                              );
                         return Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 24),
                           child: Column(
@@ -249,6 +263,10 @@ class NowPlayingPage extends StatelessWidget {
                                       )
                                     : cover(art),
                               const Spacer(),
+                              if (stripHeight > 0) ...[
+                                const AudioVisualizer(linearOnly: true, height: 56),
+                                const SizedBox(height: 8),
+                              ],
                               info,
                               const SizedBox(height: 16),
                               const SeekBar(),

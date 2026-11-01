@@ -242,7 +242,8 @@ class _FullScreenPlayerState extends State<FullScreenPlayer> {
                           ),
                         ),
                 ),
-                if (track != null) const AudioVisualizer(linearOnly: true),
+                if (track != null)
+                  const Padding(padding: EdgeInsets.fromLTRB(32, 8, 32, 16), child: AudioVisualizer(linearOnly: true)),
               ],
             ),
             // Tells first-timers how to get out, then fades away.

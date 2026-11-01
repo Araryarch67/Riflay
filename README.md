@@ -94,7 +94,7 @@ Feature options live in their respective Settings pages. Power & background has 
 |---|---|
 | **Themes** | Catppuccin, Nord, Gruvbox, Dracula or your own colors. Any font and accent. Light, dark or match your system, for every theme. High contrast. Components share the chosen scheme; Linux can follow [Matugen colors](docs/matugen/README.md) automatically |
 | **Player backgrounds** | Simple by default; optional Aurora, Silk, Orbits and Prism abstract backgrounds with a separate music-reactive switch. Only on Now Playing |
-| **Audio visualizer** | Ten optional styles: Wave, Bars, Line, Dots, Mirror, Twin waves, Pulse, Orbit, Petals and Peaks. Driven by decoded audio; linear shapes below the desktop player or radial shapes around its cover, with compact cover borders on phones. Stops when hidden or paused |
+| **Audio visualizer** | Ten optional styles: Wave, Bars, Line, Dots, Mirror, Twin waves, Pulse, Orbit, Petals and Peaks. Driven by decoded audio, with filled waves and rounded bars in their own space below the cover. Radial styles surround the artwork. Stops when hidden or paused |
 | **Dynamic theme** | Follows the cover of what's playing, local or YouTube. Cover-art colors in the player or the whole app, with adjustable strength |
 | **Layout options** | Corners, spacing, cover size, the phone's tab bar (ten looks, from a classic docked bar to Dock, Capsule and Liquid glass), five desktop player bars, Home sections, player and lyrics looks, nine page transition presets (including Circular reveal), adjustable animation speed |
 | **Adaptive layouts** | Phone, tablet and desktop. Mini and full-screen player |
