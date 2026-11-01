@@ -58,7 +58,7 @@ class _LyricsLoaderState extends State<_LyricsLoader> {
         return _Message(
           'Couldn\'t load lyrics. Check your internet connection.',
           action: TextButton(
-            style: TextButton.styleFrom(foregroundColor: Colors.white),
+            style: TextButton.styleFrom(foregroundColor: AppColors.textPrimary),
             onPressed: () => setState(() => _lyrics = LyricsService.forTrack(widget.track)),
             child: const Text('Try again'),
           ),
@@ -73,7 +73,7 @@ class _LyricsLoaderState extends State<_LyricsLoader> {
           action: !Features.userLyrics
               ? null
               : TextButton(
-                  style: TextButton.styleFrom(foregroundColor: Colors.white),
+                  style: TextButton.styleFrom(foregroundColor: AppColors.textPrimary),
                   onPressed: () => useMyLyricsFile(context, widget.track),
                   child: const Text('Use my lyrics file'),
                 ),
@@ -144,7 +144,7 @@ class _LyricsSkeletonState extends State<_LyricsSkeleton> with SingleTickerProvi
                             width: width * _LyricsSkeleton.widths[i % _LyricsSkeleton.widths.length],
                             height: bar,
                             decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.10 + 0.08 * _pulse.value),
+                              color: AppColors.textPrimary.withValues(alpha: 0.10 + 0.08 * _pulse.value),
                               borderRadius: BorderRadius.circular(bar / 3),
                             ),
                           ),
@@ -177,7 +177,7 @@ class _Message extends StatelessWidget {
           Text(
             message,
             textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(color: Colors.white70),
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(color: AppColors.textSecondary),
           ),
           if (action != null) ...[const SizedBox(height: 12), action!],
         ],
@@ -197,7 +197,7 @@ class _Source extends StatelessWidget {
     child: Text(
       'Lyrics from ${lyrics.source}',
       textAlign: _textAlign,
-      style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.white54),
+      style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.textMuted),
     ),
   );
 }
@@ -218,7 +218,7 @@ class _PlainLyricsState extends State<_PlainLyrics> with _Extras {
   @override
   Widget build(BuildContext context) {
     // Softer than a sung line: untimed lyrics all lit in white read as if every line were selected.
-    final style = _lineStyle(context)?.copyWith(color: Colors.white.withValues(alpha: 0.8));
+    final style = _lineStyle(context)?.copyWith(color: AppColors.textPrimary.withValues(alpha: 0.8));
     final lines = lyrics.plain!.split('\n');
     return SmoothScroll(
       builder: (context, scroll) => ListView(
@@ -231,7 +231,7 @@ class _PlainLyricsState extends State<_PlainLyrics> with _Extras {
               'These lyrics don\'t follow the song.',
               key: const ValueKey('lyrics-untimed'),
               textAlign: _textAlign,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.white54),
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.textMuted),
             ),
           ),
           if (extras == null)
@@ -244,7 +244,7 @@ class _PlainLyricsState extends State<_PlainLyrics> with _Extras {
                   padding: const EdgeInsets.only(bottom: 6),
                   child: Text(
                     extra,
-                    style: _extraStyle(context)?.copyWith(color: Colors.white70),
+                    style: _extraStyle(context)?.copyWith(color: AppColors.textSecondary),
                     textAlign: _textAlign,
                   ),
                 ),

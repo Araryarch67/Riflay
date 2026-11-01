@@ -95,7 +95,7 @@ if ! stamp libass; then
   done_ libass
 fi
 
-if ! stamp ffmpeg-ladspa; then
+if ! stamp ffmpeg-ladspa-visualizer; then
   rm -rf "$root/build/ffmpeg" && mkdir -p "$root/build/ffmpeg"
   # The ladspa filter (audio plugins) needs ladspa.h and dlopen, which mingw lacks: third_party/ladspa has the
   # header and a dlfcn.h over LoadLibrary. The filter also only takes a path that starts with '/' or '.', so
@@ -115,9 +115,9 @@ if ! stamp ffmpeg-ladspa; then
     --extra-cflags="-I$project/third_party/ladspa -I$project/third_party/ladspa/win" \
     --disable-videotoolbox --disable-vaapi --disable-vdpau --disable-cuda --disable-cuvid \
     --disable-nvenc --disable-nvdec --disable-d3d11va --disable-dxva2 --disable-mediafoundation \
-    --enable-filter=equalizer,crossfeed,afir,amovie,volume,aresample,anull,ladspa >/dev/null &&
+    --enable-filter=astats,equalizer,crossfeed,afir,amovie,volume,aresample,anull,ladspa >/dev/null &&
     make -j"$jobs" install >/dev/null)
-  done_ ffmpeg-ladspa
+  done_ ffmpeg-ladspa-visualizer
 fi
 
 if ! stamp mpv-patched; then

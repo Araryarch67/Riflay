@@ -7,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:riflay/main.dart';
 import 'package:riflay/models/track.dart';
 import 'package:riflay/services/player_controller.dart';
+import 'package:riflay/services/layout_prefs.dart';
 import 'package:riflay/ui/player_panels.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -70,6 +71,21 @@ void main() {
         try {
           await layOut(tester, Size(w, h), desktopBar: w >= 700);
         } finally {
+          debugDefaultTargetPlatformOverride = null;
+        }
+      });
+    }
+  }
+
+  for (final style in DesktopBarStyle.values) {
+    for (final width in [700.0, 1024.0, 1920.0]) {
+      testWidgets('desktop controls ${style.name} at $width', (tester) async {
+        debugDefaultTargetPlatformOverride = TargetPlatform.linux;
+        LayoutPrefs.instance.desktopBar = style;
+        try {
+          await layOut(tester, Size(width, 700), desktopBar: true);
+        } finally {
+          LayoutPrefs.instance.desktopBar = DesktopBarStyle.classic;
           debugDefaultTargetPlatformOverride = null;
         }
       });

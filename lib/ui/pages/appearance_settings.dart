@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../platform/host.dart';
@@ -37,12 +38,47 @@ class AppearanceSettings extends StatelessWidget {
                   spacing: gap,
                   runSpacing: gap,
                   children: [
-                    for (final t in ThemeChoice.values) _ThemeCard(choice: t, selected: look.theme == t, width: width),
+                    for (final t in ThemeChoice.values.where((t) => t != ThemeChoice.matugen || Host.isLinux))
+                      _ThemeCard(choice: t, selected: look.theme == t, width: width),
                   ],
                 );
               },
             ),
           ),
+          if (Host.isLinux && look.theme == ThemeChoice.matugen)
+            ListenableBuilder(
+              listenable: look.matugen,
+              builder: (context, _) => ListTile(
+                leading: const Icon(Icons.wallpaper_rounded),
+                title: const Text('Matugen colors'),
+                subtitle: Text(
+                  look.matugen.error ??
+                      (look.matugen.path == null
+                          ? 'Choose a generated JSON file. Colors update automatically.'
+                          : 'Following generated colors automatically'),
+                  style: muted,
+                ),
+                trailing: Wrap(
+                  spacing: 4,
+                  children: [
+                    if (look.matugenPath != null)
+                      IconButton(
+                        tooltip: 'Find generated colors automatically',
+                        icon: const Icon(Icons.restart_alt_rounded),
+                        onPressed: () => look.setMatugenPath(null),
+                      ),
+                    TextButton(
+                      onPressed: () async {
+                        final result = await FilePicker.pickFiles(type: FileType.custom, allowedExtensions: ['json']);
+                        final path = result.firstOrNull?.path;
+                        if (path != null) await look.setMatugenPath(path);
+                      },
+                      child: const Text('Choose file'),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           if (look.theme == ThemeChoice.dynamic)
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
@@ -187,13 +223,24 @@ class AppearanceSettings extends StatelessWidget {
           SettingTile(
             icon: Icons.wallpaper_rounded,
             title: const Text('Now playing background'),
-            subtitle: Text('Behind the cover on the full player (phones)', style: muted),
+            subtitle: Text('Only the Now Playing and expanded player pages', style: muted),
             control: OptionPicker<NowPlayingBackground>(
               value: look.nowPlaying,
               onChanged: look.setNowPlaying,
               options: [for (final v in NowPlayingBackground.values) (v, v.label)],
             ),
           ),
+          if (look.nowPlaying.isAbstract)
+            SwitchListTile(
+              secondary: const Icon(Icons.graphic_eq_rounded),
+              title: const Text('Music-reactive background'),
+              subtitle: Text(
+                'Abstract shapes drift with the music. Stops when paused or hidden; stays still with reduced motion.',
+                style: muted,
+              ),
+              value: look.reactiveBackground,
+              onChanged: look.setReactiveBackground,
+            ),
           SwitchListTile(
             secondary: const Icon(Icons.blur_on_rounded),
             title: const Text('Frosted glass'),

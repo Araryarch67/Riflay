@@ -68,6 +68,19 @@ class LayoutSettings extends StatelessWidget {
                 ),
               ),
               SettingTile(
+                icon: Icons.view_stream_rounded,
+                title: const Text('Desktop player bar'),
+                subtitle: Text(
+                  'Classic, floating, capsule or a compact row with controls beside the song',
+                  style: muted,
+                ),
+                control: OptionPicker<DesktopBarStyle>(
+                  value: p.desktopBar,
+                  onChanged: p.setDesktopBar,
+                  options: [for (final v in DesktopBarStyle.values) (v, v.label)],
+                ),
+              ),
+              SettingTile(
                 icon: Icons.photo_size_select_large_rounded,
                 title: const Text('Cover size in grids'),
                 subtitle: Text('The albums and playlists on Home and in "Show all"', style: muted),
@@ -84,6 +97,27 @@ class LayoutSettings extends StatelessWidget {
           const _Header('Now playing'),
           SettingsCard(
             children: [
+              SwitchListTile(
+                secondary: const Icon(Icons.graphic_eq_rounded),
+                title: const Text('Audio visualizer'),
+                subtitle: Text(
+                  'Waves below the desktop player and an animated cover border on phones. Paused for bit-perfect audio and reduced motion.',
+                  style: muted,
+                ),
+                value: p.visualizer,
+                onChanged: p.setVisualizer,
+              ),
+              if (p.visualizer)
+                SettingTile(
+                  icon: Icons.multiline_chart_rounded,
+                  title: const Text('Visualizer style'),
+                  subtitle: Text('Follows the song and your theme color', style: muted),
+                  control: OptionPicker<VisualizerStyle>(
+                    value: p.visualizerStyle,
+                    onChanged: p.setVisualizerStyle,
+                    options: [for (final v in VisualizerStyle.values) (v, v.label)],
+                  ),
+                ),
               SettingTile(
                 icon: Icons.linear_scale_rounded,
                 title: const Text('Progress bar'),
@@ -158,6 +192,26 @@ class LayoutSettings extends StatelessWidget {
           const _Header('Motion'),
           SettingsCard(
             children: [
+              SettingTile(
+                icon: Icons.auto_awesome_motion_rounded,
+                title: const Text('Transition style'),
+                subtitle: Text('Coordinated page, tab and player transitions', style: muted),
+                control: OptionPicker<PageMotionStyle>(
+                  value: p.pageMotion,
+                  onChanged: p.setPageMotion,
+                  options: [for (final v in PageMotionStyle.values) (v, v.label)],
+                ),
+              ),
+              SettingTile(
+                icon: Icons.speed_rounded,
+                title: const Text('Transition speed'),
+                subtitle: Text('Choose a brisk or more relaxed pace', style: muted),
+                control: OptionPicker<PageMotionSpeed>(
+                  value: p.pageSpeed,
+                  onChanged: p.setPageSpeed,
+                  options: [for (final v in PageMotionSpeed.values) (v, v.label)],
+                ),
+              ),
               SettingTile(
                 icon: Icons.animation_rounded,
                 title: const Text('Animations'),

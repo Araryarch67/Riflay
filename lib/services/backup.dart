@@ -26,6 +26,7 @@ abstract final class Backup {
   /// Preferences that are secrets or belong to this one device, and so are left out of a backup and kept as they
   /// are by a restore.
   static const _kept = {
+    'appearance.matugenPath',
     'lyrics.betterLyricsKey',
     'youtube.visitor.v1',
     'power.batteryAsked.v1',

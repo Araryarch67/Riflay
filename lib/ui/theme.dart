@@ -271,7 +271,17 @@ bool _frameworkOnly(Type t) => _frameworkTypes[t] ??= _frameworkWidgets.contains
 /// nothing a theme reads) is answered without building [ThemeData] again.
 @immutable
 class _ThemeKey {
-  const _ThemeKey(this.palette, this.opacity, this.highContrast, this.wholeApp, this.font, this.corners, this.motion);
+  const _ThemeKey(
+    this.palette,
+    this.opacity,
+    this.highContrast,
+    this.wholeApp,
+    this.font,
+    this.corners,
+    this.motion,
+    this.pageMotion,
+    this.pageSpeed,
+  );
 
   final AppPalette palette;
   final double opacity;
@@ -280,6 +290,8 @@ class _ThemeKey {
   final String? font;
   final CornerStyle corners;
   final Motion motion;
+  final PageMotionStyle pageMotion;
+  final PageMotionSpeed pageSpeed;
 
   @override
   bool operator ==(Object other) =>
@@ -290,10 +302,13 @@ class _ThemeKey {
       other.wholeApp == wholeApp &&
       other.font == font &&
       other.corners == corners &&
-      other.motion == motion;
+      other.motion == motion &&
+      other.pageMotion == pageMotion &&
+      other.pageSpeed == pageSpeed;
 
   @override
-  int get hashCode => Object.hash(palette, opacity, highContrast, wholeApp, font, corners, motion);
+  int get hashCode =>
+      Object.hash(palette, opacity, highContrast, wholeApp, font, corners, motion, pageMotion, pageSpeed);
 }
 
 final _themes = <_ThemeKey, ThemeData>{};
@@ -317,6 +332,8 @@ ThemeData appThemeNow({bool desktopFrame = false}) {
     a.fontFamily,
     l.corners,
     LayoutPrefs.effectiveMotion,
+    l.pageMotion,
+    l.pageSpeed,
   );
   final hit = _themes.remove(key);
   if (hit != null) {
@@ -371,21 +388,36 @@ ThemeData buildAppTheme({String? fontFamily}) {
   final brightness = AppColors.light ? Brightness.light : Brightness.dark;
   final base = ThemeData(
     brightness: brightness,
-    colorScheme: ColorScheme.fromSeed(
-      seedColor: AppColors.accent,
-      brightness: brightness,
-      primary: AppColors.accent,
-      onPrimary: AppColors.onAccent,
-      surface: AppColors.panel,
-      onSurface: AppColors.textPrimary,
-      onSurfaceVariant: AppColors.textSecondary,
-    ),
+    colorScheme:
+        (AppColors._p.materialScheme ??
+                ColorScheme.fromSeed(
+                  seedColor: AppColors.accent,
+                  brightness: brightness,
+                  primary: AppColors.accent,
+                  onPrimary: AppColors.onAccent,
+                  surface: AppColors.panel,
+                  onSurface: AppColors.textPrimary,
+                  onSurfaceVariant: AppColors.textSecondary,
+                ))
+            .copyWith(
+              primary: AppColors.accent,
+              onPrimary: AppColors.onAccent,
+              surface: AppColors.panel,
+              onSurface: AppColors.textPrimary,
+              onSurfaceVariant: AppColors.textSecondary,
+              surfaceContainerLowest: AppColors.solidBackground,
+              surfaceContainerLow: AppColors.panel,
+              surfaceContainer: AppColors.elevated,
+              surfaceContainerHigh: AppColors.menu,
+              surfaceContainerHighest: AppColors.hover,
+              outline: AppColors.textMuted,
+              outlineVariant: AppColors.border,
+            ),
     scaffoldBackgroundColor: AppColors.background,
     splashFactory: InkSparkle.splashFactory,
     // Riflay's own typeface is bundled (assets/fonts); a font picked in Settings comes from the device.
     fontFamily: fontFamily ?? 'Figtree',
   );
-  final wholeApp = Appearance.instance.followsCover;
   final text = base.textTheme.apply(bodyColor: AppColors.textPrimary, displayColor: AppColors.textPrimary);
   return base.copyWith(
     textTheme: text,
@@ -394,22 +426,22 @@ ThemeData buildAppTheme({String? fontFamily}) {
     sliderTheme: SliderThemeData(
       trackHeight: 4,
       // Whole-app cover colours: sliders take the cover's accent too.
-      activeTrackColor: wholeApp ? AppColors.accent : AppColors.textPrimary,
+      activeTrackColor: AppColors.accent,
       inactiveTrackColor: AppColors.textPrimary.withValues(alpha: 0.3),
-      thumbColor: wholeApp ? AppColors.accent : AppColors.textPrimary,
-      overlayColor: (wholeApp ? AppColors.accent : AppColors.textPrimary).withValues(alpha: 0.12),
+      thumbColor: AppColors.accent,
+      overlayColor: AppColors.accent.withValues(alpha: 0.12),
       thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6, elevation: 0),
       overlayShape: const RoundSliderOverlayShape(overlayRadius: 14),
       trackShape: const RoundedRectSliderTrackShape(),
     ),
     chipTheme: ChipThemeData(
       backgroundColor: AppColors.hover,
-      selectedColor: AppColors.textPrimary,
+      selectedColor: AppColors.accent,
       // Material 3 ignores secondaryLabelStyle: the selected (inverse) chip needs
       // its label from a state colour, or the text vanishes.
       labelStyle: text.labelLarge?.copyWith(
         color: WidgetStateColor.resolveWith(
-          (states) => states.contains(WidgetState.selected) ? AppColors.onInverse : AppColors.textPrimary,
+          (states) => states.contains(WidgetState.selected) ? AppColors.onAccent : AppColors.textPrimary,
         ),
       ),
       side: BorderSide.none,
@@ -450,16 +482,77 @@ ThemeData buildAppTheme({String? fontFamily}) {
     ),
     dividerTheme: DividerThemeData(color: AppColors.hover, thickness: 1, space: 1),
     listTileTheme: ListTileThemeData(iconColor: AppColors.textSecondary),
-    dialogTheme: wholeApp
-        ? DialogThemeData(backgroundColor: AppColors.menu, surfaceTintColor: Colors.transparent)
-        : null,
-    textSelectionTheme: wholeApp
-        ? TextSelectionThemeData(
-            cursorColor: AppColors.accent,
-            selectionColor: AppColors.accent.withValues(alpha: 0.35),
-            selectionHandleColor: AppColors.accent,
-          )
-        : null,
-    progressIndicatorTheme: wholeApp ? ProgressIndicatorThemeData(color: AppColors.accent) : null,
+    dialogTheme: DialogThemeData(backgroundColor: AppColors.menu, surfaceTintColor: Colors.transparent),
+    bottomSheetTheme: BottomSheetThemeData(
+      backgroundColor: AppColors.menu,
+      modalBackgroundColor: AppColors.menu,
+      surfaceTintColor: Colors.transparent,
+    ),
+    cardTheme: CardThemeData(color: AppColors.elevated, surfaceTintColor: Colors.transparent),
+    inputDecorationTheme: InputDecorationThemeData(
+      filled: true,
+      fillColor: AppColors.tile,
+      hintStyle: text.bodyMedium?.copyWith(color: AppColors.textMuted),
+      labelStyle: text.bodyMedium?.copyWith(color: AppColors.textSecondary),
+      enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: AppColors.border)),
+      focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: AppColors.accent, width: 2)),
+    ),
+    switchTheme: SwitchThemeData(
+      thumbColor: WidgetStateProperty.resolveWith(
+        (states) => states.contains(WidgetState.disabled)
+            ? AppColors.textMuted
+            : states.contains(WidgetState.selected)
+            ? AppColors.onAccent
+            : AppColors.textSecondary,
+      ),
+      trackColor: WidgetStateProperty.resolveWith(
+        (states) => states.contains(WidgetState.disabled)
+            ? AppColors.tile
+            : states.contains(WidgetState.selected)
+            ? AppColors.accent
+            : AppColors.hover,
+      ),
+      trackOutlineColor: WidgetStatePropertyAll(AppColors.border),
+    ),
+    filledButtonTheme: FilledButtonThemeData(
+      style: FilledButton.styleFrom(backgroundColor: AppColors.accent, foregroundColor: AppColors.onAccent),
+    ),
+    elevatedButtonTheme: ElevatedButtonThemeData(
+      style: ElevatedButton.styleFrom(
+        backgroundColor: AppColors.elevated,
+        foregroundColor: AppColors.accent,
+        surfaceTintColor: Colors.transparent,
+      ),
+    ),
+    outlinedButtonTheme: OutlinedButtonThemeData(
+      style: OutlinedButton.styleFrom(
+        foregroundColor: AppColors.accent,
+        side: BorderSide(color: AppColors.border),
+      ),
+    ),
+    textButtonTheme: TextButtonThemeData(style: TextButton.styleFrom(foregroundColor: AppColors.accent)),
+    navigationBarTheme: NavigationBarThemeData(
+      backgroundColor: AppColors.panel,
+      indicatorColor: AppColors.accent.withValues(alpha: 0.2),
+      surfaceTintColor: Colors.transparent,
+    ),
+    menuTheme: MenuThemeData(
+      style: MenuStyle(
+        backgroundColor: WidgetStatePropertyAll(AppColors.menu),
+        surfaceTintColor: const WidgetStatePropertyAll(Colors.transparent),
+      ),
+    ),
+    dropdownMenuTheme: DropdownMenuThemeData(
+      menuStyle: MenuStyle(
+        backgroundColor: WidgetStatePropertyAll(AppColors.menu),
+        surfaceTintColor: const WidgetStatePropertyAll(Colors.transparent),
+      ),
+    ),
+    textSelectionTheme: TextSelectionThemeData(
+      cursorColor: AppColors.accent,
+      selectionColor: AppColors.accent.withValues(alpha: 0.35),
+      selectionHandleColor: AppColors.accent,
+    ),
+    progressIndicatorTheme: ProgressIndicatorThemeData(color: AppColors.accent),
   );
 }

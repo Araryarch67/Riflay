@@ -4,6 +4,7 @@ import '../../models/track.dart';
 import '../../services/layout_prefs.dart';
 import '../../services/player_controller.dart';
 import '../widgets/controls.dart';
+import '../theme.dart';
 import '../widgets/marquee_text.dart';
 import '../ytmusic_edit.dart';
 import 'more_sheet.dart';
@@ -66,7 +67,7 @@ class _MiniPlayerState extends State<MiniPlayer> {
         child: Padding(
           padding: const EdgeInsets.fromLTRB(8, 0, 8, 6),
           child: GlassPanel(
-            color: Color.lerp(accent, Colors.black, 0.45)!,
+            color: AppColors.sink(accent, 0.75),
             borderRadius: LayoutPrefs.corner(8),
             child: InkWell(
               onTap: widget.onOpen,
@@ -111,7 +112,7 @@ class _MiniPlayerState extends State<MiniPlayer> {
                                           ),
                                           MarqueeText(
                                             track.artist,
-                                            style: text.bodySmall?.copyWith(color: Colors.white70),
+                                            style: text.bodySmall?.copyWith(color: AppColors.textSecondary),
                                           ),
                                         ],
                                       ),
@@ -122,7 +123,7 @@ class _MiniPlayerState extends State<MiniPlayer> {
                             ),
                           ),
                         ),
-                        LikeButton(track: track, size: 24, color: Colors.white),
+                        LikeButton(track: track, size: 24, color: AppColors.textPrimary),
                         _MiniPlay(c: c),
                         _MiniNext(c: c),
                       ],
@@ -137,8 +138,8 @@ class _MiniPlayerState extends State<MiniPlayer> {
                         child: LinearProgressIndicator(
                           value: total == 0 ? 0 : (pos / total).clamp(0, 1),
                           minHeight: 2,
-                          color: Colors.white,
-                          backgroundColor: Colors.white24,
+                          color: AppColors.textPrimary,
+                          backgroundColor: AppColors.border,
                           borderRadius: BorderRadius.circular(2),
                         ),
                       );
@@ -167,15 +168,15 @@ class _MiniPlay extends StatelessWidget {
       width: 44,
       height: 44,
       child: s.buffering
-          ? const Center(
+          ? Center(
               child: SizedBox.square(
                 dimension: 22,
-                child: CircularProgressIndicator(strokeWidth: 2.2, color: Colors.white),
+                child: CircularProgressIndicator(strokeWidth: 2.2, color: AppColors.textPrimary),
               ),
             )
           : IconButton(
               tooltip: s.playing ? 'Pause' : 'Play',
-              color: Colors.white,
+              color: AppColors.textPrimary,
               iconSize: 30,
               padding: EdgeInsets.zero,
               onPressed: c.togglePlay,
@@ -195,7 +196,7 @@ class _MiniNext extends StatelessWidget {
     select: (c) => c.hasNext,
     builder: (context, hasNext, _) => IconButton(
       tooltip: 'Next',
-      color: Colors.white,
+      color: AppColors.textPrimary,
       iconSize: 26,
       onPressed: hasNext ? c.next : null,
       icon: const Icon(Icons.skip_next_rounded),

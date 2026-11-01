@@ -48,7 +48,7 @@ class LyricsPage extends StatelessWidget {
     return AccentBuilder(
       track: track,
       builder: (context, accent) => Material(
-        color: track == null ? AppColors.panel : Color.lerp(accent, Colors.black, 0.25),
+        color: track == null ? AppColors.panel : AppColors.sink(accent, 0.75),
         child: SafeArea(
           bottom: fullScreen,
           top: fullScreen || ShellScope.of(context).compact,
@@ -64,7 +64,7 @@ class LyricsPage extends StatelessWidget {
                     else if (canPop)
                       IconButton(
                         tooltip: fullScreen ? 'Close' : 'Back',
-                        color: Colors.white,
+                        color: AppColors.textPrimary,
                         onPressed: () => Navigator.of(context).pop(),
                         icon: Icon(fullScreen ? Icons.keyboard_arrow_down_rounded : Icons.arrow_back_rounded),
                       )
@@ -79,7 +79,7 @@ class LyricsPage extends StatelessWidget {
                           if (track != null)
                             MarqueeText(
                               '${track.title} · ${track.artist}',
-                              style: text.bodySmall?.copyWith(color: Colors.white70),
+                              style: text.bodySmall?.copyWith(color: AppColors.textSecondary),
                             ),
                         ],
                       ),

@@ -92,9 +92,11 @@ Feature options live in their respective Settings pages. Power & background has 
 
 | Feature | Description |
 |---|---|
-| **Themes** | Catppuccin, Nord, Gruvbox, Dracula or your own colors. Any font and accent. Light, dark or match your system, for every theme. High contrast |
+| **Themes** | Catppuccin, Nord, Gruvbox, Dracula or your own colors. Any font and accent. Light, dark or match your system, for every theme. High contrast. Components share the chosen scheme; Linux can follow [Matugen colors](docs/matugen/README.md) automatically |
+| **Player backgrounds** | Simple by default; optional Aurora, Silk, Orbits and Prism abstract backgrounds with a separate music-reactive switch. Only on Now Playing |
+| **Audio visualizer** | Optional Wave, Bars, Line and Dots, driven by the decoded audio: bottom waves on desktop and a compact cover border on phones. Stops when hidden or paused |
 | **Dynamic theme** | Follows the cover of what's playing, local or YouTube. Cover-art colors in the player or the whole app, with adjustable strength |
-| **Layout options** | Corners, spacing, cover size, the phone's tab bar (ten looks, from a classic docked bar to Dock, Capsule and Liquid glass), Home sections, player and lyrics looks, animations |
+| **Layout options** | Corners, spacing, cover size, the phone's tab bar (ten looks, from a classic docked bar to Dock, Capsule and Liquid glass), five desktop player bars, Home sections, player and lyrics looks, nine page transition presets (including Circular reveal), adjustable animation speed |
 | **Adaptive layouts** | Phone, tablet and desktop. Mini and full-screen player |
 
 ### Everyday
@@ -169,6 +171,27 @@ Choose a style in **Settings › Look & feel › Layout**. Every style keeps Sea
 </details>
 
 The pictures show a made-up library of generated songs.
+
+<details>
+<summary>Player backgrounds, visualizers and desktop controls</summary>
+
+Everything is optional in **Settings › Look & feel**. Backgrounds stay Simple by default; motion follows Reduced motion and Off.
+
+| Abstract Aurora | Abstract Silk |
+| --- | --- |
+| ![Aurora background](docs/screenshots/background-aurora.webp) | ![Silk background](docs/screenshots/background-silk.webp) |
+| Compact desktop controls | Capsule desktop controls |
+| ![Compact desktop player](docs/screenshots/desktop-bar-compact.webp) | ![Capsule desktop player](docs/screenshots/desktop-bar-capsule.webp) |
+| Desktop visualizer | Mobile cover visualizer |
+| ![Desktop visualizer](docs/screenshots/visualizer-desktop-wave.webp) | ![Mobile visualizer](docs/screenshots/visualizer-phone-bars.webp) |
+| Matugen dark | Matugen light |
+| ![Matugen dark components](docs/screenshots/matugen-components-dark.webp) | ![Matugen light components](docs/screenshots/matugen-components-light.webp) |
+
+**Circular reveal** is one of nine transition styles, with three speed options:
+
+![Circular reveal transition](docs/screenshots/circular-reveal.webp)
+
+</details>
 
 ## Build from source
 

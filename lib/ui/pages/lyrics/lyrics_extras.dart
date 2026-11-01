@@ -54,7 +54,7 @@ class LyricsExtrasButtonsState extends State<LyricsExtrasButtons> {
           PopupMenuButton<String>(
             tooltip: 'More',
             iconSize: 20,
-            iconColor: Colors.white60,
+            iconColor: AppColors.textSecondary,
             icon: const Icon(Icons.more_vert_rounded),
             onSelected: (v) => switch (v) {
               'copy' => copyLyrics(context, l),
@@ -97,9 +97,9 @@ class LyricsToggleButton extends StatelessWidget {
     isSelected: on,
     visualDensity: VisualDensity.compact,
     iconSize: 20,
-    color: Colors.white60,
-    selectedIcon: Icon(icon, color: Colors.white),
-    style: IconButton.styleFrom(backgroundColor: on ? Colors.white.withValues(alpha: 0.18) : null),
+    color: AppColors.textSecondary,
+    selectedIcon: Icon(icon, color: AppColors.textPrimary),
+    style: IconButton.styleFrom(backgroundColor: on ? AppColors.textPrimary.withValues(alpha: 0.18) : null),
     onPressed: onPressed,
     icon: Icon(icon),
   );
@@ -189,7 +189,7 @@ class LyricsTimingSheet extends StatelessWidget {
             const SizedBox(height: 4),
             Text(
               'If the lyrics come too early or too late, move them until they match the song.',
-              style: text.bodySmall?.copyWith(color: Colors.white70),
+              style: text.bodySmall?.copyWith(color: AppColors.textSecondary),
             ),
             const SizedBox(height: 20),
             Row(

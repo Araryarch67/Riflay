@@ -127,6 +127,7 @@ class _SyncedLyricsViewState extends State<SyncedLyricsView> with _Extras {
   }
 
   int _current = -2;
+  double? _viewportHeight;
 
   /// Follow the current line as it changes. Switched off when the person
   /// scrolls by hand; the "Back to current line" button (or a tap on a line)
@@ -136,13 +137,13 @@ class _SyncedLyricsViewState extends State<SyncedLyricsView> with _Extras {
   /// The current line is out of view while not following: shows the button.
   final _showBack = ValueNotifier<bool>(false);
 
-  void _scrollToCurrent() {
+  void _scrollToCurrent({bool animate = true}) {
     final ctx = _current < 0 ? null : _keys[_current].currentContext;
     if (ctx == null) return;
     Scrollable.ensureVisible(
       ctx,
-      alignment: 0.35,
-      duration: LayoutPrefs.dur(const Duration(milliseconds: 350)),
+      alignment: 0.5,
+      duration: animate ? LayoutPrefs.dur(const Duration(milliseconds: 350)) : Duration.zero,
       curve: Curves.easeOutCubic,
     );
   }
@@ -171,7 +172,8 @@ class _SyncedLyricsViewState extends State<SyncedLyricsView> with _Extras {
     final top = viewport.getOffsetToReveal(ro, 0).offset;
     final bottom = viewport.getOffsetToReveal(ro, 1).offset;
     final pixels = _scroll.position.pixels;
-    _showBack.value = pixels > top + 1 || pixels < bottom - 1;
+    final center = (top + bottom) / 2;
+    _showBack.value = (pixels - center).abs() > 24;
   }
 
   void _pauseFollowing() {
@@ -191,7 +193,7 @@ class _SyncedLyricsViewState extends State<SyncedLyricsView> with _Extras {
     final style = _lineStyle(context);
     final pad = _isCompact(context) ? 24.0 : 40.0;
     final dim = LayoutPrefs.instance.dimUnsungLyrics;
-    final unsung = dim ? Colors.black.withValues(alpha: 0.55) : Colors.white.withValues(alpha: 0.75);
+    final unsung = dim ? AppColors.textMuted : AppColors.textPrimary.withValues(alpha: 0.75);
     return NotificationListener<ScrollNotification>(
       onNotification: (n) {
         if (n is UserScrollNotification && n.direction != ScrollDirection.idle) {
@@ -206,77 +208,91 @@ class _SyncedLyricsViewState extends State<SyncedLyricsView> with _Extras {
         onPointerSignal: (e) {
           if (e is PointerScrollEvent) _pauseFollowing();
         },
-        child: Stack(
-          children: [
-            Positioned.fill(
-              child: SingleChildScrollView(
-                controller: _scroll,
-                padding: EdgeInsets.fromLTRB(pad, 24, pad, 0),
-                child: Column(
-                  crossAxisAlignment: _centred ? CrossAxisAlignment.stretch : CrossAxisAlignment.start,
-                  children: [
-                    if (widget.lyrics.otherVersion)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 16),
-                        child: Text(
-                          'These lyrics are from a different recording of the same song (for example, the studio version instead of a live performance). The words may be correct, but their timing may not match. Open the lyrics menu > Adjust timing to shift them.',
-                          key: const ValueKey('lyrics-other-version'),
-                          textAlign: _textAlign,
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.white54),
-                        ),
-                      ),
-                    for (var i = 0; i < lines.length; i++)
-                      _LineSlot(
-                        key: _keys[i],
-                        index: i,
-                        at: _at,
-                        line: lines[i],
-                        extra: extraFor(i),
-                        style: style,
-                        unsung: unsung,
-                        position: widget.position,
-                        ticks: widget.smoothTicks,
-                        trusted: _trusted,
-                        onTap: () {
-                          _following = true;
-                          _showBack.value = false;
-                          widget.onSeek(lines[i].time);
-                        },
-                      ),
-                    _Source(widget.lyrics),
-                  ],
+        child: LayoutBuilder(
+          builder: (context, box) {
+            // Half a viewport of breathing room lets the first and last line
+            // reach the same center as every line between them.
+            final height = box.maxHeight;
+            if (_viewportHeight != height) {
+              _viewportHeight = height;
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (mounted && _following) _scrollToCurrent(animate: false);
+              });
+            }
+            return Stack(
+              children: [
+                Positioned.fill(
+                  child: SingleChildScrollView(
+                    controller: _scroll,
+                    padding: EdgeInsets.fromLTRB(pad, height / 2, pad, height / 2),
+                    child: Column(
+                      crossAxisAlignment: _centred ? CrossAxisAlignment.stretch : CrossAxisAlignment.start,
+                      children: [
+                        if (widget.lyrics.otherVersion)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 16),
+                            child: Text(
+                              'These lyrics are from a different recording of the same song (for example, the studio version instead of a live performance). The words may be correct, but their timing may not match. Open the lyrics menu > Adjust timing to shift them.',
+                              key: const ValueKey('lyrics-other-version'),
+                              textAlign: _textAlign,
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.textMuted),
+                            ),
+                          ),
+                        for (var i = 0; i < lines.length; i++)
+                          _LineSlot(
+                            key: _keys[i],
+                            index: i,
+                            at: _at,
+                            line: lines[i],
+                            extra: extraFor(i),
+                            style: style,
+                            unsung: unsung,
+                            position: widget.position,
+                            ticks: widget.smoothTicks,
+                            trusted: _trusted,
+                            onTap: () {
+                              _following = true;
+                              _showBack.value = false;
+                              widget.onSeek(lines[i].time);
+                              if (i == _current) _scrollToCurrent();
+                            },
+                          ),
+                        _Source(widget.lyrics),
+                      ],
+                    ),
+                  ),
                 ),
-              ),
-            ),
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 16,
-              child: Center(
-                child: ValueListenableBuilder<bool>(
-                  valueListenable: _showBack,
-                  builder: (context, show, _) => IgnorePointer(
-                    ignoring: !show,
-                    child: AnimatedOpacity(
-                      duration: LayoutPrefs.dur(const Duration(milliseconds: 200)),
-                      opacity: show ? 1 : 0,
-                      child: TextButton.icon(
-                        style: TextButton.styleFrom(
-                          foregroundColor: Colors.white,
-                          backgroundColor: Colors.black.withValues(alpha: 0.6),
-                          shape: const StadiumBorder(),
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 16,
+                  child: Center(
+                    child: ValueListenableBuilder<bool>(
+                      valueListenable: _showBack,
+                      builder: (context, show, _) => IgnorePointer(
+                        ignoring: !show,
+                        child: AnimatedOpacity(
+                          duration: LayoutPrefs.dur(const Duration(milliseconds: 200)),
+                          opacity: show ? 1 : 0,
+                          child: TextButton.icon(
+                            style: TextButton.styleFrom(
+                              foregroundColor: AppColors.textPrimary,
+                              backgroundColor: AppColors.menu,
+                              shape: const StadiumBorder(),
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                            ),
+                            onPressed: _resume,
+                            icon: const Icon(Icons.my_location_rounded, size: 18),
+                            label: const Text('Back to current line'),
+                          ),
                         ),
-                        onPressed: _resume,
-                        icon: const Icon(Icons.my_location_rounded, size: 18),
-                        label: const Text('Back to current line'),
                       ),
                     ),
                   ),
                 ),
-              ),
-            ),
-          ],
+              ],
+            );
+          },
         ),
       ),
     );
@@ -370,15 +386,15 @@ class _LineSlotState extends State<_LineSlot> {
       karaoke: timed
           ? KaraokeLine(
               words: line.words,
-              sungColor: Colors.white,
+              sungColor: AppColors.textPrimary,
               position: widget.position,
               ticks: widget.ticks,
               trusted: widget.trusted,
             )
           : null,
       color: switch (_place) {
-        _LinePlace.current => timed ? widget.unsung : Colors.white,
-        _LinePlace.sung => Colors.white.withValues(alpha: 0.75),
+        _LinePlace.current => timed ? widget.unsung : AppColors.textPrimary,
+        _LinePlace.sung => AppColors.textPrimary.withValues(alpha: 0.75),
         _LinePlace.upcoming => widget.unsung,
       },
       onTap: widget.onTap,
@@ -437,7 +453,7 @@ class _LineState extends State<_Line> {
             AnimatedDefaultTextStyle(
               duration: LayoutPrefs.dur(const Duration(milliseconds: 200)),
               style: (widget.style ?? const TextStyle()).copyWith(
-                color: _hover && widget.karaoke == null ? Colors.white : widget.color,
+                color: _hover && widget.karaoke == null ? AppColors.textPrimary : widget.color,
               ),
               child: widget.karaoke ?? Text(widget.text, textAlign: _textAlign),
             ),
@@ -445,7 +461,7 @@ class _LineState extends State<_Line> {
               AnimatedDefaultTextStyle(
                 duration: LayoutPrefs.dur(const Duration(milliseconds: 200)),
                 style: (_extraStyle(context) ?? const TextStyle()).copyWith(
-                  color: (_hover ? Colors.white : widget.color).withValues(alpha: 0.8),
+                  color: (_hover ? AppColors.textPrimary : widget.color).withValues(alpha: 0.8),
                 ),
                 child: Padding(
                   padding: const EdgeInsets.only(top: 2),

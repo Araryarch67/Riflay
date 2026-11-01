@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../models/track.dart';
 import '../../platform/features.dart';
 import '../../services/audio_engine.dart';
+import '../../services/layout_prefs.dart';
 import '../../services/listen_together/listen_together.dart';
 import '../../services/player_controller.dart';
 import '../cast_picker.dart';
@@ -19,135 +20,188 @@ import 'full_screen_player.dart';
 import 'mini_window.dart';
 import 'player_common.dart';
 
-/// Full-width bottom player bar for tablets and desktops.
-///
-/// The song, the transport and the seek bar sit in the open, with Lyrics,
-/// Queue and the volume; sleep timer, Play on a device, Listen together,
-/// Download and the views (side panel, mini, expanded, full screen) are in the ⋯.
+/// Desktop controls. Classic keeps the original layout; alternatives are opt-in.
 class DesktopPlayerBar extends StatelessWidget {
   const DesktopPlayerBar({super.key, required this.sidePanelOpen, required this.onToggleSidePanel});
-
   final bool sidePanelOpen;
-
-  /// Null when the window is too narrow for the side panel.
   final VoidCallback? onToggleSidePanel;
 
-  /// How often the bar's song area was built since start (tests).
   @visibleForTesting
   static int builds = 0;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => ListenableBuilder(
+    listenable: LayoutPrefs.instance,
+    builder: (context, _) => PlayerSelect<({Track? track, int library})>(
+      select: (c) => (track: c.currentTrack, library: c.libraryRevision.value),
+      builder: (context, now, _) {
+        builds++;
+        final style = LayoutPrefs.instance.desktopBar;
+        return LayoutBuilder(
+          builder: (context, box) {
+            final compact = style == DesktopBarStyle.compact || style == DesktopBarStyle.capsule;
+            final minimal = style == DesktopBarStyle.minimal;
+            final track = now.track;
+            final info = _info(context, track, small: compact || minimal);
+            final actions = _actions(context, track, width: box.maxWidth);
+            const transport = FittedBox(fit: BoxFit.scaleDown, child: TransportControls());
+            final Widget content;
+            if (compact) {
+              content = SizedBox(
+                height: 68,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Row(
+                    children: [
+                      const SizedBox(width: 244, child: transport),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            info,
+                            if (track != null) const SizedBox(height: 16, child: SeekBar(inline: true)),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(flex: 3, child: actions),
+                    ],
+                  ),
+                ),
+              );
+            } else {
+              content = SizedBox(
+                height: minimal ? 64 : 80,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 0, 20, 0),
+                  child: Column(
+                    children: [
+                      if (minimal && track != null) const SizedBox(height: 16, child: SeekBar(inline: true)),
+                      Expanded(
+                        child: Row(
+                          children: [
+                            Expanded(flex: 3, child: info),
+                            Expanded(
+                              flex: 4,
+                              child: ConstrainedBox(
+                                constraints: const BoxConstraints(maxWidth: 720),
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [transport, if (!minimal && track != null) const SeekBar(inline: true)],
+                                ),
+                              ),
+                            ),
+                            Expanded(flex: 3, child: actions),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }
+            if (style != DesktopBarStyle.floating && style != DesktopBarStyle.capsule) return content;
+            return Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+              child: Align(
+                heightFactor: 1,
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(maxWidth: style == DesktopBarStyle.capsule ? 1180 : 1400),
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: AppColors.panel,
+                      borderRadius: BorderRadius.circular(
+                        style == DesktopBarStyle.capsule ? 40 : LayoutPrefs.radius(18),
+                      ),
+                      border: Border.all(color: AppColors.textSecondary.withValues(alpha: 0.15)),
+                      boxShadow: const [BoxShadow(color: Color(0x33000000), blurRadius: 16, offset: Offset(0, 4))],
+                    ),
+                    child: content,
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    ),
+  );
+
+  Widget _info(BuildContext context, Track? track, {required bool small}) {
     final c = PlayerScope.read(context);
     final shell = ShellScope.of(context);
     final text = Theme.of(context).textTheme;
-    // The song (and, for its album link, the library): not each play / pause or buffering.
-    return PlayerSelect<({Track? track, int library})>(
-      select: (c) => (track: c.currentTrack, library: c.libraryRevision.value),
-      builder: (context, now, _) {
-        final track = now.track;
-        DesktopPlayerBar.builds++;
-        return SizedBox(
-          height: 80,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(12, 0, 20, 0),
-            child: Row(
+    return TrackSwitcher(
+      trackId: track?.id,
+      child: track == null
+          ? const SizedBox.shrink()
+          : Row(
+              key: ValueKey(track.id),
               children: [
-                Expanded(
-                  flex: 3,
-                  child: TrackSwitcher(
-                    trackId: track?.id,
-                    child: track == null
-                        ? const SizedBox.shrink()
-                        : Row(
-                            key: ValueKey(track.id),
-                            children: [
-                              Artwork(track: track, size: 56),
-                              const SizedBox(width: 14),
-                              Flexible(
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    LinkText(
-                                      track.title,
-                                      style: text.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
-                                      onTap: switch (c.albumOf(track)) {
-                                        final album? => () => shell.openCollection(album),
-                                        null => null,
-                                      },
-                                    ),
-                                    const SizedBox(height: 2),
-                                    LinkText(
-                                      track.artist,
-                                      style: text.bodySmall?.copyWith(color: AppColors.textSecondary),
-                                      onTap: openArtist(context, c, track),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              LikeButton(track: track),
-                            ],
-                          ),
+                Artwork(track: track, size: small ? 36 : 56),
+                SizedBox(width: small ? 10 : 14),
+                Flexible(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      LinkText(
+                        track.title,
+                        style: text.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+                        onTap: switch (c.albumOf(track)) {
+                          final album? => () => shell.openCollection(album),
+                          null => null,
+                        },
+                      ),
+                      const SizedBox(height: 2),
+                      LinkText(
+                        track.artist,
+                        style: text.bodySmall?.copyWith(color: AppColors.textSecondary),
+                        onTap: openArtist(context, c, track),
+                      ),
+                    ],
                   ),
                 ),
-                Expanded(
-                  flex: 4,
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 720),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        // FittedBox: on the narrowest wide layouts the controls scale down instead of overflowing.
-                        const FittedBox(fit: BoxFit.scaleDown, child: TransportControls()),
-                        if (track != null) const SeekBar(inline: true),
-                      ],
-                    ),
-                  ),
-                ),
-                Expanded(
-                  flex: 3,
-                  // Scales down on the narrowest wide layouts instead of overflowing.
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    alignment: Alignment.centerRight,
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        // In the expanded player, lyrics open beside the cover instead.
-                        ListenableBuilder(
-                          listenable: Listenable.merge([fullScreenPlayer, expandedPlayerLyrics]),
-                          builder: (context, _) {
-                            final beside = fullScreenPlayer.value;
-                            return IconButton(
-                              tooltip: 'Lyrics',
-                              color: beside && expandedPlayerLyrics.value ? AppColors.accent : null,
-                              onPressed: track == null
-                                  ? null
-                                  : beside
-                                  ? () => expandedPlayerLyrics.value = !expandedPlayerLyrics.value
-                                  : shell.openLyrics,
-                              icon: const Icon(Icons.lyrics_outlined, size: 20),
-                            );
-                          },
-                        ),
-                        IconButton(
-                          tooltip: 'Queue',
-                          onPressed: shell.openQueue,
-                          icon: const Icon(Icons.queue_music_rounded, size: 20),
-                        ),
-                        // The bar spans the whole window, so its own width decides (not the content area's).
-                        if (MediaQuery.sizeOf(context).width > 860) const VolumeSlider(),
-                        _MoreMenu(track: track, sidePanelOpen: sidePanelOpen, onToggleSidePanel: onToggleSidePanel),
-                      ],
-                    ),
-                  ),
-                ),
+                LikeButton(track: track),
               ],
             ),
+    );
+  }
+
+  Widget _actions(BuildContext context, Track? track, {required double width}) {
+    final shell = ShellScope.of(context);
+    return FittedBox(
+      fit: BoxFit.scaleDown,
+      alignment: Alignment.centerRight,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ListenableBuilder(
+            listenable: Listenable.merge([fullScreenPlayer, expandedPlayerLyrics]),
+            builder: (context, _) {
+              final beside = fullScreenPlayer.value;
+              return IconButton(
+                tooltip: 'Lyrics',
+                color: beside && expandedPlayerLyrics.value ? AppColors.accent : null,
+                onPressed: track == null
+                    ? null
+                    : beside
+                    ? () => expandedPlayerLyrics.value = !expandedPlayerLyrics.value
+                    : shell.openLyrics,
+                icon: const Icon(Icons.lyrics_outlined, size: 20),
+              );
+            },
           ),
-        );
-      },
+          IconButton(
+            tooltip: 'Queue',
+            onPressed: shell.openQueue,
+            icon: const Icon(Icons.queue_music_rounded, size: 20),
+          ),
+          if (width > 860) const VolumeSlider(),
+          _MoreMenu(track: track, sidePanelOpen: sidePanelOpen, onToggleSidePanel: onToggleSidePanel),
+        ],
+      ),
     );
   }
 }

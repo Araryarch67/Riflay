@@ -155,8 +155,31 @@ void main() {
     expect(litCount(tester, 6), before);
   });
 
+  testWidgets('first, middle and final active lines stay at the viewport center after seeks', (tester) async {
+    await pump(tester, _long(), length: const Duration(seconds: 120));
+    await tester.pumpAndSettle();
+    void centered(int line) {
+      final viewport = tester.getRect(find.byType(SingleChildScrollView));
+      expect(tester.getCenter(find.text('Line $line')).dy, closeTo(viewport.center.dy, 1));
+    }
+
+    centered(0);
+    for (final line in [18, 39, 2, 0]) {
+      ticks.add(Duration(seconds: line * 3));
+      await tester.pump();
+      await tester.pumpAndSettle();
+      centered(line);
+    }
+    tester.view.physicalSize = const Size(1170, 1800);
+    await tester.pumpAndSettle();
+    centered(0);
+  });
+
   testWidgets('tapping a line seeks to its time', (tester) async {
     await pump(tester, _short(), length: const Duration(seconds: 30));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Line 2'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Line 2'));
     await tester.pump(const Duration(milliseconds: 400));
     expect(seeks, [const Duration(seconds: 10)]);

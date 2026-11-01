@@ -86,7 +86,10 @@ class _MiniPlayerWindowState extends State<MiniPlayerWindow> {
                 opacity: _hover ? 1 : 0,
                 duration: const Duration(milliseconds: 160),
                 child: IconButton.filled(
-                  style: IconButton.styleFrom(backgroundColor: Colors.black54, foregroundColor: Colors.white),
+                  style: IconButton.styleFrom(
+                    backgroundColor: AppColors.menu.withValues(alpha: 0.9),
+                    foregroundColor: AppColors.textPrimary,
+                  ),
                   onPressed: () => setMiniPlayer(false),
                   icon: const Icon(Icons.open_in_full_rounded, size: 18),
                 ),
@@ -97,7 +100,7 @@ class _MiniPlayerWindowState extends State<MiniPlayerWindow> {
               right: 0,
               bottom: 0,
               child: Container(
-                color: const Color(0xCC000000),
+                color: AppColors.panel.withValues(alpha: 0.92),
                 padding: const EdgeInsets.fromLTRB(12, 8, 12, 6),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -129,8 +132,8 @@ class _MiniPlayerWindowState extends State<MiniPlayerWindow> {
                         return LinearProgressIndicator(
                           value: total == 0 ? 0 : (pos / total).clamp(0, 1),
                           minHeight: 2,
-                          color: Colors.white,
-                          backgroundColor: Colors.white24,
+                          color: AppColors.accent,
+                          backgroundColor: AppColors.border,
                           borderRadius: BorderRadius.circular(2),
                         );
                       },

@@ -18,6 +18,7 @@ import 'crossfade.dart';
 import 'ios_route.dart';
 import 'linux_alsa.dart';
 import 'usb_dac.dart';
+import 'visualizer_levels.dart';
 
 /// How loudness differences between songs are evened out (mpv `replaygain`).
 enum VolumeLeveling {
@@ -591,6 +592,68 @@ class AudioEngine extends ChangeNotifier {
     _ => null,
   };
 
+  /// Metering is leased by visible player views, never by background playback.
+  final visualizerLevels = VisualizerLevels();
+  int _visualizerUsers = 0;
+  Timer? _visualizerTimer;
+  bool _visualizerReading = false;
+  Future<void> _visualizerSync = Future.value();
+  bool get visualizerActive => _visualizerUsers > 0 && !bitPerfect && _dop == null;
+
+  static const visualizerFilter =
+      '@visualizer:lavfi=[astats=metadata=1:reset=1:measure_perchannel=none:measure_overall=RMS_level]';
+
+  /// The caller releases its lease when hidden, paused, or disposed.
+  VoidCallback watchVisualizer() {
+    _visualizerUsers++;
+    if (_visualizerUsers == 1) _syncVisualizer();
+    _visualizerTimer ??= Timer.periodic(const Duration(milliseconds: 40), (_) => _readVisualizer());
+    var released = false;
+    return () {
+      if (released || _disposed) return;
+      released = true;
+      _visualizerUsers--;
+      if (_visualizerUsers == 0) {
+        _visualizerTimer?.cancel();
+        _visualizerTimer = null;
+        visualizerLevels.clear();
+        _syncVisualizer();
+      }
+    };
+  }
+
+  void _syncVisualizer() {
+    _visualizerSync = _visualizerSync
+        .then((_) async {
+          if (_disposed) return;
+          if (_native case final p?) {
+            // Only add/remove the meter: rebuilding the DSP chain would reset effects.
+            if (visualizerActive) {
+              await p.command(['af', 'add', visualizerFilter]);
+            } else {
+              await p.command(['af', 'remove', '@visualizer']);
+            }
+            _chainSent = null;
+          }
+        })
+        .catchError((Object e) => debugPrint('Audio visualizer unavailable: $e'));
+  }
+
+  Future<void> _readVisualizer() async {
+    if (_visualizerReading || _disposed || !visualizerActive) return;
+    final p = _native;
+    if (p == null || _player?.state.playing != true || _player?.state.buffering == true) return;
+    _visualizerReading = true;
+    try {
+      final level = await p.getProperty('af-metadata/visualizer/lavfi.astats.Overall.RMS_level');
+      if (!_disposed && visualizerActive && identical(p, _native)) visualizerLevels.add(level);
+    } catch (_) {
+      // A player can be replaced or disposed while the asynchronous read runs.
+    } finally {
+      _visualizerReading = false;
+    }
+  }
+
   // ── Persistence ─────────────────────────────────────────────────────────
 
   Future<void> load() async {
@@ -1069,6 +1132,7 @@ class AudioEngine extends ChangeNotifier {
       // `latency` keeps its look-ahead from delaying the song and lets it hand on the song's
       // last milliseconds at the end (gapless); `level=0`, or it would raise everything to the limit.
       if (clipGuardActive) '@limiter:lavfi=[alimiter=limit=1:level=0:latency=1]',
+      if (visualizerActive) visualizerFilter,
       // Float output for mpv's volume (lossless: the system mixer works in float anyway).
       if (_volumeAtOutput) '@output:format=format=double',
     ].join(',');
@@ -1472,6 +1536,8 @@ class AudioEngine extends ChangeNotifier {
   @override
   void dispose() {
     _disposed = true;
+    _visualizerTimer?.cancel();
+    visualizerLevels.dispose();
     _paramsSub?.cancel();
     if (Host.isAndroid) usb.clear().ignore();
     _chainSync?.cancel();

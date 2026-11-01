@@ -17,6 +17,7 @@
 // and the Search page (its YouTube Music half fails offline, and online it lists real artists).
 
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 import 'dart:ui' as ui;
@@ -44,6 +45,8 @@ import 'package:riflay/services/private_files.dart';
 import 'package:riflay/services/video_download.dart';
 import 'package:riflay/services/youtube_importer.dart';
 import 'package:riflay/ui/download_options.dart';
+import 'package:riflay/ui/pages/settings_page.dart';
+import 'package:riflay/ui/navigation.dart';
 import 'package:riflay/ui/pages/about_settings.dart' show debugSystem;
 import 'package:riflay/ui/pages/duplicates_page.dart';
 import 'package:riflay/ui/player_panels.dart';
@@ -785,6 +788,136 @@ void main() {
         await settle(4000); // past the "Press Esc" hint
         await shot('fullscreen');
         await tester.tap(find.byTooltip('Exit full screen').first);
+        await settle();
+      });
+
+      await step('backgrounds', () async {
+        await Appearance.instance.setReactiveBackground(true);
+        await LayoutPrefs.instance.setVisualizer(true);
+        await LayoutPrefs.instance.setVisualizerStyle(VisualizerStyle.bars);
+        await showExpandedPlayer(true);
+        expandedPlayerLyrics.value = true;
+        await c.player.seek(const Duration(seconds: 33));
+        for (final style in NowPlayingBackground.values.where((v) => v.isAbstract)) {
+          await Appearance.instance.setNowPlaying(style);
+          await shot('background-${style.name}');
+        }
+        expandedPlayerLyrics.value = false;
+        await showExpandedPlayer(false);
+        await Appearance.instance.setNowPlaying(NowPlayingBackground.color);
+        await Appearance.instance.setReactiveBackground(false);
+        await LayoutPrefs.instance.setVisualizer(false);
+      });
+
+      await step('circular-reveal', () async {
+        await tester.tap(find.byTooltip('Home').first);
+        await LayoutPrefs.instance.setPageMotion(PageMotionStyle.circularReveal);
+        await LayoutPrefs.instance.setPageSpeed(PageMotionSpeed.relaxed);
+        await settle();
+        ShellScope.of(tester.element(find.byType(DesktopPlayerBar)))
+            .open(const SettingsPage(), location: Locations.settings);
+        await tester.pump();
+        for (var i = 0; i < 20; i++) {
+          await tester.pump(const Duration(milliseconds: 40));
+          final boundary = tester.renderObject<RenderRepaintBoundary>(find.byType(RepaintBoundary).first);
+          final bytes = await tester.runAsync(() async {
+            final image = await boundary.toImage();
+            final data = await image.toByteData(format: ui.ImageByteFormat.png);
+            image.dispose();
+            return data;
+          });
+          File('$shots/circular-reveal-${i.toString().padLeft(2, '0')}.png')
+              .writeAsBytesSync(bytes!.buffer.asUint8List());
+        }
+        await LayoutPrefs.instance.setPageMotion(PageMotionStyle.classic);
+        await LayoutPrefs.instance.setPageSpeed(PageMotionSpeed.balanced);
+        await tester.tap(find.byTooltip('Home').first);
+        await settle();
+      });
+
+      await step('desktop-controls', () async {
+        await tester.tap(find.byTooltip('Home').first);
+        await Appearance.instance.setTheme(ThemeChoice.nord);
+        for (final style in DesktopBarStyle.values) {
+          await LayoutPrefs.instance.setDesktopBar(style);
+          await shot('desktop-bar-${style.name}');
+        }
+        await LayoutPrefs.instance.setDesktopBar(DesktopBarStyle.classic);
+        await Appearance.instance.setTheme(ThemeChoice.standard);
+      });
+
+      await step('theme-components', () async {
+        final colors = File('${dir.path}/matugen.json');
+        colors.writeAsStringSync(
+          jsonEncode({
+            'colors': {
+              'dark': {
+                'primary': '#9ccbfb',
+                'on_primary': '#003352',
+                'surface': '#101418',
+                'on_surface': '#e0e3e8',
+                'on_surface_variant': '#c2c7cf',
+                'surface_container': '#1d2025',
+                'surface_container_lowest': '#0b0e12',
+                'surface_container_high': '#272a2f',
+                'surface_container_highest': '#32353a',
+                'outline': '#8c9199',
+              },
+              'light': {
+                'primary': '#30628c',
+                'on_primary': '#ffffff',
+                'surface': '#f7f9ff',
+                'on_surface': '#181c20',
+                'on_surface_variant': '#42474e',
+                'surface_container': '#ebedf3',
+                'surface_container_lowest': '#ffffff',
+                'surface_container_high': '#e5e8ed',
+                'surface_container_highest': '#dfe2e7',
+                'outline': '#73777f',
+              },
+            },
+          }),
+        );
+        await Appearance.instance.setMatugenPath(colors.path);
+        await Appearance.instance.setTheme(ThemeChoice.matugen);
+        await openMore('Settings');
+        await tester.tap(find.text('Sound'));
+        await settle();
+        await tester.tap(find.text('Sound effects (DSP)'));
+        await shot('matugen-components-dark');
+        await Appearance.instance.setBrightness(ThemeBrightness.light);
+        await shot('matugen-components-light');
+        await Appearance.instance.setTheme(ThemeChoice.standard);
+        await Appearance.instance.setMatugenPath(null);
+        await tester.tap(find.byTooltip('Home').first);
+      });
+
+      await step('visualizers', () async {
+        await LayoutPrefs.instance.setVisualizer(true);
+        await showExpandedPlayer(true);
+        await settle(3000);
+        for (final style in VisualizerStyle.values) {
+          await LayoutPrefs.instance.setVisualizerStyle(style);
+          await shot('visualizer-desktop-${style.name}');
+        }
+        await showExpandedPlayer(false);
+        debugDefaultTargetPlatformOverride = TargetPlatform.android;
+        debugCustomTitleBar = false;
+        tester.view.physicalSize = const Size(400, 860);
+        await tester.pumpWidget(RepaintBoundary(child: RiflayApp(controller: c)));
+        await settle(2000);
+        await tester.tap(find.byType(MiniPlayer));
+        for (final style in VisualizerStyle.values) {
+          await LayoutPrefs.instance.setVisualizerStyle(style);
+          await shot('visualizer-phone-${style.name}', pixelRatio: 2);
+        }
+        await LayoutPrefs.instance.setVisualizer(false);
+        await tester.tap(find.byTooltip('Close').first);
+        await settle();
+        debugDefaultTargetPlatformOverride = null;
+        debugCustomTitleBar = null;
+        tester.view.physicalSize = const Size(1440, 900);
+        await tester.pumpWidget(RepaintBoundary(child: RiflayApp(controller: c)));
         await settle();
       });
 

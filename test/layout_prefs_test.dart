@@ -13,6 +13,8 @@ void main() {
   });
 
   test('defaults use capsule navigation and standard player appearance', () {
+    expect(p.visualizer, isFalse);
+    expect(p.visualizerStyle, VisualizerStyle.wave);
     expect(p.tabBar, TabBarStyle.capsule);
     expect(p.corners, CornerStyle.rounded);
     expect(p.density, Density.comfortable);
@@ -27,6 +29,20 @@ void main() {
     expect(p.isCustomised, isFalse);
     expect(LayoutPrefs.radius(8), 8);
     expect(LayoutPrefs.dur(const Duration(milliseconds: 200)), const Duration(milliseconds: 200));
+  });
+
+  test('visualizer choice persists and reset returns to the original player', () async {
+    await p.setDesktopBar(DesktopBarStyle.compact);
+    await p.setVisualizer(true);
+    await p.setVisualizerStyle(VisualizerStyle.dots);
+    await p.load();
+    expect(p.desktopBar, DesktopBarStyle.compact);
+    expect(p.visualizer, isTrue);
+    expect(p.visualizerStyle, VisualizerStyle.dots);
+    await p.reset();
+    expect(p.visualizer, isFalse);
+    p.restore({'visualizerStyle': 'future-style'});
+    expect(p.visualizerStyle, VisualizerStyle.wave);
   });
 
   test('corners scale one radius token', () async {

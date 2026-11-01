@@ -257,20 +257,12 @@ class _HomeShellState extends State<HomeShell> {
   static Route<void> _route(Widget page, {String? location, bool firstFrame = false}) => PageRouteBuilder(
     // The page rides along so Forward can rebuild it after Back.
     settings: RouteSettings(name: location, arguments: page),
-    transitionDuration: LayoutPrefs.dur(const Duration(milliseconds: 220)),
-    reverseTransitionDuration: LayoutPrefs.dur(const Duration(milliseconds: 180)),
+    transitionDuration: LayoutPrefs.pageDuration(),
+    reverseTransitionDuration: LayoutPrefs.pageDuration(reverse: true),
     // The first page of the app waits for the window's frame to be drawn, then fills in.
     pageBuilder: (_, _, _) => firstFrame ? FirstFrameGate(child: page) : page,
-    transitionsBuilder: (_, anim, _, child) => FadeTransition(
-      opacity: CurvedAnimation(parent: anim, curve: Curves.easeOut),
-      child: SlideTransition(
-        position: Tween(
-          begin: const Offset(0.03, 0),
-          end: Offset.zero,
-        ).animate(CurvedAnimation(parent: anim, curve: Curves.easeOutCubic)),
-        child: child,
-      ),
-    ),
+    transitionsBuilder: (context, anim, secondary, child) =>
+        LayoutPrefs.pageTransition(context, anim, secondary, child),
   );
 
   void _selectTab(PhoneTab tab) {
@@ -398,16 +390,11 @@ class _HomeShellState extends State<HomeShell> {
   void _openNowPlaying() {
     _pushPhoneRoute(
       PageRouteBuilder(
-        transitionDuration: LayoutPrefs.dur(const Duration(milliseconds: 320)),
-        reverseTransitionDuration: LayoutPrefs.dur(const Duration(milliseconds: 260)),
+        transitionDuration: LayoutPrefs.pageDuration(player: true),
+        reverseTransitionDuration: LayoutPrefs.pageDuration(reverse: true, player: true),
         pageBuilder: (_, _, _) => _scoped(const NowPlayingPage()),
-        transitionsBuilder: (_, anim, _, child) => SlideTransition(
-          position: Tween(
-            begin: const Offset(0, 1),
-            end: Offset.zero,
-          ).animate(CurvedAnimation(parent: anim, curve: Curves.easeOutCubic, reverseCurve: Curves.easeInCubic)),
-          child: child,
-        ),
+        transitionsBuilder: (context, anim, secondary, child) =>
+            LayoutPrefs.pageTransition(context, anim, secondary, child, player: true),
       ),
     );
   }
@@ -664,7 +651,14 @@ class _FadeOnChangeState extends State<_FadeOnChange> with SingleTickerProviderS
   @override
   void didUpdateWidget(_FadeOnChange old) {
     super.didUpdateWidget(old);
-    if (old.index != widget.index) _fade.forward(from: 0);
+    if (old.index != widget.index) {
+      _fade.duration = LayoutPrefs.pageDuration();
+      if (LayoutPrefs.effectiveMotion == Motion.off) {
+        _fade.value = 1;
+      } else {
+        _fade.forward(from: 0);
+      }
+    }
   }
 
   @override
@@ -674,8 +668,14 @@ class _FadeOnChangeState extends State<_FadeOnChange> with SingleTickerProviderS
   }
 
   @override
-  Widget build(BuildContext context) => FadeTransition(
-    opacity: CurvedAnimation(parent: _fade, curve: Curves.easeOut),
-    child: widget.child,
-  );
+  Widget build(BuildContext context) {
+    if (LayoutPrefs.effectiveMotion == Motion.off) return widget.child;
+    if (LayoutPrefs.instance.pageMotion == PageMotionStyle.classic) {
+      return FadeTransition(
+        opacity: _fade.drive(CurveTween(curve: Curves.easeOut)),
+        child: widget.child,
+      );
+    }
+    return LayoutPrefs.pageTransition(context, _fade, const AlwaysStoppedAnimation(0), widget.child);
+  }
 }

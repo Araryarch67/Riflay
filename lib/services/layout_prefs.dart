@@ -5,6 +5,32 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'page_motion.dart';
+export 'page_motion.dart' show PageMotionStyle, PageMotionSpeed;
+
+/// Desktop controls can stay full width or sit inside a floating player.
+enum DesktopBarStyle {
+  classic('Classic'),
+  floating('Floating'),
+  capsule('Capsule'),
+  compact('Compact'),
+  minimal('Minimal');
+
+  const DesktopBarStyle(this.label);
+  final String label;
+}
+
+/// The same visual language, adapted to a desktop wave or a phone cover border.
+enum VisualizerStyle {
+  wave('Wave'),
+  bars('Bars'),
+  line('Line'),
+  dots('Dots');
+
+  const VisualizerStyle(this.label);
+  final String label;
+}
+
 /// How round the corners of covers, cards, menus and dialogs are.
 enum CornerStyle {
   square('Square', 0),
@@ -149,13 +175,18 @@ class LayoutPrefs extends ChangeNotifier {
 
   /// The phone's tab bar: docked under the mini player like most music apps, by default.
   TabBarStyle tabBar = TabBarStyle.capsule;
+  DesktopBarStyle desktopBar = DesktopBarStyle.classic;
   bool showQualityBadge = true;
+  bool visualizer = false;
+  VisualizerStyle visualizerStyle = VisualizerStyle.wave;
 
   LyricsSize lyricsSize = LyricsSize.normal;
   LyricsAlign lyricsAlign = LyricsAlign.left;
   bool dimUnsungLyrics = true;
 
   Motion motion = Motion.full;
+  PageMotionStyle pageMotion = PageMotionStyle.classic;
+  PageMotionSpeed pageSpeed = PageMotionSpeed.balanced;
 
   // Shorthands for widgets. They read the one instance, like AppColors does.
 
@@ -183,6 +214,36 @@ class LayoutPrefs extends ChangeNotifier {
     Motion.off => Duration.zero,
   };
 
+  /// A chosen transition's duration; Reduced and Off always take precedence.
+  static Duration pageDuration({bool reverse = false, bool player = false}) {
+    final p = instance;
+    final base = p.pageMotion == PageMotionStyle.classic
+        ? (player ? (reverse ? 260 : 320) : (reverse ? 180 : 220))
+        : (p.pageMotion == PageMotionStyle.circularReveal ||
+              p.pageMotion == PageMotionStyle.diamondReveal ||
+              p.pageMotion == PageMotionStyle.reveal ||
+              p.pageMotion == PageMotionStyle.wipe)
+        ? (reverse ? 480 : 620)
+        : (reverse ? 340 : 440);
+    return dur(Duration(milliseconds: (base * p.pageSpeed.factor).round()));
+  }
+
+  static Widget pageTransition(
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondary,
+    Widget child, {
+    bool player = false,
+  }) => PageMotion.build(
+    animation,
+    secondary,
+    child,
+    style: instance.pageMotion,
+    player: player,
+    reduced: effectiveMotion == Motion.reduced || MediaQuery.disableAnimationsOf(context),
+    disabled: effectiveMotion == Motion.off,
+  );
+
   /// Sliding, scaling and bouncing; only with full motion. Fades stay otherwise.
   static bool get moves => effectiveMotion == Motion.full;
 
@@ -208,11 +269,16 @@ class LayoutPrefs extends ChangeNotifier {
     playButton = pick(PlayButtonShape.values, 'playButton', d.playButton);
     phoneCover = pick(PhoneCoverSize.values, 'phoneCover', d.phoneCover);
     tabBar = pick(TabBarStyle.values, 'tabBar', d.tabBar);
+    desktopBar = pick(DesktopBarStyle.values, 'desktopBar', d.desktopBar);
     showQualityBadge = j['showQualityBadge'] as bool? ?? d.showQualityBadge;
+    visualizer = j['visualizer'] as bool? ?? d.visualizer;
+    visualizerStyle = pick(VisualizerStyle.values, 'visualizerStyle', d.visualizerStyle);
     lyricsSize = pick(LyricsSize.values, 'lyricsSize', d.lyricsSize);
     lyricsAlign = pick(LyricsAlign.values, 'lyricsAlign', d.lyricsAlign);
     dimUnsungLyrics = j['dimUnsungLyrics'] as bool? ?? d.dimUnsungLyrics;
     motion = pick(Motion.values, 'motion', d.motion);
+    pageMotion = pick(PageMotionStyle.values, 'pageMotion', d.pageMotion);
+    pageSpeed = pick(PageMotionSpeed.values, 'pageSpeed', d.pageSpeed);
     final byName = HomeSection.values.asNameMap();
     final order = <HomeSection>[for (final n in (j['homeOrder'] as List?) ?? const []) ?byName[n]];
     // A section added by a newer version joins at its default place.
@@ -231,11 +297,16 @@ class LayoutPrefs extends ChangeNotifier {
     'playButton': playButton.name,
     'phoneCover': phoneCover.name,
     'tabBar': tabBar.name,
+    'desktopBar': desktopBar.name,
     'showQualityBadge': showQualityBadge,
+    'visualizer': visualizer,
+    'visualizerStyle': visualizerStyle.name,
     'lyricsSize': lyricsSize.name,
     'lyricsAlign': lyricsAlign.name,
     'dimUnsungLyrics': dimUnsungLyrics,
     'motion': motion.name,
+    'pageMotion': pageMotion.name,
+    'pageSpeed': pageSpeed.name,
     'homeOrder': [for (final s in homeOrder) s.name],
     'homeHidden': [for (final s in homeHidden) s.name],
   };
@@ -259,11 +330,16 @@ class LayoutPrefs extends ChangeNotifier {
   Future<void> setProgressBar(ProgressBarStyle v) => _set(() => progressBar = v);
   Future<void> setPlayButton(PlayButtonShape v) => _set(() => playButton = v);
   Future<void> setPhoneCover(PhoneCoverSize v) => _set(() => phoneCover = v);
+  Future<void> setDesktopBar(DesktopBarStyle v) => _set(() => desktopBar = v);
   Future<void> setTabBar(TabBarStyle v) => _set(() => tabBar = v);
+  Future<void> setVisualizerStyle(VisualizerStyle v) => _set(() => visualizerStyle = v);
+  Future<void> setVisualizer(bool v) => _set(() => visualizer = v);
   Future<void> setShowQualityBadge(bool v) => _set(() => showQualityBadge = v);
   Future<void> setLyricsSize(LyricsSize v) => _set(() => lyricsSize = v);
   Future<void> setLyricsAlign(LyricsAlign v) => _set(() => lyricsAlign = v);
   Future<void> setDimUnsungLyrics(bool v) => _set(() => dimUnsungLyrics = v);
+  Future<void> setPageMotion(PageMotionStyle v) => _set(() => pageMotion = v);
+  Future<void> setPageSpeed(PageMotionSpeed v) => _set(() => pageSpeed = v);
   Future<void> setMotion(Motion v) => _set(() => motion = v);
 
   Future<void> setHomeSectionShown(HomeSection s, bool shown) =>
@@ -287,7 +363,12 @@ class LayoutPrefs extends ChangeNotifier {
   ThemeData themed(ThemeData base) {
     final corner = corners;
     final motionNow = effectiveMotion;
-    if (corner == CornerStyle.rounded && motionNow == Motion.full) return base;
+    if (corner == CornerStyle.rounded &&
+        motionNow == Motion.full &&
+        pageMotion == PageMotionStyle.classic &&
+        pageSpeed == PageMotionSpeed.balanced) {
+      return base;
+    }
     var t = base;
     if (corner != CornerStyle.rounded) {
       final s = corner.scale;
@@ -310,49 +391,40 @@ class LayoutPrefs extends ChangeNotifier {
         ),
         filledButtonTheme: buttonShape == null
             ? null
-            : FilledButtonThemeData(style: FilledButton.styleFrom(shape: buttonShape)),
+            : FilledButtonThemeData(
+                style: (base.filledButtonTheme.style ?? FilledButton.styleFrom()).copyWith(
+                  shape: WidgetStatePropertyAll(buttonShape),
+                ),
+              ),
         outlinedButtonTheme: buttonShape == null
             ? null
-            : OutlinedButtonThemeData(style: OutlinedButton.styleFrom(shape: buttonShape)),
+            : OutlinedButtonThemeData(
+                style: (base.outlinedButtonTheme.style ?? OutlinedButton.styleFrom()).copyWith(
+                  shape: WidgetStatePropertyAll(buttonShape),
+                ),
+              ),
         textButtonTheme: buttonShape == null
             ? null
-            : TextButtonThemeData(style: TextButton.styleFrom(shape: buttonShape)),
+            : TextButtonThemeData(
+                style: (base.textButtonTheme.style ?? TextButton.styleFrom()).copyWith(
+                  shape: WidgetStatePropertyAll(buttonShape),
+                ),
+              ),
         chipTheme: corner == CornerStyle.square ? base.chipTheme.copyWith(shape: const RoundedRectangleBorder()) : null,
       );
     }
-    if (motionNow != Motion.full) {
-      final builder = motionNow == Motion.off ? const _NoTransition() : const _FadeTransition();
+    if (motionNow != Motion.full || pageMotion != PageMotionStyle.classic || pageSpeed != PageMotionSpeed.balanced) {
+      final builder = PresetPageTransitions(
+        style: pageMotion,
+        duration: pageDuration(),
+        reduced: motionNow == Motion.reduced,
+        disabled: motionNow == Motion.off,
+      );
       t = t.copyWith(
-        splashFactory: motionNow == Motion.off ? NoSplash.splashFactory : null,
+        splashFactory: motionNow == Motion.off ? NoSplash.splashFactory : base.splashFactory,
         pageTransitionsTheme: PageTransitionsTheme(builders: {for (final p in TargetPlatform.values) p: builder}),
       );
     }
     return t;
   }
-}
-
-class _NoTransition extends PageTransitionsBuilder {
-  const _NoTransition();
-
-  @override
-  Widget buildTransitions<T>(
-    PageRoute<T> route,
-    BuildContext context,
-    Animation<double> animation,
-    Animation<double> secondaryAnimation,
-    Widget child,
-  ) => child;
-}
-
-class _FadeTransition extends PageTransitionsBuilder {
-  const _FadeTransition();
-
-  @override
-  Widget buildTransitions<T>(
-    PageRoute<T> route,
-    BuildContext context,
-    Animation<double> animation,
-    Animation<double> secondaryAnimation,
-    Widget child,
-  ) => FadeTransition(opacity: animation, child: child);
 }

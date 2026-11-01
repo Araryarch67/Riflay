@@ -11,6 +11,8 @@ import '../../services/video_mode.dart';
 import '../shell_scope.dart';
 import '../theme.dart';
 import '../widgets/controls.dart';
+import '../widgets/audio_visualizer.dart';
+import '../widgets/player_backdrop.dart';
 import '../widgets/marquee_text.dart';
 import '../widgets/signal_path.dart';
 import '../widgets/stats_for_nerds.dart';
@@ -38,6 +40,28 @@ class NowPlayingPage extends StatelessWidget {
   }
 
   Widget _page(BuildContext context, Track? track, String? from) {
+    final a = Appearance.instance;
+    // "Black" is an explicit player background, even when the rest of the app
+    // is light. Keep its foreground and transport readable in that mode.
+    if (a.nowPlaying != NowPlayingBackground.black || !a.palette.light) return _surface(context, track, from);
+    final palette = AppPalette.derive(Colors.black, accent: a.palette.accent);
+    final theme = Theme.of(context);
+    return AppColorsScope(
+      colors: AppColorsView(palette, 1, a.highContrast),
+      child: Theme(
+        data: theme.copyWith(
+          textTheme: theme.textTheme.apply(bodyColor: palette.textPrimary, displayColor: palette.textPrimary),
+          sliderTheme: theme.sliderTheme.copyWith(
+            thumbColor: palette.accent,
+            inactiveTrackColor: palette.textPrimary.withValues(alpha: 0.3),
+          ),
+        ),
+        child: Builder(builder: (context) => _surface(context, track, from)),
+      ),
+    );
+  }
+
+  Widget _surface(BuildContext context, Track? track, String? from) {
     final text = Theme.of(context).textTheme;
     final look = Appearance.instance.nowPlaying;
     return AccentBuilder(
@@ -51,6 +75,7 @@ class NowPlayingPage extends StatelessWidget {
           body: Stack(
             fit: StackFit.expand,
             children: [
+              if (look.isAbstract) Positioned.fill(child: PlayerBackdrop(coverColor: accent)),
               if (look == NowPlayingBackground.blurredCover && track != null)
                 // A small decode is plenty under this much blur. Its own layer: the
                 // colour steps and the controls above never blur it again.
@@ -72,17 +97,21 @@ class NowPlayingPage extends StatelessWidget {
                     NowPlayingBackground.color => LinearGradient(
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
-                      colors: [accent, Color.lerp(accent, Colors.black, 0.75)!, Colors.black],
+                      colors: [AppColors.sink(accent, 0.55), AppColors.sink(accent, 0.85), AppColors.solidBackground],
                       stops: const [0, 0.6, 1],
                     ),
                     // Darkens the blurred cover towards the controls, so text stays readable.
-                    NowPlayingBackground.blurredCover => const LinearGradient(
+                    NowPlayingBackground.blurredCover => LinearGradient(
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
-                      colors: [Color(0x40000000), Color(0xA6000000), Colors.black],
+                      colors: [
+                        AppColors.solidBackground.withValues(alpha: 0.4),
+                        AppColors.solidBackground.withValues(alpha: 0.75),
+                        AppColors.solidBackground,
+                      ],
                       stops: [0, 0.6, 1],
                     ),
-                    NowPlayingBackground.black => null,
+                    _ => null,
                   },
                 ),
                 child: SafeArea(
@@ -101,7 +130,7 @@ class NowPlayingPage extends StatelessWidget {
                           children: [
                             IconButton(
                               tooltip: 'Close',
-                              color: Colors.white,
+                              color: AppColors.of(context).textPrimary,
                               onPressed: () => Navigator.of(context).pop(),
                               icon: const Icon(Icons.keyboard_arrow_down_rounded, size: 30),
                             ),
@@ -110,7 +139,10 @@ class NowPlayingPage extends StatelessWidget {
                                 children: [
                                   Text(
                                     'PLAYING FROM',
-                                    style: text.labelSmall?.copyWith(letterSpacing: 1.2, color: Colors.white70),
+                                    style: text.labelSmall?.copyWith(
+                                      letterSpacing: 1.2,
+                                      color: AppColors.of(context).textSecondary,
+                                    ),
                                   ),
                                   Text(
                                     from ?? 'Your library',
@@ -136,7 +168,12 @@ class NowPlayingPage extends StatelessWidget {
                               ),
                               child: TrackVisual(
                                 track: track,
-                                cover: Artwork(track: track, size: size, radius: 8),
+                                cover: SizedBox.square(
+                                  dimension: size,
+                                  child: AudioVisualizer(
+                                    child: Artwork(track: track, size: size, radius: 8),
+                                  ),
+                                ),
                               ),
                             ),
                           ),
@@ -157,13 +194,14 @@ class NowPlayingPage extends StatelessWidget {
                                   const SizedBox(height: 2),
                                   MarqueeText(
                                     track?.artist ?? '',
-                                    style: text.titleMedium?.copyWith(color: Colors.white70),
+                                    style: text.titleMedium?.copyWith(color: AppColors.of(context).textSecondary),
                                   ),
                                   if (showBadge) ...[const SizedBox(height: 8), const QualityBadge(onDark: true)],
                                 ],
                               ),
                             ),
-                            if (track != null) LikeButton(track: track, size: 28, color: Colors.white),
+                            if (track != null)
+                              LikeButton(track: track, size: 28, color: AppColors.of(context).textPrimary),
                           ],
                         );
                         if (sideways) {
@@ -243,7 +281,9 @@ class _MoreButton extends StatelessWidget {
       listenable: Listenable.merge([c.sleep, c.cast]),
       builder: (context, _) => IconButton(
         tooltip: 'More',
-        color: c.sleep.active || c.cast.target != null ? AppColors.accent : Colors.white,
+        color: c.sleep.active || c.cast.target != null
+            ? AppColors.of(context).accent
+            : AppColors.of(context).textPrimary,
         onPressed: () => showPlayerMore(context, closePlayer: true),
         icon: const Icon(Icons.more_horiz_rounded, size: 28),
       ),
@@ -263,13 +303,13 @@ class _SecondaryRow extends StatelessWidget {
       children: [
         IconButton(
           tooltip: 'Lyrics',
-          color: Colors.white,
+          color: AppColors.of(context).textPrimary,
           onPressed: shell.openLyrics,
           icon: const Icon(Icons.lyrics_outlined),
         ),
         IconButton(
           tooltip: 'Queue',
-          color: Colors.white,
+          color: AppColors.of(context).textPrimary,
           onPressed: shell.openQueue,
           icon: const Icon(Icons.queue_music_rounded),
         ),

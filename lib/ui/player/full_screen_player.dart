@@ -11,6 +11,8 @@ import '../../services/video_mode.dart';
 import '../pages/lyrics_page.dart';
 import '../theme.dart';
 import '../widgets/controls.dart';
+import '../widgets/audio_visualizer.dart';
+import '../widgets/player_backdrop.dart';
 import '../widgets/marquee_text.dart';
 import '../widgets/stats_for_nerds.dart';
 import '../widgets/track_row.dart';
@@ -148,10 +150,11 @@ class _FullScreenPlayerState extends State<FullScreenPlayer> {
     return AccentBuilder(
       track: track,
       builder: (context, accent) => AnimatedContainer(
-        duration: const Duration(milliseconds: 500),
-        color: Color.lerp(accent, Colors.black, 0.2),
+        duration: LayoutPrefs.dur(const Duration(milliseconds: 500)),
+        color: AppColors.sink(accent, 0.75),
         child: Stack(
           children: [
+            Positioned.fill(child: PlayerBackdrop(coverColor: accent)),
             Column(
               children: [
                 Padding(
@@ -234,6 +237,7 @@ class _FullScreenPlayerState extends State<FullScreenPlayer> {
                           ),
                         ),
                 ),
+                if (track != null) const AudioVisualizer(),
               ],
             ),
             // Tells first-timers how to get out, then fades away.
@@ -248,7 +252,7 @@ class _FullScreenPlayerState extends State<FullScreenPlayer> {
                     duration: const Duration(milliseconds: 400),
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                      decoration: BoxDecoration(color: const Color(0xE6202020), borderRadius: BorderRadius.circular(8)),
+                      decoration: BoxDecoration(color: AppColors.menu, borderRadius: BorderRadius.circular(8)),
                       child: Text('Press Esc to exit full screen', style: text.bodyMedium),
                     ),
                   ),

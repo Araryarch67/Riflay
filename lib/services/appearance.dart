@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:flutter/material.dart' show ColorScheme;
 import 'package:flutter/animation.dart' show Curves;
 import 'package:flutter/painting.dart' show HSLColor;
 import 'package:flutter/foundation.dart';
@@ -13,6 +14,7 @@ import 'beta_features.dart';
 import 'color_tools.dart';
 import 'cover_palette.dart';
 import 'layout_prefs.dart';
+import 'matugen_theme.dart';
 import 'system_fonts.dart';
 
 /// Every colour of one theme: surfaces from the window down to hover, text, and the theme's own accent.
@@ -29,6 +31,7 @@ class AppPalette {
     required this.accent,
     required this.onAccent,
     this.light = false,
+    this.materialScheme,
   });
 
   /// The window, behind the panels.
@@ -47,6 +50,7 @@ class AppPalette {
 
   /// Dark text on light surfaces.
   final bool light;
+  final ColorScheme? materialScheme;
 
   @override
   bool operator ==(Object other) =>
@@ -61,7 +65,8 @@ class AppPalette {
       other.textMuted == textMuted &&
       other.accent == accent &&
       other.onAccent == onAccent &&
-      other.light == light;
+      other.light == light &&
+      other.materialScheme == materialScheme;
 
   @override
   int get hashCode => Object.hash(
@@ -76,6 +81,7 @@ class AppPalette {
     accent,
     onAccent,
     light,
+    materialScheme,
   );
 
   /// A whole palette from one background colour, and optionally a text colour: panels, cards, hover and
@@ -129,6 +135,9 @@ class AppPalette {
       accent: mix(a.accent, b.accent),
       onAccent: mix(a.onAccent, b.onAccent),
       light: t < 0.5 ? a.light : b.light,
+      materialScheme: a.materialScheme == null || b.materialScheme == null
+          ? (t < 0.5 ? a.materialScheme : b.materialScheme)
+          : ColorScheme.lerp(a.materialScheme!, b.materialScheme!, t),
     );
   }
 
@@ -158,6 +167,7 @@ class AppPalette {
       accent: acc,
       onAccent: on,
       light: light,
+      materialScheme: materialScheme,
     );
   }
 
@@ -208,6 +218,7 @@ class AppPalette {
       accent: acc,
       onAccent: onColorFor(acc),
       light: light,
+      materialScheme: materialScheme,
     );
   }
 }
@@ -232,6 +243,7 @@ enum ThemeChoice {
 
   /// Follows the playing song's cover; this is only the calm stand-in for when nothing plays.
   dynamic('Dynamic', neutralDarkPalette),
+  matugen('Matugen', neutralDarkPalette),
   monochrome(
     'Monochrome',
     AppPalette(
@@ -576,12 +588,17 @@ enum CoverColorMode {
 
 /// What fills the phone's Now Playing page behind the cover.
 enum NowPlayingBackground {
-  color('Cover colour'),
+  color('Simple'),
   blurredCover('Blurred cover'),
-  black('Black');
+  black('Black'),
+  aurora('Abstract aurora'),
+  silk('Abstract silk'),
+  orbits('Abstract orbits'),
+  prism('Abstract prism');
 
   const NowPlayingBackground(this.label);
   final String label;
+  bool get isAbstract => index >= NowPlayingBackground.aurora.index;
 }
 
 /// Steps a 0 to 1 value over [time] on the frame clock, calling [onStep] about a dozen times (each one
@@ -640,7 +657,46 @@ class _Fade {
 /// transparency and text size. One instance for the whole app ([instance]),
 /// loaded before the first frame so nothing flashes.
 class Appearance extends ChangeNotifier {
-  Appearance._();
+  Appearance._() {
+    matugen.addListener(() {
+      if (theme != ThemeChoice.matugen) return;
+      _palette = null;
+      notifyListeners();
+    });
+  }
+
+  final matugen = MatugenTheme();
+  String? matugenPath;
+
+  Future<void> setMatugenPath(String? file) async {
+    matugenPath = file;
+    final prefs = await SharedPreferences.getInstance();
+    if (file == null) {
+      await prefs.remove('appearance.matugenPath');
+    } else {
+      await prefs.setString('appearance.matugenPath', file);
+    }
+    if (Host.isLinux && theme == ThemeChoice.matugen) await matugen.start(file: file);
+  }
+
+  AppPalette _matugenPalette() {
+    final scheme = matugen.colors?.scheme(light: isLight);
+    if (scheme == null) return ThemeChoice.standard.paletteIn(light: isLight);
+    return AppPalette(
+      background: scheme.surfaceContainerLowest,
+      panel: scheme.surface,
+      elevated: scheme.surfaceContainer,
+      hover: scheme.surfaceContainerHighest,
+      menu: scheme.surfaceContainerHigh,
+      textPrimary: scheme.onSurface,
+      textSecondary: scheme.onSurfaceVariant,
+      textMuted: scheme.outline,
+      accent: scheme.primary,
+      onAccent: scheme.onPrimary,
+      light: scheme.brightness == Brightness.light,
+      materialScheme: scheme,
+    );
+  }
 
   static final instance = Appearance._();
 
@@ -684,6 +740,7 @@ class Appearance extends ChangeNotifier {
   /// The palette a theme card previews: [t] in the brightness now in use. Dynamic shows the playing song's
   /// colours (a calm grey when nothing plays); custom is worked out from its colours.
   AppPalette paletteOf(ThemeChoice t) => switch (t) {
+    ThemeChoice.matugen => _matugenPalette(),
     ThemeChoice.custom => AppPalette.derive(customBackground, text: customText, accent: _pickedAccent),
     ThemeChoice.dynamic => t == theme ? _dynamicPalette() : _targetPalette(),
     _ => t.paletteIn(light: isLight),
@@ -793,6 +850,7 @@ class Appearance extends ChangeNotifier {
         accent: picked,
         onAccent: on,
         light: p.light,
+        materialScheme: p.materialScheme,
       );
     }
     final c = _washColor;
@@ -854,6 +912,7 @@ class Appearance extends ChangeNotifier {
   }
 
   NowPlayingBackground nowPlaying = NowPlayingBackground.color;
+  bool reactiveBackground = false;
 
   /// Frosted, see-through player bar, mini player and tab bar.
   bool glass = false;
@@ -905,9 +964,12 @@ class Appearance extends ChangeNotifier {
     try {
       await BetaFeatures.instance.load();
       final raw = (await SharedPreferences.getInstance()).getString(_key);
+      matugenPath = (await SharedPreferences.getInstance()).getString('appearance.matugenPath');
       if (raw == null) return;
       final j = jsonDecode(raw) as Map<String, dynamic>;
       theme = ThemeChoice.values.asNameMap()[j['theme']] ?? theme;
+      if (theme == ThemeChoice.matugen && !Host.isLinux) theme = ThemeChoice.standard;
+      if (theme == ThemeChoice.matugen) await matugen.start(file: matugenPath);
       // Saves from before the mode existed: a light theme (Latte) stays light.
       brightness =
           ThemeBrightness.values.asNameMap()[j['brightness']] ??
@@ -925,6 +987,7 @@ class Appearance extends ChangeNotifier {
       customText = text == null ? null : Color(text);
       _palette = null;
       nowPlaying = NowPlayingBackground.values.asNameMap()[j['nowPlaying']] ?? nowPlaying;
+      reactiveBackground = j['reactiveBackground'] as bool? ?? false;
       glass = j['glass'] as bool? ?? glass;
       blur = (j['blur'] as num?)?.toDouble().clamp(4, 48) ?? blur;
       windowOpacity = hasWindowOpacity ? (j['windowOpacity'] as num?)?.toDouble().clamp(0.5, 1) ?? 1 : 1;
@@ -964,6 +1027,7 @@ class Appearance extends ChangeNotifier {
         'customBackground': customBackground.toARGB32(),
         'customText': customText?.toARGB32(),
         'nowPlaying': nowPlaying.name,
+        'reactiveBackground': reactiveBackground,
         'glass': glass,
         'blur': blur,
         'windowOpacity': windowOpacity,
@@ -975,17 +1039,29 @@ class Appearance extends ChangeNotifier {
   }
 
   /// A new theme brings its own accent; another can be picked after.
-  Future<void> setTheme(ThemeChoice v) => _set(() {
-    theme = v;
-    accent = AccentChoice.theme;
-    // Unless following the system, a theme comes in its own brightness (Latte: light). Dynamic and custom
-    // have none of their own, so they keep the one in use.
-    if (brightness != ThemeBrightness.system && v != ThemeChoice.dynamic && v != ThemeChoice.custom) {
-      brightness = v.palette.light ? ThemeBrightness.light : ThemeBrightness.dark;
-    }
-    _dynFrom = null;
-    _dynFade.stop();
-  });
+  Future<void> setTheme(ThemeChoice v) async {
+    await _set(() {
+      theme = v;
+      if (Host.isLinux && v == ThemeChoice.matugen) {
+        coverMode = CoverColorMode.off;
+      } else {
+        matugen.stop();
+      }
+      accent = AccentChoice.theme;
+      // Unless following the system, a theme comes in its own brightness (Latte: light). Dynamic and custom
+      // have none of their own, so they keep the one in use.
+      if (brightness != ThemeBrightness.system &&
+          v != ThemeChoice.dynamic &&
+          v != ThemeChoice.custom &&
+          v != ThemeChoice.matugen) {
+        brightness = v.palette.light ? ThemeBrightness.light : ThemeBrightness.dark;
+      }
+      _dynFrom = null;
+      _dynFade.stop();
+    });
+    if (Host.isLinux && theme == ThemeChoice.matugen) await matugen.start(file: matugenPath);
+  }
+
   Future<void> setBrightness(ThemeBrightness v) => _set(() => brightness = v);
   Future<void> setHighContrast(bool v) => _set(() => highContrast = v);
   Future<void> setAccent(AccentChoice v) => _set(() => accent = v);
@@ -1021,6 +1097,9 @@ class Appearance extends ChangeNotifier {
 
   /// Everything on this page back to how a fresh install looks.
   Future<void> reset() async {
+    matugen.stop();
+    matugenPath = null;
+    await (await SharedPreferences.getInstance()).remove('appearance.matugenPath');
     await setFont(null);
     await _set(() {
       theme = ThemeChoice.standard;
@@ -1031,6 +1110,7 @@ class Appearance extends ChangeNotifier {
       coverMode = CoverColorMode.player;
       coverStrength = 0.5;
       nowPlaying = NowPlayingBackground.color;
+      reactiveBackground = false;
       glass = false;
       blur = 24;
       windowOpacity = 1;
@@ -1045,6 +1125,7 @@ class Appearance extends ChangeNotifier {
     });
   }
 
+  Future<void> setReactiveBackground(bool v) => _set(() => reactiveBackground = v);
   Future<void> setNowPlaying(NowPlayingBackground v) => _set(() => nowPlaying = v);
   Future<void> setGlass(bool v) => _set(() => glass = v);
   Future<void> setBlur(double v) => _set(() => blur = v);

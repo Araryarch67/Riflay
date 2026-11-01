@@ -199,15 +199,12 @@ class AccentBuilder extends StatelessWidget {
   final Track? track;
   final Widget Function(BuildContext context, Color accent) builder;
 
-  /// Stands in for the cover's colour when cover colours are off.
-  static const neutral = Color(0xFF3A3A3A);
-
   @override
   Widget build(BuildContext context) {
     final t = track;
     if (t == null) return builder(context, AppColors.elevated);
     final look = Appearance.instance;
-    if (!look.coverColors && look.theme != ThemeChoice.dynamic) return builder(context, neutral);
+    if (!look.coverColors && look.theme != ThemeChoice.dynamic) return builder(context, AppColors.panel);
     final cached = Metadata.cachedAccent(t);
     if (cached != null) return builder(context, cached);
     return FutureBuilder<Color>(
@@ -308,7 +305,7 @@ class _SeekBarState extends State<SeekBar> {
   Widget build(BuildContext context) {
     final player = PlayerScope.read(context);
     final style = Theme.of(context).textTheme.labelSmall
-        ?.copyWith(color: AppColors.textSecondary, fontFeatures: const [FontFeature.tabularFigures()]);
+        ?.copyWith(color: AppColors.of(context).textSecondary, fontFeatures: const [FontFeature.tabularFigures()]);
     return StreamBuilder<Duration>(
       stream: _position,
       builder: (context, snapshot) {
@@ -323,7 +320,7 @@ class _SeekBarState extends State<SeekBar> {
           child: SliderTheme(
             data: SliderTheme.of(context).copyWith(
               trackHeight: LayoutPrefs.instance.progressBar.height,
-              activeTrackColor: active && widget.inline ? AppColors.accent : AppColors.textPrimary,
+              activeTrackColor: AppColors.of(context).accent,
               thumbShape: RoundSliderThumbShape(
                 enabledThumbRadius: active || !widget.inline
                     ? (LayoutPrefs.instance.progressBar == ProgressBarStyle.thick ? 8 : 6)
@@ -392,15 +389,15 @@ class PlayButton extends StatelessWidget implements ColorFreeSelf {
   final VoidCallback? onPressed;
   final double size;
 
-  /// The theme's strongest contrast when null (white on dark themes).
+  /// The theme's accent when null; its matching foreground colors the icon.
   final Color? color;
   final Color? iconColor;
 
   @override
   Widget build(BuildContext context) {
     final colors = this.color == null || this.iconColor == null ? AppColors.of(context) : null;
-    final color = this.color ?? colors!.inverse;
-    final iconColor = this.iconColor ?? colors!.onInverse;
+    final color = this.color ?? colors!.accent;
+    final iconColor = this.iconColor ?? colors!.onAccent;
     return Tooltip(
       message: tipWith(playing ? 'Pause' : 'Play', AppAction.playPause),
       child: _Pressable(
@@ -501,11 +498,11 @@ class TransportControls extends StatelessWidget {
         playing: c.showsPlaying,
         loading: large && c.isBuffering && c.showsPlaying,
       ),
-      builder: (context, t, _) => _transport(c, t),
+      builder: (context, t, _) => _transport(context, c, t),
     );
   }
 
-  Widget _transport(PlayerController c, _TransportState t) {
+  Widget _transport(BuildContext context, PlayerController c, _TransportState t) {
     final skipSize = large ? 40.0 : 26.0;
     final modeSize = large ? 26.0 : 20.0;
     final row = Row(
@@ -523,7 +520,7 @@ class TransportControls extends StatelessWidget {
         IconButton(
           tooltip: tipWith('Previous', AppAction.previous),
           iconSize: skipSize,
-          color: AppColors.textPrimary,
+          color: AppColors.of(context).textPrimary,
           onPressed: t.hasQueue ? c.previous : null,
           icon: const Icon(Icons.skip_previous_rounded),
         ),
@@ -538,7 +535,7 @@ class TransportControls extends StatelessWidget {
         IconButton(
           tooltip: tipWith('Next', AppAction.next),
           iconSize: skipSize,
-          color: AppColors.textPrimary,
+          color: AppColors.of(context).textPrimary,
           onPressed: t.hasNext ? c.next : null,
           icon: const Icon(Icons.skip_next_rounded),
         ),
@@ -605,7 +602,7 @@ class ModeButton extends StatelessWidget {
         IconButton(
           tooltip: tooltip,
           iconSize: size,
-          color: active ? AppColors.accent : AppColors.textSecondary,
+          color: active ? AppColors.of(context).accent : AppColors.of(context).textSecondary,
           onPressed: onPressed,
           icon: Icon(icon),
         ),
@@ -615,7 +612,7 @@ class ModeButton extends StatelessWidget {
             child: Container(
               width: 4,
               height: 4,
-              decoration: BoxDecoration(color: AppColors.accent, shape: BoxShape.circle),
+              decoration: BoxDecoration(color: AppColors.of(context).accent, shape: BoxShape.circle),
             ),
           ),
       ],
