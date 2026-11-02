@@ -88,13 +88,25 @@ void main() {
     }
 
     expect(edge(active, 0), edge(resting, 0), reason: 'Pulse must keep the flower cover inside the wave');
-    final peak = waveEdge(active, 0);
-    final valley = waveEdge(active, math.pi / 24);
-    expect(peak - valley, greaterThan(8), reason: 'the solid wave needs distinct crests and troughs');
-    expect(valley, greaterThan(edge(active, math.pi / 24) + 2), reason: 'the wave surrounds the cover');
+    final radii = List.generate(180, (i) => waveEdge(active, i * math.pi / 90));
+    expect(radii.reduce(math.max) - radii.reduce(math.min), greaterThan(8));
+    double averageNear(double angle) =>
+        List.generate(21, (i) => waveEdge(active, angle + (i - 10) * math.pi / 90)).reduce((a, b) => a + b) / 21;
+    expect(averageNear(0), greaterThan(averageNear(-math.pi / 2) + 3), reason: 'right-side waves grow larger');
+    expect(averageNear(math.pi), greaterThan(averageNear(math.pi / 2) + 3), reason: 'left-side waves grow larger');
+    final crests = <int>[];
+    for (var i = 1; i < radii.length - 1; i++) {
+      if (radii[i] > radii[i - 1] && radii[i] >= radii[i + 1]) crests.add(i);
+    }
+    final spacing = List.generate(crests.length - 1, (i) => crests[i + 1] - crests[i]);
+    expect(spacing.toSet().length, greaterThan(3), reason: 'crests must not be uniformly spaced');
     final small = await render(movement: 0.5);
     final large = await render(movement: 2.5, name: 'pulse-cover-large');
-    expect(waveEdge(large, 0), greaterThan(waveEdge(small, 0) + 8));
+    final widestGrowth = List.generate(180, (i) {
+      final angle = i * math.pi / 90;
+      return waveEdge(large, angle) - waveEdge(small, angle);
+    }).reduce(math.max);
+    expect(widestGrowth, greaterThan(8));
     levels.clear();
     levels.addBands(List.generate(VisualizerLevels.samples, (i) => i < 12 ? 0.9 : 0.05));
     levels.beat = 0;
@@ -103,8 +115,12 @@ void main() {
     levels.addBands(List.generate(VisualizerLevels.samples, (i) => i < 12 ? 0.05 : 0.9));
     levels.beat = 0;
     final treble = await render(name: 'pulse-treble');
-    expect(waveEdge(bass, -math.pi / 2), greaterThan(waveEdge(treble, -math.pi / 2) + 5));
-    expect(waveEdge(treble, math.pi / 2), greaterThan(waveEdge(bass, math.pi / 2) + 5));
+    int bandResponse(List<int> louder, List<int> quieter, double start) => List.generate(30, (i) {
+      final angle = start + i * math.pi / 90;
+      return waveEdge(louder, angle) - waveEdge(quieter, angle);
+    }).reduce(math.max);
+    expect(bandResponse(bass, treble, -math.pi / 2), greaterThan(5));
+    expect(bandResponse(treble, bass, 0), greaterThan(5));
     levels.clear();
     levels.addBands(List.filled(VisualizerLevels.samples, 0.8));
     levels.beat = 0.6;

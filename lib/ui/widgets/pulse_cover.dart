@@ -83,8 +83,22 @@ class _PulseContour {
     // troughs follow each audio band instead of just brightening its edge.
     final gap = side * 0.012 + thickness;
     final available = math.max(0.0, side * 0.48 - thickness - side * 0.368 - gap);
-    final wave = 0.18 + scallop * 0.82;
-    return FlowerContour.radius(side, phase) + gap + available * motion * drive * wave;
+    // Uneven, overlapping lobes avoid the uniformly spaced flower/sine look.
+    // Cosine harmonics keep the two sides mirrored; audio bands reshape them.
+    final warp = levels.value[3] * 2.1 + levels.value[11] * 1.3 + levels.value[19] * 0.8;
+    final texture =
+        0.5 +
+        0.5 *
+            math.sin(
+              1.7 * math.cos(phase * 7) +
+                  1.1 * math.cos(phase * 13) +
+                  0.7 * math.cos(phase * 19) +
+                  0.4 * math.cos(phase * 31) +
+                  warp,
+            );
+    final wave = 0.08 + texture * 0.92;
+    final sides = 0.18 + 0.82 * math.pow(math.sin(phase), 2);
+    return side * 0.368 + gap + available * math.sqrt(motion) * drive * wave * sides;
   }
 }
 
