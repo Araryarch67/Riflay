@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import '../../services/visualizer_levels.dart';
 import 'flower_cover.dart';
 
-/// The cover, its scalloped edge and its glow share one audio-driven contour.
+/// Pulse draws a continuous audio-driven wave around the flower cover.
 /// Orbit adds spectrum bars that start immediately outside the same contour.
 class PulseCover extends StatelessWidget {
   const PulseCover({
@@ -33,7 +33,9 @@ class PulseCover extends StatelessWidget {
     return CustomPaint(
       painter: _PulsePainter(contour, color, glow: true),
       foregroundPainter: _PulsePainter(contour, color, glow: false),
-      child: child == null ? null : ClipPath(clipper: _PulseClipper(contour), child: child),
+      child: child == null
+          ? null
+          : ClipPath(clipper: orbit ? _PulseClipper(contour) : const FlowerClipper(), child: child),
     );
   }
 }
@@ -77,8 +79,12 @@ class _PulseContour {
       // outside it for the radial spectrum rather than shrinking on slider changes.
       return FlowerContour.radius(side, phase) + side * motion * (beat * 0.014 + drive * scallop * 0.025);
     }
-    final available = math.max(0.0, side * 0.132 - thickness * 0.75 - side * 0.025);
-    return FlowerContour.radius(side, phase) + available * motion * (beat * 0.3 + drive * scallop * 0.7);
+    // The cover stays still inside a separate, crisp waveform. Peaks and
+    // troughs follow each audio band instead of just brightening its edge.
+    final gap = side * 0.012 + thickness;
+    final available = math.max(0.0, side * 0.48 - thickness - side * 0.368 - gap);
+    final wave = 0.18 + scallop * 0.82;
+    return FlowerContour.radius(side, phase) + gap + available * motion * drive * wave;
   }
 }
 
@@ -105,12 +111,31 @@ class _PulsePainter extends CustomPainter {
     final path = contour.path(size);
     final width = contour.thickness;
     final pen = Paint()..style = PaintingStyle.stroke;
-    if (glow) {
-      final blur = contour.orbit ? math.min(3.0, size.shortestSide * 0.008) : math.min(10.0, size.shortestSide * 0.025);
+    if (!contour.orbit) {
+      // Paint the waveform in the foreground so artwork cannot obscure it.
+      // A solid stroke, rather than a blur, keeps its crests readable.
+      if (glow) return;
       canvas.drawPath(
         path,
         pen
-          ..color = color.withValues(alpha: contour.orbit ? 0.14 : 0.24)
+          ..strokeJoin = StrokeJoin.round
+          ..strokeWidth = width + 2
+          ..color = Colors.black.withValues(alpha: 0.35),
+      );
+      canvas.drawPath(
+        path,
+        pen
+          ..strokeWidth = width
+          ..color = color,
+      );
+      return;
+    }
+    if (glow) {
+      final blur = math.min(3.0, size.shortestSide * 0.008);
+      canvas.drawPath(
+        path,
+        pen
+          ..color = color.withValues(alpha: 0.14)
           ..strokeWidth = width + blur * 2
           ..maskFilter = MaskFilter.blur(BlurStyle.normal, blur),
       );

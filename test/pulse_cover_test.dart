@@ -10,7 +10,7 @@ import 'package:riflay/services/visualizer_levels.dart';
 import 'package:riflay/ui/widgets/audio_visualizer.dart';
 
 void main() {
-  testWidgets('Pulse hugs the cover and Orbit adds radial bars on a flower contour', (tester) async {
+  testWidgets('Pulse draws an audio wave around a stable flower cover; Orbit retains radial bars', (tester) async {
     final levels = VisualizerLevels();
     addTearDown(levels.dispose);
     final capture = GlobalKey();
@@ -76,17 +76,38 @@ void main() {
     levels.addBands(List.filled(VisualizerLevels.samples, 0.8));
     levels.beat = 0.6;
     final active = await render(name: 'pulse-cover');
-    final peak = edge(active, 0);
-    final valley = edge(active, math.pi / 24);
-    expect(peak - valley, greaterThan(5), reason: 'the artwork itself must have visible rounded scallops');
-    expect(peak, greaterThan(edge(resting, 0) + 5));
-    for (var r = 55; r < peak; r++) {
-      final at = ((side ~/ 2) * side + side ~/ 2 + r) * 4;
-      expect(active[at], greaterThan(245), reason: 'the cover must continue into the wave, without an empty ring');
+    int waveEdge(List<int> rgba, double angle) {
+      var last = 0;
+      for (var r = 90; r < side ~/ 2; r++) {
+        final x = (side / 2 + math.cos(angle) * r).round().clamp(0, side - 1);
+        final y = (side / 2 + math.sin(angle) * r).round().clamp(0, side - 1);
+        final at = (y * side + x) * 4;
+        if (rgba[at] > 130 && rgba[at] < 220 && rgba[at + 1] > 140) last = r;
+      }
+      return last;
     }
+
+    expect(edge(active, 0), edge(resting, 0), reason: 'Pulse must keep the flower cover inside the wave');
+    final peak = waveEdge(active, 0);
+    final valley = waveEdge(active, math.pi / 24);
+    expect(peak - valley, greaterThan(8), reason: 'the solid wave needs distinct crests and troughs');
+    expect(valley, greaterThan(edge(active, math.pi / 24) + 2), reason: 'the wave surrounds the cover');
     final small = await render(movement: 0.5);
     final large = await render(movement: 2.5, name: 'pulse-cover-large');
-    expect(edge(large, 0), greaterThan(edge(small, 0) + 8));
+    expect(waveEdge(large, 0), greaterThan(waveEdge(small, 0) + 8));
+    levels.clear();
+    levels.addBands(List.generate(VisualizerLevels.samples, (i) => i < 12 ? 0.9 : 0.05));
+    levels.beat = 0;
+    final bass = await render(name: 'pulse-bass');
+    levels.clear();
+    levels.addBands(List.generate(VisualizerLevels.samples, (i) => i < 12 ? 0.05 : 0.9));
+    levels.beat = 0;
+    final treble = await render(name: 'pulse-treble');
+    expect(waveEdge(bass, -math.pi / 2), greaterThan(waveEdge(treble, -math.pi / 2) + 5));
+    expect(waveEdge(treble, math.pi / 2), greaterThan(waveEdge(bass, math.pi / 2) + 5));
+    levels.clear();
+    levels.addBands(List.filled(VisualizerLevels.samples, 0.8));
+    levels.beat = 0.6;
     final orbit = await render(style: VisualizerStyle.orbit, name: 'orbit-cover');
     expect(
       edge(orbit, 0) - edge(orbit, math.pi / 24),
