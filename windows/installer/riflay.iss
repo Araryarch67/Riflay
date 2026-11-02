@@ -1,5 +1,5 @@
 ; Windows installer (Inno Setup 6). Built by the release workflow:
-;   iscc /DAppVersion=1.2.3 /DSourceDir=<Release folder> /DOutputDir=dist windows\installer\riflay.iss
+;   iscc /DAppVersion=1.0.0 /DSourceDir=<Release folder> /DOutputDir=dist windows\installer\riflay.iss
 ; Installs for the current user only, so no administrator prompt.
 
 #ifndef AppVersion
@@ -16,6 +16,10 @@
 AppId={{DC558C20-B893-4F78-A05F-6E08F3F2435E}
 AppName=Riflay
 AppVersion={#AppVersion}
+VersionInfoVersion={#AppVersion}
+VersionInfoTextVersion={#AppVersion}
+VersionInfoProductVersion={#AppVersion}
+VersionInfoProductTextVersion={#AppVersion}
 AppPublisher=Riflay
 AppPublisherURL=https://github.com/Araryarch67/Riflay
 DefaultDirName={localappdata}\Programs\Riflay
