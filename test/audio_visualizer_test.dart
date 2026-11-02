@@ -5,6 +5,8 @@ import 'package:riflay/services/layout_prefs.dart';
 import 'package:riflay/ui/pages/layout_settings.dart';
 import 'package:riflay/ui/pages/beta_settings.dart';
 import 'package:riflay/ui/widgets/audio_visualizer.dart';
+import 'package:riflay/ui/widgets/flower_cover.dart';
+import 'package:riflay/ui/widgets/audio_reactive_view.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
@@ -24,6 +26,8 @@ void main() {
       ),
     );
     expect(tester.getSize(find.byKey(const ValueKey('art'))), const Size(200, 200));
+    expect(find.byType(FlowerCover), findsOneWidget);
+    expect(find.byType(AudioReactiveView), findsNothing);
     expect(find.descendant(of: find.byType(AudioVisualizer), matching: find.byType(CustomPaint)), findsNothing);
     expect(tester.takeException(), isNull);
   });
@@ -52,6 +56,8 @@ void main() {
         ),
       );
       expect(tester.getSize(find.byKey(const ValueKey('art'))), const Size(200, 200));
+      expect(find.byType(FlowerCover), findsOneWidget);
+      expect(find.byType(AudioReactiveView), findsNothing);
       expect(find.descendant(of: find.byType(AudioVisualizer), matching: find.byType(CustomPaint)), findsNothing);
     }
     expect(tester.takeException(), isNull);
@@ -63,6 +69,8 @@ void main() {
     await tester.runAsync(() => BetaFeatures.instance.set(BetaFeature.audioVisualizer, false));
     await tester.pumpWidget(const MaterialApp(home: AudioVisualizer(child: SizedBox.square(dimension: 200))));
     expect(find.byType(VisualizerCanvas), findsNothing);
+    expect(find.byType(FlowerCover), findsOneWidget);
+    expect(find.byType(AudioReactiveView), findsNothing);
     await tester.pumpWidget(
       const MaterialApp(
         home: Scaffold(body: SingleChildScrollView(child: LayoutSettings())),

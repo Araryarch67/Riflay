@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../../services/visualizer_levels.dart';
+import 'flower_cover.dart';
 
 /// The cover, its scalloped edge and its glow share one audio-driven contour.
 /// Orbit adds spectrum bars that start immediately outside the same contour.
@@ -15,6 +16,7 @@ class PulseCover extends StatelessWidget {
     required this.thickness,
     this.child,
     this.orbit = false,
+    this.petals = false,
   });
 
   final VisualizerLevels levels;
@@ -23,10 +25,11 @@ class PulseCover extends StatelessWidget {
   final double thickness;
   final Widget? child;
   final bool orbit;
+  final bool petals;
 
   @override
   Widget build(BuildContext context) {
-    final contour = _PulseContour(levels, movement, thickness, orbit);
+    final contour = _PulseContour(levels, movement, thickness, orbit, petals);
     return CustomPaint(
       painter: _PulsePainter(contour, color, glow: true),
       foregroundPainter: _PulsePainter(contour, color, glow: false),
@@ -36,12 +39,13 @@ class PulseCover extends StatelessWidget {
 }
 
 class _PulseContour {
-  _PulseContour(this.levels, this.movement, this.thickness, this.orbit);
+  _PulseContour(this.levels, this.movement, this.thickness, this.orbit, this.petals);
 
   final VisualizerLevels levels;
   final double movement;
   final double thickness;
   final bool orbit;
+  final bool petals;
   Size? _size;
   List<double>? _values;
   double? _beat;
@@ -52,23 +56,7 @@ class _PulseContour {
     _size = size;
     _values = levels.value;
     _beat = levels.beat;
-    final center = (Offset.zero & size).center;
-    final side = size.shortestSide;
-    const count = 192;
-    final points = List.generate(count, (i) {
-      final phase = i / count * math.pi * 2;
-      final angle = phase - math.pi / 2;
-      return center + Offset(math.cos(angle), math.sin(angle)) * radius(side, phase);
-    });
-    final path = Path()..moveTo(points.first.dx, points.first.dy);
-    Offset point(int i) => points[i % count];
-    for (var i = 0; i < count; i++) {
-      final p0 = point(i - 1), p1 = point(i), p2 = point(i + 1), p3 = point(i + 2);
-      final c1 = p1 + (p2 - p0) / 6;
-      final c2 = p2 - (p3 - p1) / 6;
-      path.cubicTo(c1.dx, c1.dy, c2.dx, c2.dy, p2.dx, p2.dy);
-    }
-    return _path = path..close();
+    return _path = FlowerContour.path(size, radiusAt: (phase) => radius(size.shortestSide, phase));
   }
 
   double level(double phase) {
@@ -87,10 +75,10 @@ class _PulseContour {
     if (orbit) {
       // A flower-shaped base stays visible even between beats. Leave room
       // outside it for the radial spectrum rather than shrinking on slider changes.
-      return side * (0.29 + 0.012 * scallop + motion * (beat * 0.014 + drive * scallop * 0.025));
+      return FlowerContour.radius(side, phase) + side * motion * (beat * 0.014 + drive * scallop * 0.025);
     }
-    final available = math.max(0.0, side * 0.15 - thickness * 0.75 - side * 0.025);
-    return side * 0.35 + available * motion * (beat * 0.3 + drive * scallop * 0.7);
+    final available = math.max(0.0, side * 0.132 - thickness * 0.75 - side * 0.025);
+    return FlowerContour.radius(side, phase) + available * motion * (beat * 0.3 + drive * scallop * 0.7);
   }
 }
 
@@ -136,15 +124,16 @@ class _PulsePainter extends CustomPainter {
       if (contour.orbit) {
         final side = size.shortestSide;
         final center = (Offset.zero & size).center;
-        const count = 96;
-        final gap = width * 0.5 + 2;
+        final count = contour.petals ? 48 : 96;
+        final rayWidth = contour.petals ? width * 1.6 : width;
+        final gap = rayWidth * 0.5 + 2;
         for (var i = 0; i < count; i++) {
           final phase = i / count * math.pi * 2;
           final angle = phase - math.pi / 2;
           final ray = Offset(math.cos(angle), math.sin(angle));
           final amplitude = math.pow(contour.level(phase).clamp(0.0, 1.0), 0.8).toDouble();
           final base = contour.radius(side, phase) + gap;
-          final room = math.max(0.0, side * 0.49 - width / 2 - base);
+          final room = math.max(0.0, side * 0.49 - rayWidth / 2 - base);
           final length = math.min(room, side * 0.025 + amplitude * side * 0.15 * (contour.movement / 2.5));
           canvas.drawLine(
             center + ray * base,
@@ -152,7 +141,7 @@ class _PulsePainter extends CustomPainter {
             pen
               ..maskFilter = null
               ..strokeCap = StrokeCap.round
-              ..strokeWidth = width
+              ..strokeWidth = rayWidth
               ..color = color.withValues(alpha: 0.6 + amplitude * 0.4),
           );
         }

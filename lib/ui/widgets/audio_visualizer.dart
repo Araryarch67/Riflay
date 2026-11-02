@@ -8,8 +8,9 @@ import '../../services/visualizer_levels.dart';
 import '../theme.dart';
 import 'audio_reactive_view.dart';
 import 'pulse_cover.dart';
+import 'flower_cover.dart';
 
-/// Optional player decoration. Disabled means the original child and layout.
+/// A flower cover at rest, with optional audio-driven decoration.
 class AudioVisualizer extends StatelessWidget {
   const AudioVisualizer({super.key, this.child, this.radialOnly = false, this.linearOnly = false, this.height = 72});
   final Widget? child;
@@ -29,7 +30,7 @@ class AudioVisualizer extends StatelessWidget {
           (child != null && !style.radial) ||
           (radialOnly && !style.radial) ||
           (linearOnly && style.radial)) {
-        return child ?? const SizedBox.shrink();
+        return child == null ? const SizedBox.shrink() : FlowerCover(child: child!);
       }
       return AudioReactiveView(
         builder: (context, levels) {
@@ -83,25 +84,20 @@ class VisualizerCanvas extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (style == VisualizerStyle.pulse || style == VisualizerStyle.orbit) {
+    if (style.radial) {
       return PulseCover(
         levels: levels,
         color: color,
         movement: radialMotion,
         thickness: thickness,
-        orbit: style == VisualizerStyle.orbit,
+        orbit: style != VisualizerStyle.pulse,
+        petals: style == VisualizerStyle.petals,
         child: child,
       );
     }
-    Widget? art = child;
-    if (art != null && style.radial) {
-      art = ClipOval(child: art);
-    }
     return CustomPaint(
       foregroundPainter: _VisualizerPainter(levels, color, style, child != null, radius, radialMotion, thickness),
-      child: child == null
-          ? null
-          : Padding(padding: EdgeInsets.all(style.radial ? 10 + 22 * radialMotion + 2 * thickness : 16), child: art),
+      child: child == null ? null : FlowerCover(child: child!),
     );
   }
 }
@@ -153,9 +149,7 @@ class _VisualizerPainter extends CustomPainter {
     final values = levels.value.map((v) => math.pow(v, 1.25).toDouble()).toList();
     canvas.save();
     canvas.clipRect(Offset.zero & size);
-    if (style.radial) {
-      _radial(canvas, size, values);
-    } else if (border) {
+    if (border) {
       _border(canvas, size, values);
     } else {
       _linear(canvas, size, values);
@@ -163,34 +157,9 @@ class _VisualizerPainter extends CustomPainter {
     canvas.restore();
   }
 
-  void _radial(Canvas canvas, Size size, List<double> values) {
-    final center = (Offset.zero & size).center;
-    final padding = 10 + 22 * radialMotion + 2 * thickness;
-    final base = math.max(1.0, size.shortestSide / 2 - padding);
-    // Mirror the spectrum around the artwork. Both ends of the contour
-    // meet with zero slope, rather than jumping at the oldest/newest sample.
-    double level(double t) => sample(values, (1 - math.cos(t * math.pi * 2)) / 2);
-    if (style == VisualizerStyle.petals) {
-      final count = (base * 2 * math.pi / 10).floor().clamp(24, 80);
-      for (var i = 0; i < count; i++) {
-        final t = i / count;
-        final angle = t * math.pi * 2 - math.pi / 2;
-        final ray = Offset(math.cos(angle), math.sin(angle));
-        final amplitude = level(t);
-        canvas.drawLine(
-          center + ray * (base + 4),
-          center + ray * (base + 7 + amplitude * 22 * radialMotion),
-          pen(0.55 + amplitude * 0.4, width: thickness),
-        );
-      }
-      return;
-    }
-  }
-
   void _border(Canvas canvas, Size size, List<double> values) {
-    final rect = (Offset.zero & size).deflate(16);
-    if (rect.isEmpty) return;
-    final metric = (Path()..addRRect(RRect.fromRectAndRadius(rect, Radius.circular(radius)))).computeMetrics().first;
+    final contour = FlowerContour.path(size);
+    final metric = contour.computeMetrics().first;
     final count = (metric.length / 7).floor().clamp(32, 160);
     final outer = <Offset>[], inner = <Offset>[];
     for (var i = 0; i < count; i++) {
@@ -223,7 +192,7 @@ class _VisualizerPainter extends CustomPainter {
       final band = Path()
         ..fillType = PathFillType.evenOdd
         ..addPath(outside, Offset.zero)
-        ..addRRect(RRect.fromRectAndRadius(rect.inflate(2), Radius.circular(radius + 2)));
+        ..addPath(contour, Offset.zero);
       canvas.drawPath(band, pen(style == VisualizerStyle.wave ? 0.22 : 0.5, fill: true));
     }
     canvas.drawPath(outside, pen(0.8, width: style == VisualizerStyle.line ? 1.5 : 1.2));

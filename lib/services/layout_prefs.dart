@@ -94,9 +94,18 @@ enum ProgressBarStyle {
   final double height;
 }
 
+enum ProgressBarShape {
+  straight('Straight'),
+  wavy('Wavy');
+
+  const ProgressBarShape(this.label);
+  final String label;
+}
+
 enum PlayButtonShape {
   circle('Circle'),
-  roundedSquare('Rounded square');
+  roundedSquare('Rounded square'),
+  flower('Flower');
 
   const PlayButtonShape(this.label);
   final String label;
@@ -181,6 +190,7 @@ class LayoutPrefs extends ChangeNotifier {
   Set<HomeSection> homeHidden = {};
 
   ProgressBarStyle progressBar = ProgressBarStyle.thin;
+  ProgressBarShape progressShape = ProgressBarShape.straight;
   PlayButtonShape playButton = PlayButtonShape.circle;
   PhoneCoverSize phoneCover = PhoneCoverSize.normal;
 
@@ -280,6 +290,7 @@ class LayoutPrefs extends ChangeNotifier {
     density = pick(Density.values, 'density', d.density);
     coverSize = pick(CoverSize.values, 'coverSize', d.coverSize);
     progressBar = pick(ProgressBarStyle.values, 'progressBar', d.progressBar);
+    progressShape = pick(ProgressBarShape.values, 'progressShape', d.progressShape);
     playButton = pick(PlayButtonShape.values, 'playButton', d.playButton);
     phoneCover = pick(PhoneCoverSize.values, 'phoneCover', d.phoneCover);
     tabBar = pick(TabBarStyle.values, 'tabBar', d.tabBar);
@@ -312,6 +323,7 @@ class LayoutPrefs extends ChangeNotifier {
     'density': density.name,
     'coverSize': coverSize.name,
     'progressBar': progressBar.name,
+    'progressShape': progressShape.name,
     'playButton': playButton.name,
     'phoneCover': phoneCover.name,
     'tabBar': tabBar.name,
@@ -349,6 +361,7 @@ class LayoutPrefs extends ChangeNotifier {
   Future<void> setDensity(Density v) => _set(() => density = v);
   Future<void> setCoverSize(CoverSize v) => _set(() => coverSize = v);
   Future<void> setProgressBar(ProgressBarStyle v) => _set(() => progressBar = v);
+  Future<void> setProgressShape(ProgressBarShape v) => _set(() => progressShape = v);
   Future<void> setPlayButton(PlayButtonShape v) => _set(() => playButton = v);
   Future<void> setPhoneCover(PhoneCoverSize v) => _set(() => phoneCover = v);
   Future<void> setDesktopBar(DesktopBarStyle v) => _set(() => desktopBar = v);

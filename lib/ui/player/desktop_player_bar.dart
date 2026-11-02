@@ -148,6 +148,7 @@ class DesktopPlayerBar extends StatelessWidget {
               children: [
                 Artwork(
                   track: track,
+                  flower: true,
                   size: withProgress
                       ? 44
                       : small

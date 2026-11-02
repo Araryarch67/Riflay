@@ -24,6 +24,7 @@ import 'package:riflay/services/appearance.dart';
 import 'package:riflay/ui/widgets/player_backdrop.dart';
 import 'package:riflay/services/player_controller.dart';
 import 'package:riflay/ui/widgets/audio_visualizer.dart';
+import 'package:riflay/ui/widgets/flower_cover.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'wav_util.dart';
@@ -239,7 +240,14 @@ void main() {
           image.dispose();
         }
 
-        for (final style in [VisualizerStyle.bars, VisualizerStyle.pulse, VisualizerStyle.orbit]) {
+        await prefs.setPlayButton(PlayButtonShape.flower);
+        await prefs.setProgressShape(ProgressBarShape.wavy);
+        for (final style in [
+          VisualizerStyle.bars,
+          VisualizerStyle.pulse,
+          VisualizerStyle.orbit,
+          VisualizerStyle.petals,
+        ]) {
           await c.player.seek(const Duration(seconds: 3));
           await prefs.setVisualizerStyle(style);
           await tester.pumpWidget(phone(const NowPlayingPage()));
@@ -252,6 +260,20 @@ void main() {
           expect(tester.takeException(), isNull);
           await capturePhone('android-player-${style.name}');
         }
+        await look.setReactiveBackground(false);
+        await prefs.setVisualizer(false);
+        await BetaFeatures.instance.set(BetaFeature.audioVisualizer, false);
+        await c.player.seek(const Duration(seconds: 3));
+        await tester.pumpWidget(phone(const NowPlayingPage()));
+        for (var frame = 0; frame < 30; frame++) {
+          await Future<void>.delayed(const Duration(milliseconds: 40));
+          await tester.pump();
+        }
+        expect(find.byType(FlowerCover), findsOneWidget);
+        expect(find.byType(VisualizerCanvas), findsNothing);
+        expect(await native.getProperty('af'), isNot(contains('visualizer')));
+        expect(tester.takeException(), isNull);
+        await capturePhone('android-player-off');
         await tester.pumpWidget(phone(const SettingsBetaPage()));
         await tester.pump();
         expect(find.text('Beta Features'), findsWidgets);

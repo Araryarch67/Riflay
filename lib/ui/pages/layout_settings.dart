@@ -105,6 +105,16 @@ class LayoutSettings extends StatelessWidget {
                 ),
               ),
               SettingTile(
+                icon: Icons.waves_rounded,
+                title: const Text('Progress bar shape'),
+                subtitle: Text('Wavy curves the part of the song already played', style: muted),
+                control: OptionPicker<ProgressBarShape>(
+                  value: p.progressShape,
+                  onChanged: p.setProgressShape,
+                  options: [for (final v in ProgressBarShape.values) (v, v.label)],
+                ),
+              ),
+              SettingTile(
                 icon: Icons.play_circle_outline_rounded,
                 title: const Text('Play button'),
                 subtitle: Text('The shape of the big play and pause button', style: muted),

@@ -31,6 +31,17 @@ void main() {
     expect(LayoutPrefs.dur(const Duration(milliseconds: 200)), const Duration(milliseconds: 200));
   });
 
+  test('flower play button and wavy seek track persist independently', () async {
+    await p.setPlayButton(PlayButtonShape.flower);
+    await p.setProgressShape(ProgressBarShape.wavy);
+    await p.load();
+    expect(p.playButton, PlayButtonShape.flower);
+    expect(p.progressShape, ProgressBarShape.wavy);
+    await p.reset();
+    expect(p.playButton, PlayButtonShape.circle);
+    expect(p.progressShape, ProgressBarShape.straight);
+  });
+
   test('visualizer choice persists and reset returns to the original player', () async {
     await p.setDesktopBar(DesktopBarStyle.compact);
     await p.setVisualizer(true);

@@ -6,6 +6,7 @@ import '../../services/player_controller.dart';
 import '../shell_scope.dart';
 import '../theme.dart';
 import '../widgets/controls.dart';
+import '../widgets/audio_visualizer.dart';
 import '../widgets/signal_path.dart';
 import '../widgets/smooth_scroll.dart';
 import '../widgets/stats_for_nerds.dart';
@@ -85,10 +86,13 @@ class NowPlayingSidePanel extends StatelessWidget {
                     child: NowPlayingCover(
                       child: TrackVisual(
                         track: track,
-                        cover: TrackSwitcher(
-                          trackId: track.id,
-                          slide: false,
-                          child: Artwork(key: ValueKey(track.id), track: track, radius: 8),
+                        cover: AudioVisualizer(
+                          radialOnly: true,
+                          child: TrackSwitcher(
+                            trackId: track.id,
+                            slide: false,
+                            child: Artwork(key: ValueKey(track.id), track: track, radius: 8),
+                          ),
                         ),
                       ),
                     ),

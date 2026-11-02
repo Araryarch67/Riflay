@@ -5,6 +5,7 @@ import '../../models/track.dart';
 import '../../services/player_controller.dart';
 import '../theme.dart';
 import '../widgets/controls.dart';
+import '../widgets/audio_visualizer.dart';
 import '../widgets/marquee_text.dart';
 import 'full_screen_player.dart';
 import 'player_common.dart';
@@ -73,10 +74,13 @@ class _MiniPlayerWindowState extends State<MiniPlayerWindow> {
             DragToMoveArea(
               child: track == null
                   ? const SizedBox.expand()
-                  : TrackSwitcher(
-                      trackId: track.id,
-                      slide: false,
-                      child: Artwork(key: ValueKey(track.id), track: track, radius: 0),
+                  : AudioVisualizer(
+                      radialOnly: true,
+                      child: TrackSwitcher(
+                        trackId: track.id,
+                        slide: false,
+                        child: Artwork(key: ValueKey(track.id), track: track, radius: 0),
+                      ),
                     ),
             ),
             Positioned(

@@ -104,9 +104,14 @@ void main() {
       }
     }
     expect(longestRay, greaterThan(12), reason: 'Orbit must draw radial bars, not isolated dots');
+    final petals = await render(style: VisualizerStyle.petals, name: 'petals-cover');
+    expect(edge(petals, 0), edge(orbit, 0), reason: 'Petals and Orbit share the same cover contour');
+    expect(petals, isNot(orbit), reason: 'Petals uses fewer, wider radial bars');
     levels.clear();
     final quietOrbit = await render(style: VisualizerStyle.orbit, name: 'orbit-resting');
     expect(quietOrbit, isNot(orbit));
+    expect(quietOrbit, resting, reason: 'The resting cover must not change shape across styles');
+    expect(await render(style: VisualizerStyle.petals, name: 'petals-resting'), resting);
     expect(
       edge(quietOrbit, 0) - edge(quietOrbit, math.pi / 24),
       greaterThanOrEqualTo(2),

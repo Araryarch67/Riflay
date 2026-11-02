@@ -3,6 +3,7 @@ import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/gestures.dart' show PointerScrollEvent;
 import 'package:flutter/material.dart';
+
 import 'package:just_audio/just_audio.dart';
 
 import '../../models/track.dart';
@@ -13,6 +14,8 @@ import '../../services/player_controller.dart';
 import '../debug_switches.dart';
 import '../shortcuts.dart';
 import '../theme.dart';
+import 'flower_cover.dart';
+import 'wavy_seek_track.dart';
 
 String formatDuration(Duration? d) {
   if (d == null) return '--:--';
@@ -34,7 +37,15 @@ String formatTotal(Iterable<Track> tracks) {
 /// Anything up to about [Metadata.thumbnailSide] px is drawn from a small
 /// thumbnail made once per cover, not from the full-size embedded picture.
 class Artwork extends StatelessWidget implements ColorFreeSubtree {
-  const Artwork({super.key, required this.track, this.size, this.radius = 4, this.circle = false, this.icon});
+  const Artwork({
+    super.key,
+    required this.track,
+    this.size,
+    this.radius = 4,
+    this.circle = false,
+    this.flower = false,
+    this.icon,
+  });
 
   final Track? track;
 
@@ -42,6 +53,7 @@ class Artwork extends StatelessWidget implements ColorFreeSubtree {
   final double? size;
   final double radius;
   final bool circle;
+  final bool flower;
   final IconData? icon;
 
   @override
@@ -77,6 +89,8 @@ class Artwork extends StatelessWidget implements ColorFreeSubtree {
       // ClipRRect / ClipOval have fast paths; a generic ClipPath per cover made scrolling heavy.
       child: circle
           ? ClipOval(child: child)
+          : flower
+          ? ClipPath(clipper: const FlowerClipper(fit: true), child: child)
           : r == 0
           ? child
           : ClipRRect(borderRadius: BorderRadius.circular(r), child: child),
@@ -323,6 +337,7 @@ class _SeekBarState extends State<SeekBar> {
           child: SliderTheme(
             data: SliderTheme.of(context).copyWith(
               trackHeight: LayoutPrefs.instance.progressBar.height,
+              trackShape: LayoutPrefs.instance.progressShape == ProgressBarShape.wavy ? const WavySeekTrack() : null,
               activeTrackColor: AppColors.of(context).accent,
               thumbShape: RoundSliderThumbShape(
                 enabledThumbRadius: active || !widget.inline
@@ -408,43 +423,49 @@ class PlayButton extends StatelessWidget implements ColorFreeSelf {
     final colors = this.color == null || this.iconColor == null ? AppColors.of(context) : null;
     final color = this.color ?? colors!.accent;
     final iconColor = this.iconColor ?? colors!.onAccent;
-    return Tooltip(
-      message: tipWith(playing ? 'Pause' : 'Play', AppAction.playPause),
-      child: _Pressable(
-        onPressed: onPressed,
-        child: Container(
-          width: size,
-          height: size,
-          decoration: BoxDecoration(
-            color: onPressed == null ? color.withValues(alpha: 0.4) : color,
-            shape: LayoutPrefs.instance.playButton == PlayButtonShape.circle ? BoxShape.circle : BoxShape.rectangle,
-            borderRadius: LayoutPrefs.instance.playButton == PlayButtonShape.circle
-                ? null
-                : BorderRadius.circular(size * 0.3),
-          ),
-          child: loading
-              ? Padding(
-                  padding: EdgeInsets.all(size * 0.3),
-                  child: CircularProgressIndicator(strokeWidth: 2.5, color: iconColor),
-                )
-              : AnimatedSwitcher(
-                  duration: LayoutPrefs.dur(const Duration(milliseconds: 180)),
-                  transitionBuilder: (child, anim) => LayoutPrefs.moves
-                      ? ScaleTransition(
-                          scale: Tween(
-                            begin: 0.6,
-                            end: 1.0,
-                          ).animate(CurvedAnimation(parent: anim, curve: Curves.easeOutBack)),
-                          child: FadeTransition(opacity: anim, child: child),
-                        )
-                      : FadeTransition(opacity: anim, child: child),
-                  child: Icon(
-                    playing ? Icons.pause_rounded : Icons.play_arrow_rounded,
-                    key: ValueKey(playing),
-                    color: iconColor,
-                    size: size * 0.6,
-                  ),
+    return ListenableBuilder(
+      listenable: LayoutPrefs.instance,
+      builder: (context, _) => Tooltip(
+        message: tipWith(playing ? 'Pause' : 'Play', AppAction.playPause),
+        child: _Pressable(
+          onPressed: onPressed,
+          child: Container(
+            width: size,
+            height: size,
+            decoration: ShapeDecoration(
+              color: onPressed == null ? color.withValues(alpha: 0.4) : color,
+              shape: switch (LayoutPrefs.instance.playButton) {
+                PlayButtonShape.circle => const CircleBorder(),
+                PlayButtonShape.roundedSquare => RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(size * 0.3),
                 ),
+                PlayButtonShape.flower => const FlowerBorder(),
+              },
+            ),
+            child: loading
+                ? Padding(
+                    padding: EdgeInsets.all(size * 0.3),
+                    child: CircularProgressIndicator(strokeWidth: 2.5, color: iconColor),
+                  )
+                : AnimatedSwitcher(
+                    duration: LayoutPrefs.dur(const Duration(milliseconds: 180)),
+                    transitionBuilder: (child, anim) => LayoutPrefs.moves
+                        ? ScaleTransition(
+                            scale: Tween(
+                              begin: 0.6,
+                              end: 1.0,
+                            ).animate(CurvedAnimation(parent: anim, curve: Curves.easeOutBack)),
+                            child: FadeTransition(opacity: anim, child: child),
+                          )
+                        : FadeTransition(opacity: anim, child: child),
+                    child: Icon(
+                      playing ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                      key: ValueKey(playing),
+                      color: iconColor,
+                      size: size * 0.6,
+                    ),
+                  ),
+          ),
         ),
       ),
     );
