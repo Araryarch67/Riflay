@@ -75,20 +75,28 @@ Future<PlayerController> _panels(WidgetTester tester, Widget panel, {PlayerContr
   return c;
 }
 
+/// Finish the selected page transition before tapping through its reveal mask.
+Future<void> _finishMotion(WidgetTester tester) async {
+  await tester.pump();
+  await tester.pump();
+  await tester.pump(LayoutPrefs.pageDuration() + const Duration(milliseconds: 100));
+  await tester.pump();
+}
+
 void main() {
   testWidgets('Search waits for a tap before showing the phone keyboard, including revisits', (tester) async {
     await _app(tester, const Size(400, 800));
     await tester.tap(find.byTooltip('Search').last);
-    await tester.pump(const Duration(milliseconds: 600));
+    await _finishMotion(tester);
     final field = find.widgetWithText(TextField, 'What do you want to play?').first;
     expect(tester.testTextInput.isVisible, isFalse);
     await tester.tap(field);
     await tester.pump();
     expect(tester.testTextInput.isVisible, isTrue);
     await tester.tap(find.byTooltip('Home').last);
-    await tester.pump(const Duration(milliseconds: 600));
+    await _finishMotion(tester);
     await tester.tap(find.byTooltip('Search').last);
-    await tester.pump(const Duration(milliseconds: 600));
+    await _finishMotion(tester);
     expect(tester.testTextInput.isVisible, isFalse);
   });
 
@@ -97,14 +105,14 @@ void main() {
       await _app(tester, const Size(400, 800), controller: _ArtistPlayer());
       ShellScope.of(tester.element(find.byType(MiniPlayer))).openNowPlaying();
       await tester.pump();
-      await tester.pump(const Duration(milliseconds: 600));
+      await _finishMotion(tester);
       if (menu) {
         await tester.tap(find.byTooltip('More').last);
         await tester.pump();
-        await tester.pump(const Duration(milliseconds: 600));
+        await _finishMotion(tester);
         await tester.tap(find.byTooltip('More options for Control test').last);
         await tester.pump();
-        await tester.pump(const Duration(milliseconds: 600));
+        await _finishMotion(tester);
         await tester.tap(find.text('Go to artist'));
       } else {
         await tester.tap(find.descendant(of: find.byType(NowPlayingPage), matching: find.text('Artist')).first);
@@ -126,11 +134,11 @@ void main() {
     }
     // No page has a gear of its own any more: the tab is the only Settings.
     await tester.tap(find.byTooltip('Library').last);
-    await tester.pump(const Duration(milliseconds: 600));
+    await _finishMotion(tester);
     expect(find.byTooltip('Settings'), findsOneWidget);
 
     await tester.tap(find.byTooltip('Settings').last);
-    await tester.pump(const Duration(milliseconds: 600));
+    await _finishMotion(tester);
     expect(find.text('Sound'), findsWidgets);
     expect(find.text('Look & feel'), findsWidgets);
   });
@@ -177,22 +185,24 @@ void main() {
     });
     addTearDown(() => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.platform, null));
     await tester.tap(find.byTooltip('Settings').last);
-    await tester.pump(const Duration(milliseconds: 600));
+    await _finishMotion(tester);
     await tester.tap(find.text('Look & feel'));
     await tester.pump();
-    await tester.pump(const Duration(milliseconds: 600));
+    await _finishMotion(tester);
     await tester.binding.handlePopRoute();
-    await tester.pump(const Duration(milliseconds: 600));
+    await _finishMotion(tester);
     expect(find.text('Sound'), findsWidgets);
     expect(exits, 0);
     await tester.binding.handlePopRoute();
-    await tester.pump(const Duration(milliseconds: 600));
+    await _finishMotion(tester);
     expect(exits, 0);
     await tester.binding.handlePopRoute();
+    await tester.pump();
     await tester.pump();
     expect(find.text('Press back again to exit'), findsOneWidget);
     expect(exits, 0);
     await tester.binding.handlePopRoute();
+    await tester.pump();
     await tester.pump();
     expect(exits, 1);
   });

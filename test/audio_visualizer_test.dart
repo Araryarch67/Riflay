@@ -18,7 +18,7 @@ void main() {
   });
   tearDown(prefs.reset);
 
-  testWidgets('off preserves the cover size without requiring any audio player', (tester) async {
+  testWidgets('off preserves the cover with a minimal glow without requiring an audio player', (tester) async {
     const cover = SizedBox(key: ValueKey('art'), width: 200, height: 200);
     await tester.pumpWidget(
       const MaterialApp(
@@ -28,7 +28,7 @@ void main() {
     expect(tester.getSize(find.byKey(const ValueKey('art'))), const Size(200, 200));
     expect(find.byType(FlowerCover), findsOneWidget);
     expect(find.byType(AudioReactiveView), findsNothing);
-    expect(find.descendant(of: find.byType(AudioVisualizer), matching: find.byType(CustomPaint)), findsNothing);
+    expect(find.descendant(of: find.byType(AudioVisualizer), matching: find.byType(CustomPaint)), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -40,11 +40,11 @@ void main() {
         home: Center(child: AudioVisualizer(child: SizedBox(width: 200, height: 200))),
       ),
     );
-    expect(find.descendant(of: find.byType(AudioVisualizer), matching: find.byType(CustomPaint)), findsNothing);
+    expect(find.descendant(of: find.byType(AudioVisualizer), matching: find.byType(CustomPaint)), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('linear visualizers preserve the artwork without a decorative border', (tester) async {
+  testWidgets('linear cover previews keep a minimal glow without requiring an audio player', (tester) async {
     await prefs.setVisualizer(true);
     for (final style in VisualizerStyle.values.where((style) => !style.radial)) {
       await prefs.setVisualizerStyle(style);
@@ -58,7 +58,7 @@ void main() {
       expect(tester.getSize(find.byKey(const ValueKey('art'))), const Size(200, 200));
       expect(find.byType(FlowerCover), findsOneWidget);
       expect(find.byType(AudioReactiveView), findsNothing);
-      expect(find.descendant(of: find.byType(AudioVisualizer), matching: find.byType(CustomPaint)), findsNothing);
+      expect(find.descendant(of: find.byType(AudioVisualizer), matching: find.byType(CustomPaint)), findsOneWidget);
     }
     expect(tester.takeException(), isNull);
   });
@@ -78,6 +78,26 @@ void main() {
     );
     expect(find.text('Audio visualizer'), findsNothing);
     expect(find.text('Visualizer style'), findsNothing);
+  });
+
+  testWidgets('cover shape can change while the visualizer is off', (tester) async {
+    await tester.runAsync(() => BetaFeatures.instance.set(BetaFeature.audioVisualizer, false));
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(body: SingleChildScrollView(child: BetaSettings())),
+      ),
+    );
+    expect(find.text('Cover shape'), findsOneWidget);
+    await tester.tap(find.text('Flower'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Square'));
+    await tester.pumpAndSettle();
+    expect(prefs.visualizerCoverShape, VisualizerCoverShape.square);
+    expect(prefs.visualizerEnabled, isFalse);
+    await tester.pumpWidget(const MaterialApp(home: AudioVisualizer(child: SizedBox.square(dimension: 200))));
+    expect(tester.widget<FlowerCover>(find.byType(FlowerCover)).shape, VisualizerCoverShape.square);
+    expect(find.byType(AudioReactiveView), findsNothing);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('Beta Features owns visualizer opt-in and styles', (tester) async {

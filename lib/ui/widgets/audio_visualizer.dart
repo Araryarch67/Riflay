@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../services/layout_prefs.dart';
 import '../../services/beta_features.dart';
 import '../../services/visualizer_levels.dart';
+import '../player_scope.dart';
 import '../theme.dart';
 import 'audio_reactive_view.dart';
 import 'pulse_cover.dart';
@@ -24,13 +25,30 @@ class AudioVisualizer extends StatelessWidget {
     builder: (context, _) {
       final prefs = LayoutPrefs.instance;
       final style = prefs.visualizerStyle;
+      if (prefs.visualizerEnabled &&
+          LayoutPrefs.moves &&
+          !MediaQuery.disableAnimationsOf(context) &&
+          child != null &&
+          !style.radial &&
+          context.getInheritedWidgetOfExactType<PlayerScope>() != null) {
+        return AudioReactiveView(
+          builder: (context, levels) => RepaintBoundary(
+            child: FlowerCover(
+              levels: levels,
+              shape: prefs.visualizerCoverShape,
+              color: AppColors.of(context).accent,
+              child: child!,
+            ),
+          ),
+        );
+      }
       if (!prefs.visualizerEnabled ||
           !LayoutPrefs.moves ||
           MediaQuery.disableAnimationsOf(context) ||
           (child != null && !style.radial) ||
           (radialOnly && !style.radial) ||
           (linearOnly && style.radial)) {
-        return child == null ? const SizedBox.shrink() : FlowerCover(child: child!);
+        return child == null ? const SizedBox.shrink() : FlowerCover(shape: prefs.visualizerCoverShape, child: child!);
       }
       return AudioReactiveView(
         builder: (context, levels) {
@@ -38,6 +56,7 @@ class AudioVisualizer extends StatelessWidget {
             levels: levels,
             color: AppColors.of(context).accent,
             style: style,
+            coverShape: prefs.visualizerCoverShape,
             radius: LayoutPrefs.radius(8),
             radialMotion: prefs.visualizerRadius,
             thickness: prefs.visualizerThickness,
@@ -70,6 +89,7 @@ class VisualizerCanvas extends StatelessWidget {
     required this.color,
     required this.style,
     this.radius = 8,
+    this.coverShape = VisualizerCoverShape.flower,
     this.radialMotion = 1.6,
     this.thickness = 3,
     this.child,
@@ -78,6 +98,7 @@ class VisualizerCanvas extends StatelessWidget {
   final Color color;
   final VisualizerStyle style;
   final double radius;
+  final VisualizerCoverShape coverShape;
   final double radialMotion;
   final double thickness;
   final Widget? child;
@@ -89,6 +110,7 @@ class VisualizerCanvas extends StatelessWidget {
         levels: levels,
         color: color,
         movement: radialMotion,
+        coverShape: coverShape,
         thickness: thickness,
         orbit: style != VisualizerStyle.pulse,
         petals: style == VisualizerStyle.petals,
@@ -96,15 +118,32 @@ class VisualizerCanvas extends StatelessWidget {
       );
     }
     return CustomPaint(
-      foregroundPainter: _VisualizerPainter(levels, color, style, child != null, radius, radialMotion, thickness),
-      child: child == null ? null : FlowerCover(child: child!),
+      foregroundPainter: _VisualizerPainter(
+        levels,
+        color,
+        style,
+        child != null,
+        radius,
+        radialMotion,
+        thickness,
+        coverShape,
+      ),
+      child: child == null ? null : FlowerCover(levels: levels, shape: coverShape, color: color, child: child!),
     );
   }
 }
 
 class _VisualizerPainter extends CustomPainter {
-  _VisualizerPainter(this.levels, this.color, this.style, this.border, this.radius, this.radialMotion, this.thickness)
-    : super(repaint: levels);
+  _VisualizerPainter(
+    this.levels,
+    this.color,
+    this.style,
+    this.border,
+    this.radius,
+    this.radialMotion,
+    this.thickness,
+    this.coverShape,
+  ) : super(repaint: levels);
   final VisualizerLevels levels;
   final Color color;
   final VisualizerStyle style;
@@ -112,6 +151,7 @@ class _VisualizerPainter extends CustomPainter {
   final double radius;
   final double radialMotion;
   final double thickness;
+  final VisualizerCoverShape coverShape;
 
   Paint pen(double opacity, {double width = 2, bool fill = false}) => Paint()
     ..color = color.withValues(alpha: opacity)
@@ -158,7 +198,7 @@ class _VisualizerPainter extends CustomPainter {
   }
 
   void _border(Canvas canvas, Size size, List<double> values) {
-    final contour = FlowerContour.path(size);
+    final contour = FlowerContour.coverPath(size, shape: coverShape, levels: levels);
     final metric = contour.computeMetrics().first;
     final count = (metric.length / 7).floor().clamp(32, 160);
     final outer = <Offset>[], inner = <Offset>[];
@@ -293,5 +333,6 @@ class _VisualizerPainter extends CustomPainter {
       old.radius != radius ||
       old.style != style ||
       old.radialMotion != radialMotion ||
-      old.thickness != thickness;
+      old.thickness != thickness ||
+      old.coverShape != coverShape;
 }

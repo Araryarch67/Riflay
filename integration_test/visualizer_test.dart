@@ -122,21 +122,25 @@ void main() {
         final chain = await native.getProperty('af');
         expect('visualizer'.allMatches(chain).length, 1, reason: 'visualizers and reactive background share one meter');
         const shots = String.fromEnvironment('SHOTS');
-        for (final style in VisualizerStyle.values) {
-          await prefs.setVisualizerStyle(style);
-          await tester.pump();
-          await Future<void>.delayed(const Duration(milliseconds: 120));
-          await tester.pump();
-          if (shots.isNotEmpty && !Platform.isAndroid) {
-            Directory(shots).createSync(recursive: true);
-            final boundary = capture.currentContext!.findRenderObject()! as RenderRepaintBoundary;
-            final image = await boundary.toImage();
-            final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
-            await File('$shots/visualizer-${style.name}.png').writeAsBytes(bytes!.buffer.asUint8List());
-            image.dispose();
+        for (final shape in VisualizerCoverShape.values) {
+          await prefs.setVisualizerCoverShape(shape);
+          for (final style in VisualizerStyle.values) {
+            await prefs.setVisualizerStyle(style);
+            await tester.pump();
+            await Future<void>.delayed(const Duration(milliseconds: 120));
+            await tester.pump();
+            if (shots.isNotEmpty && !Platform.isAndroid) {
+              Directory(shots).createSync(recursive: true);
+              final boundary = capture.currentContext!.findRenderObject()! as RenderRepaintBoundary;
+              final image = await boundary.toImage();
+              final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
+              await File('$shots/visualizer-${shape.name}-${style.name}.png').writeAsBytes(bytes!.buffer.asUint8List());
+              image.dispose();
+            }
+            expect(tester.takeException(), isNull);
           }
-          expect(tester.takeException(), isNull);
         }
+        await prefs.setVisualizerCoverShape(VisualizerCoverShape.flower);
         await c.player.pause();
         await Future<void>.delayed(const Duration(milliseconds: 150));
         expect(c.audio.visualizerLevels.value, everyElement(0));
@@ -242,12 +246,15 @@ void main() {
 
         await prefs.setPlayButton(PlayButtonShape.flower);
         await prefs.setProgressShape(ProgressBarShape.wavy);
-        for (final style in [
-          VisualizerStyle.bars,
-          VisualizerStyle.pulse,
-          VisualizerStyle.orbit,
-          VisualizerStyle.petals,
+        for (final (style, shape) in [
+          (VisualizerStyle.bars, VisualizerCoverShape.flower),
+          (VisualizerStyle.pulse, VisualizerCoverShape.flower),
+          (VisualizerStyle.orbit, VisualizerCoverShape.flower),
+          (VisualizerStyle.petals, VisualizerCoverShape.flower),
+          (VisualizerStyle.pulse, VisualizerCoverShape.square),
+          (VisualizerStyle.orbit, VisualizerCoverShape.square),
         ]) {
+          await prefs.setVisualizerCoverShape(shape);
           await c.player.seek(const Duration(seconds: 3));
           await prefs.setVisualizerStyle(style);
           await tester.pumpWidget(phone(const NowPlayingPage()));
@@ -258,7 +265,7 @@ void main() {
           expect(find.byType(VisualizerCanvas), findsWidgets);
           expect(c.audio.visualizerLevels.value.any((v) => v > 0.3), isTrue);
           expect(tester.takeException(), isNull);
-          await capturePhone('android-player-${style.name}');
+          await capturePhone('android-player-${style.name}${shape == VisualizerCoverShape.square ? '-square' : ''}');
         }
         await look.setReactiveBackground(false);
         await prefs.setVisualizer(false);

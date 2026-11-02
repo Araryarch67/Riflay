@@ -3,9 +3,10 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../../services/visualizer_levels.dart';
+import '../../services/layout_prefs.dart';
 import 'flower_cover.dart';
 
-/// Pulse draws a continuous audio-driven wave around the flower cover.
+/// Pulse fills a continuous audio-driven wave around the selected cover shape.
 /// Orbit adds spectrum bars that start immediately outside the same contour.
 class PulseCover extends StatelessWidget {
   const PulseCover({
@@ -17,6 +18,7 @@ class PulseCover extends StatelessWidget {
     this.child,
     this.orbit = false,
     this.petals = false,
+    this.coverShape = VisualizerCoverShape.flower,
   });
 
   final VisualizerLevels levels;
@@ -26,28 +28,33 @@ class PulseCover extends StatelessWidget {
   final Widget? child;
   final bool orbit;
   final bool petals;
+  final VisualizerCoverShape coverShape;
 
   @override
   Widget build(BuildContext context) {
-    final contour = _PulseContour(levels, movement, thickness, orbit, petals);
+    final contour = _PulseContour(levels, movement, thickness, orbit, petals, coverShape);
     return CustomPaint(
       painter: _PulsePainter(contour, color, glow: true),
       foregroundPainter: _PulsePainter(contour, color, glow: false),
       child: child == null
           ? null
-          : ClipPath(clipper: orbit ? _PulseClipper(contour) : const FlowerClipper(), child: child),
+          : ClipPath(
+              clipper: orbit ? _PulseClipper(contour) : FlowerClipper(levels: levels, shape: coverShape),
+              child: child,
+            ),
     );
   }
 }
 
 class _PulseContour {
-  _PulseContour(this.levels, this.movement, this.thickness, this.orbit, this.petals);
+  _PulseContour(this.levels, this.movement, this.thickness, this.orbit, this.petals, this.coverShape);
 
   final VisualizerLevels levels;
   final double movement;
   final double thickness;
   final bool orbit;
   final bool petals;
+  final VisualizerCoverShape coverShape;
   Size? _size;
   List<double>? _values;
   double? _beat;
@@ -75,14 +82,20 @@ class _PulseContour {
     final motion = (movement / 2.5).clamp(0.0, 1.0);
     final scallop = (1 + math.cos(phase * 24)) * 0.5;
     if (orbit) {
+      if (coverShape == VisualizerCoverShape.square) {
+        return FlowerContour.coverRadius(side, phase, shape: coverShape, levels: levels);
+      }
       // A flower-shaped base stays visible even between beats. Leave room
       // outside it for the radial spectrum rather than shrinking on slider changes.
       return FlowerContour.radius(side, phase) + side * motion * (beat * 0.014 + drive * scallop * 0.025);
     }
-    // The cover stays still inside a separate, crisp waveform. Peaks and
+    // The cover breathes gently inside a separate, crisp waveform. Peaks and
     // troughs follow each audio band instead of just brightening its edge.
     final gap = side * 0.012 + thickness;
-    final available = math.max(0.0, side * 0.48 - thickness - side * 0.368 - gap);
+    final base = coverShape == VisualizerCoverShape.flower
+        ? side * 0.368
+        : FlowerContour.coverRadius(side, phase, shape: coverShape);
+    final available = math.max(0.0, outerRadius(side, phase, 0.48) - thickness - base - gap);
     // Uneven, overlapping lobes avoid the uniformly spaced flower/sine look.
     // Cosine harmonics keep the two sides mirrored; audio bands reshape them.
     final warp = levels.value[3] * 2.1 + levels.value[11] * 1.3 + levels.value[19] * 0.8;
@@ -98,8 +111,12 @@ class _PulseContour {
             );
     final wave = 0.08 + texture * 0.92;
     final sides = 0.18 + 0.82 * math.pow(math.sin(phase), 2);
-    return side * 0.368 + gap + available * math.sqrt(motion) * drive * wave * sides;
+    return base + gap + available * math.sqrt(motion) * drive * wave * sides;
   }
+
+  double outerRadius(double side, double phase, double fraction) => coverShape == VisualizerCoverShape.square
+      ? side * fraction / math.max(math.sin(phase).abs(), math.cos(phase).abs())
+      : side * fraction;
 }
 
 class _PulseClipper extends CustomClipper<Path> {
@@ -126,19 +143,29 @@ class _PulsePainter extends CustomPainter {
     final width = contour.thickness;
     final pen = Paint()..style = PaintingStyle.stroke;
     if (!contour.orbit) {
-      // Paint the waveform in the foreground so artwork cannot obscure it.
-      // A solid stroke, rather than a blur, keeps its crests readable.
-      if (glow) return;
+      if (glow) {
+        final energy = contour.levels.backgroundEnergy.clamp(0.0, 1.0);
+        canvas.drawPath(
+          path,
+          Paint()
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = width
+            ..color = color.withValues(alpha: 0.12 + energy * 0.1)
+            ..maskFilter = MaskFilter.blur(BlurStyle.normal, math.min(3.0, size.shortestSide * 0.01)),
+        );
+        // Fill up to the artwork's flower edge without tinting the cover,
+        // including artwork with transparent pixels.
+        final band = Path()
+          ..fillType = PathFillType.evenOdd
+          ..addPath(path, Offset.zero)
+          ..addPath(FlowerContour.coverPath(size, levels: contour.levels, shape: contour.coverShape), Offset.zero);
+        canvas.drawPath(band, Paint()..color = color);
+        return;
+      }
       canvas.drawPath(
         path,
         pen
           ..strokeJoin = StrokeJoin.round
-          ..strokeWidth = width + 2
-          ..color = Colors.black.withValues(alpha: 0.35),
-      );
-      canvas.drawPath(
-        path,
-        pen
           ..strokeWidth = width
           ..color = color,
       );
@@ -172,7 +199,7 @@ class _PulsePainter extends CustomPainter {
           final ray = Offset(math.cos(angle), math.sin(angle));
           final amplitude = math.pow(contour.level(phase).clamp(0.0, 1.0), 0.8).toDouble();
           final base = contour.radius(side, phase) + gap;
-          final room = math.max(0.0, side * 0.49 - rayWidth / 2 - base);
+          final room = math.max(0.0, contour.outerRadius(side, phase, 0.49) - rayWidth / 2 - base);
           final length = math.min(room, side * 0.025 + amplitude * side * 0.15 * (contour.movement / 2.5));
           canvas.drawLine(
             center + ray * base,

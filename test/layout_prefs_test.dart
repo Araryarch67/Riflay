@@ -15,6 +15,7 @@ void main() {
   test('defaults use capsule navigation and standard player appearance', () {
     expect(p.visualizer, isFalse);
     expect(p.visualizerStyle, VisualizerStyle.pulse);
+    expect(p.visualizerCoverShape, VisualizerCoverShape.flower);
     expect(p.tabBar, TabBarStyle.capsule);
     expect(p.corners, CornerStyle.rounded);
     expect(p.density, Density.comfortable);
@@ -26,20 +27,23 @@ void main() {
     expect(p.showQualityBadge, isTrue);
     expect(p.dimUnsungLyrics, isTrue);
     expect(p.motion, Motion.full);
+    expect(p.pageMotion, PageMotionStyle.diamondReveal);
+    expect(p.pageSpeed, PageMotionSpeed.relaxed);
+    expect(p.progressShape, ProgressBarShape.wavy);
     expect(p.isCustomised, isFalse);
     expect(LayoutPrefs.radius(8), 8);
     expect(LayoutPrefs.dur(const Duration(milliseconds: 200)), const Duration(milliseconds: 200));
   });
 
-  test('flower play button and wavy seek track persist independently', () async {
+  test('flower play button and straight seek override persist independently', () async {
     await p.setPlayButton(PlayButtonShape.flower);
-    await p.setProgressShape(ProgressBarShape.wavy);
+    await p.setProgressShape(ProgressBarShape.straight);
     await p.load();
     expect(p.playButton, PlayButtonShape.flower);
-    expect(p.progressShape, ProgressBarShape.wavy);
+    expect(p.progressShape, ProgressBarShape.straight);
     await p.reset();
     expect(p.playButton, PlayButtonShape.circle);
-    expect(p.progressShape, ProgressBarShape.straight);
+    expect(p.progressShape, ProgressBarShape.wavy);
   });
 
   test('visualizer choice persists and reset returns to the original player', () async {
@@ -54,6 +58,19 @@ void main() {
     expect(p.visualizer, isFalse);
     p.restore({'visualizerStyle': 'future-style'});
     expect(p.visualizerStyle, VisualizerStyle.pulse);
+  });
+
+  test('cover shape persists independently of visualizer enablement and defaults safely', () async {
+    await p.setVisualizerCoverShape(VisualizerCoverShape.square);
+    await p.load();
+    expect(p.visualizerCoverShape, VisualizerCoverShape.square);
+    expect(p.visualizer, isFalse);
+    p.restore({'visualizerCoverShape': 'future-shape'});
+    expect(p.visualizerCoverShape, VisualizerCoverShape.flower);
+    await p.reset();
+    expect(p.pageMotion, PageMotionStyle.diamondReveal);
+    expect(p.pageSpeed, PageMotionSpeed.relaxed);
+    expect(p.progressShape, ProgressBarShape.wavy);
   });
 
   test('old visualizer layouts migrate to Pulse; new choices still persist', () async {
@@ -121,8 +138,10 @@ void main() {
     expect(p.homeHidden, {HomeSection.discover});
   });
 
-  test('themed theme is unchanged by the defaults, and follows square corners', () async {
+  test('classic balanced preserves theme fast path, while corners still apply', () async {
     final base = ThemeData();
+    await p.setPageMotion(PageMotionStyle.classic);
+    await p.setPageSpeed(PageMotionSpeed.balanced);
     expect(identical(p.themed(base), base), isTrue);
     await p.setCorners(CornerStyle.square);
     final shape = p.themed(base).dialogTheme.shape! as RoundedRectangleBorder;

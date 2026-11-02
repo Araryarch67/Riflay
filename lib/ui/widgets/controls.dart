@@ -90,15 +90,20 @@ class Artwork extends StatelessWidget implements ColorFreeSubtree {
       child: circle
           ? ClipOval(child: child)
           : flower
-          ? ClipPath(clipper: const FlowerClipper(fit: true), child: child)
+          ? ListenableBuilder(
+              listenable: LayoutPrefs.instance,
+              child: child,
+              builder: (context, art) =>
+                  FlowerCover(fit: true, shape: LayoutPrefs.instance.visualizerCoverShape, child: art!),
+            )
           : r == 0
           ? child
           : ClipRRect(borderRadius: BorderRadius.circular(r), child: child),
     );
   }
 
-  // The only colour in a cover is the placeholder's, and it follows the theme by itself ([AppColors.of]): a palette
-  // change leaves the covers (and their pictures) alone.
+  // The placeholder and flower glow follow the theme in their own widgets,
+  // leaving the picture itself alone during palette changes.
   Widget _placeholder(Track? t) =>
       _ArtPlaceholder(icon: icon ?? (circle ? Icons.person_outline_rounded : Icons.music_note_outlined));
 }

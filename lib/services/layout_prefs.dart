@@ -42,6 +42,15 @@ enum VisualizerStyle {
   bool get radial => this == pulse || this == orbit || this == petals;
 }
 
+/// Player artwork shape, independent of whether audio visualization is enabled.
+enum VisualizerCoverShape {
+  flower('Flower'),
+  square('Square');
+
+  const VisualizerCoverShape(this.label);
+  final String label;
+}
+
 /// How round the corners of covers, cards, menus and dialogs are.
 enum CornerStyle {
   square('Square', 0),
@@ -172,8 +181,8 @@ enum HomeSection {
 
 /// How the app is laid out: corners, density, cover sizes, Home's sections, the
 /// player's details, lyrics and motion. One instance for the whole app
-/// ([instance]), loaded before the first frame. The defaults are how the app
-/// has always looked.
+/// ([instance]), loaded before the first frame. Fresh installs and Reset share
+/// the same defaults.
 class LayoutPrefs extends ChangeNotifier {
   LayoutPrefs._();
 
@@ -190,7 +199,7 @@ class LayoutPrefs extends ChangeNotifier {
   Set<HomeSection> homeHidden = {};
 
   ProgressBarStyle progressBar = ProgressBarStyle.thin;
-  ProgressBarShape progressShape = ProgressBarShape.straight;
+  ProgressBarShape progressShape = ProgressBarShape.wavy;
   PlayButtonShape playButton = PlayButtonShape.circle;
   PhoneCoverSize phoneCover = PhoneCoverSize.normal;
 
@@ -201,6 +210,7 @@ class LayoutPrefs extends ChangeNotifier {
   bool visualizer = false;
   bool get visualizerEnabled => visualizer && BetaFeatures.instance.isOn(BetaFeature.audioVisualizer);
   VisualizerStyle visualizerStyle = VisualizerStyle.pulse;
+  VisualizerCoverShape visualizerCoverShape = VisualizerCoverShape.flower;
   double visualizerRadius = 1.6;
   double visualizerThickness = 3;
 
@@ -209,8 +219,8 @@ class LayoutPrefs extends ChangeNotifier {
   bool dimUnsungLyrics = true;
 
   Motion motion = Motion.full;
-  PageMotionStyle pageMotion = PageMotionStyle.classic;
-  PageMotionSpeed pageSpeed = PageMotionSpeed.balanced;
+  PageMotionStyle pageMotion = PageMotionStyle.diamondReveal;
+  PageMotionSpeed pageSpeed = PageMotionSpeed.relaxed;
 
   // Shorthands for widgets. They read the one instance, like AppColors does.
 
@@ -301,6 +311,7 @@ class LayoutPrefs extends ChangeNotifier {
         ? pick(VisualizerStyle.values, 'visualizerStyle', d.visualizerStyle)
         : VisualizerStyle.pulse;
     visualizerRadius = (j['visualizerRadius'] as num?)?.toDouble().clamp(0.5, 2.5) ?? d.visualizerRadius;
+    visualizerCoverShape = pick(VisualizerCoverShape.values, 'visualizerCoverShape', d.visualizerCoverShape);
     visualizerThickness = (j['visualizerThickness'] as num?)?.toDouble().clamp(1, 8) ?? d.visualizerThickness;
     lyricsSize = pick(LyricsSize.values, 'lyricsSize', d.lyricsSize);
     lyricsAlign = pick(LyricsAlign.values, 'lyricsAlign', d.lyricsAlign);
@@ -331,6 +342,7 @@ class LayoutPrefs extends ChangeNotifier {
     'showQualityBadge': showQualityBadge,
     'visualizer': visualizer,
     'visualizerStyle': visualizerStyle.name,
+    'visualizerCoverShape': visualizerCoverShape.name,
     'visualizerVersion': 3,
     'visualizerRadius': visualizerRadius,
     'visualizerThickness': visualizerThickness,
@@ -367,6 +379,7 @@ class LayoutPrefs extends ChangeNotifier {
   Future<void> setDesktopBar(DesktopBarStyle v) => _set(() => desktopBar = v);
   Future<void> setTabBar(TabBarStyle v) => _set(() => tabBar = v);
   Future<void> setVisualizerStyle(VisualizerStyle v) => _set(() => visualizerStyle = v);
+  Future<void> setVisualizerCoverShape(VisualizerCoverShape v) => _set(() => visualizerCoverShape = v);
   Future<void> setVisualizerRadius(double v) => _set(() => visualizerRadius = v.clamp(0.5, 2.5));
   Future<void> setVisualizerThickness(double v) => _set(() => visualizerThickness = v.clamp(1, 8));
   Future<void> setVisualizer(bool v) => _set(() => visualizer = v);
@@ -395,7 +408,7 @@ class LayoutPrefs extends ChangeNotifier {
   Future<void> reset() => _set(() => restore(const {}));
 
   /// [base] with the corner and motion settings applied to menus, dialogs,
-  /// buttons and page transitions. Unchanged for the defaults.
+  /// buttons and page transitions.
   ThemeData themed(ThemeData base) {
     final corner = corners;
     final motionNow = effectiveMotion;

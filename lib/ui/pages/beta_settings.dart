@@ -29,6 +29,16 @@ class BetaSettings extends StatelessWidget {
               await beta.set(BetaFeature.audioVisualizer, on);
             },
           ),
+          SettingTile(
+            icon: Icons.crop_square_rounded,
+            title: const Text('Cover shape'),
+            subtitle: const Text('Player artwork, including when the visualizer is off'),
+            control: OptionPicker<VisualizerCoverShape>(
+              value: layout.visualizerCoverShape,
+              onChanged: layout.setVisualizerCoverShape,
+              options: [for (final shape in VisualizerCoverShape.values) (shape, shape.label)],
+            ),
+          ),
           if (beta.isOn(BetaFeature.audioVisualizer)) ...[
             SettingTile(
               icon: Icons.multiline_chart_rounded,

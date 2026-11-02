@@ -19,6 +19,7 @@ void main() {
       double movement = 1.6,
       VisualizerStyle style = VisualizerStyle.pulse,
       String? name,
+      VisualizerCoverShape coverShape = VisualizerCoverShape.flower,
     }) async {
       await tester.pumpWidget(
         MaterialApp(
@@ -33,6 +34,7 @@ void main() {
                     levels: levels,
                     color: style == VisualizerStyle.orbit ? const Color(0xff6be1f5) : const Color(0xffa4acab),
                     style: style,
+                    coverShape: coverShape,
                     radialMotion: movement,
                     child: const ColoredBox(
                       color: Colors.white,
@@ -82,12 +84,33 @@ void main() {
         final x = (side / 2 + math.cos(angle) * r).round().clamp(0, side - 1);
         final y = (side / 2 + math.sin(angle) * r).round().clamp(0, side - 1);
         final at = (y * side + x) * 4;
-        if (rgba[at] > 130 && rgba[at] < 220 && rgba[at + 1] > 140) last = r;
+        if (rgba[at] > 130 && rgba[at] < 220 && rgba[at + 1] > 140 && rgba[at + 3] > 220) last = r;
       }
       return last;
     }
 
-    expect(edge(active, 0), edge(resting, 0), reason: 'Pulse must keep the flower cover inside the wave');
+    expect(
+      edge(active, -math.pi / 2),
+      greaterThan(edge(resting, -math.pi / 2)),
+      reason: 'the flower cover itself breathes with the music',
+    );
+    expect(
+      edge(active, -math.pi / 2),
+      lessThanOrEqualTo(edge(resting, -math.pi / 2) + 5),
+      reason: 'cover motion stays subtle inside the filled waveform',
+    );
+    var filledPixels = 0;
+    for (var i = 0; i < 180; i++) {
+      final angle = i * math.pi / 90;
+      for (var r = edge(active, angle) + 5; r < waveEdge(active, angle) - 3; r++) {
+        final x = (side / 2 + math.cos(angle) * r).round();
+        final y = (side / 2 + math.sin(angle) * r).round();
+        final at = (y * side + x) * 4;
+        expect(active.sublist(at, at + 4), [164, 172, 171, 255], reason: 'Pulse fills the space from cover to wave');
+        filledPixels++;
+      }
+    }
+    expect(filledPixels, greaterThan(500), reason: 'Pulse is a filled band rather than an outline');
     final radii = List.generate(180, (i) => waveEdge(active, i * math.pi / 90));
     expect(radii.reduce(math.max) - radii.reduce(math.min), greaterThan(8));
     double averageNear(double angle) =>
@@ -144,6 +167,17 @@ void main() {
     final petals = await render(style: VisualizerStyle.petals, name: 'petals-cover');
     expect(edge(petals, 0), edge(orbit, 0), reason: 'Petals and Orbit share the same cover contour');
     expect(petals, isNot(orbit), reason: 'Petals uses fewer, wider radial bars');
+    for (final style in [VisualizerStyle.pulse, VisualizerStyle.orbit, VisualizerStyle.petals]) {
+      final square = await render(style: style, coverShape: VisualizerCoverShape.square, name: 'square-${style.name}');
+      final corner = (225 * side + 225) * 4;
+      expect(square.sublist(corner, corner + 4), [
+        255,
+        255,
+        255,
+        255,
+      ], reason: 'Square artwork keeps its corners in every radial style');
+      expect(active[corner], lessThan(245), reason: 'Flower and Square have different cover silhouettes');
+    }
     levels.clear();
     final quietOrbit = await render(style: VisualizerStyle.orbit, name: 'orbit-resting');
     expect(quietOrbit, isNot(orbit));
