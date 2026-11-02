@@ -319,6 +319,15 @@ void main() {
       ]) {
         expect(find.text(label), findsOneWidget, reason: label);
       }
+
+      // The header's ⋯ menu keeps the song actions the sheet does not list and
+      // drops the ones it does: one action, one entry, no duplicates.
+      await tester.tap(find.byTooltip('More options for a'));
+      await tester.pumpAndSettle();
+      for (final label in ['Add to playlist', 'Signal path', 'Stats for nerds']) {
+        expect(find.text(label), findsOneWidget, reason: '$label belongs to the sheet alone');
+      }
+      expect(find.text('Play next'), findsOneWidget, reason: 'the menu still offers what the sheet does not');
     } finally {
       debugDefaultTargetPlatformOverride = null;
     }

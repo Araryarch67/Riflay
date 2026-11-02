@@ -291,9 +291,20 @@ VoidCallback? openArtist(BuildContext host, PlayerController c, Track track, {Sh
   return id == null ? null : () => remote(id);
 }
 
+/// Entries this menu can leave out, for a host surface that already lists them
+/// itself (the player's More sheet has Add to playlist and the download states).
+enum TrackMenuEntry { addToPlaylist, download }
+
 /// The ⋯ menu of a song: play next, add to playlist, like, download, go to artist…
 class TrackMenuButton extends StatelessWidget {
-  const TrackMenuButton({super.key, required this.track, this.visible = true, this.color, this.nowPlaying = false});
+  const TrackMenuButton({
+    super.key,
+    required this.track,
+    this.visible = true,
+    this.color,
+    this.nowPlaying = false,
+    this.hide = const {},
+  });
 
   static Future<void> _queued(BuildContext context, Future<void> change, String done) async {
     final messenger = ScaffoldMessenger.of(context);
@@ -321,6 +332,9 @@ class TrackMenuButton extends StatelessWidget {
 
   /// In a now-playing view: adds Stats for nerds and Signal path.
   final bool nowPlaying;
+
+  /// Entries the host already lists, so one menu does not repeat another.
+  final Set<TrackMenuEntry> hide;
 
   @override
   Widget build(BuildContext context) {
@@ -369,10 +383,11 @@ class TrackMenuButton extends StatelessWidget {
                 onTap: () => shell.openCollection(album),
                 child: const MenuRow(leading: Icon(Icons.album_outlined), title: Text('Go to album')),
               ),
-            PopupMenuItem(
-              onTap: () => addToPlaylist(host, [track]),
-              child: const MenuRow(leading: Icon(Icons.playlist_add_rounded), title: Text('Add to playlist')),
-            ),
+            if (!hide.contains(TrackMenuEntry.addToPlaylist))
+              PopupMenuItem(
+                onTap: () => addToPlaylist(host, [track]),
+                child: const MenuRow(leading: Icon(Icons.playlist_add_rounded), title: Text('Add to playlist')),
+              ),
             if (editScope?.canRemove(track) ?? false)
               PopupMenuItem(
                 onTap: () => editScope!.remove(host, track),
@@ -402,7 +417,7 @@ class TrackMenuButton extends StatelessWidget {
                     title: Text('Suggest to ${ListenTogether.of(c).hostName ?? 'the host'}'),
                   ),
                 ),
-              if (c.downloadedCopy(track) == null && Features.downloads) ...[
+              if (c.downloadedCopy(track) == null && Features.downloads && !hide.contains(TrackMenuEntry.download)) ...[
                 PopupMenuItem(
                   onTap: () => download(host, c, [track]),
                   child: const MenuRow(leading: Icon(Icons.download_rounded), title: Text('Download for offline')),

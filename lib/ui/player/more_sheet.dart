@@ -137,8 +137,9 @@ class PlayerMoreSheet extends StatelessWidget {
                       ],
                     ),
                   ),
-                  // Go to artist / album, start radio, edit, remove… the song's own menu.
-                  TrackMenuButton(track: track, nowPlaying: true),
+                  // The song's own menu, minus what this sheet lists below: one
+                  // action, one entry. Stats for nerds and Signal path are in Sound.
+                  TrackMenuButton(track: track, hide: const {TrackMenuEntry.addToPlaylist, TrackMenuEntry.download}),
                 ],
               ),
             ),
