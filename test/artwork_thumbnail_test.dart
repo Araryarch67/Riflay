@@ -42,6 +42,34 @@ void main() {
     expect(await Metadata.thumbnail(track), equals(full));
   });
 
+  test('native thumbnails preserve aspect ratio, crop resolution and colour', () async {
+    for (final (width, height) in [(1200, 600), (600, 1200)]) {
+      final name = 'native-$width-$height';
+      final track = _song(dir, name, cover: false);
+      final source = img.Image(width: width, height: height);
+      img.fill(source, color: img.ColorRgb8(220, 40, 60));
+      File('${dir.path}/$name.png').writeAsBytesSync(img.encodePng(source));
+      final result = img.decodeJpg((await Metadata.thumbnail(track))!)!;
+      expect([result.width, result.height], width > height ? [512, 256] : [256, 512]);
+      final pixel = result.getPixel(result.width ~/ 2, result.height ~/ 2);
+      expect(pixel.r, closeTo(220, 5));
+      expect(pixel.g, closeTo(40, 5));
+      expect(pixel.b, closeTo(60, 5));
+    }
+  });
+
+  test('a small animated cover is passed through with all animation frames', () async {
+    final track = _song(dir, 'animated', cover: false);
+    final source = img.Image(width: 120, height: 120);
+    source.addFrame(img.Image(width: 120, height: 120));
+    final bytes = Uint8List.fromList(img.encodeGif(source));
+    // Use a supported sidecar name; the decoder identifies the encoded format.
+    File('${dir.path}/animated.png').writeAsBytesSync(bytes);
+    final result = await Metadata.thumbnail(track);
+    expect(result, bytes);
+    expect(img.decodeGif(result!)!.numFrames, 2);
+  });
+
   test('covers whose widgets are gone are not read', () async {
     final tracks = [for (var i = 0; i < 12; i++) _song(dir, 'q$i', cover: false)];
     final requests = [for (final _ in tracks) ArtworkRequest()];
@@ -69,5 +97,58 @@ void main() {
     gone.cancel();
     await Future.wait([a, b]);
     expect(Metadata.coversRead - read, 1);
+  });
+
+  test('a burst of covers bounds concurrent decodes and retains thumbnail quality', () async {
+    final tracks = [for (var i = 0; i < 12; i++) _song(dir, 'burst$i')];
+    Metadata.peakThumbnailDecodes = 0;
+    final made = Metadata.thumbnailsMade;
+    final results = await Future.wait(tracks.map(Metadata.thumbnail));
+    expect(Metadata.peakThumbnailDecodes, 2);
+    expect(Metadata.thumbnailDecodesInFlight, 0);
+    expect(Metadata.thumbnailsMade - made, tracks.length);
+    for (final result in results) {
+      final image = img.decodeJpg(result!)!;
+      expect([image.width, image.height], [Metadata.thumbnailSide, Metadata.thumbnailSide]);
+    }
+  });
+
+  test('queued thumbnails whose views left are skipped and can be requested again', () async {
+    final tracks = [for (var i = 0; i < 8; i++) _song(dir, 'cancel$i')];
+    await Future.wait(tracks.map(Metadata.artwork));
+    final requests = [for (final _ in tracks) ArtworkRequest()];
+    final made = Metadata.thumbnailsMade;
+    final futures = [for (var i = 0; i < tracks.length; i++) Metadata.thumbnail(tracks[i], request: requests[i])];
+    for (final request in requests.take(6)) {
+      request.cancel();
+    }
+    final results = await Future.wait(futures);
+    expect(results.take(6), everyElement(isNull));
+    expect(results.skip(6), everyElement(isNotNull));
+    expect(Metadata.thumbnailsMade - made, 2);
+    expect(Metadata.hasCachedThumbnail(tracks.first), isFalse);
+    expect(await Metadata.thumbnail(tracks.first), isNotNull);
+  });
+
+  test('deduplicated thumbnails retain requests from other views', () async {
+    final track = _song(dir, 'shared-thumb');
+    final gone = ArtworkRequest(), staying = ArtworkRequest();
+    final made = Metadata.thumbnailsMade;
+    final a = Metadata.thumbnail(track, request: gone);
+    final b = Metadata.thumbnail(track, request: staying);
+    gone.cancel();
+    final results = await Future.wait([a, b]);
+    expect(results, everyElement(isNotNull));
+    expect(results[0], same(results[1]));
+    expect(Metadata.thumbnailsMade - made, 1);
+  });
+
+  test('an unscoped caller keeps shared artwork alive after a view leaves', () async {
+    final track = _song(dir, 'unscoped');
+    final gone = ArtworkRequest();
+    final a = Metadata.thumbnail(track, request: gone);
+    final b = Metadata.thumbnail(track);
+    gone.cancel();
+    expect(await Future.wait([a, b]), everyElement(isNotNull));
   });
 }

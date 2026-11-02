@@ -12,6 +12,20 @@ Future<void> until(bool Function() done) async {
 }
 
 void main() {
+  test('a fully consumed audio stream releases cancellation callbacks', () async {
+    late StreamCancellation cancellation;
+    var released = false;
+    final stream = cancellableAudio((signal) {
+      cancellation = signal;
+      signal.whenCancelled.then((_) => released = true);
+      return Stream.value([1, 2, 3]);
+    });
+    expect(await stream.expand((chunk) => chunk).toList(), [1, 2, 3]);
+    expect(cancellation.cancelled, isTrue);
+    await Future<void>.delayed(Duration.zero);
+    expect(released, isTrue);
+  });
+
   late Directory dir;
   late AudioStreamCache<String> cache;
   setUp(() {

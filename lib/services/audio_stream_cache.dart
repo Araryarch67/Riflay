@@ -36,6 +36,9 @@ Stream<List<int>> cancellableAudio(Stream<List<int>> Function(StreamCancellation
         onError: output.addError,
         onDone: () {
           finished = true;
+          // Release abort/wait callbacks even when playback consumed the whole
+          // stream and never explicitly cancelled its subscription.
+          cancellation.cancel();
           output.close();
         },
       );
@@ -186,6 +189,9 @@ class CachedAudio<T> {
 
   Stream<List<int>> read(int from, int to) => cancellableAudio((cancel) async* {
     _readers++;
+    // Register once per reader, rather than leaving one Future.any callback on
+    // the cancellation future for every progressive download chunk.
+    cancel.whenCancelled.then((_) => _notify());
     RandomAccessFile? reader;
     try {
       reader = await file.open();
@@ -194,7 +200,7 @@ class CachedAudio<T> {
         if (position >= available) {
           if (_error case final error?) throw error;
           if (complete) break;
-          await Future.any([_changed.future, cancel.whenCancelled]);
+          await _changed.future;
           continue;
         }
         await reader.setPosition(position);

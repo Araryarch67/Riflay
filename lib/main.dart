@@ -25,6 +25,7 @@ import 'services/download_notifications.dart';
 import 'services/play_history.dart';
 import 'services/scrobbler.dart';
 import 'services/player_controller.dart';
+import 'services/rendering_memory.dart';
 import 'services/stay_awake.dart';
 import 'services/wrap_notifications.dart';
 import 'ui/home_shell.dart';
@@ -37,6 +38,7 @@ Future<void> main() => runWithNetwork(_main);
 
 Future<void> _main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  unawaited(RenderingMemory.configure());
   // just_audio has no native Linux/Windows backend; route those through libmpv.
   // Android, macOS and iOS too: libmpv gives them the equalizer, Virtual
   // speakers, ReplayGain, gapless, the signal path and decoders (ALAC,
@@ -280,7 +282,7 @@ class _RiflayAppState extends State<RiflayApp> with WidgetsBindingObserver {
   Widget build(BuildContext context) {
     // Decoded images: covers are decoded at their on-screen size, so 40 MiB
     // still holds a few hundred (Flutter's default is 100 MiB).
-    PaintingBinding.instance.imageCache.maximumSizeBytes = 40 << 20;
+    PaintingBinding.instance.imageCache.maximumSizeBytes = RenderingMemory.decodedImageBytes;
     final theme = widget.theme == null ? appThemeNow(desktopFrame: hasCustomTitleBar) : _layout.themed(widget.theme!);
     return PlayerScope(
       controller: widget.controller,

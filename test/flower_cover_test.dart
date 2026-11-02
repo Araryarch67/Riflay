@@ -8,6 +8,24 @@ import 'package:riflay/services/visualizer_levels.dart';
 import 'package:riflay/ui/widgets/flower_cover.dart';
 
 void main() {
+  test('cover geometry shares its current path and updates for audio and size changes', () {
+    final levels = VisualizerLevels();
+    addTearDown(levels.dispose);
+    final geometry = FlowerGeometry(levels: levels);
+    const size = Size.square(280);
+    final resting = geometry.path(size);
+    expect(geometry.path(size), same(resting));
+    levels.addBands(List.filled(VisualizerLevels.samples, 0.85));
+    final active = geometry.path(size);
+    expect(active, isNot(same(resting)));
+    expect(active.getBounds(), isNot(resting.getBounds()));
+    expect(geometry.path(size), same(active));
+    final resized = geometry.path(const Size.square(420));
+    expect(resized.getBounds().width, greaterThan(active.getBounds().width));
+    levels.clear();
+    expect(geometry.path(size).getBounds(), resting.getBounds());
+  });
+
   testWidgets('shared audio repaints the flower and glow, then silence restores its resting shape', (tester) async {
     final levels = VisualizerLevels();
     final capture = GlobalKey();

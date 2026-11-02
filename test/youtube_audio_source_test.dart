@@ -1,9 +1,9 @@
 import 'dart:async';
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:riflay/services/youtube_audio_source.dart';
@@ -11,6 +11,11 @@ import 'package:riflay/services/ytdlp.dart';
 import 'package:youtube_explode_dart/youtube_explode_dart.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+  TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(
+    const MethodChannel('plugins.flutter.io/path_provider'),
+    (_) async => Directory.systemTemp.path,
+  );
   var id = 0;
   YoutubeAudioSource source(int size, http.Client client) {
     final yt = YoutubeExplode();
@@ -43,6 +48,63 @@ void main() {
     expect(out.length, response.contentLength, reason: 'the proxy must receive all promised bytes');
     return out;
   }
+
+  test('a complete disk cache replays offline in bounded chunks without another download', () async {
+    const size = 2 << 20;
+    const chunkSize = 64 << 10;
+    var requests = 0;
+    var offline = false;
+    final yt = YoutubeExplode();
+    final client = MockClient.streaming((request, _) async {
+      if (offline) throw const SocketException('airplane mode');
+      requests++;
+      final range = RegExp(r'bytes=(\d+)-(\d+)').firstMatch(request.headers['Range']!)!;
+      final from = int.parse(range[1]!), to = int.parse(range[2]!);
+      final chunk = Uint8List(chunkSize)..fillRange(0, chunkSize, 42);
+      return http.StreamedResponse(
+        Stream.fromIterable(Iterable.generate((to + 1 - from) ~/ chunkSize, (_) => chunk)),
+        206,
+        headers: {'content-range': 'bytes $from-$to/$size'},
+      );
+    });
+    addTearDown(yt.close);
+    addTearDown(client.close);
+    addTearDown(YoutubeAudioSource.clearCache);
+    const key = 'offline-disk-memory-test';
+    YoutubeAudioSource.retainCache({key});
+    final audio = YoutubeAudioSource(
+      key,
+      yt: yt,
+      client: client,
+      resolveAudio: () async => ResolvedAudio(
+        url: Uri.parse('https://audio.example/song'),
+        formatId: '251',
+        ext: 'webm',
+        codec: 'opus',
+        kbps: 128,
+        size: size,
+        resolvedAt: DateTime.now(),
+        via: 'test',
+      ),
+    );
+    var bytesRead = 0;
+    await for (final bytes in (await audio.request()).stream) {
+      expect(bytes.length, lessThanOrEqualTo(chunkSize));
+      bytesRead += bytes.length;
+    }
+    expect(bytesRead, size);
+    expect(YoutubeAudioSource.cacheCompleteFor(key), isTrue);
+    final downloaded = requests;
+    offline = true;
+    bytesRead = 0;
+    await for (final bytes in (await audio.request(size ~/ 2, size)).stream) {
+      expect(bytes.length, lessThanOrEqualTo(chunkSize));
+      expect(bytes, everyElement(42));
+      bytesRead += bytes.length;
+    }
+    expect(bytesRead, size ~/ 2);
+    expect(requests, downloaded);
+  });
 
   test('a short successful response resumes from the last delivered byte', () async {
     final data = List<int>.generate(1000, (i) => i % 251);

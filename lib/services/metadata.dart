@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:collection';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math' as math;
@@ -31,9 +32,18 @@ class _PendingArt {
   final requests = <ArtworkRequest>{};
   late Future<Uint8List?> future;
   bool dropped = false;
+  bool _unscoped = false;
+
+  void addRequest(ArtworkRequest? request) {
+    if (request == null) {
+      _unscoped = true;
+    } else {
+      requests.add(request);
+    }
+  }
 
   /// Asked for only by widgets that have since gone.
-  bool get abandoned => requests.isNotEmpty && requests.every((r) => r.cancelled);
+  bool get abandoned => !_unscoped && requests.isNotEmpty && requests.every((r) => r.cancelled);
 }
 
 /// Editable tags of one file.
@@ -328,11 +338,11 @@ abstract final class Metadata {
     if (_artwork.containsKey(key)) return Future.value(_artwork[key]);
     final pending = _pendingArtwork[key];
     if (pending != null) {
-      if (request != null) pending.requests.add(request);
+      pending.addRequest(request);
       return pending.future;
     }
     final entry = _PendingArt();
-    if (request != null) entry.requests.add(request);
+    entry.addRequest(request);
     _pendingArtwork[key] = entry;
     entry.future = _loadArtwork(track, entry).then((bytes) {
       _pendingArtwork.remove(key);
@@ -355,7 +365,14 @@ abstract final class Metadata {
 
   /// Least recently used first.
   static final _thumbs = <String, Uint8List?>{};
-  static final _pendingThumbs = <String, Future<Uint8List?>>{};
+  static final _pendingThumbs = <String, _PendingArt>{};
+  static final _thumbnailJobs = Queue<(Uint8List, _PendingArt, Completer<Uint8List?>)>();
+  static int _thumbnailWorkers = 0;
+
+  @visibleForTesting
+  static int thumbnailDecodesInFlight = 0;
+  @visibleForTesting
+  static int peakThumbnailDecodes = 0;
 
   /// Covers cut down by [thumbnail] since start (tests).
   @visibleForTesting
@@ -379,34 +396,125 @@ abstract final class Metadata {
   static Future<Uint8List?> thumbnail(Track track, {ArtworkRequest? request}) {
     final key = _artKey(track);
     if (_thumbs.containsKey(key)) return Future.value(cachedThumbnail(track));
-    return _pendingThumbs[key] ??= artwork(track, request: request).then((full) async {
-      Uint8List? small;
-      if (full != null) {
-        try {
-          small = await inBackground(() => _shrink(full));
-          thumbnailsMade++;
-        } catch (_) {
-          small = full;
-        }
-      }
-      _pendingThumbs.remove(key);
-      _thumbs[key] = small;
-      _thumbBytes += small?.length ?? 0;
-      while (_thumbBytes > _maxThumbBytes && _thumbs.length > 1) {
-        _thumbBytes -= _thumbs.remove(_thumbs.keys.first)?.length ?? 0;
-      }
-      return small;
-    });
+    if (_pendingThumbs[key] case final pending?) {
+      pending.addRequest(request);
+      // File reads also need to know another visible widget wants this cover.
+      _pendingArtwork[key]?.addRequest(request);
+      return pending.future;
+    }
+    final entry = _PendingArt()..addRequest(request);
+    _pendingThumbs[key] = entry;
+    return entry.future = artwork(track, request: request)
+        .then((full) async {
+          if (entry.abandoned) return null;
+          final small = full == null ? null : await _queueThumbnail(full, entry);
+          if (entry.abandoned) return null;
+          _thumbs[key] = small;
+          _thumbBytes += small?.length ?? 0;
+          while (_thumbBytes > _maxThumbBytes && _thumbs.length > 1) {
+            _thumbBytes -= _thumbs.remove(_thumbs.keys.first)?.length ?? 0;
+          }
+          return small;
+        })
+        .whenComplete(() => _pendingThumbs.remove(key));
   }
 
-  static Uint8List _shrink(Uint8List full) {
+  static Future<Uint8List?> _queueThumbnail(Uint8List full, _PendingArt entry) {
+    final done = Completer<Uint8List?>();
+    _thumbnailJobs.add((full, entry, done));
+    if (_thumbnailWorkers < 2) {
+      _thumbnailWorkers++;
+      Timer.run(_drainThumbnails);
+    }
+    return done.future;
+  }
+
+  /// Encoded cache limits do not cap decoded pixels or isolate heaps. A screen
+  /// of 4K covers must not start dozens of full-resolution decodes at once.
+  static Future<void> _drainThumbnails() async {
+    try {
+      while (_thumbnailJobs.isNotEmpty) {
+        final (full, entry, done) = _thumbnailJobs.removeFirst();
+        if (entry.abandoned) {
+          done.complete(null);
+          continue;
+        }
+        thumbnailDecodesInFlight++;
+        peakThumbnailDecodes = math.max(peakThumbnailDecodes, thumbnailDecodesInFlight);
+        try {
+          final small = await _decodeThumbnail(full);
+          thumbnailsMade++;
+          done.complete(small);
+        } catch (_) {
+          done.complete(full);
+        } finally {
+          thumbnailDecodesInFlight--;
+        }
+      }
+    } finally {
+      _thumbnailWorkers--;
+    }
+  }
+
+  static Future<Uint8List> _decodeThumbnail(Uint8List full) async {
+    // Encoded ImageDescriptor dimensions are not available on every web
+    // renderer. Keep the browser's existing thumbnail path there.
+    if (Host.isWeb) return inBackground(() => _shrinkWebThumbnail(full));
+    final buffer = await ui.ImmutableBuffer.fromUint8List(full);
+    ui.ImageDescriptor? descriptor;
+    ui.Codec? codec;
+    ui.Image? image;
+    late Uint8List pixels;
+    late int width, height;
+    try {
+      descriptor = await ui.ImageDescriptor.encoded(buffer);
+      if (descriptor.width <= thumbnailSide && descriptor.height <= thumbnailSide) return full;
+      // Ask the native decoder for the thumbnail, rather than expanding full
+      // resolution pixels and JPEG decoder arrays in a Dart isolate. Keep the
+      // short side at 256 so square cover crops retain their original quality.
+      final landscape = descriptor.width >= descriptor.height;
+      codec = await descriptor.instantiateCodec(
+        targetWidth: landscape ? (thumbnailSide * descriptor.width / descriptor.height).round() : thumbnailSide,
+        targetHeight: landscape ? thumbnailSide : (thumbnailSide * descriptor.height / descriptor.width).round(),
+      );
+      image = (await codec.getNextFrame()).image;
+      width = image.width;
+      height = image.height;
+      final data = await image.toByteData(format: ui.ImageByteFormat.rawStraightRgba);
+      if (data == null) throw StateError('Thumbnail pixels unavailable');
+      pixels = data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
+    } finally {
+      image?.dispose();
+      codec?.dispose();
+      descriptor?.dispose();
+      buffer.dispose();
+    }
+    return _encodeThumbnail(pixels, width, height);
+  }
+
+  static Uint8List _shrinkWebThumbnail(Uint8List full) {
     final image = img.decodeImage(full);
     if (image == null || (image.width <= thumbnailSide && image.height <= thumbnailSide)) return full;
     final small = image.width >= image.height
         ? img.copyResize(image, height: thumbnailSide, interpolation: img.Interpolation.average)
         : img.copyResize(image, width: thumbnailSide, interpolation: img.Interpolation.average);
-    return Uint8List.fromList(img.encodeJpg(small, quality: 88));
+    return img.encodeJpg(small, quality: 88);
   }
+
+  // Only thumbnail-size pixels cross to the isolate; the full cover, native
+  // decoder, widget requests and queue completers are not captured by it.
+  static Future<Uint8List> _encodeThumbnail(Uint8List pixels, int width, int height) => inBackground(
+    () => img.encodeJpg(
+      img.Image.fromBytes(
+        width: width,
+        height: height,
+        bytes: pixels.buffer,
+        bytesOffset: pixels.offsetInBytes,
+        numChannels: 4,
+      ),
+      quality: 88,
+    ),
+  );
 
   static Future<Uint8List?> _loadArtwork(Track track, _PendingArt entry) {
     final path = track.path;
@@ -636,24 +744,30 @@ abstract final class Metadata {
   }
 
   static Future<Uint8List?> _smallPixels(Uint8List bytes) async {
+    ui.Codec? codec;
+    ui.Image? image;
     try {
-      final codec = await ui.instantiateImageCodec(bytes, targetWidth: 32, targetHeight: 32);
+      codec = await ui.instantiateImageCodec(bytes, targetWidth: 32, targetHeight: 32);
       final frame = await codec.getNextFrame();
-      final data = await frame.image.toByteData(format: ui.ImageByteFormat.rawRgba);
-      frame.image.dispose();
-      codec.dispose();
+      image = frame.image;
+      final data = await image.toByteData(format: ui.ImageByteFormat.rawRgba);
       return data?.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
     } catch (_) {
       return null;
+    } finally {
+      image?.dispose();
+      codec?.dispose();
     }
   }
 
   static Future<Color?> _averageColor(Uint8List bytes) async {
+    ui.Codec? codec;
+    ui.Image? image;
     try {
-      final codec = await ui.instantiateImageCodec(bytes, targetWidth: 16, targetHeight: 16);
+      codec = await ui.instantiateImageCodec(bytes, targetWidth: 16, targetHeight: 16);
       final frame = await codec.getNextFrame();
-      final data = await frame.image.toByteData(format: ui.ImageByteFormat.rawRgba);
-      frame.image.dispose();
+      image = frame.image;
+      final data = await image.toByteData(format: ui.ImageByteFormat.rawRgba);
       if (data == null) return null;
       var r = 0, g = 0, b = 0, n = 0;
       for (var i = 0; i < data.lengthInBytes; i += 4) {
@@ -672,6 +786,9 @@ abstract final class Metadata {
           .toColor();
     } catch (_) {
       return null;
+    } finally {
+      image?.dispose();
+      codec?.dispose();
     }
   }
 }

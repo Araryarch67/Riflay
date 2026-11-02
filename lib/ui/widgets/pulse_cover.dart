@@ -39,7 +39,9 @@ class PulseCover extends StatelessWidget {
       child: child == null
           ? null
           : ClipPath(
-              clipper: orbit ? _PulseClipper(contour) : FlowerClipper(levels: levels, shape: coverShape),
+              clipper: orbit
+                  ? _PulseClipper(contour)
+                  : FlowerClipper(levels: levels, shape: coverShape, geometry: contour.coverGeometry),
               child: child,
             ),
     );
@@ -55,6 +57,7 @@ class _PulseContour {
   final bool orbit;
   final bool petals;
   final VisualizerCoverShape coverShape;
+  late final coverGeometry = FlowerGeometry(levels: levels, shape: coverShape);
   Size? _size;
   List<double>? _values;
   double? _beat;
@@ -158,7 +161,7 @@ class _PulsePainter extends CustomPainter {
         final band = Path()
           ..fillType = PathFillType.evenOdd
           ..addPath(path, Offset.zero)
-          ..addPath(FlowerContour.coverPath(size, levels: contour.levels, shape: contour.coverShape), Offset.zero);
+          ..addPath(contour.coverGeometry.path(size), Offset.zero);
         canvas.drawPath(band, Paint()..color = color);
         return;
       }

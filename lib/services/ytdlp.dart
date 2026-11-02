@@ -10,6 +10,7 @@ import 'package:path_provider/path_provider.dart';
 
 import '../platform/host.dart';
 import 'download_prefs.dart';
+import 'lookup_process.dart';
 import 'video_download.dart';
 
 /// A directly fetchable audio stream, as resolved by yt-dlp.
@@ -67,6 +68,7 @@ class ResolvedVideo {
 /// manager), otherwise downloads the official standalone release once into the
 /// app's support folder.
 abstract final class YtDlp {
+  static final _processes = LookupProcessRunner();
   static bool get supported => Host.isLinux || Host.isWindows || Host.isMacOS;
 
   static Future<String?>? _exe;
@@ -199,13 +201,13 @@ abstract final class YtDlp {
   static Future<({List<AudioCandidate> audio, List<VideoCandidate> video})> listAllFormats(String videoId) async {
     final exe = await executable();
     if (exe == null) throw StateError('yt-dlp is not available on this device.');
-    final r = await Process.run(exe, [
+    final r = await _processes.run(exe, [
       '--no-warnings',
       '--no-playlist',
       '-J',
       '--',
       'https://www.youtube.com/watch?v=$videoId',
-    ], stdoutEncoding: utf8);
+    ]);
     if (r.exitCode != 0) throw StateError(_lastError(r.stderr as String));
     final info = jsonDecode(r.stdout as String) as Map<String, dynamic>;
     final formats = (info['formats'] as List).cast<Map<String, dynamic>>();
@@ -249,7 +251,7 @@ abstract final class YtDlp {
     final exe = await executable();
     if (exe == null) throw StateError('yt-dlp is not available on this device.');
     final h = '[height<=$maxHeight]';
-    final r = await Process.run(exe, [
+    final r = await _processes.run(exe, [
       '--no-warnings',
       '--no-playlist',
       '-f',
@@ -270,7 +272,7 @@ abstract final class YtDlp {
   static Future<ResolvedAudio> _run(String videoId, bool aac) async {
     final exe = await executable();
     if (exe == null) throw StateError('yt-dlp is not available on this device.');
-    final r = await Process.run(exe, [
+    final r = await _processes.run(exe, [
       '--no-warnings',
       '--no-playlist',
       '-f',

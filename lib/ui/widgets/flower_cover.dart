@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 
@@ -49,20 +50,53 @@ abstract final class FlowerContour {
   static Path path(Size size, {double Function(double phase)? radiusAt}) {
     final center = (Offset.zero & size).center;
     const count = 192;
-    final points = List.generate(count, (i) {
+    // Packed coordinates avoid temporary Offset objects for each point and
+    // each Bezier control point, while preserving the same contour.
+    final points = Float64List(count * 2);
+    for (var i = 0; i < count; i++) {
       final phase = i / count * math.pi * 2;
       final angle = phase - math.pi / 2;
       final r = radiusAt?.call(phase) ?? radius(size.shortestSide, phase);
-      return center + Offset(math.cos(angle), math.sin(angle)) * r;
-    });
-    final path = Path()..moveTo(points.first.dx, points.first.dy);
-    Offset point(int i) => points[i % count];
+      points[i * 2] = center.dx + math.cos(angle) * r;
+      points[i * 2 + 1] = center.dy + math.sin(angle) * r;
+    }
+    final path = Path()..moveTo(points[0], points[1]);
+    double x(int i) => points[(i % count) * 2];
+    double y(int i) => points[(i % count) * 2 + 1];
     for (var i = 0; i < count; i++) {
-      final p0 = point(i - 1), p1 = point(i), p2 = point(i + 1), p3 = point(i + 2);
-      final c1 = p1 + (p2 - p0) / 6, c2 = p2 - (p3 - p1) / 6;
-      path.cubicTo(c1.dx, c1.dy, c2.dx, c2.dy, p2.dx, p2.dy);
+      path.cubicTo(
+        x(i) + (x(i + 1) - x(i - 1)) / 6,
+        y(i) + (y(i + 1) - y(i - 1)) / 6,
+        x(i + 1) - (x(i + 2) - x(i)) / 6,
+        y(i + 1) - (y(i + 2) - y(i)) / 6,
+        x(i + 1),
+        y(i + 1),
+      );
     }
     return path..close();
+  }
+}
+
+/// The clip and halo use exactly the same native path. Only the latest path is
+/// retained; animation frames never accumulate in a history or global cache.
+class FlowerGeometry {
+  FlowerGeometry({this.levels, this.fit = false, this.shape = VisualizerCoverShape.flower});
+  final VisualizerLevels? levels;
+  final bool fit;
+  final VisualizerCoverShape shape;
+  Size? _size;
+  double? _energy;
+  double? _beat;
+  Path? _path;
+
+  Path path(Size size) {
+    final energy = levels?.backgroundEnergy ?? 0;
+    final beat = levels?.beat ?? 0;
+    if (_size == size && _energy == energy && _beat == beat) return _path!;
+    _size = size;
+    _energy = energy;
+    _beat = beat;
+    return _path = FlowerContour.coverPath(size, levels: levels, fit: fit, shape: shape);
   }
 }
 
@@ -83,30 +117,36 @@ class FlowerCover extends StatelessWidget {
   final VisualizerCoverShape shape;
 
   @override
-  Widget build(BuildContext context) => CustomPaint(
-    painter: _FlowerGlow(levels, color ?? Theme.of(context).colorScheme.primary, fit, shape),
-    child: ClipPath(
-      clipper: FlowerClipper(fit: fit, levels: levels, shape: shape),
-      child: child,
-    ),
-  );
+  Widget build(BuildContext context) {
+    final geometry = FlowerGeometry(levels: levels, fit: fit, shape: shape);
+    return CustomPaint(
+      painter: _FlowerGlow(levels, color ?? Theme.of(context).colorScheme.primary, fit, shape, geometry),
+      child: ClipPath(
+        clipper: FlowerClipper(fit: fit, levels: levels, shape: shape, geometry: geometry),
+        child: child,
+      ),
+    );
+  }
 }
 
 class FlowerClipper extends CustomClipper<Path> {
-  const FlowerClipper({this.fit = false, this.levels, this.shape = VisualizerCoverShape.flower})
+  const FlowerClipper({this.fit = false, this.levels, this.shape = VisualizerCoverShape.flower, this.geometry})
     : super(reclip: levels);
   final bool fit;
   final VisualizerLevels? levels;
   final VisualizerCoverShape shape;
+  final FlowerGeometry? geometry;
   @override
-  Path getClip(Size size) => FlowerContour.coverPath(size, fit: fit, levels: levels, shape: shape);
+  Path getClip(Size size) =>
+      geometry?.path(size) ?? FlowerContour.coverPath(size, fit: fit, levels: levels, shape: shape);
   @override
   bool shouldReclip(FlowerClipper oldClipper) =>
       oldClipper.fit != fit || oldClipper.levels != levels || oldClipper.shape != shape;
 }
 
 class _FlowerGlow extends CustomPainter {
-  _FlowerGlow(this.levels, this.color, this.fit, this.shape) : super(repaint: levels);
+  _FlowerGlow(this.levels, this.color, this.fit, this.shape, this.geometry) : super(repaint: levels);
+  final FlowerGeometry geometry;
   final VisualizerLevels? levels;
   final Color color;
   final bool fit;
@@ -119,7 +159,7 @@ class _FlowerGlow extends CustomPainter {
     final beat = (levels?.beat ?? 0).clamp(0.0, 1.0);
     final blur = math.min(5.0, size.shortestSide * 0.012) * (1 + energy * 0.35);
     canvas.drawPath(
-      FlowerContour.coverPath(size, fit: fit, levels: levels, shape: shape),
+      geometry.path(size),
       Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = math.min(3.0, size.shortestSide * 0.009)

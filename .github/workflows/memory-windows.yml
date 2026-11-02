@@ -1,0 +1,37 @@
+# Manual native Windows measurement; no publishing or release changes.
+name: Windows playback memory
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  measure:
+    runs-on: windows-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v7
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2
+        with:
+          channel: stable
+          flutter-version: '3.47.7'
+          cache: true
+      - name: Install fixture generator
+        shell: pwsh
+        run: choco install ffmpeg --no-progress -y
+      - name: Build release measurement app
+        run: flutter build windows --release --target=integration_test/playback_memory_test.dart --dart-define=MEMORY_EXIT=true
+      - name: Playback, animation and Listen Together with process accounting
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force build/perf | Out-Null
+          ./tool/profile_windows_memory.ps1 -Executable build/windows/x64/runner/Release/riflay.exe -Seconds 260 -Output build/perf/windows-processes.csv
+          $report = 'build/perf/playback-memory-windows-release.json'
+          if (!(Test-Path $report)) { throw 'Playback memory report was not produced.' }
+          $result = Get-Content $report -Raw | ConvertFrom-Json
+          if (!$result.playing_animated_listen) { throw 'Listen Together measurement did not complete.' }
+          Get-Content $report
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: windows-playback-memory
+          path: build/perf/
