@@ -2,6 +2,7 @@ import '../services/stay_awake.dart' show IdleInhibitor;
 
 /// No C library in a browser. See `native_calls.dart`.
 int Function(int)? lookupMallocTrim() => null;
+void trimProcessMemory() {}
 
 String get currentAbi => 'web';
 

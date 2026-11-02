@@ -8,10 +8,13 @@ import '../platform/host.dart';
 /// textures, blur masks or other cached drawing resources.
 abstract final class RenderingMemory {
   static const decodedImageBytes = 40 << 20;
+  static const maxImageCount = 40;
   static const gpuCacheBytes = 96 << 20;
 
   static Future<void> configure() async {
-    PaintingBinding.instance.imageCache.maximumSizeBytes = decodedImageBytes;
+    final cache = PaintingBinding.instance.imageCache;
+    cache.maximumSizeBytes = decodedImageBytes;
+    cache.maximumSize = maxImageCount;
     if (!Host.isWindows && !Host.isLinux) return;
     try {
       // Skia otherwise sizes this cache at 48 bytes per physical window pixel:

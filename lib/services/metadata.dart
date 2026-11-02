@@ -71,7 +71,7 @@ class TagEdit {
 abstract final class Metadata {
   /// Encoded covers kept in memory, newest last. Capped by size: an embedded
   /// hi-res cover can be several MB, so a count alone could hold hundreds.
-  static const _maxCachedArtworkBytes = 16 << 20;
+  static const _maxCachedArtworkBytes = 6 << 20;
   static var _cachedArtworkBytes = 0;
 
   static final _artwork = <String, Uint8List?>{};
@@ -360,7 +360,7 @@ abstract final class Metadata {
 
   /// Longest side of the small covers lists and the mini player paint.
   static const thumbnailSide = 256;
-  static const _maxThumbBytes = 12 << 20;
+  static const _maxThumbBytes = 4 << 20;
   static var _thumbBytes = 0;
 
   /// Least recently used first.

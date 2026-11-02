@@ -6,17 +6,18 @@ import '../platform/native_calls.dart';
 
 /// Hands memory freed by the engine, mpv and FFmpeg back to the OS.
 ///
-/// glibc keeps freed blocks in its per-thread arenas for reuse, so after a
-/// song change or a long scroll the process stays at its peak size.
-/// `malloc_trim` releases what's free. It walks every arena, which can take
-/// a while in a big process, so it runs in a background isolate rather than
-/// on the UI thread. Linux (glibc) only; elsewhere this does nothing.
+/// glibc keeps freed blocks in its per-thread arenas for reuse, and the Windows
+/// heap allocator retains pages in the process working set, so after a song
+/// change or a long scroll the process stays at its peak size. `trimProcessMemory`
+/// releases what's free (`malloc_trim` on Linux, `SetProcessWorkingSetSize` +
+/// `HeapCompact` on Windows). It runs in a background isolate rather than on the
+/// UI thread.
 abstract final class MemoryTrim {
   // Not in widget tests either: their fake clock fails on timers left running.
   static final bool _available =
-      Host.isLinux && !Host.environment.containsKey('FLUTTER_TEST') && lookupMallocTrim() != null;
+      (Host.isLinux || Host.isWindows) && !Host.environment.containsKey('FLUTTER_TEST');
 
-  static void _trim() => inBackground(() => lookupMallocTrim()?.call(0)).ignore();
+  static void _trim() => inBackground(trimProcessMemory).ignore();
 
   static Timer? _soon;
   static Timer? _every;

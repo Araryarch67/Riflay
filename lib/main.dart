@@ -25,6 +25,7 @@ import 'services/download_notifications.dart';
 import 'services/play_history.dart';
 import 'services/scrobbler.dart';
 import 'services/player_controller.dart';
+import 'services/memory_trim.dart';
 import 'services/rendering_memory.dart';
 import 'services/stay_awake.dart';
 import 'services/wrap_notifications.dart';
@@ -205,6 +206,9 @@ class _RiflayAppState extends State<RiflayApp> with WidgetsBindingObserver {
     if (state == AppLifecycleState.paused || state == AppLifecycleState.detached) {
       unawaited(widget.controller.flushSaves());
     }
+    if (state == AppLifecycleState.hidden || state == AppLifecycleState.paused) {
+      MemoryTrim.schedule();
+    }
   }
 
   @override
@@ -282,7 +286,9 @@ class _RiflayAppState extends State<RiflayApp> with WidgetsBindingObserver {
   Widget build(BuildContext context) {
     // Decoded images: covers are decoded at their on-screen size, so 40 MiB
     // still holds a few hundred (Flutter's default is 100 MiB).
-    PaintingBinding.instance.imageCache.maximumSizeBytes = RenderingMemory.decodedImageBytes;
+    final imageCache = PaintingBinding.instance.imageCache;
+    imageCache.maximumSizeBytes = RenderingMemory.decodedImageBytes;
+    imageCache.maximumSize = RenderingMemory.maxImageCount;
     final theme = widget.theme == null ? appThemeNow(desktopFrame: hasCustomTitleBar) : _layout.themed(widget.theme!);
     return PlayerScope(
       controller: widget.controller,

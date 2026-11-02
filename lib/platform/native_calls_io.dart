@@ -14,6 +14,43 @@ int Function(int)? lookupMallocTrim() {
   }
 }
 
+/// Trims free memory back to the operating system.
+/// - Linux: invokes `malloc_trim(0)` from glibc.
+/// - Windows: trims the process working set via `SetProcessWorkingSetSize` and
+///   compacts the process heap via `HeapCompact` (kernel32.dll).
+void trimProcessMemory() {
+  if (Platform.isLinux) {
+    try {
+      lookupMallocTrim()?.call(0);
+    } catch (_) {}
+  } else if (Platform.isWindows) {
+    _trimWindows();
+  }
+}
+
+void _trimWindows() {
+  try {
+    final k = DynamicLibrary.open('kernel32.dll');
+    final getCurrentProcess =
+        k.lookupFunction<IntPtr Function(), int Function()>('GetCurrentProcess');
+    final setWorkingSet = k.lookupFunction<
+        Int32 Function(IntPtr, IntPtr, IntPtr),
+        int Function(int, int, int)>('SetProcessWorkingSetSize');
+    final getProcessHeap =
+        k.lookupFunction<IntPtr Function(), int Function()>('GetProcessHeap');
+    final heapCompact = k.lookupFunction<
+        IntPtr Function(IntPtr, Uint32),
+        int Function(int, int)>('HeapCompact');
+
+    final process = getCurrentProcess();
+    setWorkingSet(process, -1, -1);
+    final heap = getProcessHeap();
+    if (heap != 0) {
+      heapCompact(heap, 0);
+    }
+  } catch (_) {}
+}
+
 /// The CPU and operating system the app was built for, as `Abi.toString()` names it ("linux_x64").
 String get currentAbi => Abi.current().toString();
 

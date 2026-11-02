@@ -1036,6 +1036,7 @@ class PlayerController extends ChangeNotifier {
     } finally {
       _scanning = false;
       notifyListeners();
+      MemoryTrim.schedule();
     }
   }
 
@@ -1313,6 +1314,7 @@ class PlayerController extends ChangeNotifier {
     _autoplaySeed = null;
     playingFrom = null;
     notifyListeners();
+    MemoryTrim.schedule();
   }
 
   Future<void> togglePlay() async {
