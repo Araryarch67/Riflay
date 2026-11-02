@@ -12,6 +12,7 @@ import '../shell_scope.dart';
 import '../theme.dart';
 import '../widgets/controls.dart';
 import '../widgets/audio_visualizer.dart';
+import '../widgets/track_row.dart';
 import '../widgets/player_backdrop.dart';
 import '../widgets/marquee_text.dart';
 import '../widgets/signal_path.dart';
@@ -19,6 +20,7 @@ import '../widgets/stats_for_nerds.dart';
 import '../widgets/video_mode.dart';
 import '../ytmusic_edit.dart';
 import 'more_sheet.dart';
+import 'player_common.dart' show LinkText;
 
 /// Full-screen player on phones. Swipe down or tap the chevron to close.
 ///
@@ -169,20 +171,7 @@ class NowPlayingPage extends StatelessWidget {
                             tag: 'now-playing-art',
                             child: DecoratedBox(
                               // The video is wider than the square: a square shadow would show around it.
-                              decoration: BoxDecoration(
-                                shape:
-                                    LayoutPrefs.instance.visualizerEnabled &&
-                                        LayoutPrefs.instance.visualizerStyle.radial
-                                    ? BoxShape.circle
-                                    : BoxShape.rectangle,
-                                boxShadow:
-                                    showsVideo ||
-                                        (LayoutPrefs.instance.visualizerEnabled &&
-                                            (LayoutPrefs.instance.visualizerStyle == VisualizerStyle.pulse ||
-                                                LayoutPrefs.instance.visualizerStyle == VisualizerStyle.orbit))
-                                    ? null
-                                    : const [BoxShadow(color: Colors.black45, blurRadius: 32, offset: Offset(0, 12))],
-                              ),
+                              decoration: const BoxDecoration(),
                               child: TrackVisual(
                                 track: track,
                                 cover: SizedBox.square(
@@ -209,9 +198,10 @@ class NowPlayingPage extends StatelessWidget {
                                     ),
                                   ),
                                   const SizedBox(height: 2),
-                                  MarqueeText(
+                                  LinkText(
                                     track?.artist ?? '',
                                     style: text.titleMedium?.copyWith(color: AppColors.of(context).textSecondary),
+                                    onTap: track == null ? null : openArtist(context, PlayerScope.read(context), track),
                                   ),
                                   if (showBadge) ...[const SizedBox(height: 8), const QualityBadge(onDark: true)],
                                 ],

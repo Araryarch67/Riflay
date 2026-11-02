@@ -14,6 +14,7 @@ import 'package:riflay/services/lyrics.dart';
 import 'package:riflay/ui/pages/lyrics_page.dart';
 import 'package:riflay/ui/widgets/controls.dart';
 import 'package:riflay/ui/shell_scope.dart';
+import 'package:riflay/ui/pages/collection_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class _ControlPlayer extends PlayerController {
@@ -27,9 +28,9 @@ class _ControlPlayer extends PlayerController {
   Track get currentTrack => track;
 }
 
-Future<PlayerController> _app(WidgetTester tester, Size size) async {
+Future<PlayerController> _app(WidgetTester tester, Size size, {PlayerController? controller}) async {
   SharedPreferences.setMockInitialValues({'library.v1': jsonEncode(<Object>[])});
-  final c = PlayerController();
+  final c = controller ?? PlayerController();
   await tester.runAsync(c.load);
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
@@ -75,6 +76,48 @@ Future<PlayerController> _panels(WidgetTester tester, Widget panel, {PlayerContr
 }
 
 void main() {
+  testWidgets('Search waits for a tap before showing the phone keyboard, including revisits', (tester) async {
+    await _app(tester, const Size(400, 800));
+    await tester.tap(find.byTooltip('Search').last);
+    await tester.pump(const Duration(milliseconds: 600));
+    final field = find.widgetWithText(TextField, 'What do you want to play?').first;
+    expect(tester.testTextInput.isVisible, isFalse);
+    await tester.tap(field);
+    await tester.pump();
+    expect(tester.testTextInput.isVisible, isTrue);
+    await tester.tap(find.byTooltip('Home').last);
+    await tester.pump(const Duration(milliseconds: 600));
+    await tester.tap(find.byTooltip('Search').last);
+    await tester.pump(const Duration(milliseconds: 600));
+    expect(tester.testTextInput.isVisible, isFalse);
+  });
+
+  for (final menu in [false, true]) {
+    testWidgets('phone artist ${menu ? 'menu' : 'name'} opens above the full-screen player', (tester) async {
+      await _app(tester, const Size(400, 800), controller: _ArtistPlayer());
+      ShellScope.of(tester.element(find.byType(MiniPlayer))).openNowPlaying();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 600));
+      if (menu) {
+        await tester.tap(find.byTooltip('More').last);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 600));
+        await tester.tap(find.byTooltip('More options for Control test').last);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 600));
+        await tester.tap(find.text('Go to artist'));
+      } else {
+        await tester.tap(find.descendant(of: find.byType(NowPlayingPage), matching: find.text('Artist')).first);
+      }
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 800));
+      expect(find.byType(NowPlayingPage), findsNothing);
+      expect(find.byType(CollectionPage), findsOneWidget);
+      expect(find.text('Artist'), findsWidgets);
+      expect(tester.takeException(), isNull);
+    });
+  }
+
   testWidgets('phone: Home, Search, Library, Downloads and Settings are the tabs', (tester) async {
     await _app(tester, const Size(400, 800));
     // Icon tabs, named by their tooltips; Home is the round button in the middle.
@@ -270,4 +313,10 @@ void main() {
       debugDefaultTargetPlatformOverride = null;
     }
   });
+}
+
+class _ArtistPlayer extends _ControlPlayer {
+  @override
+  Collection? artistNamed(String name) =>
+      Collection(kind: CollectionKind.artist, title: 'Artist', subtitle: 'Artist', tracks: [track]);
 }

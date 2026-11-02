@@ -32,6 +32,7 @@ Future<void> showPlayerMore(BuildContext context, {bool closePlayer = false, Voi
   final c = PlayerScope.read(context);
   final track = c.currentTrack;
   if (track == null) return Future.value();
+  VideoMode.instance.follow(c);
   final shell = ShellScope.of(context);
   return showModalBottomSheet<void>(
     context: context,
@@ -104,7 +105,7 @@ class PlayerMoreSheet extends StatelessWidget {
     );
 
     final sleep = c.sleep;
-    final video = VideoMode.instance..follow(c);
+    final video = VideoMode.instance;
     return SafeArea(
       child: SingleChildScrollView(
         child: Column(
@@ -115,7 +116,7 @@ class PlayerMoreSheet extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(16, 0, 4, 4),
               child: Row(
                 children: [
-                  Artwork(track: track, size: 48, radius: 4),
+                  Artwork(track: track, size: 48, radius: 4, flower: true),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(

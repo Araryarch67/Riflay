@@ -6,6 +6,7 @@ import '../../services/player_controller.dart';
 import '../widgets/controls.dart';
 import '../theme.dart';
 import '../widgets/marquee_text.dart';
+import '../widgets/track_row.dart';
 import '../ytmusic_edit.dart';
 import 'more_sheet.dart';
 import 'player_common.dart';
@@ -99,7 +100,7 @@ class _MiniPlayerState extends State<MiniPlayer> {
                                   children: [
                                     Hero(
                                       tag: 'now-playing-art',
-                                      child: Artwork(track: track, size: 40, radius: 4),
+                                      child: Artwork(track: track, size: 40, radius: 4, flower: true),
                                     ),
                                     const SizedBox(width: 10),
                                     Expanded(
@@ -110,8 +111,9 @@ class _MiniPlayerState extends State<MiniPlayer> {
                                             track.title,
                                             style: text.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
                                           ),
-                                          MarqueeText(
+                                          LinkText(
                                             track.artist,
+                                            onTap: openArtist(context, c, track),
                                             style: text.bodySmall?.copyWith(color: AppColors.textSecondary),
                                           ),
                                         ],

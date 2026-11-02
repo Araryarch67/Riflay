@@ -17,7 +17,8 @@ import '../flac_convert_dialog.dart';
 import '../shell_scope.dart';
 import '../tag_editor.dart';
 import '../../services/youtube_music_account.dart';
-import '../pages/youtube_music_page.dart' show openRemotePlaylist;
+import '../../services/ytmusic_web.dart' show WebResultKind;
+import '../pages/youtube_music_page.dart' show openRemotePlaylist, RemoteCollectionPage;
 import '../ytmusic_edit.dart';
 import '../theme.dart';
 import 'controls.dart';
@@ -255,12 +256,38 @@ class _Hovering extends StatelessWidget {
 /// Opens [track]'s artist: YouTube Music's page for a streamed song (all of
 /// its songs, not only the ones here), the library's for a file on this
 /// device. Null when there's none to open. [host] must outlive the caller.
-VoidCallback? openArtist(BuildContext host, PlayerController c, Track track) {
+VoidCallback? openArtist(BuildContext host, PlayerController c, Track track, {ShellScope? shell}) {
+  final navigation = shell ?? ShellScope.of(host);
   final id = track.artistId;
-  void remote(String id) =>
-      openRemotePlaylist(host, RemotePlaylist(id: id, browseId: id, title: track.artist.split(', ').first, count: 0));
+  void remote(String id) => openRemotePlaylist(
+    host,
+    RemotePlaylist(id: id, browseId: id, title: track.artist.split(', ').first, count: 0),
+    shell: navigation,
+    account: c.ytMusic,
+  );
   if (track.isRemote && id != null) return () => remote(id);
-  if (c.artistNamed(track.artist) case final local?) return () => ShellScope.of(host).openCollection(local);
+  if (c.artistNamed(track.artist) case final local?) return () => navigation.openCollection(local);
+  if (track.isRemote && id == null && track.artist.trim().isNotEmpty && track.artist != 'Unknown artist') {
+    final name = track.artist.split(', ').first.trim();
+    return () => navigation.open(
+      RemoteCollectionPage(
+        title: name,
+        load: () async {
+          final matches = await c.ytMusic.searchOnly(name, WebResultKind.artist);
+          final artist =
+              matches.where((a) => a.title.toLowerCase() == name.toLowerCase()).firstOrNull ?? matches.firstOrNull;
+          if (artist == null) throw StateError('No artist result for $name');
+          return Collection(
+            kind: CollectionKind.remote,
+            title: artist.title,
+            subtitle: 'Artist',
+            tracks: await c.ytMusic.collectionTracks(artist),
+          );
+        },
+      ),
+      location: 'artist:$name',
+    );
+  }
   return id == null ? null : () => remote(id);
 }
 
@@ -314,7 +341,7 @@ class TrackMenuButton extends StatelessWidget {
           if (track.isRemote && track.videoId != null) YoutubeStream.prefetchDownloadCandidates(track.videoId!);
           final host = Navigator.of(context).context;
           final editScope = PlaylistEditScope.maybeOf(context);
-          final artist = openArtist(host, c, track);
+          final artist = openArtist(host, c, track, shell: shell);
           final album = c.albumOf(track);
           // A song downloaded from YouTube, or the download of a streamed one: "Edit" with the artist locked.
           final downloaded = track.isRemote ? c.downloadedCopy(track) : (DownloadEdit.isDownload(track) ? track : null);

@@ -153,6 +153,9 @@ class _HomeShellState extends State<HomeShell> {
       WidgetsBinding.instance.addPostFrameCallback((_) => _history.open(page, where));
       return;
     }
+    // Root-level player/queue/sheets must step aside before a tab page opens.
+    // Otherwise navigation succeeds underneath a still-visible full-screen player.
+    Navigator.of(context, rootNavigator: true).popUntil((route) => route.isFirst);
     WidgetsBinding.instance.addPostFrameCallback((_) => _nav?.push(_route(page, location: where)));
   }
 
@@ -177,10 +180,14 @@ class _HomeShellState extends State<HomeShell> {
     if (_history.location != Locations.home) _history.open(const HomePage(), Locations.home);
   }
 
-  void _goSearch() {
-    if (_compact) return _selectTab(PhoneTab.search);
+  void _goSearch({bool focusInput = false}) {
+    if (_compact) {
+      _selectTab(PhoneTab.search);
+      if (focusInput) WidgetsBinding.instance.addPostFrameCallback((_) => _searchFocus.requestFocus());
+      return;
+    }
     _showSearchResults();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _search.focus.requestFocus());
+    if (focusInput) WidgetsBinding.instance.addPostFrameCallback((_) => _search.focus.requestFocus());
   }
 
   /// The search page, fed by the title bar's box (opened as soon as you type).
@@ -267,13 +274,11 @@ class _HomeShellState extends State<HomeShell> {
 
   void _selectTab(PhoneTab tab) {
     _lastExitBack = null;
+    _searchFocus.unfocus();
     if (tab == _tab) {
       _nav?.popUntil((r) => r.isFirst);
     } else {
       setState(() => _tab = tab);
-    }
-    if (tab == PhoneTab.search) {
-      WidgetsBinding.instance.addPostFrameCallback((_) => _searchFocus.requestFocus());
     }
   }
 
@@ -448,7 +453,7 @@ class _HomeShellState extends State<HomeShell> {
         AppAction.previous: c.previous,
         AppAction.volumeUp: () => c.nudgeVolume(0.05),
         AppAction.volumeDown: () => c.nudgeVolume(-0.05),
-        AppAction.search: _goSearch,
+        AppAction.search: () => _goSearch(focusInput: true),
         AppAction.back: _history.back,
         AppAction.forward: _history.forward,
         AppAction.pasteLink: _pasteLink,

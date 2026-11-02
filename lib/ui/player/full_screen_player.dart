@@ -75,8 +75,6 @@ class _FullScreenPlayerState extends State<FullScreenPlayer> {
     final text = Theme.of(context).textTheme;
 
     final hasVideo = VideoMode.instance.videoOf(track) != null;
-    final showsVideo = hasVideo && VideoMode.instance.on;
-    final radial = LayoutPrefs.instance.visualizerEnabled && LayoutPrefs.instance.visualizerStyle.radial && !showsVideo;
     // Room for the title lines and "Next" under the cover (and the Song / Video switch above it).
     final art = math.min(box.maxHeight - 150 - (hasVideo ? 44 : 0), box.maxWidth * widthShare).clamp(120.0, 900.0);
     return Center(
@@ -89,17 +87,7 @@ class _FullScreenPlayerState extends State<FullScreenPlayer> {
             child: NowPlayingCover(
               child: DecoratedBox(
                 // The video is wider than the square: a square shadow would show around it.
-                decoration: BoxDecoration(
-                  borderRadius: radial ? null : LayoutPrefs.corner(12),
-                  shape: radial ? BoxShape.circle : BoxShape.rectangle,
-                  boxShadow:
-                      showsVideo ||
-                          (LayoutPrefs.instance.visualizerEnabled &&
-                              (LayoutPrefs.instance.visualizerStyle == VisualizerStyle.pulse ||
-                                  LayoutPrefs.instance.visualizerStyle == VisualizerStyle.orbit))
-                      ? null
-                      : const [BoxShadow(color: Color(0x73000000), blurRadius: 40, offset: Offset(0, 16))],
-                ),
+                decoration: const BoxDecoration(),
                 child: TrackVisual(
                   track: track,
                   cover: AudioVisualizer(
@@ -128,9 +116,10 @@ class _FullScreenPlayerState extends State<FullScreenPlayer> {
                         style: text.headlineSmall?.copyWith(fontWeight: FontWeight.w800, letterSpacing: -0.5),
                       ),
                       const SizedBox(height: 4),
-                      MarqueeText(
+                      LinkText(
                         next == null ? track.artist : '${track.artist}   ·   Next: ${next.title}',
                         style: text.bodyLarge?.copyWith(color: AppColors.textSecondary),
+                        onTap: openArtist(context, PlayerScope.read(context), track),
                       ),
                     ],
                   ),

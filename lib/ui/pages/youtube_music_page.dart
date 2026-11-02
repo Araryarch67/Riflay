@@ -78,15 +78,16 @@ Future<void> importPlaylist(BuildContext context) async {
 }
 
 /// Opens a library playlist or a public album / playlist in the current tab.
-void openRemotePlaylist(BuildContext context, RemotePlaylist p) {
-  final account = PlayerScope.read(context).ytMusic;
+void openRemotePlaylist(BuildContext context, RemotePlaylist p, {ShellScope? shell, YoutubeMusicAccount? account}) {
+  final music = account ?? PlayerScope.read(context).ytMusic;
+  final navigation = shell ?? ShellScope.of(context);
   // Library playlists open editable when they're the user's own.
-  if (p.browseId == null && account.canEdit) {
-    ShellScope.of(context).open(location: Locations.remotePlaylist(p.id), LibraryPlaylistPage(playlist: p));
+  if (p.browseId == null && music.canEdit) {
+    navigation.open(location: Locations.remotePlaylist(p.id), LibraryPlaylistPage(playlist: p));
     return;
   }
   final artistId = p.browseId?.startsWith('UC') ?? false ? p.browseId : null;
-  ShellScope.of(context).open(
+  navigation.open(
     location: Locations.remotePlaylist(p.id),
     RemoteCollectionPage(
       title: p.title,
@@ -98,7 +99,7 @@ void openRemotePlaylist(BuildContext context, RemotePlaylist p) {
         kind: CollectionKind.remote,
         title: p.title,
         subtitle: artistId != null ? 'Artist' : p.subtitle ?? 'YouTube Music',
-        tracks: await account.collectionTracks(p),
+        tracks: await music.collectionTracks(p),
       ),
     ),
   );
