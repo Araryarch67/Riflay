@@ -208,7 +208,8 @@ class _FullScreenPlayerState extends State<FullScreenPlayer> {
                           ),
                         ),
                         // Queue, volume etc. are in the player bar right below.
-                        if (track != null) const _PanelButtons(),
+                        // Always there, even with nothing playing: Lyrics is never hidden.
+                        _PanelButtons(hasTrack: track != null),
                         const SizedBox(width: 4),
                         ValueListenableBuilder(
                           valueListenable: windowFullScreen,
@@ -308,7 +309,9 @@ class _FullScreenPlayerState extends State<FullScreenPlayer> {
 
 /// Lyrics and Equalizer: a toggle pair for the panel beside the cover.
 class _PanelButtons extends StatelessWidget {
-  const _PanelButtons();
+  const _PanelButtons({required this.hasTrack});
+
+  final bool hasTrack;
 
   @override
   Widget build(BuildContext context) {
@@ -325,7 +328,7 @@ class _PanelButtons extends StatelessWidget {
               on: lyrics,
               icon: Icons.lyrics_outlined,
               tooltip: lyrics ? 'Hide lyrics' : 'Lyrics',
-              onPressed: () => toggleExpandedPanel(ExpandedPanel.lyrics),
+              onPressed: hasTrack || lyrics ? () => toggleExpandedPanel(ExpandedPanel.lyrics) : null,
             ),
             const SizedBox(width: 4),
             LyricsToggleButton(
