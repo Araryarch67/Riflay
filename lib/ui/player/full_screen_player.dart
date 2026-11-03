@@ -331,18 +331,15 @@ class _PanelButtons extends StatelessWidget {
       builder: (context, _) {
         final panel = expandedPlayerPanel.value;
         final lyrics = panel == ExpandedPanel.lyrics, eq = panel == ExpandedPanel.equalizer;
-        return Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            LyricsToggleButton(
-              on: lyrics,
+        return _PanelSwitch(
+          selected: lyrics ? 0 : (eq ? 1 : null),
+          segments: [
+            (
               icon: Icons.lyrics_outlined,
               tooltip: lyrics ? 'Hide lyrics' : 'Lyrics',
               onPressed: hasTrack || lyrics ? () => toggleExpandedPanel(ExpandedPanel.lyrics) : null,
             ),
-            const SizedBox(width: 4),
-            LyricsToggleButton(
-              on: eq,
+            (
               icon: Icons.equalizer_rounded,
               tooltip: eq ? 'Hide equalizer' : 'Equalizer',
               // Like the equalizer's own switch: nothing to turn on in bit-perfect mode or without the engine.
@@ -354,6 +351,77 @@ class _PanelButtons extends StatelessWidget {
           ],
         );
       },
+    );
+  }
+}
+
+/// A capsule of on / off switches, at most one on: a pill slides behind the one that is on, and tapping it
+/// again turns it off. Like a light switch rather than a row of buttons.
+class _PanelSwitch extends StatelessWidget {
+  const _PanelSwitch({required this.selected, required this.segments});
+
+  /// The segment that is on, or null.
+  final int? selected;
+  final List<({IconData icon, String tooltip, VoidCallback? onPressed})> segments;
+
+  static const _width = 44.0, _height = 34.0, _pad = 3.0;
+
+  @override
+  Widget build(BuildContext context) {
+    final on = selected;
+    final duration = LayoutPrefs.dur(const Duration(milliseconds: 220));
+    return Container(
+      padding: const EdgeInsets.all(_pad),
+      decoration: ShapeDecoration(shape: const StadiumBorder(), color: AppColors.textPrimary.withValues(alpha: 0.1)),
+      child: SizedBox(
+        width: _width * segments.length,
+        height: _height,
+        child: Stack(
+          children: [
+            // The thumb: stays where it was when everything is off, and fades out.
+            AnimatedPositioned(
+              duration: duration,
+              curve: Curves.easeOutCubic,
+              left: _width * (on ?? 0),
+              top: 0,
+              bottom: 0,
+              width: _width,
+              child: AnimatedOpacity(
+                duration: duration,
+                opacity: on == null ? 0 : 1,
+                child: DecoratedBox(
+                  decoration: ShapeDecoration(shape: const StadiumBorder(), color: AppColors.textPrimary),
+                ),
+              ),
+            ),
+            Row(
+              children: [
+                for (var i = 0; i < segments.length; i++)
+                  Tooltip(
+                    message: segments[i].tooltip,
+                    child: InkWell(
+                      customBorder: const StadiumBorder(),
+                      onTap: segments[i].onPressed,
+                      child: SizedBox(
+                        width: _width,
+                        height: _height,
+                        child: Icon(
+                          segments[i].icon,
+                          size: 20,
+                          color: i == on
+                              ? AppColors.solidBackground
+                              : segments[i].onPressed == null
+                              ? AppColors.textMuted
+                              : AppColors.textSecondary,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
