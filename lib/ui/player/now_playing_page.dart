@@ -228,11 +228,11 @@ class NowPlayingPage extends StatelessWidget {
                         final art = largeCover
                             ? math.min(
                                 constraints.maxWidth - 24,
-                                constraints.maxHeight - (showBadge ? 364 : 328) - stripHeight,
+                                constraints.maxHeight - (showBadge ? 364 : 328) - _volumeRowHeight - stripHeight,
                               )
                             : math.min(
                                 constraints.maxWidth - 48,
-                                constraints.maxHeight - (showBadge ? 400 : 364) - stripHeight,
+                                constraints.maxHeight - (showBadge ? 400 : 364) - _volumeRowHeight - stripHeight,
                               );
                         return Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -260,6 +260,7 @@ class NowPlayingPage extends StatelessWidget {
                               const TransportControls(large: true),
                               const SizedBox(height: 4),
                               const _SecondaryRow(),
+                              const _VolumeRow(),
                               const SizedBox(height: 8),
                             ],
                           ),
@@ -293,6 +294,61 @@ class _MoreButton extends StatelessWidget {
             : AppColors.of(context).textPrimary,
         onPressed: () => showPlayerMore(context, closePlayer: true),
         icon: const Icon(Icons.more_horiz_rounded, size: 28),
+      ),
+    );
+  }
+}
+
+/// Height of the [_VolumeRow] at the bottom of the portrait player.
+const _volumeRowHeight = 40.0;
+
+/// Volume at the very bottom of the portrait player: quieter icon, slider, louder icon. It is the
+/// same level the desktop [VolumeSlider] sets (also the cast device's while casting).
+class _VolumeRow extends StatelessWidget {
+  const _VolumeRow();
+
+  @override
+  Widget build(BuildContext context) {
+    final c = PlayerScope.read(context);
+    final colors = AppColors.of(context);
+    return PlayerSelect<({bool casting, double device, bool canSet, bool dop})>(
+      select: (c) => (
+        casting: c.casting,
+        device: c.casting ? c.volume : 0,
+        canSet: c.canSetVolume,
+        // DoP must reach the DAC untouched: its volume is the one to use.
+        dop: !c.casting && c.audio.dopPlaying != null,
+      ),
+      builder: (context, v, _) => ValueListenableBuilder<double>(
+        valueListenable: c.volumeLevel,
+        builder: (context, level, _) {
+          final volume = v.dop ? 1.0 : (v.casting ? v.device : level);
+          final setVolume = v.canSet && !v.dop ? c.setVolume : null;
+          Widget nudge(String tooltip, IconData icon, double by) => IconButton(
+            tooltip: tooltip,
+            iconSize: 22,
+            visualDensity: VisualDensity.compact,
+            color: colors.textSecondary,
+            onPressed: setVolume == null ? null : () => c.nudgeVolume(by),
+            icon: Icon(icon),
+          );
+          return SizedBox(
+            height: _volumeRowHeight,
+            child: Row(
+              children: [
+                nudge('Quieter', Icons.volume_down_rounded, -0.05),
+                Expanded(
+                  child: Slider(
+                    value: volume.clamp(0, 1),
+                    onChangeStart: setVolume == null ? null : (_) => c.volumeDragStarted(),
+                    onChanged: setVolume,
+                  ),
+                ),
+                nudge('Louder', Icons.volume_up_rounded, 0.05),
+              ],
+            ),
+          );
+        },
       ),
     );
   }

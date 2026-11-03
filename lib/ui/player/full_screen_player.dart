@@ -5,9 +5,11 @@ import 'package:flutter/material.dart';
 import 'package:window_manager/window_manager.dart';
 
 import '../../models/track.dart';
+import '../../services/audio_engine.dart';
 import '../../services/layout_prefs.dart';
 import '../../services/player_controller.dart';
 import '../../services/video_mode.dart';
+import '../pages/equalizer_page.dart';
 import '../pages/lyrics_page.dart';
 import '../theme.dart';
 import '../widgets/controls.dart';
@@ -28,8 +30,15 @@ final fullScreenPlayer = ValueNotifier<bool>(false);
 /// Whether the window fills the screen too.
 final windowFullScreen = ValueNotifier<bool>(false);
 
-/// Lyrics beside the cover in the expanded player.
-final expandedPlayerLyrics = ValueNotifier<bool>(false);
+/// What sits beside the cover in the expanded player.
+enum ExpandedPanel { none, lyrics, equalizer }
+
+/// The panel beside the cover in the expanded player.
+final expandedPlayerPanel = ValueNotifier<ExpandedPanel>(ExpandedPanel.none);
+
+/// Shows [panel] beside the cover, or closes it when it is the one already open.
+void toggleExpandedPanel(ExpandedPanel panel) =>
+    expandedPlayerPanel.value = expandedPlayerPanel.value == panel ? ExpandedPanel.none : panel;
 
 /// Expanded player with the window full screen, or neither.
 Future<void> setFullScreenPlayer(bool on) => showExpandedPlayer(on, fullScreen: on);
@@ -170,16 +179,7 @@ class _FullScreenPlayerState extends State<FullScreenPlayer> {
                           ),
                         ),
                         // Queue, volume etc. are in the player bar right below.
-                        if (track != null)
-                          ValueListenableBuilder(
-                            valueListenable: expandedPlayerLyrics,
-                            builder: (context, on, _) => LyricsToggleButton(
-                              on: on,
-                              icon: Icons.lyrics_outlined,
-                              tooltip: on ? 'Hide lyrics' : 'Lyrics',
-                              onPressed: () => expandedPlayerLyrics.value = !on,
-                            ),
-                          ),
+                        if (track != null) const _PanelButtons(),
                         const SizedBox(width: 4),
                         ValueListenableBuilder(
                           valueListenable: windowFullScreen,
@@ -197,44 +197,49 @@ class _FullScreenPlayerState extends State<FullScreenPlayer> {
                         ? Center(child: Text('Nothing is playing', style: text.titleMedium))
                         : ListenableBuilder(
                             // The Song / Video switch and the room it takes.
-                            listenable: Listenable.merge([expandedPlayerLyrics, VideoMode.instance]),
-                            builder: (context, _) => ValueListenableBuilder(
-                              valueListenable: expandedPlayerLyrics,
-                              builder: (context, lyrics, _) => LayoutBuilder(
-                                builder: (context, box) {
-                                  if (!lyrics) return _cover(context, track, next, box, widthShare: 0.5);
-                                  final lyricsView = Padding(
-                                    padding: const EdgeInsets.only(top: 8),
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                                      children: [
-                                        Align(
-                                          alignment: Alignment.centerRight,
-                                          child: Padding(
-                                            padding: const EdgeInsets.only(right: 20),
-                                            child: LyricsExtrasButtons(key: ValueKey(track.id), track: track),
-                                          ),
+                            listenable: Listenable.merge([expandedPlayerPanel, VideoMode.instance]),
+                            builder: (context, _) => LayoutBuilder(
+                              builder: (context, box) {
+                                final panel = expandedPlayerPanel.value;
+                                if (panel == ExpandedPanel.none) {
+                                  return _cover(context, track, next, box, widthShare: 0.5);
+                                }
+                                final side = panel == ExpandedPanel.lyrics
+                                    ? Padding(
+                                        padding: const EdgeInsets.only(top: 8),
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                                          children: [
+                                            Align(
+                                              alignment: Alignment.centerRight,
+                                              child: Padding(
+                                                padding: const EdgeInsets.only(right: 20),
+                                                child: LyricsExtrasButtons(key: ValueKey(track.id), track: track),
+                                              ),
+                                            ),
+                                            Expanded(child: LyricsView(track: track)),
+                                          ],
                                         ),
-                                        Expanded(child: LyricsView(track: track)),
-                                      ],
-                                    ),
-                                  );
-                                  // Too narrow for both: the lyrics alone.
-                                  if (box.maxWidth < 900) return lyricsView;
-                                  return Row(
-                                    children: [
-                                      Expanded(
-                                        flex: 5,
-                                        child: LayoutBuilder(
-                                          builder: (context, half) =>
-                                              _cover(context, track, next, half, widthShare: 0.8),
-                                        ),
+                                      )
+                                    // Scrolls when the bands and presets don't fit the height.
+                                    : const SingleChildScrollView(
+                                        padding: EdgeInsets.only(top: 8, bottom: 16),
+                                        child: EqualizerPanel(pad: 20),
+                                      );
+                                // Too narrow for both: the panel alone.
+                                if (box.maxWidth < 900) return side;
+                                return Row(
+                                  children: [
+                                    Expanded(
+                                      flex: 5,
+                                      child: LayoutBuilder(
+                                        builder: (context, half) => _cover(context, track, next, half, widthShare: 0.8),
                                       ),
-                                      Expanded(flex: 6, child: lyricsView),
-                                    ],
-                                  );
-                                },
-                              ),
+                                    ),
+                                    Expanded(flex: 6, child: side),
+                                  ],
+                                );
+                              },
                             ),
                           ),
                   ),
@@ -268,6 +273,45 @@ class _FullScreenPlayerState extends State<FullScreenPlayer> {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Lyrics and Equalizer: a toggle pair for the panel beside the cover.
+class _PanelButtons extends StatelessWidget {
+  const _PanelButtons();
+
+  @override
+  Widget build(BuildContext context) {
+    final audio = PlayerScope.read(context).audio;
+    return ListenableBuilder(
+      listenable: Listenable.merge([expandedPlayerPanel, audio]),
+      builder: (context, _) {
+        final panel = expandedPlayerPanel.value;
+        final lyrics = panel == ExpandedPanel.lyrics, eq = panel == ExpandedPanel.equalizer;
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            LyricsToggleButton(
+              on: lyrics,
+              icon: Icons.lyrics_outlined,
+              tooltip: lyrics ? 'Hide lyrics' : 'Lyrics',
+              onPressed: () => toggleExpandedPanel(ExpandedPanel.lyrics),
+            ),
+            const SizedBox(width: 4),
+            LyricsToggleButton(
+              on: eq,
+              icon: Icons.equalizer_rounded,
+              tooltip: eq ? 'Hide equalizer' : 'Equalizer',
+              // Like the equalizer's own switch: nothing to turn on in bit-perfect mode or without the engine.
+              // An open panel can always be closed.
+              onPressed: eq || (AudioEngine.supported && !audio.bitPerfect)
+                  ? () => toggleExpandedPanel(ExpandedPanel.equalizer)
+                  : null,
+            ),
+          ],
+        );
+      },
     );
   }
 }

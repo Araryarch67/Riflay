@@ -249,7 +249,7 @@ class _MoreMenu extends StatelessWidget {
     return ListenableBuilder(
       listenable: Listenable.merge([
         fullScreenPlayer,
-        expandedPlayerLyrics,
+        expandedPlayerPanel,
         windowFullScreen,
         c.sleep,
         c.cast,
@@ -292,11 +292,9 @@ class _MoreMenu extends StatelessWidget {
               Icons.lyrics_outlined,
               'Lyrics',
               hasTrack
-                  ? (expanded
-                        ? () => expandedPlayerLyrics.value = !expandedPlayerLyrics.value
-                        : ShellScope.of(context).openLyrics)
+                  ? (expanded ? () => toggleExpandedPanel(ExpandedPanel.lyrics) : ShellScope.of(context).openLyrics)
                   : null,
-              on: expanded && expandedPlayerLyrics.value,
+              on: expanded && expandedPlayerPanel.value == ExpandedPanel.lyrics,
             ),
             const PopupMenuDivider(),
             item(

@@ -15,98 +15,104 @@ class EqualizerPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final pad = ShellScope.of(context).compact ? 16.0 : 24.0;
+    return PageScaffold(
+      title: 'Equalizer',
+      slivers: [SliverToBoxAdapter(child: EqualizerPanel(pad: pad))],
+    );
+  }
+}
+
+/// The equalizer itself (switch, presets, bands, reset), shared by [EqualizerPage] and the
+/// expanded player's side panel. It listens to the audio engine on its own and does not scroll.
+class EqualizerPanel extends StatelessWidget {
+  const EqualizerPanel({super.key, this.pad = 24});
+
+  /// Side margin of every row.
+  final double pad;
+
+  @override
+  Widget build(BuildContext context) {
     final audio = PlayerScope.of(context).audio;
-    final shell = ShellScope.of(context);
     final text = Theme.of(context).textTheme;
-    final pad = shell.compact ? 16.0 : 24.0;
     return ListenableBuilder(
       listenable: audio,
-      builder: (context, _) => PageScaffold(
-        title: 'Equalizer',
-        slivers: [
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: EdgeInsets.fromLTRB(pad, 0, pad, 4),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text('Equalizer', style: text.headlineMedium?.copyWith(fontWeight: FontWeight.w800)),
+      builder: (context, _) => Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: EdgeInsets.fromLTRB(pad, 0, pad, 4),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text('Equalizer', style: text.headlineMedium?.copyWith(fontWeight: FontWeight.w800)),
+                ),
+                Switch(value: audio.eqEnabled, onChanged: audio.bitPerfect ? null : audio.setEqEnabled),
+              ],
+            ),
+          ),
+          Padding(
+            padding: EdgeInsets.fromLTRB(pad, 0, pad, 16),
+            child: Text(
+              audio.bitPerfect
+                  ? 'Bit-perfect mode is on, so the equalizer is bypassed. Turn it off in Settings › Sound › Output & quality.'
+                  : 'Pick a preset or drag the sliders. Tap a frequency to fine-tune it.',
+              style: text.bodyMedium?.copyWith(color: AppColors.textSecondary),
+            ),
+          ),
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: pad),
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final name in eqPresets.keys)
+                  ChoiceChip(
+                    label: Text(name),
+                    selected: audio.eqEnabled && audio.eqPreset == name,
+                    onSelected: audio.bitPerfect ? null : (_) => audio.applyPreset(name),
                   ),
-                  Switch(value: audio.eqEnabled, onChanged: audio.bitPerfect ? null : audio.setEqEnabled),
-                ],
-              ),
+                if (audio.eqPreset == 'Custom')
+                  ChoiceChip(label: const Text('Custom'), selected: audio.eqEnabled, onSelected: (_) {}),
+              ],
             ),
           ),
-          SliverToBoxAdapter(
+          AnimatedOpacity(
+            duration: const Duration(milliseconds: 200),
+            opacity: audio.eqEnabled && !audio.bitPerfect ? 1 : 0.4,
             child: Padding(
-              padding: EdgeInsets.fromLTRB(pad, 0, pad, 16),
-              child: Text(
-                audio.bitPerfect
-                    ? 'Bit-perfect mode is on, so the equalizer is bypassed. Turn it off in Settings › Sound › Output & quality.'
-                    : 'Pick a preset or drag the sliders. Tap a frequency to fine-tune it.',
-                style: text.bodyMedium?.copyWith(color: AppColors.textSecondary),
-              ),
-            ),
-          ),
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: pad),
-              child: Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  for (final name in eqPresets.keys)
-                    ChoiceChip(
-                      label: Text(name),
-                      selected: audio.eqEnabled && audio.eqPreset == name,
-                      onSelected: audio.bitPerfect ? null : (_) => audio.applyPreset(name),
-                    ),
-                  if (audio.eqPreset == 'Custom')
-                    ChoiceChip(label: const Text('Custom'), selected: audio.eqEnabled, onSelected: (_) {}),
-                ],
-              ),
-            ),
-          ),
-          SliverToBoxAdapter(
-            child: AnimatedOpacity(
-              duration: const Duration(milliseconds: 200),
-              opacity: audio.eqEnabled && !audio.bitPerfect ? 1 : 0.4,
-              child: Padding(
-                padding: EdgeInsets.fromLTRB(pad - 8, 24, pad - 8, 0),
-                child: SizedBox(
-                  height: 300,
-                  child: Row(
-                    children: [
-                      for (var i = 0; i < audio.bands.length; i++)
-                        Expanded(
-                          child: _BandSlider(index: i, band: audio.bands[i], audio: audio),
-                        ),
-                    ],
-                  ),
+              padding: EdgeInsets.fromLTRB(pad - 8, 24, pad - 8, 0),
+              child: SizedBox(
+                height: 300,
+                child: Row(
+                  children: [
+                    for (var i = 0; i < audio.bands.length; i++)
+                      Expanded(
+                        child: _BandSlider(index: i, band: audio.bands[i], audio: audio),
+                      ),
+                  ],
                 ),
               ),
             ),
           ),
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: EdgeInsets.fromLTRB(pad, 16, pad, 0),
-              child: Row(
-                children: [
-                  if (audio.preamp < 0)
-                    Expanded(
-                      child: Text(
-                        'Headroom ${audio.preamp.toStringAsFixed(1)} dB, so boosted bands never distort.',
-                        style: text.bodySmall?.copyWith(color: AppColors.textMuted),
-                      ),
-                    )
-                  else
-                    const Spacer(),
-                  TextButton(
-                    onPressed: audio.bitPerfect ? null : () => audio.applyPreset('Flat'),
-                    child: const Text('Reset'),
-                  ),
-                ],
-              ),
+          Padding(
+            padding: EdgeInsets.fromLTRB(pad, 16, pad, 0),
+            child: Row(
+              children: [
+                if (audio.preamp < 0)
+                  Expanded(
+                    child: Text(
+                      'Headroom ${audio.preamp.toStringAsFixed(1)} dB, so boosted bands never distort.',
+                      style: text.bodySmall?.copyWith(color: AppColors.textMuted),
+                    ),
+                  )
+                else
+                  const Spacer(),
+                TextButton(
+                  onPressed: audio.bitPerfect ? null : () => audio.applyPreset('Flat'),
+                  child: const Text('Reset'),
+                ),
+              ],
             ),
           ),
         ],

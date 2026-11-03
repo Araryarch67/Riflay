@@ -804,13 +804,13 @@ void main() {
         await LayoutPrefs.instance.setVisualizer(true);
         await LayoutPrefs.instance.setVisualizerStyle(VisualizerStyle.bars);
         await showExpandedPlayer(true);
-        expandedPlayerLyrics.value = true;
+        expandedPlayerPanel.value = ExpandedPanel.lyrics;
         await c.player.seek(const Duration(seconds: 33));
         for (final style in NowPlayingBackground.values.where((v) => v.isAbstract)) {
           await Appearance.instance.setNowPlaying(style);
           await shot('background-${style.name}');
         }
-        expandedPlayerLyrics.value = false;
+        expandedPlayerPanel.value = ExpandedPanel.none;
         await showExpandedPlayer(false);
         await Appearance.instance.setNowPlaying(NowPlayingBackground.color);
         await Appearance.instance.setReactiveBackground(false);
