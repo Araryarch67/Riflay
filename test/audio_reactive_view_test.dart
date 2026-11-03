@@ -39,7 +39,7 @@ void main() {
     await tester.pumpWidget(view(first));
     first.audio.visualizerLevels.add('-12');
     await tester.pump();
-    await tester.pump(const Duration(milliseconds: 16));
+    await tester.pump(const Duration(milliseconds: 17)); // one 60 fps step
     expect(display.value.last, greaterThan(0));
     // Another visible decoration may already be metering the new controller.
     second.audio.visualizerLevels.add('-45');
@@ -117,7 +117,7 @@ void main() {
       expect(c.audio.visualizerActive, isTrue);
       c.audio.visualizerLevels.add('-12');
       await tester.pump();
-      await tester.pump(const Duration(milliseconds: 16));
+      await tester.pump(const Duration(milliseconds: 17)); // one 60 fps step
       expect(display.value.last, greaterThan(0));
       expect(display.value.last, lessThan(c.audio.visualizerLevels.value.last));
 

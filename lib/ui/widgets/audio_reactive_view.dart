@@ -18,7 +18,9 @@ class AudioReactiveView extends StatefulWidget {
   final bool enabled;
 
   /// Caps how often the smoothed levels (and so the painters listening to them) update, for
-  /// slow decorations that gain nothing from the display's full refresh rate.
+  /// slow decorations that gain nothing from the display's full refresh rate. Unset, views
+  /// update at most 60 times a second (the levels themselves arrive 25 times a second), or
+  /// at the display's own rate in the Heavy performance mode.
   final double? maxFps;
   @override
   State<AudioReactiveView> createState() => _AudioReactiveViewState();
@@ -38,14 +40,43 @@ class _AudioReactiveViewState extends State<AudioReactiveView>
   late final Ticker _ticker;
   Duration _lastTick = Duration.zero;
 
+  // A capped view runs on a timer instead of the ticker: a ticker wakes the app on every
+  // vsync (240 times a second on a 240 Hz screen) even when it skips most of them.
+  Timer? _timer;
+
+  double? get _cap => widget.maxFps ?? (LayoutPrefs.heavy ? null : 60);
+
+  bool get _running => _ticker.isActive || _timer != null;
+
+  void _start() {
+    if (_running) return;
+    final fps = _cap;
+    if (fps == null) {
+      _lastTick = Duration.zero;
+      _ticker.start();
+      return;
+    }
+    final period = Duration(microseconds: (1000000 / fps).round());
+    var last = 0;
+    _timer = Timer.periodic(period, (t) {
+      // Ticks the timer could not keep up with still count, so the motion keeps its speed.
+      final delta = period * (t.tick - last);
+      last = t.tick;
+      if (!_levels.follow(_controller!.audio.visualizerLevels, delta)) _halt();
+    });
+  }
+
+  void _halt() {
+    _ticker.stop();
+    _timer?.cancel();
+    _timer = null;
+  }
+
   @override
   void initState() {
     super.initState();
     _ticker = createTicker((elapsed) {
       final delta = elapsed - _lastTick;
-      // 0.9 so a 60 Hz display (two 16.7 ms ticks) still reaches a 30 fps cap.
-      final fps = widget.maxFps;
-      if (fps != null && delta.inMicroseconds < 900000 / fps) return;
       _lastTick = elapsed;
       if (!_levels.follow(_controller!.audio.visualizerLevels, delta)) {
         _ticker.stop();
@@ -83,11 +114,10 @@ class _AudioReactiveViewState extends State<AudioReactiveView>
   void _animate() {
     if (!_attached || _release == null) return;
     if (_controller!.audio.visualizerLevels.value.every((v) => v == 0)) {
-      _ticker.stop();
+      _halt();
       _levels.clear();
-    } else if (!_ticker.isActive) {
-      _lastTick = Duration.zero;
-      _ticker.start();
+    } else {
+      _start();
     }
   }
 
@@ -109,7 +139,7 @@ class _AudioReactiveViewState extends State<AudioReactiveView>
     final release = _release;
     _release = null;
     release?.call();
-    _ticker.stop();
+    _halt();
     _levels.clear();
   }
 
@@ -159,6 +189,7 @@ class _AudioReactiveViewState extends State<AudioReactiveView>
     _playState?.cancel();
     _song?.cancel();
     _release?.call();
+    _timer?.cancel();
     _ticker.dispose();
     _levels.dispose();
     super.dispose();
