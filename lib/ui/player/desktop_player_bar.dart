@@ -203,6 +203,22 @@ class DesktopPlayerBar extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
+          // Always on the bar, never folded into the menu: lyrics are one of the most used views.
+          ListenableBuilder(
+            listenable: Listenable.merge([fullScreenPlayer, expandedPlayerPanel]),
+            builder: (context, _) {
+              final on = fullScreenPlayer.value && expandedPlayerPanel.value == ExpandedPanel.lyrics;
+              return IconButton(
+                tooltip: on ? 'Hide lyrics' : 'Lyrics',
+                onPressed: track == null
+                    ? null
+                    : fullScreenPlayer.value
+                    ? () => toggleExpandedPanel(ExpandedPanel.lyrics)
+                    : shell.openLyrics,
+                icon: Icon(Icons.lyrics_outlined, size: 20, color: on ? AppColors.accent : null),
+              );
+            },
+          ),
           IconButton(
             tooltip: 'Queue',
             onPressed: shell.openQueue,
