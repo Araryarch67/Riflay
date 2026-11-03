@@ -6,6 +6,7 @@ import '../../services/audio_engine.dart';
 import '../../services/beta_features.dart';
 import '../../services/layout_prefs.dart';
 import '../../services/player_controller.dart';
+import '../../services/ui_beat.dart';
 import '../../services/video_mode.dart';
 import '../../services/visualizer_levels.dart';
 
@@ -36,30 +37,25 @@ class _AudioReactiveViewState extends State<AudioReactiveView> with WidgetsBindi
   bool _attached = true;
   bool _reduceMotion = false;
   final _levels = VisualizerLevels();
-  // A timer, not a ticker: a ticker wakes the app on every vsync (240 times a second on a
-  // 240 Hz screen) even when it skips most of them.
-  Timer? _timer;
+  // The shared UI beat, not a ticker: a ticker wakes the app on every vsync (240 times a
+  // second on a 240 Hz screen) even when it skips most of them, and a timer of its own
+  // would land its frames between the seek bar's.
+  UiBeatListener? _beat;
 
   double get _cap => widget.maxFps ?? 60;
 
-  bool get _running => _timer != null;
+  bool get _running => _beat != null;
 
   void _start() {
     if (_running) return;
-    final fps = _cap;
-    final period = Duration(microseconds: (1000000 / fps).round());
-    var last = 0;
-    _timer = Timer.periodic(period, (t) {
-      // Ticks the timer could not keep up with still count, so the motion keeps its speed.
-      final delta = period * (t.tick - last);
-      last = t.tick;
-      if (!_levels.follow(_controller!.audio.visualizerLevels, delta)) _halt();
+    _beat = UiBeat.listen(Duration(microseconds: (1000000 / _cap).round()), (elapsed) {
+      if (!_levels.follow(_controller!.audio.visualizerLevels, elapsed)) _halt();
     });
   }
 
   void _halt() {
-    _timer?.cancel();
-    _timer = null;
+    _beat?.cancel();
+    _beat = null;
   }
 
   @override
@@ -129,6 +125,7 @@ class _AudioReactiveViewState extends State<AudioReactiveView> with WidgetsBindi
   @override
   void didUpdateWidget(AudioReactiveView oldWidget) {
     super.didUpdateWidget(oldWidget);
+    _beat?.period = Duration(microseconds: (1000000 / _cap).round());
     _sync();
   }
 
@@ -172,7 +169,7 @@ class _AudioReactiveViewState extends State<AudioReactiveView> with WidgetsBindi
     _playState?.cancel();
     _song?.cancel();
     _release?.call();
-    _timer?.cancel();
+    _halt();
     _levels.dispose();
     super.dispose();
   }

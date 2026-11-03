@@ -40,6 +40,7 @@ import 'youtube_music_account.dart';
 import 'youtube_importer.dart';
 import 'youtube_stream.dart';
 import 'library_views.dart';
+import 'ui_beat.dart';
 
 export '../ui/player_scope.dart';
 
@@ -508,13 +509,7 @@ class PlayerController extends ChangeNotifier {
           (casting
                   ? cast.positionTicks(every: Duration(milliseconds: smooth ? 50 : 200))
                   : smooth
-                  ? player.createPositionStream(
-                      // The song's length / 2400: half a pixel of a 1200 px bar.
-                      steps: 2400,
-                      // Lightweight: about four ticks a second is all a seek bar needs.
-                      minPeriod: Duration(milliseconds: mode == PerformanceMode.lightweight ? 250 : 16),
-                      maxPeriod: Duration(milliseconds: mode == PerformanceMode.lightweight ? 500 : 250),
-                    )
+                  ? _smoothTicks(lightweight: mode == PerformanceMode.lightweight)
                   : player.positionStream)
               // Nothing is drawn while the window is minimized or hidden: a tick there would only wake the
               // UI and raster threads. The next tick after it is shown again puts the views right.
@@ -535,6 +530,35 @@ class PlayerController extends ChangeNotifier {
         LayoutPrefs.instance.removeListener(attach);
         return sub?.cancel();
       },
+    );
+    return out.stream;
+  }
+
+  /// [position] on the shared [UiBeat], so a seek bar, the karaoke fill and the visualizer
+  /// that move in the same beat are drawn in one frame instead of one each. A tick every
+  /// 1/2400 of the song (half a pixel of a 1200 px bar), 60 to 4 times a second.
+  Stream<Duration> _smoothTicks({required bool lightweight}) {
+    UiBeatListener? beat;
+    late final StreamController<Duration> out;
+    Duration every() {
+      final step = (duration ?? Duration.zero) ~/ 2400;
+      final min = Duration(milliseconds: lightweight ? 250 : 16);
+      final max = Duration(milliseconds: lightweight ? 500 : 250);
+      return step < min ? min : (step > max ? max : step);
+    }
+
+    Duration? last;
+    out = StreamController<Duration>(
+      onListen: () {
+        out.add(last = position);
+        beat = UiBeat.listen(every(), (_) {
+          beat!.period = every();
+          final p = position;
+          // Paused: nothing moves, so nothing is drawn.
+          if (p != last) out.add(last = p);
+        });
+      },
+      onCancel: () => beat?.cancel(),
     );
     return out.stream;
   }

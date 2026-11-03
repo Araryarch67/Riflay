@@ -1,0 +1,71 @@
+import 'dart:async';
+
+/// One clock for everything on screen that moves by itself: the seek bars, the
+/// karaoke fill and the audio-reactive views.
+///
+/// Each used to run its own timer. On a 144-240 Hz display their ticks rarely
+/// fell in the same vsync, so two 60 fps timers asked for up to 120 frames a
+/// second, each one a full pass on the GPU. Driven by this one 60 Hz timer,
+/// whatever changes in a beat is drawn in a single frame. Views that need less
+/// take every second or fourth beat ([UiBeatListener.period]).
+class UiBeat {
+  UiBeat._();
+
+  /// 60 Hz: the most any view here is drawn at.
+  static const period = Duration(microseconds: 16667);
+
+  static final _listeners = <UiBeatListener>[];
+  static Timer? _timer;
+  static int _last = 0;
+
+  /// Calls [onBeat] about every [every] (rounded to whole beats; at least one)
+  /// with the time since its last call, until [UiBeatListener.cancel].
+  static UiBeatListener listen(Duration every, void Function(Duration elapsed) onBeat) {
+    final l = UiBeatListener._(every, onBeat);
+    _listeners.add(l);
+    _timer ??= Timer.periodic(period, _beat);
+    return l;
+  }
+
+  static void _beat(Timer t) {
+    // Beats the timer could not keep up with still count, so motion keeps its speed.
+    final elapsed = period * (t.tick - _last);
+    _last = t.tick;
+    for (final l in List.of(_listeners)) {
+      if (!l._active) continue;
+      l._waited += elapsed;
+      // Half a beat early is on time: a 33 ms view fires on every second beat, not every third.
+      if (l._waited + period ~/ 2 >= l.period) {
+        final waited = l._waited;
+        l._waited = Duration.zero;
+        l._onBeat(waited);
+      }
+    }
+  }
+
+  static void _remove(UiBeatListener l) {
+    _listeners.remove(l);
+    if (_listeners.isEmpty) {
+      _timer?.cancel();
+      _timer = null;
+      _last = 0;
+    }
+  }
+}
+
+/// A view's place on [UiBeat].
+class UiBeatListener {
+  UiBeatListener._(this.period, this._onBeat);
+
+  /// How often it wants a call.
+  Duration period;
+  final void Function(Duration elapsed) _onBeat;
+  Duration _waited = Duration.zero;
+  bool _active = true;
+
+  void cancel() {
+    if (!_active) return;
+    _active = false;
+    UiBeat._remove(this);
+  }
+}
