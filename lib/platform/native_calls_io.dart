@@ -16,19 +16,20 @@ int Function(int)? lookupMallocTrim() {
 
 /// Trims free memory back to the operating system.
 /// - Linux: invokes `malloc_trim(0)` from glibc.
-/// - Windows: trims the process working set via `SetProcessWorkingSetSize` and
-///   compacts the process heap via `HeapCompact` (kernel32.dll).
-void trimProcessMemory() {
+/// - Windows: compacts the process heap via `HeapCompact` (kernel32.dll). With [workingSet] it also empties the
+///   working set (`SetProcessWorkingSetSize`): that frees nothing that is committed, it only pages it out, and
+///   every page the app touches afterwards faults back in. Worth it only while the window is hidden.
+void trimProcessMemory({bool workingSet = false}) {
   if (Platform.isLinux) {
     try {
       lookupMallocTrim()?.call(0);
     } catch (_) {}
   } else if (Platform.isWindows) {
-    _trimWindows();
+    _trimWindows(workingSet);
   }
 }
 
-void _trimWindows() {
+void _trimWindows(bool workingSet) {
   try {
     final k = DynamicLibrary.open('kernel32.dll');
     final getCurrentProcess =
@@ -42,8 +43,7 @@ void _trimWindows() {
         IntPtr Function(IntPtr, Uint32),
         int Function(int, int)>('HeapCompact');
 
-    final process = getCurrentProcess();
-    setWorkingSet(process, -1, -1);
+    if (workingSet) setWorkingSet(getCurrentProcess(), -1, -1);
     final heap = getProcessHeap();
     if (heap != 0) {
       heapCompact(heap, 0);

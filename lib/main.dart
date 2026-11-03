@@ -189,6 +189,7 @@ class _RiflayAppState extends State<RiflayApp> with WidgetsBindingObserver {
     _layout.addListener(_restyle);
     widget.controller.addListener(_syncTint);
     _syncTint();
+    MemoryTrim.schedule();
   }
 
   @override
@@ -207,7 +208,9 @@ class _RiflayAppState extends State<RiflayApp> with WidgetsBindingObserver {
       unawaited(widget.controller.flushSaves());
     }
     if (state == AppLifecycleState.hidden || state == AppLifecycleState.paused) {
-      MemoryTrim.schedule();
+      MemoryTrim.hidden();
+    } else if (state == AppLifecycleState.inactive || state == AppLifecycleState.resumed) {
+      MemoryTrim.shown();
     }
   }
 

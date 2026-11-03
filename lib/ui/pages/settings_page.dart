@@ -342,7 +342,10 @@ class SettingsGroupPage extends StatelessWidget {
                   leading: CircleAvatar(
                     radius: 18,
                     backgroundColor: AppColors.hover,
-                    foregroundImage: c.ytMusic.avatarUrl == null ? null : NetworkImage(c.ytMusic.avatarUrl!),
+                    // Decoded at the avatar's size, not whatever resolution the account photo is served at.
+                    foregroundImage: c.ytMusic.avatarUrl == null
+                        ? null
+                        : ResizeImage(NetworkImage(c.ytMusic.avatarUrl!), width: 72, allowUpscaling: false),
                     child: Icon(s.icon, color: AppColors.textSecondary, size: 20),
                   ),
                   onTap: () => shell.open(SettingsTopicPage(section: s), location: s.location),
@@ -420,7 +423,9 @@ class _AccountSettings extends StatelessWidget {
             leading: CircleAvatar(
               radius: 20,
               backgroundColor: AppColors.hover,
-              foregroundImage: account.avatarUrl == null ? null : NetworkImage(account.avatarUrl!),
+              foregroundImage: account.avatarUrl == null
+                  ? null
+                  : ResizeImage(NetworkImage(account.avatarUrl!), width: 80, allowUpscaling: false),
               child: Icon(Icons.person_rounded, color: AppColors.textSecondary),
             ),
             title: Text(account.isSignedIn ? account.accountName ?? 'YouTube Music' : 'YouTube Music'),

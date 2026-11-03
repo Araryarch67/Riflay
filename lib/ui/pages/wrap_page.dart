@@ -90,7 +90,13 @@ class _WrapStoryState extends State<WrapStory> {
       final boundary = _keys[_index].currentContext?.findRenderObject() as RenderRepaintBoundary?;
       if (boundary == null) throw StateError('card not on screen');
       final image = await boundary.toImage(pixelRatio: 3);
-      final bytes = (await image.toByteData(format: ui.ImageByteFormat.png))?.buffer.asUint8List();
+      final ByteData? data;
+      try {
+        data = await image.toByteData(format: ui.ImageByteFormat.png);
+      } finally {
+        image.dispose();
+      }
+      final bytes = data?.buffer.asUint8List();
       if (bytes == null) throw StateError('no image');
       final dir = await getDownloadsDirectory() ?? await getApplicationDocumentsDirectory();
       final file = File(p.join(dir.path, 'Riflay Wrap ${widget.data.month.label} ${_index + 1}.png'));

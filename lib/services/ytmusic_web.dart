@@ -285,6 +285,8 @@ class YtMusicWeb {
 
   static const _ua = 'Mozilla/5.0 (X11; Linux x86_64; rv:88.0) Gecko/20100101 Firefox/88.0';
 
+  static final _jsonOfUtf8 = utf8.decoder.fuse(json.decoder);
+
   final http.Client _http;
   bool _closed = false;
 
@@ -365,9 +367,10 @@ class YtMusicWeb {
     }
     final bytes = res.bodyBytes;
     // Pages run to a megabyte or two of JSON: decoded on the UI thread, that dropped frames.
+    // Fused, the bytes are parsed without first building the whole page as one big string.
     final decoded = bytes.length < 32 << 10
-        ? jsonDecode(utf8.decode(bytes))
-        : await inBackground(() => jsonDecode(utf8.decode(bytes)));
+        ? _jsonOfUtf8.convert(bytes)
+        : await inBackground(() => _jsonOfUtf8.convert(bytes));
     if (decoded is! Map<String, dynamic>) {
       throw const YtMusicWebError('YouTube Music isn\'t answering right now. Try again later.');
     }

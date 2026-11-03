@@ -228,6 +228,10 @@ class _Session {
       'replaygain': 'no',
       'volume': '100',
       'cache-on-disk': 'no',
+      // The pipe is read as it is written; mpv's default demuxer budget (150 MiB, 32 MiB from media_kit) is not needed.
+      'demuxer-max-bytes': '${8 << 20}',
+      'demuxer-max-back-bytes': '${1 << 20}',
+      'sid': 'no',
       if (rate != null) 'audio-samplerate': '$rate',
       if (rate == null && maxRate != null) 'af': MpvPcm.rateFilter(maxRate),
     };
