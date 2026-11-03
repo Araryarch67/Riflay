@@ -21,10 +21,12 @@ abstract final class AppColors {
 
   /// Window and panel backgrounds; see-through when the window opacity
   /// setting is below 100%.
-  static Color get background => _p.background.withValues(alpha: Appearance.instance.windowOpacity);
+  static Color get background => _p.background.withValues(alpha: Appearance.instance.windowOpacity * _component);
   static Color get panel => _p.panel.withValues(alpha: Appearance.instance.windowOpacity * _component);
 
-  /// The desktop's component opacity: the fills of panels, cards and menus, never what is on them.
+  /// The desktop's component opacity: the fills of the window, panels, cards and menus, never what is on
+  /// them. Below 100% the system's blurred backdrop (acrylic) shows through those fills while text,
+  /// artwork and controls stay solid.
   static double get _component => Appearance.hasComponentOpacity ? Appearance.instance.componentOpacity : 1;
 
   /// [background] and [panel] without the window's opacity.
@@ -70,11 +72,11 @@ class AppColorsView {
   final double windowOpacity;
   final bool highContrast;
 
-  /// Applies to the fills of panels, cards and menus only; text, artwork and controls stay solid.
+  /// Applies to the fills of the window, panels, cards and menus only; text, artwork and controls stay solid.
   final double componentOpacity;
 
   bool get light => palette.light;
-  Color get background => palette.background.withValues(alpha: windowOpacity);
+  Color get background => palette.background.withValues(alpha: windowOpacity * componentOpacity);
   Color get panel => palette.panel.withValues(alpha: windowOpacity * componentOpacity);
   Color get solidBackground => palette.background;
   Color get elevated => palette.elevated.withValues(alpha: palette.elevated.a * componentOpacity);

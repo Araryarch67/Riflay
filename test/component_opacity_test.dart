@@ -11,7 +11,9 @@ import 'package:riflay/ui/widgets/title_bar.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
-  testWidgets('component opacity fades panel, card and menu fills, never artwork, text or controls', (tester) async {
+  testWidgets('component opacity fades window, panel, card and menu fills, never artwork, text or controls', (
+    tester,
+  ) async {
     SharedPreferences.setMockInitialValues({});
     final look = Appearance.instance;
     await look.reset();
@@ -47,6 +49,7 @@ void main() {
     // No whole-app layer: that faded every picture and line of text, and cost an offscreen pass each frame.
     expect(find.byKey(const ValueKey('desktop-component-opacity')), findsNothing);
     final colors = AppColorsScope.current();
+    expect(colors.background.a, closeTo(look.palette.background.a * look.windowOpacity * 0.6, 0.01));
     expect(colors.panel.a, closeTo(look.palette.panel.a * look.windowOpacity * 0.6, 0.01));
     expect(colors.elevated.a, closeTo(look.palette.elevated.a * 0.6, 0.01));
     expect(colors.menu.a, closeTo(look.palette.menu.a * 0.6, 0.01));

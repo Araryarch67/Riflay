@@ -253,7 +253,8 @@ class AppearanceSettings extends StatelessWidget {
             _SliderTile(
               icon: Icons.layers_outlined,
               title: 'Component opacity',
-              subtitle: 'Backgrounds of panels, cards, menus and the player bar. Text, covers and controls stay solid',
+              subtitle:
+                  'See-through backgrounds with the desktop blurred behind them. Text, covers and controls stay solid',
               value: look.componentOpacity,
               min: 0.3,
               max: 1,
