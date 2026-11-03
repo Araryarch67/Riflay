@@ -59,6 +59,7 @@ class _MiniPlayerState extends State<MiniPlayer> {
 
   Widget _bar(BuildContext context, PlayerController c, Track track) {
     final text = Theme.of(context).textTheme;
+    final capsule = LayoutPrefs.instance.miniPlayer == MiniPlayerStyle.capsule;
     return AccentBuilder(
       track: track,
       builder: (context, accent) => Dismissible(
@@ -69,7 +70,7 @@ class _MiniPlayerState extends State<MiniPlayer> {
           padding: const EdgeInsets.fromLTRB(8, 0, 8, 6),
           child: GlassPanel(
             color: AppColors.sink(accent, 0.75),
-            borderRadius: LayoutPrefs.corner(8),
+            borderRadius: capsule ? BorderRadius.circular(LayoutPrefs.radius(32)) : LayoutPrefs.corner(8),
             child: InkWell(
               onTap: widget.onOpen,
               onLongPress: () => showPlayerMore(context, openPlayer: widget.onOpen),
@@ -100,7 +101,12 @@ class _MiniPlayerState extends State<MiniPlayer> {
                                   children: [
                                     Hero(
                                       tag: 'now-playing-art',
-                                      child: Artwork(track: track, size: 40, radius: 4, flower: true),
+                                      child: Artwork(
+                                        track: track,
+                                        size: 40,
+                                        radius: capsule ? LayoutPrefs.radius(20) : 4,
+                                        flower: !capsule,
+                                      ),
                                     ),
                                     const SizedBox(width: 10),
                                     Expanded(
@@ -125,9 +131,15 @@ class _MiniPlayerState extends State<MiniPlayer> {
                             ),
                           ),
                         ),
-                        LikeButton(track: track, size: 24, color: AppColors.textPrimary),
-                        _MiniPlay(c: c),
-                        _MiniNext(c: c),
+                        if (capsule) ...[
+                          _MiniPrev(c: c),
+                          _MiniPlay(c: c, capsule: true),
+                          _MiniNext(c: c, capsule: true),
+                        ] else ...[
+                          LikeButton(track: track, size: 24, color: AppColors.textPrimary),
+                          _MiniPlay(c: c),
+                          _MiniNext(c: c),
+                        ],
                       ],
                     ),
                   ),
@@ -159,9 +171,12 @@ class _MiniPlayerState extends State<MiniPlayer> {
 
 /// Play / pause (or the spinner while buffering): the only part of the bar that follows each play state change.
 class _MiniPlay extends StatelessWidget {
-  const _MiniPlay({required this.c});
+  const _MiniPlay({required this.c, this.capsule = false});
 
   final PlayerController c;
+
+  /// The capsule's round, accent-filled button.
+  final bool capsule;
 
   @override
   Widget build(BuildContext context) => PlayerSelect<({bool buffering, bool playing})>(
@@ -178,8 +193,11 @@ class _MiniPlay extends StatelessWidget {
             )
           : IconButton(
               tooltip: s.playing ? 'Pause' : 'Play',
-              color: AppColors.textPrimary,
-              iconSize: 30,
+              color: capsule ? AppColors.onAccent : AppColors.textPrimary,
+              style: capsule
+                  ? IconButton.styleFrom(backgroundColor: AppColors.accent, fixedSize: const Size(40, 40))
+                  : null,
+              iconSize: capsule ? 24 : 30,
               padding: EdgeInsets.zero,
               onPressed: c.togglePlay,
               icon: Icon(s.playing ? Icons.pause_rounded : Icons.play_arrow_rounded),
@@ -188,10 +206,34 @@ class _MiniPlay extends StatelessWidget {
   );
 }
 
-class _MiniNext extends StatelessWidget {
-  const _MiniNext({required this.c});
+class _MiniPrev extends StatelessWidget {
+  const _MiniPrev({required this.c});
 
   final PlayerController c;
+
+  @override
+  Widget build(BuildContext context) => PlayerSelect<bool>(
+    select: (c) => c.hasQueue,
+    builder: (context, hasQueue, _) => IconButton(
+      tooltip: 'Previous',
+      color: AppColors.textPrimary,
+      style: IconButton.styleFrom(
+        backgroundColor: AppColors.textPrimary.withValues(alpha: 0.1),
+        fixedSize: const Size(36, 36),
+      ),
+      iconSize: 22,
+      padding: EdgeInsets.zero,
+      onPressed: hasQueue ? c.previous : null,
+      icon: const Icon(Icons.skip_previous_rounded),
+    ),
+  );
+}
+
+class _MiniNext extends StatelessWidget {
+  const _MiniNext({required this.c, this.capsule = false});
+
+  final PlayerController c;
+  final bool capsule;
 
   @override
   Widget build(BuildContext context) => PlayerSelect<bool>(
@@ -199,7 +241,14 @@ class _MiniNext extends StatelessWidget {
     builder: (context, hasNext, _) => IconButton(
       tooltip: 'Next',
       color: AppColors.textPrimary,
-      iconSize: 26,
+      style: capsule
+          ? IconButton.styleFrom(
+              backgroundColor: AppColors.textPrimary.withValues(alpha: 0.1),
+              fixedSize: const Size(36, 36),
+            )
+          : null,
+      iconSize: capsule ? 22 : 26,
+      padding: capsule ? EdgeInsets.zero : null,
       onPressed: hasNext ? c.next : null,
       icon: const Icon(Icons.skip_next_rounded),
     ),

@@ -117,7 +117,10 @@ enum ProgressBarStyle {
 
 enum ProgressBarShape {
   straight('Straight'),
-  wavy('Wavy');
+  wavy('Wavy'),
+
+  /// A thick rounded track with a pill of elapsed time and a bar for a thumb (the phone's player only).
+  pill('Pill');
 
   const ProgressBarShape(this.label);
   final String label;
@@ -137,6 +140,83 @@ enum PhoneCoverSize {
   large('Large');
 
   const PhoneCoverSize(this.label);
+  final String label;
+}
+
+/// The cover on the phone's Now Playing: an inset card, or filling the top edge to edge and fading into the page.
+enum PlayerCover {
+  card('Card'),
+  fullBleed('Full width');
+
+  const PlayerCover(this.label);
+  final String label;
+}
+
+/// The top of Now Playing.
+enum PlayerHeader {
+  classic('Classic'),
+  centered('Centred'),
+  playingFrom('Playing from');
+
+  const PlayerHeader(this.label);
+  final String label;
+}
+
+/// The buttons beside the song's title.
+enum TitleActions {
+  classic('Classic'),
+  boxed('Boxed'),
+  plain('Plain');
+
+  const TitleActions(this.label);
+  final String label;
+}
+
+/// The previous / play / next controls.
+enum PlayerTransport {
+  classic('Classic'),
+  pill('Pill'),
+  plain('Plain');
+
+  const PlayerTransport(this.label);
+  final String label;
+}
+
+/// The row of buttons under the controls. Every one keeps a Lyrics button.
+enum PlayerBottomRow {
+  classic('Classic'),
+  chips('Chips'),
+  minimal('Minimal');
+
+  const PlayerBottomRow(this.label);
+  final String label;
+}
+
+/// The phone's lyrics page: its header and the player under the lyrics.
+enum LyricsLayout {
+  classic('Classic'),
+  bottomCard('Bottom card'),
+  topHeader('Top header');
+
+  const LyricsLayout(this.label);
+  final String label;
+}
+
+/// The phone's mini player above the tab bar.
+enum MiniPlayerStyle {
+  classic('Classic'),
+  capsule('Capsule');
+
+  const MiniPlayerStyle(this.label);
+  final String label;
+}
+
+/// The header of an album or playlist page on phones.
+enum AlbumHeaderStyle {
+  classic('Classic'),
+  hero('Hero');
+
+  const AlbumHeaderStyle(this.label);
   final String label;
 }
 
@@ -214,6 +294,19 @@ class LayoutPrefs extends ChangeNotifier {
   ProgressBarShape progressShape = ProgressBarShape.wavy;
   PlayButtonShape playButton = PlayButtonShape.circle;
   PhoneCoverSize phoneCover = PhoneCoverSize.normal;
+
+  /// The phone's player, part by part. The defaults are how it has always looked; Settings › Look & feel ›
+  /// Layout › Player changes them one by one, and Presets sets several at once.
+  PlayerCover playerCover = PlayerCover.card;
+  PlayerHeader playerHeader = PlayerHeader.classic;
+  TitleActions titleActions = TitleActions.classic;
+  bool showTimeLeft = false;
+  PlayerTransport transport = PlayerTransport.classic;
+  bool showVolumeRow = true;
+  PlayerBottomRow bottomRow = PlayerBottomRow.classic;
+  LyricsLayout lyricsLayout = LyricsLayout.classic;
+  MiniPlayerStyle miniPlayer = MiniPlayerStyle.classic;
+  AlbumHeaderStyle albumHeader = AlbumHeaderStyle.classic;
 
   /// The phone's tab bar: docked under the mini player like most music apps, by default.
   TabBarStyle tabBar = TabBarStyle.capsule;
@@ -303,6 +396,15 @@ class LayoutPrefs extends ChangeNotifier {
     disabled: effectiveMotion == Motion.off,
   );
 
+  /// The phone player's parts are all as they have always been (Classic keeps its original layout).
+  bool get classicPlayerFace =>
+      playerCover == PlayerCover.card &&
+      playerHeader == PlayerHeader.classic &&
+      titleActions == TitleActions.classic &&
+      transport == PlayerTransport.classic &&
+      bottomRow == PlayerBottomRow.classic &&
+      showVolumeRow;
+
   /// Performance mode: Lightweight turns off every effect that isn't needed to use the app.
   static bool get lightweight => instance.performance == PerformanceMode.lightweight;
 
@@ -334,6 +436,16 @@ class LayoutPrefs extends ChangeNotifier {
     progressShape = pick(ProgressBarShape.values, 'progressShape', d.progressShape);
     playButton = pick(PlayButtonShape.values, 'playButton', d.playButton);
     phoneCover = pick(PhoneCoverSize.values, 'phoneCover', d.phoneCover);
+    playerCover = pick(PlayerCover.values, 'playerCover', d.playerCover);
+    playerHeader = pick(PlayerHeader.values, 'playerHeader', d.playerHeader);
+    titleActions = pick(TitleActions.values, 'titleActions', d.titleActions);
+    showTimeLeft = j['showTimeLeft'] as bool? ?? d.showTimeLeft;
+    transport = pick(PlayerTransport.values, 'transport', d.transport);
+    showVolumeRow = j['showVolumeRow'] as bool? ?? d.showVolumeRow;
+    bottomRow = pick(PlayerBottomRow.values, 'bottomRow', d.bottomRow);
+    lyricsLayout = pick(LyricsLayout.values, 'lyricsLayout', d.lyricsLayout);
+    miniPlayer = pick(MiniPlayerStyle.values, 'miniPlayer', d.miniPlayer);
+    albumHeader = pick(AlbumHeaderStyle.values, 'albumHeader', d.albumHeader);
     tabBar = pick(TabBarStyle.values, 'tabBar', d.tabBar);
     desktopBar = pick(DesktopBarStyle.values, 'desktopBar', d.desktopBar);
     showQualityBadge = j['showQualityBadge'] as bool? ?? d.showQualityBadge;
@@ -371,6 +483,16 @@ class LayoutPrefs extends ChangeNotifier {
     'progressShape': progressShape.name,
     'playButton': playButton.name,
     'phoneCover': phoneCover.name,
+    'playerCover': playerCover.name,
+    'playerHeader': playerHeader.name,
+    'titleActions': titleActions.name,
+    'showTimeLeft': showTimeLeft,
+    'transport': transport.name,
+    'showVolumeRow': showVolumeRow,
+    'bottomRow': bottomRow.name,
+    'lyricsLayout': lyricsLayout.name,
+    'miniPlayer': miniPlayer.name,
+    'albumHeader': albumHeader.name,
     'tabBar': tabBar.name,
     'desktopBar': desktopBar.name,
     'showQualityBadge': showQualityBadge,
@@ -413,6 +535,19 @@ class LayoutPrefs extends ChangeNotifier {
   Future<void> setProgressShape(ProgressBarShape v) => _set(() => progressShape = v);
   Future<void> setPlayButton(PlayButtonShape v) => _set(() => playButton = v);
   Future<void> setPhoneCover(PhoneCoverSize v) => _set(() => phoneCover = v);
+  Future<void> setPlayerCover(PlayerCover v) => _set(() => playerCover = v);
+  Future<void> setPlayerHeader(PlayerHeader v) => _set(() => playerHeader = v);
+  Future<void> setTitleActions(TitleActions v) => _set(() => titleActions = v);
+  Future<void> setShowTimeLeft(bool v) => _set(() => showTimeLeft = v);
+  Future<void> setTransport(PlayerTransport v) => _set(() => transport = v);
+  Future<void> setShowVolumeRow(bool v) => _set(() => showVolumeRow = v);
+  Future<void> setBottomRow(PlayerBottomRow v) => _set(() => bottomRow = v);
+  Future<void> setLyricsLayout(LyricsLayout v) => _set(() => lyricsLayout = v);
+  Future<void> setMiniPlayer(MiniPlayerStyle v) => _set(() => miniPlayer = v);
+  Future<void> setAlbumHeader(AlbumHeaderStyle v) => _set(() => albumHeader = v);
+
+  /// Several settings at once (a preset): one notify, one save.
+  Future<void> change(VoidCallback changes) => _set(changes);
   Future<void> setDesktopBar(DesktopBarStyle v) => _set(() => desktopBar = v);
   Future<void> setTabBar(TabBarStyle v) => _set(() => tabBar = v);
   Future<void> setVisualizerStyle(VisualizerStyle v) => _set(() => visualizerStyle = v);

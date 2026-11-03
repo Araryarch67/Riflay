@@ -332,7 +332,10 @@ class _EqualizerIconState extends State<EqualizerIcon> with SingleTickerProvider
 /// Seek slider with elapsed / total labels; drags locally and seeks on release.
 /// Playback position at display rate (just_audio interpolates between engine updates).
 class SeekBar extends StatefulWidget {
-  const SeekBar({super.key, this.inline = false, this.compact = false});
+  const SeekBar({super.key, this.inline = false, this.compact = false, this.phonePlayer = false});
+
+  /// The phone's player (Now Playing, lyrics): it may take the Pill shape and show the time left.
+  final bool phonePlayer;
 
   /// Labels either side of the bar (desktop) instead of underneath (mobile).
   final bool inline;
@@ -371,17 +374,25 @@ class _SeekBarState extends State<SeekBar> {
           final max = duration.inMilliseconds.toDouble().clamp(1.0, double.infinity);
           final value = (_dragValue ?? position.inMilliseconds.toDouble()).clamp(0.0, max);
           final active = _hovering || _dragValue != null;
+          final pill = widget.phonePlayer && LayoutPrefs.instance.progressShape == ProgressBarShape.pill;
+          final colors = AppColors.of(context);
           final slider = MouseRegion(
             onEnter: (_) => setState(() => _hovering = true),
             onExit: (_) => setState(() => _hovering = false),
             child: SliderTheme(
               data: SliderTheme.of(context).copyWith(
-                trackHeight: LayoutPrefs.instance.progressBar.height,
-                trackShape: LayoutPrefs.instance.progressShape == ProgressBarShape.wavy && !LayoutPrefs.lightweight
+                trackHeight: pill ? 9 : LayoutPrefs.instance.progressBar.height,
+                trackShape: pill
+                    ? const PillSeekTrack()
+                    : LayoutPrefs.instance.progressShape == ProgressBarShape.wavy && !LayoutPrefs.lightweight
                     ? const WavySeekTrack()
                     : null,
-                activeTrackColor: AppColors.of(context).accent,
-                thumbShape: RoundSliderThumbShape(
+                activeTrackColor: pill ? colors.inverse : colors.accent,
+                inactiveTrackColor: pill ? colors.inverse.withValues(alpha: 0.18) : null,
+                thumbColor: pill ? colors.inverse : null,
+                thumbShape: pill
+                    ? const BarThumbShape()
+                    : RoundSliderThumbShape(
                   enabledThumbRadius: active || !widget.inline
                       ? (LayoutPrefs.instance.progressBar == ProgressBarStyle.thick ? 8 : 6)
                       : 0,
@@ -404,7 +415,14 @@ class _SeekBarState extends State<SeekBar> {
             ),
           );
           final elapsed = Text(formatDuration(Duration(milliseconds: value.round())), style: style, maxLines: 1);
-          final total = Text(formatDuration(player.duration), style: style, maxLines: 1);
+          final left = widget.phonePlayer && LayoutPrefs.instance.showTimeLeft && duration > Duration.zero;
+          final total = Text(
+            left
+                ? '-${formatDuration(duration - Duration(milliseconds: value.round()))}'
+                : formatDuration(player.duration),
+            style: style,
+            maxLines: 1,
+          );
           if (widget.inline) {
             final timestampScale =
                 MediaQuery.textScalerOf(context).scale(style?.fontSize ?? 11) / (style?.fontSize ?? 11);

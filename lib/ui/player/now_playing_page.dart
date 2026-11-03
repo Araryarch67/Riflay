@@ -22,6 +22,10 @@ import '../widgets/video_mode.dart';
 import '../ytmusic_edit.dart';
 import 'more_sheet.dart';
 import 'player_common.dart' show LinkText;
+import 'player_parts.dart';
+
+/// The name of Now Playing's route, so a page above it can tell whether it is underneath.
+const nowPlayingRouteName = 'now-playing';
 
 /// Full-screen player on phones. Swipe down or tap the chevron to close.
 ///
@@ -131,7 +135,7 @@ class NowPlayingPage extends StatelessWidget {
                         final stripHeight = showStrip && constraints.maxHeight >= 560 ? 88.0 : 0.0;
                         // A phone held sideways: the cover goes beside the controls.
                         final sideways = constraints.maxWidth > constraints.maxHeight && constraints.maxHeight < 480;
-                        final topBar = Row(
+                        Widget topBarFor({required bool more}) => Row(
                           children: [
                             IconButton(
                               tooltip: 'Close',
@@ -158,10 +162,11 @@ class NowPlayingPage extends StatelessWidget {
                                 ],
                               ),
                             ),
-                            const _MoreButton(),
+                            if (more) const _MoreButton() else const SizedBox(width: 48),
                           ],
                         );
-                        Widget cover(double size) => NowPlayingCover(
+                        final topBar = topBarFor(more: true);
+                        Widget cover(double size, {double radius = 8}) => NowPlayingCover(
                           child: Hero(
                             tag: 'now-playing-art',
                             child: DecoratedBox(
@@ -172,7 +177,7 @@ class NowPlayingPage extends StatelessWidget {
                                 cover: SizedBox.square(
                                   dimension: size,
                                   child: AudioVisualizer(
-                                    child: Artwork(track: track, size: size, radius: 8),
+                                    child: Artwork(track: track, size: size, radius: radius),
                                   ),
                                 ),
                               ),
@@ -220,7 +225,7 @@ class NowPlayingPage extends StatelessWidget {
                                       const Spacer(),
                                       info,
                                       const SizedBox(height: 8),
-                                      const SeekBar(),
+                                      const SeekBar(phonePlayer: true),
                                       const TransportControls(large: true),
                                       const _SecondaryRow(),
                                     ],
@@ -230,14 +235,24 @@ class NowPlayingPage extends StatelessWidget {
                             ),
                           );
                         }
+                        if (!LayoutPrefs.instance.classicPlayerFace) {
+                          return ComposedNowPlaying(
+                            track: track,
+                            from: from,
+                            accent: accent,
+                            cover: cover,
+                            classicTopBar: topBarFor,
+                            showBadge: showBadge,
+                          );
+                        }
                         final art = largeCover
                             ? math.min(
                                 constraints.maxWidth - 24,
-                                constraints.maxHeight - (showBadge ? 364 : 328) - _volumeRowHeight - stripHeight,
+                                constraints.maxHeight - (showBadge ? 364 : 328) - playerVolumeRowHeight - stripHeight,
                               )
                             : math.min(
                                 constraints.maxWidth - 48,
-                                constraints.maxHeight - (showBadge ? 400 : 364) - _volumeRowHeight - stripHeight,
+                                constraints.maxHeight - (showBadge ? 400 : 364) - playerVolumeRowHeight - stripHeight,
                               );
                         return Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -260,12 +275,12 @@ class NowPlayingPage extends StatelessWidget {
                               ],
                               info,
                               const SizedBox(height: 16),
-                              const SeekBar(),
+                              const SeekBar(phonePlayer: true),
                               const SizedBox(height: 8),
                               const TransportControls(large: true),
                               const SizedBox(height: 4),
                               const _SecondaryRow(),
-                              const _VolumeRow(),
+                              const PlayerVolumeRow(),
                               const SizedBox(height: 8),
                             ],
                           ),
@@ -304,13 +319,16 @@ class _MoreButton extends StatelessWidget {
   }
 }
 
-/// Height of the [_VolumeRow] at the bottom of the portrait player.
-const _volumeRowHeight = 40.0;
+/// Height of the [PlayerVolumeRow] at the bottom of the portrait player.
+const playerVolumeRowHeight = 40.0;
 
 /// Volume at the very bottom of the portrait player: quieter icon, slider, louder icon. It is the
 /// same level the desktop [VolumeSlider] sets (also the cast device's while casting).
-class _VolumeRow extends StatelessWidget {
-  const _VolumeRow();
+class PlayerVolumeRow extends StatelessWidget {
+  const PlayerVolumeRow({super.key, this.mute = false});
+
+  /// The left icon mutes (and unmutes) instead of turning the volume down a step.
+  final bool mute;
 
   @override
   Widget build(BuildContext context) {
@@ -338,10 +356,20 @@ class _VolumeRow extends StatelessWidget {
             icon: Icon(icon),
           );
           return SizedBox(
-            height: _volumeRowHeight,
+            height: playerVolumeRowHeight,
             child: Row(
               children: [
-                nudge('Quieter', Icons.volume_down_rounded, -0.05),
+                if (mute)
+                  IconButton(
+                    tooltip: volume == 0 ? 'Unmute' : 'Mute',
+                    iconSize: 22,
+                    visualDensity: VisualDensity.compact,
+                    color: colors.textSecondary,
+                    onPressed: setVolume == null ? null : c.toggleMute,
+                    icon: Icon(volume == 0 ? Icons.volume_off_rounded : Icons.volume_mute_rounded),
+                  )
+                else
+                  nudge('Quieter', Icons.volume_down_rounded, -0.05),
                 Expanded(
                   child: Slider(
                     value: volume.clamp(0, 1),

@@ -149,7 +149,7 @@ void main() {
   });
 
   testWidgets('Layout settings: change a choice and reset', (tester) async {
-    tester.view.physicalSize = const Size(900, 2200);
+    tester.view.physicalSize = const Size(900, 3400);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
     await tester.pumpWidget(

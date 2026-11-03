@@ -437,6 +437,7 @@ class _HomeShellState extends State<HomeShell> {
   void _openNowPlaying() {
     _pushPhoneRoute(
       PageRouteBuilder(
+        settings: const RouteSettings(name: nowPlayingRouteName),
         transitionDuration: LayoutPrefs.pageDuration(player: true),
         reverseTransitionDuration: LayoutPrefs.pageDuration(reverse: true, player: true),
         pageBuilder: (_, _, _) => _scoped(const NowPlayingPage()),

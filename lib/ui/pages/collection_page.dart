@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../models/track.dart';
 import '../../platform/features.dart';
 import '../../services/flac_convert.dart';
+import '../../services/layout_prefs.dart';
 import '../../services/play_history.dart';
 import '../../services/player_controller.dart';
 import '../../services/smart_playlists.dart';
@@ -12,6 +13,7 @@ import '../download_options.dart';
 import '../flac_convert_dialog.dart';
 import '../shell_scope.dart';
 import '../theme.dart';
+import '../widgets/collection_hero.dart';
 import '../widgets/controls.dart';
 import '../widgets/editable_title.dart';
 import '../widgets/page_scaffold.dart';
@@ -96,6 +98,7 @@ class CollectionPage extends StatelessWidget {
       if (playlistId != null) _PlaylistMenu(id: playlistId, name: live.title, tracks: tracks),
     ];
 
+    final hero = shell.compact && LayoutPrefs.instance.albumHeader == AlbumHeaderStyle.hero;
     final page = AccentBuilder(
       track: live.cover,
       builder: (context, accent) {
@@ -105,92 +108,97 @@ class CollectionPage extends StatelessWidget {
           title: live.title,
           slivers: [
             SliverToBoxAdapter(
-              child: _Header(
-                collection: live,
-                accent: headerColor,
-                onRename: playlistId != null ? (name) => c.renamePlaylist(playlistId, name) : onRename,
-              ),
-            ),
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: EdgeInsets.fromLTRB(shell.compact ? 16 : 24, 16, 24, 8),
-                child: Row(
-                  children: [
-                    PlayerSelect<(bool, bool, bool)>(
-                      select: (c) {
-                        final here = c.isPlayingFrom(live);
-                        return (here, here && c.showsPlaying, here && c.shuffle);
-                      },
-                      builder: (context, s, _) {
-                        final (playingHere, playing, shuffled) = s;
-                        return Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            PlayButton(
-                              size: 56,
-                              color: AppColors.accent,
-                              iconColor: AppColors.onAccent,
-                              playing: playing,
-                              onPressed: tracks.isEmpty
-                                  ? null
-                                  : playingHere
-                                  ? c.togglePlay
-                                  : () => c.playCollection(live),
-                            ),
-                            const SizedBox(width: 16),
-                            // Lit while this collection plays shuffled; there it toggles shuffle.
-                            ModeButton(
-                              tooltip: playingHere ? (shuffled ? 'Disable shuffle' : 'Enable shuffle') : 'Shuffle play',
-                              active: shuffled,
-                              size: 30,
-                              icon: Icons.shuffle_rounded,
-                              onPressed: tracks.isEmpty
-                                  ? null
-                                  : playingHere
-                                  ? c.toggleShuffle
-                                  : () => c.playCollection(live, shuffled: true),
-                            ),
-                          ],
-                        );
-                      },
+              child: hero
+                  ? CollectionHero(collection: live, actions: actions)
+                  : _Header(
+                      collection: live,
+                      accent: headerColor,
+                      onRename: playlistId != null ? (name) => c.renamePlaylist(playlistId, name) : onRename,
                     ),
-                    ...actions,
-                    if (isAll) ...[
-                      const Spacer(),
-                      IconButton(
-                        tooltip: 'Add files',
-                        onPressed: shell.addFiles,
-                        icon: const Icon(Icons.add_circle_outline_rounded),
-                      ),
-                    ],
-                    if (live.kind == CollectionKind.remote && tracks.isNotEmpty && Features.downloads) ...[
-                      const Spacer(),
-                      IconButton(
-                        tooltip: 'Download all for offline',
-                        onPressed: () async {
-                          final messenger = ScaffoldMessenger.of(context);
-                          final choice = await chooseDownload(context);
-                          if (choice == null) return;
-                          final n = c.youtube.enqueueTracks(tracks, choice: choice);
-                          messenger.showSnackBar(
-                            SnackBar(content: Text(n == 0 ? 'Already downloaded' : 'Downloading $n songs…')),
+            ),
+            if (!hero)
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(shell.compact ? 16 : 24, 16, 24, 8),
+                  child: Row(
+                    children: [
+                      PlayerSelect<(bool, bool, bool)>(
+                        select: (c) {
+                          final here = c.isPlayingFrom(live);
+                          return (here, here && c.showsPlaying, here && c.shuffle);
+                        },
+                        builder: (context, s, _) {
+                          final (playingHere, playing, shuffled) = s;
+                          return Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              PlayButton(
+                                size: 56,
+                                color: AppColors.accent,
+                                iconColor: AppColors.onAccent,
+                                playing: playing,
+                                onPressed: tracks.isEmpty
+                                    ? null
+                                    : playingHere
+                                    ? c.togglePlay
+                                    : () => c.playCollection(live),
+                              ),
+                              const SizedBox(width: 16),
+                              // Lit while this collection plays shuffled; there it toggles shuffle.
+                              ModeButton(
+                                tooltip: playingHere
+                                    ? (shuffled ? 'Disable shuffle' : 'Enable shuffle')
+                                    : 'Shuffle play',
+                                active: shuffled,
+                                size: 30,
+                                icon: Icons.shuffle_rounded,
+                                onPressed: tracks.isEmpty
+                                    ? null
+                                    : playingHere
+                                    ? c.toggleShuffle
+                                    : () => c.playCollection(live, shuffled: true),
+                              ),
+                            ],
                           );
                         },
-                        icon: const Icon(Icons.download_for_offline_outlined),
                       ),
+                      ...actions,
+                      if (isAll) ...[
+                        const Spacer(),
+                        IconButton(
+                          tooltip: 'Add files',
+                          onPressed: shell.addFiles,
+                          icon: const Icon(Icons.add_circle_outline_rounded),
+                        ),
+                      ],
+                      if (live.kind == CollectionKind.remote && tracks.isNotEmpty && Features.downloads) ...[
+                        const Spacer(),
+                        IconButton(
+                          tooltip: 'Download all for offline',
+                          onPressed: () async {
+                            final messenger = ScaffoldMessenger.of(context);
+                            final choice = await chooseDownload(context);
+                            if (choice == null) return;
+                            final n = c.youtube.enqueueTracks(tracks, choice: choice);
+                            messenger.showSnackBar(
+                              SnackBar(content: Text(n == 0 ? 'Already downloaded' : 'Downloading $n songs…')),
+                            );
+                          },
+                          icon: const Icon(Icons.download_for_offline_outlined),
+                        ),
+                      ],
+                      if (live.kind == CollectionKind.youtube) ...[
+                        const Spacer(),
+                        IconButton(
+                          tooltip: 'Import from YouTube',
+                          onPressed: shell.importFromYoutube,
+                          icon: const Icon(Icons.add_link_rounded),
+                        ),
+                      ],
                     ],
-                    if (live.kind == CollectionKind.youtube) ...[
-                      const Spacer(),
-                      IconButton(
-                        tooltip: 'Import from YouTube',
-                        onPressed: shell.importFromYoutube,
-                        icon: const Icon(Icons.add_link_rounded),
-                      ),
-                    ],
-                  ],
+                  ),
                 ),
               ),
-            ),
             if (!shell.compact) SliverToBoxAdapter(child: _ColumnHeader(showAlbum: live.kind != CollectionKind.album)),
             SliverPadding(
               padding: EdgeInsets.symmetric(horizontal: shell.compact ? 12 : 16),
