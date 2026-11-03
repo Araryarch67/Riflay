@@ -24,6 +24,7 @@ Riflay is a free, open-source music player for Linux, Windows, macOS, Android an
 
 - [Features](#features)
 - [Screenshots](#screenshots)
+- [Install](#install)
 - [Build from source](#build-from-source)
 - [Web version](#web-version)
 - [YouTube Music](#youtube-music)
@@ -219,6 +220,46 @@ Select a style in **Settings › Look & feel › Layout › Now playing**. Pulse
 | Peaks | ![Peaks on desktop](docs/screenshots/visualizer-desktop-peaks.webp) | ![Peaks on mobile](docs/screenshots/visualizer-phone-peaks.webp) |
 
 </details>
+
+## Install
+
+Every file is on the [latest release](https://github.com/Araryarch67/Riflay/releases/latest), with `SHA256SUMS` to check your downloads against. A package manager also keeps Riflay up to date for you.
+
+### Windows
+
+With [Scoop](https://scoop.sh):
+
+```powershell
+scoop bucket add riflay https://github.com/Araryarch67/scoop-riflay
+scoop install riflay/riflay
+```
+
+`scoop update riflay` gets the newest version. Without Scoop, run `Riflay-windows-x64-setup.exe`, or unzip `Riflay-windows-x64.zip` anywhere and start `riflay.exe`.
+
+### Linux
+
+| Distribution | Install |
+|---|---|
+| Debian, Ubuntu, Mint | `sudo apt install ./Riflay-linux-amd64.deb` |
+| Fedora | `sudo dnf install ./Riflay-linux-x86_64.rpm` |
+| openSUSE | `sudo zypper install ./Riflay-linux-x86_64.rpm` |
+| Arch, Manjaro, EndeavourOS | `sudo pacman -U Riflay-linux-x86_64.pkg.tar.zst` |
+| Any, with [Homebrew](https://brew.sh) | `brew install --cask araryarch67/riflay/riflay` |
+| Any, no install | `chmod +x Riflay-linux-x86_64.AppImage`, then run it |
+
+The `.deb`, `.rpm` and Arch packages use your distribution's GTK 3 and libmpv (installed with them) and add Riflay to the application menu. Sign in with Google needs WebKitGTK 4.1, which the `.deb` and `.rpm` pull in when your system installs recommended packages; on Arch, install `webkit2gtk-4.1` yourself. The AppImage and the Homebrew install carry their own libmpv; an AppImage needs FUSE, which most desktops have (otherwise install your distribution's `fuse3`). The `.rpm` and Arch packages come with releases after 1.0.4.
+
+### macOS
+
+```sh
+brew install --cask araryarch67/riflay/riflay
+```
+
+Or open `Riflay-macos.dmg` and drag Riflay into Applications (see [Platform notes](#platform-notes) for the first launch). macOS builds are paused for now, so recent releases don't carry them yet.
+
+### Android and iOS
+
+Install `Riflay-android.apk` from the release (Android 7.0 and later); the release notes say which of the smaller APKs fits your phone. iOS builds are paused like macOS; the `.ipa` is unsigned, so sideload it with AltStore or Sideloadly.
 
 ## Build from source
 
