@@ -230,6 +230,17 @@ class LayoutPrefs extends ChangeNotifier {
   LyricsAlign lyricsAlign = LyricsAlign.left;
   bool dimUnsungLyrics = true;
 
+  /// Desktop: the library sidebar and the now-playing side panel, as dragged. Today's widths by default;
+  /// the shell narrows them when the window is too small to give the pages their room.
+  static const sidebarDefault = 300.0;
+  static const sidebarMin = 200.0;
+  static const sidebarMax = 420.0;
+  static const sidePanelDefault = 332.0;
+  static const sidePanelMin = 260.0;
+  static const sidePanelMax = 520.0;
+  double sidebarWidth = sidebarDefault;
+  double sidePanelWidth = sidePanelDefault;
+
   Motion motion = Motion.full;
   PageMotionStyle pageMotion = PageMotionStyle.diamondReveal;
   PageMotionSpeed pageSpeed = PageMotionSpeed.relaxed;
@@ -336,6 +347,8 @@ class LayoutPrefs extends ChangeNotifier {
     lyricsSize = pick(LyricsSize.values, 'lyricsSize', d.lyricsSize);
     lyricsAlign = pick(LyricsAlign.values, 'lyricsAlign', d.lyricsAlign);
     dimUnsungLyrics = j['dimUnsungLyrics'] as bool? ?? d.dimUnsungLyrics;
+    sidebarWidth = (j['sidebarWidth'] as num?)?.toDouble().clamp(sidebarMin, sidebarMax) ?? d.sidebarWidth;
+    sidePanelWidth = (j['sidePanelWidth'] as num?)?.toDouble().clamp(sidePanelMin, sidePanelMax) ?? d.sidePanelWidth;
     motion = pick(Motion.values, 'motion', d.motion);
     pageMotion = pick(PageMotionStyle.values, 'pageMotion', d.pageMotion);
     pageSpeed = pick(PageMotionSpeed.values, 'pageSpeed', d.pageSpeed);
@@ -370,6 +383,8 @@ class LayoutPrefs extends ChangeNotifier {
     'lyricsSize': lyricsSize.name,
     'lyricsAlign': lyricsAlign.name,
     'dimUnsungLyrics': dimUnsungLyrics,
+    'sidebarWidth': sidebarWidth,
+    'sidePanelWidth': sidePanelWidth,
     'motion': motion.name,
     'pageMotion': pageMotion.name,
     'pageSpeed': pageSpeed.name,
@@ -411,6 +426,8 @@ class LayoutPrefs extends ChangeNotifier {
   Future<void> setDimUnsungLyrics(bool v) => _set(() => dimUnsungLyrics = v);
   Future<void> setPageMotion(PageMotionStyle v) => _set(() => pageMotion = v);
   Future<void> setPageSpeed(PageMotionSpeed v) => _set(() => pageSpeed = v);
+  Future<void> setSidebarWidth(double v) => _set(() => sidebarWidth = v.clamp(sidebarMin, sidebarMax));
+  Future<void> setSidePanelWidth(double v) => _set(() => sidePanelWidth = v.clamp(sidePanelMin, sidePanelMax));
   Future<void> setMotion(Motion v) => _set(() => motion = v);
   Future<void> setPerformance(PerformanceMode v) => _set(() => performance = v);
 

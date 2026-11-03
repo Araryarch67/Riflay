@@ -32,6 +32,7 @@ import 'pages/listen_together_page.dart';
 import 'shell/desktop_sidebar.dart';
 import 'shell/first_frame_gate.dart';
 import 'shell/phone_navigation.dart';
+import 'shell/resize_handle.dart';
 import 'widgets/title_bar.dart';
 
 /// Root layout.
@@ -67,6 +68,7 @@ class _HomeShellState extends State<HomeShell> {
   @override
   void initState() {
     super.initState();
+    LayoutPrefs.instance.addListener(_syncWidths);
     _history.addListener(_followLocation);
     // Tapping a download notification brings up the Downloads page.
     DownloadNotifications.registerOpenDownloads(() {
@@ -124,6 +126,9 @@ class _HomeShellState extends State<HomeShell> {
 
   @override
   void dispose() {
+    LayoutPrefs.instance.removeListener(_syncWidths);
+    _sidebarWidth.dispose();
+    _sidePanelWidth.dispose();
     _player?.removeListener(_followTrack);
     _history.removeListener(_followLocation);
     DownloadNotifications.registerOpenDownloads(null);
@@ -325,6 +330,43 @@ class _HomeShellState extends State<HomeShell> {
   bool _compact = false;
   double _contentWidth = 0;
 
+  // The sidebars' widths while dragging: only the sized boxes listen, so a drag doesn't rebuild the shell.
+  final _sidebarWidth = ValueNotifier(LayoutPrefs.instance.sidebarWidth);
+  final _sidePanelWidth = ValueNotifier(LayoutPrefs.instance.sidePanelWidth);
+
+  // What the last build knew, for the drag to clamp against.
+  double _window = 0;
+  bool _sideOpenNow = false;
+
+  /// Reset layout (or a restored backup) changed the saved widths.
+  void _syncWidths() {
+    if (_saving) return;
+    final p = LayoutPrefs.instance;
+    if (_sidebarWidth.value == p.sidebarWidth && _sidePanelWidth.value == p.sidePanelWidth) return;
+    _sidebarWidth.value = p.sidebarWidth;
+    _sidePanelWidth.value = p.sidePanelWidth;
+    if (mounted) setState(() {});
+  }
+
+  void _dragSidebar(double dx) =>
+      _sidebarWidth.value = SidebarFit.left(_sidebarWidth.value + dx, _window, sideOpen: _sideOpenNow);
+
+  void _dragSidePanel(double dx) {
+    final left = SidebarFit.left(_sidebarWidth.value, _window, sideOpen: true);
+    _sidePanelWidth.value = SidebarFit.right(_sidePanelWidth.value - dx, _window, left: left);
+  }
+
+  /// Drag over (or reset): save once, and let the pages learn their new width.
+  void _saveWidths() {
+    _saving = true;
+    unawaited(LayoutPrefs.instance.setSidebarWidth(_sidebarWidth.value));
+    unawaited(LayoutPrefs.instance.setSidePanelWidth(_sidePanelWidth.value));
+    _saving = false;
+    if (mounted) setState(() {});
+  }
+
+  bool _saving = false;
+
   /// Wraps [child] with layout facts + actions. Root-level routes (now playing,
   /// phone queue) need their own copy since they sit outside the shell tree.
   Widget _scoped(Widget child) {
@@ -522,9 +564,13 @@ class _HomeShellState extends State<HomeShell> {
         ),
       );
     } else {
-      final sidebarWidth = expanded ? 300.0 : 84.0;
       final sideOpen = expanded && _sidePanel && _hasTrack;
-      _contentWidth = width - sidebarWidth - (sideOpen ? 340 : 0) - 24;
+      _window = width;
+      _sideOpenNow = sideOpen;
+      // The rail at narrow widths is fixed; the dragged widths apply to the expanded layout only.
+      final sidebarWidth = expanded ? SidebarFit.left(_sidebarWidth.value, width, sideOpen: sideOpen) : 84.0;
+      final panelWidth = SidebarFit.right(_sidePanelWidth.value, width, left: sidebarWidth);
+      _contentWidth = width - sidebarWidth - (sideOpen ? panelWidth + 8 : 0) - 24;
       body = _scoped(
         Scaffold(
           extendBody: LayoutPrefs.instance.desktopBar.floats,
@@ -563,8 +609,12 @@ class _HomeShellState extends State<HomeShell> {
                       padding: EdgeInsets.fromLTRB(8, hasCustomTitleBar ? 0 : 8, 8, 0),
                       child: Row(
                         children: [
-                          SizedBox(
-                            width: sidebarWidth,
+                          ValueListenableBuilder(
+                            valueListenable: _sidebarWidth,
+                            builder: (context, want, sidebar) => SizedBox(
+                              width: expanded ? SidebarFit.left(want, width, sideOpen: sideOpen) : sidebarWidth,
+                              child: sidebar,
+                            ),
                             child: ListenableBuilder(
                               listenable: _history,
                               builder: (context, _) => DesktopSidebar(
@@ -577,11 +627,48 @@ class _HomeShellState extends State<HomeShell> {
                               ),
                             ),
                           ),
-                          const SizedBox(width: 8),
+                          expanded
+                              ? ResizeHandle(
+                                  label: 'Resize sidebar',
+                                  onDrag: _dragSidebar,
+                                  onEnd: _saveWidths,
+                                  onReset: () {
+                                    _sidebarWidth.value = SidebarFit.left(
+                                      LayoutPrefs.sidebarDefault,
+                                      width,
+                                      sideOpen: sideOpen,
+                                    );
+                                    _saveWidths();
+                                  },
+                                )
+                              : const SizedBox(width: 8),
                           Expanded(child: ShellPanel(child: _desktopNavigator())),
                           if (expanded)
-                            SlidingPanel(
-                              open: sideOpen,
+                            // The sidebar listens too: widening it takes the room from this panel.
+                            ListenableBuilder(
+                              listenable: Listenable.merge([_sidePanelWidth, _sidebarWidth]),
+                              builder: (context, panel) => SlidingPanel(
+                                open: sideOpen,
+                                width: SidebarFit.right(
+                                  _sidePanelWidth.value,
+                                  width,
+                                  left: SidebarFit.left(_sidebarWidth.value, width, sideOpen: sideOpen),
+                                ),
+                                handle: ResizeHandle(
+                                  label: 'Resize side panel',
+                                  onDrag: _dragSidePanel,
+                                  onEnd: _saveWidths,
+                                  onReset: () {
+                                    _sidePanelWidth.value = SidebarFit.right(
+                                      LayoutPrefs.sidePanelDefault,
+                                      width,
+                                      left: SidebarFit.left(_sidebarWidth.value, width, sideOpen: true),
+                                    );
+                                    _saveWidths();
+                                  },
+                                ),
+                                child: panel!,
+                              ),
                               child: ShellPanel(
                                 child: NowPlayingSidePanel(onClose: () => setState(() => _sidePanel = false)),
                               ),
