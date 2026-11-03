@@ -13,9 +13,13 @@ import '../../services/visualizer_levels.dart';
 /// Shares one audio analysis stream between player decorations. No microphone,
 /// extra network requests, or player is needed for reactive visuals.
 class AudioReactiveView extends StatefulWidget {
-  const AudioReactiveView({super.key, required this.builder, this.enabled = true});
+  const AudioReactiveView({super.key, required this.builder, this.enabled = true, this.maxFps});
   final Widget Function(BuildContext, VisualizerLevels) builder;
   final bool enabled;
+
+  /// Caps how often the smoothed levels (and so the painters listening to them) update, for
+  /// slow decorations that gain nothing from the display's full refresh rate.
+  final double? maxFps;
   @override
   State<AudioReactiveView> createState() => _AudioReactiveViewState();
 }
@@ -39,6 +43,9 @@ class _AudioReactiveViewState extends State<AudioReactiveView>
     super.initState();
     _ticker = createTicker((elapsed) {
       final delta = elapsed - _lastTick;
+      // 0.9 so a 60 Hz display (two 16.7 ms ticks) still reaches a 30 fps cap.
+      final fps = widget.maxFps;
+      if (fps != null && delta.inMicroseconds < 900000 / fps) return;
       _lastTick = elapsed;
       if (!_levels.follow(_controller!.audio.visualizerLevels, delta)) {
         _ticker.stop();
@@ -124,6 +131,7 @@ class _AudioReactiveViewState extends State<AudioReactiveView>
     final active =
         widget.enabled &&
         BetaFeatures.instance.isOn(BetaFeature.audioVisualizer) &&
+        !LayoutPrefs.lightweight &&
         LayoutPrefs.moves &&
         !_reduceMotion &&
         _visible &&

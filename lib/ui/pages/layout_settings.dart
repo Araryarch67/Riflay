@@ -176,6 +176,11 @@ class LayoutSettings extends StatelessWidget {
             ],
           ),
           const _Header('Motion'),
+          if (LayoutPrefs.lightweight)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Text('Performance is set to Lightweight, so these stay off.', style: muted),
+            ),
           SettingsCard(
             children: [
               SettingTile(
@@ -184,7 +189,7 @@ class LayoutSettings extends StatelessWidget {
                 subtitle: Text('Coordinated page, tab and player transitions', style: muted),
                 control: OptionPicker<PageMotionStyle>(
                   value: p.pageMotion,
-                  onChanged: p.setPageMotion,
+                  onChanged: LayoutPrefs.lightweight ? null : p.setPageMotion,
                   options: [for (final v in PageMotionStyle.values) (v, v.label)],
                 ),
               ),
@@ -194,7 +199,7 @@ class LayoutSettings extends StatelessWidget {
                 subtitle: Text('Choose a brisk or more relaxed pace', style: muted),
                 control: OptionPicker<PageMotionSpeed>(
                   value: p.pageSpeed,
-                  onChanged: p.setPageSpeed,
+                  onChanged: LayoutPrefs.lightweight ? null : p.setPageSpeed,
                   options: [for (final v in PageMotionSpeed.values) (v, v.label)],
                 ),
               ),
@@ -207,7 +212,7 @@ class LayoutSettings extends StatelessWidget {
                 ),
                 control: OptionPicker<Motion>(
                   value: p.motion,
-                  onChanged: p.setMotion,
+                  onChanged: LayoutPrefs.lightweight ? null : p.setMotion,
                   options: [for (final v in Motion.values) (v, v.label)],
                 ),
               ),

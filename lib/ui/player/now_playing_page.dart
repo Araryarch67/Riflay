@@ -1,11 +1,12 @@
 import 'dart:math' as math;
-import 'dart:ui' show ImageFilter;
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 
 import '../../models/track.dart';
 import '../../services/appearance.dart';
 import '../../services/layout_prefs.dart';
+import '../../services/metadata.dart';
 import '../../services/player_controller.dart';
 import '../../services/video_mode.dart';
 import '../shell_scope.dart';
@@ -78,19 +79,8 @@ class NowPlayingPage extends StatelessWidget {
             fit: StackFit.expand,
             children: [
               if (look.isAbstract) Positioned.fill(child: PlayerBackdrop(coverColor: accent)),
-              if (look == NowPlayingBackground.blurredCover && track != null)
-                // A small decode is plenty under this much blur. Its own layer: the
-                // colour steps and the controls above never blur it again.
-                RepaintBoundary(
-                  child: ImageFiltered(
-                    imageFilter: ImageFilter.blur(sigmaX: 48, sigmaY: 48, tileMode: TileMode.clamp),
-                    child: FittedBox(
-                      fit: BoxFit.cover,
-                      clipBehavior: Clip.hardEdge,
-                      child: Artwork(track: track, size: 160, radius: 0),
-                    ),
-                  ),
-                ),
+              if (look == NowPlayingBackground.blurredCover && track != null && !LayoutPrefs.lightweight)
+                RepaintBoundary(child: _BlurredCover(track: track)),
               AnimatedContainer(
                 duration: LayoutPrefs.dur(const Duration(milliseconds: 500)),
                 decoration: BoxDecoration(
@@ -331,6 +321,113 @@ class _SecondaryRow extends StatelessWidget {
           icon: const Icon(Icons.queue_music_rounded),
         ),
       ],
+    );
+  }
+}
+
+/// The blurred-cover background, worked out once per cover: a small decode is
+/// blurred into a still image and stretched over the page. Blurring the cover
+/// live cost every frame several full-window passes (the renderer keeps no
+/// cache of a filtered layer), for a picture that only changes with the song.
+class _BlurredCover extends StatefulWidget {
+  const _BlurredCover({required this.track});
+
+  final Track track;
+
+  @override
+  State<_BlurredCover> createState() => _BlurredCoverState();
+}
+
+class _BlurredCoverState extends State<_BlurredCover> {
+  // The last one made, so reopening Now Playing on the same song draws it at once.
+  static String? _lastKey;
+  static ui.Image? _last;
+
+  // Matches the old live blur: sigma 48 on a cover filling ~1600 px, at this size.
+  static const _side = 64;
+  static const _sigma = 2.0;
+
+  ui.Image? _image;
+  String? _key;
+
+  String _keyOf(Track t) => t.albumKey ?? t.id;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  @override
+  void didUpdateWidget(_BlurredCover old) {
+    super.didUpdateWidget(old);
+    if (_keyOf(widget.track) != _key) _load();
+  }
+
+  Future<void> _load() async {
+    final key = _key = _keyOf(widget.track);
+    if (key == _lastKey && _last != null) {
+      _show(_last!.clone());
+      return;
+    }
+    final bytes = Metadata.cachedThumbnail(widget.track) ?? await Metadata.thumbnail(widget.track);
+    if (bytes == null || !mounted || key != _key) return;
+    ui.Image? small;
+    try {
+      final codec = await ui.instantiateImageCodec(bytes, targetWidth: _side, targetHeight: _side);
+      small = (await codec.getNextFrame()).image;
+      codec.dispose();
+      final recorder = ui.PictureRecorder();
+      final size = _side.toDouble();
+      Canvas(recorder).drawImageRect(
+        small,
+        Rect.fromLTWH(0, 0, small.width.toDouble(), small.height.toDouble()),
+        Rect.fromLTWH(0, 0, size, size),
+        Paint()
+          ..filterQuality = FilterQuality.medium
+          ..imageFilter = ui.ImageFilter.blur(sigmaX: _sigma, sigmaY: _sigma, tileMode: TileMode.clamp),
+      );
+      final picture = recorder.endRecording();
+      final blurred = await picture.toImage(_side, _side);
+      picture.dispose();
+      if (!mounted || key != _key) {
+        blurred.dispose();
+        return;
+      }
+      _last?.dispose();
+      _lastKey = key;
+      _last = blurred;
+      _show(blurred.clone());
+    } catch (e) {
+      debugPrint('Blurring the cover failed: $e');
+    } finally {
+      small?.dispose();
+    }
+  }
+
+  // Each view holds its own handle, so a newer cover replacing [_last] never pulls one out from under it.
+  void _show(ui.Image image) {
+    _image?.dispose();
+    setState(() => _image = image);
+  }
+
+  @override
+  void dispose() {
+    _image?.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final image = _image;
+    if (image == null) return const SizedBox.expand();
+    // Stretched smoothly, the small blurred picture keeps the soft look of the live blur.
+    return RawImage(
+      image: image,
+      fit: BoxFit.cover,
+      filterQuality: FilterQuality.medium,
+      width: double.infinity,
+      height: double.infinity,
     );
   }
 }

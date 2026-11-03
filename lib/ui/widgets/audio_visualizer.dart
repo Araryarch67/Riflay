@@ -153,7 +153,10 @@ class _VisualizerPainter extends CustomPainter {
   final double thickness;
   final VisualizerCoverShape coverShape;
 
-  Paint pen(double opacity, {double width = 2, bool fill = false}) => Paint()
+  // One pen, restyled per stroke: every caller draws with it before asking for the next.
+  final _pen = Paint();
+  Paint pen(double opacity, {double width = 2, bool fill = false}) => _pen
+    ..shader = null
     ..color = color.withValues(alpha: opacity)
     ..strokeWidth = width
     ..strokeCap = StrokeCap.round
@@ -260,6 +263,12 @@ class _VisualizerPainter extends CustomPainter {
       final count = bars.length;
       final step = bounds.width / count;
       final width = (step * 0.72).clamp(2.0, 14.0);
+      final barShader = LinearGradient(
+        begin: Alignment.bottomCenter,
+        end: Alignment.topCenter,
+        colors: [color.withValues(alpha: 0.5), color],
+      ).createShader(bounds);
+      final barPaint = Paint()..shader = barShader;
       for (var i = 0; i < count; i++) {
         final amplitude = bars[i];
         final height = amplitude * (bounds.height - 4);
@@ -272,15 +281,7 @@ class _VisualizerPainter extends CustomPainter {
         } else {
           final baseline = style == VisualizerStyle.mirror ? center + height / 2 : bounds.bottom;
           final rect = Rect.fromLTWH(x - width / 2, baseline - height, width, height);
-          canvas.drawRRect(
-            RRect.fromRectAndRadius(rect, const Radius.circular(1.5)),
-            Paint()
-              ..shader = LinearGradient(
-                begin: Alignment.bottomCenter,
-                end: Alignment.topCenter,
-                colors: [color.withValues(alpha: 0.5), color],
-              ).createShader(bounds),
-          );
+          canvas.drawRRect(RRect.fromRectAndRadius(rect, const Radius.circular(1.5)), barPaint);
         }
       }
       return;

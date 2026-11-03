@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 
@@ -20,19 +21,17 @@ class PlayerBackdrop extends StatelessWidget {
     listenable: Listenable.merge([Appearance.instance, LayoutPrefs.instance, BetaFeatures.instance]),
     builder: (context, _) {
       final look = Appearance.instance;
-      if (!look.nowPlaying.isAbstract) return const SizedBox.shrink();
+      // Lightweight draws no backdrop at all, just the page's own background colour.
+      if (!look.nowPlaying.isAbstract || LayoutPrefs.lightweight) return const SizedBox.shrink();
       Widget paint(VisualizerLevels? levels) => IgnorePointer(
         child: RepaintBoundary(
-          child: CustomPaint(
-            painter: _AbstractBackdrop(
-              style: look.nowPlaying,
-              cover: coverColor,
-              accent: AppColors.accent,
-              background: AppColors.solidBackground,
-              light: AppColors.light,
-              levels: levels,
-            ),
-            child: const SizedBox.expand(),
+          child: _BackdropPaint(
+            style: look.nowPlaying,
+            cover: coverColor,
+            accent: AppColors.accent,
+            background: AppColors.solidBackground,
+            light: AppColors.light,
+            levels: levels,
           ),
         ),
       );
@@ -42,9 +41,170 @@ class PlayerBackdrop extends StatelessWidget {
           MediaQuery.disableAnimationsOf(context)) {
         return paint(null);
       }
-      return AudioReactiveView(builder: (context, levels) => paint(levels));
+      // The colour fields drift slowly: 30 updates a second look the same as 60 or 120.
+      return AudioReactiveView(maxFps: LayoutPrefs.heavy ? null : 30, builder: (context, levels) => paint(levels));
     },
   );
+}
+
+/// Tests set this to render the CPU painter even where the shader would load.
+@visibleForTesting
+bool debugBackdropFallback = false;
+
+/// The backdrop's fragment program (shaders/backdrop.frag), loaded once for the whole app. Until it is
+/// ready, or if it can't load on this device, [_AbstractBackdrop] paints the same look on the CPU path.
+class _BackdropPaint extends StatefulWidget {
+  const _BackdropPaint({
+    required this.style,
+    required this.cover,
+    required this.accent,
+    required this.background,
+    required this.light,
+    this.levels,
+  });
+  final NowPlayingBackground style;
+  final Color cover;
+  final Color accent;
+  final Color background;
+  final bool light;
+  final VisualizerLevels? levels;
+
+  @override
+  State<_BackdropPaint> createState() => _BackdropPaintState();
+}
+
+class _BackdropPaintState extends State<_BackdropPaint> {
+  static ui.FragmentProgram? _program;
+  static Future<ui.FragmentProgram?>? _loading;
+  ui.FragmentShader? _shader;
+
+  static Future<ui.FragmentProgram?> _load() =>
+      _loading ??= ui.FragmentProgram.fromAsset('shaders/backdrop.frag')
+          .then<ui.FragmentProgram?>((program) => _program = program)
+          .catchError((Object e) {
+            debugPrint('Backdrop shader unavailable: $e');
+            return null;
+          });
+
+  @override
+  void initState() {
+    super.initState();
+    if (debugBackdropFallback) return;
+    if (_program case final program?) {
+      _shader = program.fragmentShader();
+    } else {
+      _load().then((program) {
+        if (mounted && program != null) setState(() => _shader = program.fragmentShader());
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _shader?.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final w = widget;
+    final shader = _shader;
+    return CustomPaint(
+      painter: shader != null
+          ? _ShaderBackdrop(
+              shader: shader,
+              style: w.style,
+              cover: w.cover,
+              accent: w.accent,
+              background: w.background,
+              light: w.light,
+              levels: w.levels,
+            )
+          : _AbstractBackdrop(
+              style: w.style,
+              cover: w.cover,
+              accent: w.accent,
+              background: w.background,
+              light: w.light,
+              levels: w.levels,
+            ),
+      child: const SizedBox.expand(),
+    );
+  }
+}
+
+/// The four colour-field tints, from the cover colour and the accent.
+List<Color> _backdropColors(Color cover, Color accent) {
+  final hsl = HSLColor.fromColor(cover);
+  return [
+    cover,
+    accent,
+    hsl.withHue((hsl.hue + 42) % 360).withSaturation(hsl.saturation.clamp(0.25, 0.65)).toColor(),
+    hsl.withHue((hsl.hue + 315) % 360).withSaturation(hsl.saturation.clamp(0.25, 0.65)).toColor(),
+  ];
+}
+
+class _ShaderBackdrop extends CustomPainter {
+  _ShaderBackdrop({
+    required this.shader,
+    required this.style,
+    required this.cover,
+    required this.accent,
+    required this.background,
+    required this.light,
+    this.levels,
+  }) : colors = _backdropColors(cover, accent),
+       super(repaint: levels);
+  final ui.FragmentShader shader;
+  final NowPlayingBackground style;
+  final Color cover;
+  final Color accent;
+  final Color background;
+  final bool light;
+  final VisualizerLevels? levels;
+  final List<Color> colors;
+  final _paint = Paint();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (size.isEmpty) return;
+    // The motion repeats every 100 pi, so wrapping keeps float precision after hours of playback.
+    final phase = ((levels?.frame ?? 0) * 0.006) % (100 * math.pi);
+    final base = Color.lerp(background, cover, light ? 0.035 : 0.08)!;
+    var i = 0;
+    void set(double v) => shader.setFloat(i++, v);
+    void setColor(Color c) {
+      set(c.r);
+      set(c.g);
+      set(c.b);
+    }
+
+    set(size.width);
+    set(size.height);
+    set(switch (style) {
+      NowPlayingBackground.aurora => 0,
+      NowPlayingBackground.silk => 1,
+      NowPlayingBackground.orbits => 2,
+      _ => 3,
+    });
+    set(phase);
+    set(levels?.backgroundEnergy ?? 0.35);
+    set(light ? 1 : 0);
+    colors.forEach(setColor);
+    setColor(background);
+    setColor(base);
+    canvas.drawRect(Offset.zero & size, _paint..shader = shader);
+  }
+
+  @override
+  bool shouldRepaint(_ShaderBackdrop old) =>
+      old.style != style ||
+      old.cover != cover ||
+      old.accent != accent ||
+      old.background != background ||
+      old.light != light ||
+      old.levels != levels ||
+      old.shader != shader;
 }
 
 class _AbstractBackdrop extends CustomPainter {
@@ -70,13 +230,7 @@ class _AbstractBackdrop extends CustomPainter {
     canvas.clipRect(rect);
     final phase = (levels?.frame ?? 0) * 0.006;
     final energy = levels?.backgroundEnergy ?? 0.35;
-    final hsl = HSLColor.fromColor(cover);
-    final colors = [
-      cover,
-      accent,
-      hsl.withHue((hsl.hue + 42) % 360).withSaturation(hsl.saturation.clamp(0.25, 0.65)).toColor(),
-      hsl.withHue((hsl.hue + 315) % 360).withSaturation(hsl.saturation.clamp(0.25, 0.65)).toColor(),
-    ];
+    final colors = _backdropColors(cover, accent);
     canvas.drawColor(Color.lerp(background, cover, light ? 0.035 : 0.08)!, BlendMode.srcOver);
     void glow(Offset center, double radius, Color color, double opacity, {double stretch = 1}) {
       canvas.save();

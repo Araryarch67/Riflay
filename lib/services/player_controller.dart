@@ -26,6 +26,7 @@ import 'dop.dart';
 import 'ffmpeg.dart';
 import 'folder_watch.dart';
 import 'ios_folders.dart';
+import 'layout_prefs.dart';
 import 'library_store.dart';
 import 'lyrics.dart';
 import 'lyrics_translation.dart';
@@ -487,13 +488,21 @@ class PlayerController extends ChangeNotifier {
   /// [position] a few times a second, for views that rebuild a lot per tick.
   Stream<Duration> positionUpdates() => _positionStream(smooth: false);
 
+  static bool get _drawn => switch (WidgetsBinding.instance.lifecycleState) {
+    AppLifecycleState.hidden || AppLifecycleState.paused || AppLifecycleState.detached => false,
+    _ => true,
+  };
+
   Stream<Duration> _positionStream({required bool smooth}) {
     StreamSubscription<Duration>? sub;
     bool? wasCasting;
+    PerformanceMode? wasMode;
     late final StreamController<Duration> out;
     void attach() {
-      if (wasCasting == casting) return;
+      final mode = LayoutPrefs.instance.performance;
+      if (wasCasting == casting && wasMode == mode) return;
       wasCasting = casting;
+      wasMode = mode;
       sub?.cancel();
       sub =
           (casting
@@ -502,20 +511,28 @@ class PlayerController extends ChangeNotifier {
                   ? player.createPositionStream(
                       // The song's length / 2400: half a pixel of a 1200 px bar.
                       steps: 2400,
-                      minPeriod: const Duration(milliseconds: 16),
-                      maxPeriod: const Duration(milliseconds: 250),
+                      // Lightweight: about four ticks a second is all a seek bar needs.
+                      minPeriod: Duration(milliseconds: mode == PerformanceMode.lightweight ? 250 : 16),
+                      maxPeriod: Duration(milliseconds: mode == PerformanceMode.lightweight ? 500 : 250),
                     )
                   : player.positionStream)
-              .listen(out.add);
+              // Nothing is drawn while the window is minimized or hidden: a tick there would only wake the
+              // UI and raster threads. The next tick after it is shown again puts the views right.
+              .listen((p) {
+                if (_drawn) out.add(p);
+              });
     }
 
     out = StreamController<Duration>(
       onListen: () {
         attach();
         cast.addListener(attach);
+        // A new Performance mode takes effect on a bar that is already showing.
+        LayoutPrefs.instance.addListener(attach);
       },
       onCancel: () {
         cast.removeListener(attach);
+        LayoutPrefs.instance.removeListener(attach);
         return sub?.cancel();
       },
     );

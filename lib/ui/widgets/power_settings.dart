@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../platform/host.dart';
+import '../../services/layout_prefs.dart';
 import '../../services/player_controller.dart';
 import '../../services/power_policy.dart';
 import '../../services/stay_awake.dart';
@@ -16,8 +17,9 @@ class PowerSettings {
   /// The controls shown on the dedicated Power & background page.
   static List<Widget> rows(BuildContext context) {
     final awake = StayAwake.instance;
-    if (awake == null) return const [];
+    if (awake == null) return const [_PerformanceRow()];
     return [
+      const _PerformanceRow(),
       _ScreenRow(awake),
       if (StayAwake.isDesktop) _SleepRow(awake),
       if (BatteryExemption.supported) const BatteryTile(),
@@ -52,6 +54,29 @@ class PowerSettings {
   }
 
   static bool _offering = false;
+}
+
+/// Lightweight, Balanced or Heavy: how much the app spends on looks (see [PerformanceMode]).
+class _PerformanceRow extends StatelessWidget {
+  const _PerformanceRow();
+
+  @override
+  Widget build(BuildContext context) => ListenableBuilder(
+    listenable: LayoutPrefs.instance,
+    builder: (context, _) {
+      final p = LayoutPrefs.instance;
+      return SettingTile(
+        icon: Icons.speed_rounded,
+        title: const Text('Performance'),
+        subtitle: Text(p.performance.note, style: settingsMuted(context)),
+        control: OptionPicker<PerformanceMode>(
+          value: p.performance,
+          onChanged: p.setPerformance,
+          options: [for (final v in PerformanceMode.values) (v, v.label)],
+        ),
+      );
+    },
+  );
 }
 
 class _ScreenRow extends StatelessWidget {

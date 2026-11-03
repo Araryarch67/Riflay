@@ -94,6 +94,18 @@ enum Motion {
   final String label;
 }
 
+/// How much the app spends on looks. [lightweight] caps the user's own Look & feel choices
+/// (it never overwrites them); [heavy] lifts the frame-rate limits on decorations.
+enum PerformanceMode {
+  lightweight('Lightweight', 'Fewest effects. Best for older computers and battery.'),
+  balanced('Balanced', 'Smooth animations with sensible limits.'),
+  heavy('Heavy', 'Every effect at full speed. Uses more power.');
+
+  const PerformanceMode(this.label, this.note);
+  final String label;
+  final String note;
+}
+
 enum ProgressBarStyle {
   thin('Thin', 4),
   thick('Thick', 9);
@@ -221,6 +233,7 @@ class LayoutPrefs extends ChangeNotifier {
   Motion motion = Motion.full;
   PageMotionStyle pageMotion = PageMotionStyle.diamondReveal;
   PageMotionSpeed pageSpeed = PageMotionSpeed.relaxed;
+  PerformanceMode performance = PerformanceMode.balanced;
 
   // Shorthands for widgets. They read the one instance, like AppColors does.
 
@@ -236,6 +249,7 @@ class LayoutPrefs extends ChangeNotifier {
   /// What the motion setting comes to: "Full" gives way to "Reduced" when the
   /// system asks for less motion.
   static Motion get effectiveMotion {
+    if (lightweight) return Motion.off;
     final m = instance.motion;
     if (m != Motion.full) return m;
     return PlatformDispatcher.instance.accessibilityFeatures.disableAnimations ? Motion.reduced : Motion.full;
@@ -278,6 +292,12 @@ class LayoutPrefs extends ChangeNotifier {
     disabled: effectiveMotion == Motion.off,
   );
 
+  /// Performance mode: Lightweight turns off every effect that isn't needed to use the app.
+  static bool get lightweight => instance.performance == PerformanceMode.lightweight;
+
+  /// Performance mode: Heavy runs decorations and the seek bar at the display's full rate.
+  static bool get heavy => instance.performance == PerformanceMode.heavy;
+
   /// Sliding, scaling and bouncing; only with full motion. Fades stay otherwise.
   static bool get moves => effectiveMotion == Motion.full;
 
@@ -319,6 +339,7 @@ class LayoutPrefs extends ChangeNotifier {
     motion = pick(Motion.values, 'motion', d.motion);
     pageMotion = pick(PageMotionStyle.values, 'pageMotion', d.pageMotion);
     pageSpeed = pick(PageMotionSpeed.values, 'pageSpeed', d.pageSpeed);
+    performance = pick(PerformanceMode.values, 'performance', d.performance);
     final byName = HomeSection.values.asNameMap();
     final order = <HomeSection>[for (final n in (j['homeOrder'] as List?) ?? const []) ?byName[n]];
     // A section added by a newer version joins at its default place.
@@ -352,12 +373,13 @@ class LayoutPrefs extends ChangeNotifier {
     'motion': motion.name,
     'pageMotion': pageMotion.name,
     'pageSpeed': pageSpeed.name,
+    'performance': performance.name,
     'homeOrder': [for (final s in homeOrder) s.name],
     'homeHidden': [for (final s in homeHidden) s.name],
   };
 
-  /// Whether anything differs from the defaults.
-  bool get isCustomised => jsonEncode(toJson()) != jsonEncode(LayoutPrefs._().toJson());
+  /// Whether anything differs from the defaults (Performance is not a look, so it doesn't count).
+  bool get isCustomised => jsonEncode(toJson()) != jsonEncode((LayoutPrefs._()..performance = performance).toJson());
 
   Future<void> _set(VoidCallback change) async {
     change();
@@ -390,6 +412,7 @@ class LayoutPrefs extends ChangeNotifier {
   Future<void> setPageMotion(PageMotionStyle v) => _set(() => pageMotion = v);
   Future<void> setPageSpeed(PageMotionSpeed v) => _set(() => pageSpeed = v);
   Future<void> setMotion(Motion v) => _set(() => motion = v);
+  Future<void> setPerformance(PerformanceMode v) => _set(() => performance = v);
 
   Future<void> setHomeSectionShown(HomeSection s, bool shown) =>
       _set(() => shown ? homeHidden.remove(s) : homeHidden.add(s));
@@ -405,7 +428,12 @@ class LayoutPrefs extends ChangeNotifier {
       if (!homeHidden.contains(s)) s,
   ];
 
-  Future<void> reset() => _set(() => restore(const {}));
+  /// Back to the defaults, except Performance: that is about this computer, not about looks.
+  Future<void> reset() => _set(() {
+    final mode = performance;
+    restore(const {});
+    performance = mode;
+  });
 
   /// [base] with the corner and motion settings applied to menus, dialogs,
   /// buttons and page transitions.
