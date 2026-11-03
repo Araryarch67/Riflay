@@ -225,7 +225,7 @@ class AppearanceSettings extends StatelessWidget {
           SettingTile(
             icon: Icons.wallpaper_rounded,
             title: const Text('Now playing background'),
-            subtitle: Text('Only the Now Playing and expanded player pages', style: muted),
+            subtitle: Text(look.nowPlaying.hint ?? 'Only the Now Playing and expanded player pages', style: muted),
             control: OptionPicker<NowPlayingBackground>(
               value: look.nowPlaying,
               onChanged: look.setNowPlaying,

@@ -66,7 +66,9 @@ class NowPlayingPage extends StatelessWidget {
 
   Widget _surface(BuildContext context, Track? track, String? from) {
     final text = Theme.of(context).textTheme;
-    final look = Appearance.instance.nowPlaying;
+    final chosen = Appearance.instance.nowPlaying;
+    // Music video lies over the blurred cover (Lightweight: the plain colour).
+    final look = chosen.effective(lightweight: LayoutPrefs.lightweight);
     return AccentBuilder(
       track: track,
       builder: (context, accent) => GestureDetector(
@@ -80,7 +82,9 @@ class NowPlayingPage extends StatelessWidget {
             children: [
               if (look.isAbstract) Positioned.fill(child: PlayerBackdrop(coverColor: accent)),
               if (look == NowPlayingBackground.blurredCover && track != null && !LayoutPrefs.lightweight)
-                RepaintBoundary(child: _BlurredCover(track: track)),
+                RepaintBoundary(child: BlurredCover(track: track)),
+              if (chosen == NowPlayingBackground.video && look != NowPlayingBackground.color)
+                Positioned.fill(child: VideoBackground(track: track)),
               AnimatedContainer(
                 duration: LayoutPrefs.dur(const Duration(milliseconds: 500)),
                 decoration: BoxDecoration(
@@ -97,8 +101,9 @@ class NowPlayingPage extends StatelessWidget {
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
                       colors: [
-                        AppColors.solidBackground.withValues(alpha: 0.4),
-                        AppColors.solidBackground.withValues(alpha: 0.75),
+                        // A moving picture needs more dimming than a still blur to keep the text readable.
+                        AppColors.solidBackground.withValues(alpha: chosen == NowPlayingBackground.video ? 0.55 : 0.4),
+                        AppColors.solidBackground.withValues(alpha: chosen == NowPlayingBackground.video ? 0.82 : 0.75),
                         AppColors.solidBackground,
                       ],
                       stops: [0, 0.6, 1],
@@ -385,16 +390,17 @@ class _SecondaryRow extends StatelessWidget {
 /// blurred into a still image and stretched over the page. Blurring the cover
 /// live cost every frame several full-window passes (the renderer keeps no
 /// cache of a filtered layer), for a picture that only changes with the song.
-class _BlurredCover extends StatefulWidget {
-  const _BlurredCover({required this.track});
+/// Also behind the expanded player on desktop, under the Music video background.
+class BlurredCover extends StatefulWidget {
+  const BlurredCover({super.key, required this.track});
 
   final Track track;
 
   @override
-  State<_BlurredCover> createState() => _BlurredCoverState();
+  State<BlurredCover> createState() => _BlurredCoverState();
 }
 
-class _BlurredCoverState extends State<_BlurredCover> {
+class _BlurredCoverState extends State<BlurredCover> {
   // The last one made, so reopening Now Playing on the same song draws it at once.
   static String? _lastKey;
   static ui.Image? _last;
@@ -415,7 +421,7 @@ class _BlurredCoverState extends State<_BlurredCover> {
   }
 
   @override
-  void didUpdateWidget(_BlurredCover old) {
+  void didUpdateWidget(BlurredCover old) {
     super.didUpdateWidget(old);
     if (_keyOf(widget.track) != _key) _load();
   }

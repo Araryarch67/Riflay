@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:window_manager/window_manager.dart';
 
 import '../../models/track.dart';
+import '../../services/appearance.dart';
 import '../../services/audio_engine.dart';
 import '../../services/layout_prefs.dart';
 import '../../services/player_controller.dart';
@@ -20,6 +21,7 @@ import '../widgets/stats_for_nerds.dart';
 import '../widgets/track_row.dart';
 import '../widgets/video_mode.dart';
 import '../ytmusic_edit.dart';
+import 'now_playing_page.dart' show BlurredCover;
 import 'player_common.dart';
 
 /// Desktop expanded player: the cover art (and lyrics beside it, if asked)
@@ -162,6 +164,33 @@ class _FullScreenPlayerState extends State<FullScreenPlayer> {
         child: Stack(
           children: [
             Positioned.fill(child: PlayerBackdrop(coverColor: accent)),
+            // Music video: the blurred cover first, the video over it once it plays, then a dimming for the text.
+            // Lightweight keeps the plain colour.
+            if (Appearance.instance.nowPlaying == NowPlayingBackground.video && !LayoutPrefs.lightweight) ...[
+              if (track != null)
+                Positioned.fill(
+                  child: RepaintBoundary(child: BlurredCover(track: track)),
+                ),
+              Positioned.fill(child: VideoBackground(track: track)),
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          AppColors.solidBackground.withValues(alpha: 0.55),
+                          AppColors.solidBackground.withValues(alpha: 0.82),
+                          AppColors.solidBackground,
+                        ],
+                        stops: const [0, 0.6, 1],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
             Padding(
               padding: EdgeInsets.only(bottom: MediaQuery.paddingOf(context).bottom),
               child: Column(

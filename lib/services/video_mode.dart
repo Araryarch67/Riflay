@@ -10,6 +10,7 @@ import '../platform/mpv.dart';
 import '../models/track.dart';
 import 'beta_features.dart';
 import 'download_files.dart';
+import 'layout_prefs.dart';
 import 'player_controller.dart';
 import 'video_download.dart';
 import 'youtube_stream.dart';
@@ -27,6 +28,9 @@ import 'ytmusic_web.dart';
 /// Video is picked, it is only decoded while a Now Playing view shows it, and
 /// it turns back into Song when the app goes to the background (the screen
 /// turns off, another app comes in front).
+///
+/// The same player also serves the Music video Now Playing background, at a
+/// small size and without being asked for by the Song / Video switch.
 class VideoMode extends ChangeNotifier with WidgetsBindingObserver {
   VideoMode._();
 
@@ -34,6 +38,9 @@ class VideoMode extends ChangeNotifier with WidgetsBindingObserver {
 
   /// Phones get a lighter stream: less data, less to decode.
   static int get maxHeight => Host.isAndroid || Host.isIOS ? 480 : 720;
+
+  /// Behind the page's controls the picture is dimmed and never looked at closely: the smallest stream will do.
+  static const backgroundHeight = 360;
 
   PlayerController? _c;
 
@@ -172,8 +179,17 @@ class VideoMode extends ChangeNotifier with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     // Phones: the screen went off or another app is in front. The song plays on alone.
-    if (state == AppLifecycleState.paused || state == AppLifecycleState.hidden) setOn(false);
+    final away = state == AppLifecycleState.paused || state == AppLifecycleState.hidden;
+    if (away) setOn(false);
+    // The background video stops with it, and starts again when the app is back.
+    if (away != _away) {
+      _away = away;
+      _sync();
+      notifyListeners();
+    }
   }
+
+  bool _away = false;
 
   // ---- The video player ----
 
@@ -196,8 +212,39 @@ class VideoMode extends ChangeNotifier with WidgetsBindingObserver {
     _release = Timer(const Duration(seconds: 2), _sync);
   }
 
+  // ---- The Now Playing background ----
+
+  int _backgrounds = 0;
+  final _backgroundFailed = <String>{};
+
+  /// A Now Playing background that wants the video came on screen (or went away). Like [addView], the video is
+  /// only fetched and decoded while one is.
+  void addBackground() {
+    _backgrounds++;
+    _release?.cancel();
+    scheduleMicrotask(_sync);
+  }
+
+  void removeBackground() {
+    _backgrounds--;
+    _release?.cancel();
+    _release = Timer(const Duration(seconds: 2), _sync);
+  }
+
+  /// Whether the video of [track] plays behind the page. Not while the cover area shows the same video (Video
+  /// is picked), where the background stays the blurred cover; not in Lightweight; not once it failed to load.
+  bool showsAsBackground(Track? track) {
+    final v = videoOf(track);
+    return v != null && !_on && !LayoutPrefs.lightweight && !_backgroundFailed.contains(v.videoId);
+  }
+
+  /// The background's video, once its first picture is ready; null shows the blurred cover.
+  VideoController? backgroundController(Track? track) =>
+      showsAsBackground(track) && _loaded == videoOf(track)?.videoId && !_loadedForeground ? controller : null;
+
   Player? _player;
   VideoController? _video;
+  bool _loadedForeground = true;
   String? _loaded;
   MusicVideo? _playing;
   bool _ready = false;
@@ -225,11 +272,18 @@ class VideoMode extends ChangeNotifier with WidgetsBindingObserver {
 
   /// What should play now, from the facts: Video picked, a view on screen,
   /// and the current song has a video.
-  MusicVideo? get _wanted => _on && _views > 0 ? videoOf(_c?.currentTrack) : null;
+  MusicVideo? get _wanted {
+    final track = _c?.currentTrack;
+    if (_foreground) return videoOf(track);
+    if (_backgrounds > 0 && !_away && showsAsBackground(track)) return videoOf(track);
+    return null;
+  }
+
+  bool get _foreground => _on && _views > 0;
 
   void _changed() {
     final track = _c?.currentTrack;
-    if (_on) lookUp(track);
+    if (_on || _backgrounds > 0) lookUp(track);
     _sync();
     _follow();
   }
@@ -240,15 +294,21 @@ class VideoMode extends ChangeNotifier with WidgetsBindingObserver {
       if (_player != null) _stop();
       return;
     }
-    if (_loaded != want.videoId) _start(want);
+    // A background video is small: the Song / Video switch asks for the full size again.
+    if (_loaded != want.videoId || _foreground && !_loadedForeground) _start(want, foreground: _foreground);
   }
 
-  Future<void> _start(MusicVideo v) async {
+  Future<void> _start(MusicVideo v, {required bool foreground}) async {
     await _stop();
     _loaded = v.videoId;
+    _loadedForeground = foreground;
     _playing = v;
     final player = _player = Player(
-      configuration: const PlayerConfiguration(muted: true, title: 'Riflay video', bufferSize: 4 << 20),
+      configuration: PlayerConfiguration(
+        muted: true,
+        title: 'Riflay video',
+        bufferSize: foreground ? 4 << 20 : 2 << 20,
+      ),
     );
     final video = _video = VideoController(player);
     notifyListeners();
@@ -256,9 +316,9 @@ class VideoMode extends ChangeNotifier with WidgetsBindingObserver {
       final mpv = player.platform as NativePlayer;
       // Video only: no sound track, and only half a minute read ahead (not the whole video).
       await mpv.setProperty('aid', 'no');
-      await mpv.setProperty('cache-secs', '30');
-      await mpv.setProperty('demuxer-max-bytes', '${32 << 20}');
-      await mpv.setProperty('demuxer-max-back-bytes', '${8 << 20}');
+      await mpv.setProperty('cache-secs', foreground ? '30' : '10');
+      await mpv.setProperty('demuxer-max-bytes', '${(foreground ? 32 : 12) << 20}');
+      await mpv.setProperty('demuxer-max-back-bytes', '${(foreground ? 8 : 2) << 20}');
       final at = v.videoTimeAt(_c?.position ?? Duration.zero) ?? Duration.zero;
       final local = localVideoOf(_c?.currentTrack);
       if (local != null) {
@@ -266,7 +326,10 @@ class VideoMode extends ChangeNotifier with WidgetsBindingObserver {
         debugPrint('Video mode: ${v.videoId} from ${local.path}');
         await player.open(Media(Uri.file(local.path).toString(), start: at), play: false);
       } else {
-        final stream = await YoutubeStream.video(v.videoId, maxHeight: maxHeight);
+        // Nobody asked for this video: a phone on mobile data (or on a saver) doesn't spend it.
+        if (!foreground && !await YoutubeStream.prefetchAllowed()) throw StateError('metered connection');
+        if (!identical(player, _player)) return;
+        final stream = await YoutubeStream.video(v.videoId, maxHeight: foreground ? maxHeight : backgroundHeight);
         if (!identical(player, _player)) return;
         debugPrint('Video mode: ${v.videoId} at ${stream.height}p ${stream.codec}');
         await player.open(Media(stream.url.toString(), start: at), play: false);
@@ -280,6 +343,13 @@ class VideoMode extends ChangeNotifier with WidgetsBindingObserver {
     } catch (e) {
       if (!identical(player, _player)) return;
       debugPrint('Video mode: ${v.videoId} failed: $e');
+      if (!foreground) {
+        // The page falls back to the blurred cover, with no message; don't try this video again.
+        _backgroundFailed.add(v.videoId);
+        await _stop();
+        notifyListeners();
+        return;
+      }
       _found[_c?.currentTrack?.videoId ?? ''] = null;
       _on = false;
       _notice = 'The video couldn\'t load, so the song plays on its own.';
@@ -295,6 +365,7 @@ class VideoMode extends ChangeNotifier with WidgetsBindingObserver {
     _player = null;
     _video = null;
     _loaded = null;
+    _loadedForeground = true;
     _playing = null;
     _ready = false;
     _rate = 1;
