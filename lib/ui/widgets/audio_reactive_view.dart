@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/scheduler.dart';
 
 import '../../services/audio_engine.dart';
 import '../../services/beta_features.dart';
@@ -19,15 +18,15 @@ class AudioReactiveView extends StatefulWidget {
 
   /// Caps how often the smoothed levels (and so the painters listening to them) update, for
   /// slow decorations that gain nothing from the display's full refresh rate. Unset, views
-  /// update at most 60 times a second (the levels themselves arrive 25 times a second), or
-  /// at the display's own rate in the Heavy performance mode.
+  /// update at most 60 times a second (the levels themselves arrive 25 times a second), in
+  /// every performance mode: following a 144-240 Hz display would cost several times the CPU
+  /// for motion the eye can't tell apart.
   final double? maxFps;
   @override
   State<AudioReactiveView> createState() => _AudioReactiveViewState();
 }
 
-class _AudioReactiveViewState extends State<AudioReactiveView>
-    with WidgetsBindingObserver, SingleTickerProviderStateMixin {
+class _AudioReactiveViewState extends State<AudioReactiveView> with WidgetsBindingObserver {
   PlayerController? _controller;
   StreamSubscription<dynamic>? _playState;
   StreamSubscription<dynamic>? _song;
@@ -37,25 +36,17 @@ class _AudioReactiveViewState extends State<AudioReactiveView>
   bool _attached = true;
   bool _reduceMotion = false;
   final _levels = VisualizerLevels();
-  late final Ticker _ticker;
-  Duration _lastTick = Duration.zero;
-
-  // A capped view runs on a timer instead of the ticker: a ticker wakes the app on every
-  // vsync (240 times a second on a 240 Hz screen) even when it skips most of them.
+  // A timer, not a ticker: a ticker wakes the app on every vsync (240 times a second on a
+  // 240 Hz screen) even when it skips most of them.
   Timer? _timer;
 
-  double? get _cap => widget.maxFps ?? (LayoutPrefs.heavy ? null : 60);
+  double get _cap => widget.maxFps ?? 60;
 
-  bool get _running => _ticker.isActive || _timer != null;
+  bool get _running => _timer != null;
 
   void _start() {
     if (_running) return;
     final fps = _cap;
-    if (fps == null) {
-      _lastTick = Duration.zero;
-      _ticker.start();
-      return;
-    }
     final period = Duration(microseconds: (1000000 / fps).round());
     var last = 0;
     _timer = Timer.periodic(period, (t) {
@@ -67,7 +58,6 @@ class _AudioReactiveViewState extends State<AudioReactiveView>
   }
 
   void _halt() {
-    _ticker.stop();
     _timer?.cancel();
     _timer = null;
   }
@@ -75,13 +65,6 @@ class _AudioReactiveViewState extends State<AudioReactiveView>
   @override
   void initState() {
     super.initState();
-    _ticker = createTicker((elapsed) {
-      final delta = elapsed - _lastTick;
-      _lastTick = elapsed;
-      if (!_levels.follow(_controller!.audio.visualizerLevels, delta)) {
-        _ticker.stop();
-      }
-    });
     WidgetsBinding.instance.addObserver(this);
     _foreground =
         WidgetsBinding.instance.lifecycleState == null ||
@@ -190,7 +173,6 @@ class _AudioReactiveViewState extends State<AudioReactiveView>
     _song?.cancel();
     _release?.call();
     _timer?.cancel();
-    _ticker.dispose();
     _levels.dispose();
     super.dispose();
   }

@@ -42,7 +42,7 @@ class PlayerBackdrop extends StatelessWidget {
         return paint(null);
       }
       // The colour fields drift slowly: 30 updates a second look the same as 60 or 120.
-      return AudioReactiveView(maxFps: LayoutPrefs.heavy ? null : 30, builder: (context, levels) => paint(levels));
+      return AudioReactiveView(maxFps: LayoutPrefs.heavy ? 60 : 30, builder: (context, levels) => paint(levels));
     },
   );
 }
