@@ -3,8 +3,7 @@
 # Usage: packaging/update_manifests.sh <version> <dist dir> <output dir>
 #   <dist dir>/SHA256SUMS      every file in <dist dir> (Scoop's autoupdate reads it too)
 #   <output dir>/riflay.json   Scoop manifest (from packaging/scoop/riflay.json)
-#   <output dir>/riflay.rb     Homebrew cask (from packaging/homebrew/Casks/riflay.rb),
-#                              only when <dist dir> has Riflay-macos.dmg
+#   <output dir>/riflay.rb     Homebrew cask, macOS and Linux (from packaging/homebrew/Casks/riflay.rb)
 set -euo pipefail
 cd "$(dirname "$0")/.."
 version=$1 dist=$2 out=$3
@@ -30,10 +29,16 @@ with open(sys.argv[2], 'w', encoding='utf-8', newline='\n') as f:
     f.write('\n')
 PY
 
+# The cask's sha256 lines end with the file they check; one missing from the release is left unchecked.
+appimage_sha=$(sum_of Riflay-linux-x86_64.AppImage)
+[ -n "$appimage_sha" ] || { echo "Riflay-linux-x86_64.AppImage is missing from $dist" >&2; exit 1; }
 dmg_sha=$(sum_of Riflay-macos.dmg)
-if [ -n "$dmg_sha" ]; then
-  sed -e "s/^  version \".*\"/  version \"$version\"/" -e "s/^  sha256 .*/  sha256 \"$dmg_sha\"/" \
-    packaging/homebrew/Casks/riflay.rb > "$out/riflay.rb"
-else
-  echo "No Riflay-macos.dmg in this release: the Homebrew cask is left as it is." >&2
+dmg_check=\"$dmg_sha\"
+if [ -z "$dmg_sha" ]; then
+  dmg_check=:no_check
+  echo "No Riflay-macos.dmg in this release: the cask's macOS sha256 stays unchecked." >&2
 fi
+sed -e "s/^  version \".*\"/  version \"$version\"/" \
+  -e "s/^\( *\)sha256 .* # Riflay-macos\.dmg$/\1sha256 $dmg_check # Riflay-macos.dmg/" \
+  -e "s/^\( *\)sha256 .* # Riflay-linux-x86_64\.AppImage$/\1sha256 \"$appimage_sha\" # Riflay-linux-x86_64.AppImage/" \
+  packaging/homebrew/Casks/riflay.rb > "$out/riflay.rb"

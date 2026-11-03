@@ -328,7 +328,7 @@ jobs:
             [ "$d" = artifacts/aur/ ] || cp -r "$d". dist/
           done
       - name: Checksums and package manifests
-        # dist/SHA256SUMS, and the Scoop manifest and Homebrew cask (when the release has the macOS .dmg) for this
+        # dist/SHA256SUMS, and the Scoop manifest and Homebrew cask (macOS .dmg and Linux AppImage) for this
         # version in manifests/, with the AUR's PKGBUILD and .SRCINFO from the Linux job: copy them to the bucket,
         # tap and AUR repositories. The Scoop manifest updates itself from SHA256SUMS after that (autoupdate).
         run: |
@@ -399,6 +399,8 @@ jobs:
           **Linux**: the `.AppImage` runs anywhere; `.deb` for Debian / Ubuntu; `.rpm` for Fedora / openSUSE;
           `.pkg.tar.zst` for Arch (`sudo pacman -U` it); `.tar.gz` is the plain bundle.
           `SHA256SUMS` lists every file's checksum.
+          With a package manager: `scoop bucket add riflay https://github.com/Araryarch67/scoop-riflay` then
+          `scoop install riflay/riflay` on Windows; `brew install --cask araryarch67/riflay/riflay` on Linux.
 
           **macOS and iOS** builds are paused for now: their CI builds took too long to hold every release
           back. They will come back in a later version.
@@ -413,7 +415,7 @@ jobs:
           body_path: release.md
       - name: Homebrew tap and Scoop bucket
         # After the release, so its files are there to download: this version's Scoop manifest goes to
-        # Araryarch67/scoop-riflay (bucket/) and the cask, when there is one, to Araryarch67/homebrew-riflay (Casks/).
+        # Araryarch67/scoop-riflay (bucket/) and the cask to Araryarch67/homebrew-riflay (Casks/).
         # Needs the TAP_TOKEN secret (a fine-grained token with Contents: read and write on those two repositories);
         # skipped without it.
         env:
@@ -439,4 +441,4 @@ jobs:
             git -C "$repo" push -q origin HEAD
           }
           publish scoop-riflay bucket manifests/riflay.json
-          if [ -f manifests/riflay.rb ]; then publish homebrew-riflay Casks manifests/riflay.rb; fi
+          publish homebrew-riflay Casks manifests/riflay.rb
