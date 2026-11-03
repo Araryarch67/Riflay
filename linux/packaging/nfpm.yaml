@@ -1,0 +1,58 @@
+# The .deb and .rpm, made by nfpm from the release bundle (linux/packaging/build_packages.sh).
+# VERSION comes from the environment; paths are relative to the repository root.
+name: riflay
+arch: amd64
+platform: linux
+version: ${VERSION}
+release: 1
+section: sound
+priority: optional
+maintainer: Araryarch67 <noreply@github.com>
+vendor: Riflay
+homepage: https://github.com/Araryarch67/Riflay
+license: AGPL-3.0-only
+description: |-
+  Music player for your own music and YouTube Music
+  Free, open-source music player with hi-fi audio: bit-perfect output,
+  equalizer, ReplayGain, gapless playback and a signal path view.
+
+# OpenMusic is Riflay's old name, and installing Riflay takes its place.
+replaces: [openmusic]
+conflicts: [openmusic]
+
+contents:
+  - src: build/linux/x64/release/bundle/
+    dst: /opt/riflay
+    type: tree
+  - src: /opt/riflay/riflay
+    dst: /usr/bin/riflay
+    type: symlink
+  - src: linux/packaging/riflay.desktop
+    dst: /usr/share/applications/riflay.desktop
+  - src: linux/runner/riflay.png
+    dst: /usr/share/icons/hicolor/256x256/apps/riflay.png
+  - src: linux/runner/riflay.svg
+    dst: /usr/share/icons/hicolor/scalable/apps/riflay.svg
+
+# libmpv plays everything; WebKitGTK only runs the Google / Spotify sign-in windows
+# (linux/login_helper, linux/spotify_helper), so it is recommended, not required.
+overrides:
+  deb:
+    depends:
+      - libgtk-3-0t64 | libgtk-3-0
+      - libmpv2 | libmpv1
+    recommends:
+      - libwebkit2gtk-4.1-0
+      - ffmpeg
+  rpm:
+    # Library names, not package names: Fedora (mpv-libs, gtk3) and openSUSE (libmpv2,
+    # libgtk-3-0) both provide them.
+    depends:
+      - libgtk-3.so.0()(64bit)
+      - libmpv.so.2()(64bit)
+    recommends:
+      - libwebkit2gtk-4.1.so.0()(64bit)
+
+rpm:
+  group: Applications/Multimedia
+  summary: Music player for your own music and YouTube Music

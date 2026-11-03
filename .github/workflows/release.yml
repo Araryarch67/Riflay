@@ -180,14 +180,23 @@ jobs:
         run: |
           mkdir -p dist
           tar -C build/linux/x64/release -czf dist/Riflay-linux-x64.tar.gz --transform 's,^bundle,Riflay,' bundle
-      - name: .deb
-        run: linux/packaging/build_deb.sh "$(tool/ci_app_version.sh)" dist/Riflay-linux-amd64.deb
+      - name: .deb and .rpm
+        run: linux/packaging/build_packages.sh "$(tool/ci_app_version.sh)" dist
+      - name: Arch Linux package
+        # makepkg in an archlinux:base-devel container; the filled PKGBUILD and .SRCINFO (for the AUR) go to aur/.
+        run: |
+          linux/packaging/build_arch.sh "$(tool/ci_app_version.sh)" dist/Riflay-linux-x64.tar.gz             dist/Riflay-linux-x86_64.pkg.tar.zst aur
       - name: AppImage
         run: linux/packaging/build_appimage.sh dist/Riflay-linux-x86_64.AppImage
       - uses: actions/upload-artifact@v7
         with:
           name: linux
           path: dist/*
+      - uses: actions/upload-artifact@v7
+        with:
+          name: aur
+          path: aur/
+          include-hidden-files: true
 
   macos:
     # Paused for tag pushes: about 40 minutes of macOS runners. Run it by hand from the Actions tab.
@@ -310,8 +319,26 @@ jobs:
           fetch-depth: 0 # the commits since the last release, for the changelog
       - uses: actions/download-artifact@v8
         with:
-          path: dist
-          merge-multiple: true
+          path: artifacts
+      - name: Release files
+        # Every build's files in dist/; the AUR files are not release assets (see Package manifests).
+        run: |
+          mkdir -p dist
+          for d in artifacts/*/; do
+            [ "$d" = artifacts/aur/ ] || cp -r "$d". dist/
+          done
+      - name: Checksums and package manifests
+        # dist/SHA256SUMS, and the Scoop manifest and Homebrew cask (when the release has the macOS .dmg) for this
+        # version in manifests/, with the AUR's PKGBUILD and .SRCINFO from the Linux job: copy them to the bucket,
+        # tap and AUR repositories. The Scoop manifest updates itself from SHA256SUMS after that (autoupdate).
+        run: |
+          packaging/update_manifests.sh "${GITHUB_REF_NAME#v}" dist manifests
+          cp -r artifacts/aur manifests/aur
+      - uses: actions/upload-artifact@v7
+        with:
+          name: package-manifests
+          path: manifests/
+          include-hidden-files: true
       - name: Changelog and download guide
         # What changed since the last published release, then which file to take. GitHub's own
         # generated notes only list pull requests, and most of this work is committed straight to main.
@@ -369,7 +396,9 @@ jobs:
           emulators and Chromebooks.
 
           **Windows**: `Riflay-windows-x64-setup.exe` installs it; the `.zip` runs without installing.
-          **Linux**: the `.AppImage` runs anywhere; `.deb` for Debian / Ubuntu; `.tar.gz` is the plain bundle.
+          **Linux**: the `.AppImage` runs anywhere; `.deb` for Debian / Ubuntu; `.rpm` for Fedora / openSUSE;
+          `.pkg.tar.zst` for Arch (`sudo pacman -U` it); `.tar.gz` is the plain bundle.
+          `SHA256SUMS` lists every file's checksum.
 
           **macOS and iOS** builds are paused for now: their CI builds took too long to hold every release
           back. They will come back in a later version.
@@ -377,5 +406,37 @@ jobs:
           { cat changelog.md; echo; echo '---'; echo; cat guide.md; } > release.md
       - uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3
         with:
-          files: dist/*
+          files: |
+            dist/*
+            manifests/riflay.json
+            manifests/riflay.rb
           body_path: release.md
+      - name: Homebrew tap and Scoop bucket
+        # After the release, so its files are there to download: this version's Scoop manifest goes to
+        # Araryarch67/scoop-riflay (bucket/) and the cask, when there is one, to Araryarch67/homebrew-riflay (Casks/).
+        # Needs the TAP_TOKEN secret (a fine-grained token with Contents: read and write on those two repositories);
+        # skipped without it.
+        env:
+          TAP_TOKEN: ${{ secrets.TAP_TOKEN }}
+          VERSION: ${{ github.ref_name }}
+        run: |
+          if [ -z "$TAP_TOKEN" ]; then
+            echo "::warning::No TAP_TOKEN secret: the Homebrew tap and Scoop bucket were not updated."
+            exit 0
+          fi
+          publish() { # <repository> <folder> <file>
+            local repo="$RUNNER_TEMP/$1"
+            git clone -q --depth 1 "https://x-access-token:$TAP_TOKEN@github.com/Araryarch67/$1.git" "$repo"
+            mkdir -p "$repo/$2"
+            cp "$3" "$repo/$2/"
+            git -C "$repo" add -A
+            if git -C "$repo" diff --cached --quiet; then
+              echo "$1 already has Riflay ${VERSION#v}"
+              return
+            fi
+            git -C "$repo" -c user.name='github-actions[bot]' \
+              -c user.email='41898282+github-actions[bot]@users.noreply.github.com' commit -qm "riflay ${VERSION#v}"
+            git -C "$repo" push -q origin HEAD
+          }
+          publish scoop-riflay bucket manifests/riflay.json
+          if [ -f manifests/riflay.rb ]; then publish homebrew-riflay Casks manifests/riflay.rb; fi

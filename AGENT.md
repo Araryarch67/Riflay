@@ -416,6 +416,16 @@ Compare medians of several complete runs; debug builds are meaningless here.
    macOS and iOS are paused there for now, since their macOS runners took about
    40 minutes and held every release back; they still build by hand from the
    Actions tab (`platforms: macos, ios`).
+3. Package managers: Linux gets a `.deb` and `.rpm` (nfpm,
+   `linux/packaging/nfpm.yaml`) and an Arch `.pkg.tar.zst` (makepkg in a
+   container, `linux/packaging/arch/PKGBUILD`) next to the AppImage. The
+   release also carries `SHA256SUMS`, and the run's `package-manifests`
+   artifact holds the Scoop manifest, the Homebrew cask (only when the release
+   has the macOS `.dmg`) and the AUR `PKGBUILD` / `.SRCINFO` filled in for the
+   version (`packaging/update_manifests.sh`). With the `TAP_TOKEN` secret the
+   release pushes the manifest and cask to `Araryarch67/scoop-riflay` and
+   `Araryarch67/homebrew-riflay`; the AUR files are copied by hand. Runtime dependencies live in those files: change them all
+   when the Linux build links something new.
 
 ## Conventions
 

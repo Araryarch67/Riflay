@@ -1,0 +1,37 @@
+# Arch Linux package from the release's Linux bundle (Riflay-linux-x64.tar.gz).
+# The release workflow fills in pkgver and sha256sums (linux/packaging/build_arch.sh),
+# builds the .pkg.tar.zst in an Arch container and attaches the filled PKGBUILD and
+# .SRCINFO, ready for the AUR (riflay-bin).
+pkgname=riflay-bin
+pkgver=1.0.4
+pkgrel=1
+pkgdesc='Music player for your own music and YouTube Music, with hi-fi audio'
+arch=('x86_64')
+url='https://github.com/Araryarch67/Riflay'
+license=('AGPL-3.0-only')
+depends=('gtk3' 'mpv' 'hicolor-icon-theme')
+optdepends=('webkit2gtk-4.1: Sign in with Google and Spotify'
+            'ffmpeg: tag editor, AirPlay and casting conversions without a download')
+provides=('riflay')
+conflicts=('riflay' 'openmusic')
+replaces=('openmusic')
+# Flutter's AOT snapshot (libapp.so) must not be stripped.
+options=('!strip' '!debug')
+_raw="https://raw.githubusercontent.com/Araryarch67/Riflay/v$pkgver"
+source=("Riflay-linux-x64-$pkgver.tar.gz::$url/releases/download/v$pkgver/Riflay-linux-x64.tar.gz"
+        "riflay-$pkgver.desktop::$_raw/linux/packaging/riflay.desktop"
+        "riflay-$pkgver.png::$_raw/linux/runner/riflay.png"
+        "riflay-$pkgver.svg::$_raw/linux/runner/riflay.svg")
+sha256sums=('SKIP'
+            'SKIP'
+            'SKIP'
+            'SKIP')
+
+package() {
+  install -d "$pkgdir/opt" "$pkgdir/usr/bin"
+  cp -a Riflay "$pkgdir/opt/riflay"
+  ln -s /opt/riflay/riflay "$pkgdir/usr/bin/riflay"
+  install -Dm644 "riflay-$pkgver.desktop" "$pkgdir/usr/share/applications/riflay.desktop"
+  install -Dm644 "riflay-$pkgver.png" "$pkgdir/usr/share/icons/hicolor/256x256/apps/riflay.png"
+  install -Dm644 "riflay-$pkgver.svg" "$pkgdir/usr/share/icons/hicolor/scalable/apps/riflay.svg"
+}
