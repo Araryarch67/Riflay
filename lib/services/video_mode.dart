@@ -242,6 +242,9 @@ class VideoMode extends ChangeNotifier with WidgetsBindingObserver {
   VideoController? backgroundController(Track? track) =>
       showsAsBackground(track) && _loaded == videoOf(track)?.videoId && !_loadedForeground ? controller : null;
 
+  /// The background video of [track] is playing and covers the page: what lies under it is not drawn.
+  bool coversBackground(Track? track) => backgroundController(track) != null;
+
   Player? _player;
   VideoController? _video;
   bool _loadedForeground = true;
@@ -319,6 +322,24 @@ class VideoMode extends ChangeNotifier with WidgetsBindingObserver {
       await mpv.setProperty('cache-secs', foreground ? '30' : '10');
       await mpv.setProperty('demuxer-max-bytes', '${(foreground ? 32 : 12) << 20}');
       await mpv.setProperty('demuxer-max-back-bytes', '${(foreground ? 8 : 2) << 20}');
+      if (!foreground) {
+        // A small, dimmed picture behind the page: mpv's fast scalers and no extra passes. Its default
+        // high-quality ones cost several times the CPU and GPU for a difference nobody can see here.
+        for (final (name, value) in const [
+          ('scale', 'bilinear'),
+          ('dscale', 'bilinear'),
+          ('cscale', 'bilinear'),
+          ('dither', 'no'),
+          ('correct-downscaling', 'no'),
+          ('linear-downscaling', 'no'),
+          ('sigmoid-upscaling', 'no'),
+          ('deband', 'no'),
+          ('hdr-compute-peak', 'no'),
+          ('vd-lavc-threads', '2'),
+        ]) {
+          await mpv.setProperty(name, value);
+        }
+      }
       final at = v.videoTimeAt(_c?.position ?? Duration.zero) ?? Duration.zero;
       final local = localVideoOf(_c?.currentTrack);
       if (local != null) {

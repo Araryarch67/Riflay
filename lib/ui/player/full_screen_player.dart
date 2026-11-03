@@ -163,13 +163,23 @@ class _FullScreenPlayerState extends State<FullScreenPlayer> {
         color: AppColors.sink(accent, 0.75),
         child: Stack(
           children: [
-            Positioned.fill(child: PlayerBackdrop(coverColor: accent)),
+            // Under a playing music video nothing else is drawn: the video covers it, and an animated
+            // backdrop there cost a full-window pass every frame for nothing.
+            Positioned.fill(
+              child: _UnlessVideo(
+                track: track,
+                child: PlayerBackdrop(coverColor: accent),
+              ),
+            ),
             // Music video: the blurred cover first, the video over it once it plays, then a dimming for the text.
             // Lightweight keeps the plain colour.
             if (Appearance.instance.nowPlaying == NowPlayingBackground.video && !LayoutPrefs.lightweight) ...[
               if (track != null)
                 Positioned.fill(
-                  child: RepaintBoundary(child: BlurredCover(track: track)),
+                  child: _UnlessVideo(
+                    track: track,
+                    child: RepaintBoundary(child: BlurredCover(track: track)),
+                  ),
                 ),
               Positioned.fill(child: VideoBackground(track: track)),
               Positioned.fill(
@@ -346,4 +356,19 @@ class _PanelButtons extends StatelessWidget {
       },
     );
   }
+}
+
+/// [child], until the background music video of [track] plays over it.
+class _UnlessVideo extends StatelessWidget {
+  const _UnlessVideo({required this.track, required this.child});
+
+  final Track? track;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => ListenableBuilder(
+    listenable: VideoMode.instance,
+    builder: (context, child) => VideoMode.instance.coversBackground(track) ? const SizedBox.shrink() : child!,
+    child: child,
+  );
 }

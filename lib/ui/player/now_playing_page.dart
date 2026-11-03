@@ -85,8 +85,14 @@ class NowPlayingPage extends StatelessWidget {
             fit: StackFit.expand,
             children: [
               if (look.isAbstract) Positioned.fill(child: PlayerBackdrop(coverColor: accent)),
+              // Not drawn under a playing music video, which covers it.
               if (look == NowPlayingBackground.blurredCover && track != null && !LayoutPrefs.lightweight)
-                RepaintBoundary(child: BlurredCover(track: track)),
+                ListenableBuilder(
+                  listenable: VideoMode.instance,
+                  builder: (context, child) =>
+                      VideoMode.instance.coversBackground(track) ? const SizedBox.shrink() : child!,
+                  child: RepaintBoundary(child: BlurredCover(track: track)),
+                ),
               if (chosen == NowPlayingBackground.video && look != NowPlayingBackground.color)
                 Positioned.fill(child: VideoBackground(track: track)),
               AnimatedContainer(
