@@ -47,6 +47,9 @@ class FakeYtMusic {
   /// Times the library's playlist list was read.
   var listReads = 0;
 
+  /// Refuses moves, as YouTube Music does when it is offline or the playlist isn't the user's.
+  var refuseMoves = false;
+
   late final client = MockClient((req) async {
     final endpoint = req.url.path.replaceFirst('/youtubei/v1/', '');
     final body = jsonDecode(req.body) as Map<String, dynamic>;
@@ -89,6 +92,13 @@ class FakeYtMusic {
               });
             case 'ACTION_REMOVE_VIDEO':
               p.rows.removeWhere((r) => r.$2 == a['setVideoId']);
+            case 'ACTION_MOVE_VIDEO_BEFORE':
+              if (refuseMoves) return {'status': 'STATUS_FAILED'};
+              final i = p.rows.indexWhere((r) => r.$2 == a['setVideoId']);
+              final row = p.rows.removeAt(i);
+              final before = a['movedSetVideoIdSuccessor'] as String?;
+              final at = before == null ? p.rows.length : p.rows.indexWhere((r) => r.$2 == before);
+              p.rows.insert(at, row);
             case 'ACTION_SET_PLAYLIST_NAME':
               title = a['playlistName'] as String;
           }
@@ -208,6 +218,32 @@ void main() {
       expect(server.playlists.keys, ['PL1']);
       expect(server.playlists['PL1']!.rows.map((r) => r.$1), ['a', 'b']);
       expect(server.liked, ['z', 'l1']);
+    }, () => server.client);
+  });
+
+  test('dragging a song in your playlist moves it there too, and is put back if refused', () async {
+    final server = FakeYtMusic()..playlists['PL1']!.rows.add(('c', 'row-c'));
+    await http.runWithClient(() async {
+      final a = await signedIn(server);
+      List<String?> shown() => a.cachedPlaylist('PL1')!.tracks.map((t) => t.videoId).toList();
+      await a.playlistDetails('PL1');
+      var notified = 0;
+      a.addListener(() => notified++);
+
+      await a.moveInPlaylist('PL1', 0, 2); // a dropped at the end
+      expect(shown(), ['b', 'c', 'a']);
+      expect(notified, greaterThan(0));
+      expect(server.playlists['PL1']!.rows.map((r) => r.$1), ['b', 'c', 'a']);
+      await a.moveInPlaylist('PL1', 2, 0); // and back to the top
+      expect(shown(), ['a', 'b', 'c']);
+      expect(server.playlists['PL1']!.rows.map((r) => r.$1), ['a', 'b', 'c']);
+      await a.moveInPlaylist('PL1', 1, 1); // dropped where it was: nothing sent
+      expect(shown(), ['a', 'b', 'c']);
+
+      server.refuseMoves = true;
+      await expectLater(a.moveInPlaylist('PL1', 0, 2), throwsA(anything));
+      expect(shown(), ['a', 'b', 'c'], reason: 'back where it was');
+      expect(server.playlists['PL1']!.rows.map((r) => r.$1), ['a', 'b', 'c']);
     }, () => server.client);
   });
 

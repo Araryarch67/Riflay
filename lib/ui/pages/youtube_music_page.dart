@@ -418,6 +418,15 @@ class _LibraryPlaylistPageState extends State<LibraryPlaylistPage> {
     }
   }
 
+  Future<void> _move(int from, int to) async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await _account.moveInPlaylist(widget.playlist.id, from, to);
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text(YoutubeMusicAccount.describe(e))));
+    }
+  }
+
   Future<void> _setPrivacy(PlaylistPrivacy privacy) async {
     final messenger = ScaffoldMessenger.of(context);
     try {
@@ -513,6 +522,7 @@ class _LibraryPlaylistPageState extends State<LibraryPlaylistPage> {
       child: CollectionPage(
         collection: collection,
         onRename: d.owned ? _renameTo : null,
+        onReorder: (d.owned || d.collaborative) && d.rowIds.length == d.tracks.length ? _move : null,
         actions: [
           if (d.owned)
             PopupMenuButton<VoidCallback>(

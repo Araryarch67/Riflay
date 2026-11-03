@@ -900,6 +900,28 @@ class YoutubeMusicAccount extends ChangeNotifier {
   Future<void> movePlaylistItem(String id, String rowId, String? beforeRowId) =>
       _editing((web) => web.movePlaylistItem(id, rowId, beforeRowId));
 
+  /// Moves the song at [from] so it ends up at [to] (counted after it is taken out, as a reorderable list reports).
+  /// Shown right away; put back if YouTube Music refuses.
+  Future<void> moveInPlaylist(String id, int from, int to) async {
+    final before = _details[id];
+    if (before == null || from < 0 || from >= before.tracks.length) return;
+    final tracks = [...before.tracks];
+    final moved = tracks.removeAt(from);
+    final at = to.clamp(0, tracks.length);
+    if (at == from) return;
+    final row = before.rowIds[moved.id];
+    if (row == null) return;
+    tracks.insert(at, moved);
+    final next = at + 1 < tracks.length ? before.rowIds[tracks[at + 1].id] : null;
+    _patchDetails(id, (d) => d.copyWith(tracks: tracks));
+    try {
+      await movePlaylistItem(id, row, next);
+    } catch (_) {
+      _patchDetails(id, (d) => d.copyWith(tracks: before.tracks));
+      rethrow;
+    }
+  }
+
   /// The link that lets friends add songs to the playlist. A private playlist
   /// is made unlisted first: YouTube Music keeps collaborators out of private ones.
   Future<String> inviteLink(String id, {required PlaylistPrivacy? privacy}) async {
