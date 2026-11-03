@@ -81,7 +81,11 @@ class _AudioReactiveViewState extends State<AudioReactiveView> with WidgetsBindi
       _controller?.audio.visualizerLevels.removeListener(_animate);
       _controller = c;
       _playState = c.player.playerStateStream.listen((_) => _sync());
-      _song = c.player.currentIndexStream.distinct().listen((_) => c.audio.visualizerLevels.clear());
+      _song = c.player.currentIndexStream.distinct().listen((_) {
+        c.audio.visualizerLevels.clear();
+        // The next song may have no video (or one): whether the visualizer shows changes with it.
+        _sync();
+      });
       c.audio.addListener(_sync);
       c.audio.visualizerLevels.addListener(_animate);
     }
@@ -150,7 +154,9 @@ class _AudioReactiveViewState extends State<AudioReactiveView> with WidgetsBindi
         !c.casting &&
         !c.audio.bitPerfect &&
         c.audio.dopPlaying == null &&
-        !VideoMode.instance.on &&
+        // Video picked hides it only while this song has a video showing: the switch stays on across songs,
+        // and a song without a video plays with the visualizer as usual.
+        !(VideoMode.instance.on && VideoMode.instance.videoOf(c.currentTrack) != null) &&
         AudioEngine.supported;
     if (active) {
       _release ??= c.audio.watchVisualizer();

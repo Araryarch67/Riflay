@@ -1,16 +1,24 @@
 import 'package:flutter/material.dart';
+import 'package:riflay/models/track.dart';
 import 'package:riflay/services/beta_features.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:riflay/services/player_controller.dart';
 import 'package:riflay/services/layout_prefs.dart';
+import 'package:riflay/services/video_mode.dart';
 import 'package:riflay/services/visualizer_levels.dart';
+import 'package:riflay/services/ytmusic_web.dart';
 import 'package:riflay/ui/widgets/audio_reactive_view.dart';
 import 'package:riflay/ui/widgets/audio_visualizer.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class _PlayingController extends PlayerController {
+  Track? track;
+
   @override
   bool get showsPlaying => true;
+
+  @override
+  Track? get currentTrack => track ?? super.currentTrack;
 }
 
 void main() {
@@ -138,5 +146,30 @@ void main() {
     expect(c.audio.visualizerActive, isFalse);
     c.dispose();
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Video picked hides the visualizer only on a song that has a video', (tester) async {
+    final c = _PlayingController()..track = Track.youtube(videoId: 'arvideo', title: 'S', artist: 'A');
+    VideoMode.instance
+      ..debugSetFound('arvideo', const MusicVideo(videoId: 'arvideo'))
+      ..debugSetFound('arnone', null)
+      ..setOn(true);
+    addTearDown(() => VideoMode.instance.setOn(false));
+    await tester.pumpWidget(
+      PlayerScope(
+        controller: c,
+        child: MaterialApp(home: AudioReactiveView(builder: (_, _) => const SizedBox.shrink())),
+      ),
+    );
+    expect(c.audio.visualizerActive, isFalse, reason: 'the video shows instead');
+    // The next song has no video: the switch stays on, and the visualizer comes back.
+    c.track = Track.youtube(videoId: 'arnone', title: 'P', artist: 'A');
+    VideoMode.instance.debugSetFound('arnone', null);
+    await tester.pump();
+    expect(c.audio.visualizerActive, isTrue);
+    await tester.pumpWidget(const SizedBox.shrink());
+    // The controller's own download-format prefetch waits 3 s.
+    await tester.pump(const Duration(seconds: 4));
+    c.dispose();
   });
 }
