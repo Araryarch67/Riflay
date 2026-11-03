@@ -66,9 +66,19 @@ class WrapData {
     required this.mostReplayedCount,
     required this.mostReplayedDay,
     required this.newSongs,
+    this.until,
   });
 
   final WrapMonth month;
+
+  /// When the month is still running: the Wrap covers its start up to this moment. Null for a finished month.
+  final DateTime? until;
+
+  /// Whether the month is not over yet ("so far").
+  bool get inProgress => until != null;
+
+  /// "March 2026", or "March so far" while the month runs.
+  String get title => inProgress ? '${month.name} so far' : month.label;
   final Duration listened;
   final int plays;
 
@@ -95,14 +105,20 @@ class WrapData {
   RankedItem get topArtist => topArtists.first;
 }
 
-/// Riflay Wrap: a recap of a finished month, once enough has been listened to.
+/// Riflay Wrap: a recap of a month, once enough has been listened to. A finished month always has one to look
+/// back on; the running month has one "so far" right away.
 abstract final class MonthlyWrap {
-  /// Days of use before the first Wrap, and plays a month needs to get one.
-  static const minDays = 30;
+  /// Plays a finished month needs to get a Wrap, and plays the running month needs to show one "so far" (low, so
+  /// the cards are not empty).
   static const minPlays = 10;
+  static const minPlaysSoFar = 3;
 
-  /// Whether the person has used Riflay long enough: [minDays] since the earliest of their first recorded play and
-  /// the day the app first ran ([firstSeen]).
+  /// Days of use before the monthly "ready" notice (not before viewing a Wrap): a brand-new user is not told about
+  /// the month they had only just started.
+  static const minDays = 30;
+
+  /// Whether the person has used Riflay long enough for the notice: [minDays] since the earliest of their first
+  /// recorded play and the day the app first ran ([firstSeen]).
   static bool unlocked({DateTime? firstPlay, DateTime? firstSeen, required DateTime now}) {
     final since = [?firstPlay, ?firstSeen].fold<DateTime?>(null, (a, b) => a == null || b.isBefore(a) ? b : a);
     return since != null && now.difference(since) >= const Duration(days: minDays);
@@ -131,10 +147,15 @@ abstract final class MonthlyWrap {
 
   static DateTime _day(DateTime t) => DateTime(t.year, t.month, t.day);
 
-  /// The Wrap of [month], or null when it had fewer than [minPlays] plays.
-  static WrapData? compute(PlayHistory h, WrapMonth month) {
+  /// Whether [month] is still running at [now].
+  static bool isRunning(WrapMonth month, DateTime now) => WrapMonth.of(now) == month;
+
+  /// The Wrap of [month], or null when it had too few plays ([minPlays]; [minPlaysSoFar] for the running month).
+  /// Pass [now] to get the running month's Wrap up to that moment.
+  static WrapData? compute(PlayHistory h, WrapMonth month, {DateTime? now}) {
+    final until = now != null && isRunning(month, now) ? now : null;
     final from = month.start.millisecondsSinceEpoch ~/ 1000;
-    final to = month.end.millisecondsSinceEpoch ~/ 1000;
+    final to = until != null ? until.millisecondsSinceEpoch ~/ 1000 + 1 : month.end.millisecondsSinceEpoch ~/ 1000;
     final firstOf = List<int>.filled(h.songCount, 1 << 60);
     for (var i = 0; i < h.length; i++) {
       final s = h.songIndex(i);
@@ -149,12 +170,22 @@ abstract final class MonthlyWrap {
         seenSongs.add(h.songIndex(i));
       }
     }
-    return fromPlays(plays, month, newSongs: seenSongs.where((s) => firstOf[s] >= from && firstOf[s] < to).length);
+    return fromPlays(
+      plays,
+      month,
+      newSongs: seenSongs.where((s) => firstOf[s] >= from && firstOf[s] < to).length,
+      until: until,
+    );
   }
 
   /// [compute] over plays already limited to [month] ((when in seconds, song, seconds heard)).
-  static WrapData? fromPlays(List<(int, SongInfo, int)> plays, WrapMonth month, {required int newSongs}) {
-    if (plays.length < minPlays) return null;
+  static WrapData? fromPlays(
+    List<(int, SongInfo, int)> plays,
+    WrapMonth month, {
+    required int newSongs,
+    DateTime? until,
+  }) {
+    if (plays.length < (until != null ? minPlaysSoFar : minPlays)) return null;
     final stats = ListeningStats.fromPlays(plays, StatsPeriod.ofYear(month.year), now: month.start, top: 5);
     final artists = {
       for (final p in plays)
@@ -198,13 +229,13 @@ abstract final class MonthlyWrap {
       mostReplayedCount: replay?.value.$1 ?? 0,
       mostReplayedDay: replay?.key.$1,
       newSongs: newSongs,
+      until: until,
     );
   }
 
-  /// The months with a Wrap ready as of [now]: finished months with enough plays, newest first, and none at all
-  /// before the first [minDays] of use.
-  static List<WrapMonth> available(PlayHistory h, {DateTime? firstSeen, required DateTime now}) {
-    if (!unlocked(firstPlay: firstPlayOf(h), firstSeen: firstSeen, now: now)) return const [];
+  /// The finished months with a Wrap to look back on as of [now]: enough plays ([minPlays]), newest first. The
+  /// running month is not here; its Wrap "so far" comes from [compute] with [now].
+  static List<WrapMonth> available(PlayHistory h, {required DateTime now}) {
     final counts = <WrapMonth, int>{};
     for (var i = 0; i < h.length; i++) {
       final m = WrapMonth.of(DateTime.fromMillisecondsSinceEpoch(h.atSec(i) * 1000));
