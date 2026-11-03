@@ -22,15 +22,18 @@ abstract final class AppColors {
   /// Window and panel backgrounds; see-through when the window opacity
   /// setting is below 100%.
   static Color get background => _p.background.withValues(alpha: Appearance.instance.windowOpacity);
-  static Color get panel => _p.panel.withValues(alpha: Appearance.instance.windowOpacity);
+  static Color get panel => _p.panel.withValues(alpha: Appearance.instance.windowOpacity * _component);
+
+  /// The desktop's component opacity: the fills of panels, cards and menus, never what is on them.
+  static double get _component => Appearance.hasComponentOpacity ? Appearance.instance.componentOpacity : 1;
 
   /// [background] and [panel] without the window's opacity.
   static Color get solidBackground => _p.background;
-  static Color get elevated => _p.elevated;
+  static Color get elevated => _p.elevated.withValues(alpha: _p.elevated.a * _component);
   static Color get hover => _p.hover;
 
   /// Popup menus and pickers.
-  static Color get menu => _p.menu;
+  static Color get menu => _p.menu.withValues(alpha: _p.menu.a * _component);
   static Color get textPrimary => _p.textPrimary;
   static Color get textSecondary => _p.textSecondary;
   static Color get textMuted => _p.textMuted;
@@ -61,19 +64,22 @@ abstract final class AppColors {
 /// and only then. The static [AppColors] getters give the same values to code that has no context.
 @immutable
 class AppColorsView {
-  const AppColorsView(this.palette, this.windowOpacity, this.highContrast);
+  const AppColorsView(this.palette, this.windowOpacity, this.highContrast, {this.componentOpacity = 1});
 
   final AppPalette palette;
   final double windowOpacity;
   final bool highContrast;
 
+  /// Applies to the fills of panels, cards and menus only; text, artwork and controls stay solid.
+  final double componentOpacity;
+
   bool get light => palette.light;
   Color get background => palette.background.withValues(alpha: windowOpacity);
-  Color get panel => palette.panel.withValues(alpha: windowOpacity);
+  Color get panel => palette.panel.withValues(alpha: windowOpacity * componentOpacity);
   Color get solidBackground => palette.background;
-  Color get elevated => palette.elevated;
+  Color get elevated => palette.elevated.withValues(alpha: palette.elevated.a * componentOpacity);
   Color get hover => palette.hover;
-  Color get menu => palette.menu;
+  Color get menu => palette.menu.withValues(alpha: palette.menu.a * componentOpacity);
   Color get textPrimary => palette.textPrimary;
   Color get textSecondary => palette.textSecondary;
   Color get textMuted => palette.textMuted;
@@ -90,10 +96,11 @@ class AppColorsView {
       other is AppColorsView &&
       other.palette == palette &&
       other.windowOpacity == windowOpacity &&
-      other.highContrast == highContrast;
+      other.highContrast == highContrast &&
+      other.componentOpacity == componentOpacity;
 
   @override
-  int get hashCode => Object.hash(palette, windowOpacity, highContrast);
+  int get hashCode => Object.hash(palette, windowOpacity, highContrast, componentOpacity);
 }
 
 /// Hands [AppColorsView] down the tree. Widgets that read it through [AppColors.of] are rebuilt when the
@@ -106,7 +113,12 @@ class AppColorsScope extends InheritedWidget {
   /// The colours now in use, from [Appearance].
   static AppColorsView current() {
     final a = Appearance.instance;
-    return AppColorsView(a.palette, a.windowOpacity, a.highContrast);
+    return AppColorsView(
+      a.palette,
+      a.windowOpacity,
+      a.highContrast,
+      componentOpacity: Appearance.hasComponentOpacity ? a.componentOpacity : 1,
+    );
   }
 
   @override
