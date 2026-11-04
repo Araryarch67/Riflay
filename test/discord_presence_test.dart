@@ -70,6 +70,8 @@ class FakeDiscord {
 
   /// Answers like Discord and prints each frame it gets as `FRAME <op> <json>`.
   static const _pipeServer = r"""
+# The frames carry text like "Opus · 160 kbps": print them as UTF-8, not the console's code page.
+[Console]::OutputEncoding = [Text.Encoding]::UTF8
 $s = New-Object System.IO.Pipes.NamedPipeServerStream('PIPE_NAME', [System.IO.Pipes.PipeDirection]::InOut)
 [Console]::Out.WriteLine('LISTENING'); [Console]::Out.Flush()
 $s.WaitForConnection()
@@ -167,19 +169,23 @@ void main() {
     await fake.close();
   });
 
-  test('the state line carries the audio quality, and a later update adds it', () async {
+  test('the artist is the state line; the quality sits on the logo over the cover', () async {
     final fake = await FakeDiscord.start();
     final presence = DiscordPresence('1561368591297941655', socketPaths: () => [fake.path]);
     final track = Track.youtube(videoId: 'kJQP7kiw5Fk', title: 'Despacito', artist: 'Luis Fonsi');
+    Map activity(int i) => (fake.frames[i].$2['args'] as Map)['activity'] as Map;
 
     presence.update(track: track, playing: true, position: Duration.zero);
     await fake.waitForFrames(2);
-    expect(((fake.frames[1].$2['args'] as Map)['activity'] as Map)['state'], 'Luis Fonsi');
+    expect(activity(1)['state'], 'Luis Fonsi');
+    expect(activity(1)['details_url'], 'https://music.youtube.com/watch?v=kJQP7kiw5Fk');
+    expect((activity(1)['assets'] as Map)['small_text'], 'Riflay');
 
     // mpv reports the format a moment after the song starts.
     presence.update(track: track, playing: true, position: Duration.zero, quality: 'FLAC · 24-bit / 96 kHz');
     await fake.waitForFrames(3);
-    expect(((fake.frames[2].$2['args'] as Map)['activity'] as Map)['state'], 'Luis Fonsi · FLAC · 24-bit / 96 kHz');
+    expect(activity(2)['state'], 'Luis Fonsi');
+    expect((activity(2)['assets'] as Map)['small_text'], 'FLAC · 24-bit / 96 kHz · Riflay');
 
     presence.dispose();
     await fake.close();

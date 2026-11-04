@@ -74,20 +74,29 @@ class DiscordPresence {
     final now = DateTime.now().millisecondsSinceEpoch;
     final start = now - position.inMilliseconds;
     final videoId = t.videoId ?? _videoIdFrom(t.sourceUrl);
+    // YouTube's own thumbnails are 4:3 with black bars; a song's square art is preferred.
     final cover = t.artworkUrl ?? (videoId == null ? null : 'https://i.ytimg.com/vi/$videoId/hqdefault.jpg');
     final listenUrl = videoId == null ? null : 'https://music.youtube.com/watch?v=$videoId';
+    final artistUrl = t.artistId == null ? null : 'https://music.youtube.com/channel/${t.artistId}';
+    final artist = t.artist.trim();
     return {
       'type': 2, // "Listening to"
       'status_display_type': 2, // member list shows the song title, not the app name
+      // Laid out like the music apps' own presence: the song, then who sings it, then the album under the cover.
       'details': _clip(t.title),
-      // The quality sits on the always-visible line, for audiophile bragging.
-      'state': _clip([if (t.artist.trim().isNotEmpty) t.artist.trim(), ?quality].join(' · ')),
+      'details_url': ?listenUrl,
+      'state': _clip(artist.isNotEmpty ? artist : (quality ?? 'Riflay')),
+      'state_url': ?artistUrl,
       'timestamps': {'start': start, 'end': ?(duration == null ? null : start + duration.inMilliseconds)},
       'assets': {
         // Remote URLs work as images; local files fall back to the logo, an art
         // asset in the Discord developer portal still named after the app's old name.
         'large_image': cover ?? 'openmusic',
-        'large_text': _clip(t.album ?? 'Riflay'),
+        'large_text': _clip(t.album ?? t.title),
+        'large_url': ?listenUrl,
+        // The app's logo on the cover's corner, with the sound's quality for those who hover it.
+        if (cover != null) 'small_image': 'openmusic',
+        if (cover != null) 'small_text': _clip([?quality, 'Riflay'].join(' · ')),
       },
       // Discord allows two buttons; friends who like the music can get the app.
       'buttons': [

@@ -28,6 +28,7 @@ import 'services/player_controller.dart';
 import 'services/memory_trim.dart';
 import 'services/rendering_memory.dart';
 import 'services/stay_awake.dart';
+import 'services/taskbar_buttons.dart';
 import 'services/wrap_notifications.dart';
 import 'ui/home_shell.dart';
 import 'ui/player_panels.dart' show MiniPlayerWindow, miniPlayer, windowFullScreen;
@@ -124,6 +125,8 @@ Future<void> _startServices(PlayerController controller) async {
   await Future.wait(
     [
       MediaSession.start(controller),
+      // Windows: Previous, Play / Pause and Next on the taskbar thumbnail.
+      Future(() => TaskbarButtons.start(controller)),
       StayAwake.start(controller),
       // Notifications watch the queue, so they attach once it is restored.
       controller.youtube.restoreQueue().then((_) => DownloadNotifications.attach(controller.youtube)),
