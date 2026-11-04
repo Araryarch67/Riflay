@@ -177,6 +177,18 @@ class WebArtist {
   final String? thumbnailUrl;
 }
 
+/// An artist's page header: what the side panel's "About the artist" shows.
+class WebArtistInfo {
+  const WebArtistInfo({required this.name, this.subscribers, this.description, this.thumbnailUrl});
+
+  final String name;
+
+  /// "1.02M subscribers", as the page says it.
+  final String? subscribers;
+  final String? description;
+  final String? thumbnailUrl;
+}
+
 /// The signed-in account, as YouTube Music's own menu shows it.
 class WebProfile {
   const WebProfile({this.name, this.email, this.avatarUrl});
@@ -622,6 +634,30 @@ class YtMusicWeb {
   /// switch; signed-in accounts get those pairs).
   Future<MusicVideo?> musicVideo(String videoId) async =>
       parseMusicVideo(await _send('next', {'videoId': videoId, 'isAudioOnly': true}), videoId);
+
+  /// The header of the artist page [channelId] (`UC…`): name, subscribers, about text and photo; null when the
+  /// page has none.
+  Future<WebArtistInfo?> artistInfo(String channelId) async =>
+      parseArtistInfo(await _send('browse', {'browseId': channelId}));
+
+  @visibleForTesting
+  static WebArtistInfo? parseArtistInfo(Map<String, dynamic> page) {
+    final header =
+        _asMap(_deepFind(page, 'musicImmersiveHeaderRenderer')) ?? _asMap(_deepFind(page, 'musicVisualHeaderRenderer'));
+    final name = _text(header?['title'])?.trim();
+    if (header == null || name == null || name.isEmpty) return null;
+    final subscribers =
+        _text(_deepFind(header, 'longSubscriberCountText')) ?? _text(_deepFind(header, 'subscriberCountText'));
+    final description = _text(header['description'])?.trim();
+    return WebArtistInfo(
+      name: name,
+      subscribers: subscribers == null || subscribers.isEmpty
+          ? null
+          : (RegExp(r'[a-zA-Z]').hasMatch(subscribers) ? subscribers : '$subscribers subscribers'),
+      description: description == null || description.isEmpty ? null : description,
+      thumbnailUrl: _lastThumb(_deepFind(header, 'thumbnails')),
+    );
+  }
 
   /// Kinds of rows that are videos (official videos, uploads, official
   /// visualisers), not a song's audio with its cover (`ATV`).

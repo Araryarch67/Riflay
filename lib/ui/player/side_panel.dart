@@ -3,17 +3,21 @@ import 'package:flutter/material.dart';
 import '../../models/track.dart';
 import '../../services/layout_prefs.dart';
 import '../../services/player_controller.dart';
+import '../../services/video_mode.dart';
 import '../shell_scope.dart';
 import '../theme.dart';
+import '../ytmusic_edit.dart' show LikeButton;
+import '../../services/ytmusic_web.dart' show WebArtistInfo;
 import '../widgets/controls.dart';
+import '../widgets/faded_cover.dart';
 import '../widgets/audio_visualizer.dart';
 import '../widgets/signal_path.dart';
+import '../widgets/skeleton.dart';
 import '../widgets/smooth_scroll.dart';
 import '../widgets/stats_for_nerds.dart';
 import '../widgets/track_row.dart';
 import '../widgets/video_mode.dart';
 import 'player_common.dart';
-import 'player_parts.dart';
 
 /// Right-hand panel on large screens: big cover, title, and what's next.
 class NowPlayingSidePanel extends StatelessWidget {
@@ -61,84 +65,97 @@ class NowPlayingSidePanel extends StatelessWidget {
                 ),
               ),
             )
-          : SmoothScroll(
-              builder: (context, scroll) => ListView(
-                controller: scroll,
-                padding: EdgeInsets.fromLTRB(16, 8, 16, 16 + MediaQuery.paddingOf(context).bottom),
-                children: [
-                  Row(
+          : ListenableBuilder(
+              listenable: Listenable.merge([LayoutPrefs.instance, VideoMode.instance]),
+              builder: (context, _) {
+                // The cover as the panel's top (Cover: Background), or the music video there when Video is picked:
+                // the song on its foot, then About the artist and what is next. Otherwise the classic card.
+                final hero =
+                    LayoutPrefs.instance.playerCover == PlayerCover.background ||
+                    VideoMode.instance.showsAsBackground(track);
+                if (hero) return _HeroPanel(track: track, from: from, next: next, onClose: onClose);
+                return SmoothScroll(
+                  builder: (context, scroll) => ListView(
+                    controller: scroll,
+                    padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + MediaQuery.paddingOf(context).bottom),
                     children: [
-                      Expanded(child: PlayerFromLabel(from: from)),
-                      TrackMenuButton(track: track, nowPlaying: true),
-                      IconButton(tooltip: 'Close', onPressed: onClose, icon: const Icon(Icons.close_rounded, size: 20)),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Center(child: VideoModeSwitch(track: track)),
-                  _PanelCover(track: track),
-                  const SizedBox(height: 16),
-                  Text(
-                    track.title,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: text.headlineSmall?.copyWith(fontWeight: FontWeight.w800, letterSpacing: -0.5),
-                  ),
-                  const SizedBox(height: 4),
-                  // A click away from the artist's page (and the album's, for a file here).
-                  LinkText(
-                    track.artist,
-                    style: text.bodyLarge?.copyWith(color: AppColors.textSecondary),
-                    onTap: openArtist(context, c, track),
-                  ),
-                  if (track.album != null) ...[
-                    const SizedBox(height: 2),
-                    LinkText(
-                      track.album!,
-                      style: text.bodyMedium?.copyWith(color: AppColors.textMuted),
-                      onTap: switch (c.albumOf(track)) {
-                        final album? => () => shell.openCollection(album),
-                        null => null,
-                      },
-                    ),
-                  ],
-                  const SizedBox(height: 12),
-                  if (LayoutPrefs.instance.showQualityBadge) const QualityBadge(),
-                  const SizedBox(height: 16),
-                  if (next != null)
-                    Container(
-                      decoration: BoxDecoration(color: AppColors.elevated, borderRadius: LayoutPrefs.corner(8)),
-                      padding: const EdgeInsets.fromLTRB(8, 12, 8, 8),
-                      child: Column(
+                      // No header row: the player bar's Now playing view button shows and hides the panel, and
+                      // the song's menu sits by its title.
+                      _PanelCover(track: track),
+                      const SizedBox(height: 16),
+                      Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Row(
-                            children: [
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  'Next in queue',
-                                  style: text.titleSmall?.copyWith(fontWeight: FontWeight.w700),
-                                ),
-                              ),
-                              TextButton(
-                                onPressed: shell.openQueue,
-                                style: TextButton.styleFrom(foregroundColor: AppColors.textSecondary),
-                                child: const Text('Open queue'),
-                              ),
-                            ],
+                          Expanded(
+                            child: Text(
+                              track.title,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: text.headlineSmall?.copyWith(fontWeight: FontWeight.w800, letterSpacing: -0.5),
+                            ),
                           ),
-                          TrackRow(track: next, onTap: () => c.playQueueItem(next)),
+                          TrackMenuButton(track: track, nowPlaying: true),
                         ],
                       ),
-                    ),
-                ],
-              ),
+                      const SizedBox(height: 4),
+                      // A click away from the artist's page (and the album's, for a file here).
+                      LinkText(
+                        track.artist,
+                        style: text.bodyLarge?.copyWith(color: AppColors.textSecondary),
+                        onTap: openArtist(context, c, track),
+                      ),
+                      if (track.album != null) ...[
+                        const SizedBox(height: 2),
+                        LinkText(
+                          track.album!,
+                          style: text.bodyMedium?.copyWith(color: AppColors.textMuted),
+                          onTap: switch (c.albumOf(track)) {
+                            final album? => () => shell.openCollection(album),
+                            null => null,
+                          },
+                        ),
+                      ],
+                      const SizedBox(height: 12),
+                      if (LayoutPrefs.instance.showQualityBadge) const QualityBadge(),
+                      const SizedBox(height: 16),
+                      if (next != null)
+                        Container(
+                          decoration: BoxDecoration(color: AppColors.elevated, borderRadius: LayoutPrefs.corner(8)),
+                          padding: const EdgeInsets.fromLTRB(8, 12, 8, 8),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      'Next in queue',
+                                      style: text.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+                                    ),
+                                  ),
+                                  TextButton(
+                                    onPressed: shell.openQueue,
+                                    style: TextButton.styleFrom(foregroundColor: AppColors.textSecondary),
+                                    child: const Text('Open queue'),
+                                  ),
+                                ],
+                              ),
+                              TrackRow(track: next, onTap: () => c.playQueueItem(next)),
+                            ],
+                          ),
+                        ),
+                    ],
+                  ),
+                );
+              },
             ),
     );
   }
 }
 
-/// The big cover: a rounded square in the list's margins, or with Cover set to Full width, edge to edge and square.
+/// The big cover: the flower or the rounded square in the list's margins, or with Cover set to Background, edge to
+/// edge with no frame, fading into the panel below.
 class _PanelCover extends StatelessWidget {
   const _PanelCover({required this.track});
 
@@ -148,19 +165,21 @@ class _PanelCover extends StatelessWidget {
   Widget build(BuildContext context) => ListenableBuilder(
     listenable: LayoutPrefs.instance,
     builder: (context, _) {
-      final bleed = LayoutPrefs.instance.playerCover == PlayerCover.fullBleed;
+      final bleed = LayoutPrefs.instance.playerCover == PlayerCover.background;
       final cover = NowPlayingCover(
-        child: TrackVisual(
-          track: track,
-          cover: AudioVisualizer(
-            radialOnly: true,
-            child: TrackSwitcher(
-              trackId: track.id,
-              slide: false,
-              child: Artwork(key: ValueKey(track.id), track: track, radius: bleed ? 0 : 8),
-            ),
-          ),
-        ),
+        child: bleed
+            ? FadedCover(track: track, fade: AppColors.panel, blurStart: 0.5)
+            : TrackVisual(
+                track: track,
+                cover: AudioVisualizer(
+                  radialOnly: true,
+                  child: TrackSwitcher(
+                    trackId: track.id,
+                    slide: false,
+                    child: Artwork(key: ValueKey(track.id), track: track, radius: 8),
+                  ),
+                ),
+              ),
       );
       if (!bleed) return AspectRatio(aspectRatio: 1, child: cover);
       // Out past the list's 16 px margins on both sides.
@@ -175,4 +194,266 @@ class _PanelCover extends StatelessWidget {
       );
     },
   );
+}
+
+/// The side panel with the cover (or the music video) across its top, like the music apps' "Now playing" view: the
+/// title and artist on its foot with the heart and the song's menu; then what is next and About the artist. The
+/// player bar's Now playing view button shows and hides it, so it has no Close of its own.
+class _HeroPanel extends StatelessWidget {
+  const _HeroPanel({required this.track, required this.from, required this.next, required this.onClose});
+
+  final Track track;
+  final String? from;
+  final Track? next;
+  final VoidCallback onClose;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = PlayerScope.read(context);
+    final shell = ShellScope.of(context);
+    final text = Theme.of(context).textTheme;
+    final next = this.next;
+    return SmoothScroll(
+      builder: (context, scroll) => ListView(
+        controller: scroll,
+        padding: EdgeInsets.only(bottom: 16 + MediaQuery.paddingOf(context).bottom),
+        children: [
+          AspectRatio(
+            aspectRatio: 0.82,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                // The cover, sharp up top and soft into the panel; the video over it once it plays.
+                FadedCover(track: track, fade: AppColors.panel, blurStart: 0.7),
+                VideoBackground(track: track),
+                // Readable words over any picture: darker at the foot, where the title sits.
+                IgnorePointer(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Colors.black.withValues(alpha: 0.45),
+                          Colors.transparent,
+                          Colors.transparent,
+                          AppColors.panel.withValues(alpha: 0.85),
+                          AppColors.panel,
+                        ],
+                        stops: const [0, 0.22, 0.5, 0.88, 1],
+                      ),
+                    ),
+                  ),
+                ),
+                Positioned(
+                  left: 16,
+                  right: 8,
+                  bottom: 12,
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              track.title,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: text.headlineSmall?.copyWith(
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: -0.5,
+                                color: AppColors.textPrimary,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            LinkText(
+                              track.artist,
+                              style: text.bodyLarge?.copyWith(color: AppColors.textSecondary),
+                              onTap: openArtist(context, c, track),
+                            ),
+                          ],
+                        ),
+                      ),
+                      LikeButton(track: track, size: 24),
+                      TrackMenuButton(track: track, nowPlaying: true),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (LayoutPrefs.instance.showQualityBadge) ...[const QualityBadge(), const SizedBox(height: 16)],
+                // What is next stays on the panel, before anything else below the picture.
+                Container(
+                  decoration: BoxDecoration(color: AppColors.elevated, borderRadius: LayoutPrefs.corner(8)),
+                  padding: const EdgeInsets.fromLTRB(8, 12, 8, 8),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text('Next in queue', style: text.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+                          ),
+                          TextButton(
+                            onPressed: shell.openQueue,
+                            style: TextButton.styleFrom(foregroundColor: AppColors.textSecondary),
+                            child: const Text('Open queue'),
+                          ),
+                        ],
+                      ),
+                      if (next != null)
+                        TrackRow(track: next, onTap: () => c.playQueueItem(next))
+                      else
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(8, 4, 8, 8),
+                          child: Text(
+                            'Nothing after this song',
+                            style: text.bodyMedium?.copyWith(color: AppColors.textSecondary),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                if (track.isRemote && track.artistId != null) ...[
+                  _AboutArtist(channelId: track.artistId!, onOpen: openArtist(context, c, track)),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// "About the artist": their photo, name, subscribers, Follow, and the start of their page's about text, from
+/// YouTube Music (asked once per artist). Nothing until it arrives, or when there is nothing to say.
+class _AboutArtist extends StatefulWidget {
+  const _AboutArtist({required this.channelId, this.onOpen});
+
+  final String channelId;
+  final VoidCallback? onOpen;
+
+  @override
+  State<_AboutArtist> createState() => _AboutArtistState();
+}
+
+class _AboutArtistState extends State<_AboutArtist> {
+  late Future<WebArtistInfo?> _info = PlayerScope.read(context).ytMusic.artistInfo(widget.channelId);
+
+  @override
+  void didUpdateWidget(_AboutArtist old) {
+    super.didUpdateWidget(old);
+    if (old.channelId != widget.channelId) _info = PlayerScope.read(context).ytMusic.artistInfo(widget.channelId);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    final account = PlayerScope.read(context).ytMusic;
+    return FutureBuilder<WebArtistInfo?>(
+      future: _info,
+      builder: (context, snap) {
+        final info = snap.data;
+        if (info == null) {
+          if (snap.connectionState == ConnectionState.done) return const SizedBox.shrink();
+          return Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(color: AppColors.elevated, borderRadius: LayoutPrefs.corner(8)),
+            child: const ExcludeSemantics(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SkeletonBox(width: 110, height: 16),
+                  SizedBox(height: 12),
+                  SkeletonRow(size: 56, circle: true, trailing: false),
+                  SizedBox(height: 8),
+                  SkeletonText(lines: 3),
+                ],
+              ),
+            ),
+          );
+        }
+        final photo = info.thumbnailUrl;
+        final about = info.description;
+        return Material(
+          color: AppColors.elevated,
+          borderRadius: LayoutPrefs.corner(8),
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: widget.onOpen,
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('About the artist', style: text.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+                  const SizedBox(height: 12),
+                  if (photo != null) ...[
+                    ClipOval(
+                      child: Image.network(
+                        photo,
+                        width: 72,
+                        height: 72,
+                        fit: BoxFit.cover,
+                        cacheWidth: 216,
+                        errorBuilder: (_, _, _) => const SizedBox(width: 72, height: 72),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+                  Text(info.name, style: text.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          info.subscribers ?? '',
+                          style: text.bodyMedium?.copyWith(color: AppColors.textSecondary),
+                        ),
+                      ),
+                      if (account.canEdit)
+                        ListenableBuilder(
+                          listenable: account,
+                          builder: (context, _) {
+                            final following = account.isFollowing(widget.channelId);
+                            return OutlinedButton(
+                              onPressed: () => account.setFollowing(widget.channelId, !following),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: AppColors.textPrimary,
+                                shape: const StadiumBorder(),
+                                visualDensity: VisualDensity.compact,
+                              ),
+                              child: Text(following ? 'Following' : 'Follow'),
+                            );
+                          },
+                        ),
+                    ],
+                  ),
+                  if (about != null) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      about,
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                      style: text.bodySmall?.copyWith(color: AppColors.textSecondary),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
 }

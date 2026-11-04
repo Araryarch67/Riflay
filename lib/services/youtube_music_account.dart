@@ -992,6 +992,23 @@ class YoutubeMusicAccount extends ChangeNotifier {
     return _webTracks(rows.where((r) => r.videoId != seed.videoId).toList());
   }
 
+  final _artists = <String, Future<WebArtistInfo?>>{};
+
+  /// The header of the artist [channelId]'s page (for "About the artist"); asked once per artist, null on failure.
+  Future<WebArtistInfo?> artistInfo(String channelId) {
+    final f =
+        _artists.remove(channelId) ??
+        _browseClient.artistInfo(channelId).catchError((Object e) {
+          debugPrint('YouTube Music: about $channelId: $e');
+          return null;
+        });
+    _artists[channelId] = f; // newest last
+    while (_artists.length > 32) {
+      _artists.remove(_artists.keys.first);
+    }
+    return f;
+  }
+
   /// The music video that goes with [videoId], if it has one; asked once per song.
   Future<MusicVideo?> musicVideo(String videoId) {
     final cached = _videos.remove(videoId);

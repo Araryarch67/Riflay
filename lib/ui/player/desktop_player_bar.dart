@@ -55,14 +55,8 @@ class DesktopPlayerBar extends StatelessWidget {
                 : math.max(80.0, 36 * textScale + 16);
             final info = _info(context, track, small: compact || minimal, withProgress: compact);
             final actions = _actions(context, track, width: availableWidth);
-            // Controls: Classic is the original row; Pill and Plain are the player parts, sized for the bar.
-            final Widget transport = switch (LayoutPrefs.instance.transport) {
-              PlayerTransport.classic => const FittedBox(fit: BoxFit.scaleDown, child: TransportControls()),
-              final other => FittedBox(
-                fit: BoxFit.scaleDown,
-                child: DesktopControlsRow(plain: other == PlayerTransport.plain),
-              ),
-            };
+            // The bar is Classic in every preset: the presets shape the phone player and the side panel.
+            const Widget transport = FittedBox(fit: BoxFit.scaleDown, child: TransportControls());
             final Widget content;
             if (compact) {
               content = SizedBox(
@@ -87,8 +81,7 @@ class DesktopPlayerBar extends StatelessWidget {
                   padding: const EdgeInsets.fromLTRB(12, 0, 20, 0),
                   child: Column(
                     children: [
-                      if (minimal && track != null)
-                        const SizedBox(height: 16, child: SeekBar(inline: true, desktopPlayer: true)),
+                      if (minimal && track != null) const SizedBox(height: 16, child: SeekBar(inline: true)),
                       Expanded(
                         child: Row(
                           children: [
@@ -99,10 +92,7 @@ class DesktopPlayerBar extends StatelessWidget {
                                 constraints: const BoxConstraints(maxWidth: 720),
                                 child: Column(
                                   mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    transport,
-                                    if (!minimal && track != null) const SeekBar(inline: true, desktopPlayer: true),
-                                  ],
+                                  children: [transport, if (!minimal && track != null) const SeekBar(inline: true)],
                                 ),
                               ),
                             ),
@@ -160,8 +150,7 @@ class DesktopPlayerBar extends StatelessWidget {
               children: [
                 Artwork(
                   track: track,
-                  // Cover Full width: a plain square, not the flower.
-                  flower: LayoutPrefs.instance.playerCover != PlayerCover.fullBleed,
+                  flower: true,
                   radius: 0,
                   size: withProgress
                       ? 44
@@ -198,7 +187,7 @@ class DesktopPlayerBar extends StatelessWidget {
                       ),
                       if (withProgress) ...[
                         const SizedBox(height: 2),
-                        const SizedBox(height: 20, child: SeekBar(inline: true, compact: true, desktopPlayer: true)),
+                        const SizedBox(height: 20, child: SeekBar(inline: true, compact: true)),
                       ],
                     ],
                   ),
@@ -213,9 +202,9 @@ class DesktopPlayerBar extends StatelessWidget {
   /// Lyrics and Queue as plain icons with the volume behind its button. Lyrics is on the bar in all of them.
   Widget _actions(BuildContext context, Track? track, {required double width}) {
     final shell = ShellScope.of(context);
-    final prefs = LayoutPrefs.instance;
-    final row = prefs.bottomRow;
-    final slider = width > 860 && prefs.showVolumeRow && row != PlayerBottomRow.minimal;
+    // Classic in every preset, like the rest of the bar.
+    const row = PlayerBottomRow.classic;
+    final slider = width > 860;
     Widget part(IconData icon, String tooltip, VoidCallback? onPressed, {bool lit = false}) => PartButton(
       icon: icon,
       tooltip: tooltip,
@@ -250,6 +239,18 @@ class DesktopPlayerBar extends StatelessWidget {
                   : part(Icons.lyrics_outlined, on ? 'Hide lyrics' : 'Lyrics', open, lit: on);
             },
           ),
+          // Always on the bar where there is room for it: shows and hides the Now playing view beside the pages
+          // (it has no Close of its own).
+          if (onToggleSidePanel case final toggle?)
+            IconButton(
+              tooltip: sidePanelOpen ? 'Hide now playing view' : 'Now playing view',
+              onPressed: toggle,
+              icon: Icon(
+                sidePanelOpen ? Icons.view_sidebar_rounded : Icons.view_sidebar_outlined,
+                size: 20,
+                color: sidePanelOpen ? AppColors.accent : null,
+              ),
+            ),
           if (row == PlayerBottomRow.classic)
             IconButton(
               tooltip: 'Queue',
@@ -283,18 +284,67 @@ class DesktopPlayerBar extends StatelessWidget {
   }
 }
 
-/// Volume remains available on narrow desktop windows without crowding the dock.
-class _VolumeMenu extends StatelessWidget {
+/// Volume remains available on narrow desktop windows without crowding the dock. Its popup opens upwards, above the
+/// button (the bar sits at the bottom of the window), and closes when the window loses focus or is resized, so it can
+/// never hang around stale or run past the window's edge.
+class _VolumeMenu extends StatefulWidget {
   const _VolumeMenu();
 
   @override
+  State<_VolumeMenu> createState() => _VolumeMenuState();
+}
+
+class _VolumeMenuState extends State<_VolumeMenu> with WidgetsBindingObserver {
+  /// The popup's own height, so it can be placed exactly above the button.
+  static const _height = 56.0;
+
+  final _menu = MenuController();
+  late final AppLifecycleListener _lifecycle;
+
+  void _close() {
+    if (_menu.isOpen) _menu.close();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _lifecycle = AppLifecycleListener(onInactive: _close, onHide: _close);
+  }
+
+  @override
+  void didChangeMetrics() => _close();
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _lifecycle.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) => MenuAnchor(
+    controller: _menu,
+    alignmentOffset: const Offset(0, -_height - 4),
+    style: const MenuStyle(
+      alignment: Alignment.topLeft,
+      padding: WidgetStatePropertyAll(EdgeInsets.zero),
+      visualDensity: VisualDensity.standard,
+    ),
     builder: (context, menu, _) => IconButton(
       tooltip: 'Volume',
       onPressed: () => menu.isOpen ? menu.close() : menu.open(),
       icon: const Icon(Icons.volume_up_rounded, size: 20),
     ),
-    menuChildren: const [Padding(padding: EdgeInsets.all(12), child: VolumeSlider())],
+    menuChildren: const [
+      Padding(
+        padding: EdgeInsets.symmetric(horizontal: 12),
+        child: SizedBox(
+          height: _height,
+          child: Center(child: VolumeSlider()),
+        ),
+      ),
+    ],
   );
 }
 
