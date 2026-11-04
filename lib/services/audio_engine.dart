@@ -13,7 +13,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../platform/host.dart';
 import '../platform/mpv.dart';
-import 'beta_features.dart';
+import 'layout_prefs.dart';
 import 'carla_locator.dart';
 import 'crossfade.dart';
 import 'ios_route.dart';
@@ -360,7 +360,8 @@ class SignalPath {
 /// choice on Android) has its `has…` flag.
 class AudioEngine extends ChangeNotifier {
   AudioEngine() {
-    BetaFeatures.instance.addListener(_onVisualizerBetaChanged);
+    _visualizerWasOn = LayoutPrefs.instance.visualizerEnabled;
+    LayoutPrefs.instance.addListener(_onVisualizerBetaChanged);
     // Pitch control makes media_kit own the `af` property (scaletempo); the app needs it for EQ.
     JustAudioMediaKit.pitch = false;
     // mpv's read-ahead (media_kit: 32 MiB ahead and 32 MiB behind, per open
@@ -602,9 +603,14 @@ class AudioEngine extends ChangeNotifier {
   bool _visualizerReading = false;
   Future<void> _visualizerSync = Future.value();
   bool get visualizerActive =>
-      BetaFeatures.instance.isOn(BetaFeature.audioVisualizer) && _visualizerUsers > 0 && !bitPerfect && _dop == null;
+      LayoutPrefs.instance.visualizerEnabled && _visualizerUsers > 0 && !bitPerfect && _dop == null;
 
+  bool _visualizerWasOn = false;
+
+  /// The visualizer switch (Settings > Look & feel > Layout) changed; other layout changes are none of its business.
   void _onVisualizerBetaChanged() {
+    if (LayoutPrefs.instance.visualizerEnabled == _visualizerWasOn) return;
+    _visualizerWasOn = LayoutPrefs.instance.visualizerEnabled;
     if (!visualizerActive) visualizerLevels.clear();
     if (_visualizerUsers > 0) _syncVisualizer();
     notifyListeners();
@@ -1583,7 +1589,7 @@ class AudioEngine extends ChangeNotifier {
   @override
   void dispose() {
     _disposed = true;
-    BetaFeatures.instance.removeListener(_onVisualizerBetaChanged);
+    LayoutPrefs.instance.removeListener(_onVisualizerBetaChanged);
     _visualizerTimer?.cancel();
     visualizerLevels.dispose();
     _paramsSub?.cancel();

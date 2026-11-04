@@ -3,7 +3,6 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:riflay/services/appearance.dart';
-import 'package:riflay/services/beta_features.dart';
 import 'package:riflay/services/layout_prefs.dart';
 import 'package:riflay/services/player_controller.dart';
 import 'package:riflay/ui/widgets/audio_reactive_view.dart';
@@ -20,8 +19,7 @@ class _PlayingController extends PlayerController {
 void main() {
   final prefs = LayoutPrefs.instance;
   setUp(() async {
-    SharedPreferences.setMockInitialValues({'features.audioVisualizer': true});
-    await BetaFeatures.instance.reload();
+    SharedPreferences.setMockInitialValues({});
     await Appearance.instance.reset();
     await prefs.setPerformance(PerformanceMode.balanced);
     await prefs.reset();
@@ -64,12 +62,11 @@ void main() {
   });
 
   testWidgets('lightweight keeps the audio analysis in standby', (tester) async {
+    await prefs.setVisualizer(true);
     final c = _PlayingController();
     Widget view() => PlayerScope(
       controller: c,
-      child: MaterialApp(
-        home: AudioReactiveView(builder: (_, _) => const SizedBox.shrink()),
-      ),
+      child: MaterialApp(home: AudioReactiveView(builder: (_, _) => const SizedBox.shrink())),
     );
     await tester.pumpWidget(view());
     expect(c.audio.visualizerActive, isTrue);

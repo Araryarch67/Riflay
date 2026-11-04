@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:riflay/services/beta_features.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:riflay/services/layout_prefs.dart';
 import 'package:riflay/ui/pages/layout_settings.dart';
-import 'package:riflay/ui/pages/beta_settings.dart';
 import 'package:riflay/ui/widgets/audio_visualizer.dart';
 import 'package:riflay/ui/widgets/flower_cover.dart';
 import 'package:riflay/ui/widgets/audio_reactive_view.dart';
@@ -12,8 +10,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 void main() {
   final prefs = LayoutPrefs.instance;
   setUp(() async {
-    SharedPreferences.setMockInitialValues({'features.audioVisualizer': true});
-    await BetaFeatures.instance.reload();
+    SharedPreferences.setMockInitialValues({});
     await prefs.reset();
   });
   tearDown(prefs.reset);
@@ -63,10 +60,9 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('legacy enabled decoration stays hidden until beta opt-in', (tester) async {
-    await prefs.setVisualizer(true);
+  testWidgets('the visualizer is a normal setting in Layout, off by default', (tester) async {
+    expect(prefs.visualizer, isFalse);
     await prefs.setVisualizerStyle(VisualizerStyle.orbit);
-    await tester.runAsync(() => BetaFeatures.instance.set(BetaFeature.audioVisualizer, false));
     await tester.pumpWidget(const MaterialApp(home: AudioVisualizer(child: SizedBox.square(dimension: 200))));
     expect(find.byType(VisualizerCanvas), findsNothing);
     expect(find.byType(FlowerCover), findsOneWidget);
@@ -76,41 +72,37 @@ void main() {
         home: Scaffold(body: SingleChildScrollView(child: LayoutSettings())),
       ),
     );
-    expect(find.text('Audio visualizer'), findsNothing);
-    expect(find.text('Visualizer style'), findsNothing);
+    expect(find.text('Audio visualizer'), findsWidgets);
+    expect(find.text('Visualizer style'), findsNothing, reason: 'the styles show once it is on');
   });
 
-  testWidgets('cover shape can change while the visualizer is off', (tester) async {
-    await tester.runAsync(() => BetaFeatures.instance.set(BetaFeature.audioVisualizer, false));
-    await tester.pumpWidget(
-      const MaterialApp(
-        home: Scaffold(body: SingleChildScrollView(child: BetaSettings())),
-      ),
-    );
-    expect(find.text('Cover shape'), findsOneWidget);
-    await tester.tap(find.text('Flower'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Square'));
-    await tester.pumpAndSettle();
+  testWidgets('Cover: Square is a plain rounded card, no flower, no glow, no motion', (tester) async {
+    await prefs.setPlayerCover(PlayerCover.square);
     expect(prefs.visualizerCoverShape, VisualizerCoverShape.square);
     expect(prefs.visualizerEnabled, isFalse);
     await tester.pumpWidget(const MaterialApp(home: AudioVisualizer(child: SizedBox.square(dimension: 200))));
-    expect(tester.widget<FlowerCover>(find.byType(FlowerCover)).shape, VisualizerCoverShape.square);
+    expect(find.byType(FlowerCover), findsNothing);
+    expect(find.descendant(of: find.byType(AudioVisualizer), matching: find.byType(ClipRRect)), findsOneWidget);
     expect(find.byType(AudioReactiveView), findsNothing);
+    await prefs.setPlayerCover(PlayerCover.flower);
+    await tester.pumpWidget(const MaterialApp(home: AudioVisualizer(child: SizedBox.square(dimension: 200))));
+    expect(tester.widget<FlowerCover>(find.byType(FlowerCover)).shape, VisualizerCoverShape.flower);
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('Beta Features owns visualizer opt-in and styles', (tester) async {
-    await tester.runAsync(() => BetaFeatures.instance.set(BetaFeature.audioVisualizer, false));
+  testWidgets('Layout owns the visualizer switch and its styles', (tester) async {
+    tester.view.physicalSize = const Size(900, 4000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
     await tester.pumpWidget(
       const MaterialApp(
-        home: Scaffold(body: SingleChildScrollView(child: BetaSettings())),
+        home: Scaffold(body: SingleChildScrollView(child: LayoutSettings())),
       ),
     );
     expect(find.text('Visualizer style'), findsNothing);
     final toggle = find.widgetWithText(SwitchListTile, 'Audio visualizer');
     await tester.ensureVisible(toggle);
-    await tester.runAsync(() => tester.tap(toggle));
+    await tester.tap(toggle);
     await tester.pumpAndSettle();
     expect(prefs.visualizer, isTrue);
     expect(find.text('Visualizer style'), findsOneWidget);

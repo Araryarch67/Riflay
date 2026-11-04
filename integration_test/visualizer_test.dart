@@ -14,7 +14,7 @@ import 'package:just_audio_media_kit/just_audio_media_kit.dart';
 import 'package:media_kit/media_kit.dart' show NativePlayer;
 import 'package:riflay/models/track.dart';
 import 'package:riflay/ui/player/now_playing_page.dart';
-import 'package:riflay/ui/pages/settings_page.dart';
+import 'package:riflay/ui/pages/layout_settings.dart';
 import 'package:riflay/ui/shell_scope.dart';
 import 'package:riflay/ui/theme.dart';
 import 'package:riflay/services/beta_features.dart';
@@ -37,8 +37,8 @@ void main() {
     await tester.runAsync(() async {
       SharedPreferences.setMockInitialValues({'discord.enabled': false});
       await BetaFeatures.instance.reload();
-      expect(BetaFeatures.instance.isOn(BetaFeature.audioVisualizer), isFalse);
-      await BetaFeatures.instance.set(BetaFeature.audioVisualizer, true);
+      expect(LayoutPrefs.instance.visualizer, isFalse);
+      await LayoutPrefs.instance.setVisualizer(true);
       final folder = Directory.systemTemp.createTempSync('riflay-visualizer-test-');
       final source = writeWav('${folder.path}/levels.wav', 48000 * 12, (i) {
         final t = i / 48000;
@@ -169,12 +169,12 @@ void main() {
         // route visibility, pause/resume and app backgrounding on the device.
         for (var i = 0; i < 12; i++) {
           await c.player.seek(const Duration(seconds: 3));
-          await BetaFeatures.instance.set(BetaFeature.audioVisualizer, false);
+          await LayoutPrefs.instance.setVisualizer(false);
           await tester.pump();
           await Future<void>.delayed(const Duration(milliseconds: 60));
           expect(await native.getProperty('af'), isNot(contains('visualizer')));
           expect(c.audio.visualizerLevels.value, everyElement(0));
-          await BetaFeatures.instance.set(BetaFeature.audioVisualizer, true);
+          await LayoutPrefs.instance.setVisualizer(true);
           await prefs.setVisualizer(true);
           await tester.pump();
           await Future<void>.delayed(const Duration(milliseconds: 100));
@@ -269,7 +269,7 @@ void main() {
         }
         await look.setReactiveBackground(false);
         await prefs.setVisualizer(false);
-        await BetaFeatures.instance.set(BetaFeature.audioVisualizer, false);
+        await LayoutPrefs.instance.setVisualizer(false);
         await c.player.seek(const Duration(seconds: 3));
         await tester.pumpWidget(phone(const NowPlayingPage()));
         for (var frame = 0; frame < 30; frame++) {
@@ -281,12 +281,11 @@ void main() {
         expect(await native.getProperty('af'), isNot(contains('visualizer')));
         expect(tester.takeException(), isNull);
         await capturePhone('android-player-off');
-        await tester.pumpWidget(phone(const SettingsBetaPage()));
+        await tester.pumpWidget(phone(const SingleChildScrollView(child: LayoutSettings())));
         await tester.pump();
-        expect(find.text('Beta Features'), findsWidgets);
-        expect(find.text('Audio visualizer'), findsOneWidget);
+        expect(find.text('Audio visualizer'), findsWidgets);
         expect(tester.takeException(), isNull);
-        await capturePhone('android-beta-features');
+        await capturePhone('android-layout-settings');
         await tester.pumpWidget(view());
         await Future<void>.delayed(const Duration(milliseconds: 150));
       } finally {
@@ -294,7 +293,7 @@ void main() {
         await c.player.stop();
         c.dispose();
         JustAudioMediaKit.onPlayerCreated = original;
-        await BetaFeatures.instance.set(BetaFeature.audioVisualizer, false);
+        await LayoutPrefs.instance.setVisualizer(false);
         await prefs.reset();
         await look.reset();
         folder.deleteSync(recursive: true);

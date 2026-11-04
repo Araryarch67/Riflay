@@ -2,7 +2,7 @@ import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:riflay/services/beta_features.dart';
+import 'package:riflay/services/layout_prefs.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:riflay/services/audio_engine.dart';
 import 'package:riflay/services/visualizer_spectrum.dart';
@@ -85,16 +85,16 @@ void main() {
     }, skip: !Platform.isLinux);
   }
 
-  test('turning beta off blocks analysis even while a view holds a lease', () async {
+  test('turning the visualizer off blocks analysis even while a view holds a lease', () async {
     SharedPreferences.setMockInitialValues({});
-    await BetaFeatures.instance.reload();
+    await LayoutPrefs.instance.reset();
     final engine = AudioEngine();
     final release = engine.watchVisualizer();
     expect(engine.filterChain, isNot(contains('@visualizer')));
-    await BetaFeatures.instance.set(BetaFeature.audioVisualizer, true);
+    await LayoutPrefs.instance.setVisualizer(true);
     expect(engine.filterChain, contains('@visualizer'));
     engine.visualizerLevels.add('-6');
-    await BetaFeatures.instance.set(BetaFeature.audioVisualizer, false);
+    await LayoutPrefs.instance.setVisualizer(false);
     expect(engine.filterChain, isNot(contains('@visualizer')));
     expect(engine.visualizerLevels.value, everyElement(0));
     release();
@@ -102,8 +102,9 @@ void main() {
   });
 
   test('bit-perfect audio never acquires an analysis filter', () async {
-    SharedPreferences.setMockInitialValues({'features.audioVisualizer': true});
-    await BetaFeatures.instance.reload();
+    SharedPreferences.setMockInitialValues({});
+    await LayoutPrefs.instance.reset();
+    await LayoutPrefs.instance.setVisualizer(true);
     final engine = AudioEngine();
     final release = engine.watchVisualizer();
     expect(engine.filterChain, contains('@visualizer'));

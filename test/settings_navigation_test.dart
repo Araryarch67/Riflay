@@ -112,18 +112,6 @@ void main() {
     awake.dispose();
   });
 
-  onLinux('Beta Features opens its own page with audio analysis off by default', (tester) async {
-    final c = PlayerController();
-    final visited = <String>[];
-    await tester.pumpWidget(_app(c, visited));
-    await tester.tap(find.text('Beta Features'));
-    await tester.pumpAndSettle();
-    expect(visited.last, 'settings:beta');
-    final toggle = find.widgetWithText(SwitchListTile, 'Audio visualizer');
-    expect(tester.widget<SwitchListTile>(toggle).value, isFalse);
-    expect(find.text('Visualizer style'), findsNothing);
-  });
-
   onLinux('each group lists its sections', (tester) async {
     final c = PlayerController();
     final visited = <String>[];
@@ -182,7 +170,7 @@ void main() {
       if (AudioEngine.supported) ('Sound', 'Sound effects (DSP)', 'Crossfade', 'settings:sound/dsp'),
       if (AudioEngine.supported) ('Sound', 'Output & quality', 'Output sample rate', 'settings:sound/hifi'),
       ('Look & feel', 'Appearance', 'Theme', 'settings:look/appearance'),
-      ('Look & feel', 'Layout', 'Motion', 'settings:look/layout'),
+      ('Look & feel', 'Layout', 'Shapes and motion', 'settings:look/layout'),
       ('Library & downloads', 'Library', 'Find songs you have twice', 'settings:library/library'),
       ('Library & downloads', 'Downloads', 'Ask every time', 'settings:library/downloads'),
       (

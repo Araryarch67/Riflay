@@ -66,7 +66,7 @@ void main() {
     await Appearance.instance.load();
     await LayoutPrefs.instance.load();
     await BetaFeatures.instance.reload();
-    await BetaFeatures.instance.set(BetaFeature.audioVisualizer, true);
+    await LayoutPrefs.instance.setVisualizer(true);
     await LayoutPrefs.instance.setMotion(Motion.full);
     await LayoutPrefs.instance.setVisualizer(true);
     await LayoutPrefs.instance.setVisualizerStyle(VisualizerStyle.pulse);

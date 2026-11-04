@@ -298,7 +298,6 @@ void main() {
     SharedPreferences.setMockInitialValues({
       'discord.enabled': false,
       'listen.name': 'Ana',
-      'features.audioVisualizer': true,
     });
     await BetaFeatures.instance.reload();
 
