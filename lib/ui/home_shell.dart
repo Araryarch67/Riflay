@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 
 import '../models/track.dart';
 import '../services/download_notifications.dart';
+import '../services/gate_hooks.dart';
 import '../services/layout_prefs.dart';
 import '../services/player_controller.dart';
 import '../services/wrap.dart';
@@ -68,6 +69,7 @@ class _HomeShellState extends State<HomeShell> {
   @override
   void initState() {
     super.initState();
+    GateHooks.attach(_gate);
     LayoutPrefs.instance.addListener(_syncWidths);
     _history.addListener(_followLocation);
     // Tapping a download notification brings up the Downloads page.
@@ -126,6 +128,7 @@ class _HomeShellState extends State<HomeShell> {
 
   @override
   void dispose() {
+    GateHooks.detach(_gate);
     LayoutPrefs.instance.removeListener(_syncWidths);
     _sidebarWidth.dispose();
     _sidePanelWidth.dispose();
@@ -177,6 +180,43 @@ class _HomeShellState extends State<HomeShell> {
 
   void _openSettings() {
     if (_history.location != Locations.settings) _open(const SettingsPage());
+  }
+
+  /// Profile builds: the release gate's commands (see [GateHooks]).
+  Future<Object?> _gate(String command, Map<String, String> args) async {
+    final c = _player!;
+    switch (command) {
+      case 'play':
+        final want = (args['song'] ?? 'official').toLowerCase();
+        final recent = c.recentlyPlayed;
+        final song = recent.firstWhere((t) => t.title.toLowerCase().contains(want), orElse: () => recent.first);
+        await c.playList([song], 0);
+        return song.title;
+      case 'playing':
+        return c.isPlaying;
+      case 'expanded':
+        await showExpandedPlayer(args['on'] == 'true');
+      case 'panel':
+        final want = ExpandedPanel.values.byName(args['name']!);
+        if (expandedPlayerPanel.value != want) toggleExpandedPanel(want);
+      case 'lyrics':
+        _openLyrics();
+      case 'collection':
+        final albums = c.albums.where((a) => a.tracks.length > 5);
+        final col = albums.isEmpty ? c.allSongs : albums.first;
+        _open(CollectionPage(collection: col), location: Locations.collection(col));
+        return col.title;
+      case 'wheel':
+        final size = MediaQuery.sizeOf(context);
+        GateHooks.wheel(Offset(size.width * 0.45, size.height * 0.5), double.parse(args['dy'] ?? '120'));
+      case 'home':
+        _goHome();
+      case 'pause':
+        await c.pause();
+      default:
+        throw ArgumentError('unknown gate command $command');
+    }
+    return null;
   }
 
   void _goHome() {
