@@ -233,6 +233,12 @@ void main() {
     await p.setWindowButtons(true);
   });
 
+  test('every preset keeps the whole song in view, not the focused three lines', () {
+    for (final preset in PlayerPreset.all) {
+      expect(preset.lyricsLines, LyricsLines.all, reason: preset.name);
+    }
+  });
+
   test('the volume slider look persists, and Stacked makes it a pill with the row shown', () async {
     expect(p.volumeSlider, VolumeSliderShape.classic);
     await p.setVolumeSlider(VolumeSliderShape.thin);

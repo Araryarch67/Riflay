@@ -67,7 +67,6 @@ class PlayerPreset {
     bottomRow: PlayerBottomRow.chips,
     lyrics: LyricsLayout.bottomCard,
     badge: QualityBadgePlace.timeRow,
-    lyricsLines: LyricsLines.focused,
     volumeSlider: VolumeSliderShape.pill,
   );
 
@@ -87,7 +86,6 @@ class PlayerPreset {
     album: AlbumHeaderStyle.hero,
     playingRow: PlayingRowStyle.card,
     badge: QualityBadgePlace.timeRow,
-    lyricsLines: LyricsLines.focused,
     background: NowPlayingBackground.video,
     volumeSlider: VolumeSliderShape.thin,
   );
