@@ -716,11 +716,22 @@ class _HomeShellState extends State<HomeShell> {
                               ),
                               if (full)
                                 Positioned.fill(
-                                  // The player bar floats over it now: no room kept for it.
-                                  child: MediaQuery.removePadding(
-                                    context: context,
-                                    removeBottom: true,
-                                    child: const FullScreenPlayer(),
+                                  // The player bar floats over it now: no room kept for it. The title bar
+                                  // floats too, but its controls would land on the player's own top row:
+                                  // the player's content starts below it, its picture still fills the window.
+                                  child: Builder(
+                                    builder: (context) {
+                                      final media = MediaQuery.of(context);
+                                      return MediaQuery(
+                                        data: media.copyWith(
+                                          padding: media.padding.copyWith(
+                                            top: hasCustomTitleBar ? AppTitleBar.tallHeight : media.padding.top,
+                                            bottom: 0,
+                                          ),
+                                        ),
+                                        child: const FullScreenPlayer(),
+                                      );
+                                    },
                                   ),
                                 ),
                             ],

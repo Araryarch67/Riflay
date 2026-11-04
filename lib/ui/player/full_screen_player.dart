@@ -204,7 +204,11 @@ class _FullScreenPlayerState extends State<FullScreenPlayer> {
               ),
             ],
             Padding(
-              padding: EdgeInsets.only(bottom: MediaQuery.paddingOf(context).bottom),
+              // Top: the title bar that slides in over the window; the picture behind still fills it.
+              padding: EdgeInsets.only(
+                top: MediaQuery.paddingOf(context).top,
+                bottom: MediaQuery.paddingOf(context).bottom,
+              ),
               child: Column(
                 children: [
                   Padding(
