@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -11,15 +12,18 @@ import '../player/player_parts.dart';
 import '../shell_scope.dart';
 import '../theme.dart';
 import 'controls.dart';
+import 'editable_title.dart';
 
-/// The top of an album or playlist page on phones with Settings › Layout › Album and playlist top set to
-/// Hero: the cover across the whole width, fading into the page, with the title over its foot, then round
-/// buttons around a wide Play. The page's own buttons ([actions], like a playlist's menu) join the row.
+/// The top of an album or playlist page with Settings › Layout › Album and playlist top set to Hero: the cover
+/// across the whole width, fading into the page, with the title over its foot, then round buttons around a wide
+/// Play. The page's own buttons ([actions], like a playlist's menu) join the row. On desktop the cover is a
+/// shorter strip and the title can be renamed in place when [onRename] is given.
 class CollectionHero extends StatelessWidget {
-  const CollectionHero({super.key, required this.collection, required this.actions});
+  const CollectionHero({super.key, required this.collection, required this.actions, this.onRename});
 
   final Collection collection;
   final List<Widget> actions;
+  final FutureOr<void> Function(String name)? onRename;
 
   @override
   Widget build(BuildContext context) {
@@ -32,9 +36,11 @@ class CollectionHero extends StatelessWidget {
     final total = formatTotal(tracks);
     final meta = ['${tracks.length} ${tracks.length == 1 ? 'song' : 'songs'}', if (total.isNotEmpty) total].join(' • ');
     final artist = collection.kind == CollectionKind.album ? c.artistNamed(collection.subtitle) : null;
+    // The page behind the fade: the desktop's content panel, the phone's background.
+    final fadeTo = shell.compact ? AppColors.solidBackground : AppColors.panel.withValues(alpha: 1);
     return LayoutBuilder(
       builder: (context, box) {
-        final side = math.min(box.maxWidth, 480.0);
+        final side = math.min(box.maxWidth, shell.compact ? 480.0 : 360.0);
         return Column(
           children: [
             SizedBox(
@@ -55,11 +61,7 @@ class CollectionHero extends StatelessWidget {
                       gradient: LinearGradient(
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
-                        colors: [
-                          Colors.transparent,
-                          AppColors.solidBackground.withValues(alpha: 0.85),
-                          AppColors.solidBackground,
-                        ],
+                        colors: [Colors.transparent, fadeTo.withValues(alpha: 0.85), fadeTo],
                         stops: const [0.3, 0.8, 1],
                       ),
                     ),
@@ -71,13 +73,21 @@ class CollectionHero extends StatelessWidget {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text(
-                          collection.title,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          textAlign: TextAlign.center,
-                          style: text.headlineMedium?.copyWith(fontWeight: FontWeight.w900, letterSpacing: -0.5),
-                        ),
+                        if (onRename case final rename?)
+                          EditableTitle(
+                            title: collection.title,
+                            onRename: rename,
+                            textAlign: TextAlign.center,
+                            style: text.headlineMedium?.copyWith(fontWeight: FontWeight.w900, letterSpacing: -0.5),
+                          )
+                        else
+                          Text(
+                            collection.title,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            textAlign: TextAlign.center,
+                            style: text.headlineMedium?.copyWith(fontWeight: FontWeight.w900, letterSpacing: -0.5),
+                          ),
                         if (collection.kind == CollectionKind.album && collection.subtitle.isNotEmpty)
                           GestureDetector(
                             onTap: artist == null ? null : () => shell.openCollection(artist),

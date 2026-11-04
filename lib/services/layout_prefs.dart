@@ -119,7 +119,7 @@ enum ProgressBarShape {
   straight('Straight'),
   wavy('Wavy'),
 
-  /// A thick rounded track with a pill of elapsed time and a bar for a thumb (the phone's player only).
+  /// A thick rounded track with a pill of elapsed time and a bar for a thumb (the phone's player and the desktop bar).
   pill('Pill');
 
   const ProgressBarShape(this.label);
@@ -144,6 +144,7 @@ enum PhoneCoverSize {
 }
 
 /// The cover on the phone's Now Playing: an inset card, or filling the top edge to edge and fading into the page.
+/// On desktop: rounded, or square and as wide as its half of the expanded player (and the side panel's width).
 enum PlayerCover {
   card('Card'),
   fullBleed('Full width');
@@ -192,7 +193,7 @@ enum PlayerBottomRow {
   final String label;
 }
 
-/// The phone's lyrics page: its header and the player under the lyrics.
+/// The lyrics page: its header and the player under the lyrics (on desktop a song card on top or at the bottom).
 enum LyricsLayout {
   classic('Classic'),
   bottomCard('Bottom card'),
@@ -211,7 +212,7 @@ enum MiniPlayerStyle {
   final String label;
 }
 
-/// The header of an album or playlist page on phones.
+/// The header of an album or playlist page.
 enum AlbumHeaderStyle {
   classic('Classic'),
   hero('Hero');
@@ -295,7 +296,7 @@ class LayoutPrefs extends ChangeNotifier {
   PlayButtonShape playButton = PlayButtonShape.circle;
   PhoneCoverSize phoneCover = PhoneCoverSize.normal;
 
-  /// The phone's player, part by part. The defaults are how it has always looked; Settings › Look & feel ›
+  /// The player, part by part, on phones and desktop. The defaults are how it has always looked; Settings › Look & feel ›
   /// Layout › Player changes them one by one, and Presets sets several at once.
   PlayerCover playerCover = PlayerCover.card;
   PlayerHeader playerHeader = PlayerHeader.classic;

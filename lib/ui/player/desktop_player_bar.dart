@@ -21,6 +21,7 @@ import '../ytmusic_edit.dart';
 import 'full_screen_player.dart';
 import 'mini_window.dart';
 import 'player_common.dart';
+import 'player_parts.dart';
 
 /// Desktop controls, full width or presented as a dock over the current page.
 class DesktopPlayerBar extends StatelessWidget {
@@ -54,7 +55,14 @@ class DesktopPlayerBar extends StatelessWidget {
                 : math.max(80.0, 36 * textScale + 16);
             final info = _info(context, track, small: compact || minimal, withProgress: compact);
             final actions = _actions(context, track, width: availableWidth);
-            const transport = FittedBox(fit: BoxFit.scaleDown, child: TransportControls());
+            // Controls: Classic is the original row; Pill and Plain are the player parts, sized for the bar.
+            final Widget transport = switch (LayoutPrefs.instance.transport) {
+              PlayerTransport.classic => const FittedBox(fit: BoxFit.scaleDown, child: TransportControls()),
+              final other => FittedBox(
+                fit: BoxFit.scaleDown,
+                child: DesktopControlsRow(plain: other == PlayerTransport.plain),
+              ),
+            };
             final Widget content;
             if (compact) {
               content = SizedBox(
@@ -63,7 +71,7 @@ class DesktopPlayerBar extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: Row(
                     children: [
-                      const SizedBox(width: 244, child: transport),
+                      SizedBox(width: 244, child: transport),
                       const SizedBox(width: 16),
                       Expanded(child: info),
                       const SizedBox(width: 20),
@@ -79,7 +87,8 @@ class DesktopPlayerBar extends StatelessWidget {
                   padding: const EdgeInsets.fromLTRB(12, 0, 20, 0),
                   child: Column(
                     children: [
-                      if (minimal && track != null) const SizedBox(height: 16, child: SeekBar(inline: true)),
+                      if (minimal && track != null)
+                        const SizedBox(height: 16, child: SeekBar(inline: true, desktopPlayer: true)),
                       Expanded(
                         child: Row(
                           children: [
@@ -90,7 +99,10 @@ class DesktopPlayerBar extends StatelessWidget {
                                 constraints: const BoxConstraints(maxWidth: 720),
                                 child: Column(
                                   mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [transport, if (!minimal && track != null) const SeekBar(inline: true)],
+                                  children: [
+                                    transport,
+                                    if (!minimal && track != null) const SeekBar(inline: true, desktopPlayer: true),
+                                  ],
                                 ),
                               ),
                             ),
@@ -148,7 +160,9 @@ class DesktopPlayerBar extends StatelessWidget {
               children: [
                 Artwork(
                   track: track,
-                  flower: true,
+                  // Cover Full width: a plain square, not the flower.
+                  flower: LayoutPrefs.instance.playerCover != PlayerCover.fullBleed,
+                  radius: 0,
                   size: withProgress
                       ? 44
                       : small
@@ -184,7 +198,7 @@ class DesktopPlayerBar extends StatelessWidget {
                       ),
                       if (withProgress) ...[
                         const SizedBox(height: 2),
-                        const SizedBox(height: 20, child: SeekBar(inline: true, compact: true)),
+                        const SizedBox(height: 20, child: SeekBar(inline: true, compact: true, desktopPlayer: true)),
                       ],
                     ],
                   ),
@@ -195,8 +209,22 @@ class DesktopPlayerBar extends StatelessWidget {
     );
   }
 
+  /// Bottom buttons: Classic is the plain icons; Chips boxes Lyrics and Queue and adds the sleep timer; Minimal is
+  /// Lyrics and Queue as plain icons with the volume behind its button. Lyrics is on the bar in all of them.
   Widget _actions(BuildContext context, Track? track, {required double width}) {
     final shell = ShellScope.of(context);
+    final prefs = LayoutPrefs.instance;
+    final row = prefs.bottomRow;
+    final slider = width > 860 && prefs.showVolumeRow && row != PlayerBottomRow.minimal;
+    Widget part(IconData icon, String tooltip, VoidCallback? onPressed, {bool lit = false}) => PartButton(
+      icon: icon,
+      tooltip: tooltip,
+      look: row == PlayerBottomRow.minimal ? PartLook.plain : PartLook.outlined,
+      lit: lit,
+      size: row == PlayerBottomRow.minimal ? 40 : 36,
+      iconSize: row == PlayerBottomRow.minimal ? 24 : 20,
+      onPressed: onPressed,
+    );
     return FittedBox(
       fit: BoxFit.scaleDown,
       alignment: Alignment.centerRight,
@@ -208,23 +236,46 @@ class DesktopPlayerBar extends StatelessWidget {
             listenable: Listenable.merge([fullScreenPlayer, expandedPlayerPanel]),
             builder: (context, _) {
               final on = fullScreenPlayer.value && expandedPlayerPanel.value == ExpandedPanel.lyrics;
-              return IconButton(
-                tooltip: on ? 'Hide lyrics' : 'Lyrics',
-                onPressed: track == null
-                    ? null
-                    : fullScreenPlayer.value
-                    ? () => toggleExpandedPanel(ExpandedPanel.lyrics)
-                    : shell.openLyrics,
-                icon: Icon(Icons.lyrics_outlined, size: 20, color: on ? AppColors.accent : null),
-              );
+              final VoidCallback? open = track == null
+                  ? null
+                  : fullScreenPlayer.value
+                  ? () => toggleExpandedPanel(ExpandedPanel.lyrics)
+                  : shell.openLyrics;
+              return row == PlayerBottomRow.classic
+                  ? IconButton(
+                      tooltip: on ? 'Hide lyrics' : 'Lyrics',
+                      onPressed: open,
+                      icon: Icon(Icons.lyrics_outlined, size: 20, color: on ? AppColors.accent : null),
+                    )
+                  : part(Icons.lyrics_outlined, on ? 'Hide lyrics' : 'Lyrics', open, lit: on);
             },
           ),
-          IconButton(
-            tooltip: 'Queue',
-            onPressed: shell.openQueue,
-            icon: const Icon(Icons.queue_music_rounded, size: 20),
-          ),
-          if (width > 860) const VolumeSlider() else const _VolumeMenu(),
+          if (row == PlayerBottomRow.classic)
+            IconButton(
+              tooltip: 'Queue',
+              onPressed: shell.openQueue,
+              icon: const Icon(Icons.queue_music_rounded, size: 20),
+            )
+          else ...[
+            const SizedBox(width: 6),
+            part(Icons.queue_music_rounded, 'Queue', shell.openQueue),
+          ],
+          if (row == PlayerBottomRow.chips) ...[
+            const SizedBox(width: 6),
+            ListenableBuilder(
+              listenable: PlayerScope.read(context).sleep,
+              builder: (context, _) {
+                final sleep = PlayerScope.read(context).sleep;
+                return part(
+                  sleep.active ? Icons.bedtime_rounded : Icons.bedtime_outlined,
+                  sleep.active ? 'Sleep timer: ${SleepTimerLabel.of(sleep)}' : 'Sleep timer',
+                  () => showSleepTimer(context),
+                  lit: sleep.active,
+                );
+              },
+            ),
+          ],
+          if (slider) const VolumeSlider() else const _VolumeMenu(),
           _MoreMenu(track: track, sidePanelOpen: sidePanelOpen, onToggleSidePanel: onToggleSidePanel),
         ],
       ),

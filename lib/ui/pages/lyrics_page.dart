@@ -43,10 +43,16 @@ class LyricsPage extends StatelessWidget {
     builder: (context, track, _) => _page(context, track),
   );
 
-  Widget _page(BuildContext context, Track? track) {
+  Widget _page(BuildContext context, Track? track) => ListenableBuilder(
+    // The layout follows Settings at once.
+    listenable: LayoutPrefs.instance,
+    builder: (context, _) => _layout(context, track),
+  );
+
+  Widget _layout(BuildContext context, Track? track) {
     final text = Theme.of(context).textTheme;
     final canPop = ModalRoute.of(context)?.canPop ?? false;
-    final layout = fullScreen && track != null ? LayoutPrefs.instance.lyricsLayout : LyricsLayout.classic;
+    final layout = track != null ? LayoutPrefs.instance.lyricsLayout : LyricsLayout.classic;
     return AccentBuilder(
       track: track,
       builder: (context, accent) => Material(
@@ -60,7 +66,7 @@ class LyricsPage extends StatelessWidget {
               if (layout == LyricsLayout.topHeader) ...[
                 Padding(
                   padding: const EdgeInsets.fromLTRB(24, 12, 24, 0),
-                  child: LyricsTopHeader(track: track!),
+                  child: LyricsTopHeader(track: track!, desktop: !fullScreen),
                 ),
                 Align(
                   alignment: Alignment.centerRight,
@@ -109,11 +115,18 @@ class LyricsPage extends StatelessWidget {
               if (layout == LyricsLayout.bottomCard)
                 Padding(
                   padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
-                  child: LyricsBottomCard(track: track!),
+                  // On desktop the card is a strip in the middle, not as wide as the window.
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 720),
+                      child: LyricsBottomCard(track: track!, desktop: !fullScreen),
+                    ),
+                  ),
                 )
-              else if (layout == LyricsLayout.topHeader)
-                const Padding(padding: EdgeInsets.fromLTRB(24, 0, 24, 8), child: LyricsPlainPlayer())
-              else if (fullScreen && track != null) ...[
+              // Desktop: the player bar below already has the seek bar, controls and volume.
+              else if (layout == LyricsLayout.topHeader) ...[
+                if (fullScreen) const Padding(padding: EdgeInsets.fromLTRB(24, 0, 24, 8), child: LyricsPlainPlayer()),
+              ] else if (fullScreen && track != null) ...[
                 const Padding(padding: EdgeInsets.symmetric(horizontal: 24), child: SeekBar(phonePlayer: true)),
                 const Padding(padding: EdgeInsets.symmetric(horizontal: 24), child: TransportControls(large: true)),
                 const SizedBox(height: 16),

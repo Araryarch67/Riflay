@@ -13,6 +13,7 @@ import '../download_options.dart';
 import '../flac_convert_dialog.dart';
 import '../shell_scope.dart';
 import '../theme.dart';
+import '../player/player_parts.dart' show PartButton, PartLook;
 import '../widgets/collection_hero.dart';
 import '../widgets/controls.dart';
 import '../widgets/editable_title.dart';
@@ -98,7 +99,29 @@ class CollectionPage extends StatelessWidget {
       if (playlistId != null) _PlaylistMenu(id: playlistId, name: live.title, tracks: tracks),
     ];
 
-    final hero = shell.compact && LayoutPrefs.instance.albumHeader == AlbumHeaderStyle.hero;
+    final hero = LayoutPrefs.instance.albumHeader == AlbumHeaderStyle.hero;
+    // Desktop: the hero has no row for these, so they join its buttons.
+    final heroActions = [
+      ...actions,
+      if (!shell.compact && isAll)
+        PartButton(
+          icon: Icons.add_circle_outline_rounded,
+          tooltip: 'Add files',
+          look: PartLook.muted,
+          round: true,
+          size: 48,
+          onPressed: shell.addFiles,
+        ),
+      if (!shell.compact && live.kind == CollectionKind.youtube)
+        PartButton(
+          icon: Icons.add_link_rounded,
+          tooltip: 'Import from YouTube',
+          look: PartLook.muted,
+          round: true,
+          size: 48,
+          onPressed: shell.importFromYoutube,
+        ),
+    ];
     final page = AccentBuilder(
       track: live.cover,
       builder: (context, accent) {
@@ -109,7 +132,13 @@ class CollectionPage extends StatelessWidget {
           slivers: [
             SliverToBoxAdapter(
               child: hero
-                  ? CollectionHero(collection: live, actions: actions)
+                  ? CollectionHero(
+                      collection: live,
+                      actions: heroActions,
+                      onRename: shell.compact
+                          ? null
+                          : (playlistId != null ? (name) => c.renamePlaylist(playlistId, name) : onRename),
+                    )
                   : _Header(
                       collection: live,
                       accent: headerColor,

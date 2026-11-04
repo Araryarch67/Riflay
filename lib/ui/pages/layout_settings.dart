@@ -109,7 +109,10 @@ class LayoutSettings extends StatelessWidget {
               SettingTile(
                 icon: Icons.waves_rounded,
                 title: const Text('Progress bar shape'),
-                subtitle: Text('Wavy curves the part played. Pill is a thick bar, on phones', style: muted),
+                subtitle: Text(
+                  'Wavy curves the part played. Pill is a thick bar, also on the desktop bar',
+                  style: muted,
+                ),
                 control: OptionPicker<ProgressBarShape>(
                   value: p.progressShape,
                   onChanged: p.setProgressShape,
@@ -145,7 +148,7 @@ class LayoutSettings extends StatelessWidget {
               ),
             ],
           ),
-          const _Header('Player on phones'),
+          const _Header('Player'),
           SettingsCard(
             children: [
               ListTile(
@@ -159,7 +162,10 @@ class LayoutSettings extends StatelessWidget {
               SettingTile(
                 icon: Icons.wallpaper_rounded,
                 title: const Text('Cover'),
-                subtitle: Text('A card with margins, or the whole width at the top', style: muted),
+                subtitle: Text(
+                  'Phone: a card, or the whole width at the top. Desktop: rounded, or square and full width',
+                  style: muted,
+                ),
                 control: OptionPicker<PlayerCover>(
                   value: p.playerCover,
                   onChanged: p.setPlayerCover,
@@ -169,7 +175,7 @@ class LayoutSettings extends StatelessWidget {
               SettingTile(
                 icon: Icons.vertical_align_top_rounded,
                 title: const Text('Top of the player'),
-                subtitle: Text('What the top shows beside the close arrow', style: muted),
+                subtitle: Text('What the top shows beside the close arrow, or above the song on desktop', style: muted),
                 control: OptionPicker<PlayerHeader>(
                   value: p.playerHeader,
                   onChanged: p.setPlayerHeader,
@@ -179,7 +185,10 @@ class LayoutSettings extends StatelessWidget {
               SettingTile(
                 icon: Icons.smart_button_rounded,
                 title: const Text('Buttons by the title'),
-                subtitle: Text('Like and More as they are, boxed with Share, or plain icons', style: muted),
+                subtitle: Text(
+                  'Like and More as they are, boxed with Share, or plain icons. The song menu stays on desktop',
+                  style: muted,
+                ),
                 control: OptionPicker<TitleActions>(
                   value: p.titleActions,
                   onChanged: p.setTitleActions,
@@ -189,14 +198,20 @@ class LayoutSettings extends StatelessWidget {
               SwitchListTile(
                 secondary: const Icon(Icons.timelapse_rounded),
                 title: const Text('Show time left'),
-                subtitle: Text('The right time counts down instead of showing the total', style: muted),
+                subtitle: Text(
+                  'The right time counts down instead of showing the total, also on the desktop bar',
+                  style: muted,
+                ),
                 value: p.showTimeLeft,
                 onChanged: p.setShowTimeLeft,
               ),
               SettingTile(
                 icon: Icons.play_circle_outline_rounded,
                 title: const Text('Controls'),
-                subtitle: Text('Previous, play and next as circles, a wide pill, or plain icons', style: muted),
+                subtitle: Text(
+                  'Previous, play and next as circles, a wide pill, or plain icons, also on the desktop bar',
+                  style: muted,
+                ),
                 control: OptionPicker<PlayerTransport>(
                   value: p.transport,
                   onChanged: p.setTransport,
@@ -206,7 +221,10 @@ class LayoutSettings extends StatelessWidget {
               SwitchListTile(
                 secondary: const Icon(Icons.volume_up_rounded),
                 title: const Text('Volume slider'),
-                subtitle: Text('Shown at the very bottom of the player', style: muted),
+                subtitle: Text(
+                  'Shown at the very bottom of the phone player. Off, the desktop bar keeps it behind a button',
+                  style: muted,
+                ),
                 value: p.showVolumeRow,
                 onChanged: p.setShowVolumeRow,
               ),
@@ -214,7 +232,7 @@ class LayoutSettings extends StatelessWidget {
                 icon: Icons.view_week_rounded,
                 title: const Text('Bottom buttons'),
                 subtitle: Text(
-                  'Lyrics and Queue, a row of small buttons, or a minimal row. Lyrics is always there',
+                  'Lyrics and Queue, a row of small buttons, or a minimal row, on the phone and the desktop bar. Lyrics is always there',
                   style: muted,
                 ),
                 control: OptionPicker<PlayerBottomRow>(
@@ -226,7 +244,10 @@ class LayoutSettings extends StatelessWidget {
               SettingTile(
                 icon: Icons.lyrics_outlined,
                 title: const Text('Lyrics page'),
-                subtitle: Text('Where the player sits on the lyrics page', style: muted),
+                subtitle: Text(
+                  'Where the player sits on the lyrics page. Desktop gets a song card on top or at the bottom',
+                  style: muted,
+                ),
                 control: OptionPicker<LyricsLayout>(
                   value: p.lyricsLayout,
                   onChanged: p.setLyricsLayout,
@@ -236,7 +257,7 @@ class LayoutSettings extends StatelessWidget {
               SettingTile(
                 icon: Icons.call_to_action_rounded,
                 title: const Text('Mini player'),
-                subtitle: Text('The bar above the tabs when a song plays', style: muted),
+                subtitle: Text('The bar above the tabs when a song plays, on phones', style: muted),
                 control: OptionPicker<MiniPlayerStyle>(
                   value: p.miniPlayer,
                   onChanged: p.setMiniPlayer,
@@ -246,7 +267,7 @@ class LayoutSettings extends StatelessWidget {
               SettingTile(
                 icon: Icons.album_rounded,
                 title: const Text('Album and playlist top'),
-                subtitle: Text('A big cover behind the title, with round buttons', style: muted),
+                subtitle: Text('A big cover behind the title, with round buttons, on phones and desktop', style: muted),
                 control: OptionPicker<AlbumHeaderStyle>(
                   value: p.albumHeader,
                   onChanged: p.setAlbumHeader,

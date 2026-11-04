@@ -20,9 +20,9 @@ import '../widgets/marquee_text.dart';
 import '../widgets/stats_for_nerds.dart';
 import '../widgets/track_row.dart';
 import '../widgets/video_mode.dart';
-import '../ytmusic_edit.dart';
 import 'now_playing_page.dart' show BlurredCover;
 import 'player_common.dart';
+import 'player_parts.dart';
 
 /// Desktop expanded player: the cover art (and lyrics beside it, if asked)
 /// fills the space above the player bar, inside the window (under the title
@@ -86,8 +86,11 @@ class _FullScreenPlayerState extends State<FullScreenPlayer> {
     final text = Theme.of(context).textTheme;
 
     final hasVideo = VideoMode.instance.videoOf(track) != null;
+    // Full width: the cover takes all of its half, with square corners.
+    final bleed = LayoutPrefs.instance.playerCover == PlayerCover.fullBleed;
+    final share = bleed ? 1.0 : widthShare;
     // Room for the title lines and "Next" under the cover (and the Song / Video switch above it).
-    final art = math.min(box.maxHeight - 150 - (hasVideo ? 44 : 0), box.maxWidth * widthShare).clamp(120.0, 900.0);
+    final art = math.min(box.maxHeight - 150 - (hasVideo ? 44 : 0), box.maxWidth * share).clamp(120.0, 900.0);
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -106,7 +109,7 @@ class _FullScreenPlayerState extends State<FullScreenPlayer> {
                     child: TrackSwitcher(
                       trackId: track.id,
                       slide: false,
-                      child: Artwork(key: ValueKey(track.id), track: track, radius: 12),
+                      child: Artwork(key: ValueKey(track.id), track: track, radius: bleed ? 0 : 12),
                     ),
                   ),
                 ),
@@ -115,7 +118,7 @@ class _FullScreenPlayerState extends State<FullScreenPlayer> {
           ),
           const SizedBox(height: 24),
           SizedBox(
-            width: math.min(math.max(art, 420), box.maxWidth * widthShare),
+            width: math.min(math.max(art, 420), box.maxWidth * share),
             child: Row(
               children: [
                 Expanded(
@@ -135,8 +138,7 @@ class _FullScreenPlayerState extends State<FullScreenPlayer> {
                     ],
                   ),
                 ),
-                LikeButton(track: track, size: 26),
-                TrackMenuButton(track: track, nowPlaying: true),
+                ...desktopTitleActions(context, track),
               ],
             ),
           ),
@@ -210,12 +212,7 @@ class _FullScreenPlayerState extends State<FullScreenPlayer> {
                     child: Row(
                       children: [
                         Expanded(
-                          child: Text(
-                            from ?? track?.album ?? 'Now playing',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: text.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-                          ),
+                          child: PlayerFromLabel(from: from, album: track?.album),
                         ),
                         // Queue, volume etc. are in the player bar right below.
                         // Always there, even with nothing playing: Lyrics is never hidden.
@@ -237,7 +234,11 @@ class _FullScreenPlayerState extends State<FullScreenPlayer> {
                         ? Center(child: Text('Nothing is playing', style: text.titleMedium))
                         : ListenableBuilder(
                             // The Song / Video switch and the room it takes.
-                            listenable: Listenable.merge([expandedPlayerPanel, VideoMode.instance]),
+                            listenable: Listenable.merge([
+                              expandedPlayerPanel,
+                              VideoMode.instance,
+                              LayoutPrefs.instance,
+                            ]),
                             builder: (context, _) => LayoutBuilder(
                               builder: (context, box) {
                                 final panel = expandedPlayerPanel.value;

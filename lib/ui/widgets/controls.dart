@@ -332,10 +332,19 @@ class _EqualizerIconState extends State<EqualizerIcon> with SingleTickerProvider
 /// Seek slider with elapsed / total labels; drags locally and seeks on release.
 /// Playback position at display rate (just_audio interpolates between engine updates).
 class SeekBar extends StatefulWidget {
-  const SeekBar({super.key, this.inline = false, this.compact = false, this.phonePlayer = false});
+  const SeekBar({
+    super.key,
+    this.inline = false,
+    this.compact = false,
+    this.phonePlayer = false,
+    this.desktopPlayer = false,
+  });
 
   /// The phone's player (Now Playing, lyrics): it may take the Pill shape and show the time left.
   final bool phonePlayer;
+
+  /// The desktop player bar: the same two settings, with a thumb sized for its thin row.
+  final bool desktopPlayer;
 
   /// Labels either side of the bar (desktop) instead of underneath (mobile).
   final bool inline;
@@ -366,96 +375,104 @@ class _SeekBarState extends State<SeekBar> {
         ?.copyWith(color: AppColors.of(context).textSecondary, fontFeatures: const [FontFeature.tabularFigures()]);
     // Its own layer: each position tick repaints the bar and its labels, not the whole player bar around it.
     return RepaintBoundary(
-      child: StreamBuilder<Duration>(
-        stream: _position,
-        builder: (context, snapshot) {
-          final duration = player.duration ?? Duration.zero;
-          final position = snapshot.data ?? Duration.zero;
-          final max = duration.inMilliseconds.toDouble().clamp(1.0, double.infinity);
-          final value = (_dragValue ?? position.inMilliseconds.toDouble()).clamp(0.0, max);
-          final active = _hovering || _dragValue != null;
-          final pill = widget.phonePlayer && LayoutPrefs.instance.progressShape == ProgressBarShape.pill;
-          final colors = AppColors.of(context);
-          final slider = MouseRegion(
-            onEnter: (_) => setState(() => _hovering = true),
-            onExit: (_) => setState(() => _hovering = false),
-            child: SliderTheme(
-              data: SliderTheme.of(context).copyWith(
-                trackHeight: pill ? 9 : LayoutPrefs.instance.progressBar.height,
-                trackShape: pill
-                    ? const PillSeekTrack()
-                    : LayoutPrefs.instance.progressShape == ProgressBarShape.wavy && !LayoutPrefs.lightweight
-                    ? const WavySeekTrack()
-                    : null,
-                activeTrackColor: pill ? colors.inverse : colors.accent,
-                inactiveTrackColor: pill ? colors.inverse.withValues(alpha: 0.18) : null,
-                thumbColor: pill ? colors.inverse : null,
-                thumbShape: pill
-                    ? const BarThumbShape()
-                    : RoundSliderThumbShape(
-                  enabledThumbRadius: active || !widget.inline
-                      ? (LayoutPrefs.instance.progressBar == ProgressBarStyle.thick ? 8 : 6)
-                      : 0,
-                  elevation: 0,
+      // The shape and the time left follow Settings at once, also while paused.
+      child: ListenableBuilder(
+        listenable: LayoutPrefs.instance,
+        builder: (context, _) => StreamBuilder<Duration>(
+          stream: _position,
+          builder: (context, snapshot) {
+            final duration = player.duration ?? Duration.zero;
+            final position = snapshot.data ?? Duration.zero;
+            final max = duration.inMilliseconds.toDouble().clamp(1.0, double.infinity);
+            final value = (_dragValue ?? position.inMilliseconds.toDouble()).clamp(0.0, max);
+            final active = _hovering || _dragValue != null;
+            final parts = widget.phonePlayer || widget.desktopPlayer;
+            final pill = parts && LayoutPrefs.instance.progressShape == ProgressBarShape.pill;
+            final colors = AppColors.of(context);
+            final slider = MouseRegion(
+              onEnter: (_) => setState(() => _hovering = true),
+              onExit: (_) => setState(() => _hovering = false),
+              child: SliderTheme(
+                data: SliderTheme.of(context).copyWith(
+                  trackHeight: pill ? 9 : LayoutPrefs.instance.progressBar.height,
+                  trackShape: pill
+                      ? const PillSeekTrack()
+                      : LayoutPrefs.instance.progressShape == ProgressBarShape.wavy && !LayoutPrefs.lightweight
+                      ? const WavySeekTrack()
+                      : null,
+                  activeTrackColor: pill ? colors.inverse : colors.accent,
+                  inactiveTrackColor: pill ? colors.inverse.withValues(alpha: 0.18) : null,
+                  thumbColor: pill ? colors.inverse : null,
+                  thumbShape: pill
+                      ? BarThumbShape(height: widget.desktopPlayer ? (widget.compact ? 14 : 18) : 24)
+                      : RoundSliderThumbShape(
+                          enabledThumbRadius: active || !widget.inline
+                              ? (LayoutPrefs.instance.progressBar == ProgressBarStyle.thick ? 8 : 6)
+                              : 0,
+                          elevation: 0,
+                        ),
+                  padding: EdgeInsets.zero,
                 ),
-                padding: EdgeInsets.zero,
-              ),
-              child: SizedBox(
-                height: 24,
-                child: Slider(
-                  value: value,
-                  max: max,
-                  onChanged: duration == Duration.zero ? null : (v) => setState(() => _dragValue = v),
-                  onChangeEnd: (v) {
-                    player.seek(Duration(milliseconds: v.round()));
-                    setState(() => _dragValue = null);
-                  },
-                ),
-              ),
-            ),
-          );
-          final elapsed = Text(formatDuration(Duration(milliseconds: value.round())), style: style, maxLines: 1);
-          final left = widget.phonePlayer && LayoutPrefs.instance.showTimeLeft && duration > Duration.zero;
-          final total = Text(
-            left
-                ? '-${formatDuration(duration - Duration(milliseconds: value.round()))}'
-                : formatDuration(player.duration),
-            style: style,
-            maxLines: 1,
-          );
-          if (widget.inline) {
-            final timestampScale =
-                MediaQuery.textScalerOf(context).scale(style?.fontSize ?? 11) / (style?.fontSize ?? 11);
-            final timestampWidth =
-                (widget.compact ? ((player.duration?.inHours ?? 0) > 0 ? 52.0 : 34.0) : 44.0) * timestampScale;
-            return Row(
-              children: [
-                SizedBox(
-                  width: timestampWidth,
-                  child: Align(
-                    alignment: widget.compact ? Alignment.centerLeft : Alignment.centerRight,
-                    child: elapsed,
+                child: SizedBox(
+                  height: 24,
+                  child: Slider(
+                    value: value,
+                    max: max,
+                    onChanged: duration == Duration.zero ? null : (v) => setState(() => _dragValue = v),
+                    onChangeEnd: (v) {
+                      player.seek(Duration(milliseconds: v.round()));
+                      setState(() => _dragValue = null);
+                    },
                   ),
                 ),
-                SizedBox(width: widget.compact ? 6 : 8),
-                Expanded(child: slider),
-                SizedBox(width: widget.compact ? 6 : 8),
-                SizedBox(
-                  width: timestampWidth,
-                  child: Align(alignment: widget.compact ? Alignment.centerRight : Alignment.centerLeft, child: total),
-                ),
+              ),
+            );
+            final elapsed = Text(formatDuration(Duration(milliseconds: value.round())), style: style, maxLines: 1);
+            final left = parts && LayoutPrefs.instance.showTimeLeft && duration > Duration.zero;
+            final total = Text(
+              left
+                  ? '-${formatDuration(duration - Duration(milliseconds: value.round()))}'
+                  : formatDuration(player.duration),
+              style: style,
+              maxLines: 1,
+            );
+            if (widget.inline) {
+              final timestampScale =
+                  MediaQuery.textScalerOf(context).scale(style?.fontSize ?? 11) / (style?.fontSize ?? 11);
+              final timestampWidth =
+                  (widget.compact ? ((player.duration?.inHours ?? 0) > 0 ? 52.0 : 34.0) : 44.0) * timestampScale;
+              return Row(
+                children: [
+                  SizedBox(
+                    width: timestampWidth,
+                    child: Align(
+                      alignment: widget.compact ? Alignment.centerLeft : Alignment.centerRight,
+                      child: elapsed,
+                    ),
+                  ),
+                  SizedBox(width: widget.compact ? 6 : 8),
+                  Expanded(child: slider),
+                  SizedBox(width: widget.compact ? 6 : 8),
+                  SizedBox(
+                    width: timestampWidth,
+                    child: Align(
+                      alignment: widget.compact ? Alignment.centerRight : Alignment.centerLeft,
+                      child: total,
+                    ),
+                  ),
+                ],
+              );
+            }
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                slider,
+                const SizedBox(height: 4),
+                Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [elapsed, total]),
               ],
             );
-          }
-          return Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              slider,
-              const SizedBox(height: 4),
-              Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [elapsed, total]),
-            ],
-          );
-        },
+          },
+        ),
       ),
     );
   }
