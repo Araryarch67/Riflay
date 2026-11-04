@@ -170,4 +170,17 @@ void main() {
     await tester.pump();
     expect(p.homeHidden, {HomeSection.artists});
   });
+
+  test('the video decoder persists, is not a look, and Reset leaves it alone', () async {
+    expect(p.videoDecoder, VideoDecoder.automatic);
+    expect(VideoDecoder.automatic.hwdec, 'auto-safe');
+    expect(VideoDecoder.software.hwdec, 'no');
+    await p.setVideoDecoder(VideoDecoder.software);
+    expect(p.isCustomised, isFalse);
+    await p.load();
+    expect(p.videoDecoder, VideoDecoder.software);
+    await p.reset();
+    expect(p.videoDecoder, VideoDecoder.software);
+    await p.setVideoDecoder(VideoDecoder.automatic);
+  });
 }

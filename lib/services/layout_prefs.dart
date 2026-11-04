@@ -94,6 +94,21 @@ enum Motion {
   final String label;
 }
 
+/// How music videos are decoded (mpv's `hwdec`). A setting of this computer, like [PerformanceMode]:
+/// Reset leaves it alone.
+enum VideoDecoder {
+  automatic('Automatic', 'The graphics card when it is known to work, else the processor', 'auto-safe'),
+  hardware('Graphics card', 'Always try the graphics card first. Lightest, if your drivers cope', 'auto'),
+  software('Processor', 'Never the graphics card. Uses more power; try it if videos look wrong', 'no');
+
+  const VideoDecoder(this.label, this.note, this.hwdec);
+  final String label;
+  final String note;
+
+  /// mpv's `hwdec` value.
+  final String hwdec;
+}
+
 /// How much the app spends on looks. [lightweight] caps the user's own Look & feel choices
 /// (it never overwrites them); [heavy] lifts the frame-rate limits on decorations.
 enum PerformanceMode {
@@ -339,6 +354,7 @@ class LayoutPrefs extends ChangeNotifier {
   PageMotionStyle pageMotion = PageMotionStyle.diamondReveal;
   PageMotionSpeed pageSpeed = PageMotionSpeed.relaxed;
   PerformanceMode performance = PerformanceMode.balanced;
+  VideoDecoder videoDecoder = VideoDecoder.automatic;
 
   // Shorthands for widgets. They read the one instance, like AppColors does.
 
@@ -466,6 +482,7 @@ class LayoutPrefs extends ChangeNotifier {
     pageMotion = pick(PageMotionStyle.values, 'pageMotion', d.pageMotion);
     pageSpeed = pick(PageMotionSpeed.values, 'pageSpeed', d.pageSpeed);
     performance = pick(PerformanceMode.values, 'performance', d.performance);
+    videoDecoder = pick(VideoDecoder.values, 'videoDecoder', d.videoDecoder);
     final byName = HomeSection.values.asNameMap();
     final order = <HomeSection>[for (final n in (j['homeOrder'] as List?) ?? const []) ?byName[n]];
     // A section added by a newer version joins at its default place.
@@ -512,12 +529,21 @@ class LayoutPrefs extends ChangeNotifier {
     'pageMotion': pageMotion.name,
     'pageSpeed': pageSpeed.name,
     'performance': performance.name,
+    'videoDecoder': videoDecoder.name,
     'homeOrder': [for (final s in homeOrder) s.name],
     'homeHidden': [for (final s in homeHidden) s.name],
   };
 
-  /// Whether anything differs from the defaults (Performance is not a look, so it doesn't count).
-  bool get isCustomised => jsonEncode(toJson()) != jsonEncode((LayoutPrefs._()..performance = performance).toJson());
+  /// Whether anything differs from the defaults (Performance and the video decoder are not looks, so they
+  /// don't count).
+  bool get isCustomised =>
+      jsonEncode(toJson()) !=
+      jsonEncode(
+        (LayoutPrefs._()
+              ..performance = performance
+              ..videoDecoder = videoDecoder)
+            .toJson(),
+      );
 
   Future<void> _set(VoidCallback change) async {
     change();
@@ -566,6 +592,7 @@ class LayoutPrefs extends ChangeNotifier {
   Future<void> setSidePanelWidth(double v) => _set(() => sidePanelWidth = v.clamp(sidePanelMin, sidePanelMax));
   Future<void> setMotion(Motion v) => _set(() => motion = v);
   Future<void> setPerformance(PerformanceMode v) => _set(() => performance = v);
+  Future<void> setVideoDecoder(VideoDecoder v) => _set(() => videoDecoder = v);
 
   Future<void> setHomeSectionShown(HomeSection s, bool shown) =>
       _set(() => shown ? homeHidden.remove(s) : homeHidden.add(s));
@@ -581,11 +608,13 @@ class LayoutPrefs extends ChangeNotifier {
       if (!homeHidden.contains(s)) s,
   ];
 
-  /// Back to the defaults, except Performance: that is about this computer, not about looks.
+  /// Back to the defaults, except Performance and the video decoder: those are about this computer, not
+  /// about looks.
   Future<void> reset() => _set(() {
-    final mode = performance;
+    final mode = performance, decoder = videoDecoder;
     restore(const {});
     performance = mode;
+    videoDecoder = decoder;
   });
 
   /// [base] with the corner and motion settings applied to menus, dialogs,

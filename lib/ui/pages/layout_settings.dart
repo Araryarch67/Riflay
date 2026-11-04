@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../services/layout_prefs.dart';
 import '../../services/player_presets.dart';
 import '../../services/beta_features.dart';
+import '../../services/video_mode.dart';
 import '../theme.dart';
 import 'player_presets_page.dart';
 import 'sound_settings.dart';
@@ -30,6 +31,28 @@ class LayoutSettings extends StatelessWidget {
                   subtitle: const Text('Watch music videos in sync with the song'),
                   value: BetaFeatures.instance.isOn(BetaFeature.videoMode),
                   onChanged: (value) => BetaFeatures.instance.set(BetaFeature.videoMode, value),
+                ),
+                ListenableBuilder(
+                  listenable: VideoMode.instance,
+                  builder: (context, _) {
+                    final now = VideoMode.instance.decoderInUse;
+                    return SettingTile(
+                      icon: Icons.memory_rounded,
+                      title: const Text('Video decoding'),
+                      subtitle: Text(
+                        [
+                          p.videoDecoder.note,
+                          if (now != null) 'Now: ${now == 'no' ? 'the processor' : 'graphics card ($now)'}',
+                        ].join('. '),
+                        style: muted,
+                      ),
+                      control: OptionPicker<VideoDecoder>(
+                        value: p.videoDecoder,
+                        onChanged: p.setVideoDecoder,
+                        options: [for (final v in VideoDecoder.values) (v, v.label)],
+                      ),
+                    );
+                  },
                 ),
               ],
             ),

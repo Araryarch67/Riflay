@@ -51,6 +51,9 @@ class VideoMode extends ChangeNotifier with WidgetsBindingObserver {
     if (_c == null) WidgetsBinding.instance.addObserver(this);
     _c = c;
     c.addListener(_changed);
+    LayoutPrefs.instance
+      ..removeListener(_decoderChanged)
+      ..addListener(_decoderChanged);
     _probe();
   }
 
@@ -313,7 +316,12 @@ class VideoMode extends ChangeNotifier with WidgetsBindingObserver {
         bufferSize: foreground ? 4 << 20 : 2 << 20,
       ),
     );
-    final video = _video = VideoController(player);
+    final video = _video = VideoController(
+      player,
+      // Drawn on the graphics card either way; Settings › Layout › Video decoding picks what decodes it.
+      configuration: VideoControllerConfiguration(hwdec: LayoutPrefs.instance.videoDecoder.hwdec),
+    );
+    _decoder = LayoutPrefs.instance.videoDecoder;
     notifyListeners();
     try {
       final mpv = player.platform as NativePlayer;
@@ -357,6 +365,7 @@ class VideoMode extends ChangeNotifier with WidgetsBindingObserver {
       }
       await video.waitUntilFirstFrameRendered.timeout(const Duration(seconds: 25));
       if (!identical(player, _player)) return;
+      _readDecoder();
       _ready = true;
       _tick = Timer.periodic(const Duration(milliseconds: 250), (_) => _follow());
       _follow();
@@ -377,6 +386,41 @@ class VideoMode extends ChangeNotifier with WidgetsBindingObserver {
       await _stop();
       notifyListeners();
     }
+  }
+
+  // ---- Decoding ----
+
+  VideoDecoder? _decoder;
+
+  /// What decodes the video now, as mpv names it (`d3d11va`, `vaapi`, `videotoolbox`...; `no` is the
+  /// processor), once a video has played; null before.
+  String? get decoderInUse => _decoderInUse;
+  String? _decoderInUse;
+
+  Future<void> _readDecoder() async {
+    final player = _player;
+    if (player == null) return;
+    try {
+      final now = await (player.platform as NativePlayer).getProperty('hwdec-current');
+      if (!identical(player, _player)) return;
+      _decoderInUse = now.isEmpty ? 'no' : now;
+      debugPrint('Video mode: decoding with $_decoderInUse');
+      notifyListeners();
+    } catch (_) {}
+  }
+
+  /// A new Video decoding setting applies to the video that is playing: mpv switches decoders in place.
+  void _decoderChanged() {
+    final want = LayoutPrefs.instance.videoDecoder;
+    final player = _player;
+    if (want == _decoder) return;
+    _decoder = want;
+    if (player == null) return;
+    (player.platform as NativePlayer).setProperty('hwdec', want.hwdec).then((_) async {
+      // The switch lands on the next decoded frame.
+      await Future<void>.delayed(const Duration(milliseconds: 500));
+      await _readDecoder();
+    }).ignore();
   }
 
   Future<void> _stop() async {
