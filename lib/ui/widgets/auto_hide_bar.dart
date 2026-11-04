@@ -15,7 +15,11 @@ class AutoHideBar extends StatefulWidget {
     required this.enabled,
     this.hideAfter = const Duration(milliseconds: 900),
     this.firstShow = const Duration(milliseconds: 2500),
+    this.shown,
   });
+
+  /// Told whether the bar is in sight, for what makes room for it while it is (the expanded player's top row).
+  final ValueNotifier<bool>? shown;
 
   final Widget child;
 
@@ -29,8 +33,8 @@ class AutoHideBar extends StatefulWidget {
   /// How long it shows on its own when it is enabled, so it is seen to be there.
   final Duration firstShow;
 
-  static const _in = Duration(milliseconds: 260);
-  static const _out = Duration(milliseconds: 420);
+  static const slideIn = Duration(milliseconds: 260);
+  static const slideOut = Duration(milliseconds: 420);
 
   @override
   State<AutoHideBar> createState() => _AutoHideBarState();
@@ -82,8 +86,15 @@ class _AutoHideBarState extends State<AutoHideBar> {
   @override
   Widget build(BuildContext context) {
     final shown = _shown;
+    final report = widget.shown;
+    if (report != null && report.value != shown) {
+      // After this frame: the listeners rebuild, which they may not do while this one builds.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) report.value = _shown;
+      });
+    }
     final still = MediaQuery.disableAnimationsOf(context);
-    final time = still ? Duration.zero : (shown ? AutoHideBar._in : AutoHideBar._out);
+    final time = still ? Duration.zero : (shown ? AutoHideBar.slideIn : AutoHideBar.slideOut);
     final away = widget.edge == AxisDirection.up ? const Offset(0, -1) : const Offset(0, 1);
     return MouseRegion(
       // Over the bar's place, hidden or not; what lies under it still gets the pointer.

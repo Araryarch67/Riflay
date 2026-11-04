@@ -53,6 +53,13 @@ class _HomeShellState extends State<HomeShell> {
   bool _sidePanel = true;
   final _searchFocus = FocusNode();
 
+  /// Whether the title bar is in sight over the expanded player.
+  final _titleBarShown = ValueNotifier<bool>(false);
+
+  /// Whether the player bar is in sight over the expanded player, and how tall it is.
+  final _playerBarShown = ValueNotifier<bool>(false);
+  final _playerBarHeight = ValueNotifier<double>(0);
+
   /// The title bar's search box (desktop); the phone tab has its own.
   final _search = SearchInput();
   final _navigators = {for (final t in PhoneTab.values) t: GlobalKey<NavigatorState>()};
@@ -131,6 +138,9 @@ class _HomeShellState extends State<HomeShell> {
   @override
   void dispose() {
     GateHooks.detach(_gate);
+    _titleBarShown.dispose();
+    _playerBarShown.dispose();
+    _playerBarHeight.dispose();
     LayoutPrefs.instance.removeListener(_syncWidths);
     _sidebarWidth.dispose();
     _sidePanelWidth.dispose();
@@ -690,6 +700,7 @@ class _HomeShellState extends State<HomeShell> {
               key: _titleBarKey,
               edge: AxisDirection.up,
               enabled: full,
+              shown: _titleBarShown,
               // Over the player it brings the window's colour with it, as it has above the pages. Always there
               // (clear above the pages), so the bar keeps its state, such as what is typed, between the two.
               child: ColoredBox(color: full ? AppColors.background : Colors.transparent, child: _titleBar()),
@@ -700,11 +711,15 @@ class _HomeShellState extends State<HomeShell> {
               bottomNavigationBar: AutoHideBar(
                 edge: AxisDirection.down,
                 enabled: full,
-                child: SafeArea(
-                  top: false,
-                  child: DesktopPlayerBar(
-                    sidePanelOpen: sideOpen,
-                    onToggleSidePanel: expanded ? () => setState(() => _sidePanel = !_sidePanel) : null,
+                shown: _playerBarShown,
+                child: _ReportHeight(
+                  height: _playerBarHeight,
+                  child: SafeArea(
+                    top: false,
+                    child: DesktopPlayerBar(
+                      sidePanelOpen: sideOpen,
+                      onToggleSidePanel: expanded ? () => setState(() => _sidePanel = !_sidePanel) : null,
+                    ),
                   ),
                 ),
               ),
@@ -723,22 +738,18 @@ class _HomeShellState extends State<HomeShell> {
                               ),
                               if (full)
                                 Positioned.fill(
-                                  // The player bar floats over it now: no room kept for it. The title bar
-                                  // floats too, but its controls would land on the player's own top row:
-                                  // the player's content starts below it, its picture still fills the window.
-                                  child: Builder(
-                                    builder: (context) {
-                                      final media = MediaQuery.of(context);
-                                      return MediaQuery(
-                                        data: media.copyWith(
-                                          padding: media.padding.copyWith(
-                                            top: hasCustomTitleBar ? AppTitleBar.tallHeight : media.padding.top,
-                                            bottom: 0,
-                                          ),
-                                        ),
-                                        child: const FullScreenPlayer(),
-                                      );
-                                    },
+                                  // Both bars float over the player and slide away: its picture always fills
+                                  // the window, and its content makes room for a bar only while it is in sight.
+                                  child: ListenableBuilder(
+                                    listenable: Listenable.merge([_titleBarShown, _playerBarShown, _playerBarHeight]),
+                                    builder: (context, player) => _Insets(
+                                      top: hasCustomTitleBar && _titleBarShown.value ? AppTitleBar.tallHeight : 0,
+                                      topShown: _titleBarShown.value,
+                                      bottom: _playerBarShown.value ? _playerBarHeight.value : 0,
+                                      bottomShown: _playerBarShown.value,
+                                      child: player!,
+                                    ),
+                                    child: const FullScreenPlayer(),
                                   ),
                                 ),
                             ],
@@ -843,4 +854,77 @@ class _FadeOnChangeState extends State<_FadeOnChange> with SingleTickerProviderS
     }
     return LayoutPrefs.pageTransition(context, _fade, const AlwaysStoppedAnimation(0), widget.child);
   }
+}
+
+/// The expanded player's room for the bars that slide in over it: [top] and [bottom] follow each bar as it
+/// slides, with the same timing.
+class _Insets extends StatelessWidget {
+  const _Insets({
+    required this.top,
+    required this.topShown,
+    required this.bottom,
+    required this.bottomShown,
+    required this.child,
+  });
+
+  final double top, bottom;
+  final bool topShown, bottomShown;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => TweenAnimationBuilder<double>(
+    tween: Tween(end: top),
+    duration: topShown ? AutoHideBar.slideIn : AutoHideBar.slideOut,
+    curve: topShown ? Curves.easeOutCubic : Curves.easeInCubic,
+    builder: (context, top, child) => TweenAnimationBuilder<double>(
+      tween: Tween(end: bottom),
+      duration: bottomShown ? AutoHideBar.slideIn : AutoHideBar.slideOut,
+      curve: bottomShown ? Curves.easeOutCubic : Curves.easeInCubic,
+      builder: (context, bottom, child) {
+        final media = MediaQuery.of(context);
+        return MediaQuery(
+          data: media.copyWith(
+            padding: media.padding.copyWith(top: media.padding.top + top, bottom: bottom),
+          ),
+          child: child!,
+        );
+      },
+      child: child,
+    ),
+    child: child,
+  );
+}
+
+/// [child], telling [height] how tall it is after each layout.
+class _ReportHeight extends StatefulWidget {
+  const _ReportHeight({required this.height, required this.child});
+
+  final ValueNotifier<double> height;
+  final Widget child;
+
+  @override
+  State<_ReportHeight> createState() => _ReportHeightState();
+}
+
+class _ReportHeightState extends State<_ReportHeight> {
+  void _report() {
+    final h = context.size?.height;
+    if (mounted && h != null && h != widget.height.value) widget.height.value = h;
+  }
+
+  @override
+  Widget build(BuildContext context) => NotificationListener<SizeChangedLayoutNotification>(
+    onNotification: (_) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _report());
+      return false;
+    },
+    child: SizeChangedLayoutNotifier(
+      child: Builder(
+        builder: (context) {
+          WidgetsBinding.instance.addPostFrameCallback((_) => _report());
+          return widget.child;
+        },
+      ),
+    ),
+  );
 }
