@@ -2,6 +2,7 @@ import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
 
+import '../../services/language.dart';
 import '../../platform/features.dart';
 import '../../services/appearance.dart';
 import '../../services/layout_prefs.dart';
@@ -23,12 +24,17 @@ enum PhoneTab {
 
 typedef _TabInfo = ({PhoneTab tab, IconData icon, IconData selected, String label});
 
-const _tabItems = <_TabInfo>[
-  (tab: PhoneTab.home, icon: Icons.home_outlined, selected: Icons.home_rounded, label: 'Home'),
-  (tab: PhoneTab.library, icon: Icons.library_music_outlined, selected: Icons.library_music_rounded, label: 'Library'),
-  (tab: PhoneTab.search, icon: Icons.search_rounded, selected: Icons.manage_search_rounded, label: 'Search'),
-  (tab: PhoneTab.downloads, icon: Icons.download_outlined, selected: Icons.download_rounded, label: 'Downloads'),
-  (tab: PhoneTab.settings, icon: Icons.settings_outlined, selected: Icons.settings_rounded, label: 'Settings'),
+List<_TabInfo> get _tabItems => <_TabInfo>[
+  (tab: PhoneTab.home, icon: Icons.home_outlined, selected: Icons.home_rounded, label: tr.navHome),
+  (
+    tab: PhoneTab.library,
+    icon: Icons.library_music_outlined,
+    selected: Icons.library_music_rounded,
+    label: tr.navLibrary,
+  ),
+  (tab: PhoneTab.search, icon: Icons.search_rounded, selected: Icons.manage_search_rounded, label: tr.navSearch),
+  (tab: PhoneTab.downloads, icon: Icons.download_outlined, selected: Icons.download_rounded, label: tr.navDownloads),
+  (tab: PhoneTab.settings, icon: Icons.settings_outlined, selected: Icons.settings_rounded, label: tr.navSettings),
 ];
 
 /// A tab's icon. Downloads wears a progress ring while songs are being saved.
@@ -705,7 +711,7 @@ class _SearchHub extends StatelessWidget {
       button: true,
       selected: selected,
       child: Tooltip(
-        message: 'Search',
+        message: tr.navSearch,
         child: Material(
           color: colors.accent,
           shape: const CircleBorder(),

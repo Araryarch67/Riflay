@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../services/language.dart';
 import '../../services/player_controller.dart';
 import '../../services/sleep_timer.dart';
 import '../theme.dart';
@@ -125,37 +126,37 @@ class SleepTimerPanel extends StatelessWidget {
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(24, 20, 24, 4),
-            child: Text('Sleep timer', style: text.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
+            child: Text(tr.sleepTimer, style: text.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
           ),
           if (sleep.active) ...[
             Padding(
               padding: const EdgeInsets.fromLTRB(24, 4, 24, 12),
               child: Text(switch (sleep.songsLeft) {
-                0 => 'The music stops in ${SleepTimerLabel.of(sleep)}',
-                1 => 'The music stops when this song ends',
-                2 => 'The music stops after this song and one more',
-                final n => 'The music stops after this song and ${n - 1} more',
+                0 => tr.stopsIn(SleepTimerLabel.of(sleep)),
+                1 => tr.stopsWhenSongEnds,
+                2 => tr.stopsAfterOneMore,
+                final n => tr.stopsAfterMore(n - 1),
               }, style: text.bodyMedium),
             ),
-            ListTile(leading: const Icon(Icons.add_rounded), title: const Text('Add 10 minutes'), onTap: sleep.extend),
+            ListTile(leading: const Icon(Icons.add_rounded), title: Text(tr.add10Minutes), onTap: sleep.extend),
             ListTile(
               leading: const Icon(Icons.close_rounded),
-              title: const Text('Cancel timer'),
+              title: Text(tr.cancelTimer),
               onTap: () => closeAfter(sleep.cancel),
             ),
           ] else ...[
             Padding(
               padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
-              child: Text('The music fades out, then stops', style: muted),
+              child: Text(tr.sleepTimerFades, style: muted),
             ),
             _Group(
               icon: Icons.timer_outlined,
-              title: 'After a while',
+              title: tr.afterAWhile,
               children: [
                 for (final m in SleepTimer.presets)
-                  _Choice('$m minutes', onTap: () => closeAfter(() => sleep.start(Duration(minutes: m)))),
+                  _Choice(tr.minutesCount(m), onTap: () => closeAfter(() => sleep.start(Duration(minutes: m)))),
                 _Choice(
-                  'Custom time',
+                  tr.customTime,
                   icon: Icons.edit_outlined,
                   onTap: () async {
                     final picked = await showDialog<Duration>(context: context, builder: (_) => const _CustomTime());
@@ -167,11 +168,11 @@ class SleepTimerPanel extends StatelessWidget {
             ),
             _Group(
               icon: Icons.queue_music_rounded,
-              title: 'After songs',
+              title: tr.afterSongs,
               children: [
-                _Choice('End of this song', onTap: () => closeAfter(sleep.startEndOfSong)),
+                _Choice(tr.endOfThisSong, onTap: () => closeAfter(sleep.startEndOfSong)),
                 for (final n in SleepTimer.songPresets)
-                  _Choice('$n songs', onTap: () => closeAfter(() => sleep.startEndOfSong(n))),
+                  _Choice(tr.songsCount(n), onTap: () => closeAfter(() => sleep.startEndOfSong(n))),
               ],
             ),
           ],

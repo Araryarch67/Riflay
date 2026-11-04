@@ -17,6 +17,7 @@ import '../player/player_parts.dart' show PartButton, PartLook;
 import '../widgets/collection_hero.dart';
 import '../widgets/controls.dart';
 import '../widgets/editable_title.dart';
+import '../widgets/about_artist.dart';
 import '../widgets/page_scaffold.dart';
 import '../widgets/shelf.dart';
 import '../widgets/track_row.dart';
@@ -234,6 +235,18 @@ class CollectionPage extends StatelessWidget {
                         ),
                       ],
                     ],
+                  ),
+                ),
+              ),
+            // An artist's page says who they are: yours by name, a YouTube Music one by its channel.
+            if (isArtist || actions.any((a) => a is FollowButton))
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(shell.compact ? 16 : 24, 8, shell.compact ? 16 : 24, 8),
+                  child: AboutArtist(
+                    name: live.title,
+                    channelId: actions.whereType<FollowButton>().firstOrNull?.artistId,
+                    full: true,
                   ),
                 ),
               ),

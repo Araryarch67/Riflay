@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../services/language.dart';
 import '../../platform/features.dart';
 import '../../services/layout_prefs.dart';
 import '../../services/player_controller.dart';
@@ -132,8 +133,8 @@ class DesktopSidebar extends StatelessWidget {
     // the sidebar is then the library alone, nothing listed twice.
     final navItems = [
       if (!inTitleBar) ...[
-        item(Locations.home, Icons.home_outlined, Icons.home_rounded, 'Home', onHome),
-        item(Locations.search, Icons.search_rounded, Icons.manage_search_rounded, 'Search', onSearch),
+        item(Locations.home, Icons.home_outlined, Icons.home_rounded, tr.navHome, onHome),
+        item(Locations.search, Icons.search_rounded, Icons.manage_search_rounded, tr.navSearch, onSearch),
         if (Features.downloads) DownloadsLink(collapsed: collapsed, selected: location == Locations.downloads),
         if (Features.listenTogether)
           item(Locations.listen, Icons.group_outlined, Icons.group_rounded, 'Listen together', () {
@@ -141,7 +142,7 @@ class DesktopSidebar extends StatelessWidget {
               ShellScope.of(context).open(const ListenTogetherPage(), location: Locations.listen);
             }
           }),
-        item(Locations.settings, Icons.settings_outlined, Icons.settings_rounded, 'Settings', () {
+        item(Locations.settings, Icons.settings_outlined, Icons.settings_rounded, tr.navSettings, () {
           if (location != Locations.settings) ShellScope.of(context).open(const SettingsPage());
         }),
       ],
@@ -162,7 +163,7 @@ class DesktopSidebar extends StatelessWidget {
                   NavLink(
                     collapsed: collapsed,
                     icon: Icons.video_library_outlined,
-                    label: 'Your Library',
+                    label: tr.yourLibrary,
                     onTap: () => ShellScope.of(context).open(const LibraryPage()),
                   ),
                 ],
@@ -271,7 +272,7 @@ class TitleBarMenu extends StatelessWidget {
         return PopupMenuButton<VoidCallback>(
           // Over the whole window, so a click anywhere closes it.
           useRootNavigator: true,
-          tooltip: 'More',
+          tooltip: tr.more,
           position: PopupMenuPosition.under,
           constraints: const BoxConstraints(minWidth: 180),
           menuPadding: const EdgeInsets.symmetric(vertical: 4),
@@ -302,7 +303,7 @@ class TitleBarMenu extends StatelessWidget {
             if (Features.downloads)
               entry(
                 Icons.download_rounded,
-                'Downloads',
+                tr.navDownloads,
                 onDownloads,
                 trailing: progress == null
                     ? null
@@ -312,7 +313,7 @@ class TitleBarMenu extends StatelessWidget {
                       ),
               ),
             if (Features.listenTogether) entry(Icons.group_outlined, 'Listen together', onListen),
-            entry(Icons.settings_outlined, 'Settings', onSettings),
+            entry(Icons.settings_outlined, tr.navSettings, onSettings),
           ],
         );
       },
@@ -367,7 +368,7 @@ class DownloadsLink extends StatelessWidget {
                   const SizedBox(width: 18),
                   Expanded(
                     child: Text(
-                      'Downloads',
+                      tr.navDownloads,
                       style: text.titleMedium?.copyWith(
                         color: selected ? AppColors.textPrimary : AppColors.textSecondary,
                         fontWeight: FontWeight.w700,
@@ -384,7 +385,7 @@ class DownloadsLink extends StatelessWidget {
             ),
           ),
         );
-        return collapsed ? Tooltip(message: 'Downloads', child: row) : row;
+        return collapsed ? Tooltip(message: tr.navDownloads, child: row) : row;
       },
     );
   }

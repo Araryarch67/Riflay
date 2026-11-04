@@ -10,11 +10,13 @@ import 'package:riflay/main.dart';
 import 'package:riflay/models/track.dart';
 import 'package:riflay/services/player_controller.dart';
 import 'package:riflay/ui/player_panels.dart';
+import 'package:riflay/ui/player/player_common.dart' show ArtistLinks;
 import 'package:riflay/services/lyrics.dart';
 import 'package:riflay/ui/pages/lyrics_page.dart';
 import 'package:riflay/ui/widgets/controls.dart';
 import 'package:riflay/ui/shell_scope.dart';
 import 'package:riflay/ui/pages/collection_page.dart';
+import 'package:riflay/ui/pages/youtube_music_page.dart' show RemoteCollectionPage;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class _ControlPlayer extends PlayerController {
@@ -123,6 +125,76 @@ void main() {
       expect(find.byType(CollectionPage), findsOneWidget);
       expect(find.text('Artist'), findsWidgets);
       expect(tester.takeException(), isNull);
+    });
+  }
+
+  for (final menu in [false, true]) {
+    testWidgets('a song by two artists opens the second one\'s page from its ${menu ? 'menu' : 'name'}', (tester) async {
+      await _app(tester, const Size(400, 800), controller: _DuetPlayer());
+      ShellScope.of(tester.element(find.byType(MiniPlayer))).openNowPlaying();
+      await tester.pump();
+      await _finishMotion(tester);
+      if (menu) {
+        await tester.tap(find.byTooltip('More').last);
+        await tester.pump();
+        await _finishMotion(tester);
+        await tester.tap(find.byTooltip('More options for Duet test').last);
+        await tester.pump();
+        await _finishMotion(tester);
+        await tester.tap(find.text('Go to Vestia Zeta'));
+      } else {
+        final line = find.descendant(of: find.byType(NowPlayingPage), matching: find.byType(ArtistLinks)).first;
+        // The second name, right of the middle of the line.
+        final box = tester.getRect(line);
+        await tester.tapAt(Offset(box.left + box.width * 0.75, box.center.dy));
+      }
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 800));
+      expect(find.byType(NowPlayingPage), findsNothing);
+      expect(find.byType(CollectionPage), findsOneWidget);
+      expect(tester.widget<CollectionPage>(find.byType(CollectionPage)).collection.title, 'Vestia Zeta');
+      expect(tester.takeException(), isNull);
+    });
+  }
+
+  testWidgets('desktop: the side panel\'s song menu opens the artist', (tester) async {
+    await _app(tester, const Size(1400, 900), controller: _ArtistPlayer());
+    await tester.pump(const Duration(milliseconds: 500));
+    final menus = find.byTooltip('More options for Control test');
+    expect(menus, findsWidgets, reason: 'the side panel shows the song playing, with its menu');
+    await tester.tap(menus.last);
+    await tester.pump();
+    await _finishMotion(tester);
+    await tester.tap(find.text('Go to artist'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 800));
+    expect(find.byType(CollectionPage), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  for (final desktop in [false, true]) {
+    testWidgets('a streamed song by two artists opens the second one from its menu (${desktop ? 'desktop' : 'phone'})', (
+      tester,
+    ) async {
+      await _app(tester, desktop ? const Size(1400, 900) : const Size(400, 800), controller: _RemoteDuetPlayer());
+      await tester.pump(const Duration(milliseconds: 500));
+      if (!desktop) {
+        ShellScope.of(tester.element(find.byType(MiniPlayer))).openNowPlaying();
+        await tester.pump();
+        await _finishMotion(tester);
+        await tester.tap(find.byTooltip('More').last);
+        await tester.pump();
+        await _finishMotion(tester);
+      }
+      await tester.tap(find.byTooltip('More options for Remote duet').last);
+      await tester.pump();
+      await _finishMotion(tester);
+      await tester.tap(find.text('Go to Vestia Zeta'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 800));
+      expect(find.byType(RemoteCollectionPage), findsOneWidget);
+      expect(find.text('Vestia Zeta'), findsWidgets);
+      await tester.pump(const Duration(seconds: 2));
     });
   }
 
@@ -332,6 +404,29 @@ void main() {
       debugDefaultTargetPlatformOverride = null;
     }
   });
+}
+
+/// A song by two artists, each with a page in the library.
+class _DuetPlayer extends PlayerController {
+  final track = Track(
+    id: 'duet-test',
+    uri: Uri.parse('file:///duet-test.mp3'),
+    title: 'Duet test',
+    artist: 'Kobo Kanaeru, Vestia Zeta',
+  );
+  @override
+  Track get currentTrack => track;
+  @override
+  Collection? artistNamed(String name) => const ['Kobo Kanaeru', 'Vestia Zeta'].contains(name)
+      ? Collection(kind: CollectionKind.artist, title: name, subtitle: 'Artist', tracks: [track])
+      : null;
+}
+
+/// A streamed song by two artists, with no artist page known yet.
+class _RemoteDuetPlayer extends PlayerController {
+  final track = Track.youtube(videoId: 'duet', title: 'Remote duet', artist: 'Kobo Kanaeru, Vestia Zeta');
+  @override
+  Track get currentTrack => track;
 }
 
 class _ArtistPlayer extends _ControlPlayer {

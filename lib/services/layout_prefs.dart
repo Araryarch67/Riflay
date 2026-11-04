@@ -10,18 +10,14 @@ import 'page_motion.dart';
 export 'page_motion.dart' show PageMotionStyle, PageMotionSpeed;
 
 /// Desktop controls can stay full width or sit inside a floating player.
+/// The desktop's player bar. Every look sits flush along the window's foot; none floats over the page.
 enum DesktopBarStyle {
   classic('Classic'),
-  floating('Floating'),
-  capsule('Capsule'),
   compact('Compact'),
   minimal('Minimal');
 
   const DesktopBarStyle(this.label);
   final String label;
-
-  /// The player overlays the page, with room for the page to scroll behind it.
-  bool get floats => this == floating || this == capsule;
 }
 
 /// The same visual language in a player strip or a radial artwork surround.
@@ -553,7 +549,12 @@ class LayoutPrefs extends ChangeNotifier {
     qualityBadgePlace = pick(QualityBadgePlace.values, 'qualityBadgePlace', d.qualityBadgePlace);
     volumeSlider = pick(VolumeSliderShape.values, 'volumeSlider', d.volumeSlider);
     tabBar = pick(TabBarStyle.values, 'tabBar', d.tabBar);
-    desktopBar = pick(DesktopBarStyle.values, 'desktopBar', d.desktopBar);
+    // The floating looks are gone: Floating became Classic, Capsule (a one-row floating dock) Compact.
+    desktopBar = switch (j['desktopBar']) {
+      'floating' => DesktopBarStyle.classic,
+      'capsule' => DesktopBarStyle.compact,
+      _ => pick(DesktopBarStyle.values, 'desktopBar', d.desktopBar),
+    };
     showQualityBadge = j['showQualityBadge'] as bool? ?? d.showQualityBadge;
     visualizer = j['visualizer'] as bool? ?? d.visualizer;
     visualizerStyle = j['visualizerVersion'] == 3

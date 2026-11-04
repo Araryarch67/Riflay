@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../services/language.dart';
 import '../../models/track.dart';
 import '../../platform/features.dart';
 import '../../services/audio_engine.dart';
@@ -148,14 +149,14 @@ class PlayerMoreSheet extends StatelessWidget {
               ),
             ),
             if (openPlayer != null)
-              group('Player', [
-                tile(Icons.queue_music_rounded, 'Queue', then((_) => shell.openQueue())),
-                tile(Icons.lyrics_outlined, 'Lyrics', then((_) => shell.openLyrics())),
-                tile(Icons.close_rounded, 'Close player', then((_) => c.closePlayer())),
+              group(tr.sectionPlayer, [
+                tile(Icons.queue_music_rounded, tr.queue, then((_) => shell.openQueue())),
+                tile(Icons.lyrics_outlined, tr.lyrics, then((_) => shell.openLyrics())),
+                tile(Icons.close_rounded, tr.closePlayer, then((_) => c.closePlayer())),
               ]),
-            group('Song', [
-              tile(Icons.share_outlined, 'Share', then((host) => shareTrack(host, track))),
-              tile(Icons.playlist_add_rounded, 'Add to playlist', then((host) => addToPlaylist(host, [track]))),
+            group(tr.sectionSong, [
+              tile(Icons.share_outlined, tr.share, then((host) => shareTrack(host, track))),
+              tile(Icons.playlist_add_rounded, tr.addToPlaylist, then((host) => addToPlaylist(host, [track]))),
               if (track.isRemote && Features.downloads)
                 ListenableBuilder(
                   listenable: c.youtube,
@@ -165,14 +166,14 @@ class PlayerMoreSheet extends StatelessWidget {
                     final busy = job != null && job.isActive;
                     return tile(
                       done ? Icons.download_done_rounded : Icons.download_rounded,
-                      done ? 'Downloaded' : (busy ? 'Stop download' : 'Download'),
+                      done ? tr.downloaded : (busy ? tr.stopDownload : tr.download),
                       done
                           ? () {}
                           : busy
                           ? () => c.youtube.cancel(job)
                           : then((host) => TrackMenuButton.download(host, c, [track])),
                       on: done,
-                      subtitle: done ? 'Plays offline' : (busy ? 'Downloading…' : null),
+                      subtitle: done ? tr.playsOffline : (busy ? tr.downloading : null),
                     );
                   },
                 ),
@@ -192,12 +193,12 @@ class PlayerMoreSheet extends StatelessWidget {
                 },
               ),
             ]),
-            group('Listen', [
+            group(tr.sectionListen, [
               ListenableBuilder(
                 listenable: sleep,
                 builder: (context, _) => tile(
                   sleep.active ? Icons.bedtime_rounded : Icons.bedtime_outlined,
-                  'Sleep timer',
+                  tr.sleepTimer,
                   then(showSleepTimer),
                   on: sleep.active,
                   subtitle: sleep.active ? SleepTimerLabel.of(sleep) : null,
@@ -210,29 +211,29 @@ class PlayerMoreSheet extends StatelessWidget {
                     final target = c.cast.target;
                     return tile(
                       target == null ? Icons.cast_rounded : Icons.cast_connected_rounded,
-                      'Play on a device',
+                      tr.playOnDevice,
                       then(showCastPicker),
                       on: target != null,
-                      subtitle: target == null ? null : 'Playing on ${target.name}',
+                      subtitle: target == null ? null : tr.playingOn(target.name),
                     );
                   },
                 ),
               if (Features.listenTogether)
                 tile(
                   Icons.group_outlined,
-                  'Listen together',
+                  tr.listenTogether,
                   then((host) => openListenTogether(host, closePlayer: closePlayer)),
                 ),
             ]),
             if (AudioEngine.supported)
-              group('Sound', [
-                tile(Icons.equalizer_rounded, 'Equalizer', page(() => shell.open(const EqualizerPage()))),
-                tile(Icons.graphic_eq_rounded, 'Signal path', then(showSignalPath)),
+              group(tr.sectionSound, [
+                tile(Icons.equalizer_rounded, tr.equalizer, page(() => shell.open(const EqualizerPage()))),
+                tile(Icons.graphic_eq_rounded, tr.signalPath, then(showSignalPath)),
                 ValueListenableBuilder(
                   valueListenable: statsForNerds,
                   builder: (context, on, _) => tile(
                     Icons.query_stats_rounded,
-                    on ? 'Hide detail stats' : 'Detail stats',
+                    on ? tr.hideDetailStats : tr.detailStats,
                     then((_) {
                       statsForNerds.value = !on;
                       if (!on) openPlayer?.call();

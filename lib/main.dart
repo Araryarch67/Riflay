@@ -7,16 +7,19 @@ import 'dart:ui' show AppExitResponse;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:screen_retriever/screen_retriever.dart';
 import 'package:just_audio_media_kit/just_audio_media_kit.dart';
 import 'package:window_manager/window_manager.dart';
 
+import 'l10n/generated/app_localizations.dart';
 import 'models/track.dart';
 import 'platform/network.dart';
 import 'platform/host.dart';
 import 'services/appearance.dart';
+import 'services/language.dart';
 import 'services/layout_prefs.dart';
 import 'services/media_session.dart';
 import 'services/metadata.dart';
@@ -70,7 +73,7 @@ Future<void> _main() async {
         startSize = await _startSize();
       }(),
   ]);
-  await Future.wait([Appearance.instance.load(), LayoutPrefs.instance.load()]);
+  await Future.wait([Appearance.instance.load(), LayoutPrefs.instance.load(), Language.instance.load()]);
 
   // The window opens (sized, centred, in the theme's colour) while the player loads behind it.
   final windowShown = _showWindow(startSize);
@@ -193,6 +196,7 @@ class _RiflayAppState extends State<RiflayApp> with WidgetsBindingObserver {
     WidgetsBinding.instance.addObserver(this);
     _appearance.addListener(_restyle);
     _layout.addListener(_restyle);
+    Language.instance.addListener(_relanguage);
     widget.controller.addListener(_syncTint);
     _syncTint();
     MemoryTrim.schedule();
@@ -203,6 +207,7 @@ class _RiflayAppState extends State<RiflayApp> with WidgetsBindingObserver {
     WidgetsBinding.instance.removeObserver(this);
     _appearance.removeListener(_restyle);
     _layout.removeListener(_restyle);
+    Language.instance.removeListener(_relanguage);
     widget.controller.removeListener(_syncTint);
     super.dispose();
   }
@@ -228,6 +233,21 @@ class _RiflayAppState extends State<RiflayApp> with WidgetsBindingObserver {
 
   @override
   void didChangePlatformBrightness() => _appearance.platformBrightnessChanged();
+
+  @override
+  void didChangeLocales(List<Locale>? locales) => Language.instance.deviceLocaleChanged();
+
+  /// Another language: every screen builds again, as most read their words through [tr] rather than a
+  /// dependency. Rare (a setting), so the whole tree; the pages open and where they are stay as they were.
+  void _relanguage() {
+    setState(() {});
+    void rebuild(Element e) {
+      e.markNeedsBuild();
+      e.visitChildren(rebuild);
+    }
+
+    (context as Element).visitChildren(rebuild);
+  }
 
   String? _tintTrack;
   String? _colorsTrack;
@@ -304,6 +324,15 @@ class _RiflayAppState extends State<RiflayApp> with WidgetsBindingObserver {
       child: MaterialApp(
         title: 'Riflay',
         debugShowCheckedModeBanner: false,
+        // English or Indonesian (Settings › Look & feel › Appearance › Language); Material's own words follow.
+        locale: Language.instance.locale,
+        supportedLocales: AppLocalizations.supportedLocales,
+        localizationsDelegates: const [
+          AppLocalizations.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
         // The colours already ease in [Appearance]; a second animation here would run them twice.
         themeAnimationDuration: Duration.zero,
         // On desktop the frame paints the (maybe see-through) window

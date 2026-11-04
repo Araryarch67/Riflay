@@ -42,9 +42,8 @@ class DesktopPlayerBar extends StatelessWidget {
         final style = LayoutPrefs.instance.desktopBar;
         return LayoutBuilder(
           builder: (context, box) {
-            final dockWidth = style == DesktopBarStyle.capsule ? 1040.0 : 1120.0;
-            final availableWidth = style.floats ? math.min(box.maxWidth - 48, dockWidth) : box.maxWidth;
-            final compact = style == DesktopBarStyle.compact || style == DesktopBarStyle.capsule;
+            final availableWidth = box.maxWidth;
+            final compact = style == DesktopBarStyle.compact;
             final minimal = style == DesktopBarStyle.minimal;
             final track = now.track;
             final textScale = MediaQuery.textScalerOf(context).scale(14) / 14;
@@ -108,32 +107,7 @@ class DesktopPlayerBar extends StatelessWidget {
                 ),
               );
             }
-            if (!style.floats) return content;
-            final colors = AppColors.of(context);
-            return Padding(
-              padding: const EdgeInsets.fromLTRB(24, 14, 24, 20),
-              child: Align(
-                heightFactor: 1,
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(maxWidth: dockWidth),
-                  child: Material(
-                    key: const ValueKey('desktop-player-dock'),
-                    color: colors.elevated,
-                    elevation: 14,
-                    shadowColor: Colors.black.withValues(alpha: 0.5),
-                    surfaceTintColor: Colors.transparent,
-                    clipBehavior: Clip.antiAlias,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(
-                        style == DesktopBarStyle.capsule ? barHeight / 2 : LayoutPrefs.radius(18),
-                      ),
-                      side: BorderSide(color: colors.textSecondary.withValues(alpha: 0.2)),
-                    ),
-                    child: content,
-                  ),
-                ),
-              ),
-            );
+            return content;
           },
         );
       },

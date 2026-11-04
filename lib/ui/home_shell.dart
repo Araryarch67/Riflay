@@ -5,6 +5,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../services/language.dart';
 import '../models/track.dart';
 import '../services/download_notifications.dart';
 import '../services/gate_hooks.dart';
@@ -324,7 +325,7 @@ class _HomeShellState extends State<HomeShell> {
             builder: (context, _) {
               final home = _history.location == Locations.home;
               return IconButton.filled(
-                tooltip: 'Home',
+                tooltip: tr.navHome,
                 onPressed: _goHome,
                 style: IconButton.styleFrom(
                   backgroundColor: AppColors.tile,
@@ -744,7 +745,7 @@ class _HomeShellState extends State<HomeShell> {
               child: ColoredBox(color: full ? AppColors.background : Colors.transparent, child: _titleBar()),
             );
             return Scaffold(
-              extendBody: full || LayoutPrefs.instance.desktopBar.floats,
+              extendBody: full,
               // In the bottom slot so floating snackbars stack above the player instead of covering it.
               bottomNavigationBar: AutoHideBar(
                 edge: AxisDirection.down,

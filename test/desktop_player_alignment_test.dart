@@ -8,7 +8,6 @@ import 'package:riflay/services/player_controller.dart';
 import 'package:riflay/ui/player/desktop_player_bar.dart';
 import 'package:riflay/ui/shell_scope.dart';
 import 'package:riflay/ui/widgets/controls.dart';
-import 'package:riflay/ui/widgets/page_scaffold.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class _SongPlayer extends PlayerController {
@@ -49,8 +48,8 @@ class _MenuPlayer extends _SongPlayer {
 }
 
 void main() {
-  for (final style in [DesktopBarStyle.classic, DesktopBarStyle.floating, DesktopBarStyle.capsule]) {
-    testWidgets('${style.name} gives the page the correct space around the desktop player', (tester) async {
+  for (final style in DesktopBarStyle.values) {
+    testWidgets('${style.name} sits along the window\'s foot, under the page, never over it', (tester) async {
       SharedPreferences.setMockInitialValues({'discord.enabled': false});
       await LayoutPrefs.instance.reset();
       await LayoutPrefs.instance.setDesktopBar(style);
@@ -65,34 +64,25 @@ void main() {
       final scaffold = tester.widget<Scaffold>(scaffoldFinder);
       final page = tester.getRect(find.byWidget(scaffold.body!));
       final window = tester.getRect(scaffoldFinder);
-      if (style.floats) {
-        expect(page.bottom, closeTo(window.bottom, 0.1), reason: 'the page continues behind the dock');
-        final dock = tester.getRect(find.byKey(const ValueKey('desktop-player-dock')));
-        expect(window.bottom - dock.bottom, greaterThanOrEqualTo(20));
-        expect(dock.left - window.left, greaterThan(100));
-        expect(window.right - dock.right, greaterThan(100));
-        final pageContext = tester.element(find.byType(PageScaffold).first);
-        expect(
-          MediaQuery.paddingOf(pageContext).bottom,
-          greaterThan(dock.height),
-          reason: 'the last scroll item must remain reachable above the dock',
-        );
-      } else {
-        expect(page.bottom, lessThan(window.bottom));
-        expect(find.byKey(const ValueKey('desktop-player-dock')), findsNothing);
-      }
+      final bar = tester.getRect(find.byType(DesktopPlayerBar));
+      expect(page.bottom, lessThanOrEqualTo(bar.top + 0.1), reason: 'the page ends where the bar starts');
+      expect(bar.bottom, closeTo(window.bottom, 0.1));
+      expect(bar.width, closeTo(window.width, 0.1), reason: 'full width, not a dock');
+      expect(find.byKey(const ValueKey('desktop-player-dock')), findsNothing);
       expect(tester.takeException(), isNull);
-      if (style == DesktopBarStyle.floating) {
-        await LayoutPrefs.instance.setDesktopBar(DesktopBarStyle.classic);
-        await tester.pump();
-        final changed = tester.widget<Scaffold>(scaffoldFinder);
-        expect(tester.getRect(find.byWidget(changed.body!)).bottom, lessThan(window.bottom));
-      }
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.runAsync(() async => c.dispose());
       await LayoutPrefs.instance.reset();
     });
   }
+
+  test('saved floating looks come back as the flush ones nearest them', () {
+    LayoutPrefs.instance.restore({'desktopBar': 'floating'});
+    expect(LayoutPrefs.instance.desktopBar, DesktopBarStyle.classic);
+    LayoutPrefs.instance.restore({'desktopBar': 'capsule'});
+    expect(LayoutPrefs.instance.desktopBar, DesktopBarStyle.compact);
+    LayoutPrefs.instance.restore(const {});
+  });
 
   testWidgets('library creation and import actions share the Add menu', (tester) async {
     SharedPreferences.setMockInitialValues({'discord.enabled': false});
@@ -205,7 +195,7 @@ void main() {
           );
           await tester.pump(const Duration(milliseconds: 400));
           expect(tester.takeException(), isNull);
-          if (style == DesktopBarStyle.compact || style == DesktopBarStyle.capsule) {
+          if (style == DesktopBarStyle.compact) {
             final title = tester.getTopLeft(find.text(c.song.title).first).dx;
             final artist = tester.getTopLeft(find.text(c.song.artist).first).dx;
             final elapsed = tester.getTopLeft(find.text('1:04')).dx;

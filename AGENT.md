@@ -73,6 +73,7 @@ lib/
                                or video gets an `imported:` key (SongInfo.imported): stats show it, smart playlists skip it
     backup.dart                Backup & restore: preferences (no secrets), the listening history and my-lyrics in one JSON file
     appearance.dart            Themes and palettes (AppPalette, ThemeChoice), accent, cover colours and their fades, window opacity
+    language.dart              The language shown (English or Indonesian); `tr` gives its words anywhere
     layout_prefs.dart          Corners, density and motion (Settings › Look & feel › Layout)
     beta_features.dart         Optional feature preferences (legacy name); switches live in their respective settings pages
     listen_together/           Listen together: one queue shared over the LAN or the internet
@@ -353,6 +354,24 @@ Memory: `tool/memory.sh [runs]` runs `integration_test/memory_test.dart` the
 same way (profile, headless, fresh process per run) and prints PSS / private /
 RSS at idle, playing a local FLAC, streaming YouTube and after scrolling.
 Compare medians of several complete runs; debug builds are meaningless here.
+
+## Translations
+
+Riflay speaks English and Indonesian (Settings › Look & feel › Appearance › Language; by default the
+device's language when Riflay has it). The words live in `lib/l10n/app_en.arb` (the template) and
+`lib/l10n/app_id.arb`; `flutter gen-l10n` (also run by `flutter pub get` / any build) writes
+`lib/l10n/generated/`.
+
+- Read a word through `tr` (`lib/services/language.dart`): `Text(tr.navSettings)`, also in services and
+  enums, no BuildContext needed. A language change rebuilds every screen (`_relanguage` in `main.dart`).
+- A new string: add it to both .arb files (same key, same `{placeholders}`; counts as `{count}` with an
+  `int` placeholder), run `flutter gen-l10n`. `test/language_test.dart` fails when the Indonesian is
+  missing or its placeholders differ.
+- Keep the English exactly as the code had it: widget tests find screens by their English words.
+- Indonesian is plain and friendly ("kamu"), like a music app; keep product names (YouTube Music,
+  Equalizer, playlist) as people say them.
+- Not every screen is translated yet; untranslated ones show English. Move a screen's strings over as it is
+  touched.
 
 ## Colours and restyling
 

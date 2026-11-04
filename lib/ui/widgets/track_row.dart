@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import '../../services/language.dart';
 import '../../models/track.dart';
 import '../../platform/features.dart';
 import '../../services/audio_engine.dart';
@@ -379,41 +380,52 @@ class TrackMenuButton extends StatelessWidget {
             PopupMenuItem(
               enabled: ListenTogether.of(c).role != ListenRole.guest || (_canSuggest(c) && track.videoId != null),
               onTap: () => _canSuggest(c)
-                  ? _queued(host, ListenTogether.of(c).suggest(track), 'Requested next song')
-                  : _queued(host, c.playNext([track]), 'Plays next'),
-              child: const MenuRow(leading: Icon(Icons.playlist_play_rounded), title: Text('Play next')),
+                  ? _queued(host, ListenTogether.of(c).suggest(track), tr.toastRequestedNext)
+                  : _queued(host, c.playNext([track]), tr.toastPlaysNext),
+              child: MenuRow(leading: const Icon(Icons.playlist_play_rounded), title: Text(tr.playNext)),
             ),
             PopupMenuItem(
-              onTap: () => _queued(host, c.addToQueue([track]), 'Added to queue'),
-              child: const MenuRow(leading: Icon(Icons.queue_music_rounded), title: Text('Add to queue')),
+              onTap: () => _queued(host, c.addToQueue([track]), tr.toastAddedToQueue),
+              child: MenuRow(leading: const Icon(Icons.queue_music_rounded), title: Text(tr.addToQueue)),
             ),
-            if (artist != null)
+            // A song by several artists: one entry each, so any of them can be opened.
+            if (track.artists.length > 1) ...[
+              for (final name in track.artists)
+                if (openArtist(host, c, track, shell: shell, name: name) case final open?)
+                  PopupMenuItem(
+                    onTap: open,
+                    child: MenuRow(
+                      leading: const Icon(Icons.person_outline_rounded),
+                      title: Text(tr.goToNamedArtist(name)),
+                    ),
+                  ),
+            ] else if (artist != null)
               PopupMenuItem(
                 onTap: artist,
-                child: const MenuRow(leading: Icon(Icons.person_outline_rounded), title: Text('Go to artist')),
+                child: MenuRow(leading: const Icon(Icons.person_outline_rounded), title: Text(tr.goToArtist)),
               ),
             if (album != null)
               PopupMenuItem(
                 onTap: () => shell.openCollection(album),
-                child: const MenuRow(leading: Icon(Icons.album_outlined), title: Text('Go to album')),
+                child: MenuRow(leading: const Icon(Icons.album_outlined), title: Text(tr.goToAlbum)),
               ),
             // The song's YouTube Music link, or its name and artist for a file here.
             if (!hide.contains(TrackMenuEntry.share))
               PopupMenuItem(
                 onTap: () => shareTrack(host, track),
-                child: const MenuRow(leading: Icon(Icons.share_outlined), title: Text('Share')),
+                child: MenuRow(leading: const Icon(Icons.share_outlined), title: Text(tr.share)),
               ),
             if (!hide.contains(TrackMenuEntry.addToPlaylist))
               PopupMenuItem(
                 onTap: () => addToPlaylist(host, [track]),
-                child: const MenuRow(leading: Icon(Icons.playlist_add_rounded), title: Text('Add to playlist')),
+                child: MenuRow(leading: const Icon(Icons.playlist_add_rounded), title: Text(tr.addToPlaylist)),
               ),
             if (editScope?.canRemove(track) ?? false)
               PopupMenuItem(
                 onTap: () => editScope!.remove(host, track),
-                child: const MenuRow(
-                  leading: Icon(Icons.playlist_remove_rounded),
-                  title: Text('Remove from this playlist'),
+                child: MenuRow(
+                  leading: const Icon(Icons.playlist_remove_rounded),
+                  title: Text(tr.removeFromThisPlaylist),
                 ),
               ),
             if (track.isRemote) ...[
@@ -422,59 +434,59 @@ class TrackMenuButton extends StatelessWidget {
                   onTap: () => toggleLike(host, track),
                   child: MenuRow(
                     leading: Icon(c.ytMusic.isLiked(track) ? Icons.favorite_rounded : Icons.favorite_border_rounded),
-                    title: Text(c.ytMusic.isLiked(track) ? 'Remove from Liked music' : 'Add to Liked music'),
+                    title: Text(c.ytMusic.isLiked(track) ? tr.removeFromLiked : tr.addToLiked),
                   ),
                 ),
               PopupMenuItem(
                 onTap: () => c.startRadio(track),
-                child: const MenuRow(leading: Icon(Icons.radio_rounded), title: Text('Start radio')),
+                child: MenuRow(leading: const Icon(Icons.radio_rounded), title: Text(tr.startRadio)),
               ),
               if (_canSuggest(c))
                 PopupMenuItem(
                   onTap: () => ListenTogether.of(c).suggest(track),
                   child: MenuRow(
                     leading: const Icon(Icons.group_add_outlined),
-                    title: Text('Suggest to ${ListenTogether.of(c).hostName ?? 'the host'}'),
+                    title: Text(tr.addToHostQueue(ListenTogether.of(c).hostName ?? tr.theHost)),
                   ),
                 ),
               if (c.downloadedCopy(track) == null && Features.downloads && !hide.contains(TrackMenuEntry.download)) ...[
                 PopupMenuItem(
                   onTap: () => download(host, c, [track]),
-                  child: const MenuRow(leading: Icon(Icons.download_rounded), title: Text('Download for offline')),
+                  child: MenuRow(leading: const Icon(Icons.download_rounded), title: Text(tr.downloadForOffline)),
                 ),
                 PopupMenuItem(
                   onTap: () => download(host, c, [track], force: true),
-                  child: const MenuRow(leading: Icon(Icons.tune_rounded), title: Text('Download as…')),
+                  child: MenuRow(leading: const Icon(Icons.tune_rounded), title: Text(tr.downloadAs)),
                 ),
               ],
               if (downloaded != null)
                 PopupMenuItem(
                   onTap: () => showDownloadEditor(host, downloaded, compact: shell.compact),
-                  child: const MenuRow(leading: Icon(Icons.edit_outlined), title: Text('Edit')),
+                  child: MenuRow(leading: const Icon(Icons.edit_outlined), title: Text(tr.edit)),
                 ),
             ] else ...[
               if (downloaded != null)
                 PopupMenuItem(
                   onTap: () => showDownloadEditor(host, downloaded, compact: shell.compact),
-                  child: const MenuRow(leading: Icon(Icons.edit_outlined), title: Text('Edit')),
+                  child: MenuRow(leading: const Icon(Icons.edit_outlined), title: Text(tr.edit)),
                 )
               else if (Metadata.canEditTags(track))
                 PopupMenuItem(
                   onTap: () => showTagEditor(host, track),
-                  child: const MenuRow(leading: Icon(Icons.edit_outlined), title: Text('Edit info')),
+                  child: MenuRow(leading: const Icon(Icons.edit_outlined), title: Text(tr.editInfo)),
                 ),
               PopupMenuItem(
                 onTap: () => c.removeTrack(track),
-                child: const MenuRow(
-                  leading: Icon(Icons.remove_circle_outline_rounded),
-                  title: Text('Remove from library'),
+                child: MenuRow(
+                  leading: const Icon(Icons.remove_circle_outline_rounded),
+                  title: Text(tr.removeFromLibrary),
                 ),
               ),
             ],
             if (FlacConvert.available(convertible))
               PopupMenuItem(
                 onTap: () => showFlacConvert(host, c, [convertible]),
-                child: const MenuRow(leading: Icon(Icons.graphic_eq_rounded), title: Text('Convert to FLAC')),
+                child: MenuRow(leading: const Icon(Icons.graphic_eq_rounded), title: Text(tr.convertToFlac)),
               ),
             if (nowPlaying && AudioEngine.supported) ...[
               const PopupMenuDivider(),

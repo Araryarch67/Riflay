@@ -4,6 +4,7 @@ import '../../platform/features.dart';
 import '../../platform/host.dart';
 import '../widgets/power_settings.dart';
 import '../../services/beta_features.dart';
+import '../../services/language.dart';
 import '../../services/discord_presence.dart';
 import '../../services/lyrics.dart';
 import '../../services/player_controller.dart';
@@ -45,11 +46,28 @@ enum SettingsGroup {
     'YouTube Music, Spotify, Last.fm, Discord, lyrics, extensions',
   );
 
-  const SettingsGroup(this.id, this.label, this.icon, this._summary);
+  const SettingsGroup(this.id, this._english, this.icon, this._englishSummary);
   final String id;
-  final String label;
+  // The English words, as a reading aid here; [label] and [summary] are in the language shown.
+  // ignore: unused_field
+  final String _english;
   final IconData icon;
-  final String _summary;
+  // ignore: unused_field
+  final String _englishSummary;
+
+  String get label => switch (this) {
+    sound => tr.groupSound,
+    look => tr.groupLook,
+    library => tr.groupLibrary,
+    accounts => tr.groupAccounts,
+  };
+
+  String get _summary => switch (this) {
+    sound => tr.groupSoundSummary,
+    look => tr.groupLookSummary,
+    library => tr.groupLibrarySummary,
+    accounts => tr.groupAccountsSummary,
+  };
 
   /// One plain line; where this build leaves sections out (the web build), the names of those it shows.
   String get summary => sections.length == SettingsTopic.values.where((s) => s.group == this).length
@@ -167,21 +185,53 @@ enum SettingsTopic {
     'SpotiFLAC extension repositories: more places to search',
   );
 
-  const SettingsTopic(this.group, this.id, this._label, this.icon, this._summary);
+  const SettingsTopic(this.group, this.id, this._english, this.icon, this._englishSummary);
   final SettingsGroup group;
   final String id;
-  final String _label;
+  // The English name, as a reading aid here; [label] is in the language shown.
+  // ignore: unused_field
+  final String _english;
 
   /// The section's name; without Discord (the web build) the services section is about lyrics alone.
-  String get label => this == integrations && !DiscordPresence.supported ? 'Lyrics services' : _label;
+  String get label => switch (this) {
+    integrations when !DiscordPresence.supported => tr.topicLyricsServices,
+    playback => tr.topicPlayback,
+    dsp => tr.topicDsp,
+    advanced => tr.topicOutput,
+    appearance => tr.topicAppearance,
+    layout => tr.topicLayout,
+    library => tr.topicLibrary,
+    downloads => tr.topicDownloads,
+    history => tr.topicHistory,
+    backup => tr.topicBackup,
+    account => tr.topicAccount,
+    spotify => tr.topicSpotify,
+    scrobbling => tr.topicScrobbling,
+    integrations => tr.topicIntegrations,
+    extensions => tr.topicExtensions,
+  };
   final IconData icon;
-  final String _summary;
+  // ignore: unused_field
+  final String _englishSummary;
 
   /// One plain line. Without the sound engine (the web build) Playback has only Autoplay.
   String get summary => switch (this) {
-    playback when !AudioEngine.supported => 'Autoplay',
-    integrations when !DiscordPresence.supported => 'A Better Lyrics key for word-by-word lyrics',
-    _ => _summary,
+    playback when !AudioEngine.supported => tr.topicPlaybackSummaryWeb,
+    integrations when !DiscordPresence.supported => tr.topicIntegrationsSummaryWeb,
+    playback => tr.topicPlaybackSummary,
+    dsp => tr.topicDspSummary,
+    advanced => tr.topicOutputSummary,
+    appearance => tr.topicAppearanceSummary,
+    layout => tr.topicLayoutSummary,
+    library => tr.topicLibrarySummary,
+    downloads => tr.topicDownloadsSummary,
+    history => tr.topicHistorySummary,
+    backup => tr.topicBackupSummary,
+    account => tr.topicAccountSummary,
+    spotify => tr.topicSpotifySummary,
+    scrobbling => tr.topicScrobblingSummary,
+    integrations => tr.topicIntegrationsSummary,
+    extensions => tr.topicExtensionsSummary,
   };
 
   bool get available => switch (this) {
@@ -209,7 +259,7 @@ class _Crumb {
   final String location;
 }
 
-const _settingsCrumb = _Crumb('Settings', SettingsPage(), Locations.settings);
+_Crumb get _settingsCrumb => _Crumb(tr.navSettings, const SettingsPage(), Locations.settings);
 
 /// A row that opens another page of settings: icon, title, one plain line, chevron.
 class _SettingsRow extends StatelessWidget {
@@ -245,7 +295,7 @@ class SettingsPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final shell = ShellScope.of(context);
     return _SettingsFrame(
-      title: 'Settings',
+      title: tr.navSettings,
       child: SettingsCard(
         children: [
           for (final g in SettingsGroup.values)
@@ -259,29 +309,27 @@ class SettingsPage extends StatelessWidget {
           if (!Host.isWeb)
             _SettingsRow(
               icon: Icons.battery_saver_outlined,
-              title: 'Power & background',
-              summary: SystemTray.offered
-                  ? 'Screen timeout, sleep, background playback and closing to the tray'
-                  : 'Screen timeout, sleep and background playback',
+              title: tr.settingsPower,
+              summary: SystemTray.offered ? tr.settingsPowerSummaryTray : tr.settingsPowerSummary,
               onTap: () => shell.open(const SettingsPowerPage(), location: Locations.settingsTopic('power')),
             ),
           _SettingsRow(
             icon: Icons.group_outlined,
-            title: 'Listen together',
-            summary: 'Host a session or join friends and manage sharing permissions',
+            title: tr.listenTogether,
+            summary: tr.listenTogetherSummary,
             onTap: () => shell.open(const ListenTogetherPage(), location: Locations.listen),
           ),
           if (hasKeyboardShortcuts)
             _SettingsRow(
               icon: Icons.keyboard_outlined,
-              title: 'Keyboard shortcuts',
-              summary: 'Play, skip, search and more without the mouse',
+              title: tr.keyboardShortcuts,
+              summary: tr.keyboardShortcutsSummary,
               onTap: () => showShortcutsDialog(context),
             ),
           _SettingsRow(
             icon: Icons.info_outline_rounded,
-            title: 'About',
-            summary: 'Version, what\'s new, reporting a problem, licences',
+            title: tr.about,
+            summary: tr.aboutSummary,
             onTap: () => shell.open(const SettingsAboutPage(), location: Locations.settingsTopic('about')),
           ),
         ],
@@ -295,8 +343,8 @@ class SettingsPowerPage extends StatelessWidget {
   const SettingsPowerPage({super.key});
   @override
   Widget build(BuildContext context) => _SettingsFrame(
-    title: 'Power & background',
-    crumbs: const [_settingsCrumb],
+    title: tr.settingsPower,
+    crumbs: [_settingsCrumb],
     child: SettingsCard(children: PowerSettings.rows(context)),
   );
 }
@@ -307,7 +355,7 @@ class SettingsAboutPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) =>
-      const _SettingsFrame(title: 'About', crumbs: [_settingsCrumb], child: AboutSettings());
+      _SettingsFrame(title: tr.about, crumbs: [_settingsCrumb], child: const AboutSettings());
 }
 
 /// One group: its sections as rows, each opening its page.
@@ -322,7 +370,7 @@ class SettingsGroupPage extends StatelessWidget {
     final shell = ShellScope.of(context);
     return _SettingsFrame(
       title: group.label,
-      crumbs: const [_settingsCrumb],
+      crumbs: [_settingsCrumb],
       child: ListenableBuilder(
         listenable: Listenable.merge([c.ytMusic, BetaFeatures.instance]),
         builder: (context, _) => SettingsCard(

@@ -5,6 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../platform/host.dart';
 import '../../services/appearance.dart';
 import '../../services/color_tools.dart';
+import '../../services/language.dart';
 import '../../services/system_fonts.dart';
 import '../theme.dart';
 import '../widgets/color_picker.dart';
@@ -26,6 +27,23 @@ class AppearanceSettings extends StatelessWidget {
       listenable: look,
       builder: (context, _) => SettingsCard(
         children: [
+          ListenableBuilder(
+            listenable: Language.instance,
+            builder: (context, _) => SettingTile(
+              icon: Icons.translate_rounded,
+              title: Text(tr.language),
+              subtitle: Text(tr.languageSubtitle, style: muted),
+              control: OptionPicker<AppLanguage>(
+                value: Language.instance.choice,
+                onChanged: Language.instance.set,
+                maxWidth: 180,
+                // Each in its own language, so it can be found from any other.
+                options: [
+                  for (final l in AppLanguage.values) (l, l == AppLanguage.system ? tr.languageSystem : l.ownName),
+                ],
+              ),
+            ),
+          ),
           ListTile(leading: const Icon(Icons.dark_mode_outlined), title: const Text('Theme')),
           // The whole width, not under the tile's icon: two or more cards a row even on a phone.
           Padding(

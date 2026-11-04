@@ -695,6 +695,7 @@ class YtMusicWeb {
 
   /// A queue row: "Artist • Album • Year" under the title.
   static WebTrack? _panelSong(Map<String, dynamic> row) {
+    if (isLive(row)) return null;
     final id = row['videoId'];
     final title = _text(row['title']);
     if (id is! String || title == null) return null;
@@ -1192,6 +1193,7 @@ class YtMusicWeb {
   }
 
   static WebTrack? _twoRowSong(Map<String, dynamic> data, String videoId) {
+    if (isLive(data)) return null;
     final title = _text(data['title']);
     if (title == null) return null;
     final by = _byline(_runs(data['subtitle']));
@@ -1314,6 +1316,7 @@ class YtMusicWeb {
   /// differently, so title and artist come from the navigation endpoints (the
   /// way ytmusicapi does it) instead of fixed column numbers.
   static WebTrack? _songOf(Map<String, dynamic> data) {
+    if (isLive(data)) return null;
     var videoId = _at(data, const ['playButton', 'playNavigationEndpoint', 'watchEndpoint', 'videoId']);
     videoId ??= _at(data, const ['navigationEndpoint', 'watchEndpoint', 'videoId']);
 
@@ -1347,6 +1350,34 @@ class YtMusicWeb {
       artworkUrl: _lastThumb(_at(data, const ['thumbnail', 'musicThumbnailRenderer', 'thumbnail', 'thumbnails'])),
       artistId: by.id,
     );
+  }
+
+  /// A live stream (a 24/7 radio, a premiere on air): YouTube offers it only as a video stream with no end,
+  /// which Riflay can't play as a song, so it isn't listed. YouTube Music marks it with a live badge or icon,
+  /// or counts people "watching" instead of views.
+  @visibleForTesting
+  static bool isLive(Object? item) {
+    var live = false;
+    void visit(Object? node) {
+      if (live) return;
+      if (node is Map) {
+        if (node.containsKey('liveBadgeRenderer') || node['iconType'] == 'LIVE') {
+          live = true;
+          return;
+        }
+        final text = node['text'];
+        if (text is String && RegExp(r'^[\d.,]+\s?[KMB]?\s+watching$', caseSensitive: false).hasMatch(text.trim())) {
+          live = true;
+          return;
+        }
+        node.values.forEach(visit);
+      } else if (node is List) {
+        node.forEach(visit);
+      }
+    }
+
+    visit(item);
+    return live;
   }
 
   /// Search rows put the length in a subtitle run ("Artist • Album • 3:45").

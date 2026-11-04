@@ -47,6 +47,40 @@ Map<String, dynamic>? find(Object? node, String key) {
 const _signedIn = '__Secure-3PAPISID=abc; SID=x';
 
 void main() {
+  test('live streams are recognised by their badge, icon or "watching" count; songs are not', () {
+    Map<String, dynamic> row(String subtitle, {Map<String, dynamic>? extra}) => {
+      'flexColumns': [
+        {
+          'musicResponsiveListItemFlexColumnRenderer': {
+            'text': {
+              'runs': [
+                {'text': subtitle},
+              ],
+            },
+          },
+        },
+      ],
+      ...?extra,
+    };
+    expect(YtMusicWeb.isLive(row('1.2K watching')), isTrue);
+    expect(
+      YtMusicWeb.isLive(
+        row(
+          'Lofi Girl',
+          extra: {
+            'badges': [
+              {'liveBadgeRenderer': {}},
+            ],
+          },
+        ),
+      ),
+      isTrue,
+    );
+    expect(YtMusicWeb.isLive({'icon': {'iconType': 'LIVE'}}), isTrue);
+    expect(YtMusicWeb.isLive(row('3.4M views')), isFalse);
+    expect(YtMusicWeb.isLive(row('Song • Hindia • 4:02')), isFalse);
+  });
+
   group('moods and genres', () {
     test('groups the tiles with their params', () async {
       final f = fake({'FEmusic_moods_and_genres': fixture('ytm_moods_and_genres')});

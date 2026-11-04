@@ -7,12 +7,11 @@ import '../../services/video_mode.dart';
 import '../shell_scope.dart';
 import '../theme.dart';
 import '../ytmusic_edit.dart' show LikeButton;
-import '../../services/ytmusic_web.dart' show WebArtistInfo;
 import '../widgets/controls.dart';
 import '../widgets/faded_cover.dart';
+import '../widgets/about_artist.dart';
 import '../widgets/audio_visualizer.dart';
 import '../widgets/signal_path.dart';
-import '../widgets/skeleton.dart';
 import '../widgets/smooth_scroll.dart';
 import '../widgets/stats_for_nerds.dart';
 import '../widgets/track_row.dart';
@@ -117,6 +116,15 @@ class NowPlayingSidePanel extends StatelessWidget {
                       const SizedBox(height: 12),
                       if (LayoutPrefs.instance.showQualityBadge) const QualityBadge(),
                       const SizedBox(height: 16),
+                      // In every look, as in the cover-as-page one.
+                      if (track.artists.isNotEmpty) ...[
+                        AboutArtist(
+                          name: track.artists.first,
+                          channelId: track.isRemote ? track.artistId : null,
+                          onOpen: openArtist(context, c, track),
+                        ),
+                        const SizedBox(height: 16),
+                      ],
                       if (next != null)
                         Container(
                           decoration: BoxDecoration(color: AppColors.elevated, borderRadius: LayoutPrefs.corner(8)),
@@ -322,136 +330,18 @@ class _HeroPanel extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 16),
-                if (track.isRemote && track.artistId != null) ...[
-                  _AboutArtist(channelId: track.artistId!, onOpen: openArtist(context, c, track)),
+                if (track.artists.isNotEmpty) ...[
+                  AboutArtist(
+                    name: track.artists.first,
+                    channelId: track.isRemote ? track.artistId : null,
+                    onOpen: openArtist(context, c, track),
+                  ),
                 ],
               ],
             ),
           ),
         ],
       ),
-    );
-  }
-}
-
-/// "About the artist": their photo, name, subscribers, Follow, and the start of their page's about text, from
-/// YouTube Music (asked once per artist). Nothing until it arrives, or when there is nothing to say.
-class _AboutArtist extends StatefulWidget {
-  const _AboutArtist({required this.channelId, this.onOpen});
-
-  final String channelId;
-  final VoidCallback? onOpen;
-
-  @override
-  State<_AboutArtist> createState() => _AboutArtistState();
-}
-
-class _AboutArtistState extends State<_AboutArtist> {
-  late Future<WebArtistInfo?> _info = PlayerScope.read(context).ytMusic.artistInfo(widget.channelId);
-
-  @override
-  void didUpdateWidget(_AboutArtist old) {
-    super.didUpdateWidget(old);
-    if (old.channelId != widget.channelId) _info = PlayerScope.read(context).ytMusic.artistInfo(widget.channelId);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final text = Theme.of(context).textTheme;
-    final account = PlayerScope.read(context).ytMusic;
-    return FutureBuilder<WebArtistInfo?>(
-      future: _info,
-      builder: (context, snap) {
-        final info = snap.data;
-        if (info == null) {
-          if (snap.connectionState == ConnectionState.done) return const SizedBox.shrink();
-          return Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(color: AppColors.elevated, borderRadius: LayoutPrefs.corner(8)),
-            child: const ExcludeSemantics(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  SkeletonBox(width: 110, height: 16),
-                  SizedBox(height: 12),
-                  SkeletonRow(size: 56, circle: true, trailing: false),
-                  SizedBox(height: 8),
-                  SkeletonText(lines: 3),
-                ],
-              ),
-            ),
-          );
-        }
-        final photo = info.thumbnailUrl;
-        final about = info.description;
-        return Material(
-          color: AppColors.elevated,
-          borderRadius: LayoutPrefs.corner(8),
-          clipBehavior: Clip.antiAlias,
-          child: InkWell(
-            onTap: widget.onOpen,
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('About the artist', style: text.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
-                  const SizedBox(height: 12),
-                  if (photo != null) ...[
-                    ClipOval(
-                      child: Image.network(
-                        photo,
-                        width: 72,
-                        height: 72,
-                        fit: BoxFit.cover,
-                        cacheWidth: 216,
-                        errorBuilder: (_, _, _) => const SizedBox(width: 72, height: 72),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                  ],
-                  Text(info.name, style: text.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          info.subscribers ?? '',
-                          style: text.bodyMedium?.copyWith(color: AppColors.textSecondary),
-                        ),
-                      ),
-                      if (account.canEdit)
-                        ListenableBuilder(
-                          listenable: account,
-                          builder: (context, _) {
-                            final following = account.isFollowing(widget.channelId);
-                            return OutlinedButton(
-                              onPressed: () => account.setFollowing(widget.channelId, !following),
-                              style: OutlinedButton.styleFrom(
-                                foregroundColor: AppColors.textPrimary,
-                                shape: const StadiumBorder(),
-                                visualDensity: VisualDensity.compact,
-                              ),
-                              child: Text(following ? 'Following' : 'Follow'),
-                            );
-                          },
-                        ),
-                    ],
-                  ),
-                  if (about != null) ...[
-                    const SizedBox(height: 8),
-                    Text(
-                      about,
-                      maxLines: 3,
-                      overflow: TextOverflow.ellipsis,
-                      style: text.bodySmall?.copyWith(color: AppColors.textSecondary),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ),
-        );
-      },
     );
   }
 }

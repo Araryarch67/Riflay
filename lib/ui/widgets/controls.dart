@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 
 import 'package:just_audio/just_audio.dart';
 
+import '../../services/language.dart';
 import '../../models/track.dart';
 import '../../services/appearance.dart';
 import '../../services/layout_prefs.dart';
@@ -558,7 +559,7 @@ class PlayButton extends StatelessWidget implements ColorFreeSelf {
     return ListenableBuilder(
       listenable: LayoutPrefs.instance,
       builder: (context, _) => Tooltip(
-        message: tipWith(playing ? 'Pause' : 'Play', AppAction.playPause),
+        message: tipWith(playing ? tr.pause : tr.play, AppAction.playPause),
         child: _Pressable(
           onPressed: onPressed,
           child: Container(
@@ -673,7 +674,7 @@ class TransportControls extends StatelessWidget {
       mainAxisAlignment: large ? MainAxisAlignment.spaceBetween : MainAxisAlignment.center,
       children: [
         ModeButton(
-          tooltip: t.shuffle ? 'Disable shuffle' : 'Enable shuffle',
+          tooltip: t.shuffle ? tr.disableShuffle : tr.enableShuffle,
           active: t.shuffle,
           size: modeSize,
           icon: Icons.shuffle_rounded,
@@ -681,7 +682,7 @@ class TransportControls extends StatelessWidget {
         ),
         if (!large) const SizedBox(width: 8),
         IconButton(
-          tooltip: tipWith('Previous', AppAction.previous),
+          tooltip: tipWith(tr.previous, AppAction.previous),
           iconSize: skipSize,
           color: AppColors.of(context).textPrimary,
           onPressed: t.hasQueue ? c.previous : null,
@@ -696,7 +697,7 @@ class TransportControls extends StatelessWidget {
         ),
         if (!large) const SizedBox(width: 8),
         IconButton(
-          tooltip: tipWith('Next', AppAction.next),
+          tooltip: tipWith(tr.next, AppAction.next),
           iconSize: skipSize,
           color: AppColors.of(context).textPrimary,
           onPressed: t.hasNext ? c.next : null,
@@ -705,9 +706,9 @@ class TransportControls extends StatelessWidget {
         if (!large) const SizedBox(width: 8),
         ModeButton(
           tooltip: switch (t.loop) {
-            LoopMode.off => 'Enable repeat',
-            LoopMode.all => 'Enable repeat one',
-            LoopMode.one => 'Disable repeat',
+            LoopMode.off => tr.enableRepeat,
+            LoopMode.all => tr.enableRepeatOne,
+            LoopMode.one => tr.disableRepeat,
           },
           active: t.loop != LoopMode.off,
           size: modeSize,
@@ -809,7 +810,7 @@ class VolumeSlider extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               IconButton(
-                tooltip: volume == 0 ? 'Unmute' : 'Mute',
+                tooltip: volume == 0 ? tr.unmute : tr.mute,
                 iconSize: 20,
                 onPressed: setVolume == null ? null : c.toggleMute,
                 icon: Icon(

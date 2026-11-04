@@ -787,7 +787,8 @@ class PlayerController extends ChangeNotifier {
     }
     final results = await youtube.client.search.search('$query song');
     return [
-      for (final v in results.take(20))
+      // A live stream has no end and no audio-only stream: it can't play as a song.
+      for (final v in results.where((v) => !v.isLive).take(20))
         () {
           final names = YoutubeImporter.parseTitle(v.title, v.author);
           return Track.youtube(
