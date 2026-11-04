@@ -56,12 +56,13 @@ class UsbDac(context: Context, messenger: BinaryMessenger) {
         it.type == AudioDeviceInfo.TYPE_USB_DEVICE || it.type == AudioDeviceInfo.TYPE_USB_HEADSET
     }
 
-    // Stereo bit-perfect formats only: that is what Riflay plays.
+    // Stereo bit-perfect formats only: that is what Riflay plays. Two channels by count, not by the positional
+    // mask alone: USB devices often describe their channels with an index mask, and then channelMask is
+    // CHANNEL_INVALID (0), which filtered every format out and made a capable DAC look like none.
     private fun formats(device: AudioDeviceInfo): List<AudioMixerAttributes> {
         if (!supported) return emptyList()
         return audio.getSupportedMixerAttributes(device).filter {
-            it.mixerBehavior == AudioMixerAttributes.MIXER_BEHAVIOR_BIT_PERFECT &&
-                it.format.channelMask == AudioFormat.CHANNEL_OUT_STEREO
+            it.mixerBehavior == AudioMixerAttributes.MIXER_BEHAVIOR_BIT_PERFECT && it.format.channelCount == 2
         }
     }
 
@@ -81,6 +82,12 @@ class UsbDac(context: Context, messenger: BinaryMessenger) {
                 "name" to (d.productName?.toString() ?: "USB DAC"),
                 "formats" to formats(d).mapNotNull { a ->
                     encodingName(a.format.encoding)?.let { mapOf("rate" to a.format.sampleRate, "encoding" to it) }
+                },
+                // Every mixer format Android lists for the DAC, bit-perfect or not: tells a phone that offers none
+                // (its maker left bit-perfect out) from one whose formats Riflay can't use.
+                "reported" to audio.getSupportedMixerAttributes(d).size,
+                "bitPerfectReported" to audio.getSupportedMixerAttributes(d).count {
+                    it.mixerBehavior == AudioMixerAttributes.MIXER_BEHAVIOR_BIT_PERFECT
                 },
             )
         },

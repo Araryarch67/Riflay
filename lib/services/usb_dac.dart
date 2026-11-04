@@ -28,15 +28,24 @@ class MixerFormat {
 
 /// A USB audio output and what it takes bit-perfect.
 class UsbDevice {
-  const UsbDevice(this.id, this.name, this.formats);
+  const UsbDevice(this.id, this.name, this.formats, {this.reported, this.bitPerfectReported});
 
-  factory UsbDevice.fromJson(Map<Object?, Object?> j) => UsbDevice(j['id'] as int, j['name'] as String, [
-    for (final f in (j['formats'] as List? ?? const [])) MixerFormat.fromJson((f as Map).cast()),
-  ]);
+  factory UsbDevice.fromJson(Map<Object?, Object?> j) => UsbDevice(
+    j['id'] as int,
+    j['name'] as String,
+    [for (final f in (j['formats'] as List? ?? const [])) MixerFormat.fromJson((f as Map).cast())],
+    reported: j['reported'] as int?,
+    bitPerfectReported: j['bitPerfectReported'] as int?,
+  );
 
   final int id;
   final String name;
   final List<MixerFormat> formats;
+
+  /// How many mixer formats Android lists for it, and how many of those are bit-perfect (any channel count or
+  /// encoding): what Settings says when none can be used.
+  final int? reported;
+  final int? bitPerfectReported;
 
   /// DoP carries DSD64 in 24-bit PCM at 176.4 kHz and DSD128 at 352.8 kHz; the DAC gets it as 32-bit.
   bool takesDop(int dsdBitRate) => formats.contains(MixerFormat(dsdBitRate ~/ 16, 'pcm32'));
@@ -106,6 +115,10 @@ class UsbDac extends ChangeNotifier {
 
   /// The DAC used: the first one that offers a bit-perfect format.
   UsbDevice? get device => devices.where((d) => d.formats.isNotEmpty).firstOrNull;
+
+  /// A USB DAC that is plugged in, bit-perfect or not. Android plays through it either way; only the phone's
+  /// maker decides whether it offers a bit-perfect format for it (many phones offer none).
+  UsbDevice? get plugged => devices.firstOrNull;
 
   /// What was last set with [prefer], so a song of the same format doesn't set it again.
   MixerFormat? active;

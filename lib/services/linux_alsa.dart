@@ -129,6 +129,39 @@ abstract final class LinuxAlsa {
 
   static AlsaOutput? byMpvName(String name) => outputs().where((o) => o.mpvName == name).firstOrNull;
 
+  /// The sample rates a USB card plays (`/proc/asound/cardN/stream0`), or null when the card doesn't say
+  /// (not USB). DoP needs 176.4 kHz for DSD64, 352.8 kHz for DSD128: many small DACs stop at 96 kHz.
+  static Set<int>? playbackRates(int card) {
+    try {
+      final f = File('/proc/asound/card$card/stream0');
+      if (!f.existsSync()) return null;
+      return ratesOf(f.readAsStringSync());
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// [playbackRates] from a `stream0` file: every Rates line of its Playback part, lists and ranges alike.
+  @visibleForTesting
+  static Set<int>? ratesOf(String stream0) {
+    final playback = stream0.split(RegExp(r'^Capture:', multiLine: true)).first;
+    if (!playback.contains('Playback:')) return null;
+    final out = <int>{};
+    for (final m in RegExp(r'Rates:\s*([^\n]+)').allMatches(playback)) {
+      final line = m[1]!;
+      final range = RegExp(r'(\d+)\s*-\s*(\d+)').firstMatch(line);
+      if (range != null) {
+        final lo = int.parse(range[1]!), hi = int.parse(range[2]!);
+        for (final r in const [44100, 48000, 88200, 96000, 176400, 192000, 352800, 384000, 705600, 768000]) {
+          if (r >= lo && r <= hi) out.add(r);
+        }
+      } else {
+        out.addAll(RegExp(r'\d+').allMatches(line).map((r) => int.parse(r[0]!)));
+      }
+    }
+    return out.isEmpty ? null : out;
+  }
+
   /// The card + device behind a PipeWire output: [node] is a PipeWire node name
   /// (`alsa_output.usb-…`), or null for the system default.
   static Future<AlsaOutput?> behind(String? node) async {

@@ -406,6 +406,8 @@ class _AdvancedAudioSettingsState extends State<AdvancedAudioSettings> {
         final dopReady = audio.bitPerfect && audio.bypassesMixer;
         final android = Host.isAndroid;
         final usbName = audio.usb.device?.name;
+        // Plugged in, but this phone offers no bit-perfect format for it: say so, rather than "plug in a DAC".
+        final pluggedName = audio.usb.plugged?.name;
         return SettingsCard(
           children: [
             if (AudioEngine.hasRoutePicker)
@@ -446,15 +448,28 @@ class _AdvancedAudioSettingsState extends State<AdvancedAudioSettings> {
               ListTile(
                 leading: const Icon(Icons.speaker_rounded),
                 title: const Text('Output device'),
-                subtitle: Text(usbName == null ? 'Your phone\'s own output' : '$usbName (USB DAC)', style: muted),
+                subtitle: Text(
+                  pluggedName == null ? 'Your phone\'s own output' : '${usbName ?? pluggedName} (USB DAC)',
+                  style: muted,
+                ),
               ),
-            if (audio.hasBitPerfect)
+            if (audio.hasBitPerfect || android)
               SwitchListTile(
                 secondary: const Icon(Icons.verified_outlined),
                 title: const Text('Bit-perfect mode'),
                 subtitle: Text(
                   android
-                      ? usbName == null
+                      ? !audio.usb.supported
+                            ? 'Needs Android 14 or later'
+                            : usbName == null && pluggedName != null
+                            ? (audio.usb.plugged?.bitPerfectReported ?? 0) > 0
+                                  ? 'Android offers $pluggedName only in formats Riflay can\'t play bit-perfect '
+                                        '(${audio.usb.plugged!.bitPerfectReported} of ${audio.usb.plugged!.reported} formats). '
+                                        'Riflay still plays through your DAC, with Android mixing the sound first.'
+                                  : 'This phone doesn\'t offer bit-perfect output for $pluggedName: its maker leaves it out '
+                                        '(Android lists ${audio.usb.plugged?.reported ?? 0} formats for it, none bit-perfect). '
+                                        'Riflay still plays through your DAC, with Android mixing the sound first.'
+                            : usbName == null
                             ? 'Plug in a USB DAC to play bit-perfect'
                             : 'Sends the file to your USB DAC untouched: no equalizer, leveling or resampling. '
                                   'Other apps and system sounds are muted on the DAC, and the phone\'s volume keys stop working: '
@@ -478,7 +493,9 @@ class _AdvancedAudioSettingsState extends State<AdvancedAudioSettings> {
                 secondary: const Icon(Icons.graphic_eq_rounded),
                 title: const Text('Native DSD (DoP)'),
                 subtitle: Text(
-                  dopReady
+                  dopReady && audio.dopNote != null
+                      ? audio.dopNote!
+                      : dopReady
                       ? 'Sends DSD files to your DAC as DSD instead of converting them. '
                             'Only for DACs that support DoP: others play a faint hiss, so turn it off then. '
                             'The volume stays at 100% for DSD songs; use your DAC\'s.'

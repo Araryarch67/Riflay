@@ -555,9 +555,31 @@ class AudioEngine extends ChangeNotifier {
       bypassesMixer &&
       (hasOutputChoice || (Host.isAndroid && usb.device?.dopCapable == true));
 
-  /// Whether a DSD file of [bitRate] can go out as DoP: Android's DAC must take its PCM rate
-  /// (176.4 kHz for DSD64, 352.8 kHz for DSD128) as 32-bit; a computer's output takes any.
-  bool dopFits(int bitRate) => !Host.isAndroid || (usb.device?.takesDop(bitRate) ?? false);
+  /// Whether a DSD file of [bitRate] can go out as DoP: the DAC must take its PCM rate (176.4 kHz for DSD64,
+  /// 352.8 kHz for DSD128); Android's as 32-bit. On Linux a USB DAC says which rates it takes; one that stops
+  /// below gets the song as PCM instead (DoP at a rate it refuses would be silence). Other outputs: any.
+  bool dopFits(int bitRate) {
+    if (Host.isAndroid) return usb.device?.takesDop(bitRate) ?? false;
+    final rates = _dopCardRates;
+    return rates == null || rates.contains(bitRate ~/ 16);
+  }
+
+  /// Linux: the rates of the card bit-perfect mode plays to, when it says; null otherwise.
+  Set<int>? get _dopCardRates {
+    if (!LinuxAlsa.supported) return null;
+    final card =
+        LinuxAlsa.byMpvName(_openedDevice ?? device)?.card ?? LinuxAlsa.byMpvName(device)?.card ?? _reservation?.card;
+    return card == null ? null : LinuxAlsa.playbackRates(card);
+  }
+
+  /// Why DSD can't go out as DoP on this DAC, in plain words; null when it can (or nothing says otherwise).
+  String? get dopNote {
+    final rates = _dopCardRates;
+    if (rates == null || rates.contains(176400)) return null;
+    final top = rates.reduce((a, b) => a > b ? a : b);
+    return 'Your DAC takes up to ${SignalPath.formatRate(top)}, and DoP needs 176.4 kHz, '
+        'so DSD files play as PCM on it';
+  }
 
   DsdPlayback? _dop;
 

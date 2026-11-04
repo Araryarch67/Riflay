@@ -147,5 +147,23 @@ void main() {
       expect(calls.last.method, 'clear');
       expect(usb.active, isNull);
     });
+
+    test('a DAC the phone offers no bit-perfect format for is plugged, but not the bit-perfect device', () async {
+      const channel = MethodChannel('riflay/usb_dac_plain');
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(
+        channel,
+        (call) async => {
+          'supported': true,
+          'devices': [
+            {'id': 3, 'name': 'Plain DAC', 'formats': <Object>[]},
+          ],
+        },
+      );
+      final usb = UsbDac(channel: channel);
+      await usb.init();
+      expect(usb.device, isNull, reason: 'no bit-perfect format: bit-perfect mode can\'t use it');
+      expect(usb.plugged?.name, 'Plain DAC', reason: 'but it is there, and Settings says so');
+      expect(await usb.prefer(_f(44100, 'pcm16')), isFalse);
+    });
   });
 }
