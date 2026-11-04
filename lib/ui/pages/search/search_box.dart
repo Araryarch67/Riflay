@@ -241,6 +241,11 @@ class _SearchBoxState extends State<SearchBox> {
                   hoverColor: widget.onBar ? AppColors.hover : null,
                   contentPadding: EdgeInsets.symmetric(vertical: widget.onBar ? 12 : 14),
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(500), borderSide: BorderSide.none),
+                  // A pill when idle too: the theme's enabled border (a small radius) would otherwise win.
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(500),
+                    borderSide: BorderSide.none,
+                  ),
                   // Focused in the bar: a light ring, like the streaming apps.
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(500),
