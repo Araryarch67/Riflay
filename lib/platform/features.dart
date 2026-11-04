@@ -48,6 +48,9 @@ abstract final class Features {
   /// Last.fm and ListenBrainz (their sign-ins and queue are kept in files; the proxy doesn't carry their hosts).
   static bool get scrobbling => !Host.isWeb;
 
+  /// SpotiFLAC extensions (their scripts run in an embedded JavaScript engine, which the web build doesn't have).
+  static bool get extensions => !Host.isWeb;
+
   /// Backup & restore (reads and writes the app's own files, then restarts it).
   static bool get backup => !Host.isWeb;
 }

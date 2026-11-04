@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../../models/track.dart';
+import '../../platform/features.dart';
+import '../../services/extensions/extension_store.dart';
 import '../../services/player_controller.dart';
 import '../../services/youtube_music_account.dart';
 import '../../services/youtube_video_search.dart';
@@ -12,6 +14,7 @@ import '../theme.dart';
 import '../widgets/controls.dart';
 import '../widgets/page_scaffold.dart';
 import '../widgets/track_row.dart';
+import 'search/extension_results.dart';
 import 'search/local_results.dart';
 import 'search/remote_results.dart';
 import 'search/search_box.dart';
@@ -46,6 +49,8 @@ class _SearchPageState extends State<SearchPage> {
   @override
   void initState() {
     super.initState();
+    // Which extensions search is known once the store has loaded; a search already out stays as it went.
+    ExtensionStore.instance.load().catchError((Object e) => debugPrint('Extensions not loaded: $e'));
     if (widget.input case final input?) {
       input.controller.addListener(_fromBar);
       input.submitted.addListener(_submittedFromBar);
@@ -83,6 +88,9 @@ class _SearchPageState extends State<SearchPage> {
   /// Filter chip: null is "All".
   WebResultKind? _filter;
   Future<List<RemotePlaylist>>? _only;
+
+  /// What the enabled SpotiFLAC extensions answer, on "All".
+  List<ExtensionSearch> _extensions = const [];
 
   /// "Videos": plain YouTube instead of YouTube Music songs.
   bool _videos = false;
@@ -130,6 +138,7 @@ class _SearchPageState extends State<SearchPage> {
       _videoRun++;
       setState(() {
         _youtube = _all = _only = _top = null;
+        _extensions = const [];
         _videoTracks = const [];
         _videoLoading = false;
       });
@@ -164,6 +173,7 @@ class _SearchPageState extends State<SearchPage> {
     _all = c.ytMusic.search(q);
     _top = topAndSongsFuture(_all, _youtube);
     _only = _filter == null || _filter == WebResultKind.song ? null : c.ytMusic.searchOnly(q, _filter!);
+    _extensions = _filter == null && Features.extensions ? startExtensionSearches(q) : const [];
   }
 
   void _searchVideos(String q) {
@@ -238,6 +248,9 @@ class _SearchPageState extends State<SearchPage> {
       _only = f == null || f == WebResultKind.song || q.length < 2
           ? null
           : PlayerScope.read(context).ytMusic.searchOnly(q, f);
+      if (f == null && q.length >= 2 && Features.extensions && _extensions.isEmpty) {
+        _extensions = startExtensionSearches(q);
+      }
     });
   }
 
@@ -384,6 +397,7 @@ class _SearchPageState extends State<SearchPage> {
               ),
             ),
           ],
+          if (searching && _extensions.isNotEmpty) ExtensionResults(searches: _extensions),
           if (searching) RemoteShelves(future: _all),
           if (artists.isNotEmpty && results.isNotEmpty)
             libraryShelf('Your artists', [

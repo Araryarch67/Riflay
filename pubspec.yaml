@@ -72,6 +72,8 @@ dependencies:
   qr_flutter: ^4.1.0
   mobile_scanner: ^7.4.3
   zxing2: ^0.2.4
+  flutter_js: ^0.8.7
+  archive: ^4.6.0
 
 dependency_overrides:
   # The real Linux implementation of flutter_inappwebview links WPE WebKit,
