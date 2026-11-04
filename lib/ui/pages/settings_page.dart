@@ -21,6 +21,7 @@ import 'listen_together_page.dart';
 import 'layout_settings.dart';
 import 'library_settings.dart';
 import 'download_settings.dart';
+import 'extension_settings.dart';
 import 'privacy_settings.dart';
 import 'scrobble_settings.dart';
 import 'sound_settings.dart';
@@ -41,7 +42,7 @@ enum SettingsGroup {
     'accounts',
     'Accounts & services',
     Icons.manage_accounts_outlined,
-    'YouTube Music, Spotify, Last.fm, Discord, lyrics',
+    'YouTube Music, Spotify, Last.fm, Discord, lyrics, extensions',
   );
 
   const SettingsGroup(this.id, this.label, this.icon, this._summary);
@@ -157,6 +158,13 @@ enum SettingsTopic {
     'Discord & lyrics services',
     Icons.extension_outlined,
     'Show what you play on Discord, lyrics services',
+  ),
+  extensions(
+    SettingsGroup.accounts,
+    'extensions',
+    'Extensions',
+    Icons.extension_rounded,
+    'SpotiFLAC extension repositories: more places to search',
   );
 
   const SettingsTopic(this.group, this.id, this._label, this.icon, this._summary);
@@ -185,6 +193,7 @@ enum SettingsTopic {
     spotify => Features.playlistImport,
     scrobbling => Features.scrobbling,
     backup => Features.backup,
+    extensions => Features.extensions,
     _ => true,
   };
 
@@ -390,6 +399,7 @@ class SettingsTopicPage extends StatelessWidget {
       SettingsTopic.backup => const BackupSettings(),
       SettingsTopic.integrations => const _IntegrationsSettings(),
       SettingsTopic.scrobbling => const ScrobbleSettings(),
+      SettingsTopic.extensions => const ExtensionSettings(),
       // Opened from its row as the Spotify page itself, so this body is never shown.
       SettingsTopic.spotify => const SizedBox.shrink(),
     };

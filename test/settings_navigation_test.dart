@@ -140,6 +140,7 @@ void main() {
         'Spotify',
         'Last.fm & ListenBrainz',
         'Discord & lyrics services',
+        'Extensions',
       ],
     };
     for (final MapEntry(key: group, value: rows) in expected.entries) {
@@ -192,6 +193,7 @@ void main() {
       ),
       ('Accounts & services', 'YouTube Music account', 'Sign in with Google', 'settings:accounts/youtube-music'),
       ('Accounts & services', 'Discord & lyrics services', 'Better Lyrics API key', 'settings:accounts/services'),
+      ('Accounts & services', 'Extensions', 'Repositories', 'settings:accounts/extensions'),
     ];
     for (final (group, section, marker, location) in cases) {
       visited.clear();
