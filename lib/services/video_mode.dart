@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/widgets.dart';
 import 'package:media_kit/media_kit.dart' hide NativePlayer, Track;
 import 'package:media_kit_video/media_kit_video.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../platform/host.dart';
 import '../platform/mpv.dart';
@@ -36,11 +37,14 @@ class VideoMode extends ChangeNotifier with WidgetsBindingObserver {
 
   static final instance = VideoMode._();
 
-  /// Phones get a lighter stream: less data, less to decode.
-  static int get maxHeight => Host.isAndroid || Host.isIOS ? 480 : 720;
+  static bool get _phone => Host.isAndroid || Host.isIOS;
 
-  /// Behind the page's controls the picture is dimmed and never looked at closely: the smallest stream will do.
-  static const backgroundHeight = 360;
+  /// Watched in the player: sharp on a computer screen (1080p); phones get a lighter stream, less data to fetch
+  /// and decode.
+  static int get maxHeight => _phone ? 720 : 1080;
+
+  /// Behind the page: 360p looked blurry across a whole window, so 720p on computers; phones keep it light.
+  static int get backgroundHeight => _phone ? 480 : 720;
 
   PlayerController? _c;
 
@@ -51,6 +55,7 @@ class VideoMode extends ChangeNotifier with WidgetsBindingObserver {
     if (_c == null) WidgetsBinding.instance.addObserver(this);
     _c = c;
     c.addListener(_changed);
+    _loadOn();
     LayoutPrefs.instance
       ..removeListener(_decoderChanged)
       ..addListener(_decoderChanged);
@@ -161,11 +166,24 @@ class VideoMode extends ChangeNotifier with WidgetsBindingObserver {
 
   // ---- The switch ----
 
-  bool _on = false;
+  bool _on = true;
+  static const _onKey = 'videoMode.on';
 
-  /// Video (true) or Song: what the user picked. It lasts until they pick
-  /// Song, or the app goes to the background.
+  /// Video (true) or Song: what the user picked, kept between launches. Song shows no video anywhere, only the
+  /// cover; Video shows the music video wherever the layout has room for it: in the cover's place, behind the page
+  /// (Cover: Background) or behind the side panel. Video by default.
   bool get on => _on;
+
+  Future<void> _loadOn() async {
+    try {
+      final saved = (await SharedPreferences.getInstance()).getBool(_onKey);
+      if (saved != null && saved != _on) {
+        _on = saved;
+        _sync();
+        notifyListeners();
+      }
+    } catch (_) {}
+  }
 
   /// A calm line under the switch when the video couldn't be shown.
   String? get notice => _notice;
@@ -177,14 +195,14 @@ class VideoMode extends ChangeNotifier with WidgetsBindingObserver {
     _notice = null;
     _sync();
     notifyListeners();
+    SharedPreferences.getInstance().then((p) => p.setBool(_onKey, on)).ignore();
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     // Phones: the screen went off or another app is in front. The song plays on alone.
     final away = state == AppLifecycleState.paused || state == AppLifecycleState.hidden;
-    if (away) setOn(false);
-    // The background video stops with it, and starts again when the app is back.
+    // The video stops with it, and starts again when the app is back; the choice of Song or Video stays.
     if (away != _away) {
       _away = away;
       _sync();
@@ -234,11 +252,12 @@ class VideoMode extends ChangeNotifier with WidgetsBindingObserver {
     _release = Timer(const Duration(seconds: 2), _sync);
   }
 
-  /// Whether the video of [track] plays behind the page. Not while the cover area shows the same video (Video
-  /// is picked), where the background stays the blurred cover; not in Lightweight; not once it failed to load.
+  /// Whether the video of [track] may play behind the page: Video is picked, the song has one, not in Lightweight,
+  /// and it hasn't failed to load. Song picked: no video anywhere. (Where the cover area shows the video itself, the
+  /// background keeps the cover: [backgroundController] is null while the video plays there.)
   bool showsAsBackground(Track? track) {
     final v = videoOf(track);
-    return v != null && !_on && !LayoutPrefs.lightweight && !_backgroundFailed.contains(v.videoId);
+    return v != null && _on && !LayoutPrefs.lightweight && !_backgroundFailed.contains(v.videoId);
   }
 
   /// The background's video, once its first picture is ready; null shows the blurred cover.

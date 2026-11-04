@@ -48,20 +48,22 @@ void main() {
   });
 
   test('the video shows behind the page only for a song that has one', () {
-    final mode = VideoMode.instance;
+    final mode = VideoMode.instance..setOn(true);
     expect(mode.showsAsBackground(song), isTrue);
     expect(mode.showsAsBackground(plain), isFalse);
     expect(mode.showsAsBackground(null), isFalse);
   });
 
-  test('with Video picked the cover area shows it, so the background does not repeat it', () {
-    final mode = VideoMode.instance..setOn(true);
+  test('Song shows no video anywhere; Video lets it play behind the page', () {
+    final mode = VideoMode.instance..setOn(false);
     expect(mode.showsAsBackground(song), isFalse);
-    mode.setOn(false);
+    mode.setOn(true);
     expect(mode.showsAsBackground(song), isTrue);
+    expect(mode.showsAsBackground(plain), isFalse, reason: 'a song without a video');
   });
 
   test('Lightweight draws no video', () async {
+    VideoMode.instance.setOn(true);
     await LayoutPrefs.instance.setPerformance(PerformanceMode.lightweight);
     expect(VideoMode.instance.showsAsBackground(song), isFalse);
     await LayoutPrefs.instance.setPerformance(PerformanceMode.balanced);

@@ -171,6 +171,7 @@ void main() {
     expect(find.text('Video'), findsNothing);
     expect(find.text('Beta'), findsNothing);
 
+    VideoMode.instance.setOn(false);
     await tester.pumpWidget(app(song));
     expect(find.text('Song'), findsOneWidget);
     expect(find.text('Video'), findsOneWidget);
@@ -183,10 +184,11 @@ void main() {
     // Nothing is playing here, so no video loads: the cover stays.
     expect(find.text('cover'), findsOneWidget);
 
-    // Going to the background turns it back into Song.
+    // Going to the background keeps the choice (the video only pauses there).
     VideoMode.instance.didChangeAppLifecycleState(AppLifecycleState.paused);
     await tester.pump();
-    expect(VideoMode.instance.on, isFalse);
+    expect(VideoMode.instance.on, isTrue);
+    VideoMode.instance.didChangeAppLifecycleState(AppLifecycleState.resumed);
 
     await tester.pumpWidget(const SizedBox());
     await tester.pump(const Duration(seconds: 3));

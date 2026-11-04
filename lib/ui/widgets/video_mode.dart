@@ -6,6 +6,7 @@ import '../../services/layout_prefs.dart';
 import '../../services/player_controller.dart';
 import '../../services/video_mode.dart';
 import '../theme.dart';
+import 'skeleton.dart';
 
 /// YouTube Music's Song / Video switch, above the cover of the Now Playing
 /// views. Only there when the song has a music video this device can show.
@@ -138,15 +139,7 @@ class _VideoViewState extends State<_VideoView> {
         fit: StackFit.passthrough,
         children: [
           widget.cover,
-          if (mode.loading)
-            const Positioned.fill(
-              child: Center(
-                child: SizedBox.square(
-                  dimension: 28,
-                  child: CircularProgressIndicator(strokeWidth: 3, color: Colors.white),
-                ),
-              ),
-            ),
+          if (mode.loading) const Positioned.fill(child: Center(child: SkeletonBox(width: 28, height: 28, radius: 14))),
         ],
       );
     }
@@ -214,12 +207,14 @@ class _VideoBackgroundState extends State<VideoBackground> {
     return ListenableBuilder(
       listenable: Listenable.merge([mode, LayoutPrefs.instance]),
       builder: (context, _) {
-        final active = visible && !LayoutPrefs.lightweight;
+        final allowed = visible && !LayoutPrefs.lightweight;
+        if (allowed) mode.lookUp(widget.track);
+        // Only a song that has a video asks for the player (and keeps it for a moment after): one without asks nothing.
+        final active = allowed && mode.videoOf(widget.track) != null;
         // Registering notifies VideoMode: after this frame, not during it.
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted) _register(active);
         });
-        if (active) mode.lookUp(widget.track);
         final video = active ? mode.backgroundController(widget.track) : null;
         if (video == null) return const SizedBox.shrink();
         return IgnorePointer(
