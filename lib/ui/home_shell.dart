@@ -686,7 +686,14 @@ class _HomeShellState extends State<HomeShell> {
           valueListenable: fullScreenPlayer,
           builder: (context, full, pages) {
             // Keyed: it moves between the column and the overlay without losing what's typed in it.
-            final titleBar = AutoHideBar(key: _titleBarKey, edge: AxisDirection.up, enabled: full, child: _titleBar());
+            final titleBar = AutoHideBar(
+              key: _titleBarKey,
+              edge: AxisDirection.up,
+              enabled: full,
+              // Over the player it brings the window's colour with it, as it has above the pages. Always there
+              // (clear above the pages), so the bar keeps its state, such as what is typed, between the two.
+              child: ColoredBox(color: full ? AppColors.background : Colors.transparent, child: _titleBar()),
+            );
             return Scaffold(
               extendBody: full || LayoutPrefs.instance.desktopBar.floats,
               // In the bottom slot so floating snackbars stack above the player instead of covering it.
