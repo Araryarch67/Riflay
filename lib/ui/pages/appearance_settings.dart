@@ -10,6 +10,7 @@ import '../theme.dart';
 import '../widgets/color_picker.dart';
 import '../widgets/menus.dart';
 import 'sound_settings.dart';
+import '../widgets/skeleton.dart';
 
 /// Settings › Look & feel › Appearance: theme (including Dynamic, which follows the playing
 /// song's cover), light / dark mode, accent, cover-art colours and their
@@ -370,10 +371,7 @@ class _FontDialogState extends State<_FontDialog> {
                           () => Navigator.pop(context, (null,)),
                         ),
                       if (snap.connectionState != ConnectionState.done)
-                        const Padding(
-                          padding: EdgeInsets.all(24),
-                          child: Center(child: CircularProgressIndicator()),
-                        )
+                        const Padding(padding: EdgeInsets.all(16), child: SkeletonList(count: 6, rowSize: 28))
                       else
                         for (final f in fonts)
                           row(

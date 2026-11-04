@@ -118,23 +118,64 @@ class PresetSchematic extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = AppColors.of(context);
-    final line = c.textPrimary.withValues(alpha: 0.5);
+    final line = c.textPrimary.withValues(alpha: 0.6);
     final soft = c.textPrimary.withValues(alpha: 0.2);
+    final art = c.accent.withValues(alpha: 0.6);
     Widget bar(double w, double h, Color color, {double r = 2}) => Container(
       width: w,
       height: h,
       decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(r)),
     );
     Widget gap(double w) => SizedBox(width: w);
-    final full = preset.cover == PlayerCover.fullBleed;
-    final seekH = preset.progressShape == ProgressBarShape.pill ? 5.0 : 2.0;
+    final background = preset.cover == PlayerCover.background;
+    // The cover: a rounded square, a flower (a rounder blob) or no frame, fading into the page.
+    final cover = background
+        ? SizedBox(
+            height: 62,
+            // Out past the drawing's padding, edge to edge.
+            child: OverflowBox(
+              minWidth: 96,
+              maxWidth: 96,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [art, art.withValues(alpha: 0)],
+                  ),
+                ),
+              ),
+            ),
+          )
+        : Container(
+            height: 52,
+            margin: const EdgeInsets.symmetric(horizontal: 8),
+            decoration: BoxDecoration(
+              color: art,
+              borderRadius: BorderRadius.circular(preset.cover == PlayerCover.flower ? 22 : 6),
+            ),
+          );
+    final seek = switch (preset.progressShape) {
+      ProgressBarShape.pill => Row(
+        children: [
+          bar(22, 6, c.textPrimary, r: 3),
+          gap(2),
+          bar(2, 12, c.textPrimary, r: 1),
+          gap(2),
+          Expanded(child: bar(double.infinity, 6, soft, r: 3)),
+        ],
+      ),
+      ProgressBarShape.thin => bar(double.infinity, 2, soft, r: 1),
+      _ => bar(double.infinity, 2, soft, r: 1),
+    };
     return Container(
-      width: 84,
-      height: 150,
+      width: 96,
+      height: 176,
       padding: const EdgeInsets.all(6),
+      clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         color: c.palette.background,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: soft),
       ),
       child: Column(
@@ -143,55 +184,71 @@ class PresetSchematic extends StatelessWidget {
           if (preset.header == PlayerHeader.classic)
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [bar(8, 3, line), bar(20, 3, soft), bar(8, 3, line)],
+              children: [bar(8, 3, line), bar(22, 3, soft), bar(8, 3, line)],
             )
           else
-            Center(child: bar(preset.header == PlayerHeader.centered ? 28 : 34, 3, soft)),
+            Center(child: bar(preset.header == PlayerHeader.centered ? 30 : 38, 3, soft)),
           const SizedBox(height: 4),
-          Container(
-            height: full ? 54 : 44,
-            margin: EdgeInsets.symmetric(horizontal: full ? 0 : 6),
-            decoration: BoxDecoration(
-              color: c.accent.withValues(alpha: 0.55),
-              borderRadius: BorderRadius.circular(full ? 0 : 5),
-            ),
-          ),
-          const SizedBox(height: 5),
+          cover,
+          const SizedBox(height: 6),
           Row(
             children: [
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: [bar(32, 4, line), const SizedBox(height: 3), bar(22, 3, soft)],
+                children: [bar(34, 4, line), const SizedBox(height: 3), bar(22, 3, soft)],
               ),
               const Spacer(),
               if (preset.titleActions == TitleActions.boxed) ...[
-                bar(8, 8, c.textPrimary),
-                gap(2),
-                bar(8, 8, soft),
+                // A joined pair: outer corners rounder than the inner ones.
+                Container(
+                  width: 11,
+                  height: 12,
+                  decoration: BoxDecoration(
+                    color: c.textPrimary,
+                    borderRadius: const BorderRadius.horizontal(left: Radius.circular(6), right: Radius.circular(2)),
+                  ),
+                ),
+                gap(1),
+                Container(
+                  width: 11,
+                  height: 12,
+                  decoration: BoxDecoration(
+                    color: c.textPrimary,
+                    borderRadius: const BorderRadius.horizontal(left: Radius.circular(2), right: Radius.circular(6)),
+                  ),
+                ),
               ] else
-                bar(8, 8, soft, r: 4),
+                bar(9, 9, line, r: 4.5),
             ],
           ),
-          const SizedBox(height: 7),
-          bar(double.infinity, seekH, soft, r: 3),
+          const SizedBox(height: 8),
+          seek,
+          const SizedBox(height: 3),
+          Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [bar(8, 2, soft), bar(8, 2, soft)]),
           const SizedBox(height: 8),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: switch (preset.transport) {
               PlayerTransport.pill => [
-                bar(9, 9, soft, r: 5),
-                gap(4),
-                bar(26, 10, c.textPrimary, r: 5),
-                gap(4),
-                bar(9, 9, soft, r: 5),
+                bar(14, 14, soft, r: 7),
+                gap(3),
+                bar(34, 14, c.textPrimary, r: 7),
+                gap(3),
+                bar(14, 14, soft, r: 7),
               ],
-              PlayerTransport.plain => [bar(8, 6, line), gap(6), bar(8, 10, c.textPrimary), gap(6), bar(8, 6, line)],
+              PlayerTransport.plain => [
+                bar(10, 8, line),
+                gap(10),
+                bar(8, 13, c.textPrimary),
+                gap(10),
+                bar(10, 8, line),
+              ],
               PlayerTransport.classic => [
-                bar(6, 6, soft),
+                bar(7, 7, soft),
                 gap(5),
-                bar(12, 12, c.textPrimary, r: 6),
+                bar(15, 15, c.textPrimary, r: 8),
                 gap(5),
-                bar(6, 6, soft),
+                bar(7, 7, soft),
               ],
             },
           ),
@@ -199,14 +256,24 @@ class PresetSchematic extends StatelessWidget {
           Row(
             mainAxisAlignment: preset.bottomRow == PlayerBottomRow.classic
                 ? MainAxisAlignment.spaceBetween
+                : preset.bottomRow == PlayerBottomRow.chips
+                ? MainAxisAlignment.spaceBetween
                 : MainAxisAlignment.center,
             children: switch (preset.bottomRow) {
               PlayerBottomRow.chips => [
-                for (var i = 0; i < 4; i++) ...[bar(8, 8, soft, r: 3), gap(3)],
-                bar(8, 8, line, r: 4),
+                // One outlined group, and a round white More.
+                Container(
+                  width: 54,
+                  height: 12,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: line, width: 1),
+                  ),
+                ),
+                bar(12, 12, c.textPrimary, r: 6),
               ],
-              PlayerBottomRow.minimal => [bar(6, 6, line), gap(6), bar(30, 8, soft, r: 4), gap(6), bar(6, 6, line)],
-              PlayerBottomRow.classic => [bar(6, 6, line), bar(6, 6, line)],
+              PlayerBottomRow.minimal => [bar(7, 7, line), gap(8), bar(26, 10, soft, r: 5), gap(8), bar(7, 7, line)],
+              PlayerBottomRow.classic => [bar(7, 7, line), bar(7, 7, line)],
             },
           ),
         ],

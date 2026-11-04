@@ -15,6 +15,7 @@ class PageScaffold extends StatefulWidget {
     this.title,
     this.actions = const [],
     this.brand = false,
+    this.overHero = false,
   });
 
   final List<Widget> slivers;
@@ -24,6 +25,10 @@ class PageScaffold extends StatefulWidget {
 
   /// The app's mark and name at the left of the bar, on phones (desktop windows have it in the title bar).
   final bool brand;
+
+  /// The first thing on the page is a picture that goes to the very top, under the status bar: the bar then floats over
+  /// it (a round back button) and only fills in once the picture has scrolled away.
+  final bool overHero;
 
   @override
   State<PageScaffold> createState() => _PageScaffoldState();
@@ -58,7 +63,7 @@ class _PageScaffoldState extends State<PageScaffold> {
     final history = shell.history;
     final brand = widget.brand && shell.compact && !hasCustomTitleBar;
     final showBar = history != null || canPop || widget.actions.isNotEmpty || brand;
-    final barOpacity = ((_offset - 180) / 80).clamp(0.0, 1.0);
+    final barOpacity = (widget.overHero ? (_offset - 240) / 60 : (_offset - 180) / 80).clamp(0.0, 1.0);
     const barHeight = 56.0;
     final topInset = shell.compact ? MediaQuery.paddingOf(context).top : 0.0;
 
@@ -91,7 +96,7 @@ class _PageScaffoldState extends State<PageScaffold> {
           CustomScrollView(
             controller: _scroll,
             slivers: [
-              SliverToBoxAdapter(child: SizedBox(height: topInset + (showBar ? barHeight : 8))),
+              SliverToBoxAdapter(child: SizedBox(height: widget.overHero ? 0 : topInset + (showBar ? barHeight : 8))),
               ...widget.slivers,
               // Clears the phone's floating player and tab bar.
               SliverToBoxAdapter(child: SizedBox(height: 32 + MediaQuery.paddingOf(context).bottom)),

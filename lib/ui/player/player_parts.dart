@@ -6,11 +6,11 @@ import 'package:just_audio/just_audio.dart' show LoopMode;
 
 import '../../models/track.dart';
 import '../../platform/features.dart';
-import '../../services/appearance.dart';
 import '../../services/layout_prefs.dart';
 import '../../services/player_controller.dart';
 import '../cast_picker.dart';
 import '../pages/listen_together_page.dart';
+import '../pages/lyrics_page.dart' show LyricsMoreMenu;
 import '../shell_scope.dart';
 import '../shortcuts.dart';
 import '../theme.dart';
@@ -89,6 +89,8 @@ class PartButton extends StatelessWidget {
       iconSize: iconSize,
       style: IconButton.styleFrom(
         backgroundColor: fill,
+        // Disabled (no next song): the same circle, a dimmer icon.
+        disabledBackgroundColor: fill,
         foregroundColor: color,
         disabledForegroundColor: color.withValues(alpha: 0.38),
         fixedSize: Size.square(size),
@@ -98,6 +100,142 @@ class PartButton extends StatelessWidget {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(radius), side: side),
       ),
       icon: Icon(icon),
+    );
+  }
+}
+
+/// One button of a [JoinedButtons] group.
+typedef JoinedSegment = ({IconData icon, String tooltip, VoidCallback? onPressed, bool lit});
+
+JoinedSegment joinedSegment(IconData icon, String tooltip, VoidCallback? onPressed, {bool lit = false}) =>
+    (icon: icon, tooltip: tooltip, onPressed: onPressed, lit: lit);
+
+/// Buttons that touch, as a Material 3 Expressive connected group. Filled: white segments a hairline apart, the outer
+/// corners rounder than the inner ones. Outlined: one rounded outline with thin dividers. No text, only icons.
+class JoinedButtons extends StatelessWidget {
+  const JoinedButtons({
+    super.key,
+    required this.segments,
+    this.outlined = false,
+    this.height = 48,
+    this.segmentWidth = 52,
+    this.iconSize = 22,
+  });
+
+  final List<JoinedSegment> segments;
+  final bool outlined;
+  final double height;
+  final double segmentWidth;
+  final double iconSize;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = AppColors.of(context);
+    final outer = math.min(height / 2, LayoutPrefs.radius(height / 2));
+    final inner = math.min(outer, LayoutPrefs.radius(8));
+    Widget segment(int i, {required BorderRadius shape}) {
+      final s = segments[i];
+      // On white the "on" state is the filled icon (a heart), not a tint that could read as dimmed.
+      final color = s.lit && outlined ? c.accent : (outlined ? c.textPrimary : c.onInverse);
+      return Tooltip(
+        message: s.tooltip,
+        child: InkWell(
+          customBorder: RoundedRectangleBorder(borderRadius: shape),
+          onTap: s.onPressed,
+          child: SizedBox(
+            width: segmentWidth,
+            height: height,
+            child: Icon(s.icon, size: iconSize, color: s.onPressed == null ? color.withValues(alpha: 0.38) : color),
+          ),
+        ),
+      );
+    }
+
+    final last = segments.length - 1;
+    if (outlined) {
+      return Container(
+        clipBehavior: Clip.antiAlias,
+        decoration: ShapeDecoration(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(outer),
+            side: BorderSide(color: c.textPrimary.withValues(alpha: 0.25)),
+          ),
+        ),
+        child: Material(
+          type: MaterialType.transparency,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (var i = 0; i <= last; i++) ...[
+                if (i > 0) Container(width: 1, height: height * 0.5, color: c.textPrimary.withValues(alpha: 0.2)),
+                segment(i, shape: BorderRadius.zero),
+              ],
+            ],
+          ),
+        ),
+      );
+    }
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        for (var i = 0; i <= last; i++) ...[
+          if (i > 0) const SizedBox(width: 2),
+          Material(
+            color: c.inverse,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.horizontal(
+                left: Radius.circular(i == 0 ? outer : inner),
+                right: Radius.circular(i == last ? outer : inner),
+              ),
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: segment(
+              i,
+              shape: BorderRadius.horizontal(
+                left: Radius.circular(i == 0 ? outer : inner),
+                right: Radius.circular(i == last ? outer : inner),
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+/// Share and the heart as one joined white pair (Buttons by the title: Boxed). The heart is there for songs that can be
+/// liked; Share is always.
+class SharePair extends StatelessWidget {
+  const SharePair({super.key, required this.track, this.height = 48, this.segmentWidth = 52, this.iconSize = 22});
+
+  final Track track;
+  final double height;
+  final double segmentWidth;
+  final double iconSize;
+
+  @override
+  Widget build(BuildContext context) {
+    final account = PlayerScope.read(context).ytMusic;
+    JoinedButtons pair(bool? liked, VoidCallback? toggle) => JoinedButtons(
+      height: height,
+      segmentWidth: segmentWidth,
+      iconSize: iconSize,
+      segments: [
+        joinedSegment(Icons.share_outlined, 'Share', () => shareTrack(context, track)),
+        if (liked != null)
+          joinedSegment(
+            liked ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+            liked ? 'Remove from Liked music' : 'Add to Liked music',
+            toggle,
+            lit: liked,
+          ),
+      ],
+    );
+    // A song that can't be liked (a file here, or not signed in) keeps its heart, properly dimmed.
+    if (!track.isRemote || !account.canEdit) return pair(false, null);
+    return ListenableBuilder(
+      listenable: account,
+      builder: (context, _) => pair(account.isLiked(track), () => toggleLike(context, track)),
     );
   }
 }
@@ -220,34 +358,14 @@ class PlayerTitleBlock extends StatelessWidget {
     final text = Theme.of(context).textTheme;
     final colors = AppColors.of(context);
     final style = LayoutPrefs.instance.titleActions;
+    // On the cover itself (Cover: Background) the text is white, whatever the theme.
+    final onCover = LayoutPrefs.instance.playerCover == PlayerCover.background;
     final t = track;
     final actions = t == null
         ? null
         : switch (style) {
             TitleActions.classic => LikeButton(track: t, size: 28, color: colors.textPrimary),
-            TitleActions.boxed => Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                PartButton(
-                  icon: Icons.ios_share_rounded,
-                  tooltip: 'Share',
-                  look: PartLook.filled,
-                  onPressed: () => shareTrack(context, t),
-                ),
-                PlayerLike(
-                  track: t,
-                  builder: (context, liked, toggle) => Padding(
-                    padding: const EdgeInsets.only(left: 8),
-                    child: PartButton(
-                      icon: liked ? Icons.favorite_rounded : Icons.favorite_border_rounded,
-                      tooltip: liked ? 'Remove from Liked music' : 'Add to Liked music',
-                      lit: liked,
-                      onPressed: toggle,
-                    ),
-                  ),
-                ),
-              ],
-            ),
+            TitleActions.boxed => SharePair(track: t),
             TitleActions.plain => Row(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -263,7 +381,7 @@ class PlayerTitleBlock extends StatelessWidget {
                     onPressed: toggle,
                   ),
                 ),
-                const PlayerMoreAction(look: PartLook.plain, icon: Icons.more_vert_rounded, size: 40, iconSize: 28),
+                const PlayerMoreAction(look: PartLook.plain, icon: Icons.more_horiz_rounded, size: 40, iconSize: 28),
               ],
             ),
           };
@@ -275,17 +393,22 @@ class PlayerTitleBlock extends StatelessWidget {
             children: [
               MarqueeText(
                 t?.title ?? 'Nothing playing',
-                style: text.headlineSmall?.copyWith(fontWeight: FontWeight.w800, letterSpacing: -0.5),
+                style: text.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.5,
+                  color: onCover ? Colors.white : null,
+                ),
               ),
               const SizedBox(height: 2),
               LinkText(
                 t?.artist ?? '',
-                style: text.titleMedium?.copyWith(color: colors.textSecondary),
+                style: text.titleMedium?.copyWith(color: onCover ? Colors.white70 : colors.textSecondary),
                 onTap: t == null ? null : openArtist(context, PlayerScope.read(context), t),
               ),
-              if (style == TitleActions.classic && showBadge) ...[
+              // In every look: an outlined pill, or a soft translucent one on the Plain buttons' (Kawaii) page.
+              if (showBadge && LayoutPrefs.instance.qualityBadgePlace == QualityBadgePlace.underArtist) ...[
                 const SizedBox(height: 8),
-                const QualityBadge(onDark: true),
+                QualityBadge(onDark: true, soft: style == TitleActions.plain),
               ],
             ],
           ),
@@ -355,41 +478,48 @@ class PlayerControlsRow extends StatelessWidget {
         final next = tipWith('Next', AppAction.next);
         final play = tipWith(t.playing ? 'Pause' : 'Play', AppAction.playPause);
         if (plain) {
+          // Three big glyphs spread evenly; shuffle and repeat, when they are here, wait small at the edges.
           return Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               if (withModes) _shuffleButton(c, t),
-              IconButton(
-                tooltip: prev,
-                iconSize: 44,
-                color: colors.textPrimary,
-                onPressed: t.hasQueue ? c.previous : null,
-                icon: const Icon(Icons.fast_rewind_rounded),
-              ),
-              t.loading
-                  ? SizedBox.square(
-                      dimension: 64,
-                      child: Center(child: CircularProgressIndicator(strokeWidth: 3, color: colors.textPrimary)),
-                    )
-                  : IconButton(
-                      tooltip: play,
-                      iconSize: 64,
+              Expanded(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    IconButton(
+                      tooltip: prev,
+                      iconSize: 44,
                       color: colors.textPrimary,
-                      onPressed: t.canPlay ? c.togglePlay : null,
-                      icon: Icon(t.playing ? Icons.pause_rounded : Icons.play_arrow_rounded),
+                      onPressed: t.hasQueue ? c.previous : null,
+                      icon: const Icon(Icons.fast_rewind_rounded),
                     ),
-              IconButton(
-                tooltip: next,
-                iconSize: 44,
-                color: colors.textPrimary,
-                onPressed: t.hasNext ? c.next : null,
-                icon: const Icon(Icons.fast_forward_rounded),
+                    t.loading
+                        ? SizedBox.square(
+                            dimension: 64,
+                            child: Center(child: CircularProgressIndicator(strokeWidth: 3, color: colors.textPrimary)),
+                          )
+                        : IconButton(
+                            tooltip: play,
+                            iconSize: 64,
+                            color: colors.textPrimary,
+                            onPressed: t.canPlay ? c.togglePlay : null,
+                            icon: Icon(t.playing ? Icons.pause_rounded : Icons.play_arrow_rounded),
+                          ),
+                    IconButton(
+                      tooltip: next,
+                      iconSize: 44,
+                      color: colors.textPrimary,
+                      onPressed: t.hasNext ? c.next : null,
+                      icon: const Icon(Icons.fast_forward_rounded),
+                    ),
+                  ],
+                ),
               ),
               if (withModes) _repeatButton(c, t),
             ],
           );
         }
-        final radius = math.min(28.0, LayoutPrefs.radius(28));
+        final radius = math.min(32.0, LayoutPrefs.radius(32));
         return Row(
           children: [
             if (withModes) _shuffleButton(c, t),
@@ -398,7 +528,7 @@ class PlayerControlsRow extends StatelessWidget {
               tooltip: prev,
               look: PartLook.muted,
               round: true,
-              size: 52,
+              size: 64,
               iconSize: 28,
               onPressed: t.hasQueue ? c.previous : null,
             ),
@@ -413,7 +543,7 @@ class PlayerControlsRow extends StatelessWidget {
                   child: InkWell(
                     onTap: t.canPlay ? c.togglePlay : null,
                     child: SizedBox(
-                      height: 56,
+                      height: 64,
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
@@ -423,7 +553,7 @@ class PlayerControlsRow extends StatelessWidget {
                                   child: CircularProgressIndicator(strokeWidth: 2.5, color: colors.onInverse),
                                 )
                               : Icon(
-                                  t.playing ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                                  t.playing ? Icons.pause_rounded : Icons.play_arrow_outlined,
                                   color: colors.onInverse,
                                 ),
                           const SizedBox(width: 6),
@@ -449,7 +579,7 @@ class PlayerControlsRow extends StatelessWidget {
               tooltip: next,
               look: PartLook.muted,
               round: true,
-              size: 52,
+              size: 64,
               iconSize: 28,
               onPressed: t.hasNext ? c.next : null,
             ),
@@ -464,9 +594,12 @@ class PlayerControlsRow extends StatelessWidget {
 /// Where the song plays from, at the top of the desktop's expanded player and side panel, as Settings › Layout ›
 /// Player › Top of the player says: Classic is the plain line, the others are the phone's two lines or one.
 class PlayerFromLabel extends StatelessWidget {
-  const PlayerFromLabel({super.key, required this.from, this.album});
+  const PlayerFromLabel({super.key, required this.from, this.album, this.classic = false});
 
   final String? from;
+
+  /// Always the plain line, whatever the setting (the expanded player, which is Classic in every preset).
+  final bool classic;
 
   /// What Classic shows when nothing says where the song plays from.
   final String? album;
@@ -477,7 +610,7 @@ class PlayerFromLabel extends StatelessWidget {
     builder: (context, _) {
       final text = Theme.of(context).textTheme;
       final muted = AppColors.of(context).textSecondary;
-      return switch (LayoutPrefs.instance.playerHeader) {
+      return switch (classic ? PlayerHeader.classic : LayoutPrefs.instance.playerHeader) {
         PlayerHeader.classic => Text(
           from ?? album ?? 'Now playing',
           maxLines: 1,
@@ -510,33 +643,12 @@ class PlayerFromLabel extends StatelessWidget {
 
 /// The buttons beside the title in the desktop's expanded player. Classic is the heart and the song's menu; the
 /// others add Share in a box or make the heart a plain bigger icon. The song's menu is always there.
-List<Widget> desktopTitleActions(BuildContext context, Track track) {
+List<Widget> desktopTitleActions(BuildContext context, Track track, {bool classic = false}) {
   final menu = TrackMenuButton(track: track, nowPlaying: true);
-  return switch (LayoutPrefs.instance.titleActions) {
+  return switch (classic ? TitleActions.classic : LayoutPrefs.instance.titleActions) {
     TitleActions.classic => [LikeButton(track: track, size: 26), menu],
     TitleActions.boxed => [
-      PartButton(
-        icon: Icons.ios_share_rounded,
-        tooltip: 'Share',
-        look: PartLook.filled,
-        size: 40,
-        iconSize: 20,
-        onPressed: () => shareTrack(context, track),
-      ),
-      PlayerLike(
-        track: track,
-        builder: (context, liked, toggle) => Padding(
-          padding: const EdgeInsets.only(left: 8),
-          child: PartButton(
-            icon: liked ? Icons.favorite_rounded : Icons.favorite_border_rounded,
-            tooltip: liked ? 'Remove from Liked music' : 'Add to Liked music',
-            lit: liked,
-            size: 40,
-            iconSize: 20,
-            onPressed: toggle,
-          ),
-        ),
-      ),
+      SharePair(track: track, height: 40, segmentWidth: 42, iconSize: 20),
       const SizedBox(width: 4),
       menu,
     ],
@@ -687,53 +799,52 @@ class PlayerBottomButtons extends StatelessWidget {
     final shell = ShellScope.of(context);
     final c = PlayerScope.read(context);
     if (LayoutPrefs.instance.bottomRow == PlayerBottomRow.minimal) return _minimal(context, c, shell);
+    // Chips: the five buttons are one outlined group; More is its own white circle.
     return LayoutBuilder(
       builder: (context, box) {
-        final size = math.min(44.0, (box.maxWidth - 44) / 6);
-        Widget gap() => const SizedBox(width: 8);
+        final more = withMore ? 48.0 : 0.0;
+        final width = math.min(48.0, (box.maxWidth - more - 12) / 5);
         return PlayerSelect<_Transport>(
           select: _selectTransport,
           builder: (context, t, _) => Row(
             children: [
-              PartButton(icon: Icons.queue_music_rounded, tooltip: 'Queue', size: size, onPressed: shell.openQueue),
-              gap(),
               ListenableBuilder(
                 listenable: c.sleep,
-                builder: (context, _) {
-                  final label = SleepTimerLabel.of(c.sleep);
-                  return PartButton(
-                    icon: c.sleep.active ? Icons.bedtime_rounded : Icons.bedtime_outlined,
-                    tooltip: c.sleep.active ? 'Sleep timer: $label' : 'Sleep timer',
-                    lit: c.sleep.active,
-                    size: size,
-                    onPressed: () => showSleepTimer(context),
-                  );
-                },
-              ),
-              gap(),
-              PartButton(
-                icon: Icons.shuffle_rounded,
-                tooltip: t.shuffle ? 'Disable shuffle' : 'Enable shuffle',
-                lit: t.shuffle,
-                size: size,
-                onPressed: t.hasQueue ? c.toggleShuffle : null,
-              ),
-              gap(),
-              PartButton(icon: Icons.lyrics_outlined, tooltip: 'Lyrics', size: size, onPressed: shell.openLyrics),
-              gap(),
-              PartButton(
-                icon: t.loop == LoopMode.one ? Icons.repeat_one_rounded : Icons.repeat_rounded,
-                tooltip: switch (t.loop) {
-                  LoopMode.off => 'Enable repeat',
-                  LoopMode.all => 'Enable repeat one',
-                  LoopMode.one => 'Disable repeat',
-                },
-                lit: t.loop != LoopMode.off,
-                size: size,
-                onPressed: t.hasQueue ? c.cycleLoopMode : null,
+                builder: (context, _) => JoinedButtons(
+                  outlined: true,
+                  height: 48,
+                  segmentWidth: width,
+                  iconSize: 22,
+                  segments: [
+                    joinedSegment(Icons.queue_music_rounded, 'Queue', shell.openQueue),
+                    joinedSegment(
+                      c.sleep.active ? Icons.bedtime_rounded : Icons.bedtime_outlined,
+                      c.sleep.active ? 'Sleep timer: ${SleepTimerLabel.of(c.sleep)}' : 'Sleep timer',
+                      () => showSleepTimer(context),
+                      lit: c.sleep.active,
+                    ),
+                    joinedSegment(
+                      Icons.shuffle_rounded,
+                      t.shuffle ? 'Disable shuffle' : 'Enable shuffle',
+                      t.hasQueue ? c.toggleShuffle : null,
+                      lit: t.shuffle,
+                    ),
+                    joinedSegment(Icons.lyrics_outlined, 'Lyrics', shell.openLyrics),
+                    joinedSegment(
+                      t.loop == LoopMode.one ? Icons.repeat_one_rounded : Icons.repeat_rounded,
+                      switch (t.loop) {
+                        LoopMode.off => 'Enable repeat',
+                        LoopMode.all => 'Enable repeat one',
+                        LoopMode.one => 'Disable repeat',
+                      },
+                      t.hasQueue ? c.cycleLoopMode : null,
+                      lit: t.loop != LoopMode.off,
+                    ),
+                  ],
+                ),
               ),
               const Spacer(),
-              if (withMore) PlayerMoreAction(size: size),
+              if (withMore) const PlayerMoreAction(size: 48, icon: Icons.more_vert_rounded),
             ],
           ),
         );
@@ -741,71 +852,87 @@ class PlayerBottomButtons extends StatelessWidget {
     );
   }
 
+  /// Lyrics, a capsule of two icons (the speaker opens the volume, the person Listen together or the output) and
+  /// Queue. Icons only: a tooltip says what each is.
   Widget _minimal(BuildContext context, PlayerController c, ShellScope shell) {
     final colors = AppColors.of(context);
     final text = Theme.of(context).textTheme;
     Widget plain(IconData icon, String tooltip, VoidCallback onTap) =>
         PartButton(icon: icon, tooltip: tooltip, look: PartLook.plain, size: 48, iconSize: 26, onPressed: onTap);
-    Widget segment(String label, VoidCallback onTap, {bool selected = false}) => Flexible(
-      child: InkWell(
-        borderRadius: BorderRadius.circular(18),
-        onTap: onTap,
-        child: Container(
-          height: 32,
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: selected ? colors.textPrimary.withValues(alpha: 0.16) : null,
-            borderRadius: BorderRadius.circular(LayoutPrefs.radius(18)),
-          ),
-          child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: text.labelLarge),
-        ),
-      ),
+    Widget segment(IconData icon, String tooltip, VoidCallback onTap) => PartButton(
+      icon: icon,
+      tooltip: tooltip,
+      look: PartLook.plain,
+      round: true,
+      size: 44,
+      iconSize: 22,
+      onPressed: onTap,
     );
-    final output = Features.casting;
     final together = Features.listenTogether;
+    final output = Features.casting;
     return Row(
       children: [
         plain(Icons.lyrics_outlined, 'Lyrics', shell.openLyrics),
         Expanded(
-          child: output || together
-              ? ListenableBuilder(
-                  listenable: c.cast,
-                  builder: (context, _) => Column(
+          child: ListenableBuilder(
+            listenable: c.cast,
+            builder: (context, _) => Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(3),
+                  decoration: ShapeDecoration(
+                    shape: const StadiumBorder(),
+                    color: colors.textPrimary.withValues(alpha: 0.14),
+                  ),
+                  child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Container(
-                        padding: const EdgeInsets.all(2),
-                        decoration: BoxDecoration(
-                          color: colors.textPrimary.withValues(alpha: 0.08),
-                          borderRadius: BorderRadius.circular(LayoutPrefs.radius(20)),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            if (output) segment('Speaker', () => showCastPicker(context), selected: true),
-                            if (together)
-                              segment('Listen together', () => openListenTogether(context, closePlayer: true)),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        c.cast.target == null ? 'Playing on this device' : 'Playing on ${c.cast.target!.name}',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: text.labelSmall?.copyWith(color: colors.textSecondary),
-                      ),
+                      segment(Icons.speaker_outlined, 'Volume', () => showVolumePopup(context)),
+                      if (together || output) ...[
+                        Container(width: 1, height: 20, color: colors.textPrimary.withValues(alpha: 0.22)),
+                        if (together)
+                          segment(
+                            Icons.person_outline_rounded,
+                            'Listen together',
+                            () => openListenTogether(context, closePlayer: true),
+                          )
+                        else
+                          segment(Icons.person_outline_rounded, 'Play on a device', () => showCastPicker(context)),
+                      ],
                     ],
                   ),
-                )
-              : const SizedBox.shrink(),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  c.cast.target?.name ?? 'Speaker',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: text.labelSmall?.copyWith(color: colors.textSecondary, fontSize: 10),
+                ),
+              ],
+            ),
+          ),
         ),
         plain(Icons.queue_music_rounded, 'Queue', shell.openQueue),
       ],
     );
   }
 }
+
+/// The volume as a small sheet from the speaker button: a thin slider with a mute and a speaker icon at its ends,
+/// the same look as the progress bar's Thin line.
+Future<void> showVolumePopup(BuildContext context) => showModalBottomSheet<void>(
+  context: context,
+  backgroundColor: AppColors.of(context).elevated,
+  showDragHandle: true,
+  builder: (context) => const SafeArea(
+    child: Padding(
+      padding: EdgeInsets.fromLTRB(20, 0, 20, 16),
+      child: PlayerVolumeRow(mute: true, shape: VolumeSliderShape.thin),
+    ),
+  ),
+);
 
 /// Now Playing when any part is not Classic: the chosen header, cover, title buttons, controls and bottom
 /// row, in the same order as Classic. The background is the page's own.
@@ -833,7 +960,7 @@ class ComposedNowPlaying extends StatelessWidget {
   Widget build(BuildContext context) {
     final p = LayoutPrefs.instance;
     final moreElsewhere = p.titleActions == TitleActions.plain || p.bottomRow == PlayerBottomRow.chips;
-    final full = p.playerCover == PlayerCover.fullBleed;
+    final full = p.playerCover == PlayerCover.background;
     final over = full ? Colors.white : null;
     final more = moreElsewhere
         ? null
@@ -842,20 +969,27 @@ class ComposedNowPlaying extends StatelessWidget {
         ? classicTopBar(more: !moreElsewhere)
         : PlayerTopBar(from: from, trailing: more, color: over);
     final plainControls = p.transport == PlayerTransport.plain;
-    final controls = Padding(
+    // A tall phone gets a little more air between the parts, as in the reference; a short one keeps them tight.
+    Widget controlsFor(bool roomy) => Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           PlayerTitleBlock(track: track, showBadge: showBadge),
-          const SizedBox(height: 16),
-          const SeekBar(phonePlayer: true),
-          const SizedBox(height: 8),
+          SizedBox(height: roomy ? 20 : 16),
+          SeekBar(
+            phonePlayer: true,
+            // Centred between the elapsed and the remaining time.
+            middle: showBadge && p.qualityBadgePlace == QualityBadgePlace.timeRow
+                ? const QualityBadge(onDark: true, soft: true, alignment: Alignment.center)
+                : null,
+          ),
+          SizedBox(height: roomy ? 24 : 14),
           switch (p.transport) {
             PlayerTransport.classic => const TransportControls(large: true),
             _ => PlayerControlsRow(plain: plainControls, withModes: p.bottomRow != PlayerBottomRow.chips),
           },
-          const SizedBox(height: 4),
+          SizedBox(height: roomy ? 20 : 10),
           if (p.bottomRow == PlayerBottomRow.classic)
             const _ClassicBottom()
           else
@@ -865,69 +999,44 @@ class ComposedNowPlaying extends StatelessWidget {
         ],
       ),
     );
-    final fade = switch (Appearance.instance.nowPlaying.effective(lightweight: LayoutPrefs.lightweight)) {
-      NowPlayingBackground.color => AppColors.sink(accent, 0.8),
-      NowPlayingBackground.black => Colors.black,
-      _ => AppColors.solidBackground.withValues(alpha: 0.7),
-    };
     if (full) {
-      return Column(
+      // The cover is the page behind (see NowPlayingPage); here only the header and the controls.
+      return LayoutBuilder(
+        builder: (context, box) => Column(
+          children: [
+            Padding(padding: const EdgeInsets.symmetric(horizontal: 24), child: header),
+            const Expanded(child: SizedBox.shrink()),
+            controlsFor(box.maxHeight >= 760),
+          ],
+        ),
+      );
+    }
+    return LayoutBuilder(
+      builder: (context, outer) => Column(
         children: [
+          Padding(padding: const EdgeInsets.symmetric(horizontal: 24), child: header),
           Expanded(
             child: LayoutBuilder(
               builder: (context, box) {
-                final side = math.max(box.maxWidth, box.maxHeight);
-                return Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    if (box.maxHeight >= 120)
-                      ClipRect(
-                        child: OverflowBox(maxWidth: side, maxHeight: side, child: cover(side, radius: 0)),
-                      ),
-                    // A plain fade into the page below: no blur, nothing animated.
-                    IgnorePointer(
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            colors: [
-                              Colors.black.withValues(alpha: 0.45),
-                              Colors.transparent,
-                              Colors.transparent,
-                              fade,
-                            ],
-                            stops: const [0, 0.25, 0.6, 1],
-                          ),
-                        ),
-                      ),
-                    ),
-                    Align(
-                      alignment: Alignment.topCenter,
-                      child: Padding(padding: const EdgeInsets.symmetric(horizontal: 24), child: header),
-                    ),
-                  ],
+                final art = math.min(box.maxWidth - 48, box.maxHeight - 16);
+                if (art < 96) return const SizedBox.shrink();
+                final card = cover(art, radius: LayoutPrefs.radius(8));
+                if (p.playerCover != PlayerCover.square) return Center(child: card);
+                // A card sits near the top, as in the reference: header, cover, then the title row.
+                final top = math.min(64.0, math.max(8.0, (box.maxHeight - art) * 0.35));
+                return Align(
+                  alignment: Alignment.topCenter,
+                  child: Padding(
+                    padding: EdgeInsets.only(top: top),
+                    child: card,
+                  ),
                 );
               },
             ),
           ),
-          controls,
+          controlsFor(outer.maxHeight >= 760),
         ],
-      );
-    }
-    return Column(
-      children: [
-        Padding(padding: const EdgeInsets.symmetric(horizontal: 24), child: header),
-        Expanded(
-          child: LayoutBuilder(
-            builder: (context, box) {
-              final art = math.min(box.maxWidth - 48, box.maxHeight - 16);
-              return art < 96 ? const SizedBox.shrink() : Center(child: cover(art, radius: LayoutPrefs.radius(8)));
-            },
-          ),
-        ),
-        controls,
-      ],
+      ),
     );
   }
 }
@@ -988,68 +1097,85 @@ class LyricsBottomCard extends StatelessWidget {
     final colors = AppColors.of(context);
     final text = Theme.of(context).textTheme;
     final c = PlayerScope.read(context);
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: colors.textPrimary.withValues(alpha: 0.08),
-            borderRadius: LayoutPrefs.corner(18),
+    final song = Expanded(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            track.title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: text.titleSmall?.copyWith(fontWeight: FontWeight.w700),
           ),
-          child: Row(
+          Text(
+            track.artist,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: text.bodySmall?.copyWith(color: colors.textSecondary),
+          ),
+        ],
+      ),
+    );
+    if (!desktop) {
+      // The song, a joined white pair (open the player, More) and the progress bar, on the page itself.
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
             children: [
-              Artwork(track: track, size: 44, radius: LayoutPrefs.radius(10)),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      track.title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: text.titleSmall?.copyWith(fontWeight: FontWeight.w700),
-                    ),
-                    Text(
-                      track.artist,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: text.bodySmall?.copyWith(color: colors.textSecondary),
-                    ),
-                  ],
-                ),
+              Artwork(track: track, size: 56, radius: LayoutPrefs.radius(8)),
+              const SizedBox(width: 12),
+              song,
+              JoinedButtons(
+                height: 44,
+                segmentWidth: 46,
+                segments: [
+                  joinedSegment(Icons.fullscreen_rounded, 'Now Playing', () => showNowPlayingFromLyrics(context)),
+                  joinedSegment(Icons.more_horiz_rounded, 'More', () => showPlayerMore(context, closePlayer: true)),
+                ],
               ),
-              PlayerSelect<({bool playing, bool canPlay})>(
-                select: (c) => (playing: c.showsPlaying, canPlay: c.canPlay),
-                builder: (context, s, _) => PartButton(
-                  icon: s.playing ? Icons.pause_rounded : Icons.play_arrow_rounded,
-                  tooltip: tipWith(s.playing ? 'Pause' : 'Play', AppAction.playPause),
-                  look: PartLook.muted,
-                  round: true,
-                  size: 40,
-                  onPressed: s.canPlay ? c.togglePlay : null,
-                ),
-              ),
-              const SizedBox(width: 6),
-              PartButton(
-                icon: Icons.open_in_full_rounded,
-                tooltip: desktop ? 'Expanded player' : 'Now Playing',
-                size: 40,
-                iconSize: 20,
-                onPressed: desktop
-                    ? () {
-                        expandedPlayerPanel.value = ExpandedPanel.lyrics;
-                        showExpandedPlayer(true);
-                      }
-                    : () => showNowPlayingFromLyrics(context),
-              ),
-              if (!desktop) ...[const SizedBox(width: 6), const PlayerMoreAction(size: 40)],
             ],
           ),
-        ),
-        if (!desktop) ...[const SizedBox(height: 12), const SeekBar(phonePlayer: true)],
-      ],
+          const SizedBox(height: 14),
+          const SeekBar(phonePlayer: true),
+        ],
+      );
+    }
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: colors.textPrimary.withValues(alpha: 0.08),
+        borderRadius: LayoutPrefs.corner(18),
+      ),
+      child: Row(
+        children: [
+          Artwork(track: track, size: 44, radius: LayoutPrefs.radius(10)),
+          const SizedBox(width: 10),
+          song,
+          PlayerSelect<({bool playing, bool canPlay})>(
+            select: (c) => (playing: c.showsPlaying, canPlay: c.canPlay),
+            builder: (context, s, _) => PartButton(
+              icon: s.playing ? Icons.pause_rounded : Icons.play_arrow_rounded,
+              tooltip: tipWith(s.playing ? 'Pause' : 'Play', AppAction.playPause),
+              look: PartLook.muted,
+              round: true,
+              size: 40,
+              onPressed: s.canPlay ? c.togglePlay : null,
+            ),
+          ),
+          const SizedBox(width: 6),
+          PartButton(
+            icon: Icons.open_in_full_rounded,
+            tooltip: 'Expanded player',
+            size: 40,
+            iconSize: 20,
+            onPressed: () {
+              expandedPlayerPanel.value = ExpandedPanel.lyrics;
+              showExpandedPlayer(true);
+            },
+          ),
+        ],
+      ),
     );
   }
 }
@@ -1060,7 +1186,7 @@ class LyricsTopHeader extends StatelessWidget {
 
   final Track track;
 
-  /// On desktop the title bar goes back, so the card ends with the heart and the song's menu instead.
+  /// On desktop the title bar goes back, so the card ends with the heart and the lyrics / player menu instead.
   final bool desktop;
 
   @override
@@ -1093,16 +1219,20 @@ class LyricsTopHeader extends StatelessWidget {
         const SizedBox(width: 8),
         if (desktop) ...[
           LikeButton(track: track, size: 24),
-          TrackMenuButton(track: track, nowPlaying: true),
+          // The lyrics options (translation, timing...) and the player's, in one ⋯: one row, as on a phone.
+          LyricsMoreMenu(track: track),
         ] else ...[
           PartButton(
             icon: Icons.close_rounded,
             tooltip: 'Close',
+            look: PartLook.muted,
             round: true,
+            size: 44,
             onPressed: () => Navigator.of(context).maybePop(),
           ),
           const SizedBox(width: 8),
-          const PlayerMoreAction(look: PartLook.muted),
+          // The translation and the other lyrics options are in this menu.
+          LyricsMoreMenu(track: track),
         ],
       ],
     );
@@ -1114,13 +1244,17 @@ class LyricsPlainPlayer extends StatelessWidget {
   const LyricsPlainPlayer({super.key});
 
   @override
-  Widget build(BuildContext context) => const Column(
-    mainAxisSize: MainAxisSize.min,
-    children: [
-      SeekBar(phonePlayer: true),
-      SizedBox(height: 8),
-      PlayerControlsRow(plain: true),
-      PlayerVolumeRow(mute: true),
-    ],
+  Widget build(BuildContext context) => ListenableBuilder(
+    listenable: LayoutPrefs.instance,
+    builder: (context, _) => Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const SeekBar(phonePlayer: true),
+        const SizedBox(height: 8),
+        // Three glyphs, as in the reference; shuffle and repeat are on Now Playing.
+        const PlayerControlsRow(plain: true, withModes: false),
+        PlayerVolumeRow(mute: true),
+      ],
+    ),
   );
 }

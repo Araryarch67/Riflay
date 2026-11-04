@@ -12,12 +12,15 @@ import '../../services/video_mode.dart';
 import '../shell_scope.dart';
 import '../theme.dart';
 import '../widgets/controls.dart';
+import '../widgets/faded_cover.dart';
+import '../widgets/wavy_seek_track.dart';
 import '../widgets/audio_visualizer.dart';
 import '../widgets/track_row.dart';
 import '../widgets/player_backdrop.dart';
 import '../widgets/marquee_text.dart';
 import '../widgets/signal_path.dart';
 import '../widgets/stats_for_nerds.dart';
+import '../widgets/soft_video.dart';
 import '../widgets/video_mode.dart';
 import '../ytmusic_edit.dart';
 import 'more_sheet.dart';
@@ -73,6 +76,8 @@ class NowPlayingPage extends StatelessWidget {
     final chosen = Appearance.instance.nowPlaying;
     // Music video lies over the blurred cover (Lightweight: the plain colour).
     final look = chosen.effective(lightweight: LayoutPrefs.lightweight);
+    // Cover: Background is the whole page: sharp at the top, soft below, instead of any background.
+    final coverPage = LayoutPrefs.instance.playerCover == PlayerCover.background && track != null;
     return AccentBuilder(
       track: track,
       builder: (context, accent) => GestureDetector(
@@ -84,43 +89,86 @@ class NowPlayingPage extends StatelessWidget {
           body: Stack(
             fit: StackFit.expand,
             children: [
-              if (look.isAbstract) Positioned.fill(child: PlayerBackdrop(coverColor: accent)),
+              if (coverPage) Positioned.fill(child: FadedCover(track: track, darken: 0.65, blurStart: 0.42)),
+              // Cover: Background: a song that has a music video plays it over the cover, soft under the title and the
+              // controls (as the baked cover is), with a dark gradient to keep them readable. Songs without one keep
+              // the baked cover. Not in Lightweight.
+              if (coverPage && !LayoutPrefs.lightweight) ...[
+                Positioned.fill(child: VideoBackground(track: track)),
+                // Frosted under the title and the controls: the video is only a soft glow there, never in the way.
+                Positioned.fill(child: SoftVideo(track: track, shrink: 28, from: 0.38)),
+                Positioned.fill(
+                  child: ListenableBuilder(
+                    listenable: VideoMode.instance,
+                    builder: (context, _) => VideoMode.instance.coversBackground(track)
+                        ? IgnorePointer(
+                            child: DecoratedBox(
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: Alignment.topCenter,
+                                  end: Alignment.bottomCenter,
+                                  colors: [
+                                    Colors.black.withValues(alpha: 0.35),
+                                    Colors.transparent,
+                                    Colors.black.withValues(alpha: 0.55),
+                                    Colors.black.withValues(alpha: 0.8),
+                                  ],
+                                  stops: const [0, 0.2, 0.5, 1],
+                                ),
+                              ),
+                            ),
+                          )
+                        : const SizedBox.shrink(),
+                  ),
+                ),
+              ],
+              if (!coverPage && look.isAbstract) Positioned.fill(child: PlayerBackdrop(coverColor: accent)),
               // Not drawn under a playing music video, which covers it.
-              if (look == NowPlayingBackground.blurredCover && track != null && !LayoutPrefs.lightweight)
+              if (!coverPage && look == NowPlayingBackground.blurredCover && track != null && !LayoutPrefs.lightweight)
                 ListenableBuilder(
                   listenable: VideoMode.instance,
                   builder: (context, child) =>
                       VideoMode.instance.coversBackground(track) ? const SizedBox.shrink() : child!,
                   child: RepaintBoundary(child: BlurredCover(track: track)),
                 ),
-              if (chosen == NowPlayingBackground.video && look != NowPlayingBackground.color)
+              if (!coverPage && chosen == NowPlayingBackground.video && look != NowPlayingBackground.color)
                 Positioned.fill(child: VideoBackground(track: track)),
               AnimatedContainer(
                 duration: LayoutPrefs.dur(const Duration(milliseconds: 500)),
-                decoration: BoxDecoration(
-                  color: look == NowPlayingBackground.black ? Colors.black : null,
-                  gradient: switch (look) {
-                    NowPlayingBackground.color => LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [AppColors.sink(accent, 0.55), AppColors.sink(accent, 0.85), AppColors.solidBackground],
-                      stops: const [0, 0.6, 1],
-                    ),
-                    // Darkens the blurred cover towards the controls, so text stays readable.
-                    NowPlayingBackground.blurredCover => LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        // A moving picture needs more dimming than a still blur to keep the text readable.
-                        AppColors.solidBackground.withValues(alpha: chosen == NowPlayingBackground.video ? 0.55 : 0.4),
-                        AppColors.solidBackground.withValues(alpha: chosen == NowPlayingBackground.video ? 0.82 : 0.75),
-                        AppColors.solidBackground,
-                      ],
-                      stops: [0, 0.6, 1],
-                    ),
-                    _ => null,
-                  },
-                ),
+                decoration: coverPage
+                    ? const BoxDecoration()
+                    : BoxDecoration(
+                        color: look == NowPlayingBackground.black ? Colors.black : null,
+                        gradient: switch (look) {
+                          NowPlayingBackground.color => LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              AppColors.sink(accent, 0.55),
+                              AppColors.sink(accent, 0.85),
+                              AppColors.solidBackground,
+                            ],
+                            stops: const [0, 0.6, 1],
+                          ),
+                          // Darkens the blurred cover towards the controls, so text stays readable.
+                          NowPlayingBackground.blurredCover => LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              // A moving picture needs more dimming than a still blur to keep the text readable.
+                              AppColors.solidBackground.withValues(
+                                alpha: chosen == NowPlayingBackground.video ? 0.55 : 0.4,
+                              ),
+                              AppColors.solidBackground.withValues(
+                                alpha: chosen == NowPlayingBackground.video ? 0.82 : 0.75,
+                              ),
+                              AppColors.solidBackground,
+                            ],
+                            stops: [0, 0.6, 1],
+                          ),
+                          _ => null,
+                        },
+                      ),
                 child: SafeArea(
                   child: ListenableBuilder(
                     listenable: VideoMode.instance,
@@ -331,15 +379,21 @@ const playerVolumeRowHeight = 40.0;
 /// Volume at the very bottom of the portrait player: quieter icon, slider, louder icon. It is the
 /// same level the desktop [VolumeSlider] sets (also the cast device's while casting).
 class PlayerVolumeRow extends StatelessWidget {
-  const PlayerVolumeRow({super.key, this.mute = false});
+  const PlayerVolumeRow({super.key, this.mute = false, this.shape});
 
   /// The left icon mutes (and unmutes) instead of turning the volume down a step.
   final bool mute;
+
+  /// The slider's look; null follows Settings › Layout › Volume slider look.
+  final VolumeSliderShape? shape;
 
   @override
   Widget build(BuildContext context) {
     final c = PlayerScope.read(context);
     final colors = AppColors.of(context);
+    final look = shape ?? LayoutPrefs.instance.volumeSlider;
+    final thin = look == VolumeSliderShape.thin;
+    final pill = look == VolumeSliderShape.pill;
     return PlayerSelect<({bool casting, double device, bool canSet, bool dop})>(
       select: (c) => (
         casting: c.casting,
@@ -372,15 +426,23 @@ class PlayerVolumeRow extends StatelessWidget {
                     visualDensity: VisualDensity.compact,
                     color: colors.textSecondary,
                     onPressed: setVolume == null ? null : c.toggleMute,
-                    icon: Icon(volume == 0 ? Icons.volume_off_rounded : Icons.volume_mute_rounded),
+                    // The thin look keeps the crossed speaker at rest, like the mute button it is.
+                    icon: Icon(thin || volume == 0 ? Icons.volume_off_rounded : Icons.volume_mute_rounded),
                   )
                 else
                   nudge('Quieter', Icons.volume_down_rounded, -0.05),
                 Expanded(
-                  child: Slider(
-                    value: volume.clamp(0, 1),
-                    onChangeStart: setVolume == null ? null : (_) => c.volumeDragStarted(),
-                    onChanged: setVolume,
+                  child: SliderTheme(
+                    data: thin
+                        ? thinSliderTheme(SliderTheme.of(context), colors.textPrimary)
+                        : pill
+                        ? pillSliderTheme(SliderTheme.of(context), colors.inverse, height: 12, thumb: 28)
+                        : SliderTheme.of(context),
+                    child: Slider(
+                      value: volume.clamp(0, 1),
+                      onChangeStart: setVolume == null ? null : (_) => c.volumeDragStarted(),
+                      onChanged: setVolume,
+                    ),
                   ),
                 ),
                 nudge('Louder', Icons.volume_up_rounded, 0.05),

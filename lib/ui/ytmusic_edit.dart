@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import '../models/track.dart';
 import '../platform/features.dart';
 import '../services/download_prefs.dart';
+import '../services/layout_prefs.dart';
 import '../services/player_controller.dart';
 import '../services/youtube_importer.dart';
 import '../services/youtube_music_account.dart';
@@ -492,7 +493,22 @@ class LikeButton extends StatelessWidget {
   }
 }
 
+/// A round, translucent icon button, for the buttons of a page whose top is the Hero header.
+Widget heroRoundButton({required IconData icon, required String tooltip, required VoidCallback? onPressed}) =>
+    IconButton(
+      tooltip: tooltip,
+      onPressed: onPressed,
+      icon: Icon(icon),
+      style: IconButton.styleFrom(
+        backgroundColor: AppColors.textPrimary.withValues(alpha: 0.1),
+        foregroundColor: AppColors.textPrimary,
+        fixedSize: const Size.square(48),
+        shape: const CircleBorder(),
+      ),
+    );
+
 /// "Follow" / "Following" for a YouTube Music artist (signed in through the app).
+
 class FollowButton extends StatelessWidget {
   const FollowButton({super.key, required this.artistId, required this.name});
 
@@ -507,6 +523,18 @@ class FollowButton extends StatelessWidget {
       listenable: account,
       builder: (context, _) {
         final following = account.isFollowing(artistId);
+        void toggle() => _report(
+          context,
+          () => account.setFollowing(artistId, !following),
+          following ? 'Unfollowed $name' : 'Following $name',
+        );
+        if (LayoutPrefs.instance.albumHeader == AlbumHeaderStyle.hero) {
+          return heroRoundButton(
+            icon: following ? Icons.check_rounded : Icons.person_add_alt_1_outlined,
+            tooltip: following ? 'Following' : 'Follow',
+            onPressed: toggle,
+          );
+        }
         return OutlinedButton(
           style: OutlinedButton.styleFrom(
             foregroundColor: AppColors.textPrimary,

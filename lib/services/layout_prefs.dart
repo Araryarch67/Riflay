@@ -5,7 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'beta_features.dart';
+import '../platform/features.dart';
 import 'page_motion.dart';
 export 'page_motion.dart' show PageMotionStyle, PageMotionSpeed;
 
@@ -42,7 +42,7 @@ enum VisualizerStyle {
   bool get radial => this == pulse || this == orbit || this == petals;
 }
 
-/// Player artwork shape, independent of whether audio visualization is enabled.
+/// The outline of a player cover (what [PlayerCover] comes to when the cover is not the background).
 enum VisualizerCoverShape {
   flower('Flower'),
   square('Square');
@@ -135,7 +135,10 @@ enum ProgressBarShape {
   wavy('Wavy'),
 
   /// A thick rounded track with a pill of elapsed time and a bar for a thumb (the phone's player and the desktop bar).
-  pill('Pill');
+  pill('Pill'),
+
+  /// A flat 4 px track with round ends and no handle until it is dragged (the phone's player and the desktop bar).
+  thin('Thin line');
 
   const ProgressBarShape(this.label);
   final String label;
@@ -158,11 +161,12 @@ enum PhoneCoverSize {
   final String label;
 }
 
-/// The cover on the phone's Now Playing: an inset card, or filling the top edge to edge and fading into the page.
-/// On desktop: rounded, or square and as wide as its half of the expanded player (and the side panel's width).
+/// The shape of the player's cover, on phones and desktop alike: a rounded square, a flower, or no frame at all
+/// ([background]: the artwork fills the top of the page and fades into it).
 enum PlayerCover {
-  card('Card'),
-  fullBleed('Full width');
+  square('Square'),
+  flower('Flower'),
+  background('Background');
 
   const PlayerCover(this.label);
   final String label;
@@ -198,11 +202,12 @@ enum PlayerTransport {
   final String label;
 }
 
-/// The row of buttons under the controls. Every one keeps a Lyrics button.
+/// The row of buttons under the controls. Every one keeps a Lyrics button. [minimal] is icons only: Lyrics, a capsule
+/// with the volume and the output / listen-together buttons, and Queue.
 enum PlayerBottomRow {
   classic('Classic'),
   chips('Chips'),
-  minimal('Minimal');
+  minimal('Icons');
 
   const PlayerBottomRow(this.label);
   final String label;
@@ -218,10 +223,11 @@ enum LyricsLayout {
   final String label;
 }
 
-/// The phone's mini player above the tab bar.
+/// The phone's mini player above the tab bar: the bar as it has always been, or a floating pill with a flower cover,
+/// round translucent previous / next and a round accent play button.
 enum MiniPlayerStyle {
   classic('Classic'),
-  capsule('Capsule');
+  capsule('Floating pill');
 
   const MiniPlayerStyle(this.label);
   final String label;
@@ -236,6 +242,34 @@ enum AlbumHeaderStyle {
   final String label;
 }
 
+/// Where the sound-quality badge (FLAC, Opus 130 kbps...) sits on the phone's player.
+/// The look of the volume slider on the phone player (its row and the speaker's popup).
+enum VolumeSliderShape {
+  classic('Classic'),
+  thin('Thin line'),
+  pill('Pill');
+
+  const VolumeSliderShape(this.label);
+  final String label;
+}
+
+enum QualityBadgePlace {
+  underArtist('Under the artist'),
+  timeRow('In the time row');
+
+  const QualityBadgePlace(this.label);
+  final String label;
+}
+
+/// How the song that is playing stands out in a list of songs.
+enum PlayingRowStyle {
+  classic('Classic'),
+  card('Highlighted card');
+
+  const PlayingRowStyle(this.label);
+  final String label;
+}
+
 enum LyricsSize {
   small('Small', 0.85),
   normal('Normal', 1),
@@ -245,6 +279,29 @@ enum LyricsSize {
   const LyricsSize(this.label, this.scale);
   final String label;
   final double scale;
+}
+
+/// How many lyric lines are shown at once.
+enum LyricsLines {
+  all('All'),
+
+  /// The previous, the current and the next line, far apart.
+  focused('Focused');
+
+  const LyricsLines(this.label);
+  final String label;
+}
+
+/// How timed lyrics light up.
+enum LyricsSync {
+  /// Word by word where the lyrics have word timings (else line by line).
+  word('Word by word'),
+
+  /// The whole current line at once, even where the lyrics have word timings.
+  line('Line by line');
+
+  const LyricsSync(this.label);
+  final String label;
 }
 
 enum LyricsAlign {
@@ -313,7 +370,7 @@ class LayoutPrefs extends ChangeNotifier {
 
   /// The player, part by part, on phones and desktop. The defaults are how it has always looked; Settings › Look & feel ›
   /// Layout › Player changes them one by one, and Presets sets several at once.
-  PlayerCover playerCover = PlayerCover.card;
+  PlayerCover playerCover = PlayerCover.flower;
   PlayerHeader playerHeader = PlayerHeader.classic;
   TitleActions titleActions = TitleActions.classic;
   bool showTimeLeft = false;
@@ -323,21 +380,30 @@ class LayoutPrefs extends ChangeNotifier {
   LyricsLayout lyricsLayout = LyricsLayout.classic;
   MiniPlayerStyle miniPlayer = MiniPlayerStyle.classic;
   AlbumHeaderStyle albumHeader = AlbumHeaderStyle.classic;
+  PlayingRowStyle playingRow = PlayingRowStyle.classic;
+  QualityBadgePlace qualityBadgePlace = QualityBadgePlace.underArtist;
+  VolumeSliderShape volumeSlider = VolumeSliderShape.classic;
 
   /// The phone's tab bar: docked under the mini player like most music apps, by default.
   TabBarStyle tabBar = TabBarStyle.capsule;
   DesktopBarStyle desktopBar = DesktopBarStyle.classic;
   bool showQualityBadge = true;
   bool visualizer = false;
-  bool get visualizerEnabled => visualizer && BetaFeatures.instance.isOn(BetaFeature.audioVisualizer);
+  bool get visualizerEnabled => visualizer && Features.audioVisualizer;
+
+  /// The outline of the cover (and of what the visualizer pulses around): Square is the rounded square, anything else
+  /// the flower. It is the Cover setting of the Player group, not a setting of its own.
+  VisualizerCoverShape get visualizerCoverShape =>
+      playerCover == PlayerCover.square ? VisualizerCoverShape.square : VisualizerCoverShape.flower;
   VisualizerStyle visualizerStyle = VisualizerStyle.pulse;
-  VisualizerCoverShape visualizerCoverShape = VisualizerCoverShape.flower;
   double visualizerRadius = 1.6;
   double visualizerThickness = 3;
 
   LyricsSize lyricsSize = LyricsSize.normal;
   LyricsAlign lyricsAlign = LyricsAlign.left;
   bool dimUnsungLyrics = true;
+  LyricsLines lyricsLines = LyricsLines.all;
+  LyricsSync lyricsSync = LyricsSync.word;
 
   /// Desktop: the library sidebar and the now-playing side panel, as dragged. Today's widths by default;
   /// the shell narrows them when the window is too small to give the pages their room.
@@ -351,7 +417,7 @@ class LayoutPrefs extends ChangeNotifier {
   double sidePanelWidth = sidePanelDefault;
 
   Motion motion = Motion.full;
-  PageMotionStyle pageMotion = PageMotionStyle.diamondReveal;
+  PageMotionStyle pageMotion = PageMotionStyle.wipe;
   PageMotionSpeed pageSpeed = PageMotionSpeed.relaxed;
   PerformanceMode performance = PerformanceMode.balanced;
   VideoDecoder videoDecoder = VideoDecoder.automatic;
@@ -419,11 +485,13 @@ class LayoutPrefs extends ChangeNotifier {
 
   /// The phone player's parts are all as they have always been (Classic keeps its original layout).
   bool get classicPlayerFace =>
-      playerCover == PlayerCover.card &&
+      playerCover != PlayerCover.background &&
       playerHeader == PlayerHeader.classic &&
       titleActions == TitleActions.classic &&
       transport == PlayerTransport.classic &&
       bottomRow == PlayerBottomRow.classic &&
+      qualityBadgePlace == QualityBadgePlace.underArtist &&
+      volumeSlider == VolumeSliderShape.classic &&
       showVolumeRow;
 
   /// Performance mode: Lightweight turns off every effect that isn't needed to use the app.
@@ -437,9 +505,17 @@ class LayoutPrefs extends ChangeNotifier {
 
   Future<void> load() async {
     try {
-      final raw = (await SharedPreferences.getInstance()).getString(_key);
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString(_key);
       if (raw == null) return;
-      restore(jsonDecode(raw) as Map<String, dynamic>);
+      final j = jsonDecode(raw) as Map<String, dynamic>;
+      // The visualizer used to be a Beta feature with a switch of its own, and was only on with both: a save from
+      // then keeps it on only if that switch was.
+      if (j['visualizerStable'] != true && j['visualizer'] == true) {
+        final optedIn = prefs.getBool('features.audioVisualizer') ?? prefs.getBool('beta.audioVisualizer') ?? false;
+        if (!optedIn) j['visualizer'] = false;
+      }
+      restore(j);
     } catch (e) {
       debugPrint('Layout settings unreadable, using defaults: $e');
     }
@@ -457,7 +533,13 @@ class LayoutPrefs extends ChangeNotifier {
     progressShape = pick(ProgressBarShape.values, 'progressShape', d.progressShape);
     playButton = pick(PlayButtonShape.values, 'playButton', d.playButton);
     phoneCover = pick(PhoneCoverSize.values, 'phoneCover', d.phoneCover);
-    playerCover = pick(PlayerCover.values, 'playerCover', d.playerCover);
+    // Older versions had a card or a full-width cover, and a separate flower / square setting for the card.
+    final legacyShape = j['visualizerCoverShape'] == 'square' ? PlayerCover.square : PlayerCover.flower;
+    playerCover = switch (j['playerCover']) {
+      'fullBleed' => PlayerCover.background,
+      'card' => legacyShape,
+      final name => PlayerCover.values.asNameMap()[name] ?? legacyShape,
+    };
     playerHeader = pick(PlayerHeader.values, 'playerHeader', d.playerHeader);
     titleActions = pick(TitleActions.values, 'titleActions', d.titleActions);
     showTimeLeft = j['showTimeLeft'] as bool? ?? d.showTimeLeft;
@@ -467,6 +549,9 @@ class LayoutPrefs extends ChangeNotifier {
     lyricsLayout = pick(LyricsLayout.values, 'lyricsLayout', d.lyricsLayout);
     miniPlayer = pick(MiniPlayerStyle.values, 'miniPlayer', d.miniPlayer);
     albumHeader = pick(AlbumHeaderStyle.values, 'albumHeader', d.albumHeader);
+    playingRow = pick(PlayingRowStyle.values, 'playingRow', d.playingRow);
+    qualityBadgePlace = pick(QualityBadgePlace.values, 'qualityBadgePlace', d.qualityBadgePlace);
+    volumeSlider = pick(VolumeSliderShape.values, 'volumeSlider', d.volumeSlider);
     tabBar = pick(TabBarStyle.values, 'tabBar', d.tabBar);
     desktopBar = pick(DesktopBarStyle.values, 'desktopBar', d.desktopBar);
     showQualityBadge = j['showQualityBadge'] as bool? ?? d.showQualityBadge;
@@ -475,11 +560,12 @@ class LayoutPrefs extends ChangeNotifier {
         ? pick(VisualizerStyle.values, 'visualizerStyle', d.visualizerStyle)
         : VisualizerStyle.pulse;
     visualizerRadius = (j['visualizerRadius'] as num?)?.toDouble().clamp(0.5, 2.5) ?? d.visualizerRadius;
-    visualizerCoverShape = pick(VisualizerCoverShape.values, 'visualizerCoverShape', d.visualizerCoverShape);
     visualizerThickness = (j['visualizerThickness'] as num?)?.toDouble().clamp(1, 8) ?? d.visualizerThickness;
     lyricsSize = pick(LyricsSize.values, 'lyricsSize', d.lyricsSize);
     lyricsAlign = pick(LyricsAlign.values, 'lyricsAlign', d.lyricsAlign);
     dimUnsungLyrics = j['dimUnsungLyrics'] as bool? ?? d.dimUnsungLyrics;
+    lyricsLines = pick(LyricsLines.values, 'lyricsLines', d.lyricsLines);
+    lyricsSync = pick(LyricsSync.values, 'lyricsSync', d.lyricsSync);
     sidebarWidth = (j['sidebarWidth'] as num?)?.toDouble().clamp(sidebarMin, sidebarMax) ?? d.sidebarWidth;
     sidePanelWidth = (j['sidePanelWidth'] as num?)?.toDouble().clamp(sidePanelMin, sidePanelMax) ?? d.sidePanelWidth;
     motion = pick(Motion.values, 'motion', d.motion);
@@ -516,18 +602,23 @@ class LayoutPrefs extends ChangeNotifier {
     'lyricsLayout': lyricsLayout.name,
     'miniPlayer': miniPlayer.name,
     'albumHeader': albumHeader.name,
+    'playingRow': playingRow.name,
+    'qualityBadgePlace': qualityBadgePlace.name,
+    'volumeSlider': volumeSlider.name,
     'tabBar': tabBar.name,
     'desktopBar': desktopBar.name,
     'showQualityBadge': showQualityBadge,
     'visualizer': visualizer,
     'visualizerStyle': visualizerStyle.name,
-    'visualizerCoverShape': visualizerCoverShape.name,
     'visualizerVersion': 3,
+    'visualizerStable': true,
     'visualizerRadius': visualizerRadius,
     'visualizerThickness': visualizerThickness,
     'lyricsSize': lyricsSize.name,
     'lyricsAlign': lyricsAlign.name,
     'dimUnsungLyrics': dimUnsungLyrics,
+    'lyricsLines': lyricsLines.name,
+    'lyricsSync': lyricsSync.name,
     'sidebarWidth': sidebarWidth,
     'sidePanelWidth': sidePanelWidth,
     'motion': motion.name,
@@ -579,13 +670,17 @@ class LayoutPrefs extends ChangeNotifier {
   Future<void> setLyricsLayout(LyricsLayout v) => _set(() => lyricsLayout = v);
   Future<void> setMiniPlayer(MiniPlayerStyle v) => _set(() => miniPlayer = v);
   Future<void> setAlbumHeader(AlbumHeaderStyle v) => _set(() => albumHeader = v);
+  Future<void> setPlayingRow(PlayingRowStyle v) => _set(() => playingRow = v);
+  Future<void> setQualityBadgePlace(QualityBadgePlace v) => _set(() => qualityBadgePlace = v);
+  Future<void> setVolumeSlider(VolumeSliderShape v) => _set(() => volumeSlider = v);
 
   /// Several settings at once (a preset): one notify, one save.
   Future<void> change(VoidCallback changes) => _set(changes);
   Future<void> setDesktopBar(DesktopBarStyle v) => _set(() => desktopBar = v);
   Future<void> setTabBar(TabBarStyle v) => _set(() => tabBar = v);
   Future<void> setVisualizerStyle(VisualizerStyle v) => _set(() => visualizerStyle = v);
-  Future<void> setVisualizerCoverShape(VisualizerCoverShape v) => _set(() => visualizerCoverShape = v);
+  Future<void> setVisualizerCoverShape(VisualizerCoverShape v) =>
+      _set(() => playerCover = v == VisualizerCoverShape.square ? PlayerCover.square : PlayerCover.flower);
   Future<void> setVisualizerRadius(double v) => _set(() => visualizerRadius = v.clamp(0.5, 2.5));
   Future<void> setVisualizerThickness(double v) => _set(() => visualizerThickness = v.clamp(1, 8));
   Future<void> setVisualizer(bool v) => _set(() => visualizer = v);
@@ -593,6 +688,8 @@ class LayoutPrefs extends ChangeNotifier {
   Future<void> setLyricsSize(LyricsSize v) => _set(() => lyricsSize = v);
   Future<void> setLyricsAlign(LyricsAlign v) => _set(() => lyricsAlign = v);
   Future<void> setDimUnsungLyrics(bool v) => _set(() => dimUnsungLyrics = v);
+  Future<void> setLyricsLines(LyricsLines v) => _set(() => lyricsLines = v);
+  Future<void> setLyricsSync(LyricsSync v) => _set(() => lyricsSync = v);
   Future<void> setPageMotion(PageMotionStyle v) => _set(() => pageMotion = v);
   Future<void> setPageSpeed(PageMotionSpeed v) => _set(() => pageSpeed = v);
   Future<void> setSidebarWidth(double v) => _set(() => sidebarWidth = v.clamp(sidebarMin, sidebarMax));

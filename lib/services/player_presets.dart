@@ -8,7 +8,7 @@ class PlayerPreset {
   const PlayerPreset({
     required this.name,
     required this.note,
-    this.cover = PlayerCover.card,
+    this.cover = PlayerCover.flower,
     this.header = PlayerHeader.classic,
     this.titleActions = TitleActions.classic,
     this.progressBar = ProgressBarStyle.thin,
@@ -20,6 +20,10 @@ class PlayerPreset {
     this.lyrics = LyricsLayout.classic,
     this.mini = MiniPlayerStyle.classic,
     this.album = AlbumHeaderStyle.classic,
+    this.playingRow = PlayingRowStyle.classic,
+    this.badge = QualityBadgePlace.underArtist,
+    this.lyricsLines = LyricsLines.all,
+    this.volumeSlider = VolumeSliderShape.classic,
     this.background,
   });
 
@@ -37,6 +41,12 @@ class PlayerPreset {
   final LyricsLayout lyrics;
   final MiniPlayerStyle mini;
   final AlbumHeaderStyle album;
+  final PlayingRowStyle playingRow;
+  final QualityBadgePlace badge;
+
+  /// All the lines, or Focused: the previous, current and next only.
+  final LyricsLines lyricsLines;
+  final VolumeSliderShape volumeSlider;
 
   /// The Now Playing background that goes with the look; null leaves the user's choice alone.
   final NowPlayingBackground? background;
@@ -46,7 +56,9 @@ class PlayerPreset {
 
   static const stacked = PlayerPreset(
     name: 'Stacked',
-    note: 'A card cover, boxed buttons and a thick progress bar',
+    note: 'The cover as the page, joined buttons, a thick bar and a wide Play button',
+    cover: PlayerCover.background,
+    volume: true,
     header: PlayerHeader.centered,
     titleActions: TitleActions.boxed,
     progressBar: ProgressBarStyle.thick,
@@ -54,22 +66,30 @@ class PlayerPreset {
     transport: PlayerTransport.pill,
     bottomRow: PlayerBottomRow.chips,
     lyrics: LyricsLayout.bottomCard,
+    badge: QualityBadgePlace.timeRow,
+    lyricsLines: LyricsLines.focused,
+    volumeSlider: VolumeSliderShape.pill,
   );
 
   static const kawaii = PlayerPreset(
     name: 'Kawaii',
-    note: 'A full-width cover, plain icons and a floating mini player',
-    cover: PlayerCover.fullBleed,
+    note: 'The cover fades into the page, with plain icons, a thin line and the volume behind a button',
+    cover: PlayerCover.background,
     header: PlayerHeader.playingFrom,
     titleActions: TitleActions.plain,
-    progressShape: ProgressBarShape.straight,
+    progressShape: ProgressBarShape.thin,
     timeLeft: true,
     transport: PlayerTransport.plain,
+    volume: false,
     bottomRow: PlayerBottomRow.minimal,
     lyrics: LyricsLayout.topHeader,
     mini: MiniPlayerStyle.capsule,
     album: AlbumHeaderStyle.hero,
-    background: NowPlayingBackground.blurredCover,
+    playingRow: PlayingRowStyle.card,
+    badge: QualityBadgePlace.timeRow,
+    lyricsLines: LyricsLines.focused,
+    background: NowPlayingBackground.video,
+    volumeSlider: VolumeSliderShape.thin,
   );
 
   static const all = [classic, stacked, kawaii];
@@ -90,6 +110,10 @@ class PlayerPreset {
     differ(p.lyricsLayout, lyrics);
     differ(p.miniPlayer, mini);
     differ(p.albumHeader, album);
+    differ(p.playingRow, playingRow);
+    differ(p.qualityBadgePlace, badge);
+    differ(p.lyricsLines, lyricsLines);
+    differ(p.volumeSlider, volumeSlider);
     if (background != null) differ(Appearance.instance.nowPlaying, background!);
     return n;
   }
@@ -112,6 +136,10 @@ class PlayerPreset {
       p.lyricsLayout = lyrics;
       p.miniPlayer = mini;
       p.albumHeader = album;
+      p.playingRow = playingRow;
+      p.qualityBadgePlace = badge;
+      p.lyricsLines = lyricsLines;
+      p.volumeSlider = volumeSlider;
     });
     if (background != null) await Appearance.instance.setNowPlaying(background!);
   }

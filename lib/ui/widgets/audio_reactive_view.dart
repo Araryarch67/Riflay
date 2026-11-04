@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../../services/audio_engine.dart';
-import '../../services/beta_features.dart';
 import '../../services/layout_prefs.dart';
 import '../../services/player_controller.dart';
 import '../../services/ui_beat.dart';
@@ -144,7 +143,7 @@ class _AudioReactiveViewState extends State<AudioReactiveView> with WidgetsBindi
     if (c == null || !_attached) return;
     final active =
         widget.enabled &&
-        BetaFeatures.instance.isOn(BetaFeature.audioVisualizer) &&
+        LayoutPrefs.instance.visualizerEnabled &&
         !LayoutPrefs.lightweight &&
         LayoutPrefs.moves &&
         !_reduceMotion &&

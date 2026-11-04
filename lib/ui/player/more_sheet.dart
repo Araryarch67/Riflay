@@ -18,6 +18,7 @@ import '../widgets/stats_for_nerds.dart';
 import '../widgets/track_row.dart';
 import '../widgets/video_mode.dart';
 import '../ytmusic_edit.dart';
+import 'player_parts.dart' show shareTrack;
 
 /// The player's "More" sheet: everything the phone's player keeps off its
 /// face, in labelled groups. Used by the full-screen player's ⋯ and by a
@@ -139,7 +140,10 @@ class PlayerMoreSheet extends StatelessWidget {
                   ),
                   // The song's own menu, minus what this sheet lists below: one
                   // action, one entry. Stats for nerds and Signal path are in Sound.
-                  TrackMenuButton(track: track, hide: const {TrackMenuEntry.addToPlaylist, TrackMenuEntry.download}),
+                  TrackMenuButton(
+                    track: track,
+                    hide: const {TrackMenuEntry.addToPlaylist, TrackMenuEntry.download, TrackMenuEntry.share},
+                  ),
                 ],
               ),
             ),
@@ -150,6 +154,7 @@ class PlayerMoreSheet extends StatelessWidget {
                 tile(Icons.close_rounded, 'Close player', then((_) => c.closePlayer())),
               ]),
             group('Song', [
+              tile(Icons.share_outlined, 'Share', then((host) => shareTrack(host, track))),
               tile(Icons.playlist_add_rounded, 'Add to playlist', then((host) => addToPlaylist(host, [track]))),
               if (track.isRemote && Features.downloads)
                 ListenableBuilder(

@@ -47,18 +47,24 @@ void main() {
   late StreamController<Duration> ticks;
   late StreamController<Duration> smooth;
   late List<Duration> seeks;
+  late ValueNotifier<bool> playing;
   var now = Duration.zero;
 
   setUp(() {
     ticks = StreamController<Duration>.broadcast();
     smooth = StreamController<Duration>.broadcast();
     seeks = [];
+    playing = ValueNotifier(true);
     now = Duration.zero;
     LayoutPrefs.instance.dimUnsungLyrics = true;
   });
   tearDown(() {
     ticks.close();
     smooth.close();
+    playing.dispose();
+    LayoutPrefs.instance
+      ..lyricsLines = LyricsLines.all
+      ..lyricsSync = LyricsSync.word;
   });
 
   Future<void> pump(WidgetTester tester, Lyrics lyrics, {Duration? length, Duration? start}) async {
@@ -73,6 +79,7 @@ void main() {
             lyrics: lyrics,
             ticks: ticks.stream,
             smoothTicks: smooth.stream,
+            playing: playing,
             position: () => now,
             length: () => length,
             onSeek: seeks.add,
@@ -191,16 +198,115 @@ void main() {
     final state = tester.state<KaraokeLineState>(find.byType(KaraokeLine));
     expect(state.progress, (sung: 0, fill: 0.0));
 
-    smooth.add(const Duration(milliseconds: 1500));
-    await tester.pump();
+    // On the frame clock: the position is read on each beat, not taken from the stream.
+    now = const Duration(milliseconds: 1500);
+    await tester.pump(const Duration(milliseconds: 100));
     expect(state.progress.sung, 1);
     expect(state.progress.fill, closeTo(0.5, 0.001));
 
-    smooth.add(const Duration(seconds: 3));
-    await tester.pump();
+    now = const Duration(seconds: 3);
+    await tester.pump(const Duration(milliseconds: 100));
     expect(state.progress, (sung: 3, fill: 0.0));
     // Painting the fill works on a wrapped line too.
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('the fill advances between position ticks while playing, and holds still when paused', (tester) async {
+    await pump(tester, _karaoke(), length: const Duration(seconds: 30));
+    final state = tester.state<KaraokeLineState>(find.byType(KaraokeLine));
+    expect(state.onBeat, isTrue);
+    // No stream tick at all: only the clock moves the fill.
+    var last = state.progress.fill;
+    for (var ms = 100; ms <= 900; ms += 200) {
+      now = Duration(milliseconds: ms);
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(state.progress.fill, greaterThan(last), reason: '$ms ms');
+      last = state.progress.fill;
+    }
+
+    playing.value = false;
+    await tester.pump();
+    expect(state.onBeat, isFalse, reason: 'a paused song takes no beats');
+    now = const Duration(milliseconds: 1500);
+    await tester.pump(const Duration(milliseconds: 200));
+    expect(state.progress.sung, 0, reason: 'nothing moved it');
+    // A seek while paused still shows: the position stream moves it.
+    smooth.add(const Duration(milliseconds: 1500));
+    await tester.pump();
+    expect(state.progress.sung, 1);
+
+    playing.value = true;
+    await tester.pump();
+    expect(state.onBeat, isTrue);
+  });
+
+  testWidgets('the beat is given up when the line stops being the current one, and when the page is hidden', (
+    tester,
+  ) async {
+    await pump(tester, _karaoke(), length: const Duration(seconds: 30));
+    expect(find.byType(KaraokeLine), findsOneWidget);
+    ticks.add(const Duration(seconds: 6));
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(find.byType(KaraokeLine), findsNothing, reason: 'the next line has no word timings');
+    // No listener is left on the clock: the test ends without a timer pending.
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: TickerMode(
+            enabled: false,
+            child: SyncedLyricsView(
+              lyrics: _karaoke(),
+              ticks: ticks.stream,
+              smoothTicks: smooth.stream,
+              position: () => Duration.zero,
+              length: () => const Duration(seconds: 30),
+              onSeek: seeks.add,
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(tester.state<KaraokeLineState>(find.byType(KaraokeLine)).onBeat, isFalse, reason: 'hidden page');
+  });
+
+  testWidgets('Line by line never builds a KaraokeLine, even with word timings', (tester) async {
+    LayoutPrefs.instance.lyricsSync = LyricsSync.line;
+    await pump(tester, _karaoke(), length: const Duration(seconds: 30));
+    expect(find.byType(KaraokeLine), findsNothing);
+    expect(colorOf(tester, 'Hello big world'), _primary, reason: 'the whole line is lit at once');
+    ticks.add(const Duration(seconds: 6));
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(find.byType(KaraokeLine), findsNothing);
+  });
+
+  testWidgets('Focused shows the previous, the current and the next line, and follows the song', (tester) async {
+    LayoutPrefs.instance.lyricsLines = LyricsLines.focused;
+    await pump(tester, _long(), length: const Duration(seconds: 120), start: const Duration(seconds: 7));
+    // Line 2 is current at 7 s: lines 1, 2 and 3, and no others.
+    expect(find.textContaining('Line '), findsNWidgets(3));
+    expect(find.text('Line 1'), findsOneWidget);
+    expect(find.text('Line 2'), findsOneWidget);
+    expect(find.text('Line 3'), findsOneWidget);
+    expect(colorOf(tester, 'Line 2'), _primary);
+    // The current line sits in the middle of the view.
+    final box = tester.getRect(find.byType(SyncedLyricsView));
+    expect(tester.getCenter(find.text('Line 2')).dy, closeTo(box.center.dy, 12));
+
+    ticks.add(const Duration(seconds: 13));
+    await tester.pump(const Duration(milliseconds: 500));
+    await tester.pump(const Duration(milliseconds: 500)); // the old trio leaves once its fade is done
+    expect(find.textContaining('Line '), findsNWidgets(3));
+    expect(find.text('Line 3'), findsOneWidget);
+    expect(find.text('Line 4'), findsOneWidget);
+    expect(find.text('Line 5'), findsOneWidget);
+    expect(find.text('Line 1'), findsNothing);
+
+    // The lines either side still seek.
+    await tester.tap(find.text('Line 3'));
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(seeks, [const Duration(seconds: 9)]);
   });
 
   testWidgets('a karaoke line wraps and centres without errors', (tester) async {
@@ -217,8 +323,8 @@ void main() {
       ),
       length: const Duration(seconds: 60),
     );
-    smooth.add(const Duration(milliseconds: 6500));
-    await tester.pump();
+    now = const Duration(milliseconds: 6500);
+    await tester.pump(const Duration(milliseconds: 100));
     expect(tester.takeException(), isNull);
     expect(tester.state<KaraokeLineState>(find.byType(KaraokeLine)).progress.sung, 6);
   });

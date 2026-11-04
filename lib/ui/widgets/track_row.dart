@@ -20,6 +20,7 @@ import '../../services/youtube_music_account.dart';
 import '../../services/ytmusic_web.dart' show WebResultKind;
 import '../pages/youtube_music_page.dart' show openRemotePlaylist, RemoteCollectionPage;
 import '../ytmusic_edit.dart';
+import '../player/player_parts.dart' show shareTrack;
 import '../theme.dart';
 import 'controls.dart';
 import 'menus.dart';
@@ -98,6 +99,8 @@ class _TrackRowState extends State<TrackRow> {
     final text = Theme.of(context).textTheme;
     final t = widget.track;
     final wide = !shell.compact;
+    // Settings > Layout > Player > Song that is playing: a filled card instead of coloured text.
+    final card = isCurrent && LayoutPrefs.instance.playingRow == PlayingRowStyle.card;
 
     Widget? leading;
     if (widget.index != null && wide) {
@@ -128,6 +131,10 @@ class _TrackRowState extends State<TrackRow> {
         child: Row(
           children: [
             if (leading != null) ...[leading, const SizedBox(width: 12)],
+            if (card && leading == null && !widget.showArtwork) ...[
+              EqualizerIcon(playing: playing, size: 18, color: AppColors.textPrimary),
+              const SizedBox(width: 14),
+            ],
             if (widget.showArtwork) ...[
               Artwork(track: t, size: LayoutPrefs.dense(wide ? 40 : 48, wide ? 34 : 40)),
               const SizedBox(width: 12),
@@ -142,14 +149,17 @@ class _TrackRowState extends State<TrackRow> {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: text.bodyLarge?.copyWith(
-                      color: isCurrent ? AppColors.accent : AppColors.textPrimary,
+                      color: isCurrent && !card ? AppColors.accent : AppColors.textPrimary,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
                   const SizedBox(height: 2),
                   Row(
                     children: [
-                      if (isCurrent && !wide) ...[EqualizerIcon(playing: playing, size: 10), const SizedBox(width: 6)],
+                      if (isCurrent && !wide && !(card && !widget.showArtwork)) ...[
+                        EqualizerIcon(playing: playing, size: 10),
+                        const SizedBox(width: 6),
+                      ],
                       // YouTube songs: cloud = streams, green pin = downloaded, plays offline.
                       if (t.isRemote) ...[SourceMark(online: online, size: 14), const SizedBox(width: 4)],
                       Flexible(
@@ -220,10 +230,10 @@ class _TrackRowState extends State<TrackRow> {
         hover: _hover,
         child: body,
         builder: (context, hover, child) => Material(
-          color: hover ? AppColors.tile : Colors.transparent,
-          borderRadius: LayoutPrefs.corner(6),
+          color: card ? AppColors.accent.withValues(alpha: 0.3) : (hover ? AppColors.tile : Colors.transparent),
+          borderRadius: LayoutPrefs.corner(card ? 16 : 6),
           child: InkWell(
-            borderRadius: LayoutPrefs.corner(6),
+            borderRadius: LayoutPrefs.corner(card ? 16 : 6),
             hoverColor: Colors.transparent,
             onTap: isCurrent && wide && hover ? c.togglePlay : widget.onTap,
             child: child,
@@ -293,7 +303,7 @@ VoidCallback? openArtist(BuildContext host, PlayerController c, Track track, {Sh
 
 /// Entries this menu can leave out, for a host surface that already lists them
 /// itself (the player's More sheet has Add to playlist and the download states).
-enum TrackMenuEntry { addToPlaylist, download }
+enum TrackMenuEntry { addToPlaylist, download, share }
 
 /// The ⋯ menu of a song: play next, add to playlist, like, download, go to artist…
 class TrackMenuButton extends StatelessWidget {
@@ -382,6 +392,12 @@ class TrackMenuButton extends StatelessWidget {
               PopupMenuItem(
                 onTap: () => shell.openCollection(album),
                 child: const MenuRow(leading: Icon(Icons.album_outlined), title: Text('Go to album')),
+              ),
+            // The song's YouTube Music link, or its name and artist for a file here.
+            if (!hide.contains(TrackMenuEntry.share))
+              PopupMenuItem(
+                onTap: () => shareTrack(host, track),
+                child: const MenuRow(leading: Icon(Icons.share_outlined), title: Text('Share')),
               ),
             if (!hide.contains(TrackMenuEntry.addToPlaylist))
               PopupMenuItem(

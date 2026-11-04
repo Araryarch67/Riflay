@@ -8,6 +8,9 @@ import 'package:flutter/services.dart';
 import '../models/track.dart';
 import '../services/download_notifications.dart';
 import '../services/gate_hooks.dart';
+import 'pages/youtube_music_page.dart' show likedCollection;
+import 'widgets/track_row.dart' show openArtist;
+import '../services/player_presets.dart';
 import '../services/layout_prefs.dart';
 import '../services/player_controller.dart';
 import '../services/wrap.dart';
@@ -222,7 +225,42 @@ class _HomeShellState extends State<HomeShell> {
         final size = MediaQuery.sizeOf(context);
         GateHooks.wheel(Offset(size.width * 0.45, size.height * 0.5), double.parse(args['dy'] ?? '120'));
       case 'home':
+        _closePhoneRoutes();
+        _nav?.popUntil((r) => r.isFirst);
         _goHome();
+      case 'preset':
+        final want = args['name']!.toLowerCase();
+        await PlayerPreset.all.firstWhere((p) => p.name.toLowerCase() == want).apply(LayoutPrefs.instance);
+      case 'nowplaying':
+        _openNowPlaying();
+      case 'more':
+        final host = _compact ? _nav?.context : _history.navigatorKey.currentContext;
+        if (host != null) unawaited(showPlayerMore(host, openPlayer: _openNowPlaying));
+      case 'playlist':
+        // A Riflay playlist, else Liked music, else All Songs: a collection of real songs either way.
+        final list = c.playlists.firstOrNull;
+        final liked = c.ytMusic.libraryNow?.liked ?? const [];
+        final col = list != null
+            ? c.playlistCollection(list)
+            : liked.isNotEmpty
+            ? likedCollection(liked)
+            : c.allSongs;
+        _open(CollectionPage(collection: col), location: Locations.collection(col));
+        return col.title;
+      case 'artist':
+        final track = c.currentTrack;
+        final host = _compact ? _nav?.context : _history.navigatorKey.currentContext;
+        final open = track == null || host == null ? null : openArtist(host, c, track);
+        open?.call();
+        return open != null;
+      case 'back':
+        if (_phoneRoutes.isNotEmpty) {
+          Navigator.of(context).pop();
+        } else if (_compact) {
+          await _phoneBack();
+        } else {
+          _history.back();
+        }
       case 'pause':
         await c.pause();
       default:

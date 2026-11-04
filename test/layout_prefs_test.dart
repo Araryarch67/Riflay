@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:riflay/services/layout_prefs.dart';
+import 'package:riflay/services/player_presets.dart';
 import 'package:riflay/ui/pages/layout_settings.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -27,7 +28,7 @@ void main() {
     expect(p.showQualityBadge, isTrue);
     expect(p.dimUnsungLyrics, isTrue);
     expect(p.motion, Motion.full);
-    expect(p.pageMotion, PageMotionStyle.diamondReveal);
+    expect(p.pageMotion, PageMotionStyle.wipe);
     expect(p.pageSpeed, PageMotionSpeed.relaxed);
     expect(p.progressShape, ProgressBarShape.wavy);
     expect(p.isCustomised, isFalse);
@@ -68,7 +69,7 @@ void main() {
     p.restore({'visualizerCoverShape': 'future-shape'});
     expect(p.visualizerCoverShape, VisualizerCoverShape.flower);
     await p.reset();
-    expect(p.pageMotion, PageMotionStyle.diamondReveal);
+    expect(p.pageMotion, PageMotionStyle.wipe);
     expect(p.pageSpeed, PageMotionSpeed.relaxed);
     expect(p.progressShape, ProgressBarShape.wavy);
   });
@@ -149,7 +150,7 @@ void main() {
   });
 
   testWidgets('Layout settings: change a choice and reset', (tester) async {
-    tester.view.physicalSize = const Size(900, 3400);
+    tester.view.physicalSize = const Size(900, 7000);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
     await tester.pumpWidget(
@@ -169,6 +170,43 @@ void main() {
     await tester.tap(find.widgetWithText(SwitchListTile, 'Artists'));
     await tester.pump();
     expect(p.homeHidden, {HomeSection.artists});
+  });
+
+  test('the lyrics options persist and default to how lyrics have always been', () async {
+    expect(p.lyricsLines, LyricsLines.all);
+    expect(p.lyricsSync, LyricsSync.word);
+    await p.setLyricsLines(LyricsLines.focused);
+    await p.setLyricsSync(LyricsSync.line);
+    p.restore(const {});
+    expect(p.lyricsLines, LyricsLines.all);
+    await p.load();
+    expect(p.lyricsLines, LyricsLines.focused);
+    expect(p.lyricsSync, LyricsSync.line);
+    p.restore({'lyricsLines': 'from-the-future', 'lyricsSync': 'nope'});
+    expect(p.lyricsLines, LyricsLines.all);
+    expect(p.lyricsSync, LyricsSync.word);
+    await p.reset();
+    expect(p.isCustomised, isFalse);
+  });
+
+  test('the quality badge place persists; the visualizer survives out of Beta only if it was opted in', () async {
+    expect(p.qualityBadgePlace, QualityBadgePlace.underArtist);
+    await p.setQualityBadgePlace(QualityBadgePlace.timeRow);
+    await p.load();
+    expect(p.qualityBadgePlace, QualityBadgePlace.timeRow);
+    await p.reset();
+
+    // An older save: the visualizer was on in the layout, but only counted with its Beta switch.
+    SharedPreferences.setMockInitialValues({'layout.v1': '{"visualizer":true}'});
+    await p.load();
+    expect(p.visualizer, isFalse, reason: 'never opted in: stays off');
+    SharedPreferences.setMockInitialValues({'layout.v1': '{"visualizer":true}', 'features.audioVisualizer': true});
+    await p.load();
+    expect(p.visualizer, isTrue, reason: 'opted in: kept');
+    SharedPreferences.setMockInitialValues({'layout.v1': '{"visualizer":true,"visualizerStable":true}'});
+    await p.load();
+    expect(p.visualizer, isTrue, reason: 'a save made since is taken as it is');
+    await p.reset();
   });
 
   test('the video decoder persists, is not a look, and Reset leaves it alone', () async {
@@ -193,5 +231,19 @@ void main() {
     await p.reset();
     expect(p.windowButtons, isFalse);
     await p.setWindowButtons(true);
+  });
+
+  test('the volume slider look persists, and Stacked makes it a pill with the row shown', () async {
+    expect(p.volumeSlider, VolumeSliderShape.classic);
+    await p.setVolumeSlider(VolumeSliderShape.thin);
+    await p.load();
+    expect(p.volumeSlider, VolumeSliderShape.thin);
+    await PlayerPreset.stacked.apply(p);
+    expect(p.volumeSlider, VolumeSliderShape.pill);
+    expect(p.showVolumeRow, isTrue);
+    await PlayerPreset.kawaii.apply(p);
+    expect(p.volumeSlider, VolumeSliderShape.thin);
+    await PlayerPreset.classic.apply(p);
+    expect(p.volumeSlider, VolumeSliderShape.classic);
   });
 }

@@ -19,6 +19,8 @@ import 'package:riflay/ui/player/side_panel.dart';
 import 'package:riflay/ui/shell_scope.dart';
 import 'package:riflay/ui/widgets/collection_hero.dart';
 import 'package:riflay/ui/widgets/controls.dart';
+import 'package:riflay/ui/widgets/faded_cover.dart';
+import 'package:riflay/ui/widgets/marquee_text.dart';
 import 'package:riflay/ui/widgets/wavy_seek_track.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -162,55 +164,55 @@ void main() {
         await _close(tester, c);
       });
 
-      testWidgets('every cover, top and title-button mix fits ${size.width.toInt()}x${size.height.toInt()}', (
-        tester,
-      ) async {
-        final c = await _show(tester, const SizedBox(), size);
-        var n = 0;
-        for (final panel in [ExpandedPanel.none, ExpandedPanel.lyrics]) {
-          expandedPlayerPanel.value = panel;
-          for (final cover in PlayerCover.values) {
-            for (final header in PlayerHeader.values) {
-              for (final actions in TitleActions.values) {
-                p
-                  ..playerCover = cover
-                  ..playerHeader = header
-                  ..titleActions = actions;
-                await _swap(tester, c, size, const Scaffold(body: FullScreenPlayer()), n++);
-                final mix = '$panel $cover $header $actions';
-                expect(_real, isEmpty, reason: mix);
-                expect(
-                  _tip(panel == ExpandedPanel.lyrics ? 'Hide lyrics' : 'Lyrics'),
-                  findsOneWidget,
-                  reason: '$mix: Lyrics is always there',
-                );
-                expect(_tip('Equalizer'), findsOneWidget, reason: mix);
-                expect(find.text('Desk song'), findsOneWidget, reason: mix);
-                expect(
-                  tester.widget<Artwork>(find.byType(Artwork).first).radius,
-                  cover == PlayerCover.fullBleed ? 0 : 12,
-                  reason: mix,
-                );
-                expect(find.text('Now Playing'), header == PlayerHeader.centered ? findsOneWidget : findsNothing);
-                expect(
-                  find.textContaining('Playing from'),
-                  header == PlayerHeader.playingFrom ? findsOneWidget : findsNothing,
-                );
-                expect(_tip('Share'), actions == TitleActions.boxed ? findsOneWidget : findsNothing, reason: mix);
+      testWidgets(
+        'every cover, top and title-button mix keeps the Classic layout at ${size.width.toInt()}x${size.height.toInt()}',
+        (tester) async {
+          final c = await _show(tester, const SizedBox(), size);
+          var n = 0;
+          for (final panel in [ExpandedPanel.none, ExpandedPanel.lyrics]) {
+            expandedPlayerPanel.value = panel;
+            for (final cover in PlayerCover.values) {
+              for (final header in PlayerHeader.values) {
+                for (final actions in TitleActions.values) {
+                  p
+                    ..playerCover = cover
+                    ..playerHeader = header
+                    ..titleActions = actions;
+                  await _swap(tester, c, size, const Scaffold(body: FullScreenPlayer()), n++);
+                  final mix = '$panel $cover $header $actions';
+                  expect(_real, isEmpty, reason: mix);
+                  expect(
+                    _tip(panel == ExpandedPanel.lyrics ? 'Hide lyrics' : 'Lyrics'),
+                    findsOneWidget,
+                    reason: '$mix: Lyrics is always there',
+                  );
+                  expect(_tip('Equalizer'), findsOneWidget, reason: mix);
+                  expect(find.text('Desk song'), findsOneWidget, reason: mix);
+                  // The expanded player is Classic whatever the parts say: they shape the phone and the side panel.
+                  expect(find.byType(FadedCover), findsNothing, reason: mix);
+                  expect(tester.widget<Artwork>(find.byType(Artwork).first).radius, 12, reason: mix);
+                  expect(find.text('Now Playing'), findsNothing, reason: mix);
+                  expect(find.textContaining('Playing from'), findsNothing, reason: mix);
+                  expect(_tip('Share'), findsNothing, reason: mix);
+                  // The title never runs under its buttons.
+                  final title = tester.getRect(find.byType(MarqueeText).first);
+                  final menu = tester.getRect(find.byTooltip('More options for Desk song').first);
+                  expect(title.right, lessThanOrEqualTo(menu.left + 0.5), reason: '$mix: title vs buttons');
+                }
               }
             }
           }
-        }
-        await _close(tester, c);
-      });
+          await _close(tester, c);
+        },
+      );
     }
 
-    testWidgets('Full width makes the cover at least as big as the card', (tester) async {
+    testWidgets('the Background cover leaves the expanded player Classic', (tester) async {
       final c = await _show(tester, const Scaffold(body: FullScreenPlayer()), const Size(1280, 800));
-      final card = tester.getSize(find.byType(Artwork).first);
-      p.playerCover = PlayerCover.fullBleed;
+      p.playerCover = PlayerCover.background;
       await _swap(tester, c, const Size(1280, 800), const Scaffold(body: FullScreenPlayer()), 1);
-      expect(tester.getSize(find.byType(Artwork).first).width, greaterThanOrEqualTo(card.width));
+      expect(find.byType(FadedCover), findsNothing);
+      expect(tester.widget<Artwork>(find.byType(Artwork).first).radius, 12);
       await _close(tester, c);
     });
 
@@ -227,6 +229,49 @@ void main() {
   });
 
   group('player bar', () {
+    testWidgets('the volume popup opens above the button, inside a 1000x700 window', (tester) async {
+      const size = Size(1000, 700);
+      // A bar narrower than 860 px keeps volume behind its button; at the window's bottom-right corner.
+      final c = await _show(
+        tester,
+        const Scaffold(
+          body: Align(
+            alignment: Alignment.bottomRight,
+            child: SizedBox(width: 800, child: DesktopPlayerBar(sidePanelOpen: false, onToggleSidePanel: null)),
+          ),
+        ),
+        size,
+      );
+      final button = _tip('Volume');
+      expect(button, findsOneWidget);
+      final buttonRect = tester.getRect(button);
+      await _guarded(() async {
+        await tester.tap(button);
+        await tester.pump(const Duration(milliseconds: 300));
+      });
+      final popup = find.byType(VolumeSlider);
+      expect(popup, findsOneWidget);
+      final rect = tester.getRect(popup);
+      final window = Offset.zero & size;
+      expect(window.contains(rect.topLeft) && window.contains(rect.bottomRight), isTrue, reason: '$rect in $window');
+      expect(rect.bottom, lessThanOrEqualTo(buttonRect.top + 1), reason: 'above the button');
+      await _close(tester, c);
+    });
+
+    testWidgets('the More menu opens inside a 1000x700 window', (tester) async {
+      const size = Size(1000, 700);
+      final c = await _show(tester, _bar, size);
+      await _guarded(() async {
+        await tester.tap(_tip('More options'));
+        await tester.pump(const Duration(milliseconds: 300));
+      });
+      final menu = find.byType(PopupMenuItem<VoidCallback>).first;
+      final rect = tester.getRect(menu);
+      final window = Offset.zero & size;
+      expect(window.contains(rect.topLeft) && window.contains(rect.bottomRight), isTrue, reason: '$rect in $window');
+      await _close(tester, c);
+    });
+
     for (final size in _sizes) {
       testWidgets('defaults are the original bar at ${size.width.toInt()}x${size.height.toInt()}', (tester) async {
         final c = await _show(tester, _bar, size);
@@ -260,25 +305,20 @@ void main() {
                     ..progressShape = shape
                     ..showTimeLeft = n.isOdd
                     ..showVolumeRow = n % 3 != 0
-                    ..playerCover = n.isEven ? PlayerCover.card : PlayerCover.fullBleed;
+                    ..playerCover = PlayerCover.values[n % 3];
                   await _swap(tester, c, size, _bar, n++);
                   final mix = '$style $transport $row $shape';
                   expect(_real, isEmpty, reason: mix);
                   expect(_tip('Lyrics'), findsOneWidget, reason: '$mix: Lyrics is always on the bar');
                   expect(_tip('Queue'), findsOneWidget, reason: mix);
-                  expect(_tip('Sleep timer'), row == PlayerBottomRow.chips ? findsOneWidget : findsNothing);
-                  expect(
-                    find.byType(TransportControls),
-                    transport == PlayerTransport.classic ? findsOneWidget : findsNothing,
-                  );
-                  expect(
-                    find.byType(DesktopControlsRow),
-                    transport == PlayerTransport.classic ? findsNothing : findsOneWidget,
-                  );
+                  // The bar is Classic whatever the parts say: they shape the phone and the side panel.
+                  expect(_tip('Sleep timer'), findsNothing, reason: mix);
+                  expect(find.byType(TransportControls), findsOneWidget, reason: mix);
+                  expect(find.byType(DesktopControlsRow), findsNothing, reason: mix);
                   expect(_tip('Previous'), findsOneWidget, reason: mix);
                   expect(_tip('Next'), findsOneWidget, reason: mix);
-                  expect(_seekShape(tester).pill, shape == ProgressBarShape.pill, reason: mix);
-                  expect(find.text(p.showTimeLeft ? '-1:26' : '2:30'), findsOneWidget, reason: '$mix: time left');
+                  expect(_seekShape(tester).pill, isFalse, reason: mix);
+                  expect(find.text('2:30'), findsOneWidget, reason: '$mix: the elapsed time, as Classic');
                 }
               }
             }
@@ -301,25 +341,15 @@ void main() {
       await _close(tester, c);
     });
 
-    testWidgets('the Plain and Pill controls play and pause', (tester) async {
-      for (final transport in [PlayerTransport.pill, PlayerTransport.plain]) {
-        p.transport = transport;
+    testWidgets('the bar keeps the Classic controls and flower thumbnail in every preset', (tester) async {
+      for (final preset in PlayerPreset.all) {
+        await preset.apply(p);
         final c = await _show(tester, _bar, const Size(1280, 800));
-        expect(_tip('Play'), findsOneWidget, reason: '$transport');
-        expect(find.byType(DesktopControlsRow), findsOneWidget);
+        expect(find.byType(TransportControls), findsOneWidget, reason: preset.name);
+        expect(find.byType(DesktopControlsRow), findsNothing, reason: preset.name);
+        expect(tester.widget<Artwork>(find.byType(Artwork).first).flower, isTrue, reason: preset.name);
         await _close(tester, c);
       }
-    });
-
-    testWidgets('Full width cover turns the bar thumbnail from the flower to a plain square', (tester) async {
-      final c = await _show(tester, _bar, const Size(1280, 800));
-      expect(tester.widget<Artwork>(find.byType(Artwork).first).flower, isTrue);
-      p.playerCover = PlayerCover.fullBleed;
-      await _swap(tester, c, const Size(1280, 800), _bar, 1);
-      final art = tester.widget<Artwork>(find.byType(Artwork).first);
-      expect(art.flower, isFalse);
-      expect(art.radius, 0);
-      await _close(tester, c);
     });
   });
 
@@ -341,10 +371,15 @@ void main() {
             const Size(1280, 800),
           );
           expect(_real, isEmpty);
-          final art = tester.getRect(find.byType(Artwork).first);
-          expect(art.width, cover == PlayerCover.fullBleed ? 340 : 340 - 32);
-          expect(art.height, art.width);
-          expect(find.text('Now Playing'), header == PlayerHeader.centered ? findsOneWidget : findsNothing);
+          final art = tester.getRect(
+            cover == PlayerCover.background ? find.byType(FadedCover) : find.byType(Artwork).first,
+          );
+          // Background: the picture across the panel's top, a little taller than wide; else the card in the margins.
+          expect(art.width, cover == PlayerCover.background ? 340 : 340 - 32);
+          expect(art.height, closeTo(cover == PlayerCover.background ? 340 / 0.82 : art.width, 0.5));
+          // No header row: the bar's Now playing view button shows and hides the panel.
+          expect(find.text('Now Playing'), findsNothing);
+          expect(find.byTooltip('Close'), findsNothing);
           await _close(tester, c);
         });
       }
@@ -378,7 +413,8 @@ void main() {
           expect(find.byType(LyricsBottomCard), layout == LyricsLayout.bottomCard ? findsOneWidget : findsNothing);
           expect(find.byType(LyricsPlainPlayer), findsNothing, reason: 'the player bar has the controls');
           expect(find.byType(SeekBar), findsNothing, reason: 'the player bar has the seek bar');
-          expect(_tip('More'), findsNothing);
+          // The player's More sheet isn't here on desktop (the lyrics' own options menu may be).
+          expect(find.byType(PlayerMoreAction), findsNothing);
           expect(_tip('Expanded player'), layout == LyricsLayout.bottomCard ? findsOneWidget : findsNothing);
           expect(find.text('Desk song'), layout == LyricsLayout.classic ? findsNothing : findsOneWidget);
           await _close(tester, c);
@@ -414,6 +450,7 @@ void main() {
           if (style == AlbumHeaderStyle.hero) {
             expect(_tip('Shuffle play'), findsOneWidget);
             expect(_tip('Play'), findsOneWidget);
+            expect(_tip('Add all to queue'), findsOneWidget, reason: 'the list button of the round row');
           }
           await _close(tester, c);
         });
@@ -451,9 +488,23 @@ void main() {
           home: Scaffold(body: SingleChildScrollView(child: LayoutSettings())),
         ),
       );
-      expect(find.text('Player'), findsOneWidget);
+      // The groups, in order: Presets first, then Now Playing, the controls, lyrics, the visualizer, pages, bars.
+      for (final group in [
+        'Presets',
+        'Now Playing',
+        'Playback controls',
+        'Lyrics',
+        'Pages',
+        'Bars',
+        'Shapes and motion',
+      ]) {
+        expect(find.text(group), findsWidgets, reason: group);
+      }
       expect(find.text('Player on phones'), findsNothing);
-      expect(find.text('Presets'), findsOneWidget);
+      expect(
+        tester.getTopLeft(find.text('Presets').first).dy,
+        lessThan(tester.getTopLeft(find.text('Now Playing')).dy),
+      );
       for (final t in [
         'Cover',
         'Buttons by the title',
@@ -482,6 +533,8 @@ void main() {
           }
         });
         await tester.runAsync(() => preset.apply(p));
+        // Kawaii's Music video background starts the video machinery, which keeps timers: not what is under test.
+        await Appearance.instance.setNowPlaying(NowPlayingBackground.color);
         await tester.runAsync(() => UserLyrics.save(_track, '[00:00.00]Some words'));
         final c = await _show(tester, const SizedBox(), const Size(1280, 800));
         var n = 0;

@@ -12,6 +12,8 @@ import '../player/player_parts.dart';
 import '../shell_scope.dart';
 import '../theme.dart';
 import 'controls.dart';
+import 'faded_cover.dart';
+import '../ytmusic_edit.dart' show FollowButton;
 import 'editable_title.dart';
 
 /// The top of an album or playlist page with Settings › Layout › Album and playlist top set to Hero: the cover
@@ -34,38 +36,34 @@ class CollectionHero extends StatelessWidget {
     final tracks = collection.tracks;
     final isArtist = collection.kind == CollectionKind.artist;
     final total = formatTotal(tracks);
-    final meta = ['${tracks.length} ${tracks.length == 1 ? 'song' : 'songs'}', if (total.isNotEmpty) total].join(' • ');
+    // An artist page: your own artist, or a YouTube Music one (it has a Follow button).
+    final artistPage = isArtist || actions.any((a) => a is FollowButton);
+    final radioSeed = tracks.where((t) => t.isRemote).firstOrNull;
+    // An artist: how many songs and albums; an album or playlist: its songs and length.
+    final albums = isArtist ? c.albums.where((a) => a.subtitle == collection.title).length : 0;
+    final meta = isArtist
+        ? [
+            '${tracks.length} ${tracks.length == 1 ? 'song' : 'songs'}',
+            '$albums ${albums == 1 ? 'album' : 'albums'}',
+          ].join(' • ')
+        : ['${tracks.length} ${tracks.length == 1 ? 'song' : 'songs'}', if (total.isNotEmpty) total].join(' • ');
     final artist = collection.kind == CollectionKind.album ? c.artistNamed(collection.subtitle) : null;
     // The page behind the fade: the desktop's content panel, the phone's background.
-    final fadeTo = shell.compact ? AppColors.solidBackground : AppColors.panel.withValues(alpha: 1);
+    final fadeTo = AppColors.panel.withValues(alpha: 1);
     return LayoutBuilder(
       builder: (context, box) {
         final side = math.min(box.maxWidth, shell.compact ? 480.0 : 360.0);
+        // On a phone the picture goes up under the status bar; the page's back button floats over it.
+        final topInset = shell.compact ? MediaQuery.paddingOf(context).top : 0.0;
         return Column(
           children: [
             SizedBox(
-              height: side,
+              height: side + topInset,
               child: Stack(
                 fit: StackFit.expand,
                 children: [
-                  ClipRect(
-                    child: OverflowBox(
-                      maxWidth: math.max(side, box.maxWidth),
-                      maxHeight: math.max(side, box.maxWidth),
-                      child: Artwork(track: collection.cover, size: math.max(side, box.maxWidth), radius: 0),
-                    ),
-                  ),
-                  // A plain fade into the page: no blur, nothing animated.
-                  DecoratedBox(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [Colors.transparent, fadeTo.withValues(alpha: 0.85), fadeTo],
-                        stops: const [0.3, 0.8, 1],
-                      ),
-                    ),
-                  ),
+                  // The cover is the whole header: sharp at the top, softer below, ending in the page's own colour.
+                  FadedCover(track: collection.cover, fade: fadeTo, blurStart: 0.45, darken: 0.3),
                   Positioned(
                     left: 24,
                     right: 24,
@@ -97,7 +95,12 @@ class CollectionHero extends StatelessWidget {
                                 collection.subtitle,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: text.titleMedium?.copyWith(color: colors.accent, fontWeight: FontWeight.w700),
+                                style: text.titleMedium?.copyWith(
+                                  color: colors.accent,
+                                  fontWeight: FontWeight.w700,
+                                  decoration: TextDecoration.underline,
+                                  decorationColor: colors.accent,
+                                ),
                               ),
                             ),
                           ),
@@ -199,6 +202,33 @@ class CollectionHero extends StatelessWidget {
                         ),
                       ),
                       for (final a in actions) ...[const SizedBox(width: 12), a],
+                      // Add everything to the queue (albums and playlists), or start a radio (artists).
+                      if (!artistPage && !empty) ...[
+                        const SizedBox(width: 12),
+                        PartButton(
+                          icon: Icons.playlist_add_rounded,
+                          tooltip: 'Add all to queue',
+                          look: PartLook.muted,
+                          round: true,
+                          size: 48,
+                          onPressed: () {
+                            final messenger = ScaffoldMessenger.of(context);
+                            c.addToQueue(tracks);
+                            messenger.showSnackBar(const SnackBar(content: Text('Added to queue')));
+                          },
+                        ),
+                      ],
+                      if (artistPage && radioSeed != null) ...[
+                        const SizedBox(width: 12),
+                        PartButton(
+                          icon: Icons.sensors_rounded,
+                          tooltip: 'Start radio',
+                          look: PartLook.muted,
+                          round: true,
+                          size: 48,
+                          onPressed: () => c.startRadio(radioSeed),
+                        ),
+                      ],
                     ],
                   );
                 },

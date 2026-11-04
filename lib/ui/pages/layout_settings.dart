@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../platform/features.dart';
+import '../../services/appearance.dart';
 import '../../services/layout_prefs.dart';
 import '../../services/player_presets.dart';
 import '../../services/beta_features.dart';
@@ -21,13 +23,107 @@ class LayoutSettings extends StatelessWidget {
     final p = LayoutPrefs.instance;
     final muted = settingsMuted(context);
     return ListenableBuilder(
-      listenable: Listenable.merge([p, BetaFeatures.instance]),
+      listenable: Listenable.merge([p, BetaFeatures.instance, Appearance.instance]),
       builder: (context, _) => Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (BetaFeature.videoMode.available)
-            SettingsCard(
-              children: [
+          const _Header('Presets', hint: 'A whole look in one tap. Every part below can still be changed on its own'),
+          SettingsCard(
+            children: [
+              ListTile(
+                leading: const Icon(Icons.auto_awesome_mosaic_rounded),
+                title: const Text('Presets'),
+                subtitle: Text(playerPresetName() == null ? 'Custom' : 'Matches ${playerPresetName()}', style: muted),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: () =>
+                    Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const PlayerPresetsPage())),
+              ),
+            ],
+          ),
+          const _Header('Now Playing', hint: 'The full-screen player'),
+          SettingsCard(
+            children: [
+              SettingTile(
+                icon: Icons.wallpaper_rounded,
+                title: const Text('Cover'),
+                subtitle: Text(
+                  'Square or flower frame the cover. Background has no frame: it fills the top and fades into the page',
+                  style: muted,
+                ),
+                control: OptionPicker<PlayerCover>(
+                  value: p.playerCover,
+                  onChanged: p.setPlayerCover,
+                  options: [for (final v in PlayerCover.values) (v, v.label)],
+                ),
+              ),
+              SettingTile(
+                icon: Icons.fit_screen_rounded,
+                title: const Text('Cover size on phones'),
+                subtitle: Text('Large reaches nearly the edges of the screen', style: muted),
+                control: OptionPicker<PhoneCoverSize>(
+                  value: p.phoneCover,
+                  onChanged: p.setPhoneCover,
+                  options: [for (final v in PhoneCoverSize.values) (v, v.label)],
+                ),
+              ),
+              SettingTile(
+                icon: Icons.vertical_align_top_rounded,
+                title: const Text('Top of the player'),
+                subtitle: Text('What the top shows beside the close arrow, or above the song on desktop', style: muted),
+                control: OptionPicker<PlayerHeader>(
+                  value: p.playerHeader,
+                  onChanged: p.setPlayerHeader,
+                  options: [for (final v in PlayerHeader.values) (v, v.label)],
+                ),
+              ),
+              SettingTile(
+                icon: Icons.smart_button_rounded,
+                title: const Text('Buttons by the title'),
+                subtitle: Text(
+                  'Like and More as they are, a joined Share and heart pair, or plain icons. The song menu stays on desktop',
+                  style: muted,
+                ),
+                control: OptionPicker<TitleActions>(
+                  value: p.titleActions,
+                  onChanged: p.setTitleActions,
+                  options: [for (final v in TitleActions.values) (v, v.label)],
+                ),
+              ),
+              SwitchListTile(
+                secondary: const Icon(Icons.high_quality_outlined),
+                title: const Text('Show sound quality'),
+                subtitle: Text('The small label under the song title, such as FLAC or Hi-Res', style: muted),
+                value: p.showQualityBadge,
+                onChanged: p.setShowQualityBadge,
+              ),
+              SettingTile(
+                icon: Icons.high_quality_outlined,
+                title: const Text('Quality badge'),
+                subtitle: Text(
+                  'Where FLAC or Opus 130 kbps sits on the phone player: under the artist, or between the two times',
+                  style: muted,
+                ),
+                control: OptionPicker<QualityBadgePlace>(
+                  value: p.qualityBadgePlace,
+                  onChanged: p.setQualityBadgePlace,
+                  options: [for (final v in QualityBadgePlace.values) (v, v.label)],
+                ),
+              ),
+              SettingTile(
+                icon: Icons.wallpaper_rounded,
+                title: const Text('Background'),
+                subtitle: Text(
+                  Appearance.instance.nowPlaying.hint ??
+                      'What fills the page behind the player. Cover: Background replaces it',
+                  style: muted,
+                ),
+                control: OptionPicker<NowPlayingBackground>(
+                  value: Appearance.instance.nowPlaying,
+                  onChanged: Appearance.instance.setNowPlaying,
+                  options: [for (final v in NowPlayingBackground.values) (v, v.label)],
+                ),
+              ),
+              if (BetaFeature.videoMode.available) ...[
                 SwitchListTile(
                   title: const Text('Video mode'),
                   subtitle: const Text('Watch music videos in sync with the song'),
@@ -57,102 +153,16 @@ class LayoutSettings extends StatelessWidget {
                   },
                 ),
               ],
-            ),
-          if (hasCustomTitleBar && !Host.isMacOS) ...[
-            const _Header('Window'),
-            SettingsCard(
-              children: [
-                SwitchListTile(
-                  secondary: const Icon(Icons.web_asset_rounded),
-                  title: const Text('Window buttons'),
-                  subtitle: Text(
-                    'Minimize, maximize and close in the title bar. Turn off with a tiling window manager',
-                    style: muted,
-                  ),
-                  value: p.windowButtons,
-                  onChanged: p.setWindowButtons,
-                ),
-              ],
-            ),
-          ],
-          const _Header('Shapes and sizes'),
-          SettingsCard(
-            children: [
-              SettingTile(
-                icon: Icons.rounded_corner_rounded,
-                title: const Text('Corners'),
-                subtitle: Text('Covers, cards, menus, dialogs and the mini player', style: muted),
-                control: OptionPicker<CornerStyle>(
-                  value: p.corners,
-                  onChanged: p.setCorners,
-                  options: [for (final v in CornerStyle.values) (v, v.label)],
-                ),
-              ),
-              SettingTile(
-                icon: Icons.density_medium_rounded,
-                title: const Text('Spacing'),
-                subtitle: Text('Compact fits more songs and cards on screen', style: muted),
-                control: OptionPicker<Density>(
-                  value: p.density,
-                  onChanged: p.setDensity,
-                  options: [for (final v in Density.values) (v, v.label)],
-                ),
-              ),
-              SettingTile(
-                icon: Icons.call_to_action_outlined,
-                title: const Text('Tab bar on phones'),
-                subtitle: Text(
-                  'Classic sits at the bottom edge; Floating and Liquid glass hover above it',
-                  style: muted,
-                ),
-                control: OptionPicker<TabBarStyle>(
-                  value: p.tabBar,
-                  onChanged: p.setTabBar,
-                  options: [for (final v in TabBarStyle.values) (v, v.label)],
-                ),
-              ),
-              SettingTile(
-                icon: Icons.view_stream_rounded,
-                title: const Text('Desktop player bar'),
-                subtitle: Text('Full-width controls, a floating dock, or a compact row beside the song', style: muted),
-                control: OptionPicker<DesktopBarStyle>(
-                  value: p.desktopBar,
-                  onChanged: p.setDesktopBar,
-                  options: [for (final v in DesktopBarStyle.values) (v, v.label)],
-                ),
-              ),
-              SettingTile(
-                icon: Icons.photo_size_select_large_rounded,
-                title: const Text('Cover size in grids'),
-                subtitle: Text('The albums and playlists on Home and in "Show all"', style: muted),
-                control: OptionPicker<CoverSize>(
-                  value: p.coverSize,
-                  onChanged: p.setCoverSize,
-                  options: [for (final v in CoverSize.values) (v, v.label)],
-                ),
-              ),
             ],
           ),
-          const _Header('Home page'),
-          const _HomeSections(),
-          const _Header('Now playing'),
+          const _Header('Playback controls', hint: 'The progress bar, the buttons and the row under them'),
           SettingsCard(
             children: [
-              SettingTile(
-                icon: Icons.linear_scale_rounded,
-                title: const Text('Progress bar'),
-                subtitle: Text('How thick the bar you drag to skip around is', style: muted),
-                control: OptionPicker<ProgressBarStyle>(
-                  value: p.progressBar,
-                  onChanged: p.setProgressBar,
-                  options: [for (final v in ProgressBarStyle.values) (v, v.label)],
-                ),
-              ),
               SettingTile(
                 icon: Icons.waves_rounded,
                 title: const Text('Progress bar shape'),
                 subtitle: Text(
-                  'Wavy curves the part played. Pill is a thick bar, also on the desktop bar',
+                  'Wavy curves the part played. Pill is a thick bar with a tall handle. Thin line is flat, with no handle until you drag',
                   style: muted,
                 ),
                 control: OptionPicker<ProgressBarShape>(
@@ -162,79 +172,13 @@ class LayoutSettings extends StatelessWidget {
                 ),
               ),
               SettingTile(
-                icon: Icons.play_circle_outline_rounded,
-                title: const Text('Play button'),
-                subtitle: Text('The shape of the big play and pause button', style: muted),
-                control: OptionPicker<PlayButtonShape>(
-                  value: p.playButton,
-                  onChanged: p.setPlayButton,
-                  options: [for (final v in PlayButtonShape.values) (v, v.label)],
-                ),
-              ),
-              SettingTile(
-                icon: Icons.fit_screen_rounded,
-                title: const Text('Cover size on phones'),
-                subtitle: Text('Large reaches nearly the edges of the screen', style: muted),
-                control: OptionPicker<PhoneCoverSize>(
-                  value: p.phoneCover,
-                  onChanged: p.setPhoneCover,
-                  options: [for (final v in PhoneCoverSize.values) (v, v.label)],
-                ),
-              ),
-              SwitchListTile(
-                secondary: const Icon(Icons.high_quality_outlined),
-                title: const Text('Show sound quality'),
-                subtitle: Text('The small label under the song title, such as FLAC or Hi-Res', style: muted),
-                value: p.showQualityBadge,
-                onChanged: p.setShowQualityBadge,
-              ),
-            ],
-          ),
-          const _Header('Player'),
-          SettingsCard(
-            children: [
-              ListTile(
-                leading: const Icon(Icons.auto_awesome_mosaic_rounded),
-                title: const Text('Presets'),
-                subtitle: Text(playerPresetName() == null ? 'Custom' : 'Matches ${playerPresetName()}', style: muted),
-                trailing: const Icon(Icons.chevron_right_rounded),
-                onTap: () =>
-                    Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const PlayerPresetsPage())),
-              ),
-              SettingTile(
-                icon: Icons.wallpaper_rounded,
-                title: const Text('Cover'),
-                subtitle: Text(
-                  'Phone: a card, or the whole width at the top. Desktop: rounded, or square and full width',
-                  style: muted,
-                ),
-                control: OptionPicker<PlayerCover>(
-                  value: p.playerCover,
-                  onChanged: p.setPlayerCover,
-                  options: [for (final v in PlayerCover.values) (v, v.label)],
-                ),
-              ),
-              SettingTile(
-                icon: Icons.vertical_align_top_rounded,
-                title: const Text('Top of the player'),
-                subtitle: Text('What the top shows beside the close arrow, or above the song on desktop', style: muted),
-                control: OptionPicker<PlayerHeader>(
-                  value: p.playerHeader,
-                  onChanged: p.setPlayerHeader,
-                  options: [for (final v in PlayerHeader.values) (v, v.label)],
-                ),
-              ),
-              SettingTile(
-                icon: Icons.smart_button_rounded,
-                title: const Text('Buttons by the title'),
-                subtitle: Text(
-                  'Like and More as they are, boxed with Share, or plain icons. The song menu stays on desktop',
-                  style: muted,
-                ),
-                control: OptionPicker<TitleActions>(
-                  value: p.titleActions,
-                  onChanged: p.setTitleActions,
-                  options: [for (final v in TitleActions.values) (v, v.label)],
+                icon: Icons.linear_scale_rounded,
+                title: const Text('Progress bar'),
+                subtitle: Text('How thick the bar you drag to skip around is', style: muted),
+                control: OptionPicker<ProgressBarStyle>(
+                  value: p.progressBar,
+                  onChanged: p.setProgressBar,
+                  options: [for (final v in ProgressBarStyle.values) (v, v.label)],
                 ),
               ),
               SwitchListTile(
@@ -251,7 +195,7 @@ class LayoutSettings extends StatelessWidget {
                 icon: Icons.play_circle_outline_rounded,
                 title: const Text('Controls'),
                 subtitle: Text(
-                  'Previous, play and next as circles, a wide pill, or plain icons, also on the desktop bar',
+                  'Previous, play and next as circles, a wide Play pill, or plain big icons, also on the desktop bar',
                   style: muted,
                 ),
                 control: OptionPicker<PlayerTransport>(
@@ -260,21 +204,41 @@ class LayoutSettings extends StatelessWidget {
                   options: [for (final v in PlayerTransport.values) (v, v.label)],
                 ),
               ),
+              SettingTile(
+                icon: Icons.play_circle_outline_rounded,
+                title: const Text('Play button'),
+                subtitle: Text('The shape of the big play and pause button', style: muted),
+                control: OptionPicker<PlayButtonShape>(
+                  value: p.playButton,
+                  onChanged: p.setPlayButton,
+                  options: [for (final v in PlayButtonShape.values) (v, v.label)],
+                ),
+              ),
               SwitchListTile(
                 secondary: const Icon(Icons.volume_up_rounded),
                 title: const Text('Volume slider'),
                 subtitle: Text(
-                  'Shown at the very bottom of the phone player. Off, the desktop bar keeps it behind a button',
+                  'At the very bottom of the phone player. Off, it opens from the speaker button (Icons) or the desktop bar button',
                   style: muted,
                 ),
                 value: p.showVolumeRow,
                 onChanged: p.setShowVolumeRow,
               ),
               SettingTile(
+                icon: Icons.tune_rounded,
+                title: const Text('Volume slider look'),
+                subtitle: Text('Classic, a thin line, or a thick pill with a bar handle', style: muted),
+                control: OptionPicker<VolumeSliderShape>(
+                  value: p.volumeSlider,
+                  onChanged: p.setVolumeSlider,
+                  options: [for (final v in VolumeSliderShape.values) (v, v.label)],
+                ),
+              ),
+              SettingTile(
                 icon: Icons.view_week_rounded,
                 title: const Text('Bottom buttons'),
                 subtitle: Text(
-                  'Lyrics and Queue, a row of small buttons, or a minimal row, on the phone and the desktop bar. Lyrics is always there',
+                  'Lyrics and Queue; a joined row of icon buttons; or Lyrics, a speaker and person capsule and Queue. Icons only, Lyrics is always there',
                   style: muted,
                 ),
                 control: OptionPicker<PlayerBottomRow>(
@@ -283,6 +247,11 @@ class LayoutSettings extends StatelessWidget {
                   options: [for (final v in PlayerBottomRow.values) (v, v.label)],
                 ),
               ),
+            ],
+          ),
+          const _Header('Lyrics', hint: 'The lyrics page, and the lyrics beside the cover on desktop'),
+          SettingsCard(
+            children: [
               SettingTile(
                 icon: Icons.lyrics_outlined,
                 title: const Text('Lyrics page'),
@@ -297,30 +266,31 @@ class LayoutSettings extends StatelessWidget {
                 ),
               ),
               SettingTile(
-                icon: Icons.call_to_action_rounded,
-                title: const Text('Mini player'),
-                subtitle: Text('The bar above the tabs when a song plays, on phones', style: muted),
-                control: OptionPicker<MiniPlayerStyle>(
-                  value: p.miniPlayer,
-                  onChanged: p.setMiniPlayer,
-                  options: [for (final v in MiniPlayerStyle.values) (v, v.label)],
+                icon: Icons.view_agenda_outlined,
+                title: const Text('Lines shown'),
+                subtitle: Text(
+                  'All keeps the whole song in view. Focused shows only the previous, the current and the next line',
+                  style: muted,
+                ),
+                control: OptionPicker<LyricsLines>(
+                  value: p.lyricsLines,
+                  onChanged: p.setLyricsLines,
+                  options: [for (final v in LyricsLines.values) (v, v.label)],
                 ),
               ),
               SettingTile(
-                icon: Icons.album_rounded,
-                title: const Text('Album and playlist top'),
-                subtitle: Text('A big cover behind the title, with round buttons, on phones and desktop', style: muted),
-                control: OptionPicker<AlbumHeaderStyle>(
-                  value: p.albumHeader,
-                  onChanged: p.setAlbumHeader,
-                  options: [for (final v in AlbumHeaderStyle.values) (v, v.label)],
+                icon: Icons.mic_external_on_outlined,
+                title: const Text('Sync'),
+                subtitle: Text(
+                  'Word by word fills each word as it is sung, where the lyrics have word timings. Line by line lights the whole line',
+                  style: muted,
+                ),
+                control: OptionPicker<LyricsSync>(
+                  value: p.lyricsSync,
+                  onChanged: p.setLyricsSync,
+                  options: [for (final v in LyricsSync.values) (v, v.label)],
                 ),
               ),
-            ],
-          ),
-          const _Header('Lyrics'),
-          SettingsCard(
-            children: [
               SettingTile(
                 icon: Icons.format_size_rounded,
                 title: const Text('Text size'),
@@ -350,14 +320,193 @@ class LayoutSettings extends StatelessWidget {
               ),
             ],
           ),
-          const _Header('Motion'),
+          if (Features.audioVisualizer) ...[
+            const _Header('Visualizer', hint: 'Shapes that move with the music, off unless you turn them on'),
+            SettingsCard(
+              children: [
+                SwitchListTile(
+                  secondary: const Icon(Icons.graphic_eq_rounded),
+                  title: const Text('Audio visualizer'),
+                  subtitle: Text('Shapes that move with the music around the cover and under it', style: muted),
+                  value: p.visualizer,
+                  onChanged: p.setVisualizer,
+                ),
+                if (p.visualizer) ...[
+                  SettingTile(
+                    icon: Icons.multiline_chart_rounded,
+                    title: const Text('Visualizer style'),
+                    subtitle: Text('Paused for bit-perfect audio and reduced motion', style: muted),
+                    control: OptionPicker<VisualizerStyle>(
+                      value: p.visualizerStyle,
+                      onChanged: p.setVisualizerStyle,
+                      options: [for (final style in VisualizerStyle.values) (style, style.label)],
+                    ),
+                  ),
+                  if (p.visualizerStyle.radial) ...[
+                    SettingTile(
+                      icon: Icons.open_in_full_rounded,
+                      title: const Text('Radius movement'),
+                      subtitle: Text(
+                        '${(p.visualizerRadius * 100).round()}% · How far the shape expands with the music',
+                        style: muted,
+                      ),
+                      control: SizedBox(
+                        width: 220,
+                        child: Slider(
+                          value: p.visualizerRadius,
+                          min: 0.5,
+                          max: 2.5,
+                          divisions: 20,
+                          label: '${(p.visualizerRadius * 100).round()}%',
+                          onChanged: p.setVisualizerRadius,
+                        ),
+                      ),
+                    ),
+                    SettingTile(
+                      icon: Icons.line_weight_rounded,
+                      title: const Text('Line thickness'),
+                      subtitle: Text('${p.visualizerThickness.toStringAsFixed(1)} px', style: muted),
+                      control: SizedBox(
+                        width: 220,
+                        child: Slider(
+                          value: p.visualizerThickness,
+                          min: 1,
+                          max: 8,
+                          divisions: 14,
+                          label: '${p.visualizerThickness.toStringAsFixed(1)} px',
+                          onChanged: p.setVisualizerThickness,
+                        ),
+                      ),
+                    ),
+                  ],
+                  ListenableBuilder(
+                    listenable: Appearance.instance,
+                    builder: (context, _) => SwitchListTile(
+                      title: const Text('Music-reactive background'),
+                      subtitle: Text(
+                        'Follows the music when an abstract Now Playing background is selected',
+                        style: muted,
+                      ),
+                      value: Appearance.instance.reactiveBackground,
+                      onChanged: Appearance.instance.setReactiveBackground,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ],
+          const _Header('Pages', hint: 'Album, playlist and artist pages, song lists and Home'),
+          SettingsCard(
+            children: [
+              SettingTile(
+                icon: Icons.album_rounded,
+                title: const Text('Album and playlist top'),
+                subtitle: Text(
+                  'Hero: a big cover fading behind the title, round buttons around a Play pill. Also on artist pages',
+                  style: muted,
+                ),
+                control: OptionPicker<AlbumHeaderStyle>(
+                  value: p.albumHeader,
+                  onChanged: p.setAlbumHeader,
+                  options: [for (final v in AlbumHeaderStyle.values) (v, v.label)],
+                ),
+              ),
+              SettingTile(
+                icon: Icons.equalizer_rounded,
+                title: const Text('Song that is playing'),
+                subtitle: Text(
+                  'In a list of songs: coloured text, or a filled rounded card with the bars',
+                  style: muted,
+                ),
+                control: OptionPicker<PlayingRowStyle>(
+                  value: p.playingRow,
+                  onChanged: p.setPlayingRow,
+                  options: [for (final v in PlayingRowStyle.values) (v, v.label)],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          const _HomeSections(),
+          const _Header('Bars', hint: 'The mini player and the bars that hold the controls'),
+          SettingsCard(
+            children: [
+              SettingTile(
+                icon: Icons.call_to_action_rounded,
+                title: const Text('Mini player'),
+                subtitle: Text(
+                  'The bar above the tabs when a song plays, on phones. Floating pill has a flower cover and round buttons',
+                  style: muted,
+                ),
+                control: OptionPicker<MiniPlayerStyle>(
+                  value: p.miniPlayer,
+                  onChanged: p.setMiniPlayer,
+                  options: [for (final v in MiniPlayerStyle.values) (v, v.label)],
+                ),
+              ),
+              SettingTile(
+                icon: Icons.call_to_action_outlined,
+                title: const Text('Tab bar on phones'),
+                subtitle: Text(
+                  'Classic sits at the bottom edge; Floating and Liquid glass hover above it',
+                  style: muted,
+                ),
+                control: OptionPicker<TabBarStyle>(
+                  value: p.tabBar,
+                  onChanged: p.setTabBar,
+                  options: [for (final v in TabBarStyle.values) (v, v.label)],
+                ),
+              ),
+              SettingTile(
+                icon: Icons.view_stream_rounded,
+                title: const Text('Desktop player bar'),
+                subtitle: Text('Full-width controls, a floating dock, or a compact row beside the song', style: muted),
+                control: OptionPicker<DesktopBarStyle>(
+                  value: p.desktopBar,
+                  onChanged: p.setDesktopBar,
+                  options: [for (final v in DesktopBarStyle.values) (v, v.label)],
+                ),
+              ),
+            ],
+          ),
+          const _Header('Shapes and motion'),
           if (LayoutPrefs.lightweight)
             Padding(
               padding: const EdgeInsets.only(bottom: 8),
-              child: Text('Performance is set to Lightweight, so these stay off.', style: muted),
+              child: Text('Performance is set to Lightweight, so the motion settings stay off.', style: muted),
             ),
           SettingsCard(
             children: [
+              SettingTile(
+                icon: Icons.rounded_corner_rounded,
+                title: const Text('Corners'),
+                subtitle: Text('Covers, cards, menus, dialogs and the mini player', style: muted),
+                control: OptionPicker<CornerStyle>(
+                  value: p.corners,
+                  onChanged: p.setCorners,
+                  options: [for (final v in CornerStyle.values) (v, v.label)],
+                ),
+              ),
+              SettingTile(
+                icon: Icons.density_medium_rounded,
+                title: const Text('Spacing'),
+                subtitle: Text('Compact fits more songs and cards on screen', style: muted),
+                control: OptionPicker<Density>(
+                  value: p.density,
+                  onChanged: p.setDensity,
+                  options: [for (final v in Density.values) (v, v.label)],
+                ),
+              ),
+              SettingTile(
+                icon: Icons.photo_size_select_large_rounded,
+                title: const Text('Cover size in grids'),
+                subtitle: Text('The albums and playlists on Home and in "Show all"', style: muted),
+                control: OptionPicker<CoverSize>(
+                  value: p.coverSize,
+                  onChanged: p.setCoverSize,
+                  options: [for (final v in CoverSize.values) (v, v.label)],
+                ),
+              ),
               SettingTile(
                 icon: Icons.auto_awesome_motion_rounded,
                 title: const Text('Transition style'),
@@ -393,6 +542,23 @@ class LayoutSettings extends StatelessWidget {
               ),
             ],
           ),
+          if (hasCustomTitleBar && !Host.isMacOS) ...[
+            const _Header('Window', hint: 'Desktop only'),
+            SettingsCard(
+              children: [
+                SwitchListTile(
+                  secondary: const Icon(Icons.web_asset_rounded),
+                  title: const Text('Window buttons'),
+                  subtitle: Text(
+                    'Minimize, maximize and close in the title bar. Turn off with a tiling window manager',
+                    style: muted,
+                  ),
+                  value: p.windowButtons,
+                  onChanged: p.setWindowButtons,
+                ),
+              ],
+            ),
+          ],
           const SizedBox(height: 20),
           Align(
             alignment: Alignment.centerLeft,
@@ -409,19 +575,34 @@ class LayoutSettings extends StatelessWidget {
 }
 
 class _Header extends StatelessWidget {
-  const _Header(this.label);
+  const _Header(this.label, {this.hint});
 
   final String label;
 
+  /// One plain line under the label, for a group that needs it.
+  final String? hint;
+
   @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.fromLTRB(4, 22, 4, 8),
-    child: Text(
-      label,
-      style: Theme.of(context).textTheme.labelLarge
-          ?.copyWith(color: AppColors.textSecondary, fontWeight: FontWeight.w700),
-    ),
-  );
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(4, 22, 4, 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: text.labelLarge?.copyWith(color: AppColors.textSecondary, fontWeight: FontWeight.w700),
+          ),
+          if (hint != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 2),
+              child: Text(hint!, style: text.bodySmall?.copyWith(color: AppColors.textMuted)),
+            ),
+        ],
+      ),
+    );
+  }
 }
 
 /// Home's sections: a switch to show or hide each, a handle to drag it to a new place.

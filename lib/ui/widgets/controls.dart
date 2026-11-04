@@ -45,6 +45,7 @@ class Artwork extends StatelessWidget implements ColorFreeSubtree {
     this.radius = 4,
     this.circle = false,
     this.flower = false,
+    this.scalloped = false,
     this.icon,
   });
 
@@ -55,6 +56,9 @@ class Artwork extends StatelessWidget implements ColorFreeSubtree {
   final double radius;
   final bool circle;
   final bool flower;
+
+  /// With [flower]: fewer, deeper petals, for a small cover.
+  final bool scalloped;
   final IconData? icon;
 
   @override
@@ -94,8 +98,12 @@ class Artwork extends StatelessWidget implements ColorFreeSubtree {
           ? ListenableBuilder(
               listenable: LayoutPrefs.instance,
               child: child,
-              builder: (context, art) =>
-                  FlowerCover(fit: true, shape: LayoutPrefs.instance.visualizerCoverShape, child: art!),
+              builder: (context, art) => FlowerCover(
+                fit: true,
+                scalloped: scalloped,
+                shape: LayoutPrefs.instance.visualizerCoverShape,
+                child: art!,
+              ),
             )
           : r == 0
           ? child
@@ -339,7 +347,11 @@ class SeekBar extends StatefulWidget {
     this.compact = false,
     this.phonePlayer = false,
     this.desktopPlayer = false,
+    this.middle,
   });
+
+  /// Something centred between the two times (the quality badge).
+  final Widget? middle;
 
   /// The phone's player (Now Playing, lyrics): it may take the Pill shape and show the time left.
   final bool phonePlayer;
@@ -389,6 +401,7 @@ class _SeekBarState extends State<SeekBar> {
             final active = _hovering || _dragValue != null;
             final parts = widget.phonePlayer || widget.desktopPlayer;
             final pill = parts && LayoutPrefs.instance.progressShape == ProgressBarShape.pill;
+            final thin = parts && LayoutPrefs.instance.progressShape == ProgressBarShape.thin;
             final colors = AppColors.of(context);
             final wavy =
                 !pill && LayoutPrefs.instance.progressShape == ProgressBarShape.wavy && !LayoutPrefs.lightweight;
@@ -396,28 +409,30 @@ class _SeekBarState extends State<SeekBar> {
               onEnter: (_) => setState(() => _hovering = true),
               onExit: (_) => setState(() => _hovering = false),
               child: SliderTheme(
-                data: SliderTheme.of(context).copyWith(
-                  trackHeight: pill ? 9 : LayoutPrefs.instance.progressBar.height,
-                  trackShape: pill
-                      ? const PillSeekTrack()
-                      : wavy
-                      ? WavySeekTrack(motion: clock)
-                      : null,
-                  activeTrackColor: pill ? colors.inverse : colors.accent,
-                  inactiveTrackColor: pill ? colors.inverse.withValues(alpha: 0.18) : null,
-                  thumbColor: pill ? colors.inverse : null,
-                  thumbShape: pill
-                      ? BarThumbShape(height: widget.desktopPlayer ? (widget.compact ? 14 : 18) : 24)
-                      : RoundSliderThumbShape(
-                          enabledThumbRadius: active || !widget.inline
-                              ? (LayoutPrefs.instance.progressBar == ProgressBarStyle.thick ? 8 : 6)
-                              : 0,
-                          elevation: 0,
-                        ),
-                  padding: EdgeInsets.zero,
-                ),
+                data: thin
+                    ? thinSliderTheme(SliderTheme.of(context), colors.textPrimary)
+                    : SliderTheme.of(context).copyWith(
+                        trackHeight: pill ? (widget.desktopPlayer ? 9 : 16) : LayoutPrefs.instance.progressBar.height,
+                        trackShape: pill
+                            ? const PillSeekTrack()
+                            : wavy
+                            ? WavySeekTrack(motion: clock)
+                            : null,
+                        activeTrackColor: pill ? colors.inverse : colors.accent,
+                        inactiveTrackColor: pill ? colors.inverse.withValues(alpha: 0.18) : null,
+                        thumbColor: pill ? colors.inverse : null,
+                        thumbShape: pill
+                            ? BarThumbShape(height: widget.desktopPlayer ? (widget.compact ? 14 : 18) : 36)
+                            : RoundSliderThumbShape(
+                                enabledThumbRadius: active || !widget.inline
+                                    ? (LayoutPrefs.instance.progressBar == ProgressBarStyle.thick ? 8 : 6)
+                                    : 0,
+                                elevation: 0,
+                              ),
+                        padding: EdgeInsets.zero,
+                      ),
                 child: SizedBox(
-                  height: 24,
+                  height: pill && !widget.desktopPlayer ? 36 : 24,
                   child: Slider(
                     value: value,
                     max: max,
@@ -479,7 +494,14 @@ class _SeekBarState extends State<SeekBar> {
               children: [
                 slider,
                 const SizedBox(height: 4),
-                Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [elapsed, total]),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    elapsed,
+                    if (widget.middle != null) Expanded(child: widget.middle!),
+                    total,
+                  ],
+                ),
               ],
             );
           },

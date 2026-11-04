@@ -13,8 +13,11 @@ import 'package:riflay/ui/pages/lyrics_page.dart';
 import 'package:riflay/ui/pages/player_presets_page.dart';
 import 'package:riflay/ui/player/mini_player.dart';
 import 'package:riflay/ui/player/now_playing_page.dart';
+import 'package:riflay/ui/player/player_parts.dart';
 import 'package:riflay/ui/shell_scope.dart';
 import 'package:riflay/ui/widgets/controls.dart';
+import 'package:riflay/ui/widgets/faded_cover.dart';
+import 'package:riflay/ui/widgets/signal_path.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 final _track = Track(id: 'style-test', uri: Uri.parse('file:///style-test.mp3'), title: 'Style test', artist: 'Artist');
@@ -66,6 +69,8 @@ Future<_Player> _show(WidgetTester tester, Widget page, Size size) async {
   SharedPreferences.setMockInitialValues({'library.v1': jsonEncode(<Object>[])});
   final c = _Player();
   await tester.runAsync(c.load);
+  // Kawaii's Music video background starts the video machinery (timers, a decoder): not what these tests are about.
+  await tester.runAsync(() => Appearance.instance.setNowPlaying(NowPlayingBackground.color));
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
@@ -95,7 +100,7 @@ void main() {
   test('every player setting starts as Classic, persists and resets', () async {
     expect(p.classicPlayerFace, isTrue);
     expect(p.isCustomised, isFalse);
-    await p.setPlayerCover(PlayerCover.fullBleed);
+    await p.setPlayerCover(PlayerCover.background);
     await p.setPlayerHeader(PlayerHeader.playingFrom);
     await p.setTitleActions(TitleActions.plain);
     await p.setShowTimeLeft(true);
@@ -108,9 +113,9 @@ void main() {
     await p.setProgressShape(ProgressBarShape.pill);
     expect(p.isCustomised, isTrue);
     p.restore(const {});
-    expect(p.playerCover, PlayerCover.card);
+    expect(p.playerCover, PlayerCover.flower);
     await p.load();
-    expect(p.playerCover, PlayerCover.fullBleed);
+    expect(p.playerCover, PlayerCover.background);
     expect(p.playerHeader, PlayerHeader.playingFrom);
     expect(p.titleActions, TitleActions.plain);
     expect(p.showTimeLeft, isTrue);
@@ -122,7 +127,7 @@ void main() {
     expect(p.albumHeader, AlbumHeaderStyle.hero);
     expect(p.progressShape, ProgressBarShape.pill);
     p.restore({'playerCover': 'from-the-future', 'bottomRow': 'chips'});
-    expect(p.playerCover, PlayerCover.card);
+    expect(p.playerCover, PlayerCover.flower);
     expect(p.bottomRow, PlayerBottomRow.chips);
     await p.reset();
     expect(p.classicPlayerFace, isTrue);
@@ -135,6 +140,7 @@ void main() {
     expect(playerPresetName(), 'Classic');
     expect(PlayerPreset.stacked.changesTo(p), greaterThan(0));
     await PlayerPreset.stacked.apply(p);
+    expect(p.playerCover, PlayerCover.background);
     expect(p.playerHeader, PlayerHeader.centered);
     expect(p.titleActions, TitleActions.boxed);
     expect(p.progressShape, ProgressBarShape.pill);
@@ -145,6 +151,7 @@ void main() {
     expect(p.miniPlayer, MiniPlayerStyle.classic);
     expect(p.albumHeader, AlbumHeaderStyle.classic);
     expect(p.showVolumeRow, isTrue);
+    expect(p.volumeSlider, VolumeSliderShape.pill);
     expect(playerPresetName(), 'Stacked');
     await p.load();
     expect(playerPresetName(), 'Stacked', reason: 'saved as individual settings');
@@ -153,10 +160,12 @@ void main() {
     expect(playerPresetName(), isNull, reason: 'one part changed by hand: a custom mix');
 
     await PlayerPreset.kawaii.apply(p);
-    expect(p.playerCover, PlayerCover.fullBleed);
+    expect(p.playerCover, PlayerCover.background);
     expect(p.playerHeader, PlayerHeader.playingFrom);
     expect(p.titleActions, TitleActions.plain);
-    expect(p.progressShape, ProgressBarShape.straight);
+    expect(p.progressShape, ProgressBarShape.thin);
+    expect(p.showVolumeRow, isFalse);
+    expect(p.playingRow, PlayingRowStyle.card);
     expect(p.progressBar, ProgressBarStyle.thin);
     expect(p.showTimeLeft, isTrue);
     expect(p.transport, PlayerTransport.plain);
@@ -164,13 +173,110 @@ void main() {
     expect(p.lyricsLayout, LyricsLayout.topHeader);
     expect(p.miniPlayer, MiniPlayerStyle.capsule);
     expect(p.albumHeader, AlbumHeaderStyle.hero);
-    expect(Appearance.instance.nowPlaying, NowPlayingBackground.blurredCover);
+    expect(Appearance.instance.nowPlaying, NowPlayingBackground.video);
     expect(playerPresetName(), 'Kawaii');
     expect(PlayerPreset.kawaii.changesTo(p), 0);
 
     await PlayerPreset.classic.apply(p);
     expect(p.classicPlayerFace, isTrue);
     expect(p.isCustomised, isFalse);
+  });
+
+  test('old saved cover shapes migrate to Square, Flower or Background', () {
+    p.restore({'playerCover': 'fullBleed'});
+    expect(p.playerCover, PlayerCover.background);
+    p.restore({'playerCover': 'card'});
+    expect(p.playerCover, PlayerCover.flower, reason: 'a card was the flower unless the shape setting said square');
+    p.restore({'playerCover': 'card', 'visualizerCoverShape': 'square'});
+    expect(p.playerCover, PlayerCover.square);
+    p.restore({'visualizerCoverShape': 'square'});
+    expect(p.playerCover, PlayerCover.square);
+    p.restore(const {});
+    expect(p.playerCover, PlayerCover.flower);
+    expect(p.visualizerCoverShape, VisualizerCoverShape.flower);
+  });
+
+  testWidgets('Kawaii: no volume row, the speaker opens a thin volume popup, icons only', (tester) async {
+    await tester.runAsync(() => PlayerPreset.kawaii.apply(p));
+    final c = await _show(tester, const NowPlayingPage(), const Size(412, 915));
+    expect(find.byType(FadedCover), findsOneWidget);
+    expect(find.byType(Slider), findsOneWidget, reason: 'only the progress bar: no volume row');
+    expect(_tip('Volume'), findsOneWidget);
+    expect(_tip('Lyrics'), findsOneWidget);
+    expect(find.text('Speaker'), findsOneWidget, reason: 'the tiny caption');
+    expect(find.text('Listen together'), findsNothing, reason: 'no text on the buttons');
+    await tester.tap(_tip('Volume'));
+    await tester.pumpAndSettle();
+    expect(find.byType(Slider), findsNWidgets(2), reason: 'the popup has the volume slider');
+    expect(find.byIcon(Icons.volume_off_rounded), findsOneWidget);
+    expect(find.byIcon(Icons.volume_up_rounded), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    await tester.tapAt(const Offset(200, 100));
+    await tester.pumpAndSettle();
+    await _close(tester, c);
+  });
+
+  testWidgets('Share is one tap away on every preset: a visible button, or in the More sheet', (tester) async {
+    for (final preset in PlayerPreset.all) {
+      await tester.runAsync(() => preset.apply(p));
+      final c = await _show(tester, const NowPlayingPage(), const Size(412, 915));
+      if (find.byTooltip('Share').evaluate().isEmpty) {
+        await tester.tap(_tip('More'));
+        await tester.pumpAndSettle();
+        expect(find.text('Share'), findsOneWidget, reason: '${preset.name}: Share in the More sheet');
+        Navigator.of(tester.element(find.text('Share'))).pop();
+        await tester.pumpAndSettle();
+      }
+      await _close(tester, c);
+    }
+  });
+
+  testWidgets('Kawaii puts the quality badge in the time row, between the two times', (tester) async {
+    await tester.runAsync(() => PlayerPreset.kawaii.apply(p));
+    expect(p.qualityBadgePlace, QualityBadgePlace.timeRow);
+    final c = await _show(tester, const NowPlayingPage(), const Size(412, 915));
+    final badge = tester.getCenter(find.byType(QualityBadge));
+    final seek = tester.getRect(find.byType(SeekBar));
+    expect(badge.dx, closeTo(seek.center.dx, 16));
+    expect(badge.dy, greaterThan(tester.getCenter(find.byType(Slider)).dy), reason: 'under the bar, on the time row');
+    await _close(tester, c);
+    await PlayerPreset.classic.apply(p);
+    expect(p.qualityBadgePlace, QualityBadgePlace.underArtist);
+  });
+
+  testWidgets('the quality badge is on every preset until its own switch hides it', (tester) async {
+    for (final preset in PlayerPreset.all) {
+      await tester.runAsync(() => preset.apply(p));
+      var c = await _show(tester, const NowPlayingPage(), const Size(412, 915));
+      expect(find.byType(QualityBadge), findsOneWidget, reason: preset.name);
+      await _close(tester, c);
+    }
+    await p.setShowQualityBadge(false);
+    final c = await _show(tester, const NowPlayingPage(), const Size(412, 915));
+    expect(find.byType(QualityBadge), findsNothing);
+    await _close(tester, c);
+  });
+
+  testWidgets('Kawaii lyrics: one header row, with the lyrics options in its More menu', (tester) async {
+    await tester.runAsync(() => PlayerPreset.kawaii.apply(p));
+    final c = await _show(tester, const LyricsPage(fullScreen: true), const Size(412, 915));
+    await tester.pump(const Duration(milliseconds: 200));
+    expect(find.byType(LyricsTopHeader), findsOneWidget);
+    expect(find.byType(LyricsExtrasButtons), findsNothing, reason: 'no second row');
+    expect(_tip('More'), findsOneWidget);
+    expect(_tip('Close'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    await _close(tester, c);
+  });
+
+  testWidgets('Stacked: a joined Share pair, a joined bottom group and a round More', (tester) async {
+    await tester.runAsync(() => PlayerPreset.stacked.apply(p));
+    final c = await _show(tester, const NowPlayingPage(), const Size(412, 915));
+    expect(find.byType(JoinedButtons), findsNWidgets(2));
+    expect(tester.widgetList<JoinedButtons>(find.byType(JoinedButtons)).where((j) => j.outlined), hasLength(1));
+    expect(_tip('More'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    await _close(tester, c);
   });
 
   testWidgets('the presets page asks first, then applies', (tester) async {
@@ -198,15 +304,16 @@ void main() {
     await PlayerPreset.stacked.apply(p);
     final c = await _show(tester, const NowPlayingPage(), const Size(360, 640));
     expect(find.text('Now Playing'), findsOneWidget);
-    expect(find.text('Style test'), findsOneWidget);
+    // The test font is as wide as it is tall, so the title may scroll (two copies) beside the two buttons.
+    expect(find.text('Style test'), findsWidgets);
     expect(_tip('Share'), findsOneWidget);
-    expect(_tip('Add to Liked music'), findsNothing, reason: 'a file on this device cannot be liked');
+    expect(_tip('Add to Liked music'), findsOneWidget, reason: 'a file cannot be liked: the heart is there, dimmed');
     expect(find.text('Play'), findsOneWidget);
     for (final t in ['Queue', 'Sleep timer', 'Enable shuffle', 'Lyrics', 'Enable repeat', 'More', 'Previous', 'Next']) {
       expect(_tip(t), findsOneWidget, reason: t);
     }
-    expect(find.byIcon(Icons.volume_up_rounded), findsOneWidget);
-    expect(find.byType(Slider), findsNWidgets(2), reason: 'the progress bar and the volume');
+    expect(find.byIcon(Icons.volume_up_rounded), findsOneWidget, reason: 'Stacked has its volume row, as a pill');
+    expect(find.byType(Slider), findsNWidgets(2), reason: 'the progress bar and the volume slider');
     expect(tester.takeException(), isNull);
 
     await tester.tap(find.text('Play'));
@@ -304,7 +411,8 @@ void main() {
                     ..titleActions = actions
                     ..transport = transport
                     ..bottomRow = bottom
-                    ..showVolumeRow = n.isEven;
+                    ..showVolumeRow = n.isEven
+                    ..qualityBadgePlace = n % 3 == 0 ? QualityBadgePlace.timeRow : QualityBadgePlace.underArtist;
                   await tester.pumpWidget(
                     _tree(c, size, KeyedSubtree(key: ValueKey(n++), child: const NowPlayingPage())),
                   );
@@ -313,6 +421,8 @@ void main() {
                   expect(tester.takeException(), isNull, reason: mix);
                   expect(_tip('Lyrics'), findsOneWidget, reason: mix);
                   expect(_tip('More'), findsOneWidget, reason: '$mix: exactly one More');
+                  expect(find.byType(QualityBadge), findsOneWidget, reason: '$mix: the quality badge stays');
+                  if (actions == TitleActions.boxed) expect(_tip('Share'), findsOneWidget, reason: '$mix: Share');
                 }
               }
             }

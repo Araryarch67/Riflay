@@ -10,12 +10,16 @@ import 'playing_motion.dart';
 /// Shared resting geometry for player covers and their audio-driven borders.
 abstract final class FlowerContour {
   /// With a [motion] clock the petals turn slowly and their depth ripples; at rest it is the plain flower.
-  static double radius(double side, double phase, {MotionClock? motion}) {
-    if (motion == null) return side * (0.35 + 0.018 * (1 + math.cos(phase * 24)) / 2);
+  ///
+  /// [scalloped] is the flower of a small cover (the mini player's): fewer, deeper petals, so they still read at 40 px.
+  static double radius(double side, double phase, {MotionClock? motion, bool scalloped = false}) {
+    final petals = scalloped ? 10 : 24;
+    final depth = scalloped ? 0.045 : 0.018;
+    if (motion == null) return side * (0.35 + depth * (1 + math.cos(phase * petals)) / 2);
     final spin = motion.time * 0.15;
     // The ripple fades with the clock, so a pause settles back to evenly deep petals.
     final ripple = 1 + 0.45 * motion.eased * math.sin(motion.time * 1.7 + phase * 3);
-    return side * (0.35 + 0.018 * (1 + math.cos((phase - spin) * 24)) / 2 * ripple);
+    return side * (0.35 + depth * (1 + math.cos((phase - spin) * petals)) / 2 * ripple);
   }
 
   static double coverRadius(
@@ -24,13 +28,14 @@ abstract final class FlowerContour {
     VisualizerLevels? levels,
     VisualizerCoverShape shape = VisualizerCoverShape.flower,
     bool fit = false,
+    bool scalloped = false,
     MotionClock? clock,
   }) {
     final energy = (levels?.backgroundEnergy ?? 0).clamp(0.0, 1.0);
     final beat = (levels?.beat ?? 0).clamp(0.0, 1.0);
     final motion = side * (energy * 0.005 + beat * 0.007);
     final r = shape == VisualizerCoverShape.flower
-        ? radius(side, phase, motion: clock) + motion * (0.7 + 0.3 * math.cos(phase * 2))
+        ? radius(side, phase, motion: clock, scalloped: scalloped) + motion * (0.7 + 0.3 * math.cos(phase * 2))
         : squareRadius(side * 0.368 + motion, math.min(12, side * 0.03), phase);
     return r * (fit ? 0.5 / 0.368 : 1);
   }
@@ -51,10 +56,19 @@ abstract final class FlowerContour {
     VisualizerLevels? levels,
     bool fit = false,
     VisualizerCoverShape shape = VisualizerCoverShape.flower,
+    bool scalloped = false,
     MotionClock? motion,
   }) => path(
     size,
-    radiusAt: (phase) => coverRadius(size.shortestSide, phase, levels: levels, fit: fit, shape: shape, clock: motion),
+    radiusAt: (phase) => coverRadius(
+      size.shortestSide,
+      phase,
+      levels: levels,
+      fit: fit,
+      shape: shape,
+      scalloped: scalloped,
+      clock: motion,
+    ),
   );
 
   static Path path(Size size, {double Function(double phase)? radiusAt}) {
@@ -90,7 +104,14 @@ abstract final class FlowerContour {
 /// The clip and halo use exactly the same native path. Only the latest path is
 /// retained; animation frames never accumulate in a history or global cache.
 class FlowerGeometry {
-  FlowerGeometry({this.levels, this.fit = false, this.shape = VisualizerCoverShape.flower, this.motion});
+  FlowerGeometry({
+    this.levels,
+    this.fit = false,
+    this.shape = VisualizerCoverShape.flower,
+    this.scalloped = false,
+    this.motion,
+  });
+  final bool scalloped;
   final VisualizerLevels? levels;
   final MotionClock? motion;
   final bool fit;
@@ -112,7 +133,14 @@ class FlowerGeometry {
     _beat = beat;
     _time = time;
     _eased = eased;
-    return _path = FlowerContour.coverPath(size, levels: levels, fit: fit, shape: shape, motion: motion);
+    return _path = FlowerContour.coverPath(
+      size,
+      levels: levels,
+      fit: fit,
+      shape: shape,
+      scalloped: scalloped,
+      motion: motion,
+    );
   }
 }
 
@@ -126,8 +154,12 @@ class FlowerCover extends StatelessWidget {
     this.fit = false,
     this.shape = VisualizerCoverShape.flower,
     this.animate = false,
+    this.scalloped = false,
   });
   final Widget child;
+
+  /// Fewer, deeper petals, for a small cover.
+  final bool scalloped;
   final VisualizerLevels? levels;
   final Color? color;
   final bool fit;
@@ -146,11 +178,18 @@ class FlowerCover extends StatelessWidget {
   }
 
   Widget _flower(BuildContext context, MotionClock? clock, {bool boundary = false}) {
-    final geometry = FlowerGeometry(levels: levels, fit: fit, shape: shape, motion: clock);
+    final geometry = FlowerGeometry(levels: levels, fit: fit, shape: shape, scalloped: scalloped, motion: clock);
     return CustomPaint(
       painter: _FlowerGlow(levels, color ?? Theme.of(context).colorScheme.primary, fit, shape, geometry, clock),
       child: ClipPath(
-        clipper: FlowerClipper(fit: fit, levels: levels, shape: shape, geometry: geometry, motion: clock),
+        clipper: FlowerClipper(
+          fit: fit,
+          levels: levels,
+          shape: shape,
+          scalloped: scalloped,
+          geometry: geometry,
+          motion: clock,
+        ),
         child: boundary ? RepaintBoundary(child: child) : child,
       ),
     );
@@ -158,8 +197,15 @@ class FlowerCover extends StatelessWidget {
 }
 
 class FlowerClipper extends CustomClipper<Path> {
-  FlowerClipper({this.fit = false, this.levels, this.shape = VisualizerCoverShape.flower, this.geometry, this.motion})
-    : super(reclip: _either(levels, motion));
+  FlowerClipper({
+    this.fit = false,
+    this.levels,
+    this.shape = VisualizerCoverShape.flower,
+    this.scalloped = false,
+    this.geometry,
+    this.motion,
+  }) : super(reclip: _either(levels, motion));
+  final bool scalloped;
   final MotionClock? motion;
   final bool fit;
   final VisualizerLevels? levels;
@@ -167,10 +213,15 @@ class FlowerClipper extends CustomClipper<Path> {
   final FlowerGeometry? geometry;
   @override
   Path getClip(Size size) =>
-      geometry?.path(size) ?? FlowerContour.coverPath(size, fit: fit, levels: levels, shape: shape, motion: motion);
+      geometry?.path(size) ??
+      FlowerContour.coverPath(size, fit: fit, levels: levels, shape: shape, scalloped: scalloped, motion: motion);
   @override
   bool shouldReclip(FlowerClipper oldClipper) =>
-      oldClipper.fit != fit || oldClipper.levels != levels || oldClipper.shape != shape || oldClipper.motion != motion;
+      oldClipper.fit != fit ||
+      oldClipper.levels != levels ||
+      oldClipper.shape != shape ||
+      oldClipper.scalloped != scalloped ||
+      oldClipper.motion != motion;
 }
 
 /// What to repaint on: the audio levels, the motion clock, both or neither.

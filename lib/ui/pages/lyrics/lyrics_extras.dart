@@ -75,6 +75,88 @@ class LyricsExtrasButtonsState extends State<LyricsExtrasButtons> {
   );
 }
 
+/// A round ⋯ button for the lyrics page's header on a phone: Pronunciation, Translation, Copy, timing, my own lyrics
+/// file, and the player's own options, so the header needs no second row.
+class LyricsMoreMenu extends StatefulWidget {
+  const LyricsMoreMenu({super.key, required this.track});
+
+  final Track track;
+
+  @override
+  State<LyricsMoreMenu> createState() => _LyricsMoreMenuState();
+}
+
+class _LyricsMoreMenuState extends State<LyricsMoreMenu> {
+  late Future<Lyrics> _lyrics = LyricsService.forTrack(widget.track);
+
+  @override
+  void initState() {
+    super.initState();
+    _lyricsChanged.addListener(_reload);
+  }
+
+  @override
+  void dispose() {
+    _lyricsChanged.removeListener(_reload);
+    super.dispose();
+  }
+
+  void _reload() => setState(() {
+    _lyrics = LyricsService.forTrack(widget.track);
+  });
+
+  @override
+  Widget build(BuildContext context) => FutureBuilder<Lyrics>(
+    future: _lyrics,
+    builder: (context, snap) {
+      final l = snap.data;
+      final has = l != null && !l.isEmpty && !l.instrumental;
+      PopupMenuItem<String> option(String value, IconData icon, String label, {bool? on}) => PopupMenuItem(
+        value: value,
+        child: Row(
+          children: [
+            Icon(icon, size: 20),
+            const SizedBox(width: 12),
+            Expanded(child: Text(label)),
+            if (on ?? false) Icon(Icons.check_rounded, size: 18, color: AppColors.accent),
+          ],
+        ),
+      );
+      return PopupMenuButton<String>(
+        tooltip: 'More',
+        useRootNavigator: true,
+        style: IconButton.styleFrom(
+          backgroundColor: AppColors.textPrimary.withValues(alpha: 0.1),
+          foregroundColor: AppColors.textPrimary,
+          fixedSize: const Size.square(44),
+          shape: const CircleBorder(),
+        ),
+        icon: const Icon(Icons.more_horiz_rounded),
+        onSelected: (v) => switch (v) {
+          'romanize' => LyricsTranslation.romanize.value = !LyricsTranslation.romanize.value,
+          'translate' => LyricsTranslation.translate.value = !LyricsTranslation.translate.value,
+          'copy' => copyLyrics(context, l!),
+          'timing' => showLyricsTiming(context, widget.track),
+          'use' => useMyLyricsFile(context, widget.track),
+          'remove' => removeMyLyrics(context, widget.track),
+          _ => showPlayerMore(context, closePlayer: true),
+        },
+        itemBuilder: (_) => [
+          if (has && LyricsTranslation.hasNonLatin(_lyricLines(l).join('\n')))
+            option('romanize', Icons.abc_rounded, 'Pronunciation', on: LyricsTranslation.romanize.value),
+          if (has) option('translate', Icons.translate_rounded, 'Translation', on: LyricsTranslation.translate.value),
+          if (has) option('copy', Icons.copy_rounded, 'Copy lyrics'),
+          if (l != null && l.synced) option('timing', Icons.timer_outlined, 'Adjust timing'),
+          if (Features.userLyrics) option('use', Icons.upload_file_rounded, 'Use my lyrics file'),
+          if (l != null && l.source == _userLyricsSource)
+            option('remove', Icons.delete_outline_rounded, 'Remove my lyrics'),
+          option('player', Icons.tune_rounded, 'Player options'),
+        ],
+      );
+    },
+  );
+}
+
 /// A small on/off button over lyrics: a soft light backdrop when on, so it
 /// stays quiet next to the title on a phone.
 class LyricsToggleButton extends StatelessWidget {

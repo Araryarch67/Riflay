@@ -75,9 +75,40 @@ class WavySeekTrack extends SliderTrackShape with BaseSliderTrackShape {
   }
 }
 
-/// A thick, fully rounded track: the elapsed part is a pill, a small dot marks the end.
+/// A thick, fully rounded track, as in Material 3 Expressive: the elapsed part and the rest are two pills with a
+/// small gap either side of the thumb bar, and a dot marks the end.
 class PillSeekTrack extends SliderTrackShape with BaseSliderTrackShape {
   const PillSeekTrack();
+
+  /// Clear space between the thumb bar and the track on each side of it.
+  static const gap = 6.0;
+
+  /// The elapsed pill and the rest, for a thumb at [thumbX] on [rect] of [height]. Each is rounded only at its outer
+  /// end (the far left of the elapsed one, the far right of the rest); the ends facing the thumb are square, as in
+  /// Material 3 Expressive. Null where a part is too short to draw (the very start or end of the song).
+  @visibleForTesting
+  static (RRect?, RRect?) segments(Rect rect, double thumbX, double height) {
+    final round = Radius.circular(height / 2);
+    final thumb = thumbX.clamp(rect.left, rect.right);
+    // The thumb bar is 4 px wide: its half and the gap keep both pills clear of it.
+    final playedEnd = thumb - gap - 2, restStart = thumb + gap + 2;
+    return (
+      playedEnd - rect.left > 0.5
+          ? RRect.fromRectAndCorners(
+              Rect.fromLTRB(rect.left, rect.top, playedEnd, rect.bottom),
+              topLeft: round,
+              bottomLeft: round,
+            )
+          : null,
+      rect.right - restStart > 0.5
+          ? RRect.fromRectAndCorners(
+              Rect.fromLTRB(restStart, rect.top, rect.right, rect.bottom),
+              topRight: round,
+              bottomRight: round,
+            )
+          : null,
+    );
+  }
 
   @override
   void paint(
@@ -103,14 +134,15 @@ class PillSeekTrack extends SliderTrackShape with BaseSliderTrackShape {
     final active = sliderTheme.activeTrackColor ?? Colors.white;
     final inactive = sliderTheme.inactiveTrackColor ?? Colors.white24;
     final canvas = context.canvas;
-    final radius = Radius.circular(height / 2);
-    canvas.drawRRect(RRect.fromRectAndRadius(rect, radius), Paint()..color = inactive);
-    final thumb = thumbCenter.dx.clamp(rect.left + height, rect.right);
-    canvas.drawRRect(RRect.fromLTRBR(rect.left, rect.top, thumb, rect.bottom, radius), Paint()..color = active);
-    // The end dot hides under the pill once it reaches it.
-    final dot = Offset(rect.right - height / 2, rect.center.dy);
-    if (thumb < dot.dx - height / 2) {
-      canvas.drawCircle(dot, height * 0.2, Paint()..color = active.withValues(alpha: 0.6));
+    final (played, rest) = segments(rect, thumbCenter.dx, height);
+    // A part shorter than 0.5 px (the very start or end of the song) is not drawn at all.
+    if (played != null) canvas.drawRRect(played, Paint()..color = active);
+    if (rest != null) {
+      canvas.drawRRect(rest, Paint()..color = inactive);
+      final restStart = rest.left;
+      // The end dot hides under the thumb's side once the rest is shorter than it.
+      final dot = Offset(rect.right - height / 2, rect.center.dy);
+      if (restStart < dot.dx - 4) canvas.drawCircle(dot, 2, Paint()..color = active);
     }
   }
 }
@@ -145,3 +177,102 @@ class BarThumbShape extends SliderComponentShape {
     );
   }
 }
+
+/// A flat, fully rounded track: the elapsed part in the active colour, the rest translucent. Nothing marks the
+/// position (see [DragDotShape]), like the thin bars of streaming apps.
+class ThinSeekTrack extends SliderTrackShape with BaseSliderTrackShape {
+  const ThinSeekTrack();
+
+  @override
+  void paint(
+    PaintingContext context,
+    Offset offset, {
+    required RenderBox parentBox,
+    required SliderThemeData sliderTheme,
+    required Animation<double> enableAnimation,
+    required TextDirection textDirection,
+    required Offset thumbCenter,
+    Offset? secondaryOffset,
+    bool isDiscrete = false,
+    bool isEnabled = false,
+  }) {
+    final rect = getPreferredRect(
+      parentBox: parentBox,
+      offset: offset,
+      sliderTheme: sliderTheme,
+      isEnabled: isEnabled,
+      isDiscrete: isDiscrete,
+    );
+    final active = sliderTheme.activeTrackColor ?? Colors.white;
+    final inactive = sliderTheme.inactiveTrackColor ?? Colors.white24;
+    final canvas = context.canvas;
+    final radius = Radius.circular(rect.height / 2);
+    canvas.drawRRect(RRect.fromRectAndRadius(rect, radius), Paint()..color = inactive);
+    final rtl = textDirection == TextDirection.rtl;
+    final thumb = thumbCenter.dx.clamp(rect.left, rect.right);
+    if ((thumb - (rtl ? rect.right : rect.left)).abs() < 0.5) return;
+    final played = rtl
+        ? Rect.fromLTRB(thumb, rect.top, rect.right, rect.bottom)
+        : Rect.fromLTRB(rect.left, rect.top, thumb, rect.bottom);
+    canvas.drawRRect(RRect.fromRectAndRadius(played, radius), Paint()..color = active);
+  }
+}
+
+/// A small dot for the handle of a [ThinSeekTrack]. Used as the slider's overlay, so it only shows while the bar is
+/// being dragged or hovered and has no size at rest.
+class DragDotShape extends SliderComponentShape {
+  const DragDotShape({this.radius = 6});
+
+  final double radius;
+
+  @override
+  Size getPreferredSize(bool isEnabled, bool isDiscrete) => Size.zero;
+
+  @override
+  void paint(
+    PaintingContext context,
+    Offset center, {
+    required Animation<double> activationAnimation,
+    required Animation<double> enableAnimation,
+    required bool isDiscrete,
+    required TextPainter labelPainter,
+    required RenderBox parentBox,
+    required SliderThemeData sliderTheme,
+    required TextDirection textDirection,
+    required double value,
+    required double textScaleFactor,
+    required Size sizeWithOverflow,
+  }) {
+    final t = activationAnimation.value;
+    if (t <= 0) return;
+    context.canvas.drawCircle(center, radius * t, Paint()..color = sliderTheme.thumbColor ?? Colors.white);
+  }
+}
+
+/// The slider look of the Pill shape (Material 3 expressive): a thick track, square where it meets the tall bar
+/// thumb, with a dot at its end. For the progress bar and the volume slider.
+SliderThemeData pillSliderTheme(SliderThemeData base, Color color, {double height = 16, double thumb = 36}) =>
+    base.copyWith(
+      trackHeight: height,
+      trackShape: const PillSeekTrack(),
+      activeTrackColor: color,
+      inactiveTrackColor: color.withValues(alpha: 0.18),
+      thumbColor: color,
+      thumbShape: BarThumbShape(height: thumb),
+      overlayColor: Colors.transparent,
+      padding: EdgeInsets.zero,
+    );
+
+/// The slider look of the Thin line shape: 4 px, white on translucent, no handle at rest. For the progress bar and
+/// the volume slider.
+SliderThemeData thinSliderTheme(SliderThemeData base, Color color) => base.copyWith(
+  trackHeight: 4,
+  trackShape: const ThinSeekTrack(),
+  activeTrackColor: color,
+  inactiveTrackColor: color.withValues(alpha: 0.28),
+  thumbColor: color,
+  thumbShape: SliderComponentShape.noThumb,
+  overlayShape: const DragDotShape(),
+  overlayColor: Colors.transparent,
+  padding: EdgeInsets.zero,
+);

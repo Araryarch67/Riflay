@@ -3,7 +3,6 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../../services/layout_prefs.dart';
-import '../../services/beta_features.dart';
 import '../../services/visualizer_levels.dart';
 import '../player_scope.dart';
 import '../theme.dart';
@@ -13,18 +12,29 @@ import 'flower_cover.dart';
 
 /// A flower cover at rest, with optional audio-driven decoration.
 class AudioVisualizer extends StatelessWidget {
-  const AudioVisualizer({super.key, this.child, this.radialOnly = false, this.linearOnly = false, this.height = 72});
+  const AudioVisualizer({
+    super.key,
+    this.child,
+    this.radialOnly = false,
+    this.linearOnly = false,
+    this.height = 72,
+    this.classicShape = false,
+  });
   final Widget? child;
   final bool radialOnly;
   final bool linearOnly;
   final double height;
 
+  /// Always the flower, whatever Cover says (the desktop's expanded player is always Classic).
+  final bool classicShape;
+
   @override
   Widget build(BuildContext context) => ListenableBuilder(
-    listenable: Listenable.merge([LayoutPrefs.instance, BetaFeatures.instance]),
+    listenable: LayoutPrefs.instance,
     builder: (context, _) {
       final prefs = LayoutPrefs.instance;
       final style = prefs.visualizerStyle;
+      final shape = classicShape ? VisualizerCoverShape.flower : prefs.visualizerCoverShape;
       if (prefs.visualizerEnabled &&
           LayoutPrefs.moves &&
           !MediaQuery.disableAnimationsOf(context) &&
@@ -36,7 +46,9 @@ class AudioVisualizer extends StatelessWidget {
             child: FlowerCover(
               animate: true,
               levels: levels,
-              shape: prefs.visualizerCoverShape,
+              // The rounded square fills its box; the flower keeps its petals' room.
+              fit: shape == VisualizerCoverShape.square,
+              shape: shape,
               color: AppColors.of(context).accent,
               child: child!,
             ),
@@ -49,9 +61,12 @@ class AudioVisualizer extends StatelessWidget {
           (child != null && !style.radial) ||
           (radialOnly && !style.radial) ||
           (linearOnly && style.radial)) {
-        return child == null
-            ? const SizedBox.shrink()
-            : FlowerCover(animate: true, shape: prefs.visualizerCoverShape, child: child!);
+        if (child == null) return const SizedBox.shrink();
+        // Square is a plain rounded card: no glow, no motion. Those belong to the flower.
+        if (shape == VisualizerCoverShape.square) {
+          return ClipRRect(borderRadius: BorderRadius.circular(LayoutPrefs.radius(16)), child: child!);
+        }
+        return FlowerCover(animate: true, shape: shape, child: child!);
       }
       return AudioReactiveView(
         builder: (context, levels) {
@@ -59,7 +74,7 @@ class AudioVisualizer extends StatelessWidget {
             levels: levels,
             color: AppColors.of(context).accent,
             style: style,
-            coverShape: prefs.visualizerCoverShape,
+            coverShape: shape,
             radius: LayoutPrefs.radius(8),
             radialMotion: prefs.visualizerRadius,
             thickness: prefs.visualizerThickness,

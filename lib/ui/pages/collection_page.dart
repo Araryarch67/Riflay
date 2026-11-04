@@ -127,6 +127,8 @@ class CollectionPage extends StatelessWidget {
       builder: (context, accent) {
         final headerColor = accent;
         return PageScaffold(
+          // The hero's picture runs to the very top on desktop too; the bar fills in once it has scrolled away.
+          overHero: hero,
           gradientColor: headerColor,
           title: live.title,
           slivers: [

@@ -4,7 +4,6 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 
 import '../../services/appearance.dart';
-import '../../services/beta_features.dart';
 import '../../services/layout_prefs.dart';
 import '../../services/visualizer_levels.dart';
 import '../theme.dart';
@@ -18,7 +17,7 @@ class PlayerBackdrop extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => ListenableBuilder(
-    listenable: Listenable.merge([Appearance.instance, LayoutPrefs.instance, BetaFeatures.instance]),
+    listenable: Listenable.merge([Appearance.instance, LayoutPrefs.instance]),
     builder: (context, _) {
       final look = Appearance.instance;
       // Lightweight draws no backdrop at all, just the page's own background colour.
@@ -35,7 +34,7 @@ class PlayerBackdrop extends StatelessWidget {
           ),
         ),
       );
-      if (!BetaFeatures.instance.isOn(BetaFeature.audioVisualizer) ||
+      if (!LayoutPrefs.instance.visualizerEnabled ||
           !look.reactiveBackground ||
           !LayoutPrefs.moves ||
           MediaQuery.disableAnimationsOf(context)) {

@@ -86,9 +86,8 @@ class _FullScreenPlayerState extends State<FullScreenPlayer> {
     final text = Theme.of(context).textTheme;
 
     final hasVideo = VideoMode.instance.videoOf(track) != null;
-    // Full width: the cover takes all of its half, with square corners.
-    final bleed = LayoutPrefs.instance.playerCover == PlayerCover.fullBleed;
-    final share = bleed ? 1.0 : widthShare;
+    // The expanded player is always the Classic layout, whatever the player parts are set to.
+    final share = widthShare;
     // Room for the title lines and "Next" under the cover (and the Song / Video switch above it).
     final art = math.min(box.maxHeight - 150 - (hasVideo ? 44 : 0), box.maxWidth * share).clamp(120.0, 900.0);
     return Center(
@@ -106,10 +105,11 @@ class _FullScreenPlayerState extends State<FullScreenPlayer> {
                   track: track,
                   cover: AudioVisualizer(
                     radialOnly: true,
+                    classicShape: true,
                     child: TrackSwitcher(
                       trackId: track.id,
                       slide: false,
-                      child: Artwork(key: ValueKey(track.id), track: track, radius: bleed ? 0 : 12),
+                      child: Artwork(key: ValueKey(track.id), track: track, radius: 12),
                     ),
                   ),
                 ),
@@ -138,7 +138,7 @@ class _FullScreenPlayerState extends State<FullScreenPlayer> {
                     ],
                   ),
                 ),
-                ...desktopTitleActions(context, track),
+                ...desktopTitleActions(context, track, classic: true),
               ],
             ),
           ),
@@ -216,7 +216,7 @@ class _FullScreenPlayerState extends State<FullScreenPlayer> {
                     child: Row(
                       children: [
                         Expanded(
-                          child: PlayerFromLabel(from: from, album: track?.album),
+                          child: PlayerFromLabel(from: from, album: track?.album, classic: true),
                         ),
                         // Queue, volume etc. are in the player bar right below.
                         // Always there, even with nothing playing: Lyrics is never hidden.

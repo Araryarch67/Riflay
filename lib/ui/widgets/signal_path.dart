@@ -62,10 +62,16 @@ String _codecName(SignalPath p) => p.isDop
 
 /// Small "FLAC · 24-bit / 96 kHz" label; tap for the full signal path.
 class QualityBadge extends StatelessWidget {
-  const QualityBadge({super.key, this.onDark = false});
+  const QualityBadge({super.key, this.onDark = false, this.soft = false, this.alignment = Alignment.centerLeft});
 
   /// On a coloured background (phone now playing): white text instead of grey.
   final bool onDark;
+
+  /// A soft translucent pill with no outline, for a page that is a picture.
+  final bool soft;
+
+  /// Where it sits in the room it is given.
+  final Alignment alignment;
 
   @override
   Widget build(BuildContext context) {
@@ -86,7 +92,7 @@ class QualityBadge extends StatelessWidget {
             ? Colors.white70
             : AppColors.textSecondary;
         return Align(
-          alignment: Alignment.centerLeft,
+          alignment: alignment,
           child: Tooltip(
             message: 'Signal path',
             child: InkWell(
@@ -95,8 +101,9 @@ class QualityBadge extends StatelessWidget {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  border: Border.all(color: color.withValues(alpha: 0.6)),
-                  borderRadius: BorderRadius.circular(4),
+                  color: soft ? Colors.white.withValues(alpha: 0.14) : null,
+                  border: soft ? null : Border.all(color: color.withValues(alpha: 0.6)),
+                  borderRadius: BorderRadius.circular(soft ? 14 : 4),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,

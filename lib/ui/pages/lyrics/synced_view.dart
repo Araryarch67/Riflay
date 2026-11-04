@@ -16,6 +16,26 @@ class _SyncedLyricsState extends State<_SyncedLyrics> {
   late final PlayerController _c = PlayerScope.read(context);
   // The person's shift for this song: lyrics a second later are where the song was a second ago.
   late final ValueNotifier<Duration> _shift = LyricsTiming.of(widget.track);
+  // Whether the song is playing: the word fill only runs on the frame clock then.
+  late final _playing = ValueNotifier<bool>(_c.showsPlaying);
+
+  void _onPlayer() {
+    if (_playing.value != _c.showsPlaying) _playing.value = _c.showsPlaying;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _c.addListener(_onPlayer);
+  }
+
+  @override
+  void dispose() {
+    _c.removeListener(_onPlayer);
+    _playing.dispose();
+    super.dispose();
+  }
+
   late final Stream<Duration> _ticks = _c
       .positionUpdates()
       .map((p) => p - _shift.value)
@@ -30,6 +50,7 @@ class _SyncedLyricsState extends State<_SyncedLyrics> {
     lyrics: widget.lyrics,
     ticks: _ticks,
     smoothTicks: _smooth,
+    playing: _playing,
     position: () => _c.position - _shift.value,
     length: () => _c.currentTrack?.duration ?? _c.duration,
     onSeek: (to) {
@@ -49,6 +70,7 @@ class SyncedLyricsView extends StatefulWidget {
     required this.lyrics,
     required this.ticks,
     required this.smoothTicks,
+    this.playing,
     this.position = _zero,
     this.length,
     required this.onSeek,
@@ -61,6 +83,9 @@ class SyncedLyricsView extends StatefulWidget {
 
   /// The position often enough to glide a word's fill.
   final Stream<Duration> smoothTicks;
+
+  /// Whether the song is playing (the word fill moves only then). Null: always.
+  final ValueListenable<bool>? playing;
 
   /// Where the song is right now, read when the view opens.
   final Duration Function() position;
@@ -181,6 +206,72 @@ class _SyncedLyricsViewState extends State<SyncedLyricsView> with _Extras {
     _checkVisible();
   }
 
+  /// Lines shown: Focused. The previous, the current and the next line, each in a third of the view, so the current
+  /// one sits in the middle with room around it. Moving on crossfades to the next trio (a short slide with motion on).
+  Widget _focused(TextStyle? style, Color unsung, double pad) {
+    final lines = widget.lyrics.lines;
+    final side = style?.copyWith(fontSize: style.fontSize == null ? null : style.fontSize! * 0.8);
+    Widget slot(int i, {required bool beside}) => _LineSlot(
+      key: ValueKey(i),
+      index: i,
+      at: _at,
+      line: lines[i],
+      extra: extraFor(i),
+      style: beside ? side : style,
+      unsung: unsung,
+      fade: beside ? 0.6 : 1,
+      position: widget.position,
+      ticks: widget.smoothTicks,
+      playing: widget.playing,
+      trusted: _trusted,
+      onTap: () => widget.onSeek(lines[i].time),
+    );
+    return ValueListenableBuilder<int>(
+      valueListenable: _at,
+      builder: (context, at, _) {
+        final current = at >= 0 && at < lines.length ? at : null;
+        final before = current != null && current > 0 ? current - 1 : null;
+        // Before the first line is sung, it waits as the next one.
+        final after = current != null ? (current + 1 < lines.length ? current + 1 : null) : (at < 0 ? 0 : null);
+        return AnimatedSwitcher(
+          duration: LayoutPrefs.dur(const Duration(milliseconds: 350)),
+          transitionBuilder: (child, anim) => FadeTransition(
+            opacity: anim,
+            child: LayoutPrefs.moves
+                ? SlideTransition(
+                    position: Tween(begin: const Offset(0, 0.04), end: Offset.zero).animate(anim),
+                    child: child,
+                  )
+                : child,
+          ),
+          child: SizedBox.expand(
+            key: ValueKey(at),
+            child: Padding(
+              padding: EdgeInsets.symmetric(horizontal: pad),
+              child: Column(
+                children: [
+                  Expanded(
+                    child: Align(
+                      alignment: Alignment.bottomCenter,
+                      child: before == null ? null : slot(before, beside: true),
+                    ),
+                  ),
+                  Expanded(child: Center(child: current == null ? null : slot(current, beside: false))),
+                  Expanded(
+                    child: Align(
+                      alignment: Alignment.topCenter,
+                      child: after == null ? null : slot(after, beside: true),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   void _resume() {
     _following = true;
     _showBack.value = false;
@@ -194,6 +285,7 @@ class _SyncedLyricsViewState extends State<SyncedLyricsView> with _Extras {
     final pad = _isCompact(context) ? 24.0 : 40.0;
     final dim = LayoutPrefs.instance.dimUnsungLyrics;
     final unsung = dim ? AppColors.textMuted : AppColors.textPrimary.withValues(alpha: 0.75);
+    if (LayoutPrefs.instance.lyricsLines == LyricsLines.focused) return _focused(style, unsung, pad);
     return NotificationListener<ScrollNotification>(
       onNotification: (n) {
         if (n is UserScrollNotification && n.direction != ScrollDirection.idle) {
@@ -249,6 +341,7 @@ class _SyncedLyricsViewState extends State<SyncedLyricsView> with _Extras {
                             unsung: unsung,
                             position: widget.position,
                             ticks: widget.smoothTicks,
+                            playing: widget.playing,
                             trusted: _trusted,
                             onTap: () {
                               _following = true;
@@ -321,9 +414,15 @@ class _LineSlot extends StatefulWidget {
     required this.ticks,
     required this.trusted,
     required this.onTap,
+    this.playing,
+    this.fade = 1,
   });
 
   final int index;
+  final ValueListenable<bool>? playing;
+
+  /// Multiplies the line's colour opacity (the lines either side of the current one, in Focused).
+  final double fade;
   final ValueListenable<int> at;
   final LyricLine line;
   final String? extra;
@@ -374,11 +473,15 @@ class _LineSlotState extends State<_LineSlot> {
     if (place != _place) setState(() => _place = place);
   }
 
+  Color _faded(Color c) => widget.fade == 1 ? c : c.withValues(alpha: c.a * widget.fade);
+
   @override
   Widget build(BuildContext context) {
     lyricLineBuilds++;
     final line = widget.line;
-    final timed = _place == _LinePlace.current && line.words.isNotEmpty;
+    // Line by line never fills word by word, even where the lyrics have word timings.
+    final timed =
+        _place == _LinePlace.current && line.words.isNotEmpty && LayoutPrefs.instance.lyricsSync == LyricsSync.word;
     return _Line(
       text: line.text.isEmpty ? '♪' : line.text,
       extra: widget.extra,
@@ -389,14 +492,15 @@ class _LineSlotState extends State<_LineSlot> {
               sungColor: AppColors.textPrimary,
               position: widget.position,
               ticks: widget.ticks,
+              playing: widget.playing,
               trusted: widget.trusted,
             )
           : null,
-      color: switch (_place) {
+      color: _faded(switch (_place) {
         _LinePlace.current => timed ? widget.unsung : AppColors.textPrimary,
         _LinePlace.sung => AppColors.textPrimary.withValues(alpha: 0.75),
         _LinePlace.upcoming => widget.unsung,
-      },
+      }),
       onTap: widget.onTap,
     );
   }
@@ -448,6 +552,7 @@ class _LineState extends State<_Line> {
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 8),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: _centred ? CrossAxisAlignment.stretch : CrossAxisAlignment.start,
           children: [
             AnimatedDefaultTextStyle(
