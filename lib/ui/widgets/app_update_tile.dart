@@ -4,6 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../services/app_updates.dart';
 import '../pages/sound_settings.dart' show settingsMuted;
+import 'skeleton.dart';
 
 /// An explicit check, followed by an Android download and system installation.
 class AppUpdateTile extends StatefulWidget {
@@ -106,7 +107,7 @@ class _AppUpdateTileState extends State<AppUpdateTile> {
         ],
       ),
       trailing: _busy
-          ? const SizedBox.square(dimension: 18, child: CircularProgressIndicator(strokeWidth: 2))
+          ? const SkeletonBox.circle(size: 18)
           : Icon(_path != null ? Icons.install_mobile_rounded : Icons.chevron_right_rounded, size: 20),
       onTap: _busy ? null : _act,
     );

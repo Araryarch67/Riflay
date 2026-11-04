@@ -5,6 +5,7 @@ import '../services/cast.dart';
 import '../services/player_controller.dart';
 import 'shell_scope.dart';
 import 'theme.dart';
+import 'widgets/skeleton.dart';
 
 /// The "Play on" button: lights up while a TV or speaker is playing.
 class CastButton extends StatelessWidget {
@@ -105,7 +106,7 @@ class _CastPickerState extends State<_CastPicker> {
           style: selected ? TextStyle(color: AppColors.accent, fontWeight: FontWeight.w600) : null,
         ),
         trailing: busy
-            ? const SizedBox.square(dimension: 18, child: CircularProgressIndicator(strokeWidth: 2))
+            ? const SkeletonBox.circle(size: 18)
             : selected
             ? Icon(Icons.check_rounded, color: AppColors.accent)
             : null,
@@ -140,7 +141,7 @@ class _CastPickerState extends State<_CastPicker> {
           child: cast.searching
               ? Row(
                   children: [
-                    const SizedBox.square(dimension: 14, child: CircularProgressIndicator(strokeWidth: 2)),
+                    const SkeletonBox.circle(size: 14),
                     const SizedBox(width: 12),
                     Text('Looking for TVs and speakers…', style: muted),
                   ],

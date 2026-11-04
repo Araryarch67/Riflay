@@ -15,6 +15,7 @@ import '../widgets/shelf.dart';
 import 'downloads_page.dart';
 import 'youtube_music_page.dart';
 import '../widgets/menus.dart';
+import '../widgets/skeleton.dart';
 
 /// One Home for everything: your files, your Riflay playlists and your
 /// YouTube Music library side by side, then YouTube Music's own shelves.
@@ -229,10 +230,7 @@ class HomePage extends StatelessWidget {
       PlayerSelect<bool>(
         select: (c) => c.scanning,
         builder: (context, scanning, _) => scanning
-            ? const Padding(
-                padding: EdgeInsets.all(12),
-                child: SizedBox.square(dimension: 18, child: CircularProgressIndicator(strokeWidth: 2)),
-              )
+            ? const Padding(padding: EdgeInsets.all(12), child: SkeletonBox.circle(size: 18))
             : const SizedBox.shrink(),
       ),
       IconButton(

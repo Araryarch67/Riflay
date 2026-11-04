@@ -8,6 +8,7 @@ import '../../services/scrobbler.dart';
 import '../player_scope.dart';
 import '../theme.dart';
 import 'sound_settings.dart' show SettingTile, SettingsCard, settingsMuted;
+import '../widgets/skeleton.dart';
 
 /// Settings › Accounts & services › Last.fm & ListenBrainz: where what you play is shared.
 class ScrobbleSettings extends StatelessWidget {
@@ -337,14 +338,14 @@ class _LastFmSignInDialogState extends State<_LastFmSignInDialog> {
             if (_error != null)
               Text(_error!, style: muted)
             else if (_page == null)
-              const LinearProgressIndicator()
+              const SkeletonBox(height: 8, radius: 4)
             else ...[
               Text(
                 'Allow Riflay on the Last.fm page that opened in your browser. This closes by itself once you have.',
                 style: muted,
               ),
               const SizedBox(height: 16),
-              const LinearProgressIndicator(),
+              const SkeletonBox(height: 8, radius: 4),
             ],
           ],
         ),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../theme.dart';
 import '../../widgets/smooth_scroll.dart';
+import '../../widgets/skeleton.dart';
 
 /// The small spinner the result sections show while a search loads.
 class SearchSpinner extends StatelessWidget {
@@ -12,11 +13,8 @@ class SearchSpinner extends StatelessWidget {
   @override
   Widget build(BuildContext context) => SliverToBoxAdapter(
     child: Padding(
-      padding: EdgeInsets.symmetric(horizontal: pad, vertical: 16),
-      child: const Align(
-        alignment: Alignment.centerLeft,
-        child: SizedBox.square(dimension: 20, child: CircularProgressIndicator(strokeWidth: 2)),
-      ),
+      padding: EdgeInsets.symmetric(horizontal: pad, vertical: 8),
+      child: const SkeletonList(count: 2, rowSize: 36),
     ),
   );
 }

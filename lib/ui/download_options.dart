@@ -7,6 +7,7 @@ import '../services/youtube_importer.dart';
 import '../services/youtube_stream.dart';
 import 'theme.dart';
 import 'widgets/controls.dart' show formatBytes;
+import 'widgets/skeleton.dart';
 
 /// The format and quality to download with. Without [force] this follows
 /// Settings and only asks when "Ask every time" is on; "Download as…"
@@ -176,11 +177,7 @@ class _DownloadOptionsDialogState extends State<DownloadOptionsDialog> {
     if (!_loading) return Text(name);
     return Row(
       mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(name),
-        const SizedBox(width: 8),
-        const SizedBox.square(dimension: 12, child: CircularProgressIndicator(strokeWidth: 2)),
-      ],
+      children: [Text(name), const SizedBox(width: 8), const SkeletonBox.circle(size: 12)],
     );
   }
 
@@ -218,11 +215,7 @@ class _DownloadOptionsDialogState extends State<DownloadOptionsDialog> {
       if (formats != null || !_videoLoading) return Text(name);
       return Row(
         mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(name),
-          const SizedBox(width: 8),
-          const SizedBox.square(dimension: 12, child: CircularProgressIndicator(strokeWidth: 2)),
-        ],
+        children: [Text(name), const SizedBox(width: 8), const SkeletonBox.circle(size: 12)],
       );
     }
 

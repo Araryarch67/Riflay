@@ -5,6 +5,7 @@ import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 
 import '../../services/player_controller.dart';
 import '../theme.dart';
+import '../widgets/skeleton.dart';
 
 /// One-time Google sign-in in the app's own WebView. When the login lands back
 /// on music.youtube.com, the session (cookies plus visitor data) is read out of
@@ -76,12 +77,12 @@ JSON.stringify((() => {
                       ],
                     ),
                   ),
-                  if (_checking) const SizedBox.square(dimension: 16, child: CircularProgressIndicator(strokeWidth: 2)),
+                  if (_checking) const SkeletonBox.circle(size: 16),
                 ],
               ),
             ),
           ),
-          if (_loading) LinearProgressIndicator(minHeight: 2, backgroundColor: AppColors.panel),
+          if (_loading) const SkeletonBox(height: 3, radius: 0),
           if (_error != null)
             Container(
               width: double.infinity,

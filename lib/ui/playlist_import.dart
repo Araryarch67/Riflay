@@ -6,6 +6,7 @@ import '../services/player_controller.dart';
 import '../services/playlist_transfer.dart';
 import '../services/youtube_music_account.dart';
 import 'theme.dart';
+import 'widgets/skeleton.dart';
 
 /// Where an imported playlist was saved.
 typedef ImportedPlaylist = ({String title, String? youtubeId, UserPlaylist? local});
@@ -201,7 +202,7 @@ class _PlaylistImportDialogState extends State<PlaylistImportDialog> {
             _Step.reading => [
               Text('Reading the playlist…', style: secondary),
               const SizedBox(height: 16),
-              const LinearProgressIndicator(),
+              const SkeletonBox(height: 8, radius: 4),
             ],
             _Step.matching || _Step.saving => [
               Text(

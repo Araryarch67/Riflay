@@ -11,6 +11,7 @@ import '../../services/youtube_importer.dart';
 import '../shell_scope.dart';
 import '../theme.dart';
 import '../widgets/page_scaffold.dart';
+import '../widgets/skeleton.dart';
 
 /// Songs that are in the library more than once, in different files, formats or sources: shows each copy,
 /// picks the best to keep, and removes the others when asked.
@@ -175,9 +176,7 @@ class _DuplicatesPageState extends State<DuplicatesPage> {
         ),
         if (groups == null)
           const SliverToBoxAdapter(
-            child: Center(
-              child: Padding(padding: EdgeInsets.all(24), child: CircularProgressIndicator()),
-            ),
+            child: Padding(padding: EdgeInsets.all(16), child: SkeletonList(count: 5)),
           )
         else
           SliverPadding(

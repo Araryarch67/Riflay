@@ -5,6 +5,7 @@ import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 
 import '../../services/spotify_session.dart';
 import '../theme.dart';
+import '../widgets/skeleton.dart';
 
 /// One-time Spotify sign-in in the app's own WebView. Spotify's login
 /// page lands on the web player, which fetches its own access token; a script
@@ -64,12 +65,12 @@ class _SpotifyLoginPageState extends State<SpotifyLoginPage> {
                       ],
                     ),
                   ),
-                  if (_checking) const SizedBox.square(dimension: 16, child: CircularProgressIndicator(strokeWidth: 2)),
+                  if (_checking) const SkeletonBox.circle(size: 16),
                 ],
               ),
             ),
           ),
-          if (_loading) LinearProgressIndicator(minHeight: 2, backgroundColor: AppColors.panel),
+          if (_loading) const SkeletonBox(height: 3, radius: 0),
           if (_error != null)
             Container(
               width: double.infinity,

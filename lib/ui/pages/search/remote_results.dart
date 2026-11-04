@@ -12,6 +12,7 @@ import '../../widgets/shelf.dart';
 import '../../widgets/track_row.dart';
 import '../youtube_music_page.dart' show openRemotePlaylist, playlistCover;
 import 'search_parts.dart';
+import '../../widgets/skeleton.dart';
 
 /// Opens a search hit: plays a song, opens an artist / album / playlist.
 void openSearchHit(BuildContext context, SearchHit hit) {
@@ -307,7 +308,6 @@ class YoutubeSongResults extends StatelessWidget {
           final previous = shown.tracks;
           return SliverMainAxisGroup(
             slivers: [
-              const SliverToBoxAdapter(child: LinearProgressIndicator(minHeight: 2)),
               SliverOpacity(
                 opacity: 0.5,
                 sliver: SliverPadding(
@@ -376,13 +376,7 @@ class VideoResults extends StatelessWidget {
     final c = PlayerScope.read(context);
     final shell = ShellScope.of(context);
     final pad = shell.compact ? 16.0 : 24.0;
-    const spinner = Padding(
-      padding: EdgeInsets.symmetric(vertical: 16),
-      child: Align(
-        alignment: Alignment.centerLeft,
-        child: SizedBox.square(dimension: 20, child: CircularProgressIndicator(strokeWidth: 2)),
-      ),
-    );
+    const spinner = Padding(padding: EdgeInsets.symmetric(vertical: 8), child: SkeletonList(count: 4, rowSize: 44));
     if (loading && tracks.isEmpty) {
       return SliverToBoxAdapter(
         child: Padding(
@@ -400,7 +394,6 @@ class VideoResults extends StatelessWidget {
     final tail = !atEnd && !loading;
     return SliverMainAxisGroup(
       slivers: [
-        if (loading) const SliverToBoxAdapter(child: LinearProgressIndicator(minHeight: 2)),
         SliverOpacity(
           opacity: loading ? 0.5 : 1,
           sliver: SliverPadding(

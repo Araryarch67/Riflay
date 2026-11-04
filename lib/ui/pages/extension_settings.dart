@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../services/extensions/extension_store.dart';
 import 'sound_settings.dart';
+import '../widgets/skeleton.dart';
 
 /// SpotiFLAC extension repositories, and the extensions from them: add or remove a repository, install, turn on or
 /// off, update and remove extensions. Enabled extensions that search add their results to Search.
@@ -23,13 +24,10 @@ class _ExtensionSettingsState extends State<ExtensionSettings> {
   @override
   void initState() {
     super.initState();
-    _store.load().then(
-      (_) {
-        // Read the repositories once per visit if nothing was read yet.
-        if (mounted && _store.repositories.any((r) => _store.stateOf(r).registry == null)) _store.refresh();
-      },
-      onError: (Object e) => debugPrint('Extensions not loaded: $e'),
-    );
+    _store.load().then((_) {
+      // Read the repositories once per visit if nothing was read yet.
+      if (mounted && _store.repositories.any((r) => _store.stateOf(r).registry == null)) _store.refresh();
+    }, onError: (Object e) => debugPrint('Extensions not loaded: $e'));
   }
 
   @override
@@ -231,16 +229,13 @@ class _ExtensionSettingsState extends State<ExtensionSettings> {
     return ListTile(
       leading: const Icon(Icons.extension_outlined),
       title: Text('${m.displayName}  ${m.version}'),
-      subtitle: Text(
-        [if (m.description.isNotEmpty) m.description, _uses(m)].join('\n'),
-        style: settingsMuted(context),
-      ),
+      subtitle: Text([if (m.description.isNotEmpty) m.description, _uses(m)].join('\n'), style: settingsMuted(context)),
       isThreeLine: true,
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           if (busy)
-            const SizedBox.square(dimension: 20, child: CircularProgressIndicator(strokeWidth: 2))
+            const SkeletonBox.circle(size: 20)
           else if (update != null)
             IconButton(
               tooltip: 'Update to ${update.version}',
@@ -269,7 +264,7 @@ class _ExtensionSettingsState extends State<ExtensionSettings> {
       ),
       isThreeLine: true,
       trailing: busy
-          ? const SizedBox.square(dimension: 20, child: CircularProgressIndicator(strokeWidth: 2))
+          ? const SkeletonBox.circle(size: 20)
           : FilledButton.tonal(
               onPressed: () => _run(() => _store.install(e), 'Couldn\'t install ${e.displayName}'),
               child: const Text('Install'),

@@ -4,6 +4,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:riflay/ui/widgets/skeleton.dart';
 import 'package:riflay/services/download_prefs.dart';
 import 'package:riflay/services/mp4_mux.dart';
 import 'package:riflay/services/video_download.dart';
@@ -821,14 +822,14 @@ void main() {
       expect(find.text('Video'), findsNothing);
     });
 
-    testWidgets('chips spin while the video\'s sizes are looked up', (tester) async {
+    testWidgets('chips show a skeleton while the video\'s sizes are looked up', (tester) async {
       final found = Completer<VideoFormats?>();
       await open(tester, initial: recommendedVideoChoice, video: found.future);
-      expect(find.byType(CircularProgressIndicator), findsWidgets);
+      expect(find.byType(SkeletonBox), findsWidgets);
       found.complete(_typical);
       await tester.pump();
       await tester.pump();
-      expect(find.byType(CircularProgressIndicator), findsNothing);
+      expect(find.byType(SkeletonBox), findsNothing);
       expect(chip('720p'), findsOneWidget);
     });
 

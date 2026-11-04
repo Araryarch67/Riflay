@@ -19,6 +19,7 @@ import '../ytmusic_edit.dart';
 import '../playlist_import.dart';
 import '../../services/ytmusic_web.dart';
 import '../widgets/menus.dart';
+import '../widgets/skeleton.dart';
 
 /// The one sign-in: Google's own page, in a window on Linux (WebKitGTK helper)
 /// and inside the app everywhere else.
@@ -209,12 +210,7 @@ class DiscoverShelves extends StatelessWidget {
           future: c.ytMusic.discover(),
           builder: (context, snap) {
             if (snap.connectionState != ConnectionState.done) {
-              return const SliverToBoxAdapter(
-                child: Padding(
-                  padding: EdgeInsets.all(48),
-                  child: Center(child: CircularProgressIndicator(strokeWidth: 2.5)),
-                ),
-              );
+              return const SliverToBoxAdapter(child: SkeletonShelves());
             }
             if (snap.hasError) {
               return SliverToBoxAdapter(
@@ -310,11 +306,11 @@ class _RemoteCollectionPageState extends State<RemoteCollectionPage> {
             SliverToBoxAdapter(child: _Header(widget.title)),
             SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.all(48),
+                padding: EdgeInsets.all(snap.hasError ? 48 : 0),
                 child: Center(
                   child: snap.hasError
                       ? const Text('Couldn\'t load this playlist. Check your internet connection.')
-                      : const CircularProgressIndicator(strokeWidth: 2.5),
+                      : const SkeletonPage(),
                 ),
               ),
             ),
@@ -485,7 +481,7 @@ class _LibraryPlaylistPageState extends State<LibraryPlaylistPage> {
           SliverToBoxAdapter(child: _Header(_title)),
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.all(48),
+              padding: EdgeInsets.all(_error != null ? 48 : 0),
               child: Center(
                 child: _error != null
                     ? Column(
@@ -500,7 +496,7 @@ class _LibraryPlaylistPageState extends State<LibraryPlaylistPage> {
                           ),
                         ],
                       )
-                    : const CircularProgressIndicator(strokeWidth: 2.5),
+                    : const SkeletonPage(),
               ),
             ),
           ),

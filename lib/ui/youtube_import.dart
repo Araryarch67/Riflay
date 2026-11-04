@@ -9,6 +9,7 @@ import '../services/youtube_links.dart';
 import 'download_options.dart';
 import 'theme.dart';
 import 'widgets/controls.dart';
+import 'widgets/skeleton.dart';
 
 /// Opens the "paste a YouTube link" flow: bottom sheet on phones, dialog elsewhere.
 /// Resolves to true when something was queued.
@@ -182,10 +183,7 @@ class _ImportFormState extends State<_ImportForm> {
             duration: const Duration(milliseconds: 200),
             alignment: Alignment.topCenter,
             child: _loading
-                ? const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 24),
-                    child: Center(child: CircularProgressIndicator(strokeWidth: 2.5)),
-                  )
+                ? const Padding(padding: EdgeInsets.symmetric(vertical: 8), child: SkeletonList(count: 3))
                 : _error != null
                 ? Padding(
                     padding: const EdgeInsets.only(bottom: 8),

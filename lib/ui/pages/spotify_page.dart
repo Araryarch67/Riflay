@@ -12,6 +12,7 @@ import '../shell_scope.dart';
 import '../theme.dart';
 import '../widgets/page_scaffold.dart';
 import 'spotify_login_page.dart';
+import '../widgets/skeleton.dart';
 
 /// Builds the importer for a run. The default one writes to YouTube Music / Riflay.
 typedef SpotifyImporterBuilder = SpotifyImporter Function(BuildContext context, SpotifyLibraryClient client);
@@ -287,7 +288,7 @@ class _SpotifyPageState extends State<SpotifyPage> {
                 Text('Riflay only reads your library. It never changes your Spotify account.', style: muted),
                 const SizedBox(height: 24),
                 if (account.busy)
-                  const SizedBox(height: 52, child: Center(child: CircularProgressIndicator()))
+                  const SkeletonBox(height: 52, radius: 26)
                 else
                   SizedBox(
                     width: double.infinity,
@@ -372,10 +373,7 @@ class _SpotifyPageState extends State<SpotifyPage> {
       ),
       if (state.loading || (state.items == null && state.error == null))
         const SliverToBoxAdapter(
-          child: Padding(
-            padding: EdgeInsets.all(32),
-            child: Center(child: CircularProgressIndicator()),
-          ),
+          child: Padding(padding: EdgeInsets.all(16), child: SkeletonList(count: 6)),
         )
       else if (state.error != null)
         SliverToBoxAdapter(

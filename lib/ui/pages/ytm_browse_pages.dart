@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 
 import '../../services/player_controller.dart';
+import '../../services/layout_prefs.dart';
 import '../../services/youtube_music_account.dart';
 import '../../services/ytmusic_web.dart';
 import '../shell_scope.dart';
 import '../theme.dart';
+import '../ytmusic_edit.dart' show heroRoundButton;
 import '../widgets/page_scaffold.dart';
 import 'youtube_music_page.dart';
+import '../widgets/skeleton.dart';
 
 /// "Moods & genres" and "New releases", at the top of YouTube Music's shelves.
 class YtmBrowseLinks extends StatelessWidget {
@@ -76,7 +79,7 @@ class _LoadingPageState<T> extends State<_LoadingPage<T>> {
           else
             SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.all(48),
+                padding: EdgeInsets.all(snap.hasError ? 48 : 0),
                 child: Center(
                   child: snap.hasError
                       ? Column(
@@ -88,7 +91,7 @@ class _LoadingPageState<T> extends State<_LoadingPage<T>> {
                             ),
                           ],
                         )
-                      : const CircularProgressIndicator(strokeWidth: 2.5),
+                      : const SkeletonPage(),
                 ),
               ),
             ),
@@ -239,6 +242,13 @@ class _SaveToLibraryButtonState extends State<SaveToLibraryButton> {
   Widget build(BuildContext context) {
     final state = _state;
     if (!_account.isSignedIn || state == null) return const SizedBox.shrink();
+    if (LayoutPrefs.instance.albumHeader == AlbumHeaderStyle.hero) {
+      return heroRoundButton(
+        icon: state.saved ? Icons.check_rounded : Icons.add_rounded,
+        tooltip: state.saved ? 'Remove from library' : 'Save to library',
+        onPressed: _busy ? null : _toggle,
+      );
+    }
     return OutlinedButton(
       style: OutlinedButton.styleFrom(
         foregroundColor: AppColors.textPrimary,
