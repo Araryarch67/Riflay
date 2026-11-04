@@ -183,4 +183,15 @@ void main() {
     expect(p.videoDecoder, VideoDecoder.software);
     await p.setVideoDecoder(VideoDecoder.automatic);
   });
+
+  test('window buttons can be hidden, and Reset leaves them as they are', () async {
+    expect(p.windowButtons, isTrue);
+    await p.setWindowButtons(false);
+    expect(p.isCustomised, isFalse);
+    await p.load();
+    expect(p.windowButtons, isFalse);
+    await p.reset();
+    expect(p.windowButtons, isFalse);
+    await p.setWindowButtons(true);
+  });
 }

@@ -356,6 +356,10 @@ class LayoutPrefs extends ChangeNotifier {
   PerformanceMode performance = PerformanceMode.balanced;
   VideoDecoder videoDecoder = VideoDecoder.automatic;
 
+  /// Desktop: minimize, maximize and close in the title bar. Off for tiling window managers, which place and
+  /// close windows themselves. A setting of this computer, like [performance].
+  bool windowButtons = true;
+
   // Shorthands for widgets. They read the one instance, like AppColors does.
 
   /// [base] (the radius the app has always used) for the chosen corners.
@@ -483,6 +487,7 @@ class LayoutPrefs extends ChangeNotifier {
     pageSpeed = pick(PageMotionSpeed.values, 'pageSpeed', d.pageSpeed);
     performance = pick(PerformanceMode.values, 'performance', d.performance);
     videoDecoder = pick(VideoDecoder.values, 'videoDecoder', d.videoDecoder);
+    windowButtons = j['windowButtons'] as bool? ?? d.windowButtons;
     final byName = HomeSection.values.asNameMap();
     final order = <HomeSection>[for (final n in (j['homeOrder'] as List?) ?? const []) ?byName[n]];
     // A section added by a newer version joins at its default place.
@@ -530,18 +535,20 @@ class LayoutPrefs extends ChangeNotifier {
     'pageSpeed': pageSpeed.name,
     'performance': performance.name,
     'videoDecoder': videoDecoder.name,
+    'windowButtons': windowButtons,
     'homeOrder': [for (final s in homeOrder) s.name],
     'homeHidden': [for (final s in homeHidden) s.name],
   };
 
-  /// Whether anything differs from the defaults (Performance and the video decoder are not looks, so they
-  /// don't count).
+  /// Whether anything differs from the defaults (Performance, the video decoder and the window buttons are
+  /// about this computer, so they don't count).
   bool get isCustomised =>
       jsonEncode(toJson()) !=
       jsonEncode(
         (LayoutPrefs._()
               ..performance = performance
-              ..videoDecoder = videoDecoder)
+              ..videoDecoder = videoDecoder
+              ..windowButtons = windowButtons)
             .toJson(),
       );
 
@@ -593,6 +600,7 @@ class LayoutPrefs extends ChangeNotifier {
   Future<void> setMotion(Motion v) => _set(() => motion = v);
   Future<void> setPerformance(PerformanceMode v) => _set(() => performance = v);
   Future<void> setVideoDecoder(VideoDecoder v) => _set(() => videoDecoder = v);
+  Future<void> setWindowButtons(bool v) => _set(() => windowButtons = v);
 
   Future<void> setHomeSectionShown(HomeSection s, bool shown) =>
       _set(() => shown ? homeHidden.remove(s) : homeHidden.add(s));
@@ -608,13 +616,14 @@ class LayoutPrefs extends ChangeNotifier {
       if (!homeHidden.contains(s)) s,
   ];
 
-  /// Back to the defaults, except Performance and the video decoder: those are about this computer, not
-  /// about looks.
+  /// Back to the defaults, except Performance, the video decoder and the window buttons: those are about this
+  /// computer, not about looks.
   Future<void> reset() => _set(() {
-    final mode = performance, decoder = videoDecoder;
+    final mode = performance, decoder = videoDecoder, buttons = windowButtons;
     restore(const {});
     performance = mode;
     videoDecoder = decoder;
+    windowButtons = buttons;
   });
 
   /// [base] with the corner and motion settings applied to menus, dialogs,

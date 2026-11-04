@@ -5,6 +5,8 @@ import '../../services/player_presets.dart';
 import '../../services/beta_features.dart';
 import '../../services/video_mode.dart';
 import '../theme.dart';
+import '../widgets/title_bar.dart' show hasCustomTitleBar;
+import '../../platform/host.dart';
 import 'player_presets_page.dart';
 import 'sound_settings.dart';
 import '../widgets/menus.dart';
@@ -56,6 +58,23 @@ class LayoutSettings extends StatelessWidget {
                 ),
               ],
             ),
+          if (hasCustomTitleBar && !Host.isMacOS) ...[
+            const _Header('Window'),
+            SettingsCard(
+              children: [
+                SwitchListTile(
+                  secondary: const Icon(Icons.web_asset_rounded),
+                  title: const Text('Window buttons'),
+                  subtitle: Text(
+                    'Minimize, maximize and close in the title bar. Turn off with a tiling window manager',
+                    style: muted,
+                  ),
+                  value: p.windowButtons,
+                  onChanged: p.setWindowButtons,
+                ),
+              ],
+            ),
+          ],
           const _Header('Shapes and sizes'),
           SettingsCard(
             children: [

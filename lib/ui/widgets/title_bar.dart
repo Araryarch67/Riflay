@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:window_manager/window_manager.dart';
 
 import '../../platform/host.dart';
+import '../../services/layout_prefs.dart';
 import '../theme.dart';
 import 'app_logo.dart';
 
@@ -95,7 +96,7 @@ class _AppTitleBarState extends State<AppTitleBar> with WindowListener {
                   SizedBox(width: Host.isMacOS ? 80 : 12),
                   ?widget.leading,
                   const Spacer(),
-                  if (!Host.isMacOS) ..._windowButtons(),
+                  if (!Host.isMacOS) _windowControls(),
                 ],
               ),
             ),
@@ -135,11 +136,20 @@ class _AppTitleBarState extends State<AppTitleBar> with WindowListener {
               ),
             ),
           ),
-          if (!Host.isMacOS) ..._windowButtons(),
+          if (!Host.isMacOS) _windowControls(),
         ],
       ),
     );
   }
+
+  /// Minimize, maximize and close; hidden with Settings › Layout › Window buttons (tiling window managers),
+  /// leaving a little room at the edge.
+  Widget _windowControls() => ListenableBuilder(
+    listenable: LayoutPrefs.instance,
+    builder: (context, _) => LayoutPrefs.instance.windowButtons
+        ? Row(mainAxisSize: MainAxisSize.min, children: _windowButtons())
+        : const SizedBox(width: 12),
+  );
 
   List<Widget> _windowButtons() => [
     _WindowButton(tooltip: 'Minimize', icon: Icons.remove_rounded, onPressed: windowManager.minimize),
