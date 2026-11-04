@@ -591,15 +591,25 @@ enum CoverColorMode {
 enum NowPlayingBackground {
   color('Simple'),
   blurredCover('Blurred cover'),
+  video('Music video', 'The song\'s music video, when it has one'),
   black('Black'),
   aurora('Abstract aurora'),
   silk('Abstract silk'),
   orbits('Abstract orbits'),
   prism('Abstract prism');
 
-  const NowPlayingBackground(this.label);
+  const NowPlayingBackground(this.label, [this.hint]);
   final String label;
+
+  /// One plain line under the picker, for the choices that need one.
+  final String? hint;
   bool get isAbstract => index >= NowPlayingBackground.aurora.index;
+
+  /// What is painted under the page. Music video is the blurred cover with the video over it once that plays
+  /// (the cover alone while it loads, when the song has none, or when it fails); Lightweight draws no video
+  /// and no blur, just the plain colour.
+  NowPlayingBackground effective({required bool lightweight}) =>
+      this == video ? (lightweight ? color : blurredCover) : this;
 }
 
 /// Steps a 0 to 1 value over [time] on the frame clock, calling [onStep] about a dozen times (each one

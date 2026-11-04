@@ -619,7 +619,8 @@ class _NotchBar extends StatelessWidget {
         side(_right),
       ],
     );
-    final surface = glass
+    // Lightweight: no blur layer, the plain raised bar instead.
+    final surface = glass && !LayoutPrefs.lightweight
         ? _LiquidGlass(shape: shape, colors: colors, child: row)
         : _SolidNotched(shape: shape, colors: colors, child: row);
     return SizedBox(

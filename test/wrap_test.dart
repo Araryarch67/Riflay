@@ -95,25 +95,64 @@ void main() {
       );
     });
 
-    test('a month needs 10 plays; the running month never has a Wrap', () {
+    test('a past month needs 10 plays and nothing else; the running month is not listed', () {
       final h = march();
-      expect(MonthlyWrap.available(h, firstSeen: DateTime(2026, 1, 1), now: now), [const WrapMonth(2026, 3)]);
+      // No first-seen date and a short history: viewing is never gated.
+      expect(MonthlyWrap.available(h, now: now), [const WrapMonth(2026, 3)]);
       // February has 1 play; April is not over.
       expect(MonthlyWrap.available(h, now: DateTime(2026, 4, 20)), [const WrapMonth(2026, 3)]);
       expect(MonthlyWrap.compute(h, const WrapMonth(2026, 2)), isNull);
-      // Too early: the first play was 58 days before, but with a later "now" nothing changes; with an earlier one it is locked.
-      expect(MonthlyWrap.available(h, now: DateTime(2026, 3, 1)), isEmpty);
+      // March itself, on the day it ends: still running, so not listed.
+      expect(MonthlyWrap.available(h, now: DateTime(2026, 3, 31)), isEmpty);
     });
 
-    test('locked while the app is younger than 30 days', () {
+    test('a past month is available the day after, without 30 days of use', () {
       final h = PlayHistory();
       for (var i = 0; i < 12; i++) {
         h.record(song('s$i'), const Duration(seconds: 100), at: DateTime(2026, 3, 1 + i));
       }
-      expect(MonthlyWrap.available(h, firstSeen: DateTime(2026, 3, 1), now: DateTime(2026, 3, 31)), isEmpty);
-      expect(MonthlyWrap.available(h, now: DateTime(2026, 3, 31)), isEmpty);
-      // April 1: month over, 31 days of use.
-      expect(MonthlyWrap.available(h, now: DateTime(2026, 4, 1, 10)), [const WrapMonth(2026, 3)]);
+      expect(MonthlyWrap.unlocked(firstPlay: DateTime(2026, 3, 1), now: DateTime(2026, 4, 1, 10)), isTrue);
+      expect(MonthlyWrap.unlocked(firstPlay: DateTime(2026, 3, 25), now: DateTime(2026, 4, 1, 10)), isFalse);
+      expect(MonthlyWrap.available(h, now: DateTime(2026, 4, 1)), [const WrapMonth(2026, 3)]);
+    });
+  });
+
+  group('this month so far', () {
+    PlayHistory history(int plays) {
+      final h = PlayHistory();
+      for (var i = 0; i < plays; i++) {
+        h.record(song('s${i % 2}'), const Duration(seconds: 100), at: DateTime(2026, 11, 1 + i, 9));
+      }
+      return h;
+    }
+
+    const nov = WrapMonth(2026, 11);
+
+    test('is computed up to now, from three plays, with no waiting', () {
+      final now = DateTime(2026, 11, 3, 12);
+      final h = history(3);
+      h.record(song('later'), const Duration(seconds: 100), at: DateTime(2026, 11, 20)); // after "now"
+      final d = MonthlyWrap.compute(h, nov, now: now)!;
+      expect(d.inProgress, isTrue);
+      expect(d.until, now);
+      expect(d.plays, 3);
+      expect(d.title, 'November so far');
+      // Without a clock it is the whole month, which has too few plays to be a finished Wrap.
+      expect(MonthlyWrap.compute(h, nov), isNull);
+    });
+
+    test('needs a few plays, not ten', () {
+      expect(MonthlyWrap.compute(history(2), nov, now: DateTime(2026, 11, 5)), isNull);
+      expect(MonthlyWrap.compute(history(3), nov, now: DateTime(2026, 11, 5)), isNotNull);
+      // A finished month still needs ten.
+      expect(MonthlyWrap.compute(history(5), nov, now: DateTime(2026, 12, 5)), isNull);
+    });
+
+    test('a play at this very moment counts', () {
+      final now = DateTime(2026, 11, 3, 12);
+      final h = history(2);
+      h.record(song('now'), const Duration(seconds: 100), at: now);
+      expect(MonthlyWrap.compute(h, nov, now: now)!.plays, 3);
     });
   });
 
@@ -220,6 +259,38 @@ void main() {
         expect(sink.scheduled.where((s) => s.$1 == const WrapMonth(2026, 4)), isEmpty);
       },
     );
+
+    test('a brand-new user is not told about a month they had barely started', () async {
+      SharedPreferences.setMockInitialValues({WrapNotifier.firstSeenKey: DateTime(2026, 3, 20).millisecondsSinceEpoch});
+      final sink = FakeSink();
+      final h = PlayHistory();
+      for (var i = 0; i < 12; i++) {
+        h.record(song('s$i'), const Duration(seconds: 100), at: DateTime(2026, 3, 20 + i % 10));
+      }
+      await WrapNotifier(sink).run(h, now: DateTime(2026, 4, 2));
+      expect(sink.shown, isEmpty);
+      // Viewing is not gated, though.
+      expect(MonthlyWrap.available(h, now: DateTime(2026, 4, 2)), [const WrapMonth(2026, 3)]);
+    });
+
+    test('the running month is never announced', () async {
+      final sink = FakeSink();
+      final h = PlayHistory();
+      for (var i = 0; i < 12; i++) {
+        h.record(song('s$i'), const Duration(seconds: 100), at: DateTime(2026, 4, 1 + i));
+      }
+      await WrapNotifier(sink).run(h, now: DateTime(2026, 4, 20));
+      expect(sink.shown, isEmpty);
+      expect(
+        MonthlyWrap.dueNotice(
+          enabled: true,
+          available: const [WrapMonth(2026, 4)],
+          lastNotified: null,
+          now: DateTime(2026, 4, 20),
+        ),
+        isNull,
+      );
+    });
 
     test('a month that does not qualify yet is not scheduled', () async {
       final sink = FakeSink(canSchedule: true);
@@ -334,6 +405,9 @@ void main() {
       expect(find.text('Top songs'), findsOneWidget);
       expect(find.text('Your monthly Wraps'), findsOneWidget);
       expect(find.text('Your March in music'), findsOneWidget);
+      // April has one play: the "so far" entry is there, but waiting for a few more.
+      expect(find.text('April so far'), findsOneWidget);
+      expect(find.text('Play a few songs to see your Wrap'), findsOneWidget);
 
       await tester.tap(find.text('All time'));
       await tester.pumpAndSettle();

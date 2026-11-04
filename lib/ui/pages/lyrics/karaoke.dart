@@ -75,17 +75,20 @@ class KaraokeLineState extends State<KaraokeLine> {
   Widget build(BuildContext context) {
     final text = widget.words.map((w) => w.text).join();
     final style = DefaultTextStyle.of(context).style;
-    return CustomPaint(
-      foregroundPainter: _KaraokePainter(
-        words: widget.words,
-        text: text,
-        style: style.copyWith(color: widget.sungColor),
-        align: _textAlign,
-        direction: Directionality.of(context),
-        scaler: MediaQuery.textScalerOf(context),
-        progress: _progress,
+    // Its own layer: each fill tick repaints this line, not every line of the song around it.
+    return RepaintBoundary(
+      child: CustomPaint(
+        foregroundPainter: _KaraokePainter(
+          words: widget.words,
+          text: text,
+          style: style.copyWith(color: widget.sungColor),
+          align: _textAlign,
+          direction: Directionality.of(context),
+          scaler: MediaQuery.textScalerOf(context),
+          progress: _progress,
+        ),
+        child: Text(text, textAlign: _textAlign),
       ),
-      child: Text(text, textAlign: _textAlign),
     );
   }
 }

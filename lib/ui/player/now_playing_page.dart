@@ -1,11 +1,12 @@
 import 'dart:math' as math;
-import 'dart:ui' show ImageFilter;
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 
 import '../../models/track.dart';
 import '../../services/appearance.dart';
 import '../../services/layout_prefs.dart';
+import '../../services/metadata.dart';
 import '../../services/player_controller.dart';
 import '../../services/video_mode.dart';
 import '../shell_scope.dart';
@@ -21,6 +22,10 @@ import '../widgets/video_mode.dart';
 import '../ytmusic_edit.dart';
 import 'more_sheet.dart';
 import 'player_common.dart' show LinkText;
+import 'player_parts.dart';
+
+/// The name of Now Playing's route, so a page above it can tell whether it is underneath.
+const nowPlayingRouteName = 'now-playing';
 
 /// Full-screen player on phones. Swipe down or tap the chevron to close.
 ///
@@ -65,7 +70,9 @@ class NowPlayingPage extends StatelessWidget {
 
   Widget _surface(BuildContext context, Track? track, String? from) {
     final text = Theme.of(context).textTheme;
-    final look = Appearance.instance.nowPlaying;
+    final chosen = Appearance.instance.nowPlaying;
+    // Music video lies over the blurred cover (Lightweight: the plain colour).
+    final look = chosen.effective(lightweight: LayoutPrefs.lightweight);
     return AccentBuilder(
       track: track,
       builder: (context, accent) => GestureDetector(
@@ -78,19 +85,16 @@ class NowPlayingPage extends StatelessWidget {
             fit: StackFit.expand,
             children: [
               if (look.isAbstract) Positioned.fill(child: PlayerBackdrop(coverColor: accent)),
-              if (look == NowPlayingBackground.blurredCover && track != null)
-                // A small decode is plenty under this much blur. Its own layer: the
-                // colour steps and the controls above never blur it again.
-                RepaintBoundary(
-                  child: ImageFiltered(
-                    imageFilter: ImageFilter.blur(sigmaX: 48, sigmaY: 48, tileMode: TileMode.clamp),
-                    child: FittedBox(
-                      fit: BoxFit.cover,
-                      clipBehavior: Clip.hardEdge,
-                      child: Artwork(track: track, size: 160, radius: 0),
-                    ),
-                  ),
+              // Not drawn under a playing music video, which covers it.
+              if (look == NowPlayingBackground.blurredCover && track != null && !LayoutPrefs.lightweight)
+                ListenableBuilder(
+                  listenable: VideoMode.instance,
+                  builder: (context, child) =>
+                      VideoMode.instance.coversBackground(track) ? const SizedBox.shrink() : child!,
+                  child: RepaintBoundary(child: BlurredCover(track: track)),
                 ),
+              if (chosen == NowPlayingBackground.video && look != NowPlayingBackground.color)
+                Positioned.fill(child: VideoBackground(track: track)),
               AnimatedContainer(
                 duration: LayoutPrefs.dur(const Duration(milliseconds: 500)),
                 decoration: BoxDecoration(
@@ -107,8 +111,9 @@ class NowPlayingPage extends StatelessWidget {
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
                       colors: [
-                        AppColors.solidBackground.withValues(alpha: 0.4),
-                        AppColors.solidBackground.withValues(alpha: 0.75),
+                        // A moving picture needs more dimming than a still blur to keep the text readable.
+                        AppColors.solidBackground.withValues(alpha: chosen == NowPlayingBackground.video ? 0.55 : 0.4),
+                        AppColors.solidBackground.withValues(alpha: chosen == NowPlayingBackground.video ? 0.82 : 0.75),
                         AppColors.solidBackground,
                       ],
                       stops: [0, 0.6, 1],
@@ -136,7 +141,7 @@ class NowPlayingPage extends StatelessWidget {
                         final stripHeight = showStrip && constraints.maxHeight >= 560 ? 88.0 : 0.0;
                         // A phone held sideways: the cover goes beside the controls.
                         final sideways = constraints.maxWidth > constraints.maxHeight && constraints.maxHeight < 480;
-                        final topBar = Row(
+                        Widget topBarFor({required bool more}) => Row(
                           children: [
                             IconButton(
                               tooltip: 'Close',
@@ -163,10 +168,11 @@ class NowPlayingPage extends StatelessWidget {
                                 ],
                               ),
                             ),
-                            const _MoreButton(),
+                            if (more) const _MoreButton() else const SizedBox(width: 48),
                           ],
                         );
-                        Widget cover(double size) => NowPlayingCover(
+                        final topBar = topBarFor(more: true);
+                        Widget cover(double size, {double radius = 8}) => NowPlayingCover(
                           child: Hero(
                             tag: 'now-playing-art',
                             child: DecoratedBox(
@@ -177,7 +183,7 @@ class NowPlayingPage extends StatelessWidget {
                                 cover: SizedBox.square(
                                   dimension: size,
                                   child: AudioVisualizer(
-                                    child: Artwork(track: track, size: size, radius: 8),
+                                    child: Artwork(track: track, size: size, radius: radius),
                                   ),
                                 ),
                               ),
@@ -225,7 +231,7 @@ class NowPlayingPage extends StatelessWidget {
                                       const Spacer(),
                                       info,
                                       const SizedBox(height: 8),
-                                      const SeekBar(),
+                                      const SeekBar(phonePlayer: true),
                                       const TransportControls(large: true),
                                       const _SecondaryRow(),
                                     ],
@@ -235,14 +241,24 @@ class NowPlayingPage extends StatelessWidget {
                             ),
                           );
                         }
+                        if (!LayoutPrefs.instance.classicPlayerFace) {
+                          return ComposedNowPlaying(
+                            track: track,
+                            from: from,
+                            accent: accent,
+                            cover: cover,
+                            classicTopBar: topBarFor,
+                            showBadge: showBadge,
+                          );
+                        }
                         final art = largeCover
                             ? math.min(
                                 constraints.maxWidth - 24,
-                                constraints.maxHeight - (showBadge ? 364 : 328) - stripHeight,
+                                constraints.maxHeight - (showBadge ? 364 : 328) - playerVolumeRowHeight - stripHeight,
                               )
                             : math.min(
                                 constraints.maxWidth - 48,
-                                constraints.maxHeight - (showBadge ? 400 : 364) - stripHeight,
+                                constraints.maxHeight - (showBadge ? 400 : 364) - playerVolumeRowHeight - stripHeight,
                               );
                         return Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -265,11 +281,12 @@ class NowPlayingPage extends StatelessWidget {
                               ],
                               info,
                               const SizedBox(height: 16),
-                              const SeekBar(),
+                              const SeekBar(phonePlayer: true),
                               const SizedBox(height: 8),
                               const TransportControls(large: true),
                               const SizedBox(height: 4),
                               const _SecondaryRow(),
+                              const PlayerVolumeRow(),
                               const SizedBox(height: 8),
                             ],
                           ),
@@ -308,6 +325,74 @@ class _MoreButton extends StatelessWidget {
   }
 }
 
+/// Height of the [PlayerVolumeRow] at the bottom of the portrait player.
+const playerVolumeRowHeight = 40.0;
+
+/// Volume at the very bottom of the portrait player: quieter icon, slider, louder icon. It is the
+/// same level the desktop [VolumeSlider] sets (also the cast device's while casting).
+class PlayerVolumeRow extends StatelessWidget {
+  const PlayerVolumeRow({super.key, this.mute = false});
+
+  /// The left icon mutes (and unmutes) instead of turning the volume down a step.
+  final bool mute;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = PlayerScope.read(context);
+    final colors = AppColors.of(context);
+    return PlayerSelect<({bool casting, double device, bool canSet, bool dop})>(
+      select: (c) => (
+        casting: c.casting,
+        device: c.casting ? c.volume : 0,
+        canSet: c.canSetVolume,
+        // DoP must reach the DAC untouched: its volume is the one to use.
+        dop: !c.casting && c.audio.dopPlaying != null,
+      ),
+      builder: (context, v, _) => ValueListenableBuilder<double>(
+        valueListenable: c.volumeLevel,
+        builder: (context, level, _) {
+          final volume = v.dop ? 1.0 : (v.casting ? v.device : level);
+          final setVolume = v.canSet && !v.dop ? c.setVolume : null;
+          Widget nudge(String tooltip, IconData icon, double by) => IconButton(
+            tooltip: tooltip,
+            iconSize: 22,
+            visualDensity: VisualDensity.compact,
+            color: colors.textSecondary,
+            onPressed: setVolume == null ? null : () => c.nudgeVolume(by),
+            icon: Icon(icon),
+          );
+          return SizedBox(
+            height: playerVolumeRowHeight,
+            child: Row(
+              children: [
+                if (mute)
+                  IconButton(
+                    tooltip: volume == 0 ? 'Unmute' : 'Mute',
+                    iconSize: 22,
+                    visualDensity: VisualDensity.compact,
+                    color: colors.textSecondary,
+                    onPressed: setVolume == null ? null : c.toggleMute,
+                    icon: Icon(volume == 0 ? Icons.volume_off_rounded : Icons.volume_mute_rounded),
+                  )
+                else
+                  nudge('Quieter', Icons.volume_down_rounded, -0.05),
+                Expanded(
+                  child: Slider(
+                    value: volume.clamp(0, 1),
+                    onChangeStart: setVolume == null ? null : (_) => c.volumeDragStarted(),
+                    onChanged: setVolume,
+                  ),
+                ),
+                nudge('Louder', Icons.volume_up_rounded, 0.05),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
 /// Lyrics on the left, Queue on the right, under the transport controls.
 class _SecondaryRow extends StatelessWidget {
   const _SecondaryRow();
@@ -331,6 +416,114 @@ class _SecondaryRow extends StatelessWidget {
           icon: const Icon(Icons.queue_music_rounded),
         ),
       ],
+    );
+  }
+}
+
+/// The blurred-cover background, worked out once per cover: a small decode is
+/// blurred into a still image and stretched over the page. Blurring the cover
+/// live cost every frame several full-window passes (the renderer keeps no
+/// cache of a filtered layer), for a picture that only changes with the song.
+/// Also behind the expanded player on desktop, under the Music video background.
+class BlurredCover extends StatefulWidget {
+  const BlurredCover({super.key, required this.track});
+
+  final Track track;
+
+  @override
+  State<BlurredCover> createState() => _BlurredCoverState();
+}
+
+class _BlurredCoverState extends State<BlurredCover> {
+  // The last one made, so reopening Now Playing on the same song draws it at once.
+  static String? _lastKey;
+  static ui.Image? _last;
+
+  // Matches the old live blur: sigma 48 on a cover filling ~1600 px, at this size.
+  static const _side = 64;
+  static const _sigma = 2.0;
+
+  ui.Image? _image;
+  String? _key;
+
+  String _keyOf(Track t) => t.albumKey ?? t.id;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  @override
+  void didUpdateWidget(BlurredCover old) {
+    super.didUpdateWidget(old);
+    if (_keyOf(widget.track) != _key) _load();
+  }
+
+  Future<void> _load() async {
+    final key = _key = _keyOf(widget.track);
+    if (key == _lastKey && _last != null) {
+      _show(_last!.clone());
+      return;
+    }
+    final bytes = Metadata.cachedThumbnail(widget.track) ?? await Metadata.thumbnail(widget.track);
+    if (bytes == null || !mounted || key != _key) return;
+    ui.Image? small;
+    try {
+      final codec = await ui.instantiateImageCodec(bytes, targetWidth: _side, targetHeight: _side);
+      small = (await codec.getNextFrame()).image;
+      codec.dispose();
+      final recorder = ui.PictureRecorder();
+      final size = _side.toDouble();
+      Canvas(recorder).drawImageRect(
+        small,
+        Rect.fromLTWH(0, 0, small.width.toDouble(), small.height.toDouble()),
+        Rect.fromLTWH(0, 0, size, size),
+        Paint()
+          ..filterQuality = FilterQuality.medium
+          ..imageFilter = ui.ImageFilter.blur(sigmaX: _sigma, sigmaY: _sigma, tileMode: TileMode.clamp),
+      );
+      final picture = recorder.endRecording();
+      final blurred = await picture.toImage(_side, _side);
+      picture.dispose();
+      if (!mounted || key != _key) {
+        blurred.dispose();
+        return;
+      }
+      _last?.dispose();
+      _lastKey = key;
+      _last = blurred;
+      _show(blurred.clone());
+    } catch (e) {
+      debugPrint('Blurring the cover failed: $e');
+    } finally {
+      small?.dispose();
+    }
+  }
+
+  // Each view holds its own handle, so a newer cover replacing [_last] never pulls one out from under it.
+  void _show(ui.Image image) {
+    _image?.dispose();
+    setState(() => _image = image);
+  }
+
+  @override
+  void dispose() {
+    _image?.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final image = _image;
+    if (image == null) return const SizedBox.expand();
+    // Stretched smoothly, the small blurred picture keeps the soft look of the live blur.
+    return RawImage(
+      image: image,
+      fit: BoxFit.cover,
+      filterQuality: FilterQuality.medium,
+      width: double.infinity,
+      height: double.infinity,
     );
   }
 }

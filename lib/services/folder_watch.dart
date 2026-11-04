@@ -592,7 +592,11 @@ class FolderWatch extends ChangeNotifier with WidgetsBindingObserver {
       unawaited(_saveExcluded());
     }
     // Off the UI isolate: the diff reads the whole library and may check files for existence. Plain data goes in.
-    final library = c.library.toList(growable: false);
+    // Only this folder's songs: everything sent is copied into the isolate, and planSync ignores the rest anyway.
+    final library = [
+      for (final t in c.library)
+        if (t.path != null && !t.isRemote && p.isWithin(dir, t.path!)) t,
+    ];
     final excluded = Set<String>.of(_excluded);
     final plan = await inBackground(
       () => planSync(root: dir, disk: disk, previous: before, library: library, excluded: excluded),

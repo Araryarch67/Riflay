@@ -89,7 +89,9 @@ class LyricsToggleButton extends StatelessWidget {
   final bool on;
   final IconData icon;
   final String tooltip;
-  final VoidCallback onPressed;
+
+  /// Null greys the button out.
+  final VoidCallback? onPressed;
 
   @override
   Widget build(BuildContext context) => IconButton(

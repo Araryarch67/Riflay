@@ -344,17 +344,41 @@ class _LibraryPlaylistPageState extends State<LibraryPlaylistPage> {
   /// Opened before: shown at once from the copy kept then, edits included.
   late RemotePlaylistDetails? _shown = _account.cachedPlaylist(widget.playlist.id);
   Object? _error;
+  VoidCallback? _unsettle;
 
   @override
   void initState() {
     super.initState();
     _account.addListener(_follow);
-    _reload();
+    // Already showing the copy kept last time: the refresh (fetch, parse, rebuild of every row)
+    // waits until the page has slid in, so it doesn't land on the transition's frames.
+    if (_shown == null) {
+      _reload();
+      return;
+    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final anim = ModalRoute.of(context)?.animation;
+      if (anim == null || anim.status != AnimationStatus.forward) {
+        _reload();
+        return;
+      }
+      void settled(AnimationStatus status) {
+        if (status != AnimationStatus.completed && status != AnimationStatus.dismissed) return;
+        anim.removeStatusListener(settled);
+        _unsettle = null;
+        if (mounted) _reload();
+      }
+
+      anim.addStatusListener(settled);
+      _unsettle = () => anim.removeStatusListener(settled);
+    });
   }
 
   @override
   void dispose() {
     _account.removeListener(_follow);
+    _unsettle?.call();
     super.dispose();
   }
 
@@ -389,6 +413,15 @@ class _LibraryPlaylistPageState extends State<LibraryPlaylistPage> {
     try {
       await _account.renamePlaylist(widget.playlist.id, title);
       if (mounted) setState(() => _title = title);
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text(YoutubeMusicAccount.describe(e))));
+    }
+  }
+
+  Future<void> _move(int from, int to) async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await _account.moveInPlaylist(widget.playlist.id, from, to);
     } catch (e) {
       messenger.showSnackBar(SnackBar(content: Text(YoutubeMusicAccount.describe(e))));
     }
@@ -489,6 +522,7 @@ class _LibraryPlaylistPageState extends State<LibraryPlaylistPage> {
       child: CollectionPage(
         collection: collection,
         onRename: d.owned ? _renameTo : null,
+        onReorder: (d.owned || d.collaborative) && d.rowIds.length == d.tracks.length ? _move : null,
         actions: [
           if (d.owned)
             PopupMenuButton<VoidCallback>(

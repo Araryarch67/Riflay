@@ -14,6 +14,7 @@ import '../../services/layout_prefs.dart';
 import '../../services/lyrics.dart';
 import '../../services/lyrics_translation.dart';
 import '../../services/player_controller.dart';
+import '../player/player_parts.dart';
 import '../shell_scope.dart';
 import '../theme.dart';
 import '../widgets/controls.dart';
@@ -45,6 +46,7 @@ class LyricsPage extends StatelessWidget {
   Widget _page(BuildContext context, Track? track) {
     final text = Theme.of(context).textTheme;
     final canPop = ModalRoute.of(context)?.canPop ?? false;
+    final layout = fullScreen && track != null ? LayoutPrefs.instance.lyricsLayout : LyricsLayout.classic;
     return AccentBuilder(
       track: track,
       builder: (context, accent) => Material(
@@ -55,44 +57,64 @@ class LyricsPage extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(8, 8, 16, 0),
-                child: Row(
-                  children: [
-                    if (ShellScope.of(context).history != null && !fullScreen)
-                      const SizedBox(width: 8)
-                    else if (canPop)
-                      IconButton(
-                        tooltip: fullScreen ? 'Close' : 'Back',
-                        color: AppColors.textPrimary,
-                        onPressed: () => Navigator.of(context).pop(),
-                        icon: Icon(fullScreen ? Icons.keyboard_arrow_down_rounded : Icons.arrow_back_rounded),
-                      )
-                    else
-                      const SizedBox(width: 8),
-                    const SizedBox(width: 4),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('Lyrics', style: text.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
-                          if (track != null)
-                            MarqueeText(
-                              '${track.title} · ${track.artist}',
-                              style: text.bodySmall?.copyWith(color: AppColors.textSecondary),
-                            ),
-                        ],
-                      ),
-                    ),
-                    if (track != null) LyricsExtrasButtons(key: ValueKey(track.id), track: track),
-                  ],
+              if (layout == LyricsLayout.topHeader) ...[
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 12, 24, 0),
+                  child: LyricsTopHeader(track: track!),
                 ),
-              ),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: Padding(
+                    padding: const EdgeInsets.only(right: 16),
+                    child: LyricsExtrasButtons(key: ValueKey(track.id), track: track),
+                  ),
+                ),
+              ] else
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(8, 8, 16, 0),
+                  child: Row(
+                    children: [
+                      if (ShellScope.of(context).history != null && !fullScreen)
+                        const SizedBox(width: 8)
+                      else if (canPop)
+                        IconButton(
+                          tooltip: fullScreen ? 'Close' : 'Back',
+                          color: AppColors.textPrimary,
+                          onPressed: () => Navigator.of(context).pop(),
+                          icon: Icon(fullScreen ? Icons.keyboard_arrow_down_rounded : Icons.arrow_back_rounded),
+                        )
+                      else
+                        const SizedBox(width: 8),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Lyrics', style: text.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
+                            if (track != null)
+                              MarqueeText(
+                                '${track.title} · ${track.artist}',
+                                style: text.bodySmall?.copyWith(color: AppColors.textSecondary),
+                              ),
+                          ],
+                        ),
+                      ),
+                      if (track != null) LyricsExtrasButtons(key: ValueKey(track.id), track: track),
+                    ],
+                  ),
+                ),
               Expanded(
                 child: track == null ? const _Message('Play a song to see its lyrics here.') : LyricsView(track: track),
               ),
-              if (fullScreen && track != null) ...[
-                const Padding(padding: EdgeInsets.symmetric(horizontal: 24), child: SeekBar()),
+              if (layout == LyricsLayout.bottomCard)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
+                  child: LyricsBottomCard(track: track!),
+                )
+              else if (layout == LyricsLayout.topHeader)
+                const Padding(padding: EdgeInsets.fromLTRB(24, 0, 24, 8), child: LyricsPlainPlayer())
+              else if (fullScreen && track != null) ...[
+                const Padding(padding: EdgeInsets.symmetric(horizontal: 24), child: SeekBar(phonePlayer: true)),
                 const Padding(padding: EdgeInsets.symmetric(horizontal: 24), child: TransportControls(large: true)),
                 const SizedBox(height: 16),
               ],

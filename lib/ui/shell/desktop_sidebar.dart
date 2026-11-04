@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../platform/features.dart';
+import '../../services/layout_prefs.dart';
 import '../../services/player_controller.dart';
 import '../navigation.dart';
 import '../pages/library_page.dart';
@@ -13,13 +14,22 @@ import 'first_frame_gate.dart';
 
 /// The now-playing side panel, sliding open and shut instead of popping.
 class SlidingPanel extends StatelessWidget {
-  const SlidingPanel({super.key, required this.open, required this.child});
+  const SlidingPanel({
+    super.key,
+    required this.open,
+    required this.child,
+    this.width = LayoutPrefs.sidePanelDefault,
+    this.handle,
+  });
 
-  static const width = 332.0;
   static const gap = 8.0;
 
   final bool open;
   final Widget child;
+  final double width;
+
+  /// Sits in the gap on the panel's left edge; it opens and shuts with the panel.
+  final Widget? handle;
 
   @override
   Widget build(BuildContext context) => TweenAnimationBuilder<double>(
@@ -39,10 +49,17 @@ class SlidingPanel extends StatelessWidget {
               ),
             ),
           ),
-    child: Padding(
-      padding: const EdgeInsets.only(left: gap),
-      child: child,
-    ),
+    child: handle == null
+        ? Padding(
+            padding: const EdgeInsets.only(left: gap),
+            child: child,
+          )
+        : Row(
+            children: [
+              SizedBox(width: gap, child: handle),
+              Expanded(child: child),
+            ],
+          ),
   );
 }
 

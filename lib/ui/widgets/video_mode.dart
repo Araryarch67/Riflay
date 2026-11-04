@@ -174,3 +174,68 @@ class _VideoViewState extends State<_VideoView> {
     );
   }
 }
+
+/// The Music video Now Playing background: the song's video behind the page, cover-fit and muted. Nothing
+/// until its first picture is ready, and nothing when the song has no video, Video is picked (the cover area
+/// shows it then), it failed, or the performance mode is Lightweight: the page's blurred cover shows instead.
+///
+/// No blur here (a live blur costs several full-window passes a frame): the page's gradient above dims it.
+/// The video is only fetched and decoded while this is on screen; a page covered by another one, or an app in
+/// the background, lets it go.
+class VideoBackground extends StatefulWidget {
+  const VideoBackground({super.key, required this.track});
+
+  final Track? track;
+
+  @override
+  State<VideoBackground> createState() => _VideoBackgroundState();
+}
+
+class _VideoBackgroundState extends State<VideoBackground> {
+  bool _registered = false;
+
+  /// Whether this is on screen and may use the video: not covered by another page, not Lightweight.
+  void _register(bool active) {
+    if (active == _registered) return;
+    _registered = active;
+    active ? VideoMode.instance.addBackground() : VideoMode.instance.removeBackground();
+  }
+
+  @override
+  void dispose() {
+    _register(false);
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final mode = VideoMode.instance..follow(PlayerScope.read(context));
+    final visible = TickerMode.valuesOf(context).enabled;
+    return ListenableBuilder(
+      listenable: Listenable.merge([mode, LayoutPrefs.instance]),
+      builder: (context, _) {
+        final active = visible && !LayoutPrefs.lightweight;
+        // Registering notifies VideoMode: after this frame, not during it.
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _register(active);
+        });
+        if (active) mode.lookUp(widget.track);
+        final video = active ? mode.backgroundController(widget.track) : null;
+        if (video == null) return const SizedBox.shrink();
+        return IgnorePointer(
+          child: RepaintBoundary(
+            child: Video(
+              controller: video,
+              controls: NoVideoControls,
+              fit: BoxFit.cover,
+              fill: Colors.black,
+              // VideoMode stops it itself when the app goes to the background.
+              pauseUponEnteringBackgroundMode: false,
+              resumeUponEnteringForegroundMode: false,
+            ),
+          ),
+        );
+      },
+    );
+  }
+}

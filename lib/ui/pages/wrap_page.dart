@@ -15,11 +15,14 @@ import '../../services/wrap.dart';
 import '../theme.dart';
 import '../widgets/controls.dart';
 
-/// Riflay Wrap: a finished month as a story. Swipe, tap or use the arrow keys to move on.
+/// Riflay Wrap: a month as a story. Swipe, tap or use the arrow keys to move on.
 class WrapPage extends StatelessWidget {
-  const WrapPage({super.key, required this.month, this.history, this.data});
+  const WrapPage({super.key, required this.month, this.history, this.data, this.now});
 
   final WrapMonth month;
+
+  /// Set for the running month: its Wrap "so far", up to this moment.
+  final DateTime? now;
 
   /// The app's history by default.
   final PlayHistory? history;
@@ -29,7 +32,7 @@ class WrapPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final d = data ?? MonthlyWrap.compute(history ?? PlayHistory.instance, month);
+    final d = data ?? MonthlyWrap.compute(history ?? PlayHistory.instance, month, now: now);
     final c = PlayerScope.read(context);
     final library = {for (final t in c.library) t.id: t};
     if (d == null) {
@@ -37,7 +40,9 @@ class WrapPage extends StatelessWidget {
         color: AppColors.panel,
         child: Center(
           child: Text(
-            'There is not enough listening in ${month.label} for a Wrap.',
+            now != null && MonthlyWrap.isRunning(month, now!)
+                ? 'Play a few songs to see your Wrap.'
+                : 'There is not enough listening in ${month.label} for a Wrap.',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary),
           ),
         ),
@@ -84,16 +89,30 @@ class _WrapStoryState extends State<WrapStory> {
     _pages.animateToPage(to, duration: const Duration(milliseconds: 280), curve: Curves.easeOutCubic);
   }
 
+  /// "March 2026"; "November 2026 so far 2026-11-03" for the running month, so a later save does not overwrite it.
+  static String _fileTitle(WrapData d) {
+    final until = d.until;
+    if (until == null) return d.month.label;
+    final day = '${until.year}-${until.month.toString().padLeft(2, '0')}-${until.day.toString().padLeft(2, '0')}';
+    return '${d.month.label} so far $day';
+  }
+
   Future<void> _save() async {
     final messenger = ScaffoldMessenger.of(context);
     try {
       final boundary = _keys[_index].currentContext?.findRenderObject() as RenderRepaintBoundary?;
       if (boundary == null) throw StateError('card not on screen');
       final image = await boundary.toImage(pixelRatio: 3);
-      final bytes = (await image.toByteData(format: ui.ImageByteFormat.png))?.buffer.asUint8List();
+      final ByteData? data;
+      try {
+        data = await image.toByteData(format: ui.ImageByteFormat.png);
+      } finally {
+        image.dispose();
+      }
+      final bytes = data?.buffer.asUint8List();
       if (bytes == null) throw StateError('no image');
       final dir = await getDownloadsDirectory() ?? await getApplicationDocumentsDirectory();
-      final file = File(p.join(dir.path, 'Riflay Wrap ${widget.data.month.label} ${_index + 1}.png'));
+      final file = File(p.join(dir.path, 'Riflay Wrap ${_fileTitle(widget.data)} ${_index + 1}.png'));
       await file.writeAsBytes(bytes, flush: true);
       messenger.showSnackBar(SnackBar(content: Text('Saved ${p.basename(file.path)}')));
     } catch (e) {
@@ -250,12 +269,16 @@ class _WrapStoryState extends State<WrapStory> {
   /// The cards, in order. Each is drawn on a 360 x 640 canvas.
   static List<Widget Function(BuildContext, Color)> _buildCards(WrapData d, Track Function(SongInfo) trackFor) {
     return [
-      (c, _) =>
-          _Card(kicker: 'Riflay Wrap', headline: 'Your ${d.month.name} in music', body: d.month.label, center: true),
+      (c, _) => _Card(
+        kicker: 'Riflay Wrap',
+        headline: d.inProgress ? '${d.month.name} so far' : 'Your ${d.month.name} in music',
+        body: d.inProgress ? 'Up to ${_day(d.until!)}' : d.month.label,
+        center: true,
+      ),
       (c, _) => _Card(
         kicker: 'You listened for',
         headline: formatListened(d.listened),
-        body: 'across ${_count(d.plays, 'play', 'plays')} in ${d.month.name}.',
+        body: 'across ${_count(d.plays, 'play', 'plays')} ${d.inProgress ? 'so far in' : 'in'} ${d.month.name}.',
         center: true,
       ),
       (c, _) => _Card(
@@ -333,7 +356,7 @@ class _WrapStoryState extends State<WrapStory> {
         center: true,
       ),
       (c, _) => _Card(
-        kicker: d.month.label,
+        kicker: d.title,
         headline: formatListened(d.listened),
         body:
             'Top song: ${d.topSong.title}\nTop artist: ${d.topArtist.title}\n'

@@ -6,11 +6,14 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:riflay/main.dart';
 import 'package:riflay/services/appearance.dart';
 import 'package:riflay/services/player_controller.dart';
+import 'package:riflay/ui/theme.dart';
 import 'package:riflay/ui/widgets/title_bar.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
-  testWidgets('component opacity includes artwork, text, controls and route overlays', (tester) async {
+  testWidgets('component opacity fades window, panel, card and menu fills, never artwork, text or controls', (
+    tester,
+  ) async {
     SharedPreferences.setMockInitialValues({});
     final look = Appearance.instance;
     await look.reset();
@@ -35,43 +38,31 @@ void main() {
     final navigator = tester.state<NavigatorState>(find.byType(Navigator).first);
     navigator.push(
       MaterialPageRoute<void>(
-        builder: (context) => Scaffold(
+        builder: (context) => const Scaffold(
           body: Center(
-            child: Column(
-              children: [
-                const SizedBox.square(dimension: 100, child: ColoredBox(color: Colors.white)),
-                const Text('Opaque text'),
-                const Icon(Icons.music_note),
-                FilledButton(
-                  onPressed: () => showDialog<void>(
-                    context: context,
-                    builder: (_) =>
-                        const AlertDialog(title: Text('Overlay'), content: Text('Dialogs share component opacity')),
-                  ),
-                  child: const Text('Open dialog'),
-                ),
-              ],
-            ),
+            child: SizedBox.square(dimension: 100, child: ColoredBox(color: Colors.white)),
           ),
         ),
       ),
     );
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Open dialog'));
-    await tester.pumpAndSettle();
-    final root = find.byKey(const ValueKey('desktop-component-opacity'));
-    expect(find.descendant(of: root, matching: find.byType(AlertDialog)), findsOneWidget);
-    expect(tester.widget<Opacity>(root).opacity, 0.6);
+    // No whole-app layer: that faded every picture and line of text, and cost an offscreen pass each frame.
+    expect(find.byKey(const ValueKey('desktop-component-opacity')), findsNothing);
+    final colors = AppColorsScope.current();
+    expect(colors.background.a, closeTo(look.palette.background.a * look.windowOpacity * 0.6, 0.01));
+    expect(colors.panel.a, closeTo(look.palette.panel.a * look.windowOpacity * 0.6, 0.01));
+    expect(colors.elevated.a, closeTo(look.palette.elevated.a * 0.6, 0.01));
+    expect(colors.menu.a, closeTo(look.palette.menu.a * 0.6, 0.01));
+    expect(colors.textPrimary.a, look.palette.textPrimary.a);
+    expect(colors.accent.a, look.palette.accent.a);
     await tester.runAsync(() async {
       final boundary = capture.currentContext!.findRenderObject()! as RenderRepaintBoundary;
       final image = await boundary.toImage();
       final bytes = (await image.toByteData(format: ui.ImageByteFormat.rawRgba))!.buffer.asUint8List();
-      var maxAlpha = 0;
-      for (var i = 3; i < bytes.length; i += 4) {
-        if (bytes[i] > maxAlpha) maxAlpha = bytes[i];
-      }
+      // The middle of the white square, standing in for artwork.
+      final i = (350 * image.width + 500) * 4;
+      expect(bytes.sublist(i, i + 4), [255, 255, 255, 255], reason: 'artwork stays fully opaque');
       image.dispose();
-      expect(maxAlpha, inInclusiveRange(152, 154), reason: 'even opaque text, cards and overlays must be translucent');
     });
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox.shrink());

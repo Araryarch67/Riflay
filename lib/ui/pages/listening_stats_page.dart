@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../models/track.dart';
 import '../../services/listening_stats.dart';
 import '../../services/play_history.dart';
 import '../../services/player_controller.dart';
 import '../../services/wrap.dart';
-import '../../services/wrap_notifications.dart';
 import '../navigation.dart';
 import '../shell_scope.dart';
 import '../theme.dart';
@@ -31,18 +29,8 @@ class ListeningStatsPage extends StatefulWidget {
 class _ListeningStatsPageState extends State<ListeningStatsPage> {
   StatsPeriod _period = StatsPeriod.thisYear;
   (int, StatsPeriod, ListeningStats)? _cache;
-  DateTime? _firstSeen;
 
   PlayHistory get _history => widget.history ?? PlayHistory.instance;
-
-  @override
-  void initState() {
-    super.initState();
-    SharedPreferences.getInstance().then((prefs) {
-      final ms = prefs.getInt(WrapNotifier.firstSeenKey);
-      if (mounted && ms != null) setState(() => _firstSeen = DateTime.fromMillisecondsSinceEpoch(ms));
-    }, onError: (Object _) {});
-  }
 
   ListeningStats _stats(DateTime now) {
     final cached = _cache;
@@ -76,7 +64,9 @@ class _ListeningStatsPageState extends State<ListeningStatsPage> {
       StatsPeriod.allTime,
       for (final y in years) StatsPeriod.ofYear(y),
     ];
-    final wraps = MonthlyWrap.available(_history, firstSeen: _firstSeen, now: now);
+    final wraps = MonthlyWrap.available(_history, now: now);
+    final thisMonth = WrapMonth.of(now);
+    final soFarReady = MonthlyWrap.playsIn(_history, thisMonth) >= MonthlyWrap.minPlaysSoFar;
 
     return PageScaffold(
       title: 'Your listening',
@@ -173,22 +163,33 @@ class _ListeningStatsPageState extends State<ListeningStatsPage> {
                     ],
                   ),
                 ],
-                if (wraps.isNotEmpty)
-                  _Section(
-                    title: 'Your monthly Wraps',
-                    children: [
-                      for (final m in wraps.take(24))
-                        _Row(
-                          art: const _Glyph(Icons.auto_awesome_motion_outlined),
-                          title: 'Your ${m.name} in music',
-                          subtitle: m.label,
-                          onTap: () => shell.open(
-                            WrapPage(month: m, history: widget.history),
-                            location: Locations.wrap,
-                          ),
+                _Section(
+                  title: 'Your monthly Wraps',
+                  children: [
+                    // Recomputed each time it is opened, up to that moment.
+                    _Row(
+                      art: const _Glyph(Icons.auto_awesome_motion_outlined),
+                      title: '${thisMonth.name} so far',
+                      subtitle: soFarReady ? 'This month up to now' : 'Play a few songs to see your Wrap',
+                      onTap: soFarReady
+                          ? () => shell.open(
+                              WrapPage(month: thisMonth, history: widget.history, now: widget.now ?? DateTime.now()),
+                              location: Locations.wrap,
+                            )
+                          : null,
+                    ),
+                    for (final m in wraps.take(24))
+                      _Row(
+                        art: const _Glyph(Icons.auto_awesome_motion_outlined),
+                        title: 'Your ${m.name} in music',
+                        subtitle: m.label,
+                        onTap: () => shell.open(
+                          WrapPage(month: m, history: widget.history),
+                          location: Locations.wrap,
                         ),
-                    ],
-                  ),
+                      ),
+                  ],
+                ),
               ],
             ),
           ),
@@ -333,12 +334,12 @@ class _Row extends StatelessWidget {
   final String title;
   final String subtitle;
   final String? trailing;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
-    return InkWell(
+    final row = InkWell(
       borderRadius: BorderRadius.circular(6),
       hoverColor: AppColors.tile,
       onTap: onTap,
@@ -378,6 +379,7 @@ class _Row extends StatelessWidget {
         ),
       ),
     );
+    return onTap == null ? Opacity(opacity: 0.5, child: row) : row;
   }
 }
 

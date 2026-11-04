@@ -147,6 +147,8 @@ class _CoverImage extends StatefulWidget {
 class _CoverImageState extends State<_CoverImage> {
   ArtworkRequest? _request;
   Future<Uint8List?>? _future;
+  Animation<double>? _routeAnim;
+  bool _routeChecked = false;
 
   bool get _small => widget.width <= Metadata.thumbnailSide * 5 ~/ 4;
 
@@ -154,21 +156,45 @@ class _CoverImageState extends State<_CoverImage> {
 
   bool get _isReady => _small ? Metadata.hasCachedThumbnail(widget.track) : Metadata.hasCachedArtwork(widget.track);
 
+  /// While the page this cover is on is still sliding in, the file read and the
+  /// decode would land on the transition's frames: the placeholder is shown
+  /// meanwhile, and the cover is asked for once the route has settled.
+  bool get _routeSettling {
+    final a = _routeAnim;
+    return a != null && a.status != AnimationStatus.completed && a.status != AnimationStatus.dismissed;
+  }
+
+  void _routeStatus(AnimationStatus status) {
+    if (_routeSettling) return;
+    _routeAnim?.removeStatusListener(_routeStatus);
+    _routeAnim = null;
+    if (!mounted) return;
+    _ask();
+    if (_future != null) setState(() {});
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_routeChecked) return;
+    _routeChecked = true;
+    final anim = ModalRoute.of(context)?.animation;
+    if (anim != null && anim.status == AnimationStatus.forward) {
+      _routeAnim = anim..addStatusListener(_routeStatus);
+    } else {
+      _ask();
+    }
+  }
+
   void _ask() {
     _request?.cancel();
     _request = null;
     _future = null;
-    if (_isReady) return;
+    if (_isReady || _routeSettling) return;
     final request = _request = ArtworkRequest();
     _future = _small
         ? Metadata.thumbnail(widget.track, request: request)
         : Metadata.artwork(widget.track, request: request);
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    _ask();
   }
 
   @override
@@ -182,6 +208,7 @@ class _CoverImageState extends State<_CoverImage> {
 
   @override
   void dispose() {
+    _routeAnim?.removeStatusListener(_routeStatus);
     _request?.cancel();
     super.dispose();
   }
@@ -253,14 +280,16 @@ class _EqualizerIconState extends State<EqualizerIcon> with SingleTickerProvider
   @override
   void initState() {
     super.initState();
-    if (widget.playing) _anim.repeat();
+    if (widget.playing && !LayoutPrefs.lightweight) _anim.repeat();
   }
 
   @override
   void didUpdateWidget(EqualizerIcon old) {
     super.didUpdateWidget(old);
-    if (widget.playing && !_anim.isAnimating) _anim.repeat();
-    if (!widget.playing) _anim.stop();
+    // Lightweight: static bars, nothing repeating.
+    final still = !widget.playing || LayoutPrefs.lightweight;
+    if (!still && !_anim.isAnimating) _anim.repeat();
+    if (still) _anim.stop();
   }
 
   @override
@@ -283,7 +312,11 @@ class _EqualizerIconState extends State<EqualizerIcon> with SingleTickerProvider
             for (final p in phases)
               Container(
                 width: widget.size / 6,
-                height: widget.size * (widget.playing ? 0.25 + 0.75 * (((_anim.value + p) % 1) - 0.5).abs() * 2 : 0.3),
+                height:
+                    widget.size *
+                    (widget.playing && !LayoutPrefs.lightweight
+                        ? 0.25 + 0.75 * (((_anim.value + p) % 1) - 0.5).abs() * 2
+                        : 0.3),
                 decoration: BoxDecoration(
                   color: widget.color ?? AppColors.accent,
                   borderRadius: BorderRadius.circular(1),
@@ -299,7 +332,10 @@ class _EqualizerIconState extends State<EqualizerIcon> with SingleTickerProvider
 /// Seek slider with elapsed / total labels; drags locally and seeks on release.
 /// Playback position at display rate (just_audio interpolates between engine updates).
 class SeekBar extends StatefulWidget {
-  const SeekBar({super.key, this.inline = false, this.compact = false});
+  const SeekBar({super.key, this.inline = false, this.compact = false, this.phonePlayer = false});
+
+  /// The phone's player (Now Playing, lyrics): it may take the Pill shape and show the time left.
+  final bool phonePlayer;
 
   /// Labels either side of the bar (desktop) instead of underneath (mobile).
   final bool inline;
@@ -328,76 +364,99 @@ class _SeekBarState extends State<SeekBar> {
     final player = PlayerScope.read(context);
     final style = Theme.of(context).textTheme.labelSmall
         ?.copyWith(color: AppColors.of(context).textSecondary, fontFeatures: const [FontFeature.tabularFigures()]);
-    return StreamBuilder<Duration>(
-      stream: _position,
-      builder: (context, snapshot) {
-        final duration = player.duration ?? Duration.zero;
-        final position = snapshot.data ?? Duration.zero;
-        final max = duration.inMilliseconds.toDouble().clamp(1.0, double.infinity);
-        final value = (_dragValue ?? position.inMilliseconds.toDouble()).clamp(0.0, max);
-        final active = _hovering || _dragValue != null;
-        final slider = MouseRegion(
-          onEnter: (_) => setState(() => _hovering = true),
-          onExit: (_) => setState(() => _hovering = false),
-          child: SliderTheme(
-            data: SliderTheme.of(context).copyWith(
-              trackHeight: LayoutPrefs.instance.progressBar.height,
-              trackShape: LayoutPrefs.instance.progressShape == ProgressBarShape.wavy ? const WavySeekTrack() : null,
-              activeTrackColor: AppColors.of(context).accent,
-              thumbShape: RoundSliderThumbShape(
-                enabledThumbRadius: active || !widget.inline
-                    ? (LayoutPrefs.instance.progressBar == ProgressBarStyle.thick ? 8 : 6)
-                    : 0,
-                elevation: 0,
+    // Its own layer: each position tick repaints the bar and its labels, not the whole player bar around it.
+    return RepaintBoundary(
+      child: StreamBuilder<Duration>(
+        stream: _position,
+        builder: (context, snapshot) {
+          final duration = player.duration ?? Duration.zero;
+          final position = snapshot.data ?? Duration.zero;
+          final max = duration.inMilliseconds.toDouble().clamp(1.0, double.infinity);
+          final value = (_dragValue ?? position.inMilliseconds.toDouble()).clamp(0.0, max);
+          final active = _hovering || _dragValue != null;
+          final pill = widget.phonePlayer && LayoutPrefs.instance.progressShape == ProgressBarShape.pill;
+          final colors = AppColors.of(context);
+          final slider = MouseRegion(
+            onEnter: (_) => setState(() => _hovering = true),
+            onExit: (_) => setState(() => _hovering = false),
+            child: SliderTheme(
+              data: SliderTheme.of(context).copyWith(
+                trackHeight: pill ? 9 : LayoutPrefs.instance.progressBar.height,
+                trackShape: pill
+                    ? const PillSeekTrack()
+                    : LayoutPrefs.instance.progressShape == ProgressBarShape.wavy && !LayoutPrefs.lightweight
+                    ? const WavySeekTrack()
+                    : null,
+                activeTrackColor: pill ? colors.inverse : colors.accent,
+                inactiveTrackColor: pill ? colors.inverse.withValues(alpha: 0.18) : null,
+                thumbColor: pill ? colors.inverse : null,
+                thumbShape: pill
+                    ? const BarThumbShape()
+                    : RoundSliderThumbShape(
+                  enabledThumbRadius: active || !widget.inline
+                      ? (LayoutPrefs.instance.progressBar == ProgressBarStyle.thick ? 8 : 6)
+                      : 0,
+                  elevation: 0,
+                ),
+                padding: EdgeInsets.zero,
               ),
-              padding: EdgeInsets.zero,
-            ),
-            child: SizedBox(
-              height: 24,
-              child: Slider(
-                value: value,
-                max: max,
-                onChanged: duration == Duration.zero ? null : (v) => setState(() => _dragValue = v),
-                onChangeEnd: (v) {
-                  player.seek(Duration(milliseconds: v.round()));
-                  setState(() => _dragValue = null);
-                },
+              child: SizedBox(
+                height: 24,
+                child: Slider(
+                  value: value,
+                  max: max,
+                  onChanged: duration == Duration.zero ? null : (v) => setState(() => _dragValue = v),
+                  onChangeEnd: (v) {
+                    player.seek(Duration(milliseconds: v.round()));
+                    setState(() => _dragValue = null);
+                  },
+                ),
               ),
             ),
-          ),
-        );
-        final elapsed = Text(formatDuration(Duration(milliseconds: value.round())), style: style, maxLines: 1);
-        final total = Text(formatDuration(player.duration), style: style, maxLines: 1);
-        if (widget.inline) {
-          final timestampScale =
-              MediaQuery.textScalerOf(context).scale(style?.fontSize ?? 11) / (style?.fontSize ?? 11);
-          final timestampWidth =
-              (widget.compact ? ((player.duration?.inHours ?? 0) > 0 ? 52.0 : 34.0) : 44.0) * timestampScale;
-          return Row(
+          );
+          final elapsed = Text(formatDuration(Duration(milliseconds: value.round())), style: style, maxLines: 1);
+          final left = widget.phonePlayer && LayoutPrefs.instance.showTimeLeft && duration > Duration.zero;
+          final total = Text(
+            left
+                ? '-${formatDuration(duration - Duration(milliseconds: value.round()))}'
+                : formatDuration(player.duration),
+            style: style,
+            maxLines: 1,
+          );
+          if (widget.inline) {
+            final timestampScale =
+                MediaQuery.textScalerOf(context).scale(style?.fontSize ?? 11) / (style?.fontSize ?? 11);
+            final timestampWidth =
+                (widget.compact ? ((player.duration?.inHours ?? 0) > 0 ? 52.0 : 34.0) : 44.0) * timestampScale;
+            return Row(
+              children: [
+                SizedBox(
+                  width: timestampWidth,
+                  child: Align(
+                    alignment: widget.compact ? Alignment.centerLeft : Alignment.centerRight,
+                    child: elapsed,
+                  ),
+                ),
+                SizedBox(width: widget.compact ? 6 : 8),
+                Expanded(child: slider),
+                SizedBox(width: widget.compact ? 6 : 8),
+                SizedBox(
+                  width: timestampWidth,
+                  child: Align(alignment: widget.compact ? Alignment.centerRight : Alignment.centerLeft, child: total),
+                ),
+              ],
+            );
+          }
+          return Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              SizedBox(
-                width: timestampWidth,
-                child: Align(alignment: widget.compact ? Alignment.centerLeft : Alignment.centerRight, child: elapsed),
-              ),
-              SizedBox(width: widget.compact ? 6 : 8),
-              Expanded(child: slider),
-              SizedBox(width: widget.compact ? 6 : 8),
-              SizedBox(
-                width: timestampWidth,
-                child: Align(alignment: widget.compact ? Alignment.centerRight : Alignment.centerLeft, child: total),
-              ),
+              slider,
+              const SizedBox(height: 4),
+              Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [elapsed, total]),
             ],
           );
-        }
-        return Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            slider,
-            const SizedBox(height: 4),
-            Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [elapsed, total]),
-          ],
-        );
-      },
+        },
+      ),
     );
   }
 }
@@ -1001,8 +1060,14 @@ class GlassPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final look = Appearance.instance;
-    if (!look.glass) {
-      return Material(color: color, borderRadius: borderRadius, clipBehavior: Clip.antiAlias, child: child);
+    // Lightweight: the same panel without the blur layer, slightly more opaque to keep text readable.
+    if (!look.glass || LayoutPrefs.lightweight) {
+      return Material(
+        color: look.glass ? color.withValues(alpha: color.a * 0.92) : color,
+        borderRadius: borderRadius,
+        clipBehavior: Clip.antiAlias,
+        child: child,
+      );
     }
     // Its own layer: what happens inside (a progress line ticking) does not
     // re-blur what is behind, and a colour step repaints only this panel.

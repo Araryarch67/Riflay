@@ -26,6 +26,7 @@ import 'dop.dart';
 import 'ffmpeg.dart';
 import 'folder_watch.dart';
 import 'ios_folders.dart';
+import 'layout_prefs.dart';
 import 'library_store.dart';
 import 'lyrics.dart';
 import 'lyrics_translation.dart';
@@ -39,6 +40,7 @@ import 'youtube_music_account.dart';
 import 'youtube_importer.dart';
 import 'youtube_stream.dart';
 import 'library_views.dart';
+import 'ui_beat.dart';
 
 export '../ui/player_scope.dart';
 
@@ -487,37 +489,76 @@ class PlayerController extends ChangeNotifier {
   /// [position] a few times a second, for views that rebuild a lot per tick.
   Stream<Duration> positionUpdates() => _positionStream(smooth: false);
 
+  static bool get _drawn => switch (WidgetsBinding.instance.lifecycleState) {
+    AppLifecycleState.hidden || AppLifecycleState.paused || AppLifecycleState.detached => false,
+    _ => true,
+  };
+
   Stream<Duration> _positionStream({required bool smooth}) {
     StreamSubscription<Duration>? sub;
     bool? wasCasting;
+    PerformanceMode? wasMode;
     late final StreamController<Duration> out;
     void attach() {
-      if (wasCasting == casting) return;
+      final mode = LayoutPrefs.instance.performance;
+      if (wasCasting == casting && wasMode == mode) return;
       wasCasting = casting;
+      wasMode = mode;
       sub?.cancel();
       sub =
           (casting
                   ? cast.positionTicks(every: Duration(milliseconds: smooth ? 50 : 200))
                   : smooth
-                  ? player.createPositionStream(
-                      // The song's length / 2400: half a pixel of a 1200 px bar.
-                      steps: 2400,
-                      minPeriod: const Duration(milliseconds: 16),
-                      maxPeriod: const Duration(milliseconds: 250),
-                    )
+                  ? _smoothTicks(lightweight: mode == PerformanceMode.lightweight)
                   : player.positionStream)
-              .listen(out.add);
+              // Nothing is drawn while the window is minimized or hidden: a tick there would only wake the
+              // UI and raster threads. The next tick after it is shown again puts the views right.
+              .listen((p) {
+                if (_drawn) out.add(p);
+              });
     }
 
     out = StreamController<Duration>(
       onListen: () {
         attach();
         cast.addListener(attach);
+        // A new Performance mode takes effect on a bar that is already showing.
+        LayoutPrefs.instance.addListener(attach);
       },
       onCancel: () {
         cast.removeListener(attach);
+        LayoutPrefs.instance.removeListener(attach);
         return sub?.cancel();
       },
+    );
+    return out.stream;
+  }
+
+  /// [position] on the shared [UiBeat], so a seek bar, the karaoke fill and the visualizer
+  /// that move in the same beat are drawn in one frame instead of one each. A tick every
+  /// 1/2400 of the song (half a pixel of a 1200 px bar), 60 to 4 times a second.
+  Stream<Duration> _smoothTicks({required bool lightweight}) {
+    UiBeatListener? beat;
+    late final StreamController<Duration> out;
+    Duration every() {
+      final step = (duration ?? Duration.zero) ~/ 2400;
+      final min = Duration(milliseconds: lightweight ? 250 : 16);
+      final max = Duration(milliseconds: lightweight ? 500 : 250);
+      return step < min ? min : (step > max ? max : step);
+    }
+
+    Duration? last;
+    out = StreamController<Duration>(
+      onListen: () {
+        out.add(last = position);
+        beat = UiBeat.listen(every(), (_) {
+          beat!.period = every();
+          final p = position;
+          // Paused: nothing moves, so nothing is drawn.
+          if (p != last) out.add(last = p);
+        });
+      },
+      onCancel: () => beat?.cancel(),
     );
     return out.stream;
   }

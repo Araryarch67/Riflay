@@ -63,7 +63,11 @@ class WrapNotifier {
     final prefs = await SharedPreferences.getInstance();
     final seen = await firstSeen(prefs, now);
     final enabled = prefs.getBool(enabledKey) ?? true;
-    final available = MonthlyWrap.available(history, firstSeen: seen, now: now);
+    // Only a finished month is announced, and only to someone past their first [MonthlyWrap.minDays]: viewing a
+    // Wrap needs neither, but a notice for a month someone had barely started would be noise.
+    final available = MonthlyWrap.unlocked(firstPlay: MonthlyWrap.firstPlayOf(history), firstSeen: seen, now: now)
+        ? MonthlyWrap.available(history, now: now)
+        : const <WrapMonth>[];
     final last = WrapMonth.parse(prefs.getString(notifiedKey));
 
     final due = MonthlyWrap.dueNotice(enabled: enabled, available: available, lastNotified: last, now: now);

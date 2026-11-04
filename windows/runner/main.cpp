@@ -5,6 +5,14 @@
 #include "flutter_window.h"
 #include "utils.h"
 
+// On laptops with two GPUs, ask the NVIDIA / AMD driver for the dedicated one.
+// Left on the integrated GPU, every texture, blur layer and shader target is
+// carved out of system RAM and shows up as the app's own memory.
+extern "C" {
+__declspec(dllexport) unsigned long NvOptimusEnablement = 1;
+__declspec(dllexport) int AmdPowerXpressRequestHighPerformance = 1;
+}
+
 int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
                       _In_ wchar_t *command_line, _In_ int show_command) {
   // Attach to console when present (e.g., 'flutter run') or create a

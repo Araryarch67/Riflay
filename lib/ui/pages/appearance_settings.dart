@@ -225,7 +225,7 @@ class AppearanceSettings extends StatelessWidget {
           SettingTile(
             icon: Icons.wallpaper_rounded,
             title: const Text('Now playing background'),
-            subtitle: Text('Only the Now Playing and expanded player pages', style: muted),
+            subtitle: Text(look.nowPlaying.hint ?? 'Only the Now Playing and expanded player pages', style: muted),
             control: OptionPicker<NowPlayingBackground>(
               value: look.nowPlaying,
               onChanged: look.setNowPlaying,
@@ -253,7 +253,8 @@ class AppearanceSettings extends StatelessWidget {
             _SliderTile(
               icon: Icons.layers_outlined,
               title: 'Component opacity',
-              subtitle: 'The entire desktop app: panels, cards, covers, controls, text and menus',
+              subtitle:
+                  'See-through backgrounds with the desktop blurred behind them. Text, covers and controls stay solid',
               value: look.componentOpacity,
               min: 0.3,
               max: 1,

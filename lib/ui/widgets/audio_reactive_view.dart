@@ -1,27 +1,33 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/scheduler.dart';
 
 import '../../services/audio_engine.dart';
 import '../../services/beta_features.dart';
 import '../../services/layout_prefs.dart';
 import '../../services/player_controller.dart';
+import '../../services/ui_beat.dart';
 import '../../services/video_mode.dart';
 import '../../services/visualizer_levels.dart';
 
 /// Shares one audio analysis stream between player decorations. No microphone,
 /// extra network requests, or player is needed for reactive visuals.
 class AudioReactiveView extends StatefulWidget {
-  const AudioReactiveView({super.key, required this.builder, this.enabled = true});
+  const AudioReactiveView({super.key, required this.builder, this.enabled = true, this.maxFps});
   final Widget Function(BuildContext, VisualizerLevels) builder;
   final bool enabled;
+
+  /// Caps how often the smoothed levels (and so the painters listening to them) update, for
+  /// slow decorations that gain nothing from the display's full refresh rate. Unset, views
+  /// update at most 60 times a second (the levels themselves arrive 25 times a second), in
+  /// every performance mode: following a 144-240 Hz display would cost several times the CPU
+  /// for motion the eye can't tell apart.
+  final double? maxFps;
   @override
   State<AudioReactiveView> createState() => _AudioReactiveViewState();
 }
 
-class _AudioReactiveViewState extends State<AudioReactiveView>
-    with WidgetsBindingObserver, SingleTickerProviderStateMixin {
+class _AudioReactiveViewState extends State<AudioReactiveView> with WidgetsBindingObserver {
   PlayerController? _controller;
   StreamSubscription<dynamic>? _playState;
   StreamSubscription<dynamic>? _song;
@@ -31,19 +37,30 @@ class _AudioReactiveViewState extends State<AudioReactiveView>
   bool _attached = true;
   bool _reduceMotion = false;
   final _levels = VisualizerLevels();
-  late final Ticker _ticker;
-  Duration _lastTick = Duration.zero;
+  // The shared UI beat, not a ticker: a ticker wakes the app on every vsync (240 times a
+  // second on a 240 Hz screen) even when it skips most of them, and a timer of its own
+  // would land its frames between the seek bar's.
+  UiBeatListener? _beat;
+
+  double get _cap => widget.maxFps ?? 60;
+
+  bool get _running => _beat != null;
+
+  void _start() {
+    if (_running) return;
+    _beat = UiBeat.listen(Duration(microseconds: (1000000 / _cap).round()), (elapsed) {
+      if (!_levels.follow(_controller!.audio.visualizerLevels, elapsed)) _halt();
+    });
+  }
+
+  void _halt() {
+    _beat?.cancel();
+    _beat = null;
+  }
 
   @override
   void initState() {
     super.initState();
-    _ticker = createTicker((elapsed) {
-      final delta = elapsed - _lastTick;
-      _lastTick = elapsed;
-      if (!_levels.follow(_controller!.audio.visualizerLevels, delta)) {
-        _ticker.stop();
-      }
-    });
     WidgetsBinding.instance.addObserver(this);
     _foreground =
         WidgetsBinding.instance.lifecycleState == null ||
@@ -64,7 +81,11 @@ class _AudioReactiveViewState extends State<AudioReactiveView>
       _controller?.audio.visualizerLevels.removeListener(_animate);
       _controller = c;
       _playState = c.player.playerStateStream.listen((_) => _sync());
-      _song = c.player.currentIndexStream.distinct().listen((_) => c.audio.visualizerLevels.clear());
+      _song = c.player.currentIndexStream.distinct().listen((_) {
+        c.audio.visualizerLevels.clear();
+        // The next song may have no video (or one): whether the visualizer shows changes with it.
+        _sync();
+      });
       c.audio.addListener(_sync);
       c.audio.visualizerLevels.addListener(_animate);
     }
@@ -76,11 +97,10 @@ class _AudioReactiveViewState extends State<AudioReactiveView>
   void _animate() {
     if (!_attached || _release == null) return;
     if (_controller!.audio.visualizerLevels.value.every((v) => v == 0)) {
-      _ticker.stop();
+      _halt();
       _levels.clear();
-    } else if (!_ticker.isActive) {
-      _lastTick = Duration.zero;
-      _ticker.start();
+    } else {
+      _start();
     }
   }
 
@@ -102,13 +122,14 @@ class _AudioReactiveViewState extends State<AudioReactiveView>
     final release = _release;
     _release = null;
     release?.call();
-    _ticker.stop();
+    _halt();
     _levels.clear();
   }
 
   @override
   void didUpdateWidget(AudioReactiveView oldWidget) {
     super.didUpdateWidget(oldWidget);
+    _beat?.period = Duration(microseconds: (1000000 / _cap).round());
     _sync();
   }
 
@@ -124,6 +145,7 @@ class _AudioReactiveViewState extends State<AudioReactiveView>
     final active =
         widget.enabled &&
         BetaFeatures.instance.isOn(BetaFeature.audioVisualizer) &&
+        !LayoutPrefs.lightweight &&
         LayoutPrefs.moves &&
         !_reduceMotion &&
         _visible &&
@@ -132,7 +154,9 @@ class _AudioReactiveViewState extends State<AudioReactiveView>
         !c.casting &&
         !c.audio.bitPerfect &&
         c.audio.dopPlaying == null &&
-        !VideoMode.instance.on &&
+        // Video picked hides it only while this song has a video showing: the switch stays on across songs,
+        // and a song without a video plays with the visualizer as usual.
+        !(VideoMode.instance.on && VideoMode.instance.videoOf(c.currentTrack) != null) &&
         AudioEngine.supported;
     if (active) {
       _release ??= c.audio.watchVisualizer();
@@ -151,7 +175,7 @@ class _AudioReactiveViewState extends State<AudioReactiveView>
     _playState?.cancel();
     _song?.cancel();
     _release?.call();
-    _ticker.dispose();
+    _halt();
     _levels.dispose();
     super.dispose();
   }

@@ -189,6 +189,7 @@ class _RiflayAppState extends State<RiflayApp> with WidgetsBindingObserver {
     _layout.addListener(_restyle);
     widget.controller.addListener(_syncTint);
     _syncTint();
+    MemoryTrim.schedule();
   }
 
   @override
@@ -207,7 +208,9 @@ class _RiflayAppState extends State<RiflayApp> with WidgetsBindingObserver {
       unawaited(widget.controller.flushSaves());
     }
     if (state == AppLifecycleState.hidden || state == AppLifecycleState.paused) {
-      MemoryTrim.schedule();
+      MemoryTrim.hidden();
+    } else if (state == AppLifecycleState.inactive || state == AppLifecycleState.resumed) {
+      MemoryTrim.shown();
     }
   }
 
@@ -311,19 +314,12 @@ class _RiflayAppState extends State<RiflayApp> with WidgetsBindingObserver {
             child: child!,
           );
           // The title bar sits above every route (including full-screen ones like Now Playing).
-          final content = AppColorsScope(
+          // Component opacity lives in the panel, card and menu colours ([AppColors]), so text,
+          // artwork and controls on them stay solid.
+          return AppColorsScope(
             colors: AppColorsScope.current(),
             child: hasCustomTitleBar ? _DesktopFrame(child: scaled) : scaled,
           );
-          // Above the Navigator and desktop frame: dialogs, menus, title bar,
-          // artwork, text and the mini player all share one compositing pass.
-          return Appearance.hasComponentOpacity
-              ? Opacity(
-                  key: const ValueKey('desktop-component-opacity'),
-                  opacity: _appearance.componentOpacity,
-                  child: content,
-                )
-              : content;
         },
         home: const HomeShell(),
       ),

@@ -122,6 +122,10 @@ flutter:
     - assets/audio/HRIR-NOTICE.txt
     - assets/fonts/OFL.txt
 
+  shaders:
+    # Now Playing's abstract backdrops, drawn on the GPU in one pass.
+    - shaders/backdrop.frag
+
   fonts:
     # Riflay's own typeface (SIL Open Font License, see assets/fonts/OFL.txt): bundled, never fetched at runtime.
     - family: Figtree
