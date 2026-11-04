@@ -84,6 +84,21 @@ class Track {
 
   static const unknownArtist = 'Unknown artist';
 
+  /// The artists in one artist line, "Kobo Kanaeru, Takanashi Kiara" → both: split at commas and semicolons (how
+  /// YouTube Music and most taggers join them), each once, in order. Empty for no artist.
+  static List<String> splitArtists(String line) {
+    if (line == unknownArtist) return const [];
+    final out = <String>[];
+    for (final part in line.split(RegExp(r'[,;]'))) {
+      final name = part.trim();
+      if (name.isNotEmpty && !out.contains(name)) out.add(name);
+    }
+    return out;
+  }
+
+  /// Each artist of this song (see [splitArtists]).
+  List<String> get artists => splitArtists(artist);
+
   final String id;
   final Uri uri;
   final String title;

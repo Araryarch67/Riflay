@@ -104,9 +104,10 @@ class _FadedCoverState extends State<FadedCover> {
       }
 
       big = await decode(math.min(1024, math.max(w, h)));
+      small = await decode(48);
+      final veil = await _brightVeil(small, lowerOnly: widget.sharp);
       final blur = !LayoutPrefs.lightweight;
-      if (blur) small = await decode(48);
-      if (small != null) {
+      if (blur) {
         // Blurred once into a tiny picture, then stretched smoothly: that stretch is the soft look.
         final size = Size(small.width.toDouble(), small.height.toDouble());
         final tiny = ui.PictureRecorder();
@@ -175,6 +176,27 @@ class _FadedCoverState extends State<FadedCover> {
             [0, 0.16, holdsAt, 1],
           ),
       );
+      // A bright cover gets more shade where the text sits, so white text stays readable on it without changing
+      // colour. A dark cover gets none. The darkening above already counts: the foot needs less on top of it.
+      if (veil > 0) {
+        final foot = math.max(0.0, 1 - (1 - veil) / (1 - widget.darken));
+        final from = widget.sharp ? holdsAt : 0.0;
+        canvas.drawRect(
+          rect,
+          Paint()
+            ..shader = ui.Gradient.linear(
+              Offset.zero,
+              Offset(0, h.toDouble()),
+              [
+                Colors.transparent,
+                Colors.black.withValues(alpha: widget.sharp ? 0 : veil),
+                Colors.black.withValues(alpha: veil),
+                Colors.black.withValues(alpha: foot),
+              ],
+              [0, from, math.min(0.95, from + (widget.sharp ? 0.25 : 0)), 1],
+            ),
+        );
+      }
       final picture = recorder.endRecording();
       final baked = await picture.toImage(w, h);
       picture.dispose();
@@ -193,6 +215,35 @@ class _FadedCoverState extends State<FadedCover> {
       small?.dispose();
       soft?.dispose();
     }
+  }
+
+  /// How much shade (0 to 0.6) a cover this bright needs for white text to read on it: none for a dark one. Goes
+  /// by its brighter parts (the 75th percentile), in the lower part only when the sharp cover holds the top.
+  static Future<double> _brightVeil(ui.Image image, {required bool lowerOnly}) async {
+    final data = await image.toByteData(format: ui.ImageByteFormat.rawRgba);
+    if (data == null) return 0;
+    double linear(int v) {
+      final c = v / 255;
+      return c <= 0.04045 ? c / 12.92 : math.pow((c + 0.055) / 1.055, 2.4).toDouble();
+    }
+
+    final lum = <double>[];
+    for (var y = lowerOnly ? image.height ~/ 2 : 0; y < image.height; y++) {
+      for (var x = 0; x < image.width; x++) {
+        final i = (y * image.width + x) * 4;
+        lum.add(
+          0.2126 * linear(data.getUint8(i)) +
+              0.7152 * linear(data.getUint8(i + 1)) +
+              0.0722 * linear(data.getUint8(i + 2)),
+        );
+      }
+    }
+    if (lum.isEmpty) return 0;
+    lum.sort();
+    final bright = lum[(lum.length * 0.75).floor()];
+    // White on it reaches about 4.5:1 at a luminance of 0.18. A black veil of a scales sRGB by (1 - a).
+    if (bright <= 0.18) return 0;
+    return (1 - math.pow(0.18 / bright, 1 / 2.2)).clamp(0.0, 0.6).toDouble();
   }
 
   // Each view holds its own handle, so a newer cover replacing [_last] never pulls one out from under it.

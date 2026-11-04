@@ -56,7 +56,7 @@ void main() {
     expect(tipWith('Play', AppAction.playPause), 'Play (Space)');
   });
 
-  onLinux('the now-playing ⋯ menu has Stats for nerds and Signal path', (tester) async {
+  onLinux('the now-playing ⋯ menu has Detail stats and Signal path', (tester) async {
     SharedPreferences.setMockInitialValues({});
     final controller = PlayerController();
     final track = Track(id: 't', uri: Uri.parse('file:///t.flac'), title: 'T', artist: 'A');
@@ -85,14 +85,14 @@ void main() {
     await tester.pumpWidget(app(false));
     await tester.tap(find.byType(PopupMenuButton<void>));
     await tester.pumpAndSettle();
-    expect(find.text('Stats for nerds'), findsNothing);
+    expect(find.text('Detail stats'), findsNothing);
     await tester.tapAt(const Offset(5, 5));
     await tester.pumpAndSettle();
 
     await tester.pumpWidget(app(true));
     await tester.tap(find.byType(PopupMenuButton<void>));
     await tester.pumpAndSettle();
-    expect(find.text('Stats for nerds'), findsOneWidget, skip: !AudioEngine.supported);
+    expect(find.text('Detail stats'), findsOneWidget, skip: !AudioEngine.supported);
     expect(find.text('Signal path'), findsOneWidget, skip: !AudioEngine.supported);
   });
 }

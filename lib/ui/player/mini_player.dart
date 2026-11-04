@@ -6,7 +6,6 @@ import '../../services/player_controller.dart';
 import '../widgets/controls.dart';
 import '../theme.dart';
 import '../widgets/marquee_text.dart';
-import '../widgets/track_row.dart';
 import '../ytmusic_edit.dart';
 import 'more_sheet.dart';
 import 'player_common.dart';
@@ -118,9 +117,8 @@ class _MiniPlayerState extends State<MiniPlayer> {
                                             track.title,
                                             style: text.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
                                           ),
-                                          LinkText(
-                                            track.artist,
-                                            onTap: openArtist(context, c, track),
+                                          ArtistLinks(
+                                            track: track,
                                             style: text.bodySmall?.copyWith(color: AppColors.textSecondary),
                                           ),
                                         ],

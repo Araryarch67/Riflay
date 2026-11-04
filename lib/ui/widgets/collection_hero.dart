@@ -13,7 +13,7 @@ import '../shell_scope.dart';
 import '../theme.dart';
 import 'controls.dart';
 import 'faded_cover.dart';
-import '../ytmusic_edit.dart' show FollowButton;
+import '../ytmusic_edit.dart' show FollowButton, addToPlaylist;
 import 'editable_title.dart';
 
 /// The top of an album or playlist page with Settings › Layout › Album and playlist top set to Hero: the cover
@@ -40,7 +40,9 @@ class CollectionHero extends StatelessWidget {
     final artistPage = isArtist || actions.any((a) => a is FollowButton);
     final radioSeed = tracks.where((t) => t.isRemote).firstOrNull;
     // An artist: how many songs and albums; an album or playlist: its songs and length.
-    final albums = isArtist ? c.albums.where((a) => a.subtitle == collection.title).length : 0;
+    final albums = isArtist
+        ? c.albums.where((a) => Track.splitArtists(a.subtitle).contains(collection.title)).length
+        : 0;
     final meta = isArtist
         ? [
             '${tracks.length} ${tracks.length == 1 ? 'song' : 'songs'}',
@@ -218,6 +220,18 @@ class CollectionHero extends StatelessWidget {
                           },
                         ),
                       ],
+                      // An artist: all of their songs into one of your playlists.
+                      if (artistPage && !empty) ...[
+                        const SizedBox(width: 12),
+                        PartButton(
+                          icon: Icons.library_add_rounded,
+                          tooltip: 'Add all to playlist',
+                          look: PartLook.muted,
+                          round: true,
+                          size: 48,
+                          onPressed: () => addToPlaylist(context, tracks),
+                        ),
+                      ],
                       if (artistPage && radioSeed != null) ...[
                         const SizedBox(width: 12),
                         PartButton(
@@ -234,17 +248,8 @@ class CollectionHero extends StatelessWidget {
                 },
               ),
             ),
-            if (!isArtist)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    'Songs',
-                    style: text.titleLarge?.copyWith(color: colors.accent, fontWeight: FontWeight.w800),
-                  ),
-                ),
-              ),
+            // Room between the buttons and the first song.
+            const SizedBox(height: 16),
           ],
         );
       },

@@ -108,7 +108,7 @@ void main() {
       await tester.pumpWidget(_host(c, const SeekBar(phonePlayer: true)));
       await tester.pump();
       final shape = tester.widget<SliderTheme>(find.byType(SliderTheme).first).data.trackShape;
-      expect(shape, isNull, reason: 'Lightweight has no wavy track at all, as before');
+      expect(shape, isNot(isA<WavySeekTrack>()), reason: 'Lightweight has no wavy track at all, as before');
       await tester.pumpWidget(const SizedBox.shrink());
     });
   });

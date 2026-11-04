@@ -18,7 +18,6 @@ import '../widgets/audio_visualizer.dart';
 import '../widgets/player_backdrop.dart';
 import '../widgets/marquee_text.dart';
 import '../widgets/stats_for_nerds.dart';
-import '../widgets/track_row.dart';
 import '../widgets/video_mode.dart';
 import 'now_playing_page.dart' show BlurredCover;
 import 'player_common.dart';
@@ -130,10 +129,10 @@ class _FullScreenPlayerState extends State<FullScreenPlayer> {
                         style: text.headlineSmall?.copyWith(fontWeight: FontWeight.w800, letterSpacing: -0.5),
                       ),
                       const SizedBox(height: 4),
-                      LinkText(
-                        next == null ? track.artist : '${track.artist}   ·   Next: ${next.title}',
+                      ArtistLinks(
+                        track: track,
+                        suffix: next == null ? '' : '   ·   Next: ${next.title}',
                         style: text.bodyLarge?.copyWith(color: AppColors.textSecondary),
-                        onTap: openArtist(context, PlayerScope.read(context), track),
                       ),
                     ],
                   ),

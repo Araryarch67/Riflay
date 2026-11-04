@@ -71,28 +71,30 @@ class _PageScaffoldState extends State<PageScaffold> {
       color: AppColors.panel,
       child: Stack(
         children: [
-          // Colour wash behind the header.
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            height: 420,
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 400),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    color.withValues(alpha: 0.85 * AppColors.washStrength),
-                    color.withValues(alpha: 0.25 * AppColors.washStrength),
-                    AppColors.panel,
-                  ],
-                  stops: const [0, 0.55, 1],
+          // Colour wash behind the header. Not under a hero: the cover is the header there, and this wash stays put
+          // while the hero scrolls away, showing as a hard edge below its fade.
+          if (!widget.overHero)
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              height: 420,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 400),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      color.withValues(alpha: 0.85 * AppColors.washStrength),
+                      color.withValues(alpha: 0.25 * AppColors.washStrength),
+                      AppColors.panel,
+                    ],
+                    stops: const [0, 0.55, 1],
+                  ),
                 ),
               ),
             ),
-          ),
           CustomScrollView(
             controller: _scroll,
             slivers: [

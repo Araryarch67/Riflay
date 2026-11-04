@@ -55,7 +55,7 @@ class DesktopPlayerBar extends StatelessWidget {
                 : math.max(80.0, 36 * textScale + 16);
             final info = _info(context, track, small: compact || minimal, withProgress: compact);
             final actions = _actions(context, track, width: availableWidth);
-            // The bar is Classic in every preset: the presets shape the phone player and the side panel.
+            // The progress line takes the player's shape (Stacked's pill, Kawaii's wave), as on the phone.
             const Widget transport = FittedBox(fit: BoxFit.scaleDown, child: TransportControls());
             final Widget content;
             if (compact) {
@@ -92,7 +92,10 @@ class DesktopPlayerBar extends StatelessWidget {
                                 constraints: const BoxConstraints(maxWidth: 720),
                                 child: Column(
                                   mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [transport, if (!minimal && track != null) const SeekBar(inline: true)],
+                                  children: [
+                                    transport,
+                                    if (!minimal && track != null) const SeekBar(inline: true, desktopPlayer: true),
+                                  ],
                                 ),
                               ),
                             ),
@@ -180,14 +183,13 @@ class DesktopPlayerBar extends StatelessWidget {
                         },
                       ),
                       const SizedBox(height: 2),
-                      LinkText(
-                        track.artist,
+                      ArtistLinks(
+                        track: track,
                         style: text.bodySmall?.copyWith(color: AppColors.textSecondary),
-                        onTap: openArtist(context, c, track),
                       ),
                       if (withProgress) ...[
                         const SizedBox(height: 2),
-                        const SizedBox(height: 20, child: SeekBar(inline: true, compact: true)),
+                        const SizedBox(height: 20, child: SeekBar(inline: true, compact: true, desktopPlayer: true)),
                       ],
                     ],
                   ),

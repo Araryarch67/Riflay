@@ -25,7 +25,7 @@ import 'player_parts.dart' show shareTrack;
 /// long-press on the mini player.
 ///
 /// With [openPlayer] (the mini player's long-press) the sheet also lists Queue, Lyrics and
-/// Close player, and Stats for nerds opens the full player they show on.
+/// Close player, and Detail stats opens the full player they show on.
 ///
 /// [context] is the player's own: the actions run against it after the sheet
 /// has closed, so they find the shell around the player.
@@ -139,7 +139,7 @@ class PlayerMoreSheet extends StatelessWidget {
                     ),
                   ),
                   // The song's own menu, minus what this sheet lists below: one
-                  // action, one entry. Stats for nerds and Signal path are in Sound.
+                  // action, one entry. Detail stats and Signal path are in Sound.
                   TrackMenuButton(
                     track: track,
                     hide: const {TrackMenuEntry.addToPlaylist, TrackMenuEntry.download, TrackMenuEntry.share},
@@ -232,7 +232,7 @@ class PlayerMoreSheet extends StatelessWidget {
                   valueListenable: statsForNerds,
                   builder: (context, on, _) => tile(
                     Icons.query_stats_rounded,
-                    on ? 'Hide stats for nerds' : 'Stats for nerds',
+                    on ? 'Hide detail stats' : 'Detail stats',
                     then((_) {
                       statsForNerds.value = !on;
                       if (!on) openPlayer?.call();

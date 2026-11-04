@@ -13,7 +13,9 @@ import '../../services/play_history.dart';
 import '../../services/player_controller.dart';
 import '../../services/wrap.dart';
 import '../theme.dart';
+import '../widgets/app_logo.dart';
 import '../widgets/controls.dart';
+import '../widgets/faded_cover.dart';
 
 /// Riflay Wrap: a month as a story. Swipe, tap or use the arrow keys to move on.
 class WrapPage extends StatelessWidget {
@@ -129,6 +131,8 @@ class _WrapStoryState extends State<WrapStory> {
       builder: (context, accent) {
         // One flat colour from the top song's cover, pulled toward the app's background so text stays readable.
         final color = AppColors.sink(accent, 0.55);
+        // The small lines take the cover's colour, lifted so they read on the card.
+        final tint = Color.lerp(accent, Colors.white, 0.45)!;
         return Material(
           color: AppColors.panel,
           child: Focus(
@@ -207,21 +211,45 @@ class _WrapStoryState extends State<WrapStory> {
                                         aspectRatio: 9 / 16,
                                         child: RepaintBoundary(
                                           key: _keys[i],
-                                          child: DecoratedBox(
-                                            decoration: BoxDecoration(
-                                              color: color,
-                                              borderRadius: BorderRadius.circular(16),
-                                            ),
-                                            child: FittedBox(
-                                              fit: BoxFit.contain,
-                                              child: SizedBox(
-                                                width: 360,
-                                                height: 640,
-                                                child: Padding(
-                                                  padding: const EdgeInsets.all(28),
-                                                  child: _cards[i](context, color),
+                                          child: ClipRRect(
+                                            borderRadius: BorderRadius.circular(16),
+                                            child: Stack(
+                                              fit: StackFit.expand,
+                                              children: [
+                                                ColoredBox(color: color),
+                                                // The top song's cover, soft and dim behind every card: the month's
+                                                // own picture, not a decoration.
+                                                Opacity(
+                                                  opacity: 0.5,
+                                                  child: FadedCover(track: top, sharp: false, darken: 0.55),
                                                 ),
-                                              ),
+                                                ColoredBox(color: color.withValues(alpha: 0.45)),
+                                                FittedBox(
+                                                  fit: BoxFit.contain,
+                                                  child: SizedBox(
+                                                    width: 360,
+                                                    height: 640,
+                                                    child: Padding(
+                                                      padding: const EdgeInsets.fromLTRB(24, 22, 24, 18),
+                                                      child: _WrapTint(
+                                                        tint: tint,
+                                                        child: Column(
+                                                          children: [
+                                                            _Brand(month: widget.data.month.label),
+                                                            Expanded(
+                                                              child: Padding(
+                                                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                                                child: _cards[i](context, color),
+                                                              ),
+                                                            ),
+                                                            _Footer(index: i, count: _cards.length),
+                                                          ],
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
                                             ),
                                           ),
                                         ),
@@ -270,7 +298,7 @@ class _WrapStoryState extends State<WrapStory> {
   static List<Widget Function(BuildContext, Color)> _buildCards(WrapData d, Track Function(SongInfo) trackFor) {
     return [
       (c, _) => _Card(
-        kicker: 'Riflay Wrap',
+        kicker: d.inProgress ? 'Your Wrap so far' : 'Your monthly Wrap',
         headline: d.inProgress ? '${d.month.name} so far' : 'Your ${d.month.name} in music',
         body: d.inProgress ? 'Up to ${_day(d.until!)}' : d.month.label,
         center: true,
@@ -369,6 +397,78 @@ class _WrapStoryState extends State<WrapStory> {
   }
 }
 
+/// The cover's colour for the small lines of every card.
+class _WrapTint extends InheritedWidget {
+  const _WrapTint({required this.tint, required super.child});
+
+  final Color tint;
+
+  static Color of(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<_WrapTint>()?.tint ?? AppColors.textSecondary;
+
+  @override
+  bool updateShouldNotify(_WrapTint old) => old.tint != tint;
+}
+
+/// The top of every card: whose Wrap this is, so a saved or shared card says Riflay on it.
+class _Brand extends StatelessWidget {
+  const _Brand({required this.month});
+
+  final String month;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    return Row(
+      children: [
+        const AppLogo(size: 22),
+        const SizedBox(width: 8),
+        Text('Riflay', style: text.titleMedium?.copyWith(fontWeight: FontWeight.w800, letterSpacing: -0.3)),
+        const SizedBox(width: 6),
+        Text(
+          'Wrap',
+          style: text.titleMedium?.copyWith(fontWeight: FontWeight.w800, color: _WrapTint.of(context)),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Text(
+            month.toUpperCase(),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.end,
+            style: text.labelSmall?.copyWith(
+              color: AppColors.textSecondary,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 1.2,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// The foot of every card: where it comes from and which card it is.
+class _Footer extends StatelessWidget {
+  const _Footer({required this.index, required this.count});
+
+  final int index;
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
+    final style = Theme.of(context).textTheme.labelSmall
+        ?.copyWith(color: AppColors.textSecondary, fontWeight: FontWeight.w600, letterSpacing: 0.8);
+    return Row(
+      children: [
+        Text('Made with Riflay', style: style),
+        const Spacer(),
+        Text('${index + 1} / $count', style: style),
+      ],
+    );
+  }
+}
+
 class _Line {
   const _Line({
     required this.rank,
@@ -407,9 +507,25 @@ class _Card extends StatelessWidget {
           Text(
             kicker!,
             textAlign: center ? TextAlign.center : TextAlign.start,
-            style: text.titleMedium?.copyWith(color: AppColors.textSecondary, fontWeight: FontWeight.w600),
+            style: text.titleMedium?.copyWith(
+              color: _WrapTint.of(context),
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.2,
+            ),
           ),
-        if (art != null) ...[const SizedBox(height: 24), art!],
+        if (art != null) ...[
+          const SizedBox(height: 24),
+          DecoratedBox(
+            // Lifts the picture off the card.
+            decoration: BoxDecoration(
+              boxShadow: [
+                BoxShadow(color: Colors.black.withValues(alpha: 0.35), blurRadius: 24, offset: const Offset(0, 8)),
+              ],
+              shape: art is Artwork && (art! as Artwork).circle ? BoxShape.circle : BoxShape.rectangle,
+            ),
+            child: art!,
+          ),
+        ],
         if (headline != null) ...[
           const SizedBox(height: 20),
           Text(
@@ -417,7 +533,12 @@ class _Card extends StatelessWidget {
             maxLines: 3,
             overflow: TextOverflow.ellipsis,
             textAlign: center ? TextAlign.center : TextAlign.start,
-            style: text.headlineLarge?.copyWith(fontWeight: FontWeight.w800, color: AppColors.textPrimary, height: 1.1),
+            style: text.headlineLarge?.copyWith(
+              fontWeight: FontWeight.w900,
+              color: AppColors.textPrimary,
+              height: 1.05,
+              letterSpacing: -0.8,
+            ),
           ),
         ],
         if (body != null) ...[
@@ -436,8 +557,11 @@ class _Card extends StatelessWidget {
               child: Row(
                 children: [
                   SizedBox(
-                    width: 24,
-                    child: Text('${l.rank}', style: text.titleSmall?.copyWith(color: AppColors.textSecondary)),
+                    width: 28,
+                    child: Text(
+                      '${l.rank}',
+                      style: text.titleMedium?.copyWith(color: _WrapTint.of(context), fontWeight: FontWeight.w900),
+                    ),
                   ),
                   l.art,
                   const SizedBox(width: 12),

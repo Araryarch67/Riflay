@@ -265,20 +265,24 @@ class _Hovering extends StatelessWidget {
 
 /// Opens [track]'s artist: YouTube Music's page for a streamed song (all of
 /// its songs, not only the ones here), the library's for a file on this
-/// device. Null when there's none to open. [host] must outlive the caller.
-VoidCallback? openArtist(BuildContext host, PlayerController c, Track track, {ShellScope? shell}) {
+/// device. [name] picks one of a song's several artists (the first when null). Null when there's none to open.
+/// [host] must outlive the caller.
+VoidCallback? openArtist(BuildContext host, PlayerController c, Track track, {ShellScope? shell, String? name}) {
   final navigation = shell ?? ShellScope.of(host);
-  final id = track.artistId;
+  final names = track.artists;
+  final who = name ?? names.firstOrNull;
+  // The channel YouTube Music gives is the first artist's.
+  final id = who == names.firstOrNull ? track.artistId : null;
   void remote(String id) => openRemotePlaylist(
     host,
-    RemotePlaylist(id: id, browseId: id, title: track.artist.split(', ').first, count: 0),
+    RemotePlaylist(id: id, browseId: id, title: who ?? track.artist, count: 0),
     shell: navigation,
     account: c.ytMusic,
   );
   if (track.isRemote && id != null) return () => remote(id);
-  if (c.artistNamed(track.artist) case final local?) return () => navigation.openCollection(local);
-  if (track.isRemote && id == null && track.artist.trim().isNotEmpty && track.artist != 'Unknown artist') {
-    final name = track.artist.split(', ').first.trim();
+  if (c.artistNamed(who ?? '') case final local?) return () => navigation.openCollection(local);
+  if (track.isRemote && who != null) {
+    final name = who;
     return () => navigation.open(
       RemoteCollectionPage(
         title: name,
@@ -340,7 +344,7 @@ class TrackMenuButton extends StatelessWidget {
   final bool visible;
   final Color? color;
 
-  /// In a now-playing view: adds Stats for nerds and Signal path.
+  /// In a now-playing view: adds Detail stats and Signal path.
   final bool nowPlaying;
 
   /// Entries the host already lists, so one menu does not repeat another.

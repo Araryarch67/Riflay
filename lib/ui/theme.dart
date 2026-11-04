@@ -4,6 +4,7 @@ import '../platform/host.dart';
 import '../services/appearance.dart';
 import '../services/layout_prefs.dart';
 import 'debug_switches.dart';
+import 'widgets/wavy_seek_track.dart' show pillSliderTheme, thinSliderTheme;
 
 /// Colour tokens of the theme picked in Settings › Look & feel › Appearance ([ThemeChoice]).
 abstract final class AppColors {
@@ -143,6 +144,58 @@ class ColorFree extends StatelessWidget implements ColorFreeSubtree {
 
   @override
   Widget build(BuildContext context) => child;
+}
+
+/// Text and icons over a picture (the cover behind Now Playing or the lyrics) get a soft shadow, so light text
+/// still reads on a bright patch of the cover without changing colour. Dark text (a light palette) is left alone.
+class OverPicture extends StatelessWidget {
+  const OverPicture({super.key, this.enabled = true, required this.child});
+
+  final bool enabled;
+  final Widget child;
+
+  static const shadows = [
+    Shadow(color: Color(0x59000000), blurRadius: 12),
+    Shadow(color: Color(0x33000000), blurRadius: 3),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
+    if (!enabled || colors.textPrimary.computeLuminance() < 0.5) return child;
+    final theme = Theme.of(context);
+    TextStyle? lift(TextStyle? s) => s?.copyWith(shadows: shadows);
+    final t = theme.textTheme;
+    return Theme(
+      data: theme.copyWith(
+        textTheme: t.copyWith(
+          displayLarge: lift(t.displayLarge),
+          displayMedium: lift(t.displayMedium),
+          displaySmall: lift(t.displaySmall),
+          headlineLarge: lift(t.headlineLarge),
+          headlineMedium: lift(t.headlineMedium),
+          headlineSmall: lift(t.headlineSmall),
+          titleLarge: lift(t.titleLarge),
+          titleMedium: lift(t.titleMedium),
+          titleSmall: lift(t.titleSmall),
+          bodyLarge: lift(t.bodyLarge),
+          bodyMedium: lift(t.bodyMedium),
+          bodySmall: lift(t.bodySmall),
+          labelLarge: lift(t.labelLarge),
+          labelMedium: lift(t.labelMedium),
+          labelSmall: lift(t.labelSmall),
+        ),
+        iconTheme: theme.iconTheme.copyWith(shadows: shadows),
+      ),
+      child: DefaultTextStyle.merge(
+        style: const TextStyle(shadows: shadows),
+        child: IconTheme.merge(
+          data: const IconThemeData(shadows: shadows),
+          child: child,
+        ),
+      ),
+    );
+  }
 }
 
 /// Rebuilds what may read [AppColors] statically after a palette change. Only widgets that run a `build`
@@ -295,6 +348,7 @@ class _ThemeKey {
     this.motion,
     this.pageMotion,
     this.pageSpeed,
+    this.slider,
   );
 
   final AppPalette palette;
@@ -306,6 +360,7 @@ class _ThemeKey {
   final Motion motion;
   final PageMotionStyle pageMotion;
   final PageMotionSpeed pageSpeed;
+  final VolumeSliderShape slider;
 
   @override
   bool operator ==(Object other) =>
@@ -318,11 +373,12 @@ class _ThemeKey {
       other.corners == corners &&
       other.motion == motion &&
       other.pageMotion == pageMotion &&
-      other.pageSpeed == pageSpeed;
+      other.pageSpeed == pageSpeed &&
+      other.slider == slider;
 
   @override
   int get hashCode =>
-      Object.hash(palette, opacity, highContrast, wholeApp, font, corners, motion, pageMotion, pageSpeed);
+      Object.hash(palette, opacity, highContrast, wholeApp, font, corners, motion, pageMotion, pageSpeed, slider);
 }
 
 final _themes = <_ThemeKey, ThemeData>{};
@@ -331,6 +387,15 @@ final _themes = <_ThemeKey, ThemeData>{};
 ({int built, int cached}) get themeCacheStats => (built: _themesBuilt, cached: _themesCached);
 int _themesBuilt = 0;
 int _themesCached = 0;
+
+/// Settings › Layout › Slider look, for every slider in the app (the progress bar has its own shape setting).
+ThemeData _sliderLook(ThemeData t, VolumeSliderShape look) => switch (look) {
+  VolumeSliderShape.classic => t,
+  VolumeSliderShape.thin => t.copyWith(sliderTheme: thinSliderTheme(t.sliderTheme, AppColors.textPrimary)),
+  VolumeSliderShape.pill => t.copyWith(
+    sliderTheme: pillSliderTheme(t.sliderTheme, AppColors.inverse, height: 12, thumb: 28),
+  ),
+};
 
 /// The app's theme for the colours, font and layout settings now in use, built once per combination.
 /// [desktopFrame]: the window paints the background, so pages are see-through.
@@ -348,6 +413,7 @@ ThemeData appThemeNow({bool desktopFrame = false}) {
     LayoutPrefs.effectiveMotion,
     l.pageMotion,
     l.pageSpeed,
+    l.volumeSlider,
   );
   final hit = _themes.remove(key);
   if (hit != null) {
@@ -360,7 +426,7 @@ ThemeData appThemeNow({bool desktopFrame = false}) {
   AppColors._themeOverride = palette;
   final ThemeData built;
   try {
-    built = l.themed(buildAppTheme(fontFamily: a.fontFamily));
+    built = _sliderLook(l.themed(buildAppTheme(fontFamily: a.fontFamily)), l.volumeSlider);
   } finally {
     AppColors._themeOverride = null;
   }

@@ -12,11 +12,11 @@ import '../theme.dart';
 import 'menus.dart';
 import 'signal_path.dart';
 
-/// Stats for nerds, as on YouTube: the song playing, read live, over the
+/// Detail stats, as on YouTube: the song playing, read live, over the
 /// now-playing cover. One switch for every cover, so it stays on across views.
 final statsForNerds = ValueNotifier<bool>(false);
 
-/// The now-playing cover: Stats for nerds over it while they're on, and a
+/// The now-playing cover: Detail stats over it while they're on, and a
 /// menu on right-click / long-press to turn them on (as YouTube's video has).
 class NowPlayingCover extends StatelessWidget {
   const NowPlayingCover({super.key, required this.child});
@@ -30,7 +30,7 @@ class NowPlayingCover extends StatelessWidget {
       value: 'stats',
       child: MenuRow(
         leading: const Icon(Icons.query_stats_rounded),
-        title: Text(statsForNerds.value ? 'Hide stats for nerds' : 'Stats for nerds'),
+        title: Text(statsForNerds.value ? 'Hide detail stats' : 'Detail stats'),
       ),
     ),
     const PopupMenuItem(
@@ -225,7 +225,7 @@ class _StatsPanelState extends State<_StatsPanel> {
             Row(
               children: [
                 Expanded(
-                  child: Text('Stats for nerds', style: base?.copyWith(color: Colors.white70)),
+                  child: Text('Detail stats', style: base?.copyWith(color: Colors.white70)),
                 ),
                 icon(Icons.copy_rounded, 'Copy stats', () {
                   Clipboard.setData(ClipboardData(text: [for (final (k, v) in rows) '$k: $v'].join('\n')));

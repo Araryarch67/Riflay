@@ -88,6 +88,7 @@ void main() {
   test('turning the visualizer off blocks analysis even while a view holds a lease', () async {
     SharedPreferences.setMockInitialValues({});
     await LayoutPrefs.instance.reset();
+    await LayoutPrefs.instance.setVisualizer(false);
     final engine = AudioEngine();
     final release = engine.watchVisualizer();
     expect(engine.filterChain, isNot(contains('@visualizer')));

@@ -156,7 +156,7 @@ class LyricsPage extends StatelessWidget {
           fit: StackFit.expand,
           children: [
             Positioned.fill(child: FadedCover(track: cover, darken: 0.55, sharp: false)),
-            page,
+            OverPicture(child: page),
           ],
         );
 }

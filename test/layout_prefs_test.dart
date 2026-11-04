@@ -14,7 +14,7 @@ void main() {
   });
 
   test('defaults use capsule navigation and standard player appearance', () {
-    expect(p.visualizer, isFalse);
+    expect(p.visualizer, isTrue, reason: 'Classic pulses around the cover');
     expect(p.visualizerStyle, VisualizerStyle.pulse);
     expect(p.visualizerCoverShape, VisualizerCoverShape.flower);
     expect(p.tabBar, TabBarStyle.capsule);
@@ -55,8 +55,9 @@ void main() {
     expect(p.desktopBar, DesktopBarStyle.compact);
     expect(p.visualizer, isTrue);
     expect(p.visualizerStyle, VisualizerStyle.dots);
+    await p.setVisualizer(false);
     await p.reset();
-    expect(p.visualizer, isFalse);
+    expect(p.visualizer, isTrue);
     p.restore({'visualizerStyle': 'future-style'});
     expect(p.visualizerStyle, VisualizerStyle.pulse);
   });
@@ -65,7 +66,7 @@ void main() {
     await p.setVisualizerCoverShape(VisualizerCoverShape.square);
     await p.load();
     expect(p.visualizerCoverShape, VisualizerCoverShape.square);
-    expect(p.visualizer, isFalse);
+    expect(p.visualizer, isTrue);
     p.restore({'visualizerCoverShape': 'future-shape'});
     expect(p.visualizerCoverShape, VisualizerCoverShape.flower);
     await p.reset();
@@ -248,7 +249,7 @@ void main() {
     expect(p.volumeSlider, VolumeSliderShape.pill);
     expect(p.showVolumeRow, isTrue);
     await PlayerPreset.kawaii.apply(p);
-    expect(p.volumeSlider, VolumeSliderShape.thin);
+    expect(p.volumeSlider, VolumeSliderShape.pill, reason: 'the volume under the lyrics is a pill');
     await PlayerPreset.classic.apply(p);
     expect(p.volumeSlider, VolumeSliderShape.classic);
   });

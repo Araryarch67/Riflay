@@ -133,7 +133,8 @@ class KaraokeLineState extends State<KaraokeLine> {
         foregroundPainter: _KaraokePainter(
           words: widget.words,
           text: text,
-          style: style.copyWith(color: widget.sungColor),
+          // The line below already casts the shadow; the fill's layers would stack theirs darker.
+          style: style.copyWith(color: widget.sungColor, shadows: const []),
           align: _textAlign,
           direction: Directionality.of(context),
           scaler: MediaQuery.textScalerOf(context),

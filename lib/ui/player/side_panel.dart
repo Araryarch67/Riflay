@@ -99,10 +99,9 @@ class NowPlayingSidePanel extends StatelessWidget {
                       ),
                       const SizedBox(height: 4),
                       // A click away from the artist's page (and the album's, for a file here).
-                      LinkText(
-                        track.artist,
+                      ArtistLinks(
+                        track: track,
                         style: text.bodyLarge?.copyWith(color: AppColors.textSecondary),
-                        onTap: openArtist(context, c, track),
                       ),
                       if (track.album != null) ...[
                         const SizedBox(height: 2),
@@ -268,10 +267,9 @@ class _HeroPanel extends StatelessWidget {
                               ),
                             ),
                             const SizedBox(height: 2),
-                            LinkText(
-                              track.artist,
+                            ArtistLinks(
+                              track: track,
                               style: text.bodyLarge?.copyWith(color: AppColors.textSecondary),
-                              onTap: openArtist(context, c, track),
                             ),
                           ],
                         ),

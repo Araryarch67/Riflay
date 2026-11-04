@@ -22,7 +22,8 @@ class PlayerPresetsPage extends StatelessWidget {
         builder: (context, _) {
           final current = playerPresetName(p);
           return ListView(
-            padding: const EdgeInsets.all(16),
+            // Clears the phone's floating player and tab bar, so the last preset scrolls out from under them.
+            padding: EdgeInsets.fromLTRB(16, 16, 16, 32 + MediaQuery.paddingOf(context).bottom),
             children: [
               Text(
                 current == null ? 'Your settings are a custom mix' : 'Your settings match $current',

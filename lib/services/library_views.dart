@@ -156,7 +156,10 @@ class LibraryViews {
     if (cached != null) return cached;
     final groups = <String, List<Track>>{};
     for (final t in tracks) {
-      if (t.artist != Track.unknownArtist) (groups[t.artist] ??= []).add(t);
+      // A song by several artists is on each one's page.
+      for (final name in t.artists) {
+        (groups[name] ??= []).add(t);
+      }
     }
     return _artists = [
       for (final e in groups.entries)

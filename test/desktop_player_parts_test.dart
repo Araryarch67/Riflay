@@ -311,14 +311,24 @@ void main() {
                   expect(_real, isEmpty, reason: mix);
                   expect(_tip('Lyrics'), findsOneWidget, reason: '$mix: Lyrics is always on the bar');
                   expect(_tip('Queue'), findsOneWidget, reason: mix);
-                  // The bar is Classic whatever the parts say: they shape the phone and the side panel.
+                  // The bar's buttons are Classic whatever the parts say; only its progress line takes their shape.
                   expect(_tip('Sleep timer'), findsNothing, reason: mix);
                   expect(find.byType(TransportControls), findsOneWidget, reason: mix);
                   expect(find.byType(DesktopControlsRow), findsNothing, reason: mix);
                   expect(_tip('Previous'), findsOneWidget, reason: mix);
                   expect(_tip('Next'), findsOneWidget, reason: mix);
-                  expect(_seekShape(tester).pill, isFalse, reason: mix);
-                  expect(find.text('2:30'), findsOneWidget, reason: '$mix: the elapsed time, as Classic');
+                  expect(
+                    _seekShape(tester).pill,
+                    shape == ProgressBarShape.pill && style != DesktopBarStyle.minimal,
+                    reason: '$mix: the progress line has the phone\'s shape',
+                  );
+                  // The length, or (Time left, as on the phone) the time left, counting down.
+                  final left = p.showTimeLeft && style != DesktopBarStyle.minimal;
+                  expect(
+                    left ? find.textContaining(RegExp(r'^-\d+:\d\d$')) : find.text('2:30'),
+                    findsOneWidget,
+                    reason: mix,
+                  );
                 }
               }
             }

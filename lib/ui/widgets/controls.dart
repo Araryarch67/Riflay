@@ -156,6 +156,9 @@ class _CoverImage extends StatefulWidget {
 class _CoverImageState extends State<_CoverImage> {
   ArtworkRequest? _request;
   Future<Uint8List?>? _future;
+
+  /// The bytes last drawn, for this song's cover.
+  Uint8List? _shown;
   Animation<double>? _routeAnim;
   bool _routeChecked = false;
 
@@ -211,6 +214,7 @@ class _CoverImageState extends State<_CoverImage> {
     super.didUpdateWidget(old);
     final key = widget.track.albumKey ?? widget.track.id;
     if (key != (old.track.albumKey ?? old.track.id) || (old.width <= Metadata.thumbnailSide * 5 ~/ 4) != _small) {
+      if (key != (old.track.albumKey ?? old.track.id)) _shown = null;
       _ask();
     }
   }
@@ -226,8 +230,13 @@ class _CoverImageState extends State<_CoverImage> {
   Widget build(BuildContext context) {
     final t = widget.track;
     if (_isReady) return _image(_ready(), t);
+    // It was cached when asked, so nothing was read, and the cache (bounded) has since let it go: read it again,
+    // or the placeholder would stay for good.
+    if (_future == null && !_routeSettling) _ask();
     return FutureBuilder<Uint8List?>(
       future: _future,
+      // The picture on screen until the read lands, so a cover read again doesn't blink.
+      initialData: _shown,
       builder: (context, snap) =>
           AnimatedSwitcher(duration: LayoutPrefs.dur(const Duration(milliseconds: 250)), child: _image(snap.data, t)),
     );
@@ -235,6 +244,7 @@ class _CoverImageState extends State<_CoverImage> {
 
   Widget _image(Uint8List? bytes, Track t) {
     if (bytes == null) return widget.placeholder(t);
+    _shown = bytes;
     return Image(
       key: ValueKey(t.albumKey ?? t.id),
       image: ResizeImage(MemoryImage(bytes), width: widget.width, allowUpscaling: false),
@@ -400,6 +410,9 @@ class _SeekBarState extends State<SeekBar> {
             final value = (_dragValue ?? position.inMilliseconds.toDouble()).clamp(0.0, max);
             final active = _hovering || _dragValue != null;
             final parts = widget.phonePlayer || widget.desktopPlayer;
+            // The compact desktop bar's 20 px row takes a slimmer pill; the full bar the phone's track, 4 px shorter
+            // handle to fit under its buttons.
+            final slim = widget.desktopPlayer && widget.compact;
             final pill = parts && LayoutPrefs.instance.progressShape == ProgressBarShape.pill;
             final thin = parts && LayoutPrefs.instance.progressShape == ProgressBarShape.thin;
             final colors = AppColors.of(context);
@@ -412,17 +425,22 @@ class _SeekBarState extends State<SeekBar> {
                 data: thin
                     ? thinSliderTheme(SliderTheme.of(context), colors.textPrimary)
                     : SliderTheme.of(context).copyWith(
-                        trackHeight: pill ? (widget.desktopPlayer ? 9 : 16) : LayoutPrefs.instance.progressBar.height,
+                        trackHeight: pill ? (slim ? 9 : 16) : LayoutPrefs.instance.progressBar.height,
                         trackShape: pill
                             ? const PillSeekTrack()
                             : wavy
                             ? WavySeekTrack(motion: clock)
-                            : null,
+                            // Its own look, not the app's Slider look.
+                            : const RoundedRectSliderTrackShape(),
                         activeTrackColor: pill ? colors.inverse : colors.accent,
-                        inactiveTrackColor: pill ? colors.inverse.withValues(alpha: 0.18) : null,
-                        thumbColor: pill ? colors.inverse : null,
+                        inactiveTrackColor: pill
+                            ? colors.inverse.withValues(alpha: 0.18)
+                            : colors.textPrimary.withValues(alpha: 0.3),
+                        thumbColor: pill ? colors.inverse : colors.accent,
+                        overlayShape: pill ? null : const RoundSliderOverlayShape(overlayRadius: 14),
+                        overlayColor: pill ? null : colors.accent.withValues(alpha: 0.12),
                         thumbShape: pill
-                            ? BarThumbShape(height: widget.desktopPlayer ? (widget.compact ? 14 : 18) : 36)
+                            ? BarThumbShape(height: slim ? 14 : (widget.desktopPlayer ? 32 : 36))
                             : RoundSliderThumbShape(
                                 enabledThumbRadius: active || !widget.inline
                                     ? (LayoutPrefs.instance.progressBar == ProgressBarStyle.thick ? 8 : 6)
@@ -432,7 +450,7 @@ class _SeekBarState extends State<SeekBar> {
                         padding: EdgeInsets.zero,
                       ),
                 child: SizedBox(
-                  height: pill && !widget.desktopPlayer ? 36 : 24,
+                  height: pill && !slim ? (widget.desktopPlayer ? 32 : 36) : 24,
                   child: Slider(
                     value: value,
                     max: max,

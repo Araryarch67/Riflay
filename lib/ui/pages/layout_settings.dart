@@ -226,8 +226,11 @@ class LayoutSettings extends StatelessWidget {
               ),
               SettingTile(
                 icon: Icons.tune_rounded,
-                title: const Text('Volume slider look'),
-                subtitle: Text('Classic, a thin line, or a thick pill with a bar handle', style: muted),
+                title: const Text('Slider look'),
+                subtitle: Text(
+                  'Every slider: volume, the equalizer and settings. Classic, a thin line, or a thick pill with a bar handle',
+                  style: muted,
+                ),
                 control: OptionPicker<VolumeSliderShape>(
                   value: p.volumeSlider,
                   onChanged: p.setVolumeSlider,

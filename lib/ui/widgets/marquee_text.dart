@@ -22,9 +22,13 @@ class MarqueeText extends StatefulWidget {
     this.pause = const Duration(seconds: 2),
     this.gap = 48,
     this.fade = 16,
+    this.spans,
   });
 
   final String text;
+
+  /// The same [text] in pieces (links, say), drawn instead of the plain string. Measured as [text].
+  final List<InlineSpan>? spans;
   final TextStyle? style;
 
   /// Logical pixels a second.
@@ -135,6 +139,20 @@ class _MarqueeTextState extends State<MarqueeText> with SingleTickerProviderStat
     return moving <= 0 ? 0 : moving * (width + widget.gap);
   }
 
+  Widget _line(TextStyle style, {bool ellipsis = false}) {
+    final overflow = ellipsis ? TextOverflow.ellipsis : null;
+    final spans = widget.spans;
+    return spans == null
+        ? Text(widget.text, maxLines: 1, softWrap: false, overflow: overflow, style: style)
+        : Text.rich(
+            TextSpan(children: spans),
+            maxLines: 1,
+            softWrap: false,
+            overflow: overflow,
+            style: style,
+          );
+  }
+
   @override
   Widget build(BuildContext context) {
     final style = DefaultTextStyle.of(context).style.merge(widget.style);
@@ -152,7 +170,7 @@ class _MarqueeTextState extends State<MarqueeText> with SingleTickerProviderStat
 
         if (still || !box.hasBoundedWidth || width <= box.maxWidth) {
           if (_running != null) _stop();
-          return Text(widget.text, maxLines: 1, softWrap: false, overflow: TextOverflow.ellipsis, style: style);
+          return _line(style, ellipsis: true);
         }
 
         // Started after this frame: a ticker shouldn't start mid-build.
@@ -162,7 +180,7 @@ class _MarqueeTextState extends State<MarqueeText> with SingleTickerProviderStat
           });
         }
 
-        final line = Text(widget.text, maxLines: 1, softWrap: false, style: style);
+        final line = _line(style);
         final strip = OverflowBox(
           alignment: AlignmentDirectional.centerStart,
           minWidth: 0,

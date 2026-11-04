@@ -148,40 +148,100 @@ class SleepTimerPanel extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
               child: Text('The music fades out, then stops', style: muted),
             ),
-            for (final m in SleepTimer.presets)
-              ListTile(
-                leading: const Icon(Icons.timer_outlined),
-                title: Text('$m minutes'),
-                onTap: () => closeAfter(() => sleep.start(Duration(minutes: m))),
-              ),
-            ListTile(
-              leading: const Icon(Icons.music_note_rounded),
-              title: const Text('End of this song'),
-              onTap: () => closeAfter(sleep.startEndOfSong),
+            _Group(
+              icon: Icons.timer_outlined,
+              title: 'After a while',
+              children: [
+                for (final m in SleepTimer.presets)
+                  _Choice('$m minutes', onTap: () => closeAfter(() => sleep.start(Duration(minutes: m)))),
+                _Choice(
+                  'Custom time',
+                  icon: Icons.edit_outlined,
+                  onTap: () async {
+                    final picked = await showDialog<Duration>(context: context, builder: (_) => const _CustomTime());
+                    if (picked == null || !context.mounted) return;
+                    closeAfter(() => sleep.start(picked));
+                  },
+                ),
+              ],
             ),
-            ListTile(
-              leading: const Icon(Icons.queue_music_rounded),
-              title: const Text('After'),
-              trailing: Wrap(
-                spacing: 6,
-                children: [
-                  for (final n in SleepTimer.songPresets)
-                    ActionChip(label: Text('$n songs'), onPressed: () => closeAfter(() => sleep.startEndOfSong(n))),
-                ],
-              ),
-            ),
-            ListTile(
-              leading: const Icon(Icons.edit_outlined),
-              title: const Text('Custom time'),
-              onTap: () async {
-                final picked = await showDialog<Duration>(context: context, builder: (_) => const _CustomTime());
-                if (picked == null || !context.mounted) return;
-                closeAfter(() => sleep.start(picked));
-              },
+            _Group(
+              icon: Icons.queue_music_rounded,
+              title: 'After songs',
+              children: [
+                _Choice('End of this song', onTap: () => closeAfter(sleep.startEndOfSong)),
+                for (final n in SleepTimer.songPresets)
+                  _Choice('$n songs', onTap: () => closeAfter(() => sleep.startEndOfSong(n))),
+              ],
             ),
           ],
           const SizedBox(height: 12),
         ],
+      ),
+    );
+  }
+}
+
+/// A heading with its choices under it, wrapping onto as many lines as the sheet needs.
+class _Group extends StatelessWidget {
+  const _Group({required this.icon, required this.title, required this.children});
+
+  final IconData icon;
+  final String title;
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
+    final label = Theme.of(context).textTheme.labelLarge
+        ?.copyWith(color: colors.textSecondary, fontWeight: FontWeight.w700);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 12, 24, 4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 18, color: colors.textSecondary),
+              const SizedBox(width: 8),
+              Text(title, style: label),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Wrap(spacing: 8, runSpacing: 8, children: children),
+        ],
+      ),
+    );
+  }
+}
+
+/// One choice: a soft pill, with an icon when it opens something more.
+class _Choice extends StatelessWidget {
+  const _Choice(this.label, {required this.onTap, this.icon});
+
+  final String label;
+  final VoidCallback onTap;
+  final IconData? icon;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
+    return Material(
+      color: colors.hover,
+      shape: const StadiumBorder(),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (icon != null) ...[Icon(icon, size: 16, color: colors.textPrimary), const SizedBox(width: 6)],
+              Text(label, style: Theme.of(context).textTheme.labelLarge?.copyWith(color: colors.textPrimary)),
+            ],
+          ),
+        ),
       ),
     );
   }

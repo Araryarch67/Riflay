@@ -169,7 +169,7 @@ class MediaKitPlayer extends AudioPlayerPlatform {
         // Riflay: the sound output failing (a device that is busy or can't take the format, a
         // filter that won't build) says nothing about the song. mpv keeps playing it without
         // sound, so don't report it as a failed song: the app would skip to the next one.
-        if (isOutputError(error)) {
+        if (isOutputError(error) || (JustAudioMediaKit.changingOutput?.call() ?? false)) {
           _logger.warning('Audio output problem, the song goes on: $error');
           return;
         }

@@ -16,6 +16,7 @@ void main() {
   tearDown(prefs.reset);
 
   testWidgets('off preserves the cover with a minimal glow without requiring an audio player', (tester) async {
+    await prefs.setVisualizer(false);
     const cover = SizedBox(key: ValueKey('art'), width: 200, height: 200);
     await tester.pumpWidget(
       const MaterialApp(
@@ -60,8 +61,10 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('the visualizer is a normal setting in Layout, off by default', (tester) async {
-    expect(prefs.visualizer, isFalse);
+  testWidgets('the visualizer is a normal setting in Layout, on (Pulse) by default', (tester) async {
+    expect(prefs.visualizer, isTrue);
+    expect(prefs.visualizerStyle, VisualizerStyle.pulse);
+    await prefs.setVisualizer(false);
     await prefs.setVisualizerStyle(VisualizerStyle.orbit);
     await tester.pumpWidget(const MaterialApp(home: AudioVisualizer(child: SizedBox.square(dimension: 200))));
     expect(find.byType(VisualizerCanvas), findsNothing);
@@ -77,6 +80,7 @@ void main() {
   });
 
   testWidgets('Cover: Square is a plain rounded card, no flower, no glow, no motion', (tester) async {
+    await prefs.setVisualizer(false);
     await prefs.setPlayerCover(PlayerCover.square);
     expect(prefs.visualizerCoverShape, VisualizerCoverShape.square);
     expect(prefs.visualizerEnabled, isFalse);
@@ -94,6 +98,7 @@ void main() {
     tester.view.physicalSize = const Size(900, 4000);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
+    await prefs.setVisualizer(false);
     await tester.pumpWidget(
       const MaterialApp(
         home: Scaffold(body: SingleChildScrollView(child: LayoutSettings())),

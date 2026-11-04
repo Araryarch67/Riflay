@@ -880,7 +880,7 @@ class Appearance extends ChangeNotifier {
   CoverColorMode coverMode = CoverColorMode.player;
 
   /// How strongly "Whole app" tints (0 subtle, 1 strong).
-  double coverStrength = 0.5;
+  double coverStrength = 1;
 
   /// Whether the player and pages are tinted with the cover's colour.
   bool get coverColors => coverMode != CoverColorMode.off;
@@ -1126,7 +1126,7 @@ class Appearance extends ChangeNotifier {
       customBackground = const Color(0xFF14161B);
       customText = null;
       coverMode = CoverColorMode.player;
-      coverStrength = 0.5;
+      coverStrength = 1;
       nowPlaying = NowPlayingBackground.color;
       reactiveBackground = false;
       glass = false;

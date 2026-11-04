@@ -297,6 +297,7 @@ void main() {
     ticks.add(const Duration(seconds: 13));
     await tester.pump(const Duration(milliseconds: 500));
     await tester.pump(const Duration(milliseconds: 500)); // the old trio leaves once its fade is done
+    await tester.pump(const Duration(milliseconds: 700)); // the new one fades in after it, never both at once
     expect(find.textContaining('Line '), findsNWidgets(3));
     expect(find.text('Line 3'), findsOneWidget);
     expect(find.text('Line 4'), findsOneWidget);

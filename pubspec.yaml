@@ -35,6 +35,8 @@ dependencies:
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
   just_audio: ^0.10.6
+  # Unplugged headphones pause playback; other apps' sound does not (see PlayerController).
+  audio_session: ^0.2.4
   just_audio_media_kit: ^2.1.0
   media_kit_libs_audio: ^1.0.7
   media_kit: ^1.2.6

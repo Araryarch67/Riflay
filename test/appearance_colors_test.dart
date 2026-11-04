@@ -116,7 +116,7 @@ void main() {
       expect(a.theme, ThemeChoice.dynamic);
       expect(a.accent, AccentChoice.theme);
       expect(a.coverMode, CoverColorMode.player);
-      expect(a.coverStrength, 0.5);
+      expect(a.coverStrength, 1, reason: "Strong by default");
     });
   });
 

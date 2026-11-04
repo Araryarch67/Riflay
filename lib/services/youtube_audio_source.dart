@@ -15,7 +15,7 @@ import 'youtube_importer.dart';
 import 'youtube_stream.dart';
 import 'ytdlp.dart';
 
-/// How a YouTube song is being streamed, for Stats for nerds.
+/// How a YouTube song is being streamed, for Detail stats.
 class StreamStats {
   /// What YouTube serves for it (null until resolved).
   ResolvedAudio? stream;

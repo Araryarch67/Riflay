@@ -1,3 +1,4 @@
+import '../platform/features.dart';
 import 'appearance.dart';
 import 'layout_prefs.dart';
 
@@ -25,6 +26,8 @@ class PlayerPreset {
     this.lyricsLines = LyricsLines.all,
     this.volumeSlider = VolumeSliderShape.classic,
     this.background,
+    this.visualizer = false,
+    this.visualizerStyle = VisualizerStyle.pulse,
   });
 
   final String name;
@@ -51,8 +54,16 @@ class PlayerPreset {
   /// The Now Playing background that goes with the look; null leaves the user's choice alone.
   final NowPlayingBackground? background;
 
-  /// Today's look.
-  static const classic = PlayerPreset(name: 'Classic', note: 'The player as it has always been');
+  /// The audio visualizer around the cover, and its style. Only counted where the visualizer exists (not on the web).
+  final bool visualizer;
+  final VisualizerStyle visualizerStyle;
+
+  /// Today's look, with the visualizer pulsing around the cover.
+  static const classic = PlayerPreset(
+    name: 'Classic',
+    note: 'The player as it has always been, the cover pulsing with the music',
+    visualizer: true,
+  );
 
   static const stacked = PlayerPreset(
     name: 'Stacked',
@@ -72,11 +83,10 @@ class PlayerPreset {
 
   static const kawaii = PlayerPreset(
     name: 'Kawaii',
-    note: 'The cover fades into the page, with plain icons, a thin line and the volume behind a button',
+    note: 'The cover fades into the page, with plain icons, a wavy line and the volume behind a button',
     cover: PlayerCover.background,
     header: PlayerHeader.playingFrom,
     titleActions: TitleActions.plain,
-    progressShape: ProgressBarShape.thin,
     timeLeft: true,
     transport: PlayerTransport.plain,
     volume: false,
@@ -87,7 +97,7 @@ class PlayerPreset {
     playingRow: PlayingRowStyle.card,
     badge: QualityBadgePlace.timeRow,
     background: NowPlayingBackground.video,
-    volumeSlider: VolumeSliderShape.thin,
+    volumeSlider: VolumeSliderShape.pill,
   );
 
   static const all = [classic, stacked, kawaii];
@@ -113,6 +123,11 @@ class PlayerPreset {
     differ(p.lyricsLines, lyricsLines);
     differ(p.volumeSlider, volumeSlider);
     if (background != null) differ(Appearance.instance.nowPlaying, background!);
+    if (Features.audioVisualizer) {
+      differ(p.visualizer, visualizer);
+      // The style only shows while it is on.
+      if (visualizer) differ(p.visualizerStyle, visualizerStyle);
+    }
     return n;
   }
 
@@ -138,6 +153,8 @@ class PlayerPreset {
       p.qualityBadgePlace = badge;
       p.lyricsLines = lyricsLines;
       p.volumeSlider = volumeSlider;
+      p.visualizer = visualizer;
+      if (visualizer) p.visualizerStyle = visualizerStyle;
     });
     if (background != null) await Appearance.instance.setNowPlaying(background!);
   }

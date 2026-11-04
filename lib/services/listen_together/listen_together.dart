@@ -84,6 +84,10 @@ class ListenTogether extends ChangeNotifier {
 
   static ListenTogether of(PlayerController c) => _instances[c] ??= ListenTogether(c);
 
+  /// Makes [session] the one [of] returns for [c] (tests with a made-up connection).
+  @visibleForTesting
+  static void use(PlayerController c, ListenTogether session) => _instances[c] = session;
+
   final PlayerController player;
 
   /// Over the internet through public MQTT brokers (no server of ours). Available to all users.
@@ -121,6 +125,12 @@ class ListenTogether extends ChangeNotifier {
   String? get hostName => _hostName;
   List<String> get listeners => List.unmodifiable(_listeners);
   bool get suggestionsAllowed => _suggestionsAllowed;
+
+  /// Guest: the player is being brought to the host's song right now (not a song the guest picked).
+  bool get followingHost => _applying;
+
+  /// Host: the songs friends suggested, so each new one queues after the earlier ones (first come, first played).
+  final _suggested = <String>{};
   bool get seekingAllowed => _seekingAllowed;
   SharedTrack? get hostTrack => _hostTrack;
   List<SharedTrack> get upNext => List.unmodifiable(_upNext);
@@ -209,6 +219,7 @@ class ListenTogether extends ChangeNotifier {
     _hostName = name;
     _ownName = name;
     _listeners = const [];
+    _suggested.clear();
     _suggestionsAllowed = true;
     _seekingAllowed = false;
     _subs.add(transport.peers.listen(_onPeer, onDone: _onTransportEnded));
@@ -287,8 +298,10 @@ class ListenTogether extends ChangeNotifier {
       case Suggest(:final track):
         final from = _peers[peer];
         if (from == null || !_suggestionsAllowed) return;
-        unawaited(player.playNext([track.toTrack()]));
-        _emit('$from suggested ${track.title}');
+        final song = track.toTrack();
+        unawaited(player.queueAfter([song], after: _suggested));
+        _suggested.add(song.id);
+        _emit('$from added ${track.title} to the queue');
       case SeekRequest(:final positionMs, :final videoId):
         if (_peers[peer] == null || !_seekingAllowed || player.currentTrack?.videoId != videoId) return;
         final duration = player.player.duration?.inMilliseconds ?? player.currentTrack?.duration?.inMilliseconds;
@@ -596,19 +609,24 @@ class ListenTogether extends ChangeNotifier {
     unawaited(leave());
   }
 
-  Future<void> suggest(Track track) async {
+  /// Guest: asks the host to queue [track]. [announce]: also say so (or why not) where the guest is, for a
+  /// song picked to play rather than from a menu that says it itself.
+  Future<void> suggest(Track track, {bool announce = false}) async {
     if (_role != ListenRole.guest) return;
     final shared = SharedTrack.of(track);
-    if (shared == null) {
-      _setProblem('Only songs from YouTube Music can be suggested.');
-      return;
-    }
-    if (!_suggestionsAllowed) {
-      _setProblem('The host isn\'t taking suggestions right now.');
+    final refused = shared == null
+        ? 'Only songs from YouTube Music can be added to ${_hostName ?? 'the host'}\'s queue.'
+        : !_suggestionsAllowed
+        ? '${_hostName ?? 'The host'} isn\'t taking songs right now.'
+        : null;
+    if (refused != null) {
+      _setProblem(refused);
+      if (announce) _emit(refused);
       return;
     }
     _problem = null;
-    _conn?.send(Suggest(shared, from: _ownName ?? 'Someone').encode());
+    _conn?.send(Suggest(shared!, from: _ownName ?? 'Someone').encode());
+    if (announce) _emit('Added ${track.title} to ${_hostName ?? 'the host'}\'s queue');
     notifyListeners();
   }
 

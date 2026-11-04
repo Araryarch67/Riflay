@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:riflay/services/download_prefs.dart';
 import 'package:riflay/ui/download_options.dart';
+import 'package:riflay/ui/widgets/skeleton.dart';
 
 // 250 seconds of Opus 128 kbps (4,000,000 bytes) and AAC 130 kbps.
 const _offered = [
@@ -63,22 +64,22 @@ void main() {
     expect(find.text('64 kbps · ~1.9 MB'), findsOneWidget);
   });
 
-  testWidgets('chips spin while the formats are looked up, then show sizes', (tester) async {
+  testWidgets('chips show a placeholder while the formats are looked up, then show sizes', (tester) async {
     final found = Completer<List<AudioCandidate>>();
     await _open(tester, initial: const DownloadChoice(DownloadFormat.opus), candidates: found.future);
-    expect(find.byType(CircularProgressIndicator), findsWidgets);
+    expect(find.byType(SkeletonBox), findsWidgets);
     expect(find.textContaining('~'), findsNothing);
     found.complete(_offered);
     await tester.pump();
     await tester.pump();
-    expect(find.byType(CircularProgressIndicator), findsNothing);
+    expect(find.byType(SkeletonBox), findsNothing);
     expect(find.textContaining('~3.8 MB'), findsWidgets);
   });
 
   testWidgets('no sizes without a song (Download all) or when the lookup fails', (tester) async {
     await _open(tester, initial: const DownloadChoice(DownloadFormat.opus));
     expect(find.textContaining('~'), findsNothing);
-    expect(find.byType(CircularProgressIndicator), findsNothing);
+    expect(find.byType(SkeletonBox), findsNothing);
     expect(find.text('Best available'), findsOneWidget);
     await tester.pumpWidget(const SizedBox());
     await tester.pump(const Duration(milliseconds: 400));
@@ -88,7 +89,7 @@ void main() {
     await tester.pump();
     await tester.pump();
     expect(find.textContaining('~'), findsNothing);
-    expect(find.byType(CircularProgressIndicator), findsNothing);
+    expect(find.byType(SkeletonBox), findsNothing);
   });
 
   testWidgets('the recommended choice is tagged and preselected for someone who never chose', (tester) async {
@@ -167,7 +168,7 @@ void main() {
     tester,
   ) async {
     final result = await _open(tester, initial: const DownloadChoice.video(VideoContainer.mp4));
-    expect(find.byType(CircularProgressIndicator), findsNothing, reason: 'no lookup runs, so no size would come');
+    expect(find.byType(SkeletonBox), findsNothing, reason: 'no lookup runs, so no size would come');
     await tester.tap(find.text('Download'));
     await tester.pump();
     expect((await result)?.isVideo, isFalse);

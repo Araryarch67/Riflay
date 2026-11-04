@@ -60,15 +60,22 @@ String _codecName(SignalPath p) => p.isDop
         final c => c.toUpperCase(),
       };
 
-/// Small "FLAC · 24-bit / 96 kHz" label; tap for the full signal path.
+/// What kind of sound a song is, as the badge names it: its word and its icon.
+(String, IconData) _tier(SignalPath p) {
+  if (p.isDsd || p.isDop) return ('DSD', Icons.blur_on_rounded);
+  if (!p.lossless) return ('Lossy', Icons.graphic_eq_rounded);
+  final bits = SignalPath.bitsOf(p.inFormat);
+  final hiRes = p.inRate > 48000 || (p.sourceBits ?? (p.inFormat.startsWith('float') ? null : bits) ?? 16) > 16;
+  return hiRes ? ('Hi-Res', Icons.diamond_rounded) : ('Lossless', Icons.diamond_outlined);
+}
+
+/// "Opus · Lossy · 160 kbps", "FLAC · Hi-Res · 24-bit / 96 kHz" with the tier's icon, no frame: tap for the full
+/// signal path.
 class QualityBadge extends StatelessWidget {
-  const QualityBadge({super.key, this.onDark = false, this.soft = false, this.alignment = Alignment.centerLeft});
+  const QualityBadge({super.key, this.onDark = false, this.alignment = Alignment.centerLeft});
 
   /// On a coloured background (phone now playing): white text instead of grey.
   final bool onDark;
-
-  /// A soft translucent pill with no outline, for a page that is a picture.
-  final bool soft;
 
   /// Where it sits in the room it is given.
   final Alignment alignment;
@@ -78,44 +85,60 @@ class QualityBadge extends StatelessWidget {
     if (!AudioEngine.supported) return const SizedBox.shrink();
     return _SignalPathBuilder(
       builder: (context, p) {
-        if (p == null) return const SizedBox(height: 28);
-        final label = p.isDop
-            ? '${_codecName(p)} · DoP'
-            : p.lossless && !p.isDsd
-            ? '${_codecName(p)} · ${SignalPath.describe(p.inFormat, p.inRate, stored: p.sourceBits)}'
+        if (p == null) return const SizedBox(height: 24);
+        final (tier, icon) = p.bitPerfect ? ('Bit-perfect', Icons.verified_rounded) : _tier(p);
+        final detail = p.isDop
+            ? 'DoP'
             : p.isDsd
-            ? '${_codecName(p)} → PCM ${SignalPath.formatRate(p.inRate)}'
-            : '${_codecName(p)}${p.bitrate == null || p.bitrate == 0 ? '' : ' · ${(p.bitrate! / 1000).round()} kbps'}';
+            ? 'PCM ${SignalPath.formatRate(p.inRate)}'
+            : p.lossless
+            ? SignalPath.describe(p.inFormat, p.inRate, stored: p.sourceBits)
+            : p.bitrate == null || p.bitrate == 0
+            ? null
+            : '${(p.bitrate! / 1000).round()} kbps';
         final color = p.bitPerfect
             ? AppColors.accent
             : onDark
-            ? Colors.white70
+            ? Colors.white
             : AppColors.textSecondary;
+        final base = Theme.of(context).textTheme.labelSmall?.copyWith(color: color, letterSpacing: 0.3);
         return Align(
           alignment: alignment,
           child: Tooltip(
             message: 'Signal path',
             child: InkWell(
-              borderRadius: BorderRadius.circular(4),
+              borderRadius: BorderRadius.circular(6),
               onTap: () => showSignalPath(context),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: soft ? Colors.white.withValues(alpha: 0.14) : null,
-                  border: soft ? null : Border.all(color: color.withValues(alpha: 0.6)),
-                  borderRadius: BorderRadius.circular(soft ? 14 : 4),
-                ),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    if (p.bitPerfect) ...[
-                      Icon(Icons.verified_rounded, size: 14, color: color),
-                      const SizedBox(width: 4),
-                    ],
-                    Text(
-                      p.bitPerfect ? 'Bit-perfect · $label' : label,
-                      style: Theme.of(context).textTheme.labelSmall
-                          ?.copyWith(color: color, fontWeight: FontWeight.w700, letterSpacing: 0.3),
+                    Icon(icon, size: 14, color: color),
+                    const SizedBox(width: 5),
+                    Flexible(
+                      child: Text.rich(
+                        TextSpan(
+                          children: [
+                            TextSpan(
+                              text: _codecName(p),
+                              style: const TextStyle(fontWeight: FontWeight.w800),
+                            ),
+                            TextSpan(
+                              text: '  $tier',
+                              style: const TextStyle(fontWeight: FontWeight.w600),
+                            ),
+                            if (detail != null)
+                              TextSpan(
+                                text: '  ·  $detail',
+                                style: TextStyle(fontWeight: FontWeight.w500, color: color.withValues(alpha: 0.7)),
+                              ),
+                          ],
+                        ),
+                        style: base,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                   ],
                 ),

@@ -623,10 +623,22 @@ class YoutubeMusicAccount extends ChangeNotifier {
     _likedIds
       ..clear()
       ..addAll(liked.map((t) => t.id));
+    // YouTube Music's list lags a follow or an unfollow by a while: the edit made here wins until it catches up.
+    final shownArtists = _withFollowEdits(artists, now?.artists ?? const []);
     _followedIds
       ..clear()
-      ..addAll(artists.map((a) => a.id));
-    final l = _libraryNow = YoutubeMusicLibrary(liked: liked, playlists: lists, recent: recent, artists: artists);
+      ..addAll(shownArtists.map((a) => a.id))
+      // A follow made here counts even before any list has the artist's row.
+      ..addAll([
+        for (final e in _followEdits.entries)
+          if (e.value.following) e.key,
+      ]);
+    final l = _libraryNow = YoutubeMusicLibrary(
+      liked: liked,
+      playlists: lists,
+      recent: recent,
+      artists: shownArtists,
+    );
     notifyListeners();
     return l;
   }
@@ -743,10 +755,34 @@ class YoutubeMusicAccount extends ChangeNotifier {
   final Set<String> _followedIds = {};
   bool isFollowing(String artistId) => _followedIds.contains(artistId);
 
+  /// Follows and unfollows made here, and when: YouTube Music's own list shows them only after a while.
+  final _followEdits = <String, ({bool following, DateTime at})>{};
+
+  /// How long an edit made here outweighs YouTube Music's list.
+  static const _followEditLife = Duration(minutes: 2);
+
+  /// [fetched] (YouTube Music's list) with the recent follows and unfollows made here applied; a followed artist
+  /// missing from it keeps its row from [shown].
+  List<RemotePlaylist> _withFollowEdits(List<RemotePlaylist> fetched, List<RemotePlaylist> shown) {
+    final now = DateTime.now();
+    _followEdits.removeWhere((_, e) => now.difference(e.at) > _followEditLife);
+    if (_followEdits.isEmpty) return fetched;
+    return [
+      for (final a in fetched)
+        if (_followEdits[a.id]?.following ?? true) a,
+      for (final e in _followEdits.entries)
+        if (e.value.following && !fetched.any((a) => a.id == e.key)) ?shown.where((a) => a.id == e.key).firstOrNull,
+    ];
+  }
+
   /// Follows or unfollows an artist in YouTube Music. Shown right away;
   /// undone if YouTube Music refuses.
   Future<void> setFollowing(String artistId, bool following) async {
     following ? _followedIds.add(artistId) : _followedIds.remove(artistId);
+    final previous = _followEdits[artistId];
+    _followEdits[artistId] = (following: following, at: DateTime.now());
+    // A library load already on its way has the old list: it must not undo this.
+    _edits++;
     if (!following) {
       _patchLibrary(
         (l) => l.copyWith(
@@ -763,10 +799,17 @@ class YoutubeMusicAccount extends ChangeNotifier {
       // A new artist's name and picture come from YouTube Music's list.
       if (following) {
         final artists = await followedArtists();
-        if (artists.any((a) => a.id == artistId)) _patchLibrary((l) => l.copyWith(artists: artists));
+        if (artists.any((a) => a.id == artistId)) {
+          _patchLibrary((l) => l.copyWith(artists: _withFollowEdits(artists, l.artists)), edit: false);
+        }
       }
     } catch (_) {
       following ? _followedIds.remove(artistId) : _followedIds.add(artistId);
+      if (previous == null) {
+        _followEdits.remove(artistId);
+      } else {
+        _followEdits[artistId] = previous;
+      }
       notifyListeners();
       rethrow;
     }

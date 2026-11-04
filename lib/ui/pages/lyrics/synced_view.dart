@@ -207,7 +207,8 @@ class _SyncedLyricsViewState extends State<SyncedLyricsView> with _Extras {
   }
 
   /// Lines shown: Focused. The previous, the current and the next line, each in a third of the view, so the current
-  /// one sits in the middle with room around it. Moving on crossfades to the next trio (a short slide with motion on).
+  /// one sits in the middle with room around it. Moving on fades the trio out, then the next one in (a slight rise
+  /// with motion on), never both at once.
   Widget _focused(TextStyle? style, Color unsung, double pad) {
     final lines = widget.lyrics.lines;
     final side = style?.copyWith(fontSize: style.fontSize == null ? null : style.fontSize! * 0.8);
@@ -233,17 +234,22 @@ class _SyncedLyricsViewState extends State<SyncedLyricsView> with _Extras {
         final before = current != null && current > 0 ? current - 1 : null;
         // Before the first line is sung, it waits as the next one.
         final after = current != null ? (current + 1 < lines.length ? current + 1 : null) : (at < 0 ? 0 : null);
+        // Calm: the old lines fade out first, then the new ones fade in with a slight rise, so two sets of lines
+        // are never on screen at once. Each half has its own soft curve (the old set runs it in reverse).
         return AnimatedSwitcher(
-          duration: LayoutPrefs.dur(const Duration(milliseconds: 350)),
-          transitionBuilder: (child, anim) => FadeTransition(
-            opacity: anim,
-            child: LayoutPrefs.moves
-                ? SlideTransition(
-                    position: Tween(begin: const Offset(0, 0.04), end: Offset.zero).animate(anim),
-                    child: child,
-                  )
-                : child,
-          ),
+          duration: LayoutPrefs.dur(const Duration(milliseconds: 640)),
+          transitionBuilder: (child, anim) {
+            final half = CurvedAnimation(parent: anim, curve: const Interval(0.5, 1, curve: Curves.easeInOutCubic));
+            return FadeTransition(
+              opacity: half,
+              child: LayoutPrefs.moves
+                  ? SlideTransition(
+                      position: Tween(begin: const Offset(0, 0.012), end: Offset.zero).animate(half),
+                      child: child,
+                    )
+                  : child,
+            );
+          },
           child: SizedBox.expand(
             key: ValueKey(at),
             child: Padding(

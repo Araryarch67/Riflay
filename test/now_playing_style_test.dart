@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:riflay/models/track.dart';
 import 'package:riflay/services/appearance.dart';
+import 'package:riflay/services/audio_engine.dart';
 import 'package:riflay/services/layout_prefs.dart';
 import 'package:riflay/services/lyrics.dart';
 import 'package:riflay/services/player_controller.dart';
@@ -18,6 +19,7 @@ import 'package:riflay/ui/shell_scope.dart';
 import 'package:riflay/ui/widgets/controls.dart';
 import 'package:riflay/ui/widgets/faded_cover.dart';
 import 'package:riflay/ui/widgets/signal_path.dart';
+import 'package:riflay/ui/widgets/stats_for_nerds.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 final _track = Track(id: 'style-test', uri: Uri.parse('file:///style-test.mp3'), title: 'Style test', artist: 'Artist');
@@ -163,7 +165,7 @@ void main() {
     expect(p.playerCover, PlayerCover.background);
     expect(p.playerHeader, PlayerHeader.playingFrom);
     expect(p.titleActions, TitleActions.plain);
-    expect(p.progressShape, ProgressBarShape.thin);
+    expect(p.progressShape, ProgressBarShape.wavy);
     expect(p.showVolumeRow, isFalse);
     expect(p.playingRow, PlayingRowStyle.card);
     expect(p.progressBar, ProgressBarStyle.thin);
@@ -180,6 +182,8 @@ void main() {
     await PlayerPreset.classic.apply(p);
     expect(p.classicPlayerFace, isTrue);
     expect(p.isCustomised, isFalse);
+    expect(p.visualizer, isTrue);
+    expect(p.visualizerStyle, VisualizerStyle.pulse);
   });
 
   test('old saved cover shapes migrate to Square, Flower or Background', () {
@@ -227,6 +231,25 @@ void main() {
         Navigator.of(tester.element(find.text('Share'))).pop();
         await tester.pumpAndSettle();
       }
+      await _close(tester, c);
+    }
+  });
+
+  testWidgets('Detail stats show over the cover on every preset, the cover-as-page ones too', (tester) async {
+    addTearDown(() => statsForNerds.value = false);
+    for (final preset in PlayerPreset.all) {
+      await tester.runAsync(() => preset.apply(p));
+      statsForNerds.value = true;
+      final c = await _show(tester, const NowPlayingPage(), const Size(412, 915));
+      expect(find.byType(NowPlayingCover), findsOneWidget, reason: preset.name);
+      expect(
+        find.text('Detail stats'),
+        findsOneWidget,
+        reason: '${preset.name}: the panel is up',
+        skip: !AudioEngine.supported,
+      );
+      expect(tester.takeException(), isNull, reason: preset.name);
+      statsForNerds.value = false;
       await _close(tester, c);
     }
   });

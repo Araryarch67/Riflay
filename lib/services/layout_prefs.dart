@@ -242,8 +242,7 @@ enum AlbumHeaderStyle {
   final String label;
 }
 
-/// Where the sound-quality badge (FLAC, Opus 130 kbps...) sits on the phone's player.
-/// The look of the volume slider on the phone player (its row and the speaker's popup).
+/// The look of every slider in the app (Settings › Layout › Slider look); the progress bar has its own shape.
 enum VolumeSliderShape {
   classic('Classic'),
   thin('Thin line'),
@@ -253,6 +252,7 @@ enum VolumeSliderShape {
   final String label;
 }
 
+/// Where the sound-quality badge (FLAC, Opus 130 kbps...) sits on the phone's player.
 enum QualityBadgePlace {
   underArtist('Under the artist'),
   timeRow('In the time row');
@@ -388,7 +388,7 @@ class LayoutPrefs extends ChangeNotifier {
   TabBarStyle tabBar = TabBarStyle.capsule;
   DesktopBarStyle desktopBar = DesktopBarStyle.classic;
   bool showQualityBadge = true;
-  bool visualizer = false;
+  bool visualizer = true;
   bool get visualizerEnabled => visualizer && Features.audioVisualizer;
 
   /// The outline of the cover (and of what the visualizer pulses around): Square is the rounded square, anything else

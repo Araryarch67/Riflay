@@ -44,6 +44,10 @@ class FakeYtMusic {
   };
   final liked = <String>['l1'];
 
+  /// Channels followed, and what the Subscriptions list shows: it lags, as YouTube Music's does.
+  final followed = <String>['UCkobo'];
+  List<String>? subscriptionsShown;
+
   /// Times the library's playlist list was read.
   var listReads = 0;
 
@@ -73,6 +77,12 @@ class FakeYtMusic {
         return {'playlistId': id};
       case 'playlist/delete':
         playlists.remove(body['playlistId']);
+        return {};
+      case 'subscription/subscribe':
+        followed.addAll((body['channelIds'] as List).cast<String>());
+        return {};
+      case 'subscription/unsubscribe':
+        followed.removeWhere((body['channelIds'] as List).contains);
         return {};
       case 'like/like':
         liked.insert(0, (body['target'] as Map)['videoId'] as String);
@@ -107,6 +117,27 @@ class FakeYtMusic {
         return {'status': 'STATUS_SUCCEEDED', 'playlistEditResults': results};
       case 'browse':
         final id = body['browseId'] as String?;
+        if (id == 'FEmusic_library_corpus_artists') {
+          return {
+            'musicShelfRenderer': {
+              'contents': [
+                for (final c in subscriptionsShown ?? followed)
+                  {
+                    'musicResponsiveListItemRenderer': {
+                      'navigationEndpoint': {
+                        'browseEndpoint': {'browseId': c},
+                      },
+                      'flexColumns': [
+                        column([
+                          {'text': 'Artist $c'},
+                        ]),
+                      ],
+                    },
+                  },
+              ],
+            },
+          };
+        }
         if (id == 'FEmusic_liked_playlists') {
           listReads++;
           return {
@@ -218,6 +249,28 @@ void main() {
       expect(server.playlists.keys, ['PL1']);
       expect(server.playlists['PL1']!.rows.map((r) => r.$1), ['a', 'b']);
       expect(server.liked, ['z', 'l1']);
+    }, () => server.client);
+  });
+
+  test('an unfollow stays while YouTube Music\'s list still shows the artist', () async {
+    final server = FakeYtMusic();
+    await http.runWithClient(() async {
+      final a = await signedIn(server);
+      expect(a.isFollowing('UCkobo'), isTrue);
+      // The Subscriptions list keeps showing the artist for a while after the unfollow.
+      server.subscriptionsShown = ['UCkobo'];
+      await a.setFollowing('UCkobo', false);
+      expect(server.followed, isEmpty);
+      await a.library(refresh: true);
+      expect(a.isFollowing('UCkobo'), isFalse, reason: 'the stale list must not bring the artist back');
+      expect(a.libraryNow!.artists, isEmpty);
+
+      // And a follow stays while the list doesn't show it yet.
+      server.subscriptionsShown = const [];
+      await a.setFollowing('UCkobo', true);
+      await a.library(refresh: true);
+      expect(a.isFollowing('UCkobo'), isTrue);
+      expect(server.followed, ['UCkobo']);
     }, () => server.client);
   });
 

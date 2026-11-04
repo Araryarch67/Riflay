@@ -54,6 +54,11 @@ class JustAudioMediaKit extends JustAudioPlatform {
   /// more than once per AudioPlayer.
   static void Function(Player player)? onPlayerCreated;
 
+  /// Riflay: true while the app is changing the audio output or filters (a sound setting). mpv may report
+  /// errors as the output and filters are rebuilt; they say nothing about the song, so they must not be
+  /// taken for a song that can't play (the app would skip it).
+  static bool Function()? changingOutput;
+
   /// Riflay: when set, the app owns the volume (a 64-bit float filter, or
   /// mpv's own volume on a float output): just_audio's setVolume applies the
   /// app's level to the player instead of the one just_audio asked for.

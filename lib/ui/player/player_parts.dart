@@ -17,13 +17,14 @@ import '../theme.dart';
 import '../widgets/controls.dart';
 import '../widgets/marquee_text.dart';
 import '../widgets/signal_path.dart';
+import '../widgets/stats_for_nerds.dart' show NowPlayingCover;
 import '../widgets/sleep_timer_button.dart';
 import '../widgets/track_row.dart';
 import '../ytmusic_edit.dart';
 import 'more_sheet.dart';
 import 'now_playing_page.dart';
 import 'full_screen_player.dart' show ExpandedPanel, expandedPlayerPanel, showExpandedPlayer;
-import 'player_common.dart' show LinkText;
+import 'player_common.dart' show ArtistLinks;
 
 // The parts the player is assembled from (Settings › Look & feel › Layout › Player). The phone builds its Now
 // Playing from them; the desktop's expanded player, side panel and bar take the ones that fit a wide window.
@@ -400,15 +401,17 @@ class PlayerTitleBlock extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 2),
-              LinkText(
-                t?.artist ?? '',
-                style: text.titleMedium?.copyWith(color: onCover ? Colors.white70 : colors.textSecondary),
-                onTap: t == null ? null : openArtist(context, PlayerScope.read(context), t),
-              ),
-              // In every look: an outlined pill, or a soft translucent one on the Plain buttons' (Kawaii) page.
+              if (t == null)
+                const SizedBox.shrink()
+              else
+                ArtistLinks(
+                  track: t,
+                  style: text.titleMedium?.copyWith(color: onCover ? Colors.white70 : colors.textSecondary),
+                ),
+              // In every look: the tier's icon and the label, no frame.
               if (showBadge && LayoutPrefs.instance.qualityBadgePlace == QualityBadgePlace.underArtist) ...[
                 const SizedBox(height: 8),
-                QualityBadge(onDark: true, soft: style == TitleActions.plain),
+                const QualityBadge(onDark: true),
               ],
             ],
           ),
@@ -981,7 +984,7 @@ class ComposedNowPlaying extends StatelessWidget {
             phonePlayer: true,
             // Centred between the elapsed and the remaining time.
             middle: showBadge && p.qualityBadgePlace == QualityBadgePlace.timeRow
-                ? const QualityBadge(onDark: true, soft: true, alignment: Alignment.center)
+                ? const QualityBadge(onDark: true, alignment: Alignment.center)
                 : null,
           ),
           SizedBox(height: roomy ? 24 : 14),
@@ -1005,7 +1008,14 @@ class ComposedNowPlaying extends StatelessWidget {
         builder: (context, box) => Column(
           children: [
             Padding(padding: const EdgeInsets.symmetric(horizontal: 24), child: header),
-            const Expanded(child: SizedBox.shrink()),
+            // The cover shows through here: Detail stats sit over it, and a long-press opens their menu, as on a
+            // cover card.
+            const Expanded(
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: 16),
+                child: NowPlayingCover(child: SizedBox.expand()),
+              ),
+            ),
             controlsFor(box.maxHeight >= 760),
           ],
         ),

@@ -194,6 +194,13 @@ class CollectionPage extends StatelessWidget {
                         },
                       ),
                       ...actions,
+                      // An artist (yours, or a YouTube Music one with Follow): all of their songs into a playlist.
+                      if ((isArtist || actions.any((a) => a is FollowButton)) && tracks.isNotEmpty)
+                        IconButton(
+                          tooltip: 'Add all to playlist',
+                          onPressed: () => addToPlaylist(context, tracks),
+                          icon: const Icon(Icons.library_add_rounded),
+                        ),
                       if (isAll) ...[
                         const Spacer(),
                         IconButton(

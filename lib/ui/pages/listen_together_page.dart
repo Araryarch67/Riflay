@@ -86,6 +86,10 @@ class ListenTogetherPage extends StatefulWidget {
 
 class _ListenTogetherPageState extends State<ListenTogetherPage> {
   final _name = TextEditingController();
+  final _nameFocus = FocusNode();
+
+  /// Start or Join was tried without a name: the field says it's needed.
+  bool _nameMissing = false;
   final _code = TextEditingController();
   bool _busy = false;
   String? _error;
@@ -145,6 +149,7 @@ class _ListenTogetherPageState extends State<ListenTogetherPage> {
     _session?.removeListener(_followSession);
     _search?.cancel();
     _name.dispose();
+    _nameFocus.dispose();
     _code.dispose();
     super.dispose();
   }
@@ -155,7 +160,15 @@ class _ListenTogetherPageState extends State<ListenTogetherPage> {
     } catch (_) {}
   }
 
-  String get _who => _name.text.trim().isEmpty ? 'Me' : _name.text.trim();
+  String get _who => _name.text.trim();
+
+  /// Everyone in a session goes by a name (the host sees who joined, friends see who's listening): none, no start.
+  bool _hasName() {
+    if (_who.isNotEmpty) return true;
+    setState(() => _nameMissing = true);
+    _nameFocus.requestFocus();
+    return false;
+  }
 
   Future<void> _run(Future<void> Function() action) async {
     setState(() {
@@ -179,9 +192,13 @@ class _ListenTogetherPageState extends State<ListenTogetherPage> {
     } catch (_) {}
   }
 
-  Future<void> _start() => _run(() => _session!.host(mode: _mode, name: _who));
+  Future<void> _start() async {
+    if (_hasName()) await _run(() => _session!.host(mode: _mode, name: _who));
+  }
 
-  Future<void> _join(String code) => _run(() => _session!.join(code: code, name: _who));
+  Future<void> _join(String code) async {
+    if (_hasName()) await _run(() => _session!.join(code: code, name: _who));
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -262,11 +279,17 @@ class _ListenTogetherPageState extends State<ListenTogetherPage> {
         const SizedBox(height: 20),
         TextField(
           controller: _name,
+          focusNode: _nameFocus,
           textCapitalization: TextCapitalization.words,
           maxLength: 24,
-          onChanged: (_) => setState(() {}),
+          onChanged: (_) => setState(() => _nameMissing = false),
           onSubmitted: (_) => _saveName(),
-          decoration: const InputDecoration(labelText: 'Your name', counterText: ''),
+          decoration: InputDecoration(
+            labelText: 'Your name',
+            helperText: 'Friends see it when you join or start a session',
+            errorText: _nameMissing && _who.isEmpty ? 'Enter your name first' : null,
+            counterText: '',
+          ),
         ),
         const SizedBox(height: 20),
         SizedBox(
@@ -420,7 +443,8 @@ class _ListenTogetherPageState extends State<ListenTogetherPage> {
         const SizedBox(height: 16),
         SwitchListTile(
           contentPadding: EdgeInsets.zero,
-          title: const Text('Let friends suggest songs'),
+          title: const Text('Let friends add songs'),
+          subtitle: const Text('A song a friend plays goes into your queue, in the order they come'),
           value: s.suggestionsAllowed,
           onChanged: (v) => s.setSuggestionsAllowed(v),
         ),
@@ -473,6 +497,30 @@ class _ListenTogetherPageState extends State<ListenTogetherPage> {
             style: muted,
           ),
         ],
+        const SizedBox(height: 16),
+        Text(
+          s.suggestionsAllowed
+              ? 'Play any YouTube song and it goes into $host\'s queue.'
+              : '$host isn\'t taking songs right now.',
+          style: muted,
+        ),
+        const SizedBox(height: 24),
+        Text('Listening', style: text.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
+        const SizedBox(height: 8),
+        ListTile(
+          contentPadding: EdgeInsets.zero,
+          dense: true,
+          leading: const Icon(Icons.headphones_rounded),
+          title: Text(host),
+          subtitle: const Text('Host'),
+        ),
+        for (final name in s.listeners)
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            dense: true,
+            leading: const Icon(Icons.person_outline_rounded),
+            title: Text(name),
+          ),
         if (s.upNext.isNotEmpty) ...[
           const SizedBox(height: 24),
           Text('Up next', style: text.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
@@ -499,6 +547,7 @@ class _ListenTogetherPageState extends State<ListenTogetherPage> {
   static String _spaced(String code) => code.split('').join(' ');
 
   Future<void> _scan() async {
+    if (!_hasName()) return;
     final code = await Navigator.of(context).push<String>(MaterialPageRoute(builder: (_) => const ListenQrScanner()));
     if (!mounted || code == null) return;
     _code.text = code;

@@ -15,7 +15,6 @@ import '../widgets/controls.dart';
 import '../widgets/faded_cover.dart';
 import '../widgets/wavy_seek_track.dart';
 import '../widgets/audio_visualizer.dart';
-import '../widgets/track_row.dart';
 import '../widgets/player_backdrop.dart';
 import '../widgets/marquee_text.dart';
 import '../widgets/signal_path.dart';
@@ -24,7 +23,7 @@ import '../widgets/soft_video.dart';
 import '../widgets/video_mode.dart';
 import '../ytmusic_edit.dart';
 import 'more_sheet.dart';
-import 'player_common.dart' show LinkText;
+import 'player_common.dart' show ArtistLinks;
 import 'player_parts.dart';
 
 /// The name of Now Playing's route, so a page above it can tell whether it is underneath.
@@ -36,7 +35,7 @@ const nowPlayingRouteName = 'now-playing';
 /// progress line and shuffle / previous / play / next / repeat, with Lyrics,
 /// Queue and ⋯ More. The sleep timer, Play on a device, Listen together,
 /// Song / Video, Download, Add to playlist, the equalizer, Signal path and
-/// Stats for nerds are in the ⋯ sheet ([showPlayerMore]).
+/// Detail stats are in the ⋯ sheet ([showPlayerMore]).
 class NowPlayingPage extends StatelessWidget {
   const NowPlayingPage({super.key});
 
@@ -169,177 +168,182 @@ class NowPlayingPage extends StatelessWidget {
                           _ => null,
                         },
                       ),
-                child: SafeArea(
-                  child: ListenableBuilder(
-                    listenable: VideoMode.instance,
-                    builder: (context, _) => LayoutBuilder(
-                      builder: (context, constraints) {
-                        final showsVideo = VideoMode.instance.videoOf(track) != null && VideoMode.instance.on;
-                        // Leave room for the controls; never let the cover push them off-screen.
-                        // On very short windows the cover (then the quality badge) makes way.
-                        final showBadge = constraints.maxHeight >= 480 && LayoutPrefs.instance.showQualityBadge;
-                        final largeCover = LayoutPrefs.instance.phoneCover == PhoneCoverSize.large;
-                        final showStrip =
-                            track != null &&
-                            LayoutPrefs.instance.visualizerEnabled &&
-                            !LayoutPrefs.instance.visualizerStyle.radial &&
-                            LayoutPrefs.moves &&
-                            !MediaQuery.disableAnimationsOf(context) &&
-                            !showsVideo;
-                        final stripHeight = showStrip && constraints.maxHeight >= 560 ? 88.0 : 0.0;
-                        // A phone held sideways: the cover goes beside the controls.
-                        final sideways = constraints.maxWidth > constraints.maxHeight && constraints.maxHeight < 480;
-                        Widget topBarFor({required bool more}) => Row(
-                          children: [
-                            IconButton(
-                              tooltip: 'Close',
-                              color: AppColors.of(context).textPrimary,
-                              onPressed: () => Navigator.of(context).pop(),
-                              icon: const Icon(Icons.keyboard_arrow_down_rounded, size: 30),
-                            ),
-                            Expanded(
-                              child: Column(
-                                children: [
-                                  Text(
-                                    'PLAYING FROM',
-                                    style: text.labelSmall?.copyWith(
-                                      letterSpacing: 1.2,
-                                      color: AppColors.of(context).textSecondary,
-                                    ),
-                                  ),
-                                  Text(
-                                    from ?? 'Your library',
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: text.labelLarge?.copyWith(fontWeight: FontWeight.w700),
-                                  ),
-                                ],
+                // Over a picture, the text gets a soft shadow to stay readable on a bright cover.
+                child: OverPicture(
+                  enabled:
+                      coverPage || look == NowPlayingBackground.blurredCover || chosen == NowPlayingBackground.video,
+                  child: SafeArea(
+                    child: ListenableBuilder(
+                      listenable: VideoMode.instance,
+                      builder: (context, _) => LayoutBuilder(
+                        builder: (context, constraints) {
+                          final showsVideo = VideoMode.instance.videoOf(track) != null && VideoMode.instance.on;
+                          // Leave room for the controls; never let the cover push them off-screen.
+                          // On very short windows the cover (then the quality badge) makes way.
+                          final showBadge = constraints.maxHeight >= 480 && LayoutPrefs.instance.showQualityBadge;
+                          final largeCover = LayoutPrefs.instance.phoneCover == PhoneCoverSize.large;
+                          final showStrip =
+                              track != null &&
+                              LayoutPrefs.instance.visualizerEnabled &&
+                              !LayoutPrefs.instance.visualizerStyle.radial &&
+                              LayoutPrefs.moves &&
+                              !MediaQuery.disableAnimationsOf(context) &&
+                              !showsVideo;
+                          final stripHeight = showStrip && constraints.maxHeight >= 560 ? 88.0 : 0.0;
+                          // A phone held sideways: the cover goes beside the controls.
+                          final sideways = constraints.maxWidth > constraints.maxHeight && constraints.maxHeight < 480;
+                          Widget topBarFor({required bool more}) => Row(
+                            children: [
+                              IconButton(
+                                tooltip: 'Close',
+                                color: AppColors.of(context).textPrimary,
+                                onPressed: () => Navigator.of(context).pop(),
+                                icon: const Icon(Icons.keyboard_arrow_down_rounded, size: 30),
                               ),
-                            ),
-                            if (more) const _MoreButton() else const SizedBox(width: 48),
-                          ],
-                        );
-                        final topBar = topBarFor(more: true);
-                        Widget cover(double size, {double radius = 8}) => NowPlayingCover(
-                          child: Hero(
-                            tag: 'now-playing-art',
-                            child: DecoratedBox(
-                              // The video is wider than the square: a square shadow would show around it.
-                              decoration: const BoxDecoration(),
-                              child: TrackVisual(
-                                track: track,
-                                cover: SizedBox.square(
-                                  dimension: size,
-                                  child: AudioVisualizer(
-                                    child: Artwork(track: track, size: size, radius: radius),
+                              Expanded(
+                                child: Column(
+                                  children: [
+                                    Text(
+                                      'PLAYING FROM',
+                                      style: text.labelSmall?.copyWith(
+                                        letterSpacing: 1.2,
+                                        color: AppColors.of(context).textSecondary,
+                                      ),
+                                    ),
+                                    Text(
+                                      from ?? 'Your library',
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: text.labelLarge?.copyWith(fontWeight: FontWeight.w700),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              if (more) const _MoreButton() else const SizedBox(width: 48),
+                            ],
+                          );
+                          final topBar = topBarFor(more: true);
+                          Widget cover(double size, {double radius = 8}) => NowPlayingCover(
+                            child: Hero(
+                              tag: 'now-playing-art',
+                              child: DecoratedBox(
+                                // The video is wider than the square: a square shadow would show around it.
+                                decoration: const BoxDecoration(),
+                                child: TrackVisual(
+                                  track: track,
+                                  cover: SizedBox.square(
+                                    dimension: size,
+                                    child: AudioVisualizer(
+                                      child: Artwork(track: track, size: size, radius: radius),
+                                    ),
                                   ),
                                 ),
                               ),
                             ),
-                          ),
-                        );
-                        final info = Row(
-                          children: [
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                          );
+                          final info = Row(
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    MarqueeText(
+                                      track?.title ?? 'Nothing playing',
+                                      style: text.headlineSmall?.copyWith(
+                                        fontWeight: FontWeight.w800,
+                                        letterSpacing: -0.5,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    if (track != null)
+                                      ArtistLinks(
+                                        track: track,
+                                        style: text.titleMedium?.copyWith(color: AppColors.of(context).textSecondary),
+                                      ),
+                                    if (showBadge) ...[const SizedBox(height: 8), const QualityBadge(onDark: true)],
+                                  ],
+                                ),
+                              ),
+                              if (track != null)
+                                LikeButton(track: track, size: 28, color: AppColors.of(context).textPrimary),
+                            ],
+                          );
+                          if (sideways) {
+                            final art = math.min(constraints.maxHeight - 32, constraints.maxWidth * 0.4);
+                            return Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 24),
+                              child: Row(
                                 children: [
-                                  MarqueeText(
-                                    track?.title ?? 'Nothing playing',
-                                    style: text.headlineSmall?.copyWith(
-                                      fontWeight: FontWeight.w800,
-                                      letterSpacing: -0.5,
+                                  if (art >= 96) ...[cover(art), const SizedBox(width: 32)],
+                                  Expanded(
+                                    child: Column(
+                                      children: [
+                                        topBar,
+                                        const Spacer(),
+                                        info,
+                                        const SizedBox(height: 8),
+                                        const SeekBar(phonePlayer: true),
+                                        const TransportControls(large: true),
+                                        const _SecondaryRow(),
+                                      ],
                                     ),
                                   ),
-                                  const SizedBox(height: 2),
-                                  LinkText(
-                                    track?.artist ?? '',
-                                    style: text.titleMedium?.copyWith(color: AppColors.of(context).textSecondary),
-                                    onTap: track == null ? null : openArtist(context, PlayerScope.read(context), track),
-                                  ),
-                                  if (showBadge) ...[const SizedBox(height: 8), const QualityBadge(onDark: true)],
                                 ],
                               ),
-                            ),
-                            if (track != null)
-                              LikeButton(track: track, size: 28, color: AppColors.of(context).textPrimary),
-                          ],
-                        );
-                        if (sideways) {
-                          final art = math.min(constraints.maxHeight - 32, constraints.maxWidth * 0.4);
+                            );
+                          }
+                          if (!LayoutPrefs.instance.classicPlayerFace) {
+                            return ComposedNowPlaying(
+                              track: track,
+                              from: from,
+                              accent: accent,
+                              cover: cover,
+                              classicTopBar: topBarFor,
+                              showBadge: showBadge,
+                            );
+                          }
+                          final art = largeCover
+                              ? math.min(
+                                  constraints.maxWidth - 24,
+                                  constraints.maxHeight - (showBadge ? 364 : 328) - playerVolumeRowHeight - stripHeight,
+                                )
+                              : math.min(
+                                  constraints.maxWidth - 48,
+                                  constraints.maxHeight - (showBadge ? 400 : 364) - playerVolumeRowHeight - stripHeight,
+                                );
                           return Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 24),
-                            child: Row(
+                            child: Column(
                               children: [
-                                if (art >= 96) ...[cover(art), const SizedBox(width: 32)],
-                                Expanded(
-                                  child: Column(
-                                    children: [
-                                      topBar,
-                                      const Spacer(),
-                                      info,
-                                      const SizedBox(height: 8),
-                                      const SeekBar(phonePlayer: true),
-                                      const TransportControls(large: true),
-                                      const _SecondaryRow(),
-                                    ],
-                                  ),
-                                ),
+                                topBar,
+                                const Spacer(),
+                                // The large cover runs 12 px into the page's margin on each side.
+                                if (art >= 96)
+                                  largeCover
+                                      ? SizedBox(
+                                          height: art,
+                                          child: OverflowBox(maxWidth: art, child: cover(art)),
+                                        )
+                                      : cover(art),
+                                const Spacer(),
+                                if (stripHeight > 0) ...[
+                                  const AudioVisualizer(linearOnly: true, height: 80),
+                                  const SizedBox(height: 8),
+                                ],
+                                info,
+                                const SizedBox(height: 16),
+                                const SeekBar(phonePlayer: true),
+                                const SizedBox(height: 8),
+                                const TransportControls(large: true),
+                                const SizedBox(height: 4),
+                                const _SecondaryRow(),
+                                const PlayerVolumeRow(),
+                                const SizedBox(height: 8),
                               ],
                             ),
                           );
-                        }
-                        if (!LayoutPrefs.instance.classicPlayerFace) {
-                          return ComposedNowPlaying(
-                            track: track,
-                            from: from,
-                            accent: accent,
-                            cover: cover,
-                            classicTopBar: topBarFor,
-                            showBadge: showBadge,
-                          );
-                        }
-                        final art = largeCover
-                            ? math.min(
-                                constraints.maxWidth - 24,
-                                constraints.maxHeight - (showBadge ? 364 : 328) - playerVolumeRowHeight - stripHeight,
-                              )
-                            : math.min(
-                                constraints.maxWidth - 48,
-                                constraints.maxHeight - (showBadge ? 400 : 364) - playerVolumeRowHeight - stripHeight,
-                              );
-                        return Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 24),
-                          child: Column(
-                            children: [
-                              topBar,
-                              const Spacer(),
-                              // The large cover runs 12 px into the page's margin on each side.
-                              if (art >= 96)
-                                largeCover
-                                    ? SizedBox(
-                                        height: art,
-                                        child: OverflowBox(maxWidth: art, child: cover(art)),
-                                      )
-                                    : cover(art),
-                              const Spacer(),
-                              if (stripHeight > 0) ...[
-                                const AudioVisualizer(linearOnly: true, height: 80),
-                                const SizedBox(height: 8),
-                              ],
-                              info,
-                              const SizedBox(height: 16),
-                              const SeekBar(phonePlayer: true),
-                              const SizedBox(height: 8),
-                              const TransportControls(large: true),
-                              const SizedBox(height: 4),
-                              const _SecondaryRow(),
-                              const PlayerVolumeRow(),
-                              const SizedBox(height: 8),
-                            ],
-                          ),
-                        );
-                      },
+                        },
+                      ),
                     ),
                   ),
                 ),
@@ -384,7 +388,7 @@ class PlayerVolumeRow extends StatelessWidget {
   /// The left icon mutes (and unmutes) instead of turning the volume down a step.
   final bool mute;
 
-  /// The slider's look; null follows Settings › Layout › Volume slider look.
+  /// The slider's look; null follows Settings › Layout › Slider look.
   final VolumeSliderShape? shape;
 
   @override

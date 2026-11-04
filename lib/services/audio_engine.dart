@@ -371,6 +371,7 @@ class AudioEngine extends ChangeNotifier {
     // PulseAudio / PipeWire take `audio-client-name` instead (see [_applyProps]).
     JustAudioMediaKit.title = 'Riflay';
     JustAudioMediaKit.volumeOverride = _volumeTo;
+    JustAudioMediaKit.changingOutput = () => changingSettings;
     JustAudioMediaKit.onPlayerCreated = (p) => unawaited(_applyAll(p));
     JustAudioMediaKit.onSecondaryCreated = (p) => unawaited(_applySecondary(p));
     if (hasRoutePicker) _iosRoute.current().then((r) => route = r);
@@ -813,6 +814,7 @@ class AudioEngine extends ChangeNotifier {
   /// each rebuilds mpv's filter chain.
   Future<void> _changed({bool reopenOutput = false}) {
     notifyListeners();
+    _settingsTouchedAt = DateTime.now();
     _reopen |= reopenOutput;
     _pending?.cancel();
     final done = _done ??= Completer<void>();
@@ -831,11 +833,22 @@ class AudioEngine extends ChangeNotifier {
       } catch (e) {
         debugPrint('Applying audio settings failed: $e');
       } finally {
+        _settingsTouchedAt = DateTime.now();
         done.complete();
       }
     });
     return done.future;
   }
+
+  /// When a sound setting last changed or finished applying.
+  DateTime _settingsTouchedAt = DateTime(0);
+
+  /// A sound setting is being applied, or was a moment ago: mpv rebuilds the output and the filters, and
+  /// the errors it may report then are not the song's (see [JustAudioMediaKit.changingOutput]).
+  bool get changingSettings =>
+      (_pending?.isActive ?? false) ||
+      _done != null ||
+      DateTime.now().difference(_settingsTouchedAt) < const Duration(seconds: 4);
 
   Timer? _pending;
   Completer<void>? _done;
@@ -1311,6 +1324,10 @@ class AudioEngine extends ChangeNotifier {
     }
   }
 
+  /// What [_applyProps] last wrote, and to which player.
+  NativePlayer? _propsSentTo;
+  Map<String, String> _propsSent = const {};
+
   /// Whether the volume moved between mpv's volume and the filter
   /// ([_volumeAtOutput]): the output must then reopen, in float or back in the song's format.
   Future<bool> _applyProps(NativePlayer p) async {
@@ -1354,9 +1371,16 @@ class AudioEngine extends ChangeNotifier {
       // 100 where the filter applies the volume: mpv must not scale samples too.
       'volume': _mpvVolume,
     };
+    // Only what changed: each write of an output option (device, rate, format, buffer, exclusive...) makes
+    // mpv rebuild the sound output, even with the same value, and a streamed song is read again for it.
+    // The filters and the volume go every time, as before: other code changes them in between.
+    final sent = identical(_propsSentTo, p) ? _propsSent : const <String, String>{};
     for (final e in props.entries) {
+      if (e.key != 'af' && e.key != 'volume' && sent[e.key] == e.value) continue;
       await p.setProperty(e.key, e.value);
     }
+    _propsSentTo = p;
+    _propsSent = props;
     _chainSent = props['af'];
     _chainSetAt = DateTime.now();
     final moved = _volumeAtOutputApplied != null && _volumeAtOutputApplied != _volumeAtOutput;
@@ -1778,7 +1802,7 @@ class AudioEngine extends ChangeNotifier {
     }
   }
 
-  /// What Stats for nerds shows beside [signalPath]: seconds of the song read
+  /// What Detail stats shows beside [signalPath]: seconds of the song read
   /// ahead of the playhead, and the ReplayGain tag leveling applies ("-7.50 dB").
   Future<({double? buffered, String? gain})> nerdStats() async {
     final p = _native;

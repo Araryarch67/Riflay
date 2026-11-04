@@ -5,6 +5,10 @@
 >
 > **[Keep Android Open](https://keepandroidopen.org).**
 
+> [!NOTE]
+> **Riflay is in maintenance mode.** Work is limited to fixing issues: bug reports are welcome, new features
+> are on hold for now.
+
 <div align="center">
 
 <picture>

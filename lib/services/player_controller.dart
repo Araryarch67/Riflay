@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:math' as math;
 
+import 'package:audio_session/audio_session.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart' show ValueListenable, listEquals, visibleForTesting;
 import 'package:flutter/services.dart' show MethodChannel;
@@ -55,6 +56,10 @@ class PlayerController extends ChangeNotifier {
     // The first YouTube song then needs one request, not two.
     YoutubeStream.warmUp();
     sleep.attach(_SleepHost(this));
+    AudioSession.instance.then((session) {
+      if (_disposed) return;
+      _subs.add(session.becomingNoisyEventStream.listen((_) => player.pause()));
+    }, onError: (Object e) => debugPrint('Audio session unavailable: $e'));
     _crossfader = Crossfader(
       main: player,
       audio: audio,
@@ -245,7 +250,9 @@ class PlayerController extends ChangeNotifier {
   static const _recentKey = 'recent.v1';
   static const _maxRecent = 24;
 
-  final AudioPlayer player = AudioPlayer();
+  // Another app's sound (a video, a notification, a game) doesn't pause or duck the music: both play on. Only
+  // unplugged headphones pause it (below), so a song doesn't suddenly come out of the speaker.
+  final AudioPlayer player = AudioPlayer(handleInterruptions: false);
 
   // ── Sleep timer and crossfade (sleep_timer.dart, crossfade.dart) ──
 
@@ -360,10 +367,13 @@ class PlayerController extends ChangeNotifier {
     // In plain words: mpv's own message (paths, stream URLs) only goes to the log.
     debugPrint('Playback error: ${e.message}');
     _errors.add('Couldn\'t play ${title ?? 'this song'}');
-    // Repeat-one would retry the same broken song forever: skip it all the same.
+    // Repeat-one would retry the same broken song forever: skip it all the same. A paused player stays paused.
     final next = _neighbour(1, from: at >= 0 ? at : null);
+    final wasPlaying = player.playing;
     if (next != null) {
-      player.seek(Duration.zero, index: next).then((_) => _play(), onError: (Object _) {});
+      player.seek(Duration.zero, index: next).then((_) {
+        if (wasPlaying) _play();
+      }, onError: (Object _) {});
     }
   }
 
@@ -728,7 +738,8 @@ class PlayerController extends ChangeNotifier {
   /// Albums and artists together, by name (the library list's "everything").
   List<Collection> get albumsAndArtists => _views.albumsAndArtists;
 
-  Collection? artistNamed(String name) => _views.artistByName[name];
+  Collection? artistNamed(String name) =>
+      _views.artistByName[name] ?? _views.artistByName[Track.splitArtists(name).firstOrNull];
 
   Collection? albumOf(Track track) => _views.albumOfTrack[track.id];
 
@@ -1279,6 +1290,12 @@ class PlayerController extends ChangeNotifier {
   /// Replaces the queue with [tracks] and starts playing at [index].
   Future<void> playList(List<Track> tracks, int index, {String? from, bool shuffled = false}) async {
     if (tracks.isEmpty) return;
+    // A guest picking a song doesn't leave Listen together: the song goes to the host's queue (when the host
+    // lets friends add songs). Following the host's own song still loads it here.
+    final session = ListenTogether.of(this);
+    if (session.role == ListenRole.guest && !session.followingHost) {
+      return session.suggest(tracks[index.clamp(0, tracks.length - 1)], announce: true);
+    }
     playingFrom = from;
     _autoplayed.clear();
     _autoplaySeed = null;
@@ -1336,8 +1353,34 @@ class PlayerController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Puts [tracks] after the current song and after any of [after] still ahead in the queue: songs friends
+  /// add in Listen together play in the order they came.
+  Future<void> queueAfter(List<Track> tracks, {required Set<String> after}) async {
+    final current = currentTrack;
+    final at = player.sequenceState.currentIndex;
+    if (current == null || at == null) return playList(tracks, 0);
+    final sequence = player.sequenceState.sequence;
+    var insertAt = at + 1;
+    for (var i = at + 1; i < sequence.length; i++) {
+      if (after.contains((sequence[i].tag as Track).id)) insertAt = i + 1;
+    }
+    final before = (sequence[insertAt - 1].tag as Track).id;
+    final inOrder = _ordered.indexWhere((t) => t.id == before);
+    _ordered = [..._ordered]..insertAll(inOrder < 0 ? _ordered.length : inOrder + 1, tracks);
+    await player.insertAudioSources(insertAt, [for (final t in tracks) _sourceFor(t)]);
+    notifyListeners();
+  }
+
   /// Puts [tracks] at the end of the queue ("Add to queue").
   Future<void> addToQueue(List<Track> tracks) async {
+    // A guest adds to the host's queue instead (when the host lets them).
+    final session = ListenTogether.of(this);
+    if (session.role == ListenRole.guest) {
+      for (final track in tracks) {
+        await session.suggest(track, announce: tracks.length == 1);
+      }
+      return;
+    }
     if (currentTrack == null) return playList(tracks, 0);
     _ordered = [..._ordered, ...tracks];
     await player.addAudioSources([for (final t in tracks) _sourceFor(t)]);

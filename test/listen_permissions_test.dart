@@ -20,8 +20,12 @@ class TestPlayer extends PlayerController {
   Track get currentTrack => song;
   @override
   List<Track> get queue => [song, ...requested];
+
+  /// What [queueAfter] was told to queue after, each time.
+  final afters = <Set<String>>[];
   @override
-  Future<void> playNext(List<Track> tracks) async {
+  Future<void> queueAfter(List<Track> tracks, {required Set<String> after}) async {
+    afters.add({...after});
     requested.addAll(tracks);
   }
 
@@ -161,6 +165,61 @@ void main() {
     expect(connection.sent.whereType<SeekRequest>(), hasLength(1));
     await session.leave();
     expect(session.requestSeek(const Duration(seconds: 2)), isFalse);
+    session.dispose();
+  });
+
+  test('songs friends add go into the host\'s queue in the order they came', () async {
+    final player = TestPlayer();
+    final transport = TestHost();
+    final session = ListenTogether(player, hostTransport: (_, _) => transport);
+    await session.host(mode: ListenMode.wifi, name: 'Host');
+    final ana = TestPeer(), budi = TestPeer();
+    for (final (peer, name) in [(ana, 'Ana'), (budi, 'Budi')]) {
+      transport.connections.add(peer);
+      peer.frames.add(Hello(name: name, guestId: name).encode());
+    }
+    expect(session.listeners, ['Ana', 'Budi'], reason: 'the host sees who joined, by name');
+    ana.frames.add(
+      const Suggest(
+        SharedTrack(videoId: 'a', title: 'A', artist: 'X'),
+        from: 'Ana',
+      ).encode(),
+    );
+    budi.frames.add(
+      const Suggest(
+        SharedTrack(videoId: 'b', title: 'B', artist: 'X'),
+        from: 'Budi',
+      ).encode(),
+    );
+    expect(player.requested.map((t) => t.videoId), ['a', 'b']);
+    expect(player.afters.first, isEmpty, reason: 'the first goes right after the current song');
+    expect(player.afters.last, contains(player.requested.first.id), reason: 'the second goes after the first');
+    await session.leave();
+    session.dispose();
+  });
+
+  test('a guest picking a song adds it to the host\'s queue and stays in the session', () async {
+    final player = TestPlayer();
+    final connection = TestGuest();
+    final session = ListenTogether(player, guestConnection: (_, _) async => connection);
+    ListenTogether.use(player, session);
+    await session.join(code: 'K7Q2XM', name: 'Guest');
+    await Future<void>.delayed(Duration.zero);
+    final events = <String>[];
+    final sub = session.events.listen(events.add);
+    await player.playList([Track.youtube(videoId: 'mine', title: 'Mine', artist: 'Artist')], 0);
+    await Future<void>.delayed(Duration.zero);
+    expect(connection.sent.whereType<Suggest>().single.track.videoId, 'mine');
+    expect(session.role, ListenRole.guest, reason: 'picking a song no longer leaves the session');
+    expect(events, ['Added Mine to Host\'s queue']);
+    // The host turned adding songs off: nothing is sent, and the guest is told why.
+    connection.frames.add(const Welcome(hostName: 'Host', guests: ['Guest'], suggestionsAllowed: false).encode());
+    await player.playList([Track.youtube(videoId: 'other', title: 'Other', artist: 'Artist')], 0);
+    await Future<void>.delayed(Duration.zero);
+    expect(connection.sent.whereType<Suggest>(), hasLength(1));
+    expect(events.last, 'Host isn\'t taking songs right now.');
+    await sub.cancel();
+    await session.leave();
     session.dispose();
   });
 
