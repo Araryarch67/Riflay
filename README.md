@@ -2,366 +2,72 @@
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="assets/icon/riflay-transparent.svg">
-  <img src="assets/icon/riflay-transparent-light.svg" width="128" height="128" alt="Riflay logo">
+  <img src="assets/icon/riflay-transparent-light.svg" width="112" height="112" alt="Riflay logo">
 </picture>
 
 # Riflay
 
 **Your local music and YouTube Music, together in one hi-fi player.**
 
-Riflay is a free, open-source music player for Linux, Windows, macOS, Android and iOS, built with Flutter. It was previously released as OpenMusic.
+Free and open source, for Linux, Windows, macOS, Android and iOS.
 
 [![License: AGPL v3](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)](LICENSE)
-[![Flutter](https://img.shields.io/badge/Flutter-3-02569B?logo=flutter&logoColor=white)](https://flutter.dev)
 ![Platforms](https://img.shields.io/badge/platforms-Linux%20%7C%20Windows%20%7C%20macOS%20%7C%20Android%20%7C%20iOS-555)
-[![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
+[![Latest release](https://img.shields.io/github/v/release/Araryarch67/Riflay)](https://github.com/Araryarch67/Riflay/releases/latest)
 
 ![Riflay home](docs/screenshots/home.webp)
 
+| ![Full-screen player](docs/screenshots/fullscreen.webp) | ![Lyrics](docs/screenshots/lyrics.webp) |
+|---|---|
+| ![Signal path](docs/screenshots/signal-path.webp) | <img src="docs/screenshots/phone.webp" alt="Riflay on a phone" width="260"> |
+
 </div>
 
-## Table of contents
+## What makes it different
 
-- [Features](#features)
-- [Screenshots](#screenshots)
-- [Install](#install)
-- [Build from source](#build-from-source)
-- [Web version](#web-version)
-- [YouTube Music](#youtube-music)
-- [Audio](#audio)
-- [Platform notes](#platform-notes)
-- [Contributing](#contributing)
-- [Acknowledgements](#acknowledgements)
-- [License](#license)
-
-## Features
-
-Feature options live in their respective Settings pages. Power & background has its own page; sound processors and Crossfade are grouped under Sound effects (DSP).
-
-### Library & YouTube Music
-
-| Feature | Description |
-|---|---|
-| **One library** | Local files, playlists and YouTube Music in a single library |
-| **Format support** | FLAC, ALAC, WAV, AIFF, MP3, AAC, Ogg, Opus, WavPack, APE, DSD, SACD ISO and cue sheets |
-| **YouTube Music** | Fully usable without an account. Sign in with Google to sync likes, playlists and history. Moods & genres, new releases, save albums and playlists to your library |
-| **Video mode** | Watch the music video of a YouTube song, in step with it: one Song / Video switch on the player. Fetched only when picked, and back to the song alone when the screen is off. Downloaded videos play offline |
-| **Synced lyrics** | Word by word where the source times each word, otherwise line by line; pronunciation, translation, copy, your own .lrc files, and saved with downloads |
-| **Playlists** | Combine local files with YouTube songs, and drag songs into any order. Save what's in the queue as a playlist. Import from Spotify, Apple Music or Deezer |
-| **Spotify import** | Sign in to Spotify and bring your playlists, Liked Songs and albums over |
-| **Smart playlists** | Most played, Not played for a while, Recently added, Recently played and Lossless, kept up to date for you |
-| **A library that keeps up** | Music folders are watched: new songs are added, and songs you delete or move are taken out, without adding the folder again (phones check each time you open Riflay). Settings › Library & downloads › Library |
-| **Duplicate finder** | "Songs you have twice" lists the same song in several files and keeps the best copy of each. Settings › Library & downloads › Library |
-| **Tag editor** | Preserves ReplayGain and custom tags |
-| **Autoplay and radio** | Plays similar songs when the queue ends |
-| **Shuffle that feels random** | Shuffle keeps songs by the same artist apart, so two of theirs rarely play in a row |
-
-### Sound
-
-| Feature | Description |
-|---|---|
-| **Equalizer** | 10-band parametric, with presets and automatic headroom to prevent clipping |
-| **Crossfade** | The end of a song fades into the next, 1 to 12 seconds. Songs that follow each other on an album play without a fade. Off in bit-perfect and exclusive modes |
-| **Gapless playback** | No silence between consecutive tracks |
-| **Volume leveling** | ReplayGain, per song or per album |
-| **Virtual speakers** | Simulates two front-facing speakers on headphones (HRTF) |
-| **Mono audio** | Mixes both channels to one or both ears. For headphones with a dead side |
-| **Crossfeed** | Softens stereo separation on headphones |
-| **Room correction** | Applies an impulse response, for example from REW |
-| **Bit-perfect and DSD** | Sends the file to the DAC untouched, native DSD (DoP), exclusive mode |
-| **Audio plugins** | VST, LV2 and CLAP through Carla (Linux, Windows, macOS) |
-| **Signal path** | Shows every processing stage from file to speaker |
-
-### Downloads
-
-| Feature | Description |
-|---|---|
-| **Audio downloads** | Opus, M4A, MP3 or FLAC, at the bitrate you pick, with the size of each choice shown before you download |
-| **Video downloads** | A song's music video as MP4 (H.264, up to 1080p) or WebM (VP9, up to 4K), with the size of each resolution shown. The picture and sound are joined without re-encoding |
-| **Resumable downloads** | A download that was interrupted continues where it stopped, and retries when the network drops. Notifications show progress, with Cancel and Retry |
-| **Your downloads** | Shows how much space your downloads use, and finds downloaded songs whose file was deleted so you can download them again or remove them |
-| **Convert to FLAC** | Turns a downloaded or lossy song into a FLAC from its menu, or a whole playlist at once, keeping tags and cover. Your own files are kept beside it |
-
-### Together
-
-| Feature | Description |
-|---|---|
-| **Listen together** | Friends play along with your YouTube songs, in sync. Join by scanning a session QR code in Riflay. Hosts can allow song suggestions and seeking. On the same Wi-Fi with a short code, or **Anywhere** with a longer one: it connects through free public servers, end-to-end encrypted |
-| **Play on TVs and speakers** | DLNA / UPnP and AirPlay |
-
-### Look & feel
-
-| Feature | Description |
-|---|---|
-| **Themes** | Catppuccin, Nord, Gruvbox, Dracula or your own colors. Any font and accent. Light, dark or match your system, for every theme. High contrast. Components share the chosen scheme; Linux can follow [Matugen colors](docs/matugen/README.md) automatically |
-| **Player backgrounds** | Simple by default; optional Aurora, Silk, Orbits and Prism abstract backgrounds with a separate music-reactive switch. Only on Now Playing |
-| **Audio visualizer (Beta)** | Enable in **Settings → Beta Features** (off by default). Pulse by default, with adjustable radial movement and line thickness. Mirrored CAVA-style bars put bass at both edges and treble in the center, driven by 24 logarithmic frequency bands from decoded audio. Also Wave, Line, Dots, Mirror, Twin waves, Orbit, Petals and Peaks, with filled waves and rounded bars in their own space below the cover. Radial styles surround the artwork. Stops when hidden or paused |
-| **Desktop component opacity** | Fade the entire app together: title bar, cards, covers, controls, text, menus and dialogs. Adjustable from 30–100%, independently of background opacity |
-| **Default theme** | Follows the cover of what's playing, local or YouTube. Cover-art colors in the player or the whole app, with adjustable strength |
-| **Layout options** | Corners, spacing, cover size, the phone's tab bar (ten looks, from a classic docked bar to Dock, Capsule and Liquid glass), five desktop player bars including floating docks above the page, Home sections, player and lyrics looks, nine page transition presets (including Circular reveal), adjustable animation speed |
-| **Adaptive layouts** | Phone, tablet and desktop. Mini and full-screen player |
-
-### Everyday
-
-| Feature | Description |
-|---|---|
-| **Sleep timer** | Stop the music in 15 to 90 minutes, at the end of the song, after 2, 3 or 5 songs, or after a time you choose. The volume fades down first |
-| **Listening stats** | Your top songs, artists and albums by month, year or all time. Kept on this device, and switched off in Settings › Library & downloads › Listening history & Wrap |
-| **Riflay Wrap** | A recap of each finished month, once you have used Riflay for 30 days, as cards you can save as images |
-| **Background playback** | Keeps playing with the screen off. Optionally keeps the screen on, or the computer awake, while playing |
-| **System integration** | Lock screen, notification, Control Center, MPRIS, media keys, Discord |
-| **Last.fm & ListenBrainz** | Songs you listen to are added to your profile there (scrobbling), with Now playing. Listens made offline are sent later, and your past listens there can be brought into your stats. Settings › Accounts & services |
-| **Backup & restore** | Your settings, playlists, listening history and your own lyrics in one file, to bring back on this device or a new one. Sign-ins are left out. Settings › Library & downloads |
-| **Streaming recovery** | Temporarily caches the current and next song; resumes interrupted audio without skipping missing data. Cached audio keeps playing offline, and temporary files are removed when no longer needed. |
-| **Fast** | A YouTube song starts in about 0.3 s |
-
-## Screenshots
-
-| Home | A playlist mixing artists |
-|---|---|
-| ![Home](docs/screenshots/home.webp) | ![Playlist](docs/screenshots/playlist.webp) |
-| **Smart playlists in the library** | **Synced lyrics, word by word** |
-| ![Smart playlists](docs/screenshots/smart-playlists.webp) | ![Lyrics](docs/screenshots/lyrics.webp) |
-| **Listening stats** | **Downloads: a video and a song on their way** |
-| ![Listening stats](docs/screenshots/stats.webp) | ![Downloads](docs/screenshots/downloads.webp) |
-| **Download as: audio or video, with sizes** | **Download settings** |
-| ![Download as](docs/screenshots/download-as.webp) | ![Download settings](docs/screenshots/settings-downloads.webp) |
-| **Listen together** | **Songs you have twice** |
-| ![Listen together](docs/screenshots/listen-together.webp) | ![Duplicate finder](docs/screenshots/duplicates.webp) |
-| **Sleep timer** | **Crossfade** |
-| ![Sleep timer](docs/screenshots/sleep-timer.webp) | ![Crossfade](docs/screenshots/settings-crossfade.webp) |
-| **Virtual speakers and Mono audio** | **Equalizer** |
-| ![Sound effects and DSP settings](docs/screenshots/sound.webp) | ![Equalizer](docs/screenshots/equalizer.webp) |
-| **Signal path** | **Default theme** |
-| ![Signal path](docs/screenshots/signal-path.webp) | ![Default theme](docs/screenshots/dynamic-theme.webp) |
-| **Full-screen player** | **Settings** |
-| ![Full-screen player](docs/screenshots/fullscreen.webp) | ![Settings](docs/screenshots/settings.webp) |
-| **Themes and colours** | **About** |
-| ![Appearance](docs/screenshots/appearance.webp) | ![About](docs/screenshots/settings-about.webp) |
-| **Spotify import** | **Power & background** |
-| ![Spotify import](docs/screenshots/spotify.webp) | ![Power and background settings](docs/screenshots/settings-power.webp) |
-| **A tablet-sized window** | **Join with a QR code** |
-| ![Tablet-sized window](docs/screenshots/tablet.webp) | ![Listen together QR](docs/screenshots/listen-qr.webp) |
-
-On a phone, with Capsule as the default bottom bar and Search in the middle:
-
-| Home | Now playing |
-|---|---|
-| <img src="docs/screenshots/phone-home.webp" alt="Phone home" width="280"> | <img src="docs/screenshots/phone.webp" alt="Phone now playing" width="280"> |
-| **Library** | **Settings** |
-| <img src="docs/screenshots/phone-library.webp" alt="Phone library" width="280"> | <img src="docs/screenshots/phone-settings.webp" alt="Phone settings" width="280"> |
-| **A Riflay Wrap card** | |
-| <img src="docs/screenshots/wrap.webp" alt="Riflay Wrap card" width="200"> | |
-
-<details>
-<summary>All 10 mobile bottom bar styles</summary>
-
-Choose a style in **Settings › Look & feel › Layout**. Every style keeps Search in the middle.
-
-| Classic | Material |
-|---|---|
-| <img src="docs/screenshots/phone-bar-classic.webp" alt="Classic mobile bottom bar" width="240"> | <img src="docs/screenshots/phone-bar-material.webp" alt="Material mobile bottom bar" width="240"> |
-| **Underline** | **Minimal** |
-| <img src="docs/screenshots/phone-bar-underline.webp" alt="Underline mobile bottom bar" width="240"> | <img src="docs/screenshots/phone-bar-minimal.webp" alt="Minimal mobile bottom bar" width="240"> |
-| **Text only** | **Floating** |
-| <img src="docs/screenshots/phone-bar-text.webp" alt="Text only mobile bottom bar" width="240"> | <img src="docs/screenshots/phone-bar-floating.webp" alt="Floating mobile bottom bar" width="240"> |
-| **Capsule (default)** | **Dock** |
-| <img src="docs/screenshots/phone-bar-capsule.webp" alt="Capsule mobile bottom bar" width="240"> | <img src="docs/screenshots/phone-bar-dock.webp" alt="Dock mobile bottom bar" width="240"> |
-| **Centre button** | **Liquid glass** |
-| <img src="docs/screenshots/phone-bar-centre.webp" alt="Centre button mobile bottom bar" width="240"> | <img src="docs/screenshots/phone-bar-glass.webp" alt="Liquid glass mobile bottom bar" width="240"> |
-
-</details>
-
-The pictures show a made-up library of generated songs.
-
-<details>
-<summary>Player backgrounds, visualizers and desktop controls</summary>
-
-Everything is optional in **Settings › Look & feel**. Backgrounds stay Simple by default; motion follows Reduced motion and Off.
-
-| Abstract Aurora | Abstract Silk |
-| --- | --- |
-| ![Aurora background](docs/screenshots/background-aurora.webp) | ![Silk background](docs/screenshots/background-silk.webp) |
-| Abstract Orbits | Abstract Prism |
-| ![Orbits background](docs/screenshots/background-orbits.webp) | ![Prism background](docs/screenshots/background-prism.webp) |
-| Classic desktop controls | Floating desktop controls |
-| ![Classic desktop player](docs/screenshots/desktop-bar-classic.webp) | ![Floating desktop player](docs/screenshots/desktop-bar-floating.webp) |
-| Compact desktop controls | Capsule desktop controls |
-| ![Compact desktop player](docs/screenshots/desktop-bar-compact.webp) | ![Capsule desktop player](docs/screenshots/desktop-bar-capsule.webp) |
-| Minimal desktop controls | |
-| ![Minimal desktop player](docs/screenshots/desktop-bar-minimal.webp) | |
-| Desktop visualizer | Mobile cover visualizer |
-| ![Desktop visualizer](docs/screenshots/visualizer-desktop-wave.webp) | ![Mobile visualizer](docs/screenshots/visualizer-phone-bars.webp) |
-| Matugen dark | Matugen light |
-| ![Matugen dark components](docs/screenshots/matugen-components-dark.webp) | ![Matugen light components](docs/screenshots/matugen-components-light.webp) |
-
-**Circular reveal** is one of nine transition styles, with three speed options:
-
-![Circular reveal transition](docs/screenshots/circular-reveal.webp)
-
-</details>
-
-<details>
-<summary>All 10 audio visualizer styles</summary>
-
-Select a style in **Settings › Look & feel › Layout › Now playing**. Pulse, Orbit and Petals surround the cover on desktop; the other styles sit below it. On phones, every style stays around the cover.
-
-| Style | Desktop | Mobile |
-| --- | --- | --- |
-| Wave | ![Wave on desktop](docs/screenshots/visualizer-desktop-wave.webp) | ![Wave on mobile](docs/screenshots/visualizer-phone-wave.webp) |
-| Bars | ![Bars on desktop](docs/screenshots/visualizer-desktop-bars.webp) | ![Bars on mobile](docs/screenshots/visualizer-phone-bars.webp) |
-| Line | ![Line on desktop](docs/screenshots/visualizer-desktop-line.webp) | ![Line on mobile](docs/screenshots/visualizer-phone-line.webp) |
-| Dots | ![Dots on desktop](docs/screenshots/visualizer-desktop-dots.webp) | ![Dots on mobile](docs/screenshots/visualizer-phone-dots.webp) |
-| Mirror | ![Mirror on desktop](docs/screenshots/visualizer-desktop-mirror.webp) | ![Mirror on mobile](docs/screenshots/visualizer-phone-mirror.webp) |
-| Twin waves | ![Twin waves on desktop](docs/screenshots/visualizer-desktop-twinWaves.webp) | ![Twin waves on mobile](docs/screenshots/visualizer-phone-twinWaves.webp) |
-| Pulse | ![Pulse on desktop](docs/screenshots/visualizer-desktop-pulse.webp) | ![Pulse on mobile](docs/screenshots/visualizer-phone-pulse.webp) |
-| Orbit | ![Orbit on desktop](docs/screenshots/visualizer-desktop-orbit.webp) | ![Orbit on mobile](docs/screenshots/visualizer-phone-orbit.webp) |
-| Petals | ![Petals on desktop](docs/screenshots/visualizer-desktop-petals.webp) | ![Petals on mobile](docs/screenshots/visualizer-phone-petals.webp) |
-| Peaks | ![Peaks on desktop](docs/screenshots/visualizer-desktop-peaks.webp) | ![Peaks on mobile](docs/screenshots/visualizer-phone-peaks.webp) |
-
-</details>
+- **Local files and YouTube Music in one library.** Mix both in the same playlist; no account needed, sign in only to sync. Import from Spotify, Apple Music or Deezer.
+- **Real hi-fi.** Bit-perfect output, native DSD (DoP), exclusive mode and ASIO, with a **signal path** that shows every stage from file to speaker. FLAC, ALAC, WavPack, APE, DSD, SACD ISO and cue sheets.
+- **Sound tools usually found in pro apps.** Virtual speakers (HRTF) for headphones, crossfeed, room correction from REW, and VST / LV2 / CLAP plugins through Carla.
+- **Lyrics that follow every word**, from many free sources, with pronunciation and translation.
+- **Music videos.** Watch a song's video in step with it, or use it as the Now Playing background.
+- **Listen together, anywhere.** Friends play along in sync over the same Wi-Fi or the internet, end-to-end encrypted.
+- **Build your own player.** Pick the cover, top, buttons, progress bar, controls and bottom row one by one, or start from a preset (Classic, Stacked, Kawaii). On phone and desktop.
+- **Extensions.** Add SpotiFLAC extension repositories to search more sources.
+- **Riflay Wrap** and listening stats, kept on your device.
+- **Light on your computer.** Lightweight, Balanced and Heavy performance modes; under 2% CPU and 200 MB while playing on Windows, even with a music video.
 
 ## Install
 
-Every file is on the [latest release](https://github.com/Araryarch67/Riflay/releases/latest), with `SHA256SUMS` to check your downloads against. A package manager also keeps Riflay up to date for you.
+Every file is on the [latest release](https://github.com/Araryarch67/Riflay/releases/latest), with `SHA256SUMS`.
 
-### Windows
-
-With [Scoop](https://scoop.sh):
-
-```powershell
-scoop bucket add riflay https://github.com/Araryarch67/scoop-riflay
-scoop install riflay/riflay
-```
-
-`scoop update riflay` gets the newest version. Without Scoop, run `Riflay-windows-x64-setup.exe`, or unzip `Riflay-windows-x64.zip` anywhere and start `riflay.exe`.
-
-### Linux
-
-| Distribution | Install |
+| System | Install |
 |---|---|
+| Windows | `scoop bucket add riflay https://github.com/Araryarch67/scoop-riflay` then `scoop install riflay/riflay`, or the `setup.exe` / `.zip` |
 | Debian, Ubuntu, Mint | `sudo apt install ./Riflay-linux-amd64.deb` |
-| Fedora | `sudo dnf install ./Riflay-linux-x86_64.rpm` |
-| openSUSE | `sudo zypper install ./Riflay-linux-x86_64.rpm` |
-| Arch, Manjaro, EndeavourOS | `sudo pacman -U Riflay-linux-x86_64.pkg.tar.zst` |
-| Any, with [Homebrew](https://brew.sh) | `brew install --cask araryarch67/riflay/riflay` |
-| Any, no install | `chmod +x Riflay-linux-x86_64.AppImage`, then run it |
+| Fedora / openSUSE | `sudo dnf install ./Riflay-linux-x86_64.rpm` / `sudo zypper install ./Riflay-linux-x86_64.rpm` |
+| Arch | `sudo pacman -U Riflay-linux-x86_64.pkg.tar.zst` |
+| Linux or macOS, with Homebrew | `brew install --cask araryarch67/riflay/riflay` |
+| Any Linux | the `.AppImage` (`chmod +x`, then run it) |
+| Android | `Riflay-android.apk` (Android 7.0 and later) |
 
-The `.deb`, `.rpm` and Arch packages use your distribution's GTK 3 and libmpv (installed with them) and add Riflay to the application menu. Sign in with Google needs WebKitGTK 4.1, which the `.deb` and `.rpm` pull in when your system installs recommended packages; on Arch, install `webkit2gtk-4.1` yourself. The AppImage and the Homebrew install carry their own libmpv; an AppImage needs FUSE, which most desktops have (otherwise install your distribution's `fuse3`). The `.rpm` and Arch packages come with releases after 1.0.4.
-
-### macOS
-
-```sh
-brew install --cask araryarch67/riflay/riflay
-```
-
-Or open `Riflay-macos.dmg` and drag Riflay into Applications (see [Platform notes](#platform-notes) for the first launch). macOS builds are paused for now, so recent releases don't carry them yet.
-
-### Android and iOS
-
-Install `Riflay-android.apk` from the release (Android 7.0 and later); the release notes say which of the smaller APKs fits your phone. iOS builds are paused like macOS; the `.ipa` is unsigned, so sideload it with AltStore or Sideloadly.
+macOS and iOS builds are paused for now. The macOS app is unsigned: on first launch use System Settings › Privacy & Security › **Open Anyway**.
 
 ## Build from source
 
-You need the [Flutter SDK](https://docs.flutter.dev/get-started/install), stable channel, plus the standard desktop toolchain. On Linux this means `clang`, `cmake`, `ninja`, `pkg-config`, GTK 3 and the `libmpv` headers.
+You need the [Flutter SDK](https://docs.flutter.dev/get-started/install) (stable) and the desktop toolchain; on Linux also `clang`, `cmake`, `ninja`, `pkg-config`, GTK 3 and the `libmpv` headers.
 
 ```sh
 git clone https://github.com/Araryarch67/Riflay.git
 cd Riflay
 flutter pub get
 flutter run -d linux          # or: windows, macos, android, ios
-flutter build linux --release # build/linux/x64/release/bundle/
 ```
 
-On macOS and iOS, the first build also compiles libmpv from source (`tool/build_libmpv_apple.sh`, about ten minutes). This requires Homebrew's `meson`, `ninja`, `nasm` and `pkgconf`.
+## More
 
-After pulling changes that add packages, quit the app and run `flutter run` again. Hot reload does not load new plugins.
-
-## Web version
-
-Riflay also runs in a browser as a YouTube Music player. Browsers may not call YouTube Music directly (CORS), so the web version talks to a small proxy you run yourself, [`tool/web_proxy`](tool/web_proxy). It forwards only the requests Riflay makes (YouTube Music, song streams, covers and lyrics), keeps nothing about who listens to what, and logs no requests.
-
-**What works:** Home, Search, albums, artists and playlists, the queue, autoplay, synced lyrics, Riflay playlists (kept in the browser), themes and appearance, the player bar and Now Playing. YouTube Music is used signed out.
-
-**What doesn't:** your music folders and anything on files (tag editor, duplicates, converting), downloads, signing in to Google or Spotify and playlist imports, casting, Listen together, Discord, the equalizer and every sound setting (bit-perfect, exclusive mode, crossfade, Virtual speakers and the rest), Video mode, the mini player and the listening history. These are hidden in the web version.
-
-Run the proxy and serve the app from it, so both share one address:
-
-```sh
-flutter build web --release
-cd tool/web_proxy
-dart pub get
-dart run bin/server.dart --web ../../build/web     # http://127.0.0.1:8787
-```
-
-Or run the proxy on its own (also as a container) and point the app at it:
-
-```sh
-docker build -f tool/web_proxy/Dockerfile -t riflay-web-proxy .
-docker run --rm -p 8787:8787 riflay-web-proxy
-flutter run -d chrome --dart-define=RIFLAY_PROXY=http://127.0.0.1:8787/
-```
-
-`dart run bin/server.dart --help` lists the options: `--host 0.0.0.0` to listen beyond this computer, `--allow-origin https://your.site` to accept only your own page, and `--trust-forwarded` behind your own reverse proxy so the rate limit sees real addresses. Each address gets about two YouTube Music requests a second (song bytes are not counted); a song's stream URL is remembered until shortly before it expires.
-
-## YouTube Music
-
-All public YouTube Music features work without an account. **Sign in with Google** opens Google's own sign-in page, in a separate window on Linux and inside the app on other platforms. Once the sign-in completes, the session is stored in the app's private storage on your device. Riflay never sees your password, and nothing is sent anywhere except to YouTube Music itself.
-
-Changes you make (likes, playlists) go through YouTube Music's own API, so they also appear in the official apps.
-
-## Audio
-
-Every platform plays through [libmpv](https://mpv.io), using Riflay's own build where the stock one lacks filters (Windows, Android, macOS, iOS; see `tool/build_libmpv_*.sh`). The audio settings are therefore the same on every platform:
-
-| Area | Details |
-|---|---|
-| **Playback** (Settings › Sound) | Equalizer with presets and automatic headroom, volume leveling (ReplayGain per song or album), gapless playback, **Virtual speakers** (MIT's KEMAR HRTF: two speakers at ±30°), headphone crossfeed, **Mono audio** (both ears, left only or right only) |
-| **Output & quality** | Output sample rate; SoX resampler; buffer size. On desktop also: output device, including direct ALSA hardware on Linux; **bit-perfect mode**; **exclusive mode** (WASAPI on Windows, Core Audio hog mode on macOS); **native DSD (DoP)** for DSF, DSDIFF and SACD songs; **ASIO** on Windows; **audio plugins** through [Carla](https://kx.studio/Applications:Carla). On Android 14 and later with a USB DAC: **bit-perfect mode** and **native DSD (DoP)**. On iOS: the output picker, and a USB DAC follows each song's sample rate |
-| **Play on** | DLNA / UPnP renderers and classic AirPlay speakers, found on the network. Files the device cannot play (DSD, cue-sheet songs, WavPack, ...) are converted to FLAC on the fly; YouTube songs are sent as AAC; AirPlay receives ALAC |
-| **Signal path** | Source codec and stored bit depth → decoder → every DSP stage → volume → resampler → output device, with a verdict: *Bit-perfect*, *Lossless to the system mixer* or *Processed* |
-
-Not yet verified on real hardware: ASIO, exclusive mode, and casting to physical TVs and speakers (tested under Wine, against a simulated renderer and shairport-sync). On macOS and iOS: everything beyond the automated checks GitHub's runners perform. Reports from real devices are welcome.
-
-## Platform notes
-
-| | Linux | Windows | macOS | Android | iOS |
-|---|---|---|---|---|---|
-| Sound settings, signal path | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Output device, bit-perfect, DSD, exclusive | ✓ | ✓ | ✓ | partial¹, untested | partial², untested |
-| ASIO | not needed³ | ✓ | not needed³ | N/A | N/A |
-| Add a folder | ✓ | ✓ | ✓ | ✓ | ✓, untested |
-| Tag editor, cover art | ✓ | ✓ | ✓ | partial⁴ | ✓, untested |
-| AirPlay | ✓ | ✓ | untested | untested | partial⁵, untested |
-| Play on TVs (DLNA), with conversions | ✓ | ✓ | untested | untested | partial⁵, untested |
-| Discord | ✓ | ✓ | ✓ | N/A⁶ | N/A⁶ |
-| Audio plugins (Carla) | ✓ | ✓⁷ | ✓⁷ | N/A⁷ | N/A⁷ |
-| See-through window | ✓ | untested⁸ | untested⁸ | ✓⁸ | N/A⁸ |
-| Video mode | ✓ | untested | untested⁹ | untested⁹ | untested⁹ |
-
-✓ means the feature works and has been verified (tests, CI on that OS, an emulator or Wine). **untested** means it is built for that OS but has not yet been tried on a real device; reports from real devices are welcome.
-
-1. Android 14 and later with a USB DAC: bit-perfect mode sends the song to the DAC untouched through Android's bit-perfect USB output, and native DSD goes as DoP when the DAC accepts 176.4 kHz. Android chooses the output itself (a plugged-in USB DAC), so there is no picker or exclusive mode.
-2. Pick the output (speaker, Bluetooth, AirPlay, a USB DAC) with the system picker. A USB DAC follows each song's sample rate (FLAC, WAV, AIFF, WavPack). iOS always mixes, so it is never bit-perfect, and DSD plays as PCM.
-3. ASIO is a Windows driver standard. Linux and macOS have the same direct path to the DAC built in: bit-perfect mode (ALSA's hardware device) and exclusive mode (Core Audio's hog mode), in the row above.
-4. Songs added with **Add songs** can be edited. Songs read in place from a folder are read-only to apps since Android 11. Matroska (.mka) tags can be edited on computers only.
-5. Playing and converting work. Finding speakers and TVs on the network normally requires a multicast permission from Apple that a sideloaded app cannot have. AirPlay sends 44.1 kHz / 16-bit everywhere (AirPlay 1).
-6. Phones give other apps no connection to Discord.
-7. Carla is a separate free download: unzip it into Downloads or Program Files on Windows, put Carla.app in Applications on macOS. Android has no plugin standard, and iOS's AUv3 plugins are not supported yet.
-8. A blur behind the window on Windows 11 and macOS (plain transparency on Windows 10); the home-screen wallpaper on Android. iOS does not let apps show the wallpaper.
-9. Riflay's own player builds for these systems carry H.264 and VP9 video decoders (hardware decoding where the device has it), but Video mode has not been tried on a real device yet. Phones get a lighter stream. Video mode shows songs that are videos on YouTube Music, and with a signed-in account also the music video YouTube Music pairs with a song.
-
-YouTube streams through YouTube's player API everywhere, with yt-dlp (desktop) or a built-in extractor (phones) as the fallback. yt-dlp needs a JavaScript runtime (Deno or Node) for some YouTube challenges.
-
-No additional installation is required. Conversions for AirPlay and TVs, and the tag editor, run inside Riflay (libmpv and its own tag writers). FFmpeg is used only for AirPlay and TV conversions on Windows and for Matroska tags on computers: a system one where one exists; otherwise the official static build (gyan.dev on Windows, johnvansickle.com on Linux, Martin Riedl's on macOS, about 40 MB) is downloaded on first use, checked against its published checksum and stored in the app's folder.
-
-The macOS app is not signed by Apple. On first launch, open it from System Settings › Privacy & Security › **Open Anyway**. The iOS `.ipa` is unsigned as well; sideload it with AltStore or Sideloadly.
-
-Debug builds append every Flutter error with its full stack trace to `<app support dir>/errors.log` (on Linux, `~/.local/share/dev.riflay.riflay/errors.log`).
-
-## Contributing
-
-Bug reports, feature requests and pull requests are welcome. Start with **[CONTRIBUTING.md](CONTRIBUTING.md)**. **[AGENT.md](AGENT.md)** documents how the code is organized and how to test it. It is written for coding agents, but equally useful for human contributors.
+- [Audio and platform notes](docs/platforms.md): YouTube Music sign-in, every audio setting, and what works on which system.
+- [Riflay in a browser](docs/web.md): the web version and its proxy.
+- [Contributing](CONTRIBUTING.md) and [AGENT.md](AGENT.md) (how the code is organized and tested).
 
 ## Acknowledgements
 
