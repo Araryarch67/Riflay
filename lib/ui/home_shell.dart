@@ -32,6 +32,7 @@ import 'pages/listen_together_page.dart';
 import 'shell/desktop_sidebar.dart';
 import 'shell/first_frame_gate.dart';
 import 'shell/phone_navigation.dart';
+import 'widgets/auto_hide_bar.dart';
 import 'widgets/title_bar.dart';
 
 /// Root layout.
@@ -53,6 +54,7 @@ class _HomeShellState extends State<HomeShell> {
   /// The title bar's search box (desktop); the phone tab has its own.
   final _search = SearchInput();
   final _navigators = {for (final t in PhoneTab.values) t: GlobalKey<NavigatorState>()};
+  final _titleBarKey = GlobalKey();
 
   NavigatorState? get _nav => _navigators[_tab]!.currentState;
 
@@ -525,75 +527,97 @@ class _HomeShellState extends State<HomeShell> {
       final sidebarWidth = expanded ? 300.0 : 84.0;
       final sideOpen = expanded && _sidePanel && _hasTrack;
       _contentWidth = width - sidebarWidth - (sideOpen ? 340 : 0) - 24;
-      body = _scoped(
-        Scaffold(
-          extendBody: LayoutPrefs.instance.desktopBar.floats,
-          // In the bottom slot so floating snackbars stack above the player instead of covering it.
-          bottomNavigationBar: SafeArea(
-            top: false,
-            child: DesktopPlayerBar(
-              sidePanelOpen: sideOpen,
-              onToggleSidePanel: expanded ? () => setState(() => _sidePanel = !_sidePanel) : null,
+      // Expanded: the cover takes the whole window and both bars slide away until the pointer comes to them.
+      // The pages stay alive (and their history) underneath.
+      final pages = Padding(
+        padding: EdgeInsets.fromLTRB(8, hasCustomTitleBar ? 0 : 8, 8, 0),
+        child: Row(
+          children: [
+            SizedBox(
+              width: sidebarWidth,
+              child: ListenableBuilder(
+                listenable: _history,
+                builder: (context, _) => DesktopSidebar(
+                  collapsed: !expanded,
+                  location: _history.location,
+                  onHome: _goHome,
+                  onSearch: _goSearch,
+                  // Home and search sit in the title bar instead.
+                  inTitleBar: hasCustomTitleBar,
+                ),
+              ),
             ),
-          ),
-          body: SafeArea(
-            bottom: false,
-            child: Column(
-              children: [
-                // Only full screen hides it: the expanded player inside the window keeps the title bar.
-                if (hasCustomTitleBar)
-                  ValueListenableBuilder(
-                    valueListenable: windowFullScreen,
-                    builder: (context, full, bar) => full ? const SizedBox.shrink() : bar!,
-                    child: _titleBar(),
-                  ),
-                Expanded(
-                  // Full-screen player on top; the pages stay alive (and their history) underneath.
-                  child: ValueListenableBuilder(
-                    valueListenable: fullScreenPlayer,
-                    builder: (context, full, pages) => Stack(
-                      children: [
-                        Positioned.fill(
-                          child: Offstage(offstage: full, child: pages),
-                        ),
-                        if (full) const Positioned.fill(child: FullScreenPlayer()),
-                      ],
-                    ),
-                    child: Padding(
-                      padding: EdgeInsets.fromLTRB(8, hasCustomTitleBar ? 0 : 8, 8, 0),
-                      child: Row(
-                        children: [
-                          SizedBox(
-                            width: sidebarWidth,
-                            child: ListenableBuilder(
-                              listenable: _history,
-                              builder: (context, _) => DesktopSidebar(
-                                collapsed: !expanded,
-                                location: _history.location,
-                                onHome: _goHome,
-                                onSearch: _goSearch,
-                                // Home and search sit in the title bar instead.
-                                inTitleBar: hasCustomTitleBar,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(child: ShellPanel(child: _desktopNavigator())),
-                          if (expanded)
-                            SlidingPanel(
-                              open: sideOpen,
-                              child: ShellPanel(
-                                child: NowPlayingSidePanel(onClose: () => setState(() => _sidePanel = false)),
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
+            const SizedBox(width: 8),
+            Expanded(child: ShellPanel(child: _desktopNavigator())),
+            if (expanded)
+              SlidingPanel(
+                open: sideOpen,
+                child: ShellPanel(
+                  child: NowPlayingSidePanel(onClose: () => setState(() => _sidePanel = false)),
+                ),
+              ),
+          ],
+        ),
+      );
+      body = _scoped(
+        ValueListenableBuilder(
+          valueListenable: fullScreenPlayer,
+          builder: (context, full, pages) {
+            // Keyed: it moves between the column and the overlay without losing what's typed in it.
+            final titleBar = AutoHideBar(
+              key: _titleBarKey,
+              edge: AxisDirection.up,
+              enabled: full,
+              child: _titleBar(),
+            );
+            return Scaffold(
+              extendBody: full || LayoutPrefs.instance.desktopBar.floats,
+              // In the bottom slot so floating snackbars stack above the player instead of covering it.
+              bottomNavigationBar: AutoHideBar(
+                edge: AxisDirection.down,
+                enabled: full,
+                child: SafeArea(
+                  top: false,
+                  child: DesktopPlayerBar(
+                    sidePanelOpen: sideOpen,
+                    onToggleSidePanel: expanded ? () => setState(() => _sidePanel = !_sidePanel) : null,
                   ),
                 ),
-              ],
-            ),
-          ),
+              ),
+              body: SafeArea(
+                bottom: false,
+                child: Stack(
+                  children: [
+                    Column(
+                      children: [
+                        if (hasCustomTitleBar && !full) titleBar,
+                        Expanded(
+                          child: Stack(
+                            children: [
+                              Positioned.fill(
+                                child: Offstage(offstage: full, child: pages),
+                              ),
+                              if (full)
+                                Positioned.fill(
+                                  // The player bar floats over it now: no room kept for it.
+                                  child: MediaQuery.removePadding(
+                                    context: context,
+                                    removeBottom: true,
+                                    child: const FullScreenPlayer(),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (hasCustomTitleBar && full) Positioned(top: 0, left: 0, right: 0, child: titleBar),
+                  ],
+                ),
+              ),
+            );
+          },
+          child: pages,
         ),
       );
     }
