@@ -15,6 +15,7 @@ import '../debug_switches.dart';
 import '../shortcuts.dart';
 import '../theme.dart';
 import 'flower_cover.dart';
+import 'playing_motion.dart';
 import 'wavy_seek_track.dart';
 
 String formatDuration(Duration? d) {
@@ -389,7 +390,9 @@ class _SeekBarState extends State<SeekBar> {
             final parts = widget.phonePlayer || widget.desktopPlayer;
             final pill = parts && LayoutPrefs.instance.progressShape == ProgressBarShape.pill;
             final colors = AppColors.of(context);
-            final slider = MouseRegion(
+            final wavy =
+                !pill && LayoutPrefs.instance.progressShape == ProgressBarShape.wavy && !LayoutPrefs.lightweight;
+            Widget sliderWith(MotionClock? clock) => MouseRegion(
               onEnter: (_) => setState(() => _hovering = true),
               onExit: (_) => setState(() => _hovering = false),
               child: SliderTheme(
@@ -397,8 +400,8 @@ class _SeekBarState extends State<SeekBar> {
                   trackHeight: pill ? 9 : LayoutPrefs.instance.progressBar.height,
                   trackShape: pill
                       ? const PillSeekTrack()
-                      : LayoutPrefs.instance.progressShape == ProgressBarShape.wavy && !LayoutPrefs.lightweight
-                      ? const WavySeekTrack()
+                      : wavy
+                      ? WavySeekTrack(motion: clock)
                       : null,
                   activeTrackColor: pill ? colors.inverse : colors.accent,
                   inactiveTrackColor: pill ? colors.inverse.withValues(alpha: 0.18) : null,
@@ -427,6 +430,14 @@ class _SeekBarState extends State<SeekBar> {
                 ),
               ),
             );
+            // The wave moves with its own clock and repaints only the bar, not the labels or the page.
+            final slider = wavy
+                ? PlayingMotion(
+                    builder: (context, clock) => RepaintBoundary(
+                      child: RepaintOn(listenable: clock, child: sliderWith(clock)),
+                    ),
+                  )
+                : sliderWith(null);
             final elapsed = Text(formatDuration(Duration(milliseconds: value.round())), style: style, maxLines: 1);
             final left = parts && LayoutPrefs.instance.showTimeLeft && duration > Duration.zero;
             final total = Text(

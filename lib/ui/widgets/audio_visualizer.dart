@@ -34,6 +34,7 @@ class AudioVisualizer extends StatelessWidget {
         return AudioReactiveView(
           builder: (context, levels) => RepaintBoundary(
             child: FlowerCover(
+              animate: true,
               levels: levels,
               shape: prefs.visualizerCoverShape,
               color: AppColors.of(context).accent,
@@ -48,7 +49,9 @@ class AudioVisualizer extends StatelessWidget {
           (child != null && !style.radial) ||
           (radialOnly && !style.radial) ||
           (linearOnly && style.radial)) {
-        return child == null ? const SizedBox.shrink() : FlowerCover(shape: prefs.visualizerCoverShape, child: child!);
+        return child == null
+            ? const SizedBox.shrink()
+            : FlowerCover(animate: true, shape: prefs.visualizerCoverShape, child: child!);
       }
       return AudioReactiveView(
         builder: (context, levels) {

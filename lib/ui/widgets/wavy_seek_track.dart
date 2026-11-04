@@ -2,9 +2,18 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import 'playing_motion.dart';
+
 /// Only the elapsed portion is wavy. Slider gestures and semantics stay native.
 class WavySeekTrack extends SliderTrackShape with BaseSliderTrackShape {
-  const WavySeekTrack();
+  /// With a [motion] clock the wave travels towards the thumb while it runs and flattens to a
+  /// line as it eases out (a pause). Without one it is the still wave.
+  const WavySeekTrack({this.motion});
+
+  final MotionClock? motion;
+
+  /// Wavelengths the wave travels in a second.
+  static const _speed = 0.55;
 
   @override
   void paint(
@@ -48,7 +57,8 @@ class WavySeekTrack extends SliderTrackShape with BaseSliderTrackShape {
     context.canvas.drawLine(Offset(thumb, rect.center.dy), Offset(end, rect.center.dy), pen..color = inactive);
     final length = (thumb - start).abs();
     if (length < 0.01) return;
-    final amplitude = (height * 0.4 + 2).clamp(3.0, 5.0);
+    final amplitude = (height * 0.4 + 2).clamp(3.0, 5.0) * (motion?.eased ?? 1);
+    final shift = (motion?.time ?? 0) * _speed;
     final wavelength = 16 + height * 0.5;
     final path = Path()..moveTo(start, rect.center.dy);
     final steps = length.ceil();
@@ -58,7 +68,7 @@ class WavySeekTrack extends SliderTrackShape with BaseSliderTrackShape {
       final fade = math.min(1.0, math.min(distance, length - distance) / (wavelength / 4));
       path.lineTo(
         start + (rtl ? -distance : distance),
-        rect.center.dy + math.sin(distance / wavelength * math.pi * 2) * amplitude * fade,
+        rect.center.dy + math.sin((distance / wavelength - shift) * math.pi * 2) * amplitude * fade,
       );
     }
     context.canvas.drawPath(path, pen..color = active);
