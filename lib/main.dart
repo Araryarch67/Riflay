@@ -28,6 +28,7 @@ import 'services/player_controller.dart';
 import 'services/memory_trim.dart';
 import 'services/rendering_memory.dart';
 import 'services/stay_awake.dart';
+import 'services/system_tray.dart';
 import 'services/taskbar_buttons.dart';
 import 'services/wrap_notifications.dart';
 import 'ui/home_shell.dart';
@@ -127,6 +128,8 @@ Future<void> _startServices(PlayerController controller) async {
       MediaSession.start(controller),
       // Windows: Previous, Play / Pause and Next on the taskbar thumbnail.
       Future(() => TaskbarButtons.start(controller)),
+      // Computers: the tray icon, and closing the window hides Riflay there (Settings › Power & background).
+      SystemTray.start(controller),
       StayAwake.start(controller),
       // Notifications watch the queue, so they attach once it is restored.
       controller.youtube.restoreQueue().then((_) => DownloadNotifications.attach(controller.youtube)),

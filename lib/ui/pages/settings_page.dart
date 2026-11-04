@@ -7,6 +7,7 @@ import '../../services/beta_features.dart';
 import '../../services/discord_presence.dart';
 import '../../services/lyrics.dart';
 import '../../services/player_controller.dart';
+import '../../services/system_tray.dart';
 import '../navigation.dart';
 import '../shell_scope.dart';
 import '../shortcuts.dart';
@@ -259,7 +260,9 @@ class SettingsPage extends StatelessWidget {
             _SettingsRow(
               icon: Icons.battery_saver_outlined,
               title: 'Power & background',
-              summary: 'Screen timeout, sleep and background playback',
+              summary: SystemTray.offered
+                  ? 'Screen timeout, sleep, background playback and closing to the tray'
+                  : 'Screen timeout, sleep and background playback',
               onTap: () => shell.open(const SettingsPowerPage(), location: Locations.settingsTopic('power')),
             ),
           _SettingsRow(

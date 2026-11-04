@@ -41,6 +41,8 @@ overrides:
     depends:
       - libgtk-3-0t64 | libgtk-3-0
       - libmpv2 | libmpv1
+      # The tray icon (tray_manager links it).
+      - libayatana-appindicator3-1
     recommends:
       - libwebkit2gtk-4.1-0
       - ffmpeg
@@ -50,6 +52,7 @@ overrides:
     depends:
       - libgtk-3.so.0()(64bit)
       - libmpv.so.2()(64bit)
+      - libayatana-appindicator3.so.1()(64bit)
     recommends:
       - libwebkit2gtk-4.1.so.0()(64bit)
 

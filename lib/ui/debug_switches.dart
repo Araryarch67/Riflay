@@ -26,6 +26,10 @@ abstract final class DebugSwitches {
   /// [FirstFrameGate] shows its child at once, in the app's first frame too.
   static bool noFirstFrameGate = _all || const bool.fromEnvironment('RIFLAY_NO_FIRST_FRAME_GATE');
 
+  /// No tray icon on computers: closing the window quits, as it did before the tray, and Settings leaves out
+  /// Close to tray. Not part of `RIFLAY_NO_SHORTCUTS`, which is about rendering.
+  static bool noTray = const bool.fromEnvironment('RIFLAY_NO_TRAY');
+
   /// Prints how many widgets each palette change rebuilds, and every Material theme built.
   static bool logRestyles = const bool.fromEnvironment('RIFLAY_LOG_RESTYLES');
 

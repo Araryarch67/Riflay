@@ -20,13 +20,16 @@ fetch appimagetool https://github.com/AppImage/appimagetool/releases/download/co
 
 libmpv=$(ldconfig -p | awk '/libmpv\.so\.2 .*x86-64/ {print $NF}' | head -n1 || true)
 [ -n "$libmpv" ] || { echo "libmpv.so.2 not found" >&2; exit 1; }
+# The tray icon's plugin links it, and the app doesn't start without it; not every distro has it installed.
+indicator=$(ldconfig -p | awk '/libayatana-appindicator3\.so\.1 .*x86-64/ {print $NF}' | head -n1 || true)
+[ -n "$indicator" ] || { echo "libayatana-appindicator3.so.1 not found" >&2; exit 1; }
 
 rm -rf "$appdir"
 mkdir -p "$appdir/usr/lib" "$appdir/usr/share/riflay"
 cp -r "$bundle"/. "$appdir/usr/share/riflay/"
-# libmpv and its dependencies into usr/lib (linuxdeploy leaves out what
-# every system has: glibc, GL, X11/Wayland, ALSA...).
-"$tools/linuxdeploy" --appdir "$appdir" --library "$libmpv"
+# libmpv, the AppIndicator library and their dependencies into usr/lib
+# (linuxdeploy leaves out what every system has: glibc, GL, X11/Wayland, ALSA...).
+"$tools/linuxdeploy" --appdir "$appdir" --library "$libmpv" --library "$indicator"
 # GTK's own stack must come from the system too: an older bundled GLib or
 # libstdc++ in LD_LIBRARY_PATH would break the system's GTK on newer distros.
 (cd "$appdir/usr/lib" && rm -f libglib-2.0.so* libgio-2.0.so* libgobject-2.0.so* libgmodule-2.0.so* \

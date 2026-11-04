@@ -65,7 +65,7 @@ macOS and iOS builds are paused for now. The macOS app is unsigned: on first lau
 
 ## Build from source
 
-You need the [Flutter SDK](https://docs.flutter.dev/get-started/install) (stable) and the desktop toolchain; on Linux also `clang`, `cmake`, `ninja`, `pkg-config`, GTK 3 and the `libmpv` headers.
+You need the [Flutter SDK](https://docs.flutter.dev/get-started/install) (stable) and the desktop toolchain; on Linux also `clang`, `cmake`, `ninja`, `pkg-config`, GTK 3, the `libmpv` headers and `libayatana-appindicator3` (the tray icon; `libayatana-appindicator3-dev` on Debian and Ubuntu).
 
 ```sh
 git clone https://github.com/Araryarch67/Riflay.git

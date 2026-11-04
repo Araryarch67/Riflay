@@ -80,6 +80,9 @@ lib/
     youtube_stream.dart        A YouTube song's audio stream in one player request (yt-dlp is the fallback)
     usb_dac.dart / linux_alsa.dart  Direct outputs: Android USB DACs, Linux ALSA cards
     media_session.dart         System media controls (Android notification, Control Center, MPRIS)
+    system_tray.dart           Computers: the tray icon and menu, and Close to tray (Settings › Power & background);
+                               the plugin sits behind platform/tray.dart. Linux needs a StatusNotifier host
+                               (no tray icon, e.g. plain GNOME: closing quits as before)
     discord_presence.dart      Discord Rich Presence over the local IPC socket
   ui/
     home_shell.dart            Layouts: phone tabs / desktop sidebar + one history
@@ -393,6 +396,7 @@ Compare medians of several complete runs; debug builds are meaningless here.
   ```sh
   flutter run --dart-define=RIFLAY_SCROBBLE_DRY_RUN=true  # print scrobbles instead of sending them
   flutter run --dart-define=RIFLAY_LASTFM_KEY=… --dart-define=RIFLAY_LASTFM_SECRET=…
+  flutter run --dart-define=RIFLAY_NO_TRAY=true           # no tray icon; closing the window quits
   ```
 
   Last.fm is only offered when the build has an API account's key and secret

@@ -5,12 +5,14 @@ import '../../services/layout_prefs.dart';
 import '../../services/player_controller.dart';
 import '../../services/power_policy.dart';
 import '../../services/stay_awake.dart';
+import '../../services/system_tray.dart';
 import '../pages/sound_settings.dart' show SettingTile, settingsMuted;
 import '../theme.dart';
 import 'menus.dart';
 
 /// Settings › Power & background: keeping the screen on, keeping a computer awake
-/// while music plays, and (Android) letting Riflay run with the screen off.
+/// while music plays, closing to the tray (computers), and (Android) letting Riflay
+/// run with the screen off.
 class PowerSettings {
   const PowerSettings._();
 
@@ -22,6 +24,7 @@ class PowerSettings {
       const _PerformanceRow(),
       _ScreenRow(awake),
       if (StayAwake.isDesktop) _SleepRow(awake),
+      if (SystemTray.offered) const CloseToTrayRow(),
       if (BatteryExemption.supported) const BatteryTile(),
     ];
   }
@@ -121,6 +124,32 @@ class _SleepRow extends StatelessWidget {
       value: awake.preventSleep,
       onChanged: awake.setPreventSleep,
     ),
+  );
+}
+
+/// Computers: whether closing the window hides Riflay in the tray (see [SystemTray]).
+class CloseToTrayRow extends StatelessWidget {
+  const CloseToTrayRow({super.key});
+
+  @override
+  Widget build(BuildContext context) => ListenableBuilder(
+    listenable: Listenable.merge([CloseToTray.instance, SystemTray.available]),
+    builder: (context, _) {
+      // A desktop that shows no tray icons: the window has to close for real, so the switch can't help.
+      final noTray = SystemTray.available.value == false;
+      return SwitchListTile(
+        secondary: const Icon(Icons.move_to_inbox_outlined),
+        title: const Text('Close to tray'),
+        subtitle: Text(
+          noTray
+              ? 'Your desktop doesn\'t show tray icons, so closing the window quits Riflay'
+              : 'Closing the window keeps Riflay playing in the tray. Quit it from the tray icon',
+          style: settingsMuted(context),
+        ),
+        value: CloseToTray.instance.enabled && !noTray,
+        onChanged: noTray ? null : CloseToTray.instance.setEnabled,
+      );
+    },
   );
 }
 
