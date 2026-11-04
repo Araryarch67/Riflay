@@ -13,6 +13,7 @@ import '../widgets/stats_for_nerds.dart';
 import '../widgets/track_row.dart';
 import '../widgets/video_mode.dart';
 import 'player_common.dart';
+import 'player_parts.dart';
 
 /// Right-hand panel on large screens: big cover, title, and what's next.
 class NowPlayingSidePanel extends StatelessWidget {
@@ -67,36 +68,14 @@ class NowPlayingSidePanel extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      Expanded(
-                        child: Text(
-                          from ?? 'Now playing',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: text.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-                        ),
-                      ),
+                      Expanded(child: PlayerFromLabel(from: from)),
                       TrackMenuButton(track: track, nowPlaying: true),
                       IconButton(tooltip: 'Close', onPressed: onClose, icon: const Icon(Icons.close_rounded, size: 20)),
                     ],
                   ),
                   const SizedBox(height: 8),
                   Center(child: VideoModeSwitch(track: track)),
-                  AspectRatio(
-                    aspectRatio: 1,
-                    child: NowPlayingCover(
-                      child: TrackVisual(
-                        track: track,
-                        cover: AudioVisualizer(
-                          radialOnly: true,
-                          child: TrackSwitcher(
-                            trackId: track.id,
-                            slide: false,
-                            child: Artwork(key: ValueKey(track.id), track: track, radius: 8),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
+                  _PanelCover(track: track),
                   const SizedBox(height: 16),
                   Text(
                     track.title,
@@ -157,4 +136,43 @@ class NowPlayingSidePanel extends StatelessWidget {
             ),
     );
   }
+}
+
+/// The big cover: a rounded square in the list's margins, or with Cover set to Full width, edge to edge and square.
+class _PanelCover extends StatelessWidget {
+  const _PanelCover({required this.track});
+
+  final Track track;
+
+  @override
+  Widget build(BuildContext context) => ListenableBuilder(
+    listenable: LayoutPrefs.instance,
+    builder: (context, _) {
+      final bleed = LayoutPrefs.instance.playerCover == PlayerCover.fullBleed;
+      final cover = NowPlayingCover(
+        child: TrackVisual(
+          track: track,
+          cover: AudioVisualizer(
+            radialOnly: true,
+            child: TrackSwitcher(
+              trackId: track.id,
+              slide: false,
+              child: Artwork(key: ValueKey(track.id), track: track, radius: bleed ? 0 : 8),
+            ),
+          ),
+        ),
+      );
+      if (!bleed) return AspectRatio(aspectRatio: 1, child: cover);
+      // Out past the list's 16 px margins on both sides.
+      return LayoutBuilder(
+        builder: (context, box) {
+          final side = box.maxWidth + 32;
+          return SizedBox(
+            height: side,
+            child: OverflowBox(minWidth: side, maxWidth: side, minHeight: side, maxHeight: side, child: cover),
+          );
+        },
+      );
+    },
+  );
 }

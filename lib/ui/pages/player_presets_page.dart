@@ -5,7 +5,7 @@ import '../../services/layout_prefs.dart';
 import '../../services/player_presets.dart';
 import '../theme.dart';
 
-/// Settings › Look & feel › Layout › Player on phones › Presets: a whole look in one tap. A preset only
+/// Settings › Look & feel › Layout › Player › Presets: a whole look in one tap. A preset only
 /// sets the individual player settings, so it is the same as setting them one by one.
 class PlayerPresetsPage extends StatelessWidget {
   const PlayerPresetsPage({super.key});

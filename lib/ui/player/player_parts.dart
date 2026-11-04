@@ -22,9 +22,11 @@ import '../widgets/track_row.dart';
 import '../ytmusic_edit.dart';
 import 'more_sheet.dart';
 import 'now_playing_page.dart';
+import 'full_screen_player.dart' show ExpandedPanel, expandedPlayerPanel, showExpandedPlayer;
 import 'player_common.dart' show LinkText;
 
-// The parts the phone's player is assembled from (Settings › Look & feel › Layout › Player on phones).
+// The parts the player is assembled from (Settings › Look & feel › Layout › Player). The phone builds its Now
+// Playing from them; the desktop's expanded player, side panel and bar take the ones that fit a wide window.
 // Classic keeps its own widgets in now_playing_page.dart; these are the other choices for each part.
 
 /// Copies a link to the song (or its name, for a file on this device) so it can be pasted anywhere.
@@ -459,6 +461,219 @@ class PlayerControlsRow extends StatelessWidget {
   }
 }
 
+/// Where the song plays from, at the top of the desktop's expanded player and side panel, as Settings › Layout ›
+/// Player › Top of the player says: Classic is the plain line, the others are the phone's two lines or one.
+class PlayerFromLabel extends StatelessWidget {
+  const PlayerFromLabel({super.key, required this.from, this.album});
+
+  final String? from;
+
+  /// What Classic shows when nothing says where the song plays from.
+  final String? album;
+
+  @override
+  Widget build(BuildContext context) => ListenableBuilder(
+    listenable: LayoutPrefs.instance,
+    builder: (context, _) {
+      final text = Theme.of(context).textTheme;
+      final muted = AppColors.of(context).textSecondary;
+      return switch (LayoutPrefs.instance.playerHeader) {
+        PlayerHeader.classic => Text(
+          from ?? album ?? 'Now playing',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: text.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+        ),
+        PlayerHeader.centered => Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('Now Playing', style: text.labelSmall?.copyWith(color: muted)),
+            Text(
+              from ?? album ?? 'Your library',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: text.labelLarge?.copyWith(fontWeight: FontWeight.w700),
+            ),
+          ],
+        ),
+        PlayerHeader.playingFrom => Text(
+          'Playing from ${from ?? album ?? 'your library'}',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          textAlign: TextAlign.center,
+          style: text.labelMedium?.copyWith(color: muted, fontWeight: FontWeight.w600),
+        ),
+      };
+    },
+  );
+}
+
+/// The buttons beside the title in the desktop's expanded player. Classic is the heart and the song's menu; the
+/// others add Share in a box or make the heart a plain bigger icon. The song's menu is always there.
+List<Widget> desktopTitleActions(BuildContext context, Track track) {
+  final menu = TrackMenuButton(track: track, nowPlaying: true);
+  return switch (LayoutPrefs.instance.titleActions) {
+    TitleActions.classic => [LikeButton(track: track, size: 26), menu],
+    TitleActions.boxed => [
+      PartButton(
+        icon: Icons.ios_share_rounded,
+        tooltip: 'Share',
+        look: PartLook.filled,
+        size: 40,
+        iconSize: 20,
+        onPressed: () => shareTrack(context, track),
+      ),
+      PlayerLike(
+        track: track,
+        builder: (context, liked, toggle) => Padding(
+          padding: const EdgeInsets.only(left: 8),
+          child: PartButton(
+            icon: liked ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+            tooltip: liked ? 'Remove from Liked music' : 'Add to Liked music',
+            lit: liked,
+            size: 40,
+            iconSize: 20,
+            onPressed: toggle,
+          ),
+        ),
+      ),
+      const SizedBox(width: 4),
+      menu,
+    ],
+    TitleActions.plain => [
+      PlayerLike(
+        track: track,
+        builder: (context, liked, toggle) => PartButton(
+          icon: liked ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+          tooltip: liked ? 'Remove from Liked music' : 'Add to Liked music',
+          look: PartLook.plain,
+          size: 40,
+          iconSize: 28,
+          onPressed: toggle,
+        ),
+      ),
+      menu,
+    ],
+  };
+}
+
+/// Previous / play / next for the desktop player bar when Controls is Pill or Plain, small enough for its row.
+/// Shuffle and repeat flank them, like Classic's.
+class DesktopControlsRow extends StatelessWidget {
+  const DesktopControlsRow({super.key, required this.plain});
+
+  final bool plain;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = PlayerScope.read(context);
+    return PlayerSelect<_Transport>(
+      select: _selectTransport,
+      builder: (context, t, _) {
+        final colors = AppColors.of(context);
+        final prev = tipWith('Previous', AppAction.previous);
+        final next = tipWith('Next', AppAction.next);
+        final play = tipWith(t.playing ? 'Pause' : 'Play', AppAction.playPause);
+        if (plain) {
+          return Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _shuffleButton(c, t, size: 20),
+              const SizedBox(width: 8),
+              IconButton(
+                tooltip: prev,
+                iconSize: 26,
+                color: colors.textPrimary,
+                onPressed: t.hasQueue ? c.previous : null,
+                icon: const Icon(Icons.fast_rewind_rounded),
+              ),
+              IconButton(
+                tooltip: play,
+                iconSize: 32,
+                color: colors.textPrimary,
+                onPressed: t.canPlay ? c.togglePlay : null,
+                icon: Icon(t.playing ? Icons.pause_rounded : Icons.play_arrow_rounded),
+              ),
+              IconButton(
+                tooltip: next,
+                iconSize: 26,
+                color: colors.textPrimary,
+                onPressed: t.hasNext ? c.next : null,
+                icon: const Icon(Icons.fast_forward_rounded),
+              ),
+              const SizedBox(width: 8),
+              _repeatButton(c, t, size: 20),
+            ],
+          );
+        }
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _shuffleButton(c, t, size: 20),
+            const SizedBox(width: 8),
+            PartButton(
+              icon: Icons.skip_previous_rounded,
+              tooltip: prev,
+              look: PartLook.muted,
+              round: true,
+              size: 36,
+              iconSize: 22,
+              onPressed: t.hasQueue ? c.previous : null,
+            ),
+            const SizedBox(width: 8),
+            Tooltip(
+              message: play,
+              child: Material(
+                color: t.canPlay ? colors.inverse : colors.inverse.withValues(alpha: 0.4),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(math.min(18.0, LayoutPrefs.radius(18))),
+                ),
+                clipBehavior: Clip.antiAlias,
+                child: InkWell(
+                  onTap: t.canPlay ? c.togglePlay : null,
+                  child: SizedBox(
+                    width: 104,
+                    height: 36,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          t.playing ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                          color: colors.onInverse,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          t.playing ? 'Pause' : 'Play',
+                          maxLines: 1,
+                          style: Theme.of(context).textTheme.labelLarge
+                              ?.copyWith(color: colors.onInverse, fontWeight: FontWeight.w700),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            PartButton(
+              icon: Icons.skip_next_rounded,
+              tooltip: next,
+              look: PartLook.muted,
+              round: true,
+              size: 36,
+              iconSize: 22,
+              onPressed: t.hasNext ? c.next : null,
+            ),
+            const SizedBox(width: 8),
+            _repeatButton(c, t, size: 20),
+          ],
+        );
+      },
+    );
+  }
+}
+
 /// The row under the controls: small buttons (Chips) or Lyrics, the output and Queue (Minimal).
 /// Lyrics is in both, always.
 class PlayerBottomButtons extends StatelessWidget {
@@ -761,9 +976,12 @@ void showNowPlayingFromLyrics(BuildContext context) {
 
 /// The lyrics page's player as a mini card (a thumbnail, the song, play, expand and More) with the seek bar.
 class LyricsBottomCard extends StatelessWidget {
-  const LyricsBottomCard({super.key, required this.track});
+  const LyricsBottomCard({super.key, required this.track, this.desktop = false});
 
   final Track track;
+
+  /// On desktop the player bar below has the seek bar and More, so the card keeps the song, play and expand.
+  final bool desktop;
 
   @override
   Widget build(BuildContext context) {
@@ -816,18 +1034,21 @@ class LyricsBottomCard extends StatelessWidget {
               const SizedBox(width: 6),
               PartButton(
                 icon: Icons.open_in_full_rounded,
-                tooltip: 'Now Playing',
+                tooltip: desktop ? 'Expanded player' : 'Now Playing',
                 size: 40,
                 iconSize: 20,
-                onPressed: () => showNowPlayingFromLyrics(context),
+                onPressed: desktop
+                    ? () {
+                        expandedPlayerPanel.value = ExpandedPanel.lyrics;
+                        showExpandedPlayer(true);
+                      }
+                    : () => showNowPlayingFromLyrics(context),
               ),
-              const SizedBox(width: 6),
-              const PlayerMoreAction(size: 40),
+              if (!desktop) ...[const SizedBox(width: 6), const PlayerMoreAction(size: 40)],
             ],
           ),
         ),
-        const SizedBox(height: 12),
-        const SeekBar(phonePlayer: true),
+        if (!desktop) ...[const SizedBox(height: 12), const SeekBar(phonePlayer: true)],
       ],
     );
   }
@@ -835,9 +1056,12 @@ class LyricsBottomCard extends StatelessWidget {
 
 /// The lyrics page's header as a song card: thumbnail, title, artist, a round close and More.
 class LyricsTopHeader extends StatelessWidget {
-  const LyricsTopHeader({super.key, required this.track});
+  const LyricsTopHeader({super.key, required this.track, this.desktop = false});
 
   final Track track;
+
+  /// On desktop the title bar goes back, so the card ends with the heart and the song's menu instead.
+  final bool desktop;
 
   @override
   Widget build(BuildContext context) {
@@ -867,14 +1091,19 @@ class LyricsTopHeader extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 8),
-        PartButton(
-          icon: Icons.close_rounded,
-          tooltip: 'Close',
-          round: true,
-          onPressed: () => Navigator.of(context).maybePop(),
-        ),
-        const SizedBox(width: 8),
-        const PlayerMoreAction(look: PartLook.muted),
+        if (desktop) ...[
+          LikeButton(track: track, size: 24),
+          TrackMenuButton(track: track, nowPlaying: true),
+        ] else ...[
+          PartButton(
+            icon: Icons.close_rounded,
+            tooltip: 'Close',
+            round: true,
+            onPressed: () => Navigator.of(context).maybePop(),
+          ),
+          const SizedBox(width: 8),
+          const PlayerMoreAction(look: PartLook.muted),
+        ],
       ],
     );
   }
