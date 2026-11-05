@@ -120,15 +120,38 @@ class LibraryViews {
     );
   }
 
-  /// Video id → the first library file downloaded from it.
+  /// Video id → the newest library file downloaded from it (an older one may be gone: a format since changed).
   Map<String, Track> get downloads {
     final cached = _downloads;
     if (cached != null) return cached;
     final out = <String, Track>{};
     for (final t in tracks) {
-      if (_videoIdOf(t.sourceUrl) case final id?) out.putIfAbsent(id, () => t);
+      if (videoIdOf(t.sourceUrl) case final id?) out[id] = t;
     }
     return _downloads = out;
+  }
+
+  /// [library] with one entry per downloaded video. A song downloaded again (another format, after a delete)
+  /// used to be added beside the first, which may point at a file that is gone: it showed twice, and the stale
+  /// one wouldn't play. Of the entries of one video, the newest whose file [exists] stays (the newest, if none
+  /// does); a video with a single entry is never touched, so a card that is only unreadable for now loses nothing.
+  static List<Track> withoutRepeatedDownloads(List<Track> library, bool Function(Track t) exists) {
+    final byVideo = <String, List<int>>{};
+    for (final (i, t) in library.indexed) {
+      if (videoIdOf(t.sourceUrl) case final id? when t.path != null) (byVideo[id] ??= []).add(i);
+    }
+    final drop = <int>{};
+    for (final at in byVideo.values) {
+      if (at.length < 2) continue;
+      final present = at.where((i) => exists(library[i])).toList();
+      final keep = (present.isEmpty ? at : present).last;
+      drop.addAll(at.where((i) => i != keep));
+    }
+    if (drop.isEmpty) return library;
+    return [
+      for (final (i, t) in library.indexed)
+        if (!drop.contains(i)) t,
+    ];
   }
 
   List<Collection> get albums {
@@ -198,7 +221,7 @@ class LibraryViews {
   }
 
   /// `watch?v=<id>` or `youtu.be/<id>`.
-  static String? _videoIdOf(String? url) {
+  static String? videoIdOf(String? url) {
     final u = url == null ? null : Uri.tryParse(url);
     if (u == null) return null;
     return u.queryParameters['v'] ?? (u.host.endsWith('youtu.be') ? u.pathSegments.firstOrNull : null);

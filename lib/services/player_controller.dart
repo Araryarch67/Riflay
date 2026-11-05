@@ -655,6 +655,34 @@ class PlayerController extends ChangeNotifier {
 
   Collection? playlistById(String? id) => _playlists.where((p) => p.id == id).map(playlistCollection).firstOrNull;
 
+  /// Playlists keep their own copy of each song: one that holds a download no longer in the library (downloaded
+  /// again since, or left out as a repeat) gets the library's download of the same video. True when any changed.
+  bool _repointDownloads() {
+    final ids = {for (final t in _library) t.id};
+    final latest = <String, Track>{};
+    for (final t in _library) {
+      final v = LibraryViews.videoIdOf(t.sourceUrl);
+      if (v != null) latest[v] = t;
+    }
+    var changed = false;
+    _playlists = [
+      for (final p in _playlists)
+        p.copyWith(
+          tracks: [
+            for (final t in p.tracks)
+              switch (LibraryViews.videoIdOf(t.sourceUrl)) {
+                final v? when !ids.contains(t.id) && latest[v] != null && t.path != null => () {
+                  changed = true;
+                  return latest[v]!;
+                }(),
+                _ => t,
+              },
+          ],
+        ),
+    ];
+    return changed;
+  }
+
   Future<void> _savePlaylists() async => (await SharedPreferences.getInstance()).setString(
     _playlistsKey,
     jsonEncode([for (final p in _playlists) p.toJson()]),
@@ -824,6 +852,15 @@ class PlayerController extends ChangeNotifier {
     _library = Host.isIOS
         ? await Future.wait(IosFolders.repoint(await library, await folders).map(YoutubeImporter.relocate))
         : await library;
+    // Libraries from before 1.1.4 may hold a song downloaded twice, one entry for a file that is gone.
+    if (!Host.isWeb) {
+      final cleaned = LibraryViews.withoutRepeatedDownloads(_library, (t) => File(t.path!).existsSync());
+      if (cleaned.length != _library.length) {
+        debugPrint('Library: ${_library.length - cleaned.length} repeated downloads left out');
+        _library = cleaned;
+        unawaited(_save());
+      }
+    }
     _recentIds = prefs.getStringList(_recentKey) ?? [];
     try {
       _playlists = [
@@ -834,6 +871,7 @@ class PlayerController extends ChangeNotifier {
         final moved = await folders;
         _playlists = [for (final p in _playlists) p.copyWith(tracks: IosFolders.repoint(p.tracks, moved))];
       }
+      if (_repointDownloads()) unawaited(_savePlaylists());
       _recentRemote = {
         for (final j in jsonDecode(prefs.getString(_recentRemoteKey) ?? '[]') as List)
           if (Track.fromJson((j as Map).cast()) case final t) t.id: t,
@@ -1040,7 +1078,15 @@ class PlayerController extends ChangeNotifier {
     final known = _library.map((t) => t.id).toSet();
     final fresh = tracks.where((t) => known.add(t.id)).toList();
     if (fresh.isEmpty) return 0;
-    _library = [..._library, ...fresh];
+    // A song downloaded again (another format) replaces its earlier download in the library, rather than
+    // showing twice; the older file is left where it is.
+    final again = {for (final t in fresh) ?LibraryViews.videoIdOf(t.sourceUrl)};
+    _library = [
+      for (final t in _library)
+        if (!again.contains(LibraryViews.videoIdOf(t.sourceUrl))) t,
+      ...fresh,
+    ];
+    if (again.isNotEmpty && _repointDownloads()) unawaited(_savePlaylists());
     notifyListeners();
     await _save();
     unawaited(_enrichUntagged());
