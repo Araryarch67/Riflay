@@ -6,7 +6,9 @@ plugins {
 
 android {
     namespace = "dev.riflay.riflay"
-    compileSdk = flutter.compileSdkVersion
+    // 37, not Flutter's 36: libusbdac (Direct USB) and the androidx.core it brings are built against it. Only the
+    // APIs compiled against; minSdk and targetSdk (which phones run it, and how) stay Flutter's.
+    compileSdk = 37
     ndkVersion = flutter.ndkVersion
 
     compileOptions {

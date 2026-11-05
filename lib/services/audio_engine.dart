@@ -498,6 +498,9 @@ class AudioEngine extends ChangeNotifier {
   /// mpv's own output before Direct USB took it over (media_kit's choice), put back when it ends.
   String? _defaultAo;
 
+  /// Direct USB: the sample format asked of mpv for the song playing (packed `s24` for a 24-bit one).
+  String _directFormat = 'no';
+
   Future<void> setDirectUsb(bool v) async {
     directUsbWanted = v;
     await directUsb.enable(v);
@@ -1344,8 +1347,14 @@ class AudioEngine extends ChangeNotifier {
       p.onLoadHooks.add(() async {
         await applied.future;
         _visualizerFormat = null;
-        // A 24-bit song reaches the pipe in mpv's 32-bit container: Direct USB is told its real depth.
-        if (directUsbActive) await directUsb.sourceBits(await _sourceBits(await _read(p, 'path')));
+        // Direct USB: mpv decodes a 24-bit song into 32 bits; asked for packed 24-bit instead, it reaches the DAC
+        // on its 24-bit format (many take 16 and 24 only). Everything else in its own format.
+        if (directUsbActive) {
+          final bits = await _sourceBits(await _read(p, 'path'));
+          _directFormat = bits == 24 ? 's24' : 'no';
+          await p.setProperty('audio-format', _directFormat);
+          _propsSent = {..._propsSent, 'audio-format': _directFormat};
+        }
         if (hasRoutePicker) await _matchRate(p);
         if (_chainSent != filterChain) await _setChain(p);
       });
@@ -1434,7 +1443,7 @@ class AudioEngine extends ChangeNotifier {
           ? '0'
           : '${outputRate ?? await _systemMixerRate() ?? 0}',
       // Android bit-perfect: the exact format of the mixer attributes, so the track matches them.
-      if (Host.isAndroid) 'audio-format': _mixer?.format.mpvFormat ?? 'no',
+      if (Host.isAndroid) 'audio-format': directUsbActive ? _directFormat : (_mixer?.format.mpvFormat ?? 'no'),
       // Only used when the rate has to change; keeps the default otherwise.
       'audio-swresample-o': await _swresampleOptions(),
       // 100 where the filter applies the volume: mpv must not scale samples too.

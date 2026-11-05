@@ -94,8 +94,5 @@ class DirectUsbOutput extends ChangeNotifier {
   /// After a seek or a jump to another song: what was queued for the DAC is dropped.
   Future<void> flush() => _call('flush');
 
-  /// The song's own bit depth, so a 24-bit song in mpv's 32-bit container goes out as 24-bit.
-  Future<void> sourceBits(int? bits) => _call('sourceBits', bits);
-
   Future<void> requestPermission() => _call('requestPermission');
 }

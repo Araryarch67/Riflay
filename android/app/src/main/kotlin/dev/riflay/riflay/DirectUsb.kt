@@ -52,8 +52,6 @@ object DirectUsb {
     // Not paused until told: a paused mpv writes nothing anyway, and Direct USB may start mid-song.
     @Volatile private var paused = false
     @Volatile private var flushWanted = false
-    /** The song's own bit depth when it is narrower than the container mpv writes (24 in 32). */
-    @Volatile private var sourceBits: Int? = null
 
     // What the screens show (Signal path, Settings): updated from the reader and the library.
     @Volatile private var streamFormat: String? = null
@@ -101,10 +99,6 @@ object DirectUsb {
                         flushWanted = true
                         result.success(null)
                     }
-                    "sourceBits" -> {
-                        sourceBits = call.arguments as? Int
-                        result.success(null)
-                    }
                     "requestPermission" -> {
                         manager?.devices?.value?.firstOrNull { !it.hasPermission }?.let { manager?.requestPermission(it.device) }
                         result.success(null)
@@ -150,10 +144,7 @@ object DirectUsb {
             changed()
             return null
         }
-        // mpv hands 24-bit songs over in a 32-bit container: say so, and they go out on the DAC's 24-bit format.
-        val m = manager ?: UsbAudioManagerImpl(ctx, prefs, realBitsPerSample = { f ->
-            if (f.pcmEncoding == C.ENCODING_PCM_32BIT && sourceBits == 24) 24 else null
-        }).also {
+        val m = manager ?: UsbAudioManagerImpl(ctx, prefs).also {
             manager = it
             it.start()
             watch(it)
