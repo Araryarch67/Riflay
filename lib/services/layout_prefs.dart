@@ -413,7 +413,8 @@ class LayoutPrefs extends ChangeNotifier {
   double sidePanelWidth = sidePanelDefault;
 
   Motion motion = Motion.full;
-  PageMotionStyle pageMotion = PageMotionStyle.wipe;
+  /// Classic by default: the reveals felt like too much to many as the first thing they saw.
+  PageMotionStyle pageMotion = PageMotionStyle.classic;
   PageMotionSpeed pageSpeed = PageMotionSpeed.relaxed;
   PerformanceMode performance = PerformanceMode.balanced;
   VideoDecoder videoDecoder = VideoDecoder.automatic;
@@ -570,7 +571,11 @@ class LayoutPrefs extends ChangeNotifier {
     sidebarWidth = (j['sidebarWidth'] as num?)?.toDouble().clamp(sidebarMin, sidebarMax) ?? d.sidebarWidth;
     sidePanelWidth = (j['sidePanelWidth'] as num?)?.toDouble().clamp(sidePanelMin, sidePanelMax) ?? d.sidePanelWidth;
     motion = pick(Motion.values, 'motion', d.motion);
-    pageMotion = pick(PageMotionStyle.values, 'pageMotion', d.pageMotion);
+    // Side reveal was the default until 1.1.3, and every save holds it: those saves start on Classic, the new
+    // default. A choice made since is kept (`pageMotionVersion`).
+    pageMotion = j['pageMotionVersion'] == null && j['pageMotion'] == PageMotionStyle.wipe.name
+        ? PageMotionStyle.classic
+        : pick(PageMotionStyle.values, 'pageMotion', d.pageMotion);
     pageSpeed = pick(PageMotionSpeed.values, 'pageSpeed', d.pageSpeed);
     performance = pick(PerformanceMode.values, 'performance', d.performance);
     videoDecoder = pick(VideoDecoder.values, 'videoDecoder', d.videoDecoder);
@@ -624,6 +629,7 @@ class LayoutPrefs extends ChangeNotifier {
     'sidePanelWidth': sidePanelWidth,
     'motion': motion.name,
     'pageMotion': pageMotion.name,
+    'pageMotionVersion': 2,
     'pageSpeed': pageSpeed.name,
     'performance': performance.name,
     'videoDecoder': videoDecoder.name,

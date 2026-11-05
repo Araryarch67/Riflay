@@ -28,7 +28,7 @@ void main() {
     expect(p.showQualityBadge, isTrue);
     expect(p.dimUnsungLyrics, isTrue);
     expect(p.motion, Motion.full);
-    expect(p.pageMotion, PageMotionStyle.wipe);
+    expect(p.pageMotion, PageMotionStyle.classic);
     expect(p.pageSpeed, PageMotionSpeed.relaxed);
     expect(p.progressShape, ProgressBarShape.wavy);
     expect(p.isCustomised, isFalse);
@@ -45,6 +45,17 @@ void main() {
     await p.reset();
     expect(p.playButton, PlayButtonShape.circle);
     expect(p.progressShape, ProgressBarShape.wavy);
+  });
+
+  test('page motion starts on Classic; an old save\'s default Side reveal moves over, a choice made since stays', () {
+    p.restore({'pageMotion': 'wipe'});
+    expect(p.pageMotion, PageMotionStyle.classic, reason: 'Side reveal was only the old default');
+    p.restore({'pageMotion': 'wipe', 'pageMotionVersion': 2});
+    expect(p.pageMotion, PageMotionStyle.wipe, reason: 'picked after the change: kept');
+    p.restore({'pageMotion': 'glide'});
+    expect(p.pageMotion, PageMotionStyle.glide, reason: 'another choice is never touched');
+    expect(p.toJson()['pageMotionVersion'], 2);
+    p.restore(const {});
   });
 
   test('visualizer choice persists and reset returns to the original player', () async {
@@ -70,7 +81,7 @@ void main() {
     p.restore({'visualizerCoverShape': 'future-shape'});
     expect(p.visualizerCoverShape, VisualizerCoverShape.flower);
     await p.reset();
-    expect(p.pageMotion, PageMotionStyle.wipe);
+    expect(p.pageMotion, PageMotionStyle.classic);
     expect(p.pageSpeed, PageMotionSpeed.relaxed);
     expect(p.progressShape, ProgressBarShape.wavy);
   });

@@ -71,26 +71,34 @@ class _PageScaffoldState extends State<PageScaffold> {
       color: AppColors.panel,
       child: Stack(
         children: [
-          // Colour wash behind the header. Not under a hero: the cover is the header there, and this wash stays put
-          // while the hero scrolls away, showing as a hard edge below its fade.
+          // Colour wash behind the header. It scrolls with the page, as part of it: held in place it seemed to follow
+          // the content. Not under a hero: the cover is the header there.
           if (!widget.overHero)
             Positioned(
               top: 0,
               left: 0,
               right: 0,
               height: 420,
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 400),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      color.withValues(alpha: 0.85 * AppColors.washStrength),
-                      color.withValues(alpha: 0.25 * AppColors.washStrength),
-                      AppColors.panel,
-                    ],
-                    stops: const [0, 0.55, 1],
+              child: AnimatedBuilder(
+                animation: _scroll,
+                builder: (context, wash) =>
+                    Transform.translate(offset: Offset(0, _scroll.hasClients ? -_scroll.offset : 0), child: wash),
+                // Its own layer: scrolling moves it, never repaints it.
+                child: RepaintBoundary(
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 400),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          color.withValues(alpha: 0.85 * AppColors.washStrength),
+                          color.withValues(alpha: 0.25 * AppColors.washStrength),
+                          AppColors.panel,
+                        ],
+                        stops: const [0, 0.55, 1],
+                      ),
+                    ),
                   ),
                 ),
               ),

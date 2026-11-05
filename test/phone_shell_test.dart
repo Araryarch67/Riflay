@@ -129,7 +129,9 @@ void main() {
   }
 
   for (final menu in [false, true]) {
-    testWidgets('a song by two artists opens the second one\'s page from its ${menu ? 'menu' : 'name'}', (tester) async {
+    testWidgets('a song by two artists opens the second one\'s page from its ${menu ? 'menu' : 'name'}', (
+      tester,
+    ) async {
       await _app(tester, const Size(400, 800), controller: _DuetPlayer());
       ShellScope.of(tester.element(find.byType(MiniPlayer))).openNowPlaying();
       await tester.pump();
@@ -173,30 +175,46 @@ void main() {
   });
 
   for (final desktop in [false, true]) {
-    testWidgets('a streamed song by two artists opens the second one from its menu (${desktop ? 'desktop' : 'phone'})', (
-      tester,
-    ) async {
-      await _app(tester, desktop ? const Size(1400, 900) : const Size(400, 800), controller: _RemoteDuetPlayer());
-      await tester.pump(const Duration(milliseconds: 500));
-      if (!desktop) {
-        ShellScope.of(tester.element(find.byType(MiniPlayer))).openNowPlaying();
+    testWidgets(
+      'a streamed song by two artists opens the second one from its menu (${desktop ? 'desktop' : 'phone'})',
+      (tester) async {
+        await _app(tester, desktop ? const Size(1400, 900) : const Size(400, 800), controller: _RemoteDuetPlayer());
+        await tester.pump(const Duration(milliseconds: 500));
+        if (!desktop) {
+          ShellScope.of(tester.element(find.byType(MiniPlayer))).openNowPlaying();
+          await tester.pump();
+          await _finishMotion(tester);
+          await tester.tap(find.byTooltip('More').last);
+          await tester.pump();
+          await _finishMotion(tester);
+        }
+        await tester.tap(find.byTooltip('More options for Remote duet').last);
         await tester.pump();
         await _finishMotion(tester);
-        await tester.tap(find.byTooltip('More').last);
+        await tester.tap(find.text('Go to Vestia Zeta'));
         await tester.pump();
-        await _finishMotion(tester);
-      }
-      await tester.tap(find.byTooltip('More options for Remote duet').last);
-      await tester.pump();
-      await _finishMotion(tester);
-      await tester.tap(find.text('Go to Vestia Zeta'));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 800));
-      expect(find.byType(RemoteCollectionPage), findsOneWidget);
-      expect(find.text('Vestia Zeta'), findsWidgets);
-      await tester.pump(const Duration(seconds: 2));
-    });
+        await tester.pump(const Duration(milliseconds: 800));
+        expect(find.byType(RemoteCollectionPage), findsOneWidget);
+        expect(find.text('Vestia Zeta'), findsWidgets);
+        await tester.pump(const Duration(seconds: 2));
+      },
+    );
   }
+
+  testWidgets('a downloaded YouTube song opens its artist\'s YouTube Music page, not the downloads of them', (
+    tester,
+  ) async {
+    await _app(tester, const Size(1400, 900), controller: _DownloadedPlayer());
+    await tester.pump(const Duration(milliseconds: 500));
+    await tester.tap(find.byTooltip('More options for Downloaded test').last);
+    await tester.pump();
+    await _finishMotion(tester);
+    await tester.tap(find.text('Go to artist'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 800));
+    expect(find.byType(RemoteCollectionPage), findsOneWidget, reason: 'the artist\'s page on YouTube Music');
+    await tester.pump(const Duration(seconds: 2));
+  });
 
   testWidgets('phone: Home, Search, Library, Downloads and Settings are the tabs', (tester) async {
     await _app(tester, const Size(400, 800));
@@ -427,6 +445,23 @@ class _RemoteDuetPlayer extends PlayerController {
   final track = Track.youtube(videoId: 'duet', title: 'Remote duet', artist: 'Kobo Kanaeru, Vestia Zeta');
   @override
   Track get currentTrack => track;
+}
+
+/// A song downloaded from YouTube Music: a file here, whose artist the library also lists (from downloads).
+class _DownloadedPlayer extends PlayerController {
+  final track = Track(
+    id: 'downloaded-test',
+    uri: Uri.file('/music/Kobo Kanaeru - Downloaded test.opus'),
+    title: 'Downloaded test',
+    artist: 'Kobo Kanaeru',
+    sourceUrl: 'https://music.youtube.com/watch?v=dl',
+    artistId: 'UCkobo',
+  );
+  @override
+  Track get currentTrack => track;
+  @override
+  Collection? artistNamed(String name) =>
+      Collection(kind: CollectionKind.artist, title: name, subtitle: '1 song', tracks: [track]);
 }
 
 class _ArtistPlayer extends _ControlPlayer {

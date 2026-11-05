@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:just_audio/just_audio.dart' show LoopMode;
 
 import '../../models/track.dart';
+import '../../platform/host.dart';
 import '../../platform/features.dart';
 import '../../services/layout_prefs.dart';
 import '../../services/player_controller.dart';
@@ -32,9 +33,29 @@ import 'player_common.dart' show ArtistLinks;
 
 /// Copies a link to the song (or its name, for a file on this device) so it can be pasted anywhere.
 Future<void> shareTrack(BuildContext context, Track track) async {
-  final link = track.videoId == null ? null : (track.sourceUrl ?? 'https://music.youtube.com/watch?v=${track.videoId}');
+  // A downloaded song keeps the link it came from; a streamed one has its video. A file of your own has neither.
+  final source = track.sourceUrl;
+  final link = source != null && source.startsWith('http')
+      ? source
+      : track.videoId == null
+      ? null
+      : 'https://music.youtube.com/watch?v=${track.videoId}';
+  final name = track.artist.isEmpty || track.artist == Track.unknownArtist
+      ? track.title
+      : '${track.title} – ${track.artist}';
+  final text = link == null ? name : '$name\n$link';
   final messenger = ScaffoldMessenger.maybeOf(context);
-  await Clipboard.setData(ClipboardData(text: link ?? '${track.title} - ${track.artist}'));
+  // The phone's share sheet; a computer has none, so the link (or the name) is copied instead.
+  if (Host.isAndroid) {
+    try {
+      final shown = await const MethodChannel('riflay/share')
+          .invokeMethod<bool>('share', {'text': text, 'subject': name});
+      if (shown ?? false) return;
+    } catch (e) {
+      debugPrint('Share sheet: $e');
+    }
+  }
+  await Clipboard.setData(ClipboardData(text: link ?? name));
   messenger?.showSnackBar(SnackBar(content: Text(link != null ? 'Link copied' : 'Song name copied')));
 }
 
@@ -923,17 +944,14 @@ class PlayerBottomButtons extends StatelessWidget {
   }
 }
 
-/// The volume as a small sheet from the speaker button: a thin slider with a mute and a speaker icon at its ends,
-/// the same look as the progress bar's Thin line.
+/// The volume as a small sheet from the speaker button: a slider in the Slider look (Settings › Layout), with a mute
+/// and a speaker icon at its ends.
 Future<void> showVolumePopup(BuildContext context) => showModalBottomSheet<void>(
   context: context,
   backgroundColor: AppColors.of(context).elevated,
   showDragHandle: true,
   builder: (context) => const SafeArea(
-    child: Padding(
-      padding: EdgeInsets.fromLTRB(20, 0, 20, 16),
-      child: PlayerVolumeRow(mute: true, shape: VolumeSliderShape.thin),
-    ),
+    child: Padding(padding: EdgeInsets.fromLTRB(20, 0, 20, 16), child: PlayerVolumeRow(mute: true)),
   ),
 );
 

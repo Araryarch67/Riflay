@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import '../../services/artist_channels.dart';
 import '../../services/language.dart';
 import '../../models/track.dart';
 import '../../platform/features.dart';
@@ -264,46 +265,54 @@ class _Hovering extends StatelessWidget {
   );
 }
 
-/// Opens [track]'s artist: YouTube Music's page for a streamed song (all of
-/// its songs, not only the ones here), the library's for a file on this
-/// device. [name] picks one of a song's several artists (the first when null). Null when there's none to open.
-/// [host] must outlive the caller.
+/// Opens [track]'s artist. A song from YouTube Music, streamed or downloaded, opens the artist's page there
+/// (their albums and singles, About, Follow), never the few downloads of theirs the library holds; a file of
+/// your own opens the library's artist. [name] picks one of a song's several artists (the first when null).
+/// Null when there's none to open. [host] must outlive the caller.
 VoidCallback? openArtist(BuildContext host, PlayerController c, Track track, {ShellScope? shell, String? name}) {
   final navigation = shell ?? ShellScope.of(host);
   final names = track.artists;
   final who = name ?? names.firstOrNull;
   // The channel YouTube Music gives is the first artist's.
   final id = who == names.firstOrNull ? track.artistId : null;
-  void remote(String id) => openRemotePlaylist(
+  final fromYoutube = track.isRemote || DownloadEdit.isDownload(track);
+  final local = c.artistNamed(who ?? '');
+  void remote(String id, String title) => openRemotePlaylist(
     host,
-    RemotePlaylist(id: id, browseId: id, title: who ?? track.artist, count: 0),
+    RemotePlaylist(id: id, browseId: id, title: title, count: 0),
     shell: navigation,
     account: c.ytMusic,
   );
-  if (track.isRemote && id != null) return () => remote(id);
-  if (c.artistNamed(who ?? '') case final local?) return () => navigation.openCollection(local);
-  if (track.isRemote && who != null) {
-    final name = who;
-    return () => navigation.open(
-      RemoteCollectionPage(
-        title: name,
-        load: () async {
-          final matches = await c.ytMusic.searchOnly(name, WebResultKind.artist);
-          final artist =
-              matches.where((a) => a.title.toLowerCase() == name.toLowerCase()).firstOrNull ?? matches.firstOrNull;
-          if (artist == null) throw StateError('No artist result for $name');
-          return Collection(
-            kind: CollectionKind.remote,
-            title: artist.title,
-            subtitle: 'Artist',
-            tracks: await c.ytMusic.collectionTracks(artist),
-          );
-        },
-      ),
-      location: 'artist:$name',
-    );
+  if (fromYoutube && who != null) {
+    if (id != null) return () => remote(id, who);
+    // Known by name only (a second artist, an older download): their channel is looked up, once per name.
+    return () async {
+      final found = await ArtistChannels.find(c.ytMusic, who);
+      if (found != null) return remote(found, who);
+      // Offline, or no artist of exactly that name: what the library has of them, else a search.
+      if (local != null) return navigation.openCollection(local);
+      navigation.open(
+        RemoteCollectionPage(
+          title: who,
+          load: () async {
+            final matches = await c.ytMusic.searchOnly(who, WebResultKind.artist);
+            final artist =
+                matches.where((a) => a.title.toLowerCase() == who.toLowerCase()).firstOrNull ?? matches.firstOrNull;
+            if (artist == null) throw StateError('No artist result for $who');
+            return Collection(
+              kind: CollectionKind.remote,
+              title: artist.title,
+              subtitle: 'Artist',
+              tracks: await c.ytMusic.collectionTracks(artist),
+            );
+          },
+        ),
+        location: 'artist:$who',
+      );
+    };
   }
-  return id == null ? null : () => remote(id);
+  if (local != null) return () => navigation.openCollection(local);
+  return id == null ? null : () => remote(id, who ?? track.artist);
 }
 
 /// Entries this menu can leave out, for a host surface that already lists them

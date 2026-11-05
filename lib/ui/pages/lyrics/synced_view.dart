@@ -239,7 +239,10 @@ class _SyncedLyricsViewState extends State<SyncedLyricsView> with _Extras {
         return AnimatedSwitcher(
           duration: LayoutPrefs.dur(const Duration(milliseconds: 640)),
           transitionBuilder: (child, anim) {
-            final half = CurvedAnimation(parent: anim, curve: const Interval(0.5, 1, curve: Curves.easeInOutCubic));
+            final half = CurvedAnimation(
+              parent: anim,
+              curve: const Interval(0.5, 1, curve: Curves.easeInOutCubic),
+            );
             return FadeTransition(
               opacity: half,
               child: LayoutPrefs.moves
@@ -507,6 +510,7 @@ class _LineSlotState extends State<_LineSlot> {
         _LinePlace.sung => AppColors.textPrimary.withValues(alpha: 0.75),
         _LinePlace.upcoming => widget.unsung,
       }),
+      extraColor: timed ? _faded(AppColors.textPrimary) : null,
       onTap: widget.onTap,
     );
   }
@@ -518,6 +522,7 @@ class _Line extends StatefulWidget {
     this.extra,
     required this.style,
     required this.color,
+    this.extraColor,
     this.karaoke,
     required this.onTap,
   });
@@ -528,6 +533,10 @@ class _Line extends StatefulWidget {
   final String? extra;
   final TextStyle? style;
   final Color color;
+
+  /// [extra]'s colour, when it isn't [color]: a word-timed line being sung is dim under its fill, but its
+  /// pronunciation has no word timings to fill by, so it lights up whole.
+  final Color? extraColor;
 
   /// Stands in for the plain text while a word-timed line is being sung.
   final Widget? karaoke;
@@ -572,7 +581,7 @@ class _LineState extends State<_Line> {
               AnimatedDefaultTextStyle(
                 duration: LayoutPrefs.dur(const Duration(milliseconds: 200)),
                 style: (_extraStyle(context) ?? const TextStyle()).copyWith(
-                  color: (_hover ? AppColors.textPrimary : widget.color).withValues(alpha: 0.8),
+                  color: (_hover ? AppColors.textPrimary : widget.extraColor ?? widget.color).withValues(alpha: 0.8),
                 ),
                 child: Padding(
                   padding: const EdgeInsets.only(top: 2),

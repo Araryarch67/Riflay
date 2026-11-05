@@ -54,6 +54,22 @@ class MainActivity : AudioServiceActivity() {
         usbDac = UsbDac(this, flutterEngine.dartExecutor.binaryMessenger)
         PowerControl(applicationContext, flutterEngine.dartExecutor.binaryMessenger)
         appUpdater = AppUpdater(this, flutterEngine.dartExecutor.binaryMessenger)
+        // Share: Android's own share sheet (messaging apps, Nearby Share…) with the song's name and link.
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "riflay/share").setMethodCallHandler { call, result ->
+            val text = call.argument<String>("text")
+            if (call.method != "share" || text == null) return@setMethodCallHandler result.notImplemented()
+            val send = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                type = "text/plain"
+                putExtra(android.content.Intent.EXTRA_TEXT, text)
+                call.argument<String>("subject")?.let { putExtra(android.content.Intent.EXTRA_SUBJECT, it) }
+            }
+            try {
+                startActivity(android.content.Intent.createChooser(send, null))
+                result.success(true)
+            } catch (e: android.content.ActivityNotFoundException) {
+                result.success(false)
+            }
+        }
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "riflay/window").setMethodCallHandler { call, result ->
             val on = call.arguments as? Boolean
             if (call.method != "setSeeThrough" || on == null) return@setMethodCallHandler result.notImplemented()

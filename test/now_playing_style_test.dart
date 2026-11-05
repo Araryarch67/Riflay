@@ -19,6 +19,7 @@ import 'package:riflay/ui/shell_scope.dart';
 import 'package:riflay/ui/widgets/controls.dart';
 import 'package:riflay/ui/widgets/faded_cover.dart';
 import 'package:riflay/ui/widgets/signal_path.dart';
+import 'package:riflay/ui/widgets/wavy_seek_track.dart' show PillSeekTrack;
 import 'package:riflay/ui/widgets/stats_for_nerds.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -200,7 +201,7 @@ void main() {
     expect(p.visualizerCoverShape, VisualizerCoverShape.flower);
   });
 
-  testWidgets('Kawaii: no volume row, the speaker opens a thin volume popup, icons only', (tester) async {
+  testWidgets('Kawaii: no volume row, the speaker opens a volume popup in the Slider look, icons only', (tester) async {
     await tester.runAsync(() => PlayerPreset.kawaii.apply(p));
     final c = await _show(tester, const NowPlayingPage(), const Size(412, 915));
     expect(find.byType(FadedCover), findsOneWidget);
@@ -212,7 +213,9 @@ void main() {
     await tester.tap(_tip('Volume'));
     await tester.pumpAndSettle();
     expect(find.byType(Slider), findsNWidgets(2), reason: 'the popup has the volume slider');
-    expect(find.byIcon(Icons.volume_off_rounded), findsOneWidget);
+    final popup = tester.element(find.byType(Slider).last);
+    expect(SliderTheme.of(popup).trackShape, isA<PillSeekTrack>(), reason: 'Kawaii\'s Slider look is the pill');
+    expect(find.byIcon(Icons.volume_mute_rounded), findsOneWidget, reason: 'mute, at the slider\'s low end');
     expect(find.byIcon(Icons.volume_up_rounded), findsOneWidget);
     expect(tester.takeException(), isNull);
     await tester.tapAt(const Offset(200, 100));

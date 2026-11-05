@@ -9,6 +9,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:riflay/models/track.dart';
 import 'package:riflay/services/layout_prefs.dart';
 import 'package:riflay/services/lyrics.dart';
+import 'package:riflay/services/lyrics_translation.dart';
 import 'package:riflay/ui/pages/lyrics_page.dart';
 import 'package:riflay/ui/theme.dart';
 
@@ -209,6 +210,20 @@ void main() {
     expect(state.progress, (sung: 3, fill: 0.0));
     // Painting the fill works on a wrapped line too.
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('the pronunciation under a word-timed line lights up whole while the line is sung', (tester) async {
+    await pump(tester, _karaoke(), length: const Duration(seconds: 30));
+    // Pronunciation as the translation service would bring it (no word timings of its own).
+    final view = tester.state(find.byType(SyncedLyricsView)) as dynamic;
+    LyricsTranslation.romanize.value = true;
+    addTearDown(() => LyricsTranslation.romanize.value = false);
+    view.extras = const [LineExtras(romanized: 'haro biggu waarudo'), LineExtras.none];
+    // ignore: invalid_use_of_protected_member
+    view.setState(() {});
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.byType(KaraokeLine), findsOneWidget, reason: 'the line itself fills word by word');
+    expect(colorOf(tester, 'haro biggu waarudo'), _primary.withValues(alpha: 0.8), reason: 'not dim like the unsung');
   });
 
   testWidgets('the fill advances between position ticks while playing, and holds still when paused', (tester) async {

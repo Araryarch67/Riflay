@@ -13,6 +13,7 @@ import '../shell_scope.dart';
 import '../theme.dart';
 import 'controls.dart';
 import 'faded_cover.dart';
+import 'menus.dart';
 import '../ytmusic_edit.dart' show FollowButton, addToPlaylist;
 import 'editable_title.dart';
 
@@ -125,125 +126,145 @@ class CollectionHero extends StatelessWidget {
                 builder: (context, s, _) {
                   final (playingHere, playing, shuffled) = s;
                   final empty = tracks.isEmpty;
-                  return Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      if (collection.kind == CollectionKind.remote && !empty && Features.downloads) ...[
-                        PartButton(
-                          icon: Icons.download_for_offline_outlined,
-                          tooltip: 'Download all for offline',
-                          look: PartLook.muted,
-                          round: true,
-                          size: 48,
-                          onPressed: () async {
-                            final messenger = ScaffoldMessenger.of(context);
-                            final choice = await chooseDownload(context);
-                            if (choice == null) return;
-                            final n = c.youtube.enqueueTracks(tracks, choice: choice);
-                            messenger.showSnackBar(
-                              SnackBar(content: Text(n == 0 ? 'Already downloaded' : 'Downloading $n songs…')),
-                            );
-                          },
-                        ),
-                        const SizedBox(width: 12),
-                      ],
-                      PartButton(
-                        icon: Icons.shuffle_rounded,
-                        tooltip: playingHere ? (shuffled ? 'Disable shuffle' : 'Enable shuffle') : 'Shuffle play',
-                        look: PartLook.muted,
-                        lit: shuffled,
-                        round: true,
-                        size: 48,
-                        onPressed: empty
-                            ? null
-                            : playingHere
-                            ? c.toggleShuffle
-                            : () => c.playCollection(collection, shuffled: true),
+                  // Everything past shuffle, Play and the page's own buttons: shown while they fit beside a Play
+                  // button that stays whole, the rest behind ⋯.
+                  final extras = <({IconData icon, String label, VoidCallback onTap})>[
+                    // An artist: all of their songs into one of your playlists, or a radio of them.
+                    if (artistPage && !empty)
+                      (
+                        icon: Icons.library_add_rounded,
+                        label: 'Add all to playlist',
+                        onTap: () => addToPlaylist(context, tracks),
                       ),
-                      const SizedBox(width: 12),
-                      Flexible(
-                        child: ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: 160),
-                          child: Tooltip(
-                            message: playing ? 'Pause' : 'Play',
-                            child: Material(
-                              color: empty ? colors.inverse.withValues(alpha: 0.4) : colors.inverse,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(LayoutPrefs.radius(28)),
-                              ),
-                              clipBehavior: Clip.antiAlias,
-                              child: InkWell(
-                                onTap: empty
-                                    ? null
-                                    : playingHere
-                                    ? c.togglePlay
-                                    : () => c.playCollection(collection),
-                                child: SizedBox(
-                                  height: 56,
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Icon(
-                                        playing ? Icons.pause_rounded : Icons.play_arrow_rounded,
-                                        color: colors.onInverse,
+                    if (artistPage && radioSeed != null)
+                      (icon: Icons.sensors_rounded, label: 'Start radio', onTap: () => c.startRadio(radioSeed)),
+                    // Albums and playlists: everything into the queue.
+                    if (!artistPage && !empty)
+                      (
+                        icon: Icons.playlist_add_rounded,
+                        label: 'Add all to queue',
+                        onTap: () {
+                          c.addToQueue(tracks);
+                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Added to queue')));
+                        },
+                      ),
+                    if (collection.kind == CollectionKind.remote && !empty && Features.downloads)
+                      (
+                        icon: Icons.download_for_offline_outlined,
+                        label: 'Download all for offline',
+                        onTap: () async {
+                          final messenger = ScaffoldMessenger.of(context);
+                          final choice = await chooseDownload(context);
+                          if (choice == null) return;
+                          final n = c.youtube.enqueueTracks(tracks, choice: choice);
+                          messenger.showSnackBar(
+                            SnackBar(content: Text(n == 0 ? 'Already downloaded' : 'Downloading $n songs…')),
+                          );
+                        },
+                      ),
+                  ];
+                  Widget round(IconData icon, String tooltip, VoidCallback onPressed) => PartButton(
+                    icon: icon,
+                    tooltip: tooltip,
+                    look: PartLook.muted,
+                    round: true,
+                    size: 48,
+                    onPressed: onPressed,
+                  );
+                  return LayoutBuilder(
+                    builder: (context, box) {
+                      const slot = 48.0 + 12; // a round button and the gap before it
+                      const play = 132.0; // "Pause" whole, with its icon
+                      final room = box.maxWidth - slot - play - actions.length * slot;
+                      final fit = (room / slot).floor().clamp(0, extras.length);
+                      // All of them, or one place fewer and ⋯ for the rest.
+                      final shown = fit >= extras.length ? extras.length : math.max(0, fit - 1);
+                      final hidden = extras.skip(shown).toList();
+                      return Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          PartButton(
+                            icon: Icons.shuffle_rounded,
+                            tooltip: playingHere ? (shuffled ? 'Disable shuffle' : 'Enable shuffle') : 'Shuffle play',
+                            look: PartLook.muted,
+                            lit: shuffled,
+                            round: true,
+                            size: 48,
+                            onPressed: empty
+                                ? null
+                                : playingHere
+                                ? c.toggleShuffle
+                                : () => c.playCollection(collection, shuffled: true),
+                          ),
+                          const SizedBox(width: 12),
+                          Flexible(
+                            child: ConstrainedBox(
+                              constraints: const BoxConstraints(minWidth: play, maxWidth: 160),
+                              child: Tooltip(
+                                message: playing ? 'Pause' : 'Play',
+                                child: Material(
+                                  color: empty ? colors.inverse.withValues(alpha: 0.4) : colors.inverse,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(LayoutPrefs.radius(28)),
+                                  ),
+                                  clipBehavior: Clip.antiAlias,
+                                  child: InkWell(
+                                    onTap: empty
+                                        ? null
+                                        : playingHere
+                                        ? c.togglePlay
+                                        : () => c.playCollection(collection),
+                                    child: SizedBox(
+                                      height: 56,
+                                      child: Row(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Icon(
+                                            playing ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                                            color: colors.onInverse,
+                                          ),
+                                          const SizedBox(width: 6),
+                                          Text(
+                                            playing ? 'Pause' : 'Play',
+                                            style: text.titleMedium?.copyWith(
+                                              color: colors.onInverse,
+                                              fontWeight: FontWeight.w700,
+                                            ),
+                                          ),
+                                        ],
                                       ),
-                                      const SizedBox(width: 6),
-                                      Text(
-                                        playing ? 'Pause' : 'Play',
-                                        style: text.titleMedium?.copyWith(
-                                          color: colors.onInverse,
-                                          fontWeight: FontWeight.w700,
-                                        ),
-                                      ),
-                                    ],
+                                    ),
                                   ),
                                 ),
                               ),
                             ),
                           ),
-                        ),
-                      ),
-                      for (final a in actions) ...[const SizedBox(width: 12), a],
-                      // Add everything to the queue (albums and playlists), or start a radio (artists).
-                      if (!artistPage && !empty) ...[
-                        const SizedBox(width: 12),
-                        PartButton(
-                          icon: Icons.playlist_add_rounded,
-                          tooltip: 'Add all to queue',
-                          look: PartLook.muted,
-                          round: true,
-                          size: 48,
-                          onPressed: () {
-                            final messenger = ScaffoldMessenger.of(context);
-                            c.addToQueue(tracks);
-                            messenger.showSnackBar(const SnackBar(content: Text('Added to queue')));
-                          },
-                        ),
-                      ],
-                      // An artist: all of their songs into one of your playlists.
-                      if (artistPage && !empty) ...[
-                        const SizedBox(width: 12),
-                        PartButton(
-                          icon: Icons.library_add_rounded,
-                          tooltip: 'Add all to playlist',
-                          look: PartLook.muted,
-                          round: true,
-                          size: 48,
-                          onPressed: () => addToPlaylist(context, tracks),
-                        ),
-                      ],
-                      if (artistPage && radioSeed != null) ...[
-                        const SizedBox(width: 12),
-                        PartButton(
-                          icon: Icons.sensors_rounded,
-                          tooltip: 'Start radio',
-                          look: PartLook.muted,
-                          round: true,
-                          size: 48,
-                          onPressed: () => c.startRadio(radioSeed),
-                        ),
-                      ],
-                    ],
+                          for (final a in actions) ...[const SizedBox(width: 12), a],
+                          for (final e in extras.take(shown)) ...[
+                            const SizedBox(width: 12),
+                            round(e.icon, e.label, e.onTap),
+                          ],
+                          if (hidden.isNotEmpty) ...[
+                            const SizedBox(width: 12),
+                            PopupMenuButton<VoidCallback>(
+                              // The round button inside says it.
+                              tooltip: '',
+                              color: AppColors.menu,
+                              shape: menuShape,
+                              onSelected: (act) => act(),
+                              itemBuilder: (_) => [
+                                for (final e in hidden)
+                                  PopupMenuItem(
+                                    value: e.onTap,
+                                    child: MenuRow(leading: Icon(e.icon), title: Text(e.label)),
+                                  ),
+                              ],
+                              child: IgnorePointer(child: round(Icons.more_horiz_rounded, 'More', () {})),
+                            ),
+                          ],
+                        ],
+                      );
+                    },
                   );
                 },
               ),

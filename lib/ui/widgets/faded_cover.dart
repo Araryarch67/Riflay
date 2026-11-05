@@ -14,7 +14,7 @@ import '../theme.dart';
 /// The picture is baked once per song and size into one still image: a blurred copy of the cover over the whole box,
 /// the sharp cover across the top fading out into it, a darkening gradient. It is then drawn with a plain [RawImage]:
 /// nothing blurs while the song plays, so it costs no more than any picture. Lightweight keeps the sharp cover, with
-/// no blur, and the darkening.
+/// no blur, and the darkening; behind text ([sharp] off, the lyrics) the picture is blurred to its colours always.
 class FadedCover extends StatefulWidget {
   const FadedCover({
     super.key,
@@ -104,9 +104,12 @@ class _FadedCoverState extends State<FadedCover> {
       }
 
       big = await decode(math.min(1024, math.max(w, h)));
-      small = await decode(48);
+      // Behind text (lyrics: no sharp cover) the picture is only its colours: a far smaller copy, stretched, so no
+      // shape of the artwork is left to read through the words.
+      small = await decode(widget.sharp ? 48 : 16);
       final veil = await _brightVeil(small, lowerOnly: widget.sharp);
-      final blur = !LayoutPrefs.lightweight;
+      // Baked once per song, never per frame: behind text it is blurred in Lightweight too.
+      final blur = !LayoutPrefs.lightweight || !widget.sharp;
       if (blur) {
         // Blurred once into a tiny picture, then stretched smoothly: that stretch is the soft look.
         final size = Size(small.width.toDouble(), small.height.toDouble());
@@ -115,7 +118,12 @@ class _FadedCoverState extends State<FadedCover> {
           small,
           Offset.zero & size,
           Offset.zero & size,
-          Paint()..imageFilter = ui.ImageFilter.blur(sigmaX: 2, sigmaY: 2, tileMode: TileMode.clamp),
+          Paint()
+            ..imageFilter = ui.ImageFilter.blur(
+              sigmaX: widget.sharp ? 2 : 3,
+              sigmaY: widget.sharp ? 2 : 3,
+              tileMode: TileMode.clamp,
+            ),
         );
         final picture = tiny.endRecording();
         soft = await picture.toImage(small.width, small.height);

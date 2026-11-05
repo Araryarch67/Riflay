@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 
+import '../../services/artist_channels.dart';
 import '../../services/language.dart';
 import '../../services/layout_prefs.dart';
 import '../../services/player_controller.dart';
-import '../../services/youtube_music_account.dart';
-import '../../services/ytmusic_web.dart' show WebArtistInfo, WebResultKind;
+import '../../services/ytmusic_web.dart' show WebArtistInfo;
 import '../theme.dart';
 import 'skeleton.dart';
 
@@ -28,9 +28,6 @@ class AboutArtist extends StatefulWidget {
 }
 
 class _AboutArtistState extends State<AboutArtist> {
-  /// Channels found by name, once per name for the app's run.
-  static final _found = <String, Future<String?>>{};
-
   late Future<({String id, WebArtistInfo info})?> _about = _load();
   bool _more = false;
 
@@ -43,18 +40,10 @@ class _AboutArtistState extends State<AboutArtist> {
     }
   }
 
-  static Future<String?> _channelFor(YoutubeMusicAccount account, String name) =>
-      _found[name.toLowerCase()] ??= () async {
-        final matches = await account.searchOnly(name, WebResultKind.artist);
-        final same = matches.where((a) => a.title.trim().toLowerCase() == name.trim().toLowerCase());
-        final id = same.firstOrNull?.browseId;
-        return id != null && id.startsWith('UC') ? id : null;
-      }();
-
   Future<({String id, WebArtistInfo info})?> _load() async {
     final account = PlayerScope.read(context).ytMusic;
     try {
-      final id = widget.channelId ?? await _channelFor(account, widget.name);
+      final id = widget.channelId ?? await ArtistChannels.find(account, widget.name);
       if (id == null) return null;
       final info = await account.artistInfo(id);
       return info == null ? null : (id: id, info: info);
