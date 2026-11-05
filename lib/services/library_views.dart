@@ -1,6 +1,7 @@
 import 'dart:collection';
 
 import '../models/track.dart';
+import 'download_files.dart' show youtubeVideoIdOf;
 
 /// What the UI reads from one version of the library, each part worked out on
 /// first use. A new library gets a new one. Songs whose tags were filled in
@@ -126,7 +127,7 @@ class LibraryViews {
     if (cached != null) return cached;
     final out = <String, Track>{};
     for (final t in tracks) {
-      if (videoIdOf(t.sourceUrl) case final id?) out[id] = t;
+      if (youtubeVideoIdOf(t.sourceUrl) case final id?) out[id] = t;
     }
     return _downloads = out;
   }
@@ -138,7 +139,7 @@ class LibraryViews {
   static List<Track> withoutRepeatedDownloads(List<Track> library, bool Function(Track t) exists) {
     final byVideo = <String, List<int>>{};
     for (final (i, t) in library.indexed) {
-      if (videoIdOf(t.sourceUrl) case final id? when t.path != null) (byVideo[id] ??= []).add(i);
+      if (youtubeVideoIdOf(t.sourceUrl) case final id? when t.path != null) (byVideo[id] ??= []).add(i);
     }
     final drop = <int>{};
     for (final at in byVideo.values) {
@@ -218,12 +219,5 @@ class LibraryViews {
         return c != 0 ? c : a - b;
       });
     return [for (final i in order) items[i]];
-  }
-
-  /// `watch?v=<id>` or `youtu.be/<id>`.
-  static String? videoIdOf(String? url) {
-    final u = url == null ? null : Uri.tryParse(url);
-    if (u == null) return null;
-    return u.queryParameters['v'] ?? (u.host.endsWith('youtu.be') ? u.pathSegments.firstOrNull : null);
   }
 }

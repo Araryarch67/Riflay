@@ -7,7 +7,6 @@ import '../../models/track.dart';
 import '../../platform/features.dart';
 import '../../services/audio_engine.dart';
 import '../../services/layout_prefs.dart';
-import '../../services/download_edit.dart';
 import '../../services/flac_convert.dart';
 import '../../services/listen_together/listen_together.dart';
 import '../../services/metadata.dart';
@@ -275,7 +274,7 @@ VoidCallback? openArtist(BuildContext host, PlayerController c, Track track, {Sh
   final who = name ?? names.firstOrNull;
   // The channel YouTube Music gives is the first artist's.
   final id = who == names.firstOrNull ? track.artistId : null;
-  final fromYoutube = track.isRemote || DownloadEdit.isDownload(track);
+  final fromYoutube = track.isRemote || track.isDownload;
   final local = c.artistNamed(who ?? '');
   void remote(String id, String title) => openRemotePlaylist(
     host,
@@ -382,7 +381,7 @@ class TrackMenuButton extends StatelessWidget {
           final artist = openArtist(host, c, track, shell: shell);
           final album = c.albumOf(track);
           // A song downloaded from YouTube, or the download of a streamed one: "Edit" with the artist locked.
-          final downloaded = track.isRemote ? c.downloadedCopy(track) : (DownloadEdit.isDownload(track) ? track : null);
+          final downloaded = track.isRemote ? c.downloadedCopy(track) : (track.isDownload ? track : null);
           // A streamed song that was downloaded converts its file; one with no file has nothing to convert.
           final convertible = downloaded ?? track;
           return [

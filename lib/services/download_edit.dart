@@ -10,7 +10,6 @@ import 'player_controller.dart';
 /// as the artist released it.
 abstract final class DownloadEdit {
   /// A library song made by a download (not a file the person added themselves).
-  static bool isDownload(Track t) => t.sourceUrl != null && t.path != null && !t.isRemote;
 
   /// Saves the new [title] and [album] and, if given, [cover]. Written into the
   /// file's tags where the format has a tag writer (M4A), else kept in the library.

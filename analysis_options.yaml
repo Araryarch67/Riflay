@@ -9,6 +9,10 @@
 # packages, and plugins designed to encourage good coding practices.
 include: package:flutter_lints/flutter.yaml
 
+# The code is written 120 columns wide: without this, `dart format` rewraps a whole file at 80.
+formatter:
+  page_width: 120
+
 analyzer:
   exclude:
     - build/**

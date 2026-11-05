@@ -130,6 +130,9 @@ class Track {
 
   bool get isRemote => videoId != null;
 
+  /// A file on this device downloaded by Riflay from YouTube (it remembers the video in [sourceUrl]).
+  bool get isDownload => sourceUrl != null && path != null && !isRemote;
+
   /// One song out of a whole-album file, described by a cue sheet.
   bool get isCueTrack => start != null;
 

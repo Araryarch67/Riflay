@@ -24,6 +24,7 @@ import 'cue_sheet.dart';
 import 'discord_presence.dart';
 import 'dlna.dart';
 import 'dop.dart';
+import 'download_files.dart' show youtubeVideoIdOf;
 import 'ffmpeg.dart';
 import 'folder_watch.dart';
 import 'ios_folders.dart';
@@ -673,7 +674,7 @@ class PlayerController extends ChangeNotifier {
     final ids = {for (final t in _library) t.id};
     final latest = <String, Track>{};
     for (final t in _library) {
-      final v = LibraryViews.videoIdOf(t.sourceUrl);
+      final v = youtubeVideoIdOf(t.sourceUrl);
       if (v != null) latest[v] = t;
     }
     var changed = false;
@@ -682,7 +683,7 @@ class PlayerController extends ChangeNotifier {
         p.copyWith(
           tracks: [
             for (final t in p.tracks)
-              switch (LibraryViews.videoIdOf(t.sourceUrl)) {
+              switch (youtubeVideoIdOf(t.sourceUrl)) {
                 final v? when !ids.contains(t.id) && latest[v] != null && t.path != null => () {
                   changed = true;
                   return latest[v]!;
@@ -1102,10 +1103,10 @@ class PlayerController extends ChangeNotifier {
     if (fresh.isEmpty) return 0;
     // A song downloaded again (another format) replaces its earlier download in the library, rather than
     // showing twice; the older file is left where it is.
-    final again = {for (final t in fresh) ?LibraryViews.videoIdOf(t.sourceUrl)};
+    final again = {for (final t in fresh) ?youtubeVideoIdOf(t.sourceUrl)};
     _library = [
       for (final t in _library)
-        if (!again.contains(LibraryViews.videoIdOf(t.sourceUrl))) t,
+        if (!again.contains(youtubeVideoIdOf(t.sourceUrl))) t,
       ...fresh,
     ];
     if (again.isNotEmpty && _repointDownloads()) unawaited(_savePlaylists());
@@ -1208,7 +1209,7 @@ class PlayerController extends ChangeNotifier {
   /// Deletes downloaded songs: out of the library, and their files off this device. Returns how many files
   /// couldn't be deleted (they are still taken out of the library).
   Future<int> deleteDownloads(Iterable<Track> tracks) async {
-    final gone = tracks.where((t) => t.sourceUrl != null && t.path != null && !t.isRemote).toList();
+    final gone = tracks.where((t) => t.isDownload).toList();
     var failed = 0;
     for (final t in gone) {
       try {
