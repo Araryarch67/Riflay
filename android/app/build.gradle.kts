@@ -6,7 +6,9 @@ plugins {
 
 android {
     namespace = "dev.riflay.riflay"
-    compileSdk = flutter.compileSdkVersion
+    // 37, not Flutter's 36: libusbdac (Direct USB) and the androidx.core it brings are built against it. Only the
+    // APIs compiled against; minSdk and targetSdk (which phones run it, and how) stay Flutter's.
+    compileSdk = 37
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
@@ -62,6 +64,11 @@ kotlin {
 
 dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
+    // Direct USB (DirectUsb.kt): a USB Audio Class driver that streams to the DAC itself, on any phone.
+    implementation("com.github.ostrichbat2k:libusbdac:v0.1.0")
+    // Its AudioSink / AudioOutput types (no ExoPlayer player is used).
+    implementation("androidx.media3:media3-exoplayer:1.11.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
 }
 
 flutter {
