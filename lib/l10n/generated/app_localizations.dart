@@ -620,6 +620,36 @@ abstract class AppLocalizations {
   /// **'Remove from library'**
   String get removeFromLibrary;
 
+  /// No description provided for @deleteDownload.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete download'**
+  String get deleteDownload;
+
+  /// No description provided for @deleteDownloadQuestion.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete this download?'**
+  String get deleteDownloadQuestion;
+
+  /// No description provided for @deleteDownloadBody.
+  ///
+  /// In en, this message translates to:
+  /// **'{title} is removed from your library and its file is deleted from this device.'**
+  String deleteDownloadBody(String title);
+
+  /// No description provided for @delete.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete'**
+  String get delete;
+
+  /// No description provided for @downloadDeleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Download deleted'**
+  String get downloadDeleted;
+
   /// No description provided for @convertToFlac.
   ///
   /// In en, this message translates to:

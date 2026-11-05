@@ -114,7 +114,7 @@ class LibraryViews {
     if (downloaded.isEmpty) return null;
     return _youtubeDownloads = Collection(
       kind: CollectionKind.youtube,
-      title: 'From YouTube',
+      title: 'Downloaded',
       subtitle: '${downloaded.length} ${downloaded.length == 1 ? 'song' : 'songs'}',
       tracks: downloaded,
     );

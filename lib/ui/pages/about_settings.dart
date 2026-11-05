@@ -12,6 +12,9 @@ import 'sound_settings.dart' show SettingsCard, settingsMuted;
 
 const _repo = 'https://github.com/Araryarch67/Riflay';
 
+/// Where to support Riflay (the same link as the repository's Sponsor button, `.github/FUNDING.yml`).
+const donateUrl = 'https://tako.id/ararya/gift';
+
 /// What a bug report needs to say about this copy of Riflay: the version and the system it runs on.
 String aboutDetails() => [
   'Riflay $appVersion',
@@ -125,6 +128,19 @@ class AboutSettings extends StatelessWidget {
               'Report a problem',
               'Opens a new issue; paste the version details in it',
               () => _open(context, '$_repo/issues/new'),
+            ),
+            // Songs streamed here earn their makers next to nothing: Premium is how listening pays them.
+            link(
+              Icons.music_note_rounded,
+              'Support the artists',
+              'Enjoying the music? YouTube Music Premium pays the people who make it',
+              () => _open(context, 'https://www.youtube.com/musicpremium'),
+            ),
+            link(
+              Icons.favorite_outline_rounded,
+              'Support Riflay',
+              'Send a gift on Tako to keep it going',
+              () => _open(context, donateUrl),
             ),
             link(Icons.code_rounded, 'Source code', 'Riflay is open source, on GitHub', () => _open(context, _repo)),
             ListTile(

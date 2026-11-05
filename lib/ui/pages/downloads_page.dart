@@ -308,7 +308,7 @@ class _JobRow extends StatelessWidget {
     return InkWell(
       borderRadius: BorderRadius.circular(6),
       hoverColor: AppColors.tile,
-      onTap: track == null ? null : () => c.playList([track], 0, from: 'From YouTube'),
+      onTap: track == null ? null : () => c.playList([track], 0, from: 'Downloaded'),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
         child: Row(
@@ -372,7 +372,7 @@ class _JobRow extends StatelessWidget {
               ),
               DownloadStatus.done => IconButton(
                 tooltip: 'Play',
-                onPressed: () => c.playList([track!], 0, from: 'From YouTube'),
+                onPressed: () => c.playList([track!], 0, from: 'Downloaded'),
                 icon: const Icon(Icons.play_arrow_rounded),
               ),
             },

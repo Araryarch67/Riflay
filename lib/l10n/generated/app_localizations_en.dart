@@ -288,6 +288,23 @@ class AppLocalizationsEn extends AppLocalizations {
   String get removeFromLibrary => 'Remove from library';
 
   @override
+  String get deleteDownload => 'Delete download';
+
+  @override
+  String get deleteDownloadQuestion => 'Delete this download?';
+
+  @override
+  String deleteDownloadBody(String title) {
+    return '$title is removed from your library and its file is deleted from this device.';
+  }
+
+  @override
+  String get delete => 'Delete';
+
+  @override
+  String get downloadDeleted => 'Download deleted';
+
+  @override
   String get convertToFlac => 'Convert to FLAC';
 
   @override

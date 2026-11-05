@@ -287,6 +287,23 @@ class AppLocalizationsId extends AppLocalizations {
   String get removeFromLibrary => 'Hapus dari koleksi';
 
   @override
+  String get deleteDownload => 'Hapus unduhan';
+
+  @override
+  String get deleteDownloadQuestion => 'Hapus unduhan ini?';
+
+  @override
+  String deleteDownloadBody(String title) {
+    return '$title dihapus dari koleksimu dan filenya dihapus dari perangkat ini.';
+  }
+
+  @override
+  String get delete => 'Hapus';
+
+  @override
+  String get downloadDeleted => 'Unduhan dihapus';
+
+  @override
   String get convertToFlac => 'Ubah ke FLAC';
 
   @override

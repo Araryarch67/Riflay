@@ -492,6 +492,11 @@ class TrackMenuButton extends StatelessWidget {
                 ),
               ),
             ],
+            if (downloaded != null)
+              PopupMenuItem(
+                onTap: () => confirmDeleteDownload(host, c, downloaded),
+                child: MenuRow(leading: const Icon(Icons.delete_outline_rounded), title: Text(tr.deleteDownload)),
+              ),
             if (FlacConvert.available(convertible))
               PopupMenuItem(
                 onTap: () => showFlacConvert(host, c, [convertible]),
@@ -507,4 +512,26 @@ class TrackMenuButton extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Asks first, then deletes a downloaded song: out of the library and off this device.
+Future<void> confirmDeleteDownload(BuildContext context, PlayerController c, Track download) async {
+  final messenger = ScaffoldMessenger.maybeOf(context);
+  final ok = await showDialog<bool>(
+    context: context,
+    useRootNavigator: true,
+    builder: (context) => AlertDialog(
+      title: Text(tr.deleteDownloadQuestion),
+      content: Text(tr.deleteDownloadBody(download.title)),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+        FilledButton(onPressed: () => Navigator.pop(context, true), child: Text(tr.delete)),
+      ],
+    ),
+  );
+  if (ok != true) return;
+  final failed = await c.deleteDownloads([download]);
+  messenger?.showSnackBar(
+    SnackBar(content: Text(failed > 0 ? "Removed from your library; the file couldn't be deleted." : tr.downloadDeleted)),
+  );
 }

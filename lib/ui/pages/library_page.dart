@@ -19,7 +19,9 @@ import '../widgets/smooth_scroll.dart';
 import '../navigation.dart';
 import '../widgets/menus.dart';
 
-enum LibraryFilter { playlists, albums, artists }
+/// [downloaded]: what was downloaded, grouped (the songs, and the albums and artists they're from), still in the
+/// rest of the library too.
+enum LibraryFilter { playlists, downloaded, albums, artists }
 
 /// "Your Library": Riflay playlists, YouTube Music (liked songs and
 /// playlists, marked with a cloud) and the files on this device, in one list.
@@ -56,14 +58,22 @@ class _LibraryListState extends State<LibraryList> {
     final account = c.ytMusic;
     bool show(LibraryFilter f) => _filter == null || _filter == f;
 
+    final downloads = c.youtubeDownloads;
     final local = switch (_filter) {
       null => c.albumsAndArtists,
       LibraryFilter.albums => c.albums,
       LibraryFilter.artists => c.artists,
+      LibraryFilter.downloaded => [
+        for (final a in c.albumsAndArtists)
+          if (a.tracks.any((t) => t.sourceUrl != null)) a,
+      ],
       LibraryFilter.playlists => const <Collection>[],
     };
 
     final rows = <Widget>[
+      // First, so downloads are easy to find.
+      if (downloads != null && (show(LibraryFilter.playlists) || _filter == LibraryFilter.downloaded))
+        _LibraryRow(collection: downloads, collapsed: widget.collapsed),
       if (show(LibraryFilter.playlists)) ...[
         if (widget.collapsed)
           _SimpleRow(
@@ -89,7 +99,6 @@ class _LibraryListState extends State<LibraryList> {
             ),
         ],
         if (c.library.isNotEmpty) _LibraryRow(collection: c.allSongs, collapsed: widget.collapsed),
-        if (c.youtubeDownloads case final d?) _LibraryRow(collection: d, collapsed: widget.collapsed),
         for (final entry in SmartPlaylists.of(c, PlayHistory.instance).entries)
           _SimpleRow(
             collapsed: widget.collapsed,
@@ -253,15 +262,17 @@ class _LibraryListState extends State<LibraryList> {
                 runSpacing: 8,
                 children: [
                   for (final f in LibraryFilter.values)
-                    FilterChip(
-                      label: Text(switch (f) {
-                        LibraryFilter.playlists => 'Playlists',
-                        LibraryFilter.albums => 'Albums',
-                        LibraryFilter.artists => 'Artists',
-                      }),
-                      selected: _filter == f,
-                      onSelected: (on) => setState(() => _filter = on ? f : null),
-                    ),
+                    if (f != LibraryFilter.downloaded || downloads != null || _filter == f)
+                      FilterChip(
+                        label: Text(switch (f) {
+                          LibraryFilter.playlists => 'Playlists',
+                          LibraryFilter.downloaded => 'Downloaded',
+                          LibraryFilter.albums => 'Albums',
+                          LibraryFilter.artists => 'Artists',
+                        }),
+                        selected: _filter == f,
+                        onSelected: (on) => setState(() => _filter = on ? f : null),
+                      ),
                 ],
               ),
             ),

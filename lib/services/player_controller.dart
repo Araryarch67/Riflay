@@ -1205,6 +1205,24 @@ class PlayerController extends ChangeNotifier {
     await _save();
   }
 
+  /// Deletes downloaded songs: out of the library, and their files off this device. Returns how many files
+  /// couldn't be deleted (they are still taken out of the library).
+  Future<int> deleteDownloads(Iterable<Track> tracks) async {
+    final gone = tracks.where((t) => t.sourceUrl != null && t.path != null && !t.isRemote).toList();
+    var failed = 0;
+    for (final t in gone) {
+      try {
+        if (FileSystemEntity.typeSync(t.path!, followLinks: false) == FileSystemEntityType.file) {
+          await File(t.path!).delete();
+        }
+      } on FileSystemException {
+        failed++;
+      }
+    }
+    await removeTracks(gone);
+    return failed;
+  }
+
   // ── Folder watching and duplicates (folder_watch.dart, duplicate_finder.dart) ──
 
   /// Applies what a look at a music folder found: new files, gone files, moved files and changed files.
