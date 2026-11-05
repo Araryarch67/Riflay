@@ -427,4 +427,28 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get showLess => 'Show less';
+
+  @override
+  String get tempoPitch => 'Tempo & pitch';
+
+  @override
+  String get tempo => 'Tempo';
+
+  @override
+  String get pitch => 'Pitch';
+
+  @override
+  String semitones(int count) {
+    return '$count semitones';
+  }
+
+  @override
+  String get reset => 'Reset';
+
+  @override
+  String get asRecorded => 'As recorded';
+
+  @override
+  String get tempoPitchOff =>
+      'Off while bit-perfect mode is on or listening together';
 }

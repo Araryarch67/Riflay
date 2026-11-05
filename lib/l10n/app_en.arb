@@ -168,5 +168,19 @@
   "follow": "Follow",
   "following": "Following",
   "showMore": "Show more",
-  "showLess": "Show less"
+  "showLess": "Show less",
+  "tempoPitch": "Tempo & pitch",
+  "tempo": "Tempo",
+  "pitch": "Pitch",
+  "semitones": "{count} semitones",
+  "@semitones": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "reset": "Reset",
+  "asRecorded": "As recorded",
+  "tempoPitchOff": "Off while bit-perfect mode is on or listening together"
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../services/language.dart';
+import '../widgets/tempo_pitch.dart';
 import '../../models/track.dart';
 import '../../platform/features.dart';
 import '../../services/audio_engine.dart';
@@ -229,6 +230,20 @@ class PlayerMoreSheet extends StatelessWidget {
               group(tr.sectionSound, [
                 tile(Icons.equalizer_rounded, tr.equalizer, page(() => shell.open(const EqualizerPage()))),
                 tile(Icons.graphic_eq_rounded, tr.signalPath, then(showSignalPath)),
+                ListenableBuilder(
+                  listenable: c.audio,
+                  builder: (context, _) {
+                    final a = c.audio;
+                    final changed = a.effectiveTempo != 1 || a.effectivePitch != 0;
+                    return tile(
+                      Icons.speed_rounded,
+                      tr.tempoPitch,
+                      then(showTempoPitch),
+                      on: changed,
+                      subtitle: changed ? tempoPitchLabel(a) : null,
+                    );
+                  },
+                ),
                 ValueListenableBuilder(
                   valueListenable: statsForNerds,
                   builder: (context, on, _) => tile(

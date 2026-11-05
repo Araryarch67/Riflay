@@ -127,5 +127,12 @@
   "follow": "Ikuti",
   "following": "Mengikuti",
   "showMore": "Selengkapnya",
-  "showLess": "Lebih sedikit"
+  "showLess": "Lebih sedikit",
+  "tempoPitch": "Tempo & nada",
+  "tempo": "Tempo",
+  "pitch": "Nada",
+  "semitones": "{count} semitone",
+  "reset": "Atur ulang",
+  "asRecorded": "Seperti aslinya",
+  "tempoPitchOff": "Mati selama mode bit-perfect atau dengar bersama"
 }

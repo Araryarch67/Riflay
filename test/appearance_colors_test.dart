@@ -43,7 +43,12 @@ void main() {
       'grey': const Color(0xFF666666),
       'near black': const Color(0xFF1A1A1A),
     };
-    for (final theme in [ThemeChoice.standard, ThemeChoice.catppuccinLatte, ThemeChoice.everforestLight, ThemeChoice.nord]) {
+    for (final theme in [
+      ThemeChoice.standard,
+      ThemeChoice.catppuccinLatte,
+      ThemeChoice.everforestLight,
+      ThemeChoice.nord,
+    ]) {
       for (final e in covers.entries) {
         test('${theme.label} with a ${e.key} cover stays readable', () {
           for (final amount in [0.25, 1.0]) {
@@ -51,7 +56,8 @@ void main() {
             final base = theme.palette;
             final all = [p.background, p.panel, p.elevated, p.hover, p.menu];
             final baseAll = [base.background, base.panel, base.elevated, base.hover, base.menu];
-            double worst(Color fg, List<Color> on) => on.map((s) => contrastRatio(fg, s)).reduce((a, b) => a < b ? a : b);
+            double worst(Color fg, List<Color> on) =>
+                on.map((s) => contrastRatio(fg, s)).reduce((a, b) => a < b ? a : b);
             // At least 4.5:1, or what the theme itself offered when that was lower.
             for (final (fg, was) in [(p.textPrimary, base.textPrimary), (p.textSecondary, base.textSecondary)]) {
               final need = worst(was, baseAll) < 4.5 ? worst(was, baseAll) : 4.5;
@@ -83,6 +89,26 @@ void main() {
       await a.load();
       return a;
     }
+
+    test('Black puts any dark theme on pure black, keeping its text and accent', () async {
+      final dark = await loadWith({'theme': 'nord', 'brightness': 'dark'});
+      final accent = dark.palette.accent, text = dark.palette.textPrimary;
+      expect(dark.palette.background, isNot(const Color(0xFF000000)));
+      await dark.setBrightness(ThemeBrightness.black);
+      final p = dark.palette;
+      expect(p.background, const Color(0xFF000000));
+      expect(p.panel, const Color(0xFF000000));
+      expect(p.elevated, isNot(const Color(0xFF000000)), reason: 'cards still stand apart');
+      expect(p.accent, accent);
+      expect(p.textPrimary, text);
+      expect(dark.isLight, isFalse);
+      // Another dark theme keeps Black; it is kept across a restart.
+      await dark.setTheme(ThemeChoice.dracula);
+      expect(dark.brightness, ThemeBrightness.black);
+      final again = await loadWith({'theme': 'nord', 'brightness': 'black'});
+      expect(again.palette.background, const Color(0xFF000000));
+      await again.reset();
+    });
 
     test('an old "cover colours on" becomes Player only', () async {
       final a = await loadWith({'coverColors': true});

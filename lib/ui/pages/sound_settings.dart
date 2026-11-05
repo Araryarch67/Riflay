@@ -45,6 +45,18 @@ class PlaybackSettings extends StatelessWidget {
               value: c.audio.gapless,
               onChanged: c.audio.setGapless,
             ),
+          if (AudioEngine.hasSkipSilence)
+            SwitchListTile(
+              secondary: const Icon(Icons.fast_forward_rounded),
+              title: const Text('Skip silence'),
+              subtitle: Text(
+                c.audio.bitPerfect
+                    ? 'Off while bit-perfect mode is on'
+                    : 'Silent intros, outros and gaps are cut short. Soft passages play whole',
+              ),
+              value: c.audio.skipSilence && !c.audio.bitPerfect,
+              onChanged: c.audio.bitPerfect ? null : c.audio.setSkipSilence,
+            ),
         ],
       ),
     );

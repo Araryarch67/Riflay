@@ -298,6 +298,8 @@ class PlayerController extends ChangeNotifier {
     // A Listen together guest follows the host, who decides what comes next: jumping ahead to the next song
     // here would look like the guest choosing a song of their own (and they would be taken out of the session).
     if (casting || holdAutoplay || player.loopMode == LoopMode.one || sleep.mode == SleepMode.endOfSong) return true;
+    // The second player plays at the song's own pace: with a tempo or pitch of its own the two wouldn't meet.
+    if (audio.mpvSpeed != 1) return true;
     if (!audio.dopActive) return false;
     final up = _crossfadeUpcoming();
     bool dsd(Track t) => SacdDisc.isSacdTrack(t) || (t.path != null && DsdFile.isDsdPath(t.path!));
@@ -848,6 +850,7 @@ class PlayerController extends ChangeNotifier {
     // iOS: picked folders have to be reopened before any of their songs can be read.
     final folders = Host.isIOS ? IosFolders.restore() : Future.value(const <String, String>{});
     await Future.wait([library, folders, ytMusic.load(), audio.load()]);
+    _followTempo(); // a tempo or pitch kept from last time
     // iOS moves the app's folder on updates; elsewhere downloads stay put.
     _library = Host.isIOS
         ? await Future.wait(IosFolders.repoint(await library, await folders).map(YoutubeImporter.relocate))
@@ -892,6 +895,9 @@ class PlayerController extends ChangeNotifier {
     audio.addListener(notifyListeners);
     _dopWasActive = audio.dopActive;
     audio.addListener(_onAudioSettings);
+    audio.addListener(_followTempo);
+    final session = ListenTogether.of(this);
+    session.addListener(() => audio.holdTempoPitch(session.role != ListenRole.none));
     notifyListeners();
     // The player's own loop mode and volume are not needed before the first frame; they follow it.
     unawaited(_applyPlayerSettings(loop, level));
@@ -1299,6 +1305,12 @@ class PlayerController extends ChangeNotifier {
 
   bool _dopWasActive = false;
 
+  /// Tempo & pitch: the player's speed follows them (the engine sets the filter and the pitch correction).
+  void _followTempo() {
+    final speed = audio.mpvSpeed;
+    if ((player.speed - speed).abs() > 1e-6) unawaited(player.setSpeed(speed));
+  }
+
   /// DoP switched on or off: rebuild the queue so DSD songs change over,
   /// from where the current one is.
   void _onAudioSettings() {
@@ -1423,6 +1435,32 @@ class PlayerController extends ChangeNotifier {
     final inOrder = _ordered.indexWhere((t) => t.id == before);
     _ordered = [..._ordered]..insertAll(inOrder < 0 ? _ordered.length : inOrder + 1, tracks);
     await player.insertAudioSources(insertAt, [for (final t in tracks) _sourceFor(t)]);
+    notifyListeners();
+  }
+
+  /// Moves the song [from] places after the current one to [to] places after it (the queue page's drag).
+  Future<void> moveInQueue(int from, int to) async {
+    final at = player.sequenceState.currentIndex;
+    final length = player.sequenceState.sequence.length;
+    if (at == null || from == to) return;
+    final a = at + 1 + from, b = at + 1 + to;
+    if (a >= length || b >= length || a <= at || b <= at) return;
+    await player.moveAudioSource(a, b);
+    notifyListeners();
+  }
+
+  /// Takes the song [index] places after the current one out of the queue.
+  Future<void> removeFromQueue(int index) async {
+    final at = player.sequenceState.currentIndex;
+    final sequence = player.sequenceState.sequence;
+    if (at == null) return;
+    final i = at + 1 + index;
+    if (i >= sequence.length) return;
+    final track = sequence[i].tag as Track;
+    await player.removeAudioSourceAt(i);
+    // Out of the play-in-order list too, so turning shuffle off doesn't bring it back.
+    final inOrder = _ordered.indexWhere((t) => t.id == track.id);
+    if (inOrder >= 0) _ordered = [..._ordered]..removeAt(inOrder);
     notifyListeners();
   }
 

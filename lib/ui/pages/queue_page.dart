@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../models/track.dart';
 import '../../services/player_controller.dart';
 import '../shell_scope.dart';
 import '../theme.dart';
@@ -18,8 +19,22 @@ class QueuePage extends StatelessWidget {
     final text = Theme.of(context).textTheme;
     final current = c.currentTrack;
     final upNext = c.upNext;
-    final queued = upNext.where((t) => !c.isAutoplayed(t)).toList();
-    final autoplayed = upNext.where(c.isAutoplayed).toList();
+    // Each entry by its place after the current song: a song can be queued twice, so not by its id.
+    final entries = [for (final (i, t) in upNext.indexed) (place: i, track: t)];
+    final queued = [
+      for (final e in entries)
+        if (!c.isAutoplayed(e.track)) e,
+    ];
+    final autoplayed = [
+      for (final e in entries)
+        if (c.isAutoplayed(e.track)) e,
+    ];
+    final place = {for (final e in entries) e: e.place};
+    // Keys that follow an entry as it moves: its song and how many times that song came before it.
+    final seen = <String, int>{};
+    final keys = {
+      for (final e in entries) e: ValueKey('${e.track.id}#${seen.update(e.track.id, (n) => n + 1, ifAbsent: () => 0)}'),
+    };
     final pad = shell.compact ? 16.0 : 24.0;
     final hPad = EdgeInsets.symmetric(horizontal: shell.compact ? 12 : 16);
 
@@ -67,10 +82,18 @@ class QueuePage extends StatelessWidget {
             SectionTitleSliver(title: c.playingFrom == null ? 'Next up' : 'Next from: ${c.playingFrom}'),
             SliverPadding(
               padding: hPad,
-              sliver: SliverList.builder(
+              // Dragged by the handle (or a long press) to play sooner or later; ✕ or a swipe takes one out.
+              sliver: SliverReorderableList(
                 itemCount: queued.length,
-                itemBuilder: (context, i) =>
-                    TrackRow(track: queued[i], index: i + 2, onTap: () => c.playQueueItem(queued[i])),
+                onReorderItem: (from, to) => c.moveInQueue(place[queued[from]]!, place[queued[to]]!),
+                itemBuilder: (context, i) => _QueueRow(
+                  key: keys[queued[i]],
+                  track: queued[i].track,
+                  index: i + 2,
+                  dragIndex: i,
+                  onTap: () => c.playQueueItem(queued[i].track),
+                  onRemove: () => c.removeFromQueue(place[queued[i]]!),
+                ),
               ),
             ),
           ],
@@ -94,10 +117,12 @@ class QueuePage extends StatelessWidget {
               padding: hPad,
               sliver: SliverList.builder(
                 itemCount: autoplayed.length,
-                itemBuilder: (context, i) => TrackRow(
-                  track: autoplayed[i],
+                itemBuilder: (context, i) => _QueueRow(
+                  key: keys[autoplayed[i]],
+                  track: autoplayed[i].track,
                   index: queued.length + i + 2,
-                  onTap: () => c.playQueueItem(autoplayed[i]),
+                  onTap: () => c.playQueueItem(autoplayed[i].track),
+                  onRemove: () => c.removeFromQueue(place[autoplayed[i]]!),
                 ),
               ),
             ),
@@ -115,4 +140,65 @@ class SectionTitleSliver extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => SliverToBoxAdapter(child: SectionTitle(title));
+}
+
+/// A song in the queue: tap to play it now, ✕ or a swipe to take it out, and (in Next up) a handle to drag it.
+class _QueueRow extends StatelessWidget {
+  const _QueueRow({
+    super.key,
+    required this.track,
+    required this.index,
+    required this.onTap,
+    required this.onRemove,
+    this.dragIndex,
+  });
+
+  final Track track;
+  final int index;
+  final VoidCallback onTap;
+  final VoidCallback onRemove;
+
+  /// Its place in a reorderable list; null where songs can't be moved.
+  final int? dragIndex;
+
+  @override
+  Widget build(BuildContext context) {
+    final muted = AppColors.of(context).textSecondary;
+    final row = Row(
+      children: [
+        Expanded(
+          child: TrackRow(track: track, index: index, onTap: onTap),
+        ),
+        IconButton(
+          tooltip: 'Remove from queue',
+          color: muted,
+          onPressed: onRemove,
+          icon: const Icon(Icons.close_rounded, size: 20),
+        ),
+        if (dragIndex case final i?)
+          ReorderableDragStartListener(
+            index: i,
+            child: Tooltip(
+              message: 'Drag to move',
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+                child: Icon(Icons.drag_handle_rounded, color: muted),
+              ),
+            ),
+          ),
+      ],
+    );
+    return Dismissible(
+      key: ValueKey('dismiss-${key.hashCode}'),
+      direction: DismissDirection.endToStart,
+      onDismissed: (_) => onRemove(),
+      background: Container(
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.only(right: 24),
+        color: Theme.of(context).colorScheme.error.withValues(alpha: 0.25),
+        child: const Icon(Icons.delete_outline_rounded),
+      ),
+      child: Material(type: MaterialType.transparency, child: row),
+    );
+  }
 }

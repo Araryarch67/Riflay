@@ -425,4 +425,28 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get showLess => 'Lebih sedikit';
+
+  @override
+  String get tempoPitch => 'Tempo & nada';
+
+  @override
+  String get tempo => 'Tempo';
+
+  @override
+  String get pitch => 'Nada';
+
+  @override
+  String semitones(int count) {
+    return '$count semitone';
+  }
+
+  @override
+  String get reset => 'Atur ulang';
+
+  @override
+  String get asRecorded => 'Seperti aslinya';
+
+  @override
+  String get tempoPitchOff =>
+      'Mati selama mode bit-perfect atau dengar bersama';
 }

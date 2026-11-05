@@ -865,6 +865,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Show less'**
   String get showLess;
+
+  /// No description provided for @tempoPitch.
+  ///
+  /// In en, this message translates to:
+  /// **'Tempo & pitch'**
+  String get tempoPitch;
+
+  /// No description provided for @tempo.
+  ///
+  /// In en, this message translates to:
+  /// **'Tempo'**
+  String get tempo;
+
+  /// No description provided for @pitch.
+  ///
+  /// In en, this message translates to:
+  /// **'Pitch'**
+  String get pitch;
+
+  /// No description provided for @semitones.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} semitones'**
+  String semitones(int count);
+
+  /// No description provided for @reset.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset'**
+  String get reset;
+
+  /// No description provided for @asRecorded.
+  ///
+  /// In en, this message translates to:
+  /// **'As recorded'**
+  String get asRecorded;
+
+  /// No description provided for @tempoPitchOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Off while bit-perfect mode is on or listening together'**
+  String get tempoPitchOff;
 }
 
 class _AppLocalizationsDelegate

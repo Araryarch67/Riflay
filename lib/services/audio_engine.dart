@@ -422,6 +422,26 @@ class AudioEngine extends ChangeNotifier {
   /// Headphone crossfeed strength 0..1 (0 = off).
   double crossfeed = 0;
 
+  /// Settings › Sound › Playback: silent stretches are cut short (a quiet intro or outro, a gap in a live set).
+  bool skipSilence = false;
+
+  /// Tempo & pitch (the player's ⋯ › Tempo & pitch): how fast songs play (1 as recorded) and how many semitones
+  /// higher or lower. Kept between songs, until reset.
+  double tempo = 1;
+  int pitch = 0;
+
+  /// Off in bit-perfect mode (they change every sample), on DSD sent as DoP, and while listening together
+  /// ([tempoPitchHeld]: everyone hears the host's song at its own pace).
+  bool get tempoPitchActive => !bitPerfect && _dop == null && !tempoPitchHeld;
+  bool tempoPitchHeld = false;
+
+  double get effectiveTempo => tempoPitchActive ? tempo : 1;
+  int get effectivePitch => tempoPitchActive ? pitch : 0;
+
+  /// mpv's `speed`. A pitch shift plays faster or slower without pitch correction (the pitch moves with it), and
+  /// the `@pitch` scaletempo brings the tempo back: mpv's own filters only, so every platform's build has them.
+  double get mpvSpeed => effectiveTempo * math.pow(2, effectivePitch / 12).toDouble();
+
   /// Stereo range of the crossfeed processor (0..1).
   double crossfeedRange = 0.5;
 
@@ -786,6 +806,9 @@ class AudioEngine extends ChangeNotifier {
       final b = j['bands'] as List?;
       if (b != null && b.isNotEmpty) bands = [for (final x in b) EqBand.fromJson((x as Map).cast())];
       crossfeed = (j['crossfeed'] as num?)?.toDouble() ?? crossfeed;
+      skipSilence = j['skipSilence'] as bool? ?? skipSilence;
+      tempo = ((j['tempo'] as num?)?.toDouble() ?? tempo).clamp(0.5, 2.0);
+      pitch = ((j['pitch'] as num?)?.round() ?? pitch).clamp(-12, 12);
       virtualSpeakers = j['virtualSpeakers'] as bool? ?? virtualSpeakers;
       crossfeedRange = ((j['crossfeedRange'] as num?)?.toDouble() ?? 0.5).clamp(0, 1);
       virtualSpeakerGain = ((j['virtualSpeakerGain'] as num?)?.toDouble() ?? 0).clamp(-12, 6);
@@ -849,6 +872,9 @@ class AudioEngine extends ChangeNotifier {
       'eqPreset': eqPreset,
       'bands': [for (final b in bands) b.toJson()],
       'crossfeed': crossfeed,
+      'skipSilence': skipSilence,
+      'tempo': tempo,
+      'pitch': pitch,
       'virtualSpeakers': virtualSpeakers,
       'crossfeedRange': crossfeedRange,
       'virtualSpeakerGain': virtualSpeakerGain,
@@ -917,6 +943,20 @@ class AudioEngine extends ChangeNotifier {
   // ── Setters used by the UI ──────────────────────────────────────────────
 
   Future<void> setGapless(bool v) => _set(() => gapless = v);
+  Future<void> setSkipSilence(bool v) => _set(() => skipSilence = v);
+  Future<void> setTempo(double v) => _set(() => tempo = ((v * 20).round() / 20.0).clamp(0.5, 2.0));
+  Future<void> setPitch(int v) => _set(() => pitch = v.clamp(-12, 12));
+  Future<void> resetTempoPitch() => _set(() {
+    tempo = 1;
+    pitch = 0;
+  });
+
+  /// Listen together started or ended: tempo and pitch wait meanwhile.
+  void holdTempoPitch(bool held) {
+    if (held == tempoPitchHeld) return;
+    _set(() => tempoPitchHeld = held).ignore();
+  }
+
   Future<void> setCrossfade(bool v) => _set(() => crossfade = v);
   Future<void> setCrossfadeSeconds(int v) =>
       _set(() => crossfadeSeconds = v.clamp(CrossfadeRules.minSeconds, CrossfadeRules.maxSeconds));
@@ -1125,6 +1165,21 @@ class AudioEngine extends ChangeNotifier {
   bool get eqActive => eqEnabled && !bitPerfect && bands.any((b) => b.gain.abs() > 0.05);
   bool get monoActive => mono != MonoAudio.off && !bitPerfect;
 
+  /// It changes what is played, so never in bit-perfect mode, nor on DSD sent as DoP.
+  bool get skipSilenceActive => hasSkipSilence && skipSilence && !bitPerfect && _dop == null;
+
+  /// Where mpv has FFmpeg's `silenceremove`: Linux's own libmpv, and Riflay's Android build
+  /// (`tool/build_libmpv_android.sh`). The Windows and Apple builds list only the filters their sound settings
+  /// need (`tool/build_libmpv_*.sh`); a missing one fails the whole chain, so the switch isn't offered there
+  /// until they are built with it.
+  static bool get hasSkipSilence => Host.isLinux || Host.isAndroid;
+
+  /// Cuts any silence longer than a second down to 0.4 s, and the silence a song starts with. -70 dB: a soft
+  /// passage (a whispered intro at -60 dB) is music, not silence, and plays whole.
+  static const skipSilenceFilter =
+      '@skipsilence:lavfi=[silenceremove=start_periods=1:start_threshold=-70dB:'
+      'stop_periods=-1:stop_duration=1:stop_threshold=-70dB:stop_silence=0.4]';
+
   /// Off under [monoActive]: summed to one channel, the two ears' responses
   /// would only colour the sound.
   bool get virtualSpeakersActive => virtualSpeakers && hrirPath != null && !bitPerfect && !monoActive;
@@ -1235,6 +1290,10 @@ class AudioEngine extends ChangeNotifier {
   String get filterChain {
     String n(double v) => v.toStringAsFixed(2);
     return [
+      // Before everything else: what is cut needs no processing.
+      if (skipSilenceActive) skipSilenceFilter,
+      // A pitch shift: mpv plays faster or slower by the pitch (see [mpvSpeed]); this undoes the tempo part.
+      if (effectivePitch != 0) '@pitch:scaletempo=scale=${(1 / math.pow(2, effectivePitch / 12)).toStringAsFixed(6)}',
       // First: room correction applies to the signal as a whole.
       if (convolutionActive)
         _lavfi(
@@ -1414,6 +1473,9 @@ class AudioEngine extends ChangeNotifier {
       'replaygain': effectiveLeveling.mpv,
       'replaygain-clip': 'no',
       'replaygain-fallback': '0',
+      // A pitch shift moves the pitch with the speed on purpose (the `@pitch` filter fixes the tempo); otherwise
+      // mpv keeps the pitch while the tempo changes.
+      'audio-pitch-correction': effectivePitch == 0 ? 'yes' : 'no',
       // An output that can't open (busy device, a format or exclusive mode it can't take) must not
       // end the song: with no audio output mpv treats an audio file as finished and moves on to the
       // next one. The null output keeps it going, silently and in time, from the same place.

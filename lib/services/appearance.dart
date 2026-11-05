@@ -174,6 +174,36 @@ class AppPalette {
   /// This palette for "High contrast": primary and secondary text at 7:1, muted text and the accent at 4.5:1.
   AppPalette withHighContrast() => withReadableText(text: 7, muted: 4.5, accent: 4.5);
 
+  /// The same theme on pure black (Settings › Appearance › Black): the window and panels #000000, cards, menus
+  /// and hover a step above in the theme's own text colour, so they still stand apart. Text and accent stay.
+  /// A light theme is left as it is.
+  AppPalette onBlack() {
+    if (light) return this;
+    const black = Color(0xFF000000);
+    Color lift(double a) => Color.alphaBlend(textPrimary.withValues(alpha: a), black);
+    final elevated = lift(0.06), menu = lift(0.09), hover = lift(0.12);
+    return AppPalette(
+      background: black,
+      panel: black,
+      elevated: elevated,
+      hover: hover,
+      menu: menu,
+      textPrimary: textPrimary,
+      textSecondary: textSecondary,
+      textMuted: textMuted,
+      accent: accent,
+      onAccent: onAccent,
+      materialScheme: materialScheme?.copyWith(
+        surface: black,
+        surfaceContainerLowest: black,
+        surfaceContainerLow: black,
+        surfaceContainer: elevated,
+        surfaceContainerHigh: menu,
+        surfaceContainerHighest: hover,
+      ),
+    );
+  }
+
   /// This palette washed with [cover] ([amount] 0 to 1 of the full wash), for "Colours from what's playing:
   /// Whole app". Surfaces move toward the cover's hue, the accent becomes the cover's colour, and text is
   /// nudged to stay readable (4.5:1, or what the theme itself had when that was lower).
@@ -550,6 +580,9 @@ final _tokyoNightDay = const AppPalette(
 enum ThemeBrightness {
   dark('Dark'),
   light('Light'),
+
+  /// Dark on pure black (AMOLED): the window and panels are #000000, an OLED screen's pixels off.
+  black('Black'),
   system('Match system');
 
   const ThemeBrightness(this.label);
@@ -730,7 +763,7 @@ class Appearance extends ChangeNotifier {
 
   /// Whether the app is light right now ([brightness], with "Match system" resolved).
   bool get isLight => switch (brightness) {
-    ThemeBrightness.dark => false,
+    ThemeBrightness.dark || ThemeBrightness.black => false,
     ThemeBrightness.light => true,
     ThemeBrightness.system => PlatformDispatcher.instance.platformBrightness == Brightness.light,
   };
@@ -869,6 +902,7 @@ class Appearance extends ChangeNotifier {
     if (theme != ThemeChoice.dynamic && coverMode == CoverColorMode.app && c != null) {
       p = p.tinted(c, _washAmount * (0.25 + 0.75 * coverStrength), _washAmount);
     }
+    if (brightness == ThemeBrightness.black) p = p.onBlack();
     return highContrast ? p.withHighContrast() : p;
   }
 
@@ -1068,7 +1102,9 @@ class Appearance extends ChangeNotifier {
       accent = AccentChoice.theme;
       // Unless following the system, a theme comes in its own brightness (Latte: light). Dynamic and custom
       // have none of their own, so they keep the one in use.
+      // Black stays black for any dark theme: only a light one (Latte) takes its own brightness.
       if (brightness != ThemeBrightness.system &&
+          !(brightness == ThemeBrightness.black && !v.palette.light) &&
           v != ThemeChoice.dynamic &&
           v != ThemeChoice.custom &&
           v != ThemeChoice.matugen) {

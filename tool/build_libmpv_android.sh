@@ -3,7 +3,7 @@
 # playback for Video mode (media_kit_video: mpv's OpenGL ES output on the
 # app's Surface, MediaCodec hardware decoding, h264 and vp9 in software as the
 # fallback) and the FFmpeg filters the app uses: crossfeed, afir and amovie (room correction),
-# headphone (Virtual speakers). media_kit's Android build has only equalizer,
+# headphone (Virtual speakers), silenceremove (Skip silence). media_kit's Android build has only equalizer,
 # volume and aresample. Same mpv and FFmpeg as the Windows build
 # (tool/build_libmpv_windows.sh); TLS through mbedtls, as media_kit's.
 #
@@ -114,7 +114,7 @@ EOF
     done_ libass
   fi
 
-  if ! stamp ffmpeg-spectrum; then
+  if ! stamp ffmpeg-silence; then
     rm -rf "$work/ffmpeg" && mkdir -p "$work/ffmpeg"
     # Every audio decoder (the audio, PCM and ADPCM sections of FFmpeg's codec list) and demuxer, the filters
     # mpv and the app use. Video only for Video mode: what YouTube serves under 720p (h264 and vp9; AV1 is left
@@ -133,10 +133,10 @@ EOF
       --disable-autodetect --enable-network --enable-zlib --enable-mbedtls --enable-version3 \
       --disable-vulkan --enable-jni --enable-mediacodec \
       --disable-decoders --enable-decoder="$audio_decoders,$video_decoders" --disable-filters \
-      --enable-filter=asplit,amerge,bandpass,astats,abuffer,abuffersink,aformat,anull,aresample,volume,equalizer,crossfeed,afir,amovie,headphone,pan \
+      --enable-filter=asplit,amerge,bandpass,astats,abuffer,abuffersink,aformat,anull,aresample,volume,equalizer,crossfeed,afir,amovie,headphone,pan,silenceremove \
       >/dev/null &&
       make -j"$jobs" install >/dev/null)
-    done_ ffmpeg-spectrum
+    done_ ffmpeg-silence
   fi
 
   # FFmpeg's MediaCodec (and mpv's use of it) needs the Java VM; libmpv.so is loaded by System.loadLibrary,
