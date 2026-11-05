@@ -11,6 +11,7 @@ import 'package:riflay/services/video_download.dart';
 import 'package:riflay/services/webm_mux.dart';
 import 'package:riflay/services/youtube_stream.dart';
 import 'package:riflay/services/youtube_importer.dart';
+import 'package:riflay/services/ytmusic_web.dart';
 import 'package:riflay/ui/download_options.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -858,6 +859,30 @@ void main() {
       );
       await tester.pump();
       expect(chip('2160p60 · AV1 (newer devices)'), findsOneWidget);
+    });
+  });
+
+  group('the music video a Video download saves', () {
+    tearDown(() => YoutubeStream.musicVideoIdLookup = null);
+
+    test('is found the way the picker found it (as the signed-in account), not signed out', () async {
+      YoutubeStream.musicVideoIdLookup = (id) async => id == 'song' ? 'video' : null;
+      var askedSignedOut = false;
+      final id = await YoutubeImporter.musicVideoIdOf(
+        'song',
+        signedOut: (_) async {
+          askedSignedOut = true;
+          return null; // what YouTube Music answers signed out: no Song/Video pair
+        },
+      );
+      expect(id, 'video');
+      expect(askedSignedOut, isFalse);
+    });
+
+    test('is asked signed out only when nothing set the lookup', () async {
+      YoutubeStream.musicVideoIdLookup = null;
+      final id = await YoutubeImporter.musicVideoIdOf('song', signedOut: (_) async => const MusicVideo(videoId: 'v'));
+      expect(id, 'v');
     });
   });
 }

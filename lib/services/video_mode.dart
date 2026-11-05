@@ -10,7 +10,6 @@ import '../platform/host.dart';
 import '../platform/mpv.dart';
 import '../models/track.dart';
 import 'beta_features.dart';
-import 'download_files.dart';
 import 'layout_prefs.dart';
 import 'player_controller.dart';
 import 'video_download.dart';
@@ -76,7 +75,8 @@ class VideoMode extends ChangeNotifier with WidgetsBindingObserver {
     _probed = true;
     if (Host.isLinux || Host.isWindows) {
       _canDecode = true;
-      notifyListeners();
+      // follow() is called from the views' build: tell them after it, not during it.
+      scheduleMicrotask(notifyListeners);
       return;
     }
     Player? p;
@@ -138,8 +138,7 @@ class VideoMode extends ChangeNotifier with WidgetsBindingObserver {
         !_asking.add(id)) {
       return;
     }
-    c.ytMusic
-        .musicVideo(id)
+    (debugLookUp ?? c.ytMusic.musicVideo)(id)
         .then(
           (v) => _found[id] = v,
           onError: (Object e) {
@@ -156,6 +155,10 @@ class VideoMode extends ChangeNotifier with WidgetsBindingObserver {
           notifyListeners();
         });
   }
+
+  /// Stands in for YouTube Music's answer in [lookUp] (tests).
+  @visibleForTesting
+  static Future<MusicVideo?> Function(String videoId)? debugLookUp;
 
   @visibleForTesting
   void debugSetFound(String videoId, MusicVideo? video) {

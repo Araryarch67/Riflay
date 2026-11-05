@@ -130,6 +130,18 @@ class Track {
 
   bool get isRemote => videoId != null;
 
+  /// The YouTube video this song is: a streamed song's own id, or the one a download remembers in
+  /// [sourceUrl]. Null for a file that never came from YouTube, which a YouTube Music playlist can't hold.
+  String? get youtubeId => videoId ?? youtubeVideoIdOf(sourceUrl);
+
+  /// This song as YouTube Music streams it (for a YouTube Music playlist), or null without a [youtubeId].
+  Track? get onYoutube => isRemote
+      ? this
+      : switch (youtubeId) {
+          final id? => Track.youtube(videoId: id, title: title, artist: artist, duration: duration, artistId: artistId),
+          null => null,
+        };
+
   /// A file on this device downloaded by Riflay from YouTube (it remembers the video in [sourceUrl]).
   bool get isDownload => sourceUrl != null && path != null && !isRemote;
 
@@ -282,4 +294,11 @@ class UserPlaylist {
     'tracks': [for (final t in tracks) t.toJson()],
     'createdAt': createdAt,
   };
+}
+
+/// The video id in a YouTube link: `watch?v=<id>` or `youtu.be/<id>`.
+String? youtubeVideoIdOf(String? url) {
+  final u = url == null ? null : Uri.tryParse(url);
+  if (u == null) return null;
+  return u.queryParameters['v'] ?? (u.host.endsWith('youtu.be') ? u.pathSegments.firstOrNull : null);
 }

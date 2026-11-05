@@ -6,6 +6,7 @@ import '../../models/track.dart';
 import '../../platform/features.dart';
 import '../../services/artist_channels.dart';
 import '../../services/flac_convert.dart';
+import '../../services/language.dart';
 import '../../services/layout_prefs.dart';
 import '../../services/play_history.dart';
 import '../../services/player_controller.dart';
@@ -22,6 +23,7 @@ import '../widgets/about_artist.dart';
 import '../widgets/page_scaffold.dart';
 import '../widgets/shelf.dart';
 import '../widgets/track_row.dart';
+import '../widgets/track_selection.dart';
 import '../ytmusic_edit.dart';
 import '../widgets/menus.dart';
 
@@ -47,13 +49,16 @@ class CollectionPage extends StatelessWidget {
     // wherever in the app it's made), not on every change of what's playing:
     // the buttons and rows that show that follow it themselves.
     final c = PlayerScope.identity(context);
-    Widget page([Track? picture]) => ListenableBuilder(
-      listenable: collection.id == likedMusicId
-          ? Listenable.merge([c.libraryRevision, c.ytMusic])
-          : collection.kind == CollectionKind.smart
-          ? Listenable.merge([c.libraryRevision, PlayHistory.instance])
-          : c.libraryRevision,
-      builder: (context, _) => _build(context, c, picture),
+    // Songs can be picked (hold a row) to add several to a playlist or the queue at once.
+    Widget page([Track? picture]) => TrackSelectionHost(
+      child: ListenableBuilder(
+        listenable: collection.id == likedMusicId
+            ? Listenable.merge([c.libraryRevision, c.ytMusic])
+            : collection.kind == CollectionKind.smart
+            ? Listenable.merge([c.libraryRevision, PlayHistory.instance])
+            : c.libraryRevision,
+        builder: (context, _) => _build(context, c, picture),
+      ),
     );
     // An artist is pictured by their own photo, not by their first song's cover (a playlist keeps that); the
     // song's cover stays until the photo is found, and when there is none.
@@ -120,7 +125,7 @@ class CollectionPage extends StatelessWidget {
       if (!shell.compact && isAll)
         PartButton(
           icon: Icons.add_circle_outline_rounded,
-          tooltip: 'Add files',
+          tooltip: tr.addFiles,
           look: PartLook.muted,
           round: true,
           size: 48,
@@ -129,7 +134,7 @@ class CollectionPage extends StatelessWidget {
       if (!shell.compact && live.kind == CollectionKind.youtube)
         PartButton(
           icon: Icons.add_link_rounded,
-          tooltip: 'Import from YouTube',
+          tooltip: tr.importFromYouTube,
           look: PartLook.muted,
           round: true,
           size: 48,
@@ -192,8 +197,8 @@ class CollectionPage extends StatelessWidget {
                               // Lit while this collection plays shuffled; there it toggles shuffle.
                               ModeButton(
                                 tooltip: playingHere
-                                    ? (shuffled ? 'Disable shuffle' : 'Enable shuffle')
-                                    : 'Shuffle play',
+                                    ? (shuffled ? tr.disableShuffle : tr.enableShuffle)
+                                    : tr.shufflePlay,
                                 active: shuffled,
                                 size: 30,
                                 icon: Icons.shuffle_rounded,
@@ -211,14 +216,14 @@ class CollectionPage extends StatelessWidget {
                       // An artist (yours, or a YouTube Music one with Follow): all of their songs into a playlist.
                       if ((isArtist || actions.any((a) => a is FollowButton)) && tracks.isNotEmpty)
                         IconButton(
-                          tooltip: 'Add all to playlist',
+                          tooltip: tr.addAllToPlaylist,
                           onPressed: () => addToPlaylist(context, tracks),
                           icon: const Icon(Icons.library_add_rounded),
                         ),
                       if (isAll) ...[
                         const Spacer(),
                         IconButton(
-                          tooltip: 'Add files',
+                          tooltip: tr.addFiles,
                           onPressed: shell.addFiles,
                           icon: const Icon(Icons.add_circle_outline_rounded),
                         ),
@@ -226,14 +231,14 @@ class CollectionPage extends StatelessWidget {
                       if (live.kind == CollectionKind.remote && tracks.isNotEmpty && Features.downloads) ...[
                         const Spacer(),
                         IconButton(
-                          tooltip: 'Download all for offline',
+                          tooltip: tr.downloadAllOffline,
                           onPressed: () async {
                             final messenger = ScaffoldMessenger.of(context);
                             final choice = await chooseDownload(context);
                             if (choice == null) return;
                             final n = c.youtube.enqueueTracks(tracks, choice: choice);
                             messenger.showSnackBar(
-                              SnackBar(content: Text(n == 0 ? 'Already downloaded' : 'Downloading $n songs…')),
+                              SnackBar(content: Text(n == 0 ? tr.alreadyDownloaded : tr.downloadingSongs(n))),
                             );
                           },
                           icon: const Icon(Icons.download_for_offline_outlined),
@@ -242,7 +247,7 @@ class CollectionPage extends StatelessWidget {
                       if (live.kind == CollectionKind.youtube) ...[
                         const Spacer(),
                         IconButton(
-                          tooltip: 'Import from YouTube',
+                          tooltip: tr.importFromYouTube,
                           onPressed: shell.importFromYoutube,
                           icon: const Icon(Icons.add_link_rounded),
                         ),
@@ -295,7 +300,7 @@ class CollectionPage extends StatelessWidget {
                           Icon(Icons.album_outlined, size: 18, color: AppColors.textSecondary),
                           const SizedBox(width: 12),
                           Text(
-                            'Disc ${tracks[-1 - i].discNumber ?? 1}',
+                            tr.disc(tracks[-1 - i].discNumber ?? 1),
                             style: text.titleSmall?.copyWith(fontWeight: FontWeight.w700),
                           ),
                         ],
@@ -332,11 +337,36 @@ class CollectionPage extends StatelessWidget {
               ),
             ),
             if (isArtist) ..._artistAlbums(context, c, live),
+            // Room for the bar of picked songs, so it never covers the last ones.
+            if (TrackSelectionScope.maybeOf(context) case final selection?)
+              SliverToBoxAdapter(
+                child: ListenableBuilder(
+                  listenable: selection,
+                  builder: (context, _) => SizedBox(height: selection.active ? 88 : 0),
+                ),
+              ),
           ],
         );
       },
     );
-    if (playlistId == null) return page;
+    final selection = TrackSelectionScope.maybeOf(context);
+    final withBar = selection == null
+        ? page
+        : Stack(
+            children: [
+              page,
+              Positioned(
+                left: 16,
+                right: 16,
+                bottom: 16,
+                child: SafeArea(
+                  top: false,
+                  child: TrackSelectionBar(selection: selection, tracks: tracks),
+                ),
+              ),
+            ],
+          );
+    if (playlistId == null) return withBar;
     // A Riflay playlist: every song in it can be taken out.
     return PlaylistEditScope(
       canRemove: (t) => tracks.any((x) => x.id == t.id),
@@ -344,12 +374,12 @@ class CollectionPage extends StatelessWidget {
         c.removeFromPlaylist(playlistId, t);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Removed from ${live.title}'),
-            action: SnackBarAction(label: 'Undo', onPressed: () => c.addToPlaylist(playlistId, [t])),
+            content: Text(tr.removedFrom(live.title)),
+            action: SnackBarAction(label: tr.undo, onPressed: () => c.addToPlaylist(playlistId, [t])),
           ),
         );
       },
-      child: page,
+      child: withBar,
     );
   }
 
@@ -382,13 +412,13 @@ class CollectionPage extends StatelessWidget {
     return [
       SliverToBoxAdapter(
         child: Shelf(
-          title: 'Albums',
+          title: tr.albums,
           cards: [
             for (final album in albums)
               MediaCard(
                 track: album.cover,
                 title: album.title,
-                subtitle: 'Album',
+                subtitle: tr.album,
                 onTap: () => ShellScope.of(context).openCollection(album),
                 onPlay: () => c.playCollection(album),
               ),
@@ -504,10 +534,10 @@ class _ColumnHeader extends StatelessWidget {
                 child: Center(child: Text('#', style: style)),
               ),
               const SizedBox(width: 12),
-              Expanded(flex: 5, child: Text('Title', style: style)),
+              Expanded(flex: 5, child: Text(tr.title, style: style)),
               if (showAlbum && shell.width > 900) ...[
                 const SizedBox(width: 16),
-                Expanded(flex: 4, child: Text('Album', style: style)),
+                Expanded(flex: 4, child: Text(tr.album, style: style)),
               ],
               const SizedBox(
                 width: 56,
@@ -541,7 +571,7 @@ class _PlaylistMenu extends StatelessWidget {
     return PopupMenuButton<VoidCallback>(
       // Over the whole window, so a click anywhere (sidebar included) closes it.
       useRootNavigator: true,
-      tooltip: 'Edit playlist',
+      tooltip: tr.editPlaylist,
       icon: const Icon(Icons.more_horiz_rounded, size: 30),
       onSelected: (action) => action(),
       itemBuilder: (_) => [
@@ -550,12 +580,12 @@ class _PlaylistMenu extends StatelessWidget {
             final answer = await askPlaylistName(context, initialTitle: name, askPrivacy: false);
             if (answer != null) c.renamePlaylist(id, answer.title);
           },
-          child: const MenuRow(leading: Icon(Icons.edit_outlined), title: Text('Rename')),
+          child: MenuRow(leading: Icon(Icons.edit_outlined), title: Text(tr.rename)),
         ),
         if (files.isNotEmpty)
           PopupMenuItem(
             value: () => showFlacConvert(context, c, files),
-            child: const MenuRow(leading: Icon(Icons.graphic_eq_rounded), title: Text('Convert all to FLAC')),
+            child: MenuRow(leading: Icon(Icons.graphic_eq_rounded), title: Text(tr.convertAllToFlac)),
           ),
         PopupMenuItem(
           value: () async {
@@ -564,14 +594,14 @@ class _PlaylistMenu extends StatelessWidget {
             final sure = await showDialog<bool>(
               context: context,
               builder: (context) => AlertDialog(
-                title: const Text('Delete playlist?'),
+                title: Text(tr.deletePlaylistQuestion),
                 content: Text('"$name" will be deleted. The songs stay in your library.'),
                 actions: [
-                  TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+                  TextButton(onPressed: () => Navigator.pop(context, false), child: Text(tr.cancel)),
                   FilledButton(
                     style: FilledButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.error),
                     onPressed: () => Navigator.pop(context, true),
-                    child: const Text('Delete'),
+                    child: Text(tr.delete),
                   ),
                 ],
               ),
@@ -580,7 +610,7 @@ class _PlaylistMenu extends StatelessWidget {
             c.deletePlaylist(id);
             history != null ? history.back() : navigator.maybePop();
           },
-          child: const MenuRow(leading: Icon(Icons.delete_outline_rounded), title: Text('Delete playlist')),
+          child: MenuRow(leading: Icon(Icons.delete_outline_rounded), title: Text(tr.deletePlaylist)),
         ),
       ],
     );

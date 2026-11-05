@@ -2,6 +2,8 @@ import 'dart:io';
 
 import '../models/track.dart';
 
+export '../models/track.dart' show youtubeVideoIdOf;
+
 /// What the files of the songs downloaded from YouTube look like on disk.
 class DownloadScan {
   const DownloadScan({required this.bytes, required this.missing});
@@ -11,13 +13,6 @@ class DownloadScan {
 
   /// Downloaded songs whose file is gone (deleted elsewhere, or lost with a reinstall).
   final List<Track> missing;
-}
-
-/// The video id in a YouTube link: `watch?v=<id>` or `youtu.be/<id>`.
-String? youtubeVideoIdOf(String? url) {
-  final u = url == null ? null : Uri.tryParse(url);
-  if (u == null) return null;
-  return u.queryParameters['v'] ?? (u.host.endsWith('youtu.be') ? u.pathSegments.firstOrNull : null);
 }
 
 /// The songs of [library] that were downloaded from YouTube: a file on this

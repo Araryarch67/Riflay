@@ -8,7 +8,6 @@ import 'package:riflay/services/player_controller.dart';
 import 'package:riflay/ui/widgets/audio_reactive_view.dart';
 import 'package:riflay/ui/widgets/controls.dart';
 import 'package:riflay/ui/widgets/marquee_text.dart';
-import 'package:riflay/ui/widgets/player_backdrop.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class _PlayingController extends PlayerController {
@@ -78,16 +77,6 @@ void main() {
     expect(c.audio.visualizerActive, isTrue);
     await tester.pumpWidget(const SizedBox.shrink());
     c.dispose();
-  });
-
-  testWidgets('lightweight draws no abstract backdrop', (tester) async {
-    await Appearance.instance.setNowPlaying(NowPlayingBackground.values.firstWhere((v) => v.isAbstract));
-    Widget host() => const MaterialApp(home: PlayerBackdrop(coverColor: Colors.pink));
-    await tester.pumpWidget(host());
-    expect(find.descendant(of: find.byType(PlayerBackdrop), matching: find.byType(CustomPaint)), findsWidgets);
-    await prefs.setPerformance(PerformanceMode.lightweight);
-    await tester.pumpWidget(host());
-    expect(find.descendant(of: find.byType(PlayerBackdrop), matching: find.byType(CustomPaint)), findsNothing);
   });
 
   testWidgets('lightweight stops the marquee and the equalizer icon', (tester) async {

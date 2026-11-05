@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../models/track.dart';
+import '../../services/language.dart';
 import '../../services/layout_prefs.dart';
 import '../../services/player_controller.dart';
 import '../../services/video_mode.dart';
@@ -58,7 +59,7 @@ class NowPlayingSidePanel extends StatelessWidget {
               child: Padding(
                 padding: const EdgeInsets.all(32),
                 child: Text(
-                  'Play something and it will show up here.',
+                  tr.sidePanelEmpty,
                   textAlign: TextAlign.center,
                   style: text.bodyMedium?.copyWith(color: AppColors.textSecondary),
                 ),
@@ -137,14 +138,14 @@ class NowPlayingSidePanel extends StatelessWidget {
                                   const SizedBox(width: 8),
                                   Expanded(
                                     child: Text(
-                                      'Next in queue',
+                                      tr.nextInQueue,
                                       style: text.titleSmall?.copyWith(fontWeight: FontWeight.w700),
                                     ),
                                   ),
                                   TextButton(
                                     onPressed: shell.openQueue,
                                     style: TextButton.styleFrom(foregroundColor: AppColors.textSecondary),
-                                    child: const Text('Open queue'),
+                                    child: Text(tr.openQueue),
                                   ),
                                 ],
                               ),
@@ -307,12 +308,12 @@ class _HeroPanel extends StatelessWidget {
                         children: [
                           const SizedBox(width: 8),
                           Expanded(
-                            child: Text('Next in queue', style: text.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+                            child: Text(tr.nextInQueue, style: text.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
                           ),
                           TextButton(
                             onPressed: shell.openQueue,
                             style: TextButton.styleFrom(foregroundColor: AppColors.textSecondary),
-                            child: const Text('Open queue'),
+                            child: Text(tr.openQueue),
                           ),
                         ],
                       ),
@@ -322,7 +323,7 @@ class _HeroPanel extends StatelessWidget {
                         Padding(
                           padding: const EdgeInsets.fromLTRB(8, 4, 8, 8),
                           child: Text(
-                            'Nothing after this song',
+                            tr.nothingAfterThisSong,
                             style: text.bodyMedium?.copyWith(color: AppColors.textSecondary),
                           ),
                         ),

@@ -1,7 +1,6 @@
 import 'dart:collection';
 
 import '../models/track.dart';
-import 'download_files.dart' show youtubeVideoIdOf;
 
 /// What the UI reads from one version of the library, each part worked out on
 /// first use. A new library gets a new one. Songs whose tags were filled in

@@ -1144,6 +1144,17 @@ class YoutubeImporter extends ChangeNotifier {
     }
   }
 
+  /// The id of the music video a Video download of [songId] saves, or null when it has none. Asked the way the
+  /// picker and Video mode ask ([YoutubeStream.musicVideoIdLookup], as the signed-in account): YouTube Music pairs
+  /// a song with its video only for a signed-in account, so asked signed out a song the picker offered as video
+  /// has none, and was quietly saved as audio. [signedOut] only where nothing set the lookup.
+  @visibleForTesting
+  static Future<String?> musicVideoIdOf(String songId, {required Future<MusicVideo?> Function(String) signedOut}) {
+    final find = YoutubeStream.musicVideoIdLookup;
+    if (find != null) return find(songId);
+    return signedOut(songId).then((v) => v?.videoId);
+  }
+
   /// Saves the song's music video (or, for a pasted link, the video itself) as one MP4 or WebM: the picture and the
   /// sound stream are fetched at the same time and combined without re-encoding ([muxVideo]).
   ///
@@ -1154,8 +1165,10 @@ class YoutubeImporter extends ChangeNotifier {
     var streamId = job.knownNames ? null : job.videoId;
     if (job.knownNames) {
       try {
-        final web = _web ??= YtMusicWeb.anonymous();
-        streamId = (await web.musicVideo(job.videoId).timeout(const Duration(seconds: 15)))?.videoId;
+        streamId = await musicVideoIdOf(
+          job.videoId,
+          signedOut: (id) => (_web ??= YtMusicWeb.anonymous()).musicVideo(id),
+        ).timeout(const Duration(seconds: 15));
       } catch (e) {
         if (e is SocketException || e is http.ClientException) rethrow;
         debugPrint('Download: no music video for ${job.videoId}: $e');

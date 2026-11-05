@@ -18,6 +18,7 @@ import 'l10n/generated/app_localizations.dart';
 import 'models/track.dart';
 import 'platform/network.dart';
 import 'platform/host.dart';
+import 'services/incoming_links.dart';
 import 'services/appearance.dart';
 import 'services/language.dart';
 import 'services/layout_prefs.dart';
@@ -40,10 +41,13 @@ import 'ui/theme.dart';
 import 'ui/widgets/title_bar.dart';
 
 // On the web every request the browser would block goes through Riflay's proxy (lib/platform/network.dart).
-Future<void> main() => runWithNetwork(_main);
+// [args]: computers' command line, which may hold a YouTube link to open (lib/services/incoming_links.dart).
+Future<void> main(List<String> args) => runWithNetwork(() => _main(args));
 
-Future<void> _main() async {
+Future<void> _main(List<String> args) async {
   WidgetsFlutterBinding.ensureInitialized();
+  // Riflay already runs: the link goes to it, and this process ends before showing a window.
+  await IncomingLinks.handOff(args);
   unawaited(RenderingMemory.configure());
   // just_audio has no native Linux/Windows backend; route those through libmpv.
   // Android, macOS and iOS too: libmpv gives them the equalizer, Virtual
@@ -88,7 +92,10 @@ Future<void> _main() async {
   runApp(RiflayApp(controller: controller));
   // Nothing here is needed to draw the first frame; it starts right after it. The media session must exist
   // before anything can be played, and playing needs a tap on that first frame.
-  WidgetsBinding.instance.addPostFrameCallback((_) => unawaited(_startServices(controller)));
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    unawaited(_startServices(controller));
+    unawaited(IncomingLinks.instance.start(args));
+  });
 }
 
 /// The first line of text laid out in a process makes the engine list the computer's fonts (a few dozen

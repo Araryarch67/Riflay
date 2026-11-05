@@ -30,8 +30,15 @@ class MainActivity : AudioServiceActivity() {
     private val seeThrough get() = getSharedPreferences("window", MODE_PRIVATE).getBoolean("seeThrough", false)
     private var seeThroughNow = false
 
+    // A YouTube link opened ("Open with") or shared with Riflay, until Dart takes it (riflay/incoming_link,
+    // lib/services/incoming_links.dart). Kept here because Dart may not be listening yet on a cold start.
+    private var incomingLink: String? = null
+    private var incomingLinks: MethodChannel? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         seeThroughNow = seeThrough
+        // Not when see-through recreates the activity: its intent was handled already.
+        if (savedInstanceState == null) incomingLink = linkOf(intent)
         super.onCreate(savedInstanceState)
         if (seeThroughNow) window.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
     }
@@ -72,6 +79,13 @@ class MainActivity : AudioServiceActivity() {
                 result.success(false)
             }
         }
+        incomingLinks = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "riflay/incoming_link").apply {
+            setMethodCallHandler { call, result ->
+                if (call.method != "take") return@setMethodCallHandler result.notImplemented()
+                result.success(incomingLink)
+                incomingLink = null
+            }
+        }
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "riflay/window").setMethodCallHandler { call, result ->
             val on = call.arguments as? Boolean
             if (call.method != "setSeeThrough" || on == null) return@setMethodCallHandler result.notImplemented()
@@ -103,6 +117,30 @@ class MainActivity : AudioServiceActivity() {
                 }
                 else -> result.notImplemented()
             }
+        }
+    }
+
+    // singleTask: a link opened while Riflay runs comes here. Dart is told, then takes it.
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        linkOf(intent)?.let {
+            incomingLink = it
+            incomingLinks?.invokeMethod("available", null)
+        }
+    }
+
+    // The link or the shared text; Dart finds the YouTube link in it. Reopening Riflay from Recents
+    // replays the intent it was started with, which was handled then.
+    private fun linkOf(intent: Intent?): String? {
+        if (intent == null || intent.flags and Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY != 0) return null
+        return when (intent.action) {
+            Intent.ACTION_VIEW -> intent.dataString
+            Intent.ACTION_SEND -> listOfNotNull(
+                intent.getCharSequenceExtra(Intent.EXTRA_TEXT)?.toString(),
+                intent.getCharSequenceExtra(Intent.EXTRA_SUBJECT)?.toString(),
+            ).joinToString("\n").ifBlank { null }
+            else -> null
         }
     }
 

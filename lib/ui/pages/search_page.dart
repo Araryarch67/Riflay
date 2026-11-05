@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../models/track.dart';
 import '../../platform/features.dart';
 import '../../services/extensions/extension_store.dart';
+import '../../services/language.dart';
 import '../../services/player_controller.dart';
 import '../../services/youtube_music_account.dart';
 import '../../services/youtube_video_search.dart';
@@ -285,7 +286,7 @@ class _SearchPageState extends State<SearchPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 if (shell.compact) ...[
-                  Text('Search', style: text.headlineMedium?.copyWith(fontWeight: FontWeight.w800)),
+                  Text(tr.navSearch, style: text.headlineMedium?.copyWith(fontWeight: FontWeight.w800)),
                   const SizedBox(height: 16),
                 ],
                 if (widget.input == null)
@@ -302,9 +303,9 @@ class _SearchPageState extends State<SearchPage> {
                   if (widget.input == null) const SizedBox(height: 16),
                   SegmentedButton<bool>(
                     showSelectedIcon: false,
-                    segments: const [
-                      ButtonSegment(value: false, label: Text('Songs')),
-                      ButtonSegment(value: true, label: Text('Videos')),
+                    segments: [
+                      ButtonSegment(value: false, label: Text(tr.songs)),
+                      ButtonSegment(value: true, label: Text(tr.videos)),
                     ],
                     selected: {_videos},
                     onSelectionChanged: (s) => _setVideos(s.first),
@@ -315,12 +316,12 @@ class _SearchPageState extends State<SearchPage> {
                       spacing: 8,
                       runSpacing: 8,
                       children: [
-                        for (final (label, kind) in const [
-                          ('All', null),
-                          ('Songs', WebResultKind.song),
-                          ('Artists', WebResultKind.artist),
-                          ('Albums', WebResultKind.album),
-                          ('Playlists', WebResultKind.playlist),
+                        for (final (label, kind) in [
+                          (tr.all, null),
+                          (tr.songs, WebResultKind.song),
+                          (tr.artists, WebResultKind.artist),
+                          (tr.albums, WebResultKind.album),
+                          (tr.playlists, WebResultKind.playlist),
                         ])
                           FilterChip(
                             label: Text(label),
@@ -338,15 +339,11 @@ class _SearchPageState extends State<SearchPage> {
           SliverToBoxAdapter(
             child: Padding(
               padding: EdgeInsets.fromLTRB(pad, 8, pad, 0),
-              child: Text(
-                'Searches your own music and all of YouTube Music together. Songs with a cloud stream online; '
-                'the rest play offline.',
-                style: text.bodyLarge?.copyWith(color: AppColors.textSecondary),
-              ),
+              child: Text(tr.searchIntro, style: text.bodyLarge?.copyWith(color: AppColors.textSecondary)),
             ),
           ),
           if (artists.isNotEmpty) ...[
-            const SliverToBoxAdapter(child: SectionTitle('Browse artists')),
+            SliverToBoxAdapter(child: SectionTitle(tr.browseArtists)),
             SliverPadding(
               padding: EdgeInsets.fromLTRB(pad, 8, pad, 0),
               sliver: SliverGrid.builder(
@@ -385,14 +382,14 @@ class _SearchPageState extends State<SearchPage> {
         ] else ...[
           if (searching) TopAndSongs(future: _top),
           if (results.isNotEmpty) ...[
-            const SliverToBoxAdapter(child: SectionTitle('In your library')),
+            SliverToBoxAdapter(child: SectionTitle(tr.inYourLibrary)),
             SliverPadding(
               padding: EdgeInsets.symmetric(horizontal: shell.compact ? 12 : 16),
               sliver: SliverList.builder(
                 itemCount: results.length.clamp(0, 8),
                 itemBuilder: (context, i) => TrackRow(
                   track: results[i],
-                  onTap: () => c.playList(results, i, from: 'Search'),
+                  onTap: () => c.playList(results, i, from: tr.navSearch),
                 ),
               ),
             ),
@@ -400,18 +397,18 @@ class _SearchPageState extends State<SearchPage> {
           if (searching && _extensions.isNotEmpty) ExtensionResults(searches: _extensions),
           if (searching) RemoteShelves(future: _all),
           if (artists.isNotEmpty && results.isNotEmpty)
-            libraryShelf('Your artists', [
+            libraryShelf(tr.yourArtists, [
               for (final a in artists)
                 MediaCard(
                   track: a.cover,
                   title: a.title,
-                  subtitle: 'Artist',
+                  subtitle: tr.artist,
                   circle: true,
                   onTap: () => shell.openCollection(a),
                 ),
             ]),
           if (albums.isNotEmpty)
-            libraryShelf('Your albums', [
+            libraryShelf(tr.yourAlbums, [
               for (final a in albums)
                 MediaCard(
                   track: a.cover,

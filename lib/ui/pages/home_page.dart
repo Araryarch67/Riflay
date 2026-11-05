@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../models/track.dart';
 import '../../platform/features.dart';
+import '../../services/language.dart';
 import '../../services/layout_prefs.dart';
 import '../../services/player_controller.dart';
 import '../../services/youtube_music_account.dart';
@@ -26,12 +27,12 @@ class HomePage extends StatelessWidget {
   static String _greeting() {
     final h = DateTime.now().hour;
     return h < 5
-        ? 'Good night'
+        ? tr.greetingNight
         : h < 12
-        ? 'Good morning'
+        ? tr.greetingMorning
         : h < 18
-        ? 'Good afternoon'
-        : 'Good evening';
+        ? tr.greetingAfternoon
+        : tr.greetingEvening;
   }
 
   /// Home's bodies built, for tests: a song starting or pausing must not add to it.
@@ -68,14 +69,14 @@ class HomePage extends StatelessWidget {
     final quickPicks = <Widget>[
       if (c.library.isNotEmpty)
         QuickTile(
-          title: 'All Songs',
+          title: tr.allSongs,
           leading: CoverMosaic(tracks: c.allSongs.tracks, radius: 0),
           onTap: () => shell.openCollection(c.allSongs),
           onPlay: () => c.playCollection(c.allSongs),
         ),
       if (liked != null)
         QuickTile(
-          title: 'Liked music',
+          title: tr.likedMusic,
           leading: CoverMosaic(tracks: liked.tracks, radius: 0),
           onTap: () => shell.openCollection(liked),
           onPlay: () => c.playCollection(liked),
@@ -128,15 +129,15 @@ class HomePage extends StatelessWidget {
           builder: (context, _, _) {
             final recent = c.recentlyPlayed;
             if (recent.isEmpty) return const SliverToBoxAdapter(child: SizedBox.shrink());
-            return _shelf('Recently played', recent.length, (i) {
+            return _shelf(tr.recentlyPlayed, recent.length, (i) {
               final t = recent[i];
               return MediaCard(
                 track: t,
                 title: t.title,
                 subtitle: t.artist,
                 online: !c.isOffline(t),
-                onTap: () => c.playList(recent, i, from: 'Recently played'),
-                onPlay: () => c.playList(recent, i, from: 'Recently played'),
+                onTap: () => c.playList(recent, i, from: tr.recentlyPlayed),
+                onPlay: () => c.playList(recent, i, from: tr.recentlyPlayed),
               );
             });
           },
@@ -144,13 +145,13 @@ class HomePage extends StatelessWidget {
       ],
       HomeSection.playlists: [
         if (playlists.isNotEmpty || remotePlaylists.isNotEmpty)
-          _shelf('Your playlists', playlists.length + remotePlaylists.length, (i) {
+          _shelf(tr.yourPlaylists, playlists.length + remotePlaylists.length, (i) {
             if (i < playlists.length) {
               final p = playlists[i];
               return MediaCard(
                 track: p.tracks.firstOrNull,
                 title: p.name,
-                subtitle: 'Riflay • ${p.tracks.length} songs',
+                subtitle: 'Riflay • ${tr.songsCount(p.tracks.length)}',
                 onTap: () => shell.openCollection(c.playlistCollection(p)),
                 onPlay: p.tracks.isEmpty ? null : () => c.playCollection(c.playlistCollection(p)),
               );
@@ -167,7 +168,7 @@ class HomePage extends StatelessWidget {
       ],
       HomeSection.albums: [
         if (albums.isNotEmpty)
-          _shelf('Your albums', albums.length, (i) {
+          _shelf(tr.yourAlbums, albums.length, (i) {
             final a = albums[i];
             return MediaCard(
               track: a.cover,
@@ -180,12 +181,12 @@ class HomePage extends StatelessWidget {
       ],
       HomeSection.artists: [
         if (artists.isNotEmpty)
-          _shelf('Artists', artists.length, (i) {
+          _shelf(tr.artists, artists.length, (i) {
             final a = artists[i];
             return MediaCard(
               track: a.cover,
               title: a.title,
-              subtitle: 'Artist',
+              subtitle: tr.artist,
               circle: true,
               onTap: () => shell.openCollection(a),
               onPlay: () => c.playCollection(a),
@@ -198,14 +199,14 @@ class HomePage extends StatelessWidget {
       ],
       HomeSection.recentlyAdded: [
         if (c.library.isNotEmpty)
-          _shelf('Recently added', math.min(20, c.recentlyAdded.length), (i) {
+          _shelf(tr.recentlyAdded, math.min(20, c.recentlyAdded.length), (i) {
             final t = c.recentlyAdded[i];
             return MediaCard(
               track: t,
               title: t.title,
               subtitle: t.artist,
-              onTap: () => c.playList(c.recentlyAdded, i, from: 'Recently added'),
-              onPlay: () => c.playList(c.recentlyAdded, i, from: 'Recently added'),
+              onTap: () => c.playList(c.recentlyAdded, i, from: tr.recentlyAdded),
+              onPlay: () => c.playList(c.recentlyAdded, i, from: tr.recentlyAdded),
             );
           }, onShowAll: () => shell.openCollection(c.allSongs)),
       ],
@@ -234,7 +235,7 @@ class HomePage extends StatelessWidget {
             : const SizedBox.shrink(),
       ),
       IconButton(
-        tooltip: 'Refresh',
+        tooltip: tr.refresh,
         onPressed: () {
           account.discover(refresh: true);
           if (account.isSignedIn) account.library(refresh: true);
@@ -284,20 +285,17 @@ class _AddYourMusic extends StatelessWidget {
           runSpacing: 12,
           crossAxisAlignment: WrapCrossAlignment.center,
           children: [
-            Text(
-              'Add music from this device to play it offline.',
-              style: text.bodyMedium?.copyWith(color: AppColors.textSecondary),
-            ),
+            Text(tr.addMusicOffline, style: text.bodyMedium?.copyWith(color: AppColors.textSecondary)),
             OutlinedButton.icon(
               onPressed: shell.addFiles,
               icon: const Icon(Icons.audio_file_outlined),
-              label: const Text('Add songs'),
+              label: Text(tr.addSongs),
             ),
             if (shell.addFolder != null)
               OutlinedButton.icon(
                 onPressed: shell.addFolder,
                 icon: const Icon(Icons.folder_open_rounded),
-                label: const Text('Add a folder'),
+                label: Text(tr.addFolder),
               ),
           ],
         ),
@@ -379,17 +377,17 @@ class _AddMenu extends StatelessWidget {
     return PopupMenuButton<VoidCallback>(
       // Over the whole window, so a click anywhere (sidebar included) closes it.
       useRootNavigator: true,
-      tooltip: 'Add music',
+      tooltip: tr.addMusic,
       icon: const Icon(Icons.add_rounded),
       onSelected: (action) => action(),
       itemBuilder: (_) => [
         PopupMenuItem(
           value: shell.addFiles,
-          child: const MenuRow(leading: Icon(Icons.audio_file_outlined), title: Text('Add songs')),
+          child: MenuRow(leading: Icon(Icons.audio_file_outlined), title: Text(tr.addSongs)),
         ),
         PopupMenuItem(
           value: shell.importFromYoutube,
-          child: const MenuRow(leading: Icon(Icons.add_link_rounded), title: Text('Import from YouTube')),
+          child: MenuRow(leading: Icon(Icons.add_link_rounded), title: Text(tr.importFromYouTube)),
         ),
       ],
     );
@@ -418,13 +416,13 @@ class EmptyLibrary extends StatelessWidget {
               if (greeting != null) Text(greeting!, style: text.titleMedium?.copyWith(color: AppColors.textSecondary)),
               const SizedBox(height: 4),
               Text(
-                'No music yet',
+                tr.noMusicYet,
                 textAlign: TextAlign.center,
                 style: text.headlineMedium?.copyWith(fontWeight: FontWeight.w900, letterSpacing: -0.8),
               ),
               const SizedBox(height: 12),
               Text(
-                'Add audio files from this device. Albums, artists and cover art come from the files\' tags.',
+                tr.noMusicYetBody,
                 textAlign: TextAlign.center,
                 style: text.bodyLarge?.copyWith(color: AppColors.textSecondary),
               ),
@@ -443,7 +441,7 @@ class EmptyLibrary extends StatelessWidget {
                     ),
                     onPressed: shell.addFiles,
                     icon: const Icon(Icons.audio_file_rounded),
-                    label: const Text('Add songs'),
+                    label: Text(tr.addSongs),
                   ),
                   OutlinedButton.icon(
                     style: OutlinedButton.styleFrom(
@@ -454,7 +452,7 @@ class EmptyLibrary extends StatelessWidget {
                     ),
                     onPressed: shell.importFromYoutube,
                     icon: const Icon(Icons.add_link_rounded),
-                    label: const Text('From YouTube'),
+                    label: Text(tr.fromYouTube),
                   ),
                   if (shell.addFolder != null)
                     OutlinedButton.icon(
@@ -466,7 +464,7 @@ class EmptyLibrary extends StatelessWidget {
                       ),
                       onPressed: shell.addFolder,
                       icon: const Icon(Icons.folder_open_rounded),
-                      label: const Text('Add a folder'),
+                      label: Text(tr.addFolder),
                     ),
                 ],
               ),

@@ -62,8 +62,7 @@ import 'app_localizations_id.dart';
 /// be consistent with the languages listed in the AppLocalizations.supportedLocales
 /// property.
 abstract class AppLocalizations {
-  AppLocalizations(String locale)
-    : localeName = intl.Intl.canonicalizedLocale(locale.toString());
+  AppLocalizations(String locale) : localeName = intl.Intl.canonicalizedLocale(locale.toString());
 
   final String localeName;
 
@@ -71,8 +70,7 @@ abstract class AppLocalizations {
     return Localizations.of<AppLocalizations>(context, AppLocalizations)!;
   }
 
-  static const LocalizationsDelegate<AppLocalizations> delegate =
-      _AppLocalizationsDelegate();
+  static const LocalizationsDelegate<AppLocalizations> delegate = _AppLocalizationsDelegate();
 
   /// A list of this localizations delegate along with the default localizations
   /// delegates.
@@ -84,19 +82,15 @@ abstract class AppLocalizations {
   /// Additional delegates can be added by appending to this list in
   /// MaterialApp. This list does not have to be used at all if a custom list
   /// of delegates is preferred or required.
-  static const List<LocalizationsDelegate<dynamic>> localizationsDelegates =
-      <LocalizationsDelegate<dynamic>>[
-        delegate,
-        GlobalMaterialLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-      ];
+  static const List<LocalizationsDelegate<dynamic>> localizationsDelegates = <LocalizationsDelegate<dynamic>>[
+    delegate,
+    GlobalMaterialLocalizations.delegate,
+    GlobalCupertinoLocalizations.delegate,
+    GlobalWidgetsLocalizations.delegate,
+  ];
 
   /// A list of this localizations delegate's supported locales.
-  static const List<Locale> supportedLocales = <Locale>[
-    Locale('en'),
-    Locale('id'),
-  ];
+  static const List<Locale> supportedLocales = <Locale>[Locale('en'), Locale('id')];
 
   /// No description provided for @language.
   ///
@@ -536,12 +530,6 @@ abstract class AppLocalizations {
   /// **'Detail stats'**
   String get detailStats;
 
-  /// No description provided for @hideDetailStats.
-  ///
-  /// In en, this message translates to:
-  /// **'Hide detail stats'**
-  String get hideDetailStats;
-
   /// No description provided for @playNext.
   ///
   /// In en, this message translates to:
@@ -937,10 +925,933 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Off while bit-perfect mode is on or listening together'**
   String get tempoPitchOff;
+
+  /// No description provided for @greetingNight.
+  ///
+  /// In en, this message translates to:
+  /// **'Good night'**
+  String get greetingNight;
+
+  /// No description provided for @greetingMorning.
+  ///
+  /// In en, this message translates to:
+  /// **'Good morning'**
+  String get greetingMorning;
+
+  /// No description provided for @greetingAfternoon.
+  ///
+  /// In en, this message translates to:
+  /// **'Good afternoon'**
+  String get greetingAfternoon;
+
+  /// No description provided for @greetingEvening.
+  ///
+  /// In en, this message translates to:
+  /// **'Good evening'**
+  String get greetingEvening;
+
+  /// No description provided for @allSongs.
+  ///
+  /// In en, this message translates to:
+  /// **'All Songs'**
+  String get allSongs;
+
+  /// No description provided for @likedMusic.
+  ///
+  /// In en, this message translates to:
+  /// **'Liked music'**
+  String get likedMusic;
+
+  /// No description provided for @recentlyPlayed.
+  ///
+  /// In en, this message translates to:
+  /// **'Recently played'**
+  String get recentlyPlayed;
+
+  /// No description provided for @yourPlaylists.
+  ///
+  /// In en, this message translates to:
+  /// **'Your playlists'**
+  String get yourPlaylists;
+
+  /// No description provided for @yourAlbums.
+  ///
+  /// In en, this message translates to:
+  /// **'Your albums'**
+  String get yourAlbums;
+
+  /// No description provided for @yourArtists.
+  ///
+  /// In en, this message translates to:
+  /// **'Your artists'**
+  String get yourArtists;
+
+  /// No description provided for @artists.
+  ///
+  /// In en, this message translates to:
+  /// **'Artists'**
+  String get artists;
+
+  /// No description provided for @artist.
+  ///
+  /// In en, this message translates to:
+  /// **'Artist'**
+  String get artist;
+
+  /// No description provided for @albums.
+  ///
+  /// In en, this message translates to:
+  /// **'Albums'**
+  String get albums;
+
+  /// No description provided for @album.
+  ///
+  /// In en, this message translates to:
+  /// **'Album'**
+  String get album;
+
+  /// No description provided for @playlists.
+  ///
+  /// In en, this message translates to:
+  /// **'Playlists'**
+  String get playlists;
+
+  /// No description provided for @playlist.
+  ///
+  /// In en, this message translates to:
+  /// **'Playlist'**
+  String get playlist;
+
+  /// No description provided for @smartPlaylist.
+  ///
+  /// In en, this message translates to:
+  /// **'Smart playlist'**
+  String get smartPlaylist;
+
+  /// No description provided for @recentlyAdded.
+  ///
+  /// In en, this message translates to:
+  /// **'Recently added'**
+  String get recentlyAdded;
+
+  /// No description provided for @refresh.
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh'**
+  String get refresh;
+
+  /// No description provided for @addMusicOffline.
+  ///
+  /// In en, this message translates to:
+  /// **'Add music from this device to play it offline.'**
+  String get addMusicOffline;
+
+  /// No description provided for @addSongs.
+  ///
+  /// In en, this message translates to:
+  /// **'Add songs'**
+  String get addSongs;
+
+  /// No description provided for @addFolder.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a folder'**
+  String get addFolder;
+
+  /// No description provided for @addMusic.
+  ///
+  /// In en, this message translates to:
+  /// **'Add music'**
+  String get addMusic;
+
+  /// No description provided for @addFiles.
+  ///
+  /// In en, this message translates to:
+  /// **'Add files'**
+  String get addFiles;
+
+  /// No description provided for @add.
+  ///
+  /// In en, this message translates to:
+  /// **'Add'**
+  String get add;
+
+  /// No description provided for @importFromYouTube.
+  ///
+  /// In en, this message translates to:
+  /// **'Import from YouTube'**
+  String get importFromYouTube;
+
+  /// No description provided for @fromYouTube.
+  ///
+  /// In en, this message translates to:
+  /// **'From YouTube'**
+  String get fromYouTube;
+
+  /// No description provided for @noMusicYet.
+  ///
+  /// In en, this message translates to:
+  /// **'No music yet'**
+  String get noMusicYet;
+
+  /// No description provided for @noMusicYetBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Add audio files from this device. Albums, artists and cover art come from the files\' tags.'**
+  String get noMusicYetBody;
+
+  /// No description provided for @newPlaylist.
+  ///
+  /// In en, this message translates to:
+  /// **'New playlist'**
+  String get newPlaylist;
+
+  /// No description provided for @newPlaylistSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Mix your own songs and YouTube Music'**
+  String get newPlaylistSubtitle;
+
+  /// No description provided for @yourListeningStats.
+  ///
+  /// In en, this message translates to:
+  /// **'Your listening stats'**
+  String get yourListeningStats;
+
+  /// No description provided for @yourListeningStatsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Top songs, artists and albums'**
+  String get yourListeningStatsSubtitle;
+
+  /// No description provided for @yourYouTubeMusic.
+  ///
+  /// In en, this message translates to:
+  /// **'Your YouTube Music'**
+  String get yourYouTubeMusic;
+
+  /// No description provided for @yourYouTubeMusicBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in to see your liked songs and playlists here.'**
+  String get yourYouTubeMusicBody;
+
+  /// No description provided for @signInWithGoogle.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in with Google'**
+  String get signInWithGoogle;
+
+  /// No description provided for @musicOnDevice.
+  ///
+  /// In en, this message translates to:
+  /// **'Music on this device'**
+  String get musicOnDevice;
+
+  /// No description provided for @musicOnDeviceBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Add audio files to play them offline.'**
+  String get musicOnDeviceBody;
+
+  /// No description provided for @joinSharedPlaylist.
+  ///
+  /// In en, this message translates to:
+  /// **'Join a shared playlist'**
+  String get joinSharedPlaylist;
+
+  /// No description provided for @importPlaylist.
+  ///
+  /// In en, this message translates to:
+  /// **'Import a playlist'**
+  String get importPlaylist;
+
+  /// No description provided for @spotifyLibrary.
+  ///
+  /// In en, this message translates to:
+  /// **'Spotify library'**
+  String get spotifyLibrary;
+
+  /// No description provided for @libraryEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'Add songs or a playlist to start your library.'**
+  String get libraryEmpty;
+
+  /// No description provided for @all.
+  ///
+  /// In en, this message translates to:
+  /// **'All'**
+  String get all;
+
+  /// No description provided for @songs.
+  ///
+  /// In en, this message translates to:
+  /// **'Songs'**
+  String get songs;
+
+  /// No description provided for @videos.
+  ///
+  /// In en, this message translates to:
+  /// **'Videos'**
+  String get videos;
+
+  /// No description provided for @searchIntro.
+  ///
+  /// In en, this message translates to:
+  /// **'Searches your own music and all of YouTube Music together. Songs with a cloud stream online; the rest play offline.'**
+  String get searchIntro;
+
+  /// No description provided for @browseArtists.
+  ///
+  /// In en, this message translates to:
+  /// **'Browse artists'**
+  String get browseArtists;
+
+  /// No description provided for @inYourLibrary.
+  ///
+  /// In en, this message translates to:
+  /// **'In your library'**
+  String get inYourLibrary;
+
+  /// No description provided for @searchHint.
+  ///
+  /// In en, this message translates to:
+  /// **'What do you want to play?'**
+  String get searchHint;
+
+  /// No description provided for @clear.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear'**
+  String get clear;
+
+  /// No description provided for @recentSearches.
+  ///
+  /// In en, this message translates to:
+  /// **'Recent searches'**
+  String get recentSearches;
+
+  /// No description provided for @remove.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove'**
+  String get remove;
+
+  /// No description provided for @clearFinished.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear finished'**
+  String get clearFinished;
+
+  /// No description provided for @nothingDownloading.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing downloading. Paste a YouTube video or playlist link to add its audio to your library.'**
+  String get nothingDownloading;
+
+  /// No description provided for @downloadsUse.
+  ///
+  /// In en, this message translates to:
+  /// **'Downloads use {size}'**
+  String downloadsUse(Object size);
+
+  /// No description provided for @missingFiles.
+  ///
+  /// In en, this message translates to:
+  /// **'Missing files'**
+  String get missingFiles;
+
+  /// No description provided for @downloadAllAgain.
+  ///
+  /// In en, this message translates to:
+  /// **'Download all again'**
+  String get downloadAllAgain;
+
+  /// No description provided for @removeAllFromLibrary.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove all from library'**
+  String get removeAllFromLibrary;
+
+  /// No description provided for @missingFilesBody.
+  ///
+  /// In en, this message translates to:
+  /// **'These songs are in your library, but their files aren\'t on this device any more.'**
+  String get missingFilesBody;
+
+  /// No description provided for @downloadAgain.
+  ///
+  /// In en, this message translates to:
+  /// **'Download again'**
+  String get downloadAgain;
+
+  /// No description provided for @waiting.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting…'**
+  String get waiting;
+
+  /// No description provided for @preparing.
+  ///
+  /// In en, this message translates to:
+  /// **'Preparing…'**
+  String get preparing;
+
+  /// No description provided for @bytesOf.
+  ///
+  /// In en, this message translates to:
+  /// **'{received} of {total}'**
+  String bytesOf(Object received, Object total);
+
+  /// No description provided for @addedToLibrary.
+  ///
+  /// In en, this message translates to:
+  /// **'Added to library'**
+  String get addedToLibrary;
+
+  /// No description provided for @failed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed'**
+  String get failed;
+
+  /// No description provided for @cancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancelled'**
+  String get cancelled;
+
+  /// No description provided for @cancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get cancel;
+
+  /// No description provided for @retry.
+  ///
+  /// In en, this message translates to:
+  /// **'Retry'**
+  String get retry;
+
+  /// No description provided for @downloadingCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Downloading {count}'**
+  String downloadingCount(int count);
+
+  /// No description provided for @saveAsPlaylist.
+  ///
+  /// In en, this message translates to:
+  /// **'Save as playlist'**
+  String get saveAsPlaylist;
+
+  /// No description provided for @queueEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing playing yet. Pick an album, artist or song to fill the queue.'**
+  String get queueEmpty;
+
+  /// No description provided for @nowPlaying.
+  ///
+  /// In en, this message translates to:
+  /// **'Now playing'**
+  String get nowPlaying;
+
+  /// No description provided for @nowPlayingTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Now Playing'**
+  String get nowPlayingTitle;
+
+  /// No description provided for @nextUp.
+  ///
+  /// In en, this message translates to:
+  /// **'Next up'**
+  String get nextUp;
+
+  /// No description provided for @nextFrom.
+  ///
+  /// In en, this message translates to:
+  /// **'Next from: {source}'**
+  String nextFrom(Object source);
+
+  /// No description provided for @autoplay.
+  ///
+  /// In en, this message translates to:
+  /// **'Autoplay'**
+  String get autoplay;
+
+  /// No description provided for @autoplaySubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'When the queue ends, keep playing similar songs from YouTube Music'**
+  String get autoplaySubtitle;
+
+  /// No description provided for @autoplaySimilar.
+  ///
+  /// In en, this message translates to:
+  /// **'Autoplay: similar to what you\'re playing'**
+  String get autoplaySimilar;
+
+  /// No description provided for @removeFromQueue.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove from queue'**
+  String get removeFromQueue;
+
+  /// No description provided for @dragToMove.
+  ///
+  /// In en, this message translates to:
+  /// **'Drag to move'**
+  String get dragToMove;
+
+  /// No description provided for @shufflePlay.
+  ///
+  /// In en, this message translates to:
+  /// **'Shuffle play'**
+  String get shufflePlay;
+
+  /// No description provided for @addAllToPlaylist.
+  ///
+  /// In en, this message translates to:
+  /// **'Add all to playlist'**
+  String get addAllToPlaylist;
+
+  /// No description provided for @select.
+  ///
+  /// In en, this message translates to:
+  /// **'Select'**
+  String get select;
+
+  /// No description provided for @unselect.
+  ///
+  /// In en, this message translates to:
+  /// **'Unselect'**
+  String get unselect;
+
+  /// No description provided for @selectAll.
+  ///
+  /// In en, this message translates to:
+  /// **'Select all'**
+  String get selectAll;
+
+  /// No description provided for @cancelSelection.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel selection'**
+  String get cancelSelection;
+
+  /// No description provided for @selectedCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} selected'**
+  String selectedCount(int count);
+
+  /// No description provided for @playlistOnRiflay.
+  ///
+  /// In en, this message translates to:
+  /// **'Riflay • {count} songs'**
+  String playlistOnRiflay(int count);
+
+  /// No description provided for @playlistOnYoutubeMusic.
+  ///
+  /// In en, this message translates to:
+  /// **'YouTube Music • {count} songs'**
+  String playlistOnYoutubeMusic(int count);
+
+  /// No description provided for @addedTo.
+  ///
+  /// In en, this message translates to:
+  /// **'Added to {name}'**
+  String addedTo(String name);
+
+  /// No description provided for @addedSongsTo.
+  ///
+  /// In en, this message translates to:
+  /// **'Added {count} songs to {name}'**
+  String addedSongsTo(int count, String name);
+
+  /// No description provided for @alreadyIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Already in {name}'**
+  String alreadyIn(String name);
+
+  /// No description provided for @notOnYoutubeMusic.
+  ///
+  /// In en, this message translates to:
+  /// **'This song isn\'t on YouTube Music'**
+  String get notOnYoutubeMusic;
+
+  /// No description provided for @noneOnYoutubeMusic.
+  ///
+  /// In en, this message translates to:
+  /// **'None of these songs are on YouTube Music'**
+  String get noneOnYoutubeMusic;
+
+  /// No description provided for @skippedNotOnYoutubeMusic.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} not on YouTube Music, skipped'**
+  String skippedNotOnYoutubeMusic(int count);
+
+  /// No description provided for @addAllToQueue.
+  ///
+  /// In en, this message translates to:
+  /// **'Add all to queue'**
+  String get addAllToQueue;
+
+  /// No description provided for @downloadAllOffline.
+  ///
+  /// In en, this message translates to:
+  /// **'Download all for offline'**
+  String get downloadAllOffline;
+
+  /// No description provided for @alreadyDownloaded.
+  ///
+  /// In en, this message translates to:
+  /// **'Already downloaded'**
+  String get alreadyDownloaded;
+
+  /// No description provided for @downloadingSongs.
+  ///
+  /// In en, this message translates to:
+  /// **'Downloading {count} songs…'**
+  String downloadingSongs(int count);
+
+  /// No description provided for @disc.
+  ///
+  /// In en, this message translates to:
+  /// **'Disc {number}'**
+  String disc(Object number);
+
+  /// No description provided for @removedFrom.
+  ///
+  /// In en, this message translates to:
+  /// **'Removed from {playlist}'**
+  String removedFrom(Object playlist);
+
+  /// No description provided for @undo.
+  ///
+  /// In en, this message translates to:
+  /// **'Undo'**
+  String get undo;
+
+  /// No description provided for @title.
+  ///
+  /// In en, this message translates to:
+  /// **'Title'**
+  String get title;
+
+  /// No description provided for @editPlaylist.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit playlist'**
+  String get editPlaylist;
+
+  /// No description provided for @rename.
+  ///
+  /// In en, this message translates to:
+  /// **'Rename'**
+  String get rename;
+
+  /// No description provided for @convertAllToFlac.
+  ///
+  /// In en, this message translates to:
+  /// **'Convert all to FLAC'**
+  String get convertAllToFlac;
+
+  /// No description provided for @deletePlaylistQuestion.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete playlist?'**
+  String get deletePlaylistQuestion;
+
+  /// No description provided for @deletePlaylist.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete playlist'**
+  String get deletePlaylist;
+
+  /// No description provided for @close.
+  ///
+  /// In en, this message translates to:
+  /// **'Close'**
+  String get close;
+
+  /// No description provided for @playingFromCaps.
+  ///
+  /// In en, this message translates to:
+  /// **'PLAYING FROM'**
+  String get playingFromCaps;
+
+  /// No description provided for @yourLibrarySource.
+  ///
+  /// In en, this message translates to:
+  /// **'Your library'**
+  String get yourLibrarySource;
+
+  /// No description provided for @yourLibraryInline.
+  ///
+  /// In en, this message translates to:
+  /// **'your library'**
+  String get yourLibraryInline;
+
+  /// No description provided for @playingFrom.
+  ///
+  /// In en, this message translates to:
+  /// **'Playing from {source}'**
+  String playingFrom(Object source);
+
+  /// No description provided for @nothingPlaying.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing playing'**
+  String get nothingPlaying;
+
+  /// No description provided for @quieter.
+  ///
+  /// In en, this message translates to:
+  /// **'Quieter'**
+  String get quieter;
+
+  /// No description provided for @louder.
+  ///
+  /// In en, this message translates to:
+  /// **'Louder'**
+  String get louder;
+
+  /// No description provided for @linkCopied.
+  ///
+  /// In en, this message translates to:
+  /// **'Link copied'**
+  String get linkCopied;
+
+  /// No description provided for @songNameCopied.
+  ///
+  /// In en, this message translates to:
+  /// **'Song name copied'**
+  String get songNameCopied;
+
+  /// No description provided for @sleepTimerWith.
+  ///
+  /// In en, this message translates to:
+  /// **'Sleep timer: {time}'**
+  String sleepTimerWith(Object time);
+
+  /// No description provided for @volume.
+  ///
+  /// In en, this message translates to:
+  /// **'Volume'**
+  String get volume;
+
+  /// No description provided for @speaker.
+  ///
+  /// In en, this message translates to:
+  /// **'Speaker'**
+  String get speaker;
+
+  /// No description provided for @expandedPlayer.
+  ///
+  /// In en, this message translates to:
+  /// **'Expanded player'**
+  String get expandedPlayer;
+
+  /// No description provided for @closeExpandedPlayer.
+  ///
+  /// In en, this message translates to:
+  /// **'Close expanded player'**
+  String get closeExpandedPlayer;
+
+  /// No description provided for @hideLyrics.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide lyrics'**
+  String get hideLyrics;
+
+  /// No description provided for @nowPlayingView.
+  ///
+  /// In en, this message translates to:
+  /// **'Now playing view'**
+  String get nowPlayingView;
+
+  /// No description provided for @hideNowPlayingView.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide now playing view'**
+  String get hideNowPlayingView;
+
+  /// No description provided for @moreOptions.
+  ///
+  /// In en, this message translates to:
+  /// **'More options'**
+  String get moreOptions;
+
+  /// No description provided for @miniPlayer.
+  ///
+  /// In en, this message translates to:
+  /// **'Mini player'**
+  String get miniPlayer;
+
+  /// No description provided for @fullScreen.
+  ///
+  /// In en, this message translates to:
+  /// **'Full screen'**
+  String get fullScreen;
+
+  /// No description provided for @exitFullScreen.
+  ///
+  /// In en, this message translates to:
+  /// **'Exit full screen'**
+  String get exitFullScreen;
+
+  /// No description provided for @sidePanelEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'Play something and it will show up here.'**
+  String get sidePanelEmpty;
+
+  /// No description provided for @nextInQueue.
+  ///
+  /// In en, this message translates to:
+  /// **'Next in queue'**
+  String get nextInQueue;
+
+  /// No description provided for @openQueue.
+  ///
+  /// In en, this message translates to:
+  /// **'Open queue'**
+  String get openQueue;
+
+  /// No description provided for @nothingAfterThisSong.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing after this song'**
+  String get nothingAfterThisSong;
+
+  /// No description provided for @lyricsLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load lyrics. Check your internet connection.'**
+  String get lyricsLoadFailed;
+
+  /// No description provided for @tryAgain.
+  ///
+  /// In en, this message translates to:
+  /// **'Try again'**
+  String get tryAgain;
+
+  /// No description provided for @lyricsInstrumental.
+  ///
+  /// In en, this message translates to:
+  /// **'This song is instrumental. Enjoy the music.'**
+  String get lyricsInstrumental;
+
+  /// No description provided for @noLyricsFound.
+  ///
+  /// In en, this message translates to:
+  /// **'No lyrics found for this song.'**
+  String get noLyricsFound;
+
+  /// No description provided for @useMyLyricsFile.
+  ///
+  /// In en, this message translates to:
+  /// **'Use my lyrics file'**
+  String get useMyLyricsFile;
+
+  /// No description provided for @loadingLyrics.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading lyrics'**
+  String get loadingLyrics;
+
+  /// No description provided for @lyricsFrom.
+  ///
+  /// In en, this message translates to:
+  /// **'Lyrics from {source}'**
+  String lyricsFrom(Object source);
+
+  /// No description provided for @lyricsUntimed.
+  ///
+  /// In en, this message translates to:
+  /// **'These lyrics don\'t follow the song.'**
+  String get lyricsUntimed;
+
+  /// No description provided for @back.
+  ///
+  /// In en, this message translates to:
+  /// **'Back'**
+  String get back;
+
+  /// No description provided for @playToSeeLyrics.
+  ///
+  /// In en, this message translates to:
+  /// **'Play a song to see its lyrics here.'**
+  String get playToSeeLyrics;
+
+  /// No description provided for @directUsbFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Direct USB couldn\'t run, so songs play through Android. Turn it on to try again.'**
+  String get directUsbFailed;
+
+  /// No description provided for @directUsbClosedWhileStarting.
+  ///
+  /// In en, this message translates to:
+  /// **'Direct USB was turned off because Riflay closed while starting it. Turn it on to try again.'**
+  String get directUsbClosedWhileStarting;
+
+  /// No description provided for @directUsbBeta.
+  ///
+  /// In en, this message translates to:
+  /// **'Direct USB (beta)'**
+  String get directUsbBeta;
+
+  /// No description provided for @directUsbBetaSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Offers Direct USB below: Riflay plays straight to your USB DAC, past Android. Experimental.'**
+  String get directUsbBetaSubtitle;
+
+  /// No description provided for @directUsbWarningTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn on Direct USB?'**
+  String get directUsbWarningTitle;
+
+  /// No description provided for @directUsbWarningBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Direct USB is experimental. It may freeze or close Riflay, and it may not work with every phone or DAC. Your DAC can get the sound at full volume, so turn your DAC\'s volume down and take your earphones out before you play. Turning it off goes back to normal output.'**
+  String get directUsbWarningBody;
+
+  /// No description provided for @directUsbWarningConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn on'**
+  String get directUsbWarningConfirm;
+
+  /// No description provided for @linkNotYoutube.
+  ///
+  /// In en, this message translates to:
+  /// **'There\'s no YouTube link in what was shared.'**
+  String get linkNotYoutube;
+
+  /// No description provided for @linkOpening.
+  ///
+  /// In en, this message translates to:
+  /// **'Opening the link…'**
+  String get linkOpening;
+
+  /// No description provided for @linkFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t open that link. It may be private, removed or region-locked.'**
+  String get linkFailed;
 }
 
-class _AppLocalizationsDelegate
-    extends LocalizationsDelegate<AppLocalizations> {
+class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {
   const _AppLocalizationsDelegate();
 
   @override
@@ -949,8 +1860,7 @@ class _AppLocalizationsDelegate
   }
 
   @override
-  bool isSupported(Locale locale) =>
-      <String>['en', 'id'].contains(locale.languageCode);
+  bool isSupported(Locale locale) => <String>['en', 'id'].contains(locale.languageCode);
 
   @override
   bool shouldReload(_AppLocalizationsDelegate old) => false;

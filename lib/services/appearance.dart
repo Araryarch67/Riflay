@@ -625,18 +625,13 @@ enum NowPlayingBackground {
   color('Simple'),
   blurredCover('Blurred cover'),
   video('Music video', 'The song\'s music video, when it has one'),
-  black('Black'),
-  aurora('Abstract aurora'),
-  silk('Abstract silk'),
-  orbits('Abstract orbits'),
-  prism('Abstract prism');
+  black('Black');
 
   const NowPlayingBackground(this.label, [this.hint]);
   final String label;
 
   /// One plain line under the picker, for the choices that need one.
   final String? hint;
-  bool get isAbstract => index >= NowPlayingBackground.aurora.index;
 
   /// What is painted under the page. Music video is the blurred cover with the video over it once that plays
   /// (the cover alone while it loads, when the song has none, or when it fails); Lightweight draws no video
@@ -957,7 +952,6 @@ class Appearance extends ChangeNotifier {
   }
 
   NowPlayingBackground nowPlaying = NowPlayingBackground.color;
-  bool reactiveBackground = false;
 
   /// Frosted, see-through player bar, mini player and tab bar.
   bool glass = false;
@@ -1037,7 +1031,6 @@ class Appearance extends ChangeNotifier {
       customText = text == null ? null : Color(text);
       _palette = null;
       nowPlaying = NowPlayingBackground.values.asNameMap()[j['nowPlaying']] ?? nowPlaying;
-      reactiveBackground = j['reactiveBackground'] as bool? ?? false;
       glass = j['glass'] as bool? ?? glass;
       blur = (j['blur'] as num?)?.toDouble().clamp(4, 48) ?? blur;
       componentOpacity = hasComponentOpacity ? (j['componentOpacity'] as num?)?.toDouble().clamp(0.3, 1) ?? 1 : 1;
@@ -1078,7 +1071,6 @@ class Appearance extends ChangeNotifier {
         'customBackground': customBackground.toARGB32(),
         'customText': customText?.toARGB32(),
         'nowPlaying': nowPlaying.name,
-        'reactiveBackground': reactiveBackground,
         'glass': glass,
         'blur': blur,
         'windowOpacity': windowOpacity,
@@ -1164,7 +1156,6 @@ class Appearance extends ChangeNotifier {
       coverMode = CoverColorMode.player;
       coverStrength = 1;
       nowPlaying = NowPlayingBackground.color;
-      reactiveBackground = false;
       glass = false;
       blur = 24;
       windowOpacity = 1;
@@ -1180,7 +1171,6 @@ class Appearance extends ChangeNotifier {
     });
   }
 
-  Future<void> setReactiveBackground(bool v) => _set(() => reactiveBackground = v);
   Future<void> setNowPlaying(NowPlayingBackground v) => _set(() => nowPlaying = v);
   Future<void> setGlass(bool v) => _set(() => glass = v);
   Future<void> setBlur(double v) => _set(() => blur = v);

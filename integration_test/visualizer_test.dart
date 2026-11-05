@@ -21,7 +21,6 @@ import 'package:riflay/services/beta_features.dart';
 import 'package:riflay/services/visualizer_spectrum.dart';
 import 'package:riflay/services/layout_prefs.dart';
 import 'package:riflay/services/appearance.dart';
-import 'package:riflay/ui/widgets/player_backdrop.dart';
 import 'package:riflay/services/player_controller.dart';
 import 'package:riflay/ui/widgets/audio_visualizer.dart';
 import 'package:riflay/ui/widgets/flower_cover.dart';
@@ -59,8 +58,6 @@ void main() {
       final prefs = LayoutPrefs.instance;
       await prefs.setVisualizer(true);
       final look = Appearance.instance;
-      await look.setNowPlaying(NowPlayingBackground.aurora);
-      await look.setReactiveBackground(true);
       final capture = GlobalKey();
       Widget view({bool visible = true}) => PlayerScope(
         controller: c,
@@ -78,7 +75,6 @@ void main() {
                     child: Stack(
                       fit: StackFit.expand,
                       children: [
-                        PlayerBackdrop(coverColor: Color(0xffb64d7b)),
                         Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
@@ -120,7 +116,7 @@ void main() {
         );
         final native = JustAudioMediaKit.activePlayer!.platform as NativePlayer;
         final chain = await native.getProperty('af');
-        expect('visualizer'.allMatches(chain).length, 1, reason: 'visualizers and reactive background share one meter');
+        expect('visualizer'.allMatches(chain).length, 1, reason: 'the visualizers share one meter');
         const shots = String.fromEnvironment('SHOTS');
         for (final shape in VisualizerCoverShape.values) {
           await prefs.setVisualizerCoverShape(shape);
@@ -155,15 +151,8 @@ void main() {
         await prefs.setVisualizer(false);
         await tester.pump();
         await Future<void>.delayed(const Duration(milliseconds: 150));
-        expect(await native.getProperty('af'), contains('visualizer'), reason: 'background works independently');
-        final frame = c.audio.visualizerLevels.frame;
-        await Future<void>.delayed(const Duration(milliseconds: 200));
-        expect(c.audio.visualizerLevels.frame, greaterThan(frame));
-        await look.setReactiveBackground(false);
-        await tester.pump();
-        await Future<void>.delayed(const Duration(milliseconds: 150));
         expect(await native.getProperty('af'), isNot(contains('visualizer')));
-        await look.setReactiveBackground(true);
+        await prefs.setVisualizer(true);
         await tester.pump();
         // Exercise reads racing with native filter removal/re-addition, seeks,
         // route visibility, pause/resume and app backgrounding on the device.
@@ -267,7 +256,6 @@ void main() {
           expect(tester.takeException(), isNull);
           await capturePhone('android-player-${style.name}${shape == VisualizerCoverShape.square ? '-square' : ''}');
         }
-        await look.setReactiveBackground(false);
         await prefs.setVisualizer(false);
         await LayoutPrefs.instance.setVisualizer(false);
         await c.player.seek(const Duration(seconds: 3));

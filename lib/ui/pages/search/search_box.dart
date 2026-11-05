@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../../services/language.dart';
 import '../../../services/player_controller.dart';
 import '../../../services/youtube_music_account.dart';
 import '../../../services/ytmusic_web.dart' show WebResultKind;
@@ -216,7 +217,7 @@ class _SearchBoxState extends State<SearchBox> {
                 style: text.bodyLarge?.copyWith(color: _ink, fontWeight: FontWeight.w500),
                 cursorColor: _ink,
                 decoration: InputDecoration(
-                  hintText: 'What do you want to play?',
+                  hintText: tr.searchHint,
                   hintStyle: text.bodyLarge?.copyWith(
                     color: widget.onBar ? AppColors.textSecondary : AppColors.onInverse.withValues(alpha: 0.54),
                   ),
@@ -227,7 +228,7 @@ class _SearchBoxState extends State<SearchBox> {
                   suffixIcon: widget.controller.text.isEmpty
                       ? null
                       : IconButton(
-                          tooltip: 'Clear',
+                          tooltip: tr.clear,
                           color: widget.onBar ? AppColors.textSecondary : AppColors.onInverse.withValues(alpha: 0.87),
                           onPressed: () {
                             widget.controller.clear();
@@ -300,7 +301,7 @@ class _SearchBoxState extends State<SearchBox> {
       rows.add(
         Padding(
           padding: const EdgeInsets.fromLTRB(14, 12, 14, 4),
-          child: Text('Recent searches', style: text.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+          child: Text(tr.recentSearches, style: text.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
         ),
       );
       for (final q in _recent) {
@@ -309,7 +310,7 @@ class _SearchBoxState extends State<SearchBox> {
             leading: Icon(Icons.history_rounded, color: AppColors.textSecondary, size: 22),
             title: Text(q, maxLines: 1, overflow: TextOverflow.ellipsis, style: text.bodyLarge),
             trailing: IconButton(
-              tooltip: 'Remove',
+              tooltip: tr.remove,
               iconSize: 18,
               color: AppColors.textSecondary,
               onPressed: () async {

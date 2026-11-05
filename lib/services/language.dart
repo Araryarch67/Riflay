@@ -27,7 +27,9 @@ class Language extends ChangeNotifier {
 
   static const _key = 'language.v1';
 
-  AppLanguage choice = AppLanguage.system;
+  /// English until someone picks another language, wherever they are: the device's language is only followed
+  /// when System is picked.
+  AppLanguage choice = AppLanguage.english;
 
   /// The locale shown: the chosen one, or the device's when Riflay speaks it, else English.
   Locale get locale {
@@ -54,7 +56,7 @@ class Language extends ChangeNotifier {
   Future<void> load() async {
     try {
       final saved = (await SharedPreferences.getInstance()).getString(_key);
-      choice = AppLanguage.values.asNameMap()[saved] ?? AppLanguage.system;
+      choice = AppLanguage.values.asNameMap()[saved] ?? AppLanguage.english;
     } catch (e) {
       debugPrint('Language setting unreadable: $e');
     }

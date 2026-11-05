@@ -16,6 +16,7 @@ import '../platform/mpv.dart';
 import 'layout_prefs.dart';
 import 'carla_locator.dart';
 import 'crossfade.dart';
+import 'beta_features.dart';
 import 'direct_usb.dart';
 import 'ios_route.dart';
 import 'linux_alsa.dart';
@@ -114,6 +115,26 @@ class DsdPlayback {
 
   /// 1-bit samples per second: 2822400 for DSD64.
   final int bitRate;
+}
+
+/// What Detail stats reads from mpv beside the [SignalPath] (see [AudioEngine.nerdStats]); null where mpv has none.
+class NerdStats {
+  const NerdStats({this.buffered, this.gain, this.codecName, this.fileSize, this.readSpeed});
+
+  /// Seconds of the song read ahead of the playhead.
+  final double? buffered;
+
+  /// The ReplayGain tag leveling applies, e.g. "-7.50 dB".
+  final String? gain;
+
+  /// The decoder's full name, e.g. "Opus (Opus Audio Codec)".
+  final String? codecName;
+
+  /// The file's size in bytes.
+  final int? fileSize;
+
+  /// How fast mpv is reading the file right now, in bytes per second.
+  final int? readSpeed;
 }
 
 /// What is actually happening to the sound right now, read back from mpv.
@@ -512,24 +533,45 @@ class AudioEngine extends ChangeNotifier {
   /// bit-perfect on any phone. Asked for in Settings; [directUsbActive] while a DAC is plugged in and it runs.
   bool directUsbWanted = false;
   final directUsb = DirectUsbOutput();
-  bool get directUsbActive => Host.isAndroid && directUsbWanted && directUsb.running && directUsb.hasDac;
+  bool get directUsbActive =>
+      Host.isAndroid && directUsbAllowed && directUsbWanted && directUsb.running && directUsb.hasDac;
+
+  /// Direct USB's beta switch ([BetaFeature.directUsb]): off, Direct USB is neither offered nor run.
+  bool get directUsbAllowed => BetaFeatures.instance.isOn(BetaFeature.directUsb);
   bool _directUsbWas = false;
 
   /// mpv's own output before Direct USB took it over (media_kit's choice), put back when it ends.
   String? _defaultAo;
 
-  /// Direct USB: the sample format asked of mpv for the song playing (packed `s24` for a 24-bit one).
-  String _directFormat = 'no';
-
   Future<void> setDirectUsb(bool v) async {
-    directUsbWanted = v;
-    await directUsb.enable(v);
+    if (!v) {
+      // mpv leaves the pipe before its reader goes: a write into a pipe nobody reads fails.
+      directUsbWanted = false;
+      _directUsbWas = false;
+      await _set(() {}, reopen: true);
+      await directUsb.enable(false);
+      return;
+    }
+    if (!directUsbAllowed) return;
+    directUsbWanted = true;
+    await directUsb.enable(true);
+    // Couldn't start: off again, and Settings says why ([DirectUsbOutput.failed]). Songs stay on Android's output.
+    if (!directUsb.running) directUsbWanted = false;
     _directUsbWas = directUsbActive;
     await _set(() {}, reopen: true);
   }
 
   void _onDirectUsb() {
+    // It stopped by itself (the reader or the USB driver failed): off, and saved so, so the next start doesn't
+    // try it again unasked. mpv goes back to Android's output below.
+    final stopped = directUsb.failed && directUsbWanted;
+    if (stopped) directUsbWanted = false;
     notifyListeners();
+    if (stopped) {
+      _directUsbWas = directUsbActive;
+      _changed(reopenOutput: true).ignore();
+      return;
+    }
     // A DAC plugged in or pulled out while Direct USB is on: mpv's output switches over.
     if (directUsbActive != _directUsbWas) {
       _directUsbWas = directUsbActive;
@@ -790,6 +832,7 @@ class AudioEngine extends ChangeNotifier {
     }
     final raw = (await SharedPreferences.getInstance()).getString(_key);
     if (raw == null) return;
+    var turnedOffDirectUsb = false;
     try {
       final j = jsonDecode(raw) as Map<String, dynamic>;
       gapless = j['gapless'] as bool? ?? gapless;
@@ -822,7 +865,22 @@ class AudioEngine extends ChangeNotifier {
       nativeDsd = j['nativeDsd'] as bool? ?? nativeDsd;
       directUsbWanted = Host.isAndroid && (j['directUsb'] as bool? ?? false);
       if (directUsbWanted) {
+        await BetaFeatures.instance.load();
+        // On from before it was a beta, or the beta was turned off: normal output until it is turned on again.
+        if (!directUsbAllowed) {
+          directUsbWanted = false;
+          turnedOffDirectUsb = true;
+        }
+      }
+      if (directUsbWanted && await DirectUsbOutput.closedLastTime()) {
+        // The app closed while Direct USB was starting last time: left off, so it doesn't close again.
+        directUsbWanted = false;
+        directUsb.closedWhileStarting = true;
+        turnedOffDirectUsb = true;
+      }
+      if (directUsbWanted) {
         await directUsb.enable(true);
+        if (!directUsb.running) directUsbWanted = false;
         _directUsbWas = directUsbActive;
       }
       plugins = j['plugins'] as bool? ?? plugins;
@@ -837,6 +895,7 @@ class AudioEngine extends ChangeNotifier {
     } catch (e) {
       debugPrint('Ignoring bad audio settings: $e');
     }
+    if (turnedOffDirectUsb) await _save();
     if (virtualSpeakers) await _installHrir();
   }
 
@@ -1287,6 +1346,11 @@ class AudioEngine extends ChangeNotifier {
   }
 
   /// The mpv `af` chain. Labels let the signal path name each stage.
+  /// See [filterChain]. arealtime sleeps in mpv's core thread until each frame is due, so property reads wait up to a
+  /// frame (85 ms for FLAC); cut into 256-sample frames first (no padding, samples untouched) they wait ~2 ms.
+  /// Needs both filters in Android's libmpv (tool/build_libmpv_android.sh).
+  static const directUsbPaceFilter = '@realtime:lavfi=[asetnsamples=n=256:p=0,arealtime]';
+
   String get filterChain {
     String n(double v) => v.toStringAsFixed(2);
     return [
@@ -1319,6 +1383,10 @@ class AudioEngine extends ChangeNotifier {
       if (visualizerActive) _currentVisualizerFilter,
       // Float output for mpv's volume (lossless: the system mixer works in float anyway).
       if (_volumeAtOutput) '@output:format=format=double',
+      // Last, Direct USB: mpv's pcm output has no clock, so the pipe's reader was its only pace, and mpv held its
+      // lock through each ~1.4 s write into the full pipe: every property read waited that long (the app froze).
+      // arealtime hands the samples on untouched at the song's own pace, and the pipe stays near empty.
+      if (directUsbActive) directUsbPaceFilter,
     ].join(',');
   }
 
@@ -1406,14 +1474,6 @@ class AudioEngine extends ChangeNotifier {
       p.onLoadHooks.add(() async {
         await applied.future;
         _visualizerFormat = null;
-        // Direct USB: mpv decodes a 24-bit song into 32 bits; asked for packed 24-bit instead, it reaches the DAC
-        // on its 24-bit format (many take 16 and 24 only). Everything else in its own format.
-        if (directUsbActive) {
-          final bits = await _sourceBits(await _read(p, 'path'));
-          _directFormat = bits == 24 ? 's24' : 'no';
-          await p.setProperty('audio-format', _directFormat);
-          _propsSent = {..._propsSent, 'audio-format': _directFormat};
-        }
         if (hasRoutePicker) await _matchRate(p);
         if (_chainSent != filterChain) await _setChain(p);
       });
@@ -1504,8 +1564,10 @@ class AudioEngine extends ChangeNotifier {
           : bitPerfect
           ? '0'
           : '${outputRate ?? await _systemMixerRate() ?? 0}',
-      // Android bit-perfect: the exact format of the mixer attributes, so the track matches them.
-      if (Host.isAndroid) 'audio-format': directUsbActive ? _directFormat : (_mixer?.format.mpvFormat ?? 'no'),
+      // Android bit-perfect: the exact format of the mixer attributes, so the track matches them. Only then: mpv
+      // takes no "no" (its own default, the song's format) nor packed `s24`, and a song loaded with either fails
+      // ("unknown format name"), which left Direct USB playing nothing. Direct USB gets each song in its own format.
+      if (Host.isAndroid && !directUsbActive && _mixer != null) 'audio-format': _mixer!.format.mpvFormat,
       // Only used when the rate has to change; keeps the default otherwise.
       'audio-swresample-o': await _swresampleOptions(),
       // 100 where the filter applies the volume: mpv must not scale samples too.
@@ -1943,11 +2005,18 @@ class AudioEngine extends ChangeNotifier {
   }
 
   /// What Detail stats shows beside [signalPath]: seconds of the song read
-  /// ahead of the playhead, and the ReplayGain tag leveling applies ("-7.50 dB").
-  Future<({double? buffered, String? gain})> nerdStats() async {
+  /// ahead of the playhead, the ReplayGain tag leveling applies ("-7.50 dB"),
+  /// the decoder's full name ("Opus (Opus Audio Codec)"), the file's size and
+  /// how fast mpv is reading it now (bytes per second).
+  Future<NerdStats> nerdStats() async {
     final p = _native;
-    if (p == null) return (buffered: null, gain: null);
+    if (p == null) return const NerdStats();
     Future<String> g(String k) => _read(p, k);
+    // Direct USB: every read waits on mpv's paced core (see signalPath), so only what is needed once a second.
+    final more = !directUsbActive;
+    final codecName = more ? await g('audio-codec') : '';
+    final fileSize = more ? int.tryParse(await g('file-size')) : null;
+    final readSpeed = more ? int.tryParse(await g('cache-speed')) : null;
     final track = await g('metadata/by-key/REPLAYGAIN_TRACK_GAIN');
     final gain = switch (effectiveLeveling) {
       VolumeLeveling.off => '',
@@ -1958,11 +2027,35 @@ class AudioEngine extends ChangeNotifier {
         final album => album,
       },
     };
-    return (buffered: double.tryParse(await g('demuxer-cache-duration')), gain: gain.isEmpty ? null : gain);
+    return NerdStats(
+      buffered: double.tryParse(await g('demuxer-cache-duration')),
+      gain: gain.isEmpty ? null : gain,
+      codecName: codecName.isEmpty ? null : codecName,
+      fileSize: fileSize,
+      readSpeed: readSpeed,
+    );
   }
 
   /// One read of the live signal path, or null when nothing is playing.
+  /// Direct USB: the signal path of the song playing, read once (see [signalPath]).
+  ({NativePlayer player, String file, SignalPath path})? _directUsbSignal;
+
   Future<SignalPath?> signalPath() async {
+    if (!directUsbActive) return _readSignalPath();
+    // Direct USB: mpv's core paces the song (directUsbPaceFilter), so each property read waits a little for it,
+    // ~14 ms on a phone, and Signal path's ~15 reads a second took most of the UI thread (the app lagged). Read once
+    // per song, as soon as it is complete (a stream's bitrate comes a little later); then one read a second.
+    final p = _native;
+    if (p == null) return null;
+    final file = await _read(p, 'path');
+    final kept = _directUsbSignal;
+    if (kept != null && identical(kept.player, p) && kept.file == file) return kept.path;
+    final path = await _readSignalPath();
+    if (path != null && path.qualityComplete) _directUsbSignal = (player: p, file: file, path: path);
+    return path;
+  }
+
+  Future<SignalPath?> _readSignalPath() async {
     final p = _native;
     if (p == null) return null;
     Future<String> g(String k) => _read(p, k);

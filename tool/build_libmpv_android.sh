@@ -114,12 +114,13 @@ EOF
     done_ libass
   fi
 
-  if ! stamp ffmpeg-silence; then
+  if ! stamp ffmpeg-realtime2; then
     rm -rf "$work/ffmpeg" && mkdir -p "$work/ffmpeg"
     # Every audio decoder (the audio, PCM and ADPCM sections of FFmpeg's codec list) and demuxer, the filters
     # mpv and the app use. Video only for Video mode: what YouTube serves under 720p (h264 and vp9; AV1 is left
     # out, its software decoder is a library of its own) in software, and the same through MediaCodec. No
-    # encoders, muxers or devices. Cover art is read by the app itself.
+    # encoders, muxers or devices. Cover art is read by the app itself. asetnsamples and arealtime pace Direct USB
+    # (see AudioEngine.directUsbPaceFilter): mpv's pcm output has no clock of its own.
     local audio_decoders video_decoders=h264,vp9,h264_mediacodec,vp9_mediacodec
     audio_decoders=$(sed -n '/^\/\* audio codecs \*\//,/^\/\* subtitles \*\//p' "$root/src/ffmpeg/libavcodec/allcodecs.c" |
       grep -oE 'ff_[a-z0-9_]+_decoder' | sed 's/^ff_//; s/_decoder$//' | sort -u | paste -sd,)
@@ -133,10 +134,10 @@ EOF
       --disable-autodetect --enable-network --enable-zlib --enable-mbedtls --enable-version3 \
       --disable-vulkan --enable-jni --enable-mediacodec \
       --disable-decoders --enable-decoder="$audio_decoders,$video_decoders" --disable-filters \
-      --enable-filter=asplit,amerge,bandpass,astats,abuffer,abuffersink,aformat,anull,aresample,volume,equalizer,crossfeed,afir,amovie,headphone,pan,silenceremove \
+      --enable-filter=asplit,amerge,bandpass,astats,abuffer,abuffersink,aformat,anull,aresample,volume,equalizer,crossfeed,afir,amovie,headphone,pan,silenceremove,arealtime,asetnsamples \
       >/dev/null &&
       make -j"$jobs" install >/dev/null)
-    done_ ffmpeg-silence
+    done_ ffmpeg-realtime2
   fi
 
   # FFmpeg's MediaCodec (and mpv's use of it) needs the Java VM; libmpv.so is loaded by System.loadLibrary,

@@ -103,7 +103,8 @@ class _ImportFormState extends State<_ImportForm> {
     }
     // The paste field also takes a bare video id; clipboard auto-detect never does.
     final link = YoutubeLinks.parse(text, allowBareId: true);
-    if (link == null) {
+    // An album page has no video list youtube_explode_dart can read.
+    if (link == null || link is AlbumLink) {
       setState(() {
         _preview = null;
         _error = 'Paste a YouTube link to a video or playlist.';

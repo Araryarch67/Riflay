@@ -7,6 +7,7 @@ import 'package:just_audio/just_audio.dart' show LoopMode;
 import '../../models/track.dart';
 import '../../platform/host.dart';
 import '../../platform/features.dart';
+import '../../services/language.dart';
 import '../../services/layout_prefs.dart';
 import '../../services/player_controller.dart';
 import '../cast_picker.dart';
@@ -56,7 +57,7 @@ Future<void> shareTrack(BuildContext context, Track track) async {
     }
   }
   await Clipboard.setData(ClipboardData(text: link ?? name));
-  messenger?.showSnackBar(SnackBar(content: Text(link != null ? 'Link copied' : 'Song name copied')));
+  messenger?.showSnackBar(SnackBar(content: Text(link != null ? tr.linkCopied : tr.songNameCopied)));
 }
 
 /// How a [PartButton] is filled.
@@ -243,11 +244,11 @@ class SharePair extends StatelessWidget {
       segmentWidth: segmentWidth,
       iconSize: iconSize,
       segments: [
-        joinedSegment(Icons.share_outlined, 'Share', () => shareTrack(context, track)),
+        joinedSegment(Icons.share_outlined, tr.share, () => shareTrack(context, track)),
         if (liked != null)
           joinedSegment(
             liked ? Icons.favorite_rounded : Icons.favorite_border_rounded,
-            liked ? 'Remove from Liked music' : 'Add to Liked music',
+            liked ? tr.removeFromLiked : tr.addToLiked,
             toggle,
             lit: liked,
           ),
@@ -301,7 +302,7 @@ class PlayerMoreAction extends StatelessWidget {
     return ListenableBuilder(
       listenable: Listenable.merge([c.sleep, c.cast]),
       builder: (context, _) => PartButton(
-        tooltip: 'More',
+        tooltip: tr.more,
         icon: icon,
         look: look,
         round: true,
@@ -336,7 +337,7 @@ class PlayerTopBar extends StatelessWidget {
     return Row(
       children: [
         IconButton(
-          tooltip: 'Close',
+          tooltip: tr.close,
           color: color ?? colors.textPrimary,
           onPressed: () => Navigator.of(context).pop(),
           icon: const Icon(Icons.keyboard_arrow_down_rounded, size: 30),
@@ -344,7 +345,7 @@ class PlayerTopBar extends StatelessWidget {
         Expanded(
           child: single
               ? Text(
-                  'Playing from ${from ?? 'your library'}',
+                  tr.playingFrom(from ?? tr.yourLibraryInline),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   textAlign: TextAlign.center,
@@ -352,9 +353,9 @@ class PlayerTopBar extends StatelessWidget {
                 )
               : Column(
                   children: [
-                    Text('Now Playing', style: text.labelSmall?.copyWith(color: muted)),
+                    Text(tr.nowPlayingTitle, style: text.labelSmall?.copyWith(color: muted)),
                     Text(
-                      from ?? 'Your library',
+                      from ?? tr.yourLibrarySource,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: text.labelLarge?.copyWith(fontWeight: FontWeight.w700, color: color),
@@ -395,7 +396,7 @@ class PlayerTitleBlock extends StatelessWidget {
                   track: t,
                   builder: (context, liked, toggle) => PartButton(
                     icon: liked ? Icons.favorite_rounded : Icons.favorite_border_rounded,
-                    tooltip: liked ? 'Remove from Liked music' : 'Add to Liked music',
+                    tooltip: liked ? tr.removeFromLiked : tr.addToLiked,
                     look: PartLook.plain,
                     lit: false,
                     size: 40,
@@ -414,7 +415,7 @@ class PlayerTitleBlock extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               MarqueeText(
-                t?.title ?? 'Nothing playing',
+                t?.title ?? tr.nothingPlaying,
                 style: text.headlineSmall?.copyWith(
                   fontWeight: FontWeight.w800,
                   letterSpacing: -0.5,
@@ -464,7 +465,7 @@ _Transport _selectTransport(PlayerController c) => (
 );
 
 Widget _shuffleButton(PlayerController c, _Transport t, {double size = 22}) => ModeButton(
-  tooltip: t.shuffle ? 'Disable shuffle' : 'Enable shuffle',
+  tooltip: t.shuffle ? tr.disableShuffle : tr.enableShuffle,
   active: t.shuffle,
   size: size,
   icon: Icons.shuffle_rounded,
@@ -473,9 +474,9 @@ Widget _shuffleButton(PlayerController c, _Transport t, {double size = 22}) => M
 
 Widget _repeatButton(PlayerController c, _Transport t, {double size = 22}) => ModeButton(
   tooltip: switch (t.loop) {
-    LoopMode.off => 'Enable repeat',
-    LoopMode.all => 'Enable repeat one',
-    LoopMode.one => 'Disable repeat',
+    LoopMode.off => tr.enableRepeat,
+    LoopMode.all => tr.enableRepeatOne,
+    LoopMode.one => tr.disableRepeat,
   },
   active: t.loop != LoopMode.off,
   size: size,
@@ -498,9 +499,9 @@ class PlayerControlsRow extends StatelessWidget {
       select: _selectTransport,
       builder: (context, t, _) {
         final colors = AppColors.of(context);
-        final prev = tipWith('Previous', AppAction.previous);
-        final next = tipWith('Next', AppAction.next);
-        final play = tipWith(t.playing ? 'Pause' : 'Play', AppAction.playPause);
+        final prev = tipWith(tr.previous, AppAction.previous);
+        final next = tipWith(tr.next, AppAction.next);
+        final play = tipWith(t.playing ? tr.pause : tr.play, AppAction.playPause);
         if (plain) {
           // Three big glyphs spread evenly; shuffle and repeat, when they are here, wait small at the edges.
           return Row(
@@ -583,7 +584,7 @@ class PlayerControlsRow extends StatelessWidget {
                           const SizedBox(width: 6),
                           Flexible(
                             child: Text(
-                              t.playing ? 'Pause' : 'Play',
+                              t.playing ? tr.pause : tr.play,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: Theme.of(context).textTheme.titleMedium
@@ -636,7 +637,7 @@ class PlayerFromLabel extends StatelessWidget {
       final muted = AppColors.of(context).textSecondary;
       return switch (classic ? PlayerHeader.classic : LayoutPrefs.instance.playerHeader) {
         PlayerHeader.classic => Text(
-          from ?? album ?? 'Now playing',
+          from ?? album ?? tr.nowPlaying,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: text.titleMedium?.copyWith(fontWeight: FontWeight.w700),
@@ -644,9 +645,9 @@ class PlayerFromLabel extends StatelessWidget {
         PlayerHeader.centered => Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('Now Playing', style: text.labelSmall?.copyWith(color: muted)),
+            Text(tr.nowPlayingTitle, style: text.labelSmall?.copyWith(color: muted)),
             Text(
-              from ?? album ?? 'Your library',
+              from ?? album ?? tr.yourLibrarySource,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: text.labelLarge?.copyWith(fontWeight: FontWeight.w700),
@@ -654,7 +655,7 @@ class PlayerFromLabel extends StatelessWidget {
           ],
         ),
         PlayerHeader.playingFrom => Text(
-          'Playing from ${from ?? album ?? 'your library'}',
+          tr.playingFrom(from ?? album ?? tr.yourLibraryInline),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           textAlign: TextAlign.center,
@@ -681,7 +682,7 @@ List<Widget> desktopTitleActions(BuildContext context, Track track, {bool classi
         track: track,
         builder: (context, liked, toggle) => PartButton(
           icon: liked ? Icons.favorite_rounded : Icons.favorite_border_rounded,
-          tooltip: liked ? 'Remove from Liked music' : 'Add to Liked music',
+          tooltip: liked ? tr.removeFromLiked : tr.addToLiked,
           look: PartLook.plain,
           size: 40,
           iconSize: 28,
@@ -707,9 +708,9 @@ class DesktopControlsRow extends StatelessWidget {
       select: _selectTransport,
       builder: (context, t, _) {
         final colors = AppColors.of(context);
-        final prev = tipWith('Previous', AppAction.previous);
-        final next = tipWith('Next', AppAction.next);
-        final play = tipWith(t.playing ? 'Pause' : 'Play', AppAction.playPause);
+        final prev = tipWith(tr.previous, AppAction.previous);
+        final next = tipWith(tr.next, AppAction.next);
+        final play = tipWith(t.playing ? tr.pause : tr.play, AppAction.playPause);
         if (plain) {
           return Row(
             mainAxisSize: MainAxisSize.min,
@@ -780,7 +781,7 @@ class DesktopControlsRow extends StatelessWidget {
                         ),
                         const SizedBox(width: 4),
                         Text(
-                          t.playing ? 'Pause' : 'Play',
+                          t.playing ? tr.pause : tr.play,
                           maxLines: 1,
                           style: Theme.of(context).textTheme.labelLarge
                               ?.copyWith(color: colors.onInverse, fontWeight: FontWeight.w700),
@@ -840,26 +841,26 @@ class PlayerBottomButtons extends StatelessWidget {
                   segmentWidth: width,
                   iconSize: 22,
                   segments: [
-                    joinedSegment(Icons.queue_music_rounded, 'Queue', shell.openQueue),
+                    joinedSegment(Icons.queue_music_rounded, tr.queue, shell.openQueue),
                     joinedSegment(
                       c.sleep.active ? Icons.bedtime_rounded : Icons.bedtime_outlined,
-                      c.sleep.active ? 'Sleep timer: ${SleepTimerLabel.of(c.sleep)}' : 'Sleep timer',
+                      c.sleep.active ? tr.sleepTimerWith(SleepTimerLabel.of(c.sleep)) : tr.sleepTimer,
                       () => showSleepTimer(context),
                       lit: c.sleep.active,
                     ),
                     joinedSegment(
                       Icons.shuffle_rounded,
-                      t.shuffle ? 'Disable shuffle' : 'Enable shuffle',
+                      t.shuffle ? tr.disableShuffle : tr.enableShuffle,
                       t.hasQueue ? c.toggleShuffle : null,
                       lit: t.shuffle,
                     ),
-                    joinedSegment(Icons.lyrics_outlined, 'Lyrics', shell.openLyrics),
+                    joinedSegment(Icons.lyrics_outlined, tr.lyrics, shell.openLyrics),
                     joinedSegment(
                       t.loop == LoopMode.one ? Icons.repeat_one_rounded : Icons.repeat_rounded,
                       switch (t.loop) {
-                        LoopMode.off => 'Enable repeat',
-                        LoopMode.all => 'Enable repeat one',
-                        LoopMode.one => 'Disable repeat',
+                        LoopMode.off => tr.enableRepeat,
+                        LoopMode.all => tr.enableRepeatOne,
+                        LoopMode.one => tr.disableRepeat,
                       },
                       t.hasQueue ? c.cycleLoopMode : null,
                       lit: t.loop != LoopMode.off,
@@ -896,7 +897,7 @@ class PlayerBottomButtons extends StatelessWidget {
     final output = Features.casting;
     return Row(
       children: [
-        plain(Icons.lyrics_outlined, 'Lyrics', shell.openLyrics),
+        plain(Icons.lyrics_outlined, tr.lyrics, shell.openLyrics),
         Expanded(
           child: ListenableBuilder(
             listenable: c.cast,
@@ -912,24 +913,24 @@ class PlayerBottomButtons extends StatelessWidget {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      segment(Icons.speaker_outlined, 'Volume', () => showVolumePopup(context)),
+                      segment(Icons.speaker_outlined, tr.volume, () => showVolumePopup(context)),
                       if (together || output) ...[
                         Container(width: 1, height: 20, color: colors.textPrimary.withValues(alpha: 0.22)),
                         if (together)
                           segment(
                             Icons.person_outline_rounded,
-                            'Listen together',
+                            tr.listenTogether,
                             () => openListenTogether(context, closePlayer: true),
                           )
                         else
-                          segment(Icons.person_outline_rounded, 'Play on a device', () => showCastPicker(context)),
+                          segment(Icons.person_outline_rounded, tr.playOnDevice, () => showCastPicker(context)),
                       ],
                     ],
                   ),
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  c.cast.target?.name ?? 'Speaker',
+                  c.cast.target?.name ?? tr.speaker,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: text.labelSmall?.copyWith(color: colors.textSecondary, fontSize: 10),
@@ -938,7 +939,7 @@ class PlayerBottomButtons extends StatelessWidget {
             ),
           ),
         ),
-        plain(Icons.queue_music_rounded, 'Queue', shell.openQueue),
+        plain(Icons.queue_music_rounded, tr.queue, shell.openQueue),
       ],
     );
   }
@@ -1081,13 +1082,13 @@ class _ClassicBottom extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         IconButton(
-          tooltip: 'Lyrics',
+          tooltip: tr.lyrics,
           color: color,
           onPressed: shell.openLyrics,
           icon: const Icon(Icons.lyrics_outlined),
         ),
         IconButton(
-          tooltip: 'Queue',
+          tooltip: tr.queue,
           color: color,
           onPressed: shell.openQueue,
           icon: const Icon(Icons.queue_music_rounded),
@@ -1158,8 +1159,8 @@ class LyricsBottomCard extends StatelessWidget {
                 height: 44,
                 segmentWidth: 46,
                 segments: [
-                  joinedSegment(Icons.fullscreen_rounded, 'Now Playing', () => showNowPlayingFromLyrics(context)),
-                  joinedSegment(Icons.more_horiz_rounded, 'More', () => showPlayerMore(context, closePlayer: true)),
+                  joinedSegment(Icons.fullscreen_rounded, tr.nowPlayingTitle, () => showNowPlayingFromLyrics(context)),
+                  joinedSegment(Icons.more_horiz_rounded, tr.more, () => showPlayerMore(context, closePlayer: true)),
                 ],
               ),
             ],
@@ -1184,7 +1185,7 @@ class LyricsBottomCard extends StatelessWidget {
             select: (c) => (playing: c.showsPlaying, canPlay: c.canPlay),
             builder: (context, s, _) => PartButton(
               icon: s.playing ? Icons.pause_rounded : Icons.play_arrow_rounded,
-              tooltip: tipWith(s.playing ? 'Pause' : 'Play', AppAction.playPause),
+              tooltip: tipWith(s.playing ? tr.pause : tr.play, AppAction.playPause),
               look: PartLook.muted,
               round: true,
               size: 40,
@@ -1194,7 +1195,7 @@ class LyricsBottomCard extends StatelessWidget {
           const SizedBox(width: 6),
           PartButton(
             icon: Icons.open_in_full_rounded,
-            tooltip: 'Expanded player',
+            tooltip: tr.expandedPlayer,
             size: 40,
             iconSize: 20,
             onPressed: () {
@@ -1252,7 +1253,7 @@ class LyricsTopHeader extends StatelessWidget {
         ] else ...[
           PartButton(
             icon: Icons.close_rounded,
-            tooltip: 'Close',
+            tooltip: tr.close,
             look: PartLook.muted,
             round: true,
             size: 44,

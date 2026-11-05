@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../models/track.dart';
 import '../../services/download_files.dart';
+import '../../services/language.dart';
 import '../../services/player_controller.dart';
 import '../../services/youtube_importer.dart';
 import '../shell_scope.dart';
@@ -28,7 +29,7 @@ class DownloadsPage extends StatelessWidget {
         final jobs = c.youtube.jobs;
         final hasFinished = jobs.any((j) => !j.isActive);
         return PageScaffold(
-          title: 'Downloads',
+          title: tr.navDownloads,
           slivers: [
             SliverToBoxAdapter(
               child: Padding(
@@ -38,7 +39,7 @@ class DownloadsPage extends StatelessWidget {
                   spacing: 12,
                   runSpacing: 12,
                   children: [
-                    Text('Downloads', style: text.headlineMedium?.copyWith(fontWeight: FontWeight.w800)),
+                    Text(tr.navDownloads, style: text.headlineMedium?.copyWith(fontWeight: FontWeight.w800)),
                     const SizedBox(width: 8),
                     FilledButton.icon(
                       style: FilledButton.styleFrom(
@@ -47,13 +48,13 @@ class DownloadsPage extends StatelessWidget {
                       ),
                       onPressed: shell.importFromYoutube,
                       icon: const Icon(Icons.add_link_rounded),
-                      label: const Text('Import from YouTube'),
+                      label: Text(tr.importFromYouTube),
                     ),
                     if (hasFinished)
                       TextButton(
                         style: TextButton.styleFrom(foregroundColor: AppColors.textSecondary),
                         onPressed: c.youtube.clearFinished,
-                        child: const Text('Clear finished'),
+                        child: Text(tr.clearFinished),
                       ),
                   ],
                 ),
@@ -64,10 +65,7 @@ class DownloadsPage extends StatelessWidget {
               SliverToBoxAdapter(
                 child: Padding(
                   padding: EdgeInsets.symmetric(horizontal: pad, vertical: 8),
-                  child: Text(
-                    'Nothing downloading. Paste a YouTube video or playlist link to add its audio to your library.',
-                    style: text.bodyLarge?.copyWith(color: AppColors.textSecondary),
-                  ),
+                  child: Text(tr.nothingDownloading, style: text.bodyLarge?.copyWith(color: AppColors.textSecondary)),
                 ),
               )
             else
@@ -172,7 +170,7 @@ class _DownloadedFilesState extends State<_DownloadedFiles> {
             child: Padding(
               padding: EdgeInsets.fromLTRB(pad, 0, pad, 16),
               child: Text(
-                'Downloads use ${formatFileSize(scan.bytes)}',
+                tr.downloadsUse(formatFileSize(scan.bytes)),
                 style: text.bodyLarge?.copyWith(color: AppColors.textSecondary),
               ),
             ),
@@ -186,12 +184,12 @@ class _DownloadedFilesState extends State<_DownloadedFiles> {
                 spacing: 8,
                 runSpacing: 4,
                 children: [
-                  Text('Missing files', style: text.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
-                  TextButton(onPressed: () => _downloadAgain(missing), child: const Text('Download all again')),
+                  Text(tr.missingFiles, style: text.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
+                  TextButton(onPressed: () => _downloadAgain(missing), child: Text(tr.downloadAllAgain)),
                   TextButton(
                     style: TextButton.styleFrom(foregroundColor: AppColors.textSecondary),
                     onPressed: () => _remove(missing),
-                    child: const Text('Remove all from library'),
+                    child: Text(tr.removeAllFromLibrary),
                   ),
                 ],
               ),
@@ -200,10 +198,7 @@ class _DownloadedFilesState extends State<_DownloadedFiles> {
           SliverToBoxAdapter(
             child: Padding(
               padding: EdgeInsets.fromLTRB(pad, 0, pad, 8),
-              child: Text(
-                "These songs are in your library, but their files aren't on this device any more.",
-                style: text.bodyMedium?.copyWith(color: AppColors.textSecondary),
-              ),
+              child: Text(tr.missingFilesBody, style: text.bodyMedium?.copyWith(color: AppColors.textSecondary)),
             ),
           ),
           SliverPadding(
@@ -256,9 +251,9 @@ class _MissingRow extends StatelessWidget {
               ],
             ),
           ),
-          IconButton(tooltip: 'Download again', onPressed: onDownload, icon: const Icon(Icons.refresh_rounded)),
+          IconButton(tooltip: tr.downloadAgain, onPressed: onDownload, icon: const Icon(Icons.refresh_rounded)),
           IconButton(
-            tooltip: 'Remove from library',
+            tooltip: tr.removeFromLibrary,
             onPressed: onRemove,
             icon: const Icon(Icons.remove_circle_outline_rounded),
           ),
@@ -278,25 +273,25 @@ class _JobRow extends StatelessWidget {
     final c = PlayerScope.read(context);
     final text = Theme.of(context).textTheme;
     final status = switch (job.status) {
-      DownloadStatus.queued => 'Waiting…',
+      DownloadStatus.queued => tr.waiting,
       DownloadStatus.downloading =>
         job.quality == null
-            ? 'Preparing…'
+            ? tr.preparing
             : job.phase != DownloadPhase.downloading
             ? [job.phase.label, job.quality].join(' • ')
             : [
                 job.quality,
-                if (job.totalBytes != null) '${formatBytes(job.receivedBytes)} of ${formatBytes(job.totalBytes!)}',
+                if (job.totalBytes != null) tr.bytesOf(formatBytes(job.receivedBytes), formatBytes(job.totalBytes!)),
                 if (job.bytesPerSecond != null) '${formatBytes(job.bytesPerSecond!)}/s',
                 if (job.eta case final eta?) formatEta(eta),
               ].join(' • '),
       DownloadStatus.done => [
-        'Added to library',
+        tr.addedToLibrary,
         ?job.quality,
         if (job.totalBytes != null) formatBytes(job.totalBytes!),
       ].join(' • '),
-      DownloadStatus.failed => job.error ?? 'Failed',
-      DownloadStatus.cancelled => 'Cancelled',
+      DownloadStatus.failed => job.error ?? tr.failed,
+      DownloadStatus.cancelled => tr.cancelled,
     };
     final statusColor = switch (job.status) {
       DownloadStatus.failed => Theme.of(context).colorScheme.error,
@@ -308,7 +303,7 @@ class _JobRow extends StatelessWidget {
     return InkWell(
       borderRadius: BorderRadius.circular(6),
       hoverColor: AppColors.tile,
-      onTap: track == null ? null : () => c.playList([track], 0, from: 'Downloaded'),
+      onTap: track == null ? null : () => c.playList([track], 0, from: tr.downloaded),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
         child: Row(
@@ -361,18 +356,18 @@ class _JobRow extends StatelessWidget {
             const SizedBox(width: 8),
             switch (job.status) {
               DownloadStatus.queued || DownloadStatus.downloading => IconButton(
-                tooltip: 'Cancel',
+                tooltip: tr.cancel,
                 onPressed: () => c.youtube.cancel(job),
                 icon: const Icon(Icons.close_rounded),
               ),
               DownloadStatus.failed || DownloadStatus.cancelled => IconButton(
-                tooltip: 'Retry',
+                tooltip: tr.retry,
                 onPressed: () => c.youtube.retry(job),
                 icon: const Icon(Icons.refresh_rounded),
               ),
               DownloadStatus.done => IconButton(
-                tooltip: 'Play',
-                onPressed: () => c.playList([track!], 0, from: 'Downloaded'),
+                tooltip: tr.play,
+                onPressed: () => c.playList([track!], 0, from: tr.downloaded),
                 icon: const Icon(Icons.play_arrow_rounded),
               ),
             },
@@ -396,7 +391,7 @@ class DownloadsButton extends StatelessWidget {
       builder: (context, _) {
         final progress = c.youtube.activeProgress;
         return IconButton(
-          tooltip: progress == null ? 'Downloads' : 'Downloading ${c.youtube.activeCount}',
+          tooltip: progress == null ? tr.navDownloads : tr.downloadingCount(c.youtube.activeCount),
           onPressed: shell.openDownloads,
           icon: progress == null
               ? const Icon(Icons.download_rounded)

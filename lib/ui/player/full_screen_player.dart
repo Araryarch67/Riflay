@@ -15,7 +15,6 @@ import '../pages/lyrics_page.dart';
 import '../theme.dart';
 import '../widgets/controls.dart';
 import '../widgets/audio_visualizer.dart';
-import '../widgets/player_backdrop.dart';
 import '../widgets/marquee_text.dart';
 import '../widgets/stats_for_nerds.dart';
 import '../widgets/video_mode.dart';
@@ -164,14 +163,6 @@ class _FullScreenPlayerState extends State<FullScreenPlayer> {
         color: AppColors.sink(accent, 0.75),
         child: Stack(
           children: [
-            // Under a playing music video nothing else is drawn: the video covers it, and an animated
-            // backdrop there cost a full-window pass every frame for nothing.
-            Positioned.fill(
-              child: _UnlessVideo(
-                track: track,
-                child: PlayerBackdrop(coverColor: accent),
-              ),
-            ),
             // Music video: the blurred cover first, the video over it once it plays, then a dimming for the text.
             // Lightweight keeps the plain colour.
             if (Appearance.instance.nowPlaying == NowPlayingBackground.video && !LayoutPrefs.lightweight) ...[

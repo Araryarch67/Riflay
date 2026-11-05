@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../platform/features.dart';
+import '../platform/host.dart';
 
 /// Optional player features, configured in their respective settings pages.
 enum BetaFeature {
@@ -10,7 +11,11 @@ enum BetaFeature {
     'Musixmatch lyrics',
     'Look for word-by-word lyrics on Musixmatch when other sources have none.',
   ),
-  videoMode('video', 'Video mode', 'Watch a song\'s music video in the player, in step with the song.');
+  videoMode('video', 'Video mode', 'Watch a song\'s music video in the player, in step with the song.'),
+
+  /// Android's Direct USB (Settings › Sound › Output & quality): experimental, so off until asked for, behind a
+  /// warning. Off, the option isn't offered and Direct USB never runs.
+  directUsb('directUsb', 'Direct USB', 'Play straight to a USB DAC, past Android. Experimental.');
 
   const BetaFeature(this.id, this.title, this.description);
 
@@ -21,11 +26,12 @@ enum BetaFeature {
   /// One plain line.
   final String description;
 
-  bool get defaultOn => true;
+  bool get defaultOn => this != directUsb;
 
   /// Whether this build has the feature at all (the web build has no Video mode).
   bool get available => switch (this) {
     videoMode => Features.videoMode,
+    directUsb => Host.isAndroid,
     _ => true,
   };
 }

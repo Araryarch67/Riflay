@@ -10,6 +10,8 @@ void mkfifo(String path) => throw UnsupportedError('No named pipes in a browser'
 
 bool pokeWriter(String path) => false;
 
+bool ignoreBrokenPipes() => false;
+
 bool processAlive(int pid) => false;
 
 class WindowsPowerRequest implements IdleInhibitor {

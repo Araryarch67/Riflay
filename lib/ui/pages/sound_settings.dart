@@ -10,8 +10,10 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../platform/host.dart';
 import '../../services/audio_engine.dart';
+import '../../services/beta_features.dart';
 import '../../services/carla_locator.dart';
 import '../../services/crossfade.dart';
+import '../../services/language.dart';
 import '../../services/layout_prefs.dart';
 import '../../services/player_controller.dart';
 import '../shell_scope.dart';
@@ -500,7 +502,7 @@ class _AdvancedAudioSettingsState extends State<AdvancedAudioSettings> {
                 value: audio.bitPerfectWanted,
                 onChanged: android && usbName == null ? null : audio.setBitPerfect,
               ),
-            if (android) _DirectUsbTile(audio: audio),
+            if (android) _DirectUsbBeta(audio: audio),
             if (audio.hasBitPerfect)
               SwitchListTile(
                 secondary: const Icon(Icons.graphic_eq_rounded),
@@ -693,6 +695,59 @@ class SettingTile extends StatelessWidget {
   );
 }
 
+/// Android: Direct USB's beta switch ([BetaFeature.directUsb]), and the option itself once it is on. Turning the
+/// beta on asks first ([confirmDirectUsb]); turning it off stops Direct USB, back to Android's output.
+class _DirectUsbBeta extends StatelessWidget {
+  const _DirectUsbBeta({required this.audio});
+
+  final AudioEngine audio;
+
+  @override
+  Widget build(BuildContext context) => ListenableBuilder(
+    listenable: BetaFeatures.instance,
+    builder: (context, _) {
+      final on = BetaFeatures.instance.isOn(BetaFeature.directUsb);
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SwitchListTile(
+            secondary: const Icon(Icons.science_outlined),
+            title: Text(tr.directUsbBeta),
+            subtitle: Text(tr.directUsbBetaSubtitle, style: settingsMuted(context)),
+            value: on,
+            onChanged: (v) async {
+              if (v) {
+                if (await confirmDirectUsb(context)) await BetaFeatures.instance.set(BetaFeature.directUsb, true);
+              } else {
+                await audio.setDirectUsb(false);
+                await BetaFeatures.instance.set(BetaFeature.directUsb, false);
+              }
+            },
+          ),
+          if (on) _DirectUsbTile(audio: audio),
+        ],
+      );
+    },
+  );
+}
+
+/// The warning before Direct USB's beta goes on. True when the person chose to turn it on.
+@visibleForTesting
+Future<bool> confirmDirectUsb(BuildContext context) async =>
+    await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        icon: const Icon(Icons.warning_amber_rounded),
+        title: Text(tr.directUsbWarningTitle),
+        content: Text(tr.directUsbWarningBody),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: Text(tr.cancel)),
+          FilledButton(onPressed: () => Navigator.pop(context, true), child: Text(tr.directUsbWarningConfirm)),
+        ],
+      ),
+    ) ??
+    false;
+
 /// Android: Direct USB, bit-perfect to a USB DAC on any phone (`DirectUsb.kt`, libusbdac). Experimental: it says
 /// what it does at every step (the DAC, the permission, where the song goes and in what format, dropouts), so a
 /// screenshot is enough to tell what happened.
@@ -708,7 +763,11 @@ class _DirectUsbTile extends StatelessWidget {
     final text = Theme.of(context).textTheme;
     final dac = d.devices.firstOrNull?.name;
     final on = audio.directUsbWanted;
-    final status = !on
+    final status = !on && d.closedWhileStarting
+        ? tr.directUsbClosedWhileStarting
+        : !on && d.failed
+        ? tr.directUsbFailed
+        : !on
         ? 'Riflay talks to your USB DAC itself, past Android, so songs reach it untouched even on phones '
               'where Bit-perfect mode can\'t. Experimental.'
         : dac == null
@@ -736,6 +795,15 @@ class _DirectUsbTile extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.fromLTRB(72, 0, 16, 8),
             child: OutlinedButton(onPressed: d.requestPermission, child: const Text('Allow USB access')),
+          ),
+        // What stopped it, after it turned itself off.
+        if (!on && d.failed && d.error != null)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(72, 0, 16, 12),
+            child: Text(
+              'Problem: ${d.error}',
+              style: (text.bodySmall ?? const TextStyle()).copyWith(color: Theme.of(context).colorScheme.error),
+            ),
           ),
         if (on)
           Padding(

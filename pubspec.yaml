@@ -139,10 +139,6 @@ flutter:
     # The tray icon on computers (lib/platform/tray_io.dart): PNG for Linux and macOS, ICO for Windows.
     - assets/tray/
 
-  shaders:
-    # Now Playing's abstract backdrops, drawn on the GPU in one pass.
-    - shaders/backdrop.frag
-
   fonts:
     # Riflay's own typeface (SIL Open Font License, see assets/fonts/OFL.txt): bundled, never fetched at runtime.
     - family: Figtree

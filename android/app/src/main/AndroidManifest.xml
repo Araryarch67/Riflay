@@ -51,6 +51,34 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
+            <!-- "Open with Riflay" for YouTube and YouTube Music links (lib/services/incoming_links.dart).
+                 No autoVerify: Riflay can't own these domains, so Android asks which app to use. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="https"/>
+                <data android:host="youtube.com"/>
+                <data android:host="www.youtube.com"/>
+                <data android:host="m.youtube.com"/>
+                <data android:host="music.youtube.com"/>
+                <data android:pathPrefix="/watch"/>
+                <data android:pathPrefix="/shorts/"/>
+                <data android:pathPrefix="/playlist"/>
+                <data android:pathPrefix="/browse/"/>
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="https" android:host="youtu.be"/>
+            </intent-filter>
+            <!-- Share sheet: a shared message with a YouTube link somewhere in it. -->
+            <intent-filter>
+                <action android:name="android.intent.action.SEND"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <data android:mimeType="text/plain"/>
+            </intent-filter>
         </activity>
         <service android:name="com.ryanheise.audioservice.AudioService"
             android:foregroundServiceType="mediaPlayback"

@@ -101,6 +101,23 @@ bool pokeWriter(String path) {
   }
 }
 
+typedef _SignalNative = IntPtr Function(Int32, IntPtr);
+typedef _Signal = int Function(int, int);
+
+/// Android, Linux: a write to a pipe nobody reads any more fails (EPIPE) instead of ending the app. By default it
+/// raises SIGPIPE, which kills the process without a trace, and libmpv leaves that default alone; Direct USB's mpv
+/// writes into a pipe whose reader can stop. True when it is set.
+bool ignoreBrokenPipes() {
+  if (!Platform.isAndroid && !Platform.isLinux) return false;
+  try {
+    final lib = Platform.isAndroid ? DynamicLibrary.open('libc.so') : DynamicLibrary.process();
+    const sigpipe = 13, sigIgn = 1; // SIGPIPE, SIG_IGN
+    return lib.lookupFunction<_SignalNative, _Signal>('signal')(sigpipe, sigIgn) != -1; // SIG_ERR
+  } catch (_) {
+    return false;
+  }
+}
+
 /// Whether the process [pid] is still running.
 bool processAlive(int pid) {
   if (Platform.isLinux || Platform.isAndroid) return Directory('/proc/$pid').existsSync();

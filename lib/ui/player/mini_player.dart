@@ -117,8 +117,13 @@ class _MiniPlayerState extends State<MiniPlayer> {
                                             track.title,
                                             style: text.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
                                           ),
-                                          ArtistLinks(
-                                            track: track,
+                                          // Plain text, not links: a thumb on its way to the bar landed on the
+                                          // artist and left for their page. A tap opens the player, as the rest
+                                          // of the bar does; Go to artist is in its menu.
+                                          Text(
+                                            track.artist,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
                                             style: text.bodySmall?.copyWith(color: AppColors.textSecondary),
                                           ),
                                         ],

@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 
 import '../../models/track.dart';
 import '../../platform/features.dart';
+import '../../services/language.dart';
 import '../../services/layout_prefs.dart';
 import '../../services/player_controller.dart';
 import '../download_options.dart';
@@ -133,32 +134,32 @@ class CollectionHero extends StatelessWidget {
                     if (artistPage && !empty)
                       (
                         icon: Icons.library_add_rounded,
-                        label: 'Add all to playlist',
+                        label: tr.addAllToPlaylist,
                         onTap: () => addToPlaylist(context, tracks),
                       ),
                     if (artistPage && radioSeed != null)
-                      (icon: Icons.sensors_rounded, label: 'Start radio', onTap: () => c.startRadio(radioSeed)),
+                      (icon: Icons.sensors_rounded, label: tr.startRadio, onTap: () => c.startRadio(radioSeed)),
                     // Albums and playlists: everything into the queue.
                     if (!artistPage && !empty)
                       (
                         icon: Icons.playlist_add_rounded,
-                        label: 'Add all to queue',
+                        label: tr.addAllToQueue,
                         onTap: () {
                           c.addToQueue(tracks);
-                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Added to queue')));
+                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(tr.toastAddedToQueue)));
                         },
                       ),
                     if (collection.kind == CollectionKind.remote && !empty && Features.downloads)
                       (
                         icon: Icons.download_for_offline_outlined,
-                        label: 'Download all for offline',
+                        label: tr.downloadAllOffline,
                         onTap: () async {
                           final messenger = ScaffoldMessenger.of(context);
                           final choice = await chooseDownload(context);
                           if (choice == null) return;
                           final n = c.youtube.enqueueTracks(tracks, choice: choice);
                           messenger.showSnackBar(
-                            SnackBar(content: Text(n == 0 ? 'Already downloaded' : 'Downloading $n songs…')),
+                            SnackBar(content: Text(n == 0 ? tr.alreadyDownloaded : tr.downloadingSongs(n))),
                           );
                         },
                       ),
@@ -185,7 +186,7 @@ class CollectionHero extends StatelessWidget {
                         children: [
                           PartButton(
                             icon: Icons.shuffle_rounded,
-                            tooltip: playingHere ? (shuffled ? 'Disable shuffle' : 'Enable shuffle') : 'Shuffle play',
+                            tooltip: playingHere ? (shuffled ? tr.disableShuffle : tr.enableShuffle) : tr.shufflePlay,
                             look: PartLook.muted,
                             lit: shuffled,
                             round: true,
@@ -201,7 +202,7 @@ class CollectionHero extends StatelessWidget {
                             child: ConstrainedBox(
                               constraints: const BoxConstraints(minWidth: play, maxWidth: 160),
                               child: Tooltip(
-                                message: playing ? 'Pause' : 'Play',
+                                message: playing ? tr.pause : tr.play,
                                 child: Material(
                                   color: empty ? colors.inverse.withValues(alpha: 0.4) : colors.inverse,
                                   shape: RoundedRectangleBorder(
@@ -225,7 +226,7 @@ class CollectionHero extends StatelessWidget {
                                           ),
                                           const SizedBox(width: 6),
                                           Text(
-                                            playing ? 'Pause' : 'Play',
+                                            playing ? tr.pause : tr.play,
                                             style: text.titleMedium?.copyWith(
                                               color: colors.onInverse,
                                               fontWeight: FontWeight.w700,
@@ -259,7 +260,7 @@ class CollectionHero extends StatelessWidget {
                                     child: MenuRow(leading: Icon(e.icon), title: Text(e.label)),
                                   ),
                               ],
-                              child: IgnorePointer(child: round(Icons.more_horiz_rounded, 'More', () {})),
+                              child: IgnorePointer(child: round(Icons.more_horiz_rounded, tr.more, () {})),
                             ),
                           ],
                         ],

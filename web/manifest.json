@@ -8,6 +8,11 @@
     "description": "Stream YouTube Music in your browser.",
     "orientation": "any",
     "prefer_related_applications": false,
+    "share_target": {
+        "action": ".",
+        "method": "GET",
+        "params": {"title": "title", "text": "text", "url": "url"}
+    },
     "icons": [
         {
             "src": "icons/Icon-192.png",

@@ -11,6 +11,7 @@ import 'package:flutter/services.dart';
 
 import '../../models/track.dart';
 import '../../platform/features.dart';
+import '../../services/language.dart';
 import '../../services/layout_prefs.dart';
 import '../../services/lyrics.dart';
 import '../../services/lyrics_translation.dart';
@@ -93,7 +94,7 @@ class LyricsPage extends StatelessWidget {
                           const SizedBox(width: 8)
                         else if (canPop)
                           IconButton(
-                            tooltip: fullScreen ? 'Close' : 'Back',
+                            tooltip: fullScreen ? tr.close : tr.back,
                             color: AppColors.textPrimary,
                             onPressed: () => Navigator.of(context).pop(),
                             icon: Icon(fullScreen ? Icons.keyboard_arrow_down_rounded : Icons.arrow_back_rounded),
@@ -105,7 +106,7 @@ class LyricsPage extends StatelessWidget {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text('Lyrics', style: text.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
+                              Text(tr.lyrics, style: text.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
                               if (track != null)
                                 MarqueeText(
                                   '${track.title} · ${track.artist}',
@@ -118,11 +119,7 @@ class LyricsPage extends StatelessWidget {
                       ],
                     ),
                   ),
-                Expanded(
-                  child: track == null
-                      ? const _Message('Play a song to see its lyrics here.')
-                      : LyricsView(track: track),
-                ),
+                Expanded(child: track == null ? _Message(tr.playToSeeLyrics) : LyricsView(track: track)),
                 if (layout == LyricsLayout.bottomCard)
                   Padding(
                     padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
@@ -156,7 +153,8 @@ class LyricsPage extends StatelessWidget {
           fit: StackFit.expand,
           children: [
             Positioned.fill(child: FadedCover(track: cover, darken: 0.55, sharp: false)),
-            OverPicture(shade: OverPicture.maroon, child: page),
+            // No glow behind the lines: plain white text over the darkened cover.
+            page,
           ],
         );
 }

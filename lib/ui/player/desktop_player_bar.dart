@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../models/track.dart';
 import '../../platform/features.dart';
 import '../../services/audio_engine.dart';
+import '../../services/language.dart';
 import '../../services/layout_prefs.dart';
 import '../../services/listen_together/listen_together.dart';
 import '../../services/player_controller.dart';
@@ -208,18 +209,18 @@ class DesktopPlayerBar extends StatelessWidget {
                   : shell.openLyrics;
               return row == PlayerBottomRow.classic
                   ? IconButton(
-                      tooltip: on ? 'Hide lyrics' : 'Lyrics',
+                      tooltip: on ? tr.hideLyrics : tr.lyrics,
                       onPressed: open,
                       icon: Icon(Icons.lyrics_outlined, size: 20, color: on ? AppColors.accent : null),
                     )
-                  : part(Icons.lyrics_outlined, on ? 'Hide lyrics' : 'Lyrics', open, lit: on);
+                  : part(Icons.lyrics_outlined, on ? tr.hideLyrics : tr.lyrics, open, lit: on);
             },
           ),
           // Always on the bar where there is room for it: shows and hides the Now playing view beside the pages
           // (it has no Close of its own).
           if (onToggleSidePanel case final toggle?)
             IconButton(
-              tooltip: sidePanelOpen ? 'Hide now playing view' : 'Now playing view',
+              tooltip: sidePanelOpen ? tr.hideNowPlayingView : tr.nowPlayingView,
               onPressed: toggle,
               icon: Icon(
                 sidePanelOpen ? Icons.view_sidebar_rounded : Icons.view_sidebar_outlined,
@@ -229,13 +230,13 @@ class DesktopPlayerBar extends StatelessWidget {
             ),
           if (row == PlayerBottomRow.classic)
             IconButton(
-              tooltip: 'Queue',
+              tooltip: tr.queue,
               onPressed: shell.openQueue,
               icon: const Icon(Icons.queue_music_rounded, size: 20),
             )
           else ...[
             const SizedBox(width: 6),
-            part(Icons.queue_music_rounded, 'Queue', shell.openQueue),
+            part(Icons.queue_music_rounded, tr.queue, shell.openQueue),
           ],
           if (row == PlayerBottomRow.chips) ...[
             const SizedBox(width: 6),
@@ -245,7 +246,7 @@ class DesktopPlayerBar extends StatelessWidget {
                 final sleep = PlayerScope.read(context).sleep;
                 return part(
                   sleep.active ? Icons.bedtime_rounded : Icons.bedtime_outlined,
-                  sleep.active ? 'Sleep timer: ${SleepTimerLabel.of(sleep)}' : 'Sleep timer',
+                  sleep.active ? tr.sleepTimerWith(SleepTimerLabel.of(sleep)) : tr.sleepTimer,
                   () => showSleepTimer(context),
                   lit: sleep.active,
                 );
@@ -308,7 +309,7 @@ class _VolumeMenuState extends State<_VolumeMenu> with WidgetsBindingObserver {
       visualDensity: VisualDensity.standard,
     ),
     builder: (context, menu, _) => IconButton(
-      tooltip: 'Volume',
+      tooltip: tr.volume,
       onPressed: () => menu.isOpen ? menu.close() : menu.open(),
       icon: const Icon(Icons.volume_up_rounded, size: 20),
     ),
@@ -373,7 +374,7 @@ class _MoreMenu extends StatelessWidget {
         return PopupMenuButton<VoidCallback>(
           // Over the whole window, so a click anywhere closes it.
           useRootNavigator: true,
-          tooltip: 'More options',
+          tooltip: tr.moreOptions,
           icon: Icon(
             Icons.more_horiz_rounded,
             size: 22,
@@ -383,7 +384,7 @@ class _MoreMenu extends StatelessWidget {
           itemBuilder: (_) => [
             item(
               Icons.lyrics_outlined,
-              'Lyrics',
+              tr.lyrics,
               hasTrack
                   ? (expanded ? () => toggleExpandedPanel(ExpandedPanel.lyrics) : ShellScope.of(context).openLyrics)
                   : null,
@@ -392,51 +393,51 @@ class _MoreMenu extends StatelessWidget {
             const PopupMenuDivider(),
             item(
               sleeping ? Icons.bedtime_rounded : Icons.bedtime_outlined,
-              sleeping ? 'Sleep timer: ${SleepTimerLabel.of(c.sleep)}' : 'Sleep timer',
+              sleeping ? tr.sleepTimerWith(SleepTimerLabel.of(c.sleep)) : tr.sleepTimer,
               () => showSleepTimer(context),
               on: sleeping,
             ),
             if (Features.casting)
               item(
                 device == null ? Icons.cast_rounded : Icons.cast_connected_rounded,
-                device == null ? 'Play on a device' : 'Playing on ${device.name}',
+                device == null ? tr.playOnDevice : tr.playingOn(device.name),
                 () => showCastPicker(context),
                 on: device != null,
               ),
             if (Features.listenTogether)
               item(
                 Icons.group_outlined,
-                together ?? 'Listen together',
+                together ?? tr.listenTogether,
                 () => openListenTogether(context),
                 on: together != null,
               ),
             if (downloadable && Features.downloads)
               item(
                 downloading ? Icons.downloading_rounded : Icons.download_rounded,
-                downloading ? 'Downloading…' : 'Download',
+                downloading ? tr.downloading : tr.download,
                 () => TrackMenuButton.download(context, c, [track!]),
               ),
             const PopupMenuDivider(),
             if (onToggleSidePanel case final toggle?)
               item(
                 Icons.view_sidebar_outlined,
-                sidePanelOpen ? 'Hide now playing view' : 'Now playing view',
+                sidePanelOpen ? tr.hideNowPlayingView : tr.nowPlayingView,
                 toggle,
                 on: sidePanelOpen,
               ),
             if (Features.miniPlayer)
-              item(Icons.picture_in_picture_alt_rounded, 'Mini player', () => setMiniPlayer(true)),
+              item(Icons.picture_in_picture_alt_rounded, tr.miniPlayer, () => setMiniPlayer(true)),
             if (hasTrack || expanded)
               item(
                 expanded ? Icons.close_fullscreen_rounded : Icons.open_in_full_rounded,
-                expanded ? 'Close expanded player' : 'Expanded player',
+                expanded ? tr.closeExpandedPlayer : tr.expandedPlayer,
                 () => showExpandedPlayer(!expanded),
                 on: expanded,
               ),
             if (hasTrack || full)
               item(
                 full ? Icons.fullscreen_exit_rounded : Icons.fullscreen_rounded,
-                full ? 'Exit full screen' : 'Full screen',
+                full ? tr.exitFullScreen : tr.fullScreen,
                 () => setFullScreenPlayer(!full),
                 on: full,
               ),

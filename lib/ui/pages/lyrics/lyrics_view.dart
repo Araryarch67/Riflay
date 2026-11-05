@@ -56,26 +56,26 @@ class _LyricsLoaderState extends State<_LyricsLoader> {
     builder: (context, snap) {
       if (snap.hasError) {
         return _Message(
-          'Couldn\'t load lyrics. Check your internet connection.',
+          tr.lyricsLoadFailed,
           action: TextButton(
             style: TextButton.styleFrom(foregroundColor: AppColors.textPrimary),
             onPressed: () => setState(() => _lyrics = LyricsService.forTrack(widget.track)),
-            child: const Text('Try again'),
+            child: Text(tr.tryAgain),
           ),
         );
       }
       final lyrics = snap.data;
       if (lyrics == null) return const _LyricsSkeleton();
-      if (lyrics.instrumental) return const _Message('This song is instrumental. Enjoy the music.');
+      if (lyrics.instrumental) return _Message(tr.lyricsInstrumental);
       if (lyrics.isEmpty) {
         return _Message(
-          'No lyrics found for this song.',
+          tr.noLyricsFound,
           action: !Features.userLyrics
               ? null
               : TextButton(
                   style: TextButton.styleFrom(foregroundColor: AppColors.textPrimary),
                   onPressed: () => useMyLyricsFile(context, widget.track),
-                  child: const Text('Use my lyrics file'),
+                  child: Text(tr.useMyLyricsFile),
                 ),
         );
       }
@@ -121,7 +121,7 @@ class _LyricsSkeletonState extends State<_LyricsSkeleton> with SingleTickerProvi
     final bar = size * 0.72;
     final gap = size * 1.25 - bar + 16;
     return Semantics(
-      label: 'Loading lyrics',
+      label: tr.loadingLyrics,
       child: ExcludeSemantics(
         child: LayoutBuilder(
           builder: (context, box) {
@@ -195,7 +195,7 @@ class _Source extends StatelessWidget {
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.only(top: 32, bottom: 48),
     child: Text(
-      'Lyrics from ${lyrics.source}',
+      tr.lyricsFrom(lyrics.source),
       textAlign: _textAlign,
       style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.textMuted),
     ),
@@ -228,7 +228,7 @@ class _PlainLyricsState extends State<_PlainLyrics> with _Extras {
           Padding(
             padding: const EdgeInsets.only(bottom: 16),
             child: Text(
-              'These lyrics don\'t follow the song.',
+              tr.lyricsUntimed,
               key: const ValueKey('lyrics-untimed'),
               textAlign: _textAlign,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.textMuted),

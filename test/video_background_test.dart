@@ -35,7 +35,6 @@ void main() {
     expect(look.nowPlaying, NowPlayingBackground.video);
     expect(NowPlayingBackground.video.label, 'Music video');
     expect(NowPlayingBackground.video.hint, 'The song\'s music video, when it has one');
-    expect(NowPlayingBackground.video.isAbstract, isFalse);
     await look.reset();
     expect(look.nowPlaying, NowPlayingBackground.color);
   });
@@ -44,7 +43,6 @@ void main() {
     expect(NowPlayingBackground.video.effective(lightweight: false), NowPlayingBackground.blurredCover);
     expect(NowPlayingBackground.video.effective(lightweight: true), NowPlayingBackground.color);
     expect(NowPlayingBackground.black.effective(lightweight: true), NowPlayingBackground.black);
-    expect(NowPlayingBackground.silk.effective(lightweight: false), NowPlayingBackground.silk);
   });
 
   test('the video shows behind the page only for a song that has one', () {

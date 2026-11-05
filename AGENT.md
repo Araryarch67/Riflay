@@ -115,6 +115,13 @@ test/                          Unit and widget tests
   SharedPreferences (`playlists.v1`) and shown as `CollectionKind.playlist`.
 - Song menus get "Remove from this playlist" from a `PlaylistEditScope` above
   them (Riflay playlists and the user's own YouTube Music playlists).
+- Picking several songs: every `CollectionPage` (albums, artists, playlists,
+  YouTube Music ones too) has a `TrackSelectionHost` (`widgets/track_selection.dart`).
+  Hold a row or use "Select" in its menu; while anything is picked a tap picks
+  instead of playing, and `TrackSelectionBar` adds them to a playlist or the
+  queue. Rows read the selection without depending on it and only the tint and
+  the round mark listen, so picking doesn't rebuild every row. Not a shortcut,
+  so no `RIFLAY_*` switch.
 - Menus use `useRootNavigator: true`, and their actions use the navigator's
   context (`host` in `_TrackMenu`): the row may be rebuilt away while the
   menu is open.
@@ -136,7 +143,9 @@ test/                          Unit and widget tests
 
 ## How audio works
 
-- **Android Direct USB** (Settings › Sound › Output & quality, experimental, off by default). Android 14's
+- **Android Direct USB** (Settings › Sound › Output & quality, experimental, off by default). A beta
+  (`BetaFeature.directUsb`, off by default): its switch there warns first (`confirmDirectUsb`: may freeze or close
+  the app, full volume to the DAC) and only then offers Direct USB; turned off, Direct USB stops and never runs. Android 14's
   bit-perfect mixer (`usb_dac.dart`) only works where the phone's maker offers it; many (Xiaomi, Samsung)
   list no bit-perfect format. Direct USB goes around Android instead: mpv writes the decoded song with
   `ao=pcm` into a FIFO in the cache folder (a WAV header per stream), and `DirectUsb.kt` reads it into
@@ -145,6 +154,25 @@ test/                          Unit and widget tests
   process: mpv blocks on the FIFO without a reader. Pause/play/seek reach it from `PlayerController`.
   The position shown runs ahead by what the pipe holds (well under a second). Settings shows its route,
   formats, dropouts and log, so a screenshot tells what happened.
+  mpv's `pcm` output has no clock: paced only by the pipe's reader, it held its audio lock through each ~1.4 s
+  write (65536 frames) into the full pipe, the core waited on that lock, and every synchronous property read from
+  Dart waited with it on the UI thread (ANR). So the chain ends in `asetnsamples` + `arealtime` while Direct USB
+  runs (`AudioEngine.directUsbPaceFilter`; Android's libmpv is built with both): samples untouched, at the song's
+  pace, the pipe near empty. arealtime sleeps in mpv's core thread until each frame is due, so the 256-sample
+  frames keep property reads at ~2 ms (whole FLAC frames made them ~15 ms, and Signal path lagged). Never send mpv `audio-format=no` or `s24`: this mpv parses neither,
+  and a song loaded with either fails.
+  It must never close the app. SIGPIPE is ignored before the pipe opens (`ignoreBrokenPipes`: libmpv keeps the
+  default, which kills the process silently when the reader stops); turning it off moves mpv off the pipe before
+  the reader goes; every channel call answers; and an exception on the reader or on a libusbdac thread turns Direct
+  USB off (Settings says why, songs go back to Android) instead of reaching Android's kill handler. A sink that
+  stops taking audio (libusbdac's Android fallback goes silent once the DAC is claimed) is flushed once, then a
+  watchdog thread closes the pipe, which frees mpv, and turns Direct USB off (`STALL_MS`, `WATCHDOG_MS` in
+  `DirectUsb.kt`); each stream first waits briefly for the DAC to activate so it starts on USB. A crash nothing
+  can catch (native code) leaves `directUsb.starting.v1` set, and the next start leaves Direct USB off once
+  ("Riflay closed while starting it"). `RIFLAY_NO_DIRECT_USB_GUARD` turns the catching and the start marker off.
+  Crash capture over ADB (libusbdac logs through Timber, which says nothing in Riflay): `adb logcat -c`, then
+  `adb logcat -v time -b main,system,crash AndroidRuntime:E DEBUG:V libc:V DirectUsb:V flutter:V ActivityManager:I '*:S'`
+  while turning it on.
 
 - just_audio everywhere, with libmpv as its backend on **every platform**
   through `just_audio_media_kit`. Linux uses the system libmpv; the others use
@@ -248,6 +276,29 @@ test/                          Unit and widget tests
   `ACTION_MOVE_VIDEO_BEFORE`), `playlist/delete`, `like/like`, `like/removelike`.
 - Only playlists with `musicEditablePlaylistDetailHeaderRenderer` are the
   user's own; offer edits only for those.
+- A downloaded song goes into a YouTube Music playlist by the video it came
+  from (`Track.youtubeId` / `Track.onYoutube`, read from `sourceUrl` with
+  `youtubeVideoIdOf`). A file that never came from YouTube can't: the account's
+  `createPlaylist` / `addToPlaylist` leave those out (`YoutubeMusicAccount.youtubeSongs`)
+  and "Add to playlist" says so ("This song isn't on YouTube Music", or how many
+  were skipped). Not a shortcut, so no `RIFLAY_*` switch.
+- Links opened with Riflay (`lib/services/incoming_links.dart`): Android's
+  "Open with" and Share sheet (intent filters in `AndroidManifest.xml`, no
+  `autoVerify` since Riflay can't own the domains; `MainActivity.kt` keeps the
+  link until Dart takes it over `riflay/incoming_link`, cold start and
+  `onNewIntent`), a link on the computers' command line (`riflay <link>`; a
+  copy already running gets it over a loopback port with a token,
+  `lib/platform/link_relay_io.dart`, and the new process quits), and the web
+  app's `share_target` / `?url=`. `YoutubeLinks.parse` finds the link in a
+  whole shared message; `HomeShell._openIncoming` plays a song or opens the
+  playlist / album (`browse/MPREb_…`). Not on iOS or macOS yet: those need a
+  share extension and `application(_:open:)`. `RIFLAY_NO_OPEN_LINKS` takes
+  none (Android still lists Riflay).
+- Uploading a file to the user's library (music.youtube.com uploads) is not
+  built: ytmusicapi's `upload_song` does it with these same cookies
+  (`upload.youtube.com/upload/usermusic/http`, resumable start + finalize), but
+  YouTube processes the file for minutes before it gets a video id, so adding it
+  to a playlist would mean polling the uploads list; no web build (CORS).
 
 ## Web build
 
@@ -427,6 +478,8 @@ device's language when Riflay has it). The words live in `lib/l10n/app_en.arb` (
   flutter run --dart-define=RIFLAY_SCROBBLE_DRY_RUN=true  # print scrobbles instead of sending them
   flutter run --dart-define=RIFLAY_LASTFM_KEY=… --dart-define=RIFLAY_LASTFM_SECRET=…
   flutter run --dart-define=RIFLAY_NO_TRAY=true           # no tray icon; closing the window quits
+  flutter run --dart-define=RIFLAY_NO_DIRECT_USB_GUARD=true  # Android Direct USB crashes for real (logcat)
+  flutter run --dart-define=RIFLAY_NO_OPEN_LINKS=true     # ignore links opened or shared with Riflay
   ```
 
   Last.fm is only offered when the build has an API account's key and secret

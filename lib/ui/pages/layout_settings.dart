@@ -382,18 +382,6 @@ class LayoutSettings extends StatelessWidget {
                       ),
                     ),
                   ],
-                  ListenableBuilder(
-                    listenable: Appearance.instance,
-                    builder: (context, _) => SwitchListTile(
-                      title: const Text('Music-reactive background'),
-                      subtitle: Text(
-                        'Follows the music when an abstract Now Playing background is selected',
-                        style: muted,
-                      ),
-                      value: Appearance.instance.reactiveBackground,
-                      onChanged: Appearance.instance.setReactiveBackground,
-                    ),
-                  ),
                 ],
               ],
             ),

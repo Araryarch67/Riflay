@@ -149,27 +149,20 @@ class ColorFree extends StatelessWidget implements ColorFreeSubtree {
 /// Text and icons over a picture (the cover behind Now Playing or the lyrics) get a soft shadow, so light text
 /// still reads on a bright patch of the cover without changing colour. Dark text (a light palette) is left alone.
 class OverPicture extends StatelessWidget {
-  const OverPicture({super.key, this.enabled = true, this.shade = const Color(0xFF000000), required this.child});
+  const OverPicture({super.key, this.enabled = true, required this.child});
 
   final bool enabled;
-
-  /// The shadow's colour: black, or maroon behind the lyrics, where a coloured glow stands out more than a dark one.
-  final Color shade;
   final Widget child;
 
-  /// Behind the lyrics.
-  static const maroon = Color(0xFF800000);
+  static const shadows = [
+    Shadow(color: Color(0x59000000), blurRadius: 12),
+    Shadow(color: Color(0x33000000), blurRadius: 3),
+  ];
 
   @override
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
     if (!enabled || colors.textPrimary.computeLuminance() < 0.5) return child;
-    // A colour needs more of it than black to show.
-    final strong = shade != const Color(0xFF000000);
-    final shadows = [
-      Shadow(color: shade.withValues(alpha: strong ? 0.7 : 0.35), blurRadius: 12),
-      Shadow(color: shade.withValues(alpha: strong ? 0.4 : 0.2), blurRadius: 3),
-    ];
     final theme = Theme.of(context);
     TextStyle? lift(TextStyle? s) => s?.copyWith(shadows: shadows);
     final t = theme.textTheme;

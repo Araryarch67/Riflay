@@ -26,6 +26,7 @@ import '../theme.dart';
 import 'controls.dart';
 import 'menus.dart';
 import 'stats_for_nerds.dart';
+import 'track_selection.dart';
 
 /// How a row of [width] px shows its download button.
 enum RowDownload { full, compact, none }
@@ -102,6 +103,8 @@ class _TrackRowState extends State<TrackRow> {
     final wide = !shell.compact;
     // Settings > Layout > Player > Song that is playing: a filled card instead of coloured text.
     final card = isCurrent && LayoutPrefs.instance.playingRow == PlayingRowStyle.card;
+    // A page where songs can be picked (see TrackSelection): hold to pick; while picking, a tap picks too.
+    final selection = TrackSelectionScope.maybeOf(context);
 
     Widget? leading;
     if (widget.index != null && wide) {
@@ -131,6 +134,7 @@ class _TrackRowState extends State<TrackRow> {
         padding: EdgeInsets.symmetric(horizontal: wide ? 12 : 4, vertical: LayoutPrefs.dense(6, 2)),
         child: Row(
           children: [
+            if (selection != null) TrackSelectMark(selection: selection, track: t),
             if (leading != null) ...[leading, const SizedBox(width: 12)],
             if (card && leading == null && !widget.showArtwork) ...[
               EqualizerIcon(playing: playing, size: 18, color: AppColors.textPrimary),
@@ -227,19 +231,30 @@ class _TrackRowState extends State<TrackRow> {
       onEnter: (_) => _hover.value = true,
       onExit: (_) => _hover.value = false,
       // The only part that changes with hover: the tint and what a tap does.
-      child: _Hovering(
-        hover: _hover,
+      child: ListenableBuilder(
+        listenable: selection == null ? _hover : Listenable.merge([_hover, selection]),
         child: body,
-        builder: (context, hover, child) => Material(
-          color: card ? AppColors.accent.withValues(alpha: 0.3) : (hover ? AppColors.tile : Colors.transparent),
-          borderRadius: LayoutPrefs.corner(card ? 16 : 6),
-          child: InkWell(
+        builder: (context, child) {
+          TrackRow.debugHoverBuilds++;
+          final hover = _hover.value;
+          final picking = selection?.active ?? false;
+          final picked = selection?.contains(t) ?? false;
+          return Material(
+            color: picked
+                ? AppColors.accent.withValues(alpha: 0.18)
+                : card
+                ? AppColors.accent.withValues(alpha: 0.3)
+                : (hover ? AppColors.tile : Colors.transparent),
             borderRadius: LayoutPrefs.corner(card ? 16 : 6),
-            hoverColor: Colors.transparent,
-            onTap: isCurrent && wide && hover ? c.togglePlay : widget.onTap,
-            child: child,
-          ),
-        ),
+            child: InkWell(
+              borderRadius: LayoutPrefs.corner(card ? 16 : 6),
+              hoverColor: Colors.transparent,
+              onTap: picking ? () => selection!.toggle(t) : (isCurrent && wide && hover ? c.togglePlay : widget.onTap),
+              onLongPress: selection == null ? null : () => selection.toggle(t),
+              child: child,
+            ),
+          );
+        },
       ),
     );
   }
@@ -378,6 +393,7 @@ class TrackMenuButton extends StatelessWidget {
           if (track.isRemote && track.videoId != null) YoutubeStream.prefetchDownloadCandidates(track.videoId!);
           final host = Navigator.of(context).context;
           final editScope = PlaylistEditScope.maybeOf(context);
+          final selection = TrackSelectionScope.maybeOf(context);
           final artist = openArtist(host, c, track, shell: shell);
           final album = c.albumOf(track);
           // A song downloaded from YouTube, or the download of a streamed one: "Edit" with the artist locked.
@@ -427,6 +443,14 @@ class TrackMenuButton extends StatelessWidget {
               PopupMenuItem(
                 onTap: () => addToPlaylist(host, [track]),
                 child: MenuRow(leading: const Icon(Icons.playlist_add_rounded), title: Text(tr.addToPlaylist)),
+              ),
+            if (selection != null)
+              PopupMenuItem(
+                onTap: () => selection.toggle(track),
+                child: MenuRow(
+                  leading: const Icon(Icons.check_circle_outline_rounded),
+                  title: Text(selection.contains(track) ? tr.unselect : tr.select),
+                ),
               ),
             if (editScope?.canRemove(track) ?? false)
               PopupMenuItem(
@@ -531,6 +555,8 @@ Future<void> confirmDeleteDownload(BuildContext context, PlayerController c, Tra
   if (ok != true) return;
   final failed = await c.deleteDownloads([download]);
   messenger?.showSnackBar(
-    SnackBar(content: Text(failed > 0 ? "Removed from your library; the file couldn't be deleted." : tr.downloadDeleted)),
+    SnackBar(
+      content: Text(failed > 0 ? "Removed from your library; the file couldn't be deleted." : tr.downloadDeleted),
+    ),
   );
 }

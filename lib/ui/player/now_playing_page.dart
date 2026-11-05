@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 
 import '../../models/track.dart';
 import '../../services/appearance.dart';
+import '../../services/language.dart';
 import '../../services/layout_prefs.dart';
 import '../../services/metadata.dart';
 import '../../services/player_controller.dart';
@@ -15,7 +16,6 @@ import '../widgets/controls.dart';
 import '../widgets/faded_cover.dart';
 import '../widgets/wavy_seek_track.dart';
 import '../widgets/audio_visualizer.dart';
-import '../widgets/player_backdrop.dart';
 import '../widgets/marquee_text.dart';
 import '../widgets/signal_path.dart';
 import '../widgets/stats_for_nerds.dart';
@@ -121,7 +121,6 @@ class NowPlayingPage extends StatelessWidget {
                   ),
                 ),
               ],
-              if (!coverPage && look.isAbstract) Positioned.fill(child: PlayerBackdrop(coverColor: accent)),
               // Not drawn under a playing music video, which covers it.
               if (!coverPage && look == NowPlayingBackground.blurredCover && track != null && !LayoutPrefs.lightweight)
                 ListenableBuilder(
@@ -195,7 +194,7 @@ class NowPlayingPage extends StatelessWidget {
                           Widget topBarFor({required bool more}) => Row(
                             children: [
                               IconButton(
-                                tooltip: 'Close',
+                                tooltip: tr.close,
                                 color: AppColors.of(context).textPrimary,
                                 onPressed: () => Navigator.of(context).pop(),
                                 icon: const Icon(Icons.keyboard_arrow_down_rounded, size: 30),
@@ -204,14 +203,14 @@ class NowPlayingPage extends StatelessWidget {
                                 child: Column(
                                   children: [
                                     Text(
-                                      'PLAYING FROM',
+                                      tr.playingFromCaps,
                                       style: text.labelSmall?.copyWith(
                                         letterSpacing: 1.2,
                                         color: AppColors.of(context).textSecondary,
                                       ),
                                     ),
                                     Text(
-                                      from ?? 'Your library',
+                                      from ?? tr.yourLibrarySource,
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                       style: text.labelLarge?.copyWith(fontWeight: FontWeight.w700),
@@ -248,7 +247,7 @@ class NowPlayingPage extends StatelessWidget {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     MarqueeText(
-                                      track?.title ?? 'Nothing playing',
+                                      track?.title ?? tr.nothingPlaying,
                                       style: text.headlineSmall?.copyWith(
                                         fontWeight: FontWeight.w800,
                                         letterSpacing: -0.5,
@@ -366,7 +365,7 @@ class _MoreButton extends StatelessWidget {
     return ListenableBuilder(
       listenable: Listenable.merge([c.sleep, c.cast]),
       builder: (context, _) => IconButton(
-        tooltip: 'More',
+        tooltip: tr.more,
         color: c.sleep.active || c.cast.target != null
             ? AppColors.of(context).accent
             : AppColors.of(context).textPrimary,
@@ -425,7 +424,7 @@ class PlayerVolumeRow extends StatelessWidget {
               children: [
                 if (mute)
                   IconButton(
-                    tooltip: volume == 0 ? 'Unmute' : 'Mute',
+                    tooltip: volume == 0 ? tr.unmute : tr.mute,
                     iconSize: 22,
                     visualDensity: VisualDensity.compact,
                     color: colors.textSecondary,
@@ -434,7 +433,7 @@ class PlayerVolumeRow extends StatelessWidget {
                     icon: Icon(thin || volume == 0 ? Icons.volume_off_rounded : Icons.volume_mute_rounded),
                   )
                 else
-                  nudge('Quieter', Icons.volume_down_rounded, -0.05),
+                  nudge(tr.quieter, Icons.volume_down_rounded, -0.05),
                 Expanded(
                   child: SliderTheme(
                     data: thin
@@ -449,7 +448,7 @@ class PlayerVolumeRow extends StatelessWidget {
                     ),
                   ),
                 ),
-                nudge('Louder', Icons.volume_up_rounded, 0.05),
+                nudge(tr.louder, Icons.volume_up_rounded, 0.05),
               ],
             ),
           );
@@ -470,13 +469,13 @@ class _SecondaryRow extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         IconButton(
-          tooltip: 'Lyrics',
+          tooltip: tr.lyrics,
           color: AppColors.of(context).textPrimary,
           onPressed: shell.openLyrics,
           icon: const Icon(Icons.lyrics_outlined),
         ),
         IconButton(
-          tooltip: 'Queue',
+          tooltip: tr.queue,
           color: AppColors.of(context).textPrimary,
           onPressed: shell.openQueue,
           icon: const Icon(Icons.queue_music_rounded),

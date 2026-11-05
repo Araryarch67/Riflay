@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:riflay/services/direct_usb.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   test('reads what DirectUsb.kt reports: the DAC, its permission, the route and the formats', () {
@@ -32,5 +33,22 @@ void main() {
     d.read({'running': false, 'fifo': '/cache/direct_usb.fifo', 'devices': <Object>[]});
     expect(d.running, isFalse, reason: 'a pipe that is not running is no pipe for mpv');
     expect(d.hasDac, isFalse);
+  });
+
+  test('a pipe that stops by itself is a failure, and Settings can say so', () {
+    final d = DirectUsbOutput();
+    d.read({'running': true, 'fifo': '/cache/direct_usb.fifo', 'route': 'none'});
+    expect(d.failed, isFalse);
+    d.read({'running': false, 'error': 'Direct USB stopped: UnsatisfiedLinkError'});
+    expect(d.failed, isTrue);
+    expect(d.error, 'Direct USB stopped: UnsatisfiedLinkError');
+  });
+
+  test('the app closing while Direct USB starts leaves it off once', () async {
+    SharedPreferences.setMockInitialValues({'directUsb.starting.v1': true});
+    expect(await DirectUsbOutput.closedLastTime(), isTrue);
+    expect(await DirectUsbOutput.closedLastTime(), isFalse, reason: 'told once, then it may try again');
+    SharedPreferences.setMockInitialValues({});
+    expect(await DirectUsbOutput.closedLastTime(), isFalse);
   });
 }

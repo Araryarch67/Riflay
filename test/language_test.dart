@@ -9,11 +9,12 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   setUp(() => SharedPreferences.setMockInitialValues({}));
-  tearDown(() => Language.instance.set(AppLanguage.system));
+  tearDown(() => Language.instance.set(AppLanguage.english));
 
-  test('English by default (the test device speaks English), Indonesian when chosen, and it is kept', () async {
+  test('English by default whatever the device speaks, Indonesian when chosen, and it is kept', () async {
     await Language.instance.load();
-    expect(Language.instance.choice, AppLanguage.system);
+    expect(Language.instance.choice, AppLanguage.english);
+    expect(Language.instance.locale.languageCode, 'en');
     expect(tr.navSettings, 'Settings');
     expect(tr.songsCount(3), '3 songs');
 
@@ -22,7 +23,7 @@ void main() {
     expect(tr.navSettings, 'Pengaturan');
     expect(tr.songsCount(3), '3 lagu');
 
-    Language.instance.choice = AppLanguage.system;
+    Language.instance.choice = AppLanguage.english;
     await Language.instance.load();
     expect(Language.instance.choice, AppLanguage.indonesian, reason: 'the choice is saved');
   });

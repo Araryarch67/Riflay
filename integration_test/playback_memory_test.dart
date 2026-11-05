@@ -70,8 +70,6 @@ void main() {
     await LayoutPrefs.instance.setMotion(Motion.full);
     await LayoutPrefs.instance.setVisualizer(true);
     await LayoutPrefs.instance.setVisualizerStyle(VisualizerStyle.pulse);
-    await Appearance.instance.setNowPlaying(NowPlayingBackground.aurora);
-    await Appearance.instance.setReactiveBackground(true);
     final controller = PlayerController();
     final original = JustAudioMediaKit.onPlayerCreated!;
     JustAudioMediaKit.onPlayerCreated = (player) {

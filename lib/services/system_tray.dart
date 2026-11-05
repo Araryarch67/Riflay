@@ -105,10 +105,21 @@ class SystemTray with WindowListener {
     if (!offered) return;
     await CloseToTray.instance.load();
     available.value = await NativeTray.available();
-    final tray = SystemTray._(c);
+    final tray = _running = SystemTray._(c);
     CloseToTray.instance.addListener(tray._apply);
     windowManager.addListener(tray);
     await tray._apply();
+  }
+
+  static SystemTray? _running;
+
+  /// Computers: brings the window back from the tray, or from under other windows (a link opened with Riflay).
+  static Future<void> bringToFront() async {
+    if (_running case final tray?) return tray._showWindow();
+    if (Host.isWeb || !(Host.isLinux || Host.isWindows || Host.isMacOS)) return;
+    if (await windowManager.isMinimized()) await windowManager.restore();
+    await windowManager.show();
+    await windowManager.focus();
   }
 
   Future<void>? _applying;

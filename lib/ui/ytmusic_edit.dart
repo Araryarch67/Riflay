@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import '../models/track.dart';
 import '../platform/features.dart';
 import '../services/download_prefs.dart';
+import '../services/language.dart';
 import '../services/layout_prefs.dart';
 import '../services/player_controller.dart';
 import '../services/youtube_importer.dart';
@@ -178,18 +179,19 @@ class _PlaylistNameDialogState extends State<_PlaylistNameDialog> {
 enum PlaylistHome { riflay, youtubeMusic }
 
 /// "New playlist": a Riflay playlist on this device by default. Signed in,
-/// it can be made in YouTube Music instead, but only when every song is from
-/// YouTube Music (files from this device can't go there).
+/// it can be made in YouTube Music instead when some of the songs are there
+/// (streamed or downloaded from it); files from this device are left out.
 Future<void> createPlaylist(BuildContext context, {List<Track> tracks = const []}) async {
   final c = PlayerScope.read(context);
-  final canYoutube = c.ytMusic.canEdit && tracks.every((t) => t.isRemote);
+  final onYoutube = YoutubeMusicAccount.youtubeSongs(tracks);
+  final canYoutube = c.ytMusic.canEdit && (tracks.isEmpty || onYoutube.songs.isNotEmpty);
   final answer = await askPlaylistName(context, askPrivacy: false, offerYoutube: canYoutube);
   if (answer == null || !context.mounted) return;
   if (answer.home == PlaylistHome.youtubeMusic) {
     await _report(
       context,
-      () => c.ytMusic.createPlaylist(answer.title, privacy: answer.privacy, tracks: tracks),
-      'Created "${answer.title}" in YouTube Music',
+      () => c.ytMusic.createPlaylist(answer.title, privacy: answer.privacy, tracks: onYoutube.songs),
+      withSkipped('Created "${answer.title}" in YouTube Music', onYoutube.skipped),
     );
     return;
   }
@@ -203,27 +205,42 @@ Future<void> createPlaylist(BuildContext context, {List<Track> tracks = const []
   );
 }
 
-/// "Add to playlist": Riflay playlists, then (for YouTube songs, signed in)
-/// the YouTube Music ones, each marked with where it lives.
+/// [done], plus how many songs were left out for not being on YouTube Music.
+String withSkipped(String done, int skipped) => skipped == 0 ? done : '$done. ${tr.skippedNotOnYoutubeMusic(skipped)}';
+
+/// What adding [added] of [tracks] to playlist [name] did, in words: [skipped] of them weren't on YouTube Music.
+@visibleForTesting
+String addedMessage({required String name, required int tracks, required int added, int skipped = 0}) {
+  if (skipped > 0 && skipped == tracks) return tracks == 1 ? tr.notOnYoutubeMusic : tr.noneOnYoutubeMusic;
+  final done = added == 0 ? tr.alreadyIn(name) : (tracks == 1 ? tr.addedTo(name) : tr.addedSongsTo(added, name));
+  return withSkipped(done, skipped);
+}
+
+/// "Add to playlist": Riflay playlists, then (signed in) the YouTube Music
+/// ones, each marked with where it lives. A download goes into a YouTube Music
+/// playlist by the video it came from; a file that never came from YouTube
+/// can't, so those playlists say so instead of failing quietly.
 Future<void> addToPlaylist(BuildContext context, List<Track> tracks) async {
   final c = PlayerScope.read(context);
   final account = c.ytMusic;
-  final remoteOk = account.canEdit && tracks.every((t) => t.isRemote);
-  final remote = remoteOk
+  final onYoutube = YoutubeMusicAccount.youtubeSongs(tracks);
+  final remote = account.canEdit
       ? (await account.library().catchError(
           (Object _) => const YoutubeMusicLibrary(liked: [], playlists: [], recent: []),
         )).playlists
       : const <RemotePlaylist>[];
   if (!context.mounted) return;
   final text = Theme.of(context).textTheme;
+  final noneThere = onYoutube.songs.isEmpty;
+  final notThere = tracks.length == 1 ? tr.notOnYoutubeMusic : tr.noneOnYoutubeMusic;
   final choice = await showDialog<Object>(
     context: context,
     builder: (context) => SimpleDialog(
-      title: const Text('Add to playlist'),
+      title: Text(tr.addToPlaylist),
       children: [
         SimpleDialogOption(
           onPressed: () => Navigator.pop(context, #create),
-          child: const ListTile(leading: Icon(Icons.add_rounded), title: Text('New playlist')),
+          child: ListTile(leading: const Icon(Icons.add_rounded), title: Text(tr.newPlaylist)),
         ),
         for (final p in c.playlists)
           SimpleDialogOption(
@@ -231,17 +248,22 @@ Future<void> addToPlaylist(BuildContext context, List<Track> tracks) async {
             child: ListTile(
               leading: const Icon(Icons.queue_music_rounded),
               title: Text(p.name, maxLines: 1, overflow: TextOverflow.ellipsis),
-              subtitle: Text('Riflay • ${p.tracks.length} songs', style: text.bodySmall),
+              subtitle: Text(tr.playlistOnRiflay(p.tracks.length), style: text.bodySmall),
             ),
           ),
         for (final p in remote)
           SimpleDialogOption(
             onPressed: () => Navigator.pop(context, p),
             child: ListTile(
+              enabled: !noneThere,
               leading: const Icon(Icons.cloud_outlined),
               title: Text(p.title, maxLines: 1, overflow: TextOverflow.ellipsis),
               subtitle: Text(
-                p.count == 0 ? 'YouTube Music' : 'YouTube Music • ${p.count} songs',
+                noneThere
+                    ? notThere
+                    : p.count == 0
+                    ? 'YouTube Music'
+                    : tr.playlistOnYoutubeMusic(p.count),
                 style: text.bodySmall,
               ),
             ),
@@ -250,19 +272,29 @@ Future<void> addToPlaylist(BuildContext context, List<Track> tracks) async {
     ),
   );
   if (!context.mounted) return;
-  final what = tracks.length == 1 ? 'Added' : 'Added ${tracks.length} songs';
+  final messenger = ScaffoldMessenger.of(context);
   switch (choice) {
     case #create:
       return createPlaylist(context, tracks: tracks);
     case final UserPlaylist p:
       final n = c.addToPlaylist(p.id, tracks);
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(n == 0 ? 'Already in ${p.name}' : '$what to ${p.name}')));
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(addedMessage(name: p.name, tracks: tracks.length, added: n)),
+        ),
+      );
     case final RemotePlaylist p:
-      final messenger = ScaffoldMessenger.of(context);
+      if (noneThere) {
+        messenger.showSnackBar(SnackBar(content: Text(notThere)));
+        return;
+      }
       try {
-        final n = await account.addToPlaylist(p.id, tracks);
-        messenger.showSnackBar(SnackBar(content: Text(n == 0 ? 'Already in ${p.title}' : '$what to ${p.title}')));
+        final n = await account.addToPlaylist(p.id, onYoutube.songs);
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(addedMessage(name: p.title, tracks: tracks.length, added: n, skipped: onYoutube.skipped)),
+          ),
+        );
       } catch (e) {
         messenger.showSnackBar(SnackBar(content: Text(YoutubeMusicAccount.describe(e))));
       }

@@ -633,12 +633,7 @@ class YoutubeMusicAccount extends ChangeNotifier {
         for (final e in _followEdits.entries)
           if (e.value.following) e.key,
       ]);
-    final l = _libraryNow = YoutubeMusicLibrary(
-      liked: liked,
-      playlists: lists,
-      recent: recent,
-      artists: shownArtists,
-    );
+    final l = _libraryNow = YoutubeMusicLibrary(liked: liked, playlists: lists, recent: recent, artists: shownArtists);
     notifyListeners();
     return l;
   }
@@ -853,12 +848,29 @@ class YoutubeMusicAccount extends ChangeNotifier {
       listEquals([for (final t in a.tracks) t.id], [for (final t in b.tracks) t.id]) &&
       mapEquals(a.rowIds, b.rowIds);
 
-  /// Creates a playlist (optionally with songs) and returns its id.
+  /// The songs of [tracks] a YouTube Music playlist can hold, as YouTube Music streams them (a download goes
+  /// in by the video it came from), and how many were left out: files that never came from YouTube.
+  static ({List<Track> songs, int skipped}) youtubeSongs(Iterable<Track> tracks) {
+    final songs = <Track>[];
+    var skipped = 0;
+    for (final t in tracks) {
+      if (t.onYoutube case final song?) {
+        songs.add(song);
+      } else {
+        skipped++;
+      }
+    }
+    return (songs: songs, skipped: skipped);
+  }
+
+  /// Creates a playlist (optionally with songs) and returns its id. Songs that aren't on YouTube Music are
+  /// left out (see [youtubeSongs]).
   Future<String> createPlaylist(
     String title, {
     PlaylistPrivacy privacy = PlaylistPrivacy.private,
     List<Track> tracks = const [],
   }) async {
+    tracks = youtubeSongs(tracks).songs;
     final id = await _editing(
       (web) => web.createPlaylist(title, privacy: privacy, videoIds: [for (final t in tracks) ?t.videoId]),
     );
@@ -899,8 +911,10 @@ class YoutubeMusicAccount extends ChangeNotifier {
 
   /// Adds songs to a playlist; they show in it (and in its count) as soon as
   /// YouTube Music takes them, no reload. Songs already in it are skipped.
-  /// Returns how many were added.
+  /// Returns how many were added. Songs that aren't on YouTube Music are left out (see [youtubeSongs]).
   Future<int> addToPlaylist(String id, List<Track> tracks) async {
+    tracks = youtubeSongs(tracks).songs;
+    if (tracks.isEmpty) return 0;
     final rows = await _editing((web) => web.addToPlaylist(id, [for (final t in tracks) ?t.videoId]));
     final rowOf = {for (final r in rows) r.videoId: r.setVideoId};
     final shown = _details[id];
@@ -1033,6 +1047,13 @@ class YoutubeMusicAccount extends ChangeNotifier {
   Future<List<Track>> upNext(Track seed) async {
     final rows = await _browseClient.radio(seed.videoId!);
     return _webTracks(rows.where((r) => r.videoId != seed.videoId).toList());
+  }
+
+  /// [videoId] as YouTube Music lists it (the song's own title and artist, not the video's), read from the
+  /// head of its radio; null when it isn't there.
+  Future<Track?> song(String videoId) async {
+    final own = (await _browseClient.radio(videoId)).where((r) => r.videoId == videoId).take(1).toList();
+    return own.isEmpty ? null : _webTracks(own).first;
   }
 
   final _artists = <String, Future<WebArtistInfo?>>{};

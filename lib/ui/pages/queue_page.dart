@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../models/track.dart';
+import '../../services/language.dart';
 import '../../services/player_controller.dart';
 import '../shell_scope.dart';
 import '../theme.dart';
@@ -39,7 +40,7 @@ class QueuePage extends StatelessWidget {
     final hPad = EdgeInsets.symmetric(horizontal: shell.compact ? 12 : 16);
 
     return PageScaffold(
-      title: 'Queue',
+      title: tr.queue,
       slivers: [
         SliverToBoxAdapter(
           child: Padding(
@@ -47,14 +48,14 @@ class QueuePage extends StatelessWidget {
             child: Row(
               children: [
                 Expanded(
-                  child: Text('Queue', style: text.headlineMedium?.copyWith(fontWeight: FontWeight.w800)),
+                  child: Text(tr.queue, style: text.headlineMedium?.copyWith(fontWeight: FontWeight.w800)),
                 ),
                 if (current != null)
                   // The song playing and everything after it, autoplay included: what the page shows.
                   TextButton.icon(
                     onPressed: () => createPlaylist(context, tracks: [current, ...upNext]),
                     icon: const Icon(Icons.playlist_add_rounded),
-                    label: const Text('Save as playlist'),
+                    label: Text(tr.saveAsPlaylist),
                   ),
               ],
             ),
@@ -64,14 +65,11 @@ class QueuePage extends StatelessWidget {
           SliverToBoxAdapter(
             child: Padding(
               padding: EdgeInsets.all(pad),
-              child: Text(
-                'Nothing playing yet. Pick an album, artist or song to fill the queue.',
-                style: text.bodyLarge?.copyWith(color: AppColors.textSecondary),
-              ),
+              child: Text(tr.queueEmpty, style: text.bodyLarge?.copyWith(color: AppColors.textSecondary)),
             ),
           )
         else ...[
-          const SliverToBoxAdapter(child: SectionTitle('Now playing')),
+          SliverToBoxAdapter(child: SectionTitle(tr.nowPlaying)),
           SliverPadding(
             padding: hPad,
             sliver: SliverToBoxAdapter(
@@ -79,7 +77,7 @@ class QueuePage extends StatelessWidget {
             ),
           ),
           if (queued.isNotEmpty) ...[
-            SectionTitleSliver(title: c.playingFrom == null ? 'Next up' : 'Next from: ${c.playingFrom}'),
+            SectionTitleSliver(title: c.playingFrom == null ? tr.nextUp : tr.nextFrom(c.playingFrom!)),
             SliverPadding(
               padding: hPad,
               // Dragged by the handle (or a long press) to play sooner or later; ✕ or a swipe takes one out.
@@ -101,18 +99,15 @@ class QueuePage extends StatelessWidget {
             child: Padding(
               padding: EdgeInsets.fromLTRB(pad - 16, 16, pad - 16, 0),
               child: SwitchListTile(
-                title: const Text('Autoplay'),
-                subtitle: Text(
-                  'When the queue ends, keep playing similar songs from YouTube Music',
-                  style: text.bodySmall?.copyWith(color: AppColors.textSecondary),
-                ),
+                title: Text(tr.autoplay),
+                subtitle: Text(tr.autoplaySubtitle, style: text.bodySmall?.copyWith(color: AppColors.textSecondary)),
                 value: c.autoplay,
                 onChanged: c.setAutoplay,
               ),
             ),
           ),
           if (autoplayed.isNotEmpty) ...[
-            const SectionTitleSliver(title: 'Autoplay: similar to what you\'re playing'),
+            SectionTitleSliver(title: tr.autoplaySimilar),
             SliverPadding(
               padding: hPad,
               sliver: SliverList.builder(
@@ -170,7 +165,7 @@ class _QueueRow extends StatelessWidget {
           child: TrackRow(track: track, index: index, onTap: onTap),
         ),
         IconButton(
-          tooltip: 'Remove from queue',
+          tooltip: tr.removeFromQueue,
           color: muted,
           onPressed: onRemove,
           icon: const Icon(Icons.close_rounded, size: 20),
@@ -179,7 +174,7 @@ class _QueueRow extends StatelessWidget {
           ReorderableDragStartListener(
             index: i,
             child: Tooltip(
-              message: 'Drag to move',
+              message: tr.dragToMove,
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
                 child: Icon(Icons.drag_handle_rounded, color: muted),

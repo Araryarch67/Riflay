@@ -252,6 +252,31 @@ void main() {
     }, () => server.client);
   });
 
+  test('a downloaded song goes into a YouTube Music playlist by its video; a file of your own is left out', () async {
+    final server = FakeYtMusic();
+    await http.runWithClient(() async {
+      final a = await signedIn(server);
+      await a.playlistDetails('PL1');
+      final file = Uri.file('/music/d.m4a');
+      final download = Track(
+        id: '$file',
+        uri: file,
+        title: 'Downloaded',
+        artist: 'Artist',
+        sourceUrl: 'https://www.youtube.com/watch?v=d1',
+      );
+      final own = Track(id: '/music/own.flac', uri: Uri.file('/music/own.flac'), title: 'Own', artist: 'Me');
+      expect(await a.addToPlaylist('PL1', [download, own]), 1);
+      expect(server.playlists['PL1']!.rows.map((r) => r.$1), ['a', 'b', 'd1']);
+      final shown = a.cachedPlaylist('PL1')!;
+      expect(shown.tracks.last.id, 'yt:d1', reason: 'shown as the YouTube Music song, not the file');
+      expect(shown.rowIds['yt:d1'], 'row-d1');
+
+      expect(await a.addToPlaylist('PL1', [own]), 0, reason: 'nothing to send');
+      expect(server.playlists['PL1']!.rows, hasLength(3));
+    }, () => server.client);
+  });
+
   test('an unfollow stays while YouTube Music\'s list still shows the artist', () async {
     final server = FakeYtMusic();
     await http.runWithClient(() async {

@@ -9,7 +9,7 @@ import '../services/language.dart';
 import '../models/track.dart';
 import '../services/download_notifications.dart';
 import '../services/gate_hooks.dart';
-import 'pages/youtube_music_page.dart' show likedCollection;
+import 'pages/youtube_music_page.dart' show likedCollection, openRemotePlaylist;
 import 'widgets/track_row.dart' show openArtist;
 import '../services/player_presets.dart';
 import '../services/layout_prefs.dart';
@@ -31,7 +31,11 @@ import 'widgets/power_settings.dart';
 import 'shortcuts.dart';
 import 'theme.dart';
 import 'youtube_import.dart';
+import '../services/incoming_links.dart';
+import '../services/system_tray.dart';
+import '../services/youtube_importer.dart';
 import '../services/youtube_links.dart';
+import '../services/youtube_music_account.dart' show RemotePlaylist;
 import '../services/listen_together/listen_together.dart';
 import 'pages/listen_together_page.dart';
 import 'shell/desktop_sidebar.dart';
@@ -94,6 +98,7 @@ class _HomeShellState extends State<HomeShell> {
       final month = WrapMonth.parse(key);
       if (mounted && month != null) _open(WrapPage(month: month), location: Locations.wrap);
     });
+    IncomingLinks.instance.listen(_openIncoming);
   }
 
   String? _location;
@@ -152,6 +157,7 @@ class _HomeShellState extends State<HomeShell> {
     _history.removeListener(_followLocation);
     DownloadNotifications.registerOpenDownloads(null);
     DownloadNotifications.registerOpenWrap(null);
+    IncomingLinks.instance.stopListening(_openIncoming);
     _errors?.cancel();
     _listenEvents?.cancel();
     _searchFocus.dispose();
@@ -490,6 +496,73 @@ class _HomeShellState extends State<HomeShell> {
       ),
     );
   }
+
+  /// A YouTube link opened with Riflay or shared to it (lib/services/incoming_links.dart): a song or video
+  /// plays (phones show it playing), a playlist or album opens.
+  Future<void> _openIncoming(String text) async {
+    if (!mounted) return;
+    unawaited(SystemTray.bringToFront());
+    final messenger = ScaffoldMessenger.of(context);
+    final c = PlayerScope.read(context);
+    final link = IncomingLinks.read(text);
+    // Phones: the full-screen player would cover the page or message the link brings.
+    if (link is! VideoLink && _phoneRoutes.isNotEmpty) _closePhoneRoutes();
+    if (link == null) {
+      messenger.showSnackBar(SnackBar(content: Text(tr.linkNotYoutube)));
+      return;
+    }
+    messenger.showSnackBar(SnackBar(content: Text(tr.linkOpening)));
+    try {
+      switch (link) {
+        case VideoLink(:final videoId, :final startAt):
+          final track = await _incomingSong(c, videoId);
+          if (!mounted) return;
+          messenger.hideCurrentSnackBar();
+          await c.playList([track], 0);
+          if (startAt != null) await c.seek(startAt);
+          if (mounted && _compact && _phoneRoutes.isEmpty) _openNowPlaying();
+        case PlaylistLink(:final playlistId):
+          // The page shows the title it is given; a mix or private list may have none to read.
+          final title = await c.youtube.client.playlists
+              .get(playlistId)
+              .then((p) => p.title, onError: (Object _) => tr.playlist);
+          if (!mounted) return;
+          messenger.hideCurrentSnackBar();
+          _openRemote(RemotePlaylist(id: playlistId, title: title, count: 0));
+        case AlbumLink(:final browseId):
+          messenger.hideCurrentSnackBar();
+          _openRemote(RemotePlaylist(id: browseId, browseId: browseId, title: tr.album, count: 0));
+      }
+    } catch (e) {
+      debugPrint('Opening $link failed: $e');
+      if (!mounted) return;
+      if (_phoneRoutes.isNotEmpty) _closePhoneRoutes();
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(SnackBar(content: Text(tr.linkFailed)));
+    }
+  }
+
+  /// YouTube Music's own title and artist when it has the song; otherwise read from the video's title
+  /// ("Artist - Song", as downloads are named).
+  Future<Track> _incomingSong(PlayerController c, String videoId) async {
+    try {
+      if (await c.ytMusic.song(videoId).timeout(const Duration(seconds: 8)) case final song?) return song;
+    } catch (e) {
+      debugPrint('YouTube Music has no song $videoId: $e');
+    }
+    final video = await c.youtube.client.videos.get(videoId);
+    final names = YoutubeImporter.parseTitle(video.title, video.author);
+    return Track.youtube(
+      videoId: videoId,
+      title: names.title,
+      artist: names.artist,
+      duration: video.duration,
+      artworkUrl: video.thumbnails.highResUrl,
+    );
+  }
+
+  void _openRemote(RemotePlaylist p) =>
+      openRemotePlaylist(context, p, shell: _scoped(const SizedBox.shrink()) as ShellScope);
 
   /// Ctrl/Cmd+V anywhere outside a text field: a copied YouTube link opens the importer.
   Future<void> _pasteLink() async {

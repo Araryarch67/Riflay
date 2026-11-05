@@ -65,6 +65,25 @@ class PlaylistLink extends YoutubeLink {
   String toString() => 'PlaylistLink($playlistId)';
 }
 
+/// A YouTube Music album page (`music.youtube.com/browse/MPREb_…`).
+class AlbumLink extends YoutubeLink {
+  const AlbumLink(this.browseId);
+
+  final String browseId;
+
+  @override
+  String get canonicalUrl => 'https://music.youtube.com/browse/$browseId';
+
+  @override
+  bool operator ==(Object other) => other is AlbumLink && other.browseId == browseId;
+
+  @override
+  int get hashCode => browseId.hashCode;
+
+  @override
+  String toString() => 'AlbumLink($browseId)';
+}
+
 abstract final class YoutubeLinks {
   static final _videoId = RegExp(r'^[A-Za-z0-9_-]{11}$');
 
@@ -79,6 +98,8 @@ abstract final class YoutubeLinks {
     r'(?:youtube\.com|youtube-nocookie\.com|youtu\.be)(?![\w@-]|\.\w)(?:[/?#]\S*)?',
     caseSensitive: false,
   );
+
+  static final _albumId = RegExp(r'^MPREb_[A-Za-z0-9_-]{6,}$');
 
   static final _trailingPunctuation = RegExp(r'''[.,;:!?)\]}>"'*]+$''');
   static final _scheme = RegExp(r'^https?://', caseSensitive: false);
@@ -133,6 +154,11 @@ abstract final class YoutubeLinks {
         return id != null && _videoId.hasMatch(id) ? _video(id, query['list'], start) : null;
       case 'playlist':
         return _playlist(query['list']);
+      // YouTube Music pages: an album (MPREb_…) or a playlist (VL + its id).
+      case 'browse':
+        final id = segments.length > 1 ? segments[1] : '';
+        if (_albumId.hasMatch(id)) return AlbumLink(id);
+        return id.startsWith('VL') ? _playlist(id.substring(2)) : null;
       case 'attribution_link':
         final inner = query['u'];
         if (inner == null || !inner.startsWith('/')) return null;

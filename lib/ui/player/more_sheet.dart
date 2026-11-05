@@ -244,18 +244,7 @@ class PlayerMoreSheet extends StatelessWidget {
                     );
                   },
                 ),
-                ValueListenableBuilder(
-                  valueListenable: statsForNerds,
-                  builder: (context, on, _) => tile(
-                    Icons.query_stats_rounded,
-                    on ? tr.hideDetailStats : tr.detailStats,
-                    then((_) {
-                      statsForNerds.value = !on;
-                      if (!on) openPlayer?.call();
-                    }),
-                    on: on,
-                  ),
-                ),
+                tile(Icons.query_stats_rounded, tr.detailStats, then(showDetailStats)),
               ]),
             const SizedBox(height: 8),
           ],

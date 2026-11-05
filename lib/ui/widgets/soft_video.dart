@@ -5,8 +5,8 @@ import 'video_mode.dart';
 
 /// The song's music video, soft as if blurred, filling its box.
 ///
-/// Not a blur filter, which would run on every video frame: the video is drawn at 1/[shrink] of the box and
-/// stretched back with smooth filtering, which reads as a blur and costs almost nothing. With [from], it fades in
+/// Not a blur filter, which would run on every video frame: the video is magnified [shrink] times about its
+/// centre with smooth filtering, which reads as a blur and costs almost nothing. With [from], it fades in
 /// from that height down (0 is the top, 1 the foot), so the sharp video above shows through: the soft part sits
 /// under the title and the controls.
 class SoftVideo extends StatelessWidget {
@@ -16,6 +16,8 @@ class SoftVideo extends StatelessWidget {
   final double shrink;
   final double? from;
 
+  static const _overscan = 1.1;
+
   @override
   Widget build(BuildContext context) => LayoutBuilder(
     builder: (context, box) {
@@ -23,12 +25,15 @@ class SoftVideo extends StatelessWidget {
         child: OverflowBox(
           maxWidth: double.infinity,
           maxHeight: double.infinity,
+          // No filterQuality here: that draws the copy into a layer of its own first, and on Android that layer came
+          // out a few pixels short of the right and bottom edges, a sharp strip down the soft part of the page. The
+          // video's own texture is sampled smoothly when magnified.
           child: Transform.scale(
             scale: shrink,
-            filterQuality: FilterQuality.medium,
+            // The page's size (OverflowBox keeps the page as the least it may be) and 5% past each edge, clipped above.
             child: SizedBox(
-              width: box.maxWidth / shrink,
-              height: box.maxHeight / shrink,
+              width: box.maxWidth * _overscan,
+              height: box.maxHeight * _overscan,
               child: VideoBackground(track: track),
             ),
           ),

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -5,7 +6,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:riflay/models/track.dart';
 import 'package:riflay/services/appearance.dart';
-import 'package:riflay/services/audio_engine.dart';
 import 'package:riflay/services/layout_prefs.dart';
 import 'package:riflay/services/lyrics.dart';
 import 'package:riflay/services/player_controller.dart';
@@ -238,21 +238,17 @@ void main() {
     }
   });
 
-  testWidgets('Detail stats show over the cover on every preset, the cover-as-page ones too', (tester) async {
-    addTearDown(() => statsForNerds.value = false);
+  testWidgets('Detail stats open from the cover on every preset, the cover-as-page ones too', (tester) async {
     for (final preset in PlayerPreset.all) {
       await tester.runAsync(() => preset.apply(p));
-      statsForNerds.value = true;
       final c = await _show(tester, const NowPlayingPage(), const Size(412, 915));
       expect(find.byType(NowPlayingCover), findsOneWidget, reason: preset.name);
-      expect(
-        find.text('Detail stats'),
-        findsOneWidget,
-        reason: '${preset.name}: the panel is up',
-        skip: !AudioEngine.supported,
-      );
+      unawaited(showDetailStats(tester.element(find.byType(NowPlayingCover))));
+      await tester.pumpAndSettle();
+      expect(find.text('Detail stats'), findsOneWidget, reason: '${preset.name}: the sheet is up');
       expect(tester.takeException(), isNull, reason: preset.name);
-      statsForNerds.value = false;
+      Navigator.of(tester.element(find.text('Detail stats'))).pop();
+      await tester.pumpAndSettle();
       await _close(tester, c);
     }
   });

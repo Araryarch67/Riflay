@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../models/track.dart';
 import '../../platform/features.dart';
 import '../../services/beta_features.dart';
+import '../../services/language.dart';
 import '../../services/play_history.dart';
 import '../../services/player_controller.dart';
 import '../../services/smart_playlists.dart';
@@ -79,8 +80,8 @@ class _LibraryListState extends State<LibraryList> {
           _SimpleRow(
             collapsed: true,
             art: const _IconArt(Icons.add_rounded),
-            title: 'New playlist',
-            subtitle: 'Mix your own songs and YouTube Music',
+            title: tr.newPlaylist,
+            subtitle: tr.newPlaylistSubtitle,
             onTap: () => createPlaylist(context),
           ),
         for (final p in c.playlists) _LibraryRow(collection: c.playlistCollection(p), collapsed: widget.collapsed),
@@ -92,7 +93,9 @@ class _LibraryListState extends State<LibraryList> {
               collapsed: widget.collapsed,
               art: Artwork(track: playlistCover(p), size: 48),
               title: p.title,
-              subtitle: p.count == 0 ? 'Playlist • YouTube Music' : 'Playlist • YouTube Music • ${p.count} songs',
+              subtitle: p.count == 0
+                  ? '${tr.playlist} • YouTube Music'
+                  : '${tr.playlist} • YouTube Music • ${tr.songsCount(p.count)}',
               online: true,
               location: Locations.remotePlaylist(p.id),
               onTap: () => openRemotePlaylist(context, p),
@@ -104,7 +107,7 @@ class _LibraryListState extends State<LibraryList> {
             collapsed: widget.collapsed,
             art: _IconArt(_smartIcon(entry.key)),
             title: entry.value.title,
-            subtitle: 'Smart playlist • ${entry.value.subtitle}',
+            subtitle: '${tr.smartPlaylist} • ${entry.value.subtitle}',
             location: Locations.collection(entry.value),
             onTap: () => shell.openCollection(entry.value),
           ),
@@ -112,8 +115,8 @@ class _LibraryListState extends State<LibraryList> {
           _SimpleRow(
             collapsed: widget.collapsed,
             art: const _IconArt(Icons.insights_rounded),
-            title: 'Your listening stats',
-            subtitle: 'Top songs, artists and albums',
+            title: tr.yourListeningStats,
+            subtitle: tr.yourListeningStatsSubtitle,
             location: Locations.stats,
             onTap: () => shell.open(const ListeningStatsPage(), location: Locations.stats),
           ),
@@ -127,7 +130,7 @@ class _LibraryListState extends State<LibraryList> {
             collapsed: widget.collapsed,
             art: Artwork(track: playlistCover(a), size: 48, circle: true),
             title: a.title,
-            subtitle: 'Artist • YouTube Music',
+            subtitle: '${tr.artist} • YouTube Music',
             online: true,
             location: Locations.remotePlaylist(a.id),
             onTap: () => openRemotePlaylist(context, a),
@@ -143,9 +146,9 @@ class _LibraryListState extends State<LibraryList> {
         Padding(
           padding: const EdgeInsets.fromLTRB(8, 16, 8, 0),
           child: _Prompt(
-            title: 'Your YouTube Music',
-            body: 'Sign in to see your liked songs and playlists here.',
-            button: 'Sign in with Google',
+            title: tr.yourYouTubeMusic,
+            body: tr.yourYouTubeMusicBody,
+            button: tr.signInWithGoogle,
             onPressed: account.connecting ? null : () => signInToYoutubeMusic(context),
           ),
         ),
@@ -153,9 +156,9 @@ class _LibraryListState extends State<LibraryList> {
         Padding(
           padding: const EdgeInsets.fromLTRB(8, 16, 8, 0),
           child: _Prompt(
-            title: 'Music on this device',
-            body: 'Add audio files to play them offline.',
-            button: 'Add songs',
+            title: tr.musicOnDevice,
+            body: tr.musicOnDeviceBody,
+            button: tr.addSongs,
             onPressed: shell.addFiles,
           ),
         ),
@@ -167,7 +170,7 @@ class _LibraryListState extends State<LibraryList> {
           // Centred over the rows; New playlist is already the first of them.
           ? Center(
               child: IconButton(
-                tooltip: 'Your Library',
+                tooltip: tr.yourLibrary,
                 onPressed: () => shell.open(const LibraryPage()),
                 icon: Icon(Icons.library_music_rounded, color: AppColors.textSecondary),
               ),
@@ -178,7 +181,7 @@ class _LibraryListState extends State<LibraryList> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    'Your Library',
+                    tr.yourLibrary,
                     style: (widget.dense ? text.titleMedium : text.headlineSmall)?.copyWith(
                       fontWeight: FontWeight.w800,
                       color: widget.dense ? AppColors.textSecondary : null,
@@ -188,58 +191,49 @@ class _LibraryListState extends State<LibraryList> {
                 // The phone layout has Settings as a tab of its own.
                 if (!widget.dense && !shell.compact)
                   IconButton(
-                    tooltip: 'Settings',
+                    tooltip: tr.navSettings,
                     onPressed: () => shell.open(const SettingsPage()),
                     icon: const Icon(Icons.settings_outlined),
                   ),
                 PopupMenuButton<VoidCallback>(
                   // Over the whole window, so a click anywhere (sidebar included) closes it.
                   useRootNavigator: true,
-                  tooltip: 'Add',
+                  tooltip: tr.add,
                   icon: const Icon(Icons.add_rounded),
                   onSelected: (action) => action(),
                   itemBuilder: (_) => [
                     PopupMenuItem(
                       value: () => createPlaylist(context),
-                      child: const MenuRow(leading: Icon(Icons.playlist_add_rounded), title: Text('New playlist')),
+                      child: MenuRow(leading: Icon(Icons.playlist_add_rounded), title: Text(tr.newPlaylist)),
                     ),
                     if (account.canEdit)
                       PopupMenuItem(
                         value: () => joinSharedPlaylist(context),
-                        child: const MenuRow(
-                          leading: Icon(Icons.group_add_outlined),
-                          title: Text('Join a shared playlist'),
-                        ),
+                        child: MenuRow(leading: Icon(Icons.group_add_outlined), title: Text(tr.joinSharedPlaylist)),
                       ),
                     if (Features.playlistImport) ...[
                       PopupMenuItem(
                         value: () => importPlaylist(context),
-                        child: const MenuRow(
-                          leading: Icon(Icons.playlist_add_rounded),
-                          title: Text('Import a playlist'),
-                        ),
+                        child: MenuRow(leading: Icon(Icons.playlist_add_rounded), title: Text(tr.importPlaylist)),
                       ),
                       PopupMenuItem(
                         value: () => shell.open(const SpotifyPage(), location: Locations.spotify),
-                        child: const MenuRow(
-                          leading: Icon(Icons.library_music_outlined),
-                          title: Text('Spotify library'),
-                        ),
+                        child: MenuRow(leading: Icon(Icons.library_music_outlined), title: Text(tr.spotifyLibrary)),
                       ),
                     ],
                     const PopupMenuDivider(),
                     PopupMenuItem(
                       value: shell.addFiles,
-                      child: const MenuRow(leading: Icon(Icons.audio_file_outlined), title: Text('Add songs')),
+                      child: MenuRow(leading: Icon(Icons.audio_file_outlined), title: Text(tr.addSongs)),
                     ),
                     if (shell.addFolder != null)
                       PopupMenuItem(
                         value: shell.addFolder,
-                        child: const MenuRow(leading: Icon(Icons.folder_open_rounded), title: Text('Add a folder')),
+                        child: MenuRow(leading: Icon(Icons.folder_open_rounded), title: Text(tr.addFolder)),
                       ),
                     PopupMenuItem(
                       value: shell.importFromYoutube,
-                      child: const MenuRow(leading: Icon(Icons.add_link_rounded), title: Text('Import from YouTube')),
+                      child: MenuRow(leading: Icon(Icons.add_link_rounded), title: Text(tr.importFromYouTube)),
                     ),
                   ],
                 ),
@@ -265,10 +259,10 @@ class _LibraryListState extends State<LibraryList> {
                     if (f != LibraryFilter.downloaded || downloads != null || _filter == f)
                       FilterChip(
                         label: Text(switch (f) {
-                          LibraryFilter.playlists => 'Playlists',
-                          LibraryFilter.downloaded => 'Downloaded',
-                          LibraryFilter.albums => 'Albums',
-                          LibraryFilter.artists => 'Artists',
+                          LibraryFilter.playlists => tr.playlists,
+                          LibraryFilter.downloaded => tr.downloaded,
+                          LibraryFilter.albums => tr.albums,
+                          LibraryFilter.artists => tr.artists,
                         }),
                         selected: _filter == f,
                         onSelected: (on) => setState(() => _filter = on ? f : null),
@@ -288,7 +282,7 @@ class _LibraryListState extends State<LibraryList> {
                         child: Padding(
                           padding: const EdgeInsets.all(24),
                           child: Text(
-                            'Add songs or a playlist to start your library.',
+                            tr.libraryEmpty,
                             style: text.bodyMedium?.copyWith(color: AppColors.textSecondary),
                           ),
                         ),
@@ -308,8 +302,8 @@ class _LibraryListState extends State<LibraryList> {
                               prototypeItem: _SimpleRow(
                                 collapsed: widget.collapsed,
                                 art: const _IconArt(Icons.add_rounded),
-                                title: 'New playlist',
-                                subtitle: 'Mix your own songs and YouTube Music',
+                                title: tr.newPlaylist,
+                                subtitle: tr.newPlaylistSubtitle,
                                 onTap: () {},
                               ),
                               itemBuilder: (context, i) => i < rows.length
@@ -503,11 +497,11 @@ class _LibraryRow extends StatelessWidget {
                                 switch (collection.kind) {
                                   CollectionKind.allSongs ||
                                   CollectionKind.youtube ||
-                                  CollectionKind.remote => 'Playlist • ${collection.subtitle}',
-                                  CollectionKind.smart => 'Smart playlist • ${collection.subtitle}',
-                                  CollectionKind.playlist => 'Playlist • Riflay • ${collection.subtitle}',
-                                  CollectionKind.album => 'Album • ${collection.subtitle}',
-                                  CollectionKind.artist => 'Artist',
+                                  CollectionKind.remote => '${tr.playlist} • ${collection.subtitle}',
+                                  CollectionKind.smart => '${tr.smartPlaylist} • ${collection.subtitle}',
+                                  CollectionKind.playlist => '${tr.playlist} • Riflay • ${collection.subtitle}',
+                                  CollectionKind.album => '${tr.album} • ${collection.subtitle}',
+                                  CollectionKind.artist => tr.artist,
                                 },
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,

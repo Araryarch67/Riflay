@@ -100,7 +100,10 @@ class TrackVisual extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final mode = VideoMode.instance;
+    // Asks for the song's video itself: on a computer the side panel's cover is the only Now Playing view on
+    // screen, with no Song / Video switch or video background to ask for it, so the cover never turned.
+    final mode = VideoMode.instance..follow(PlayerScope.read(context));
+    mode.lookUp(track);
     return ListenableBuilder(
       listenable: mode,
       builder: (context, _) => mode.on && mode.videoOf(track) != null ? _VideoView(cover: cover) : cover,
@@ -185,6 +188,9 @@ class VideoBackground extends StatefulWidget {
 }
 
 class _VideoBackgroundState extends State<VideoBackground> {
+  /// 3% past each edge: more than the shortfall seen on phones, too little to notice on a picture cropped to cover.
+  static const _overscan = 1.06;
+
   bool _registered = false;
 
   /// Whether this is on screen and may use the video: not covered by another page, not Lightweight.
@@ -219,14 +225,21 @@ class _VideoBackgroundState extends State<VideoBackground> {
         if (video == null) return const SizedBox.shrink();
         return IgnorePointer(
           child: RepaintBoundary(
-            child: Video(
-              controller: video,
-              controls: NoVideoControls,
-              fit: BoxFit.cover,
-              fill: Colors.black,
-              // VideoMode stops it itself when the app goes to the background.
-              pauseUponEnteringBackgroundMode: false,
-              resumeUponEnteringForegroundMode: false,
+            // A little larger than the page and clipped: on Android the video's picture falls a few pixels short
+            // of its box (a dark strip down the right, a band along the top), which a background must not show.
+            child: ClipRect(
+              child: Transform.scale(
+                scale: _overscan,
+                child: Video(
+                  controller: video,
+                  controls: NoVideoControls,
+                  fit: BoxFit.cover,
+                  fill: Colors.black,
+                  // VideoMode stops it itself when the app goes to the background.
+                  pauseUponEnteringBackgroundMode: false,
+                  resumeUponEnteringForegroundMode: false,
+                ),
+              ),
             ),
           ),
         );

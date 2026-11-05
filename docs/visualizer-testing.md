@@ -13,7 +13,7 @@ them. Existing layout preferences migrate to Pulse once.
 
 Enable **Settings → Look & feel → Layout → Audio visualizer**. It starts off, and
 an older installation keeps it on only if it had also switched the former Beta
-feature on. The same switch gates the reactive background because both use native metering.
+feature on.
 
 The former `af-metadata/visualizer/lavfi.astats.Overall.RMS_level` query causes
 a native null-pointer dereference in the bundled Android libmpv. Reproduced on
