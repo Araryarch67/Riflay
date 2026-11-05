@@ -203,4 +203,51 @@ void main() {
     presence.dispose();
     await fake.close();
   });
+
+  group('options', () {
+    final song = Track.youtube(
+      videoId: 'v1',
+      title: 'Kyapi',
+      artist: 'Houshou Marine',
+      artworkUrl: 'https://img/c.jpg',
+      duration: const Duration(minutes: 3),
+    );
+    Map<String, dynamic> sent(DiscordOptions o, {bool playing = true}) =>
+        (DiscordPresence('id', socketPaths: () => const [])..options = o).activity(
+          song,
+          position: const Duration(seconds: 30),
+          duration: const Duration(minutes: 3),
+          playing: playing,
+        );
+
+    test('the defaults show everything, as before', () {
+      final a = sent(const DiscordOptions());
+      expect((a['assets'] as Map)['large_image'], 'https://img/c.jpg');
+      expect(a['timestamps'], isNotNull);
+      expect(a['status_display_type'], 2);
+      expect([for (final b in a['buttons'] as List) b['label']], ['Listen on YouTube Music', 'Download Riflay']);
+    });
+
+    test('each option leaves its part out', () {
+      expect((sent(const DiscordOptions(cover: false))['assets'] as Map)['large_image'], 'openmusic');
+      expect(sent(const DiscordOptions(time: false)).containsKey('timestamps'), isFalse);
+      expect(sent(const DiscordOptions(songInList: false))['status_display_type'], 0);
+      expect([
+        for (final b in sent(const DiscordOptions(listenButton: false))['buttons'] as List) b['label'],
+      ], ['Download Riflay']);
+      expect(sent(const DiscordOptions(listenButton: false, appButton: false))['buttons'], isEmpty);
+    });
+
+    test('a paused song stays shown only when asked, with no clock and marked paused', () {
+      final a = sent(const DiscordOptions(whilePaused: true), playing: false);
+      expect(a.containsKey('timestamps'), isFalse, reason: 'a clock would run on');
+      expect((a['assets'] as Map)['small_text'], startsWith('Paused'));
+    });
+
+    test('kept as JSON, and an old save without them keeps the defaults', () {
+      const o = DiscordOptions(cover: false, whilePaused: true);
+      expect(DiscordOptions.fromJson(o.toJson()), o);
+      expect(DiscordOptions.fromJson(const {}), const DiscordOptions());
+    });
+  });
 }

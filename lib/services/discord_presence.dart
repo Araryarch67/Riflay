@@ -9,6 +9,77 @@ import 'package:flutter/foundation.dart';
 import '../models/track.dart';
 import '../platform/host.dart';
 
+/// What the Discord presence shows (Settings › Accounts & services › Discord & lyrics services).
+@immutable
+class DiscordOptions {
+  const DiscordOptions({
+    this.cover = true,
+    this.time = true,
+    this.listenButton = true,
+    this.appButton = true,
+    this.songInList = true,
+    this.whilePaused = false,
+  });
+
+  /// The song's cover; off: Riflay's logo.
+  final bool cover;
+
+  /// The time played and the time left (Discord draws the bar).
+  final bool time;
+  final bool listenButton;
+  final bool appButton;
+
+  /// The member list says the song's title; off: "Listening to Riflay".
+  final bool songInList;
+
+  /// A paused song stays shown, marked paused; off: the presence goes away.
+  final bool whilePaused;
+
+  DiscordOptions copyWith({
+    bool? cover,
+    bool? time,
+    bool? listenButton,
+    bool? appButton,
+    bool? songInList,
+    bool? whilePaused,
+  }) => DiscordOptions(
+    cover: cover ?? this.cover,
+    time: time ?? this.time,
+    listenButton: listenButton ?? this.listenButton,
+    appButton: appButton ?? this.appButton,
+    songInList: songInList ?? this.songInList,
+    whilePaused: whilePaused ?? this.whilePaused,
+  );
+
+  Map<String, Object> toJson() => {
+    'cover': cover,
+    'time': time,
+    'listenButton': listenButton,
+    'appButton': appButton,
+    'songInList': songInList,
+    'whilePaused': whilePaused,
+  };
+
+  factory DiscordOptions.fromJson(Map<String, Object?> j) {
+    bool b(String k, bool d) => j[k] as bool? ?? d;
+    const d = DiscordOptions();
+    return DiscordOptions(
+      cover: b('cover', d.cover),
+      time: b('time', d.time),
+      listenButton: b('listenButton', d.listenButton),
+      appButton: b('appButton', d.appButton),
+      songInList: b('songInList', d.songInList),
+      whilePaused: b('whilePaused', d.whilePaused),
+    );
+  }
+
+  @override
+  bool operator ==(Object other) => other is DiscordOptions && jsonEncode(other.toJson()) == jsonEncode(toJson());
+
+  @override
+  int get hashCode => jsonEncode(toJson()).hashCode;
+}
+
 /// Discord Rich Presence over Discord's local IPC socket (no SDK, no network).
 ///
 /// Protocol: frames of `[int32 LE opcode][int32 LE length][JSON]` over
@@ -34,6 +105,9 @@ class DiscordPresence {
   Map<String, dynamic>? _wanted;
   bool _enabled = true;
 
+  /// What the presence shows; Settings sets it.
+  DiscordOptions options = const DiscordOptions();
+
   static bool get supported => Host.isLinux || Host.isWindows || Host.isMacOS;
 
   bool get enabled => _enabled;
@@ -55,7 +129,9 @@ class DiscordPresence {
     String? quality,
   }) {
     if (!supported || !_enabled) return;
-    _wanted = track == null || !playing ? null : _activity(track, position, duration, quality);
+    _wanted = track == null || (!playing && !options.whilePaused)
+        ? null
+        : activity(track, position: position, duration: duration, quality: quality, playing: playing);
     // Nothing shown yet and nothing to show: don't wake Discord up just to clear.
     if (_wanted == null && _conn == null) {
       _pending?.cancel();
@@ -70,24 +146,37 @@ class DiscordPresence {
     _pending = Timer(wait.isNegative ? Duration.zero : wait, () => _send(_wanted));
   }
 
-  Map<String, dynamic> _activity(Track t, Duration position, Duration? duration, String? quality) {
+  /// What is sent to Discord for [t] at [position], as [options] say. Settings' preview draws this very map, so
+  /// what it shows is what Discord gets.
+  Map<String, dynamic> activity(
+    Track t, {
+    required Duration position,
+    Duration? duration,
+    String? quality,
+    bool playing = true,
+  }) {
     final now = DateTime.now().millisecondsSinceEpoch;
     final start = now - position.inMilliseconds;
     final videoId = t.videoId ?? _videoIdFrom(t.sourceUrl);
     // YouTube's own thumbnails are 4:3 with black bars; a song's square art is preferred.
-    final cover = t.artworkUrl ?? (videoId == null ? null : 'https://i.ytimg.com/vi/$videoId/hqdefault.jpg');
+    final cover = !options.cover
+        ? null
+        : t.artworkUrl ?? (videoId == null ? null : 'https://i.ytimg.com/vi/$videoId/hqdefault.jpg');
     final listenUrl = videoId == null ? null : 'https://music.youtube.com/watch?v=$videoId';
     final artistUrl = t.artistId == null ? null : 'https://music.youtube.com/channel/${t.artistId}';
     final artist = t.artist.trim();
     return {
       'type': 2, // "Listening to"
-      'status_display_type': 2, // member list shows the song title, not the app name
+      // The member list shows the song's title (2) or the app's name (0).
+      'status_display_type': options.songInList ? 2 : 0,
       // Laid out like the music apps' own presence: the song, then who sings it, then the album under the cover.
       'details': _clip(t.title),
       'details_url': ?listenUrl,
       'state': _clip(artist.isNotEmpty ? artist : (quality ?? 'Riflay')),
       'state_url': ?artistUrl,
-      'timestamps': {'start': start, 'end': ?(duration == null ? null : start + duration.inMilliseconds)},
+      // Paused: no clock, which would run on.
+      if (options.time && playing)
+        'timestamps': {'start': start, 'end': ?(duration == null ? null : start + duration.inMilliseconds)},
       'assets': {
         // Remote URLs work as images; local files fall back to the logo, an art
         // asset in the Discord developer portal still named after the app's old name.
@@ -95,13 +184,13 @@ class DiscordPresence {
         'large_text': _clip(t.album ?? t.title),
         'large_url': ?listenUrl,
         // The app's logo on the cover's corner, with the sound's quality for those who hover it.
-        if (cover != null) 'small_image': 'openmusic',
-        if (cover != null) 'small_text': _clip([?quality, 'Riflay'].join(' · ')),
+        if (cover != null || !playing) 'small_image': 'openmusic',
+        if (cover != null || !playing) 'small_text': _clip([if (!playing) 'Paused', ?quality, 'Riflay'].join(' · ')),
       },
       // Discord allows two buttons; friends who like the music can get the app.
       'buttons': [
-        if (listenUrl != null) {'label': 'Listen on YouTube Music', 'url': listenUrl},
-        {'label': 'Download Riflay', 'url': downloadUrl},
+        if (options.listenButton && listenUrl != null) {'label': 'Listen on YouTube Music', 'url': listenUrl},
+        if (options.appButton) {'label': 'Download Riflay', 'url': downloadUrl},
       ],
     };
   }

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../models/track.dart';
 import '../../platform/features.dart';
+import '../../services/artist_channels.dart';
 import '../../services/flac_convert.dart';
 import '../../services/layout_prefs.dart';
 import '../../services/play_history.dart';
@@ -46,20 +47,31 @@ class CollectionPage extends StatelessWidget {
     // wherever in the app it's made), not on every change of what's playing:
     // the buttons and rows that show that follow it themselves.
     final c = PlayerScope.identity(context);
-    return ListenableBuilder(
+    Widget page([Track? picture]) => ListenableBuilder(
       listenable: collection.id == likedMusicId
           ? Listenable.merge([c.libraryRevision, c.ytMusic])
           : collection.kind == CollectionKind.smart
           ? Listenable.merge([c.libraryRevision, PlayHistory.instance])
           : c.libraryRevision,
-      builder: (context, _) => _build(context, c),
+      builder: (context, _) => _build(context, c, picture),
+    );
+    // An artist is pictured by their own photo, not by their first song's cover (a playlist keeps that); the
+    // song's cover stays until the photo is found, and when there is none.
+    if (collection.kind != CollectionKind.artist && !actions.any((a) => a is FollowButton)) return page();
+    return FutureBuilder(
+      future: ArtistChannels.picture(
+        c.ytMusic,
+        collection.title,
+        channelId: actions.whereType<FollowButton>().firstOrNull?.artistId,
+      ),
+      builder: (context, snap) => page(snap.data),
     );
   }
 
-  Widget _build(BuildContext context, PlayerController c) {
+  Widget _build(BuildContext context, PlayerController c, Track? picture) {
     final shell = ShellScope.of(context);
     // Re-resolve so tag scans / removals show up while the page is open.
-    final live =
+    var live =
         switch (collection.kind) {
           CollectionKind.allSongs => c.allSongs,
           CollectionKind.youtube => c.youtubeDownloads,
@@ -79,6 +91,7 @@ class CollectionPage extends StatelessWidget {
           CollectionKind.album => c.albums.where((a) => a.title == collection.title).firstOrNull,
         } ??
         collection;
+    if (picture != null) live = live.withPicture(picture);
     final tracks = live.tracks;
     final isArtist = live.kind == CollectionKind.artist;
     final isAll = live.kind == CollectionKind.allSongs;

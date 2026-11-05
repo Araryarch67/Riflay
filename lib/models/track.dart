@@ -208,7 +208,14 @@ int compareAlbumOrder(Track a, Track b) {
 
 /// A group of tracks shown as a card / page (album, artist or the whole library).
 class Collection {
-  const Collection({required this.kind, required this.title, required this.subtitle, required this.tracks, this.id});
+  const Collection({
+    required this.kind,
+    required this.title,
+    required this.subtitle,
+    required this.tracks,
+    this.id,
+    this.picture,
+  });
 
   final CollectionKind kind;
 
@@ -218,7 +225,14 @@ class Collection {
   final String subtitle;
   final List<Track> tracks;
 
-  Track? get cover => tracks.isEmpty ? null : tracks.first;
+  /// A picture of its own (an artist's photo), drawn instead of its first song's cover.
+  final Track? picture;
+
+  Track? get cover => picture ?? (tracks.isEmpty ? null : tracks.first);
+
+  /// The same, with [p] as its picture.
+  Collection withPicture(Track p) =>
+      Collection(kind: kind, title: title, subtitle: subtitle, tracks: tracks, id: id, picture: p);
 }
 
 /// [Collection.id] of YouTube Music's "Liked music".

@@ -192,10 +192,20 @@ class PlayerController extends ChangeNotifier {
 
   static const _discordAppId = '1561368591297941655';
   static const _discordKey = 'discord.enabled';
+  static const _discordOptionsKey = 'discord.options';
 
   final DiscordPresence discord = DiscordPresence(_discordAppId);
 
   bool get discordEnabled => discord.enabled;
+
+  DiscordOptions get discordOptions => discord.options;
+
+  Future<void> setDiscordOptions(DiscordOptions value) async {
+    discord.options = value;
+    _updatePresence(force: true);
+    notifyListeners();
+    await (await SharedPreferences.getInstance()).setString(_discordOptionsKey, jsonEncode(value.toJson()));
+  }
 
   Future<void> setDiscordEnabled(bool value) async {
     discord.enabled = value;
@@ -883,6 +893,12 @@ class PlayerController extends ChangeNotifier {
       debugPrint('Ignoring unreadable playlists: $e');
     }
     discord.enabled = prefs.getBool(_discordKey) ?? true;
+    try {
+      final saved = prefs.getString(_discordOptionsKey);
+      if (saved != null) discord.options = DiscordOptions.fromJson((jsonDecode(saved) as Map).cast());
+    } catch (e) {
+      debugPrint('Discord options unreadable: $e');
+    }
     _autoplay = prefs.getBool(_autoplayKey) ?? true;
     final loop = LoopMode.values.asNameMap()[prefs.getString(_loopKey)];
     final level = prefs.getDouble(_volumeKey);

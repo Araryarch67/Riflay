@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../platform/features.dart';
 import '../../platform/host.dart';
+import '../widgets/discord_preview.dart';
 import '../widgets/power_settings.dart';
 import '../../services/beta_features.dart';
 import '../../services/language.dart';
@@ -535,6 +536,8 @@ class _IntegrationsSettingsState extends State<_IntegrationsSettings> {
             value: c.discordEnabled,
             onChanged: c.setDiscordEnabled,
           ),
+        // What it shows, and a preview of the profile card.
+        if (DiscordPresence.supported && c.discordEnabled) const DiscordPresenceSettings(),
         ListTile(
           leading: const Icon(Icons.key_rounded),
           title: const Text('Better Lyrics API key'),
