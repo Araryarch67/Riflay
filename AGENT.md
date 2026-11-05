@@ -80,6 +80,7 @@ lib/
     video_mode.dart            Video mode: a YouTube song's music video on Now Playing
     youtube_stream.dart        A YouTube song's audio stream in one player request (yt-dlp is the fallback)
     usb_dac.dart / linux_alsa.dart  Direct outputs: Android USB DACs, Linux ALSA cards
+    direct_usb.dart            Android Direct USB: libusbdac streams to the DAC itself (DirectUsb.kt), any phone
     media_session.dart         System media controls (Android notification, Control Center, MPRIS)
     system_tray.dart           Computers: the tray icon and menu, and Close to tray (Settings › Power & background);
                                the plugin sits behind platform/tray.dart. Linux needs a StatusNotifier host
@@ -134,6 +135,16 @@ test/                          Unit and widget tests
   Performance budget).
 
 ## How audio works
+
+- **Android Direct USB** (Settings › Sound › Output & quality, experimental, off by default). Android 14's
+  bit-perfect mixer (`usb_dac.dart`) only works where the phone's maker offers it; many (Xiaomi, Samsung)
+  list no bit-perfect format. Direct USB goes around Android instead: mpv writes the decoded song with
+  `ao=pcm` into a FIFO in the cache folder (a WAV header per stream), and `DirectUsb.kt` reads it into
+  libusbdac's `RoutingAudioSink` (JitPack `com.github.ostrichbat2k:libusbdac`), which claims the DAC's USB
+  interface and streams to it, or plays through Android for a format the DAC doesn't take. One per
+  process: mpv blocks on the FIFO without a reader. Pause/play/seek reach it from `PlayerController`.
+  The position shown runs ahead by what the pipe holds (well under a second). Settings shows its route,
+  formats, dropouts and log, so a screenshot tells what happened.
 
 - just_audio everywhere, with libmpv as its backend on **every platform**
   through `just_audio_media_kit`. Linux uses the system libmpv; the others use

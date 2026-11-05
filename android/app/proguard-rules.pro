@@ -11,3 +11,7 @@
 -keep class kotlin.Result { *; }
 -keep class kotlin.Result$Failure { *; }
 -keep class kotlin.Unit { *; }
+
+# Direct USB (DirectUsb.kt): libusbdac ships no keep rules. Its native layer is found through JNI by class and
+# method name, and its Room database by generated class name, so neither may be renamed.
+-keep class org.ostrichbat2k.usbdac.** { *; }

@@ -16,6 +16,7 @@ import '../platform/mpv.dart';
 import 'layout_prefs.dart';
 import 'carla_locator.dart';
 import 'crossfade.dart';
+import 'direct_usb.dart';
 import 'ios_route.dart';
 import 'linux_alsa.dart';
 import 'usb_dac.dart';
@@ -485,7 +486,33 @@ class AudioEngine extends ChangeNotifier {
 
   /// [bitPerfectWanted], and on Android only while a USB DAC is plugged in: there the switch is
   /// Android 14's bit-perfect USB output, and without a DAC nothing can be bit-perfect.
-  bool get bitPerfect => bitPerfectWanted && (!Host.isAndroid || androidUsb);
+  bool get bitPerfect => (bitPerfectWanted && (!Host.isAndroid || androidUsb)) || directUsbActive;
+
+  /// Android: Direct USB (Settings › Sound › Output & quality): libusbdac streams to the USB DAC itself, so it is
+  /// bit-perfect on any phone. Asked for in Settings; [directUsbActive] while a DAC is plugged in and it runs.
+  bool directUsbWanted = false;
+  final directUsb = DirectUsbOutput();
+  bool get directUsbActive => Host.isAndroid && directUsbWanted && directUsb.running && directUsb.hasDac;
+  bool _directUsbWas = false;
+
+  /// mpv's own output before Direct USB took it over (media_kit's choice), put back when it ends.
+  String? _defaultAo;
+
+  Future<void> setDirectUsb(bool v) async {
+    directUsbWanted = v;
+    await directUsb.enable(v);
+    _directUsbWas = directUsbActive;
+    await _set(() {}, reopen: true);
+  }
+
+  void _onDirectUsb() {
+    notifyListeners();
+    // A DAC plugged in or pulled out while Direct USB is on: mpv's output switches over.
+    if (directUsbActive != _directUsbWas) {
+      _directUsbWas = directUsbActive;
+      _changed(reopenOutput: true).ignore();
+    }
+  }
 
   set bitPerfect(bool v) => bitPerfectWanted = v;
 
@@ -735,6 +762,8 @@ class AudioEngine extends ChangeNotifier {
     if (Host.isAndroid) {
       await usb.init();
       usb.addListener(_onUsb);
+      await directUsb.init();
+      directUsb.addListener(_onDirectUsb);
     }
     final raw = (await SharedPreferences.getInstance()).getString(_key);
     if (raw == null) return;
@@ -765,6 +794,11 @@ class AudioEngine extends ChangeNotifier {
       hqResampler = j['hqResampler'] as bool? ?? hqResampler;
       bitPerfectWanted = j['bitPerfect'] as bool? ?? bitPerfectWanted;
       nativeDsd = j['nativeDsd'] as bool? ?? nativeDsd;
+      directUsbWanted = Host.isAndroid && (j['directUsb'] as bool? ?? false);
+      if (directUsbWanted) {
+        await directUsb.enable(true);
+        _directUsbWas = directUsbActive;
+      }
       plugins = j['plugins'] as bool? ?? plugins;
       impulsePath = j['impulsePath'] as String?;
       impulseName = j['impulseName'] as String?;
@@ -823,6 +857,7 @@ class AudioEngine extends ChangeNotifier {
       'hqResampler': hqResampler,
       'bitPerfect': bitPerfectWanted,
       'nativeDsd': nativeDsd,
+      'directUsb': directUsbWanted,
       'plugins': plugins,
       'impulsePath': impulsePath,
       'impulseName': impulseName,
@@ -1241,7 +1276,8 @@ class AudioEngine extends ChangeNotifier {
     final before = _mixer;
     final dac = usb.device;
     MixerChoice? choice;
-    if (bitPerfect && dac != null) {
+    // Direct USB reaches the DAC by itself: Android's mixer attributes stay as they are.
+    if (bitPerfect && dac != null && !directUsbActive) {
       final rate = int.tryParse(await _read(p, 'audio-params/samplerate')) ?? 0;
       if (rate == 0) return false; // nothing decoded yet: the next song's parameters call again
       final bits = SignalPath.bitsOf(await _read(p, 'audio-params/format')) ?? 32;
@@ -1295,6 +1331,7 @@ class AudioEngine extends ChangeNotifier {
   Future<void> _applyAll(Player player) async {
     if (player.platform case final NativePlayer p) {
       _followSong(player, p);
+      if (Host.isAndroid) _defaultAo ??= await _read(p, 'ao');
       // A level sent to the running filter is lost when the next song's filters
       // are built from `af`, and the song would start at the old level. Before a
       // song loads (no filters run then), `af` gets the current one. That also puts
@@ -1307,6 +1344,8 @@ class AudioEngine extends ChangeNotifier {
       p.onLoadHooks.add(() async {
         await applied.future;
         _visualizerFormat = null;
+        // A 24-bit song reaches the pipe in mpv's 32-bit container: Direct USB is told its real depth.
+        if (directUsbActive) await directUsb.sourceBits(await _sourceBits(await _read(p, 'path')));
         if (hasRoutePicker) await _matchRate(p);
         if (_chainSent != filterChain) await _setChain(p);
       });
@@ -1372,6 +1411,14 @@ class AudioEngine extends ChangeNotifier {
       'audio-fallback-to-null': 'yes',
       // A downloaded music video plays as sound: its picture is neither decoded nor shown here.
       'vid': 'no',
+      // Android, Direct USB: the decoded song goes into the pipe DirectUsb.kt reads, a WAV header for each
+      // stream so it knows the format, at the song's own rate and depth (see bitPerfect). Otherwise mpv's own.
+      // The pipe first: switching `ao` may reopen the output at once, and it must open the pipe, not a file.
+      if (Host.isAndroid) ...{
+        'ao-pcm-file': directUsbActive ? directUsb.fifo! : '',
+        'ao-pcm-waveheader': 'yes',
+        'ao': directUsbActive ? 'pcm' : (_defaultAo ?? ''),
+      },
       'audio-buffer': buffer.seconds.toString(),
       'af': filterChain,
       'audio-device': _openedDevice!,

@@ -218,7 +218,9 @@ class MediaKitPlayer extends AudioPlayerPlatform {
   /// Whether an mpv error line is about the audio output or the audio filter chain, not the
   /// song: those come from reopening the output after a setting changed.
   static bool isOutputError(String error) => RegExp(
-        r'audio (device|output|driver|filter)|initialize audio|no sound|audio reinit|reinit(iali[sz]ing)? audio|audio resampl',
+        r'audio (device|output|driver|filter)|initialize audio|no sound|audio reinit|reinit(iali[sz]ing)? audio|audio resampl'
+        // Riflay's Direct USB: ao=pcm writes into a pipe, which can't seek back to finish the WAV header.
+        r'|WAV size headers',
         caseSensitive: false,
       ).hasMatch(error);
 

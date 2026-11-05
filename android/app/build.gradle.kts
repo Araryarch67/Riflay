@@ -62,6 +62,11 @@ kotlin {
 
 dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
+    // Direct USB (DirectUsb.kt): a USB Audio Class driver that streams to the DAC itself, on any phone.
+    implementation("com.github.ostrichbat2k:libusbdac:v0.1.0")
+    // Its AudioSink / AudioOutput types (no ExoPlayer player is used).
+    implementation("androidx.media3:media3-exoplayer:1.11.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
 }
 
 flutter {

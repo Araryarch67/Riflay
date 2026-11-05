@@ -488,6 +488,7 @@ class _AdvancedAudioSettingsState extends State<AdvancedAudioSettings> {
                 value: audio.bitPerfectWanted,
                 onChanged: android && usbName == null ? null : audio.setBitPerfect,
               ),
+            if (android) _DirectUsbTile(audio: audio),
             if (audio.hasBitPerfect)
               SwitchListTile(
                 secondary: const Icon(Icons.graphic_eq_rounded),
@@ -678,4 +679,80 @@ class SettingTile extends StatelessWidget {
             ),
           ),
   );
+}
+
+/// Android: Direct USB, bit-perfect to a USB DAC on any phone (`DirectUsb.kt`, libusbdac). Experimental: it says
+/// what it does at every step (the DAC, the permission, where the song goes and in what format, dropouts), so a
+/// screenshot is enough to tell what happened.
+class _DirectUsbTile extends StatelessWidget {
+  const _DirectUsbTile({required this.audio});
+
+  final AudioEngine audio;
+
+  @override
+  Widget build(BuildContext context) {
+    final d = audio.directUsb;
+    final muted = settingsMuted(context);
+    final text = Theme.of(context).textTheme;
+    final dac = d.devices.firstOrNull?.name;
+    final on = audio.directUsbWanted;
+    final status = !on
+        ? 'Riflay talks to your USB DAC itself, past Android, so songs reach it untouched even on phones '
+              'where Bit-perfect mode can\'t. Experimental.'
+        : dac == null
+        ? 'On. Plug in a USB DAC.'
+        : d.needsPermission
+        ? 'On. Allow Riflay to use $dac.'
+        : switch (d.route) {
+            'direct' => 'Bit-perfect to $dac${d.routeFormat == null ? '' : ': ${d.routeFormat}'}',
+            'fallback' =>
+              'This song${d.routeFormat == null ? '' : ' (${d.routeFormat})'} is in a format $dac doesn\'t take, '
+                  'so it plays through Android.',
+            _ => 'On, with $dac. Play a song.',
+          };
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SwitchListTile(
+          secondary: const Icon(Icons.usb_rounded),
+          title: const Text('Direct USB'),
+          subtitle: Text(status, style: muted),
+          value: on,
+          onChanged: audio.setDirectUsb,
+        ),
+        if (on && d.needsPermission)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(72, 0, 16, 8),
+            child: OutlinedButton(onPressed: d.requestPermission, child: const Text('Allow USB access')),
+          ),
+        if (on)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(72, 0, 16, 12),
+            child: DefaultTextStyle(
+              style: (text.bodySmall ?? const TextStyle()).copyWith(
+                color: AppColors.textMuted,
+                fontFeatures: const [FontFeature.tabularFigures()],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Pipe: ${d.running ? 'open' : 'closed'} · Output: ${audio.directUsbActive ? 'Direct USB' : 'Android'}',
+                  ),
+                  if (d.streamFormat != null) Text('From the player: ${d.streamFormat}'),
+                  Text('Route: ${d.route}${d.routeFormat == null ? '' : ' (${d.routeFormat})'}'),
+                  if (d.underruns > 0) Text('Dropouts: ${d.underruns}'),
+                  if (d.error != null)
+                    Text('Problem: ${d.error}', style: TextStyle(color: Theme.of(context).colorScheme.error)),
+                  if (d.log.isNotEmpty) ...[
+                    const SizedBox(height: 6),
+                    for (final l in d.log.take(6)) Text(l, maxLines: 2, overflow: TextOverflow.ellipsis),
+                  ],
+                ],
+              ),
+            ),
+          ),
+      ],
+    );
+  }
 }

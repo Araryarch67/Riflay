@@ -60,6 +60,14 @@ class PlayerController extends ChangeNotifier {
       if (_disposed) return;
       _subs.add(session.becomingNoisyEventStream.listen((_) => player.pause()));
     }, onError: (Object e) => debugPrint('Audio session unavailable: $e'));
+    // Direct USB (Android): what is queued for the DAC follows pause and play, and is dropped on a seek or a
+    // jump to another song; a song running into the next one keeps flowing.
+    _subs.add(player.playingStream.listen((on) => on ? audio.directUsb.play() : audio.directUsb.pause()));
+    _subs.add(
+      player.positionDiscontinuityStream.listen((d) {
+        if (d.reason == PositionDiscontinuityReason.seek) audio.directUsb.flush();
+      }),
+    );
     _crossfader = Crossfader(
       main: player,
       audio: audio,

@@ -2,6 +2,10 @@ allprojects {
     repositories {
         google()
         mavenCentral()
+        // libusbdac (Direct USB) is published there from its release tags, and only there.
+        maven("https://jitpack.io") {
+            content { includeGroup("com.github.ostrichbat2k") }
+        }
     }
 }
 
