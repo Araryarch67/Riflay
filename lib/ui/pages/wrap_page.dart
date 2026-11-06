@@ -12,6 +12,7 @@ import '../../platform/browser_files.dart';
 import '../../platform/host.dart';
 import '../../services/language.dart';
 import '../../services/listening_stats.dart';
+import '../../services/listening_streak.dart';
 import '../../services/play_history.dart';
 import '../../services/player_controller.dart';
 import '../../services/wrap.dart';
@@ -19,6 +20,7 @@ import '../theme.dart';
 import '../widgets/app_logo.dart';
 import '../widgets/controls.dart';
 import '../widgets/faded_cover.dart';
+import '../widgets/streak_badge.dart';
 
 /// Riflay Wrap: a month as a story. Swipe, tap or use the arrow keys to move on.
 class WrapPage extends StatelessWidget {
@@ -463,6 +465,16 @@ class _WrapStoryState extends State<WrapStory> {
         body: '${formatListened(d.busiestDayListened)} of music.',
         center: true,
       ),
+      // Worth showing off from two days in a row; the flame takes the colour the streak reached.
+      if (d.bestStreak >= 2)
+        (c, _) => _Card(
+          kicker: d.streakNow >= 2 && d.streakNow == d.bestStreak ? 'Your streak, still going' : 'Your longest streak',
+          headline: '${d.bestStreak} days in a row',
+          body:
+              'You listened on ${d.daysListened} of ${_count(d.days, 'day', 'days')}${d.inProgress ? ' so far' : ''}.',
+          art: StreakFlame(tier: StreakTier.of(d.bestStreak), size: 150),
+          center: true,
+        ),
       if (d.mostReplayed case final song?)
         (c, _) => _Card(
           kicker: 'Most replayed',
@@ -483,7 +495,8 @@ class _WrapStoryState extends State<WrapStory> {
         body:
             'Top song: ${d.topSong.title}\nTop artist: ${d.topArtist.title}\n'
             '${_count(d.songs, 'song', 'songs')}, ${_count(d.artists, 'artist', 'artists')}'
-            '${d.newSongs > 0 ? ', ${d.newSongs} new' : ''}',
+            '${d.newSongs > 0 ? ', ${d.newSongs} new' : ''}'
+            '${d.bestStreak >= 2 ? '\nStreak: ${d.bestStreak} days in a row' : ''}',
         art: Artwork(track: trackFor(d.topSong.sample), size: 120, radius: 8),
         center: true,
       ),
@@ -697,7 +710,7 @@ class _Card extends StatelessWidget {
               ),
               child: picture,
             )
-          else
+          else if (picture is Artwork)
             // Tilted a little and lit from behind, like a sleeve on a table.
             Transform.rotate(
               angle: -0.04,
@@ -711,7 +724,10 @@ class _Card extends StatelessWidget {
                 ),
                 child: picture,
               ),
-            ),
+            )
+          else
+            // Not a cover (the streak's flame): it lights itself.
+            picture,
         ],
         if (headline != null) ...[
           const SizedBox(height: 22),

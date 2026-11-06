@@ -156,6 +156,72 @@ void main() {
     });
   });
 
+  group('the streak', () {
+    test('a finished month counts its days and its longest run', () {
+      final h = PlayHistory();
+      // March 2, 3, 4 and 10, 11: five days, three in a row at most; two plays a day.
+      for (final day in [2, 3, 4, 10, 11]) {
+        h.record(song('a$day'), const Duration(seconds: 100), at: DateTime(2026, 3, day, 9));
+        h.record(song('b$day'), const Duration(seconds: 100), at: DateTime(2026, 3, day, 21));
+      }
+      final d = MonthlyWrap.compute(h, const WrapMonth(2026, 3))!;
+      expect(d.daysListened, 5);
+      expect(d.longestStreak, 3);
+      expect(d.streakNow, 0);
+      expect(d.bestStreak, 3);
+      expect(d.days, 31);
+    });
+
+    test('the running month shows the streak still going, from before the month began', () {
+      final h = PlayHistory();
+      for (final at in [DateTime(2026, 10, 30), DateTime(2026, 10, 31)]) {
+        h.record(song('october'), const Duration(seconds: 100), at: at.add(const Duration(hours: 12)));
+      }
+      for (var day = 1; day <= 4; day++) {
+        h.record(song('n$day'), const Duration(seconds: 100), at: DateTime(2026, 11, day, 12));
+      }
+      final d = MonthlyWrap.compute(h, const WrapMonth(2026, 11), now: DateTime(2026, 11, 4, 20))!;
+      expect(d.longestStreak, 4);
+      expect(d.streakNow, 6);
+      expect(d.bestStreak, 6);
+      expect(d.days, 4);
+    });
+
+    testWidgets('the story shows the streak card and the share card names the streak', (tester) async {
+      final h = PlayHistory();
+      for (var day = 1; day <= 12; day++) {
+        h.record(song('s$day'), const Duration(seconds: 200), at: DateTime(2026, 3, day, 12));
+      }
+      final d = MonthlyWrap.compute(h, const WrapMonth(2026, 3))!;
+      await tester.binding.setSurfaceSize(const Size(400, 800));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      await tester.pumpWidget(
+        MaterialApp(
+          home: WrapStory(data: d, trackFor: (s) => s.toTrack()),
+        ),
+      );
+      var sawStreak = false;
+      for (var i = 0; i < 20 && !sawStreak; i++) {
+        sawStreak = find.text('12 days in a row').evaluate().isNotEmpty;
+        if (!sawStreak) {
+          await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+          await tester.pumpAndSettle();
+        }
+      }
+      expect(sawStreak, isTrue);
+      expect(find.text('Your longest streak'), findsOneWidget);
+      expect(find.text('You listened on 12 of 31 days.'), findsOneWidget);
+      for (var i = 0; i < 20; i++) {
+        await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+        await tester.pumpAndSettle();
+      }
+      expect(find.textContaining('Streak: 12 days in a row'), findsOneWidget);
+      // Let the last card's timers run out before the test ends.
+      await tester.pumpWidget(const SizedBox());
+      await tester.pump(const Duration(seconds: 10));
+    });
+  });
+
   group('the numbers', () {
     test('every statistic of March', () {
       final d = MonthlyWrap.compute(march(), const WrapMonth(2026, 3))!;

@@ -1,4 +1,5 @@
 import 'listening_stats.dart';
+import 'listening_streak.dart';
 import 'play_history.dart';
 
 /// A calendar month in local time: what one Wrap covers.
@@ -67,6 +68,9 @@ class WrapData {
     required this.mostReplayedDay,
     required this.newSongs,
     this.until,
+    this.daysListened = 0,
+    this.longestStreak = 0,
+    this.streakNow = 0,
   });
 
   final WrapMonth month;
@@ -100,6 +104,42 @@ class WrapData {
 
   /// Songs whose first play ever was this month.
   final int newSongs;
+
+  /// Days of the month with at least one play, and the most of them in a row.
+  final int daysListened;
+  final int longestStreak;
+
+  /// The running month: the listening streak still going (days in a row up to today, counting days before the
+  /// month began). 0 for a finished month.
+  final int streakNow;
+
+  /// The streak to show off: the longer of [longestStreak] and [streakNow].
+  int get bestStreak => streakNow > longestStreak ? streakNow : longestStreak;
+
+  /// Days the Wrap covers: the whole month, or up to today while it runs.
+  int get days => until?.day ?? DateTime(month.year, month.month + 1, 0).day;
+
+  /// This Wrap with [days] as [streakNow].
+  WrapData withStreakNow(int days) => WrapData(
+    month: month,
+    listened: listened,
+    plays: plays,
+    songs: songs,
+    artists: artists,
+    topSongs: topSongs,
+    topArtists: topArtists,
+    topAlbum: topAlbum,
+    busiestDay: busiestDay,
+    busiestDayListened: busiestDayListened,
+    mostReplayed: mostReplayed,
+    mostReplayedCount: mostReplayedCount,
+    mostReplayedDay: mostReplayedDay,
+    newSongs: newSongs,
+    until: until,
+    daysListened: daysListened,
+    longestStreak: longestStreak,
+    streakNow: days,
+  );
 
   RankedItem get topSong => topSongs.first;
   RankedItem get topArtist => topArtists.first;
@@ -170,12 +210,20 @@ abstract final class MonthlyWrap {
         seenSongs.add(h.songIndex(i));
       }
     }
-    return fromPlays(
+    final data = fromPlays(
       plays,
       month,
       newSongs: seenSongs.where((s) => firstOf[s] >= from && firstOf[s] < to).length,
       until: until,
     );
+    if (data == null || until == null) return data;
+    // The streak still going reaches back past the month's start: the whole history up to now counts.
+    final upToNow = [
+      for (var i = 0; i < h.length; i++)
+        if (h.atSec(i) < to) h.atSec(i),
+    ];
+    final streak = ListeningStreak.compute(upToNow, today: ListeningStreak.dayNumberOf(until));
+    return data.withStreakNow(streak.current);
   }
 
   /// [compute] over plays already limited to [month] ((when in seconds, song, seconds heard)).
@@ -230,6 +278,10 @@ abstract final class MonthlyWrap {
       mostReplayedDay: replay?.key.$1,
       newSongs: newSongs,
       until: until,
+      daysListened: perDay.length,
+      longestStreak: ListeningStreak.compute([
+        for (final (at, _, _) in plays) at,
+      ], today: ListeningStreak.dayNumberOf(month.start)).longest,
     );
   }
 
