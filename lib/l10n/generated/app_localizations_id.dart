@@ -1593,6 +1593,9 @@ class AppLocalizationsId extends AppLocalizations {
   String get shapeThinLine => 'Garis tipis';
 
   @override
+  String get shapeWaveform => 'Gelombang lagu';
+
+  @override
   String get shapeCircle => 'Lingkaran';
 
   @override

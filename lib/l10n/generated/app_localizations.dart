@@ -2979,6 +2979,12 @@ abstract class AppLocalizations {
   /// **'Thin line'**
   String get shapeThinLine;
 
+  /// No description provided for @shapeWaveform.
+  ///
+  /// In en, this message translates to:
+  /// **'Waveform'**
+  String get shapeWaveform;
+
   /// No description provided for @shapeCircle.
   ///
   /// In en, this message translates to:

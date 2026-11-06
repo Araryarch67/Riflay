@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 
@@ -72,6 +73,71 @@ class WavySeekTrack extends SliderTrackShape with BaseSliderTrackShape {
       );
     }
     context.canvas.drawPath(path, pen..color = active);
+  }
+}
+
+/// The song's waveform for a track: [bars] (0-255 each) side by side, the elapsed ones in the active colour.
+class WaveformSeekTrack extends SliderTrackShape with BaseSliderTrackShape {
+  const WaveformSeekTrack(this.bars);
+
+  final Uint8List bars;
+
+  /// The bars' height; the slider's track height is only its line through the middle.
+  static const height = 26.0;
+
+  @override
+  void paint(
+    PaintingContext context,
+    Offset offset, {
+    required RenderBox parentBox,
+    required SliderThemeData sliderTheme,
+    required Animation<double> enableAnimation,
+    required TextDirection textDirection,
+    required Offset thumbCenter,
+    Offset? secondaryOffset,
+    bool isDiscrete = false,
+    bool isEnabled = false,
+  }) {
+    final rect = getPreferredRect(
+      parentBox: parentBox,
+      offset: offset,
+      sliderTheme: sliderTheme,
+      isEnabled: isEnabled,
+      isDiscrete: isDiscrete,
+    );
+    if (bars.isEmpty || rect.width <= 0) return;
+    final active = ColorTween(
+      begin: sliderTheme.disabledActiveTrackColor,
+      end: sliderTheme.activeTrackColor,
+    ).evaluate(enableAnimation)!;
+    final inactive = ColorTween(
+      begin: sliderTheme.disabledInactiveTrackColor,
+      end: sliderTheme.inactiveTrackColor,
+    ).evaluate(enableAnimation)!;
+    final rtl = textDirection == TextDirection.rtl;
+    // As many bars as fit at 3 px each (a gap of a pixel), each the loudest of the song's bars it stands for.
+    final count = math.max(1, (rect.width / 3).floor());
+    final step = rect.width / count;
+    final width = math.max(1.0, step - 1);
+    final thumb = thumbCenter.dx;
+    final pen = Paint();
+    for (var i = 0; i < count; i++) {
+      final from = i * bars.length ~/ count, to = math.max(from + 1, (i + 1) * bars.length ~/ count);
+      var level = 0;
+      for (var k = from; k < to && k < bars.length; k++) {
+        if (bars[k] > level) level = bars[k];
+      }
+      final h = math.max(2.0, height * level / 255);
+      final x = rtl ? rect.right - (i + 1) * step : rect.left + i * step;
+      final played = rtl ? x + width / 2 >= thumb : x + width / 2 <= thumb;
+      context.canvas.drawRRect(
+        RRect.fromRectAndRadius(
+          Rect.fromLTWH(x, rect.center.dy - h / 2, width, h),
+          Radius.circular(width / 2),
+        ),
+        pen..color = played ? active : inactive,
+      );
+    }
   }
 }
 

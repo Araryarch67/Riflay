@@ -189,13 +189,18 @@ enum ProgressBarShape {
   pill,
 
   /// A flat 4 px track with round ends and no handle until it is dragged (the phone's player and the desktop bar).
-  thin;
+  thin,
+
+  /// The song's loudness as bars across the track, lit up to where it is ([AudioReport.waveform]). Until the
+  /// song is measured (a stream is, on Wi-Fi), the plain track.
+  waveform;
 
   String get label => switch (this) {
     straight => tr.shapeStraight,
     wavy => tr.shapeWavy,
     pill => tr.shapePill,
     thin => tr.shapeThinLine,
+    waveform => tr.shapeWaveform,
   };
 }
 

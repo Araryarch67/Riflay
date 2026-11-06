@@ -1604,6 +1604,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get shapeThinLine => 'Thin line';
 
   @override
+  String get shapeWaveform => 'Waveform';
+
+  @override
   String get shapeCircle => 'Circle';
 
   @override

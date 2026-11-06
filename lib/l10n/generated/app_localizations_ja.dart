@@ -1573,6 +1573,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get shapeThinLine => '細い線';
 
   @override
+  String get shapeWaveform => '波形';
+
+  @override
   String get shapeCircle => '丸';
 
   @override

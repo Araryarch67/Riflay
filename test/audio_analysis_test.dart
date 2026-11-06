@@ -89,6 +89,16 @@ void main() {
     expect(saved.spectrogram, isNull);
   });
 
+  test('the waveform follows the song: quiet, loud, quiet', () {
+    final r = measure(48000, 30, (t) => (t >= 10 && t < 20 ? 0.8 : 0.05) * math.sin(2 * math.pi * 440 * t));
+    final w = r.waveform!;
+    expect(w.length, AudioAnalyzer.waveformBars);
+    expect(w[100], 255, reason: 'the loud middle is the top');
+    expect(w[20], lessThan(w[100] ~/ 2), reason: '24 dB quieter is near the floor');
+    expect(w[180], lessThan(w[100] ~/ 2));
+    expect(AudioReport.fromJson(r.toJson()).waveform, w, reason: 'kept with the numbers');
+  });
+
   test('silence has no loudness', () {
     final r = measure(48000, 3, (_) => 0);
     expect(r.lufs, isNull);

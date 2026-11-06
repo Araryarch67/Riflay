@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:math' as math;
 import 'dart:typed_data';
 
@@ -26,6 +27,7 @@ class AudioReport {
     this.verdict = SourceVerdict.fullBand,
     this.spectrogram,
     this.columns = 0,
+    this.waveform,
   });
 
   /// Integrated loudness, LUFS; null for silence.
@@ -49,6 +51,10 @@ class AudioReport {
   final Uint8List? spectrogram;
   final int columns;
 
+  /// How loud the song is across its length, in [AudioAnalyzer.waveformBars] bars (each its loudest moment,
+  /// 0 to 255 on a square-root scale, so quiet parts still show): the seek bar's Waveform shape.
+  final Uint8List? waveform;
+
   /// ReplayGain 2.0's gain: what brings the song to -18 LUFS.
   double? get gainDb => lufs == null ? null : (-18 - lufs!).clamp(-24.0, 12.0);
 
@@ -59,6 +65,7 @@ class AudioReport {
     'rate': rate,
     'cutoff': cutoffHz,
     'verdict': verdict.name,
+    if (waveform case final w?) 'wave': base64Encode(w),
   };
 
   static AudioReport fromJson(Map<String, dynamic> j) => AudioReport(
@@ -68,6 +75,7 @@ class AudioReport {
     rate: (j['rate'] as num).toInt(),
     cutoffHz: (j['cutoff'] as num?)?.toDouble(),
     verdict: SourceVerdict.values.asNameMap()[j['verdict']] ?? SourceVerdict.fullBand,
+    waveform: j['wave'] is String ? base64Decode(j['wave'] as String) : null,
   );
 
   AudioReport withSpectrogram(Uint8List data, int columns) => AudioReport(
@@ -79,6 +87,7 @@ class AudioReport {
     verdict: verdict,
     spectrogram: data,
     columns: columns,
+    waveform: waveform,
   );
 }
 
@@ -99,6 +108,7 @@ class AudioAnalyzer {
   final int channels;
 
   static const rows = 160;
+  static const waveformBars = 200;
   static const _fft = 4096;
 
   // ── Loudness: K-weighted energy in 100 ms steps, 400 ms blocks ───────────
@@ -252,7 +262,28 @@ class AudioAnalyzer {
       verdict: _cutoff().$2,
       spectrogram: spectrogram ? _image() : null,
       columns: spectrogram ? math.min(_columns.length, 600) : 0,
+      waveform: _waveform(),
     );
+  }
+
+  /// [waveformBars] bars over the song, each the loudest 100 ms step in its stretch: its (K-weighted) loudness
+  /// over the song's top 24 dB, so a loud master still shows its verses, choruses and breaks (peaks barely move).
+  Uint8List? _waveform() {
+    if (_steps.length < 2) return null;
+    final bars = Uint8List(waveformBars);
+    final db = [for (final e in _steps) e <= 0 ? -120.0 : 10 * math.log(e) / math.ln10];
+    final top = db.reduce(math.max);
+    if (top <= -120) return bars;
+    for (var b = 0; b < waveformBars; b++) {
+      final from = b * db.length ~/ waveformBars;
+      final to = math.max(from + 1, (b + 1) * db.length ~/ waveformBars);
+      var level = -120.0;
+      for (var i = from; i < to && i < db.length; i++) {
+        if (db[i] > level) level = db[i];
+      }
+      bars[b] = ((level - (top - 24)) / 24 * 255).round().clamp(0, 255);
+    }
+    return bars;
   }
 
   static double _db(double amplitude) => amplitude <= 0 ? -120 : 20 * math.log(amplitude) / math.ln10;

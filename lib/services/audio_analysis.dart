@@ -10,6 +10,7 @@ import 'package:path_provider/path_provider.dart';
 import '../models/track.dart';
 import 'audio_analysis_core.dart';
 import 'pcm_decoder.dart';
+import 'youtube_stream.dart';
 
 export 'audio_analysis_core.dart' show AudioAnalyzer, AudioReport, SourceVerdict;
 
@@ -95,16 +96,32 @@ abstract final class AudioAnalysis {
   static double? gainFor(String path) => useScannedGain ? savedFor(path)?.gainDb : null;
 
   /// [track] measured: from what was kept, or decoded now. With [spectrogram] the picture comes too (measured
-  /// again if only the numbers were kept). Null for a stream, or a file that can't be decoded.
-  static Future<AudioReport?> of(Track track, {bool spectrogram = false}) async {
-    final path = fileOf(track);
-    if (path == null || !supported) return null;
+  /// again if only the numbers were kept). Null for a file that can't be decoded, and for a stream unless
+  /// [streams] (the seek bar's waveform), then only where prefetching is allowed (not on mobile data): its sound
+  /// is fetched once more to be measured.
+  static Future<AudioReport?> of(
+    Track track, {
+    bool spectrogram = false,
+    bool streams = false,
+    bool waveform = false,
+  }) async {
+    if (!supported) return null;
+    var path = fileOf(track);
     await load();
-    final key = _key(path);
-    if (key == null) return null;
+    String? key;
+    if (path != null) {
+      key = _key(path);
+    } else if (streams && track.videoId != null) {
+      key = 'yt:${track.videoId}';
+      if (_saved![key] case final known? when !spectrogram && (!waveform || known.waveform != null)) return known;
+      if (!await YoutubeStream.prefetchAllowed()) return null;
+      path = (await YoutubeStream.resolve(track.videoId!)).url.toString();
+    }
+    if (key == null || path == null) return null;
     if (spectrogram) {
       if (_spectrograms[key] case final shown?) return shown;
-    } else if (_saved![key] case final known?) {
+    } else if (_saved![key] case final known? when !waveform || known.waveform != null) {
+      // Kept from before the waveform was measured too: measured again for it.
       return known;
     }
     final measuring = _measuring['$key|$spectrogram'] ??= _measure(path, spectrogram: spectrogram);

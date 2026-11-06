@@ -9,6 +9,7 @@ import 'package:just_audio/just_audio.dart';
 import '../../services/language.dart';
 import '../../models/track.dart';
 import '../../services/appearance.dart';
+import '../../services/audio_analysis.dart';
 import '../../services/layout_prefs.dart';
 import '../../services/metadata.dart';
 import '../../services/player_controller.dart';
@@ -386,6 +387,21 @@ class _SeekBarState extends State<SeekBar> {
   bool _hovering = false;
   Stream<Duration>? _position;
 
+  /// The playing song's waveform, for the Waveform shape; null until it is measured.
+  Uint8List? _bars;
+  String? _barsFor;
+
+  void _wantBars(Track? track, bool waveform) {
+    final key = waveform && track != null ? track.id : null;
+    if (key == _barsFor) return;
+    _barsFor = key;
+    _bars = null;
+    if (key == null) return;
+    AudioAnalysis.of(track!, streams: true, waveform: true).then((r) {
+      if (mounted && _barsFor == key && r?.waveform != null) setState(() => _bars = r!.waveform);
+    }, onError: (Object e) => debugPrint('Waveform of ${track.title}: $e'));
+  }
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -420,6 +436,11 @@ class _SeekBarState extends State<SeekBar> {
             final colors = AppColors.of(context);
             final wavy =
                 !pill && LayoutPrefs.instance.progressShape == ProgressBarShape.wavy && !LayoutPrefs.lightweight;
+            _wantBars(
+              player.currentTrack,
+              LayoutPrefs.instance.progressShape == ProgressBarShape.waveform && !LayoutPrefs.lightweight,
+            );
+            final bars = LayoutPrefs.instance.progressShape == ProgressBarShape.waveform ? _bars : null;
             Widget sliderWith(MotionClock? clock) => MouseRegion(
               onEnter: (_) => setState(() => _hovering = true),
               onExit: (_) => setState(() => _hovering = false),
@@ -430,6 +451,8 @@ class _SeekBarState extends State<SeekBar> {
                         trackHeight: pill ? (slim ? 9 : 16) : LayoutPrefs.instance.progressBar.height,
                         trackShape: pill
                             ? const PillSeekTrack()
+                            : bars != null
+                            ? WaveformSeekTrack(bars)
                             : wavy
                             ? WavySeekTrack(motion: clock)
                             // Its own look, not the app's Slider look.
@@ -452,7 +475,11 @@ class _SeekBarState extends State<SeekBar> {
                         padding: EdgeInsets.zero,
                       ),
                 child: SizedBox(
-                  height: pill && !slim ? (widget.desktopPlayer ? 32 : 36) : 24,
+                  height: pill && !slim
+                      ? (widget.desktopPlayer ? 32 : 36)
+                      : bars != null && !slim
+                      ? WaveformSeekTrack.height + 6
+                      : 24,
                   child: Slider(
                     value: value,
                     max: max,
