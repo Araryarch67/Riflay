@@ -14,8 +14,10 @@ class VisualizerLevels extends ValueNotifier<List<double>> {
   double backgroundEnergy = 0;
   double beat = 0;
 
-  static double amplitude(String metadata) {
-    final db = double.tryParse(metadata);
+  static double amplitude(String metadata) => amplitudeOfDb(double.tryParse(metadata));
+
+  /// A level in dB as 0..1: -60 dB and below is nothing, 0 dB is full.
+  static double amplitudeOfDb(double? db) {
     if (db == null || !db.isFinite || db <= -60) return 0;
     return ((db + 60) / 60).clamp(0.0, 1.0);
   }

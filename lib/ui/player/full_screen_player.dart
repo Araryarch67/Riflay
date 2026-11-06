@@ -339,7 +339,7 @@ class _PanelButtons extends StatelessWidget {
               tooltip: eq ? 'Hide equalizer' : 'Equalizer',
               // Like the equalizer's own switch: nothing to turn on in bit-perfect mode or without the engine.
               // An open panel can always be closed.
-              onPressed: eq || (AudioEngine.supported && !audio.bitPerfect)
+              onPressed: eq || ((AudioEngine.supported || AudioEngine.webEffects) && !audio.bitPerfect)
                   ? () => toggleExpandedPanel(ExpandedPanel.equalizer)
                   : null,
             ),

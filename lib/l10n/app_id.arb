@@ -83,6 +83,8 @@
   "startRadio": "Mulai radio",
   "downloadForOffline": "Unduh untuk offline",
   "downloadAs": "Unduh sebagai…",
+  "saveToDevice": "Simpan ke perangkat",
+  "savingToDevice": "{title} sedang diunduh di browser",
   "edit": "Edit",
   "editInfo": "Edit info",
   "removeFromLibrary": "Hapus dari koleksi",

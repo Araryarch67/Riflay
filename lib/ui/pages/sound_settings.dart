@@ -82,9 +82,11 @@ class DspSettings extends StatelessWidget {
         final monoOn = audio.monoActive;
         final speakersOn = audio.virtualSpeakersActive;
         String lockedNote(String normal) => locked ? 'Off while bit-perfect mode is on' : normal;
+        // The web build has the equalizer, crossfeed and mono audio (Web Audio); the rest needs mpv.
+        final native = AudioEngine.supported;
         return SettingsCard(
           children: [
-            if (AudioEngine.supported) ...[
+            if (native || AudioEngine.webEffects) ...[
               ListTile(
                 leading: const Icon(Icons.equalizer_rounded),
                 title: const Text('Equalizer'),
@@ -92,87 +94,89 @@ class DspSettings extends StatelessWidget {
                 trailing: const Icon(Icons.chevron_right_rounded),
                 onTap: () => shell.open(const EqualizerPage()),
               ),
-              SettingTile(
-                icon: Icons.graphic_eq_rounded,
-                title: const Text('Volume leveling'),
-                subtitle: Text(
-                  lockedNote('Plays songs at a similar loudness, using their ReplayGain tags'),
-                  style: muted,
-                ),
-                control: OptionPicker<VolumeLeveling>(
-                  value: audio.leveling,
-                  onChanged: locked ? null : audio.setLeveling,
-                  options: [for (final v in VolumeLeveling.values) (v, v.label)],
-                ),
-              ),
-              SwitchListTile(
-                secondary: const Icon(Icons.compare_arrows_rounded),
-                title: const Text('Crossfade'),
-                subtitle: Text(
-                  audio.crossfadeBlock ??
-                      'The end of a song fades into the start of the next. Off in bit-perfect and exclusive modes',
-                  style: muted,
-                ),
-                value: audio.crossfade,
-                onChanged: audio.crossfadeBlock != null ? null : audio.setCrossfade,
-              ),
-              if (audio.crossfade && audio.crossfadeBlock == null) ...[
+              if (native) ...[
                 SettingTile(
-                  icon: Icons.timelapse_rounded,
-                  title: const Text('Fade length'),
-                  control: SizedBox(
-                    width: 220,
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Slider(
-                            value: audio.crossfadeSeconds.toDouble(),
-                            min: CrossfadeRules.minSeconds.toDouble(),
-                            max: CrossfadeRules.maxSeconds.toDouble(),
-                            divisions: CrossfadeRules.maxSeconds - CrossfadeRules.minSeconds,
-                            label: '${audio.crossfadeSeconds} s',
-                            onChanged: (v) => audio.setCrossfadeSeconds(v.round()),
-                          ),
-                        ),
-                        SizedBox(width: 40, child: Text('${audio.crossfadeSeconds} s', style: muted)),
-                      ],
-                    ),
+                  icon: Icons.graphic_eq_rounded,
+                  title: const Text('Volume leveling'),
+                  subtitle: Text(
+                    lockedNote('Plays songs at a similar loudness, using their ReplayGain tags'),
+                    style: muted,
+                  ),
+                  control: OptionPicker<VolumeLeveling>(
+                    value: audio.leveling,
+                    onChanged: locked ? null : audio.setLeveling,
+                    options: [for (final v in VolumeLeveling.values) (v, v.label)],
                   ),
                 ),
                 SwitchListTile(
-                  secondary: const Icon(Icons.album_outlined),
-                  title: const Text('Skip for albums'),
+                  secondary: const Icon(Icons.compare_arrows_rounded),
+                  title: const Text('Crossfade'),
                   subtitle: Text(
-                    'Songs that follow each other on an album play without a fade, as the artist made them',
+                    audio.crossfadeBlock ??
+                        'The end of a song fades into the start of the next. Off in bit-perfect and exclusive modes',
                     style: muted,
                   ),
-                  value: audio.crossfadeSkipAlbums,
-                  onChanged: audio.setCrossfadeSkipAlbums,
+                  value: audio.crossfade,
+                  onChanged: audio.crossfadeBlock != null ? null : audio.setCrossfade,
                 ),
-              ],
-              SwitchListTile(
-                secondary: const Icon(Icons.spatial_audio_rounded),
-                title: const Text('Virtual speakers'),
-                subtitle: Text(
-                  lockedNote(
-                    monoOn ? 'Off while Mono audio is on' : 'For headphones: the music plays in front of you, like from two speakers, instead of inside your head',
+                if (audio.crossfade && audio.crossfadeBlock == null) ...[
+                  SettingTile(
+                    icon: Icons.timelapse_rounded,
+                    title: const Text('Fade length'),
+                    control: SizedBox(
+                      width: 220,
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Slider(
+                              value: audio.crossfadeSeconds.toDouble(),
+                              min: CrossfadeRules.minSeconds.toDouble(),
+                              max: CrossfadeRules.maxSeconds.toDouble(),
+                              divisions: CrossfadeRules.maxSeconds - CrossfadeRules.minSeconds,
+                              label: '${audio.crossfadeSeconds} s',
+                              onChanged: (v) => audio.setCrossfadeSeconds(v.round()),
+                            ),
+                          ),
+                          SizedBox(width: 40, child: Text('${audio.crossfadeSeconds} s', style: muted)),
+                        ],
+                      ),
+                    ),
                   ),
-                  style: muted,
+                  SwitchListTile(
+                    secondary: const Icon(Icons.album_outlined),
+                    title: const Text('Skip for albums'),
+                    subtitle: Text(
+                      'Songs that follow each other on an album play without a fade, as the artist made them',
+                      style: muted,
+                    ),
+                    value: audio.crossfadeSkipAlbums,
+                    onChanged: audio.setCrossfadeSkipAlbums,
+                  ),
+                ],
+                SwitchListTile(
+                  secondary: const Icon(Icons.spatial_audio_rounded),
+                  title: const Text('Virtual speakers'),
+                  subtitle: Text(
+                    lockedNote(
+                      monoOn ? 'Off while Mono audio is on' : 'For headphones: the music plays in front of you, like from two speakers, instead of inside your head',
+                    ),
+                    style: muted,
+                  ),
+                  value: speakersOn,
+                  onChanged: locked || monoOn ? null : audio.setVirtualSpeakers,
                 ),
-                value: speakersOn,
-                onChanged: locked || monoOn ? null : audio.setVirtualSpeakers,
-              ),
-              if (audio.virtualSpeakers)
-                _DspSlider(
-                  title: 'Virtual speaker level',
-                  description: 'Adjust the simulation output level to match your other listening modes.',
-                  value: audio.virtualSpeakerGain,
-                  min: -12,
-                  max: 6,
-                  defaultValue: 0,
-                  label: '${audio.virtualSpeakerGain.toStringAsFixed(1)} dB',
-                  onChanged: locked || monoOn ? null : audio.setVirtualSpeakerGain,
-                ),
+                if (audio.virtualSpeakers)
+                  _DspSlider(
+                    title: 'Virtual speaker level',
+                    description: 'Adjust the simulation output level to match your other listening modes.',
+                    value: audio.virtualSpeakerGain,
+                    min: -12,
+                    max: 6,
+                    defaultValue: 0,
+                    label: '${audio.virtualSpeakerGain.toStringAsFixed(1)} dB',
+                    onChanged: locked || monoOn ? null : audio.setVirtualSpeakerGain,
+                  ),
+              ],
               SettingTile(
                 icon: Icons.headphones_rounded,
                 title: const Text('Headphone crossfeed'),
@@ -229,84 +233,86 @@ class DspSettings extends StatelessWidget {
                   options: [for (final m in MonoAudio.values) (m, m.label)],
                 ),
               ),
-              if (AudioEngine.pluginBridge != null)
-                if (AudioEngine.hasPlugins)
-                  SettingTile(
-                    icon: Icons.extension_outlined,
-                    title: const Text('Audio plugins'),
-                    subtitle: Text(
-                      locked
-                          ? 'Off while bit-perfect mode is on'
-                          : 'VST, LV2 and CLAP plugins, set up in Carla: add them there and save, and they play here',
-                      style: muted,
+              if (native) ...[
+                if (AudioEngine.pluginBridge != null)
+                  if (AudioEngine.hasPlugins)
+                    SettingTile(
+                      icon: Icons.extension_outlined,
+                      title: const Text('Audio plugins'),
+                      subtitle: Text(
+                        locked
+                            ? 'Off while bit-perfect mode is on'
+                            : 'VST, LV2 and CLAP plugins, set up in Carla: add them there and save, and they play here',
+                        style: muted,
+                      ),
+                      control: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          TextButton(onPressed: locked ? null : audio.editPlugins, child: const Text('Edit in Carla')),
+                          Switch(value: audio.plugins && !locked, onChanged: locked ? null : audio.setPlugins),
+                        ],
+                      ),
+                    )
+                  else
+                    SettingTile(
+                      icon: Icons.extension_outlined,
+                      title: const Text('Audio plugins'),
+                      subtitle: Text(
+                        Host.isWindows
+                            ? 'Needs Carla, a free program that holds your VST, LV2 and CLAP plugins. Download it, unzip it in your '
+                                  'Downloads or Program Files folder, then reopen this page.'
+                            : 'Needs Carla, a free program that holds your VST, LV2 and CLAP plugins. Install it, then reopen this page.',
+                        style: muted,
+                      ),
+                      control: TextButton(
+                        onPressed: () => launchUrl(Uri.parse(CarlaLocator.downloadPage)),
+                        child: const Text('Install Carla'),
+                      ),
                     ),
-                    control: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        TextButton(onPressed: locked ? null : audio.editPlugins, child: const Text('Edit in Carla')),
-                        Switch(value: audio.plugins && !locked, onChanged: locked ? null : audio.setPlugins),
-                      ],
-                    ),
-                  )
-                else
-                  SettingTile(
-                    icon: Icons.extension_outlined,
-                    title: const Text('Audio plugins'),
-                    subtitle: Text(
-                      Host.isWindows
-                          ? 'Needs Carla, a free program that holds your VST, LV2 and CLAP plugins. Download it, unzip it in your '
-                                'Downloads or Program Files folder, then reopen this page.'
-                          : 'Needs Carla, a free program that holds your VST, LV2 and CLAP plugins. Install it, then reopen this page.',
-                      style: muted,
-                    ),
-                    control: TextButton(
-                      onPressed: () => launchUrl(Uri.parse(CarlaLocator.downloadPage)),
-                      child: const Text('Install Carla'),
-                    ),
+                SettingTile(
+                  icon: Icons.surround_sound_rounded,
+                  title: const Text('Room correction'),
+                  subtitle: Text(
+                    locked
+                        ? 'Off while bit-perfect mode is on'
+                        : audio.impulseName == null
+                        ? 'Load an impulse response (WAV or FLAC, e.g. made with REW) to correct your room or headphones'
+                        : audio.impulseName!,
+                    style: muted,
                   ),
-              SettingTile(
-                icon: Icons.surround_sound_rounded,
-                title: const Text('Room correction'),
-                subtitle: Text(
-                  locked
-                      ? 'Off while bit-perfect mode is on'
-                      : audio.impulseName == null
-                      ? 'Load an impulse response (WAV or FLAC, e.g. made with REW) to correct your room or headphones'
-                      : audio.impulseName!,
-                  style: muted,
+                  control: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      TextButton(
+                        onPressed: locked ? null : () => AdvancedAudioSettings._pickImpulse(context, audio),
+                        child: Text(audio.impulseName == null ? 'Choose file' : 'Change'),
+                      ),
+                      Switch(
+                        value: audio.convolution && !locked,
+                        onChanged: locked || audio.impulsePath == null ? null : audio.setConvolution,
+                      ),
+                    ],
+                  ),
                 ),
-                control: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    TextButton(
-                      onPressed: locked ? null : () => AdvancedAudioSettings._pickImpulse(context, audio),
-                      child: Text(audio.impulseName == null ? 'Choose file' : 'Change'),
-                    ),
-                    Switch(
-                      value: audio.convolution && !locked,
-                      onChanged: locked || audio.impulsePath == null ? null : audio.setConvolution,
-                    ),
-                  ],
+                if (audio.impulsePath != null)
+                  _DspSlider(
+                    title: 'Room correction headroom',
+                    description: 'Lower the corrected signal if the impulse response makes peaks too loud.',
+                    value: audio.convolutionGain,
+                    min: -24,
+                    max: 0,
+                    defaultValue: 0,
+                    label: '${audio.convolutionGain.toStringAsFixed(1)} dB',
+                    onChanged: locked || !audio.convolution ? null : audio.setConvolutionGain,
+                  ),
+                ListTile(
+                  leading: const Icon(Icons.account_tree_outlined),
+                  title: const Text('Signal path'),
+                  subtitle: const Text('See which effects are actually active for the current song'),
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                  onTap: () => showSignalPath(context),
                 ),
-              ),
-              if (audio.impulsePath != null)
-                _DspSlider(
-                  title: 'Room correction headroom',
-                  description: 'Lower the corrected signal if the impulse response makes peaks too loud.',
-                  value: audio.convolutionGain,
-                  min: -24,
-                  max: 0,
-                  defaultValue: 0,
-                  label: '${audio.convolutionGain.toStringAsFixed(1)} dB',
-                  onChanged: locked || !audio.convolution ? null : audio.setConvolutionGain,
-                ),
-              ListTile(
-                leading: const Icon(Icons.account_tree_outlined),
-                title: const Text('Signal path'),
-                subtitle: const Text('See which effects are actually active for the current song'),
-                trailing: const Icon(Icons.chevron_right_rounded),
-                onTap: () => showSignalPath(context),
-              ),
+              ],
             ],
           ],
         );

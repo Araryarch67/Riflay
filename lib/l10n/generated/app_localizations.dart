@@ -590,6 +590,18 @@ abstract class AppLocalizations {
   /// **'Download as…'**
   String get downloadAs;
 
+  /// No description provided for @saveToDevice.
+  ///
+  /// In en, this message translates to:
+  /// **'Save to device'**
+  String get saveToDevice;
+
+  /// No description provided for @savingToDevice.
+  ///
+  /// In en, this message translates to:
+  /// **'{title} is downloading in your browser'**
+  String savingToDevice(Object title);
+
   /// No description provided for @edit.
   ///
   /// In en, this message translates to:

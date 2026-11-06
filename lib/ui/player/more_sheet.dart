@@ -158,6 +158,12 @@ class PlayerMoreSheet extends StatelessWidget {
             group(tr.sectionSong, [
               tile(Icons.share_outlined, tr.share, then((host) => shareTrack(host, track))),
               tile(Icons.playlist_add_rounded, tr.addToPlaylist, then((host) => addToPlaylist(host, [track]))),
+              if (track.isRemote && Features.saveToDevice)
+                tile(
+                  Icons.download_rounded,
+                  tr.saveToDevice,
+                  then((host) => TrackMenuButton.saveToDevice(host, track)),
+                ),
               if (track.isRemote && Features.downloads)
                 ListenableBuilder(
                   listenable: c.youtube,

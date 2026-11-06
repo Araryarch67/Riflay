@@ -5,11 +5,15 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:riflay/platform/background.dart';
+import 'package:riflay/platform/browser_files.dart';
 import 'package:riflay/platform/features.dart';
 import 'package:riflay/platform/host.dart';
 import 'package:riflay/platform/network.dart';
 import 'package:riflay/platform/proxy_client.dart';
 import 'package:riflay/platform/proxy_route.dart';
+import 'package:riflay/platform/web_audio.dart';
+import 'package:riflay/platform/web_storage.dart';
+import 'package:riflay/services/audio_engine.dart';
 import 'package:riflay/services/youtube_player_api.dart';
 
 /// The seams that keep the web build apart (lib/platform): native builds must see exactly what they saw before, and
@@ -42,6 +46,19 @@ void main() {
       expect(Features.listeningHistory, isTrue);
       expect(Features.scrobbling, isTrue);
       expect(Features.backup, isTrue);
+      expect(Features.listenOnLan, isTrue);
+      expect(Features.systemNotifications, isTrue);
+      expect(Features.audioVisualizer, isTrue);
+      // Web-only stand-ins stay off natively.
+      expect(Features.saveToDevice, isFalse);
+    });
+
+    test('no browser: mpv does the effects, files hold the history, the app writes its own files', () {
+      expect(WebAudio.available, isFalse);
+      expect(AudioEngine.webEffects, isFalse);
+      expect(WebStorage.available, isFalse);
+      expect(BrowserFiles.available, isFalse);
+      expect(webSaveUri('dQw4w9WgXcQ', 'Song'), isNull);
     });
 
     test('no proxy: URLs stay as they are and songs stream the native way', () {
@@ -58,6 +75,21 @@ void main() {
   });
 
   group('proxy routes', () {
+    test('a song saved as a file asks the proxy for a download named after it', () {
+      expect(audioOnProxy('dQw4w9WgXcQ', proxy).toString(), 'http://localhost:8787/audio/dQw4w9WgXcQ');
+      expect(
+        audioOnProxy('dQw4w9WgXcQ', proxy, aac: true, saveAs: 'Tulus - Teh Hijau').toString(),
+        'http://localhost:8787/audio/dQw4w9WgXcQ?aac=1&save=Tulus+-+Teh+Hijau',
+      );
+      expect(audioExtension('audio/webm; codecs="opus"'), 'webm');
+      expect(audioExtension('audio/mp4; codecs="mp4a.40.2"'), 'm4a');
+      expect(
+        attachmentDisposition('Sheila On 7 - Dan…', 'webm'),
+        'attachment; filename="Sheila On 7 - Dan_.webm"; filename*=UTF-8\'\'Sheila%20On%207%20-%20Dan%E2%80%A6.webm',
+      );
+      expect(attachmentDisposition(' / : ', 'm4a'), startsWith('attachment; filename="song.m4a"'));
+    });
+
     test('InnerTube calls go to /fetch/<host>/<path> with their query', () {
       final out = toProxy(
         Uri.parse('https://music.youtube.com/youtubei/v1/browse?prettyPrint=false'),

@@ -56,6 +56,8 @@ class PlayerController extends ChangeNotifier {
     // The first YouTube song then needs one request, not two.
     YoutubeStream.warmUp();
     sleep.attach(_SleepHost(this));
+    // The proxy answers CORS: asked for that way, the song's samples reach the web build's effects and visualizer.
+    if (AudioEngine.webEffects) player.setWebCrossOrigin(WebCrossOrigin.anonymous).ignore();
     AudioSession.instance.then((session) {
       if (_disposed) return;
       _subs.add(session.becomingNoisyEventStream.listen((_) => player.pause()));

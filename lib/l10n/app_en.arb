@@ -88,6 +88,8 @@
   "startRadio": "Start radio",
   "downloadForOffline": "Download for offline",
   "downloadAs": "Download as…",
+  "saveToDevice": "Save to device",
+  "savingToDevice": "{title} is downloading in your browser",
   "edit": "Edit",
   "editInfo": "Edit info",
   "removeFromLibrary": "Remove from library",

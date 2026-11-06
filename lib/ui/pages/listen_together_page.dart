@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../platform/features.dart';
 import '../../platform/host.dart';
 import '../../services/listen_together/listen_together.dart';
 import '../../services/listen_together/protocol.dart';
@@ -93,7 +94,7 @@ class _ListenTogetherPageState extends State<ListenTogetherPage> {
   final _code = TextEditingController();
   bool _busy = false;
   String? _error;
-  ListenMode _mode = ListenMode.wifi;
+  ListenMode _mode = Features.listenOnLan ? ListenMode.wifi : ListenMode.internet;
 
   StreamSubscription<List<FoundSession>>? _search;
   List<FoundSession> _nearby = const [];
@@ -132,7 +133,7 @@ class _ListenTogetherPageState extends State<ListenTogetherPage> {
 
   /// Nearby sessions are searched only while idle.
   void _followSession() {
-    final idle = _session!.role == ListenRole.none;
+    final idle = _session!.role == ListenRole.none && Features.listenOnLan;
     if (idle && _search == null) {
       _search = _session!.findNearby().listen((found) {
         if (mounted) setState(() => _nearby = found);
@@ -270,7 +271,12 @@ class _ListenTogetherPageState extends State<ListenTogetherPage> {
   Widget _idle(BuildContext context) {
     final text = Theme.of(context).textTheme;
     final muted = text.bodyMedium?.copyWith(color: AppColors.textSecondary);
-    final canCode = ListenTogether.modeForCode(_code.text.trim()) != null;
+    // A Wi-Fi code needs the local network, which the web build can't reach.
+    final canCode = switch (ListenTogether.modeForCode(_code.text.trim())) {
+      null => false,
+      ListenMode.wifi => Features.listenOnLan,
+      ListenMode.internet => true,
+    };
     final internet = _mode == ListenMode.internet;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -291,22 +297,24 @@ class _ListenTogetherPageState extends State<ListenTogetherPage> {
             counterText: '',
           ),
         ),
-        const SizedBox(height: 20),
-        SizedBox(
-          width: double.infinity,
-          child: SegmentedButton<ListenMode>(
-            showSelectedIcon: false,
-            segments: const [
-              ButtonSegment(value: ListenMode.wifi, label: Text('Same Wi-Fi')),
-              ButtonSegment(
-                value: ListenMode.internet,
-                label: Row(mainAxisSize: MainAxisSize.min, children: [Text('Anywhere')]),
-              ),
-            ],
-            selected: {_mode},
-            onSelectionChanged: _busy ? null : (v) => _setMode(v.first),
+        if (Features.listenOnLan) ...[
+          const SizedBox(height: 20),
+          SizedBox(
+            width: double.infinity,
+            child: SegmentedButton<ListenMode>(
+              showSelectedIcon: false,
+              segments: const [
+                ButtonSegment(value: ListenMode.wifi, label: Text('Same Wi-Fi')),
+                ButtonSegment(
+                  value: ListenMode.internet,
+                  label: Row(mainAxisSize: MainAxisSize.min, children: [Text('Anywhere')]),
+                ),
+              ],
+              selected: {_mode},
+              onSelectionChanged: _busy ? null : (v) => _setMode(v.first),
+            ),
           ),
-        ),
+        ],
         const SizedBox(height: 8),
         Text(
           internet
@@ -336,24 +344,26 @@ class _ListenTogetherPageState extends State<ListenTogetherPage> {
           icon: const Icon(Icons.qr_code_scanner_rounded),
           label: const Text('Scan QR code'),
         ),
-        const SizedBox(height: 16),
-        Text('On this Wi-Fi', style: text.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
-        const SizedBox(height: 8),
-        if (_nearby.isEmpty)
-          Text('Looking for sessions on this network…', style: muted)
-        else
-          for (final s in _nearby)
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: CircleAvatar(
-                backgroundColor: AppColors.hover,
-                child: Icon(Icons.group_rounded, color: AppColors.textPrimary),
+        if (Features.listenOnLan) ...[
+          const SizedBox(height: 16),
+          Text('On this Wi-Fi', style: text.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+          const SizedBox(height: 8),
+          if (_nearby.isEmpty)
+            Text('Looking for sessions on this network…', style: muted)
+          else
+            for (final s in _nearby)
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: CircleAvatar(
+                  backgroundColor: AppColors.hover,
+                  child: Icon(Icons.group_rounded, color: AppColors.textPrimary),
+                ),
+                title: Text(s.hostName),
+                subtitle: const Text('Tap to join'),
+                enabled: !_busy,
+                onTap: () => _join(s.code),
               ),
-              title: Text(s.hostName),
-              subtitle: const Text('Tap to join'),
-              enabled: !_busy,
-              onTap: () => _join(s.code),
-            ),
+        ],
         const SizedBox(height: 16),
         Text('Have a code?', style: text.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
         const SizedBox(height: 8),

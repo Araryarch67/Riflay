@@ -4,7 +4,9 @@ import 'package:flutter/material.dart';
 import '../../services/artist_channels.dart';
 import '../../services/language.dart';
 import '../../models/track.dart';
+import '../../platform/browser_files.dart';
 import '../../platform/features.dart';
+import '../../platform/network.dart';
 import '../../services/audio_engine.dart';
 import '../../services/layout_prefs.dart';
 import '../../services/flac_convert.dart';
@@ -364,6 +366,14 @@ class TrackMenuButton extends StatelessWidget {
     c.youtube.enqueueTracks(tracks, choice: choice);
   }
 
+  /// The web build: [track]'s audio as a browser download (see [Features.saveToDevice]).
+  static void saveToDevice(BuildContext host, Track track) {
+    final url = webSaveUri(track.videoId!, [if (track.artist.isNotEmpty) track.artist, track.title].join(' - '));
+    if (url == null) return;
+    BrowserFiles.saveUrl(url, track.title);
+    ScaffoldMessenger.of(host).showSnackBar(SnackBar(content: Text(tr.savingToDevice(track.title))));
+  }
+
   final Track track;
   final bool visible;
   final Color? color;
@@ -491,6 +501,11 @@ class TrackMenuButton extends StatelessWidget {
                   child: MenuRow(leading: const Icon(Icons.tune_rounded), title: Text(tr.downloadAs)),
                 ),
               ],
+              if (track.isRemote && Features.saveToDevice && !hide.contains(TrackMenuEntry.download))
+                PopupMenuItem(
+                  onTap: () => saveToDevice(host, track),
+                  child: MenuRow(leading: const Icon(Icons.download_rounded), title: Text(tr.saveToDevice)),
+                ),
               if (downloaded != null)
                 PopupMenuItem(
                   onTap: () => showDownloadEditor(host, downloaded, compact: shell.compact),

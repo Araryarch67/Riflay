@@ -21,3 +21,10 @@ Uri? webAudioUri(String videoId) {
   final proxy = webProxy;
   return proxy == null ? null : audioOnProxy(videoId, proxy, aac: !playsOpus);
 }
+
+/// Where the web build downloads [videoId]'s audio as a file called [name]; null in native builds, which download
+/// songs themselves (`YoutubeDownloads`).
+Uri? webSaveUri(String videoId, String name) {
+  final proxy = webProxy;
+  return proxy == null ? null : audioOnProxy(videoId, proxy, aac: !playsOpus, saveAs: name);
+}

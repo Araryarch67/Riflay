@@ -281,6 +281,7 @@ class Crossfader {
       handleAudioSessionActivation: false,
     );
     _tail = tail;
+    if (AudioEngine.webEffects) tail.setWebCrossOrigin(WebCrossOrigin.anonymous).ignore();
     try {
       audio.expectSecondaryPlayer();
       try {

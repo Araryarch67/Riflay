@@ -261,6 +261,14 @@ class AppLocalizationsId extends AppLocalizations {
   String get downloadAs => 'Unduh sebagai…';
 
   @override
+  String get saveToDevice => 'Simpan ke perangkat';
+
+  @override
+  String savingToDevice(Object title) {
+    return '$title sedang diunduh di browser';
+  }
+
+  @override
   String get edit => 'Edit';
 
   @override

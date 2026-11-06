@@ -236,7 +236,8 @@ enum SettingsTopic {
   };
 
   bool get available => switch (this) {
-    advanced || dsp => AudioEngine.supported,
+    advanced => AudioEngine.supported,
+    dsp => AudioEngine.supported || AudioEngine.webEffects,
     library => Features.localLibrary,
     downloads => Features.downloads,
     history => Features.listeningHistory,

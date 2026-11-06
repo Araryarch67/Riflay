@@ -163,7 +163,7 @@ class _AudioReactiveViewState extends State<AudioReactiveView> with WidgetsBindi
         !c.casting &&
         !c.audio.bitPerfect &&
         c.audio.dopPlaying == null &&
-        AudioEngine.supported;
+        (AudioEngine.supported || AudioEngine.webEffects);
     if (active) {
       _release ??= c.audio.watchVisualizer();
       _animate();

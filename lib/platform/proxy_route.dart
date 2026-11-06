@@ -19,11 +19,29 @@ final _videoId = RegExp(r'^[A-Za-z0-9_-]{11}$');
 /// Whether [id] looks like a YouTube video id.
 bool isVideoId(String id) => _videoId.hasMatch(id);
 
-/// The proxy URL that plays [videoId]'s audio.
-Uri audioOnProxy(String videoId, Uri proxy, {bool aac = false}) {
+/// The query parameter that has the proxy send a song's audio as a download: its value is the file's name, without
+/// the extension (the proxy adds the stream's own).
+const proxySaveParameter = 'save';
+
+/// The proxy URL that plays [videoId]'s audio, or with [saveAs] downloads it as a file of that name.
+Uri audioOnProxy(String videoId, Uri proxy, {bool aac = false, String? saveAs}) {
   final base = proxy.path.endsWith('/') ? proxy.path.substring(0, proxy.path.length - 1) : proxy.path;
-  return proxy.replace(path: '$base$proxyAudioPrefix$videoId', query: aac ? 'aac=1' : null);
+  final query = {if (aac) 'aac': '1', proxySaveParameter: ?saveAs};
+  return proxy.replace(path: '$base$proxyAudioPrefix$videoId', queryParameters: query.isEmpty ? null : query);
 }
+
+/// The `Content-Disposition` that saves a download as [name] (plus [extension]): a plain-ASCII fallback for old
+/// browsers, and the whole name in UTF-8. Characters a file name or the header can't hold are dropped.
+String attachmentDisposition(String name, String extension) {
+  var clean = name.replaceAll(RegExp(r'[\\/:*?"<>|\x00-\x1f\x7f]'), ' ').replaceAll(RegExp(r'\s+'), ' ').trim();
+  if (clean.length > 120) clean = clean.substring(0, 120).trim();
+  if (clean.isEmpty) clean = 'song';
+  final ascii = clean.replaceAll(RegExp(r'[^\x20-\x7e]'), '_');
+  return 'attachment; filename="$ascii.$extension"; filename*=UTF-8\'\'${Uri.encodeComponent('$clean.$extension')}';
+}
+
+/// The file extension for a stream of [mimeType] (`audio/webm; codecs="opus"`, `audio/mp4; …`).
+String audioExtension(String mimeType) => mimeType.startsWith('audio/mp4') ? 'm4a' : 'webm';
 
 /// Request headers a browser will not let a page set. The app sends them as `x-riflay-<name>` and the proxy puts
 /// them back under their own name.

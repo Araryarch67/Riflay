@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/track.dart';
 import '../platform/background.dart';
+import '../platform/web_storage.dart';
 import 'player_controller.dart';
 import 'private_files.dart';
 import 'ytmusic_play_report.dart';
@@ -191,8 +192,9 @@ class PlayHistory extends ChangeNotifier {
       _fileOverride = file,
       _useOverride = file != null;
 
-  /// The app's history. Tests may swap it for one with a temporary file.
-  static PlayHistory instance = PlayHistory();
+  /// The app's history. Tests may swap it for one with a temporary file. A browser's local storage holds a few
+  /// megabytes, so the web build keeps fewer plays (still years of listening).
+  static PlayHistory instance = PlayHistory(maxPlays: WebStorage.available ? 40000 : 150000);
 
   static const enabledKey = 'history.enabled.v1';
   static const _name = 'listening_history.jsonl';
@@ -217,7 +219,7 @@ class PlayHistory extends ChangeNotifier {
   bool _enabled = true;
   bool _loaded = false;
   int _revision = 0;
-  File? _file;
+  _Store? _file;
   final _pending = <String>[];
   Timer? _timer;
   bool _needsNewline = false;
@@ -347,7 +349,7 @@ class PlayHistory extends ChangeNotifier {
       for (final l in lines) {
         b.writeln(l);
       }
-      await file.writeAsString(b.toString(), mode: FileMode.append, flush: true);
+      await file.append(b.toString());
       _needsHeader = false;
       _needsNewline = false;
     } catch (e) {
@@ -411,16 +413,9 @@ class PlayHistory extends ChangeNotifier {
   }
 
   // Static, so the isolate's closure doesn't carry the history (and its pending futures) with it.
-  static Future<(HistoryData, bool, bool)?> _read(File file) => inBackground(() => _readFile(file));
+  static Future<(HistoryData, bool, bool)?> _read(_Store file) => file.read();
 
-  static (HistoryData, bool, bool)? _readFile(File file) {
-    if (!file.existsSync()) return null;
-    final text = file.readAsStringSync();
-    return (parse(text), text.isNotEmpty && !text.endsWith('\n'), text.isNotEmpty);
-  }
-
-  static Future<void> _writeAll(File file, HistoryData data) =>
-      inBackground(() => PrivateFiles.writeSync(file, encode(data)));
+  static Future<void> _writeAll(_Store file, HistoryData data) => file.writeAll(data);
 
   void _mergeLoaded(HistoryData data) {
     // Whatever was recorded while the file was being read goes after what was in it.
@@ -480,11 +475,12 @@ class PlayHistory extends ChangeNotifier {
     }
   }
 
-  Future<File?> _resolveFile() async {
-    if (_useOverride) return _fileOverride;
+  Future<_Store?> _resolveFile() async {
+    if (_useOverride) return _FileStore(_fileOverride!);
     if (_file != null) return _file;
+    if (WebStorage.available) return _file = _WebStore(_name);
     try {
-      return _file = await PrivateFiles.file(_name);
+      return _file = _FileStore(await PrivateFiles.file(_name));
     } catch (_) {
       return null; // no app folder (widget tests): the history lives in memory only
     }
@@ -518,7 +514,7 @@ class PlayHistory extends ChangeNotifier {
     final done = _io = _io.then((_) async {
       final file = await _resolveFile();
       try {
-        if (file != null && file.existsSync()) await file.delete();
+        await file?.delete();
       } catch (e) {
         debugPrint('Deleting the listening history failed: $e');
       }
@@ -806,4 +802,76 @@ class PlayHistory extends ChangeNotifier {
     }
     return out;
   }
+}
+
+/// Where the history is kept: its file, or the browser's local storage in the web build.
+sealed class _Store {
+  /// The history, whether its text ends mid-line, and whether there was any text; null when there is none yet.
+  Future<(HistoryData, bool, bool)?> read();
+
+  Future<void> append(String lines);
+
+  Future<void> writeAll(HistoryData data);
+
+  Future<void> delete();
+
+  static (HistoryData, bool, bool) _parsed(String text) =>
+      (PlayHistory.parse(text), text.isNotEmpty && !text.endsWith('\n'), text.isNotEmpty);
+}
+
+class _FileStore extends _Store {
+  _FileStore(this.file);
+
+  final File file;
+
+  // Static, so the isolate's closure doesn't carry the history (and its pending futures) with it.
+  static (HistoryData, bool, bool)? _readFile(File file) {
+    if (!file.existsSync()) return null;
+    return _Store._parsed(file.readAsStringSync());
+  }
+
+  static void _writeFile(File file, HistoryData data) => PrivateFiles.writeSync(file, PlayHistory.encode(data));
+
+  @override
+  Future<(HistoryData, bool, bool)?> read() {
+    final f = file;
+    return inBackground(() => _readFile(f));
+  }
+
+  @override
+  Future<void> append(String lines) => file.writeAsString(lines, mode: FileMode.append, flush: true);
+
+  @override
+  Future<void> writeAll(HistoryData data) {
+    final f = file;
+    return inBackground(() => _writeFile(f, data));
+  }
+
+  @override
+  Future<void> delete() async {
+    if (file.existsSync()) await file.delete();
+  }
+}
+
+/// The browser's local storage holds the file's text under its name. Each append rewrites it whole: a few
+/// megabytes at most, written every 15 seconds of listening.
+class _WebStore extends _Store {
+  _WebStore(this.key);
+
+  final String key;
+
+  @override
+  Future<(HistoryData, bool, bool)?> read() async {
+    final text = WebStorage.read(key);
+    return text == null ? null : _Store._parsed(text);
+  }
+
+  @override
+  Future<void> append(String lines) async => WebStorage.write(key, (WebStorage.read(key) ?? '') + lines);
+
+  @override
+  Future<void> writeAll(HistoryData data) async => WebStorage.write(key, PlayHistory.encode(data));
+
+  @override
+  Future<void> delete() async => WebStorage.remove(key);
 }

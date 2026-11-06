@@ -5,10 +5,10 @@ import 'dart:math';
 import 'package:crypto/crypto.dart' as crypto;
 import 'package:flutter/foundation.dart';
 import 'package:mqtt_client/mqtt_client.dart';
-import 'package:mqtt_client/mqtt_server_client.dart';
 import 'package:pointycastle/export.dart';
 import 'package:typed_data/typed_data.dart' show Uint8Buffer;
 
+import '../../platform/mqtt.dart';
 import 'lan.dart';
 import 'transport.dart';
 
@@ -30,17 +30,21 @@ import 'transport.dart';
 /// be replayed on another topic. Messages that fail to decrypt, or whose `ts` is more than two minutes off, are
 /// dropped.
 
-/// A public broker with TLS.
+/// A public broker with TLS, on its MQTT [port] and (for the web build) as a secure WebSocket on [wssPort].
 class InternetBroker {
-  const InternetBroker(this.host, this.port);
+  const InternetBroker(this.host, this.port, {required this.wssPort});
 
   final String host;
   final int port;
+  final int wssPort;
 }
 
 /// The index of a broker is part of every session code, so only ever append to this list. Checked against the
 /// real brokers; test.mosquitto.org (8886) reset every connection when this was written, so it isn't here.
-const internetBrokers = [InternetBroker('broker.emqx.io', 8883), InternetBroker('broker.hivemq.com', 8883)];
+const internetBrokers = [
+  InternetBroker('broker.emqx.io', 8883, wssPort: 8084),
+  InternetBroker('broker.hivemq.com', 8883, wssPort: 8884),
+];
 
 /// Characters in a session code for the internet.
 const internetCodeLength = 10;
@@ -209,7 +213,7 @@ String _randomId([int length = 12]) {
 class _Link {
   _Link._(this._client);
 
-  final MqttServerClient _client;
+  final MqttClient _client;
   final messages = StreamController<(String, Uint8List)>.broadcast();
   final _down = Completer<void>();
   var _closing = false;
@@ -226,12 +230,17 @@ class _Link {
     String? will,
     Duration timeout = const Duration(seconds: 10),
   }) async {
-    final client = MqttServerClient.withPort(broker.host, 'riflay-${_randomId(16)}', broker.port)
-      ..secure = true
-      ..keepAlivePeriod = 30
-      ..autoReconnect = false
-      ..logging(on: false)
-      ..setProtocolV311();
+    final client =
+        secureMqttClient(
+            broker.host,
+            tlsPort: broker.port,
+            wssPort: broker.wssPort,
+            clientId: 'riflay-${_randomId(16)}',
+          )
+          ..keepAlivePeriod = 30
+          ..autoReconnect = false
+          ..logging(on: false)
+          ..setProtocolV311();
     var message = MqttConnectMessage().withClientIdentifier(client.clientIdentifier).startClean();
     if (will != null) {
       message = message.withWillTopic(will).withWillMessage('').withWillQos(MqttQos.atLeastOnce).withWillRetain();

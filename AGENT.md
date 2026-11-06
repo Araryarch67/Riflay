@@ -335,6 +335,24 @@ through the code:
   proxy imports it (and `youtube_player_api.dart`) by file path. A new service the app calls
   on the web needs its host here.
 
+- `web_audio.dart`: every `<audio>` element just_audio plays is routed (by wrapping
+  `HTMLMediaElement.prototype.play`, since just_audio keeps its element private) through one Web Audio
+  graph: preamp, the equalizer's peaking filters, crossfeed or mono, then an analyser the visualizer reads
+  (`AudioEngine._readWebVisualizer`, the same 24 bands as mpv's filter bank). `AudioEngine.webEffects` is
+  its switch; Settings › Sound › Sound effects shows the equalizer, crossfeed and mono there. Only
+  same-origin, `blob:` and CORS (`crossOrigin` set, which the player does on the web) elements are routed:
+  a routed cross-origin element without CORS would play silence. `RIFLAY_NO_WEB_AUDIO` turns it off.
+- `web_storage.dart`: the browser's local storage. `PlayHistory` keeps its file's text there (40,000 plays
+  at most, the quota is a few megabytes), so Stats, Wrap and the streak work on the web.
+- `browser_files.dart`: browser downloads (the Wrap card; a song's audio via the proxy's `?save=`, which
+  answers with `Content-Disposition`, for "Save to device").
+- `mqtt.dart`: Listen together over the internet connects to the same brokers as a secure WebSocket
+  (`wss://<broker>:<wssPort>/mqtt`), so web and app share sessions. Same-Wi-Fi sessions stay native
+  (`Features.listenOnLan`).
+- The desktop layout's top bar (Back / Forward, Home, search) is drawn on the web too
+  (`hasCustomTitleBar`); what belongs to a window (dragging, window buttons, `window_manager`) is behind
+  `hasNativeWindow`.
+
 Playback on the web is just_audio's own HTML backend (`JustAudioMediaKit.ensureInitialized`
 registers nothing there). Run it against a local proxy:
 
@@ -492,6 +510,7 @@ device's language when Riflay has it). The words live in `lib/l10n/app_en.arb` (
   flutter run --dart-define=RIFLAY_NO_STREAK_CACHE=true  # the listening streak counted afresh every build
   flutter run --dart-define=RIFLAY_NO_MV_SEARCH=true     # a song YouTube Music pairs with no video gets none (no search for its official video)
   flutter run --dart-define=RIFLAY_NO_PAGE_ARTWORK=true  # Cover: Background uses the list's 544 px cover, not a 1600 px one
+  flutter run -d chrome --dart-define=RIFLAY_NO_WEB_AUDIO=true  # web: songs play straight from <audio>, no effects or visualizer
   ```
 
   Last.fm is only offered when the build has an API account's key and secret

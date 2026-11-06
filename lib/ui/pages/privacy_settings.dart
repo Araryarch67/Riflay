@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../platform/features.dart';
 import '../../services/play_history.dart';
 import '../../services/wrap_notifications.dart';
 import '../navigation.dart';
@@ -70,15 +71,16 @@ class _PrivacySettingsState extends State<PrivacySettings> {
             value: _history.enabled,
             onChanged: _history.setEnabled,
           ),
-          SwitchListTile(
-            title: const Text('Monthly Wrap notification'),
-            subtitle: Text('On the 1st, tell me when last month\'s Wrap is ready.', style: muted),
-            value: _wrapNotes,
-            onChanged: (v) {
-              setState(() => _wrapNotes = v);
-              WrapNotifier.instance.setEnabled(v, _history).ignore();
-            },
-          ),
+          if (Features.systemNotifications)
+            SwitchListTile(
+              title: const Text('Monthly Wrap notification'),
+              subtitle: Text('On the 1st, tell me when last month\'s Wrap is ready.', style: muted),
+              value: _wrapNotes,
+              onChanged: (v) {
+                setState(() => _wrapNotes = v);
+                WrapNotifier.instance.setEnabled(v, _history).ignore();
+              },
+            ),
           ListTile(
             leading: const Icon(Icons.insights_rounded),
             title: const Text('Your listening stats'),

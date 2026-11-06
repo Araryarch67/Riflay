@@ -261,6 +261,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get downloadAs => 'Download as…';
 
   @override
+  String get saveToDevice => 'Save to device';
+
+  @override
+  String savingToDevice(Object title) {
+    return '$title is downloading in your browser';
+  }
+
+  @override
   String get edit => 'Edit';
 
   @override

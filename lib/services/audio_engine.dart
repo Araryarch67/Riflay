@@ -13,6 +13,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../platform/host.dart';
 import '../platform/mpv.dart';
+import '../platform/web_audio.dart';
+import '../platform/web_effects.dart';
 import 'layout_prefs.dart';
 import 'carla_locator.dart';
 import 'crossfade.dart';
@@ -400,6 +402,31 @@ class AudioEngine extends ChangeNotifier {
   }
 
   static bool get supported => Host.isLinux || Host.isWindows || Host.isAndroid || Host.isMacOS || Host.isIOS;
+
+  /// The web build's share of the effects: the equalizer, crossfeed and mono audio, and the visualizer, done
+  /// with Web Audio (`web_audio.dart`) instead of mpv. Never true where [supported] is.
+  static bool get webEffects => !supported && WebAudio.available;
+
+  /// What [webEffects] applies, from the same settings mpv's [filterChain] is made of.
+  @visibleForTesting
+  WebEffects get webEffectsNow => WebEffects(
+    preamp: preamp,
+    eq: eqActive
+        ? [
+            for (final b in bands)
+              if (b.gain.abs() > 0.05) (frequency: b.frequency, gain: b.gain, q: b.q),
+          ]
+        : const [],
+    crossfeed: crossfeedActive ? crossfeed : 0,
+    crossfeedRange: crossfeedRange,
+    mono: monoActive
+        ? switch (mono) {
+            MonoAudio.left => WebMono.left,
+            MonoAudio.right => WebMono.right,
+            _ => WebMono.both,
+          }
+        : null,
+  );
 
   /// Android and iOS offer no device choice or exclusive output: the system mixer plays everything.
   /// iOS has no device list but lets the user pick the route (speaker, Bluetooth, AirPlay, a USB DAC) with
@@ -802,6 +829,7 @@ class AudioEngine extends ChangeNotifier {
 
   Future<void> _readVisualizer() async {
     if (_visualizerReading || _disposed || !visualizerActive) return;
+    if (webEffects) return _readWebVisualizer();
     final p = _native;
     if (p == null || _player?.state.playing != true || _player?.state.buffering == true) return;
     _visualizerReading = true;
@@ -819,6 +847,17 @@ class AudioEngine extends ChangeNotifier {
     } finally {
       _visualizerReading = false;
     }
+  }
+
+  late final _webBandEdges = bandEdges([
+    for (var i = 0; i < VisualizerSpectrum.bands; i++) VisualizerSpectrum.frequency(i, WebAudio.sampleRate.round()),
+  ], 0.55);
+  final _webBandLevels = Float64List(VisualizerSpectrum.bands);
+
+  /// The web build's visualizer: the same bands as mpv's filter bank, read from Web Audio's analyser.
+  void _readWebVisualizer() {
+    if (!WebAudio.readBands(_webBandEdges, _webBandLevels)) return;
+    visualizerLevels.addBands([for (final db in _webBandLevels) VisualizerLevels.amplitudeOfDb(db)]);
   }
 
   // ── Persistence ─────────────────────────────────────────────────────────
@@ -897,6 +936,7 @@ class AudioEngine extends ChangeNotifier {
     }
     if (turnedOffDirectUsb) await _save();
     if (virtualSpeakers) await _installHrir();
+    if (webEffects) WebAudio.apply(webEffectsNow);
   }
 
   /// Copies [hrirAsset] next to the app's other files, for [hrirPath].
@@ -969,6 +1009,7 @@ class AudioEngine extends ChangeNotifier {
       _done = null;
       try {
         await _save();
+        if (webEffects) WebAudio.apply(webEffectsNow);
         final p = _native;
         if (p != null) {
           final mixerMoved = Host.isAndroid && await _syncMixer(p);

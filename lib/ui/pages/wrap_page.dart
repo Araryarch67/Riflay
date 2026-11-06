@@ -8,6 +8,8 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
 import '../../models/track.dart';
+import '../../platform/browser_files.dart';
+import '../../platform/host.dart';
 import '../../services/language.dart';
 import '../../services/listening_stats.dart';
 import '../../services/play_history.dart';
@@ -125,16 +127,22 @@ class _WrapStoryState extends State<WrapStory> {
         'Top song: ${d.topSong.title}. Top artist: ${d.topArtist.title}.';
   }
 
-  /// Saves the card to Downloads (the app's documents where there is none); the saved file, or null if it failed.
-  Future<File?> _save({bool quiet = false}) async {
+  /// Saves the card to Downloads (the app's documents where there is none; the browser's downloads on the web);
+  /// the saved file's name, or null if it failed.
+  Future<String?> _save({bool quiet = false}) async {
     final messenger = ScaffoldMessenger.of(context);
     try {
       final bytes = await _render();
+      if (BrowserFiles.available) {
+        BrowserFiles.save(bytes, _fileName, mime: 'image/png');
+        if (!quiet) messenger.showSnackBar(SnackBar(content: Text('Saved $_fileName')));
+        return _fileName;
+      }
       final dir = await getDownloadsDirectory() ?? await getApplicationDocumentsDirectory();
       final file = File(p.join(dir.path, _fileName));
       await file.writeAsBytes(bytes, flush: true);
       if (!quiet) messenger.showSnackBar(SnackBar(content: Text('Saved ${p.basename(file.path)}')));
-      return file;
+      return p.basename(file.path);
     } catch (e) {
       debugPrint('Saving a Wrap card failed: $e');
       messenger.showSnackBar(const SnackBar(content: Text('Couldn\'t save the image')));
@@ -146,7 +154,7 @@ class _WrapStoryState extends State<WrapStory> {
   /// copied, to paste beside it.
   Future<void> _share() async {
     final messenger = ScaffoldMessenger.of(context);
-    if (Platform.isAndroid) {
+    if (Host.isAndroid) {
       try {
         final bytes = await _render();
         // The cache's shared/ folder: the one the share sheet may lend out (res/xml/update_file_paths.xml).
@@ -164,10 +172,10 @@ class _WrapStoryState extends State<WrapStory> {
         debugPrint('Sharing a Wrap card failed: $e');
       }
     }
-    final file = await _save(quiet: true);
-    if (file == null) return;
+    final name = await _save(quiet: true);
+    if (name == null) return;
     await Clipboard.setData(ClipboardData(text: _caption));
-    messenger.showSnackBar(SnackBar(content: Text('Saved ${p.basename(file.path)}; the caption is copied')));
+    messenger.showSnackBar(SnackBar(content: Text('Saved $name; the caption is copied')));
   }
 
   @override
