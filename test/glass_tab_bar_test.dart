@@ -127,6 +127,19 @@ void main() {
         await tester.pump(const Duration(milliseconds: 50));
         expect(bar.link.search.focus.hasFocus, isTrue);
         expect(tester.testTextInput.isVisible, isTrue);
+        final editable = find.descendant(
+          of: find.byKey(PhoneBottomBar.searchFieldKey),
+          matching: find.byType(EditableText),
+        );
+        final inputState = tester.state<EditableTextState>(editable);
+        tester.view.viewInsets = FakeViewPadding(bottom: size.height * 0.4);
+        addTearDown(tester.view.resetViewInsets);
+        for (var frame = 0; frame < 30; frame++) {
+          await tester.pump(const Duration(milliseconds: 20));
+          expect(bar.link.search.focus.hasFocus, isTrue, reason: 'keyboard stays open throughout expansion');
+          expect(tester.state<EditableTextState>(editable), same(inputState), reason: 'the input must stay mounted');
+          expect(tester.testTextInput.isVisible, isTrue);
+        }
         tester.testTextInput.enterText('led zeppelin');
         await tester.pump();
         expect(bar.link.search.controller.text, 'led zeppelin');
@@ -308,6 +321,8 @@ void main() {
     await tester.pump(const Duration(milliseconds: 800));
     expect(find.byKey(PhoneBottomBar.searchFieldKey), findsOneWidget);
     expect(find.byType(SearchBox), findsNothing);
+    final field = tester.widget<TextField>(find.byKey(PhoneBottomBar.searchFieldKey));
+    expect(field.focusNode!.hasFocus, isTrue, reason: 'focus survives the shell switching pages');
 
     await tester.runAsync(() => prefs.setTabBar(TabBarStyle.floating));
     await tester.pump(const Duration(milliseconds: 400));
@@ -316,14 +331,19 @@ void main() {
     expect(find.byType(SearchBox), findsOneWidget, reason: 'other tab bars leave the box on the page');
   });
 
-  test('Liquid Kawaii is Kawaii with the Liquid glass tab bar, and is named over it', () async {
-    prefs.tabBar = TabBarStyle.capsule;
+  test('Kawaii and Liquid Kawaii switch between distinct tab bars and preset names', () async {
+    prefs.tabBar = TabBarStyle.glass;
     await PlayerPreset.kawaii.apply(prefs);
-    expect(prefs.tabBar, TabBarStyle.capsule, reason: 'Kawaii leaves the tab bar alone');
+    expect(prefs.tabBar, TabBarStyle.capsule);
     expect(playerPresetName(), 'Kawaii');
     await PlayerPreset.liquidKawaii.apply(prefs);
     expect(prefs.tabBar, TabBarStyle.glass);
     expect(playerPresetName(), 'Liquid Kawaii');
-    expect(PlayerPreset.kawaii.changesTo(prefs), 0, reason: 'every other setting is Kawaii\'s');
+    expect(PlayerPreset.kawaii.changesTo(prefs), 1, reason: 'switching back must change the tab bar');
+    expect(PlayerPreset.kawaii.matches(prefs), isFalse);
+    await PlayerPreset.kawaii.apply(prefs);
+    expect(prefs.tabBar, TabBarStyle.capsule);
+    expect(playerPresetName(), 'Kawaii');
+    expect(PlayerPreset.liquidKawaii.changesTo(prefs), 1);
   });
 }

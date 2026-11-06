@@ -98,6 +98,7 @@ class PlayerPreset {
     volumeSlider: VolumeSliderShape.pill,
   );
 
+  /// Kawaii uses Capsule navigation; applying it must also leave Liquid Kawaii's glass bar behind.
   static const kawaii = PlayerPreset(
     name: 'Kawaii',
     note: 'The cover fades into the page, with plain icons, a wavy line and the volume behind a button',
@@ -115,6 +116,7 @@ class PlayerPreset {
     badge: QualityBadgePlace.timeRow,
     background: NowPlayingBackground.video,
     volumeSlider: VolumeSliderShape.pill,
+    tabBar: TabBarStyle.capsule,
   );
 
   /// Kawaii, with the Liquid glass tab bar on phones.
@@ -206,7 +208,7 @@ class PlayerPreset {
 /// The name of the preset the current settings match, or null for a custom mix.
 String? playerPresetName([LayoutPrefs? prefs]) {
   final p = prefs ?? LayoutPrefs.instance;
-  // A preset that also sets the tab bar is named before one that leaves it alone (Liquid Kawaii before Kawaii).
+  // Prefer presets that also specify navigation over player-only presets.
   for (final preset in [
     ...PlayerPreset.all.where((preset) => preset.tabBar != null),
     ...PlayerPreset.all.where((preset) => preset.tabBar == null),

@@ -443,7 +443,13 @@ class _GlassBarState extends State<_GlassBar> with TickerProviderStateMixin {
             IgnorePointer(ignoring: typing > 0.5, child: _tabsPill(colors, full, shrink, search)),
           ),
         ),
-      Positioned.fromRect(rect: searchRect, child: _searchPill(colors, searchRect.width, field.width, search)),
+      // The tabs disappear at the end of the typing animation. Keep Search's subtree in place when its
+      // position in this list changes, so its text input connection and keyboard survive the animation.
+      Positioned.fromRect(
+        key: const ValueKey('glass-search-pill'),
+        rect: searchRect,
+        child: _searchPill(colors, searchRect.width, field.width, search),
+      ),
       if (search > 0)
         Positioned.fromRect(
           rect: corner,
@@ -594,8 +600,10 @@ class _GlassBarState extends State<_GlassBar> with TickerProviderStateMixin {
                     child: InkWell(
                       onTap: () {
                         widget.onSelect(PhoneTab.search);
-                        // Focus follows the field when it mounts, while the pill is still growing.
-                        _input.focus.requestFocus();
+                        // The shell must finish switching focus scopes before the field takes focus.
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          if (mounted && widget.tab == PhoneTab.search) _input.focus.requestFocus();
+                        });
                       },
                     ),
                   ),
@@ -617,6 +625,7 @@ class _GlassBarState extends State<_GlassBar> with TickerProviderStateMixin {
           // Built as soon as Search opens, so "focus the search box" finds it before the field has grown.
           if (open)
             Positioned(
+              key: const ValueKey('glass-search-input'),
               left: inset,
               top: 0,
               bottom: 0,

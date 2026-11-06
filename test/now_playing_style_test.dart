@@ -356,6 +356,28 @@ void main() {
     await tester.pumpWidget(const SizedBox());
   });
 
+  testWidgets('the presets page can switch from Liquid Kawaii to Kawaii and back', (tester) async {
+    final c = await _show(tester, const PlayerPresetsPage(), const Size(412, 915));
+    await tester.runAsync(() => PlayerPreset.liquidKawaii.apply(p));
+    await tester.pumpAndSettle();
+    expect(find.text('Your settings match Liquid Kawaii'), findsOneWidget);
+
+    for (final preset in [PlayerPreset.kawaii, PlayerPreset.liquidKawaii]) {
+      await tester.ensureVisible(find.text(preset.name));
+      await tester.tap(find.text(preset.name));
+      await tester.pumpAndSettle();
+      expect(find.byType(AlertDialog), findsOneWidget, reason: 'the other preset must be selectable');
+      await tester.tap(find.text('Apply'));
+      await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 50)));
+      await tester.pumpAndSettle();
+      expect(p.tabBar, preset.tabBar);
+      tester.state<ScrollableState>(find.byType(Scrollable).first).position.jumpTo(0);
+      await tester.pumpAndSettle();
+      expect(find.text('Your settings match ${preset.name}'), findsOneWidget);
+    }
+    await _close(tester, c);
+  });
+
   testWidgets('Stacked parts: header, share, pill Play, bottom chips with Lyrics, volume; Play toggles', (
     tester,
   ) async {
