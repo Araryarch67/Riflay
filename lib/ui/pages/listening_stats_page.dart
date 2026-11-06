@@ -12,6 +12,7 @@ import '../widgets/controls.dart';
 import '../widgets/page_scaffold.dart';
 import '../widgets/track_row.dart';
 import 'wrap_page.dart';
+import '../../services/language.dart';
 
 /// "Your listening": what was played most this month, this year or ever, worked out from the history kept on this
 /// device.
@@ -69,7 +70,7 @@ class _ListeningStatsPageState extends State<ListeningStatsPage> {
     final soFarReady = MonthlyWrap.playsIn(_history, thisMonth) >= MonthlyWrap.minPlaysSoFar;
 
     return PageScaffold(
-      title: 'Your listening',
+      title: tr.yourListening,
       slivers: [
         SliverToBoxAdapter(
           child: Padding(
@@ -77,12 +78,9 @@ class _ListeningStatsPageState extends State<ListeningStatsPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Your listening', style: text.headlineMedium?.copyWith(fontWeight: FontWeight.w800)),
+                Text(tr.yourListening, style: text.headlineMedium?.copyWith(fontWeight: FontWeight.w800)),
                 const SizedBox(height: 4),
-                Text(
-                  'Worked out from songs you played for 30 seconds or more. It stays on this device.',
-                  style: text.bodySmall?.copyWith(color: AppColors.textSecondary),
-                ),
+                Text(tr.yourListeningBody, style: text.bodySmall?.copyWith(color: AppColors.textSecondary)),
                 const SizedBox(height: 16),
                 Wrap(
                   spacing: 8,
@@ -102,12 +100,12 @@ class _ListeningStatsPageState extends State<ListeningStatsPage> {
                 else ...[
                   _Totals(stats: stats),
                   const SizedBox(height: 24),
-                  Text('Listening time', style: text.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+                  Text(tr.listeningTime, style: text.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
                   const SizedBox(height: 12),
                   _BarChart(bars: stats.bars),
                   const SizedBox(height: 28),
                   _Section(
-                    title: 'Top songs',
+                    title: tr.topSongs,
                     children: [
                       for (final (i, s) in stats.topSongs.indexed)
                         _Row(
@@ -118,7 +116,7 @@ class _ListeningStatsPageState extends State<ListeningStatsPage> {
                           trailing: _plays(s.plays),
                           onTap: () {
                             if (s.sample.imported) {
-                              _playImported(context, c, s.sample, 'Your top songs');
+                              _playImported(context, c, s.sample, tr.wrapTopSongs);
                               return;
                             }
                             final playable = [
@@ -128,14 +126,14 @@ class _ListeningStatsPageState extends State<ListeningStatsPage> {
                             c.playList(
                               [for (final t in playable) trackFor(t)],
                               playable.indexOf(s.sample),
-                              from: 'Your top songs',
+                              from: tr.wrapTopSongs,
                             );
                           },
                         ),
                     ],
                   ),
                   _Section(
-                    title: 'Top artists',
+                    title: tr.topArtists,
                     children: [
                       for (final (i, a) in stats.topArtists.take(6).indexed)
                         _Row(
@@ -149,7 +147,7 @@ class _ListeningStatsPageState extends State<ListeningStatsPage> {
                     ],
                   ),
                   _Section(
-                    title: 'Top albums',
+                    title: tr.topAlbums,
                     children: [
                       for (final (i, a) in stats.topAlbums.take(6).indexed)
                         _Row(
@@ -164,13 +162,13 @@ class _ListeningStatsPageState extends State<ListeningStatsPage> {
                   ),
                 ],
                 _Section(
-                  title: 'Your monthly Wraps',
+                  title: tr.yourMonthlyWraps,
                   children: [
                     // Recomputed each time it is opened, up to that moment.
                     _Row(
                       art: const _Glyph(Icons.auto_awesome_motion_outlined),
-                      title: '${thisMonth.name} so far',
-                      subtitle: soFarReady ? 'This month up to now' : 'Play a few songs to see your Wrap',
+                      title: tr.wrapSoFar(thisMonth.name),
+                      subtitle: soFarReady ? tr.thisMonthUpToNow : tr.playFewSongsWrapShort,
                       onTap: soFarReady
                           ? () => shell.open(
                               WrapPage(month: thisMonth, history: widget.history, now: widget.now ?? DateTime.now()),
@@ -181,7 +179,7 @@ class _ListeningStatsPageState extends State<ListeningStatsPage> {
                     for (final m in wraps.take(24))
                       _Row(
                         art: const _Glyph(Icons.auto_awesome_motion_outlined),
-                        title: 'Your ${m.name} in music',
+                        title: tr.wrapMonthInMusic(m.name),
                         subtitle: m.label,
                         onTap: () => shell.open(
                           WrapPage(month: m, history: widget.history),
@@ -198,7 +196,7 @@ class _ListeningStatsPageState extends State<ListeningStatsPage> {
     );
   }
 
-  static String _plays(int n) => n == 1 ? '1 play' : '$n plays';
+  static String _plays(int n) => tr.playsPlural(n);
 
   void _openArtist(BuildContext context, PlayerController c, RankedItem item, Track sample) {
     final open = openArtist(context, c, sample);
@@ -226,7 +224,7 @@ class _ListeningStatsPageState extends State<ListeningStatsPage> {
     } catch (e) {
       debugPrint('Looking up ${song.title}: $e');
     }
-    messenger?.showSnackBar(SnackBar(content: Text('Couldn\'t find ${song.title}')));
+    messenger?.showSnackBar(SnackBar(content: Text(tr.couldntFindSong(song.title))));
   }
 
   void _openAlbum(BuildContext context, PlayerController c, RankedItem item, Track sample) {
@@ -249,9 +247,7 @@ class _Empty extends StatelessWidget {
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.symmetric(vertical: 24),
     child: Text(
-      history.enabled
-          ? 'Nothing here yet. Songs you listen to for 30 seconds or more will show up.'
-          : 'Your listening history is off. Turn it on in Settings › Library & downloads › Listening history & Wrap.',
+      history.enabled ? tr.statsNothingYet : tr.historyOff,
       style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary),
     ),
   );
@@ -276,9 +272,9 @@ class _Totals extends StatelessWidget {
       spacing: 40,
       runSpacing: 16,
       children: [
-        cell(formatListened(stats.listened), 'listened'),
-        cell('${stats.songs}', stats.songs == 1 ? 'song' : 'songs'),
-        cell('${stats.plays}', stats.plays == 1 ? 'play' : 'plays'),
+        cell(formatListened(stats.listened), tr.statsListened),
+        cell('${stats.songs}', tr.statsSongsUnit(stats.songs)),
+        cell('${stats.plays}', tr.statsPlaysUnit(stats.plays)),
       ],
     );
   }
@@ -392,8 +388,9 @@ class _BarChart extends StatelessWidget {
   Widget build(BuildContext context) {
     final peak = bars.fold<int>(0, (m, b) => b.listened.inSeconds > m ? b.listened.inSeconds : m);
     return Semantics(
-      label:
-          'Listening time chart. ${bars.where((b) => b.listened > Duration.zero).map((b) => '${b.name}: ${formatListened(b.listened)}').join('. ')}',
+      label: tr.listeningTimeChart(
+        bars.where((b) => b.listened > Duration.zero).map((b) => '${b.name}: ${formatListened(b.listened)}').join('. '),
+      ),
       child: ExcludeSemantics(
         child: SizedBox(
           height: 150,

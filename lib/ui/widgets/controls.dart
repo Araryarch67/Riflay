@@ -843,7 +843,7 @@ class VolumeSlider extends StatelessWidget {
               ),
             ],
           );
-          return dop ? Tooltip(message: 'DSD goes to your DAC as it is: use the DAC\'s volume', child: row) : row;
+          return dop ? Tooltip(message: tr.dsdUseDacVolume, child: row) : row;
         },
       ),
     );
@@ -1117,7 +1117,7 @@ class SourceMark extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Tooltip(
-    message: online ? 'YouTube Music: needs internet' : 'On this device: plays offline',
+    message: online ? tr.streamsOnline : tr.playsOfflineHere,
     child: Icon(
       online ? Icons.cloud_outlined : Icons.offline_pin_rounded,
       size: size,

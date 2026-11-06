@@ -318,7 +318,7 @@ VoidCallback? openArtist(BuildContext host, PlayerController c, Track track, {Sh
             return Collection(
               kind: CollectionKind.remote,
               title: artist.title,
-              subtitle: 'Artist',
+              subtitle: tr.artist,
               tracks: await c.ytMusic.collectionTracks(artist),
             );
           },
@@ -393,7 +393,7 @@ class TrackMenuButton extends StatelessWidget {
       child: PopupMenuButton<void>(
         // Over the whole window, so a click anywhere (sidebar included) closes it.
         useRootNavigator: true,
-        tooltip: 'More options for ${track.title}',
+        tooltip: tr.moreOptionsFor(track.title),
         icon: Icon(Icons.more_horiz_rounded, color: color),
         // The row can be rebuilt away while the menu is open (a list refreshing),
         // so actions run against the navigator's context, which outlives it.
@@ -562,16 +562,12 @@ Future<void> confirmDeleteDownload(BuildContext context, PlayerController c, Tra
       title: Text(tr.deleteDownloadQuestion),
       content: Text(tr.deleteDownloadBody(download.title)),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+        TextButton(onPressed: () => Navigator.pop(context, false), child: Text(tr.cancel)),
         FilledButton(onPressed: () => Navigator.pop(context, true), child: Text(tr.delete)),
       ],
     ),
   );
   if (ok != true) return;
   final failed = await c.deleteDownloads([download]);
-  messenger?.showSnackBar(
-    SnackBar(
-      content: Text(failed > 0 ? "Removed from your library; the file couldn't be deleted." : tr.downloadDeleted),
-    ),
-  );
+  messenger?.showSnackBar(SnackBar(content: Text(failed > 0 ? tr.removedFileNotDeleted : tr.downloadDeleted)));
 }

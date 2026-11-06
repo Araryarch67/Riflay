@@ -8,6 +8,7 @@ import '../services/youtube_stream.dart';
 import 'theme.dart';
 import 'widgets/controls.dart' show formatBytes;
 import 'widgets/skeleton.dart';
+import '../services/language.dart';
 
 /// The format and quality to download with. Without [force] this follows
 /// Settings and only asks when "Ask every time" is on; "Download as…"
@@ -221,7 +222,7 @@ class _DownloadOptionsDialogState extends State<DownloadOptionsDialog> {
 
     final note = formats == null || _container != VideoContainer.mp4 ? null : webmTallerNote(formats, ffmpeg: _ffmpeg);
     return [
-      Text('Format', style: text.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+      Text(tr.format, style: text.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
       RadioGroup<VideoContainer>(
         groupValue: _container,
         onChanged: (v) => setState(() => _container = v ?? _container),
@@ -238,7 +239,7 @@ class _DownloadOptionsDialogState extends State<DownloadOptionsDialog> {
                     if (c == recommendedVideoChoice.container) ...[
                       const SizedBox(width: 8),
                       Text(
-                        'Recommended',
+                        tr.recommended,
                         style: muted?.copyWith(color: AppColors.accent, fontWeight: FontWeight.w700),
                       ),
                     ],
@@ -250,7 +251,7 @@ class _DownloadOptionsDialogState extends State<DownloadOptionsDialog> {
         ),
       ),
       const SizedBox(height: 8),
-      Text('Size', style: text.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+      Text(tr.size, style: text.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
       const SizedBox(height: 8),
       Wrap(
         spacing: 8,
@@ -258,7 +259,7 @@ class _DownloadOptionsDialogState extends State<DownloadOptionsDialog> {
         children: [
           ChoiceChip(
             label: chipLabel(
-              options.isEmpty ? 'Best available' : 'Best available (${options.first.label})',
+              options.isEmpty ? tr.bestAvailable : tr.bestAvailableWith(options.first.label),
               _videoSize(_container, null),
             ),
             selected: want == null,
@@ -285,7 +286,7 @@ class _DownloadOptionsDialogState extends State<DownloadOptionsDialog> {
     final muted = text.bodySmall?.copyWith(color: AppColors.textSecondary);
     return AlertDialog(
       backgroundColor: AppColors.elevated,
-      title: const Text('Download as'),
+      title: Text(tr.downloadAsTitle),
       content: SizedBox(
         width: 380,
         child: SingleChildScrollView(
@@ -302,11 +303,11 @@ class _DownloadOptionsDialogState extends State<DownloadOptionsDialog> {
                 ),
                 const SizedBox(height: 16),
               ],
-              if (_videoFailed) ...[Text("Couldn't look up video sizes.", style: muted), const SizedBox(height: 12)],
+              if (_videoFailed) ...[Text(tr.couldntLookUpSizes, style: muted), const SizedBox(height: 12)],
               if (_kind == DownloadKind.video)
                 ..._videoSection(text, muted)
               else ...[
-                Text('Format', style: text.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+                Text(tr.format, style: text.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
                 RadioGroup<DownloadFormat>(
                   groupValue: _format,
                   onChanged: (v) => setState(() => _format = v ?? _format),
@@ -328,7 +329,7 @@ class _DownloadOptionsDialogState extends State<DownloadOptionsDialog> {
                                 if (f == recommendedChoice.format) ...[
                                   const SizedBox(width: 8),
                                   Text(
-                                    'Recommended',
+                                    tr.recommended,
                                     style: muted?.copyWith(color: AppColors.accent, fontWeight: FontWeight.w700),
                                   ),
                                 ],
@@ -341,7 +342,7 @@ class _DownloadOptionsDialogState extends State<DownloadOptionsDialog> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  _format.lossless ? 'Bit depth and sample rate' : 'Bitrate',
+                  _format.lossless ? tr.bitDepthSampleRate : tr.bitrate,
                   style: text.titleSmall?.copyWith(fontWeight: FontWeight.w700),
                 ),
                 const SizedBox(height: 8),
@@ -375,12 +376,7 @@ class _DownloadOptionsDialogState extends State<DownloadOptionsDialog> {
                   ),
                   if (_kbps[_format] != null) ...[
                     const SizedBox(height: 8),
-                    Text(
-                      _canReencode
-                          ? 'Smaller files, with a little less full sound.'
-                          : 'Smaller files, with a little less full sound. Uses the closest version YouTube offers.',
-                      style: muted,
-                    ),
+                    Text(_canReencode ? tr.smallerFilesNote : tr.smallerFilesClosest, style: muted),
                   ],
                 ],
               ],
@@ -389,13 +385,13 @@ class _DownloadOptionsDialogState extends State<DownloadOptionsDialog> {
         ),
       ),
       actions: [
-        TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancel')),
+        TextButton(onPressed: () => Navigator.of(context).pop(), child: Text(tr.cancel)),
         FilledButton(
           style: FilledButton.styleFrom(backgroundColor: AppColors.inverse, foregroundColor: AppColors.onInverse),
           onPressed: _kind == DownloadKind.video
               ? (_videoLoading ? null : () => Navigator.of(context).pop(_videoChoice()))
               : () => Navigator.of(context).pop(DownloadChoice(_format, kbps: _kbps[_format], flac: _flac)),
-          child: const Text('Download'),
+          child: Text(tr.download),
         ),
       ],
     );

@@ -1,3 +1,5 @@
+import 'language.dart';
+
 import 'dart:async';
 import 'dart:convert';
 
@@ -42,7 +44,7 @@ class SpotifyItem {
 class SpotifySignedOut implements Exception {
   const SpotifySignedOut();
 
-  static const message = 'Your Spotify sign-in has expired. Sign in again.';
+  static String get message => tr.spotifySignInExpired;
 
   @override
   String toString() => message;
@@ -64,7 +66,7 @@ class SpotifyLibraryClient {
   static const _ua = 'Mozilla/5.0 (X11; Linux x86_64; rv:128.0) Gecko/20100101 Firefox/128.0';
   static const _endpoint = 'https://api-partner.spotify.com/pathfinder/v2/query';
   static const _timeout = Duration(seconds: 30);
-  static const _failure = PlaylistTransferError('Couldn\'t read your Spotify library right now. Try again later.');
+  static PlaylistTransferError get _failure => PlaylistTransferError(tr.spotifyReadFailed);
 
   /// The query hashes of the web player at the time of writing; used when its
   /// bundle can't be read. profileAttributes has none: the name is optional.

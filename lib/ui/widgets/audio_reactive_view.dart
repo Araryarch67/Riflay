@@ -7,20 +7,21 @@ import '../../services/layout_prefs.dart';
 import '../../services/player_controller.dart';
 import '../../services/ui_beat.dart';
 import '../../services/visualizer_levels.dart';
+import '../../services/language.dart';
 
 /// Why the visualizer can't be on at all right now, in words for its switch; null when it can.
 /// These are settings of their own: the switch is greyed out until they change.
 String? visualizerBlockedBy(PlayerController c, {bool reduceMotion = false}) {
-  if (c.audio.bitPerfect) return 'Off while Bit-perfect is on: nothing may change the sound on its way to your DAC';
-  if (LayoutPrefs.lightweight) return 'Off in the Lightweight performance mode';
-  if (!LayoutPrefs.moves || reduceMotion) return 'Off while Motion is reduced';
+  if (c.audio.bitPerfect) return tr.vizOffBitPerfect;
+  if (LayoutPrefs.lightweight) return tr.vizOffLightweight;
+  if (!LayoutPrefs.moves || reduceMotion) return tr.vizOffReducedMotion;
   return null;
 }
 
 /// Why the visualizer is on but hidden for the song playing now; null when it shows.
 String? visualizerHiddenBy(PlayerController c) {
-  if (c.audio.dopPlaying != null) return 'Hidden while this song plays as DSD over DoP';
-  if (c.casting) return 'Hidden while playing on another device';
+  if (c.audio.dopPlaying != null) return tr.vizHiddenDop;
+  if (c.casting) return tr.vizHiddenCasting;
   return null;
 }
 

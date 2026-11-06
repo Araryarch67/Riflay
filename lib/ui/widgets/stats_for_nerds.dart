@@ -29,9 +29,9 @@ class NowPlayingCover extends StatelessWidget {
       value: 'stats',
       child: MenuRow(leading: const Icon(Icons.query_stats_rounded), title: Text(tr.detailStats)),
     ),
-    const PopupMenuItem(
+    PopupMenuItem(
       value: 'path',
-      child: MenuRow(leading: Icon(Icons.graphic_eq_rounded), title: Text('Signal path')),
+      child: MenuRow(leading: Icon(Icons.graphic_eq_rounded), title: Text(tr.signalPath)),
     ),
   ];
 
@@ -280,12 +280,12 @@ class _DetailStatsSheetState extends State<_DetailStatsSheet> {
     final p = _path;
     final sections = track == null || p == null ? const <_Section>[] : _sections(c, track, p);
     final status = track == null
-        ? 'Nothing is playing.'
+        ? tr.statsNothingPlaying
         : c.casting
-        ? 'Playing on another device: the stats come from the device playing.'
+        ? tr.statsOtherDevice
         : _read
         ? null
-        : 'Waiting for audio…';
+        : tr.waitingForAudio;
     void copy() {
       Clipboard.setData(
         ClipboardData(
@@ -298,7 +298,7 @@ class _DetailStatsSheetState extends State<_DetailStatsSheet> {
         ),
       );
       ScaffoldMessenger.maybeOf(context)
-          ?.showSnackBar(const SnackBar(content: Text('Stats copied'), duration: Duration(seconds: 2)));
+          ?.showSnackBar(SnackBar(content: Text(tr.statsCopied), duration: Duration(seconds: 2)));
     }
 
     return SafeArea(
@@ -313,7 +313,7 @@ class _DetailStatsSheetState extends State<_DetailStatsSheet> {
                   child: Text(tr.detailStats, style: text.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
                 ),
                 if (sections.isNotEmpty)
-                  IconButton(tooltip: 'Copy stats', onPressed: copy, icon: const Icon(Icons.copy_rounded)),
+                  IconButton(tooltip: tr.copyStats, onPressed: copy, icon: const Icon(Icons.copy_rounded)),
               ],
             ),
             const SizedBox(height: 8),
@@ -322,17 +322,14 @@ class _DetailStatsSheetState extends State<_DetailStatsSheet> {
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 24),
                 child: Text(
-                  status ?? 'Waiting for audio…',
+                  status ?? tr.waitingForAudio,
                   style: text.bodyMedium?.copyWith(color: AppColors.textSecondary),
                 ),
               ),
             for (final s in sections) ...[const SizedBox(height: 16), _Card(section: s)],
             if (sections.isNotEmpty) ...[
               const SizedBox(height: 16),
-              Text(
-                'Updates every second. Copy them to paste into a bug report.',
-                style: text.bodySmall?.copyWith(color: AppColors.textMuted),
-              ),
+              Text(tr.statsHint, style: text.bodySmall?.copyWith(color: AppColors.textMuted)),
             ],
           ],
         ),

@@ -6,6 +6,7 @@ import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import '../../services/spotify_session.dart';
 import '../theme.dart';
 import '../widgets/skeleton.dart';
+import '../../services/language.dart';
 
 /// One-time Spotify sign-in in the app's own WebView. Spotify's login
 /// page lands on the web player, which fetches its own access token; a script
@@ -44,7 +45,7 @@ class _SpotifyLoginPageState extends State<SpotifyLoginPage> {
               child: Row(
                 children: [
                   IconButton(
-                    tooltip: 'Back',
+                    tooltip: tr.back,
                     onPressed: () => Navigator.of(context).maybePop(),
                     icon: const Icon(Icons.chevron_left_rounded),
                   ),
@@ -53,11 +54,9 @@ class _SpotifyLoginPageState extends State<SpotifyLoginPage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Sign in to Spotify', style: text.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+                        Text(tr.signInToSpotify, style: text.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
                         Text(
-                          _checking
-                              ? 'Checking the session…'
-                              : 'Spotify handles the sign-in. Riflay only reads your library.',
+                          _checking ? tr.checkingSession : tr.spotifyHandlesSignIn,
                           style: text.bodySmall?.copyWith(color: AppColors.textSecondary),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -81,7 +80,7 @@ class _SpotifyLoginPageState extends State<SpotifyLoginPage> {
                   Expanded(
                     child: Text(_error!, style: text.bodySmall?.copyWith(color: Theme.of(context).colorScheme.error)),
                   ),
-                  TextButton(onPressed: _checking ? null : _capture, child: const Text('Try again')),
+                  TextButton(onPressed: _checking ? null : _capture, child: Text(tr.tryAgain)),
                 ],
               ),
             ),
@@ -115,7 +114,7 @@ class _SpotifyLoginPageState extends State<SpotifyLoginPage> {
               onReceivedError: (controller, request, error) {
                 if (request.isForMainFrame != true) return;
                 debugPrint('Spotify sign-in page: ${error.description}');
-                setState(() => _error = 'Couldn\'t load the sign-in page. Check your internet connection.');
+                setState(() => _error = tr.couldntLoadSignIn);
               },
             ),
           ),
@@ -147,11 +146,11 @@ class _SpotifyLoginPageState extends State<SpotifyLoginPage> {
         await Future<void>.delayed(const Duration(milliseconds: 500));
       }
       if (mounted) {
-        setState(() => _error = 'No signed-in session on this page yet. Finish signing in above, then tap Try again.');
+        setState(() => _error = tr.noSessionYet);
       }
     } catch (e) {
       debugPrint('Spotify sign-in check: $e');
-      if (mounted) setState(() => _error = 'Couldn\'t read the Spotify session. Try again.');
+      if (mounted) setState(() => _error = tr.couldntReadSpotifySession);
     } finally {
       _checking = false;
       if (mounted) setState(() {});

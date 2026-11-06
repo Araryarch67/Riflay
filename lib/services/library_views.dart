@@ -1,6 +1,7 @@
 import 'dart:collection';
 
 import '../models/track.dart';
+import 'language.dart';
 
 /// What the UI reads from one version of the library, each part worked out on
 /// first use. A new library gets a new one. Songs whose tags were filled in
@@ -99,8 +100,8 @@ class LibraryViews {
 
   Collection get allSongs => _allSongs ??= Collection(
     kind: CollectionKind.allSongs,
-    title: 'All Songs',
-    subtitle: '${tracks.length} ${tracks.length == 1 ? 'song' : 'songs'}',
+    title: tr.allSongs,
+    subtitle: tr.songsPlural(tracks.length),
     tracks: _sortedBy(tracks, (t) => t.title.toLowerCase()),
   );
 
@@ -114,8 +115,8 @@ class LibraryViews {
     if (downloaded.isEmpty) return null;
     return _youtubeDownloads = Collection(
       kind: CollectionKind.youtube,
-      title: 'Downloaded',
-      subtitle: '${downloaded.length} ${downloaded.length == 1 ? 'song' : 'songs'}',
+      title: tr.downloaded,
+      subtitle: tr.songsPlural(downloaded.length),
       tracks: downloaded,
     );
   }
@@ -189,7 +190,7 @@ class LibraryViews {
         Collection(
           kind: CollectionKind.artist,
           title: e.key,
-          subtitle: '${e.value.length} ${e.value.length == 1 ? 'song' : 'songs'}',
+          subtitle: tr.songsPlural(e.value.length),
           tracks: e.value
             ..sort((a, b) {
               final byAlbum = (a.album ?? '').compareTo(b.album ?? '');

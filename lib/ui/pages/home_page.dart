@@ -156,7 +156,7 @@ class HomePage extends StatelessWidget {
               return MediaCard(
                 track: p.tracks.firstOrNull,
                 title: p.name,
-                subtitle: 'Riflay • ${tr.songsCount(p.tracks.length)}',
+                subtitle: tr.playlistOnRiflay(p.tracks.length),
                 onTap: () => shell.openCollection(c.playlistCollection(p)),
                 onPlay: p.tracks.isEmpty ? null : () => c.playCollection(c.playlistCollection(p)),
               );
@@ -165,7 +165,7 @@ class HomePage extends StatelessWidget {
             return MediaCard(
               track: playlistCover(p),
               title: p.title,
-              subtitle: p.count == 0 ? 'YouTube Music' : 'YouTube Music • ${p.count} songs',
+              subtitle: p.count == 0 ? 'YouTube Music' : tr.playlistOnYoutubeMusic(p.count),
               online: true,
               onTap: () => openRemotePlaylist(context, p),
             );

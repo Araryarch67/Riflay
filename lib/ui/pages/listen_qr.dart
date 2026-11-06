@@ -6,6 +6,7 @@ import 'package:qr_flutter/qr_flutter.dart';
 import '../../platform/background.dart';
 import '../../platform/host.dart';
 import '../../services/listen_together/qr_code.dart';
+import '../../services/language.dart';
 
 /// Displays a room code that another Riflay can scan to join.
 class ListenQrDialog extends StatelessWidget {
@@ -14,7 +15,7 @@ class ListenQrDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => AlertDialog(
-    title: const Text('Session QR code'),
+    title: Text(tr.sessionQr),
     content: SizedBox(
       width: 280,
       child: SingleChildScrollView(
@@ -25,17 +26,17 @@ class ListenQrDialog extends StatelessWidget {
               data: listenQrPayload(code),
               backgroundColor: Colors.white,
               padding: const EdgeInsets.all(16),
-              semanticsLabel: 'Listening session QR code',
+              semanticsLabel: tr.sessionQrSemantics,
             ),
             const SizedBox(height: 16),
             Text(code, style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 8),
-            const Text('In Riflay on another device, open Listen together and choose Scan QR code.'),
+            Text(tr.sessionQrHowTo),
           ],
         ),
       ),
     ),
-    actions: [TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Close'))],
+    actions: [TextButton(onPressed: () => Navigator.of(context).pop(), child: Text(tr.close))],
   );
 }
 
@@ -65,7 +66,7 @@ class _ListenQrScannerState extends State<ListenQrScanner> {
         return;
       }
     }
-    setState(() => _error = 'That QR code is not a Riflay session code.');
+    setState(() => _error = tr.notASessionQr);
   }
 
   Future<void> _image() async {
@@ -80,13 +81,13 @@ class _ListenQrScannerState extends State<ListenQrScanner> {
       final code = await inBackground(() => listenCodeFromImage(bytes));
       if (!mounted || _done) return;
       if (code == null) {
-        setState(() => _error = "Couldn't find a Riflay session code in that image.");
+        setState(() => _error = tr.noSessionInImage);
       } else {
         _read([code]);
       }
     } catch (e) {
       debugPrint('Listen together: QR image: $e');
-      if (mounted) setState(() => _error = "Couldn't read that image. Try another one.");
+      if (mounted) setState(() => _error = tr.couldntReadImage);
     } finally {
       if (mounted) setState(() => _readingImage = false);
     }
@@ -94,7 +95,7 @@ class _ListenQrScannerState extends State<ListenQrScanner> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('Scan QR code')),
+    appBar: AppBar(title: Text(tr.scanQr)),
     body: SafeArea(
       child: Column(
         children: [
@@ -106,20 +107,12 @@ class _ListenQrScannerState extends State<ListenQrScanner> {
                           .where((barcode) => barcode.format == BarcodeFormat.qrCode)
                           .map((barcode) => barcode.rawValue),
                     ),
-                    errorBuilder: (context, error) => const Center(
-                      child: Padding(
-                        padding: EdgeInsets.all(24),
-                        child: Text(
-                          'Camera unavailable. Allow camera access in your device settings, or open a QR image.',
-                        ),
-                      ),
+                    errorBuilder: (context, error) => Center(
+                      child: Padding(padding: EdgeInsets.all(24), child: Text(tr.cameraUnavailable)),
                     ),
                   )
-                : const Center(
-                    child: Padding(
-                      padding: EdgeInsets.all(24),
-                      child: Text('Open an image of the session QR code to join.'),
-                    ),
+                : Center(
+                    child: Padding(padding: EdgeInsets.all(24), child: Text(tr.openQrImageToJoin)),
                   ),
           ),
           Padding(
@@ -127,13 +120,13 @@ class _ListenQrScannerState extends State<ListenQrScanner> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                if (_camera) const Text('Point the camera at the session QR code shown in Riflay.'),
+                if (_camera) Text(tr.pointCamera),
                 if (_error != null) ...[const SizedBox(height: 8), Semantics(liveRegion: true, child: Text(_error!))],
                 const SizedBox(height: 12),
                 OutlinedButton.icon(
                   onPressed: _readingImage ? null : _image,
                   icon: const Icon(Icons.image_outlined),
-                  label: Text(_readingImage ? 'Reading image…' : 'Open QR image'),
+                  label: Text(_readingImage ? tr.readingImage : tr.openQrImage),
                 ),
               ],
             ),

@@ -16,6 +16,7 @@ import 'video_alignment.dart';
 import 'video_download.dart';
 import 'youtube_stream.dart';
 import 'ytmusic_web.dart';
+import 'language.dart';
 
 /// Video mode: a YouTube song's music video on the Now Playing views,
 /// YouTube Music's Song / Video switch.
@@ -406,7 +407,7 @@ class VideoMode extends ChangeNotifier with WidgetsBindingObserver {
       }
       _found[_c?.currentTrack?.videoId ?? ''] = null;
       _on = false;
-      _notice = 'The video couldn\'t load, so the song plays on its own.';
+      _notice = tr.videoCouldntLoad;
       await _stop();
       notifyListeners();
     }

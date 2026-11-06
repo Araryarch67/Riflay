@@ -96,7 +96,13 @@
   "deleteDownload": "Delete download",
   "deleteDownloadQuestion": "Delete this download?",
   "deleteDownloadBody": "{title} is removed from your library and its file is deleted from this device.",
-  "@deleteDownloadBody": {"placeholders": {"title": {"type": "String"}}},
+  "@deleteDownloadBody": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
   "delete": "Delete",
   "downloadDeleted": "Download deleted",
   "convertToFlac": "Convert to FLAC",
@@ -245,7 +251,11 @@
   "clearFinished": "Clear finished",
   "nothingDownloading": "Nothing downloading. Paste a YouTube video or playlist link to add its audio to your library.",
   "downloadsUse": "Downloads use {size}",
-  "@downloadsUse": {"placeholders": {"size": {}}},
+  "@downloadsUse": {
+    "placeholders": {
+      "size": {}
+    }
+  },
   "missingFiles": "Missing files",
   "downloadAllAgain": "Download all again",
   "removeAllFromLibrary": "Remove all from library",
@@ -254,21 +264,36 @@
   "waiting": "Waiting…",
   "preparing": "Preparing…",
   "bytesOf": "{received} of {total}",
-  "@bytesOf": {"placeholders": {"received": {}, "total": {}}},
+  "@bytesOf": {
+    "placeholders": {
+      "received": {},
+      "total": {}
+    }
+  },
   "addedToLibrary": "Added to library",
   "failed": "Failed",
   "cancelled": "Cancelled",
   "cancel": "Cancel",
   "retry": "Retry",
   "downloadingCount": "Downloading {count}",
-  "@downloadingCount": {"placeholders": {"count": {"type": "int"}}},
+  "@downloadingCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "saveAsPlaylist": "Save as playlist",
   "queueEmpty": "Nothing playing yet. Pick an album, artist or song to fill the queue.",
   "nowPlaying": "Now playing",
   "nowPlayingTitle": "Now Playing",
   "nextUp": "Next up",
   "nextFrom": "Next from: {source}",
-  "@nextFrom": {"placeholders": {"source": {}}},
+  "@nextFrom": {
+    "placeholders": {
+      "source": {}
+    }
+  },
   "autoplay": "Autoplay",
   "autoplaySubtitle": "When the queue ends, keep playing similar songs from YouTube Music",
   "autoplaySimilar": "Autoplay: similar to what you're playing",
@@ -281,30 +306,89 @@
   "selectAll": "Select all",
   "cancelSelection": "Cancel selection",
   "selectedCount": "{count} selected",
-  "@selectedCount": {"placeholders": {"count": {"type": "int"}}},
+  "@selectedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "playlistOnRiflay": "Riflay • {count} songs",
-  "@playlistOnRiflay": {"placeholders": {"count": {"type": "int"}}},
+  "@playlistOnRiflay": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "playlistOnYoutubeMusic": "YouTube Music • {count} songs",
-  "@playlistOnYoutubeMusic": {"placeholders": {"count": {"type": "int"}}},
+  "@playlistOnYoutubeMusic": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "addedTo": "Added to {name}",
-  "@addedTo": {"placeholders": {"name": {"type": "String"}}},
+  "@addedTo": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "addedSongsTo": "Added {count} songs to {name}",
-  "@addedSongsTo": {"placeholders": {"count": {"type": "int"}, "name": {"type": "String"}}},
+  "@addedSongsTo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "alreadyIn": "Already in {name}",
-  "@alreadyIn": {"placeholders": {"name": {"type": "String"}}},
+  "@alreadyIn": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "notOnYoutubeMusic": "This song isn't on YouTube Music",
   "noneOnYoutubeMusic": "None of these songs are on YouTube Music",
   "skippedNotOnYoutubeMusic": "{count} not on YouTube Music, skipped",
-  "@skippedNotOnYoutubeMusic": {"placeholders": {"count": {"type": "int"}}},
+  "@skippedNotOnYoutubeMusic": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "addAllToQueue": "Add all to queue",
   "downloadAllOffline": "Download all for offline",
   "alreadyDownloaded": "Already downloaded",
   "downloadingSongs": "Downloading {count} songs…",
-  "@downloadingSongs": {"placeholders": {"count": {"type": "int"}}},
+  "@downloadingSongs": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "disc": "Disc {number}",
-  "@disc": {"placeholders": {"number": {}}},
+  "@disc": {
+    "placeholders": {
+      "number": {}
+    }
+  },
   "removedFrom": "Removed from {playlist}",
-  "@removedFrom": {"placeholders": {"playlist": {}}},
+  "@removedFrom": {
+    "placeholders": {
+      "playlist": {}
+    }
+  },
   "undo": "Undo",
   "title": "Title",
   "editPlaylist": "Edit playlist",
@@ -317,14 +401,22 @@
   "yourLibrarySource": "Your library",
   "yourLibraryInline": "your library",
   "playingFrom": "Playing from {source}",
-  "@playingFrom": {"placeholders": {"source": {}}},
+  "@playingFrom": {
+    "placeholders": {
+      "source": {}
+    }
+  },
   "nothingPlaying": "Nothing playing",
   "quieter": "Quieter",
   "louder": "Louder",
   "linkCopied": "Link copied",
   "songNameCopied": "Song name copied",
   "sleepTimerWith": "Sleep timer: {time}",
-  "@sleepTimerWith": {"placeholders": {"time": {}}},
+  "@sleepTimerWith": {
+    "placeholders": {
+      "time": {}
+    }
+  },
   "volume": "Volume",
   "speaker": "Speaker",
   "expandedPlayer": "Expanded player",
@@ -347,7 +439,11 @@
   "useMyLyricsFile": "Use my lyrics file",
   "loadingLyrics": "Loading lyrics",
   "lyricsFrom": "Lyrics from {source}",
-  "@lyricsFrom": {"placeholders": {"source": {}}},
+  "@lyricsFrom": {
+    "placeholders": {
+      "source": {}
+    }
+  },
   "lyricsUntimed": "These lyrics don't follow the song.",
   "back": "Back",
   "playToSeeLyrics": "Play a song to see its lyrics here.",
@@ -363,21 +459,2660 @@
   "linkFailed": "Couldn't open that link. It may be private, removed or region-locked.",
   "streakTitle": "Listening streak",
   "streakDays": "{count}-day streak",
-  "@streakDays": {"placeholders": {"count": {"type": "int"}}},
+  "@streakDays": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "streakTooltip": "{count, plural, =1{Listening streak: 1 day} other{Listening streak: {count} days}}",
-  "@streakTooltip": {"placeholders": {"count": {"type": "int"}}},
+  "@streakTooltip": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "streakSafe": "You've listened today. See you tomorrow!",
   "streakKeepGoing": "Play a song today to keep your streak",
   "streakStart": "Play a song to start a streak",
   "streakLongest": "{count, plural, =1{Longest: 1 day} other{Longest: {count} days}}",
-  "@streakLongest": {"placeholders": {"count": {"type": "int"}}},
+  "@streakLongest": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "streakToNext": "{count} more days to the {flame}",
-  "@streakToNext": {"placeholders": {"count": {"type": "int"}, "flame": {}}},
+  "@streakToNext": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "flame": {}
+    }
+  },
   "streakTop": "The highest flame there is",
   "flameRed": "red flame",
   "flameGold": "gold flame",
   "flameBlue": "blue flame",
   "flamePurple": "purple flame",
   "flameRainbow": "rainbow flame",
-  "streakRule": "A day counts once you play a song for 30 seconds or more. Your history stays on this device."
+  "streakRule": "A day counts once you play a song for 30 seconds or more. Your history stays on this device.",
+  "songsLeft": "{count} songs left",
+  "@songsLeft": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "songEndShort": "Song end",
+  "endOfSong": "End of song",
+  "hours": "Hours",
+  "minutes": "Minutes",
+  "start": "Start",
+  "thisPhone": "This phone",
+  "thisComputer": "This computer",
+  "playOn": "Play on",
+  "lookingForDevices": "Looking for TVs and speakers…",
+  "noDevicesFound": "No TVs or speakers found. They need to be on and on the same Wi-Fi.",
+  "castWorksWith": "Works with TVs, speakers and receivers that support DLNA or AirPlay.",
+  "searchAgain": "Search again",
+  "discordSongCover": "Song cover",
+  "discordTime": "Time played and left",
+  "discordSongInList": "Song title in the member list",
+  "discordListenButton": "\"Listen on YouTube Music\" button",
+  "discordWhilePaused": "Keep showing while paused",
+  "previewYourSong": "Your song",
+  "previewItsArtist": "Its artist",
+  "discordListeningTo": "Listening to",
+  "paused": "Paused",
+  "playerPresets": "Player presets",
+  "presetsCustomMix": "Your settings are a custom mix",
+  "presetsMatch": "Your settings match {preset}",
+  "@presetsMatch": {
+    "placeholders": {
+      "preset": {
+        "type": "String"
+      }
+    }
+  },
+  "applyPresetQuestion": "Apply {preset}?",
+  "@applyPresetQuestion": {
+    "placeholders": {
+      "preset": {
+        "type": "String"
+      }
+    }
+  },
+  "applyPresetBody": "{count, plural, =1{This changes 1 player setting. You can still change each one after.} other{This changes {count} player settings. You can still change each one after.}}",
+  "@applyPresetBody": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "apply": "Apply",
+  "inUse": "In use",
+  "tapToApply": "Tap to apply",
+  "autoplayKeepGoing": "When the queue ends, keep going with similar songs",
+  "gaplessPlayback": "Gapless playback",
+  "gaplessPlaybackSubtitle": "No added silence between tracks. Crossfade is under Sound effects (DSP).",
+  "skipSilence": "Skip silence",
+  "offWhileBitPerfect": "Off while bit-perfect mode is on",
+  "skipSilenceSubtitle": "Silent intros, outros and gaps are cut short. Soft passages play whole",
+  "off": "Off",
+  "volumeLeveling": "Volume leveling",
+  "volumeLevelingSubtitle": "Plays songs at a similar loudness, using their ReplayGain tags",
+  "crossfade": "Crossfade",
+  "crossfadeSubtitle": "The end of a song fades into the start of the next. Off in bit-perfect and exclusive modes",
+  "fadeLength": "Fade length",
+  "skipForAlbums": "Skip for albums",
+  "skipForAlbumsSubtitle": "Songs that follow each other on an album play without a fade, as the artist made them",
+  "virtualSpeakers": "Virtual speakers",
+  "offWhileMono": "Off while Mono audio is on",
+  "virtualSpeakersSubtitle": "For headphones: the music plays in front of you, like from two speakers, instead of inside your head",
+  "virtualSpeakerLevel": "Virtual speaker level",
+  "virtualSpeakerLevelBody": "Adjust the simulation output level to match your other listening modes.",
+  "headphoneCrossfeed": "Headphone crossfeed",
+  "crossfeedNotNeeded": "Not needed with Virtual speakers: they already do this",
+  "crossfeedSubtitle": "Makes headphones sound more like speakers in a room",
+  "crossfeedSoundstage": "Crossfeed soundstage",
+  "crossfeedSoundstageBody": "Adjust the frequency range blended between the left and right channels. Default: 50%.",
+  "monoAudio": "Mono audio",
+  "monoAudioSubtitle": "Both sides as one sound. Handy when one side of your headphones doesn't work",
+  "audioPlugins": "Audio plugins",
+  "audioPluginsSubtitle": "VST, LV2 and CLAP plugins, set up in Carla: add them there and save, and they play here",
+  "editInCarla": "Edit in Carla",
+  "needsCarlaDownload": "Needs Carla, a free program that holds your VST, LV2 and CLAP plugins. Download it, unzip it in your Downloads or Program Files folder, then reopen this page.",
+  "needsCarlaInstall": "Needs Carla, a free program that holds your VST, LV2 and CLAP plugins. Install it, then reopen this page.",
+  "installCarla": "Install Carla",
+  "roomCorrection": "Room correction",
+  "roomCorrectionSubtitle": "Load an impulse response (WAV or FLAC, e.g. made with REW) to correct your room or headphones",
+  "chooseFile": "Choose file",
+  "change": "Change",
+  "roomCorrectionHeadroom": "Room correction headroom",
+  "roomCorrectionHeadroomBody": "Lower the corrected signal if the impulse response makes peaks too loud.",
+  "signalPathSubtitle": "See which effects are actually active for the current song",
+  "resetNamed": "Reset {name}",
+  "@resetNamed": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "chooseImpulse": "Choose an impulse response",
+  "couldntUseFile": "Couldn't use that file",
+  "output": "Output",
+  "iosOutputNote": "A USB DAC follows each song's sample rate; the speaker and Bluetooth keep one rate. iOS always mixes the sound, so it can't be bit-perfect here.",
+  "outputDevice": "Output device",
+  "directDevicesNote": "Devices marked \"direct\" skip the system mixer: bit-perfect, but other apps go quiet",
+  "phonesOwnOutput": "Your phone's own output",
+  "usbDacNamed": "{name} (USB DAC)",
+  "@usbDacNamed": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "bitPerfectMode": "Bit-perfect mode",
+  "needsAndroid14": "Needs Android 14 or later",
+  "androidFormatsUnplayable": "Android offers {dac} only in formats Riflay can't play bit-perfect ({bitPerfect} of {total} formats). Riflay still plays through your DAC, with Android mixing the sound first.",
+  "@androidFormatsUnplayable": {
+    "placeholders": {
+      "dac": {
+        "type": "String"
+      },
+      "bitPerfect": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "phoneNoBitPerfect": "This phone doesn't offer bit-perfect output for {dac}: its maker leaves it out (Android lists {count} formats for it, none bit-perfect). Riflay still plays through your DAC, with Android mixing the sound first.",
+  "@phoneNoBitPerfect": {
+    "placeholders": {
+      "dac": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "plugInDacForBitPerfect": "Plug in a USB DAC to play bit-perfect",
+  "bitPerfectAndroid": "Sends the file to your USB DAC untouched: no equalizer, leveling or resampling. Other apps and system sounds are muted on the DAC, and the phone's volume keys stop working: use your DAC's volume, since lowering Riflay's own volume changes the sound.",
+  "bitPerfectMac": "No equalizer, leveling or resampling in Riflay, and your DAC follows each song's sample rate. Volume still works; at 100% nothing is changed. Other apps keep playing, so macOS still mixes the sound: turn on Exclusive mode too to send the file to your DAC untouched.",
+  "bitPerfectWindows": "No equalizer, leveling or resampling in Riflay. Volume still works; at 100% nothing is changed. Other apps keep playing, so Windows still mixes the sound: turn on Exclusive mode too to send the file to your DAC untouched.",
+  "bitPerfectLinux": "Sends the file to your DAC untouched: no equalizer, leveling or resampling. Volume still works; at 100% nothing is changed. Takes over your DAC so the system mixer can't resample. Meanwhile other apps play through another output.",
+  "nativeDsd": "Native DSD (DoP)",
+  "nativeDsdSubtitle": "Sends DSD files to your DAC as DSD instead of converting them. Only for DACs that support DoP: others play a faint hiss, so turn it off then. The volume stays at 100% for DSD songs; use your DAC's.",
+  "needsBitPerfectAndDac": "Needs Bit-perfect mode and a USB DAC that takes 176.4 kHz or higher",
+  "needsBitPerfectAndExclusive": "Needs Bit-perfect mode and Exclusive mode",
+  "needsBitPerfect": "Needs Bit-perfect mode",
+  "exclusiveMode": "Exclusive mode",
+  "exclusiveMac": "Takes over the device so macOS can't mix or resample: the DAC switches to each song's sample rate. Other apps go silent while Riflay plays.",
+  "exclusiveWindows": "Takes over the device so Windows' mixer can't resample: the DAC switches to each song's sample rate. Other apps go silent while Riflay plays, and Windows' volume mixer can't control it.",
+  "outputSampleRate": "Output sample rate",
+  "followsEachSong": "Follows each song while bit-perfect mode is on",
+  "followOrConvert": "Follow the song, or convert everything to one rate",
+  "followTheSong": "Follow the song",
+  "hqResampler": "High-quality resampler",
+  "hqResamplerSubtitle": "SoX-grade conversion whenever the rate has to change (slightly more CPU)",
+  "buffer": "Buffer",
+  "bufferSubtitle": "Raise it if you hear crackles or dropouts",
+  "signalPathSubtitleExact": "See exactly what happens to the song you're playing",
+  "directUsbIntro": "Riflay talks to your USB DAC itself, past Android, so songs reach it untouched even on phones where Bit-perfect mode can't. Experimental.",
+  "directUsbPlugIn": "On. Plug in a USB DAC.",
+  "directUsbAllow": "On. Allow Riflay to use {dac}.",
+  "@directUsbAllow": {
+    "placeholders": {
+      "dac": {
+        "type": "String"
+      }
+    }
+  },
+  "directUsbBitPerfectTo": "Bit-perfect to {dac}",
+  "@directUsbBitPerfectTo": {
+    "placeholders": {
+      "dac": {
+        "type": "String"
+      }
+    }
+  },
+  "directUsbFallback": "This song{format} is in a format {dac} doesn't take, so it plays through Android.",
+  "@directUsbFallback": {
+    "placeholders": {
+      "format": {
+        "type": "String"
+      },
+      "dac": {
+        "type": "String"
+      }
+    }
+  },
+  "directUsbOnWith": "On, with {dac}. Play a song.",
+  "@directUsbOnWith": {
+    "placeholders": {
+      "dac": {
+        "type": "String"
+      }
+    }
+  },
+  "allowUsbAccess": "Allow USB access",
+  "problemWith": "Problem: {error}",
+  "@problemWith": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "directUsbPipe": "Pipe: {state} · Output: {output}",
+  "@directUsbPipe": {
+    "placeholders": {
+      "state": {
+        "type": "String"
+      },
+      "output": {
+        "type": "String"
+      }
+    }
+  },
+  "pipeOpen": "open",
+  "pipeClosed": "closed",
+  "fromThePlayer": "From the player: {format}",
+  "@fromThePlayer": {
+    "placeholders": {
+      "format": {
+        "type": "String"
+      }
+    }
+  },
+  "directUsbRoute": "Route: {route}",
+  "@directUsbRoute": {
+    "placeholders": {
+      "route": {
+        "type": "String"
+      }
+    }
+  },
+  "dropouts": "Dropouts: {count}",
+  "@dropouts": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "directUsb": "Direct USB",
+  "styleClassic": "Classic",
+  "styleCompact": "Compact",
+  "styleMinimal": "Minimal",
+  "vizWave": "Wave",
+  "vizBars": "Bars",
+  "vizLine": "Line",
+  "vizDots": "Dots",
+  "vizMirror": "Mirror",
+  "vizTwinWaves": "Twin waves",
+  "vizPulse": "Pulse",
+  "vizOrbit": "Orbit",
+  "vizPetals": "Petals",
+  "vizPeaks": "Peaks",
+  "shapeFlower": "Flower",
+  "shapeSquare": "Square",
+  "shapeRounded": "Rounded",
+  "shapeExtraRound": "Extra round",
+  "densityComfortable": "Comfortable",
+  "sizeSmall": "Small",
+  "sizeMedium": "Medium",
+  "sizeLarge": "Large",
+  "motionFull": "Full",
+  "motionReduced": "Reduced",
+  "decoderAuto": "Automatic",
+  "decoderGpu": "Graphics card",
+  "decoderCpu": "Processor",
+  "decoderAutoNote": "The graphics card when it is known to work, else the processor",
+  "decoderGpuNote": "Always try the graphics card first. Lightest, if your drivers cope",
+  "decoderCpuNote": "Never the graphics card. Uses more power; try it if videos look wrong",
+  "perfLight": "Lightweight",
+  "perfBalanced": "Balanced",
+  "perfHeavy": "Heavy",
+  "perfLightNote": "Fewest effects. Best for older computers and battery.",
+  "perfBalancedNote": "Smooth animations with sensible limits.",
+  "perfHeavyNote": "Every effect at full speed. Uses more power.",
+  "styleThin": "Thin",
+  "styleThick": "Thick",
+  "shapeStraight": "Straight",
+  "shapeWavy": "Wavy",
+  "shapePill": "Pill",
+  "shapeThinLine": "Thin line",
+  "shapeCircle": "Circle",
+  "shapeRoundedSquare": "Rounded square",
+  "sizeNormal": "Normal",
+  "coverBackground": "Background",
+  "headerCentred": "Centred",
+  "headerPlayingFrom": "Playing from",
+  "styleBoxed": "Boxed",
+  "stylePlain": "Plain",
+  "styleChips": "Chips",
+  "styleIcons": "Icons",
+  "styleBottomCard": "Bottom card",
+  "styleTopHeader": "Top header",
+  "styleFloatingPill": "Floating pill",
+  "styleHero": "Hero",
+  "badgeUnderArtist": "Under the artist",
+  "badgeTimeRow": "In the time row",
+  "styleHighlightedCard": "Highlighted card",
+  "sizeLargest": "Largest",
+  "lyricsFocused": "Focused",
+  "lyricsWordByWord": "Word by word",
+  "lyricsLineByLine": "Line by line",
+  "alignLeft": "Left",
+  "alignCentre": "Centre",
+  "styleMaterial": "Material",
+  "styleUnderline": "Underline",
+  "styleTextOnly": "Text only",
+  "styleFloating": "Floating",
+  "styleCapsule": "Capsule",
+  "styleDock": "Dock",
+  "styleCentreButton": "Centre button",
+  "styleLiquidGlass": "Liquid glass",
+  "quickPicks": "Quick picks",
+  "fromYoutubeMusic": "From YouTube Music",
+  "presets": "Presets",
+  "custom": "Custom",
+  "matchesPreset": "Matches {preset}",
+  "@matchesPreset": {
+    "placeholders": {
+      "preset": {
+        "type": "String"
+      }
+    }
+  },
+  "fullScreenPlayerHint": "The full-screen player",
+  "cover": "Cover",
+  "coverSubtitle": "Square or flower frame the cover. Background has no frame: it fills the top and fades into the page",
+  "coverSizeOnPhones": "Cover size on phones",
+  "coverSizeOnPhonesSubtitle": "Large reaches nearly the edges of the screen",
+  "topOfPlayer": "Top of the player",
+  "topOfPlayerSubtitle": "What the top shows beside the close arrow, or above the song on desktop",
+  "buttonsByTitle": "Buttons by the title",
+  "buttonsByTitleSubtitle": "Like and More as they are, a joined Share and heart pair, or plain icons. The song menu stays on desktop",
+  "showSoundQuality": "Show sound quality",
+  "showSoundQualitySubtitle": "The small label under the song title, such as FLAC or Hi-Res",
+  "songVideoSwitch": "Song / Video switch",
+  "songVideoSwitchSubtitle": "At the top of Now Playing. Adaptive shows it only when the song has a music video",
+  "adaptive": "Adaptive",
+  "qualityBadge": "Quality badge",
+  "qualityBadgeSubtitle": "Where FLAC or Opus 130 kbps sits on the phone player: under the artist, or between the two times",
+  "background": "Background",
+  "backgroundSubtitle": "What fills the page behind the player. Cover: Background replaces it",
+  "videoMode": "Video mode",
+  "videoModeSubtitle": "Watch music videos in sync with the song",
+  "videoDecoding": "Video decoding",
+  "decoderNow": "Now: {decoder}",
+  "@decoderNow": {
+    "placeholders": {
+      "decoder": {
+        "type": "String"
+      }
+    }
+  },
+  "decoderNowCpu": "the processor",
+  "decoderNowGpu": "graphics card ({hwdec})",
+  "@decoderNowGpu": {
+    "placeholders": {
+      "hwdec": {
+        "type": "String"
+      }
+    }
+  },
+  "playbackControls": "Playback controls",
+  "playbackControlsHint": "The progress bar, the buttons and the row under them",
+  "progressBarShape": "Progress bar shape",
+  "progressBar": "Progress bar",
+  "progressBarSubtitle": "How thick the bar you drag to skip around is",
+  "showTimeLeft": "Show time left",
+  "showTimeLeftSubtitle": "The right time counts down instead of showing the total, also on the desktop bar",
+  "controls": "Controls",
+  "controlsSubtitle": "Previous, play and next as circles, a wide Play pill, or plain big icons, also on the desktop bar",
+  "playButton": "Play button",
+  "playButtonSubtitle": "The shape of the big play and pause button",
+  "volumeSlider": "Volume slider",
+  "volumeSliderSubtitle": "At the very bottom of the phone player. Off, it opens from the speaker button (Icons) or the desktop bar button",
+  "sliderLook": "Slider look",
+  "sliderLookSubtitle": "Every slider: volume, the equalizer and settings. Classic, a thin line, or a thick pill with a bar handle",
+  "bottomButtons": "Bottom buttons",
+  "bottomButtonsSubtitle": "Lyrics and Queue; a joined row of icon buttons; or Lyrics, a speaker and person capsule and Queue. Icons only, Lyrics is always there",
+  "lyricsHint": "The lyrics page, and the lyrics beside the cover on desktop",
+  "lyricsPage": "Lyrics page",
+  "lyricsPageSubtitle": "Where the player sits on the lyrics page. Desktop gets a song card on top or at the bottom",
+  "linesShown": "Lines shown",
+  "linesShownSubtitle": "All keeps the whole song in view. Focused shows only the previous, the current and the next line",
+  "sync": "Sync",
+  "syncSubtitle": "Word by word fills each word as it is sung, where the lyrics have word timings. Line by line lights the whole line",
+  "textSize": "Text size",
+  "lyricsTextSizeSubtitle": "How big the lyrics are",
+  "alignment": "Alignment",
+  "alignmentSubtitle": "Lines start at the left edge, or sit in the middle",
+  "dimUnsung": "Dim lines not yet sung",
+  "dimUnsungSubtitle": "Only the line being sung and the ones before it stay bright",
+  "visualizer": "Visualizer",
+  "visualizerHint": "Shapes that move with the music",
+  "pages": "Pages",
+  "pagesHint": "Album, playlist and artist pages, song lists and Home",
+  "albumPlaylistTop": "Album and playlist top",
+  "albumPlaylistTopSubtitle": "Hero: a big cover fading behind the title, round buttons around a Play pill. Also on artist pages",
+  "songThatIsPlaying": "Song that is playing",
+  "songThatIsPlayingSubtitle": "In a list of songs: coloured text, or a filled rounded card with the bars",
+  "bars": "Bars",
+  "barsHint": "The mini player and the bars that hold the controls",
+  "miniPlayerSubtitle": "The bar above the tabs when a song plays, on phones. Floating pill has a flower cover and round buttons",
+  "tabBarOnPhones": "Tab bar on phones",
+  "tabBarOnPhonesSubtitle": "Classic sits at the bottom edge; Floating and Liquid glass hover above it",
+  "desktopPlayerBar": "Desktop player bar",
+  "desktopPlayerBarSubtitle": "Along the window's foot: full-width controls, a compact row beside the song, or a minimal strip",
+  "shapesAndMotion": "Shapes and motion",
+  "motionOffLightweight": "Performance is set to Lightweight, so the motion settings stay off.",
+  "corners": "Corners",
+  "cornersSubtitle": "Covers, cards, menus, dialogs and the mini player",
+  "spacing": "Spacing",
+  "spacingSubtitle": "Compact fits more songs and cards on screen",
+  "coverSizeInGrids": "Cover size in grids",
+  "coverSizeInGridsSubtitle": "The albums and playlists on Home and in \"Show all\"",
+  "transitionStyle": "Transition style",
+  "transitionStyleSubtitle": "Coordinated page, tab and player transitions",
+  "transitionSpeed": "Transition speed",
+  "transitionSpeedSubtitle": "Choose a brisk or more relaxed pace",
+  "animations": "Animations",
+  "animationsSubtitle": "Reduced keeps quick fades only. Full follows your system when it asks for less motion",
+  "window": "Window",
+  "desktopOnly": "Desktop only",
+  "windowButtons": "Window buttons",
+  "windowButtonsSubtitle": "Minimize, maximize and close in the title bar. Turn off with a tiling window manager",
+  "resetLayout": "Reset layout to default",
+  "dragToReorderSections": "Drag the handle to put sections in a different order",
+  "audioVisualizer": "Audio visualizer",
+  "audioVisualizerSubtitle": "Shapes that move with the music around the cover and under it",
+  "visualizerStyle": "Visualizer style",
+  "visualizerStyleBackground": "A strip under the song. Pulse, Orbit and Petals ring the cover: pick Square or Flower for them",
+  "visualizerStyleRings": "Rings the cover",
+  "visualizerStyleEdge": "Moves along the cover's edge, with a strip under the song",
+  "radiusMovement": "Radius movement",
+  "radiusMovementSubtitle": "{percent}% · How far the shape expands with the music",
+  "@radiusMovementSubtitle": {
+    "placeholders": {
+      "percent": {
+        "type": "String"
+      }
+    }
+  },
+  "lineThickness": "Line thickness",
+  "signedInAs": "Signed in as {name}",
+  "@signedInAs": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "ytSignedInBody": "Signed in. Your likes, playlists and followed artists are here.",
+  "ytSignedOutBody": "Not signed in. Search and the public home work without an account.",
+  "disconnect": "Disconnect",
+  "addToYtHistory": "Add songs you play to your YouTube Music history",
+  "addToYtHistorySubtitle": "Like the official app, so YouTube Music keeps learning what you like.",
+  "musixmatchLyrics": "Musixmatch lyrics",
+  "musixmatchLyricsSubtitle": "Find word-by-word lyrics when other sources have none",
+  "discordRichPresence": "Discord Rich Presence",
+  "discordRichPresenceSubtitle": "Show what you're listening to on your Discord profile",
+  "betterLyricsKey": "Better Lyrics API key",
+  "betterLyricsKeyOptional": "Optional. Lets Better Lyrics find lyrics it hasn't saved yet, if you have a key.",
+  "betterLyricsKeyAdded": "Added. Better Lyrics can find lyrics it hasn't saved yet.",
+  "crumbsThen": "{crumbs}, then {current}",
+  "@crumbsThen": {
+    "placeholders": {
+      "crumbs": {
+        "type": "String"
+      },
+      "current": {
+        "type": "String"
+      }
+    }
+  },
+  "crumbsJoin": ", then ",
+  "betterLyricsKeyInvalid": "Better Lyrics says this key isn't valid.",
+  "betterLyricsUnreachable": "Couldn't reach Better Lyrics to check the key. Try again.",
+  "betterLyricsKeyBody": "Without a key, lyrics from Better Lyrics still work for every song it has saved. Better Lyrics isn't giving out new keys right now.",
+  "apiKey": "API key",
+  "checking": "Checking…",
+  "save": "Save",
+  "statsNothingPlaying": "Nothing is playing.",
+  "statsOtherDevice": "Playing on another device: the stats come from the device playing.",
+  "waitingForAudio": "Waiting for audio…",
+  "statsCopied": "Stats copied",
+  "copyStats": "Copy stats",
+  "statsHint": "Updates every second. Copy them to paste into a bug report.",
+  "themeLegacy": "Legacy",
+  "themeDefault": "Default",
+  "themeMonochrome": "Monochrome",
+  "modeDark": "Dark",
+  "modeLight": "Light",
+  "modeBlack": "Black",
+  "modeSystem": "Match system",
+  "accentTheme": "Theme",
+  "accentTeal": "Teal",
+  "accentGreen": "Green",
+  "accentBlue": "Blue",
+  "accentViolet": "Violet",
+  "accentPink": "Pink",
+  "accentOrange": "Orange",
+  "accentWhite": "White",
+  "customEllipsis": "Custom…",
+  "coverColorPlayer": "Player only",
+  "coverColorApp": "Whole app",
+  "npBgSimple": "Simple",
+  "npBgBlurredCover": "Blurred cover",
+  "npBgMusicVideo": "Music video",
+  "npBgMusicVideoHint": "The song's music video, when it has one",
+  "theme": "Theme",
+  "matugenColors": "Matugen colors",
+  "matugenChoose": "Choose a generated JSON file. Colors update automatically.",
+  "matugenFollowing": "Following generated colors automatically",
+  "matugenFind": "Find generated colors automatically",
+  "coloursFromCover": "Colours come from the cover of what's playing",
+  "backgroundColour": "Background colour",
+  "backgroundColourSubtitle": "Panels, cards and menus are worked out from it",
+  "textColour": "Text colour",
+  "textColourAuto": "Chosen to suit the background",
+  "textColourAdjusted": "Lightened or darkened where it would be hard to read",
+  "automatic": "Automatic",
+  "mode": "Mode",
+  "modeSubtitle": "Light or dark, for every theme",
+  "accentColour": "Accent colour",
+  "coloursFromCoverArt": "Colours from cover art",
+  "coverColorOffNote": "Colours stay as the theme has them",
+  "coverColorPlayerNote": "Tint the player and pages with the colour of what's playing",
+  "coverColorAppNote": "The whole app takes the colour of what's playing",
+  "colourStrength": "Colour strength",
+  "colourStrengthSubtitle": "How much of the cover's colour shows in backgrounds and panels",
+  "strengthSubtle": "Subtle",
+  "strengthStrong": "Strong",
+  "highContrast": "High contrast",
+  "highContrastSubtitle": "Brighter text and clearer edges, easier to read",
+  "textSizeSubtitle": "Body text, in pixels; titles and labels grow with it. {size} px is the default",
+  "@textSizeSubtitle": {
+    "placeholders": {
+      "size": {
+        "type": "int"
+      }
+    }
+  },
+  "font": "Font",
+  "openFontsFolder": "Open the fonts folder (put .ttf or .otf files here)",
+  "nowPlayingBackground": "Now playing background",
+  "nowPlayingBackgroundSubtitle": "Only the Now Playing and expanded player pages",
+  "frostedGlass": "Frosted glass",
+  "frostedGlassSubtitle": "See-through, blurred mini player and tab bar. Uses a little more GPU",
+  "blurStrength": "Blur strength",
+  "componentOpacity": "Component opacity",
+  "componentOpacitySubtitle": "See-through backgrounds with the desktop blurred behind them. Text, covers and controls stay solid",
+  "backgroundOpacity": "Background opacity",
+  "backgroundOpacityAndroid": "Below 100% your wallpaper shows through",
+  "backgroundOpacityDesktop": "Below 100% the desktop shows through, blurred where the system can (Windows 11, macOS, Hyprland, KDE)",
+  "resetToDefault": "Reset to default",
+  "couldntLoadFont": "Couldn't load {font}.",
+  "@couldntLoadFont": {
+    "placeholders": {
+      "font": {
+        "type": "String"
+      }
+    }
+  },
+  "searchFonts": "Search fonts on this device",
+  "riflaysOwnFont": "Riflay's own font",
+  "fontFiles": "{count, plural, =1{1 file} other{{count} files (weights and styles)}}",
+  "@fontFiles": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "defaultThemeFollows": "Default theme, follows the song that is playing",
+  "themeNamed": "{name} theme",
+  "@themeNamed": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "smaller": "Smaller",
+  "larger": "Larger",
+  "levelingPerSong": "Per song",
+  "levelingPerAlbum": "Per album",
+  "bufferLow": "Low latency",
+  "bufferStable": "Extra stable",
+  "monoOff": "Off (stereo)",
+  "monoBoth": "Both ears",
+  "monoLeft": "Left ear only",
+  "monoRight": "Right ear only",
+  "eqFlat": "Flat",
+  "eqBassBoost": "Bass boost",
+  "eqBassCut": "Bass cut",
+  "eqTrebleBoost": "Treble boost",
+  "eqVocal": "Vocal",
+  "eqRock": "Rock",
+  "eqPop": "Pop",
+  "eqJazz": "Jazz",
+  "eqClassical": "Classical",
+  "eqElectronic": "Electronic",
+  "eqLoudness": "Loudness",
+  "dopNote": "Your DAC takes up to {rate}, and DoP needs 176.4 kHz, so DSD files play as PCM on it",
+  "@dopNote": {
+    "placeholders": {
+      "rate": {
+        "type": "String"
+      }
+    }
+  },
+  "systemDefault": "System default",
+  "outputNotConnected": "The chosen output isn't connected, so it plays through the system default for now.",
+  "cardBusy": "{card} is busy, so it plays through the system mixer for now.",
+  "@cardBusy": {
+    "placeholders": {
+      "card": {
+        "type": "String"
+      }
+    }
+  },
+  "fxRoomCorrection": "Room correction ({name})",
+  "@fxRoomCorrection": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "fxEqHeadroom": "Equalizer headroom",
+  "fxHrtf": "Virtual speakers (HRTF)",
+  "fxMonoBoth": "Mono (both ears)",
+  "fxMonoLeft": "Mono (left ear only)",
+  "fxMonoRight": "Mono (right ear only)",
+  "fxPlugins": "Audio plugins (Carla)",
+  "removedFromLiked": "Removed from Liked music",
+  "addedToLiked": "Added to Liked music",
+  "renamePlaylist": "Rename playlist",
+  "name": "Name",
+  "playlistOnDeviceNote": "Kept on this device. Can mix your own files and YouTube Music songs.",
+  "playlistOnYtNote": "Saved to your YouTube Music account, on all your devices.",
+  "privacyPrivate": "Only you can see it.",
+  "privacyUnlisted": "Anyone with the link can see it.",
+  "privacyPublic": "Anyone can find and see it.",
+  "create": "Create",
+  "createdInYt": "Created \"{title}\" in YouTube Music",
+  "@createdInYt": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "createdPlaylistWith": "Created \"{title}\" with {count} songs",
+  "@createdPlaylistWith": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "createdPlaylist": "Created \"{title}\"",
+  "@createdPlaylist": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "removedFromThisPlaylist": "Removed from this playlist",
+  "makeUnlistedQuestion": "Make it unlisted?",
+  "makeUnlistedBody": "Friends can only join a playlist that isn't private. It will become unlisted: hidden from search, but anyone with the link can see it.",
+  "makeUnlisted": "Make unlisted",
+  "inviteFriends": "Invite friends",
+  "inviteLinkCopied": "The link is copied. Send it to your friends: anyone who opens it can add songs.",
+  "copyAgain": "Copy again",
+  "done": "Done",
+  "stopSharingQuestion": "Stop sharing?",
+  "stopSharingBody": "Friends won't be able to add songs any more, and old invite links stop working.",
+  "stopSharing": "Stop sharing",
+  "onlyYouCanAdd": "Only you can add songs now",
+  "joinSharedPlaylistBody": "Paste the invite link a friend sent you. You'll both be able to add songs.",
+  "inviteLink": "Invite link",
+  "notAnInviteLink": "That isn't an invite link",
+  "join": "Join",
+  "unfollowedName": "Unfollowed {name}",
+  "@unfollowedName": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "followingName": "Following {name}",
+  "@followingName": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "downloadFailedTryAgain": "Download failed, try again",
+  "downloadHoldTooltip": "Download\nHold to download now as {format}",
+  "@downloadHoldTooltip": {
+    "placeholders": {
+      "format": {
+        "type": "String"
+      }
+    }
+  },
+  "downloadingIn": "Downloading in {format}…",
+  "@downloadingIn": {
+    "placeholders": {
+      "format": {
+        "type": "String"
+      }
+    }
+  },
+  "downloadingTitle": "Downloading {title}…",
+  "@downloadingTitle": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "thisMonth": "This month",
+  "thisYear": "This year",
+  "allTime": "All time",
+  "monthJanuary": "January",
+  "monthFebruary": "February",
+  "monthMarch": "March",
+  "monthApril": "April",
+  "monthMay": "May",
+  "monthJune": "June",
+  "monthJuly": "July",
+  "monthAugust": "August",
+  "monthSeptember": "September",
+  "monthOctober": "October",
+  "monthNovember": "November",
+  "monthDecember": "December",
+  "monthInitials": "J F M A M J J A S O N D",
+  "monthYear": "{month} {year}",
+  "@monthYear": {
+    "placeholders": {
+      "month": {
+        "type": "String"
+      },
+      "year": {
+        "type": "String"
+      }
+    }
+  },
+  "monthDay": "{month} {day}",
+  "@monthDay": {
+    "placeholders": {
+      "month": {
+        "type": "String"
+      },
+      "day": {
+        "type": "String"
+      }
+    }
+  },
+  "durZero": "0 min",
+  "durOneMin": "1 min",
+  "durMin": "{m} min",
+  "@durMin": {
+    "placeholders": {
+      "m": {
+        "type": "String"
+      }
+    }
+  },
+  "durHours": "{h} h",
+  "@durHours": {
+    "placeholders": {
+      "h": {
+        "type": "String"
+      }
+    }
+  },
+  "durHoursMin": "{h} h {m} min",
+  "@durHoursMin": {
+    "placeholders": {
+      "h": {
+        "type": "String"
+      },
+      "m": {
+        "type": "String"
+      }
+    }
+  },
+  "wrapSoFar": "{month} so far",
+  "@wrapSoFar": {
+    "placeholders": {
+      "month": {
+        "type": "String"
+      }
+    }
+  },
+  "playFewSongsWrap": "Play a few songs to see your Wrap.",
+  "notEnoughForWrap": "There is not enough listening in {month} for a Wrap.",
+  "@notEnoughForWrap": {
+    "placeholders": {
+      "month": {
+        "type": "String"
+      }
+    }
+  },
+  "wrapCaption": "My {month} on Riflay: {listened} of music. Top song: {song}. Top artist: {artist}.",
+  "@wrapCaption": {
+    "placeholders": {
+      "month": {
+        "type": "String"
+      },
+      "listened": {
+        "type": "String"
+      },
+      "song": {
+        "type": "String"
+      },
+      "artist": {
+        "type": "String"
+      }
+    }
+  },
+  "wrapCaptionStreak": "🔥 {count} days in a row.",
+  "@wrapCaptionStreak": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "savedFile": "Saved {file}",
+  "@savedFile": {
+    "placeholders": {
+      "file": {
+        "type": "String"
+      }
+    }
+  },
+  "couldntSaveImage": "Couldn't save the image",
+  "savedCaptionCopied": "Saved {file}; the caption is copied",
+  "@savedCaptionCopied": {
+    "placeholders": {
+      "file": {
+        "type": "String"
+      }
+    }
+  },
+  "saveImage": "Save image",
+  "weekdayMonday": "Monday",
+  "weekdayTuesday": "Tuesday",
+  "weekdayWednesday": "Wednesday",
+  "weekdayThursday": "Thursday",
+  "weekdayFriday": "Friday",
+  "weekdaySaturday": "Saturday",
+  "weekdaySunday": "Sunday",
+  "weekdayMonthDay": "{weekday}, {month} {day}",
+  "@weekdayMonthDay": {
+    "placeholders": {
+      "weekday": {
+        "type": "String"
+      },
+      "month": {
+        "type": "String"
+      },
+      "day": {
+        "type": "String"
+      }
+    }
+  },
+  "wrapSoFarKicker": "Your Wrap so far",
+  "wrapMonthlyKicker": "Your monthly Wrap",
+  "wrapMonthInMusic": "Your {month} in music",
+  "@wrapMonthInMusic": {
+    "placeholders": {
+      "month": {
+        "type": "String"
+      }
+    }
+  },
+  "wrapUpTo": "Up to {day}",
+  "@wrapUpTo": {
+    "placeholders": {
+      "day": {
+        "type": "String"
+      }
+    }
+  },
+  "wrapListenedFor": "You listened for",
+  "wrapAcross": "{count, plural, =1{across 1 play in {month}.} other{across {count} plays in {month}.}}",
+  "@wrapAcross": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "month": {
+        "type": "String"
+      }
+    }
+  },
+  "wrapAcrossSoFar": "{count, plural, =1{across 1 play so far in {month}.} other{across {count} plays so far in {month}.}}",
+  "@wrapAcrossSoFar": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "month": {
+        "type": "String"
+      }
+    }
+  },
+  "wrapSummary": "Top song: {song}\nTop artist: {artist}\n{songs, plural, =1{1 song} other{{songs} songs}}, {artists, plural, =1{1 artist} other{{artists} artists}}",
+  "@wrapSummary": {
+    "placeholders": {
+      "songs": {
+        "type": "int"
+      },
+      "artists": {
+        "type": "int"
+      },
+      "song": {
+        "type": "String"
+      },
+      "artist": {
+        "type": "String"
+      }
+    }
+  },
+  "wrapYouPlayed": "You played",
+  "songsPlural": "{count, plural, =1{1 song} other{{count} songs}}",
+  "@songsPlural": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "wrapByArtists": "{count, plural, =1{by 1 artist.} other{by {count} artists.}}",
+  "@wrapByArtists": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "wrapTopSong": "Your top song",
+  "playsPlural": "{count, plural, =1{1 play} other{{count} plays}}",
+  "@playsPlural": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "wrapTopSongs": "Your top songs",
+  "wrapTopArtist": "Your top artist",
+  "wrapTopArtists": "Your top artists",
+  "wrapTopAlbum": "Your top album",
+  "wrapBiggestDay": "Your biggest day",
+  "wrapOfMusic": "{listened} of music.",
+  "@wrapOfMusic": {
+    "placeholders": {
+      "listened": {
+        "type": "String"
+      }
+    }
+  },
+  "wrapStreakGoing": "Your streak, still going",
+  "wrapLongestStreak": "Your longest streak",
+  "daysInARow": "{count} days in a row",
+  "@daysInARow": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "wrapListenedOnDays": "{count, plural, =1{You listened on {listened} of 1 day.} other{You listened on {listened} of {count} days.}}",
+  "@wrapListenedOnDays": {
+    "placeholders": {
+      "listened": {
+        "type": "int"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "wrapListenedOnDaysSoFar": "{count, plural, =1{You listened on {listened} of 1 day so far.} other{You listened on {listened} of {count} days so far.}}",
+  "@wrapListenedOnDaysSoFar": {
+    "placeholders": {
+      "listened": {
+        "type": "int"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "wrapMostReplayed": "Most replayed",
+  "wrapPlayedTimesOn": "{artist}\nPlayed {count} times on {day}.",
+  "@wrapPlayedTimesOn": {
+    "placeholders": {
+      "artist": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      },
+      "day": {
+        "type": "String"
+      }
+    }
+  },
+  "wrapNewThisMonth": "New this month",
+  "newSongsPlural": "{count, plural, =1{1 new song} other{{count} new songs}}",
+  "@newSongsPlural": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "wrapStayedWithKnown": "You stayed with the songs you know.",
+  "wrapNeverPlayed": "Songs you had never played before.",
+  "wrapNewCount": ", {count} new",
+  "@wrapNewCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "madeWithRiflay": "Made with Riflay",
+  "yourListening": "Your listening",
+  "yourListeningBody": "Worked out from songs you played for 30 seconds or more. It stays on this device.",
+  "listeningTime": "Listening time",
+  "topSongs": "Top songs",
+  "topArtists": "Top artists",
+  "topAlbums": "Top albums",
+  "yourMonthlyWraps": "Your monthly Wraps",
+  "thisMonthUpToNow": "This month up to now",
+  "playFewSongsWrapShort": "Play a few songs to see your Wrap",
+  "couldntFindSong": "Couldn't find {title}",
+  "@couldntFindSong": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "statsNothingYet": "Nothing here yet. Songs you listen to for 30 seconds or more will show up.",
+  "historyOff": "Your listening history is off. Turn it on in Settings › Library & downloads › Listening history & Wrap.",
+  "listeningTimeChart": "Listening time chart. {bars}",
+  "@listeningTimeChart": {
+    "placeholders": {
+      "bars": {
+        "type": "String"
+      }
+    }
+  },
+  "listeningWith": "Listening with {host}",
+  "@listeningWith": {
+    "placeholders": {
+      "host": {
+        "type": "String"
+      }
+    }
+  },
+  "aFriend": "a friend",
+  "hosting": "Hosting",
+  "listeningCount": "{count} listening",
+  "@listeningCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "couldntConnect": "Couldn't connect. Try again.",
+  "listenTogetherIntro": "Play YouTube songs together with friends.",
+  "yourName": "Your name",
+  "yourNameHelper": "Friends see it when you join or start a session",
+  "enterNameFirst": "Enter your name first",
+  "sameWifi": "Same Wi-Fi",
+  "anywhere": "Anywhere",
+  "anywhereNote": "Connects through free public servers. Everything is encrypted, but it's new and can sometimes fail to connect.",
+  "sameWifiNote": "Everyone needs to be on the same Wi-Fi.",
+  "startSession": "Start a session",
+  "scanQr": "Scan QR code",
+  "onThisWifi": "On this Wi-Fi",
+  "lookingForSessions": "Looking for sessions on this network…",
+  "tapToJoin": "Tap to join",
+  "haveACode": "Have a code?",
+  "joinCodeAnywhere": "Friends anywhere can join with this code.",
+  "joinCodeWifi": "Friends on the same Wi-Fi can join with this code.",
+  "showQr": "Show QR code",
+  "listening": "Listening",
+  "nobodyJoined": "Nobody has joined yet.",
+  "letFriendsAdd": "Let friends add songs",
+  "letFriendsAddSubtitle": "A song a friend plays goes into your queue, in the order they come",
+  "letFriendsSeek": "Let friends seek within songs",
+  "letFriendsSeekSubtitle": "Changes playback position for everyone",
+  "youPickSongs": "You pick the songs. Play any YouTube song and everyone follows.",
+  "endSession": "End session",
+  "waitingForHost": "Waiting for {host} to play something.",
+  "@waitingForHost": {
+    "placeholders": {
+      "host": {
+        "type": "String"
+      }
+    }
+  },
+  "hostPlayingOwnFiles": "{host} is playing a song from their own files. It'll continue when they play a YouTube song.",
+  "@hostPlayingOwnFiles": {
+    "placeholders": {
+      "host": {
+        "type": "String"
+      }
+    }
+  },
+  "playGoesToHostQueue": "Play any YouTube song and it goes into {host}'s queue.",
+  "@playGoesToHostQueue": {
+    "placeholders": {
+      "host": {
+        "type": "String"
+      }
+    }
+  },
+  "hostNotTakingSongs": "{host} isn't taking songs right now.",
+  "@hostNotTakingSongs": {
+    "placeholders": {
+      "host": {
+        "type": "String"
+      }
+    }
+  },
+  "host": "Host",
+  "upNext": "Up next",
+  "seekForEveryone": "Use the player timeline to seek for everyone.",
+  "onlyHostSeeks": "Only the host can seek within songs.",
+  "leave": "Leave",
+  "spMixerResamples": "Riflay leaves the sound alone, but the system mixer runs your DAC at {dacRate} instead of {songRate}.",
+  "@spMixerResamples": {
+    "placeholders": {
+      "dacRate": {
+        "type": "String"
+      },
+      "songRate": {
+        "type": "String"
+      }
+    }
+  },
+  "spFixedRateOutputs": "iPhone, iPad and Bluetooth outputs run at one fixed rate; a USB DAC usually follows each song.",
+  "spTurnOnBitPerfect": "Turn on Bit-perfect mode in Settings › Sound › Output & quality to send it as it is.",
+  "spMixerMayResample": "Nothing in Riflay changes the sound, but the system mixer may resample it.",
+  "spIosAlwaysMixes": "iOS always mixes the sound, so it is never bit-perfect here.",
+  "spForBitPerfectExclusive": "For bit-perfect, turn on Bit-perfect mode and Exclusive mode in Settings › Sound › Output & quality (other apps go silent meanwhile).",
+  "spForBitPerfect": "For bit-perfect, turn on Bit-perfect mode in Settings › Sound › Output & quality.",
+  "spDsdToPcmExclusive": "DSD is decoded to high-rate PCM. To send it to your DAC as DSD, turn on Bit-perfect mode, Exclusive mode and Native DSD (DoP) in Settings › Sound › Output & quality.",
+  "spDsdToPcmHowTo": "DSD is decoded to high-rate PCM. To send it to your DAC as DSD, turn on Bit-perfect mode and Native DSD (DoP) in Settings › Sound › Output & quality.",
+  "spUsbDacRateUnsupported": "{dac} doesn't take {songRate}, so Android plays it at {outRate} instead.",
+  "@spUsbDacRateUnsupported": {
+    "placeholders": {
+      "dac": {
+        "type": "String"
+      },
+      "songRate": {
+        "type": "String"
+      },
+      "outRate": {
+        "type": "String"
+      }
+    }
+  },
+  "qualityLossy": "Lossy",
+  "qualityLossless": "Lossless",
+  "nativeDsd2": "Native DSD",
+  "spNativeDsdBody": "The DSD stream reaches your DAC as it is, packed as DoP. A DAC that supports DoP shows DSD; one that doesn't plays a faint hiss (then turn off Native DSD).",
+  "spDopChanged": "DoP is being changed",
+  "spDopChangedBody": "Something between Riflay and your DAC changes the samples, so the DAC can't see the DSD. Choose a direct output in Settings › Sound › Output & quality.",
+  "spUsbBitPerfect": "USB DAC, bit-perfect (Android 14): every sample reaches {dac} exactly as it is stored in the file.",
+  "@spUsbBitPerfect": {
+    "placeholders": {
+      "dac": {
+        "type": "String"
+      }
+    }
+  },
+  "spNotBitPerfect": "Not bit-perfect",
+  "spBitPerfectBody": "Every sample reaches your DAC exactly as it is stored in the file.",
+  "spResampledByMixer": "Resampled by the system mixer",
+  "spLosslessToMixer": "Lossless to the system mixer",
+  "spDsdConverted": "DSD converted to PCM",
+  "spDsdIos": "DSD is decoded to high-rate PCM. iOS can't send DSD to a DAC as DSD.",
+  "spProcessed": "Processed",
+  "spProcessedBody": "Something below changes the samples. That is fine if it is what you want.",
+  "spSource": "Source",
+  "spLosslessParen": "(lossless)",
+  "spDecoded": "Decoded",
+  "spPadded": "({bits}-bit, padded losslessly)",
+  "@spPadded": {
+    "placeholders": {
+      "bits": {
+        "type": "int"
+      }
+    }
+  },
+  "spUntouched": "100% (untouched)",
+  "spMuted": "Muted",
+  "spClipProtection": "Clip protection",
+  "spClipProtectionBody": "Softens any peak past full scale instead of cutting it off",
+  "spResampled": "Resampled",
+  "spDacReceives": "DAC receives",
+  "spMono": "mono",
+  "spStereo": "stereo",
+  "spChannels": "{count} channels",
+  "@spChannels": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "spPipewire": "PipeWire (system mixer)",
+  "spPulse": "PulseAudio (system mixer)",
+  "spAlsaDirect": "ALSA, direct to hardware",
+  "spWasapiExclusive": "WASAPI exclusive",
+  "spWasapiShared": "WASAPI shared",
+  "spAndroidMixer": "Android mixer",
+  "spAndroidMixerParen": "(Android mixer)",
+  "spIosSession": "iOS audio session (system mixer)",
+  "couldntOpenBrowser": "Couldn't open the browser.",
+  "versionNamed": "Version {version}",
+  "@versionNamed": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "version": "Version",
+  "copy": "Copy",
+  "copied": "Copied",
+  "whatsNew": "What's new",
+  "whatsNewSubtitle": "Release notes and downloads for every platform",
+  "reportProblem": "Report a problem",
+  "reportProblemSubtitle": "Opens a new issue; paste the version details in it",
+  "supportArtists": "Support the artists",
+  "supportArtistsSubtitle": "Enjoying the music? YouTube Music Premium pays the people who make it",
+  "supportRiflay": "Support Riflay",
+  "supportRiflaySubtitle": "Send a gift on Tako to keep it going",
+  "sourceCode": "Source code",
+  "sourceCodeSubtitle": "Riflay is open source, on GitHub",
+  "licence": "Licence",
+  "openSourceLicences": "Open-source licences",
+  "openSourceLicencesSubtitle": "The libraries Riflay is built with",
+  "scrobbleBody": "Songs you listen to past the halfway mark (or 4 minutes) are added to your profile there. Listens made offline are sent once you're back online.",
+  "connect": "Connect",
+  "notConnected": "Not connected",
+  "connectedAs": "Connected as {user}",
+  "@connectedAs": {
+    "placeholders": {
+      "user": {
+        "type": "String"
+      }
+    }
+  },
+  "connected": "Connected",
+  "noNewListens": "No new listens to bring in",
+  "listensAdded": "{count, plural, =1{1 listen added to your history} other{{count} listens added to your history}}",
+  "@listensAdded": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "serviceSignedOut": "{service} signed you out. Connect it again.",
+  "@serviceSignedOut": {
+    "placeholders": {
+      "service": {
+        "type": "String"
+      }
+    }
+  },
+  "couldntReachService": "Couldn't reach {service}. Try again.",
+  "@couldntReachService": {
+    "placeholders": {
+      "service": {
+        "type": "String"
+      }
+    }
+  },
+  "readingListens": "Reading your listens: {count} so far",
+  "@readingListens": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "turnOnHistoryFirst": "Turn on the listening history in Library & downloads first.",
+  "bringInBody": "Adds the songs you played elsewhere to your stats, Wraps and Most played. Ones already here are skipped.",
+  "bringInHistory": "Bring in your {service} history",
+  "@bringInHistory": {
+    "placeholders": {
+      "service": {
+        "type": "String"
+      }
+    }
+  },
+  "stop": "Stop",
+  "bringIn": "Bring in",
+  "connectService": "Connect {service}",
+  "@connectService": {
+    "placeholders": {
+      "service": {
+        "type": "String"
+      }
+    }
+  },
+  "listenBrainzTokenBody": "Copy your user token from your ListenBrainz settings and paste it here.",
+  "openListenBrainzSettings": "Open ListenBrainz settings",
+  "userToken": "User token",
+  "signInTooLong": "The sign-in took too long. Try again.",
+  "lastfmDidntFinish": "Last.fm didn't finish the sign-in. Try again.",
+  "lastfmAllowBody": "Allow Riflay on the Last.fm page that opened in your browser. This closes by itself once you have.",
+  "openLastfmAgain": "Open Last.fm again",
+  "spotifyReadFailed": "Couldn't read your Spotify library right now. Try again later.",
+  "needsWebkit": "Signing in needs WebKitGTK (webkit2gtk-4.1). Install it and restart Riflay.",
+  "spotifySignInUnavailable": "Signing in to Spotify isn't available here.",
+  "spotifyIntro": "Copy your Spotify playlists, Liked Songs and albums into Riflay.",
+  "spotifyReadOnly": "Riflay only reads your library. It never changes your Spotify account.",
+  "signInWithSpotify": "Sign in with Spotify",
+  "playlistsGoToYt": "Playlists go to your YouTube Music library.",
+  "playlistsBecomeRiflay": "Playlists become Riflay playlists.",
+  "signedInToSpotify": "Signed in to Spotify",
+  "signOut": "Sign out",
+  "nothingHereYet": "Nothing here yet.",
+  "imported": "Imported",
+  "importAll": "Import all",
+  "importCount": "Import {count}",
+  "@importCount": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "import": "Import",
+  "importing": "Importing",
+  "stopping": "Stopping…",
+  "findingSongsInYt": "Finding songs in YouTube Music: {matched} of {total}",
+  "@findingSongsInYt": {
+    "placeholders": {
+      "matched": {
+        "type": "String"
+      },
+      "total": {
+        "type": "String"
+      }
+    }
+  },
+  "findingArtistInYt": "Finding the artist in YouTube Music…",
+  "readingTheSongs": "Reading the songs…",
+  "importedOf": "Imported {done} of {total}",
+  "@importedOf": {
+    "placeholders": {
+      "done": {
+        "type": "String"
+      },
+      "total": {
+        "type": "String"
+      }
+    }
+  },
+  "youStoppedImport": "You stopped the import.",
+  "pronunciation": "Pronunciation",
+  "translation": "Translation",
+  "copyLyrics": "Copy lyrics",
+  "adjustTiming": "Adjust timing",
+  "removeMyLyrics": "Remove my lyrics",
+  "playerOptions": "Player options",
+  "chooseLyricsFile": "Choose a lyrics file",
+  "lyricsFileTooBig": "That file is too big to be lyrics.",
+  "yourLyricsInUse": "Your lyrics are in use",
+  "couldntReadFile": "Couldn't read that file.",
+  "couldntRemoveLyrics": "Couldn't remove your lyrics.",
+  "onTime": "On time",
+  "secondsEarlier": "{seconds} s earlier",
+  "@secondsEarlier": {
+    "placeholders": {
+      "seconds": {
+        "type": "String"
+      }
+    }
+  },
+  "secondsLater": "{seconds} s later",
+  "@secondsLater": {
+    "placeholders": {
+      "seconds": {
+        "type": "String"
+      }
+    }
+  },
+  "adjustTimingBody": "If the lyrics come too early or too late, move them until they match the song.",
+  "earlier": "Earlier",
+  "later": "Later",
+  "lyricsCopied": "Lyrics copied",
+  "couldntTranslateLyrics": "Couldn't translate these lyrics. Check your internet connection.",
+  "privacyPublicLabel": "Public",
+  "privacyUnlistedLabel": "Unlisted",
+  "privacyPrivateLabel": "Private",
+  "joinedPlaylist": "Joined \"{title}\"",
+  "@joinedPlaylist": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "thePlaylist": "the playlist",
+  "sharedPlaylist": "Shared playlist",
+  "ytSignInPrompt": "Sign in to YouTube Music to add your liked songs, playlists and history.",
+  "signingIn": "Signing in…",
+  "ytLoadFailed": "Couldn't load YouTube Music. Check your internet connection.",
+  "playlistLoadFailed": "Couldn't load this playlist. Check your internet connection.",
+  "playlistIsNow": "Playlist is now {privacy}",
+  "@playlistIsNow": {
+    "placeholders": {
+      "privacy": {
+        "type": "String"
+      }
+    }
+  },
+  "deleteYtPlaylistBody": "\"{title}\" will be deleted from your YouTube Music library. This can't be undone.",
+  "@deleteYtPlaylistBody": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "shared": "Shared",
+  "makePrivacy": "Make {privacy}",
+  "@makePrivacy": {
+    "placeholders": {
+      "privacy": {
+        "type": "String"
+      }
+    }
+  },
+  "chooseDownloadsFolder": "Choose where downloads are saved",
+  "bestSoundNote": "The best sound YouTube has for each song.",
+  "smallerFilesNote": "Smaller files, with a little less full sound.",
+  "closestVersionNote": "{base} Uses the closest version YouTube offers.",
+  "@closestVersionNote": {
+    "placeholders": {
+      "base": {
+        "type": "String"
+      }
+    }
+  },
+  "whatToSave": "What to save",
+  "saveAs": "Save as",
+  "saveAsVideoNote": "The music video, with its sound. Songs without a music video are saved as audio.",
+  "saveAsAudioNote": "Just the sound. Choose Video to keep the music video too.",
+  "videoFormat": "Video format",
+  "size": "Size",
+  "videoSizeNote": "The tallest picture the video has, up to the one you choose. 1080p is a sharp picture without a huge file.",
+  "bestAvailable": "Best available",
+  "heightRecommended": "{height}p (Recommended)",
+  "@heightRecommended": {
+    "placeholders": {
+      "height": {
+        "type": "String"
+      }
+    }
+  },
+  "format": "Format",
+  "flacUnavailable": "{about}\nFLAC isn't available on this device.",
+  "@flacUnavailable": {
+    "placeholders": {
+      "about": {
+        "type": "String"
+      }
+    }
+  },
+  "bitDepthSampleRate": "Bit depth and sample rate",
+  "bitrate": "Bitrate",
+  "askEveryTime": "Ask every time",
+  "askEveryTimeSubtitle": "Choose the format and quality each time you download a song.",
+  "where": "Where",
+  "downloadOverMobile": "Download over mobile data",
+  "downloadOverMobileOn": "Songs download on mobile data as well as Wi-Fi.",
+  "downloadOverMobileOff": "Songs wait for Wi-Fi, so they don't use your data plan.",
+  "downloadsFolder": "Downloads folder",
+  "phoneDownloadsFixed": "{path}\nPhones keep downloads in Riflay's own storage, so this can't be changed.",
+  "@phoneDownloadsFixed": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "openFolder": "Open folder",
+  "ytDlp": "YouTube downloader (yt-dlp)",
+  "ytDlpMissing": "Not available. Install it (e.g. pacman -S yt-dlp) for YouTube downloads.",
+  "removeNamedQuestion": "Remove {name}?",
+  "@removeNamedQuestion": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "removeExtensionBody": "Its files and what it saved on this device are deleted.",
+  "couldntRemoveNamed": "Couldn't remove {name}",
+  "@couldntRemoveNamed": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "extensionsIntro": "Extensions written for SpotiFLAC add more places to search, such as Apple Music, SoundCloud and JioSaavn. Their songs play from YouTube Music. Only add repositories you trust: an extension runs its own code and can reach the sites its manifest lists.",
+  "repositories": "Repositories",
+  "installed": "Installed",
+  "noExtensionsYet": "No extensions yet",
+  "installFromRepo": "Install one from a repository below",
+  "available": "Available",
+  "repositoryAddress": "Repository address",
+  "reading": "Reading…",
+  "couldntReadIt": "Couldn't read it: {error}",
+  "@couldntReadIt": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "notReadYet": "Not read yet",
+  "extensionsCount": "{count, plural, =1{1 extension} other{{count} extensions}}",
+  "@extensionsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "removeRepository": "Remove repository",
+  "addsToSearch": "Adds results to Search",
+  "downloadsUnsupported": "downloads not supported yet",
+  "lyricsUnsupported": "lyrics not supported yet",
+  "needsSpotiflacFeatures": "needs SpotiFLAC features Riflay lacks, so it may not work",
+  "updateTo": "Update to {version}",
+  "@updateTo": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "couldntUpdateNamed": "Couldn't update {name}",
+  "@couldntUpdateNamed": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "couldntInstallNamed": "Couldn't install {name}",
+  "@couldntInstallNamed": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "install": "Install",
+  "scPlayPause": "Play or pause",
+  "scNext": "Next song",
+  "scPrevious": "Previous song",
+  "scVolumeUp": "Volume up",
+  "scVolumeDown": "Volume down",
+  "scBack": "Go back",
+  "scForward": "Go forward",
+  "scPasteLink": "Import a copied YouTube link",
+  "scFullScreen": "Full screen player",
+  "scHelp": "Show this list",
+  "scSlashOr": "? or Ctrl+/",
+  "saveABackup": "Save a backup",
+  "backupSaved": "Backup saved",
+  "couldntSaveBackup": "Couldn't save the backup.",
+  "chooseBackup": "Choose a Riflay backup",
+  "backupNeedsNewer": "This backup needs a newer Riflay.",
+  "notABackup": "That file isn't a Riflay backup.",
+  "restoreBackupQuestion": "Restore this backup?",
+  "restoreBackupBody": "{made}It has {playlists, plural, =1{1 playlist} other{{playlists} playlists}}, {plays, plural, =1{1 play} other{{plays} plays}} of listening history and {lyrics, plural, =1{1 lyrics file} other{{lyrics} lyrics files}}. They replace the settings, playlists and history on this device. Your sign-ins stay.",
+  "@restoreBackupBody": {
+    "placeholders": {
+      "playlists": {
+        "type": "int"
+      },
+      "plays": {
+        "type": "int"
+      },
+      "lyrics": {
+        "type": "int"
+      },
+      "made": {
+        "type": "String"
+      }
+    }
+  },
+  "restore": "Restore",
+  "couldntRestoreBackup": "Couldn't restore the backup.",
+  "backupRestored": "Backup restored",
+  "backupRestoredIos": "Close Riflay from the app switcher and open it again to finish.",
+  "backupRestoredDesktop": "Riflay closes now. Open it again to finish.",
+  "closeRiflay": "Close Riflay",
+  "madeOn": "Made on {date}.",
+  "@madeOn": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "saveABackupSubtitle": "Your settings, playlists, listening history and your own lyrics, in one file. Sign-ins are left out.",
+  "restoreABackup": "Restore a backup",
+  "restoreABackupSubtitle": "Bring them back on this device or a new one.",
+  "dupRemovedSomeFailed": "Removed {removed} copies. {failed} files couldn't be deleted.",
+  "@dupRemovedSomeFailed": {
+    "placeholders": {
+      "removed": {
+        "type": "int"
+      },
+      "failed": {
+        "type": "int"
+      }
+    }
+  },
+  "dupRemovedAndDeleted": "Removed {removed} copies and deleted {deleted} files, freeing {size}.",
+  "@dupRemovedAndDeleted": {
+    "placeholders": {
+      "removed": {
+        "type": "int"
+      },
+      "deleted": {
+        "type": "int"
+      },
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "dupRemovedFromLibrary": "Removed {removed} copies from your library.",
+  "@dupRemovedFromLibrary": {
+    "placeholders": {
+      "removed": {
+        "type": "int"
+      }
+    }
+  },
+  "songsYouHaveTwice": "Songs you have twice",
+  "lookingThroughLibrary": "Looking through your library...",
+  "noDuplicates": "No song is in your library twice.",
+  "duplicatesBody": "These are the same song in more than one file. The best copy is chosen for each; pick another if you like, then remove the rest.",
+  "nothingToRemove": "Nothing to remove",
+  "removeExtraCopies": "{count, plural, =1{Remove 1 extra copy} other{Remove {count} extra copies}}",
+  "@removeExtraCopies": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "upToCanBeFreed": "Up to {size} can be freed.",
+  "@upToCanBeFreed": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "chooseOne": "Choose one",
+  "keepAll": "Keep all",
+  "bestQuality": "best quality",
+  "downloadedByRiflay": "Downloaded by Riflay",
+  "yourFile": "Your file",
+  "keep": "Keep",
+  "removeCopiesQuestion": "{count, plural, =1{Remove 1 copy?} other{Remove {count} copies?}}",
+  "@removeCopiesQuestion": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "removeCopiesBody": "They are taken out of your library, and the copy you keep stays. Playlists that had a removed copy use the one you keep.",
+  "alsoDeleteFiles": "Also delete the files from this device",
+  "freesSize": "Frees {size}. Deleted files can't be brought back.",
+  "@freesSize": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "ownFilesCount": "{count} of your own files",
+  "@ownFilesCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "downloadsRiflaySaved": "{count} downloads Riflay saved",
+  "@downloadsRiflaySaved": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "listAnd": "and",
+  "filesUsedElsewhere": "{count} files are used by other songs and stay.",
+  "@filesUsedElsewhere": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "deleteFiles": "Delete files",
+  "couldntPlay": "Couldn't play {title}",
+  "@couldntPlay": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "ytSearchFailed": "YouTube search failed. Check your connection.",
+  "noYtResults": "No YouTube results.",
+  "ytSearchSource": "YouTube search",
+  "topResult": "Top result",
+  "nothingFound": "Nothing found.",
+  "noYtVideos": "No YouTube videos found.",
+  "ytVideosSource": "YouTube videos",
+  "couldntReadSongInfo": "Couldn't read this song's info",
+  "saved": "Saved",
+  "couldntSaveChanges": "Couldn't save the changes",
+  "chooseCoverArt": "Choose cover art",
+  "noCoverFound": "No cover found for this album",
+  "couldntReachCoverArchive": "Couldn't reach the Cover Art Archive",
+  "changeCover": "Change cover",
+  "searching": "Searching…",
+  "findOnline": "Find online",
+  "largeImageHint": "Use a large image (1000 px or more) for sharp artwork.",
+  "trackNumber": "Track",
+  "discNumber": "Disc",
+  "year": "Year",
+  "genre": "Genre",
+  "ytSignInAgain": "Please sign in to YouTube Music again.",
+  "ytBusy": "YouTube Music is busy. Try again in a minute.",
+  "ytNotAnswering": "YouTube Music isn't answering right now. Try again later.",
+  "couldntFinishSignIn": "Couldn't finish signing in. Try again.",
+  "signInDidntFinish": "Signing in didn't finish. Try again.",
+  "moodsAndGenres": "Moods & genres",
+  "performance": "Performance",
+  "keepScreenOn": "Keep screen on",
+  "keepScreenOnPhone": "Stops the screen from turning off by itself. Costs battery",
+  "keepScreenOnDesktop": "Stops the screen from turning off and locking by itself",
+  "dontSleepWhilePlaying": "Don't sleep while playing",
+  "dontSleepSubtitle": "The computer stays awake while music plays. The screen can still turn off",
+  "closeToTray": "Close to tray",
+  "noTrayIcons": "Your desktop doesn't show tray icons, so closing the window quits Riflay",
+  "closeToTraySubtitle": "Closing the window keeps Riflay playing in the tray. Quit it from the tray icon",
+  "keepPlayingScreenOff": "Keep playing with the screen off",
+  "batteryExemptOn": "On. Your phone won't put Riflay to sleep",
+  "batteryExemptOff": "Off. Your phone may stop the music after a while",
+  "allow": "Allow",
+  "openBatterySettings": "Open battery settings",
+  "keepMusicPlaying": "Keep the music playing",
+  "keepMusicPlayingBody": "Some phones stop music when the screen has been off for a while. Allowing Riflay to run in the background keeps it playing. You can change this later in Settings.",
+  "notNow": "Not now",
+  "couldntSaveChangesRetry": "Couldn't save the changes. Try again.",
+  "editSong": "Edit song",
+  "artistNamesStay": "Artist names stay as the artist released them.",
+  "yourLyrics": "Your lyrics",
+  "yourLyricsBody": "Shown instead of lyrics found online. Start lines with a time like [01:23.45] to have them follow the song.",
+  "pasteLyricsHere": "Paste lyrics here",
+  "addFromFile": "Add from a file",
+  "importedNamed": "Imported \"{title}\"",
+  "@importedNamed": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "pastePlaylistLink": "Paste a playlist link from Spotify, Apple Music or Deezer.",
+  "becomesYtPlaylist": "It becomes a playlist in your YouTube Music library.",
+  "becomesRiflayPlaylist": "It becomes a Riflay playlist of YouTube Music songs.",
+  "playlistLink": "Playlist link",
+  "notAPlaylistLink": "That isn't a Spotify, Apple Music or Deezer playlist link",
+  "readingPlaylist": "Reading the playlist…",
+  "saving": "Saving…",
+  "songsAddedOf": "{saved} of {total} songs added.",
+  "@songsAddedOf": {
+    "placeholders": {
+      "saved": {
+        "type": "String"
+      },
+      "total": {
+        "type": "String"
+      }
+    }
+  },
+  "songsAddedOfYt": "{saved} of {total} songs added to your YouTube Music library.",
+  "@songsAddedOfYt": {
+    "placeholders": {
+      "saved": {
+        "type": "String"
+      },
+      "total": {
+        "type": "String"
+      }
+    }
+  },
+  "firstSongsOnly": "{service} only shows the first {count} songs without signing in, so the rest were left out.",
+  "@firstSongsOnly": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "service": {
+        "type": "String"
+      }
+    }
+  },
+  "songsNotOnYt": "{count, plural, =1{1 song isn't on YouTube Music:} other{{count} songs aren't on YouTube Music:}}",
+  "@songsNotOnYt": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "openPlaylist": "Open playlist",
+  "fmtOpusAbout": "Smallest files for the same sound. Plays in Riflay and most players.",
+  "fmtM4aAbout": "The most widely supported. Plays on nearly every phone, TV and speaker.",
+  "fmtFlacAbout": "Lossless file for players and libraries that want FLAC. YouTube's sound is kept exactly; it gets no better.",
+  "fmtMp3About": "For older players and car stereos. Made from YouTube's audio, so it never sounds better than Opus or M4A.",
+  "kindAudio": "Audio",
+  "kindVideo": "Video",
+  "vidMp4About": "H.264 picture and AAC sound. Plays on nearly every phone, TV and computer.",
+  "vidWebmAbout": "VP9 picture and Opus sound. Smaller files, and the tallest sizes; plays in Riflay and most computers.",
+  "flacStandardAbout": "Same sample rate as YouTube's audio. Plays everywhere.",
+  "flacCdAbout": "CD quality, for players and burners that want exactly that.",
+  "flacHiResAbout": "Larger files, for libraries kept at 24-bit.",
+  "kbpsBest": "{kbps} kbps (best)",
+  "@kbpsBest": {
+    "placeholders": {
+      "kbps": {
+        "type": "String"
+      }
+    }
+  },
+  "videoChoice": "Video · {container} · {height}",
+  "@videoChoice": {
+    "placeholders": {
+      "container": {
+        "type": "String"
+      },
+      "height": {
+        "type": "String"
+      }
+    }
+  },
+  "bestAvailableLower": "best available",
+  "waitingToStart": "Waiting to start",
+  "noteDownloading": "Downloading",
+  "downloadedTitle": "Downloaded {title}",
+  "@downloadedTitle": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "savedToLibrary": "Saved to your library",
+  "couldntDownloadTitle": "Couldn't download {title}",
+  "@couldntDownloadTitle": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "tapRetry": "Tap Retry to try again.",
+  "downloadingSongsNote": "Downloading {count} songs",
+  "@downloadingSongsNote": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "openRiflay": "Open Riflay",
+  "downloadsChannelDescription": "Progress of songs being downloaded",
+  "servicePlaylist": "{service} playlist",
+  "@servicePlaylist": {
+    "placeholders": {
+      "service": {
+        "type": "String"
+      }
+    }
+  },
+  "clearHistoryQuestion": "Clear listening history?",
+  "clearHistoryBody": "{count, plural, =1{This deletes 1 play from this device. Your library and playlists stay as they are, but your stats, Wraps and lists like Most played start over.} other{This deletes {count} plays from this device. Your library and playlists stay as they are, but your stats, Wraps and lists like Most played start over.}}",
+  "@clearHistoryBody": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "historyCleared": "Listening history cleared",
+  "keepHistory": "Keep a listening history on this device",
+  "keepHistorySubtitle": "Powers Your listening stats, monthly Wraps and lists like Most played. It is never sent anywhere. Turning it off stops recording; what is saved stays until you clear it.",
+  "wrapNotification": "Monthly Wrap notification",
+  "wrapNotificationSubtitle": "On the 1st, tell me when last month's Wrap is ready.",
+  "clearHistory": "Clear listening history",
+  "nothingSavedYet": "Nothing saved yet",
+  "playsSaved": "{count} plays saved on this device",
+  "@playsSaved": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "lyricsFile": "Lyrics file",
+  "embeddedInFile": "Embedded in the file",
+  "addLyricsFirst": "Add some lyrics first.",
+  "lrcTimesWrong": "Some of the times in these lyrics aren't written correctly. Start each line with a time like [01:23.45].",
+  "lrcTimesPastEnd": "These times run past the end of the song. Check that the lyrics belong to it.",
+  "couldntStartSession": "Couldn't start a session. Check that you're connected to Wi-Fi.",
+  "sessionStopped": "The session stopped. Start it again to keep listening together.",
+  "nameLeft": "{name} left",
+  "@nameLeft": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "someone": "Someone",
+  "nameAddedToQueue": "{name} added {title} to the queue",
+  "@nameAddedToQueue": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "sessionNotFound": "Couldn't find that session. Check the code and that you're on the same Wi-Fi.",
+  "sessionNotAnswering": "That session isn't answering. Try again in a moment.",
+  "theHostCap": "The host",
+  "hostEndedSession": "{host} ended the listening session",
+  "@hostEndedSession": {
+    "placeholders": {
+      "host": {
+        "type": "String"
+      }
+    }
+  },
+  "sessionEndedOrDropped": "The session ended or the connection dropped.",
+  "lostHostConnection": "Lost the connection to the host. Join again to keep listening.",
+  "listeningTogetherSource": "Listening together",
+  "youLeftSession": "You left the listening session",
+  "onlyYtToHostQueue": "Only songs from YouTube Music can be added to {host}'s queue.",
+  "@onlyYtToHostQueue": {
+    "placeholders": {
+      "host": {
+        "type": "String"
+      }
+    }
+  },
+  "checkGithubUpdate": "Check GitHub for a newer version of Riflay",
+  "checkingUpdates": "Checking for updates…",
+  "latestVersion": "You're using the latest version",
+  "versionAvailable": "Version {version} is available",
+  "@versionAvailable": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "downloadingVersion": "Downloading version {version}…",
+  "@downloadingVersion": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "versionReady": "Version {version} is ready to install",
+  "@versionReady": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "openingInstaller": "Opening the Android installer…",
+  "completeInInstaller": "Complete the update in the Android installer",
+  "allowInstallUpdates": "Allow Riflay to install updates, then try again",
+  "differentSigningKey": "This copy uses a different signing key. Back up your data before installing the release",
+  "couldntVerifyUpdate": "Couldn't verify the update. Try downloading it again",
+  "couldntCheckUpdates": "Couldn't check for updates. Try again",
+  "couldntUpdateRiflay": "Couldn't update Riflay. Try again",
+  "installUpdate": "Install update",
+  "checkForUpdates": "Check for updates",
+  "downloadUpdate": "Download update",
+  "getUpdate": "Get update",
+  "spotifySignInExpired": "Your Spotify sign-in has expired. Sign in again.",
+  "recommended": "Recommended",
+  "bestAvailableWith": "Best available ({label})",
+  "@bestAvailableWith": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "downloadAsTitle": "Download as",
+  "couldntLookUpSizes": "Couldn't look up video sizes.",
+  "smallerFilesClosest": "Smaller files, with a little less full sound. Uses the closest version YouTube offers.",
+  "musicFolders": "Music folders",
+  "keepLibraryUpToDate": "Keep the library up to date",
+  "keepLibraryOpen": "New songs in your music folders are added, and songs you delete or move are taken out, each time you open Riflay.",
+  "keepLibraryWatch": "New songs in your music folders are added, and songs you delete or move are taken out, without adding the folder again.",
+  "checkNow": "Check now",
+  "addFolderFirst": "Add a music folder from the library first.",
+  "checkingDots": "Checking...",
+  "lookAtFoldersAgain": "{count, plural, =1{Look at your music folder again.} other{Look at your {count} music folders again.}}",
+  "@lookAtFoldersAgain": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "stopWatching": "Stop watching",
+  "tidyUp": "Tidy up",
+  "findDuplicates": "Find songs you have twice",
+  "findDuplicatesSubtitle": "The same song in different files, so you can keep the best one.",
+  "sessionQr": "Session QR code",
+  "sessionQrSemantics": "Listening session QR code",
+  "sessionQrHowTo": "In Riflay on another device, open Listen together and choose Scan QR code.",
+  "notASessionQr": "That QR code is not a Riflay session code.",
+  "noSessionInImage": "Couldn't find a Riflay session code in that image.",
+  "couldntReadImage": "Couldn't read that image. Try another one.",
+  "cameraUnavailable": "Camera unavailable. Allow camera access in your device settings, or open a QR image.",
+  "openQrImageToJoin": "Open an image of the session QR code to join.",
+  "pointCamera": "Point the camera at the session QR code shown in Riflay.",
+  "readingImage": "Reading image…",
+  "openQrImage": "Open QR image",
+  "motionGlide": "Glide",
+  "motionFadeThrough": "Fade through",
+  "motionSoftZoom": "Soft zoom",
+  "motionSlide": "Slide",
+  "motionCurtain": "Curtain reveal",
+  "motionCircular": "Circular reveal",
+  "motionSide": "Side reveal",
+  "motionDiamond": "Diamond reveal",
+  "speedFast": "Fast",
+  "speedRelaxed": "Relaxed",
+  "serviceSignedOutSettings": "{service} signed you out. Connect it again in Settings.",
+  "@serviceSignedOutSettings": {
+    "placeholders": {
+      "service": {
+        "type": "String"
+      }
+    }
+  },
+  "lostConnectionTo": "Lost connection to {device}",
+  "@lostConnectionTo": {
+    "placeholders": {
+      "device": {
+        "type": "String"
+      }
+    }
+  },
+  "couldntPlayOn": "Couldn't play on {device}",
+  "@couldntPlayOn": {
+    "placeholders": {
+      "device": {
+        "type": "String"
+      }
+    }
+  },
+  "pasteYtLink": "Paste a YouTube link to a video or playlist.",
+  "linkLoadFailed": "Couldn't load that link. It may be private, removed or region-locked.",
+  "importFromYtBody": "Downloads the audio track and adds it to your library.",
+  "paste": "Paste",
+  "bestQualityNote": "Saved in the best quality YouTube offers (up to ~160 kbps Opus/AAC), without re-encoding.",
+  "downloadCount": "Download {count}",
+  "@downloadCount": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "aboutSize": "About {size}",
+  "@aboutSize": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "aboutSizeTotal": "About {size} total",
+  "@aboutSizeTotal": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "ytPlaylistLine": "Playlist • {author} • {count} videos",
+  "@ytPlaylistLine": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "author": {
+        "type": "String"
+      }
+    }
+  },
+  "checkingSize": "Checking size…",
+  "eqBitPerfectNote": "Bit-perfect mode is on, so the equalizer is bypassed. Turn it off in Settings › Sound › Output & quality.",
+  "eqHint": "Pick a preset or drag the sliders. Tap a frequency to fine-tune it.",
+  "eqHeadroom": "Headroom {db} dB, so boosted bands never distort.",
+  "@eqHeadroom": {
+    "placeholders": {
+      "db": {
+        "type": "String"
+      }
+    }
+  },
+  "changeFrequency": "Change frequency and width",
+  "bandNumber": "Band {number}",
+  "@bandNumber": {
+    "placeholders": {
+      "number": {
+        "type": "String"
+      }
+    }
+  },
+  "defaultLabel": "Default",
+  "newReleases": "New releases",
+  "couldntLoadPage": "Couldn't load this page. Check your internet connection.",
+  "removedFromLibrary": "Removed from your library",
+  "saveToLibrary": "Save to library",
+  "phaseDownloading": "Downloading",
+  "converting": "Converting…",
+  "finishing": "Finishing…",
+  "needsFfmpegMp3": "MP3 downloads need ffmpeg, which isn't available here. Pick another format in Settings › Library & downloads › Downloads.",
+  "noFlacHere": "FLAC downloads aren't available on this device. Pick another format in Settings › Library & downloads › Downloads.",
+  "mobileDataOff": "Mobile data downloads are off. Connect to Wi-Fi, or allow them in Settings › Library & downloads › Downloads.",
+  "couldntDownloadSong": "Couldn't download this song. Try again later.",
+  "spotifyLinePlaylist": "{name}: {found} of {total} songs",
+  "@spotifyLinePlaylist": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "found": {
+        "type": "String"
+      },
+      "total": {
+        "type": "String"
+      }
+    }
+  },
+  "spotifyLineAlbumSaved": "{name}: saved to your library",
+  "@spotifyLineAlbumSaved": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "spotifyLineFollowed": "{name}: followed",
+  "@spotifyLineFollowed": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "spotifyLineArtistMissing": "{name}: not found on YouTube Music",
+  "@spotifyLineArtistMissing": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "spotifyLineNoSongs": "{name}: no songs found on YouTube Music",
+  "@spotifyLineNoSongs": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "spotifyLineFailed": "{name}: {problem}",
+  "@spotifyLineFailed": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "problem": {
+        "type": "String"
+      }
+    }
+  },
+  "somethingWentWrong": "something went wrong",
+  "positionOf": "{kind} {position} of {count}",
+  "@positionOf": {
+    "placeholders": {
+      "kind": {
+        "type": "String"
+      },
+      "position": {
+        "type": "String"
+      },
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "signInYtFirst": "sign in to YouTube Music first",
+  "hideRiflay": "Hide Riflay",
+  "showRiflay": "Show Riflay",
+  "quitRiflay": "Quit Riflay",
+  "convertingToFlac": "Converting {title} to FLAC…",
+  "@convertingToFlac": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "convertingSongsToFlac": "Converting {count} songs to FLAC…",
+  "@convertingSongsToFlac": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "convertedToFlac": "Converted {title} to FLAC",
+  "@convertedToFlac": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "alreadyLossless": "{title} is already lossless",
+  "@alreadyLossless": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "couldntConvert": "Couldn't convert {title}",
+  "@couldntConvert": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "convertedSongsToFlac": "{count, plural, =1{Converted 1 song to FLAC} other{Converted {count} songs to FLAC}}",
+  "@convertedSongsToFlac": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "convertedSomeFailed": "{count, plural, =1{Converted 1 song to FLAC, {failed} couldn't be converted} other{Converted {count} songs to FLAC, {failed} couldn't be converted}}",
+  "@convertedSomeFailed": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "failed": {
+        "type": "int"
+      }
+    }
+  },
+  "couldntConvertThese": "Couldn't convert these songs",
+  "addedSongsCount": "{count, plural, =1{Added 1 song} other{Added {count} songs}}",
+  "@addedSongsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "allowReadMusic": "Allow Riflay to read your music to add a folder",
+  "couldntAddMusic": "Couldn't add that music",
+  "pressBackToExit": "Press back again to exit",
+  "downloadingAudio": "Downloading audio…",
+  "view": "View",
+  "resizeSidebar": "Resize sidebar",
+  "resizeSidePanel": "Resize side panel",
+  "signInToSpotify": "Sign in to Spotify",
+  "checkingSession": "Checking the session…",
+  "spotifyHandlesSignIn": "Spotify handles the sign-in. Riflay only reads your library.",
+  "couldntLoadSignIn": "Couldn't load the sign-in page. Check your internet connection.",
+  "noSessionYet": "No signed-in session on this page yet. Finish signing in above, then tap Try again.",
+  "couldntReadSpotifySession": "Couldn't read the Spotify session. Try again.",
+  "signInToYt": "Sign in to YouTube Music",
+  "googleHandlesSignIn": "Google handles the sign-in. Riflay only keeps the session.",
+  "couldNotUseSignIn": "Could not use that sign-in.",
+  "nothingIsPlaying": "Nothing is playing",
+  "pressEscToExit": "Press Esc to exit full screen",
+  "hideEqualizer": "Hide equalizer",
+  "videoUnavailable": "This video is unavailable.",
+  "videoUnplayable": "This video can't be played (private, age-restricted or region-locked).",
+  "muxFailed": "Couldn't combine the picture and the sound. Try again, or pick another size in Settings › Library & downloads › Downloads.",
+  "noInternetTryAgain": "No internet connection. Try again.",
+  "extAnsweredUnreadable": "{name} answered something unreadable",
+  "@extAnsweredUnreadable": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "extStopped": "{name} was stopped",
+  "@extStopped": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "flacBiggerOne": "The FLAC file will be bigger than the original. The sound stays the same: FLAC can't bring back what the original already lost.",
+  "flacBiggerEach": "Each FLAC file will be bigger than the original. The sound stays the same: FLAC can't bring back what the original already lost.",
+  "ownSongsStay": "Songs you added yourself stay as they are, next to their FLAC.",
+  "quality": "Quality",
+  "convert": "Convert",
+  "betaMusixmatchBody": "Look for word-by-word lyrics on Musixmatch when other sources have none.",
+  "betaVideoModeBody": "Watch a song's music video in the player, in step with the song.",
+  "betaDirectUsbBody": "Play straight to a USB DAC, past Android. Experimental.",
+  "mostPlayed": "Most played",
+  "notPlayedForAWhile": "Not played for a while",
+  "thisSong": "this song",
+  "addMusicFolder": "Add music folder",
+  "couldntReachDevice": "Couldn't reach {device}",
+  "@couldntReachDevice": {
+    "placeholders": {
+      "device": {
+        "type": "String"
+      }
+    }
+  },
+  "presetClassicNote": "The player as it has always been, the cover pulsing with the music",
+  "presetStackedNote": "The cover as the page, joined buttons, a thick bar and a wide Play button",
+  "presetKawaiiNote": "The cover fades into the page, with plain icons, a wavy line and the volume behind a button",
+  "useThisColour": "Use this colour",
+  "saturationBrightness": "Saturation and brightness",
+  "hue": "Hue",
+  "wrapReadyTitle": "Your {month} in music is ready",
+  "@wrapReadyTitle": {
+    "placeholders": {
+      "month": {
+        "type": "String"
+      }
+    }
+  },
+  "monthlyWrap": "Monthly Wrap",
+  "monthlyWrapChannel": "Your month in music, once it is over",
+  "tapToSeeListened": "Tap to see what you listened to.",
+  "vizOffBitPerfect": "Off while Bit-perfect is on: nothing may change the sound on its way to your DAC",
+  "vizOffLightweight": "Off in the Lightweight performance mode",
+  "vizOffReducedMotion": "Off while Motion is reduced",
+  "vizHiddenDop": "Hidden while this song plays as DSD over DoP",
+  "vizHiddenCasting": "Hidden while playing on another device",
+  "minimize": "Minimize",
+  "maximize": "Maximize",
+  "windowRestore": "Restore",
+  "whilePlaying": "While playing",
+  "whileRiflayOpen": "While Riflay is open",
+  "couldntFindOnYt": "Couldn't find {title} on YouTube Music",
+  "@couldntFindOnYt": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "fromNamed": "From {name}",
+  "@fromNamed": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "extCouldntSearch": "{name} couldn't search: {error}",
+  "@extCouldntSearch": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "moreOptionsFor": "More options for {title}",
+  "@moreOptionsFor": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "removedFileNotDeleted": "Removed from your library; the file couldn't be deleted.",
+  "couldntPlayOnDevice": "Couldn't play {title} on {device}",
+  "@couldntPlayOnDevice": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      },
+      "device": {
+        "type": "String"
+      }
+    }
+  },
+  "tallerAsWebm": "{size} is available as WebM.",
+  "@tallerAsWebm": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "dsdUseDacVolume": "DSD goes to your DAC as it is: use the DAC's volume",
+  "streamsOnline": "YouTube Music: needs internet",
+  "playsOfflineHere": "On this device: plays offline",
+  "showAll": "Show all",
+  "offWhileDirect": "Off while the sound goes straight to your DAC",
+  "ffmpegOneTime": "Getting this ready: a one-time download (about 40 MB)…",
+  "matugenInvalid": "Choose a valid Matugen JSON color file. Keeping the last working colors.",
+  "couldntSignInSpotify": "Couldn't sign in to Spotify. Try again.",
+  "somethingWentWrongRetry": "Something went wrong. Try again.",
+  "videoCouldntLoad": "The video couldn't load, so the song plays on its own.",
+  "keySpace": "Space",
+  "forward": "Forward",
+  "deletePlaylistBody": "\"{name}\" will be deleted. The songs stay in your library.",
+  "@deletePlaylistBody": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "lyricsOtherVersion": "These lyrics are from a different recording of the same song (for example, the studio version instead of a live performance). The words may be correct, but their timing may not match. Open the lyrics menu > Adjust timing to shift them.",
+  "backToCurrentLine": "Back to current line",
+  "signInWindowClosed": "The sign-in window closed unexpectedly. Try again.",
+  "spotifySignInWindowClosed": "The Spotify sign-in window closed unexpectedly. Try again.",
+  "deviceDidntRespond": "{device} didn't respond",
+  "@deviceDidntRespond": {
+    "placeholders": {
+      "device": {
+        "type": "String"
+      }
+    }
+  },
+  "theDevice": "The device",
+  "ytReturnedNothing": "YouTube Music returned nothing. Check your connection.",
+  "signInToChangeYt": "Sign in with Google to change your YouTube Music library.",
+  "notYtInvite": "That isn't a YouTube Music invite link.",
+  "noInternetCheck": "No internet connection. Check it and try again.",
+  "ytDidntCreatePlaylist": "YouTube Music did not create the playlist.",
+  "ytDidntTakeChange": "YouTube Music didn't take that change. Try again.",
+  "ytDidntMakeInvite": "YouTube Music did not make an invite link.",
+  "notPlaylistLinkFrom": "That isn't a playlist link from {services}.",
+  "@notPlaylistLinkFrom": {
+    "placeholders": {
+      "services": {
+        "type": "String"
+      }
+    }
+  },
+  "playlistEmptyOrPrivate": "That playlist is empty, or it's private.",
+  "playlistMissingOrPrivate": "That playlist doesn't exist, or it's private.",
+  "spotifyPageChanged": "Spotify changed its page; this link can't be read right now.",
+  "unexpectedDeezerReply": "Unexpected reply from Deezer.",
+  "lbTokenInvalid": "ListenBrainz says this token isn't valid.",
+  "noneOfItsSongsOnYt": "None of its songs are on YouTube Music.",
+  "accentNamed": "{name} accent",
+  "@accentNamed": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "frequencyHz": "Frequency: {hz}Hz",
+  "@frequencyHz": {
+    "placeholders": {
+      "hz": {
+        "type": "String"
+      }
+    }
+  },
+  "deletedNamed": "Deleted \"{title}\"",
+  "@deletedNamed": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "spotifySongsNotFound": "{count, plural, =1{{name}: 1 song not found} other{{name}: {count} songs not found}}",
+  "@spotifySongsNotFound": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "statsListened": "listened",
+  "statsSongsUnit": "{count, plural, =1{song} other{songs}}",
+  "@statsSongsUnit": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "statsPlaysUnit": "{count, plural, =1{play} other{plays}}",
+  "@statsPlaysUnit": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "albumsPlural": "{count, plural, =1{1 album} other{{count} albums}}",
+  "@albumsPlural": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "listensWaiting": "{count, plural, =1{{who}. 1 listen waiting to be sent.} other{{who}. {count} listens waiting to be sent.}}",
+  "@listensWaiting": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "who": {
+        "type": "String"
+      }
+    }
+  },
+  "sessionCodeHint": "ABC123 or ABCDE-FGHJK"
 }

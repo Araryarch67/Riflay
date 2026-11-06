@@ -55,7 +55,8 @@ void main() {
       final other = read(f);
       for (final k in keys) {
         expect(other[k], isA<String>(), reason: '$k missing in ${f.path}');
-        final holes = RegExp(r'\{(\w+)\}');
+        // A placeholder, not a plural branch such as `=1{song}` or `other{songs}`.
+        final holes = RegExp(r'(?<!=\d+|\b(?:zero|one|two|few|many|other))\{(\w+)\}');
         expect(
           holes.allMatches(other[k] as String).map((m) => m[1]).toSet(),
           holes.allMatches(en[k] as String).map((m) => m[1]).toSet(),

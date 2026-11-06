@@ -9,6 +9,7 @@ import '../../services/system_tray.dart';
 import '../pages/sound_settings.dart' show SettingTile, settingsMuted;
 import '../theme.dart';
 import 'menus.dart';
+import '../../services/language.dart';
 
 /// Settings › Power & background: keeping the screen on, keeping a computer awake
 /// while music plays, closing to the tray (computers), and (Android) letting Riflay
@@ -70,7 +71,7 @@ class _PerformanceRow extends StatelessWidget {
       final p = LayoutPrefs.instance;
       return SettingTile(
         icon: Icons.speed_rounded,
-        title: const Text('Performance'),
+        title: Text(tr.performance),
         subtitle: Text(p.performance.note, style: settingsMuted(context)),
         control: OptionPicker<PerformanceMode>(
           value: p.performance,
@@ -91,11 +92,9 @@ class _ScreenRow extends StatelessWidget {
     listenable: awake,
     builder: (context, _) => SettingTile(
       icon: Icons.light_mode_outlined,
-      title: const Text('Keep screen on'),
+      title: Text(tr.keepScreenOn),
       subtitle: Text(
-        Host.isIOS || Host.isAndroid
-            ? 'Stops the screen from turning off by itself. Costs battery'
-            : 'Stops the screen from turning off and locking by itself',
+        Host.isIOS || Host.isAndroid ? tr.keepScreenOnPhone : tr.keepScreenOnDesktop,
         style: settingsMuted(context),
       ),
       control: OptionPicker<KeepScreenOn>(
@@ -116,11 +115,8 @@ class _SleepRow extends StatelessWidget {
     listenable: awake,
     builder: (context, _) => SwitchListTile(
       secondary: const Icon(Icons.bedtime_off_outlined),
-      title: const Text('Don\'t sleep while playing'),
-      subtitle: Text(
-        'The computer stays awake while music plays. The screen can still turn off',
-        style: settingsMuted(context),
-      ),
+      title: Text(tr.dontSleepWhilePlaying),
+      subtitle: Text(tr.dontSleepSubtitle, style: settingsMuted(context)),
       value: awake.preventSleep,
       onChanged: awake.setPreventSleep,
     ),
@@ -139,13 +135,8 @@ class CloseToTrayRow extends StatelessWidget {
       final noTray = SystemTray.available.value == false;
       return SwitchListTile(
         secondary: const Icon(Icons.move_to_inbox_outlined),
-        title: const Text('Close to tray'),
-        subtitle: Text(
-          noTray
-              ? 'Your desktop doesn\'t show tray icons, so closing the window quits Riflay'
-              : 'Closing the window keeps Riflay playing in the tray. Quit it from the tray icon',
-          style: settingsMuted(context),
-        ),
+        title: Text(tr.closeToTray),
+        subtitle: Text(noTray ? tr.noTrayIcons : tr.closeToTraySubtitle, style: settingsMuted(context)),
         value: CloseToTray.instance.enabled && !noTray,
         onChanged: noTray ? null : CloseToTray.instance.setEnabled,
       );
@@ -198,21 +189,21 @@ class _BatteryTileState extends State<BatteryTile> with WidgetsBindingObserver {
     final muted = settingsMuted(context);
     return SettingTile(
       icon: Icons.battery_charging_full_rounded,
-      title: const Text('Keep playing with the screen off'),
+      title: Text(tr.keepPlayingScreenOff),
       subtitle: Text(
         exempt == null
             ? ''
             : exempt
-            ? 'On. Your phone won\'t put Riflay to sleep'
-            : 'Off. Your phone may stop the music after a while',
+            ? tr.batteryExemptOn
+            : tr.batteryExemptOff,
         style: muted,
       ),
       control: Wrap(
         spacing: 8,
         children: [
-          if (exempt == false) FilledButton(onPressed: BatteryExemption.request, child: const Text('Allow')),
+          if (exempt == false) FilledButton(onPressed: BatteryExemption.request, child: Text(tr.allow)),
           if (_aggressive || exempt == false)
-            OutlinedButton(onPressed: BatteryExemption.openBatterySettings, child: const Text('Open battery settings')),
+            OutlinedButton(onPressed: BatteryExemption.openBatterySettings, child: Text(tr.openBatterySettings)),
         ],
       ),
     );
@@ -232,21 +223,17 @@ class _BatterySheet extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Keep the music playing', style: text.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
+            Text(tr.keepMusicPlaying, style: text.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
             const SizedBox(height: 8),
-            Text(
-              'Some phones stop music when the screen has been off for a while. '
-              'Allowing Riflay to run in the background keeps it playing. You can change this later in Settings.',
-              style: text.bodyMedium?.copyWith(color: AppColors.textSecondary),
-            ),
+            Text(tr.keepMusicPlayingBody, style: text.bodyMedium?.copyWith(color: AppColors.textSecondary)),
             const SizedBox(height: 20),
             SizedBox(
               width: double.infinity,
-              child: FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Allow')),
+              child: FilledButton(onPressed: () => Navigator.pop(context, true), child: Text(tr.allow)),
             ),
             SizedBox(
               width: double.infinity,
-              child: TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Not now')),
+              child: TextButton(onPressed: () => Navigator.pop(context, false), child: Text(tr.notNow)),
             ),
           ],
         ),

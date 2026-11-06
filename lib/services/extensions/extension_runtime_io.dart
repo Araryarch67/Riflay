@@ -12,6 +12,7 @@ import 'package:path/path.dart' as p;
 
 import 'extension_models.dart';
 import 'extension_runner.dart';
+import '../language.dart';
 
 /// QuickJS (Windows, Linux, Android) or JavaScriptCore (macOS, iOS), through flutter_js.
 const jsRuntimeSupported = true;
@@ -80,7 +81,7 @@ class JsExtensionRunner implements ExtensionRunner {
           try {
             json = jsonDecode(m['json'] as String? ?? 'null');
           } catch (e) {
-            reply.completeError(ExtensionError('${manifest.displayName} answered something unreadable'));
+            reply.completeError(ExtensionError(tr.extAnsweredUnreadable(manifest.displayName)));
             return;
           }
           if (json is Map && json['error'] != null) {
@@ -138,7 +139,7 @@ class JsExtensionRunner implements ExtensionRunner {
   }
 
   Future<Object?> _call(String fn, List<Object?> args) async {
-    if (_disposed) throw ExtensionError('${manifest.displayName} was stopped');
+    if (_disposed) throw ExtensionError(tr.extStopped(manifest.displayName));
     final port = await _ready;
     final id = _nextCall++;
     final reply = _calls[id] = Completer<Object?>();
@@ -180,7 +181,7 @@ class JsExtensionRunner implements ExtensionRunner {
     _isolate?.kill(priority: Isolate.immediate);
     _fromScript.close();
     for (final c in _calls.values) {
-      c.completeError(ExtensionError('${manifest.displayName} was stopped'));
+      c.completeError(ExtensionError(tr.extStopped(manifest.displayName)));
     }
     _calls.clear();
     try {
@@ -241,7 +242,11 @@ void _scriptMain(_Boot b) {
     }
     if (m is! Map) return;
     final out = js.evaluate('__riflayCall(${jsonEncode(m['fn'])}, ${jsonEncode(m['args'])}, false)');
-    b.port.send({'t': 'result', 'id': m['id'], 'json': out.isError ? jsonEncode({'error': out.stringResult}) : out.stringResult});
+    b.port.send({
+      't': 'result',
+      'id': m['id'],
+      'json': out.isError ? jsonEncode({'error': out.stringResult}) : out.stringResult,
+    });
   });
 }
 
@@ -368,7 +373,8 @@ class ExtensionHost {
   /// `utils.sha256` / `md5` / `sha1` / `hmacSHA1` / `hmacSHA256`: of text, as lower-case hex; of bytes (a list of
   /// numbers, as Spotify's TOTP passes), as bytes.
   static Object hash(String algo, Object? data, {Object? key}) {
-    List<int> bytesOf(Object? v) => v is List ? [for (final b in v) (b as num).toInt() & 0xff] : utf8.encode('${v ?? ''}');
+    List<int> bytesOf(Object? v) =>
+        v is List ? [for (final b in v) (b as num).toInt() & 0xff] : utf8.encode('${v ?? ''}');
     final bytes = bytesOf(data);
     final digest = switch (algo) {
       'sha256' => sha256.convert(bytes),

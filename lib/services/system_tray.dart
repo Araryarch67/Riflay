@@ -8,6 +8,7 @@ import '../platform/host.dart';
 import '../platform/tray.dart';
 import '../ui/debug_switches.dart';
 import 'player_controller.dart';
+import 'language.dart';
 
 /// Settings › Power & background › Close to tray (computers): closing the window hides Riflay in the tray and
 /// the music keeps playing; Quit in the tray menu ends it. On by default.
@@ -53,14 +54,14 @@ List<TrayEntry> trayMenu(
 }) {
   final song = s.song;
   return [
-    TrayEntry(s.windowShown ? 'Hide Riflay' : 'Show Riflay', toggleWindow),
+    TrayEntry(s.windowShown ? tr.hideRiflay : tr.showRiflay, toggleWindow),
     const TrayEntry.divider(),
-    TrayEntry(song ?? 'Nothing playing'),
-    TrayEntry(s.playing ? 'Pause' : 'Play', song == null ? null : playPause),
-    TrayEntry('Previous', song == null ? null : previous),
-    TrayEntry('Next', s.hasNext ? next : null),
+    TrayEntry(song ?? tr.nothingPlaying),
+    TrayEntry(s.playing ? tr.pause : tr.play, song == null ? null : playPause),
+    TrayEntry(tr.previous, song == null ? null : previous),
+    TrayEntry(tr.next, s.hasNext ? next : null),
     const TrayEntry.divider(),
-    TrayEntry('Quit Riflay', quit),
+    TrayEntry(tr.quitRiflay, quit),
   ];
 }
 

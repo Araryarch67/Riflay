@@ -8,6 +8,7 @@ import 'package:flutter/foundation.dart';
 
 import '../models/track.dart';
 import '../platform/host.dart';
+import 'language.dart';
 
 /// What the Discord presence shows (Settings › Accounts & services › Discord & lyrics services).
 @immutable
@@ -185,7 +186,7 @@ class DiscordPresence {
         'large_url': ?listenUrl,
         // The app's logo on the cover's corner, with the sound's quality for those who hover it.
         if (cover != null || !playing) 'small_image': 'openmusic',
-        if (cover != null || !playing) 'small_text': _clip([if (!playing) 'Paused', ?quality, 'Riflay'].join(' · ')),
+        if (cover != null || !playing) 'small_text': _clip([if (!playing) tr.paused, ?quality, 'Riflay'].join(' · ')),
       },
       // Discord allows two buttons; friends who like the music can get the app.
       'buttons': [

@@ -14,6 +14,7 @@ import 'desktop_login.dart';
 import 'private_files.dart';
 import 'ytmusic_play_report.dart';
 import 'ytmusic_web.dart';
+import 'language.dart';
 
 class YoutubeMusicLibrary {
   const YoutubeMusicLibrary({
@@ -356,7 +357,7 @@ class YoutubeMusicAccount extends ChangeNotifier {
       for (final shelf in pages.expand((p) => p))
         if (seen.add(shelf.title.toLowerCase())) _remoteShelf(shelf),
     ];
-    if (out.isEmpty) throw const YtMusicWebError('YouTube Music returned nothing. Check your connection.');
+    if (out.isEmpty) throw YtMusicWebError(tr.ytReturnedNothing);
     return out;
   }
 
@@ -715,7 +716,7 @@ class YoutubeMusicAccount extends ChangeNotifier {
   bool isLiked(Track t) => _likedIds.contains(t.id);
 
   Future<T> _editing<T>(Future<T> Function(YtMusicWeb web) change) async {
-    if (!canEdit) throw const YtMusicWebError('Sign in with Google to change your YouTube Music library.');
+    if (!canEdit) throw YtMusicWebError(tr.signInToChangeYt);
     try {
       return await change(_webClient);
     } catch (e) {
@@ -1004,7 +1005,7 @@ class YoutubeMusicAccount extends ChangeNotifier {
   /// Joins a friend's playlist from their invite link and returns its id.
   Future<String> joinPlaylist(String inviteLink) async {
     final invite = YtMusicWeb.parseInvite(inviteLink);
-    if (invite == null) throw const YtMusicWebError('That isn\'t a YouTube Music invite link.');
+    if (invite == null) throw YtMusicWebError(tr.notYtInvite);
     // Joining twice is refused like a bad session; already in, just open it.
     final mine = await library().then((l) => l.playlists, onError: (Object _) => const <RemotePlaylist>[]);
     if (mine.any((p) => p.id == invite.playlistId)) return invite.playlistId;
@@ -1126,10 +1127,8 @@ class YoutubeMusicAccount extends ChangeNotifier {
   static String describe(Object e) => switch (e) {
     YtMusicWebError(:final message) => message,
     DesktopLoginException(:final message) => message,
-    TimeoutException() ||
-    SocketException() ||
-    http.ClientException() => 'No internet connection. Check it and try again.',
-    _ => 'Something went wrong. Try again.',
+    TimeoutException() || SocketException() || http.ClientException() => tr.noInternetCheck,
+    _ => tr.somethingWentWrongRetry,
   };
 
   static String _describe(Object e) {

@@ -8,6 +8,7 @@ import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:path/path.dart' as p;
 
 import '../platform/host.dart';
+import 'language.dart';
 
 /// A signed-in Spotify web player session: the cookies that prove the login
 /// (`sp_dc` among them) plus the token and headers the player's own requests
@@ -202,7 +203,7 @@ abstract final class SpotifyLogin {
     final session = code == 0 ? _fromHelperOutput(out) : null;
     if (session == null) {
       debugPrint('Spotify sign-in window exited $code: ${_lastLine(err)}');
-      throw const SpotifyLoginException('The Spotify sign-in window closed unexpectedly. Try again.');
+      throw SpotifyLoginException(tr.spotifySignInWindowClosed);
     }
     return session;
   }

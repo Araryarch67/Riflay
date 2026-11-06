@@ -17,6 +17,7 @@ import 'package:pointycastle/export.dart' show AESEngine, CBCBlockCipher, KeyPar
 import '../platform/host.dart';
 import 'ffmpeg.dart';
 import 'pcm_decoder.dart';
+import 'language.dart';
 
 /// A speaker that takes classic AirPlay (RAOP): AirPort Express, AirPlay
 /// receivers in amplifiers and speakers, shairport-sync.
@@ -283,9 +284,9 @@ class AirPlaySession {
     _rtsp = s;
     s.listen(
       _onRtspData,
-      onError: (Object e) => _fail('Lost connection to ${device.name}'),
+      onError: (Object e) => _fail(tr.lostConnectionTo(device.name)),
       onDone: () {
-        if (_rtsp != null) _fail('Lost connection to ${device.name}');
+        if (_rtsp != null) _fail(tr.lostConnectionTo(device.name));
       },
     );
     final local = s.address;
@@ -374,7 +375,7 @@ class AirPlaySession {
       final text = latin1.decode(bytes);
       final end = text.indexOf('\r\n\r\n');
       if (end < 0) {
-        if (bytes.length > _maxReply) _fail('Lost connection to ${device.name}');
+        if (bytes.length > _maxReply) _fail(tr.lostConnectionTo(device.name));
         return;
       }
       final lines = text.substring(0, end).split('\r\n');
@@ -384,7 +385,7 @@ class AirPlaySession {
         if (c > 0) headers[l.substring(0, c).trim().toLowerCase()] = l.substring(c + 1).trim();
       }
       final length = int.tryParse(headers['content-length'] ?? '') ?? 0;
-      if (length < 0 || length > _maxReply) return _fail('Lost connection to ${device.name}');
+      if (length < 0 || length > _maxReply) return _fail(tr.lostConnectionTo(device.name));
       if (bytes.length < end + 4 + length) return;
       _rtspBuffer
         ..clear()
@@ -568,7 +569,7 @@ class AirPlaySession {
     _firstSync = true;
     _stream(source, from, generation).catchError((Object e) {
       debugPrint('AirPlay: $e');
-      if (generation == _generation) _fail('Couldn\'t play on ${device.name}');
+      if (generation == _generation) _fail(tr.couldntPlayOn(device.name));
     });
   }
 

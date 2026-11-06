@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../services/extensions/extension_store.dart';
 import 'sound_settings.dart';
 import '../widgets/skeleton.dart';
+import '../../services/language.dart';
 
 /// SpotiFLAC extension repositories, and the extensions from them: add or remove a repository, install, turn on or
 /// off, update and remove extensions. Enabled extensions that search add their results to Search.
@@ -61,15 +62,15 @@ class _ExtensionSettingsState extends State<ExtensionSettings> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Remove ${ext.manifest.displayName}?'),
-        content: const Text('Its files and what it saved on this device are deleted.'),
+        title: Text(tr.removeNamedQuestion(ext.manifest.displayName)),
+        content: Text(tr.removeExtensionBody),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Remove')),
+          TextButton(onPressed: () => Navigator.pop(context, false), child: Text(tr.cancel)),
+          FilledButton(onPressed: () => Navigator.pop(context, true), child: Text(tr.remove)),
         ],
       ),
     );
-    if (ok == true) await _run(() => _store.uninstall(ext.id), 'Couldn\'t remove ${ext.manifest.displayName}');
+    if (ok == true) await _run(() => _store.uninstall(ext.id), tr.couldntRemoveNamed(ext.manifest.displayName));
   }
 
   @override
@@ -87,22 +88,17 @@ class _ExtensionSettingsState extends State<ExtensionSettings> {
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(4, 0, 4, 20),
-            child: Text(
-              'Extensions written for SpotiFLAC add more places to search, such as Apple Music, SoundCloud and '
-              'JioSaavn. Their songs play from YouTube Music. Only add repositories you trust: an extension runs '
-              'its own code and can reach the sites its manifest lists.',
-              style: settingsMuted(context),
-            ),
+            child: Text(tr.extensionsIntro, style: settingsMuted(context)),
           ),
-          SettingsSection(title: 'Repositories', child: _repositories(context)),
+          SettingsSection(title: tr.repositories, child: _repositories(context)),
           SettingsSection(
-            title: 'Installed',
+            title: tr.installed,
             child: installed.isEmpty
                 ? SettingsCard(
                     children: [
                       ListTile(
-                        title: const Text('No extensions yet'),
-                        subtitle: Text('Install one from a repository below', style: settingsMuted(context)),
+                        title: Text(tr.noExtensionsYet),
+                        subtitle: Text(tr.installFromRepo, style: settingsMuted(context)),
                       ),
                     ],
                   )
@@ -110,7 +106,7 @@ class _ExtensionSettingsState extends State<ExtensionSettings> {
           ),
           if (available.isNotEmpty)
             SettingsSection(
-              title: 'Available',
+              title: tr.available,
               child: SettingsCard(children: [for (final e in available) _availableTile(context, e)]),
             ),
         ],
@@ -139,7 +135,7 @@ class _ExtensionSettingsState extends State<ExtensionSettings> {
                       controller: _url,
                       keyboardType: TextInputType.url,
                       decoration: InputDecoration(
-                        labelText: 'Repository address',
+                        labelText: tr.repositoryAddress,
                         hintText: 'https://…/registry.json',
                         errorText: _urlError,
                         isDense: true,
@@ -148,7 +144,7 @@ class _ExtensionSettingsState extends State<ExtensionSettings> {
                     ),
                   ),
                   const SizedBox(width: 12),
-                  FilledButton.tonal(onPressed: () => _add(_url.text), child: const Text('Add')),
+                  FilledButton.tonal(onPressed: () => _add(_url.text), child: Text(tr.add)),
                 ],
               ),
               if (suggestions.isNotEmpty) ...[
@@ -182,12 +178,12 @@ class _ExtensionSettingsState extends State<ExtensionSettings> {
     ].firstOrNull;
     final count = state.registry?.entries.length;
     final status = state.loading
-        ? 'Reading…'
+        ? tr.reading
         : state.error != null
-        ? 'Couldn\'t read it: ${state.error}'
+        ? tr.couldntReadIt('${state.error}')
         : count == null
-        ? 'Not read yet'
-        : '$count extension${count == 1 ? '' : 's'}';
+        ? tr.notReadYet
+        : tr.extensionsCount(count);
     return ListTile(
       leading: const Icon(Icons.source_outlined),
       title: Text(name ?? Uri.parse(url).host),
@@ -197,12 +193,12 @@ class _ExtensionSettingsState extends State<ExtensionSettings> {
         mainAxisSize: MainAxisSize.min,
         children: [
           IconButton(
-            tooltip: 'Refresh',
+            tooltip: tr.refresh,
             icon: const Icon(Icons.refresh_rounded),
             onPressed: state.loading ? null : () => _store.refresh(url),
           ),
           IconButton(
-            tooltip: 'Remove repository',
+            tooltip: tr.removeRepository,
             icon: const Icon(Icons.delete_outline_rounded),
             onPressed: () => _store.removeRepository(url),
           ),
@@ -214,10 +210,10 @@ class _ExtensionSettingsState extends State<ExtensionSettings> {
   /// What Riflay does with it so far: searching. Downloads and lyrics from extensions aren't wired yet.
   static String _uses(ExtensionManifest m) {
     final parts = <String>[
-      if (m.canSearch) 'Adds results to Search',
-      if (m.isDownloadProvider) 'downloads not supported yet',
-      if (m.isLyricsProvider) 'lyrics not supported yet',
-      if (m.requiredRuntimeFeatures.isNotEmpty) 'needs SpotiFLAC features Riflay lacks, so it may not work',
+      if (m.canSearch) tr.addsToSearch,
+      if (m.isDownloadProvider) tr.downloadsUnsupported,
+      if (m.isLyricsProvider) tr.lyricsUnsupported,
+      if (m.requiredRuntimeFeatures.isNotEmpty) tr.needsSpotiflacFeatures,
     ];
     return parts.join(' · ');
   }
@@ -238,12 +234,12 @@ class _ExtensionSettingsState extends State<ExtensionSettings> {
             const SkeletonBox.circle(size: 20)
           else if (update != null)
             IconButton(
-              tooltip: 'Update to ${update.version}',
+              tooltip: tr.updateTo(update.version),
               icon: const Icon(Icons.system_update_alt_rounded),
-              onPressed: () => _run(() => _store.install(update), 'Couldn\'t update ${m.displayName}'),
+              onPressed: () => _run(() => _store.install(update), tr.couldntUpdateNamed(m.displayName)),
             ),
           IconButton(
-            tooltip: 'Remove',
+            tooltip: tr.remove,
             icon: const Icon(Icons.delete_outline_rounded),
             onPressed: busy ? null : () => _uninstall(e),
           ),
@@ -266,8 +262,8 @@ class _ExtensionSettingsState extends State<ExtensionSettings> {
       trailing: busy
           ? const SkeletonBox.circle(size: 20)
           : FilledButton.tonal(
-              onPressed: () => _run(() => _store.install(e), 'Couldn\'t install ${e.displayName}'),
-              child: const Text('Install'),
+              onPressed: () => _run(() => _store.install(e), tr.couldntInstallNamed(e.displayName)),
+              child: Text(tr.install),
             ),
     );
   }

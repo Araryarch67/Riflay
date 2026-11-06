@@ -8,6 +8,7 @@ import '../services/metadata.dart';
 import '../services/player_controller.dart';
 import 'theme.dart';
 import 'widgets/controls.dart';
+import '../services/language.dart';
 
 /// "Edit info" for a local file: title, artist, album, numbers and cover art.
 Future<void> showTagEditor(BuildContext context, Track track) async {
@@ -18,7 +19,7 @@ Future<void> showTagEditor(BuildContext context, Track track) async {
     tags = await Metadata.readTags(track);
   } catch (e) {
     debugPrint('Reading tags failed: $e');
-    messenger.showSnackBar(const SnackBar(content: Text('Couldn\'t read this song\'s info')));
+    messenger.showSnackBar(SnackBar(content: Text(tr.couldntReadSongInfo)));
     return;
   }
   if (!context.mounted) return;
@@ -29,10 +30,10 @@ Future<void> showTagEditor(BuildContext context, Track track) async {
   if (saved == null) return;
   try {
     await c.editTags(track, saved);
-    messenger.showSnackBar(const SnackBar(content: Text('Saved')));
+    messenger.showSnackBar(SnackBar(content: Text(tr.saved)));
   } catch (e) {
     debugPrint('Saving tags failed: $e');
-    messenger.showSnackBar(const SnackBar(content: Text('Couldn\'t save the changes')));
+    messenger.showSnackBar(SnackBar(content: Text(tr.couldntSaveChanges)));
   }
 }
 
@@ -66,7 +67,7 @@ class _TagEditorDialogState extends State<_TagEditorDialog> {
   }
 
   Future<void> _pickCover() async {
-    final file = (await FilePicker.pickFiles(type: FileType.image, dialogTitle: 'Choose cover art')).firstOrNull;
+    final file = (await FilePicker.pickFiles(type: FileType.image, dialogTitle: tr.chooseCoverArt)).firstOrNull;
     if (file == null) return;
     final bytes = await file.readAsBytes();
     setState(() {
@@ -84,7 +85,7 @@ class _TagEditorDialogState extends State<_TagEditorDialog> {
       final found = await Metadata.findCoverOnline(_artist.text.trim(), _album.text.trim());
       if (!mounted) return;
       if (found == null) {
-        messenger.showSnackBar(const SnackBar(content: Text('No cover found for this album')));
+        messenger.showSnackBar(SnackBar(content: Text(tr.noCoverFound)));
       } else {
         setState(() {
           _cover = found.bytes;
@@ -93,7 +94,7 @@ class _TagEditorDialogState extends State<_TagEditorDialog> {
       }
     } catch (e) {
       debugPrint('Cover search failed: $e');
-      messenger.showSnackBar(const SnackBar(content: Text('Couldn\'t reach the Cover Art Archive')));
+      messenger.showSnackBar(SnackBar(content: Text(tr.couldntReachCoverArchive)));
     } finally {
       if (mounted) setState(() => _searching = false);
     }
@@ -113,7 +114,7 @@ class _TagEditorDialogState extends State<_TagEditorDialog> {
       ),
     );
     return AlertDialog(
-      title: const Text('Edit info'),
+      title: Text(tr.editInfo),
       content: SizedBox(
         width: 440,
         child: SingleChildScrollView(
@@ -148,7 +149,7 @@ class _TagEditorDialogState extends State<_TagEditorDialog> {
                           children: [
                             OutlinedButton(
                               onPressed: Metadata.canEditCover(widget.track) ? _pickCover : null,
-                              child: const Text('Change cover'),
+                              child: Text(tr.changeCover),
                             ),
                             ListenableBuilder(
                               listenable: Listenable.merge([_artist, _album]),
@@ -160,14 +161,14 @@ class _TagEditorDialogState extends State<_TagEditorDialog> {
                                         _album.text.trim().isNotEmpty
                                     ? _findCover
                                     : null,
-                                child: Text(_searching ? 'Searching…' : 'Find online'),
+                                child: Text(_searching ? tr.searching : tr.findOnline),
                               ),
                             ),
                           ],
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          'Use a large image (1000 px or more) for sharp artwork.',
+                          tr.largeImageHint,
                           style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
                         ),
                       ],
@@ -176,25 +177,25 @@ class _TagEditorDialogState extends State<_TagEditorDialog> {
                 ],
               ),
               const SizedBox(height: 16),
-              field('Title', _title),
-              field('Artist', _artist),
-              field('Album', _album),
+              field(tr.title, _title),
+              field(tr.artist, _artist),
+              field(tr.album, _album),
               Row(
                 children: [
-                  Expanded(child: field('Track', _track, number: true)),
+                  Expanded(child: field(tr.trackNumber, _track, number: true)),
                   const SizedBox(width: 12),
-                  Expanded(child: field('Disc', _disc, number: true)),
+                  Expanded(child: field(tr.discNumber, _disc, number: true)),
                   const SizedBox(width: 12),
-                  Expanded(child: field('Year', _year, number: true)),
+                  Expanded(child: field(tr.year, _year, number: true)),
                 ],
               ),
-              field('Genre', _genre),
+              field(tr.genre, _genre),
             ],
           ),
         ),
       ),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+        TextButton(onPressed: () => Navigator.pop(context), child: Text(tr.cancel)),
         FilledButton(
           onPressed: () {
             final edit = TagEdit(
@@ -212,7 +213,7 @@ class _TagEditorDialogState extends State<_TagEditorDialog> {
             }
             Navigator.pop(context, edit);
           },
-          child: const Text('Save'),
+          child: Text(tr.save),
         ),
       ],
     );

@@ -2,29 +2,44 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import 'language.dart';
+
 /// Coordinated incoming/outgoing page motion; these never animate audio state.
 enum PageMotionStyle {
-  classic('Classic'),
-  glide('Glide'),
-  fadeThrough('Fade through'),
-  zoom('Soft zoom'),
-  slide('Slide'),
-  reveal('Curtain reveal'),
-  circularReveal('Circular reveal'),
-  wipe('Side reveal'),
-  diamondReveal('Diamond reveal');
+  classic,
+  glide,
+  fadeThrough,
+  zoom,
+  slide,
+  reveal,
+  circularReveal,
+  wipe,
+  diamondReveal;
 
-  const PageMotionStyle(this.label);
-  final String label;
+  String get label => switch (this) {
+    classic => tr.styleClassic,
+    glide => tr.motionGlide,
+    fadeThrough => tr.motionFadeThrough,
+    zoom => tr.motionSoftZoom,
+    slide => tr.motionSlide,
+    reveal => tr.motionCurtain,
+    circularReveal => tr.motionCircular,
+    wipe => tr.motionSide,
+    diamondReveal => tr.motionDiamond,
+  };
 }
 
 enum PageMotionSpeed {
-  fast('Fast', 0.75),
-  balanced('Balanced', 1),
-  relaxed('Relaxed', 1.3);
+  fast(0.75),
+  balanced(1),
+  relaxed(1.3);
 
-  const PageMotionSpeed(this.label, this.factor);
-  final String label;
+  const PageMotionSpeed(this.factor);
+  String get label => switch (this) {
+    fast => tr.speedFast,
+    balanced => tr.perfBalanced,
+    relaxed => tr.speedRelaxed,
+  };
   final double factor;
 }
 

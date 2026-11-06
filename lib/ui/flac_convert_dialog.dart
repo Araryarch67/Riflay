@@ -6,6 +6,7 @@ import '../services/flac_convert.dart';
 import '../services/player_controller.dart';
 import '../services/youtube_importer.dart';
 import 'theme.dart';
+import '../services/language.dart';
 
 /// Asks how to make [tracks] FLAC, then converts them; the result comes as a SnackBar. Songs that can't be converted
 /// are left out. Does nothing when none can.
@@ -57,7 +58,7 @@ class _FlacConvertDialogState extends State<FlacConvertDialog> {
     final muted = text.bodySmall?.copyWith(color: AppColors.textSecondary);
     final one = widget.count == 1;
     return AlertDialog(
-      title: const Text('Convert to FLAC'),
+      title: Text(tr.convertToFlac),
       content: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 420),
         child: SingleChildScrollView(
@@ -65,16 +66,10 @@ class _FlacConvertDialogState extends State<FlacConvertDialog> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                '${one ? 'The FLAC file' : 'Each FLAC file'} will be bigger than the original. The sound stays the '
-                'same: FLAC can\'t bring back what the original already lost.',
-              ),
-              if (widget.keepsOriginals) ...[
-                const SizedBox(height: 8),
-                Text('Songs you added yourself stay as they are, next to their FLAC.', style: muted),
-              ],
+              Text(one ? tr.flacBiggerOne : tr.flacBiggerEach),
+              if (widget.keepsOriginals) ...[const SizedBox(height: 8), Text(tr.ownSongsStay, style: muted)],
               const SizedBox(height: 16),
-              Text('Quality', style: text.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+              Text(tr.quality, style: text.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
               const SizedBox(height: 8),
               Wrap(
                 spacing: 8,
@@ -95,11 +90,11 @@ class _FlacConvertDialogState extends State<FlacConvertDialog> {
         ),
       ),
       actions: [
-        TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancel')),
+        TextButton(onPressed: () => Navigator.of(context).pop(), child: Text(tr.cancel)),
         FilledButton(
           style: FilledButton.styleFrom(backgroundColor: AppColors.inverse, foregroundColor: AppColors.onInverse),
           onPressed: () => Navigator.of(context).pop(_quality),
-          child: const Text('Convert'),
+          child: Text(tr.convert),
         ),
       ],
     );

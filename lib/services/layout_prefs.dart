@@ -7,58 +7,82 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../platform/features.dart';
 import 'page_motion.dart';
+import 'language.dart';
 export 'page_motion.dart' show PageMotionStyle, PageMotionSpeed;
 
 /// Desktop controls can stay full width or sit inside a floating player.
 /// The desktop's player bar. Every look sits flush along the window's foot; none floats over the page.
 enum DesktopBarStyle {
-  classic('Classic'),
-  compact('Compact'),
-  minimal('Minimal');
+  classic,
+  compact,
+  minimal;
 
-  const DesktopBarStyle(this.label);
-  final String label;
+  String get label => switch (this) {
+    classic => tr.styleClassic,
+    compact => tr.styleCompact,
+    minimal => tr.styleMinimal,
+  };
 }
 
 /// The same visual language in a player strip or a radial artwork surround.
 enum VisualizerStyle {
-  wave('Wave'),
-  bars('Bars'),
-  line('Line'),
-  dots('Dots'),
-  mirror('Mirror'),
-  twinWaves('Twin waves'),
-  pulse('Pulse'),
-  orbit('Orbit'),
-  petals('Petals'),
-  peaks('Peaks');
+  wave,
+  bars,
+  line,
+  dots,
+  mirror,
+  twinWaves,
+  pulse,
+  orbit,
+  petals,
+  peaks;
 
-  const VisualizerStyle(this.label);
-  final String label;
+  String get label => switch (this) {
+    wave => tr.vizWave,
+    bars => tr.vizBars,
+    line => tr.vizLine,
+    dots => tr.vizDots,
+    mirror => tr.vizMirror,
+    twinWaves => tr.vizTwinWaves,
+    pulse => tr.vizPulse,
+    orbit => tr.vizOrbit,
+    petals => tr.vizPetals,
+    peaks => tr.vizPeaks,
+  };
   bool get radial => this == pulse || this == orbit || this == petals;
 
   /// The styles that can show with [cover]: the radial ones ring a framed cover, and Background has no frame.
-  static List<VisualizerStyle> fitting(PlayerCover cover) =>
-      cover == PlayerCover.background ? [for (final s in values) if (!s.radial) s] : values;
+  static List<VisualizerStyle> fitting(PlayerCover cover) => cover == PlayerCover.background
+      ? [
+          for (final s in values)
+            if (!s.radial) s,
+        ]
+      : values;
 }
 
 /// The outline of a player cover (what [PlayerCover] comes to when the cover is not the background).
 enum VisualizerCoverShape {
-  flower('Flower'),
-  square('Square');
+  flower,
+  square;
 
-  const VisualizerCoverShape(this.label);
-  final String label;
+  String get label => switch (this) {
+    flower => tr.shapeFlower,
+    square => tr.shapeSquare,
+  };
 }
 
 /// How round the corners of covers, cards, menus and dialogs are.
 enum CornerStyle {
-  square('Square', 0),
-  rounded('Rounded', 1),
-  extraRound('Extra round', 2);
+  square(0),
+  rounded(1),
+  extraRound(2);
 
-  const CornerStyle(this.label, this.scale);
-  final String label;
+  const CornerStyle(this.scale);
+  String get label => switch (this) {
+    square => tr.shapeSquare,
+    rounded => tr.shapeRounded,
+    extraRound => tr.shapeExtraRound,
+  };
 
   /// Multiplies every corner radius (1 is how the app has always looked).
   final double scale;
@@ -66,44 +90,61 @@ enum CornerStyle {
 
 /// How tightly lists and grids are packed.
 enum Density {
-  comfortable('Comfortable'),
-  compact('Compact');
+  comfortable,
+  compact;
 
-  const Density(this.label);
-  final String label;
+  String get label => switch (this) {
+    comfortable => tr.densityComfortable,
+    compact => tr.styleCompact,
+  };
 }
 
 /// How big the covers in shelves and grids are.
 enum CoverSize {
-  small('Small', 0.8),
-  medium('Medium', 1),
-  large('Large', 1.25);
+  small(0.8),
+  medium(1),
+  large(1.25);
 
-  const CoverSize(this.label, this.scale);
-  final String label;
+  const CoverSize(this.scale);
+  String get label => switch (this) {
+    small => tr.sizeSmall,
+    medium => tr.sizeMedium,
+    large => tr.sizeLarge,
+  };
   final double scale;
 }
 
 /// How much the app moves.
 enum Motion {
-  full('Full'),
-  reduced('Reduced'),
-  off('Off');
+  full,
+  reduced,
+  off;
 
-  const Motion(this.label);
-  final String label;
+  String get label => switch (this) {
+    full => tr.motionFull,
+    reduced => tr.motionReduced,
+    off => tr.off,
+  };
 }
 
 /// How music videos are decoded (mpv's `hwdec`). A setting of this computer, like [PerformanceMode]:
 /// Reset leaves it alone.
 enum VideoDecoder {
-  automatic('Automatic', 'The graphics card when it is known to work, else the processor', 'auto-safe'),
-  hardware('Graphics card', 'Always try the graphics card first. Lightest, if your drivers cope', 'auto'),
-  software('Processor', 'Never the graphics card. Uses more power; try it if videos look wrong', 'no');
+  automatic('auto-safe'),
+  hardware('auto'),
+  software('no');
 
-  const VideoDecoder(this.label, this.note, this.hwdec);
-  final String label;
-  final String note;
+  const VideoDecoder(this.hwdec);
+  String get label => switch (this) {
+    automatic => tr.decoderAuto,
+    hardware => tr.decoderGpu,
+    software => tr.decoderCpu,
+  };
+  String get note => switch (this) {
+    automatic => tr.decoderAutoNote,
+    hardware => tr.decoderGpuNote,
+    software => tr.decoderCpuNote,
+  };
 
   /// mpv's `hwdec` value.
   final String hwdec;
@@ -112,236 +153,313 @@ enum VideoDecoder {
 /// How much the app spends on looks. [lightweight] caps the user's own Look & feel choices
 /// (it never overwrites them); [heavy] lifts the frame-rate limits on decorations.
 enum PerformanceMode {
-  lightweight('Lightweight', 'Fewest effects. Best for older computers and battery.'),
-  balanced('Balanced', 'Smooth animations with sensible limits.'),
-  heavy('Heavy', 'Every effect at full speed. Uses more power.');
+  lightweight,
+  balanced,
+  heavy;
 
-  const PerformanceMode(this.label, this.note);
-  final String label;
-  final String note;
+  String get label => switch (this) {
+    lightweight => tr.perfLight,
+    balanced => tr.perfBalanced,
+    heavy => tr.perfHeavy,
+  };
+  String get note => switch (this) {
+    lightweight => tr.perfLightNote,
+    balanced => tr.perfBalancedNote,
+    heavy => tr.perfHeavyNote,
+  };
 }
 
 enum ProgressBarStyle {
-  thin('Thin', 4),
-  thick('Thick', 9);
+  thin(4),
+  thick(9);
 
-  const ProgressBarStyle(this.label, this.height);
-  final String label;
+  const ProgressBarStyle(this.height);
+  String get label => switch (this) {
+    thin => tr.styleThin,
+    thick => tr.styleThick,
+  };
   final double height;
 }
 
 enum ProgressBarShape {
-  straight('Straight'),
-  wavy('Wavy'),
+  straight,
+  wavy,
 
   /// A thick rounded track with a pill of elapsed time and a bar for a thumb (the phone's player and the desktop bar).
-  pill('Pill'),
+  pill,
 
   /// A flat 4 px track with round ends and no handle until it is dragged (the phone's player and the desktop bar).
-  thin('Thin line');
+  thin;
 
-  const ProgressBarShape(this.label);
-  final String label;
+  String get label => switch (this) {
+    straight => tr.shapeStraight,
+    wavy => tr.shapeWavy,
+    pill => tr.shapePill,
+    thin => tr.shapeThinLine,
+  };
 }
 
 enum PlayButtonShape {
-  circle('Circle'),
-  roundedSquare('Rounded square'),
-  flower('Flower');
+  circle,
+  roundedSquare,
+  flower;
 
-  const PlayButtonShape(this.label);
-  final String label;
+  String get label => switch (this) {
+    circle => tr.shapeCircle,
+    roundedSquare => tr.shapeRoundedSquare,
+    flower => tr.shapeFlower,
+  };
 }
 
 enum PhoneCoverSize {
-  normal('Normal'),
-  large('Large');
+  normal,
+  large;
 
-  const PhoneCoverSize(this.label);
-  final String label;
+  String get label => switch (this) {
+    normal => tr.sizeNormal,
+    large => tr.sizeLarge,
+  };
 }
 
 /// The shape of the player's cover, on phones and desktop alike: a rounded square, a flower, or no frame at all
 /// ([background]: the artwork fills the top of the page and fades into it).
 enum PlayerCover {
-  square('Square'),
-  flower('Flower'),
-  background('Background');
+  square,
+  flower,
+  background;
 
-  const PlayerCover(this.label);
-  final String label;
+  String get label => switch (this) {
+    square => tr.shapeSquare,
+    flower => tr.shapeFlower,
+    background => tr.coverBackground,
+  };
 }
 
 /// The top of Now Playing.
 enum PlayerHeader {
-  classic('Classic'),
-  centered('Centred'),
-  playingFrom('Playing from');
+  classic,
+  centered,
+  playingFrom;
 
-  const PlayerHeader(this.label);
-  final String label;
+  String get label => switch (this) {
+    classic => tr.styleClassic,
+    centered => tr.headerCentred,
+    playingFrom => tr.headerPlayingFrom,
+  };
 }
 
 /// The buttons beside the song's title.
 enum TitleActions {
-  classic('Classic'),
-  boxed('Boxed'),
-  plain('Plain');
+  classic,
+  boxed,
+  plain;
 
-  const TitleActions(this.label);
-  final String label;
+  String get label => switch (this) {
+    classic => tr.styleClassic,
+    boxed => tr.styleBoxed,
+    plain => tr.stylePlain,
+  };
 }
 
 /// The previous / play / next controls.
 enum PlayerTransport {
-  classic('Classic'),
-  pill('Pill'),
-  plain('Plain');
+  classic,
+  pill,
+  plain;
 
-  const PlayerTransport(this.label);
-  final String label;
+  String get label => switch (this) {
+    classic => tr.styleClassic,
+    pill => tr.shapePill,
+    plain => tr.stylePlain,
+  };
 }
 
 /// The row of buttons under the controls. Every one keeps a Lyrics button. [minimal] is icons only: Lyrics, a capsule
 /// with the volume and the output / listen-together buttons, and Queue.
 enum PlayerBottomRow {
-  classic('Classic'),
-  chips('Chips'),
-  minimal('Icons');
+  classic,
+  chips,
+  minimal;
 
-  const PlayerBottomRow(this.label);
-  final String label;
+  String get label => switch (this) {
+    classic => tr.styleClassic,
+    chips => tr.styleChips,
+    minimal => tr.styleIcons,
+  };
 }
 
 /// The lyrics page: its header and the player under the lyrics (on desktop a song card on top or at the bottom).
 enum LyricsLayout {
-  classic('Classic'),
-  bottomCard('Bottom card'),
-  topHeader('Top header');
+  classic,
+  bottomCard,
+  topHeader;
 
-  const LyricsLayout(this.label);
-  final String label;
+  String get label => switch (this) {
+    classic => tr.styleClassic,
+    bottomCard => tr.styleBottomCard,
+    topHeader => tr.styleTopHeader,
+  };
 }
 
 /// The phone's mini player above the tab bar: the bar as it has always been, or a floating pill with a flower cover,
 /// round translucent previous / next and a round accent play button.
 enum MiniPlayerStyle {
-  classic('Classic'),
-  capsule('Floating pill');
+  classic,
+  capsule;
 
-  const MiniPlayerStyle(this.label);
-  final String label;
+  String get label => switch (this) {
+    classic => tr.styleClassic,
+    capsule => tr.styleFloatingPill,
+  };
 }
 
 /// The header of an album or playlist page.
 enum AlbumHeaderStyle {
-  classic('Classic'),
-  hero('Hero');
+  classic,
+  hero;
 
-  const AlbumHeaderStyle(this.label);
-  final String label;
+  String get label => switch (this) {
+    classic => tr.styleClassic,
+    hero => tr.styleHero,
+  };
 }
 
 /// The look of every slider in the app (Settings › Layout › Slider look); the progress bar has its own shape.
 enum VolumeSliderShape {
-  classic('Classic'),
-  thin('Thin line'),
-  pill('Pill');
+  classic,
+  thin,
+  pill;
 
-  const VolumeSliderShape(this.label);
-  final String label;
+  String get label => switch (this) {
+    classic => tr.styleClassic,
+    thin => tr.shapeThinLine,
+    pill => tr.shapePill,
+  };
 }
 
 /// Where the sound-quality badge (FLAC, Opus 130 kbps...) sits on the phone's player.
 enum QualityBadgePlace {
-  underArtist('Under the artist'),
-  timeRow('In the time row');
+  underArtist,
+  timeRow;
 
-  const QualityBadgePlace(this.label);
-  final String label;
+  String get label => switch (this) {
+    underArtist => tr.badgeUnderArtist,
+    timeRow => tr.badgeTimeRow,
+  };
 }
 
 /// How the song that is playing stands out in a list of songs.
 enum PlayingRowStyle {
-  classic('Classic'),
-  card('Highlighted card');
+  classic,
+  card;
 
-  const PlayingRowStyle(this.label);
-  final String label;
+  String get label => switch (this) {
+    classic => tr.styleClassic,
+    card => tr.styleHighlightedCard,
+  };
 }
 
 enum LyricsSize {
-  small('Small', 0.85),
-  normal('Normal', 1),
-  large('Large', 1.2),
-  largest('Largest', 1.4);
+  small(0.85),
+  normal(1),
+  large(1.2),
+  largest(1.4);
 
-  const LyricsSize(this.label, this.scale);
-  final String label;
+  const LyricsSize(this.scale);
+  String get label => switch (this) {
+    small => tr.sizeSmall,
+    normal => tr.sizeNormal,
+    large => tr.sizeLarge,
+    largest => tr.sizeLargest,
+  };
   final double scale;
 }
 
 /// How many lyric lines are shown at once.
 enum LyricsLines {
-  all('All'),
+  all,
 
   /// The previous, the current and the next line, far apart.
-  focused('Focused');
+  focused;
 
-  const LyricsLines(this.label);
-  final String label;
+  String get label => switch (this) {
+    all => tr.all,
+    focused => tr.lyricsFocused,
+  };
 }
 
 /// How timed lyrics light up.
 enum LyricsSync {
   /// Word by word where the lyrics have word timings (else line by line).
-  word('Word by word'),
+  word,
 
   /// The whole current line at once, even where the lyrics have word timings.
-  line('Line by line');
+  line;
 
-  const LyricsSync(this.label);
-  final String label;
+  String get label => switch (this) {
+    word => tr.lyricsWordByWord,
+    line => tr.lyricsLineByLine,
+  };
 }
 
 enum LyricsAlign {
-  left('Left'),
-  centre('Centre');
+  left,
+  centre;
 
-  const LyricsAlign(this.label);
-  final String label;
+  String get label => switch (this) {
+    left => tr.alignLeft,
+    centre => tr.alignCentre,
+  };
 }
 
 /// How the phone's tab bar looks. [docked] ones sit on the bottom edge; the others hover a little above it.
 enum TabBarStyle {
-  classic('Classic', docked: true),
-  material('Material', docked: true),
-  underline('Underline', docked: true),
-  minimal('Minimal', docked: true),
-  text('Text only', docked: true),
-  floating('Floating'),
-  capsule('Capsule'),
-  dock('Dock'),
-  centre('Centre button'),
-  glass('Liquid glass');
+  classic(docked: true),
+  material(docked: true),
+  underline(docked: true),
+  minimal(docked: true),
+  text(docked: true),
+  floating,
+  capsule,
+  dock,
+  centre,
+  glass;
 
-  const TabBarStyle(this.label, {this.docked = false});
-  final String label;
+  const TabBarStyle({this.docked = false});
+  String get label => switch (this) {
+    classic => tr.styleClassic,
+    material => tr.styleMaterial,
+    underline => tr.styleUnderline,
+    minimal => tr.styleMinimal,
+    text => tr.styleTextOnly,
+    floating => tr.styleFloating,
+    capsule => tr.styleCapsule,
+    dock => tr.styleDock,
+    centre => tr.styleCentreButton,
+    glass => tr.styleLiquidGlass,
+  };
   final bool docked;
 }
 
 /// The sections of Home, in today's order.
 enum HomeSection {
-  quickPicks('Quick picks'),
-  recentlyPlayed('Recently played'),
-  playlists('Your playlists'),
-  albums('Your albums'),
-  artists('Artists'),
-  discover('From YouTube Music'),
-  recentlyAdded('Recently added');
+  quickPicks,
+  recentlyPlayed,
+  playlists,
+  albums,
+  artists,
+  discover,
+  recentlyAdded;
 
-  const HomeSection(this.label);
-  final String label;
+  String get label => switch (this) {
+    quickPicks => tr.quickPicks,
+    recentlyPlayed => tr.recentlyPlayed,
+    playlists => tr.yourPlaylists,
+    albums => tr.yourAlbums,
+    artists => tr.artists,
+    discover => tr.fromYoutubeMusic,
+    recentlyAdded => tr.recentlyAdded,
+  };
 }
 
 /// How the app is laid out: corners, density, cover sizes, Home's sections, the
@@ -687,6 +805,7 @@ class LayoutPrefs extends ChangeNotifier {
   void fitVisualizerStyle() {
     if (!VisualizerStyle.fitting(playerCover).contains(visualizerStyle)) visualizerStyle = VisualizerStyle.wave;
   }
+
   Future<void> setPlayerHeader(PlayerHeader v) => _set(() => playerHeader = v);
   Future<void> setTitleActions(TitleActions v) => _set(() => titleActions = v);
   Future<void> setShowTimeLeft(bool v) => _set(() => showTimeLeft = v);

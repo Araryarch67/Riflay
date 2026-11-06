@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:path/path.dart' as p;
 
 import '../platform/host.dart';
+import 'language.dart';
 
 /// Supports Matugen's old mode-first JSON, current role-first JSON, and flat
 /// template output (snake_case or camelCase). No wallpaper command is executed.
@@ -162,7 +163,7 @@ class MatugenTheme extends ChangeNotifier {
       notifyListeners();
     } catch (_) {
       if (!_disposed) {
-        error = 'Choose a valid Matugen JSON color file. Keeping the last working colors.';
+        error = tr.matugenInvalid;
         if (error != previousError) notifyListeners();
       }
     }

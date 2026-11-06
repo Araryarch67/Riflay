@@ -1,3 +1,5 @@
+import '../services/language.dart';
+
 import 'package:path/path.dart' as p;
 
 /// A single playable audio file in the library.
@@ -254,18 +256,25 @@ class Collection {
 const likedMusicId = 'LM';
 
 enum CollectionKind {
-  allSongs('Playlist'),
-  playlist('Playlist'),
-  album('Album'),
-  youtube('Playlist'),
-  remote('Playlist'),
+  allSongs,
+  playlist,
+  album,
+  youtube,
+  remote,
 
   /// A built-in list worked out from the library and the listening history (Most played…); not editable.
-  smart('Playlist'),
-  artist('Artist');
+  smart,
+  artist;
 
-  const CollectionKind(this.label);
-  final String label;
+  String get label => switch (this) {
+    allSongs => tr.playlist,
+    playlist => tr.playlist,
+    album => tr.album,
+    youtube => tr.playlist,
+    remote => tr.playlist,
+    smart => tr.playlist,
+    artist => tr.artist,
+  };
 }
 
 /// A playlist made in Riflay, kept on this device. It can mix songs from

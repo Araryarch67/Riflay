@@ -9,6 +9,7 @@ import '../player_scope.dart';
 import '../theme.dart';
 import 'sound_settings.dart' show SettingTile, SettingsCard, settingsMuted;
 import '../widgets/skeleton.dart';
+import '../../services/language.dart';
 
 /// Settings › Accounts & services › Last.fm & ListenBrainz: where what you play is shared.
 class ScrobbleSettings extends StatelessWidget {
@@ -32,11 +33,7 @@ class ScrobbleSettings extends StatelessWidget {
         children: [
           Padding(
             padding: const EdgeInsets.only(bottom: 16),
-            child: Text(
-              'Songs you listen to past the halfway mark (or 4 minutes) are added to your profile there. '
-              'Listens made offline are sent once you\'re back online.',
-              style: muted,
-            ),
+            child: Text(tr.scrobbleBody, style: muted),
           ),
           SettingsCard(
             children: [
@@ -46,7 +43,7 @@ class ScrobbleSettings extends StatelessWidget {
                   title: Text(service.label),
                   subtitle: Text(_status(s, service), style: muted),
                   control: service.connected
-                      ? TextButton(onPressed: () => s.disconnect(service), child: const Text('Disconnect'))
+                      ? TextButton(onPressed: () => s.disconnect(service), child: Text(tr.disconnect))
                       : FilledButton(
                           style: FilledButton.styleFrom(
                             backgroundColor: AppColors.inverse,
@@ -62,7 +59,7 @@ class ScrobbleSettings extends StatelessWidget {
                               builder: (_) => _ListenBrainzDialog(scrobbler: s),
                             ),
                           },
-                          child: const Text('Connect'),
+                          child: Text(tr.connect),
                         ),
                 ),
             ],
@@ -82,10 +79,10 @@ class ScrobbleSettings extends StatelessWidget {
   }
 
   static String _status(Scrobbler s, ScrobbleService service) {
-    if (!service.connected) return 'Not connected';
-    final who = service.user == null ? 'Connected' : 'Connected as ${service.user}';
+    if (!service.connected) return tr.notConnected;
+    final who = service.user == null ? tr.connected : tr.connectedAs('${service.user}');
     final n = s.pending(service);
-    return n == 0 ? who : '$who. $n ${n == 1 ? 'listen' : 'listens'} waiting to be sent.';
+    return n == 0 ? who : tr.listensWaiting(n, who);
   }
 }
 
@@ -107,17 +104,13 @@ class _ImportTile extends StatelessWidget {
         library: PlayerScope.read(context).library,
       );
       say(switch (added) {
-        0 => 'No new listens to bring in',
-        1 => '1 listen added to your history',
-        _ => '$added listens added to your history',
+        0 => tr.noNewListens,
+        1 => tr.listensAdded(1),
+        _ => tr.listensAdded(added),
       });
     } on ScrobbleError catch (e) {
       debugPrint('Import from ${service.label}: $e');
-      say(
-        e.signedOut
-            ? '${service.label} signed you out. Connect it again.'
-            : 'Couldn\'t reach ${service.label}. Try again.',
-      );
+      say(e.signedOut ? tr.serviceSignedOut(service.label) : tr.couldntReachService(service.label));
     }
   }
 
@@ -128,23 +121,19 @@ class _ImportTile extends StatelessWidget {
     final busy = scrobbler.importing != null;
     final String subtitle;
     if (running) {
-      subtitle = 'Reading your listens: ${scrobbler.importRead} so far';
+      subtitle = tr.readingListens('${scrobbler.importRead}');
     } else if (!history.enabled) {
-      subtitle = 'Turn on the listening history in Library & downloads first.';
+      subtitle = tr.turnOnHistoryFirst;
     } else {
-      subtitle =
-          'Adds the songs you played elsewhere to your stats, Wraps and Most played. Ones already here are skipped.';
+      subtitle = tr.bringInBody;
     }
     return SettingTile(
       icon: Icons.download_for_offline_outlined,
-      title: Text('Bring in your ${service.label} history'),
+      title: Text(tr.bringInHistory(service.label)),
       subtitle: Text(subtitle, style: muted),
       control: running
-          ? TextButton(onPressed: scrobbler.cancelImport, child: const Text('Stop'))
-          : TextButton(
-              onPressed: busy || !history.enabled ? null : () => _import(context),
-              child: const Text('Bring in'),
-            ),
+          ? TextButton(onPressed: scrobbler.cancelImport, child: Text(tr.stop))
+          : TextButton(onPressed: busy || !history.enabled ? null : () => _import(context), child: Text(tr.bringIn)),
     );
   }
 }
@@ -180,7 +169,7 @@ class _ListenBrainzDialogState extends State<_ListenBrainzDialog> {
       if (mounted) Navigator.pop(context);
     } on ScrobbleError catch (e) {
       if (mounted) {
-        setState(() => _error = e.retry ? 'Couldn\'t reach ListenBrainz. Try again.' : e.message);
+        setState(() => _error = e.retry ? tr.couldntReachService('ListenBrainz') : e.message);
       }
     } finally {
       if (mounted) setState(() => _checking = false);
@@ -189,7 +178,7 @@ class _ListenBrainzDialogState extends State<_ListenBrainzDialog> {
 
   @override
   Widget build(BuildContext context) => AlertDialog(
-    title: const Text('Connect ListenBrainz'),
+    title: Text(tr.connectService('ListenBrainz')),
     content: SizedBox(
       width: 420,
       child: Column(
@@ -197,7 +186,7 @@ class _ListenBrainzDialogState extends State<_ListenBrainzDialog> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Copy your user token from your ListenBrainz settings and paste it here.',
+            tr.listenBrainzTokenBody,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary),
           ),
           Align(
@@ -209,7 +198,7 @@ class _ListenBrainzDialogState extends State<_ListenBrainzDialog> {
                 mode: LaunchMode.externalApplication,
               ).catchError((_) => false),
               icon: const Icon(Icons.open_in_new_rounded, size: 18),
-              label: const Text('Open ListenBrainz settings'),
+              label: Text(tr.openListenBrainzSettings),
             ),
           ),
           const SizedBox(height: 8),
@@ -219,7 +208,7 @@ class _ListenBrainzDialogState extends State<_ListenBrainzDialog> {
             obscureText: true,
             enabled: !_checking,
             decoration: InputDecoration(
-              labelText: 'User token',
+              labelText: tr.userToken,
               border: const OutlineInputBorder(),
               isDense: true,
               errorText: _error,
@@ -231,12 +220,12 @@ class _ListenBrainzDialogState extends State<_ListenBrainzDialog> {
       ),
     ),
     actions: [
-      TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+      TextButton(onPressed: () => Navigator.pop(context), child: Text(tr.cancel)),
       ListenableBuilder(
         listenable: _token,
         builder: (context, _) => FilledButton(
           onPressed: _checking || _token.text.trim().isEmpty ? null : _save,
-          child: Text(_checking ? 'Checking…' : 'Connect'),
+          child: Text(_checking ? tr.checking : tr.connect),
         ),
       ),
     ],
@@ -292,7 +281,7 @@ class _LastFmSignInDialogState extends State<_LastFmSignInDialog> {
       _poll = Timer.periodic(const Duration(seconds: 3), (_) => _check());
     } on ScrobbleError catch (e) {
       debugPrint('Last.fm sign-in failed: $e');
-      if (mounted) setState(() => _error = 'Couldn\'t reach Last.fm. Try again.');
+      if (mounted) setState(() => _error = tr.couldntReachService('Last.fm'));
     }
   }
 
@@ -313,12 +302,12 @@ class _LastFmSignInDialogState extends State<_LastFmSignInDialog> {
         if (mounted) Navigator.pop(context);
       } else if (_started.elapsed > _giveUpAfter) {
         _poll?.cancel();
-        if (mounted) setState(() => _error = 'The sign-in took too long. Try again.');
+        if (mounted) setState(() => _error = tr.signInTooLong);
       }
     } on ScrobbleError catch (e) {
       if (e.retry) return; // offline for a moment: the next check tries again
       _poll?.cancel();
-      if (mounted) setState(() => _error = 'Last.fm didn\'t finish the sign-in. Try again.');
+      if (mounted) setState(() => _error = tr.lastfmDidntFinish);
     } finally {
       _checking = false;
     }
@@ -328,7 +317,7 @@ class _LastFmSignInDialogState extends State<_LastFmSignInDialog> {
   Widget build(BuildContext context) {
     final muted = Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary);
     return AlertDialog(
-      title: const Text('Connect Last.fm'),
+      title: Text(tr.connectService('Last.fm')),
       content: SizedBox(
         width: 420,
         child: Column(
@@ -340,10 +329,7 @@ class _LastFmSignInDialogState extends State<_LastFmSignInDialog> {
             else if (_page == null)
               const SkeletonBox(height: 8, radius: 4)
             else ...[
-              Text(
-                'Allow Riflay on the Last.fm page that opened in your browser. This closes by itself once you have.',
-                style: muted,
-              ),
+              Text(tr.lastfmAllowBody, style: muted),
               const SizedBox(height: 16),
               const SkeletonBox(height: 8, radius: 4),
             ],
@@ -351,11 +337,11 @@ class _LastFmSignInDialogState extends State<_LastFmSignInDialog> {
         ),
       ),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+        TextButton(onPressed: () => Navigator.pop(context), child: Text(tr.cancel)),
         if (_error != null)
-          FilledButton(onPressed: _begin, child: const Text('Try again'))
+          FilledButton(onPressed: _begin, child: Text(tr.tryAgain))
         else if (_page != null)
-          FilledButton(onPressed: _open, child: const Text('Open Last.fm again')),
+          FilledButton(onPressed: _open, child: Text(tr.openLastfmAgain)),
       ],
     );
   }

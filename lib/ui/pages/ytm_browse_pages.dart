@@ -10,6 +10,7 @@ import '../ytmusic_edit.dart' show heroRoundButton;
 import '../widgets/page_scaffold.dart';
 import 'youtube_music_page.dart';
 import '../widgets/skeleton.dart';
+import '../../services/language.dart';
 
 /// "Moods & genres" and "New releases", at the top of YouTube Music's shelves.
 class YtmBrowseLinks extends StatelessWidget {
@@ -28,12 +29,12 @@ class YtmBrowseLinks extends StatelessWidget {
           OutlinedButton.icon(
             onPressed: () => shell.open(const YtmMoodsPage(), location: 'ytm:moods'),
             icon: const Icon(Icons.mood_rounded),
-            label: const Text('Moods & genres'),
+            label: Text(tr.moodsAndGenres),
           ),
           OutlinedButton.icon(
             onPressed: () => shell.open(const YtmNewReleasesPage(), location: 'ytm:new-releases'),
             icon: const Icon(Icons.new_releases_outlined),
-            label: const Text('New releases'),
+            label: Text(tr.newReleases),
           ),
         ],
       ),
@@ -84,10 +85,10 @@ class _LoadingPageState<T> extends State<_LoadingPage<T>> {
                   child: snap.hasError
                       ? Column(
                           children: [
-                            const Text('Couldn\'t load this page. Check your internet connection.'),
+                            Text(tr.couldntLoadPage),
                             TextButton(
                               onPressed: () => setState(() => _future = widget.load()),
-                              child: const Text('Try again'),
+                              child: Text(tr.tryAgain),
                             ),
                           ],
                         )
@@ -111,7 +112,7 @@ class YtmMoodsPage extends StatelessWidget {
     final shell = ShellScope.of(context);
     final pad = shell.compact ? 16.0 : 24.0;
     return _LoadingPage<List<WebMoodGroup>>(
-      title: 'Moods & genres',
+      title: tr.moodsAndGenres,
       load: account.moodsAndGenres,
       builder: (context, groups) => [
         for (final g in groups) ...[
@@ -190,7 +191,7 @@ class YtmNewReleasesPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = PlayerScope.read(context);
     return _LoadingPage<List<RemoteShelf>>(
-      title: 'New releases',
+      title: tr.newReleases,
       load: c.ytMusic.newReleases,
       builder: (context, shelves) => [SliverList.list(children: remoteShelfWidgets(context, c, shelves))],
     );
@@ -230,7 +231,7 @@ class _SaveToLibraryButtonState extends State<SaveToLibraryButton> {
     try {
       await _account.setSaved(widget.browseId, state, saved);
       if (mounted) setState(() => _state = WebSaveState(playlistId: state.playlistId, saved: saved));
-      messenger.showSnackBar(SnackBar(content: Text(saved ? 'Saved to your library' : 'Removed from your library')));
+      messenger.showSnackBar(SnackBar(content: Text(saved ? tr.savedToLibrary : tr.removedFromLibrary)));
     } catch (e) {
       messenger.showSnackBar(SnackBar(content: Text(YoutubeMusicAccount.describe(e))));
     } finally {
@@ -245,7 +246,7 @@ class _SaveToLibraryButtonState extends State<SaveToLibraryButton> {
     if (LayoutPrefs.instance.albumHeader == AlbumHeaderStyle.hero) {
       return heroRoundButton(
         icon: state.saved ? Icons.check_rounded : Icons.add_rounded,
-        tooltip: state.saved ? 'Remove from library' : 'Save to library',
+        tooltip: state.saved ? tr.removeFromLibrary : tr.saveToLibrary,
         onPressed: _busy ? null : _toggle,
       );
     }
@@ -257,7 +258,7 @@ class _SaveToLibraryButtonState extends State<SaveToLibraryButton> {
         padding: const EdgeInsets.symmetric(horizontal: 18),
       ),
       onPressed: _busy ? null : _toggle,
-      child: Text(state.saved ? 'Remove from library' : 'Save to library'),
+      child: Text(state.saved ? tr.removeFromLibrary : tr.saveToLibrary),
     );
   }
 }

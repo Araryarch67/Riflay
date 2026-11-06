@@ -4,18 +4,25 @@ import 'package:path/path.dart' as p;
 import '../models/track.dart';
 import 'play_history.dart';
 import 'player_controller.dart';
+import 'language.dart';
 
 /// The built-in, self-updating lists in Library. Worked out, never edited.
 enum SmartList {
-  mostPlayed('smart:most-played', 'Most played'),
-  notPlayedForAWhile('smart:not-played', 'Not played for a while'),
-  recentlyAdded('smart:recently-added', 'Recently added'),
-  recentlyPlayed('smart:recently-played', 'Recently played'),
-  lossless('smart:lossless', 'Lossless');
+  mostPlayed('smart:most-played'),
+  notPlayedForAWhile('smart:not-played'),
+  recentlyAdded('smart:recently-added'),
+  recentlyPlayed('smart:recently-played'),
+  lossless('smart:lossless');
 
-  const SmartList(this.id, this.title);
+  const SmartList(this.id);
   final String id;
-  final String title;
+  String get title => switch (this) {
+    mostPlayed => tr.mostPlayed,
+    notPlayedForAWhile => tr.notPlayedForAWhile,
+    recentlyAdded => tr.recentlyAdded,
+    recentlyPlayed => tr.recentlyPlayed,
+    lossless => tr.qualityLossless,
+  };
 
   static SmartList? byId(String? id) => values.where((l) => l.id == id).firstOrNull;
 }
@@ -111,7 +118,7 @@ abstract final class SmartPlaylists {
             kind: CollectionKind.smart,
             id: e.key.id,
             title: e.key.title,
-            subtitle: '${e.value.length} ${e.value.length == 1 ? 'song' : 'songs'}',
+            subtitle: tr.songsPlural(e.value.length),
             tracks: e.value,
           ),
     };

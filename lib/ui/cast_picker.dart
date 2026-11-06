@@ -6,6 +6,7 @@ import '../services/player_controller.dart';
 import 'shell_scope.dart';
 import 'theme.dart';
 import 'widgets/skeleton.dart';
+import '../services/language.dart';
 
 /// The "Play on" button: lights up while a TV or speaker is playing.
 class CastButton extends StatelessWidget {
@@ -19,7 +20,7 @@ class CastButton extends StatelessWidget {
     final c = PlayerScope.of(context);
     final target = c.cast.target;
     return IconButton(
-      tooltip: target == null ? 'Play on a device' : 'Playing on ${target.name}',
+      tooltip: target == null ? tr.playOnDevice : tr.playingOn(target.name),
       color: target == null ? color : AppColors.accent,
       onPressed: () => showCastPicker(context),
       icon: Icon(target == null ? Icons.cast_rounded : Icons.cast_connected_rounded, size: size),
@@ -87,7 +88,7 @@ class _CastPickerState extends State<_CastPicker> {
     final cast = c.cast;
     final text = Theme.of(context).textTheme;
     final muted = text.bodySmall?.copyWith(color: AppColors.textSecondary);
-    final here = Host.isAndroid || Host.isIOS ? 'This phone' : 'This computer';
+    final here = Host.isAndroid || Host.isIOS ? tr.thisPhone : tr.thisComputer;
 
     Widget tile({
       required IconData icon,
@@ -120,7 +121,7 @@ class _CastPickerState extends State<_CastPicker> {
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(24, 20, 24, 8),
-          child: Text('Play on', style: text.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
+          child: Text(tr.playOn, style: text.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
         ),
         tile(
           icon: Host.isAndroid || Host.isIOS ? Icons.smartphone_rounded : Icons.computer_rounded,
@@ -143,20 +144,13 @@ class _CastPickerState extends State<_CastPicker> {
                   children: [
                     const SkeletonBox.circle(size: 14),
                     const SizedBox(width: 12),
-                    Text('Looking for TVs and speakers…', style: muted),
+                    Text(tr.lookingForDevices, style: muted),
                   ],
                 )
               : Row(
                   children: [
-                    Expanded(
-                      child: Text(
-                        cast.devices.isEmpty
-                            ? 'No TVs or speakers found. They need to be on and on the same Wi-Fi.'
-                            : 'Works with TVs, speakers and receivers that support DLNA or AirPlay.',
-                        style: muted,
-                      ),
-                    ),
-                    TextButton(onPressed: cast.search, child: const Text('Search again')),
+                    Expanded(child: Text(cast.devices.isEmpty ? tr.noDevicesFound : tr.castWorksWith, style: muted)),
+                    TextButton(onPressed: cast.search, child: Text(tr.searchAgain)),
                   ],
                 ),
         ),

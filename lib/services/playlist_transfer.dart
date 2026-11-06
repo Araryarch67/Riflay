@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 import '../models/track.dart';
+import 'language.dart';
 
 /// A song as another app lists it, before it's found in YouTube Music.
 class ForeignSong {
@@ -124,14 +125,14 @@ class PlaylistTransfer {
   Future<ForeignPlaylist> read(String link) async {
     final source = _source(link) ?? await _resolveShortLink(link);
     if (source == null) {
-      throw PlaylistTransferError('That isn\'t a playlist link from ${services.join(', ')}.');
+      throw PlaylistTransferError(tr.notPlaylistLinkFrom(services.join(', ')));
     }
     final list = await switch (source.service) {
       'Spotify' => _spotify(source),
       'Deezer' => _deezer(source),
       _ => _appleMusic(source),
     };
-    if (list.songs.isEmpty) throw const PlaylistTransferError('That playlist is empty, or it\'s private.');
+    if (list.songs.isEmpty) throw PlaylistTransferError(tr.playlistEmptyOrPrivate);
     return list;
   }
 
@@ -163,7 +164,7 @@ class PlaylistTransfer {
     final res = await _http
         .get(url, headers: {'user-agent': ua, 'accept-language': 'en-US,en;q=0.9'})
         .timeout(const Duration(seconds: 30));
-    if (res.statusCode == 404) throw const PlaylistTransferError('That playlist doesn\'t exist, or it\'s private.');
+    if (res.statusCode == 404) throw PlaylistTransferError(tr.playlistMissingOrPrivate);
     if (res.statusCode != 200) {
       throw const PlaylistTransferError('Couldn\'t open that link right now. Try again later.');
     }
@@ -187,7 +188,7 @@ class PlaylistTransfer {
     final data = _scriptJson(await embed, '__NEXT_DATA__', 'Spotify');
     final entity = _at(data, const ['props', 'pageProps', 'state', 'data', 'entity']);
     if (entity is! Map) {
-      throw const PlaylistTransferError('Spotify changed its page; this link can\'t be read right now.');
+      throw PlaylistTransferError(tr.spotifyPageChanged);
     }
     final songs = [
       for (final t in (entity['trackList'] as List? ?? const []).whereType<Map>())
@@ -200,7 +201,7 @@ class PlaylistTransfer {
     ];
     final count = RegExp(r'<meta name="music:song_count" content="(\d+)"').firstMatch(await full ?? '');
     return ForeignPlaylist(
-      title: (entity['name'] ?? entity['title'] ?? 'Spotify playlist') as String,
+      title: (entity['name'] ?? entity['title'] ?? tr.servicePlaylist('Spotify')) as String,
       service: 'Spotify',
       songs: songs,
       total: count == null ? null : int.parse(count.group(1)!),
@@ -227,7 +228,7 @@ class PlaylistTransfer {
             ),
     ];
     return ForeignPlaylist(
-      title: (header?['title'] as String?) ?? 'Apple Music playlist',
+      title: (header?['title'] as String?) ?? tr.servicePlaylist('Apple Music'),
       service: 'Apple Music',
       songs: songs,
       total: header?['trackCount'] as int?,
@@ -237,8 +238,8 @@ class PlaylistTransfer {
   Future<ForeignPlaylist> _deezer(_Source s) async {
     Future<Map<String, dynamic>> api(Uri url) async {
       final j = jsonDecode(await _get(url));
-      if (j is! Map<String, dynamic>) throw const PlaylistTransferError('Unexpected reply from Deezer.');
-      if (j['error'] is Map) throw const PlaylistTransferError('That playlist doesn\'t exist, or it\'s private.');
+      if (j is! Map<String, dynamic>) throw PlaylistTransferError(tr.unexpectedDeezerReply);
+      if (j['error'] is Map) throw PlaylistTransferError(tr.playlistMissingOrPrivate);
       return j;
     }
 
@@ -260,7 +261,7 @@ class PlaylistTransfer {
       next = page['next'] is String ? Uri.parse(page['next'] as String) : null;
     }
     return ForeignPlaylist(
-      title: (info['title'] as String?) ?? 'Deezer playlist',
+      title: (info['title'] as String?) ?? tr.servicePlaylist('Deezer'),
       service: 'Deezer',
       songs: songs,
       total: (info['nb_tracks'] as int?) ?? songs.length,

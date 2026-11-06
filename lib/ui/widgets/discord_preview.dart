@@ -6,6 +6,7 @@ import '../../models/track.dart';
 import '../../services/discord_presence.dart';
 import '../../services/player_controller.dart';
 import 'app_logo.dart';
+import '../../services/language.dart';
 
 /// Settings › Discord: what the presence looks like on a Discord profile, and what it shows. The card draws
 /// [DiscordPresence.activity] itself, the map sent to Discord, for the song playing (or a sample).
@@ -27,12 +28,12 @@ class DiscordPresenceSettings extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         const Padding(padding: EdgeInsets.fromLTRB(16, 4, 16, 12), child: DiscordPreview()),
-        option('Song cover', o.cover, (v) => o.copyWith(cover: v)),
-        option('Time played and left', o.time, (v) => o.copyWith(time: v)),
-        option('Song title in the member list', o.songInList, (v) => o.copyWith(songInList: v)),
-        option('"Listen on YouTube Music" button', o.listenButton, (v) => o.copyWith(listenButton: v)),
+        option(tr.discordSongCover, o.cover, (v) => o.copyWith(cover: v)),
+        option(tr.discordTime, o.time, (v) => o.copyWith(time: v)),
+        option(tr.discordSongInList, o.songInList, (v) => o.copyWith(songInList: v)),
+        option(tr.discordListenButton, o.listenButton, (v) => o.copyWith(listenButton: v)),
         option('"Download Riflay" button', o.appButton, (v) => o.copyWith(appButton: v)),
-        option('Keep showing while paused', o.whilePaused, (v) => o.copyWith(whilePaused: v)),
+        option(tr.discordWhilePaused, o.whilePaused, (v) => o.copyWith(whilePaused: v)),
       ],
     );
   }
@@ -56,8 +57,8 @@ class _DiscordPreviewState extends State<DiscordPreview> {
   /// Shown when nothing plays, so the options can still be tried.
   static final _sample = Track.youtube(
     videoId: 'sample',
-    title: 'Your song',
-    artist: 'Its artist',
+    title: tr.previewYourSong,
+    artist: tr.previewItsArtist,
     duration: const Duration(minutes: 3, seconds: 30),
   );
 
@@ -122,7 +123,7 @@ class _DiscordPreviewState extends State<DiscordPreview> {
               child: Text.rich(
                 TextSpan(
                   children: [
-                    const TextSpan(text: 'Listening to '),
+                    TextSpan(text: '${tr.discordListeningTo} '),
                     TextSpan(
                       text: a['status_display_type'] == 2 ? a['details'] as String : 'Riflay',
                       style: const TextStyle(fontWeight: FontWeight.w700),
@@ -194,7 +195,7 @@ class _DiscordPreviewState extends State<DiscordPreview> {
                         ),
                         if (!playing)
                           Text(
-                            'Paused',
+                            tr.paused,
                             style: text.bodySmall?.copyWith(color: _muted, fontStyle: FontStyle.italic),
                           ),
                       ],

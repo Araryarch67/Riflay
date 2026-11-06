@@ -46,11 +46,8 @@ class CollectionHero extends StatelessWidget {
         ? c.albums.where((a) => Track.splitArtists(a.subtitle).contains(collection.title)).length
         : 0;
     final meta = isArtist
-        ? [
-            '${tracks.length} ${tracks.length == 1 ? 'song' : 'songs'}',
-            '$albums ${albums == 1 ? 'album' : 'albums'}',
-          ].join(' • ')
-        : ['${tracks.length} ${tracks.length == 1 ? 'song' : 'songs'}', if (total.isNotEmpty) total].join(' • ');
+        ? [tr.songsPlural(tracks.length), tr.albumsPlural(albums)].join(' • ')
+        : [tr.songsPlural(tracks.length), if (total.isNotEmpty) total].join(' • ');
     final artist = collection.kind == CollectionKind.album ? c.artistNamed(collection.subtitle) : null;
     // The page behind the fade: the desktop's content panel, the phone's background.
     final fadeTo = AppColors.panel.withValues(alpha: 1);
@@ -175,7 +172,7 @@ class CollectionHero extends StatelessWidget {
                   return LayoutBuilder(
                     builder: (context, box) {
                       const slot = 48.0 + 12; // a round button and the gap before it
-                      const play = 132.0; // "Pause" whole, with its icon
+                      const play = 132.0; // tr.pause whole, with its icon
                       final room = box.maxWidth - slot - play - actions.length * slot;
                       final fit = (room / slot).floor().clamp(0, extras.length);
                       // All of them, or one place fewer and ⋯ for the rest.

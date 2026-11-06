@@ -4,6 +4,7 @@ import '../../services/appearance.dart';
 import '../../services/layout_prefs.dart';
 import '../../services/player_presets.dart';
 import '../theme.dart';
+import '../../services/language.dart';
 
 /// Settings › Look & feel › Layout › Player › Presets: a whole look in one tap. A preset only
 /// sets the individual player settings, so it is the same as setting them one by one.
@@ -16,7 +17,7 @@ class PlayerPresetsPage extends StatelessWidget {
     final text = Theme.of(context).textTheme;
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(title: const Text('Player presets'), backgroundColor: AppColors.background),
+      appBar: AppBar(title: Text(tr.playerPresets), backgroundColor: AppColors.background),
       body: ListenableBuilder(
         listenable: Listenable.merge([p, Appearance.instance]),
         builder: (context, _) {
@@ -26,7 +27,7 @@ class PlayerPresetsPage extends StatelessWidget {
             padding: EdgeInsets.fromLTRB(16, 16, 16, 32 + MediaQuery.paddingOf(context).bottom),
             children: [
               Text(
-                current == null ? 'Your settings are a custom mix' : 'Your settings match $current',
+                current == null ? tr.presetsCustomMix : tr.presetsMatch(current),
                 style: text.bodyMedium?.copyWith(color: AppColors.textSecondary),
               ),
               const SizedBox(height: 12),
@@ -55,13 +56,11 @@ class _PresetCard extends StatelessWidget {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: AppColors.elevated,
-        title: Text('Apply ${preset.name}?'),
-        content: Text(
-          'This changes $n player ${n == 1 ? 'setting' : 'settings'}. You can still change each one after.',
-        ),
+        title: Text(tr.applyPresetQuestion(preset.name)),
+        content: Text(tr.applyPresetBody(n)),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Apply')),
+          TextButton(onPressed: () => Navigator.pop(context, false), child: Text(tr.cancel)),
+          FilledButton(onPressed: () => Navigator.pop(context, true), child: Text(tr.apply)),
         ],
       ),
     );
@@ -93,10 +92,10 @@ class _PresetCard extends StatelessWidget {
                   children: [
                     Text(preset.name, style: text.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
                     const SizedBox(height: 4),
-                    Text(preset.note, style: text.bodySmall?.copyWith(color: colors.textSecondary)),
+                    Text(presetNote(preset), style: text.bodySmall?.copyWith(color: colors.textSecondary)),
                     const SizedBox(height: 8),
                     Text(
-                      current ? 'In use' : 'Tap to apply',
+                      current ? tr.inUse : tr.tapToApply,
                       style: text.labelMedium?.copyWith(color: current ? colors.accent : colors.textSecondary),
                     ),
                   ],

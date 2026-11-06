@@ -9,6 +9,7 @@ import '../widgets/marquee_text.dart';
 import '../ytmusic_edit.dart';
 import 'more_sheet.dart';
 import 'player_common.dart';
+import '../../services/language.dart';
 
 /// Floating bar above the bottom tabs on phones, tinted with the cover colour.
 /// Cover, title, like, play / pause and next; swipe sideways to change song,
@@ -196,7 +197,7 @@ class _MiniPlay extends StatelessWidget {
               ),
             )
           : IconButton(
-              tooltip: s.playing ? 'Pause' : 'Play',
+              tooltip: s.playing ? tr.pause : tr.play,
               color: capsule ? AppColors.onAccent : AppColors.textPrimary,
               style: capsule
                   ? IconButton.styleFrom(backgroundColor: AppColors.accent, fixedSize: const Size(40, 40))
@@ -219,7 +220,7 @@ class _MiniPrev extends StatelessWidget {
   Widget build(BuildContext context) => PlayerSelect<bool>(
     select: (c) => c.hasQueue,
     builder: (context, hasQueue, _) => IconButton(
-      tooltip: 'Previous',
+      tooltip: tr.previous,
       color: AppColors.textPrimary,
       style: IconButton.styleFrom(
         backgroundColor: AppColors.textPrimary.withValues(alpha: 0.1),
@@ -243,7 +244,7 @@ class _MiniNext extends StatelessWidget {
   Widget build(BuildContext context) => PlayerSelect<bool>(
     select: (c) => c.hasNext,
     builder: (context, hasNext, _) => IconButton(
-      tooltip: 'Next',
+      tooltip: tr.next,
       color: AppColors.textPrimary,
       style: capsule
           ? IconButton.styleFrom(

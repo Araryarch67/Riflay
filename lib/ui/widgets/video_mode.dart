@@ -7,6 +7,7 @@ import '../../services/player_controller.dart';
 import '../../services/video_mode.dart';
 import '../theme.dart';
 import 'skeleton.dart';
+import '../../services/language.dart';
 
 /// YouTube Music's Song / Video switch, above the cover of the Now Playing
 /// views. Only there when the song has a music video this device can show.
@@ -77,7 +78,10 @@ class VideoModeSwitch extends StatelessWidget {
                   color: onDark ? Colors.white.withValues(alpha: 0.14) : AppColors.tile,
                   borderRadius: BorderRadius.circular(22),
                 ),
-                child: Row(mainAxisSize: MainAxisSize.min, children: [segment('Song', false), segment('Video', true)]),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [segment(tr.sectionSong, false), segment(tr.kindVideo, true)],
+                ),
               ),
               const SizedBox(width: 8),
             ],

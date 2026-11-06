@@ -1,14 +1,19 @@
+import 'language.dart';
+
 // Which locks keep the device awake, decided from plain facts. No platform
 // code here, so it is unit tested; [StayAwake] applies the answer.
 
 /// Settings › Power & background › Keep screen on.
 enum KeepScreenOn {
-  off('Off'),
-  whilePlaying('While playing'),
-  whileOpen('While Riflay is open');
+  off,
+  whilePlaying,
+  whileOpen;
 
-  const KeepScreenOn(this.label);
-  final String label;
+  String get label => switch (this) {
+    off => tr.off,
+    whilePlaying => tr.whilePlaying,
+    whileOpen => tr.whileRiflayOpen,
+  };
 }
 
 /// What is true right now.

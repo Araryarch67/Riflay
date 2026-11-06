@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import '../../services/audio_engine.dart';
 import '../../services/player_controller.dart';
 import '../theme.dart';
+import '../../services/language.dart';
 
 /// Polls mpv for the live signal path while it's on screen.
 class _SignalPathBuilder extends StatefulWidget {
@@ -63,10 +64,10 @@ String _codecName(SignalPath p) => p.isDop
 /// What kind of sound a song is, as the badge names it: its word and its icon.
 (String, IconData) _tier(SignalPath p) {
   if (p.isDsd || p.isDop) return ('DSD', Icons.blur_on_rounded);
-  if (!p.lossless) return ('Lossy', Icons.graphic_eq_rounded);
+  if (!p.lossless) return (tr.qualityLossy, Icons.graphic_eq_rounded);
   final bits = SignalPath.bitsOf(p.inFormat);
   final hiRes = p.inRate > 48000 || (p.sourceBits ?? (p.inFormat.startsWith('float') ? null : bits) ?? 16) > 16;
-  return hiRes ? ('Hi-Res', Icons.diamond_rounded) : ('Lossless', Icons.diamond_outlined);
+  return hiRes ? ('Hi-Res', Icons.diamond_rounded) : (tr.qualityLossless, Icons.diamond_outlined);
 }
 
 /// "Opus · Lossy · 160 kbps", "FLAC · Hi-Res · 24-bit / 96 kHz" with the tier's icon, no frame: tap for the full
@@ -105,7 +106,7 @@ class QualityBadge extends StatelessWidget {
         return Align(
           alignment: alignment,
           child: Tooltip(
-            message: 'Signal path',
+            message: tr.signalPath,
             child: InkWell(
               borderRadius: BorderRadius.circular(6),
               onTap: () => showSignalPath(context),
@@ -172,77 +173,62 @@ class _SignalPathSheet extends StatelessWidget {
     return _SignalPathBuilder(
       builder: (context, p) {
         if (p == null) {
-          return const Padding(padding: EdgeInsets.all(32), child: Text('Nothing is playing.'));
+          return Padding(padding: EdgeInsets.all(32), child: Text(tr.statsNothingPlaying));
         }
         final (verdict, verdictColor, detail) = p.isDop && p.bitPerfect
-            ? (
-                'Native DSD',
-                AppColors.accent,
-                'The DSD stream reaches your DAC as it is, packed as DoP. A DAC that supports DoP '
-                    'shows DSD; one that doesn\'t plays a faint hiss (then turn off Native DSD).',
-              )
+            ? (tr.nativeDsd2, AppColors.accent, tr.spNativeDsdBody)
             : p.isDop
-            ? (
-                'DoP is being changed',
-                Theme.of(context).colorScheme.error,
-                'Something between Riflay and your DAC changes the samples, so the DAC can\'t see the DSD. '
-                    'Choose a direct output in Settings › Sound › Output & quality.',
-              )
+            ? (tr.spDopChanged, Theme.of(context).colorScheme.error, tr.spDopChangedBody)
             : p.bitPerfect && p.usbDacName != null
-            ? (
-                'Bit-perfect',
-                AppColors.accent,
-                'USB DAC, bit-perfect (Android 14): every sample reaches ${p.usbDacName} exactly as it is stored in the file.',
-              )
+            ? ('Bit-perfect', AppColors.accent, tr.spUsbBitPerfect('${p.usbDacName}'))
             : p.usbDacName != null && p.untouched == false && p.inRate != p.outRate
             ? (
-                'Not bit-perfect',
+                tr.spNotBitPerfect,
                 AppColors.textPrimary,
-                '${p.usbDacName} doesn\'t take ${SignalPath.formatRate(p.inRate)}, so Android plays it at '
-                    '${SignalPath.formatRate(p.outRate)} instead.',
+                tr.spUsbDacRateUnsupported(
+                  p.usbDacName!,
+                  SignalPath.formatRate(p.inRate),
+                  SignalPath.formatRate(p.outRate),
+                ),
               )
             : p.bitPerfect
-            ? ('Bit-perfect', AppColors.accent, 'Every sample reaches your DAC exactly as it is stored in the file.')
+            ? ('Bit-perfect', AppColors.accent, tr.spBitPerfectBody)
             : p.untouched && p.mixerResamples
             ? (
-                'Resampled by the system mixer',
+                tr.spResampledByMixer,
                 AppColors.textPrimary,
-                'Riflay leaves the sound alone, but the system mixer runs your DAC at '
-                    '${SignalPath.formatRate(p.dac!.rate)} instead of ${SignalPath.formatRate(p.inRate)}. '
-                    '${AudioEngine.hasRoutePicker ? 'iPhone, iPad and Bluetooth outputs run at one fixed rate; a USB DAC usually follows each song.' : 'Turn on Bit-perfect mode in Settings › Sound › Output & quality to send it as it is.'}',
+                '${tr.spMixerResamples(SignalPath.formatRate(p.dac!.rate), SignalPath.formatRate(p.inRate))} '
+                    '${AudioEngine.hasRoutePicker ? tr.spFixedRateOutputs : tr.spTurnOnBitPerfect}',
               )
             : p.untouched && p.viaSystemMixer
             ? (
-                'Lossless to the system mixer',
+                tr.spLosslessToMixer,
                 AppColors.textPrimary,
-                'Nothing in Riflay changes the sound, but the system mixer may resample it. '
+                '${tr.spMixerMayResample} '
                     '${AudioEngine.hasRoutePicker
-                        ? 'iOS always mixes the sound, so it is never bit-perfect here.'
+                        ? tr.spIosAlwaysMixes
                         : AudioEngine.hasExclusiveMode
-                        ? 'For bit-perfect, turn on Bit-perfect mode and Exclusive mode in Settings › Sound › Output & quality (other apps go silent meanwhile).'
-                        : 'For bit-perfect, turn on Bit-perfect mode in Settings › Sound › Output & quality.'}',
+                        ? tr.spForBitPerfectExclusive
+                        : tr.spForBitPerfect}',
               )
             : p.isDsd
             ? (
-                'DSD converted to PCM',
+                tr.spDsdConverted,
                 AppColors.textPrimary,
                 AudioEngine.hasRoutePicker
-                    ? 'DSD is decoded to high-rate PCM. iOS can\'t send DSD to a DAC as DSD.'
-                    : 'DSD is decoded to high-rate PCM. To send it to your DAC as DSD, turn on Bit-perfect mode'
-                          '${AudioEngine.hasExclusiveMode ? ', Exclusive mode' : ''} and Native DSD (DoP) in Settings › Sound › Output & quality.',
+                    ? tr.spDsdIos
+                    : AudioEngine.hasExclusiveMode
+                    ? tr.spDsdToPcmExclusive
+                    : tr.spDsdToPcmHowTo,
               )
-            : (
-                'Processed',
-                AppColors.textSecondary,
-                'Something below changes the samples. That is fine if it is what you want.',
-              );
+            : (tr.spProcessed, AppColors.textSecondary, tr.spProcessedBody);
         return SafeArea(
           child: SingleChildScrollView(
             padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Signal path', style: text.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
+                Text(tr.signalPath, style: text.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
                 const SizedBox(height: 12),
                 Row(
                   children: [
@@ -262,45 +248,45 @@ class _SignalPathSheet extends StatelessWidget {
                 Text(detail, style: text.bodySmall?.copyWith(color: AppColors.textSecondary)),
                 const SizedBox(height: 20),
                 _Stage(
-                  title: 'Source',
+                  title: tr.spSource,
                   value:
-                      '${_codecName(p)}${p.lossless ? ' (lossless)' : ''}'
+                      '${_codecName(p)}${p.lossless ? ' ${tr.spLosslessParen}' : ''}'
                       '${p.sourceBits == null ? '' : ' · ${p.sourceBits}-bit'}'
                       '${p.bitrate == null || p.bitrate == 0 ? '' : ' · ${(p.bitrate! / 1000).round()} kbps'}',
                 ),
                 _Stage(
-                  title: 'Decoded',
+                  title: tr.spDecoded,
                   value:
                       '${SignalPath.describe(p.inFormat, p.inRate)} · ${_channels(p.inChannels)}'
-                      '${p.sourceBits != null && p.sourceBits != SignalPath.bitsOf(p.inFormat) && !p.inFormat.startsWith('float') ? ' (${p.sourceBits}-bit, padded losslessly)' : ''}',
+                      '${p.sourceBits != null && p.sourceBits != SignalPath.bitsOf(p.inFormat) && !p.inFormat.startsWith('float') ? ' ${tr.spPadded(p.sourceBits!)}' : ''}',
                 ),
                 for (final f in p.filters) _Stage(title: 'DSP', value: f, changes: true),
-                if (p.leveling) const _Stage(title: 'Volume leveling', value: 'ReplayGain', changes: true),
+                if (p.leveling) _Stage(title: tr.volumeLeveling, value: 'ReplayGain', changes: true),
                 _Stage(
-                  title: 'Volume',
+                  title: tr.volume,
                   value: (p.volume - 100).abs() < 0.01
-                      ? '100% (untouched)'
+                      ? tr.spUntouched
                       : p.volume <= 0
-                      ? 'Muted'
+                      ? tr.spMuted
                       : '${(20 * math.log(p.volume / 100) / math.ln10).toStringAsFixed(1)} dB (${p.volumePrecision})',
                   changes: (p.volume - 100).abs() >= 0.01,
                 ),
                 if (p.clipGuard)
                   _Stage(
-                    title: 'Clip protection',
-                    value: 'Softens any peak past full scale instead of cutting it off',
+                    title: tr.spClipProtection,
+                    value: tr.spClipProtectionBody,
                     // Nothing in an untouched song reaches past full scale.
                     changes: !p.untouched,
                   ),
                 if (p.inRate != p.outRate)
                   _Stage(
-                    title: 'Resampled',
+                    title: tr.spResampled,
                     value:
                         '${SignalPath.formatRate(p.inRate)} → ${SignalPath.formatRate(p.outRate)} · ${AudioEngine.resamplerName}',
                     changes: true,
                   ),
                 _Stage(
-                  title: 'Output',
+                  title: tr.output,
                   value:
                       '${SignalPath.describe(p.outFormat, p.outRate)} · ${_channels(p.outChannels)}\n'
                       '${outputName(p)}',
@@ -309,7 +295,7 @@ class _SignalPathSheet extends StatelessWidget {
                 ),
                 if (p.dac case final dac?)
                   _Stage(
-                    title: 'DAC receives',
+                    title: tr.spDacReceives,
                     value:
                         '${dac.bits == null ? dac.format : '${dac.bits}-bit${dac.isFloat ? ' float' : ''}'} / '
                         '${SignalPath.formatRate(dac.rate)} · ${_channels(dac.channels)} (${dac.format})\n${p.dacName ?? ''}',
@@ -325,26 +311,26 @@ class _SignalPathSheet extends StatelessWidget {
   }
 
   static String _channels(int n) => switch (n) {
-    1 => 'mono',
-    2 => 'stereo',
-    final n => '$n channels',
+    1 => tr.spMono,
+    2 => tr.spStereo,
+    final n => tr.spChannels('$n'),
   };
 }
 
 /// The output API and device, e.g. "WASAPI shared · {0.0.0.00000000}.{…}".
 String outputName(SignalPath p) {
   final api = switch (p.output) {
-    'pipewire' => 'PipeWire (system mixer)',
-    'pulse' => 'PulseAudio (system mixer)',
-    'alsa' => p.viaSystemMixer ? 'ALSA' : 'ALSA, direct to hardware',
-    'wasapi' => p.exclusive ? 'WASAPI exclusive' : 'WASAPI shared',
+    'pipewire' => tr.spPipewire,
+    'pulse' => tr.spPulse,
+    'alsa' => p.viaSystemMixer ? 'ALSA' : tr.spAlsaDirect,
+    'wasapi' => p.exclusive ? tr.spWasapiExclusive : tr.spWasapiShared,
     'asio' => 'ASIO',
     'coreaudio' => 'Core Audio',
     'opensles' || 'audiotrack' || 'aaudio' =>
       p.usbDacName != null
-          ? 'USB DAC${p.usbBitPerfect ? ', bit-perfect (Android 14)' : ' (Android mixer)'} · ${p.usbDacName}'
-          : 'Android mixer',
-    'audiounit' => 'iOS audio session (system mixer)',
+          ? 'USB DAC${p.usbBitPerfect ? ', bit-perfect (Android 14)' : ' ${tr.spAndroidMixerParen}'} · ${p.usbDacName}'
+          : tr.spAndroidMixer,
+    'audiounit' => tr.spIosSession,
     final o => o,
   };
   if (p.usbDacName != null) return api;

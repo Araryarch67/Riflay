@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
 
 import '../platform/host.dart';
+import 'language.dart';
 
 /// Linux sign-in window (linux/login_helper): Google's own login page in a
 /// WebKitGTK window, which hands the YouTube Music session back on stdout.
@@ -40,7 +41,7 @@ abstract final class DesktopLogin {
           .where((l) => l.trim().isNotEmpty && !l.contains('CRITICAL') && !l.contains('MESA'))
           .lastOrNull;
       debugPrint('Sign-in window exited $code: $reason');
-      throw const DesktopLoginException('The sign-in window closed unexpectedly. Try again.');
+      throw DesktopLoginException(tr.signInWindowClosed);
     }
     final line = const LineSplitter().convert(out).lastWhere((l) => l.startsWith('{'), orElse: () => '');
     if (line.isEmpty) return null;

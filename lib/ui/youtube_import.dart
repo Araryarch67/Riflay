@@ -10,6 +10,7 @@ import 'download_options.dart';
 import 'theme.dart';
 import 'widgets/controls.dart';
 import 'widgets/skeleton.dart';
+import '../services/language.dart';
 
 /// Opens the "paste a YouTube link" flow: bottom sheet on phones, dialog elsewhere.
 /// Resolves to true when something was queued.
@@ -107,7 +108,7 @@ class _ImportFormState extends State<_ImportForm> {
     if (link == null || link is AlbumLink) {
       setState(() {
         _preview = null;
-        _error = 'Paste a YouTube link to a video or playlist.';
+        _error = tr.pasteYtLink;
       });
       return;
     }
@@ -123,7 +124,7 @@ class _ImportFormState extends State<_ImportForm> {
       if (!mounted || lookup != _lookup) return;
       setState(() {
         _preview = null;
-        _error = 'Couldn\'t load that link. It may be private, removed or region-locked.';
+        _error = tr.linkLoadFailed;
       });
     } finally {
       if (mounted && lookup == _lookup) setState(() => _loading = false);
@@ -154,12 +155,9 @@ class _ImportFormState extends State<_ImportForm> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Import from YouTube', style: text.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
+          Text(tr.importFromYouTube, style: text.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
           const SizedBox(height: 4),
-          Text(
-            'Downloads the audio track and adds it to your library.',
-            style: text.bodyMedium?.copyWith(color: AppColors.textSecondary),
-          ),
+          Text(tr.importFromYtBody, style: text.bodyMedium?.copyWith(color: AppColors.textSecondary)),
           const SizedBox(height: 20),
           TextField(
             controller: _url,
@@ -175,7 +173,7 @@ class _ImportFormState extends State<_ImportForm> {
               filled: true,
               fillColor: AppColors.hover,
               prefixIcon: const Icon(Icons.link_rounded),
-              suffixIcon: TextButton(onPressed: _paste, child: const Text('Paste')),
+              suffixIcon: TextButton(onPressed: _paste, child: Text(tr.paste)),
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
             ),
           ),
@@ -198,10 +196,7 @@ class _ImportFormState extends State<_ImportForm> {
           LayoutBuilder(
             // Narrow windows: the note goes above the button instead of squeezing it.
             builder: (context, constraints) {
-              final note = Text(
-                'Saved in the best quality YouTube offers (up to ~160 kbps Opus/AAC), without re-encoding.',
-                style: text.bodySmall?.copyWith(color: AppColors.textMuted),
-              );
+              final note = Text(tr.bestQualityNote, style: text.bodySmall?.copyWith(color: AppColors.textMuted));
               final button = FilledButton(
                 style: FilledButton.styleFrom(
                   backgroundColor: AppColors.inverse,
@@ -211,8 +206,8 @@ class _ImportFormState extends State<_ImportForm> {
                 ),
                 onPressed: preview == null || _loading ? null : _download,
                 child: Text(switch (preview) {
-                  PlaylistPreview(:final videos) => 'Download ${videos.length}',
-                  _ => 'Download',
+                  PlaylistPreview(:final videos) => tr.downloadCount('${videos.length}'),
+                  _ => tr.download,
                 }),
               );
               return constraints.maxWidth < 360
@@ -256,7 +251,7 @@ class _PreviewCardState extends State<_PreviewCard> {
         if (peek == null) return null;
         return [
           peek.quality,
-          if (peek.size case final size?) peek.approx ? 'About ${formatBytes(size)}' : formatBytes(size),
+          if (peek.size case final size?) peek.approx ? tr.aboutSize(formatBytes(size)) : formatBytes(size),
         ].join(' • ');
       case PlaylistPreview(:final videos):
         final seconds = videos.fold(0, (sum, v) => sum + (v.duration?.inSeconds ?? 0));
@@ -268,7 +263,7 @@ class _PreviewCardState extends State<_PreviewCard> {
             ? estimateFlacBytes(Duration(seconds: seconds), choice.flac, compressed: YoutubeImporter.canReencode)
             // ~130 kbps Opus/AAC is what YouTube serves for most music; a lower bitrate is about what it says.
             : seconds * (choice.kbps ?? 130) * 1000 / 8;
-        return 'About ${formatBytes(bytes)} total';
+        return tr.aboutSizeTotal(formatBytes(bytes));
     }
   }
 
@@ -285,7 +280,7 @@ class _PreviewCardState extends State<_PreviewCard> {
       PlaylistPreview(:final playlist, :final videos) => (
         videos.firstOrNull?.thumbnails.mediumResUrl,
         playlist.title,
-        'Playlist • ${playlist.author} • ${videos.length} videos',
+        tr.ytPlaylistLine(videos.length, playlist.author),
       ),
     };
     return Container(
@@ -331,7 +326,7 @@ class _PreviewCardState extends State<_PreviewCard> {
                   builder: (context, snap) => Padding(
                     padding: const EdgeInsets.only(top: 2),
                     child: Text(
-                      snap.connectionState == ConnectionState.done ? (snap.data ?? '') : 'Checking size…',
+                      snap.connectionState == ConnectionState.done ? (snap.data ?? '') : tr.checkingSize,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: text.bodySmall?.copyWith(color: AppColors.textMuted),

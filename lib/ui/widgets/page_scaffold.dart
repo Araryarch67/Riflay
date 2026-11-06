@@ -4,6 +4,7 @@ import '../shell_scope.dart';
 import '../theme.dart';
 import 'app_logo.dart';
 import 'smooth_scroll.dart';
+import '../../services/language.dart';
 import 'title_bar.dart' show hasCustomTitleBar;
 
 /// Scrolling page with a top colour wash and a sticky title bar that fades in on scroll.
@@ -133,7 +134,7 @@ class _PageScaffoldState extends State<PageScaffold> {
                     children: [
                       if (history == null && canPop)
                         IconButton.filled(
-                          tooltip: 'Back',
+                          tooltip: tr.back,
                           style: IconButton.styleFrom(backgroundColor: Colors.black45, foregroundColor: Colors.white),
                           onPressed: () => Navigator.of(context).maybePop(),
                           icon: const Icon(Icons.chevron_left_rounded),
@@ -195,7 +196,7 @@ class SectionTitle extends StatelessWidget {
             TextButton(
               onPressed: onShowAll,
               style: TextButton.styleFrom(foregroundColor: AppColors.textSecondary),
-              child: const Text('Show all'),
+              child: Text(tr.showAll),
             ),
         ],
       ),

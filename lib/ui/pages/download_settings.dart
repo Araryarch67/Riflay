@@ -12,6 +12,7 @@ import '../../services/ytdlp.dart';
 import '../theme.dart';
 import '../widgets/menus.dart';
 import 'sound_settings.dart';
+import '../../services/language.dart';
 
 /// Settings › Library & downloads › Downloads: what a download is saved as, and where.
 class DownloadSettings extends StatefulWidget {
@@ -42,16 +43,16 @@ class _DownloadSettingsState extends State<DownloadSettings> {
   }
 
   Future<void> _chooseFolder() async {
-    final chosen = await FilePicker.getDirectoryPath(dialogTitle: 'Choose where downloads are saved');
+    final chosen = await FilePicker.getDirectoryPath(dialogTitle: tr.chooseDownloadsFolder);
     if (chosen == null) return;
     await _prefs.setFolder(chosen);
     if (mounted) setState(() => _folder = YoutubeImporter.downloadsDir());
   }
 
   static String _bitrateAbout(int? kbps) {
-    if (kbps == null) return 'The best sound YouTube has for each song.';
-    final base = 'Smaller files, with a little less full sound.';
-    return YoutubeImporter.canReencode ? base : '$base Uses the closest version YouTube offers.';
+    if (kbps == null) return tr.bestSoundNote;
+    final base = tr.smallerFilesNote;
+    return YoutubeImporter.canReencode ? base : tr.closestVersionNote(base);
   }
 
   @override
@@ -62,16 +63,14 @@ class _DownloadSettingsState extends State<DownloadSettings> {
       builder: (context, _) => Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _heading(context, 'What to save'),
+          _heading(context, tr.whatToSave),
           SettingsCard(
             children: [
               SettingTile(
                 icon: Icons.movie_outlined,
-                title: const Text('Save as'),
+                title: Text(tr.saveAs),
                 subtitle: Text(
-                  _prefs.kind == DownloadKind.video
-                      ? 'The music video, with its sound. Songs without a music video are saved as audio.'
-                      : 'Just the sound. Choose Video to keep the music video too.',
+                  _prefs.kind == DownloadKind.video ? tr.saveAsVideoNote : tr.saveAsAudioNote,
                   style: muted,
                 ),
                 control: OptionPicker<DownloadKind>(
@@ -83,7 +82,7 @@ class _DownloadSettingsState extends State<DownloadSettings> {
               if (_prefs.kind == DownloadKind.video) ...[
                 SettingTile(
                   icon: Icons.video_file_outlined,
-                  title: const Text('Video format'),
+                  title: Text(tr.videoFormat),
                   subtitle: Text(_prefs.videoContainer.about, style: muted),
                   control: OptionPicker<VideoContainer>(
                     value: _prefs.videoContainer,
@@ -96,17 +95,14 @@ class _DownloadSettingsState extends State<DownloadSettings> {
                 ),
                 SettingTile(
                   icon: Icons.high_quality_outlined,
-                  title: const Text('Size'),
-                  subtitle: Text(
-                    'The tallest picture the video has, up to the one you choose. 1080p is a sharp picture without a huge file.',
-                    style: muted,
-                  ),
+                  title: Text(tr.size),
+                  subtitle: Text(tr.videoSizeNote, style: muted),
                   control: OptionPicker<int?>(
                     value: _prefs.heightFor(_prefs.videoContainer),
                     options: [
-                      (null, 'Best available'),
+                      (null, tr.bestAvailable),
                       for (final h in standardVideoHeights(_prefs.videoContainer))
-                        (h, h == recommendedVideoHeight ? '${h}p (Recommended)' : '${h}p'),
+                        (h, h == recommendedVideoHeight ? tr.heightRecommended('$h') : '${h}p'),
                     ],
                     onChanged: (h) => _prefs.setVideoHeight(_prefs.videoContainer, h),
                   ),
@@ -114,11 +110,11 @@ class _DownloadSettingsState extends State<DownloadSettings> {
               ] else ...[
                 SettingTile(
                   icon: Icons.audio_file_outlined,
-                  title: const Text('Format'),
+                  title: Text(tr.format),
                   subtitle: Text(
                     YoutubeImporter.canMakeFlac || _prefs.format.lossless
                         ? _prefs.format.about
-                        : '${_prefs.format.about}\nFLAC isn\'t available on this device.',
+                        : tr.flacUnavailable(_prefs.format.about),
                     style: muted,
                   ),
                   control: OptionPicker<DownloadFormat>(
@@ -138,7 +134,7 @@ class _DownloadSettingsState extends State<DownloadSettings> {
                 if (_prefs.format.lossless)
                   SettingTile(
                     icon: Icons.high_quality_outlined,
-                    title: const Text('Bit depth and sample rate'),
+                    title: Text(tr.bitDepthSampleRate),
                     subtitle: Text(_prefs.flac.about, style: muted),
                     control: OptionPicker<FlacQuality>(
                       value: _prefs.flac,
@@ -149,7 +145,7 @@ class _DownloadSettingsState extends State<DownloadSettings> {
                 else
                   SettingTile(
                     icon: Icons.high_quality_outlined,
-                    title: const Text('Bitrate'),
+                    title: Text(tr.bitrate),
                     subtitle: Text(_bitrateAbout(_prefs.kbpsFor(_prefs.format)), style: muted),
                     control: OptionPicker<int?>(
                       value: _prefs.kbpsFor(_prefs.format),
@@ -160,26 +156,21 @@ class _DownloadSettingsState extends State<DownloadSettings> {
               ],
               SwitchListTile(
                 secondary: const Icon(Icons.help_outline_rounded),
-                title: const Text('Ask every time'),
-                subtitle: Text('Choose the format and quality each time you download a song.', style: muted),
+                title: Text(tr.askEveryTime),
+                subtitle: Text(tr.askEveryTimeSubtitle, style: muted),
                 value: _prefs.askEveryTime,
                 onChanged: _prefs.setAskEveryTime,
               ),
             ],
           ),
-          _heading(context, 'Where'),
+          _heading(context, tr.where),
           SettingsCard(
             children: [
               if (_phone)
                 SwitchListTile(
                   secondary: const Icon(Icons.signal_cellular_alt_rounded),
-                  title: const Text('Download over mobile data'),
-                  subtitle: Text(
-                    _prefs.mobileData
-                        ? 'Songs download on mobile data as well as Wi-Fi.'
-                        : 'Songs wait for Wi-Fi, so they don\'t use your data plan.',
-                    style: muted,
-                  ),
+                  title: Text(tr.downloadOverMobile),
+                  subtitle: Text(_prefs.mobileData ? tr.downloadOverMobileOn : tr.downloadOverMobileOff, style: muted),
                   value: _prefs.mobileData,
                   onChanged: _prefs.setMobileData,
                 ),
@@ -187,11 +178,9 @@ class _DownloadSettingsState extends State<DownloadSettings> {
                 future: _folder,
                 builder: (context, snap) => ListTile(
                   leading: const Icon(Icons.folder_rounded),
-                  title: const Text('Downloads folder'),
+                  title: Text(tr.downloadsFolder),
                   subtitle: Text(
-                    _phone
-                        ? '${snap.data?.path ?? '…'}\nPhones keep downloads in Riflay\'s own storage, so this can\'t be changed.'
-                        : snap.data?.path ?? '…',
+                    _phone ? tr.phoneDownloadsFixed(snap.data?.path ?? '…') : snap.data?.path ?? '…',
                     style: muted,
                   ),
                   isThreeLine: _phone,
@@ -201,18 +190,18 @@ class _DownloadSettingsState extends State<DownloadSettings> {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             IconButton(
-                              tooltip: 'Open folder',
+                              tooltip: tr.openFolder,
                               onPressed: () => launchUrl(Uri.directory(snap.data!.path)),
                               icon: const Icon(Icons.folder_open_rounded),
                             ),
-                            TextButton(onPressed: _chooseFolder, child: const Text('Change')),
+                            TextButton(onPressed: _chooseFolder, child: Text(tr.change)),
                             if (_prefs.folder != null)
                               TextButton(
                                 onPressed: () async {
                                   await _prefs.setFolder(null);
                                   if (mounted) setState(() => _folder = YoutubeImporter.downloadsDir());
                                 },
-                                child: const Text('Reset'),
+                                child: Text(tr.reset),
                               ),
                           ],
                         ),
@@ -223,11 +212,9 @@ class _DownloadSettingsState extends State<DownloadSettings> {
                   future: _ytdlp,
                   builder: (context, snap) => ListTile(
                     leading: const Icon(Icons.download_rounded),
-                    title: const Text('YouTube downloader (yt-dlp)'),
+                    title: Text(tr.ytDlp),
                     subtitle: Text(
-                      snap.connectionState != ConnectionState.done
-                          ? 'Checking…'
-                          : snap.data ?? 'Not available. Install it (e.g. pacman -S yt-dlp) for YouTube downloads.',
+                      snap.connectionState != ConnectionState.done ? tr.checking : snap.data ?? tr.ytDlpMissing,
                       style: muted,
                     ),
                   ),

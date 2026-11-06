@@ -13,6 +13,7 @@ import 'play_history.dart';
 import 'player_controller.dart';
 import 'private_files.dart';
 import 'ytmusic_play_report.dart';
+import 'language.dart';
 
 /// One song listened to, as the scrobbling services want it.
 @immutable
@@ -254,7 +255,7 @@ class ListenBrainz extends ScrobbleService {
     final r = await _send(() => _client.get(Uri.parse('$base/1/validate-token'), headers: _headers(t)));
     final j = _json(r.body);
     if (r.statusCode != 200 || j['valid'] != true) {
-      throw const ScrobbleError('ListenBrainz says this token isn\'t valid.');
+      throw ScrobbleError(tr.lbTokenInvalid);
     }
     token = t;
     user = j['user_name'] as String?;
@@ -768,7 +769,7 @@ class Scrobbler extends ChangeNotifier {
             if (e.signedOut) {
               s.forget();
               _queues.remove(s.id);
-              onMessage?.call('${s.label} signed you out. Connect it again in Settings.');
+              onMessage?.call(tr.serviceSignedOutSettings(s.label));
             } else if (e.retry) {
               failed = true;
             } else {

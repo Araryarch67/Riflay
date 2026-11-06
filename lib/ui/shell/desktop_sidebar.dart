@@ -137,7 +137,7 @@ class DesktopSidebar extends StatelessWidget {
         item(Locations.search, Icons.search_rounded, Icons.manage_search_rounded, tr.navSearch, onSearch),
         if (Features.downloads) DownloadsLink(collapsed: collapsed, selected: location == Locations.downloads),
         if (Features.listenTogether)
-          item(Locations.listen, Icons.group_outlined, Icons.group_rounded, 'Listen together', () {
+          item(Locations.listen, Icons.group_outlined, Icons.group_rounded, tr.listenTogether, () {
             if (location != Locations.listen) {
               ShellScope.of(context).open(const ListenTogetherPage(), location: Locations.listen);
             }
@@ -312,7 +312,7 @@ class TitleBarMenu extends StatelessWidget {
                         style: text.labelSmall?.copyWith(color: AppColors.accent, fontWeight: FontWeight.w700),
                       ),
               ),
-            if (Features.listenTogether) entry(Icons.group_outlined, 'Listen together', onListen),
+            if (Features.listenTogether) entry(Icons.group_outlined, tr.listenTogether, onListen),
             entry(Icons.settings_outlined, tr.navSettings, onSettings),
           ],
         );

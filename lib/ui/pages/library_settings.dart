@@ -5,6 +5,7 @@ import '../navigation.dart';
 import '../shell_scope.dart';
 import 'duplicates_page.dart';
 import 'sound_settings.dart';
+import '../../services/language.dart';
 
 /// Settings › Library & downloads › Library: keeping the music folders up to date, and finding songs you have twice.
 class LibrarySettings extends StatelessWidget {
@@ -23,32 +24,25 @@ class LibrarySettings extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             SettingsSection(
-              title: 'Music folders',
+              title: tr.musicFolders,
               child: SettingsCard(
                 children: [
                   SwitchListTile(
                     secondary: const Icon(Icons.sync_rounded),
-                    title: const Text('Keep the library up to date'),
-                    subtitle: Text(
-                      FolderWatch.isPhone
-                          ? 'New songs in your music folders are added, and songs you delete or move are taken out, '
-                                'each time you open Riflay.'
-                          : 'New songs in your music folders are added, and songs you delete or move are taken out, '
-                                'without adding the folder again.',
-                      style: muted,
-                    ),
+                    title: Text(tr.keepLibraryUpToDate),
+                    subtitle: Text(FolderWatch.isPhone ? tr.keepLibraryOpen : tr.keepLibraryWatch, style: muted),
                     value: watch.keepUpToDate,
                     onChanged: watch.setKeepUpToDate,
                   ),
                   ListTile(
                     leading: const Icon(Icons.refresh_rounded),
-                    title: const Text('Check now'),
+                    title: Text(tr.checkNow),
                     subtitle: Text(
                       folders.isEmpty
-                          ? 'Add a music folder from the library first.'
+                          ? tr.addFolderFirst
                           : watch.checking
-                          ? 'Checking...'
-                          : 'Look at ${folders.length == 1 ? 'your music folder' : 'your ${folders.length} music folders'} again.',
+                          ? tr.checkingDots
+                          : tr.lookAtFoldersAgain(folders.length),
                       style: muted,
                     ),
                     enabled: folders.isNotEmpty && !watch.checking,
@@ -58,19 +52,19 @@ class LibrarySettings extends StatelessWidget {
                     ListTile(
                       leading: const Icon(Icons.folder_rounded),
                       title: Text(dir, maxLines: 2, overflow: TextOverflow.ellipsis),
-                      trailing: TextButton(onPressed: () => watch.forget(dir), child: const Text('Stop watching')),
+                      trailing: TextButton(onPressed: () => watch.forget(dir), child: Text(tr.stopWatching)),
                     ),
                 ],
               ),
             ),
             SettingsSection(
-              title: 'Tidy up',
+              title: tr.tidyUp,
               child: SettingsCard(
                 children: [
                   ListTile(
                     leading: const Icon(Icons.library_music_outlined),
-                    title: const Text('Find songs you have twice'),
-                    subtitle: Text('The same song in different files, so you can keep the best one.', style: muted),
+                    title: Text(tr.findDuplicates),
+                    subtitle: Text(tr.findDuplicatesSubtitle, style: muted),
                     trailing: const Icon(Icons.chevron_right_rounded),
                     // Its own location: the shell skips opening a page at the location already on screen.
                     onTap: () => shell.open(
