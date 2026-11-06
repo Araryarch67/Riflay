@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:riflay/services/layout_prefs.dart';
+import 'package:riflay/services/player_controller.dart';
+import 'package:riflay/services/player_presets.dart';
 import 'package:riflay/ui/pages/layout_settings.dart';
 import 'package:riflay/ui/widgets/audio_visualizer.dart';
 import 'package:riflay/ui/widgets/flower_cover.dart';
@@ -122,5 +124,57 @@ void main() {
     await tester.tap(find.text('Wave'));
     await tester.pumpAndSettle();
     expect(prefs.visualizerStyle, VisualizerStyle.wave);
+  });
+
+  testWidgets('Bit-perfect greys out the switch and says why', (tester) async {
+    tester.view.physicalSize = const Size(900, 4000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await prefs.setVisualizer(true);
+    final c = PlayerController();
+    c.audio.bitPerfect = true;
+    await tester.pumpWidget(
+      PlayerScope(
+        controller: c,
+        child: const MaterialApp(
+          home: Scaffold(body: SingleChildScrollView(child: LayoutSettings())),
+        ),
+      ),
+    );
+    final toggle = tester.widget<SwitchListTile>(find.widgetWithText(SwitchListTile, 'Audio visualizer'));
+    expect(toggle.value, isFalse, reason: 'nothing can show, so it does not read as on');
+    expect(toggle.onChanged, isNull);
+    expect(find.textContaining('Off while Bit-perfect is on'), findsOneWidget);
+    expect(find.text('Visualizer style'), findsNothing);
+    expect(prefs.visualizer, isTrue, reason: 'the choice comes back once Bit-perfect is off');
+  });
+
+  testWidgets('a Background cover offers only the styles it can show', (tester) async {
+    tester.view.physicalSize = const Size(900, 4000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await prefs.setVisualizer(true);
+    await prefs.setVisualizerStyle(VisualizerStyle.orbit);
+    await prefs.setPlayerCover(PlayerCover.background);
+    expect(prefs.visualizerStyle, VisualizerStyle.wave, reason: 'Orbit has no frame to ring');
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(body: SingleChildScrollView(child: LayoutSettings())),
+      ),
+    );
+    await tester.ensureVisible(find.text('Wave'));
+    await tester.tap(find.text('Wave'));
+    await tester.pumpAndSettle();
+    for (final style in VisualizerStyle.values) {
+      expect(find.text(style.label), style.radial ? findsNothing : findsWidgets, reason: style.label);
+    }
+    expect(find.text('Radius movement'), findsNothing);
+  });
+
+  test('a preset with a Background cover leaves no radial style behind', () async {
+    await prefs.setVisualizerStyle(VisualizerStyle.petals);
+    await PlayerPreset.kawaii.apply(prefs);
+    expect(prefs.playerCover, PlayerCover.background);
+    expect(VisualizerStyle.fitting(prefs.playerCover), contains(prefs.visualizerStyle));
   });
 }

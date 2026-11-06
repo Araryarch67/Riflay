@@ -36,6 +36,10 @@ enum VisualizerStyle {
   const VisualizerStyle(this.label);
   final String label;
   bool get radial => this == pulse || this == orbit || this == petals;
+
+  /// The styles that can show with [cover]: the radial ones ring a framed cover, and Background has no frame.
+  static List<VisualizerStyle> fitting(PlayerCover cover) =>
+      cover == PlayerCover.background ? [for (final s in values) if (!s.radial) s] : values;
 }
 
 /// The outline of a player cover (what [PlayerCover] comes to when the cover is not the background).
@@ -566,6 +570,7 @@ class LayoutPrefs extends ChangeNotifier {
     visualizerStyle = j['visualizerVersion'] == 3
         ? pick(VisualizerStyle.values, 'visualizerStyle', d.visualizerStyle)
         : VisualizerStyle.pulse;
+    fitVisualizerStyle();
     visualizerRadius = (j['visualizerRadius'] as num?)?.toDouble().clamp(0.5, 2.5) ?? d.visualizerRadius;
     visualizerThickness = (j['visualizerThickness'] as num?)?.toDouble().clamp(1, 8) ?? d.visualizerThickness;
     lyricsSize = pick(LyricsSize.values, 'lyricsSize', d.lyricsSize);
@@ -673,7 +678,15 @@ class LayoutPrefs extends ChangeNotifier {
   Future<void> setProgressShape(ProgressBarShape v) => _set(() => progressShape = v);
   Future<void> setPlayButton(PlayButtonShape v) => _set(() => playButton = v);
   Future<void> setPhoneCover(PhoneCoverSize v) => _set(() => phoneCover = v);
-  Future<void> setPlayerCover(PlayerCover v) => _set(() => playerCover = v);
+  Future<void> setPlayerCover(PlayerCover v) => _set(() {
+    playerCover = v;
+    fitVisualizerStyle();
+  });
+
+  /// A radial style with a Background cover has nothing to ring: it becomes Wave, the style the settings offer first.
+  void fitVisualizerStyle() {
+    if (!VisualizerStyle.fitting(playerCover).contains(visualizerStyle)) visualizerStyle = VisualizerStyle.wave;
+  }
   Future<void> setPlayerHeader(PlayerHeader v) => _set(() => playerHeader = v);
   Future<void> setTitleActions(TitleActions v) => _set(() => titleActions = v);
   Future<void> setShowTimeLeft(bool v) => _set(() => showTimeLeft = v);

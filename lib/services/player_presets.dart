@@ -161,6 +161,7 @@ class PlayerPreset {
       p.showVideoSwitch = videoSwitch;
       p.visualizer = visualizer;
       if (visualizer) p.visualizerStyle = visualizerStyle;
+      p.fitVisualizerStyle();
     });
     if (background != null) await Appearance.instance.setNowPlaying(background!);
   }

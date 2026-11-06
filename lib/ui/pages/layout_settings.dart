@@ -12,6 +12,8 @@ import '../../platform/host.dart';
 import 'player_presets_page.dart';
 import 'sound_settings.dart';
 import '../widgets/menus.dart';
+import '../player_scope.dart';
+import '../widgets/audio_reactive_view.dart';
 
 /// Settings › Look & feel › Layout: corners, density, cover size, Home's sections, what the
 /// player shows, lyrics and motion. Every default is how the app has always looked.
@@ -338,67 +340,8 @@ class LayoutSettings extends StatelessWidget {
             ],
           ),
           if (Features.audioVisualizer) ...[
-            const _Header('Visualizer', hint: 'Shapes that move with the music, off unless you turn them on'),
-            SettingsCard(
-              children: [
-                SwitchListTile(
-                  secondary: const Icon(Icons.graphic_eq_rounded),
-                  title: const Text('Audio visualizer'),
-                  subtitle: Text('Shapes that move with the music around the cover and under it', style: muted),
-                  value: p.visualizer,
-                  onChanged: p.setVisualizer,
-                ),
-                if (p.visualizer) ...[
-                  SettingTile(
-                    icon: Icons.multiline_chart_rounded,
-                    title: const Text('Visualizer style'),
-                    subtitle: Text('Paused for bit-perfect audio and reduced motion', style: muted),
-                    control: OptionPicker<VisualizerStyle>(
-                      value: p.visualizerStyle,
-                      onChanged: p.setVisualizerStyle,
-                      options: [for (final style in VisualizerStyle.values) (style, style.label)],
-                    ),
-                  ),
-                  if (p.visualizerStyle.radial) ...[
-                    SettingTile(
-                      icon: Icons.open_in_full_rounded,
-                      title: const Text('Radius movement'),
-                      subtitle: Text(
-                        '${(p.visualizerRadius * 100).round()}% · How far the shape expands with the music',
-                        style: muted,
-                      ),
-                      control: SizedBox(
-                        width: 220,
-                        child: Slider(
-                          value: p.visualizerRadius,
-                          min: 0.5,
-                          max: 2.5,
-                          divisions: 20,
-                          label: '${(p.visualizerRadius * 100).round()}%',
-                          onChanged: p.setVisualizerRadius,
-                        ),
-                      ),
-                    ),
-                    SettingTile(
-                      icon: Icons.line_weight_rounded,
-                      title: const Text('Line thickness'),
-                      subtitle: Text('${p.visualizerThickness.toStringAsFixed(1)} px', style: muted),
-                      control: SizedBox(
-                        width: 220,
-                        child: Slider(
-                          value: p.visualizerThickness,
-                          min: 1,
-                          max: 8,
-                          divisions: 14,
-                          label: '${p.visualizerThickness.toStringAsFixed(1)} px',
-                          onChanged: p.setVisualizerThickness,
-                        ),
-                      ),
-                    ),
-                  ],
-                ],
-              ],
-            ),
+            const _Header('Visualizer', hint: 'Shapes that move with the music'),
+            _VisualizerSettings(prefs: p),
           ],
           const _Header('Pages', hint: 'Album, playlist and artist pages, song lists and Home'),
           SettingsCard(
@@ -655,6 +598,99 @@ class _HomeSections extends StatelessWidget {
             ),
         ],
       ),
+    );
+  }
+}
+
+/// The visualizer's switch and style. Says why it can't show (Bit-perfect, Lightweight, reduced motion grey the switch
+/// out; a music video or DoP hides it for one song), and offers only the styles the Cover setting can show.
+class _VisualizerSettings extends StatelessWidget {
+  const _VisualizerSettings({required this.prefs});
+  final LayoutPrefs prefs;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = prefs;
+    final muted = settingsMuted(context);
+    final c = context.getInheritedWidgetOfExactType<PlayerScope>()?.notifier;
+    return ListenableBuilder(
+      listenable: Listenable.merge([?c?.audio, ?c, VideoMode.instance]),
+      builder: (context, _) {
+        final blocked = c == null ? null : visualizerBlockedBy(c, reduceMotion: MediaQuery.disableAnimationsOf(context));
+        final hidden = c == null || blocked != null || !p.visualizer ? null : visualizerHiddenBy(c);
+        final on = p.visualizer && blocked == null;
+        final styles = VisualizerStyle.fitting(p.playerCover);
+        return SettingsCard(
+          children: [
+            SwitchListTile(
+              secondary: const Icon(Icons.graphic_eq_rounded),
+              title: const Text('Audio visualizer'),
+              subtitle: Text(
+                blocked ?? hidden ?? 'Shapes that move with the music around the cover and under it',
+                style: muted,
+              ),
+              value: on,
+              onChanged: blocked == null ? p.setVisualizer : null,
+            ),
+            if (on) ...[
+              SettingTile(
+                icon: Icons.multiline_chart_rounded,
+                title: const Text('Visualizer style'),
+                subtitle: Text(
+                  p.playerCover == PlayerCover.background
+                      ? 'A strip under the song. Pulse, Orbit and Petals ring the cover: pick Square or Flower for them'
+                      : p.visualizerStyle.radial
+                      ? 'Rings the cover'
+                      : 'Moves along the cover\'s edge, with a strip under the song',
+                  style: muted,
+                ),
+                control: OptionPicker<VisualizerStyle>(
+                  value: p.visualizerStyle,
+                  onChanged: p.setVisualizerStyle,
+                  options: [for (final style in styles) (style, style.label)],
+                ),
+              ),
+              if (p.visualizerStyle.radial) ...[
+                SettingTile(
+                  icon: Icons.open_in_full_rounded,
+                  title: const Text('Radius movement'),
+                  subtitle: Text(
+                    '${(p.visualizerRadius * 100).round()}% · How far the shape expands with the music',
+                    style: muted,
+                  ),
+                  control: SizedBox(
+                    width: 220,
+                    child: Slider(
+                      value: p.visualizerRadius,
+                      min: 0.5,
+                      max: 2.5,
+                      divisions: 20,
+                      label: '${(p.visualizerRadius * 100).round()}%',
+                      onChanged: p.setVisualizerRadius,
+                    ),
+                  ),
+                ),
+                SettingTile(
+                  icon: Icons.line_weight_rounded,
+                  title: const Text('Line thickness'),
+                  subtitle: Text('${p.visualizerThickness.toStringAsFixed(1)} px', style: muted),
+                  control: SizedBox(
+                    width: 220,
+                    child: Slider(
+                      value: p.visualizerThickness,
+                      min: 1,
+                      max: 8,
+                      divisions: 14,
+                      label: '${p.visualizerThickness.toStringAsFixed(1)} px',
+                      onChanged: p.setVisualizerThickness,
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ],
+        );
+      },
     );
   }
 }
