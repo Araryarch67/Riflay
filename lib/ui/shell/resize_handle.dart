@@ -84,6 +84,11 @@ class SidebarFit {
 
   static double _room(double window, bool sideOpen) => window - _chrome - (sideOpen ? 8 : 0) - minContent;
 
+  /// Whether the full library sidebar fits in a window [window] wide at its narrowest, next to the pages' minimum
+  /// and (when [sideOpen]) the side panel's.
+  static bool fullFits(double window, {required bool sideOpen}) =>
+      _room(window, sideOpen) - (sideOpen ? LayoutPrefs.sidePanelMin : 0) >= LayoutPrefs.sidebarMin;
+
   /// The library sidebar's width for [want]; the side panel keeps its minimum when it is open.
   static double left(double want, double window, {required bool sideOpen}) {
     final max = math.min(LayoutPrefs.sidebarMax, _room(window, sideOpen) - (sideOpen ? LayoutPrefs.sidePanelMin : 0));

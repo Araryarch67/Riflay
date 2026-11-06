@@ -122,7 +122,8 @@ void main() {
     expect(_sidebarW(tester), LayoutPrefs.sidebarDefault);
     expect(LayoutPrefs.instance.isCustomised, isFalse);
 
-    tester.view.physicalSize = const Size(1000, 800);
+    // Below HomeShell.sidePanelFrom the library is a rail; above it the full sidebar shows wherever it fits.
+    tester.view.physicalSize = const Size(850, 800);
     await tester.pump();
     expect(_handle('Resize sidebar'), findsNothing);
     expect(_sidebarW(tester), 84);

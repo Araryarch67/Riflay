@@ -195,14 +195,21 @@ class PhoneBottomBar extends StatelessWidget {
             if (showTabs)
               Padding(
                 padding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
-                child: switch (style) {
-                  TabBarStyle.glass => _NotchBar(tab: tab, onSelect: onSelect, glass: true),
-                  TabBarStyle.centre => _NotchBar(tab: tab, onSelect: onSelect, glass: false),
-                  TabBarStyle.dock => Center(
-                    child: _DockBar(tab: tab, onSelect: onSelect),
+                // As wide as a phone at most: the phone layout also serves a phone held sideways and a narrow
+                // browser window, where a bar across the whole width looked stretched.
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 520),
+                    child: switch (style) {
+                      TabBarStyle.glass => _NotchBar(tab: tab, onSelect: onSelect, glass: true),
+                      TabBarStyle.centre => _NotchBar(tab: tab, onSelect: onSelect, glass: false),
+                      TabBarStyle.dock => Center(
+                        child: _DockBar(tab: tab, onSelect: onSelect),
+                      ),
+                      _ => _FloatingBar(style: style, tab: tab, onSelect: onSelect),
+                    },
                   ),
-                  _ => _FloatingBar(style: style, tab: tab, onSelect: onSelect),
-                },
+                ),
               ),
           ],
         ),

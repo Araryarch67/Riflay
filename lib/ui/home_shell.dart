@@ -47,8 +47,8 @@ import 'widgets/title_bar.dart';
 
 /// Root layout.
 ///  * < 700px: bottom tabs + floating mini player, full-screen now playing.
-///  * 700–1200px: collapsed library rail + content + player bar; from [sidePanelFrom] the now-playing side panel
-///    fits beside them too (a browser window or a half-screen desktop one).
+///  * 700–1200px: library rail + content + player bar; from [sidePanelFrom] the now-playing side panel fits beside
+///    them too, and the full library sidebar replaces the rail wherever it fits there (`SidebarFit.fullFits`).
 ///  * ≥ 1200px: full library sidebar + content + now-playing side panel.
 class HomeShell extends StatefulWidget {
   /// The narrowest window the now-playing side panel opens in: the rail, its minimum and the pages' minimum.
@@ -452,9 +452,11 @@ class _HomeShellState extends State<HomeShell> {
   void _dragSidebar(double dx) =>
       _sidebarWidth.value = SidebarFit.left(_sidebarWidth.value + dx, _window, sideOpen: _sideOpenNow);
 
-  /// The library sidebar's width: dragged in the expanded layout, the fixed rail below it.
+  /// The library sidebar's width: dragged in the expanded layout, the fixed rail when it doesn't fit.
   double _leftWidth(double window, {required bool sideOpen}) =>
-      window >= 1200 ? SidebarFit.left(_sidebarWidth.value, window, sideOpen: sideOpen) : 84.0;
+      window >= 1200 || window >= HomeShell.sidePanelFrom && SidebarFit.fullFits(window, sideOpen: sideOpen)
+      ? SidebarFit.left(_sidebarWidth.value, window, sideOpen: sideOpen)
+      : 84.0;
 
   void _dragSidePanel(double dx) {
     final left = _leftWidth(_window, sideOpen: true);
@@ -650,8 +652,10 @@ class _HomeShellState extends State<HomeShell> {
     if (width >= 700 && !phone && _phoneRoutes.isNotEmpty) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _closePhoneRoutes());
     }
-    final expanded = width >= 1200;
     final sideRoom = width >= HomeShell.sidePanelFrom;
+    // The full (resizable) library sidebar whenever it fits at its narrowest beside the pages and an open side
+    // panel; the rail only when it doesn't.
+    final expanded = width >= 1200 || sideRoom && SidebarFit.fullFits(width, sideOpen: _sidePanel && _hasTrack);
 
     _compact = compact;
     // The frame's plain title bar steps aside while this layout draws the full one.
