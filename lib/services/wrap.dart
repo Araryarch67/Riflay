@@ -3,15 +3,22 @@ import 'listening_streak.dart';
 import 'play_history.dart';
 import 'language.dart';
 
-/// A calendar month in local time: what one Wrap covers.
+/// A calendar month in local time: what one Wrap covers. Or a whole year ([WrapMonth.year], month 0): the
+/// yearly Wrap, with the same cards over January to December.
 class WrapMonth implements Comparable<WrapMonth> {
   const WrapMonth(this.year, this.month);
+
+  /// The whole of [year].
+  const WrapMonth.year(this.year) : month = 0;
+
+  bool get isYear => month == 0;
 
   /// The month [t] falls in.
   WrapMonth.of(DateTime t) : this(t.year, t.month);
 
   /// `2026-03`, as saved.
   static WrapMonth? parse(String? key) {
+    if (RegExp(r'^\d{4}$').hasMatch(key ?? '')) return WrapMonth.year(int.parse(key!));
     final m = RegExp(r'^(\d{4})-(\d{2})$').firstMatch(key ?? '');
     if (m == null) return null;
     final month = int.parse(m.group(2)!);
@@ -21,25 +28,25 @@ class WrapMonth implements Comparable<WrapMonth> {
   final int year;
   final int month;
 
-  String get key => '$year-${month.toString().padLeft(2, '0')}';
+  String get key => isYear ? '$year' : '$year-${month.toString().padLeft(2, '0')}';
 
-  /// "March".
-  String get name => ListeningStats.months[month - 1];
+  /// "March"; "2026" for a year.
+  String get name => isYear ? '$year' : ListeningStats.months[month - 1];
 
-  /// "March 2026".
-  String get label => tr.monthYear(name, '$year');
+  /// "March 2026"; "2026" for a year.
+  String get label => isYear ? '$year' : tr.monthYear(name, '$year');
 
   /// Midnight of the 1st (local), inclusive.
-  DateTime get start => DateTime(year, month);
+  DateTime get start => DateTime(year, isYear ? 1 : month);
 
-  /// Midnight of the next month's 1st (local), exclusive.
-  DateTime get end => DateTime(year, month + 1);
+  /// Midnight of the next month's (or year's) 1st (local), exclusive.
+  DateTime get end => isYear ? DateTime(year + 1) : DateTime(year, month + 1);
 
   WrapMonth get previous => WrapMonth.of(DateTime(year, month - 1));
   WrapMonth get next => WrapMonth.of(DateTime(year, month + 1));
 
   @override
-  int compareTo(WrapMonth other) => (year * 12 + month).compareTo(other.year * 12 + other.month);
+  int compareTo(WrapMonth other) => (year * 13 + month).compareTo(other.year * 13 + other.month);
 
   @override
   bool operator ==(Object other) => other is WrapMonth && other.year == year && other.month == month;
@@ -117,8 +124,11 @@ class WrapData {
   /// The streak to show off: the longer of [longestStreak] and [streakNow].
   int get bestStreak => streakNow > longestStreak ? streakNow : longestStreak;
 
-  /// Days the Wrap covers: the whole month, or up to today while it runs.
-  int get days => until?.day ?? DateTime(month.year, month.month + 1, 0).day;
+  /// Days the Wrap covers: the whole month (or year), or up to today while it runs.
+  int get days {
+    final last = until ?? month.end.subtract(const Duration(days: 1));
+    return DateTime(last.year, last.month, last.day).difference(month.start).inDays + 1;
+  }
 
   /// This Wrap with [days] as [streakNow].
   WrapData withStreakNow(int days) => WrapData(
@@ -188,8 +198,26 @@ abstract final class MonthlyWrap {
 
   static DateTime _day(DateTime t) => DateTime(t.year, t.month, t.day);
 
-  /// Whether [month] is still running at [now].
-  static bool isRunning(WrapMonth month, DateTime now) => WrapMonth.of(now) == month;
+  /// Whether [month] (or year) is still running at [now].
+  static bool isRunning(WrapMonth month, DateTime now) =>
+      month.isYear ? now.year == month.year : WrapMonth.of(now) == month;
+
+  /// The years with a yearly Wrap as of [now], newest first: the running one from December (its Wrap up to now),
+  /// and every finished year with at least [minPlaysYear] plays.
+  static List<WrapMonth> yearsAvailable(PlayHistory h, {required DateTime now}) {
+    final counts = <int, int>{};
+    for (var i = 0; i < h.length; i++) {
+      final y = DateTime.fromMillisecondsSinceEpoch(h.atSec(i) * 1000).year;
+      counts[y] = (counts[y] ?? 0) + 1;
+    }
+    return [
+      for (final MapEntry(key: y, value: n) in counts.entries)
+        if (n >= minPlaysYear && (y < now.year || (y == now.year && now.month == 12))) WrapMonth.year(y),
+    ]..sort((a, b) => b.compareTo(a));
+  }
+
+  /// Plays a year needs for its Wrap.
+  static const minPlaysYear = 50;
 
   /// The Wrap of [month], or null when it had too few plays ([minPlays]; [minPlaysSoFar] for the running month).
   /// Pass [now] to get the running month's Wrap up to that moment.

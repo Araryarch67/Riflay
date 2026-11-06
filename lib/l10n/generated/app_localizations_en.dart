@@ -1080,6 +1080,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get discordShowQuality => 'Show the sound quality (FLAC 24/96, Opus 160 kbps)';
 
   @override
+  String get shareLyrics => 'Share lyrics';
+
+  @override
+  String lyricCardPick(int count) {
+    return 'Pick up to $count lines for the card';
+  }
+
+  @override
+  String lyricCardCaption(String lines, String title, String artist) {
+    return '“$lines” — $title by $artist, on Riflay';
+  }
+
+  @override
   String videoQualityLower(String height) {
     return 'Resolution adjusted to your network ($height)';
   }
@@ -2838,6 +2851,23 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get wrapNewThisMonth => 'New this month';
+
+  @override
+  String get wrapYearlyKicker => 'Your yearly Wrap';
+
+  @override
+  String get wrapNewThisYear => 'New this year';
+
+  @override
+  String wrapLongestStreakOf(String year) {
+    return 'Your longest streak of $year';
+  }
+
+  @override
+  String get yourYearlyWraps => 'Your yearly Wraps';
+
+  @override
+  String get thisYearUpToNow => 'This year, up to now';
 
   @override
   String newSongsPlural(int count) {

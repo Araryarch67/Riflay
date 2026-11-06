@@ -2067,6 +2067,24 @@ abstract class AppLocalizations {
   /// **'Show the sound quality (FLAC 24/96, Opus 160 kbps)'**
   String get discordShowQuality;
 
+  /// No description provided for @shareLyrics.
+  ///
+  /// In en, this message translates to:
+  /// **'Share lyrics'**
+  String get shareLyrics;
+
+  /// No description provided for @lyricCardPick.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick up to {count} lines for the card'**
+  String lyricCardPick(int count);
+
+  /// No description provided for @lyricCardCaption.
+  ///
+  /// In en, this message translates to:
+  /// **'“{lines}” — {title} by {artist}, on Riflay'**
+  String lyricCardCaption(String lines, String title, String artist);
+
   /// No description provided for @videoQualityLower.
   ///
   /// In en, this message translates to:
@@ -5156,6 +5174,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'New this month'**
   String get wrapNewThisMonth;
+
+  /// No description provided for @wrapYearlyKicker.
+  ///
+  /// In en, this message translates to:
+  /// **'Your yearly Wrap'**
+  String get wrapYearlyKicker;
+
+  /// No description provided for @wrapNewThisYear.
+  ///
+  /// In en, this message translates to:
+  /// **'New this year'**
+  String get wrapNewThisYear;
+
+  /// No description provided for @wrapLongestStreakOf.
+  ///
+  /// In en, this message translates to:
+  /// **'Your longest streak of {year}'**
+  String wrapLongestStreakOf(String year);
+
+  /// No description provided for @yourYearlyWraps.
+  ///
+  /// In en, this message translates to:
+  /// **'Your yearly Wraps'**
+  String get yourYearlyWraps;
+
+  /// No description provided for @thisYearUpToNow.
+  ///
+  /// In en, this message translates to:
+  /// **'This year, up to now'**
+  String get thisYearUpToNow;
 
   /// No description provided for @newSongsPlural.
   ///

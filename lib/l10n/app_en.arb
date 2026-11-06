@@ -527,6 +527,11 @@
   "discordListenButton": "\"Listen on YouTube Music\" button",
   "discordWhilePaused": "Keep showing while paused",
   "discordShowQuality": "Show the sound quality (FLAC 24/96, Opus 160 kbps)",
+  "shareLyrics": "Share lyrics",
+  "lyricCardPick": "Pick up to {count} lines for the card",
+  "@lyricCardPick": {"placeholders": {"count": {"type": "int"}}},
+  "lyricCardCaption": "“{lines}” — {title} by {artist}, on Riflay",
+  "@lyricCardCaption": {"placeholders": {"lines": {"type": "String"}, "title": {"type": "String"}, "artist": {"type": "String"}}},
   "videoQualityLower": "Resolution adjusted to your network ({height})",
   "@videoQualityLower": {"placeholders": {"height": {"type": "String"}}},
   "videoQualityHigher": "Back up to {height}: your network keeps up",
@@ -1552,6 +1557,12 @@
     }
   },
   "wrapNewThisMonth": "New this month",
+  "wrapYearlyKicker": "Your yearly Wrap",
+  "wrapNewThisYear": "New this year",
+  "wrapLongestStreakOf": "Your longest streak of {year}",
+  "@wrapLongestStreakOf": {"placeholders": {"year": {"type": "String"}}},
+  "yourYearlyWraps": "Your yearly Wraps",
+  "thisYearUpToNow": "This year, up to now",
   "newSongsPlural": "{count, plural, =1{1 new song} other{{count} new songs}}",
   "@newSongsPlural": {
     "placeholders": {

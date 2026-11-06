@@ -26,6 +26,7 @@ import '../widgets/controls.dart';
 import '../widgets/faded_cover.dart';
 import '../widgets/marquee_text.dart';
 import '../widgets/smooth_scroll.dart';
+import 'wrap_page.dart' show showLyricCard;
 
 part 'lyrics/lyrics_view.dart';
 part 'lyrics/lyrics_extras.dart';

@@ -518,4 +518,50 @@ void main() {
       expect(h.length, 0);
     });
   });
+
+  group('the yearly Wrap', () {
+    PlayHistory year2025() {
+      final h = PlayHistory();
+      // Two songs a day through March (90 days in a row), then a song now and then.
+      for (var d = 0; d < 90; d++) {
+        final day = DateTime(2025, 1, 1).add(Duration(days: d, hours: 12));
+        h.record(song('a${d % 7}'), const Duration(seconds: 200), at: day);
+        h.record(song('b${d % 5}'), const Duration(seconds: 180), at: day.add(const Duration(hours: 2)));
+      }
+      for (var m = 5; m <= 12; m++) {
+        h.record(song('late$m'), const Duration(seconds: 200), at: DateTime(2025, m, 10, 12));
+      }
+      return h;
+    }
+
+    test('covers January to December, with the longest streak of the year', () {
+      const y = WrapMonth.year(2025);
+      expect(y.isYear, isTrue);
+      expect(y.label, '2025');
+      expect(y.start, DateTime(2025));
+      expect(y.end, DateTime(2026));
+      expect(WrapMonth.parse(y.key), y);
+      final d = MonthlyWrap.compute(year2025(), y)!;
+      expect(d.plays, 188);
+      expect(d.days, 365);
+      expect(d.longestStreak, 90);
+      expect(d.inProgress, isFalse);
+    });
+
+    test('offered for a finished year, and for this one from December only', () {
+      final h = year2025();
+      expect(MonthlyWrap.yearsAvailable(h, now: DateTime(2026, 2, 1)), [const WrapMonth.year(2025)]);
+      for (var d = 0; d < 60; d++) {
+        h.record(song('n$d'), const Duration(seconds: 200), at: DateTime(2026, 1, 1).add(Duration(days: d)));
+      }
+      expect(MonthlyWrap.yearsAvailable(h, now: DateTime(2026, 11, 30)), [const WrapMonth.year(2025)]);
+      expect(MonthlyWrap.yearsAvailable(h, now: DateTime(2026, 12, 2)), [
+        const WrapMonth.year(2026),
+        const WrapMonth.year(2025),
+      ]);
+      final soFar = MonthlyWrap.compute(h, const WrapMonth.year(2026), now: DateTime(2026, 12, 2, 9))!;
+      expect(soFar.inProgress, isTrue);
+      expect(soFar.days, 336, reason: 'January 1 to December 2');
+    });
+  });
 }

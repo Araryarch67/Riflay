@@ -58,6 +58,12 @@ class _SyncedLyricsState extends State<_SyncedLyrics> {
       _c.seek(at.isNegative ? Duration.zero : at);
       if (!_c.isPlaying) _c.play();
     },
+    onHold: (i) => showLyricCard(
+      context,
+      track: widget.track,
+      lines: [for (final l in widget.lyrics.lines) l.text],
+      initial: i,
+    ),
   );
 }
 
@@ -74,9 +80,13 @@ class SyncedLyricsView extends StatefulWidget {
     this.position = _zero,
     this.length,
     required this.onSeek,
+    this.onHold,
   });
 
   final Lyrics lyrics;
+
+  /// A line was held (long-pressed, or right-clicked): its card to share.
+  final ValueChanged<int>? onHold;
 
   /// The position a few times a second; the current line changes from it.
   final Stream<Duration> ticks;
@@ -226,6 +236,7 @@ class _SyncedLyricsViewState extends State<SyncedLyricsView> with _Extras {
       playing: widget.playing,
       trusted: _trusted,
       onTap: () => widget.onSeek(lines[i].time),
+      onHold: widget.onHold == null ? null : () => widget.onHold!(i),
     );
     return ValueListenableBuilder<int>(
       valueListenable: _at,
@@ -358,6 +369,7 @@ class _SyncedLyricsViewState extends State<SyncedLyricsView> with _Extras {
                               widget.onSeek(lines[i].time);
                               if (i == _current) _scrollToCurrent();
                             },
+                            onHold: widget.onHold == null ? null : () => widget.onHold!(i),
                           ),
                         _Source(widget.lyrics),
                       ],
@@ -423,6 +435,7 @@ class _LineSlot extends StatefulWidget {
     required this.ticks,
     required this.trusted,
     required this.onTap,
+    this.onHold,
     this.playing,
     this.fade = 1,
   });
@@ -441,6 +454,7 @@ class _LineSlot extends StatefulWidget {
   final Stream<Duration> ticks;
   final Duration? Function(Duration) trusted;
   final VoidCallback onTap;
+  final VoidCallback? onHold;
 
   @override
   State<_LineSlot> createState() => _LineSlotState();
@@ -513,6 +527,7 @@ class _LineSlotState extends State<_LineSlot> {
       extraColor: timed ? _faded(AppColors.textPrimary) : null,
       highlight: _place == _LinePlace.current && widget.fade == 1,
       onTap: widget.onTap,
+      onHold: widget.onHold,
     );
   }
 }
@@ -527,6 +542,7 @@ class _Line extends StatefulWidget {
     this.karaoke,
     this.highlight = false,
     required this.onTap,
+    this.onHold,
   });
 
   /// The line being sung: on the dark glass, when Layout › Lyrics says so.
@@ -546,6 +562,7 @@ class _Line extends StatefulWidget {
   /// Stands in for the plain text while a word-timed line is being sung.
   final Widget? karaoke;
   final VoidCallback onTap;
+  final VoidCallback? onHold;
 
   @override
   State<_Line> createState() => _LineState();
@@ -569,6 +586,8 @@ class _LineState extends State<_Line> {
     child: GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: widget.onTap,
+      onLongPress: widget.onHold,
+      onSecondaryTap: widget.onHold,
       child: _Glass(
         on: widget.highlight,
         child: Column(

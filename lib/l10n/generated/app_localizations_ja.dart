@@ -1064,6 +1064,19 @@ class AppLocalizationsJa extends AppLocalizations {
   String get discordShowQuality => '音質も表示する（FLAC 24/96、Opus 160 kbps）';
 
   @override
+  String get shareLyrics => '歌詞をシェア';
+
+  @override
+  String lyricCardPick(int count) {
+    return 'カードに載せる行を $count 行まで選んでね';
+  }
+
+  @override
+  String lyricCardCaption(String lines, String title, String artist) {
+    return '「$lines」— $artist「$title」、Riflay で';
+  }
+
+  @override
   String videoQualityLower(String height) {
     return '回線に合わせて画質を下げたよ（$height）';
   }
@@ -2756,6 +2769,23 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get wrapNewThisMonth => '今月の新顔';
+
+  @override
+  String get wrapYearlyKicker => '今年の Wrap';
+
+  @override
+  String get wrapNewThisYear => '今年はじめて聴いた曲';
+
+  @override
+  String wrapLongestStreakOf(String year) {
+    return '$year 年の最長ストリーク';
+  }
+
+  @override
+  String get yourYearlyWraps => '年間 Wrap';
+
+  @override
+  String get thisYearUpToNow => '今年、ここまで';
 
   @override
   String newSongsPlural(int count) {

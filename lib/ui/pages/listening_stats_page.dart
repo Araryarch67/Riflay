@@ -58,14 +58,15 @@ class _ListeningStatsPageState extends State<ListeningStatsPage> {
     final stats = _stats(now);
     final library = {for (final t in c.library) t.id: t};
     Track trackFor(SongInfo s) => library[s.key] ?? s.toTrack();
-    final years = _history.years.where((y) => y != now.year).toList();
+    final pastYears = _history.years.where((y) => y != now.year).toList();
     final periods = [
       StatsPeriod.thisMonth,
       StatsPeriod.thisYear,
       StatsPeriod.allTime,
-      for (final y in years) StatsPeriod.ofYear(y),
+      for (final y in pastYears) StatsPeriod.ofYear(y),
     ];
     final wraps = MonthlyWrap.available(_history, now: now);
+    final years = MonthlyWrap.yearsAvailable(_history, now: now);
     final thisMonth = WrapMonth.of(now);
     final soFarReady = MonthlyWrap.playsIn(_history, thisMonth) >= MonthlyWrap.minPlaysSoFar;
 
@@ -161,6 +162,23 @@ class _ListeningStatsPageState extends State<ListeningStatsPage> {
                     ],
                   ),
                 ],
+                if (years.isNotEmpty)
+                  _Section(
+                    title: tr.yourYearlyWraps,
+                    children: [
+                      for (final y in years)
+                        _Row(
+                          art: const _Glyph(Icons.celebration_outlined),
+                          title: tr.wrapMonthInMusic(y.name),
+                          subtitle: y.year == now.year ? tr.thisYearUpToNow : y.label,
+                          onTap: () => shell.open(
+                            // The running year: its Wrap up to this moment.
+                            WrapPage(month: y, history: widget.history, now: y.year == now.year ? now : null),
+                            location: Locations.wrap,
+                          ),
+                        ),
+                    ],
+                  ),
                 _Section(
                   title: tr.yourMonthlyWraps,
                   children: [
