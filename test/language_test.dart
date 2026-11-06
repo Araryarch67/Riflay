@@ -28,18 +28,40 @@ void main() {
     expect(Language.instance.choice, AppLanguage.indonesian, reason: 'the choice is saved');
   });
 
-  test('every English string has an Indonesian one, with the same placeholders', () {
-    Map<String, dynamic> read(String f) => jsonDecode(File('lib/l10n/$f').readAsStringSync()) as Map<String, dynamic>;
-    final en = read('app_en.arb'), id = read('app_id.arb');
+  test('Japanese when chosen', () async {
+    await Language.instance.set(AppLanguage.japanese);
+    expect(Language.instance.locale.languageCode, 'ja');
+    expect(tr.navSettings, '設定');
+    expect(tr.songsCount(3), '3曲');
+    expect(tr.streakTooltip(1), 'リスニングストリーク：1日');
+  });
+
+  test('every English string is in every language, with the same placeholders', () {
+    Map<String, dynamic> read(File f) => jsonDecode(f.readAsStringSync()) as Map<String, dynamic>;
+    final en = read(File('lib/l10n/app_en.arb'));
     final keys = en.keys.where((k) => !k.startsWith('@'));
-    for (final k in keys) {
-      expect(id[k], isA<String>(), reason: '$k has no Indonesian');
-      final holes = RegExp(r'\{(\w+)\}');
+    final others = Directory('lib/l10n')
+        .listSync()
+        .whereType<File>()
+        .where((f) => f.path.endsWith('.arb') && !f.path.endsWith('app_en.arb'));
+    for (final language in AppLanguage.values.where((l) => l.code != null && l.code != 'en')) {
       expect(
-        holes.allMatches(id[k] as String).map((m) => m[1]).toSet(),
-        holes.allMatches(en[k] as String).map((m) => m[1]).toSet(),
-        reason: '$k: placeholders differ',
+        others.map((f) => f.path),
+        contains('lib/l10n/app_${language.code}.arb'),
+        reason: '${language.name} has no .arb',
       );
+    }
+    for (final f in others) {
+      final other = read(f);
+      for (final k in keys) {
+        expect(other[k], isA<String>(), reason: '$k missing in ${f.path}');
+        final holes = RegExp(r'\{(\w+)\}');
+        expect(
+          holes.allMatches(other[k] as String).map((m) => m[1]).toSet(),
+          holes.allMatches(en[k] as String).map((m) => m[1]).toSet(),
+          reason: '$k: placeholders differ in ${f.path}',
+        );
+      }
     }
   });
 }

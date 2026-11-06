@@ -10,7 +10,8 @@ import '../l10n/generated/app_localizations.dart';
 enum AppLanguage {
   system(null, ''),
   english('en', 'English'),
-  indonesian('id', 'Bahasa Indonesia');
+  indonesian('id', 'Bahasa Indonesia'),
+  japanese('ja', '日本語');
 
   const AppLanguage(this.code, this.ownName);
 
