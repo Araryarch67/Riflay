@@ -126,4 +126,18 @@ void main() {
       },
     );
   }
+
+  test('an installed update leaves no APK behind: the next start deletes it', () async {
+    final temp = Directory.systemTemp.createTempSync('riflay-updates-');
+    addTearDown(() => temp.deleteSync(recursive: true));
+    final folder = Directory('${temp.path}/app-updates')..createSync();
+    File('${folder.path}/riflay-1.2.1.apk').writeAsBytesSync([1, 2, 3]);
+    File('${folder.path}/riflay-1.2.2.apk.part').writeAsBytesSync([1]);
+    final other = File('${folder.path}/notes.txt')..writeAsStringSync('kept');
+    final updates = AppUpdates(android: true, cacheDirectory: () async => temp);
+    addTearDown(updates.dispose);
+    expect(await updates.cleanUp(), 2);
+    expect(folder.listSync().map((f) => f.path), [other.path]);
+    expect(await AppUpdates(android: false, cacheDirectory: () async => temp).cleanUp(), 0);
+  });
 }

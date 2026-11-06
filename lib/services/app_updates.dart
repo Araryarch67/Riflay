@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:crypto/crypto.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as p;
@@ -116,6 +117,28 @@ class AppUpdates {
   }
 
   UpdateAsset? assetFor(AppRelease release) => release.androidAsset(_abis);
+
+  /// Deletes update files left from before: an installed update's APK (the installer was done with it before this
+  /// version could start) and an unfinished download. Tens of megabytes each, which otherwise stayed in the cache
+  /// until the next update.
+  Future<int> cleanUp() async {
+    if (!android) return 0;
+    var removed = 0;
+    try {
+      final folder = Directory(p.join((await _cacheDirectory()).path, 'app-updates'));
+      if (!folder.existsSync()) return 0;
+      await for (final file in folder.list()) {
+        final name = p.basename(file.path);
+        if (file is File && name.startsWith('riflay-') && (name.endsWith('.apk') || name.endsWith('.apk.part'))) {
+          await file.delete();
+          removed++;
+        }
+      }
+    } catch (e) {
+      debugPrint('Cleaning up updates: $e');
+    }
+    return removed;
+  }
 
   Future<String> download(AppRelease release, void Function(double) progress) async {
     if (!android) throw StateError('APK installation requires Android');

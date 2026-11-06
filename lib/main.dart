@@ -18,6 +18,7 @@ import 'l10n/generated/app_localizations.dart';
 import 'models/track.dart';
 import 'platform/network.dart';
 import 'platform/host.dart';
+import 'services/app_updates.dart';
 import 'platform/web_audio.dart';
 import 'services/incoming_links.dart';
 import 'services/appearance.dart';
@@ -50,6 +51,10 @@ Future<void> _main(List<String> args) async {
   // Riflay already runs: the link goes to it, and this process ends before showing a window.
   await IncomingLinks.handOff(args);
   unawaited(RenderingMemory.configure());
+  if (Host.isAndroid) {
+    final updates = AppUpdates();
+    unawaited(updates.cleanUp().whenComplete(updates.dispose));
+  }
   // just_audio has no native Linux/Windows backend; route those through libmpv.
   // Android, macOS and iOS too: libmpv gives them the equalizer, Virtual
   // speakers, ReplayGain, gapless, the signal path and decoders (ALAC,
