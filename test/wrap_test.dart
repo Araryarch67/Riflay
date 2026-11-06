@@ -9,6 +9,7 @@ import 'package:riflay/services/wrap_notifications.dart';
 import 'package:riflay/ui/pages/listening_stats_page.dart';
 import 'package:riflay/ui/pages/privacy_settings.dart';
 import 'package:riflay/ui/pages/wrap_page.dart';
+import 'package:riflay/ui/widgets/streak_badge.dart';
 import 'package:riflay/ui/shell_scope.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -215,7 +216,9 @@ void main() {
         await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
         await tester.pumpAndSettle();
       }
-      expect(find.textContaining('Streak: 12 days in a row'), findsOneWidget);
+      // The summary carries the streak as a flame on a pill.
+      expect(find.text('12 days in a row'), findsOneWidget);
+      expect(find.byType(StreakFlame), findsOneWidget);
       // Let the last card's timers run out before the test ends.
       await tester.pumpWidget(const SizedBox());
       await tester.pump(const Duration(seconds: 10));

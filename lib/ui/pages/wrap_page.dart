@@ -473,7 +473,7 @@ class _WrapStoryState extends State<WrapStory> {
           headline: '${d.bestStreak} days in a row',
           body:
               'You listened on ${d.daysListened} of ${_count(d.days, 'day', 'days')}${d.inProgress ? ' so far' : ''}.',
-          art: StreakFlame(tier: StreakTier.of(d.bestStreak), size: 150, flicker: true),
+          art: StreakFlame(tier: StreakTier.of(d.bestStreak), size: 150),
           center: true,
         ),
       if (d.mostReplayed case final song?)
@@ -526,11 +526,15 @@ class _StreakPill extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          StreakFlame(tier: tier, size: 30, flicker: true),
+          StreakFlame(tier: tier, size: 30),
           const SizedBox(width: 8),
-          Text(
-            '$days days in a row',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+          Flexible(
+            child: Text(
+              '$days days in a row',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+            ),
           ),
         ],
       ),
