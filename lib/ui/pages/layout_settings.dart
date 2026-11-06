@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../platform/features.dart';
 import '../../services/appearance.dart';
 import '../../services/layout_prefs.dart';
+import '../../services/media_session.dart';
 import '../../services/player_presets.dart';
 import '../../services/beta_features.dart';
 import '../../services/video_mode.dart';
@@ -301,6 +302,17 @@ class LayoutSettings extends StatelessWidget {
                 value: p.dimUnsungLyrics,
                 onChanged: p.setDimUnsungLyrics,
               ),
+              if (MediaSession.lyricsSupported)
+                ValueListenableBuilder(
+                  valueListenable: MediaSession.showLyrics,
+                  builder: (context, on, _) => SwitchListTile(
+                    secondary: const Icon(Icons.lock_clock_rounded),
+                    title: Text(tr.lockScreenLyrics),
+                    subtitle: Text(tr.lockScreenLyricsSubtitle, style: muted),
+                    value: on,
+                    onChanged: (v) => MediaSession.showLyrics.value = v,
+                  ),
+                ),
             ],
           ),
           if (Features.audioVisualizer) ...[

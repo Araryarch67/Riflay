@@ -561,6 +561,8 @@
   "alignmentSubtitle": "行を左端からそろえるか、中央に置くか",
   "dimUnsung": "まだ歌われてない行を暗くする",
   "dimUnsungSubtitle": "歌われてる行とそれより前の行だけ明るいまま",
+  "lockScreenLyrics": "ロック画面に歌詞",
+  "lockScreenLyricsSubtitle": "通知やロック画面、車のディスプレイで、アーティスト名の代わりに今歌ってる行を出すよ",
   "visualizer": "ビジュアライザー",
   "visualizerHint": "音楽に合わせて動く図形",
   "pages": "ページ",

@@ -3459,6 +3459,18 @@ abstract class AppLocalizations {
   /// **'Only the line being sung and the ones before it stay bright'**
   String get dimUnsungSubtitle;
 
+  /// No description provided for @lockScreenLyrics.
+  ///
+  /// In en, this message translates to:
+  /// **'Lyrics on the lock screen'**
+  String get lockScreenLyrics;
+
+  /// No description provided for @lockScreenLyricsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'The line being sung takes the artist\'s place in the notification, on the lock screen and on a car\'s display'**
+  String get lockScreenLyricsSubtitle;
+
   /// No description provided for @visualizer.
   ///
   /// In en, this message translates to:

@@ -31,6 +31,7 @@ import 'layout_prefs.dart';
 import 'library_store.dart';
 import 'lyrics.dart';
 import 'lyrics_translation.dart';
+import 'media_session.dart';
 import 'metadata.dart';
 import 'sacd.dart';
 import 'sleep_timer.dart';
@@ -911,6 +912,7 @@ class PlayerController extends ChangeNotifier {
     // A browser has no files, tag tools or music folders (see lib/platform/host.dart).
     if (!Host.isWeb) unawaited(Metadata.probeTagTools().then((_) => notifyListeners()));
     unawaited(LyricsTranslation.load());
+    unawaited(MediaSession.loadLyricsSetting());
     unawaited(LyricsService.loadBetterLyricsKey());
     audio.addListener(notifyListeners);
     _dopWasActive = audio.dopActive;

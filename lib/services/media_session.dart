@@ -8,10 +8,12 @@ import 'package:flutter/foundation.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/track.dart';
 import '../platform/host.dart';
 import '../platform/network.dart';
+import 'lyrics.dart';
 import 'metadata.dart';
 import 'player_controller.dart';
 
@@ -28,7 +30,11 @@ class MediaSession extends BaseAudioHandler with SeekHandler {
       p.playerStateStream.listen((_) => _publishState()),
       p.positionDiscontinuityStream.listen((_) => _publishState()),
       p.durationStream.listen((_) => _publishItem()),
+      // Where the song is decides the line shown: a seek, a pause or play moves it.
+      p.playerStateStream.listen((_) => _followLyrics()),
+      p.positionDiscontinuityStream.listen((_) => _followLyrics()),
     ]);
+    showLyrics.addListener(_onShowLyrics);
     _c.addListener(_onController);
     _publishItem();
     _publishState();
@@ -55,8 +61,28 @@ class MediaSession extends BaseAudioHandler with SeekHandler {
     }
   }
 
+  /// The line being sung in place of the artist, in the notification, on the lock screen and on a car's
+  /// display (which reads the same fields). Phones only: on a computer the media widget names the artist. Saved.
+  static final showLyrics = ValueNotifier(true);
+  static bool get lyricsSupported => Host.isAndroid || Host.isIOS;
+
+  static Future<void> loadLyricsSetting() async {
+    final p = await SharedPreferences.getInstance();
+    showLyrics.value = p.getBool(_lyricsKey) ?? true;
+    showLyrics.addListener(() => p.setBool(_lyricsKey, showLyrics.value));
+  }
+
+  static const _lyricsKey = 'lyrics.lockScreen';
+
   final PlayerController _c;
   final _subs = <StreamSubscription<Object?>>[];
+
+  /// The song as published, with its artist: the lyric line takes the artist's place over a copy of it.
+  MediaItem? _item;
+  Lyrics? _lyrics;
+  String? _lyricsFor;
+  Timer? _nextLine;
+  String? _shownLine;
   String? _shownId;
   bool? _shownPlaying;
 
@@ -68,7 +94,10 @@ class MediaSession extends BaseAudioHandler with SeekHandler {
   bool get _playing => _c.isPlaying && (_c.casting || _c.player.processingState != ProcessingState.completed);
 
   void _onController() {
-    if (_c.currentTrack?.id != _shownId) _publishItem();
+    if (_c.currentTrack?.id != _shownId) {
+      _publishItem();
+      _loadLyrics();
+    }
     if (_playing != _shownPlaying) _publishState();
   }
 
@@ -86,13 +115,93 @@ class MediaSession extends BaseAudioHandler with SeekHandler {
       duration: _c.duration ?? t.duration,
       artUri: t.isRemote && t.artworkUrl != null ? Uri.tryParse(t.artworkUrl!) : null,
     );
-    mediaItem.add(item);
+    _item = item;
+    _shownLine = null;
+    _publishLine();
     if (item.artUri == null) {
       // Local cover art lives in the file's tags; the system needs a file or URL.
       final art = await _artFile(t);
-      if (art != null && _shownId == t.id) mediaItem.add(item.copyWith(artUri: art.uri));
+      if (art != null && _shownId == t.id) {
+        _item = item.copyWith(artUri: art.uri);
+        _publishLine(force: true);
+      }
     }
   }
+
+  void _onShowLyrics() {
+    _loadLyrics();
+    _followLyrics();
+  }
+
+  /// The current song's synced lyrics, when the line is to be shown.
+  Future<void> _loadLyrics() async {
+    final t = _c.currentTrack;
+    _lyrics = null;
+    _lyricsFor = t?.id;
+    _followLyrics();
+    if (t == null || !lyricsSupported || !showLyrics.value) return;
+    try {
+      final l = await LyricsService.forTrack(t);
+      if (_lyricsFor != t.id || !l.synced) return;
+      _lyrics = l;
+      _followLyrics();
+    } catch (_) {
+      // No lyrics site reachable: the artist stays.
+    }
+  }
+
+  /// Shows the line being sung, and wakes for the next one: one timer per line, not a clock ticking.
+  void _followLyrics() {
+    _nextLine?.cancel();
+    final l = _lyrics, t = _c.currentTrack;
+    if (l == null || t == null || !showLyrics.value || !lyricsSupported) return _publishLine();
+    final at = _c.position - LyricsTiming.of(t).value;
+    _publishLine();
+    if (!_c.isPlaying) return;
+    final next = nextLineAt(l, at);
+    if (next != null) {
+      // Tempo plays the song faster or slower than the clock.
+      final speed = _c.player.speed <= 0 ? 1.0 : _c.player.speed;
+      _nextLine = Timer(Duration(microseconds: ((next - at).inMicroseconds / speed).round()), _followLyrics);
+    }
+  }
+
+  /// The song's item, with the line being sung (if any) as its artist.
+  void _publishLine({bool force = false}) {
+    final item = _item, t = _c.currentTrack, l = _lyrics;
+    if (item == null || t == null) return;
+    final line = l == null || !showLyrics.value || !lyricsSupported
+        ? null
+        : lineFor(l, _c.position - LyricsTiming.of(t).value);
+    if (!force && line == _shownLine && mediaItem.value?.id == item.id) return;
+    _shownLine = line;
+    mediaItem.add(line == null ? item : item.copyWith(artist: line, album: item.artist));
+  }
+
+  /// The words of the line sung at [position], or null between lines (an empty or ♪ line, or before the first).
+  /// A little early, as the lyrics page lights it.
+  @visibleForTesting
+  static String? lineFor(Lyrics lyrics, Duration position) {
+    final i = lyrics.lineAt(position + _early);
+    if (i < 0) return null;
+    final line = lyrics.lines[i];
+    if (line.end case final end? when position + _early >= end) return null;
+    final text = line.text.trim();
+    return text.isEmpty || RegExp(r'^[♪♫\s]+$').hasMatch(text) ? null : text;
+  }
+
+  /// When the shown line next changes after [position]: the next line's start, or this one's end.
+  @visibleForTesting
+  static Duration? nextLineAt(Lyrics lyrics, Duration position) {
+    final i = lyrics.lineAt(position + _early);
+    final candidates = [
+      if (i >= 0 && lyrics.lines[i].end != null) lyrics.lines[i].end!,
+      if (i + 1 < lyrics.lines.length) lyrics.lines[i + 1].time,
+    ].where((d) => d > position + _early).toList()..sort();
+    return candidates.isEmpty ? null : candidates.first - _early;
+  }
+
+  static const _early = Duration(milliseconds: 150);
 
   void _publishState() {
     final p = _c.player;

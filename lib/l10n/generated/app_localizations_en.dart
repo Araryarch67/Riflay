@@ -1849,6 +1849,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dimUnsungSubtitle => 'Only the line being sung and the ones before it stay bright';
 
   @override
+  String get lockScreenLyrics => 'Lyrics on the lock screen';
+
+  @override
+  String get lockScreenLyricsSubtitle =>
+      'The line being sung takes the artist\'s place in the notification, on the lock screen and on a car\'s display';
+
+  @override
   String get visualizer => 'Visualizer';
 
   @override

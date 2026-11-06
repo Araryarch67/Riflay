@@ -1837,6 +1837,13 @@ class AppLocalizationsId extends AppLocalizations {
   String get dimUnsungSubtitle => 'Hanya baris yang sedang dinyanyikan dan sebelumnya yang tetap terang';
 
   @override
+  String get lockScreenLyrics => 'Lirik di layar kunci';
+
+  @override
+  String get lockScreenLyricsSubtitle =>
+      'Baris yang sedang dinyanyikan menggantikan nama artis di notifikasi, layar kunci, dan layar mobil';
+
+  @override
   String get visualizer => 'Visualizer';
 
   @override

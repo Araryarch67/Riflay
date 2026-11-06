@@ -568,6 +568,8 @@
   "alignmentSubtitle": "Baris mulai dari tepi kiri, atau di tengah",
   "dimUnsung": "Redupkan baris yang belum dinyanyikan",
   "dimUnsungSubtitle": "Hanya baris yang sedang dinyanyikan dan sebelumnya yang tetap terang",
+  "lockScreenLyrics": "Lirik di layar kunci",
+  "lockScreenLyricsSubtitle": "Baris yang sedang dinyanyikan menggantikan nama artis di notifikasi, layar kunci, dan layar mobil",
   "visualizer": "Visualizer",
   "visualizerHint": "Bentuk yang bergerak mengikuti musik",
   "pages": "Halaman",
