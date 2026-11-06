@@ -153,6 +153,8 @@ Handler audioHandler({
       'content-length': '${to - from}',
       'cache-control': 'no-store',
       if (request.headers['range'] != null) 'content-range': 'bytes $from-${to - 1}/${stream.size}',
+      if (request.url.queryParameters[proxySaveParameter] case final name?)
+        'content-disposition': attachmentDisposition(name, audioExtension(stream.mimeType)),
     };
     final status = request.headers['range'] != null ? 206 : 200;
     if (request.method == 'HEAD') return Response(status, headers: headers);
@@ -199,20 +201,35 @@ Stream<List<int>> _bytes(
     final req = http.Request('GET', stream.url)
       ..headers['range'] = 'bytes=$pos-$last'
       ..headers['user-agent'] = YoutubePlayerApi.userAgent;
-    final res = await client.send(req);
-    if (res.statusCode != 200 && res.statusCode != 206) {
-      await res.stream.drain<void>();
-      // Usually an expired or throttled URL: look it up afresh, once.
-      if (retried) throw HttpException('googlevideo ${res.statusCode}');
+    final start = pos;
+    try {
+      final res = await client.send(req);
+      if (res.statusCode != 200 && res.statusCode != 206) {
+        await res.stream.drain<void>();
+        throw HttpException('googlevideo ${res.statusCode}');
+      }
+      await for (final bytes in res.stream) {
+        // Never past the range asked for: the browser counts on exactly `content-length` bytes.
+        final keep = pos + bytes.length > to ? bytes.sublist(0, to - pos) : bytes;
+        yield keep;
+        pos += keep.length;
+      }
+    } on Exception {
+      // A cut connection or an expired URL. Whatever arrived was sent on; carry on from the next byte with the
+      // song looked up afresh, but only once in a row: a chunk that gets nowhere twice ends the response.
+      if (retried && pos == start) rethrow;
       retried = true;
       resolver.forget(videoId);
       stream = await resolver.resolve(videoId, aac: aac);
       continue;
     }
-    await for (final bytes in res.stream) {
-      yield bytes;
-      pos += bytes.length;
+    // A short answer (googlevideo may send less than asked) goes on from where it ended, never past it: skipped
+    // bytes would make the song undecodable and the player move on to the next one.
+    if (pos == start) {
+      if (retried) throw HttpException('googlevideo sent nothing');
+      retried = true;
+      continue;
     }
-    pos = last + 1;
+    retried = false;
   }
 }

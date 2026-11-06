@@ -128,6 +128,7 @@ void main() {
     late int playerCalls;
     late List<String> ranges;
     late int refuseNext;
+    late int shortNext;
 
     http.Client youtube() => MockClient((r) async {
       if (r.url.path == '/youtubei/v1/visitor_id') {
@@ -168,6 +169,10 @@ void main() {
         final m = RegExp(r'bytes=(\d+)-(\d+)').firstMatch(r.headers['range']!)!;
         ranges.add(r.headers['range']!);
         final from = int.parse(m[1]!), to = int.parse(m[2]!) + 1;
+        if (shortNext > 0) {
+          shortNext--;
+          return http.Response.bytes(song.sublist(from, from + (to - from) ~/ 3), 206);
+        }
         return http.Response.bytes(song.sublist(from, to), 206);
       }
       return http.Response('', 404);
@@ -177,6 +182,7 @@ void main() {
       playerCalls = 0;
       ranges = [];
       refuseNext = 0;
+      shortNext = 0;
     });
 
     Future<Uint8List> bytesOf(Response res) async => Uint8List.fromList(await res.read().expand((b) => b).toList());
@@ -214,6 +220,27 @@ void main() {
       final res = await handler(_req('GET', '/audio/dQw4w9WgXcQ', headers: {'range': 'bytes=0-99'}));
       expect(await bytesOf(res), song.sublist(0, 100));
       expect(playerCalls, 2);
+    });
+
+    test('a short answer from googlevideo goes on from where it ended', () async {
+      final handler = proxyHandler(client: youtube());
+      shortNext = 2;
+      final res = await handler(_req('GET', '/audio/dQw4w9WgXcQ'));
+      // Every byte, in order: none skipped where a chunk came back short.
+      expect(await bytesOf(res), song);
+    });
+
+    test('?save= sends the song as a download named after it', () async {
+      final handler = proxyHandler(client: youtube());
+      final res = await handler(
+        _req('GET', '/audio/dQw4w9WgXcQ?save=Tulus%20-%20Hati%2FHati', headers: {'range': 'bytes=0-9'}),
+      );
+      expect(
+        res.headers['content-disposition'],
+        'attachment; filename="Tulus - Hati Hati.webm"; filename*=UTF-8\'\'Tulus%20-%20Hati%20Hati.webm',
+      );
+      final plain = await handler(_req('GET', '/audio/dQw4w9WgXcQ', headers: {'range': 'bytes=0-9'}));
+      expect(plain.headers['content-disposition'], isNull);
     });
 
     test('bad ids and unsatisfiable ranges are refused', () async {
