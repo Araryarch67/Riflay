@@ -2107,6 +2107,14 @@ class AudioEngine extends ChangeNotifier {
   static const _shareSignalPath = !bool.fromEnvironment('RIFLAY_NO_SHARED_SIGNAL_PATH');
   Future<SignalPath?>? _sharedPath;
   DateTime _sharedPathAt = DateTime(0);
+  NativePlayer? _sharedPathPlayer;
+
+  /// A changed setting changes the path at once: the next read is a fresh one, not the shared read from before it.
+  @override
+  void notifyListeners() {
+    _sharedPath = null;
+    super.notifyListeners();
+  }
 
   /// One read of the live signal path, or null when nothing is playing.
   ///
@@ -2117,8 +2125,15 @@ class AudioEngine extends ChangeNotifier {
     if (!_shareSignalPath) return _signalPathNow();
     final now = DateTime.now();
     final shared = _sharedPath;
-    if (shared != null && now.difference(_sharedPathAt) < const Duration(milliseconds: 900)) return shared;
+    // A new player (a new song, or the settings rebuilt it) has a path of its own.
+    final player = _native;
+    if (shared != null &&
+        identical(player, _sharedPathPlayer) &&
+        now.difference(_sharedPathAt) < const Duration(milliseconds: 900)) {
+      return shared;
+    }
     _sharedPathAt = now;
+    _sharedPathPlayer = player;
     return _sharedPath = _signalPathNow();
   }
 

@@ -11,4 +11,14 @@ void main() {
     expect(identical(engine.signalPath(), first), isTrue, reason: 'the badge and the sheet in the same second');
     expect(await first, isNull, reason: 'nothing is playing');
   });
+
+  test('a changed setting is read fresh, not from the shared read before it', () async {
+    SharedPreferences.setMockInitialValues({});
+    final engine = AudioEngine();
+    addTearDown(engine.dispose);
+    final before = engine.signalPath();
+    await engine.setMono(MonoAudio.left);
+    expect(identical(engine.signalPath(), before), isFalse, reason: 'the path shown must have the new setting');
+    await before;
+  });
 }
