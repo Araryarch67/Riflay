@@ -1,0 +1,45 @@
+# Called once per successful platform build. Build jobs keep their read-only token;
+# this small job publishes that platform without waiting for the other builds.
+name: Publish platform
+
+on:
+  workflow_call:
+    inputs:
+      platform:
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  upload:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: ${{ inputs.platform }}
+          path: dist
+      - name: Upload this platform and publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          PLATFORM: ${{ inputs.platform }}
+        run: |
+          case "$PLATFORM" in
+            android|windows|linux|macos|ios) ;;
+            *) echo "::error::Unknown release platform: $PLATFORM"; exit 1 ;;
+          esac
+          mkdir -p checksums
+          (cd dist && sha256sum -- *) > "checksums/SHA256SUMS-$PLATFORM"
+          # Disjoint asset names allow uploads to run concurrently. Only the first successful upload
+          # needs to make the draft public; repeating the edit leaves it public on retries.
+          gh release upload "$GITHUB_REF_NAME" dist/* "checksums/SHA256SUMS-$PLATFORM" --clobber
+          gh release edit "$GITHUB_REF_NAME" --draft=false
+      - uses: actions/upload-artifact@v7
+        with:
+          name: checksums-${{ inputs.platform }}
+          path: checksums/*
+          overwrite: true

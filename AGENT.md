@@ -561,20 +561,24 @@ device's language when Riflay has it). The words live in `lib/l10n/app_en.arb` (
    `test/about_test.dart` fails when they differ), and commit them as
    `chore: <version>`.
 2. Tag and push: `git tag v<version> && git push origin main v<version>`.
-   `.github/workflows/release.yml` builds Android, Windows, Linux and macOS and
-   publishes the GitHub release with a changelog (its notes are GitHub's
-   generated ones, the commits since the last release) and a download guide.
-   iOS is slow, so the release does not wait for it: the `ios-asset` job
-   attaches the `.ipa` once it is built, and on tags iOS skips its Simulator
-   test (the macOS job tests the same libmpv). Any platform still builds by
-   hand from the Actions tab (`platforms: macos, ios`).
+   `.github/workflows/release.yml` prepares a draft with a changelog and download
+   guide while Android, Windows, Linux, macOS and iOS build independently.
+   Each `<platform>-asset` job calls `release-platform.yml` after its own build:
+   it uploads that platform's files and `SHA256SUMS-<platform>`, then makes the
+   release public. The first successful upload publishes it; slower or failed
+   platforms do not block the others. Reruns replace only that platform's assets
+   and keep an already public release public. The `checksums` job combines the
+   successful platforms' checksums once the uploads finish, even if another failed.
+   On tags iOS skips its Simulator test (macOS tests the same libmpv). Manual
+   builds (`platforms: macos, ios`) still save artifacts without publishing.
 3. Package managers: Linux gets a `.deb` and `.rpm` (nfpm,
    `linux/packaging/nfpm.yaml`) and an Arch `.pkg.tar.zst` (makepkg in a
    container, `linux/packaging/arch/PKGBUILD`) next to the AppImage. The
    release also carries `SHA256SUMS`, and the run's `package-manifests`
    artifact holds the Scoop manifest, the Homebrew cask (the macOS `.dmg`
    and the Linux AppImage) and the AUR `PKGBUILD` / `.SRCINFO` filled in for the
-   version (`packaging/update_manifests.sh`). With the `TAP_TOKEN` secret the
+   version (`packaging/update_manifests.sh`). This job waits for Windows, Linux
+   and macOS uploads; it does not delay the platform downloads. With the `TAP_TOKEN` secret the
    release pushes the manifest and cask to `Araryarch67/scoop-riflay` and
    `Araryarch67/homebrew-riflay`; the AUR files are copied by hand. Runtime dependencies live in those files: change them all
    when the Linux build links something new.
