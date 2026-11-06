@@ -88,9 +88,14 @@ void main() {
     var n = 0;
     Future<List<double>> render(String name, Future<void> Function() change) async {
       out = '${dir.path}/out${n++}.wav';
-      Future<T?> step<T>(Future<T> Function() f) => tester.runAsync(() => f().timeout(const Duration(seconds: 30)));
+      Future<T?> step<T>(Future<T> Function() f, [Duration limit = const Duration(seconds: 30)]) =>
+          tester.runAsync(() => f().timeout(limit));
       await step(c.player.stop);
-      await step(change);
+      // The first Carla load on a fresh macOS runner waits on Gatekeeper's check of its unsigned binaries.
+      final took = Stopwatch()..start();
+      await step(change, Duration(seconds: Platform.isMacOS ? 120 : 30));
+      // ignore: avoid_print
+      print('PLUGINS $name: the settings took ${took.elapsedMilliseconds} ms');
       await step(() => c.player.setAudioSource(AudioSource.file(song.path)));
       await tester.pump(const Duration(milliseconds: 300));
       unawaited(c.player.play());
