@@ -91,7 +91,7 @@ void main() {
       Future<T?> step<T>(Future<T> Function() f, [Duration limit = const Duration(seconds: 30)]) =>
           tester.runAsync(() => f().timeout(limit));
       await step(c.player.stop);
-      // The first Carla load on a fresh macOS runner waits on Gatekeeper's check of its unsigned binaries.
+      // Under 100 ms as a rule, but once on a macOS runner it took past 30 s while the sound still came out right.
       final took = Stopwatch()..start();
       await step(change, Duration(seconds: Platform.isMacOS ? 120 : 30));
       // ignore: avoid_print
