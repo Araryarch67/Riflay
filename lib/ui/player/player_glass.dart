@@ -25,14 +25,17 @@ LiquidGlassSettings _settings(BuildContext context) => LiquidGlassSettings.ios27
 
 /// Frosts a control's surface in Liquid presets, with the renderer's platform fallback.
 class PlayerGlassSurface extends StatelessWidget {
-  const PlayerGlassSurface({super.key, required this.child, this.radius = 24});
+  const PlayerGlassSurface({super.key, required this.child, this.radius = 24, this.enabled = true});
 
   final Widget child;
   final double radius;
 
+  /// The part's own switch under Liquid Glass controls (the seek bar, transport and volume have one).
+  final bool enabled;
+
   @override
   Widget build(BuildContext context) {
-    if (!LayoutPrefs.instance.playerGlassControls) return child;
+    if (!enabled || !LayoutPrefs.instance.playerGlassControls) return child;
     final corners = LayoutPrefs.radius(radius).clamp(0.0, radius);
     if (LayoutPrefs.lightweight) {
       final c = AppColors.of(context);

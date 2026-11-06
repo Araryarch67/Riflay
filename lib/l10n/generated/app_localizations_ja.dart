@@ -5016,5 +5016,17 @@ class AppLocalizationsJa extends AppLocalizations {
   String get liquidGlassControls => 'リキッドグラスの操作パネル';
 
   @override
-  String get liquidGlassControlsSubtitle => 'プレーヤーの透明な操作パネルをリキッドグラスにする。';
+  String get liquidGlassControlsSubtitle => 'プレーヤーのボタンをリキッドグラスにする。下でほかにガラスにする部分を選べます。';
+
+  @override
+  String get glassSeekBar => 'シークバーをガラスに';
+
+  @override
+  String get glassTransport => '再生ボタンをガラスに';
+
+  @override
+  String get glassTransportSubtitle => '前へ・再生/一時停止・次へ';
+
+  @override
+  String get glassVolume => '音量をガラスに';
 }

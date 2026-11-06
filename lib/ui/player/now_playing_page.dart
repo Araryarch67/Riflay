@@ -25,8 +25,8 @@ import '../widgets/video_mode.dart';
 import '../ytmusic_edit.dart';
 import 'more_sheet.dart';
 import 'player_common.dart' show ArtistLinks;
-import 'player_parts.dart';
 import 'player_glass.dart';
+import 'player_parts.dart';
 
 /// The name of Now Playing's route, so a page above it can tell whether it is underneath.
 const nowPlayingRouteName = 'now-playing';
@@ -525,6 +525,7 @@ class PlayerVolumeRow extends StatelessWidget {
             icon: Icon(icon),
           );
           return PlayerGlassSurface(
+            enabled: LayoutPrefs.instance.glassVolume,
             child: SizedBox(
               height: playerVolumeRowHeight,
               child: Row(

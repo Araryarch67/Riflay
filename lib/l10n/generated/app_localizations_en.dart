@@ -5193,5 +5193,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get liquidGlassControls => 'Liquid Glass controls';
 
   @override
-  String get liquidGlassControlsSubtitle => 'Frost the player’s transparent control surfaces.';
+  String get liquidGlassControlsSubtitle => 'Frost the player’s buttons. Choose below which other parts are glass too.';
+
+  @override
+  String get glassSeekBar => 'Glass progress bar';
+
+  @override
+  String get glassTransport => 'Glass playback buttons';
+
+  @override
+  String get glassTransportSubtitle => 'Previous, play/pause and next';
+
+  @override
+  String get glassVolume => 'Glass volume';
 }

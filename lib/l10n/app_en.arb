@@ -3157,5 +3157,9 @@
   "presetLiquidStackedNote": "Stacked, with Liquid Glass controls and glass tabs on phones",
   "presetLiquidKawaiiNote": "Kawaii, with Liquid Glass controls and glass tabs on phones",
   "liquidGlassControls": "Liquid Glass controls",
-  "liquidGlassControlsSubtitle": "Frost the player’s transparent control surfaces."
+  "liquidGlassControlsSubtitle": "Frost the player’s buttons. Choose below which other parts are glass too.",
+  "glassSeekBar": "Glass progress bar",
+  "glassTransport": "Glass playback buttons",
+  "glassTransportSubtitle": "Previous, play/pause and next",
+  "glassVolume": "Glass volume"
 }

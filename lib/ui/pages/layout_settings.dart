@@ -170,6 +170,28 @@ class LayoutSettings extends StatelessWidget {
                 value: p.playerGlassControls,
                 onChanged: p.setPlayerGlassControls,
               ),
+              // Which solid parts glass reaches too; only while the controls are glass at all.
+              if (p.playerGlassControls) ...[
+                SwitchListTile(
+                  secondary: const Icon(Icons.linear_scale_rounded),
+                  title: Text(tr.glassSeekBar),
+                  value: p.glassSeekBar,
+                  onChanged: p.setGlassSeekBar,
+                ),
+                SwitchListTile(
+                  secondary: const Icon(Icons.play_circle_outline_rounded),
+                  title: Text(tr.glassTransport),
+                  subtitle: Text(tr.glassTransportSubtitle, style: muted),
+                  value: p.glassTransport,
+                  onChanged: p.setGlassTransport,
+                ),
+                SwitchListTile(
+                  secondary: const Icon(Icons.volume_up_rounded),
+                  title: Text(tr.glassVolume),
+                  value: p.glassVolume,
+                  onChanged: p.setGlassVolume,
+                ),
+              ],
               SettingTile(
                 icon: Icons.waves_rounded,
                 title: Text(tr.progressBarShape),

@@ -1511,5 +1511,9 @@
   "presetLiquidStackedNote": "Stacked, dengan kontrol Liquid Glass dan tab kaca di ponsel",
   "presetLiquidKawaiiNote": "Kawaii, dengan kontrol Liquid Glass dan tab kaca di ponsel",
   "liquidGlassControls": "Kontrol Liquid Glass",
-  "liquidGlassControlsSubtitle": "Ubah permukaan kontrol player yang transparan menjadi Liquid Glass."
+  "liquidGlassControlsSubtitle": "Ubah tombol player menjadi Liquid Glass. Pilih di bawah bagian lain yang ikut jadi kaca.",
+  "glassSeekBar": "Progress bar kaca",
+  "glassTransport": "Tombol pemutaran kaca",
+  "glassTransportSubtitle": "Sebelumnya, putar/jeda, dan berikutnya",
+  "glassVolume": "Volume kaca"
 }

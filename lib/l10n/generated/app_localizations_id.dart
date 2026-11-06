@@ -5119,5 +5119,18 @@ class AppLocalizationsId extends AppLocalizations {
   String get liquidGlassControls => 'Kontrol Liquid Glass';
 
   @override
-  String get liquidGlassControlsSubtitle => 'Ubah permukaan kontrol player yang transparan menjadi Liquid Glass.';
+  String get liquidGlassControlsSubtitle =>
+      'Ubah tombol player menjadi Liquid Glass. Pilih di bawah bagian lain yang ikut jadi kaca.';
+
+  @override
+  String get glassSeekBar => 'Progress bar kaca';
+
+  @override
+  String get glassTransport => 'Tombol pemutaran kaca';
+
+  @override
+  String get glassTransportSubtitle => 'Sebelumnya, putar/jeda, dan berikutnya';
+
+  @override
+  String get glassVolume => 'Volume kaca';
 }

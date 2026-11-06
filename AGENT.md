@@ -119,7 +119,7 @@ test/                          Unit and widget tests
   (screenshots with `SHOTS`) cover it.
 - Stacked and Kawaii use Capsule navigation. Liquid Stacked and Liquid Kawaii use Liquid Glass navigation and
   `playerGlassControls`: transparent player surfaces use `ui/player/player_glass.dart`, sharing a backdrop in the
-  composed player. Opaque filled controls retain their fill. Lightweight uses solid surfaces without a glass layer.
+  composed player. Opaque filled controls retain their fill; the seek bar, previous/play/next and the volume (row, or Kawaii's speaker pill) stay solid unless their own switches (`glassSeekBar`, `glassTransport`, `glassVolume`, shown under Liquid Glass controls) are on. Presets leave those three alone. Lightweight uses solid surfaces without a glass layer.
   The flag persists in Layout preferences and can be changed under Playback controls independently of the preset.
 - The bar's large Close button clears Search and returns to the previous tab. There is no separate small Clear
   button in the bar; preserve the keyed input subtree during expansion so its keyboard connection stays alive.

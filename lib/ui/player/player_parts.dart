@@ -76,6 +76,7 @@ class PartButton extends StatelessWidget {
     this.size = 44,
     this.round = false,
     this.iconSize = 22,
+    this.glass = true,
   });
 
   final IconData icon;
@@ -91,11 +92,14 @@ class PartButton extends StatelessWidget {
   final bool round;
   final double iconSize;
 
+  /// False keeps the plain surface under Liquid Glass controls too (the transport, unless its own switch is on).
+  final bool glass;
+
   @override
   Widget build(BuildContext context) {
     final c = AppColors.of(context);
     final radius = math.min(size / 2, LayoutPrefs.radius(round ? size / 2 : 14));
-    final glass = LayoutPrefs.instance.playerGlassControls && look != PartLook.filled;
+    final glass = this.glass && LayoutPrefs.instance.playerGlassControls && look != PartLook.filled;
     final (fill, color, side) = lit
         ? (c.accent.withValues(alpha: 0.16), c.accent, BorderSide(color: c.accent.withValues(alpha: 0.5)))
         : switch (look) {
@@ -522,6 +526,8 @@ class PlayerControlsRow extends StatelessWidget {
         final next = tipWith(tr.next, AppAction.next);
         final play = tipWith(t.playing ? tr.pause : tr.play, AppAction.playPause);
         if (plain) {
+          Widget transport(double radius, Widget child) =>
+              PlayerGlassSurface(radius: radius, enabled: LayoutPrefs.instance.glassTransport, child: child);
           // Three big glyphs spread evenly; shuffle and repeat, when they are here, wait small at the edges.
           return Row(
             children: [
@@ -530,9 +536,9 @@ class PlayerControlsRow extends StatelessWidget {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
-                    PlayerGlassSurface(
-                      radius: 32,
-                      child: IconButton(
+                    transport(
+                      32,
+                      IconButton(
                         tooltip: prev,
                         iconSize: 44,
                         color: colors.textPrimary,
@@ -540,9 +546,9 @@ class PlayerControlsRow extends StatelessWidget {
                         icon: const Icon(Icons.fast_rewind_rounded),
                       ),
                     ),
-                    PlayerGlassSurface(
-                      radius: 40,
-                      child: t.loading
+                    transport(
+                      40,
+                      t.loading
                           ? SizedBox.square(
                               dimension: 64,
                               child: Center(
@@ -557,9 +563,9 @@ class PlayerControlsRow extends StatelessWidget {
                               icon: Icon(t.playing ? Icons.pause_rounded : Icons.play_arrow_rounded),
                             ),
                     ),
-                    PlayerGlassSurface(
-                      radius: 32,
-                      child: IconButton(
+                    transport(
+                      32,
+                      IconButton(
                         tooltip: next,
                         iconSize: 44,
                         color: colors.textPrimary,
@@ -580,6 +586,7 @@ class PlayerControlsRow extends StatelessWidget {
             if (withModes) _shuffleButton(c, t),
             PartButton(
               icon: Icons.skip_previous_rounded,
+              glass: LayoutPrefs.instance.glassTransport,
               tooltip: prev,
               look: PartLook.muted,
               round: true,
@@ -633,6 +640,7 @@ class PlayerControlsRow extends StatelessWidget {
             const SizedBox(width: 8),
             PartButton(
               icon: Icons.skip_next_rounded,
+              glass: LayoutPrefs.instance.glassTransport,
               tooltip: next,
               look: PartLook.muted,
               round: true,
@@ -925,6 +933,7 @@ class PlayerBottomButtons extends StatelessWidget {
       size: 44,
       iconSize: 22,
       onPressed: onTap,
+      glass: LayoutPrefs.instance.glassVolume,
     );
     final together = Features.listenTogether;
     final output = Features.casting;
@@ -937,13 +946,15 @@ class PlayerBottomButtons extends StatelessWidget {
             builder: (context, _) => Column(
               mainAxisSize: MainAxisSize.min,
               children: [
+                // The volume's own pill: glass only with the Glass volume switch.
                 PlayerGlassSurface(
                   radius: 25,
+                  enabled: LayoutPrefs.instance.glassVolume,
                   child: Container(
                     padding: const EdgeInsets.all(3),
                     decoration: ShapeDecoration(
                       shape: const StadiumBorder(),
-                      color: LayoutPrefs.instance.playerGlassControls
+                      color: LayoutPrefs.instance.playerGlassControls && LayoutPrefs.instance.glassVolume
                           ? Colors.transparent
                           : colors.textPrimary.withValues(alpha: 0.14),
                     ),
@@ -1043,8 +1054,9 @@ class ComposedNowPlaying extends StatelessWidget {
           PlayerTitleBlock(track: track, showBadge: showBadge),
           SizedBox(height: roomy ? 20 : 16),
           PlayerGlassSurface(
+            enabled: p.glassSeekBar,
             child: Padding(
-              padding: p.playerGlassControls
+              padding: p.playerGlassControls && p.glassSeekBar
                   ? const EdgeInsets.symmetric(horizontal: 12, vertical: 4)
                   : EdgeInsets.zero,
               child: SeekBar(
@@ -1067,7 +1079,7 @@ class ComposedNowPlaying extends StatelessWidget {
           else
             PlayerBottomButtons(withMore: p.titleActions != TitleActions.plain),
           if (p.showVolumeRow) ...[
-            if (p.playerGlassControls) const SizedBox(height: 8),
+            if (p.playerGlassControls && p.glassVolume) const SizedBox(height: 8),
             PlayerVolumeRow(mute: plainControls),
           ],
           const SizedBox(height: 8),

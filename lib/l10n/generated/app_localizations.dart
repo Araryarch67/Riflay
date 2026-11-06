@@ -9120,8 +9120,32 @@ abstract class AppLocalizations {
   /// No description provided for @liquidGlassControlsSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Frost the player’s transparent control surfaces.'**
+  /// **'Frost the player’s buttons. Choose below which other parts are glass too.'**
   String get liquidGlassControlsSubtitle;
+
+  /// No description provided for @glassSeekBar.
+  ///
+  /// In en, this message translates to:
+  /// **'Glass progress bar'**
+  String get glassSeekBar;
+
+  /// No description provided for @glassTransport.
+  ///
+  /// In en, this message translates to:
+  /// **'Glass playback buttons'**
+  String get glassTransport;
+
+  /// No description provided for @glassTransportSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Previous, play/pause and next'**
+  String get glassTransportSubtitle;
+
+  /// No description provided for @glassVolume.
+  ///
+  /// In en, this message translates to:
+  /// **'Glass volume'**
+  String get glassVolume;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

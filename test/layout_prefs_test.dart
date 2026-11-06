@@ -261,6 +261,19 @@ void main() {
     expect(p.playerGlassControls, isFalse);
   });
 
+  test('Liquid glass part switches start off, persist, and survive presets', () async {
+    expect((p.glassSeekBar, p.glassTransport, p.glassVolume), (false, false, false));
+    await p.setGlassSeekBar(true);
+    await p.setGlassTransport(true);
+    await p.setGlassVolume(true);
+    await p.load();
+    expect((p.glassSeekBar, p.glassTransport, p.glassVolume), (true, true, true));
+    await PlayerPreset.liquidKawaii.apply(p);
+    expect((p.glassSeekBar, p.glassTransport, p.glassVolume), (true, true, true));
+    await p.reset();
+    expect((p.glassSeekBar, p.glassTransport, p.glassVolume), (false, false, false));
+  });
+
   test('every preset keeps the whole song in view, not the focused three lines', () {
     for (final preset in PlayerPreset.all) {
       expect(preset.lyricsLines, LyricsLines.all, reason: preset.name);

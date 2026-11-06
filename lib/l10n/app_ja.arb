@@ -1504,5 +1504,9 @@
   "presetLiquidStackedNote": "Stacked にリキッドグラスの操作パネルとスマホのガラスタブを追加",
   "presetLiquidKawaiiNote": "Kawaii にリキッドグラスの操作パネルとスマホのガラスタブを追加",
   "liquidGlassControls": "リキッドグラスの操作パネル",
-  "liquidGlassControlsSubtitle": "プレーヤーの透明な操作パネルをリキッドグラスにする。"
+  "liquidGlassControlsSubtitle": "プレーヤーのボタンをリキッドグラスにする。下でほかにガラスにする部分を選べます。",
+  "glassSeekBar": "シークバーをガラスに",
+  "glassTransport": "再生ボタンをガラスに",
+  "glassTransportSubtitle": "前へ・再生/一時停止・次へ",
+  "glassVolume": "音量をガラスに"
 }

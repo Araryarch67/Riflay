@@ -445,15 +445,60 @@ void main() {
       final c = await _show(tester, const NowPlayingPage(), const Size(360, 640));
       expect(find.byType(PlayerGlassLayer), findsOneWidget);
       expect(find.byType(LiquidGlass), findsWidgets);
-      expect(find.ancestor(of: find.byType(SeekBar).first, matching: find.byType(LiquidGlass)), findsWidgets);
       expect(find.ancestor(of: _tip('Close').first, matching: find.byType(LiquidGlass)), findsWidgets);
+      // The seek bar, transport and volume stay solid.
+      expect(find.ancestor(of: find.byType(SeekBar).first, matching: find.byType(LiquidGlass)), findsNothing);
+      for (final tip in ['Play', 'Previous', 'Next']) {
+        expect(
+          find.ancestor(of: _tip(tip).first, matching: find.byType(LiquidGlass)),
+          findsNothing,
+          reason: tip,
+        );
+      }
+      expect(find.descendant(of: find.byType(PlayerVolumeRow), matching: find.byType(LiquidGlass)), findsNothing);
       if (preset == PlayerPreset.liquidKawaii) {
-        expect(find.ancestor(of: _tip('Play').first, matching: find.byType(LiquidGlass)), findsWidgets);
+        expect(find.ancestor(of: _tip('Volume').first, matching: find.byType(LiquidGlass)), findsNothing);
       }
       await tester.tap(_tip('Play').first);
       await tester.pump();
       expect(c.toggles, 1);
       expect(tester.takeException(), isNull);
+      await _close(tester, c);
+    });
+  }
+
+  for (final preset in [PlayerPreset.liquidStacked, PlayerPreset.liquidKawaii]) {
+    testWidgets('${preset.name} frosts the seek bar, transport and volume when their switches are on', (tester) async {
+      await tester.runAsync(() => preset.apply(p));
+      await tester.runAsync(() async {
+        await p.setGlassSeekBar(true);
+        await p.setGlassTransport(true);
+        await p.setGlassVolume(true);
+      });
+      final c = await _show(tester, const NowPlayingPage(), const Size(360, 640));
+      expect(find.ancestor(of: find.byType(SeekBar).first, matching: find.byType(LiquidGlass)), findsWidgets);
+      for (final tip in ['Previous', 'Next']) {
+        expect(
+          find.ancestor(of: _tip(tip).first, matching: find.byType(LiquidGlass)),
+          findsWidgets,
+          reason: tip,
+        );
+      }
+      if (preset == PlayerPreset.liquidKawaii) {
+        expect(find.ancestor(of: _tip('Play').first, matching: find.byType(LiquidGlass)), findsWidgets);
+      }
+      // Kawaii has no volume row: its volume is the speaker pill in the bottom row.
+      expect(
+        preset == PlayerPreset.liquidKawaii
+            ? find.ancestor(of: _tip('Volume').first, matching: find.byType(LiquidGlass))
+            : find.descendant(of: find.byType(PlayerVolumeRow), matching: find.byType(LiquidGlass)),
+        findsWidgets,
+      );
+      await tester.runAsync(() async {
+        await p.setGlassSeekBar(false);
+        await p.setGlassTransport(false);
+        await p.setGlassVolume(false);
+      });
       await _close(tester, c);
     });
   }
