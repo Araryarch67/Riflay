@@ -127,21 +127,23 @@ class HomePage extends StatelessWidget {
         // What was played changes with each song, but the shelf only when the list does.
         PlayerSelect<String>(
           select: _recentKey,
-          builder: (context, _, _) {
-            final recent = c.recentlyPlayed;
-            if (recent.isEmpty) return const SliverToBoxAdapter(child: SizedBox.shrink());
-            return _shelf(tr.recentlyPlayed, recent.length, (i) {
-              final t = recent[i];
-              return MediaCard(
-                track: t,
-                title: t.title,
-                subtitle: t.artist,
-                online: !c.isOffline(t),
-                onTap: () => shell.playAndOpen(() => c.playList(recent, i, from: tr.recentlyPlayed)),
-                onPlay: () => c.playList(recent, i, from: tr.recentlyPlayed),
-              );
-            });
-          },
+          builder: (context, _, _) => SteadyOrder(
+            tracks: c.recentlyPlayed,
+            builder: (context, recent) {
+              if (recent.isEmpty) return const SliverToBoxAdapter(child: SizedBox.shrink());
+              return _shelf(tr.recentlyPlayed, recent.length, (i) {
+                final t = recent[i];
+                return MediaCard(
+                  track: t,
+                  title: t.title,
+                  subtitle: t.artist,
+                  online: !c.isOffline(t),
+                  onTap: () => shell.playAndOpen(() => c.playList(recent, i, from: tr.recentlyPlayed)),
+                  onPlay: () => c.playList(recent, i, from: tr.recentlyPlayed),
+                );
+              });
+            },
+          ),
         ),
       ],
       HomeSection.playlists: [
@@ -272,6 +274,57 @@ class HomePage extends StatelessWidget {
   Widget _shelf(String title, int count, Widget Function(int i) card, {VoidCallback? onShowAll}) => SliverToBoxAdapter(
     child: Shelf.builder(title: title, count: count, card: card, onShowAll: onShowAll),
   );
+}
+
+/// Keeps a most-recent-first shelf ("Recently played") from reshuffling under the pointer: playing a card moved it
+/// to the front, so the next tap in the same place played another song. While the shelf stays in sight, songs
+/// already on it keep their places and newly played ones go in front; the true order comes back when the page is
+/// shown again after another one covered it.
+class SteadyOrder extends StatefulWidget {
+  const SteadyOrder({super.key, required this.tracks, required this.builder});
+
+  /// Most recent first.
+  final List<Track> tracks;
+  final Widget Function(BuildContext context, List<Track> tracks) builder;
+
+  /// [now]'s ids in the order to show, given the order [shown] last: new ones first (in [now]'s order), then the
+  /// ones still there where they were.
+  @visibleForTesting
+  static List<String> order(List<String> shown, List<String> now) {
+    final present = now.toSet();
+    final before = shown.toSet();
+    return [
+      for (final id in now)
+        if (!before.contains(id)) id,
+      for (final id in shown)
+        if (present.contains(id)) id,
+    ];
+  }
+
+  @override
+  State<SteadyOrder> createState() => _SteadyOrderState();
+}
+
+class _SteadyOrderState extends State<SteadyOrder> {
+  List<String>? _shown;
+  bool _visible = true;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // A page over this one turns its tickers off; coming back into sight, the shelf is in true order again.
+    final visible = TickerMode.valuesOf(context).enabled;
+    if (visible && !_visible) _shown = null;
+    _visible = visible;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final byId = {for (final t in widget.tracks) t.id: t};
+    final ids = byId.keys.toList();
+    final shown = _shown = _shown == null ? ids : SteadyOrder.order(_shown!, ids);
+    return widget.builder(context, [for (final id in shown) byId[id]!]);
+  }
 }
 
 /// Shown on Home while there are no files yet: a small invitation, not a wall.
