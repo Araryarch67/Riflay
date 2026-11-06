@@ -1,12 +1,13 @@
-# Builds Riflay for Android, Windows and Linux and attaches the files to a
+# Builds Riflay for Android, Windows, Linux, macOS and iOS and attaches the files to a
 # GitHub release. Runs when a version tag is pushed (`git tag v1.2.0
 # && git push origin v1.2.0`), or by hand from the Actions tab (then the files
 # are only kept as workflow artifacts, no release is made; `platforms` picks
 # which builds run).
 #
-# macOS and iOS are paused for tag pushes for now: their macOS runners take
-# about 40 minutes and held every release back. They still run by hand from the
-# Actions tab (platforms: macos, ios).
+# iOS is the slow one (its libmpv, the Simulator): the release does not wait for
+# it. It is published without the .ipa, which the ios-asset job attaches once the
+# iOS build is done. On tags iOS skips its Simulator test, which checks the same
+# libmpv sound settings the macOS job already tests.
 #
 # Android signing: add these repository secrets so every release is signed with
 # the same key (otherwise phones refuse to update over an earlier version):
@@ -199,8 +200,7 @@ jobs:
           include-hidden-files: true
 
   macos:
-    # Paused for tag pushes: about 40 minutes of macOS runners. Run it by hand from the Actions tab.
-    if: github.event_name == 'workflow_dispatch' && (inputs.platforms == 'all' || contains(inputs.platforms, 'macos'))
+    if: github.event_name != 'workflow_dispatch' || inputs.platforms == 'all' || contains(inputs.platforms, 'macos')
     runs-on: macos-26
     steps:
       - uses: actions/checkout@v7
@@ -262,8 +262,8 @@ jobs:
           path: dist/*
 
   ios:
-    # Paused for tag pushes: about 40 minutes of macOS runners. Run it by hand from the Actions tab.
-    if: github.event_name == 'workflow_dispatch' && (inputs.platforms == 'all' || contains(inputs.platforms, 'ios'))
+    # The release does not wait for it: ios-asset attaches its .ipa afterwards.
+    if: github.event_name != 'workflow_dispatch' || inputs.platforms == 'all' || contains(inputs.platforms, 'ios')
     runs-on: macos-26
     steps:
       - uses: actions/checkout@v7
@@ -288,6 +288,9 @@ jobs:
       - name: Version from the tag
         run: echo "BUILD_ARGS=$(tool/ci_version.sh)" >> "$GITHUB_ENV"
       - name: Sound settings work on this libmpv (iOS Simulator)
+        # By hand only: booting the Simulator and building for it is most of this job's time, and on tags the macOS
+        # job has just tested the same libmpv's sound settings.
+        if: github.event_name == 'workflow_dispatch'
         run: |
           udid=$(xcrun simctl list devices available --json | python3 -c '
           import json, sys
@@ -309,7 +312,7 @@ jobs:
 
   release:
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: [android, windows, linux] # not macos, ios: paused for tags (see above)
+    needs: [android, windows, linux, macos] # not ios: ios-asset adds it after (see above)
     runs-on: ubuntu-24.04
     permissions:
       contents: write
@@ -400,10 +403,12 @@ jobs:
           `.pkg.tar.zst` for Arch (`sudo pacman -U` it); `.tar.gz` is the plain bundle.
           `SHA256SUMS` lists every file's checksum.
           With a package manager: `scoop bucket add riflay https://github.com/Araryarch67/scoop-riflay` then
-          `scoop install riflay/riflay` on Windows; `brew install --cask araryarch67/riflay/riflay` on Linux.
+          `scoop install riflay/riflay` on Windows; `brew install --cask araryarch67/riflay/riflay` on Linux and macOS.
 
-          **macOS and iOS** builds are paused for now: their CI builds took too long to hold every release
-          back. They will come back in a later version.
+          **macOS**: `Riflay-macos.dmg` (drag Riflay to Applications); the `.zip` is the app alone. It is not signed by
+          Apple: on first launch use System Settings › Privacy & Security › **Open Anyway**.
+          **iOS**: `Riflay-ios-unsigned.ipa`, for sideloading (AltStore, Sideloadly). It is attached a little after the
+          rest, once its build is done.
           GUIDE
           { cat changelog.md; echo; echo '---'; echo; cat guide.md; } > release.md
       - uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3
@@ -442,3 +447,20 @@ jobs:
           }
           publish scoop-riflay bucket manifests/riflay.json
           publish homebrew-riflay Casks manifests/riflay.rb
+
+  ios-asset:
+    # The .ipa onto the release published without it.
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [ios, release]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: ios
+          path: dist
+      - name: Attach the .ipa
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "$GITHUB_REF_NAME" dist/*.ipa --clobber -R "$GITHUB_REPOSITORY"

@@ -529,12 +529,13 @@ device's language when Riflay has it). The words live in `lib/l10n/app_en.arb` (
    `test/about_test.dart` fails when they differ), and commit them as
    `chore: <version>`.
 2. Tag and push: `git tag v<version> && git push origin main v<version>`.
-   `.github/workflows/release.yml` builds Android, Windows and Linux and
+   `.github/workflows/release.yml` builds Android, Windows, Linux and macOS and
    publishes the GitHub release with a changelog (its notes are GitHub's
    generated ones, the commits since the last release) and a download guide.
-   macOS and iOS are paused there for now, since their macOS runners took about
-   40 minutes and held every release back; they still build by hand from the
-   Actions tab (`platforms: macos, ios`).
+   iOS is slow, so the release does not wait for it: the `ios-asset` job
+   attaches the `.ipa` once it is built, and on tags iOS skips its Simulator
+   test (the macOS job tests the same libmpv). Any platform still builds by
+   hand from the Actions tab (`platforms: macos, ios`).
 3. Package managers: Linux gets a `.deb` and `.rpm` (nfpm,
    `linux/packaging/nfpm.yaml`) and an Arch `.pkg.tar.zst` (makepkg in a
    container, `linux/packaging/arch/PKGBUILD`) next to the AppImage. The

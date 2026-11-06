@@ -61,8 +61,10 @@ Every file is on the [latest release](https://github.com/Araryarch67/Riflay/rele
 | Linux or macOS, with Homebrew | `brew install --cask araryarch67/riflay/riflay` |
 | Any Linux | the `.AppImage` (`chmod +x`, then run it) |
 | Android | `Riflay-android.apk` (Android 7.0 and later) |
+| macOS | `Riflay-macos.dmg` (macOS 12 and later) |
+| iOS | `Riflay-ios-unsigned.ipa`, sideloaded with AltStore or Sideloadly |
 
-macOS and iOS builds are paused for now. The macOS app is unsigned: on first launch use System Settings › Privacy & Security › **Open Anyway**.
+The macOS app is unsigned: on first launch use System Settings › Privacy & Security › **Open Anyway**. The iOS file is attached to a release a little after the others.
 
 ## Build from source
 
