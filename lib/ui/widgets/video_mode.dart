@@ -149,7 +149,9 @@ class _VideoViewState extends State<_VideoView> {
     return ValueListenableBuilder(
       valueListenable: video.rect,
       builder: (context, rect, _) {
-        final ratio = rect == null || rect.height <= 0 ? 16 / 9 : rect.width / rect.height;
+        // No size yet: the texture has nothing to show, and a black box would stand where the cover was.
+        if (rect == null || rect.width <= 1 || rect.height <= 0) return widget.cover;
+        final ratio = rect.width / rect.height;
         return Center(
           child: AspectRatio(
             aspectRatio: ratio,

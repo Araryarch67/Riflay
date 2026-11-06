@@ -388,6 +388,20 @@ class VideoMode extends ChangeNotifier with WidgetsBindingObserver {
         await player.open(Media(stream.url.toString(), start: at), play: false);
       }
       await video.waitUntilFirstFrameRendered.timeout(const Duration(seconds: 25));
+      // And its size: until then a view has only an empty (black) texture to draw, so the cover stays.
+      if (!_sized(video)) {
+        final sized = Completer<void>();
+        void check() {
+          if (_sized(video) && !sized.isCompleted) sized.complete();
+        }
+
+        video.rect.addListener(check);
+        try {
+          await sized.future.timeout(const Duration(seconds: 3), onTimeout: () {});
+        } finally {
+          video.rect.removeListener(check);
+        }
+      }
       if (!identical(player, _player)) return;
       _readDecoder();
       _ready = true;
@@ -462,6 +476,8 @@ class VideoMode extends ChangeNotifier with WidgetsBindingObserver {
     notifyListeners();
     await player?.dispose();
   }
+
+  static bool _sized(VideoController video) => (video.rect.value?.width ?? 0) > 1;
 
   /// Keeps the video with the song: same play / pause; a small gap closes by
   /// running the video a little faster or slower (invisible, and no new
