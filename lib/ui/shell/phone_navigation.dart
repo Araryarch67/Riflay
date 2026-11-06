@@ -591,7 +591,13 @@ class _GlassBarState extends State<_GlassBar> with TickerProviderStateMixin {
                   excludeSemantics: true,
                   child: Tooltip(
                     message: tr.navSearch,
-                    child: InkWell(onTap: () => widget.onSelect(PhoneTab.search)),
+                    child: InkWell(
+                      onTap: () {
+                        widget.onSelect(PhoneTab.search);
+                        // Focus follows the field when it mounts, while the pill is still growing.
+                        _input.focus.requestFocus();
+                      },
+                    ),
                   ),
                 ),
               ),

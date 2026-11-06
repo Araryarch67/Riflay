@@ -114,6 +114,34 @@ void main() {
   for (final size in const [Size(360, 640), Size(412, 915)]) {
     final w = size.width.toInt();
 
+    for (final collapsed in [false, true]) {
+      testWidgets('$w px: one Search tap focuses the input while expanding (collapsed: $collapsed)', (tester) async {
+        final bar = await show(tester, size);
+        if (collapsed) {
+          await tester.drag(list, const Offset(0, -300));
+          await tester.pumpAndSettle();
+        }
+
+        await tester.tap(find.byTooltip('Search'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 50));
+        expect(bar.link.search.focus.hasFocus, isTrue);
+        expect(tester.testTextInput.isVisible, isTrue);
+        tester.testTextInput.enterText('led zeppelin');
+        await tester.pump();
+        expect(bar.link.search.controller.text, 'led zeppelin');
+        expect(tester.takeException(), isNull);
+
+        await tester.pumpAndSettle();
+        expect(collapsedButton, findsNothing);
+        await tester.tap(find.byTooltip('Close'));
+        await tester.pumpAndSettle();
+        expect(bar.link.search.focus.hasFocus, isFalse);
+        expect(bar.link.search.controller.text, isEmpty);
+        expect(selectedTab('Home'), findsOneWidget);
+      });
+    }
+
     testWidgets('$w px: scrolling down shrinks the bar to one row, up and the top bring it back', (tester) async {
       final bar = await show(tester, size);
       // At rest: the mini player on its own row over the tabs, Search beside them.
@@ -225,6 +253,8 @@ void main() {
     await show(tester, const Size(412, 915), tab: PhoneTab.library);
     await tester.tap(find.byTooltip('Search'));
     await tester.pumpAndSettle();
+    FocusManager.instance.primaryFocus?.unfocus();
+    await tester.pumpAndSettle();
     final round = tester.widget<Tooltip>(find.descendant(of: collapsedButton, matching: find.byType(Tooltip)));
     expect(round.message, 'Home');
     await tester.tap(find.byTooltip('Close'));
@@ -233,6 +263,8 @@ void main() {
     expect(selectedTab('Library'), findsOneWidget, reason: 'back on Library');
 
     await tester.tap(find.byTooltip('Search'));
+    await tester.pumpAndSettle();
+    FocusManager.instance.primaryFocus?.unfocus();
     await tester.pumpAndSettle();
     await tester.tap(collapsedButton);
     await tester.pumpAndSettle();
