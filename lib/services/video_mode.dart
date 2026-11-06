@@ -12,6 +12,7 @@ import '../models/track.dart';
 import 'beta_features.dart';
 import 'layout_prefs.dart';
 import 'player_controller.dart';
+import 'video_alignment.dart';
 import 'video_download.dart';
 import 'youtube_stream.dart';
 import 'ytmusic_web.dart';
@@ -143,7 +144,10 @@ class VideoMode extends ChangeNotifier with WidgetsBindingObserver {
     }
     (debugLookUp ?? c.ytMusic.musicVideo)(id)
         .then(
-          (v) => _found[id] = v,
+          (v) {
+            _found[id] = v;
+            if (v != null) _align(id, v);
+          },
           onError: (Object e) {
             debugPrint('Video mode: looking up $id: $e');
             _found[id] = null;
@@ -157,6 +161,22 @@ class VideoMode extends ChangeNotifier with WidgetsBindingObserver {
           _sync();
           notifyListeners();
         });
+  }
+
+  /// A video without YouTube Music's map of the parts plays on the song's timeline until its own is measured
+  /// ([VideoAlignment]); then it moves there, with one seek.
+  void _align(String songId, MusicVideo v) {
+    if (!VideoAlignment.enabled || v.segments.isNotEmpty || v.videoId == songId || debugLookUp != null) return;
+    VideoAlignment.of(songId, v.videoId).then((a) {
+      if (a == null || a.none || !identical(_found[songId], v)) return;
+      final shifted = _found[songId] = v.shifted(a.offset, a.rate);
+      if (identical(_playing, v)) {
+        _playing = shifted;
+        _lastSeek = DateTime(0);
+        _seekedTo = null;
+        _follow(seekNow: true);
+      }
+    }).ignore();
   }
 
   /// Stands in for YouTube Music's answer in [lookUp] (tests).
@@ -470,7 +490,7 @@ class VideoMode extends ChangeNotifier with WidgetsBindingObserver {
   /// running the video a little faster or slower (invisible, and no new
   /// buffering), a big one (a seek, a stall) with a seek of its own, aimed
   /// ahead by what the last one took. A seek waits for the last one to land.
-  void _follow() {
+  void _follow({bool seekNow = false}) {
     final c = _c, player = _player, v = _playing;
     if (c == null || player == null || v == null || !_ready) return;
     final target = v.videoTimeAt(c.position);
@@ -491,7 +511,9 @@ class VideoMode extends ChangeNotifier with WidgetsBindingObserver {
       // Up to [seekBeyond] closes by speed: a seek on a stream fetches again first, and measured on a song's first
       // seconds the video froze two or three seconds after each one, then overshot into the next (a 1 s limit
       // swung the gap between -1.4 and +1.3 s for twelve seconds).
-      if (drift.abs() > seekBeyond || !c.isPlaying && drift.abs() > const Duration(milliseconds: 100)) {
+      if (seekNow && drift.abs() > const Duration(milliseconds: 100) ||
+          drift.abs() > seekBeyond ||
+          !c.isPlaying && drift.abs() > const Duration(milliseconds: 100)) {
         // Not until the last seek has landed: the stream comes only a little faster than it plays, so each seek
         // fetches for a second or two first, and a new one would throw that away and start again.
         if (_seekedTo == null && now.difference(_lastSeek) > const Duration(milliseconds: 700)) {

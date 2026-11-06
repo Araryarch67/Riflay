@@ -56,18 +56,28 @@ class VideoSegment {
 /// (YouTube Music's OMV / UGC), or its video counterpart, with the parts both
 /// share.
 class MusicVideo {
-  const MusicVideo({required this.videoId, this.segments = const []});
+  const MusicVideo({required this.videoId, this.segments = const [], this.offset = Duration.zero, this.rate = 1});
 
   final String videoId;
 
-  /// Where the song's parts are in the video. Empty: the same timeline.
+  /// Where the song's parts are in the video. Empty: one timeline, the song's moved by [offset] and run at [rate]
+  /// (measured from both soundtracks: another edit can start a little earlier or later, or run a little slower).
   final List<VideoSegment> segments;
+  final Duration offset;
+  final double rate;
+
+  /// This video on the timeline measured against the song.
+  MusicVideo shifted(Duration offset, double rate) => MusicVideo(videoId: videoId, offset: offset, rate: rate);
 
   /// The point in the video that goes with [song], or null when the video
   /// doesn't have that part (an intro or a scene that only the video has
   /// moves the rest along).
   Duration? videoTimeAt(Duration song) {
-    if (segments.isEmpty) return song;
+    if (segments.isEmpty) {
+      if (offset == Duration.zero && rate == 1) return song;
+      final at = Duration(microseconds: (song.inMicroseconds * rate).round()) + offset;
+      return at.isNegative ? null : at;
+    }
     for (final s in segments) {
       if (song >= s.songStart && song < s.songStart + s.length) return s.videoStart + (song - s.songStart);
     }
