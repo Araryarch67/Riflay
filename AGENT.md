@@ -369,6 +369,7 @@ flutter run -d chrome --dart-define=RIFLAY_PROXY=http://127.0.0.1:8787/
 | Package | Why |
 |---|---|
 | `just_audio_media_kit` | Exposes the libmpv player (hook + `activePlayer`) |
+| `just_audio_web` | The web player: it reused the previous queue's songs for a new one (just_audio 0.10 keeps one playlist id), so a tapped song played another; `load()` builds its sources afresh |
 | `media_kit_libs_macos_audio`, `media_kit_libs_ios_audio` | Their podspecs use `Mpv.xcframework` from `tool/build_libmpv_apple.sh` instead of media_kit's download |
 | `media_kit_libs_android_audio` | Android's `libmpv.so` from `tool/build_libmpv_android.sh` (the FFmpeg filters crossfeed, room correction and Virtual speakers need) instead of media_kit's downloaded one; media_kit's helper library is kept as it was |
 | `audio_metadata_reader` | Its FLAC and MP4 writers dropped ReplayGain, lyrics, disc numbers and unknown tags (MP4 freeform `----` atoms) on every save; ours keep them. WAV and AIFF read the disc number from an ID3 chunk |

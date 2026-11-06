@@ -124,8 +124,10 @@ class HomePage extends StatelessWidget {
         if (!account.isSignedIn) const SliverToBoxAdapter(child: SignInBanner()),
       ],
       HomeSection.recentlyPlayed: [
-        // What was played changes with each song, but the shelf only when the list does.
+        // What was played changes with each song, but the shelf only when the list does. Keyed: a section
+        // appearing above it must not rebuild it from scratch (SteadyOrder would forget the order it shows).
         PlayerSelect<String>(
+          key: const ValueKey(HomeSection.recentlyPlayed),
           select: _recentKey,
           builder: (context, _, _) => SteadyOrder(
             tracks: c.recentlyPlayed,

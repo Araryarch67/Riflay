@@ -94,6 +94,9 @@ dependency_overrides:
   # properties (EQ filters, output device, gapless, ReplayGain, signal path).
   just_audio_media_kit:
     path: third_party/just_audio_media_kit
+  # The web build's player: a new queue played songs from the previous one (see the Riflay note in load()).
+  just_audio_web:
+    path: third_party/just_audio_web
   # Android's libmpv with the FFmpeg filters crossfeed, room correction and
   # Virtual speakers need (tool/build_libmpv_android.sh); media_kit's has none.
   media_kit_libs_android_audio:
