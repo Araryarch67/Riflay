@@ -6,7 +6,6 @@ import '../../services/audio_engine.dart';
 import '../../services/layout_prefs.dart';
 import '../../services/player_controller.dart';
 import '../../services/ui_beat.dart';
-import '../../services/video_mode.dart';
 import '../../services/visualizer_levels.dart';
 
 /// Why the visualizer can't be on at all right now, in words for its switch; null when it can.
@@ -22,9 +21,6 @@ String? visualizerBlockedBy(PlayerController c, {bool reduceMotion = false}) {
 String? visualizerHiddenBy(PlayerController c) {
   if (c.audio.dopPlaying != null) return 'Hidden while this song plays as DSD over DoP';
   if (c.casting) return 'Hidden while playing on another device';
-  if (VideoMode.instance.on && VideoMode.instance.videoOf(c.currentTrack) != null) {
-    return 'Hidden while this song shows its music video: pick Song above the cover to see it';
-  }
   return null;
 }
 
@@ -84,7 +80,6 @@ class _AudioReactiveViewState extends State<AudioReactiveView> with WidgetsBindi
         WidgetsBinding.instance.lifecycleState == null ||
         (WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed ||
             WidgetsBinding.instance.lifecycleState == AppLifecycleState.inactive);
-    VideoMode.instance.addListener(_sync);
   }
 
   @override
@@ -99,11 +94,7 @@ class _AudioReactiveViewState extends State<AudioReactiveView> with WidgetsBindi
       _controller?.audio.visualizerLevels.removeListener(_animate);
       _controller = c;
       _playState = c.player.playerStateStream.listen((_) => _sync());
-      _song = c.player.currentIndexStream.distinct().listen((_) {
-        c.audio.visualizerLevels.clear();
-        // The next song may have no video (or one): whether the visualizer shows changes with it.
-        _sync();
-      });
+      _song = c.player.currentIndexStream.distinct().listen((_) => c.audio.visualizerLevels.clear());
       c.audio.addListener(_sync);
       c.audio.visualizerLevels.addListener(_animate);
     }
@@ -172,9 +163,6 @@ class _AudioReactiveViewState extends State<AudioReactiveView> with WidgetsBindi
         !c.casting &&
         !c.audio.bitPerfect &&
         c.audio.dopPlaying == null &&
-        // Video picked hides it only while this song has a video showing: the switch stays on across songs,
-        // and a song without a video plays with the visualizer as usual.
-        !(VideoMode.instance.on && VideoMode.instance.videoOf(c.currentTrack) != null) &&
         AudioEngine.supported;
     if (active) {
       _release ??= c.audio.watchVisualizer();
@@ -187,7 +175,6 @@ class _AudioReactiveViewState extends State<AudioReactiveView> with WidgetsBindi
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    VideoMode.instance.removeListener(_sync);
     _controller?.audio.removeListener(_sync);
     _controller?.audio.visualizerLevels.removeListener(_animate);
     _playState?.cancel();

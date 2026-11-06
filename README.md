@@ -25,6 +25,7 @@ Free and open source, for Linux, Windows, macOS, Android and iOS.
 [![License: AGPL v3](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)](LICENSE)
 ![Platforms](https://img.shields.io/badge/platforms-Linux%20%7C%20Windows%20%7C%20macOS%20%7C%20Android%20%7C%20iOS-555)
 [![Latest release](https://img.shields.io/github/v/release/Araryarch67/Riflay)](https://github.com/Araryarch67/Riflay/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/Araryarch67/Riflay/total)](https://github.com/Araryarch67/Riflay/releases)
 
 ![Riflay home](docs/screenshots/home.webp)
 

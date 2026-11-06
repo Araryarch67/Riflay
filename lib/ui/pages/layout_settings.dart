@@ -616,7 +616,9 @@ class _VisualizerSettings extends StatelessWidget {
     return ListenableBuilder(
       listenable: Listenable.merge([?c?.audio, ?c, VideoMode.instance]),
       builder: (context, _) {
-        final blocked = c == null ? null : visualizerBlockedBy(c, reduceMotion: MediaQuery.disableAnimationsOf(context));
+        final blocked = c == null
+            ? null
+            : visualizerBlockedBy(c, reduceMotion: MediaQuery.disableAnimationsOf(context));
         final hidden = c == null || blocked != null || !p.visualizer ? null : visualizerHiddenBy(c);
         final on = p.visualizer && blocked == null;
         final styles = VisualizerStyle.fitting(p.playerCover);

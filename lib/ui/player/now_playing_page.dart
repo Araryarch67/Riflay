@@ -195,10 +195,10 @@ class NowPlayingPage extends StatelessWidget {
                             final showStrip =
                                 track != null &&
                                 LayoutPrefs.instance.visualizerEnabled &&
-                                !LayoutPrefs.instance.visualizerStyle.radial &&
+                                // With the video in the cover's place a radial style draws in the strip instead.
+                                (!LayoutPrefs.instance.visualizerStyle.radial || showsVideo) &&
                                 LayoutPrefs.moves &&
-                                !MediaQuery.disableAnimationsOf(context) &&
-                                !showsVideo;
+                                !MediaQuery.disableAnimationsOf(context);
                             final stripHeight = showStrip && constraints.maxHeight >= 560 ? 88.0 : 0.0;
                             // A phone held sideways: the cover goes beside the controls.
                             final sideways =

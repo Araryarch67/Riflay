@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../../services/layout_prefs.dart';
+import '../../services/video_mode.dart';
 import '../../services/visualizer_levels.dart';
 import '../player_scope.dart';
 import '../theme.dart';
@@ -28,12 +29,22 @@ class AudioVisualizer extends StatelessWidget {
   /// Always the flower, whatever Cover says (the desktop's expanded player is always Classic).
   final bool classicShape;
 
+  /// Whether the song playing now shows its music video where the cover was.
+  static bool videoShowing(BuildContext context) {
+    final c = context.getInheritedWidgetOfExactType<PlayerScope>()?.notifier;
+    return c != null && VideoMode.instance.on && VideoMode.instance.videoOf(c.currentTrack) != null;
+  }
+
   @override
   Widget build(BuildContext context) => ListenableBuilder(
-    listenable: LayoutPrefs.instance,
+    listenable: Listenable.merge([LayoutPrefs.instance, if (linearOnly) VideoMode.instance]),
     builder: (context, _) {
       final prefs = LayoutPrefs.instance;
-      final style = prefs.visualizerStyle;
+      // A music video takes the cover's place, and with it the ring around the cover: the strip under the song
+      // draws the radial styles as Wave meanwhile, so the visualizer stays on screen.
+      final style = linearOnly && prefs.visualizerStyle.radial && videoShowing(context)
+          ? VisualizerStyle.wave
+          : prefs.visualizerStyle;
       final shape = classicShape ? VisualizerCoverShape.flower : prefs.visualizerCoverShape;
       if (prefs.visualizerEnabled &&
           LayoutPrefs.moves &&

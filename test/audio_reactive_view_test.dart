@@ -147,25 +147,23 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('Video picked hides the visualizer only on a song that has a video', (tester) async {
+  testWidgets('Video picked keeps the visualizer: the strip draws a radial style as Wave', (tester) async {
     final c = _PlayingController()..track = Track.youtube(videoId: 'arvideo', title: 'S', artist: 'A');
     VideoMode.instance
       ..debugSetFound('arvideo', const MusicVideo(videoId: 'arvideo'))
-      ..debugSetFound('arnone', null)
       ..setOn(true);
     addTearDown(() => VideoMode.instance.setOn(false));
+    await LayoutPrefs.instance.setVisualizerStyle(VisualizerStyle.pulse);
+    addTearDown(LayoutPrefs.instance.reset);
     await tester.pumpWidget(
       PlayerScope(
         controller: c,
-        child: MaterialApp(home: AudioReactiveView(builder: (_, _) => const SizedBox.shrink())),
+        child: const MaterialApp(home: Scaffold(body: AudioVisualizer(linearOnly: true))),
       ),
     );
-    expect(c.audio.visualizerActive, isFalse, reason: 'the video shows instead');
-    // The next song has no video: the switch stays on, and the visualizer comes back.
-    c.track = Track.youtube(videoId: 'arnone', title: 'P', artist: 'A');
-    VideoMode.instance.debugSetFound('arnone', null);
-    await tester.pump();
-    expect(c.audio.visualizerActive, isTrue);
+    expect(c.audio.visualizerActive, isTrue, reason: 'the video does not turn the visualizer off');
+    expect(find.byType(VisualizerCanvas), findsOneWidget);
+    expect(tester.widget<VisualizerCanvas>(find.byType(VisualizerCanvas)).style, VisualizerStyle.wave);
     await tester.pumpWidget(const SizedBox.shrink());
     // The controller's own download-format prefetch waits 3 s.
     await tester.pump(const Duration(seconds: 4));
