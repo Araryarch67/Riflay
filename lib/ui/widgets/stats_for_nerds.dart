@@ -426,7 +426,8 @@ class _Card extends StatelessWidget {
                       child: Text(label, style: text.bodySmall?.copyWith(color: AppColors.textSecondary)),
                     ),
                     const SizedBox(width: 12),
-                    Expanded(child: SelectableText(v, style: value)),
+                    // Plain text: a selectable one costs an editor each, rebuilt every second (Copy has them all).
+                    Expanded(child: Text(v, style: value)),
                   ],
                 ),
               ),

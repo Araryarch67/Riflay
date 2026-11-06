@@ -8,6 +8,7 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
 import '../../models/track.dart';
+import '../../services/language.dart';
 import '../../services/listening_stats.dart';
 import '../../services/play_history.dart';
 import '../../services/player_controller.dart';
@@ -99,28 +100,74 @@ class _WrapStoryState extends State<WrapStory> {
     return '${d.month.label} so far $day';
   }
 
-  Future<void> _save() async {
+  /// The card on screen as a PNG, at three times its size.
+  Future<Uint8List> _render() async {
+    final boundary = _keys[_index].currentContext?.findRenderObject() as RenderRepaintBoundary?;
+    if (boundary == null) throw StateError('card not on screen');
+    final image = await boundary.toImage(pixelRatio: 3);
+    final ByteData? data;
+    try {
+      data = await image.toByteData(format: ui.ImageByteFormat.png);
+    } finally {
+      image.dispose();
+    }
+    final bytes = data?.buffer.asUint8List();
+    if (bytes == null) throw StateError('no image');
+    return bytes;
+  }
+
+  String get _fileName => 'Riflay Wrap ${_fileTitle(widget.data)} ${_index + 1}.png';
+
+  /// What goes with a shared card: the month, the top song and artist.
+  String get _caption {
+    final d = widget.data;
+    return 'My ${d.month.label} on Riflay: ${formatListened(d.listened)} of music. '
+        'Top song: ${d.topSong.title}. Top artist: ${d.topArtist.title}.';
+  }
+
+  /// Saves the card to Downloads (the app's documents where there is none); the saved file, or null if it failed.
+  Future<File?> _save({bool quiet = false}) async {
     final messenger = ScaffoldMessenger.of(context);
     try {
-      final boundary = _keys[_index].currentContext?.findRenderObject() as RenderRepaintBoundary?;
-      if (boundary == null) throw StateError('card not on screen');
-      final image = await boundary.toImage(pixelRatio: 3);
-      final ByteData? data;
-      try {
-        data = await image.toByteData(format: ui.ImageByteFormat.png);
-      } finally {
-        image.dispose();
-      }
-      final bytes = data?.buffer.asUint8List();
-      if (bytes == null) throw StateError('no image');
+      final bytes = await _render();
       final dir = await getDownloadsDirectory() ?? await getApplicationDocumentsDirectory();
-      final file = File(p.join(dir.path, 'Riflay Wrap ${_fileTitle(widget.data)} ${_index + 1}.png'));
+      final file = File(p.join(dir.path, _fileName));
       await file.writeAsBytes(bytes, flush: true);
-      messenger.showSnackBar(SnackBar(content: Text('Saved ${p.basename(file.path)}')));
+      if (!quiet) messenger.showSnackBar(SnackBar(content: Text('Saved ${p.basename(file.path)}')));
+      return file;
     } catch (e) {
       debugPrint('Saving a Wrap card failed: $e');
       messenger.showSnackBar(const SnackBar(content: Text('Couldn\'t save the image')));
+      return null;
     }
+  }
+
+  /// The phone's share sheet with the card and a caption. A computer has none: the card is saved and the caption
+  /// copied, to paste beside it.
+  Future<void> _share() async {
+    final messenger = ScaffoldMessenger.of(context);
+    if (Platform.isAndroid) {
+      try {
+        final bytes = await _render();
+        // The cache's shared/ folder: the one the share sheet may lend out (res/xml/update_file_paths.xml).
+        final dir = Directory(p.join((await getTemporaryDirectory()).path, 'shared'))..createSync(recursive: true);
+        final file = File(p.join(dir.path, _fileName));
+        await file.writeAsBytes(bytes, flush: true);
+        final shown = await const MethodChannel('riflay/share').invokeMethod<bool>('share', {
+          'text': _caption,
+          'subject': 'Riflay Wrap',
+          'file': file.path,
+          'mime': 'image/png',
+        });
+        if (shown ?? false) return;
+      } catch (e) {
+        debugPrint('Sharing a Wrap card failed: $e');
+      }
+    }
+    final file = await _save(quiet: true);
+    if (file == null) return;
+    await Clipboard.setData(ClipboardData(text: _caption));
+    messenger.showSnackBar(SnackBar(content: Text('Saved ${p.basename(file.path)}; the caption is copied')));
   }
 
   @override
@@ -129,10 +176,6 @@ class _WrapStoryState extends State<WrapStory> {
     return AccentBuilder(
       track: top,
       builder: (context, accent) {
-        // One flat colour from the top song's cover, pulled toward the app's background so text stays readable.
-        final color = AppColors.sink(accent, 0.55);
-        // The small lines take the cover's colour, lifted so they read on the card.
-        final tint = Color.lerp(accent, Colors.white, 0.45)!;
         return Material(
           color: AppColors.panel,
           child: Focus(
@@ -204,58 +247,78 @@ class _WrapStoryState extends State<WrapStory> {
                                   controller: _pages,
                                   itemCount: _cards.length,
                                   onPageChanged: (i) => setState(() => _index = i),
-                                  itemBuilder: (context, i) => Padding(
-                                    padding: const EdgeInsets.all(12),
-                                    child: Center(
-                                      child: AspectRatio(
-                                        aspectRatio: 9 / 16,
-                                        child: RepaintBoundary(
-                                          key: _keys[i],
-                                          child: ClipRRect(
-                                            borderRadius: BorderRadius.circular(16),
-                                            child: Stack(
-                                              fit: StackFit.expand,
-                                              children: [
-                                                ColoredBox(color: color),
-                                                // The top song's cover, soft and dim behind every card: the month's
-                                                // own picture, not a decoration.
-                                                Opacity(
-                                                  opacity: 0.5,
-                                                  child: FadedCover(track: top, sharp: false, darken: 0.55),
-                                                ),
-                                                ColoredBox(color: color.withValues(alpha: 0.45)),
-                                                FittedBox(
-                                                  fit: BoxFit.contain,
-                                                  child: SizedBox(
-                                                    width: 360,
-                                                    height: 640,
-                                                    child: Padding(
-                                                      padding: const EdgeInsets.fromLTRB(24, 22, 24, 18),
-                                                      child: _WrapTint(
-                                                        tint: tint,
-                                                        child: Column(
-                                                          children: [
-                                                            _Brand(month: widget.data.month.label),
-                                                            Expanded(
-                                                              child: Padding(
-                                                                padding: const EdgeInsets.symmetric(vertical: 16),
-                                                                child: _cards[i](context, color),
+                                  itemBuilder: (context, i) {
+                                    // Each card its own shade of the cover's colour, so the story moves.
+                                    final own = _shade(accent, i);
+                                    final base = AppColors.sink(own, 0.55);
+                                    return Padding(
+                                      padding: const EdgeInsets.all(12),
+                                      child: Center(
+                                        child: AspectRatio(
+                                          aspectRatio: 9 / 16,
+                                          child: RepaintBoundary(
+                                            key: _keys[i],
+                                            child: ClipRRect(
+                                              borderRadius: BorderRadius.circular(16),
+                                              child: Stack(
+                                                fit: StackFit.expand,
+                                                children: [
+                                                  CustomPaint(
+                                                    painter: _Backdrop(base: base, glow: own, seed: i),
+                                                  ),
+                                                  // The top song's cover, soft and dim behind every card: the month's
+                                                  // own picture, not a decoration.
+                                                  Opacity(
+                                                    opacity: 0.22,
+                                                    child: FadedCover(track: top, sharp: false, darken: 0.55),
+                                                  ),
+                                                  // Darker at the foot, so the footer reads on any cover.
+                                                  DecoratedBox(
+                                                    decoration: BoxDecoration(
+                                                      gradient: LinearGradient(
+                                                        begin: Alignment.topCenter,
+                                                        end: Alignment.bottomCenter,
+                                                        colors: [
+                                                          Colors.transparent,
+                                                          Colors.black.withValues(alpha: 0.35),
+                                                        ],
+                                                        stops: const [0.6, 1],
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  FittedBox(
+                                                    fit: BoxFit.contain,
+                                                    child: SizedBox(
+                                                      width: 360,
+                                                      height: 640,
+                                                      child: Padding(
+                                                        padding: const EdgeInsets.fromLTRB(24, 22, 24, 18),
+                                                        child: _WrapTint(
+                                                          tint: Color.lerp(own, Colors.white, 0.45)!,
+                                                          child: Column(
+                                                            children: [
+                                                              _Brand(month: widget.data.month.label),
+                                                              Expanded(
+                                                                child: Padding(
+                                                                  padding: const EdgeInsets.symmetric(vertical: 16),
+                                                                  child: _cards[i](context, base),
+                                                                ),
                                                               ),
-                                                            ),
-                                                            _Footer(index: i, count: _cards.length),
-                                                          ],
+                                                              _Footer(index: i, count: _cards.length),
+                                                            ],
+                                                          ),
                                                         ),
                                                       ),
                                                     ),
                                                   ),
-                                                ),
-                                              ],
+                                                ],
+                                              ),
                                             ),
                                           ),
                                         ),
                                       ),
-                                    ),
-                                  ),
+                                    );
+                                  },
                                 ),
                               ),
                             ),
@@ -271,12 +334,23 @@ class _WrapStoryState extends State<WrapStory> {
                     ),
                   ),
                   Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: TextButton.icon(
-                      style: TextButton.styleFrom(foregroundColor: AppColors.textSecondary),
-                      onPressed: _save,
-                      icon: const Icon(Icons.download_rounded, size: 18),
-                      label: const Text('Save image'),
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        FilledButton.icon(
+                          onPressed: _share,
+                          icon: const Icon(Icons.ios_share_rounded, size: 18),
+                          label: Text(tr.share),
+                        ),
+                        const SizedBox(width: 8),
+                        TextButton.icon(
+                          style: TextButton.styleFrom(foregroundColor: AppColors.textSecondary),
+                          onPressed: _save,
+                          icon: const Icon(Icons.download_rounded, size: 18),
+                          label: const Text('Save image'),
+                        ),
+                      ],
                     ),
                   ),
                 ],
@@ -286,6 +360,18 @@ class _WrapStoryState extends State<WrapStory> {
         );
       },
     );
+  }
+
+  /// How far each card turns the cover's hue, in degrees: neighbours differ, and the story comes back to it.
+  static const _turns = [0.0, 28, -24, 46, -40, 16, -12, 58, -52, 34, -30, 8];
+
+  /// The cover's colour for card [i], turned around the colour wheel and a touch more saturated.
+  static Color _shade(Color accent, int i) {
+    final hsl = HSLColor.fromColor(accent);
+    return hsl
+        .withHue((hsl.hue + _turns[i % _turns.length] + 360) % 360)
+        .withSaturation((hsl.saturation * 1.15).clamp(0.35, 0.9))
+        .toColor();
   }
 
   static const _weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
@@ -397,6 +483,70 @@ class _WrapStoryState extends State<WrapStory> {
   }
 }
 
+/// A card's background: a diagonal wash of its colour, soft glows of light placed by [seed] (so each card's are
+/// somewhere else), and thin rings in a corner. Plain gradients: nothing here blurs, and it draws once.
+class _Backdrop extends CustomPainter {
+  const _Backdrop({required this.base, required this.glow, required this.seed});
+
+  final Color base;
+  final Color glow;
+  final int seed;
+
+  /// Where the glows sit, as fractions of the card, one set per card in turn.
+  static const _spots = [
+    [Offset(0.15, 0.1), Offset(0.95, 0.55), Offset(0.3, 0.95)],
+    [Offset(0.9, 0.12), Offset(0.05, 0.6), Offset(0.7, 0.9)],
+    [Offset(0.5, 0.0), Offset(0.0, 0.85), Offset(1.0, 0.75)],
+    [Offset(0.05, 0.35), Offset(0.85, 0.05), Offset(0.6, 1.0)],
+  ];
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rect = Offset.zero & size;
+    final hsl = HSLColor.fromColor(glow);
+    final second = hsl.withHue((hsl.hue + 40) % 360).toColor();
+    canvas.drawRect(
+      rect,
+      Paint()
+        ..shader = LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color.lerp(base, glow, 0.35)!, base, Color.lerp(base, Colors.black, 0.35)!],
+          stops: const [0, 0.55, 1],
+        ).createShader(rect),
+    );
+    final spots = _spots[seed % _spots.length];
+    final colors = [glow.withValues(alpha: 0.55), second.withValues(alpha: 0.4), Colors.white.withValues(alpha: 0.1)];
+    final radii = [0.75, 0.6, 0.5];
+    for (var k = 0; k < spots.length; k++) {
+      final center = Offset(spots[k].dx * size.width, spots[k].dy * size.height);
+      final r = size.width * radii[k];
+      canvas.drawCircle(
+        center,
+        r,
+        Paint()
+          ..shader = RadialGradient(colors: [colors[k], colors[k].withValues(alpha: 0)])
+              .createShader(Rect.fromCircle(center: center, radius: r)),
+      );
+    }
+    // Rings round the corner opposite the first glow.
+    final corner = Offset(
+      spots[0].dx < 0.5 ? size.width : 0,
+      spots[0].dy < 0.5 ? size.height * 0.82 : size.height * 0.18,
+    );
+    final ring = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.2
+      ..color = Colors.white.withValues(alpha: 0.07);
+    for (var k = 1; k <= 4; k++) {
+      canvas.drawCircle(corner, size.width * 0.14 * k, ring);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_Backdrop old) => old.base != base || old.glow != glow || old.seed != seed;
+}
+
 /// The cover's colour for the small lines of every card.
 class _WrapTint extends InheritedWidget {
   const _WrapTint({required this.tint, required super.child});
@@ -459,11 +609,23 @@ class _Footer extends StatelessWidget {
   Widget build(BuildContext context) {
     final style = Theme.of(context).textTheme.labelSmall
         ?.copyWith(color: AppColors.textSecondary, fontWeight: FontWeight.w600, letterSpacing: 0.8);
+    final tint = _WrapTint.of(context);
     return Row(
       children: [
-        Text('Made with Riflay', style: style),
-        const Spacer(),
-        Text('${index + 1} / $count', style: style),
+        Expanded(
+          child: Text('Made with Riflay', maxLines: 1, overflow: TextOverflow.ellipsis, style: style),
+        ),
+        // Where this card is in the story: a long mark for this one (the marks say it, no "3 / 12" beside them).
+        for (var i = 0; i < count; i++)
+          Container(
+            width: i == index ? 12 : 4,
+            height: 4,
+            margin: const EdgeInsets.only(left: 3),
+            decoration: BoxDecoration(
+              color: i == index ? tint : Colors.white.withValues(alpha: 0.25),
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
       ],
     );
   }
@@ -498,69 +660,102 @@ class _Card extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
+    final tint = _WrapTint.of(context);
     final align = center ? CrossAxisAlignment.center : CrossAxisAlignment.start;
+    final textAlign = center ? TextAlign.center : TextAlign.start;
+    final picture = art;
+    final round = picture is Artwork && picture.circle;
     return Column(
       crossAxisAlignment: align,
-      mainAxisAlignment: center ? MainAxisAlignment.center : MainAxisAlignment.start,
+      // A short list sits in the middle too, not under the brand with the card empty below it.
+      mainAxisAlignment: center || list != null ? MainAxisAlignment.center : MainAxisAlignment.start,
       children: [
         if (kicker != null)
           Text(
             kicker!,
-            textAlign: center ? TextAlign.center : TextAlign.start,
-            style: text.titleMedium?.copyWith(
-              color: _WrapTint.of(context),
-              fontWeight: FontWeight.w700,
-              letterSpacing: 0.2,
-            ),
+            textAlign: textAlign,
+            style: text.titleMedium?.copyWith(color: tint, fontWeight: FontWeight.w700, letterSpacing: 0.2),
           ),
-        if (art != null) ...[
-          const SizedBox(height: 24),
-          DecoratedBox(
-            // Lifts the picture off the card.
-            decoration: BoxDecoration(
-              boxShadow: [
-                BoxShadow(color: Colors.black.withValues(alpha: 0.35), blurRadius: 24, offset: const Offset(0, 8)),
-              ],
-              shape: art is Artwork && (art! as Artwork).circle ? BoxShape.circle : BoxShape.rectangle,
+        if (picture != null) ...[
+          const SizedBox(height: 28),
+          if (round)
+            // A ring of the card's colours round the artist.
+            Container(
+              padding: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: SweepGradient(colors: [tint, Colors.white, tint.withValues(alpha: 0.4), tint]),
+                boxShadow: [BoxShadow(color: tint.withValues(alpha: 0.45), blurRadius: 36)],
+              ),
+              child: picture,
+            )
+          else
+            // Tilted a little and lit from behind, like a sleeve on a table.
+            Transform.rotate(
+              angle: -0.04,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(10),
+                  boxShadow: [
+                    BoxShadow(color: tint.withValues(alpha: 0.4), blurRadius: 40, spreadRadius: 2),
+                    BoxShadow(color: Colors.black.withValues(alpha: 0.4), blurRadius: 24, offset: const Offset(0, 10)),
+                  ],
+                ),
+                child: picture,
+              ),
             ),
-            child: art!,
-          ),
         ],
         if (headline != null) ...[
-          const SizedBox(height: 20),
-          Text(
-            headline!,
-            maxLines: 3,
-            overflow: TextOverflow.ellipsis,
-            textAlign: center ? TextAlign.center : TextAlign.start,
-            style: text.headlineLarge?.copyWith(
-              fontWeight: FontWeight.w900,
-              color: AppColors.textPrimary,
-              height: 1.05,
-              letterSpacing: -0.8,
+          const SizedBox(height: 22),
+          // White into the card's colour across the words.
+          ShaderMask(
+            blendMode: BlendMode.srcIn,
+            shaderCallback: (r) => LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Colors.white, Color.lerp(Colors.white, tint, 0.7)!],
+            ).createShader(r),
+            child: Text(
+              headline!,
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+              textAlign: textAlign,
+              style: text.displaySmall?.copyWith(fontWeight: FontWeight.w900, height: 1.02, letterSpacing: -1.2),
             ),
           ),
         ],
         if (body != null) ...[
-          const SizedBox(height: 12),
+          const SizedBox(height: 14),
           Text(
             body!,
-            textAlign: center ? TextAlign.center : TextAlign.start,
-            style: text.titleMedium?.copyWith(color: AppColors.textSecondary, height: 1.35),
+            textAlign: textAlign,
+            style: text.titleMedium?.copyWith(color: AppColors.textPrimary.withValues(alpha: 0.78), height: 1.4),
           ),
         ],
         if (list != null) ...[
-          const SizedBox(height: 20),
+          const SizedBox(height: 18),
           for (final l in list!)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 7),
+            Container(
+              margin: const EdgeInsets.symmetric(vertical: 4),
+              padding: const EdgeInsets.fromLTRB(10, 8, 12, 8),
+              decoration: BoxDecoration(
+                // Glass tiles; the first one lit in the card's colour.
+                color: l.rank == 1 ? tint.withValues(alpha: 0.18) : Colors.white.withValues(alpha: 0.07),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: l.rank == 1 ? tint.withValues(alpha: 0.5) : Colors.white.withValues(alpha: 0.08),
+                ),
+              ),
               child: Row(
                 children: [
                   SizedBox(
-                    width: 28,
+                    width: 30,
                     child: Text(
                       '${l.rank}',
-                      style: text.titleMedium?.copyWith(color: _WrapTint.of(context), fontWeight: FontWeight.w900),
+                      style: (l.rank == 1 ? text.headlineSmall : text.titleLarge)?.copyWith(
+                        color: l.rank == 1 ? tint : AppColors.textSecondary,
+                        fontWeight: FontWeight.w900,
+                      ),
                     ),
                   ),
                   l.art,
@@ -573,7 +768,7 @@ class _Card extends StatelessWidget {
                           l.title,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: text.bodyLarge?.copyWith(fontWeight: FontWeight.w700),
+                          style: text.bodyLarge?.copyWith(fontWeight: FontWeight.w800),
                         ),
                         Text(
                           l.subtitle,
@@ -585,7 +780,10 @@ class _Card extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  Text(l.trailing, style: text.bodySmall?.copyWith(color: AppColors.textSecondary)),
+                  Text(
+                    l.trailing,
+                    style: text.bodySmall?.copyWith(color: AppColors.textSecondary, fontWeight: FontWeight.w600),
+                  ),
                 ],
               ),
             ),

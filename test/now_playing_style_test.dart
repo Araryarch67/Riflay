@@ -10,6 +10,8 @@ import 'package:riflay/services/layout_prefs.dart';
 import 'package:riflay/services/lyrics.dart';
 import 'package:riflay/services/player_controller.dart';
 import 'package:riflay/services/player_presets.dart';
+import 'package:riflay/services/video_mode.dart';
+import 'package:riflay/services/ytmusic_web.dart';
 import 'package:riflay/ui/pages/lyrics_page.dart';
 import 'package:riflay/ui/pages/player_presets_page.dart';
 import 'package:riflay/ui/player/mini_player.dart';
@@ -26,7 +28,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 final _track = Track(id: 'style-test', uri: Uri.parse('file:///style-test.mp3'), title: 'Style test', artist: 'Artist');
 
 class _Player extends PlayerController {
-  final track = _track;
+  _Player([Track? track]) : track = track ?? _track;
+  final Track track;
   bool playing = false;
   int toggles = 0;
 
@@ -68,9 +71,9 @@ Widget _tree(_Player c, Size size, Widget page) => PlayerScope(
   ),
 );
 
-Future<_Player> _show(WidgetTester tester, Widget page, Size size) async {
+Future<_Player> _show(WidgetTester tester, Widget page, Size size, {Track? track}) async {
   SharedPreferences.setMockInitialValues({'library.v1': jsonEncode(<Object>[])});
-  final c = _Player();
+  final c = _Player(track);
   await tester.runAsync(c.load);
   // Kawaii's Music video background starts the video machinery (timers, a decoder): not what these tests are about.
   await tester.runAsync(() => Appearance.instance.setNowPlaying(NowPlayingBackground.color));
@@ -208,7 +211,7 @@ void main() {
     expect(find.byType(Slider), findsOneWidget, reason: 'only the progress bar: no volume row');
     expect(_tip('Volume'), findsOneWidget);
     expect(_tip('Lyrics'), findsOneWidget);
-    expect(find.text('Speaker'), findsOneWidget, reason: 'the tiny caption');
+    expect(find.text('Speaker'), findsNothing, reason: 'no caption while the sound plays here');
     expect(find.text('Listen together'), findsNothing, reason: 'no text on the buttons');
     await tester.tap(_tip('Volume'));
     await tester.pumpAndSettle();
@@ -251,6 +254,39 @@ void main() {
       await tester.pumpAndSettle();
       await _close(tester, c);
     }
+  });
+
+  testWidgets('the Song / Video switch shows for a song with a video, fades, and comes back on a touch above', (
+    tester,
+  ) async {
+    final song = Track.youtube(videoId: 'switch-test', title: 'Style test', artist: 'Artist');
+    VideoMode.instance.debugSetFound('switch-test', const MusicVideo(videoId: 'switch-test'));
+    addTearDown(() => VideoMode.instance.debugSetFound('switch-test', null));
+    // Song picked: the switch still shows, and no video player starts (no media_kit in widget tests).
+    VideoMode.instance.setOn(false);
+    addTearDown(() => VideoMode.instance.setOn(true));
+    final c = await _show(tester, const NowPlayingPage(), const Size(412, 915), track: song);
+    double shown() => tester
+        .widget<AnimatedOpacity>(find.ancestor(of: find.text('Video'), matching: find.byType(AnimatedOpacity)).first)
+        .opacity;
+    expect(find.text('Video'), findsOneWidget, reason: 'at the top, no ⋯ needed');
+    expect(shown(), 1);
+    await tester.pump(const Duration(seconds: 4));
+    expect(shown(), 0, reason: 'out of the way of the cover');
+    await tester.tapAt(const Offset(206, 300));
+    await tester.pump();
+    expect(shown(), 1, reason: 'a touch on the cover brings it back');
+    await tester.pump(const Duration(seconds: 4));
+    await tester.tapAt(const Offset(206, 860));
+    await tester.pump();
+    expect(shown(), 0, reason: 'the buttons below leave it hidden');
+    await _close(tester, c);
+    await tester.runAsync(() => p.setShowVideoSwitch(false));
+    final off = await _show(tester, const NowPlayingPage(), const Size(412, 915), track: song);
+    expect(find.text('Video'), findsNothing, reason: 'Off in Settings');
+    await _close(tester, off);
+    // VideoMode lets go of its views a moment after they close.
+    await tester.pump(const Duration(minutes: 1));
   });
 
   testWidgets('Kawaii puts the quality badge in the time row, between the two times', (tester) async {

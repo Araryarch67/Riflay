@@ -629,6 +629,24 @@ abstract final class Metadata {
     }
   }
 
+  /// The cover at the size a whole page needs (Cover: Background): an online cover from googleusercontent, which
+  /// serves any size, asked at 1600 px (song rows give 544, about five times stretched across a phone's page).
+  /// Anything else, or a failed fetch, is the usual [artwork]. Off with `RIFLAY_NO_PAGE_ARTWORK`.
+  static Future<Uint8List?> pageArtwork(Track track) async {
+    final url = track.artworkUrl;
+    final sized = RegExp(r'=w\d+-h\d+');
+    if (_pageArtworkOff ||
+        track.path != null ||
+        url == null ||
+        !url.contains('googleusercontent') ||
+        !sized.hasMatch(url)) {
+      return artwork(track);
+    }
+    return await _networkArtwork(url.replaceFirst(sized, '=w1600-h1600')) ?? await artwork(track);
+  }
+
+  static const _pageArtworkOff = bool.fromEnvironment('RIFLAY_NO_PAGE_ARTWORK');
+
   static const _coverHeaders = {'User-Agent': 'Riflay (https://github.com/Araryarch67/Riflay)'};
 
   /// Looks up the front cover of [album] by [artist] on MusicBrainz and

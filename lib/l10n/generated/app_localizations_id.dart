@@ -947,4 +947,58 @@ class AppLocalizationsId extends AppLocalizations {
   @override
   String get linkFailed =>
       'Tautan itu tidak bisa dibuka. Mungkin privat, sudah dihapus, atau tidak tersedia di wilayahmu.';
+
+  @override
+  String get streakTitle => 'Streak dengar';
+
+  @override
+  String streakDays(int count) {
+    return 'Streak $count hari';
+  }
+
+  @override
+  String streakTooltip(int count) {
+    return 'Streak dengar: $count hari';
+  }
+
+  @override
+  String get streakSafe => 'Hari ini kamu sudah dengar. Sampai besok!';
+
+  @override
+  String get streakKeepGoing => 'Putar satu lagu hari ini biar streak-mu lanjut';
+
+  @override
+  String get streakStart => 'Putar lagu untuk mulai streak';
+
+  @override
+  String streakLongest(int count) {
+    return 'Terpanjang: $count hari';
+  }
+
+  @override
+  String streakToNext(int count, Object flame) {
+    return '$count hari lagi menuju $flame';
+  }
+
+  @override
+  String get streakTop => 'Api tertinggi yang ada';
+
+  @override
+  String get flameRed => 'api merah';
+
+  @override
+  String get flameGold => 'api emas';
+
+  @override
+  String get flameBlue => 'api biru';
+
+  @override
+  String get flamePurple => 'api ungu';
+
+  @override
+  String get flameRainbow => 'api pelangi';
+
+  @override
+  String get streakRule =>
+      'Satu hari terhitung kalau kamu memutar lagu minimal 30 detik. Riwayatmu tetap di perangkat ini.';
 }

@@ -2049,7 +2049,6 @@ class AudioEngine extends ChangeNotifier {
     );
   }
 
-  /// One read of the live signal path, or null when nothing is playing.
   /// The song playing, from media_kit's state in Dart (no mpv read): its place in the playlist and its address.
   String get _songKey {
     final list = _player?.state.playlist;
@@ -2063,7 +2062,26 @@ class AudioEngine extends ChangeNotifier {
   /// Direct USB: the signal path of the song playing, read once (see [signalPath]).
   ({NativePlayer player, String file, SignalPath path})? _directUsbSignal;
 
-  Future<SignalPath?> signalPath() async {
+  /// The latest [signalPath] read and when it started. Off with `RIFLAY_NO_SHARED_SIGNAL_PATH`: every caller reads.
+  static const _shareSignalPath = !bool.fromEnvironment('RIFLAY_NO_SHARED_SIGNAL_PATH');
+  Future<SignalPath?>? _sharedPath;
+  DateTime _sharedPathAt = DateTime(0);
+
+  /// One read of the live signal path, or null when nothing is playing.
+  ///
+  /// One read shared by everyone who asks within a second: the quality badge, Signal path, Detail stats and the
+  /// Discord presence each poll once a second, and every mpv property read is a synchronous call on the UI thread
+  /// (~20 of them per path), so with two or three open the player stuttered.
+  Future<SignalPath?> signalPath() {
+    if (!_shareSignalPath) return _signalPathNow();
+    final now = DateTime.now();
+    final shared = _sharedPath;
+    if (shared != null && now.difference(_sharedPathAt) < const Duration(milliseconds: 900)) return shared;
+    _sharedPathAt = now;
+    return _sharedPath = _signalPathNow();
+  }
+
+  Future<SignalPath?> _signalPathNow() async {
     if (!directUsbActive) return _readSignalPath();
     // Direct USB: mpv's core paces the song (directUsbPaceFilter), so each property read waits a little for it,
     // ~14 ms on a phone, and Signal path's ~15 reads a second took most of the UI thread (the app lagged). Read once

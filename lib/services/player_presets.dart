@@ -28,6 +28,7 @@ class PlayerPreset {
     this.background,
     this.visualizer = false,
     this.visualizerStyle = VisualizerStyle.pulse,
+    this.videoSwitch = true,
   });
 
   final String name;
@@ -57,6 +58,9 @@ class PlayerPreset {
   /// The audio visualizer around the cover, and its style. Only counted where the visualizer exists (not on the web).
   final bool visualizer;
   final VisualizerStyle visualizerStyle;
+
+  /// The Song / Video switch at the top of Now Playing: shown by every preset.
+  final bool videoSwitch;
 
   /// Today's look, with the visualizer pulsing around the cover.
   static const classic = PlayerPreset(
@@ -122,6 +126,7 @@ class PlayerPreset {
     differ(p.qualityBadgePlace, badge);
     differ(p.lyricsLines, lyricsLines);
     differ(p.volumeSlider, volumeSlider);
+    differ(p.showVideoSwitch, videoSwitch);
     if (background != null) differ(Appearance.instance.nowPlaying, background!);
     if (Features.audioVisualizer) {
       differ(p.visualizer, visualizer);
@@ -153,6 +158,7 @@ class PlayerPreset {
       p.qualityBadgePlace = badge;
       p.lyricsLines = lyricsLines;
       p.volumeSlider = volumeSlider;
+      p.showVideoSwitch = videoSwitch;
       p.visualizer = visualizer;
       if (visualizer) p.visualizerStyle = visualizerStyle;
     });

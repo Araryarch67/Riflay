@@ -46,6 +46,13 @@ class ShellScope extends InheritedWidget {
   /// Null where folders can't be scanned (mobile).
   final VoidCallback? addFolder;
 
+  /// A song card's tap: [play] starts it and, on a phone, the full player opens over the page at once (the mini
+  /// player coming up alone looked as if little had happened). A computer's side panel shows the song already.
+  void playAndOpen(Future<void> Function() play) {
+    play().ignore();
+    if (compact) openNowPlaying();
+  }
+
   /// The same scope around [child]: for what is built in a route of its own (a sheet),
   /// outside the shell's tree.
   Widget wrap(Widget child) => ShellScope(

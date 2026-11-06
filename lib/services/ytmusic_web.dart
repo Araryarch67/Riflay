@@ -632,8 +632,71 @@ class YtMusicWeb {
   /// The music video of [videoId], or null when it has none: the song is a
   /// video itself, or YouTube Music pairs it with one (the Song / Video
   /// switch; signed-in accounts get those pairs).
-  Future<MusicVideo?> musicVideo(String videoId) async =>
-      parseMusicVideo(await _send('next', {'videoId': videoId, 'isAudioOnly': true}), videoId);
+  ///
+  /// YouTube Music doesn't pair every song: an audio track (`ATV`) may come with no counterpart even though its
+  /// official video is right there (signed out, often). Then the videos found by its title are searched for that
+  /// video: the same title, an artist of the song, and nearly its length ([matchMusicVideo]). Off with
+  /// `RIFLAY_NO_MV_SEARCH`.
+  Future<MusicVideo?> musicVideo(String videoId) async {
+    final next = await _send('next', {'videoId': videoId, 'isAudioOnly': true});
+    final paired = parseMusicVideo(next, videoId);
+    if (paired != null || !_searchForVideo) return paired;
+    final song = songOf(next, videoId);
+    if (song == null || song.title.isEmpty) return null;
+    final id = matchMusicVideo(song, await searchVideos('${song.title} ${song.artist}'));
+    return id == null ? null : MusicVideo(videoId: id);
+  }
+
+  static const _searchForVideo = !bool.fromEnvironment('RIFLAY_NO_MV_SEARCH');
+
+  /// Words that mark a video as another take of a song: a cover, a remix, a live or dance video.
+  static final _otherTake = RegExp(
+    r'cover|karaoke|remix|live|instrumental|acoustic|nightcore|sped up|slowed|8d|dance|practice|mirror|lyric video|'
+    r'歌ってみた|踊ってみた|弾いてみた|叩いてみた|カバー|ライブ',
+  );
+
+  /// The song's own row in a `next` response, as an audio track (`ATV`) only: a video is its own music video.
+  @visibleForTesting
+  static WebTrack? songOf(Map<String, dynamic> next, String videoId) {
+    for (final item in _list(_asMap(_deepFind(next, 'playlistPanelRenderer'))?['contents'])) {
+      final row = _asMap(_deepFind(item, 'playlistPanelVideoRenderer'));
+      if (row?['videoId'] != videoId) continue;
+      if (_deepFind(row?['navigationEndpoint'], 'musicVideoType') != 'MUSIC_VIDEO_TYPE_ATV') return null;
+      return _panelSong(row!);
+    }
+    return null;
+  }
+
+  /// The official video of [song] among [videos]: the same title (or the same main title, the part before a
+  /// " - " or a bracket, so a translation or a typo after it doesn't matter), by one of the song's artists (by name,
+  /// or uploaded by the artist's own channel, which also matches 宝鐘マリン to Houshou Marine), within four seconds of
+  /// its length so the picture keeps time with the sound (it plays from the same point). Covers, dance videos and
+  /// fan edits differ in uploader or length; none of them is taken.
+  @visibleForTesting
+  static String? matchMusicVideo(WebTrack song, List<WebTrack> videos) {
+    String plain(String s) => s.toLowerCase().replaceAll(RegExp(r'\s+'), ' ').trim();
+    String main(String s) => plain(s.split(RegExp(r' - |[(\[【（]')).first);
+    final title = plain(song.title), mainTitle = main(song.title);
+    final artists = [
+      for (final a in song.artist.split(RegExp(r',|&| x | feat\.? ', caseSensitive: false)))
+        if (plain(a).isNotEmpty) plain(a),
+    ];
+    final length = song.duration;
+    for (final v in videos) {
+      if (v.videoId == song.videoId) continue;
+      final t = plain(v.title);
+      if (t != title && (mainTitle.length < 2 || main(v.title) != mainTitle)) continue;
+      // Another take of the song under its title: a word the video's title has and the song's doesn't.
+      if (_otherTake.allMatches(t).any((m) => !title.contains(m[0]!))) continue;
+      final by = plain(v.artist);
+      final sameChannel = song.artistId != null && song.artistId == v.artistId;
+      if (!sameChannel && !artists.any(by.contains)) continue;
+      final d = v.duration;
+      if (length == null || d == null || (d - length).abs() > const Duration(seconds: 4)) continue;
+      return v.videoId;
+    }
+    return null;
+  }
 
   /// The header of the artist page [channelId] (`UC…`): name, subscribers, about text and photo; null when the
   /// page has none.
@@ -1223,8 +1286,10 @@ class YtMusicWeb {
       browseId: browseId,
       title: title,
       subtitle: _text(data['subtitle']) ?? '',
+      // The usual place, else any list of thumbnails under the card's picture (some shelves wrap it differently).
       thumbnailUrl: _lastThumb(
-        _at(data, const ['thumbnailRenderer', 'musicThumbnailRenderer', 'thumbnail', 'thumbnails']),
+        _at(data, const ['thumbnailRenderer', 'musicThumbnailRenderer', 'thumbnail', 'thumbnails']) ??
+            _deepFind(data['thumbnailRenderer'], 'thumbnails'),
       ),
     );
   }
@@ -1455,8 +1520,10 @@ class YtMusicWeb {
       id: browseId.startsWith('VL') ? browseId.substring(2) : browseId,
       title: title,
       count: count,
+      // The usual place, else any list of thumbnails under the card's picture (some shelves wrap it differently).
       thumbnailUrl: _lastThumb(
-        _at(data, const ['thumbnailRenderer', 'musicThumbnailRenderer', 'thumbnail', 'thumbnails']),
+        _at(data, const ['thumbnailRenderer', 'musicThumbnailRenderer', 'thumbnail', 'thumbnails']) ??
+            _deepFind(data['thumbnailRenderer'], 'thumbnails'),
       ),
     );
   }

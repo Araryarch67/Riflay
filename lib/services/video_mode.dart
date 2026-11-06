@@ -38,12 +38,15 @@ class VideoMode extends ChangeNotifier with WidgetsBindingObserver {
 
   static bool get _phone => Host.isAndroid || Host.isIOS;
 
-  /// Watched in the player: sharp on a computer screen (1080p); phones get a lighter stream, less data to fetch
-  /// and decode.
-  static int get maxHeight => _phone ? 720 : 1080;
+  /// Watched in the player: 1080p on computers. A phone's screen is tall and the video fills it cropped to cover,
+  /// so only a middle strip of each frame shows, stretched to the screen's height (a 1080p frame about 2.5 times
+  /// on a 2656-pixel screen): up to 1440p there, which YouTube serves as VP9 and phones decode in hardware.
+  static int get maxHeight => _phone ? 1440 : 1080;
 
-  /// Behind the page: 360p looked blurry across a whole window, so 720p on computers; phones keep it light.
-  static int get backgroundHeight => _phone ? 480 : 720;
+  /// Behind the page: on a phone it is the page itself (cropped to cover, as above), and 480p came out
+  /// pixelated; the player's size there too (fetched only on Wi-Fi, see `prefetchAllowed`). Computers show it
+  /// across a window, dimmed: 720p.
+  static int get backgroundHeight => _phone ? maxHeight : 720;
 
   PlayerController? _c;
 
@@ -355,7 +358,7 @@ class VideoMode extends ChangeNotifier with WidgetsBindingObserver {
       if (!foreground) {
         // A small, dimmed picture behind the page: mpv's fast scalers and no extra passes. Its default
         // high-quality ones cost several times the CPU and GPU for a difference nobody can see here.
-        for (final (name, value) in const [
+        for (final (name, value) in [
           ('scale', 'bilinear'),
           ('dscale', 'bilinear'),
           ('cscale', 'bilinear'),
@@ -365,7 +368,9 @@ class VideoMode extends ChangeNotifier with WidgetsBindingObserver {
           ('sigmoid-upscaling', 'no'),
           ('deband', 'no'),
           ('hdr-compute-peak', 'no'),
-          ('vd-lavc-threads', '2'),
+          // Two decoding threads are plenty for 720p; a phone's 1080p page (decoded on the processor where its
+          // graphics card won't) needs mpv's own count, or it falls behind and the follower keeps seeking.
+          if (backgroundHeight <= 720) ('vd-lavc-threads', '2'),
         ]) {
           await mpv.setProperty(name, value);
         }
@@ -483,7 +488,10 @@ class VideoMode extends ChangeNotifier with WidgetsBindingObserver {
       if (now.difference(_lastSeek) > const Duration(seconds: 8)) _seekedTo = null;
       // A paused song is matched exactly. A song that is only buffering (a streamed song does, briefly, between
       // chunks) just pauses the video: a seek would send it back to the network for nothing.
-      if (drift.abs() > const Duration(seconds: 1) || !c.isPlaying && drift.abs() > const Duration(milliseconds: 100)) {
+      // Up to [seekBeyond] closes by speed: a seek on a stream fetches again first, and measured on a song's first
+      // seconds the video froze two or three seconds after each one, then overshot into the next (a 1 s limit
+      // swung the gap between -1.4 and +1.3 s for twelve seconds).
+      if (drift.abs() > seekBeyond || !c.isPlaying && drift.abs() > const Duration(milliseconds: 100)) {
         // Not until the last seek has landed: the stream comes only a little faster than it plays, so each seek
         // fetches for a second or two first, and a new one would throw that away and start again.
         if (_seekedTo == null && now.difference(_lastSeek) > const Duration(milliseconds: 700)) {
@@ -511,13 +519,17 @@ class VideoMode extends ChangeNotifier with WidgetsBindingObserver {
     return Duration(milliseconds: ms);
   }
 
+  /// A gap (video minus song) past this while playing is closed by a seek; anything smaller by speed.
+  static const seekBeyond = Duration(milliseconds: 2500);
+
   /// The video's speed that closes a gap of [drift] (video minus song) in
-  /// about three seconds; within 40 ms it is in step.
+  /// about three seconds; within 40 ms it is in step. Between 0.7 and 1.4
+  /// times, so a gap up to [seekBeyond] closes in a few seconds without a seek.
   @visibleForTesting
   static double catchUpRate(Duration drift) {
     final ms = drift.inMilliseconds;
     if (ms.abs() <= 40) return 1;
-    return (1 - ms / 3000).clamp(0.75, 1.25);
+    return (1 - ms / 3000).clamp(0.7, 1.4);
   }
 
   @override

@@ -97,6 +97,20 @@ class LayoutSettings extends StatelessWidget {
                 onChanged: p.setShowQualityBadge,
               ),
               SettingTile(
+                icon: Icons.music_video_outlined,
+                title: const Text('Song / Video switch'),
+                subtitle: Text(
+                  'At the top of Now Playing. Adaptive shows it only when the song has a music video',
+                  style: muted,
+                ),
+                // Not On / Off: even "on", it follows the song (nothing to switch to without a video).
+                control: OptionPicker<bool>(
+                  value: p.showVideoSwitch,
+                  onChanged: p.setShowVideoSwitch,
+                  options: const [(true, 'Adaptive'), (false, 'Off')],
+                ),
+              ),
+              SettingTile(
                 icon: Icons.high_quality_outlined,
                 title: const Text('Quality badge'),
                 subtitle: Text(

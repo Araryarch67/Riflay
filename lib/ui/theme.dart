@@ -198,6 +198,51 @@ class OverPicture extends StatelessWidget {
   }
 }
 
+/// Content on a light fill under [OverPicture] (a white button): without its shadow, which shows there as a dark
+/// halo round dark icons and words.
+class OffPicture extends StatelessWidget {
+  const OffPicture({super.key, required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final t = theme.textTheme;
+    if (IconTheme.of(context).shadows == null && t.bodyMedium?.shadows == null) return child;
+    TextStyle? clear(TextStyle? s) => s?.copyWith(shadows: const []);
+    return Theme(
+      data: theme.copyWith(
+        textTheme: t.copyWith(
+          displayLarge: clear(t.displayLarge),
+          displayMedium: clear(t.displayMedium),
+          displaySmall: clear(t.displaySmall),
+          headlineLarge: clear(t.headlineLarge),
+          headlineMedium: clear(t.headlineMedium),
+          headlineSmall: clear(t.headlineSmall),
+          titleLarge: clear(t.titleLarge),
+          titleMedium: clear(t.titleMedium),
+          titleSmall: clear(t.titleSmall),
+          bodyLarge: clear(t.bodyLarge),
+          bodyMedium: clear(t.bodyMedium),
+          bodySmall: clear(t.bodySmall),
+          labelLarge: clear(t.labelLarge),
+          labelMedium: clear(t.labelMedium),
+          labelSmall: clear(t.labelSmall),
+        ),
+        iconTheme: theme.iconTheme.copyWith(shadows: const []),
+      ),
+      child: DefaultTextStyle.merge(
+        style: const TextStyle(shadows: []),
+        child: IconTheme.merge(
+          data: const IconThemeData(shadows: []),
+          child: child,
+        ),
+      ),
+    );
+  }
+}
+
 /// Rebuilds what may read [AppColors] statically after a palette change. Only widgets that run a `build`
 /// (stateless, stateful, builders) can have a colour in their output; render objects, inherited and proxy
 /// widgets hold the same configuration and gain nothing from a rebuild, so they are left alone, as is
@@ -389,6 +434,9 @@ int _themesBuilt = 0;
 int _themesCached = 0;
 
 /// Settings › Layout › Slider look, for every slider in the app (the progress bar has its own shape setting).
+/// The corners of every text field (see `inputDecorationTheme`): Search's pill.
+const _field = BorderRadius.all(Radius.circular(24));
+
 ThemeData _sliderLook(ThemeData t, VolumeSliderShape look) => switch (look) {
   VolumeSliderShape.classic => t,
   VolumeSliderShape.thin => t.copyWith(sliderTheme: thinSliderTheme(t.sliderTheme, AppColors.textPrimary)),
@@ -569,13 +617,31 @@ ThemeData buildAppTheme({String? fontFamily}) {
       surfaceTintColor: Colors.transparent,
     ),
     cardTheme: CardThemeData(color: AppColors.elevated, surfaceTintColor: Colors.transparent),
+    // Every field looks like Search's: a filled pill with no outline, a light ring while typing. These win over a
+    // field's own `border`, so one written with `OutlineInputBorder()` gets them too. 24: a pill at a field's
+    // height, soft corners on a field of several lines.
     inputDecorationTheme: InputDecorationThemeData(
       filled: true,
       fillColor: AppColors.tile,
+      hoverColor: AppColors.hover,
       hintStyle: text.bodyMedium?.copyWith(color: AppColors.textMuted),
       labelStyle: text.bodyMedium?.copyWith(color: AppColors.textSecondary),
-      enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: AppColors.border)),
-      focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: AppColors.accent, width: 2)),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+      border: const OutlineInputBorder(borderRadius: _field, borderSide: BorderSide.none),
+      enabledBorder: const OutlineInputBorder(borderRadius: _field, borderSide: BorderSide.none),
+      disabledBorder: const OutlineInputBorder(borderRadius: _field, borderSide: BorderSide.none),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: _field,
+        borderSide: BorderSide(color: AppColors.textPrimary, width: 2),
+      ),
+      errorBorder: OutlineInputBorder(
+        borderRadius: _field,
+        borderSide: BorderSide(color: Colors.redAccent.withValues(alpha: 0.8)),
+      ),
+      focusedErrorBorder: const OutlineInputBorder(
+        borderRadius: _field,
+        borderSide: BorderSide(color: Colors.redAccent, width: 2),
+      ),
     ),
     switchTheme: SwitchThemeData(
       thumbColor: WidgetStateProperty.resolveWith(

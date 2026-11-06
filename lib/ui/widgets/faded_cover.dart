@@ -92,7 +92,8 @@ class _FadedCoverState extends State<FadedCover> {
       _show(_last!.clone());
       return;
     }
-    final bytes = Metadata.cachedArtwork(track) ?? await Metadata.artwork(track);
+    // A whole page: the large cover where there is one (the list's 544 px looked pixelated stretched this far).
+    final bytes = await Metadata.pageArtwork(track);
     if (bytes == null || !mounted || key != _key) return;
     ui.Image? big, small, soft;
     try {

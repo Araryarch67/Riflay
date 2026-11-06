@@ -13,6 +13,7 @@ import '../theme.dart';
 import '../widgets/controls.dart';
 import '../widgets/page_scaffold.dart';
 import '../widgets/shelf.dart';
+import '../widgets/streak_badge.dart';
 import 'downloads_page.dart';
 import 'youtube_music_page.dart';
 import '../widgets/menus.dart';
@@ -136,7 +137,7 @@ class HomePage extends StatelessWidget {
                 title: t.title,
                 subtitle: t.artist,
                 online: !c.isOffline(t),
-                onTap: () => c.playList(recent, i, from: tr.recentlyPlayed),
+                onTap: () => shell.playAndOpen(() => c.playList(recent, i, from: tr.recentlyPlayed)),
                 onPlay: () => c.playList(recent, i, from: tr.recentlyPlayed),
               );
             });
@@ -205,7 +206,7 @@ class HomePage extends StatelessWidget {
               track: t,
               title: t.title,
               subtitle: t.artist,
-              onTap: () => c.playList(c.recentlyAdded, i, from: tr.recentlyAdded),
+              onTap: () => shell.playAndOpen(() => c.playList(c.recentlyAdded, i, from: tr.recentlyAdded)),
               onPlay: () => c.playList(c.recentlyAdded, i, from: tr.recentlyAdded),
             );
           }, onShowAll: () => shell.openCollection(c.allSongs)),
@@ -216,9 +217,17 @@ class HomePage extends StatelessWidget {
       SliverToBoxAdapter(
         child: Padding(
           padding: EdgeInsets.fromLTRB(pad, 0, pad, 16),
-          child: Text(
-            _greeting(),
-            style: text.headlineMedium?.copyWith(fontWeight: FontWeight.w800, letterSpacing: -0.8),
+          // The listening streak beside the greeting: the first thing seen, and a reason to come back tomorrow.
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  _greeting(),
+                  style: text.headlineMedium?.copyWith(fontWeight: FontWeight.w800, letterSpacing: -0.8),
+                ),
+              ),
+              const StreakBadge(),
+            ],
           ),
         ),
       ),

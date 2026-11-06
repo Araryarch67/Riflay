@@ -115,6 +115,10 @@ test/                          Unit and widget tests
   SharedPreferences (`playlists.v1`) and shown as `CollectionKind.playlist`.
 - Song menus get "Remove from this playlist" from a `PlaylistEditScope` above
   them (Riflay playlists and the user's own YouTube Music playlists).
+- The listening streak (`services/listening_streak.dart`, shown by `StreakBadge` beside Home's greeting): days
+  in a row with a play kept in `PlayHistory` (30 seconds or more), alive through today until it ends. Its flame
+  follows `StreakTier`: red under 10 days, gold from 10, blue from 50, purple from 100, every colour from 365.
+  Counted once per history change and day (`RIFLAY_NO_STREAK_CACHE` turns that off).
 - Picking several songs: every `CollectionPage` (albums, artists, playlists,
   YouTube Music ones too) has a `TrackSelectionHost` (`widgets/track_selection.dart`).
   Hold a row or use "Select" in its menu; while anything is picked a tap picks
@@ -484,6 +488,10 @@ device's language when Riflay has it). The words live in `lib/l10n/app_en.arb` (
   flutter run --dart-define=RIFLAY_NO_TRAY=true           # no tray icon; closing the window quits
   flutter run --dart-define=RIFLAY_NO_DIRECT_USB_GUARD=true  # Android Direct USB crashes for real (logcat)
   flutter run --dart-define=RIFLAY_NO_OPEN_LINKS=true     # ignore links opened or shared with Riflay
+  flutter run --dart-define=RIFLAY_NO_SHARED_SIGNAL_PATH=true  # every signalPath() caller reads mpv itself
+  flutter run --dart-define=RIFLAY_NO_STREAK_CACHE=true  # the listening streak counted afresh every build
+  flutter run --dart-define=RIFLAY_NO_MV_SEARCH=true     # a song YouTube Music pairs with no video gets none (no search for its official video)
+  flutter run --dart-define=RIFLAY_NO_PAGE_ARTWORK=true  # Cover: Background uses the list's 544 px cover, not a 1600 px one
   ```
 
   Last.fm is only offered when the build has an API account's key and secret

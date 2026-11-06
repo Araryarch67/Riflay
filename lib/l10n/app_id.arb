@@ -293,5 +293,20 @@
   "directUsbWarningConfirm": "Nyalakan",
   "linkNotYoutube": "Tidak ada tautan YouTube di yang dibagikan.",
   "linkOpening": "Membuka tautan…",
-  "linkFailed": "Tautan itu tidak bisa dibuka. Mungkin privat, sudah dihapus, atau tidak tersedia di wilayahmu."
+  "linkFailed": "Tautan itu tidak bisa dibuka. Mungkin privat, sudah dihapus, atau tidak tersedia di wilayahmu.",
+  "streakTitle": "Streak dengar",
+  "streakDays": "Streak {count} hari",
+  "streakTooltip": "Streak dengar: {count} hari",
+  "streakSafe": "Hari ini kamu sudah dengar. Sampai besok!",
+  "streakKeepGoing": "Putar satu lagu hari ini biar streak-mu lanjut",
+  "streakStart": "Putar lagu untuk mulai streak",
+  "streakLongest": "Terpanjang: {count} hari",
+  "streakToNext": "{count} hari lagi menuju {flame}",
+  "streakTop": "Api tertinggi yang ada",
+  "flameRed": "api merah",
+  "flameGold": "api emas",
+  "flameBlue": "api biru",
+  "flamePurple": "api ungu",
+  "flameRainbow": "api pelangi",
+  "streakRule": "Satu hari terhitung kalau kamu memutar lagu minimal 30 detik. Riwayatmu tetap di perangkat ini."
 }

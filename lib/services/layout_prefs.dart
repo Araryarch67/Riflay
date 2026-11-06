@@ -384,6 +384,9 @@ class LayoutPrefs extends ChangeNotifier {
   TabBarStyle tabBar = TabBarStyle.capsule;
   DesktopBarStyle desktopBar = DesktopBarStyle.classic;
   bool showQualityBadge = true;
+
+  /// The Song / Video switch at the top of Now Playing, for a song with a music video. On in every preset.
+  bool showVideoSwitch = true;
   bool visualizer = true;
   bool get visualizerEnabled => visualizer && Features.audioVisualizer;
 
@@ -413,6 +416,7 @@ class LayoutPrefs extends ChangeNotifier {
   double sidePanelWidth = sidePanelDefault;
 
   Motion motion = Motion.full;
+
   /// Classic by default: the reveals felt like too much to many as the first thing they saw.
   PageMotionStyle pageMotion = PageMotionStyle.classic;
   PageMotionSpeed pageSpeed = PageMotionSpeed.relaxed;
@@ -557,6 +561,7 @@ class LayoutPrefs extends ChangeNotifier {
       _ => pick(DesktopBarStyle.values, 'desktopBar', d.desktopBar),
     };
     showQualityBadge = j['showQualityBadge'] as bool? ?? d.showQualityBadge;
+    showVideoSwitch = j['showVideoSwitch'] as bool? ?? d.showVideoSwitch;
     visualizer = j['visualizer'] as bool? ?? d.visualizer;
     visualizerStyle = j['visualizerVersion'] == 3
         ? pick(VisualizerStyle.values, 'visualizerStyle', d.visualizerStyle)
@@ -614,6 +619,7 @@ class LayoutPrefs extends ChangeNotifier {
     'tabBar': tabBar.name,
     'desktopBar': desktopBar.name,
     'showQualityBadge': showQualityBadge,
+    'showVideoSwitch': showVideoSwitch,
     'visualizer': visualizer,
     'visualizerStyle': visualizerStyle.name,
     'visualizerVersion': 3,
@@ -692,6 +698,7 @@ class LayoutPrefs extends ChangeNotifier {
   Future<void> setVisualizerThickness(double v) => _set(() => visualizerThickness = v.clamp(1, 8));
   Future<void> setVisualizer(bool v) => _set(() => visualizer = v);
   Future<void> setShowQualityBadge(bool v) => _set(() => showQualityBadge = v);
+  Future<void> setShowVideoSwitch(bool v) => _set(() => showVideoSwitch = v);
   Future<void> setLyricsSize(LyricsSize v) => _set(() => lyricsSize = v);
   Future<void> setLyricsAlign(LyricsAlign v) => _set(() => lyricsAlign = v);
   Future<void> setDimUnsungLyrics(bool v) => _set(() => dimUnsungLyrics = v);

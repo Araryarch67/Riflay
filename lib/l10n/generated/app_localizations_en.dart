@@ -945,4 +945,70 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get linkFailed => 'Couldn\'t open that link. It may be private, removed or region-locked.';
+
+  @override
+  String get streakTitle => 'Listening streak';
+
+  @override
+  String streakDays(int count) {
+    return '$count-day streak';
+  }
+
+  @override
+  String streakTooltip(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Listening streak: $count days',
+      one: 'Listening streak: 1 day',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get streakSafe => 'You\'ve listened today. See you tomorrow!';
+
+  @override
+  String get streakKeepGoing => 'Play a song today to keep your streak';
+
+  @override
+  String get streakStart => 'Play a song to start a streak';
+
+  @override
+  String streakLongest(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Longest: $count days',
+      one: 'Longest: 1 day',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String streakToNext(int count, Object flame) {
+    return '$count more days to the $flame';
+  }
+
+  @override
+  String get streakTop => 'The highest flame there is';
+
+  @override
+  String get flameRed => 'red flame';
+
+  @override
+  String get flameGold => 'gold flame';
+
+  @override
+  String get flameBlue => 'blue flame';
+
+  @override
+  String get flamePurple => 'purple flame';
+
+  @override
+  String get flameRainbow => 'rainbow flame';
+
+  @override
+  String get streakRule =>
+      'A day counts once you play a song for 30 seconds or more. Your history stays on this device.';
 }

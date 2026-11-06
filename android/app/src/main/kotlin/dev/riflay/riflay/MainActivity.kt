@@ -67,10 +67,23 @@ class MainActivity : AudioServiceActivity() {
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "riflay/share").setMethodCallHandler { call, result ->
             val text = call.argument<String>("text")
             if (call.method != "share" || text == null) return@setMethodCallHandler result.notImplemented()
+            // A picture too, when given: a file in the cache's shared/ folder, lent to the app picked.
+            val picture = call.argument<String>("file")?.let { path ->
+                try {
+                    androidx.core.content.FileProvider.getUriForFile(this, "$packageName.updates", java.io.File(path))
+                } catch (e: IllegalArgumentException) {
+                    null
+                }
+            }
             val send = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
-                type = "text/plain"
+                type = if (picture != null) call.argument<String>("mime") ?: "image/png" else "text/plain"
                 putExtra(android.content.Intent.EXTRA_TEXT, text)
                 call.argument<String>("subject")?.let { putExtra(android.content.Intent.EXTRA_SUBJECT, it) }
+                if (picture != null) {
+                    putExtra(android.content.Intent.EXTRA_STREAM, picture)
+                    clipData = android.content.ClipData.newRawUri(null, picture)
+                    addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                }
             }
             try {
                 startActivity(android.content.Intent.createChooser(send, null))

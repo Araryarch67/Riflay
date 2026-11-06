@@ -1849,6 +1849,96 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Couldn\'t open that link. It may be private, removed or region-locked.'**
   String get linkFailed;
+
+  /// No description provided for @streakTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Listening streak'**
+  String get streakTitle;
+
+  /// No description provided for @streakDays.
+  ///
+  /// In en, this message translates to:
+  /// **'{count}-day streak'**
+  String streakDays(int count);
+
+  /// No description provided for @streakTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{Listening streak: 1 day} other{Listening streak: {count} days}}'**
+  String streakTooltip(int count);
+
+  /// No description provided for @streakSafe.
+  ///
+  /// In en, this message translates to:
+  /// **'You\'ve listened today. See you tomorrow!'**
+  String get streakSafe;
+
+  /// No description provided for @streakKeepGoing.
+  ///
+  /// In en, this message translates to:
+  /// **'Play a song today to keep your streak'**
+  String get streakKeepGoing;
+
+  /// No description provided for @streakStart.
+  ///
+  /// In en, this message translates to:
+  /// **'Play a song to start a streak'**
+  String get streakStart;
+
+  /// No description provided for @streakLongest.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{Longest: 1 day} other{Longest: {count} days}}'**
+  String streakLongest(int count);
+
+  /// No description provided for @streakToNext.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} more days to the {flame}'**
+  String streakToNext(int count, Object flame);
+
+  /// No description provided for @streakTop.
+  ///
+  /// In en, this message translates to:
+  /// **'The highest flame there is'**
+  String get streakTop;
+
+  /// No description provided for @flameRed.
+  ///
+  /// In en, this message translates to:
+  /// **'red flame'**
+  String get flameRed;
+
+  /// No description provided for @flameGold.
+  ///
+  /// In en, this message translates to:
+  /// **'gold flame'**
+  String get flameGold;
+
+  /// No description provided for @flameBlue.
+  ///
+  /// In en, this message translates to:
+  /// **'blue flame'**
+  String get flameBlue;
+
+  /// No description provided for @flamePurple.
+  ///
+  /// In en, this message translates to:
+  /// **'purple flame'**
+  String get flamePurple;
+
+  /// No description provided for @flameRainbow.
+  ///
+  /// In en, this message translates to:
+  /// **'rainbow flame'**
+  String get flameRainbow;
+
+  /// No description provided for @streakRule.
+  ///
+  /// In en, this message translates to:
+  /// **'A day counts once you play a song for 30 seconds or more. Your history stays on this device.'**
+  String get streakRule;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

@@ -106,9 +106,24 @@ void openRemotePlaylist(BuildContext context, RemotePlaylist p, {ShellScope? she
   );
 }
 
-/// Placeholder track used only to show a playlist's cover image.
-Track playlistCover(RemotePlaylist p) =>
-    Track.youtube(videoId: 'playlist-${p.id}', title: p.title, artist: '', artworkUrl: p.thumbnailUrl);
+/// Placeholder track used only to show a playlist's cover image ([fallback] where it has none).
+Track playlistCover(RemotePlaylist p, {String? fallback}) =>
+    Track.youtube(videoId: 'playlist-${p.id}', title: p.title, artist: '', artworkUrl: p.thumbnailUrl ?? fallback);
+
+/// The cover of [p]'s first song, for a card with no picture of its own; asked once per playlist (the songs are
+/// the ones opening it shows, kept by the account). Null when it has no songs or they can't be read.
+Future<String?> firstSongCover(YoutubeMusicAccount music, RemotePlaylist p) => _firstCovers[p.id] ??= music
+    .collectionTracks(p)
+    .then(
+      (tracks) => tracks.map((t) => t.artworkUrl).nonNulls.firstOrNull,
+      onError: (Object e) {
+        _firstCovers.remove(p.id);
+        debugPrint('No first song cover for ${p.id}: $e');
+        return null;
+      },
+    );
+
+final _firstCovers = <String, Future<String?>>{};
 
 class _Header extends StatelessWidget {
   const _Header(this.title);
@@ -245,6 +260,7 @@ class DiscoverShelves extends StatelessWidget {
 
 /// YouTube Music's carousels as widgets: songs play, albums and playlists open.
 List<Widget> remoteShelfWidgets(BuildContext context, PlayerController c, List<RemoteShelf> shelves) {
+  final shell = ShellScope.of(context);
   return [
     for (final (si, shelf) in shelves.indexed)
       FadeIn(
@@ -258,16 +274,20 @@ List<Widget> remoteShelfWidgets(BuildContext context, PlayerController c, List<R
                 title: t.title,
                 subtitle: t.artist,
                 online: !c.isOffline(t),
-                onTap: () => c.playList(shelf.tracks, i, from: shelf.title),
+                onTap: () => shell.playAndOpen(() => c.playList(shelf.tracks, i, from: shelf.title)),
                 onPlay: () => c.playList(shelf.tracks, i, from: shelf.title),
               ),
             for (final p in shelf.collections)
-              MediaCard(
-                track: playlistCover(p),
-                title: p.title,
-                subtitle: p.subtitle ?? 'Playlist',
-                online: true,
-                onTap: () => openRemotePlaylist(context, p),
+              // A card YouTube Music gives no picture (shelves like Fresh finds): its first song's cover.
+              FutureBuilder<String?>(
+                future: p.thumbnailUrl == null ? firstSongCover(c.ytMusic, p) : null,
+                builder: (context, first) => MediaCard(
+                  track: playlistCover(p, fallback: first.data),
+                  title: p.title,
+                  subtitle: p.subtitle ?? 'Playlist',
+                  online: true,
+                  onTap: () => openRemotePlaylist(context, p),
+                ),
               ),
           ],
         ),

@@ -106,7 +106,7 @@ class PartButton extends StatelessWidget {
             PartLook.muted => (c.textPrimary.withValues(alpha: 0.1), c.textPrimary, BorderSide.none),
             PartLook.plain => (Colors.transparent, c.textPrimary, BorderSide.none),
           };
-    return IconButton(
+    final button = IconButton(
       tooltip: tooltip,
       onPressed: onPressed,
       iconSize: iconSize,
@@ -124,6 +124,8 @@ class PartButton extends StatelessWidget {
       ),
       icon: Icon(icon),
     );
+    // A dark icon on the white fill: the picture's text shadow would ring it in black.
+    return fill == c.inverse ? OffPicture(child: button) : button;
   }
 }
 
@@ -212,11 +214,13 @@ class JoinedButtons extends StatelessWidget {
               ),
             ),
             clipBehavior: Clip.antiAlias,
-            child: segment(
-              i,
-              shape: BorderRadius.horizontal(
-                left: Radius.circular(i == 0 ? outer : inner),
-                right: Radius.circular(i == last ? outer : inner),
+            child: OffPicture(
+              child: segment(
+                i,
+                shape: BorderRadius.horizontal(
+                  left: Radius.circular(i == 0 ? outer : inner),
+                  right: Radius.circular(i == last ? outer : inner),
+                ),
               ),
             ),
           ),
@@ -580,6 +584,8 @@ class PlayerControlsRow extends StatelessWidget {
                               : Icon(
                                   t.playing ? Icons.pause_rounded : Icons.play_arrow_outlined,
                                   color: colors.onInverse,
+                                  // Dark on the white pill: no picture shadow (a black halo there).
+                                  shadows: const [],
                                 ),
                           const SizedBox(width: 6),
                           Flexible(
@@ -588,7 +594,7 @@ class PlayerControlsRow extends StatelessWidget {
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: Theme.of(context).textTheme.titleMedium
-                                  ?.copyWith(color: colors.onInverse, fontWeight: FontWeight.w700),
+                                  ?.copyWith(color: colors.onInverse, fontWeight: FontWeight.w700, shadows: const []),
                             ),
                           ),
                         ],
@@ -778,13 +784,14 @@ class DesktopControlsRow extends StatelessWidget {
                           t.playing ? Icons.pause_rounded : Icons.play_arrow_rounded,
                           color: colors.onInverse,
                           size: 20,
+                          shadows: const [],
                         ),
                         const SizedBox(width: 4),
                         Text(
                           t.playing ? tr.pause : tr.play,
                           maxLines: 1,
                           style: Theme.of(context).textTheme.labelLarge
-                              ?.copyWith(color: colors.onInverse, fontWeight: FontWeight.w700),
+                              ?.copyWith(color: colors.onInverse, fontWeight: FontWeight.w700, shadows: const []),
                         ),
                       ],
                     ),
@@ -928,13 +935,16 @@ class PlayerBottomButtons extends StatelessWidget {
                     ],
                   ),
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  c.cast.target?.name ?? tr.speaker,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: text.labelSmall?.copyWith(color: colors.textSecondary, fontSize: 10),
-                ),
+                // Only where the sound goes elsewhere: "Speaker" under it said nothing on every song.
+                if (c.cast.target case final target?) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    target.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: text.labelSmall?.copyWith(color: colors.textSecondary, fontSize: 10),
+                  ),
+                ],
               ],
             ),
           ),

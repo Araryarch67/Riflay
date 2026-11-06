@@ -131,7 +131,8 @@ void main() {
     expect(VideoMode.catchUpRate(const Duration(milliseconds: 30)), 1);
     expect(VideoMode.catchUpRate(const Duration(milliseconds: -300)), closeTo(1.1, 1e-9)); // behind: faster
     expect(VideoMode.catchUpRate(const Duration(milliseconds: 300)), closeTo(0.9, 1e-9)); // ahead: slower
-    expect(VideoMode.catchUpRate(const Duration(seconds: -5)), 1.25);
+    expect(VideoMode.catchUpRate(const Duration(seconds: -5)), 1.4);
+    expect(VideoMode.catchUpRate(const Duration(seconds: 5)), 0.7);
   });
 
   test('a sound-only mpv build keeps the switch hidden', () {
