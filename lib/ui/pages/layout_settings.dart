@@ -302,6 +302,13 @@ class LayoutSettings extends StatelessWidget {
                 value: p.dimUnsungLyrics,
                 onChanged: p.setDimUnsungLyrics,
               ),
+              SwitchListTile(
+                secondary: const Icon(Icons.highlight_rounded),
+                title: Text(tr.highlightLyricLine),
+                subtitle: Text(tr.highlightLyricLineSubtitle, style: muted),
+                value: p.highlightLyricLine,
+                onChanged: p.setHighlightLyricLine,
+              ),
               if (MediaSession.lyricsSupported)
                 ValueListenableBuilder(
                   valueListenable: MediaSession.showLyrics,

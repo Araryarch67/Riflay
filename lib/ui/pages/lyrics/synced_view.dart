@@ -511,6 +511,7 @@ class _LineSlotState extends State<_LineSlot> {
         _LinePlace.upcoming => widget.unsung,
       }),
       extraColor: timed ? _faded(AppColors.textPrimary) : null,
+      highlight: _place == _LinePlace.current && widget.fade == 1,
       onTap: widget.onTap,
     );
   }
@@ -524,8 +525,12 @@ class _Line extends StatefulWidget {
     required this.color,
     this.extraColor,
     this.karaoke,
+    this.highlight = false,
     required this.onTap,
   });
+
+  /// The line being sung: on the dark glass, when Layout › Lyrics says so.
+  final bool highlight;
 
   final String text;
 
@@ -564,8 +569,8 @@ class _LineState extends State<_Line> {
     child: GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: widget.onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8),
+      child: _Glass(
+        on: widget.highlight,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: _centred ? CrossAxisAlignment.stretch : CrossAxisAlignment.start,
@@ -594,3 +599,46 @@ class _LineState extends State<_Line> {
     ),
   );
 }
+
+/// A line's pane: dark frosted glass, faint, behind the line being sung, fading in and out as the lines move on.
+/// With the highlight off it is only the line's spacing. Every line keeps the pane's inset either way, so the words
+/// don't move when it comes.
+class _Glass extends StatelessWidget {
+  const _Glass({required this.on, required this.child});
+
+  final bool on;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!LayoutPrefs.instance.highlightLyricLine) {
+      return Padding(padding: const EdgeInsets.symmetric(vertical: 8), child: child);
+    }
+    const radius = BorderRadius.all(Radius.circular(18));
+    final duration = LayoutPrefs.dur(const Duration(milliseconds: 260));
+    final pane = AnimatedContainer(
+      // The whole row, not just the words' width.
+      width: double.infinity,
+      duration: duration,
+      curve: Curves.easeOut,
+      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 14),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: on ? 0.2 : 0),
+        borderRadius: radius,
+        border: Border.all(color: Colors.white.withValues(alpha: on ? 0.07 : 0)),
+      ),
+      child: child,
+    );
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      // The blur only behind the one line being sung, and not in Lightweight.
+      child: on && !LayoutPrefs.lightweight
+          ? ClipRRect(
+              borderRadius: radius,
+              child: BackdropFilter(filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10), child: pane),
+            )
+          : pane,
+    );
+  }
+}
+

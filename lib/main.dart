@@ -23,6 +23,7 @@ import 'platform/web_audio.dart';
 import 'services/incoming_links.dart';
 import 'services/appearance.dart';
 import 'services/language.dart';
+import 'services/video_mode.dart';
 import 'services/layout_prefs.dart';
 import 'services/media_session.dart';
 import 'services/metadata.dart';
@@ -204,6 +205,24 @@ class RiflayApp extends StatefulWidget {
 class _RiflayAppState extends State<RiflayApp> with WidgetsBindingObserver {
   final _appearance = Appearance.instance;
   final _layout = LayoutPrefs.instance;
+  final _messenger = GlobalKey<ScaffoldMessengerState>();
+
+  /// The music video moved to another height to keep up with the connection: said once, briefly.
+  void _videoQuality() {
+    final change = VideoMode.instance.qualityChanged.value;
+    if (change == null) return;
+    _messenger.currentState
+      ?..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(
+            change.lower ? tr.videoQualityLower('${change.height}p') : tr.videoQualityHigher('${change.height}p'),
+          ),
+          duration: const Duration(seconds: 3),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+  }
 
   @override
   void initState() {
@@ -214,6 +233,7 @@ class _RiflayAppState extends State<RiflayApp> with WidgetsBindingObserver {
     Language.instance.addListener(_relanguage);
     widget.controller.addListener(_syncTint);
     _syncTint();
+    VideoMode.instance.qualityChanged.addListener(_videoQuality);
     MemoryTrim.schedule();
   }
 
@@ -224,6 +244,7 @@ class _RiflayAppState extends State<RiflayApp> with WidgetsBindingObserver {
     _layout.removeListener(_restyle);
     Language.instance.removeListener(_relanguage);
     widget.controller.removeListener(_syncTint);
+    VideoMode.instance.qualityChanged.removeListener(_videoQuality);
     super.dispose();
   }
 
@@ -337,6 +358,7 @@ class _RiflayAppState extends State<RiflayApp> with WidgetsBindingObserver {
     return PlayerScope(
       controller: widget.controller,
       child: MaterialApp(
+        scaffoldMessengerKey: _messenger,
         // The playing song on the web, where this is the tab's title (see `network.dart`).
         title: pageTitle,
         debugShowCheckedModeBanner: false,

@@ -523,6 +523,9 @@ class LayoutPrefs extends ChangeNotifier {
   LyricsSize lyricsSize = LyricsSize.normal;
   LyricsAlign lyricsAlign = LyricsAlign.left;
   bool dimUnsungLyrics = true;
+
+  /// The line being sung sits on a dark pane of frosted glass, faint, from one side of the line to the other.
+  bool highlightLyricLine = true;
   LyricsLines lyricsLines = LyricsLines.all;
   LyricsSync lyricsSync = LyricsSync.word;
 
@@ -694,6 +697,7 @@ class LayoutPrefs extends ChangeNotifier {
     lyricsSize = pick(LyricsSize.values, 'lyricsSize', d.lyricsSize);
     lyricsAlign = pick(LyricsAlign.values, 'lyricsAlign', d.lyricsAlign);
     dimUnsungLyrics = j['dimUnsungLyrics'] as bool? ?? d.dimUnsungLyrics;
+    highlightLyricLine = j['highlightLyricLine'] as bool? ?? d.highlightLyricLine;
     lyricsLines = pick(LyricsLines.values, 'lyricsLines', d.lyricsLines);
     lyricsSync = pick(LyricsSync.values, 'lyricsSync', d.lyricsSync);
     sidebarWidth = (j['sidebarWidth'] as num?)?.toDouble().clamp(sidebarMin, sidebarMax) ?? d.sidebarWidth;
@@ -752,6 +756,7 @@ class LayoutPrefs extends ChangeNotifier {
     'lyricsSize': lyricsSize.name,
     'lyricsAlign': lyricsAlign.name,
     'dimUnsungLyrics': dimUnsungLyrics,
+    'highlightLyricLine': highlightLyricLine,
     'lyricsLines': lyricsLines.name,
     'lyricsSync': lyricsSync.name,
     'sidebarWidth': sidebarWidth,
@@ -834,6 +839,7 @@ class LayoutPrefs extends ChangeNotifier {
   Future<void> setLyricsSize(LyricsSize v) => _set(() => lyricsSize = v);
   Future<void> setLyricsAlign(LyricsAlign v) => _set(() => lyricsAlign = v);
   Future<void> setDimUnsungLyrics(bool v) => _set(() => dimUnsungLyrics = v);
+  Future<void> setHighlightLyricLine(bool v) => _set(() => highlightLyricLine = v);
   Future<void> setLyricsLines(LyricsLines v) => _set(() => lyricsLines = v);
   Future<void> setLyricsSync(LyricsSync v) => _set(() => lyricsSync = v);
   Future<void> setPageMotion(PageMotionStyle v) => _set(() => pageMotion = v);

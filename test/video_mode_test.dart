@@ -200,4 +200,14 @@ void main() {
     await tester.pumpWidget(const SizedBox());
     await tester.pump(const Duration(seconds: 3));
   });
+
+  test('a stalling video comes down a step at a time, and back up no higher than the most allowed', () {
+    expect(VideoMode.stepDown(1440), 1080);
+    expect(VideoMode.stepDown(1080), 720);
+    expect(VideoMode.stepDown(800), 720, reason: 'an odd height steps to the next one under it');
+    expect(VideoMode.stepDown(360), isNull, reason: 'nothing under the bottom step');
+    expect(VideoMode.stepUp(480, 1080), 720);
+    expect(VideoMode.stepUp(720, 1080), 1080);
+    expect(VideoMode.stepUp(1080, 1080), isNull);
+  });
 }

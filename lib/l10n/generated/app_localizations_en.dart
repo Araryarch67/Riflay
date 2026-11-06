@@ -1080,6 +1080,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get discordShowQuality => 'Show the sound quality (FLAC 24/96, Opus 160 kbps)';
 
   @override
+  String videoQualityLower(String height) {
+    return 'Resolution adjusted to your network ($height)';
+  }
+
+  @override
+  String videoQualityHigher(String height) {
+    return 'Back up to $height: your network keeps up';
+  }
+
+  @override
   String get showBluetoothCodec => 'Show the Bluetooth codec';
 
   @override
@@ -1866,6 +1876,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get dimUnsungSubtitle => 'Only the line being sung and the ones before it stay bright';
+
+  @override
+  String get highlightLyricLine => 'Highlight the line being sung';
+
+  @override
+  String get highlightLyricLineSubtitle => 'A faint pane of dark frosted glass behind the whole line';
 
   @override
   String get lockScreenLyrics => 'Lyrics on the lock screen';

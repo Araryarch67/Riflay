@@ -46,6 +46,84 @@ class VideoMode extends ChangeNotifier with WidgetsBindingObserver {
   /// Behind the page: the same size (a background is fetched only on Wi-Fi, see `prefetchAllowed`).
   static int get backgroundHeight => maxHeight;
 
+  // ---- Fitting the connection ----
+
+  /// Off with `RIFLAY_NO_ADAPTIVE_VIDEO`: the video always comes at [maxHeight], however often it stalls.
+  static const adaptive = !bool.fromEnvironment('RIFLAY_NO_ADAPTIVE_VIDEO');
+
+  /// The steps the video comes down (and back up) through.
+  static const ladder = [2160, 1440, 1080, 720, 480, 360];
+
+  /// The tallest the connection has kept up with: a video that stalls comes down a step, and goes back up a step
+  /// at the next song after a minute and a half without stalling. Null: [maxHeight].
+  int? _cap;
+  int _streamHeight = 0;
+  bool _streamed = false;
+  DateTime? _stallSince;
+  final _stalls = <DateTime>[];
+  DateTime _smoothSince = DateTime.now();
+
+  /// The height the video was just moved to, to tell the person (a snackbar), with a count so the same height
+  /// twice still tells.
+  final qualityChanged = ValueNotifier<({int height, bool lower, int serial})?>(null);
+
+  int _height(bool foreground) {
+    final most = foreground ? maxHeight : backgroundHeight;
+    return _cap == null ? most : _cap!.clamp(ladder.last, most);
+  }
+
+  /// The step under [height], or null at the bottom.
+  @visibleForTesting
+  static int? stepDown(int height) => ladder.where((h) => h < height).firstOrNull;
+
+  /// The step over [height] up to [most], or null when already there.
+  @visibleForTesting
+  static int? stepUp(int height, int most) => ladder.reversed.where((h) => h > height && h <= most).firstOrNull;
+
+  void _announce(int height, {required bool lower}) => qualityChanged.value = (
+    height: height,
+    lower: lower,
+    serial: (qualityChanged.value?.serial ?? 0) + 1,
+  );
+
+  /// Watches the streamed video for stalls while the song plays: one of 2.5 s, or three in 40 s, bring it down a
+  /// step. A seek's own wait doesn't count. True when the video was let go to come back smaller.
+  bool _watchStalls(Player player, bool play, DateTime now) {
+    if (!adaptive || !_streamed || !play || _seekedTo != null || now.difference(_lastSeek) < const Duration(seconds: 3)) {
+      _stallSince = null;
+      return false;
+    }
+    if (player.state.buffering) {
+      _stallSince ??= now;
+      return now.difference(_stallSince!) > const Duration(milliseconds: 2500) && _lower();
+    }
+    if (_stallSince case final since?) {
+      _stallSince = null;
+      if (now.difference(since) > const Duration(milliseconds: 400)) {
+        _stalls
+          ..add(now)
+          ..removeWhere((t) => now.difference(t) > const Duration(seconds: 40));
+        _smoothSince = now;
+        if (_stalls.length >= 3) return _lower();
+      }
+    }
+    return false;
+  }
+
+  bool _lower() {
+    final next = stepDown(_streamHeight > 0 ? _streamHeight : _height(_loadedForeground));
+    _stalls.clear();
+    _stallSince = null;
+    _smoothSince = DateTime.now();
+    if (next == null) return false;
+    _cap = next;
+    _announce(next, lower: true);
+    debugPrint('Video mode: stalling, down to ${next}p');
+    // Again from where the song is, smaller; the cover shows meanwhile.
+    _stop().then((_) => _sync());
+    return true;
+  }
+
   PlayerController? _c;
 
   /// Starts following [c]'s current song. Called by the views; once is enough.
@@ -348,6 +426,16 @@ class VideoMode extends ChangeNotifier with WidgetsBindingObserver {
 
   Future<void> _start(MusicVideo v, {required bool foreground}) async {
     await _stop();
+    // A minute and a half without a stall: this song may try a step higher.
+    if (adaptive && _cap != null && DateTime.now().difference(_smoothSince) > const Duration(seconds: 90)) {
+      final most = foreground ? maxHeight : backgroundHeight;
+      final up = stepUp(_cap!, most);
+      _cap = up == null || up >= most ? null : up;
+      _smoothSince = DateTime.now();
+      if (up != null) _announce(up, lower: false);
+    }
+    _streamed = false;
+    _streamHeight = 0;
     _loaded = v.videoId;
     _loadedForeground = foreground;
     _playing = v;
@@ -382,8 +470,10 @@ class VideoMode extends ChangeNotifier with WidgetsBindingObserver {
         // Nobody asked for this video: a phone on mobile data (or on a saver) doesn't spend it.
         if (!foreground && !await YoutubeStream.prefetchAllowed()) throw StateError('metered connection');
         if (!identical(player, _player)) return;
-        final stream = await YoutubeStream.video(v.videoId, maxHeight: foreground ? maxHeight : backgroundHeight);
+        final stream = await YoutubeStream.video(v.videoId, maxHeight: _height(foreground));
         if (!identical(player, _player)) return;
+        _streamed = true;
+        _streamHeight = stream.height;
         debugPrint('Video mode: ${v.videoId} at ${stream.height}p ${stream.codec}');
         await player.open(Media(stream.url.toString(), start: at), play: false);
       }
@@ -492,6 +582,7 @@ class VideoMode extends ChangeNotifier with WidgetsBindingObserver {
     if (target != null) {
       final drift = player.state.position - target;
       final now = DateTime.now();
+      if (_watchStalls(player, play, now)) return;
       // Once the video moves on after a seek, the gap left says how far ahead to aim next time.
       if (_seekedTo case final to? when player.state.position > to + const Duration(milliseconds: 100)) {
         _seekedTo = null;

@@ -1070,6 +1070,16 @@ class AppLocalizationsId extends AppLocalizations {
   String get discordShowQuality => 'Tampilkan kualitas suara (FLAC 24/96, Opus 160 kbps)';
 
   @override
+  String videoQualityLower(String height) {
+    return 'Resolusi disesuaikan dengan jaringanmu ($height)';
+  }
+
+  @override
+  String videoQualityHigher(String height) {
+    return 'Naik lagi ke $height: jaringanmu sudah lancar';
+  }
+
+  @override
   String get showBluetoothCodec => 'Tampilkan codec Bluetooth';
 
   @override
@@ -1854,6 +1864,12 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get dimUnsungSubtitle => 'Hanya baris yang sedang dinyanyikan dan sebelumnya yang tetap terang';
+
+  @override
+  String get highlightLyricLine => 'Sorot baris yang sedang dinyanyikan';
+
+  @override
+  String get highlightLyricLineSubtitle => 'Panel kaca buram gelap yang tipis di belakang seluruh baris';
 
   @override
   String get lockScreenLyrics => 'Lirik di layar kunci';

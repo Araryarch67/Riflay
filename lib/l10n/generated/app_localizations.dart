@@ -2067,6 +2067,18 @@ abstract class AppLocalizations {
   /// **'Show the sound quality (FLAC 24/96, Opus 160 kbps)'**
   String get discordShowQuality;
 
+  /// No description provided for @videoQualityLower.
+  ///
+  /// In en, this message translates to:
+  /// **'Resolution adjusted to your network ({height})'**
+  String videoQualityLower(String height);
+
+  /// No description provided for @videoQualityHigher.
+  ///
+  /// In en, this message translates to:
+  /// **'Back up to {height}: your network keeps up'**
+  String videoQualityHigher(String height);
+
   /// No description provided for @showBluetoothCodec.
   ///
   /// In en, this message translates to:
@@ -3488,6 +3500,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Only the line being sung and the ones before it stay bright'**
   String get dimUnsungSubtitle;
+
+  /// No description provided for @highlightLyricLine.
+  ///
+  /// In en, this message translates to:
+  /// **'Highlight the line being sung'**
+  String get highlightLyricLine;
+
+  /// No description provided for @highlightLyricLineSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'A faint pane of dark frosted glass behind the whole line'**
+  String get highlightLyricLineSubtitle;
 
   /// No description provided for @lockScreenLyrics.
   ///
