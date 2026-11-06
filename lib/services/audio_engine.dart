@@ -2011,6 +2011,19 @@ class AudioEngine extends ChangeNotifier {
   Future<NerdStats> nerdStats() async {
     final p = _native;
     if (p == null) return const NerdStats();
+    // Direct USB: once per song, like [signalPath] (each read waits on mpv's paced core, ~80 ms measured).
+    if (directUsbActive) {
+      final song = _songKey;
+      final kept = _directUsbNerd;
+      if (kept != null && kept.song == song && song.isNotEmpty) return kept.stats;
+      final stats = await _readNerdStats(p);
+      _directUsbNerd = (song: song, stats: stats);
+      return stats;
+    }
+    return _readNerdStats(p);
+  }
+
+  Future<NerdStats> _readNerdStats(NativePlayer p) async {
     Future<String> g(String k) => _read(p, k);
     // Direct USB: every read waits on mpv's paced core (see signalPath), so only what is needed once a second.
     final more = !directUsbActive;
@@ -2037,6 +2050,16 @@ class AudioEngine extends ChangeNotifier {
   }
 
   /// One read of the live signal path, or null when nothing is playing.
+  /// The song playing, from media_kit's state in Dart (no mpv read): its place in the playlist and its address.
+  String get _songKey {
+    final list = _player?.state.playlist;
+    if (list == null || list.index < 0 || list.index >= list.medias.length) return '';
+    return '${list.index} ${list.medias[list.index].uri}';
+  }
+
+  /// Direct USB: [nerdStats] of the song playing, read once.
+  ({String song, NerdStats stats})? _directUsbNerd;
+
   /// Direct USB: the signal path of the song playing, read once (see [signalPath]).
   ({NativePlayer player, String file, SignalPath path})? _directUsbSignal;
 
@@ -2047,7 +2070,8 @@ class AudioEngine extends ChangeNotifier {
     // per song, as soon as it is complete (a stream's bitrate comes a little later); then one read a second.
     final p = _native;
     if (p == null) return null;
-    final file = await _read(p, 'path');
+    // Which song from media_kit's own state, not from mpv: no read at all while the song plays on.
+    final file = _songKey;
     final kept = _directUsbSignal;
     if (kept != null && identical(kept.player, p) && kept.file == file) return kept.path;
     final path = await _readSignalPath();

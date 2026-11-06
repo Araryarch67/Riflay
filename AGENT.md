@@ -159,7 +159,11 @@ test/                          Unit and widget tests
   Dart waited with it on the UI thread (ANR). So the chain ends in `asetnsamples` + `arealtime` while Direct USB
   runs (`AudioEngine.directUsbPaceFilter`; Android's libmpv is built with both): samples untouched, at the song's
   pace, the pipe near empty. arealtime sleeps in mpv's core thread until each frame is due, so the 256-sample
-  frames keep property reads at ~2 ms (whole FLAC frames made them ~15 ms, and Signal path lagged). Never send mpv `audio-format=no` or `s24`: this mpv parses neither,
+  frames keep property reads at ~2 ms (whole FLAC frames made them ~15 ms, and Signal path lagged).
+  `DirectUsb.kt` reads the pipe on one thread into memory (up to 10 s) and feeds the sink on another, so a DAC that
+  is activating never holds mpv's writes; audio more than 600 ms behind mpv's clock is dropped down to 200 ms once
+  (screen, skips, Video mode and synced lyrics otherwise ran 1-3 s ahead of the sound). Signal path and Detail stats
+  read mpv once per song while Direct USB runs (each read waits ~15-80 ms on the paced core). Never send mpv `audio-format=no` or `s24`: this mpv parses neither,
   and a song loaded with either fails.
   It must never close the app. SIGPIPE is ignored before the pipe opens (`ignoreBrokenPipes`: libmpv keeps the
   default, which kills the process silently when the reader stops); turning it off moves mpv off the pipe before

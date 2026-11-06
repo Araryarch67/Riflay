@@ -376,6 +376,12 @@ object DirectUsb {
     // the pipe, so mpv's lock is never held through them (see AudioEngine.directUsbPaceFilter).
     private const val QUEUE_SECONDS = 10
 
+    // mpv's clock runs on as soon as it hands audio over, so what waits in the queue is heard that late: measured
+    // 1-3 s after the DAC activated or a seek (the screen, a skip and synced lyrics all ran ahead of the sound). Past
+    // LAG_MAX_MS, the oldest audio is dropped down to LAG_KEEP_MS: a short jump once, then sound and screen agree.
+    private const val LAG_MAX_MS = 600L
+    private const val LAG_KEEP_MS = 200L
+
     /**
      * Two threads: this one empties the pipe as soon as mpv writes into it, and [feed] hands the audio to the sink
      * at the DAC's pace. One thread doing both held mpv's writes while the sink waited (the DAC activating, Android's
@@ -466,8 +472,21 @@ object DirectUsb {
                     Thread.sleep(20)
                     continue
                 }
-                val c = queue.poll(20, java.util.concurrent.TimeUnit.MILLISECONDS) ?: continue
+                var c = queue.poll(20, java.util.concurrent.TimeUnit.MILLISECONDS) ?: continue
                 queued.addAndGet(-c.length.toLong())
+                val bytesPerMs = c.wav.rate.toLong() * c.wav.frameBytes / 1000
+                if (queued.get() > LAG_MAX_MS * bytesPerMs) {
+                    var dropped = 0L
+                    while (queued.get() > LAG_KEEP_MS * bytesPerMs) {
+                        val next = queue.peek() ?: break
+                        if (next.wav.label != c.wav.label) break // never across a format change
+                        queue.poll()
+                        queued.addAndGet(-next.length.toLong())
+                        dropped += c.length
+                        c = next
+                    }
+                    Log.i(TAG, "dropped ${dropped / bytesPerMs} ms the DAC was behind by")
+                }
                 val wav = c.wav
                 if (current == null || current!!.label != wav.label) {
                     // On the USB stream from the start rather than on Android's track, which the DAC's claim
