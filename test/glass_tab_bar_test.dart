@@ -17,7 +17,12 @@ class _Player extends PlayerController {
   _Player({this.playing = true});
 
   final bool playing;
-  final track = Track(id: 'glass-test', uri: Uri.parse('file:///glass-test.mp3'), title: 'Glass test', artist: 'Artist');
+  final track = Track(
+    id: 'glass-test',
+    uri: Uri.parse('file:///glass-test.mp3'),
+    title: 'Glass test',
+    artist: 'Artist',
+  );
 
   @override
   Track? get currentTrack => playing ? track : null;
@@ -102,6 +107,9 @@ void main() {
   }
 
   Rect rectOf(WidgetTester tester, Finder f) => tester.getRect(f);
+
+  Finder selectedTab(String label) =>
+      find.byWidgetPredicate((w) => w is Semantics && w.properties.label == label && w.properties.selected == true);
 
   for (final size in const [Size(360, 640), Size(412, 915)]) {
     final w = size.width.toInt();
@@ -210,6 +218,27 @@ void main() {
       expect(find.byTooltip('Settings'), findsOneWidget);
     });
   }
+
+  testWidgets('on Search the round button is Home, whichever tab came before; Close returns to that tab', (
+    tester,
+  ) async {
+    await show(tester, const Size(412, 915), tab: PhoneTab.library);
+    await tester.tap(find.byTooltip('Search'));
+    await tester.pumpAndSettle();
+    final round = tester.widget<Tooltip>(find.descendant(of: collapsedButton, matching: find.byType(Tooltip)));
+    expect(round.message, 'Home');
+    await tester.tap(find.byTooltip('Close'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(PhoneBottomBar.searchFieldKey), findsNothing);
+    expect(selectedTab('Library'), findsOneWidget, reason: 'back on Library');
+
+    await tester.tap(find.byTooltip('Search'));
+    await tester.pumpAndSettle();
+    await tester.tap(collapsedButton);
+    await tester.pumpAndSettle();
+    expect(find.byKey(PhoneBottomBar.searchFieldKey), findsNothing);
+    expect(selectedTab('Home'), findsOneWidget, reason: 'the round button went Home');
+  });
 
   testWidgets('without full motion the bar switches at once', (tester) async {
     prefs.motion = Motion.reduced;

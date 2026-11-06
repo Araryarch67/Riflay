@@ -303,7 +303,7 @@ class _GlassBarState extends State<_GlassBar> with TickerProviderStateMixin {
   late final _search = _anim(widget.tab == PhoneTab.search);
   late final _typing = _anim(false);
 
-  /// The tab the round button shows: the one open, or on Search the one before it.
+  /// The tab open before Search (where Close returns), and the one the round button shows when the bar shrinks.
   late PhoneTab _last = widget.tab == PhoneTab.search ? PhoneTab.home : widget.tab;
 
   SearchInput get _input => widget.link.search;
@@ -474,16 +474,20 @@ class _GlassBarState extends State<_GlassBar> with TickerProviderStateMixin {
     ];
   }
 
-  /// The tabs, laid out at their full width while the pill shrinks around them and they fade, and the open tab's
-  /// icon sliding from its place to the round button's middle.
+  /// The tabs, laid out at their full width while the pill shrinks around them and they fade, and the round
+  /// button's icon sliding from its tab's place to the button's middle: the open tab's, or on Search Home's.
   Widget _tabsPill(AppColorsView colors, double full, double shrink, double search) {
     final shown = [
       for (final i in _shownTabs)
         if (i.tab != PhoneTab.search) i,
     ];
-    final at = math.max(0, shown.indexWhere((i) => i.tab == _last));
+    final round = widget.tab == PhoneTab.search ? PhoneTab.home : _last;
+    final at = math.max(0, shown.indexWhere((i) => i.tab == round));
     final centre = full / shown.length * (at + 0.5);
-    final last = _info(_last);
+    final last = _info(round);
+    // Four tabs and Search share the width: where a tab has too little room for its name (a 360 px phone), only
+    // the open tab keeps one and the others are their icons, rather than every name shrunk to a different size.
+    final named = (full - 8) / shown.length >= 76;
     return _glass(
       colors,
       Stack(
@@ -507,7 +511,11 @@ class _GlassBarState extends State<_GlassBar> with TickerProviderStateMixin {
                               info: i,
                               selected: widget.tab == i.tab,
                               onTap: () => widget.onSelect(i.tab),
-                              child: _GlassTab(info: i, selected: widget.tab == i.tab),
+                              child: _GlassTab(
+                                info: i,
+                                selected: widget.tab == i.tab,
+                                label: named || widget.tab == i.tab,
+                              ),
                             ),
                           ),
                       ],
@@ -529,9 +537,9 @@ class _GlassBarState extends State<_GlassBar> with TickerProviderStateMixin {
                   child: _TabButton(
                     key: PhoneBottomBar.tabsButtonKey,
                     info: last,
-                    selected: widget.tab == _last,
-                    // Shrunk by scrolling it brings the tabs back; on Search it returns to the tab before.
-                    onTap: search > 0.5 ? () => widget.onSelect(_last) : () => widget.link.collapsed.value = false,
+                    selected: widget.tab == round,
+                    // Shrunk by scrolling it brings the tabs back; on Search it goes Home.
+                    onTap: search > 0.5 ? () => widget.onSelect(round) : () => widget.link.collapsed.value = false,
                     child: Center(
                       child: _TabIcon(
                         info: last,
@@ -677,9 +685,14 @@ class _GlassBarState extends State<_GlassBar> with TickerProviderStateMixin {
   /// [_gap] (as the mini player passes over the tabs).
   Widget _layer(BuildContext context, Widget child) {
     if (!_renderer) return child;
+    // The preset's own frost (4.5) leans on refraction for the look; FakeGlass (Android, desktop) has none and
+    // read almost clear. As frosted as the rest of the app's glass, and a little more tint to keep text legible.
+    final blur = Appearance.instance.glass ? Appearance.instance.blur.clamp(18.0, 40.0) : 24.0;
     return LiquidGlassLayer(
       settings: LiquidGlassSettings.ios27Regular(
         brightness: AppColors.of(context).light ? Brightness.light : Brightness.dark,
+        frost: blur,
+        tintAmount: 0.4,
       ),
       child: LiquidGlassBlendGroup(blend: _gap - 2, child: child),
     );
@@ -706,12 +719,15 @@ class _GlassBarState extends State<_GlassBar> with TickerProviderStateMixin {
   }
 }
 
-/// One tab in the glass pill: its icon over its name, a soft wash behind the open one.
+/// One tab in the glass pill: its icon over its name (or the icon alone), a soft wash behind the open one.
 class _GlassTab extends StatelessWidget {
-  const _GlassTab({required this.info, required this.selected});
+  const _GlassTab({required this.info, required this.selected, this.label = true});
 
   final _TabInfo info;
   final bool selected;
+
+  /// Off: the icon alone, in the middle.
+  final bool label;
 
   @override
   Widget build(BuildContext context) {
@@ -727,8 +743,10 @@ class _GlassTab extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           _icon(context, info, selected),
-          const SizedBox(height: 2),
-          _TabLabel(info: info, selected: selected, color: selected ? colors.accent : null),
+          if (label) ...[
+            const SizedBox(height: 2),
+            _TabLabel(info: info, selected: selected, color: selected ? colors.accent : null),
+          ],
         ],
       ),
     );

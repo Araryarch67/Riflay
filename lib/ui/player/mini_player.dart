@@ -230,7 +230,13 @@ class _GlassMiniPlayerState extends State<GlassMiniPlayer> with _SongSwipe {
                           children: [
                             Hero(
                               tag: 'now-playing-art',
-                              child: Artwork(track: track, size: 42, radius: LayoutPrefs.radius(10)),
+                              child: Artwork(
+                                track: track,
+                                size: 42,
+                                radius: LayoutPrefs.radius(21),
+                                flower: true,
+                                scalloped: true,
+                              ),
                             ),
                             const SizedBox(width: 10),
                             Expanded(

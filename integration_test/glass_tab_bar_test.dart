@@ -24,6 +24,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 const shots = String.fromEnvironment('SHOTS');
 
+/// The phone's width: `--dart-define=WIDTH=360` for a small one.
+const width = int.fromEnvironment('WIDTH', defaultValue: 412);
+
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
@@ -74,7 +77,7 @@ void main() {
     final look = LayoutPrefs.instance;
     await tester.runAsync(() => look.setTabBar(TabBarStyle.glass));
 
-    tester.view.physicalSize = const Size(412, 800);
+    tester.view.physicalSize = Size(width.toDouble(), 800);
     tester.view.devicePixelRatio = 1;
     await tester.pumpWidget(RepaintBoundary(child: RiflayApp(controller: c)));
 
@@ -93,7 +96,7 @@ void main() {
         final image = await boundary.toImage();
         return image.toByteData(format: ui.ImageByteFormat.png);
       });
-      File('$shots/$name.png').writeAsBytesSync(bytes!.buffer.asUint8List());
+      File('$shots/$name-$width.png').writeAsBytesSync(bytes!.buffer.asUint8List());
     }
 
     final collapsed = find.byKey(PhoneBottomBar.tabsButtonKey);
