@@ -163,6 +163,13 @@ class LayoutSettings extends StatelessWidget {
           _Header(tr.playbackControls, hint: tr.playbackControlsHint),
           SettingsCard(
             children: [
+              SwitchListTile(
+                secondary: const Icon(Icons.blur_on_rounded),
+                title: Text(tr.liquidGlassControls),
+                subtitle: Text(tr.liquidGlassControlsSubtitle, style: muted),
+                value: p.playerGlassControls,
+                onChanged: p.setPlayerGlassControls,
+              ),
               SettingTile(
                 icon: Icons.waves_rounded,
                 title: Text(tr.progressBarShape),

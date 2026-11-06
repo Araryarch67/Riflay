@@ -12,6 +12,9 @@ abstract final class Features {
   /// On-demand release checks and native Android APK updates.
   static bool get appUpdates => !Host.isWeb;
 
+  /// FFmpeg and yt-dlp can be downloaded into Riflay's own tool folder on desktop.
+  static bool get downloadedTools => Host.isLinux || Host.isWindows || Host.isMacOS;
+
   /// Music folders, adding songs and folders, the tag editor, duplicates, converting to FLAC.
   static bool get localLibrary => !Host.isWeb;
 

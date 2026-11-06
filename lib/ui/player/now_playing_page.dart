@@ -26,6 +26,7 @@ import '../ytmusic_edit.dart';
 import 'more_sheet.dart';
 import 'player_common.dart' show ArtistLinks;
 import 'player_parts.dart';
+import 'player_glass.dart';
 
 /// The name of Now Playing's route, so a page above it can tell whether it is underneath.
 const nowPlayingRouteName = 'now-playing';
@@ -45,7 +46,7 @@ class NowPlayingPage extends StatelessWidget {
     // The song and where it plays from; play state lives in the controls.
     return PlayerSelect<({Track? track, String? from})>(
       select: (c) => (track: c.currentTrack, from: c.playingFrom),
-      builder: (context, now, _) => _page(context, now.track, now.from),
+      builder: (context, now, _) => BackdropGroup(child: _page(context, now.track, now.from)),
     );
   }
 
@@ -523,38 +524,40 @@ class PlayerVolumeRow extends StatelessWidget {
             onPressed: setVolume == null ? null : () => c.nudgeVolume(by),
             icon: Icon(icon),
           );
-          return SizedBox(
-            height: playerVolumeRowHeight,
-            child: Row(
-              children: [
-                if (mute)
-                  IconButton(
-                    tooltip: volume == 0 ? tr.unmute : tr.mute,
-                    iconSize: 22,
-                    visualDensity: VisualDensity.compact,
-                    color: colors.textSecondary,
-                    onPressed: setVolume == null ? null : c.toggleMute,
-                    // The thin look keeps the crossed speaker at rest, like the mute button it is.
-                    icon: Icon(thin || volume == 0 ? Icons.volume_off_rounded : Icons.volume_mute_rounded),
-                  )
-                else
-                  nudge(tr.quieter, Icons.volume_down_rounded, -0.05),
-                Expanded(
-                  child: SliderTheme(
-                    data: thin
-                        ? thinSliderTheme(SliderTheme.of(context), colors.textPrimary)
-                        : pill
-                        ? pillSliderTheme(SliderTheme.of(context), colors.inverse, height: 12, thumb: 28)
-                        : SliderTheme.of(context),
-                    child: Slider(
-                      value: volume.clamp(0, 1),
-                      onChangeStart: setVolume == null ? null : (_) => c.volumeDragStarted(),
-                      onChanged: setVolume,
+          return PlayerGlassSurface(
+            child: SizedBox(
+              height: playerVolumeRowHeight,
+              child: Row(
+                children: [
+                  if (mute)
+                    IconButton(
+                      tooltip: volume == 0 ? tr.unmute : tr.mute,
+                      iconSize: 22,
+                      visualDensity: VisualDensity.compact,
+                      color: colors.textSecondary,
+                      onPressed: setVolume == null ? null : c.toggleMute,
+                      // The thin look keeps the crossed speaker at rest, like the mute button it is.
+                      icon: Icon(thin || volume == 0 ? Icons.volume_off_rounded : Icons.volume_mute_rounded),
+                    )
+                  else
+                    nudge(tr.quieter, Icons.volume_down_rounded, -0.05),
+                  Expanded(
+                    child: SliderTheme(
+                      data: thin
+                          ? thinSliderTheme(SliderTheme.of(context), colors.textPrimary)
+                          : pill
+                          ? pillSliderTheme(SliderTheme.of(context), colors.inverse, height: 12, thumb: 28)
+                          : SliderTheme.of(context),
+                      child: Slider(
+                        value: volume.clamp(0, 1),
+                        onChangeStart: setVolume == null ? null : (_) => c.volumeDragStarted(),
+                        onChanged: setVolume,
+                      ),
                     ),
                   ),
-                ),
-                nudge(tr.louder, Icons.volume_up_rounded, 0.05),
-              ],
+                  nudge(tr.louder, Icons.volume_up_rounded, 0.05),
+                ],
+              ),
             ),
           );
         },

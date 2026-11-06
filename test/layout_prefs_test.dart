@@ -245,6 +245,22 @@ void main() {
     await p.setWindowButtons(true);
   });
 
+  test('Liquid player controls persist, and normal presets turn them off', () async {
+    await p.setPlayerGlassControls(true);
+    await p.load();
+    expect(p.playerGlassControls, isTrue);
+    await PlayerPreset.stacked.apply(p);
+    expect(p.playerGlassControls, isFalse);
+    await PlayerPreset.liquidStacked.apply(p);
+    expect(p.playerGlassControls, isTrue);
+    await PlayerPreset.kawaii.apply(p);
+    expect(p.playerGlassControls, isFalse);
+    await PlayerPreset.liquidKawaii.apply(p);
+    expect(p.playerGlassControls, isTrue);
+    await p.reset();
+    expect(p.playerGlassControls, isFalse);
+  });
+
   test('every preset keeps the whole song in view, not the focused three lines', () {
     for (final preset in PlayerPreset.all) {
       expect(preset.lyricsLines, LyricsLines.all, reason: preset.name);

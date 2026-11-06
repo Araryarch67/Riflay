@@ -10,6 +10,7 @@ import '../widgets/app_logo.dart';
 import '../widgets/app_update_tile.dart';
 import '../../services/language.dart';
 import 'sound_settings.dart' show SettingsCard, settingsMuted;
+import 'downloaded_tools_page.dart';
 
 const _repo = 'https://github.com/Araryarch67/Riflay';
 
@@ -103,6 +104,15 @@ class AboutSettings extends StatelessWidget {
         SettingsCard(
           children: [
             if (Features.appUpdates) const AppUpdateTile(),
+            if (Features.downloadedTools)
+              ListTile(
+                leading: const Icon(Icons.delete_outline_rounded),
+                title: Text(tr.deleteExecutables),
+                subtitle: Text(tr.downloadedToolsSubtitle, style: muted),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: () =>
+                    Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const DownloadedToolsPage())),
+              ),
             ListTile(
               leading: const Icon(Icons.info_outline_rounded),
               title: Text(tr.version),

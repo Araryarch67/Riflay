@@ -25,6 +25,7 @@ import '../widgets/track_row.dart';
 import '../ytmusic_edit.dart';
 import 'more_sheet.dart';
 import 'now_playing_page.dart';
+import 'player_glass.dart';
 import 'full_screen_player.dart' show ExpandedPanel, expandedPlayerPanel, showExpandedPlayer;
 import 'player_common.dart' show ArtistLinks;
 
@@ -94,6 +95,7 @@ class PartButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = AppColors.of(context);
     final radius = math.min(size / 2, LayoutPrefs.radius(round ? size / 2 : 14));
+    final glass = LayoutPrefs.instance.playerGlassControls && look != PartLook.filled;
     final (fill, color, side) = lit
         ? (c.accent.withValues(alpha: 0.16), c.accent, BorderSide(color: c.accent.withValues(alpha: 0.5)))
         : switch (look) {
@@ -111,20 +113,24 @@ class PartButton extends StatelessWidget {
       onPressed: onPressed,
       iconSize: iconSize,
       style: IconButton.styleFrom(
-        backgroundColor: fill,
+        backgroundColor: glass && !lit ? Colors.transparent : fill,
         // Disabled (no next song): the same circle, a dimmer icon.
-        disabledBackgroundColor: fill,
+        disabledBackgroundColor: glass && !lit ? Colors.transparent : fill,
         foregroundColor: color,
         disabledForegroundColor: color.withValues(alpha: 0.38),
         fixedSize: Size.square(size),
         minimumSize: Size.square(size),
         padding: EdgeInsets.zero,
         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(radius), side: side),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(radius),
+          side: glass ? BorderSide.none : side,
+        ),
       ),
       icon: Icon(icon),
     );
     // A dark icon on the white fill: the picture's text shadow would ring it in black.
+    if (glass) return PlayerGlassSurface(radius: radius, child: button);
     return fill == c.inverse ? OffPicture(child: button) : button;
   }
 }
@@ -178,24 +184,27 @@ class JoinedButtons extends StatelessWidget {
 
     final last = segments.length - 1;
     if (outlined) {
-      return Container(
-        clipBehavior: Clip.antiAlias,
-        decoration: ShapeDecoration(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(outer),
-            side: BorderSide(color: c.textPrimary.withValues(alpha: 0.25)),
+      return PlayerGlassSurface(
+        radius: outer,
+        child: Container(
+          clipBehavior: Clip.antiAlias,
+          decoration: ShapeDecoration(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(outer),
+              side: BorderSide(color: c.textPrimary.withValues(alpha: 0.25)),
+            ),
           ),
-        ),
-        child: Material(
-          type: MaterialType.transparency,
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              for (var i = 0; i <= last; i++) ...[
-                if (i > 0) Container(width: 1, height: height * 0.5, color: c.textPrimary.withValues(alpha: 0.2)),
-                segment(i, shape: BorderRadius.zero),
+          child: Material(
+            type: MaterialType.transparency,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                for (var i = 0; i <= last; i++) ...[
+                  if (i > 0) Container(width: 1, height: height * 0.5, color: c.textPrimary.withValues(alpha: 0.2)),
+                  segment(i, shape: BorderRadius.zero),
+                ],
               ],
-            ],
+            ),
           ),
         ),
       );
@@ -258,11 +267,11 @@ class SharePair extends StatelessWidget {
           ),
       ],
     );
-    // A song that can't be liked (a file here, or not signed in) keeps its heart, properly dimmed.
-    if (!track.isRemote || !account.canEdit) return pair(false, null);
+    if (!track.isRemote) return pair(null, null);
     return ListenableBuilder(
       listenable: account,
-      builder: (context, _) => pair(account.isLiked(track), () => toggleLike(context, track)),
+      builder: (context, _) =>
+          account.canEdit ? pair(account.isLiked(track), () => toggleLike(context, track)) : pair(null, null),
     );
   }
 }
@@ -340,11 +349,13 @@ class PlayerTopBar extends StatelessWidget {
     final single = LayoutPrefs.instance.playerHeader == PlayerHeader.playingFrom;
     return Row(
       children: [
-        IconButton(
-          tooltip: tr.close,
-          color: color ?? colors.textPrimary,
-          onPressed: () => Navigator.of(context).pop(),
-          icon: const Icon(Icons.keyboard_arrow_down_rounded, size: 30),
+        PlayerGlassSurface(
+          child: IconButton(
+            tooltip: tr.close,
+            color: color ?? colors.textPrimary,
+            onPressed: () => Navigator.of(context).pop(),
+            icon: const Icon(Icons.keyboard_arrow_down_rounded, size: 30),
+          ),
         ),
         Expanded(
           child: single
@@ -468,24 +479,28 @@ _Transport _selectTransport(PlayerController c) => (
   loading: c.isBuffering && c.showsPlaying,
 );
 
-Widget _shuffleButton(PlayerController c, _Transport t, {double size = 22}) => ModeButton(
-  tooltip: t.shuffle ? tr.disableShuffle : tr.enableShuffle,
-  active: t.shuffle,
-  size: size,
-  icon: Icons.shuffle_rounded,
-  onPressed: t.hasQueue ? c.toggleShuffle : null,
+Widget _shuffleButton(PlayerController c, _Transport t, {double size = 22}) => PlayerGlassSurface(
+  child: ModeButton(
+    tooltip: t.shuffle ? tr.disableShuffle : tr.enableShuffle,
+    active: t.shuffle,
+    size: size,
+    icon: Icons.shuffle_rounded,
+    onPressed: t.hasQueue ? c.toggleShuffle : null,
+  ),
 );
 
-Widget _repeatButton(PlayerController c, _Transport t, {double size = 22}) => ModeButton(
-  tooltip: switch (t.loop) {
-    LoopMode.off => tr.enableRepeat,
-    LoopMode.all => tr.enableRepeatOne,
-    LoopMode.one => tr.disableRepeat,
-  },
-  active: t.loop != LoopMode.off,
-  size: size,
-  icon: t.loop == LoopMode.one ? Icons.repeat_one_rounded : Icons.repeat_rounded,
-  onPressed: t.hasQueue ? c.cycleLoopMode : null,
+Widget _repeatButton(PlayerController c, _Transport t, {double size = 22}) => PlayerGlassSurface(
+  child: ModeButton(
+    tooltip: switch (t.loop) {
+      LoopMode.off => tr.enableRepeat,
+      LoopMode.all => tr.enableRepeatOne,
+      LoopMode.one => tr.disableRepeat,
+    },
+    active: t.loop != LoopMode.off,
+    size: size,
+    icon: t.loop == LoopMode.one ? Icons.repeat_one_rounded : Icons.repeat_rounded,
+    onPressed: t.hasQueue ? c.cycleLoopMode : null,
+  ),
 );
 
 /// Previous / play / next as a wide pill or as plain icons. Shuffle and repeat flank them unless the bottom
@@ -515,31 +530,42 @@ class PlayerControlsRow extends StatelessWidget {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
-                    IconButton(
-                      tooltip: prev,
-                      iconSize: 44,
-                      color: colors.textPrimary,
-                      onPressed: t.hasQueue ? c.previous : null,
-                      icon: const Icon(Icons.fast_rewind_rounded),
+                    PlayerGlassSurface(
+                      radius: 32,
+                      child: IconButton(
+                        tooltip: prev,
+                        iconSize: 44,
+                        color: colors.textPrimary,
+                        onPressed: t.hasQueue ? c.previous : null,
+                        icon: const Icon(Icons.fast_rewind_rounded),
+                      ),
                     ),
-                    t.loading
-                        ? SizedBox.square(
-                            dimension: 64,
-                            child: Center(child: CircularProgressIndicator(strokeWidth: 3, color: colors.textPrimary)),
-                          )
-                        : IconButton(
-                            tooltip: play,
-                            iconSize: 64,
-                            color: colors.textPrimary,
-                            onPressed: t.canPlay ? c.togglePlay : null,
-                            icon: Icon(t.playing ? Icons.pause_rounded : Icons.play_arrow_rounded),
-                          ),
-                    IconButton(
-                      tooltip: next,
-                      iconSize: 44,
-                      color: colors.textPrimary,
-                      onPressed: t.hasNext ? c.next : null,
-                      icon: const Icon(Icons.fast_forward_rounded),
+                    PlayerGlassSurface(
+                      radius: 40,
+                      child: t.loading
+                          ? SizedBox.square(
+                              dimension: 64,
+                              child: Center(
+                                child: CircularProgressIndicator(strokeWidth: 3, color: colors.textPrimary),
+                              ),
+                            )
+                          : IconButton(
+                              tooltip: play,
+                              iconSize: 64,
+                              color: colors.textPrimary,
+                              onPressed: t.canPlay ? c.togglePlay : null,
+                              icon: Icon(t.playing ? Icons.pause_rounded : Icons.play_arrow_rounded),
+                            ),
+                    ),
+                    PlayerGlassSurface(
+                      radius: 32,
+                      child: IconButton(
+                        tooltip: next,
+                        iconSize: 44,
+                        color: colors.textPrimary,
+                        onPressed: t.hasNext ? c.next : null,
+                        icon: const Icon(Icons.fast_forward_rounded),
+                      ),
                     ),
                   ],
                 ),
@@ -911,28 +937,33 @@ class PlayerBottomButtons extends StatelessWidget {
             builder: (context, _) => Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Container(
-                  padding: const EdgeInsets.all(3),
-                  decoration: ShapeDecoration(
-                    shape: const StadiumBorder(),
-                    color: colors.textPrimary.withValues(alpha: 0.14),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      segment(Icons.speaker_outlined, tr.volume, () => showVolumePopup(context)),
-                      if (together || output) ...[
-                        Container(width: 1, height: 20, color: colors.textPrimary.withValues(alpha: 0.22)),
-                        if (together)
-                          segment(
-                            Icons.person_outline_rounded,
-                            tr.listenTogether,
-                            () => openListenTogether(context, closePlayer: true),
-                          )
-                        else
-                          segment(Icons.person_outline_rounded, tr.playOnDevice, () => showCastPicker(context)),
+                PlayerGlassSurface(
+                  radius: 25,
+                  child: Container(
+                    padding: const EdgeInsets.all(3),
+                    decoration: ShapeDecoration(
+                      shape: const StadiumBorder(),
+                      color: LayoutPrefs.instance.playerGlassControls
+                          ? Colors.transparent
+                          : colors.textPrimary.withValues(alpha: 0.14),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        segment(Icons.speaker_outlined, tr.volume, () => showVolumePopup(context)),
+                        if (together || output) ...[
+                          Container(width: 1, height: 20, color: colors.textPrimary.withValues(alpha: 0.22)),
+                          if (together)
+                            segment(
+                              Icons.person_outline_rounded,
+                              tr.listenTogether,
+                              () => openListenTogether(context, closePlayer: true),
+                            )
+                          else
+                            segment(Icons.person_outline_rounded, tr.playOnDevice, () => showCastPicker(context)),
+                        ],
                       ],
-                    ],
+                    ),
                   ),
                 ),
                 // Only where the sound goes elsewhere: "Speaker" under it said nothing on every song.
@@ -989,7 +1020,9 @@ class ComposedNowPlaying extends StatelessWidget {
   final bool showBadge;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => PlayerGlassLayer(child: Builder(builder: _build));
+
+  Widget _build(BuildContext context) {
     final p = LayoutPrefs.instance;
     final moreElsewhere = p.titleActions == TitleActions.plain || p.bottomRow == PlayerBottomRow.chips;
     final full = p.playerCover == PlayerCover.background;
@@ -1009,12 +1042,19 @@ class ComposedNowPlaying extends StatelessWidget {
         children: [
           PlayerTitleBlock(track: track, showBadge: showBadge),
           SizedBox(height: roomy ? 20 : 16),
-          SeekBar(
-            phonePlayer: true,
-            // Centred between the elapsed and the remaining time.
-            middle: showBadge && p.qualityBadgePlace == QualityBadgePlace.timeRow
-                ? const QualityBadge(onDark: true, alignment: Alignment.center)
-                : null,
+          PlayerGlassSurface(
+            child: Padding(
+              padding: p.playerGlassControls
+                  ? const EdgeInsets.symmetric(horizontal: 12, vertical: 4)
+                  : EdgeInsets.zero,
+              child: SeekBar(
+                phonePlayer: true,
+                // Centred between the elapsed and the remaining time.
+                middle: showBadge && p.qualityBadgePlace == QualityBadgePlace.timeRow
+                    ? const QualityBadge(onDark: true, alignment: Alignment.center)
+                    : null,
+              ),
+            ),
           ),
           SizedBox(height: roomy ? 24 : 14),
           switch (p.transport) {
@@ -1026,7 +1066,10 @@ class ComposedNowPlaying extends StatelessWidget {
             const _ClassicBottom()
           else
             PlayerBottomButtons(withMore: p.titleActions != TitleActions.plain),
-          if (p.showVolumeRow) PlayerVolumeRow(mute: plainControls),
+          if (p.showVolumeRow) ...[
+            if (p.playerGlassControls) const SizedBox(height: 8),
+            PlayerVolumeRow(mute: plainControls),
+          ],
           const SizedBox(height: 8),
         ],
       ),
@@ -1180,40 +1223,45 @@ class LyricsBottomCard extends StatelessWidget {
         ],
       );
     }
-    return Container(
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: colors.textPrimary.withValues(alpha: 0.08),
-        borderRadius: LayoutPrefs.corner(18),
-      ),
-      child: Row(
-        children: [
-          Artwork(track: track, size: 44, radius: LayoutPrefs.radius(10)),
-          const SizedBox(width: 10),
-          song,
-          PlayerSelect<({bool playing, bool canPlay})>(
-            select: (c) => (playing: c.showsPlaying, canPlay: c.canPlay),
-            builder: (context, s, _) => PartButton(
-              icon: s.playing ? Icons.pause_rounded : Icons.play_arrow_rounded,
-              tooltip: tipWith(s.playing ? tr.pause : tr.play, AppAction.playPause),
-              look: PartLook.muted,
-              round: true,
-              size: 40,
-              onPressed: s.canPlay ? c.togglePlay : null,
+    return PlayerGlassSurface(
+      radius: 18,
+      child: Container(
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: LayoutPrefs.instance.playerGlassControls
+              ? Colors.transparent
+              : colors.textPrimary.withValues(alpha: 0.08),
+          borderRadius: LayoutPrefs.corner(18),
+        ),
+        child: Row(
+          children: [
+            Artwork(track: track, size: 44, radius: LayoutPrefs.radius(10)),
+            const SizedBox(width: 10),
+            song,
+            PlayerSelect<({bool playing, bool canPlay})>(
+              select: (c) => (playing: c.showsPlaying, canPlay: c.canPlay),
+              builder: (context, s, _) => PartButton(
+                icon: s.playing ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                tooltip: tipWith(s.playing ? tr.pause : tr.play, AppAction.playPause),
+                look: PartLook.muted,
+                round: true,
+                size: 40,
+                onPressed: s.canPlay ? c.togglePlay : null,
+              ),
             ),
-          ),
-          const SizedBox(width: 6),
-          PartButton(
-            icon: Icons.open_in_full_rounded,
-            tooltip: tr.expandedPlayer,
-            size: 40,
-            iconSize: 20,
-            onPressed: () {
-              expandedPlayerPanel.value = ExpandedPanel.lyrics;
-              showExpandedPlayer(true);
-            },
-          ),
-        ],
+            const SizedBox(width: 6),
+            PartButton(
+              icon: Icons.open_in_full_rounded,
+              tooltip: tr.expandedPlayer,
+              size: 40,
+              iconSize: 20,
+              onPressed: () {
+                expandedPlayerPanel.value = ExpandedPanel.lyrics;
+                showExpandedPlayer(true);
+              },
+            ),
+          ],
+        ),
       ),
     );
   }

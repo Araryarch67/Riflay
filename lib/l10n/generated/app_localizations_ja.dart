@@ -4972,4 +4972,49 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get sessionCodeHint => 'ABC123 または ABCDE-FGHJK';
+
+  @override
+  String get downloadedTools => 'ダウンロードしたツール';
+
+  @override
+  String get deleteExecutables => '実行ファイルを削除';
+
+  @override
+  String get downloadedToolsSubtitle => 'Riflay がダウンロードした FFmpeg と yt-dlp を探して削除。';
+
+  @override
+  String get downloadedToolsIntro => 'Riflay がダウンロードしたツールだけを表示。システムにインストールしたツールは別で管理。';
+
+  @override
+  String get noDownloadedTools => 'ダウンロードした実行ファイルは見つからなかった。';
+
+  @override
+  String get deleteAllExecutables => '実行ファイルをすべて削除';
+
+  @override
+  String get deleteExecutablesQuestion => 'ダウンロードした実行ファイルを削除する？';
+
+  @override
+  String get deleteExecutablesBody => '必要になったら Riflay がもう一度ダウンロードする。音楽と設定はそのまま。';
+
+  @override
+  String get executablesDeleted => 'ダウンロードした実行ファイルを削除した。';
+
+  @override
+  String get couldntFindExecutables => '実行ファイルを探せなかった。もう一度試してね。';
+
+  @override
+  String get couldntDeleteExecutables => '一部の実行ファイルを削除できなかった。もう一度試してね。';
+
+  @override
+  String get presetLiquidStackedNote => 'Stacked にリキッドグラスの操作パネルとスマホのガラスタブを追加';
+
+  @override
+  String get presetLiquidKawaiiNote => 'Kawaii にリキッドグラスの操作パネルとスマホのガラスタブを追加';
+
+  @override
+  String get liquidGlassControls => 'リキッドグラスの操作パネル';
+
+  @override
+  String get liquidGlassControlsSubtitle => 'プレーヤーの透明な操作パネルをリキッドグラスにする。';
 }

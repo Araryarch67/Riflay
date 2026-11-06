@@ -9032,6 +9032,96 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'ABC123 or ABCDE-FGHJK'**
   String get sessionCodeHint;
+
+  /// No description provided for @downloadedTools.
+  ///
+  /// In en, this message translates to:
+  /// **'Downloaded tools'**
+  String get downloadedTools;
+
+  /// No description provided for @deleteExecutables.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete executables'**
+  String get deleteExecutables;
+
+  /// No description provided for @downloadedToolsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Find and delete FFmpeg and yt-dlp downloaded by Riflay.'**
+  String get downloadedToolsSubtitle;
+
+  /// No description provided for @downloadedToolsIntro.
+  ///
+  /// In en, this message translates to:
+  /// **'Only tools downloaded by Riflay are listed here. System-installed tools are managed separately.'**
+  String get downloadedToolsIntro;
+
+  /// No description provided for @noDownloadedTools.
+  ///
+  /// In en, this message translates to:
+  /// **'No downloaded executables found.'**
+  String get noDownloadedTools;
+
+  /// No description provided for @deleteAllExecutables.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete all executables'**
+  String get deleteAllExecutables;
+
+  /// No description provided for @deleteExecutablesQuestion.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete downloaded executables?'**
+  String get deleteExecutablesQuestion;
+
+  /// No description provided for @deleteExecutablesBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Riflay will download these tools again when needed. Your music and settings will stay.'**
+  String get deleteExecutablesBody;
+
+  /// No description provided for @executablesDeleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Downloaded executables deleted.'**
+  String get executablesDeleted;
+
+  /// No description provided for @couldntFindExecutables.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t find downloaded executables. Try again.'**
+  String get couldntFindExecutables;
+
+  /// No description provided for @couldntDeleteExecutables.
+  ///
+  /// In en, this message translates to:
+  /// **'Some executables couldn\'t be deleted. Try again.'**
+  String get couldntDeleteExecutables;
+
+  /// No description provided for @presetLiquidStackedNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Stacked, with Liquid Glass controls and glass tabs on phones'**
+  String get presetLiquidStackedNote;
+
+  /// No description provided for @presetLiquidKawaiiNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Kawaii, with Liquid Glass controls and glass tabs on phones'**
+  String get presetLiquidKawaiiNote;
+
+  /// No description provided for @liquidGlassControls.
+  ///
+  /// In en, this message translates to:
+  /// **'Liquid Glass controls'**
+  String get liquidGlassControls;
+
+  /// No description provided for @liquidGlassControlsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Frost the player’s transparent control surfaces.'**
+  String get liquidGlassControlsSubtitle;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

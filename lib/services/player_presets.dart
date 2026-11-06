@@ -10,7 +10,9 @@ import 'language.dart';
 String presetNote(PlayerPreset p) => switch (p.name) {
   'Classic' => tr.presetClassicNote,
   'Stacked' => tr.presetStackedNote,
+  'Liquid Stacked' => tr.presetLiquidStackedNote,
   'Kawaii' => tr.presetKawaiiNote,
+  'Liquid Kawaii' => tr.presetLiquidKawaiiNote,
   _ => p.note,
 };
 
@@ -26,6 +28,7 @@ class PlayerPreset {
     this.timeLeft = false,
     this.transport = PlayerTransport.classic,
     this.volume = true,
+    this.glassControls = false,
     this.bottomRow = PlayerBottomRow.classic,
     this.lyrics = LyricsLayout.classic,
     this.mini = MiniPlayerStyle.classic,
@@ -51,6 +54,7 @@ class PlayerPreset {
   final bool timeLeft;
   final PlayerTransport transport;
   final bool volume;
+  final bool glassControls;
   final PlayerBottomRow bottomRow;
   final LyricsLayout lyrics;
   final MiniPlayerStyle mini;
@@ -96,6 +100,26 @@ class PlayerPreset {
     lyrics: LyricsLayout.bottomCard,
     badge: QualityBadgePlace.timeRow,
     volumeSlider: VolumeSliderShape.pill,
+    tabBar: TabBarStyle.capsule,
+  );
+
+  /// Stacked's player controls, with Liquid glass navigation instead of Capsule.
+  static const liquidStacked = PlayerPreset(
+    name: 'Liquid Stacked',
+    note: 'Stacked, with Liquid Glass controls and glass tabs on phones',
+    cover: PlayerCover.background,
+    volume: true,
+    header: PlayerHeader.centered,
+    titleActions: TitleActions.boxed,
+    progressBar: ProgressBarStyle.thick,
+    progressShape: ProgressBarShape.pill,
+    transport: PlayerTransport.pill,
+    bottomRow: PlayerBottomRow.chips,
+    lyrics: LyricsLayout.bottomCard,
+    badge: QualityBadgePlace.timeRow,
+    volumeSlider: VolumeSliderShape.pill,
+    tabBar: TabBarStyle.glass,
+    glassControls: true,
   );
 
   /// Kawaii uses Capsule navigation; applying it must also leave Liquid Kawaii's glass bar behind.
@@ -122,7 +146,7 @@ class PlayerPreset {
   /// Kawaii, with the Liquid glass tab bar on phones.
   static const liquidKawaii = PlayerPreset(
     name: 'Liquid Kawaii',
-    note: 'Kawaii, with glass tabs on phones that shrink to one row as you scroll',
+    note: 'Kawaii, with Liquid Glass controls and glass tabs on phones',
     cover: PlayerCover.background,
     header: PlayerHeader.playingFrom,
     titleActions: TitleActions.plain,
@@ -138,9 +162,10 @@ class PlayerPreset {
     background: NowPlayingBackground.video,
     volumeSlider: VolumeSliderShape.pill,
     tabBar: TabBarStyle.glass,
+    glassControls: true,
   );
 
-  static const all = [classic, stacked, kawaii, liquidKawaii];
+  static const all = [classic, stacked, liquidStacked, kawaii, liquidKawaii];
 
   /// The settings that would change if this preset were applied to [p].
   int changesTo(LayoutPrefs p) {
@@ -154,6 +179,7 @@ class PlayerPreset {
     differ(p.showTimeLeft, timeLeft);
     differ(p.transport, transport);
     differ(p.showVolumeRow, volume);
+    differ(p.playerGlassControls, glassControls);
     differ(p.bottomRow, bottomRow);
     differ(p.lyricsLayout, lyrics);
     differ(p.miniPlayer, mini);
@@ -187,6 +213,7 @@ class PlayerPreset {
       p.showTimeLeft = timeLeft;
       p.transport = transport;
       p.showVolumeRow = volume;
+      p.playerGlassControls = glassControls;
       p.bottomRow = bottomRow;
       p.lyricsLayout = lyrics;
       p.miniPlayer = mini;

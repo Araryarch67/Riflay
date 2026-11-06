@@ -674,18 +674,7 @@ class _GlassBarState extends State<_GlassBar> with TickerProviderStateMixin {
             ),
           ),
         ),
-        ListenableBuilder(
-          listenable: _input.controller,
-          builder: (context, _) => _input.controller.text.isEmpty
-              ? const SizedBox(width: 12)
-              : IconButton(
-                  tooltip: tr.clear,
-                  color: colors.textSecondary,
-                  iconSize: 20,
-                  onPressed: _input.controller.clear,
-                  icon: const Icon(Icons.cancel_rounded),
-                ),
-        ),
+        const SizedBox(width: 12),
       ],
     );
   }

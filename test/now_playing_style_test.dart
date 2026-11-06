@@ -4,6 +4,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:liquid_glass_renderer/liquid_glass_renderer.dart';
 import 'package:riflay/models/track.dart';
 import 'package:riflay/services/appearance.dart';
 import 'package:riflay/services/layout_prefs.dart';
@@ -12,11 +13,13 @@ import 'package:riflay/services/player_controller.dart';
 import 'package:riflay/services/player_presets.dart';
 import 'package:riflay/services/video_mode.dart';
 import 'package:riflay/services/ytmusic_web.dart';
+import 'package:riflay/services/youtube_music_account.dart';
 import 'package:riflay/ui/pages/lyrics_page.dart';
 import 'package:riflay/ui/pages/player_presets_page.dart';
 import 'package:riflay/ui/player/mini_player.dart';
 import 'package:riflay/ui/player/now_playing_page.dart';
 import 'package:riflay/ui/player/player_parts.dart';
+import 'package:riflay/ui/player/player_glass.dart';
 import 'package:riflay/ui/shell_scope.dart';
 import 'package:riflay/ui/widgets/controls.dart';
 import 'package:riflay/ui/widgets/faded_cover.dart';
@@ -47,6 +50,31 @@ class _Player extends PlayerController {
     playing = !playing;
     notifyListeners();
   }
+}
+
+class _LikeAccount extends YoutubeMusicAccount {
+  bool connected = false, liked = false;
+
+  @override
+  bool get canEdit => connected;
+  @override
+  bool isLiked(Track track) => liked;
+  @override
+  Future<void> setLiked(Track track, bool value) async {
+    liked = value;
+    notifyListeners();
+  }
+
+  void connect(bool value) {
+    connected = value;
+    notifyListeners();
+  }
+}
+
+class _LikePlayer extends _Player {
+  final account = _LikeAccount();
+  @override
+  YoutubeMusicAccount get ytMusic => account;
 }
 
 Finder _tip(String start) => find.byWidgetPredicate((w) => w is Tooltip && (w.message ?? '').startsWith(start));
@@ -327,6 +355,31 @@ void main() {
     await _close(tester, c);
   });
 
+  testWidgets('the Share pair hides Like while signed out and follows login, like and logout', (tester) async {
+    final c = _LikePlayer();
+    final track = Track.youtube(videoId: 'liked-test', title: 'Test', artist: 'Artist');
+    await tester.pumpWidget(_tree(c, const Size(412, 915), Scaffold(body: SharePair(track: track))));
+    expect(find.byTooltip('Share'), findsOneWidget);
+    expect(find.byTooltip('Add to Liked music'), findsNothing);
+
+    c.account.connect(true);
+    await tester.pump();
+    expect(find.byTooltip('Add to Liked music'), findsOneWidget);
+    await tester.tap(find.byTooltip('Add to Liked music'));
+    await tester.pumpAndSettle();
+    expect(c.account.liked, isTrue);
+    expect(find.byTooltip('Remove from Liked music'), findsOneWidget);
+    await tester.tap(find.byTooltip('Remove from Liked music'));
+    await tester.pumpAndSettle();
+    expect(c.account.liked, isFalse);
+
+    c.account.connect(false);
+    await tester.pump();
+    expect(find.byTooltip('Add to Liked music'), findsNothing);
+    expect(find.byTooltip('Share'), findsOneWidget);
+    await _close(tester, c);
+  });
+
   testWidgets('Stacked: a joined Share pair, a joined bottom group and a round More', (tester) async {
     await tester.runAsync(() => PlayerPreset.stacked.apply(p));
     final c = await _show(tester, const NowPlayingPage(), const Size(412, 915));
@@ -356,14 +409,19 @@ void main() {
     await tester.pumpWidget(const SizedBox());
   });
 
-  testWidgets('the presets page can switch from Liquid Kawaii to Kawaii and back', (tester) async {
+  testWidgets('the presets page can select the normal and Liquid variants separately', (tester) async {
     final c = await _show(tester, const PlayerPresetsPage(), const Size(412, 915));
     await tester.runAsync(() => PlayerPreset.liquidKawaii.apply(p));
     await tester.pumpAndSettle();
     expect(find.text('Your settings match Liquid Kawaii'), findsOneWidget);
 
-    for (final preset in [PlayerPreset.kawaii, PlayerPreset.liquidKawaii]) {
-      await tester.ensureVisible(find.text(preset.name));
+    for (final preset in [
+      PlayerPreset.kawaii,
+      PlayerPreset.liquidKawaii,
+      PlayerPreset.stacked,
+      PlayerPreset.liquidStacked,
+    ]) {
+      await tester.scrollUntilVisible(find.text(preset.name), 180, scrollable: find.byType(Scrollable).first);
       await tester.tap(find.text(preset.name));
       await tester.pumpAndSettle();
       expect(find.byType(AlertDialog), findsOneWidget, reason: 'the other preset must be selectable');
@@ -371,10 +429,53 @@ void main() {
       await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 50)));
       await tester.pumpAndSettle();
       expect(p.tabBar, preset.tabBar);
+      expect(p.playerGlassControls, preset.glassControls);
       tester.state<ScrollableState>(find.byType(Scrollable).first).position.jumpTo(0);
       await tester.pumpAndSettle();
       expect(find.text('Your settings match ${preset.name}'), findsOneWidget);
     }
+    await _close(tester, c);
+  });
+
+  for (final preset in [PlayerPreset.liquidStacked, PlayerPreset.liquidKawaii]) {
+    testWidgets('${preset.name} gives transparent player controls liquid surfaces and keeps playback usable', (
+      tester,
+    ) async {
+      await tester.runAsync(() => preset.apply(p));
+      final c = await _show(tester, const NowPlayingPage(), const Size(360, 640));
+      expect(find.byType(PlayerGlassLayer), findsOneWidget);
+      expect(find.byType(LiquidGlass), findsWidgets);
+      expect(find.ancestor(of: find.byType(SeekBar).first, matching: find.byType(LiquidGlass)), findsWidgets);
+      expect(find.ancestor(of: _tip('Close').first, matching: find.byType(LiquidGlass)), findsWidgets);
+      if (preset == PlayerPreset.liquidKawaii) {
+        expect(find.ancestor(of: _tip('Play').first, matching: find.byType(LiquidGlass)), findsWidgets);
+      }
+      await tester.tap(_tip('Play').first);
+      await tester.pump();
+      expect(c.toggles, 1);
+      expect(tester.takeException(), isNull);
+      await _close(tester, c);
+    });
+  }
+
+  testWidgets('normal Stacked and Kawaii keep their original player surfaces', (tester) async {
+    for (final preset in [PlayerPreset.stacked, PlayerPreset.kawaii]) {
+      await tester.runAsync(() => preset.apply(p));
+      final c = await _show(tester, const NowPlayingPage(), const Size(360, 640));
+      expect(find.byType(LiquidGlass), findsNothing);
+      await _close(tester, c);
+    }
+  });
+
+  testWidgets('Lightweight keeps Liquid player controls usable without rendering glass', (tester) async {
+    await tester.runAsync(() => PlayerPreset.liquidStacked.apply(p));
+    p.performance = PerformanceMode.lightweight;
+    final c = await _show(tester, const NowPlayingPage(), const Size(360, 640));
+    expect(find.byType(LiquidGlass), findsNothing);
+    await tester.tap(_tip('Play').first);
+    await tester.pump();
+    expect(c.toggles, 1);
+    expect(tester.takeException(), isNull);
     await _close(tester, c);
   });
 
@@ -387,7 +488,7 @@ void main() {
     // The test font is as wide as it is tall, so the title may scroll (two copies) beside the two buttons.
     expect(find.text('Style test'), findsWidgets);
     expect(_tip('Share'), findsOneWidget);
-    expect(_tip('Add to Liked music'), findsOneWidget, reason: 'a file cannot be liked: the heart is there, dimmed');
+    expect(_tip('Add to Liked music'), findsNothing, reason: 'a file cannot be liked on YouTube Music');
     expect(find.text('Play'), findsOneWidget);
     for (final t in ['Queue', 'Sleep timer', 'Enable shuffle', 'Lyrics', 'Enable repeat', 'More', 'Previous', 'Next']) {
       expect(_tip(t), findsOneWidget, reason: t);

@@ -25,7 +25,7 @@ part of '../lyrics_page.dart';
 /// frame is that clip, so no widget rebuilds, no relayout, and the text is measured once per width.
 ///
 /// While the line is the current one, the page is on screen and the song plays, the fill runs on the shared
-/// [UiBeat] clock, reading the player's interpolated position on each beat (30 times a second, 60 in Heavy), so it
+/// [UiBeat] clock, reading the player's interpolated position on each beat (60 times a second), so it
 /// glides rather than stepping with the position stream. Lightweight, a paused song and a hidden page take no beats at
 /// all: the stream's ticks move the fill then.
 class KaraokeLine extends StatefulWidget {
@@ -59,6 +59,8 @@ class KaraokeLineState extends State<KaraokeLine> {
   StreamSubscription<Duration>? _sub;
   UiBeatListener? _beat;
   bool _visible = true;
+  Duration? _lastPosition;
+  late double _cursor = _progress.value.sung + _progress.value.fill;
 
   ({int sung, double fill}) _at(Duration p) {
     final t = widget.trusted(p);
@@ -76,9 +78,10 @@ class KaraokeLineState extends State<KaraokeLine> {
   @override
   void initState() {
     super.initState();
+    _lastPosition = widget.trusted(widget.position());
     // While the beat runs it holds the newer position; the stream's older ticks would pull the fill back.
     _sub = widget.ticks.listen((p) {
-      if (_beat == null) _progress.value = _at(p);
+      if (_beat == null) _snap(p);
     });
     widget.playing?.addListener(_sync);
   }
@@ -94,6 +97,7 @@ class KaraokeLineState extends State<KaraokeLine> {
   @override
   void didUpdateWidget(KaraokeLine oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (oldWidget.words != widget.words) _snap(widget.position());
     if (oldWidget.playing != widget.playing) {
       oldWidget.playing?.removeListener(_sync);
       widget.playing?.addListener(_sync);
@@ -108,10 +112,43 @@ class KaraokeLineState extends State<KaraokeLine> {
       _beat = null;
       return;
     }
-    _beat ??= UiBeat.listen(
-      LayoutPrefs.heavy ? UiBeat.period : UiBeat.period * 2,
-      (_) => _progress.value = _at(widget.position()),
-    );
+    if (_beat == null) {
+      _snap(widget.position());
+      _beat = UiBeat.listen(UiBeat.period, _advance);
+    }
+  }
+
+  void _snap(Duration position) {
+    final p = _at(position);
+    _cursor = p.sung + p.fill;
+    _lastPosition = widget.trusted(position);
+    _progress.value = p;
+  }
+
+  void _advance(Duration elapsed) {
+    final position = widget.position();
+    final trusted = widget.trusted(position);
+    if (trusted == null) return _snap(position);
+    final previous = _lastPosition;
+    final delta = previous == null ? Duration.zero : trusted - previous;
+    // Seeks must land immediately. Small clock corrections and abrupt word stamps can glide instead.
+    if (previous == null ||
+        delta < const Duration(milliseconds: -80) ||
+        delta > elapsed + const Duration(milliseconds: 350)) {
+      return _snap(position);
+    }
+    _lastPosition = trusted;
+    final target = karaokeProgress(widget.words, trusted);
+    final to = target.sung + target.fill;
+    final alpha = 1 - math.exp(-elapsed.inMicroseconds / 45000);
+    var next = _cursor + (math.max(_cursor, to) - _cursor) * alpha;
+    // Smooth only the presentation: never let it fall more than 80 ms behind the real word timings.
+    final floor = karaokeProgress(widget.words, trusted - const Duration(milliseconds: 80));
+    next = math.max(next, floor.sung + floor.fill);
+    if ((to - next).abs() < 0.001) next = to;
+    _cursor = next.clamp(0.0, widget.words.length.toDouble());
+    final sung = _cursor.floor();
+    _progress.value = (sung: sung, fill: _cursor - sung);
   }
 
   @override
@@ -165,9 +202,9 @@ class _KaraokePainter extends CustomPainter {
   final TextScaler scaler;
   final ValueListenable<({int sung, double fill})> progress;
 
-  /// The soft edge of the fill: this wide, in [_steps] strips of falling opacity. Whole sung words stay fully coloured.
-  static const _feather = 12.0;
-  static const _steps = 4;
+  /// One soft edge across the line, in [_steps] strips of falling opacity.
+  static const _feather = 18.0;
+  static const _steps = 8;
 
   /// The sung colour at full strength, then at the strengths of the edge's strips. Laid out once per width.
   final _layers = <TextPainter>[];
@@ -175,6 +212,7 @@ class _KaraokePainter extends CustomPainter {
 
   /// Each word's boxes (more than one when it wraps), measured with the layout.
   final _boxes = <List<TextBox>>[];
+  final _widths = <double>[];
 
   void _layout(double width) {
     if (_layers.isNotEmpty && width == _width) return;
@@ -197,6 +235,7 @@ class _KaraokePainter extends CustomPainter {
     }
     final tp = _layers.first;
     _boxes.clear();
+    _widths.clear();
     var start = 0;
     for (final w in words) {
       final end = start + w.text.length;
@@ -205,12 +244,10 @@ class _KaraokePainter extends CustomPainter {
       _boxes.add(
         trimmed > start ? tp.getBoxesForSelection(TextSelection(baseOffset: start, extentOffset: trimmed)) : const [],
       );
+      _widths.add(_boxes.last.fold(0.0, (sum, box) => sum + box.right - box.left));
       start = end;
     }
   }
-
-  /// A mild ease in and out, so a short word does not snap across.
-  static double _ease(double t) => t * t * (3 - 2 * t);
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -218,42 +255,32 @@ class _KaraokePainter extends CustomPainter {
     if (p.sung == 0 && p.fill <= 0) return;
     _layout(size.width);
     final solid = Path();
-    for (var i = 0; i < p.sung && i < _boxes.length; i++) {
-      for (final b in _boxes[i]) {
-        solid.addRect(b.toRect());
-      }
-    }
-    // The strips of the soft edge, each with the layer that has its opacity.
     final edge = <(Rect, int)>[];
-    if (p.fill > 0 && p.sung < _boxes.length) {
-      final boxes = _boxes[p.sung];
-      var left = boxes.fold<double>(0, (sum, b) => sum + (b.right - b.left)) * _ease(p.fill);
-      for (final b in boxes) {
-        final w = b.right - b.left;
-        if (left <= 0) break;
-        final part = left.clamp(0, w).toDouble();
-        final rtl = b.direction == TextDirection.rtl;
-        // The feather lies behind where the fill ends, inside the word; a fill just begun is all feather.
-        final feather = math.min(_feather, part);
-        final solidPart = part - feather;
-        if (solidPart > 0) {
-          solid.addRect(
-            rtl
-                ? Rect.fromLTRB(b.right - solidPart, b.top, b.right, b.bottom)
-                : Rect.fromLTRB(b.left, b.top, b.left + solidPart, b.bottom),
-          );
-        }
+    final total = _widths.fold(0.0, (sum, width) => sum + width);
+    var cursor = 0.0;
+    for (var i = 0; i < _widths.length; i++) {
+      if (i < p.sung) cursor += _widths[i];
+      if (i == p.sung) cursor += _widths[i] * p.fill;
+    }
+    // Carry one reveal edge across word boundaries. Restarting an ease and feather for each word made
+    // the highlight stop, accelerate and flash at every boundary, even with accurate timestamps.
+    final feather = math.min(_feather, math.min(cursor, math.max(0.0, total - cursor) * 4));
+    final solidEnd = cursor - feather;
+    var offset = 0.0;
+    for (final boxes in _boxes) {
+      for (final box in boxes) {
+        final width = box.right - box.left;
+        Rect slice(double from, double to) => box.direction == TextDirection.rtl
+            ? Rect.fromLTRB(box.right - to, box.top, box.right - from, box.bottom)
+            : Rect.fromLTRB(box.left + from, box.top, box.left + to, box.bottom);
+        final filled = (solidEnd - offset).clamp(0.0, width);
+        if (filled > 0) solid.addRect(slice(0, filled));
         for (var k = 0; k < _steps; k++) {
-          // Strip k, counted from the solid side: fainter the nearer the end.
-          final a = solidPart + feather * k / _steps, z = solidPart + feather * (k + 1) / _steps;
-          edge.add((
-            rtl
-                ? Rect.fromLTRB(b.right - z, b.top, b.right - a, b.bottom)
-                : Rect.fromLTRB(b.left + a, b.top, b.left + z, b.bottom),
-            k + 1,
-          ));
+          final from = (solidEnd + feather * k / _steps - offset).clamp(0.0, width);
+          final to = (solidEnd + feather * (k + 1) / _steps - offset).clamp(0.0, width);
+          if (to > from) edge.add((slice(from, to), k + 1));
         }
-        left -= w;
+        offset += width;
       }
     }
     canvas
@@ -272,5 +299,10 @@ class _KaraokePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_KaraokePainter old) =>
-      old.text != text || old.style != style || old.align != align || old.scaler != scaler;
+      old.text != text ||
+      old.words != words ||
+      old.style != style ||
+      old.align != align ||
+      old.direction != direction ||
+      old.scaler != scaler;
 }

@@ -117,6 +117,22 @@ test/                          Unit and widget tests
   (the Adreno workaround in its manifest), so it and the other platforms get the package's FakeGlass. Lightweight
   draws the plain raised surface. `test/glass_tab_bar_test.dart` and `integration_test/glass_tab_bar_test.dart`
   (screenshots with `SHOTS`) cover it.
+- Stacked and Kawaii use Capsule navigation. Liquid Stacked and Liquid Kawaii use Liquid Glass navigation and
+  `playerGlassControls`: transparent player surfaces use `ui/player/player_glass.dart`, sharing a backdrop in the
+  composed player. Opaque filled controls retain their fill. Lightweight uses solid surfaces without a glass layer.
+  The flag persists in Layout preferences and can be changed under Playback controls independently of the preset.
+- The bar's large Close button clears Search and returns to the previous tab. There is no separate small Clear
+  button in the bar; preserve the keyed input subtree during expansion so its keyboard connection stays alive.
+
+## Downloaded executables
+
+- Settings › About › Delete executables on desktop lists Riflay-owned FFmpeg and yt-dlp files and partial downloads
+  from its application-support `bin` directory. It never follows symlinks, scans PATH, or deletes system tools.
+- `services/executable_store.dart` serializes tool resolution, downloads and cleanup. `downloaded_tools.dart` scans
+  and deletes only known filenames, reports partial failures, and invalidates cached executable paths. yt-dlp's
+  deferred update checks its generation so an update queued behind cleanup cannot recreate a deleted binary.
+- `test/downloaded_tools_test.dart` and `test/downloaded_tools_page_test.dart` cover ownership, queue ordering,
+  confirmation, failures and empty state. Tests use temporary files; never delete the developer's own tools.
 
 ## Library model
 

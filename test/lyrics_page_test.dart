@@ -226,6 +226,59 @@ void main() {
     expect(colorOf(tester, 'haro biggu waarudo'), _primary.withValues(alpha: 0.8), reason: 'not dim like the unsung');
   });
 
+  testWidgets('word fill advances every frame in Balanced mode without resetting at word boundaries', (tester) async {
+    final prefs = LayoutPrefs.instance;
+    final previous = prefs.performance;
+    prefs.performance = PerformanceMode.balanced;
+    addTearDown(() => prefs.performance = previous);
+    await pump(tester, _karaoke(), length: const Duration(seconds: 30));
+    final state = tester.state<KaraokeLineState>(find.byType(KaraokeLine));
+    var last = 0.0;
+    for (var i = 1; i <= 70; i++) {
+      now = Duration(milliseconds: i * 18);
+      await tester.pump(const Duration(milliseconds: 18));
+      final current = state.progress.sung + state.progress.fill;
+      expect(current, greaterThan(last), reason: 'frame $i must advance, including across the first word boundary');
+      final minimum = karaokeProgress(_karaoke().lines.first.words, now - const Duration(milliseconds: 80));
+      expect(current, greaterThanOrEqualTo(minimum.sung + minimum.fill - 0.001));
+      last = current;
+    }
+    expect(state.progress.sung, 1);
+  });
+
+  testWidgets('rough word stamps glide, but a seek still lands immediately', (tester) async {
+    final words = [
+      const LyricWord(Duration.zero, Duration(milliseconds: 200), 'One '),
+      const LyricWord(Duration(milliseconds: 200), Duration(milliseconds: 200), 'tiny '),
+      const LyricWord(Duration(milliseconds: 200), Duration(seconds: 2), 'word'),
+    ];
+    final lyrics = Lyrics(
+      source: 'Test',
+      lines: [LyricLine(Duration.zero, 'One tiny word', end: const Duration(seconds: 2), words: words)],
+    );
+    await pump(tester, lyrics, length: const Duration(seconds: 30));
+    final state = tester.state<KaraokeLineState>(find.byType(KaraokeLine));
+    for (var i = 1; i <= 10; i++) {
+      now = Duration(milliseconds: i * 18);
+      await tester.pump(const Duration(milliseconds: 18));
+    }
+    now = const Duration(milliseconds: 216);
+    await tester.pump(const Duration(milliseconds: 18));
+    expect(state.progress.sung + state.progress.fill, lessThan(2), reason: 'a zero-length word should not flash on');
+    for (var i = 1; i <= 6; i++) {
+      now = Duration(milliseconds: 216 + i * 18);
+      await tester.pump(const Duration(milliseconds: 18));
+    }
+    expect(state.progress.sung + state.progress.fill, greaterThan(2));
+    now = const Duration(milliseconds: 1600);
+    await tester.pump(const Duration(milliseconds: 18));
+    expect(state.progress, karaokeProgress(words, now), reason: 'forward seeks snap');
+    now = const Duration(milliseconds: 500);
+    await tester.pump(const Duration(milliseconds: 18));
+    expect(state.progress, karaokeProgress(words, now), reason: 'backward seeks snap');
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('the fill advances between position ticks while playing, and holds still when paused', (tester) async {
     await pump(tester, _karaoke(), length: const Duration(seconds: 30));
     final state = tester.state<KaraokeLineState>(find.byType(KaraokeLine));

@@ -5147,4 +5147,51 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get sessionCodeHint => 'ABC123 or ABCDE-FGHJK';
+
+  @override
+  String get downloadedTools => 'Downloaded tools';
+
+  @override
+  String get deleteExecutables => 'Delete executables';
+
+  @override
+  String get downloadedToolsSubtitle => 'Find and delete FFmpeg and yt-dlp downloaded by Riflay.';
+
+  @override
+  String get downloadedToolsIntro =>
+      'Only tools downloaded by Riflay are listed here. System-installed tools are managed separately.';
+
+  @override
+  String get noDownloadedTools => 'No downloaded executables found.';
+
+  @override
+  String get deleteAllExecutables => 'Delete all executables';
+
+  @override
+  String get deleteExecutablesQuestion => 'Delete downloaded executables?';
+
+  @override
+  String get deleteExecutablesBody =>
+      'Riflay will download these tools again when needed. Your music and settings will stay.';
+
+  @override
+  String get executablesDeleted => 'Downloaded executables deleted.';
+
+  @override
+  String get couldntFindExecutables => 'Couldn\'t find downloaded executables. Try again.';
+
+  @override
+  String get couldntDeleteExecutables => 'Some executables couldn\'t be deleted. Try again.';
+
+  @override
+  String get presetLiquidStackedNote => 'Stacked, with Liquid Glass controls and glass tabs on phones';
+
+  @override
+  String get presetLiquidKawaiiNote => 'Kawaii, with Liquid Glass controls and glass tabs on phones';
+
+  @override
+  String get liquidGlassControls => 'Liquid Glass controls';
+
+  @override
+  String get liquidGlassControlsSubtitle => 'Frost the player’s transparent control surfaces.';
 }

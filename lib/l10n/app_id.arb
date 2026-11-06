@@ -1496,5 +1496,20 @@
   "statsPlaysUnit": "{count, plural, other{kali putar}}",
   "albumsPlural": "{count, plural, other{{count} album}}",
   "listensWaiting": "{count, plural, other{{who}. {count} riwayat menunggu dikirim.}}",
-  "sessionCodeHint": "ABC123 atau ABCDE-FGHJK"
+  "sessionCodeHint": "ABC123 atau ABCDE-FGHJK",
+  "downloadedTools": "Alat yang diunduh",
+  "deleteExecutables": "Hapus executable",
+  "downloadedToolsSubtitle": "Cari dan hapus FFmpeg dan yt-dlp yang diunduh Riflay.",
+  "downloadedToolsIntro": "Hanya alat yang diunduh Riflay yang ditampilkan di sini. Alat yang dipasang lewat sistem dikelola terpisah.",
+  "noDownloadedTools": "Tidak ada executable unduhan yang ditemukan.",
+  "deleteAllExecutables": "Hapus semua executable",
+  "deleteExecutablesQuestion": "Hapus executable yang diunduh?",
+  "deleteExecutablesBody": "Riflay akan mengunduh alat ini lagi saat dibutuhkan. Musik dan pengaturanmu tetap tersimpan.",
+  "executablesDeleted": "Executable unduhan sudah dihapus.",
+  "couldntFindExecutables": "Tidak bisa menemukan executable unduhan. Coba lagi.",
+  "couldntDeleteExecutables": "Beberapa executable tidak bisa dihapus. Coba lagi.",
+  "presetLiquidStackedNote": "Stacked, dengan kontrol Liquid Glass dan tab kaca di ponsel",
+  "presetLiquidKawaiiNote": "Kawaii, dengan kontrol Liquid Glass dan tab kaca di ponsel",
+  "liquidGlassControls": "Kontrol Liquid Glass",
+  "liquidGlassControlsSubtitle": "Ubah permukaan kontrol player yang transparan menjadi Liquid Glass."
 }

@@ -143,6 +143,7 @@ void main() {
         tester.testTextInput.enterText('led zeppelin');
         await tester.pump();
         expect(bar.link.search.controller.text, 'led zeppelin');
+        expect(find.byTooltip('Clear'), findsNothing, reason: 'the large Close button also clears the input');
         expect(tester.takeException(), isNull);
 
         await tester.pumpAndSettle();
@@ -250,7 +251,7 @@ void main() {
       expect(tester.getRect(field).bottom, lessThan(size.height * 0.6), reason: 'above the keyboard');
       await tester.enterText(field, 'led zeppelin');
       await tester.pump();
-      expect(find.byTooltip('Clear'), findsOneWidget);
+      expect(find.byTooltip('Clear'), findsNothing);
       expect(tester.takeException(), isNull);
 
       await tester.tap(find.byTooltip('Close'));
@@ -339,11 +340,29 @@ void main() {
     await PlayerPreset.liquidKawaii.apply(prefs);
     expect(prefs.tabBar, TabBarStyle.glass);
     expect(playerPresetName(), 'Liquid Kawaii');
-    expect(PlayerPreset.kawaii.changesTo(prefs), 1, reason: 'switching back must change the tab bar');
+    expect(PlayerPreset.kawaii.changesTo(prefs), 2, reason: 'switching back changes the bar and glass player surfaces');
     expect(PlayerPreset.kawaii.matches(prefs), isFalse);
     await PlayerPreset.kawaii.apply(prefs);
     expect(prefs.tabBar, TabBarStyle.capsule);
     expect(playerPresetName(), 'Kawaii');
-    expect(PlayerPreset.liquidKawaii.changesTo(prefs), 1);
+    expect(PlayerPreset.liquidKawaii.changesTo(prefs), 2);
+  });
+
+  test('Stacked uses Capsule, Liquid Stacked adds glass navigation and player surfaces', () async {
+    await PlayerPreset.liquidKawaii.apply(prefs);
+    await PlayerPreset.stacked.apply(prefs);
+    expect(prefs.tabBar, TabBarStyle.capsule);
+    expect(playerPresetName(), 'Stacked');
+    expect(PlayerPreset.liquidStacked.changesTo(prefs), 2);
+    await PlayerPreset.liquidStacked.apply(prefs);
+    expect(prefs.tabBar, TabBarStyle.glass);
+    expect(playerPresetName(), 'Liquid Stacked');
+    expect(PlayerPreset.stacked.changesTo(prefs), 2);
+    expect(prefs.playerGlassControls, isTrue);
+    expect(prefs.transport, PlayerTransport.pill);
+    expect(prefs.titleActions, TitleActions.boxed);
+    await PlayerPreset.stacked.apply(prefs);
+    expect(playerPresetName(), 'Stacked');
+    expect(prefs.playerGlassControls, isFalse);
   });
 }

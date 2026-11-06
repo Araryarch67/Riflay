@@ -34,6 +34,7 @@ void main() {
     expect(find.textContaining(' #'), findsNothing, reason: 'no kernel build line');
     for (final row in [
       'Check for updates',
+      'Delete executables',
       "What's new",
       'Report a problem',
       'Source code',

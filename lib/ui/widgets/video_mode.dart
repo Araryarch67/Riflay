@@ -6,6 +6,7 @@ import '../../services/layout_prefs.dart';
 import '../../services/player_controller.dart';
 import '../../services/video_mode.dart';
 import '../theme.dart';
+import '../player/player_glass.dart';
 import 'skeleton.dart';
 import '../../services/language.dart';
 
@@ -72,15 +73,22 @@ class VideoModeSwitch extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Container(
-                padding: const EdgeInsets.all(3),
-                decoration: BoxDecoration(
-                  color: onDark ? Colors.white.withValues(alpha: 0.14) : AppColors.tile,
-                  borderRadius: BorderRadius.circular(22),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [segment(tr.sectionSong, false), segment(tr.kindVideo, true)],
+              PlayerGlassSurface(
+                radius: 22,
+                child: Container(
+                  padding: const EdgeInsets.all(3),
+                  decoration: BoxDecoration(
+                    color: LayoutPrefs.instance.playerGlassControls
+                        ? Colors.transparent
+                        : onDark
+                        ? Colors.white.withValues(alpha: 0.14)
+                        : AppColors.tile,
+                    borderRadius: BorderRadius.circular(22),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [segment(tr.sectionSong, false), segment(tr.kindVideo, true)],
+                  ),
                 ),
               ),
               const SizedBox(width: 8),

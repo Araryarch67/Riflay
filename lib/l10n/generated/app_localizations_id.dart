@@ -5073,4 +5073,51 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get sessionCodeHint => 'ABC123 atau ABCDE-FGHJK';
+
+  @override
+  String get downloadedTools => 'Alat yang diunduh';
+
+  @override
+  String get deleteExecutables => 'Hapus executable';
+
+  @override
+  String get downloadedToolsSubtitle => 'Cari dan hapus FFmpeg dan yt-dlp yang diunduh Riflay.';
+
+  @override
+  String get downloadedToolsIntro =>
+      'Hanya alat yang diunduh Riflay yang ditampilkan di sini. Alat yang dipasang lewat sistem dikelola terpisah.';
+
+  @override
+  String get noDownloadedTools => 'Tidak ada executable unduhan yang ditemukan.';
+
+  @override
+  String get deleteAllExecutables => 'Hapus semua executable';
+
+  @override
+  String get deleteExecutablesQuestion => 'Hapus executable yang diunduh?';
+
+  @override
+  String get deleteExecutablesBody =>
+      'Riflay akan mengunduh alat ini lagi saat dibutuhkan. Musik dan pengaturanmu tetap tersimpan.';
+
+  @override
+  String get executablesDeleted => 'Executable unduhan sudah dihapus.';
+
+  @override
+  String get couldntFindExecutables => 'Tidak bisa menemukan executable unduhan. Coba lagi.';
+
+  @override
+  String get couldntDeleteExecutables => 'Beberapa executable tidak bisa dihapus. Coba lagi.';
+
+  @override
+  String get presetLiquidStackedNote => 'Stacked, dengan kontrol Liquid Glass dan tab kaca di ponsel';
+
+  @override
+  String get presetLiquidKawaiiNote => 'Kawaii, dengan kontrol Liquid Glass dan tab kaca di ponsel';
+
+  @override
+  String get liquidGlassControls => 'Kontrol Liquid Glass';
+
+  @override
+  String get liquidGlassControlsSubtitle => 'Ubah permukaan kontrol player yang transparan menjadi Liquid Glass.';
 }

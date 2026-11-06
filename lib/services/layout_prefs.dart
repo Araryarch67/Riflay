@@ -499,6 +499,9 @@ class LayoutPrefs extends ChangeNotifier {
   bool showTimeLeft = false;
   PlayerTransport transport = PlayerTransport.classic;
   bool showVolumeRow = true;
+
+  /// Liquid presets frost the player's transparent control surfaces.
+  bool playerGlassControls = false;
   PlayerBottomRow bottomRow = PlayerBottomRow.classic;
   LyricsLayout lyricsLayout = LyricsLayout.classic;
   MiniPlayerStyle miniPlayer = MiniPlayerStyle.classic;
@@ -623,6 +626,7 @@ class LayoutPrefs extends ChangeNotifier {
       bottomRow == PlayerBottomRow.classic &&
       qualityBadgePlace == QualityBadgePlace.underArtist &&
       volumeSlider == VolumeSliderShape.classic &&
+      !playerGlassControls &&
       showVolumeRow;
 
   /// Performance mode: Lightweight turns off every effect that isn't needed to use the app.
@@ -676,6 +680,7 @@ class LayoutPrefs extends ChangeNotifier {
     showTimeLeft = j['showTimeLeft'] as bool? ?? d.showTimeLeft;
     transport = pick(PlayerTransport.values, 'transport', d.transport);
     showVolumeRow = j['showVolumeRow'] as bool? ?? d.showVolumeRow;
+    playerGlassControls = j['playerGlassControls'] as bool? ?? d.playerGlassControls;
     bottomRow = pick(PlayerBottomRow.values, 'bottomRow', d.bottomRow);
     lyricsLayout = pick(LyricsLayout.values, 'lyricsLayout', d.lyricsLayout);
     miniPlayer = pick(MiniPlayerStyle.values, 'miniPlayer', d.miniPlayer);
@@ -741,6 +746,7 @@ class LayoutPrefs extends ChangeNotifier {
     'showTimeLeft': showTimeLeft,
     'transport': transport.name,
     'showVolumeRow': showVolumeRow,
+    'playerGlassControls': playerGlassControls,
     'bottomRow': bottomRow.name,
     'lyricsLayout': lyricsLayout.name,
     'miniPlayer': miniPlayer.name,
@@ -821,6 +827,7 @@ class LayoutPrefs extends ChangeNotifier {
   Future<void> setShowTimeLeft(bool v) => _set(() => showTimeLeft = v);
   Future<void> setTransport(PlayerTransport v) => _set(() => transport = v);
   Future<void> setShowVolumeRow(bool v) => _set(() => showVolumeRow = v);
+  Future<void> setPlayerGlassControls(bool v) => _set(() => playerGlassControls = v);
   Future<void> setBottomRow(PlayerBottomRow v) => _set(() => bottomRow = v);
   Future<void> setLyricsLayout(LyricsLayout v) => _set(() => lyricsLayout = v);
   Future<void> setMiniPlayer(MiniPlayerStyle v) => _set(() => miniPlayer = v);

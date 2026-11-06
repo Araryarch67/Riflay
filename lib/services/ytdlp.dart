@@ -6,11 +6,11 @@ import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as p;
-import 'package:path_provider/path_provider.dart';
 
 import '../platform/host.dart';
 import 'download_prefs.dart';
 import 'lookup_process.dart';
+import 'executable_store.dart';
 import 'video_download.dart';
 
 /// A directly fetchable audio stream, as resolved by yt-dlp.
@@ -72,6 +72,7 @@ abstract final class YtDlp {
   static bool get supported => Host.isLinux || Host.isWindows || Host.isMacOS;
 
   static Future<String?>? _exe;
+  static int _generation = 0;
 
   static String _lastError(String stderr) {
     final line = stderr.trim().split(RegExp(r'\r?\n')).lastWhere((l) => l.isNotEmpty, orElse: () => 'yt-dlp failed');
@@ -91,7 +92,16 @@ abstract final class YtDlp {
       : 'yt-dlp_linux';
 
   /// Path to a usable yt-dlp, downloading the official binary if none is installed.
-  static Future<String?> executable() => _exe ??= () async {
+  static Future<String?> executable() => ExecutableStore.run(() => _exe ??= _findExecutable());
+
+  /// Called inside executable maintenance after downloaded files have been removed.
+  static void forgetExecutable() {
+    _exe = null;
+    _generation++;
+  }
+
+  static Future<String?> _findExecutable() async {
+    final generation = _generation;
     if (!supported) return null;
     for (final candidate in ['yt-dlp', if (Host.isWindows) 'yt-dlp.exe']) {
       try {
@@ -101,17 +111,18 @@ abstract final class YtDlp {
         // Not on PATH.
       }
     }
-    final local = File(p.join((await getApplicationSupportDirectory()).path, 'bin', _releaseAsset));
+    final local = File(p.join((await ExecutableStore.directory()).path, _releaseAsset));
     // Older versions wrote it straight to its place: a download cut short stayed there for good.
     final whole = local.existsSync() && local.lengthSync() > 4 << 20;
     if (!whole && !await _download(local)) return null;
     // YouTube changes break old yt-dlp releases within weeks; a copy of our own is
     // brought up to date in the background (the system's is the package manager's job).
     if (whole && DateTime.now().difference(local.statSync().modified) > const Duration(days: 14)) {
-      _download(local).ignore();
+      // Cleanup can already be queued behind this lookup. Do not recreate its files with an older update.
+      ExecutableStore.run(() async => generation == _generation ? _download(local) : false).ignore();
     }
     return local.path;
-  }();
+  }
 
   static const _releases = 'https://github.com/yt-dlp/yt-dlp/releases';
 

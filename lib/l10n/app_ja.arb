@@ -1489,5 +1489,20 @@
   "statsPlaysUnit": "{count, plural, other{回再生}}",
   "albumsPlural": "{count, plural, other{アルバム{count}枚}}",
   "listensWaiting": "{count, plural, other{{who}。送信待ちの再生記録が{count}件。}}",
-  "sessionCodeHint": "ABC123 または ABCDE-FGHJK"
+  "sessionCodeHint": "ABC123 または ABCDE-FGHJK",
+  "downloadedTools": "ダウンロードしたツール",
+  "deleteExecutables": "実行ファイルを削除",
+  "downloadedToolsSubtitle": "Riflay がダウンロードした FFmpeg と yt-dlp を探して削除。",
+  "downloadedToolsIntro": "Riflay がダウンロードしたツールだけを表示。システムにインストールしたツールは別で管理。",
+  "noDownloadedTools": "ダウンロードした実行ファイルは見つからなかった。",
+  "deleteAllExecutables": "実行ファイルをすべて削除",
+  "deleteExecutablesQuestion": "ダウンロードした実行ファイルを削除する？",
+  "deleteExecutablesBody": "必要になったら Riflay がもう一度ダウンロードする。音楽と設定はそのまま。",
+  "executablesDeleted": "ダウンロードした実行ファイルを削除した。",
+  "couldntFindExecutables": "実行ファイルを探せなかった。もう一度試してね。",
+  "couldntDeleteExecutables": "一部の実行ファイルを削除できなかった。もう一度試してね。",
+  "presetLiquidStackedNote": "Stacked にリキッドグラスの操作パネルとスマホのガラスタブを追加",
+  "presetLiquidKawaiiNote": "Kawaii にリキッドグラスの操作パネルとスマホのガラスタブを追加",
+  "liquidGlassControls": "リキッドグラスの操作パネル",
+  "liquidGlassControlsSubtitle": "プレーヤーの透明な操作パネルをリキッドグラスにする。"
 }

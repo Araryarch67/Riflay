@@ -5,11 +5,11 @@ import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as p;
-import 'package:path_provider/path_provider.dart';
 
 import '../platform/host.dart';
 import '../platform/native_calls.dart';
 import 'language.dart';
+import 'executable_store.dart';
 
 /// The `ffmpeg` command, for what libmpv can't do: writing tags into MP3 / Ogg
 /// files, and converting for AirPlay and TVs. A system one is used when
@@ -25,7 +25,9 @@ abstract final class Ffmpeg {
   static void Function(String message)? onDownload;
 
   /// Looks for an installed or already downloaded ffmpeg (no download). Runs once at startup.
-  static Future<void> probe() async {
+  static Future<void> probe() => ExecutableStore.run(_probe);
+
+  static Future<void> _probe() async {
     _probed = true;
     try {
       if ((await Process.run('ffmpeg', ['-hide_banner', '-version'])).exitCode == 0) {
@@ -46,8 +48,8 @@ abstract final class Ffmpeg {
   static bool get available => installed || _source != null;
 
   /// The path to run, downloading ffmpeg first if needed.
-  static Future<String> executable() async {
-    if (!_probed) await probe();
+  static Future<String> executable() => ExecutableStore.run(() async {
+    if (!_probed) await _probe();
     if (_path case final path?) return path;
     return _download ??= _fetch().then(
       (path) => _path = path,
@@ -56,10 +58,17 @@ abstract final class Ffmpeg {
         throw e;
       },
     );
+  });
+
+  /// Called inside executable maintenance after downloaded files have been removed.
+  static void forgetExecutable() {
+    _path = null;
+    _probed = false;
+    _download = null;
   }
 
   static Future<File> _localFile() async =>
-      File(p.join((await getApplicationSupportDirectory()).path, 'bin', Host.isWindows ? 'ffmpeg.exe' : 'ffmpeg'));
+      File(p.join((await ExecutableStore.directory()).path, Host.isWindows ? 'ffmpeg.exe' : 'ffmpeg'));
 
   /// Where the official builds live, with how to check them; null where none is offered.
   /// A null [checksumUrl] means the checksum sits next to the file [url] redirects to.

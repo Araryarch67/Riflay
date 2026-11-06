@@ -3142,5 +3142,20 @@
       }
     }
   },
-  "sessionCodeHint": "ABC123 or ABCDE-FGHJK"
+  "sessionCodeHint": "ABC123 or ABCDE-FGHJK",
+  "downloadedTools": "Downloaded tools",
+  "deleteExecutables": "Delete executables",
+  "downloadedToolsSubtitle": "Find and delete FFmpeg and yt-dlp downloaded by Riflay.",
+  "downloadedToolsIntro": "Only tools downloaded by Riflay are listed here. System-installed tools are managed separately.",
+  "noDownloadedTools": "No downloaded executables found.",
+  "deleteAllExecutables": "Delete all executables",
+  "deleteExecutablesQuestion": "Delete downloaded executables?",
+  "deleteExecutablesBody": "Riflay will download these tools again when needed. Your music and settings will stay.",
+  "executablesDeleted": "Downloaded executables deleted.",
+  "couldntFindExecutables": "Couldn't find downloaded executables. Try again.",
+  "couldntDeleteExecutables": "Some executables couldn't be deleted. Try again.",
+  "presetLiquidStackedNote": "Stacked, with Liquid Glass controls and glass tabs on phones",
+  "presetLiquidKawaiiNote": "Kawaii, with Liquid Glass controls and glass tabs on phones",
+  "liquidGlassControls": "Liquid Glass controls",
+  "liquidGlassControlsSubtitle": "Frost the player’s transparent control surfaces."
 }
