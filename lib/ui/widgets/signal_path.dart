@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../../services/audio_engine.dart';
+import '../../services/bluetooth_codec.dart';
 import '../../services/player_controller.dart';
 import '../theme.dart';
 import '../../services/language.dart';
@@ -302,6 +303,16 @@ class _SignalPathSheet extends StatelessWidget {
                     changes: !p.dacMatches,
                     last: true,
                   ),
+                // Bluetooth headphones: their codec takes the Nearby devices permission to read.
+                if (p.bluetooth?.needsPermission ?? false)
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: TextButton.icon(
+                      onPressed: BluetoothCodecs.allow,
+                      icon: const Icon(Icons.bluetooth_rounded, size: 18),
+                      label: Text(tr.showBluetoothCodec),
+                    ),
+                  ),
               ],
             ),
           ),
@@ -329,6 +340,8 @@ String outputName(SignalPath p) {
     'opensles' || 'audiotrack' || 'aaudio' =>
       p.usbDacName != null
           ? 'USB DAC${p.usbBitPerfect ? ', bit-perfect (Android 14)' : ' ${tr.spAndroidMixerParen}'} · ${p.usbDacName}'
+          : p.bluetooth != null
+          ? ['Bluetooth', ?p.bluetooth!.label, ?p.bluetooth!.name].join(' · ')
           : tr.spAndroidMixer,
     'audiounit' => tr.spIosSession,
     final o => o,

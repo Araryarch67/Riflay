@@ -1070,6 +1070,9 @@ class AppLocalizationsId extends AppLocalizations {
   String get discordShowQuality => 'Tampilkan kualitas suara (FLAC 24/96, Opus 160 kbps)';
 
   @override
+  String get showBluetoothCodec => 'Tampilkan codec Bluetooth';
+
+  @override
   String get previewYourSong => 'Lagumu';
 
   @override
@@ -1142,6 +1145,22 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get volumeLevelingSubtitle => 'Memutar lagu dengan kerasnya serupa, pakai tag ReplayGain';
+
+  @override
+  String get measureLoudness => 'Ukur lagu tanpa tag ReplayGain';
+
+  @override
+  String measureLoudnessSubtitle(int measured, int total) {
+    return '$measured dari $total lagu di perangkat ini sudah diukur. Lagu tanpa tag diratakan dari hasil ukurnya';
+  }
+
+  @override
+  String measuringLoudness(int done, int total) {
+    return 'Mengukur $done dari $total…';
+  }
+
+  @override
+  String get measure => 'Ukur';
 
   @override
   String get crossfade => 'Crossfade';

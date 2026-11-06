@@ -2067,6 +2067,12 @@ abstract class AppLocalizations {
   /// **'Show the sound quality (FLAC 24/96, Opus 160 kbps)'**
   String get discordShowQuality;
 
+  /// No description provided for @showBluetoothCodec.
+  ///
+  /// In en, this message translates to:
+  /// **'Show the Bluetooth codec'**
+  String get showBluetoothCodec;
+
   /// No description provided for @previewYourSong.
   ///
   /// In en, this message translates to:
@@ -2192,6 +2198,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Plays songs at a similar loudness, using their ReplayGain tags'**
   String get volumeLevelingSubtitle;
+
+  /// No description provided for @measureLoudness.
+  ///
+  /// In en, this message translates to:
+  /// **'Measure songs without ReplayGain tags'**
+  String get measureLoudness;
+
+  /// No description provided for @measureLoudnessSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'{measured} of {total} songs on this device measured. A song without tags is leveled by what is measured'**
+  String measureLoudnessSubtitle(int measured, int total);
+
+  /// No description provided for @measuringLoudness.
+  ///
+  /// In en, this message translates to:
+  /// **'Measuring {done} of {total}…'**
+  String measuringLoudness(int done, int total);
+
+  /// No description provided for @measure.
+  ///
+  /// In en, this message translates to:
+  /// **'Measure'**
+  String get measure;
 
   /// No description provided for @crossfade.
   ///

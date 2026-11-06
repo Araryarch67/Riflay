@@ -9,6 +9,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../platform/host.dart';
+import '../../services/audio_analysis.dart';
 import '../../services/audio_engine.dart';
 import '../../services/beta_features.dart';
 import '../../services/carla_locator.dart';
@@ -101,6 +102,7 @@ class DspSettings extends StatelessWidget {
                     options: [for (final v in VolumeLeveling.values) (v, v.label)],
                   ),
                 ),
+                if (audio.leveling != VolumeLeveling.off && AudioAnalysis.supported) const _MeasureLoudness(),
                 SwitchListTile(
                   secondary: const Icon(Icons.compare_arrows_rounded),
                   title: Text(tr.crossfade),
@@ -787,6 +789,39 @@ class _DirectUsbTile extends StatelessWidget {
             ),
           ),
       ],
+    );
+  }
+}
+
+/// Leveling's helper for songs without ReplayGain tags: measures the library's files, one at a time, and says how
+/// many are done. Songs that play are measured anyway (and the next one), so this is for all of them at once.
+class _MeasureLoudness extends StatelessWidget {
+  const _MeasureLoudness();
+
+  @override
+  Widget build(BuildContext context) {
+    final c = PlayerScope.of(context);
+    final muted = settingsMuted(context);
+    final files = [
+      for (final t in c.library)
+        if (AudioAnalysis.fileOf(t) != null) t,
+    ];
+    if (files.isEmpty) return const SizedBox.shrink();
+    return ValueListenableBuilder(
+      valueListenable: AudioAnalysis.scan,
+      builder: (context, progress, _) => ListTile(
+        leading: const Icon(Icons.multitrack_audio_rounded),
+        title: Text(tr.measureLoudness),
+        subtitle: Text(
+          progress == null
+              ? tr.measureLoudnessSubtitle(AudioAnalysis.measuredOf(files), files.length)
+              : tr.measuringLoudness(progress.$1, progress.$2),
+          style: muted,
+        ),
+        trailing: progress == null
+            ? FilledButton.tonal(onPressed: () => AudioAnalysis.scanAll(files), child: Text(tr.measure))
+            : OutlinedButton(onPressed: AudioAnalysis.stopScan, child: Text(tr.stop)),
+      ),
     );
   }
 }

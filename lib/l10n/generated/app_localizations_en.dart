@@ -1080,6 +1080,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get discordShowQuality => 'Show the sound quality (FLAC 24/96, Opus 160 kbps)';
 
   @override
+  String get showBluetoothCodec => 'Show the Bluetooth codec';
+
+  @override
   String get previewYourSong => 'Your song';
 
   @override
@@ -1153,6 +1156,22 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get volumeLevelingSubtitle => 'Plays songs at a similar loudness, using their ReplayGain tags';
+
+  @override
+  String get measureLoudness => 'Measure songs without ReplayGain tags';
+
+  @override
+  String measureLoudnessSubtitle(int measured, int total) {
+    return '$measured of $total songs on this device measured. A song without tags is leveled by what is measured';
+  }
+
+  @override
+  String measuringLoudness(int done, int total) {
+    return 'Measuring $done of $total…';
+  }
+
+  @override
+  String get measure => 'Measure';
 
   @override
   String get crossfade => 'Crossfade';

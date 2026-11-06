@@ -1,10 +1,12 @@
 import 'dart:async';
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../models/track.dart';
+import '../../services/audio_analysis.dart';
 import '../../services/audio_engine.dart';
 import '../../services/extensions/extension_finds.dart';
 import '../../services/language.dart';
@@ -99,6 +101,44 @@ class _DetailStatsSheetState extends State<_DetailStatsSheet> {
   bool _read = false;
   Timer? _timer;
 
+  /// The song's file measured (spectrum, dynamic range, loudness): once per song shown here.
+  AudioReport? _report;
+  String? _reportFor;
+  bool _measuring = false;
+
+  void _measure(Track track) {
+    if (_reportFor == track.id) return;
+    _reportFor = track.id;
+    _report = null;
+    if (AudioAnalysis.fileOf(track) == null || !AudioAnalysis.supported) return;
+    _measuring = true;
+    AudioAnalysis.of(track, spectrogram: true)
+        .then((r) {
+          if (mounted && _reportFor == track.id) setState(() => _report = r);
+        }, onError: (Object e) => debugPrint('Measuring ${track.title}: $e'))
+        .whenComplete(() {
+          if (mounted && _reportFor == track.id) setState(() => _measuring = false);
+        });
+  }
+
+  static String _khz(double hz) => '${(hz / 1000).toStringAsFixed(1)} kHz';
+
+  /// What the spectrum says, in words: for a lossless file, whether it was made from a lossy one.
+  static String _spectrum(AudioReport r, bool lossless) => switch (r.verdict) {
+    SourceVerdict.lossyCut when lossless => 'Cut at ${_khz(r.cutoffHz!)}: probably made from an MP3 or AAC',
+    SourceVerdict.lossyCut => 'Cut at ${_khz(r.cutoffHz!)}, as lossy files are',
+    SourceVerdict.upsampled => 'Nothing above about 22 kHz: upsampled from 44.1 / 48 kHz',
+    SourceVerdict.fullBand =>
+      r.cutoffHz == null ? 'Full band, up to ${_khz(r.rate / 2)}' : 'Full band, up to ${_khz(r.cutoffHz!)}',
+  };
+
+  static String _dr(int dr) =>
+      'DR$dr (${dr >= 12
+          ? 'dynamic'
+          : dr >= 8
+          ? 'moderately compressed'
+          : 'heavily compressed'})';
+
   @override
   void initState() {
     super.initState();
@@ -107,7 +147,9 @@ class _DetailStatsSheetState extends State<_DetailStatsSheet> {
   }
 
   Future<void> _poll() async {
-    final audio = PlayerScope.read(context).audio;
+    final c = PlayerScope.read(context);
+    if (c.currentTrack case final t?) _measure(t);
+    final audio = c.audio;
     final path = await audio.signalPath();
     final extra = await audio.nerdStats();
     if (mounted) {
@@ -193,6 +235,27 @@ class _DetailStatsSheetState extends State<_DetailStatsSheet> {
           if (size != null) ('File size', _bytes(size)),
         ],
       ),
+      if (_report != null || _measuring)
+        (
+          icon: Icons.analytics_rounded,
+          title: 'Analysis',
+          rows: switch (_report) {
+            null => [('Measuring', 'Reading the whole file…')],
+            final r => [
+              ('Spectrum', _spectrum(r, p.lossless)),
+              if (r.dr case final dr?) ('Dynamic range', _dr(dr)),
+              (
+                'Loudness',
+                '${r.lufs == null ? '-' : '${r.lufs!.toStringAsFixed(1)} LUFS'} · peak ${r.peakDb.toStringAsFixed(1)} dBFS',
+              ),
+              if (r.gainDb case final g?)
+                (
+                  'Measured gain',
+                  '${g >= 0 ? '+' : ''}${g.toStringAsFixed(1)} dB (leveling uses it without ReplayGain tags)',
+                ),
+            ],
+          },
+        ),
       (
         icon: Icons.tune_rounded,
         title: 'Sound',
@@ -244,6 +307,14 @@ class _DetailStatsSheetState extends State<_DetailStatsSheet> {
               '${SignalPath.formatRate(p.inRate)} → ${SignalPath.formatRate(p.outRate)} · ${AudioEngine.resamplerName}',
             ),
           ('Device', outputName(p)),
+          if (p.bluetooth case final bt?)
+            (
+              'Bluetooth',
+              [
+                bt.label ?? (bt.needsPermission ? 'codec: allow Nearby devices' : 'codec unknown'),
+                ?bt.name,
+              ].join(' · '),
+            ),
           if (p.dac case final dac?)
             (
               'DAC receives',
@@ -327,6 +398,10 @@ class _DetailStatsSheetState extends State<_DetailStatsSheet> {
                 ),
               ),
             for (final s in sections) ...[const SizedBox(height: 16), _Card(section: s)],
+            if (_report case final r? when r.spectrogram != null && r.columns > 0) ...[
+              const SizedBox(height: 16),
+              Spectrogram(report: r),
+            ],
             if (sections.isNotEmpty) ...[
               const SizedBox(height: 16),
               Text(tr.statsHint, style: text.bodySmall?.copyWith(color: AppColors.textMuted)),
@@ -436,4 +511,177 @@ class _Card extends StatelessWidget {
       ),
     );
   }
+}
+
+/// A song's spectrogram: time across, frequency up (to the top of the file's band), loudness as colour, with a
+/// line where a cut was found.
+class Spectrogram extends StatefulWidget {
+  const Spectrogram({super.key, required this.report});
+
+  final AudioReport report;
+
+  @override
+  State<Spectrogram> createState() => _SpectrogramState();
+}
+
+class _SpectrogramState extends State<Spectrogram> {
+  ui.Image? _image;
+
+  /// Dark blue through purple and orange to pale yellow: quiet to loud.
+  static const _stops = [
+    (0.0, Color(0xFF000004)),
+    (0.25, Color(0xFF3B0F70)),
+    (0.5, Color(0xFF8C2981)),
+    (0.7, Color(0xFFDE4968)),
+    (0.85, Color(0xFFFE9F6D)),
+    (1.0, Color(0xFFFCFDBF)),
+  ];
+
+  static Color _colour(double t) {
+    for (var i = 1; i < _stops.length; i++) {
+      final (b, cb) = _stops[i];
+      final (a, ca) = _stops[i - 1];
+      if (t <= b) return Color.lerp(ca, cb, (t - a) / (b - a))!;
+    }
+    return _stops.last.$2;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _draw();
+  }
+
+  @override
+  void didUpdateWidget(Spectrogram old) {
+    super.didUpdateWidget(old);
+    if (!identical(old.report, widget.report)) _draw();
+  }
+
+  void _draw() {
+    final r = widget.report, data = r.spectrogram!, w = r.columns, h = AudioAnalyzer.rows;
+    final palette = [for (var v = 0; v < 256; v++) _colour(((v / 255) - 0.25).clamp(0.0, 0.75) / 0.75)];
+    final pixels = Uint8List(w * h * 4);
+    for (var y = 0; y < h; y++) {
+      for (var x = 0; x < w; x++) {
+        // Stored bottom row first; an image's first row is its top.
+        final c = palette[data[y * w + x]];
+        final o = ((h - 1 - y) * w + x) * 4;
+        pixels[o] = (c.r * 255).round();
+        pixels[o + 1] = (c.g * 255).round();
+        pixels[o + 2] = (c.b * 255).round();
+        pixels[o + 3] = 255;
+      }
+    }
+    ui.decodeImageFromPixels(pixels, w, h, ui.PixelFormat.rgba8888, (image) {
+      if (mounted) {
+        setState(() {
+          _image?.dispose();
+          _image = image;
+        });
+      } else {
+        image.dispose();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _image?.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    final r = widget.report;
+    final top = r.rate / 2;
+    final muted = text.labelSmall?.copyWith(color: AppColors.textSecondary);
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: AppColors.hover.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.divider),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.waves_rounded, size: 18, color: AppColors.accent),
+                const SizedBox(width: 8),
+                Text('Spectrogram', style: text.titleSmall?.copyWith(fontWeight: FontWeight.w800)),
+              ],
+            ),
+            const SizedBox(height: 10),
+            SizedBox(
+              height: 160,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  SizedBox(
+                    width: 52,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        for (final f in [top, top * 3 / 4, top / 2, top / 4, 0.0])
+                          Text('${(f / 1000).round()} kHz', style: muted),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: CustomPaint(
+                        painter: _SpectrogramPainter(_image, cutoff: r.cutoffHz, top: top),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SpectrogramPainter extends CustomPainter {
+  _SpectrogramPainter(this.image, {required this.cutoff, required this.top});
+
+  final ui.Image? image;
+  final double? cutoff;
+  final double top;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final image = this.image;
+    canvas.drawRect(Offset.zero & size, Paint()..color = const Color(0xFF000004));
+    if (image != null) {
+      paintImage(
+        canvas: canvas,
+        rect: Offset.zero & size,
+        image: image,
+        fit: BoxFit.fill,
+        filterQuality: FilterQuality.medium,
+      );
+    }
+    if (cutoff case final hz? when hz < top) {
+      final y = size.height * (1 - hz / top);
+      final pen = Paint()
+        ..color = const Color(0xCCFFFFFF)
+        ..strokeWidth = 1;
+      for (var x = 0.0; x < size.width; x += 8) {
+        canvas.drawLine(Offset(x, y), Offset(math.min(x + 4, size.width), y), pen);
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(_SpectrogramPainter old) => old.image != image || old.cutoff != cutoff || old.top != top;
 }

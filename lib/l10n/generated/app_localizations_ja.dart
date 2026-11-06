@@ -1064,6 +1064,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get discordShowQuality => '音質も表示する（FLAC 24/96、Opus 160 kbps）';
 
   @override
+  String get showBluetoothCodec => 'Bluetooth のコーデックを表示';
+
+  @override
   String get previewYourSong => '曲名';
 
   @override
@@ -1132,6 +1135,22 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get volumeLevelingSubtitle => 'ReplayGain タグを使って、曲ごとの音量をそろえる';
+
+  @override
+  String get measureLoudness => 'ReplayGain タグのない曲を測る';
+
+  @override
+  String measureLoudnessSubtitle(int measured, int total) {
+    return 'この端末の $total 曲中 $measured 曲を測定済み。タグのない曲は測った音量でそろえるよ';
+  }
+
+  @override
+  String measuringLoudness(int done, int total) {
+    return '$total 曲中 $done 曲目を測定中…';
+  }
+
+  @override
+  String get measure => '測る';
 
   @override
   String get crossfade => 'クロスフェード';

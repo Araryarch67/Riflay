@@ -27,6 +27,7 @@ import 'dop.dart';
 import 'ffmpeg.dart';
 import 'folder_watch.dart';
 import 'ios_folders.dart';
+import 'audio_analysis.dart';
 import 'layout_prefs.dart';
 import 'library_store.dart';
 import 'lyrics.dart';
@@ -96,6 +97,7 @@ class PlayerController extends ChangeNotifier {
             _followDop();
             _prefetchNext();
             _prefetchDownloadFormats();
+            _measureForLeveling();
             _recordRecent();
             _updatePresence();
             MemoryTrim.schedule();
@@ -244,6 +246,22 @@ class PlayerController extends ChangeNotifier {
       discord.update(track: track, playing: isPlaying, position: position, duration: duration, quality: _quality);
     }
     if (track != null && isPlaying) _watchQuality();
+  }
+
+  /// With leveling on, the next song (and this one, for next time) is measured if it is a file without a
+  /// measurement: its ReplayGain fallback is then ready before it loads. One at a time, in the background.
+  Future<void> _measureForLeveling() async {
+    if (audio.effectiveLeveling == VolumeLeveling.off || !AudioAnalysis.supported) return;
+    final next = upNext;
+    for (final t in [?currentTrack, if (next.isNotEmpty) next.first]) {
+      final path = AudioAnalysis.fileOf(t);
+      if (path == null || AudioAnalysis.savedFor(path) != null) continue;
+      try {
+        await AudioAnalysis.of(t);
+      } catch (e) {
+        debugPrint('Measuring ${t.title} for leveling: $e');
+      }
+    }
   }
 
   /// mpv knows a song's format and bitrate only once it plays (YouTube's bitrate a little later), so
@@ -913,6 +931,7 @@ class PlayerController extends ChangeNotifier {
     if (!Host.isWeb) unawaited(Metadata.probeTagTools().then((_) => notifyListeners()));
     unawaited(LyricsTranslation.load());
     unawaited(MediaSession.loadLyricsSetting());
+    unawaited(AudioAnalysis.load());
     unawaited(LyricsService.loadBetterLyricsKey());
     audio.addListener(notifyListeners);
     _dopWasActive = audio.dopActive;

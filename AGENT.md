@@ -540,6 +540,7 @@ device's language when Riflay has it). The words live in `lib/l10n/app_en.arb` (
   flutter run --dart-define=RIFLAY_NO_STREAK_CACHE=true  # the listening streak counted afresh every build
   flutter run --dart-define=RIFLAY_NO_MV_SEARCH=true     # a song YouTube Music pairs with no video gets none (no search for its official video)
   flutter run --dart-define=RIFLAY_NO_MV_ALIGN=true      # a music video with no map of its parts plays on the song's timeline, not lined up by their sound
+  flutter run --dart-define=RIFLAY_NO_SCANNED_GAIN=true  # a song without ReplayGain tags plays unleveled, measured or not
   flutter run --dart-define=RIFLAY_NO_PAGE_ARTWORK=true  # Cover: Background uses the list's 544 px cover, not a 1600 px one
   flutter run -d chrome --dart-define=RIFLAY_NO_WEB_AUDIO=true  # web: songs play straight from <audio>, no effects or visualizer
   ```

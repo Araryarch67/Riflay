@@ -113,6 +113,21 @@ class MainActivity : AudioServiceActivity() {
             pending = result
             requestPermissions(arrayOf(musicPermission), REQUEST)
         }
+        // Signal path's Bluetooth stage: the codec the headphones get, and Nearby devices to read it (Android 12+).
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "riflay/bluetooth").setMethodCallHandler { call, result ->
+            when (call.method) {
+                "codec" -> BluetoothCodec(this).read(result)
+                "allow" -> {
+                    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S ||
+                        checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED
+                    ) return@setMethodCallHandler result.success(true)
+                    pending?.success(false)
+                    pending = result
+                    requestPermissions(arrayOf(Manifest.permission.BLUETOOTH_CONNECT), REQUEST)
+                }
+                else -> result.notImplemented()
+            }
+        }
         // Looking for AirPlay speakers (mDNS) needs Wi-Fi to pass multicast packets on.
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "riflay/multicast").setMethodCallHandler { call, result ->
             when (call.method) {

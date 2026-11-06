@@ -15,6 +15,8 @@ import '../platform/host.dart';
 import '../platform/mpv.dart';
 import '../platform/web_audio.dart';
 import '../platform/web_effects.dart';
+import 'audio_analysis.dart';
+import 'bluetooth_codec.dart';
 import 'layout_prefs.dart';
 import 'carla_locator.dart';
 import 'crossfade.dart';
@@ -195,7 +197,11 @@ class SignalPath {
     this.dopBitRate,
     this.usbDacName,
     this.usbBitPerfect = false,
+    this.bluetooth,
   });
+
+  /// Android: the Bluetooth headphones the sound goes to, and their codec.
+  final BluetoothOutput? bluetooth;
 
   final String codec;
   final String container;
@@ -1544,6 +1550,7 @@ class AudioEngine extends ChangeNotifier {
       p.onLoadHooks.add(() async {
         await applied.future;
         _visualizerFormat = null;
+        await _scannedGain(p);
         if (hasRoutePicker) await _matchRate(p);
         if (_chainSent != filterChain) await _setChain(p);
       });
@@ -1553,6 +1560,19 @@ class AudioEngine extends ChangeNotifier {
       } finally {
         applied.complete();
       }
+    }
+  }
+
+  /// A file without ReplayGain tags is leveled by the gain measured from its sound ([AudioAnalysis]), which mpv
+  /// takes as its fallback; a stream or an unmeasured file keeps 0 dB.
+  Future<void> _scannedGain(NativePlayer p) async {
+    if (effectiveLeveling == VolumeLeveling.off) return;
+    try {
+      final path = await _read(p, 'path');
+      final gain = path.isEmpty || path.contains('://') ? null : AudioAnalysis.gainFor(path);
+      await p.setProperty('replaygain-fallback', (gain ?? 0).toStringAsFixed(2));
+    } catch (e) {
+      debugPrint('Measured leveling: $e');
     }
   }
 
@@ -2247,6 +2267,7 @@ class AudioEngine extends ChangeNotifier {
       dopBitRate: _dop?.bitRate,
       usbDacName: androidUsb && bitPerfect ? usb.device!.name : null,
       usbBitPerfect: _mixer?.bitPerfect ?? false,
+      bluetooth: Host.isAndroid && !androidUsb ? await BluetoothCodecs.read() : null,
     );
   }
 }
