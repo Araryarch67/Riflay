@@ -126,7 +126,8 @@ class _WrapStoryState extends State<WrapStory> {
   String get _caption {
     final d = widget.data;
     return 'My ${d.month.label} on Riflay: ${formatListened(d.listened)} of music. '
-        'Top song: ${d.topSong.title}. Top artist: ${d.topArtist.title}.';
+        'Top song: ${d.topSong.title}. Top artist: ${d.topArtist.title}.'
+        '${d.bestStreak >= 2 ? ' 🔥 ${d.bestStreak} days in a row.' : ''}';
   }
 
   /// Saves the card to Downloads (the app's documents where there is none; the browser's downloads on the web);
@@ -472,7 +473,7 @@ class _WrapStoryState extends State<WrapStory> {
           headline: '${d.bestStreak} days in a row',
           body:
               'You listened on ${d.daysListened} of ${_count(d.days, 'day', 'days')}${d.inProgress ? ' so far' : ''}.',
-          art: StreakFlame(tier: StreakTier.of(d.bestStreak), size: 150),
+          art: StreakFlame(tier: StreakTier.of(d.bestStreak), size: 150, flicker: true),
           center: true,
         ),
       if (d.mostReplayed case final song?)
@@ -495,12 +496,45 @@ class _WrapStoryState extends State<WrapStory> {
         body:
             'Top song: ${d.topSong.title}\nTop artist: ${d.topArtist.title}\n'
             '${_count(d.songs, 'song', 'songs')}, ${_count(d.artists, 'artist', 'artists')}'
-            '${d.newSongs > 0 ? ', ${d.newSongs} new' : ''}'
-            '${d.bestStreak >= 2 ? '\nStreak: ${d.bestStreak} days in a row' : ''}',
+            '${d.newSongs > 0 ? ', ${d.newSongs} new' : ''}',
         art: Artwork(track: trackFor(d.topSong.sample), size: 120, radius: 8),
+        footer: d.bestStreak >= 2 ? _StreakPill(days: d.bestStreak) : null,
         center: true,
       ),
     ];
+  }
+}
+
+/// The summary's streak: the flame in the colour the streak reached, on a pill lit the same way.
+class _StreakPill extends StatelessWidget {
+  const _StreakPill({required this.days});
+
+  final int days;
+
+  @override
+  Widget build(BuildContext context) {
+    final tier = StreakTier.of(days);
+    final color = tier.colors[tier.colors.length ~/ 2];
+    return Container(
+      padding: const EdgeInsets.fromLTRB(10, 6, 16, 6),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.16),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: color.withValues(alpha: 0.55)),
+        boxShadow: [BoxShadow(color: color.withValues(alpha: 0.35), blurRadius: 24)],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          StreakFlame(tier: tier, size: 30, flicker: true),
+          const SizedBox(width: 8),
+          Text(
+            '$days days in a row',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -669,13 +703,16 @@ class _Line {
 
 /// One card's layout: a small line above, a big statement, and the detail under it.
 class _Card extends StatelessWidget {
-  const _Card({this.kicker, this.headline, this.body, this.art, this.list, this.center = false});
+  const _Card({this.kicker, this.headline, this.body, this.art, this.list, this.footer, this.center = false});
 
   final String? kicker;
   final String? headline;
   final String? body;
   final Widget? art;
   final List<_Line>? list;
+
+  /// Under the words: the summary's streak.
+  final Widget? footer;
   final bool center;
 
   @override
@@ -756,6 +793,7 @@ class _Card extends StatelessWidget {
             style: text.titleMedium?.copyWith(color: AppColors.textPrimary.withValues(alpha: 0.78), height: 1.4),
           ),
         ],
+        if (footer != null) ...[const SizedBox(height: 18), footer!],
         if (list != null) ...[
           const SizedBox(height: 18),
           for (final l in list!)
