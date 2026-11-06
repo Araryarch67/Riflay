@@ -245,8 +245,8 @@ abstract final class YtDlp {
     return (audio: resolvedFrom(pick.candidate), convert: pick.convert);
   }
 
-  /// A video-only stream of [videoId] no taller than [maxHeight] (Video mode),
-  /// H.264 first as in [YoutubeStream.pickVideo].
+  /// The tallest video-only stream of [videoId] up to [maxHeight] (Video mode),
+  /// H.264 first at the same height and AV1 last, as in [YoutubeStream.pickVideo].
   static Future<ResolvedVideo> resolveVideo(String videoId, {required int maxHeight}) async {
     final exe = await executable();
     if (exe == null) throw StateError('yt-dlp is not available on this device.');
@@ -255,7 +255,9 @@ abstract final class YtDlp {
       '--no-warnings',
       '--no-playlist',
       '-f',
-      'bv$h[vcodec^=avc1]/bv$h[vcodec^=vp]/bv$h',
+      'bv$h[vcodec!^=av01]/bv$h',
+      '-S',
+      'res,vcodec:h264',
       '-O',
       '%(height)s|%(vcodec)s',
       '-O',

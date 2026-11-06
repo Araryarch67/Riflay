@@ -422,9 +422,10 @@ abstract final class YoutubeStream {
     }
   }
 
-  /// The tallest video-only stream up to [maxHeight]. H.264 first: phones and
-  /// most computers decode it in hardware, so it costs the least battery;
-  /// then VP9. AV1 only when there is nothing else (software decoding is heavy).
+  /// The tallest video-only stream up to [maxHeight]. At the same height H.264
+  /// first: phones and most computers decode it in hardware, so it costs the
+  /// least battery; then VP9. AV1 only when there is nothing else (few devices
+  /// decode it in hardware, and in software a tall one is heavy).
   static Map<String, dynamic>? pickVideo(List<Map<String, dynamic>> formats, {required int maxHeight}) {
     int codec(String mime) => mime.contains('avc1')
         ? 2
@@ -438,9 +439,11 @@ abstract final class YoutubeStream {
             ((f['height'] as num?)?.toInt() ?? 1 << 20) <= maxHeight)
           f,
     ];
+    final decodable = candidates.where((f) => codec(f['mimeType'] as String) > 0).toList();
     int score(Map<String, dynamic> f) => (f['height'] as num).toInt() * 4 + codec(f['mimeType'] as String);
-    candidates.sort((a, b) => score(b).compareTo(score(a)));
-    return candidates.firstOrNull;
+    final from = decodable.isEmpty ? candidates : decodable;
+    from.sort((a, b) => score(b).compareTo(score(a)));
+    return from.firstOrNull;
   }
 
   /// Highest-bitrate original audio (see [YoutubePlayerApi.pickBest]).

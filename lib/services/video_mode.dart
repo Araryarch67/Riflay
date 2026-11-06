@@ -37,17 +37,14 @@ class VideoMode extends ChangeNotifier with WidgetsBindingObserver {
 
   static final instance = VideoMode._();
 
-  static bool get _phone => Host.isAndroid || Host.isIOS;
+  /// The tallest the video comes in, up to 4K, wherever it shows. Anything less came out pixelated: a computer
+  /// stretches it across the expanded player or a whole window (720p and 1080p did), and a phone fills its tall
+  /// screen with it cropped to cover, so only a middle strip of each frame shows, stretched about 2.5 times.
+  /// Above 1080p YouTube serves VP9, which phones and computers decode in hardware.
+  static int get maxHeight => 2160;
 
-  /// Watched in the player: 1080p on computers. A phone's screen is tall and the video fills it cropped to cover,
-  /// so only a middle strip of each frame shows, stretched to the screen's height (a 1080p frame about 2.5 times
-  /// on a 2656-pixel screen): up to 1440p there, which YouTube serves as VP9 and phones decode in hardware.
-  static int get maxHeight => _phone ? 1440 : 1080;
-
-  /// Behind the page: on a phone it is the page itself (cropped to cover, as above), and 480p came out
-  /// pixelated; the player's size there too (fetched only on Wi-Fi, see `prefetchAllowed`). Computers show it
-  /// across a window, dimmed: 720p.
-  static int get backgroundHeight => _phone ? maxHeight : 720;
+  /// Behind the page: the same size (a background is fetched only on Wi-Fi, see `prefetchAllowed`).
+  static int get backgroundHeight => maxHeight;
 
   PlayerController? _c;
 
@@ -375,26 +372,6 @@ class VideoMode extends ChangeNotifier with WidgetsBindingObserver {
       await mpv.setProperty('cache-secs', foreground ? '30' : '10');
       await mpv.setProperty('demuxer-max-bytes', '${(foreground ? 32 : 12) << 20}');
       await mpv.setProperty('demuxer-max-back-bytes', '${(foreground ? 8 : 2) << 20}');
-      if (!foreground) {
-        // A small, dimmed picture behind the page: mpv's fast scalers and no extra passes. Its default
-        // high-quality ones cost several times the CPU and GPU for a difference nobody can see here.
-        for (final (name, value) in [
-          ('scale', 'bilinear'),
-          ('dscale', 'bilinear'),
-          ('cscale', 'bilinear'),
-          ('dither', 'no'),
-          ('correct-downscaling', 'no'),
-          ('linear-downscaling', 'no'),
-          ('sigmoid-upscaling', 'no'),
-          ('deband', 'no'),
-          ('hdr-compute-peak', 'no'),
-          // Two decoding threads are plenty for 720p; a phone's 1080p page (decoded on the processor where its
-          // graphics card won't) needs mpv's own count, or it falls behind and the follower keeps seeking.
-          if (backgroundHeight <= 720) ('vd-lavc-threads', '2'),
-        ]) {
-          await mpv.setProperty(name, value);
-        }
-      }
       final at = v.videoTimeAt(_c?.position ?? Duration.zero) ?? Duration.zero;
       final local = localVideoOf(_c?.currentTrack);
       if (local != null) {
