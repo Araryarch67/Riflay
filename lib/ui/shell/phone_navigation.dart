@@ -482,12 +482,19 @@ class _GlassBarState extends State<_GlassBar> with TickerProviderStateMixin {
         if (i.tab != PhoneTab.search) i,
     ];
     final round = widget.tab == PhoneTab.search ? PhoneTab.home : _last;
-    final at = math.max(0, shown.indexWhere((i) => i.tab == round));
-    final centre = full / shown.length * (at + 0.5);
+    // As in the Capsule style: the open tab widens into an accent capsule with its name, the others are icons,
+    // which leaves the four tabs and Search room on a small phone.
+    int flex(_TabInfo i) => widget.tab == i.tab ? 2 : 1;
+    final unit = (full - 8) / shown.fold(0, (n, i) => n + flex(i));
+    var centre = 4.0;
+    for (final i in shown) {
+      if (i.tab == round) {
+        centre += flex(i) * unit / 2;
+        break;
+      }
+      centre += flex(i) * unit;
+    }
     final last = _info(round);
-    // Four tabs and Search share the width: where a tab has too little room for its name (a 360 px phone), only
-    // the open tab keeps one and the others are their icons, rather than every name shrunk to a different size.
-    final named = (full - 8) / shown.length >= 76;
     return _glass(
       colors,
       Stack(
@@ -507,15 +514,12 @@ class _GlassBarState extends State<_GlassBar> with TickerProviderStateMixin {
                       children: [
                         for (final i in shown)
                           Expanded(
+                            flex: flex(i),
                             child: _TabButton(
                               info: i,
                               selected: widget.tab == i.tab,
                               onTap: () => widget.onSelect(i.tab),
-                              child: _GlassTab(
-                                info: i,
-                                selected: widget.tab == i.tab,
-                                label: named || widget.tab == i.tab,
-                              ),
+                              child: _Capsule(info: i, selected: widget.tab == i.tab),
                             ),
                           ),
                       ],
@@ -540,11 +544,23 @@ class _GlassBarState extends State<_GlassBar> with TickerProviderStateMixin {
                     selected: widget.tab == round,
                     // Shrunk by scrolling it brings the tabs back; on Search it goes Home.
                     onTap: search > 0.5 ? () => widget.onSelect(round) : () => widget.link.collapsed.value = false,
+                    // The open tab on its accent disc, as its capsule was; Home on Search is plain.
                     child: Center(
-                      child: _TabIcon(
-                        info: last,
-                        selected: true,
-                        color: search > 0.5 ? colors.textPrimary : colors.accent,
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: search > 0.5 ? colors.accent.withValues(alpha: 0) : colors.accent,
+                        ),
+                        child: SizedBox.square(
+                          dimension: 44,
+                          child: Center(
+                            child: _TabIcon(
+                              info: last,
+                              selected: true,
+                              color: search > 0.5 ? colors.textPrimary : colors.onAccent,
+                            ),
+                          ),
+                        ),
                       ),
                     ),
                   ),
@@ -716,40 +732,6 @@ class _GlassBarState extends State<_GlassBar> with TickerProviderStateMixin {
     return LayoutPrefs.lightweight
         ? _SolidSurface(shape: shape, colors: colors, child: child)
         : _LiquidGlass(shape: shape, colors: colors, child: child);
-  }
-}
-
-/// One tab in the glass pill: its icon over its name (or the icon alone), a soft wash behind the open one.
-class _GlassTab extends StatelessWidget {
-  const _GlassTab({required this.info, required this.selected, this.label = true});
-
-  final _TabInfo info;
-  final bool selected;
-
-  /// Off: the icon alone, in the middle.
-  final bool label;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = AppColors.of(context);
-    return AnimatedContainer(
-      duration: LayoutPrefs.dur(const Duration(milliseconds: 200)),
-      curve: Curves.easeOut,
-      decoration: BoxDecoration(
-        color: colors.textPrimary.withValues(alpha: selected ? 0.1 : 0),
-        borderRadius: BorderRadius.circular(LayoutPrefs.radius(25)),
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          _icon(context, info, selected),
-          if (label) ...[
-            const SizedBox(height: 2),
-            _TabLabel(info: info, selected: selected, color: selected ? colors.accent : null),
-          ],
-        ],
-      ),
-    );
   }
 }
 
