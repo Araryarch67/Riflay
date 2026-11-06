@@ -91,12 +91,16 @@ void main() {
       Future<T?> step<T>(Future<T> Function() f, [Duration limit = const Duration(seconds: 30)]) =>
           tester.runAsync(() => f().timeout(limit));
       await step(c.player.stop);
-      // Under 100 ms as a rule, but once on a macOS runner it took past 30 s while the sound still came out right.
+      // Each under a second as a rule, but on macOS runners one of them now and then took past 30 s (the settings once,
+      // loading the song with Carla in the chain twice) while the sound still came out right: room for that, and the
+      // times in the log.
+      final slow = Duration(seconds: Platform.isMacOS ? 120 : 30);
       final took = Stopwatch()..start();
-      await step(change, Duration(seconds: Platform.isMacOS ? 120 : 30));
+      await step(change, slow);
+      final settings = took.elapsedMilliseconds;
+      await step(() => c.player.setAudioSource(AudioSource.file(song.path)), slow);
       // ignore: avoid_print
-      print('PLUGINS $name: the settings took ${took.elapsedMilliseconds} ms');
-      await step(() => c.player.setAudioSource(AudioSource.file(song.path)));
+      print('PLUGINS $name: the settings took $settings ms, loading ${took.elapsedMilliseconds - settings} ms');
       await tester.pump(const Duration(milliseconds: 300));
       unawaited(c.player.play());
       final sw = Stopwatch()..start();
