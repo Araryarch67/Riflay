@@ -9,6 +9,7 @@ import '../widgets/audio_visualizer.dart';
 import '../widgets/marquee_text.dart';
 import 'full_screen_player.dart';
 import 'player_common.dart';
+import '../../services/language.dart';
 
 /// Desktop mini player: the window shrinks to the cover with controls and
 /// stays on top of other windows, like Spotify's. The full player comes back
@@ -111,7 +112,7 @@ class _MiniPlayerWindowState extends State<MiniPlayerWindow> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     MarqueeText(
-                      track?.title ?? 'Nothing playing',
+                      track?.title ?? tr.nothingPlaying,
                       style: text.titleSmall?.copyWith(fontWeight: FontWeight.w700),
                     ),
                     if (track != null)

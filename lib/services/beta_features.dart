@@ -3,28 +3,33 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../platform/features.dart';
 import '../platform/host.dart';
+import 'language.dart';
 
 /// Optional player features, configured in their respective settings pages.
 enum BetaFeature {
-  musixmatch(
-    'musixmatch',
-    'Musixmatch lyrics',
-    'Look for word-by-word lyrics on Musixmatch when other sources have none.',
-  ),
-  videoMode('video', 'Video mode', 'Watch a song\'s music video in the player, in step with the song.'),
+  musixmatch('musixmatch'),
+  videoMode('video'),
 
   /// Android's Direct USB (Settings › Sound › Output & quality): experimental, so off until asked for, behind a
   /// warning. Off, the option isn't offered and Direct USB never runs.
-  directUsb('directUsb', 'Direct USB', 'Play straight to a USB DAC, past Android. Experimental.');
+  directUsb('directUsb');
 
-  const BetaFeature(this.id, this.title, this.description);
+  const BetaFeature(this.id);
 
   /// Stored as `features.<id>`; legacy beta keys are still read.
   final String id;
-  final String title;
+  String get title => switch (this) {
+    musixmatch => tr.musixmatchLyrics,
+    videoMode => tr.videoMode,
+    directUsb => tr.directUsb,
+  };
 
   /// One plain line.
-  final String description;
+  String get description => switch (this) {
+    musixmatch => tr.betaMusixmatchBody,
+    videoMode => tr.betaVideoModeBody,
+    directUsb => tr.betaDirectUsbBody,
+  };
 
   bool get defaultOn => this != directUsb;
 

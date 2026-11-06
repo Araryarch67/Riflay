@@ -7,6 +7,7 @@ import '../../services/player_controller.dart';
 import '../shell_scope.dart';
 import '../theme.dart';
 import '../widgets/page_scaffold.dart';
+import '../../services/language.dart';
 
 /// Ten-band equalizer with presets. Each band's frequency and width can be
 /// changed too (tap its label), which makes it a parametric EQ.
@@ -17,7 +18,7 @@ class EqualizerPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final pad = ShellScope.of(context).compact ? 16.0 : 24.0;
     return PageScaffold(
-      title: 'Equalizer',
+      title: tr.equalizer,
       slivers: [SliverToBoxAdapter(child: EqualizerPanel(pad: pad))],
     );
   }
@@ -45,7 +46,7 @@ class EqualizerPanel extends StatelessWidget {
             child: Row(
               children: [
                 Expanded(
-                  child: Text('Equalizer', style: text.headlineMedium?.copyWith(fontWeight: FontWeight.w800)),
+                  child: Text(tr.equalizer, style: text.headlineMedium?.copyWith(fontWeight: FontWeight.w800)),
                 ),
                 Switch(value: audio.eqEnabled, onChanged: audio.bitPerfect ? null : audio.setEqEnabled),
               ],
@@ -54,9 +55,7 @@ class EqualizerPanel extends StatelessWidget {
           Padding(
             padding: EdgeInsets.fromLTRB(pad, 0, pad, 16),
             child: Text(
-              audio.bitPerfect
-                  ? 'Bit-perfect mode is on, so the equalizer is bypassed. Turn it off in Settings › Sound › Output & quality.'
-                  : 'Pick a preset or drag the sliders. Tap a frequency to fine-tune it.',
+              audio.bitPerfect ? tr.eqBitPerfectNote : tr.eqHint,
               style: text.bodyMedium?.copyWith(color: AppColors.textSecondary),
             ),
           ),
@@ -68,12 +67,12 @@ class EqualizerPanel extends StatelessWidget {
               children: [
                 for (final name in eqPresets.keys)
                   ChoiceChip(
-                    label: Text(name),
+                    label: Text(eqPresetLabel(name)),
                     selected: audio.eqEnabled && audio.eqPreset == name,
                     onSelected: audio.bitPerfect ? null : (_) => audio.applyPreset(name),
                   ),
                 if (audio.eqPreset == 'Custom')
-                  ChoiceChip(label: const Text('Custom'), selected: audio.eqEnabled, onSelected: (_) {}),
+                  ChoiceChip(label: Text(tr.custom), selected: audio.eqEnabled, onSelected: (_) {}),
               ],
             ),
           ),
@@ -102,16 +101,13 @@ class EqualizerPanel extends StatelessWidget {
                 if (audio.preamp < 0)
                   Expanded(
                     child: Text(
-                      'Headroom ${audio.preamp.toStringAsFixed(1)} dB, so boosted bands never distort.',
+                      tr.eqHeadroom(audio.preamp.toStringAsFixed(1)),
                       style: text.bodySmall?.copyWith(color: AppColors.textMuted),
                     ),
                   )
                 else
                   const Spacer(),
-                TextButton(
-                  onPressed: audio.bitPerfect ? null : () => audio.applyPreset('Flat'),
-                  child: const Text('Reset'),
-                ),
+                TextButton(onPressed: audio.bitPerfect ? null : () => audio.applyPreset('Flat'), child: Text(tr.reset)),
               ],
             ),
           ),
@@ -153,7 +149,7 @@ class _BandSlider extends StatelessWidget {
           ),
         ),
         Tooltip(
-          message: 'Change frequency and width',
+          message: tr.changeFrequency,
           child: InkWell(
             borderRadius: BorderRadius.circular(4),
             onTap: enabled ? () => _editBand(context) : null,
@@ -174,12 +170,12 @@ class _BandSlider extends StatelessWidget {
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
-          title: Text('Band ${index + 1}'),
+          title: Text(tr.bandNumber('${index + 1}')),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Frequency: ${_freq(f)}Hz'),
+              Text(tr.frequencyHz(_freq(f))),
               // Log scale: equal slider travel per octave.
               Slider(value: _log(f), min: _log(20), max: _log(20000), onChanged: (v) => setState(() => f = _exp(v))),
               Text(
@@ -199,9 +195,9 @@ class _BandSlider extends StatelessWidget {
                 q = 1.41;
                 Navigator.pop(context, true);
               },
-              child: const Text('Default'),
+              child: Text(tr.defaultLabel),
             ),
-            FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Done')),
+            FilledButton(onPressed: () => Navigator.pop(context, true), child: Text(tr.done)),
           ],
         ),
       ),

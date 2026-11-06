@@ -443,7 +443,7 @@ class _Header extends StatelessWidget {
     final isArtist = collection.kind == CollectionKind.artist;
     final isAll = collection.kind == CollectionKind.allSongs;
     final total = formatTotal(collection.tracks);
-    final count = '${collection.tracks.length} ${collection.tracks.length == 1 ? 'song' : 'songs'}';
+    final count = tr.songsPlural(collection.tracks.length);
     final meta = [
       if (collection.kind == CollectionKind.album) collection.subtitle,
       count,
@@ -595,7 +595,7 @@ class _PlaylistMenu extends StatelessWidget {
               context: context,
               builder: (context) => AlertDialog(
                 title: Text(tr.deletePlaylistQuestion),
-                content: Text('"$name" will be deleted. The songs stay in your library.'),
+                content: Text(tr.deletePlaylistBody(name)),
                 actions: [
                   TextButton(onPressed: () => Navigator.pop(context, false), child: Text(tr.cancel)),
                   FilledButton(

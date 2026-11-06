@@ -7,6 +7,7 @@ import '../services/playlist_transfer.dart';
 import '../services/youtube_music_account.dart';
 import 'theme.dart';
 import 'widgets/skeleton.dart';
+import '../services/language.dart';
 
 /// Where an imported playlist was saved.
 typedef ImportedPlaylist = ({String title, String? youtubeId, UserPlaylist? local});
@@ -125,7 +126,7 @@ class _PlaylistImportDialogState extends State<PlaylistImportDialog> {
         },
       );
       if (stale()) return;
-      if (r.found.isEmpty) throw const PlaylistTransferError('None of its songs are on YouTube Music.');
+      if (r.found.isEmpty) throw PlaylistTransferError(tr.noneOfItsSongsOnYt);
       setState(() => step = _Step.saving);
       final where = await widget.save(p.title, r.found);
       if (!mounted) return;
@@ -161,9 +162,9 @@ class _PlaylistImportDialogState extends State<PlaylistImportDialog> {
     final signedIn = widget.signedIn;
     return AlertDialog(
       title: Text(switch (step) {
-        _Step.link => 'Import a playlist',
-        _Step.done => 'Imported "${result!.title}"',
-        _ => p?.title ?? 'Import a playlist',
+        _Step.link => tr.importPlaylist,
+        _Step.done => tr.importedNamed(result!.title),
+        _ => p?.title ?? tr.importPlaylist,
       }),
       content: SizedBox(
         width: 400,
@@ -172,14 +173,9 @@ class _PlaylistImportDialogState extends State<PlaylistImportDialog> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: switch (step) {
             _Step.link => [
-              const Text('Paste a playlist link from Spotify, Apple Music or Deezer.'),
+              Text(tr.pastePlaylistLink),
               const SizedBox(height: 4),
-              Text(
-                signedIn
-                    ? 'It becomes a playlist in your YouTube Music library.'
-                    : 'It becomes a Riflay playlist of YouTube Music songs.',
-                style: secondary,
-              ),
+              Text(signedIn ? tr.becomesYtPlaylist : tr.becomesRiflayPlaylist, style: secondary),
               const SizedBox(height: 16),
               TextField(
                 controller: link,
@@ -188,25 +184,21 @@ class _PlaylistImportDialogState extends State<PlaylistImportDialog> {
                 onChanged: (_) => setState(() => error = null),
                 onSubmitted: (_) => start(),
                 decoration: InputDecoration(
-                  labelText: 'Playlist link',
+                  labelText: tr.playlistLink,
                   border: const OutlineInputBorder(),
                   errorMaxLines: 3,
-                  errorText:
-                      error ??
-                      (link.text.trim().isNotEmpty && !valid
-                          ? 'That isn\'t a Spotify, Apple Music or Deezer playlist link'
-                          : null),
+                  errorText: error ?? (link.text.trim().isNotEmpty && !valid ? tr.notAPlaylistLink : null),
                 ),
               ),
             ],
             _Step.reading => [
-              Text('Reading the playlist…', style: secondary),
+              Text(tr.readingPlaylist, style: secondary),
               const SizedBox(height: 16),
               const SkeletonBox(height: 8, radius: 4),
             ],
             _Step.matching || _Step.saving => [
               Text(
-                step == _Step.saving ? 'Saving…' : 'Finding songs in YouTube Music: $done of ${p!.songs.length}',
+                step == _Step.saving ? tr.saving : tr.findingSongsInYt('$done', '${p!.songs.length}'),
                 style: secondary,
               ),
               const SizedBox(height: 16),
@@ -216,22 +208,18 @@ class _PlaylistImportDialogState extends State<PlaylistImportDialog> {
             ],
             _Step.done => [
               Text(
-                '$saved of ${p!.total} songs added${result!.youtubeId != null ? ' to your YouTube Music library' : ''}.',
+                result!.youtubeId != null
+                    ? tr.songsAddedOfYt('$saved', '${p!.total}')
+                    : tr.songsAddedOf('$saved', '${p!.total}'),
               ),
               if (p.total > p.songs.length) ...[
                 const SizedBox(height: 8),
-                Text(
-                  '${p.service} only shows the first ${p.songs.length} songs without signing in, '
-                  'so the rest were left out.',
-                  style: secondary,
-                ),
+                Text(tr.firstSongsOnly(p.songs.length, p.service), style: secondary),
               ],
               if (missing.isNotEmpty) ...[
                 const SizedBox(height: 16),
                 Text(
-                  missing.length == 1
-                      ? '1 song isn\'t on YouTube Music:'
-                      : '${missing.length} songs aren\'t on YouTube Music:',
+                  missing.length == 1 ? tr.songsNotOnYt(1) : tr.songsNotOnYt(missing.length),
                   style: text.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: 8),
@@ -255,15 +243,15 @@ class _PlaylistImportDialogState extends State<PlaylistImportDialog> {
       ),
       actions: switch (step) {
         _Step.link => [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-          FilledButton(onPressed: valid ? start : null, child: const Text('Import')),
+          TextButton(onPressed: () => Navigator.pop(context), child: Text(tr.cancel)),
+          FilledButton(onPressed: valid ? start : null, child: Text(tr.import)),
         ],
         _Step.saving => const [],
         _Step.done => [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close')),
-          FilledButton(onPressed: () => Navigator.pop(context, result), child: const Text('Open playlist')),
+          TextButton(onPressed: () => Navigator.pop(context), child: Text(tr.close)),
+          FilledButton(onPressed: () => Navigator.pop(context, result), child: Text(tr.openPlaylist)),
         ],
-        _ => [TextButton(onPressed: cancel, child: const Text('Cancel'))],
+        _ => [TextButton(onPressed: cancel, child: Text(tr.cancel))],
       },
     );
   }

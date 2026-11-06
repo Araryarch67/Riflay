@@ -14,6 +14,7 @@ import 'sound_settings.dart';
 import '../widgets/menus.dart';
 import '../player_scope.dart';
 import '../widgets/audio_reactive_view.dart';
+import '../../services/language.dart';
 
 /// Settings › Look & feel › Layout: corners, density, cover size, Home's sections, what the
 /// player shows, lyrics and motion. Every default is how the app has always looked.
@@ -29,29 +30,29 @@ class LayoutSettings extends StatelessWidget {
       builder: (context, _) => Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const _Header('Presets', hint: 'A whole look in one tap. Every part below can still be changed on its own'),
+          _Header(tr.presets, hint: 'A whole look in one tap. Every part below can still be changed on its own'),
           SettingsCard(
             children: [
               ListTile(
                 leading: const Icon(Icons.auto_awesome_mosaic_rounded),
-                title: const Text('Presets'),
-                subtitle: Text(playerPresetName() == null ? 'Custom' : 'Matches ${playerPresetName()}', style: muted),
+                title: Text(tr.presets),
+                subtitle: Text(
+                  playerPresetName() == null ? tr.custom : tr.matchesPreset('${playerPresetName()}'),
+                  style: muted,
+                ),
                 trailing: const Icon(Icons.chevron_right_rounded),
                 onTap: () =>
                     Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const PlayerPresetsPage())),
               ),
             ],
           ),
-          const _Header('Now Playing', hint: 'The full-screen player'),
+          _Header(tr.nowPlayingTitle, hint: tr.fullScreenPlayerHint),
           SettingsCard(
             children: [
               SettingTile(
                 icon: Icons.wallpaper_rounded,
-                title: const Text('Cover'),
-                subtitle: Text(
-                  'Square or flower frame the cover. Background has no frame: it fills the top and fades into the page',
-                  style: muted,
-                ),
+                title: Text(tr.cover),
+                subtitle: Text(tr.coverSubtitle, style: muted),
                 control: OptionPicker<PlayerCover>(
                   value: p.playerCover,
                   onChanged: p.setPlayerCover,
@@ -60,8 +61,8 @@ class LayoutSettings extends StatelessWidget {
               ),
               SettingTile(
                 icon: Icons.fit_screen_rounded,
-                title: const Text('Cover size on phones'),
-                subtitle: Text('Large reaches nearly the edges of the screen', style: muted),
+                title: Text(tr.coverSizeOnPhones),
+                subtitle: Text(tr.coverSizeOnPhonesSubtitle, style: muted),
                 control: OptionPicker<PhoneCoverSize>(
                   value: p.phoneCover,
                   onChanged: p.setPhoneCover,
@@ -70,8 +71,8 @@ class LayoutSettings extends StatelessWidget {
               ),
               SettingTile(
                 icon: Icons.vertical_align_top_rounded,
-                title: const Text('Top of the player'),
-                subtitle: Text('What the top shows beside the close arrow, or above the song on desktop', style: muted),
+                title: Text(tr.topOfPlayer),
+                subtitle: Text(tr.topOfPlayerSubtitle, style: muted),
                 control: OptionPicker<PlayerHeader>(
                   value: p.playerHeader,
                   onChanged: p.setPlayerHeader,
@@ -80,11 +81,8 @@ class LayoutSettings extends StatelessWidget {
               ),
               SettingTile(
                 icon: Icons.smart_button_rounded,
-                title: const Text('Buttons by the title'),
-                subtitle: Text(
-                  'Like and More as they are, a joined Share and heart pair, or plain icons. The song menu stays on desktop',
-                  style: muted,
-                ),
+                title: Text(tr.buttonsByTitle),
+                subtitle: Text(tr.buttonsByTitleSubtitle, style: muted),
                 control: OptionPicker<TitleActions>(
                   value: p.titleActions,
                   onChanged: p.setTitleActions,
@@ -93,32 +91,26 @@ class LayoutSettings extends StatelessWidget {
               ),
               SwitchListTile(
                 secondary: const Icon(Icons.high_quality_outlined),
-                title: const Text('Show sound quality'),
-                subtitle: Text('The small label under the song title, such as FLAC or Hi-Res', style: muted),
+                title: Text(tr.showSoundQuality),
+                subtitle: Text(tr.showSoundQualitySubtitle, style: muted),
                 value: p.showQualityBadge,
                 onChanged: p.setShowQualityBadge,
               ),
               SettingTile(
                 icon: Icons.music_video_outlined,
-                title: const Text('Song / Video switch'),
-                subtitle: Text(
-                  'At the top of Now Playing. Adaptive shows it only when the song has a music video',
-                  style: muted,
-                ),
+                title: Text(tr.songVideoSwitch),
+                subtitle: Text(tr.songVideoSwitchSubtitle, style: muted),
                 // Not On / Off: even "on", it follows the song (nothing to switch to without a video).
                 control: OptionPicker<bool>(
                   value: p.showVideoSwitch,
                   onChanged: p.setShowVideoSwitch,
-                  options: const [(true, 'Adaptive'), (false, 'Off')],
+                  options: [(true, tr.adaptive), (false, tr.off)],
                 ),
               ),
               SettingTile(
                 icon: Icons.high_quality_outlined,
-                title: const Text('Quality badge'),
-                subtitle: Text(
-                  'Where FLAC or Opus 130 kbps sits on the phone player: under the artist, or between the two times',
-                  style: muted,
-                ),
+                title: Text(tr.qualityBadge),
+                subtitle: Text(tr.qualityBadgeSubtitle, style: muted),
                 control: OptionPicker<QualityBadgePlace>(
                   value: p.qualityBadgePlace,
                   onChanged: p.setQualityBadgePlace,
@@ -127,12 +119,8 @@ class LayoutSettings extends StatelessWidget {
               ),
               SettingTile(
                 icon: Icons.wallpaper_rounded,
-                title: const Text('Background'),
-                subtitle: Text(
-                  Appearance.instance.nowPlaying.hint ??
-                      'What fills the page behind the player. Cover: Background replaces it',
-                  style: muted,
-                ),
+                title: Text(tr.background),
+                subtitle: Text(Appearance.instance.nowPlaying.hint ?? tr.backgroundSubtitle, style: muted),
                 control: OptionPicker<NowPlayingBackground>(
                   value: Appearance.instance.nowPlaying,
                   onChanged: Appearance.instance.setNowPlaying,
@@ -141,8 +129,8 @@ class LayoutSettings extends StatelessWidget {
               ),
               if (BetaFeature.videoMode.available) ...[
                 SwitchListTile(
-                  title: const Text('Video mode'),
-                  subtitle: const Text('Watch music videos in sync with the song'),
+                  title: Text(tr.videoMode),
+                  subtitle: Text(tr.videoModeSubtitle),
                   value: BetaFeatures.instance.isOn(BetaFeature.videoMode),
                   onChanged: (value) => BetaFeatures.instance.set(BetaFeature.videoMode, value),
                 ),
@@ -152,11 +140,11 @@ class LayoutSettings extends StatelessWidget {
                     final now = VideoMode.instance.decoderInUse;
                     return SettingTile(
                       icon: Icons.memory_rounded,
-                      title: const Text('Video decoding'),
+                      title: Text(tr.videoDecoding),
                       subtitle: Text(
                         [
                           p.videoDecoder.note,
-                          if (now != null) 'Now: ${now == 'no' ? 'the processor' : 'graphics card ($now)'}',
+                          if (now != null) tr.decoderNow(now == 'no' ? tr.decoderNowCpu : tr.decoderNowGpu(now)),
                         ].join('. '),
                         style: muted,
                       ),
@@ -171,12 +159,12 @@ class LayoutSettings extends StatelessWidget {
               ],
             ],
           ),
-          const _Header('Playback controls', hint: 'The progress bar, the buttons and the row under them'),
+          _Header(tr.playbackControls, hint: tr.playbackControlsHint),
           SettingsCard(
             children: [
               SettingTile(
                 icon: Icons.waves_rounded,
-                title: const Text('Progress bar shape'),
+                title: Text(tr.progressBarShape),
                 subtitle: Text(
                   'Wavy curves the part played. Pill is a thick bar with a tall handle. Thin line is flat, with no handle until you drag',
                   style: muted,
@@ -189,8 +177,8 @@ class LayoutSettings extends StatelessWidget {
               ),
               SettingTile(
                 icon: Icons.linear_scale_rounded,
-                title: const Text('Progress bar'),
-                subtitle: Text('How thick the bar you drag to skip around is', style: muted),
+                title: Text(tr.progressBar),
+                subtitle: Text(tr.progressBarSubtitle, style: muted),
                 control: OptionPicker<ProgressBarStyle>(
                   value: p.progressBar,
                   onChanged: p.setProgressBar,
@@ -199,21 +187,15 @@ class LayoutSettings extends StatelessWidget {
               ),
               SwitchListTile(
                 secondary: const Icon(Icons.timelapse_rounded),
-                title: const Text('Show time left'),
-                subtitle: Text(
-                  'The right time counts down instead of showing the total, also on the desktop bar',
-                  style: muted,
-                ),
+                title: Text(tr.showTimeLeft),
+                subtitle: Text(tr.showTimeLeftSubtitle, style: muted),
                 value: p.showTimeLeft,
                 onChanged: p.setShowTimeLeft,
               ),
               SettingTile(
                 icon: Icons.play_circle_outline_rounded,
-                title: const Text('Controls'),
-                subtitle: Text(
-                  'Previous, play and next as circles, a wide Play pill, or plain big icons, also on the desktop bar',
-                  style: muted,
-                ),
+                title: Text(tr.controls),
+                subtitle: Text(tr.controlsSubtitle, style: muted),
                 control: OptionPicker<PlayerTransport>(
                   value: p.transport,
                   onChanged: p.setTransport,
@@ -222,8 +204,8 @@ class LayoutSettings extends StatelessWidget {
               ),
               SettingTile(
                 icon: Icons.play_circle_outline_rounded,
-                title: const Text('Play button'),
-                subtitle: Text('The shape of the big play and pause button', style: muted),
+                title: Text(tr.playButton),
+                subtitle: Text(tr.playButtonSubtitle, style: muted),
                 control: OptionPicker<PlayButtonShape>(
                   value: p.playButton,
                   onChanged: p.setPlayButton,
@@ -232,21 +214,15 @@ class LayoutSettings extends StatelessWidget {
               ),
               SwitchListTile(
                 secondary: const Icon(Icons.volume_up_rounded),
-                title: const Text('Volume slider'),
-                subtitle: Text(
-                  'At the very bottom of the phone player. Off, it opens from the speaker button (Icons) or the desktop bar button',
-                  style: muted,
-                ),
+                title: Text(tr.volumeSlider),
+                subtitle: Text(tr.volumeSliderSubtitle, style: muted),
                 value: p.showVolumeRow,
                 onChanged: p.setShowVolumeRow,
               ),
               SettingTile(
                 icon: Icons.tune_rounded,
-                title: const Text('Slider look'),
-                subtitle: Text(
-                  'Every slider: volume, the equalizer and settings. Classic, a thin line, or a thick pill with a bar handle',
-                  style: muted,
-                ),
+                title: Text(tr.sliderLook),
+                subtitle: Text(tr.sliderLookSubtitle, style: muted),
                 control: OptionPicker<VolumeSliderShape>(
                   value: p.volumeSlider,
                   onChanged: p.setVolumeSlider,
@@ -255,11 +231,8 @@ class LayoutSettings extends StatelessWidget {
               ),
               SettingTile(
                 icon: Icons.view_week_rounded,
-                title: const Text('Bottom buttons'),
-                subtitle: Text(
-                  'Lyrics and Queue; a joined row of icon buttons; or Lyrics, a speaker and person capsule and Queue. Icons only, Lyrics is always there',
-                  style: muted,
-                ),
+                title: Text(tr.bottomButtons),
+                subtitle: Text(tr.bottomButtonsSubtitle, style: muted),
                 control: OptionPicker<PlayerBottomRow>(
                   value: p.bottomRow,
                   onChanged: p.setBottomRow,
@@ -268,16 +241,13 @@ class LayoutSettings extends StatelessWidget {
               ),
             ],
           ),
-          const _Header('Lyrics', hint: 'The lyrics page, and the lyrics beside the cover on desktop'),
+          _Header(tr.lyrics, hint: tr.lyricsHint),
           SettingsCard(
             children: [
               SettingTile(
                 icon: Icons.lyrics_outlined,
-                title: const Text('Lyrics page'),
-                subtitle: Text(
-                  'Where the player sits on the lyrics page. Desktop gets a song card on top or at the bottom',
-                  style: muted,
-                ),
+                title: Text(tr.lyricsPage),
+                subtitle: Text(tr.lyricsPageSubtitle, style: muted),
                 control: OptionPicker<LyricsLayout>(
                   value: p.lyricsLayout,
                   onChanged: p.setLyricsLayout,
@@ -286,11 +256,8 @@ class LayoutSettings extends StatelessWidget {
               ),
               SettingTile(
                 icon: Icons.view_agenda_outlined,
-                title: const Text('Lines shown'),
-                subtitle: Text(
-                  'All keeps the whole song in view. Focused shows only the previous, the current and the next line',
-                  style: muted,
-                ),
+                title: Text(tr.linesShown),
+                subtitle: Text(tr.linesShownSubtitle, style: muted),
                 control: OptionPicker<LyricsLines>(
                   value: p.lyricsLines,
                   onChanged: p.setLyricsLines,
@@ -299,11 +266,8 @@ class LayoutSettings extends StatelessWidget {
               ),
               SettingTile(
                 icon: Icons.mic_external_on_outlined,
-                title: const Text('Sync'),
-                subtitle: Text(
-                  'Word by word fills each word as it is sung, where the lyrics have word timings. Line by line lights the whole line',
-                  style: muted,
-                ),
+                title: Text(tr.sync),
+                subtitle: Text(tr.syncSubtitle, style: muted),
                 control: OptionPicker<LyricsSync>(
                   value: p.lyricsSync,
                   onChanged: p.setLyricsSync,
@@ -312,8 +276,8 @@ class LayoutSettings extends StatelessWidget {
               ),
               SettingTile(
                 icon: Icons.format_size_rounded,
-                title: const Text('Text size'),
-                subtitle: Text('How big the lyrics are', style: muted),
+                title: Text(tr.textSize),
+                subtitle: Text(tr.lyricsTextSizeSubtitle, style: muted),
                 control: OptionPicker<LyricsSize>(
                   value: p.lyricsSize,
                   onChanged: p.setLyricsSize,
@@ -322,8 +286,8 @@ class LayoutSettings extends StatelessWidget {
               ),
               SettingTile(
                 icon: Icons.format_align_left_rounded,
-                title: const Text('Alignment'),
-                subtitle: Text('Lines start at the left edge, or sit in the middle', style: muted),
+                title: Text(tr.alignment),
+                subtitle: Text(tr.alignmentSubtitle, style: muted),
                 control: OptionPicker<LyricsAlign>(
                   value: p.lyricsAlign,
                   onChanged: p.setLyricsAlign,
@@ -332,27 +296,24 @@ class LayoutSettings extends StatelessWidget {
               ),
               SwitchListTile(
                 secondary: const Icon(Icons.contrast_rounded),
-                title: const Text('Dim lines not yet sung'),
-                subtitle: Text('Only the line being sung and the ones before it stay bright', style: muted),
+                title: Text(tr.dimUnsung),
+                subtitle: Text(tr.dimUnsungSubtitle, style: muted),
                 value: p.dimUnsungLyrics,
                 onChanged: p.setDimUnsungLyrics,
               ),
             ],
           ),
           if (Features.audioVisualizer) ...[
-            const _Header('Visualizer', hint: 'Shapes that move with the music'),
+            _Header(tr.visualizer, hint: tr.visualizerHint),
             _VisualizerSettings(prefs: p),
           ],
-          const _Header('Pages', hint: 'Album, playlist and artist pages, song lists and Home'),
+          _Header(tr.pages, hint: tr.pagesHint),
           SettingsCard(
             children: [
               SettingTile(
                 icon: Icons.album_rounded,
-                title: const Text('Album and playlist top'),
-                subtitle: Text(
-                  'Hero: a big cover fading behind the title, round buttons around a Play pill. Also on artist pages',
-                  style: muted,
-                ),
+                title: Text(tr.albumPlaylistTop),
+                subtitle: Text(tr.albumPlaylistTopSubtitle, style: muted),
                 control: OptionPicker<AlbumHeaderStyle>(
                   value: p.albumHeader,
                   onChanged: p.setAlbumHeader,
@@ -361,11 +322,8 @@ class LayoutSettings extends StatelessWidget {
               ),
               SettingTile(
                 icon: Icons.equalizer_rounded,
-                title: const Text('Song that is playing'),
-                subtitle: Text(
-                  'In a list of songs: coloured text, or a filled rounded card with the bars',
-                  style: muted,
-                ),
+                title: Text(tr.songThatIsPlaying),
+                subtitle: Text(tr.songThatIsPlayingSubtitle, style: muted),
                 control: OptionPicker<PlayingRowStyle>(
                   value: p.playingRow,
                   onChanged: p.setPlayingRow,
@@ -376,16 +334,13 @@ class LayoutSettings extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           const _HomeSections(),
-          const _Header('Bars', hint: 'The mini player and the bars that hold the controls'),
+          _Header(tr.bars, hint: tr.barsHint),
           SettingsCard(
             children: [
               SettingTile(
                 icon: Icons.call_to_action_rounded,
-                title: const Text('Mini player'),
-                subtitle: Text(
-                  'The bar above the tabs when a song plays, on phones. Floating pill has a flower cover and round buttons',
-                  style: muted,
-                ),
+                title: Text(tr.miniPlayer),
+                subtitle: Text(tr.miniPlayerSubtitle, style: muted),
                 control: OptionPicker<MiniPlayerStyle>(
                   value: p.miniPlayer,
                   onChanged: p.setMiniPlayer,
@@ -394,11 +349,8 @@ class LayoutSettings extends StatelessWidget {
               ),
               SettingTile(
                 icon: Icons.call_to_action_outlined,
-                title: const Text('Tab bar on phones'),
-                subtitle: Text(
-                  'Classic sits at the bottom edge; Floating and Liquid glass hover above it',
-                  style: muted,
-                ),
+                title: Text(tr.tabBarOnPhones),
+                subtitle: Text(tr.tabBarOnPhonesSubtitle, style: muted),
                 control: OptionPicker<TabBarStyle>(
                   value: p.tabBar,
                   onChanged: p.setTabBar,
@@ -407,11 +359,8 @@ class LayoutSettings extends StatelessWidget {
               ),
               SettingTile(
                 icon: Icons.view_stream_rounded,
-                title: const Text('Desktop player bar'),
-                subtitle: Text(
-                  'Along the window\'s foot: full-width controls, a compact row beside the song, or a minimal strip',
-                  style: muted,
-                ),
+                title: Text(tr.desktopPlayerBar),
+                subtitle: Text(tr.desktopPlayerBarSubtitle, style: muted),
                 control: OptionPicker<DesktopBarStyle>(
                   value: p.desktopBar,
                   onChanged: p.setDesktopBar,
@@ -420,18 +369,18 @@ class LayoutSettings extends StatelessWidget {
               ),
             ],
           ),
-          const _Header('Shapes and motion'),
+          _Header(tr.shapesAndMotion),
           if (LayoutPrefs.lightweight)
             Padding(
               padding: const EdgeInsets.only(bottom: 8),
-              child: Text('Performance is set to Lightweight, so the motion settings stay off.', style: muted),
+              child: Text(tr.motionOffLightweight, style: muted),
             ),
           SettingsCard(
             children: [
               SettingTile(
                 icon: Icons.rounded_corner_rounded,
-                title: const Text('Corners'),
-                subtitle: Text('Covers, cards, menus, dialogs and the mini player', style: muted),
+                title: Text(tr.corners),
+                subtitle: Text(tr.cornersSubtitle, style: muted),
                 control: OptionPicker<CornerStyle>(
                   value: p.corners,
                   onChanged: p.setCorners,
@@ -440,8 +389,8 @@ class LayoutSettings extends StatelessWidget {
               ),
               SettingTile(
                 icon: Icons.density_medium_rounded,
-                title: const Text('Spacing'),
-                subtitle: Text('Compact fits more songs and cards on screen', style: muted),
+                title: Text(tr.spacing),
+                subtitle: Text(tr.spacingSubtitle, style: muted),
                 control: OptionPicker<Density>(
                   value: p.density,
                   onChanged: p.setDensity,
@@ -450,8 +399,8 @@ class LayoutSettings extends StatelessWidget {
               ),
               SettingTile(
                 icon: Icons.photo_size_select_large_rounded,
-                title: const Text('Cover size in grids'),
-                subtitle: Text('The albums and playlists on Home and in "Show all"', style: muted),
+                title: Text(tr.coverSizeInGrids),
+                subtitle: Text(tr.coverSizeInGridsSubtitle, style: muted),
                 control: OptionPicker<CoverSize>(
                   value: p.coverSize,
                   onChanged: p.setCoverSize,
@@ -460,8 +409,8 @@ class LayoutSettings extends StatelessWidget {
               ),
               SettingTile(
                 icon: Icons.auto_awesome_motion_rounded,
-                title: const Text('Transition style'),
-                subtitle: Text('Coordinated page, tab and player transitions', style: muted),
+                title: Text(tr.transitionStyle),
+                subtitle: Text(tr.transitionStyleSubtitle, style: muted),
                 control: OptionPicker<PageMotionStyle>(
                   value: p.pageMotion,
                   onChanged: LayoutPrefs.lightweight ? null : p.setPageMotion,
@@ -470,8 +419,8 @@ class LayoutSettings extends StatelessWidget {
               ),
               SettingTile(
                 icon: Icons.speed_rounded,
-                title: const Text('Transition speed'),
-                subtitle: Text('Choose a brisk or more relaxed pace', style: muted),
+                title: Text(tr.transitionSpeed),
+                subtitle: Text(tr.transitionSpeedSubtitle, style: muted),
                 control: OptionPicker<PageMotionSpeed>(
                   value: p.pageSpeed,
                   onChanged: LayoutPrefs.lightweight ? null : p.setPageSpeed,
@@ -480,11 +429,8 @@ class LayoutSettings extends StatelessWidget {
               ),
               SettingTile(
                 icon: Icons.animation_rounded,
-                title: const Text('Animations'),
-                subtitle: Text(
-                  'Reduced keeps quick fades only. Full follows your system when it asks for less motion',
-                  style: muted,
-                ),
+                title: Text(tr.animations),
+                subtitle: Text(tr.animationsSubtitle, style: muted),
                 control: OptionPicker<Motion>(
                   value: p.motion,
                   onChanged: LayoutPrefs.lightweight ? null : p.setMotion,
@@ -494,16 +440,13 @@ class LayoutSettings extends StatelessWidget {
             ],
           ),
           if (hasNativeWindow && !Host.isMacOS) ...[
-            const _Header('Window', hint: 'Desktop only'),
+            _Header(tr.window, hint: tr.desktopOnly),
             SettingsCard(
               children: [
                 SwitchListTile(
                   secondary: const Icon(Icons.web_asset_rounded),
-                  title: const Text('Window buttons'),
-                  subtitle: Text(
-                    'Minimize, maximize and close in the title bar. Turn off with a tiling window manager',
-                    style: muted,
-                  ),
+                  title: Text(tr.windowButtons),
+                  subtitle: Text(tr.windowButtonsSubtitle, style: muted),
                   value: p.windowButtons,
                   onChanged: p.setWindowButtons,
                 ),
@@ -516,7 +459,7 @@ class LayoutSettings extends StatelessWidget {
             child: OutlinedButton.icon(
               onPressed: p.isCustomised ? p.reset : null,
               icon: const Icon(Icons.restart_alt_rounded),
-              label: const Text('Reset layout to default'),
+              label: Text(tr.resetLayout),
             ),
           ),
         ],
@@ -583,7 +526,7 @@ class _HomeSections extends StatelessWidget {
                 child: MouseRegion(
                   cursor: SystemMouseCursors.grab,
                   child: Tooltip(
-                    message: 'Drag to move',
+                    message: tr.dragToMove,
                     child: Padding(
                       padding: const EdgeInsets.all(12),
                       child: Icon(Icons.drag_handle_rounded, color: AppColors.textMuted),
@@ -592,7 +535,7 @@ class _HomeSections extends StatelessWidget {
                 ),
               ),
               title: Text(s.label),
-              subtitle: i == 0 ? Text('Drag the handle to put sections in a different order', style: muted) : null,
+              subtitle: i == 0 ? Text(tr.dragToReorderSections, style: muted) : null,
               value: !p.homeHidden.contains(s),
               onChanged: (v) => p.setHomeSectionShown(s, v),
             ),
@@ -626,24 +569,21 @@ class _VisualizerSettings extends StatelessWidget {
           children: [
             SwitchListTile(
               secondary: const Icon(Icons.graphic_eq_rounded),
-              title: const Text('Audio visualizer'),
-              subtitle: Text(
-                blocked ?? hidden ?? 'Shapes that move with the music around the cover and under it',
-                style: muted,
-              ),
+              title: Text(tr.audioVisualizer),
+              subtitle: Text(blocked ?? hidden ?? tr.audioVisualizerSubtitle, style: muted),
               value: on,
               onChanged: blocked == null ? p.setVisualizer : null,
             ),
             if (on) ...[
               SettingTile(
                 icon: Icons.multiline_chart_rounded,
-                title: const Text('Visualizer style'),
+                title: Text(tr.visualizerStyle),
                 subtitle: Text(
                   p.playerCover == PlayerCover.background
-                      ? 'A strip under the song. Pulse, Orbit and Petals ring the cover: pick Square or Flower for them'
+                      ? tr.visualizerStyleBackground
                       : p.visualizerStyle.radial
-                      ? 'Rings the cover'
-                      : 'Moves along the cover\'s edge, with a strip under the song',
+                      ? tr.visualizerStyleRings
+                      : tr.visualizerStyleEdge,
                   style: muted,
                 ),
                 control: OptionPicker<VisualizerStyle>(
@@ -655,11 +595,8 @@ class _VisualizerSettings extends StatelessWidget {
               if (p.visualizerStyle.radial) ...[
                 SettingTile(
                   icon: Icons.open_in_full_rounded,
-                  title: const Text('Radius movement'),
-                  subtitle: Text(
-                    '${(p.visualizerRadius * 100).round()}% · How far the shape expands with the music',
-                    style: muted,
-                  ),
+                  title: Text(tr.radiusMovement),
+                  subtitle: Text(tr.radiusMovementSubtitle('${(p.visualizerRadius * 100).round()}'), style: muted),
                   control: SizedBox(
                     width: 220,
                     child: Slider(
@@ -674,7 +611,7 @@ class _VisualizerSettings extends StatelessWidget {
                 ),
                 SettingTile(
                   icon: Icons.line_weight_rounded,
-                  title: const Text('Line thickness'),
+                  title: Text(tr.lineThickness),
                   subtitle: Text('${p.visualizerThickness.toStringAsFixed(1)} px', style: muted),
                   control: SizedBox(
                     width: 220,

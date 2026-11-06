@@ -46,13 +46,13 @@ class LyricsExtrasButtonsState extends State<LyricsExtrasButtons> {
         mainAxisSize: MainAxisSize.min,
         children: [
           if (has && LyricsTranslation.hasNonLatin(_lyricLines(l).join('\n')))
-            toggle(LyricsTranslation.romanize, Icons.abc_rounded, 'Pronunciation'),
+            toggle(LyricsTranslation.romanize, Icons.abc_rounded, tr.pronunciation),
           if (has) ...[
             const SizedBox(width: 4),
-            toggle(LyricsTranslation.translate, Icons.translate_rounded, 'Translation'),
+            toggle(LyricsTranslation.translate, Icons.translate_rounded, tr.translation),
           ],
           PopupMenuButton<String>(
-            tooltip: 'More',
+            tooltip: tr.more,
             iconSize: 20,
             iconColor: AppColors.textSecondary,
             icon: const Icon(Icons.more_vert_rounded),
@@ -63,10 +63,10 @@ class LyricsExtrasButtonsState extends State<LyricsExtrasButtons> {
               _ => removeMyLyrics(context, widget.track),
             },
             itemBuilder: (_) => [
-              if (has) const PopupMenuItem(value: 'copy', child: Text('Copy lyrics')),
-              if (l.synced) const PopupMenuItem(value: 'timing', child: Text('Adjust timing')),
-              if (Features.userLyrics) const PopupMenuItem(value: 'use', child: Text('Use my lyrics file')),
-              if (l.source == _userLyricsSource) const PopupMenuItem(value: 'remove', child: Text('Remove my lyrics')),
+              if (has) PopupMenuItem(value: 'copy', child: Text(tr.copyLyrics)),
+              if (l.synced) PopupMenuItem(value: 'timing', child: Text(tr.adjustTiming)),
+              if (Features.userLyrics) PopupMenuItem(value: 'use', child: Text(tr.useMyLyricsFile)),
+              if (l.source == _userLyricsSource) PopupMenuItem(value: 'remove', child: Text(tr.removeMyLyrics)),
             ],
           ),
         ],
@@ -123,7 +123,7 @@ class _LyricsMoreMenuState extends State<LyricsMoreMenu> {
         ),
       );
       return PopupMenuButton<String>(
-        tooltip: 'More',
+        tooltip: tr.more,
         useRootNavigator: true,
         style: IconButton.styleFrom(
           backgroundColor: AppColors.textPrimary.withValues(alpha: 0.1),
@@ -143,14 +143,14 @@ class _LyricsMoreMenuState extends State<LyricsMoreMenu> {
         },
         itemBuilder: (_) => [
           if (has && LyricsTranslation.hasNonLatin(_lyricLines(l).join('\n')))
-            option('romanize', Icons.abc_rounded, 'Pronunciation', on: LyricsTranslation.romanize.value),
-          if (has) option('translate', Icons.translate_rounded, 'Translation', on: LyricsTranslation.translate.value),
-          if (has) option('copy', Icons.copy_rounded, 'Copy lyrics'),
-          if (l != null && l.synced) option('timing', Icons.timer_outlined, 'Adjust timing'),
-          if (Features.userLyrics) option('use', Icons.upload_file_rounded, 'Use my lyrics file'),
+            option('romanize', Icons.abc_rounded, tr.pronunciation, on: LyricsTranslation.romanize.value),
+          if (has) option('translate', Icons.translate_rounded, tr.translation, on: LyricsTranslation.translate.value),
+          if (has) option('copy', Icons.copy_rounded, tr.copyLyrics),
+          if (l != null && l.synced) option('timing', Icons.timer_outlined, tr.adjustTiming),
+          if (Features.userLyrics) option('use', Icons.upload_file_rounded, tr.useMyLyricsFile),
           if (l != null && l.source == _userLyricsSource)
-            option('remove', Icons.delete_outline_rounded, 'Remove my lyrics'),
-          option('player', Icons.tune_rounded, 'Player options'),
+            option('remove', Icons.delete_outline_rounded, tr.removeMyLyrics),
+          option('player', Icons.tune_rounded, tr.playerOptions),
         ],
       );
     },
@@ -203,20 +203,20 @@ Future<void> useMyLyricsFile(BuildContext context, Track track) async {
     final file = (await FilePicker.pickFiles(
       type: FileType.custom,
       allowedExtensions: const ['lrc', 'txt'],
-      dialogTitle: 'Choose a lyrics file',
+      dialogTitle: tr.chooseLyricsFile,
     )).firstOrNull;
     if (file == null) return;
     final bytes = await file.readAsBytes();
-    if (bytes.length > 1 << 20) return say('That file is too big to be lyrics.');
+    if (bytes.length > 1 << 20) return say(tr.lyricsFileTooBig);
     final text = utf8.decode(bytes, allowMalformed: true).replaceFirst('\u{feff}', '');
     final check = Lyrics.check(text, length: track.duration);
     if (!check.ok) return say(check.problem!);
     await UserLyrics.save(track, text);
     _lyricsChanged.value++;
-    say('Your lyrics are in use');
+    say(tr.yourLyricsInUse);
   } catch (e) {
     debugPrint('Lyrics file: $e');
-    say('Couldn\'t read that file.');
+    say(tr.couldntReadFile);
   }
 }
 
@@ -228,7 +228,7 @@ Future<void> removeMyLyrics(BuildContext context, Track track) async {
     _lyricsChanged.value++;
   } catch (e) {
     debugPrint('Remove lyrics: $e');
-    messenger?.showSnackBar(const SnackBar(content: Text('Couldn\'t remove your lyrics.')));
+    messenger?.showSnackBar(SnackBar(content: Text(tr.couldntRemoveLyrics)));
   }
 }
 
@@ -252,9 +252,9 @@ class LyricsTimingSheet extends StatelessWidget {
 
   /// "On time", "1.5 s later", "0.5 s earlier".
   static String describe(Duration shift) {
-    if (shift == Duration.zero) return 'On time';
+    if (shift == Duration.zero) return tr.onTime;
     final seconds = (shift.inMilliseconds.abs() / 1000).toStringAsFixed(1);
-    return shift.isNegative ? '$seconds s earlier' : '$seconds s later';
+    return shift.isNegative ? tr.secondsEarlier(seconds) : tr.secondsLater(seconds);
   }
 
   @override
@@ -269,19 +269,16 @@ class LyricsTimingSheet extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text('Adjust timing', style: text.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
+            Text(tr.adjustTiming, style: text.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
             const SizedBox(height: 4),
-            Text(
-              'If the lyrics come too early or too late, move them until they match the song.',
-              style: text.bodySmall?.copyWith(color: AppColors.textSecondary),
-            ),
+            Text(tr.adjustTimingBody, style: text.bodySmall?.copyWith(color: AppColors.textSecondary)),
             const SizedBox(height: 20),
             Row(
               children: [
                 Expanded(
                   child: OutlinedButton(
                     onPressed: () => LyricsTiming.set(track, shift.value - step),
-                    child: const Text('Earlier'),
+                    child: Text(tr.earlier),
                   ),
                 ),
                 Expanded(
@@ -295,7 +292,7 @@ class LyricsTimingSheet extends StatelessWidget {
                 Expanded(
                   child: OutlinedButton(
                     onPressed: () => LyricsTiming.set(track, shift.value + step),
-                    child: const Text('Later'),
+                    child: Text(tr.later),
                   ),
                 ),
               ],
@@ -304,7 +301,7 @@ class LyricsTimingSheet extends StatelessWidget {
             Align(
               child: TextButton(
                 onPressed: now == Duration.zero ? null : () => LyricsTiming.set(track, Duration.zero),
-                child: const Text('Reset'),
+                child: Text(tr.reset),
               ),
             ),
           ],
@@ -320,7 +317,7 @@ class LyricsTimingSheet extends StatelessWidget {
 Future<void> copyLyrics(BuildContext context, Lyrics l) async {
   final messenger = ScaffoldMessenger.maybeOf(context);
   await Clipboard.setData(ClipboardData(text: _lyricLines(l).join('\n')));
-  messenger?.showSnackBar(const SnackBar(content: Text('Lyrics copied')));
+  messenger?.showSnackBar(SnackBar(content: Text(tr.lyricsCopied)));
 }
 
 List<String> _lyricLines(Lyrics l) => l.synced ? [for (final line in l.lines) line.text] : l.plain!.split('\n');
@@ -364,9 +361,7 @@ mixin _Extras<T extends StatefulWidget> on State<T> {
       onError: (Object _) {
         _asked = false; // switching it off and on again retries
         if (!mounted) return;
-        ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-          const SnackBar(content: Text('Couldn\'t translate these lyrics. Check your internet connection.')),
-        );
+        ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(content: Text(tr.couldntTranslateLyrics)));
       },
     );
   }

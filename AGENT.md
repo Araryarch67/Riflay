@@ -478,8 +478,16 @@ device's language when Riflay has it). The words live in `lib/l10n/app_en.arb` (
 - Japanese is casual plain form (だ/る) like app copy; です/ます only for confirmations and errors. Keep
   loanwords people expect (プレイリスト, イコライザー) and names as the English has them (Riflay, Wrap,
   Bit-perfect). Counters stick to the number (`{count}曲`); plurals keep only `other`.
-- Not every screen is translated yet; untranslated ones show English. Move a screen's strings over as it is
-  touched.
+- Every screen is translated. `test/hardcoded_strings_test.dart` fails on English typed into what a screen
+  shows (`Text('…')`, `tooltip:`, `title:`, `labelText:` …); names that stay the same everywhere are listed
+  there. Detail stats (`stats_for_nerds.dart`) stays English on purpose: its rows go into bug reports.
+- Plurals: an ICU `plural` with `=1` and `other` in English, never `n == 1 ? 'song' : 'songs'`. Several
+  placeholders: declare them in the order the call passes them (the metadata order is the argument order).
+- A label of an enum value: a `String get label => switch (this) { … => tr.… }` getter, not a string in the
+  constructor. A list of labels (`appShortcuts`, `ListeningStats.months`): a getter, not a `const` or
+  `final` top-level list, which would keep the first language it was read in.
+- Saved values stay English and are translated where they are shown: EQ presets (`eqPresetLabel`), lyrics
+  sources (`lyricsSourceLabel`), player preset notes (`presetNote`).
 
 ## Colours and restyling
 

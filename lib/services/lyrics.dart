@@ -15,6 +15,15 @@ import '../platform/background.dart';
 import 'beta_features.dart';
 import 'lyrics_sources.dart';
 import 'ytmusic_web.dart';
+import 'language.dart';
+
+/// Where [Lyrics.source] says lyrics came from, in the language shown; service names stay as they are.
+String lyricsSourceLabel(String source) => switch (source) {
+  'Your lyrics' => tr.yourLyrics,
+  'Lyrics file' => tr.lyricsFile,
+  'Embedded in the file' => tr.embeddedInFile,
+  _ => source,
+};
 
 /// One word (or syllable) of a word-timed line, sung from [start] to [end].
 /// [text] keeps its own trailing space, so a line's words joined give its text.
@@ -271,10 +280,8 @@ class Lyrics {
   /// `[mm:ss.xx]` with seconds under 60, and, when the song's [length] is
   /// known, can't all fall long after it ends.
   static LrcCheck check(String text, {Duration? length}) {
-    if (text.trim().isEmpty) return const LrcCheck.invalid('Add some lyrics first.');
-    const bad = LrcCheck.invalid(
-      'Some of the times in these lyrics aren\'t written correctly. Start each line with a time like [01:23.45].',
-    );
+    if (text.trim().isEmpty) return LrcCheck.invalid(tr.addLyricsFirst);
+    final bad = LrcCheck.invalid(tr.lrcTimesWrong);
     final full = RegExp(r'^(\[\d+:\d+(?:[.:]\d+)?\])+');
     var stamps = 0;
     var latest = Duration.zero;
@@ -294,7 +301,7 @@ class Lyrics {
     }
     if (stamps == 0) return const LrcCheck.plain();
     if (length != null && length > Duration.zero && latest > length + const Duration(seconds: 15)) {
-      return const LrcCheck.invalid('These times run past the end of the song. Check that the lyrics belong to it.');
+      return LrcCheck.invalid(tr.lrcTimesPastEnd);
     }
     return const LrcCheck.timed();
   }

@@ -13,12 +13,13 @@ import '../../widgets/track_row.dart';
 import '../youtube_music_page.dart' show openRemotePlaylist, playlistCover;
 import 'search_parts.dart';
 import '../../widgets/skeleton.dart';
+import '../../../services/language.dart';
 
 /// Opens a search hit: plays a song, opens an artist / album / playlist.
 void openSearchHit(BuildContext context, SearchHit hit) {
   final c = PlayerScope.read(context);
   if (hit.track case final t?) {
-    c.playList([t], 0, from: 'Search');
+    c.playList([t], 0, from: tr.navSearch);
   } else {
     openRemotePlaylist(context, hit.collection!);
   }
@@ -33,7 +34,7 @@ Future<void> playRemote(BuildContext context, RemotePlaylist p) async {
     if (tracks.isNotEmpty) await c.playList(tracks, 0, from: p.title);
   } catch (e) {
     debugPrint('Playing ${p.title} failed: $e');
-    messenger.showSnackBar(SnackBar(content: Text('Couldn\'t play ${p.title}')));
+    messenger.showSnackBar(SnackBar(content: Text(tr.couldntPlay(p.title))));
   }
 }
 
@@ -141,10 +142,7 @@ class TopAndSongs extends StatelessWidget {
         final songs = (snap.data![1] as List<Track>?) ?? all?.songs ?? const <Track>[];
         final top = all?.top;
         if (top == null && songs.isEmpty) {
-          return SearchNote(
-            all == null ? 'YouTube search failed. Check your connection.' : 'No YouTube results.',
-            pad: pad,
-          );
+          return SearchNote(all == null ? tr.ytSearchFailed : tr.noYtResults, pad: pad);
         }
         final topCard = top == null ? null : TopResult(hit: top);
         final list = Column(
@@ -156,7 +154,7 @@ class TopAndSongs extends StatelessWidget {
                 TrackRow(
                   track: t,
                   showAlbum: false,
-                  onTap: () => c.playList(songs, i, from: 'YouTube search'),
+                  onTap: () => c.playList(songs, i, from: tr.ytSearchSource),
                 ),
               ),
           ],
@@ -168,14 +166,14 @@ class TopAndSongs extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     if (topCard != null) ...[
-                      heading('Top result'),
+                      heading(tr.topResult),
                       Padding(
                         padding: EdgeInsets.symmetric(horizontal: pad),
                         child: topCard,
                       ),
                     ],
                     if (songs.isNotEmpty) ...[
-                      heading('Songs'),
+                      heading(tr.songs),
                       Padding(padding: const EdgeInsets.symmetric(horizontal: 12), child: list),
                     ],
                   ],
@@ -189,7 +187,7 @@ class TopAndSongs extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            heading('Top result'),
+                            heading(tr.topResult),
                             Padding(
                               padding: EdgeInsets.only(left: pad),
                               child: topCard,
@@ -201,7 +199,7 @@ class TopAndSongs extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          heading('Songs'),
+                          heading(tr.songs),
                           Padding(padding: const EdgeInsets.symmetric(horizontal: 12), child: list),
                         ],
                       ),
@@ -233,9 +231,9 @@ class RemoteShelves extends StatelessWidget {
       if (r == null) return const SliverToBoxAdapter(child: SizedBox.shrink());
       return SliverMainAxisGroup(
         slivers: [
-          if (r.artists.isNotEmpty) _row('Artists', [for (final a in r.artists) RemoteCard(collection: a)]),
-          if (r.albums.isNotEmpty) _row('Albums', [for (final a in r.albums) RemoteCard(collection: a)]),
-          if (r.playlists.isNotEmpty) _row('Playlists', [for (final a in r.playlists) RemoteCard(collection: a)]),
+          if (r.artists.isNotEmpty) _row(tr.artists, [for (final a in r.artists) RemoteCard(collection: a)]),
+          if (r.albums.isNotEmpty) _row(tr.albums, [for (final a in r.albums) RemoteCard(collection: a)]),
+          if (r.playlists.isNotEmpty) _row(tr.playlists, [for (final a in r.playlists) RemoteCard(collection: a)]),
         ],
       );
     },
@@ -261,10 +259,7 @@ class CollectionGrid extends StatelessWidget {
         if (snap.connectionState != ConnectionState.done) return SearchSpinner(pad: pad);
         final items = snap.data ?? const <RemotePlaylist>[];
         if (items.isEmpty) {
-          return SearchNote(
-            snap.hasError ? 'YouTube search failed. Check your connection.' : 'Nothing found.',
-            pad: pad,
-          );
+          return SearchNote(snap.hasError ? tr.ytSearchFailed : tr.nothingFound, pad: pad);
         }
         return SliverPadding(
           padding: EdgeInsets.symmetric(horizontal: shell.compact ? 6 : 14),
@@ -317,7 +312,7 @@ class YoutubeSongResults extends StatelessWidget {
                     itemBuilder: (context, i) => TrackRow(
                       track: previous[i],
                       showAlbum: false,
-                      onTap: () => c.playList(previous, i, from: 'YouTube search'),
+                      onTap: () => c.playList(previous, i, from: tr.ytSearchSource),
                     ),
                   ),
                 ),
@@ -328,10 +323,7 @@ class YoutubeSongResults extends StatelessWidget {
         if (loading) return SearchSpinner(pad: pad);
         final tracks = snap.data ?? const <Track>[];
         if (snap.hasError || tracks.isEmpty) {
-          return SearchNote(
-            snap.hasError ? 'YouTube search failed. Check your connection.' : 'No YouTube results.',
-            pad: pad,
-          );
+          return SearchNote(snap.hasError ? tr.ytSearchFailed : tr.noYtResults, pad: pad);
         }
         return SliverPadding(
           padding: EdgeInsets.symmetric(horizontal: shell.compact ? 12 : 16),
@@ -342,7 +334,7 @@ class YoutubeSongResults extends StatelessWidget {
               TrackRow(
                 track: tracks[i],
                 showAlbum: false,
-                onTap: () => c.playList(tracks, i, from: 'YouTube search'),
+                onTap: () => c.playList(tracks, i, from: tr.ytSearchSource),
               ),
             ),
           ),
@@ -386,10 +378,7 @@ class VideoResults extends StatelessWidget {
       );
     }
     if (tracks.isEmpty) {
-      return SearchNote(
-        failed ? 'YouTube search failed. Check your connection.' : 'No YouTube videos found.',
-        pad: pad,
-      );
+      return SearchNote(failed ? tr.ytSearchFailed : tr.noYtVideos, pad: pad);
     }
     final tail = !atEnd && !loading;
     return SliverMainAxisGroup(
@@ -415,7 +404,7 @@ class VideoResults extends StatelessWidget {
                   TrackRow(
                     track: tracks[i],
                     showAlbum: false,
-                    onTap: () => c.playList(tracks, i, from: 'YouTube videos'),
+                    onTap: () => c.playList(tracks, i, from: tr.ytVideosSource),
                   ),
                 );
               },

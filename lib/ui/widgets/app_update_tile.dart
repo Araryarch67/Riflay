@@ -5,6 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../services/app_updates.dart';
 import '../pages/sound_settings.dart' show settingsMuted;
 import 'skeleton.dart';
+import '../../services/language.dart';
 
 /// An explicit check, followed by an Android download and system installation.
 class AppUpdateTile extends StatefulWidget {
@@ -21,7 +22,8 @@ class _AppUpdateTileState extends State<AppUpdateTile> {
   bool _busy = false;
   double? _progress;
   String? _path;
-  String _message = 'Check GitHub for a newer version of Riflay';
+  // Null until a check starts: the idle line, read in the language shown.
+  String? _message;
 
   @override
   void dispose() {
@@ -34,12 +36,12 @@ class _AppUpdateTileState extends State<AppUpdateTile> {
     setState(() => _busy = true);
     try {
       if (_release == null) {
-        setState(() => _message = 'Checking for updates…');
+        setState(() => _message = tr.checkingUpdates);
         final release = await _updates.check();
         if (!mounted) return;
         setState(() {
           _release = release.newerThan(_updates.installedVersion) ? release : null;
-          _message = _release == null ? "You're using the latest version" : 'Version ${release.version} is available';
+          _message = _release == null ? tr.latestVersion : tr.versionAvailable(release.version);
         });
       } else if (!_updates.android || _updates.assetFor(_release!) == null) {
         if (!await launchUrl(_release!.url, mode: LaunchMode.externalApplication)) {
@@ -47,7 +49,7 @@ class _AppUpdateTileState extends State<AppUpdateTile> {
         }
       } else if (_path == null) {
         setState(() {
-          _message = 'Downloading version ${_release!.version}…';
+          _message = tr.downloadingVersion(_release!.version);
           _progress = 0;
         });
         final path = await _updates.download(_release!, (progress) {
@@ -57,16 +59,14 @@ class _AppUpdateTileState extends State<AppUpdateTile> {
         setState(() {
           _path = path;
           _progress = null;
-          _message = 'Version ${_release!.version} is ready to install';
+          _message = tr.versionReady(_release!.version);
         });
       } else {
-        setState(() => _message = 'Opening the Android installer…');
+        setState(() => _message = tr.openingInstaller);
         final opened = await _updates.install(_path!);
         if (!mounted) return;
         setState(() {
-          _message = opened
-              ? 'Complete the update in the Android installer'
-              : 'Allow Riflay to install updates, then try again';
+          _message = opened ? tr.completeInInstaller : tr.allowInstallUpdates;
         });
       }
     } catch (error) {
@@ -75,11 +75,10 @@ class _AppUpdateTileState extends State<AppUpdateTile> {
       setState(() {
         _progress = null;
         _message = switch (error) {
-          PlatformException(code: 'signature') =>
-            'This copy uses a different signing key. Back up your data before installing the release',
-          FormatException() when _release != null => "Couldn't verify the update. Try downloading it again",
-          _ when _release == null => "Couldn't check for updates. Try again",
-          _ => "Couldn't update Riflay. Try again",
+          PlatformException(code: 'signature') => tr.differentSigningKey,
+          FormatException() when _release != null => tr.couldntVerifyUpdate,
+          _ when _release == null => tr.couldntCheckUpdates,
+          _ => tr.couldntUpdateRiflay,
         };
       });
     } finally {
@@ -90,19 +89,19 @@ class _AppUpdateTileState extends State<AppUpdateTile> {
   @override
   Widget build(BuildContext context) {
     final label = _path != null
-        ? 'Install update'
+        ? tr.installUpdate
         : _release == null
-        ? 'Check for updates'
+        ? tr.checkForUpdates
         : _updates.android && _updates.assetFor(_release!) != null
-        ? 'Download update'
-        : 'Get update';
+        ? tr.downloadUpdate
+        : tr.getUpdate;
     return ListTile(
       leading: const Icon(Icons.system_update_rounded),
       title: Text(_busy && _progress != null ? 'Downloading… ${(_progress! * 100).round()}%' : label),
       subtitle: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(_message, style: settingsMuted(context)),
+          Text(_message ?? tr.checkGithubUpdate, style: settingsMuted(context)),
           if (_progress != null) ...[const SizedBox(height: 8), LinearProgressIndicator(value: _progress)],
         ],
       ),

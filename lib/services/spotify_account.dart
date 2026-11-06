@@ -8,6 +8,7 @@ import 'playlist_transfer.dart';
 import 'private_files.dart';
 import 'spotify_library.dart';
 import 'spotify_session.dart';
+import 'language.dart';
 
 /// The signed-in Spotify account: the web-player session kept in the
 /// app's private folder, fresh tokens on demand, and what was imported so far.
@@ -229,7 +230,7 @@ class SpotifyAccount extends ChangeNotifier {
     PlaylistTransferError(:final message) => message,
     _ => () {
       debugPrint('Spotify sign-in: $e');
-      return 'Couldn\'t sign in to Spotify. Try again.';
+      return tr.couldntSignInSpotify;
     }(),
   };
 }

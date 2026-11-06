@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart' show debugPrint, visibleForTesting;
 import 'package:http/http.dart' as http;
 
 import '../platform/background.dart';
+import 'language.dart';
 
 /// A song row as YouTube Music returns it.
 class WebTrack {
@@ -87,13 +88,17 @@ class MusicVideo {
 
 /// Who can see a playlist.
 enum PlaylistPrivacy {
-  public('PUBLIC', 'Public'),
-  unlisted('UNLISTED', 'Unlisted'),
-  private('PRIVATE', 'Private');
+  public('PUBLIC'),
+  unlisted('UNLISTED'),
+  private('PRIVATE');
 
-  const PlaylistPrivacy(this.api, this.label);
+  const PlaylistPrivacy(this.api);
   final String api;
-  final String label;
+  String get label => switch (this) {
+    public => tr.privacyPublicLabel,
+    unlisted => tr.privacyUnlistedLabel,
+    private => tr.privacyPrivateLabel,
+  };
 
   static PlaylistPrivacy? parse(Object? s) => values.where((v) => v.api == s).firstOrNull;
 }
@@ -382,9 +387,9 @@ class YtMusicWeb {
     if (res.statusCode != 200) {
       debugPrint('YouTube Music $endpoint: HTTP ${res.statusCode}');
       throw YtMusicWebError(switch (res.statusCode) {
-        401 || 403 => 'Please sign in to YouTube Music again.',
-        429 => 'YouTube Music is busy. Try again in a minute.',
-        _ => 'YouTube Music isn\'t answering right now. Try again later.',
+        401 || 403 => tr.ytSignInAgain,
+        429 => tr.ytBusy,
+        _ => tr.ytNotAnswering,
       });
     }
     final bytes = res.bodyBytes;
@@ -394,7 +399,7 @@ class YtMusicWeb {
         ? _jsonOfUtf8.convert(bytes)
         : await inBackground(() => _jsonOfUtf8.convert(bytes));
     if (decoded is! Map<String, dynamic>) {
-      throw const YtMusicWebError('YouTube Music isn\'t answering right now. Try again later.');
+      throw YtMusicWebError(tr.ytNotAnswering);
     }
     return decoded;
   }
@@ -404,9 +409,7 @@ class YtMusicWeb {
     final res = await _send('account/account_menu', const {});
     final header = _asMap(_deepFind(res, 'activeAccountHeaderRenderer'));
     if (header == null) {
-      throw YtMusicWebError(
-        _signedIn(res) ? 'Couldn\'t finish signing in. Try again.' : 'Signing in didn\'t finish. Try again.',
-      );
+      throw YtMusicWebError(_signedIn(res) ? tr.couldntFinishSignIn : tr.signInDidntFinish);
     }
     return WebProfile(
       name: _text(header['accountName']),
@@ -508,7 +511,7 @@ class YtMusicWeb {
       if (videoIds.isNotEmpty) 'videoIds': videoIds,
     });
     final id = res['playlistId'];
-    if (id is! String) throw const YtMusicWebError('YouTube Music did not create the playlist.');
+    if (id is! String) throw YtMusicWebError(tr.ytDidntCreatePlaylist);
     return id;
   }
 
@@ -520,7 +523,7 @@ class YtMusicWeb {
     final status = res['status'];
     if (status is String && !status.contains('SUCCEEDED')) {
       debugPrint('YouTube Music edit: $status');
-      throw const YtMusicWebError('YouTube Music didn\'t take that change. Try again.');
+      throw YtMusicWebError(tr.ytDidntTakeChange);
     }
     return res;
   }
@@ -574,7 +577,7 @@ class YtMusicWeb {
     ]);
     final link = res['collaborationInviteLink'];
     if (link is! String || parseInvite(link) == null) {
-      throw const YtMusicWebError('YouTube Music did not make an invite link.');
+      throw YtMusicWebError(tr.ytDidntMakeInvite);
     }
     return link;
   }
@@ -1006,7 +1009,7 @@ class YtMusicWeb {
       }
       if (moods.isEmpty) continue;
       final title = _text(_at(grid, const ['header', 'gridHeaderRenderer', 'title']));
-      out.add(WebMoodGroup(title: title ?? 'Moods & genres', moods: moods));
+      out.add(WebMoodGroup(title: title ?? tr.moodsAndGenres, moods: moods));
     }
     return out;
   }

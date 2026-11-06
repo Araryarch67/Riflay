@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../models/track.dart';
 import 'theme.dart';
+import '../services/language.dart';
 
 /// Identifies a screen, so the sidebar can highlight where you are.
 abstract final class Locations {
@@ -121,11 +122,11 @@ class HistoryButtons extends StatelessWidget {
     builder: (context, _) => Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        _Arrow(icon: Icons.chevron_left_rounded, tooltip: 'Back', onPressed: history.canGoBack ? history.back : null),
+        _Arrow(icon: Icons.chevron_left_rounded, tooltip: tr.back, onPressed: history.canGoBack ? history.back : null),
         const SizedBox(width: 4),
         _Arrow(
           icon: Icons.chevron_right_rounded,
-          tooltip: 'Forward',
+          tooltip: tr.forward,
           onPressed: history.canGoForward ? history.forward : null,
         ),
       ],

@@ -1,6 +1,7 @@
 import 'listening_stats.dart';
 import 'listening_streak.dart';
 import 'play_history.dart';
+import 'language.dart';
 
 /// A calendar month in local time: what one Wrap covers.
 class WrapMonth implements Comparable<WrapMonth> {
@@ -26,7 +27,7 @@ class WrapMonth implements Comparable<WrapMonth> {
   String get name => ListeningStats.months[month - 1];
 
   /// "March 2026".
-  String get label => '$name $year';
+  String get label => tr.monthYear(name, '$year');
 
   /// Midnight of the 1st (local), inclusive.
   DateTime get start => DateTime(year, month);
@@ -82,7 +83,7 @@ class WrapData {
   bool get inProgress => until != null;
 
   /// "March 2026", or "March so far" while the month runs.
-  String get title => inProgress ? '${month.name} so far' : month.label;
+  String get title => inProgress ? tr.wrapSoFar(month.name) : month.label;
   final Duration listened;
   final int plays;
 

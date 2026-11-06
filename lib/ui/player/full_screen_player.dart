@@ -21,6 +21,7 @@ import '../widgets/video_mode.dart';
 import 'now_playing_page.dart' show BlurredCover;
 import 'player_common.dart';
 import 'player_parts.dart';
+import '../../services/language.dart';
 
 /// Desktop expanded player: the cover art (and lyrics beside it, if asked)
 /// fills the space above the player bar, inside the window (under the title
@@ -215,7 +216,7 @@ class _FullScreenPlayerState extends State<FullScreenPlayer> {
                         ValueListenableBuilder(
                           valueListenable: windowFullScreen,
                           builder: (context, full, _) => IconButton(
-                            tooltip: full ? 'Exit full screen' : 'Close expanded player',
+                            tooltip: full ? tr.exitFullScreen : tr.closeExpandedPlayer,
                             onPressed: () => showExpandedPlayer(false),
                             icon: Icon(full ? Icons.fullscreen_exit_rounded : Icons.close_fullscreen_rounded),
                           ),
@@ -225,7 +226,7 @@ class _FullScreenPlayerState extends State<FullScreenPlayer> {
                   ),
                   Expanded(
                     child: track == null
-                        ? Center(child: Text('Nothing is playing', style: text.titleMedium))
+                        ? Center(child: Text(tr.nothingIsPlaying, style: text.titleMedium))
                         : ListenableBuilder(
                             // The Song / Video switch and the room it takes.
                             listenable: Listenable.merge([
@@ -299,7 +300,7 @@ class _FullScreenPlayerState extends State<FullScreenPlayer> {
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                       decoration: BoxDecoration(color: AppColors.menu, borderRadius: BorderRadius.circular(8)),
-                      child: Text('Press Esc to exit full screen', style: text.bodyMedium),
+                      child: Text(tr.pressEscToExit, style: text.bodyMedium),
                     ),
                   ),
                 ),
@@ -331,12 +332,12 @@ class _PanelButtons extends StatelessWidget {
           segments: [
             (
               icon: Icons.lyrics_outlined,
-              tooltip: lyrics ? 'Hide lyrics' : 'Lyrics',
+              tooltip: lyrics ? tr.hideLyrics : tr.lyrics,
               onPressed: hasTrack || lyrics ? () => toggleExpandedPanel(ExpandedPanel.lyrics) : null,
             ),
             (
               icon: Icons.equalizer_rounded,
-              tooltip: eq ? 'Hide equalizer' : 'Equalizer',
+              tooltip: eq ? tr.hideEqualizer : tr.equalizer,
               // Like the equalizer's own switch: nothing to turn on in bit-perfect mode or without the engine.
               // An open panel can always be closed.
               onPressed: eq || ((AudioEngine.supported || AudioEngine.webEffects) && !audio.bitPerfect)

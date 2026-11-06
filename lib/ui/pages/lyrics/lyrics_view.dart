@@ -195,7 +195,7 @@ class _Source extends StatelessWidget {
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.only(top: 32, bottom: 48),
     child: Text(
-      tr.lyricsFrom(lyrics.source),
+      tr.lyricsFrom(lyricsSourceLabel(lyrics.source)),
       textAlign: _textAlign,
       style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.textMuted),
     ),

@@ -9,6 +9,7 @@ import '../../theme.dart';
 import '../../widgets/controls.dart';
 import '../../widgets/page_scaffold.dart';
 import 'search_parts.dart';
+import '../../../services/language.dart';
 
 /// One enabled extension's answer to a search; never fails (a failure is [error]).
 typedef ExtensionSearch = ({InstalledExtension ext, Future<({List<ExtensionSearchHit> hits, String? error})> result});
@@ -42,13 +43,13 @@ Future<void> playExtensionHit(BuildContext context, ExtensionSearchHit hit, Stri
       parallel: 1,
     );
     if (match.found.isEmpty) {
-      messenger?.showSnackBar(SnackBar(content: Text('Couldn\'t find ${hit.foreign} on YouTube Music')));
+      messenger?.showSnackBar(SnackBar(content: Text(tr.couldntFindOnYt('${hit.foreign}'))));
       return;
     }
     ExtensionFinds.remember(match.found.first, from);
     await c.playList(match.found, 0, from: from);
   } catch (e) {
-    messenger?.showSnackBar(SnackBar(content: Text('Couldn\'t play ${hit.title}')));
+    messenger?.showSnackBar(SnackBar(content: Text(tr.couldntPlay(hit.title))));
   }
 }
 
@@ -79,7 +80,7 @@ class _ExtensionSection extends StatelessWidget {
     return FutureBuilder(
       future: search.result,
       builder: (context, snap) {
-        final title = SliverToBoxAdapter(child: SectionTitle('From $name'));
+        final title = SliverToBoxAdapter(child: SectionTitle(tr.fromNamed(name)));
         if (snap.connectionState != ConnectionState.done) {
           return SliverMainAxisGroup(
             slivers: [
@@ -95,7 +96,7 @@ class _ExtensionSection extends StatelessWidget {
           return SliverMainAxisGroup(
             slivers: [
               title,
-              SearchNote('$name couldn\'t search: $error', pad: pad),
+              SearchNote(tr.extCouldntSearch(name, error), pad: pad),
             ],
           );
         }

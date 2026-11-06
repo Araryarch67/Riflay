@@ -6,6 +6,7 @@ import 'package:just_audio/just_audio.dart';
 
 import '../models/track.dart';
 import 'audio_engine.dart';
+import 'language.dart';
 
 /// The decisions behind crossfade, as plain functions (no player involved).
 ///
@@ -79,8 +80,8 @@ abstract final class CrossfadeRules {
   /// Why crossfade can't run, in plain words, or null when it can. [direct] is the sound
   /// going straight to a DAC (exclusive mode, ASIO, a card held directly).
   static String? blockedNote({required bool bitPerfect, required bool direct}) {
-    if (bitPerfect) return 'Off while bit-perfect mode is on';
-    if (direct) return 'Off while the sound goes straight to your DAC';
+    if (bitPerfect) return tr.offWhileBitPerfect;
+    if (direct) return tr.offWhileDirect;
     return null;
   }
 

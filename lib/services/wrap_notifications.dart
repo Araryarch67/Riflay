@@ -7,6 +7,7 @@ import '../platform/host.dart';
 import 'download_notifications.dart';
 import 'play_history.dart';
 import 'wrap.dart';
+import 'language.dart';
 
 /// Where the announcement goes (a system notification; a fake in tests).
 abstract class WrapNoteSink {
@@ -22,7 +23,7 @@ abstract class WrapNoteSink {
 }
 
 /// "Your March in music is ready."
-String wrapNoteTitle(WrapMonth m) => 'Your ${m.name} in music is ready';
+String wrapNoteTitle(WrapMonth m) => tr.wrapReadyTitle(m.name);
 
 /// Announces each month's Wrap once: when the 1st of the month comes (set ahead of time where the platform lets an
 /// app do that), or the first time the app opens after it.
@@ -112,11 +113,11 @@ class SystemWrapSink implements WrapNoteSink {
   @override
   bool get canSchedule => !kIsWeb && (Host.isAndroid || Host.isIOS || Host.isMacOS);
 
-  NotificationDetails get _details => const NotificationDetails(
+  NotificationDetails get _details => NotificationDetails(
     android: AndroidNotificationDetails(
       'wrap',
-      'Monthly Wrap',
-      channelDescription: 'Your month in music, once it is over',
+      tr.monthlyWrap,
+      channelDescription: tr.monthlyWrapChannel,
       icon: 'ic_stat_download',
     ),
     iOS: DarwinNotificationDetails(presentAlert: true, presentBanner: true, presentList: true),
@@ -131,7 +132,7 @@ class SystemWrapSink implements WrapNoteSink {
       await plugin?.show(
         id: _id,
         title: wrapNoteTitle(month),
-        body: 'Tap to see what you listened to.',
+        body: tr.tapToSeeListened,
         notificationDetails: _details,
         payload: 'wrap:${month.key}',
       );
@@ -149,7 +150,7 @@ class SystemWrapSink implements WrapNoteSink {
         id: _id,
         scheduledDate: tz.TZDateTime.from(at, tz.UTC),
         title: wrapNoteTitle(month),
-        body: 'Tap to see what you listened to.',
+        body: tr.tapToSeeListened,
         notificationDetails: _details,
         androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
         payload: 'wrap:${month.key}',

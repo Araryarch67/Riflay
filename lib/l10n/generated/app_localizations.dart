@@ -1952,6 +1952,6960 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'A day counts once you play a song for 30 seconds or more. Your history stays on this device.'**
   String get streakRule;
+
+  /// No description provided for @songsLeft.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} songs left'**
+  String songsLeft(int count);
+
+  /// No description provided for @songEndShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Song end'**
+  String get songEndShort;
+
+  /// No description provided for @endOfSong.
+  ///
+  /// In en, this message translates to:
+  /// **'End of song'**
+  String get endOfSong;
+
+  /// No description provided for @hours.
+  ///
+  /// In en, this message translates to:
+  /// **'Hours'**
+  String get hours;
+
+  /// No description provided for @minutes.
+  ///
+  /// In en, this message translates to:
+  /// **'Minutes'**
+  String get minutes;
+
+  /// No description provided for @start.
+  ///
+  /// In en, this message translates to:
+  /// **'Start'**
+  String get start;
+
+  /// No description provided for @thisPhone.
+  ///
+  /// In en, this message translates to:
+  /// **'This phone'**
+  String get thisPhone;
+
+  /// No description provided for @thisComputer.
+  ///
+  /// In en, this message translates to:
+  /// **'This computer'**
+  String get thisComputer;
+
+  /// No description provided for @playOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Play on'**
+  String get playOn;
+
+  /// No description provided for @lookingForDevices.
+  ///
+  /// In en, this message translates to:
+  /// **'Looking for TVs and speakers…'**
+  String get lookingForDevices;
+
+  /// No description provided for @noDevicesFound.
+  ///
+  /// In en, this message translates to:
+  /// **'No TVs or speakers found. They need to be on and on the same Wi-Fi.'**
+  String get noDevicesFound;
+
+  /// No description provided for @castWorksWith.
+  ///
+  /// In en, this message translates to:
+  /// **'Works with TVs, speakers and receivers that support DLNA or AirPlay.'**
+  String get castWorksWith;
+
+  /// No description provided for @searchAgain.
+  ///
+  /// In en, this message translates to:
+  /// **'Search again'**
+  String get searchAgain;
+
+  /// No description provided for @discordSongCover.
+  ///
+  /// In en, this message translates to:
+  /// **'Song cover'**
+  String get discordSongCover;
+
+  /// No description provided for @discordTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Time played and left'**
+  String get discordTime;
+
+  /// No description provided for @discordSongInList.
+  ///
+  /// In en, this message translates to:
+  /// **'Song title in the member list'**
+  String get discordSongInList;
+
+  /// No description provided for @discordListenButton.
+  ///
+  /// In en, this message translates to:
+  /// **'\"Listen on YouTube Music\" button'**
+  String get discordListenButton;
+
+  /// No description provided for @discordWhilePaused.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep showing while paused'**
+  String get discordWhilePaused;
+
+  /// No description provided for @previewYourSong.
+  ///
+  /// In en, this message translates to:
+  /// **'Your song'**
+  String get previewYourSong;
+
+  /// No description provided for @previewItsArtist.
+  ///
+  /// In en, this message translates to:
+  /// **'Its artist'**
+  String get previewItsArtist;
+
+  /// No description provided for @discordListeningTo.
+  ///
+  /// In en, this message translates to:
+  /// **'Listening to'**
+  String get discordListeningTo;
+
+  /// No description provided for @paused.
+  ///
+  /// In en, this message translates to:
+  /// **'Paused'**
+  String get paused;
+
+  /// No description provided for @playerPresets.
+  ///
+  /// In en, this message translates to:
+  /// **'Player presets'**
+  String get playerPresets;
+
+  /// No description provided for @presetsCustomMix.
+  ///
+  /// In en, this message translates to:
+  /// **'Your settings are a custom mix'**
+  String get presetsCustomMix;
+
+  /// No description provided for @presetsMatch.
+  ///
+  /// In en, this message translates to:
+  /// **'Your settings match {preset}'**
+  String presetsMatch(String preset);
+
+  /// No description provided for @applyPresetQuestion.
+  ///
+  /// In en, this message translates to:
+  /// **'Apply {preset}?'**
+  String applyPresetQuestion(String preset);
+
+  /// No description provided for @applyPresetBody.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{This changes 1 player setting. You can still change each one after.} other{This changes {count} player settings. You can still change each one after.}}'**
+  String applyPresetBody(int count);
+
+  /// No description provided for @apply.
+  ///
+  /// In en, this message translates to:
+  /// **'Apply'**
+  String get apply;
+
+  /// No description provided for @inUse.
+  ///
+  /// In en, this message translates to:
+  /// **'In use'**
+  String get inUse;
+
+  /// No description provided for @tapToApply.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap to apply'**
+  String get tapToApply;
+
+  /// No description provided for @autoplayKeepGoing.
+  ///
+  /// In en, this message translates to:
+  /// **'When the queue ends, keep going with similar songs'**
+  String get autoplayKeepGoing;
+
+  /// No description provided for @gaplessPlayback.
+  ///
+  /// In en, this message translates to:
+  /// **'Gapless playback'**
+  String get gaplessPlayback;
+
+  /// No description provided for @gaplessPlaybackSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No added silence between tracks. Crossfade is under Sound effects (DSP).'**
+  String get gaplessPlaybackSubtitle;
+
+  /// No description provided for @skipSilence.
+  ///
+  /// In en, this message translates to:
+  /// **'Skip silence'**
+  String get skipSilence;
+
+  /// No description provided for @offWhileBitPerfect.
+  ///
+  /// In en, this message translates to:
+  /// **'Off while bit-perfect mode is on'**
+  String get offWhileBitPerfect;
+
+  /// No description provided for @skipSilenceSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Silent intros, outros and gaps are cut short. Soft passages play whole'**
+  String get skipSilenceSubtitle;
+
+  /// No description provided for @off.
+  ///
+  /// In en, this message translates to:
+  /// **'Off'**
+  String get off;
+
+  /// No description provided for @volumeLeveling.
+  ///
+  /// In en, this message translates to:
+  /// **'Volume leveling'**
+  String get volumeLeveling;
+
+  /// No description provided for @volumeLevelingSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Plays songs at a similar loudness, using their ReplayGain tags'**
+  String get volumeLevelingSubtitle;
+
+  /// No description provided for @crossfade.
+  ///
+  /// In en, this message translates to:
+  /// **'Crossfade'**
+  String get crossfade;
+
+  /// No description provided for @crossfadeSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'The end of a song fades into the start of the next. Off in bit-perfect and exclusive modes'**
+  String get crossfadeSubtitle;
+
+  /// No description provided for @fadeLength.
+  ///
+  /// In en, this message translates to:
+  /// **'Fade length'**
+  String get fadeLength;
+
+  /// No description provided for @skipForAlbums.
+  ///
+  /// In en, this message translates to:
+  /// **'Skip for albums'**
+  String get skipForAlbums;
+
+  /// No description provided for @skipForAlbumsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Songs that follow each other on an album play without a fade, as the artist made them'**
+  String get skipForAlbumsSubtitle;
+
+  /// No description provided for @virtualSpeakers.
+  ///
+  /// In en, this message translates to:
+  /// **'Virtual speakers'**
+  String get virtualSpeakers;
+
+  /// No description provided for @offWhileMono.
+  ///
+  /// In en, this message translates to:
+  /// **'Off while Mono audio is on'**
+  String get offWhileMono;
+
+  /// No description provided for @virtualSpeakersSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'For headphones: the music plays in front of you, like from two speakers, instead of inside your head'**
+  String get virtualSpeakersSubtitle;
+
+  /// No description provided for @virtualSpeakerLevel.
+  ///
+  /// In en, this message translates to:
+  /// **'Virtual speaker level'**
+  String get virtualSpeakerLevel;
+
+  /// No description provided for @virtualSpeakerLevelBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Adjust the simulation output level to match your other listening modes.'**
+  String get virtualSpeakerLevelBody;
+
+  /// No description provided for @headphoneCrossfeed.
+  ///
+  /// In en, this message translates to:
+  /// **'Headphone crossfeed'**
+  String get headphoneCrossfeed;
+
+  /// No description provided for @crossfeedNotNeeded.
+  ///
+  /// In en, this message translates to:
+  /// **'Not needed with Virtual speakers: they already do this'**
+  String get crossfeedNotNeeded;
+
+  /// No description provided for @crossfeedSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Makes headphones sound more like speakers in a room'**
+  String get crossfeedSubtitle;
+
+  /// No description provided for @crossfeedSoundstage.
+  ///
+  /// In en, this message translates to:
+  /// **'Crossfeed soundstage'**
+  String get crossfeedSoundstage;
+
+  /// No description provided for @crossfeedSoundstageBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Adjust the frequency range blended between the left and right channels. Default: 50%.'**
+  String get crossfeedSoundstageBody;
+
+  /// No description provided for @monoAudio.
+  ///
+  /// In en, this message translates to:
+  /// **'Mono audio'**
+  String get monoAudio;
+
+  /// No description provided for @monoAudioSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Both sides as one sound. Handy when one side of your headphones doesn\'t work'**
+  String get monoAudioSubtitle;
+
+  /// No description provided for @audioPlugins.
+  ///
+  /// In en, this message translates to:
+  /// **'Audio plugins'**
+  String get audioPlugins;
+
+  /// No description provided for @audioPluginsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'VST, LV2 and CLAP plugins, set up in Carla: add them there and save, and they play here'**
+  String get audioPluginsSubtitle;
+
+  /// No description provided for @editInCarla.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit in Carla'**
+  String get editInCarla;
+
+  /// No description provided for @needsCarlaDownload.
+  ///
+  /// In en, this message translates to:
+  /// **'Needs Carla, a free program that holds your VST, LV2 and CLAP plugins. Download it, unzip it in your Downloads or Program Files folder, then reopen this page.'**
+  String get needsCarlaDownload;
+
+  /// No description provided for @needsCarlaInstall.
+  ///
+  /// In en, this message translates to:
+  /// **'Needs Carla, a free program that holds your VST, LV2 and CLAP plugins. Install it, then reopen this page.'**
+  String get needsCarlaInstall;
+
+  /// No description provided for @installCarla.
+  ///
+  /// In en, this message translates to:
+  /// **'Install Carla'**
+  String get installCarla;
+
+  /// No description provided for @roomCorrection.
+  ///
+  /// In en, this message translates to:
+  /// **'Room correction'**
+  String get roomCorrection;
+
+  /// No description provided for @roomCorrectionSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Load an impulse response (WAV or FLAC, e.g. made with REW) to correct your room or headphones'**
+  String get roomCorrectionSubtitle;
+
+  /// No description provided for @chooseFile.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose file'**
+  String get chooseFile;
+
+  /// No description provided for @change.
+  ///
+  /// In en, this message translates to:
+  /// **'Change'**
+  String get change;
+
+  /// No description provided for @roomCorrectionHeadroom.
+  ///
+  /// In en, this message translates to:
+  /// **'Room correction headroom'**
+  String get roomCorrectionHeadroom;
+
+  /// No description provided for @roomCorrectionHeadroomBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Lower the corrected signal if the impulse response makes peaks too loud.'**
+  String get roomCorrectionHeadroomBody;
+
+  /// No description provided for @signalPathSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'See which effects are actually active for the current song'**
+  String get signalPathSubtitle;
+
+  /// No description provided for @resetNamed.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset {name}'**
+  String resetNamed(String name);
+
+  /// No description provided for @chooseImpulse.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose an impulse response'**
+  String get chooseImpulse;
+
+  /// No description provided for @couldntUseFile.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t use that file'**
+  String get couldntUseFile;
+
+  /// No description provided for @output.
+  ///
+  /// In en, this message translates to:
+  /// **'Output'**
+  String get output;
+
+  /// No description provided for @iosOutputNote.
+  ///
+  /// In en, this message translates to:
+  /// **'A USB DAC follows each song\'s sample rate; the speaker and Bluetooth keep one rate. iOS always mixes the sound, so it can\'t be bit-perfect here.'**
+  String get iosOutputNote;
+
+  /// No description provided for @outputDevice.
+  ///
+  /// In en, this message translates to:
+  /// **'Output device'**
+  String get outputDevice;
+
+  /// No description provided for @directDevicesNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Devices marked \"direct\" skip the system mixer: bit-perfect, but other apps go quiet'**
+  String get directDevicesNote;
+
+  /// No description provided for @phonesOwnOutput.
+  ///
+  /// In en, this message translates to:
+  /// **'Your phone\'s own output'**
+  String get phonesOwnOutput;
+
+  /// No description provided for @usbDacNamed.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} (USB DAC)'**
+  String usbDacNamed(String name);
+
+  /// No description provided for @bitPerfectMode.
+  ///
+  /// In en, this message translates to:
+  /// **'Bit-perfect mode'**
+  String get bitPerfectMode;
+
+  /// No description provided for @needsAndroid14.
+  ///
+  /// In en, this message translates to:
+  /// **'Needs Android 14 or later'**
+  String get needsAndroid14;
+
+  /// No description provided for @androidFormatsUnplayable.
+  ///
+  /// In en, this message translates to:
+  /// **'Android offers {dac} only in formats Riflay can\'t play bit-perfect ({bitPerfect} of {total} formats). Riflay still plays through your DAC, with Android mixing the sound first.'**
+  String androidFormatsUnplayable(String dac, int bitPerfect, int total);
+
+  /// No description provided for @phoneNoBitPerfect.
+  ///
+  /// In en, this message translates to:
+  /// **'This phone doesn\'t offer bit-perfect output for {dac}: its maker leaves it out (Android lists {count} formats for it, none bit-perfect). Riflay still plays through your DAC, with Android mixing the sound first.'**
+  String phoneNoBitPerfect(String dac, int count);
+
+  /// No description provided for @plugInDacForBitPerfect.
+  ///
+  /// In en, this message translates to:
+  /// **'Plug in a USB DAC to play bit-perfect'**
+  String get plugInDacForBitPerfect;
+
+  /// No description provided for @bitPerfectAndroid.
+  ///
+  /// In en, this message translates to:
+  /// **'Sends the file to your USB DAC untouched: no equalizer, leveling or resampling. Other apps and system sounds are muted on the DAC, and the phone\'s volume keys stop working: use your DAC\'s volume, since lowering Riflay\'s own volume changes the sound.'**
+  String get bitPerfectAndroid;
+
+  /// No description provided for @bitPerfectMac.
+  ///
+  /// In en, this message translates to:
+  /// **'No equalizer, leveling or resampling in Riflay, and your DAC follows each song\'s sample rate. Volume still works; at 100% nothing is changed. Other apps keep playing, so macOS still mixes the sound: turn on Exclusive mode too to send the file to your DAC untouched.'**
+  String get bitPerfectMac;
+
+  /// No description provided for @bitPerfectWindows.
+  ///
+  /// In en, this message translates to:
+  /// **'No equalizer, leveling or resampling in Riflay. Volume still works; at 100% nothing is changed. Other apps keep playing, so Windows still mixes the sound: turn on Exclusive mode too to send the file to your DAC untouched.'**
+  String get bitPerfectWindows;
+
+  /// No description provided for @bitPerfectLinux.
+  ///
+  /// In en, this message translates to:
+  /// **'Sends the file to your DAC untouched: no equalizer, leveling or resampling. Volume still works; at 100% nothing is changed. Takes over your DAC so the system mixer can\'t resample. Meanwhile other apps play through another output.'**
+  String get bitPerfectLinux;
+
+  /// No description provided for @nativeDsd.
+  ///
+  /// In en, this message translates to:
+  /// **'Native DSD (DoP)'**
+  String get nativeDsd;
+
+  /// No description provided for @nativeDsdSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Sends DSD files to your DAC as DSD instead of converting them. Only for DACs that support DoP: others play a faint hiss, so turn it off then. The volume stays at 100% for DSD songs; use your DAC\'s.'**
+  String get nativeDsdSubtitle;
+
+  /// No description provided for @needsBitPerfectAndDac.
+  ///
+  /// In en, this message translates to:
+  /// **'Needs Bit-perfect mode and a USB DAC that takes 176.4 kHz or higher'**
+  String get needsBitPerfectAndDac;
+
+  /// No description provided for @needsBitPerfectAndExclusive.
+  ///
+  /// In en, this message translates to:
+  /// **'Needs Bit-perfect mode and Exclusive mode'**
+  String get needsBitPerfectAndExclusive;
+
+  /// No description provided for @needsBitPerfect.
+  ///
+  /// In en, this message translates to:
+  /// **'Needs Bit-perfect mode'**
+  String get needsBitPerfect;
+
+  /// No description provided for @exclusiveMode.
+  ///
+  /// In en, this message translates to:
+  /// **'Exclusive mode'**
+  String get exclusiveMode;
+
+  /// No description provided for @exclusiveMac.
+  ///
+  /// In en, this message translates to:
+  /// **'Takes over the device so macOS can\'t mix or resample: the DAC switches to each song\'s sample rate. Other apps go silent while Riflay plays.'**
+  String get exclusiveMac;
+
+  /// No description provided for @exclusiveWindows.
+  ///
+  /// In en, this message translates to:
+  /// **'Takes over the device so Windows\' mixer can\'t resample: the DAC switches to each song\'s sample rate. Other apps go silent while Riflay plays, and Windows\' volume mixer can\'t control it.'**
+  String get exclusiveWindows;
+
+  /// No description provided for @outputSampleRate.
+  ///
+  /// In en, this message translates to:
+  /// **'Output sample rate'**
+  String get outputSampleRate;
+
+  /// No description provided for @followsEachSong.
+  ///
+  /// In en, this message translates to:
+  /// **'Follows each song while bit-perfect mode is on'**
+  String get followsEachSong;
+
+  /// No description provided for @followOrConvert.
+  ///
+  /// In en, this message translates to:
+  /// **'Follow the song, or convert everything to one rate'**
+  String get followOrConvert;
+
+  /// No description provided for @followTheSong.
+  ///
+  /// In en, this message translates to:
+  /// **'Follow the song'**
+  String get followTheSong;
+
+  /// No description provided for @hqResampler.
+  ///
+  /// In en, this message translates to:
+  /// **'High-quality resampler'**
+  String get hqResampler;
+
+  /// No description provided for @hqResamplerSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'SoX-grade conversion whenever the rate has to change (slightly more CPU)'**
+  String get hqResamplerSubtitle;
+
+  /// No description provided for @buffer.
+  ///
+  /// In en, this message translates to:
+  /// **'Buffer'**
+  String get buffer;
+
+  /// No description provided for @bufferSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Raise it if you hear crackles or dropouts'**
+  String get bufferSubtitle;
+
+  /// No description provided for @signalPathSubtitleExact.
+  ///
+  /// In en, this message translates to:
+  /// **'See exactly what happens to the song you\'re playing'**
+  String get signalPathSubtitleExact;
+
+  /// No description provided for @directUsbIntro.
+  ///
+  /// In en, this message translates to:
+  /// **'Riflay talks to your USB DAC itself, past Android, so songs reach it untouched even on phones where Bit-perfect mode can\'t. Experimental.'**
+  String get directUsbIntro;
+
+  /// No description provided for @directUsbPlugIn.
+  ///
+  /// In en, this message translates to:
+  /// **'On. Plug in a USB DAC.'**
+  String get directUsbPlugIn;
+
+  /// No description provided for @directUsbAllow.
+  ///
+  /// In en, this message translates to:
+  /// **'On. Allow Riflay to use {dac}.'**
+  String directUsbAllow(String dac);
+
+  /// No description provided for @directUsbBitPerfectTo.
+  ///
+  /// In en, this message translates to:
+  /// **'Bit-perfect to {dac}'**
+  String directUsbBitPerfectTo(String dac);
+
+  /// No description provided for @directUsbFallback.
+  ///
+  /// In en, this message translates to:
+  /// **'This song{format} is in a format {dac} doesn\'t take, so it plays through Android.'**
+  String directUsbFallback(String format, String dac);
+
+  /// No description provided for @directUsbOnWith.
+  ///
+  /// In en, this message translates to:
+  /// **'On, with {dac}. Play a song.'**
+  String directUsbOnWith(String dac);
+
+  /// No description provided for @allowUsbAccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Allow USB access'**
+  String get allowUsbAccess;
+
+  /// No description provided for @problemWith.
+  ///
+  /// In en, this message translates to:
+  /// **'Problem: {error}'**
+  String problemWith(String error);
+
+  /// No description provided for @directUsbPipe.
+  ///
+  /// In en, this message translates to:
+  /// **'Pipe: {state} · Output: {output}'**
+  String directUsbPipe(String state, String output);
+
+  /// No description provided for @pipeOpen.
+  ///
+  /// In en, this message translates to:
+  /// **'open'**
+  String get pipeOpen;
+
+  /// No description provided for @pipeClosed.
+  ///
+  /// In en, this message translates to:
+  /// **'closed'**
+  String get pipeClosed;
+
+  /// No description provided for @fromThePlayer.
+  ///
+  /// In en, this message translates to:
+  /// **'From the player: {format}'**
+  String fromThePlayer(String format);
+
+  /// No description provided for @directUsbRoute.
+  ///
+  /// In en, this message translates to:
+  /// **'Route: {route}'**
+  String directUsbRoute(String route);
+
+  /// No description provided for @dropouts.
+  ///
+  /// In en, this message translates to:
+  /// **'Dropouts: {count}'**
+  String dropouts(String count);
+
+  /// No description provided for @directUsb.
+  ///
+  /// In en, this message translates to:
+  /// **'Direct USB'**
+  String get directUsb;
+
+  /// No description provided for @styleClassic.
+  ///
+  /// In en, this message translates to:
+  /// **'Classic'**
+  String get styleClassic;
+
+  /// No description provided for @styleCompact.
+  ///
+  /// In en, this message translates to:
+  /// **'Compact'**
+  String get styleCompact;
+
+  /// No description provided for @styleMinimal.
+  ///
+  /// In en, this message translates to:
+  /// **'Minimal'**
+  String get styleMinimal;
+
+  /// No description provided for @vizWave.
+  ///
+  /// In en, this message translates to:
+  /// **'Wave'**
+  String get vizWave;
+
+  /// No description provided for @vizBars.
+  ///
+  /// In en, this message translates to:
+  /// **'Bars'**
+  String get vizBars;
+
+  /// No description provided for @vizLine.
+  ///
+  /// In en, this message translates to:
+  /// **'Line'**
+  String get vizLine;
+
+  /// No description provided for @vizDots.
+  ///
+  /// In en, this message translates to:
+  /// **'Dots'**
+  String get vizDots;
+
+  /// No description provided for @vizMirror.
+  ///
+  /// In en, this message translates to:
+  /// **'Mirror'**
+  String get vizMirror;
+
+  /// No description provided for @vizTwinWaves.
+  ///
+  /// In en, this message translates to:
+  /// **'Twin waves'**
+  String get vizTwinWaves;
+
+  /// No description provided for @vizPulse.
+  ///
+  /// In en, this message translates to:
+  /// **'Pulse'**
+  String get vizPulse;
+
+  /// No description provided for @vizOrbit.
+  ///
+  /// In en, this message translates to:
+  /// **'Orbit'**
+  String get vizOrbit;
+
+  /// No description provided for @vizPetals.
+  ///
+  /// In en, this message translates to:
+  /// **'Petals'**
+  String get vizPetals;
+
+  /// No description provided for @vizPeaks.
+  ///
+  /// In en, this message translates to:
+  /// **'Peaks'**
+  String get vizPeaks;
+
+  /// No description provided for @shapeFlower.
+  ///
+  /// In en, this message translates to:
+  /// **'Flower'**
+  String get shapeFlower;
+
+  /// No description provided for @shapeSquare.
+  ///
+  /// In en, this message translates to:
+  /// **'Square'**
+  String get shapeSquare;
+
+  /// No description provided for @shapeRounded.
+  ///
+  /// In en, this message translates to:
+  /// **'Rounded'**
+  String get shapeRounded;
+
+  /// No description provided for @shapeExtraRound.
+  ///
+  /// In en, this message translates to:
+  /// **'Extra round'**
+  String get shapeExtraRound;
+
+  /// No description provided for @densityComfortable.
+  ///
+  /// In en, this message translates to:
+  /// **'Comfortable'**
+  String get densityComfortable;
+
+  /// No description provided for @sizeSmall.
+  ///
+  /// In en, this message translates to:
+  /// **'Small'**
+  String get sizeSmall;
+
+  /// No description provided for @sizeMedium.
+  ///
+  /// In en, this message translates to:
+  /// **'Medium'**
+  String get sizeMedium;
+
+  /// No description provided for @sizeLarge.
+  ///
+  /// In en, this message translates to:
+  /// **'Large'**
+  String get sizeLarge;
+
+  /// No description provided for @motionFull.
+  ///
+  /// In en, this message translates to:
+  /// **'Full'**
+  String get motionFull;
+
+  /// No description provided for @motionReduced.
+  ///
+  /// In en, this message translates to:
+  /// **'Reduced'**
+  String get motionReduced;
+
+  /// No description provided for @decoderAuto.
+  ///
+  /// In en, this message translates to:
+  /// **'Automatic'**
+  String get decoderAuto;
+
+  /// No description provided for @decoderGpu.
+  ///
+  /// In en, this message translates to:
+  /// **'Graphics card'**
+  String get decoderGpu;
+
+  /// No description provided for @decoderCpu.
+  ///
+  /// In en, this message translates to:
+  /// **'Processor'**
+  String get decoderCpu;
+
+  /// No description provided for @decoderAutoNote.
+  ///
+  /// In en, this message translates to:
+  /// **'The graphics card when it is known to work, else the processor'**
+  String get decoderAutoNote;
+
+  /// No description provided for @decoderGpuNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Always try the graphics card first. Lightest, if your drivers cope'**
+  String get decoderGpuNote;
+
+  /// No description provided for @decoderCpuNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Never the graphics card. Uses more power; try it if videos look wrong'**
+  String get decoderCpuNote;
+
+  /// No description provided for @perfLight.
+  ///
+  /// In en, this message translates to:
+  /// **'Lightweight'**
+  String get perfLight;
+
+  /// No description provided for @perfBalanced.
+  ///
+  /// In en, this message translates to:
+  /// **'Balanced'**
+  String get perfBalanced;
+
+  /// No description provided for @perfHeavy.
+  ///
+  /// In en, this message translates to:
+  /// **'Heavy'**
+  String get perfHeavy;
+
+  /// No description provided for @perfLightNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Fewest effects. Best for older computers and battery.'**
+  String get perfLightNote;
+
+  /// No description provided for @perfBalancedNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Smooth animations with sensible limits.'**
+  String get perfBalancedNote;
+
+  /// No description provided for @perfHeavyNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Every effect at full speed. Uses more power.'**
+  String get perfHeavyNote;
+
+  /// No description provided for @styleThin.
+  ///
+  /// In en, this message translates to:
+  /// **'Thin'**
+  String get styleThin;
+
+  /// No description provided for @styleThick.
+  ///
+  /// In en, this message translates to:
+  /// **'Thick'**
+  String get styleThick;
+
+  /// No description provided for @shapeStraight.
+  ///
+  /// In en, this message translates to:
+  /// **'Straight'**
+  String get shapeStraight;
+
+  /// No description provided for @shapeWavy.
+  ///
+  /// In en, this message translates to:
+  /// **'Wavy'**
+  String get shapeWavy;
+
+  /// No description provided for @shapePill.
+  ///
+  /// In en, this message translates to:
+  /// **'Pill'**
+  String get shapePill;
+
+  /// No description provided for @shapeThinLine.
+  ///
+  /// In en, this message translates to:
+  /// **'Thin line'**
+  String get shapeThinLine;
+
+  /// No description provided for @shapeCircle.
+  ///
+  /// In en, this message translates to:
+  /// **'Circle'**
+  String get shapeCircle;
+
+  /// No description provided for @shapeRoundedSquare.
+  ///
+  /// In en, this message translates to:
+  /// **'Rounded square'**
+  String get shapeRoundedSquare;
+
+  /// No description provided for @sizeNormal.
+  ///
+  /// In en, this message translates to:
+  /// **'Normal'**
+  String get sizeNormal;
+
+  /// No description provided for @coverBackground.
+  ///
+  /// In en, this message translates to:
+  /// **'Background'**
+  String get coverBackground;
+
+  /// No description provided for @headerCentred.
+  ///
+  /// In en, this message translates to:
+  /// **'Centred'**
+  String get headerCentred;
+
+  /// No description provided for @headerPlayingFrom.
+  ///
+  /// In en, this message translates to:
+  /// **'Playing from'**
+  String get headerPlayingFrom;
+
+  /// No description provided for @styleBoxed.
+  ///
+  /// In en, this message translates to:
+  /// **'Boxed'**
+  String get styleBoxed;
+
+  /// No description provided for @stylePlain.
+  ///
+  /// In en, this message translates to:
+  /// **'Plain'**
+  String get stylePlain;
+
+  /// No description provided for @styleChips.
+  ///
+  /// In en, this message translates to:
+  /// **'Chips'**
+  String get styleChips;
+
+  /// No description provided for @styleIcons.
+  ///
+  /// In en, this message translates to:
+  /// **'Icons'**
+  String get styleIcons;
+
+  /// No description provided for @styleBottomCard.
+  ///
+  /// In en, this message translates to:
+  /// **'Bottom card'**
+  String get styleBottomCard;
+
+  /// No description provided for @styleTopHeader.
+  ///
+  /// In en, this message translates to:
+  /// **'Top header'**
+  String get styleTopHeader;
+
+  /// No description provided for @styleFloatingPill.
+  ///
+  /// In en, this message translates to:
+  /// **'Floating pill'**
+  String get styleFloatingPill;
+
+  /// No description provided for @styleHero.
+  ///
+  /// In en, this message translates to:
+  /// **'Hero'**
+  String get styleHero;
+
+  /// No description provided for @badgeUnderArtist.
+  ///
+  /// In en, this message translates to:
+  /// **'Under the artist'**
+  String get badgeUnderArtist;
+
+  /// No description provided for @badgeTimeRow.
+  ///
+  /// In en, this message translates to:
+  /// **'In the time row'**
+  String get badgeTimeRow;
+
+  /// No description provided for @styleHighlightedCard.
+  ///
+  /// In en, this message translates to:
+  /// **'Highlighted card'**
+  String get styleHighlightedCard;
+
+  /// No description provided for @sizeLargest.
+  ///
+  /// In en, this message translates to:
+  /// **'Largest'**
+  String get sizeLargest;
+
+  /// No description provided for @lyricsFocused.
+  ///
+  /// In en, this message translates to:
+  /// **'Focused'**
+  String get lyricsFocused;
+
+  /// No description provided for @lyricsWordByWord.
+  ///
+  /// In en, this message translates to:
+  /// **'Word by word'**
+  String get lyricsWordByWord;
+
+  /// No description provided for @lyricsLineByLine.
+  ///
+  /// In en, this message translates to:
+  /// **'Line by line'**
+  String get lyricsLineByLine;
+
+  /// No description provided for @alignLeft.
+  ///
+  /// In en, this message translates to:
+  /// **'Left'**
+  String get alignLeft;
+
+  /// No description provided for @alignCentre.
+  ///
+  /// In en, this message translates to:
+  /// **'Centre'**
+  String get alignCentre;
+
+  /// No description provided for @styleMaterial.
+  ///
+  /// In en, this message translates to:
+  /// **'Material'**
+  String get styleMaterial;
+
+  /// No description provided for @styleUnderline.
+  ///
+  /// In en, this message translates to:
+  /// **'Underline'**
+  String get styleUnderline;
+
+  /// No description provided for @styleTextOnly.
+  ///
+  /// In en, this message translates to:
+  /// **'Text only'**
+  String get styleTextOnly;
+
+  /// No description provided for @styleFloating.
+  ///
+  /// In en, this message translates to:
+  /// **'Floating'**
+  String get styleFloating;
+
+  /// No description provided for @styleCapsule.
+  ///
+  /// In en, this message translates to:
+  /// **'Capsule'**
+  String get styleCapsule;
+
+  /// No description provided for @styleDock.
+  ///
+  /// In en, this message translates to:
+  /// **'Dock'**
+  String get styleDock;
+
+  /// No description provided for @styleCentreButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Centre button'**
+  String get styleCentreButton;
+
+  /// No description provided for @styleLiquidGlass.
+  ///
+  /// In en, this message translates to:
+  /// **'Liquid glass'**
+  String get styleLiquidGlass;
+
+  /// No description provided for @quickPicks.
+  ///
+  /// In en, this message translates to:
+  /// **'Quick picks'**
+  String get quickPicks;
+
+  /// No description provided for @fromYoutubeMusic.
+  ///
+  /// In en, this message translates to:
+  /// **'From YouTube Music'**
+  String get fromYoutubeMusic;
+
+  /// No description provided for @presets.
+  ///
+  /// In en, this message translates to:
+  /// **'Presets'**
+  String get presets;
+
+  /// No description provided for @custom.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom'**
+  String get custom;
+
+  /// No description provided for @matchesPreset.
+  ///
+  /// In en, this message translates to:
+  /// **'Matches {preset}'**
+  String matchesPreset(String preset);
+
+  /// No description provided for @fullScreenPlayerHint.
+  ///
+  /// In en, this message translates to:
+  /// **'The full-screen player'**
+  String get fullScreenPlayerHint;
+
+  /// No description provided for @cover.
+  ///
+  /// In en, this message translates to:
+  /// **'Cover'**
+  String get cover;
+
+  /// No description provided for @coverSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Square or flower frame the cover. Background has no frame: it fills the top and fades into the page'**
+  String get coverSubtitle;
+
+  /// No description provided for @coverSizeOnPhones.
+  ///
+  /// In en, this message translates to:
+  /// **'Cover size on phones'**
+  String get coverSizeOnPhones;
+
+  /// No description provided for @coverSizeOnPhonesSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Large reaches nearly the edges of the screen'**
+  String get coverSizeOnPhonesSubtitle;
+
+  /// No description provided for @topOfPlayer.
+  ///
+  /// In en, this message translates to:
+  /// **'Top of the player'**
+  String get topOfPlayer;
+
+  /// No description provided for @topOfPlayerSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'What the top shows beside the close arrow, or above the song on desktop'**
+  String get topOfPlayerSubtitle;
+
+  /// No description provided for @buttonsByTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Buttons by the title'**
+  String get buttonsByTitle;
+
+  /// No description provided for @buttonsByTitleSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Like and More as they are, a joined Share and heart pair, or plain icons. The song menu stays on desktop'**
+  String get buttonsByTitleSubtitle;
+
+  /// No description provided for @showSoundQuality.
+  ///
+  /// In en, this message translates to:
+  /// **'Show sound quality'**
+  String get showSoundQuality;
+
+  /// No description provided for @showSoundQualitySubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'The small label under the song title, such as FLAC or Hi-Res'**
+  String get showSoundQualitySubtitle;
+
+  /// No description provided for @songVideoSwitch.
+  ///
+  /// In en, this message translates to:
+  /// **'Song / Video switch'**
+  String get songVideoSwitch;
+
+  /// No description provided for @songVideoSwitchSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'At the top of Now Playing. Adaptive shows it only when the song has a music video'**
+  String get songVideoSwitchSubtitle;
+
+  /// No description provided for @adaptive.
+  ///
+  /// In en, this message translates to:
+  /// **'Adaptive'**
+  String get adaptive;
+
+  /// No description provided for @qualityBadge.
+  ///
+  /// In en, this message translates to:
+  /// **'Quality badge'**
+  String get qualityBadge;
+
+  /// No description provided for @qualityBadgeSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Where FLAC or Opus 130 kbps sits on the phone player: under the artist, or between the two times'**
+  String get qualityBadgeSubtitle;
+
+  /// No description provided for @background.
+  ///
+  /// In en, this message translates to:
+  /// **'Background'**
+  String get background;
+
+  /// No description provided for @backgroundSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'What fills the page behind the player. Cover: Background replaces it'**
+  String get backgroundSubtitle;
+
+  /// No description provided for @videoMode.
+  ///
+  /// In en, this message translates to:
+  /// **'Video mode'**
+  String get videoMode;
+
+  /// No description provided for @videoModeSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Watch music videos in sync with the song'**
+  String get videoModeSubtitle;
+
+  /// No description provided for @videoDecoding.
+  ///
+  /// In en, this message translates to:
+  /// **'Video decoding'**
+  String get videoDecoding;
+
+  /// No description provided for @decoderNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Now: {decoder}'**
+  String decoderNow(String decoder);
+
+  /// No description provided for @decoderNowCpu.
+  ///
+  /// In en, this message translates to:
+  /// **'the processor'**
+  String get decoderNowCpu;
+
+  /// No description provided for @decoderNowGpu.
+  ///
+  /// In en, this message translates to:
+  /// **'graphics card ({hwdec})'**
+  String decoderNowGpu(String hwdec);
+
+  /// No description provided for @playbackControls.
+  ///
+  /// In en, this message translates to:
+  /// **'Playback controls'**
+  String get playbackControls;
+
+  /// No description provided for @playbackControlsHint.
+  ///
+  /// In en, this message translates to:
+  /// **'The progress bar, the buttons and the row under them'**
+  String get playbackControlsHint;
+
+  /// No description provided for @progressBarShape.
+  ///
+  /// In en, this message translates to:
+  /// **'Progress bar shape'**
+  String get progressBarShape;
+
+  /// No description provided for @progressBar.
+  ///
+  /// In en, this message translates to:
+  /// **'Progress bar'**
+  String get progressBar;
+
+  /// No description provided for @progressBarSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'How thick the bar you drag to skip around is'**
+  String get progressBarSubtitle;
+
+  /// No description provided for @showTimeLeft.
+  ///
+  /// In en, this message translates to:
+  /// **'Show time left'**
+  String get showTimeLeft;
+
+  /// No description provided for @showTimeLeftSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'The right time counts down instead of showing the total, also on the desktop bar'**
+  String get showTimeLeftSubtitle;
+
+  /// No description provided for @controls.
+  ///
+  /// In en, this message translates to:
+  /// **'Controls'**
+  String get controls;
+
+  /// No description provided for @controlsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Previous, play and next as circles, a wide Play pill, or plain big icons, also on the desktop bar'**
+  String get controlsSubtitle;
+
+  /// No description provided for @playButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Play button'**
+  String get playButton;
+
+  /// No description provided for @playButtonSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'The shape of the big play and pause button'**
+  String get playButtonSubtitle;
+
+  /// No description provided for @volumeSlider.
+  ///
+  /// In en, this message translates to:
+  /// **'Volume slider'**
+  String get volumeSlider;
+
+  /// No description provided for @volumeSliderSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'At the very bottom of the phone player. Off, it opens from the speaker button (Icons) or the desktop bar button'**
+  String get volumeSliderSubtitle;
+
+  /// No description provided for @sliderLook.
+  ///
+  /// In en, this message translates to:
+  /// **'Slider look'**
+  String get sliderLook;
+
+  /// No description provided for @sliderLookSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Every slider: volume, the equalizer and settings. Classic, a thin line, or a thick pill with a bar handle'**
+  String get sliderLookSubtitle;
+
+  /// No description provided for @bottomButtons.
+  ///
+  /// In en, this message translates to:
+  /// **'Bottom buttons'**
+  String get bottomButtons;
+
+  /// No description provided for @bottomButtonsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Lyrics and Queue; a joined row of icon buttons; or Lyrics, a speaker and person capsule and Queue. Icons only, Lyrics is always there'**
+  String get bottomButtonsSubtitle;
+
+  /// No description provided for @lyricsHint.
+  ///
+  /// In en, this message translates to:
+  /// **'The lyrics page, and the lyrics beside the cover on desktop'**
+  String get lyricsHint;
+
+  /// No description provided for @lyricsPage.
+  ///
+  /// In en, this message translates to:
+  /// **'Lyrics page'**
+  String get lyricsPage;
+
+  /// No description provided for @lyricsPageSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Where the player sits on the lyrics page. Desktop gets a song card on top or at the bottom'**
+  String get lyricsPageSubtitle;
+
+  /// No description provided for @linesShown.
+  ///
+  /// In en, this message translates to:
+  /// **'Lines shown'**
+  String get linesShown;
+
+  /// No description provided for @linesShownSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'All keeps the whole song in view. Focused shows only the previous, the current and the next line'**
+  String get linesShownSubtitle;
+
+  /// No description provided for @sync.
+  ///
+  /// In en, this message translates to:
+  /// **'Sync'**
+  String get sync;
+
+  /// No description provided for @syncSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Word by word fills each word as it is sung, where the lyrics have word timings. Line by line lights the whole line'**
+  String get syncSubtitle;
+
+  /// No description provided for @textSize.
+  ///
+  /// In en, this message translates to:
+  /// **'Text size'**
+  String get textSize;
+
+  /// No description provided for @lyricsTextSizeSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'How big the lyrics are'**
+  String get lyricsTextSizeSubtitle;
+
+  /// No description provided for @alignment.
+  ///
+  /// In en, this message translates to:
+  /// **'Alignment'**
+  String get alignment;
+
+  /// No description provided for @alignmentSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Lines start at the left edge, or sit in the middle'**
+  String get alignmentSubtitle;
+
+  /// No description provided for @dimUnsung.
+  ///
+  /// In en, this message translates to:
+  /// **'Dim lines not yet sung'**
+  String get dimUnsung;
+
+  /// No description provided for @dimUnsungSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Only the line being sung and the ones before it stay bright'**
+  String get dimUnsungSubtitle;
+
+  /// No description provided for @visualizer.
+  ///
+  /// In en, this message translates to:
+  /// **'Visualizer'**
+  String get visualizer;
+
+  /// No description provided for @visualizerHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Shapes that move with the music'**
+  String get visualizerHint;
+
+  /// No description provided for @pages.
+  ///
+  /// In en, this message translates to:
+  /// **'Pages'**
+  String get pages;
+
+  /// No description provided for @pagesHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Album, playlist and artist pages, song lists and Home'**
+  String get pagesHint;
+
+  /// No description provided for @albumPlaylistTop.
+  ///
+  /// In en, this message translates to:
+  /// **'Album and playlist top'**
+  String get albumPlaylistTop;
+
+  /// No description provided for @albumPlaylistTopSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Hero: a big cover fading behind the title, round buttons around a Play pill. Also on artist pages'**
+  String get albumPlaylistTopSubtitle;
+
+  /// No description provided for @songThatIsPlaying.
+  ///
+  /// In en, this message translates to:
+  /// **'Song that is playing'**
+  String get songThatIsPlaying;
+
+  /// No description provided for @songThatIsPlayingSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'In a list of songs: coloured text, or a filled rounded card with the bars'**
+  String get songThatIsPlayingSubtitle;
+
+  /// No description provided for @bars.
+  ///
+  /// In en, this message translates to:
+  /// **'Bars'**
+  String get bars;
+
+  /// No description provided for @barsHint.
+  ///
+  /// In en, this message translates to:
+  /// **'The mini player and the bars that hold the controls'**
+  String get barsHint;
+
+  /// No description provided for @miniPlayerSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'The bar above the tabs when a song plays, on phones. Floating pill has a flower cover and round buttons'**
+  String get miniPlayerSubtitle;
+
+  /// No description provided for @tabBarOnPhones.
+  ///
+  /// In en, this message translates to:
+  /// **'Tab bar on phones'**
+  String get tabBarOnPhones;
+
+  /// No description provided for @tabBarOnPhonesSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Classic sits at the bottom edge; Floating and Liquid glass hover above it'**
+  String get tabBarOnPhonesSubtitle;
+
+  /// No description provided for @desktopPlayerBar.
+  ///
+  /// In en, this message translates to:
+  /// **'Desktop player bar'**
+  String get desktopPlayerBar;
+
+  /// No description provided for @desktopPlayerBarSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Along the window\'s foot: full-width controls, a compact row beside the song, or a minimal strip'**
+  String get desktopPlayerBarSubtitle;
+
+  /// No description provided for @shapesAndMotion.
+  ///
+  /// In en, this message translates to:
+  /// **'Shapes and motion'**
+  String get shapesAndMotion;
+
+  /// No description provided for @motionOffLightweight.
+  ///
+  /// In en, this message translates to:
+  /// **'Performance is set to Lightweight, so the motion settings stay off.'**
+  String get motionOffLightweight;
+
+  /// No description provided for @corners.
+  ///
+  /// In en, this message translates to:
+  /// **'Corners'**
+  String get corners;
+
+  /// No description provided for @cornersSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Covers, cards, menus, dialogs and the mini player'**
+  String get cornersSubtitle;
+
+  /// No description provided for @spacing.
+  ///
+  /// In en, this message translates to:
+  /// **'Spacing'**
+  String get spacing;
+
+  /// No description provided for @spacingSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Compact fits more songs and cards on screen'**
+  String get spacingSubtitle;
+
+  /// No description provided for @coverSizeInGrids.
+  ///
+  /// In en, this message translates to:
+  /// **'Cover size in grids'**
+  String get coverSizeInGrids;
+
+  /// No description provided for @coverSizeInGridsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'The albums and playlists on Home and in \"Show all\"'**
+  String get coverSizeInGridsSubtitle;
+
+  /// No description provided for @transitionStyle.
+  ///
+  /// In en, this message translates to:
+  /// **'Transition style'**
+  String get transitionStyle;
+
+  /// No description provided for @transitionStyleSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Coordinated page, tab and player transitions'**
+  String get transitionStyleSubtitle;
+
+  /// No description provided for @transitionSpeed.
+  ///
+  /// In en, this message translates to:
+  /// **'Transition speed'**
+  String get transitionSpeed;
+
+  /// No description provided for @transitionSpeedSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a brisk or more relaxed pace'**
+  String get transitionSpeedSubtitle;
+
+  /// No description provided for @animations.
+  ///
+  /// In en, this message translates to:
+  /// **'Animations'**
+  String get animations;
+
+  /// No description provided for @animationsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Reduced keeps quick fades only. Full follows your system when it asks for less motion'**
+  String get animationsSubtitle;
+
+  /// No description provided for @window.
+  ///
+  /// In en, this message translates to:
+  /// **'Window'**
+  String get window;
+
+  /// No description provided for @desktopOnly.
+  ///
+  /// In en, this message translates to:
+  /// **'Desktop only'**
+  String get desktopOnly;
+
+  /// No description provided for @windowButtons.
+  ///
+  /// In en, this message translates to:
+  /// **'Window buttons'**
+  String get windowButtons;
+
+  /// No description provided for @windowButtonsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Minimize, maximize and close in the title bar. Turn off with a tiling window manager'**
+  String get windowButtonsSubtitle;
+
+  /// No description provided for @resetLayout.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset layout to default'**
+  String get resetLayout;
+
+  /// No description provided for @dragToReorderSections.
+  ///
+  /// In en, this message translates to:
+  /// **'Drag the handle to put sections in a different order'**
+  String get dragToReorderSections;
+
+  /// No description provided for @audioVisualizer.
+  ///
+  /// In en, this message translates to:
+  /// **'Audio visualizer'**
+  String get audioVisualizer;
+
+  /// No description provided for @audioVisualizerSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Shapes that move with the music around the cover and under it'**
+  String get audioVisualizerSubtitle;
+
+  /// No description provided for @visualizerStyle.
+  ///
+  /// In en, this message translates to:
+  /// **'Visualizer style'**
+  String get visualizerStyle;
+
+  /// No description provided for @visualizerStyleBackground.
+  ///
+  /// In en, this message translates to:
+  /// **'A strip under the song. Pulse, Orbit and Petals ring the cover: pick Square or Flower for them'**
+  String get visualizerStyleBackground;
+
+  /// No description provided for @visualizerStyleRings.
+  ///
+  /// In en, this message translates to:
+  /// **'Rings the cover'**
+  String get visualizerStyleRings;
+
+  /// No description provided for @visualizerStyleEdge.
+  ///
+  /// In en, this message translates to:
+  /// **'Moves along the cover\'s edge, with a strip under the song'**
+  String get visualizerStyleEdge;
+
+  /// No description provided for @radiusMovement.
+  ///
+  /// In en, this message translates to:
+  /// **'Radius movement'**
+  String get radiusMovement;
+
+  /// No description provided for @radiusMovementSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'{percent}% · How far the shape expands with the music'**
+  String radiusMovementSubtitle(String percent);
+
+  /// No description provided for @lineThickness.
+  ///
+  /// In en, this message translates to:
+  /// **'Line thickness'**
+  String get lineThickness;
+
+  /// No description provided for @signedInAs.
+  ///
+  /// In en, this message translates to:
+  /// **'Signed in as {name}'**
+  String signedInAs(String name);
+
+  /// No description provided for @ytSignedInBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Signed in. Your likes, playlists and followed artists are here.'**
+  String get ytSignedInBody;
+
+  /// No description provided for @ytSignedOutBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Not signed in. Search and the public home work without an account.'**
+  String get ytSignedOutBody;
+
+  /// No description provided for @disconnect.
+  ///
+  /// In en, this message translates to:
+  /// **'Disconnect'**
+  String get disconnect;
+
+  /// No description provided for @addToYtHistory.
+  ///
+  /// In en, this message translates to:
+  /// **'Add songs you play to your YouTube Music history'**
+  String get addToYtHistory;
+
+  /// No description provided for @addToYtHistorySubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Like the official app, so YouTube Music keeps learning what you like.'**
+  String get addToYtHistorySubtitle;
+
+  /// No description provided for @musixmatchLyrics.
+  ///
+  /// In en, this message translates to:
+  /// **'Musixmatch lyrics'**
+  String get musixmatchLyrics;
+
+  /// No description provided for @musixmatchLyricsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Find word-by-word lyrics when other sources have none'**
+  String get musixmatchLyricsSubtitle;
+
+  /// No description provided for @discordRichPresence.
+  ///
+  /// In en, this message translates to:
+  /// **'Discord Rich Presence'**
+  String get discordRichPresence;
+
+  /// No description provided for @discordRichPresenceSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Show what you\'re listening to on your Discord profile'**
+  String get discordRichPresenceSubtitle;
+
+  /// No description provided for @betterLyricsKey.
+  ///
+  /// In en, this message translates to:
+  /// **'Better Lyrics API key'**
+  String get betterLyricsKey;
+
+  /// No description provided for @betterLyricsKeyOptional.
+  ///
+  /// In en, this message translates to:
+  /// **'Optional. Lets Better Lyrics find lyrics it hasn\'t saved yet, if you have a key.'**
+  String get betterLyricsKeyOptional;
+
+  /// No description provided for @betterLyricsKeyAdded.
+  ///
+  /// In en, this message translates to:
+  /// **'Added. Better Lyrics can find lyrics it hasn\'t saved yet.'**
+  String get betterLyricsKeyAdded;
+
+  /// No description provided for @crumbsThen.
+  ///
+  /// In en, this message translates to:
+  /// **'{crumbs}, then {current}'**
+  String crumbsThen(String crumbs, String current);
+
+  /// No description provided for @crumbsJoin.
+  ///
+  /// In en, this message translates to:
+  /// **', then '**
+  String get crumbsJoin;
+
+  /// No description provided for @betterLyricsKeyInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Better Lyrics says this key isn\'t valid.'**
+  String get betterLyricsKeyInvalid;
+
+  /// No description provided for @betterLyricsUnreachable.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t reach Better Lyrics to check the key. Try again.'**
+  String get betterLyricsUnreachable;
+
+  /// No description provided for @betterLyricsKeyBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Without a key, lyrics from Better Lyrics still work for every song it has saved. Better Lyrics isn\'t giving out new keys right now.'**
+  String get betterLyricsKeyBody;
+
+  /// No description provided for @apiKey.
+  ///
+  /// In en, this message translates to:
+  /// **'API key'**
+  String get apiKey;
+
+  /// No description provided for @checking.
+  ///
+  /// In en, this message translates to:
+  /// **'Checking…'**
+  String get checking;
+
+  /// No description provided for @save.
+  ///
+  /// In en, this message translates to:
+  /// **'Save'**
+  String get save;
+
+  /// No description provided for @statsNothingPlaying.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing is playing.'**
+  String get statsNothingPlaying;
+
+  /// No description provided for @statsOtherDevice.
+  ///
+  /// In en, this message translates to:
+  /// **'Playing on another device: the stats come from the device playing.'**
+  String get statsOtherDevice;
+
+  /// No description provided for @waitingForAudio.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for audio…'**
+  String get waitingForAudio;
+
+  /// No description provided for @statsCopied.
+  ///
+  /// In en, this message translates to:
+  /// **'Stats copied'**
+  String get statsCopied;
+
+  /// No description provided for @copyStats.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy stats'**
+  String get copyStats;
+
+  /// No description provided for @statsHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Updates every second. Copy them to paste into a bug report.'**
+  String get statsHint;
+
+  /// No description provided for @themeLegacy.
+  ///
+  /// In en, this message translates to:
+  /// **'Legacy'**
+  String get themeLegacy;
+
+  /// No description provided for @themeDefault.
+  ///
+  /// In en, this message translates to:
+  /// **'Default'**
+  String get themeDefault;
+
+  /// No description provided for @themeMonochrome.
+  ///
+  /// In en, this message translates to:
+  /// **'Monochrome'**
+  String get themeMonochrome;
+
+  /// No description provided for @modeDark.
+  ///
+  /// In en, this message translates to:
+  /// **'Dark'**
+  String get modeDark;
+
+  /// No description provided for @modeLight.
+  ///
+  /// In en, this message translates to:
+  /// **'Light'**
+  String get modeLight;
+
+  /// No description provided for @modeBlack.
+  ///
+  /// In en, this message translates to:
+  /// **'Black'**
+  String get modeBlack;
+
+  /// No description provided for @modeSystem.
+  ///
+  /// In en, this message translates to:
+  /// **'Match system'**
+  String get modeSystem;
+
+  /// No description provided for @accentTheme.
+  ///
+  /// In en, this message translates to:
+  /// **'Theme'**
+  String get accentTheme;
+
+  /// No description provided for @accentTeal.
+  ///
+  /// In en, this message translates to:
+  /// **'Teal'**
+  String get accentTeal;
+
+  /// No description provided for @accentGreen.
+  ///
+  /// In en, this message translates to:
+  /// **'Green'**
+  String get accentGreen;
+
+  /// No description provided for @accentBlue.
+  ///
+  /// In en, this message translates to:
+  /// **'Blue'**
+  String get accentBlue;
+
+  /// No description provided for @accentViolet.
+  ///
+  /// In en, this message translates to:
+  /// **'Violet'**
+  String get accentViolet;
+
+  /// No description provided for @accentPink.
+  ///
+  /// In en, this message translates to:
+  /// **'Pink'**
+  String get accentPink;
+
+  /// No description provided for @accentOrange.
+  ///
+  /// In en, this message translates to:
+  /// **'Orange'**
+  String get accentOrange;
+
+  /// No description provided for @accentWhite.
+  ///
+  /// In en, this message translates to:
+  /// **'White'**
+  String get accentWhite;
+
+  /// No description provided for @customEllipsis.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom…'**
+  String get customEllipsis;
+
+  /// No description provided for @coverColorPlayer.
+  ///
+  /// In en, this message translates to:
+  /// **'Player only'**
+  String get coverColorPlayer;
+
+  /// No description provided for @coverColorApp.
+  ///
+  /// In en, this message translates to:
+  /// **'Whole app'**
+  String get coverColorApp;
+
+  /// No description provided for @npBgSimple.
+  ///
+  /// In en, this message translates to:
+  /// **'Simple'**
+  String get npBgSimple;
+
+  /// No description provided for @npBgBlurredCover.
+  ///
+  /// In en, this message translates to:
+  /// **'Blurred cover'**
+  String get npBgBlurredCover;
+
+  /// No description provided for @npBgMusicVideo.
+  ///
+  /// In en, this message translates to:
+  /// **'Music video'**
+  String get npBgMusicVideo;
+
+  /// No description provided for @npBgMusicVideoHint.
+  ///
+  /// In en, this message translates to:
+  /// **'The song\'s music video, when it has one'**
+  String get npBgMusicVideoHint;
+
+  /// No description provided for @theme.
+  ///
+  /// In en, this message translates to:
+  /// **'Theme'**
+  String get theme;
+
+  /// No description provided for @matugenColors.
+  ///
+  /// In en, this message translates to:
+  /// **'Matugen colors'**
+  String get matugenColors;
+
+  /// No description provided for @matugenChoose.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a generated JSON file. Colors update automatically.'**
+  String get matugenChoose;
+
+  /// No description provided for @matugenFollowing.
+  ///
+  /// In en, this message translates to:
+  /// **'Following generated colors automatically'**
+  String get matugenFollowing;
+
+  /// No description provided for @matugenFind.
+  ///
+  /// In en, this message translates to:
+  /// **'Find generated colors automatically'**
+  String get matugenFind;
+
+  /// No description provided for @coloursFromCover.
+  ///
+  /// In en, this message translates to:
+  /// **'Colours come from the cover of what\'s playing'**
+  String get coloursFromCover;
+
+  /// No description provided for @backgroundColour.
+  ///
+  /// In en, this message translates to:
+  /// **'Background colour'**
+  String get backgroundColour;
+
+  /// No description provided for @backgroundColourSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Panels, cards and menus are worked out from it'**
+  String get backgroundColourSubtitle;
+
+  /// No description provided for @textColour.
+  ///
+  /// In en, this message translates to:
+  /// **'Text colour'**
+  String get textColour;
+
+  /// No description provided for @textColourAuto.
+  ///
+  /// In en, this message translates to:
+  /// **'Chosen to suit the background'**
+  String get textColourAuto;
+
+  /// No description provided for @textColourAdjusted.
+  ///
+  /// In en, this message translates to:
+  /// **'Lightened or darkened where it would be hard to read'**
+  String get textColourAdjusted;
+
+  /// No description provided for @automatic.
+  ///
+  /// In en, this message translates to:
+  /// **'Automatic'**
+  String get automatic;
+
+  /// No description provided for @mode.
+  ///
+  /// In en, this message translates to:
+  /// **'Mode'**
+  String get mode;
+
+  /// No description provided for @modeSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Light or dark, for every theme'**
+  String get modeSubtitle;
+
+  /// No description provided for @accentColour.
+  ///
+  /// In en, this message translates to:
+  /// **'Accent colour'**
+  String get accentColour;
+
+  /// No description provided for @coloursFromCoverArt.
+  ///
+  /// In en, this message translates to:
+  /// **'Colours from cover art'**
+  String get coloursFromCoverArt;
+
+  /// No description provided for @coverColorOffNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Colours stay as the theme has them'**
+  String get coverColorOffNote;
+
+  /// No description provided for @coverColorPlayerNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Tint the player and pages with the colour of what\'s playing'**
+  String get coverColorPlayerNote;
+
+  /// No description provided for @coverColorAppNote.
+  ///
+  /// In en, this message translates to:
+  /// **'The whole app takes the colour of what\'s playing'**
+  String get coverColorAppNote;
+
+  /// No description provided for @colourStrength.
+  ///
+  /// In en, this message translates to:
+  /// **'Colour strength'**
+  String get colourStrength;
+
+  /// No description provided for @colourStrengthSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'How much of the cover\'s colour shows in backgrounds and panels'**
+  String get colourStrengthSubtitle;
+
+  /// No description provided for @strengthSubtle.
+  ///
+  /// In en, this message translates to:
+  /// **'Subtle'**
+  String get strengthSubtle;
+
+  /// No description provided for @strengthStrong.
+  ///
+  /// In en, this message translates to:
+  /// **'Strong'**
+  String get strengthStrong;
+
+  /// No description provided for @highContrast.
+  ///
+  /// In en, this message translates to:
+  /// **'High contrast'**
+  String get highContrast;
+
+  /// No description provided for @highContrastSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Brighter text and clearer edges, easier to read'**
+  String get highContrastSubtitle;
+
+  /// No description provided for @textSizeSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Body text, in pixels; titles and labels grow with it. {size} px is the default'**
+  String textSizeSubtitle(int size);
+
+  /// No description provided for @font.
+  ///
+  /// In en, this message translates to:
+  /// **'Font'**
+  String get font;
+
+  /// No description provided for @openFontsFolder.
+  ///
+  /// In en, this message translates to:
+  /// **'Open the fonts folder (put .ttf or .otf files here)'**
+  String get openFontsFolder;
+
+  /// No description provided for @nowPlayingBackground.
+  ///
+  /// In en, this message translates to:
+  /// **'Now playing background'**
+  String get nowPlayingBackground;
+
+  /// No description provided for @nowPlayingBackgroundSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Only the Now Playing and expanded player pages'**
+  String get nowPlayingBackgroundSubtitle;
+
+  /// No description provided for @frostedGlass.
+  ///
+  /// In en, this message translates to:
+  /// **'Frosted glass'**
+  String get frostedGlass;
+
+  /// No description provided for @frostedGlassSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'See-through, blurred mini player and tab bar. Uses a little more GPU'**
+  String get frostedGlassSubtitle;
+
+  /// No description provided for @blurStrength.
+  ///
+  /// In en, this message translates to:
+  /// **'Blur strength'**
+  String get blurStrength;
+
+  /// No description provided for @componentOpacity.
+  ///
+  /// In en, this message translates to:
+  /// **'Component opacity'**
+  String get componentOpacity;
+
+  /// No description provided for @componentOpacitySubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'See-through backgrounds with the desktop blurred behind them. Text, covers and controls stay solid'**
+  String get componentOpacitySubtitle;
+
+  /// No description provided for @backgroundOpacity.
+  ///
+  /// In en, this message translates to:
+  /// **'Background opacity'**
+  String get backgroundOpacity;
+
+  /// No description provided for @backgroundOpacityAndroid.
+  ///
+  /// In en, this message translates to:
+  /// **'Below 100% your wallpaper shows through'**
+  String get backgroundOpacityAndroid;
+
+  /// No description provided for @backgroundOpacityDesktop.
+  ///
+  /// In en, this message translates to:
+  /// **'Below 100% the desktop shows through, blurred where the system can (Windows 11, macOS, Hyprland, KDE)'**
+  String get backgroundOpacityDesktop;
+
+  /// No description provided for @resetToDefault.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset to default'**
+  String get resetToDefault;
+
+  /// No description provided for @couldntLoadFont.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load {font}.'**
+  String couldntLoadFont(String font);
+
+  /// No description provided for @searchFonts.
+  ///
+  /// In en, this message translates to:
+  /// **'Search fonts on this device'**
+  String get searchFonts;
+
+  /// No description provided for @riflaysOwnFont.
+  ///
+  /// In en, this message translates to:
+  /// **'Riflay\'s own font'**
+  String get riflaysOwnFont;
+
+  /// No description provided for @fontFiles.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 file} other{{count} files (weights and styles)}}'**
+  String fontFiles(int count);
+
+  /// No description provided for @defaultThemeFollows.
+  ///
+  /// In en, this message translates to:
+  /// **'Default theme, follows the song that is playing'**
+  String get defaultThemeFollows;
+
+  /// No description provided for @themeNamed.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} theme'**
+  String themeNamed(String name);
+
+  /// No description provided for @smaller.
+  ///
+  /// In en, this message translates to:
+  /// **'Smaller'**
+  String get smaller;
+
+  /// No description provided for @larger.
+  ///
+  /// In en, this message translates to:
+  /// **'Larger'**
+  String get larger;
+
+  /// No description provided for @levelingPerSong.
+  ///
+  /// In en, this message translates to:
+  /// **'Per song'**
+  String get levelingPerSong;
+
+  /// No description provided for @levelingPerAlbum.
+  ///
+  /// In en, this message translates to:
+  /// **'Per album'**
+  String get levelingPerAlbum;
+
+  /// No description provided for @bufferLow.
+  ///
+  /// In en, this message translates to:
+  /// **'Low latency'**
+  String get bufferLow;
+
+  /// No description provided for @bufferStable.
+  ///
+  /// In en, this message translates to:
+  /// **'Extra stable'**
+  String get bufferStable;
+
+  /// No description provided for @monoOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Off (stereo)'**
+  String get monoOff;
+
+  /// No description provided for @monoBoth.
+  ///
+  /// In en, this message translates to:
+  /// **'Both ears'**
+  String get monoBoth;
+
+  /// No description provided for @monoLeft.
+  ///
+  /// In en, this message translates to:
+  /// **'Left ear only'**
+  String get monoLeft;
+
+  /// No description provided for @monoRight.
+  ///
+  /// In en, this message translates to:
+  /// **'Right ear only'**
+  String get monoRight;
+
+  /// No description provided for @eqFlat.
+  ///
+  /// In en, this message translates to:
+  /// **'Flat'**
+  String get eqFlat;
+
+  /// No description provided for @eqBassBoost.
+  ///
+  /// In en, this message translates to:
+  /// **'Bass boost'**
+  String get eqBassBoost;
+
+  /// No description provided for @eqBassCut.
+  ///
+  /// In en, this message translates to:
+  /// **'Bass cut'**
+  String get eqBassCut;
+
+  /// No description provided for @eqTrebleBoost.
+  ///
+  /// In en, this message translates to:
+  /// **'Treble boost'**
+  String get eqTrebleBoost;
+
+  /// No description provided for @eqVocal.
+  ///
+  /// In en, this message translates to:
+  /// **'Vocal'**
+  String get eqVocal;
+
+  /// No description provided for @eqRock.
+  ///
+  /// In en, this message translates to:
+  /// **'Rock'**
+  String get eqRock;
+
+  /// No description provided for @eqPop.
+  ///
+  /// In en, this message translates to:
+  /// **'Pop'**
+  String get eqPop;
+
+  /// No description provided for @eqJazz.
+  ///
+  /// In en, this message translates to:
+  /// **'Jazz'**
+  String get eqJazz;
+
+  /// No description provided for @eqClassical.
+  ///
+  /// In en, this message translates to:
+  /// **'Classical'**
+  String get eqClassical;
+
+  /// No description provided for @eqElectronic.
+  ///
+  /// In en, this message translates to:
+  /// **'Electronic'**
+  String get eqElectronic;
+
+  /// No description provided for @eqLoudness.
+  ///
+  /// In en, this message translates to:
+  /// **'Loudness'**
+  String get eqLoudness;
+
+  /// No description provided for @dopNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Your DAC takes up to {rate}, and DoP needs 176.4 kHz, so DSD files play as PCM on it'**
+  String dopNote(String rate);
+
+  /// No description provided for @systemDefault.
+  ///
+  /// In en, this message translates to:
+  /// **'System default'**
+  String get systemDefault;
+
+  /// No description provided for @outputNotConnected.
+  ///
+  /// In en, this message translates to:
+  /// **'The chosen output isn\'t connected, so it plays through the system default for now.'**
+  String get outputNotConnected;
+
+  /// No description provided for @cardBusy.
+  ///
+  /// In en, this message translates to:
+  /// **'{card} is busy, so it plays through the system mixer for now.'**
+  String cardBusy(String card);
+
+  /// No description provided for @fxRoomCorrection.
+  ///
+  /// In en, this message translates to:
+  /// **'Room correction ({name})'**
+  String fxRoomCorrection(String name);
+
+  /// No description provided for @fxEqHeadroom.
+  ///
+  /// In en, this message translates to:
+  /// **'Equalizer headroom'**
+  String get fxEqHeadroom;
+
+  /// No description provided for @fxHrtf.
+  ///
+  /// In en, this message translates to:
+  /// **'Virtual speakers (HRTF)'**
+  String get fxHrtf;
+
+  /// No description provided for @fxMonoBoth.
+  ///
+  /// In en, this message translates to:
+  /// **'Mono (both ears)'**
+  String get fxMonoBoth;
+
+  /// No description provided for @fxMonoLeft.
+  ///
+  /// In en, this message translates to:
+  /// **'Mono (left ear only)'**
+  String get fxMonoLeft;
+
+  /// No description provided for @fxMonoRight.
+  ///
+  /// In en, this message translates to:
+  /// **'Mono (right ear only)'**
+  String get fxMonoRight;
+
+  /// No description provided for @fxPlugins.
+  ///
+  /// In en, this message translates to:
+  /// **'Audio plugins (Carla)'**
+  String get fxPlugins;
+
+  /// No description provided for @removedFromLiked.
+  ///
+  /// In en, this message translates to:
+  /// **'Removed from Liked music'**
+  String get removedFromLiked;
+
+  /// No description provided for @addedToLiked.
+  ///
+  /// In en, this message translates to:
+  /// **'Added to Liked music'**
+  String get addedToLiked;
+
+  /// No description provided for @renamePlaylist.
+  ///
+  /// In en, this message translates to:
+  /// **'Rename playlist'**
+  String get renamePlaylist;
+
+  /// No description provided for @name.
+  ///
+  /// In en, this message translates to:
+  /// **'Name'**
+  String get name;
+
+  /// No description provided for @playlistOnDeviceNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Kept on this device. Can mix your own files and YouTube Music songs.'**
+  String get playlistOnDeviceNote;
+
+  /// No description provided for @playlistOnYtNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved to your YouTube Music account, on all your devices.'**
+  String get playlistOnYtNote;
+
+  /// No description provided for @privacyPrivate.
+  ///
+  /// In en, this message translates to:
+  /// **'Only you can see it.'**
+  String get privacyPrivate;
+
+  /// No description provided for @privacyUnlisted.
+  ///
+  /// In en, this message translates to:
+  /// **'Anyone with the link can see it.'**
+  String get privacyUnlisted;
+
+  /// No description provided for @privacyPublic.
+  ///
+  /// In en, this message translates to:
+  /// **'Anyone can find and see it.'**
+  String get privacyPublic;
+
+  /// No description provided for @create.
+  ///
+  /// In en, this message translates to:
+  /// **'Create'**
+  String get create;
+
+  /// No description provided for @createdInYt.
+  ///
+  /// In en, this message translates to:
+  /// **'Created \"{title}\" in YouTube Music'**
+  String createdInYt(String title);
+
+  /// No description provided for @createdPlaylistWith.
+  ///
+  /// In en, this message translates to:
+  /// **'Created \"{title}\" with {count} songs'**
+  String createdPlaylistWith(String title, int count);
+
+  /// No description provided for @createdPlaylist.
+  ///
+  /// In en, this message translates to:
+  /// **'Created \"{title}\"'**
+  String createdPlaylist(String title);
+
+  /// No description provided for @removedFromThisPlaylist.
+  ///
+  /// In en, this message translates to:
+  /// **'Removed from this playlist'**
+  String get removedFromThisPlaylist;
+
+  /// No description provided for @makeUnlistedQuestion.
+  ///
+  /// In en, this message translates to:
+  /// **'Make it unlisted?'**
+  String get makeUnlistedQuestion;
+
+  /// No description provided for @makeUnlistedBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Friends can only join a playlist that isn\'t private. It will become unlisted: hidden from search, but anyone with the link can see it.'**
+  String get makeUnlistedBody;
+
+  /// No description provided for @makeUnlisted.
+  ///
+  /// In en, this message translates to:
+  /// **'Make unlisted'**
+  String get makeUnlisted;
+
+  /// No description provided for @inviteFriends.
+  ///
+  /// In en, this message translates to:
+  /// **'Invite friends'**
+  String get inviteFriends;
+
+  /// No description provided for @inviteLinkCopied.
+  ///
+  /// In en, this message translates to:
+  /// **'The link is copied. Send it to your friends: anyone who opens it can add songs.'**
+  String get inviteLinkCopied;
+
+  /// No description provided for @copyAgain.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy again'**
+  String get copyAgain;
+
+  /// No description provided for @done.
+  ///
+  /// In en, this message translates to:
+  /// **'Done'**
+  String get done;
+
+  /// No description provided for @stopSharingQuestion.
+  ///
+  /// In en, this message translates to:
+  /// **'Stop sharing?'**
+  String get stopSharingQuestion;
+
+  /// No description provided for @stopSharingBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Friends won\'t be able to add songs any more, and old invite links stop working.'**
+  String get stopSharingBody;
+
+  /// No description provided for @stopSharing.
+  ///
+  /// In en, this message translates to:
+  /// **'Stop sharing'**
+  String get stopSharing;
+
+  /// No description provided for @onlyYouCanAdd.
+  ///
+  /// In en, this message translates to:
+  /// **'Only you can add songs now'**
+  String get onlyYouCanAdd;
+
+  /// No description provided for @joinSharedPlaylistBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Paste the invite link a friend sent you. You\'ll both be able to add songs.'**
+  String get joinSharedPlaylistBody;
+
+  /// No description provided for @inviteLink.
+  ///
+  /// In en, this message translates to:
+  /// **'Invite link'**
+  String get inviteLink;
+
+  /// No description provided for @notAnInviteLink.
+  ///
+  /// In en, this message translates to:
+  /// **'That isn\'t an invite link'**
+  String get notAnInviteLink;
+
+  /// No description provided for @join.
+  ///
+  /// In en, this message translates to:
+  /// **'Join'**
+  String get join;
+
+  /// No description provided for @unfollowedName.
+  ///
+  /// In en, this message translates to:
+  /// **'Unfollowed {name}'**
+  String unfollowedName(String name);
+
+  /// No description provided for @followingName.
+  ///
+  /// In en, this message translates to:
+  /// **'Following {name}'**
+  String followingName(String name);
+
+  /// No description provided for @downloadFailedTryAgain.
+  ///
+  /// In en, this message translates to:
+  /// **'Download failed, try again'**
+  String get downloadFailedTryAgain;
+
+  /// No description provided for @downloadHoldTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Download\nHold to download now as {format}'**
+  String downloadHoldTooltip(String format);
+
+  /// No description provided for @downloadingIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Downloading in {format}…'**
+  String downloadingIn(String format);
+
+  /// No description provided for @downloadingTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Downloading {title}…'**
+  String downloadingTitle(String title);
+
+  /// No description provided for @thisMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'This month'**
+  String get thisMonth;
+
+  /// No description provided for @thisYear.
+  ///
+  /// In en, this message translates to:
+  /// **'This year'**
+  String get thisYear;
+
+  /// No description provided for @allTime.
+  ///
+  /// In en, this message translates to:
+  /// **'All time'**
+  String get allTime;
+
+  /// No description provided for @monthJanuary.
+  ///
+  /// In en, this message translates to:
+  /// **'January'**
+  String get monthJanuary;
+
+  /// No description provided for @monthFebruary.
+  ///
+  /// In en, this message translates to:
+  /// **'February'**
+  String get monthFebruary;
+
+  /// No description provided for @monthMarch.
+  ///
+  /// In en, this message translates to:
+  /// **'March'**
+  String get monthMarch;
+
+  /// No description provided for @monthApril.
+  ///
+  /// In en, this message translates to:
+  /// **'April'**
+  String get monthApril;
+
+  /// No description provided for @monthMay.
+  ///
+  /// In en, this message translates to:
+  /// **'May'**
+  String get monthMay;
+
+  /// No description provided for @monthJune.
+  ///
+  /// In en, this message translates to:
+  /// **'June'**
+  String get monthJune;
+
+  /// No description provided for @monthJuly.
+  ///
+  /// In en, this message translates to:
+  /// **'July'**
+  String get monthJuly;
+
+  /// No description provided for @monthAugust.
+  ///
+  /// In en, this message translates to:
+  /// **'August'**
+  String get monthAugust;
+
+  /// No description provided for @monthSeptember.
+  ///
+  /// In en, this message translates to:
+  /// **'September'**
+  String get monthSeptember;
+
+  /// No description provided for @monthOctober.
+  ///
+  /// In en, this message translates to:
+  /// **'October'**
+  String get monthOctober;
+
+  /// No description provided for @monthNovember.
+  ///
+  /// In en, this message translates to:
+  /// **'November'**
+  String get monthNovember;
+
+  /// No description provided for @monthDecember.
+  ///
+  /// In en, this message translates to:
+  /// **'December'**
+  String get monthDecember;
+
+  /// No description provided for @monthInitials.
+  ///
+  /// In en, this message translates to:
+  /// **'J F M A M J J A S O N D'**
+  String get monthInitials;
+
+  /// No description provided for @monthYear.
+  ///
+  /// In en, this message translates to:
+  /// **'{month} {year}'**
+  String monthYear(String month, String year);
+
+  /// No description provided for @monthDay.
+  ///
+  /// In en, this message translates to:
+  /// **'{month} {day}'**
+  String monthDay(String month, String day);
+
+  /// No description provided for @durZero.
+  ///
+  /// In en, this message translates to:
+  /// **'0 min'**
+  String get durZero;
+
+  /// No description provided for @durOneMin.
+  ///
+  /// In en, this message translates to:
+  /// **'1 min'**
+  String get durOneMin;
+
+  /// No description provided for @durMin.
+  ///
+  /// In en, this message translates to:
+  /// **'{m} min'**
+  String durMin(String m);
+
+  /// No description provided for @durHours.
+  ///
+  /// In en, this message translates to:
+  /// **'{h} h'**
+  String durHours(String h);
+
+  /// No description provided for @durHoursMin.
+  ///
+  /// In en, this message translates to:
+  /// **'{h} h {m} min'**
+  String durHoursMin(String h, String m);
+
+  /// No description provided for @wrapSoFar.
+  ///
+  /// In en, this message translates to:
+  /// **'{month} so far'**
+  String wrapSoFar(String month);
+
+  /// No description provided for @playFewSongsWrap.
+  ///
+  /// In en, this message translates to:
+  /// **'Play a few songs to see your Wrap.'**
+  String get playFewSongsWrap;
+
+  /// No description provided for @notEnoughForWrap.
+  ///
+  /// In en, this message translates to:
+  /// **'There is not enough listening in {month} for a Wrap.'**
+  String notEnoughForWrap(String month);
+
+  /// No description provided for @wrapCaption.
+  ///
+  /// In en, this message translates to:
+  /// **'My {month} on Riflay: {listened} of music. Top song: {song}. Top artist: {artist}.'**
+  String wrapCaption(String month, String listened, String song, String artist);
+
+  /// No description provided for @wrapCaptionStreak.
+  ///
+  /// In en, this message translates to:
+  /// **'🔥 {count} days in a row.'**
+  String wrapCaptionStreak(int count);
+
+  /// No description provided for @savedFile.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved {file}'**
+  String savedFile(String file);
+
+  /// No description provided for @couldntSaveImage.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t save the image'**
+  String get couldntSaveImage;
+
+  /// No description provided for @savedCaptionCopied.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved {file}; the caption is copied'**
+  String savedCaptionCopied(String file);
+
+  /// No description provided for @saveImage.
+  ///
+  /// In en, this message translates to:
+  /// **'Save image'**
+  String get saveImage;
+
+  /// No description provided for @weekdayMonday.
+  ///
+  /// In en, this message translates to:
+  /// **'Monday'**
+  String get weekdayMonday;
+
+  /// No description provided for @weekdayTuesday.
+  ///
+  /// In en, this message translates to:
+  /// **'Tuesday'**
+  String get weekdayTuesday;
+
+  /// No description provided for @weekdayWednesday.
+  ///
+  /// In en, this message translates to:
+  /// **'Wednesday'**
+  String get weekdayWednesday;
+
+  /// No description provided for @weekdayThursday.
+  ///
+  /// In en, this message translates to:
+  /// **'Thursday'**
+  String get weekdayThursday;
+
+  /// No description provided for @weekdayFriday.
+  ///
+  /// In en, this message translates to:
+  /// **'Friday'**
+  String get weekdayFriday;
+
+  /// No description provided for @weekdaySaturday.
+  ///
+  /// In en, this message translates to:
+  /// **'Saturday'**
+  String get weekdaySaturday;
+
+  /// No description provided for @weekdaySunday.
+  ///
+  /// In en, this message translates to:
+  /// **'Sunday'**
+  String get weekdaySunday;
+
+  /// No description provided for @weekdayMonthDay.
+  ///
+  /// In en, this message translates to:
+  /// **'{weekday}, {month} {day}'**
+  String weekdayMonthDay(String weekday, String month, String day);
+
+  /// No description provided for @wrapSoFarKicker.
+  ///
+  /// In en, this message translates to:
+  /// **'Your Wrap so far'**
+  String get wrapSoFarKicker;
+
+  /// No description provided for @wrapMonthlyKicker.
+  ///
+  /// In en, this message translates to:
+  /// **'Your monthly Wrap'**
+  String get wrapMonthlyKicker;
+
+  /// No description provided for @wrapMonthInMusic.
+  ///
+  /// In en, this message translates to:
+  /// **'Your {month} in music'**
+  String wrapMonthInMusic(String month);
+
+  /// No description provided for @wrapUpTo.
+  ///
+  /// In en, this message translates to:
+  /// **'Up to {day}'**
+  String wrapUpTo(String day);
+
+  /// No description provided for @wrapListenedFor.
+  ///
+  /// In en, this message translates to:
+  /// **'You listened for'**
+  String get wrapListenedFor;
+
+  /// No description provided for @wrapAcross.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{across 1 play in {month}.} other{across {count} plays in {month}.}}'**
+  String wrapAcross(int count, String month);
+
+  /// No description provided for @wrapAcrossSoFar.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{across 1 play so far in {month}.} other{across {count} plays so far in {month}.}}'**
+  String wrapAcrossSoFar(int count, String month);
+
+  /// No description provided for @wrapSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'Top song: {song}\nTop artist: {artist}\n{songs, plural, =1{1 song} other{{songs} songs}}, {artists, plural, =1{1 artist} other{{artists} artists}}'**
+  String wrapSummary(int songs, int artists, String song, String artist);
+
+  /// No description provided for @wrapYouPlayed.
+  ///
+  /// In en, this message translates to:
+  /// **'You played'**
+  String get wrapYouPlayed;
+
+  /// No description provided for @songsPlural.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 song} other{{count} songs}}'**
+  String songsPlural(int count);
+
+  /// No description provided for @wrapByArtists.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{by 1 artist.} other{by {count} artists.}}'**
+  String wrapByArtists(int count);
+
+  /// No description provided for @wrapTopSong.
+  ///
+  /// In en, this message translates to:
+  /// **'Your top song'**
+  String get wrapTopSong;
+
+  /// No description provided for @playsPlural.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 play} other{{count} plays}}'**
+  String playsPlural(int count);
+
+  /// No description provided for @wrapTopSongs.
+  ///
+  /// In en, this message translates to:
+  /// **'Your top songs'**
+  String get wrapTopSongs;
+
+  /// No description provided for @wrapTopArtist.
+  ///
+  /// In en, this message translates to:
+  /// **'Your top artist'**
+  String get wrapTopArtist;
+
+  /// No description provided for @wrapTopArtists.
+  ///
+  /// In en, this message translates to:
+  /// **'Your top artists'**
+  String get wrapTopArtists;
+
+  /// No description provided for @wrapTopAlbum.
+  ///
+  /// In en, this message translates to:
+  /// **'Your top album'**
+  String get wrapTopAlbum;
+
+  /// No description provided for @wrapBiggestDay.
+  ///
+  /// In en, this message translates to:
+  /// **'Your biggest day'**
+  String get wrapBiggestDay;
+
+  /// No description provided for @wrapOfMusic.
+  ///
+  /// In en, this message translates to:
+  /// **'{listened} of music.'**
+  String wrapOfMusic(String listened);
+
+  /// No description provided for @wrapStreakGoing.
+  ///
+  /// In en, this message translates to:
+  /// **'Your streak, still going'**
+  String get wrapStreakGoing;
+
+  /// No description provided for @wrapLongestStreak.
+  ///
+  /// In en, this message translates to:
+  /// **'Your longest streak'**
+  String get wrapLongestStreak;
+
+  /// No description provided for @daysInARow.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} days in a row'**
+  String daysInARow(int count);
+
+  /// No description provided for @wrapListenedOnDays.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{You listened on {listened} of 1 day.} other{You listened on {listened} of {count} days.}}'**
+  String wrapListenedOnDays(int listened, int count);
+
+  /// No description provided for @wrapListenedOnDaysSoFar.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{You listened on {listened} of 1 day so far.} other{You listened on {listened} of {count} days so far.}}'**
+  String wrapListenedOnDaysSoFar(int listened, int count);
+
+  /// No description provided for @wrapMostReplayed.
+  ///
+  /// In en, this message translates to:
+  /// **'Most replayed'**
+  String get wrapMostReplayed;
+
+  /// No description provided for @wrapPlayedTimesOn.
+  ///
+  /// In en, this message translates to:
+  /// **'{artist}\nPlayed {count} times on {day}.'**
+  String wrapPlayedTimesOn(String artist, int count, String day);
+
+  /// No description provided for @wrapNewThisMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'New this month'**
+  String get wrapNewThisMonth;
+
+  /// No description provided for @newSongsPlural.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 new song} other{{count} new songs}}'**
+  String newSongsPlural(int count);
+
+  /// No description provided for @wrapStayedWithKnown.
+  ///
+  /// In en, this message translates to:
+  /// **'You stayed with the songs you know.'**
+  String get wrapStayedWithKnown;
+
+  /// No description provided for @wrapNeverPlayed.
+  ///
+  /// In en, this message translates to:
+  /// **'Songs you had never played before.'**
+  String get wrapNeverPlayed;
+
+  /// No description provided for @wrapNewCount.
+  ///
+  /// In en, this message translates to:
+  /// **', {count} new'**
+  String wrapNewCount(int count);
+
+  /// No description provided for @madeWithRiflay.
+  ///
+  /// In en, this message translates to:
+  /// **'Made with Riflay'**
+  String get madeWithRiflay;
+
+  /// No description provided for @yourListening.
+  ///
+  /// In en, this message translates to:
+  /// **'Your listening'**
+  String get yourListening;
+
+  /// No description provided for @yourListeningBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Worked out from songs you played for 30 seconds or more. It stays on this device.'**
+  String get yourListeningBody;
+
+  /// No description provided for @listeningTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Listening time'**
+  String get listeningTime;
+
+  /// No description provided for @topSongs.
+  ///
+  /// In en, this message translates to:
+  /// **'Top songs'**
+  String get topSongs;
+
+  /// No description provided for @topArtists.
+  ///
+  /// In en, this message translates to:
+  /// **'Top artists'**
+  String get topArtists;
+
+  /// No description provided for @topAlbums.
+  ///
+  /// In en, this message translates to:
+  /// **'Top albums'**
+  String get topAlbums;
+
+  /// No description provided for @yourMonthlyWraps.
+  ///
+  /// In en, this message translates to:
+  /// **'Your monthly Wraps'**
+  String get yourMonthlyWraps;
+
+  /// No description provided for @thisMonthUpToNow.
+  ///
+  /// In en, this message translates to:
+  /// **'This month up to now'**
+  String get thisMonthUpToNow;
+
+  /// No description provided for @playFewSongsWrapShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Play a few songs to see your Wrap'**
+  String get playFewSongsWrapShort;
+
+  /// No description provided for @couldntFindSong.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t find {title}'**
+  String couldntFindSong(String title);
+
+  /// No description provided for @statsNothingYet.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing here yet. Songs you listen to for 30 seconds or more will show up.'**
+  String get statsNothingYet;
+
+  /// No description provided for @historyOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Your listening history is off. Turn it on in Settings › Library & downloads › Listening history & Wrap.'**
+  String get historyOff;
+
+  /// No description provided for @listeningTimeChart.
+  ///
+  /// In en, this message translates to:
+  /// **'Listening time chart. {bars}'**
+  String listeningTimeChart(String bars);
+
+  /// No description provided for @listeningWith.
+  ///
+  /// In en, this message translates to:
+  /// **'Listening with {host}'**
+  String listeningWith(String host);
+
+  /// No description provided for @aFriend.
+  ///
+  /// In en, this message translates to:
+  /// **'a friend'**
+  String get aFriend;
+
+  /// No description provided for @hosting.
+  ///
+  /// In en, this message translates to:
+  /// **'Hosting'**
+  String get hosting;
+
+  /// No description provided for @listeningCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} listening'**
+  String listeningCount(int count);
+
+  /// No description provided for @couldntConnect.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t connect. Try again.'**
+  String get couldntConnect;
+
+  /// No description provided for @listenTogetherIntro.
+  ///
+  /// In en, this message translates to:
+  /// **'Play YouTube songs together with friends.'**
+  String get listenTogetherIntro;
+
+  /// No description provided for @yourName.
+  ///
+  /// In en, this message translates to:
+  /// **'Your name'**
+  String get yourName;
+
+  /// No description provided for @yourNameHelper.
+  ///
+  /// In en, this message translates to:
+  /// **'Friends see it when you join or start a session'**
+  String get yourNameHelper;
+
+  /// No description provided for @enterNameFirst.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter your name first'**
+  String get enterNameFirst;
+
+  /// No description provided for @sameWifi.
+  ///
+  /// In en, this message translates to:
+  /// **'Same Wi-Fi'**
+  String get sameWifi;
+
+  /// No description provided for @anywhere.
+  ///
+  /// In en, this message translates to:
+  /// **'Anywhere'**
+  String get anywhere;
+
+  /// No description provided for @anywhereNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Connects through free public servers. Everything is encrypted, but it\'s new and can sometimes fail to connect.'**
+  String get anywhereNote;
+
+  /// No description provided for @sameWifiNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Everyone needs to be on the same Wi-Fi.'**
+  String get sameWifiNote;
+
+  /// No description provided for @startSession.
+  ///
+  /// In en, this message translates to:
+  /// **'Start a session'**
+  String get startSession;
+
+  /// No description provided for @scanQr.
+  ///
+  /// In en, this message translates to:
+  /// **'Scan QR code'**
+  String get scanQr;
+
+  /// No description provided for @onThisWifi.
+  ///
+  /// In en, this message translates to:
+  /// **'On this Wi-Fi'**
+  String get onThisWifi;
+
+  /// No description provided for @lookingForSessions.
+  ///
+  /// In en, this message translates to:
+  /// **'Looking for sessions on this network…'**
+  String get lookingForSessions;
+
+  /// No description provided for @tapToJoin.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap to join'**
+  String get tapToJoin;
+
+  /// No description provided for @haveACode.
+  ///
+  /// In en, this message translates to:
+  /// **'Have a code?'**
+  String get haveACode;
+
+  /// No description provided for @joinCodeAnywhere.
+  ///
+  /// In en, this message translates to:
+  /// **'Friends anywhere can join with this code.'**
+  String get joinCodeAnywhere;
+
+  /// No description provided for @joinCodeWifi.
+  ///
+  /// In en, this message translates to:
+  /// **'Friends on the same Wi-Fi can join with this code.'**
+  String get joinCodeWifi;
+
+  /// No description provided for @showQr.
+  ///
+  /// In en, this message translates to:
+  /// **'Show QR code'**
+  String get showQr;
+
+  /// No description provided for @listening.
+  ///
+  /// In en, this message translates to:
+  /// **'Listening'**
+  String get listening;
+
+  /// No description provided for @nobodyJoined.
+  ///
+  /// In en, this message translates to:
+  /// **'Nobody has joined yet.'**
+  String get nobodyJoined;
+
+  /// No description provided for @letFriendsAdd.
+  ///
+  /// In en, this message translates to:
+  /// **'Let friends add songs'**
+  String get letFriendsAdd;
+
+  /// No description provided for @letFriendsAddSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'A song a friend plays goes into your queue, in the order they come'**
+  String get letFriendsAddSubtitle;
+
+  /// No description provided for @letFriendsSeek.
+  ///
+  /// In en, this message translates to:
+  /// **'Let friends seek within songs'**
+  String get letFriendsSeek;
+
+  /// No description provided for @letFriendsSeekSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Changes playback position for everyone'**
+  String get letFriendsSeekSubtitle;
+
+  /// No description provided for @youPickSongs.
+  ///
+  /// In en, this message translates to:
+  /// **'You pick the songs. Play any YouTube song and everyone follows.'**
+  String get youPickSongs;
+
+  /// No description provided for @endSession.
+  ///
+  /// In en, this message translates to:
+  /// **'End session'**
+  String get endSession;
+
+  /// No description provided for @waitingForHost.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for {host} to play something.'**
+  String waitingForHost(String host);
+
+  /// No description provided for @hostPlayingOwnFiles.
+  ///
+  /// In en, this message translates to:
+  /// **'{host} is playing a song from their own files. It\'ll continue when they play a YouTube song.'**
+  String hostPlayingOwnFiles(String host);
+
+  /// No description provided for @playGoesToHostQueue.
+  ///
+  /// In en, this message translates to:
+  /// **'Play any YouTube song and it goes into {host}\'s queue.'**
+  String playGoesToHostQueue(String host);
+
+  /// No description provided for @hostNotTakingSongs.
+  ///
+  /// In en, this message translates to:
+  /// **'{host} isn\'t taking songs right now.'**
+  String hostNotTakingSongs(String host);
+
+  /// No description provided for @host.
+  ///
+  /// In en, this message translates to:
+  /// **'Host'**
+  String get host;
+
+  /// No description provided for @upNext.
+  ///
+  /// In en, this message translates to:
+  /// **'Up next'**
+  String get upNext;
+
+  /// No description provided for @seekForEveryone.
+  ///
+  /// In en, this message translates to:
+  /// **'Use the player timeline to seek for everyone.'**
+  String get seekForEveryone;
+
+  /// No description provided for @onlyHostSeeks.
+  ///
+  /// In en, this message translates to:
+  /// **'Only the host can seek within songs.'**
+  String get onlyHostSeeks;
+
+  /// No description provided for @leave.
+  ///
+  /// In en, this message translates to:
+  /// **'Leave'**
+  String get leave;
+
+  /// No description provided for @spMixerResamples.
+  ///
+  /// In en, this message translates to:
+  /// **'Riflay leaves the sound alone, but the system mixer runs your DAC at {dacRate} instead of {songRate}.'**
+  String spMixerResamples(String dacRate, String songRate);
+
+  /// No description provided for @spFixedRateOutputs.
+  ///
+  /// In en, this message translates to:
+  /// **'iPhone, iPad and Bluetooth outputs run at one fixed rate; a USB DAC usually follows each song.'**
+  String get spFixedRateOutputs;
+
+  /// No description provided for @spTurnOnBitPerfect.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn on Bit-perfect mode in Settings › Sound › Output & quality to send it as it is.'**
+  String get spTurnOnBitPerfect;
+
+  /// No description provided for @spMixerMayResample.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing in Riflay changes the sound, but the system mixer may resample it.'**
+  String get spMixerMayResample;
+
+  /// No description provided for @spIosAlwaysMixes.
+  ///
+  /// In en, this message translates to:
+  /// **'iOS always mixes the sound, so it is never bit-perfect here.'**
+  String get spIosAlwaysMixes;
+
+  /// No description provided for @spForBitPerfectExclusive.
+  ///
+  /// In en, this message translates to:
+  /// **'For bit-perfect, turn on Bit-perfect mode and Exclusive mode in Settings › Sound › Output & quality (other apps go silent meanwhile).'**
+  String get spForBitPerfectExclusive;
+
+  /// No description provided for @spForBitPerfect.
+  ///
+  /// In en, this message translates to:
+  /// **'For bit-perfect, turn on Bit-perfect mode in Settings › Sound › Output & quality.'**
+  String get spForBitPerfect;
+
+  /// No description provided for @spDsdToPcmExclusive.
+  ///
+  /// In en, this message translates to:
+  /// **'DSD is decoded to high-rate PCM. To send it to your DAC as DSD, turn on Bit-perfect mode, Exclusive mode and Native DSD (DoP) in Settings › Sound › Output & quality.'**
+  String get spDsdToPcmExclusive;
+
+  /// No description provided for @spDsdToPcmHowTo.
+  ///
+  /// In en, this message translates to:
+  /// **'DSD is decoded to high-rate PCM. To send it to your DAC as DSD, turn on Bit-perfect mode and Native DSD (DoP) in Settings › Sound › Output & quality.'**
+  String get spDsdToPcmHowTo;
+
+  /// No description provided for @spUsbDacRateUnsupported.
+  ///
+  /// In en, this message translates to:
+  /// **'{dac} doesn\'t take {songRate}, so Android plays it at {outRate} instead.'**
+  String spUsbDacRateUnsupported(String dac, String songRate, String outRate);
+
+  /// No description provided for @qualityLossy.
+  ///
+  /// In en, this message translates to:
+  /// **'Lossy'**
+  String get qualityLossy;
+
+  /// No description provided for @qualityLossless.
+  ///
+  /// In en, this message translates to:
+  /// **'Lossless'**
+  String get qualityLossless;
+
+  /// No description provided for @nativeDsd2.
+  ///
+  /// In en, this message translates to:
+  /// **'Native DSD'**
+  String get nativeDsd2;
+
+  /// No description provided for @spNativeDsdBody.
+  ///
+  /// In en, this message translates to:
+  /// **'The DSD stream reaches your DAC as it is, packed as DoP. A DAC that supports DoP shows DSD; one that doesn\'t plays a faint hiss (then turn off Native DSD).'**
+  String get spNativeDsdBody;
+
+  /// No description provided for @spDopChanged.
+  ///
+  /// In en, this message translates to:
+  /// **'DoP is being changed'**
+  String get spDopChanged;
+
+  /// No description provided for @spDopChangedBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Something between Riflay and your DAC changes the samples, so the DAC can\'t see the DSD. Choose a direct output in Settings › Sound › Output & quality.'**
+  String get spDopChangedBody;
+
+  /// No description provided for @spUsbBitPerfect.
+  ///
+  /// In en, this message translates to:
+  /// **'USB DAC, bit-perfect (Android 14): every sample reaches {dac} exactly as it is stored in the file.'**
+  String spUsbBitPerfect(String dac);
+
+  /// No description provided for @spNotBitPerfect.
+  ///
+  /// In en, this message translates to:
+  /// **'Not bit-perfect'**
+  String get spNotBitPerfect;
+
+  /// No description provided for @spBitPerfectBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Every sample reaches your DAC exactly as it is stored in the file.'**
+  String get spBitPerfectBody;
+
+  /// No description provided for @spResampledByMixer.
+  ///
+  /// In en, this message translates to:
+  /// **'Resampled by the system mixer'**
+  String get spResampledByMixer;
+
+  /// No description provided for @spLosslessToMixer.
+  ///
+  /// In en, this message translates to:
+  /// **'Lossless to the system mixer'**
+  String get spLosslessToMixer;
+
+  /// No description provided for @spDsdConverted.
+  ///
+  /// In en, this message translates to:
+  /// **'DSD converted to PCM'**
+  String get spDsdConverted;
+
+  /// No description provided for @spDsdIos.
+  ///
+  /// In en, this message translates to:
+  /// **'DSD is decoded to high-rate PCM. iOS can\'t send DSD to a DAC as DSD.'**
+  String get spDsdIos;
+
+  /// No description provided for @spProcessed.
+  ///
+  /// In en, this message translates to:
+  /// **'Processed'**
+  String get spProcessed;
+
+  /// No description provided for @spProcessedBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Something below changes the samples. That is fine if it is what you want.'**
+  String get spProcessedBody;
+
+  /// No description provided for @spSource.
+  ///
+  /// In en, this message translates to:
+  /// **'Source'**
+  String get spSource;
+
+  /// No description provided for @spLosslessParen.
+  ///
+  /// In en, this message translates to:
+  /// **'(lossless)'**
+  String get spLosslessParen;
+
+  /// No description provided for @spDecoded.
+  ///
+  /// In en, this message translates to:
+  /// **'Decoded'**
+  String get spDecoded;
+
+  /// No description provided for @spPadded.
+  ///
+  /// In en, this message translates to:
+  /// **'({bits}-bit, padded losslessly)'**
+  String spPadded(int bits);
+
+  /// No description provided for @spUntouched.
+  ///
+  /// In en, this message translates to:
+  /// **'100% (untouched)'**
+  String get spUntouched;
+
+  /// No description provided for @spMuted.
+  ///
+  /// In en, this message translates to:
+  /// **'Muted'**
+  String get spMuted;
+
+  /// No description provided for @spClipProtection.
+  ///
+  /// In en, this message translates to:
+  /// **'Clip protection'**
+  String get spClipProtection;
+
+  /// No description provided for @spClipProtectionBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Softens any peak past full scale instead of cutting it off'**
+  String get spClipProtectionBody;
+
+  /// No description provided for @spResampled.
+  ///
+  /// In en, this message translates to:
+  /// **'Resampled'**
+  String get spResampled;
+
+  /// No description provided for @spDacReceives.
+  ///
+  /// In en, this message translates to:
+  /// **'DAC receives'**
+  String get spDacReceives;
+
+  /// No description provided for @spMono.
+  ///
+  /// In en, this message translates to:
+  /// **'mono'**
+  String get spMono;
+
+  /// No description provided for @spStereo.
+  ///
+  /// In en, this message translates to:
+  /// **'stereo'**
+  String get spStereo;
+
+  /// No description provided for @spChannels.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} channels'**
+  String spChannels(String count);
+
+  /// No description provided for @spPipewire.
+  ///
+  /// In en, this message translates to:
+  /// **'PipeWire (system mixer)'**
+  String get spPipewire;
+
+  /// No description provided for @spPulse.
+  ///
+  /// In en, this message translates to:
+  /// **'PulseAudio (system mixer)'**
+  String get spPulse;
+
+  /// No description provided for @spAlsaDirect.
+  ///
+  /// In en, this message translates to:
+  /// **'ALSA, direct to hardware'**
+  String get spAlsaDirect;
+
+  /// No description provided for @spWasapiExclusive.
+  ///
+  /// In en, this message translates to:
+  /// **'WASAPI exclusive'**
+  String get spWasapiExclusive;
+
+  /// No description provided for @spWasapiShared.
+  ///
+  /// In en, this message translates to:
+  /// **'WASAPI shared'**
+  String get spWasapiShared;
+
+  /// No description provided for @spAndroidMixer.
+  ///
+  /// In en, this message translates to:
+  /// **'Android mixer'**
+  String get spAndroidMixer;
+
+  /// No description provided for @spAndroidMixerParen.
+  ///
+  /// In en, this message translates to:
+  /// **'(Android mixer)'**
+  String get spAndroidMixerParen;
+
+  /// No description provided for @spIosSession.
+  ///
+  /// In en, this message translates to:
+  /// **'iOS audio session (system mixer)'**
+  String get spIosSession;
+
+  /// No description provided for @couldntOpenBrowser.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t open the browser.'**
+  String get couldntOpenBrowser;
+
+  /// No description provided for @versionNamed.
+  ///
+  /// In en, this message translates to:
+  /// **'Version {version}'**
+  String versionNamed(String version);
+
+  /// No description provided for @version.
+  ///
+  /// In en, this message translates to:
+  /// **'Version'**
+  String get version;
+
+  /// No description provided for @copy.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy'**
+  String get copy;
+
+  /// No description provided for @copied.
+  ///
+  /// In en, this message translates to:
+  /// **'Copied'**
+  String get copied;
+
+  /// No description provided for @whatsNew.
+  ///
+  /// In en, this message translates to:
+  /// **'What\'s new'**
+  String get whatsNew;
+
+  /// No description provided for @whatsNewSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Release notes and downloads for every platform'**
+  String get whatsNewSubtitle;
+
+  /// No description provided for @reportProblem.
+  ///
+  /// In en, this message translates to:
+  /// **'Report a problem'**
+  String get reportProblem;
+
+  /// No description provided for @reportProblemSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Opens a new issue; paste the version details in it'**
+  String get reportProblemSubtitle;
+
+  /// No description provided for @supportArtists.
+  ///
+  /// In en, this message translates to:
+  /// **'Support the artists'**
+  String get supportArtists;
+
+  /// No description provided for @supportArtistsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Enjoying the music? YouTube Music Premium pays the people who make it'**
+  String get supportArtistsSubtitle;
+
+  /// No description provided for @supportRiflay.
+  ///
+  /// In en, this message translates to:
+  /// **'Support Riflay'**
+  String get supportRiflay;
+
+  /// No description provided for @supportRiflaySubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Send a gift on Tako to keep it going'**
+  String get supportRiflaySubtitle;
+
+  /// No description provided for @sourceCode.
+  ///
+  /// In en, this message translates to:
+  /// **'Source code'**
+  String get sourceCode;
+
+  /// No description provided for @sourceCodeSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Riflay is open source, on GitHub'**
+  String get sourceCodeSubtitle;
+
+  /// No description provided for @licence.
+  ///
+  /// In en, this message translates to:
+  /// **'Licence'**
+  String get licence;
+
+  /// No description provided for @openSourceLicences.
+  ///
+  /// In en, this message translates to:
+  /// **'Open-source licences'**
+  String get openSourceLicences;
+
+  /// No description provided for @openSourceLicencesSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'The libraries Riflay is built with'**
+  String get openSourceLicencesSubtitle;
+
+  /// No description provided for @scrobbleBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Songs you listen to past the halfway mark (or 4 minutes) are added to your profile there. Listens made offline are sent once you\'re back online.'**
+  String get scrobbleBody;
+
+  /// No description provided for @connect.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect'**
+  String get connect;
+
+  /// No description provided for @notConnected.
+  ///
+  /// In en, this message translates to:
+  /// **'Not connected'**
+  String get notConnected;
+
+  /// No description provided for @connectedAs.
+  ///
+  /// In en, this message translates to:
+  /// **'Connected as {user}'**
+  String connectedAs(String user);
+
+  /// No description provided for @connected.
+  ///
+  /// In en, this message translates to:
+  /// **'Connected'**
+  String get connected;
+
+  /// No description provided for @noNewListens.
+  ///
+  /// In en, this message translates to:
+  /// **'No new listens to bring in'**
+  String get noNewListens;
+
+  /// No description provided for @listensAdded.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 listen added to your history} other{{count} listens added to your history}}'**
+  String listensAdded(int count);
+
+  /// No description provided for @serviceSignedOut.
+  ///
+  /// In en, this message translates to:
+  /// **'{service} signed you out. Connect it again.'**
+  String serviceSignedOut(String service);
+
+  /// No description provided for @couldntReachService.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t reach {service}. Try again.'**
+  String couldntReachService(String service);
+
+  /// No description provided for @readingListens.
+  ///
+  /// In en, this message translates to:
+  /// **'Reading your listens: {count} so far'**
+  String readingListens(String count);
+
+  /// No description provided for @turnOnHistoryFirst.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn on the listening history in Library & downloads first.'**
+  String get turnOnHistoryFirst;
+
+  /// No description provided for @bringInBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Adds the songs you played elsewhere to your stats, Wraps and Most played. Ones already here are skipped.'**
+  String get bringInBody;
+
+  /// No description provided for @bringInHistory.
+  ///
+  /// In en, this message translates to:
+  /// **'Bring in your {service} history'**
+  String bringInHistory(String service);
+
+  /// No description provided for @stop.
+  ///
+  /// In en, this message translates to:
+  /// **'Stop'**
+  String get stop;
+
+  /// No description provided for @bringIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Bring in'**
+  String get bringIn;
+
+  /// No description provided for @connectService.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect {service}'**
+  String connectService(String service);
+
+  /// No description provided for @listenBrainzTokenBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy your user token from your ListenBrainz settings and paste it here.'**
+  String get listenBrainzTokenBody;
+
+  /// No description provided for @openListenBrainzSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Open ListenBrainz settings'**
+  String get openListenBrainzSettings;
+
+  /// No description provided for @userToken.
+  ///
+  /// In en, this message translates to:
+  /// **'User token'**
+  String get userToken;
+
+  /// No description provided for @signInTooLong.
+  ///
+  /// In en, this message translates to:
+  /// **'The sign-in took too long. Try again.'**
+  String get signInTooLong;
+
+  /// No description provided for @lastfmDidntFinish.
+  ///
+  /// In en, this message translates to:
+  /// **'Last.fm didn\'t finish the sign-in. Try again.'**
+  String get lastfmDidntFinish;
+
+  /// No description provided for @lastfmAllowBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Allow Riflay on the Last.fm page that opened in your browser. This closes by itself once you have.'**
+  String get lastfmAllowBody;
+
+  /// No description provided for @openLastfmAgain.
+  ///
+  /// In en, this message translates to:
+  /// **'Open Last.fm again'**
+  String get openLastfmAgain;
+
+  /// No description provided for @spotifyReadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t read your Spotify library right now. Try again later.'**
+  String get spotifyReadFailed;
+
+  /// No description provided for @needsWebkit.
+  ///
+  /// In en, this message translates to:
+  /// **'Signing in needs WebKitGTK (webkit2gtk-4.1). Install it and restart Riflay.'**
+  String get needsWebkit;
+
+  /// No description provided for @spotifySignInUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Signing in to Spotify isn\'t available here.'**
+  String get spotifySignInUnavailable;
+
+  /// No description provided for @spotifyIntro.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy your Spotify playlists, Liked Songs and albums into Riflay.'**
+  String get spotifyIntro;
+
+  /// No description provided for @spotifyReadOnly.
+  ///
+  /// In en, this message translates to:
+  /// **'Riflay only reads your library. It never changes your Spotify account.'**
+  String get spotifyReadOnly;
+
+  /// No description provided for @signInWithSpotify.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in with Spotify'**
+  String get signInWithSpotify;
+
+  /// No description provided for @playlistsGoToYt.
+  ///
+  /// In en, this message translates to:
+  /// **'Playlists go to your YouTube Music library.'**
+  String get playlistsGoToYt;
+
+  /// No description provided for @playlistsBecomeRiflay.
+  ///
+  /// In en, this message translates to:
+  /// **'Playlists become Riflay playlists.'**
+  String get playlistsBecomeRiflay;
+
+  /// No description provided for @signedInToSpotify.
+  ///
+  /// In en, this message translates to:
+  /// **'Signed in to Spotify'**
+  String get signedInToSpotify;
+
+  /// No description provided for @signOut.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign out'**
+  String get signOut;
+
+  /// No description provided for @nothingHereYet.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing here yet.'**
+  String get nothingHereYet;
+
+  /// No description provided for @imported.
+  ///
+  /// In en, this message translates to:
+  /// **'Imported'**
+  String get imported;
+
+  /// No description provided for @importAll.
+  ///
+  /// In en, this message translates to:
+  /// **'Import all'**
+  String get importAll;
+
+  /// No description provided for @importCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Import {count}'**
+  String importCount(String count);
+
+  /// No description provided for @import.
+  ///
+  /// In en, this message translates to:
+  /// **'Import'**
+  String get import;
+
+  /// No description provided for @importing.
+  ///
+  /// In en, this message translates to:
+  /// **'Importing'**
+  String get importing;
+
+  /// No description provided for @stopping.
+  ///
+  /// In en, this message translates to:
+  /// **'Stopping…'**
+  String get stopping;
+
+  /// No description provided for @findingSongsInYt.
+  ///
+  /// In en, this message translates to:
+  /// **'Finding songs in YouTube Music: {matched} of {total}'**
+  String findingSongsInYt(String matched, String total);
+
+  /// No description provided for @findingArtistInYt.
+  ///
+  /// In en, this message translates to:
+  /// **'Finding the artist in YouTube Music…'**
+  String get findingArtistInYt;
+
+  /// No description provided for @readingTheSongs.
+  ///
+  /// In en, this message translates to:
+  /// **'Reading the songs…'**
+  String get readingTheSongs;
+
+  /// No description provided for @importedOf.
+  ///
+  /// In en, this message translates to:
+  /// **'Imported {done} of {total}'**
+  String importedOf(String done, String total);
+
+  /// No description provided for @youStoppedImport.
+  ///
+  /// In en, this message translates to:
+  /// **'You stopped the import.'**
+  String get youStoppedImport;
+
+  /// No description provided for @pronunciation.
+  ///
+  /// In en, this message translates to:
+  /// **'Pronunciation'**
+  String get pronunciation;
+
+  /// No description provided for @translation.
+  ///
+  /// In en, this message translates to:
+  /// **'Translation'**
+  String get translation;
+
+  /// No description provided for @copyLyrics.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy lyrics'**
+  String get copyLyrics;
+
+  /// No description provided for @adjustTiming.
+  ///
+  /// In en, this message translates to:
+  /// **'Adjust timing'**
+  String get adjustTiming;
+
+  /// No description provided for @removeMyLyrics.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove my lyrics'**
+  String get removeMyLyrics;
+
+  /// No description provided for @playerOptions.
+  ///
+  /// In en, this message translates to:
+  /// **'Player options'**
+  String get playerOptions;
+
+  /// No description provided for @chooseLyricsFile.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a lyrics file'**
+  String get chooseLyricsFile;
+
+  /// No description provided for @lyricsFileTooBig.
+  ///
+  /// In en, this message translates to:
+  /// **'That file is too big to be lyrics.'**
+  String get lyricsFileTooBig;
+
+  /// No description provided for @yourLyricsInUse.
+  ///
+  /// In en, this message translates to:
+  /// **'Your lyrics are in use'**
+  String get yourLyricsInUse;
+
+  /// No description provided for @couldntReadFile.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t read that file.'**
+  String get couldntReadFile;
+
+  /// No description provided for @couldntRemoveLyrics.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t remove your lyrics.'**
+  String get couldntRemoveLyrics;
+
+  /// No description provided for @onTime.
+  ///
+  /// In en, this message translates to:
+  /// **'On time'**
+  String get onTime;
+
+  /// No description provided for @secondsEarlier.
+  ///
+  /// In en, this message translates to:
+  /// **'{seconds} s earlier'**
+  String secondsEarlier(String seconds);
+
+  /// No description provided for @secondsLater.
+  ///
+  /// In en, this message translates to:
+  /// **'{seconds} s later'**
+  String secondsLater(String seconds);
+
+  /// No description provided for @adjustTimingBody.
+  ///
+  /// In en, this message translates to:
+  /// **'If the lyrics come too early or too late, move them until they match the song.'**
+  String get adjustTimingBody;
+
+  /// No description provided for @earlier.
+  ///
+  /// In en, this message translates to:
+  /// **'Earlier'**
+  String get earlier;
+
+  /// No description provided for @later.
+  ///
+  /// In en, this message translates to:
+  /// **'Later'**
+  String get later;
+
+  /// No description provided for @lyricsCopied.
+  ///
+  /// In en, this message translates to:
+  /// **'Lyrics copied'**
+  String get lyricsCopied;
+
+  /// No description provided for @couldntTranslateLyrics.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t translate these lyrics. Check your internet connection.'**
+  String get couldntTranslateLyrics;
+
+  /// No description provided for @privacyPublicLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Public'**
+  String get privacyPublicLabel;
+
+  /// No description provided for @privacyUnlistedLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Unlisted'**
+  String get privacyUnlistedLabel;
+
+  /// No description provided for @privacyPrivateLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Private'**
+  String get privacyPrivateLabel;
+
+  /// No description provided for @joinedPlaylist.
+  ///
+  /// In en, this message translates to:
+  /// **'Joined \"{title}\"'**
+  String joinedPlaylist(String title);
+
+  /// No description provided for @thePlaylist.
+  ///
+  /// In en, this message translates to:
+  /// **'the playlist'**
+  String get thePlaylist;
+
+  /// No description provided for @sharedPlaylist.
+  ///
+  /// In en, this message translates to:
+  /// **'Shared playlist'**
+  String get sharedPlaylist;
+
+  /// No description provided for @ytSignInPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in to YouTube Music to add your liked songs, playlists and history.'**
+  String get ytSignInPrompt;
+
+  /// No description provided for @signingIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Signing in…'**
+  String get signingIn;
+
+  /// No description provided for @ytLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load YouTube Music. Check your internet connection.'**
+  String get ytLoadFailed;
+
+  /// No description provided for @playlistLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load this playlist. Check your internet connection.'**
+  String get playlistLoadFailed;
+
+  /// No description provided for @playlistIsNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Playlist is now {privacy}'**
+  String playlistIsNow(String privacy);
+
+  /// No description provided for @deleteYtPlaylistBody.
+  ///
+  /// In en, this message translates to:
+  /// **'\"{title}\" will be deleted from your YouTube Music library. This can\'t be undone.'**
+  String deleteYtPlaylistBody(String title);
+
+  /// No description provided for @shared.
+  ///
+  /// In en, this message translates to:
+  /// **'Shared'**
+  String get shared;
+
+  /// No description provided for @makePrivacy.
+  ///
+  /// In en, this message translates to:
+  /// **'Make {privacy}'**
+  String makePrivacy(String privacy);
+
+  /// No description provided for @chooseDownloadsFolder.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose where downloads are saved'**
+  String get chooseDownloadsFolder;
+
+  /// No description provided for @bestSoundNote.
+  ///
+  /// In en, this message translates to:
+  /// **'The best sound YouTube has for each song.'**
+  String get bestSoundNote;
+
+  /// No description provided for @smallerFilesNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Smaller files, with a little less full sound.'**
+  String get smallerFilesNote;
+
+  /// No description provided for @closestVersionNote.
+  ///
+  /// In en, this message translates to:
+  /// **'{base} Uses the closest version YouTube offers.'**
+  String closestVersionNote(String base);
+
+  /// No description provided for @whatToSave.
+  ///
+  /// In en, this message translates to:
+  /// **'What to save'**
+  String get whatToSave;
+
+  /// No description provided for @saveAs.
+  ///
+  /// In en, this message translates to:
+  /// **'Save as'**
+  String get saveAs;
+
+  /// No description provided for @saveAsVideoNote.
+  ///
+  /// In en, this message translates to:
+  /// **'The music video, with its sound. Songs without a music video are saved as audio.'**
+  String get saveAsVideoNote;
+
+  /// No description provided for @saveAsAudioNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Just the sound. Choose Video to keep the music video too.'**
+  String get saveAsAudioNote;
+
+  /// No description provided for @videoFormat.
+  ///
+  /// In en, this message translates to:
+  /// **'Video format'**
+  String get videoFormat;
+
+  /// No description provided for @size.
+  ///
+  /// In en, this message translates to:
+  /// **'Size'**
+  String get size;
+
+  /// No description provided for @videoSizeNote.
+  ///
+  /// In en, this message translates to:
+  /// **'The tallest picture the video has, up to the one you choose. 1080p is a sharp picture without a huge file.'**
+  String get videoSizeNote;
+
+  /// No description provided for @bestAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Best available'**
+  String get bestAvailable;
+
+  /// No description provided for @heightRecommended.
+  ///
+  /// In en, this message translates to:
+  /// **'{height}p (Recommended)'**
+  String heightRecommended(String height);
+
+  /// No description provided for @format.
+  ///
+  /// In en, this message translates to:
+  /// **'Format'**
+  String get format;
+
+  /// No description provided for @flacUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'{about}\nFLAC isn\'t available on this device.'**
+  String flacUnavailable(String about);
+
+  /// No description provided for @bitDepthSampleRate.
+  ///
+  /// In en, this message translates to:
+  /// **'Bit depth and sample rate'**
+  String get bitDepthSampleRate;
+
+  /// No description provided for @bitrate.
+  ///
+  /// In en, this message translates to:
+  /// **'Bitrate'**
+  String get bitrate;
+
+  /// No description provided for @askEveryTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Ask every time'**
+  String get askEveryTime;
+
+  /// No description provided for @askEveryTimeSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose the format and quality each time you download a song.'**
+  String get askEveryTimeSubtitle;
+
+  /// No description provided for @where.
+  ///
+  /// In en, this message translates to:
+  /// **'Where'**
+  String get where;
+
+  /// No description provided for @downloadOverMobile.
+  ///
+  /// In en, this message translates to:
+  /// **'Download over mobile data'**
+  String get downloadOverMobile;
+
+  /// No description provided for @downloadOverMobileOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Songs download on mobile data as well as Wi-Fi.'**
+  String get downloadOverMobileOn;
+
+  /// No description provided for @downloadOverMobileOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Songs wait for Wi-Fi, so they don\'t use your data plan.'**
+  String get downloadOverMobileOff;
+
+  /// No description provided for @downloadsFolder.
+  ///
+  /// In en, this message translates to:
+  /// **'Downloads folder'**
+  String get downloadsFolder;
+
+  /// No description provided for @phoneDownloadsFixed.
+  ///
+  /// In en, this message translates to:
+  /// **'{path}\nPhones keep downloads in Riflay\'s own storage, so this can\'t be changed.'**
+  String phoneDownloadsFixed(String path);
+
+  /// No description provided for @openFolder.
+  ///
+  /// In en, this message translates to:
+  /// **'Open folder'**
+  String get openFolder;
+
+  /// No description provided for @ytDlp.
+  ///
+  /// In en, this message translates to:
+  /// **'YouTube downloader (yt-dlp)'**
+  String get ytDlp;
+
+  /// No description provided for @ytDlpMissing.
+  ///
+  /// In en, this message translates to:
+  /// **'Not available. Install it (e.g. pacman -S yt-dlp) for YouTube downloads.'**
+  String get ytDlpMissing;
+
+  /// No description provided for @removeNamedQuestion.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove {name}?'**
+  String removeNamedQuestion(String name);
+
+  /// No description provided for @removeExtensionBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Its files and what it saved on this device are deleted.'**
+  String get removeExtensionBody;
+
+  /// No description provided for @couldntRemoveNamed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t remove {name}'**
+  String couldntRemoveNamed(String name);
+
+  /// No description provided for @extensionsIntro.
+  ///
+  /// In en, this message translates to:
+  /// **'Extensions written for SpotiFLAC add more places to search, such as Apple Music, SoundCloud and JioSaavn. Their songs play from YouTube Music. Only add repositories you trust: an extension runs its own code and can reach the sites its manifest lists.'**
+  String get extensionsIntro;
+
+  /// No description provided for @repositories.
+  ///
+  /// In en, this message translates to:
+  /// **'Repositories'**
+  String get repositories;
+
+  /// No description provided for @installed.
+  ///
+  /// In en, this message translates to:
+  /// **'Installed'**
+  String get installed;
+
+  /// No description provided for @noExtensionsYet.
+  ///
+  /// In en, this message translates to:
+  /// **'No extensions yet'**
+  String get noExtensionsYet;
+
+  /// No description provided for @installFromRepo.
+  ///
+  /// In en, this message translates to:
+  /// **'Install one from a repository below'**
+  String get installFromRepo;
+
+  /// No description provided for @available.
+  ///
+  /// In en, this message translates to:
+  /// **'Available'**
+  String get available;
+
+  /// No description provided for @repositoryAddress.
+  ///
+  /// In en, this message translates to:
+  /// **'Repository address'**
+  String get repositoryAddress;
+
+  /// No description provided for @reading.
+  ///
+  /// In en, this message translates to:
+  /// **'Reading…'**
+  String get reading;
+
+  /// No description provided for @couldntReadIt.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t read it: {error}'**
+  String couldntReadIt(String error);
+
+  /// No description provided for @notReadYet.
+  ///
+  /// In en, this message translates to:
+  /// **'Not read yet'**
+  String get notReadYet;
+
+  /// No description provided for @extensionsCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 extension} other{{count} extensions}}'**
+  String extensionsCount(int count);
+
+  /// No description provided for @removeRepository.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove repository'**
+  String get removeRepository;
+
+  /// No description provided for @addsToSearch.
+  ///
+  /// In en, this message translates to:
+  /// **'Adds results to Search'**
+  String get addsToSearch;
+
+  /// No description provided for @downloadsUnsupported.
+  ///
+  /// In en, this message translates to:
+  /// **'downloads not supported yet'**
+  String get downloadsUnsupported;
+
+  /// No description provided for @lyricsUnsupported.
+  ///
+  /// In en, this message translates to:
+  /// **'lyrics not supported yet'**
+  String get lyricsUnsupported;
+
+  /// No description provided for @needsSpotiflacFeatures.
+  ///
+  /// In en, this message translates to:
+  /// **'needs SpotiFLAC features Riflay lacks, so it may not work'**
+  String get needsSpotiflacFeatures;
+
+  /// No description provided for @updateTo.
+  ///
+  /// In en, this message translates to:
+  /// **'Update to {version}'**
+  String updateTo(String version);
+
+  /// No description provided for @couldntUpdateNamed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t update {name}'**
+  String couldntUpdateNamed(String name);
+
+  /// No description provided for @couldntInstallNamed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t install {name}'**
+  String couldntInstallNamed(String name);
+
+  /// No description provided for @install.
+  ///
+  /// In en, this message translates to:
+  /// **'Install'**
+  String get install;
+
+  /// No description provided for @scPlayPause.
+  ///
+  /// In en, this message translates to:
+  /// **'Play or pause'**
+  String get scPlayPause;
+
+  /// No description provided for @scNext.
+  ///
+  /// In en, this message translates to:
+  /// **'Next song'**
+  String get scNext;
+
+  /// No description provided for @scPrevious.
+  ///
+  /// In en, this message translates to:
+  /// **'Previous song'**
+  String get scPrevious;
+
+  /// No description provided for @scVolumeUp.
+  ///
+  /// In en, this message translates to:
+  /// **'Volume up'**
+  String get scVolumeUp;
+
+  /// No description provided for @scVolumeDown.
+  ///
+  /// In en, this message translates to:
+  /// **'Volume down'**
+  String get scVolumeDown;
+
+  /// No description provided for @scBack.
+  ///
+  /// In en, this message translates to:
+  /// **'Go back'**
+  String get scBack;
+
+  /// No description provided for @scForward.
+  ///
+  /// In en, this message translates to:
+  /// **'Go forward'**
+  String get scForward;
+
+  /// No description provided for @scPasteLink.
+  ///
+  /// In en, this message translates to:
+  /// **'Import a copied YouTube link'**
+  String get scPasteLink;
+
+  /// No description provided for @scFullScreen.
+  ///
+  /// In en, this message translates to:
+  /// **'Full screen player'**
+  String get scFullScreen;
+
+  /// No description provided for @scHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Show this list'**
+  String get scHelp;
+
+  /// No description provided for @scSlashOr.
+  ///
+  /// In en, this message translates to:
+  /// **'? or Ctrl+/'**
+  String get scSlashOr;
+
+  /// No description provided for @saveABackup.
+  ///
+  /// In en, this message translates to:
+  /// **'Save a backup'**
+  String get saveABackup;
+
+  /// No description provided for @backupSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Backup saved'**
+  String get backupSaved;
+
+  /// No description provided for @couldntSaveBackup.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t save the backup.'**
+  String get couldntSaveBackup;
+
+  /// No description provided for @chooseBackup.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a Riflay backup'**
+  String get chooseBackup;
+
+  /// No description provided for @backupNeedsNewer.
+  ///
+  /// In en, this message translates to:
+  /// **'This backup needs a newer Riflay.'**
+  String get backupNeedsNewer;
+
+  /// No description provided for @notABackup.
+  ///
+  /// In en, this message translates to:
+  /// **'That file isn\'t a Riflay backup.'**
+  String get notABackup;
+
+  /// No description provided for @restoreBackupQuestion.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore this backup?'**
+  String get restoreBackupQuestion;
+
+  /// No description provided for @restoreBackupBody.
+  ///
+  /// In en, this message translates to:
+  /// **'{made}It has {playlists, plural, =1{1 playlist} other{{playlists} playlists}}, {plays, plural, =1{1 play} other{{plays} plays}} of listening history and {lyrics, plural, =1{1 lyrics file} other{{lyrics} lyrics files}}. They replace the settings, playlists and history on this device. Your sign-ins stay.'**
+  String restoreBackupBody(int playlists, int plays, int lyrics, String made);
+
+  /// No description provided for @restore.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore'**
+  String get restore;
+
+  /// No description provided for @couldntRestoreBackup.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t restore the backup.'**
+  String get couldntRestoreBackup;
+
+  /// No description provided for @backupRestored.
+  ///
+  /// In en, this message translates to:
+  /// **'Backup restored'**
+  String get backupRestored;
+
+  /// No description provided for @backupRestoredIos.
+  ///
+  /// In en, this message translates to:
+  /// **'Close Riflay from the app switcher and open it again to finish.'**
+  String get backupRestoredIos;
+
+  /// No description provided for @backupRestoredDesktop.
+  ///
+  /// In en, this message translates to:
+  /// **'Riflay closes now. Open it again to finish.'**
+  String get backupRestoredDesktop;
+
+  /// No description provided for @closeRiflay.
+  ///
+  /// In en, this message translates to:
+  /// **'Close Riflay'**
+  String get closeRiflay;
+
+  /// No description provided for @madeOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Made on {date}.'**
+  String madeOn(String date);
+
+  /// No description provided for @saveABackupSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Your settings, playlists, listening history and your own lyrics, in one file. Sign-ins are left out.'**
+  String get saveABackupSubtitle;
+
+  /// No description provided for @restoreABackup.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore a backup'**
+  String get restoreABackup;
+
+  /// No description provided for @restoreABackupSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Bring them back on this device or a new one.'**
+  String get restoreABackupSubtitle;
+
+  /// No description provided for @dupRemovedSomeFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Removed {removed} copies. {failed} files couldn\'t be deleted.'**
+  String dupRemovedSomeFailed(int removed, int failed);
+
+  /// No description provided for @dupRemovedAndDeleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Removed {removed} copies and deleted {deleted} files, freeing {size}.'**
+  String dupRemovedAndDeleted(int removed, int deleted, String size);
+
+  /// No description provided for @dupRemovedFromLibrary.
+  ///
+  /// In en, this message translates to:
+  /// **'Removed {removed} copies from your library.'**
+  String dupRemovedFromLibrary(int removed);
+
+  /// No description provided for @songsYouHaveTwice.
+  ///
+  /// In en, this message translates to:
+  /// **'Songs you have twice'**
+  String get songsYouHaveTwice;
+
+  /// No description provided for @lookingThroughLibrary.
+  ///
+  /// In en, this message translates to:
+  /// **'Looking through your library...'**
+  String get lookingThroughLibrary;
+
+  /// No description provided for @noDuplicates.
+  ///
+  /// In en, this message translates to:
+  /// **'No song is in your library twice.'**
+  String get noDuplicates;
+
+  /// No description provided for @duplicatesBody.
+  ///
+  /// In en, this message translates to:
+  /// **'These are the same song in more than one file. The best copy is chosen for each; pick another if you like, then remove the rest.'**
+  String get duplicatesBody;
+
+  /// No description provided for @nothingToRemove.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing to remove'**
+  String get nothingToRemove;
+
+  /// No description provided for @removeExtraCopies.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{Remove 1 extra copy} other{Remove {count} extra copies}}'**
+  String removeExtraCopies(int count);
+
+  /// No description provided for @upToCanBeFreed.
+  ///
+  /// In en, this message translates to:
+  /// **'Up to {size} can be freed.'**
+  String upToCanBeFreed(String size);
+
+  /// No description provided for @chooseOne.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose one'**
+  String get chooseOne;
+
+  /// No description provided for @keepAll.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep all'**
+  String get keepAll;
+
+  /// No description provided for @bestQuality.
+  ///
+  /// In en, this message translates to:
+  /// **'best quality'**
+  String get bestQuality;
+
+  /// No description provided for @downloadedByRiflay.
+  ///
+  /// In en, this message translates to:
+  /// **'Downloaded by Riflay'**
+  String get downloadedByRiflay;
+
+  /// No description provided for @yourFile.
+  ///
+  /// In en, this message translates to:
+  /// **'Your file'**
+  String get yourFile;
+
+  /// No description provided for @keep.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep'**
+  String get keep;
+
+  /// No description provided for @removeCopiesQuestion.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{Remove 1 copy?} other{Remove {count} copies?}}'**
+  String removeCopiesQuestion(int count);
+
+  /// No description provided for @removeCopiesBody.
+  ///
+  /// In en, this message translates to:
+  /// **'They are taken out of your library, and the copy you keep stays. Playlists that had a removed copy use the one you keep.'**
+  String get removeCopiesBody;
+
+  /// No description provided for @alsoDeleteFiles.
+  ///
+  /// In en, this message translates to:
+  /// **'Also delete the files from this device'**
+  String get alsoDeleteFiles;
+
+  /// No description provided for @freesSize.
+  ///
+  /// In en, this message translates to:
+  /// **'Frees {size}. Deleted files can\'t be brought back.'**
+  String freesSize(String size);
+
+  /// No description provided for @ownFilesCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} of your own files'**
+  String ownFilesCount(int count);
+
+  /// No description provided for @downloadsRiflaySaved.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} downloads Riflay saved'**
+  String downloadsRiflaySaved(int count);
+
+  /// No description provided for @listAnd.
+  ///
+  /// In en, this message translates to:
+  /// **'and'**
+  String get listAnd;
+
+  /// No description provided for @filesUsedElsewhere.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} files are used by other songs and stay.'**
+  String filesUsedElsewhere(int count);
+
+  /// No description provided for @deleteFiles.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete files'**
+  String get deleteFiles;
+
+  /// No description provided for @couldntPlay.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t play {title}'**
+  String couldntPlay(String title);
+
+  /// No description provided for @ytSearchFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'YouTube search failed. Check your connection.'**
+  String get ytSearchFailed;
+
+  /// No description provided for @noYtResults.
+  ///
+  /// In en, this message translates to:
+  /// **'No YouTube results.'**
+  String get noYtResults;
+
+  /// No description provided for @ytSearchSource.
+  ///
+  /// In en, this message translates to:
+  /// **'YouTube search'**
+  String get ytSearchSource;
+
+  /// No description provided for @topResult.
+  ///
+  /// In en, this message translates to:
+  /// **'Top result'**
+  String get topResult;
+
+  /// No description provided for @nothingFound.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing found.'**
+  String get nothingFound;
+
+  /// No description provided for @noYtVideos.
+  ///
+  /// In en, this message translates to:
+  /// **'No YouTube videos found.'**
+  String get noYtVideos;
+
+  /// No description provided for @ytVideosSource.
+  ///
+  /// In en, this message translates to:
+  /// **'YouTube videos'**
+  String get ytVideosSource;
+
+  /// No description provided for @couldntReadSongInfo.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t read this song\'s info'**
+  String get couldntReadSongInfo;
+
+  /// No description provided for @saved.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved'**
+  String get saved;
+
+  /// No description provided for @couldntSaveChanges.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t save the changes'**
+  String get couldntSaveChanges;
+
+  /// No description provided for @chooseCoverArt.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose cover art'**
+  String get chooseCoverArt;
+
+  /// No description provided for @noCoverFound.
+  ///
+  /// In en, this message translates to:
+  /// **'No cover found for this album'**
+  String get noCoverFound;
+
+  /// No description provided for @couldntReachCoverArchive.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t reach the Cover Art Archive'**
+  String get couldntReachCoverArchive;
+
+  /// No description provided for @changeCover.
+  ///
+  /// In en, this message translates to:
+  /// **'Change cover'**
+  String get changeCover;
+
+  /// No description provided for @searching.
+  ///
+  /// In en, this message translates to:
+  /// **'Searching…'**
+  String get searching;
+
+  /// No description provided for @findOnline.
+  ///
+  /// In en, this message translates to:
+  /// **'Find online'**
+  String get findOnline;
+
+  /// No description provided for @largeImageHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Use a large image (1000 px or more) for sharp artwork.'**
+  String get largeImageHint;
+
+  /// No description provided for @trackNumber.
+  ///
+  /// In en, this message translates to:
+  /// **'Track'**
+  String get trackNumber;
+
+  /// No description provided for @discNumber.
+  ///
+  /// In en, this message translates to:
+  /// **'Disc'**
+  String get discNumber;
+
+  /// No description provided for @year.
+  ///
+  /// In en, this message translates to:
+  /// **'Year'**
+  String get year;
+
+  /// No description provided for @genre.
+  ///
+  /// In en, this message translates to:
+  /// **'Genre'**
+  String get genre;
+
+  /// No description provided for @ytSignInAgain.
+  ///
+  /// In en, this message translates to:
+  /// **'Please sign in to YouTube Music again.'**
+  String get ytSignInAgain;
+
+  /// No description provided for @ytBusy.
+  ///
+  /// In en, this message translates to:
+  /// **'YouTube Music is busy. Try again in a minute.'**
+  String get ytBusy;
+
+  /// No description provided for @ytNotAnswering.
+  ///
+  /// In en, this message translates to:
+  /// **'YouTube Music isn\'t answering right now. Try again later.'**
+  String get ytNotAnswering;
+
+  /// No description provided for @couldntFinishSignIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t finish signing in. Try again.'**
+  String get couldntFinishSignIn;
+
+  /// No description provided for @signInDidntFinish.
+  ///
+  /// In en, this message translates to:
+  /// **'Signing in didn\'t finish. Try again.'**
+  String get signInDidntFinish;
+
+  /// No description provided for @moodsAndGenres.
+  ///
+  /// In en, this message translates to:
+  /// **'Moods & genres'**
+  String get moodsAndGenres;
+
+  /// No description provided for @performance.
+  ///
+  /// In en, this message translates to:
+  /// **'Performance'**
+  String get performance;
+
+  /// No description provided for @keepScreenOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep screen on'**
+  String get keepScreenOn;
+
+  /// No description provided for @keepScreenOnPhone.
+  ///
+  /// In en, this message translates to:
+  /// **'Stops the screen from turning off by itself. Costs battery'**
+  String get keepScreenOnPhone;
+
+  /// No description provided for @keepScreenOnDesktop.
+  ///
+  /// In en, this message translates to:
+  /// **'Stops the screen from turning off and locking by itself'**
+  String get keepScreenOnDesktop;
+
+  /// No description provided for @dontSleepWhilePlaying.
+  ///
+  /// In en, this message translates to:
+  /// **'Don\'t sleep while playing'**
+  String get dontSleepWhilePlaying;
+
+  /// No description provided for @dontSleepSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'The computer stays awake while music plays. The screen can still turn off'**
+  String get dontSleepSubtitle;
+
+  /// No description provided for @closeToTray.
+  ///
+  /// In en, this message translates to:
+  /// **'Close to tray'**
+  String get closeToTray;
+
+  /// No description provided for @noTrayIcons.
+  ///
+  /// In en, this message translates to:
+  /// **'Your desktop doesn\'t show tray icons, so closing the window quits Riflay'**
+  String get noTrayIcons;
+
+  /// No description provided for @closeToTraySubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Closing the window keeps Riflay playing in the tray. Quit it from the tray icon'**
+  String get closeToTraySubtitle;
+
+  /// No description provided for @keepPlayingScreenOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep playing with the screen off'**
+  String get keepPlayingScreenOff;
+
+  /// No description provided for @batteryExemptOn.
+  ///
+  /// In en, this message translates to:
+  /// **'On. Your phone won\'t put Riflay to sleep'**
+  String get batteryExemptOn;
+
+  /// No description provided for @batteryExemptOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Off. Your phone may stop the music after a while'**
+  String get batteryExemptOff;
+
+  /// No description provided for @allow.
+  ///
+  /// In en, this message translates to:
+  /// **'Allow'**
+  String get allow;
+
+  /// No description provided for @openBatterySettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Open battery settings'**
+  String get openBatterySettings;
+
+  /// No description provided for @keepMusicPlaying.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep the music playing'**
+  String get keepMusicPlaying;
+
+  /// No description provided for @keepMusicPlayingBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Some phones stop music when the screen has been off for a while. Allowing Riflay to run in the background keeps it playing. You can change this later in Settings.'**
+  String get keepMusicPlayingBody;
+
+  /// No description provided for @notNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Not now'**
+  String get notNow;
+
+  /// No description provided for @couldntSaveChangesRetry.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t save the changes. Try again.'**
+  String get couldntSaveChangesRetry;
+
+  /// No description provided for @editSong.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit song'**
+  String get editSong;
+
+  /// No description provided for @artistNamesStay.
+  ///
+  /// In en, this message translates to:
+  /// **'Artist names stay as the artist released them.'**
+  String get artistNamesStay;
+
+  /// No description provided for @yourLyrics.
+  ///
+  /// In en, this message translates to:
+  /// **'Your lyrics'**
+  String get yourLyrics;
+
+  /// No description provided for @yourLyricsBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Shown instead of lyrics found online. Start lines with a time like [01:23.45] to have them follow the song.'**
+  String get yourLyricsBody;
+
+  /// No description provided for @pasteLyricsHere.
+  ///
+  /// In en, this message translates to:
+  /// **'Paste lyrics here'**
+  String get pasteLyricsHere;
+
+  /// No description provided for @addFromFile.
+  ///
+  /// In en, this message translates to:
+  /// **'Add from a file'**
+  String get addFromFile;
+
+  /// No description provided for @importedNamed.
+  ///
+  /// In en, this message translates to:
+  /// **'Imported \"{title}\"'**
+  String importedNamed(String title);
+
+  /// No description provided for @pastePlaylistLink.
+  ///
+  /// In en, this message translates to:
+  /// **'Paste a playlist link from Spotify, Apple Music or Deezer.'**
+  String get pastePlaylistLink;
+
+  /// No description provided for @becomesYtPlaylist.
+  ///
+  /// In en, this message translates to:
+  /// **'It becomes a playlist in your YouTube Music library.'**
+  String get becomesYtPlaylist;
+
+  /// No description provided for @becomesRiflayPlaylist.
+  ///
+  /// In en, this message translates to:
+  /// **'It becomes a Riflay playlist of YouTube Music songs.'**
+  String get becomesRiflayPlaylist;
+
+  /// No description provided for @playlistLink.
+  ///
+  /// In en, this message translates to:
+  /// **'Playlist link'**
+  String get playlistLink;
+
+  /// No description provided for @notAPlaylistLink.
+  ///
+  /// In en, this message translates to:
+  /// **'That isn\'t a Spotify, Apple Music or Deezer playlist link'**
+  String get notAPlaylistLink;
+
+  /// No description provided for @readingPlaylist.
+  ///
+  /// In en, this message translates to:
+  /// **'Reading the playlist…'**
+  String get readingPlaylist;
+
+  /// No description provided for @saving.
+  ///
+  /// In en, this message translates to:
+  /// **'Saving…'**
+  String get saving;
+
+  /// No description provided for @songsAddedOf.
+  ///
+  /// In en, this message translates to:
+  /// **'{saved} of {total} songs added.'**
+  String songsAddedOf(String saved, String total);
+
+  /// No description provided for @songsAddedOfYt.
+  ///
+  /// In en, this message translates to:
+  /// **'{saved} of {total} songs added to your YouTube Music library.'**
+  String songsAddedOfYt(String saved, String total);
+
+  /// No description provided for @firstSongsOnly.
+  ///
+  /// In en, this message translates to:
+  /// **'{service} only shows the first {count} songs without signing in, so the rest were left out.'**
+  String firstSongsOnly(int count, String service);
+
+  /// No description provided for @songsNotOnYt.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 song isn\'t on YouTube Music:} other{{count} songs aren\'t on YouTube Music:}}'**
+  String songsNotOnYt(int count);
+
+  /// No description provided for @openPlaylist.
+  ///
+  /// In en, this message translates to:
+  /// **'Open playlist'**
+  String get openPlaylist;
+
+  /// No description provided for @fmtOpusAbout.
+  ///
+  /// In en, this message translates to:
+  /// **'Smallest files for the same sound. Plays in Riflay and most players.'**
+  String get fmtOpusAbout;
+
+  /// No description provided for @fmtM4aAbout.
+  ///
+  /// In en, this message translates to:
+  /// **'The most widely supported. Plays on nearly every phone, TV and speaker.'**
+  String get fmtM4aAbout;
+
+  /// No description provided for @fmtFlacAbout.
+  ///
+  /// In en, this message translates to:
+  /// **'Lossless file for players and libraries that want FLAC. YouTube\'s sound is kept exactly; it gets no better.'**
+  String get fmtFlacAbout;
+
+  /// No description provided for @fmtMp3About.
+  ///
+  /// In en, this message translates to:
+  /// **'For older players and car stereos. Made from YouTube\'s audio, so it never sounds better than Opus or M4A.'**
+  String get fmtMp3About;
+
+  /// No description provided for @kindAudio.
+  ///
+  /// In en, this message translates to:
+  /// **'Audio'**
+  String get kindAudio;
+
+  /// No description provided for @kindVideo.
+  ///
+  /// In en, this message translates to:
+  /// **'Video'**
+  String get kindVideo;
+
+  /// No description provided for @vidMp4About.
+  ///
+  /// In en, this message translates to:
+  /// **'H.264 picture and AAC sound. Plays on nearly every phone, TV and computer.'**
+  String get vidMp4About;
+
+  /// No description provided for @vidWebmAbout.
+  ///
+  /// In en, this message translates to:
+  /// **'VP9 picture and Opus sound. Smaller files, and the tallest sizes; plays in Riflay and most computers.'**
+  String get vidWebmAbout;
+
+  /// No description provided for @flacStandardAbout.
+  ///
+  /// In en, this message translates to:
+  /// **'Same sample rate as YouTube\'s audio. Plays everywhere.'**
+  String get flacStandardAbout;
+
+  /// No description provided for @flacCdAbout.
+  ///
+  /// In en, this message translates to:
+  /// **'CD quality, for players and burners that want exactly that.'**
+  String get flacCdAbout;
+
+  /// No description provided for @flacHiResAbout.
+  ///
+  /// In en, this message translates to:
+  /// **'Larger files, for libraries kept at 24-bit.'**
+  String get flacHiResAbout;
+
+  /// No description provided for @kbpsBest.
+  ///
+  /// In en, this message translates to:
+  /// **'{kbps} kbps (best)'**
+  String kbpsBest(String kbps);
+
+  /// No description provided for @videoChoice.
+  ///
+  /// In en, this message translates to:
+  /// **'Video · {container} · {height}'**
+  String videoChoice(String container, String height);
+
+  /// No description provided for @bestAvailableLower.
+  ///
+  /// In en, this message translates to:
+  /// **'best available'**
+  String get bestAvailableLower;
+
+  /// No description provided for @waitingToStart.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting to start'**
+  String get waitingToStart;
+
+  /// No description provided for @noteDownloading.
+  ///
+  /// In en, this message translates to:
+  /// **'Downloading'**
+  String get noteDownloading;
+
+  /// No description provided for @downloadedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Downloaded {title}'**
+  String downloadedTitle(String title);
+
+  /// No description provided for @savedToLibrary.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved to your library'**
+  String get savedToLibrary;
+
+  /// No description provided for @couldntDownloadTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t download {title}'**
+  String couldntDownloadTitle(String title);
+
+  /// No description provided for @tapRetry.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap Retry to try again.'**
+  String get tapRetry;
+
+  /// No description provided for @downloadingSongsNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Downloading {count} songs'**
+  String downloadingSongsNote(int count);
+
+  /// No description provided for @openRiflay.
+  ///
+  /// In en, this message translates to:
+  /// **'Open Riflay'**
+  String get openRiflay;
+
+  /// No description provided for @downloadsChannelDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Progress of songs being downloaded'**
+  String get downloadsChannelDescription;
+
+  /// No description provided for @servicePlaylist.
+  ///
+  /// In en, this message translates to:
+  /// **'{service} playlist'**
+  String servicePlaylist(String service);
+
+  /// No description provided for @clearHistoryQuestion.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear listening history?'**
+  String get clearHistoryQuestion;
+
+  /// No description provided for @clearHistoryBody.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{This deletes 1 play from this device. Your library and playlists stay as they are, but your stats, Wraps and lists like Most played start over.} other{This deletes {count} plays from this device. Your library and playlists stay as they are, but your stats, Wraps and lists like Most played start over.}}'**
+  String clearHistoryBody(int count);
+
+  /// No description provided for @historyCleared.
+  ///
+  /// In en, this message translates to:
+  /// **'Listening history cleared'**
+  String get historyCleared;
+
+  /// No description provided for @keepHistory.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep a listening history on this device'**
+  String get keepHistory;
+
+  /// No description provided for @keepHistorySubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Powers Your listening stats, monthly Wraps and lists like Most played. It is never sent anywhere. Turning it off stops recording; what is saved stays until you clear it.'**
+  String get keepHistorySubtitle;
+
+  /// No description provided for @wrapNotification.
+  ///
+  /// In en, this message translates to:
+  /// **'Monthly Wrap notification'**
+  String get wrapNotification;
+
+  /// No description provided for @wrapNotificationSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'On the 1st, tell me when last month\'s Wrap is ready.'**
+  String get wrapNotificationSubtitle;
+
+  /// No description provided for @clearHistory.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear listening history'**
+  String get clearHistory;
+
+  /// No description provided for @nothingSavedYet.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing saved yet'**
+  String get nothingSavedYet;
+
+  /// No description provided for @playsSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} plays saved on this device'**
+  String playsSaved(int count);
+
+  /// No description provided for @lyricsFile.
+  ///
+  /// In en, this message translates to:
+  /// **'Lyrics file'**
+  String get lyricsFile;
+
+  /// No description provided for @embeddedInFile.
+  ///
+  /// In en, this message translates to:
+  /// **'Embedded in the file'**
+  String get embeddedInFile;
+
+  /// No description provided for @addLyricsFirst.
+  ///
+  /// In en, this message translates to:
+  /// **'Add some lyrics first.'**
+  String get addLyricsFirst;
+
+  /// No description provided for @lrcTimesWrong.
+  ///
+  /// In en, this message translates to:
+  /// **'Some of the times in these lyrics aren\'t written correctly. Start each line with a time like [01:23.45].'**
+  String get lrcTimesWrong;
+
+  /// No description provided for @lrcTimesPastEnd.
+  ///
+  /// In en, this message translates to:
+  /// **'These times run past the end of the song. Check that the lyrics belong to it.'**
+  String get lrcTimesPastEnd;
+
+  /// No description provided for @couldntStartSession.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t start a session. Check that you\'re connected to Wi-Fi.'**
+  String get couldntStartSession;
+
+  /// No description provided for @sessionStopped.
+  ///
+  /// In en, this message translates to:
+  /// **'The session stopped. Start it again to keep listening together.'**
+  String get sessionStopped;
+
+  /// No description provided for @nameLeft.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} left'**
+  String nameLeft(String name);
+
+  /// No description provided for @someone.
+  ///
+  /// In en, this message translates to:
+  /// **'Someone'**
+  String get someone;
+
+  /// No description provided for @nameAddedToQueue.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} added {title} to the queue'**
+  String nameAddedToQueue(String name, String title);
+
+  /// No description provided for @sessionNotFound.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t find that session. Check the code and that you\'re on the same Wi-Fi.'**
+  String get sessionNotFound;
+
+  /// No description provided for @sessionNotAnswering.
+  ///
+  /// In en, this message translates to:
+  /// **'That session isn\'t answering. Try again in a moment.'**
+  String get sessionNotAnswering;
+
+  /// No description provided for @theHostCap.
+  ///
+  /// In en, this message translates to:
+  /// **'The host'**
+  String get theHostCap;
+
+  /// No description provided for @hostEndedSession.
+  ///
+  /// In en, this message translates to:
+  /// **'{host} ended the listening session'**
+  String hostEndedSession(String host);
+
+  /// No description provided for @sessionEndedOrDropped.
+  ///
+  /// In en, this message translates to:
+  /// **'The session ended or the connection dropped.'**
+  String get sessionEndedOrDropped;
+
+  /// No description provided for @lostHostConnection.
+  ///
+  /// In en, this message translates to:
+  /// **'Lost the connection to the host. Join again to keep listening.'**
+  String get lostHostConnection;
+
+  /// No description provided for @listeningTogetherSource.
+  ///
+  /// In en, this message translates to:
+  /// **'Listening together'**
+  String get listeningTogetherSource;
+
+  /// No description provided for @youLeftSession.
+  ///
+  /// In en, this message translates to:
+  /// **'You left the listening session'**
+  String get youLeftSession;
+
+  /// No description provided for @onlyYtToHostQueue.
+  ///
+  /// In en, this message translates to:
+  /// **'Only songs from YouTube Music can be added to {host}\'s queue.'**
+  String onlyYtToHostQueue(String host);
+
+  /// No description provided for @checkGithubUpdate.
+  ///
+  /// In en, this message translates to:
+  /// **'Check GitHub for a newer version of Riflay'**
+  String get checkGithubUpdate;
+
+  /// No description provided for @checkingUpdates.
+  ///
+  /// In en, this message translates to:
+  /// **'Checking for updates…'**
+  String get checkingUpdates;
+
+  /// No description provided for @latestVersion.
+  ///
+  /// In en, this message translates to:
+  /// **'You\'re using the latest version'**
+  String get latestVersion;
+
+  /// No description provided for @versionAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Version {version} is available'**
+  String versionAvailable(String version);
+
+  /// No description provided for @downloadingVersion.
+  ///
+  /// In en, this message translates to:
+  /// **'Downloading version {version}…'**
+  String downloadingVersion(String version);
+
+  /// No description provided for @versionReady.
+  ///
+  /// In en, this message translates to:
+  /// **'Version {version} is ready to install'**
+  String versionReady(String version);
+
+  /// No description provided for @openingInstaller.
+  ///
+  /// In en, this message translates to:
+  /// **'Opening the Android installer…'**
+  String get openingInstaller;
+
+  /// No description provided for @completeInInstaller.
+  ///
+  /// In en, this message translates to:
+  /// **'Complete the update in the Android installer'**
+  String get completeInInstaller;
+
+  /// No description provided for @allowInstallUpdates.
+  ///
+  /// In en, this message translates to:
+  /// **'Allow Riflay to install updates, then try again'**
+  String get allowInstallUpdates;
+
+  /// No description provided for @differentSigningKey.
+  ///
+  /// In en, this message translates to:
+  /// **'This copy uses a different signing key. Back up your data before installing the release'**
+  String get differentSigningKey;
+
+  /// No description provided for @couldntVerifyUpdate.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t verify the update. Try downloading it again'**
+  String get couldntVerifyUpdate;
+
+  /// No description provided for @couldntCheckUpdates.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t check for updates. Try again'**
+  String get couldntCheckUpdates;
+
+  /// No description provided for @couldntUpdateRiflay.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t update Riflay. Try again'**
+  String get couldntUpdateRiflay;
+
+  /// No description provided for @installUpdate.
+  ///
+  /// In en, this message translates to:
+  /// **'Install update'**
+  String get installUpdate;
+
+  /// No description provided for @checkForUpdates.
+  ///
+  /// In en, this message translates to:
+  /// **'Check for updates'**
+  String get checkForUpdates;
+
+  /// No description provided for @downloadUpdate.
+  ///
+  /// In en, this message translates to:
+  /// **'Download update'**
+  String get downloadUpdate;
+
+  /// No description provided for @getUpdate.
+  ///
+  /// In en, this message translates to:
+  /// **'Get update'**
+  String get getUpdate;
+
+  /// No description provided for @spotifySignInExpired.
+  ///
+  /// In en, this message translates to:
+  /// **'Your Spotify sign-in has expired. Sign in again.'**
+  String get spotifySignInExpired;
+
+  /// No description provided for @recommended.
+  ///
+  /// In en, this message translates to:
+  /// **'Recommended'**
+  String get recommended;
+
+  /// No description provided for @bestAvailableWith.
+  ///
+  /// In en, this message translates to:
+  /// **'Best available ({label})'**
+  String bestAvailableWith(String label);
+
+  /// No description provided for @downloadAsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Download as'**
+  String get downloadAsTitle;
+
+  /// No description provided for @couldntLookUpSizes.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t look up video sizes.'**
+  String get couldntLookUpSizes;
+
+  /// No description provided for @smallerFilesClosest.
+  ///
+  /// In en, this message translates to:
+  /// **'Smaller files, with a little less full sound. Uses the closest version YouTube offers.'**
+  String get smallerFilesClosest;
+
+  /// No description provided for @musicFolders.
+  ///
+  /// In en, this message translates to:
+  /// **'Music folders'**
+  String get musicFolders;
+
+  /// No description provided for @keepLibraryUpToDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep the library up to date'**
+  String get keepLibraryUpToDate;
+
+  /// No description provided for @keepLibraryOpen.
+  ///
+  /// In en, this message translates to:
+  /// **'New songs in your music folders are added, and songs you delete or move are taken out, each time you open Riflay.'**
+  String get keepLibraryOpen;
+
+  /// No description provided for @keepLibraryWatch.
+  ///
+  /// In en, this message translates to:
+  /// **'New songs in your music folders are added, and songs you delete or move are taken out, without adding the folder again.'**
+  String get keepLibraryWatch;
+
+  /// No description provided for @checkNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Check now'**
+  String get checkNow;
+
+  /// No description provided for @addFolderFirst.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a music folder from the library first.'**
+  String get addFolderFirst;
+
+  /// No description provided for @checkingDots.
+  ///
+  /// In en, this message translates to:
+  /// **'Checking...'**
+  String get checkingDots;
+
+  /// No description provided for @lookAtFoldersAgain.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{Look at your music folder again.} other{Look at your {count} music folders again.}}'**
+  String lookAtFoldersAgain(int count);
+
+  /// No description provided for @stopWatching.
+  ///
+  /// In en, this message translates to:
+  /// **'Stop watching'**
+  String get stopWatching;
+
+  /// No description provided for @tidyUp.
+  ///
+  /// In en, this message translates to:
+  /// **'Tidy up'**
+  String get tidyUp;
+
+  /// No description provided for @findDuplicates.
+  ///
+  /// In en, this message translates to:
+  /// **'Find songs you have twice'**
+  String get findDuplicates;
+
+  /// No description provided for @findDuplicatesSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'The same song in different files, so you can keep the best one.'**
+  String get findDuplicatesSubtitle;
+
+  /// No description provided for @sessionQr.
+  ///
+  /// In en, this message translates to:
+  /// **'Session QR code'**
+  String get sessionQr;
+
+  /// No description provided for @sessionQrSemantics.
+  ///
+  /// In en, this message translates to:
+  /// **'Listening session QR code'**
+  String get sessionQrSemantics;
+
+  /// No description provided for @sessionQrHowTo.
+  ///
+  /// In en, this message translates to:
+  /// **'In Riflay on another device, open Listen together and choose Scan QR code.'**
+  String get sessionQrHowTo;
+
+  /// No description provided for @notASessionQr.
+  ///
+  /// In en, this message translates to:
+  /// **'That QR code is not a Riflay session code.'**
+  String get notASessionQr;
+
+  /// No description provided for @noSessionInImage.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t find a Riflay session code in that image.'**
+  String get noSessionInImage;
+
+  /// No description provided for @couldntReadImage.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t read that image. Try another one.'**
+  String get couldntReadImage;
+
+  /// No description provided for @cameraUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Camera unavailable. Allow camera access in your device settings, or open a QR image.'**
+  String get cameraUnavailable;
+
+  /// No description provided for @openQrImageToJoin.
+  ///
+  /// In en, this message translates to:
+  /// **'Open an image of the session QR code to join.'**
+  String get openQrImageToJoin;
+
+  /// No description provided for @pointCamera.
+  ///
+  /// In en, this message translates to:
+  /// **'Point the camera at the session QR code shown in Riflay.'**
+  String get pointCamera;
+
+  /// No description provided for @readingImage.
+  ///
+  /// In en, this message translates to:
+  /// **'Reading image…'**
+  String get readingImage;
+
+  /// No description provided for @openQrImage.
+  ///
+  /// In en, this message translates to:
+  /// **'Open QR image'**
+  String get openQrImage;
+
+  /// No description provided for @motionGlide.
+  ///
+  /// In en, this message translates to:
+  /// **'Glide'**
+  String get motionGlide;
+
+  /// No description provided for @motionFadeThrough.
+  ///
+  /// In en, this message translates to:
+  /// **'Fade through'**
+  String get motionFadeThrough;
+
+  /// No description provided for @motionSoftZoom.
+  ///
+  /// In en, this message translates to:
+  /// **'Soft zoom'**
+  String get motionSoftZoom;
+
+  /// No description provided for @motionSlide.
+  ///
+  /// In en, this message translates to:
+  /// **'Slide'**
+  String get motionSlide;
+
+  /// No description provided for @motionCurtain.
+  ///
+  /// In en, this message translates to:
+  /// **'Curtain reveal'**
+  String get motionCurtain;
+
+  /// No description provided for @motionCircular.
+  ///
+  /// In en, this message translates to:
+  /// **'Circular reveal'**
+  String get motionCircular;
+
+  /// No description provided for @motionSide.
+  ///
+  /// In en, this message translates to:
+  /// **'Side reveal'**
+  String get motionSide;
+
+  /// No description provided for @motionDiamond.
+  ///
+  /// In en, this message translates to:
+  /// **'Diamond reveal'**
+  String get motionDiamond;
+
+  /// No description provided for @speedFast.
+  ///
+  /// In en, this message translates to:
+  /// **'Fast'**
+  String get speedFast;
+
+  /// No description provided for @speedRelaxed.
+  ///
+  /// In en, this message translates to:
+  /// **'Relaxed'**
+  String get speedRelaxed;
+
+  /// No description provided for @serviceSignedOutSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'{service} signed you out. Connect it again in Settings.'**
+  String serviceSignedOutSettings(String service);
+
+  /// No description provided for @lostConnectionTo.
+  ///
+  /// In en, this message translates to:
+  /// **'Lost connection to {device}'**
+  String lostConnectionTo(String device);
+
+  /// No description provided for @couldntPlayOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t play on {device}'**
+  String couldntPlayOn(String device);
+
+  /// No description provided for @pasteYtLink.
+  ///
+  /// In en, this message translates to:
+  /// **'Paste a YouTube link to a video or playlist.'**
+  String get pasteYtLink;
+
+  /// No description provided for @linkLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load that link. It may be private, removed or region-locked.'**
+  String get linkLoadFailed;
+
+  /// No description provided for @importFromYtBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Downloads the audio track and adds it to your library.'**
+  String get importFromYtBody;
+
+  /// No description provided for @paste.
+  ///
+  /// In en, this message translates to:
+  /// **'Paste'**
+  String get paste;
+
+  /// No description provided for @bestQualityNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved in the best quality YouTube offers (up to ~160 kbps Opus/AAC), without re-encoding.'**
+  String get bestQualityNote;
+
+  /// No description provided for @downloadCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Download {count}'**
+  String downloadCount(String count);
+
+  /// No description provided for @aboutSize.
+  ///
+  /// In en, this message translates to:
+  /// **'About {size}'**
+  String aboutSize(String size);
+
+  /// No description provided for @aboutSizeTotal.
+  ///
+  /// In en, this message translates to:
+  /// **'About {size} total'**
+  String aboutSizeTotal(String size);
+
+  /// No description provided for @ytPlaylistLine.
+  ///
+  /// In en, this message translates to:
+  /// **'Playlist • {author} • {count} videos'**
+  String ytPlaylistLine(int count, String author);
+
+  /// No description provided for @checkingSize.
+  ///
+  /// In en, this message translates to:
+  /// **'Checking size…'**
+  String get checkingSize;
+
+  /// No description provided for @eqBitPerfectNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Bit-perfect mode is on, so the equalizer is bypassed. Turn it off in Settings › Sound › Output & quality.'**
+  String get eqBitPerfectNote;
+
+  /// No description provided for @eqHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick a preset or drag the sliders. Tap a frequency to fine-tune it.'**
+  String get eqHint;
+
+  /// No description provided for @eqHeadroom.
+  ///
+  /// In en, this message translates to:
+  /// **'Headroom {db} dB, so boosted bands never distort.'**
+  String eqHeadroom(String db);
+
+  /// No description provided for @changeFrequency.
+  ///
+  /// In en, this message translates to:
+  /// **'Change frequency and width'**
+  String get changeFrequency;
+
+  /// No description provided for @bandNumber.
+  ///
+  /// In en, this message translates to:
+  /// **'Band {number}'**
+  String bandNumber(String number);
+
+  /// No description provided for @defaultLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Default'**
+  String get defaultLabel;
+
+  /// No description provided for @newReleases.
+  ///
+  /// In en, this message translates to:
+  /// **'New releases'**
+  String get newReleases;
+
+  /// No description provided for @couldntLoadPage.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load this page. Check your internet connection.'**
+  String get couldntLoadPage;
+
+  /// No description provided for @removedFromLibrary.
+  ///
+  /// In en, this message translates to:
+  /// **'Removed from your library'**
+  String get removedFromLibrary;
+
+  /// No description provided for @saveToLibrary.
+  ///
+  /// In en, this message translates to:
+  /// **'Save to library'**
+  String get saveToLibrary;
+
+  /// No description provided for @phaseDownloading.
+  ///
+  /// In en, this message translates to:
+  /// **'Downloading'**
+  String get phaseDownloading;
+
+  /// No description provided for @converting.
+  ///
+  /// In en, this message translates to:
+  /// **'Converting…'**
+  String get converting;
+
+  /// No description provided for @finishing.
+  ///
+  /// In en, this message translates to:
+  /// **'Finishing…'**
+  String get finishing;
+
+  /// No description provided for @needsFfmpegMp3.
+  ///
+  /// In en, this message translates to:
+  /// **'MP3 downloads need ffmpeg, which isn\'t available here. Pick another format in Settings › Library & downloads › Downloads.'**
+  String get needsFfmpegMp3;
+
+  /// No description provided for @noFlacHere.
+  ///
+  /// In en, this message translates to:
+  /// **'FLAC downloads aren\'t available on this device. Pick another format in Settings › Library & downloads › Downloads.'**
+  String get noFlacHere;
+
+  /// No description provided for @mobileDataOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Mobile data downloads are off. Connect to Wi-Fi, or allow them in Settings › Library & downloads › Downloads.'**
+  String get mobileDataOff;
+
+  /// No description provided for @couldntDownloadSong.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t download this song. Try again later.'**
+  String get couldntDownloadSong;
+
+  /// No description provided for @spotifyLinePlaylist.
+  ///
+  /// In en, this message translates to:
+  /// **'{name}: {found} of {total} songs'**
+  String spotifyLinePlaylist(String name, String found, String total);
+
+  /// No description provided for @spotifyLineAlbumSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'{name}: saved to your library'**
+  String spotifyLineAlbumSaved(String name);
+
+  /// No description provided for @spotifyLineFollowed.
+  ///
+  /// In en, this message translates to:
+  /// **'{name}: followed'**
+  String spotifyLineFollowed(String name);
+
+  /// No description provided for @spotifyLineArtistMissing.
+  ///
+  /// In en, this message translates to:
+  /// **'{name}: not found on YouTube Music'**
+  String spotifyLineArtistMissing(String name);
+
+  /// No description provided for @spotifyLineNoSongs.
+  ///
+  /// In en, this message translates to:
+  /// **'{name}: no songs found on YouTube Music'**
+  String spotifyLineNoSongs(String name);
+
+  /// No description provided for @spotifyLineFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'{name}: {problem}'**
+  String spotifyLineFailed(String name, String problem);
+
+  /// No description provided for @somethingWentWrong.
+  ///
+  /// In en, this message translates to:
+  /// **'something went wrong'**
+  String get somethingWentWrong;
+
+  /// No description provided for @positionOf.
+  ///
+  /// In en, this message translates to:
+  /// **'{kind} {position} of {count}'**
+  String positionOf(String kind, String position, String count);
+
+  /// No description provided for @signInYtFirst.
+  ///
+  /// In en, this message translates to:
+  /// **'sign in to YouTube Music first'**
+  String get signInYtFirst;
+
+  /// No description provided for @hideRiflay.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide Riflay'**
+  String get hideRiflay;
+
+  /// No description provided for @showRiflay.
+  ///
+  /// In en, this message translates to:
+  /// **'Show Riflay'**
+  String get showRiflay;
+
+  /// No description provided for @quitRiflay.
+  ///
+  /// In en, this message translates to:
+  /// **'Quit Riflay'**
+  String get quitRiflay;
+
+  /// No description provided for @convertingToFlac.
+  ///
+  /// In en, this message translates to:
+  /// **'Converting {title} to FLAC…'**
+  String convertingToFlac(String title);
+
+  /// No description provided for @convertingSongsToFlac.
+  ///
+  /// In en, this message translates to:
+  /// **'Converting {count} songs to FLAC…'**
+  String convertingSongsToFlac(int count);
+
+  /// No description provided for @convertedToFlac.
+  ///
+  /// In en, this message translates to:
+  /// **'Converted {title} to FLAC'**
+  String convertedToFlac(String title);
+
+  /// No description provided for @alreadyLossless.
+  ///
+  /// In en, this message translates to:
+  /// **'{title} is already lossless'**
+  String alreadyLossless(String title);
+
+  /// No description provided for @couldntConvert.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t convert {title}'**
+  String couldntConvert(String title);
+
+  /// No description provided for @convertedSongsToFlac.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{Converted 1 song to FLAC} other{Converted {count} songs to FLAC}}'**
+  String convertedSongsToFlac(int count);
+
+  /// No description provided for @convertedSomeFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{Converted 1 song to FLAC, {failed} couldn\'t be converted} other{Converted {count} songs to FLAC, {failed} couldn\'t be converted}}'**
+  String convertedSomeFailed(int count, int failed);
+
+  /// No description provided for @couldntConvertThese.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t convert these songs'**
+  String get couldntConvertThese;
+
+  /// No description provided for @addedSongsCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{Added 1 song} other{Added {count} songs}}'**
+  String addedSongsCount(int count);
+
+  /// No description provided for @allowReadMusic.
+  ///
+  /// In en, this message translates to:
+  /// **'Allow Riflay to read your music to add a folder'**
+  String get allowReadMusic;
+
+  /// No description provided for @couldntAddMusic.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t add that music'**
+  String get couldntAddMusic;
+
+  /// No description provided for @pressBackToExit.
+  ///
+  /// In en, this message translates to:
+  /// **'Press back again to exit'**
+  String get pressBackToExit;
+
+  /// No description provided for @downloadingAudio.
+  ///
+  /// In en, this message translates to:
+  /// **'Downloading audio…'**
+  String get downloadingAudio;
+
+  /// No description provided for @view.
+  ///
+  /// In en, this message translates to:
+  /// **'View'**
+  String get view;
+
+  /// No description provided for @resizeSidebar.
+  ///
+  /// In en, this message translates to:
+  /// **'Resize sidebar'**
+  String get resizeSidebar;
+
+  /// No description provided for @resizeSidePanel.
+  ///
+  /// In en, this message translates to:
+  /// **'Resize side panel'**
+  String get resizeSidePanel;
+
+  /// No description provided for @signInToSpotify.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in to Spotify'**
+  String get signInToSpotify;
+
+  /// No description provided for @checkingSession.
+  ///
+  /// In en, this message translates to:
+  /// **'Checking the session…'**
+  String get checkingSession;
+
+  /// No description provided for @spotifyHandlesSignIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Spotify handles the sign-in. Riflay only reads your library.'**
+  String get spotifyHandlesSignIn;
+
+  /// No description provided for @couldntLoadSignIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load the sign-in page. Check your internet connection.'**
+  String get couldntLoadSignIn;
+
+  /// No description provided for @noSessionYet.
+  ///
+  /// In en, this message translates to:
+  /// **'No signed-in session on this page yet. Finish signing in above, then tap Try again.'**
+  String get noSessionYet;
+
+  /// No description provided for @couldntReadSpotifySession.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t read the Spotify session. Try again.'**
+  String get couldntReadSpotifySession;
+
+  /// No description provided for @signInToYt.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in to YouTube Music'**
+  String get signInToYt;
+
+  /// No description provided for @googleHandlesSignIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Google handles the sign-in. Riflay only keeps the session.'**
+  String get googleHandlesSignIn;
+
+  /// No description provided for @couldNotUseSignIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not use that sign-in.'**
+  String get couldNotUseSignIn;
+
+  /// No description provided for @nothingIsPlaying.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing is playing'**
+  String get nothingIsPlaying;
+
+  /// No description provided for @pressEscToExit.
+  ///
+  /// In en, this message translates to:
+  /// **'Press Esc to exit full screen'**
+  String get pressEscToExit;
+
+  /// No description provided for @hideEqualizer.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide equalizer'**
+  String get hideEqualizer;
+
+  /// No description provided for @videoUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'This video is unavailable.'**
+  String get videoUnavailable;
+
+  /// No description provided for @videoUnplayable.
+  ///
+  /// In en, this message translates to:
+  /// **'This video can\'t be played (private, age-restricted or region-locked).'**
+  String get videoUnplayable;
+
+  /// No description provided for @muxFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t combine the picture and the sound. Try again, or pick another size in Settings › Library & downloads › Downloads.'**
+  String get muxFailed;
+
+  /// No description provided for @noInternetTryAgain.
+  ///
+  /// In en, this message translates to:
+  /// **'No internet connection. Try again.'**
+  String get noInternetTryAgain;
+
+  /// No description provided for @extAnsweredUnreadable.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} answered something unreadable'**
+  String extAnsweredUnreadable(String name);
+
+  /// No description provided for @extStopped.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} was stopped'**
+  String extStopped(String name);
+
+  /// No description provided for @flacBiggerOne.
+  ///
+  /// In en, this message translates to:
+  /// **'The FLAC file will be bigger than the original. The sound stays the same: FLAC can\'t bring back what the original already lost.'**
+  String get flacBiggerOne;
+
+  /// No description provided for @flacBiggerEach.
+  ///
+  /// In en, this message translates to:
+  /// **'Each FLAC file will be bigger than the original. The sound stays the same: FLAC can\'t bring back what the original already lost.'**
+  String get flacBiggerEach;
+
+  /// No description provided for @ownSongsStay.
+  ///
+  /// In en, this message translates to:
+  /// **'Songs you added yourself stay as they are, next to their FLAC.'**
+  String get ownSongsStay;
+
+  /// No description provided for @quality.
+  ///
+  /// In en, this message translates to:
+  /// **'Quality'**
+  String get quality;
+
+  /// No description provided for @convert.
+  ///
+  /// In en, this message translates to:
+  /// **'Convert'**
+  String get convert;
+
+  /// No description provided for @betaMusixmatchBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Look for word-by-word lyrics on Musixmatch when other sources have none.'**
+  String get betaMusixmatchBody;
+
+  /// No description provided for @betaVideoModeBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Watch a song\'s music video in the player, in step with the song.'**
+  String get betaVideoModeBody;
+
+  /// No description provided for @betaDirectUsbBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Play straight to a USB DAC, past Android. Experimental.'**
+  String get betaDirectUsbBody;
+
+  /// No description provided for @mostPlayed.
+  ///
+  /// In en, this message translates to:
+  /// **'Most played'**
+  String get mostPlayed;
+
+  /// No description provided for @notPlayedForAWhile.
+  ///
+  /// In en, this message translates to:
+  /// **'Not played for a while'**
+  String get notPlayedForAWhile;
+
+  /// No description provided for @thisSong.
+  ///
+  /// In en, this message translates to:
+  /// **'this song'**
+  String get thisSong;
+
+  /// No description provided for @addMusicFolder.
+  ///
+  /// In en, this message translates to:
+  /// **'Add music folder'**
+  String get addMusicFolder;
+
+  /// No description provided for @couldntReachDevice.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t reach {device}'**
+  String couldntReachDevice(String device);
+
+  /// No description provided for @presetClassicNote.
+  ///
+  /// In en, this message translates to:
+  /// **'The player as it has always been, the cover pulsing with the music'**
+  String get presetClassicNote;
+
+  /// No description provided for @presetStackedNote.
+  ///
+  /// In en, this message translates to:
+  /// **'The cover as the page, joined buttons, a thick bar and a wide Play button'**
+  String get presetStackedNote;
+
+  /// No description provided for @presetKawaiiNote.
+  ///
+  /// In en, this message translates to:
+  /// **'The cover fades into the page, with plain icons, a wavy line and the volume behind a button'**
+  String get presetKawaiiNote;
+
+  /// No description provided for @useThisColour.
+  ///
+  /// In en, this message translates to:
+  /// **'Use this colour'**
+  String get useThisColour;
+
+  /// No description provided for @saturationBrightness.
+  ///
+  /// In en, this message translates to:
+  /// **'Saturation and brightness'**
+  String get saturationBrightness;
+
+  /// No description provided for @hue.
+  ///
+  /// In en, this message translates to:
+  /// **'Hue'**
+  String get hue;
+
+  /// No description provided for @wrapReadyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Your {month} in music is ready'**
+  String wrapReadyTitle(String month);
+
+  /// No description provided for @monthlyWrap.
+  ///
+  /// In en, this message translates to:
+  /// **'Monthly Wrap'**
+  String get monthlyWrap;
+
+  /// No description provided for @monthlyWrapChannel.
+  ///
+  /// In en, this message translates to:
+  /// **'Your month in music, once it is over'**
+  String get monthlyWrapChannel;
+
+  /// No description provided for @tapToSeeListened.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap to see what you listened to.'**
+  String get tapToSeeListened;
+
+  /// No description provided for @vizOffBitPerfect.
+  ///
+  /// In en, this message translates to:
+  /// **'Off while Bit-perfect is on: nothing may change the sound on its way to your DAC'**
+  String get vizOffBitPerfect;
+
+  /// No description provided for @vizOffLightweight.
+  ///
+  /// In en, this message translates to:
+  /// **'Off in the Lightweight performance mode'**
+  String get vizOffLightweight;
+
+  /// No description provided for @vizOffReducedMotion.
+  ///
+  /// In en, this message translates to:
+  /// **'Off while Motion is reduced'**
+  String get vizOffReducedMotion;
+
+  /// No description provided for @vizHiddenDop.
+  ///
+  /// In en, this message translates to:
+  /// **'Hidden while this song plays as DSD over DoP'**
+  String get vizHiddenDop;
+
+  /// No description provided for @vizHiddenCasting.
+  ///
+  /// In en, this message translates to:
+  /// **'Hidden while playing on another device'**
+  String get vizHiddenCasting;
+
+  /// No description provided for @minimize.
+  ///
+  /// In en, this message translates to:
+  /// **'Minimize'**
+  String get minimize;
+
+  /// No description provided for @maximize.
+  ///
+  /// In en, this message translates to:
+  /// **'Maximize'**
+  String get maximize;
+
+  /// No description provided for @windowRestore.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore'**
+  String get windowRestore;
+
+  /// No description provided for @whilePlaying.
+  ///
+  /// In en, this message translates to:
+  /// **'While playing'**
+  String get whilePlaying;
+
+  /// No description provided for @whileRiflayOpen.
+  ///
+  /// In en, this message translates to:
+  /// **'While Riflay is open'**
+  String get whileRiflayOpen;
+
+  /// No description provided for @couldntFindOnYt.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t find {title} on YouTube Music'**
+  String couldntFindOnYt(String title);
+
+  /// No description provided for @fromNamed.
+  ///
+  /// In en, this message translates to:
+  /// **'From {name}'**
+  String fromNamed(String name);
+
+  /// No description provided for @extCouldntSearch.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} couldn\'t search: {error}'**
+  String extCouldntSearch(String name, String error);
+
+  /// No description provided for @moreOptionsFor.
+  ///
+  /// In en, this message translates to:
+  /// **'More options for {title}'**
+  String moreOptionsFor(String title);
+
+  /// No description provided for @removedFileNotDeleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Removed from your library; the file couldn\'t be deleted.'**
+  String get removedFileNotDeleted;
+
+  /// No description provided for @couldntPlayOnDevice.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t play {title} on {device}'**
+  String couldntPlayOnDevice(String title, String device);
+
+  /// No description provided for @tallerAsWebm.
+  ///
+  /// In en, this message translates to:
+  /// **'{size} is available as WebM.'**
+  String tallerAsWebm(String size);
+
+  /// No description provided for @dsdUseDacVolume.
+  ///
+  /// In en, this message translates to:
+  /// **'DSD goes to your DAC as it is: use the DAC\'s volume'**
+  String get dsdUseDacVolume;
+
+  /// No description provided for @streamsOnline.
+  ///
+  /// In en, this message translates to:
+  /// **'YouTube Music: needs internet'**
+  String get streamsOnline;
+
+  /// No description provided for @playsOfflineHere.
+  ///
+  /// In en, this message translates to:
+  /// **'On this device: plays offline'**
+  String get playsOfflineHere;
+
+  /// No description provided for @showAll.
+  ///
+  /// In en, this message translates to:
+  /// **'Show all'**
+  String get showAll;
+
+  /// No description provided for @offWhileDirect.
+  ///
+  /// In en, this message translates to:
+  /// **'Off while the sound goes straight to your DAC'**
+  String get offWhileDirect;
+
+  /// No description provided for @ffmpegOneTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Getting this ready: a one-time download (about 40 MB)…'**
+  String get ffmpegOneTime;
+
+  /// No description provided for @matugenInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a valid Matugen JSON color file. Keeping the last working colors.'**
+  String get matugenInvalid;
+
+  /// No description provided for @couldntSignInSpotify.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t sign in to Spotify. Try again.'**
+  String get couldntSignInSpotify;
+
+  /// No description provided for @somethingWentWrongRetry.
+  ///
+  /// In en, this message translates to:
+  /// **'Something went wrong. Try again.'**
+  String get somethingWentWrongRetry;
+
+  /// No description provided for @videoCouldntLoad.
+  ///
+  /// In en, this message translates to:
+  /// **'The video couldn\'t load, so the song plays on its own.'**
+  String get videoCouldntLoad;
+
+  /// No description provided for @keySpace.
+  ///
+  /// In en, this message translates to:
+  /// **'Space'**
+  String get keySpace;
+
+  /// No description provided for @forward.
+  ///
+  /// In en, this message translates to:
+  /// **'Forward'**
+  String get forward;
+
+  /// No description provided for @deletePlaylistBody.
+  ///
+  /// In en, this message translates to:
+  /// **'\"{name}\" will be deleted. The songs stay in your library.'**
+  String deletePlaylistBody(String name);
+
+  /// No description provided for @lyricsOtherVersion.
+  ///
+  /// In en, this message translates to:
+  /// **'These lyrics are from a different recording of the same song (for example, the studio version instead of a live performance). The words may be correct, but their timing may not match. Open the lyrics menu > Adjust timing to shift them.'**
+  String get lyricsOtherVersion;
+
+  /// No description provided for @backToCurrentLine.
+  ///
+  /// In en, this message translates to:
+  /// **'Back to current line'**
+  String get backToCurrentLine;
+
+  /// No description provided for @signInWindowClosed.
+  ///
+  /// In en, this message translates to:
+  /// **'The sign-in window closed unexpectedly. Try again.'**
+  String get signInWindowClosed;
+
+  /// No description provided for @spotifySignInWindowClosed.
+  ///
+  /// In en, this message translates to:
+  /// **'The Spotify sign-in window closed unexpectedly. Try again.'**
+  String get spotifySignInWindowClosed;
+
+  /// No description provided for @deviceDidntRespond.
+  ///
+  /// In en, this message translates to:
+  /// **'{device} didn\'t respond'**
+  String deviceDidntRespond(String device);
+
+  /// No description provided for @theDevice.
+  ///
+  /// In en, this message translates to:
+  /// **'The device'**
+  String get theDevice;
+
+  /// No description provided for @ytReturnedNothing.
+  ///
+  /// In en, this message translates to:
+  /// **'YouTube Music returned nothing. Check your connection.'**
+  String get ytReturnedNothing;
+
+  /// No description provided for @signInToChangeYt.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in with Google to change your YouTube Music library.'**
+  String get signInToChangeYt;
+
+  /// No description provided for @notYtInvite.
+  ///
+  /// In en, this message translates to:
+  /// **'That isn\'t a YouTube Music invite link.'**
+  String get notYtInvite;
+
+  /// No description provided for @noInternetCheck.
+  ///
+  /// In en, this message translates to:
+  /// **'No internet connection. Check it and try again.'**
+  String get noInternetCheck;
+
+  /// No description provided for @ytDidntCreatePlaylist.
+  ///
+  /// In en, this message translates to:
+  /// **'YouTube Music did not create the playlist.'**
+  String get ytDidntCreatePlaylist;
+
+  /// No description provided for @ytDidntTakeChange.
+  ///
+  /// In en, this message translates to:
+  /// **'YouTube Music didn\'t take that change. Try again.'**
+  String get ytDidntTakeChange;
+
+  /// No description provided for @ytDidntMakeInvite.
+  ///
+  /// In en, this message translates to:
+  /// **'YouTube Music did not make an invite link.'**
+  String get ytDidntMakeInvite;
+
+  /// No description provided for @notPlaylistLinkFrom.
+  ///
+  /// In en, this message translates to:
+  /// **'That isn\'t a playlist link from {services}.'**
+  String notPlaylistLinkFrom(String services);
+
+  /// No description provided for @playlistEmptyOrPrivate.
+  ///
+  /// In en, this message translates to:
+  /// **'That playlist is empty, or it\'s private.'**
+  String get playlistEmptyOrPrivate;
+
+  /// No description provided for @playlistMissingOrPrivate.
+  ///
+  /// In en, this message translates to:
+  /// **'That playlist doesn\'t exist, or it\'s private.'**
+  String get playlistMissingOrPrivate;
+
+  /// No description provided for @spotifyPageChanged.
+  ///
+  /// In en, this message translates to:
+  /// **'Spotify changed its page; this link can\'t be read right now.'**
+  String get spotifyPageChanged;
+
+  /// No description provided for @unexpectedDeezerReply.
+  ///
+  /// In en, this message translates to:
+  /// **'Unexpected reply from Deezer.'**
+  String get unexpectedDeezerReply;
+
+  /// No description provided for @lbTokenInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'ListenBrainz says this token isn\'t valid.'**
+  String get lbTokenInvalid;
+
+  /// No description provided for @noneOfItsSongsOnYt.
+  ///
+  /// In en, this message translates to:
+  /// **'None of its songs are on YouTube Music.'**
+  String get noneOfItsSongsOnYt;
+
+  /// No description provided for @accentNamed.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} accent'**
+  String accentNamed(String name);
+
+  /// No description provided for @frequencyHz.
+  ///
+  /// In en, this message translates to:
+  /// **'Frequency: {hz}Hz'**
+  String frequencyHz(String hz);
+
+  /// No description provided for @deletedNamed.
+  ///
+  /// In en, this message translates to:
+  /// **'Deleted \"{title}\"'**
+  String deletedNamed(String title);
+
+  /// No description provided for @spotifySongsNotFound.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{{name}: 1 song not found} other{{name}: {count} songs not found}}'**
+  String spotifySongsNotFound(int count, String name);
+
+  /// No description provided for @statsListened.
+  ///
+  /// In en, this message translates to:
+  /// **'listened'**
+  String get statsListened;
+
+  /// No description provided for @statsSongsUnit.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{song} other{songs}}'**
+  String statsSongsUnit(int count);
+
+  /// No description provided for @statsPlaysUnit.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{play} other{plays}}'**
+  String statsPlaysUnit(int count);
+
+  /// No description provided for @albumsPlural.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 album} other{{count} albums}}'**
+  String albumsPlural(int count);
+
+  /// No description provided for @listensWaiting.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{{who}. 1 listen waiting to be sent.} other{{who}. {count} listens waiting to be sent.}}'**
+  String listensWaiting(int count, String who);
+
+  /// No description provided for @sessionCodeHint.
+  ///
+  /// In en, this message translates to:
+  /// **'ABC123 or ABCDE-FGHJK'**
+  String get sessionCodeHint;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

@@ -4,6 +4,7 @@ import '../models/track.dart';
 import 'playlist_transfer.dart';
 import 'spotify_library.dart';
 import 'youtube_music_account.dart';
+import 'language.dart';
 
 /// How one item of the run ended.
 enum SpotifyOutcome {
@@ -50,12 +51,12 @@ class SpotifyImportResult {
 
   /// One line for the summary.
   String get line => switch (outcome) {
-    SpotifyOutcome.playlist => '${item.name}: $found of $total songs',
-    SpotifyOutcome.albumSaved => '${item.name}: saved to your library',
-    SpotifyOutcome.followed => '${item.name}: followed',
-    SpotifyOutcome.artistMissing => '${item.name}: not found on YouTube Music',
-    SpotifyOutcome.noSongs => '${item.name}: no songs found on YouTube Music',
-    SpotifyOutcome.failed => '${item.name}: ${message ?? 'something went wrong'}',
+    SpotifyOutcome.playlist => tr.spotifyLinePlaylist(item.name, '$found', '$total'),
+    SpotifyOutcome.albumSaved => tr.spotifyLineAlbumSaved(item.name),
+    SpotifyOutcome.followed => tr.spotifyLineFollowed(item.name),
+    SpotifyOutcome.artistMissing => tr.spotifyLineArtistMissing(item.name),
+    SpotifyOutcome.noSongs => tr.spotifyLineNoSongs(item.name),
+    SpotifyOutcome.failed => tr.spotifyLineFailed(item.name, message ?? tr.somethingWentWrong),
   };
 }
 
@@ -127,11 +128,11 @@ class SpotifyImporter extends ChangeNotifier {
   /// "Playlist 2 of 7" for the item being imported.
   String get positionLabel {
     final kind = switch (current?.kind) {
-      SpotifyItemKind.album => 'Album',
-      SpotifyItemKind.artist => 'Artist',
-      _ => 'Playlist',
+      SpotifyItemKind.album => tr.album,
+      SpotifyItemKind.artist => tr.artist,
+      _ => tr.playlist,
     };
-    return '$kind $position of $count';
+    return tr.positionOf(kind, '$position', '$count');
   }
 
   /// Stops after the song being looked up; what was saved stays.
@@ -209,7 +210,7 @@ class SpotifyImporter extends ChangeNotifier {
     switch (item.kind) {
       case SpotifyItemKind.artist:
         if (!canEdit) {
-          return SpotifyImportResult(item, SpotifyOutcome.failed, message: 'sign in to YouTube Music first');
+          return SpotifyImportResult(item, SpotifyOutcome.failed, message: tr.signInYtFirst);
         }
         final id = await findArtist(item);
         if (_cancelled) return null;

@@ -34,28 +34,24 @@ class PlaybackSettings extends StatelessWidget {
         children: [
           SwitchListTile(
             secondary: const Icon(Icons.radio_rounded),
-            title: const Text('Autoplay'),
-            subtitle: const Text('When the queue ends, keep going with similar songs'),
+            title: Text(tr.autoplay),
+            subtitle: Text(tr.autoplayKeepGoing),
             value: c.autoplay,
             onChanged: c.setAutoplay,
           ),
           if (AudioEngine.supported)
             SwitchListTile(
               secondary: const Icon(Icons.join_inner_rounded),
-              title: const Text('Gapless playback'),
-              subtitle: const Text('No added silence between tracks. Crossfade is under Sound effects (DSP).'),
+              title: Text(tr.gaplessPlayback),
+              subtitle: Text(tr.gaplessPlaybackSubtitle),
               value: c.audio.gapless,
               onChanged: c.audio.setGapless,
             ),
           if (AudioEngine.hasSkipSilence)
             SwitchListTile(
               secondary: const Icon(Icons.fast_forward_rounded),
-              title: const Text('Skip silence'),
-              subtitle: Text(
-                c.audio.bitPerfect
-                    ? 'Off while bit-perfect mode is on'
-                    : 'Silent intros, outros and gaps are cut short. Soft passages play whole',
-              ),
+              title: Text(tr.skipSilence),
+              subtitle: Text(c.audio.bitPerfect ? tr.offWhileBitPerfect : tr.skipSilenceSubtitle),
               value: c.audio.skipSilence && !c.audio.bitPerfect,
               onChanged: c.audio.bitPerfect ? null : c.audio.setSkipSilence,
             ),
@@ -81,7 +77,7 @@ class DspSettings extends StatelessWidget {
         final locked = audio.bitPerfect;
         final monoOn = audio.monoActive;
         final speakersOn = audio.virtualSpeakersActive;
-        String lockedNote(String normal) => locked ? 'Off while bit-perfect mode is on' : normal;
+        String lockedNote(String normal) => locked ? tr.offWhileBitPerfect : normal;
         // The web build has the equalizer, crossfeed and mono audio (Web Audio); the rest needs mpv.
         final native = AudioEngine.supported;
         return SettingsCard(
@@ -89,19 +85,16 @@ class DspSettings extends StatelessWidget {
             if (native || AudioEngine.webEffects) ...[
               ListTile(
                 leading: const Icon(Icons.equalizer_rounded),
-                title: const Text('Equalizer'),
-                subtitle: Text(lockedNote(audio.eqActive ? audio.eqPreset : 'Off'), style: muted),
+                title: Text(tr.equalizer),
+                subtitle: Text(lockedNote(audio.eqActive ? eqPresetLabel(audio.eqPreset) : tr.off), style: muted),
                 trailing: const Icon(Icons.chevron_right_rounded),
                 onTap: () => shell.open(const EqualizerPage()),
               ),
               if (native) ...[
                 SettingTile(
                   icon: Icons.graphic_eq_rounded,
-                  title: const Text('Volume leveling'),
-                  subtitle: Text(
-                    lockedNote('Plays songs at a similar loudness, using their ReplayGain tags'),
-                    style: muted,
-                  ),
+                  title: Text(tr.volumeLeveling),
+                  subtitle: Text(lockedNote(tr.volumeLevelingSubtitle), style: muted),
                   control: OptionPicker<VolumeLeveling>(
                     value: audio.leveling,
                     onChanged: locked ? null : audio.setLeveling,
@@ -110,19 +103,15 @@ class DspSettings extends StatelessWidget {
                 ),
                 SwitchListTile(
                   secondary: const Icon(Icons.compare_arrows_rounded),
-                  title: const Text('Crossfade'),
-                  subtitle: Text(
-                    audio.crossfadeBlock ??
-                        'The end of a song fades into the start of the next. Off in bit-perfect and exclusive modes',
-                    style: muted,
-                  ),
+                  title: Text(tr.crossfade),
+                  subtitle: Text(audio.crossfadeBlock ?? tr.crossfadeSubtitle, style: muted),
                   value: audio.crossfade,
                   onChanged: audio.crossfadeBlock != null ? null : audio.setCrossfade,
                 ),
                 if (audio.crossfade && audio.crossfadeBlock == null) ...[
                   SettingTile(
                     icon: Icons.timelapse_rounded,
-                    title: const Text('Fade length'),
+                    title: Text(tr.fadeLength),
                     control: SizedBox(
                       width: 220,
                       child: Row(
@@ -144,31 +133,23 @@ class DspSettings extends StatelessWidget {
                   ),
                   SwitchListTile(
                     secondary: const Icon(Icons.album_outlined),
-                    title: const Text('Skip for albums'),
-                    subtitle: Text(
-                      'Songs that follow each other on an album play without a fade, as the artist made them',
-                      style: muted,
-                    ),
+                    title: Text(tr.skipForAlbums),
+                    subtitle: Text(tr.skipForAlbumsSubtitle, style: muted),
                     value: audio.crossfadeSkipAlbums,
                     onChanged: audio.setCrossfadeSkipAlbums,
                   ),
                 ],
                 SwitchListTile(
                   secondary: const Icon(Icons.spatial_audio_rounded),
-                  title: const Text('Virtual speakers'),
-                  subtitle: Text(
-                    lockedNote(
-                      monoOn ? 'Off while Mono audio is on' : 'For headphones: the music plays in front of you, like from two speakers, instead of inside your head',
-                    ),
-                    style: muted,
-                  ),
+                  title: Text(tr.virtualSpeakers),
+                  subtitle: Text(lockedNote(monoOn ? tr.offWhileMono : tr.virtualSpeakersSubtitle), style: muted),
                   value: speakersOn,
                   onChanged: locked || monoOn ? null : audio.setVirtualSpeakers,
                 ),
                 if (audio.virtualSpeakers)
                   _DspSlider(
-                    title: 'Virtual speaker level',
-                    description: 'Adjust the simulation output level to match your other listening modes.',
+                    title: tr.virtualSpeakerLevel,
+                    description: tr.virtualSpeakerLevelBody,
                     value: audio.virtualSpeakerGain,
                     min: -12,
                     max: 6,
@@ -179,14 +160,14 @@ class DspSettings extends StatelessWidget {
               ],
               SettingTile(
                 icon: Icons.headphones_rounded,
-                title: const Text('Headphone crossfeed'),
+                title: Text(tr.headphoneCrossfeed),
                 subtitle: Text(
                   lockedNote(
                     monoOn
-                        ? 'Off while Mono audio is on'
+                        ? tr.offWhileMono
                         : speakersOn
-                        ? 'Not needed with Virtual speakers: they already do this'
-                        : 'Makes headphones sound more like speakers in a room',
+                        ? tr.crossfeedNotNeeded
+                        : tr.crossfeedSubtitle,
                   ),
                   style: muted,
                 ),
@@ -203,7 +184,10 @@ class DspSettings extends StatelessWidget {
                       ),
                       SizedBox(
                         width: 40,
-                        child: Text(audio.crossfeed == 0 ? 'Off' : '${(audio.crossfeed * 100).round()}%', style: muted),
+                        child: Text(
+                          audio.crossfeed == 0 ? tr.off : '${(audio.crossfeed * 100).round()}%',
+                          style: muted,
+                        ),
                       ),
                     ],
                   ),
@@ -211,8 +195,8 @@ class DspSettings extends StatelessWidget {
               ),
               if (audio.crossfeed > 0)
                 _DspSlider(
-                  title: 'Crossfeed soundstage',
-                  description: 'Adjust the frequency range blended between the left and right channels. Default: 50%.',
+                  title: tr.crossfeedSoundstage,
+                  description: tr.crossfeedSoundstageBody,
                   value: audio.crossfeedRange,
                   min: 0,
                   max: 1,
@@ -222,11 +206,8 @@ class DspSettings extends StatelessWidget {
                 ),
               SettingTile(
                 icon: Icons.hearing_rounded,
-                title: const Text('Mono audio'),
-                subtitle: Text(
-                  lockedNote('Both sides as one sound. Handy when one side of your headphones doesn\'t work'),
-                  style: muted,
-                ),
+                title: Text(tr.monoAudio),
+                subtitle: Text(lockedNote(tr.monoAudioSubtitle), style: muted),
                 control: OptionPicker<MonoAudio>(
                   value: locked ? MonoAudio.off : audio.mono,
                   onChanged: locked ? null : audio.setMono,
@@ -238,17 +219,12 @@ class DspSettings extends StatelessWidget {
                   if (AudioEngine.hasPlugins)
                     SettingTile(
                       icon: Icons.extension_outlined,
-                      title: const Text('Audio plugins'),
-                      subtitle: Text(
-                        locked
-                            ? 'Off while bit-perfect mode is on'
-                            : 'VST, LV2 and CLAP plugins, set up in Carla: add them there and save, and they play here',
-                        style: muted,
-                      ),
+                      title: Text(tr.audioPlugins),
+                      subtitle: Text(locked ? tr.offWhileBitPerfect : tr.audioPluginsSubtitle, style: muted),
                       control: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          TextButton(onPressed: locked ? null : audio.editPlugins, child: const Text('Edit in Carla')),
+                          TextButton(onPressed: locked ? null : audio.editPlugins, child: Text(tr.editInCarla)),
                           Switch(value: audio.plugins && !locked, onChanged: locked ? null : audio.setPlugins),
                         ],
                       ),
@@ -256,27 +232,21 @@ class DspSettings extends StatelessWidget {
                   else
                     SettingTile(
                       icon: Icons.extension_outlined,
-                      title: const Text('Audio plugins'),
-                      subtitle: Text(
-                        Host.isWindows
-                            ? 'Needs Carla, a free program that holds your VST, LV2 and CLAP plugins. Download it, unzip it in your '
-                                  'Downloads or Program Files folder, then reopen this page.'
-                            : 'Needs Carla, a free program that holds your VST, LV2 and CLAP plugins. Install it, then reopen this page.',
-                        style: muted,
-                      ),
+                      title: Text(tr.audioPlugins),
+                      subtitle: Text(Host.isWindows ? tr.needsCarlaDownload : tr.needsCarlaInstall, style: muted),
                       control: TextButton(
                         onPressed: () => launchUrl(Uri.parse(CarlaLocator.downloadPage)),
-                        child: const Text('Install Carla'),
+                        child: Text(tr.installCarla),
                       ),
                     ),
                 SettingTile(
                   icon: Icons.surround_sound_rounded,
-                  title: const Text('Room correction'),
+                  title: Text(tr.roomCorrection),
                   subtitle: Text(
                     locked
-                        ? 'Off while bit-perfect mode is on'
+                        ? tr.offWhileBitPerfect
                         : audio.impulseName == null
-                        ? 'Load an impulse response (WAV or FLAC, e.g. made with REW) to correct your room or headphones'
+                        ? tr.roomCorrectionSubtitle
                         : audio.impulseName!,
                     style: muted,
                   ),
@@ -285,7 +255,7 @@ class DspSettings extends StatelessWidget {
                     children: [
                       TextButton(
                         onPressed: locked ? null : () => AdvancedAudioSettings._pickImpulse(context, audio),
-                        child: Text(audio.impulseName == null ? 'Choose file' : 'Change'),
+                        child: Text(audio.impulseName == null ? tr.chooseFile : tr.change),
                       ),
                       Switch(
                         value: audio.convolution && !locked,
@@ -296,8 +266,8 @@ class DspSettings extends StatelessWidget {
                 ),
                 if (audio.impulsePath != null)
                   _DspSlider(
-                    title: 'Room correction headroom',
-                    description: 'Lower the corrected signal if the impulse response makes peaks too loud.',
+                    title: tr.roomCorrectionHeadroom,
+                    description: tr.roomCorrectionHeadroomBody,
                     value: audio.convolutionGain,
                     min: -24,
                     max: 0,
@@ -307,8 +277,8 @@ class DspSettings extends StatelessWidget {
                   ),
                 ListTile(
                   leading: const Icon(Icons.account_tree_outlined),
-                  title: const Text('Signal path'),
-                  subtitle: const Text('See which effects are actually active for the current song'),
+                  title: Text(tr.signalPath),
+                  subtitle: Text(tr.signalPathSubtitle),
                   trailing: const Icon(Icons.chevron_right_rounded),
                   onTap: () => showSignalPath(context),
                 ),
@@ -363,7 +333,7 @@ class _DspSlider extends StatelessWidget {
           ),
           SizedBox(width: 64, child: Text(label, textAlign: TextAlign.end)),
           IconButton(
-            tooltip: 'Reset $title',
+            tooltip: tr.resetNamed(title),
             onPressed: onChanged == null || value == defaultValue ? null : () => onChanged!(defaultValue),
             icon: const Icon(Icons.restart_alt_rounded),
           ),
@@ -382,7 +352,7 @@ class AdvancedAudioSettings extends StatefulWidget {
     final file = (await FilePicker.pickFiles(
       type: FileType.custom,
       allowedExtensions: const ['wav', 'flac'],
-      dialogTitle: 'Choose an impulse response',
+      dialogTitle: tr.chooseImpulse,
     )).firstOrNull;
     final path = file?.path;
     if (file == null || path == null) return;
@@ -390,7 +360,7 @@ class AdvancedAudioSettings extends StatefulWidget {
       await audio.setImpulse(File(path), name: file.name, into: await getApplicationSupportDirectory());
     } catch (e) {
       debugPrint('Impulse response: $e');
-      messenger.showSnackBar(const SnackBar(content: Text('Couldn\'t use that file')));
+      messenger.showSnackBar(SnackBar(content: Text(tr.couldntUseFile)));
     }
   }
 
@@ -433,12 +403,11 @@ class _AdvancedAudioSettingsState extends State<AdvancedAudioSettings> {
             if (AudioEngine.hasRoutePicker)
               SettingTile(
                 icon: Icons.speaker_rounded,
-                title: const Text('Output'),
+                title: Text(tr.output),
                 subtitle: Text(
                   '${audio.route?.name.isNotEmpty == true ? audio.route!.name : 'iPhone'}'
                   '${audio.route == null ? '' : ' · ${SignalPath.formatRate(audio.route!.rate)}'}. '
-                  'A USB DAC follows each song\'s sample rate; the speaker and Bluetooth keep one rate. '
-                  'iOS always mixes the sound, so it can\'t be bit-perfect here.',
+                  '${tr.iosOutputNote}',
                   style: muted,
                 ),
                 control: const RoutePickerButton(),
@@ -446,10 +415,9 @@ class _AdvancedAudioSettingsState extends State<AdvancedAudioSettings> {
             if (AudioEngine.hasOutputChoice)
               SettingTile(
                 icon: Icons.speaker_rounded,
-                title: const Text('Output device'),
+                title: Text(tr.outputDevice),
                 subtitle: Text(
-                  audio.deviceError ??
-                      'Devices marked "direct" skip the system mixer: bit-perfect, but other apps go quiet',
+                  audio.deviceError ?? tr.directDevicesNote,
                   style: audio.deviceError == null
                       ? muted
                       : muted?.copyWith(color: Theme.of(context).colorScheme.error),
@@ -467,42 +435,36 @@ class _AdvancedAudioSettingsState extends State<AdvancedAudioSettings> {
             if (android && audio.usb.supported)
               ListTile(
                 leading: const Icon(Icons.speaker_rounded),
-                title: const Text('Output device'),
+                title: Text(tr.outputDevice),
                 subtitle: Text(
-                  pluggedName == null ? 'Your phone\'s own output' : '${usbName ?? pluggedName} (USB DAC)',
+                  pluggedName == null ? tr.phonesOwnOutput : tr.usbDacNamed(usbName ?? pluggedName),
                   style: muted,
                 ),
               ),
             if (audio.hasBitPerfect || android)
               SwitchListTile(
                 secondary: const Icon(Icons.verified_outlined),
-                title: const Text('Bit-perfect mode'),
+                title: Text(tr.bitPerfectMode),
                 subtitle: Text(
                   android
                       ? !audio.usb.supported
-                            ? 'Needs Android 14 or later'
+                            ? tr.needsAndroid14
                             : usbName == null && pluggedName != null
                             ? (audio.usb.plugged?.bitPerfectReported ?? 0) > 0
-                                  ? 'Android offers $pluggedName only in formats Riflay can\'t play bit-perfect '
-                                        '(${audio.usb.plugged!.bitPerfectReported} of ${audio.usb.plugged!.reported} formats). '
-                                        'Riflay still plays through your DAC, with Android mixing the sound first.'
-                                  : 'This phone doesn\'t offer bit-perfect output for $pluggedName: its maker leaves it out '
-                                        '(Android lists ${audio.usb.plugged?.reported ?? 0} formats for it, none bit-perfect). '
-                                        'Riflay still plays through your DAC, with Android mixing the sound first.'
+                                  ? tr.androidFormatsUnplayable(
+                                      pluggedName,
+                                      audio.usb.plugged!.bitPerfectReported ?? 0,
+                                      audio.usb.plugged!.reported ?? 0,
+                                    )
+                                  : tr.phoneNoBitPerfect(pluggedName, audio.usb.plugged?.reported ?? 0)
                             : usbName == null
-                            ? 'Plug in a USB DAC to play bit-perfect'
-                            : 'Sends the file to your USB DAC untouched: no equalizer, leveling or resampling. '
-                                  'Other apps and system sounds are muted on the DAC, and the phone\'s volume keys stop working: '
-                                  'use your DAC\'s volume, since lowering Riflay\'s own volume changes the sound.'
+                            ? tr.plugInDacForBitPerfect
+                            : tr.bitPerfectAndroid
                       : Host.isMacOS
-                      ? 'No equalizer, leveling or resampling in Riflay, and your DAC follows each song\'s sample rate. '
-                            'Volume still works; at 100% nothing is changed. Other apps keep playing, so macOS still mixes the sound: '
-                            'turn on Exclusive mode too to send the file to your DAC untouched.'
+                      ? tr.bitPerfectMac
                       : AudioEngine.hasExclusiveMode
-                      ? 'No equalizer, leveling or resampling in Riflay. Volume still works; at 100% nothing is changed. '
-                            'Other apps keep playing, so Windows still mixes the sound: turn on Exclusive mode too to send the file to your DAC untouched.'
-                      : 'Sends the file to your DAC untouched: no equalizer, leveling or resampling. Volume still works; at 100% nothing is changed. '
-                            'Takes over your DAC so the system mixer can\'t resample. Meanwhile other apps play through another output.',
+                      ? tr.bitPerfectWindows
+                      : tr.bitPerfectLinux,
                   style: muted,
                 ),
                 value: audio.bitPerfectWanted,
@@ -512,19 +474,17 @@ class _AdvancedAudioSettingsState extends State<AdvancedAudioSettings> {
             if (audio.hasBitPerfect)
               SwitchListTile(
                 secondary: const Icon(Icons.graphic_eq_rounded),
-                title: const Text('Native DSD (DoP)'),
+                title: Text(tr.nativeDsd),
                 subtitle: Text(
                   dopReady && audio.dopNote != null
                       ? audio.dopNote!
                       : dopReady
-                      ? 'Sends DSD files to your DAC as DSD instead of converting them. '
-                            'Only for DACs that support DoP: others play a faint hiss, so turn it off then. '
-                            'The volume stays at 100% for DSD songs; use your DAC\'s.'
+                      ? tr.nativeDsdSubtitle
                       : android
-                      ? 'Needs Bit-perfect mode and a USB DAC that takes 176.4 kHz or higher'
+                      ? tr.needsBitPerfectAndDac
                       : AudioEngine.hasExclusiveMode
-                      ? 'Needs Bit-perfect mode and Exclusive mode'
-                      : 'Needs Bit-perfect mode',
+                      ? tr.needsBitPerfectAndExclusive
+                      : tr.needsBitPerfect,
                   style: muted,
                 ),
                 value: audio.nativeDsd && dopReady,
@@ -533,47 +493,35 @@ class _AdvancedAudioSettingsState extends State<AdvancedAudioSettings> {
             if (AudioEngine.hasExclusiveMode)
               SwitchListTile(
                 secondary: const Icon(Icons.lock_outline_rounded),
-                title: const Text('Exclusive mode'),
-                subtitle: Text(
-                  Host.isMacOS
-                      ? 'Takes over the device so macOS can\'t mix or resample: the DAC switches to each song\'s sample rate. '
-                            'Other apps go silent while Riflay plays.'
-                      : 'Takes over the device so Windows\' mixer can\'t resample: the DAC switches to each song\'s sample rate. '
-                            'Other apps go silent while Riflay plays, and Windows\' volume mixer can\'t control it.',
-                  style: muted,
-                ),
+                title: Text(tr.exclusiveMode),
+                subtitle: Text(Host.isMacOS ? tr.exclusiveMac : tr.exclusiveWindows, style: muted),
                 value: audio.exclusive,
                 onChanged: audio.setExclusive,
               ),
             SettingTile(
               icon: Icons.multiline_chart_rounded,
-              title: const Text('Output sample rate'),
-              subtitle: Text(
-                locked
-                    ? 'Follows each song while bit-perfect mode is on'
-                    : 'Follow the song, or convert everything to one rate',
-                style: muted,
-              ),
+              title: Text(tr.outputSampleRate),
+              subtitle: Text(locked ? tr.followsEachSong : tr.followOrConvert, style: muted),
               control: OptionPicker<int>(
                 value: locked ? 0 : audio.outputRate ?? 0,
                 onChanged: locked ? null : (v) => audio.setOutputRate(v == 0 ? null : v),
                 options: [
-                  (0, 'Follow the song'),
+                  (0, tr.followTheSong),
                   for (final r in AdvancedAudioSettings._rates) (r, SignalPath.formatRate(r)),
                 ],
               ),
             ),
             SwitchListTile(
               secondary: const Icon(Icons.high_quality_outlined),
-              title: const Text('High-quality resampler'),
-              subtitle: Text('SoX-grade conversion whenever the rate has to change (slightly more CPU)', style: muted),
+              title: Text(tr.hqResampler),
+              subtitle: Text(tr.hqResamplerSubtitle, style: muted),
               value: audio.hqResamplerActive,
               onChanged: locked && audio.bypassesMixer ? null : audio.setHqResampler,
             ),
             SettingTile(
               icon: Icons.timer_outlined,
-              title: const Text('Buffer'),
-              subtitle: Text('Raise it if you hear crackles or dropouts', style: muted),
+              title: Text(tr.buffer),
+              subtitle: Text(tr.bufferSubtitle, style: muted),
               control: OptionPicker<BufferSize>(
                 value: audio.buffer,
                 onChanged: audio.setBuffer,
@@ -582,8 +530,8 @@ class _AdvancedAudioSettingsState extends State<AdvancedAudioSettings> {
             ),
             ListTile(
               leading: const Icon(Icons.account_tree_outlined),
-              title: const Text('Signal path'),
-              subtitle: Text('See exactly what happens to the song you\'re playing', style: muted),
+              title: Text(tr.signalPath),
+              subtitle: Text(tr.signalPathSubtitleExact, style: muted),
               trailing: const Icon(Icons.chevron_right_rounded),
               onTap: () => showSignalPath(context),
             ),
@@ -774,25 +722,22 @@ class _DirectUsbTile extends StatelessWidget {
         : !on && d.failed
         ? tr.directUsbFailed
         : !on
-        ? 'Riflay talks to your USB DAC itself, past Android, so songs reach it untouched even on phones '
-              'where Bit-perfect mode can\'t. Experimental.'
+        ? tr.directUsbIntro
         : dac == null
-        ? 'On. Plug in a USB DAC.'
+        ? tr.directUsbPlugIn
         : d.needsPermission
-        ? 'On. Allow Riflay to use $dac.'
+        ? tr.directUsbAllow(dac)
         : switch (d.route) {
-            'direct' => 'Bit-perfect to $dac${d.routeFormat == null ? '' : ': ${d.routeFormat}'}',
-            'fallback' =>
-              'This song${d.routeFormat == null ? '' : ' (${d.routeFormat})'} is in a format $dac doesn\'t take, '
-                  'so it plays through Android.',
-            _ => 'On, with $dac. Play a song.',
+            'direct' => '${tr.directUsbBitPerfectTo(dac)}${d.routeFormat == null ? '' : ': ${d.routeFormat}'}',
+            'fallback' => tr.directUsbFallback(d.routeFormat == null ? '' : ' (${d.routeFormat})', dac),
+            _ => tr.directUsbOnWith(dac),
           };
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         SwitchListTile(
           secondary: const Icon(Icons.usb_rounded),
-          title: const Text('Direct USB'),
+          title: Text(tr.directUsb),
           subtitle: Text(status, style: muted),
           value: on,
           onChanged: audio.setDirectUsb,
@@ -800,14 +745,14 @@ class _DirectUsbTile extends StatelessWidget {
         if (on && d.needsPermission)
           Padding(
             padding: const EdgeInsets.fromLTRB(72, 0, 16, 8),
-            child: OutlinedButton(onPressed: d.requestPermission, child: const Text('Allow USB access')),
+            child: OutlinedButton(onPressed: d.requestPermission, child: Text(tr.allowUsbAccess)),
           ),
         // What stopped it, after it turned itself off.
         if (!on && d.failed && d.error != null)
           Padding(
             padding: const EdgeInsets.fromLTRB(72, 0, 16, 12),
             child: Text(
-              'Problem: ${d.error}',
+              tr.problemWith('${d.error}'),
               style: (text.bodySmall ?? const TextStyle()).copyWith(color: Theme.of(context).colorScheme.error),
             ),
           ),
@@ -823,13 +768,16 @@ class _DirectUsbTile extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Pipe: ${d.running ? 'open' : 'closed'} · Output: ${audio.directUsbActive ? 'Direct USB' : 'Android'}',
+                    tr.directUsbPipe(
+                      d.running ? tr.pipeOpen : tr.pipeClosed,
+                      audio.directUsbActive ? tr.directUsb : 'Android',
+                    ),
                   ),
-                  if (d.streamFormat != null) Text('From the player: ${d.streamFormat}'),
-                  Text('Route: ${d.route}${d.routeFormat == null ? '' : ' (${d.routeFormat})'}'),
-                  if (d.underruns > 0) Text('Dropouts: ${d.underruns}'),
+                  if (d.streamFormat != null) Text(tr.fromThePlayer('${d.streamFormat}')),
+                  Text(tr.directUsbRoute('${d.route}${d.routeFormat == null ? '' : ' (${d.routeFormat})'}')),
+                  if (d.underruns > 0) Text(tr.dropouts('${d.underruns}')),
                   if (d.error != null)
-                    Text('Problem: ${d.error}', style: TextStyle(color: Theme.of(context).colorScheme.error)),
+                    Text(tr.problemWith('${d.error}'), style: TextStyle(color: Theme.of(context).colorScheme.error)),
                   if (d.log.isNotEmpty) ...[
                     const SizedBox(height: 6),
                     for (final l in d.log.take(6)) Text(l, maxLines: 2, overflow: TextOverflow.ellipsis),

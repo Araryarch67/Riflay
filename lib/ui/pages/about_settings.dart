@@ -8,6 +8,7 @@ import '../../platform/host.dart';
 import '../theme.dart';
 import '../widgets/app_logo.dart';
 import '../widgets/app_update_tile.dart';
+import '../../services/language.dart';
 import 'sound_settings.dart' show SettingsCard, settingsMuted;
 
 const _repo = 'https://github.com/Araryarch67/Riflay';
@@ -62,7 +63,7 @@ class AboutSettings extends StatelessWidget {
   Future<void> _open(BuildContext context, String url) async {
     final ok = await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication).catchError((_) => false);
     if (!ok && context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Couldn't open the browser.")));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(tr.couldntOpenBrowser)));
     }
   }
 
@@ -92,7 +93,7 @@ class AboutSettings extends StatelessWidget {
                   children: [
                     Text('Riflay', style: text.headlineSmall?.copyWith(fontWeight: FontWeight.w800)),
                     const SizedBox(height: 2),
-                    Text('Version $appVersion', style: text.bodyMedium?.copyWith(color: AppColors.textSecondary)),
+                    Text(tr.versionNamed(appVersion), style: text.bodyMedium?.copyWith(color: AppColors.textSecondary)),
                   ],
                 ),
               ),
@@ -104,56 +105,56 @@ class AboutSettings extends StatelessWidget {
             if (Features.appUpdates) const AppUpdateTile(),
             ListTile(
               leading: const Icon(Icons.info_outline_rounded),
-              title: const Text('Version'),
+              title: Text(tr.version),
               subtitle: Text(aboutDetails(), style: muted),
               trailing: IconButton(
-                tooltip: 'Copy',
+                tooltip: tr.copy,
                 icon: const Icon(Icons.copy_rounded, size: 18),
                 onPressed: () async {
                   await Clipboard.setData(ClipboardData(text: aboutDetails()));
                   if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Copied')));
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(tr.copied)));
                   }
                 },
               ),
             ),
             link(
               Icons.new_releases_outlined,
-              "What's new",
-              'Release notes and downloads for every platform',
+              tr.whatsNew,
+              tr.whatsNewSubtitle,
               () => _open(context, '$_repo/releases'),
             ),
             link(
               Icons.bug_report_outlined,
-              'Report a problem',
-              'Opens a new issue; paste the version details in it',
+              tr.reportProblem,
+              tr.reportProblemSubtitle,
               () => _open(context, '$_repo/issues/new'),
             ),
             // Songs streamed here earn their makers next to nothing: Premium is how listening pays them.
             link(
               Icons.music_note_rounded,
-              'Support the artists',
-              'Enjoying the music? YouTube Music Premium pays the people who make it',
+              tr.supportArtists,
+              tr.supportArtistsSubtitle,
               () => _open(context, 'https://www.youtube.com/musicpremium'),
             ),
             link(
               Icons.favorite_outline_rounded,
-              'Support Riflay',
-              'Send a gift on Tako to keep it going',
+              tr.supportRiflay,
+              tr.supportRiflaySubtitle,
               () => _open(context, donateUrl),
             ),
-            link(Icons.code_rounded, 'Source code', 'Riflay is open source, on GitHub', () => _open(context, _repo)),
+            link(Icons.code_rounded, tr.sourceCode, tr.sourceCodeSubtitle, () => _open(context, _repo)),
             ListTile(
               leading: const Icon(Icons.gavel_rounded),
-              title: const Text('Licence'),
+              title: Text(tr.licence),
               subtitle: Text('GNU AGPL v3.0', style: muted),
               trailing: const Icon(Icons.open_in_new_rounded, size: 18),
               onTap: () => _open(context, '$_repo/blob/main/LICENSE'),
             ),
             ListTile(
               leading: const Icon(Icons.description_outlined),
-              title: const Text('Open-source licences'),
-              subtitle: Text('The libraries Riflay is built with', style: muted),
+              title: Text(tr.openSourceLicences),
+              subtitle: Text(tr.openSourceLicencesSubtitle, style: muted),
               trailing: const Icon(Icons.chevron_right_rounded),
               onTap: () => showLicensePage(
                 context: context,

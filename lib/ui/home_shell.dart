@@ -396,13 +396,13 @@ class _HomeShellState extends State<HomeShell> {
     try {
       final added = await pick();
       if (added > 0) {
-        messenger.showSnackBar(SnackBar(content: Text('Added $added ${added == 1 ? 'song' : 'songs'}')));
+        messenger.showSnackBar(SnackBar(content: Text(tr.addedSongsCount(added))));
       }
     } on MusicPermissionDenied {
-      messenger.showSnackBar(const SnackBar(content: Text('Allow Riflay to read your music to add a folder')));
+      messenger.showSnackBar(SnackBar(content: Text(tr.allowReadMusic)));
     } catch (e) {
       debugPrint('Adding music failed: $e');
-      messenger.showSnackBar(const SnackBar(content: Text('Couldn\'t add that music')));
+      messenger.showSnackBar(SnackBar(content: Text(tr.couldntAddMusic)));
     }
   }
 
@@ -427,7 +427,7 @@ class _HomeShellState extends State<HomeShell> {
     _lastExitBack = now;
     if (mounted) {
       ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('Press back again to exit'), duration: Duration(seconds: 2)));
+          .showSnackBar(SnackBar(content: Text(tr.pressBackToExit), duration: Duration(seconds: 2)));
     }
   }
 
@@ -504,8 +504,8 @@ class _HomeShellState extends State<HomeShell> {
     if (!queued || !mounted) return;
     messenger.showSnackBar(
       SnackBar(
-        content: const Text('Downloading audio…'),
-        action: SnackBarAction(label: 'View', onPressed: () => _open(const DownloadsPage())),
+        content: Text(tr.downloadingAudio),
+        action: SnackBarAction(label: tr.view, onPressed: () => _open(const DownloadsPage())),
       ),
     );
   }
@@ -783,7 +783,7 @@ class _HomeShellState extends State<HomeShell> {
             ),
             expanded
                 ? ResizeHandle(
-                    label: 'Resize sidebar',
+                    label: tr.resizeSidebar,
                     onDrag: _dragSidebar,
                     onEnd: _saveWidths,
                     onReset: () {
@@ -801,7 +801,7 @@ class _HomeShellState extends State<HomeShell> {
                   open: sideOpen,
                   width: SidebarFit.right(_sidePanelWidth.value, width, left: _leftWidth(width, sideOpen: sideOpen)),
                   handle: ResizeHandle(
-                    label: 'Resize side panel',
+                    label: tr.resizeSidePanel,
                     onDrag: _dragSidePanel,
                     onEnd: _saveWidths,
                     onReset: () {

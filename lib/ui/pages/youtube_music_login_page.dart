@@ -6,6 +6,7 @@ import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import '../../services/player_controller.dart';
 import '../theme.dart';
 import '../widgets/skeleton.dart';
+import '../../services/language.dart';
 
 /// One-time Google sign-in in the app's own WebView. When the login lands back
 /// on music.youtube.com, the session (cookies plus visitor data) is read out of
@@ -53,7 +54,7 @@ JSON.stringify((() => {
               child: Row(
                 children: [
                   IconButton(
-                    tooltip: 'Back',
+                    tooltip: tr.back,
                     onPressed: () => Navigator.of(context).maybePop(),
                     icon: const Icon(Icons.chevron_left_rounded),
                   ),
@@ -62,14 +63,9 @@ JSON.stringify((() => {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        Text(tr.signInToYt, style: text.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
                         Text(
-                          'Sign in to YouTube Music',
-                          style: text.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-                        ),
-                        Text(
-                          _checking
-                              ? 'Checking the session…'
-                              : 'Google handles the sign-in. Riflay only keeps the session.',
+                          _checking ? tr.checkingSession : tr.googleHandlesSignIn,
                           style: text.bodySmall?.copyWith(color: AppColors.textSecondary),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -93,7 +89,7 @@ JSON.stringify((() => {
                   Expanded(
                     child: Text(_error!, style: text.bodySmall?.copyWith(color: Theme.of(context).colorScheme.error)),
                   ),
-                  TextButton(onPressed: _checking ? null : () => _capture(_lastUrl), child: const Text('Try again')),
+                  TextButton(onPressed: _checking ? null : () => _capture(_lastUrl), child: Text(tr.tryAgain)),
                 ],
               ),
             ),
@@ -111,7 +107,7 @@ JSON.stringify((() => {
               onReceivedError: (controller, request, error) {
                 if (request.isForMainFrame != true) return;
                 debugPrint('Sign-in page: ${error.description}');
-                setState(() => _error = 'Couldn\'t load the sign-in page. Check your internet connection.');
+                setState(() => _error = tr.couldntLoadSignIn);
               },
             ),
           ),
@@ -142,14 +138,14 @@ JSON.stringify((() => {
           if (ok) {
             Navigator.of(context).maybePop();
           } else {
-            setState(() => _error = account.error ?? 'Could not use that sign-in.');
+            setState(() => _error = account.error ?? tr.couldNotUseSignIn);
           }
           return;
         }
         await Future<void>.delayed(const Duration(milliseconds: 400));
       }
       if (mounted) {
-        setState(() => _error = 'No signed-in session on this page yet. Finish signing in above, then tap Try again.');
+        setState(() => _error = tr.noSessionYet);
       }
     } finally {
       _checking = false;

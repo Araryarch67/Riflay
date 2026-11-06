@@ -42,6 +42,7 @@ import 'youtube_importer.dart';
 import 'youtube_stream.dart';
 import 'library_views.dart';
 import 'ui_beat.dart';
+import 'language.dart';
 
 export '../ui/player_scope.dart';
 
@@ -388,7 +389,7 @@ class PlayerController extends ChangeNotifier {
     final title = at >= 0 ? (seq[at].tag as Track).title : currentTrack?.title;
     // In plain words: mpv's own message (paths, stream URLs) only goes to the log.
     debugPrint('Playback error: ${e.message}');
-    _errors.add('Couldn\'t play ${title ?? 'this song'}');
+    _errors.add(tr.couldntPlay(title ?? tr.thisSong));
     // Repeat-one would retry the same broken song forever: skip it all the same. A paused player stays paused.
     final next = _neighbour(1, from: at >= 0 ? at : null);
     final wasPlaying = player.playing;
@@ -663,7 +664,7 @@ class PlayerController extends ChangeNotifier {
     kind: CollectionKind.playlist,
     id: p.id,
     title: p.name,
-    subtitle: '${p.tracks.length} ${p.tracks.length == 1 ? 'song' : 'songs'}',
+    subtitle: tr.songsPlural(p.tracks.length),
     tracks: p.tracks,
   );
 
@@ -1024,7 +1025,7 @@ class PlayerController extends ChangeNotifier {
     final files = await FilePicker.pickFiles(
       type: FileType.custom,
       allowedExtensions: [...Track.audioExtensions, 'cue', 'iso'],
-      dialogTitle: 'Add music',
+      dialogTitle: tr.addMusic,
     );
     final cues = files.where((f) => f.name.toLowerCase().endsWith('.cue') && f.path != null);
     final split = await _readCues([for (final f in cues) File(f.path!)]);
@@ -1072,7 +1073,7 @@ class PlayerController extends ChangeNotifier {
     }
     final dir = Host.isIOS
         ? await IosFolders.pick()
-        : await FilePicker.getDirectoryPath(dialogTitle: 'Add music folder');
+        : await FilePicker.getDirectoryPath(dialogTitle: tr.addMusicFolder);
     if (dir == null) return 0;
     return scanFolder(dir);
   }
@@ -1416,7 +1417,7 @@ class PlayerController extends ChangeNotifier {
       if (loaded) unawaited(_play(restart: true));
     } on PlayerException catch (e) {
       debugPrint('Playback failed: ${e.message}');
-      _errors.add('Couldn\'t play ${tracks[index].title}');
+      _errors.add(tr.couldntPlay(tracks[index].title));
     }
     notifyListeners();
   }
@@ -1647,7 +1648,7 @@ class PlayerController extends ChangeNotifier {
       await cast.connect(renderer);
     } catch (e) {
       debugPrint('Casting to ${renderer.name} failed: $e');
-      _errors.add('Couldn\'t reach ${renderer.name}');
+      _errors.add(tr.couldntReachDevice(renderer.name));
       return;
     }
     await player.pause();

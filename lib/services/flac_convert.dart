@@ -9,6 +9,7 @@ import 'metadata.dart';
 import 'player_controller.dart';
 import 'sacd.dart';
 import 'youtube_importer.dart';
+import 'language.dart';
 
 /// "Convert to FLAC": turns a song already in the library (a YouTube download, or a file in another
 /// format) into a FLAC, with the machinery downloads use ([YoutubeImporter.toFlac]).
@@ -230,7 +231,7 @@ abstract final class FlacConvert {
     if (todo.isEmpty) return;
     final dir = await YoutubeImporter.downloadsDir();
     _running.addAll(todo.map((t) => t.id));
-    c.notify(todo.length == 1 ? 'Converting ${todo.first.title} to FLAC…' : 'Converting ${todo.length} songs to FLAC…');
+    c.notify(todo.length == 1 ? tr.convertingToFlac(todo.first.title) : tr.convertingSongsToFlac(todo.length));
     var done = 0;
     var already = 0;
     final failed = <Track>[];
@@ -250,20 +251,19 @@ abstract final class FlacConvert {
     if (todo.length == 1) {
       c.notify(
         done == 1
-            ? 'Converted ${todo.first.title} to FLAC'
+            ? tr.convertedToFlac(todo.first.title)
             : already == 1
-            ? '${todo.first.title} is already lossless'
-            : 'Couldn\'t convert ${todo.first.title}',
+            ? tr.alreadyLossless(todo.first.title)
+            : tr.couldntConvert(todo.first.title),
       );
       return;
     }
-    String songs(int n) => n == 1 ? '1 song' : '$n songs';
     c.notify(
       failed.isEmpty
-          ? 'Converted ${songs(done)} to FLAC'
+          ? tr.convertedSongsToFlac(done)
           : done == 0
-          ? 'Couldn\'t convert these songs'
-          : 'Converted ${songs(done)} to FLAC, ${failed.length} couldn\'t be converted',
+          ? tr.couldntConvertThese
+          : tr.convertedSomeFailed(done, failed.length),
     );
   }
 }

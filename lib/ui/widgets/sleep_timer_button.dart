@@ -30,7 +30,7 @@ class SleepTimerButton extends StatelessWidget {
           fontFeatures: const [FontFeature.tabularFigures()],
         );
         final button = IconButton(
-          tooltip: sleep.active ? 'Sleep timer: $label' : 'Sleep timer',
+          tooltip: sleep.active ? tr.sleepTimerWith(label) : tr.sleepTimer,
           color: sleep.active ? AppColors.accent : color,
           padding: sleep.active && labelBelow ? const EdgeInsets.fromLTRB(8, 4, 8, 14) : null,
           onPressed: () => showSleepTimer(context),
@@ -69,8 +69,8 @@ class SleepTimerButton extends StatelessWidget {
 abstract final class SleepTimerLabel {
   static String of(SleepTimer sleep, {bool short = false}) {
     if (!sleep.active) return '';
-    if (sleep.songsLeft > 1) return short ? '${sleep.songsLeft} songs' : '${sleep.songsLeft} songs left';
-    if (sleep.mode == SleepMode.endOfSong) return short ? 'Song end' : 'End of song';
+    if (sleep.songsLeft > 1) return short ? tr.songsCount(sleep.songsLeft) : tr.songsLeft(sleep.songsLeft);
+    if (sleep.mode == SleepMode.endOfSong) return short ? tr.songEndShort : tr.endOfSong;
     final left = sleep.remaining;
     return left == null ? '' : SleepTimer.clock(left);
   }
@@ -288,13 +288,13 @@ class _CustomTimeState extends State<_CustomTime> {
     );
     return AlertDialog(
       backgroundColor: AppColors.elevated,
-      title: const Text('Custom time'),
-      content: Row(children: [field('Hours', _hours), const SizedBox(width: 16), field('Minutes', _minutes)]),
+      title: Text(tr.customTime),
+      content: Row(children: [field(tr.hours, _hours), const SizedBox(width: 16), field(tr.minutes, _minutes)]),
       actions: [
-        TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancel')),
+        TextButton(onPressed: () => Navigator.of(context).pop(), child: Text(tr.cancel)),
         FilledButton(
           onPressed: _picked == null ? null : () => Navigator.of(context).pop(_picked),
-          child: const Text('Start'),
+          child: Text(tr.start),
         ),
       ],
     );

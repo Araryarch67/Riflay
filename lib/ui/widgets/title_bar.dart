@@ -5,6 +5,7 @@ import '../../platform/host.dart';
 import '../../services/layout_prefs.dart';
 import '../theme.dart';
 import 'app_logo.dart';
+import '../../services/language.dart';
 
 /// Desktop platforms draw their own title bar; mobile has none. The web build draws the same bar (Back / Forward,
 /// Home and search along the top) in the browser tab, without what belongs to a window (dragging, its buttons).
@@ -159,14 +160,14 @@ class _AppTitleBarState extends State<AppTitleBar> with WindowListener {
   );
 
   List<Widget> _windowButtons() => [
-    _WindowButton(tooltip: 'Minimize', icon: Icons.remove_rounded, onPressed: windowManager.minimize),
+    _WindowButton(tooltip: tr.minimize, icon: Icons.remove_rounded, onPressed: windowManager.minimize),
     _WindowButton(
-      tooltip: _maximized ? 'Restore' : 'Maximize',
+      tooltip: _maximized ? tr.windowRestore : tr.maximize,
       icon: _maximized ? Icons.filter_none_rounded : Icons.crop_square_rounded,
       iconSize: _maximized ? 13 : 15,
       onPressed: _toggleMaximize,
     ),
-    _WindowButton(tooltip: 'Close', icon: Icons.close_rounded, onPressed: windowManager.close, danger: true),
+    _WindowButton(tooltip: tr.close, icon: Icons.close_rounded, onPressed: windowManager.close, danger: true),
   ];
 }
 

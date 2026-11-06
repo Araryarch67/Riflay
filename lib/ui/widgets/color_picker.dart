@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import '../../services/color_tools.dart';
 import '../theme.dart';
+import '../../services/language.dart';
 
 /// A small colour picker: hue, a saturation / brightness square and a hex field. Returns the colour
 /// picked, or null when cancelled.
@@ -103,8 +104,8 @@ class _ColorPickerDialogState extends State<_ColorPickerDialog> {
         ),
       ),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-        FilledButton(onPressed: () => Navigator.pop(context, color), child: const Text('Use this colour')),
+        TextButton(onPressed: () => Navigator.pop(context), child: Text(tr.cancel)),
+        FilledButton(onPressed: () => Navigator.pop(context, color), child: Text(tr.useThisColour)),
       ],
     );
   }
@@ -127,7 +128,7 @@ class _SaturationBrightness extends StatelessWidget {
           hsv.withSaturation((p.dx / width).clamp(0.0, 1.0)).withValue((1 - p.dy / height).clamp(0.0, 1.0)),
         );
         return Semantics(
-          label: 'Saturation and brightness',
+          label: tr.saturationBrightness,
           child: GestureDetector(
             onPanDown: (d) => pick(d.localPosition),
             onPanUpdate: (d) => pick(d.localPosition),
@@ -195,7 +196,7 @@ class _HueBar extends StatelessWidget {
         final width = c.maxWidth;
         void pick(Offset p) => onChanged((p.dx / width).clamp(0.0, 1.0) * 359.99);
         return Semantics(
-          label: 'Hue',
+          label: tr.hue,
           child: GestureDetector(
             onPanDown: (d) => pick(d.localPosition),
             onPanUpdate: (d) => pick(d.localPosition),

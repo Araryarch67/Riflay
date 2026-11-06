@@ -27,6 +27,7 @@ import 'youtube_stream.dart';
 import 'webm_opus.dart';
 import 'ytdlp.dart';
 import 'ytmusic_web.dart';
+import 'language.dart';
 
 enum DownloadStatus { queued, downloading, done, failed, cancelled }
 
@@ -39,9 +40,9 @@ enum DownloadPhase {
 
   /// The line a list or notification shows for this phase.
   String get label => switch (this) {
-    downloading => 'Downloading',
-    converting => 'Converting…',
-    finishing => 'Finishing…',
+    downloading => tr.phaseDownloading,
+    converting => tr.converting,
+    finishing => tr.finishing,
   };
 
   /// The phase after the stream has arrived: a conversion converts; a plain save only remuxes and tags.
@@ -1433,15 +1434,14 @@ class YoutubeImporter extends ChangeNotifier {
     debugPrint('Download failed: $e');
     return switch (e) {
       // Subclass first: VideoUnavailableException extends VideoUnplayableException.
-      VideoUnavailableException() => 'This video is unavailable.',
-      VideoUnplayableException() => 'This video can\'t be played (private, age-restricted or region-locked).',
-      MuxException() => 'Couldn\'t combine the picture and the sound. Try again, or pick another size in Settings › Library & downloads › Downloads.',
-      _NoMp3() => 'MP3 downloads need ffmpeg, which isn\'t available here. Pick another format in Settings › Library & downloads › Downloads.',
-      _NoFlac() => 'FLAC downloads aren\'t available on this device. Pick another format in Settings › Library & downloads › Downloads.',
-      _OnMobileData() =>
-        'Mobile data downloads are off. Connect to Wi-Fi, or allow them in Settings › Library & downloads › Downloads.',
-      SocketException() || http.ClientException() || TimeoutException() => 'No internet connection. Try again.',
-      _ => 'Couldn\'t download this song. Try again later.',
+      VideoUnavailableException() => tr.videoUnavailable,
+      VideoUnplayableException() => tr.videoUnplayable,
+      MuxException() => tr.muxFailed,
+      _NoMp3() => tr.needsFfmpegMp3,
+      _NoFlac() => tr.noFlacHere,
+      _OnMobileData() => tr.mobileDataOff,
+      SocketException() || http.ClientException() || TimeoutException() => tr.noInternetTryAgain,
+      _ => tr.couldntDownloadSong,
     };
   }
 

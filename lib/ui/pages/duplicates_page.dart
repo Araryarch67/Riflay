@@ -12,6 +12,7 @@ import '../shell_scope.dart';
 import '../theme.dart';
 import '../widgets/page_scaffold.dart';
 import '../widgets/skeleton.dart';
+import '../../services/language.dart';
 
 /// Songs that are in the library more than once, in different files, formats or sources: shows each copy,
 /// picks the best to keep, and removes the others when asked.
@@ -98,10 +99,10 @@ class _DuplicatesPageState extends State<DuplicatesPage> {
       SnackBar(
         content: Text(
           failed > 0
-              ? 'Removed ${plan.removeFromLibrary.length} copies. $failed files couldn\'t be deleted.'
+              ? tr.dupRemovedSomeFailed(plan.removeFromLibrary.length, failed)
               : result
-              ? 'Removed ${plan.removeFromLibrary.length} copies and deleted $deleted files, freeing ${formatFileSize(plan.bytesFreed)}.'
-              : 'Removed ${plan.removeFromLibrary.length} copies from your library.',
+              ? tr.dupRemovedAndDeleted(plan.removeFromLibrary.length, deleted, formatFileSize(plan.bytesFreed))
+              : tr.dupRemovedFromLibrary(plan.removeFromLibrary.length),
         ),
       ),
     );
@@ -118,7 +119,7 @@ class _DuplicatesPageState extends State<DuplicatesPage> {
     final extra = choices.fold<int>(0, (n, c) => n + c.group.items.length - 1);
     final freeable = planRemoval(choices, deleteFiles: true, library: _c?.library ?? const []).bytesFreed;
     return PageScaffold(
-      title: 'Songs you have twice',
+      title: tr.songsYouHaveTwice,
       slivers: [
         SliverToBoxAdapter(
           child: Padding(
@@ -130,15 +131,14 @@ class _DuplicatesPageState extends State<DuplicatesPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Songs you have twice', style: text.headlineMedium?.copyWith(fontWeight: FontWeight.w800)),
+                    Text(tr.songsYouHaveTwice, style: text.headlineMedium?.copyWith(fontWeight: FontWeight.w800)),
                     const SizedBox(height: 8),
                     Text(
                       groups == null
-                          ? 'Looking through your library...'
+                          ? tr.lookingThroughLibrary
                           : groups.isEmpty
-                          ? 'No song is in your library twice.'
-                          : 'These are the same song in more than one file. The best copy is chosen for each; '
-                                'pick another if you like, then remove the rest.',
+                          ? tr.noDuplicates
+                          : tr.duplicatesBody,
                       style: text.bodyMedium?.copyWith(color: AppColors.textSecondary),
                     ),
                     if (groups != null && groups.isNotEmpty) ...[
@@ -154,15 +154,11 @@ class _DuplicatesPageState extends State<DuplicatesPage> {
                               foregroundColor: AppColors.onInverse,
                             ),
                             onPressed: extra == 0 || _working ? null : _remove,
-                            child: Text(
-                              extra == 0
-                                  ? 'Nothing to remove'
-                                  : 'Remove $extra extra ${extra == 1 ? 'copy' : 'copies'}',
-                            ),
+                            child: Text(extra == 0 ? tr.nothingToRemove : tr.removeExtraCopies(extra)),
                           ),
                           if (extra > 0 && freeable > 0)
                             Text(
-                              'Up to ${formatFileSize(freeable)} can be freed.',
+                              tr.upToCanBeFreed(formatFileSize(freeable)),
                               style: text.bodySmall?.copyWith(color: AppColors.textSecondary),
                             ),
                         ],
@@ -256,7 +252,7 @@ class _GroupCard extends StatelessWidget {
                   TextButton(
                     style: TextButton.styleFrom(foregroundColor: AppColors.textSecondary),
                     onPressed: () => onKeepAll(!keepAll),
-                    child: Text(keepAll ? 'Choose one' : 'Keep all'),
+                    child: Text(keepAll ? tr.chooseOne : tr.keepAll),
                   ),
                 ],
               ),
@@ -289,12 +285,12 @@ class _GroupCard extends StatelessWidget {
                               [
                                 item.qualityLabel,
                                 if (item.bytes != null) formatFileSize(item.bytes!),
-                                if (item == group.best) 'best quality',
+                                if (item == group.best) tr.bestQuality,
                               ].join('  ·  '),
                               style: text.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
                             ),
                             Text(
-                              '${item.madeByRiflay ? 'Downloaded by Riflay' : 'Your file'}  ·  ${p.basename(item.path)}',
+                              '${item.madeByRiflay ? tr.downloadedByRiflay : tr.yourFile}  ·  ${p.basename(item.path)}',
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: muted,
@@ -306,7 +302,7 @@ class _GroupCard extends StatelessWidget {
                       if (!keepAll && item.track.id == keepId)
                         Padding(
                           padding: const EdgeInsets.only(left: 8, top: 2),
-                          child: Text('Keep', style: muted?.copyWith(fontWeight: FontWeight.w700)),
+                          child: Text(tr.keep, style: muted?.copyWith(fontWeight: FontWeight.w700)),
                         ),
                     ],
                   ),
@@ -340,48 +336,41 @@ class _RemoveDialogState extends State<_RemoveDialog> {
     final n = plan.removeFromLibrary.length;
     final muted = Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary);
     return AlertDialog(
-      title: Text('Remove $n ${n == 1 ? 'copy' : 'copies'}?'),
+      title: Text(tr.removeCopiesQuestion(n)),
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'They are taken out of your library, and the copy you keep stays. Playlists that had a removed copy '
-              'use the one you keep.',
-            ),
+            Text(tr.removeCopiesBody),
             const SizedBox(height: 12),
             CheckboxListTile(
               contentPadding: EdgeInsets.zero,
               controlAffinity: ListTileControlAffinity.leading,
               value: _delete,
               onChanged: (v) => setState(() => _delete = v ?? false),
-              title: const Text('Also delete the files from this device'),
-              subtitle: Text(
-                'Frees ${formatFileSize(withFiles.bytesFreed)}. Deleted files can\'t be brought back.',
-                style: muted,
-              ),
+              title: Text(tr.alsoDeleteFiles),
+              subtitle: Text(tr.freesSize(formatFileSize(withFiles.bytesFreed)), style: muted),
             ),
             if (_delete && plan.filesToDelete.isNotEmpty) ...[
               const SizedBox(height: 8),
               Text(
                 [
-                  if (plan.ownFilesToDelete > 0) '${plan.ownFilesToDelete} of your own files',
-                  if (plan.downloadsToDelete > 0) '${plan.downloadsToDelete} downloads Riflay saved',
-                ].join(' and '),
+                  if (plan.ownFilesToDelete > 0) tr.ownFilesCount(plan.ownFilesToDelete),
+                  if (plan.downloadsToDelete > 0) tr.downloadsRiflaySaved(plan.downloadsToDelete),
+                ].join(' ${tr.listAnd} '),
                 style: muted,
               ),
             ],
-            if (_delete && plan.skippedFiles > 0)
-              Text('${plan.skippedFiles} files are used by other songs and stay.', style: muted),
+            if (_delete && plan.skippedFiles > 0) Text(tr.filesUsedElsewhere(plan.skippedFiles), style: muted),
           ],
         ),
       ),
       actions: [
-        TextButton(onPressed: () => Navigator.of(context, rootNavigator: true).pop(), child: const Text('Cancel')),
+        TextButton(onPressed: () => Navigator.of(context, rootNavigator: true).pop(), child: Text(tr.cancel)),
         FilledButton(
           onPressed: () => Navigator.of(context, rootNavigator: true).pop(_delete),
-          child: Text(_delete ? 'Delete files' : 'Remove from library'),
+          child: Text(_delete ? tr.deleteFiles : tr.removeFromLibrary),
         ),
       ],
     );

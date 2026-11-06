@@ -13,6 +13,7 @@ import '../theme.dart';
 import '../widgets/page_scaffold.dart';
 import 'spotify_login_page.dart';
 import '../widgets/skeleton.dart';
+import '../../services/language.dart';
 
 /// Builds the importer for a run. The default one writes to YouTube Music / Riflay.
 typedef SpotifyImporterBuilder = SpotifyImporter Function(BuildContext context, SpotifyLibraryClient client);
@@ -151,7 +152,7 @@ class _SpotifyPageState extends State<SpotifyPage> {
           ..error = switch (e) {
             PlaylistTransferError(:final message) => message,
             SpotifySignedOut() => SpotifySignedOut.message,
-            _ => 'Couldn\'t read your Spotify library right now. Try again later.',
+            _ => tr.spotifyReadFailed,
           };
       });
     }
@@ -161,13 +162,7 @@ class _SpotifyPageState extends State<SpotifyPage> {
     final messenger = ScaffoldMessenger.of(context);
     if (!SpotifyLogin.canSignIn) {
       messenger.showSnackBar(
-        SnackBar(
-          content: Text(
-            SpotifyLogin.signsInWithHelper
-                ? 'Signing in needs WebKitGTK (webkit2gtk-4.1). Install it and restart Riflay.'
-                : 'Signing in to Spotify isn\'t available here.',
-          ),
-        ),
+        SnackBar(content: Text(SpotifyLogin.signsInWithHelper ? tr.needsWebkit : tr.spotifySignInUnavailable)),
       );
       return;
     }
@@ -283,9 +278,9 @@ class _SpotifyPageState extends State<SpotifyPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Copy your Spotify playlists, Liked Songs and albums into Riflay.', style: text.bodyLarge),
+                Text(tr.spotifyIntro, style: text.bodyLarge),
                 const SizedBox(height: 8),
-                Text('Riflay only reads your library. It never changes your Spotify account.', style: muted),
+                Text(tr.spotifyReadOnly, style: muted),
                 const SizedBox(height: 24),
                 if (account.busy)
                   const SkeletonBox(height: 52, radius: 26)
@@ -295,7 +290,7 @@ class _SpotifyPageState extends State<SpotifyPage> {
                     child: FilledButton(
                       style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(52)),
                       onPressed: _signIn,
-                      child: const Text('Sign in with Spotify'),
+                      child: Text(tr.signInWithSpotify),
                     ),
                   ),
                 if (account.error != null) ...[
@@ -331,7 +326,7 @@ class _SpotifyPageState extends State<SpotifyPage> {
     final muted = text.bodySmall?.copyWith(color: AppColors.textSecondary);
     final state = _tabs[_tab]!;
     final youtube = _youtubeSignedIn;
-    final note = youtube ? 'Playlists go to your YouTube Music library.' : 'Playlists become Riflay playlists.';
+    final note = youtube ? tr.playlistsGoToYt : tr.playlistsBecomeRiflay;
     return [
       SliverToBoxAdapter(
         child: Padding(
@@ -340,13 +335,13 @@ class _SpotifyPageState extends State<SpotifyPage> {
             children: [
               Expanded(
                 child: Text(
-                  account.name == null ? 'Signed in to Spotify' : 'Signed in as ${account.name}',
+                  account.name == null ? tr.signedInToSpotify : tr.signedInAs('${account.name}'),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: text.bodyMedium?.copyWith(color: AppColors.textSecondary),
                 ),
               ),
-              TextButton(onPressed: () => account.signOut(), child: const Text('Sign out')),
+              TextButton(onPressed: () => account.signOut(), child: Text(tr.signOut)),
             ],
           ),
         ),
@@ -356,9 +351,9 @@ class _SpotifyPageState extends State<SpotifyPage> {
           padding: EdgeInsets.fromLTRB(pad, 4, pad, 8),
           child: SegmentedButton<_Tab>(
             showSelectedIcon: false,
-            segments: const [
-              ButtonSegment(value: _Tab.playlists, label: Text('Playlists')),
-              ButtonSegment(value: _Tab.albums, label: Text('Albums')),
+            segments: [
+              ButtonSegment(value: _Tab.playlists, label: Text(tr.playlists)),
+              ButtonSegment(value: _Tab.albums, label: Text(tr.albums)),
             ],
             selected: {_tab},
             onSelectionChanged: (v) => _selectTab(v.first),
@@ -384,7 +379,7 @@ class _SpotifyPageState extends State<SpotifyPage> {
               children: [
                 Text(state.error!, style: text.bodyMedium?.copyWith(color: AppColors.textSecondary)),
                 const SizedBox(height: 8),
-                TextButton(onPressed: () => _ensureLoaded(_tab), child: const Text('Try again')),
+                TextButton(onPressed: () => _ensureLoaded(_tab), child: Text(tr.tryAgain)),
               ],
             ),
           ),
@@ -393,7 +388,7 @@ class _SpotifyPageState extends State<SpotifyPage> {
         SliverToBoxAdapter(
           child: Padding(
             padding: EdgeInsets.symmetric(horizontal: pad, vertical: 16),
-            child: Text('Nothing here yet.', style: muted),
+            child: Text(tr.nothingHereYet, style: muted),
           ),
         )
       else
@@ -424,7 +419,7 @@ class _SpotifyPageState extends State<SpotifyPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 if (subtitle.isNotEmpty) Text(subtitle, maxLines: 1, overflow: TextOverflow.ellipsis, style: muted),
-                if (imported != null) Text('Imported', style: muted?.copyWith(color: AppColors.accent)),
+                if (imported != null) Text(tr.imported, style: muted?.copyWith(color: AppColors.accent)),
               ],
             ),
     );
@@ -446,12 +441,12 @@ class _SpotifyPageState extends State<SpotifyPage> {
             children: [
               FilledButton.tonal(
                 onPressed: ready && all.isNotEmpty ? () => _start(all) : null,
-                child: const Text('Import all'),
+                child: Text(tr.importAll),
               ),
               const SizedBox(width: 12),
               FilledButton(
                 onPressed: ready && chosen.isNotEmpty ? () => _start(chosen) : null,
-                child: Text(chosen.isEmpty ? 'Import' : 'Import ${chosen.length}'),
+                child: Text(chosen.isEmpty ? tr.import : tr.importCount('${chosen.length}')),
               ),
             ],
           ),
@@ -530,7 +525,7 @@ class _ImportPanel extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          item == null ? 'Importing' : '${importer.positionLabel} · ${item.name}',
+          item == null ? tr.importing : '${importer.positionLabel} · ${item.name}',
           maxLines: 2,
           overflow: TextOverflow.ellipsis,
           style: text.titleMedium?.copyWith(fontWeight: FontWeight.w700),
@@ -538,12 +533,12 @@ class _ImportPanel extends StatelessWidget {
         const SizedBox(height: 8),
         Text(
           importer.cancelled
-              ? 'Stopping…'
+              ? tr.stopping
               : finding
-              ? 'Finding songs in YouTube Music: ${importer.matched} of ${importer.matchTotal}'
+              ? tr.findingSongsInYt('${importer.matched}', '${importer.matchTotal}')
               : item?.kind == SpotifyItemKind.artist
-              ? 'Finding the artist in YouTube Music…'
-              : 'Reading the songs…',
+              ? tr.findingArtistInYt
+              : tr.readingTheSongs,
           style: muted,
         ),
         const SizedBox(height: 16),
@@ -551,7 +546,7 @@ class _ImportPanel extends StatelessWidget {
         const SizedBox(height: 16),
         Align(
           alignment: Alignment.centerLeft,
-          child: TextButton(onPressed: importer.cancelled ? null : importer.cancel, child: const Text('Cancel')),
+          child: TextButton(onPressed: importer.cancelled ? null : importer.cancel, child: Text(tr.cancel)),
         ),
       ],
     );
@@ -569,10 +564,10 @@ class _ImportPanel extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Imported ${importer.succeeded} of $planned',
+          tr.importedOf('${importer.succeeded}', '$planned'),
           style: text.titleLarge?.copyWith(fontWeight: FontWeight.w800),
         ),
-        if (importer.cancelled) ...[const SizedBox(height: 4), Text('You stopped the import.', style: muted)],
+        if (importer.cancelled) ...[const SizedBox(height: 4), Text(tr.youStoppedImport, style: muted)],
         const SizedBox(height: 16),
         for (final r in importer.results)
           Padding(
@@ -598,10 +593,7 @@ class _ImportPanel extends StatelessWidget {
               child: ExpansionTile(
                 tilePadding: EdgeInsets.zero,
                 childrenPadding: const EdgeInsets.only(bottom: 8),
-                title: Text(
-                  '${r.item.name}: ${r.missing.length} ${r.missing.length == 1 ? 'song' : 'songs'} not found',
-                  style: text.bodyMedium,
-                ),
+                title: Text(tr.spotifySongsNotFound(r.missing.length, r.item.name), style: text.bodyMedium),
                 children: [
                   Align(
                     alignment: Alignment.centerLeft,
@@ -621,7 +613,7 @@ class _ImportPanel extends StatelessWidget {
             ),
         ],
         const SizedBox(height: 24),
-        FilledButton(onPressed: onDone, child: const Text('Done')),
+        FilledButton(onPressed: onDone, child: Text(tr.done)),
       ],
     );
   }

@@ -21,6 +21,7 @@ import '../playlist_import.dart';
 import '../../services/ytmusic_web.dart';
 import '../widgets/menus.dart';
 import '../widgets/skeleton.dart';
+import '../../services/language.dart';
 
 /// The one sign-in: Google's own page, in a window on Linux (WebKitGTK helper)
 /// and inside the app everywhere else.
@@ -42,16 +43,14 @@ Future<void> signInToYoutubeMusic(BuildContext context) async {
       shell.open(const YoutubeMusicLoginPage());
     }
   } else {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Signing in needs WebKitGTK (webkit2gtk-4.1). Install it and restart Riflay.')),
-    );
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(tr.needsWebkit)));
   }
 }
 
 Collection likedCollection(List<Track> liked) => Collection(
   kind: CollectionKind.remote,
   id: likedMusicId,
-  title: 'Liked music',
+  title: tr.likedMusic,
   subtitle: 'YouTube Music',
   tracks: liked,
 );
@@ -64,8 +63,8 @@ Future<void> joinSharedPlaylist(BuildContext context) async {
   final lib = await account.library().then<YoutubeMusicLibrary?>((l) => l, onError: (Object _) => null);
   if (!context.mounted) return;
   final p = lib?.playlists.where((p) => p.id == id).firstOrNull;
-  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Joined "${p?.title ?? 'the playlist'}"')));
-  openRemotePlaylist(context, p ?? RemotePlaylist(id: id, title: 'Shared playlist', count: 0));
+  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(tr.joinedPlaylist(p?.title ?? tr.thePlaylist))));
+  openRemotePlaylist(context, p ?? RemotePlaylist(id: id, title: tr.sharedPlaylist, count: 0));
 }
 
 /// "Import a playlist" from Spotify, Apple Music or Deezer, then opens it.
@@ -100,7 +99,7 @@ void openRemotePlaylist(BuildContext context, RemotePlaylist p, {ShellScope? she
       load: () async => Collection(
         kind: CollectionKind.remote,
         title: p.title,
-        subtitle: artistId != null ? 'Artist' : p.subtitle ?? 'YouTube Music',
+        subtitle: artistId != null ? tr.artist : p.subtitle ?? 'YouTube Music',
         tracks: await music.collectionTracks(p),
       ),
     ),
@@ -201,15 +200,12 @@ class SignInBanner extends StatelessWidget {
           spacing: 12,
           runSpacing: 8,
           children: [
-            Text(
-              'Sign in to YouTube Music to add your liked songs, playlists and history.',
-              style: text.bodyMedium?.copyWith(color: AppColors.textSecondary),
-            ),
+            Text(tr.ytSignInPrompt, style: text.bodyMedium?.copyWith(color: AppColors.textSecondary)),
             FilledButton.icon(
               style: FilledButton.styleFrom(backgroundColor: AppColors.inverse, foregroundColor: AppColors.onInverse),
               onPressed: account.connecting ? null : () => signInToYoutubeMusic(context),
               icon: const Icon(Icons.login_rounded),
-              label: Text(account.connecting ? 'Signing in…' : 'Sign in with Google'),
+              label: Text(account.connecting ? tr.signingIn : tr.signInWithGoogle),
             ),
           ],
         ),
@@ -247,11 +243,11 @@ class DiscoverShelves extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Couldn\'t load YouTube Music. Check your internet connection.',
+                          tr.ytLoadFailed,
                           style: text.bodyLarge?.copyWith(color: Theme.of(context).colorScheme.error),
                         ),
                         const SizedBox(height: 8),
-                        TextButton(onPressed: () => c.ytMusic.discover(refresh: true), child: const Text('Try again')),
+                        TextButton(onPressed: () => c.ytMusic.discover(refresh: true), child: Text(tr.tryAgain)),
                       ],
                     ),
                   ),
@@ -296,7 +292,7 @@ List<Widget> remoteShelfWidgets(BuildContext context, PlayerController c, List<R
                 builder: (context, first) => MediaCard(
                   track: playlistCover(p, fallback: first.data),
                   title: p.title,
-                  subtitle: p.subtitle ?? 'Playlist',
+                  subtitle: p.subtitle ?? tr.playlist,
                   online: true,
                   onTap: () => openRemotePlaylist(context, p),
                 ),
@@ -339,11 +335,7 @@ class _RemoteCollectionPageState extends State<RemoteCollectionPage> {
             SliverToBoxAdapter(
               child: Padding(
                 padding: EdgeInsets.all(snap.hasError ? 48 : 0),
-                child: Center(
-                  child: snap.hasError
-                      ? const Text('Couldn\'t load this playlist. Check your internet connection.')
-                      : const SkeletonPage(),
-                ),
+                child: Center(child: snap.hasError ? Text(tr.playlistLoadFailed) : const SkeletonPage()),
               ),
             ),
           ],
@@ -459,7 +451,7 @@ class _LibraryPlaylistPageState extends State<LibraryPlaylistPage> {
     final messenger = ScaffoldMessenger.of(context);
     try {
       await _account.setPlaylistPrivacy(widget.playlist.id, privacy);
-      messenger.showSnackBar(SnackBar(content: Text('Playlist is now ${privacy.label.toLowerCase()}')));
+      messenger.showSnackBar(SnackBar(content: Text(tr.playlistIsNow(privacy.label))));
     } catch (e) {
       messenger.showSnackBar(SnackBar(content: Text(YoutubeMusicAccount.describe(e))));
     }
@@ -481,14 +473,14 @@ class _LibraryPlaylistPageState extends State<LibraryPlaylistPage> {
     final sure = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete playlist?'),
-        content: Text('"$_title" will be deleted from your YouTube Music library. This can\'t be undone.'),
+        title: Text(tr.deletePlaylistQuestion),
+        content: Text(tr.deleteYtPlaylistBody(_title)),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(context, false), child: Text(tr.cancel)),
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.error),
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Delete'),
+            child: Text(tr.delete),
           ),
         ],
       ),
@@ -496,7 +488,7 @@ class _LibraryPlaylistPageState extends State<LibraryPlaylistPage> {
     if (sure != true) return;
     try {
       await account.deletePlaylist(widget.playlist.id);
-      messenger.showSnackBar(SnackBar(content: Text('Deleted "$_title"')));
+      messenger.showSnackBar(SnackBar(content: Text(tr.deletedNamed(_title))));
       history != null ? history.back() : navigator.maybePop();
     } catch (e) {
       messenger.showSnackBar(SnackBar(content: Text(YoutubeMusicAccount.describe(e))));
@@ -518,13 +510,13 @@ class _LibraryPlaylistPageState extends State<LibraryPlaylistPage> {
                 child: _error != null
                     ? Column(
                         children: [
-                          const Text('Couldn\'t load this playlist. Check your internet connection.'),
+                          Text(tr.playlistLoadFailed),
                           TextButton(
                             onPressed: () {
                               setState(() => _error = null);
                               _reload();
                             },
-                            child: const Text('Try again'),
+                            child: Text(tr.tryAgain),
                           ),
                         ],
                       )
@@ -538,7 +530,7 @@ class _LibraryPlaylistPageState extends State<LibraryPlaylistPage> {
     final collection = Collection(
       kind: CollectionKind.remote,
       title: _title,
-      subtitle: [if (d.privacy != null) d.privacy!.label, if (d.collaborative) 'Shared', 'YouTube Music'].join(' · '),
+      subtitle: [if (d.privacy != null) d.privacy!.label, if (d.collaborative) tr.shared, 'YouTube Music'].join(' · '),
       tracks: d.tracks,
     );
     return PlaylistEditScope(
@@ -556,22 +548,22 @@ class _LibraryPlaylistPageState extends State<LibraryPlaylistPage> {
             PopupMenuButton<VoidCallback>(
               // Over the whole window, so a click anywhere (sidebar included) closes it.
               useRootNavigator: true,
-              tooltip: 'Edit playlist',
+              tooltip: tr.editPlaylist,
               icon: const Icon(Icons.more_horiz_rounded, size: 30),
               onSelected: (action) => action(),
               itemBuilder: (_) => [
                 PopupMenuItem(
                   value: () => _invite(d),
-                  child: const MenuRow(leading: Icon(Icons.group_add_outlined), title: Text('Invite friends')),
+                  child: MenuRow(leading: Icon(Icons.group_add_outlined), title: Text(tr.inviteFriends)),
                 ),
                 if (d.collaborative)
                   PopupMenuItem(
                     value: _stopSharing,
-                    child: const MenuRow(leading: Icon(Icons.group_off_outlined), title: Text('Stop sharing')),
+                    child: MenuRow(leading: Icon(Icons.group_off_outlined), title: Text(tr.stopSharing)),
                   ),
                 PopupMenuItem(
                   value: _rename,
-                  child: const MenuRow(leading: Icon(Icons.edit_outlined), title: Text('Rename')),
+                  child: MenuRow(leading: Icon(Icons.edit_outlined), title: Text(tr.rename)),
                 ),
                 for (final p in PlaylistPrivacy.values)
                   if (p != d.privacy)
@@ -583,12 +575,12 @@ class _LibraryPlaylistPageState extends State<LibraryPlaylistPage> {
                           PlaylistPrivacy.unlisted => Icons.link_rounded,
                           PlaylistPrivacy.private => Icons.lock_outline_rounded,
                         }),
-                        title: Text('Make ${p.label.toLowerCase()}'),
+                        title: Text(tr.makePrivacy(p.label)),
                       ),
                     ),
                 PopupMenuItem(
                   value: _delete,
-                  child: const MenuRow(leading: Icon(Icons.delete_outline_rounded), title: Text('Delete playlist')),
+                  child: MenuRow(leading: Icon(Icons.delete_outline_rounded), title: Text(tr.deletePlaylist)),
                 ),
               ],
             ),

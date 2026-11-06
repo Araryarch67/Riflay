@@ -9,6 +9,7 @@ import 'package:path_provider/path_provider.dart';
 
 import '../platform/host.dart';
 import '../platform/native_calls.dart';
+import 'language.dart';
 
 /// The `ffmpeg` command, for what libmpv can't do: writing tags into MP3 / Ogg
 /// files, and converting for AirPlay and TVs. A system one is used when
@@ -96,7 +97,7 @@ abstract final class Ffmpeg {
   static Future<String> _fetch() async {
     final source = _source;
     if (source == null) throw StateError('FFmpeg isn\'t installed. Install it to use this.');
-    onDownload?.call('Getting this ready: a one-time download (about 40 MB)…');
+    onDownload?.call(tr.ffmpegOneTime);
     final target = await _localFile();
     final work = await Directory.systemTemp.createTemp('riflay-ffmpeg');
     try {

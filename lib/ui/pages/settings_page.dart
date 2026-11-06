@@ -382,9 +382,7 @@ class SettingsGroupPage extends StatelessWidget {
                 _SettingsRow(
                   icon: s.icon,
                   title: s.label,
-                  summary: c.ytMusic.isSignedIn
-                      ? 'Signed in as ${c.ytMusic.accountName ?? 'YouTube Music'}'
-                      : s.summary,
+                  summary: c.ytMusic.isSignedIn ? tr.signedInAs(c.ytMusic.accountName ?? 'YouTube Music') : s.summary,
                   leading: CircleAvatar(
                     radius: 18,
                     backgroundColor: AppColors.hover,
@@ -476,27 +474,22 @@ class _AccountSettings extends StatelessWidget {
               child: Icon(Icons.person_rounded, color: AppColors.textSecondary),
             ),
             title: Text(account.isSignedIn ? account.accountName ?? 'YouTube Music' : 'YouTube Music'),
-            subtitle: Text(
-              account.isSignedIn
-                  ? 'Signed in. Your likes, playlists and followed artists are here.'
-                  : 'Not signed in. Search and the public home work without an account.',
-              style: muted,
-            ),
+            subtitle: Text(account.isSignedIn ? tr.ytSignedInBody : tr.ytSignedOutBody, style: muted),
             control: account.isSignedIn
-                ? TextButton(onPressed: account.signOut, child: const Text('Disconnect'))
+                ? TextButton(onPressed: account.signOut, child: Text(tr.disconnect))
                 : FilledButton(
                     style: FilledButton.styleFrom(
                       backgroundColor: AppColors.inverse,
                       foregroundColor: AppColors.onInverse,
                     ),
                     onPressed: account.connecting ? null : () => signInToYoutubeMusic(context),
-                    child: const Text('Sign in with Google'),
+                    child: Text(tr.signInWithGoogle),
                   ),
           ),
           if (account.isSignedIn)
             SwitchListTile(
-              title: const Text('Add songs you play to your YouTube Music history'),
-              subtitle: Text('Like the official app, so YouTube Music keeps learning what you like.', style: muted),
+              title: Text(tr.addToYtHistory),
+              subtitle: Text(tr.addToYtHistorySubtitle, style: muted),
               value: account.reportPlays,
               onChanged: account.setReportPlays,
             ),
@@ -521,8 +514,8 @@ class _IntegrationsSettingsState extends State<_IntegrationsSettings> {
     return SettingsCard(
       children: [
         SwitchListTile(
-          title: const Text('Musixmatch lyrics'),
-          subtitle: const Text('Find word-by-word lyrics when other sources have none'),
+          title: Text(tr.musixmatchLyrics),
+          subtitle: Text(tr.musixmatchLyricsSubtitle),
           value: BetaFeatures.instance.isOn(BetaFeature.musixmatch),
           onChanged: (value) async {
             await BetaFeatures.instance.set(BetaFeature.musixmatch, value);
@@ -532,8 +525,8 @@ class _IntegrationsSettingsState extends State<_IntegrationsSettings> {
         if (DiscordPresence.supported)
           SwitchListTile(
             secondary: const Icon(Icons.discord),
-            title: const Text('Discord Rich Presence'),
-            subtitle: Text('Show what you\'re listening to on your Discord profile', style: muted),
+            title: Text(tr.discordRichPresence),
+            subtitle: Text(tr.discordRichPresenceSubtitle, style: muted),
             value: c.discordEnabled,
             onChanged: c.setDiscordEnabled,
           ),
@@ -541,11 +534,9 @@ class _IntegrationsSettingsState extends State<_IntegrationsSettings> {
         if (DiscordPresence.supported && c.discordEnabled) const DiscordPresenceSettings(),
         ListTile(
           leading: const Icon(Icons.key_rounded),
-          title: const Text('Better Lyrics API key'),
+          title: Text(tr.betterLyricsKey),
           subtitle: Text(
-            LyricsService.betterLyricsKey == null
-                ? 'Optional. Lets Better Lyrics find lyrics it hasn\'t saved yet, if you have a key.'
-                : 'Added. Better Lyrics can find lyrics it hasn\'t saved yet.',
+            LyricsService.betterLyricsKey == null ? tr.betterLyricsKeyOptional : tr.betterLyricsKeyAdded,
             style: muted,
           ),
           trailing: TextButton(
@@ -553,7 +544,7 @@ class _IntegrationsSettingsState extends State<_IntegrationsSettings> {
               await showDialog<void>(context: context, builder: (_) => const _BetterLyricsKeyDialog());
               if (mounted) setState(() {});
             },
-            child: Text(LyricsService.betterLyricsKey == null ? 'Add' : 'Change'),
+            child: Text(LyricsService.betterLyricsKey == null ? tr.add : tr.change),
           ),
         ),
       ],
@@ -619,7 +610,7 @@ class _Breadcrumb extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
       child: Semantics(
-        label: '${[for (final c in crumbs) c.label].join(', then ')}, then $current',
+        label: tr.crumbsThen([for (final c in crumbs) c.label].join(tr.crumbsJoin), current),
         child: Wrap(
           crossAxisAlignment: WrapCrossAlignment.center,
           children: [
@@ -706,9 +697,9 @@ class _BetterLyricsKeyDialogState extends State<_BetterLyricsKeyDialog> {
       final ok = await LyricsService.setBetterLyricsKey(key);
       if (!mounted) return;
       if (ok) return Navigator.pop(context);
-      setState(() => _error = 'Better Lyrics says this key isn\'t valid.');
+      setState(() => _error = tr.betterLyricsKeyInvalid);
     } catch (_) {
-      if (mounted) setState(() => _error = 'Couldn\'t reach Better Lyrics to check the key. Try again.');
+      if (mounted) setState(() => _error = tr.betterLyricsUnreachable);
     } finally {
       if (mounted) setState(() => _checking = false);
     }
@@ -716,7 +707,7 @@ class _BetterLyricsKeyDialogState extends State<_BetterLyricsKeyDialog> {
 
   @override
   Widget build(BuildContext context) => AlertDialog(
-    title: const Text('Better Lyrics API key'),
+    title: Text(tr.betterLyricsKey),
     content: SizedBox(
       width: 420,
       child: Column(
@@ -724,8 +715,7 @@ class _BetterLyricsKeyDialogState extends State<_BetterLyricsKeyDialog> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Without a key, lyrics from Better Lyrics still work for every song it has saved. '
-            'Better Lyrics isn\'t giving out new keys right now.',
+            tr.betterLyricsKeyBody,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary),
           ),
           const SizedBox(height: 16),
@@ -735,7 +725,7 @@ class _BetterLyricsKeyDialogState extends State<_BetterLyricsKeyDialog> {
             obscureText: true,
             enabled: !_checking,
             decoration: InputDecoration(
-              labelText: 'API key',
+              labelText: tr.apiKey,
               border: const OutlineInputBorder(),
               isDense: true,
               errorText: _error,
@@ -748,13 +738,13 @@ class _BetterLyricsKeyDialogState extends State<_BetterLyricsKeyDialog> {
     ),
     actions: [
       if (LyricsService.betterLyricsKey != null)
-        TextButton(onPressed: _checking ? null : () => _save(null), child: const Text('Remove')),
-      TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+        TextButton(onPressed: _checking ? null : () => _save(null), child: Text(tr.remove)),
+      TextButton(onPressed: () => Navigator.pop(context), child: Text(tr.cancel)),
       ListenableBuilder(
         listenable: _key,
         builder: (context, _) => FilledButton(
           onPressed: _checking || _key.text.trim().isEmpty ? null : () => _save(_key.text),
-          child: Text(_checking ? 'Checking…' : 'Save'),
+          child: Text(_checking ? tr.checking : tr.save),
         ),
       ),
     ],

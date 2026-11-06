@@ -9,6 +9,7 @@ import 'internet.dart';
 import 'lan.dart';
 import 'protocol.dart';
 import 'transport.dart';
+import '../language.dart';
 
 /// What [ListenTogether.host] and [ListenTogether.join] throw; [message] is the calm sentence also in `problem`.
 class ListenException implements Exception {
@@ -204,11 +205,7 @@ class ListenTogether extends ChangeNotifier {
         await transport.stop();
       } catch (_) {}
       _busy = false;
-      _fail(
-        mode == ListenMode.internet
-            ? const InternetUnreachable().message
-            : 'Couldn\'t start a session. Check that you\'re connected to Wi-Fi.',
-      );
+      _fail(mode == ListenMode.internet ? const InternetUnreachable().message : tr.couldntStartSession);
     }
     _busy = false;
     _transport = transport;
@@ -241,7 +238,7 @@ class ListenTogether extends ChangeNotifier {
 
   void _onTransportEnded() {
     if (_role == ListenRole.host) {
-      _problem = 'The session stopped. Start it again to keep listening together.';
+      _problem = tr.sessionStopped;
       unawaited(_teardown());
     }
   }
@@ -268,7 +265,7 @@ class ListenTogether extends ChangeNotifier {
     if (!_peers.containsKey(peer)) return;
     final name = _peers.remove(peer);
     if (name == null || _role != ListenRole.host) return;
-    _emit('$name left');
+    _emit(tr.nameLeft(name));
     _sendGuests();
   }
 
@@ -280,7 +277,7 @@ class ListenTogether extends ChangeNotifier {
     switch (message) {
       case Hello(:final name):
         if (_peers[peer] != null) return;
-        final clean = name.trim().isEmpty ? 'Someone' : name.trim();
+        final clean = name.trim().isEmpty ? tr.someone : name.trim();
         _peers[peer] = clean.length > 30 ? clean.substring(0, 30) : clean;
         peer.send(
           Welcome(
@@ -301,7 +298,7 @@ class ListenTogether extends ChangeNotifier {
         final song = track.toTrack();
         unawaited(player.queueAfter([song], after: _suggested));
         _suggested.add(song.id);
-        _emit('$from added ${track.title} to the queue');
+        _emit(tr.nameAddedToQueue(from, track.title));
       case SeekRequest(:final positionMs, :final videoId):
         if (_peers[peer] == null || !_seekingAllowed || player.currentTrack?.videoId != videoId) return;
         final duration = player.player.duration?.inMilliseconds ?? player.currentTrack?.duration?.inMilliseconds;
@@ -427,7 +424,7 @@ class ListenTogether extends ChangeNotifier {
     } catch (e) {
       debugPrint('Listen together: can\'t join: $e');
       _busy = false;
-      _fail('Couldn\'t find that session. Check the code and that you\'re on the same Wi-Fi.');
+      _fail(tr.sessionNotFound);
     }
     final welcome = _welcome = Completer<Welcome>();
     _conn = conn;
@@ -466,7 +463,7 @@ class ListenTogether extends ChangeNotifier {
       _busy = false;
       if (_conn == conn) {
         await _teardown();
-        _fail('That session isn\'t answering. Try again in a moment.');
+        _fail(tr.sessionNotAnswering);
       }
     }
   }
@@ -508,8 +505,8 @@ class ListenTogether extends ChangeNotifier {
         _pending = message;
         if (_role == ListenRole.guest && !_applying) unawaited(_applyPending());
       case Bye():
-        final host = _hostName ?? 'The host';
-        _emit('$host ended the listening session');
+        final host = _hostName ?? tr.theHostCap;
+        _emit(tr.hostEndedSession(host));
         unawaited(_teardown());
       default:
     }
@@ -520,11 +517,7 @@ class ListenTogether extends ChangeNotifier {
     if (_role == ListenRole.guest) {
       final internet = _mode == ListenMode.internet;
       unawaited(_teardown());
-      _setProblem(
-        internet
-            ? 'The session ended or the connection dropped.'
-            : 'Lost the connection to the host. Join again to keep listening.',
-      );
+      _setProblem(internet ? tr.sessionEndedOrDropped : tr.lostHostConnection);
     }
   }
 
@@ -556,7 +549,7 @@ class ListenTogether extends ChangeNotifier {
     int target() => ListenSync.targetMs(s, guestNowMs: _now(), offsetMs: _clock.offsetMs);
     if (ListenSync.songDiffers(player.currentTrack?.videoId, shared)) {
       _lastVideoId = shared.videoId;
-      await player.playList([shared.toTrack()], 0, from: 'Listening together');
+      await player.playList([shared.toTrack()], 0, from: tr.listeningTogetherSource);
       // The load took a while; the target is computed from the clock now, so it already includes that time.
       if (_pending != null) return; // a newer state arrived while loading
       await player.player.seek(Duration(milliseconds: s.playing ? target() : s.positionMs));
@@ -605,7 +598,7 @@ class ListenTogether extends ChangeNotifier {
   }
 
   void _leftByChoosing() {
-    _emit('You left the listening session');
+    _emit(tr.youLeftSession);
     unawaited(leave());
   }
 
@@ -615,9 +608,9 @@ class ListenTogether extends ChangeNotifier {
     if (_role != ListenRole.guest) return;
     final shared = SharedTrack.of(track);
     final refused = shared == null
-        ? 'Only songs from YouTube Music can be added to ${_hostName ?? 'the host'}\'s queue.'
+        ? tr.onlyYtToHostQueue(_hostName ?? tr.theHost)
         : !_suggestionsAllowed
-        ? '${_hostName ?? 'The host'} isn\'t taking songs right now.'
+        ? tr.hostNotTakingSongs(_hostName ?? tr.theHostCap)
         : null;
     if (refused != null) {
       _setProblem(refused);
@@ -625,7 +618,7 @@ class ListenTogether extends ChangeNotifier {
       return;
     }
     _problem = null;
-    _conn?.send(Suggest(shared!, from: _ownName ?? 'Someone').encode());
+    _conn?.send(Suggest(shared!, from: _ownName ?? tr.someone).encode());
     if (announce) _emit('Added ${track.title} to ${_hostName ?? 'the host'}\'s queue');
     notifyListeners();
   }

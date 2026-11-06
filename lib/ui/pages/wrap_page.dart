@@ -47,9 +47,7 @@ class WrapPage extends StatelessWidget {
         color: AppColors.panel,
         child: Center(
           child: Text(
-            now != null && MonthlyWrap.isRunning(month, now!)
-                ? 'Play a few songs to see your Wrap.'
-                : 'There is not enough listening in ${month.label} for a Wrap.',
+            now != null && MonthlyWrap.isRunning(month, now!) ? tr.playFewSongsWrap : tr.notEnoughForWrap(month.label),
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary),
           ),
         ),
@@ -101,7 +99,7 @@ class _WrapStoryState extends State<WrapStory> {
     final until = d.until;
     if (until == null) return d.month.label;
     final day = '${until.year}-${until.month.toString().padLeft(2, '0')}-${until.day.toString().padLeft(2, '0')}';
-    return '${d.month.label} so far $day';
+    return '${tr.wrapSoFar(d.month.label)} $day';
   }
 
   /// The card on screen as a PNG, at three times its size.
@@ -125,9 +123,8 @@ class _WrapStoryState extends State<WrapStory> {
   /// What goes with a shared card: the month, the top song and artist.
   String get _caption {
     final d = widget.data;
-    return 'My ${d.month.label} on Riflay: ${formatListened(d.listened)} of music. '
-        'Top song: ${d.topSong.title}. Top artist: ${d.topArtist.title}.'
-        '${d.bestStreak >= 2 ? ' 🔥 ${d.bestStreak} days in a row.' : ''}';
+    return '${tr.wrapCaption(d.month.label, formatListened(d.listened), d.topSong.title, d.topArtist.title)}'
+        '${d.bestStreak >= 2 ? ' ${tr.wrapCaptionStreak(d.bestStreak)}' : ''}';
   }
 
   /// Saves the card to Downloads (the app's documents where there is none; the browser's downloads on the web);
@@ -138,17 +135,17 @@ class _WrapStoryState extends State<WrapStory> {
       final bytes = await _render();
       if (BrowserFiles.available) {
         BrowserFiles.save(bytes, _fileName, mime: 'image/png');
-        if (!quiet) messenger.showSnackBar(SnackBar(content: Text('Saved $_fileName')));
+        if (!quiet) messenger.showSnackBar(SnackBar(content: Text(tr.savedFile(_fileName))));
         return _fileName;
       }
       final dir = await getDownloadsDirectory() ?? await getApplicationDocumentsDirectory();
       final file = File(p.join(dir.path, _fileName));
       await file.writeAsBytes(bytes, flush: true);
-      if (!quiet) messenger.showSnackBar(SnackBar(content: Text('Saved ${p.basename(file.path)}')));
+      if (!quiet) messenger.showSnackBar(SnackBar(content: Text(tr.savedFile(p.basename(file.path)))));
       return p.basename(file.path);
     } catch (e) {
       debugPrint('Saving a Wrap card failed: $e');
-      messenger.showSnackBar(const SnackBar(content: Text('Couldn\'t save the image')));
+      messenger.showSnackBar(SnackBar(content: Text(tr.couldntSaveImage)));
       return null;
     }
   }
@@ -178,7 +175,7 @@ class _WrapStoryState extends State<WrapStory> {
     final name = await _save(quiet: true);
     if (name == null) return;
     await Clipboard.setData(ClipboardData(text: _caption));
-    messenger.showSnackBar(SnackBar(content: Text('Saved $name; the caption is copied')));
+    messenger.showSnackBar(SnackBar(content: Text(tr.savedCaptionCopied(name))));
   }
 
   @override
@@ -213,7 +210,7 @@ class _WrapStoryState extends State<WrapStory> {
                     child: Row(
                       children: [
                         IconButton(
-                          tooltip: 'Close',
+                          tooltip: tr.close,
                           onPressed: () => Navigator.of(context).maybePop(),
                           icon: const Icon(Icons.close_rounded),
                         ),
@@ -246,7 +243,7 @@ class _WrapStoryState extends State<WrapStory> {
                           children: [
                             if (wide)
                               IconButton(
-                                tooltip: 'Previous',
+                                tooltip: tr.previous,
                                 onPressed: _index == 0 ? null : () => _go(_index - 1),
                                 icon: const Icon(Icons.chevron_left_rounded),
                               ),
@@ -335,7 +332,7 @@ class _WrapStoryState extends State<WrapStory> {
                             ),
                             if (wide)
                               IconButton(
-                                tooltip: 'Next',
+                                tooltip: tr.next,
                                 onPressed: _index == _cards.length - 1 ? null : () => _go(_index + 1),
                                 icon: const Icon(Icons.chevron_right_rounded),
                               ),
@@ -359,7 +356,7 @@ class _WrapStoryState extends State<WrapStory> {
                           style: TextButton.styleFrom(foregroundColor: AppColors.textSecondary),
                           onPressed: _save,
                           icon: const Icon(Icons.download_rounded, size: 18),
-                          label: const Text('Save image'),
+                          label: Text(tr.saveImage),
                         ),
                       ],
                     ),
@@ -385,42 +382,49 @@ class _WrapStoryState extends State<WrapStory> {
         .toColor();
   }
 
-  static const _weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+  static List<String> get _weekdays => [
+    tr.weekdayMonday,
+    tr.weekdayTuesday,
+    tr.weekdayWednesday,
+    tr.weekdayThursday,
+    tr.weekdayFriday,
+    tr.weekdaySaturday,
+    tr.weekdaySunday,
+  ];
 
-  static String _day(DateTime d) => '${_weekdays[d.weekday - 1]}, ${ListeningStats.months[d.month - 1]} ${d.day}';
-
-  static String _count(int n, String one, String many) => '$n ${n == 1 ? one : many}';
+  static String _day(DateTime d) =>
+      tr.weekdayMonthDay(_weekdays[d.weekday - 1], ListeningStats.months[d.month - 1], '${d.day}');
 
   /// The cards, in order. Each is drawn on a 360 x 640 canvas.
   static List<Widget Function(BuildContext, Color)> _buildCards(WrapData d, Track Function(SongInfo) trackFor) {
     return [
       (c, _) => _Card(
-        kicker: d.inProgress ? 'Your Wrap so far' : 'Your monthly Wrap',
-        headline: d.inProgress ? '${d.month.name} so far' : 'Your ${d.month.name} in music',
-        body: d.inProgress ? 'Up to ${_day(d.until!)}' : d.month.label,
+        kicker: d.inProgress ? tr.wrapSoFarKicker : tr.wrapMonthlyKicker,
+        headline: d.inProgress ? tr.wrapSoFar(d.month.name) : tr.wrapMonthInMusic(d.month.name),
+        body: d.inProgress ? tr.wrapUpTo(_day(d.until!)) : d.month.label,
         center: true,
       ),
       (c, _) => _Card(
-        kicker: 'You listened for',
+        kicker: tr.wrapListenedFor,
         headline: formatListened(d.listened),
-        body: 'across ${_count(d.plays, 'play', 'plays')} ${d.inProgress ? 'so far in' : 'in'} ${d.month.name}.',
+        body: d.inProgress ? tr.wrapAcrossSoFar(d.plays, d.month.name) : tr.wrapAcross(d.plays, d.month.name),
         center: true,
       ),
       (c, _) => _Card(
-        kicker: 'You played',
-        headline: _count(d.songs, 'song', 'songs'),
-        body: 'by ${_count(d.artists, 'artist', 'artists')}.',
+        kicker: tr.wrapYouPlayed,
+        headline: tr.songsPlural(d.songs),
+        body: tr.wrapByArtists(d.artists),
         center: true,
       ),
       (c, _) => _Card(
-        kicker: 'Your top song',
+        kicker: tr.wrapTopSong,
         headline: d.topSong.title,
-        body: '${d.topSong.subtitle}\n${_count(d.topSong.plays, 'play', 'plays')}',
+        body: '${d.topSong.subtitle}\n${tr.playsPlural(d.topSong.plays)}',
         art: Artwork(track: trackFor(d.topSong.sample), size: 220, radius: 8),
         center: true,
       ),
       (c, _) => _Card(
-        kicker: 'Your top songs',
+        kicker: tr.wrapTopSongs,
         list: [
           for (final (i, s) in d.topSongs.indexed)
             _Line(
@@ -428,19 +432,19 @@ class _WrapStoryState extends State<WrapStory> {
               art: Artwork(track: trackFor(s.sample), size: 44),
               title: s.title,
               subtitle: s.subtitle,
-              trailing: _count(s.plays, 'play', 'plays'),
+              trailing: tr.playsPlural(s.plays),
             ),
         ],
       ),
       (c, _) => _Card(
-        kicker: 'Your top artist',
+        kicker: tr.wrapTopArtist,
         headline: d.topArtist.title,
-        body: _count(d.topArtist.plays, 'play', 'plays'),
+        body: tr.playsPlural(d.topArtist.plays),
         art: Artwork(track: trackFor(d.topArtist.sample), size: 200, circle: true),
         center: true,
       ),
       (c, _) => _Card(
-        kicker: 'Your top artists',
+        kicker: tr.wrapTopArtists,
         list: [
           for (final (i, a) in d.topArtists.indexed)
             _Line(
@@ -448,55 +452,55 @@ class _WrapStoryState extends State<WrapStory> {
               art: Artwork(track: trackFor(a.sample), size: 44, circle: true),
               title: a.title,
               subtitle: formatListened(a.listened),
-              trailing: _count(a.plays, 'play', 'plays'),
+              trailing: tr.playsPlural(a.plays),
             ),
         ],
       ),
       if (d.topAlbum case final album?)
         (c, _) => _Card(
-          kicker: 'Your top album',
+          kicker: tr.wrapTopAlbum,
           headline: album.title,
-          body: '${album.subtitle}\n${_count(album.plays, 'play', 'plays')}',
+          body: '${album.subtitle}\n${tr.playsPlural(album.plays)}',
           art: Artwork(track: trackFor(album.sample), size: 220, radius: 8),
           center: true,
         ),
       (c, _) => _Card(
-        kicker: 'Your biggest day',
+        kicker: tr.wrapBiggestDay,
         headline: _day(d.busiestDay),
-        body: '${formatListened(d.busiestDayListened)} of music.',
+        body: tr.wrapOfMusic(formatListened(d.busiestDayListened)),
         center: true,
       ),
       // Worth showing off from two days in a row; the flame takes the colour the streak reached.
       if (d.bestStreak >= 2)
         (c, _) => _Card(
-          kicker: d.streakNow >= 2 && d.streakNow == d.bestStreak ? 'Your streak, still going' : 'Your longest streak',
-          headline: '${d.bestStreak} days in a row',
-          body:
-              'You listened on ${d.daysListened} of ${_count(d.days, 'day', 'days')}${d.inProgress ? ' so far' : ''}.',
+          kicker: d.streakNow >= 2 && d.streakNow == d.bestStreak ? tr.wrapStreakGoing : tr.wrapLongestStreak,
+          headline: tr.daysInARow(d.bestStreak),
+          body: d.inProgress
+              ? tr.wrapListenedOnDaysSoFar(d.daysListened, d.days)
+              : tr.wrapListenedOnDays(d.daysListened, d.days),
           art: StreakFlame(tier: StreakTier.of(d.bestStreak), size: 150),
           center: true,
         ),
       if (d.mostReplayed case final song?)
         (c, _) => _Card(
-          kicker: 'Most replayed',
+          kicker: tr.wrapMostReplayed,
           headline: song.title,
-          body: '${song.artist}\nPlayed ${d.mostReplayedCount} times on ${_day(d.mostReplayedDay!)}.',
+          body: tr.wrapPlayedTimesOn(song.artist, d.mostReplayedCount, _day(d.mostReplayedDay!)),
           art: Artwork(track: trackFor(song), size: 160, radius: 8),
           center: true,
         ),
       (c, _) => _Card(
-        kicker: 'New this month',
-        headline: _count(d.newSongs, 'new song', 'new songs'),
-        body: d.newSongs == 0 ? 'You stayed with the songs you know.' : 'Songs you had never played before.',
+        kicker: tr.wrapNewThisMonth,
+        headline: tr.newSongsPlural(d.newSongs),
+        body: d.newSongs == 0 ? tr.wrapStayedWithKnown : tr.wrapNeverPlayed,
         center: true,
       ),
       (c, _) => _Card(
         kicker: d.title,
         headline: formatListened(d.listened),
         body:
-            'Top song: ${d.topSong.title}\nTop artist: ${d.topArtist.title}\n'
-            '${_count(d.songs, 'song', 'songs')}, ${_count(d.artists, 'artist', 'artists')}'
-            '${d.newSongs > 0 ? ', ${d.newSongs} new' : ''}',
+            '${tr.wrapSummary(d.songs, d.artists, d.topSong.title, d.topArtist.title)}'
+            '${d.newSongs > 0 ? tr.wrapNewCount(d.newSongs) : ''}',
         art: Artwork(track: trackFor(d.topSong.sample), size: 120, radius: 8),
         footer: d.bestStreak >= 2 ? _StreakPill(days: d.bestStreak) : null,
         center: true,
@@ -530,7 +534,7 @@ class _StreakPill extends StatelessWidget {
           const SizedBox(width: 8),
           Flexible(
             child: Text(
-              '$days days in a row',
+              tr.daysInARow(days),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
@@ -672,7 +676,7 @@ class _Footer extends StatelessWidget {
     return Row(
       children: [
         Expanded(
-          child: Text('Made with Riflay', maxLines: 1, overflow: TextOverflow.ellipsis, style: style),
+          child: Text(tr.madeWithRiflay, maxLines: 1, overflow: TextOverflow.ellipsis, style: style),
         ),
         // Where this card is in the story: a long mark for this one (the marks say it, no "3 / 12" beside them).
         for (var i = 0; i < count; i++)

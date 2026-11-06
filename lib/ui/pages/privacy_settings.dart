@@ -6,6 +6,7 @@ import '../../services/wrap_notifications.dart';
 import '../navigation.dart';
 import '../shell_scope.dart';
 import 'listening_stats_page.dart';
+import '../../services/language.dart';
 import 'sound_settings.dart' show SettingsCard, settingsMuted;
 
 /// Settings › Library & downloads › Listening history & Wrap: the listening history kept on this device.
@@ -38,20 +39,17 @@ class _PrivacySettingsState extends State<PrivacySettings> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Clear listening history?'),
-        content: Text(
-          'This deletes $n ${n == 1 ? 'play' : 'plays'} from this device. Your library and playlists stay as they are, '
-          'but your stats, Wraps and lists like Most played start over.',
-        ),
+        title: Text(tr.clearHistoryQuestion),
+        content: Text(tr.clearHistoryBody(n)),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Clear')),
+          TextButton(onPressed: () => Navigator.pop(context, false), child: Text(tr.cancel)),
+          FilledButton(onPressed: () => Navigator.pop(context, true), child: Text(tr.clear)),
         ],
       ),
     );
     if (ok != true) return;
     await _history.clear();
-    messenger.showSnackBar(const SnackBar(content: Text('Listening history cleared')));
+    messenger.showSnackBar(SnackBar(content: Text(tr.historyCleared)));
   }
 
   @override
@@ -62,19 +60,15 @@ class _PrivacySettingsState extends State<PrivacySettings> {
       builder: (context, _) => SettingsCard(
         children: [
           SwitchListTile(
-            title: const Text('Keep a listening history on this device'),
-            subtitle: Text(
-              'Powers Your listening stats, monthly Wraps and lists like Most played. It is never sent anywhere. '
-              'Turning it off stops recording; what is saved stays until you clear it.',
-              style: muted,
-            ),
+            title: Text(tr.keepHistory),
+            subtitle: Text(tr.keepHistorySubtitle, style: muted),
             value: _history.enabled,
             onChanged: _history.setEnabled,
           ),
           if (Features.systemNotifications)
             SwitchListTile(
-              title: const Text('Monthly Wrap notification'),
-              subtitle: Text('On the 1st, tell me when last month\'s Wrap is ready.', style: muted),
+              title: Text(tr.wrapNotification),
+              subtitle: Text(tr.wrapNotificationSubtitle, style: muted),
               value: _wrapNotes,
               onChanged: (v) {
                 setState(() => _wrapNotes = v);
@@ -83,19 +77,16 @@ class _PrivacySettingsState extends State<PrivacySettings> {
             ),
           ListTile(
             leading: const Icon(Icons.insights_rounded),
-            title: const Text('Your listening stats'),
-            subtitle: Text('Top songs, artists and albums', style: muted),
+            title: Text(tr.yourListeningStats),
+            subtitle: Text(tr.yourListeningStatsSubtitle, style: muted),
             trailing: const Icon(Icons.chevron_right_rounded),
             onTap: () => ShellScope.of(context).open(const ListeningStatsPage(), location: Locations.stats),
           ),
           ListTile(
             leading: const Icon(Icons.delete_outline_rounded),
-            title: const Text('Clear listening history'),
-            subtitle: Text(
-              _history.isEmpty ? 'Nothing saved yet' : '${_history.length} plays saved on this device',
-              style: muted,
-            ),
-            trailing: TextButton(onPressed: _history.isEmpty ? null : _clear, child: const Text('Clear')),
+            title: Text(tr.clearHistory),
+            subtitle: Text(_history.isEmpty ? tr.nothingSavedYet : tr.playsSaved(_history.length), style: muted),
+            trailing: TextButton(onPressed: _history.isEmpty ? null : _clear, child: Text(tr.clear)),
           ),
         ],
       ),

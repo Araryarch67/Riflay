@@ -1,23 +1,25 @@
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import 'language.dart';
+
 import 'package:youtube_explode_dart/youtube_explode_dart.dart' show AudioOnlyStreamInfo;
 
 /// The file type a download is saved as.
 enum DownloadFormat {
-  opus('Opus', 'Smallest files for the same sound. Plays in Riflay and most players.'),
-  m4a('M4A (AAC)', 'The most widely supported. Plays on nearly every phone, TV and speaker.'),
-  flac(
-    'FLAC',
-    'Lossless file for players and libraries that want FLAC. YouTube\'s sound is kept exactly; it gets no better.',
-  ),
-  mp3(
-    'MP3',
-    'For older players and car stereos. Made from YouTube\'s audio, so it never sounds better than Opus or M4A.',
-  );
+  opus('Opus'),
+  m4a('M4A (AAC)'),
+  flac('FLAC'),
+  mp3('MP3');
 
-  const DownloadFormat(this.label, this.about);
+  const DownloadFormat(this.label);
   final String label;
-  final String about;
+  String get about => switch (this) {
+    opus => tr.fmtOpusAbout,
+    m4a => tr.fmtM4aAbout,
+    flac => tr.fmtFlacAbout,
+    mp3 => tr.fmtMp3About,
+  };
 
   /// FLAC is made from the downloaded stream; the others are YouTube's own.
   bool get lossless => this == flac;
@@ -37,21 +39,26 @@ enum DownloadFormat {
 
 /// Whether a download is the song's sound alone or its music video too.
 enum DownloadKind {
-  audio('Audio'),
-  video('Video');
+  audio,
+  video;
 
-  const DownloadKind(this.label);
-  final String label;
+  String get label => switch (this) {
+    audio => tr.kindAudio,
+    video => tr.kindVideo,
+  };
 }
 
 /// The file a music video is saved as.
 enum VideoContainer {
-  mp4('MP4', 'H.264 picture and AAC sound. Plays on nearly every phone, TV and computer.'),
-  webm('WebM', 'VP9 picture and Opus sound. Smaller files, and the tallest sizes; plays in Riflay and most computers.');
+  mp4('MP4'),
+  webm('WebM');
 
-  const VideoContainer(this.label, this.about);
+  const VideoContainer(this.label);
   final String label;
-  final String about;
+  String get about => switch (this) {
+    mp4 => tr.vidMp4About,
+    webm => tr.vidWebmAbout,
+  };
 }
 
 /// The size a music video is recommended at (and the default): 1080p, or the best the video has below that.
@@ -62,23 +69,27 @@ const mp3BestKbps = 192;
 
 /// Bit depth and sample rate of a FLAC download.
 enum FlacQuality {
-  standard('16-bit / 48 kHz', 16, 48000, 'Same sample rate as YouTube\'s audio. Plays everywhere.'),
-  cd('16-bit / 44.1 kHz', 16, 44100, 'CD quality, for players and burners that want exactly that.'),
-  hiRes('24-bit / 48 kHz', 24, 48000, 'Larger files, for libraries kept at 24-bit.');
+  standard('16-bit / 48 kHz', 16, 48000),
+  cd('16-bit / 44.1 kHz', 16, 44100),
+  hiRes('24-bit / 48 kHz', 24, 48000);
 
-  const FlacQuality(this.label, this.bits, this.rate, this.about);
+  const FlacQuality(this.label, this.bits, this.rate);
   final String label;
   final int bits;
   final int rate;
-  final String about;
+  String get about => switch (this) {
+    standard => tr.flacStandardAbout,
+    cd => tr.flacCdAbout,
+    hiRes => tr.flacHiResAbout,
+  };
 }
 
 /// "Best available" or "128 kbps", for pickers.
-String bitrateLabel(int? kbps) => kbps == null ? 'Best available' : '$kbps kbps';
+String bitrateLabel(int? kbps) => kbps == null ? tr.bestAvailable : '$kbps kbps';
 
 /// What a bitrate chip or picker entry says: "128 kbps", and for the best, "Best available" (MP3: "192 kbps (best)").
 String bitrateLabelFor(DownloadFormat f, int? kbps) =>
-    f == DownloadFormat.mp3 && kbps == null ? '$mp3BestKbps kbps (best)' : bitrateLabel(kbps);
+    f == DownloadFormat.mp3 && kbps == null ? tr.kbpsBest('$mp3BestKbps') : bitrateLabel(kbps);
 
 /// A format and quality for one download.
 class DownloadChoice {
@@ -330,13 +341,14 @@ int? estimateDownloadBytes(Iterable<AudioCandidate> all, DownloadChoice c, {requ
 
 /// "Downloading in MP3 · 192 kbps…", for the long-press download.
 String describeChoice(DownloadChoice c) => c.isVideo
-    ? 'Video · ${c.container!.label} · ${c.height == null ? 'best available' : '${c.height}p'}'
+    ? tr.videoChoice(c.container!.label, c.height == null ? tr.bestAvailableLower : '${c.height}p')
     : _describeAudioChoice(c);
 
 String _describeAudioChoice(DownloadChoice c) => switch (c.format) {
   DownloadFormat.flac => 'FLAC · ${c.flac.label}',
   DownloadFormat.mp3 => 'MP3 · ${c.kbps ?? mp3BestKbps} kbps',
-  _ => '${c.format == DownloadFormat.opus ? 'Opus' : 'M4A'} · ${c.kbps == null ? 'best available' : '${c.kbps} kbps'}',
+  _ =>
+    '${c.format == DownloadFormat.opus ? 'Opus' : 'M4A'} · ${c.kbps == null ? tr.bestAvailableLower : '${c.kbps} kbps'}',
 };
 
 /// Below this, a stream is taken for a broken one when the other format has a real one.

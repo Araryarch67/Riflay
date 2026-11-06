@@ -6,6 +6,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 import '../platform/host.dart';
 import 'youtube_importer.dart';
+import 'language.dart';
 
 /// What the notification code needs to know about one download.
 class JobSnapshot {
@@ -114,10 +115,10 @@ NoteContent? noteFor(JobSnapshot job, {int? idOverride}) {
       return NoteContent(
         id: id,
         title: job.title,
-        body: 'Waiting to start',
+        body: tr.waitingToStart,
         indeterminate: true,
         ongoing: true,
-        actions: const [NoteAction(cancelAction, 'Cancel')],
+        actions: [NoteAction(cancelAction, tr.cancel)],
         videoId: job.videoId,
       );
     case DownloadStatus.downloading:
@@ -128,7 +129,7 @@ NoteContent? noteFor(JobSnapshot job, {int? idOverride}) {
           body: job.phase.label,
           indeterminate: true,
           ongoing: true,
-          actions: const [NoteAction(cancelAction, 'Cancel')],
+          actions: [NoteAction(cancelAction, tr.cancel)],
           videoId: job.videoId,
         );
       }
@@ -136,21 +137,21 @@ NoteContent? noteFor(JobSnapshot job, {int? idOverride}) {
       return NoteContent(
         id: id,
         title: pct > 0 ? '${job.title} · $pct%' : job.title,
-        body: 'Downloading',
+        body: tr.noteDownloading,
         percent: pct > 0 ? pct : null,
         indeterminate: pct == 0,
         ongoing: true,
-        actions: const [NoteAction(cancelAction, 'Cancel')],
+        actions: [NoteAction(cancelAction, tr.cancel)],
         videoId: job.videoId,
       );
     case DownloadStatus.done:
-      return NoteContent(id: id, title: 'Downloaded ${job.title}', body: 'Saved to your library', videoId: job.videoId);
+      return NoteContent(id: id, title: tr.downloadedTitle(job.title), body: tr.savedToLibrary, videoId: job.videoId);
     case DownloadStatus.failed:
       return NoteContent(
         id: id,
-        title: 'Couldn\'t download ${job.title}',
-        body: 'Tap Retry to try again.',
-        actions: const [NoteAction(retryAction, 'Retry')],
+        title: tr.couldntDownloadTitle(job.title),
+        body: tr.tapRetry,
+        actions: [NoteAction(retryAction, tr.retry)],
         videoId: job.videoId,
       );
     case DownloadStatus.cancelled:
@@ -172,7 +173,7 @@ NoteContent? summaryFor(List<JobSnapshot> jobs) {
   final more = active.length > 2 ? ' +${active.length - 2}' : '';
   return NoteContent(
     id: summaryNoteId,
-    title: 'Downloading ${active.length} songs',
+    title: tr.downloadingSongsNote(active.length),
     body: '$names$more',
     percent: working.isEmpty && pct == 0 ? null : pct,
     indeterminate: working.isEmpty && pct == 0,
@@ -262,11 +263,11 @@ class DownloadNotifications {
     try {
       final category = DarwinNotificationCategory(
         'download',
-        actions: [DarwinNotificationAction.plain(cancelAction, 'Cancel')],
+        actions: [DarwinNotificationAction.plain(cancelAction, tr.cancel)],
       );
       final retry = DarwinNotificationCategory(
         'retry',
-        actions: [DarwinNotificationAction.plain(retryAction, 'Retry')],
+        actions: [DarwinNotificationAction.plain(retryAction, tr.retry)],
       );
       final darwin = DarwinInitializationSettings(
         // Asked when the first download starts, not at launch.
@@ -280,7 +281,7 @@ class DownloadNotifications {
           android: const AndroidInitializationSettings('ic_stat_download'),
           iOS: darwin,
           macOS: darwin,
-          linux: const LinuxInitializationSettings(defaultActionName: 'Open Riflay'),
+          linux: LinuxInitializationSettings(defaultActionName: tr.openRiflay),
           windows: const WindowsInitializationSettings(
             appName: 'Riflay',
             appUserModelId: 'dev.riflay.riflay',
@@ -557,8 +558,8 @@ class DownloadNotifications {
     return NotificationDetails(
       android: AndroidNotificationDetails(
         _channelId,
-        'Downloads',
-        channelDescription: 'Progress of songs being downloaded',
+        tr.navDownloads,
+        channelDescription: tr.downloadsChannelDescription,
         icon: 'ic_stat_download',
         importance: n.ongoing ? Importance.low : Importance.defaultImportance,
         priority: n.ongoing ? Priority.low : Priority.defaultPriority,

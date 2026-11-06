@@ -1,5 +1,6 @@
 import 'play_history.dart';
 import '../models/track.dart';
+import 'language.dart';
 
 enum StatsPeriodKind { month, year, all, pastYear }
 
@@ -16,9 +17,9 @@ class StatsPeriod {
   final int? year;
 
   String get label => switch (kind) {
-    StatsPeriodKind.month => 'This month',
-    StatsPeriodKind.year => 'This year',
-    StatsPeriodKind.all => 'All time',
+    StatsPeriodKind.month => tr.thisMonth,
+    StatsPeriodKind.year => tr.thisYear,
+    StatsPeriodKind.all => tr.allTime,
     StatsPeriodKind.pastYear => '$year',
   };
 
@@ -89,20 +90,24 @@ class ListeningStats {
 
   bool get isEmpty => plays == 0;
 
-  static const months = [
-    'January',
-    'February',
-    'March',
-    'April',
-    'May',
-    'June',
-    'July',
-    'August',
-    'September',
-    'October',
-    'November',
-    'December',
+  /// The month names in the language shown, January first.
+  static List<String> get months => [
+    tr.monthJanuary,
+    tr.monthFebruary,
+    tr.monthMarch,
+    tr.monthApril,
+    tr.monthMay,
+    tr.monthJune,
+    tr.monthJuly,
+    tr.monthAugust,
+    tr.monthSeptember,
+    tr.monthOctober,
+    tr.monthNovember,
+    tr.monthDecember,
   ];
+
+  /// One short mark per month for the bars of a year chart: "J", or "1" in Japanese.
+  static List<String> get monthInitials => tr.monthInitials.split(' ');
 
   /// The artist a song counts for: a streamed song lists several ("A, B"); the first gets the play.
   static String artistOf(SongInfo s) => s.videoId != null ? s.artist.split(', ').first : s.artist;
@@ -188,7 +193,10 @@ class ListeningStats {
         final d = when(p);
         if (d.year == year) sums[d.month - 1] += p.$3;
       }
-      return [for (var m = 0; m < 12; m++) StatsBar(months[m][0], '${months[m]} $year', Duration(seconds: sums[m]))];
+      return [
+        for (var m = 0; m < 12; m++)
+          StatsBar(monthInitials[m], tr.monthYear(months[m], '$year'), Duration(seconds: sums[m])),
+      ];
     }
 
     switch (period.kind) {
@@ -201,7 +209,7 @@ class ListeningStats {
         }
         return [
           for (var d = 0; d < days; d++)
-            StatsBar('${d + 1}', '${months[now.month - 1]} ${d + 1}', Duration(seconds: sums[d])),
+            StatsBar('${d + 1}', tr.monthDay(months[now.month - 1], '${d + 1}'), Duration(seconds: sums[d])),
         ];
       case StatsPeriodKind.year:
         return months12(now.year);
@@ -248,8 +256,8 @@ class _Tally {
 /// "12 h 40 min", "35 min", "1 min".
 String formatListened(Duration d) {
   final minutes = d.inMinutes;
-  if (minutes < 1) return d.inSeconds < 1 ? '0 min' : '1 min';
+  if (minutes < 1) return d.inSeconds < 1 ? tr.durZero : tr.durOneMin;
   final h = minutes ~/ 60;
   final m = minutes % 60;
-  return h == 0 ? '$m min' : (m == 0 ? '$h h' : '$h h $m min');
+  return h == 0 ? tr.durMin('$m') : (m == 0 ? tr.durHours('$h') : tr.durHoursMin('$h', '$m'));
 }

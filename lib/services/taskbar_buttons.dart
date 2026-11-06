@@ -5,6 +5,7 @@ import 'package:windows_taskbar/windows_taskbar.dart';
 
 import '../platform/host.dart';
 import 'player_controller.dart';
+import 'language.dart';
 
 /// Windows: Previous, Play / Pause and Next under Riflay's taskbar thumbnail, as music players have, so the
 /// song can be controlled from the taskbar without bringing the window up.
@@ -35,19 +36,19 @@ class TaskbarButtons {
       WindowsTaskbar.setThumbnailToolbar([
         ThumbnailToolbarButton(
           ThumbnailToolbarAssetIcon('assets/taskbar/previous.ico'),
-          'Previous',
+          tr.previous,
           () => unawaited(_c.previous()),
           mode: mode(now.track),
         ),
         ThumbnailToolbarButton(
           ThumbnailToolbarAssetIcon(now.playing ? 'assets/taskbar/pause.ico' : 'assets/taskbar/play.ico'),
-          now.playing ? 'Pause' : 'Play',
+          now.playing ? tr.pause : tr.play,
           () => unawaited(_c.togglePlay()),
           mode: mode(now.track),
         ),
         ThumbnailToolbarButton(
           ThumbnailToolbarAssetIcon('assets/taskbar/next.ico'),
-          'Next',
+          tr.next,
           () => unawaited(_c.next()),
           mode: mode(now.next),
         ),

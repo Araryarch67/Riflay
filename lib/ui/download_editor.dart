@@ -10,6 +10,7 @@ import '../services/lyrics.dart';
 import '../services/player_controller.dart';
 import 'theme.dart';
 import 'widgets/controls.dart';
+import '../services/language.dart';
 
 /// "Edit" for a downloaded song: title, album, cover and the person's own
 /// lyrics. The artist is shown but can't be changed. A bottom sheet on phones,
@@ -32,11 +33,11 @@ Future<void> showDownloadEditor(BuildContext context, Track track, {required boo
       if (edits.lyrics != null) {
         edits.lyrics!.trim().isEmpty ? await UserLyrics.remove(track) : await UserLyrics.save(track, edits.lyrics!);
       }
-      messenger.showSnackBar(const SnackBar(content: Text('Saved')));
+      messenger.showSnackBar(SnackBar(content: Text(tr.saved)));
       return null;
     } catch (e) {
       debugPrint('Saving a downloaded song failed: $e');
-      return 'Couldn\'t save the changes. Try again.';
+      return tr.couldntSaveChangesRetry;
     }
   }
 
@@ -113,7 +114,7 @@ class _DownloadEditFormState extends State<DownloadEditForm> {
   }
 
   Future<void> _pickCover() async {
-    final file = (await FilePicker.pickFiles(type: FileType.image, dialogTitle: 'Choose cover art')).firstOrNull;
+    final file = (await FilePicker.pickFiles(type: FileType.image, dialogTitle: tr.chooseCoverArt)).firstOrNull;
     if (file == null) return;
     final bytes = await file.readAsBytes();
     if (!mounted) return;
@@ -127,13 +128,13 @@ class _DownloadEditFormState extends State<DownloadEditForm> {
     final file = (await FilePicker.pickFiles(
       type: FileType.custom,
       allowedExtensions: const ['lrc', 'txt'],
-      dialogTitle: 'Choose a lyrics file',
+      dialogTitle: tr.chooseLyricsFile,
     )).firstOrNull;
     if (file == null) return;
     final bytes = await file.readAsBytes();
     if (!mounted) return;
     if (bytes.length > 1 << 20) {
-      setState(() => _problem = 'That file is too big to be lyrics.');
+      setState(() => _problem = tr.lyricsFileTooBig);
       return;
     }
     setState(() {
@@ -187,7 +188,7 @@ class _DownloadEditFormState extends State<DownloadEditForm> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Edit song', style: text.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
+          Text(tr.editSong, style: text.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
           const SizedBox(height: 16),
           Row(
             children: [
@@ -206,13 +207,13 @@ class _DownloadEditFormState extends State<DownloadEditForm> {
                 ),
               ),
               const SizedBox(width: 16),
-              OutlinedButton(onPressed: _pickCover, child: const Text('Change cover')),
+              OutlinedButton(onPressed: _pickCover, child: Text(tr.changeCover)),
             ],
           ),
           const SizedBox(height: 16),
           TextField(
             controller: _title,
-            decoration: const InputDecoration(labelText: 'Title', border: OutlineInputBorder(), isDense: true),
+            decoration: InputDecoration(labelText: tr.title, border: OutlineInputBorder(), isDense: true),
           ),
           const SizedBox(height: 12),
           // Shown, not editable: a download keeps the artist's name as released.
@@ -222,8 +223,8 @@ class _DownloadEditFormState extends State<DownloadEditForm> {
             readOnly: true,
             enableInteractiveSelection: false,
             decoration: InputDecoration(
-              labelText: 'Artist',
-              helperText: 'Artist names stay as the artist released them.',
+              labelText: tr.artist,
+              helperText: tr.artistNamesStay,
               helperStyle: muted,
               border: const OutlineInputBorder(),
               isDense: true,
@@ -233,39 +234,32 @@ class _DownloadEditFormState extends State<DownloadEditForm> {
           const SizedBox(height: 12),
           TextField(
             controller: _album,
-            decoration: const InputDecoration(labelText: 'Album', border: OutlineInputBorder(), isDense: true),
+            decoration: InputDecoration(labelText: tr.album, border: OutlineInputBorder(), isDense: true),
           ),
           const SizedBox(height: 20),
-          Text('Your lyrics', style: text.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+          Text(tr.yourLyrics, style: text.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
           const SizedBox(height: 4),
-          Text(
-            'Shown instead of lyrics found online. Start lines with a time like [01:23.45] to have them follow the song.',
-            style: muted,
-          ),
+          Text(tr.yourLyricsBody, style: muted),
           const SizedBox(height: 8),
           TextField(
             key: const ValueKey('lyrics-field'),
             controller: _lyrics,
             minLines: 4,
             maxLines: 8,
-            decoration: const InputDecoration(
-              hintText: 'Paste lyrics here',
-              border: OutlineInputBorder(),
-              isDense: true,
-            ),
+            decoration: InputDecoration(hintText: tr.pasteLyricsHere, border: OutlineInputBorder(), isDense: true),
           ),
           const SizedBox(height: 8),
           Wrap(
             spacing: 8,
             runSpacing: 4,
             children: [
-              OutlinedButton(onPressed: _pickLyrics, child: const Text('Add from a file')),
+              OutlinedButton(onPressed: _pickLyrics, child: Text(tr.addFromFile)),
               ListenableBuilder(
                 listenable: _lyrics,
                 builder: (context, _) => TextButton(
                   style: TextButton.styleFrom(foregroundColor: AppColors.textSecondary),
                   onPressed: _lyrics.text.isEmpty ? null : () => setState(_lyrics.clear),
-                  child: const Text('Remove my lyrics'),
+                  child: Text(tr.removeMyLyrics),
                 ),
               ),
             ],
@@ -278,12 +272,12 @@ class _DownloadEditFormState extends State<DownloadEditForm> {
           Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
-              TextButton(onPressed: _saving ? null : () => Navigator.of(context).pop(), child: const Text('Cancel')),
+              TextButton(onPressed: _saving ? null : () => Navigator.of(context).pop(), child: Text(tr.cancel)),
               const SizedBox(width: 8),
               FilledButton(
                 style: FilledButton.styleFrom(backgroundColor: AppColors.inverse, foregroundColor: AppColors.onInverse),
                 onPressed: _saving ? null : _save,
-                child: const Text('Save'),
+                child: Text(tr.save),
               ),
             ],
           ),

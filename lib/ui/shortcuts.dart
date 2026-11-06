@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 
 import '../platform/features.dart';
 import 'theme.dart';
+import '../services/language.dart';
 
 /// What a keyboard shortcut does. The shell maps each to a callback.
 enum AppAction { playPause, next, previous, volumeUp, volumeDown, search, back, forward, pasteLink, fullScreen, help }
@@ -28,41 +29,44 @@ class AppShortcut {
 
 /// Every keyboard shortcut of the app. The shell binds these and the
 /// "Keyboard shortcuts" dialog lists them, so the two can't drift apart.
-const appShortcuts = <AppShortcut>[
-  AppShortcut(AppAction.playPause, 'Play or pause', [
+/// A getter, so the names follow the language shown.
+List<AppShortcut> get appShortcuts => <AppShortcut>[
+  AppShortcut(AppAction.playPause, tr.scPlayPause, [
     SingleActivator(LogicalKeyboardKey.space),
     SingleActivator(LogicalKeyboardKey.mediaPlayPause),
-  ], 'Space'),
-  AppShortcut(AppAction.next, 'Next song', [
+  ], tr.keySpace),
+  AppShortcut(AppAction.next, tr.scNext, [
     SingleActivator(LogicalKeyboardKey.arrowRight, control: true),
     SingleActivator(LogicalKeyboardKey.mediaTrackNext),
   ], 'Ctrl+→'),
-  AppShortcut(AppAction.previous, 'Previous song', [
+  AppShortcut(AppAction.previous, tr.scPrevious, [
     SingleActivator(LogicalKeyboardKey.arrowLeft, control: true),
     SingleActivator(LogicalKeyboardKey.mediaTrackPrevious),
   ], 'Ctrl+←'),
-  AppShortcut(AppAction.volumeUp, 'Volume up', [SingleActivator(LogicalKeyboardKey.arrowUp, control: true)], 'Ctrl+↑'),
-  AppShortcut(AppAction.volumeDown, 'Volume down', [
+  AppShortcut(AppAction.volumeUp, tr.scVolumeUp, [
+    SingleActivator(LogicalKeyboardKey.arrowUp, control: true),
+  ], 'Ctrl+↑'),
+  AppShortcut(AppAction.volumeDown, tr.scVolumeDown, [
     SingleActivator(LogicalKeyboardKey.arrowDown, control: true),
   ], 'Ctrl+↓'),
-  AppShortcut(AppAction.search, 'Search', [SingleActivator(LogicalKeyboardKey.keyK, control: true)], 'Ctrl+K'),
-  AppShortcut(AppAction.back, 'Go back', [SingleActivator(LogicalKeyboardKey.arrowLeft, alt: true)], 'Alt+←'),
-  AppShortcut(AppAction.forward, 'Go forward', [SingleActivator(LogicalKeyboardKey.arrowRight, alt: true)], 'Alt+→'),
-  AppShortcut(AppAction.pasteLink, 'Import a copied YouTube link', [
+  AppShortcut(AppAction.search, tr.navSearch, [SingleActivator(LogicalKeyboardKey.keyK, control: true)], 'Ctrl+K'),
+  AppShortcut(AppAction.back, tr.scBack, [SingleActivator(LogicalKeyboardKey.arrowLeft, alt: true)], 'Alt+←'),
+  AppShortcut(AppAction.forward, tr.scForward, [SingleActivator(LogicalKeyboardKey.arrowRight, alt: true)], 'Alt+→'),
+  AppShortcut(AppAction.pasteLink, tr.scPasteLink, [
     SingleActivator(LogicalKeyboardKey.keyV, control: true),
     SingleActivator(LogicalKeyboardKey.keyV, meta: true),
   ], 'Ctrl+V'),
   AppShortcut(
     AppAction.fullScreen,
-    'Full screen player',
+    tr.scFullScreen,
     [SingleActivator(LogicalKeyboardKey.f11)],
     'F11',
     wideLayoutOnly: true,
   ),
-  AppShortcut(AppAction.help, 'Show this list', [
+  AppShortcut(AppAction.help, tr.scHelp, [
     CharacterActivator('?'),
     SingleActivator(LogicalKeyboardKey.slash, control: true),
-  ], '? or Ctrl+/'),
+  ], tr.scSlashOr),
 ];
 
 /// Whether the device has a keyboard to speak of (shortcuts are listed and named in tooltips).
@@ -97,7 +101,7 @@ Future<void> showShortcutsDialog(BuildContext context) => showDialog<void>(
     final text = Theme.of(context).textTheme;
     return AlertDialog(
       backgroundColor: AppColors.elevated,
-      title: const Text('Keyboard shortcuts'),
+      title: Text(tr.keyboardShortcuts),
       content: SizedBox(
         width: 380,
         child: SingleChildScrollView(
@@ -119,7 +123,7 @@ Future<void> showShortcutsDialog(BuildContext context) => showDialog<void>(
           ),
         ),
       ),
-      actions: [TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Close'))],
+      actions: [TextButton(onPressed: () => Navigator.of(context).pop(), child: Text(tr.close))],
     );
   },
 );

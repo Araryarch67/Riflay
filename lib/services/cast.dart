@@ -9,6 +9,7 @@ import 'airplay.dart';
 import 'dlna.dart';
 import 'ffmpeg.dart';
 import 'pcm_decoder.dart';
+import 'language.dart';
 
 /// One song to play on a renderer.
 class CastItem {
@@ -315,7 +316,7 @@ class Cast extends ChangeNotifier {
         await a.load(_airPlaySource(item.media(Duration.zero)), duration: item.duration, from: from, play: play);
       } catch (e) {
         debugPrint('AirPlay load: $e');
-        onError('Couldn\'t play ${item.title} on ${a.device.name}');
+        onError(tr.couldntPlayOnDevice(item.title, a.device.name));
       }
       notifyListeners();
       return;
@@ -372,7 +373,7 @@ class Cast extends ChangeNotifier {
       _playing = false;
       notifyListeners();
       debugPrint('DLNA load: $e');
-      onError('Couldn\'t play ${item.title} on ${c.renderer.name}');
+      onError(tr.couldntPlayOnDevice(item.title, c.renderer.name));
     }
   }
 
@@ -459,7 +460,7 @@ class Cast extends ChangeNotifier {
       await action();
     } catch (e) {
       debugPrint('Cast control: $e');
-      onError('${target?.name ?? 'The device'} didn\'t respond');
+      onError(tr.deviceDidntRespond(target?.name ?? tr.theDevice));
     }
   }
 
@@ -512,7 +513,7 @@ class Cast extends ChangeNotifier {
       if (++_failures >= 5) {
         final name = c.renderer.name;
         await disconnect(stopRenderer: false);
-        onError('Lost connection to $name');
+        onError(tr.lostConnectionTo(name));
       }
     } finally {
       _refreshing = false;

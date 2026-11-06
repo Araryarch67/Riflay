@@ -16,6 +16,7 @@ import 'cover_palette.dart';
 import 'layout_prefs.dart';
 import 'matugen_theme.dart';
 import 'system_fonts.dart';
+import 'language.dart';
 
 /// Every colour of one theme: surfaces from the window down to hover, text, and the theme's own accent.
 class AppPalette {
@@ -257,7 +258,6 @@ class AppPalette {
 enum ThemeChoice {
   // Legacy preference and neutral fallback palette; omitted from the theme picker.
   standard(
-    'Legacy',
     AppPalette(
       background: Color(0xFF000000),
       panel: Color(0xFF121212),
@@ -273,10 +273,9 @@ enum ThemeChoice {
   ),
 
   /// Follows the playing song's cover; this is only the calm stand-in for when nothing plays.
-  dynamic('Default', neutralDarkPalette),
-  matugen('Matugen', neutralDarkPalette),
+  dynamic(neutralDarkPalette),
+  matugen(neutralDarkPalette),
   monochrome(
-    'Monochrome',
     AppPalette(
       background: Color(0xFF000000),
       panel: Color(0xFF0E0E0E),
@@ -291,7 +290,6 @@ enum ThemeChoice {
     ),
   ),
   catppuccinMocha(
-    'Catppuccin Mocha',
     AppPalette(
       background: Color(0xFF11111B), // crust
       panel: Color(0xFF1E1E2E), // base
@@ -306,7 +304,6 @@ enum ThemeChoice {
     ),
   ),
   catppuccinMacchiato(
-    'Catppuccin Macchiato',
     AppPalette(
       background: Color(0xFF181926), // crust
       panel: Color(0xFF24273A), // base
@@ -321,7 +318,6 @@ enum ThemeChoice {
     ),
   ),
   catppuccinFrappe(
-    'Catppuccin Frappé',
     AppPalette(
       background: Color(0xFF232634), // crust
       panel: Color(0xFF303446), // base
@@ -336,7 +332,6 @@ enum ThemeChoice {
     ),
   ),
   catppuccinLatte(
-    'Catppuccin Latte',
     AppPalette(
       background: Color(0xFFDCE0E8), // crust
       panel: Color(0xFFEFF1F5), // base
@@ -352,7 +347,6 @@ enum ThemeChoice {
     ),
   ),
   everblush(
-    'Everblush',
     AppPalette(
       background: Color(0xFF0F1517),
       panel: Color(0xFF141B1E), // background
@@ -367,7 +361,6 @@ enum ThemeChoice {
     ),
   ),
   everforestDark(
-    'Everforest Dark',
     AppPalette(
       background: Color(0xFF232A2E), // bg_dim
       panel: Color(0xFF2D353B), // bg0
@@ -382,7 +375,6 @@ enum ThemeChoice {
     ),
   ),
   everforestLight(
-    'Everforest Light',
     AppPalette(
       background: Color(0xFFEFEBD4), // bg_dim
       panel: Color(0xFFFDF6E3), // bg0
@@ -398,7 +390,6 @@ enum ThemeChoice {
     ),
   ),
   nord(
-    'Nord',
     AppPalette(
       background: Color(0xFF242933),
       panel: Color(0xFF2E3440), // nord0
@@ -413,7 +404,6 @@ enum ThemeChoice {
     ),
   ),
   gruvbox(
-    'Gruvbox',
     AppPalette(
       background: Color(0xFF1D2021), // bg0_h
       panel: Color(0xFF282828), // bg0
@@ -428,7 +418,6 @@ enum ThemeChoice {
     ),
   ),
   tokyoNight(
-    'Tokyo Night',
     AppPalette(
       background: Color(0xFF16161E),
       panel: Color(0xFF1A1B26), // bg
@@ -443,7 +432,6 @@ enum ThemeChoice {
     ),
   ),
   dracula(
-    'Dracula',
     AppPalette(
       background: Color(0xFF191A21),
       panel: Color(0xFF282A36), // background
@@ -458,7 +446,6 @@ enum ThemeChoice {
     ),
   ),
   rosePine(
-    'Rosé Pine',
     AppPalette(
       background: Color(0xFF12101A),
       panel: Color(0xFF191724), // base
@@ -475,7 +462,6 @@ enum ThemeChoice {
 
   /// Your own: a background colour (and optionally a text colour); [Appearance.palette] derives the rest.
   custom(
-    'Custom',
     AppPalette(
       background: Color(0xFF14161B),
       panel: Color(0xFF1A1D23),
@@ -490,8 +476,26 @@ enum ThemeChoice {
     ),
   );
 
-  const ThemeChoice(this.label, this.palette);
-  final String label;
+  const ThemeChoice(this.palette);
+  String get label => switch (this) {
+    standard => tr.themeLegacy,
+    dynamic => tr.themeDefault,
+    matugen => 'Matugen',
+    monochrome => tr.themeMonochrome,
+    catppuccinMocha => 'Catppuccin Mocha',
+    catppuccinMacchiato => 'Catppuccin Macchiato',
+    catppuccinFrappe => 'Catppuccin Frappé',
+    catppuccinLatte => 'Catppuccin Latte',
+    everblush => 'Everblush',
+    everforestDark => 'Everforest Dark',
+    everforestLight => 'Everforest Light',
+    nord => 'Nord',
+    gruvbox => 'Gruvbox',
+    tokyoNight => 'Tokyo Night',
+    dracula => 'Dracula',
+    rosePine => 'Rosé Pine',
+    custom => tr.custom,
+  };
 
   /// The theme as its author drew it (dark or light as that theme naturally is).
   final AppPalette palette;
@@ -578,60 +582,81 @@ final _tokyoNightDay = const AppPalette(
 
 /// Whether the app is drawn dark or light.
 enum ThemeBrightness {
-  dark('Dark'),
-  light('Light'),
+  dark,
+  light,
 
   /// Dark on pure black (AMOLED): the window and panels are #000000, an OLED screen's pixels off.
-  black('Black'),
-  system('Match system');
+  black,
+  system;
 
-  const ThemeBrightness(this.label);
-  final String label;
+  String get label => switch (this) {
+    dark => tr.modeDark,
+    light => tr.modeLight,
+    black => tr.modeBlack,
+    system => tr.modeSystem,
+  };
 }
 
 /// Accent colours to pick from in Settings › Look & feel › Appearance.
 enum AccentChoice {
   /// The theme's own accent (mauve for Catppuccin, green for Everforest...).
-  theme('Theme', Color(0x00000000), Color(0x00000000)),
-  teal('Teal', Color(0xFF2EE6C5), Color(0xFF00201B)),
-  green('Green', Color(0xFF1ED760), Color(0xFF00210B)),
-  blue('Blue', Color(0xFF4C9AFF), Color(0xFF001B3D)),
-  violet('Violet', Color(0xFFB18CFF), Color(0xFF1E0D45)),
-  pink('Pink', Color(0xFFFF6FAE), Color(0xFF3D0020)),
-  orange('Orange', Color(0xFFFF9F43), Color(0xFF3A1A00)),
-  white('White', Color(0xFFFFFFFF), Color(0xFF000000)),
+  theme(Color(0x00000000), Color(0x00000000)),
+  teal(Color(0xFF2EE6C5), Color(0xFF00201B)),
+  green(Color(0xFF1ED760), Color(0xFF00210B)),
+  blue(Color(0xFF4C9AFF), Color(0xFF001B3D)),
+  violet(Color(0xFFB18CFF), Color(0xFF1E0D45)),
+  pink(Color(0xFFFF6FAE), Color(0xFF3D0020)),
+  orange(Color(0xFFFF9F43), Color(0xFF3A1A00)),
+  white(Color(0xFFFFFFFF), Color(0xFF000000)),
 
   /// A colour of your own ([Appearance.customAccent]).
-  custom('Custom…', Color(0x00000000), Color(0x00000000));
+  custom(Color(0x00000000), Color(0x00000000));
 
-  const AccentChoice(this.label, this.color, this.onColor);
-  final String label;
+  const AccentChoice(this.color, this.onColor);
+  String get label => switch (this) {
+    theme => tr.accentTheme,
+    teal => tr.accentTeal,
+    green => tr.accentGreen,
+    blue => tr.accentBlue,
+    violet => tr.accentViolet,
+    pink => tr.accentPink,
+    orange => tr.accentOrange,
+    white => tr.accentWhite,
+    custom => tr.customEllipsis,
+  };
   final Color color;
   final Color onColor;
 }
 
 /// Where the colour of the playing song's cover shows up.
 enum CoverColorMode {
-  off('Off'),
-  player('Player only'),
-  app('Whole app');
+  off,
+  player,
+  app;
 
-  const CoverColorMode(this.label);
-  final String label;
+  String get label => switch (this) {
+    off => tr.off,
+    player => tr.coverColorPlayer,
+    app => tr.coverColorApp,
+  };
 }
 
 /// What fills the phone's Now Playing page behind the cover.
 enum NowPlayingBackground {
-  color('Simple'),
-  blurredCover('Blurred cover'),
-  video('Music video', 'The song\'s music video, when it has one'),
-  black('Black');
+  color,
+  blurredCover,
+  video,
+  black;
 
-  const NowPlayingBackground(this.label, [this.hint]);
-  final String label;
+  String get label => switch (this) {
+    color => tr.npBgSimple,
+    blurredCover => tr.npBgBlurredCover,
+    video => tr.npBgMusicVideo,
+    black => tr.modeBlack,
+  };
 
   /// One plain line under the picker, for the choices that need one.
-  final String? hint;
+  String? get hint => this == video ? tr.npBgMusicVideoHint : null;
 
   /// What is painted under the page. Music video is the blurred cover with the video over it once that plays
   /// (the cover alone while it loads, when the song has none, or when it fails); Lightweight draws no video

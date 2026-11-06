@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../theme.dart';
+import '../../services/language.dart';
 
 /// A page title that can be renamed in place: tap it (or the small pencil
 /// beside it) and it becomes a text box. Enter saves, Esc cancels; leaving
@@ -120,7 +121,7 @@ class _EditableTitleState extends State<EditableTitle> {
         ),
         IconButton(
           key: const ValueKey('rename-pencil'),
-          tooltip: 'Rename',
+          tooltip: tr.rename,
           iconSize: 18,
           visualDensity: VisualDensity.compact,
           color: AppColors.textSecondary,

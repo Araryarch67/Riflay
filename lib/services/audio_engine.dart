@@ -25,39 +25,52 @@ import 'linux_alsa.dart';
 import 'usb_dac.dart';
 import 'visualizer_levels.dart';
 import 'visualizer_spectrum.dart';
+import 'language.dart';
 
 /// How loudness differences between songs are evened out (mpv `replaygain`).
 enum VolumeLeveling {
-  off('Off', 'no'),
-  track('Per song', 'track'),
-  album('Per album', 'album');
+  off('no'),
+  track('track'),
+  album('album');
 
-  const VolumeLeveling(this.label, this.mpv);
-  final String label;
+  const VolumeLeveling(this.mpv);
+  String get label => switch (this) {
+    off => tr.off,
+    track => tr.levelingPerSong,
+    album => tr.levelingPerAlbum,
+  };
   final String mpv;
 }
 
 /// Output buffering: shorter reacts faster, longer survives a busy system.
 enum BufferSize {
-  low('Low latency', 0.05),
-  balanced('Balanced', 0.2),
-  stable('Extra stable', 1.0);
+  low(0.05),
+  balanced(0.2),
+  stable(1.0);
 
-  const BufferSize(this.label, this.seconds);
-  final String label;
+  const BufferSize(this.seconds);
+  String get label => switch (this) {
+    low => tr.bufferLow,
+    balanced => tr.perfBalanced,
+    stable => tr.bufferStable,
+  };
   final double seconds;
 }
 
 /// Both sides played as one sound: in both ears, or in one when the other side
 /// of the headphones doesn't work.
 enum MonoAudio {
-  off('Off (stereo)'),
-  both('Both ears'),
-  left('Left ear only'),
-  right('Right ear only');
+  off,
+  both,
+  left,
+  right;
 
-  const MonoAudio(this.label);
-  final String label;
+  String get label => switch (this) {
+    off => tr.monoOff,
+    both => tr.monoBoth,
+    left => tr.monoLeft,
+    right => tr.monoRight,
+  };
 }
 
 /// One peaking filter of the equalizer.
@@ -94,6 +107,23 @@ const eqPresets = <String, List<double>>{
   'Classical': [4, 3, 2, 1, -1, -1, 0, 2, 3, 4],
   'Electronic': [5, 4, 1, 0, -2, 1, 0, 1, 4, 5],
   'Loudness': [5, 3, 0, 0, -1, 0, -1, 0, 3, 4],
+};
+
+/// The name of an [eqPresets] entry (or 'Custom') in the language shown; the English name is what is saved.
+String eqPresetLabel(String name) => switch (name) {
+  'Flat' => tr.eqFlat,
+  'Bass boost' => tr.eqBassBoost,
+  'Bass cut' => tr.eqBassCut,
+  'Treble boost' => tr.eqTrebleBoost,
+  'Vocal' => tr.eqVocal,
+  'Rock' => tr.eqRock,
+  'Pop' => tr.eqPop,
+  'Jazz' => tr.eqJazz,
+  'Classical' => tr.eqClassical,
+  'Electronic' => tr.eqElectronic,
+  'Loudness' => tr.eqLoudness,
+  'Custom' => tr.custom,
+  _ => name,
 };
 
 const defaultEqFrequencies = [31.0, 62.0, 125.0, 250.0, 500.0, 1000.0, 2000.0, 4000.0, 8000.0, 16000.0];
@@ -696,8 +726,7 @@ class AudioEngine extends ChangeNotifier {
     final rates = _dopCardRates;
     if (rates == null || rates.contains(176400)) return null;
     final top = rates.reduce((a, b) => a > b ? a : b);
-    return 'Your DAC takes up to ${SignalPath.formatRate(top)}, and DoP needs 176.4 kHz, '
-        'so DSD files play as PCM on it';
+    return tr.dopNote(SignalPath.formatRate(top));
   }
 
   DsdPlayback? _dop;
@@ -722,7 +751,7 @@ class AudioEngine extends ChangeNotifier {
     }
   }
 
-  List<OutputDevice> devices = const [OutputDevice('auto', 'System default')];
+  List<OutputDevice> devices = [OutputDevice('auto', tr.systemDefault)];
 
   /// Why the chosen output couldn't be used as asked (shown under Output device).
   String? deviceError;
@@ -1786,7 +1815,7 @@ class AudioEngine extends ChangeNotifier {
     final listed = devices.length > 1; // the list failed to load otherwise
     if (device != 'auto' && listed && !devices.any((d) => d.name == device)) {
       _releaseCard();
-      _setDeviceError('The chosen output isn\'t connected, so it plays through the system default for now.');
+      _setDeviceError(tr.outputNotConnected);
       return 'auto';
     }
     if (!LinuxAlsa.supported) return device;
@@ -1814,7 +1843,7 @@ class AudioEngine extends ChangeNotifier {
     _reservation = got;
     _heldTarget = got == null ? null : target;
     if (_reservation == null) {
-      _setDeviceError('${card.name} is busy, so it plays through the system mixer for now.');
+      _setDeviceError(tr.cardBusy(card.name));
       return device == target ? 'auto' : device;
     }
     _setDeviceError(null);
@@ -1941,7 +1970,7 @@ class AudioEngine extends ChangeNotifier {
   /// mirrors of PipeWire nodes...) and marks direct hardware outputs.
   static List<OutputDevice> _usable(List<(String, String)> all) {
     final hasPipewire = all.any((d) => d.$1.startsWith('pipewire/'));
-    final out = <OutputDevice>[const OutputDevice('auto', 'System default')];
+    final out = <OutputDevice>[OutputDevice('auto', tr.systemDefault)];
     for (final (name, desc) in all) {
       if (!name.contains('/')) continue; // "pipewire", "alsa", "jack": just "default of this API"
       final api = name.split('/').first;
@@ -2197,15 +2226,15 @@ class AudioEngine extends ChangeNotifier {
           r'@(\w+):',
         ).allMatches(af).where((m) => !const {'volume', 'limiter', 'output'}.contains(m[1])))
           switch (m[1]) {
-            'eq' => 'Equalizer',
-            'preamp' => 'Equalizer headroom',
-            'crossfeed' => 'Headphone crossfeed',
-            'hrtf' => 'Virtual speakers (HRTF)',
-            'mono' => 'Mono (both ears)',
-            'monoleft' => 'Mono (left ear only)',
-            'monoright' => 'Mono (right ear only)',
-            'convolution' => 'Room correction (${impulseName ?? 'convolution'})',
-            'plugins' => 'Audio plugins (Carla)',
+            'eq' => tr.equalizer,
+            'preamp' => tr.fxEqHeadroom,
+            'crossfeed' => tr.headphoneCrossfeed,
+            'hrtf' => tr.fxHrtf,
+            'mono' => tr.fxMonoBoth,
+            'monoleft' => tr.fxMonoLeft,
+            'monoright' => tr.fxMonoRight,
+            'convolution' => tr.fxRoomCorrection(impulseName ?? 'convolution'),
+            'plugins' => tr.fxPlugins,
             final other => other!,
           },
       ],

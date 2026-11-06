@@ -16,6 +16,7 @@ import '../shell_scope.dart';
 import '../theme.dart';
 import '../widgets/controls.dart';
 import '../widgets/page_scaffold.dart';
+import '../../services/language.dart';
 
 /// Opens the Listen together page. From the phone's full-screen player the player closes first,
 /// so the page is not hidden underneath it.
@@ -42,7 +43,7 @@ class ListenTogetherButton extends StatelessWidget {
         final label = listenStatusLabel(session);
         if (label == null) {
           return IconButton(
-            tooltip: 'Listen together',
+            tooltip: tr.listenTogether,
             color: color,
             onPressed: () => openListenTogether(context, closePlayer: closePlayer),
             icon: Icon(Icons.group_outlined, size: size),
@@ -73,8 +74,8 @@ class ListenTogetherButton extends StatelessWidget {
 /// "Listening with Ana" / "3 listening", or null outside a session.
 String? listenStatusLabel(ListenTogether s) => switch (s.role) {
   ListenRole.none => null,
-  ListenRole.guest => 'Listening with ${s.hostName ?? 'a friend'}',
-  ListenRole.host => s.listeners.isEmpty ? 'Hosting' : '${s.listeners.length} listening',
+  ListenRole.guest => tr.listeningWith(s.hostName ?? tr.aFriend),
+  ListenRole.host => s.listeners.isEmpty ? tr.hosting : tr.listeningCount(s.listeners.length),
 };
 
 /// Start a session, join one, or see the one you are in.
@@ -181,7 +182,7 @@ class _ListenTogetherPageState extends State<ListenTogetherPage> {
       await action();
     } catch (e) {
       debugPrint('Listen together: $e');
-      if (mounted) setState(() => _error = _session?.problem ?? "Couldn't connect. Try again.");
+      if (mounted) setState(() => _error = _session?.problem ?? tr.couldntConnect);
     }
     if (mounted) setState(() => _busy = false);
   }
@@ -217,7 +218,7 @@ class _ListenTogetherPageState extends State<ListenTogetherPage> {
         };
         final problem = session.problem ?? _error;
         return PageScaffold(
-          title: 'Listen together',
+          title: tr.listenTogether,
           slivers: [
             SliverToBoxAdapter(
               child: Align(
@@ -233,7 +234,7 @@ class _ListenTogetherPageState extends State<ListenTogetherPage> {
                           children: [
                             Flexible(
                               child: Text(
-                                'Listen together',
+                                tr.listenTogether,
                                 style: text.headlineMedium?.copyWith(fontWeight: FontWeight.w800),
                               ),
                             ),
@@ -281,7 +282,7 @@ class _ListenTogetherPageState extends State<ListenTogetherPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Play YouTube songs together with friends.', style: muted),
+        Text(tr.listenTogetherIntro, style: muted),
         const SizedBox(height: 20),
         TextField(
           controller: _name,
@@ -291,9 +292,9 @@ class _ListenTogetherPageState extends State<ListenTogetherPage> {
           onChanged: (_) => setState(() => _nameMissing = false),
           onSubmitted: (_) => _saveName(),
           decoration: InputDecoration(
-            labelText: 'Your name',
-            helperText: 'Friends see it when you join or start a session',
-            errorText: _nameMissing && _who.isEmpty ? 'Enter your name first' : null,
+            labelText: tr.yourName,
+            helperText: tr.yourNameHelper,
+            errorText: _nameMissing && _who.isEmpty ? tr.enterNameFirst : null,
             counterText: '',
           ),
         ),
@@ -303,11 +304,11 @@ class _ListenTogetherPageState extends State<ListenTogetherPage> {
             width: double.infinity,
             child: SegmentedButton<ListenMode>(
               showSelectedIcon: false,
-              segments: const [
-                ButtonSegment(value: ListenMode.wifi, label: Text('Same Wi-Fi')),
+              segments: [
+                ButtonSegment(value: ListenMode.wifi, label: Text(tr.sameWifi)),
                 ButtonSegment(
                   value: ListenMode.internet,
-                  label: Row(mainAxisSize: MainAxisSize.min, children: [Text('Anywhere')]),
+                  label: Row(mainAxisSize: MainAxisSize.min, children: [Text(tr.anywhere)]),
                 ),
               ],
               selected: {_mode},
@@ -316,12 +317,7 @@ class _ListenTogetherPageState extends State<ListenTogetherPage> {
           ),
         ],
         const SizedBox(height: 8),
-        Text(
-          internet
-              ? "Connects through free public servers. Everything is encrypted, but it's new and can sometimes fail to connect."
-              : 'Everyone needs to be on the same Wi-Fi.',
-          style: muted,
-        ),
+        Text(internet ? tr.anywhereNote : tr.sameWifiNote, style: muted),
         const SizedBox(height: 20),
         SizedBox(
           width: double.infinity,
@@ -333,23 +329,23 @@ class _ListenTogetherPageState extends State<ListenTogetherPage> {
             ),
             onPressed: _busy ? null : _start,
             icon: const Icon(Icons.play_arrow_rounded),
-            label: const Text('Start a session'),
+            label: Text(tr.startSession),
           ),
         ),
         const SizedBox(height: 32),
-        Text('Join', style: text.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
+        Text(tr.join, style: text.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
         const SizedBox(height: 12),
         OutlinedButton.icon(
           onPressed: _busy ? null : _scan,
           icon: const Icon(Icons.qr_code_scanner_rounded),
-          label: const Text('Scan QR code'),
+          label: Text(tr.scanQr),
         ),
         if (Features.listenOnLan) ...[
           const SizedBox(height: 16),
-          Text('On this Wi-Fi', style: text.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+          Text(tr.onThisWifi, style: text.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
           const SizedBox(height: 8),
           if (_nearby.isEmpty)
-            Text('Looking for sessions on this network…', style: muted)
+            Text(tr.lookingForSessions, style: muted)
           else
             for (final s in _nearby)
               ListTile(
@@ -359,13 +355,13 @@ class _ListenTogetherPageState extends State<ListenTogetherPage> {
                   child: Icon(Icons.group_rounded, color: AppColors.textPrimary),
                 ),
                 title: Text(s.hostName),
-                subtitle: const Text('Tap to join'),
+                subtitle: Text(tr.tapToJoin),
                 enabled: !_busy,
                 onTap: () => _join(s.code),
               ),
         ],
         const SizedBox(height: 16),
-        Text('Have a code?', style: text.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+        Text(tr.haveACode, style: text.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
         const SizedBox(height: 8),
         Row(
           children: [
@@ -378,7 +374,7 @@ class _ListenTogetherPageState extends State<ListenTogetherPage> {
                 style: const TextStyle(letterSpacing: 4, fontWeight: FontWeight.w700),
                 onChanged: (_) => setState(() {}),
                 onSubmitted: (_) => canCode && !_busy ? _join(_code.text.trim()) : null,
-                decoration: const InputDecoration(hintText: 'ABC123 or ABCDE-FGHJK', counterText: ''),
+                decoration: InputDecoration(hintText: tr.sessionCodeHint, counterText: ''),
               ),
             ),
             const SizedBox(width: 12),
@@ -389,7 +385,7 @@ class _ListenTogetherPageState extends State<ListenTogetherPage> {
                 minimumSize: const Size(80, 48),
               ),
               onPressed: canCode && !_busy ? () => _join(_code.text.trim()) : null,
-              child: const Text('Join'),
+              child: Text(tr.join),
             ),
           ],
         ),
@@ -407,10 +403,7 @@ class _ListenTogetherPageState extends State<ListenTogetherPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          internet ? 'Friends anywhere can join with this code.' : 'Friends on the same Wi-Fi can join with this code.',
-          style: muted,
-        ),
+        Text(internet ? tr.joinCodeAnywhere : tr.joinCodeWifi, style: muted),
         const SizedBox(height: 16),
         Row(
           children: [
@@ -435,13 +428,13 @@ class _ListenTogetherPageState extends State<ListenTogetherPage> {
                   builder: (_) => ListenQrDialog(code: code),
                 ),
           icon: const Icon(Icons.qr_code_rounded),
-          label: const Text('Show QR code'),
+          label: Text(tr.showQr),
         ),
         const SizedBox(height: 24),
-        Text('Listening', style: text.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
+        Text(tr.listening, style: text.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
         const SizedBox(height: 8),
         if (s.listeners.isEmpty)
-          Text('Nobody has joined yet.', style: muted)
+          Text(tr.nobodyJoined, style: muted)
         else
           for (final name in s.listeners)
             ListTile(
@@ -453,22 +446,22 @@ class _ListenTogetherPageState extends State<ListenTogetherPage> {
         const SizedBox(height: 16),
         SwitchListTile(
           contentPadding: EdgeInsets.zero,
-          title: const Text('Let friends add songs'),
-          subtitle: const Text('A song a friend plays goes into your queue, in the order they come'),
+          title: Text(tr.letFriendsAdd),
+          subtitle: Text(tr.letFriendsAddSubtitle),
           value: s.suggestionsAllowed,
           onChanged: (v) => s.setSuggestionsAllowed(v),
         ),
         const SizedBox(height: 16),
         SwitchListTile(
           contentPadding: EdgeInsets.zero,
-          title: const Text('Let friends seek within songs'),
-          subtitle: const Text('Changes playback position for everyone'),
+          title: Text(tr.letFriendsSeek),
+          subtitle: Text(tr.letFriendsSeekSubtitle),
           value: s.seekingAllowed,
           onChanged: s.setSeekingAllowed,
         ),
-        Text('You pick the songs. Play any YouTube song and everyone follows.', style: muted),
+        Text(tr.youPickSongs, style: muted),
         const SizedBox(height: 24),
-        _leaveButton(s, 'End session'),
+        _leaveButton(s, tr.endSession),
       ],
     );
   }
@@ -487,7 +480,7 @@ class _ListenTogetherPageState extends State<ListenTogetherPage> {
           children: [
             Flexible(
               child: Text(
-                'Listening with $host',
+                tr.listeningWith(host),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: text.titleLarge?.copyWith(fontWeight: FontWeight.w800),
@@ -496,33 +489,19 @@ class _ListenTogetherPageState extends State<ListenTogetherPage> {
           ],
         ),
         const SizedBox(height: 16),
-        if (now == null)
-          Text('Waiting for $host to play something.', style: muted)
-        else
-          _SongTile(song: now, size: 72, big: true),
-        if (s.hostPlayingUnshareable) ...[
-          const SizedBox(height: 12),
-          Text(
-            "$host is playing a song from their own files. It'll continue when they play a YouTube song.",
-            style: muted,
-          ),
-        ],
+        if (now == null) Text(tr.waitingForHost(host), style: muted) else _SongTile(song: now, size: 72, big: true),
+        if (s.hostPlayingUnshareable) ...[const SizedBox(height: 12), Text(tr.hostPlayingOwnFiles(host), style: muted)],
         const SizedBox(height: 16),
-        Text(
-          s.suggestionsAllowed
-              ? 'Play any YouTube song and it goes into $host\'s queue.'
-              : '$host isn\'t taking songs right now.',
-          style: muted,
-        ),
+        Text(s.suggestionsAllowed ? tr.playGoesToHostQueue(host) : tr.hostNotTakingSongs(host), style: muted),
         const SizedBox(height: 24),
-        Text('Listening', style: text.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
+        Text(tr.listening, style: text.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
         const SizedBox(height: 8),
         ListTile(
           contentPadding: EdgeInsets.zero,
           dense: true,
           leading: const Icon(Icons.headphones_rounded),
           title: Text(host),
-          subtitle: const Text('Host'),
+          subtitle: Text(tr.host),
         ),
         for (final name in s.listeners)
           ListTile(
@@ -533,17 +512,14 @@ class _ListenTogetherPageState extends State<ListenTogetherPage> {
           ),
         if (s.upNext.isNotEmpty) ...[
           const SizedBox(height: 24),
-          Text('Up next', style: text.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
+          Text(tr.upNext, style: text.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
           const SizedBox(height: 8),
           for (final song in s.upNext) _SongTile(song: song, size: 44),
         ],
         const SizedBox(height: 24),
-        Text(
-          s.seekingAllowed ? 'Use the player timeline to seek for everyone.' : 'Only the host can seek within songs.',
-          style: muted,
-        ),
+        Text(s.seekingAllowed ? tr.seekForEveryone : tr.onlyHostSeeks, style: muted),
         const SizedBox(height: 16),
-        _leaveButton(s, 'Leave'),
+        _leaveButton(s, tr.leave),
       ],
     );
   }

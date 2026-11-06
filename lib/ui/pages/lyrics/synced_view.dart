@@ -333,7 +333,7 @@ class _SyncedLyricsViewState extends State<SyncedLyricsView> with _Extras {
                           Padding(
                             padding: const EdgeInsets.only(bottom: 16),
                             child: Text(
-                              'These lyrics are from a different recording of the same song (for example, the studio version instead of a live performance). The words may be correct, but their timing may not match. Open the lyrics menu > Adjust timing to shift them.',
+                              tr.lyricsOtherVersion,
                               key: const ValueKey('lyrics-other-version'),
                               textAlign: _textAlign,
                               style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.textMuted),
@@ -385,7 +385,7 @@ class _SyncedLyricsViewState extends State<SyncedLyricsView> with _Extras {
                             ),
                             onPressed: _resume,
                             icon: const Icon(Icons.my_location_rounded, size: 18),
-                            label: const Text('Back to current line'),
+                            label: Text(tr.backToCurrentLine),
                           ),
                         ),
                       ),

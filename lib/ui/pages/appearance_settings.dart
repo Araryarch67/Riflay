@@ -44,7 +44,7 @@ class AppearanceSettings extends StatelessWidget {
               ),
             ),
           ),
-          ListTile(leading: const Icon(Icons.dark_mode_outlined), title: const Text('Theme')),
+          ListTile(leading: const Icon(Icons.dark_mode_outlined), title: Text(tr.theme)),
           // The whole width, not under the tile's icon: two or more cards a row even on a phone.
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
@@ -71,12 +71,9 @@ class AppearanceSettings extends StatelessWidget {
               listenable: look.matugen,
               builder: (context, _) => ListTile(
                 leading: const Icon(Icons.wallpaper_rounded),
-                title: const Text('Matugen colors'),
+                title: Text(tr.matugenColors),
                 subtitle: Text(
-                  look.matugen.error ??
-                      (look.matugen.path == null
-                          ? 'Choose a generated JSON file. Colors update automatically.'
-                          : 'Following generated colors automatically'),
+                  look.matugen.error ?? (look.matugen.path == null ? tr.matugenChoose : tr.matugenFollowing),
                   style: muted,
                 ),
                 trailing: Wrap(
@@ -84,7 +81,7 @@ class AppearanceSettings extends StatelessWidget {
                   children: [
                     if (look.matugenPath != null)
                       IconButton(
-                        tooltip: 'Find generated colors automatically',
+                        tooltip: tr.matugenFind,
                         icon: const Icon(Icons.restart_alt_rounded),
                         onPressed: () => look.setMatugenPath(null),
                       ),
@@ -94,7 +91,7 @@ class AppearanceSettings extends StatelessWidget {
                         final path = result.firstOrNull?.path;
                         if (path != null) await look.setMatugenPath(path);
                       },
-                      child: const Text('Choose file'),
+                      child: Text(tr.chooseFile),
                     ),
                   ],
                 ),
@@ -103,41 +100,36 @@ class AppearanceSettings extends StatelessWidget {
           if (look.theme == ThemeChoice.dynamic)
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-              child: Text('Colours come from the cover of what\'s playing', style: muted),
+              child: Text(tr.coloursFromCover, style: muted),
             ),
           if (look.theme == ThemeChoice.custom) ...[
             ListTile(
               leading: const Icon(Icons.format_color_fill_rounded),
-              title: const Text('Background colour'),
-              subtitle: Text('Panels, cards and menus are worked out from it', style: muted),
+              title: Text(tr.backgroundColour),
+              subtitle: Text(tr.backgroundColourSubtitle, style: muted),
               trailing: _ColorButton(
                 color: look.customBackground,
-                label: 'Background colour',
+                label: tr.backgroundColour,
                 onTap: () async {
-                  final c = await showColorPicker(context, title: 'Background colour', initial: look.customBackground);
+                  final c = await showColorPicker(context, title: tr.backgroundColour, initial: look.customBackground);
                   if (c != null) look.setCustomBackground(c);
                 },
               ),
             ),
             ListTile(
               leading: const Icon(Icons.text_fields_rounded),
-              title: const Text('Text colour'),
-              subtitle: Text(
-                look.customText == null
-                    ? 'Chosen to suit the background'
-                    : 'Lightened or darkened where it would be hard to read',
-                style: muted,
-              ),
+              title: Text(tr.textColour),
+              subtitle: Text(look.customText == null ? tr.textColourAuto : tr.textColourAdjusted, style: muted),
               trailing: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   if (look.customText != null)
-                    TextButton(onPressed: () => look.setCustomText(null), child: const Text('Automatic')),
+                    TextButton(onPressed: () => look.setCustomText(null), child: Text(tr.automatic)),
                   _ColorButton(
                     color: look.palette.textPrimary,
-                    label: 'Text colour',
+                    label: tr.textColour,
                     onTap: () async {
-                      final c = await showColorPicker(context, title: 'Text colour', initial: look.palette.textPrimary);
+                      final c = await showColorPicker(context, title: tr.textColour, initial: look.palette.textPrimary);
                       if (c != null) look.setCustomText(c);
                     },
                   ),
@@ -148,8 +140,8 @@ class AppearanceSettings extends StatelessWidget {
           if (look.theme != ThemeChoice.custom)
             SettingTile(
               icon: Icons.brightness_6_outlined,
-              title: const Text('Mode'),
-              subtitle: Text('Light or dark, for every theme', style: muted),
+              title: Text(tr.mode),
+              subtitle: Text(tr.modeSubtitle, style: muted),
               control: OptionPicker<ThemeBrightness>(
                 value: look.brightness,
                 onChanged: look.setBrightness,
@@ -158,7 +150,7 @@ class AppearanceSettings extends StatelessWidget {
             ),
           ListTile(
             leading: const Icon(Icons.palette_outlined),
-            title: const Text('Accent colour'),
+            title: Text(tr.accentColour),
             subtitle: Padding(
               padding: const EdgeInsets.only(top: 10, bottom: 4),
               child: Wrap(
@@ -171,11 +163,11 @@ class AppearanceSettings extends StatelessWidget {
           if (look.theme != ThemeChoice.dynamic)
             SettingTile(
               icon: Icons.format_color_fill_rounded,
-              title: const Text('Colours from cover art'),
+              title: Text(tr.coloursFromCoverArt),
               subtitle: Text(switch (look.coverMode) {
-                CoverColorMode.off => 'Colours stay as the theme has them',
-                CoverColorMode.player => 'Tint the player and pages with the colour of what\'s playing',
-                CoverColorMode.app => 'The whole app takes the colour of what\'s playing',
+                CoverColorMode.off => tr.coverColorOffNote,
+                CoverColorMode.player => tr.coverColorPlayerNote,
+                CoverColorMode.app => tr.coverColorAppNote,
               }, style: muted),
               control: OptionPicker<CoverColorMode>(
                 value: look.coverMode,
@@ -186,28 +178,25 @@ class AppearanceSettings extends StatelessWidget {
           if (look.followsCover)
             _SliderTile(
               icon: Icons.opacity_rounded,
-              title: 'Colour strength',
-              subtitle: 'How much of the cover\'s colour shows in backgrounds and panels',
+              title: tr.colourStrength,
+              subtitle: tr.colourStrengthSubtitle,
               value: look.coverStrength,
               min: 0,
               max: 1,
-              label: (v) => v < 0.34 ? 'Subtle' : (v < 0.67 ? 'Medium' : 'Strong'),
+              label: (v) => v < 0.34 ? tr.strengthSubtle : (v < 0.67 ? tr.sizeMedium : tr.strengthStrong),
               onChanged: look.setCoverStrength,
             ),
           SwitchListTile(
             secondary: const Icon(Icons.contrast_rounded),
-            title: const Text('High contrast'),
-            subtitle: Text('Brighter text and clearer edges, easier to read', style: muted),
+            title: Text(tr.highContrast),
+            subtitle: Text(tr.highContrastSubtitle, style: muted),
             value: look.highContrast,
             onChanged: look.setHighContrast,
           ),
           SettingTile(
             icon: Icons.format_size_rounded,
-            title: const Text('Text size'),
-            subtitle: Text(
-              'Body text, in pixels; titles and labels grow with it. ${Appearance.defaultTextSize.round()} px is the default',
-              style: muted,
-            ),
+            title: Text(tr.textSize),
+            subtitle: Text(tr.textSizeSubtitle(Appearance.defaultTextSize.round()), style: muted),
             control: _Stepper(
               value: look.textSize.round(),
               min: Appearance.minTextSize.round(),
@@ -218,7 +207,7 @@ class AppearanceSettings extends StatelessWidget {
           ),
           ListTile(
             leading: const Icon(Icons.font_download_outlined),
-            title: const Text('Font'),
+            title: Text(tr.font),
             subtitle: Text(
               look.fontFamily ?? '${AppFont.ownName} (Riflay\'s own)',
               style: muted,
@@ -229,7 +218,7 @@ class AppearanceSettings extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 IconButton(
-                  tooltip: 'Open the fonts folder (put .ttf or .otf files here)',
+                  tooltip: tr.openFontsFolder,
                   onPressed: () async {
                     final dir = await SystemFonts.appFontsDir();
                     await dir.create(recursive: true);
@@ -237,14 +226,14 @@ class AppearanceSettings extends StatelessWidget {
                   },
                   icon: const Icon(Icons.folder_open_rounded),
                 ),
-                TextButton(onPressed: () => _pickFont(context), child: const Text('Change')),
+                TextButton(onPressed: () => _pickFont(context), child: Text(tr.change)),
               ],
             ),
           ),
           SettingTile(
             icon: Icons.wallpaper_rounded,
-            title: const Text('Now playing background'),
-            subtitle: Text(look.nowPlaying.hint ?? 'Only the Now Playing and expanded player pages', style: muted),
+            title: Text(tr.nowPlayingBackground),
+            subtitle: Text(look.nowPlaying.hint ?? tr.nowPlayingBackgroundSubtitle, style: muted),
             control: OptionPicker<NowPlayingBackground>(
               value: look.nowPlaying,
               onChanged: look.setNowPlaying,
@@ -253,15 +242,15 @@ class AppearanceSettings extends StatelessWidget {
           ),
           SwitchListTile(
             secondary: const Icon(Icons.blur_on_rounded),
-            title: const Text('Frosted glass'),
-            subtitle: Text('See-through, blurred mini player and tab bar. Uses a little more GPU', style: muted),
+            title: Text(tr.frostedGlass),
+            subtitle: Text(tr.frostedGlassSubtitle, style: muted),
             value: look.glass,
             onChanged: look.setGlass,
           ),
           if (look.glass)
             _SliderTile(
               icon: Icons.lens_blur_rounded,
-              title: 'Blur strength',
+              title: tr.blurStrength,
               value: look.blur,
               min: 4,
               max: 48,
@@ -271,9 +260,8 @@ class AppearanceSettings extends StatelessWidget {
           if (Appearance.hasComponentOpacity)
             _SliderTile(
               icon: Icons.layers_outlined,
-              title: 'Component opacity',
-              subtitle:
-                  'See-through backgrounds with the desktop blurred behind them. Text, covers and controls stay solid',
+              title: tr.componentOpacity,
+              subtitle: tr.componentOpacitySubtitle,
               value: look.componentOpacity,
               min: 0.3,
               max: 1,
@@ -283,8 +271,8 @@ class AppearanceSettings extends StatelessWidget {
           if (Appearance.hasWindowOpacity)
             _SliderTile(
               icon: Icons.opacity_rounded,
-              title: 'Background opacity',
-              subtitle: Host.isAndroid ? 'Below 100% your wallpaper shows through' : 'Below 100% the desktop shows through, blurred where the system can (Windows 11, macOS, Hyprland, KDE)',
+              title: tr.backgroundOpacity,
+              subtitle: Host.isAndroid ? tr.backgroundOpacityAndroid : tr.backgroundOpacityDesktop,
               value: look.windowOpacity,
               min: 0.5,
               max: 1,
@@ -295,7 +283,7 @@ class AppearanceSettings extends StatelessWidget {
             alignment: Alignment.centerLeft,
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
-              child: TextButton(onPressed: look.reset, child: const Text('Reset to default')),
+              child: TextButton(onPressed: look.reset, child: Text(tr.resetToDefault)),
             ),
           ),
         ],
@@ -314,7 +302,7 @@ Future<void> _pickFont(BuildContext context) async {
   if (picked == null) return;
   final ok = await Appearance.instance.setFont(picked.$1);
   if (!ok && context.mounted) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Couldn\'t load ${picked.$1?.family}.')));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(tr.couldntLoadFont('${picked.$1?.family}'))));
   }
 }
 
@@ -348,7 +336,7 @@ class _FontDialogState extends State<_FontDialog> {
       onTap: onTap,
     );
     return AlertDialog(
-      title: const Text('Font'),
+      title: Text(tr.font),
       contentPadding: const EdgeInsets.fromLTRB(0, 12, 0, 0),
       content: SizedBox(
         width: 440,
@@ -360,9 +348,9 @@ class _FontDialogState extends State<_FontDialog> {
               child: TextField(
                 controller: _query,
                 autofocus: true,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   prefixIcon: Icon(Icons.search_rounded),
-                  hintText: 'Search fonts on this device',
+                  hintText: tr.searchFonts,
                   isDense: true,
                   border: OutlineInputBorder(),
                 ),
@@ -382,19 +370,14 @@ class _FontDialogState extends State<_FontDialog> {
                   return ListView(
                     children: [
                       if (q.isEmpty || AppFont.ownName.toLowerCase().contains(q))
-                        row(
-                          AppFont.ownName,
-                          'Riflay\'s own font',
-                          current == null,
-                          () => Navigator.pop(context, (null,)),
-                        ),
+                        row(AppFont.ownName, tr.riflaysOwnFont, current == null, () => Navigator.pop(context, (null,))),
                       if (snap.connectionState != ConnectionState.done)
                         const Padding(padding: EdgeInsets.all(16), child: SkeletonList(count: 6, rowSize: 28))
                       else
                         for (final f in fonts)
                           row(
                             f.family,
-                            f.files.length == 1 ? '1 file' : '${f.files.length} files (weights and styles)',
+                            tr.fontFiles(f.files.length),
                             current == f.family,
                             () => Navigator.pop(context, (f,)),
                           ),
@@ -406,7 +389,7 @@ class _FontDialogState extends State<_FontDialog> {
           ],
         ),
       ),
-      actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel'))],
+      actions: [TextButton(onPressed: () => Navigator.pop(context), child: Text(tr.cancel))],
     );
   }
 }
@@ -435,7 +418,7 @@ class _ThemeCard extends StatelessWidget {
     return Semantics(
       button: true,
       selected: selected,
-      label: dynamicTheme ? 'Default theme, follows the song that is playing' : '${choice.label} theme',
+      label: dynamicTheme ? tr.defaultThemeFollows : tr.themeNamed(choice.label),
       child: InkWell(
         onTap: () => Appearance.instance.setTheme(choice),
         borderRadius: BorderRadius.circular(12),
@@ -537,11 +520,11 @@ class _Swatch extends StatelessWidget {
     child: Semantics(
       button: true,
       selected: selected,
-      label: '${choice.label} accent',
+      label: tr.accentNamed(choice.label),
       child: InkResponse(
         onTap: () async {
           if (choice != AccentChoice.custom) return Appearance.instance.setAccent(choice);
-          final c = await showColorPicker(context, title: 'Accent colour', initial: Appearance.instance.customAccent);
+          final c = await showColorPicker(context, title: tr.accentColour, initial: Appearance.instance.customAccent);
           if (c != null) Appearance.instance.setCustomAccent(c);
         },
         radius: 22,
@@ -623,7 +606,7 @@ class _Stepper extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         IconButton(
-          tooltip: 'Smaller',
+          tooltip: tr.smaller,
           style: style,
           onPressed: value > min ? () => onChanged(value - 1) : null,
           icon: const Icon(Icons.remove_rounded, size: 18),
@@ -637,7 +620,7 @@ class _Stepper extends StatelessWidget {
           ),
         ),
         IconButton(
-          tooltip: 'Larger',
+          tooltip: tr.larger,
           style: style,
           onPressed: value < max ? () => onChanged(value + 1) : null,
           icon: const Icon(Icons.add_rounded, size: 18),

@@ -45,11 +45,7 @@ Future<bool> _report(BuildContext context, Future<void> Function() change, Strin
 Future<void> toggleLike(BuildContext context, Track track) {
   final account = PlayerScope.read(context).ytMusic;
   final liked = account.isLiked(track);
-  return _report(
-    context,
-    () => account.setLiked(track, !liked),
-    liked ? 'Removed from Liked music' : 'Added to Liked music',
-  );
+  return _report(context, () => account.setLiked(track, !liked), liked ? tr.removedFromLiked : tr.addedToLiked);
 }
 
 /// Name + privacy for a new playlist (or a rename when [initialTitle] is set).
@@ -110,7 +106,7 @@ class _PlaylistNameDialogState extends State<_PlaylistNameDialog> {
     final askPrivacy = widget.askPrivacy;
     final offerYoutube = widget.offerYoutube;
     return AlertDialog(
-      title: Text(initialTitle == null ? 'New playlist' : 'Rename playlist'),
+      title: Text(initialTitle == null ? tr.newPlaylist : tr.renamePlaylist),
       content: SizedBox(
         width: 380,
         child: Column(
@@ -122,7 +118,7 @@ class _PlaylistNameDialogState extends State<_PlaylistNameDialog> {
               autofocus: true,
               textInputAction: TextInputAction.done,
               onSubmitted: (_) => submit(),
-              decoration: const InputDecoration(labelText: 'Name', border: OutlineInputBorder()),
+              decoration: InputDecoration(labelText: tr.name, border: OutlineInputBorder()),
             ),
             if (offerYoutube) ...[
               const SizedBox(height: 16),
@@ -144,9 +140,7 @@ class _PlaylistNameDialogState extends State<_PlaylistNameDialog> {
               ),
               const SizedBox(height: 8),
               Text(
-                home == PlaylistHome.riflay
-                    ? 'Kept on this device. Can mix your own files and YouTube Music songs.'
-                    : 'Saved to your YouTube Music account, on all your devices.',
+                home == PlaylistHome.riflay ? tr.playlistOnDeviceNote : tr.playlistOnYtNote,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
               ),
             ],
@@ -159,17 +153,17 @@ class _PlaylistNameDialogState extends State<_PlaylistNameDialog> {
               ),
               const SizedBox(height: 8),
               Text(switch (privacy) {
-                PlaylistPrivacy.private => 'Only you can see it.',
-                PlaylistPrivacy.unlisted => 'Anyone with the link can see it.',
-                PlaylistPrivacy.public => 'Anyone can find and see it.',
+                PlaylistPrivacy.private => tr.privacyPrivate,
+                PlaylistPrivacy.unlisted => tr.privacyUnlisted,
+                PlaylistPrivacy.public => tr.privacyPublic,
               }, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary)),
             ],
           ],
         ),
       ),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-        FilledButton(onPressed: submit, child: Text(initialTitle == null ? 'Create' : 'Save')),
+        TextButton(onPressed: () => Navigator.pop(context), child: Text(tr.cancel)),
+        FilledButton(onPressed: submit, child: Text(initialTitle == null ? tr.create : tr.save)),
       ],
     );
   }
@@ -191,7 +185,7 @@ Future<void> createPlaylist(BuildContext context, {List<Track> tracks = const []
     await _report(
       context,
       () => c.ytMusic.createPlaylist(answer.title, privacy: answer.privacy, tracks: onYoutube.songs),
-      withSkipped('Created "${answer.title}" in YouTube Music', onYoutube.skipped),
+      withSkipped(tr.createdInYt(answer.title), onYoutube.skipped),
     );
     return;
   }
@@ -199,7 +193,7 @@ Future<void> createPlaylist(BuildContext context, {List<Track> tracks = const []
   ScaffoldMessenger.of(context).showSnackBar(
     SnackBar(
       content: Text(
-        tracks.isEmpty ? 'Created "${answer.title}"' : 'Created "${answer.title}" with ${tracks.length} songs',
+        tracks.isEmpty ? tr.createdPlaylist(answer.title) : tr.createdPlaylistWith(answer.title, tracks.length),
       ),
     ),
   );
@@ -310,7 +304,7 @@ Future<void> removeFromPlaylist(BuildContext context, Track track) async {
 Future<bool> removeFromRemotePlaylist(BuildContext context, String playlistId, Track track, String rowId) => _report(
   context,
   () => PlayerScope.read(context).ytMusic.removeFromPlaylist(playlistId, track, rowId),
-  'Removed from this playlist',
+  tr.removedFromThisPlaylist,
 );
 
 /// "Invite friends": turns on collaboration and hands over the link to send.
@@ -323,14 +317,11 @@ Future<bool> inviteToPlaylist(BuildContext context, String playlistId, PlaylistP
     final ok = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Make it unlisted?'),
-        content: const Text(
-          'Friends can only join a playlist that isn\'t private. It will become unlisted: '
-          'hidden from search, but anyone with the link can see it.',
-        ),
+        title: Text(tr.makeUnlistedQuestion),
+        content: Text(tr.makeUnlistedBody),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Make unlisted')),
+          TextButton(onPressed: () => Navigator.pop(context, false), child: Text(tr.cancel)),
+          FilledButton(onPressed: () => Navigator.pop(context, true), child: Text(tr.makeUnlisted)),
         ],
       ),
     );
@@ -361,14 +352,14 @@ class _InviteDialog extends StatelessWidget {
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
     return AlertDialog(
-      title: const Text('Invite friends'),
+      title: Text(tr.inviteFriends),
       content: SizedBox(
         width: 380,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('The link is copied. Send it to your friends: anyone who opens it can add songs.'),
+            Text(tr.inviteLinkCopied),
             const SizedBox(height: 16),
             DecoratedBox(
               decoration: BoxDecoration(color: AppColors.hover, borderRadius: BorderRadius.circular(6)),
@@ -384,11 +375,11 @@ class _InviteDialog extends StatelessWidget {
         TextButton(
           onPressed: () {
             Clipboard.setData(ClipboardData(text: link));
-            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Link copied')));
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(tr.linkCopied)));
           },
-          child: const Text('Copy again'),
+          child: Text(tr.copyAgain),
         ),
-        FilledButton(onPressed: () => Navigator.pop(context), child: const Text('Done')),
+        FilledButton(onPressed: () => Navigator.pop(context), child: Text(tr.done)),
       ],
     );
   }
@@ -399,20 +390,16 @@ Future<bool> stopSharingPlaylist(BuildContext context, String playlistId) async 
   final sure = await showDialog<bool>(
     context: context,
     builder: (context) => AlertDialog(
-      title: const Text('Stop sharing?'),
-      content: const Text('Friends won\'t be able to add songs any more, and old invite links stop working.'),
+      title: Text(tr.stopSharingQuestion),
+      content: Text(tr.stopSharingBody),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-        FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Stop sharing')),
+        TextButton(onPressed: () => Navigator.pop(context, false), child: Text(tr.cancel)),
+        FilledButton(onPressed: () => Navigator.pop(context, true), child: Text(tr.stopSharing)),
       ],
     ),
   );
   if (sure != true || !context.mounted) return false;
-  return _report(
-    context,
-    () => PlayerScope.read(context).ytMusic.stopCollaboration(playlistId),
-    'Only you can add songs now',
-  );
+  return _report(context, () => PlayerScope.read(context).ytMusic.stopCollaboration(playlistId), tr.onlyYouCanAdd);
 }
 
 /// Asks for a friend's invite link (filled in from the clipboard when one is
@@ -461,14 +448,14 @@ class _JoinDialogState extends State<_JoinDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Join a shared playlist'),
+      title: Text(tr.joinSharedPlaylist),
       content: SizedBox(
         width: 380,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Paste the invite link a friend sent you. You\'ll both be able to add songs.'),
+            Text(tr.joinSharedPlaylistBody),
             const SizedBox(height: 16),
             TextField(
               controller: link,
@@ -477,17 +464,17 @@ class _JoinDialogState extends State<_JoinDialog> {
               onChanged: (v) => setState(() => valid = YtMusicWeb.parseInvite(v) != null),
               onSubmitted: (_) => submit(),
               decoration: InputDecoration(
-                labelText: 'Invite link',
+                labelText: tr.inviteLink,
                 border: const OutlineInputBorder(),
-                errorText: link.text.trim().isNotEmpty && !valid ? 'That isn\'t an invite link' : null,
+                errorText: link.text.trim().isNotEmpty && !valid ? tr.notAnInviteLink : null,
               ),
             ),
           ],
         ),
       ),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-        FilledButton(onPressed: valid ? submit : null, child: const Text('Join')),
+        TextButton(onPressed: () => Navigator.pop(context), child: Text(tr.cancel)),
+        FilledButton(onPressed: valid ? submit : null, child: Text(tr.join)),
       ],
     );
   }
@@ -510,7 +497,7 @@ class LikeButton extends StatelessWidget {
       builder: (context, _) {
         final liked = account.isLiked(track);
         return IconButton(
-          tooltip: liked ? 'Remove from Liked music' : 'Add to Liked music',
+          tooltip: liked ? tr.removeFromLiked : tr.addToLiked,
           iconSize: size,
           color: liked ? AppColors.accent : color,
           onPressed: () => toggleLike(context, track),
@@ -558,12 +545,12 @@ class FollowButton extends StatelessWidget {
         void toggle() => _report(
           context,
           () => account.setFollowing(artistId, !following),
-          following ? 'Unfollowed $name' : 'Following $name',
+          following ? tr.unfollowedName(name) : tr.followingName(name),
         );
         if (LayoutPrefs.instance.albumHeader == AlbumHeaderStyle.hero) {
           return heroRoundButton(
             icon: following ? Icons.check_rounded : Icons.person_add_alt_1_outlined,
-            tooltip: following ? 'Following' : 'Follow',
+            tooltip: following ? tr.following : tr.follow,
             onPressed: toggle,
           );
         }
@@ -577,9 +564,9 @@ class FollowButton extends StatelessWidget {
           onPressed: () => _report(
             context,
             () => account.setFollowing(artistId, !following),
-            following ? 'Unfollowed $name' : 'Following $name',
+            following ? tr.unfollowedName(name) : tr.followingName(name),
           ),
-          child: Text(following ? 'Following' : 'Follow'),
+          child: Text(following ? tr.following : tr.follow),
         );
       },
     );
@@ -605,7 +592,7 @@ class DownloadButton extends StatelessWidget {
         final job = c.youtube.jobFor(track.videoId!);
         if (c.downloadedCopy(track) != null || job?.status == DownloadStatus.done) {
           return IconButton(
-            tooltip: 'Downloaded',
+            tooltip: tr.downloaded,
             iconSize: size,
             color: AppColors.accent,
             onPressed: null,
@@ -615,7 +602,7 @@ class DownloadButton extends StatelessWidget {
         }
         if (job != null && job.isActive) {
           return IconButton(
-            tooltip: 'Stop download',
+            tooltip: tr.stopDownload,
             iconSize: size,
             onPressed: () => c.youtube.cancel(job),
             icon: SizedBox.square(
@@ -644,9 +631,7 @@ class DownloadButton extends StatelessWidget {
         return ListenableBuilder(
           listenable: prefs,
           builder: (context, _) => Tooltip(
-            message: failed
-                ? 'Download failed, try again'
-                : 'Download\nHold to download now as ${describeChoice(prefs.choice)}',
+            message: failed ? tr.downloadFailedTryAgain : tr.downloadHoldTooltip(describeChoice(prefs.choice)),
             triggerMode: TooltipTriggerMode.manual,
             child: GestureDetector(
               behavior: HitTestBehavior.deferToChild,
@@ -655,7 +640,7 @@ class DownloadButton extends StatelessWidget {
                 await prefs.load();
                 final choice = prefs.choice;
                 c.youtube.enqueueTracks([track], choice: choice);
-                messenger.showSnackBar(SnackBar(content: Text('Downloading in ${describeChoice(choice)}…')));
+                messenger.showSnackBar(SnackBar(content: Text(tr.downloadingIn(describeChoice(choice)))));
               },
               child: IconButton(
                 iconSize: size,
@@ -665,7 +650,7 @@ class DownloadButton extends StatelessWidget {
                   final choice = await chooseDownload(context, videoId: track.videoId);
                   if (choice == null) return;
                   c.youtube.enqueueTracks([track], choice: choice);
-                  messenger.showSnackBar(SnackBar(content: Text('Downloading ${track.title}…')));
+                  messenger.showSnackBar(SnackBar(content: Text(tr.downloadingTitle(track.title))));
                 },
                 icon: Icon(failed ? Icons.error_outline_rounded : Icons.download_rounded),
               ),

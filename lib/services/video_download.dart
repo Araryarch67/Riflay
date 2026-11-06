@@ -7,6 +7,7 @@ import 'download_prefs.dart';
 import 'ffmpeg.dart';
 import 'mp4_mux.dart';
 import 'webm_mux.dart';
+import 'language.dart';
 
 /// The picture codec of a video stream.
 enum VideoCodec {
@@ -256,7 +257,7 @@ String? webmTallerNote(VideoFormats f, {required bool ffmpeg}) {
   final webm = videoOptions(f, VideoContainer.webm, ffmpeg: ffmpeg);
   if (webm.isEmpty || mp4.isEmpty || webm.first.height <= mp4.first.height) return null;
   final taller = webm.first.height;
-  return '${tallName(taller)} is available as WebM.';
+  return tr.tallerAsWebm(tallName(taller));
 }
 
 /// The sizes the Settings picker offers when no video is at hand: what YouTube serves, and for MP4 up to 1080p.
@@ -266,7 +267,7 @@ List<int> standardVideoHeights(VideoContainer c) => switch (c) {
 };
 
 /// "Best available" or "1080p", for pickers.
-String videoHeightLabel(int? height) => height == null ? 'Best available' : '${height}p';
+String videoHeightLabel(int? height) => height == null ? tr.bestAvailable : '${height}p';
 
 // ---- putting the two streams into one file ----
 
