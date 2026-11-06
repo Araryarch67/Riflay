@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../models/track.dart';
 import '../../platform/features.dart';
+import '../../services/metadata.dart';
 import '../../services/player_controller.dart';
 import '../../services/youtube_music_account.dart';
 import '../../services/desktop_login.dart';
@@ -106,22 +107,32 @@ void openRemotePlaylist(BuildContext context, RemotePlaylist p, {ShellScope? she
   );
 }
 
-/// Placeholder track used only to show a playlist's cover image ([fallback] where it has none).
-Track playlistCover(RemotePlaylist p, {String? fallback}) =>
-    Track.youtube(videoId: 'playlist-${p.id}', title: p.title, artist: '', artworkUrl: p.thumbnailUrl ?? fallback);
+/// Placeholder track used only to show a playlist's cover image: its own, or [fallback] instead.
+Track playlistCover(RemotePlaylist p, {String? fallback}) => Track.youtube(
+  // Covers are kept by id: the first song's cover gets an id of its own, or the "no picture" kept for the card
+  // would stay.
+  videoId: fallback != null ? 'playlist-${p.id}-first' : 'playlist-${p.id}',
+  title: p.title,
+  artist: '',
+  artworkUrl: fallback ?? p.thumbnailUrl,
+);
 
-/// The cover of [p]'s first song, for a card with no picture of its own; asked once per playlist (the songs are
-/// the ones opening it shows, kept by the account). Null when it has no songs or they can't be read.
-Future<String?> firstSongCover(YoutubeMusicAccount music, RemotePlaylist p) => _firstCovers[p.id] ??= music
-    .collectionTracks(p)
-    .then(
-      (tracks) => tracks.map((t) => t.artworkUrl).nonNulls.firstOrNull,
-      onError: (Object e) {
-        _firstCovers.remove(p.id);
-        debugPrint('No first song cover for ${p.id}: $e');
-        return null;
-      },
-    );
+/// The cover of [p]'s first song when the card's own picture can't be shown, else null (the card keeps its own).
+/// YouTube Music's mixes come with `music.youtube.com/image/mixart`, which its app draws itself and isn't an image,
+/// and some playlists' thumbnails answer 404. Asked once per playlist; the songs are the ones opening it shows.
+Future<String?> firstSongCover(YoutubeMusicAccount music, RemotePlaylist p) => _firstCovers[p.id] ??= () async {
+  final own = p.thumbnailUrl;
+  if (own != null && !own.contains('music.youtube.com/image/')) {
+    if (await Metadata.artwork(playlistCover(p)) != null) return null;
+  }
+  try {
+    return (await music.collectionTracks(p)).map((t) => t.artworkUrl).nonNulls.firstOrNull;
+  } catch (e) {
+    _firstCovers.remove(p.id);
+    debugPrint('No first song cover for ${p.id}: $e');
+    return null;
+  }
+}();
 
 final _firstCovers = <String, Future<String?>>{};
 
@@ -278,9 +289,10 @@ List<Widget> remoteShelfWidgets(BuildContext context, PlayerController c, List<R
                 onPlay: () => c.playList(shelf.tracks, i, from: shelf.title),
               ),
             for (final p in shelf.collections)
-              // A card YouTube Music gives no picture (shelves like Fresh finds): its first song's cover.
+              // A card whose picture doesn't load (Fresh finds' mixes, a playlist's missing thumbnail): its first
+              // song's cover.
               FutureBuilder<String?>(
-                future: p.thumbnailUrl == null ? firstSongCover(c.ytMusic, p) : null,
+                future: firstSongCover(c.ytMusic, p),
                 builder: (context, first) => MediaCard(
                   track: playlistCover(p, fallback: first.data),
                   title: p.title,

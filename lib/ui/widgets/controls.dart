@@ -16,6 +16,7 @@ import '../debug_switches.dart';
 import '../shortcuts.dart';
 import '../theme.dart';
 import 'flower_cover.dart';
+import 'marquee_text.dart';
 import 'playing_motion.dart';
 import 'wavy_seek_track.dart';
 
@@ -973,13 +974,21 @@ class _MediaCardState extends State<MediaCard> {
                     ),
                   ),
                   SizedBox(height: LayoutPrefs.dense(10, 6)),
-                  Text(
-                    widget.title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    textAlign: widget.circle ? TextAlign.center : TextAlign.start,
-                    style: text.titleSmall?.copyWith(fontWeight: FontWeight.w700),
-                  ),
+                  // A long name slides to show itself whole (it draws only while it moves); a short one stays put,
+                  // centred under a round picture.
+                  widget.circle
+                      ? Text(
+                          widget.title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center,
+                          style: text.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+                        )
+                      : MarqueeText(
+                          widget.title,
+                          pause: const Duration(seconds: 3),
+                          style: text.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+                        ),
                   const SizedBox(height: 2),
                   Row(
                     mainAxisAlignment: widget.circle ? MainAxisAlignment.center : MainAxisAlignment.start,

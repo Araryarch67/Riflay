@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
@@ -11,8 +12,8 @@ import '../../services/layout_prefs.dart';
 /// (Settings › Look & feel › Layout › Motion, or the system's setting) it is cut off with an
 /// ellipsis instead.
 ///
-/// Only for a few titles on screen (the player, the lyrics header), never for
-/// list rows.
+/// It draws frames only while it moves: the rest at the start is a timer, so a screen of cards with long titles
+/// isn't redrawn all the time. Still not for list rows, where dozens would scroll at once.
 class MarqueeText extends StatefulWidget {
   const MarqueeText(
     this.text, {
@@ -81,6 +82,9 @@ class _MarqueeTextState extends State<MarqueeText> with SingleTickerProviderStat
   /// Width of the text the controller is running for; null when still.
   double? _running;
 
+  /// The rest at the start between two scrolls: a timer, no frames.
+  Timer? _rest;
+
   /// The edge fade, made again only when the width or the left fade changes.
   ui.Shader? _shader;
   (double, bool)? _shaderFor;
@@ -111,12 +115,15 @@ class _MarqueeTextState extends State<MarqueeText> with SingleTickerProviderStat
 
   @override
   void dispose() {
+    _rest?.cancel();
     _shader?.dispose();
     _controller.dispose();
     super.dispose();
   }
 
   void _stop() {
+    _rest?.cancel();
+    _rest = null;
     _controller
       ..stop()
       ..value = 0;
@@ -125,19 +132,27 @@ class _MarqueeTextState extends State<MarqueeText> with SingleTickerProviderStat
 
   void _start(double width) {
     if (_running == width) return;
+    _stop();
     _running = width;
-    final scroll = Duration(microseconds: ((width + widget.gap) / widget.speed * 1e6).round());
-    _controller
-      ..value = 0
-      ..repeat(period: widget.pause + scroll);
+    _controller.duration = Duration(microseconds: ((width + widget.gap) / widget.speed * 1e6).round());
+    _restThenScroll();
   }
 
-  /// How far the text has moved left at controller value [t].
-  double _offset(double t, double width) {
-    final total = widget.pause.inMicroseconds + (width + widget.gap) / widget.speed * 1e6;
-    final moving = (t * total - widget.pause.inMicroseconds) / (total - widget.pause.inMicroseconds);
-    return moving <= 0 ? 0 : moving * (width + widget.gap);
+  /// Rests at the start for [MarqueeText.pause], scrolls once, and again.
+  void _restThenScroll() {
+    _rest?.cancel();
+    _rest = Timer(widget.pause, () {
+      if (!mounted || _running == null) return;
+      _controller.forward(from: 0).then((_) {
+        if (!mounted || _running == null) return;
+        _controller.value = 0;
+        _restThenScroll();
+      }, onError: (Object _) {});
+    });
   }
+
+  /// How far the text has moved left at controller value [t] (the scroll alone: the rest isn't animated).
+  double _offset(double t, double width) => t * (width + widget.gap);
 
   Widget _line(TextStyle style, {bool ellipsis = false}) {
     final overflow = ellipsis ? TextOverflow.ellipsis : null;

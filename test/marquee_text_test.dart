@@ -45,7 +45,9 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(seconds: 1));
     expect(_shift(tester), 0);
-    await tester.pump(const Duration(seconds: 2));
+    // The rest ends (a timer, no frames), then the scroll runs.
+    await tester.pump(const Duration(seconds: 1));
+    await tester.pump(const Duration(seconds: 1));
     expect(_shift(tester), greaterThan(10));
     expect(find.bySemanticsLabel(_long), findsOneWidget);
     await tester.pumpWidget(const SizedBox());
@@ -69,7 +71,8 @@ void main() {
   testWidgets('a new title starts again from the beginning', (tester) async {
     await tester.pumpWidget(_host(_long));
     await tester.pump();
-    await tester.pump(const Duration(seconds: 4));
+    await tester.pump(const Duration(seconds: 2));
+    await tester.pump(const Duration(seconds: 1));
     expect(_shift(tester), greaterThan(10));
 
     await tester.pumpWidget(_host('$_long, the sequel'));
@@ -77,7 +80,8 @@ void main() {
     expect(_shift(tester), 0);
     await tester.pump(const Duration(seconds: 1));
     expect(_shift(tester), 0);
-    await tester.pump(const Duration(seconds: 2));
+    await tester.pump(const Duration(seconds: 1));
+    await tester.pump(const Duration(seconds: 1));
     expect(_shift(tester), greaterThan(10));
 
     // And a short one stops it.

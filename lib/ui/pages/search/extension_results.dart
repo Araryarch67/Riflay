@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../services/extensions/extension_finds.dart';
 import '../../../services/extensions/extension_store.dart';
 import '../../../services/player_controller.dart';
 import '../../../services/playlist_transfer.dart';
@@ -44,6 +45,7 @@ Future<void> playExtensionHit(BuildContext context, ExtensionSearchHit hit, Stri
       messenger?.showSnackBar(SnackBar(content: Text('Couldn\'t find ${hit.foreign} on YouTube Music')));
       return;
     }
+    ExtensionFinds.remember(match.found.first, from);
     await c.playList(match.found, 0, from: from);
   } catch (e) {
     messenger?.showSnackBar(SnackBar(content: Text('Couldn\'t play ${hit.title}')));
@@ -79,13 +81,23 @@ class _ExtensionSection extends StatelessWidget {
       builder: (context, snap) {
         final title = SliverToBoxAdapter(child: SectionTitle('From $name'));
         if (snap.connectionState != ConnectionState.done) {
-          return SliverMainAxisGroup(slivers: [title, SearchSpinner(pad: pad)]);
+          return SliverMainAxisGroup(
+            slivers: [
+              title,
+              SearchSpinner(pad: pad),
+            ],
+          );
         }
         final (:hits, :error) = snap.data!;
         if (hits.isEmpty) {
           // An extension with nothing to say stays out of the way; a failing one says so in a line.
           if (error == null) return const SliverToBoxAdapter();
-          return SliverMainAxisGroup(slivers: [title, SearchNote('$name couldn\'t search: $error', pad: pad)]);
+          return SliverMainAxisGroup(
+            slivers: [
+              title,
+              SearchNote('$name couldn\'t search: $error', pad: pad),
+            ],
+          );
         }
         return SliverMainAxisGroup(
           slivers: [

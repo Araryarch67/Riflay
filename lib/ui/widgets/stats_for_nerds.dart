@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 
 import '../../models/track.dart';
 import '../../services/audio_engine.dart';
+import '../../services/extensions/extension_finds.dart';
 import '../../services/language.dart';
 import '../../services/player_controller.dart';
 import '../../services/youtube_audio_source.dart';
@@ -162,6 +163,8 @@ class _DetailStatsSheetState extends State<_DetailStatsSheet> {
                 ? 'Downloaded copy'
                 : 'File on this device',
           ),
+          // An extension only finds a song; the sound is the same song matched on YouTube Music.
+          if (ExtensionFinds.of(track) case final ext?) ('Found with', '$ext extension · matched on YouTube Music'),
           if (track.videoId case final id?)
             streaming ? ('Video ID / itag', '$id / ${stream?.formatId ?? '-'}') : ('Video ID', id)
           else
