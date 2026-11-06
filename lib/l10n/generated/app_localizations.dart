@@ -2061,6 +2061,12 @@ abstract class AppLocalizations {
   /// **'Keep showing while paused'**
   String get discordWhilePaused;
 
+  /// No description provided for @discordShowQuality.
+  ///
+  /// In en, this message translates to:
+  /// **'Show the sound quality (FLAC 24/96, Opus 160 kbps)'**
+  String get discordShowQuality;
+
   /// No description provided for @previewYourSong.
   ///
   /// In en, this message translates to:

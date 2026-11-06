@@ -526,6 +526,7 @@
   "discordSongInList": "Song title in the member list",
   "discordListenButton": "\"Listen on YouTube Music\" button",
   "discordWhilePaused": "Keep showing while paused",
+  "discordShowQuality": "Show the sound quality (FLAC 24/96, Opus 160 kbps)",
   "previewYourSong": "Your song",
   "previewItsArtist": "Its artist",
   "discordListeningTo": "Listening to",

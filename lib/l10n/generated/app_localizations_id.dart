@@ -1067,6 +1067,9 @@ class AppLocalizationsId extends AppLocalizations {
   String get discordWhilePaused => 'Tetap tampil saat dijeda';
 
   @override
+  String get discordShowQuality => 'Tampilkan kualitas suara (FLAC 24/96, Opus 160 kbps)';
+
+  @override
   String get previewYourSong => 'Lagumu';
 
   @override

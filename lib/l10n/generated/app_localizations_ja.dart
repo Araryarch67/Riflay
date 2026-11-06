@@ -1061,6 +1061,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get discordWhilePaused => '一時停止中も表示する';
 
   @override
+  String get discordShowQuality => '音質も表示する（FLAC 24/96、Opus 160 kbps）';
+
+  @override
   String get previewYourSong => '曲名';
 
   @override

@@ -232,9 +232,10 @@ void main() {
       expect((sent(const DiscordOptions(cover: false))['assets'] as Map)['large_image'], 'openmusic');
       expect(sent(const DiscordOptions(time: false)).containsKey('timestamps'), isFalse);
       expect(sent(const DiscordOptions(songInList: false))['status_display_type'], 0);
-      expect([
-        for (final b in sent(const DiscordOptions(listenButton: false))['buttons'] as List) b['label'],
-      ], ['Download Riflay']);
+      expect(
+        [for (final b in sent(const DiscordOptions(listenButton: false))['buttons'] as List) b['label']],
+        ['Download Riflay'],
+      );
       expect(sent(const DiscordOptions(listenButton: false, appButton: false))['buttons'], isEmpty);
     });
 
@@ -244,8 +245,33 @@ void main() {
       expect((a['assets'] as Map)['small_text'], startsWith('Paused'));
     });
 
+    test('the quality shows for all on the line under the song, short', () {
+      Map<String, dynamic> withQuality(DiscordOptions o, String q) =>
+          (DiscordPresence('id', socketPaths: () => const [])..options = o).activity(
+            Track.youtube(videoId: 'v1', title: 'Kyapi', artist: 'Houshou Marine').copyWith(album: 'Ahoy'),
+            position: Duration.zero,
+            quality: q,
+          );
+      expect(
+        (withQuality(const DiscordOptions(), 'FLAC · 24-bit / 96 kHz')['assets'] as Map)['large_text'],
+        'Ahoy · FLAC 24/96',
+      );
+      expect(
+        (withQuality(const DiscordOptions(), 'Opus · 160 kbps')['assets'] as Map)['large_text'],
+        'Ahoy · Opus 160 kbps',
+      );
+      expect(
+        (withQuality(const DiscordOptions(quality: false), 'Opus · 160 kbps')['assets'] as Map)['large_text'],
+        'Ahoy',
+      );
+      expect(DiscordPresence.shortQuality('FLAC · 16-bit / 44.1 kHz'), 'FLAC 16/44.1');
+      expect(DiscordPresence.shortQuality('WAV · 32-bit float / 48 kHz'), 'WAV 32-bit float/48');
+      expect(DiscordPresence.shortQuality('DSD128'), 'DSD128');
+      expect(DiscordPresence.shortQuality('AAC'), 'AAC');
+    });
+
     test('kept as JSON, and an old save without them keeps the defaults', () {
-      const o = DiscordOptions(cover: false, whilePaused: true);
+      const o = DiscordOptions(cover: false, whilePaused: true, quality: false);
       expect(DiscordOptions.fromJson(o.toJson()), o);
       expect(DiscordOptions.fromJson(const {}), const DiscordOptions());
     });

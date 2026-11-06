@@ -221,6 +221,7 @@ class PlayerController extends ChangeNotifier {
 
   /// "FLAC · 24-bit / 96 kHz" of the current song for the Discord presence, once mpv has it.
   String? _quality;
+  String? get presenceQuality => _quality;
   bool _qualityComplete = false;
   String? _qualityFor;
   Timer? _qualityTimer;

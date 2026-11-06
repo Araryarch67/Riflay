@@ -20,6 +20,7 @@ class DiscordOptions {
     this.appButton = true,
     this.songInList = true,
     this.whilePaused = false,
+    this.quality = true,
   });
 
   /// The song's cover; off: Riflay's logo.
@@ -36,6 +37,9 @@ class DiscordOptions {
   /// A paused song stays shown, marked paused; off: the presence goes away.
   final bool whilePaused;
 
+  /// The sound's quality ("FLAC 24/96", "Opus 160 kbps") on the line under the song, beside the album.
+  final bool quality;
+
   DiscordOptions copyWith({
     bool? cover,
     bool? time,
@@ -43,6 +47,7 @@ class DiscordOptions {
     bool? appButton,
     bool? songInList,
     bool? whilePaused,
+    bool? quality,
   }) => DiscordOptions(
     cover: cover ?? this.cover,
     time: time ?? this.time,
@@ -50,6 +55,7 @@ class DiscordOptions {
     appButton: appButton ?? this.appButton,
     songInList: songInList ?? this.songInList,
     whilePaused: whilePaused ?? this.whilePaused,
+    quality: quality ?? this.quality,
   );
 
   Map<String, Object> toJson() => {
@@ -59,6 +65,7 @@ class DiscordOptions {
     'appButton': appButton,
     'songInList': songInList,
     'whilePaused': whilePaused,
+    'quality': quality,
   };
 
   factory DiscordOptions.fromJson(Map<String, Object?> j) {
@@ -71,6 +78,7 @@ class DiscordOptions {
       appButton: b('appButton', d.appButton),
       songInList: b('songInList', d.songInList),
       whilePaused: b('whilePaused', d.whilePaused),
+      quality: b('quality', d.quality),
     );
   }
 
@@ -166,6 +174,7 @@ class DiscordPresence {
     final listenUrl = videoId == null ? null : 'https://music.youtube.com/watch?v=$videoId';
     final artistUrl = t.artistId == null ? null : 'https://music.youtube.com/channel/${t.artistId}';
     final artist = t.artist.trim();
+    final shown = options.quality && quality != null ? shortQuality(quality) : null;
     return {
       'type': 2, // "Listening to"
       // The member list shows the song's title (2) or the app's name (0).
@@ -182,7 +191,8 @@ class DiscordPresence {
         // Remote URLs work as images; local files fall back to the logo, an art
         // asset in the Discord developer portal still named after the app's old name.
         'large_image': cover ?? 'openmusic',
-        'large_text': _clip(t.album ?? t.title),
+        // The line under the song: the album, and the sound's quality for all to see.
+        'large_text': _clip([t.album ?? t.title, ?shown].join(' · ')),
         'large_url': ?listenUrl,
         // The app's logo on the cover's corner, with the sound's quality for those who hover it.
         if (cover != null || !playing) 'small_image': 'openmusic',
@@ -195,6 +205,15 @@ class DiscordPresence {
       ],
     };
   }
+
+  /// [quality] ("FLAC · 24-bit / 96 kHz") as short as a profile line wants it: "FLAC 24/96", "Opus 160 kbps",
+  /// "WAV 32-bit float/48".
+  @visibleForTesting
+  static String shortQuality(String quality) => quality
+      .replaceAllMapped(RegExp(r'(\d+)-bit / ([\d.]+) kHz'), (m) => '${m[1]}/${m[2]}')
+      .replaceAllMapped(RegExp(r'(\d+-bit float) / ([\d.]+) kHz'), (m) => '${m[1]}/${m[2]}')
+      .replaceAll(' kHz', '')
+      .replaceAll(' · ', ' ');
 
   static String? _videoIdFrom(String? url) => url == null ? null : Uri.tryParse(url)?.queryParameters['v'];
 

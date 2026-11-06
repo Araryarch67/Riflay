@@ -1077,6 +1077,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get discordWhilePaused => 'Keep showing while paused';
 
   @override
+  String get discordShowQuality => 'Show the sound quality (FLAC 24/96, Opus 160 kbps)';
+
+  @override
   String get previewYourSong => 'Your song';
 
   @override

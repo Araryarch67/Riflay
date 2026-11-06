@@ -335,6 +335,7 @@
   "discordSongInList": "Judul lagu di daftar anggota",
   "discordListenButton": "Tombol \"Listen on YouTube Music\"",
   "discordWhilePaused": "Tetap tampil saat dijeda",
+  "discordShowQuality": "Tampilkan kualitas suara (FLAC 24/96, Opus 160 kbps)",
   "previewYourSong": "Lagumu",
   "previewItsArtist": "Artisnya",
   "discordListeningTo": "Mendengarkan",

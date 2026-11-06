@@ -34,6 +34,7 @@ class DiscordPresenceSettings extends StatelessWidget {
         option(tr.discordListenButton, o.listenButton, (v) => o.copyWith(listenButton: v)),
         option('"Download Riflay" button', o.appButton, (v) => o.copyWith(appButton: v)),
         option(tr.discordWhilePaused, o.whilePaused, (v) => o.copyWith(whilePaused: v)),
+        option(tr.discordShowQuality, o.quality, (v) => o.copyWith(quality: v)),
       ],
     );
   }
@@ -91,6 +92,8 @@ class _DiscordPreviewState extends State<DiscordPreview> {
       position: c.currentTrack == null ? const Duration(minutes: 1, seconds: 12) : c.position,
       duration: c.duration ?? track.duration,
       playing: playing,
+      // The song's own once mpv has read it; a sample while nothing plays.
+      quality: c.currentTrack == null ? 'FLAC · 24-bit / 96 kHz' : c.presenceQuality,
     );
     final text = Theme.of(context).textTheme;
     final assets = (a['assets'] as Map).cast<String, Object?>();

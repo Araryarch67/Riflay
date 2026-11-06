@@ -328,6 +328,7 @@
   "discordSongInList": "メンバーリストに曲名を出す",
   "discordListenButton": "「Listen on YouTube Music」ボタン",
   "discordWhilePaused": "一時停止中も表示する",
+  "discordShowQuality": "音質も表示する（FLAC 24/96、Opus 160 kbps）",
   "previewYourSong": "曲名",
   "previewItsArtist": "アーティスト名",
   "discordListeningTo": "再生中：",
