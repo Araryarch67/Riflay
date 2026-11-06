@@ -37,11 +37,10 @@ class VideoMode extends ChangeNotifier with WidgetsBindingObserver {
 
   static final instance = VideoMode._();
 
-  /// The tallest the video comes in, up to 4K, wherever it shows. Anything less came out pixelated: a computer
-  /// stretches it across the expanded player or a whole window (720p and 1080p did), and a phone fills its tall
-  /// screen with it cropped to cover, so only a middle strip of each frame shows, stretched about 2.5 times.
-  /// Above 1080p YouTube serves VP9, which phones and computers decode in hardware.
-  static int get maxHeight => 2160;
+  /// The tallest the video comes in, wherever it shows: 1080p on computers, 1440p on phones. A phone fills its tall
+  /// screen with it cropped to cover, so only a middle strip of each frame shows, stretched about 2.5 times; 1440p
+  /// is VP9, which phones decode in hardware. Taller (4K) streams buffered on ordinary connections.
+  static int get maxHeight => Host.isAndroid || Host.isIOS ? 1440 : 1080;
 
   /// Behind the page: the same size (a background is fetched only on Wi-Fi, see `prefetchAllowed`).
   static int get backgroundHeight => maxHeight;
