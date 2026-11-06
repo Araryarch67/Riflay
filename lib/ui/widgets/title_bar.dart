@@ -6,10 +6,14 @@ import '../../services/layout_prefs.dart';
 import '../theme.dart';
 import 'app_logo.dart';
 
-/// Desktop platforms draw their own title bar; mobile has none.
+/// Desktop platforms draw their own title bar; mobile has none. The web build draws the same bar (Back / Forward,
+/// Home and search along the top) in the browser tab, without what belongs to a window (dragging, its buttons).
 @visibleForTesting
 bool? debugCustomTitleBar;
-bool get hasCustomTitleBar => debugCustomTitleBar ?? (Host.isLinux || Host.isWindows || Host.isMacOS);
+bool get hasCustomTitleBar => debugCustomTitleBar ?? (hasNativeWindow || Host.isWeb);
+
+/// A window of the app's own that `window_manager` sizes, drags and closes: the desktop apps, not a browser tab.
+bool get hasNativeWindow => Host.isLinux || Host.isWindows || Host.isMacOS;
 
 /// True while the desktop layout draws the title bar itself (with Back /
 /// Forward, Home and search in it); the app frame then leaves its plain one out.
@@ -43,13 +47,14 @@ class _AppTitleBarState extends State<AppTitleBar> with WindowListener {
   @override
   void initState() {
     super.initState();
+    if (!hasNativeWindow) return;
     windowManager.addListener(this);
     _sync();
   }
 
   @override
   void dispose() {
-    windowManager.removeListener(this);
+    if (hasNativeWindow) windowManager.removeListener(this);
     super.dispose();
   }
 
@@ -77,12 +82,14 @@ class _AppTitleBarState extends State<AppTitleBar> with WindowListener {
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
-    Widget drag(Widget child) => GestureDetector(
-      behavior: HitTestBehavior.translucent,
-      onPanStart: (_) => windowManager.startDragging(),
-      onDoubleTap: _toggleMaximize,
-      child: child,
-    );
+    Widget drag(Widget child) => !hasNativeWindow
+        ? child
+        : GestureDetector(
+            behavior: HitTestBehavior.translucent,
+            onPanStart: (_) => windowManager.startDragging(),
+            onDoubleTap: _toggleMaximize,
+            child: child,
+          );
     if (widget.center != null || widget.leading != null) {
       // The centre piece sits in the middle of the window, whatever the sides hold.
       return SizedBox(
@@ -96,7 +103,7 @@ class _AppTitleBarState extends State<AppTitleBar> with WindowListener {
                   SizedBox(width: Host.isMacOS ? 80 : 12),
                   ?widget.leading,
                   const Spacer(),
-                  if (!Host.isMacOS) _windowControls(),
+                  if (hasNativeWindow && !Host.isMacOS) _windowControls() else const SizedBox(width: 12),
                 ],
               ),
             ),

@@ -239,7 +239,8 @@ class _SearchBoxState extends State<SearchBox> {
                         ),
                   filled: true,
                   fillColor: widget.onBar ? AppColors.tile : AppColors.inverse,
-                  hoverColor: widget.onBar ? AppColors.hover : null,
+                  // The theme's hover is a light wash for dark tiles; over the white pill it turned it a muddy grey.
+                  hoverColor: widget.onBar ? AppColors.hover : AppColors.onInverse.withValues(alpha: 0.06),
                   contentPadding: EdgeInsets.symmetric(vertical: widget.onBar ? 12 : 14),
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(500), borderSide: BorderSide.none),
                   // A pill when idle too: the theme's enabled border (a small radius) would otherwise win.

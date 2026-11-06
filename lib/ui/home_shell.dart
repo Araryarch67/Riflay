@@ -47,9 +47,13 @@ import 'widgets/title_bar.dart';
 
 /// Root layout.
 ///  * < 700px: bottom tabs + floating mini player, full-screen now playing.
-///  * 700–1200px: collapsed library rail + content + player bar.
+///  * 700–1200px: collapsed library rail + content + player bar; from [sidePanelFrom] the now-playing side panel
+///    fits beside them too (a browser window or a half-screen desktop one).
 ///  * ≥ 1200px: full library sidebar + content + now-playing side panel.
 class HomeShell extends StatefulWidget {
+  /// The narrowest window the now-playing side panel opens in: the rail, its minimum and the pages' minimum.
+  static const sidePanelFrom = 900.0;
+
   const HomeShell({super.key});
 
   @override
@@ -448,8 +452,12 @@ class _HomeShellState extends State<HomeShell> {
   void _dragSidebar(double dx) =>
       _sidebarWidth.value = SidebarFit.left(_sidebarWidth.value + dx, _window, sideOpen: _sideOpenNow);
 
+  /// The library sidebar's width: dragged in the expanded layout, the fixed rail below it.
+  double _leftWidth(double window, {required bool sideOpen}) =>
+      window >= 1200 ? SidebarFit.left(_sidebarWidth.value, window, sideOpen: sideOpen) : 84.0;
+
   void _dragSidePanel(double dx) {
-    final left = SidebarFit.left(_sidebarWidth.value, _window, sideOpen: true);
+    final left = _leftWidth(_window, sideOpen: true);
     _sidePanelWidth.value = SidebarFit.right(_sidePanelWidth.value - dx, _window, left: left);
   }
 
@@ -643,6 +651,7 @@ class _HomeShellState extends State<HomeShell> {
       WidgetsBinding.instance.addPostFrameCallback((_) => _closePhoneRoutes());
     }
     final expanded = width >= 1200;
+    final sideRoom = width >= HomeShell.sidePanelFrom;
 
     _compact = compact;
     // The frame's plain title bar steps aside while this layout draws the full one.
@@ -729,7 +738,7 @@ class _HomeShellState extends State<HomeShell> {
         ),
       );
     } else {
-      final sideOpen = expanded && _sidePanel && _hasTrack;
+      final sideOpen = sideRoom && _sidePanel && _hasTrack;
       _window = width;
       _sideOpenNow = sideOpen;
       // The rail at narrow widths is fixed; the dragged widths apply to the expanded layout only.
@@ -772,17 +781,13 @@ class _HomeShellState extends State<HomeShell> {
                   )
                 : const SizedBox(width: 8),
             Expanded(child: ShellPanel(child: _desktopNavigator())),
-            if (expanded)
+            if (sideRoom)
               // The sidebar listens too: widening it takes the room from this panel.
               ListenableBuilder(
                 listenable: Listenable.merge([_sidePanelWidth, _sidebarWidth]),
                 builder: (context, panel) => SlidingPanel(
                   open: sideOpen,
-                  width: SidebarFit.right(
-                    _sidePanelWidth.value,
-                    width,
-                    left: SidebarFit.left(_sidebarWidth.value, width, sideOpen: sideOpen),
-                  ),
+                  width: SidebarFit.right(_sidePanelWidth.value, width, left: _leftWidth(width, sideOpen: sideOpen)),
                   handle: ResizeHandle(
                     label: 'Resize side panel',
                     onDrag: _dragSidePanel,
@@ -791,7 +796,7 @@ class _HomeShellState extends State<HomeShell> {
                       _sidePanelWidth.value = SidebarFit.right(
                         LayoutPrefs.sidePanelDefault,
                         width,
-                        left: SidebarFit.left(_sidebarWidth.value, width, sideOpen: true),
+                        left: _leftWidth(width, sideOpen: true),
                       );
                       _saveWidths();
                     },
@@ -830,7 +835,7 @@ class _HomeShellState extends State<HomeShell> {
                     top: false,
                     child: DesktopPlayerBar(
                       sidePanelOpen: sideOpen,
-                      onToggleSidePanel: expanded ? () => setState(() => _sidePanel = !_sidePanel) : null,
+                      onToggleSidePanel: sideRoom ? () => setState(() => _sidePanel = !_sidePanel) : null,
                     ),
                   ),
                 ),

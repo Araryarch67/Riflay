@@ -8,4 +8,5 @@ R runWithNetwork<R>(R Function() body) => body();
 bool get playsOpus => true;
 
 /// The page's title. See `network.dart`; native windows keep their own.
+String get pageTitle => 'Riflay';
 set pageTitle(String title) {}

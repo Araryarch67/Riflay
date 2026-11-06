@@ -16,5 +16,8 @@ R runWithNetwork<R>(R Function() body) => http.runWithClient(body, () => ProxyCl
 final bool playsOpus = web.HTMLAudioElement().canPlayType('audio/webm; codecs="opus"').isNotEmpty;
 
 /// The tab's title. Some browsers (Brave) name the song in the desktop's media controls after it rather than after
-/// the Media Session.
-set pageTitle(String title) => web.document.title = title;
+/// the Media Session. `MaterialApp` sets the title on every rebuild (a theme change follows each song's cover), so
+/// it is given this one, not a fixed name.
+String get pageTitle => _pageTitle;
+set pageTitle(String title) => web.document.title = _pageTitle = title;
+var _pageTitle = 'Riflay';

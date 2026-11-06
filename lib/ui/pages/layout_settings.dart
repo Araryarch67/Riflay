@@ -7,7 +7,7 @@ import '../../services/player_presets.dart';
 import '../../services/beta_features.dart';
 import '../../services/video_mode.dart';
 import '../theme.dart';
-import '../widgets/title_bar.dart' show hasCustomTitleBar;
+import '../widgets/title_bar.dart' show hasNativeWindow;
 import '../../platform/host.dart';
 import 'player_presets_page.dart';
 import 'sound_settings.dart';
@@ -493,7 +493,7 @@ class LayoutSettings extends StatelessWidget {
               ),
             ],
           ),
-          if (hasCustomTitleBar && !Host.isMacOS) ...[
+          if (hasNativeWindow && !Host.isMacOS) ...[
             const _Header('Window', hint: 'Desktop only'),
             SettingsCard(
               children: [

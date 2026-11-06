@@ -18,6 +18,7 @@ import 'l10n/generated/app_localizations.dart';
 import 'models/track.dart';
 import 'platform/network.dart';
 import 'platform/host.dart';
+import 'platform/web_audio.dart';
 import 'services/incoming_links.dart';
 import 'services/appearance.dart';
 import 'services/language.dart';
@@ -54,6 +55,8 @@ Future<void> _main(List<String> args) async {
   // speakers, ReplayGain, gapless, the signal path and decoders (ALAC,
   // WavPack, DSD) that ExoPlayer and AVPlayer lack.
   JustAudioMediaKit.ensureInitialized(linux: true, windows: true, android: true, macOS: true, iOS: true);
+  // The web build's effects and visualizer (a no-op in native builds).
+  WebAudio.install();
   // The KEMAR data behind Virtual speakers asks to be credited.
   LicenseRegistry.addLicense(() async* {
     yield LicenseEntryWithLineBreaks([
@@ -71,7 +74,7 @@ Future<void> _main(List<String> args) async {
   await Future.wait([
     LegacyData.bringOver(),
     if (kDebugMode && !Host.isWeb) _logErrorsToFile(),
-    if (hasCustomTitleBar)
+    if (hasNativeWindow)
       () async {
         await windowManager.ensureInitialized();
         startSize = await _startSize();
@@ -112,7 +115,7 @@ void warmUpText() {
 }
 
 Future<void> _showWindow(Size? size) async {
-  if (!hasCustomTitleBar) return;
+  if (!hasNativeWindow) return;
   await windowManager.waitUntilReadyToShow(
     WindowOptions(
       title: 'Riflay',
@@ -329,7 +332,8 @@ class _RiflayAppState extends State<RiflayApp> with WidgetsBindingObserver {
     return PlayerScope(
       controller: widget.controller,
       child: MaterialApp(
-        title: 'Riflay',
+        // The playing song on the web, where this is the tab's title (see `network.dart`).
+        title: pageTitle,
         debugShowCheckedModeBanner: false,
         // English or Indonesian (Settings › Look & feel › Appearance › Language); Material's own words follow.
         locale: Language.instance.locale,
@@ -385,7 +389,9 @@ class _DesktopFrame extends StatelessWidget {
           // Hidden while the player fills the screen (the expanded player inside the window keeps it).
           ListenableBuilder(
             listenable: Listenable.merge([windowFullScreen, titleBarInShell]),
-            builder: (context, bar) => windowFullScreen.value || titleBarInShell.value ? const SizedBox.shrink() : bar!,
+            // A browser tab has its own title: the web build only draws the desktop layout's bar.
+            builder: (context, bar) =>
+                windowFullScreen.value || titleBarInShell.value || !hasNativeWindow ? const SizedBox.shrink() : bar!,
             child: const AppTitleBar(),
           ),
           Expanded(
