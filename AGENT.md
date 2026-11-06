@@ -446,19 +446,23 @@ Compare medians of several complete runs; debug builds are meaningless here.
 
 ## Translations
 
-Riflay speaks English and Indonesian (Settings › Look & feel › Appearance › Language; by default the
+Riflay speaks English, Indonesian and Japanese (Settings › Look & feel › Appearance › Language; by default the
 device's language when Riflay has it). The words live in `lib/l10n/app_en.arb` (the template) and
-`lib/l10n/app_id.arb`; `flutter gen-l10n` (also run by `flutter pub get` / any build) writes
+`lib/l10n/app_id.arb` / `app_ja.arb`; `flutter gen-l10n` (also run by `flutter pub get` / any build) writes
 `lib/l10n/generated/`.
 
 - Read a word through `tr` (`lib/services/language.dart`): `Text(tr.navSettings)`, also in services and
   enums, no BuildContext needed. A language change rebuilds every screen (`_relanguage` in `main.dart`).
-- A new string: add it to both .arb files (same key, same `{placeholders}`; counts as `{count}` with an
-  `int` placeholder), run `flutter gen-l10n`. `test/language_test.dart` fails when the Indonesian is
-  missing or its placeholders differ.
+- A new string: add it to every .arb file (same key, same `{placeholders}`; counts as `{count}` with an
+  `int` placeholder), run `flutter gen-l10n`. `test/language_test.dart` fails when a language is
+  missing it or its placeholders differ. A new language: its .arb plus an `AppLanguage` entry named in its
+  own script.
 - Keep the English exactly as the code had it: widget tests find screens by their English words.
 - Indonesian is plain and friendly ("kamu"), like a music app; keep product names (YouTube Music,
   Equalizer, playlist) as people say them.
+- Japanese is casual plain form (だ/る) like app copy; です/ます only for confirmations and errors. Keep
+  loanwords people expect (プレイリスト, イコライザー) and names as the English has them (Riflay, Wrap,
+  Bit-perfect). Counters stick to the number (`{count}曲`); plurals keep only `other`.
 - Not every screen is translated yet; untranslated ones show English. Move a screen's strings over as it is
   touched.
 
