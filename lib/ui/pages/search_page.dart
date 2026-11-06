@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:flutter/material.dart';
 
 import '../../models/track.dart';
@@ -32,13 +33,17 @@ export 'search/search_input.dart' show SearchInput, RecentSearches;
 const _localDebounce = Duration(milliseconds: 80);
 
 class SearchPage extends StatefulWidget {
-  const SearchPage({super.key, this.focusNode, this.input});
+  const SearchPage({super.key, this.focusNode, this.input, this.boxInBar});
 
   final FocusNode? focusNode;
 
   /// Desktop: the title bar's search box types into this page, which then
   /// shows no box of its own.
   final SearchInput? input;
+
+  /// Phone: while true the Liquid glass tab bar carries the box (typing into [input]); the page shows its own,
+  /// on the same [input], otherwise.
+  final ValueListenable<bool>? boxInBar;
 
   @override
   State<SearchPage> createState() => _SearchPageState();
@@ -276,6 +281,15 @@ class _SearchPageState extends State<SearchPage> {
     final albums = local.albums;
     final q = _query.trim().toLowerCase();
     final searching = q.length >= 2;
+    Widget box({required ValueChanged<String> onChanged}) => ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 520),
+      child: SearchBox(
+        controller: _controller,
+        focusNode: widget.focusNode,
+        onChanged: onChanged,
+        onSubmitted: _submit,
+      ),
+    );
 
     return PageScaffold(
       slivers: [
@@ -290,14 +304,17 @@ class _SearchPageState extends State<SearchPage> {
                   const SizedBox(height: 16),
                 ],
                 if (widget.input == null)
-                  ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 520),
-                    child: SearchBox(
-                      controller: _controller,
-                      focusNode: widget.focusNode,
-                      onChanged: _onQuery,
-                      onSubmitted: _submit,
-                    ),
+                  box(onChanged: _onQuery)
+                else if (widget.boxInBar case final inBar?)
+                  // Typing reaches [_onQuery] through the input's listener.
+                  ValueListenableBuilder(
+                    valueListenable: inBar,
+                    builder: (context, carried, _) => carried
+                        ? const SizedBox.shrink()
+                        : Padding(
+                            padding: EdgeInsets.only(bottom: searching ? 16 : 0),
+                            child: box(onChanged: (_) {}),
+                          ),
                   ),
                 if (searching) ...[
                   if (widget.input == null) const SizedBox(height: 16),

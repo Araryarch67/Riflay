@@ -22,7 +22,8 @@ class MiniPlayer extends StatefulWidget {
   State<MiniPlayer> createState() => _MiniPlayerState();
 }
 
-class _MiniPlayerState extends State<MiniPlayer> {
+/// Swiping the song sideways changes it: left for the next one, right for the previous one.
+mixin _SongSwipe<T extends StatefulWidget> on State<T> {
   /// How far the song is being dragged sideways.
   final _drag = ValueNotifier<double>(0);
 
@@ -43,6 +44,24 @@ class _MiniPlayerState extends State<MiniPlayer> {
     }
   }
 
+  /// [child] following the finger, fading as it goes.
+  Widget _swipeable(PlayerController c, Widget child) => GestureDetector(
+    behavior: HitTestBehavior.translucent,
+    onHorizontalDragUpdate: (d) => _drag.value += d.delta.dx,
+    onHorizontalDragEnd: (d) => _endDrag(c, d),
+    onHorizontalDragCancel: () => _drag.value = 0,
+    child: ValueListenableBuilder<double>(
+      valueListenable: _drag,
+      builder: (context, dx, child) => Transform.translate(
+        offset: Offset(dx, 0),
+        child: Opacity(opacity: (1 - dx.abs() / 240).clamp(0.3, 1), child: child),
+      ),
+      child: child,
+    ),
+  );
+}
+
+class _MiniPlayerState extends State<MiniPlayer> with _SongSwipe {
   @override
   Widget build(BuildContext context) {
     final c = PlayerScope.read(context);
@@ -81,56 +100,46 @@ class _MiniPlayerState extends State<MiniPlayer> {
                     child: Row(
                       children: [
                         Expanded(
-                          child: GestureDetector(
-                            behavior: HitTestBehavior.translucent,
-                            onHorizontalDragUpdate: (d) => _drag.value += d.delta.dx,
-                            onHorizontalDragEnd: (d) => _endDrag(c, d),
-                            onHorizontalDragCancel: () => _drag.value = 0,
-                            child: ValueListenableBuilder<double>(
-                              valueListenable: _drag,
-                              builder: (context, dx, child) => Transform.translate(
-                                offset: Offset(dx, 0),
-                                child: Opacity(opacity: (1 - dx.abs() / 240).clamp(0.3, 1), child: child),
-                              ),
-                              child: TrackSwitcher(
-                                trackId: track.id,
-                                slide: false,
-                                child: Row(
-                                  key: ValueKey(track.id),
-                                  children: [
-                                    Hero(
-                                      tag: 'now-playing-art',
-                                      child: Artwork(
-                                        track: track,
-                                        size: 40,
-                                        radius: capsule ? LayoutPrefs.radius(20) : 4,
-                                        flower: true,
-                                        scalloped: capsule,
-                                      ),
+                          child: _swipeable(
+                            c,
+                            TrackSwitcher(
+                              trackId: track.id,
+                              slide: false,
+                              child: Row(
+                                key: ValueKey(track.id),
+                                children: [
+                                  Hero(
+                                    tag: 'now-playing-art',
+                                    child: Artwork(
+                                      track: track,
+                                      size: 40,
+                                      radius: capsule ? LayoutPrefs.radius(20) : 4,
+                                      flower: true,
+                                      scalloped: capsule,
                                     ),
-                                    const SizedBox(width: 10),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          MarqueeText(
-                                            track.title,
-                                            style: text.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
-                                          ),
-                                          // Plain text, not links: a thumb on its way to the bar landed on the
-                                          // artist and left for their page. A tap opens the player, as the rest
-                                          // of the bar does; Go to artist is in its menu.
-                                          Text(
-                                            track.artist,
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                            style: text.bodySmall?.copyWith(color: AppColors.textSecondary),
-                                          ),
-                                        ],
-                                      ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        MarqueeText(
+                                          track.title,
+                                          style: text.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
+                                        ),
+                                        // Plain text, not links: a thumb on its way to the bar landed on the
+                                        // artist and left for their page. A tap opens the player, as the rest
+                                        // of the bar does; Go to artist is in its menu.
+                                        Text(
+                                          track.artist,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: text.bodySmall?.copyWith(color: AppColors.textSecondary),
+                                        ),
+                                      ],
                                     ),
-                                  ],
-                                ),
+                                  ),
+                                ],
                               ),
                             ),
                           ),
@@ -163,6 +172,103 @@ class _MiniPlayerState extends State<MiniPlayer> {
                       );
                     },
                   ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The mini player inside the Liquid glass tab bar, which draws the glass around it: cover, title and artist,
+/// play / pause and next. As [compact] goes from 0 to 1 (the bar shrinking to one row) next folds away.
+/// Tap to open the player, swipe sideways to change song, down to close; long-press for the rest.
+class GlassMiniPlayer extends StatefulWidget {
+  const GlassMiniPlayer({super.key, required this.track, required this.onOpen, this.compact = 0});
+
+  final Track track;
+  final VoidCallback onOpen;
+  final double compact;
+
+  @override
+  State<GlassMiniPlayer> createState() => _GlassMiniPlayerState();
+}
+
+class _GlassMiniPlayerState extends State<GlassMiniPlayer> with _SongSwipe {
+  @override
+  Widget build(BuildContext context) {
+    final c = PlayerScope.read(context);
+    final text = Theme.of(context).textTheme;
+    final track = widget.track;
+    final compact = widget.compact;
+    return Dismissible(
+      key: const ValueKey('glass-mini-player'),
+      direction: DismissDirection.down,
+      onDismissed: (_) => c.closePlayer(),
+      child: Material(
+        type: MaterialType.transparency,
+        child: InkWell(
+          onTap: widget.onOpen,
+          onLongPress: () => showPlayerMore(context, openPlayer: widget.onOpen),
+          // Two lines of text in a bar of fixed height: large text grows them only so far.
+          child: MediaQuery.withClampedTextScaling(
+            maxScaleFactor: 1.3,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(8, 0, 4, 0),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: _swipeable(
+                      c,
+                      TrackSwitcher(
+                        trackId: track.id,
+                        slide: false,
+                        child: Row(
+                          key: ValueKey(track.id),
+                          children: [
+                            Hero(
+                              tag: 'now-playing-art',
+                              child: Artwork(track: track, size: 42, radius: LayoutPrefs.radius(10)),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  MarqueeText(
+                                    track.title,
+                                    style: text.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
+                                  ),
+                                  // Plain text, as in the other mini player: a tap opens the player.
+                                  Text(
+                                    track.artist,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: text.bodySmall?.copyWith(color: AppColors.textSecondary),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  _MiniPlay(c: c),
+                  if (compact < 1)
+                    ClipRect(
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        widthFactor: 1 - compact,
+                        child: Opacity(
+                          opacity: (1 - compact * 2).clamp(0.0, 1.0),
+                          child: _MiniNext(c: c),
+                        ),
+                      ),
+                    ),
                 ],
               ),
             ),

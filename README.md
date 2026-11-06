@@ -100,8 +100,10 @@ Riflay builds on the work of:
 | [audio_metadata_reader](https://github.com/ClementBeal/audio_metadata_reader) | Tags | MIT |
 | Bill Gardner and Keith Martin's [KEMAR HRTF measurements](https://sound.media.mit.edu/resources/KEMAR.html) (MIT Media Lab) | Virtual speakers | MIT |
 | [akagi](https://github.com/z0orb/akagi) | Ideas behind playlist reordering and Downloads storage overview (re-implemented, no code copied) | MIT |
+| [liquid_glass_renderer](https://github.com/whynotmake-it/flutter_liquid_glass/tree/main/packages/liquid_glass_renderer) | The phone's Liquid glass tab bar | Apache-2.0 |
+| Apple Music on iOS 26 | Idea behind the Liquid glass tab bar that shrinks to one row on scroll and carries the search field (re-implemented, no code copied) | — |
 
-Riflay is not affiliated with YouTube, Google or Discord.
+Riflay is not affiliated with YouTube, Google, Discord or Apple.
 
 ## License
 

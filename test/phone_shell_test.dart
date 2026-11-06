@@ -311,8 +311,13 @@ void main() {
         expect(label.bottom, lessThanOrEqualTo(632), reason: 'above the bottom margin');
       }
       final searchX = tester.getCenter(find.byTooltip('Search').last).dx;
-      expect(searchX, greaterThan(tester.getCenter(find.byTooltip('Library').last).dx));
-      expect(searchX, lessThan(tester.getCenter(find.byTooltip('Downloads').last).dx));
+      if (style == TabBarStyle.glass) {
+        // A round button of its own, right of the tabs.
+        expect(searchX, greaterThan(label.right));
+      } else {
+        expect(searchX, greaterThan(tester.getCenter(find.byTooltip('Library').last).dx));
+        expect(searchX, lessThan(tester.getCenter(find.byTooltip('Downloads').last).dx));
+      }
       expect(tester.takeException(), isNull);
       tester.platformDispatcher.textScaleFactorTestValue = 2.0;
       addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);

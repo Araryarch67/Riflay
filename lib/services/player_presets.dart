@@ -26,6 +26,7 @@ class PlayerPreset {
     this.lyricsLines = LyricsLines.all,
     this.volumeSlider = VolumeSliderShape.classic,
     this.background,
+    this.tabBar,
     this.visualizer = false,
     this.visualizerStyle = VisualizerStyle.pulse,
     this.videoSwitch = true,
@@ -54,6 +55,9 @@ class PlayerPreset {
 
   /// The Now Playing background that goes with the look; null leaves the user's choice alone.
   final NowPlayingBackground? background;
+
+  /// The phone's tab bar that goes with the look; null leaves the user's choice alone.
+  final TabBarStyle? tabBar;
 
   /// The audio visualizer around the cover, and its style. Only counted where the visualizer exists (not on the web).
   final bool visualizer;
@@ -104,7 +108,28 @@ class PlayerPreset {
     volumeSlider: VolumeSliderShape.pill,
   );
 
-  static const all = [classic, stacked, kawaii];
+  /// Kawaii, with the Liquid glass tab bar on phones.
+  static const liquidKawaii = PlayerPreset(
+    name: 'Liquid Kawaii',
+    note: 'Kawaii, with glass tabs on phones that shrink to one row as you scroll',
+    cover: PlayerCover.background,
+    header: PlayerHeader.playingFrom,
+    titleActions: TitleActions.plain,
+    timeLeft: true,
+    transport: PlayerTransport.plain,
+    volume: false,
+    bottomRow: PlayerBottomRow.minimal,
+    lyrics: LyricsLayout.topHeader,
+    mini: MiniPlayerStyle.capsule,
+    album: AlbumHeaderStyle.hero,
+    playingRow: PlayingRowStyle.card,
+    badge: QualityBadgePlace.timeRow,
+    background: NowPlayingBackground.video,
+    volumeSlider: VolumeSliderShape.pill,
+    tabBar: TabBarStyle.glass,
+  );
+
+  static const all = [classic, stacked, kawaii, liquidKawaii];
 
   /// The settings that would change if this preset were applied to [p].
   int changesTo(LayoutPrefs p) {
@@ -128,6 +153,7 @@ class PlayerPreset {
     differ(p.volumeSlider, volumeSlider);
     differ(p.showVideoSwitch, videoSwitch);
     if (background != null) differ(Appearance.instance.nowPlaying, background!);
+    if (tabBar != null) differ(p.tabBar, tabBar!);
     if (Features.audioVisualizer) {
       differ(p.visualizer, visualizer);
       // The style only shows while it is on.
@@ -159,6 +185,7 @@ class PlayerPreset {
       p.lyricsLines = lyricsLines;
       p.volumeSlider = volumeSlider;
       p.showVideoSwitch = videoSwitch;
+      if (tabBar != null) p.tabBar = tabBar!;
       p.visualizer = visualizer;
       if (visualizer) p.visualizerStyle = visualizerStyle;
       p.fitVisualizerStyle();
@@ -170,7 +197,11 @@ class PlayerPreset {
 /// The name of the preset the current settings match, or null for a custom mix.
 String? playerPresetName([LayoutPrefs? prefs]) {
   final p = prefs ?? LayoutPrefs.instance;
-  for (final preset in PlayerPreset.all) {
+  // A preset that also sets the tab bar is named before one that leaves it alone (Liquid Kawaii before Kawaii).
+  for (final preset in [
+    ...PlayerPreset.all.where((preset) => preset.tabBar != null),
+    ...PlayerPreset.all.where((preset) => preset.tabBar == null),
+  ]) {
     if (preset.matches(p)) return preset.name;
   }
   return null;

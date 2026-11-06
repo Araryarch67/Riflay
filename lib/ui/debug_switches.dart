@@ -30,6 +30,13 @@ abstract final class DebugSwitches {
   /// Close to tray. Not part of `RIFLAY_NO_SHORTCUTS`, which is about rendering.
   static bool noTray = const bool.fromEnvironment('RIFLAY_NO_TRAY');
 
+  /// The phone's Liquid glass tab bar never shrinks to one row on scroll. Not part of `RIFLAY_NO_SHORTCUTS`, which
+  /// is about rendering.
+  static bool noTabBarCollapse = const bool.fromEnvironment('RIFLAY_NO_TAB_BAR_COLLAPSE');
+
+  /// The Liquid glass tab bar draws its pills with Riflay's own blur instead of liquid_glass_renderer.
+  static bool noGlassRenderer = _all || const bool.fromEnvironment('RIFLAY_NO_GLASS_RENDERER');
+
   /// Prints how many widgets each palette change rebuilds, and every Material theme built.
   static bool logRestyles = const bool.fromEnvironment('RIFLAY_LOG_RESTYLES');
 

@@ -89,7 +89,7 @@ lib/
   ui/
     home_shell.dart            Layouts: phone tabs / desktop sidebar + one history
     navigation.dart            DesktopHistory (Back/Forward), Locations, sidebar highlight
-    shell/                     Desktop sidebar, phone navigation, FirstFrameGate
+    shell/                     Desktop sidebar, phone navigation (the Liquid glass bar: see below), FirstFrameGate
     player/                    Player bar, mini player, Now Playing, full screen, side panel
     theme.dart                 AppColors, ThemeData from the palette, restyleTree (see Colours)
     debug_switches.dart        Turns the rendering shortcuts off to debug them (see Debugging)
@@ -102,6 +102,21 @@ third_party/                   Vendored packages (see below)
 integration_test/              Real-engine tests, run in headless Weston
 test/                          Unit and widget tests
 ```
+
+## Phone tab bar
+
+- Settings › Look & feel › Layout › Tab bar on phones. All styles live in `ui/shell/phone_navigation.dart`
+  (`PhoneBottomBar`); the mini player is built there too.
+- Liquid glass (`_GlassBar`, also set by the Liquid Kawaii preset): the mini player on its own row over the tabs,
+  Search as a round button beside them. `GlassBarLink` (owned by the shell) shrinks it to one row when the page
+  scrolls down: the shell's `NotificationListener<ScrollNotification>` around every tab feeds `onScroll`, so pages
+  need nothing. On the Search tab the bar carries the search field (`GlassBarLink.search`, a `SearchInput`) and
+  `SearchPage(boxInBar:)` leaves out its own box; while typing the field rides on the keyboard.
+- The pills are drawn by liquid_glass_renderer (one `LiquidGlassLayer` and blend group). Full glass needs Impeller
+  and Flutter GPU: on in iOS's `Info.plist` (`FLTEnableFlutterGPU`); Android stays on Impeller's OpenGL ES backend
+  (the Adreno workaround in its manifest), so it and the other platforms get the package's FakeGlass. Lightweight
+  draws the plain raised surface. `test/glass_tab_bar_test.dart` and `integration_test/glass_tab_bar_test.dart`
+  (screenshots with `SHOTS`) cover it.
 
 ## Library model
 
@@ -509,6 +524,8 @@ device's language when Riflay has it). The words live in `lib/l10n/app_en.arb` (
   flutter run --dart-define=RIFLAY_SCROBBLE_DRY_RUN=true  # print scrobbles instead of sending them
   flutter run --dart-define=RIFLAY_LASTFM_KEY=… --dart-define=RIFLAY_LASTFM_SECRET=…
   flutter run --dart-define=RIFLAY_NO_TRAY=true           # no tray icon; closing the window quits
+  flutter run --dart-define=RIFLAY_NO_TAB_BAR_COLLAPSE=true  # the phone's Liquid glass tab bar never shrinks on scroll
+  flutter run --dart-define=RIFLAY_NO_GLASS_RENDERER=true    # its pills in Riflay's own blur, not liquid_glass_renderer
   flutter run --dart-define=RIFLAY_NO_DIRECT_USB_GUARD=true  # Android Direct USB crashes for real (logcat)
   flutter run --dart-define=RIFLAY_NO_OPEN_LINKS=true     # ignore links opened or shared with Riflay
   flutter run --dart-define=RIFLAY_NO_SHARED_SIGNAL_PATH=true  # every signalPath() caller reads mpv itself

@@ -63,7 +63,10 @@ class HomeShell extends StatefulWidget {
 class _HomeShellState extends State<HomeShell> {
   PhoneTab _tab = PhoneTab.home;
   bool _sidePanel = true;
-  final _searchFocus = FocusNode();
+
+  /// The phone's Liquid glass bar: shrinks on scroll, and carries the search field (its focus is Search's).
+  final _bar = GlassBarLink();
+  FocusNode get _searchFocus => _bar.search.focus;
 
   /// Whether the title bar is in sight over the expanded player.
   final _titleBarShown = ValueNotifier<bool>(false);
@@ -164,7 +167,7 @@ class _HomeShellState extends State<HomeShell> {
     IncomingLinks.instance.stopListening(_openIncoming);
     _errors?.cancel();
     _listenEvents?.cancel();
-    _searchFocus.dispose();
+    _bar.dispose();
     _search.dispose();
     if (titleBarInShell.value) titleBarInShell.value = false;
     super.dispose();
@@ -631,7 +634,7 @@ class _HomeShellState extends State<HomeShell> {
     key: _navigators[tab],
     onGenerateRoute: (_) => _route(switch (tab) {
       PhoneTab.home => const HomePage(),
-      PhoneTab.search => SearchPage(focusNode: _searchFocus),
+      PhoneTab.search => SearchPage(focusNode: _searchFocus, input: _bar.search, boxInBar: _bar.searchInBar),
       PhoneTab.library => const LibraryPage(),
       PhoneTab.downloads => const DownloadsPage(),
       PhoneTab.settings => const SettingsPage(),
@@ -704,14 +707,18 @@ class _HomeShellState extends State<HomeShell> {
       _contentWidth = sideways ? width - PhoneSideTabs.width - insets.left - insets.right : width;
       // The desktop history stays alive (hidden) while the window is narrow,
       // so widening it again returns to the same page.
-      final pages = Stack(
-        children: [
-          Positioned.fill(child: tabs()),
-          // Full size even while hidden: laid out at width 0 its pages would break.
-          Positioned.fill(
-            child: Offstage(child: TickerMode(enabled: false, child: _desktopNavigator())),
-          ),
-        ],
+      // Every page's scrolling reaches the Liquid glass bar from here.
+      final pages = NotificationListener<ScrollNotification>(
+        onNotification: _bar.onScroll,
+        child: Stack(
+          children: [
+            Positioned.fill(child: tabs()),
+            // Full size even while hidden: laid out at width 0 its pages would break.
+            Positioned.fill(
+              child: Offstage(child: TickerMode(enabled: false, child: _desktopNavigator())),
+            ),
+          ],
+        ),
       );
       body = _scoped(
         Scaffold(
@@ -734,7 +741,8 @@ class _HomeShellState extends State<HomeShell> {
                 )
               : pages,
           bottomNavigationBar: PhoneBottomBar(
-            mini: MiniPlayer(onOpen: _openNowPlaying),
+            onOpenPlayer: _openNowPlaying,
+            link: _bar,
             tab: _tab,
             onSelect: _selectTab,
             showTabs: !sideways,

@@ -83,6 +83,7 @@ dependencies:
   windows_taskbar: ^1.1.2
   # Desktop: the tray icon and its menu (lib/platform/tray_io.dart). Linux links libayatana-appindicator3.
   tray_manager: 0.5.3
+  liquid_glass_renderer: 1.0.0-dev.2
 
 dependency_overrides:
   # The real Linux implementation of flutter_inappwebview links WPE WebKit,

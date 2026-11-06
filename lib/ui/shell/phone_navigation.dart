@@ -1,12 +1,18 @@
-import 'dart:ui' show ImageFilter;
+import 'dart:math' as math;
+import 'dart:ui' show ImageFilter, lerpDouble;
 
 import 'package:flutter/material.dart';
+import 'package:liquid_glass_renderer/liquid_glass_renderer.dart';
 
 import '../../services/language.dart';
 import '../../platform/features.dart';
 import '../../services/appearance.dart';
 import '../../services/layout_prefs.dart';
+import '../../models/track.dart';
 import '../../services/player_controller.dart';
+import '../debug_switches.dart';
+import '../pages/search/search_input.dart';
+import '../player/mini_player.dart';
 import '../theme.dart';
 
 /// The phone's tabs. Settings is one of them, so no page needs a gear of its own;
@@ -155,28 +161,44 @@ class PhoneSideTabs extends StatelessWidget {
 /// - Capsule: icons; the selected tab widens into an accent capsule with its name.
 /// - Dock: a small bar in the middle, icons only, the selected one in an accent circle.
 /// - Centre button: Home raised in the middle, in a notch cut into a plain bar.
-/// - Liquid glass: the same shape, the page blurring behind it.
+/// - Liquid glass: the page blurring behind glass pills. The mini player sits on its own row above the tabs, with
+///   Search as a round button beside them; scrolling down shrinks it all to one row (see [GlassBarLink]). On the
+///   Search tab the search field moves into the bar, and while typing it rides on the keyboard.
 class PhoneBottomBar extends StatelessWidget {
   const PhoneBottomBar({
     super.key,
-    required this.mini,
+    required this.onOpenPlayer,
     required this.tab,
     required this.onSelect,
+    required this.link,
     this.showTabs = true,
   });
 
-  final Widget mini;
+  final VoidCallback onOpenPlayer;
   final PhoneTab tab;
   final ValueChanged<PhoneTab> onSelect;
+  final GlassBarLink link;
 
   /// Off when the tabs sit in [PhoneSideTabs] instead.
   final bool showTabs;
+
+  /// Liquid glass: the round button the tabs shrink into, and the search field on the Search tab.
+  static const tabsButtonKey = ValueKey('glass-tabs-button');
+  static const searchFieldKey = ValueKey('glass-search-field');
 
   @override
   Widget build(BuildContext context) => ListenableBuilder(
     listenable: LayoutPrefs.instance,
     builder: (context, _) {
       final style = LayoutPrefs.instance.tabBar;
+      final mini = MiniPlayer(onOpen: onOpenPlayer);
+      // The search page leaves its box out while the bar carries it; told after this frame, as the page is not
+      // below the bar.
+      final inBar = showTabs && style == TabBarStyle.glass;
+      if (link.searchInBar.value != inBar) {
+        WidgetsBinding.instance.addPostFrameCallback((_) => link.searchInBar.value = inBar);
+      }
+      if (inBar) return _GlassBar(tab: tab, onSelect: onSelect, onOpenPlayer: onOpenPlayer, link: link);
       if (showTabs && style.docked) {
         return Column(
           mainAxisSize: MainAxisSize.min,
@@ -201,8 +223,7 @@ class PhoneBottomBar extends StatelessWidget {
                   child: ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: 520),
                     child: switch (style) {
-                      TabBarStyle.glass => _NotchBar(tab: tab, onSelect: onSelect, glass: true),
-                      TabBarStyle.centre => _NotchBar(tab: tab, onSelect: onSelect, glass: false),
+                      TabBarStyle.centre => _NotchBar(tab: tab, onSelect: onSelect),
                       TabBarStyle.dock => Center(
                         child: _DockBar(tab: tab, onSelect: onSelect),
                       ),
@@ -216,6 +237,502 @@ class PhoneBottomBar extends StatelessWidget {
       );
     },
   );
+}
+
+/// What the shell, the pages and the Liquid glass bar share: whether the bar is shrunk to one row, fed by the
+/// pages' scrolling through [onScroll] (one listener around them all, so no page needs its own), and the search
+/// field the bar carries on the Search tab ([search]; [searchInBar] tells the search page to leave out its own).
+class GlassBarLink {
+  final collapsed = ValueNotifier(false);
+  final searchInBar = ValueNotifier(false);
+  final search = SearchInput();
+
+  /// How far the page has scrolled one way since it last turned.
+  double _run = 0;
+
+  /// Scrolling this far one way shrinks the bar (down) or grows it (up); within [_top] of the top it is always full.
+  static const _turn = 24.0, _top = 8.0;
+
+  bool onScroll(ScrollNotification n) {
+    // The page's own list, not a shelf of covers across it or a list inside it.
+    if (n.depth != 0 || n.metrics.axis != Axis.vertical) return false;
+    final m = n.metrics;
+    if (DebugSwitches.noTabBarCollapse || m.pixels <= m.minScrollExtent + _top) {
+      _run = 0;
+      collapsed.value = false;
+    } else if (n is ScrollUpdateNotification && m.pixels <= m.maxScrollExtent) {
+      // Past the end (a bounce) counts neither way.
+      final d = n.scrollDelta ?? 0;
+      if (d == 0) return false;
+      if (d.sign != _run.sign) _run = 0;
+      _run += d;
+      if (_run > _turn) collapsed.value = true;
+      if (_run < -_turn) collapsed.value = false;
+    }
+    return false;
+  }
+
+  void dispose() {
+    collapsed.dispose();
+    searchInBar.dispose();
+    search.dispose();
+  }
+}
+
+/// Liquid glass (see [PhoneBottomBar]). Three animations drive one layout: [_collapse] (scrolled down: the tabs
+/// shrink to a round button and the mini player joins their row), [_search] (the Search tab: the search button
+/// grows into a field, the tabs shrink, a close button takes the corner) and [_typing] (the field focused: it
+/// stays alone with the close button, on top of the keyboard).
+class _GlassBar extends StatefulWidget {
+  const _GlassBar({required this.tab, required this.onSelect, required this.onOpenPlayer, required this.link});
+
+  final PhoneTab tab;
+  final ValueChanged<PhoneTab> onSelect;
+  final VoidCallback onOpenPlayer;
+  final GlassBarLink link;
+
+  @override
+  State<_GlassBar> createState() => _GlassBarState();
+}
+
+class _GlassBarState extends State<_GlassBar> with TickerProviderStateMixin {
+  /// A row's height, the round buttons' size, and the space between pills.
+  static const _size = 58.0, _gap = 8.0;
+
+  late final _collapse = _anim(widget.link.collapsed.value && !DebugSwitches.noTabBarCollapse);
+  late final _search = _anim(widget.tab == PhoneTab.search);
+  late final _typing = _anim(false);
+
+  /// The tab the round button shows: the one open, or on Search the one before it.
+  late PhoneTab _last = widget.tab == PhoneTab.search ? PhoneTab.home : widget.tab;
+
+  SearchInput get _input => widget.link.search;
+
+  AnimationController _anim(bool on) =>
+      AnimationController(vsync: this, duration: const Duration(milliseconds: 340), value: on ? 1 : 0);
+
+  @override
+  void initState() {
+    super.initState();
+    _listen(widget.link);
+  }
+
+  void _listen(GlassBarLink link) {
+    link.collapsed.addListener(_follow);
+    link.search.focus.addListener(_follow);
+  }
+
+  void _unlisten(GlassBarLink link) {
+    link.collapsed.removeListener(_follow);
+    link.search.focus.removeListener(_follow);
+  }
+
+  @override
+  void didUpdateWidget(_GlassBar old) {
+    super.didUpdateWidget(old);
+    if (old.link != widget.link) {
+      _unlisten(old.link);
+      _listen(widget.link);
+    }
+    if (old.tab != widget.tab) {
+      if (widget.tab != PhoneTab.search) _last = widget.tab;
+      // Another tab opens at its top, with the bar full.
+      widget.link.collapsed.value = false;
+    }
+    _follow();
+  }
+
+  @override
+  void dispose() {
+    _unlisten(widget.link);
+    _collapse.dispose();
+    _search.dispose();
+    _typing.dispose();
+    super.dispose();
+  }
+
+  void _follow() {
+    final search = widget.tab == PhoneTab.search;
+    _to(_collapse, widget.link.collapsed.value && !DebugSwitches.noTabBarCollapse);
+    _to(_search, search);
+    _to(_typing, search && _input.focus.hasFocus);
+  }
+
+  /// Animates [a] to on or off; without full motion it switches at once.
+  void _to(AnimationController a, bool on) {
+    final v = on ? 1.0 : 0.0;
+    if (a.value == v && !a.isAnimating) return;
+    if (LayoutPrefs.moves) {
+      a.animateTo(v, curve: Curves.easeOutCubic);
+    } else {
+      a.value = v;
+    }
+  }
+
+  /// The close button: leaves Search for the tab before it, the field emptied.
+  void _close() {
+    _input.controller.clear();
+    _input.focus.unfocus();
+    widget.onSelect(_last);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final keyboard = MediaQuery.viewInsetsOf(context).bottom;
+    return PlayerSelect<Track?>(
+      select: (c) => c.currentTrack,
+      builder: (context, track, _) => AnimatedBuilder(
+        animation: Listenable.merge([_collapse, _search, _typing]),
+        builder: (context, _) {
+          final typing = _typing.value;
+          final mini = track != null && typing < 1;
+          final height = mini ? _size * 2 + _gap : _size;
+          return SafeArea(
+            top: false,
+            child: Padding(
+              // While typing, the row rides on the keyboard (the scaffold leaves its bar under it).
+              padding: EdgeInsets.fromLTRB(12, 0, 12, 10 + keyboard * typing),
+              // As wide as a phone at most, as the other floating bars.
+              child: Center(
+                heightFactor: 1,
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 520),
+                  child: SizedBox(
+                    width: double.infinity,
+                    height: height,
+                    child: MediaQuery.withClampedTextScaling(
+                      maxScaleFactor: 1.3,
+                      child: LayoutBuilder(
+                        builder: (context, box) =>
+                            _layer(context, Stack(children: _parts(context, box.maxWidth, height, track))),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  List<Widget> _parts(BuildContext context, double width, double height, Track? track) {
+    final colors = AppColors.of(context);
+    final search = _search.value, typing = _typing.value;
+    // Search keeps the bar full: the field needs the room.
+    final collapse = _collapse.value * (1 - search);
+    final shrink = math.max(collapse, search);
+    final row = height - _size;
+    final side = _size + _gap;
+    final full = width - side;
+    final tabs = Rect.fromLTWH(0, row, lerpDouble(full, _size, shrink)!, _size);
+    final corner = Rect.fromLTWH(width - _size, row, _size, _size);
+    final field = Rect.lerp(
+      Rect.fromLTWH(side, row, width - 2 * side, _size),
+      Rect.fromLTWH(0, row, full, _size),
+      typing,
+    )!;
+    final searchRect = Rect.lerp(corner, field, search)!;
+    return [
+      if (typing < 1)
+        Positioned.fromRect(
+          rect: tabs,
+          child: _fade(
+            1 - typing,
+            IgnorePointer(ignoring: typing > 0.5, child: _tabsPill(colors, full, shrink, search)),
+          ),
+        ),
+      Positioned.fromRect(rect: searchRect, child: _searchPill(colors, searchRect.width, field.width, search)),
+      if (search > 0)
+        Positioned.fromRect(
+          rect: corner,
+          child: _fade(
+            search,
+            IgnorePointer(
+              ignoring: search < 0.5,
+              child: _round(
+                tooltip: tr.close,
+                onTap: _close,
+                child: Icon(Icons.close_rounded, color: colors.textPrimary, size: 26),
+              ),
+            ),
+          ),
+        ),
+      if (track != null && typing < 1)
+        Positioned.fromRect(
+          rect: Rect.lerp(
+            Rect.fromLTWH(0, 0, width, _size),
+            Rect.fromLTWH(side, row, width - 2 * side, _size),
+            collapse,
+          )!,
+          child: _fade(
+            1 - typing,
+            _glass(colors, GlassMiniPlayer(track: track, onOpen: widget.onOpenPlayer, compact: collapse)),
+          ),
+        ),
+    ];
+  }
+
+  /// The tabs, laid out at their full width while the pill shrinks around them and they fade, and the open tab's
+  /// icon sliding from its place to the round button's middle.
+  Widget _tabsPill(AppColorsView colors, double full, double shrink, double search) {
+    final shown = [
+      for (final i in _shownTabs)
+        if (i.tab != PhoneTab.search) i,
+    ];
+    final at = math.max(0, shown.indexWhere((i) => i.tab == _last));
+    final centre = full / shown.length * (at + 0.5);
+    final last = _info(_last);
+    return _glass(
+      colors,
+      Stack(
+        children: [
+          if (shrink < 1)
+            Opacity(
+              opacity: (1 - shrink * 2).clamp(0.0, 1.0),
+              child: IgnorePointer(
+                ignoring: shrink > 0.5,
+                child: OverflowBox(
+                  alignment: Alignment.centerLeft,
+                  minWidth: full,
+                  maxWidth: full,
+                  child: Padding(
+                    padding: const EdgeInsets.all(4),
+                    child: Row(
+                      children: [
+                        for (final i in shown)
+                          Expanded(
+                            child: _TabButton(
+                              info: i,
+                              selected: widget.tab == i.tab,
+                              onTap: () => widget.onSelect(i.tab),
+                              child: _GlassTab(info: i, selected: widget.tab == i.tab),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          if (shrink > 0)
+            Positioned(
+              left: lerpDouble(centre - _size / 2, 0, shrink),
+              top: 0,
+              width: _size,
+              height: _size,
+              child: Opacity(
+                opacity: shrink,
+                child: IgnorePointer(
+                  ignoring: shrink < 0.5,
+                  child: _TabButton(
+                    key: PhoneBottomBar.tabsButtonKey,
+                    info: last,
+                    selected: widget.tab == _last,
+                    // Shrunk by scrolling it brings the tabs back; on Search it returns to the tab before.
+                    onTap: search > 0.5 ? () => widget.onSelect(_last) : () => widget.link.collapsed.value = false,
+                    child: Center(
+                      child: _TabIcon(
+                        info: last,
+                        selected: true,
+                        color: search > 0.5 ? colors.textPrimary : colors.accent,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  /// Search: a round button that grows into the search field ([search] from 0 to 1), [fieldWidth] wide in the end.
+  Widget _searchPill(AppColorsView colors, double width, double fieldWidth, double search) {
+    final open = widget.tab == PhoneTab.search;
+    const inset = 16.0 + 24 + 10;
+    return _glass(
+      colors,
+      Stack(
+        children: [
+          if (search < 1)
+            Positioned.fill(
+              child: IgnorePointer(
+                ignoring: search > 0.5,
+                child: Semantics(
+                  button: true,
+                  selected: open,
+                  label: tr.navSearch,
+                  excludeSemantics: true,
+                  child: Tooltip(
+                    message: tr.navSearch,
+                    child: InkWell(onTap: () => widget.onSelect(PhoneTab.search)),
+                  ),
+                ),
+              ),
+            ),
+          Positioned(
+            left: lerpDouble((_size - 24) / 2, 16, search),
+            top: 0,
+            bottom: 0,
+            child: IgnorePointer(
+              child: Icon(
+                Icons.search_rounded,
+                size: 24,
+                color: search > 0.5 ? colors.textSecondary : colors.textPrimary,
+              ),
+            ),
+          ),
+          // Built as soon as Search opens, so "focus the search box" finds it before the field has grown.
+          if (open)
+            Positioned(
+              left: inset,
+              top: 0,
+              bottom: 0,
+              width: math.max(0.0, width - inset),
+              child: Opacity(
+                opacity: search,
+                child: IgnorePointer(
+                  ignoring: search < 0.5,
+                  child: OverflowBox(
+                    alignment: Alignment.centerLeft,
+                    minWidth: fieldWidth - inset,
+                    maxWidth: fieldWidth - inset,
+                    child: _field(context, colors),
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _field(BuildContext context, AppColorsView colors) {
+    final text = Theme.of(context).textTheme;
+    return Row(
+      children: [
+        Expanded(
+          child: TextField(
+            key: PhoneBottomBar.searchFieldKey,
+            controller: _input.controller,
+            focusNode: _input.focus,
+            textInputAction: TextInputAction.search,
+            onSubmitted: _input.submit,
+            style: text.bodyLarge?.copyWith(color: colors.textPrimary),
+            cursorColor: colors.accent,
+            // The pill is the field: no fill or outline of the theme's, focused or not.
+            decoration: InputDecoration(
+              isCollapsed: true,
+              filled: false,
+              border: InputBorder.none,
+              enabledBorder: InputBorder.none,
+              focusedBorder: InputBorder.none,
+              contentPadding: EdgeInsets.zero,
+              hintText: tr.searchHint,
+              hintStyle: text.bodyLarge?.copyWith(color: colors.textSecondary),
+            ),
+          ),
+        ),
+        ListenableBuilder(
+          listenable: _input.controller,
+          builder: (context, _) => _input.controller.text.isEmpty
+              ? const SizedBox(width: 12)
+              : IconButton(
+                  tooltip: tr.clear,
+                  color: colors.textSecondary,
+                  iconSize: 20,
+                  onPressed: _input.controller.clear,
+                  icon: const Icon(Icons.cancel_rounded),
+                ),
+        ),
+      ],
+    );
+  }
+
+  /// A round glass button.
+  Widget _round({required String tooltip, required VoidCallback onTap, required Widget child}) => _glass(
+    AppColors.of(context),
+    Semantics(
+      button: true,
+      label: tooltip,
+      excludeSemantics: true,
+      child: Tooltip(
+        message: tooltip,
+        child: InkWell(
+          onTap: onTap,
+          child: Center(child: child),
+        ),
+      ),
+    ),
+  );
+
+  /// Whether the pills are drawn by liquid_glass_renderer, which refracts the page behind them and melts pills that
+  /// touch into one (it falls back to its own frosted glass where the GPU path isn't there, as on the web).
+  /// Lightweight draws the plain raised surface instead; `RIFLAY_NO_GLASS_RENDERER` Riflay's own blur.
+  static bool get _renderer => !LayoutPrefs.lightweight && !DebugSwitches.noGlassRenderer;
+
+  /// The one layer every pill of the bar renders into, the pills melting together where they come closer than
+  /// [_gap] (as the mini player passes over the tabs).
+  Widget _layer(BuildContext context, Widget child) {
+    if (!_renderer) return child;
+    return LiquidGlassLayer(
+      settings: LiquidGlassSettings.ios27Regular(
+        brightness: AppColors.of(context).light ? Brightness.light : Brightness.dark,
+      ),
+      child: LiquidGlassBlendGroup(blend: _gap - 2, child: child),
+    );
+  }
+
+  /// [child] faded to [visibility]: the renderer's glass fades through its own scope, which [Opacity] doesn't reach.
+  Widget _fade(double visibility, Widget child) => _renderer
+      ? LiquidGlassVisibility(visibility: visibility, child: child)
+      : Opacity(opacity: visibility, child: child);
+
+  /// [child] on a glass pill.
+  Widget _glass(AppColorsView colors, Widget child) {
+    final radius = math.min(LayoutPrefs.radius(_size / 2), _size / 2);
+    if (_renderer) {
+      return LiquidGlass.grouped(
+        shape: LiquidRoundedSuperellipse(borderRadius: radius),
+        child: Material(type: MaterialType.transparency, child: child),
+      );
+    }
+    final shape = _PillShape(radius);
+    return LayoutPrefs.lightweight
+        ? _SolidSurface(shape: shape, colors: colors, child: child)
+        : _LiquidGlass(shape: shape, colors: colors, child: child);
+  }
+}
+
+/// One tab in the glass pill: its icon over its name, a soft wash behind the open one.
+class _GlassTab extends StatelessWidget {
+  const _GlassTab({required this.info, required this.selected});
+
+  final _TabInfo info;
+  final bool selected;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
+    return AnimatedContainer(
+      duration: LayoutPrefs.dur(const Duration(milliseconds: 200)),
+      curve: Curves.easeOut,
+      decoration: BoxDecoration(
+        color: colors.textPrimary.withValues(alpha: selected ? 0.1 : 0),
+        borderRadius: BorderRadius.circular(LayoutPrefs.radius(25)),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          _icon(context, info, selected),
+          const SizedBox(height: 2),
+          _TabLabel(info: info, selected: selected, color: selected ? colors.accent : null),
+        ],
+      ),
+    );
+  }
 }
 
 _TabInfo _info(PhoneTab t) => _tabItems.firstWhere((i) => i.tab == t);
@@ -395,7 +912,7 @@ class _RaisedSurface extends StatelessWidget {
 
 /// What every tab shares: one button named by its label, for screen readers and as a tooltip.
 class _TabButton extends StatelessWidget {
-  const _TabButton({required this.info, required this.selected, required this.onTap, required this.child});
+  const _TabButton({super.key, required this.info, required this.selected, required this.onTap, required this.child});
 
   final _TabInfo info;
   final bool selected;
@@ -583,14 +1100,13 @@ class _Capsule extends StatelessWidget {
   }
 }
 
-/// Centre button and Liquid glass: Home raised in a notch in the middle of the bar, the other tabs as icons with a
-/// dot under the selected one. With [glass] the page blurs behind the bar; without, it is the plain raised surface.
+/// Centre button: Search raised in a notch in the middle of the bar, the other tabs as icons with a dot under the
+/// selected one.
 class _NotchBar extends StatelessWidget {
-  const _NotchBar({required this.tab, required this.onSelect, required this.glass});
+  const _NotchBar({required this.tab, required this.onSelect});
 
   final PhoneTab tab;
   final ValueChanged<PhoneTab> onSelect;
-  final bool glass;
 
   static const _height = 60.0;
 
@@ -632,10 +1148,7 @@ class _NotchBar extends StatelessWidget {
         side(_right),
       ],
     );
-    // Lightweight: no blur layer, the plain raised bar instead.
-    final surface = glass && !LayoutPrefs.lightweight
-        ? _LiquidGlass(shape: shape, colors: colors, child: row)
-        : _SolidNotched(shape: shape, colors: colors, child: row);
+    final surface = _SolidSurface(shape: shape, colors: colors, child: row);
     return SizedBox(
       height: _height + _rise,
       child: Stack(
@@ -754,13 +1267,13 @@ class _SearchHub extends StatelessWidget {
   }
 }
 
-/// The bar's liquid glass. What scrolls behind is blurred and its colours lifted, then tinted with the theme's
-/// raised surface (lighter at the top), edged with a rim that catches the light on top and fades towards the
-/// bottom. The shadow is painted outside the clip, so it follows the notch.
+/// Liquid glass. What scrolls behind is blurred and its colours lifted, then tinted with the theme's raised surface
+/// (lighter at the top), edged with a rim that catches the light on top and fades towards the bottom. The shadow
+/// is painted outside the clip, so it follows the shape.
 class _LiquidGlass extends StatelessWidget {
   const _LiquidGlass({required this.shape, required this.colors, required this.child});
 
-  final _NotchedBar shape;
+  final CustomClipper<Path> shape;
   final AppColorsView colors;
   final Widget child;
 
@@ -800,11 +1313,11 @@ class _LiquidGlass extends StatelessWidget {
   }
 }
 
-/// The notched bar without the glass: the theme's raised colour under a hairline, and the same shadow.
-class _SolidNotched extends StatelessWidget {
-  const _SolidNotched({required this.shape, required this.colors, required this.child});
+/// A bar without the glass: the theme's raised colour under a hairline, and the same shadow.
+class _SolidSurface extends StatelessWidget {
+  const _SolidSurface({required this.shape, required this.colors, required this.child});
 
-  final _NotchedBar shape;
+  final CustomClipper<Path> shape;
   final AppColorsView colors;
   final Widget child;
 
@@ -825,7 +1338,7 @@ class _SolidNotched extends StatelessWidget {
 class _Outline extends CustomPainter {
   const _Outline(this.shape, this.color);
 
-  final _NotchedBar shape;
+  final CustomClipper<Path> shape;
   final Color color;
 
   @override
@@ -838,25 +1351,25 @@ class _Outline extends CustomPainter {
   );
 
   @override
-  bool shouldRepaint(_Outline old) => old.color != color || old.shape.shouldReclip(shape);
+  bool shouldRepaint(_Outline old) => old.color != color || _reshaped(old.shape, shape);
 }
 
 class _GlassShadow extends CustomPainter {
   const _GlassShadow(this.shape);
 
-  final _NotchedBar shape;
+  final CustomClipper<Path> shape;
 
   @override
   void paint(Canvas canvas, Size size) => canvas.drawShadow(shape.getClip(size), const Color(0x80000000), 6, true);
 
   @override
-  bool shouldRepaint(_GlassShadow old) => old.shape.shouldReclip(shape);
+  bool shouldRepaint(_GlassShadow old) => _reshaped(old.shape, shape);
 }
 
 class _GlassFace extends CustomPainter {
   const _GlassFace(this.shape, this.tint, {required this.light});
 
-  final _NotchedBar shape;
+  final CustomClipper<Path> shape;
   final Color tint;
   final bool light;
 
@@ -900,7 +1413,25 @@ class _GlassFace extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_GlassFace old) => old.tint != tint || old.light != light || old.shape.shouldReclip(shape);
+  bool shouldRepaint(_GlassFace old) => old.tint != tint || old.light != light || _reshaped(old.shape, shape);
+}
+
+/// Whether [now] cuts a different outline than [old] did (a clipper only compares with its own kind).
+bool _reshaped(CustomClipper<Path> old, CustomClipper<Path> now) =>
+    old.runtimeType != now.runtimeType || now.shouldReclip(old);
+
+/// A pill: a rectangle with ends as round as [radius] allows (a circle when square).
+class _PillShape extends CustomClipper<Path> {
+  const _PillShape(this.radius);
+
+  final double radius;
+
+  @override
+  Path getClip(Size size) => Path()
+    ..addRRect(RRect.fromRectAndRadius(Offset.zero & size, Radius.circular(radius.clamp(0, size.shortestSide / 2))));
+
+  @override
+  bool shouldReclip(_PillShape old) => old.radius != radius;
 }
 
 /// The bar's outline: a rounded rectangle with a smooth notch around the Search button.
