@@ -60,7 +60,11 @@ class _AudioReactiveViewState extends State<AudioReactiveView> with WidgetsBindi
   // would land its frames between the seek bar's.
   UiBeatListener? _beat;
 
-  double get _cap => math.min(widget.maxFps ?? 60, LayoutPrefs.heavy ? 60 : 20);
+  /// Heavy's 30 fps (on the beats the flower and wave use, [PlayingMotion.heavyEvery]) only with the window focused:
+  /// behind another app it moves at Balanced's 20 (each frame redraws the whole window, a glance doesn't need more).
+  double get _cap => math.min(widget.maxFps ?? 60, LayoutPrefs.heavy && _focused ? 30 : 20);
+
+  bool _focused = true;
 
   bool get _running => _beat != null;
 
@@ -83,6 +87,7 @@ class _AudioReactiveViewState extends State<AudioReactiveView> with WidgetsBindi
     // While the window can be seen, focused or behind another app (people watch it beside their work); minimized
     // or hidden, the meter is let go and mpv drops its filter bank too.
     _foreground = PlayingMotion.visible(WidgetsBinding.instance.lifecycleState);
+    _focused = PlayingMotion.decorates(WidgetsBinding.instance.lifecycleState);
   }
 
   @override
@@ -149,6 +154,8 @@ class _AudioReactiveViewState extends State<AudioReactiveView> with WidgetsBindi
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     _foreground = PlayingMotion.visible(state);
+    _focused = PlayingMotion.decorates(state);
+    _beat?.period = Duration(microseconds: (1000000 / _cap).round());
     _sync();
   }
 

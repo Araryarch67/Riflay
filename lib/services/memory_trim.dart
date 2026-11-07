@@ -54,6 +54,12 @@ abstract final class MemoryTrim {
     if (_hidden || _idle) _trim(workingSet: true);
   }
 
+  /// Empties the working set once the window is idle, looking again every [_idleAfter] until it is.
+  static void _whenIdle() {
+    if (_idle || _hidden) return _trim(workingSet: true);
+    _soon = Timer(_idleAfter, _whenIdle);
+  }
+
   /// Trims a few seconds from now (after a song change has settled), and
   /// once a minute from then on.
   static void schedule() {
@@ -61,7 +67,12 @@ abstract final class MemoryTrim {
     _listen();
     _every ??= Timer.periodic(const Duration(minutes: 1), (_) => _tick());
     _soon?.cancel();
-    _soon = Timer(const Duration(seconds: 4), () => _trim(workingSet: Host.isWindows && _idle));
+    _soon = Timer(const Duration(seconds: 4), () {
+      _trim(workingSet: Host.isWindows && _idle);
+      // Windows, still in use: the working set goes back once nobody has touched the window for a while, not at the
+      // next minute (after a start or a song change it stood near its peak, ~190 MB, for up to a minute).
+      if (Host.isWindows && !_idle) _soon = Timer(_idleAfter, _whenIdle);
+    });
   }
 
   /// The window was hidden or minimized: nothing is drawn, so cached images and

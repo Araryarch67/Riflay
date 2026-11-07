@@ -25,12 +25,19 @@ class UiBeat {
   static Timer? _timer;
   static int _last = 0;
 
+  /// Beats counted since the clock started, across restarts of [_timer] (views fire on multiples of it).
+  static int _count = 0;
+
+  /// Beats between two firings of [_timer]: as many as the busiest view allows. A seek bar ticking once a second
+  /// alone wakes the app once a second, not 60 times (each wake-up is the Dart thread's own work, ~5% of a core).
+  static int _stride = 1;
+
   /// Calls [onBeat] about every [every] (rounded to whole beats; at least one)
   /// with the time since its last call, until [UiBeatListener.cancel].
   static UiBeatListener listen(Duration every, void Function(Duration elapsed) onBeat) {
     final l = UiBeatListener._(every, onBeat);
     _listeners.add(l);
-    _timer ??= Timer.periodic(period, _beat);
+    _restride();
     return l;
   }
 
@@ -42,10 +49,23 @@ class UiBeat {
     return n < 3 || DebugSwitches.unalignedBeats ? n : (n / 3).round() * 3;
   }
 
+  /// Starts the timer, or starts it again at a new [_stride] when the busiest view's pace changed.
+  static void _restride() {
+    if (_listeners.isEmpty) return;
+    final stride = DebugSwitches.unalignedBeats ? 1 : _listeners.map((l) => beatsFor(l.period)).reduce(math.min);
+    if (_timer != null && stride == _stride) return;
+    _timer?.cancel();
+    _stride = stride;
+    _last = 0;
+    _timer = Timer.periodic(period * stride, _beat);
+  }
+
   static void _beat(Timer t) {
     // Beats the timer could not keep up with still count, so motion keeps its speed.
-    final elapsed = period * (t.tick - _last);
+    final beats = (t.tick - _last) * _stride;
     _last = t.tick;
+    _count += beats;
+    final elapsed = period * beats;
     for (final l in List.of(_listeners)) {
       if (!l._active) continue;
       l._waited += elapsed;
@@ -53,7 +73,7 @@ class UiBeat {
       // On the shared count (a missed beat can't make a view skip its turn); unaligned, its own.
       final due = DebugSwitches.unalignedBeats
           ? l._waited + period ~/ 2 >= period * n
-          : t.tick % n == 0 || l._waited >= period * n;
+          : _count % n == 0 || l._waited >= period * n;
       if (due) {
         final waited = l._waited;
         l._waited = Duration.zero;
@@ -71,16 +91,26 @@ class UiBeat {
       _timer?.cancel();
       _timer = null;
       _last = 0;
+      _count = 0;
+    } else {
+      _restride();
     }
   }
 }
 
 /// A view's place on [UiBeat].
 class UiBeatListener {
-  UiBeatListener._(this.period, this._onBeat);
+  UiBeatListener._(this._period, this._onBeat);
 
   /// How often it wants a call.
-  Duration period;
+  Duration get period => _period;
+  Duration _period;
+  set period(Duration value) {
+    if (value == _period) return;
+    _period = value;
+    if (_active) UiBeat._restride();
+  }
+
   final void Function(Duration elapsed) _onBeat;
   Duration _waited = Duration.zero;
   bool _active = true;

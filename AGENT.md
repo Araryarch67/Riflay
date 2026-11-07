@@ -668,8 +668,17 @@ device's language when Riflay has it). The words live in `lib/l10n/app_en.arb` (
   So on Windows the side panel's video covers the picture (`panscan`) with the title under it, its shade and fade
   come from an mpv user shader (`VideoMode._fadeShader`), and there is no video behind Now Playing's words. The
   windows are disabled: the main window hands their mouse input to the Flutter view. Playing in front: ~0.1% of
-  a 24-thread CPU (it was ~3%).
+  a 24-thread CPU (it was ~3%). It plays on behind other windows (only minimized or hidden lets it go), keeps its
+  player a minute without a view (`_holdWithoutView`), and the side panel has none in Lightweight.
+  `RIFLAY_IMPELLER=on|off` (runner/main.cpp) picks the renderer for measuring; Skia saved no memory here.
 - `StreakFlame` breathes three times when it comes on screen, then rests (it repeated forever at the display's rate).
+- `UiBeat`'s timer fires only as often as its busiest view needs (`_stride`): a seek bar ticking once a second wakes
+  the app once a second, not 60 times. Heavy's decorations and visualizer run at 30 fps (`PlayingMotion.heavyEvery`):
+  at 60 a focused window cost ~0.9% of a 24-thread CPU. The visualizer moves while the window can be seen
+  (`PlayingMotion.visible`), at 20 fps when another window has the focus.
+- Measured on a 24-thread laptop (Windows, playing a YouTube song with its video and the visualizer on, % of the
+  whole CPU / private working set): Lightweight 0.01-0.16% / 30-85 MB after the first idle trim (~15 s, see
+  `MemoryTrim`), Balanced 0.2-0.7% / up to ~260 MB, Heavy 0.4-0.7% / up to ~275 MB in front and ~0.1% behind.
 - `third_party/just_audio_media_kit` sends a playback event for mpv's `time-pos` only when just_audio's own
   extrapolation would be 250 ms off (or every 2 s), and for the read-ahead per second: mpv reports both dozens of
   times a second.

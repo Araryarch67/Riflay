@@ -265,7 +265,9 @@ class _HeroPanel extends StatelessWidget {
                 fit: StackFit.expand,
                 children: [
                   FadedCover(track: track, fade: AppColors.panel, blurStart: 0.7),
-                  TrackVisual(track: track, cover: const SizedBox.expand(), fill: true, fade: AppColors.panel),
+                  // Not in Lightweight, as the video behind the panel never was there.
+                  if (!LayoutPrefs.lightweight)
+                    TrackVisual(track: track, cover: const SizedBox.expand(), fill: true, fade: AppColors.panel),
                 ],
               ),
             ),

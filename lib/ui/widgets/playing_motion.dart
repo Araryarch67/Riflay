@@ -84,6 +84,10 @@ class _PlayingMotionState extends State<PlayingMotion> with WidgetsBindingObserv
   /// the wave rolls slowly, so 20 fps looks the same; at 30 each frame of a playing song cost half again as much.
   static const _slow = Duration(milliseconds: 50);
 
+  /// Heavy: 30 fps, every second beat. At the display's rate (60) a focused window spent ~0.9% of a 24-thread
+  /// processor on the flower and the wave alone; 30 still reads as smooth for their slow motion.
+  static const heavyEvery = Duration(microseconds: 33334);
+
   @override
   void initState() {
     super.initState();
@@ -127,7 +131,7 @@ class _PlayingMotionState extends State<PlayingMotion> with WidgetsBindingObserv
     if (allowed != _allowed) setState(() => _allowed = allowed);
   }
 
-  Duration get _every => LayoutPrefs.heavy ? UiBeat.period : _slow;
+  Duration get _every => LayoutPrefs.heavy ? heavyEvery : _slow;
 
   void _tick(Duration elapsed) {
     _clock.advance(elapsed);
