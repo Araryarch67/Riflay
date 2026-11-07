@@ -53,6 +53,10 @@ abstract final class DebugSwitches {
   /// The seek bar's position stays on [UiBeat] while paused, as before.
   static bool beatWhilePaused = _all || const bool.fromEnvironment('RIFLAY_BEAT_WHILE_PAUSED');
 
+  /// Decorations, the visualizer and marquees keep moving, and the seek bar at its speed, while another window has
+  /// the focus, as before.
+  static bool moveUnfocused = _all || const bool.fromEnvironment('RIFLAY_MOVE_UNFOCUSED');
+
   /// Prints how many widgets each palette change rebuilds, and every Material theme built.
   static bool logRestyles = const bool.fromEnvironment('RIFLAY_LOG_RESTYLES');
 

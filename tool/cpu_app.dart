@@ -164,6 +164,10 @@ Future<void> main() async {
     );
   }
 
+  // Headless Weston has no keyboard, so the window never gets the focus: say it has, as on a desktop where someone
+  // is looking at it. "unfocused" below is another window having the focus.
+  stdout.writeln('CPU (the embedder reported ${WidgetsBinding.instance.lifecycleState}; measured as resumed)');
+  WidgetsBinding.instance.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
   await measure('idle, Home');
   final queue = [
     for (final t in c.library)
@@ -184,6 +188,9 @@ Future<void> main() async {
   await c.play();
   ShellScope.of(_find((e) => e.widget is PageScaffold)!).openNowPlaying();
   await measure('playing, Now Playing');
+  WidgetsBinding.instance.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+  await measure('playing, Now Playing, unfocused');
+  WidgetsBinding.instance.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
   await c.pause();
   await measure('paused, Now Playing');
   exit(0);

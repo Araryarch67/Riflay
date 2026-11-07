@@ -63,7 +63,7 @@ class MarqueeText extends StatefulWidget {
   /// rests until the song plays again: a song title sliding over a paused player kept the window drawing.
   final bool whilePaused;
 
-  /// Whether a song plays (set once by the app); null, as in tests, counts as playing.
+  /// Whether a song plays with the window focused (set once by the app); null, as in tests, counts as playing.
   static ValueListenable<bool>? playing;
 
   @override

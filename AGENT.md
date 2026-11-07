@@ -585,6 +585,7 @@ device's language when Riflay has it). The words live in `lib/l10n/app_en.arb` (
   flutter run --dart-define=RIFLAY_NO_DEVICE_SETUP=true  # no setup page on a computer's first start
   flutter run --dart-define=RIFLAY_QUICK_LIGHTWEIGHT_SEEK_BAR=true  # Lightweight's seek bar moves 2-4 times a second, not once
   flutter run --dart-define=RIFLAY_BEAT_WHILE_PAUSED=true  # the seek bar's position stays on UiBeat while paused
+  flutter run --dart-define=RIFLAY_MOVE_UNFOCUSED=true  # decorations, visualizer and marquees keep moving while another window has the focus
   flutter run -d chrome --dart-define=RIFLAY_NO_WEB_AUDIO=true  # web: songs play straight from <audio>, no effects or visualizer
   ```
 
@@ -647,6 +648,10 @@ device's language when Riflay has it). The words live in `lib/l10n/app_en.arb` (
   Lightweight's seek bar and the quality badge tick once a second on the same beat (about 1 frame a second while
   playing). Paused, nothing stays on the beat (`tool/cpu.sh` prints how many are): a listener that only returns
   still keeps its 60 Hz timer waking the app.
+- Decorations (the flower, the wave, the visualizer) and marquees move only while the window has the focus
+  (`PlayingMotion.decorates`: `resumed`; computers report `inactive` while another window has it), and the seek bar
+  ticks once a second then. Most listening happens with another window in front: a playing song in Balanced then
+  costs what Lightweight does. `tool/cpu.sh` measures it as "unfocused".
 - Wheel scrolling: give new vertical scroll views a `SmoothScrollController`
   (or wrap them in `SmoothScroll`).
 - Overlays above content (sticky headers) must not swallow clicks: wrap

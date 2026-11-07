@@ -598,7 +598,10 @@ class PlayerController extends ChangeNotifier {
     late final StreamController<Duration> out;
     Duration every() {
       final step = (duration ?? Duration.zero) ~/ 2400;
-      final slow = lightweight && !DebugSwitches.quickLightweightSeekBar;
+      // Lightweight, or another window has the focus: once a second, with the time beside the bar.
+      final unfocused =
+          WidgetsBinding.instance.lifecycleState == AppLifecycleState.inactive && !DebugSwitches.moveUnfocused;
+      final slow = (lightweight && !DebugSwitches.quickLightweightSeekBar) || unfocused;
       final min = Duration(milliseconds: slow ? 1000 : 16);
       final max = Duration(milliseconds: slow ? 1000 : 250);
       return step < min ? min : (step > max ? max : step);

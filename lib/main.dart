@@ -43,6 +43,7 @@ import 'ui/home_shell.dart';
 import 'ui/player_panels.dart' show MiniPlayerWindow, miniPlayer, windowFullScreen;
 import 'ui/theme.dart';
 import 'ui/widgets/marquee_text.dart';
+import 'ui/widgets/playing_motion.dart';
 import 'ui/widgets/title_bar.dart';
 
 // On the web every request the browser would block goes through Riflay's proxy (lib/platform/network.dart).
@@ -100,9 +101,13 @@ Future<void> _main(List<String> args) async {
   final windowSettled = windowShown.then((_) => Appearance.instance.applyWindow());
 
   final controller = PlayerController();
-  // Song titles that don't fit slide only while something plays (MarqueeText.whilePaused).
+  // Song titles that don't fit slide only while something plays and the window has the focus
+  // (MarqueeText.whilePaused, PlayingMotion.decorates).
   final playing = ValueNotifier(false);
-  controller.addListener(() => playing.value = controller.showsPlaying);
+  void syncPlaying() =>
+      playing.value = controller.showsPlaying && PlayingMotion.decorates(WidgetsBinding.instance.lifecycleState);
+  controller.addListener(syncPlaying);
+  AppLifecycleListener(onStateChange: (_) => syncPlaying());
   MarqueeText.playing = playing;
   // The library is read in another isolate: meanwhile this one gets the text engine ready.
   final loading = controller.load();

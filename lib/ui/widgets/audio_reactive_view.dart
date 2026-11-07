@@ -8,6 +8,7 @@ import '../../services/layout_prefs.dart';
 import '../../services/player_controller.dart';
 import '../../services/ui_beat.dart';
 import '../../services/visualizer_levels.dart';
+import 'playing_motion.dart';
 import '../../services/language.dart';
 
 /// Why the visualizer can't be on at all right now, in words for its switch; null when it can.
@@ -79,10 +80,8 @@ class _AudioReactiveViewState extends State<AudioReactiveView> with WidgetsBindi
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _foreground =
-        WidgetsBinding.instance.lifecycleState == null ||
-        (WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed ||
-            WidgetsBinding.instance.lifecycleState == AppLifecycleState.inactive);
+    // Focused only, as the other decorations: unfocused, the meter is let go and mpv drops its filter bank too.
+    _foreground = PlayingMotion.decorates(WidgetsBinding.instance.lifecycleState);
   }
 
   @override
@@ -148,7 +147,7 @@ class _AudioReactiveViewState extends State<AudioReactiveView> with WidgetsBindi
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    _foreground = state == AppLifecycleState.resumed || state == AppLifecycleState.inactive;
+    _foreground = PlayingMotion.decorates(state);
     _sync();
   }
 

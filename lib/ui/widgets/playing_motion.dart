@@ -4,6 +4,7 @@ import 'package:flutter/rendering.dart';
 import '../../services/layout_prefs.dart';
 import '../../services/player_controller.dart';
 import '../../services/ui_beat.dart';
+import '../debug_switches.dart';
 
 /// Slow motion for a decoration that moves while a song plays: the seek bar's wave and the
 /// cover's flower. Painters listen to it and read [time] and [eased].
@@ -51,6 +52,14 @@ class MotionClock extends ChangeNotifier {
 class PlayingMotion extends StatefulWidget {
   const PlayingMotion({super.key, required this.builder});
 
+  /// Whether decorations move in this lifecycle [state]: only with the window in front and focused. A computer
+  /// reports `inactive` while another window has the focus, which is most of the time a song plays: nobody watches
+  /// the flower then, and on a small laptop its frames were most of what a playing song cost.
+  static bool decorates(AppLifecycleState? state) =>
+      state == null ||
+      state == AppLifecycleState.resumed ||
+      (state == AppLifecycleState.inactive && DebugSwitches.moveUnfocused);
+
   final Widget Function(BuildContext context, MotionClock? clock) builder;
 
   @override
@@ -76,7 +85,7 @@ class _PlayingMotionState extends State<PlayingMotion> with WidgetsBindingObserv
     WidgetsBinding.instance.addObserver(this);
     LayoutPrefs.instance.addListener(_sync);
     final state = WidgetsBinding.instance.lifecycleState;
-    _foreground = state == null || state == AppLifecycleState.resumed || state == AppLifecycleState.inactive;
+    _foreground = PlayingMotion.decorates(state);
   }
 
   @override
@@ -94,7 +103,7 @@ class _PlayingMotionState extends State<PlayingMotion> with WidgetsBindingObserv
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    _foreground = state == AppLifecycleState.resumed || state == AppLifecycleState.inactive;
+    _foreground = PlayingMotion.decorates(state);
     _sync();
   }
 
