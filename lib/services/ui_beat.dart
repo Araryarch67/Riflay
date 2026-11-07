@@ -62,6 +62,9 @@ class UiBeat {
     }
   }
 
+  /// Views listening now (tool/cpu.sh prints it: a paused player should have none, or the timer keeps waking).
+  static int get listeners => _listeners.length;
+
   static void _remove(UiBeatListener l) {
     _listeners.remove(l);
     if (_listeners.isEmpty) {

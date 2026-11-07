@@ -7,6 +7,7 @@
 # Usage: tool/cpu.sh [runs]   (default 1)
 #        RIFLAY_CPU_WIDTH=1280 RIFLAY_CPU_HEIGHT=800 tool/cpu.sh   (another screen size)
 #        RIFLAY_CPU_LAYOUT='{"visualizer": false}' tool/cpu.sh   (start with other Layout settings)
+#        RIFLAY_CPU_ENV='NAME=value' tool/cpu.sh   (an environment variable for the app, e.g. a probe)
 set -euo pipefail
 cd "$(dirname "$0")/.."
 runs=${1:-1}
@@ -45,5 +46,5 @@ if os.environ.get('RIFLAY_CPU_LAYOUT'):
 pathlib.Path(scratch, 'data/dev.riflay.riflay/shared_preferences.json').write_text(json.dumps(prefs))
 EOF
   env -u DISPLAY WAYLAND_DISPLAY=om-cpu GDK_BACKEND=wayland XDG_DATA_HOME="$scratch/data" \
-    RIFLAY_CPU_SONGS="$scratch/songs" timeout 300 build/linux/x64/profile/bundle/riflay 2>&1 | grep -E "^CPU " || true
+    RIFLAY_CPU_SONGS="$scratch/songs" ${RIFLAY_CPU_ENV:-} timeout 300 build/linux/x64/profile/bundle/riflay 2>&1 | grep -E "^CPU " || true
 done

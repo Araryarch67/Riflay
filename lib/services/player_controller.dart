@@ -45,6 +45,7 @@ import 'youtube_stream.dart';
 import 'library_views.dart';
 import 'ui_beat.dart';
 import 'language.dart';
+import '../ui/debug_switches.dart';
 
 export '../ui/player_scope.dart';
 
@@ -589,29 +590,57 @@ class PlayerController extends ChangeNotifier {
 
   /// [position] on the shared [UiBeat], so a seek bar, the karaoke fill and the visualizer
   /// that move in the same beat are drawn in one frame instead of one each. A tick every
-  /// 1/2400 of the song (half a pixel of a 1200 px bar), 60 to 4 times a second.
+  /// 1/2400 of the song (half a pixel of a 1200 px bar), 60 to 4 times a second. Lightweight
+  /// ticks once a second, with the elapsed time beside the bar: there a playing song draws
+  /// nothing else, and on Linux each frame costs the main thread several milliseconds.
   Stream<Duration> _smoothTicks({required bool lightweight}) {
     UiBeatListener? beat;
     late final StreamController<Duration> out;
     Duration every() {
       final step = (duration ?? Duration.zero) ~/ 2400;
-      final min = Duration(milliseconds: lightweight ? 250 : 16);
-      final max = Duration(milliseconds: lightweight ? 500 : 250);
+      final slow = lightweight && !DebugSwitches.quickLightweightSeekBar;
+      final min = Duration(milliseconds: slow ? 1000 : 16);
+      final max = Duration(milliseconds: slow ? 1000 : 250);
       return step < min ? min : (step > max ? max : step);
     }
 
     Duration? last;
+    void tick() {
+      final p = position;
+      // Nothing moved (a seek bar at the end, a stall): nothing is drawn.
+      if (p != last) out.add(last = p);
+    }
+
+    // Paused, off the beat: a listener left on it kept its 60 Hz timer waking the app for a bar that doesn't move.
+    // A slow look once a second still catches a seek made elsewhere (the media keys, MPRIS).
+    Timer? idle;
+    void sync() {
+      if (showsPlaying || DebugSwitches.beatWhilePaused) {
+        idle?.cancel();
+        idle = null;
+        beat ??= UiBeat.listen(every(), (_) {
+          beat!.period = every();
+          tick();
+        });
+      } else {
+        beat?.cancel();
+        beat = null;
+        idle ??= Timer.periodic(const Duration(seconds: 1), (_) => tick());
+        tick();
+      }
+    }
+
     out = StreamController<Duration>(
       onListen: () {
         out.add(last = position);
-        beat = UiBeat.listen(every(), (_) {
-          beat!.period = every();
-          final p = position;
-          // Paused: nothing moves, so nothing is drawn.
-          if (p != last) out.add(last = p);
-        });
+        sync();
+        addListener(sync);
       },
-      onCancel: () => beat?.cancel(),
+      onCancel: () {
+        removeListener(sync);
+        beat?.cancel();
+        idle?.cancel();
+      },
     );
     return out.stream;
   }

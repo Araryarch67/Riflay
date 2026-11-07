@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import '../../services/audio_engine.dart';
 import '../../services/bluetooth_codec.dart';
 import '../../services/player_controller.dart';
+import '../../services/ui_beat.dart';
 import '../debug_switches.dart';
 import '../theme.dart';
 import '../../services/language.dart';
@@ -24,7 +25,7 @@ class _SignalPathBuilder extends StatefulWidget {
 
 class _SignalPathBuilderState extends State<_SignalPathBuilder> {
   SignalPath? _path;
-  Timer? _timer;
+  UiBeatListener? _beat;
   late final PlayerController _controller = PlayerScope.read(context);
 
   /// A read waiting for the one in flight: a burst of changes reads once more, not once each.
@@ -36,16 +37,26 @@ class _SignalPathBuilderState extends State<_SignalPathBuilder> {
   void initState() {
     super.initState();
     _poll();
-    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (!_paused) _poll();
-    });
+    _syncBeat();
     _controller.addListener(_changed);
     _controller.audio.addListener(_changed);
   }
 
-  /// While playing the timer reads soon enough; paused, a change is read now.
+  /// While playing the beat reads soon enough; paused, a change is read now.
   void _changed() {
+    _syncBeat();
     if (_paused) _poll();
+  }
+
+  /// On the shared beat while playing: a second is 60 beats, the ones Lightweight's seek bar ticks on, so both draw
+  /// in one frame. Paused, off it: a listener left on keeps the beat's 60 Hz timer waking the app.
+  void _syncBeat() {
+    if (_paused) {
+      _beat?.cancel();
+      _beat = null;
+    } else {
+      _beat ??= UiBeat.listen(const Duration(seconds: 1), (_) => _poll());
+    }
   }
 
   Future<void> _poll() async {
@@ -68,7 +79,7 @@ class _SignalPathBuilderState extends State<_SignalPathBuilder> {
 
   @override
   void dispose() {
-    _timer?.cancel();
+    _beat?.cancel();
     _controller.removeListener(_changed);
     _controller.audio.removeListener(_changed);
     super.dispose();

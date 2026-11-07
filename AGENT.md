@@ -583,6 +583,8 @@ device's language when Riflay has it). The words live in `lib/l10n/app_en.arb` (
   flutter run --dart-define=RIFLAY_SIGNAL_PATH_WHILE_PAUSED=true  # the quality badge reads mpv every second while paused too
   flutter run --dart-define=RIFLAY_UNALIGNED_BEATS=true  # views on UiBeat count their own beats (same rate, separate frames)
   flutter run --dart-define=RIFLAY_NO_DEVICE_SETUP=true  # no setup page on a computer's first start
+  flutter run --dart-define=RIFLAY_QUICK_LIGHTWEIGHT_SEEK_BAR=true  # Lightweight's seek bar moves 2-4 times a second, not once
+  flutter run --dart-define=RIFLAY_BEAT_WHILE_PAUSED=true  # the seek bar's position stays on UiBeat while paused
   flutter run -d chrome --dart-define=RIFLAY_NO_WEB_AUDIO=true  # web: songs play straight from <audio>, no effects or visualizer
   ```
 
@@ -642,6 +644,9 @@ device's language when Riflay has it). The words live in `lib/l10n/app_en.arb` (
   times a second). Slower views fire on the same beats (`UiBeat.beatsFor`: from three beats on, multiples of three),
   so Balanced's cover, wave, visualizer and marquee all draw in the same 20 frames a second. On Linux each frame
   costs the main thread several milliseconds beyond Dart's build, so the number of frames is the cost.
+  Lightweight's seek bar and the quality badge tick once a second on the same beat (about 1 frame a second while
+  playing). Paused, nothing stays on the beat (`tool/cpu.sh` prints how many are): a listener that only returns
+  still keeps its 60 Hz timer waking the app.
 - Wheel scrolling: give new vertical scroll views a `SmoothScrollController`
   (or wrap them in `SmoothScroll`).
 - Overlays above content (sticky headers) must not swallow clicks: wrap

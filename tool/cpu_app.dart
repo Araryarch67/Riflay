@@ -13,6 +13,7 @@ import 'dart:io';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart';
 import 'package:riflay/main.dart' as app;
+import 'package:riflay/services/ui_beat.dart';
 import 'package:riflay/ui/player_scope.dart';
 import 'package:riflay/ui/shell_scope.dart';
 import 'package:riflay/ui/widgets/page_scaffold.dart';
@@ -69,6 +70,27 @@ Future<void> _whoDraws({bool long = false}) async {
   WidgetsBinding.instance.rootElement?.visitChildren(visit);
 }
 
+/// CPU ticks so far of the system's audio server (PipeWire, or PulseAudio), which plays what the app sends: its
+/// cost is the app's doing too, so it is measured alongside. Null when none runs.
+int? _audioServerTicks() {
+  var total = 0;
+  var found = false;
+  for (final d in Directory('/proc').listSync()) {
+    final pid = d.path.split('/').last;
+    if (int.tryParse(pid) == null) continue;
+    try {
+      final comm = File('${d.path}/comm').readAsStringSync().trim();
+      if (comm != 'pipewire' && comm != 'pipewire-pulse' && comm != 'pulseaudio') continue;
+      final f = File('${d.path}/stat').readAsStringSync().split(') ').last.split(' ');
+      total += int.parse(f[11]) + int.parse(f[12]);
+      found = true;
+    } on FileSystemException {
+      // Gone, or not ours to read.
+    }
+  }
+  return found ? total : null;
+}
+
 Element? _find(bool Function(Element) test) {
   Element? found;
   void visit(Element e) {
@@ -114,6 +136,7 @@ Future<void> main() async {
     build = raster = Duration.zero;
     final cpu = _cpuTime();
     final threads = _threadTicks();
+    final server = _audioServerTicks();
     final clock = Stopwatch()..start();
     await Future<void>.delayed(window);
     final used = _cpuTime() - cpu;
@@ -122,7 +145,7 @@ Future<void> main() async {
     String per(Duration d) => frames == 0 ? '-' : (d.inMicroseconds / frames / 1000).toStringAsFixed(2);
     stdout.writeln(
       'CPU $label: ${pct.toStringAsFixed(2)}% of one core, ${fps.toStringAsFixed(1)} frames/s '
-      '(build ${per(build)} ms, raster ${per(raster)} ms a frame)',
+      '(build ${per(build)} ms, raster ${per(raster)} ms a frame), ${UiBeat.listeners} on the beat',
     );
     // The busiest threads (by name: mpv's are "mpv/…", "ao/…", Flutter's "io.flutter.…").
     final after = _threadTicks();
@@ -132,6 +155,10 @@ Future<void> main() async {
     }
     final top = busy.entries.where((e) => e.value > 0).toList()..sort((a, b) => b.value - a.value);
     final seconds = clock.elapsedMilliseconds / 1000;
+    final serverNow = _audioServerTicks();
+    if (server != null && serverNow != null) {
+      stdout.writeln('CPU   audio server (outside the app) ${((serverNow - server) / seconds).toStringAsFixed(2)}%');
+    }
     stdout.writeln(
       'CPU   ${[for (final e in top.take(6)) '${e.key} ${(e.value / seconds).toStringAsFixed(2)}%'].join(', ')}',
     );

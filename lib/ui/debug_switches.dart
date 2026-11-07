@@ -47,6 +47,12 @@ abstract final class DebugSwitches {
   /// rate draw in separate frames.
   static bool unalignedBeats = _all || const bool.fromEnvironment('RIFLAY_UNALIGNED_BEATS');
 
+  /// Lightweight's seek bar moves 2-4 times a second, as before, not once a second.
+  static bool quickLightweightSeekBar = _all || const bool.fromEnvironment('RIFLAY_QUICK_LIGHTWEIGHT_SEEK_BAR');
+
+  /// The seek bar's position stays on [UiBeat] while paused, as before.
+  static bool beatWhilePaused = _all || const bool.fromEnvironment('RIFLAY_BEAT_WHILE_PAUSED');
+
   /// Prints how many widgets each palette change rebuilds, and every Material theme built.
   static bool logRestyles = const bool.fromEnvironment('RIFLAY_LOG_RESTYLES');
 
