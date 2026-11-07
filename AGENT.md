@@ -312,6 +312,8 @@ test/                          Unit and widget tests
   or it shows this device's paused player instead of the TV.
 - `services/media_session.dart` (audio_service) mirrors the player to the
   Android notification / lock screen, Control Center and Linux MPRIS.
+  On phones the synced line takes the artist's place; with the lyrics page's Pronunciation on, a line in
+  another script reads "line — pronunciation" (`LyricsTranslation.of`, one cached request per song).
 
 ## YouTube Music
 

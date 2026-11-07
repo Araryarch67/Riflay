@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:riflay/services/lyrics.dart';
+import 'package:riflay/services/lyrics_translation.dart';
 import 'package:riflay/services/media_session.dart';
 
 void main() {
@@ -39,5 +40,19 @@ void main() {
     expect(MediaSession.lineFor(timed, s(5)), isNull);
     expect(MediaSession.nextLineAt(timed, s(2)), s(2.85));
     expect(MediaSession.nextLineAt(timed, s(5)), s(9.85));
+  });
+
+  test('a line in kanji / kana shows its pronunciation after it; a Latin line stays as it is', () {
+    final sung = Lyrics.parse('[00:05.00]今日もまた始まる\n[00:09.00]Baby, give me some time\n', source: 'test');
+    // A pronunciation for the English line too, as a reply could carry: it is still left alone.
+    const extras = [LineExtras(romanized: 'kyō mo mata hajimaru'), LineExtras(romanized: 'beibi')];
+    expect(MediaSession.lineFor(sung, s(6), extras: extras), '今日もまた始まる — kyō mo mata hajimaru');
+    expect(MediaSession.lineFor(sung, s(10), extras: extras), 'Baby, give me some time');
+    expect(MediaSession.lineFor(sung, s(6)), '今日もまた始まる', reason: 'Pronunciation off, or not fetched yet');
+    expect(
+      MediaSession.lineFor(sung, s(6), extras: const [LineExtras.none, LineExtras.none]),
+      '今日もまた始まる',
+      reason: 'no pronunciation came back',
+    );
   });
 }
