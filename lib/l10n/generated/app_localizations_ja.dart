@@ -5029,4 +5029,49 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get glassVolume => '音量をガラスに';
+
+  @override
+  String get deviceSetupTitle => 'このパソコンに合わせて設定';
+
+  @override
+  String deviceSetupIntro(String percent) {
+    return 'Riflay がこのパソコンを調べて、曲の再生中もプロセッサの$percent%未満で済む見た目を選んだ。設定 › 電源とバックグラウンド でいつでも変えられる。';
+  }
+
+  @override
+  String deviceSetupThreads(int count) {
+    String _temp0 = intl.Intl.pluralLogic(count, locale: localeName, other: 'プロセッサ $countスレッド');
+    return '$_temp0';
+  }
+
+  @override
+  String deviceSetupMemory(String size) {
+    return 'メモリ ${size}GB';
+  }
+
+  @override
+  String get deviceSetupLaptop => 'ノートパソコン(バッテリーあり)';
+
+  @override
+  String get deviceSetupDesktop => 'デスクトップ(バッテリーなし)';
+
+  @override
+  String deviceSetupCost(String percent) {
+    return '再生中はプロセッサの約$percent%';
+  }
+
+  @override
+  String get deviceSetupRecommended => 'おすすめ';
+
+  @override
+  String get deviceSetupContinue => '続ける';
+
+  @override
+  String get deviceSetupKeep => '今の設定のままにする';
+
+  @override
+  String get deviceSetupAgain => 'このパソコンを調べる';
+
+  @override
+  String get deviceSetupAgainNote => 'このパソコンをもう一度調べて、合う見た目を提案する';
 }

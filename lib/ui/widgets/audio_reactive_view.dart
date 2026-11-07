@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
@@ -34,9 +35,10 @@ class AudioReactiveView extends StatefulWidget {
 
   /// Caps how often the smoothed levels (and so the painters listening to them) update, for
   /// slow decorations that gain nothing from the display's full refresh rate. Unset, views
-  /// update at most 60 times a second (the levels themselves arrive 25 times a second), in
-  /// every performance mode: following a 144-240 Hz display would cost several times the CPU
-  /// for motion the eye can't tell apart.
+  /// update at most 20 times a second in Balanced (the levels themselves arrive 25 times a
+  /// second, and 20 shares its frames with the seek bar's wave and the cover's flower) and 60 in
+  /// Heavy: following a 144-240 Hz display would cost several times the CPU for motion the eye
+  /// can't tell apart.
   final double? maxFps;
   @override
   State<AudioReactiveView> createState() => _AudioReactiveViewState();
@@ -57,7 +59,7 @@ class _AudioReactiveViewState extends State<AudioReactiveView> with WidgetsBindi
   // would land its frames between the seek bar's.
   UiBeatListener? _beat;
 
-  double get _cap => widget.maxFps ?? 60;
+  double get _cap => math.min(widget.maxFps ?? 60, LayoutPrefs.heavy ? 60 : 20);
 
   bool get _running => _beat != null;
 
@@ -108,7 +110,8 @@ class _AudioReactiveViewState extends State<AudioReactiveView> with WidgetsBindi
     if (!_attached || _release == null) return;
     if (_controller!.audio.visualizerLevels.value.every((v) => v == 0)) {
       _halt();
-      _levels.clear();
+      // Silence comes in 25 times a second: clearing what is already clear repainted the view each time.
+      if (_levels.value.any((v) => v != 0)) _levels.clear();
     } else {
       _start();
     }

@@ -5206,4 +5206,54 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get glassVolume => 'Glass volume';
+
+  @override
+  String get deviceSetupTitle => 'Set up Riflay for this computer';
+
+  @override
+  String deviceSetupIntro(String percent) {
+    return 'Riflay looked at this computer and picked the look that keeps a playing song under $percent% of its processor. You can change it any time in Settings › Power & background.';
+  }
+
+  @override
+  String deviceSetupThreads(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count processor threads',
+      one: '1 processor thread',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String deviceSetupMemory(String size) {
+    return '$size GB of memory';
+  }
+
+  @override
+  String get deviceSetupLaptop => 'Laptop, runs on battery';
+
+  @override
+  String get deviceSetupDesktop => 'Desktop, no battery';
+
+  @override
+  String deviceSetupCost(String percent) {
+    return 'About $percent% of the processor while a song plays';
+  }
+
+  @override
+  String get deviceSetupRecommended => 'Recommended';
+
+  @override
+  String get deviceSetupContinue => 'Continue';
+
+  @override
+  String get deviceSetupKeep => 'Keep my settings';
+
+  @override
+  String get deviceSetupAgain => 'Check this computer';
+
+  @override
+  String get deviceSetupAgainNote => 'Looks at this computer again and suggests the look that suits it';
 }

@@ -1,9 +1,12 @@
 import 'dart:async';
 import 'dart:ui' as ui;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../services/layout_prefs.dart';
+import '../../services/ui_beat.dart';
+import '../debug_switches.dart';
 
 /// One line of text that slides sideways when it doesn't fit, so a long song
 /// title can be read whole: it rests at the start for [pause], scrolls at
@@ -14,6 +17,11 @@ import '../../services/layout_prefs.dart';
 ///
 /// It draws frames only while it moves: the rest at the start is a timer, so a screen of cards with long titles
 /// isn't redrawn all the time. Still not for list rows, where dozens would scroll at once.
+///
+/// It scrolls [loops] times and then rests at the start until its text changes: a title that slid forever kept
+/// the whole window redrawing at the display's rate while nothing else happened (a paused player, a Home page
+/// left open), which on a laptop's integrated GPU is a busy CPU and GPU for nothing. [moving] off holds it still
+/// with an ellipsis (a card that isn't hovered).
 class MarqueeText extends StatefulWidget {
   const MarqueeText(
     this.text, {
@@ -24,6 +32,9 @@ class MarqueeText extends StatefulWidget {
     this.gap = 48,
     this.fade = 16,
     this.spans,
+    this.moving = true,
+    this.loops = 3,
+    this.whilePaused = false,
   });
 
   final String text;
@@ -41,6 +52,19 @@ class MarqueeText extends StatefulWidget {
 
   /// Width of the faded edges while it scrolls.
   final double fade;
+
+  /// False: cut off with an ellipsis and never scrolled, as if motion were off.
+  final bool moving;
+
+  /// How many times it scrolls before resting for good (until the text changes); null scrolls forever.
+  final int? loops;
+
+  /// Scrolls while [playing] is false too (a hovered card). Otherwise a pause takes it back to the start, where it
+  /// rests until the song plays again: a song title sliding over a paused player kept the window drawing.
+  final bool whilePaused;
+
+  /// Whether a song plays (set once by the app); null, as in tests, counts as playing.
+  static ValueListenable<bool>? playing;
 
   @override
   State<MarqueeText> createState() => _MarqueeTextState();
@@ -76,14 +100,28 @@ class MarqueeText extends StatefulWidget {
   }
 }
 
-class _MarqueeTextState extends State<MarqueeText> with SingleTickerProviderStateMixin {
-  late final _controller = AnimationController(vsync: this);
+class _MarqueeTextState extends State<MarqueeText> {
+  /// How far through one scroll it is, 0 to 1. Moved on the shared [UiBeat], not a ticker: a ticker drew at the
+  /// display's rate (up to 240 times a second) for text moving 35 px a second, in frames of its own.
+  final _progress = ValueNotifier<double>(0);
+  UiBeatListener? _beat;
+  Duration _scrollTime = Duration.zero;
+
+  /// On a page that isn't shown ([TickerMode] off) the scroll holds where it is, and goes on when it is shown.
+  bool _shown = true, _resume = false;
+
+  /// 20 times a second in Balanced, on the beats the player's other motion uses; Heavy, every beat.
+  static Duration get _every =>
+      LayoutPrefs.heavy || DebugSwitches.endlessMarquee ? UiBeat.period : const Duration(milliseconds: 50);
 
   /// Width of the text the controller is running for; null when still.
   double? _running;
 
   /// The rest at the start between two scrolls: a timer, no frames.
   Timer? _rest;
+
+  /// Scrolls finished since it started; at [MarqueeText.loops] it stops.
+  int _scrolled = 0;
 
   /// The edge fade, made again only when the width or the left fade changes.
   ui.Shader? _shader;
@@ -108,33 +146,83 @@ class _MarqueeTextState extends State<MarqueeText> with SingleTickerProviderStat
         old.style != widget.style ||
         old.speed != widget.speed ||
         old.pause != widget.pause ||
-        old.gap != widget.gap) {
+        old.gap != widget.gap ||
+        old.moving != widget.moving ||
+        old.loops != widget.loops ||
+        old.whilePaused != widget.whilePaused) {
       _stop();
+    }
+  }
+
+  ValueListenable<bool>? _playing;
+
+  bool get _paused => !widget.whilePaused && _playing?.value == false && !DebugSwitches.endlessMarquee;
+
+  @override
+  void initState() {
+    super.initState();
+    _playing = MarqueeText.playing?..addListener(_onPlaying);
+  }
+
+  /// Paused: back to the start and still. Playing again: rests, then scrolls on.
+  void _onPlaying() {
+    if (_running == null) return;
+    if (_paused) {
+      if (_beat == null && _rest == null && !_resume) return; // done with its loops already
+      _rest?.cancel();
+      _rest = null;
+      _halt();
+      _progress.value = 0;
+      _resume = true;
+    } else if (_resume && _shown) {
+      _resume = false;
+      _restThenScroll();
+    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _shown = TickerMode.valuesOf(context).enabled;
+    if (!_shown && _beat != null) {
+      _halt();
+      _resume = true;
+    } else if (_shown && _resume && !_paused) {
+      _resume = false;
+      if (_running != null) _scroll();
     }
   }
 
   @override
   void dispose() {
+    _playing?.removeListener(_onPlaying);
     _rest?.cancel();
+    _halt();
     _shader?.dispose();
-    _controller.dispose();
+    _progress.dispose();
     super.dispose();
+  }
+
+  void _halt() {
+    _beat?.cancel();
+    _beat = null;
   }
 
   void _stop() {
     _rest?.cancel();
     _rest = null;
-    _controller
-      ..stop()
-      ..value = 0;
+    _halt();
+    _resume = false;
+    _progress.value = 0;
     _running = null;
+    _scrolled = 0;
   }
 
   void _start(double width) {
     if (_running == width) return;
     _stop();
     _running = width;
-    _controller.duration = Duration(microseconds: ((width + widget.gap) / widget.speed * 1e6).round());
+    _scrollTime = Duration(microseconds: ((width + widget.gap) / widget.speed * 1e6).round());
     _restThenScroll();
   }
 
@@ -142,16 +230,37 @@ class _MarqueeTextState extends State<MarqueeText> with SingleTickerProviderStat
   void _restThenScroll() {
     _rest?.cancel();
     _rest = Timer(widget.pause, () {
+      _rest = null;
       if (!mounted || _running == null) return;
-      _controller.forward(from: 0).then((_) {
-        if (!mounted || _running == null) return;
-        _controller.value = 0;
-        _restThenScroll();
-      }, onError: (Object _) {});
+      _progress.value = 0;
+      if (_shown && !_paused) {
+        _scroll();
+      } else {
+        _resume = true;
+      }
     });
   }
 
-  /// How far the text has moved left at controller value [t] (the scroll alone: the rest isn't animated).
+  void _scroll() {
+    _halt();
+    _beat = UiBeat.listen(_every, (elapsed) {
+      if (!mounted || _running == null) return _halt();
+      final next = _progress.value + elapsed.inMicroseconds / _scrollTime.inMicroseconds;
+      if (next < 1) {
+        _progress.value = next;
+        return;
+      }
+      _halt();
+      _progress.value = 0;
+      _scrolled++;
+      final loops = widget.loops;
+      // Done: it stays at the start, and [_running] keeps the next build from starting it again.
+      if (loops != null && _scrolled >= loops && !DebugSwitches.endlessMarquee) return;
+      _restThenScroll();
+    });
+  }
+
+  /// How far the text has moved left at progress [t] (the scroll alone: the rest isn't animated).
   double _offset(double t, double width) => t * (width + widget.gap);
 
   Widget _line(TextStyle style, {bool ellipsis = false}) {
@@ -171,7 +280,10 @@ class _MarqueeTextState extends State<MarqueeText> with SingleTickerProviderStat
   @override
   Widget build(BuildContext context) {
     final style = DefaultTextStyle.of(context).style.merge(widget.style);
-    final still = !LayoutPrefs.moves || MediaQuery.disableAnimationsOf(context);
+    final still =
+        !LayoutPrefs.moves ||
+        MediaQuery.disableAnimationsOf(context) ||
+        (!widget.moving && !DebugSwitches.endlessMarquee);
     return LayoutBuilder(
       builder: (context, box) {
         final size = MarqueeText._measure(
@@ -219,10 +331,10 @@ class _MarqueeTextState extends State<MarqueeText> with SingleTickerProviderStat
             child: RepaintBoundary(
               child: ClipRect(
                 child: AnimatedBuilder(
-                  animation: _controller,
+                  animation: _progress,
                   child: strip,
                   builder: (context, child) {
-                    final dx = _offset(_controller.value, width);
+                    final dx = _offset(_progress.value, width);
                     return ShaderMask(
                       blendMode: BlendMode.dstIn,
                       shaderCallback: (rect) => _fadeShader(rect, dx > 0),

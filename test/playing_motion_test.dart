@@ -89,14 +89,14 @@ void main() {
       await tester.pumpWidget(const SizedBox.shrink());
     });
 
-    testWidgets('Balanced draws every second beat, Heavy every beat', (tester) async {
+    testWidgets('Balanced draws every third beat, Heavy every beat', (tester) async {
       await LayoutPrefs.instance.setPerformance(PerformanceMode.balanced);
       await tester.pumpWidget(_host(c, const SeekBar(phonePlayer: true)));
       final clock = _waveClock(tester)!;
       var ticks = 0;
       clock.addListener(() => ticks++);
-      await _beats(tester, 10);
-      expect(ticks, inInclusiveRange(4, 6));
+      await _beats(tester, 12);
+      expect(ticks, inInclusiveRange(3, 5));
       await tester.pumpWidget(const SizedBox.shrink());
     });
 

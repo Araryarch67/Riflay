@@ -18,6 +18,7 @@ import 'l10n/generated/app_localizations.dart';
 import 'models/track.dart';
 import 'platform/network.dart';
 import 'platform/host.dart';
+import 'services/device_setup.dart';
 import 'services/app_updates.dart';
 import 'platform/web_audio.dart';
 import 'services/incoming_links.dart';
@@ -41,6 +42,7 @@ import 'services/wrap_notifications.dart';
 import 'ui/home_shell.dart';
 import 'ui/player_panels.dart' show MiniPlayerWindow, miniPlayer, windowFullScreen;
 import 'ui/theme.dart';
+import 'ui/widgets/marquee_text.dart';
 import 'ui/widgets/title_bar.dart';
 
 // On the web every request the browser would block goes through Riflay's proxy (lib/platform/network.dart).
@@ -86,13 +88,22 @@ Future<void> _main(List<String> args) async {
         startSize = await _startSize();
       }(),
   ]);
-  await Future.wait([Appearance.instance.load(), LayoutPrefs.instance.load(), Language.instance.load()]);
+  await Future.wait([
+    Appearance.instance.load(),
+    LayoutPrefs.instance.load(),
+    Language.instance.load(),
+    DeviceSetup.instance.load(),
+  ]);
 
   // The window opens (sized, centred, in the theme's colour) while the player loads behind it.
   final windowShown = _showWindow(startSize);
   final windowSettled = windowShown.then((_) => Appearance.instance.applyWindow());
 
   final controller = PlayerController();
+  // Song titles that don't fit slide only while something plays (MarqueeText.whilePaused).
+  final playing = ValueNotifier(false);
+  controller.addListener(() => playing.value = controller.showsPlaying);
+  MarqueeText.playing = playing;
   // The library is read in another isolate: meanwhile this one gets the text engine ready.
   final loading = controller.load();
   warmUpText();

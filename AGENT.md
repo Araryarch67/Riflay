@@ -124,6 +124,18 @@ test/                          Unit and widget tests
 - The bar's large Close button clears Search and returns to the previous tab. There is no separate small Clear
   button in the bar; preserve the keyed input subtree during expansion so its keyboard connection stays alive.
 
+## First start on a computer
+
+- `services/device_setup.dart` reads the computer (processor name, threads, memory, battery: `/proc` and
+  `/sys/class/power_supply` on Linux, `GlobalMemoryStatusEx` / `GetSystemPowerStatus` and the registry on Windows,
+  `sysctl` / `pmset` on macOS) and recommends a `PerformanceMode`: the heaviest whose `playingCost` stays under
+  `DeviceSetup.budget` (0.8%) of the whole CPU, Lightweight under 8 GB. 16 threads (a Ryzen 7 7000) get Lightweight.
+- `ui/pages/device_setup_page.dart` shows it once (`deviceSetup.v1`), the recommendation picked; Continue applies
+  the pick, "Keep my settings" changes nothing. Settings › Power & background › Check this computer opens it again.
+  Computers only: phones keep their look. `main` loads the flag, so tests that build `RiflayApp` never see it.
+- `playingCost` comes from `tool/cpu.sh`: measure again when what a mode draws changes.
+  `RIFLAY_NO_DEVICE_SETUP` never shows the page.
+
 ## Downloaded executables
 
 - Settings › About › Delete executables on desktop lists Riflay-owned FFmpeg and yt-dlp files and partial downloads
@@ -470,6 +482,14 @@ scan, song changes and scrolling, as `BIG …` lines) and
 song plays and while paused). Compare the old code and the new in two
 copies of the project, a couple of runs each.
 
+The live test binding asks for a frame after every frame, so `cpu_test` can't see a view that keeps an idle window
+redrawing. `tool/cpu.sh [runs]` can: it builds `tool/cpu_app.dart` (the real app on Flutter's own binding) in
+profile mode, seeds a library of silent songs with long titles, and prints `CPU …` lines (share of one core,
+frames/s, build and raster time a frame, the busiest threads) idle, playing and paused on Home and Now Playing.
+`RIFLAY_CPU_LAYOUT='{"performance": "lightweight"}'` starts it with other Layout settings. Idle and paused must
+draw no frames and stay under 0.8% of one core. In a debug build (swap `--profile` for `--debug` in a copy of the
+script) `RIFLAY_CPU_STACKS=true` prints who asks for frames while playing and paused, and every running ticker.
+
 Memory: `tool/memory.sh [runs]` runs `integration_test/memory_test.dart` the
 same way (profile, headless, fresh process per run) and prints PSS / private /
 RSS at idle, playing a local FLAC, streaming YouTube and after scrolling.
@@ -559,6 +579,10 @@ device's language when Riflay has it). The words live in `lib/l10n/app_en.arb` (
   flutter run --dart-define=RIFLAY_NO_SCANNED_GAIN=true  # a song without ReplayGain tags plays unleveled, measured or not
   flutter run --dart-define=RIFLAY_NO_ADAPTIVE_VIDEO=true # a music video stays at its full height however often it stalls
   flutter run --dart-define=RIFLAY_NO_PAGE_ARTWORK=true  # Cover: Background uses the list's 544 px cover, not a 1600 px one
+  flutter run --dart-define=RIFLAY_ENDLESS_MARQUEE=true  # long titles scroll forever, card titles without a hover too
+  flutter run --dart-define=RIFLAY_SIGNAL_PATH_WHILE_PAUSED=true  # the quality badge reads mpv every second while paused too
+  flutter run --dart-define=RIFLAY_UNALIGNED_BEATS=true  # views on UiBeat count their own beats (same rate, separate frames)
+  flutter run --dart-define=RIFLAY_NO_DEVICE_SETUP=true  # no setup page on a computer's first start
   flutter run -d chrome --dart-define=RIFLAY_NO_WEB_AUDIO=true  # web: songs play straight from <audio>, no effects or visualizer
   ```
 
@@ -609,6 +633,15 @@ device's language when Riflay has it). The words live in `lib/l10n/app_en.arb` (
 - Desktop navigation is one browser-style history (`DesktopHistory`): open
   screens with `ShellScope.of(context).open(page, location: …)` so the sidebar can
   highlight them. Phones keep one stack per bottom tab.
+- Nothing on screen may move forever by itself while the app is idle: one running ticker redraws the whole
+  window at the display's rate (60-240 times a second), a busy CPU and GPU on laptops whose integrated GPU
+  shares RAM. `MarqueeText` scrolls `loops` times (3), only while a song plays (`whilePaused` for a hovered card),
+  and rests; card titles move only while hovered (once on phones). A debug build with
+  `debugPrintScheduleFrameStacks = true` shows who asks for frames.
+- What moves by itself rides `UiBeat`, never a ticker of its own (a ticker draws at the display's rate, up to 240
+  times a second). Slower views fire on the same beats (`UiBeat.beatsFor`: from three beats on, multiples of three),
+  so Balanced's cover, wave, visualizer and marquee all draw in the same 20 frames a second. On Linux each frame
+  costs the main thread several milliseconds beyond Dart's build, so the number of frames is the cost.
 - Wheel scrolling: give new vertical scroll views a `SmoothScrollController`
   (or wrap them in `SmoothScroll`).
 - Overlays above content (sticky headers) must not swallow clicks: wrap

@@ -1508,5 +1508,17 @@
   "glassSeekBar": "シークバーをガラスに",
   "glassTransport": "再生ボタンをガラスに",
   "glassTransportSubtitle": "前へ・再生/一時停止・次へ",
-  "glassVolume": "音量をガラスに"
+  "glassVolume": "音量をガラスに",
+  "deviceSetupTitle": "このパソコンに合わせて設定",
+  "deviceSetupIntro": "Riflay がこのパソコンを調べて、曲の再生中もプロセッサの{percent}%未満で済む見た目を選んだ。設定 › 電源とバックグラウンド でいつでも変えられる。",
+  "deviceSetupThreads": "{count, plural, other{プロセッサ {count}スレッド}}",
+  "deviceSetupMemory": "メモリ {size}GB",
+  "deviceSetupLaptop": "ノートパソコン(バッテリーあり)",
+  "deviceSetupDesktop": "デスクトップ(バッテリーなし)",
+  "deviceSetupCost": "再生中はプロセッサの約{percent}%",
+  "deviceSetupRecommended": "おすすめ",
+  "deviceSetupContinue": "続ける",
+  "deviceSetupKeep": "今の設定のままにする",
+  "deviceSetupAgain": "このパソコンを調べる",
+  "deviceSetupAgainNote": "このパソコンをもう一度調べて、合う見た目を提案する"
 }

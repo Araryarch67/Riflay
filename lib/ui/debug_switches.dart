@@ -37,6 +37,16 @@ abstract final class DebugSwitches {
   /// The Liquid glass tab bar draws its pills with Riflay's own blur instead of liquid_glass_renderer.
   static bool noGlassRenderer = _all || const bool.fromEnvironment('RIFLAY_NO_GLASS_RENDERER');
 
+  /// [MarqueeText] scrolls forever and everywhere, as before: card titles without a hover, and past its loops.
+  static bool endlessMarquee = _all || const bool.fromEnvironment('RIFLAY_ENDLESS_MARQUEE');
+
+  /// The signal path on screen is read from mpv every second while paused too, as it was.
+  static bool signalPathWhilePaused = _all || const bool.fromEnvironment('RIFLAY_SIGNAL_PATH_WHILE_PAUSED');
+
+  /// Views on [UiBeat] each count their own beats instead of sharing one count, as before: views at the same
+  /// rate draw in separate frames.
+  static bool unalignedBeats = _all || const bool.fromEnvironment('RIFLAY_UNALIGNED_BEATS');
+
   /// Prints how many widgets each palette change rebuilds, and every Material theme built.
   static bool logRestyles = const bool.fromEnvironment('RIFLAY_LOG_RESTYLES');
 

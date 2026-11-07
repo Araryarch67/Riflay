@@ -5,6 +5,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../services/device_setup.dart';
 import '../services/language.dart';
 import '../models/track.dart';
 import '../services/download_notifications.dart';
@@ -15,6 +16,7 @@ import '../services/player_presets.dart';
 import '../services/layout_prefs.dart';
 import '../services/player_controller.dart';
 import '../services/wrap.dart';
+import 'pages/device_setup_page.dart';
 import 'pages/collection_page.dart';
 import 'pages/downloads_page.dart';
 import 'pages/home_page.dart';
@@ -106,6 +108,12 @@ class _HomeShellState extends State<HomeShell> {
       if (mounted && month != null) _open(WrapPage(month: month), location: Locations.wrap);
     });
     IncomingLinks.instance.listen(_openIncoming);
+    // A computer's first start: what it can take decides how much the app moves (lib/services/device_setup.dart).
+    if (DeviceSetup.instance.due) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && DeviceSetup.instance.due) unawaited(showDeviceSetup(context));
+      });
+    }
   }
 
   String? _location;

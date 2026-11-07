@@ -3,7 +3,10 @@
 // few seconds of real time on Home, on a long song list and paused.
 //
 // A music player sits there playing for hours, so this is battery and fan
-// noise. Profile mode, headless Weston, frames scheduled as in the real app:
+// noise. Profile mode, headless Weston. The live test binding asks for a new
+// frame after every frame, so frames/s is always about 60 here and a view that
+// keeps redrawing an idle window doesn't show: check that on the real app with
+// debugPrintScheduleFrameStacks (a debug build) or DevTools' frame chart:
 //   tool/perf.sh --target=integration_test/cpu_test.dart
 // Prints "CPU ..." lines.
 import 'dart:convert';
@@ -105,6 +108,11 @@ void main() {
     await measure('playing, All Songs');
     await c.pause();
     await measure('paused, All Songs');
+    await c.play();
+    ShellScope.of(tester.element(find.byType(PageScaffold).first)).openNowPlaying();
+    await measure('playing, Now Playing');
+    await c.pause();
+    await measure('paused, Now Playing');
     await c.player.stop();
   });
 }

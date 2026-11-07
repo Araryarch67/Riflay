@@ -6,12 +6,15 @@ import 'package:riflay/ui/widgets/marquee_text.dart';
 const _short = 'Short';
 const _long = 'A very long song title that cannot possibly fit in this narrow space at all';
 
-Widget _host(String text, {bool disableAnimations = false}) => MaterialApp(
+Widget _host(String text, {bool disableAnimations = false, bool moving = true, int? loops = 3}) => MaterialApp(
   home: MediaQuery(
     data: MediaQueryData(disableAnimations: disableAnimations),
     child: Scaffold(
       body: Center(
-        child: SizedBox(width: 200, child: MarqueeText(text, key: const ValueKey('m'))),
+        child: SizedBox(
+          width: 200,
+          child: MarqueeText(text, key: const ValueKey('m'), moving: moving, loops: loops),
+        ),
       ),
     ),
   ),
@@ -106,5 +109,53 @@ void main() {
     // A new title is a new measurement.
     await tester.pumpWidget(_host('$_long!'));
     expect(MarqueeText.measurements - before, 2);
+  });
+
+  testWidgets('after its loops it rests at the start and draws nothing more', (tester) async {
+    await tester.pumpWidget(_host(_long, loops: 1));
+    await tester.pump();
+    // The rest and one scroll (the test font makes it ~1100 px, about 31 s), in small steps so the ticker runs.
+    for (var i = 0; i < 400; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    expect(_shift(tester), 0);
+    expect(_animating(tester), isFalse);
+    await tester.pump(const Duration(seconds: 10));
+    expect(_shift(tester), 0);
+    expect(_animating(tester), isFalse);
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('held still, it is cut off with an ellipsis', (tester) async {
+    await tester.pumpWidget(_host(_long, moving: false));
+    await tester.pump(const Duration(seconds: 5));
+    expect(_strip, findsNothing);
+    expect(tester.widget<Text>(find.text(_long)).overflow, TextOverflow.ellipsis);
+    expect(_animating(tester), isFalse);
+  });
+
+  testWidgets('a pause takes it back to the start until the song plays again', (tester) async {
+    final playing = ValueNotifier(true);
+    MarqueeText.playing = playing;
+    addTearDown(() => MarqueeText.playing = null);
+    await tester.pumpWidget(_host(_long));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 2));
+    await tester.pump(const Duration(seconds: 1));
+    expect(_shift(tester), greaterThan(10));
+
+    playing.value = false;
+    await tester.pump();
+    expect(_shift(tester), 0);
+    await tester.pump(const Duration(seconds: 10));
+    expect(_shift(tester), 0);
+    expect(_animating(tester), isFalse);
+
+    playing.value = true;
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 2));
+    await tester.pump(const Duration(seconds: 1));
+    expect(_shift(tester), greaterThan(10));
+    await tester.pumpWidget(const SizedBox());
   });
 }

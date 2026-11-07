@@ -32,16 +32,12 @@ void trimProcessMemory({bool workingSet = false}) {
 void _trimWindows(bool workingSet) {
   try {
     final k = DynamicLibrary.open('kernel32.dll');
-    final getCurrentProcess =
-        k.lookupFunction<IntPtr Function(), int Function()>('GetCurrentProcess');
-    final setWorkingSet = k.lookupFunction<
-        Int32 Function(IntPtr, IntPtr, IntPtr),
-        int Function(int, int, int)>('SetProcessWorkingSetSize');
-    final getProcessHeap =
-        k.lookupFunction<IntPtr Function(), int Function()>('GetProcessHeap');
-    final heapCompact = k.lookupFunction<
-        IntPtr Function(IntPtr, Uint32),
-        int Function(int, int)>('HeapCompact');
+    final getCurrentProcess = k.lookupFunction<IntPtr Function(), int Function()>('GetCurrentProcess');
+    final setWorkingSet = k.lookupFunction<Int32 Function(IntPtr, IntPtr, IntPtr), int Function(int, int, int)>(
+      'SetProcessWorkingSetSize',
+    );
+    final getProcessHeap = k.lookupFunction<IntPtr Function(), int Function()>('GetProcessHeap');
+    final heapCompact = k.lookupFunction<IntPtr Function(IntPtr, Uint32), int Function(int, int)>('HeapCompact');
 
     if (workingSet) setWorkingSet(getCurrentProcess(), -1, -1);
     final heap = getProcessHeap();
@@ -213,5 +209,43 @@ class MacAssertion implements IdleInhibitor {
     if (id == null) return;
     final io = DynamicLibrary.open('/System/Library/Frameworks/IOKit.framework/IOKit');
     io.lookupFunction<Int32 Function(Uint32), int Function(int)>('IOPMAssertionRelease')(id);
+  }
+}
+
+/// Windows: the computer's physical memory in bytes (`GlobalMemoryStatusEx`), or null.
+int? windowsTotalMemory() {
+  if (!Platform.isWindows) return null;
+  // MEMORYSTATUSEX: dwLength, dwMemoryLoad, then ullTotalPhys at byte 8 (64 bytes in all).
+  final status = calloc<Uint8>(64);
+  try {
+    status.cast<Uint32>().value = 64;
+    final k = DynamicLibrary.open('kernel32.dll');
+    final ok = k.lookupFunction<Int32 Function(Pointer<Void>), int Function(Pointer<Void>)>('GlobalMemoryStatusEx')(
+      status.cast(),
+    );
+    return ok == 0 ? null : (status + 8).cast<Uint64>().value;
+  } catch (_) {
+    return null;
+  } finally {
+    calloc.free(status);
+  }
+}
+
+/// Windows: whether the computer has a battery (`GetSystemPowerStatus`), or null when it can't tell.
+bool? windowsHasBattery() {
+  if (!Platform.isWindows) return null;
+  // SYSTEM_POWER_STATUS: ACLineStatus, BatteryFlag (128: no system battery, 255: unknown), … (12 bytes).
+  final status = calloc<Uint8>(12);
+  try {
+    final k = DynamicLibrary.open('kernel32.dll');
+    final ok = k.lookupFunction<Int32 Function(Pointer<Void>), int Function(Pointer<Void>)>('GetSystemPowerStatus')(
+      status.cast(),
+    );
+    final flag = status[1];
+    return ok == 0 || flag == 255 ? null : flag & 128 == 0;
+  } catch (_) {
+    return null;
+  } finally {
+    calloc.free(status);
   }
 }

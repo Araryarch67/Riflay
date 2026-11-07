@@ -3161,5 +3161,21 @@
   "glassSeekBar": "Glass progress bar",
   "glassTransport": "Glass playback buttons",
   "glassTransportSubtitle": "Previous, play/pause and next",
-  "glassVolume": "Glass volume"
+  "glassVolume": "Glass volume",
+  "deviceSetupTitle": "Set up Riflay for this computer",
+  "deviceSetupIntro": "Riflay looked at this computer and picked the look that keeps a playing song under {percent}% of its processor. You can change it any time in Settings › Power & background.",
+  "@deviceSetupIntro": {"placeholders": {"percent": {"type": "String"}}},
+  "deviceSetupThreads": "{count, plural, =1{1 processor thread} other{{count} processor threads}}",
+  "@deviceSetupThreads": {"placeholders": {"count": {"type": "int"}}},
+  "deviceSetupMemory": "{size} GB of memory",
+  "@deviceSetupMemory": {"placeholders": {"size": {"type": "String"}}},
+  "deviceSetupLaptop": "Laptop, runs on battery",
+  "deviceSetupDesktop": "Desktop, no battery",
+  "deviceSetupCost": "About {percent}% of the processor while a song plays",
+  "@deviceSetupCost": {"placeholders": {"percent": {"type": "String"}}},
+  "deviceSetupRecommended": "Recommended",
+  "deviceSetupContinue": "Continue",
+  "deviceSetupKeep": "Keep my settings",
+  "deviceSetupAgain": "Check this computer",
+  "deviceSetupAgainNote": "Looks at this computer again and suggests the look that suits it"
 }

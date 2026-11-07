@@ -941,6 +941,11 @@ class _MediaCardState extends State<MediaCard> {
     return _built!;
   }
 
+  static bool _touch(BuildContext context) => switch (Theme.of(context).platform) {
+    TargetPlatform.android || TargetPlatform.iOS || TargetPlatform.fuchsia => true,
+    _ => false,
+  };
+
   Widget _content(TextTheme text) {
     return MouseRegion(
       onEnter: (_) => setState(() {
@@ -1002,7 +1007,8 @@ class _MediaCardState extends State<MediaCard> {
                   ),
                   SizedBox(height: LayoutPrefs.dense(10, 6)),
                   // A long name slides to show itself whole (it draws only while it moves); a short one stays put,
-                  // centred under a round picture.
+                  // centred under a round picture. With a mouse it slides while hovered: a Home page of long names
+                  // sliding by themselves never stopped drawing. On a phone, once when it shows up.
                   widget.circle
                       ? Text(
                           widget.title,
@@ -1013,7 +1019,10 @@ class _MediaCardState extends State<MediaCard> {
                         )
                       : MarqueeText(
                           widget.title,
-                          pause: const Duration(seconds: 3),
+                          moving: _hover || _touch(context),
+                          loops: _hover ? null : 1,
+                          whilePaused: _hover || _touch(context),
+                          pause: _hover ? const Duration(milliseconds: 500) : const Duration(seconds: 3),
                           style: text.titleSmall?.copyWith(fontWeight: FontWeight.w700),
                         ),
                   const SizedBox(height: 2),

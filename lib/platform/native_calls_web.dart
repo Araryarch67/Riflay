@@ -23,3 +23,7 @@ class WindowsPowerRequest implements IdleInhibitor {
 }
 
 class MacAssertion extends WindowsPowerRequest {}
+
+int? windowsTotalMemory() => null;
+
+bool? windowsHasBattery() => null;

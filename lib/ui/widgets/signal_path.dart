@@ -6,10 +6,13 @@ import 'package:flutter/material.dart';
 import '../../services/audio_engine.dart';
 import '../../services/bluetooth_codec.dart';
 import '../../services/player_controller.dart';
+import '../debug_switches.dart';
 import '../theme.dart';
 import '../../services/language.dart';
 
-/// Polls mpv for the live signal path while it's on screen.
+/// Polls mpv for the live signal path while it's on screen, once a second while a song plays. Paused, nothing in
+/// it moves: it is read again only when the song, the player or a sound setting changes (a read and a rebuild
+/// every second kept an idle window drawing).
 class _SignalPathBuilder extends StatefulWidget {
   const _SignalPathBuilder({required this.builder});
 
@@ -22,22 +25,52 @@ class _SignalPathBuilder extends StatefulWidget {
 class _SignalPathBuilderState extends State<_SignalPathBuilder> {
   SignalPath? _path;
   Timer? _timer;
+  late final PlayerController _controller = PlayerScope.read(context);
+
+  /// A read waiting for the one in flight: a burst of changes reads once more, not once each.
+  bool _reading = false, _again = false;
+
+  bool get _paused => !_controller.showsPlaying && !DebugSwitches.signalPathWhilePaused;
 
   @override
   void initState() {
     super.initState();
     _poll();
-    _timer = Timer.periodic(const Duration(seconds: 1), (_) => _poll());
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (!_paused) _poll();
+    });
+    _controller.addListener(_changed);
+    _controller.audio.addListener(_changed);
+  }
+
+  /// While playing the timer reads soon enough; paused, a change is read now.
+  void _changed() {
+    if (_paused) _poll();
   }
 
   Future<void> _poll() async {
-    final path = await PlayerScope.read(context).audio.signalPath();
-    if (mounted) setState(() => _path = path);
+    if (_reading) {
+      _again = true;
+      return;
+    }
+    _reading = true;
+    try {
+      final path = await _controller.audio.signalPath();
+      if (mounted) setState(() => _path = path);
+    } finally {
+      _reading = false;
+    }
+    if (_again && mounted) {
+      _again = false;
+      await _poll();
+    }
   }
 
   @override
   void dispose() {
     _timer?.cancel();
+    _controller.removeListener(_changed);
+    _controller.audio.removeListener(_changed);
     super.dispose();
   }
 

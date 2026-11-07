@@ -9146,6 +9146,78 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Glass volume'**
   String get glassVolume;
+
+  /// No description provided for @deviceSetupTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Set up Riflay for this computer'**
+  String get deviceSetupTitle;
+
+  /// No description provided for @deviceSetupIntro.
+  ///
+  /// In en, this message translates to:
+  /// **'Riflay looked at this computer and picked the look that keeps a playing song under {percent}% of its processor. You can change it any time in Settings › Power & background.'**
+  String deviceSetupIntro(String percent);
+
+  /// No description provided for @deviceSetupThreads.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 processor thread} other{{count} processor threads}}'**
+  String deviceSetupThreads(int count);
+
+  /// No description provided for @deviceSetupMemory.
+  ///
+  /// In en, this message translates to:
+  /// **'{size} GB of memory'**
+  String deviceSetupMemory(String size);
+
+  /// No description provided for @deviceSetupLaptop.
+  ///
+  /// In en, this message translates to:
+  /// **'Laptop, runs on battery'**
+  String get deviceSetupLaptop;
+
+  /// No description provided for @deviceSetupDesktop.
+  ///
+  /// In en, this message translates to:
+  /// **'Desktop, no battery'**
+  String get deviceSetupDesktop;
+
+  /// No description provided for @deviceSetupCost.
+  ///
+  /// In en, this message translates to:
+  /// **'About {percent}% of the processor while a song plays'**
+  String deviceSetupCost(String percent);
+
+  /// No description provided for @deviceSetupRecommended.
+  ///
+  /// In en, this message translates to:
+  /// **'Recommended'**
+  String get deviceSetupRecommended;
+
+  /// No description provided for @deviceSetupContinue.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue'**
+  String get deviceSetupContinue;
+
+  /// No description provided for @deviceSetupKeep.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep my settings'**
+  String get deviceSetupKeep;
+
+  /// No description provided for @deviceSetupAgain.
+  ///
+  /// In en, this message translates to:
+  /// **'Check this computer'**
+  String get deviceSetupAgain;
+
+  /// No description provided for @deviceSetupAgainNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Looks at this computer again and suggests the look that suits it'**
+  String get deviceSetupAgainNote;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

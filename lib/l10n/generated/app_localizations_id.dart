@@ -5133,4 +5133,54 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get glassVolume => 'Volume kaca';
+
+  @override
+  String get deviceSetupTitle => 'Siapkan Riflay untuk komputer ini';
+
+  @override
+  String deviceSetupIntro(String percent) {
+    return 'Riflay sudah mengecek komputer ini dan memilih tampilan yang membuat lagu yang diputar memakai kurang dari $percent% prosesornya. Kamu bisa mengubahnya kapan saja di Pengaturan › Daya & latar belakang.';
+  }
+
+  @override
+  String deviceSetupThreads(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count thread prosesor',
+      one: '1 thread prosesor',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String deviceSetupMemory(String size) {
+    return 'Memori $size GB';
+  }
+
+  @override
+  String get deviceSetupLaptop => 'Laptop, pakai baterai';
+
+  @override
+  String get deviceSetupDesktop => 'Desktop, tanpa baterai';
+
+  @override
+  String deviceSetupCost(String percent) {
+    return 'Sekitar $percent% prosesor saat lagu diputar';
+  }
+
+  @override
+  String get deviceSetupRecommended => 'Disarankan';
+
+  @override
+  String get deviceSetupContinue => 'Lanjut';
+
+  @override
+  String get deviceSetupKeep => 'Pakai pengaturanku';
+
+  @override
+  String get deviceSetupAgain => 'Cek komputer ini';
+
+  @override
+  String get deviceSetupAgainNote => 'Mengecek komputer ini lagi dan menyarankan tampilan yang cocok';
 }

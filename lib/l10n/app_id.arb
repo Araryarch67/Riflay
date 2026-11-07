@@ -1515,5 +1515,17 @@
   "glassSeekBar": "Progress bar kaca",
   "glassTransport": "Tombol pemutaran kaca",
   "glassTransportSubtitle": "Sebelumnya, putar/jeda, dan berikutnya",
-  "glassVolume": "Volume kaca"
+  "glassVolume": "Volume kaca",
+  "deviceSetupTitle": "Siapkan Riflay untuk komputer ini",
+  "deviceSetupIntro": "Riflay sudah mengecek komputer ini dan memilih tampilan yang membuat lagu yang diputar memakai kurang dari {percent}% prosesornya. Kamu bisa mengubahnya kapan saja di Pengaturan › Daya & latar belakang.",
+  "deviceSetupThreads": "{count, plural, =1{1 thread prosesor} other{{count} thread prosesor}}",
+  "deviceSetupMemory": "Memori {size} GB",
+  "deviceSetupLaptop": "Laptop, pakai baterai",
+  "deviceSetupDesktop": "Desktop, tanpa baterai",
+  "deviceSetupCost": "Sekitar {percent}% prosesor saat lagu diputar",
+  "deviceSetupRecommended": "Disarankan",
+  "deviceSetupContinue": "Lanjut",
+  "deviceSetupKeep": "Pakai pengaturanku",
+  "deviceSetupAgain": "Cek komputer ini",
+  "deviceSetupAgainNote": "Mengecek komputer ini lagi dan menyarankan tampilan yang cocok"
 }

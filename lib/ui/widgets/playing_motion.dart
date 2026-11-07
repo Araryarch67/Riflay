@@ -66,8 +66,9 @@ class _PlayingMotionState extends State<PlayingMotion> with WidgetsBindingObserv
   bool _reduceMotion = false;
   bool _allowed = false;
 
-  /// 33 ms: Balanced draws 30 times a second, and the beat rounds to whole 60 Hz steps.
-  static const _slow = Duration(microseconds: 33333);
+  /// 50 ms: Balanced draws 20 times a second, on the beats [UiBeat] gives every slower view. The flower turns and
+  /// the wave rolls slowly, so 20 fps looks the same; at 30 each frame of a playing song cost half again as much.
+  static const _slow = Duration(milliseconds: 50);
 
   @override
   void initState() {

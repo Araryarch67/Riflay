@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 
 import '../../platform/host.dart';
+import '../../services/device_setup.dart';
 import '../../services/layout_prefs.dart';
 import '../../services/player_controller.dart';
 import '../../services/power_policy.dart';
 import '../../services/stay_awake.dart';
 import '../../services/system_tray.dart';
+import '../pages/device_setup_page.dart';
 import '../pages/sound_settings.dart' show SettingTile, settingsMuted;
 import '../theme.dart';
 import 'menus.dart';
@@ -20,9 +22,10 @@ class PowerSettings {
   /// The controls shown on the dedicated Power & background page.
   static List<Widget> rows(BuildContext context) {
     final awake = StayAwake.instance;
-    if (awake == null) return const [_PerformanceRow()];
+    if (awake == null) return [const _PerformanceRow(), if (DeviceSetup.offered) const _CheckDeviceRow()];
     return [
       const _PerformanceRow(),
+      if (DeviceSetup.offered) const _CheckDeviceRow(),
       _ScreenRow(awake),
       if (StayAwake.isDesktop) _SleepRow(awake),
       if (SystemTray.offered) const CloseToTrayRow(),
@@ -80,6 +83,19 @@ class _PerformanceRow extends StatelessWidget {
         ),
       );
     },
+  );
+}
+
+/// Opens the setup page again: what this computer is, and the mode that suits it.
+class _CheckDeviceRow extends StatelessWidget {
+  const _CheckDeviceRow();
+
+  @override
+  Widget build(BuildContext context) => SettingTile(
+    icon: Icons.memory_rounded,
+    title: Text(tr.deviceSetupAgain),
+    subtitle: Text(tr.deviceSetupAgainNote, style: settingsMuted(context)),
+    control: OutlinedButton(onPressed: () => showDeviceSetup(context), child: Text(tr.deviceSetupAgain)),
   );
 }
 
