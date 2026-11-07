@@ -2594,6 +2594,27 @@
     }
   },
   "downloadAsTitle": "Download as",
+  "downloadTrackTitle": "Download track",
+  "audioFormat": "Audio format",
+  "bitrateQuality": "Bitrate quality",
+  "fmtTagUniversal": "Universal",
+  "fmtTagModern": "Modern",
+  "downloadFormatAction": "Download {format}",
+  "@downloadFormatAction": {
+    "placeholders": {
+      "format": {
+        "type": "String"
+      }
+    }
+  },
+  "savedToFolder": "Saved to {folder}",
+  "@savedToFolder": {
+    "placeholders": {
+      "folder": {
+        "type": "String"
+      }
+    }
+  },
   "couldntLookUpSizes": "Couldn't look up video sizes.",
   "smallerFilesClosest": "Smaller files, with a little less full sound. Uses the closest version YouTube offers.",
   "musicFolders": "Music folders",

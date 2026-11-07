@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
 
+import '../models/track.dart';
+import '../platform/host.dart';
 import '../services/download_prefs.dart';
+import '../services/layout_prefs.dart';
 import '../services/player_controller.dart';
 import '../services/video_download.dart';
 import '../services/youtube_importer.dart';
 import '../services/youtube_stream.dart';
 import 'theme.dart';
 import 'widgets/app_dialog.dart';
-import 'widgets/controls.dart' show formatBytes;
+import 'widgets/controls.dart' show Artwork, formatBytes;
 import 'widgets/skeleton.dart';
 import '../services/language.dart';
 
@@ -16,8 +19,14 @@ import '../services/language.dart';
 /// forces the question. Null means the person backed out.
 ///
 /// With a [videoId] the dialog shows what each choice would weigh (formats are looked up ahead, so they
-/// are usually there as it opens). Without one (a whole playlist) it shows no sizes.
-Future<DownloadChoice?> chooseDownload(BuildContext context, {bool force = false, String? videoId}) async {
+/// are usually there as it opens). Without one (a whole playlist) it shows no sizes. [track] puts the song's
+/// cover, title and artist at the top.
+Future<DownloadChoice?> chooseDownload(
+  BuildContext context, {
+  bool force = false,
+  String? videoId,
+  Track? track,
+}) async {
   final prefs = DownloadPrefs.instance;
   await prefs.load();
   if (!force && !prefs.askEveryTime) return prefs.choice;
@@ -30,11 +39,31 @@ Future<DownloadChoice?> chooseDownload(BuildContext context, {bool force = false
   // The dialog reports a failed lookup itself; until it is on screen nobody listens yet.
   candidates?.ignore();
   video?.ignore();
+  final folder = await _savedTo();
+  if (!context.mounted) return null;
   return showDialog<DownloadChoice>(
     context: context,
     useRootNavigator: true,
-    builder: (_) => DownloadOptionsDialog(initial: prefs.choice, candidates: candidates, video: video),
+    builder: (_) => DownloadOptionsDialog(
+      initial: prefs.choice,
+      candidates: candidates,
+      video: video,
+      track: track,
+      folder: folder,
+    ),
   );
+}
+
+/// The downloads folder, for "Saved to" on computers. Phones keep downloads in the app's own folder, which says
+/// nothing to the person, so they get no line.
+Future<String?> _savedTo() async {
+  if (!(Host.isLinux || Host.isWindows || Host.isMacOS)) return null;
+  try {
+    return (await YoutubeImporter.downloadsDir()).path;
+  } catch (e) {
+    debugPrint('downloads folder: $e');
+    return null;
+  }
 }
 
 /// What the song's music video offers, or null when it has none (then the dialog only offers Audio). One cached
@@ -55,9 +84,17 @@ class DownloadOptionsDialog extends StatefulWidget {
     this.canMakeMp3,
     this.canMakeFlac,
     this.canReencode,
+    this.track,
+    this.folder,
   });
 
   final DownloadChoice initial;
+
+  /// The song, shown as a card under the title; null (a whole playlist) shows none.
+  final Track? track;
+
+  /// Where the file goes, under the buttons; null shows no line.
+  final String? folder;
 
   /// What the song offers, for the sizes; null shows none. A failed lookup shows none too.
   final Future<List<AudioCandidate>>? candidates;
@@ -172,15 +209,11 @@ class _DownloadOptionsDialogState extends State<DownloadOptionsDialog> {
     return e == null ? null : '${e.exact ? '' : '~'}${formatBytes(e.bytes)}';
   }
 
-  /// A chip's label: the name, then its size or, while the lookup runs, a small spinner.
-  Widget _chipLabel(String name, DownloadChoice c) {
-    final size = _size(c);
-    if (size != null) return Text('$name · $size');
-    if (!_loading) return Text(name);
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [Text(name), const SizedBox(width: 8), const SkeletonBox.circle(size: 12)],
-    );
+  /// A tile's second line: the size, a small placeholder while it is looked up, or [fallback].
+  Widget? _sizeLine(String? size, {required bool loading, String? fallback}) {
+    if (size != null) return Text(size);
+    if (loading) return const Center(child: SkeletonBox(width: 44, height: 10, radius: 4));
+    return fallback == null ? null : Text(fallback);
   }
 
   /// The Audio / Video switch shows once the song is known to have a music video (or while that is looked up and
@@ -197,30 +230,6 @@ class _DownloadOptionsDialogState extends State<DownloadOptionsDialog> {
     return DownloadChoice.video(_container, height: pick?.video.height ?? height);
   }
 
-  /// A chip for one choice in a group: its name, then a "Recommended" tag when [recommended].
-  Widget _choice({
-    required Widget label,
-    required bool selected,
-    required VoidCallback onSelected,
-    bool recommended = false,
-  }) => ChoiceChip(
-    label: recommended
-        ? Row(
-            mainAxisSize: MainAxisSize.min,
-            // A long video label ("2160p60 · AV1 (newer devices) · 120 MB") gives way before the tag does.
-            children: [
-              Flexible(child: label),
-              const SizedBox(width: 8),
-              DialogTag(tr.recommended, onSelected: selected),
-            ],
-          )
-        : label,
-    selected: selected,
-    onSelected: (_) => onSelected(),
-  );
-
-  static Widget _chips(List<Widget> chips) => Wrap(spacing: 8, runSpacing: 8, children: chips);
-
   List<Widget> _videoSection() {
     final formats = _videoFormats;
     final containers = formats == null
@@ -235,59 +244,58 @@ class _DownloadOptionsDialogState extends State<DownloadOptionsDialog> {
     final selected = want == null || options.isEmpty
         ? null
         : pickVideoDownload(formats!, DownloadChoice.video(_container, height: want), ffmpeg: _ffmpeg)?.video.height;
-    Widget chipLabel(String name, String? size) {
-      if (size != null) return Text('$name · $size');
-      // A spinner only while a lookup runs: with none (or a failed one), sizes never come.
-      if (formats != null || !_videoLoading) return Text(name);
-      return Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [Text(name), const SizedBox(width: 8), const SkeletonBox.circle(size: 12)],
-      );
-    }
-
+    // Sizes come only while a lookup runs: with none (or a failed one) they never come.
+    final looking = formats == null && _videoLoading;
     final note = formats == null || _container != VideoContainer.mp4 ? null : webmTallerNote(formats, ffmpeg: _ffmpeg);
     return [
       DialogSection(
         label: tr.format,
         note: Text(_container.about),
-        child: _chips([
-          for (final c in containers)
-            _choice(
-              label: Text(c.label),
-              selected: _container == c,
-              recommended: c == recommendedVideoChoice.container,
-              onSelected: () => setState(() => _container = c),
-            ),
-        ]),
+        child: ChoiceTileGrid(
+          columns: 2,
+          children: [
+            for (final c in containers)
+              ChoiceTile(
+                title: c.label,
+                subtitle: Text(c == VideoContainer.mp4 ? 'H.264' : 'VP9'),
+                selected: _container == c,
+                badge: c == recommendedVideoChoice.container ? tr.recommended : null,
+                onTap: () => setState(() => _container = c),
+              ),
+          ],
+        ),
       ),
       DialogSection(
         label: tr.size,
         note: note == null ? null : Text(note),
-        child: _chips([
-          _choice(
-            label: chipLabel(
-              options.isEmpty ? tr.bestAvailable : tr.bestAvailableWith(options.first.label),
-              _videoSize(_container, null),
+        child: ChoiceTileGrid(
+          columns: 3,
+          children: [
+            ChoiceTile(
+              title: options.isEmpty ? tr.bestAvailable : tr.bestAvailableWith(options.first.label),
+              subtitle: _sizeLine(_videoSize(_container, null), loading: looking),
+              selected: want == null,
+              onTap: () => setState(() => _heights[_container] = null),
             ),
-            selected: want == null,
-            onSelected: () => setState(() => _heights[_container] = null),
-          ),
-          for (final o in options)
-            _choice(
-              label: chipLabel(o.label, _videoSize(_container, o.height)),
-              selected: o.height == selected,
-              recommended: o.height == recommended,
-              onSelected: () => setState(() => _heights[_container] = o.height),
-            ),
-        ]),
+            for (final o in options)
+              ChoiceTile(
+                title: o.label,
+                subtitle: _sizeLine(_videoSize(_container, o.height), loading: looking),
+                selected: o.height == selected,
+                badge: o.height == recommended ? tr.recommended : null,
+                onTap: () => setState(() => _heights[_container] = o.height),
+              ),
+          ],
+        ),
       ),
     ];
   }
 
   List<Widget> _audioSection() {
-    // A format this device can't make is left out, not shown greyed: unless it is the saved one.
+    // A format this device can't make is left out, not shown greyed: unless it is the saved one. In the order
+    // people know them: the one that plays anywhere first.
     final formats = [
-      for (final f in DownloadFormat.values)
+      for (final f in const [DownloadFormat.mp3, DownloadFormat.flac, DownloadFormat.m4a, DownloadFormat.opus])
         if (switch (f) {
           DownloadFormat.flac => _canFlac || _format == f,
           DownloadFormat.mp3 => _canMp3 || _format == f,
@@ -296,77 +304,158 @@ class _DownloadOptionsDialogState extends State<DownloadOptionsDialog> {
           f,
     ];
     final kbps = _kbps[_format];
+    final aboutFormat = _format == recommendedChoice.format
+        ? Text.rich(
+            TextSpan(
+              children: [
+                WidgetSpan(
+                  alignment: PlaceholderAlignment.middle,
+                  child: Padding(padding: const EdgeInsetsDirectional.only(end: 8), child: DialogTag(tr.recommended)),
+                ),
+                TextSpan(text: _format.about),
+              ],
+            ),
+          )
+        : Text(_format.about);
     return [
       DialogSection(
-        label: tr.format,
-        note: Text(_format.about),
-        child: _chips([
-          for (final f in formats)
-            _choice(
-              label: Text(f.label),
-              selected: _format == f,
-              recommended: f == recommendedChoice.format,
-              onSelected: () => setState(() => _format = f),
-            ),
-        ]),
+        label: tr.audioFormat,
+        note: aboutFormat,
+        child: ChoiceTileGrid(
+          columns: formats.length,
+          children: [
+            for (final f in formats)
+              ChoiceTile(
+                title: f.shortLabel,
+                subtitle: Text(f.kindLabel),
+                selected: _format == f,
+                badge: f == recommendedChoice.format ? tr.recommended : null,
+                onTap: () => setState(() => _format = f),
+              ),
+          ],
+        ),
       ),
-      // Lossless has no bitrate: its own question (bit depth and rate) takes the place of the bitrate's.
+      // Lossless has no bitrate: its own question (bit depth and rate) takes the bitrate's place, rather than a
+      // row of bitrates shown greyed out.
       if (_format.lossless)
         DialogSection(
           label: tr.bitDepthSampleRate,
           note: Text(_flac.about),
-          child: _chips([
-            for (final q in FlacQuality.values)
-              _choice(
-                label: _chipLabel(q.label, DownloadChoice(DownloadFormat.flac, flac: q)),
-                selected: _flac == q,
-                onSelected: () => setState(() => _flac = q),
-              ),
-          ]),
+          child: ChoiceTileGrid(
+            columns: 3,
+            children: [
+              for (final q in FlacQuality.values)
+                ChoiceTile(
+                  title: q.label,
+                  subtitle: _sizeLine(_size(DownloadChoice(DownloadFormat.flac, flac: q)), loading: _loading),
+                  selected: _flac == q,
+                  onTap: () => setState(() => _flac = q),
+                ),
+            ],
+          ),
         )
       else
         DialogSection(
-          label: tr.bitrate,
+          label: tr.bitrateQuality,
           note: kbps == null ? null : Text(_canReencode ? tr.smallerFilesNote : tr.smallerFilesClosest),
-          child: _chips([
-            for (final k in _format.bitrates)
-              _choice(
-                label: _chipLabel(bitrateLabelFor(_format, k), DownloadChoice(_format, kbps: k)),
-                selected: kbps == k,
-                onSelected: () => setState(() => _kbps[_format] = k),
-              ),
-          ]),
+          child: ChoiceTileGrid(
+            columns: 3,
+            children: [
+              for (final k in _format.bitrates)
+                ChoiceTile(
+                  title: bitrateLabelFor(_format, k),
+                  subtitle: _sizeLine(_size(DownloadChoice(_format, kbps: k)), loading: _loading),
+                  selected: kbps == k,
+                  onTap: () => setState(() => _kbps[_format] = k),
+                ),
+            ],
+          ),
         ),
     ];
+  }
+
+  /// The song this is for: its cover, title and artist.
+  Widget _trackCard(Track track) {
+    final text = Theme.of(context).textTheme;
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(color: AppColors.tile, borderRadius: LayoutPrefs.corner(16)),
+      child: Row(
+        children: [
+          Artwork(track: track, size: 56, radius: LayoutPrefs.radius(10)),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  track.title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: text.titleMedium?.copyWith(fontWeight: FontWeight.w700, color: AppColors.textPrimary),
+                ),
+                if (track.artist.isNotEmpty) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    track.artist,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: text.bodyMedium?.copyWith(color: AppColors.textSecondary),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final muted = Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary);
+    final track = widget.track;
+    final video = _kind == DownloadKind.video;
+    final folder = widget.folder;
+    final button = ButtonStyle(
+      padding: const WidgetStatePropertyAll(EdgeInsets.symmetric(horizontal: 24, vertical: 16)),
+      textStyle: WidgetStatePropertyAll(Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600)),
+    );
     return AppDialog(
-      title: tr.downloadAsTitle,
+      title: track == null ? tr.downloadAsTitle : tr.downloadTrackTitle,
+      width: 520,
+      onClose: () => Navigator.of(context).pop(),
       content: DialogBody(
         children: [
+          if (track != null) _trackCard(track),
           if (_showKind)
-            SegmentedButton<DownloadKind>(
-              showSelectedIcon: false,
-              segments: [for (final k in DownloadKind.values) ButtonSegment(value: k, label: Text(k.label))],
-              selected: {_kind},
-              onSelectionChanged: (v) => setState(() => _kind = v.first),
+            PillTabs<DownloadKind>(
+              values: DownloadKind.values,
+              selected: _kind,
+              label: (k) => k.label,
+              onSelected: (k) => setState(() => _kind = k),
             ),
           if (_videoFailed) Text(tr.couldntLookUpSizes, style: muted),
-          ...(_kind == DownloadKind.video ? _videoSection() : _audioSection()),
+          ...(video ? _videoSection() : _audioSection()),
         ],
       ),
       actions: [
-        TextButton(onPressed: () => Navigator.of(context).pop(), child: Text(tr.cancel)),
+        TextButton(
+          style: button.merge(
+            TextButton.styleFrom(backgroundColor: AppColors.tile, foregroundColor: AppColors.textPrimary),
+          ),
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(tr.cancel),
+        ),
         FilledButton(
-          onPressed: _kind == DownloadKind.video
+          style: button,
+          onPressed: video
               ? (_videoLoading ? null : () => Navigator.of(context).pop(_videoChoice()))
               : () => Navigator.of(context).pop(DownloadChoice(_format, kbps: _kbps[_format], flac: _flac)),
-          child: Text(tr.download),
+          child: Text(tr.downloadFormatAction(video ? _container.label : _format.shortLabel)),
         ),
       ],
+      footer: folder == null ? null : Text(tr.savedToFolder(folder)),
     );
   }
 }

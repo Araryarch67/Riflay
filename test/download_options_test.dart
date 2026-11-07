@@ -2,8 +2,10 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:riflay/models/track.dart';
 import 'package:riflay/services/download_prefs.dart';
 import 'package:riflay/ui/download_options.dart';
+import 'package:riflay/ui/widgets/app_dialog.dart';
 import 'package:riflay/ui/widgets/skeleton.dart';
 
 // 250 seconds of Opus 128 kbps (4,000,000 bytes) and AAC 130 kbps.
@@ -19,6 +21,8 @@ Future<Future<DownloadChoice?>> _open(
   bool mp3 = true,
   bool flac = true,
   bool ffmpeg = true,
+  Track? track,
+  String? folder,
 }) async {
   tester.view.physicalSize = const Size(600, 1600);
   tester.view.devicePixelRatio = 1;
@@ -42,6 +46,8 @@ Future<Future<DownloadChoice?>> _open(
       canMakeMp3: mp3,
       canMakeFlac: flac,
       canReencode: ffmpeg,
+      track: track,
+      folder: folder,
     ),
   );
   await tester.pump();
@@ -49,22 +55,29 @@ Future<Future<DownloadChoice?>> _open(
   return result;
 }
 
-// A chip by the start of its name; its label may carry a "Recommended" tag beside the name.
+// A tile by the start of its name.
 Finder _chip(String startsWith) => find.ancestor(
   of: find.byWidgetPredicate((w) => w is Text && (w.data ?? '').startsWith(startsWith)),
-  matching: find.byType(ChoiceChip),
+  matching: find.byType(ChoiceTile),
 );
 
-bool _selected(WidgetTester tester, Finder chip) => tester.widget<ChoiceChip>(chip).selected;
+bool _selected(WidgetTester tester, Finder chip) => tester.widget<ChoiceTile>(chip).selected;
+
+/// A tile named [name] whose second line is [size].
+Finder _sized(String name, String size) =>
+    find.descendant(of: find.byWidgetPredicate((w) => w is ChoiceTile && w.title == name), matching: find.text(size));
+
+/// The main button: "Download Opus", "Download MP4".
+final _download = find.byType(FilledButton);
 
 void main() {
   testWidgets('each bitrate shows its size once the formats are known', (tester) async {
     await _open(tester, initial: const DownloadChoice(DownloadFormat.opus), candidates: Future.value(_offered));
     await tester.pump();
-    expect(find.text('Best available · ~3.8 MB'), findsOneWidget);
-    expect(find.text('128 kbps · ~3.8 MB'), findsOneWidget, reason: 'YouTube\'s own stream is within 15%');
-    expect(find.text('96 kbps · ~2.9 MB'), findsOneWidget, reason: '250 s at 96 kbps');
-    expect(find.text('64 kbps · ~1.9 MB'), findsOneWidget);
+    expect(_sized('Best available', '~3.8 MB'), findsOneWidget);
+    expect(_sized('128 kbps', '~3.8 MB'), findsOneWidget, reason: 'YouTube\'s own stream is within 15%');
+    expect(_sized('96 kbps', '~2.9 MB'), findsOneWidget, reason: '250 s at 96 kbps');
+    expect(_sized('64 kbps', '~1.9 MB'), findsOneWidget);
   });
 
   testWidgets('chips show a placeholder while the formats are looked up, then show sizes', (tester) async {
@@ -101,11 +114,8 @@ void main() {
     expect(find.text('Recommended'), findsOneWidget);
     expect(_selected(tester, _chip('Best available')), isTrue);
     expect(_selected(tester, _chip('Opus')), isTrue);
-    expect(
-      find.descendant(of: _chip('Opus'), matching: find.text('Recommended')),
-      findsOneWidget,
-      reason: 'the tag sits on the recommended format',
-    );
+    expect(tester.widget<ChoiceTile>(_chip('Opus')).badge, 'Recommended', reason: 'the star sits on Opus');
+    expect(find.text('Recommended'), findsOneWidget, reason: 'and its note says so');
   });
 
   testWidgets('a saved choice is preselected', (tester) async {
@@ -131,9 +141,9 @@ void main() {
     await tester.pump();
     await tester.tap(find.text('MP3'));
     await tester.pump();
-    expect(find.text('192 kbps (best) · ~5.7 MB'), findsOneWidget);
-    expect(find.text('128 kbps · ~3.8 MB'), findsOneWidget);
-    expect(find.text('96 kbps · ~2.9 MB'), findsOneWidget);
+    expect(_sized('192 kbps (best)', '~5.7 MB'), findsOneWidget);
+    expect(_sized('128 kbps', '~3.8 MB'), findsOneWidget);
+    expect(_sized('96 kbps', '~2.9 MB'), findsOneWidget);
   });
 
   testWidgets('FLAC shows a size for each quality', (tester) async {
@@ -145,9 +155,9 @@ void main() {
     );
     await tester.pump();
     // 250 s: 16-bit / 48 kHz packs to 28.8 MB, 24-bit to 43.2 MB.
-    expect(find.text('16-bit / 48 kHz · ~27.5 MB'), findsOneWidget);
-    expect(find.text('24-bit / 48 kHz · ~41.2 MB'), findsOneWidget);
-    expect(find.text('Bitrate'), findsNothing, reason: 'lossless has no bitrate: hidden, not shown greyed out');
+    expect(_sized('16-bit / 48 kHz', '~27.5 MB'), findsOneWidget);
+    expect(_sized('24-bit / 48 kHz', '~41.2 MB'), findsOneWidget);
+    expect(find.text('Bitrate quality'), findsNothing, reason: 'lossless has no bitrate: hidden, not shown greyed out');
   });
 
   testWidgets('Download hands back the choice made', (tester) async {
@@ -161,7 +171,7 @@ void main() {
     await tester.pump();
     await tester.tap(_chip('128 kbps'));
     await tester.pump();
-    await tester.tap(find.text('Download'));
+    await tester.tap(_download);
     await tester.pump(const Duration(milliseconds: 400));
     expect(await result, const DownloadChoice(DownloadFormat.mp3, kbps: 128));
   });
@@ -171,8 +181,27 @@ void main() {
   ) async {
     final result = await _open(tester, initial: const DownloadChoice.video(VideoContainer.mp4));
     expect(find.byType(SkeletonBox), findsNothing, reason: 'no lookup runs, so no size would come');
-    await tester.tap(find.text('Download'));
+    await tester.tap(_download);
     await tester.pump();
     expect((await result)?.isVideo, isFalse);
+  });
+
+  testWidgets('a song shows its card, the button names the format, and the folder is under the buttons', (
+    tester,
+  ) async {
+    final result = await _open(
+      tester,
+      initial: const DownloadChoice(DownloadFormat.flac),
+      track: Track(id: 'k', uri: Uri.parse('file:///k.mp3'), title: 'Kyapi', artist: 'Houshou Marine'),
+      folder: '/home/me/Downloads',
+    );
+    expect(find.text('Download track'), findsOneWidget);
+    expect(find.text('Kyapi'), findsOneWidget);
+    expect(find.text('Houshou Marine'), findsOneWidget);
+    expect(find.text('Download FLAC'), findsOneWidget);
+    expect(find.text('Saved to /home/me/Downloads'), findsOneWidget);
+    await tester.tap(find.byIcon(Icons.close_rounded));
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(await result, isNull, reason: 'the cross backs out like Cancel');
   });
 }

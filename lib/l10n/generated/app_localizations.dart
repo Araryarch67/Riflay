@@ -7869,6 +7869,48 @@ abstract class AppLocalizations {
   /// **'Download as'**
   String get downloadAsTitle;
 
+  /// No description provided for @downloadTrackTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Download track'**
+  String get downloadTrackTitle;
+
+  /// No description provided for @audioFormat.
+  ///
+  /// In en, this message translates to:
+  /// **'Audio format'**
+  String get audioFormat;
+
+  /// No description provided for @bitrateQuality.
+  ///
+  /// In en, this message translates to:
+  /// **'Bitrate quality'**
+  String get bitrateQuality;
+
+  /// No description provided for @fmtTagUniversal.
+  ///
+  /// In en, this message translates to:
+  /// **'Universal'**
+  String get fmtTagUniversal;
+
+  /// No description provided for @fmtTagModern.
+  ///
+  /// In en, this message translates to:
+  /// **'Modern'**
+  String get fmtTagModern;
+
+  /// No description provided for @downloadFormatAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Download {format}'**
+  String downloadFormatAction(String format);
+
+  /// No description provided for @savedToFolder.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved to {folder}'**
+  String savedToFolder(String folder);
+
   /// No description provided for @couldntLookUpSizes.
   ///
   /// In en, this message translates to:

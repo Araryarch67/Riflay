@@ -263,7 +263,7 @@ void main() {
         await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 50)));
         await tester.pump(const Duration(milliseconds: 100));
       }
-      expect(find.text('Download as'), findsOneWidget);
+      expect(find.text('Download track'), findsOneWidget);
       expect(c.youtube.jobFor('dQw4w9WgXcQ'), isNull);
       await tester.tap(find.text('Cancel'));
       await tester.pump(const Duration(milliseconds: 300));

@@ -4373,6 +4373,31 @@ class AppLocalizationsId extends AppLocalizations {
   String get downloadAsTitle => 'Unduh sebagai';
 
   @override
+  String get downloadTrackTitle => 'Unduh lagu';
+
+  @override
+  String get audioFormat => 'Format audio';
+
+  @override
+  String get bitrateQuality => 'Kualitas bitrate';
+
+  @override
+  String get fmtTagUniversal => 'Universal';
+
+  @override
+  String get fmtTagModern => 'Modern';
+
+  @override
+  String downloadFormatAction(String format) {
+    return 'Unduh $format';
+  }
+
+  @override
+  String savedToFolder(String folder) {
+    return 'Disimpan di $folder';
+  }
+
+  @override
   String get couldntLookUpSizes => 'Ukuran video tidak bisa dicari.';
 
   @override

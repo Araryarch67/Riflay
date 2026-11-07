@@ -21,6 +21,17 @@ enum DownloadFormat {
     mp3 => tr.fmtMp3About,
   };
 
+  /// The name on a format tile: M4A without its codec, which the tile's second line ([kindLabel]) gives.
+  String get shortLabel => this == m4a ? 'M4A' : label;
+
+  /// The tile's second line: what kind of file it is, in a word.
+  String get kindLabel => switch (this) {
+    opus => tr.fmtTagModern,
+    m4a => 'AAC',
+    flac => tr.qualityLossless,
+    mp3 => tr.fmtTagUniversal,
+  };
+
   /// FLAC is made from the downloaded stream; the others are YouTube's own.
   bool get lossless => this == flac;
 

@@ -633,7 +633,7 @@ class DownloadButton extends StatelessWidget {
                 color: failed ? Theme.of(context).colorScheme.error : color,
                 onPressed: () async {
                   final messenger = ScaffoldMessenger.of(context);
-                  final choice = await chooseDownload(context, videoId: track.videoId);
+                  final choice = await chooseDownload(context, videoId: track.videoId, track: track);
                   if (choice == null) return;
                   c.youtube.enqueueTracks([track], choice: choice);
                   messenger.showSnackBar(SnackBar(content: Text(tr.downloadingTitle(track.title))));

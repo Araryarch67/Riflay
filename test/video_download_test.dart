@@ -4,6 +4,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:riflay/ui/widgets/app_dialog.dart';
 import 'package:riflay/ui/widgets/skeleton.dart';
 import 'package:riflay/services/download_prefs.dart';
 import 'package:riflay/services/mp4_mux.dart';
@@ -740,7 +741,7 @@ void main() {
     // A chip by the start of its name; the recommended one carries a "Recommended" tag beside it.
     Finder chip(String startsWith) => find.ancestor(
       of: find.byWidgetPredicate((w) => w is Text && (w.data ?? '').startsWith(startsWith)),
-      matching: find.byType(ChoiceChip),
+      matching: find.byType(ChoiceTile),
     );
     String nameOf(WidgetTester tester, Element chip) => tester
         .widget<Text>(find.descendant(of: find.byElementPredicate((e) => e == chip), matching: find.byType(Text)).first)
@@ -761,7 +762,7 @@ void main() {
       expect(find.text('MP4'), findsOneWidget);
       expect(find.text('WebM'), findsOneWidget);
       expect(find.text('Opus'), findsNothing);
-      await tester.tap(find.text('Download'));
+      await tester.tap(find.byType(FilledButton));
       await tester.pump(const Duration(milliseconds: 300));
       expect(await result, const DownloadChoice.video(VideoContainer.mp4, height: 1080));
     });
@@ -770,19 +771,19 @@ void main() {
       await open(tester, initial: recommendedVideoChoice, video: Future.value(_typical));
       await tester.pump();
       expect(chip('Best available (1080p60)'), findsOneWidget);
-      expect(find.descendant(of: chip('1080p60'), matching: find.text('Recommended')), findsOneWidget);
+      expect(tester.widget<ChoiceTile>(chip('1080p60')).badge, 'Recommended');
       expect(chip('720p'), findsOneWidget);
       expect(chip('360p'), findsOneWidget);
       expect(chip('2160p'), findsNothing, reason: 'MP4 stops at the H.264 sizes');
       expect(find.text('4K is available as WebM.'), findsOneWidget);
       // The size chips; MP4 and WebM are chips too, above them.
       final labels = [
-        for (final c in find.byType(ChoiceChip).evaluate())
+        for (final c in find.byType(ChoiceTile).evaluate())
           if (!const {'MP4', 'WebM'}.contains(nameOf(tester, c))) nameOf(tester, c),
       ];
       expect(labels.first, startsWith('Best available'));
       expect(labels.every((l) => !l.contains('~')), isTrue, reason: 'both sizes known: no tilde');
-      expect(tester.widget<ChoiceChip>(chip('1080p60')).selected, isTrue);
+      expect(tester.widget<ChoiceTile>(chip('1080p60')).selected, isTrue);
     });
 
     testWidgets('WebM goes up to 4K, and each container keeps its own size', (tester) async {
@@ -795,10 +796,10 @@ void main() {
       expect(chip('2160p60'), findsOneWidget);
       expect(chip('1440p'), findsOneWidget);
       expect(find.text('4K is available as WebM.'), findsNothing);
-      expect(tester.widget<ChoiceChip>(chip('1080p')).selected, isTrue, reason: 'WebM still has the recommended size');
+      expect(tester.widget<ChoiceTile>(chip('1080p')).selected, isTrue, reason: 'WebM still has the recommended size');
       await tester.tap(chip('2160p60'));
       await tester.pump();
-      await tester.tap(find.text('Download'));
+      await tester.tap(find.byType(FilledButton));
       await tester.pump(const Duration(milliseconds: 300));
       expect(await result, const DownloadChoice.video(VideoContainer.webm, height: 2160));
     });
@@ -808,7 +809,7 @@ void main() {
       await tester.pump();
       await tester.tap(chip('Best available'));
       await tester.pump();
-      await tester.tap(find.text('Download'));
+      await tester.tap(find.byType(FilledButton));
       await tester.pump(const Duration(milliseconds: 300));
       expect(await result, const DownloadChoice.video(VideoContainer.mp4, height: null));
     });

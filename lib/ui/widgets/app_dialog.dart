@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../services/language.dart';
+import '../../services/layout_prefs.dart';
 import '../theme.dart';
 
 /// Gaps inside a dialog, so every popup breathes the same way: [section] between groups of options, [label]
@@ -41,6 +42,8 @@ class AppDialog extends StatelessWidget {
     this.width = DialogWidth.regular,
     this.scrollable = true,
     this.contentPadding,
+    this.onClose,
+    this.footer,
   });
 
   /// The headline: a [Text] (a [String] is turned into one).
@@ -58,6 +61,12 @@ class AppDialog extends StatelessWidget {
 
   /// Defaults to 24 at the sides; a list that runs edge to edge passes zero.
   final EdgeInsetsGeometry? contentPadding;
+
+  /// Shows a close button at the end of the headline.
+  final VoidCallback? onClose;
+
+  /// A muted line under the actions, centred: where a download is saved.
+  final Widget? footer;
 
   @override
   Widget build(BuildContext context) {
@@ -93,10 +102,26 @@ class AppDialog extends StatelessWidget {
                     ),
                     const SizedBox(height: 16),
                   ],
-                  DefaultTextStyle.merge(
-                    style: titleStyle,
-                    textAlign: icon == null ? TextAlign.start : TextAlign.center,
-                    child: Semantics(header: true, child: heading),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: DefaultTextStyle.merge(
+                          style: titleStyle,
+                          textAlign: icon == null ? TextAlign.start : TextAlign.center,
+                          child: Semantics(header: true, child: heading),
+                        ),
+                      ),
+                      if (onClose != null)
+                        // Pulled into the corner so the cross lines up with the content's edge, not its padding.
+                        Transform.translate(
+                          offset: const Offset(8, 0),
+                          child: IconButton(
+                            tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
+                            onPressed: onClose,
+                            icon: Icon(Icons.close_rounded, color: AppColors.textSecondary),
+                          ),
+                        ),
+                    ],
                   ),
                 ],
               ),
@@ -109,11 +134,24 @@ class AppDialog extends StatelessWidget {
             ),
             if (actions.isNotEmpty || destructive != null)
               Padding(
-                padding: const EdgeInsets.fromLTRB(24, 24, 24, 24),
+                padding: EdgeInsets.fromLTRB(24, 24, 24, footer == null ? 24 : 12),
                 child: DialogActions(destructive: destructive, children: actions),
               )
             else
               const SizedBox(height: 24),
+            if (footer != null)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
+                child: Center(
+                  child: DefaultTextStyle.merge(
+                    style: theme.textTheme.bodySmall?.copyWith(color: AppColors.textMuted),
+                    textAlign: TextAlign.center,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    child: footer!,
+                  ),
+                ),
+              ),
           ],
         ),
       ),
@@ -205,7 +243,7 @@ class DialogSection extends StatelessWidget {
             Flexible(
               child: Text(
                 label,
-                style: text.titleSmall?.copyWith(fontWeight: FontWeight.w700, color: AppColors.textPrimary),
+                style: text.titleSmall?.copyWith(fontWeight: FontWeight.w600, color: AppColors.textSecondary),
               ),
             ),
             if (trailing != null) ...[const SizedBox(width: 8), trailing!],
@@ -260,6 +298,187 @@ class DialogTag extends StatelessWidget {
         label,
         style: Theme.of(context).textTheme.labelSmall?.copyWith(color: ink, fontWeight: FontWeight.w700),
       ),
+    );
+  }
+}
+
+/// One choice in a [ChoiceTileGrid]: a short name over a muted line (what it is, or its size). Selected, it takes
+/// the accent's tint. [badge] marks the recommended one with a star in the corner.
+class ChoiceTile extends StatelessWidget {
+  const ChoiceTile({
+    super.key,
+    required this.title,
+    this.subtitle,
+    required this.selected,
+    required this.onTap,
+    this.badge,
+  });
+
+  final String title;
+
+  /// A line of text, or a small placeholder while a size is looked up.
+  final Widget? subtitle;
+  final bool selected;
+  final VoidCallback? onTap;
+  final String? badge;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    final radius = LayoutPrefs.corner(14);
+    final ink = selected ? AppColors.accent : AppColors.textPrimary;
+    return Semantics(
+      selected: selected,
+      button: true,
+      hint: badge,
+      child: Material(
+        color: selected ? AppColors.accent.withValues(alpha: 0.18) : AppColors.tile,
+        borderRadius: radius,
+        child: InkWell(
+          borderRadius: radius,
+          onTap: onTap,
+          child: Stack(
+            children: [
+              ConstrainedBox(
+                constraints: const BoxConstraints(minHeight: 64, minWidth: double.infinity),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        title,
+                        textAlign: TextAlign.center,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: text.titleSmall?.copyWith(fontWeight: FontWeight.w700, color: ink),
+                      ),
+                      if (subtitle != null) ...[
+                        const SizedBox(height: 2),
+                        DefaultTextStyle.merge(
+                          textAlign: TextAlign.center,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: text.bodySmall?.copyWith(
+                            color: selected ? AppColors.accent.withValues(alpha: 0.85) : AppColors.textSecondary,
+                          ),
+                          child: subtitle!,
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+              if (badge != null)
+                PositionedDirectional(
+                  top: 4,
+                  end: 4,
+                  child: Tooltip(
+                    message: badge!,
+                    child: Icon(Icons.star_rounded, size: 12, color: AppColors.accent),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// [children] (usually [ChoiceTile]s) in rows of equal tiles, [columns] across; a name too long for its tile
+/// takes a second line.
+class ChoiceTileGrid extends StatelessWidget {
+  const ChoiceTileGrid({super.key, required this.children, this.columns = 4});
+
+  final List<Widget> children;
+  final int columns;
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, constraints) {
+      const gap = 8.0;
+      final across = children.length < columns ? children.length : columns;
+      if (across == 0) return const SizedBox.shrink();
+      final width = (constraints.maxWidth - gap * (across - 1)) / across;
+      final rows = <Widget>[];
+      for (var i = 0; i < children.length; i += across) {
+        final row = children.sublist(i, (i + across).clamp(0, children.length));
+        rows.add(
+          // A tile whose name takes two lines makes its neighbours as tall.
+          IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                for (var j = 0; j < row.length; j++) ...[
+                  if (j > 0) const SizedBox(width: gap),
+                  SizedBox(width: width, child: row[j]),
+                ],
+              ],
+            ),
+          ),
+        );
+      }
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (var i = 0; i < rows.length; i++) ...[if (i > 0) const SizedBox(height: gap), rows[i]],
+        ],
+      );
+    },
+  );
+}
+
+/// Pills across, one selected and filled with the accent: a dialog's top-level switch (Audio / Video).
+class PillTabs<T> extends StatelessWidget {
+  const PillTabs({
+    super.key,
+    required this.values,
+    required this.selected,
+    required this.label,
+    required this.onSelected,
+  });
+
+  final List<T> values;
+  final T selected;
+  final String Function(T) label;
+  final ValueChanged<T> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    return Row(
+      children: [
+        for (var i = 0; i < values.length; i++) ...[
+          if (i > 0) const SizedBox(width: 8),
+          Expanded(
+            child: Semantics(
+              selected: values[i] == selected,
+              button: true,
+              child: Material(
+                color: values[i] == selected ? AppColors.accent : Colors.transparent,
+                shape: const StadiumBorder(),
+                child: InkWell(
+                  customBorder: const StadiumBorder(),
+                  onTap: () => onSelected(values[i]),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    child: Text(
+                      label(values[i]),
+                      textAlign: TextAlign.center,
+                      style: text.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: values[i] == selected ? AppColors.onAccent : AppColors.textPrimary,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ],
     );
   }
 }

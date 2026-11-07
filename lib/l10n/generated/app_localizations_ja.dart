@@ -4291,6 +4291,31 @@ class AppLocalizationsJa extends AppLocalizations {
   String get downloadAsTitle => '形式を選んでダウンロード';
 
   @override
+  String get downloadTrackTitle => '曲をダウンロード';
+
+  @override
+  String get audioFormat => '音声の形式';
+
+  @override
+  String get bitrateQuality => 'ビットレート';
+
+  @override
+  String get fmtTagUniversal => 'どこでも再生';
+
+  @override
+  String get fmtTagModern => '新しめ';
+
+  @override
+  String downloadFormatAction(String format) {
+    return '$formatでダウンロード';
+  }
+
+  @override
+  String savedToFolder(String folder) {
+    return '保存先: $folder';
+  }
+
+  @override
   String get couldntLookUpSizes => '動画のサイズを調べられませんでした。';
 
   @override

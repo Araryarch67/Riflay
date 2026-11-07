@@ -362,7 +362,8 @@ class TrackMenuButton extends StatelessWidget {
   /// Queues [tracks] for download. A plain tap follows Settings (and asks only if
   /// "Ask every time" is on); [force] always asks, for "Download as…".
   static Future<void> download(BuildContext host, PlayerController c, List<Track> tracks, {bool force = false}) async {
-    final choice = await chooseDownload(host, force: force, videoId: tracks.length == 1 ? tracks.first.videoId : null);
+    final one = tracks.length == 1 ? tracks.first : null;
+    final choice = await chooseDownload(host, force: force, videoId: one?.videoId, track: one);
     if (choice == null) return;
     c.youtube.enqueueTracks(tracks, choice: choice);
   }

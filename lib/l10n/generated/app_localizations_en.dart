@@ -4427,6 +4427,31 @@ class AppLocalizationsEn extends AppLocalizations {
   String get downloadAsTitle => 'Download as';
 
   @override
+  String get downloadTrackTitle => 'Download track';
+
+  @override
+  String get audioFormat => 'Audio format';
+
+  @override
+  String get bitrateQuality => 'Bitrate quality';
+
+  @override
+  String get fmtTagUniversal => 'Universal';
+
+  @override
+  String get fmtTagModern => 'Modern';
+
+  @override
+  String downloadFormatAction(String format) {
+    return 'Download $format';
+  }
+
+  @override
+  String savedToFolder(String folder) {
+    return 'Saved to $folder';
+  }
+
+  @override
   String get couldntLookUpSizes => 'Couldn\'t look up video sizes.';
 
   @override
