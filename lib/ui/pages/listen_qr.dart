@@ -7,6 +7,7 @@ import '../../platform/background.dart';
 import '../../platform/host.dart';
 import '../../services/listen_together/qr_code.dart';
 import '../../services/language.dart';
+import '../widgets/app_dialog.dart';
 
 /// Displays a room code that another Riflay can scan to join.
 class ListenQrDialog extends StatelessWidget {
@@ -14,27 +15,23 @@ class ListenQrDialog extends StatelessWidget {
   final String code;
 
   @override
-  Widget build(BuildContext context) => AlertDialog(
+  Widget build(BuildContext context) => AppDialog(
     title: Text(tr.sessionQr),
-    content: SizedBox(
-      width: 280,
-      child: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            QrImageView(
-              data: listenQrPayload(code),
-              backgroundColor: Colors.white,
-              padding: const EdgeInsets.all(16),
-              semanticsLabel: tr.sessionQrSemantics,
-            ),
-            const SizedBox(height: 16),
-            Text(code, style: Theme.of(context).textTheme.titleLarge),
-            const SizedBox(height: 8),
-            Text(tr.sessionQrHowTo),
-          ],
+    width: 328,
+    content: Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        QrImageView(
+          data: listenQrPayload(code),
+          backgroundColor: Colors.white,
+          padding: const EdgeInsets.all(16),
+          semanticsLabel: tr.sessionQrSemantics,
         ),
-      ),
+        const SizedBox(height: 16),
+        Text(code, style: Theme.of(context).textTheme.titleLarge),
+        const SizedBox(height: 8),
+        Text(tr.sessionQrHowTo),
+      ],
     ),
     actions: [TextButton(onPressed: () => Navigator.of(context).pop(), child: Text(tr.close))],
   );

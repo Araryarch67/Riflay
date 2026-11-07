@@ -8,6 +8,7 @@ import '../services/youtube_music_account.dart';
 import 'theme.dart';
 import 'widgets/skeleton.dart';
 import '../services/language.dart';
+import 'widgets/app_dialog.dart';
 
 /// Where an imported playlist was saved.
 typedef ImportedPlaylist = ({String title, String? youtubeId, UserPlaylist? local});
@@ -160,86 +161,84 @@ class _PlaylistImportDialogState extends State<PlaylistImportDialog> {
     final secondary = text.bodySmall?.copyWith(color: AppColors.textSecondary);
     final p = playlist;
     final signedIn = widget.signedIn;
-    return AlertDialog(
+    return AppDialog(
       title: Text(switch (step) {
         _Step.link => tr.importPlaylist,
         _Step.done => tr.importedNamed(result!.title),
         _ => p?.title ?? tr.importPlaylist,
       }),
-      content: SizedBox(
-        width: 400,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: switch (step) {
-            _Step.link => [
-              Text(tr.pastePlaylistLink),
-              const SizedBox(height: 4),
-              Text(signedIn ? tr.becomesYtPlaylist : tr.becomesRiflayPlaylist, style: secondary),
-              const SizedBox(height: 16),
-              TextField(
-                controller: link,
-                autofocus: widget.initial == null,
-                textInputAction: TextInputAction.done,
-                onChanged: (_) => setState(() => error = null),
-                onSubmitted: (_) => start(),
-                decoration: InputDecoration(
-                  labelText: tr.playlistLink,
-                  border: const OutlineInputBorder(),
-                  errorMaxLines: 3,
-                  errorText: error ?? (link.text.trim().isNotEmpty && !valid ? tr.notAPlaylistLink : null),
-                ),
+      width: DialogWidth.regular,
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: switch (step) {
+          _Step.link => [
+            Text(tr.pastePlaylistLink),
+            const SizedBox(height: 4),
+            Text(signedIn ? tr.becomesYtPlaylist : tr.becomesRiflayPlaylist, style: secondary),
+            const SizedBox(height: 16),
+            TextField(
+              controller: link,
+              autofocus: widget.initial == null,
+              textInputAction: TextInputAction.done,
+              onChanged: (_) => setState(() => error = null),
+              onSubmitted: (_) => start(),
+              decoration: InputDecoration(
+                labelText: tr.playlistLink,
+                border: const OutlineInputBorder(),
+                errorMaxLines: 3,
+                errorText: error ?? (link.text.trim().isNotEmpty && !valid ? tr.notAPlaylistLink : null),
               ),
+            ),
+          ],
+          _Step.reading => [
+            Text(tr.readingPlaylist, style: secondary),
+            const SizedBox(height: 16),
+            const SkeletonBox(height: 8, radius: 4),
+          ],
+          _Step.matching || _Step.saving => [
+            Text(
+              step == _Step.saving ? tr.saving : tr.findingSongsInYt('$done', '${p!.songs.length}'),
+              style: secondary,
+            ),
+            const SizedBox(height: 16),
+            LinearProgressIndicator(
+              value: step == _Step.saving || p == null || p.songs.isEmpty ? null : done / p.songs.length,
+            ),
+          ],
+          _Step.done => [
+            Text(
+              result!.youtubeId != null
+                  ? tr.songsAddedOfYt('$saved', '${p!.total}')
+                  : tr.songsAddedOf('$saved', '${p!.total}'),
+            ),
+            if (p.total > p.songs.length) ...[
+              const SizedBox(height: 8),
+              Text(tr.firstSongsOnly(p.songs.length, p.service), style: secondary),
             ],
-            _Step.reading => [
-              Text(tr.readingPlaylist, style: secondary),
+            if (missing.isNotEmpty) ...[
               const SizedBox(height: 16),
-              const SkeletonBox(height: 8, radius: 4),
-            ],
-            _Step.matching || _Step.saving => [
               Text(
-                step == _Step.saving ? tr.saving : tr.findingSongsInYt('$done', '${p!.songs.length}'),
-                style: secondary,
+                missing.length == 1 ? tr.songsNotOnYt(1) : tr.songsNotOnYt(missing.length),
+                style: text.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
               ),
-              const SizedBox(height: 16),
-              LinearProgressIndicator(
-                value: step == _Step.saving || p == null || p.songs.isEmpty ? null : done / p.songs.length,
+              const SizedBox(height: 8),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: 160),
+                child: ListView(
+                  shrinkWrap: true,
+                  children: [
+                    for (final s in missing)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 2),
+                        child: Text('$s', maxLines: 1, overflow: TextOverflow.ellipsis, style: secondary),
+                      ),
+                  ],
+                ),
               ),
             ],
-            _Step.done => [
-              Text(
-                result!.youtubeId != null
-                    ? tr.songsAddedOfYt('$saved', '${p!.total}')
-                    : tr.songsAddedOf('$saved', '${p!.total}'),
-              ),
-              if (p.total > p.songs.length) ...[
-                const SizedBox(height: 8),
-                Text(tr.firstSongsOnly(p.songs.length, p.service), style: secondary),
-              ],
-              if (missing.isNotEmpty) ...[
-                const SizedBox(height: 16),
-                Text(
-                  missing.length == 1 ? tr.songsNotOnYt(1) : tr.songsNotOnYt(missing.length),
-                  style: text.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
-                ),
-                const SizedBox(height: 8),
-                ConstrainedBox(
-                  constraints: const BoxConstraints(maxHeight: 160),
-                  child: ListView(
-                    shrinkWrap: true,
-                    children: [
-                      for (final s in missing)
-                        Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 2),
-                          child: Text('$s', maxLines: 1, overflow: TextOverflow.ellipsis, style: secondary),
-                        ),
-                    ],
-                  ),
-                ),
-              ],
-            ],
-          },
-        ),
+          ],
+        },
       ),
       actions: switch (step) {
         _Step.link => [

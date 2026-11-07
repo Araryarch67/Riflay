@@ -49,8 +49,11 @@ Future<Future<DownloadChoice?>> _open(
   return result;
 }
 
-Finder _chip(String startsWith) =>
-    find.byWidgetPredicate((w) => w is ChoiceChip && w.label is Text && (w.label as Text).data!.startsWith(startsWith));
+// A chip by the start of its name; its label may carry a "Recommended" tag beside the name.
+Finder _chip(String startsWith) => find.ancestor(
+  of: find.byWidgetPredicate((w) => w is Text && (w.data ?? '').startsWith(startsWith)),
+  matching: find.byType(ChoiceChip),
+);
 
 bool _selected(WidgetTester tester, Finder chip) => tester.widget<ChoiceChip>(chip).selected;
 
@@ -97,12 +100,12 @@ void main() {
     await tester.pump();
     expect(find.text('Recommended'), findsOneWidget);
     expect(_selected(tester, _chip('Best available')), isTrue);
+    expect(_selected(tester, _chip('Opus')), isTrue);
     expect(
-      tester.widget<RadioListTile<DownloadFormat>>(find.byType(RadioListTile<DownloadFormat>).first).value,
-      DownloadFormat.opus,
+      find.descendant(of: _chip('Opus'), matching: find.text('Recommended')),
+      findsOneWidget,
+      reason: 'the tag sits on the recommended format',
     );
-    final group = tester.widget<RadioGroup<DownloadFormat>>(find.byType(RadioGroup<DownloadFormat>));
-    expect(group.groupValue, DownloadFormat.opus);
   });
 
   testWidgets('a saved choice is preselected', (tester) async {
@@ -112,10 +115,8 @@ void main() {
       candidates: Future.value(_offered),
     );
     await tester.pump();
-    expect(
-      tester.widget<RadioGroup<DownloadFormat>>(find.byType(RadioGroup<DownloadFormat>)).groupValue,
-      DownloadFormat.m4a,
-    );
+    expect(_selected(tester, _chip('M4A')), isTrue);
+    expect(_selected(tester, _chip('Opus')), isFalse);
     expect(_selected(tester, _chip('96 kbps')), isTrue);
     expect(_selected(tester, _chip('Best available')), isFalse);
   });
@@ -146,6 +147,7 @@ void main() {
     // 250 s: 16-bit / 48 kHz packs to 28.8 MB, 24-bit to 43.2 MB.
     expect(find.text('16-bit / 48 kHz · ~27.5 MB'), findsOneWidget);
     expect(find.text('24-bit / 48 kHz · ~41.2 MB'), findsOneWidget);
+    expect(find.text('Bitrate'), findsNothing, reason: 'lossless has no bitrate: hidden, not shown greyed out');
   });
 
   testWidgets('Download hands back the choice made', (tester) async {

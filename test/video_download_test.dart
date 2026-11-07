@@ -737,9 +737,14 @@ void main() {
       return result;
     }
 
-    Finder chip(String startsWith) => find.byWidgetPredicate(
-      (w) => w is ChoiceChip && w.label is Text && (w.label as Text).data!.startsWith(startsWith),
+    // A chip by the start of its name; the recommended one carries a "Recommended" tag beside it.
+    Finder chip(String startsWith) => find.ancestor(
+      of: find.byWidgetPredicate((w) => w is Text && (w.data ?? '').startsWith(startsWith)),
+      matching: find.byType(ChoiceChip),
     );
+    String nameOf(WidgetTester tester, Element chip) => tester
+        .widget<Text>(find.descendant(of: find.byElementPredicate((e) => e == chip), matching: find.byType(Text)).first)
+        .data!;
 
     testWidgets('a song with a music video can be saved as Audio or Video; Audio stays the default', (tester) async {
       final result = await open(
@@ -765,15 +770,19 @@ void main() {
       await open(tester, initial: recommendedVideoChoice, video: Future.value(_typical));
       await tester.pump();
       expect(chip('Best available (1080p60)'), findsOneWidget);
-      expect(chip('1080p60 · Recommended'), findsOneWidget);
+      expect(find.descendant(of: chip('1080p60'), matching: find.text('Recommended')), findsOneWidget);
       expect(chip('720p'), findsOneWidget);
       expect(chip('360p'), findsOneWidget);
       expect(chip('2160p'), findsNothing, reason: 'MP4 stops at the H.264 sizes');
       expect(find.text('4K is available as WebM.'), findsOneWidget);
-      final labels = [for (final c in tester.widgetList<ChoiceChip>(find.byType(ChoiceChip))) (c.label as Text).data!];
+      // The size chips; MP4 and WebM are chips too, above them.
+      final labels = [
+        for (final c in find.byType(ChoiceChip).evaluate())
+          if (!const {'MP4', 'WebM'}.contains(nameOf(tester, c))) nameOf(tester, c),
+      ];
       expect(labels.first, startsWith('Best available'));
       expect(labels.every((l) => !l.contains('~')), isTrue, reason: 'both sizes known: no tilde');
-      expect(tester.widget<ChoiceChip>(chip('1080p60 · Recommended')).selected, isTrue);
+      expect(tester.widget<ChoiceChip>(chip('1080p60')).selected, isTrue);
     });
 
     testWidgets('WebM goes up to 4K, and each container keeps its own size', (tester) async {

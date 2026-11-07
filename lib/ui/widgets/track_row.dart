@@ -25,6 +25,7 @@ import '../pages/youtube_music_page.dart' show openRemotePlaylist, RemoteCollect
 import '../ytmusic_edit.dart';
 import '../player/player_parts.dart' show shareTrack;
 import '../theme.dart';
+import 'app_dialog.dart';
 import 'controls.dart';
 import 'menus.dart';
 import 'stats_for_nerds.dart';
@@ -555,19 +556,14 @@ class TrackMenuButton extends StatelessWidget {
 /// Asks first, then deletes a downloaded song: out of the library and off this device.
 Future<void> confirmDeleteDownload(BuildContext context, PlayerController c, Track download) async {
   final messenger = ScaffoldMessenger.maybeOf(context);
-  final ok = await showDialog<bool>(
-    context: context,
-    useRootNavigator: true,
-    builder: (context) => AlertDialog(
-      title: Text(tr.deleteDownloadQuestion),
-      content: Text(tr.deleteDownloadBody(download.title)),
-      actions: [
-        TextButton(onPressed: () => Navigator.pop(context, false), child: Text(tr.cancel)),
-        FilledButton(onPressed: () => Navigator.pop(context, true), child: Text(tr.delete)),
-      ],
-    ),
+  final ok = await confirmDialog(
+    context,
+    title: tr.deleteDownloadQuestion,
+    body: tr.deleteDownloadBody(download.title),
+    confirmLabel: tr.delete,
+    destructive: true,
   );
-  if (ok != true) return;
+  if (!ok) return;
   final failed = await c.deleteDownloads([download]);
   messenger?.showSnackBar(SnackBar(content: Text(failed > 0 ? tr.removedFileNotDeleted : tr.downloadDeleted)));
 }

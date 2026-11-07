@@ -4,6 +4,7 @@ import '../../services/extensions/extension_store.dart';
 import 'sound_settings.dart';
 import '../widgets/skeleton.dart';
 import '../../services/language.dart';
+import '../widgets/app_dialog.dart';
 
 /// SpotiFLAC extension repositories, and the extensions from them: add or remove a repository, install, turn on or
 /// off, update and remove extensions. Enabled extensions that search add their results to Search.
@@ -59,16 +60,12 @@ class _ExtensionSettingsState extends State<ExtensionSettings> {
   }
 
   Future<void> _uninstall(InstalledExtension ext) async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(tr.removeNamedQuestion(ext.manifest.displayName)),
-        content: Text(tr.removeExtensionBody),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: Text(tr.cancel)),
-          FilledButton(onPressed: () => Navigator.pop(context, true), child: Text(tr.remove)),
-        ],
-      ),
+    final ok = await confirmDialog(
+      context,
+      title: tr.removeNamedQuestion(ext.manifest.displayName),
+      body: tr.removeExtensionBody,
+      confirmLabel: tr.remove,
+      destructive: true,
     );
     if (ok == true) await _run(() => _store.uninstall(ext.id), tr.couldntRemoveNamed(ext.manifest.displayName));
   }

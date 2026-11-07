@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import '../../services/color_tools.dart';
 import '../theme.dart';
 import '../../services/language.dart';
+import 'app_dialog.dart';
 
 /// A small colour picker: hue, a saturation / brightness square and a hex field. Returns the colour
 /// picked, or null when cancelled.
@@ -47,61 +48,59 @@ class _ColorPickerDialogState extends State<_ColorPickerDialog> {
   @override
   Widget build(BuildContext context) {
     final color = _typed ?? _hsv.toColor();
-    return AlertDialog(
+    return AppDialog(
       title: Text(widget.title),
-      content: SizedBox(
-        width: 280,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _SaturationBrightness(hsv: _hsv, onChanged: _set),
-            const SizedBox(height: 14),
-            _HueBar(hue: _hsv.hue, onChanged: (h) => _set(_hsv.withHue(h))),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Container(
-                  width: 44,
-                  height: 44,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: color,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: AppColors.border),
-                  ),
-                  child: Text(
-                    'Aa',
-                    style: TextStyle(color: onColorFor(color), fontWeight: FontWeight.w700),
-                  ),
+      width: 328,
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _SaturationBrightness(hsv: _hsv, onChanged: _set),
+          const SizedBox(height: 14),
+          _HueBar(hue: _hsv.hue, onChanged: (h) => _set(_hsv.withHue(h))),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: color,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: AppColors.border),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: TextField(
-                    controller: _hex,
-                    maxLength: 7,
-                    inputFormatters: [FilteringTextInputFormatter.allow(RegExp('[#0-9a-fA-F]'))],
-                    decoration: const InputDecoration(
-                      labelText: 'Hex',
-                      counterText: '',
-                      isDense: true,
-                      border: OutlineInputBorder(),
-                    ),
-                    onChanged: (t) {
-                      final c = parseHex(t);
-                      if (c != null) {
-                        setState(() {
-                          _hsv = HSVColor.fromColor(c);
-                          _typed = c;
-                        });
-                      }
-                    },
-                  ),
+                child: Text(
+                  'Aa',
+                  style: TextStyle(color: onColorFor(color), fontWeight: FontWeight.w700),
                 ),
-              ],
-            ),
-          ],
-        ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: TextField(
+                  controller: _hex,
+                  maxLength: 7,
+                  inputFormatters: [FilteringTextInputFormatter.allow(RegExp('[#0-9a-fA-F]'))],
+                  decoration: const InputDecoration(
+                    labelText: 'Hex',
+                    counterText: '',
+                    isDense: true,
+                    border: OutlineInputBorder(),
+                  ),
+                  onChanged: (t) {
+                    final c = parseHex(t);
+                    if (c != null) {
+                      setState(() {
+                        _hsv = HSVColor.fromColor(c);
+                        _typed = c;
+                      });
+                    }
+                  },
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
       actions: [
         TextButton(onPressed: () => Navigator.pop(context), child: Text(tr.cancel)),

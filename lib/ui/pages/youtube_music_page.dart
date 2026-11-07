@@ -22,6 +22,7 @@ import '../../services/ytmusic_web.dart';
 import '../widgets/menus.dart';
 import '../widgets/skeleton.dart';
 import '../../services/language.dart';
+import '../widgets/app_dialog.dart';
 
 /// The one sign-in: Google's own page, in a window on Linux (WebKitGTK helper)
 /// and inside the app everywhere else.
@@ -470,20 +471,12 @@ class _LibraryPlaylistPageState extends State<LibraryPlaylistPage> {
     final messenger = ScaffoldMessenger.of(context);
     final history = ShellScope.of(context).history;
     final navigator = Navigator.of(context);
-    final sure = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(tr.deletePlaylistQuestion),
-        content: Text(tr.deleteYtPlaylistBody(_title)),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: Text(tr.cancel)),
-          FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.error),
-            onPressed: () => Navigator.pop(context, true),
-            child: Text(tr.delete),
-          ),
-        ],
-      ),
+    final sure = await confirmDialog(
+      context,
+      title: tr.deletePlaylistQuestion,
+      body: tr.deleteYtPlaylistBody(_title),
+      confirmLabel: tr.delete,
+      destructive: true,
     );
     if (sure != true) return;
     try {

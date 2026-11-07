@@ -8,6 +8,7 @@ import '../../services/color_tools.dart';
 import '../../services/language.dart';
 import '../../services/system_fonts.dart';
 import '../theme.dart';
+import '../widgets/app_dialog.dart';
 import '../widgets/color_picker.dart';
 import '../widgets/menus.dart';
 import 'sound_settings.dart';
@@ -330,16 +331,19 @@ class _FontDialogState extends State<_FontDialog> {
     final muted = settingsMuted(context);
     Widget row(String title, String subtitle, bool selected, VoidCallback onTap) => ListTile(
       dense: true,
+      // In line with the dialog's title and search field.
+      contentPadding: const EdgeInsets.symmetric(horizontal: 24),
       title: Text(title),
       subtitle: Text(subtitle, style: muted),
       trailing: selected ? Icon(Icons.check_rounded, color: AppColors.accent) : null,
       onTap: onTap,
     );
-    return AlertDialog(
+    return AppDialog(
       title: Text(tr.font),
-      contentPadding: const EdgeInsets.fromLTRB(0, 12, 0, 0),
+      // The list scrolls itself and runs edge to edge; the dialog keeps one height while the search narrows it.
+      scrollable: false,
+      contentPadding: EdgeInsets.zero,
       content: SizedBox(
-        width: 440,
         height: 460,
         child: Column(
           children: [

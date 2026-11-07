@@ -60,8 +60,6 @@ Future<void> showDownloadEditor(BuildContext context, Track track, {required boo
       context: context,
       useRootNavigator: true,
       builder: (context) => Dialog(
-        backgroundColor: AppColors.elevated,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 520), child: form),
       ),
     );
@@ -274,11 +272,7 @@ class _DownloadEditFormState extends State<DownloadEditForm> {
             children: [
               TextButton(onPressed: _saving ? null : () => Navigator.of(context).pop(), child: Text(tr.cancel)),
               const SizedBox(width: 8),
-              FilledButton(
-                style: FilledButton.styleFrom(backgroundColor: AppColors.inverse, foregroundColor: AppColors.onInverse),
-                onPressed: _saving ? null : _save,
-                child: Text(tr.save),
-              ),
+              FilledButton(onPressed: _saving ? null : _save, child: Text(tr.save)),
             ],
           ),
         ],

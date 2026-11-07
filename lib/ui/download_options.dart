@@ -6,6 +6,7 @@ import '../services/video_download.dart';
 import '../services/youtube_importer.dart';
 import '../services/youtube_stream.dart';
 import 'theme.dart';
+import 'widgets/app_dialog.dart';
 import 'widgets/controls.dart' show formatBytes;
 import 'widgets/skeleton.dart';
 import '../services/language.dart';
@@ -196,7 +197,31 @@ class _DownloadOptionsDialogState extends State<DownloadOptionsDialog> {
     return DownloadChoice.video(_container, height: pick?.video.height ?? height);
   }
 
-  List<Widget> _videoSection(TextTheme text, TextStyle? muted) {
+  /// A chip for one choice in a group: its name, then a "Recommended" tag when [recommended].
+  Widget _choice({
+    required Widget label,
+    required bool selected,
+    required VoidCallback onSelected,
+    bool recommended = false,
+  }) => ChoiceChip(
+    label: recommended
+        ? Row(
+            mainAxisSize: MainAxisSize.min,
+            // A long video label ("2160p60 · AV1 (newer devices) · 120 MB") gives way before the tag does.
+            children: [
+              Flexible(child: label),
+              const SizedBox(width: 8),
+              DialogTag(tr.recommended, onSelected: selected),
+            ],
+          )
+        : label,
+    selected: selected,
+    onSelected: (_) => onSelected(),
+  );
+
+  static Widget _chips(List<Widget> chips) => Wrap(spacing: 8, runSpacing: 8, children: chips);
+
+  List<Widget> _videoSection() {
     final formats = _videoFormats;
     final containers = formats == null
         ? VideoContainer.values
@@ -222,172 +247,120 @@ class _DownloadOptionsDialogState extends State<DownloadOptionsDialog> {
 
     final note = formats == null || _container != VideoContainer.mp4 ? null : webmTallerNote(formats, ffmpeg: _ffmpeg);
     return [
-      Text(tr.format, style: text.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
-      RadioGroup<VideoContainer>(
-        groupValue: _container,
-        onChanged: (v) => setState(() => _container = v ?? _container),
-        child: Column(
-          children: [
-            for (final c in containers)
-              RadioListTile<VideoContainer>(
-                dense: true,
-                contentPadding: EdgeInsets.zero,
-                value: c,
-                title: Row(
-                  children: [
-                    Flexible(child: Text(c.label)),
-                    if (c == recommendedVideoChoice.container) ...[
-                      const SizedBox(width: 8),
-                      Text(
-                        tr.recommended,
-                        style: muted?.copyWith(color: AppColors.accent, fontWeight: FontWeight.w700),
-                      ),
-                    ],
-                  ],
-                ),
-                subtitle: Text(c.about, style: muted),
-              ),
-          ],
-        ),
+      DialogSection(
+        label: tr.format,
+        note: Text(_container.about),
+        child: _chips([
+          for (final c in containers)
+            _choice(
+              label: Text(c.label),
+              selected: _container == c,
+              recommended: c == recommendedVideoChoice.container,
+              onSelected: () => setState(() => _container = c),
+            ),
+        ]),
       ),
-      const SizedBox(height: 8),
-      Text(tr.size, style: text.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
-      const SizedBox(height: 8),
-      Wrap(
-        spacing: 8,
-        runSpacing: 4,
-        children: [
-          ChoiceChip(
+      DialogSection(
+        label: tr.size,
+        note: note == null ? null : Text(note),
+        child: _chips([
+          _choice(
             label: chipLabel(
               options.isEmpty ? tr.bestAvailable : tr.bestAvailableWith(options.first.label),
               _videoSize(_container, null),
             ),
             selected: want == null,
-            onSelected: (_) => setState(() => _heights[_container] = null),
+            onSelected: () => setState(() => _heights[_container] = null),
           ),
           for (final o in options)
-            ChoiceChip(
-              label: chipLabel(
-                o.height == recommended ? '${o.label} · Recommended' : o.label,
-                _videoSize(_container, o.height),
-              ),
+            _choice(
+              label: chipLabel(o.label, _videoSize(_container, o.height)),
               selected: o.height == selected,
-              onSelected: (_) => setState(() => _heights[_container] = o.height),
+              recommended: o.height == recommended,
+              onSelected: () => setState(() => _heights[_container] = o.height),
             ),
-        ],
+        ]),
       ),
-      if (note != null) ...[const SizedBox(height: 8), Text(note, style: muted)],
+    ];
+  }
+
+  List<Widget> _audioSection() {
+    // A format this device can't make is left out, not shown greyed: unless it is the saved one.
+    final formats = [
+      for (final f in DownloadFormat.values)
+        if (switch (f) {
+          DownloadFormat.flac => _canFlac || _format == f,
+          DownloadFormat.mp3 => _canMp3 || _format == f,
+          _ => true,
+        })
+          f,
+    ];
+    final kbps = _kbps[_format];
+    return [
+      DialogSection(
+        label: tr.format,
+        note: Text(_format.about),
+        child: _chips([
+          for (final f in formats)
+            _choice(
+              label: Text(f.label),
+              selected: _format == f,
+              recommended: f == recommendedChoice.format,
+              onSelected: () => setState(() => _format = f),
+            ),
+        ]),
+      ),
+      // Lossless has no bitrate: its own question (bit depth and rate) takes the place of the bitrate's.
+      if (_format.lossless)
+        DialogSection(
+          label: tr.bitDepthSampleRate,
+          note: Text(_flac.about),
+          child: _chips([
+            for (final q in FlacQuality.values)
+              _choice(
+                label: _chipLabel(q.label, DownloadChoice(DownloadFormat.flac, flac: q)),
+                selected: _flac == q,
+                onSelected: () => setState(() => _flac = q),
+              ),
+          ]),
+        )
+      else
+        DialogSection(
+          label: tr.bitrate,
+          note: kbps == null ? null : Text(_canReencode ? tr.smallerFilesNote : tr.smallerFilesClosest),
+          child: _chips([
+            for (final k in _format.bitrates)
+              _choice(
+                label: _chipLabel(bitrateLabelFor(_format, k), DownloadChoice(_format, kbps: k)),
+                selected: kbps == k,
+                onSelected: () => setState(() => _kbps[_format] = k),
+              ),
+          ]),
+        ),
     ];
   }
 
   @override
   Widget build(BuildContext context) {
-    final text = Theme.of(context).textTheme;
-    final muted = text.bodySmall?.copyWith(color: AppColors.textSecondary);
-    return AlertDialog(
-      backgroundColor: AppColors.elevated,
-      title: Text(tr.downloadAsTitle),
-      content: SizedBox(
-        width: 380,
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (_showKind) ...[
-                SegmentedButton<DownloadKind>(
-                  showSelectedIcon: false,
-                  segments: [for (final k in DownloadKind.values) ButtonSegment(value: k, label: Text(k.label))],
-                  selected: {_kind},
-                  onSelectionChanged: (v) => setState(() => _kind = v.first),
-                ),
-                const SizedBox(height: 16),
-              ],
-              if (_videoFailed) ...[Text(tr.couldntLookUpSizes, style: muted), const SizedBox(height: 12)],
-              if (_kind == DownloadKind.video)
-                ..._videoSection(text, muted)
-              else ...[
-                Text(tr.format, style: text.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
-                RadioGroup<DownloadFormat>(
-                  groupValue: _format,
-                  onChanged: (v) => setState(() => _format = v ?? _format),
-                  child: Column(
-                    children: [
-                      for (final f in DownloadFormat.values)
-                        if (switch (f) {
-                          DownloadFormat.flac => _canFlac || _format == f,
-                          DownloadFormat.mp3 => _canMp3 || _format == f,
-                          _ => true,
-                        })
-                          RadioListTile<DownloadFormat>(
-                            dense: true,
-                            contentPadding: EdgeInsets.zero,
-                            value: f,
-                            title: Row(
-                              children: [
-                                Flexible(child: Text(f.label)),
-                                if (f == recommendedChoice.format) ...[
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    tr.recommended,
-                                    style: muted?.copyWith(color: AppColors.accent, fontWeight: FontWeight.w700),
-                                  ),
-                                ],
-                              ],
-                            ),
-                            subtitle: Text(f.about, style: muted),
-                          ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  _format.lossless ? tr.bitDepthSampleRate : tr.bitrate,
-                  style: text.titleSmall?.copyWith(fontWeight: FontWeight.w700),
-                ),
-                const SizedBox(height: 8),
-                if (_format.lossless) ...[
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 4,
-                    children: [
-                      for (final q in FlacQuality.values)
-                        ChoiceChip(
-                          label: _chipLabel(q.label, DownloadChoice(DownloadFormat.flac, flac: q)),
-                          selected: _flac == q,
-                          onSelected: (_) => setState(() => _flac = q),
-                        ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Text(_flac.about, style: muted),
-                ] else ...[
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 4,
-                    children: [
-                      for (final k in _format.bitrates)
-                        ChoiceChip(
-                          label: _chipLabel(bitrateLabelFor(_format, k), DownloadChoice(_format, kbps: k)),
-                          selected: _kbps[_format] == k,
-                          onSelected: (_) => setState(() => _kbps[_format] = k),
-                        ),
-                    ],
-                  ),
-                  if (_kbps[_format] != null) ...[
-                    const SizedBox(height: 8),
-                    Text(_canReencode ? tr.smallerFilesNote : tr.smallerFilesClosest, style: muted),
-                  ],
-                ],
-              ],
-            ],
-          ),
-        ),
+    final muted = Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary);
+    return AppDialog(
+      title: tr.downloadAsTitle,
+      content: DialogBody(
+        children: [
+          if (_showKind)
+            SegmentedButton<DownloadKind>(
+              showSelectedIcon: false,
+              segments: [for (final k in DownloadKind.values) ButtonSegment(value: k, label: Text(k.label))],
+              selected: {_kind},
+              onSelectionChanged: (v) => setState(() => _kind = v.first),
+            ),
+          if (_videoFailed) Text(tr.couldntLookUpSizes, style: muted),
+          ...(_kind == DownloadKind.video ? _videoSection() : _audioSection()),
+        ],
       ),
       actions: [
         TextButton(onPressed: () => Navigator.of(context).pop(), child: Text(tr.cancel)),
         FilledButton(
-          style: FilledButton.styleFrom(backgroundColor: AppColors.inverse, foregroundColor: AppColors.onInverse),
           onPressed: _kind == DownloadKind.video
               ? (_videoLoading ? null : () => Navigator.of(context).pop(_videoChoice()))
               : () => Navigator.of(context).pop(DownloadChoice(_format, kbps: _kbps[_format], flac: _flac)),

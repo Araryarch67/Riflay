@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import '../platform/features.dart';
 import 'theme.dart';
 import '../services/language.dart';
+import 'widgets/app_dialog.dart';
 
 /// What a keyboard shortcut does. The shell maps each to a callback.
 enum AppAction { playPause, next, previous, volumeUp, volumeDown, search, back, forward, pasteLink, fullScreen, help }
@@ -99,29 +100,24 @@ Future<void> showShortcutsDialog(BuildContext context) => showDialog<void>(
   context: context,
   builder: (context) {
     final text = Theme.of(context).textTheme;
-    return AlertDialog(
-      backgroundColor: AppColors.elevated,
+    return AppDialog(
       title: Text(tr.keyboardShortcuts),
-      content: SizedBox(
-        width: 380,
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              for (final s in appShortcuts)
-                if (s.available)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 6),
-                    child: Row(
-                      children: [
-                        Expanded(child: Text(s.label)),
-                        Text(_keysFor(s), style: text.bodyMedium?.copyWith(color: AppColors.textSecondary)),
-                      ],
-                    ),
-                  ),
-            ],
-          ),
-        ),
+      width: DialogWidth.regular,
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (final s in appShortcuts)
+            if (s.available)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 6),
+                child: Row(
+                  children: [
+                    Expanded(child: Text(s.label)),
+                    Text(_keysFor(s), style: text.bodyMedium?.copyWith(color: AppColors.textSecondary)),
+                  ],
+                ),
+              ),
+        ],
       ),
       actions: [TextButton(onPressed: () => Navigator.of(context).pop(), child: Text(tr.close))],
     );

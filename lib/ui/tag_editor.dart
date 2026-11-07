@@ -9,6 +9,7 @@ import '../services/player_controller.dart';
 import 'theme.dart';
 import 'widgets/controls.dart';
 import '../services/language.dart';
+import 'widgets/app_dialog.dart';
 
 /// "Edit info" for a local file: title, artist, album, numbers and cover art.
 Future<void> showTagEditor(BuildContext context, Track track) async {
@@ -113,86 +114,82 @@ class _TagEditorDialogState extends State<_TagEditorDialog> {
         decoration: InputDecoration(labelText: label, border: const OutlineInputBorder(), isDense: true),
       ),
     );
-    return AlertDialog(
+    return AppDialog(
       title: Text(tr.editInfo),
-      content: SizedBox(
-        width: 440,
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
+      width: DialogWidth.regular,
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
             children: [
-              Row(
-                children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(4),
-                    child: SizedBox.square(
-                      dimension: 72,
-                      child: _cover != null
-                          // A picked cover can be a 3000 px scan: decode only what the box shows.
-                          ? Image.memory(
-                              _cover!,
-                              key: const ValueKey('new-cover'),
-                              fit: BoxFit.cover,
-                              cacheWidth: (72 * MediaQuery.devicePixelRatioOf(context)).round(),
-                            )
-                          : Artwork(track: widget.track, size: 72),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+              ClipRRect(
+                borderRadius: BorderRadius.circular(4),
+                child: SizedBox.square(
+                  dimension: 72,
+                  child: _cover != null
+                      // A picked cover can be a 3000 px scan: decode only what the box shows.
+                      ? Image.memory(
+                          _cover!,
+                          key: const ValueKey('new-cover'),
+                          fit: BoxFit.cover,
+                          cacheWidth: (72 * MediaQuery.devicePixelRatioOf(context)).round(),
+                        )
+                      : Artwork(track: widget.track, size: 72),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
                       children: [
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: [
-                            OutlinedButton(
-                              onPressed: Metadata.canEditCover(widget.track) ? _pickCover : null,
-                              child: Text(tr.changeCover),
-                            ),
-                            ListenableBuilder(
-                              listenable: Listenable.merge([_artist, _album]),
-                              builder: (context, _) => OutlinedButton(
-                                onPressed:
-                                    Metadata.canEditCover(widget.track) &&
-                                        !_searching &&
-                                        _artist.text.trim().isNotEmpty &&
-                                        _album.text.trim().isNotEmpty
-                                    ? _findCover
-                                    : null,
-                                child: Text(_searching ? tr.searching : tr.findOnline),
-                              ),
-                            ),
-                          ],
+                        OutlinedButton(
+                          onPressed: Metadata.canEditCover(widget.track) ? _pickCover : null,
+                          child: Text(tr.changeCover),
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          tr.largeImageHint,
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
+                        ListenableBuilder(
+                          listenable: Listenable.merge([_artist, _album]),
+                          builder: (context, _) => OutlinedButton(
+                            onPressed:
+                                Metadata.canEditCover(widget.track) &&
+                                    !_searching &&
+                                    _artist.text.trim().isNotEmpty &&
+                                    _album.text.trim().isNotEmpty
+                                ? _findCover
+                                : null,
+                            child: Text(_searching ? tr.searching : tr.findOnline),
+                          ),
                         ),
                       ],
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 4),
+                    Text(
+                      tr.largeImageHint,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
+                    ),
+                  ],
+                ),
               ),
-              const SizedBox(height: 16),
-              field(tr.title, _title),
-              field(tr.artist, _artist),
-              field(tr.album, _album),
-              Row(
-                children: [
-                  Expanded(child: field(tr.trackNumber, _track, number: true)),
-                  const SizedBox(width: 12),
-                  Expanded(child: field(tr.discNumber, _disc, number: true)),
-                  const SizedBox(width: 12),
-                  Expanded(child: field(tr.year, _year, number: true)),
-                ],
-              ),
-              field(tr.genre, _genre),
             ],
           ),
-        ),
+          const SizedBox(height: 16),
+          field(tr.title, _title),
+          field(tr.artist, _artist),
+          field(tr.album, _album),
+          Row(
+            children: [
+              Expanded(child: field(tr.trackNumber, _track, number: true)),
+              const SizedBox(width: 12),
+              Expanded(child: field(tr.discNumber, _disc, number: true)),
+              const SizedBox(width: 12),
+              Expanded(child: field(tr.year, _year, number: true)),
+            ],
+          ),
+          field(tr.genre, _genre),
+        ],
       ),
       actions: [
         TextButton(onPressed: () => Navigator.pop(context), child: Text(tr.cancel)),

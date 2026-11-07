@@ -8,6 +8,7 @@ import '../shell_scope.dart';
 import '../theme.dart';
 import '../widgets/page_scaffold.dart';
 import '../../services/language.dart';
+import '../widgets/app_dialog.dart';
 
 /// Ten-band equalizer with presets. Each band's frequency and width can be
 /// changed too (tap its label), which makes it a parametric EQ.
@@ -169,7 +170,7 @@ class _BandSlider extends StatelessWidget {
     final ok = await showDialog<bool>(
       context: context,
       builder: (context) => StatefulBuilder(
-        builder: (context, setState) => AlertDialog(
+        builder: (context, setState) => AppDialog(
           title: Text(tr.bandNumber('${index + 1}')),
           content: Column(
             mainAxisSize: MainAxisSize.min,

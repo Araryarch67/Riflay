@@ -5,6 +5,7 @@ import '../../services/language.dart';
 import '../../services/player_controller.dart';
 import '../../services/sleep_timer.dart';
 import '../theme.dart';
+import 'app_dialog.dart';
 
 /// The moon in the player: opens the sleep timer, and while it runs shows how long is left.
 class SleepTimerButton extends StatelessWidget {
@@ -94,8 +95,6 @@ Future<void> showSleepTimer(BuildContext context) {
   return showDialog<void>(
     context: context,
     builder: (_) => Dialog(
-      backgroundColor: AppColors.elevated,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 380),
         child: SingleChildScrollView(child: body),
@@ -286,8 +285,7 @@ class _CustomTimeState extends State<_CustomTime> {
         onSubmitted: (_) => _picked == null ? null : Navigator.of(context).pop(_picked),
       ),
     );
-    return AlertDialog(
-      backgroundColor: AppColors.elevated,
+    return AppDialog(
       title: Text(tr.customTime),
       content: Row(children: [field(tr.hours, _hours), const SizedBox(width: 16), field(tr.minutes, _minutes)]),
       actions: [

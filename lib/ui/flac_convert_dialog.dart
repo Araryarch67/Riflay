@@ -7,6 +7,7 @@ import '../services/player_controller.dart';
 import '../services/youtube_importer.dart';
 import 'theme.dart';
 import '../services/language.dart';
+import 'widgets/app_dialog.dart';
 
 /// Asks how to make [tracks] FLAC, then converts them; the result comes as a SnackBar. Songs that can't be converted
 /// are left out. Does nothing when none can.
@@ -54,48 +55,44 @@ class _FlacConvertDialogState extends State<FlacConvertDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final text = Theme.of(context).textTheme;
-    final muted = text.bodySmall?.copyWith(color: AppColors.textSecondary);
+    final muted = Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary);
     final one = widget.count == 1;
-    return AlertDialog(
+    return AppDialog(
       title: Text(tr.convertToFlac),
-      content: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 420),
-        child: SingleChildScrollView(
-          child: Column(
+      content: DialogBody(
+        children: [
+          Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(one ? tr.flacBiggerOne : tr.flacBiggerEach),
-              if (widget.keepsOriginals) ...[const SizedBox(height: 8), Text(tr.ownSongsStay, style: muted)],
-              const SizedBox(height: 16),
-              Text(tr.quality, style: text.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 8,
-                runSpacing: 4,
-                children: [
-                  for (final q in FlacQuality.values)
-                    ChoiceChip(
-                      label: Text(q.label),
-                      selected: _quality == q,
-                      onSelected: (_) => setState(() => _quality = q),
-                    ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Text(_quality.about, style: muted),
+              if (widget.keepsOriginals) ...[
+                const SizedBox(height: DialogGap.note),
+                Text(tr.ownSongsStay, style: muted),
+              ],
             ],
           ),
-        ),
+          DialogSection(
+            label: tr.quality,
+            note: Text(_quality.about),
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final q in FlacQuality.values)
+                  ChoiceChip(
+                    label: Text(q.label),
+                    selected: _quality == q,
+                    onSelected: (_) => setState(() => _quality = q),
+                  ),
+              ],
+            ),
+          ),
+        ],
       ),
       actions: [
         TextButton(onPressed: () => Navigator.of(context).pop(), child: Text(tr.cancel)),
-        FilledButton(
-          style: FilledButton.styleFrom(backgroundColor: AppColors.inverse, foregroundColor: AppColors.onInverse),
-          onPressed: () => Navigator.of(context).pop(_quality),
-          child: Text(tr.convert),
-        ),
+        FilledButton(onPressed: () => Navigator.of(context).pop(_quality), child: Text(tr.convert)),
       ],
     );
   }

@@ -4,6 +4,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:riflay/ui/widgets/app_dialog.dart';
 import 'package:liquid_glass_renderer/liquid_glass_renderer.dart';
 import 'package:riflay/models/track.dart';
 import 'package:riflay/services/appearance.dart';
@@ -424,7 +425,7 @@ void main() {
       await tester.scrollUntilVisible(find.text(preset.name), 180, scrollable: find.byType(Scrollable).first);
       await tester.tap(find.text(preset.name));
       await tester.pumpAndSettle();
-      expect(find.byType(AlertDialog), findsOneWidget, reason: 'the other preset must be selectable');
+      expect(find.byType(AppDialog), findsOneWidget, reason: 'the other preset must be selectable');
       await tester.tap(find.text('Apply'));
       await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 50)));
       await tester.pumpAndSettle();

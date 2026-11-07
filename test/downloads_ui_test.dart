@@ -245,7 +245,7 @@ void main() {
       await tester.longPress(find.byType(IconButton));
       await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 50)));
       await tester.pump();
-      expect(find.byType(AlertDialog), findsNothing);
+      expect(find.byType(Dialog), findsNothing);
       final job = c.youtube.jobFor('dQw4w9WgXcQ');
       expect(job, isNotNull);
       expect(job!.choice, const DownloadChoice(DownloadFormat.m4a, kbps: 96));

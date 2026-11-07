@@ -10,6 +10,7 @@ import '../theme.dart';
 import 'sound_settings.dart' show SettingTile, SettingsCard, settingsMuted;
 import '../widgets/skeleton.dart';
 import '../../services/language.dart';
+import '../widgets/app_dialog.dart';
 
 /// Settings › Accounts & services › Last.fm & ListenBrainz: where what you play is shared.
 class ScrobbleSettings extends StatelessWidget {
@@ -177,47 +178,45 @@ class _ListenBrainzDialogState extends State<_ListenBrainzDialog> {
   }
 
   @override
-  Widget build(BuildContext context) => AlertDialog(
+  Widget build(BuildContext context) => AppDialog(
     title: Text(tr.connectService('ListenBrainz')),
-    content: SizedBox(
-      width: 420,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            tr.listenBrainzTokenBody,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary),
+    width: DialogWidth.regular,
+    content: Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          tr.listenBrainzTokenBody,
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary),
+        ),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: TextButton.icon(
+            style: TextButton.styleFrom(padding: EdgeInsets.zero),
+            onPressed: () => launchUrl(
+              Uri.parse(ListenBrainz.tokenPage),
+              mode: LaunchMode.externalApplication,
+            ).catchError((_) => false),
+            icon: const Icon(Icons.open_in_new_rounded, size: 18),
+            label: Text(tr.openListenBrainzSettings),
           ),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: TextButton.icon(
-              style: TextButton.styleFrom(padding: EdgeInsets.zero),
-              onPressed: () => launchUrl(
-                Uri.parse(ListenBrainz.tokenPage),
-                mode: LaunchMode.externalApplication,
-              ).catchError((_) => false),
-              icon: const Icon(Icons.open_in_new_rounded, size: 18),
-              label: Text(tr.openListenBrainzSettings),
-            ),
+        ),
+        const SizedBox(height: 8),
+        TextField(
+          controller: _token,
+          autofocus: true,
+          obscureText: true,
+          enabled: !_checking,
+          decoration: InputDecoration(
+            labelText: tr.userToken,
+            border: const OutlineInputBorder(),
+            isDense: true,
+            errorText: _error,
+            errorMaxLines: 2,
           ),
-          const SizedBox(height: 8),
-          TextField(
-            controller: _token,
-            autofocus: true,
-            obscureText: true,
-            enabled: !_checking,
-            decoration: InputDecoration(
-              labelText: tr.userToken,
-              border: const OutlineInputBorder(),
-              isDense: true,
-              errorText: _error,
-              errorMaxLines: 2,
-            ),
-            onSubmitted: (_) => _save(),
-          ),
-        ],
-      ),
+          onSubmitted: (_) => _save(),
+        ),
+      ],
     ),
     actions: [
       TextButton(onPressed: () => Navigator.pop(context), child: Text(tr.cancel)),
@@ -316,25 +315,23 @@ class _LastFmSignInDialogState extends State<_LastFmSignInDialog> {
   @override
   Widget build(BuildContext context) {
     final muted = Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary);
-    return AlertDialog(
+    return AppDialog(
       title: Text(tr.connectService('Last.fm')),
-      content: SizedBox(
-        width: 420,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (_error != null)
-              Text(_error!, style: muted)
-            else if (_page == null)
-              const SkeletonBox(height: 8, radius: 4)
-            else ...[
-              Text(tr.lastfmAllowBody, style: muted),
-              const SizedBox(height: 16),
-              const SkeletonBox(height: 8, radius: 4),
-            ],
+      width: DialogWidth.regular,
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (_error != null)
+            Text(_error!, style: muted)
+          else if (_page == null)
+            const SkeletonBox(height: 8, radius: 4)
+          else ...[
+            Text(tr.lastfmAllowBody, style: muted),
+            const SizedBox(height: 16),
+            const SkeletonBox(height: 8, radius: 4),
           ],
-        ),
+        ],
       ),
       actions: [
         TextButton(onPressed: () => Navigator.pop(context), child: Text(tr.cancel)),

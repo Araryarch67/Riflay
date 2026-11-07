@@ -29,6 +29,7 @@ import 'scrobble_settings.dart';
 import 'sound_settings.dart';
 import 'spotify_page.dart';
 import 'youtube_music_page.dart';
+import '../widgets/app_dialog.dart';
 
 /// The few groups on the first Settings page; each opens a page that lists its [SettingsTopic]s.
 enum SettingsGroup {
@@ -706,35 +707,33 @@ class _BetterLyricsKeyDialogState extends State<_BetterLyricsKeyDialog> {
   }
 
   @override
-  Widget build(BuildContext context) => AlertDialog(
+  Widget build(BuildContext context) => AppDialog(
     title: Text(tr.betterLyricsKey),
-    content: SizedBox(
-      width: 420,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            tr.betterLyricsKeyBody,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary),
+    width: DialogWidth.regular,
+    content: Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          tr.betterLyricsKeyBody,
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary),
+        ),
+        const SizedBox(height: 16),
+        TextField(
+          controller: _key,
+          autofocus: true,
+          obscureText: true,
+          enabled: !_checking,
+          decoration: InputDecoration(
+            labelText: tr.apiKey,
+            border: const OutlineInputBorder(),
+            isDense: true,
+            errorText: _error,
+            errorMaxLines: 2,
           ),
-          const SizedBox(height: 16),
-          TextField(
-            controller: _key,
-            autofocus: true,
-            obscureText: true,
-            enabled: !_checking,
-            decoration: InputDecoration(
-              labelText: tr.apiKey,
-              border: const OutlineInputBorder(),
-              isDense: true,
-              errorText: _error,
-              errorMaxLines: 2,
-            ),
-            onSubmitted: (v) => _save(v),
-          ),
-        ],
-      ),
+          onSubmitted: (v) => _save(v),
+        ),
+      ],
     ),
     actions: [
       if (LyricsService.betterLyricsKey != null)

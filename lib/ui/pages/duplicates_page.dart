@@ -13,6 +13,7 @@ import '../theme.dart';
 import '../widgets/page_scaffold.dart';
 import '../widgets/skeleton.dart';
 import '../../services/language.dart';
+import '../widgets/app_dialog.dart';
 
 /// Songs that are in the library more than once, in different files, formats or sources: shows each copy,
 /// picks the best to keep, and removes the others when asked.
@@ -335,40 +336,39 @@ class _RemoveDialogState extends State<_RemoveDialog> {
     final withFiles = planRemoval(widget.choices, deleteFiles: true, library: widget.library);
     final n = plan.removeFromLibrary.length;
     final muted = Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary);
-    return AlertDialog(
+    return AppDialog(
       title: Text(tr.removeCopiesQuestion(n)),
-      content: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(tr.removeCopiesBody),
-            const SizedBox(height: 12),
-            CheckboxListTile(
-              contentPadding: EdgeInsets.zero,
-              controlAffinity: ListTileControlAffinity.leading,
-              value: _delete,
-              onChanged: (v) => setState(() => _delete = v ?? false),
-              title: Text(tr.alsoDeleteFiles),
-              subtitle: Text(tr.freesSize(formatFileSize(withFiles.bytesFreed)), style: muted),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(tr.removeCopiesBody),
+          const SizedBox(height: 12),
+          CheckboxListTile(
+            contentPadding: EdgeInsets.zero,
+            controlAffinity: ListTileControlAffinity.leading,
+            value: _delete,
+            onChanged: (v) => setState(() => _delete = v ?? false),
+            title: Text(tr.alsoDeleteFiles),
+            subtitle: Text(tr.freesSize(formatFileSize(withFiles.bytesFreed)), style: muted),
+          ),
+          if (_delete && plan.filesToDelete.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(
+              [
+                if (plan.ownFilesToDelete > 0) tr.ownFilesCount(plan.ownFilesToDelete),
+                if (plan.downloadsToDelete > 0) tr.downloadsRiflaySaved(plan.downloadsToDelete),
+              ].join(' ${tr.listAnd} '),
+              style: muted,
             ),
-            if (_delete && plan.filesToDelete.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              Text(
-                [
-                  if (plan.ownFilesToDelete > 0) tr.ownFilesCount(plan.ownFilesToDelete),
-                  if (plan.downloadsToDelete > 0) tr.downloadsRiflaySaved(plan.downloadsToDelete),
-                ].join(' ${tr.listAnd} '),
-                style: muted,
-              ),
-            ],
-            if (_delete && plan.skippedFiles > 0) Text(tr.filesUsedElsewhere(plan.skippedFiles), style: muted),
           ],
-        ),
+          if (_delete && plan.skippedFiles > 0) Text(tr.filesUsedElsewhere(plan.skippedFiles), style: muted),
+        ],
       ),
       actions: [
         TextButton(onPressed: () => Navigator.of(context, rootNavigator: true).pop(), child: Text(tr.cancel)),
-        FilledButton(
+        DestructiveButton(
+          filled: true,
           onPressed: () => Navigator.of(context, rootNavigator: true).pop(_delete),
           child: Text(_delete ? tr.deleteFiles : tr.removeFromLibrary),
         ),

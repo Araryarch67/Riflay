@@ -46,8 +46,6 @@ Future<void> showCastPicker(BuildContext context) {
   return showDialog<void>(
     context: context,
     builder: (_) => Dialog(
-      backgroundColor: AppColors.elevated,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 420), child: body),
     ),
   );

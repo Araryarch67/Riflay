@@ -35,8 +35,6 @@ Future<bool> showYoutubeImport(BuildContext context, {required bool compact, Str
       : await showDialog<bool>(
           context: context,
           builder: (context) => Dialog(
-            backgroundColor: AppColors.elevated,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             // Scrolls on short windows instead of overflowing.
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 520),

@@ -12,6 +12,7 @@ import '../services/youtube_music_account.dart';
 import '../services/ytmusic_web.dart';
 import 'download_options.dart';
 import 'theme.dart';
+import 'widgets/app_dialog.dart';
 
 /// Marks the songs below as rows of a playlist the user can edit (an
 /// Riflay playlist or their own YouTube Music one), so each song's menu
@@ -105,61 +106,59 @@ class _PlaylistNameDialogState extends State<_PlaylistNameDialog> {
     final initialTitle = widget.initialTitle;
     final askPrivacy = widget.askPrivacy;
     final offerYoutube = widget.offerYoutube;
-    return AlertDialog(
+    return AppDialog(
       title: Text(initialTitle == null ? tr.newPlaylist : tr.renamePlaylist),
-      content: SizedBox(
-        width: 380,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            TextField(
-              controller: name,
-              autofocus: true,
-              textInputAction: TextInputAction.done,
-              onSubmitted: (_) => submit(),
-              decoration: InputDecoration(labelText: tr.name, border: OutlineInputBorder()),
+      width: DialogWidth.regular,
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          TextField(
+            controller: name,
+            autofocus: true,
+            textInputAction: TextInputAction.done,
+            onSubmitted: (_) => submit(),
+            decoration: InputDecoration(labelText: tr.name, border: OutlineInputBorder()),
+          ),
+          if (offerYoutube) ...[
+            const SizedBox(height: 16),
+            SegmentedButton<PlaylistHome>(
+              segments: const [
+                ButtonSegment(
+                  value: PlaylistHome.riflay,
+                  icon: Icon(Icons.offline_pin_outlined),
+                  label: Text('Riflay'),
+                ),
+                ButtonSegment(
+                  value: PlaylistHome.youtubeMusic,
+                  icon: Icon(Icons.cloud_outlined),
+                  label: Text('YouTube Music'),
+                ),
+              ],
+              selected: {home},
+              onSelectionChanged: (v) => setState(() => home = v.first),
             ),
-            if (offerYoutube) ...[
-              const SizedBox(height: 16),
-              SegmentedButton<PlaylistHome>(
-                segments: const [
-                  ButtonSegment(
-                    value: PlaylistHome.riflay,
-                    icon: Icon(Icons.offline_pin_outlined),
-                    label: Text('Riflay'),
-                  ),
-                  ButtonSegment(
-                    value: PlaylistHome.youtubeMusic,
-                    icon: Icon(Icons.cloud_outlined),
-                    label: Text('YouTube Music'),
-                  ),
-                ],
-                selected: {home},
-                onSelectionChanged: (v) => setState(() => home = v.first),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                home == PlaylistHome.riflay ? tr.playlistOnDeviceNote : tr.playlistOnYtNote,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
-              ),
-            ],
-            if (askPrivacy || home == PlaylistHome.youtubeMusic) ...[
-              const SizedBox(height: 16),
-              SegmentedButton<PlaylistPrivacy>(
-                segments: [for (final p in PlaylistPrivacy.values) ButtonSegment(value: p, label: Text(p.label))],
-                selected: {privacy},
-                onSelectionChanged: (v) => setState(() => privacy = v.first),
-              ),
-              const SizedBox(height: 8),
-              Text(switch (privacy) {
-                PlaylistPrivacy.private => tr.privacyPrivate,
-                PlaylistPrivacy.unlisted => tr.privacyUnlisted,
-                PlaylistPrivacy.public => tr.privacyPublic,
-              }, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary)),
-            ],
+            const SizedBox(height: 8),
+            Text(
+              home == PlaylistHome.riflay ? tr.playlistOnDeviceNote : tr.playlistOnYtNote,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
+            ),
           ],
-        ),
+          if (askPrivacy || home == PlaylistHome.youtubeMusic) ...[
+            const SizedBox(height: 16),
+            SegmentedButton<PlaylistPrivacy>(
+              segments: [for (final p in PlaylistPrivacy.values) ButtonSegment(value: p, label: Text(p.label))],
+              selected: {privacy},
+              onSelectionChanged: (v) => setState(() => privacy = v.first),
+            ),
+            const SizedBox(height: 8),
+            Text(switch (privacy) {
+              PlaylistPrivacy.private => tr.privacyPrivate,
+              PlaylistPrivacy.unlisted => tr.privacyUnlisted,
+              PlaylistPrivacy.public => tr.privacyPublic,
+            }, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary)),
+          ],
+        ],
       ),
       actions: [
         TextButton(onPressed: () => Navigator.pop(context), child: Text(tr.cancel)),
@@ -314,16 +313,11 @@ Future<bool> inviteToPlaylist(BuildContext context, String playlistId, PlaylistP
   final account = PlayerScope.read(context).ytMusic;
   final messenger = ScaffoldMessenger.of(context);
   if (privacy == PlaylistPrivacy.private) {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(tr.makeUnlistedQuestion),
-        content: Text(tr.makeUnlistedBody),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: Text(tr.cancel)),
-          FilledButton(onPressed: () => Navigator.pop(context, true), child: Text(tr.makeUnlisted)),
-        ],
-      ),
+    final ok = await confirmDialog(
+      context,
+      title: tr.makeUnlistedQuestion,
+      body: tr.makeUnlistedBody,
+      confirmLabel: tr.makeUnlisted,
     );
     if (ok != true) return false;
   }
@@ -351,25 +345,23 @@ class _InviteDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
-    return AlertDialog(
+    return AppDialog(
       title: Text(tr.inviteFriends),
-      content: SizedBox(
-        width: 380,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(tr.inviteLinkCopied),
-            const SizedBox(height: 16),
-            DecoratedBox(
-              decoration: BoxDecoration(color: AppColors.hover, borderRadius: BorderRadius.circular(6)),
-              child: Padding(
-                padding: const EdgeInsets.all(12),
-                child: SelectableText(link, maxLines: 2, style: text.bodySmall),
-              ),
+      width: DialogWidth.regular,
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(tr.inviteLinkCopied),
+          const SizedBox(height: 16),
+          DecoratedBox(
+            decoration: BoxDecoration(color: AppColors.hover, borderRadius: BorderRadius.circular(6)),
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: SelectableText(link, maxLines: 2, style: text.bodySmall),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
       actions: [
         TextButton(
@@ -387,16 +379,12 @@ class _InviteDialog extends StatelessWidget {
 
 /// "Stop sharing": every friend loses access and old links stop working.
 Future<bool> stopSharingPlaylist(BuildContext context, String playlistId) async {
-  final sure = await showDialog<bool>(
-    context: context,
-    builder: (context) => AlertDialog(
-      title: Text(tr.stopSharingQuestion),
-      content: Text(tr.stopSharingBody),
-      actions: [
-        TextButton(onPressed: () => Navigator.pop(context, false), child: Text(tr.cancel)),
-        FilledButton(onPressed: () => Navigator.pop(context, true), child: Text(tr.stopSharing)),
-      ],
-    ),
+  final sure = await confirmDialog(
+    context,
+    title: tr.stopSharingQuestion,
+    body: tr.stopSharingBody,
+    confirmLabel: tr.stopSharing,
+    destructive: true,
   );
   if (sure != true || !context.mounted) return false;
   return _report(context, () => PlayerScope.read(context).ytMusic.stopCollaboration(playlistId), tr.onlyYouCanAdd);
@@ -447,30 +435,28 @@ class _JoinDialogState extends State<_JoinDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
+    return AppDialog(
       title: Text(tr.joinSharedPlaylist),
-      content: SizedBox(
-        width: 380,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(tr.joinSharedPlaylistBody),
-            const SizedBox(height: 16),
-            TextField(
-              controller: link,
-              autofocus: widget.initial == null,
-              textInputAction: TextInputAction.done,
-              onChanged: (v) => setState(() => valid = YtMusicWeb.parseInvite(v) != null),
-              onSubmitted: (_) => submit(),
-              decoration: InputDecoration(
-                labelText: tr.inviteLink,
-                border: const OutlineInputBorder(),
-                errorText: link.text.trim().isNotEmpty && !valid ? tr.notAnInviteLink : null,
-              ),
+      width: DialogWidth.regular,
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(tr.joinSharedPlaylistBody),
+          const SizedBox(height: 16),
+          TextField(
+            controller: link,
+            autofocus: widget.initial == null,
+            textInputAction: TextInputAction.done,
+            onChanged: (v) => setState(() => valid = YtMusicWeb.parseInvite(v) != null),
+            onSubmitted: (_) => submit(),
+            decoration: InputDecoration(
+              labelText: tr.inviteLink,
+              border: const OutlineInputBorder(),
+              errorText: link.text.trim().isNotEmpty && !valid ? tr.notAnInviteLink : null,
             ),
-          ],
-        ),
+          ),
+        ],
       ),
       actions: [
         TextButton(onPressed: () => Navigator.pop(context), child: Text(tr.cancel)),

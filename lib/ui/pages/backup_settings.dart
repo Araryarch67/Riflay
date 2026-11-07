@@ -8,6 +8,7 @@ import '../../platform/host.dart';
 import '../../services/backup.dart';
 import '../../services/language.dart';
 import 'sound_settings.dart' show SettingTile, SettingsCard, settingsMuted;
+import '../widgets/app_dialog.dart';
 
 /// Settings › Library & downloads › Backup & restore: settings, playlists and history in one file.
 class BackupSettings extends StatefulWidget {
@@ -63,16 +64,11 @@ class _BackupSettingsState extends State<BackupSettings> {
       return;
     }
     if (!mounted) return;
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(tr.restoreBackupQuestion),
-        content: Text(tr.restoreBackupBody(backup.playlists, backup.plays, backup.lyrics, _made(backup.created))),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: Text(tr.cancel)),
-          FilledButton(onPressed: () => Navigator.pop(context, true), child: Text(tr.restore)),
-        ],
-      ),
+    final ok = await confirmDialog(
+      context,
+      title: tr.restoreBackupQuestion,
+      body: tr.restoreBackupBody(backup.playlists, backup.plays, backup.lyrics, _made(backup.created)),
+      confirmLabel: tr.restore,
     );
     if (ok != true || !mounted) return;
     setState(() => _busy = true);

@@ -5,6 +5,7 @@ import '../../services/language.dart';
 import '../theme.dart';
 import '../widgets/controls.dart' show formatBytes;
 import 'sound_settings.dart' show SettingsCard, settingsMuted;
+import '../widgets/app_dialog.dart';
 
 /// Settings › About › Delete executables: inspect and remove tools downloaded by Riflay.
 class DownloadedToolsPage extends StatefulWidget {
@@ -44,16 +45,12 @@ class _DownloadedToolsPageState extends State<DownloadedToolsPage> {
   }
 
   Future<void> _delete() async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(tr.deleteExecutablesQuestion),
-        content: Text(tr.deleteExecutablesBody),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: Text(tr.cancel)),
-          FilledButton(onPressed: () => Navigator.pop(context, true), child: Text(tr.delete)),
-        ],
-      ),
+    final confirmed = await confirmDialog(
+      context,
+      title: tr.deleteExecutablesQuestion,
+      body: tr.deleteExecutablesBody,
+      confirmLabel: tr.delete,
+      destructive: true,
     );
     if (confirmed != true || !mounted) return;
     setState(() => _busy = true);

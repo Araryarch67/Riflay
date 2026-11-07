@@ -22,6 +22,7 @@ import '../theme.dart';
 import '../widgets/menus.dart';
 import '../widgets/signal_path.dart';
 import 'equalizer_page.dart';
+import '../widgets/app_dialog.dart';
 
 /// Settings > Sound > Playback: queue behavior and seamless track changes.
 class PlaybackSettings extends StatelessWidget {
@@ -689,20 +690,13 @@ class _DirectUsbBeta extends StatelessWidget {
 
 /// The warning before Direct USB's beta goes on. True when the person chose to turn it on.
 @visibleForTesting
-Future<bool> confirmDirectUsb(BuildContext context) async =>
-    await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        icon: const Icon(Icons.warning_amber_rounded),
-        title: Text(tr.directUsbWarningTitle),
-        content: Text(tr.directUsbWarningBody),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: Text(tr.cancel)),
-          FilledButton(onPressed: () => Navigator.pop(context, true), child: Text(tr.directUsbWarningConfirm)),
-        ],
-      ),
-    ) ??
-    false;
+Future<bool> confirmDirectUsb(BuildContext context) => confirmDialog(
+  context,
+  title: tr.directUsbWarningTitle,
+  body: tr.directUsbWarningBody,
+  confirmLabel: tr.directUsbWarningConfirm,
+  icon: const Icon(Icons.warning_amber_rounded),
+);
 
 /// Android: Direct USB, bit-perfect to a USB DAC on any phone (`DirectUsb.kt`, libusbdac). Experimental: it says
 /// what it does at every step (the DAC, the permission, where the song goes and in what format, dropouts), so a

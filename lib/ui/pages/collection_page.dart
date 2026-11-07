@@ -26,6 +26,7 @@ import '../widgets/track_row.dart';
 import '../widgets/track_selection.dart';
 import '../ytmusic_edit.dart';
 import '../widgets/menus.dart';
+import '../widgets/app_dialog.dart';
 
 /// Album / artist / "All Songs" page with a colour-washed header.
 class CollectionPage extends StatelessWidget {
@@ -591,20 +592,12 @@ class _PlaylistMenu extends StatelessWidget {
           value: () async {
             final history = ShellScope.of(context).history;
             final navigator = Navigator.of(context);
-            final sure = await showDialog<bool>(
-              context: context,
-              builder: (context) => AlertDialog(
-                title: Text(tr.deletePlaylistQuestion),
-                content: Text(tr.deletePlaylistBody(name)),
-                actions: [
-                  TextButton(onPressed: () => Navigator.pop(context, false), child: Text(tr.cancel)),
-                  FilledButton(
-                    style: FilledButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.error),
-                    onPressed: () => Navigator.pop(context, true),
-                    child: Text(tr.delete),
-                  ),
-                ],
-              ),
+            final sure = await confirmDialog(
+              context,
+              title: tr.deletePlaylistQuestion,
+              body: tr.deletePlaylistBody(name),
+              confirmLabel: tr.delete,
+              destructive: true,
             );
             if (sure != true) return;
             c.deletePlaylist(id);

@@ -5,6 +5,7 @@ import '../../services/layout_prefs.dart';
 import '../../services/player_presets.dart';
 import '../theme.dart';
 import '../../services/language.dart';
+import '../widgets/app_dialog.dart';
 
 /// Settings › Look & feel › Layout › Player › Presets: a whole look in one tap. A preset only
 /// sets the individual player settings, so it is the same as setting them one by one.
@@ -52,17 +53,11 @@ class _PresetCard extends StatelessWidget {
   Future<void> _apply(BuildContext context) async {
     final n = preset.changesTo(LayoutPrefs.instance);
     if (n == 0) return;
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppColors.elevated,
-        title: Text(tr.applyPresetQuestion(preset.name)),
-        content: Text(tr.applyPresetBody(n)),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: Text(tr.cancel)),
-          FilledButton(onPressed: () => Navigator.pop(context, true), child: Text(tr.apply)),
-        ],
-      ),
+    final ok = await confirmDialog(
+      context,
+      title: tr.applyPresetQuestion(preset.name),
+      body: tr.applyPresetBody(n),
+      confirmLabel: tr.apply,
     );
     if (ok == true) await preset.apply(LayoutPrefs.instance);
   }

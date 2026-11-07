@@ -8,6 +8,7 @@ import '../shell_scope.dart';
 import 'listening_stats_page.dart';
 import '../../services/language.dart';
 import 'sound_settings.dart' show SettingsCard, settingsMuted;
+import '../widgets/app_dialog.dart';
 
 /// Settings › Library & downloads › Listening history & Wrap: the listening history kept on this device.
 class PrivacySettings extends StatefulWidget {
@@ -36,16 +37,12 @@ class _PrivacySettingsState extends State<PrivacySettings> {
   Future<void> _clear() async {
     final messenger = ScaffoldMessenger.of(context);
     final n = _history.length;
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(tr.clearHistoryQuestion),
-        content: Text(tr.clearHistoryBody(n)),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: Text(tr.cancel)),
-          FilledButton(onPressed: () => Navigator.pop(context, true), child: Text(tr.clear)),
-        ],
-      ),
+    final ok = await confirmDialog(
+      context,
+      title: tr.clearHistoryQuestion,
+      body: tr.clearHistoryBody(n),
+      confirmLabel: tr.clear,
+      destructive: true,
     );
     if (ok != true) return;
     await _history.clear();
