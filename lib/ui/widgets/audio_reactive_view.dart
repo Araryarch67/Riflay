@@ -80,8 +80,9 @@ class _AudioReactiveViewState extends State<AudioReactiveView> with WidgetsBindi
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    // Focused only, as the other decorations: unfocused, the meter is let go and mpv drops its filter bank too.
-    _foreground = PlayingMotion.decorates(WidgetsBinding.instance.lifecycleState);
+    // While the window can be seen, focused or behind another app (people watch it beside their work); minimized
+    // or hidden, the meter is let go and mpv drops its filter bank too.
+    _foreground = PlayingMotion.visible(WidgetsBinding.instance.lifecycleState);
   }
 
   @override
@@ -147,7 +148,7 @@ class _AudioReactiveViewState extends State<AudioReactiveView> with WidgetsBindi
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    _foreground = PlayingMotion.decorates(state);
+    _foreground = PlayingMotion.visible(state);
     _sync();
   }
 

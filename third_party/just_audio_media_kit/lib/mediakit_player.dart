@@ -87,7 +87,10 @@ class MediaKitPlayer extends AudioPlayerPlatform {
         final start = _currentMedia?.start;
         if (start != null) _position -= start;
         if (_position < Duration.zero) _position = Duration.zero;
-        _updatePlaybackEvent();
+        // Riflay: mpv reports time-pos for every audio chunk (dozens a second). just_audio works the position out
+        // from the last event's time while playing, so an event goes out only when that would be off: a seek, a
+        // stall, a rate change.
+        if (_positionNews()) _updatePlaybackEvent();
       }),
       _player.stream.buffering.listen((isBuffering) {
         // Riflay: at the end of the last song mpv pauses (keep-open), and its
@@ -135,8 +138,14 @@ class MediaKitPlayer extends AudioPlayerPlatform {
           if (_loadCompleter?.isCompleted != true) {
             _loadCompleter?.complete(_duration);
           }
+          _updatePlaybackEvent();
+          return;
         }
-        _updatePlaybackEvent();
+        // Riflay: a stream's read-ahead grows many times a second; the seek bar shows it to the second.
+        if ((buffer - _sentBuffered).abs() >= const Duration(seconds: 1) ||
+            buffer < _sentBuffered) {
+          _updatePlaybackEvent();
+        }
       }),
       _player.stream.volume.listen((volume) {
         // Riflay: the app applies the volume and reports it (mpv's may stay at 100%).
@@ -256,8 +265,27 @@ class MediaKitPlayer extends AudioPlayerPlatform {
   Stream<PlayerDataMessage> get playerDataMessageStream =>
       _dataController.stream;
 
+  // What the last event said, to tell whether a new position or buffer is news (Riflay).
+  Duration _sentPosition = Duration.zero;
+  Duration _sentBuffered = Duration.zero;
+  DateTime _sentAt = DateTime.now();
+
+  /// Whether [_position] is further than a quarter second from where the last event's position has run on to
+  /// (as just_audio works it out), or it is due anyway (every two seconds).
+  bool _positionNews() {
+    final now = DateTime.now();
+    final since = now.difference(_sentAt);
+    if (since >= const Duration(seconds: 2)) return true;
+    final running = _player.state.playing && !_player.state.buffering;
+    final expected = running ? _sentPosition + since * _player.state.rate : _sentPosition;
+    return (_position - expected).abs() > const Duration(milliseconds: 250);
+  }
+
   /// Updates the playback event
   void _updatePlaybackEvent() {
+    _sentPosition = _position;
+    _sentBuffered = _bufferedPosition;
+    _sentAt = DateTime.now();
     _eventController.add(PlaybackEventMessage(
       processingState: _processingState,
       updateTime: DateTime.now(),

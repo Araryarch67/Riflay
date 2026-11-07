@@ -7,6 +7,7 @@ import '../../services/player_controller.dart';
 import '../../services/video_mode.dart';
 import '../theme.dart';
 import '../player/player_glass.dart';
+import 'native_video_surface.dart';
 import 'skeleton.dart';
 import '../../services/language.dart';
 
@@ -102,9 +103,15 @@ class VideoModeSwitch extends StatelessWidget {
 
 /// The cover, or the music video in its place while Video is picked.
 class TrackVisual extends StatelessWidget {
-  const TrackVisual({super.key, required this.track, required this.cover});
+  const TrackVisual({super.key, required this.track, required this.cover, this.fill = false, this.fade});
 
   final Track? track;
+
+  /// The video covers the whole box, cropped (the side panel's picture), rather than fitting inside it.
+  final bool fill;
+
+  /// With [fill]: the colour the picture's foot fades into (see [NativeVideoSurface.fade]).
+  final Color? fade;
 
   /// The cover art, shown in Song mode, while the video loads, and where the
   /// video has no picture for this part of the song.
@@ -118,15 +125,18 @@ class TrackVisual extends StatelessWidget {
     mode.lookUp(track);
     return ListenableBuilder(
       listenable: mode,
-      builder: (context, _) => mode.on && mode.videoOf(track) != null ? _VideoView(cover: cover) : cover,
+      builder: (context, _) =>
+          mode.on && mode.videoOf(track) != null ? _VideoView(cover: cover, fill: fill, fade: fade) : cover,
     );
   }
 }
 
 class _VideoView extends StatefulWidget {
-  const _VideoView({required this.cover});
+  const _VideoView({required this.cover, this.fill = false, this.fade});
 
   final Widget cover;
+  final bool fill;
+  final Color? fade;
 
   @override
   State<_VideoView> createState() => _VideoViewState();
@@ -148,6 +158,17 @@ class _VideoViewState extends State<_VideoView> {
   @override
   Widget build(BuildContext context) {
     final mode = VideoMode.instance;
+    // Windows: the video is in a window of its own, kept over this box (the cover shows while it is hidden).
+    if (mode.nativeReady) {
+      if (widget.fill) return NativeVideoSurface(cover: true, fade: widget.fade, child: widget.cover);
+      return Center(
+        child: AspectRatio(
+          aspectRatio: mode.nativeAspect,
+          // The cover under it as it is: a FittedBox around a cover not laid out yet scaled by infinity.
+          child: NativeVideoSurface(child: ClipRect(child: widget.cover)),
+        ),
+      );
+    }
     final video = mode.controller;
     if (video == null) {
       return Stack(

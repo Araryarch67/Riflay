@@ -81,6 +81,27 @@ if(NOT EXISTS "${ANGLE_SRC}/libEGL.dll" OR NOT EXISTS "${ANGLE_SRC}/include/EGL/
   endif()
 endif()
 
+# Video mode's own libmpv: Riflay's (windows/libmpv) is sound only, so the music
+# video was decoded and drawn on the processor and copied into Flutter every
+# frame. This is media_kit's video build (Direct3D 11 output, d3d11va
+# decoding), renamed so it loads beside Riflay's; lib/platform/native_video.dart
+# hands it a window of its own (runner/video_window.cpp). Pinned by SHA-256.
+set(MPV_VIDEO_SRC "${CMAKE_BINARY_DIR}/libmpv-video")
+set(MPV_VIDEO_DLL "${MPV_VIDEO_SRC}/libmpv-video-2.dll")
+if(NOT EXISTS "${MPV_VIDEO_DLL}")
+  set(MPV_VIDEO_ARCHIVE "${CMAKE_BINARY_DIR}/mpv-dev-x86_64-20230924-git-652a1dd.7z")
+  file(DOWNLOAD
+    "https://github.com/media-kit/libmpv-win32-video-build/releases/download/2023-09-24/mpv-dev-x86_64-20230924-git-652a1dd.7z"
+    "${MPV_VIDEO_ARCHIVE}"
+    EXPECTED_HASH SHA256=dce982222d7a23e4a1c6f0fb6cc39f6e899a6714624b95ea49cff6558ee97572
+    TLS_VERIFY ON)
+  file(REMOVE_RECURSE "${MPV_VIDEO_SRC}")
+  file(MAKE_DIRECTORY "${MPV_VIDEO_SRC}/unpacked")
+  file(ARCHIVE_EXTRACT INPUT "${MPV_VIDEO_ARCHIVE}" DESTINATION "${MPV_VIDEO_SRC}/unpacked" PATTERNS "libmpv-2.dll")
+  file(RENAME "${MPV_VIDEO_SRC}/unpacked/libmpv-2.dll" "${MPV_VIDEO_DLL}")
+  file(REMOVE_RECURSE "${MPV_VIDEO_SRC}/unpacked")
+endif()
+
 # Generated plugin build rules, which manage building the plugins and adding
 # them to the application.
 include(flutter/generated_plugins.cmake)
@@ -130,6 +151,7 @@ install(FILES "${FLUTTER_LIBRARY}" DESTINATION "${INSTALL_BUNDLE_LIB_DIR}"
 # tool/build_libmpv_windows.sh from third_party/mpv_asio.
 list(FILTER PLUGIN_BUNDLED_LIBRARIES EXCLUDE REGEX "libmpv-2\\.dll$")
 list(APPEND PLUGIN_BUNDLED_LIBRARIES "${CMAKE_CURRENT_SOURCE_DIR}/libmpv/libmpv-2.dll")
+list(APPEND PLUGIN_BUNDLED_LIBRARIES "${MPV_VIDEO_DLL}")
 # media_kit_video links ANGLE, so these sit next to the exe (the same files
 # media_kit_libs_windows_video bundles).
 foreach(angle_dll libEGL libGLESv2 d3dcompiler_47 vk_swiftshader vulkan-1 zlib)

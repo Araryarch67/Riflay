@@ -25,6 +25,10 @@ class StreakFlame extends StatefulWidget {
 class _StreakFlameState extends State<StreakFlame> with SingleTickerProviderStateMixin {
   late final _breath = AnimationController(vsync: this, duration: const Duration(milliseconds: 1400));
 
+  /// How many times it breathes in and out each time it comes on screen.
+  static const _breaths = 3;
+  bool _breathed = false;
+
   @override
   void initState() {
     super.initState();
@@ -39,8 +43,13 @@ class _StreakFlameState extends State<StreakFlame> with SingleTickerProviderStat
 
   void _update() {
     final moving = widget.flicker && !widget.dim && LayoutPrefs.moves;
-    if (moving && !_breath.isAnimating) {
-      _breath.repeat(reverse: true);
+    if (moving && !_breath.isAnimating && !_breathed) {
+      // A few breaths when it comes on screen, then still: a repeating ticker redrew the whole window at the
+      // display's rate for as long as Home was open (and with Windows' own-window video, it was most of the cost).
+      _breathed = true;
+      _breath.repeat(reverse: true, count: _breaths * 2).whenComplete(() {
+        if (mounted) _breath.animateBack(0);
+      });
     } else if (!moving && _breath.isAnimating) {
       _breath.stop();
     }

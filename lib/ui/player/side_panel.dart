@@ -221,76 +221,87 @@ class _HeroPanel extends StatelessWidget {
     final shell = ShellScope.of(context);
     final text = Theme.of(context).textTheme;
     final next = this.next;
+    final titleRow = Row(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                track.title,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: text.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.5,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 2),
+              ArtistLinks(
+                track: track,
+                style: text.bodyLarge?.copyWith(color: AppColors.textSecondary),
+              ),
+            ],
+          ),
+        ),
+        LikeButton(track: track, size: 24),
+        TrackMenuButton(track: track, nowPlaying: true),
+      ],
+    );
     return SmoothScroll(
       builder: (context, scroll) => ListView(
         controller: scroll,
         padding: EdgeInsets.only(bottom: 16 + MediaQuery.paddingOf(context).bottom),
         children: [
-          AspectRatio(
-            aspectRatio: 0.82,
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                // The cover, sharp up top and soft into the panel; the video over it once it plays.
-                FadedCover(track: track, fade: AppColors.panel, blurStart: 0.7),
-                VideoBackground(track: track),
-                // Readable words over any picture: darker at the foot, where the title sits.
-                IgnorePointer(
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          Colors.black.withValues(alpha: 0.45),
-                          Colors.transparent,
-                          Colors.transparent,
-                          AppColors.panel.withValues(alpha: 0.85),
-                          AppColors.panel,
-                        ],
-                        stops: const [0, 0.22, 0.5, 0.88, 1],
+          // Windows: the video plays in a window of its own, which Flutter can't draw over, so it covers the whole
+          // picture and the title sits under it. Elsewhere the video is drawn behind the title.
+          if (VideoMode.native) ...[
+            AspectRatio(
+              aspectRatio: 1,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  FadedCover(track: track, fade: AppColors.panel, blurStart: 0.7),
+                  TrackVisual(track: track, cover: const SizedBox.expand(), fill: true, fade: AppColors.panel),
+                ],
+              ),
+            ),
+            Padding(padding: const EdgeInsets.fromLTRB(16, 12, 8, 0), child: titleRow),
+          ] else
+            AspectRatio(
+              aspectRatio: 0.82,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  // The cover, sharp up top and soft into the panel; the video over it once it plays.
+                  FadedCover(track: track, fade: AppColors.panel, blurStart: 0.7),
+                  VideoBackground(track: track),
+                  // Readable words over any picture: darker at the foot, where the title sits.
+                  IgnorePointer(
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Colors.black.withValues(alpha: 0.45),
+                            Colors.transparent,
+                            Colors.transparent,
+                            AppColors.panel.withValues(alpha: 0.85),
+                            AppColors.panel,
+                          ],
+                          stops: const [0, 0.22, 0.5, 0.88, 1],
+                        ),
                       ),
                     ),
                   ),
-                ),
-                Positioned(
-                  left: 16,
-                  right: 8,
-                  bottom: 12,
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              track.title,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: text.headlineSmall?.copyWith(
-                                fontWeight: FontWeight.w800,
-                                letterSpacing: -0.5,
-                                color: AppColors.textPrimary,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            ArtistLinks(
-                              track: track,
-                              style: text.bodyLarge?.copyWith(color: AppColors.textSecondary),
-                            ),
-                          ],
-                        ),
-                      ),
-                      LikeButton(track: track, size: 24),
-                      TrackMenuButton(track: track, nowPlaying: true),
-                    ],
-                  ),
-                ),
-              ],
+                  Positioned(left: 16, right: 8, bottom: 12, child: titleRow),
+                ],
+              ),
             ),
-          ),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
             child: Column(

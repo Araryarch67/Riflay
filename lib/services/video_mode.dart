@@ -8,12 +8,15 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../platform/host.dart';
 import '../platform/mpv.dart';
+import '../platform/native_video.dart';
+import '../ui/widgets/native_video_surface.dart';
 import '../models/track.dart';
 import 'beta_features.dart';
 import 'layout_prefs.dart';
 import 'player_controller.dart';
 import 'video_alignment.dart';
 import 'video_download.dart';
+import 'video_engine.dart';
 import 'youtube_stream.dart';
 import 'ytmusic_web.dart';
 import 'language.dart';
@@ -38,15 +41,36 @@ class VideoMode extends ChangeNotifier with WidgetsBindingObserver {
 
   static final instance = VideoMode._();
 
-  /// The tallest the video comes in, wherever it shows: 1080p on computers, 1440p on phones. A phone fills its tall
-  /// screen with it cropped to cover, so only a middle strip of each frame shows, stretched about 2.5 times; 1440p
-  /// is VP9, which phones decode in hardware. Taller (4K) streams buffered on ordinary connections.
-  static int get maxHeight => Host.isAndroid || Host.isIOS ? 1440 : 1080;
+  /// The tallest the video comes in, wherever it shows: on phones 1440p; on computers by performance mode, 1080p in
+  /// Heavy, 720p in Balanced and 480p in Lightweight. A phone fills its tall screen with it cropped to cover, so only
+  /// a middle strip of each frame shows, stretched about 2.5 times; 1440p is VP9, which phones decode in hardware.
+  /// Taller (4K) streams buffered on ordinary connections. On a computer each video frame redraws the window, and a
+  /// smaller one is decoded, uploaded and kept (decoder surfaces, read-ahead) for less: the video in a cover-sized
+  /// view or behind a blurred page looks the same at 720p.
+  static int get maxHeight => Host.isAndroid || Host.isIOS
+      ? 1440
+      : switch (LayoutPrefs.instance.performance) {
+          PerformanceMode.heavy => 1080,
+          PerformanceMode.balanced => 720,
+          PerformanceMode.lightweight => 480,
+        };
 
   /// Behind the page: the same size (a background is fetched only on Wi-Fi, see `prefetchAllowed`).
   static int get backgroundHeight => maxHeight;
 
   // ---- Fitting the connection ----
+
+  /// The most video frames a second on a computer, null for the video's own rate (Heavy, phones). Every frame is
+  /// a full redraw of the window (Flutter has no partial redraw there): a 30 fps video beside Balanced's 20 fps
+  /// decorations made about 50 a second, ~3% of a 24-thread processor. The fps filter only passes or drops the
+  /// decoded GPU frames, so hardware decoding stays.
+  static int? get maxFps => Host.isAndroid || Host.isIOS
+      ? null
+      : switch (LayoutPrefs.instance.performance) {
+          PerformanceMode.heavy => null,
+          PerformanceMode.balanced => int.tryParse(Host.environment['RIFLAY_VIDEO_FPS'] ?? '') ?? 15,
+          PerformanceMode.lightweight => 10,
+        };
 
   /// Off with `RIFLAY_NO_ADAPTIVE_VIDEO`: the video always comes at [maxHeight], however often it stalls.
   static const adaptive = !bool.fromEnvironment('RIFLAY_NO_ADAPTIVE_VIDEO');
@@ -80,20 +104,21 @@ class VideoMode extends ChangeNotifier with WidgetsBindingObserver {
   @visibleForTesting
   static int? stepUp(int height, int most) => ladder.reversed.where((h) => h > height && h <= most).firstOrNull;
 
-  void _announce(int height, {required bool lower}) => qualityChanged.value = (
-    height: height,
-    lower: lower,
-    serial: (qualityChanged.value?.serial ?? 0) + 1,
-  );
+  void _announce(int height, {required bool lower}) =>
+      qualityChanged.value = (height: height, lower: lower, serial: (qualityChanged.value?.serial ?? 0) + 1);
 
   /// Watches the streamed video for stalls while the song plays: one of 2.5 s, or three in 40 s, bring it down a
   /// step. A seek's own wait doesn't count. True when the video was let go to come back smaller.
-  bool _watchStalls(Player player, bool play, DateTime now) {
-    if (!adaptive || !_streamed || !play || _seekedTo != null || now.difference(_lastSeek) < const Duration(seconds: 3)) {
+  bool _watchStalls(VideoEngine player, bool play, DateTime now) {
+    if (!adaptive ||
+        !_streamed ||
+        !play ||
+        _seekedTo != null ||
+        now.difference(_lastSeek) < const Duration(seconds: 3)) {
       _stallSince = null;
       return false;
     }
-    if (player.state.buffering) {
+    if (player.buffering) {
       _stallSince ??= now;
       return now.difference(_stallSince!) > const Duration(milliseconds: 2500) && _lower();
     }
@@ -309,14 +334,50 @@ class VideoMode extends ChangeNotifier with WidgetsBindingObserver {
       _sync();
       notifyListeners();
     }
+    // Computers: another window has the focus. The video holds its picture (nothing decodes, nothing is drawn: in
+    // Balanced a playing video was most of what a song cost, about 1.7% of a 24-thread processor), and after
+    // [unfocusedRelease] it lets go of its player and buffers (about 100 MB). Back in front it starts again where
+    // the song is. Phones pass through `inactive` for a pulled-down shade: they keep playing.
+    // Windows' own-window video costs next to nothing to keep playing (the graphics card decodes and draws it), and
+    // a window behind another is often still watched: it plays on until the window is minimized or hidden.
+    final unfocused = _computer && !native && state == AppLifecycleState.inactive;
+    if (unfocused != _unfocused) {
+      _unfocused = unfocused;
+      _unfocusedRelease?.cancel();
+      if (unfocused) {
+        _follow();
+        _unfocusedRelease = Timer(unfocusedRelease, () {
+          _released = true;
+          _sync();
+        });
+      } else if (_released) {
+        _released = false;
+        _sync();
+      } else {
+        _follow(seekNow: true);
+      }
+    }
   }
 
   bool _away = false;
+
+  static bool get _computer => Host.isLinux || Host.isWindows || Host.isMacOS;
+
+  /// How long another window may have the focus before the video's player is let go.
+  static const unfocusedRelease = Duration(seconds: 20);
+  bool _unfocused = false;
+  bool _released = false;
+  Timer? _unfocusedRelease;
 
   // ---- The video player ----
 
   int _views = 0;
   Timer? _release;
+
+  /// How long the player is kept with no view on screen. A page changing, a dialog (Signal path) or the cover moving
+  /// between layouts briefly has none: drawn in the page, the video goes after 2 s; in Windows' own window, where
+  /// keeping it costs little, after a minute (fetching it again shows the cover for a few seconds).
+  static Duration get _holdWithoutView => native ? const Duration(minutes: 1) : const Duration(seconds: 2);
 
   /// A view that shows the video came on screen (or went away). The video is
   /// only fetched and decoded while one is.
@@ -331,7 +392,7 @@ class VideoMode extends ChangeNotifier with WidgetsBindingObserver {
     _views--;
     // A page changing, or the cover moving between layouts, briefly has no view: keep the video through that.
     _release?.cancel();
-    _release = Timer(const Duration(seconds: 2), _sync);
+    _release = Timer(_holdWithoutView, _sync);
   }
 
   // ---- The Now Playing background ----
@@ -350,7 +411,7 @@ class VideoMode extends ChangeNotifier with WidgetsBindingObserver {
   void removeBackground() {
     _backgrounds--;
     _release?.cancel();
-    _release = Timer(const Duration(seconds: 2), _sync);
+    _release = Timer(_holdWithoutView, _sync);
   }
 
   /// Whether the video of [track] may play behind the page: Video is picked, the song has one, not in Lightweight,
@@ -358,7 +419,8 @@ class VideoMode extends ChangeNotifier with WidgetsBindingObserver {
   /// background keeps the cover: [backgroundController] is null while the video plays there.)
   bool showsAsBackground(Track? track) {
     final v = videoOf(track);
-    return v != null && _on && !LayoutPrefs.lightweight && !_backgroundFailed.contains(v.videoId);
+    // Windows' own-window video can't lie under the page's words: the blurred cover does there.
+    return v != null && _on && !LayoutPrefs.lightweight && !native && !_backgroundFailed.contains(v.videoId);
   }
 
   /// The background's video, once its first picture is ready; null shows the blurred cover.
@@ -368,8 +430,68 @@ class VideoMode extends ChangeNotifier with WidgetsBindingObserver {
   /// The background video of [track] is playing and covers the page: what lies under it is not drawn.
   bool coversBackground(Track? track) => backgroundController(track) != null;
 
-  Player? _player;
+  VideoEngine? _player;
   VideoController? _video;
+  NativeVideoPlayer? _native;
+
+  /// Windows: the video plays in a window of its own over the page (`platform/native_video.dart`), decoded and
+  /// drawn by the graphics card; views place it with [NativeVideoSurface] instead of drawing [controller].
+  static bool get native => NativeVideoPlayer.available;
+
+  /// The own-window video is ready to be placed (its first picture is out).
+  bool get nativeReady => _ready && _native != null;
+
+  /// Cover (cropped to fill) or fit, as the box showing it asks ([NativeVideoSurface.cover]).
+  void _fit() {
+    if (!_fitting) {
+      _fitting = true;
+      NativeVideoWindow.cover.addListener(_fit);
+      NativeVideoWindow.fade.addListener(_fit);
+    }
+    final own = _native;
+    if (own == null) return;
+    own.setProperty('panscan', NativeVideoWindow.cover.value ? '1.0' : '0.0');
+    final fade = NativeVideoWindow.fade.value;
+    final shader = fade == null ? '' : _fadeShader(fade);
+    if (shader != _shader) {
+      _shader = shader;
+      own.setProperty('glsl-shaders', shader);
+    }
+  }
+
+  String? _shader;
+
+  /// An mpv user shader (written once per colour, run on the graphics card) that does what Flutter drew over the
+  /// video before: a shade across the top, and the foot faded into [into].
+  static String _fadeShader(Color into) {
+    String c(double v) => v.toStringAsFixed(4);
+    final hex = into.toARGB32().toRadixString(16).padLeft(8, '0');
+    // The version in the name: a changed shader must not reuse an older file of the same colour.
+    final file = File('${Directory.systemTemp.path}${Platform.pathSeparator}riflay-video-fade-v2-$hex.glsl');
+    if (!file.existsSync()) {
+      // The gradient the panel drew over its picture: black at 45% to clear by 22% down, clear to half way, then
+      // the panel's colour at 85% by 88% and solid at the foot.
+      file.writeAsStringSync('''
+//!HOOK OUTPUT
+//!BIND HOOKED
+//!DESC Riflay: the side panel's shade and fade
+vec4 hook() {
+    float y = HOOKED_pos.y;
+    vec4 color = HOOKED_tex(HOOKED_pos);
+    color.rgb *= 1.0 - 0.45 * (1.0 - clamp(y / 0.22, 0.0, 1.0));
+    float t = y < 0.88 ? 0.85 * clamp((y - 0.5) / 0.38, 0.0, 1.0) : mix(0.85, 1.0, (y - 0.88) / 0.12);
+    color.rgb = mix(color.rgb, vec3(${c(into.r)}, ${c(into.g)}, ${c(into.b)}), t);
+    return color;
+}
+''');
+    }
+    return file.path;
+  }
+
+  bool _fitting = false;
+
+  /// Its width over its height (16:9 until it is known).
+  double get nativeAspect => _native?.aspect ?? 16 / 9;
   bool _loadedForeground = true;
   String? _loaded;
   MusicVideo? _playing;
@@ -394,11 +516,12 @@ class VideoMode extends ChangeNotifier with WidgetsBindingObserver {
   /// Where the video is, and whether it is playing (for tests).
   @visibleForTesting
   ({Duration position, bool playing})? get debugVideoState =>
-      _player == null ? null : (position: _player!.state.position, playing: _player!.state.playing);
+      _player == null ? null : (position: _player!.position, playing: _player!.playing);
 
   /// What should play now, from the facts: Video picked, a view on screen,
   /// and the current song has a video.
   MusicVideo? get _wanted {
+    if (_released) return null;
     final track = _c?.currentTrack;
     if (_foreground) return videoOf(track);
     if (_backgrounds > 0 && !_away && showsAsBackground(track)) return videoOf(track);
@@ -439,33 +562,71 @@ class VideoMode extends ChangeNotifier with WidgetsBindingObserver {
     _loaded = v.videoId;
     _loadedForeground = foreground;
     _playing = v;
-    final player = _player = Player(
-      configuration: PlayerConfiguration(
-        muted: true,
-        title: 'Riflay video',
-        bufferSize: foreground ? 4 << 20 : 2 << 20,
-      ),
-    );
-    final video = _video = VideoController(
-      player,
-      // Drawn on the graphics card either way; Settings › Layout › Video decoding picks what decodes it.
-      configuration: VideoControllerConfiguration(hwdec: LayoutPrefs.instance.videoDecoder.hwdec),
-    );
     _decoder = LayoutPrefs.instance.videoDecoder;
+    final hwdec = LayoutPrefs.instance.videoDecoder.hwdec;
+    final VideoEngine player;
+    VideoController? video;
+    NativeVideoPlayer? own;
+    if (native) {
+      try {
+        // Its own window: a frame of video costs Flutter nothing, so no frame cap.
+        own = NativeVideoPlayer(
+          window: await NativeVideoWindow.ensure(),
+          hwdec: hwdec == 'auto' ? 'd3d11va' : hwdec,
+          foreground: foreground,
+        );
+      } catch (e) {
+        debugPrint('Video mode: no own window ($e), drawing it in the page');
+      }
+      if (!identical(_playing, v)) {
+        await own?.dispose();
+        return;
+      }
+    }
+    if (own != null) {
+      player = _player = _native = own;
+      _fit();
+    } else {
+      final kit = Player(
+        configuration: PlayerConfiguration(
+          muted: true,
+          title: 'Riflay video',
+          bufferSize: foreground ? 4 << 20 : 2 << 20,
+        ),
+      );
+      player = _player = _KitEngine(kit);
+      video = _video = VideoController(
+        kit,
+        // Drawn on the graphics card either way; Settings › Layout › Video decoding picks what decodes it.
+        configuration: VideoControllerConfiguration(hwdec: hwdec),
+      );
+    }
     notifyListeners();
     try {
-      final mpv = player.platform as NativePlayer;
-      // Video only: no sound track, and only half a minute read ahead (not the whole video).
-      await mpv.setProperty('aid', 'no');
-      await mpv.setProperty('cache-secs', foreground ? '30' : '10');
-      await mpv.setProperty('demuxer-max-bytes', '${(foreground ? 32 : 12) << 20}');
-      await mpv.setProperty('demuxer-max-back-bytes', '${(foreground ? 8 : 2) << 20}');
+      if (player case _KitEngine(:final kit)) {
+        final mpv = kit.platform as NativePlayer;
+        // Video only: no sound track, and only half a minute read ahead (not the whole video).
+        await mpv.setProperty('aid', 'no');
+        await mpv.setProperty('cache-secs', foreground ? '30' : '10');
+        await mpv.setProperty('demuxer-max-bytes', '${(foreground ? 32 : 12) << 20}');
+        await mpv.setProperty('demuxer-max-back-bytes', '${(foreground ? 8 : 2) << 20}');
+        // Each video frame redraws the whole window on a computer: fewer of them below Heavy (see [maxFps]).
+        if (maxFps case final fps?) await mpv.setProperty('vf', 'fps=$fps');
+      }
+      Future<void> open(String url, Duration at) async {
+        if (player case _KitEngine(:final kit)) {
+          await kit.open(Media(url, start: at), play: false);
+        } else {
+          await own!.open(url, start: at);
+        }
+      }
+
       final at = v.videoTimeAt(_c?.position ?? Duration.zero) ?? Duration.zero;
       final local = localVideoOf(_c?.currentTrack);
       if (local != null) {
         // The downloaded file: no network, and the size it was saved at.
         debugPrint('Video mode: ${v.videoId} from ${local.path}');
-        await player.open(Media(Uri.file(local.path).toString(), start: at), play: false);
+        await open(own != null ? local.path : Uri.file(local.path).toString(), at);
       } else {
         // Nobody asked for this video: a phone on mobile data (or on a saver) doesn't spend it.
         if (!foreground && !await YoutubeStream.prefetchAllowed()) throw StateError('metered connection');
@@ -475,21 +636,26 @@ class VideoMode extends ChangeNotifier with WidgetsBindingObserver {
         _streamed = true;
         _streamHeight = stream.height;
         debugPrint('Video mode: ${v.videoId} at ${stream.height}p ${stream.codec}');
-        await player.open(Media(stream.url.toString(), start: at), play: false);
+        await open(stream.url.toString(), at);
       }
-      await video.waitUntilFirstFrameRendered.timeout(const Duration(seconds: 25));
-      // And its size: until then a view has only an empty (black) texture to draw, so the cover stays.
-      if (!_sized(video)) {
-        final sized = Completer<void>();
-        void check() {
-          if (_sized(video) && !sized.isCompleted) sized.complete();
-        }
+      if (own != null) {
+        if (!await own.firstFrame(const Duration(seconds: 25))) throw TimeoutException('no first picture');
+      } else {
+        final kitVideo = video!;
+        await kitVideo.waitUntilFirstFrameRendered.timeout(const Duration(seconds: 25));
+        // And its size: until then a view has only an empty (black) texture to draw, so the cover stays.
+        if (!_sized(kitVideo)) {
+          final sized = Completer<void>();
+          void check() {
+            if (_sized(kitVideo) && !sized.isCompleted) sized.complete();
+          }
 
-        video.rect.addListener(check);
-        try {
-          await sized.future.timeout(const Duration(seconds: 3), onTimeout: () {});
-        } finally {
-          video.rect.removeListener(check);
+          kitVideo.rect.addListener(check);
+          try {
+            await sized.future.timeout(const Duration(seconds: 3), onTimeout: () {});
+          } finally {
+            kitVideo.rect.removeListener(check);
+          }
         }
       }
       if (!identical(player, _player)) return;
@@ -529,7 +695,7 @@ class VideoMode extends ChangeNotifier with WidgetsBindingObserver {
     final player = _player;
     if (player == null) return;
     try {
-      final now = await (player.platform as NativePlayer).getProperty('hwdec-current');
+      final now = await player.getProperty('hwdec-current');
       if (!identical(player, _player)) return;
       _decoderInUse = now.isEmpty ? 'no' : now;
       debugPrint('Video mode: decoding with $_decoderInUse');
@@ -544,7 +710,7 @@ class VideoMode extends ChangeNotifier with WidgetsBindingObserver {
     if (want == _decoder) return;
     _decoder = want;
     if (player == null) return;
-    (player.platform as NativePlayer).setProperty('hwdec', want.hwdec).then((_) async {
+    player.setProperty('hwdec', want.hwdec == 'auto' && _native != null ? 'd3d11va' : want.hwdec).then((_) async {
       // The switch lands on the next decoded frame.
       await Future<void>.delayed(const Duration(milliseconds: 500));
       await _readDecoder();
@@ -557,6 +723,7 @@ class VideoMode extends ChangeNotifier with WidgetsBindingObserver {
     _tick = null;
     _player = null;
     _video = null;
+    _native = null;
     _loaded = null;
     _loadedForeground = true;
     _playing = null;
@@ -577,14 +744,14 @@ class VideoMode extends ChangeNotifier with WidgetsBindingObserver {
     final c = _c, player = _player, v = _playing;
     if (c == null || player == null || v == null || !_ready) return;
     final target = v.videoTimeAt(c.position);
-    final play = target != null && c.isPlaying && !c.isBuffering;
+    final play = target != null && c.isPlaying && !c.isBuffering && !_unfocused;
     var rate = 1.0;
     if (target != null) {
-      final drift = player.state.position - target;
+      final drift = player.position - target;
       final now = DateTime.now();
       if (_watchStalls(player, play, now)) return;
       // Once the video moves on after a seek, the gap left says how far ahead to aim next time.
-      if (_seekedTo case final to? when player.state.position > to + const Duration(milliseconds: 100)) {
+      if (_seekedTo case final to? when player.position > to + const Duration(milliseconds: 100)) {
         _seekedTo = null;
         if (play) _lead = nextLead(_lead, drift);
       }
@@ -595,7 +762,10 @@ class VideoMode extends ChangeNotifier with WidgetsBindingObserver {
       // Up to [seekBeyond] closes by speed: a seek on a stream fetches again first, and measured on a song's first
       // seconds the video froze two or three seconds after each one, then overshot into the next (a 1 s limit
       // swung the gap between -1.4 and +1.3 s for twelve seconds).
-      if (seekNow && drift.abs() > const Duration(milliseconds: 100) ||
+      // Held while another window has the focus: it catches up once back in front.
+      if (_unfocused) {
+        // Nothing to match.
+      } else if (seekNow && drift.abs() > const Duration(milliseconds: 100) ||
           drift.abs() > seekBeyond ||
           !c.isPlaying && drift.abs() > const Duration(milliseconds: 100)) {
         // Not until the last seek has landed: the stream comes only a little faster than it plays, so each seek
@@ -614,7 +784,7 @@ class VideoMode extends ChangeNotifier with WidgetsBindingObserver {
       _rate = rate;
       player.setRate(rate).ignore();
     }
-    if (play != player.state.playing) (play ? player.play() : player.pause()).ignore();
+    if (play != player.playing) (play ? player.play() : player.pause()).ignore();
   }
 
   /// The next seek's [lead], from the gap [drift] (video minus song) the last
@@ -643,7 +813,36 @@ class VideoMode extends ChangeNotifier with WidgetsBindingObserver {
     _c?.removeListener(_changed);
     WidgetsBinding.instance.removeObserver(this);
     _release?.cancel();
+    _unfocusedRelease?.cancel();
     _stop();
     super.dispose();
   }
+}
+
+/// media_kit's player (the video drawn by Flutter through a texture) as a [VideoEngine].
+class _KitEngine implements VideoEngine {
+  _KitEngine(this.kit);
+
+  final Player kit;
+
+  @override
+  Duration get position => kit.state.position;
+  @override
+  bool get playing => kit.state.playing;
+  @override
+  bool get buffering => kit.state.buffering;
+  @override
+  Future<void> play() => kit.play();
+  @override
+  Future<void> pause() => kit.pause();
+  @override
+  Future<void> seek(Duration to) => kit.seek(to);
+  @override
+  Future<void> setRate(double rate) => kit.setRate(rate);
+  @override
+  Future<String> getProperty(String name) => (kit.platform as NativePlayer).getProperty(name);
+  @override
+  Future<void> setProperty(String name, String value) => (kit.platform as NativePlayer).setProperty(name, value);
+  @override
+  Future<void> dispose() => kit.dispose();
 }

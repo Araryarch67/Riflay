@@ -128,8 +128,9 @@ test/                          Unit and widget tests
 
 - `services/device_setup.dart` reads the computer (processor name, threads, memory, battery: `/proc` and
   `/sys/class/power_supply` on Linux, `GlobalMemoryStatusEx` / `GetSystemPowerStatus` and the registry on Windows,
-  `sysctl` / `pmset` on macOS) and recommends a `PerformanceMode`: the heaviest whose `playingCost` stays under
-  `DeviceSetup.budget` (0.8%) of the whole CPU, Lightweight under 8 GB. 16 threads (a Ryzen 7 7000) get Lightweight.
+  `sysctl` / `pmset` on macOS) and recommends a `PerformanceMode` by kind of computer: Lightweight under 8 GB or 8
+  threads, Heavy on a desktop with 16+ threads and 16+ GB, Balanced otherwise (laptops included: a 24-thread Core
+  Ultra 9 laptop gets Balanced). The page is drawn over the shell, so it carries its own `AppTitleBar`.
 - `ui/pages/device_setup_page.dart` shows it once (`deviceSetup.v1`), the recommendation picked; Continue applies
   the pick, "Keep my settings" changes nothing. Settings › Power & background › Check this computer opens it again.
   Computers only: phones keep their look. `main` loads the flag, so tests that build `RiflayApp` never see it.
@@ -648,6 +649,32 @@ device's language when Riflay has it). The words live in `lib/l10n/app_en.arb` (
   Lightweight's seek bar and the quality badge tick once a second on the same beat (about 1 frame a second while
   playing). Paused, nothing stays on the beat (`tool/cpu.sh` prints how many are): a listener that only returns
   still keeps its 60 Hz timer waking the app.
+- Video mode is the most a playing song can cost on a computer (a second mpv; every video frame re-rasters the
+  whole window, blur included): ~1.7% of a 24-thread CPU and ~100 MB in Balanced. While another window has the
+  focus the video holds its picture, and after `VideoMode.unfocusedRelease` (20 s) its player is let go; back in
+  front it starts again where the song is. Its height follows the mode on computers (Heavy 1080p, Balanced 720p,
+  Lightweight 480p), and so does its frame rate (`VideoMode.maxFps`: Balanced 15, Lightweight 10, an mpv `fps`
+  filter that keeps hardware decoding; `RIFLAY_VIDEO_FPS` overrides Balanced's for measuring). Windows renders with
+  Impeller on ANGLE, which has no raster cache: each video frame redraws every layer of the window (~15 render
+  passes, ~17 ms of CPU a frame), so the video in front costs ~1.5-3% of a 24-thread CPU in Balanced.
+  `services/window_focus.dart` tells the app `inactive` when the window opens without the focus
+  (Windows only reports changes), and `resumed` / `inactive` on focus and blur.
+- Windows plays the music video in a window of its own (`windows/runner/video_window.cpp`, channel
+  `riflay/video_window`): Riflay's libmpv is sound only (no GPU output, no d3d11va), so the video was decoded,
+  drawn and copied into Flutter on the processor. `windows/CMakeLists.txt` fetches media_kit's video libmpv
+  (pinned by SHA-256) as `libmpv-video-2.dll`; `platform/native_video_io.dart` drives it over FFI with `wid`,
+  `vo=gpu`, `gpu-context=d3d11`, d3d11va. `NativeVideoSurface` keeps the window over its box after each frame,
+  cut to its scroll view and hidden while a route (menu, dialog) is on top: nothing Flutter draws can lie over it.
+  So on Windows the side panel's video covers the picture (`panscan`) with the title under it, its shade and fade
+  come from an mpv user shader (`VideoMode._fadeShader`), and there is no video behind Now Playing's words. The
+  windows are disabled: the main window hands their mouse input to the Flutter view. Playing in front: ~0.1% of
+  a 24-thread CPU (it was ~3%).
+- `StreakFlame` breathes three times when it comes on screen, then rests (it repeated forever at the display's rate).
+- `third_party/just_audio_media_kit` sends a playback event for mpv's `time-pos` only when just_audio's own
+  extrapolation would be 250 ms off (or every 2 s), and for the read-ahead per second: mpv reports both dozens of
+  times a second.
+- `EqualizerIcon` (a playing row's bars) rides `UiBeat` at 10 fps and `MarqueeText.playing`; its own repeating
+  `AnimationController` redrew the window at the display's rate.
 - Decorations (the flower, the wave, the visualizer) and marquees move only while the window has the focus
   (`PlayingMotion.decorates`: `resumed`; computers report `inactive` while another window has it), and the seek bar
   ticks once a second then. Most listening happens with another window in front: a playing song in Balanced then

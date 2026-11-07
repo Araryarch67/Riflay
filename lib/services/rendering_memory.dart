@@ -3,11 +3,18 @@ import 'package:flutter/painting.dart';
 import 'package:flutter/services.dart';
 
 import '../platform/host.dart';
+import 'layout_prefs.dart';
 
 /// Independent budgets: Flutter's decoded image LRU does not bound Skia's GPU
 /// textures, blur masks or other cached drawing resources.
 abstract final class RenderingMemory {
-  static const decodedImageBytes = 40 << 20;
+  /// Decoded covers kept: 40 MiB in Heavy, 24 in Balanced, 16 in Lightweight (covers are decoded at their
+  /// on-screen size, so even 16 holds a page of them). Read again when the mode changes (`RiflayApp.build`).
+  static int get decodedImageBytes => switch (LayoutPrefs.instance.performance) {
+    PerformanceMode.heavy => 40 << 20,
+    PerformanceMode.balanced => 24 << 20,
+    PerformanceMode.lightweight => 16 << 20,
+  };
   static const maxImageCount = 40;
   static const gpuCacheBytes = 96 << 20;
 

@@ -60,6 +60,11 @@ class PlayingMotion extends StatefulWidget {
       state == AppLifecycleState.resumed ||
       (state == AppLifecycleState.inactive && DebugSwitches.moveUnfocused);
 
+  /// Whether the window can be seen in this lifecycle [state]: in front, or behind another window (`inactive` on a
+  /// computer), not minimized or hidden. The visualizer moves then: people watch it beside other apps.
+  static bool visible(AppLifecycleState? state) =>
+      state == null || state == AppLifecycleState.resumed || state == AppLifecycleState.inactive;
+
   final Widget Function(BuildContext context, MotionClock? clock) builder;
 
   @override

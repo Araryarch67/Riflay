@@ -1517,7 +1517,7 @@
   "glassTransportSubtitle": "Sebelumnya, putar/jeda, dan berikutnya",
   "glassVolume": "Volume kaca",
   "deviceSetupTitle": "Siapkan Riflay untuk komputer ini",
-  "deviceSetupIntro": "Riflay sudah mengecek komputer ini dan memilih tampilan yang membuat lagu yang diputar memakai kurang dari {percent}% prosesornya. Kamu bisa mengubahnya kapan saja di Pengaturan › Daya & latar belakang.",
+  "deviceSetupIntro": "Riflay sudah mengecek komputer ini dan memilih tampilan yang cocok: efek lebih sedikit untuk komputer lama atau memori kecil, lebih banyak untuk komputer kencang. Kamu bisa mengubahnya kapan saja di Pengaturan › Daya & latar belakang.",
   "deviceSetupThreads": "{count, plural, =1{1 thread prosesor} other{{count} thread prosesor}}",
   "deviceSetupMemory": "Memori {size} GB",
   "deviceSetupLaptop": "Laptop, pakai baterai",

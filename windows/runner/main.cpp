@@ -26,6 +26,12 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
   ::CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
 
   flutter::DartProject project(L"data");
+  // The renderer, for measuring: RIFLAY_IMPELLER=on or off (unset: Flutter's default).
+  wchar_t impeller[8] = {};
+  if (::GetEnvironmentVariableW(L"RIFLAY_IMPELLER", impeller, 8) > 0) {
+    project.set_impeller_switch(wcscmp(impeller, L"off") == 0 ? flutter::ImpellerSwitch::Disabled
+                                                               : flutter::ImpellerSwitch::Enabled);
+  }
 
   std::vector<std::string> command_line_arguments =
       GetCommandLineArguments();

@@ -5138,9 +5138,8 @@ class AppLocalizationsId extends AppLocalizations {
   String get deviceSetupTitle => 'Siapkan Riflay untuk komputer ini';
 
   @override
-  String deviceSetupIntro(String percent) {
-    return 'Riflay sudah mengecek komputer ini dan memilih tampilan yang membuat lagu yang diputar memakai kurang dari $percent% prosesornya. Kamu bisa mengubahnya kapan saja di Pengaturan › Daya & latar belakang.';
-  }
+  String get deviceSetupIntro =>
+      'Riflay sudah mengecek komputer ini dan memilih tampilan yang cocok: efek lebih sedikit untuk komputer lama atau memori kecil, lebih banyak untuk komputer kencang. Kamu bisa mengubahnya kapan saja di Pengaturan › Daya & latar belakang.';
 
   @override
   String deviceSetupThreads(int count) {

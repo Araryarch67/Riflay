@@ -38,6 +38,7 @@ import 'services/rendering_memory.dart';
 import 'services/stay_awake.dart';
 import 'services/system_tray.dart';
 import 'services/taskbar_buttons.dart';
+import 'services/window_focus.dart';
 import 'services/wrap_notifications.dart';
 import 'ui/home_shell.dart';
 import 'ui/player_panels.dart' show MiniPlayerWindow, miniPlayer, windowFullScreen;
@@ -98,7 +99,11 @@ Future<void> _main(List<String> args) async {
 
   // The window opens (sized, centred, in the theme's colour) while the player loads behind it.
   final windowShown = _showWindow(startSize);
-  final windowSettled = windowShown.then((_) => Appearance.instance.applyWindow());
+  final windowSettled = windowShown.then((_) {
+    // A window that opens behind another counts as unfocused (decorations and the video wait).
+    if (hasNativeWindow) WindowFocus.start().ignore();
+    return Appearance.instance.applyWindow();
+  });
 
   final controller = PlayerController();
   // Song titles that don't fit slide only while something plays and the window has the focus

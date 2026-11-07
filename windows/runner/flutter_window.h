@@ -33,6 +33,9 @@ class FlutterWindow : public Win32Window {
 
   // "riflay/window": the see-through window switch (see SetSeeThrough).
   std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>> window_channel_;
+
+  // "riflay/video_window": the music video's own windows (see video_window.cpp).
+  std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>> video_channel_;
 };
 
 #endif  // RUNNER_FLUTTER_WINDOW_H_

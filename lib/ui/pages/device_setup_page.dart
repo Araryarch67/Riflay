@@ -4,6 +4,7 @@ import '../../services/device_setup.dart';
 import '../../services/language.dart';
 import '../../services/layout_prefs.dart';
 import '../theme.dart';
+import '../widgets/title_bar.dart';
 
 /// Opens the setup page over the app: on the first start of a computer ([DeviceSetup.due]), and from Settings ›
 /// Power & background. The pick applies on Continue; "Keep my settings" leaves everything as it was.
@@ -12,8 +13,8 @@ Future<void> showDeviceSetup(BuildContext context) => Navigator.of(
   rootNavigator: true,
 ).push(MaterialPageRoute<void>(fullscreenDialog: true, builder: (_) => const DeviceSetupPage()));
 
-/// What this computer is, and the three performance modes with what a playing song costs in each, the one that
-/// fits [DeviceSetup.budget] picked to start with.
+/// What this computer is, and the three performance modes with what a playing song costs in each, the one
+/// [DeviceSetup.recommend] gives picked to start with.
 class DeviceSetupPage extends StatefulWidget {
   const DeviceSetupPage({super.key, this.specs});
 
@@ -40,65 +41,75 @@ class _DeviceSetupPageState extends State<DeviceSetupPage> {
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
     final muted = text.bodyMedium?.copyWith(color: AppColors.textSecondary);
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: SafeArea(
-        child: FutureBuilder<DeviceSpecs>(
-          future: _specs,
-          builder: (context, snap) {
-            final specs = snap.data;
-            if (specs == null) return const Center(child: CircularProgressIndicator());
-            final recommended = DeviceSetup.recommend(specs);
-            final picked = _picked ?? recommended;
-            return Center(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 560),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Text(tr.deviceSetupTitle, style: text.headlineSmall?.copyWith(fontWeight: FontWeight.w800)),
-                      const SizedBox(height: 12),
-                      Text(tr.deviceSetupIntro(_percent(DeviceSetup.budget)), style: muted),
-                      const SizedBox(height: 24),
-                      _Specs(specs),
-                      const SizedBox(height: 24),
-                      Text(tr.performance, style: text.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
-                      const SizedBox(height: 8),
-                      for (final mode in PerformanceMode.values)
-                        _ModeTile(
-                          mode: mode,
-                          cost: _percent(DeviceSetup.share(mode, specs)),
-                          recommended: mode == recommended,
-                          selected: mode == picked,
-                          onTap: () => setState(() => _picked = mode),
-                        ),
-                      const SizedBox(height: 24),
-                      Wrap(
-                        alignment: WrapAlignment.end,
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: [
-                          TextButton(onPressed: () => _finish(null), child: Text(tr.deviceSetupKeep)),
-                          FilledButton(
-                            style: FilledButton.styleFrom(
-                              backgroundColor: AppColors.inverse,
-                              foregroundColor: AppColors.onInverse,
-                            ),
-                            onPressed: () => _finish(picked),
-                            child: Text(tr.deviceSetupContinue),
-                          ),
-                        ],
+    final page = SafeArea(
+      child: FutureBuilder<DeviceSpecs>(
+        future: _specs,
+        builder: (context, snap) {
+          final specs = snap.data;
+          if (specs == null) return const Center(child: CircularProgressIndicator());
+          final recommended = DeviceSetup.recommend(specs);
+          final picked = _picked ?? recommended;
+          return Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 560),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(tr.deviceSetupTitle, style: text.headlineSmall?.copyWith(fontWeight: FontWeight.w800)),
+                    const SizedBox(height: 12),
+                    Text(tr.deviceSetupIntro, style: muted),
+                    const SizedBox(height: 24),
+                    _Specs(specs),
+                    const SizedBox(height: 24),
+                    Text(tr.performance, style: text.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+                    const SizedBox(height: 8),
+                    for (final mode in PerformanceMode.values)
+                      _ModeTile(
+                        mode: mode,
+                        cost: _percent(DeviceSetup.share(mode, specs)),
+                        recommended: mode == recommended,
+                        selected: mode == picked,
+                        onTap: () => setState(() => _picked = mode),
                       ),
-                    ],
-                  ),
+                    const SizedBox(height: 24),
+                    Wrap(
+                      alignment: WrapAlignment.end,
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        TextButton(onPressed: () => _finish(null), child: Text(tr.deviceSetupKeep)),
+                        FilledButton(
+                          style: FilledButton.styleFrom(
+                            backgroundColor: AppColors.inverse,
+                            foregroundColor: AppColors.onInverse,
+                          ),
+                          onPressed: () => _finish(picked),
+                          child: Text(tr.deviceSetupContinue),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
               ),
-            );
-          },
-        ),
+            ),
+          );
+        },
       ),
+    );
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      // Opened over the whole app, it covers the desktop layout's own title bar: the window keeps one to drag,
+      // minimize and close it by.
+      body: titleBarInShell.value
+          ? Column(
+              children: [
+                const AppTitleBar(),
+                Expanded(child: page),
+              ],
+            )
+          : page,
     );
   }
 }

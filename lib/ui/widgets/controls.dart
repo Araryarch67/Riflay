@@ -13,6 +13,7 @@ import '../../services/audio_analysis.dart';
 import '../../services/layout_prefs.dart';
 import '../../services/metadata.dart';
 import '../../services/player_controller.dart';
+import '../../services/ui_beat.dart';
 import '../debug_switches.dart';
 import '../shortcuts.dart';
 import '../theme.dart';
@@ -296,27 +297,46 @@ class EqualizerIcon extends StatefulWidget {
   State<EqualizerIcon> createState() => _EqualizerIconState();
 }
 
-class _EqualizerIconState extends State<EqualizerIcon> with SingleTickerProviderStateMixin {
-  late final _anim = AnimationController(vsync: this, duration: const Duration(milliseconds: 900));
+class _EqualizerIconState extends State<EqualizerIcon> {
+  /// Where the bars are in their 900 ms loop, 0 to 1.
+  final _phase = ValueNotifier(0.0);
+  UiBeatListener? _beat;
+
+  /// 10 frames a second, on [UiBeat] (a ticker of its own redrew the window at the display's rate, 240 times a
+  /// second on some laptops), and only while a song plays with the window in front ([MarqueeText.playing]).
+  static const _every = Duration(milliseconds: 100);
+  static const _loop = 900;
+
+  bool get _moving => widget.playing && !LayoutPrefs.lightweight && (MarqueeText.playing?.value ?? true);
+
+  void _sync() {
+    if (_moving) {
+      _beat ??= UiBeat.listen(_every, (elapsed) => _phase.value = (_phase.value + elapsed.inMilliseconds / _loop) % 1);
+    } else {
+      _beat?.cancel();
+      _beat = null;
+    }
+  }
 
   @override
   void initState() {
     super.initState();
-    if (widget.playing && !LayoutPrefs.lightweight) _anim.repeat();
+    MarqueeText.playing?.addListener(_sync);
+    _sync();
   }
 
   @override
   void didUpdateWidget(EqualizerIcon old) {
     super.didUpdateWidget(old);
     // Lightweight: static bars, nothing repeating.
-    final still = !widget.playing || LayoutPrefs.lightweight;
-    if (!still && !_anim.isAnimating) _anim.repeat();
-    if (still) _anim.stop();
+    _sync();
   }
 
   @override
   void dispose() {
-    _anim.dispose();
+    MarqueeText.playing?.removeListener(_sync);
+    _beat?.cancel();
+    _phase.dispose();
     super.dispose();
   }
 
@@ -325,9 +345,9 @@ class _EqualizerIconState extends State<EqualizerIcon> with SingleTickerProvider
     const phases = [0.0, 0.35, 0.7, 0.15];
     return SizedBox.square(
       dimension: widget.size,
-      child: AnimatedBuilder(
-        animation: _anim,
-        builder: (context, _) => Row(
+      child: ValueListenableBuilder(
+        valueListenable: _phase,
+        builder: (context, phase, _) => Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
@@ -337,7 +357,7 @@ class _EqualizerIconState extends State<EqualizerIcon> with SingleTickerProvider
                 height:
                     widget.size *
                     (widget.playing && !LayoutPrefs.lightweight
-                        ? 0.25 + 0.75 * (((_anim.value + p) % 1) - 0.5).abs() * 2
+                        ? 0.25 + 0.75 * (((phase + p) % 1) - 0.5).abs() * 2
                         : 0.3),
                 decoration: BoxDecoration(
                   color: widget.color ?? AppColors.accent,

@@ -29,7 +29,7 @@ class DeviceSpecs {
 }
 
 /// The first start on a computer: Riflay looks at it and picks how much it spends on looks
-/// ([PerformanceMode]), so a song playing stays under [budget] of the whole CPU. Shown once, as a page
+/// ([PerformanceMode]) from what kind of computer it is ([recommend]). Shown once, as a page
 /// the person confirms (`ui/pages/device_setup_page.dart`); Settings › Power & background opens it again.
 class DeviceSetup {
   DeviceSetup._();
@@ -37,9 +37,6 @@ class DeviceSetup {
   static final instance = DeviceSetup._();
 
   static const _key = 'deviceSetup.v1';
-
-  /// The most of the whole CPU (all threads together, as Task Manager shows it) a playing song may take.
-  static const budget = 0.8;
 
   /// What a song playing costs in each mode, in % of one thread, measured with `tool/cpu.sh` (the real app in a
   /// 2560 × 1600 window, Home and Now Playing, the default look otherwise; Heavy estimated from Balanced at 30 fps).
@@ -54,6 +51,14 @@ class DeviceSetup {
 
   /// Below this much memory the lightest mode, whatever the processor: an integrated GPU takes its share of it.
   static const minMemoryGb = 8;
+
+  /// Fewer threads than this: an older or low-power processor, Lightweight. Balanced's playing cost (a quarter of
+  /// one thread) is then over 3% of the whole processor.
+  static const minThreads = 8;
+
+  /// Heavy: a desktop (no battery to drain) with at least this many threads and GB of memory.
+  static const heavyThreads = 16;
+  static const heavyMemoryGb = 16;
 
   bool _due = false;
 
@@ -88,16 +93,14 @@ class DeviceSetup {
       !const bool.fromEnvironment('RIFLAY_NO_DEVICE_SETUP') &&
       !Host.environment.containsKey('FLUTTER_TEST');
 
-  /// The heaviest mode whose playing cost fits in [budget] of this computer's threads; Lightweight with little
-  /// memory. 16 threads give 12.8% of one: Lightweight; Balanced needs 32 threads and Heavy 75.
+  /// What suits [specs]: Lightweight on little memory or few threads; Heavy on a strong desktop; Balanced
+  /// otherwise, laptops included (a strong laptop pays Balanced's cost from its battery, Heavy's would show).
+  /// Unknown memory or battery goes by the threads, as if they allowed it.
   static PerformanceMode recommend(DeviceSpecs specs) {
     final gb = specs.memoryGb;
-    if (gb != null && gb < minMemoryGb) return PerformanceMode.lightweight;
-    final room = budget * specs.threads;
-    for (final mode in [PerformanceMode.heavy, PerformanceMode.balanced]) {
-      if (playingCost[mode]! <= room) return mode;
-    }
-    return PerformanceMode.lightweight;
+    if ((gb != null && gb < minMemoryGb) || specs.threads < minThreads) return PerformanceMode.lightweight;
+    final strong = specs.threads >= heavyThreads && (gb == null || gb >= heavyMemoryGb);
+    return strong && specs.battery != true ? PerformanceMode.heavy : PerformanceMode.balanced;
   }
 
   /// [playingCost] of [mode] on [specs], as a share of the whole CPU (what the page shows next to each mode).

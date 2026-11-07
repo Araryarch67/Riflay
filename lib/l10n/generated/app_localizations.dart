@@ -9156,8 +9156,8 @@ abstract class AppLocalizations {
   /// No description provided for @deviceSetupIntro.
   ///
   /// In en, this message translates to:
-  /// **'Riflay looked at this computer and picked the look that keeps a playing song under {percent}% of its processor. You can change it any time in Settings › Power & background.'**
-  String deviceSetupIntro(String percent);
+  /// **'Riflay looked at this computer and picked the look that suits it: fewer effects for older computers and little memory, more for powerful ones. You can change it any time in Settings › Power & background.'**
+  String get deviceSetupIntro;
 
   /// No description provided for @deviceSetupThreads.
   ///

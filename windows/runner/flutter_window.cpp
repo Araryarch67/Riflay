@@ -7,6 +7,7 @@
 #include <optional>
 
 #include "flutter/generated_plugin_registrant.h"
+#include "video_window.h"
 
 namespace {
 
@@ -86,6 +87,41 @@ bool FlutterWindow::OnCreate() {
     result->Success();
   });
 
+  video_channel_ = std::make_unique<flutter::MethodChannel<flutter::EncodableValue>>(
+      flutter_controller_->engine()->messenger(), "riflay/video_window",
+      &flutter::StandardMethodCodec::GetInstance());
+  video_channel_->SetMethodCallHandler([this](const auto& call, auto result) {
+    const auto& name = call.method_name();
+    if (name == "ensure") {
+      HWND host = video_window::Ensure(GetHandle());
+      if (host == nullptr) return result->Error("no-window", "The video window could not be made");
+      return result->Success(flutter::EncodableValue(static_cast<int64_t>(reinterpret_cast<intptr_t>(host))));
+    }
+    if (name == "place") {
+      // [clip left, top, right, bottom, full left, top, right, bottom], in the client area's pixels.
+      const auto* list = std::get_if<flutter::EncodableList>(call.arguments());
+      if (list == nullptr || list->size() != 8) return result->Error("bad-args", "Eight numbers are expected");
+      int v[8];
+      for (size_t i = 0; i < 8; i++) {
+        const auto& e = (*list)[i];
+        if (const auto* n = std::get_if<int32_t>(&e)) {
+          v[i] = *n;
+        } else if (const auto* l = std::get_if<int64_t>(&e)) {
+          v[i] = static_cast<int>(*l);
+        } else {
+          return result->Error("bad-args", "Eight integers are expected");
+        }
+      }
+      video_window::Place(RECT{v[0], v[1], v[2], v[3]}, RECT{v[4], v[5], v[6], v[7]});
+      return result->Success();
+    }
+    if (name == "destroy") {
+      video_window::Destroy();
+      return result->Success();
+    }
+    result->NotImplemented();
+  });
+
   flutter_controller_->engine()->SetNextFrameCallback([&]() {
     this->Show();
   });
@@ -100,6 +136,8 @@ bool FlutterWindow::OnCreate() {
 
 void FlutterWindow::OnDestroy() {
   window_channel_ = nullptr;
+  video_channel_ = nullptr;
+  video_window::Destroy();
   if (flutter_controller_) {
     flutter_controller_ = nullptr;
   }
@@ -111,6 +149,12 @@ LRESULT
 FlutterWindow::MessageHandler(HWND hwnd, UINT const message,
                               WPARAM const wparam,
                               LPARAM const lparam) noexcept {
+  // The music video's windows are disabled, so the mouse over them comes here: the Flutter view under them takes it
+  // (its client area starts where this window's does, so the coordinates hold).
+  if (message >= WM_MOUSEFIRST && message <= WM_MOUSELAST && flutter_controller_ && video_window::Visible()) {
+    return SendMessage(flutter_controller_->view()->GetNativeWindow(), message, wparam, lparam);
+  }
+
   // Give Flutter, including plugins, an opportunity to handle window messages.
   if (flutter_controller_) {
     std::optional<LRESULT> result =

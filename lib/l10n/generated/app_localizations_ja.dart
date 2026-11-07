@@ -5034,9 +5034,8 @@ class AppLocalizationsJa extends AppLocalizations {
   String get deviceSetupTitle => 'このパソコンに合わせて設定';
 
   @override
-  String deviceSetupIntro(String percent) {
-    return 'Riflay がこのパソコンを調べて、曲の再生中もプロセッサの$percent%未満で済む見た目を選んだ。設定 › 電源とバックグラウンド でいつでも変えられる。';
-  }
+  String get deviceSetupIntro =>
+      'Riflay がこのパソコンを調べて、合う見た目を選んだ。古いパソコンやメモリが少ないなら効果を控えめに、性能が高いなら多めに。設定 › 電源とバックグラウンド でいつでも変えられる。';
 
   @override
   String deviceSetupThreads(int count) {

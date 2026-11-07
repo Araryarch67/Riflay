@@ -13,27 +13,23 @@ const _gb = 1 << 30;
 
 void main() {
   group('recommend', () {
-    test('the heaviest mode that keeps a playing song under 0.8% of the whole processor', () {
-      PerformanceMode pick(int threads, {int gb = 32}) =>
-          DeviceSetup.recommend(DeviceSpecs(threads: threads, memoryBytes: gb * _gb));
-      // A Ryzen 7 7840HS or 7700X: 16 threads give 12.8% of one, under Balanced's 25.
-      expect(pick(16), PerformanceMode.lightweight);
-      expect(pick(8), PerformanceMode.lightweight);
-      expect(pick(24), PerformanceMode.lightweight);
-      expect(pick(32), PerformanceMode.balanced);
-      expect(pick(64), PerformanceMode.balanced);
-      expect(pick(96), PerformanceMode.heavy);
-      for (final threads in [1, 4, 16, 32, 64, 128]) {
-        final mode = pick(threads);
-        if (mode != PerformanceMode.lightweight) {
-          expect(DeviceSetup.share(mode, DeviceSpecs(threads: threads)), lessThanOrEqualTo(DeviceSetup.budget));
-        }
-      }
-    });
-
-    test('little memory is Lightweight however many threads; unknown memory goes by threads', () {
-      expect(DeviceSetup.recommend(const DeviceSpecs(threads: 96, memoryBytes: 6 * _gb)), PerformanceMode.lightweight);
-      expect(DeviceSetup.recommend(const DeviceSpecs(threads: 96)), PerformanceMode.heavy);
+    test('Lightweight for weak computers, Balanced for laptops and mid-range, Heavy for strong desktops', () {
+      PerformanceMode pick(int threads, {int? gb = 32, bool? battery = false}) => DeviceSetup.recommend(
+        DeviceSpecs(threads: threads, memoryBytes: gb == null ? null : gb * _gb, battery: battery),
+      );
+      expect(pick(4), PerformanceMode.lightweight);
+      expect(pick(6, battery: true), PerformanceMode.lightweight);
+      expect(pick(64, gb: 6), PerformanceMode.lightweight);
+      expect(pick(8), PerformanceMode.balanced);
+      expect(pick(12, gb: 16), PerformanceMode.balanced);
+      // A Core Ultra 9 275HX laptop: strong, but on a battery.
+      expect(pick(24, gb: 31, battery: true), PerformanceMode.balanced);
+      expect(pick(16, gb: 8), PerformanceMode.balanced);
+      expect(pick(16, gb: 16), PerformanceMode.heavy);
+      expect(pick(24, gb: 32), PerformanceMode.heavy);
+      // Unknown memory or battery goes by the threads.
+      expect(pick(16, gb: null, battery: null), PerformanceMode.heavy);
+      expect(pick(16, battery: null), PerformanceMode.heavy);
     });
 
     test('memory is rounded as the system shows it', () {
@@ -43,7 +39,7 @@ void main() {
 
   testWidgets('the page shows the computer, picks the recommendation, and Continue applies it once', (tester) async {
     SharedPreferences.setMockInitialValues({});
-    await LayoutPrefs.instance.setPerformance(PerformanceMode.balanced);
+    await LayoutPrefs.instance.setPerformance(PerformanceMode.lightweight);
     addTearDown(() => LayoutPrefs.instance.setPerformance(PerformanceMode.balanced));
     tester.view.physicalSize = const Size(900, 1000);
     tester.view.devicePixelRatio = 1;
@@ -75,6 +71,14 @@ void main() {
     expect(find.text('Recommended'), findsOneWidget);
     // Lightweight on 16 threads: 4% of one thread is 0.25% of all of them.
     expect(find.text('About 0.25% of the processor while a song plays'), findsOneWidget);
+    // A 16-thread laptop gets Balanced.
+    expect(
+      find.descendant(
+        of: find.ancestor(of: find.text('Recommended'), matching: find.byType(Row)).first,
+        matching: find.text('Balanced'),
+      ),
+      findsOneWidget,
+    );
 
     final shots = Platform.environment['SHOTS'];
     if (shots != null) {
@@ -86,7 +90,7 @@ void main() {
 
     await tester.tap(find.text('Continue'));
     await tester.pumpAndSettle();
-    expect(LayoutPrefs.instance.performance, PerformanceMode.lightweight);
+    expect(LayoutPrefs.instance.performance, PerformanceMode.balanced);
     expect(DeviceSetup.instance.due, isFalse);
     expect((await SharedPreferences.getInstance()).getBool('deviceSetup.v1'), isTrue);
   });
