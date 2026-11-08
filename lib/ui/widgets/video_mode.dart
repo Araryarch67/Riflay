@@ -158,7 +158,7 @@ class _VideoViewState extends State<_VideoView> {
   @override
   Widget build(BuildContext context) {
     final mode = VideoMode.instance;
-    // Windows: the video is in a window of its own, kept over this box (the cover shows while it is hidden).
+    // Windows/Linux: a native surface covers this box; the cover shows while it is hidden.
     if (mode.nativeReady) {
       if (widget.fill) return NativeVideoSurface(cover: true, fade: widget.fade, child: widget.cover);
       return Center(

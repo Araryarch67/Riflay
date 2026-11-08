@@ -256,7 +256,7 @@ class _HeroPanel extends StatelessWidget {
         controller: scroll,
         padding: EdgeInsets.only(bottom: 16 + MediaQuery.paddingOf(context).bottom),
         children: [
-          // Windows: the video plays in a window of its own, which Flutter can't draw over, so it covers the whole
+          // Windows/Linux: the native video surface sits above Flutter, so it covers the whole
           // picture and the title sits under it. Elsewhere the video is drawn behind the title.
           if (VideoMode.native) ...[
             AspectRatio(

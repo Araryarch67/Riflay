@@ -704,13 +704,40 @@ device's language when Riflay has it). The words live in `lib/l10n/app_en.arb` (
   a 24-thread CPU (it was ~3%). It plays on behind other windows (only minimized or hidden lets it go), keeps its
   player a minute without a view (`_holdWithoutView`), and the side panel has none in Lightweight.
   `RIFLAY_IMPELLER=on|off` (runner/main.cpp) picks the renderer for measuring; Skia saved no memory here.
+- Linux uses the same FFI video player with system `libmpv.so.2`, `vo=libmpv`, and a GTK3 `GtkGLArea`
+  (`linux/runner/native_video.cc`). A `GtkOverlay` places the surface above the Flutter view, passing input through.
+  mpv's update callback schedules GTK rendering; video frames do not invalidate a Flutter texture. Both Wayland
+  and X11 use the render API with their native display supplied for hardware decoding. Clipping copies the
+  visible portion of a full-size GPU framebuffer, keeping the aspect ratio while scrolling. The renderer is
+  detached on the GTK thread before Dart destroys mpv. Initialization failure falls back to media_kit for the
+  rest of the session. Full-page backgrounds retain the texture backend so Flutter can paint text above them.
+  `integration_test/native_video_linux_test.dart` checks playback, clipping, dialogs, and reattachment with a
+  generated local clip (needs ffmpeg). `tool/native_video_probe.dart` compares CPU and Flutter frame rates in a
+  profile build, independently of the live integration-test frame loop; run it in headless Weston as above.
+  `--dart-define=RIFLAY_NO_NATIVE_VIDEO=true` selects texture video in the full app for comparison.
+  Linux keeps its performance-mode FPS caps, pause while unfocused, and two-second release without a view.
+  On 2026-11-08, the isolated 640x360/30 fps profile probe in headless Weston on NVIDIA/NVDEC used 23.8% of
+  one CPU core for GTK versus 29.8% for texture (six-second samples); both paused near zero. This is not a
+  whole-app benchmark. With software decoding the same probe was about 30% for either renderer.
+  Full-app measurements and raw data are in `docs/performance/linux-video-2026-11-08/`: three fresh processes
+  per configuration, normal binding/profile build, 1280x800, 120 covers and local media, a silent PipeWire sink.
+  Native video medians were 0.437% / 522 MiB private (Lightweight), 1.577% / 554 MiB (Balanced), and 2.624% /
+  577 MiB (Heavy), CPU as a share of the whole 24-core machine. These exceed the numerical Windows references;
+  Linux private/PSS/RSS and Windows private working set use different accounting. Balanced texture was 1.708%
+  / 558 MiB: per-run CPU ranges overlap, so the isolated probe is not evidence of a consistent 20% app saving.
+  All idle/paused samples were below 0.30% of one core with zero reported UI frames. `tool/benchmark_linux_video.py`
+  reproduces the run using `tool/linux_video_benchmark_app.dart` in a copied checkout and headless Weston.
+  The full-app driver exposed overlapping renderer initialization on song changes: `_opening` coalesces duplicate
+  requests, a generation cancels obsolete work, and `_withSurface` serializes only creation/disposal, leaving
+  network loads cancellable. The integration regression also exercises duplicate notifications and rapid skips.
 - `StreakFlame` breathes three times when it comes on screen, then rests (it repeated forever at the display's rate).
 - `UiBeat`'s timer fires only as often as its busiest view needs (`_stride`): a seek bar ticking once a second wakes
   the app once a second, not 60 times. Heavy's decorations and visualizer run at 30 fps (`PlayingMotion.heavyEvery`):
-  at 60 a focused window cost ~0.9% of a 24-thread CPU. The visualizer moves only while the window has the focus:
-  its mpv filter bank (`VisualizerSpectrum`: 24 band filters, then a level per channel) kept
-  mpv's core thread at ~5% of a core behind other windows, where the view drew 20 fps. Unfocused, the lease is let
-  go and mpv drops the bank.
+  at 60 a focused window cost ~0.9% of a 24-thread CPU. On Linux the visualizer moves only while the window has the
+  focus (`PlayingMotion.visible`): its mpv filter bank (`VisualizerSpectrum`: 24 band filters, then a level per
+  channel) kept mpv's core thread at ~5% of a core behind other windows, where the view drew 20 fps. Unfocused, the
+  lease is let go and mpv drops the bank. Windows and macOS keep it moving behind other windows (people watch it
+  beside their work), Heavy at 20 fps there; minimized or hidden lets it go everywhere.
 - The bank measures each band with `aspectralstats` (mean and variance of one 1024-point FFT a window; their
   `variance + mean²` is the power, 34.6 dB under `astats`' RMS for any sound, `VisualizerLevels.spectralDb`).
   `astats` worked out ~25 statistics on every sample of 26 channels for the one RMS used, ~90% of the bank's cost:
