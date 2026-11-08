@@ -1,0 +1,3186 @@
+{
+  "metadata": {
+    "logicalProcessors": 24,
+    "sampleSeconds": 10,
+    "settleSeconds": 4,
+    "runsRequested": 3,
+    "startedUtc": "2026-11-07T19:57:38Z",
+    "gitHead": "0a6761a6c08501c684f101599a24532b498c2c07",
+    "cpu": "{\n   \"lscpu\": [\n      {\n         \"field\": \"Architecture:\",\n         \"data\": \"x86_64\"\n      },{\n         \"field\": \"CPU op-mode(s):\",\n         \"data\": \"32-bit, 64-bit\"\n      },{\n         \"field\": \"Address sizes:\",\n         \"data\": \"42 bits physical, 48 bits virtual\"\n      },{\n         \"field\": \"Byte Order:\",\n         \"data\": \"Little Endian\"\n      },{\n         \"field\": \"CPU(s):\",\n         \"data\": \"24\"\n      },{\n         \"field\": \"On-line CPU(s) list:\",\n         \"data\": \"0-23\"\n      },{\n         \"field\": \"Vendor ID:\",\n         \"data\": \"GenuineIntel\"\n      },{\n         \"field\": \"Model name:\",\n         \"data\": \"Intel(R) Core(TM) Ultra 9 275HX\"\n      },{\n         \"field\": \"CPU family:\",\n         \"data\": \"6\"\n      },{\n         \"field\": \"Model:\",\n         \"data\": \"198\"\n      },{\n         \"field\": \"Thread(s) per core:\",\n         \"data\": \"1\"\n      },{\n         \"field\": \"Core(s) per socket:\",\n         \"data\": \"24\"\n      },{\n         \"field\": \"Socket(s):\",\n         \"data\": \"1\"\n      },{\n         \"field\": \"Stepping:\",\n         \"data\": \"2\"\n      },{\n         \"field\": \"Microcode version:\",\n         \"data\": \"0x122\"\n      },{\n         \"field\": \"CPU(s) scaling MHz:\",\n         \"data\": \"80%\"\n      },{\n         \"field\": \"CPU max MHz:\",\n         \"data\": \"6500.0000\"\n      },{\n         \"field\": \"CPU min MHz:\",\n         \"data\": \"800.0000\"\n      },{\n         \"field\": \"BogoMIPS:\",\n         \"data\": \"6144.00\"\n      },{\n         \"field\": \"Flags:\",\n         \"data\": \"fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush dts acpi mmx fxsr sse sse2 ss ht tm pbe syscall nx pdpe1gb rdtscp lm constant_tsc art arch_perfmon pebs bts rep_good nopl xtopology nonstop_tsc cpuid aperfmperf tsc_known_freq pni pclmulqdq dtes64 monitor ds_cpl vmx smx est tm2 ssse3 sdbg fma cx16 xtpr pdcm pcid sse4_1 sse4_2 x2apic movbe popcnt tsc_deadline_timer aes xsave avx f16c rdrand lahf_lm abm 3dnowprefetch cpuid_fault epb ssbd ibrs ibpb stibp ibrs_enhanced tpr_shadow flexpriority ept vpid ept_ad fsgsbase tsc_adjust bmi1 avx2 smep bmi2 erms invpcid rdt_a rdseed adx smap clflushopt clwb intel_pt sha_ni xsaveopt xsavec xgetbv1 xsaves split_lock_detect user_shstk avx_vnni lass lam wbnoinvd dtherm ida arat pln pts hwp hwp_notify hwp_act_window hwp_epp hwp_pkg_req hfi vnmi umip pku ospke waitpkg gfni vaes vpclmulqdq rdpid bus_lock_detect movdiri movdir64b fsrm md_clear serialize arch_lbr ibt flush_l1d arch_capabilities\"\n      },{\n         \"field\": \"Virtualization:\",\n         \"data\": \"VT-x\"\n      },{\n         \"field\": \"L1d cache:\",\n         \"data\": \"768 KiB (20 instances)\"\n      },{\n         \"field\": \"L1i cache:\",\n         \"data\": \"1.3 MiB (20 instances)\"\n      },{\n         \"field\": \"L2 cache:\",\n         \"data\": \"40 MiB (12 instances)\"\n      },{\n         \"field\": \"L3 cache:\",\n         \"data\": \"36 MiB (1 instance)\"\n      },{\n         \"field\": \"NUMA node(s):\",\n         \"data\": \"1\"\n      },{\n         \"field\": \"NUMA node0 CPU(s):\",\n         \"data\": \"0-23\"\n      },{\n         \"field\": \"Vulnerability Gather data sampling:\",\n         \"data\": \"Not affected\"\n      },{\n         \"field\": \"Vulnerability Ghostwrite:\",\n         \"data\": \"Not affected\"\n      },{\n         \"field\": \"Vulnerability Indirect target selection:\",\n         \"data\": \"Not affected\"\n      },{\n         \"field\": \"Vulnerability Itlb multihit:\",\n         \"data\": \"Not affected\"\n      },{\n         \"field\": \"Vulnerability L1tf:\",\n         \"data\": \"Not affected\"\n      },{\n         \"field\": \"Vulnerability Mds:\",\n         \"data\": \"Not affected\"\n      },{\n         \"field\": \"Vulnerability Meltdown:\",\n         \"data\": \"Not affected\"\n      },{\n         \"field\": \"Vulnerability Mmio stale data:\",\n         \"data\": \"Not affected\"\n      },{\n         \"field\": \"Vulnerability Old microcode:\",\n         \"data\": \"Not affected\"\n      },{\n         \"field\": \"Vulnerability Reg file data sampling:\",\n         \"data\": \"Not affected\"\n      },{\n         \"field\": \"Vulnerability Retbleed:\",\n         \"data\": \"Not affected\"\n      },{\n         \"field\": \"Vulnerability Spec rstack overflow:\",\n         \"data\": \"Not affected\"\n      },{\n         \"field\": \"Vulnerability Spec store bypass:\",\n         \"data\": \"Mitigation; Speculative Store Bypass disabled via prctl\"\n      },{\n         \"field\": \"Vulnerability Spectre v1:\",\n         \"data\": \"Mitigation; usercopy/swapgs barriers and __user pointer sanitization\"\n      },{\n         \"field\": \"Vulnerability Spectre v2:\",\n         \"data\": \"Mitigation; Enhanced / Automatic IBRS; IBPB conditional; PBRSB-eIBRS Not affected; BHI BHI_DIS_S\"\n      },{\n         \"field\": \"Vulnerability Srbds:\",\n         \"data\": \"Not affected\"\n      },{\n         \"field\": \"Vulnerability Tsa:\",\n         \"data\": \"Not affected\"\n      },{\n         \"field\": \"Vulnerability Tsx async abort:\",\n         \"data\": \"Not affected\"\n      },{\n         \"field\": \"Vulnerability Vmscape:\",\n         \"data\": \"Mitigation; IBPB before exit to userspace\"\n      }\n   ]\n}\n",
+    "gpu": "NVIDIA GeForce RTX 5070 Ti Laptop GPU, 615.78.08, 12227 MiB",
+    "flutter": {
+      "frameworkVersion": "3.47.7",
+      "channel": "stable",
+      "repositoryUrl": "https://github.com/flutter/flutter.git",
+      "frameworkRevision": "abaf9c523780a608bd46686fd5e53740a07077f8",
+      "frameworkCommitDate": "2026-10-08 09:51:21 -0700",
+      "engineRevision": "deb287481e3ce9468f3434937ced4240a70539ca",
+      "engineCommitDate": "2026-10-07 17:09:12.000Z",
+      "engineContentHash": "d8a2d6c768c334d53e16277f837970ffa1e2de81",
+      "engineBuildDate": "2026-10-08 00:51:44.552",
+      "dartSdkVersion": "3.13.5",
+      "devToolsVersion": "2.60.0",
+      "flutterVersion": "3.47.7",
+      "flutterRoot": "/home/ararya/development/flutter"
+    },
+    "sourceSha256": "42ddbd4d4d1ab44d05fe863f22a50d14dfcc5525b5aebcf86007846deda84cd1",
+    "copiedSource": "/tmp/riflay-full-benchmark-work/source",
+    "audioSink": "Temporary PipeWire null sink; unmuted DSP",
+    "compositorGlRenderer": [
+      "NVIDIA GeForce RTX 5070 Ti Laptop GPU/PCIe/SSE2"
+    ],
+    "finishedUtc": "2026-11-07T20:19:42Z"
+  },
+  "samples": [
+    {
+      "phase": "idle_home",
+      "mode": "lightweight",
+      "backend": "native",
+      "run": 1,
+      "sampleSeconds": 10.002747,
+      "logicalProcessors": 24,
+      "cpuOneCorePercent": 0.09997253754393669,
+      "cpuTotalPercent": 0.004165522397664029,
+      "memoryBefore": {
+        "privateMiB": 287.42578125,
+        "pssMiB": 307.09375,
+        "rssMiB": 396.546875,
+        "peakRssMiB": 442.97265625
+      },
+      "memoryAfter": {
+        "privateMiB": 286.6328125,
+        "pssMiB": 306.30078125,
+        "rssMiB": 395.75390625,
+        "peakRssMiB": 442.97265625
+      },
+      "reportedFrameTimingsPerSecond": 0.0,
+      "uiBeatListeners": 0,
+      "lifecycle": "resumed",
+      "audioPlaying": false,
+      "audioPositionStartMs": 0,
+      "audioPositionEndMs": 0,
+      "videoPositionStartMs": null,
+      "videoPositionEndMs": null,
+      "videoPlaying": null,
+      "nativeReady": false,
+      "textureReady": false,
+      "decoderInUse": null,
+      "surfaceBefore": {
+        "attached": false,
+        "visible": false,
+        "frames": 0,
+        "width": 0,
+        "height": 0
+      },
+      "surfaceAfter": {
+        "attached": false,
+        "visible": false,
+        "frames": 0,
+        "width": 0,
+        "height": 0
+      },
+      "windowPhysicalSize": {
+        "width": 1280.0,
+        "height": 800.0
+      },
+      "devicePixelRatio": 1.0,
+      "audioOutput": null,
+      "audioDevice": null,
+      "visualizerActive": false
+    },
+    {
+      "phase": "audio_playing",
+      "mode": "lightweight",
+      "backend": "native",
+      "run": 1,
+      "sampleSeconds": 10.002134,
+      "logicalProcessors": 24,
+      "cpuOneCorePercent": 3.3992745948014695,
+      "cpuTotalPercent": 0.14163644145006124,
+      "memoryBefore": {
+        "privateMiB": 307.9140625,
+        "pssMiB": 328.3798828125,
+        "rssMiB": 419.97265625,
+        "peakRssMiB": 472.2421875
+      },
+      "memoryAfter": {
+        "privateMiB": 304.83203125,
+        "pssMiB": 325.2978515625,
+        "rssMiB": 416.890625,
+        "peakRssMiB": 472.2421875
+      },
+      "reportedFrameTimingsPerSecond": 1.0997653100828284,
+      "uiBeatListeners": 4,
+      "lifecycle": "resumed",
+      "audioPlaying": true,
+      "audioPositionStartMs": 4185,
+      "audioPositionEndMs": 14195,
+      "videoPositionStartMs": null,
+      "videoPositionEndMs": null,
+      "videoPlaying": null,
+      "nativeReady": false,
+      "textureReady": false,
+      "decoderInUse": null,
+      "surfaceBefore": {
+        "attached": false,
+        "visible": false,
+        "frames": 0,
+        "width": 0,
+        "height": 0
+      },
+      "surfaceAfter": {
+        "attached": false,
+        "visible": false,
+        "frames": 0,
+        "width": 0,
+        "height": 0
+      },
+      "windowPhysicalSize": {
+        "width": 1280.0,
+        "height": 800.0
+      },
+      "devicePixelRatio": 1.0,
+      "audioOutput": "pipewire",
+      "audioDevice": "pipewire/riflay_benchmark_31857",
+      "visualizerActive": false
+    },
+    {
+      "phase": "video_playing",
+      "mode": "lightweight",
+      "backend": "native",
+      "run": 1,
+      "sampleSeconds": 10.001954,
+      "logicalProcessors": 24,
+      "cpuOneCorePercent": 10.09802684555438,
+      "cpuTotalPercent": 0.4207511185647658,
+      "memoryBefore": {
+        "privateMiB": 522.4296875,
+        "pssMiB": 543.154296875,
+        "rssMiB": 635.75390625,
+        "peakRssMiB": 806.5703125
+      },
+      "memoryAfter": {
+        "privateMiB": 519.49609375,
+        "pssMiB": 540.220703125,
+        "rssMiB": 632.8203125,
+        "peakRssMiB": 824.44921875
+      },
+      "reportedFrameTimingsPerSecond": 1.5996874210779215,
+      "uiBeatListeners": 4,
+      "lifecycle": "resumed",
+      "audioPlaying": true,
+      "audioPositionStartMs": 4999,
+      "audioPositionEndMs": 15012,
+      "videoPositionStartMs": 4900,
+      "videoPositionEndMs": 15000,
+      "videoPlaying": true,
+      "nativeReady": true,
+      "textureReady": false,
+      "decoderInUse": "nvdec",
+      "surfaceBefore": {
+        "attached": true,
+        "visible": true,
+        "frames": 44,
+        "width": 1232,
+        "height": 692
+      },
+      "surfaceAfter": {
+        "attached": true,
+        "visible": true,
+        "frames": 145,
+        "width": 1232,
+        "height": 692
+      },
+      "windowPhysicalSize": {
+        "width": 1280.0,
+        "height": 800.0
+      },
+      "devicePixelRatio": 1.0,
+      "audioOutput": "pipewire",
+      "audioDevice": "pipewire/riflay_benchmark_31857",
+      "visualizerActive": false
+    },
+    {
+      "phase": "video_paused",
+      "mode": "lightweight",
+      "backend": "native",
+      "run": 1,
+      "sampleSeconds": 10.002349,
+      "logicalProcessors": 24,
+      "cpuOneCorePercent": 0.19995303103301032,
+      "cpuTotalPercent": 0.008331376293042097,
+      "memoryBefore": {
+        "privateMiB": 525.0390625,
+        "pssMiB": 545.763671875,
+        "rssMiB": 638.36328125,
+        "peakRssMiB": 824.44921875
+      },
+      "memoryAfter": {
+        "privateMiB": 522.5625,
+        "pssMiB": 543.287109375,
+        "rssMiB": 635.88671875,
+        "peakRssMiB": 824.44921875
+      },
+      "reportedFrameTimingsPerSecond": 0.0,
+      "uiBeatListeners": 0,
+      "lifecycle": "resumed",
+      "audioPlaying": false,
+      "audioPositionStartMs": 15015,
+      "audioPositionEndMs": 15015,
+      "videoPositionStartMs": 15000,
+      "videoPositionEndMs": 15000,
+      "videoPlaying": false,
+      "nativeReady": true,
+      "textureReady": false,
+      "decoderInUse": "nvdec",
+      "surfaceBefore": {
+        "attached": true,
+        "visible": true,
+        "frames": 146,
+        "width": 1232,
+        "height": 692
+      },
+      "surfaceAfter": {
+        "attached": true,
+        "visible": true,
+        "frames": 146,
+        "width": 1232,
+        "height": 692
+      },
+      "windowPhysicalSize": {
+        "width": 1280.0,
+        "height": 800.0
+      },
+      "devicePixelRatio": 1.0,
+      "audioOutput": "pipewire",
+      "audioDevice": "pipewire/riflay_benchmark_31857",
+      "visualizerActive": false
+    },
+    {
+      "phase": "video_unfocused_released",
+      "mode": "lightweight",
+      "backend": "native",
+      "run": 1,
+      "sampleSeconds": 10.00195,
+      "logicalProcessors": 24,
+      "cpuOneCorePercent": 4.999025190087933,
+      "cpuTotalPercent": 0.20829271625366386,
+      "memoryBefore": {
+        "privateMiB": 368.74609375,
+        "pssMiB": 389.486328125,
+        "rssMiB": 482.1328125,
+        "peakRssMiB": 828.22265625
+      },
+      "memoryAfter": {
+        "privateMiB": 378.36328125,
+        "pssMiB": 399.1005859375,
+        "rssMiB": 491.75,
+        "peakRssMiB": 828.22265625
+      },
+      "reportedFrameTimingsPerSecond": 1.8996295722334144,
+      "uiBeatListeners": 4,
+      "lifecycle": "inactive",
+      "audioPlaying": true,
+      "audioPositionStartMs": 39368,
+      "audioPositionEndMs": 49380,
+      "videoPositionStartMs": null,
+      "videoPositionEndMs": null,
+      "videoPlaying": null,
+      "nativeReady": false,
+      "textureReady": false,
+      "decoderInUse": "nvdec",
+      "surfaceBefore": {
+        "attached": false,
+        "visible": false,
+        "frames": 0,
+        "width": 0,
+        "height": 0
+      },
+      "surfaceAfter": {
+        "attached": false,
+        "visible": false,
+        "frames": 0,
+        "width": 0,
+        "height": 0
+      },
+      "windowPhysicalSize": {
+        "width": 1280.0,
+        "height": 800.0
+      },
+      "devicePixelRatio": 1.0,
+      "audioOutput": "pipewire",
+      "audioDevice": "pipewire/riflay_benchmark_31857",
+      "visualizerActive": false
+    },
+    {
+      "phase": "idle_home",
+      "mode": "balanced",
+      "backend": "native",
+      "run": 1,
+      "sampleSeconds": 10.002039,
+      "logicalProcessors": 24,
+      "cpuOneCorePercent": 0.09997961415667346,
+      "cpuTotalPercent": 0.0041658172565280606,
+      "memoryBefore": {
+        "privateMiB": 289.453125,
+        "pssMiB": 309.017578125,
+        "rssMiB": 398.1875,
+        "peakRssMiB": 442.60546875
+      },
+      "memoryAfter": {
+        "privateMiB": 289.2109375,
+        "pssMiB": 308.775390625,
+        "rssMiB": 397.9453125,
+        "peakRssMiB": 442.60546875
+      },
+      "reportedFrameTimingsPerSecond": 0.0,
+      "uiBeatListeners": 0,
+      "lifecycle": "resumed",
+      "audioPlaying": false,
+      "audioPositionStartMs": 0,
+      "audioPositionEndMs": 0,
+      "videoPositionStartMs": null,
+      "videoPositionEndMs": null,
+      "videoPlaying": null,
+      "nativeReady": false,
+      "textureReady": false,
+      "decoderInUse": null,
+      "surfaceBefore": {
+        "attached": false,
+        "visible": false,
+        "frames": 0,
+        "width": 0,
+        "height": 0
+      },
+      "surfaceAfter": {
+        "attached": false,
+        "visible": false,
+        "frames": 0,
+        "width": 0,
+        "height": 0
+      },
+      "windowPhysicalSize": {
+        "width": 1280.0,
+        "height": 800.0
+      },
+      "devicePixelRatio": 1.0,
+      "audioOutput": null,
+      "audioDevice": null,
+      "visualizerActive": false
+    },
+    {
+      "phase": "audio_playing",
+      "mode": "balanced",
+      "backend": "native",
+      "run": 1,
+      "sampleSeconds": 10.002155,
+      "logicalProcessors": 24,
+      "cpuOneCorePercent": 43.09071395114353,
+      "cpuTotalPercent": 1.7954464146309803,
+      "memoryBefore": {
+        "privateMiB": 328.06640625,
+        "pssMiB": 348.3828125,
+        "rssMiB": 439.66015625,
+        "peakRssMiB": 503.60546875
+      },
+      "memoryAfter": {
+        "privateMiB": 339.90234375,
+        "pssMiB": 360.2197265625,
+        "rssMiB": 451.49609375,
+        "peakRssMiB": 503.60546875
+      },
+      "reportedFrameTimingsPerSecond": 20.195647837890935,
+      "uiBeatListeners": 5,
+      "lifecycle": "resumed",
+      "audioPlaying": true,
+      "audioPositionStartMs": 4218,
+      "audioPositionEndMs": 14230,
+      "videoPositionStartMs": null,
+      "videoPositionEndMs": null,
+      "videoPlaying": null,
+      "nativeReady": false,
+      "textureReady": false,
+      "decoderInUse": null,
+      "surfaceBefore": {
+        "attached": false,
+        "visible": false,
+        "frames": 0,
+        "width": 0,
+        "height": 0
+      },
+      "surfaceAfter": {
+        "attached": false,
+        "visible": false,
+        "frames": 0,
+        "width": 0,
+        "height": 0
+      },
+      "windowPhysicalSize": {
+        "width": 1280.0,
+        "height": 800.0
+      },
+      "devicePixelRatio": 1.0,
+      "audioOutput": "pipewire",
+      "audioDevice": "pipewire/riflay_benchmark_31857",
+      "visualizerActive": true
+    },
+    {
+      "phase": "video_playing",
+      "mode": "balanced",
+      "backend": "native",
+      "run": 1,
+      "sampleSeconds": 10.001782,
+      "logicalProcessors": 24,
+      "cpuOneCorePercent": 36.893425591559584,
+      "cpuTotalPercent": 1.5372260663149826,
+      "memoryBefore": {
+        "privateMiB": 540.453125,
+        "pssMiB": 561.037109375,
+        "rssMiB": 653.33984375,
+        "peakRssMiB": 849.6953125
+      },
+      "memoryAfter": {
+        "privateMiB": 561.82421875,
+        "pssMiB": 582.408203125,
+        "rssMiB": 674.7109375,
+        "peakRssMiB": 854.35546875
+      },
+      "reportedFrameTimingsPerSecond": 19.996436634991642,
+      "uiBeatListeners": 3,
+      "lifecycle": "resumed",
+      "audioPlaying": true,
+      "audioPositionStartMs": 5023,
+      "audioPositionEndMs": 15036,
+      "videoPositionStartMs": 5000,
+      "videoPositionEndMs": 15000,
+      "videoPlaying": true,
+      "nativeReady": true,
+      "textureReady": false,
+      "decoderInUse": "nvdec",
+      "surfaceBefore": {
+        "attached": true,
+        "visible": true,
+        "frames": 64,
+        "width": 332,
+        "height": 332
+      },
+      "surfaceAfter": {
+        "attached": true,
+        "visible": true,
+        "frames": 215,
+        "width": 332,
+        "height": 332
+      },
+      "windowPhysicalSize": {
+        "width": 1280.0,
+        "height": 800.0
+      },
+      "devicePixelRatio": 1.0,
+      "audioOutput": "pipewire",
+      "audioDevice": "pipewire/riflay_benchmark_31857",
+      "visualizerActive": false
+    },
+    {
+      "phase": "video_paused",
+      "mode": "balanced",
+      "backend": "native",
+      "run": 1,
+      "sampleSeconds": 10.001822,
+      "logicalProcessors": 24,
+      "cpuOneCorePercent": 0.09998178331907925,
+      "cpuTotalPercent": 0.004165907638294969,
+      "memoryBefore": {
+        "privateMiB": 550.86328125,
+        "pssMiB": 571.447265625,
+        "rssMiB": 663.75,
+        "peakRssMiB": 854.35546875
+      },
+      "memoryAfter": {
+        "privateMiB": 550.0625,
+        "pssMiB": 570.646484375,
+        "rssMiB": 662.94921875,
+        "peakRssMiB": 854.35546875
+      },
+      "reportedFrameTimingsPerSecond": 0.0,
+      "uiBeatListeners": 0,
+      "lifecycle": "resumed",
+      "audioPlaying": false,
+      "audioPositionStartMs": 15039,
+      "audioPositionEndMs": 15039,
+      "videoPositionStartMs": 15000,
+      "videoPositionEndMs": 15000,
+      "videoPlaying": false,
+      "nativeReady": true,
+      "textureReady": false,
+      "decoderInUse": "nvdec",
+      "surfaceBefore": {
+        "attached": true,
+        "visible": true,
+        "frames": 216,
+        "width": 332,
+        "height": 332
+      },
+      "surfaceAfter": {
+        "attached": true,
+        "visible": true,
+        "frames": 216,
+        "width": 332,
+        "height": 332
+      },
+      "windowPhysicalSize": {
+        "width": 1280.0,
+        "height": 800.0
+      },
+      "devicePixelRatio": 1.0,
+      "audioOutput": "pipewire",
+      "audioDevice": "pipewire/riflay_benchmark_31857",
+      "visualizerActive": false
+    },
+    {
+      "phase": "video_unfocused_released",
+      "mode": "balanced",
+      "backend": "native",
+      "run": 1,
+      "sampleSeconds": 10.0022,
+      "logicalProcessors": 24,
+      "cpuOneCorePercent": 3.899142188718482,
+      "cpuTotalPercent": 0.1624642578632701,
+      "memoryBefore": {
+        "privateMiB": 393.3046875,
+        "pssMiB": 413.9130859375,
+        "rssMiB": 506.296875,
+        "peakRssMiB": 855.19140625
+      },
+      "memoryAfter": {
+        "privateMiB": 387.3671875,
+        "pssMiB": 407.9755859375,
+        "rssMiB": 500.359375,
+        "peakRssMiB": 855.19140625
+      },
+      "reportedFrameTimingsPerSecond": 1.0997580532282898,
+      "uiBeatListeners": 2,
+      "lifecycle": "inactive",
+      "audioPlaying": true,
+      "audioPositionStartMs": 39428,
+      "audioPositionEndMs": 49439,
+      "videoPositionStartMs": null,
+      "videoPositionEndMs": null,
+      "videoPlaying": null,
+      "nativeReady": false,
+      "textureReady": false,
+      "decoderInUse": "nvdec",
+      "surfaceBefore": {
+        "attached": false,
+        "visible": false,
+        "frames": 0,
+        "width": 0,
+        "height": 0
+      },
+      "surfaceAfter": {
+        "attached": false,
+        "visible": false,
+        "frames": 0,
+        "width": 0,
+        "height": 0
+      },
+      "windowPhysicalSize": {
+        "width": 1280.0,
+        "height": 800.0
+      },
+      "devicePixelRatio": 1.0,
+      "audioOutput": "pipewire",
+      "audioDevice": "pipewire/riflay_benchmark_31857",
+      "visualizerActive": false
+    },
+    {
+      "phase": "idle_home",
+      "mode": "balanced",
+      "backend": "texture",
+      "run": 1,
+      "sampleSeconds": 10.001849,
+      "logicalProcessors": 24,
+      "cpuOneCorePercent": 0.0,
+      "cpuTotalPercent": 0.0,
+      "memoryBefore": {
+        "privateMiB": 287.7421875,
+        "pssMiB": 307.3994140625,
+        "rssMiB": 396.76171875,
+        "peakRssMiB": 442.4765625
+      },
+      "memoryAfter": {
+        "privateMiB": 287.140625,
+        "pssMiB": 306.794921875,
+        "rssMiB": 396.16015625,
+        "peakRssMiB": 442.4765625
+      },
+      "reportedFrameTimingsPerSecond": 0.0,
+      "uiBeatListeners": 0,
+      "lifecycle": "resumed",
+      "audioPlaying": false,
+      "audioPositionStartMs": 0,
+      "audioPositionEndMs": 0,
+      "videoPositionStartMs": null,
+      "videoPositionEndMs": null,
+      "videoPlaying": null,
+      "nativeReady": false,
+      "textureReady": false,
+      "decoderInUse": null,
+      "windowPhysicalSize": {
+        "width": 1280.0,
+        "height": 800.0
+      },
+      "devicePixelRatio": 1.0,
+      "audioOutput": null,
+      "audioDevice": null,
+      "visualizerActive": false
+    },
+    {
+      "phase": "audio_playing",
+      "mode": "balanced",
+      "backend": "texture",
+      "run": 1,
+      "sampleSeconds": 10.00215,
+      "logicalProcessors": 24,
+      "cpuOneCorePercent": 43.29069250111226,
+      "cpuTotalPercent": 1.8037788542130109,
+      "memoryBefore": {
+        "privateMiB": 344.70703125,
+        "pssMiB": 365.123046875,
+        "rssMiB": 456.62109375,
+        "peakRssMiB": 502.09765625
+      },
+      "memoryAfter": {
+        "privateMiB": 347.15625,
+        "pssMiB": 367.5732421875,
+        "rssMiB": 459.0703125,
+        "peakRssMiB": 502.09765625
+      },
+      "reportedFrameTimingsPerSecond": 20.095679428922782,
+      "uiBeatListeners": 5,
+      "lifecycle": "resumed",
+      "audioPlaying": true,
+      "audioPositionStartMs": 4234,
+      "audioPositionEndMs": 14243,
+      "videoPositionStartMs": null,
+      "videoPositionEndMs": null,
+      "videoPlaying": null,
+      "nativeReady": false,
+      "textureReady": false,
+      "decoderInUse": null,
+      "windowPhysicalSize": {
+        "width": 1280.0,
+        "height": 800.0
+      },
+      "devicePixelRatio": 1.0,
+      "audioOutput": "pipewire",
+      "audioDevice": "pipewire/riflay_benchmark_31857",
+      "visualizerActive": true
+    },
+    {
+      "phase": "video_playing",
+      "mode": "balanced",
+      "backend": "texture",
+      "run": 1,
+      "sampleSeconds": 10.002318,
+      "logicalProcessors": 24,
+      "cpuOneCorePercent": 40.9904984024703,
+      "cpuTotalPercent": 1.7079374334362625,
+      "memoryBefore": {
+        "privateMiB": 558.47265625,
+        "pssMiB": 579.154296875,
+        "rssMiB": 671.66015625,
+        "peakRssMiB": 853.359375
+      },
+      "memoryAfter": {
+        "privateMiB": 554.76171875,
+        "pssMiB": 575.443359375,
+        "rssMiB": 667.94921875,
+        "peakRssMiB": 856.91796875
+      },
+      "reportedFrameTimingsPerSecond": 20.295295550491396,
+      "uiBeatListeners": 5,
+      "lifecycle": "resumed",
+      "audioPlaying": true,
+      "audioPositionStartMs": 7971,
+      "audioPositionEndMs": 17992,
+      "videoPositionStartMs": 8066,
+      "videoPositionEndMs": 18000,
+      "videoPlaying": true,
+      "nativeReady": false,
+      "textureReady": true,
+      "decoderInUse": "nvdec",
+      "windowPhysicalSize": {
+        "width": 1280.0,
+        "height": 800.0
+      },
+      "devicePixelRatio": 1.0,
+      "audioOutput": "pipewire",
+      "audioDevice": "pipewire/riflay_benchmark_31857",
+      "visualizerActive": true
+    },
+    {
+      "phase": "video_paused",
+      "mode": "balanced",
+      "backend": "texture",
+      "run": 1,
+      "sampleSeconds": 10.002211,
+      "logicalProcessors": 24,
+      "cpuOneCorePercent": 0.09997789488744038,
+      "cpuTotalPercent": 0.004165745620310016,
+      "memoryBefore": {
+        "privateMiB": 551.98046875,
+        "pssMiB": 572.662109375,
+        "rssMiB": 665.16796875,
+        "peakRssMiB": 856.91796875
+      },
+      "memoryAfter": {
+        "privateMiB": 546.70703125,
+        "pssMiB": 567.388671875,
+        "rssMiB": 659.89453125,
+        "peakRssMiB": 856.91796875
+      },
+      "reportedFrameTimingsPerSecond": 0.0,
+      "uiBeatListeners": 0,
+      "lifecycle": "resumed",
+      "audioPlaying": false,
+      "audioPositionStartMs": 17992,
+      "audioPositionEndMs": 17992,
+      "videoPositionStartMs": 18000,
+      "videoPositionEndMs": 18000,
+      "videoPlaying": false,
+      "nativeReady": false,
+      "textureReady": true,
+      "decoderInUse": "nvdec",
+      "windowPhysicalSize": {
+        "width": 1280.0,
+        "height": 800.0
+      },
+      "devicePixelRatio": 1.0,
+      "audioOutput": "pipewire",
+      "audioDevice": "pipewire/riflay_benchmark_31857",
+      "visualizerActive": false
+    },
+    {
+      "phase": "video_unfocused_released",
+      "mode": "balanced",
+      "backend": "texture",
+      "run": 1,
+      "sampleSeconds": 10.001797,
+      "logicalProcessors": 24,
+      "cpuOneCorePercent": 35.59360382939186,
+      "cpuTotalPercent": 1.483066826224661,
+      "memoryBefore": {
+        "privateMiB": 399.86328125,
+        "pssMiB": 420.5419921875,
+        "rssMiB": 513.05078125,
+        "peakRssMiB": 863.77734375
+      },
+      "memoryAfter": {
+        "privateMiB": 404.23828125,
+        "pssMiB": 424.9306640625,
+        "rssMiB": 517.48828125,
+        "peakRssMiB": 863.77734375
+      },
+      "reportedFrameTimingsPerSecond": 21.296173077697937,
+      "uiBeatListeners": 3,
+      "lifecycle": "inactive",
+      "audioPlaying": true,
+      "audioPositionStartMs": 42588,
+      "audioPositionEndMs": 52600,
+      "videoPositionStartMs": null,
+      "videoPositionEndMs": null,
+      "videoPlaying": null,
+      "nativeReady": false,
+      "textureReady": false,
+      "decoderInUse": "nvdec",
+      "windowPhysicalSize": {
+        "width": 1280.0,
+        "height": 800.0
+      },
+      "devicePixelRatio": 1.0,
+      "audioOutput": "pipewire",
+      "audioDevice": "pipewire/riflay_benchmark_31857",
+      "visualizerActive": true
+    },
+    {
+      "phase": "idle_home",
+      "mode": "heavy",
+      "backend": "native",
+      "run": 1,
+      "sampleSeconds": 10.002318,
+      "logicalProcessors": 24,
+      "cpuOneCorePercent": 0.0999768253718788,
+      "cpuTotalPercent": 0.0041657010571616165,
+      "memoryBefore": {
+        "privateMiB": 289.1875,
+        "pssMiB": 308.76953125,
+        "rssMiB": 397.921875,
+        "peakRssMiB": 440.62109375
+      },
+      "memoryAfter": {
+        "privateMiB": 288.51953125,
+        "pssMiB": 308.1015625,
+        "rssMiB": 397.25390625,
+        "peakRssMiB": 440.62109375
+      },
+      "reportedFrameTimingsPerSecond": 0.0,
+      "uiBeatListeners": 0,
+      "lifecycle": "resumed",
+      "audioPlaying": false,
+      "audioPositionStartMs": 0,
+      "audioPositionEndMs": 0,
+      "videoPositionStartMs": null,
+      "videoPositionEndMs": null,
+      "videoPlaying": null,
+      "nativeReady": false,
+      "textureReady": false,
+      "decoderInUse": null,
+      "surfaceBefore": {
+        "attached": false,
+        "visible": false,
+        "frames": 0,
+        "width": 0,
+        "height": 0
+      },
+      "surfaceAfter": {
+        "attached": false,
+        "visible": false,
+        "frames": 0,
+        "width": 0,
+        "height": 0
+      },
+      "windowPhysicalSize": {
+        "width": 1280.0,
+        "height": 800.0
+      },
+      "devicePixelRatio": 1.0,
+      "audioOutput": null,
+      "audioDevice": null,
+      "visualizerActive": false
+    },
+    {
+      "phase": "audio_playing",
+      "mode": "heavy",
+      "backend": "native",
+      "run": 1,
+      "sampleSeconds": 10.001975,
+      "logicalProcessors": 24,
+      "cpuOneCorePercent": 71.38590128449631,
+      "cpuTotalPercent": 2.9744125535206796,
+      "memoryBefore": {
+        "privateMiB": 324.96484375,
+        "pssMiB": 345.3095703125,
+        "rssMiB": 436.5859375,
+        "peakRssMiB": 504.36328125
+      },
+      "memoryAfter": {
+        "privateMiB": 331.4140625,
+        "pssMiB": 351.7568359375,
+        "rssMiB": 443.03515625,
+        "peakRssMiB": 504.36328125
+      },
+      "reportedFrameTimingsPerSecond": 45.59099577833378,
+      "uiBeatListeners": 5,
+      "lifecycle": "resumed",
+      "audioPlaying": true,
+      "audioPositionStartMs": 4133,
+      "audioPositionEndMs": 14179,
+      "videoPositionStartMs": null,
+      "videoPositionEndMs": null,
+      "videoPlaying": null,
+      "nativeReady": false,
+      "textureReady": false,
+      "decoderInUse": null,
+      "surfaceBefore": {
+        "attached": false,
+        "visible": false,
+        "frames": 0,
+        "width": 0,
+        "height": 0
+      },
+      "surfaceAfter": {
+        "attached": false,
+        "visible": false,
+        "frames": 0,
+        "width": 0,
+        "height": 0
+      },
+      "windowPhysicalSize": {
+        "width": 1280.0,
+        "height": 800.0
+      },
+      "devicePixelRatio": 1.0,
+      "audioOutput": "pipewire",
+      "audioDevice": "pipewire/riflay_benchmark_31857",
+      "visualizerActive": true
+    },
+    {
+      "phase": "video_playing",
+      "mode": "heavy",
+      "backend": "native",
+      "run": 1,
+      "sampleSeconds": 10.009165,
+      "logicalProcessors": 24,
+      "cpuOneCorePercent": 62.14304589843409,
+      "cpuTotalPercent": 2.58929357910142,
+      "memoryBefore": {
+        "privateMiB": 578.34375,
+        "pssMiB": 598.9521484375,
+        "rssMiB": 691.2578125,
+        "peakRssMiB": 881.84375
+      },
+      "memoryAfter": {
+        "privateMiB": 569.9375,
+        "pssMiB": 590.5458984375,
+        "rssMiB": 682.8515625,
+        "peakRssMiB": 884.27734375
+      },
+      "reportedFrameTimingsPerSecond": 48.05595671567009,
+      "uiBeatListeners": 4,
+      "lifecycle": "resumed",
+      "audioPlaying": true,
+      "audioPositionStartMs": 5139,
+      "audioPositionEndMs": 15152,
+      "videoPositionStartMs": 5100,
+      "videoPositionEndMs": 15133,
+      "videoPlaying": true,
+      "nativeReady": true,
+      "textureReady": false,
+      "decoderInUse": "nvdec",
+      "surfaceBefore": {
+        "attached": true,
+        "visible": true,
+        "frames": 123,
+        "width": 332,
+        "height": 332
+      },
+      "surfaceAfter": {
+        "attached": true,
+        "visible": true,
+        "frames": 424,
+        "width": 332,
+        "height": 332
+      },
+      "windowPhysicalSize": {
+        "width": 1280.0,
+        "height": 800.0
+      },
+      "devicePixelRatio": 1.0,
+      "audioOutput": "pipewire",
+      "audioDevice": "pipewire/riflay_benchmark_31857",
+      "visualizerActive": true
+    },
+    {
+      "phase": "video_paused",
+      "mode": "heavy",
+      "backend": "native",
+      "run": 1,
+      "sampleSeconds": 10.001986,
+      "logicalProcessors": 24,
+      "cpuOneCorePercent": 0.09998014394341283,
+      "cpuTotalPercent": 0.0041658393309755345,
+      "memoryBefore": {
+        "privateMiB": 571.36328125,
+        "pssMiB": 591.9716796875,
+        "rssMiB": 684.27734375,
+        "peakRssMiB": 884.27734375
+      },
+      "memoryAfter": {
+        "privateMiB": 565.29296875,
+        "pssMiB": 585.904296875,
+        "rssMiB": 678.20703125,
+        "peakRssMiB": 884.27734375
+      },
+      "reportedFrameTimingsPerSecond": 0.0,
+      "uiBeatListeners": 0,
+      "lifecycle": "resumed",
+      "audioPlaying": false,
+      "audioPositionStartMs": 15158,
+      "audioPositionEndMs": 15158,
+      "videoPositionStartMs": 15133,
+      "videoPositionEndMs": 15133,
+      "videoPlaying": false,
+      "nativeReady": true,
+      "textureReady": false,
+      "decoderInUse": "nvdec",
+      "surfaceBefore": {
+        "attached": true,
+        "visible": true,
+        "frames": 427,
+        "width": 332,
+        "height": 332
+      },
+      "surfaceAfter": {
+        "attached": true,
+        "visible": true,
+        "frames": 427,
+        "width": 332,
+        "height": 332
+      },
+      "windowPhysicalSize": {
+        "width": 1280.0,
+        "height": 800.0
+      },
+      "devicePixelRatio": 1.0,
+      "audioOutput": "pipewire",
+      "audioDevice": "pipewire/riflay_benchmark_31857",
+      "visualizerActive": false
+    },
+    {
+      "phase": "video_unfocused_released",
+      "mode": "heavy",
+      "backend": "native",
+      "run": 1,
+      "sampleSeconds": 10.001996,
+      "logicalProcessors": 24,
+      "cpuOneCorePercent": 34.393135130228,
+      "cpuTotalPercent": 1.4330472970928334,
+      "memoryBefore": {
+        "privateMiB": 401.1015625,
+        "pssMiB": 421.7314453125,
+        "rssMiB": 514.12109375,
+        "peakRssMiB": 895.390625
+      },
+      "memoryAfter": {
+        "privateMiB": 406.67578125,
+        "pssMiB": 427.3056640625,
+        "rssMiB": 519.6953125,
+        "peakRssMiB": 895.390625
+      },
+      "reportedFrameTimingsPerSecond": 20.09598884062741,
+      "uiBeatListeners": 3,
+      "lifecycle": "inactive",
+      "audioPlaying": true,
+      "audioPositionStartMs": 39571,
+      "audioPositionEndMs": 49584,
+      "videoPositionStartMs": null,
+      "videoPositionEndMs": null,
+      "videoPlaying": null,
+      "nativeReady": false,
+      "textureReady": false,
+      "decoderInUse": "nvdec",
+      "surfaceBefore": {
+        "attached": false,
+        "visible": false,
+        "frames": 0,
+        "width": 0,
+        "height": 0
+      },
+      "surfaceAfter": {
+        "attached": false,
+        "visible": false,
+        "frames": 0,
+        "width": 0,
+        "height": 0
+      },
+      "windowPhysicalSize": {
+        "width": 1280.0,
+        "height": 800.0
+      },
+      "devicePixelRatio": 1.0,
+      "audioOutput": "pipewire",
+      "audioDevice": "pipewire/riflay_benchmark_31857",
+      "visualizerActive": true
+    },
+    {
+      "phase": "idle_home",
+      "mode": "heavy",
+      "backend": "native",
+      "run": 2,
+      "sampleSeconds": 10.00169,
+      "logicalProcessors": 24,
+      "cpuOneCorePercent": 0.0,
+      "cpuTotalPercent": 0.0,
+      "memoryBefore": {
+        "privateMiB": 288.40625,
+        "pssMiB": 308.041015625,
+        "rssMiB": 397.37890625,
+        "peakRssMiB": 441.93359375
+      },
+      "memoryAfter": {
+        "privateMiB": 288.23046875,
+        "pssMiB": 307.865234375,
+        "rssMiB": 397.203125,
+        "peakRssMiB": 441.93359375
+      },
+      "reportedFrameTimingsPerSecond": 0.0,
+      "uiBeatListeners": 0,
+      "lifecycle": "resumed",
+      "audioPlaying": false,
+      "audioPositionStartMs": 0,
+      "audioPositionEndMs": 0,
+      "videoPositionStartMs": null,
+      "videoPositionEndMs": null,
+      "videoPlaying": null,
+      "nativeReady": false,
+      "textureReady": false,
+      "decoderInUse": null,
+      "surfaceBefore": {
+        "attached": false,
+        "visible": false,
+        "frames": 0,
+        "width": 0,
+        "height": 0
+      },
+      "surfaceAfter": {
+        "attached": false,
+        "visible": false,
+        "frames": 0,
+        "width": 0,
+        "height": 0
+      },
+      "windowPhysicalSize": {
+        "width": 1280.0,
+        "height": 800.0
+      },
+      "devicePixelRatio": 1.0,
+      "audioOutput": null,
+      "audioDevice": null,
+      "visualizerActive": false
+    },
+    {
+      "phase": "audio_playing",
+      "mode": "heavy",
+      "backend": "native",
+      "run": 2,
+      "sampleSeconds": 10.002074,
+      "logicalProcessors": 24,
+      "cpuOneCorePercent": 68.68575457450125,
+      "cpuTotalPercent": 2.8619064406042187,
+      "memoryBefore": {
+        "privateMiB": 330.59765625,
+        "pssMiB": 351.00390625,
+        "rssMiB": 442.484375,
+        "peakRssMiB": 495.39453125
+      },
+      "memoryAfter": {
+        "privateMiB": 326.28125,
+        "pssMiB": 346.6884765625,
+        "rssMiB": 438.16796875,
+        "peakRssMiB": 495.39453125
+      },
+      "reportedFrameTimingsPerSecond": 45.39058599246516,
+      "uiBeatListeners": 4,
+      "lifecycle": "resumed",
+      "audioPlaying": true,
+      "audioPositionStartMs": 4170,
+      "audioPositionEndMs": 14224,
+      "videoPositionStartMs": null,
+      "videoPositionEndMs": null,
+      "videoPlaying": null,
+      "nativeReady": false,
+      "textureReady": false,
+      "decoderInUse": null,
+      "surfaceBefore": {
+        "attached": false,
+        "visible": false,
+        "frames": 0,
+        "width": 0,
+        "height": 0
+      },
+      "surfaceAfter": {
+        "attached": false,
+        "visible": false,
+        "frames": 0,
+        "width": 0,
+        "height": 0
+      },
+      "windowPhysicalSize": {
+        "width": 1280.0,
+        "height": 800.0
+      },
+      "devicePixelRatio": 1.0,
+      "audioOutput": "pipewire",
+      "audioDevice": "pipewire/riflay_benchmark_31857",
+      "visualizerActive": true
+    },
+    {
+      "phase": "video_playing",
+      "mode": "heavy",
+      "backend": "native",
+      "run": 2,
+      "sampleSeconds": 10.005424,
+      "logicalProcessors": 24,
+      "cpuOneCorePercent": 62.96584732441124,
+      "cpuTotalPercent": 2.6235769718504685,
+      "memoryBefore": {
+        "privateMiB": 553.421875,
+        "pssMiB": 574.107421875,
+        "rssMiB": 666.6328125,
+        "peakRssMiB": 869.11328125
+      },
+      "memoryAfter": {
+        "privateMiB": 561.6015625,
+        "pssMiB": 582.287109375,
+        "rssMiB": 674.8125,
+        "peakRssMiB": 869.5234375
+      },
+      "reportedFrameTimingsPerSecond": 38.37918313106971,
+      "uiBeatListeners": 3,
+      "lifecycle": "resumed",
+      "audioPlaying": true,
+      "audioPositionStartMs": 5013,
+      "audioPositionEndMs": 15035,
+      "videoPositionStartMs": 4966,
+      "videoPositionEndMs": 15000,
+      "videoPlaying": true,
+      "nativeReady": true,
+      "textureReady": false,
+      "decoderInUse": "nvdec",
+      "surfaceBefore": {
+        "attached": true,
+        "visible": true,
+        "frames": 127,
+        "width": 332,
+        "height": 332
+      },
+      "surfaceAfter": {
+        "attached": true,
+        "visible": true,
+        "frames": 428,
+        "width": 332,
+        "height": 332
+      },
+      "windowPhysicalSize": {
+        "width": 1280.0,
+        "height": 800.0
+      },
+      "devicePixelRatio": 1.0,
+      "audioOutput": "pipewire",
+      "audioDevice": "pipewire/riflay_benchmark_31857",
+      "visualizerActive": false
+    },
+    {
+      "phase": "video_paused",
+      "mode": "heavy",
+      "backend": "native",
+      "run": 2,
+      "sampleSeconds": 10.002138,
+      "logicalProcessors": 24,
+      "cpuOneCorePercent": 0.09997862457006691,
+      "cpuTotalPercent": 0.004165776023752788,
+      "memoryBefore": {
+        "privateMiB": 565.1015625,
+        "pssMiB": 585.787109375,
+        "rssMiB": 678.3125,
+        "peakRssMiB": 869.5234375
+      },
+      "memoryAfter": {
+        "privateMiB": 563.390625,
+        "pssMiB": 584.076171875,
+        "rssMiB": 676.6015625,
+        "peakRssMiB": 869.5234375
+      },
+      "reportedFrameTimingsPerSecond": 0.0,
+      "uiBeatListeners": 0,
+      "lifecycle": "resumed",
+      "audioPlaying": false,
+      "audioPositionStartMs": 15046,
+      "audioPositionEndMs": 15046,
+      "videoPositionStartMs": 15000,
+      "videoPositionEndMs": 15000,
+      "videoPlaying": false,
+      "nativeReady": true,
+      "textureReady": false,
+      "decoderInUse": "nvdec",
+      "surfaceBefore": {
+        "attached": true,
+        "visible": true,
+        "frames": 429,
+        "width": 332,
+        "height": 332
+      },
+      "surfaceAfter": {
+        "attached": true,
+        "visible": true,
+        "frames": 429,
+        "width": 332,
+        "height": 332
+      },
+      "windowPhysicalSize": {
+        "width": 1280.0,
+        "height": 800.0
+      },
+      "devicePixelRatio": 1.0,
+      "audioOutput": "pipewire",
+      "audioDevice": "pipewire/riflay_benchmark_31857",
+      "visualizerActive": false
+    },
+    {
+      "phase": "video_unfocused_released",
+      "mode": "heavy",
+      "backend": "native",
+      "run": 2,
+      "sampleSeconds": 10.002148,
+      "logicalProcessors": 24,
+      "cpuOneCorePercent": 3.6992054106777865,
+      "cpuTotalPercent": 0.15413355877824111,
+      "memoryBefore": {
+        "privateMiB": 390.29296875,
+        "pssMiB": 410.994140625,
+        "rssMiB": 503.56640625,
+        "peakRssMiB": 875.83203125
+      },
+      "memoryAfter": {
+        "privateMiB": 383.484375,
+        "pssMiB": 404.185546875,
+        "rssMiB": 496.7578125,
+        "peakRssMiB": 875.83203125
+      },
+      "reportedFrameTimingsPerSecond": 1.0997637707420447,
+      "uiBeatListeners": 2,
+      "lifecycle": "inactive",
+      "audioPlaying": true,
+      "audioPositionStartMs": 39416,
+      "audioPositionEndMs": 49427,
+      "videoPositionStartMs": null,
+      "videoPositionEndMs": null,
+      "videoPlaying": null,
+      "nativeReady": false,
+      "textureReady": false,
+      "decoderInUse": "nvdec",
+      "surfaceBefore": {
+        "attached": false,
+        "visible": false,
+        "frames": 0,
+        "width": 0,
+        "height": 0
+      },
+      "surfaceAfter": {
+        "attached": false,
+        "visible": false,
+        "frames": 0,
+        "width": 0,
+        "height": 0
+      },
+      "windowPhysicalSize": {
+        "width": 1280.0,
+        "height": 800.0
+      },
+      "devicePixelRatio": 1.0,
+      "audioOutput": "pipewire",
+      "audioDevice": "pipewire/riflay_benchmark_31857",
+      "visualizerActive": false
+    },
+    {
+      "phase": "idle_home",
+      "mode": "balanced",
+      "backend": "texture",
+      "run": 2,
+      "sampleSeconds": 10.002191,
+      "logicalProcessors": 24,
+      "cpuOneCorePercent": 0.0,
+      "cpuTotalPercent": 0.0,
+      "memoryBefore": {
+        "privateMiB": 288.91015625,
+        "pssMiB": 308.630859375,
+        "rssMiB": 398.19921875,
+        "peakRssMiB": 438.234375
+      },
+      "memoryAfter": {
+        "privateMiB": 288.703125,
+        "pssMiB": 308.423828125,
+        "rssMiB": 397.9921875,
+        "peakRssMiB": 438.234375
+      },
+      "reportedFrameTimingsPerSecond": 0.0,
+      "uiBeatListeners": 0,
+      "lifecycle": "resumed",
+      "audioPlaying": false,
+      "audioPositionStartMs": 0,
+      "audioPositionEndMs": 0,
+      "videoPositionStartMs": null,
+      "videoPositionEndMs": null,
+      "videoPlaying": null,
+      "nativeReady": false,
+      "textureReady": false,
+      "decoderInUse": null,
+      "windowPhysicalSize": {
+        "width": 1280.0,
+        "height": 800.0
+      },
+      "devicePixelRatio": 1.0,
+      "audioOutput": null,
+      "audioDevice": null,
+      "visualizerActive": false
+    },
+    {
+      "phase": "audio_playing",
+      "mode": "balanced",
+      "backend": "texture",
+      "run": 2,
+      "sampleSeconds": 10.00547,
+      "logicalProcessors": 24,
+      "cpuOneCorePercent": 43.87599982809403,
+      "cpuTotalPercent": 1.8281666595039179,
+      "memoryBefore": {
+        "privateMiB": 324.01171875,
+        "pssMiB": 344.4736328125,
+        "rssMiB": 436.125,
+        "peakRssMiB": 499.984375
+      },
+      "memoryAfter": {
+        "privateMiB": 344.73046875,
+        "pssMiB": 365.193359375,
+        "rssMiB": 456.84375,
+        "peakRssMiB": 499.984375
+      },
+      "reportedFrameTimingsPerSecond": 19.989065980908443,
+      "uiBeatListeners": 6,
+      "lifecycle": "resumed",
+      "audioPlaying": true,
+      "audioPositionStartMs": 4112,
+      "audioPositionEndMs": 14126,
+      "videoPositionStartMs": null,
+      "videoPositionEndMs": null,
+      "videoPlaying": null,
+      "nativeReady": false,
+      "textureReady": false,
+      "decoderInUse": null,
+      "windowPhysicalSize": {
+        "width": 1280.0,
+        "height": 800.0
+      },
+      "devicePixelRatio": 1.0,
+      "audioOutput": "pipewire",
+      "audioDevice": "pipewire/riflay_benchmark_31857",
+      "visualizerActive": true
+    },
+    {
+      "phase": "video_playing",
+      "mode": "balanced",
+      "backend": "texture",
+      "run": 2,
+      "sampleSeconds": 10.002212,
+      "logicalProcessors": 24,
+      "cpuOneCorePercent": 47.08958378406697,
+      "cpuTotalPercent": 1.9620659910027902,
+      "memoryBefore": {
+        "privateMiB": 550.08203125,
+        "pssMiB": 570.85546875,
+        "rssMiB": 663.62890625,
+        "peakRssMiB": 849.3125
+      },
+      "memoryAfter": {
+        "privateMiB": 560.125,
+        "pssMiB": 580.8984375,
+        "rssMiB": 673.671875,
+        "peakRssMiB": 857.484375
+      },
+      "reportedFrameTimingsPerSecond": 20.695422172615416,
+      "uiBeatListeners": 5,
+      "lifecycle": "resumed",
+      "audioPlaying": true,
+      "audioPositionStartMs": 7922,
+      "audioPositionEndMs": 17940,
+      "videoPositionStartMs": 8066,
+      "videoPositionEndMs": 17933,
+      "videoPlaying": true,
+      "nativeReady": false,
+      "textureReady": true,
+      "decoderInUse": "nvdec",
+      "windowPhysicalSize": {
+        "width": 1280.0,
+        "height": 800.0
+      },
+      "devicePixelRatio": 1.0,
+      "audioOutput": "pipewire",
+      "audioDevice": "pipewire/riflay_benchmark_31857",
+      "visualizerActive": true
+    },
+    {
+      "phase": "video_paused",
+      "mode": "balanced",
+      "backend": "texture",
+      "run": 2,
+      "sampleSeconds": 10.00185,
+      "logicalProcessors": 24,
+      "cpuOneCorePercent": 0.19996300684373391,
+      "cpuTotalPercent": 0.008331791951822246,
+      "memoryBefore": {
+        "privateMiB": 543.5546875,
+        "pssMiB": 564.328125,
+        "rssMiB": 657.1015625,
+        "peakRssMiB": 857.484375
+      },
+      "memoryAfter": {
+        "privateMiB": 537.92578125,
+        "pssMiB": 558.6962890625,
+        "rssMiB": 651.47265625,
+        "peakRssMiB": 857.484375
+      },
+      "reportedFrameTimingsPerSecond": 0.0,
+      "uiBeatListeners": 0,
+      "lifecycle": "resumed",
+      "audioPlaying": false,
+      "audioPositionStartMs": 17941,
+      "audioPositionEndMs": 17941,
+      "videoPositionStartMs": 18000,
+      "videoPositionEndMs": 18000,
+      "videoPlaying": false,
+      "nativeReady": false,
+      "textureReady": true,
+      "decoderInUse": "nvdec",
+      "windowPhysicalSize": {
+        "width": 1280.0,
+        "height": 800.0
+      },
+      "devicePixelRatio": 1.0,
+      "audioOutput": "pipewire",
+      "audioDevice": "pipewire/riflay_benchmark_31857",
+      "visualizerActive": false
+    },
+    {
+      "phase": "video_unfocused_released",
+      "mode": "balanced",
+      "backend": "texture",
+      "run": 2,
+      "sampleSeconds": 10.001805,
+      "logicalProcessors": 24,
+      "cpuOneCorePercent": 34.79371973358809,
+      "cpuTotalPercent": 1.449738322232837,
+      "memoryBefore": {
+        "privateMiB": 410.69921875,
+        "pssMiB": 431.4716796875,
+        "rssMiB": 524.24609375,
+        "peakRssMiB": 864.8359375
+      },
+      "memoryAfter": {
+        "privateMiB": 390.41015625,
+        "pssMiB": 411.197265625,
+        "rssMiB": 504.01953125,
+        "peakRssMiB": 864.8359375
+      },
+      "reportedFrameTimingsPerSecond": 20.196354558002284,
+      "uiBeatListeners": 3,
+      "lifecycle": "inactive",
+      "audioPlaying": true,
+      "audioPositionStartMs": 42523,
+      "audioPositionEndMs": 52540,
+      "videoPositionStartMs": null,
+      "videoPositionEndMs": null,
+      "videoPlaying": null,
+      "nativeReady": false,
+      "textureReady": false,
+      "decoderInUse": "nvdec",
+      "windowPhysicalSize": {
+        "width": 1280.0,
+        "height": 800.0
+      },
+      "devicePixelRatio": 1.0,
+      "audioOutput": "pipewire",
+      "audioDevice": "pipewire/riflay_benchmark_31857",
+      "visualizerActive": true
+    },
+    {
+      "phase": "idle_home",
+      "mode": "balanced",
+      "backend": "native",
+      "run": 2,
+      "sampleSeconds": 10.002075,
+      "logicalProcessors": 24,
+      "cpuOneCorePercent": 0.19995850860946354,
+      "cpuTotalPercent": 0.008331604525394314,
+      "memoryBefore": {
+        "privateMiB": 288.6484375,
+        "pssMiB": 308.3212890625,
+        "rssMiB": 397.73046875,
+        "peakRssMiB": 437.1796875
+      },
+      "memoryAfter": {
+        "privateMiB": 288.4921875,
+        "pssMiB": 308.162109375,
+        "rssMiB": 397.57421875,
+        "peakRssMiB": 437.1796875
+      },
+      "reportedFrameTimingsPerSecond": 0.0,
+      "uiBeatListeners": 0,
+      "lifecycle": "resumed",
+      "audioPlaying": false,
+      "audioPositionStartMs": 0,
+      "audioPositionEndMs": 0,
+      "videoPositionStartMs": null,
+      "videoPositionEndMs": null,
+      "videoPlaying": null,
+      "nativeReady": false,
+      "textureReady": false,
+      "decoderInUse": null,
+      "surfaceBefore": {
+        "attached": false,
+        "visible": false,
+        "frames": 0,
+        "width": 0,
+        "height": 0
+      },
+      "surfaceAfter": {
+        "attached": false,
+        "visible": false,
+        "frames": 0,
+        "width": 0,
+        "height": 0
+      },
+      "windowPhysicalSize": {
+        "width": 1280.0,
+        "height": 800.0
+      },
+      "devicePixelRatio": 1.0,
+      "audioOutput": null,
+      "audioDevice": null,
+      "visualizerActive": false
+    },
+    {
+      "phase": "audio_playing",
+      "mode": "balanced",
+      "backend": "native",
+      "run": 2,
+      "sampleSeconds": 10.001205,
+      "logicalProcessors": 24,
+      "cpuOneCorePercent": 42.79484322139182,
+      "cpuTotalPercent": 1.7831184675579925,
+      "memoryBefore": {
+        "privateMiB": 338.4140625,
+        "pssMiB": 358.8642578125,
+        "rssMiB": 450.42578125,
+        "peakRssMiB": 501.96875
+      },
+      "memoryAfter": {
+        "privateMiB": 342.953125,
+        "pssMiB": 363.4033203125,
+        "rssMiB": 454.96484375,
+        "peakRssMiB": 501.96875
+      },
+      "reportedFrameTimingsPerSecond": 20.09757824182186,
+      "uiBeatListeners": 6,
+      "lifecycle": "resumed",
+      "audioPlaying": true,
+      "audioPositionStartMs": 4206,
+      "audioPositionEndMs": 14218,
+      "videoPositionStartMs": null,
+      "videoPositionEndMs": null,
+      "videoPlaying": null,
+      "nativeReady": false,
+      "textureReady": false,
+      "decoderInUse": null,
+      "surfaceBefore": {
+        "attached": false,
+        "visible": false,
+        "frames": 0,
+        "width": 0,
+        "height": 0
+      },
+      "surfaceAfter": {
+        "attached": false,
+        "visible": false,
+        "frames": 0,
+        "width": 0,
+        "height": 0
+      },
+      "windowPhysicalSize": {
+        "width": 1280.0,
+        "height": 800.0
+      },
+      "devicePixelRatio": 1.0,
+      "audioOutput": "pipewire",
+      "audioDevice": "pipewire/riflay_benchmark_31857",
+      "visualizerActive": true
+    },
+    {
+      "phase": "video_playing",
+      "mode": "balanced",
+      "backend": "native",
+      "run": 2,
+      "sampleSeconds": 10.01123,
+      "logicalProcessors": 24,
+      "cpuOneCorePercent": 46.64761472865972,
+      "cpuTotalPercent": 1.943650613694155,
+      "memoryBefore": {
+        "privateMiB": 547.5390625,
+        "pssMiB": 568.232421875,
+        "rssMiB": 660.75390625,
+        "peakRssMiB": 851.37890625
+      },
+      "memoryAfter": {
+        "privateMiB": 553.94921875,
+        "pssMiB": 574.642578125,
+        "rssMiB": 667.1640625,
+        "peakRssMiB": 853.80859375
+      },
+      "reportedFrameTimingsPerSecond": 20.177340846229686,
+      "uiBeatListeners": 4,
+      "lifecycle": "resumed",
+      "audioPlaying": true,
+      "audioPositionStartMs": 5028,
+      "audioPositionEndMs": 15052,
+      "videoPositionStartMs": 5000,
+      "videoPositionEndMs": 15000,
+      "videoPlaying": true,
+      "nativeReady": true,
+      "textureReady": false,
+      "decoderInUse": "nvdec",
+      "surfaceBefore": {
+        "attached": true,
+        "visible": true,
+        "frames": 65,
+        "width": 332,
+        "height": 332
+      },
+      "surfaceAfter": {
+        "attached": true,
+        "visible": true,
+        "frames": 215,
+        "width": 332,
+        "height": 332
+      },
+      "windowPhysicalSize": {
+        "width": 1280.0,
+        "height": 800.0
+      },
+      "devicePixelRatio": 1.0,
+      "audioOutput": "pipewire",
+      "audioDevice": "pipewire/riflay_benchmark_31857",
+      "visualizerActive": true
+    },
+    {
+      "phase": "video_paused",
+      "mode": "balanced",
+      "backend": "native",
+      "run": 2,
+      "sampleSeconds": 10.00215,
+      "logicalProcessors": 24,
+      "cpuOneCorePercent": 0.19995700924301274,
+      "cpuTotalPercent": 0.008331542051792198,
+      "memoryBefore": {
+        "privateMiB": 555.2265625,
+        "pssMiB": 575.9228515625,
+        "rssMiB": 668.44140625,
+        "peakRssMiB": 853.80859375
+      },
+      "memoryAfter": {
+        "privateMiB": 550.16015625,
+        "pssMiB": 570.8564453125,
+        "rssMiB": 663.375,
+        "peakRssMiB": 853.80859375
+      },
+      "reportedFrameTimingsPerSecond": 0.0,
+      "uiBeatListeners": 0,
+      "lifecycle": "resumed",
+      "audioPlaying": false,
+      "audioPositionStartMs": 15055,
+      "audioPositionEndMs": 15055,
+      "videoPositionStartMs": 15000,
+      "videoPositionEndMs": 15000,
+      "videoPlaying": false,
+      "nativeReady": true,
+      "textureReady": false,
+      "decoderInUse": "nvdec",
+      "surfaceBefore": {
+        "attached": true,
+        "visible": true,
+        "frames": 216,
+        "width": 332,
+        "height": 332
+      },
+      "surfaceAfter": {
+        "attached": true,
+        "visible": true,
+        "frames": 216,
+        "width": 332,
+        "height": 332
+      },
+      "windowPhysicalSize": {
+        "width": 1280.0,
+        "height": 800.0
+      },
+      "devicePixelRatio": 1.0,
+      "audioOutput": "pipewire",
+      "audioDevice": "pipewire/riflay_benchmark_31857",
+      "visualizerActive": false
+    },
+    {
+      "phase": "video_unfocused_released",
+      "mode": "balanced",
+      "backend": "native",
+      "run": 2,
+      "sampleSeconds": 10.001808,
+      "logicalProcessors": 24,
+      "cpuOneCorePercent": 37.093293532529316,
+      "cpuTotalPercent": 1.5455538971887215,
+      "memoryBefore": {
+        "privateMiB": 389.23828125,
+        "pssMiB": 409.9443359375,
+        "rssMiB": 502.515625,
+        "peakRssMiB": 860.5703125
+      },
+      "memoryAfter": {
+        "privateMiB": 397.31640625,
+        "pssMiB": 418.0224609375,
+        "rssMiB": 510.59375,
+        "peakRssMiB": 860.5703125
+      },
+      "reportedFrameTimingsPerSecond": 20.09636657692289,
+      "uiBeatListeners": 3,
+      "lifecycle": "inactive",
+      "audioPlaying": true,
+      "audioPositionStartMs": 39411,
+      "audioPositionEndMs": 49423,
+      "videoPositionStartMs": null,
+      "videoPositionEndMs": null,
+      "videoPlaying": null,
+      "nativeReady": false,
+      "textureReady": false,
+      "decoderInUse": "nvdec",
+      "surfaceBefore": {
+        "attached": false,
+        "visible": false,
+        "frames": 0,
+        "width": 0,
+        "height": 0
+      },
+      "surfaceAfter": {
+        "attached": false,
+        "visible": false,
+        "frames": 0,
+        "width": 0,
+        "height": 0
+      },
+      "windowPhysicalSize": {
+        "width": 1280.0,
+        "height": 800.0
+      },
+      "devicePixelRatio": 1.0,
+      "audioOutput": "pipewire",
+      "audioDevice": "pipewire/riflay_benchmark_31857",
+      "visualizerActive": true
+    },
+    {
+      "phase": "idle_home",
+      "mode": "lightweight",
+      "backend": "native",
+      "run": 2,
+      "sampleSeconds": 10.001948,
+      "logicalProcessors": 24,
+      "cpuOneCorePercent": 0.19996104758792987,
+      "cpuTotalPercent": 0.008331710316163745,
+      "memoryBefore": {
+        "privateMiB": 289.9296875,
+        "pssMiB": 309.5419921875,
+        "rssMiB": 398.80078125,
+        "peakRssMiB": 440.96484375
+      },
+      "memoryAfter": {
+        "privateMiB": 288.859375,
+        "pssMiB": 308.4716796875,
+        "rssMiB": 397.73046875,
+        "peakRssMiB": 440.96484375
+      },
+      "reportedFrameTimingsPerSecond": 0.0,
+      "uiBeatListeners": 0,
+      "lifecycle": "resumed",
+      "audioPlaying": false,
+      "audioPositionStartMs": 0,
+      "audioPositionEndMs": 0,
+      "videoPositionStartMs": null,
+      "videoPositionEndMs": null,
+      "videoPlaying": null,
+      "nativeReady": false,
+      "textureReady": false,
+      "decoderInUse": null,
+      "surfaceBefore": {
+        "attached": false,
+        "visible": false,
+        "frames": 0,
+        "width": 0,
+        "height": 0
+      },
+      "surfaceAfter": {
+        "attached": false,
+        "visible": false,
+        "frames": 0,
+        "width": 0,
+        "height": 0
+      },
+      "windowPhysicalSize": {
+        "width": 1280.0,
+        "height": 800.0
+      },
+      "devicePixelRatio": 1.0,
+      "audioOutput": null,
+      "audioDevice": null,
+      "visualizerActive": false
+    },
+    {
+      "phase": "audio_playing",
+      "mode": "lightweight",
+      "backend": "native",
+      "run": 2,
+      "sampleSeconds": 10.002388,
+      "logicalProcessors": 24,
+      "cpuOneCorePercent": 3.89906890234612,
+      "cpuTotalPercent": 0.16246120426442165,
+      "memoryBefore": {
+        "privateMiB": 312.765625,
+        "pssMiB": 333.1669921875,
+        "rssMiB": 424.609375,
+        "peakRssMiB": 471.22265625
+      },
+      "memoryAfter": {
+        "privateMiB": 307.17578125,
+        "pssMiB": 327.578125,
+        "rssMiB": 419.01953125,
+        "peakRssMiB": 471.22265625
+      },
+      "reportedFrameTimingsPerSecond": 1.0997373827130081,
+      "uiBeatListeners": 4,
+      "lifecycle": "resumed",
+      "audioPlaying": true,
+      "audioPositionStartMs": 4175,
+      "audioPositionEndMs": 14186,
+      "videoPositionStartMs": null,
+      "videoPositionEndMs": null,
+      "videoPlaying": null,
+      "nativeReady": false,
+      "textureReady": false,
+      "decoderInUse": null,
+      "surfaceBefore": {
+        "attached": false,
+        "visible": false,
+        "frames": 0,
+        "width": 0,
+        "height": 0
+      },
+      "surfaceAfter": {
+        "attached": false,
+        "visible": false,
+        "frames": 0,
+        "width": 0,
+        "height": 0
+      },
+      "windowPhysicalSize": {
+        "width": 1280.0,
+        "height": 800.0
+      },
+      "devicePixelRatio": 1.0,
+      "audioOutput": "pipewire",
+      "audioDevice": "pipewire/riflay_benchmark_31857",
+      "visualizerActive": false
+    },
+    {
+      "phase": "video_playing",
+      "mode": "lightweight",
+      "backend": "native",
+      "run": 2,
+      "sampleSeconds": 10.002144,
+      "logicalProcessors": 24,
+      "cpuOneCorePercent": 10.497749282553821,
+      "cpuTotalPercent": 0.4374062201064092,
+      "memoryBefore": {
+        "privateMiB": 512.0546875,
+        "pssMiB": 532.7197265625,
+        "rssMiB": 625.171875,
+        "peakRssMiB": 799.62890625
+      },
+      "memoryAfter": {
+        "privateMiB": 518.5390625,
+        "pssMiB": 539.2041015625,
+        "rssMiB": 631.65625,
+        "peakRssMiB": 824.30078125
+      },
+      "reportedFrameTimingsPerSecond": 1.9995712919150135,
+      "uiBeatListeners": 4,
+      "lifecycle": "resumed",
+      "audioPlaying": true,
+      "audioPositionStartMs": 5008,
+      "audioPositionEndMs": 15019,
+      "videoPositionStartMs": 5000,
+      "videoPositionEndMs": 15000,
+      "videoPlaying": true,
+      "nativeReady": true,
+      "textureReady": false,
+      "decoderInUse": "nvdec",
+      "surfaceBefore": {
+        "attached": true,
+        "visible": true,
+        "frames": 44,
+        "width": 1232,
+        "height": 692
+      },
+      "surfaceAfter": {
+        "attached": true,
+        "visible": true,
+        "frames": 144,
+        "width": 1232,
+        "height": 692
+      },
+      "windowPhysicalSize": {
+        "width": 1280.0,
+        "height": 800.0
+      },
+      "devicePixelRatio": 1.0,
+      "audioOutput": "pipewire",
+      "audioDevice": "pipewire/riflay_benchmark_31857",
+      "visualizerActive": false
+    },
+    {
+      "phase": "video_paused",
+      "mode": "lightweight",
+      "backend": "native",
+      "run": 2,
+      "sampleSeconds": 10.001468,
+      "logicalProcessors": 24,
+      "cpuOneCorePercent": 0.09998532215470769,
+      "cpuTotalPercent": 0.004166055089779487,
+      "memoryBefore": {
+        "privateMiB": 520.25,
+        "pssMiB": 540.9150390625,
+        "rssMiB": 633.3671875,
+        "peakRssMiB": 824.30078125
+      },
+      "memoryAfter": {
+        "privateMiB": 515.20703125,
+        "pssMiB": 535.8720703125,
+        "rssMiB": 628.32421875,
+        "peakRssMiB": 824.30078125
+      },
+      "reportedFrameTimingsPerSecond": 0.0,
+      "uiBeatListeners": 0,
+      "lifecycle": "resumed",
+      "audioPlaying": false,
+      "audioPositionStartMs": 15029,
+      "audioPositionEndMs": 15029,
+      "videoPositionStartMs": 15000,
+      "videoPositionEndMs": 15000,
+      "videoPlaying": false,
+      "nativeReady": true,
+      "textureReady": false,
+      "decoderInUse": "nvdec",
+      "surfaceBefore": {
+        "attached": true,
+        "visible": true,
+        "frames": 145,
+        "width": 1232,
+        "height": 692
+      },
+      "surfaceAfter": {
+        "attached": true,
+        "visible": true,
+        "frames": 145,
+        "width": 1232,
+        "height": 692
+      },
+      "windowPhysicalSize": {
+        "width": 1280.0,
+        "height": 800.0
+      },
+      "devicePixelRatio": 1.0,
+      "audioOutput": "pipewire",
+      "audioDevice": "pipewire/riflay_benchmark_31857",
+      "visualizerActive": false
+    },
+    {
+      "phase": "video_unfocused_released",
+      "mode": "lightweight",
+      "backend": "native",
+      "run": 2,
+      "sampleSeconds": 10.002101,
+      "logicalProcessors": 24,
+      "cpuOneCorePercent": 3.7992017877044035,
+      "cpuTotalPercent": 0.1583000744876835,
+      "memoryBefore": {
+        "privateMiB": 374.41015625,
+        "pssMiB": 395.091796875,
+        "rssMiB": 487.58984375,
+        "peakRssMiB": 824.30078125
+      },
+      "memoryAfter": {
+        "privateMiB": 371.7265625,
+        "pssMiB": 392.408203125,
+        "rssMiB": 484.90625,
+        "peakRssMiB": 824.30078125
+      },
+      "reportedFrameTimingsPerSecond": 1.0997689385460114,
+      "uiBeatListeners": 4,
+      "lifecycle": "inactive",
+      "audioPlaying": true,
+      "audioPositionStartMs": 39406,
+      "audioPositionEndMs": 49419,
+      "videoPositionStartMs": null,
+      "videoPositionEndMs": null,
+      "videoPlaying": null,
+      "nativeReady": false,
+      "textureReady": false,
+      "decoderInUse": "nvdec",
+      "surfaceBefore": {
+        "attached": false,
+        "visible": false,
+        "frames": 0,
+        "width": 0,
+        "height": 0
+      },
+      "surfaceAfter": {
+        "attached": false,
+        "visible": false,
+        "frames": 0,
+        "width": 0,
+        "height": 0
+      },
+      "windowPhysicalSize": {
+        "width": 1280.0,
+        "height": 800.0
+      },
+      "devicePixelRatio": 1.0,
+      "audioOutput": "pipewire",
+      "audioDevice": "pipewire/riflay_benchmark_31857",
+      "visualizerActive": false
+    },
+    {
+      "phase": "idle_home",
+      "mode": "lightweight",
+      "backend": "native",
+      "run": 3,
+      "sampleSeconds": 10.002355,
+      "logicalProcessors": 24,
+      "cpuOneCorePercent": 0.0,
+      "cpuTotalPercent": 0.0,
+      "memoryBefore": {
+        "privateMiB": 283.546875,
+        "pssMiB": 303.1845703125,
+        "rssMiB": 392.609375,
+        "peakRssMiB": 437.46875
+      },
+      "memoryAfter": {
+        "privateMiB": 283.27734375,
+        "pssMiB": 302.9150390625,
+        "rssMiB": 392.33984375,
+        "peakRssMiB": 437.46875
+      },
+      "reportedFrameTimingsPerSecond": 0.0,
+      "uiBeatListeners": 0,
+      "lifecycle": "resumed",
+      "audioPlaying": false,
+      "audioPositionStartMs": 0,
+      "audioPositionEndMs": 0,
+      "videoPositionStartMs": null,
+      "videoPositionEndMs": null,
+      "videoPlaying": null,
+      "nativeReady": false,
+      "textureReady": false,
+      "decoderInUse": null,
+      "surfaceBefore": {
+        "attached": false,
+        "visible": false,
+        "frames": 0,
+        "width": 0,
+        "height": 0
+      },
+      "surfaceAfter": {
+        "attached": false,
+        "visible": false,
+        "frames": 0,
+        "width": 0,
+        "height": 0
+      },
+      "windowPhysicalSize": {
+        "width": 1280.0,
+        "height": 800.0
+      },
+      "devicePixelRatio": 1.0,
+      "audioOutput": null,
+      "audioDevice": null,
+      "visualizerActive": false
+    },
+    {
+      "phase": "audio_playing",
+      "mode": "lightweight",
+      "backend": "native",
+      "run": 3,
+      "sampleSeconds": 10.00159,
+      "logicalProcessors": 24,
+      "cpuOneCorePercent": 3.7993958960525274,
+      "cpuTotalPercent": 0.15830816233552197,
+      "memoryBefore": {
+        "privateMiB": 296.015625,
+        "pssMiB": 316.4423828125,
+        "rssMiB": 408.0234375,
+        "peakRssMiB": 467.12109375
+      },
+      "memoryAfter": {
+        "privateMiB": 309.26953125,
+        "pssMiB": 329.69921875,
+        "rssMiB": 421.27734375,
+        "peakRssMiB": 467.12109375
+      },
+      "reportedFrameTimingsPerSecond": 1.0998251278046791,
+      "uiBeatListeners": 4,
+      "lifecycle": "resumed",
+      "audioPlaying": true,
+      "audioPositionStartMs": 4163,
+      "audioPositionEndMs": 14174,
+      "videoPositionStartMs": null,
+      "videoPositionEndMs": null,
+      "videoPlaying": null,
+      "nativeReady": false,
+      "textureReady": false,
+      "decoderInUse": null,
+      "surfaceBefore": {
+        "attached": false,
+        "visible": false,
+        "frames": 0,
+        "width": 0,
+        "height": 0
+      },
+      "surfaceAfter": {
+        "attached": false,
+        "visible": false,
+        "frames": 0,
+        "width": 0,
+        "height": 0
+      },
+      "windowPhysicalSize": {
+        "width": 1280.0,
+        "height": 800.0
+      },
+      "devicePixelRatio": 1.0,
+      "audioOutput": "pipewire",
+      "audioDevice": "pipewire/riflay_benchmark_31857",
+      "visualizerActive": false
+    },
+    {
+      "phase": "video_playing",
+      "mode": "lightweight",
+      "backend": "native",
+      "run": 3,
+      "sampleSeconds": 10.00155,
+      "logicalProcessors": 24,
+      "cpuOneCorePercent": 10.598357254625533,
+      "cpuTotalPercent": 0.44159821894273055,
+      "memoryBefore": {
+        "privateMiB": 520.2578125,
+        "pssMiB": 540.947265625,
+        "rssMiB": 633.52734375,
+        "peakRssMiB": 809.20703125
+      },
+      "memoryAfter": {
+        "privateMiB": 525.046875,
+        "pssMiB": 545.736328125,
+        "rssMiB": 638.31640625,
+        "peakRssMiB": 814.37890625
+      },
+      "reportedFrameTimingsPerSecond": 1.9996900480425535,
+      "uiBeatListeners": 4,
+      "lifecycle": "resumed",
+      "audioPlaying": true,
+      "audioPositionStartMs": 5029,
+      "audioPositionEndMs": 15041,
+      "videoPositionStartMs": 5000,
+      "videoPositionEndMs": 15000,
+      "videoPlaying": true,
+      "nativeReady": true,
+      "textureReady": false,
+      "decoderInUse": "nvdec",
+      "surfaceBefore": {
+        "attached": true,
+        "visible": true,
+        "frames": 45,
+        "width": 1232,
+        "height": 692
+      },
+      "surfaceAfter": {
+        "attached": true,
+        "visible": true,
+        "frames": 145,
+        "width": 1232,
+        "height": 692
+      },
+      "windowPhysicalSize": {
+        "width": 1280.0,
+        "height": 800.0
+      },
+      "devicePixelRatio": 1.0,
+      "audioOutput": "pipewire",
+      "audioDevice": "pipewire/riflay_benchmark_31857",
+      "visualizerActive": false
+    },
+    {
+      "phase": "video_paused",
+      "mode": "lightweight",
+      "backend": "native",
+      "run": 3,
+      "sampleSeconds": 10.002184,
+      "logicalProcessors": 24,
+      "cpuOneCorePercent": 0.19995632953762899,
+      "cpuTotalPercent": 0.008331513730734541,
+      "memoryBefore": {
+        "privateMiB": 526.8515625,
+        "pssMiB": 547.541015625,
+        "rssMiB": 640.12109375,
+        "peakRssMiB": 814.37890625
+      },
+      "memoryAfter": {
+        "privateMiB": 527.16796875,
+        "pssMiB": 547.8544921875,
+        "rssMiB": 640.4375,
+        "peakRssMiB": 814.37890625
+      },
+      "reportedFrameTimingsPerSecond": 0.0,
+      "uiBeatListeners": 0,
+      "lifecycle": "resumed",
+      "audioPlaying": false,
+      "audioPositionStartMs": 15050,
+      "audioPositionEndMs": 15050,
+      "videoPositionStartMs": 15000,
+      "videoPositionEndMs": 15000,
+      "videoPlaying": false,
+      "nativeReady": true,
+      "textureReady": false,
+      "decoderInUse": "nvdec",
+      "surfaceBefore": {
+        "attached": true,
+        "visible": true,
+        "frames": 146,
+        "width": 1232,
+        "height": 692
+      },
+      "surfaceAfter": {
+        "attached": true,
+        "visible": true,
+        "frames": 146,
+        "width": 1232,
+        "height": 692
+      },
+      "windowPhysicalSize": {
+        "width": 1280.0,
+        "height": 800.0
+      },
+      "devicePixelRatio": 1.0,
+      "audioOutput": "pipewire",
+      "audioDevice": "pipewire/riflay_benchmark_31857",
+      "visualizerActive": false
+    },
+    {
+      "phase": "video_unfocused_released",
+      "mode": "lightweight",
+      "backend": "native",
+      "run": 3,
+      "sampleSeconds": 10.002377,
+      "logicalProcessors": 24,
+      "cpuOneCorePercent": 3.5991444833563064,
+      "cpuTotalPercent": 0.14996435347317943,
+      "memoryBefore": {
+        "privateMiB": 374.125,
+        "pssMiB": 394.8271484375,
+        "rssMiB": 487.45703125,
+        "peakRssMiB": 821.87890625
+      },
+      "memoryAfter": {
+        "privateMiB": 370.1171875,
+        "pssMiB": 390.8193359375,
+        "rssMiB": 483.44921875,
+        "peakRssMiB": 821.87890625
+      },
+      "reportedFrameTimingsPerSecond": 1.0997385921366492,
+      "uiBeatListeners": 4,
+      "lifecycle": "inactive",
+      "audioPlaying": true,
+      "audioPositionStartMs": 39416,
+      "audioPositionEndMs": 49427,
+      "videoPositionStartMs": null,
+      "videoPositionEndMs": null,
+      "videoPlaying": null,
+      "nativeReady": false,
+      "textureReady": false,
+      "decoderInUse": "nvdec",
+      "surfaceBefore": {
+        "attached": false,
+        "visible": false,
+        "frames": 0,
+        "width": 0,
+        "height": 0
+      },
+      "surfaceAfter": {
+        "attached": false,
+        "visible": false,
+        "frames": 0,
+        "width": 0,
+        "height": 0
+      },
+      "windowPhysicalSize": {
+        "width": 1280.0,
+        "height": 800.0
+      },
+      "devicePixelRatio": 1.0,
+      "audioOutput": "pipewire",
+      "audioDevice": "pipewire/riflay_benchmark_31857",
+      "visualizerActive": false
+    },
+    {
+      "phase": "idle_home",
+      "mode": "balanced",
+      "backend": "native",
+      "run": 3,
+      "sampleSeconds": 10.001328,
+      "logicalProcessors": 24,
+      "cpuOneCorePercent": 0.0,
+      "cpuTotalPercent": 0.0,
+      "memoryBefore": {
+        "privateMiB": 287.0859375,
+        "pssMiB": 306.7763671875,
+        "rssMiB": 396.13671875,
+        "peakRssMiB": 436.9375
+      },
+      "memoryAfter": {
+        "privateMiB": 286.3984375,
+        "pssMiB": 306.0859375,
+        "rssMiB": 395.44921875,
+        "peakRssMiB": 436.9375
+      },
+      "reportedFrameTimingsPerSecond": 0.0,
+      "uiBeatListeners": 0,
+      "lifecycle": "resumed",
+      "audioPlaying": false,
+      "audioPositionStartMs": 0,
+      "audioPositionEndMs": 0,
+      "videoPositionStartMs": null,
+      "videoPositionEndMs": null,
+      "videoPlaying": null,
+      "nativeReady": false,
+      "textureReady": false,
+      "decoderInUse": null,
+      "surfaceBefore": {
+        "attached": false,
+        "visible": false,
+        "frames": 0,
+        "width": 0,
+        "height": 0
+      },
+      "surfaceAfter": {
+        "attached": false,
+        "visible": false,
+        "frames": 0,
+        "width": 0,
+        "height": 0
+      },
+      "windowPhysicalSize": {
+        "width": 1280.0,
+        "height": 800.0
+      },
+      "devicePixelRatio": 1.0,
+      "audioOutput": null,
+      "audioDevice": null,
+      "visualizerActive": false
+    },
+    {
+      "phase": "audio_playing",
+      "mode": "balanced",
+      "backend": "native",
+      "run": 3,
+      "sampleSeconds": 10.001903,
+      "logicalProcessors": 24,
+      "cpuOneCorePercent": 41.99200892070239,
+      "cpuTotalPercent": 1.7496670383625996,
+      "memoryBefore": {
+        "privateMiB": 337.25390625,
+        "pssMiB": 357.6787109375,
+        "rssMiB": 449.1171875,
+        "peakRssMiB": 493.34765625
+      },
+      "memoryAfter": {
+        "privateMiB": 340.921875,
+        "pssMiB": 361.34765625,
+        "rssMiB": 452.78515625,
+        "peakRssMiB": 493.34765625
+      },
+      "reportedFrameTimingsPerSecond": 19.996194724143994,
+      "uiBeatListeners": 5,
+      "lifecycle": "resumed",
+      "audioPlaying": true,
+      "audioPositionStartMs": 4163,
+      "audioPositionEndMs": 14172,
+      "videoPositionStartMs": null,
+      "videoPositionEndMs": null,
+      "videoPlaying": null,
+      "nativeReady": false,
+      "textureReady": false,
+      "decoderInUse": null,
+      "surfaceBefore": {
+        "attached": false,
+        "visible": false,
+        "frames": 0,
+        "width": 0,
+        "height": 0
+      },
+      "surfaceAfter": {
+        "attached": false,
+        "visible": false,
+        "frames": 0,
+        "width": 0,
+        "height": 0
+      },
+      "windowPhysicalSize": {
+        "width": 1280.0,
+        "height": 800.0
+      },
+      "devicePixelRatio": 1.0,
+      "audioOutput": "pipewire",
+      "audioDevice": "pipewire/riflay_benchmark_31857",
+      "visualizerActive": true
+    },
+    {
+      "phase": "video_playing",
+      "mode": "balanced",
+      "backend": "native",
+      "run": 3,
+      "sampleSeconds": 10.011514,
+      "logicalProcessors": 24,
+      "cpuOneCorePercent": 37.85641212707689,
+      "cpuTotalPercent": 1.5773505052948702,
+      "memoryBefore": {
+        "privateMiB": 547.015625,
+        "pssMiB": 567.7138671875,
+        "rssMiB": 660.19140625,
+        "peakRssMiB": 839.953125
+      },
+      "memoryAfter": {
+        "privateMiB": 547.79296875,
+        "pssMiB": 568.494140625,
+        "rssMiB": 660.96875,
+        "peakRssMiB": 842.109375
+      },
+      "reportedFrameTimingsPerSecond": 20.77607842330341,
+      "uiBeatListeners": 3,
+      "lifecycle": "resumed",
+      "audioPlaying": true,
+      "audioPositionStartMs": 5177,
+      "audioPositionEndMs": 15201,
+      "videoPositionStartMs": 5133,
+      "videoPositionEndMs": 15200,
+      "videoPlaying": true,
+      "nativeReady": true,
+      "textureReady": false,
+      "decoderInUse": "nvdec",
+      "surfaceBefore": {
+        "attached": true,
+        "visible": true,
+        "frames": 64,
+        "width": 332,
+        "height": 332
+      },
+      "surfaceAfter": {
+        "attached": true,
+        "visible": true,
+        "frames": 215,
+        "width": 332,
+        "height": 332
+      },
+      "windowPhysicalSize": {
+        "width": 1280.0,
+        "height": 800.0
+      },
+      "devicePixelRatio": 1.0,
+      "audioOutput": "pipewire",
+      "audioDevice": "pipewire/riflay_benchmark_31857",
+      "visualizerActive": false
+    },
+    {
+      "phase": "video_paused",
+      "mode": "balanced",
+      "backend": "native",
+      "run": 3,
+      "sampleSeconds": 10.001527,
+      "logicalProcessors": 24,
+      "cpuOneCorePercent": 0.199969464662746,
+      "cpuTotalPercent": 0.008332061027614418,
+      "memoryBefore": {
+        "privateMiB": 538.6953125,
+        "pssMiB": 559.396484375,
+        "rssMiB": 651.87109375,
+        "peakRssMiB": 842.109375
+      },
+      "memoryAfter": {
+        "privateMiB": 536.5078125,
+        "pssMiB": 557.208984375,
+        "rssMiB": 649.68359375,
+        "peakRssMiB": 842.109375
+      },
+      "reportedFrameTimingsPerSecond": 0.0,
+      "uiBeatListeners": 0,
+      "lifecycle": "resumed",
+      "audioPlaying": false,
+      "audioPositionStartMs": 15221,
+      "audioPositionEndMs": 15221,
+      "videoPositionStartMs": 15200,
+      "videoPositionEndMs": 15200,
+      "videoPlaying": false,
+      "nativeReady": true,
+      "textureReady": false,
+      "decoderInUse": "nvdec",
+      "surfaceBefore": {
+        "attached": true,
+        "visible": true,
+        "frames": 216,
+        "width": 332,
+        "height": 332
+      },
+      "surfaceAfter": {
+        "attached": true,
+        "visible": true,
+        "frames": 216,
+        "width": 332,
+        "height": 332
+      },
+      "windowPhysicalSize": {
+        "width": 1280.0,
+        "height": 800.0
+      },
+      "devicePixelRatio": 1.0,
+      "audioOutput": "pipewire",
+      "audioDevice": "pipewire/riflay_benchmark_31857",
+      "visualizerActive": false
+    },
+    {
+      "phase": "video_unfocused_released",
+      "mode": "balanced",
+      "backend": "native",
+      "run": 3,
+      "sampleSeconds": 10.002017,
+      "logicalProcessors": 24,
+      "cpuOneCorePercent": 3.7992336945638066,
+      "cpuTotalPercent": 0.1583014039401586,
+      "memoryBefore": {
+        "privateMiB": 387.79296875,
+        "pssMiB": 408.5048828125,
+        "rssMiB": 501.03125,
+        "peakRssMiB": 850.34765625
+      },
+      "memoryAfter": {
+        "privateMiB": 380.82421875,
+        "pssMiB": 401.5361328125,
+        "rssMiB": 494.0625,
+        "peakRssMiB": 850.34765625
+      },
+      "reportedFrameTimingsPerSecond": 1.0997781747421544,
+      "uiBeatListeners": 2,
+      "lifecycle": "inactive",
+      "audioPlaying": true,
+      "audioPositionStartMs": 39607,
+      "audioPositionEndMs": 49619,
+      "videoPositionStartMs": null,
+      "videoPositionEndMs": null,
+      "videoPlaying": null,
+      "nativeReady": false,
+      "textureReady": false,
+      "decoderInUse": "nvdec",
+      "surfaceBefore": {
+        "attached": false,
+        "visible": false,
+        "frames": 0,
+        "width": 0,
+        "height": 0
+      },
+      "surfaceAfter": {
+        "attached": false,
+        "visible": false,
+        "frames": 0,
+        "width": 0,
+        "height": 0
+      },
+      "windowPhysicalSize": {
+        "width": 1280.0,
+        "height": 800.0
+      },
+      "devicePixelRatio": 1.0,
+      "audioOutput": "pipewire",
+      "audioDevice": "pipewire/riflay_benchmark_31857",
+      "visualizerActive": false
+    },
+    {
+      "phase": "idle_home",
+      "mode": "balanced",
+      "backend": "texture",
+      "run": 3,
+      "sampleSeconds": 10.001905,
+      "logicalProcessors": 24,
+      "cpuOneCorePercent": 0.0,
+      "cpuTotalPercent": 0.0,
+      "memoryBefore": {
+        "privateMiB": 286.6640625,
+        "pssMiB": 306.2451171875,
+        "rssMiB": 395.33203125,
+        "peakRssMiB": 440.2109375
+      },
+      "memoryAfter": {
+        "privateMiB": 285.94140625,
+        "pssMiB": 305.5224609375,
+        "rssMiB": 394.609375,
+        "peakRssMiB": 440.2109375
+      },
+      "reportedFrameTimingsPerSecond": 0.0,
+      "uiBeatListeners": 0,
+      "lifecycle": "resumed",
+      "audioPlaying": false,
+      "audioPositionStartMs": 0,
+      "audioPositionEndMs": 0,
+      "videoPositionStartMs": null,
+      "videoPositionEndMs": null,
+      "videoPlaying": null,
+      "nativeReady": false,
+      "textureReady": false,
+      "decoderInUse": null,
+      "windowPhysicalSize": {
+        "width": 1280.0,
+        "height": 800.0
+      },
+      "devicePixelRatio": 1.0,
+      "audioOutput": null,
+      "audioDevice": null,
+      "visualizerActive": false
+    },
+    {
+      "phase": "audio_playing",
+      "mode": "balanced",
+      "backend": "texture",
+      "run": 3,
+      "sampleSeconds": 10.001476,
+      "logicalProcessors": 24,
+      "cpuOneCorePercent": 42.79368365229292,
+      "cpuTotalPercent": 1.7830701521788717,
+      "memoryBefore": {
+        "privateMiB": 334.7421875,
+        "pssMiB": 355.0849609375,
+        "rssMiB": 446.3046875,
+        "peakRssMiB": 495.7578125
+      },
+      "memoryAfter": {
+        "privateMiB": 340.48046875,
+        "pssMiB": 360.8212890625,
+        "rssMiB": 452.04296875,
+        "peakRssMiB": 495.7578125
+      },
+      "reportedFrameTimingsPerSecond": 19.997048435650896,
+      "uiBeatListeners": 4,
+      "lifecycle": "resumed",
+      "audioPlaying": true,
+      "audioPositionStartMs": 4299,
+      "audioPositionEndMs": 14343,
+      "videoPositionStartMs": null,
+      "videoPositionEndMs": null,
+      "videoPlaying": null,
+      "nativeReady": false,
+      "textureReady": false,
+      "decoderInUse": null,
+      "windowPhysicalSize": {
+        "width": 1280.0,
+        "height": 800.0
+      },
+      "devicePixelRatio": 1.0,
+      "audioOutput": "pipewire",
+      "audioDevice": "pipewire/riflay_benchmark_31857",
+      "visualizerActive": true
+    },
+    {
+      "phase": "video_playing",
+      "mode": "balanced",
+      "backend": "texture",
+      "run": 3,
+      "sampleSeconds": 10.006039,
+      "logicalProcessors": 24,
+      "cpuOneCorePercent": 36.27809166044626,
+      "cpuTotalPercent": 1.511587152518594,
+      "memoryBefore": {
+        "privateMiB": 549.6171875,
+        "pssMiB": 570.2236328125,
+        "rssMiB": 662.453125,
+        "peakRssMiB": 842.04296875
+      },
+      "memoryAfter": {
+        "privateMiB": 549.3515625,
+        "pssMiB": 569.9580078125,
+        "rssMiB": 662.1875,
+        "peakRssMiB": 843.7734375
+      },
+      "reportedFrameTimingsPerSecond": 20.687506814634645,
+      "uiBeatListeners": 4,
+      "lifecycle": "resumed",
+      "audioPlaying": true,
+      "audioPositionStartMs": 7985,
+      "audioPositionEndMs": 17999,
+      "videoPositionStartMs": 8133,
+      "videoPositionEndMs": 18000,
+      "videoPlaying": true,
+      "nativeReady": false,
+      "textureReady": true,
+      "decoderInUse": "nvdec",
+      "windowPhysicalSize": {
+        "width": 1280.0,
+        "height": 800.0
+      },
+      "devicePixelRatio": 1.0,
+      "audioOutput": "pipewire",
+      "audioDevice": "pipewire/riflay_benchmark_31857",
+      "visualizerActive": false
+    },
+    {
+      "phase": "video_paused",
+      "mode": "balanced",
+      "backend": "texture",
+      "run": 3,
+      "sampleSeconds": 10.001903,
+      "logicalProcessors": 24,
+      "cpuOneCorePercent": 0.09998097362071998,
+      "cpuTotalPercent": 0.004165873900863332,
+      "memoryBefore": {
+        "privateMiB": 535.98046875,
+        "pssMiB": 556.5869140625,
+        "rssMiB": 648.81640625,
+        "peakRssMiB": 843.7734375
+      },
+      "memoryAfter": {
+        "privateMiB": 533.625,
+        "pssMiB": 554.234375,
+        "rssMiB": 646.4609375,
+        "peakRssMiB": 843.7734375
+      },
+      "reportedFrameTimingsPerSecond": 0.0,
+      "uiBeatListeners": 0,
+      "lifecycle": "resumed",
+      "audioPlaying": false,
+      "audioPositionStartMs": 17999,
+      "audioPositionEndMs": 17999,
+      "videoPositionStartMs": 18066,
+      "videoPositionEndMs": 18066,
+      "videoPlaying": false,
+      "nativeReady": false,
+      "textureReady": true,
+      "decoderInUse": "nvdec",
+      "windowPhysicalSize": {
+        "width": 1280.0,
+        "height": 800.0
+      },
+      "devicePixelRatio": 1.0,
+      "audioOutput": "pipewire",
+      "audioDevice": "pipewire/riflay_benchmark_31857",
+      "visualizerActive": false
+    },
+    {
+      "phase": "video_unfocused_released",
+      "mode": "balanced",
+      "backend": "texture",
+      "run": 3,
+      "sampleSeconds": 10.001728,
+      "logicalProcessors": 24,
+      "cpuOneCorePercent": 3.9993089194187244,
+      "cpuTotalPercent": 0.16663787164244684,
+      "memoryBefore": {
+        "privateMiB": 392.21875,
+        "pssMiB": 412.828125,
+        "rssMiB": 505.0546875,
+        "peakRssMiB": 851.26953125
+      },
+      "memoryAfter": {
+        "privateMiB": 382.4453125,
+        "pssMiB": 403.0654296875,
+        "rssMiB": 495.34375,
+        "peakRssMiB": 851.26953125
+      },
+      "reportedFrameTimingsPerSecond": 1.0998099528401493,
+      "uiBeatListeners": 2,
+      "lifecycle": "inactive",
+      "audioPlaying": true,
+      "audioPositionStartMs": 42599,
+      "audioPositionEndMs": 52612,
+      "videoPositionStartMs": null,
+      "videoPositionEndMs": null,
+      "videoPlaying": null,
+      "nativeReady": false,
+      "textureReady": false,
+      "decoderInUse": "nvdec",
+      "windowPhysicalSize": {
+        "width": 1280.0,
+        "height": 800.0
+      },
+      "devicePixelRatio": 1.0,
+      "audioOutput": "pipewire",
+      "audioDevice": "pipewire/riflay_benchmark_31857",
+      "visualizerActive": false
+    },
+    {
+      "phase": "idle_home",
+      "mode": "heavy",
+      "backend": "native",
+      "run": 3,
+      "sampleSeconds": 10.002052,
+      "logicalProcessors": 24,
+      "cpuOneCorePercent": 0.09997948420984014,
+      "cpuTotalPercent": 0.0041658118420766724,
+      "memoryBefore": {
+        "privateMiB": 286.8046875,
+        "pssMiB": 306.48828125,
+        "rssMiB": 396.05859375,
+        "peakRssMiB": 441.8203125
+      },
+      "memoryAfter": {
+        "privateMiB": 286.62109375,
+        "pssMiB": 306.306640625,
+        "rssMiB": 395.875,
+        "peakRssMiB": 441.8203125
+      },
+      "reportedFrameTimingsPerSecond": 0.0,
+      "uiBeatListeners": 0,
+      "lifecycle": "resumed",
+      "audioPlaying": false,
+      "audioPositionStartMs": 0,
+      "audioPositionEndMs": 0,
+      "videoPositionStartMs": null,
+      "videoPositionEndMs": null,
+      "videoPlaying": null,
+      "nativeReady": false,
+      "textureReady": false,
+      "decoderInUse": null,
+      "surfaceBefore": {
+        "attached": false,
+        "visible": false,
+        "frames": 0,
+        "width": 0,
+        "height": 0
+      },
+      "surfaceAfter": {
+        "attached": false,
+        "visible": false,
+        "frames": 0,
+        "width": 0,
+        "height": 0
+      },
+      "windowPhysicalSize": {
+        "width": 1280.0,
+        "height": 800.0
+      },
+      "devicePixelRatio": 1.0,
+      "audioOutput": null,
+      "audioDevice": null,
+      "visualizerActive": false
+    },
+    {
+      "phase": "audio_playing",
+      "mode": "heavy",
+      "backend": "native",
+      "run": 3,
+      "sampleSeconds": 10.002029,
+      "logicalProcessors": 24,
+      "cpuOneCorePercent": 67.88622588476798,
+      "cpuTotalPercent": 2.828592745198666,
+      "memoryBefore": {
+        "privateMiB": 332.546875,
+        "pssMiB": 352.990234375,
+        "rssMiB": 444.6640625,
+        "peakRssMiB": 500.76953125
+      },
+      "memoryAfter": {
+        "privateMiB": 329.98046875,
+        "pssMiB": 350.4248046875,
+        "rssMiB": 442.09765625,
+        "peakRssMiB": 500.76953125
+      },
+      "reportedFrameTimingsPerSecond": 45.290810494550655,
+      "uiBeatListeners": 5,
+      "lifecycle": "resumed",
+      "audioPlaying": true,
+      "audioPositionStartMs": 4148,
+      "audioPositionEndMs": 14130,
+      "videoPositionStartMs": null,
+      "videoPositionEndMs": null,
+      "videoPlaying": null,
+      "nativeReady": false,
+      "textureReady": false,
+      "decoderInUse": null,
+      "surfaceBefore": {
+        "attached": false,
+        "visible": false,
+        "frames": 0,
+        "width": 0,
+        "height": 0
+      },
+      "surfaceAfter": {
+        "attached": false,
+        "visible": false,
+        "frames": 0,
+        "width": 0,
+        "height": 0
+      },
+      "windowPhysicalSize": {
+        "width": 1280.0,
+        "height": 800.0
+      },
+      "devicePixelRatio": 1.0,
+      "audioOutput": "pipewire",
+      "audioDevice": "pipewire/riflay_benchmark_31857",
+      "visualizerActive": true
+    },
+    {
+      "phase": "video_playing",
+      "mode": "heavy",
+      "backend": "native",
+      "run": 3,
+      "sampleSeconds": 10.010861,
+      "logicalProcessors": 24,
+      "cpuOneCorePercent": 78.1151591256736,
+      "cpuTotalPercent": 3.2547982969030667,
+      "memoryBefore": {
+        "privateMiB": 576.73828125,
+        "pssMiB": 597.4736328125,
+        "rssMiB": 690.2421875,
+        "peakRssMiB": 880.17578125
+      },
+      "memoryAfter": {
+        "privateMiB": 574.84375,
+        "pssMiB": 595.5771484375,
+        "rssMiB": 688.34765625,
+        "peakRssMiB": 883.2421875
+      },
+      "reportedFrameTimingsPerSecond": 48.14770677567094,
+      "uiBeatListeners": 4,
+      "lifecycle": "resumed",
+      "audioPlaying": true,
+      "audioPositionStartMs": 5160,
+      "audioPositionEndMs": 15179,
+      "videoPositionStartMs": 5133,
+      "videoPositionEndMs": 15133,
+      "videoPlaying": true,
+      "nativeReady": true,
+      "textureReady": false,
+      "decoderInUse": "nvdec",
+      "surfaceBefore": {
+        "attached": true,
+        "visible": true,
+        "frames": 124,
+        "width": 332,
+        "height": 332
+      },
+      "surfaceAfter": {
+        "attached": true,
+        "visible": true,
+        "frames": 425,
+        "width": 332,
+        "height": 332
+      },
+      "windowPhysicalSize": {
+        "width": 1280.0,
+        "height": 800.0
+      },
+      "devicePixelRatio": 1.0,
+      "audioOutput": "pipewire",
+      "audioDevice": "pipewire/riflay_benchmark_31857",
+      "visualizerActive": true
+    },
+    {
+      "phase": "video_paused",
+      "mode": "heavy",
+      "backend": "native",
+      "run": 3,
+      "sampleSeconds": 10.002184,
+      "logicalProcessors": 24,
+      "cpuOneCorePercent": 0.2999344943064435,
+      "cpuTotalPercent": 0.012497270596101812,
+      "memoryBefore": {
+        "privateMiB": 563.125,
+        "pssMiB": 583.8583984375,
+        "rssMiB": 676.62890625,
+        "peakRssMiB": 883.2421875
+      },
+      "memoryAfter": {
+        "privateMiB": 556.78125,
+        "pssMiB": 577.5146484375,
+        "rssMiB": 670.28515625,
+        "peakRssMiB": 883.2421875
+      },
+      "reportedFrameTimingsPerSecond": 0.0,
+      "uiBeatListeners": 0,
+      "lifecycle": "resumed",
+      "audioPlaying": false,
+      "audioPositionStartMs": 15185,
+      "audioPositionEndMs": 15185,
+      "videoPositionStartMs": 15133,
+      "videoPositionEndMs": 15133,
+      "videoPlaying": false,
+      "nativeReady": true,
+      "textureReady": false,
+      "decoderInUse": "nvdec",
+      "surfaceBefore": {
+        "attached": true,
+        "visible": true,
+        "frames": 426,
+        "width": 332,
+        "height": 332
+      },
+      "surfaceAfter": {
+        "attached": true,
+        "visible": true,
+        "frames": 426,
+        "width": 332,
+        "height": 332
+      },
+      "windowPhysicalSize": {
+        "width": 1280.0,
+        "height": 800.0
+      },
+      "devicePixelRatio": 1.0,
+      "audioOutput": "pipewire",
+      "audioDevice": "pipewire/riflay_benchmark_31857",
+      "visualizerActive": false
+    },
+    {
+      "phase": "video_unfocused_released",
+      "mode": "heavy",
+      "backend": "native",
+      "run": 3,
+      "sampleSeconds": 10.00207,
+      "logicalProcessors": 24,
+      "cpuOneCorePercent": 34.69281858655258,
+      "cpuTotalPercent": 1.4455341077730244,
+      "memoryBefore": {
+        "privateMiB": 403.94921875,
+        "pssMiB": 424.697265625,
+        "rssMiB": 517.515625,
+        "peakRssMiB": 889.0859375
+      },
+      "memoryAfter": {
+        "privateMiB": 396.33203125,
+        "pssMiB": 417.080078125,
+        "rssMiB": 509.8984375,
+        "peakRssMiB": 889.0859375
+      },
+      "reportedFrameTimingsPerSecond": 20.395778073938693,
+      "uiBeatListeners": 3,
+      "lifecycle": "inactive",
+      "audioPlaying": true,
+      "audioPositionStartMs": 39596,
+      "audioPositionEndMs": 49610,
+      "videoPositionStartMs": null,
+      "videoPositionEndMs": null,
+      "videoPlaying": null,
+      "nativeReady": false,
+      "textureReady": false,
+      "decoderInUse": "nvdec",
+      "surfaceBefore": {
+        "attached": false,
+        "visible": false,
+        "frames": 0,
+        "width": 0,
+        "height": 0
+      },
+      "surfaceAfter": {
+        "attached": false,
+        "visible": false,
+        "frames": 0,
+        "width": 0,
+        "height": 0
+      },
+      "windowPhysicalSize": {
+        "width": 1280.0,
+        "height": 800.0
+      },
+      "devicePixelRatio": 1.0,
+      "audioOutput": "pipewire",
+      "audioDevice": "pipewire/riflay_benchmark_31857",
+      "visualizerActive": true
+    }
+  ]
+}

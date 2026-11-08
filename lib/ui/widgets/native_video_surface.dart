@@ -5,14 +5,19 @@ import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
-/// The music video's own window on Windows (`runner/video_window.cpp`), which mpv draws into.
+/// A Windows child window or Linux GTK surface that mpv draws into independently of Flutter.
 abstract final class NativeVideoWindow {
   static const _channel = MethodChannel('riflay/video_window');
 
   static int? _window;
 
   /// The window mpv is handed (made the first time, hidden until a [NativeVideoSurface] places it).
-  static Future<int> ensure() async => _window ??= (await _channel.invokeMethod<int>('ensure'))!;
+  static Future<int> ensure() async {
+    // A detached renderer hides its surface. The next player must place it
+    // again even if its box has exactly the same coordinates.
+    _placed = null;
+    return _window ??= (await _channel.invokeMethod<int>('ensure'))!;
+  }
 
   /// Whether the box now showing the video wants it to cover the box (cropped), not fit inside it.
   static final cover = ValueNotifier(false);
@@ -37,8 +42,8 @@ abstract final class NativeVideoWindow {
             full.bottom.round(),
           ];
     if (_placed != null && listEquals(_placed!, r)) return;
-    _placed = r;
     if (_window == null) return;
+    _placed = r;
     _channel.invokeMethod<void>('place', r).ignore();
   }
 

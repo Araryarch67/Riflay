@@ -61,8 +61,12 @@ class _AudioReactiveViewState extends State<AudioReactiveView> with WidgetsBindi
   // would land its frames between the seek bar's.
   UiBeatListener? _beat;
 
-  /// Heavy's 30 fps (on the beats the flower and wave use, [PlayingMotion.heavyEvery]), Balanced's 20.
-  double get _cap => math.min(widget.maxFps ?? 60, LayoutPrefs.heavy ? 30 : (LayoutPrefs.frugal ? 10 : 20));
+  /// Heavy's 30 fps (on the beats the flower and wave use, [PlayingMotion.heavyEvery]) only with the window focused:
+  /// behind another app it moves at Balanced's 20 (each frame redraws the whole window, a glance doesn't need more).
+  /// Frugal Balanced (`LayoutPrefs.frugal`) 10.
+  double get _cap => math.min(widget.maxFps ?? 60, LayoutPrefs.heavy && _focused ? 30 : (LayoutPrefs.frugal ? 10 : 20));
+
+  bool _focused = true;
 
   bool get _running => _beat != null;
 
@@ -82,10 +86,10 @@ class _AudioReactiveViewState extends State<AudioReactiveView> with WidgetsBindi
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    // Only with the window focused: behind another app its filter bank alone kept mpv at ~5% of a core (24 band
-    // filters on every sample) and the view drew 20 frames a second. Unfocused, the meter is let go and mpv drops
-    // the bank too.
-    _foreground = PlayingMotion.decorates(WidgetsBinding.instance.lifecycleState);
+    // While the window can be seen, focused or behind another app (people watch it beside their work; on Linux only
+    // focused, see PlayingMotion.visible); otherwise the meter is let go and mpv drops its filter bank too.
+    _foreground = PlayingMotion.visible(WidgetsBinding.instance.lifecycleState);
+    _focused = PlayingMotion.decorates(WidgetsBinding.instance.lifecycleState);
   }
 
   @override
@@ -151,7 +155,9 @@ class _AudioReactiveViewState extends State<AudioReactiveView> with WidgetsBindi
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    _foreground = PlayingMotion.decorates(state);
+    _foreground = PlayingMotion.visible(state);
+    _focused = PlayingMotion.decorates(state);
+    _beat?.period = Duration(microseconds: (1000000 / _cap).round());
     _sync();
   }
 

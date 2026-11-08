@@ -1,5 +1,5 @@
 /// What Video mode needs from the player that draws the music video: where it is, play / pause, seek, speed, and
-/// mpv's properties. media_kit's player (drawn by Flutter through a texture) and Windows' own-window player
+/// mpv's properties. media_kit's player (drawn by Flutter through a texture) and the Windows/Linux native player
 /// (`platform/native_video.dart`) both answer it.
 abstract interface class VideoEngine {
   Duration get position;

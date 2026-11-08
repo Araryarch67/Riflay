@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 
+import '../../platform/host.dart';
 import '../../services/layout_prefs.dart';
 import '../../services/player_controller.dart';
 import '../../services/ui_beat.dart';
@@ -59,6 +60,15 @@ class PlayingMotion extends StatefulWidget {
       state == null ||
       state == AppLifecycleState.resumed ||
       (state == AppLifecycleState.inactive && DebugSwitches.moveUnfocused);
+
+  /// Whether the visualizer moves in this lifecycle [state]: in front, or behind another window (`inactive` on a
+  /// computer; people watch it beside other apps), not minimized or hidden. On Linux only in front: there its mpv
+  /// filter bank and 20 frames a second through the GTK embedder cost about 0.4% of a 16-thread CPU, over the 0.3%
+  /// a song playing behind other windows may take.
+  static bool visible(AppLifecycleState? state) =>
+      state == null ||
+      state == AppLifecycleState.resumed ||
+      (state == AppLifecycleState.inactive && (!Host.isLinux || DebugSwitches.moveUnfocused));
 
   final Widget Function(BuildContext context, MotionClock? clock) builder;
 

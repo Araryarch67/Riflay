@@ -37,6 +37,9 @@ abstract final class DebugSwitches {
   /// The Liquid glass tab bar draws its pills with Riflay's own blur instead of liquid_glass_renderer.
   static bool noGlassRenderer = _all || const bool.fromEnvironment('RIFLAY_NO_GLASS_RENDERER');
 
+  /// Draw video through Flutter textures to compare native surface rendering.
+  static bool noNativeVideo = _all || const bool.fromEnvironment('RIFLAY_NO_NATIVE_VIDEO');
+
   /// [MarqueeText] scrolls forever and everywhere, as before: card titles without a hover, and past its loops.
   static bool endlessMarquee = _all || const bool.fromEnvironment('RIFLAY_ENDLESS_MARQUEE');
 

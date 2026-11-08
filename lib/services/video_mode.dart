@@ -10,6 +10,7 @@ import '../platform/host.dart';
 import '../platform/mpv.dart';
 import '../platform/native_video.dart';
 import '../ui/widgets/native_video_surface.dart';
+import '../ui/debug_switches.dart';
 import '../models/track.dart';
 import 'beta_features.dart';
 import 'layout_prefs.dart';
@@ -340,7 +341,7 @@ class VideoMode extends ChangeNotifier with WidgetsBindingObserver {
     // the song is. Phones pass through `inactive` for a pulled-down shade: they keep playing.
     // Windows' own-window video costs next to nothing to keep playing (the graphics card decodes and draws it), and
     // a window behind another is often still watched: it plays on until the window is minimized or hidden.
-    final unfocused = _computer && !native && state == AppLifecycleState.inactive;
+    final unfocused = _computer && (Host.isLinux || _native == null) && state == AppLifecycleState.inactive;
     if (unfocused != _unfocused) {
       _unfocused = unfocused;
       _unfocusedRelease?.cancel();
@@ -377,7 +378,8 @@ class VideoMode extends ChangeNotifier with WidgetsBindingObserver {
   /// How long the player is kept with no view on screen. A page changing, a dialog (Signal path) or the cover moving
   /// between layouts briefly has none: drawn in the page, the video goes after 2 s; in Windows' own window, where
   /// keeping it costs little, after a minute (fetching it again shows the cover for a few seconds).
-  static Duration get _holdWithoutView => native ? const Duration(minutes: 1) : const Duration(seconds: 2);
+  static Duration get _holdWithoutView =>
+      Host.isWindows && instance._native != null ? const Duration(minutes: 1) : const Duration(seconds: 2);
 
   /// A view that shows the video came on screen (or went away). The video is
   /// only fetched and decoded while one is.
@@ -420,12 +422,16 @@ class VideoMode extends ChangeNotifier with WidgetsBindingObserver {
   bool showsAsBackground(Track? track) {
     final v = videoOf(track);
     // Windows' own-window video can't lie under the page's words: the blurred cover does there.
-    return v != null && _on && !LayoutPrefs.lightweight && !native && !_backgroundFailed.contains(v.videoId);
+    return v != null &&
+        _on &&
+        !LayoutPrefs.lightweight &&
+        (!native || Host.isLinux) &&
+        !_backgroundFailed.contains(v.videoId);
   }
 
   /// The background's video, once its first picture is ready; null shows the blurred cover.
   VideoController? backgroundController(Track? track) =>
-      showsAsBackground(track) && _loaded == videoOf(track)?.videoId && !_loadedForeground ? controller : null;
+      showsAsBackground(track) && _loaded == videoOf(track)?.videoId && !_foreground ? controller : null;
 
   /// The background video of [track] is playing and covers the page: what lies under it is not drawn.
   bool coversBackground(Track? track) => backgroundController(track) != null;
@@ -433,10 +439,31 @@ class VideoMode extends ChangeNotifier with WidgetsBindingObserver {
   VideoEngine? _player;
   VideoController? _video;
   NativeVideoPlayer? _native;
+  Future<void> _surfaceChange = Future.value();
+  int _videoRequest = 0;
+  ({String id, bool foreground})? _opening;
+  bool _disposed = false;
 
-  /// Windows: the video plays in a window of its own over the page (`platform/native_video.dart`), decoded and
-  /// drawn by the graphics card; views place it with [NativeVideoSurface] instead of drawing [controller].
-  static bool get native => NativeVideoPlayer.available;
+  // Native surfaces have one renderer. Serialize only creation/disposal, not
+  // network loading, so a newer song can cancel a slow load immediately.
+  Future<T> _withSurface<T>(Future<T> Function() work) async {
+    final previous = _surfaceChange;
+    final finished = Completer<void>();
+    _surfaceChange = finished.future;
+    try {
+      await previous;
+      return await work();
+    } finally {
+      finished.complete();
+    }
+  }
+
+  /// Windows/Linux: video has its own native surface over the page. Views place
+  /// it with [NativeVideoSurface] instead of drawing [controller].
+  static bool get native => !DebugSwitches.noNativeVideo && !_nativeUnavailable && NativeVideoPlayer.available;
+  static bool _nativeUnavailable = false;
+
+  static String _nativeHwdec(String hwdec) => Host.isWindows && hwdec == 'auto' ? 'd3d11va' : hwdec;
 
   /// The own-window video is ready to be placed (its first picture is out).
   bool get nativeReady => _ready && _native != null;
@@ -521,7 +548,7 @@ vec4 hook() {
   /// What should play now, from the facts: Video picked, a view on screen,
   /// and the current song has a video.
   MusicVideo? get _wanted {
-    if (_released) return null;
+    if (_released || _disposed) return null;
     final track = _c?.currentTrack;
     if (_foreground) return videoOf(track);
     if (_backgrounds > 0 && !_away && showsAsBackground(track)) return videoOf(track);
@@ -540,68 +567,95 @@ vec4 hook() {
   void _sync() {
     final want = _wanted;
     if (want == null) {
-      if (_player != null) _stop();
+      if (_player != null || _opening != null) _stop();
       return;
     }
+    if (_opening == (id: want.videoId, foreground: _foreground)) return;
     // A background video is small: the Song / Video switch asks for the full size again.
-    if (_loaded != want.videoId || _foreground && !_loadedForeground) _start(want, foreground: _foreground);
+    if (_opening != null ||
+        _loaded != want.videoId ||
+        _foreground && !_loadedForeground ||
+        Host.isLinux && !_foreground && _native != null) {
+      _start(want, foreground: _foreground);
+    }
   }
 
   Future<void> _start(MusicVideo v, {required bool foreground}) async {
-    await _stop();
-    // A minute and a half without a stall: this song may try a step higher.
-    if (adaptive && _cap != null && DateTime.now().difference(_smoothSince) > const Duration(seconds: 90)) {
-      final most = foreground ? maxHeight : backgroundHeight;
-      final up = stepUp(_cap!, most);
-      _cap = up == null || up >= most ? null : up;
-      _smoothSince = DateTime.now();
-      if (up != null) _announce(up, lower: false);
-    }
-    _streamed = false;
-    _streamHeight = 0;
-    _loaded = v.videoId;
-    _loadedForeground = foreground;
-    _playing = v;
-    _decoder = LayoutPrefs.instance.videoDecoder;
-    final hwdec = LayoutPrefs.instance.videoDecoder.hwdec;
-    final VideoEngine player;
+    final request = ++_videoRequest;
+    _opening = (id: v.videoId, foreground: foreground);
+    VideoEngine? selected;
     VideoController? video;
     NativeVideoPlayer? own;
-    if (native) {
-      try {
-        // Its own window: a frame of video costs Flutter nothing, so no frame cap.
-        own = NativeVideoPlayer(
-          window: await NativeVideoWindow.ensure(),
-          hwdec: hwdec == 'auto' ? 'd3d11va' : hwdec,
-          foreground: foreground,
-        );
-      } catch (e) {
-        debugPrint('Video mode: no own window ($e), drawing it in the page');
-      }
-      if (!identical(_playing, v)) {
-        await own?.dispose();
-        return;
-      }
+    try {
+      await _withSurface(() async {
+        if (request != _videoRequest) return;
+        await _disposePlayer();
+        if (request != _videoRequest) return;
+        // A minute and a half without a stall: this song may try a step higher.
+        if (adaptive && _cap != null && DateTime.now().difference(_smoothSince) > const Duration(seconds: 90)) {
+          final most = foreground ? maxHeight : backgroundHeight;
+          final up = stepUp(_cap!, most);
+          _cap = up == null || up >= most ? null : up;
+          _smoothSince = DateTime.now();
+          if (up != null) _announce(up, lower: false);
+        }
+        _streamed = false;
+        _streamHeight = 0;
+        _loaded = v.videoId;
+        _loadedForeground = foreground;
+        _playing = v;
+        _decoder = LayoutPrefs.instance.videoDecoder;
+        final hwdec = LayoutPrefs.instance.videoDecoder.hwdec;
+        // A full-page background needs Flutter text and effects above the video.
+        // Linux retains its texture backend there; cover/side-panel video is native.
+        if (native && (foreground || !Host.isLinux)) {
+          try {
+            // Linux retains its power limits until full-app profiling supports
+            // relaxing them. Windows' direct window output is already measured.
+            own = NativeVideoPlayer(
+              window: await NativeVideoWindow.ensure(),
+              hwdec: _nativeHwdec(hwdec),
+              maxFps: Host.isLinux ? maxFps : null,
+              foreground: foreground,
+            );
+            await own!.attach();
+          } catch (e) {
+            debugPrint('Video mode: no own window ($e), drawing it in the page');
+            await own?.dispose();
+            own = null;
+            if (request != _videoRequest) return;
+            _nativeUnavailable = true;
+          }
+          if (request != _videoRequest) {
+            await own?.dispose();
+            return;
+          }
+        }
+        if (own != null) {
+          selected = _player = _native = own;
+          _fit();
+        } else {
+          final kit = Player(
+            configuration: PlayerConfiguration(
+              muted: true,
+              title: 'Riflay video',
+              bufferSize: foreground ? 4 << 20 : 2 << 20,
+            ),
+          );
+          selected = _player = _KitEngine(kit);
+          video = _video = VideoController(
+            kit,
+            // Drawn on the graphics card either way; Settings › Layout › Video decoding picks what decodes it.
+            configuration: VideoControllerConfiguration(hwdec: hwdec),
+          );
+        }
+        notifyListeners();
+      });
+    } finally {
+      if (request == _videoRequest) _opening = null;
     }
-    if (own != null) {
-      player = _player = _native = own;
-      _fit();
-    } else {
-      final kit = Player(
-        configuration: PlayerConfiguration(
-          muted: true,
-          title: 'Riflay video',
-          bufferSize: foreground ? 4 << 20 : 2 << 20,
-        ),
-      );
-      player = _player = _KitEngine(kit);
-      video = _video = VideoController(
-        kit,
-        // Drawn on the graphics card either way; Settings › Layout › Video decoding picks what decodes it.
-        configuration: VideoControllerConfiguration(hwdec: hwdec),
-      );
-    }
-    notifyListeners();
+    final player = selected;
+    if (player == null || request != _videoRequest) return;
     try {
       if (player case _KitEngine(:final kit)) {
         final mpv = kit.platform as NativePlayer;
@@ -639,7 +693,7 @@ vec4 hook() {
         await open(stream.url.toString(), at);
       }
       if (own != null) {
-        if (!await own.firstFrame(const Duration(seconds: 25))) throw TimeoutException('no first picture');
+        if (!await own!.firstFrame(const Duration(seconds: 25))) throw TimeoutException('no first picture');
       } else {
         final kitVideo = video!;
         await kitVideo.waitUntilFirstFrameRendered.timeout(const Duration(seconds: 25));
@@ -710,7 +764,7 @@ vec4 hook() {
     if (want == _decoder) return;
     _decoder = want;
     if (player == null) return;
-    player.setProperty('hwdec', want.hwdec == 'auto' && _native != null ? 'd3d11va' : want.hwdec).then((_) async {
+    player.setProperty('hwdec', _native != null ? _nativeHwdec(want.hwdec) : want.hwdec).then((_) async {
       // The switch lands on the next decoded frame.
       await Future<void>.delayed(const Duration(milliseconds: 500));
       await _readDecoder();
@@ -718,6 +772,13 @@ vec4 hook() {
   }
 
   Future<void> _stop() async {
+    final request = ++_videoRequest;
+    _opening = null;
+    await _withSurface(_disposePlayer);
+    if (request == _videoRequest) _sync();
+  }
+
+  Future<void> _disposePlayer() async {
     final player = _player;
     _tick?.cancel();
     _tick = null;
@@ -730,7 +791,7 @@ vec4 hook() {
     _ready = false;
     _rate = 1;
     _seekedTo = null;
-    notifyListeners();
+    if (!_disposed) notifyListeners();
     await player?.dispose();
   }
 
@@ -810,6 +871,7 @@ vec4 hook() {
 
   @override
   void dispose() {
+    _disposed = true;
     _c?.removeListener(_changed);
     WidgetsBinding.instance.removeObserver(this);
     _release?.cancel();

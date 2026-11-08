@@ -8,6 +8,8 @@ class NativeVideoPlayer implements VideoEngine {
 
   static bool get available => false;
 
+  Future<void> attach() async {}
+
   @override
   Duration get position => Duration.zero;
   @override
