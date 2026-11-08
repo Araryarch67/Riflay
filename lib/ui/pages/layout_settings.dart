@@ -17,10 +17,10 @@ import '../player_scope.dart';
 import '../widgets/audio_reactive_view.dart';
 import '../../services/language.dart';
 
-/// Settings › Look & feel › Layout: corners, density, cover size, Home's sections, what the
-/// player shows, lyrics and motion. Every default is how the app has always looked.
-class LayoutSettings extends StatelessWidget {
-  const LayoutSettings({super.key});
+/// Settings › Look & feel › Now Playing: presets, the cover, the top, the title's buttons, the progress bar, the
+/// controls, Liquid Glass and the visualizer.
+class NowPlayingSettings extends StatelessWidget {
+  const NowPlayingSettings({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -271,6 +271,29 @@ class LayoutSettings extends StatelessWidget {
               ),
             ],
           ),
+          if (Features.audioVisualizer) ...[
+            _Header(tr.visualizer, hint: tr.visualizerHint),
+            _VisualizerSettings(prefs: p),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// Settings › Look & feel › Lyrics: how the lyrics page looks (the lyrics services follow it on the page).
+class LyricsSettings extends StatelessWidget {
+  const LyricsSettings({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final p = LayoutPrefs.instance;
+    final muted = settingsMuted(context);
+    return ListenableBuilder(
+      listenable: Listenable.merge([p, BetaFeatures.instance, Appearance.instance]),
+      builder: (context, _) => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
           _Header(tr.lyrics, hint: tr.lyricsHint),
           SettingsCard(
             children: [
@@ -351,10 +374,26 @@ class LayoutSettings extends StatelessWidget {
                 ),
             ],
           ),
-          if (Features.audioVisualizer) ...[
-            _Header(tr.visualizer, hint: tr.visualizerHint),
-            _VisualizerSettings(prefs: p),
-          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// Settings › Look & feel › Pages & navigation: album pages, Home's sections, the bars, corners, spacing, cover
+/// size and motion. Every default is how the app has always looked.
+class LayoutSettings extends StatelessWidget {
+  const LayoutSettings({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final p = LayoutPrefs.instance;
+    final muted = settingsMuted(context);
+    return ListenableBuilder(
+      listenable: Listenable.merge([p, BetaFeatures.instance, Appearance.instance]),
+      builder: (context, _) => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
           _Header(tr.pages, hint: tr.pagesHint),
           SettingsCard(
             children: [

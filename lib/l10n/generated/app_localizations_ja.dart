@@ -49,7 +49,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get groupLook => '見た目と操作感';
 
   @override
-  String get groupLookSummary => 'テーマ、色、文字の大きさ、画面に出すもの';
+  String get groupLookSummary => 'テーマ、言語と文字、再生画面、歌詞、ページ';
 
   @override
   String get groupLibrary => 'ライブラリとダウンロード';
@@ -61,19 +61,19 @@ class AppLocalizationsJa extends AppLocalizations {
   String get groupAccounts => 'アカウントとサービス';
 
   @override
-  String get groupAccountsSummary => 'YouTube Music、Spotify、Last.fm、Discord、歌詞、拡張機能';
+  String get groupAccountsSummary => 'YouTube Music、Spotify、Last.fm、Discord、拡張機能';
 
   @override
   String get topicPlayback => '再生';
 
   @override
-  String get topicPlaybackSummary => '自動再生とギャップレス再生';
+  String get topicPlaybackSummary => '自動再生、ギャップレス再生、クロスフェード';
 
   @override
   String get topicDsp => '音響効果（DSP）';
 
   @override
-  String get topicDspSummary => 'イコライザー、音量の均一化、クロスフェード、空間オーディオ、ルーム補正';
+  String get topicDspSummary => 'イコライザー、音量の均一化、空間オーディオ、ルーム補正';
 
   @override
   String get topicOutput => '出力と音質';
@@ -82,16 +82,16 @@ class AppLocalizationsJa extends AppLocalizations {
   String get topicOutputSummary => '出力デバイス、Bit-perfect モード、サンプルレート';
 
   @override
-  String get topicAppearance => '外観';
+  String get topicAppearance => 'テーマと色';
 
   @override
-  String get topicAppearanceSummary => 'テーマ、アクセントカラー、背景、文字の大きさ、フォント';
+  String get topicAppearanceSummary => 'テーマ、モード、アクセントカラー、ジャケットの色、すりガラス';
 
   @override
-  String get topicLayout => 'レイアウト';
+  String get topicLayout => 'ページとナビゲーション';
 
   @override
-  String get topicLayoutSummary => '形、サイズ、プレイヤーに出すもの';
+  String get topicLayoutSummary => 'ホーム、バー、角、余白、カバーの大きさ、動き';
 
   @override
   String get topicLibrary => 'ライブラリ';
@@ -136,10 +136,10 @@ class AppLocalizationsJa extends AppLocalizations {
   String get topicScrobblingSummary => '聴いた曲をそっちのプロフィールに記録する';
 
   @override
-  String get topicIntegrations => 'Discord と歌詞サービス';
+  String get topicIntegrations => 'Discord';
 
   @override
-  String get topicIntegrationsSummary => '聴いてる曲を Discord に表示、歌詞サービス';
+  String get topicIntegrationsSummary => '聴いてる曲を Discord に表示';
 
   @override
   String get topicExtensions => '拡張機能';
@@ -157,7 +157,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get topicIntegrationsSummaryWeb => '単語ごとの歌詞に使う Better Lyrics のキー';
 
   @override
-  String get settingsPower => '電源とバックグラウンド';
+  String get settingsPower => 'パフォーマンスと電源';
 
   @override
   String get listenTogether => '一緒に聴く';
@@ -387,10 +387,10 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
-  String get settingsPowerSummaryTray => '画面のタイムアウト、スリープ、バックグラウンド再生、トレイに閉じる';
+  String get settingsPowerSummaryTray => 'パフォーマンスモード、画面のタイムアウト、スリープ、バックグラウンド再生、トレイ';
 
   @override
-  String get settingsPowerSummary => '画面のタイムアウト、スリープ、バックグラウンド再生';
+  String get settingsPowerSummary => 'パフォーマンスモード、画面のタイムアウト、スリープ、バックグラウンド再生';
 
   @override
   String get listenTogetherSummary => 'セッションを開くか友だちに参加して、共有の権限を管理';
@@ -5431,4 +5431,22 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get discordAppButton => '「Riflay をダウンロード」ボタン';
+
+  @override
+  String get topicText => '言語と文字';
+
+  @override
+  String get topicTextSummary => '言語、文字の大きさ、フォント';
+
+  @override
+  String get topicNowPlaying => '再生画面';
+
+  @override
+  String get topicNowPlayingSummary => 'カバー、操作ボタン、シークバー、Liquid Glass、ビジュアライザー';
+
+  @override
+  String get topicLyrics => '歌詞';
+
+  @override
+  String get topicLyricsSummary => '歌詞の見た目と取得元';
 }

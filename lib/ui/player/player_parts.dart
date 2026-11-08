@@ -29,7 +29,7 @@ import 'player_glass.dart';
 import 'full_screen_player.dart' show ExpandedPanel, expandedPlayerPanel, showExpandedPlayer;
 import 'player_common.dart' show ArtistLinks;
 
-// The parts the player is assembled from (Settings › Look & feel › Layout › Player). The phone builds its Now
+// The parts the player is assembled from (Settings › Look & feel › Now Playing). The phone builds its Now
 // Playing from them; the desktop's expanded player, side panel and bar take the ones that fit a wide window.
 // Classic keeps its own widgets in now_playing_page.dart; these are the other choices for each part.
 
@@ -64,7 +64,7 @@ Future<void> shareTrack(BuildContext context, Track track) async {
 /// How a [PartButton] is filled.
 enum PartLook { outlined, filled, muted, plain }
 
-/// A square or round button in the player's own style: corners follow Settings › Layout › Corners.
+/// A square or round button in the player's own style: corners follow Settings › Pages & navigation › Corners.
 class PartButton extends StatelessWidget {
   const PartButton({
     super.key,
@@ -660,8 +660,8 @@ class PlayerControlsRow extends StatelessWidget {
   }
 }
 
-/// Where the song plays from, at the top of the desktop's expanded player and side panel, as Settings › Layout ›
-/// Player › Top of the player says: Classic is the plain line, the others are the phone's two lines or one.
+/// Where the song plays from, at the top of the desktop's expanded player and side panel, as Settings › Look & feel ›
+/// Now Playing › Top of the player says: Classic is the plain line, the others are the phone's two lines or one.
 class PlayerFromLabel extends StatelessWidget {
   const PlayerFromLabel({super.key, required this.from, this.album, this.classic = false});
 
@@ -1001,8 +1001,8 @@ class PlayerBottomButtons extends StatelessWidget {
   }
 }
 
-/// The volume as a small sheet from the speaker button: a slider in the Slider look (Settings › Layout), with a mute
-/// and a speaker icon at its ends.
+/// The volume as a small sheet from the speaker button: a slider in the Slider look (Settings › Now Playing), with a
+/// mute and a speaker icon at its ends.
 Future<void> showVolumePopup(BuildContext context) => showModalBottomSheet<void>(
   context: context,
   backgroundColor: AppColors.of(context).elevated,

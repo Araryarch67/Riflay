@@ -6,7 +6,7 @@ import '../services/layout_prefs.dart';
 import 'debug_switches.dart';
 import 'widgets/wavy_seek_track.dart' show pillSliderTheme, thinSliderTheme;
 
-/// Colour tokens of the theme picked in Settings › Look & feel › Appearance ([ThemeChoice]).
+/// Colour tokens of the theme picked in Settings › Look & feel › Theme & colours ([ThemeChoice]).
 abstract final class AppColors {
   static AppPalette get _p => _themeOverride ?? Appearance.instance.palette;
 
@@ -433,7 +433,7 @@ final _themes = <_ThemeKey, ThemeData>{};
 int _themesBuilt = 0;
 int _themesCached = 0;
 
-/// Settings › Layout › Slider look, for every slider in the app (the progress bar has its own shape setting).
+/// Settings › Now Playing › Slider look, for every slider in the app (the progress bar has its own shape setting).
 /// The corners of every text field (see `inputDecorationTheme`): Search's pill.
 const _field = BorderRadius.all(Radius.circular(24));
 

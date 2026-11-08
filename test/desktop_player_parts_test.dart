@@ -504,10 +504,14 @@ void main() {
       addTearDown(tester.view.reset);
       await tester.pumpWidget(
         const MaterialApp(
-          home: Scaffold(body: SingleChildScrollView(child: LayoutSettings())),
+          home: Scaffold(
+            body: SingleChildScrollView(
+              child: Column(children: [NowPlayingSettings(), LyricsSettings(), LayoutSettings()]),
+            ),
+          ),
         ),
       );
-      // The groups, in order: Presets first, then Now Playing, the controls, lyrics, the visualizer, pages, bars.
+      // The groups across Now Playing, Lyrics and Pages & navigation, in order: Presets first.
       for (final group in [
         'Presets',
         'Now Playing',

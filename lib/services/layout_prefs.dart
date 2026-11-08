@@ -331,7 +331,7 @@ enum AlbumHeaderStyle {
   };
 }
 
-/// The look of every slider in the app (Settings › Layout › Slider look); the progress bar has its own shape.
+/// The look of every slider in the app (Settings › Now Playing › Slider look); the progress bar has its own shape.
 enum VolumeSliderShape {
   classic,
   thin,

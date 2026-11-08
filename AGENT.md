@@ -11,12 +11,12 @@ setup and one obvious control:
 - YouTube Music sign-in is a single **Sign in with Google** button. Never add
   "paste your cookies", OAuth client IDs, or browser pickers.
 - Power-user audio settings live under **Settings › Sound › Output & quality**.
-  Everyday effects (Equalizer, Volume leveling, Crossfade, Virtual speakers,
-  Crossfeed, Mono audio) live in **Settings › Sound › Sound effects (DSP)**.
-  Autoplay and gapless live in **Settings › Sound › Playback**.
-  Power options live in **Settings › Power & background**.
+  Everyday effects (Equalizer, Volume leveling, Virtual speakers, Crossfeed,
+  Mono audio) live in **Settings › Sound › Sound effects (DSP)**.
+  Autoplay, gapless and crossfade live in **Settings › Sound › Playback**.
+  Power options live in **Settings › Performance & power**.
 - UI looks like a streaming app. Colours come from the theme picked in
-  **Settings › Look & feel › Appearance** (`ThemeChoice`: Default; Dynamic,
+  **Settings › Look & feel › Theme & colours** (`ThemeChoice`: Default; Dynamic,
   which follows the playing song's cover; Monochrome; Catppuccin, Everforest,
   Everblush, Nord, Gruvbox, Tokyo Night, Dracula, Rosé Pine; Custom; dark,
   light or matching the system) and from real
@@ -59,7 +59,7 @@ lib/
     mp4_mux.dart / webm_mux.dart  Pure-Dart muxers (no re-encoding): YouTube's DASH fMP4 and WebM streams into one file; used where there is no ffmpeg
     download_edit.dart         Editing a downloaded song: title, album, cover (never the artist); lyrics live in lyrics.dart's UserLyrics
     ffmpeg.dart                Finds / downloads ffmpeg (tag editor, AirPlay, casting conversions)
-    system_fonts.dart          Fonts from the device's font folders (Settings › Look & feel › Appearance › Font)
+    system_fonts.dart          Fonts from the device's font folders (Settings › Look & feel › Language & text › Font)
     desktop_login.dart         Runs linux/login_helper (WebKitGTK Google sign-in window)
     spotify_session.dart       Spotify sign-in: the web player's own token, caught in a WebView / linux/spotify_helper
     spotify_library.dart       Spotify library over the web player's GraphQL (hashes read from its bundle)
@@ -74,7 +74,7 @@ lib/
     backup.dart                Backup & restore: preferences (no secrets), the listening history and my-lyrics in one JSON file
     appearance.dart            Themes and palettes (AppPalette, ThemeChoice), accent, cover colours and their fades, window opacity
     language.dart              The language shown (English or Indonesian); `tr` gives its words anywhere
-    layout_prefs.dart          Corners, density and motion (Settings › Look & feel › Layout)
+    layout_prefs.dart          Corners, density and motion (Settings › Look & feel › Pages & navigation)
     beta_features.dart         Optional feature preferences (legacy name); switches live in their respective settings pages
     listen_together/           Listen together: one queue shared over the LAN or the internet
     video_mode.dart            Video mode: a YouTube song's music video on Now Playing
@@ -84,7 +84,7 @@ lib/
     usb_dac.dart / linux_alsa.dart  Direct outputs: Android USB DACs, Linux ALSA cards
     direct_usb.dart            Android Direct USB: libusbdac streams to the DAC itself (DirectUsb.kt), any phone
     media_session.dart         System media controls (Android notification, Control Center, MPRIS)
-    system_tray.dart           Computers: the tray icon and menu, and Close to tray (Settings › Power & background);
+    system_tray.dart           Computers: the tray icon and menu, and Close to tray (Settings › Performance & power);
                                the plugin sits behind platform/tray.dart. Linux needs a StatusNotifier host
                                (no tray icon, e.g. plain GNOME: closing quits as before)
     discord_presence.dart      Discord Rich Presence over the local IPC socket
@@ -109,7 +109,7 @@ test/                          Unit and widget tests
 
 ## Phone tab bar
 
-- Settings › Look & feel › Layout › Tab bar on phones. All styles live in `ui/shell/phone_navigation.dart`
+- Settings › Look & feel › Pages & navigation › Tab bar on phones. All styles live in `ui/shell/phone_navigation.dart`
   (`PhoneBottomBar`); the mini player is built there too.
 - Liquid glass (`_GlassBar`, also set by the Liquid Kawaii preset): the mini player on its own row over the tabs,
   Search as a round button beside them. `GlassBarLink` (owned by the shell) shrinks it to one row when the page
@@ -148,7 +148,7 @@ test/                          Unit and widget tests
   threads, Heavy on a desktop with 16+ threads and 16+ GB, Balanced otherwise (laptops included: a 24-thread Core
   Ultra 9 laptop gets Balanced). The page is drawn over the shell, so it carries its own `AppTitleBar`.
 - `ui/pages/device_setup_page.dart` shows it once (`deviceSetup.v1`), the recommendation picked; Continue applies
-  the pick, "Keep my settings" changes nothing. Settings › Power & background › Check this computer opens it again.
+  the pick, "Keep my settings" changes nothing. Settings › Performance & power › Check this computer opens it again.
   Computers only: phones keep their look. `main` loads the flag, so tests that build `RiflayApp` never see it.
 - `playingCost` comes from `tool/cpu.sh`: measure again when what a mode draws changes.
   `RIFLAY_NO_DEVICE_SETUP` never shows the page.
@@ -593,6 +593,13 @@ and lights it up for a moment. Tapping an option that changes the look shows the
 beside the list on a computer (when there is room, `_SettingsFrame` in `settings_page.dart`), over the rows above it
 on a phone (below it near the top of the page).
 
+- The pages (groups are `SettingsGroup`, their pages `SettingsTopic`; the location of each in brackets):
+  Sound [settings:sound] › Playback (autoplay, gapless, crossfade), Sound effects (DSP), Output & quality;
+  Look & feel [settings:look] › Theme & colours [look/appearance], Language & text [look/text], Now Playing
+  [look/now-playing], Lyrics (and the lyrics services) [look/lyrics], Pages & navigation (Home, bars, corners,
+  spacing, motion) [look/layout]; Library & downloads; Accounts & services (Discord alone is [accounts/services]);
+  then Performance & power [settings:power], Listen together, Keyboard shortcuts, About. A page that moves keeps
+  its location id, so links and the sidebar's highlight still find it.
 - **Registering an option** is one entry in `SettingsOptions.all` (`lib/ui/pages/settings_index.dart`):
   `SettingsOption('corners', .layout, (t) => t.corners, subtitle: (t) => t.cornersSubtitle,
   find: (t) => t.kwCorners, preview: .cards)`. Words are getters of `AppLocalizations`, so search reads every
@@ -621,7 +628,7 @@ on a phone (below it near the top of the page).
 
 ## Translations
 
-Riflay speaks English, Indonesian and Japanese (Settings › Look & feel › Appearance › Language; by default the
+Riflay speaks English, Indonesian and Japanese (Settings › Look & feel › Language & text › Language; by default the
 device's language when Riflay has it). The words live in `lib/l10n/app_en.arb` (the template) and
 `lib/l10n/app_id.arb` / `app_ja.arb`; `flutter gen-l10n` (also run by `flutter pub get` / any build) writes
 `lib/l10n/generated/`.

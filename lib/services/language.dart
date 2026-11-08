@@ -5,7 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../l10n/generated/app_localizations.dart';
 
-/// The languages Riflay speaks, as Settings › Look & feel › Appearance offers them. Each is named in its own
+/// The languages Riflay speaks, as Settings › Look & feel › Theme & colours offers them. Each is named in its own
 /// language, so someone who can't read the current one still finds theirs.
 enum AppLanguage {
   system(null, ''),
@@ -20,7 +20,7 @@ enum AppLanguage {
   final String ownName;
 }
 
-/// The language the screens are in (Settings › Look & feel › Appearance › Language). [tr] gives the words in it.
+/// The language the screens are in (Settings › Look & feel › Language & text › Language). [tr] gives the words in it.
 class Language extends ChangeNotifier {
   Language._();
 

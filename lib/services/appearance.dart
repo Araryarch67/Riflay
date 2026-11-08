@@ -254,7 +254,7 @@ class AppPalette {
   }
 }
 
-/// The colour schemes in Settings › Look & feel › Appearance, from their authors' palettes.
+/// The colour schemes in Settings › Look & feel › Theme & colours, from their authors' palettes.
 enum ThemeChoice {
   // Legacy preference and neutral fallback palette; omitted from the theme picker.
   standard(
@@ -597,7 +597,7 @@ enum ThemeBrightness {
   };
 }
 
-/// Accent colours to pick from in Settings › Look & feel › Appearance.
+/// Accent colours to pick from in Settings › Look & feel › Theme & colours.
 enum AccentChoice {
   /// The theme's own accent (mauve for Catppuccin, green for Everforest...).
   theme(Color(0x00000000), Color(0x00000000)),

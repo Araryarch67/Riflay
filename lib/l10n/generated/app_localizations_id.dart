@@ -49,7 +49,7 @@ class AppLocalizationsId extends AppLocalizations {
   String get groupLook => 'Tampilan';
 
   @override
-  String get groupLookSummary => 'Tema, warna, ukuran teks, isi tiap layar';
+  String get groupLookSummary => 'Tema, bahasa dan teks, Now Playing, lirik, halaman';
 
   @override
   String get groupLibrary => 'Koleksi & unduhan';
@@ -61,19 +61,19 @@ class AppLocalizationsId extends AppLocalizations {
   String get groupAccounts => 'Akun & layanan';
 
   @override
-  String get groupAccountsSummary => 'YouTube Music, Spotify, Last.fm, Discord, lirik, ekstensi';
+  String get groupAccountsSummary => 'YouTube Music, Spotify, Last.fm, Discord, ekstensi';
 
   @override
   String get topicPlayback => 'Pemutaran';
 
   @override
-  String get topicPlaybackSummary => 'Autoplay dan pemutaran tanpa jeda';
+  String get topicPlaybackSummary => 'Autoplay, pemutaran tanpa jeda, dan crossfade';
 
   @override
   String get topicDsp => 'Efek suara (DSP)';
 
   @override
-  String get topicDspSummary => 'Equalizer, penyeimbang volume, crossfade, audio spasial dan koreksi ruangan';
+  String get topicDspSummary => 'Equalizer, penyeimbang volume, audio spasial dan koreksi ruangan';
 
   @override
   String get topicOutput => 'Output & kualitas';
@@ -82,16 +82,16 @@ class AppLocalizationsId extends AppLocalizations {
   String get topicOutputSummary => 'Perangkat output, mode bit-perfect, sample rate';
 
   @override
-  String get topicAppearance => 'Penampilan';
+  String get topicAppearance => 'Tema & warna';
 
   @override
-  String get topicAppearanceSummary => 'Tema, warna aksen, latar, ukuran teks, font';
+  String get topicAppearanceSummary => 'Tema, mode, warna aksen, warna sampul, kaca buram';
 
   @override
-  String get topicLayout => 'Tata letak';
+  String get topicLayout => 'Halaman & navigasi';
 
   @override
-  String get topicLayoutSummary => 'Bentuk, ukuran, isi player';
+  String get topicLayoutSummary => 'Beranda, bar, sudut, jarak, ukuran sampul, gerakan';
 
   @override
   String get topicLibrary => 'Koleksi';
@@ -136,10 +136,10 @@ class AppLocalizationsId extends AppLocalizations {
   String get topicScrobblingSummary => 'Catat lagu yang kamu putar ke profilmu di sana';
 
   @override
-  String get topicIntegrations => 'Discord & layanan lirik';
+  String get topicIntegrations => 'Discord';
 
   @override
-  String get topicIntegrationsSummary => 'Tampilkan lagu yang diputar di Discord, layanan lirik';
+  String get topicIntegrationsSummary => 'Tampilkan lagu yang diputar di Discord';
 
   @override
   String get topicExtensions => 'Ekstensi';
@@ -157,7 +157,7 @@ class AppLocalizationsId extends AppLocalizations {
   String get topicIntegrationsSummaryWeb => 'Kunci Better Lyrics untuk lirik kata per kata';
 
   @override
-  String get settingsPower => 'Daya & latar belakang';
+  String get settingsPower => 'Performa & daya';
 
   @override
   String get listenTogether => 'Dengar bersama';
@@ -387,10 +387,10 @@ class AppLocalizationsId extends AppLocalizations {
   }
 
   @override
-  String get settingsPowerSummaryTray => 'Layar mati, tidur, pemutaran di latar belakang, dan menutup ke tray';
+  String get settingsPowerSummaryTray => 'Mode performa, layar mati, tidur, pemutaran di latar belakang, dan tray';
 
   @override
-  String get settingsPowerSummary => 'Layar mati, tidur, dan pemutaran di latar belakang';
+  String get settingsPowerSummary => 'Mode performa, layar mati, tidur, dan pemutaran di latar belakang';
 
   @override
   String get listenTogetherSummary => 'Buat sesi atau gabung teman, dan atur izin berbagi';
@@ -5540,4 +5540,22 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get discordAppButton => 'Tombol \"Unduh Riflay\"';
+
+  @override
+  String get topicText => 'Bahasa & teks';
+
+  @override
+  String get topicTextSummary => 'Bahasa, ukuran teks, font';
+
+  @override
+  String get topicNowPlaying => 'Now Playing';
+
+  @override
+  String get topicNowPlayingSummary => 'Sampul, kontrol, bar progres, Liquid Glass, visualizer';
+
+  @override
+  String get topicLyrics => 'Lirik';
+
+  @override
+  String get topicLyricsSummary => 'Tampilan lirik dan sumbernya';
 }

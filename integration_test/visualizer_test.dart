@@ -269,7 +269,7 @@ void main() {
         expect(await native.getProperty('af'), isNot(contains('visualizer')));
         expect(tester.takeException(), isNull);
         await capturePhone('android-player-off');
-        await tester.pumpWidget(phone(const SingleChildScrollView(child: LayoutSettings())));
+        await tester.pumpWidget(phone(const SingleChildScrollView(child: NowPlayingSettings())));
         await tester.pump();
         expect(find.text('Audio visualizer'), findsWidgets);
         expect(tester.takeException(), isNull);

@@ -41,7 +41,7 @@ class SkeletonClock {
   }
 }
 
-/// A grey rounded box standing where content will be. Its corners follow Settings › Layout › Corners.
+/// A grey rounded box standing where content will be. Its corners follow Settings › Pages & navigation › Corners.
 class SkeletonBox extends StatefulWidget {
   const SkeletonBox({super.key, this.width, this.height = 14, this.radius = 6, this.circle = false});
 

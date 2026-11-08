@@ -27,6 +27,9 @@ enum SettingsPlace {
   dsp(SettingsTopic.dsp),
   output(SettingsTopic.advanced),
   appearance(SettingsTopic.appearance),
+  text(SettingsTopic.text),
+  nowPlaying(SettingsTopic.nowPlaying),
+  lyrics(SettingsTopic.lyrics),
   layout(SettingsTopic.layout),
   library(SettingsTopic.library),
   downloads(SettingsTopic.downloads),
@@ -41,7 +44,7 @@ enum SettingsPlace {
 
   const SettingsPlace(this.topic);
 
-  /// The section this is, or null for Power & background and About.
+  /// The section this is, or null for Performance & power and About.
   final SettingsTopic? topic;
 
   bool get available => topic?.available ?? (this != power || !Host.isWeb);
@@ -52,7 +55,7 @@ enum SettingsPlace {
     _ => topic!.label,
   };
 
-  /// "Look & feel › Layout", shown under a search result.
+  /// "Look & feel › Pages & navigation", shown under a search result.
   String get trail => [?topic?.group.label, label].join(' › ');
 
   String get location => switch (this) {
@@ -130,7 +133,7 @@ abstract final class SettingsOptions {
 
   static bool _native() => AudioEngine.supported;
 
-  /// Power & background lists only Performance until keeping awake has started.
+  /// Performance & power lists only Performance until keeping awake has started.
   static bool _awake() => StayAwake.instance != null;
 
   static final List<SettingsOption> all = [
@@ -170,7 +173,7 @@ abstract final class SettingsOptions {
     ),
     SettingsOption(
       'crossfade',
-      .dsp,
+      .playback,
       (t) => t.crossfade,
       subtitle: (t) => t.crossfadeSubtitle,
       find: (t) => t.kwCrossfade,
@@ -178,7 +181,7 @@ abstract final class SettingsOptions {
     ),
     SettingsOption(
       'fadeLength',
-      .dsp,
+      .playback,
       (t) => t.fadeLength,
       find: (t) => t.kwFadeLength,
       parent: 'crossfade',
@@ -186,7 +189,7 @@ abstract final class SettingsOptions {
     ),
     SettingsOption(
       'skipForAlbums',
-      .dsp,
+      .playback,
       (t) => t.skipForAlbums,
       subtitle: (t) => t.skipForAlbumsSubtitle,
       parent: 'crossfade',
@@ -287,10 +290,10 @@ abstract final class SettingsOptions {
       subtitle: (t) => t.signalPathSubtitleExact,
       find: (t) => t.kwSignalPath,
     ),
-    // Look & feel › Appearance
+    // Look & feel › Theme & colours
     SettingsOption(
       'language',
-      .appearance,
+      .text,
       (t) => t.language,
       subtitle: (t) => t.languageSubtitle,
       find: (t) => t.kwLanguage,
@@ -344,16 +347,8 @@ abstract final class SettingsOptions {
       subtitle: (t) => t.highContrastSubtitle,
       find: (t) => t.kwHighContrast,
     ),
-    SettingsOption('textSize', .appearance, (t) => t.textSize, find: (t) => t.kwTextSize),
-    SettingsOption('font', .appearance, (t) => t.font, find: (t) => t.kwFont),
-    SettingsOption(
-      'nowPlayingBackground',
-      .appearance,
-      (t) => t.nowPlayingBackground,
-      subtitle: (t) => t.nowPlayingBackgroundSubtitle,
-      find: (t) => t.kwPlayerBackground,
-      preview: .nowPlaying,
-    ),
+    SettingsOption('textSize', .text, (t) => t.textSize, find: (t) => t.kwTextSize),
+    SettingsOption('font', .text, (t) => t.font, find: (t) => t.kwFont),
     SettingsOption(
       'frostedGlass',
       .appearance,
@@ -383,11 +378,11 @@ abstract final class SettingsOptions {
       find: (t) => t.kwOpacity,
       parent: 'frostedGlass',
     ),
-    // Look & feel › Layout
-    SettingsOption('presets', .layout, (t) => t.presets, find: (t) => t.kwPresets),
+    // Look & feel › Pages & navigation
+    SettingsOption('presets', .nowPlaying, (t) => t.presets, find: (t) => t.kwPresets),
     SettingsOption(
       'cover',
-      .layout,
+      .nowPlaying,
       (t) => t.cover,
       subtitle: (t) => t.coverSubtitle,
       find: (t) => t.kwCover,
@@ -395,7 +390,7 @@ abstract final class SettingsOptions {
     ),
     SettingsOption(
       'phoneCover',
-      .layout,
+      .nowPlaying,
       (t) => t.coverSizeOnPhones,
       subtitle: (t) => t.coverSizeOnPhonesSubtitle,
       find: (t) => t.kwCover,
@@ -403,7 +398,7 @@ abstract final class SettingsOptions {
     ),
     SettingsOption(
       'playerHeader',
-      .layout,
+      .nowPlaying,
       (t) => t.topOfPlayer,
       subtitle: (t) => t.topOfPlayerSubtitle,
       find: (t) => t.kwPlayerHeader,
@@ -411,7 +406,7 @@ abstract final class SettingsOptions {
     ),
     SettingsOption(
       'titleActions',
-      .layout,
+      .nowPlaying,
       (t) => t.buttonsByTitle,
       subtitle: (t) => t.buttonsByTitleSubtitle,
       find: (t) => t.kwTitleButtons,
@@ -419,7 +414,7 @@ abstract final class SettingsOptions {
     ),
     SettingsOption(
       'showQualityBadge',
-      .layout,
+      .nowPlaying,
       (t) => t.showSoundQuality,
       subtitle: (t) => t.showSoundQualitySubtitle,
       find: (t) => t.kwQualityBadge,
@@ -427,14 +422,14 @@ abstract final class SettingsOptions {
     ),
     SettingsOption(
       'videoSwitch',
-      .layout,
+      .nowPlaying,
       (t) => t.songVideoSwitch,
       subtitle: (t) => t.songVideoSwitchSubtitle,
       find: (t) => t.kwMusicVideo,
     ),
     SettingsOption(
       'qualityBadgePlace',
-      .layout,
+      .nowPlaying,
       (t) => t.qualityBadge,
       subtitle: (t) => t.qualityBadgeSubtitle,
       find: (t) => t.kwQualityBadge,
@@ -442,14 +437,14 @@ abstract final class SettingsOptions {
     ),
     SettingsOption(
       'playerBackground',
-      .layout,
+      .nowPlaying,
       (t) => t.background,
       find: (t) => t.kwPlayerBackground,
       preview: .nowPlaying,
     ),
     SettingsOption(
       'videoMode',
-      .layout,
+      .nowPlaying,
       (t) => t.videoMode,
       subtitle: (t) => t.videoModeSubtitle,
       find: (t) => t.kwMusicVideo,
@@ -457,14 +452,14 @@ abstract final class SettingsOptions {
     ),
     SettingsOption(
       'videoDecoding',
-      .layout,
+      .nowPlaying,
       (t) => t.videoDecoding,
       find: (t) => t.kwVideoDecoding,
       available: () => BetaFeature.videoMode.available,
     ),
     SettingsOption(
       'glassControls',
-      .layout,
+      .nowPlaying,
       (t) => t.liquidGlassControls,
       subtitle: (t) => t.liquidGlassControlsSubtitle,
       find: (t) => t.kwLiquidGlass,
@@ -472,7 +467,7 @@ abstract final class SettingsOptions {
     ),
     SettingsOption(
       'glassSeekBar',
-      .layout,
+      .nowPlaying,
       (t) => t.glassSeekBar,
       find: (t) => t.kwLiquidGlass,
       parent: 'glassControls',
@@ -480,7 +475,7 @@ abstract final class SettingsOptions {
     ),
     SettingsOption(
       'glassTransport',
-      .layout,
+      .nowPlaying,
       (t) => t.glassTransport,
       subtitle: (t) => t.glassTransportSubtitle,
       find: (t) => t.kwLiquidGlass,
@@ -489,16 +484,22 @@ abstract final class SettingsOptions {
     ),
     SettingsOption(
       'glassVolume',
-      .layout,
+      .nowPlaying,
       (t) => t.glassVolume,
       find: (t) => t.kwLiquidGlass,
       parent: 'glassControls',
       preview: .nowPlaying,
     ),
-    SettingsOption('progressShape', .layout, (t) => t.progressBarShape, find: (t) => t.kwSeekBar, preview: .nowPlaying),
+    SettingsOption(
+      'progressShape',
+      .nowPlaying,
+      (t) => t.progressBarShape,
+      find: (t) => t.kwSeekBar,
+      preview: .nowPlaying,
+    ),
     SettingsOption(
       'progressBar',
-      .layout,
+      .nowPlaying,
       (t) => t.progressBar,
       subtitle: (t) => t.progressBarSubtitle,
       find: (t) => t.kwSeekBar,
@@ -506,7 +507,7 @@ abstract final class SettingsOptions {
     ),
     SettingsOption(
       'showTimeLeft',
-      .layout,
+      .nowPlaying,
       (t) => t.showTimeLeft,
       subtitle: (t) => t.showTimeLeftSubtitle,
       find: (t) => t.kwTimeLeft,
@@ -514,7 +515,7 @@ abstract final class SettingsOptions {
     ),
     SettingsOption(
       'transport',
-      .layout,
+      .nowPlaying,
       (t) => t.controls,
       subtitle: (t) => t.controlsSubtitle,
       find: (t) => t.kwTransport,
@@ -522,7 +523,7 @@ abstract final class SettingsOptions {
     ),
     SettingsOption(
       'playButton',
-      .layout,
+      .nowPlaying,
       (t) => t.playButton,
       subtitle: (t) => t.playButtonSubtitle,
       find: (t) => t.kwTransport,
@@ -530,7 +531,7 @@ abstract final class SettingsOptions {
     ),
     SettingsOption(
       'volumeRow',
-      .layout,
+      .nowPlaying,
       (t) => t.volumeSlider,
       subtitle: (t) => t.volumeSliderSubtitle,
       find: (t) => t.kwVolumeSlider,
@@ -538,7 +539,7 @@ abstract final class SettingsOptions {
     ),
     SettingsOption(
       'sliderLook',
-      .layout,
+      .nowPlaying,
       (t) => t.sliderLook,
       subtitle: (t) => t.sliderLookSubtitle,
       find: (t) => t.kwVolumeSlider,
@@ -546,7 +547,7 @@ abstract final class SettingsOptions {
     ),
     SettingsOption(
       'bottomRow',
-      .layout,
+      .nowPlaying,
       (t) => t.bottomButtons,
       subtitle: (t) => t.bottomButtonsSubtitle,
       find: (t) => t.kwBottomButtons,
@@ -554,7 +555,7 @@ abstract final class SettingsOptions {
     ),
     SettingsOption(
       'lyricsLayout',
-      .layout,
+      .lyrics,
       (t) => t.lyricsPage,
       subtitle: (t) => t.lyricsPageSubtitle,
       find: (t) => t.kwLyrics,
@@ -562,7 +563,7 @@ abstract final class SettingsOptions {
     ),
     SettingsOption(
       'lyricsLines',
-      .layout,
+      .lyrics,
       (t) => t.linesShown,
       subtitle: (t) => t.linesShownSubtitle,
       find: (t) => t.kwLyrics,
@@ -570,7 +571,7 @@ abstract final class SettingsOptions {
     ),
     SettingsOption(
       'lyricsSync',
-      .layout,
+      .lyrics,
       (t) => t.sync,
       subtitle: (t) => t.syncSubtitle,
       find: (t) => t.kwKaraoke,
@@ -578,7 +579,7 @@ abstract final class SettingsOptions {
     ),
     SettingsOption(
       'lyricsSize',
-      .layout,
+      .lyrics,
       (t) => t.textSize,
       subtitle: (t) => t.lyricsTextSizeSubtitle,
       find: (t) => t.kwLyricsSize,
@@ -586,7 +587,7 @@ abstract final class SettingsOptions {
     ),
     SettingsOption(
       'lyricsAlign',
-      .layout,
+      .lyrics,
       (t) => t.alignment,
       subtitle: (t) => t.alignmentSubtitle,
       find: (t) => t.kwLyricsAlign,
@@ -594,7 +595,7 @@ abstract final class SettingsOptions {
     ),
     SettingsOption(
       'dimUnsung',
-      .layout,
+      .lyrics,
       (t) => t.dimUnsung,
       subtitle: (t) => t.dimUnsungSubtitle,
       find: (t) => t.kwKaraoke,
@@ -602,7 +603,7 @@ abstract final class SettingsOptions {
     ),
     SettingsOption(
       'highlightLine',
-      .layout,
+      .lyrics,
       (t) => t.highlightLyricLine,
       subtitle: (t) => t.highlightLyricLineSubtitle,
       find: (t) => t.kwLyrics,
@@ -610,7 +611,7 @@ abstract final class SettingsOptions {
     ),
     SettingsOption(
       'lockScreenLyrics',
-      .layout,
+      .lyrics,
       (t) => t.lockScreenLyrics,
       subtitle: (t) => t.lockScreenLyricsSubtitle,
       find: (t) => t.kwLyrics,
@@ -618,7 +619,7 @@ abstract final class SettingsOptions {
     ),
     SettingsOption(
       'visualizer',
-      .layout,
+      .nowPlaying,
       (t) => t.audioVisualizer,
       find: (t) => t.kwVisualizer,
       preview: .visualizer,
@@ -626,7 +627,7 @@ abstract final class SettingsOptions {
     ),
     SettingsOption(
       'visualizerStyle',
-      .layout,
+      .nowPlaying,
       (t) => t.visualizerStyle,
       find: (t) => t.kwVisualizer,
       parent: 'visualizer',
@@ -635,7 +636,7 @@ abstract final class SettingsOptions {
     ),
     SettingsOption(
       'visualizerRadius',
-      .layout,
+      .nowPlaying,
       (t) => t.radiusMovement,
       find: (t) => t.kwVisualizer,
       parent: 'visualizerStyle',
@@ -644,7 +645,7 @@ abstract final class SettingsOptions {
     ),
     SettingsOption(
       'visualizerThickness',
-      .layout,
+      .nowPlaying,
       (t) => t.lineThickness,
       find: (t) => t.kwVisualizer,
       parent: 'visualizerStyle',
@@ -750,7 +751,7 @@ abstract final class SettingsOptions {
       find: (t) => t.kwWindowButtons,
       available: () => hasNativeWindow && !Host.isMacOS,
     ),
-    // Power & background
+    // Performance & power
     SettingsOption('performance', .power, (t) => t.performance, find: (t) => t.kwPerformance, preview: .nowPlaying),
     SettingsOption(
       'deviceSetup',
@@ -885,7 +886,7 @@ abstract final class SettingsOptions {
     ),
     SettingsOption(
       'musixmatch',
-      .integrations,
+      .lyrics,
       (t) => t.musixmatchLyrics,
       subtitle: (t) => t.musixmatchLyricsSubtitle,
       find: (t) => t.kwLyricsServices,
@@ -954,7 +955,7 @@ abstract final class SettingsOptions {
       parent: 'discord',
       available: () => DiscordPresence.supported,
     ),
-    SettingsOption('betterLyrics', .integrations, (t) => t.betterLyricsKey, find: (t) => t.kwLyricsServices),
+    SettingsOption('betterLyrics', .lyrics, (t) => t.betterLyricsKey, find: (t) => t.kwLyricsServices),
     SettingsOption('repositories', .extensions, (t) => t.repositories, find: (t) => t.kwExtensions),
     // About
     SettingsOption(

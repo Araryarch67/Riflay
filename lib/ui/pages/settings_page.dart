@@ -120,16 +120,25 @@ enum SettingsTopic {
   appearance(
     SettingsGroup.look,
     'appearance',
-    'Appearance',
+    'Theme & colours',
     Icons.palette_outlined,
-    'Theme, accent colour, background, text size, font',
+    'Theme, mode, accent colour, cover colours, frosted glass',
   ),
+  text(SettingsGroup.look, 'text', 'Language & text', Icons.translate_rounded, 'Language, text size, font'),
+  nowPlaying(
+    SettingsGroup.look,
+    'now-playing',
+    'Now Playing',
+    Icons.play_circle_outline_rounded,
+    'Cover, controls, progress bar, Liquid Glass, visualizer',
+  ),
+  lyrics(SettingsGroup.look, 'lyrics', 'Lyrics', Icons.lyrics_outlined, 'How lyrics look, and where they come from'),
   layout(
     SettingsGroup.look,
     'layout',
-    'Layout',
+    'Pages & navigation',
     Icons.dashboard_customize_outlined,
-    'Shapes, sizes, what the player shows',
+    'Home, the bars, corners, spacing, cover size, motion',
   ),
   library(
     SettingsGroup.library,
@@ -180,13 +189,7 @@ enum SettingsTopic {
     Icons.query_stats_rounded,
     'Add the songs you play to your profile there',
   ),
-  integrations(
-    SettingsGroup.accounts,
-    'services',
-    'Discord & lyrics services',
-    Icons.extension_outlined,
-    'Show what you play on Discord, lyrics services',
-  ),
+  integrations(SettingsGroup.accounts, 'services', 'Discord', Icons.discord, 'Show what you play on Discord'),
   extensions(
     SettingsGroup.accounts,
     'extensions',
@@ -202,13 +205,15 @@ enum SettingsTopic {
   // ignore: unused_field
   final String _english;
 
-  /// The section's name; without Discord (the web build) the services section is about lyrics alone.
+  /// The section's name.
   String get label => switch (this) {
-    integrations when !DiscordPresence.supported => tr.topicLyricsServices,
     playback => tr.topicPlayback,
     dsp => tr.topicDsp,
     advanced => tr.topicOutput,
     appearance => tr.topicAppearance,
+    text => tr.topicText,
+    nowPlaying => tr.topicNowPlaying,
+    lyrics => tr.topicLyrics,
     layout => tr.topicLayout,
     library => tr.topicLibrary,
     downloads => tr.topicDownloads,
@@ -227,11 +232,13 @@ enum SettingsTopic {
   /// One plain line. Without the sound engine (the web build) Playback has only Autoplay.
   String get summary => switch (this) {
     playback when !AudioEngine.supported => tr.topicPlaybackSummaryWeb,
-    integrations when !DiscordPresence.supported => tr.topicIntegrationsSummaryWeb,
     playback => tr.topicPlaybackSummary,
     dsp => tr.topicDspSummary,
     advanced => tr.topicOutputSummary,
     appearance => tr.topicAppearanceSummary,
+    text => tr.topicTextSummary,
+    nowPlaying => tr.topicNowPlayingSummary,
+    lyrics => tr.topicLyricsSummary,
     layout => tr.topicLayoutSummary,
     library => tr.topicLibrarySummary,
     downloads => tr.topicDownloadsSummary,
@@ -255,6 +262,7 @@ enum SettingsTopic {
     scrobbling => Features.scrobbling,
     backup => Features.backup,
     extensions => Features.extensions,
+    integrations => DiscordPresence.supported,
     _ => true,
   };
 
@@ -408,7 +416,7 @@ class _SearchResults extends StatelessWidget {
   }
 }
 
-/// The groups, Power & background, Listen together, Keyboard shortcuts and About.
+/// The groups, Performance & power, Listen together, Keyboard shortcuts and About.
 class _SettingsGroups extends StatelessWidget {
   const _SettingsGroups();
 
@@ -562,6 +570,12 @@ class SettingsTopicPage extends StatelessWidget {
     final body = switch (section) {
       SettingsTopic.account => const _AccountSettings(),
       SettingsTopic.appearance => const AppearanceSettings(),
+      SettingsTopic.text => const TextSettings(),
+      SettingsTopic.nowPlaying => const NowPlayingSettings(),
+      SettingsTopic.lyrics => const Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [LyricsSettings(), SizedBox(height: 22), _LyricsServices()],
+      ),
       SettingsTopic.layout => const LayoutSettings(),
       SettingsTopic.playback => const PlaybackSettings(),
       SettingsTopic.dsp => const DspSettings(),
@@ -635,53 +649,78 @@ class _AccountSettings extends StatelessWidget {
   }
 }
 
-class _IntegrationsSettings extends StatefulWidget {
+/// Discord: the switch, then what it shows and a preview of the profile card.
+class _IntegrationsSettings extends StatelessWidget {
   const _IntegrationsSettings();
 
   @override
-  State<_IntegrationsSettings> createState() => _IntegrationsSettingsState();
-}
-
-class _IntegrationsSettingsState extends State<_IntegrationsSettings> {
-  @override
   Widget build(BuildContext context) {
     final c = PlayerScope.of(context);
-    final muted = settingsMuted(context);
     return SettingsCard(
       children: [
         SwitchListTile(
-          title: Text(tr.musixmatchLyrics),
-          subtitle: Text(tr.musixmatchLyricsSubtitle),
-          value: BetaFeatures.instance.isOn(BetaFeature.musixmatch),
-          onChanged: (value) async {
-            await BetaFeatures.instance.set(BetaFeature.musixmatch, value);
-            if (mounted) setState(() {});
-          },
+          secondary: const Icon(Icons.discord),
+          title: Text(tr.discordRichPresence),
+          subtitle: Text(tr.discordRichPresenceSubtitle, style: settingsMuted(context)),
+          value: c.discordEnabled,
+          onChanged: c.setDiscordEnabled,
         ),
-        if (DiscordPresence.supported)
-          SwitchListTile(
-            secondary: const Icon(Icons.discord),
-            title: Text(tr.discordRichPresence),
-            subtitle: Text(tr.discordRichPresenceSubtitle, style: muted),
-            value: c.discordEnabled,
-            onChanged: c.setDiscordEnabled,
+        if (c.discordEnabled) const DiscordPresenceSettings(),
+      ],
+    );
+  }
+}
+
+/// Where lyrics come from: Musixmatch, and a Better Lyrics key for word-by-word lyrics.
+class _LyricsServices extends StatefulWidget {
+  const _LyricsServices();
+
+  @override
+  State<_LyricsServices> createState() => _LyricsServicesState();
+}
+
+class _LyricsServicesState extends State<_LyricsServices> {
+  @override
+  Widget build(BuildContext context) {
+    final muted = settingsMuted(context);
+    final text = Theme.of(context).textTheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(4, 0, 4, 8),
+          child: Text(
+            tr.topicLyricsServices,
+            style: text.labelLarge?.copyWith(color: AppColors.textSecondary, fontWeight: FontWeight.w700),
           ),
-        // What it shows, and a preview of the profile card.
-        if (DiscordPresence.supported && c.discordEnabled) const DiscordPresenceSettings(),
-        ListTile(
-          leading: const Icon(Icons.key_rounded),
-          title: Text(tr.betterLyricsKey),
-          subtitle: Text(
-            LyricsService.betterLyricsKey == null ? tr.betterLyricsKeyOptional : tr.betterLyricsKeyAdded,
-            style: muted,
-          ),
-          trailing: TextButton(
-            onPressed: () async {
-              await showDialog<void>(context: context, builder: (_) => const _BetterLyricsKeyDialog());
-              if (mounted) setState(() {});
-            },
-            child: Text(LyricsService.betterLyricsKey == null ? tr.add : tr.change),
-          ),
+        ),
+        SettingsCard(
+          children: [
+            SwitchListTile(
+              title: Text(tr.musixmatchLyrics),
+              subtitle: Text(tr.musixmatchLyricsSubtitle),
+              value: BetaFeatures.instance.isOn(BetaFeature.musixmatch),
+              onChanged: (value) async {
+                await BetaFeatures.instance.set(BetaFeature.musixmatch, value);
+                if (mounted) setState(() {});
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.key_rounded),
+              title: Text(tr.betterLyricsKey),
+              subtitle: Text(
+                LyricsService.betterLyricsKey == null ? tr.betterLyricsKeyOptional : tr.betterLyricsKeyAdded,
+                style: muted,
+              ),
+              trailing: TextButton(
+                onPressed: () async {
+                  await showDialog<void>(context: context, builder: (_) => const _BetterLyricsKeyDialog());
+                  if (mounted) setState(() {});
+                },
+                child: Text(LyricsService.betterLyricsKey == null ? tr.add : tr.change),
+              ),
+            ),
+          ],
         ),
       ],
     );

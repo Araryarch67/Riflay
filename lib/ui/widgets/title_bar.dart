@@ -150,7 +150,7 @@ class _AppTitleBarState extends State<AppTitleBar> with WindowListener {
     );
   }
 
-  /// Minimize, maximize and close; hidden with Settings › Layout › Window buttons (tiling window managers),
+  /// Minimize, maximize and close; hidden with Settings › Pages & navigation › Window buttons (tiling window managers),
   /// leaving a little room at the edge.
   Widget _windowControls() => ListenableBuilder(
     listenable: LayoutPrefs.instance,

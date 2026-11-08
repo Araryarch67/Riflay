@@ -415,14 +415,14 @@ void main() {
     await tester.pump(const Duration(milliseconds: 800));
     expect(find.text('Hi-fi audio'), findsOneWidget, reason: 'Back returns to the Sound page');
 
-    // The breadcrumb's "Settings" returns to the list; Look & feel lists Appearance.
+    // The breadcrumb's "Settings" returns to the list; Look & feel lists Language & text.
     await tester.tap(find.text('Settings'));
     await tester.pump(const Duration(milliseconds: 800));
     await tester.tap(find.text('Look & feel'));
     await tester.pump(const Duration(milliseconds: 800));
-    await tester.tap(find.text('Appearance'));
+    await tester.tap(find.text('Language & text'));
     await tester.pump(const Duration(milliseconds: 800));
-    expect(find.text('Theme'), findsOneWidget, reason: 'Appearance has its own page');
+    expect(find.text('Font'), findsOneWidget, reason: 'Language & text has its own page');
 
     // Text size: − and + step one pixel.
     await tester.ensureVisible(find.byTooltip('Larger'));

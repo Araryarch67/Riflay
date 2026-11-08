@@ -174,7 +174,7 @@ abstract class AppLocalizations {
   /// No description provided for @groupLookSummary.
   ///
   /// In en, this message translates to:
-  /// **'Themes, colours, text size, what the screens show'**
+  /// **'Theme, language and text, Now Playing, lyrics, pages'**
   String get groupLookSummary;
 
   /// No description provided for @groupLibrary.
@@ -198,7 +198,7 @@ abstract class AppLocalizations {
   /// No description provided for @groupAccountsSummary.
   ///
   /// In en, this message translates to:
-  /// **'YouTube Music, Spotify, Last.fm, Discord, lyrics, extensions'**
+  /// **'YouTube Music, Spotify, Last.fm, Discord, extensions'**
   String get groupAccountsSummary;
 
   /// No description provided for @topicPlayback.
@@ -210,7 +210,7 @@ abstract class AppLocalizations {
   /// No description provided for @topicPlaybackSummary.
   ///
   /// In en, this message translates to:
-  /// **'Autoplay and gapless playback'**
+  /// **'Autoplay, gapless playback and crossfade'**
   String get topicPlaybackSummary;
 
   /// No description provided for @topicDsp.
@@ -222,7 +222,7 @@ abstract class AppLocalizations {
   /// No description provided for @topicDspSummary.
   ///
   /// In en, this message translates to:
-  /// **'Equalizer, volume leveling, crossfade, spatial audio and room correction'**
+  /// **'Equalizer, volume leveling, spatial audio and room correction'**
   String get topicDspSummary;
 
   /// No description provided for @topicOutput.
@@ -240,25 +240,25 @@ abstract class AppLocalizations {
   /// No description provided for @topicAppearance.
   ///
   /// In en, this message translates to:
-  /// **'Appearance'**
+  /// **'Theme & colours'**
   String get topicAppearance;
 
   /// No description provided for @topicAppearanceSummary.
   ///
   /// In en, this message translates to:
-  /// **'Theme, accent colour, background, text size, font'**
+  /// **'Theme, mode, accent colour, cover colours, frosted glass'**
   String get topicAppearanceSummary;
 
   /// No description provided for @topicLayout.
   ///
   /// In en, this message translates to:
-  /// **'Layout'**
+  /// **'Pages & navigation'**
   String get topicLayout;
 
   /// No description provided for @topicLayoutSummary.
   ///
   /// In en, this message translates to:
-  /// **'Shapes, sizes, what the player shows'**
+  /// **'Home, the bars, corners, spacing, cover size, motion'**
   String get topicLayoutSummary;
 
   /// No description provided for @topicLibrary.
@@ -348,13 +348,13 @@ abstract class AppLocalizations {
   /// No description provided for @topicIntegrations.
   ///
   /// In en, this message translates to:
-  /// **'Discord & lyrics services'**
+  /// **'Discord'**
   String get topicIntegrations;
 
   /// No description provided for @topicIntegrationsSummary.
   ///
   /// In en, this message translates to:
-  /// **'Show what you play on Discord, lyrics services'**
+  /// **'Show what you play on Discord'**
   String get topicIntegrationsSummary;
 
   /// No description provided for @topicExtensions.
@@ -390,7 +390,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsPower.
   ///
   /// In en, this message translates to:
-  /// **'Power & background'**
+  /// **'Performance & power'**
   String get settingsPower;
 
   /// No description provided for @listenTogether.
@@ -822,13 +822,13 @@ abstract class AppLocalizations {
   /// No description provided for @settingsPowerSummaryTray.
   ///
   /// In en, this message translates to:
-  /// **'Screen timeout, sleep, background playback and closing to the tray'**
+  /// **'Performance mode, screen timeout, sleep, background playback and the tray'**
   String get settingsPowerSummaryTray;
 
   /// No description provided for @settingsPowerSummary.
   ///
   /// In en, this message translates to:
-  /// **'Screen timeout, sleep and background playback'**
+  /// **'Performance mode, screen timeout, sleep and background playback'**
   String get settingsPowerSummary;
 
   /// No description provided for @listenTogetherSummary.
@@ -9902,6 +9902,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'\"Download Riflay\" button'**
   String get discordAppButton;
+
+  /// No description provided for @topicText.
+  ///
+  /// In en, this message translates to:
+  /// **'Language & text'**
+  String get topicText;
+
+  /// No description provided for @topicTextSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'Language, text size, font'**
+  String get topicTextSummary;
+
+  /// No description provided for @topicNowPlaying.
+  ///
+  /// In en, this message translates to:
+  /// **'Now Playing'**
+  String get topicNowPlaying;
+
+  /// No description provided for @topicNowPlayingSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'Cover, controls, progress bar, Liquid Glass, visualizer'**
+  String get topicNowPlayingSummary;
+
+  /// No description provided for @topicLyrics.
+  ///
+  /// In en, this message translates to:
+  /// **'Lyrics'**
+  String get topicLyrics;
+
+  /// No description provided for @topicLyricsSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'How lyrics look, and where they come from'**
+  String get topicLyricsSummary;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

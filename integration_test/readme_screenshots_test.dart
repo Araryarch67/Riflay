@@ -553,9 +553,9 @@ void main() {
         await DownloadPrefs.instance.setFolder(null);
         await tester.tap(find.text('Settings').first); // the trail's first step: back to the list
         await settle();
-        await Scrollable.ensureVisible(tester.element(find.text('Power & background')), alignment: 0.5);
+        await Scrollable.ensureVisible(tester.element(find.text('Performance & power')), alignment: 0.5);
         await settle();
-        await tester.tap(find.text('Power & background'));
+        await tester.tap(find.text('Performance & power'));
         await settle();
         await shot('settings-power');
         await tester.tap(find.text('Settings').first);
@@ -722,7 +722,7 @@ void main() {
         await settle();
         await tester.tap(find.text('Look & feel'));
         await settle();
-        await tester.tap(find.text('Appearance'));
+        await tester.tap(find.text('Theme & colours'));
         await settle();
         await shot('appearance');
       });

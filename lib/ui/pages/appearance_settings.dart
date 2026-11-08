@@ -14,9 +14,9 @@ import '../widgets/menus.dart';
 import 'sound_settings.dart';
 import '../widgets/skeleton.dart';
 
-/// Settings › Look & feel › Appearance: theme (including Dynamic, which follows the playing
+/// Settings › Look & feel › Theme & colours: theme (including Dynamic, which follows the playing
 /// song's cover), light / dark mode, accent, cover-art colours and their
-/// strength, high contrast, text size, font, frosted glass and window opacity.
+/// strength, high contrast, frosted glass and window opacity.
 class AppearanceSettings extends StatelessWidget {
   const AppearanceSettings({super.key});
 
@@ -28,23 +28,6 @@ class AppearanceSettings extends StatelessWidget {
       listenable: look,
       builder: (context, _) => SettingsCard(
         children: [
-          ListenableBuilder(
-            listenable: Language.instance,
-            builder: (context, _) => SettingTile(
-              icon: Icons.translate_rounded,
-              title: Text(tr.language),
-              subtitle: Text(tr.languageSubtitle, style: muted),
-              control: OptionPicker<AppLanguage>(
-                value: Language.instance.choice,
-                onChanged: Language.instance.set,
-                maxWidth: 180,
-                // Each in its own language, so it can be found from any other.
-                options: [
-                  for (final l in AppLanguage.values) (l, l == AppLanguage.system ? tr.languageSystem : l.ownName),
-                ],
-              ),
-            ),
-          ),
           ListTile(leading: const Icon(Icons.dark_mode_outlined), title: Text(tr.theme)),
           // The whole width, not under the tile's icon: two or more cards a row even on a phone.
           Padding(
@@ -194,53 +177,6 @@ class AppearanceSettings extends StatelessWidget {
             value: look.highContrast,
             onChanged: look.setHighContrast,
           ),
-          SettingTile(
-            icon: Icons.format_size_rounded,
-            title: Text(tr.textSize),
-            subtitle: Text(tr.textSizeSubtitle(Appearance.defaultTextSize.round()), style: muted),
-            control: _Stepper(
-              value: look.textSize.round(),
-              min: Appearance.minTextSize.round(),
-              max: Appearance.maxTextSize.round(),
-              unit: 'px',
-              onChanged: (v) => look.setTextSize(v.toDouble()),
-            ),
-          ),
-          ListTile(
-            leading: const Icon(Icons.font_download_outlined),
-            title: Text(tr.font),
-            subtitle: Text(
-              look.fontFamily ?? '${AppFont.ownName} (Riflay\'s own)',
-              style: muted,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                IconButton(
-                  tooltip: tr.openFontsFolder,
-                  onPressed: () async {
-                    final dir = await SystemFonts.appFontsDir();
-                    await dir.create(recursive: true);
-                    await launchUrl(Uri.directory(dir.path));
-                  },
-                  icon: const Icon(Icons.folder_open_rounded),
-                ),
-                TextButton(onPressed: () => _pickFont(context), child: Text(tr.change)),
-              ],
-            ),
-          ),
-          SettingTile(
-            icon: Icons.wallpaper_rounded,
-            title: Text(tr.nowPlayingBackground),
-            subtitle: Text(look.nowPlaying.hint ?? tr.nowPlayingBackgroundSubtitle, style: muted),
-            control: OptionPicker<NowPlayingBackground>(
-              value: look.nowPlaying,
-              onChanged: look.setNowPlaying,
-              options: [for (final v in NowPlayingBackground.values) (v, v.label)],
-            ),
-          ),
           SwitchListTile(
             secondary: const Icon(Icons.blur_on_rounded),
             title: Text(tr.frostedGlass),
@@ -285,6 +221,78 @@ class AppearanceSettings extends StatelessWidget {
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
               child: TextButton(onPressed: look.reset, child: Text(tr.resetToDefault)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Settings › Look & feel › Language & text: the language, the text size and the font.
+class TextSettings extends StatelessWidget {
+  const TextSettings({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final look = Appearance.instance;
+    final muted = settingsMuted(context);
+    return ListenableBuilder(
+      listenable: look,
+      builder: (context, _) => SettingsCard(
+        children: [
+          ListenableBuilder(
+            listenable: Language.instance,
+            builder: (context, _) => SettingTile(
+              icon: Icons.translate_rounded,
+              title: Text(tr.language),
+              subtitle: Text(tr.languageSubtitle, style: muted),
+              control: OptionPicker<AppLanguage>(
+                value: Language.instance.choice,
+                onChanged: Language.instance.set,
+                maxWidth: 180,
+                // Each in its own language, so it can be found from any other.
+                options: [
+                  for (final l in AppLanguage.values) (l, l == AppLanguage.system ? tr.languageSystem : l.ownName),
+                ],
+              ),
+            ),
+          ),
+          SettingTile(
+            icon: Icons.format_size_rounded,
+            title: Text(tr.textSize),
+            subtitle: Text(tr.textSizeSubtitle(Appearance.defaultTextSize.round()), style: muted),
+            control: _Stepper(
+              value: look.textSize.round(),
+              min: Appearance.minTextSize.round(),
+              max: Appearance.maxTextSize.round(),
+              unit: 'px',
+              onChanged: (v) => look.setTextSize(v.toDouble()),
+            ),
+          ),
+          ListTile(
+            leading: const Icon(Icons.font_download_outlined),
+            title: Text(tr.font),
+            subtitle: Text(
+              look.fontFamily ?? '${AppFont.ownName} (Riflay\'s own)',
+              style: muted,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  tooltip: tr.openFontsFolder,
+                  onPressed: () async {
+                    final dir = await SystemFonts.appFontsDir();
+                    await dir.create(recursive: true);
+                    await launchUrl(Uri.directory(dir.path));
+                  },
+                  icon: const Icon(Icons.folder_open_rounded),
+                ),
+                TextButton(onPressed: () => _pickFont(context), child: Text(tr.change)),
+              ],
             ),
           ),
         ],

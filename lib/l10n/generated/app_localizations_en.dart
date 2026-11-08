@@ -49,7 +49,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get groupLook => 'Look & feel';
 
   @override
-  String get groupLookSummary => 'Themes, colours, text size, what the screens show';
+  String get groupLookSummary => 'Theme, language and text, Now Playing, lyrics, pages';
 
   @override
   String get groupLibrary => 'Library & downloads';
@@ -61,19 +61,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get groupAccounts => 'Accounts & services';
 
   @override
-  String get groupAccountsSummary => 'YouTube Music, Spotify, Last.fm, Discord, lyrics, extensions';
+  String get groupAccountsSummary => 'YouTube Music, Spotify, Last.fm, Discord, extensions';
 
   @override
   String get topicPlayback => 'Playback';
 
   @override
-  String get topicPlaybackSummary => 'Autoplay and gapless playback';
+  String get topicPlaybackSummary => 'Autoplay, gapless playback and crossfade';
 
   @override
   String get topicDsp => 'Sound effects (DSP)';
 
   @override
-  String get topicDspSummary => 'Equalizer, volume leveling, crossfade, spatial audio and room correction';
+  String get topicDspSummary => 'Equalizer, volume leveling, spatial audio and room correction';
 
   @override
   String get topicOutput => 'Output & quality';
@@ -82,16 +82,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get topicOutputSummary => 'Output device, bit-perfect mode, sample rate';
 
   @override
-  String get topicAppearance => 'Appearance';
+  String get topicAppearance => 'Theme & colours';
 
   @override
-  String get topicAppearanceSummary => 'Theme, accent colour, background, text size, font';
+  String get topicAppearanceSummary => 'Theme, mode, accent colour, cover colours, frosted glass';
 
   @override
-  String get topicLayout => 'Layout';
+  String get topicLayout => 'Pages & navigation';
 
   @override
-  String get topicLayoutSummary => 'Shapes, sizes, what the player shows';
+  String get topicLayoutSummary => 'Home, the bars, corners, spacing, cover size, motion';
 
   @override
   String get topicLibrary => 'Library';
@@ -136,10 +136,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get topicScrobblingSummary => 'Add the songs you play to your profile there';
 
   @override
-  String get topicIntegrations => 'Discord & lyrics services';
+  String get topicIntegrations => 'Discord';
 
   @override
-  String get topicIntegrationsSummary => 'Show what you play on Discord, lyrics services';
+  String get topicIntegrationsSummary => 'Show what you play on Discord';
 
   @override
   String get topicExtensions => 'Extensions';
@@ -157,7 +157,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get topicIntegrationsSummaryWeb => 'A Better Lyrics key for word-by-word lyrics';
 
   @override
-  String get settingsPower => 'Power & background';
+  String get settingsPower => 'Performance & power';
 
   @override
   String get listenTogether => 'Listen together';
@@ -387,10 +387,10 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get settingsPowerSummaryTray => 'Screen timeout, sleep, background playback and closing to the tray';
+  String get settingsPowerSummaryTray => 'Performance mode, screen timeout, sleep, background playback and the tray';
 
   @override
-  String get settingsPowerSummary => 'Screen timeout, sleep and background playback';
+  String get settingsPowerSummary => 'Performance mode, screen timeout, sleep and background playback';
 
   @override
   String get listenTogetherSummary => 'Host a session or join friends and manage sharing permissions';
@@ -5618,4 +5618,22 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get discordAppButton => '\"Download Riflay\" button';
+
+  @override
+  String get topicText => 'Language & text';
+
+  @override
+  String get topicTextSummary => 'Language, text size, font';
+
+  @override
+  String get topicNowPlaying => 'Now Playing';
+
+  @override
+  String get topicNowPlayingSummary => 'Cover, controls, progress bar, Liquid Glass, visualizer';
+
+  @override
+  String get topicLyrics => 'Lyrics';
+
+  @override
+  String get topicLyricsSummary => 'How lyrics look, and where they come from';
 }

@@ -85,7 +85,7 @@ void main() {
     await tester.pumpWidget(_app(PlayerController(), []));
     await search(tester, 'corners');
     expect(find.text('Corners'), findsOneWidget);
-    expect(find.text('Look & feel › Layout'), findsWidgets, reason: 'each result says where it is');
+    expect(find.text('Look & feel › Pages & navigation'), findsWidgets, reason: 'each result says where it is');
     expect(find.text('Sound'), findsNothing, reason: 'the groups make way for the results');
 
     // Another word for it.
@@ -149,7 +149,7 @@ void main() {
     for (var i = 0; i < 8; i++) {
       await tester.pump(const Duration(milliseconds: 100));
     }
-    expect(visited.last, 'settings:look/layout');
+    expect(visited.last, 'settings:look/now-playing');
     final row = find.ancestor(of: find.text('Liquid Glass controls'), matching: find.byType(ListTile)).first;
     expect(tester.getRect(find.byKey(SettingsPage.highlightKey)), tester.getRect(row));
   });
@@ -238,16 +238,20 @@ void main() {
     await tapRow('Tab bar on phones');
     expect(find.descendant(of: find.byType(LivePreview), matching: find.byType(PhoneBottomBar)), findsOneWidget);
 
+    await tester.pumpWidget(_app(PlayerController(), [], home: SettingsPlace.lyrics.page));
+    await tester.pump(const Duration(milliseconds: 300));
     await tapRow('Lyrics page');
     expect(find.descendant(of: find.byType(LivePreview), matching: find.byType(SyncedLyricsView)), findsOneWidget);
 
+    await tester.pumpWidget(_app(PlayerController(), [], home: SettingsPlace.nowPlaying.page));
+    await tester.pump(const Duration(milliseconds: 300));
     await tapRow('Cover');
     expect(find.descendant(of: find.byType(LivePreview), matching: find.byType(NowPlayingPage)), findsOneWidget);
     await tester.pumpAndSettle();
     expect(tester.binding.hasScheduledFrame, isFalse);
 
     // A row without a preview closes it.
-    await tapRow('Transition style');
+    await tapRow('Song / Video switch');
     expect(find.byType(SettingPreviewCard), findsNothing);
   });
 

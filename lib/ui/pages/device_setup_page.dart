@@ -7,7 +7,7 @@ import '../theme.dart';
 import '../widgets/title_bar.dart';
 
 /// Opens the setup page over the app: on the first start of a computer ([DeviceSetup.due]), and from Settings ›
-/// Power & background. The pick applies on Continue; "Keep my settings" leaves everything as it was.
+/// Performance & power. The pick applies on Continue; "Keep my settings" leaves everything as it was.
 Future<void> showDeviceSetup(BuildContext context) => Navigator.of(
   context,
   rootNavigator: true,
