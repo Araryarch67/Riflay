@@ -170,19 +170,40 @@ class _VideoView extends StatefulWidget {
   State<_VideoView> createState() => _VideoViewState();
 }
 
-class _VideoViewState extends State<_VideoView> {
+/// Kept routes still have mounted video widgets while Lyrics or Queue covers them. Only visible routes may
+/// retain a decoder lease; the service keeps the player briefly so returning doesn't force an immediate reload.
+mixin _VisibleVideoView<T extends StatefulWidget> on State<T> {
+  bool _registered = false;
+  bool get fullVideoView => false;
+
+  void _register(bool visible) {
+    if (visible == _registered) return;
+    _registered = visible;
+    visible ? VideoMode.instance.addView(full: fullVideoView) : VideoMode.instance.removeView(full: fullVideoView);
+  }
+
   @override
-  void initState() {
-    super.initState();
-    VideoMode.instance.addView();
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _register(
+      TickerMode.valuesOf(context).enabled && ModalRoute.isCurrentOf(context) != false && !LivePreview.of(context),
+    );
+  }
+
+  @override
+  void deactivate() {
+    _register(false);
+    super.deactivate();
   }
 
   @override
   void dispose() {
-    VideoMode.instance.removeView();
+    _register(false);
     super.dispose();
   }
+}
 
+class _VideoViewState extends State<_VideoView> with _VisibleVideoView<_VideoView> {
   /// A double tap opens the video full screen. The native video's window passes the touch through to this.
   Widget _doubleTap(Widget child) =>
       widget.expandable ? GestureDetector(onDoubleTap: () => openVideoFullView(context), child: child) : child;
@@ -316,18 +337,9 @@ class VideoPicture extends StatefulWidget {
   State<VideoPicture> createState() => _VideoPictureState();
 }
 
-class _VideoPictureState extends State<VideoPicture> {
+class _VideoPictureState extends State<VideoPicture> with _VisibleVideoView<VideoPicture> {
   @override
-  void initState() {
-    super.initState();
-    VideoMode.instance.addView(full: true);
-  }
-
-  @override
-  void dispose() {
-    VideoMode.instance.removeView(full: true);
-    super.dispose();
-  }
+  bool get fullVideoView => true;
 
   @override
   Widget build(BuildContext context) {
@@ -414,7 +426,8 @@ class _VideoBackgroundState extends State<VideoBackground> {
   @override
   Widget build(BuildContext context) {
     final mode = VideoMode.instance..follow(PlayerScope.read(context));
-    final visible = TickerMode.valuesOf(context).enabled && !LivePreview.of(context);
+    final visible =
+        TickerMode.valuesOf(context).enabled && ModalRoute.isCurrentOf(context) != false && !LivePreview.of(context);
     return ListenableBuilder(
       listenable: Listenable.merge([mode, LayoutPrefs.instance]),
       builder: (context, _) {

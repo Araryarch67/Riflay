@@ -11,6 +11,7 @@ import '../../services/appearance.dart';
 import '../../services/language.dart';
 import '../../services/layout_prefs.dart';
 import '../../services/lyrics.dart';
+import '../../services/lyrics_translation.dart';
 import '../../services/player_controller.dart';
 import '../../services/video_mode.dart';
 import '../debug_switches.dart';
@@ -358,6 +359,22 @@ class _VideoFullViewState extends State<VideoFullView> {
             onPressed: track == null ? null : _toggleLyrics,
             icon: const Icon(Icons.lyrics_outlined),
           ),
+          ValueListenableBuilder<bool>(
+            valueListenable: LyricsTranslation.romanize,
+            builder: (context, enabled, _) => IconButton(
+              tooltip: tr.pronunciation,
+              isSelected: enabled,
+              color: enabled ? AppColors.of(context).accent : Colors.white,
+              onPressed: track == null
+                  ? null
+                  : () {
+                      LyricsTranslation.romanize.value = !enabled;
+                      if (!enabled) setState(() => _lyricsShown = true);
+                      _showControls();
+                    },
+              icon: const Icon(Icons.abc_rounded),
+            ),
+          ),
           IconButton(
             tooltip: tr.queue,
             color: _queuePanel ? AppColors.of(context).accent : Colors.white,
@@ -481,9 +498,47 @@ class _LyricsLine extends StatefulWidget {
 
 class _LyricsLineState extends State<_LyricsLine> {
   List<LyricLine> _lines = const [];
+  List<LineExtras>? _extras;
+  bool _asked = false;
+  int _generation = 0;
   int _index = -1;
   StreamSubscription<Duration>? _ticks;
   String? _for;
+
+  @override
+  void initState() {
+    super.initState();
+    LyricsTranslation.romanize.addListener(_pronunciationChanged);
+  }
+
+  void _pronunciationChanged() {
+    if (!mounted) return;
+    setState(() {});
+    _loadExtras();
+  }
+
+  void _loadExtras() {
+    if (_asked ||
+        !LyricsTranslation.romanize.value ||
+        _lines.isEmpty ||
+        !_lines.any((line) => LyricsTranslation.hasNonLatin(line.text))) {
+      return;
+    }
+    _asked = true;
+    final generation = _generation;
+    // The same per-song cache as the lyrics page: never a translation request per frame or per sung line.
+    LyricsTranslation.of(_lines.map((line) => line.text).toList()).then(
+      (extras) {
+        if (mounted && generation == _generation) setState(() => _extras = extras);
+      },
+      onError: (Object error) {
+        if (!mounted || generation != _generation) return;
+        _asked = false;
+        debugPrint('Video pronunciation: $error');
+        ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(content: Text(tr.couldntTranslateLyrics)));
+      },
+    );
+  }
 
   @override
   void didChangeDependencies() {
@@ -502,12 +557,18 @@ class _LyricsLineState extends State<_LyricsLine> {
     final track = widget.track;
     if (track.id == _for) return;
     _for = track.id;
-    _lines = const [];
+    _generation++;
+    _asked = false;
+    _extras = null;
+    _lines = LyricsService.loaded(track)?.lines ?? const [];
     _index = -1;
+    _at(PlayerScope.read(context).position);
+    _loadExtras();
     LyricsService.forTrack(track).then((l) {
       if (!mounted || _for != track.id) return;
       setState(() => _lines = l.lines);
       _at(PlayerScope.read(context).position);
+      _loadExtras();
     }, onError: (Object e) => debugPrint('Lyrics over the video: $e'));
   }
 
@@ -521,6 +582,7 @@ class _LyricsLineState extends State<_LyricsLine> {
 
   @override
   void dispose() {
+    LyricsTranslation.romanize.removeListener(_pronunciationChanged);
     _ticks?.cancel();
     super.dispose();
   }
@@ -528,23 +590,45 @@ class _LyricsLineState extends State<_LyricsLine> {
   @override
   Widget build(BuildContext context) {
     final line = _index < 0 ? '' : _lines[_index].text;
+    final pronunciation = LyricsTranslation.romanize.value && _index >= 0 && _index < (_extras?.length ?? 0)
+        ? _extras![_index].romanized
+        : null;
     return AnimatedSwitcher(
       // On a computer the next line comes at once: each 200 ms fade drew ~12 frames over the video's own surface, ~20 ms
       // of the Linux main thread each (Heavy's full screen was ~1% of the CPU with it). Phones keep the fade.
       duration: Host.isLinux || Host.isWindows || Host.isMacOS
           ? Duration.zero
           : LayoutPrefs.dur(const Duration(milliseconds: 200)),
-      child: Text(
-        line,
-        key: ValueKey(_index),
-        textAlign: TextAlign.center,
-        maxLines: 2,
-        overflow: TextOverflow.ellipsis,
-        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-          color: Colors.white,
-          fontWeight: FontWeight.w700,
-          shadows: const [Shadow(blurRadius: 8, color: Colors.black)],
-        ),
+      child: Column(
+        key: ValueKey((_for, _index)),
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            line,
+            textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+              color: Colors.white,
+              fontWeight: FontWeight.w700,
+              shadows: const [Shadow(blurRadius: 8, color: Colors.black)],
+            ),
+          ),
+          if (pronunciation != null && pronunciation.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text(
+              pronunciation,
+              key: const ValueKey('video-lyrics-pronunciation'),
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                color: Colors.white70,
+                shadows: const [Shadow(blurRadius: 8, color: Colors.black)],
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }

@@ -386,6 +386,10 @@ class VideoMode extends ChangeNotifier with WidgetsBindingObserver {
   /// video too, without asking for it again at the cover's size (a reload would show the cover for seconds).
   int _fullViews = 0;
 
+  @visibleForTesting
+  ({int covers, int full, int backgrounds}) get debugVisibleViews =>
+      (covers: _views, full: _fullViews, backgrounds: _backgrounds);
+
   /// A view that shows the video came on screen (or went away). The video is
   /// only fetched and decoded while one is. [full]: the full-screen player.
   void addView({bool full = false}) {
@@ -573,7 +577,10 @@ vec4 hook() {
 
   /// [showing] may change with the views: listeners hear it after the frame that changed them (never mid-build).
   void _viewsChanged() => scheduleMicrotask(() {
-    if (!_disposed) notifyListeners();
+    if (!_disposed) {
+      _follow();
+      notifyListeners();
+    }
   });
 
   void _changed() {
@@ -826,6 +833,12 @@ vec4 hook() {
   void _follow({bool seekNow = false}) {
     final c = _c, player = _player, v = _playing;
     if (c == null || player == null || v == null || !_ready) return;
+    // Stop invisible video work as a route is covered, while retaining the decoder for the short handoff period.
+    // No seeks while hidden: those decode/network loads used to compete with the opening lyrics page.
+    if (_wanted == null) {
+      if (player.playing) player.pause().ignore();
+      return;
+    }
     final target = v.videoTimeAt(c.position);
     final play = target != null && c.isPlaying && !c.isBuffering && !_unfocused;
     var rate = 1.0;

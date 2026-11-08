@@ -93,30 +93,11 @@ class _LyricsLoaderState extends State<_LyricsLoader> {
 
 /// While lyrics load: grey bars where the lines will be, the size and alignment of the real ones, softly pulsing
 /// (still when animations are off).
-class _LyricsSkeleton extends StatefulWidget {
+class _LyricsSkeleton extends StatelessWidget {
   const _LyricsSkeleton();
 
   /// How wide each bar is, as a share of the width: uneven, like lines of a song.
   static const widths = [0.72, 0.5, 0.86, 0.38, 0.64, 0.8, 0.46, 0.7, 0.58, 0.84, 0.42, 0.66];
-
-  @override
-  State<_LyricsSkeleton> createState() => _LyricsSkeletonState();
-}
-
-class _LyricsSkeletonState extends State<_LyricsSkeleton> with SingleTickerProviderStateMixin {
-  late final _pulse = AnimationController(vsync: this, duration: const Duration(milliseconds: 900));
-
-  @override
-  void initState() {
-    super.initState();
-    if (LayoutPrefs.moves) _pulse.repeat(reverse: true);
-  }
-
-  @override
-  void dispose() {
-    _pulse.dispose();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -137,25 +118,19 @@ class _LyricsSkeletonState extends State<_LyricsSkeleton> with SingleTickerProvi
               physics: const NeverScrollableScrollPhysics(),
               child: Padding(
                 padding: EdgeInsets.fromLTRB(pad, 24 + 8, pad, 0),
-                child: AnimatedBuilder(
-                  animation: _pulse,
-                  builder: (context, _) => Column(
-                    crossAxisAlignment: _centred ? CrossAxisAlignment.center : CrossAxisAlignment.start,
-                    children: [
-                      for (var i = 0; i < count; i++)
-                        Padding(
-                          padding: EdgeInsets.only(bottom: gap),
-                          child: Container(
-                            width: width * _LyricsSkeleton.widths[i % _LyricsSkeleton.widths.length],
-                            height: bar,
-                            decoration: BoxDecoration(
-                              color: AppColors.textPrimary.withValues(alpha: 0.10 + 0.08 * _pulse.value),
-                              borderRadius: BorderRadius.circular(bar / 3),
-                            ),
-                          ),
+                child: Column(
+                  crossAxisAlignment: _centred ? CrossAxisAlignment.center : CrossAxisAlignment.start,
+                  children: [
+                    for (var i = 0; i < count; i++)
+                      Padding(
+                        padding: EdgeInsets.only(bottom: gap),
+                        child: SkeletonBox(
+                          width: width * _LyricsSkeleton.widths[i % _LyricsSkeleton.widths.length],
+                          height: bar,
+                          radius: bar / 3,
                         ),
-                    ],
-                  ),
+                      ),
+                  ],
                 ),
               ),
             );

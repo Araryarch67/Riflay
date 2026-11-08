@@ -28,6 +28,7 @@ import '../widgets/faded_cover.dart';
 import '../widgets/marquee_text.dart';
 import '../widgets/playing_motion.dart';
 import '../widgets/smooth_scroll.dart';
+import '../widgets/skeleton.dart';
 import 'wrap_page.dart' show showLyricCard;
 
 part 'lyrics/lyrics_view.dart';

@@ -1,12 +1,17 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:riflay/models/track.dart';
 import 'package:riflay/services/appearance.dart';
 import 'package:riflay/services/layout_prefs.dart';
+import 'package:riflay/services/lyrics.dart';
+import 'package:riflay/services/lyrics_translation.dart';
 import 'package:riflay/services/player_controller.dart';
 import 'package:riflay/services/video_mode.dart';
 import 'package:riflay/services/ytmusic_web.dart';
@@ -17,6 +22,7 @@ import 'package:riflay/ui/player/now_playing_page.dart';
 import 'package:riflay/ui/player/video_full_view.dart';
 import 'package:riflay/ui/shell_scope.dart';
 import 'package:riflay/ui/widgets/controls.dart';
+import 'package:riflay/ui/widgets/video_mode.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 final _song = Track.youtube(videoId: 'full-view-test', title: 'Full view', artist: 'Artist');
@@ -57,9 +63,11 @@ void main() {
       ..setOn(true)
       ..debugSetFound(_song.videoId!, const MusicVideo(videoId: 'full-view-test'));
     calls.clear();
+    LyricsTranslation.romanize.value = false;
     queueOpened = 0;
   });
   tearDown(() async {
+    LyricsTranslation.romanize.value = false;
     VideoMode.instance.debugSetFound(_song.videoId!, null);
     await LayoutPrefs.instance.reset();
   });
@@ -135,6 +143,101 @@ void main() {
     // Title and artist over the video.
     expect(find.descendant(of: find.byType(VideoFullView), matching: find.text('Full view')), findsOneWidget);
     expect(find.descendant(of: find.byType(VideoFullView), matching: find.text('Artist')), findsOneWidget);
+    await close(tester, c);
+  });
+
+  testWidgets('landscape video has a bounded width and leaves room for the player controls', (tester) async {
+    final c = await show(tester, size: _landscape);
+    final picture = tester.renderObject<RenderBox>(find.byType(TrackVisual));
+    expect(
+      picture.constraints.hasBoundedWidth,
+      true,
+      reason: 'an unbounded video AspectRatio consumed the whole row when its first frame arrived',
+    );
+    expect(picture.size.width, lessThan(_landscape.width * 0.45));
+    expect(tester.takeException(), isNull);
+    await close(tester, c);
+  });
+
+  testWidgets('a video covered by fullscreen or lyrics releases its decoder lease and restores it on return', (
+    tester,
+  ) async {
+    final c = await show(tester);
+    expect(VideoMode.instance.debugVisibleViews.covers, 1);
+    await tester.tap(find.byTooltip('Watch full screen'));
+    await settle(tester);
+    expect(VideoMode.instance.debugVisibleViews.covers, 0);
+    expect(VideoMode.instance.debugVisibleViews.full, 1);
+    final navigator = Navigator.of(tester.element(find.byType(VideoFullView)));
+    navigator.push(MaterialPageRoute<void>(builder: (_) => const Scaffold(body: Text('Lyrics route'))));
+    await settle(tester);
+    expect(VideoMode.instance.debugVisibleViews.full, 0);
+    expect(VideoMode.instance.debugVisibleViews.covers, 0);
+    navigator.pop();
+    await settle(tester);
+    expect(VideoMode.instance.debugVisibleViews.full, 1);
+    navigator.pop();
+    await settle(tester);
+    expect(VideoMode.instance.debugVisibleViews.covers, 1);
+    await close(tester, c);
+    expect(VideoMode.instance.debugVisibleViews.covers, 0);
+    expect(VideoMode.instance.debugVisibleViews.full, 0);
+  });
+
+  testWidgets('fullscreen pronunciation shows under the synced line and can be toggled without leaving the video', (
+    tester,
+  ) async {
+    const original = '今日もまた始まる';
+    const romanized = 'kyō mo mata hajimaru';
+    final directory = Directory.systemTemp.createTempSync('riflay-video-pronunciation-');
+    LyricsCache.dirOverride = directory;
+    LyricsService.forget(_song);
+    addTearDown(() async {
+      LyricsService.forget(_song);
+      LyricsCache.dirOverride = null;
+      directory.deleteSync(recursive: true);
+    });
+    var requests = 0;
+    await tester.runAsync(() async {
+      await LyricsCache.write(_song, Lyrics(source: 'Test', lines: [const LyricLine(Duration.zero, original)]));
+      await LyricsService.forTrack(_song);
+      final extras = await LyricsTranslation.of(
+        [original],
+        client: MockClient((_) async {
+          requests++;
+          return http.Response.bytes(
+            utf8.encode(
+              jsonEncode([
+                [
+                  ['Today begins again', original, null, null, 3],
+                  [null, null, romanized, romanized],
+                ],
+                null,
+                'ja',
+              ]),
+            ),
+            200,
+          );
+        }),
+      );
+      expect(extras.single.romanized, romanized);
+      expect(LyricsTranslation.hasNonLatin(original), true);
+    });
+    final c = await show(tester);
+    await tester.tap(find.byTooltip('Watch full screen'));
+    await settle(tester);
+    await tester.tap(find.byTooltip('Pronunciation'));
+    await tester.pump();
+    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 20)));
+    await settle(tester);
+    expect(LyricsTranslation.romanize.value, true);
+    expect(find.text(original), findsOneWidget);
+    expect(find.text(romanized), findsOneWidget);
+    expect(requests, 1, reason: 'the fullscreen view reuses the shared per-song pronunciation cache');
+    await tester.tap(find.byTooltip('Pronunciation'));
+    await settle(tester);
+    expect(find.text(romanized), findsNothing);
+    expect(find.text(original), findsOneWidget);
     await close(tester, c);
   });
 

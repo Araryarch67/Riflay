@@ -289,7 +289,16 @@ class NowPlayingPage extends StatelessWidget {
                                 padding: const EdgeInsets.symmetric(horizontal: 24),
                                 child: Row(
                                   children: [
-                                    if (art >= 96) ...[cover(art), const SizedBox(width: 32)],
+                                    if (art >= 96) ...[
+                                      // A video has its own aspect ratio: in an unconstrained Row it otherwise
+                                      // grows to the full viewport height and squeezes the controls into a sliver.
+                                      SizedBox(
+                                        width: art,
+                                        height: art,
+                                        child: Center(child: cover(art)),
+                                      ),
+                                      const SizedBox(width: 32),
+                                    ],
                                     Expanded(
                                       child: Column(
                                         children: [
