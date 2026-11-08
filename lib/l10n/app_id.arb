@@ -1549,5 +1549,8 @@
   "soundcloudUnplayable": "SoundCloud tidak mengizinkan lagu ini diputar di sini.",
   "soundcloudImportNote": "Lagu SoundCloud diputar lewat internet: putar sekarang atau simpan ke koleksimu.",
   "soundcloudLine": "SoundCloud • {author} • {count, plural, other{{count} lagu}}",
-  "saveCountToLibrary": "{count, plural, other{Simpan {count} ke koleksi}}"
+  "saveCountToLibrary": "{count, plural, other{Simpan {count} ke koleksi}}",
+  "soundcloudArtists": "Artis di SoundCloud",
+  "soundcloudPlaylists": "Playlist di SoundCloud",
+  "linkNotSupported": "Tidak ada tautan YouTube atau SoundCloud di yang dibagikan."
 }

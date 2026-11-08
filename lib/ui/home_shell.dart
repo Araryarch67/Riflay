@@ -29,11 +29,14 @@ import 'pages/wrap_page.dart';
 import 'navigation.dart';
 import 'player_panels.dart';
 import 'shell_scope.dart';
+import 'soundcloud_pages.dart';
 import 'widgets/power_settings.dart';
 import 'shortcuts.dart';
 import 'theme.dart';
 import 'youtube_import.dart';
+import '../platform/features.dart';
 import '../services/incoming_links.dart';
+import '../services/soundcloud.dart';
 import '../services/system_tray.dart';
 import '../services/youtube_importer.dart';
 import '../services/youtube_links.dart';
@@ -529,7 +532,8 @@ class _HomeShellState extends State<HomeShell> {
     // Phones: the full-screen player would cover the page or message the link brings.
     if (link is! VideoLink && _phoneRoutes.isNotEmpty) _closePhoneRoutes();
     if (link == null) {
-      messenger.showSnackBar(SnackBar(content: Text(tr.linkNotYoutube)));
+      if (IncomingLinks.readSoundcloud(text) case final soundcloud?) return _openSoundcloud(c, soundcloud);
+      messenger.showSnackBar(SnackBar(content: Text(Features.soundcloud ? tr.linkNotSupported : tr.linkNotYoutube)));
       return;
     }
     messenger.showSnackBar(SnackBar(content: Text(tr.linkOpening)));
@@ -563,6 +567,37 @@ class _HomeShellState extends State<HomeShell> {
     }
   }
 
+  /// A SoundCloud link: a track plays, a playlist or profile opens as a page.
+  Future<void> _openSoundcloud(PlayerController c, SoundcloudLink link) async {
+    final messenger = ScaffoldMessenger.of(context);
+    if (_phoneRoutes.isNotEmpty && !link.isTrack) _closePhoneRoutes();
+    messenger.showSnackBar(SnackBar(content: Text(tr.linkOpening)));
+    try {
+      final page = await c.soundcloud.resolve(link);
+      if (!mounted) return;
+      messenger.hideCurrentSnackBar();
+      if (page.kind == SoundcloudKind.track) {
+        await c.playList(page.tracks, 0);
+        if (mounted && _compact && _phoneRoutes.isEmpty) _openNowPlaying();
+      } else {
+        openSoundcloud(
+          context,
+          kind: page.kind,
+          id: page.id,
+          title: page.title,
+          shell: _scoped(const SizedBox.shrink()) as ShellScope,
+        );
+      }
+    } catch (e) {
+      debugPrint('Opening $link failed: $e');
+      if (!mounted) return;
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(
+        SnackBar(content: Text(e is SoundcloudUnplayable ? tr.soundcloudUnplayable : tr.linkFailed)),
+      );
+    }
+  }
+
   /// YouTube Music's own title and artist when it has the song; otherwise read from the video's title
   /// ("Artist - Song", as downloads are named).
   Future<Track> _incomingSong(PlayerController c, String videoId) async {
@@ -588,7 +623,7 @@ class _HomeShellState extends State<HomeShell> {
   /// Ctrl/Cmd+V anywhere outside a text field: a copied YouTube link opens the importer.
   Future<void> _pasteLink() async {
     final text = (await Clipboard.getData(Clipboard.kTextPlain))?.text?.trim();
-    if (text != null && YoutubeLinks.looksLikeLink(text)) await _importFromYoutube(url: text);
+    if (text != null && IncomingLinks.isLink(text)) await _importFromYoutube(url: text);
   }
 
   /// Full-screen routes of the phone layout (now playing, queue, lyrics).

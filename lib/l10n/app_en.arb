@@ -3229,5 +3229,8 @@
         "type": "int"
       }
     }
-  }
+  },
+  "soundcloudArtists": "Artists on SoundCloud",
+  "soundcloudPlaylists": "Playlists on SoundCloud",
+  "linkNotSupported": "There's no YouTube or SoundCloud link in what was shared."
 }

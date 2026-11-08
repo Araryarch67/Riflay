@@ -59,6 +59,13 @@ void main() {
         });
         final base = 'http://127.0.0.1:${server.port}';
         final playlist = await File('${dir.path}/playlist.m3u8').readAsString();
+        // The first playlist's signatures run out just past the refresh margin, so the player looks it up again.
+        var lookups = 0;
+        String signed(Duration life) {
+          final at = DateTime.now().add(life).millisecondsSinceEpoch ~/ 1000;
+          return playlist.replaceAllMapped(RegExp(r'^(.+\.m4s)$', multiLine: true), (m) => '${m[1]}?expires=$at');
+        }
+
         c.soundcloud = SoundcloudClient(
           prefs: await SharedPreferences.getInstance(),
           client: MockClient((r) async {
@@ -86,7 +93,11 @@ void main() {
               return http.Response(jsonEncode({'url': '$base/playlist.m3u8'}), 200);
             }
             // The playlist itself: its relative segments become the local server's.
-            if (r.url.path == '/playlist.m3u8') return http.Response(playlist, 200);
+            if (r.url.path == '/playlist.m3u8') {
+              lookups++;
+              final life = lookups == 1 ? const Duration(minutes: 10, seconds: 20) : const Duration(hours: 3);
+              return http.Response(signed(life), 200);
+            }
             return http.Response('', 404);
           }),
         );
@@ -99,6 +110,25 @@ void main() {
         expect(segments, greaterThan(1));
         expect(errors, isEmpty);
         debugPrint('SOUNDCLOUD local HLS: PASS, duration=${c.duration}, segments=$segments');
+
+        // Signatures about to run out: the track is loaded again where it is, and keeps playing.
+        await c.seek(const Duration(seconds: 2));
+        final first = lookups;
+        var before = Duration.zero;
+        await _until(
+          () {
+            if (lookups == first) before = c.position;
+            return lookups > first;
+          },
+          'a fresh playlist',
+          seconds: 60,
+        );
+        await Future<void>.delayed(const Duration(seconds: 3));
+        final at = c.position;
+        expect(at, greaterThanOrEqualTo(before), reason: 'it goes on from where it was ($before), not from the top');
+        expect(c.currentTrack?.id, track.id);
+        expect(errors, isEmpty);
+        debugPrint('SOUNDCLOUD refresh: PASS, $before before, $at three seconds after, lookups=$lookups');
         await c.pause();
 
         if (const bool.fromEnvironment('RIFLAY_LIVE_SOUNDCLOUD')) {

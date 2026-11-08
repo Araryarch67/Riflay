@@ -13,11 +13,13 @@ import '../../services/flac_convert.dart';
 import '../../services/listen_together/listen_together.dart';
 import '../../services/metadata.dart';
 import '../../services/player_controller.dart';
+import '../../services/soundcloud.dart' show SoundcloudKind;
 import '../../services/youtube_stream.dart';
 import '../download_editor.dart';
 import '../download_options.dart';
 import '../flac_convert_dialog.dart';
 import '../shell_scope.dart';
+import '../soundcloud_pages.dart' show openSoundcloud;
 import '../tag_editor.dart';
 import '../../services/youtube_music_account.dart';
 import '../../services/ytmusic_web.dart' show WebResultKind;
@@ -297,6 +299,10 @@ VoidCallback? openArtist(BuildContext host, PlayerController c, Track track, {Sh
   final id = who == names.firstOrNull ? track.artistId : null;
   final fromYoutube = track.isRemote || track.isDownload;
   final local = c.artistNamed(who ?? '');
+  // A SoundCloud track: its uploader's page there (the profile the track came from).
+  if (track.soundcloudId != null && id != null) {
+    return () => openSoundcloud(host, kind: SoundcloudKind.user, id: id, title: who ?? track.artist, shell: navigation);
+  }
   void remote(String id, String title) => openRemotePlaylist(
     host,
     RemotePlaylist(id: id, browseId: id, title: title, count: 0),

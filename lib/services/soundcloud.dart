@@ -92,38 +92,66 @@ class SoundcloudClient {
     if (link.short) url = await _expand(url);
     final json = await _get('/resolve', {'url': url.toString()});
     if (json is! Map) throw const SoundcloudException('Nothing at that link');
+    if (json['kind'] == 'track') {
+      final track = parseTrack(json);
+      if (track == null) throw const SoundcloudUnplayable();
+      return SoundcloudPage(
+        kind: SoundcloudKind.track,
+        id: track.soundcloudId!,
+        title: track.title,
+        subtitle: track.artist,
+        tracks: [track],
+        artworkUrl: track.artworkUrl,
+      );
+    }
+    return _pageOf(json);
+  }
+
+  /// A playlist (or album) with its playable tracks.
+  Future<SoundcloudPage> playlist(String id) async => _pageOf(await _get('/playlists/$id'));
+
+  /// A profile with its latest tracks (the 50 newest that play).
+  Future<SoundcloudPage> user(String id) async => _pageOf(await _get('/users/$id'));
+
+  Future<SoundcloudPage> _pageOf(Object? json) async {
+    if (json is! Map) throw const SoundcloudException('Nothing there');
     switch (json['kind']) {
-      case 'track':
-        final track = parseTrack(json);
-        if (track == null) throw const SoundcloudUnplayable();
-        return SoundcloudPage(
-          title: track.title,
-          subtitle: track.artist,
-          tracks: [track],
-          artworkUrl: track.artworkUrl,
-        );
       case 'playlist':
-        final stubs = _list(json['tracks']);
-        final tracks = await _fullTracks(stubs);
+        final tracks = await _fullTracks(_list(json['tracks']));
         return SoundcloudPage(
+          kind: SoundcloudKind.playlist,
+          id: '${json['id']}',
           title: '${json['title'] ?? ''}',
           subtitle: _userName(json['user']),
           tracks: tracks,
           artworkUrl: largeArtwork(json['artwork_url'] as String?) ?? tracks.firstOrNull?.artworkUrl,
-          isPlaylist: true,
         );
       case 'user':
         final page = await _get('/users/${json['id']}/tracks', {'limit': '50', 'linked_partitioning': '1'});
-        final tracks = [for (final t in _list(page is Map ? page['collection'] : null)) ?parseTrack(t)];
         return SoundcloudPage(
+          kind: SoundcloudKind.user,
+          id: '${json['id']}',
           title: _userName(json),
           subtitle: '',
-          tracks: tracks,
+          tracks: [for (final t in _list(page is Map ? page['collection'] : null)) ?parseTrack(t)],
           artworkUrl: largeArtwork(json['avatar_url'] as String?),
-          isPlaylist: true,
         );
     }
     throw SoundcloudException('Unknown kind ${json['kind']}');
+  }
+
+  /// Playlists and profiles matching [query], for Search's shelves.
+  Future<({List<SoundcloudCollection> playlists, List<SoundcloudCollection> users})> searchCollections(
+    String query,
+  ) async {
+    final found = await Future.wait([
+      _get('/search/playlists', {'q': query, 'limit': '12', 'linked_partitioning': '1'}),
+      _get('/search/users', {'q': query, 'limit': '12', 'linked_partitioning': '1'}),
+    ]);
+    List<SoundcloudCollection> read(Object? json) => [
+      for (final c in _list(json is Map ? json['collection'] : null)) ?SoundcloudCollection.tryParse(c),
+    ];
+    return (playlists: read(found[0]), users: read(found[1]));
   }
 
   /// A playlist's first tracks come whole, the rest as ids only: those are fetched, 50 at a time, in order.
@@ -165,6 +193,21 @@ class SoundcloudClient {
   }
 
   final _playlists = <String, ({DateTime at, String text})>{};
+  final _expiry = <String, DateTime>{};
+  final _served = StreamController<String>.broadcast(sync: true);
+
+  /// A track's playlist was just looked up for the player (its [expiresAt] is new).
+  Stream<String> get served => _served.stream;
+
+  /// When the segments of the playlist last handed out for [trackId] stop working (SoundCloud signs them for
+  /// about two hours), if known.
+  DateTime? expiresAt(String trackId) => _expiry[trackId];
+
+  /// Drops what is kept of [trackId]'s playlist, so the next request looks it up afresh.
+  void forget(String trackId) {
+    _playlists.remove(trackId);
+    _expiry.remove(trackId);
+  }
 
   /// The HLS playlist of track [trackId], ready for mpv: SoundCloud signs its address for a few minutes, so it is
   /// looked up when the player asks, and kept a moment for mpv's second request (it probes, then opens).
@@ -182,6 +225,12 @@ class SoundcloudClient {
     final r = await _http.get(Uri.parse(address), headers: _headers);
     if (r.statusCode != 200) throw SoundcloudException('The stream playlist answered ${r.statusCode}');
     final text = absolutePlaylist(utf8.decode(r.bodyBytes), Uri.parse(address));
+    _expiry.remove(trackId);
+    if (playlistExpiry(text) case final at?) {
+      if (_expiry.length >= 8) _expiry.remove(_expiry.keys.first);
+      _expiry[trackId] = at;
+    }
+    _served.add(trackId);
     if (_cache) {
       _playlists.removeWhere((_, v) => DateTime.now().difference(v.at) >= const Duration(minutes: 2));
       // A few at most: the current song and the one after it, plus a skip back.
@@ -211,6 +260,10 @@ class SoundcloudClient {
       artist: artist.isEmpty ? Track.unknownArtist : artist,
       permalink: json['permalink_url'] as String?,
       duration: ms is int && ms > 0 ? Duration(milliseconds: ms) : null,
+      userId: switch (user is Map ? user['id'] : json['user_id']) {
+        final Object id? => '$id',
+        null => null,
+      },
       artworkUrl:
           largeArtwork(json['artwork_url'] as String?) ??
           (user is Map ? largeArtwork(user['avatar_url'] as String?) : null),
@@ -252,6 +305,16 @@ class SoundcloudClient {
       }
     }
     return best;
+  }
+
+  /// When the first of a playlist's signed addresses runs out (`expires=` is in seconds since 1970), or null.
+  static DateTime? playlistExpiry(String text) {
+    int? first;
+    for (final m in RegExp(r'[?&]expires=(\d+)').allMatches(text)) {
+      final at = int.parse(m.group(1)!);
+      if (first == null || at < first) first = at;
+    }
+    return first == null ? null : DateTime.fromMillisecondsSinceEpoch(first * 1000);
   }
 
   /// SoundCloud's 100 px `-large` cover as its 500 px one.
@@ -296,18 +359,73 @@ class SoundcloudClient {
 /// A link resolved: one track, or a playlist's or profile's tracks.
 class SoundcloudPage {
   const SoundcloudPage({
+    required this.kind,
+    required this.id,
     required this.title,
     required this.subtitle,
     required this.tracks,
     this.artworkUrl,
-    this.isPlaylist = false,
   });
 
+  final SoundcloudKind kind;
+
+  /// SoundCloud's id of the track, playlist or profile.
+  final String id;
   final String title;
   final String subtitle;
   final List<Track> tracks;
   final String? artworkUrl;
-  final bool isPlaylist;
+
+  bool get isPlaylist => kind != SoundcloudKind.track;
+}
+
+enum SoundcloudKind { track, playlist, user }
+
+/// A playlist or profile in search results, before its tracks are fetched.
+class SoundcloudCollection {
+  const SoundcloudCollection({
+    required this.kind,
+    required this.id,
+    required this.title,
+    required this.subtitle,
+    this.artworkUrl,
+    this.count = 0,
+  });
+
+  final SoundcloudKind kind;
+  final String id;
+  final String title;
+
+  /// The playlist's owner; empty for a profile.
+  final String subtitle;
+  final String? artworkUrl;
+
+  /// Tracks in it (all of them, playable or not).
+  final int count;
+
+  static SoundcloudCollection? tryParse(Object? json) {
+    if (json is! Map || json['id'] == null) return null;
+    final kind = switch (json['kind']) {
+      'playlist' => SoundcloudKind.playlist,
+      'user' => SoundcloudKind.user,
+      _ => null,
+    };
+    if (kind == null) return null;
+    final user = kind == SoundcloudKind.user;
+    final count = json['track_count'];
+    return SoundcloudCollection(
+      kind: kind,
+      id: '${json['id']}',
+      title: user ? SoundcloudClient._userName(json) : '${json['title'] ?? ''}'.trim(),
+      subtitle: user ? '' : SoundcloudClient._userName(json['user']),
+      artworkUrl: SoundcloudClient.largeArtwork((user ? json['avatar_url'] : json['artwork_url']) as String?),
+      count: count is int ? count : 0,
+    );
+  }
+
+  /// A stand-in track that carries the picture to cards (and their SoundCloud mark); never played.
+  Track get cover =>
+      Track.soundcloud(trackId: '${kind.name}-$id', title: title, artist: subtitle, artworkUrl: artworkUrl);
 }
 
 class SoundcloudException implements Exception {

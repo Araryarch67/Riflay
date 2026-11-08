@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:riflay/models/track.dart';
+import 'package:riflay/services/incoming_links.dart';
 import 'package:riflay/services/play_history.dart';
 import 'package:riflay/services/soundcloud.dart';
 import 'package:riflay/services/soundcloud_audio_source.dart';
@@ -189,6 +190,51 @@ void main() {
     expect(file.streams, isFalse);
   });
 
+  test('the uploader\'s id rides along for their page', () {
+    final t = SoundcloudClient.parseTrack({
+      ..._track(),
+      'user': {'id': 77, 'username': 'someone'},
+    })!;
+    expect(t.artistId, '77');
+    expect(Track.fromJson(t.toJson()).artistId, '77');
+  });
+
+  test('playlistExpiry is the first signature to run out', () {
+    const text = '#EXTM3U\nhttps://a/x.m4s?expires=1800000100&Policy=p\nhttps://a/y.m4s?a=1&expires=1800000050\n';
+    expect(SoundcloudClient.playlistExpiry(text), DateTime.fromMillisecondsSinceEpoch(1800000050 * 1000));
+    expect(SoundcloudClient.playlistExpiry('#EXTM3U\nseg.m4s'), isNull);
+  });
+
+  test('SoundcloudCollection reads playlists and profiles', () {
+    final p = SoundcloudCollection.tryParse({
+      'kind': 'playlist',
+      'id': 9,
+      'title': ' Best of ',
+      'track_count': 12,
+      'artwork_url': 'https://i1.sndcdn.com/artworks-a-large.jpg',
+      'user': {'username': 'someone'},
+    })!;
+    expect((p.kind, p.id, p.title, p.subtitle, p.count), (SoundcloudKind.playlist, '9', 'Best of', 'someone', 12));
+    expect(p.artworkUrl, endsWith('-t500x500.jpg'));
+    expect(p.cover.source, TrackSource.soundcloud);
+    final u = SoundcloudCollection.tryParse({
+      'kind': 'user',
+      'id': 3,
+      'username': 'Lofi Girl',
+      'avatar_url': 'https://i1.sndcdn.com/avatars-b-large.jpg',
+    })!;
+    expect((u.kind, u.title, u.subtitle), (SoundcloudKind.user, 'Lofi Girl', ''));
+    expect(SoundcloudCollection.tryParse({'kind': 'track', 'id': 1}), isNull);
+  });
+
+  test('shared SoundCloud links are taken, YouTube ones first', () {
+    expect(IncomingLinks.isLink('https://soundcloud.com/someone/night-drive'), isTrue);
+    expect(IncomingLinks.isLink('https://youtu.be/dQw4w9WgXcQ'), isTrue);
+    expect(IncomingLinks.isLink('--verbose'), isFalse);
+    expect(IncomingLinks.readSoundcloud('Hear this https://on.soundcloud.com/AbC')!.short, isTrue);
+    expect(IncomingLinks.readSoundcloud('https://youtu.be/dQw4w9WgXcQ https://soundcloud.com/a/b'), isNull);
+  });
+
   group('SoundcloudClient', () {
     const id = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ012345';
     const html = '<script crossorigin src="https://a-v2.sndcdn.com/assets/9-zz.js"></script>';
@@ -266,6 +312,86 @@ void main() {
       expect(part.offset, 2);
       expect(part.contentLength, 5);
       expect(utf8.decode(await part.stream.expand((b) => b).toList()), text.substring(2, 7));
+    });
+
+    test('a playlist\'s signatures are remembered until it is looked up again', () async {
+      final sc = client((r) async {
+        if (r.url.path == '/tracks/42') return http.Response(jsonEncode(_track()), 200);
+        if (r.url.path.contains('/stream/hls')) {
+          return http.Response(jsonEncode({'url': 'https://cdn.example/x/playlist.m3u8'}), 200);
+        }
+        return http.Response('#EXTM3U\n#EXTINF:10,\nseg0.m4s?expires=1800000000\n', 200);
+      });
+      final served = <String>[];
+      sc.served.listen(served.add);
+      await sc.playlistFor('42');
+      expect(sc.expiresAt('42'), DateTime.fromMillisecondsSinceEpoch(1800000000 * 1000));
+      expect(served, ['42']);
+      final asked0 = asked.length;
+      sc.forget('42');
+      expect(sc.expiresAt('42'), isNull);
+      await sc.playlistFor('42');
+      expect(asked.length, greaterThan(asked0), reason: 'forgotten: looked up afresh');
+      expect(served, ['42', '42']);
+    });
+
+    test('profiles, playlists by id and the search shelves', () async {
+      final sc = client((r) async {
+        switch (r.url.path) {
+          case '/users/3':
+            return http.Response(jsonEncode({'kind': 'user', 'id': 3, 'username': 'Lofi Girl'}), 200);
+          case '/users/3/tracks':
+            return http.Response(
+              jsonEncode({
+                'collection': [_track(id: 5)],
+              }),
+              200,
+            );
+          case '/playlists/9':
+            return http.Response(
+              jsonEncode({
+                'kind': 'playlist',
+                'id': 9,
+                'title': 'Mix',
+                'user': {'username': 'x'},
+                'tracks': [_track()],
+              }),
+              200,
+            );
+          case '/search/playlists':
+            return http.Response(
+              jsonEncode({
+                'collection': [
+                  {
+                    'kind': 'playlist',
+                    'id': 9,
+                    'title': 'Mix',
+                    'user': {'username': 'x'},
+                  },
+                ],
+              }),
+              200,
+            );
+          case '/search/users':
+            return http.Response(
+              jsonEncode({
+                'collection': [
+                  {'kind': 'user', 'id': 3, 'username': 'Lofi Girl'},
+                ],
+              }),
+              200,
+            );
+        }
+        return http.Response('', 404);
+      });
+      final user = await sc.user('3');
+      expect((user.kind, user.id, user.title), (SoundcloudKind.user, '3', 'Lofi Girl'));
+      expect(user.tracks.single.soundcloudId, '5');
+      final list = await sc.playlist('9');
+      expect((list.kind, list.title, list.tracks.length), (SoundcloudKind.playlist, 'Mix', 1));
+      final found = await sc.searchCollections('lofi');
+      expect(found.playlists.single.title, 'Mix');
+      expect(found.users.single.title, 'Lofi Girl');
     });
 
     test('a Go+ track is not played', () async {

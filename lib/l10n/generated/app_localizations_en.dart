@@ -5336,4 +5336,13 @@ class AppLocalizationsEn extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get soundcloudArtists => 'Artists on SoundCloud';
+
+  @override
+  String get soundcloudPlaylists => 'Playlists on SoundCloud';
+
+  @override
+  String get linkNotSupported => 'There\'s no YouTube or SoundCloud link in what was shared.';
 }

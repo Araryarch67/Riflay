@@ -1542,5 +1542,8 @@
   "soundcloudUnplayable": "SoundCloudではこの曲をここで再生できません。",
   "soundcloudImportNote": "SoundCloudの曲はストリーミング再生。今すぐ再生するか、ライブラリに保存できる",
   "soundcloudLine": "SoundCloud • {author} • {count, plural, other{{count}曲}}",
-  "saveCountToLibrary": "{count, plural, other{{count}曲をライブラリに保存}}"
+  "saveCountToLibrary": "{count, plural, other{{count}曲をライブラリに保存}}",
+  "soundcloudArtists": "SoundCloudのアーティスト",
+  "soundcloudPlaylists": "SoundCloudのプレイリスト",
+  "linkNotSupported": "共有されたものに YouTube や SoundCloud のリンクがない。"
 }

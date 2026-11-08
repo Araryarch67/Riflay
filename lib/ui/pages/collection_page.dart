@@ -94,6 +94,7 @@ class CollectionPage extends StatelessWidget {
           CollectionKind.smart => SmartPlaylists.of(c, PlayHistory.instance)[SmartList.byId(collection.id)],
           CollectionKind.playlist => c.playlistById(collection.id),
           CollectionKind.artist => c.artistNamed(collection.title),
+          CollectionKind.remoteArtist => null,
           CollectionKind.album => c.albums.where((a) => a.title == collection.title).firstOrNull,
         } ??
         collection;

@@ -59,6 +59,7 @@ class MusicPermissionDenied implements Exception {
 /// Owns the audio player, the library and the play queue.
 class PlayerController extends ChangeNotifier {
   PlayerController() {
+    soundcloud = SoundcloudClient.instance;
     // The first YouTube song then needs one request, not two.
     YoutubeStream.warmUp();
     sleep.attach(_SleepHost(this));
@@ -96,6 +97,7 @@ class PlayerController extends ChangeNotifier {
           )
           .listen((_) {
             _maybeAutoplay();
+            _followSoundcloudExpiry();
             _castFollow();
             _followDop();
             _prefetchNext();
@@ -463,6 +465,7 @@ class PlayerController extends ChangeNotifier {
 
   Future<void> seek(Duration to) async {
     if (ListenTogether.of(this).requestSeek(to)) return;
+    if (!casting && _soundcloudExpired) return _refreshSoundcloud(at: to);
     await (casting ? cast.seek(to) : player.seek(to));
   }
 
@@ -903,8 +906,57 @@ class PlayerController extends ChangeNotifier {
     return future;
   }
 
-  /// SoundCloud's client (search, links, streams).
-  SoundcloudClient soundcloud = SoundcloudClient.instance;
+  /// SoundCloud's client (search, links, streams). Tests put one of their own here.
+  SoundcloudClient get soundcloud => _soundcloud;
+  set soundcloud(SoundcloudClient client) {
+    _soundcloud = client;
+    _soundcloudServed?.cancel();
+    _soundcloudServed = client.served.listen((id) {
+      if (id == currentTrack?.soundcloudId) _followSoundcloudExpiry();
+    });
+  }
+
+  late SoundcloudClient _soundcloud;
+  StreamSubscription<String>? _soundcloudServed;
+  Timer? _soundcloudRefresh;
+
+  /// How long before its segments run out a playing SoundCloud track is loaded again: mpv reads ahead.
+  static const _soundcloudMargin = Duration(minutes: 10);
+
+  /// SoundCloud signs a track's segments for about two hours; mpv would stop at the first one it can no longer
+  /// fetch (a long mix, a song paused for hours). Before that, one timer (nothing runs meanwhile) loads the
+  /// track again where it is, with a fresh playlist.
+  void _followSoundcloudExpiry() {
+    _soundcloudRefresh?.cancel();
+    _soundcloudRefresh = null;
+    final id = currentTrack?.soundcloudId;
+    final at = id == null ? null : soundcloud.expiresAt(id);
+    if (at == null) return;
+    final due = at.subtract(_soundcloudMargin).difference(DateTime.now());
+    _soundcloudRefresh = Timer(due.isNegative ? Duration.zero : due, () {
+      if (currentTrack?.soundcloudId == id) _refreshSoundcloud().ignore();
+    });
+  }
+
+  /// Whether the playing SoundCloud track's segments ran out (or nearly): timers don't run while a phone sleeps.
+  bool get _soundcloudExpired {
+    final id = currentTrack?.soundcloudId;
+    final at = id == null ? null : soundcloud.expiresAt(id);
+    return at != null && DateTime.now().isAfter(at.subtract(const Duration(minutes: 1)));
+  }
+
+  /// Loads the current SoundCloud track again at [at] (where it is), as it was playing or paused.
+  Future<void> _refreshSoundcloud({Duration? at}) async {
+    final id = currentTrack?.soundcloudId;
+    final index = player.currentIndex;
+    if (id == null || index == null || casting) return;
+    final position = at ?? player.position;
+    final wasPlaying = player.playing;
+    soundcloud.forget(id);
+    debugPrint('SoundCloud: a fresh playlist for $id at $position');
+    await _load([for (final s in player.sequenceState.sequence) s.tag as Track], index, position: position);
+    if (wasPlaying) unawaited(player.play());
+  }
 
   final _soundcloudSearches = <String, Future<List<Track>>>{};
 
@@ -1659,7 +1711,10 @@ class PlayerController extends ChangeNotifier {
   /// Plays here, or on the cast device. [restart]: the song was just chosen,
   /// so start it from the top even if it's the one already on the device.
   Future<void> _play({bool restart = false}) async {
-    if (!casting) return player.play();
+    if (!casting) {
+      if (_soundcloudExpired) await _refreshSoundcloud();
+      return player.play();
+    }
     if (cast.loadedKey != currentTrack?.id) return _castCurrent(play: true);
     // Already sent (the queue change just did it).
     if (cast.loading) return;
@@ -1883,6 +1938,8 @@ class PlayerController extends ChangeNotifier {
   void dispose() {
     _disposed = true;
     _qualityTimer?.cancel();
+    _soundcloudRefresh?.cancel();
+    _soundcloudServed?.cancel();
     // A level set in the last half second is still kept.
     if (_saveVolume?.isActive ?? false) {
       _saveVolume!.cancel();

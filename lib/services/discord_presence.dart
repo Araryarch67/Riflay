@@ -176,7 +176,9 @@ class DiscordPresence {
         : t.soundcloudId != null
         ? t.sourceUrl
         : null;
-    final artistUrl = t.artistId == null ? null : 'https://music.youtube.com/channel/${t.artistId}';
+    final artistUrl = t.artistId == null || t.soundcloudId != null
+        ? null
+        : 'https://music.youtube.com/channel/${t.artistId}';
     final artist = t.artist.trim();
     final shown = options.quality && quality != null ? shortQuality(quality) : null;
     return {

@@ -501,7 +501,7 @@ class _LibraryRow extends StatelessWidget {
                                   CollectionKind.smart => '${tr.smartPlaylist} • ${collection.subtitle}',
                                   CollectionKind.playlist => '${tr.playlist} • Riflay • ${collection.subtitle}',
                                   CollectionKind.album => '${tr.album} • ${collection.subtitle}',
-                                  CollectionKind.artist => tr.artist,
+                                  CollectionKind.artist || CollectionKind.remoteArtist => tr.artist,
                                 },
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,

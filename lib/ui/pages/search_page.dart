@@ -8,6 +8,7 @@ import '../../platform/features.dart';
 import '../../services/extensions/extension_store.dart';
 import '../../services/language.dart';
 import '../../services/player_controller.dart';
+import '../../services/soundcloud.dart' show SoundcloudCollection;
 import '../../services/youtube_music_account.dart';
 import '../../services/youtube_video_search.dart';
 import '../../services/ytmusic_web.dart' show WebResultKind;
@@ -116,11 +117,11 @@ class _SearchPageState extends State<SearchPage> {
 
   /// The last results shown: they stay (dimmed) while the next query loads, instead of flashing a spinner.
   final _shown = ShownSongs();
-  final _shownSoundcloud = ShownSongs();
 
   /// Where to search online (always YouTube Music where SoundCloud isn't offered).
   SearchSource _source = SearchSource.youtubeMusic;
   Future<List<Track>>? _soundcloud;
+  Future<({List<SoundcloudCollection> playlists, List<SoundcloudCollection> users})>? _soundcloudShelves;
 
   @override
   void dispose() {
@@ -155,7 +156,7 @@ class _SearchPageState extends State<SearchPage> {
       _videoRun++;
       setState(() {
         _youtube = _all = _only = _top = null;
-        _soundcloud = null;
+        _soundcloud = _soundcloudShelves = null;
         _extensions = const [];
         _videoTracks = const [];
         _videoLoading = false;
@@ -187,6 +188,12 @@ class _SearchPageState extends State<SearchPage> {
   void _searchYoutube(String q) {
     final c = PlayerScope.read(context);
     _soundcloud = _source.usesSoundcloud ? c.searchSoundcloud(q) : null;
+    _soundcloudShelves = _source.usesSoundcloud
+        ? c.soundcloud.searchCollections(q).catchError((Object e) {
+            debugPrint('SoundCloud playlist / artist search failed: $e');
+            return (playlists: <SoundcloudCollection>[], users: <SoundcloudCollection>[]);
+          })
+        : null;
     if (!_source.youtube) {
       _youtube = _all = _only = _top = null;
       _extensions = const [];
@@ -438,14 +445,8 @@ class _SearchPageState extends State<SearchPage> {
             ),
           ],
         ] else if (!_source.youtube) ...[
-          if (searching)
-            YoutubeSongResults(
-              future: _soundcloud,
-              shown: _shownSoundcloud,
-              from: tr.soundcloudSearchSource,
-              failedNote: tr.soundcloudSearchFailed,
-              emptyNote: tr.noSoundcloudResults,
-            ),
+          if (searching) SoundcloudSection(future: _soundcloud, count: 10, title: tr.songs),
+          if (searching) SoundcloudShelves(future: _soundcloudShelves),
           ..._library(c, results, shell),
         ] else if (_videos) ...[
           if (searching)
@@ -467,6 +468,8 @@ class _SearchPageState extends State<SearchPage> {
           ..._library(c, results, shell),
           if (searching && _extensions.isNotEmpty) ExtensionResults(searches: _extensions),
           if (searching) RemoteShelves(future: _all),
+          // YouTube Music is the heart of Riflay: SoundCloud's artists and playlists come after its own.
+          if (_source.usesSoundcloud && searching) SoundcloudShelves(future: _soundcloudShelves),
           if (artists.isNotEmpty && results.isNotEmpty)
             libraryShelf(tr.yourArtists, [
               for (final a in artists)

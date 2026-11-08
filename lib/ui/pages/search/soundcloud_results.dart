@@ -4,11 +4,14 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../../models/track.dart';
 import '../../../services/language.dart';
 import '../../../services/player_controller.dart';
+import '../../../services/soundcloud.dart';
 import '../../shell_scope.dart';
+import '../../soundcloud_pages.dart';
 import '../../theme.dart';
 import '../../widgets/controls.dart';
 import '../../widgets/menus.dart';
 import '../../widgets/page_scaffold.dart';
+import '../../widgets/shelf.dart';
 import '../../widgets/track_row.dart';
 import 'search_parts.dart';
 
@@ -101,12 +104,16 @@ class SearchSourceChoice extends StatelessWidget {
   }
 }
 
-/// "All" with both sources: the first SoundCloud tracks under YouTube Music's.
+/// The first SoundCloud tracks for the query: under YouTube Music's with both sources, on their own (as Songs, above
+/// SoundCloud's artists and playlists) with SoundCloud alone.
 class SoundcloudSection extends StatelessWidget {
-  const SoundcloudSection({super.key, required this.future, this.count = 5});
+  const SoundcloudSection({super.key, required this.future, this.count = 5, this.title});
 
   final Future<List<Track>>? future;
   final int count;
+
+  /// The heading; "On SoundCloud" when null.
+  final String? title;
 
   @override
   Widget build(BuildContext context) {
@@ -120,7 +127,7 @@ class SoundcloudSection extends StatelessWidget {
         final tracks = snap.data ?? const <Track>[];
         return SliverMainAxisGroup(
           slivers: [
-            SliverToBoxAdapter(child: SectionTitle(tr.onSoundcloud)),
+            SliverToBoxAdapter(child: SectionTitle(title ?? tr.onSoundcloud)),
             if (loading)
               SearchSpinner(pad: pad)
             else if (snap.hasError || tracks.isEmpty)
@@ -145,4 +152,38 @@ class SoundcloudSection extends StatelessWidget {
       },
     );
   }
+}
+
+/// SoundCloud's artists and playlists for the query, as shelves of cards.
+class SoundcloudShelves extends StatelessWidget {
+  const SoundcloudShelves({super.key, required this.future});
+
+  final Future<({List<SoundcloudCollection> playlists, List<SoundcloudCollection> users})>? future;
+
+  @override
+  Widget build(BuildContext context) => FutureBuilder(
+    future: future,
+    builder: (context, snap) {
+      final r = snap.data;
+      if (r == null) return const SliverToBoxAdapter(child: SizedBox.shrink());
+      return SliverMainAxisGroup(
+        slivers: [
+          if (r.users.isNotEmpty)
+            SliverToBoxAdapter(
+              child: Shelf(
+                title: tr.soundcloudArtists,
+                cards: [for (final u in r.users) SoundcloudCard(collection: u)],
+              ),
+            ),
+          if (r.playlists.isNotEmpty)
+            SliverToBoxAdapter(
+              child: Shelf(
+                title: tr.soundcloudPlaylists,
+                cards: [for (final p in r.playlists) SoundcloudCard(collection: p)],
+              ),
+            ),
+        ],
+      );
+    },
+  );
 }

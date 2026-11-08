@@ -3,9 +3,11 @@ import 'package:flutter/services.dart';
 
 import '../platform/host.dart';
 import '../platform/link_relay.dart';
+import '../platform/features.dart';
+import 'soundcloud.dart';
 import 'youtube_links.dart';
 
-/// YouTube links other apps hand to Riflay, wherever the system lets them:
+/// YouTube (and SoundCloud) links other apps hand to Riflay, wherever the system lets them:
 ///
 /// - Android: "Open with" and the Share sheet (intent filters in `AndroidManifest.xml`; `MainActivity.kt`
 ///   keeps the link until Dart takes it over `riflay/incoming_link`, on a cold start and while running).
@@ -27,6 +29,14 @@ class IncomingLinks {
   /// The YouTube link in [text]: a link alone, or a whole shared message with one somewhere in it.
   /// Bare ids don't count, so a shared sentence is never read as one.
   static YoutubeLink? read(String text) => YoutubeLinks.parse(text);
+
+  /// The SoundCloud link in [text], when there is no YouTube one (and this build has SoundCloud).
+  static SoundcloudLink? readSoundcloud(String text) =>
+      Features.soundcloud && YoutubeLinks.parse(text) == null ? SoundcloudLink.parse(text) : null;
+
+  /// Whether a command-line argument is a link Riflay opens.
+  static bool isLink(String arg) =>
+      YoutubeLinks.looksLikeLink(arg) || (Features.soundcloud && SoundcloudLink.looksLikeLink(arg));
 
   final _waiting = <String>[];
   void Function(String text)? _handler;
@@ -56,13 +66,13 @@ class IncomingLinks {
   /// Computers, before the window shows: a link given while Riflay already runs goes to that copy, and
   /// this process quits there and then.
   static Future<void> handOff(List<String> args) async {
-    if (enabled) await handOffToRunningCopy(args.where(YoutubeLinks.looksLikeLink).toList());
+    if (enabled) await handOffToRunningCopy(args.where(isLink).toList());
   }
 
   /// Starts taking links. [args] are the command line's (computers).
   Future<void> start(List<String> args) async {
     if (!enabled) return;
-    args.where(YoutubeLinks.looksLikeLink).forEach(add);
+    args.where(isLink).forEach(add);
     pageLinks().forEach(add);
     if (Host.isAndroid) {
       _channel.setMethodCallHandler((call) async {

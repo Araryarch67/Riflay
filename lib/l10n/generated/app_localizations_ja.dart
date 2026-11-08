@@ -5149,4 +5149,13 @@ class AppLocalizationsJa extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(count, locale: localeName, other: '$count曲をライブラリに保存');
     return '$_temp0';
   }
+
+  @override
+  String get soundcloudArtists => 'SoundCloudのアーティスト';
+
+  @override
+  String get soundcloudPlaylists => 'SoundCloudのプレイリスト';
+
+  @override
+  String get linkNotSupported => '共有されたものに YouTube や SoundCloud のリンクがない。';
 }

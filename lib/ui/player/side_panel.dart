@@ -118,7 +118,8 @@ class NowPlayingSidePanel extends StatelessWidget {
                       if (LayoutPrefs.instance.showQualityBadge) const QualityBadge(),
                       const SizedBox(height: 16),
                       // In every look, as in the cover-as-page one.
-                      if (track.artists.isNotEmpty) ...[
+                      // A SoundCloud uploader isn't a YouTube Music artist: no card that would name someone else.
+                      if (track.artists.isNotEmpty && track.soundcloudId == null) ...[
                         AboutArtist(
                           name: track.artists.first,
                           channelId: track.isRemote ? track.artistId : null,
@@ -344,7 +345,8 @@ class _HeroPanel extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 16),
-                if (track.artists.isNotEmpty) ...[
+                // A SoundCloud uploader isn't a YouTube Music artist: no card that would name someone else.
+                if (track.artists.isNotEmpty && track.soundcloudId == null) ...[
                   AboutArtist(
                     name: track.artists.first,
                     channelId: track.isRemote ? track.artistId : null,

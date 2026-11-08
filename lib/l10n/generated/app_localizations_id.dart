@@ -5258,4 +5258,13 @@ class AppLocalizationsId extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(count, locale: localeName, other: 'Simpan $count ke koleksi');
     return '$_temp0';
   }
+
+  @override
+  String get soundcloudArtists => 'Artis di SoundCloud';
+
+  @override
+  String get soundcloudPlaylists => 'Playlist di SoundCloud';
+
+  @override
+  String get linkNotSupported => 'Tidak ada tautan YouTube atau SoundCloud di yang dibagikan.';
 }

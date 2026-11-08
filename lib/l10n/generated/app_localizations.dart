@@ -9350,6 +9350,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{count, plural, =1{Save to library} other{Save {count} to library}}'**
   String saveCountToLibrary(int count);
+
+  /// No description provided for @soundcloudArtists.
+  ///
+  /// In en, this message translates to:
+  /// **'Artists on SoundCloud'**
+  String get soundcloudArtists;
+
+  /// No description provided for @soundcloudPlaylists.
+  ///
+  /// In en, this message translates to:
+  /// **'Playlists on SoundCloud'**
+  String get soundcloudPlaylists;
+
+  /// No description provided for @linkNotSupported.
+  ///
+  /// In en, this message translates to:
+  /// **'There\'s no YouTube or SoundCloud link in what was shared.'**
+  String get linkNotSupported;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

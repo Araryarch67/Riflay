@@ -185,6 +185,14 @@ class _ImportFormState extends State<_ImportForm> {
     messenger.showSnackBar(SnackBar(content: Text(tr.savedToLibrary)));
   }
 
+  void _saveSoundcloudPlaylist(SoundcloudPage page) {
+    final c = PlayerScope.read(context);
+    final messenger = ScaffoldMessenger.of(context);
+    Navigator.of(context).pop(true);
+    c.createPlaylist(page.title, tracks: page.tracks);
+    messenger.showSnackBar(SnackBar(content: Text(tr.createdPlaylistWith(page.title, page.tracks.length))));
+  }
+
   Future<void> _download() async {
     final videos = switch (_preview) {
       VideoPreview(:final video) => [video],
@@ -208,6 +216,12 @@ class _ImportFormState extends State<_ImportForm> {
       runSpacing: 8,
       alignment: WrapAlignment.end,
       children: [
+        if (page.kind == SoundcloudKind.playlist)
+          OutlinedButton(
+            style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14)),
+            onPressed: () => _saveSoundcloudPlaylist(page),
+            child: Text(tr.saveAsPlaylist),
+          ),
         OutlinedButton(
           style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14)),
           onPressed: () => _saveSoundcloud(page),

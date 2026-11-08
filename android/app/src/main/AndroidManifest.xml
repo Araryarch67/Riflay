@@ -76,7 +76,18 @@
                 <category android:name="android.intent.category.BROWSABLE"/>
                 <data android:scheme="https" android:host="youtu.be"/>
             </intent-filter>
-            <!-- Share sheet: a shared message with a YouTube link somewhere in it. -->
+            <!-- SoundCloud tracks, playlists, profiles and short links (lib/services/soundcloud.dart). -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="https"/>
+                <data android:host="soundcloud.com"/>
+                <data android:host="www.soundcloud.com"/>
+                <data android:host="m.soundcloud.com"/>
+                <data android:host="on.soundcloud.com"/>
+            </intent-filter>
+            <!-- Share sheet: a shared message with a YouTube (or SoundCloud) link somewhere in it. -->
             <intent-filter>
                 <action android:name="android.intent.action.SEND"/>
                 <category android:name="android.intent.category.DEFAULT"/>

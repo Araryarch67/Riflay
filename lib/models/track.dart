@@ -45,7 +45,7 @@ class Track {
   );
 
   /// A SoundCloud track that streams. [permalink] is its page (`soundcloud.com/<user>/<track>`), kept for sharing;
-  /// playback needs only [trackId] (see `SoundcloudClient.playlistFor`).
+  /// playback needs only [trackId] (see `SoundcloudClient.playlistFor`). [userId] is the uploader's, for their page.
   factory Track.soundcloud({
     required String trackId,
     required String title,
@@ -53,6 +53,7 @@ class Track {
     String? permalink,
     Duration? duration,
     String? artworkUrl,
+    String? userId,
   }) => Track(
     id: '$soundcloudPrefix$trackId',
     uri: Uri.parse(permalink ?? 'https://api.soundcloud.com/tracks/$trackId'),
@@ -62,6 +63,7 @@ class Track {
     tagged: true,
     sourceUrl: permalink,
     artworkUrl: artworkUrl,
+    artistId: userId,
   );
 
   /// [id]'s prefix for a SoundCloud track; the rest is SoundCloud's numeric track id.
@@ -150,7 +152,8 @@ class Track {
   /// Cover art fetched over the network (streamed songs have no file to read it from).
   final String? artworkUrl;
 
-  /// The YouTube Music artist channel (`UC…`) of a streamed song, when known.
+  /// The YouTube Music artist channel (`UC…`) of a streamed song, or the SoundCloud uploader's user id of a
+  /// SoundCloud track, when known.
   final String? artistId;
 
   /// A YouTube Music song that streams (it has a [videoId]). SoundCloud tracks stream too but aren't this:
@@ -303,6 +306,9 @@ enum CollectionKind {
   youtube,
   remote,
 
+  /// A profile on a streaming service (a SoundCloud uploader's page), shown like a playlist of their tracks.
+  remoteArtist,
+
   /// A built-in list worked out from the library and the listening history (Most played…); not editable.
   smart,
   artist;
@@ -313,6 +319,7 @@ enum CollectionKind {
     album => tr.album,
     youtube => tr.playlist,
     remote => tr.playlist,
+    remoteArtist => tr.artist,
     smart => tr.playlist,
     artist => tr.artist,
   };
