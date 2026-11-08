@@ -96,30 +96,44 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           repo="$RUNNER_TEMP/kotlin-maven"
-          module="$repo/org/jetbrains/kotlin/kotlin-compiler-embeddable/2.4.0"
-          mkdir -p "$module" "$HOME/.gradle/init.d"
-          python3 tool/download_release_asset.py \
-            https://github.com/JetBrains/kotlin/releases/download/v2.4.0/kotlin-compiler-embeddable-2.4.0.jar \
-            "$module/kotlin-compiler-embeddable-2.4.0.jar" \
-            --sha256 c2b25e8c1c93ec416ba4327f5e31eaec0f0c8847241b9353e294b8db9dce564f
-          curl -fsSL --retry 3 --retry-all-errors \
-            https://repo.maven.apache.org/maven2/org/jetbrains/kotlin/kotlin-compiler-embeddable/2.4.0/kotlin-compiler-embeddable-2.4.0.pom \
-            -o "$module/kotlin-compiler-embeddable-2.4.0.pom"
+          mkdir -p "$HOME/.gradle/init.d"
+          for version in 2.4.0 2.2.21; do
+            case "$version" in
+              2.4.0) checksum=c2b25e8c1c93ec416ba4327f5e31eaec0f0c8847241b9353e294b8db9dce564f ;;
+              2.2.21) checksum=9588fa696ac5507af764fd5660df6894185e12704ec1bc3f5cb772af4987f295 ;;
+            esac
+            module="$repo/org/jetbrains/kotlin/kotlin-compiler-embeddable/$version"
+            mkdir -p "$module"
+            python3 tool/download_release_asset.py \
+              "https://github.com/JetBrains/kotlin/releases/download/v$version/kotlin-compiler-embeddable-$version.jar" \
+              "$module/kotlin-compiler-embeddable-$version.jar" --sha256 "$checksum"
+            curl -fsSL --retry 3 --retry-all-errors \
+              "https://repo.maven.apache.org/maven2/org/jetbrains/kotlin/kotlin-compiler-embeddable/$version/kotlin-compiler-embeddable-$version.pom" \
+              -o "$module/kotlin-compiler-embeddable-$version.pom"
+          done
           echo "RIFLAY_KOTLIN_REPO=$repo" >> "$GITHUB_ENV"
           # Only this artifact comes from the local repository; its original POM retains its dependencies.
           cat > "$HOME/.gradle/init.d/riflay-kotlin.gradle" <<'GRADLE'
-          gradle.beforeProject { project ->
-              // Flutter's included Gradle build forbids project repositories; change only the Android app build.
-              if (project.rootDir.canonicalFile != new File(System.getenv('GITHUB_WORKSPACE'), 'android').canonicalFile) {
-                  return
-              }
-              project.repositories.exclusiveContent {
+          def androidRoot = new File(System.getenv('GITHUB_WORKSPACE'), 'android').canonicalFile
+          def addCompilerRepository = { repositories ->
+              repositories.exclusiveContent {
                   forRepository {
-                      project.repositories.maven {
-                          url = project.uri(System.getenv('RIFLAY_KOTLIN_REPO'))
+                      repositories.maven {
+                          url = new File(System.getenv('RIFLAY_KOTLIN_REPO')).toURI()
                       }
                   }
                   filter { includeModule('org.jetbrains.kotlin', 'kotlin-compiler-embeddable') }
+              }
+          }
+          gradle.settingsEvaluated { settings ->
+              // Flutter's included build forbids project repositories and resolves through its settings instead.
+              if (settings.rootDir.canonicalFile != androidRoot) {
+                  addCompilerRepository(settings.dependencyResolutionManagement.repositories)
+              }
+          }
+          gradle.beforeProject { project ->
+              if (project.rootDir.canonicalFile == androidRoot) {
+                  addCompilerRepository(project.repositories)
               }
           }
           GRADLE
