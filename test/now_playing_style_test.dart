@@ -447,12 +447,13 @@ void main() {
       expect(find.byType(PlayerGlassLayer), findsOneWidget);
       expect(find.byType(LiquidGlass), findsWidgets);
       expect(find.ancestor(of: _tip('Close').first, matching: find.byType(LiquidGlass)), findsWidgets);
-      // The seek bar, transport and volume stay solid.
+      // The seek bar, Play and volume stay solid; Liquid Stacked's previous and next are glass, Kawaii's solid.
       expect(find.ancestor(of: find.byType(SeekBar).first, matching: find.byType(LiquidGlass)), findsNothing);
-      for (final tip in ['Play', 'Previous', 'Next']) {
+      expect(find.ancestor(of: _tip('Play').first, matching: find.byType(LiquidGlass)), findsNothing);
+      for (final tip in ['Previous', 'Next']) {
         expect(
           find.ancestor(of: _tip(tip).first, matching: find.byType(LiquidGlass)),
-          findsNothing,
+          preset == PlayerPreset.liquidStacked ? findsWidgets : findsNothing,
           reason: tip,
         );
       }
@@ -503,6 +504,35 @@ void main() {
       await _close(tester, c);
     });
   }
+
+  testWidgets('Liquid Kawaii: shuffle, repeat and Close are glass circles, not squircles', (tester) async {
+    await tester.runAsync(() => PlayerPreset.liquidKawaii.apply(p));
+    final c = await _show(tester, const NowPlayingPage(), const Size(360, 640));
+    for (final tip in ['Enable shuffle', 'Enable repeat', 'Close']) {
+      final glass = find.ancestor(of: _tip(tip).first, matching: find.byType(LiquidGlass)).first;
+      expect(tester.widget<LiquidGlass>(glass).shape, isA<LiquidOval>(), reason: tip);
+      final size = tester.getSize(glass);
+      expect(size.width, size.height, reason: '$tip: an oval on a square is a circle');
+    }
+    await _close(tester, c);
+  });
+
+  testWidgets('Liquid Stacked: glass previous and next on their own, a solid Play pill', (tester) async {
+    await tester.runAsync(() => p.setGlassTransport(false));
+    await tester.runAsync(() => PlayerPreset.liquidStacked.apply(p));
+    expect(p.glassTransport, isTrue);
+    final c = await _show(tester, const NowPlayingPage(), const Size(360, 640));
+    for (final tip in ['Previous', 'Next']) {
+      expect(
+        find.ancestor(of: _tip(tip).first, matching: find.byType(LiquidGlass)),
+        findsWidgets,
+        reason: tip,
+      );
+    }
+    expect(find.ancestor(of: _tip('Play').first, matching: find.byType(LiquidGlass)), findsNothing);
+    await tester.runAsync(() => p.setGlassTransport(false));
+    await _close(tester, c);
+  });
 
   testWidgets('normal Stacked and Kawaii keep their original player surfaces', (tester) async {
     for (final preset in [PlayerPreset.stacked, PlayerPreset.kawaii]) {

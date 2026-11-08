@@ -25,10 +25,20 @@ LiquidGlassSettings _settings(BuildContext context) => LiquidGlassSettings.ios27
 
 /// Frosts a control's surface in Liquid presets, with the renderer's platform fallback.
 class PlayerGlassSurface extends StatelessWidget {
-  const PlayerGlassSurface({super.key, required this.child, this.radius = 24, this.enabled = true});
+  const PlayerGlassSurface({
+    super.key,
+    required this.child,
+    this.radius = 24,
+    this.enabled = true,
+    this.circle = false,
+  });
 
   final Widget child;
   final double radius;
+
+  /// A true circle (an oval on a square child) for round buttons: a superellipse with half the side as its corner
+  /// radius is a squircle, which read as a circle drawn badly beside them.
+  final bool circle;
 
   /// The part's own switch under Liquid Glass controls (the seek bar, transport and volume have one).
   final bool enabled;
@@ -41,7 +51,7 @@ class PlayerGlassSurface extends StatelessWidget {
       final c = AppColors.of(context);
       return Material(
         color: c.elevated,
-        borderRadius: BorderRadius.circular(corners),
+        shape: circle ? const CircleBorder() : RoundedRectangleBorder(borderRadius: BorderRadius.circular(corners)),
         clipBehavior: Clip.antiAlias,
         child: child,
       );
@@ -49,7 +59,7 @@ class PlayerGlassSurface extends StatelessWidget {
     return LiquidGlass.auto(
       settings: _settings(context),
       useBackdropGroup: true,
-      shape: LiquidRoundedSuperellipse(borderRadius: corners),
+      shape: circle ? const LiquidOval() : LiquidRoundedSuperellipse(borderRadius: corners),
       child: Material(type: MaterialType.transparency, child: child),
     );
   }

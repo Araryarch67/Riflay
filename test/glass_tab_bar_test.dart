@@ -353,11 +353,14 @@ void main() {
     await PlayerPreset.stacked.apply(prefs);
     expect(prefs.tabBar, TabBarStyle.capsule);
     expect(playerPresetName(), 'Stacked');
-    expect(PlayerPreset.liquidStacked.changesTo(prefs), 2);
+    // The tab bar, glass controls, and glass previous and next.
+    expect(PlayerPreset.liquidStacked.changesTo(prefs), 3);
     await PlayerPreset.liquidStacked.apply(prefs);
     expect(prefs.tabBar, TabBarStyle.glass);
     expect(playerPresetName(), 'Liquid Stacked');
+    // Stacked leaves the glass part switches as they are.
     expect(PlayerPreset.stacked.changesTo(prefs), 2);
+    expect(prefs.glassTransport, isTrue);
     expect(prefs.playerGlassControls, isTrue);
     expect(prefs.transport, PlayerTransport.pill);
     expect(prefs.titleActions, TitleActions.boxed);

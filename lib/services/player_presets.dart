@@ -29,6 +29,7 @@ class PlayerPreset {
     this.transport = PlayerTransport.classic,
     this.volume = true,
     this.glassControls = false,
+    this.glassTransport,
     this.bottomRow = PlayerBottomRow.classic,
     this.lyrics = LyricsLayout.classic,
     this.mini = MiniPlayerStyle.classic,
@@ -55,6 +56,10 @@ class PlayerPreset {
   final PlayerTransport transport;
   final bool volume;
   final bool glassControls;
+
+  /// Glass previous and next (`LayoutPrefs.glassTransport`, set with [glassControls]); the Pill's play button stays
+  /// solid either way. Null leaves the switch as it is, as the other glass part switches survive presets.
+  final bool? glassTransport;
   final PlayerBottomRow bottomRow;
   final LyricsLayout lyrics;
   final MiniPlayerStyle mini;
@@ -120,6 +125,8 @@ class PlayerPreset {
     volumeSlider: VolumeSliderShape.pill,
     tabBar: TabBarStyle.glass,
     glassControls: true,
+    // Glass previous and next beside the solid play pill.
+    glassTransport: true,
   );
 
   /// Kawaii uses Capsule navigation; applying it must also leave Liquid Kawaii's glass bar behind.
@@ -180,6 +187,7 @@ class PlayerPreset {
     differ(p.transport, transport);
     differ(p.showVolumeRow, volume);
     differ(p.playerGlassControls, glassControls);
+    if (glassTransport != null) differ(p.glassTransport, glassTransport!);
     differ(p.bottomRow, bottomRow);
     differ(p.lyricsLayout, lyrics);
     differ(p.miniPlayer, mini);
@@ -214,6 +222,7 @@ class PlayerPreset {
       p.transport = transport;
       p.showVolumeRow = volume;
       p.playerGlassControls = glassControls;
+      if (glassTransport != null) p.glassTransport = glassTransport!;
       p.bottomRow = bottomRow;
       p.lyricsLayout = lyrics;
       p.miniPlayer = mini;

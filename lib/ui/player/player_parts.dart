@@ -134,7 +134,8 @@ class PartButton extends StatelessWidget {
       icon: Icon(icon),
     );
     // A dark icon on the white fill: the picture's text shadow would ring it in black.
-    if (glass) return PlayerGlassSurface(radius: radius, child: button);
+    // Fully round (the Corners setting allows it): a circle of glass, not a squircle.
+    if (glass) return PlayerGlassSurface(radius: radius, circle: round && radius == size / 2, child: button);
     return fill == c.inverse ? OffPicture(child: button) : button;
   }
 }
@@ -354,6 +355,7 @@ class PlayerTopBar extends StatelessWidget {
     return Row(
       children: [
         PlayerGlassSurface(
+          circle: true,
           child: IconButton(
             tooltip: tr.close,
             color: color ?? colors.textPrimary,
@@ -484,6 +486,7 @@ _Transport _selectTransport(PlayerController c) => (
 );
 
 Widget _shuffleButton(PlayerController c, _Transport t, {double size = 22}) => PlayerGlassSurface(
+  circle: true,
   child: ModeButton(
     tooltip: t.shuffle ? tr.disableShuffle : tr.enableShuffle,
     active: t.shuffle,
@@ -494,6 +497,7 @@ Widget _shuffleButton(PlayerController c, _Transport t, {double size = 22}) => P
 );
 
 Widget _repeatButton(PlayerController c, _Transport t, {double size = 22}) => PlayerGlassSurface(
+  circle: true,
   child: ModeButton(
     tooltip: switch (t.loop) {
       LoopMode.off => tr.enableRepeat,
