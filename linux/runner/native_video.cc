@@ -13,6 +13,7 @@
 #endif
 
 #include <algorithm>
+#include <cstdlib>
 #include <cmath>
 #include <cstdint>
 #include <vector>
@@ -70,6 +71,21 @@ void detach(Surface* s) {
   if (!s->destroyed) gtk_widget_unrealize(s->area);
 }
 
+// RIFLAY_VIDEO_TIMING: where a video frame's main-thread time goes, averaged every 60 frames.
+struct Timing {
+  gint64 update = 0, render = 0, paint = 0, paint_start = 0;
+  int frames = 0, paints = 0;
+};
+Timing timing;
+const bool timing_on = getenv("RIFLAY_VIDEO_TIMING") != nullptr;
+void timing_report() {
+  if (!timing_on || timing.frames < 60) return;
+  g_printerr("VIDEO timing: %d frames, update %.2f ms, render %.2f ms; %d GTK paints, %.2f ms each\n",
+             timing.frames, timing.update / 1000.0 / timing.frames, timing.render / 1000.0 / timing.frames,
+             timing.paints, timing.paints ? timing.paint / 1000.0 / timing.paints : 0.0);
+  timing = Timing{};
+}
+
 void render_frame(Surface* s, int target, int w, int h) {
   mpv_opengl_fbo fbo = {target, w, h, 0};
   int flip = 1;
@@ -87,7 +103,19 @@ void render_frame(Surface* s, int target, int w, int h) {
 gboolean render(GtkGLArea* area, GdkGLContext*, gpointer data) {
   auto* s = static_cast<Surface*>(data);
   if (s->renderer == nullptr) return TRUE;
+  const gint64 t0 = g_get_monotonic_time();
   mpv_render_context_update(s->renderer);
+  const gint64 t1 = g_get_monotonic_time();
+  struct Done {
+    gint64 t0, t1;
+    ~Done() {
+      if (!timing_on) return;
+      timing.update += t1 - t0;
+      timing.render += g_get_monotonic_time() - t1;
+      ++timing.frames;
+      timing_report();
+    }
+  } done{t0, t1};
   GLint target = 0;
   glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &target);
   const int w = std::max(1, s->full[2] - s->full[0]);
@@ -169,6 +197,11 @@ const char* attach(Surface* s, mpv_handle* player) {
   gtk_gl_area_make_current(GTK_GL_AREA(s->area));
   if (gtk_gl_area_get_error(GTK_GL_AREA(s->area)) != nullptr) {
     return gtk_gl_area_get_error(GTK_GL_AREA(s->area))->message;
+  }
+  if (timing_on) {
+    g_printerr("VIDEO GL: %s / %s, display %s\n", reinterpret_cast<const char*>(glGetString(GL_VENDOR)),
+               reinterpret_cast<const char*>(glGetString(GL_RENDERER)),
+               G_OBJECT_TYPE_NAME(gtk_widget_get_display(s->area)));
   }
   GdkDisplay* display = gtk_widget_get_display(s->area);
   mpv_opengl_init_params gl = {get_proc, display};
@@ -325,6 +358,21 @@ GtkWidget* native_video_wrap(FlView* view) {
   // Keep the channel registered for the lifetime of this view.
   g_object_set_data_full(G_OBJECT(view), "riflay-video-channel",
                          g_object_ref(channel), g_object_unref);
+  if (timing_on) {
+    g_signal_connect(overlay, "realize", G_CALLBACK(+[](GtkWidget* w, gpointer) {
+                       GdkFrameClock* clock = gtk_widget_get_frame_clock(w);
+                       if (clock == nullptr) return;
+                       g_signal_connect(clock, "before-paint", G_CALLBACK(+[](GdkFrameClock*, gpointer) {
+                                          timing.paint_start = g_get_monotonic_time();
+                                        }), nullptr);
+                       g_signal_connect(clock, "after-paint", G_CALLBACK(+[](GdkFrameClock*, gpointer) {
+                                          if (timing.paint_start == 0) return;
+                                          timing.paint += g_get_monotonic_time() - timing.paint_start;
+                                          ++timing.paints;
+                                          timing.paint_start = 0;
+                                        }), nullptr);
+                     }), nullptr);
+  }
   gtk_widget_show(overlay);
   return overlay;
 }

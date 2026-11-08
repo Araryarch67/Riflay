@@ -21,4 +21,4 @@ if os.environ.get('RIFLAY_MV_LAYOUT'):
 pathlib.Path(sys.argv[1], 'data/dev.riflay.riflay/shared_preferences.json').write_text(json.dumps(prefs))
 PY
 env -u DISPLAY WAYLAND_DISPLAY=om-mv GDK_BACKEND=wayland XDG_DATA_HOME="$scratch/data" ${RIFLAY_MV_ENV:-} \
-  timeout 400 build/linux/x64/release/bundle/riflay 2>&1 | grep -E "^MV |Video mode" || true
+  timeout 400 build/linux/x64/release/bundle/riflay 2>&1 | grep -E "^MV |Video mode|^VIDEO " || true
