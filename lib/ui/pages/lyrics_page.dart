@@ -22,6 +22,7 @@ import '../player/more_sheet.dart' show showPlayerMore;
 import '../player/player_parts.dart';
 import '../shell_scope.dart';
 import '../theme.dart';
+import '../debug_switches.dart';
 import '../widgets/controls.dart';
 import '../widgets/faded_cover.dart';
 import '../widgets/marquee_text.dart';

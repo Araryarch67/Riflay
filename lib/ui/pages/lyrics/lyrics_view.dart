@@ -34,6 +34,9 @@ class _LyricsLoader extends StatefulWidget {
 class _LyricsLoaderState extends State<_LyricsLoader> {
   late Future<Lyrics> _lyrics = LyricsService.forTrack(widget.track);
 
+  /// Found before this page opened: shown in its first frame, with no loading bars and no fade-in.
+  late Lyrics? _ready = LyricsService.loaded(widget.track);
+
   @override
   void initState() {
     super.initState();
@@ -47,12 +50,14 @@ class _LyricsLoaderState extends State<_LyricsLoader> {
   }
 
   void _reload() => setState(() {
+    _ready = null;
     _lyrics = LyricsService.forTrack(widget.track);
   });
 
   @override
   Widget build(BuildContext context) => FutureBuilder<Lyrics>(
     future: _lyrics,
+    initialData: _ready,
     builder: (context, snap) {
       if (snap.hasError) {
         return _Message(
@@ -79,9 +84,9 @@ class _LyricsLoaderState extends State<_LyricsLoader> {
                 ),
         );
       }
-      return FadeIn(
-        child: lyrics.synced ? _SyncedLyrics(track: widget.track, lyrics: lyrics) : _PlainLyrics(lyrics: lyrics),
-      );
+      final view = lyrics.synced ? _SyncedLyrics(track: widget.track, lyrics: lyrics) : _PlainLyrics(lyrics: lyrics);
+      // Already there when the page opened: no fade (and no frames for it).
+      return identical(lyrics, _ready) ? view : FadeIn(child: view);
     },
   );
 }

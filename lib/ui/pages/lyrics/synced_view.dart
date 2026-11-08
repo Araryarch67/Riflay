@@ -58,12 +58,8 @@ class _SyncedLyricsState extends State<_SyncedLyrics> {
       _c.seek(at.isNegative ? Duration.zero : at);
       if (!_c.isPlaying) _c.play();
     },
-    onHold: (i) => showLyricCard(
-      context,
-      track: widget.track,
-      lines: [for (final l in widget.lyrics.lines) l.text],
-      initial: i,
-    ),
+    onHold: (i) =>
+        showLyricCard(context, track: widget.track, lines: [for (final l in widget.lyrics.lines) l.text], initial: i),
   );
 }
 
@@ -154,6 +150,7 @@ class _SyncedLyricsViewState extends State<SyncedLyricsView> with _Extras {
 
   @override
   void dispose() {
+    _stopGlide();
     _sub?.cancel();
     _showBack.dispose();
     _at.dispose();
@@ -172,9 +169,43 @@ class _SyncedLyricsViewState extends State<SyncedLyricsView> with _Extras {
   /// The current line is out of view while not following: shows the button.
   final _showBack = ValueNotifier<bool>(false);
 
+  /// The follow scroll in frugal Balanced: [_scroll] eased to the current line on the shared [UiBeat] at 20 fps
+  /// (~7 frames for its 350 ms) instead of at the display's rate (~25). Cancelled by a hand scroll or a newer line.
+  UiBeatListener? _glide;
+
+  void _glideTo(double to) {
+    _glide?.cancel();
+    final from = _scroll.position.pixels;
+    if ((to - from).abs() < 1) return;
+    const length = Duration(milliseconds: 350);
+    var t = Duration.zero;
+    _glide = UiBeat.listen(const Duration(milliseconds: 50), (elapsed) {
+      t += elapsed;
+      final done = t >= length;
+      if (!mounted || !_scroll.hasClients) return _stopGlide();
+      final eased = Curves.easeOutCubic.transform(done ? 1 : t.inMicroseconds / length.inMicroseconds);
+      _scroll.jumpTo(from + (to - from) * eased);
+      if (done) _stopGlide();
+    });
+  }
+
+  void _stopGlide() {
+    _glide?.cancel();
+    _glide = null;
+  }
+
   void _scrollToCurrent({bool animate = true}) {
     final ctx = _current < 0 ? null : _keys[_current].currentContext;
     if (ctx == null) return;
+    if (animate && LayoutPrefs.frugal && LayoutPrefs.dur(const Duration(milliseconds: 350)) > Duration.zero) {
+      final ro = ctx.findRenderObject();
+      final viewport = ro == null ? null : RenderAbstractViewport.maybeOf(ro);
+      if (ro != null && viewport != null && _scroll.hasClients) {
+        final p = _scroll.position;
+        return _glideTo(viewport.getOffsetToReveal(ro, 0.5).offset.clamp(p.minScrollExtent, p.maxScrollExtent));
+      }
+    }
+    _stopGlide();
     Scrollable.ensureVisible(
       ctx,
       alignment: 0.5,
@@ -183,13 +214,18 @@ class _SyncedLyricsViewState extends State<SyncedLyricsView> with _Extras {
     );
   }
 
+  /// Whether the view has been put at the current line once. The first time is a jump: the page is still opening,
+  /// and a 350 ms scroll on top of its transition doubled the frames (and the CPU) of opening the lyrics.
+  bool _placed = false;
+
   void _follow(int index) {
     if (index == _current) return;
     _current = index;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       if (_following) {
-        _scrollToCurrent();
+        _scrollToCurrent(animate: _placed);
+        _placed = true;
       } else {
         _checkVisible();
       }
@@ -212,6 +248,7 @@ class _SyncedLyricsViewState extends State<SyncedLyricsView> with _Extras {
   }
 
   void _pauseFollowing() {
+    _stopGlide();
     _following = false;
     _checkVisible();
   }
@@ -334,45 +371,51 @@ class _SyncedLyricsViewState extends State<SyncedLyricsView> with _Extras {
             return Stack(
               children: [
                 Positioned.fill(
-                  child: SingleChildScrollView(
-                    controller: _scroll,
-                    padding: EdgeInsets.fromLTRB(pad, height / 2, pad, height / 2),
-                    child: Column(
-                      crossAxisAlignment: _centred ? CrossAxisAlignment.stretch : CrossAxisAlignment.start,
-                      children: [
-                        if (widget.lyrics.otherVersion)
-                          Padding(
-                            padding: const EdgeInsets.only(bottom: 16),
-                            child: Text(
-                              tr.lyricsOtherVersion,
-                              key: const ValueKey('lyrics-other-version'),
-                              textAlign: _textAlign,
-                              style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.textMuted),
+                  // No scrollbar: the view follows the song, and on a computer each line's scroll showed it and
+                  // faded it out again (~25 frames a line, ~10 ms of the main thread each on Linux). The wheel and
+                  // a drag still scroll. RIFLAY_LYRICS_SCROLLBAR brings it back.
+                  child: ScrollConfiguration(
+                    behavior: ScrollConfiguration.of(context).copyWith(scrollbars: DebugSwitches.lyricsScrollbar),
+                    child: SingleChildScrollView(
+                      controller: _scroll,
+                      padding: EdgeInsets.fromLTRB(pad, height / 2, pad, height / 2),
+                      child: Column(
+                        crossAxisAlignment: _centred ? CrossAxisAlignment.stretch : CrossAxisAlignment.start,
+                        children: [
+                          if (widget.lyrics.otherVersion)
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 16),
+                              child: Text(
+                                tr.lyricsOtherVersion,
+                                key: const ValueKey('lyrics-other-version'),
+                                textAlign: _textAlign,
+                                style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.textMuted),
+                              ),
                             ),
-                          ),
-                        for (var i = 0; i < lines.length; i++)
-                          _LineSlot(
-                            key: _keys[i],
-                            index: i,
-                            at: _at,
-                            line: lines[i],
-                            extra: extraFor(i),
-                            style: style,
-                            unsung: unsung,
-                            position: widget.position,
-                            ticks: widget.smoothTicks,
-                            playing: widget.playing,
-                            trusted: _trusted,
-                            onTap: () {
-                              _following = true;
-                              _showBack.value = false;
-                              widget.onSeek(lines[i].time);
-                              if (i == _current) _scrollToCurrent();
-                            },
-                            onHold: widget.onHold == null ? null : () => widget.onHold!(i),
-                          ),
-                        _Source(widget.lyrics),
-                      ],
+                          for (var i = 0; i < lines.length; i++)
+                            _LineSlot(
+                              key: _keys[i],
+                              index: i,
+                              at: _at,
+                              line: lines[i],
+                              extra: extraFor(i),
+                              style: style,
+                              unsung: unsung,
+                              position: widget.position,
+                              ticks: widget.smoothTicks,
+                              playing: widget.playing,
+                              trusted: _trusted,
+                              onTap: () {
+                                _following = true;
+                                _showBack.value = false;
+                                widget.onSeek(lines[i].time);
+                                if (i == _current) _scrollToCurrent();
+                              },
+                              onHold: widget.onHold == null ? null : () => widget.onHold!(i),
+                            ),
+                          _Source(widget.lyrics),
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -595,7 +638,7 @@ class _LineState extends State<_Line> {
           crossAxisAlignment: _centred ? CrossAxisAlignment.stretch : CrossAxisAlignment.start,
           children: [
             AnimatedDefaultTextStyle(
-              duration: LayoutPrefs.dur(const Duration(milliseconds: 200)),
+              duration: _lineChange(200),
               style: (widget.style ?? const TextStyle()).copyWith(
                 color: _hover && widget.karaoke == null ? AppColors.textPrimary : widget.color,
               ),
@@ -603,7 +646,7 @@ class _LineState extends State<_Line> {
             ),
             if (widget.extra case final extra?)
               AnimatedDefaultTextStyle(
-                duration: LayoutPrefs.dur(const Duration(milliseconds: 200)),
+                duration: _lineChange(200),
                 style: (_extraStyle(context) ?? const TextStyle()).copyWith(
                   color: (_hover ? AppColors.textPrimary : widget.extraColor ?? widget.color).withValues(alpha: 0.8),
                 ),
@@ -634,7 +677,7 @@ class _Glass extends StatelessWidget {
       return Padding(padding: const EdgeInsets.symmetric(vertical: 8), child: child);
     }
     const radius = BorderRadius.all(Radius.circular(18));
-    final duration = LayoutPrefs.dur(const Duration(milliseconds: 260));
+    final duration = _lineChange(260);
     final pane = AnimatedContainer(
       // The whole row, not just the words' width.
       width: double.infinity,
@@ -661,3 +704,7 @@ class _Glass extends StatelessWidget {
   }
 }
 
+/// How long a line takes to change look when the song moves on to the next one. Frugal Balanced on a computer
+/// (`LayoutPrefs.frugal`): at once. Each fade drew at the display's rate, ~15 frames a line beside the scroll (which
+/// glides on the beat there, see `_glide`), on a page where everything else moves 5-10 times a second.
+Duration _lineChange(int ms) => LayoutPrefs.frugal ? Duration.zero : LayoutPrefs.dur(Duration(milliseconds: ms));

@@ -425,8 +425,19 @@ class _Pending {
 abstract final class LyricsService {
   static final _cache = <String, Future<Lyrics>>{};
 
+  /// What [_cache]'s finished looks found, by song: the page shows these at once ([loaded]).
+  static final _found = <String, Lyrics>{};
+
   /// Forget what was found for [track], so the next look reads its lyrics again.
-  static void forget(Track track) => _cache.remove(track.id);
+  static void forget(Track track) {
+    _cache.remove(track.id);
+    _found.remove(track.id);
+  }
+
+  /// [track]'s lyrics when a look for them has already finished, null while one runs or none has: opening the
+  /// lyrics page again shows them in its first frame, without the loading bars and their fade (each frame of a page
+  /// opening costs the main thread ~10 ms on Linux).
+  static Lyrics? loaded(Track track) => _cache.containsKey(track.id) ? _found[track.id] : null;
 
   /// [Lyrics.none] when there are none; throws when no source could be
   /// reached (that isn't cached, so the next try asks again).
@@ -438,16 +449,22 @@ abstract final class LyricsService {
             _find(track).then((r) {
               // A source that couldn't be asked (offline, rate limited) may have them:
               // "none" isn't remembered then, so the next look asks again.
-              if (r.missed) _cache.remove(track.id);
+              if (r.missed) {
+                _cache.remove(track.id);
+              } else {
+                _found[track.id] = r.lyrics;
+              }
               return r.lyrics;
             });
     // A long session plays thousands of songs: keep the lyrics of the last few dozen.
     while (_cache.length > 48) {
+      _found.remove(_cache.keys.first);
       _cache.remove(_cache.keys.first);
     }
     future.ignore();
     return future.catchError((Object e) {
       _cache.remove(track.id);
+      _found.remove(track.id);
       throw e;
     });
   }
@@ -662,6 +679,7 @@ abstract final class LyricsService {
     betterLyricsKey = key;
     // Songs that came up empty may have lyrics now.
     _cache.clear();
+    _found.clear();
     return true;
   }
 

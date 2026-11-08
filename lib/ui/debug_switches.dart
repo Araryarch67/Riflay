@@ -68,6 +68,9 @@ abstract final class DebugSwitches {
   /// instead of `aspectralstats` (one FFT a window).
   static bool astatsVisualizer = _all || const bool.fromEnvironment('RIFLAY_ASTATS_VISUALIZER');
 
+  /// Synced lyrics show a scrollbar on computers, as before: each line's scroll showed it and faded it out again.
+  static bool lyricsScrollbar = _all || const bool.fromEnvironment('RIFLAY_LYRICS_SCROLLBAR');
+
   /// Prints how many widgets each palette change rebuilds, and every Material theme built.
   static bool logRestyles = const bool.fromEnvironment('RIFLAY_LOG_RESTYLES');
 

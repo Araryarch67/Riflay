@@ -8,6 +8,8 @@
 #        RIFLAY_CPU_WIDTH=1280 RIFLAY_CPU_HEIGHT=800 tool/cpu.sh   (another screen size)
 #        RIFLAY_CPU_LAYOUT='{"visualizer": false}' tool/cpu.sh   (start with other Layout settings)
 #        RIFLAY_CPU_ENV='NAME=value' tool/cpu.sh   (an environment variable for the app, e.g. a probe)
+#        RIFLAY_CPU_ENV='RIFLAY_CPU_SPIKE=lyrics' tool/cpu.sh   (CPU every 100 ms while the lyrics page opens)
+#        RIFLAY_CPU_ENV='RIFLAY_CPU_SPIKE=unfocus' tool/cpu.sh   (the same after another window takes the focus)
 #        RIFLAY_CPU_SOURCE='anoisesrc=r=44100:c=pink:a=0.3' RIFLAY_CPU_ENV='RIFLAY_MPV_OPTIONS=ao=null' tool/cpu.sh
 #            (songs with sound, so the visualizer moves; ao=null keeps them off the speakers, and PipeWire's ~1.2%)
 set -euo pipefail
@@ -21,6 +23,18 @@ for i in 1 2 3; do
   ffmpeg -loglevel error -y -f lavfi -i "${RIFLAY_CPU_SOURCE:-anullsrc=r=44100:cl=stereo}" -t 300 \
     -metadata "title=A rather long song title that never fits on one card, part $i" \
     -metadata artist="Some Artist With A Long Name" -metadata album="An Album $i" "$scratch/songs/song$i.flac"
+  # Synced lyrics beside each song, timed word by word (karaoke), Japanese and English: what opening the lyrics
+  # page loads (RIFLAY_CPU_SPIKE=lyrics).
+  python3 - "$scratch/songs/song$i.lrc" <<'LRC'
+import sys
+lines = []
+for n in range(60):
+    t = n * 4.0
+    words = (['夜空', 'に', '光る', '星', 'を', '数えて'] if n % 2 else ['Counting', 'the', 'stars', 'that', 'shine', 'tonight'])
+    stamp = lambda s: f'{int(s // 60):02d}:{s % 60:05.2f}'
+    lines.append(f'[{stamp(t)}]' + ' '.join(f'<{stamp(t + k * 0.5)}>{w}' for k, w in enumerate(words)))
+open(sys.argv[1], 'w').write('\n'.join(lines) + '\n')
+LRC
 done
 
 flutter build linux --profile --dart-define=RIFLAY_NO_UPDATE_CHECK=true -t tool/cpu_app.dart >/dev/null

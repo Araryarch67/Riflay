@@ -681,6 +681,7 @@ device's language when Riflay has it). The words live in `lib/l10n/app_en.arb` (
   flutter run --dart-define=RIFLAY_NO_PHONE_SETUP=true  # a phone under 4 GB keeps Balanced at its first start
   flutter run --dart-define=RIFLAY_NO_ANDROID_TRIM=true  # Android keeps its allocator's free pages and covers in the background
   flutter run --dart-define=RIFLAY_NO_UPDATE_CHECK=true  # no update check at start (Settings › About still checks)
+  flutter run --dart-define=RIFLAY_LYRICS_SCROLLBAR=true  # synced lyrics show a scrollbar on computers again
   flutter run --dart-define=RIFLAY_NO_PAGE_OUT=true  # Linux keeps the app resident behind other windows (no MADV_PAGEOUT)
   flutter run --dart-define=RIFLAY_ASTATS_VISUALIZER=true  # the visualizer measures its bands with astats (~3x the CPU), not aspectralstats
   flutter run -d chrome --dart-define=RIFLAY_NO_WEB_AUDIO=true  # web: songs play straight from <audio>, no effects or visualizer
@@ -836,12 +837,28 @@ Windows zip, Linux AppImage and macOS dmg, so successful platforms need not be r
   `MemoryTrim`), Balanced 0.2-0.7% / up to ~260 MB, Heavy 0.4-0.7% / up to ~275 MB in front and ~0.1% behind.
 - Linux pages the app out like Windows empties its working set (`MemoryTrim`, `trimProcessMemory`):
   `madvise(MADV_PAGEOUT)` over its private mappings, while hidden or left alone (8 s without input) behind another
-  window, once a minute after that and after a song change. Pages go to zram/swap or back to the page cache and fault
-  in when touched. btop showed ~400 MiB RSS for a window playing behind others (that is when people look at it);
+  window: once per time away (`_pagedOut`, reset when it is focused or shown again), not each minute. Pages go to
+  zram/swap or back to the page cache and fault in when touched. Compressing them into zram costs ~0.6 s of CPU on
+  the trim's own isolate, so it rests as it goes (~8 ms a MB, big mappings in eighths): spread over ~2.5 s, longer
+  than btop's sampling. Repeated each minute it was a spike btop showed every minute (`DartWorker` 5.7% of a core
+  in a 10 s window behind another window). `RIFLAY_CPU_ENV='RIFLAY_CPU_SPIKE=unfocus' tool/cpu.sh` shows it. btop showed ~400 MiB RSS for a window playing behind others (that is when people look at it);
   paged out, ~190-240 MiB RSS and 65-110 MiB private. Not while the window has the focus, so lyrics read without the
   mouse don't fault back in each minute. Off with `RIFLAY_NO_PAGE_OUT`. The base app is most of what stays:
   Lightweight measured the same as Balanced in front (~150 MiB private idle, ~200 playing, ~220 scrolling); Heavy
   peaks ~336 MiB private / ~460 MiB RSS with a 1080p music video.
+- Opening the lyrics page (`RIFLAY_CPU_ENV='RIFLAY_CPU_SPIKE=lyrics' tool/cpu.sh`: CPU and frames every 100 ms,
+  each thread, `RIFLAY_CPU_PROFILE=true` the Dart profile, `RIFLAY_CPU_STACKS=true` in a debug build who asks for
+  frames). On Linux a frame costs the main thread ~10 ms natively (GTK composites the whole window; Dart is a small
+  part), so what counts is how many frames run: synced lyrics have no scrollbar (`RIFLAY_LYRICS_SCROLLBAR`; each
+  follow scroll showed it and faded it out again, ~25 frames a line and a second burst after the page opened);
+  lyrics already found show in the page's first frame (`LyricsService.loaded`: no loading bars, no fade) and the
+  first placement on the current line is a jump. In frugal Balanced the follow scroll glides on `UiBeat` at 20 fps
+  (`_glideTo`, ~7 frames a line) and a line's colour changes at once (`_lineChange`). Opening the page went from
+  ~800 ms of the main thread to ~320 ms; the page left open from ~1.6 s to ~0.74 s per 12 s.
+- The native video's `GtkOverlay` keeps its `GtkFixed` hidden until a video has a place on screen: shown over the
+  Flutter view at all times it made GTK composite the slow way, ~2.8% of a core more while a song played (main thread
+  7.5% -> 4.7% on Home). Measurements across the 2026-11 kernel update differ: the same commit measured ~5% more on
+  Home after it, so compare builds on the same day.
 - Measuring a song (`AudioAnalysis._measure`: loudness for leveling, the waveform) keeps at most 8 of mpv's 64 KiB
   reads in flight to the worker isolate: mpv decodes far faster than the worker measures, and the whole song piled up
   in its queue (180 MiB for four minutes of 24/96, twice that at 192 kHz).

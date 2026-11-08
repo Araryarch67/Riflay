@@ -63,6 +63,7 @@ void detach(Surface* s) {
   s->width = s->height = 0;
   s->frames = 0;
   gtk_widget_hide(s->area);
+  gtk_widget_hide(s->fixed);
 }
 
 void render_frame(Surface* s, int target, int w, int h) {
@@ -249,7 +250,9 @@ void method_call(FlMethodChannel*, FlMethodCall* call, gpointer data) {
         if (s->clip[2] <= s->clip[0] || s->clip[3] <= s->clip[1] ||
             s->renderer == nullptr) {
           gtk_widget_hide(s->area);
+          gtk_widget_hide(s->fixed);
         } else {
+          gtk_widget_show(s->fixed);
           const double scale = gtk_widget_get_scale_factor(s->area);
           gtk_fixed_move(GTK_FIXED(s->fixed), s->area,
                          std::lround(s->clip[0] / scale),
@@ -283,7 +286,9 @@ GtkWidget* native_video_wrap(FlView* view) {
   GtkWidget* fixed = gtk_fixed_new();
   gtk_overlay_add_overlay(GTK_OVERLAY(overlay), fixed);
   gtk_overlay_set_overlay_pass_through(GTK_OVERLAY(overlay), fixed, TRUE);
-  gtk_widget_show(fixed);
+  // Shown only while a video has a place on screen ("place"): with any child showing over the Flutter view, GTK
+  // composited the whole window the slow way, ~2% of a core while a song played with no video at all.
+  gtk_widget_set_no_show_all(fixed, TRUE);
 
   GtkWidget* area = gtk_gl_area_new();
   gtk_gl_area_set_required_version(GTK_GL_AREA(area), 3, 2);

@@ -8,7 +8,10 @@
 // Run it through tool/cpu.sh (profile build, headless Weston, a throwaway data
 // folder). Prints "CPU ..." lines and exits.
 import 'dart:async';
+import 'dart:convert';
+import 'dart:developer' as developer;
 import 'dart:io';
+import 'dart:isolate';
 
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart';
@@ -46,8 +49,8 @@ Map<String, (String, int)> _threadTicks() {
 }
 
 /// A debug build only: prints what asks for frames for a moment, and every running ticker with where it sits.
-Future<void> _whoDraws({bool long = false}) async {
-  await Future<void>.delayed(const Duration(seconds: 3));
+Future<void> _whoDraws({bool long = false, Duration wait = const Duration(seconds: 3)}) async {
+  await Future<void>.delayed(wait);
   stdout.writeln('STACKS from here');
   debugPrintScheduleFrameStacks = true;
   await Future<void>.delayed(Duration(milliseconds: long ? 3000 : 300));
@@ -89,6 +92,75 @@ int? _audioServerTicks() {
     }
   }
   return found ? total : null;
+}
+
+/// The UI isolate's CPU samples between [from] and [to] (the VM clock, µs), from its VM service: the functions that
+/// were running most (self) and the ones most often on the stack (total), in % of the samples.
+/// Turns the VM's sampling profiler on (a profile build starts with it off), so [_dartProfile] has samples.
+Future<void> _startProfiler() async {
+  final uri = (await developer.Service.getInfo()).serverWebSocketUri;
+  if (uri == null) return;
+  final socket = await WebSocket.connect(uri.toString());
+  socket.add(
+    jsonEncode({
+      'jsonrpc': '2.0',
+      'id': 'p',
+      'method': 'setFlag',
+      'params': {'name': 'profiler', 'value': 'true'},
+    }),
+  );
+  stdout.writeln('CPU profiler: ${(await socket.map((m) => jsonDecode(m as String)).first)}');
+  await socket.close();
+}
+
+Future<String> _dartProfile(int from, int to) async {
+  final uri = (await developer.Service.getInfo()).serverWebSocketUri;
+  if (uri == null) return 'no VM service (a profile build has it)';
+  final socket = await WebSocket.connect(uri.toString());
+  final replies = socket.map((m) => jsonDecode(m as String) as Map<String, dynamic>).asBroadcastStream();
+  try {
+    socket.add(
+      jsonEncode({
+        'jsonrpc': '2.0',
+        'id': '1',
+        'method': 'getCpuSamples',
+        'params': {
+          'isolateId': developer.Service.getIsolateId(Isolate.current),
+          'timeOriginMicros': from,
+          'timeExtentMicros': to - from,
+        },
+      }),
+    );
+    final reply = await replies.firstWhere((m) => m['id'] == '1');
+    final r = reply['result'] as Map<String, dynamic>?;
+    if (r == null) return 'VM service: ${reply['error']}';
+    final functions = [
+      for (final f in (r['functions'] as List).cast<Map<String, dynamic>>())
+        () {
+          final fn = f['function'] as Map<String, dynamic>;
+          final owner = (fn['owner'] as Map?)?['name'];
+          return owner == null ? '${fn['name']}' : '$owner.${fn['name']}';
+        }(),
+    ];
+    final samples = (r['samples'] as List).cast<Map<String, dynamic>>();
+    final self = <String, int>{}, total = <String, int>{};
+    for (final s in samples) {
+      final stack = (s['stack'] as List).cast<int>();
+      if (stack.isEmpty) continue;
+      self.update(functions[stack.first], (v) => v + 1, ifAbsent: () => 1);
+      for (final name in {for (final i in stack) functions[i]}) {
+        total.update(name, (v) => v + 1, ifAbsent: () => 1);
+      }
+    }
+    String top(Map<String, int> m, int n) {
+      final e = m.entries.toList()..sort((a, b) => b.value - a.value);
+      return [for (final x in e.take(n)) '${x.key} ${(x.value * 100 / samples.length).round()}%'].join(', ');
+    }
+
+    return '${samples.length} samples\nCPU   self: ${top(self, 15)}\nCPU   total: ${top(total, 40)}';
+  } finally {
+    await socket.close();
+  }
 }
 
 Element? _find(bool Function(Element) test) {
@@ -164,10 +236,122 @@ Future<void> main() async {
     );
   }
 
+  /// CPU (share of one core) and frames in each 100 ms for [length], from [start] on: how a moment like opening a
+  /// page spikes, which a 15 s average hides.
+  Future<void> slices(String label, Duration length, void Function() start) async {
+    final out = <String>[];
+    var peak = 0.0;
+    var frameCount = 0;
+    final from = developer.Timeline.now;
+    final threads = _threadTicks();
+    int switches() {
+      final status = File('/proc/self/status').readAsStringSync();
+      int field(String n) => int.parse(RegExp('^$n:\\s+(\\d+)', multiLine: true).firstMatch(status)![1]!);
+      return field('voluntary_ctxt_switches') + field('nonvoluntary_ctxt_switches');
+    }
+
+    final wakes = switches();
+    start();
+    final clock = Stopwatch()..start();
+    var cpu = _cpuTime();
+    var last = Duration.zero;
+    frames = 0;
+    build = raster = Duration.zero;
+    while (clock.elapsed < length) {
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+      final now = _cpuTime(), at = clock.elapsed;
+      final pct = (now - cpu).inMicroseconds / (at - last).inMicroseconds * 100;
+      peak = pct > peak ? pct : peak;
+      out.add('${pct.round()}${frames > 0 ? '/$frames' : ''}');
+      frameCount += frames;
+      cpu = now;
+      last = at;
+      frames = 0;
+    }
+    stdout.writeln('CPU $label: peak ${peak.round()}% of one core; every 100 ms (% / frames): ${out.join(' ')}');
+    stdout.writeln(
+      'CPU   frames: $frameCount (build ${(build.inMicroseconds / 1000).toStringAsFixed(0)} ms, '
+      'raster ${(raster.inMicroseconds / 1000).toStringAsFixed(0)} ms in all)',
+    );
+    final busy = <String, int>{};
+    stdout.writeln(
+      'CPU   main thread woke ${((switches() - wakes) / clock.elapsedMilliseconds * 1000).round()} times a second',
+    );
+    final self = '/proc/self/task/$pid';
+    for (final MapEntry(key: id, value: (name, ticks)) in _threadTicks().entries) {
+      final d = ticks - (threads[id]?.$2 ?? 0);
+      // The main thread (Flutter's UI and GTK) apart from the threads that share its name.
+      final key = name == 'riflay' && id != self ? 'riflay#${id.split('/').last}' : name;
+      if (d > 0) busy.update(key, (v) => v + d, ifAbsent: () => d);
+    }
+    final top = busy.entries.toList()..sort((a, b) => b.value - a.value);
+    stdout.writeln('CPU   threads (ms): ${[for (final e in top.take(8)) '${e.key} ${e.value * 10}'].join(', ')}');
+    if (Platform.environment['RIFLAY_CPU_PROFILE'] == 'true') {
+      try {
+        // RIFLAY_CPU_PROFILE_WINDOW=600-1300: only those ms after the start.
+        final window = (Platform.environment['RIFLAY_CPU_PROFILE_WINDOW'] ?? '').split('-').map(int.tryParse).toList();
+        final (a, b) = window.length == 2 && window[0] != null && window[1] != null
+            ? (from + window[0]! * 1000, from + window[1]! * 1000)
+            : (from, developer.Timeline.now);
+        stdout.writeln('CPU   dart: ${await _dartProfile(a, b)}');
+      } catch (e) {
+        stdout.writeln('CPU   dart: profile failed: $e');
+      }
+    }
+  }
+
   // Headless Weston has no keyboard, so the window never gets the focus: say it has, as on a desktop where someone
   // is looking at it. "unfocused" below is another window having the focus.
   stdout.writeln('CPU (the embedder reported ${WidgetsBinding.instance.lifecycleState}; measured as resumed)');
   WidgetsBinding.instance.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+  if (Platform.environment['RIFLAY_CPU_PROFILE'] == 'true') await _startProfiler();
+  if (Platform.environment['RIFLAY_CPU_SPIKE'] == 'unfocus') {
+    // Another window takes the focus while a song plays: the memory trim pages the app out ~8 s later.
+    await c.playList([
+      for (final t in c.library)
+        if (t.path?.startsWith(songs) ?? false) t,
+    ], 0);
+    await Future<void>.delayed(settle);
+    await slices(
+      'another window in front',
+      const Duration(seconds: 14),
+      () => WidgetsBinding.instance.handleAppLifecycleStateChanged(AppLifecycleState.inactive),
+    );
+    exit(0);
+  }
+  if (Platform.environment['RIFLAY_CPU_SPIKE'] == 'lyrics') {
+    final queue = [
+      for (final t in c.library)
+        if (t.path?.startsWith(songs) ?? false) t,
+    ];
+    await c.playList(queue, 0);
+    await Future<void>.delayed(settle);
+    ShellScope shell() => ShellScope.of(_find((e) => e.widget is PageScaffold)!);
+    if (Platform.environment['RIFLAY_CPU_STACKS'] == 'true') {
+      // A debug build: who asks for frames in the second burst after the page opens, and what ticks then.
+      shell().openLyrics();
+      await Future<void>.delayed(const Duration(milliseconds: 750));
+      stdout.writeln('STACKS from here');
+      debugPrintScheduleFrameStacks = true;
+      await Future<void>.delayed(const Duration(milliseconds: 150));
+      debugPrintScheduleFrameStacks = false;
+      await _whoDraws(long: false, wait: Duration.zero);
+      exit(0);
+    }
+    await slices('opening lyrics', const Duration(seconds: 4), () => shell().openLyrics());
+    await slices('back to Home', const Duration(seconds: 2), () => shell().history?.back());
+    await Future<void>.delayed(const Duration(seconds: 2));
+    await slices('opening lyrics again (loaded)', const Duration(seconds: 4), () => shell().openLyrics());
+    // For comparison: Home, the same song playing, nothing else moving there.
+    shell().history?.back();
+    await Future<void>.delayed(const Duration(seconds: 2));
+    await slices('Home, playing', const Duration(seconds: 12), () {});
+    shell().openLyrics();
+    await Future<void>.delayed(const Duration(seconds: 2));
+    // The page left open: a line changes every 4 s in the seeded lyrics.
+    await slices('lyrics open, lines changing', const Duration(seconds: 12), () {});
+    exit(0);
+  }
   await measure('idle, Home');
   final queue = [
     for (final t in c.library)

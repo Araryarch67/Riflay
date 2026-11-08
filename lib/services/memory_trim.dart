@@ -29,8 +29,23 @@ abstract final class MemoryTrim {
   /// How long without a pointer or key event before the window counts as idle.
   static const _idleAfter = Duration(seconds: 8);
 
-  static void _trim({bool workingSet = false}) =>
-      inBackground(() => trimProcessMemory(workingSet: workingSet)).ignore();
+  /// Linux: paged out since the window was last in use. Paging out compresses the pages into zram on the thread that
+  /// asks (~0.5 s of CPU for a couple of hundred MB), and what the song needs faults straight back in: repeated every
+  /// minute away, it was a spike btop showed every minute. Once per time away is enough. Windows only moves its pages
+  /// to the standby list, so it keeps emptying the working set each minute.
+  static bool _pagedOut = false;
+
+  static void _trim({bool workingSet = false}) {
+    if (workingSet && Host.isLinux) {
+      if (_pagedOut) {
+        workingSet = false;
+      } else {
+        _pagedOut = true;
+      }
+    }
+    final pageOut = workingSet;
+    inBackground(() => trimProcessMemory(workingSet: pageOut)).ignore();
+  }
 
   static Timer? _soon;
   static Timer? _every;
@@ -110,6 +125,7 @@ abstract final class MemoryTrim {
   static void focus(bool focused) {
     if (!_available || focused == _focused) return;
     _focused = focused;
+    if (focused) _pagedOut = false;
     if (focused || !Host.isLinux || !_pagesOut || _hidden) return;
     _listen();
     _soon?.cancel();
@@ -120,6 +136,7 @@ abstract final class MemoryTrim {
   static void shown() {
     if (!_hidden) return;
     _hidden = false;
+    _pagedOut = false;
     _soon?.cancel();
     unawaited(RenderingMemory.restore());
   }

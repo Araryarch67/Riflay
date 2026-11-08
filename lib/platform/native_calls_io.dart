@@ -47,20 +47,42 @@ void _purgeAndroid() {
 
 /// `MADV_PAGEOUT` (Linux 5.4) over every private mapping of this process. Shared ones (the compositor's buffers, the
 /// GPU's) and the kernel's own ([vdso], [vvar]) are left alone; pages other processes map too are skipped by the
-/// kernel, and an older kernel just answers EINVAL.
+/// kernel, and an older kernel just answers EINVAL. Paging out compresses the pages (zram) on this thread, so it
+/// rests as it goes, ~8 ms a MB (a big mapping in eighths): the same CPU, spread over a few seconds, longer than btop's
+/// sampling, instead of one spike it showed.
 void _pageOutLinux() {
   try {
     final madvise = DynamicLibrary.process()
         .lookupFunction<Int32 Function(IntPtr, Size, Int32), int Function(int, int, int)>('madvise');
     const pageOut = 21;
-    for (final line in File('/proc/self/maps').readAsLinesSync()) {
-      final f = line.split(RegExp(r'\s+'));
-      if (f.length < 5 || f[1].length < 4 || f[1][0] != 'r' || f[1][3] != 'p') continue;
-      final path = f.length > 5 ? f.sublist(5).join(' ') : '';
-      if (path.startsWith('/dev/') || path.startsWith('[v') || path == '[stack]') continue;
-      final range = f[0].split('-');
-      final start = int.parse(range[0], radix: 16), end = int.parse(range[1], radix: 16);
-      madvise(start, end - start, pageOut);
+    final header = RegExp(r'^([0-9a-f]+)-([0-9a-f]+) (\S+) \S+ \S+ \S+\s*(.*)$');
+    final rss = RegExp(r'^Rss:\s+(\d+) kB');
+    (int, int)? range;
+    for (final line in File('/proc/self/smaps').readAsLinesSync()) {
+      final h = header.firstMatch(line);
+      if (h != null) {
+        final perms = h[3]!, path = h[4]!.trim();
+        final skip =
+            perms[0] != 'r' ||
+            perms[3] != 'p' ||
+            path.startsWith('/dev/') ||
+            path.startsWith('[v') ||
+            path == '[stack]';
+        range = skip ? null : (int.parse(h[1]!, radix: 16), int.parse(h[2]!, radix: 16));
+        continue;
+      }
+      final r = range == null ? null : rss.firstMatch(line);
+      if (r == null) continue;
+      final kb = int.parse(r[1]!);
+      final (start, end) = range!;
+      range = null;
+      if (kb == 0) continue;
+      final parts = kb >= 16 << 10 ? 8 : 1;
+      final step = ((end - start) ~/ parts + 4095) & ~4095;
+      for (var a = start; a < end; a += step) {
+        madvise(a, (a + step > end ? end : a + step) - a, pageOut);
+        if (kb >= 1024) sleep(Duration(milliseconds: (kb ~/ 128 ~/ parts).clamp(2, 400)));
+      }
     }
   } catch (_) {}
 }
