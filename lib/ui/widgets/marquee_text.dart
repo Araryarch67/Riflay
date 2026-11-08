@@ -13,7 +13,7 @@ import 'playing_motion.dart' show PlayingMotion;
 /// title can be read whole: it rests at the start for [pause], scrolls at
 /// [speed] logical pixels a second until a second copy (after [gap]) takes its
 /// place, and starts over. Text that fits stays still. With less motion
-/// (Settings › Look & feel › Layout › Motion, or the system's setting) it is cut off with an
+/// (Settings › Look & feel › Pages & navigation › Motion, or the system's setting) it is cut off with an
 /// ellipsis instead.
 ///
 /// It draws frames only while it moves: the rest at the start is a timer, so a screen of cards with long titles

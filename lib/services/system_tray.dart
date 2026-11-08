@@ -10,7 +10,7 @@ import '../ui/debug_switches.dart';
 import 'player_controller.dart';
 import 'language.dart';
 
-/// Settings › Power & background › Close to tray (computers): closing the window hides Riflay in the tray and
+/// Settings › Performance & power › Close to tray (computers): closing the window hides Riflay in the tray and
 /// the music keeps playing; Quit in the tray menu ends it. On by default.
 class CloseToTray extends ChangeNotifier {
   CloseToTray._();

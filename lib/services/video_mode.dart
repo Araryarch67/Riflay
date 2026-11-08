@@ -664,7 +664,7 @@ vec4 hook() {
           selected = _player = _KitEngine(kit);
           video = _video = VideoController(
             kit,
-            // Drawn on the graphics card either way; Settings › Layout › Video decoding picks what decodes it.
+            // Drawn on the graphics card either way; Settings › Now Playing › Video decoding picks what decodes it.
             configuration: VideoControllerConfiguration(hwdec: hwdec),
           );
         }

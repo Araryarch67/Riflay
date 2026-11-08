@@ -10,7 +10,7 @@ import '../models/track.dart';
 import '../platform/host.dart';
 import 'language.dart';
 
-/// What the Discord presence shows (Settings › Accounts & services › Discord & lyrics services).
+/// What the Discord presence shows (Settings › Accounts & services › Discord).
 @immutable
 class DiscordOptions {
   const DiscordOptions({

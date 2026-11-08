@@ -181,7 +181,7 @@ void main() {
     await settle();
     await tester.tap(find.text('Look & feel'));
     await settle();
-    await tester.tap(find.text('Appearance'));
+    await tester.tap(find.text('Theme & colours'));
     await settle();
     await shot('4-appearance-whole-app-green');
 

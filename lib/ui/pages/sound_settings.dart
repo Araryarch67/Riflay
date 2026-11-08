@@ -24,12 +24,13 @@ import '../widgets/signal_path.dart';
 import 'equalizer_page.dart';
 import '../widgets/app_dialog.dart';
 
-/// Settings > Sound > Playback: queue behavior and seamless track changes.
+/// Settings > Sound > Playback: queue behavior and track changes (gapless, crossfade).
 class PlaybackSettings extends StatelessWidget {
   const PlaybackSettings({super.key});
   @override
   Widget build(BuildContext context) {
     final c = PlayerScope.of(context);
+    final muted = settingsMuted(context);
     return ListenableBuilder(
       listenable: c.audio,
       builder: (context, _) => SettingsCard(
@@ -57,13 +58,53 @@ class PlaybackSettings extends StatelessWidget {
               value: c.audio.skipSilence && !c.audio.bitPerfect,
               onChanged: c.audio.bitPerfect ? null : c.audio.setSkipSilence,
             ),
+          if (AudioEngine.supported) ...[
+            SwitchListTile(
+              secondary: const Icon(Icons.compare_arrows_rounded),
+              title: Text(tr.crossfade),
+              subtitle: Text(c.audio.crossfadeBlock ?? tr.crossfadeSubtitle, style: muted),
+              value: c.audio.crossfade,
+              onChanged: c.audio.crossfadeBlock != null ? null : c.audio.setCrossfade,
+            ),
+            if (c.audio.crossfade && c.audio.crossfadeBlock == null) ...[
+              SettingTile(
+                icon: Icons.timelapse_rounded,
+                title: Text(tr.fadeLength),
+                control: SizedBox(
+                  width: 220,
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Slider(
+                          value: c.audio.crossfadeSeconds.toDouble(),
+                          min: CrossfadeRules.minSeconds.toDouble(),
+                          max: CrossfadeRules.maxSeconds.toDouble(),
+                          divisions: CrossfadeRules.maxSeconds - CrossfadeRules.minSeconds,
+                          label: '${c.audio.crossfadeSeconds} s',
+                          onChanged: (v) => c.audio.setCrossfadeSeconds(v.round()),
+                        ),
+                      ),
+                      SizedBox(width: 40, child: Text('${c.audio.crossfadeSeconds} s', style: muted)),
+                    ],
+                  ),
+                ),
+              ),
+              SwitchListTile(
+                secondary: const Icon(Icons.album_outlined),
+                title: Text(tr.skipForAlbums),
+                subtitle: Text(tr.skipForAlbumsSubtitle, style: muted),
+                value: c.audio.crossfadeSkipAlbums,
+                onChanged: c.audio.setCrossfadeSkipAlbums,
+              ),
+            ],
+          ],
         ],
       ),
     );
   }
 }
 
-/// Settings > Sound > Sound effects (DSP): processors and transitions, with their parameters.
+/// Settings > Sound > Sound effects (DSP): processors, with their parameters.
 class DspSettings extends StatelessWidget {
   const DspSettings({super.key});
 
@@ -104,44 +145,6 @@ class DspSettings extends StatelessWidget {
                   ),
                 ),
                 if (audio.leveling != VolumeLeveling.off && AudioAnalysis.supported) const _MeasureLoudness(),
-                SwitchListTile(
-                  secondary: const Icon(Icons.compare_arrows_rounded),
-                  title: Text(tr.crossfade),
-                  subtitle: Text(audio.crossfadeBlock ?? tr.crossfadeSubtitle, style: muted),
-                  value: audio.crossfade,
-                  onChanged: audio.crossfadeBlock != null ? null : audio.setCrossfade,
-                ),
-                if (audio.crossfade && audio.crossfadeBlock == null) ...[
-                  SettingTile(
-                    icon: Icons.timelapse_rounded,
-                    title: Text(tr.fadeLength),
-                    control: SizedBox(
-                      width: 220,
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Slider(
-                              value: audio.crossfadeSeconds.toDouble(),
-                              min: CrossfadeRules.minSeconds.toDouble(),
-                              max: CrossfadeRules.maxSeconds.toDouble(),
-                              divisions: CrossfadeRules.maxSeconds - CrossfadeRules.minSeconds,
-                              label: '${audio.crossfadeSeconds} s',
-                              onChanged: (v) => audio.setCrossfadeSeconds(v.round()),
-                            ),
-                          ),
-                          SizedBox(width: 40, child: Text('${audio.crossfadeSeconds} s', style: muted)),
-                        ],
-                      ),
-                    ),
-                  ),
-                  SwitchListTile(
-                    secondary: const Icon(Icons.album_outlined),
-                    title: Text(tr.skipForAlbums),
-                    subtitle: Text(tr.skipForAlbumsSubtitle, style: muted),
-                    value: audio.crossfadeSkipAlbums,
-                    onChanged: audio.setCrossfadeSkipAlbums,
-                  ),
-                ],
                 SwitchListTile(
                   secondary: const Icon(Icons.spatial_audio_rounded),
                   title: Text(tr.virtualSpeakers),

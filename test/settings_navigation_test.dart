@@ -77,12 +77,12 @@ void main() {
     }
   });
 
-  onLinux('power has its own page and DSP owns crossfade and detailed controls', (tester) async {
+  onLinux('power has its own page, Playback owns crossfade and DSP the detailed controls', (tester) async {
     final c = PlayerController();
     final awake = await StayAwake.start(c, backend: _PowerTestBackend());
     final visited = <String>[];
     await tester.pumpWidget(_app(c, visited));
-    await tester.tap(find.text('Power & background'));
+    await tester.tap(find.text('Performance & power'));
     await tester.pumpAndSettle();
     expect(visited.last, 'settings:power');
     expect(find.text('Keep screen on'), findsOneWidget);
@@ -90,11 +90,11 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Sound'));
     await tester.pumpAndSettle();
-    expect(find.text('Power & background'), findsNothing);
+    expect(find.text('Performance & power'), findsNothing);
     await tester.tap(find.text('Playback'));
     await tester.pumpAndSettle();
     expect(find.text('Autoplay'), findsOneWidget);
-    expect(find.text('Crossfade'), findsNothing);
+    expect(find.text('Crossfade'), findsOneWidget);
     expect(find.text('Keep screen on'), findsNothing);
     await tester.tap(find.text('Sound'));
     await tester.pumpAndSettle();
@@ -102,7 +102,7 @@ void main() {
     c.audio.hrirPath = AudioEngine.hrirAsset;
     await tester.tap(find.text('Sound effects (DSP)'));
     await tester.pumpAndSettle();
-    expect(find.text('Crossfade'), findsOneWidget);
+    expect(find.text('Crossfade'), findsNothing);
     expect(find.text('Virtual speaker level'), findsOneWidget);
     final level = find.ancestor(of: find.text('Virtual speaker level'), matching: find.byType(SettingTile));
     tester.widget<Slider>(find.descendant(of: level, matching: find.byType(Slider))).onChanged!(-3);
@@ -121,15 +121,9 @@ void main() {
         'Playback',
         if (AudioEngine.supported) ...['Sound effects (DSP)', 'Output & quality'],
       ],
-      'Look & feel': ['Appearance', 'Layout'],
+      'Look & feel': ['Theme & colours', 'Language & text', 'Now Playing', 'Lyrics', 'Pages & navigation'],
       'Library & downloads': ['Library', 'Downloads', 'Listening history & Wrap', 'Backup & restore'],
-      'Accounts & services': [
-        'YouTube Music account',
-        'Spotify',
-        'Last.fm & ListenBrainz',
-        'Discord & lyrics services',
-        'Extensions',
-      ],
+      'Accounts & services': ['YouTube Music account', 'Spotify', 'Last.fm & ListenBrainz', 'Discord', 'Extensions'],
     };
     for (final MapEntry(key: group, value: rows) in expected.entries) {
       await tester.tap(find.text(group));
@@ -169,8 +163,11 @@ void main() {
       ('Sound', 'Playback', 'Gapless playback', 'settings:sound/playback'),
       if (AudioEngine.supported) ('Sound', 'Sound effects (DSP)', 'Crossfade', 'settings:sound/dsp'),
       if (AudioEngine.supported) ('Sound', 'Output & quality', 'Output sample rate', 'settings:sound/hifi'),
-      ('Look & feel', 'Appearance', 'Theme', 'settings:look/appearance'),
-      ('Look & feel', 'Layout', 'Shapes and motion', 'settings:look/layout'),
+      ('Look & feel', 'Theme & colours', 'Theme', 'settings:look/appearance'),
+      ('Look & feel', 'Language & text', 'Font', 'settings:look/text'),
+      ('Look & feel', 'Now Playing', 'Liquid Glass controls', 'settings:look/now-playing'),
+      ('Look & feel', 'Lyrics', 'Better Lyrics API key', 'settings:look/lyrics'),
+      ('Look & feel', 'Pages & navigation', 'Shapes and motion', 'settings:look/layout'),
       ('Library & downloads', 'Library', 'Find songs you have twice', 'settings:library/library'),
       ('Library & downloads', 'Downloads', 'Ask every time', 'settings:library/downloads'),
       (
@@ -180,7 +177,7 @@ void main() {
         'settings:library/history',
       ),
       ('Accounts & services', 'YouTube Music account', 'Sign in with Google', 'settings:accounts/youtube-music'),
-      ('Accounts & services', 'Discord & lyrics services', 'Better Lyrics API key', 'settings:accounts/services'),
+      ('Accounts & services', 'Discord', 'Discord Rich Presence', 'settings:accounts/services'),
       ('Accounts & services', 'Extensions', 'Repositories', 'settings:accounts/extensions'),
     ];
     for (final (group, section, marker, location) in cases) {
@@ -231,10 +228,10 @@ void main() {
     await tester.pumpWidget(_app(c, [], compact: true));
     await tester.tap(find.text('Look & feel'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Appearance'));
+    await tester.tap(find.text('Theme & colours'));
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
-    expect(find.bySemanticsLabel(RegExp('Settings, then Look & feel, then Appearance')), findsOneWidget);
+    expect(find.bySemanticsLabel(RegExp('Settings, then Look & feel, then Theme & colours')), findsOneWidget);
     expect(find.text('Look & feel'), findsOneWidget);
     semantics.dispose();
   });

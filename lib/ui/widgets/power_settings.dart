@@ -13,13 +13,13 @@ import '../theme.dart';
 import 'menus.dart';
 import '../../services/language.dart';
 
-/// Settings › Power & background: keeping the screen on, keeping a computer awake
+/// Settings › Performance & power: keeping the screen on, keeping a computer awake
 /// while music plays, closing to the tray (computers), and (Android) letting Riflay
 /// run with the screen off.
 class PowerSettings {
   const PowerSettings._();
 
-  /// The controls shown on the dedicated Power & background page.
+  /// The controls shown on the dedicated Performance & power page.
   static List<Widget> rows(BuildContext context) {
     final awake = StayAwake.instance;
     if (awake == null) return [const _PerformanceRow(), if (DeviceSetup.offered) const _CheckDeviceRow()];

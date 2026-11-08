@@ -74,7 +74,7 @@ void main() {
     expect(find.byType(AudioReactiveView), findsNothing);
     await tester.pumpWidget(
       const MaterialApp(
-        home: Scaffold(body: SingleChildScrollView(child: LayoutSettings())),
+        home: Scaffold(body: SingleChildScrollView(child: NowPlayingSettings())),
       ),
     );
     expect(find.text('Audio visualizer'), findsWidgets);
@@ -103,7 +103,7 @@ void main() {
     await prefs.setVisualizer(false);
     await tester.pumpWidget(
       const MaterialApp(
-        home: Scaffold(body: SingleChildScrollView(child: LayoutSettings())),
+        home: Scaffold(body: SingleChildScrollView(child: NowPlayingSettings())),
       ),
     );
     expect(find.text('Visualizer style'), findsNothing);
@@ -137,7 +137,7 @@ void main() {
       PlayerScope(
         controller: c,
         child: const MaterialApp(
-          home: Scaffold(body: SingleChildScrollView(child: LayoutSettings())),
+          home: Scaffold(body: SingleChildScrollView(child: NowPlayingSettings())),
         ),
       ),
     );
@@ -159,7 +159,7 @@ void main() {
     expect(prefs.visualizerStyle, VisualizerStyle.wave, reason: 'Orbit has no frame to ring');
     await tester.pumpWidget(
       const MaterialApp(
-        home: Scaffold(body: SingleChildScrollView(child: LayoutSettings())),
+        home: Scaffold(body: SingleChildScrollView(child: NowPlayingSettings())),
       ),
     );
     await tester.ensureVisible(find.text('Wave'));

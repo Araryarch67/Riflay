@@ -7,7 +7,7 @@ import '../theme.dart';
 import '../../services/language.dart';
 import '../widgets/app_dialog.dart';
 
-/// Settings › Look & feel › Layout › Player › Presets: a whole look in one tap. A preset only
+/// Settings › Look & feel › Now Playing › Presets: a whole look in one tap. A preset only
 /// sets the individual player settings, so it is the same as setting them one by one.
 class PlayerPresetsPage extends StatelessWidget {
   const PlayerPresetsPage({super.key});

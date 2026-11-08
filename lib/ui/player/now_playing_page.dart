@@ -496,7 +496,7 @@ class PlayerVolumeRow extends StatelessWidget {
   /// The left icon mutes (and unmutes) instead of turning the volume down a step.
   final bool mute;
 
-  /// The slider's look; null follows Settings › Layout › Slider look.
+  /// The slider's look; null follows Settings › Look & feel › Now Playing › Slider look.
   final VolumeSliderShape? shape;
 
   @override

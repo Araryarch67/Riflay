@@ -4,7 +4,7 @@ import 'layout_prefs.dart';
 import 'language.dart';
 
 /// A look for the player, on phones and desktop, set up in one go. A preset is only a list of values for the
-/// individual settings in Settings › Look & feel › Layout › Player: nothing remembers that one was applied, and
+/// individual settings in Settings › Look & feel › Now Playing: nothing remembers that one was applied, and
 /// each setting can be changed afterwards.
 /// [PlayerPreset.note] in the language shown; the names stay as they are.
 String presetNote(PlayerPreset p) => switch (p.name) {

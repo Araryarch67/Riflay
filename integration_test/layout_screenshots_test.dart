@@ -177,7 +177,7 @@ void main() {
       await settle();
       await tester.tap(find.text('Look & feel'));
       await settle();
-      await tester.tap(find.text('Layout'));
+      await tester.tap(find.text('Now Playing').last);
       await settle();
       tester.view.physicalSize = const Size(1280, 1500);
       await shot('desktop-settings-layout');

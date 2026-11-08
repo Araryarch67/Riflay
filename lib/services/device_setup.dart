@@ -30,7 +30,7 @@ class DeviceSpecs {
 
 /// The first start on a computer: Riflay looks at it and picks how much it spends on looks
 /// ([PerformanceMode]) from what kind of computer it is ([recommend]). Shown once, as a page
-/// the person confirms (`ui/pages/device_setup_page.dart`); Settings › Power & background opens it again.
+/// the person confirms (`ui/pages/device_setup_page.dart`); Settings › Performance & power opens it again.
 class DeviceSetup {
   DeviceSetup._();
 
@@ -117,7 +117,7 @@ class DeviceSetup {
   }
 
   /// Computers only. Phones keep their look: their tab bar and player are drawn for it, and battery there is the
-  /// system's business (Settings › Power & background still offers Lightweight).
+  /// system's business (Settings › Performance & power still offers Lightweight).
   static bool get offered =>
       (Host.isLinux || Host.isWindows || Host.isMacOS) &&
       !const bool.fromEnvironment('RIFLAY_NO_DEVICE_SETUP') &&

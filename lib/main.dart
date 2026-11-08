@@ -171,7 +171,7 @@ Future<void> _startServices(PlayerController controller) async {
       MediaSession.start(controller),
       // Windows: Previous, Play / Pause and Next on the taskbar thumbnail.
       Future(() => TaskbarButtons.start(controller)),
-      // Computers: the tray icon, and closing the window hides Riflay there (Settings › Power & background).
+      // Computers: the tray icon, and closing the window hides Riflay there (Settings › Performance & power).
       SystemTray.start(controller),
       StayAwake.start(controller),
       // Notifications watch the queue, so they attach once it is restored.
@@ -396,7 +396,7 @@ class _RiflayAppState extends State<RiflayApp> with WidgetsBindingObserver {
         // The playing song on the web, where this is the tab's title (see `network.dart`).
         title: pageTitle,
         debugShowCheckedModeBanner: false,
-        // English or Indonesian (Settings › Look & feel › Appearance › Language); Material's own words follow.
+        // English or Indonesian (Settings › Look & feel › Language & text › Language); Material's own words follow.
         locale: Language.instance.locale,
         supportedLocales: AppLocalizations.supportedLocales,
         localizationsDelegates: const [

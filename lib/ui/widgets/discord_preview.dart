@@ -32,7 +32,7 @@ class DiscordPresenceSettings extends StatelessWidget {
         option(tr.discordTime, o.time, (v) => o.copyWith(time: v)),
         option(tr.discordSongInList, o.songInList, (v) => o.copyWith(songInList: v)),
         option(tr.discordListenButton, o.listenButton, (v) => o.copyWith(listenButton: v)),
-        option('"Download Riflay" button', o.appButton, (v) => o.copyWith(appButton: v)),
+        option(tr.discordAppButton, o.appButton, (v) => o.copyWith(appButton: v)),
         option(tr.discordWhilePaused, o.whilePaused, (v) => o.copyWith(whilePaused: v)),
         option(tr.discordShowQuality, o.quality, (v) => o.copyWith(quality: v)),
       ],

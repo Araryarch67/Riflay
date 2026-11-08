@@ -18,8 +18,8 @@ import 'menus.dart';
 import '../ytmusic_edit.dart' show FollowButton, addToPlaylist;
 import 'editable_title.dart';
 
-/// The top of an album or playlist page with Settings › Layout › Album and playlist top set to Hero: the cover
-/// across the whole width, fading into the page, with the title over its foot, then round buttons around a wide
+/// The top of an album or playlist page with Settings › Pages & navigation › Album and playlist top set to Hero: the
+/// cover across the whole width, fading into the page, with the title over its foot, then round buttons around a wide
 /// Play. The page's own buttons ([actions], like a playlist's menu) join the row. On desktop the cover is a
 /// shorter strip and the title can be renamed in place when [onRename] is given.
 class CollectionHero extends StatelessWidget {

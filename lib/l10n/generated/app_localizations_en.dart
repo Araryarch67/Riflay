@@ -49,7 +49,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get groupLook => 'Look & feel';
 
   @override
-  String get groupLookSummary => 'Themes, colours, text size, what the screens show';
+  String get groupLookSummary => 'Theme, language and text, Now Playing, lyrics, pages';
 
   @override
   String get groupLibrary => 'Library & downloads';
@@ -61,19 +61,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get groupAccounts => 'Accounts & services';
 
   @override
-  String get groupAccountsSummary => 'YouTube Music, Spotify, Last.fm, Discord, lyrics, extensions';
+  String get groupAccountsSummary => 'YouTube Music, Spotify, Last.fm, Discord, extensions';
 
   @override
   String get topicPlayback => 'Playback';
 
   @override
-  String get topicPlaybackSummary => 'Autoplay and gapless playback';
+  String get topicPlaybackSummary => 'Autoplay, gapless playback and crossfade';
 
   @override
   String get topicDsp => 'Sound effects (DSP)';
 
   @override
-  String get topicDspSummary => 'Equalizer, volume leveling, crossfade, spatial audio and room correction';
+  String get topicDspSummary => 'Equalizer, volume leveling, spatial audio and room correction';
 
   @override
   String get topicOutput => 'Output & quality';
@@ -82,16 +82,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get topicOutputSummary => 'Output device, bit-perfect mode, sample rate';
 
   @override
-  String get topicAppearance => 'Appearance';
+  String get topicAppearance => 'Theme & colours';
 
   @override
-  String get topicAppearanceSummary => 'Theme, accent colour, background, text size, font';
+  String get topicAppearanceSummary => 'Theme, mode, accent colour, cover colours, frosted glass';
 
   @override
-  String get topicLayout => 'Layout';
+  String get topicLayout => 'Pages & navigation';
 
   @override
-  String get topicLayoutSummary => 'Shapes, sizes, what the player shows';
+  String get topicLayoutSummary => 'Home, the bars, corners, spacing, cover size, motion';
 
   @override
   String get topicLibrary => 'Library';
@@ -136,10 +136,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get topicScrobblingSummary => 'Add the songs you play to your profile there';
 
   @override
-  String get topicIntegrations => 'Discord & lyrics services';
+  String get topicIntegrations => 'Discord';
 
   @override
-  String get topicIntegrationsSummary => 'Show what you play on Discord, lyrics services';
+  String get topicIntegrationsSummary => 'Show what you play on Discord';
 
   @override
   String get topicExtensions => 'Extensions';
@@ -157,7 +157,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get topicIntegrationsSummaryWeb => 'A Better Lyrics key for word-by-word lyrics';
 
   @override
-  String get settingsPower => 'Power & background';
+  String get settingsPower => 'Performance & power';
 
   @override
   String get listenTogether => 'Listen together';
@@ -387,10 +387,10 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get settingsPowerSummaryTray => 'Screen timeout, sleep, background playback and closing to the tray';
+  String get settingsPowerSummaryTray => 'Performance mode, screen timeout, sleep, background playback and the tray';
 
   @override
-  String get settingsPowerSummary => 'Screen timeout, sleep and background playback';
+  String get settingsPowerSummary => 'Performance mode, screen timeout, sleep and background playback';
 
   @override
   String get listenTogetherSummary => 'Host a session or join friends and manage sharing permissions';
@@ -5351,4 +5351,295 @@ class AppLocalizationsEn extends AppLocalizations {
   String searchOnSource(String source) {
     return 'Search on $source';
   }
+
+  @override
+  String get searchSettings => 'Search settings';
+
+  @override
+  String searchSettingsNone(String query) {
+    return 'No settings match $query';
+  }
+
+  @override
+  String get settingsPreview => 'Preview';
+
+  @override
+  String get settingsPreviewHint => 'Tap a setting that changes the look to see it here';
+
+  @override
+  String get closePreview => 'Close preview';
+
+  @override
+  String get homeSectionsOption => 'Home sections';
+
+  @override
+  String get previewLyrics =>
+      'The line before this one\nThe line sung right now\nThe next line comes after\nAnd one more after that';
+
+  @override
+  String get kwAutoplay => 'radio, continue, keep playing, similar songs, endless';
+
+  @override
+  String get kwGapless => 'seamless, no gap, live album, continuous';
+
+  @override
+  String get kwSkipSilence => 'silence, quiet parts, trim';
+
+  @override
+  String get kwEqualizer => 'eq, bass, treble, tone, preset';
+
+  @override
+  String get kwVolumeLeveling => 'replaygain, normalize, loudness, same volume';
+
+  @override
+  String get kwCrossfade => 'fade, blend, transition, mix songs';
+
+  @override
+  String get kwFadeLength => 'fade time, seconds, duration';
+
+  @override
+  String get kwVirtualSpeakers => 'spatial, surround, 3d, hrtf, headphones';
+
+  @override
+  String get kwCrossfeed => 'headphones, stereo width, bs2b';
+
+  @override
+  String get kwMono => 'one channel, single ear, accessibility';
+
+  @override
+  String get kwAudioPlugins => 'vst, lv2, carla, effects';
+
+  @override
+  String get kwRoomCorrection => 'convolution, impulse response, ir, speakers';
+
+  @override
+  String get kwSignalPath => 'quality, bit depth, what plays, chain';
+
+  @override
+  String get kwOutputDevice => 'speaker, headphones, dac, sound card, bluetooth';
+
+  @override
+  String get kwBitPerfect => 'hi-res, lossless, untouched, audiophile';
+
+  @override
+  String get kwDirectUsb => 'usb dac, android, bit-perfect';
+
+  @override
+  String get kwNativeDsd => 'dsd, dop, sacd';
+
+  @override
+  String get kwExclusiveMode => 'wasapi, exclusive, hog mode';
+
+  @override
+  String get kwSampleRate => 'hz, 44.1, 48, 96, resample';
+
+  @override
+  String get kwBuffer => 'latency, stutter, crackle, dropouts';
+
+  @override
+  String get kwLanguage => 'english, indonesian, japanese, translation';
+
+  @override
+  String get kwTheme => 'colors, dark mode, light mode, catppuccin, nord, dracula';
+
+  @override
+  String get kwColours => 'color, colour, custom, palette';
+
+  @override
+  String get kwMode => 'dark, light, system, night';
+
+  @override
+  String get kwCoverColours => 'dynamic, artwork colours, tint';
+
+  @override
+  String get kwHighContrast => 'contrast, readability, accessibility';
+
+  @override
+  String get kwTextSize => 'font size, bigger text, zoom, scale';
+
+  @override
+  String get kwFont => 'typeface, font family';
+
+  @override
+  String get kwPlayerBackground => 'now playing, blurred cover, black, colour';
+
+  @override
+  String get kwFrostedGlass => 'blur, transparent, acrylic, mica';
+
+  @override
+  String get kwOpacity => 'transparency, see through';
+
+  @override
+  String get kwPresets => 'whole look, style, liquid, kawaii';
+
+  @override
+  String get kwCover => 'artwork, album art, flower, square';
+
+  @override
+  String get kwPlayerHeader => 'top bar, playing from, header';
+
+  @override
+  String get kwTitleButtons => 'like, share, heart, more';
+
+  @override
+  String get kwQualityBadge => 'hi-res, flac, lossless, badge, bitrate';
+
+  @override
+  String get kwMusicVideo => 'video, mv, clip';
+
+  @override
+  String get kwVideoDecoding => 'hardware, gpu, cpu, decoder';
+
+  @override
+  String get kwLiquidGlass => 'glass, ios, frosted controls';
+
+  @override
+  String get kwSeekBar => 'progress, timeline, wavy, scrubber';
+
+  @override
+  String get kwTimeLeft => 'remaining, countdown, duration';
+
+  @override
+  String get kwTransport => 'play, pause, next, previous, buttons';
+
+  @override
+  String get kwVolumeSlider => 'volume, loudness slider';
+
+  @override
+  String get kwBottomButtons => 'queue, lyrics, chips, row';
+
+  @override
+  String get kwLyrics => 'words, lyric, karaoke';
+
+  @override
+  String get kwKaraoke => 'word by word, sing along, timing';
+
+  @override
+  String get kwLyricsSize => 'lyrics font, bigger lyrics';
+
+  @override
+  String get kwLyricsAlign => 'left, centre, center, align';
+
+  @override
+  String get kwVisualizer => 'spectrum, bars, wave, rings, audio reactive';
+
+  @override
+  String get kwAlbumHeader => 'album page, playlist page, header';
+
+  @override
+  String get kwPlayingRow => 'current song, highlight, equalizer icon';
+
+  @override
+  String get kwHomeSections => 'home, shelves, reorder, hide';
+
+  @override
+  String get kwMiniPlayer => 'mini, small player, bottom player';
+
+  @override
+  String get kwTabBar => 'navigation, bottom bar, tabs, dock, glass';
+
+  @override
+  String get kwDesktopBar => 'player bar, bottom bar, computer';
+
+  @override
+  String get kwCorners => 'rounded, radius, roundness, square edges';
+
+  @override
+  String get kwDensity => 'spacing, compact, comfortable, padding';
+
+  @override
+  String get kwCoverSize => 'grid, cards, tiles, thumbnails';
+
+  @override
+  String get kwMotion => 'animation, transitions, reduce motion, speed';
+
+  @override
+  String get kwWindowButtons => 'title bar, close, minimize, maximize';
+
+  @override
+  String get kwPerformance => 'battery, cpu, lightweight, balanced, heavy, speed';
+
+  @override
+  String get kwScreen => 'display, awake, screen timeout';
+
+  @override
+  String get kwSleep => 'standby, suspend, awake';
+
+  @override
+  String get kwTray => 'system tray, background, close button';
+
+  @override
+  String get kwBattery => 'background, screen off, battery optimization';
+
+  @override
+  String get kwMusicFolders => 'scan, watch, folders, library, rescan';
+
+  @override
+  String get kwDuplicates => 'duplicates, same song twice, cleanup';
+
+  @override
+  String get kwDownloadFormat => 'mp3, flac, opus, m4a, video, audio';
+
+  @override
+  String get kwDownloadQuality => 'bitrate, kbps, bit depth, quality';
+
+  @override
+  String get kwMobileData => 'cellular, data, wifi only';
+
+  @override
+  String get kwDownloadsFolder => 'save location, where, path';
+
+  @override
+  String get kwYtDlp => 'ffmpeg, tools, executables, downloader';
+
+  @override
+  String get kwHistory => 'listening history, privacy, recently played';
+
+  @override
+  String get kwWrap => 'stats, wrapped, year in review, top songs';
+
+  @override
+  String get kwBackup => 'export, import, restore, transfer, save';
+
+  @override
+  String get kwYoutubeAccount => 'google, sign in, login, account';
+
+  @override
+  String get kwScrobbling => 'scrobble, last.fm, listenbrainz, profile';
+
+  @override
+  String get kwLyricsServices => 'musixmatch, better lyrics, api key';
+
+  @override
+  String get kwDiscord => 'rich presence, status, activity';
+
+  @override
+  String get kwExtensions => 'spotiflac, plugins, repositories, sources';
+
+  @override
+  String get kwUpdates => 'new version, upgrade, update';
+
+  @override
+  String get kwVersion => 'about, licence, license, open source';
+
+  @override
+  String get discordAppButton => '\"Download Riflay\" button';
+
+  @override
+  String get topicText => 'Language & text';
+
+  @override
+  String get topicTextSummary => 'Language, text size, font';
+
+  @override
+  String get topicNowPlaying => 'Now Playing';
+
+  @override
+  String get topicNowPlayingSummary => 'Cover, controls, progress bar, Liquid Glass, visualizer';
+
+  @override
+  String get topicLyrics => 'Lyrics';
+
+  @override
+  String get topicLyricsSummary => 'How lyrics look, and where they come from';
 }
