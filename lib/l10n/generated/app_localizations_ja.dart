@@ -877,6 +877,12 @@ class AppLocalizationsJa extends AppLocalizations {
   String get exitFullScreen => '全画面を終了';
 
   @override
+  String get watchVideo => '全画面で見る';
+
+  @override
+  String get showLyrics => '歌詞を表示';
+
+  @override
   String get sidePanelEmpty => '何か再生すると、ここに出てくる。';
 
   @override

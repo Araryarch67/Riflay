@@ -7,6 +7,8 @@ import '../../services/player_controller.dart';
 import '../../services/video_mode.dart';
 import '../theme.dart';
 import '../player/player_glass.dart';
+import '../player/video_full_view.dart';
+import 'controls.dart';
 import 'native_video_surface.dart';
 import 'skeleton.dart';
 import '../../services/language.dart';
@@ -14,9 +16,13 @@ import '../../services/language.dart';
 /// YouTube Music's Song / Video switch, above the cover of the Now Playing
 /// views. Only there when the song has a music video this device can show.
 class VideoModeSwitch extends StatelessWidget {
-  const VideoModeSwitch({super.key, required this.track, this.onDark = false});
+  const VideoModeSwitch({super.key, required this.track, this.onDark = false, this.expandable = false});
 
   final Track? track;
+
+  /// A full-screen button beside it while Video is picked: where the video's own window lies over the cover
+  /// (Windows, Linux), a button drawn on the video wouldn't show.
+  final bool expandable;
 
   /// Drawn over the phone player's dark background.
   final bool onDark;
@@ -93,6 +99,13 @@ class VideoModeSwitch extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 8),
+              if (expandable && mode.on)
+                IconButton(
+                  tooltip: tr.watchVideo,
+                  color: fg,
+                  onPressed: () => openVideoFullView(context),
+                  icon: const Icon(Icons.fullscreen_rounded),
+                ),
             ],
           ),
         );
@@ -103,9 +116,19 @@ class VideoModeSwitch extends StatelessWidget {
 
 /// The cover, or the music video in its place while Video is picked.
 class TrackVisual extends StatelessWidget {
-  const TrackVisual({super.key, required this.track, required this.cover, this.fill = false, this.fade});
+  const TrackVisual({
+    super.key,
+    required this.track,
+    required this.cover,
+    this.fill = false,
+    this.fade,
+    this.expandable = true,
+  });
 
   final Track? track;
+
+  /// A double tap on the video, or its full-screen button, opens it full screen ([VideoFullView]).
+  final bool expandable;
 
   /// The video covers the whole box, cropped (the side panel's picture), rather than fitting inside it.
   final bool fill;
@@ -125,18 +148,20 @@ class TrackVisual extends StatelessWidget {
     mode.lookUp(track);
     return ListenableBuilder(
       listenable: mode,
-      builder: (context, _) =>
-          mode.on && mode.videoOf(track) != null ? _VideoView(cover: cover, fill: fill, fade: fade) : cover,
+      builder: (context, _) => mode.on && mode.videoOf(track) != null
+          ? _VideoView(cover: cover, fill: fill, fade: fade, expandable: expandable)
+          : cover,
     );
   }
 }
 
 class _VideoView extends StatefulWidget {
-  const _VideoView({required this.cover, this.fill = false, this.fade});
+  const _VideoView({required this.cover, this.fill = false, this.fade, this.expandable = true});
 
   final Widget cover;
   final bool fill;
   final Color? fade;
+  final bool expandable;
 
   @override
   State<_VideoView> createState() => _VideoViewState();
@@ -155,28 +180,48 @@ class _VideoViewState extends State<_VideoView> {
     super.dispose();
   }
 
+  /// A double tap opens the video full screen. The native video's window passes the touch through to this.
+  Widget _doubleTap(Widget child) =>
+      widget.expandable ? GestureDetector(onDoubleTap: () => openVideoFullView(context), child: child) : child;
+
+  /// [child] with the full-screen button in its corner. Beside the double tap, not under it: a double-tap listener
+  /// above the button would hold each of its taps back for the second one.
+  Widget _withButton(Widget child) => widget.expandable
+      ? Stack(
+          fit: StackFit.passthrough,
+          children: [
+            _doubleTap(child),
+            const Positioned(right: 8, bottom: 8, child: VideoExpandButton()),
+          ],
+        )
+      : child;
+
   @override
   Widget build(BuildContext context) {
     final mode = VideoMode.instance;
-    // Windows/Linux: a native surface covers this box; the cover shows while it is hidden.
+    // Windows/Linux: a native surface covers this box; the cover shows while it is hidden. Nothing drawn here shows
+    // over it: the full-screen button sits beside the Song / Video switch there.
     if (mode.nativeReady) {
-      if (widget.fill) return NativeVideoSurface(cover: true, fade: widget.fade, child: widget.cover);
+      if (widget.fill) return _doubleTap(NativeVideoSurface(cover: true, fade: widget.fade, child: widget.cover));
       return Center(
         child: AspectRatio(
           aspectRatio: mode.nativeAspect,
           // The cover under it as it is: a FittedBox around a cover not laid out yet scaled by infinity.
-          child: NativeVideoSurface(child: ClipRect(child: widget.cover)),
+          child: _doubleTap(NativeVideoSurface(child: ClipRect(child: widget.cover))),
         ),
       );
     }
     final video = mode.controller;
     if (video == null) {
-      return Stack(
-        fit: StackFit.passthrough,
-        children: [
-          widget.cover,
-          if (mode.loading) const Positioned.fill(child: Center(child: SkeletonBox(width: 28, height: 28, radius: 14))),
-        ],
+      return _withButton(
+        Stack(
+          fit: StackFit.passthrough,
+          children: [
+            widget.cover,
+            if (mode.loading)
+              const Positioned.fill(child: Center(child: SkeletonBox(width: 28, height: 28, radius: 14))),
+          ],
+        ),
       );
     }
     return ValueListenableBuilder(
@@ -188,18 +233,140 @@ class _VideoViewState extends State<_VideoView> {
         return Center(
           child: AspectRatio(
             aspectRatio: ratio,
-            child: ClipRRect(
-              borderRadius: LayoutPrefs.corner(8),
-              child: Video(
-                controller: video,
-                controls: NoVideoControls,
-                fill: Colors.black,
-                // Video mode turns itself off in the background; nothing to resume.
-                pauseUponEnteringBackgroundMode: false,
-                resumeUponEnteringForegroundMode: false,
+            child: _withButton(
+              ClipRRect(
+                borderRadius: LayoutPrefs.corner(8),
+                child: Video(
+                  controller: video,
+                  controls: NoVideoControls,
+                  fill: Colors.black,
+                  // Video mode turns itself off in the background; nothing to resume.
+                  pauseUponEnteringBackgroundMode: false,
+                  resumeUponEnteringForegroundMode: false,
+                ),
               ),
             ),
           ),
+        );
+      },
+    );
+  }
+}
+
+/// The round full-screen button in the corner of the video on the cover ([VideoFullView]).
+class VideoExpandButton extends StatelessWidget {
+  const VideoExpandButton({super.key});
+
+  @override
+  Widget build(BuildContext context) => IconButton(
+    tooltip: tr.watchVideo,
+    onPressed: () => openVideoFullView(context),
+    icon: const Icon(Icons.fullscreen_rounded),
+    iconSize: 22,
+    style: IconButton.styleFrom(
+      backgroundColor: Colors.black.withValues(alpha: 0.45),
+      foregroundColor: Colors.white,
+      fixedSize: const Size.square(36),
+      minimumSize: const Size.square(36),
+      padding: EdgeInsets.zero,
+      shape: const CircleBorder(),
+    ),
+  );
+}
+
+/// Where Cover: Background leaves the page open over the music video behind it: a double tap there, or the button
+/// in its corner, opens the video full screen. Empty while the video isn't the page's background.
+class VideoBackgroundExpand extends StatelessWidget {
+  const VideoBackgroundExpand({super.key, required this.track});
+
+  final Track? track;
+
+  @override
+  Widget build(BuildContext context) => ListenableBuilder(
+    listenable: VideoMode.instance,
+    builder: (context, _) {
+      if (!VideoMode.instance.coversBackground(track)) return const SizedBox.expand();
+      return Stack(
+        fit: StackFit.expand,
+        children: [
+          GestureDetector(
+            behavior: HitTestBehavior.translucent,
+            onDoubleTap: () => openVideoFullView(context),
+            child: const SizedBox.expand(),
+          ),
+          const Positioned(right: 8, bottom: 8, child: VideoExpandButton()),
+        ],
+      );
+    },
+  );
+}
+
+/// The music video, whole (letterboxed in black), for the full-screen player: the same player and picture as the
+/// cover's, held on screen as a full view ([VideoMode.addView]), so a background video goes on without reloading.
+/// The cover stands in while the video loads, or for a song that has none.
+class VideoPicture extends StatefulWidget {
+  const VideoPicture({super.key, required this.track});
+
+  final Track? track;
+
+  @override
+  State<VideoPicture> createState() => _VideoPictureState();
+}
+
+class _VideoPictureState extends State<VideoPicture> {
+  @override
+  void initState() {
+    super.initState();
+    VideoMode.instance.addView(full: true);
+  }
+
+  @override
+  void dispose() {
+    VideoMode.instance.removeView(full: true);
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final mode = VideoMode.instance..follow(PlayerScope.read(context));
+    mode.lookUp(widget.track);
+    return ListenableBuilder(
+      listenable: mode,
+      builder: (context, _) {
+        final cover = LayoutBuilder(
+          builder: (context, box) {
+            final side = box.biggest.shortestSide * 0.8;
+            return Center(
+              child: Artwork(track: widget.track, size: side, radius: 8),
+            );
+          },
+        );
+        if (!mode.on || mode.videoOf(widget.track) == null) return cover;
+        if (mode.nativeReady) {
+          return Center(
+            child: AspectRatio(
+              aspectRatio: mode.nativeAspect,
+              child: const NativeVideoSurface(child: ColoredBox(color: Colors.black)),
+            ),
+          );
+        }
+        final video = mode.controller;
+        if (video == null) {
+          return Stack(
+            fit: StackFit.expand,
+            children: [
+              cover,
+              if (mode.loading) const Center(child: SkeletonBox(width: 28, height: 28, radius: 14)),
+            ],
+          );
+        }
+        return Video(
+          controller: video,
+          controls: NoVideoControls,
+          fit: BoxFit.contain,
+          fill: Colors.black,
+          pauseUponEnteringBackgroundMode: false,
+          resumeUponEnteringForegroundMode: false,
         );
       },
     );

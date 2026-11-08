@@ -93,7 +93,7 @@ class _FullScreenPlayerState extends State<FullScreenPlayer> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          VideoModeSwitch(track: track),
+          VideoModeSwitch(track: track, expandable: true),
           SizedBox.square(
             dimension: art,
             child: NowPlayingCover(

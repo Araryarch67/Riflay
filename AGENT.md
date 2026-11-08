@@ -77,7 +77,7 @@ lib/
     layout_prefs.dart          Corners, density and motion (Settings › Look & feel › Layout)
     beta_features.dart         Optional feature preferences (legacy name); switches live in their respective settings pages
     listen_together/           Listen together: one queue shared over the LAN or the internet
-    video_mode.dart            Video mode: a YouTube song's music video on Now Playing
+    video_mode.dart            Video mode: a YouTube song's music video on Now Playing (and full screen, see Conventions)
     youtube_stream.dart        A YouTube song's audio stream in one player request (yt-dlp is the fallback)
     soundcloud.dart            SoundCloud over api-v2: search, links, related tracks, a track's HLS playlist (see SoundCloud)
     soundcloud_audio_source.dart  Plays a SoundCloud track: hands mpv its HLS playlist through just_audio's loopback server
@@ -665,6 +665,7 @@ device's language when Riflay has it). The words live in `lib/l10n/app_en.arb` (
   flutter run --dart-define=RIFLAY_NO_SOUNDCLOUD_CACHE=true  # SoundCloud's client id, searches and stream playlists looked up every time
   flutter run --dart-define=RIFLAY_NO_SHARED_SIGNAL_PATH=true  # every signalPath() caller reads mpv itself
   flutter run --dart-define=RIFLAY_NO_STREAK_CACHE=true  # the listening streak counted afresh every build
+  flutter run --dart-define=RIFLAY_NO_VIDEO_ROTATE=true  # turning a phone sideways on Now Playing doesn't open the music video full screen
   flutter run --dart-define=RIFLAY_NO_MV_SEARCH=true     # a song YouTube Music pairs with no video gets none (no search for its official video)
   flutter run --dart-define=RIFLAY_NO_MV_ALIGN=true      # a music video with no map of its parts plays on the song's timeline, not lined up by their sound
   flutter run --dart-define=RIFLAY_NO_SCANNED_GAIN=true  # a song without ReplayGain tags plays unleveled, measured or not
@@ -766,6 +767,19 @@ Windows zip, Linux AppImage and macOS dmg, so successful platforms need not be r
   Lightweight's seek bar and the quality badge tick once a second on the same beat (about 1 frame a second while
   playing). Paused, nothing stays on the beat (`tool/cpu.sh` prints how many are): a listener that only returns
   still keeps its 60 Hz timer waking the app.
+- The music video full screen (`ui/player/video_full_view.dart`, `VideoFullView`): the round button in the corner
+  of the video on the cover (`VideoExpandButton`; over Cover: Background, `VideoBackgroundExpand`), a double tap on
+  the video, or on a computer the button beside the Song / Video switch of the expanded player (the native video's
+  window lies over anything drawn on the cover there). It shows the same player's picture uncropped
+  (`VideoPicture`, `BoxFit.contain`): no second decoder. `VideoMode.addView(full: true)` keeps the video wanted
+  while the page under it lets go of its views, and doesn't reload a background video at the cover's size. On a
+  phone it locks landscape and hides the system bars (`immersiveSticky`); closing puts back the app's declared
+  orientations (`[]`) and both bars. A tablet keeps its orientation (turning it wide swaps the phone layout and its
+  Now Playing for the desktop one). Turning a phone sideways while Now Playing shows the video opens it without the
+  lock, and upright again closes it (`VideoRotateWatcher`, off with `RIFLAY_NO_VIDEO_ROTATE`). The controls (title,
+  like, a lyrics line, Queue, close, the seek bar and transport) fade in on a tap and leave the tree 4 s after the
+  last touch, so nothing ticks over the video. The lyrics line listens to `positionUpdates()` only while shown and
+  rebuilds when the line changes. Windows and Linux keep the controls above and below the picture.
 - Video mode is the most a playing song can cost on a computer (a second mpv; every video frame re-rasters the
   whole window, blur included): ~1.7% of a 24-thread CPU and ~100 MB in Balanced. While another window has the
   focus the video holds its picture, and after `VideoMode.unfocusedRelease` (20 s) its player is let go; back in

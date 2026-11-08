@@ -271,6 +271,8 @@
   "miniPlayer": "ミニプレイヤー",
   "fullScreen": "全画面",
   "exitFullScreen": "全画面を終了",
+  "watchVideo": "全画面で見る",
+  "showLyrics": "歌詞を表示",
   "sidePanelEmpty": "何か再生すると、ここに出てくる。",
   "nextInQueue": "キューの次の曲",
   "openQueue": "キューを開く",

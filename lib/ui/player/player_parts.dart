@@ -22,6 +22,7 @@ import '../widgets/signal_path.dart';
 import '../widgets/stats_for_nerds.dart' show NowPlayingCover;
 import '../widgets/sleep_timer_button.dart';
 import '../widgets/track_row.dart';
+import '../widgets/video_mode.dart' show VideoBackgroundExpand;
 import '../ytmusic_edit.dart';
 import 'more_sheet.dart';
 import 'now_playing_page.dart';
@@ -1098,10 +1099,11 @@ class ComposedNowPlaying extends StatelessWidget {
             Padding(padding: const EdgeInsets.symmetric(horizontal: 24), child: header),
             // The cover shows through here: Detail stats sit over it, and a long-press opens their menu, as on a
             // cover card.
-            const Expanded(
+            // A double tap, or the button in its corner, opens the music video behind it full screen.
+            Expanded(
               child: Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16),
-                child: NowPlayingCover(child: SizedBox.expand()),
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: NowPlayingCover(child: VideoBackgroundExpand(track: track)),
               ),
             ),
             controlsFor(box.maxHeight >= 760),

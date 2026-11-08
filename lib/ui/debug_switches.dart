@@ -37,6 +37,10 @@ abstract final class DebugSwitches {
   /// The Liquid glass tab bar draws its pills with Riflay's own blur instead of liquid_glass_renderer.
   static bool noGlassRenderer = _all || const bool.fromEnvironment('RIFLAY_NO_GLASS_RENDERER');
 
+  /// Turning a phone sideways while Now Playing shows the music video doesn't open it full screen (the button and a
+  /// double tap on the video still do). Not part of `RIFLAY_NO_SHORTCUTS`, which is about rendering.
+  static bool noVideoRotate = const bool.fromEnvironment('RIFLAY_NO_VIDEO_ROTATE');
+
   /// Draw video through Flutter textures to compare native surface rendering.
   static bool noNativeVideo = _all || const bool.fromEnvironment('RIFLAY_NO_NATIVE_VIDEO');
 
