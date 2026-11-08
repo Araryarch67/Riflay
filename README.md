@@ -66,6 +66,31 @@ Every file is on the [latest release](https://github.com/Araryarch67/Riflay/rele
 
 The macOS app is unsigned: on first launch use System Settings › Privacy & Security › **Open Anyway**. The iOS file is attached to a release a little after the others.
 
+## System requirements
+
+| System | Version | Processor |
+|---|---|---|
+| Windows | 10 or 11, 64-bit | x64 |
+| Linux | a 64-bit distribution with GTK 3, on Wayland or X11, and a working OpenGL driver; PipeWire, PulseAudio or ALSA | x86_64 |
+| macOS | 12 Monterey or later | Apple silicon or Intel |
+| Android | 7.0 or later | arm64, arm32 or x86_64 |
+| iOS | 15 or later (sideloaded) | arm64 |
+
+On a computer Riflay picks a performance mode at first start (Settings › Power & background changes it):
+
+| | Lightweight | Balanced | Heavy |
+|---|---|---|---|
+| Suits | under 8 GB of memory, or fewer than 8 processor threads | laptops and most desktops | desktops with 16+ threads and 16+ GB |
+| Moves | the seek bar, about once a second | cover and wave at 5 fps, visualizer at 10 | everything at 30 fps |
+| CPU while a song plays, in front | ~3% of one thread | ~8% | ~14% |
+
+At least 4 GB of memory is recommended for the system, Riflay and a browser beside it. Riflay itself measured on
+Linux (release build, private memory): ~150 MB idle, ~200-230 MB playing or scrolling a library of covers, ~300 MB
+with a 1080p music video, and 65-110 MB while it plays behind other windows (it hands unused memory back to the
+system then; Windows does the same). Behind other windows every mode draws about one frame a second. The app takes
+about 40 MB on disk on Linux (plus the system's libmpv) and a few hundred MB elsewhere, where libmpv comes with it;
+downloads and the cover cache need room of their own.
+
 ## Build from source
 
 You need the [Flutter SDK](https://docs.flutter.dev/get-started/install) (stable) and the desktop toolchain; on Linux also `clang`, `cmake`, `ninja`, `pkg-config`, GTK 3, the `libmpv` headers and `libayatana-appindicator3` (the tray icon; `libayatana-appindicator3-dev` on Debian and Ubuntu).

@@ -69,8 +69,8 @@ void main() {
     expect(find.text('16 GB of memory'), findsOneWidget);
     expect(find.text('Laptop, runs on battery'), findsOneWidget);
     expect(find.text('Recommended'), findsOneWidget);
-    // Lightweight on 16 threads: 4% of one thread is 0.25% of all of them.
-    expect(find.text('About 0.25% of the processor while a song plays'), findsOneWidget);
+    // Lightweight on 16 threads: 3% of one thread is 0.19% of all of them.
+    expect(find.text('About 0.19% of the processor while a song plays'), findsOneWidget);
     // A 16-thread laptop gets Balanced.
     expect(
       find.descendant(

@@ -38,15 +38,15 @@ class DeviceSetup {
 
   static const _key = 'deviceSetup.v1';
 
-  /// What a song playing costs in each mode, in % of one thread, measured with `tool/cpu.sh` (the real app in a
-  /// 2560 × 1600 window, Home and Now Playing, the default look otherwise; Heavy estimated from Balanced at 30 fps).
-  /// Lightweight draws about one frame a second (the seek bar, with the time beside it); Balanced moves the cover,
-  /// the wave and the visualizer at 20 fps; Heavy at the display's rate. Measure again and change these when what a
-  /// mode draws changes.
+  /// What a song playing costs in each mode, in % of one thread, measured with `tool/cpu.sh` on Linux (the real app
+  /// in a 2560 × 1600 window, focused, Home and Now Playing, songs with sound and the visualizer on, the audio
+  /// server's share included). Lightweight draws about one frame a second (the seek bar, with the time beside it);
+  /// Balanced (frugal on a computer) moves the cover and the wave at 5 fps and the visualizer at 10; Heavy all of
+  /// them at 30. Measure again and change these when what a mode draws changes.
   static const playingCost = {
-    PerformanceMode.lightweight: 4.0,
-    PerformanceMode.balanced: 25.0,
-    PerformanceMode.heavy: 60.0,
+    PerformanceMode.lightweight: 3.0,
+    PerformanceMode.balanced: 8.0,
+    PerformanceMode.heavy: 14.0,
   };
 
   /// Below this much memory the lightest mode, whatever the processor: an integrated GPU takes its share of it.

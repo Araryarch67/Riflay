@@ -126,6 +126,11 @@ test/                          Unit and widget tests
 
 ## First start on a computer
 
+- `services/app_updates.dart` checks GitHub's latest stable release: on request (Settings › About,
+  `AppUpdateTile`), and once a start (`AppUpdates.checkAtStart`, from `RiflayApp`): 10 s after the window is up, one
+  quiet request; a newer release shows `showUpdatePopup` (the version, the tile that gets it, Not now), the latest
+  version or no connection show nothing. Not in widget tests, `tool/cpu.sh` or `tool/memory_app.sh`;
+  `RIFLAY_NO_UPDATE_CHECK` turns the check at start off.
 - `services/device_setup.dart` reads the computer (processor name, threads, memory, battery: `/proc` and
   `/sys/class/power_supply` on Linux, `GlobalMemoryStatusEx` / `GetSystemPowerStatus` and the registry on Windows,
   `sysctl` / `pmset` on macOS) and recommends a `PerformanceMode` by kind of computer: Lightweight under 8 GB or 8
@@ -505,6 +510,16 @@ moving, ~0.17% without it, and Heavy with the visualizer must stay under 0.8% (~
 seeded songs are silent, so the visualizer's bars stand still: `RIFLAY_CPU_SOURCE='anoisesrc=r=44100:c=pink:a=0.3'`
 gives them sound, and `RIFLAY_CPU_ENV='RIFLAY_MPV_OPTIONS=ao=null'` keeps it off the speakers (add PipeWire's ~1.3%).
 
+Memory over a session: `tool/memory_app.sh` builds `tool/memory_app.dart` (the real app, on Flutter's own binding)
+and takes it through idle, a hi-res song, Now Playing, scrolling 120 songs with 1000 px covers, a 1080p music video
+(Now Playing, then the side panel) and a long pause, reading its own memory every 250 ms: each phase prints private
+/ PSS / RSS as low / median / high, so a jump between fixed points shows. `RIFLAY_MEM_BUILD=release` measures what
+people run (a profile build carries ~40 MiB more: the VM service, timeline, source maps).
+`RIFLAY_MEM_ENV='RIFLAY_MEM_PARTS=true'` adds what private memory is made of (C heap, anonymous, Dart heap, each
+library), `RIFLAY_MEM_DART=true` (profile) the Dart heap's biggest classes; `RIFLAY_MEM_LAYOUT` / `RIFLAY_MEM_AUDIO`
+seed Layout and Sound settings. `RIFLAY_VIDEO_MPV_OPTIONS='name=value;…'` sets mpv options on the music video's
+player, for an A/B. Runs differ by ~20 MiB; compare medians of a couple of runs.
+
 Memory: `tool/memory.sh [runs]` runs `integration_test/memory_test.dart` the
 same way (profile, headless, fresh process per run) and prints PSS / private /
 RSS at idle, playing a local FLAC, streaming YouTube and after scrolling.
@@ -602,6 +617,8 @@ device's language when Riflay has it). The words live in `lib/l10n/app_en.arb` (
   flutter run --dart-define=RIFLAY_BEAT_WHILE_PAUSED=true  # the seek bar's position stays on UiBeat while paused
   flutter run --dart-define=RIFLAY_MOVE_UNFOCUSED=true  # decorations, visualizer and marquees keep moving while another window has the focus
   flutter run --dart-define=RIFLAY_FULL_BALANCED=true  # Balanced on a computer moves at 20 fps, not 5 (visualizer 10)
+  flutter run --dart-define=RIFLAY_NO_UPDATE_CHECK=true  # no update check at start (Settings › About still checks)
+  flutter run --dart-define=RIFLAY_NO_PAGE_OUT=true  # Linux keeps the app resident behind other windows (no MADV_PAGEOUT)
   flutter run --dart-define=RIFLAY_ASTATS_VISUALIZER=true  # the visualizer measures its bands with astats (~3x the CPU), not aspectralstats
   flutter run -d chrome --dart-define=RIFLAY_NO_WEB_AUDIO=true  # web: songs play straight from <audio>, no effects or visualizer
   ```
@@ -712,6 +729,17 @@ device's language when Riflay has it). The words live in `lib/l10n/app_en.arb` (
 - Measured on a 24-thread laptop (Windows, playing a YouTube song with its video and the visualizer on, % of the
   whole CPU / private working set): Lightweight 0.01-0.16% / 30-85 MB after the first idle trim (~15 s, see
   `MemoryTrim`), Balanced 0.2-0.7% / up to ~260 MB, Heavy 0.4-0.7% / up to ~275 MB in front and ~0.1% behind.
+- Linux pages the app out like Windows empties its working set (`MemoryTrim`, `trimProcessMemory`):
+  `madvise(MADV_PAGEOUT)` over its private mappings, while hidden or left alone (8 s without input) behind another
+  window, once a minute after that and after a song change. Pages go to zram/swap or back to the page cache and fault
+  in when touched. btop showed ~400 MiB RSS for a window playing behind others (that is when people look at it);
+  paged out, ~190-240 MiB RSS and 65-110 MiB private. Not while the window has the focus, so lyrics read without the
+  mouse don't fault back in each minute. Off with `RIFLAY_NO_PAGE_OUT`. The base app is most of what stays:
+  Lightweight measured the same as Balanced in front (~150 MiB private idle, ~200 playing, ~220 scrolling); Heavy
+  peaks ~336 MiB private / ~460 MiB RSS with a 1080p music video.
+- Measuring a song (`AudioAnalysis._measure`: loudness for leveling, the waveform) keeps at most 8 of mpv's 64 KiB
+  reads in flight to the worker isolate: mpv decodes far faster than the worker measures, and the whole song piled up
+  in its queue (180 MiB for four minutes of 24/96, twice that at 192 kHz).
 - mpv doesn't report `time-pos` (`stopPositionEvents` in `third_party/just_audio_media_kit`): it did for every
   audio chunk, 16+ times a second, each waking the app. The position is read on the spot when an event goes out
   that used to carry mpv's latest report, and checked once a second while playing; a playback event goes out only

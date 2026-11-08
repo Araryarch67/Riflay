@@ -9,8 +9,11 @@ import '../../services/language.dart';
 
 /// An explicit check, followed by an Android download and system installation.
 class AppUpdateTile extends StatefulWidget {
-  const AppUpdateTile({super.key, this.updates});
+  const AppUpdateTile({super.key, this.updates, this.release});
   final AppUpdates? updates;
+
+  /// A newer release already found ([showUpdatePopup]): the tile starts at getting it.
+  final AppRelease? release;
 
   @override
   State<AppUpdateTile> createState() => _AppUpdateTileState();
@@ -18,7 +21,7 @@ class AppUpdateTile extends StatefulWidget {
 
 class _AppUpdateTileState extends State<AppUpdateTile> {
   late final _updates = widget.updates ?? AppUpdates();
-  AppRelease? _release;
+  late AppRelease? _release = widget.release;
   bool _busy = false;
   double? _progress;
   String? _path;
@@ -101,7 +104,9 @@ class _AppUpdateTileState extends State<AppUpdateTile> {
       subtitle: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(_message ?? tr.checkGithubUpdate, style: settingsMuted(context)),
+          // Found at start: the popup's title already says which version.
+          if (_message != null || widget.release == null)
+            Text(_message ?? tr.checkGithubUpdate, style: settingsMuted(context)),
           if (_progress != null) ...[const SizedBox(height: 8), LinearProgressIndicator(value: _progress)],
         ],
       ),
@@ -112,3 +117,16 @@ class _AppUpdateTileState extends State<AppUpdateTile> {
     );
   }
 }
+
+/// Tells about a newer [release] that the check at start found ([AppUpdates.checkAtStart]): its version, and the tile
+/// that gets it (an Android download and install, elsewhere the release page). [updates] is the checker that found
+/// it, and is disposed with the tile.
+Future<void> showUpdatePopup(BuildContext context, AppUpdates updates, AppRelease release) => showDialog<void>(
+  context: context,
+  builder: (context) => AlertDialog(
+    title: Text(tr.versionAvailable(release.version)),
+    contentPadding: const EdgeInsets.fromLTRB(8, 16, 8, 0),
+    content: AppUpdateTile(updates: updates, release: release),
+    actions: [TextButton(onPressed: () => Navigator.of(context).pop(), child: Text(tr.notNow))],
+  ),
+);

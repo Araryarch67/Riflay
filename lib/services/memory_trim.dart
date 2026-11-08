@@ -15,8 +15,9 @@ import 'rendering_memory.dart';
 /// releases them. On Windows the heap is compacted after a song change, and the
 /// working set is emptied while the window is hidden, or once a minute while
 /// nobody is using it: emptying it mid-scroll would make every page the next
-/// frames touch fault back in (CPU time, and stutter). It runs in a background
-/// isolate rather than on the UI thread.
+/// frames touch fault back in (CPU time, and stutter). Linux pages the app out the
+/// same way (`MADV_PAGEOUT`), while hidden or left alone behind another window.
+/// It runs in a background isolate rather than on the UI thread.
 abstract final class MemoryTrim {
   // Not in widget tests either: their fake clock fails on timers left running.
   static final bool _available = (Host.isLinux || Host.isWindows) && !Host.environment.containsKey('FLUTTER_TEST');
@@ -35,6 +36,17 @@ abstract final class MemoryTrim {
 
   static bool get _idle => DateTime.now().difference(_lastInput) >= _idleAfter;
 
+  /// Another window has the focus (or this one does: true). See [focus].
+  static bool _focused = true;
+
+  /// Nobody is using the window: hidden, or untouched for a while; on Linux also with another window in front, so
+  /// lyrics read without the mouse don't fault back in every minute.
+  static bool get _away => _hidden || (_idle && (Host.isWindows || !_focused));
+
+  /// Empties the working set while idle or hidden: Windows, and Linux, where btop and the system monitor showed a
+  /// window left playing behind others at its peak. Off on Linux with `RIFLAY_NO_PAGE_OUT`.
+  static final bool _pagesOut = Host.isWindows || (Host.isLinux && !const bool.fromEnvironment('RIFLAY_NO_PAGE_OUT'));
+
   static void _input(PointerEvent _) => _lastInput = DateTime.now();
 
   static bool _key(KeyEvent _) {
@@ -49,14 +61,13 @@ abstract final class MemoryTrim {
     HardwareKeyboard.instance.addHandler(_key);
   }
 
-  static void _tick() {
-    if (Host.isLinux) return _trim();
-    if (_hidden || _idle) _trim(workingSet: true);
-  }
+  static void _tick() => _trim(workingSet: _pagesOut && _away);
 
   /// Empties the working set once the window is idle, looking again every [_idleAfter] until it is.
   static void _whenIdle() {
-    if (_idle || _hidden) return _trim(workingSet: true);
+    if (_away) return _trim(workingSet: _pagesOut);
+    // Linux, back in front: the next time it loses the focus starts this again ([focus]).
+    if (Host.isLinux && _focused && !_hidden) return;
     _soon = Timer(_idleAfter, _whenIdle);
   }
 
@@ -68,10 +79,10 @@ abstract final class MemoryTrim {
     _every ??= Timer.periodic(const Duration(minutes: 1), (_) => _tick());
     _soon?.cancel();
     _soon = Timer(const Duration(seconds: 4), () {
-      _trim(workingSet: Host.isWindows && _idle);
-      // Windows, still in use: the working set goes back once nobody has touched the window for a while, not at the
-      // next minute (after a start or a song change it stood near its peak, ~190 MB, for up to a minute).
-      if (Host.isWindows && !_idle) _soon = Timer(_idleAfter, _whenIdle);
+      _trim(workingSet: _pagesOut && _away);
+      // Still in use: the working set goes back once nobody has touched the window for a while, not at the next
+      // minute (after a start or a song change it stood near its peak, ~190 MB on Windows, for up to a minute).
+      if (_pagesOut && !_away) _soon = Timer(_idleAfter, _whenIdle);
     });
   }
 
@@ -86,8 +97,19 @@ abstract final class MemoryTrim {
     _soon?.cancel();
     _soon = Timer(const Duration(seconds: 2), () async {
       await RenderingMemory.release();
-      _trim(workingSet: true);
+      _trim(workingSet: _pagesOut);
     });
+  }
+
+  /// Whether the window has the focus. On Linux, losing it pages the app out once it has been left alone for
+  /// [_idleAfter]: someone looking at btop or the system monitor, or working in another window, while a song plays.
+  static void focus(bool focused) {
+    if (!_available || focused == _focused) return;
+    _focused = focused;
+    if (focused || !Host.isLinux || !_pagesOut || _hidden) return;
+    _listen();
+    _soon?.cancel();
+    _soon = Timer(_idleAfter, _whenIdle);
   }
 
   /// The window is shown again: caches get their normal budgets back.

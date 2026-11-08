@@ -85,9 +85,30 @@ class AppRelease {
   }
 }
 
-/// Checks only on request. Android downloads are size- and SHA-256-checked;
-/// the native installer separately checks the package, version and signing key.
+/// Checks on request (Settings › About), and once a start in the background ([checkAtStart]). Android downloads are
+/// size- and SHA-256-checked; the native installer separately checks the package, version and signing key.
 class AppUpdates {
+  /// Off with `RIFLAY_NO_UPDATE_CHECK`: no check at start, only the one in Settings › About.
+  static const _checksAtStart = !bool.fromEnvironment('RIFLAY_NO_UPDATE_CHECK');
+  static bool _checkedAtStart = false;
+
+  /// Once a start, a while after the window is up and quietly: one request for the latest release. [found] gets a
+  /// newer one, with the checker that found it (for its download); the latest version, no connection or an error
+  /// show nothing. A second call in the same run does nothing.
+  static Future<void> checkAtStart(void Function(AppUpdates updates, AppRelease release) found) async {
+    if (!_checksAtStart || _checkedAtStart || Host.isWeb || Host.environment.containsKey('FLUTTER_TEST')) return;
+    _checkedAtStart = true;
+    await Future<void>.delayed(const Duration(seconds: 10));
+    final updates = AppUpdates();
+    try {
+      final release = await updates.check();
+      if (release.newerThan(updates.installedVersion)) return found(updates, release);
+    } catch (e) {
+      debugPrint('Update check at start: $e');
+    }
+    updates.dispose();
+  }
+
   AppUpdates({http.Client? client, bool? android, Future<Directory> Function()? cacheDirectory})
     : _client = client ?? http.Client(),
       android = android ?? Host.isAndroid,
