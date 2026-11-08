@@ -17,6 +17,8 @@ mkdir -p "$tools"
 fetch() { [ -x "$tools/$1" ] || { python3 tool/download_release_asset.py "$2" "$tools/$1" && chmod +x "$tools/$1"; }; }
 fetch linuxdeploy https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
 fetch appimagetool https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage
+# appimagetool otherwise downloads this internally through the same failing release URL route.
+fetch runtime-x86_64 https://github.com/AppImage/type2-runtime/releases/download/continuous/runtime-x86_64
 
 libmpv=$(ldconfig -p | awk '/libmpv\.so\.2 .*x86-64/ {print $NF}' | head -n1 || true)
 [ -n "$libmpv" ] || { echo "libmpv.so.2 not found" >&2; exit 1; }
@@ -54,4 +56,4 @@ exec "$here/usr/share/riflay/riflay" "$@"
 APPRUN
 chmod +x "$appdir/AppRun"
 
-ARCH=x86_64 "$tools/appimagetool" --no-appstream "$appdir" "$out"
+ARCH=x86_64 "$tools/appimagetool" --runtime-file "$tools/runtime-x86_64" --no-appstream "$appdir" "$out"

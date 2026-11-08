@@ -1,8 +1,8 @@
 # Builds Riflay for Android, Windows, Linux, macOS and iOS and attaches the files to a
 # GitHub release. Runs when a version tag is pushed (`git tag v1.2.0
-# && git push origin v1.2.0`), or by hand from the Actions tab (then the files
-# are only kept as workflow artifacts, no release is made; `platforms` picks
-# which builds run).
+# && git push origin v1.2.0`), or by hand from the Actions tab. Manual runs keep
+# artifacts only unless publish_tag names an existing release to repair;
+# platforms picks which builds run.
 #
 # Each platform uploads as soon as its own build finishes. A draft holds the notes
 # until the first upload publishes it; slower or failed platforms do not block the
@@ -91,6 +91,34 @@ jobs:
             --sha256 17f277867f6914d61b1aa02efab1ba7bb439ad652ca485cd8ca6842fccec6e43
           sed -i "s|^distributionUrl=.*|distributionUrl=file\\:$RUNNER_TEMP/gradle-9.3.1-all.zip|" \
             android/gradle/wrapper/gradle-wrapper.properties
+      - name: Kotlin compiler through the asset API
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          repo="$RUNNER_TEMP/kotlin-maven"
+          module="$repo/org/jetbrains/kotlin/kotlin-compiler-embeddable/2.4.0"
+          mkdir -p "$module" "$HOME/.gradle/init.d"
+          python3 tool/download_release_asset.py \
+            https://github.com/JetBrains/kotlin/releases/download/v2.4.0/kotlin-compiler-embeddable-2.4.0.jar \
+            "$module/kotlin-compiler-embeddable-2.4.0.jar" \
+            --sha256 c2b25e8c1c93ec416ba4327f5e31eaec0f0c8847241b9353e294b8db9dce564f
+          curl -fsSL --retry 3 --retry-all-errors \
+            https://repo.maven.apache.org/maven2/org/jetbrains/kotlin/kotlin-compiler-embeddable/2.4.0/kotlin-compiler-embeddable-2.4.0.pom \
+            -o "$module/kotlin-compiler-embeddable-2.4.0.pom"
+          echo "RIFLAY_KOTLIN_REPO=$repo" >> "$GITHUB_ENV"
+          # Only this artifact comes from the local repository; its original POM retains its dependencies.
+          cat > "$HOME/.gradle/init.d/riflay-kotlin.gradle" <<'GRADLE'
+          gradle.beforeProject { project ->
+              project.repositories.exclusiveContent {
+                  forRepository {
+                      project.repositories.maven {
+                          url = project.uri(System.getenv('RIFLAY_KOTLIN_REPO'))
+                      }
+                  }
+                  filter { includeModule('org.jetbrains.kotlin', 'kotlin-compiler-embeddable') }
+              }
+          }
+          GRADLE
       - name: Build APKs
         env:
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
