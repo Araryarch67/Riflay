@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:riflay/services/appearance.dart';
 import 'package:riflay/services/layout_prefs.dart';
 import 'package:riflay/services/player_controller.dart';
+import 'package:riflay/services/visualizer_levels.dart';
 import 'package:riflay/ui/debug_switches.dart';
 import 'package:riflay/ui/widgets/audio_reactive_view.dart';
 import 'package:riflay/ui/widgets/controls.dart';
@@ -80,24 +81,39 @@ void main() {
     c.dispose();
   });
 
-  testWidgets('Balanced on a computer keeps the audio analysis in standby; Heavy has it', (tester) async {
+  testWidgets('Balanced on a computer keeps the visualizer, at 10 fps', (tester) async {
     DebugSwitches.fullBalanced = false;
     addTearDown(() => DebugSwitches.fullBalanced = true);
     await prefs.setVisualizer(true);
     final c = _PlayingController();
-    Widget view() => PlayerScope(
-      controller: c,
-      child: MaterialApp(home: AudioReactiveView(builder: (_, _) => const SizedBox.shrink())),
+    late VisualizerLevels shown;
+    await tester.pumpWidget(
+      PlayerScope(
+        controller: c,
+        child: MaterialApp(
+          home: AudioReactiveView(
+            builder: (_, levels) {
+              shown = levels;
+              return const SizedBox.shrink();
+            },
+          ),
+        ),
+      ),
     );
+    var builds = 0;
+    void count() => builds++;
+    shown.addListener(count);
     expect(LayoutPrefs.frugal, isTrue);
-    expect(visualizerBlockedBy(c), isNotNull);
-    await tester.pumpWidget(view());
-    expect(c.audio.visualizerActive, isFalse);
-    await prefs.setPerformance(PerformanceMode.heavy);
-    await tester.pumpWidget(view());
-    expect(LayoutPrefs.frugal, isFalse);
     expect(visualizerBlockedBy(c), isNull);
     expect(c.audio.visualizerActive, isTrue);
+    // Fresh levels keep arriving: the view follows them on its own beat, not on each one.
+    final start = builds;
+    for (var i = 0; i < 60; i++) {
+      c.audio.visualizerLevels.addBands(List.filled(VisualizerLevels.samples, i.isEven ? 0.9 : 0.1));
+      await tester.pump(const Duration(milliseconds: 1000 ~/ 60));
+    }
+    expect(builds - start, inInclusiveRange(8, 12), reason: 'one second at 10 fps');
+    shown.removeListener(count);
     await tester.pumpWidget(const SizedBox.shrink());
     c.dispose();
   });

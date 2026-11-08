@@ -15,6 +15,7 @@ import '../platform/host.dart';
 import '../platform/mpv.dart';
 import '../platform/web_audio.dart';
 import '../platform/web_effects.dart';
+import '../ui/debug_switches.dart';
 import 'audio_analysis.dart';
 import 'bluetooth_codec.dart';
 import 'layout_prefs.dart';
@@ -799,8 +800,17 @@ class AudioEngine extends ChangeNotifier {
     final format = _visualizerFormat;
     return format == null
         ? _visualizerStandbyFilter
-        : VisualizerSpectrum.filter(channels: format.channels, layout: format.layout, rate: format.rate);
+        : VisualizerSpectrum.filter(
+            channels: format.channels,
+            layout: format.layout,
+            rate: format.rate,
+            spectral: _spectral,
+          );
   }
+
+  /// The bands are measured with `aspectralstats` until an mpv refuses it (its FFmpeg is older than 5.1), then with
+  /// `astats`. See [VisualizerSpectrum.filter].
+  bool _spectral = !DebugSwitches.astatsVisualizer;
 
   // A format-neutral meter while the decoder is opening the next song.
   static const _visualizerStandbyFilter =
@@ -853,6 +863,12 @@ class AudioEngine extends ChangeNotifier {
                 _visualizerFormat = null;
               }
               await p.command(['af', 'add', _currentVisualizerFilter]);
+              // mpv logs a graph it can't build and plays on without it, so look for the filter.
+              if (_spectral && _visualizerFormat != null && !(await p.getProperty('af')).contains('visualizer')) {
+                if (_disposed || !identical(p, _native) || !visualizerActive) return;
+                _spectral = false;
+                await p.command(['af', 'add', _currentVisualizerFilter]);
+              }
             } else {
               await p.command(['af', 'remove', '@visualizer']);
             }

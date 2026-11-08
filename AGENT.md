@@ -497,10 +497,11 @@ output and leaving the resampling to PipeWire don't change it. The rest of a pla
 
 Budget on Linux, as a share of the whole processor (24 threads here, so 2.4% of one core is 0.1%): playing behind
 another window, paused or idle, every mode stays under 0.1%; so does Lightweight in front. Balanced on a computer
-(`LayoutPrefs.frugal`: no visualizer, everything that moves on one 5 fps beat) is ~0.15-0.18% in front, and Heavy
-with the visualizer must stay under 0.8% (~0.6%: half of it is mpv's `astats`, the rest its 30 fps). Seed the
-visualizer with `{"visualizer": true, "visualizerStable": true}`: without the second key the old Beta migration turns
-it off.
+(`LayoutPrefs.frugal`: decorations on one 5 fps beat, the visualizer at 10) is ~0.33% in front with the visualizer
+moving, ~0.17% without it, and Heavy with the visualizer must stay under 0.8% (~0.57%). Seed the visualizer with
+`{"visualizer": true, "visualizerStable": true}`: without the second key the old Beta migration turns it off. The
+seeded songs are silent, so the visualizer's bars stand still: `RIFLAY_CPU_SOURCE='anoisesrc=r=44100:c=pink:a=0.3'`
+gives them sound, and `RIFLAY_CPU_ENV='RIFLAY_MPV_OPTIONS=ao=null'` keeps it off the speakers (add PipeWire's ~1.3%).
 
 Memory: `tool/memory.sh [runs]` runs `integration_test/memory_test.dart` the
 same way (profile, headless, fresh process per run) and prints PSS / private /
@@ -598,7 +599,8 @@ device's language when Riflay has it). The words live in `lib/l10n/app_en.arb` (
   flutter run --dart-define=RIFLAY_QUICK_LIGHTWEIGHT_SEEK_BAR=true  # Lightweight's seek bar moves 2-4 times a second, not once
   flutter run --dart-define=RIFLAY_BEAT_WHILE_PAUSED=true  # the seek bar's position stays on UiBeat while paused
   flutter run --dart-define=RIFLAY_MOVE_UNFOCUSED=true  # decorations, visualizer and marquees keep moving while another window has the focus
-  flutter run --dart-define=RIFLAY_FULL_BALANCED=true  # Balanced on a computer keeps the visualizer and 20 fps decorations
+  flutter run --dart-define=RIFLAY_FULL_BALANCED=true  # Balanced on a computer moves at 20 fps, not 5 (visualizer 10)
+  flutter run --dart-define=RIFLAY_ASTATS_VISUALIZER=true  # the visualizer measures its bands with astats (~3x the CPU), not aspectralstats
   flutter run -d chrome --dart-define=RIFLAY_NO_WEB_AUDIO=true  # web: songs play straight from <audio>, no effects or visualizer
   ```
 
@@ -687,12 +689,18 @@ device's language when Riflay has it). The words live in `lib/l10n/app_en.arb` (
 - `UiBeat`'s timer fires only as often as its busiest view needs (`_stride`): a seek bar ticking once a second wakes
   the app once a second, not 60 times. Heavy's decorations and visualizer run at 30 fps (`PlayingMotion.heavyEvery`):
   at 60 a focused window cost ~0.9% of a 24-thread CPU. The visualizer moves only while the window has the focus:
-  its mpv filter bank (`VisualizerSpectrum`: 24 band filters, then `astats` on every channel, ~90% of its cost) kept
+  its mpv filter bank (`VisualizerSpectrum`: 24 band filters, then a level per channel) kept
   mpv's core thread at ~5% of a core behind other windows, where the view drew 20 fps. Unfocused, the lease is let
   go and mpv drops the bank.
-- Balanced on a computer is frugal (`LayoutPrefs.frugal`, `RIFLAY_FULL_BALANCED` turns it off): the visualizer is off
-  (its switch says why, like Lightweight's) and the flower, wave, karaoke and seek bar move every 200 ms
-  (`LayoutPrefs.frugalEvery`), in the same frames. A focused window went from ~0.5% to ~0.16% of the CPU. Marquees
+- The bank measures each band with `aspectralstats` (mean and variance of one 1024-point FFT a window; their
+  `variance + mean²` is the power, 34.6 dB under `astats`' RMS for any sound, `VisualizerLevels.spectralDb`).
+  `astats` worked out ~25 statistics on every sample of 26 channels for the one RMS used, ~90% of the bank's cost:
+  FFmpeg 9 spends 2.7 s per 120 s of audio on the bank now, 8.9 s before; mpv's core thread fell from ~5% to ~2.4%
+  of a core. An mpv whose FFmpeg predates 5.1 refuses the graph (logged, playback goes on, `af` comes back
+  without it): `_syncVisualizer` sees that and adds the `astats` bank instead. `RIFLAY_ASTATS_VISUALIZER` forces it.
+- Balanced on a computer is frugal (`LayoutPrefs.frugal`, `RIFLAY_FULL_BALANCED` turns it off): the flower, wave,
+  karaoke and seek bar move every 200 ms (`LayoutPrefs.frugalEvery`) and the visualizer every 100 ms, in the same
+  frames. A focused window with the visualizer went from ~0.5% to ~0.33% of the CPU. Marquees
   keep 20 fps: they stop after a few loops, and at 5 fps a title jumps 7 px. Phones keep the full Balanced; tests
   run as a phone (`test/flutter_test_config.dart`) and turn the switch back for frugal's own tests.
 - Karaoke fills at the player's rate (Balanced 20, Heavy 30 fps; it was the display's) and only with the window in

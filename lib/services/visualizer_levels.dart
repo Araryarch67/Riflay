@@ -22,14 +22,43 @@ class VisualizerLevels extends ValueNotifier<List<double>> {
     return ((db + 60) / 60).clamp(0.0, 1.0);
   }
 
-  /// One value per frequency band in the current audio frame, ordered bass to treble.
-  /// The map is read whole to avoid the bundled mpv's unsafe sub-key lookup; the keys are
-  /// scanned in place rather than jsonDecoded, since this runs every 40 ms.
+  /// One value per frequency band in the current audio frame, ordered bass to treble, from `aspectralstats` (mean
+  /// and variance per channel) or `astats` (RMS per channel). The map is read whole to avoid the bundled mpv's unsafe
+  /// sub-key lookup; the keys are scanned in place rather than jsonDecoded, since this runs every 40 ms.
   void addMetadata(String metadata, {int firstBandChannel = 3}) {
-    final levels = _scratch;
-    levels.fillRange(0, samples, 0);
-    const prefix = '"lavfi.astats.';
-    const suffix = '.RMS_level"';
+    final levels = _scratch..fillRange(0, samples, 0);
+    if (metadata.contains(_spectral)) {
+      final mean = _mean..fillRange(0, samples, 0);
+      final variance = _variance..fillRange(0, samples, 0);
+      _scan(metadata, _spectral, '.mean"', firstBandChannel, (band, v) => mean[band] = double.tryParse(v) ?? 0);
+      _scan(metadata, _spectral, '.variance"', firstBandChannel, (band, v) => variance[band] = double.tryParse(v) ?? 0);
+      for (var i = 0; i < samples; i++) {
+        levels[i] = amplitudeOfDb(spectralDb(mean[i], variance[i]));
+      }
+    } else {
+      _scan(metadata, '"lavfi.astats.', '.RMS_level"', firstBandChannel, (band, v) => levels[band] = amplitude(v));
+    }
+    addBands(levels);
+  }
+
+  static const _spectral = '"lavfi.aspectralstats.';
+
+  /// A band's RMS in dB from `aspectralstats`' mean and variance of its 1024-point magnitude spectrum: variance plus
+  /// mean squared is the window's power (Parseval), 34.6 dB under what `astats` reports for the same samples, for a
+  /// tone, noise or any band (within 0.4 dB). So the bars stand as tall as they did with `astats`.
+  static double? spectralDb(double mean, double variance) {
+    final power = variance + mean * mean;
+    return power > 0 && power.isFinite ? 10 * math.log(power) / math.ln10 + 34.6 : null;
+  }
+
+  /// Calls [found] with the band and raw value of every `<prefix><channel><suffix>` key in [metadata].
+  static void _scan(
+    String metadata,
+    String prefix,
+    String suffix,
+    int firstBandChannel,
+    void Function(int band, String value) found,
+  ) {
     var at = metadata.indexOf(prefix);
     while (at >= 0) {
       var i = at + prefix.length;
@@ -53,13 +82,14 @@ class VisualizerLevels extends ValueNotifier<List<double>> {
           if (c == 0x22 || c == 0x2c || c == 0x7d) break;
           end++;
         }
-        levels[band] = amplitude(metadata.substring(i, end));
+        found(band, metadata.substring(i, end));
       }
       at = metadata.indexOf(prefix, at + prefix.length);
     }
-    addBands(levels);
   }
 
+  final _mean = Float64List(samples);
+  final _variance = Float64List(samples);
   final _scratch = Float64List(samples);
 
   void addBands(List<double> bands) {

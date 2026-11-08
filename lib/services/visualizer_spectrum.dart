@@ -9,7 +9,10 @@ abstract final class VisualizerSpectrum {
   static double frequency(int band, int rate) =>
       (35 * math.pow(math.min(16000, rate * 0.45) / 35, band / (bands - 1))).toDouble();
 
-  static String filter({int channels = 2, String layout = 'stereo', int rate = 48000}) {
+  /// [spectral]: each channel's power from one 1024-point FFT a window (`aspectralstats`), ~3x cheaper than `astats`,
+  /// which works out ~25 statistics on every sample to give the one RMS used here. Off: `astats`, for an mpv whose
+  /// FFmpeg is older than 5.1 (no `aspectralstats`), and with `RIFLAY_ASTATS_VISUALIZER`.
+  static String filter({int channels = 2, String layout = 'stereo', int rate = 48000, bool spectral = true}) {
     if (channels < 1 || channels > 8 || rate < 8000 || !RegExp(r'^[a-zA-Z0-9.+()]+$').hasMatch(layout)) {
       throw ArgumentError('Unsupported spectrum input format');
     }
@@ -19,7 +22,7 @@ abstract final class VisualizerSpectrum {
       for (var i = 0; i < bands; i++) '[b$i]bandpass=f=${frequency(i, rate).toStringAsFixed(3)}:t=o:w=0.55[f$i]',
       '[dry]${List.generate(bands, (i) => '[f$i]').join()}'
           'amerge=inputs=${bands + 1},'
-          'astats=metadata=1:reset=1:measure_perchannel=RMS_level:measure_overall=none,'
+          '${spectral ? 'aspectralstats=win_size=1024:overlap=0:measure=mean+variance' : 'astats=metadata=1:reset=1:measure_perchannel=RMS_level:measure_overall=none'},'
           'pan=$layout${List.generate(channels, (i) => '|c$i=c$i').join()}[out]',
     ].join(';');
     return '@visualizer:lavfi=graph=%${utf8.encode(graph).length}%$graph';

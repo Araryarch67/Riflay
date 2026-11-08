@@ -4950,9 +4950,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get vizOffLightweight => 'Off in the Lightweight performance mode';
 
   @override
-  String get vizOffBalanced => 'Off in the Balanced performance mode on a computer. Heavy has it';
-
-  @override
   String get vizOffReducedMotion => 'Off while Motion is reduced';
 
   @override

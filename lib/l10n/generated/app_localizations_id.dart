@@ -4886,9 +4886,6 @@ class AppLocalizationsId extends AppLocalizations {
   String get vizOffLightweight => 'Mati di mode performa Ringan';
 
   @override
-  String get vizOffBalanced => 'Mati di mode performa Seimbang di komputer. Mode Berat punya visualizer';
-
-  @override
   String get vizOffReducedMotion => 'Mati saat Gerak dikurangi';
 
   @override

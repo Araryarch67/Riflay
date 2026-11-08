@@ -16,7 +16,6 @@ import '../../services/language.dart';
 String? visualizerBlockedBy(PlayerController c, {bool reduceMotion = false}) {
   if (c.audio.bitPerfect) return tr.vizOffBitPerfect;
   if (LayoutPrefs.lightweight) return tr.vizOffLightweight;
-  if (LayoutPrefs.frugal) return tr.vizOffBalanced;
   if (!LayoutPrefs.moves || reduceMotion) return tr.vizOffReducedMotion;
   return null;
 }
@@ -38,7 +37,8 @@ class AudioReactiveView extends StatefulWidget {
   /// Caps how often the smoothed levels (and so the painters listening to them) update, for
   /// slow decorations that gain nothing from the display's full refresh rate. Unset, views
   /// update at most 20 times a second in Balanced (the levels themselves arrive 25 times a
-  /// second, and 20 shares its frames with the seek bar's wave and the cover's flower) and 60 in
+  /// second, and 20 shares its frames with the seek bar's wave and the cover's flower), 10 in
+  /// Balanced on a computer (every other frame on the 5 fps beat of `LayoutPrefs.frugal`) and 30 in
   /// Heavy: following a 144-240 Hz display would cost several times the CPU for motion the eye
   /// can't tell apart.
   final double? maxFps;
@@ -62,7 +62,7 @@ class _AudioReactiveViewState extends State<AudioReactiveView> with WidgetsBindi
   UiBeatListener? _beat;
 
   /// Heavy's 30 fps (on the beats the flower and wave use, [PlayingMotion.heavyEvery]), Balanced's 20.
-  double get _cap => math.min(widget.maxFps ?? 60, LayoutPrefs.heavy ? 30 : 20);
+  double get _cap => math.min(widget.maxFps ?? 60, LayoutPrefs.heavy ? 30 : (LayoutPrefs.frugal ? 10 : 20));
 
   bool get _running => _beat != null;
 
@@ -162,7 +162,6 @@ class _AudioReactiveViewState extends State<AudioReactiveView> with WidgetsBindi
         widget.enabled &&
         LayoutPrefs.instance.visualizerEnabled &&
         !LayoutPrefs.lightweight &&
-        !LayoutPrefs.frugal &&
         LayoutPrefs.moves &&
         !_reduceMotion &&
         _visible &&

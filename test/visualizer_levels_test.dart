@@ -18,6 +18,26 @@ void main() {
     expect(levels.value[0], inExclusiveRange(0, measured));
   });
 
+  test('aspectralstats metadata stands as tall as astats for the same sound', () {
+    // Measured by FFmpeg 9 on a 1 kHz tone: astats -27.07 dB RMS; aspectralstats mean 4.55e-05 and variance
+    // 6.53e-07 (power -61.84 dB).
+    expect(VisualizerLevels.spectralDb(4.55094e-05, 6.53e-07)!, closeTo(-27.07, 0.4));
+    expect(VisualizerLevels.spectralDb(0, 0), isNull);
+    final spectral = VisualizerLevels();
+    final rms = VisualizerLevels();
+    addTearDown(spectral.dispose);
+    addTearDown(rms.dispose);
+    final mean = 0.001, variance = 0.00002;
+    final db = VisualizerLevels.spectralDb(mean, variance)!;
+    spectral.addMetadata(
+      '{"lavfi.aspectralstats.1.mean":"1","lavfi.aspectralstats.3.mean":"$mean",'
+      '"lavfi.aspectralstats.3.variance":"$variance","lavfi.aspectralstats.4.mean":"0"}',
+    );
+    rms.addMetadata('{"lavfi.astats.3.RMS_level":"$db"}');
+    expect(spectral.value[0], closeTo(rms.value[0], 1e-9));
+    expect(spectral.value.skip(1), everyElement(0));
+  });
+
   test('mono metadata starts the analysis after its one original channel', () {
     final levels = VisualizerLevels();
     addTearDown(levels.dispose);

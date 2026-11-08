@@ -8,6 +8,8 @@
 #        RIFLAY_CPU_WIDTH=1280 RIFLAY_CPU_HEIGHT=800 tool/cpu.sh   (another screen size)
 #        RIFLAY_CPU_LAYOUT='{"visualizer": false}' tool/cpu.sh   (start with other Layout settings)
 #        RIFLAY_CPU_ENV='NAME=value' tool/cpu.sh   (an environment variable for the app, e.g. a probe)
+#        RIFLAY_CPU_SOURCE='anoisesrc=r=44100:c=pink:a=0.3' RIFLAY_CPU_ENV='RIFLAY_MPV_OPTIONS=ao=null' tool/cpu.sh
+#            (songs with sound, so the visualizer moves; ao=null keeps them off the speakers, and PipeWire's ~1.2%)
 set -euo pipefail
 cd "$(dirname "$0")/.."
 runs=${1:-1}
@@ -16,7 +18,7 @@ scratch=$(mktemp -d)
 trap 'kill $weston 2>/dev/null || true; rm -rf "$scratch"' EXIT
 mkdir -p "$scratch/songs"
 for i in 1 2 3; do
-  ffmpeg -loglevel error -y -f lavfi -i anullsrc=r=44100:cl=stereo -t 300 \
+  ffmpeg -loglevel error -y -f lavfi -i "${RIFLAY_CPU_SOURCE:-anullsrc=r=44100:cl=stereo}" -t 300 \
     -metadata "title=A rather long song title that never fits on one card, part $i" \
     -metadata artist="Some Artist With A Long Name" -metadata album="An Album $i" "$scratch/songs/song$i.flac"
 done

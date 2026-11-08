@@ -642,9 +642,9 @@ class LayoutPrefs extends ChangeNotifier {
   /// Performance mode: Heavy runs decorations and the seek bar at the display's full rate.
   static bool get heavy => instance.performance == PerformanceMode.heavy;
 
-  /// Balanced on a computer: no visualizer, and the decorations, karaoke, marquees and seek bar all move together
-  /// every [frugalEvery]. A playing song then stays near 0.1% of the whole processor with the window focused; at
-  /// 20 fps with the visualizer it was ~0.5%. Heavy keeps every effect. `RIFLAY_FULL_BALANCED` turns this off.
+  /// Balanced on a computer: the flower, wave, karaoke and seek bar move together every [frugalEvery], and the
+  /// visualizer at 10 fps on every other of those beats. A playing song in a focused window then takes ~0.25% of the
+  /// whole processor; at 20 fps it was ~0.5%. Heavy keeps every effect. `RIFLAY_FULL_BALANCED` turns this off.
   static bool get frugal =>
       instance.performance == PerformanceMode.balanced &&
       (Host.isLinux || Host.isWindows || Host.isMacOS) &&
