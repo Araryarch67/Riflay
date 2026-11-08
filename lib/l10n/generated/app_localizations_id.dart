@@ -5267,4 +5267,277 @@ class AppLocalizationsId extends AppLocalizations {
   String searchOnSource(String source) {
     return 'Cari di $source';
   }
+
+  @override
+  String get searchSettings => 'Cari pengaturan';
+
+  @override
+  String searchSettingsNone(String query) {
+    return 'Tidak ada pengaturan yang cocok dengan $query';
+  }
+
+  @override
+  String get settingsPreview => 'Pratinjau';
+
+  @override
+  String get settingsPreviewHint => 'Ketuk pengaturan yang mengubah tampilan untuk melihatnya di sini';
+
+  @override
+  String get closePreview => 'Tutup pratinjau';
+
+  @override
+  String get homeSectionsOption => 'Bagian Beranda';
+
+  @override
+  String get previewLyrics =>
+      'Baris sebelum yang ini\nBaris yang sedang dinyanyikan\nBaris berikutnya menyusul\nLalu satu baris lagi';
+
+  @override
+  String get kwAutoplay => 'radio, lanjut, terus putar, lagu mirip';
+
+  @override
+  String get kwGapless => 'tanpa jeda, mulus, album live';
+
+  @override
+  String get kwSkipSilence => 'hening, sunyi, lewati diam';
+
+  @override
+  String get kwEqualizer => 'eq, bass, treble, nada';
+
+  @override
+  String get kwVolumeLeveling => 'replaygain, normalisasi, kenyaringan, volume sama';
+
+  @override
+  String get kwCrossfade => 'fade, transisi, campur lagu';
+
+  @override
+  String get kwFadeLength => 'durasi fade, detik';
+
+  @override
+  String get kwVirtualSpeakers => 'spasial, surround, 3d, headphone';
+
+  @override
+  String get kwCrossfeed => 'headphone, lebar stereo, bs2b';
+
+  @override
+  String get kwMono => 'satu kanal, satu telinga, aksesibilitas';
+
+  @override
+  String get kwAudioPlugins => 'vst, lv2, carla, efek';
+
+  @override
+  String get kwRoomCorrection => 'konvolusi, impulse response, ir, speaker';
+
+  @override
+  String get kwSignalPath => 'kualitas, bit depth, jalur audio';
+
+  @override
+  String get kwOutputDevice => 'speaker, headphone, dac, kartu suara, bluetooth';
+
+  @override
+  String get kwBitPerfect => 'hi-res, lossless, audiophile, tanpa ubah';
+
+  @override
+  String get kwDirectUsb => 'usb dac, android, bit-perfect';
+
+  @override
+  String get kwNativeDsd => 'dsd, dop, sacd';
+
+  @override
+  String get kwExclusiveMode => 'wasapi, eksklusif';
+
+  @override
+  String get kwSampleRate => 'hz, 44.1, 48, 96, resample';
+
+  @override
+  String get kwBuffer => 'latensi, patah-patah, putus';
+
+  @override
+  String get kwLanguage => 'bahasa, inggris, indonesia, jepang';
+
+  @override
+  String get kwTheme => 'warna, mode gelap, mode terang, catppuccin, nord';
+
+  @override
+  String get kwColours => 'warna, kustom, palet';
+
+  @override
+  String get kwMode => 'gelap, terang, sistem, malam';
+
+  @override
+  String get kwCoverColours => 'dinamis, warna sampul';
+
+  @override
+  String get kwHighContrast => 'kontras, mudah dibaca, aksesibilitas';
+
+  @override
+  String get kwTextSize => 'ukuran huruf, teks besar, zoom';
+
+  @override
+  String get kwFont => 'huruf, jenis font';
+
+  @override
+  String get kwPlayerBackground => 'sedang diputar, sampul blur, hitam';
+
+  @override
+  String get kwFrostedGlass => 'blur, transparan, kaca';
+
+  @override
+  String get kwOpacity => 'transparansi, tembus pandang';
+
+  @override
+  String get kwPresets => 'gaya, tampilan, liquid, kawaii';
+
+  @override
+  String get kwCover => 'sampul, gambar album, bunga, kotak';
+
+  @override
+  String get kwPlayerHeader => 'bagian atas, diputar dari';
+
+  @override
+  String get kwTitleButtons => 'suka, bagikan, hati';
+
+  @override
+  String get kwQualityBadge => 'hi-res, flac, lossless, lencana';
+
+  @override
+  String get kwMusicVideo => 'video, mv, klip';
+
+  @override
+  String get kwVideoDecoding => 'hardware, gpu, cpu, dekoder';
+
+  @override
+  String get kwLiquidGlass => 'kaca, ios, kontrol transparan';
+
+  @override
+  String get kwSeekBar => 'progres, linimasa, bergelombang';
+
+  @override
+  String get kwTimeLeft => 'sisa waktu, durasi';
+
+  @override
+  String get kwTransport => 'putar, jeda, berikutnya, sebelumnya, tombol';
+
+  @override
+  String get kwVolumeSlider => 'volume, penggeser';
+
+  @override
+  String get kwBottomButtons => 'antrean, lirik, tombol bawah';
+
+  @override
+  String get kwLyrics => 'lirik, kata-kata';
+
+  @override
+  String get kwKaraoke => 'kata demi kata, ikut bernyanyi';
+
+  @override
+  String get kwLyricsSize => 'ukuran lirik, lirik besar';
+
+  @override
+  String get kwLyricsAlign => 'kiri, tengah, rata';
+
+  @override
+  String get kwVisualizer => 'spektrum, batang, gelombang, cincin';
+
+  @override
+  String get kwAlbumHeader => 'halaman album, halaman playlist';
+
+  @override
+  String get kwPlayingRow => 'lagu saat ini, sorotan';
+
+  @override
+  String get kwHomeSections => 'beranda, rak, urutkan, sembunyikan';
+
+  @override
+  String get kwMiniPlayer => 'pemutar mini, pemutar kecil';
+
+  @override
+  String get kwTabBar => 'navigasi, bar bawah, tab, dock';
+
+  @override
+  String get kwDesktopBar => 'bar pemutar, komputer';
+
+  @override
+  String get kwCorners => 'sudut, membulat, radius';
+
+  @override
+  String get kwDensity => 'jarak, rapat, lega';
+
+  @override
+  String get kwCoverSize => 'grid, kartu, ukuran sampul';
+
+  @override
+  String get kwMotion => 'animasi, transisi, gerakan';
+
+  @override
+  String get kwWindowButtons => 'bilah judul, tutup, perkecil';
+
+  @override
+  String get kwPerformance => 'baterai, cpu, ringan, seimbang, berat';
+
+  @override
+  String get kwScreen => 'layar, tetap menyala';
+
+  @override
+  String get kwSleep => 'tidur, siaga';
+
+  @override
+  String get kwTray => 'tray, latar belakang';
+
+  @override
+  String get kwBattery => 'latar belakang, layar mati, baterai';
+
+  @override
+  String get kwMusicFolders => 'pindai, folder, perpustakaan';
+
+  @override
+  String get kwDuplicates => 'duplikat, lagu ganda, bersihkan';
+
+  @override
+  String get kwDownloadFormat => 'mp3, flac, opus, m4a, video, audio';
+
+  @override
+  String get kwDownloadQuality => 'bitrate, kbps, kualitas';
+
+  @override
+  String get kwMobileData => 'data seluler, kuota, wifi';
+
+  @override
+  String get kwDownloadsFolder => 'lokasi simpan, folder';
+
+  @override
+  String get kwYtDlp => 'ffmpeg, alat, pengunduh';
+
+  @override
+  String get kwHistory => 'riwayat, privasi, baru diputar';
+
+  @override
+  String get kwWrap => 'statistik, rekap tahunan, lagu teratas';
+
+  @override
+  String get kwBackup => 'ekspor, impor, pulihkan, pindah';
+
+  @override
+  String get kwYoutubeAccount => 'google, masuk, login, akun';
+
+  @override
+  String get kwScrobbling => 'scrobble, profil';
+
+  @override
+  String get kwLyricsServices => 'musixmatch, better lyrics, kunci api';
+
+  @override
+  String get kwDiscord => 'status, aktivitas';
+
+  @override
+  String get kwExtensions => 'plugin, repositori, sumber';
+
+  @override
+  String get kwUpdates => 'versi baru, pembaruan';
+
+  @override
+  String get kwVersion => 'tentang, lisensi, sumber terbuka';
+
+  @override
+  String get discordAppButton => 'Tombol \"Unduh Riflay\"';
 }

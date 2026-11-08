@@ -5345,4 +5345,277 @@ class AppLocalizationsEn extends AppLocalizations {
   String searchOnSource(String source) {
     return 'Search on $source';
   }
+
+  @override
+  String get searchSettings => 'Search settings';
+
+  @override
+  String searchSettingsNone(String query) {
+    return 'No settings match $query';
+  }
+
+  @override
+  String get settingsPreview => 'Preview';
+
+  @override
+  String get settingsPreviewHint => 'Tap a setting that changes the look to see it here';
+
+  @override
+  String get closePreview => 'Close preview';
+
+  @override
+  String get homeSectionsOption => 'Home sections';
+
+  @override
+  String get previewLyrics =>
+      'The line before this one\nThe line sung right now\nThe next line comes after\nAnd one more after that';
+
+  @override
+  String get kwAutoplay => 'radio, continue, keep playing, similar songs, endless';
+
+  @override
+  String get kwGapless => 'seamless, no gap, live album, continuous';
+
+  @override
+  String get kwSkipSilence => 'silence, quiet parts, trim';
+
+  @override
+  String get kwEqualizer => 'eq, bass, treble, tone, preset';
+
+  @override
+  String get kwVolumeLeveling => 'replaygain, normalize, loudness, same volume';
+
+  @override
+  String get kwCrossfade => 'fade, blend, transition, mix songs';
+
+  @override
+  String get kwFadeLength => 'fade time, seconds, duration';
+
+  @override
+  String get kwVirtualSpeakers => 'spatial, surround, 3d, hrtf, headphones';
+
+  @override
+  String get kwCrossfeed => 'headphones, stereo width, bs2b';
+
+  @override
+  String get kwMono => 'one channel, single ear, accessibility';
+
+  @override
+  String get kwAudioPlugins => 'vst, lv2, carla, effects';
+
+  @override
+  String get kwRoomCorrection => 'convolution, impulse response, ir, speakers';
+
+  @override
+  String get kwSignalPath => 'quality, bit depth, what plays, chain';
+
+  @override
+  String get kwOutputDevice => 'speaker, headphones, dac, sound card, bluetooth';
+
+  @override
+  String get kwBitPerfect => 'hi-res, lossless, untouched, audiophile';
+
+  @override
+  String get kwDirectUsb => 'usb dac, android, bit-perfect';
+
+  @override
+  String get kwNativeDsd => 'dsd, dop, sacd';
+
+  @override
+  String get kwExclusiveMode => 'wasapi, exclusive, hog mode';
+
+  @override
+  String get kwSampleRate => 'hz, 44.1, 48, 96, resample';
+
+  @override
+  String get kwBuffer => 'latency, stutter, crackle, dropouts';
+
+  @override
+  String get kwLanguage => 'english, indonesian, japanese, translation';
+
+  @override
+  String get kwTheme => 'colors, dark mode, light mode, catppuccin, nord, dracula';
+
+  @override
+  String get kwColours => 'color, colour, custom, palette';
+
+  @override
+  String get kwMode => 'dark, light, system, night';
+
+  @override
+  String get kwCoverColours => 'dynamic, artwork colours, tint';
+
+  @override
+  String get kwHighContrast => 'contrast, readability, accessibility';
+
+  @override
+  String get kwTextSize => 'font size, bigger text, zoom, scale';
+
+  @override
+  String get kwFont => 'typeface, font family';
+
+  @override
+  String get kwPlayerBackground => 'now playing, blurred cover, black, colour';
+
+  @override
+  String get kwFrostedGlass => 'blur, transparent, acrylic, mica';
+
+  @override
+  String get kwOpacity => 'transparency, see through';
+
+  @override
+  String get kwPresets => 'whole look, style, liquid, kawaii';
+
+  @override
+  String get kwCover => 'artwork, album art, flower, square';
+
+  @override
+  String get kwPlayerHeader => 'top bar, playing from, header';
+
+  @override
+  String get kwTitleButtons => 'like, share, heart, more';
+
+  @override
+  String get kwQualityBadge => 'hi-res, flac, lossless, badge, bitrate';
+
+  @override
+  String get kwMusicVideo => 'video, mv, clip';
+
+  @override
+  String get kwVideoDecoding => 'hardware, gpu, cpu, decoder';
+
+  @override
+  String get kwLiquidGlass => 'glass, ios, frosted controls';
+
+  @override
+  String get kwSeekBar => 'progress, timeline, wavy, scrubber';
+
+  @override
+  String get kwTimeLeft => 'remaining, countdown, duration';
+
+  @override
+  String get kwTransport => 'play, pause, next, previous, buttons';
+
+  @override
+  String get kwVolumeSlider => 'volume, loudness slider';
+
+  @override
+  String get kwBottomButtons => 'queue, lyrics, chips, row';
+
+  @override
+  String get kwLyrics => 'words, lyric, karaoke';
+
+  @override
+  String get kwKaraoke => 'word by word, sing along, timing';
+
+  @override
+  String get kwLyricsSize => 'lyrics font, bigger lyrics';
+
+  @override
+  String get kwLyricsAlign => 'left, centre, center, align';
+
+  @override
+  String get kwVisualizer => 'spectrum, bars, wave, rings, audio reactive';
+
+  @override
+  String get kwAlbumHeader => 'album page, playlist page, header';
+
+  @override
+  String get kwPlayingRow => 'current song, highlight, equalizer icon';
+
+  @override
+  String get kwHomeSections => 'home, shelves, reorder, hide';
+
+  @override
+  String get kwMiniPlayer => 'mini, small player, bottom player';
+
+  @override
+  String get kwTabBar => 'navigation, bottom bar, tabs, dock, glass';
+
+  @override
+  String get kwDesktopBar => 'player bar, bottom bar, computer';
+
+  @override
+  String get kwCorners => 'rounded, radius, roundness, square edges';
+
+  @override
+  String get kwDensity => 'spacing, compact, comfortable, padding';
+
+  @override
+  String get kwCoverSize => 'grid, cards, tiles, thumbnails';
+
+  @override
+  String get kwMotion => 'animation, transitions, reduce motion, speed';
+
+  @override
+  String get kwWindowButtons => 'title bar, close, minimize, maximize';
+
+  @override
+  String get kwPerformance => 'battery, cpu, lightweight, balanced, heavy, speed';
+
+  @override
+  String get kwScreen => 'display, awake, screen timeout';
+
+  @override
+  String get kwSleep => 'standby, suspend, awake';
+
+  @override
+  String get kwTray => 'system tray, background, close button';
+
+  @override
+  String get kwBattery => 'background, screen off, battery optimization';
+
+  @override
+  String get kwMusicFolders => 'scan, watch, folders, library, rescan';
+
+  @override
+  String get kwDuplicates => 'duplicates, same song twice, cleanup';
+
+  @override
+  String get kwDownloadFormat => 'mp3, flac, opus, m4a, video, audio';
+
+  @override
+  String get kwDownloadQuality => 'bitrate, kbps, bit depth, quality';
+
+  @override
+  String get kwMobileData => 'cellular, data, wifi only';
+
+  @override
+  String get kwDownloadsFolder => 'save location, where, path';
+
+  @override
+  String get kwYtDlp => 'ffmpeg, tools, executables, downloader';
+
+  @override
+  String get kwHistory => 'listening history, privacy, recently played';
+
+  @override
+  String get kwWrap => 'stats, wrapped, year in review, top songs';
+
+  @override
+  String get kwBackup => 'export, import, restore, transfer, save';
+
+  @override
+  String get kwYoutubeAccount => 'google, sign in, login, account';
+
+  @override
+  String get kwScrobbling => 'scrobble, last.fm, listenbrainz, profile';
+
+  @override
+  String get kwLyricsServices => 'musixmatch, better lyrics, api key';
+
+  @override
+  String get kwDiscord => 'rich presence, status, activity';
+
+  @override
+  String get kwExtensions => 'spotiflac, plugins, repositories, sources';
+
+  @override
+  String get kwUpdates => 'new version, upgrade, update';
+
+  @override
+  String get kwVersion => 'about, licence, license, open source';
+
+  @override
+  String get discordAppButton => '\"Download Riflay\" button';
 }

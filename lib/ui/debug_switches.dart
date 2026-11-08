@@ -34,6 +34,10 @@ abstract final class DebugSwitches {
   /// is about rendering.
   static bool noTabBarCollapse = const bool.fromEnvironment('RIFLAY_NO_TAB_BAR_COLLAPSE');
 
+  /// Settings' previews ([LivePreview]) run their animations and follow the player, instead of standing still and
+  /// being built afresh on each change of look.
+  static bool movingPreviews = _all || const bool.fromEnvironment('RIFLAY_MOVING_PREVIEWS');
+
   /// The Liquid glass tab bar draws its pills with Riflay's own blur instead of liquid_glass_renderer.
   static bool noGlassRenderer = _all || const bool.fromEnvironment('RIFLAY_NO_GLASS_RENDERER');
 

@@ -9362,6 +9362,546 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Search on {source}'**
   String searchOnSource(String source);
+
+  /// No description provided for @searchSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Search settings'**
+  String get searchSettings;
+
+  /// No description provided for @searchSettingsNone.
+  ///
+  /// In en, this message translates to:
+  /// **'No settings match {query}'**
+  String searchSettingsNone(String query);
+
+  /// No description provided for @settingsPreview.
+  ///
+  /// In en, this message translates to:
+  /// **'Preview'**
+  String get settingsPreview;
+
+  /// No description provided for @settingsPreviewHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap a setting that changes the look to see it here'**
+  String get settingsPreviewHint;
+
+  /// No description provided for @closePreview.
+  ///
+  /// In en, this message translates to:
+  /// **'Close preview'**
+  String get closePreview;
+
+  /// No description provided for @homeSectionsOption.
+  ///
+  /// In en, this message translates to:
+  /// **'Home sections'**
+  String get homeSectionsOption;
+
+  /// No description provided for @previewLyrics.
+  ///
+  /// In en, this message translates to:
+  /// **'The line before this one\nThe line sung right now\nThe next line comes after\nAnd one more after that'**
+  String get previewLyrics;
+
+  /// No description provided for @kwAutoplay.
+  ///
+  /// In en, this message translates to:
+  /// **'radio, continue, keep playing, similar songs, endless'**
+  String get kwAutoplay;
+
+  /// No description provided for @kwGapless.
+  ///
+  /// In en, this message translates to:
+  /// **'seamless, no gap, live album, continuous'**
+  String get kwGapless;
+
+  /// No description provided for @kwSkipSilence.
+  ///
+  /// In en, this message translates to:
+  /// **'silence, quiet parts, trim'**
+  String get kwSkipSilence;
+
+  /// No description provided for @kwEqualizer.
+  ///
+  /// In en, this message translates to:
+  /// **'eq, bass, treble, tone, preset'**
+  String get kwEqualizer;
+
+  /// No description provided for @kwVolumeLeveling.
+  ///
+  /// In en, this message translates to:
+  /// **'replaygain, normalize, loudness, same volume'**
+  String get kwVolumeLeveling;
+
+  /// No description provided for @kwCrossfade.
+  ///
+  /// In en, this message translates to:
+  /// **'fade, blend, transition, mix songs'**
+  String get kwCrossfade;
+
+  /// No description provided for @kwFadeLength.
+  ///
+  /// In en, this message translates to:
+  /// **'fade time, seconds, duration'**
+  String get kwFadeLength;
+
+  /// No description provided for @kwVirtualSpeakers.
+  ///
+  /// In en, this message translates to:
+  /// **'spatial, surround, 3d, hrtf, headphones'**
+  String get kwVirtualSpeakers;
+
+  /// No description provided for @kwCrossfeed.
+  ///
+  /// In en, this message translates to:
+  /// **'headphones, stereo width, bs2b'**
+  String get kwCrossfeed;
+
+  /// No description provided for @kwMono.
+  ///
+  /// In en, this message translates to:
+  /// **'one channel, single ear, accessibility'**
+  String get kwMono;
+
+  /// No description provided for @kwAudioPlugins.
+  ///
+  /// In en, this message translates to:
+  /// **'vst, lv2, carla, effects'**
+  String get kwAudioPlugins;
+
+  /// No description provided for @kwRoomCorrection.
+  ///
+  /// In en, this message translates to:
+  /// **'convolution, impulse response, ir, speakers'**
+  String get kwRoomCorrection;
+
+  /// No description provided for @kwSignalPath.
+  ///
+  /// In en, this message translates to:
+  /// **'quality, bit depth, what plays, chain'**
+  String get kwSignalPath;
+
+  /// No description provided for @kwOutputDevice.
+  ///
+  /// In en, this message translates to:
+  /// **'speaker, headphones, dac, sound card, bluetooth'**
+  String get kwOutputDevice;
+
+  /// No description provided for @kwBitPerfect.
+  ///
+  /// In en, this message translates to:
+  /// **'hi-res, lossless, untouched, audiophile'**
+  String get kwBitPerfect;
+
+  /// No description provided for @kwDirectUsb.
+  ///
+  /// In en, this message translates to:
+  /// **'usb dac, android, bit-perfect'**
+  String get kwDirectUsb;
+
+  /// No description provided for @kwNativeDsd.
+  ///
+  /// In en, this message translates to:
+  /// **'dsd, dop, sacd'**
+  String get kwNativeDsd;
+
+  /// No description provided for @kwExclusiveMode.
+  ///
+  /// In en, this message translates to:
+  /// **'wasapi, exclusive, hog mode'**
+  String get kwExclusiveMode;
+
+  /// No description provided for @kwSampleRate.
+  ///
+  /// In en, this message translates to:
+  /// **'hz, 44.1, 48, 96, resample'**
+  String get kwSampleRate;
+
+  /// No description provided for @kwBuffer.
+  ///
+  /// In en, this message translates to:
+  /// **'latency, stutter, crackle, dropouts'**
+  String get kwBuffer;
+
+  /// No description provided for @kwLanguage.
+  ///
+  /// In en, this message translates to:
+  /// **'english, indonesian, japanese, translation'**
+  String get kwLanguage;
+
+  /// No description provided for @kwTheme.
+  ///
+  /// In en, this message translates to:
+  /// **'colors, dark mode, light mode, catppuccin, nord, dracula'**
+  String get kwTheme;
+
+  /// No description provided for @kwColours.
+  ///
+  /// In en, this message translates to:
+  /// **'color, colour, custom, palette'**
+  String get kwColours;
+
+  /// No description provided for @kwMode.
+  ///
+  /// In en, this message translates to:
+  /// **'dark, light, system, night'**
+  String get kwMode;
+
+  /// No description provided for @kwCoverColours.
+  ///
+  /// In en, this message translates to:
+  /// **'dynamic, artwork colours, tint'**
+  String get kwCoverColours;
+
+  /// No description provided for @kwHighContrast.
+  ///
+  /// In en, this message translates to:
+  /// **'contrast, readability, accessibility'**
+  String get kwHighContrast;
+
+  /// No description provided for @kwTextSize.
+  ///
+  /// In en, this message translates to:
+  /// **'font size, bigger text, zoom, scale'**
+  String get kwTextSize;
+
+  /// No description provided for @kwFont.
+  ///
+  /// In en, this message translates to:
+  /// **'typeface, font family'**
+  String get kwFont;
+
+  /// No description provided for @kwPlayerBackground.
+  ///
+  /// In en, this message translates to:
+  /// **'now playing, blurred cover, black, colour'**
+  String get kwPlayerBackground;
+
+  /// No description provided for @kwFrostedGlass.
+  ///
+  /// In en, this message translates to:
+  /// **'blur, transparent, acrylic, mica'**
+  String get kwFrostedGlass;
+
+  /// No description provided for @kwOpacity.
+  ///
+  /// In en, this message translates to:
+  /// **'transparency, see through'**
+  String get kwOpacity;
+
+  /// No description provided for @kwPresets.
+  ///
+  /// In en, this message translates to:
+  /// **'whole look, style, liquid, kawaii'**
+  String get kwPresets;
+
+  /// No description provided for @kwCover.
+  ///
+  /// In en, this message translates to:
+  /// **'artwork, album art, flower, square'**
+  String get kwCover;
+
+  /// No description provided for @kwPlayerHeader.
+  ///
+  /// In en, this message translates to:
+  /// **'top bar, playing from, header'**
+  String get kwPlayerHeader;
+
+  /// No description provided for @kwTitleButtons.
+  ///
+  /// In en, this message translates to:
+  /// **'like, share, heart, more'**
+  String get kwTitleButtons;
+
+  /// No description provided for @kwQualityBadge.
+  ///
+  /// In en, this message translates to:
+  /// **'hi-res, flac, lossless, badge, bitrate'**
+  String get kwQualityBadge;
+
+  /// No description provided for @kwMusicVideo.
+  ///
+  /// In en, this message translates to:
+  /// **'video, mv, clip'**
+  String get kwMusicVideo;
+
+  /// No description provided for @kwVideoDecoding.
+  ///
+  /// In en, this message translates to:
+  /// **'hardware, gpu, cpu, decoder'**
+  String get kwVideoDecoding;
+
+  /// No description provided for @kwLiquidGlass.
+  ///
+  /// In en, this message translates to:
+  /// **'glass, ios, frosted controls'**
+  String get kwLiquidGlass;
+
+  /// No description provided for @kwSeekBar.
+  ///
+  /// In en, this message translates to:
+  /// **'progress, timeline, wavy, scrubber'**
+  String get kwSeekBar;
+
+  /// No description provided for @kwTimeLeft.
+  ///
+  /// In en, this message translates to:
+  /// **'remaining, countdown, duration'**
+  String get kwTimeLeft;
+
+  /// No description provided for @kwTransport.
+  ///
+  /// In en, this message translates to:
+  /// **'play, pause, next, previous, buttons'**
+  String get kwTransport;
+
+  /// No description provided for @kwVolumeSlider.
+  ///
+  /// In en, this message translates to:
+  /// **'volume, loudness slider'**
+  String get kwVolumeSlider;
+
+  /// No description provided for @kwBottomButtons.
+  ///
+  /// In en, this message translates to:
+  /// **'queue, lyrics, chips, row'**
+  String get kwBottomButtons;
+
+  /// No description provided for @kwLyrics.
+  ///
+  /// In en, this message translates to:
+  /// **'words, lyric, karaoke'**
+  String get kwLyrics;
+
+  /// No description provided for @kwKaraoke.
+  ///
+  /// In en, this message translates to:
+  /// **'word by word, sing along, timing'**
+  String get kwKaraoke;
+
+  /// No description provided for @kwLyricsSize.
+  ///
+  /// In en, this message translates to:
+  /// **'lyrics font, bigger lyrics'**
+  String get kwLyricsSize;
+
+  /// No description provided for @kwLyricsAlign.
+  ///
+  /// In en, this message translates to:
+  /// **'left, centre, center, align'**
+  String get kwLyricsAlign;
+
+  /// No description provided for @kwVisualizer.
+  ///
+  /// In en, this message translates to:
+  /// **'spectrum, bars, wave, rings, audio reactive'**
+  String get kwVisualizer;
+
+  /// No description provided for @kwAlbumHeader.
+  ///
+  /// In en, this message translates to:
+  /// **'album page, playlist page, header'**
+  String get kwAlbumHeader;
+
+  /// No description provided for @kwPlayingRow.
+  ///
+  /// In en, this message translates to:
+  /// **'current song, highlight, equalizer icon'**
+  String get kwPlayingRow;
+
+  /// No description provided for @kwHomeSections.
+  ///
+  /// In en, this message translates to:
+  /// **'home, shelves, reorder, hide'**
+  String get kwHomeSections;
+
+  /// No description provided for @kwMiniPlayer.
+  ///
+  /// In en, this message translates to:
+  /// **'mini, small player, bottom player'**
+  String get kwMiniPlayer;
+
+  /// No description provided for @kwTabBar.
+  ///
+  /// In en, this message translates to:
+  /// **'navigation, bottom bar, tabs, dock, glass'**
+  String get kwTabBar;
+
+  /// No description provided for @kwDesktopBar.
+  ///
+  /// In en, this message translates to:
+  /// **'player bar, bottom bar, computer'**
+  String get kwDesktopBar;
+
+  /// No description provided for @kwCorners.
+  ///
+  /// In en, this message translates to:
+  /// **'rounded, radius, roundness, square edges'**
+  String get kwCorners;
+
+  /// No description provided for @kwDensity.
+  ///
+  /// In en, this message translates to:
+  /// **'spacing, compact, comfortable, padding'**
+  String get kwDensity;
+
+  /// No description provided for @kwCoverSize.
+  ///
+  /// In en, this message translates to:
+  /// **'grid, cards, tiles, thumbnails'**
+  String get kwCoverSize;
+
+  /// No description provided for @kwMotion.
+  ///
+  /// In en, this message translates to:
+  /// **'animation, transitions, reduce motion, speed'**
+  String get kwMotion;
+
+  /// No description provided for @kwWindowButtons.
+  ///
+  /// In en, this message translates to:
+  /// **'title bar, close, minimize, maximize'**
+  String get kwWindowButtons;
+
+  /// No description provided for @kwPerformance.
+  ///
+  /// In en, this message translates to:
+  /// **'battery, cpu, lightweight, balanced, heavy, speed'**
+  String get kwPerformance;
+
+  /// No description provided for @kwScreen.
+  ///
+  /// In en, this message translates to:
+  /// **'display, awake, screen timeout'**
+  String get kwScreen;
+
+  /// No description provided for @kwSleep.
+  ///
+  /// In en, this message translates to:
+  /// **'standby, suspend, awake'**
+  String get kwSleep;
+
+  /// No description provided for @kwTray.
+  ///
+  /// In en, this message translates to:
+  /// **'system tray, background, close button'**
+  String get kwTray;
+
+  /// No description provided for @kwBattery.
+  ///
+  /// In en, this message translates to:
+  /// **'background, screen off, battery optimization'**
+  String get kwBattery;
+
+  /// No description provided for @kwMusicFolders.
+  ///
+  /// In en, this message translates to:
+  /// **'scan, watch, folders, library, rescan'**
+  String get kwMusicFolders;
+
+  /// No description provided for @kwDuplicates.
+  ///
+  /// In en, this message translates to:
+  /// **'duplicates, same song twice, cleanup'**
+  String get kwDuplicates;
+
+  /// No description provided for @kwDownloadFormat.
+  ///
+  /// In en, this message translates to:
+  /// **'mp3, flac, opus, m4a, video, audio'**
+  String get kwDownloadFormat;
+
+  /// No description provided for @kwDownloadQuality.
+  ///
+  /// In en, this message translates to:
+  /// **'bitrate, kbps, bit depth, quality'**
+  String get kwDownloadQuality;
+
+  /// No description provided for @kwMobileData.
+  ///
+  /// In en, this message translates to:
+  /// **'cellular, data, wifi only'**
+  String get kwMobileData;
+
+  /// No description provided for @kwDownloadsFolder.
+  ///
+  /// In en, this message translates to:
+  /// **'save location, where, path'**
+  String get kwDownloadsFolder;
+
+  /// No description provided for @kwYtDlp.
+  ///
+  /// In en, this message translates to:
+  /// **'ffmpeg, tools, executables, downloader'**
+  String get kwYtDlp;
+
+  /// No description provided for @kwHistory.
+  ///
+  /// In en, this message translates to:
+  /// **'listening history, privacy, recently played'**
+  String get kwHistory;
+
+  /// No description provided for @kwWrap.
+  ///
+  /// In en, this message translates to:
+  /// **'stats, wrapped, year in review, top songs'**
+  String get kwWrap;
+
+  /// No description provided for @kwBackup.
+  ///
+  /// In en, this message translates to:
+  /// **'export, import, restore, transfer, save'**
+  String get kwBackup;
+
+  /// No description provided for @kwYoutubeAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'google, sign in, login, account'**
+  String get kwYoutubeAccount;
+
+  /// No description provided for @kwScrobbling.
+  ///
+  /// In en, this message translates to:
+  /// **'scrobble, last.fm, listenbrainz, profile'**
+  String get kwScrobbling;
+
+  /// No description provided for @kwLyricsServices.
+  ///
+  /// In en, this message translates to:
+  /// **'musixmatch, better lyrics, api key'**
+  String get kwLyricsServices;
+
+  /// No description provided for @kwDiscord.
+  ///
+  /// In en, this message translates to:
+  /// **'rich presence, status, activity'**
+  String get kwDiscord;
+
+  /// No description provided for @kwExtensions.
+  ///
+  /// In en, this message translates to:
+  /// **'spotiflac, plugins, repositories, sources'**
+  String get kwExtensions;
+
+  /// No description provided for @kwUpdates.
+  ///
+  /// In en, this message translates to:
+  /// **'new version, upgrade, update'**
+  String get kwUpdates;
+
+  /// No description provided for @kwVersion.
+  ///
+  /// In en, this message translates to:
+  /// **'about, licence, license, open source'**
+  String get kwVersion;
+
+  /// No description provided for @discordAppButton.
+  ///
+  /// In en, this message translates to:
+  /// **'\"Download Riflay\" button'**
+  String get discordAppButton;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

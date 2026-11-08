@@ -7,6 +7,7 @@ import '../../services/player_controller.dart';
 import '../../services/video_mode.dart';
 import '../theme.dart';
 import '../player/player_glass.dart';
+import 'live_preview.dart';
 import 'native_video_surface.dart';
 import 'skeleton.dart';
 import '../../services/language.dart';
@@ -119,6 +120,8 @@ class TrackVisual extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // A preview in Settings never starts a video player.
+    if (LivePreview.of(context)) return cover;
     // Asks for the song's video itself: on a computer the side panel's cover is the only Now Playing view on
     // screen, with no Song / Video switch or video background to ask for it, so the cover never turned.
     final mode = VideoMode.instance..follow(PlayerScope.read(context));
@@ -244,7 +247,7 @@ class _VideoBackgroundState extends State<VideoBackground> {
   @override
   Widget build(BuildContext context) {
     final mode = VideoMode.instance..follow(PlayerScope.read(context));
-    final visible = TickerMode.valuesOf(context).enabled;
+    final visible = TickerMode.valuesOf(context).enabled && !LivePreview.of(context);
     return ListenableBuilder(
       listenable: Listenable.merge([mode, LayoutPrefs.instance]),
       builder: (context, _) {

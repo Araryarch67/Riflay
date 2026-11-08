@@ -96,6 +96,8 @@ lib/
     theme.dart                 AppColors, ThemeData from the palette, restyleTree (see Colours)
     debug_switches.dart        Turns the rendering shortcuts off to debug them (see Debugging)
     pages/                     One file per screen; sound_settings.dart, equalizer_page.dart…; search/ and lyrics/ hold their parts
+      settings_index.dart      Every Settings option for search and previews (see Settings search and previews)
+      settings_preview.dart    The previews: real widgets, small (widgets/live_preview.dart draws them still)
     widgets/                   Shared widgets: controls, track_row, menus, page_scaffold, smooth_scroll, signal_path
 linux/login_helper/            C++ GTK3 + webkit2gtk-4.1 sign-in helper
 linux/spotify_helper/          The same for Spotify; --refresh gets a new token without a window
@@ -584,6 +586,39 @@ same way (profile, headless, fresh process per run) and prints PSS / private /
 RSS at idle, playing a local FLAC, streaming YouTube and after scrolling.
 Compare medians of several complete runs; debug builds are meaningless here.
 
+## Settings search and previews
+
+Settings opens with a search box over every option on every page; a result opens the page, scrolls to the option
+and lights it up for a moment. Tapping an option that changes the look shows the real widgets it changes, small:
+beside the list on a computer (when there is room, `_SettingsFrame` in `settings_page.dart`), over the rows above it
+on a phone (below it near the top of the page).
+
+- **Registering an option** is one entry in `SettingsOptions.all` (`lib/ui/pages/settings_index.dart`):
+  `SettingsOption('corners', .layout, (t) => t.corners, subtitle: (t) => t.cornersSubtitle,
+  find: (t) => t.kwCorners, preview: .cards)`. Words are getters of `AppLocalizations`, so search reads every
+  language (an Indonesian speaker typing "equalizer" finds it). The page needs no change: the option is found
+  on it by its title's words (`locate:` when its row has no fixed title, such as Home's sections), and
+  `parent:` names the switch shown in its place while it is hidden (Glass progress bar → Liquid Glass controls).
+  `available:` hides it where the build or device doesn't have it.
+- `find:` is a few other words people type for it, comma-separated, in a `kw…` key of each .arb file.
+- A new page of options is a `SettingsPlace` (the page and its location); a new group's sections come from
+  `SettingsTopic`, so places follow when sections move.
+- `test/settings_search_test.dart` fails when a row on a page of options isn't registered (or is registered and
+  can't be found there): add the entry it names. Things that aren't options (a watched folder, a Home section, an
+  installed extension) are allowed there.
+- **A preview** is a `SettingPreview` kind (`settings_preview.dart`): the real widget (`NowPlayingPage`,
+  `PhoneBottomBar`, `DesktopPlayerBar`, `SyncedLyricsView`, `Shelf` and `TrackRow`, `VisualizerCanvas`) in a
+  `LivePreview` with the size it is laid out at. Give an option `preview:` to show one; reuse a kind before adding
+  one, and never draw a look-alike: a preview made of the real parts can't drift from the app.
+- Previews cost nothing while shown: `LivePreview` turns tickers and animations off, takes no pointer, lets no
+  hero fly, decodes covers at the size drawn, and is built afresh on each change of Layout or Appearance (an
+  implicit animation frozen part-way would keep the old look). Nothing in it leases the visualizer bank or a music
+  video (`TrackVisual` and `VideoBackground` check `LivePreview.of`). It shows only while open: nothing runs for a
+  closed one. `RIFLAY_MOVING_PREVIEWS` lets previews move and follow the player, to tell whether a bug is the
+  freezing's.
+- The light after a jump fades once (1.6 s); without motion (Lightweight, Reduced) it shows and goes, no frames
+  between.
+
 ## Translations
 
 Riflay speaks English, Indonesian and Japanese (Settings › Look & feel › Appearance › Language; by default the
@@ -658,6 +693,7 @@ device's language when Riflay has it). The words live in `lib/l10n/app_en.arb` (
   flutter run --dart-define=RIFLAY_LASTFM_KEY=… --dart-define=RIFLAY_LASTFM_SECRET=…
   flutter run --dart-define=RIFLAY_NO_TRAY=true           # no tray icon; closing the window quits
   flutter run --dart-define=RIFLAY_NO_TAB_BAR_COLLAPSE=true  # the phone's Liquid glass tab bar never shrinks on scroll
+  flutter run --dart-define=RIFLAY_MOVING_PREVIEWS=true  # Settings' previews move and follow the player, not still pictures
   flutter run --dart-define=RIFLAY_NO_GLASS_RENDERER=true    # its pills in Riflay's own blur, not liquid_glass_renderer
   flutter run --dart-define=RIFLAY_NO_DIRECT_USB_GUARD=true  # Android Direct USB crashes for real (logcat)
   flutter run --dart-define=RIFLAY_NO_OPEN_LINKS=true     # ignore links opened or shared with Riflay

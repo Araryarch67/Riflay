@@ -5159,4 +5159,276 @@ class AppLocalizationsJa extends AppLocalizations {
   String searchOnSource(String source) {
     return '$sourceで検索';
   }
+
+  @override
+  String get searchSettings => '設定を検索';
+
+  @override
+  String searchSettingsNone(String query) {
+    return '$query に合う設定はない';
+  }
+
+  @override
+  String get settingsPreview => 'プレビュー';
+
+  @override
+  String get settingsPreviewHint => '見た目を変える設定をタップするとここに表示される';
+
+  @override
+  String get closePreview => 'プレビューを閉じる';
+
+  @override
+  String get homeSectionsOption => 'ホームのセクション';
+
+  @override
+  String get previewLyrics => 'ひとつ前の行\nいま歌っている行\nこのあとに来る行\nさらにそのあとの行';
+
+  @override
+  String get kwAutoplay => 'ラジオ, 続けて再生, 自動再生, 似た曲';
+
+  @override
+  String get kwGapless => 'ギャップレス, 途切れない, 曲間';
+
+  @override
+  String get kwSkipSilence => '無音, 静かな部分, スキップ';
+
+  @override
+  String get kwEqualizer => 'EQ, 低音, 高音, 音質';
+
+  @override
+  String get kwVolumeLeveling => 'ReplayGain, ノーマライズ, 音量の均一化, ラウドネス';
+
+  @override
+  String get kwCrossfade => 'フェード, つなぎ, 曲間の重ね';
+
+  @override
+  String get kwFadeLength => 'フェード時間, 秒';
+
+  @override
+  String get kwVirtualSpeakers => '立体音響, サラウンド, 3D, HRTF';
+
+  @override
+  String get kwCrossfeed => 'ヘッドホン, ステレオ幅, bs2b';
+
+  @override
+  String get kwMono => 'モノラル, 片耳, アクセシビリティ';
+
+  @override
+  String get kwAudioPlugins => 'VST, LV2, Carla, エフェクト';
+
+  @override
+  String get kwRoomCorrection => '畳み込み, インパルス応答, IR, スピーカー';
+
+  @override
+  String get kwSignalPath => '音質, ビット深度, 信号経路';
+
+  @override
+  String get kwOutputDevice => 'スピーカー, ヘッドホン, DAC, サウンドカード, Bluetooth';
+
+  @override
+  String get kwBitPerfect => 'ハイレゾ, ロスレス, ビットパーフェクト';
+
+  @override
+  String get kwDirectUsb => 'USB DAC, Android';
+
+  @override
+  String get kwNativeDsd => 'DSD, DoP, SACD';
+
+  @override
+  String get kwExclusiveMode => '排他モード, WASAPI';
+
+  @override
+  String get kwSampleRate => 'サンプリングレート, Hz, リサンプル';
+
+  @override
+  String get kwBuffer => 'レイテンシ, 音切れ, バッファ';
+
+  @override
+  String get kwLanguage => '言語, 英語, インドネシア語, 日本語';
+
+  @override
+  String get kwTheme => 'テーマ, ダークモード, ライトモード, 配色';
+
+  @override
+  String get kwColours => '色, カラー, カスタム';
+
+  @override
+  String get kwMode => 'ダーク, ライト, システム';
+
+  @override
+  String get kwCoverColours => 'ダイナミック, ジャケットの色';
+
+  @override
+  String get kwHighContrast => 'コントラスト, 見やすさ, アクセシビリティ';
+
+  @override
+  String get kwTextSize => '文字サイズ, 大きな文字, 拡大';
+
+  @override
+  String get kwFont => 'フォント, 書体';
+
+  @override
+  String get kwPlayerBackground => '再生画面, 背景, ぼかし';
+
+  @override
+  String get kwFrostedGlass => 'すりガラス, 透明, ぼかし';
+
+  @override
+  String get kwOpacity => '透明度, 不透明度';
+
+  @override
+  String get kwPresets => 'プリセット, スタイル, Liquid';
+
+  @override
+  String get kwCover => 'ジャケット, アートワーク, 花, 四角';
+
+  @override
+  String get kwPlayerHeader => '上部, ヘッダー, 再生元';
+
+  @override
+  String get kwTitleButtons => 'いいね, 共有, ハート';
+
+  @override
+  String get kwQualityBadge => 'ハイレゾ, FLAC, バッジ';
+
+  @override
+  String get kwMusicVideo => 'ミュージックビデオ, 動画, MV';
+
+  @override
+  String get kwVideoDecoding => 'ハードウェア, GPU, デコード';
+
+  @override
+  String get kwLiquidGlass => 'ガラス, iOS, リキッド';
+
+  @override
+  String get kwSeekBar => 'シークバー, 進行, 波線';
+
+  @override
+  String get kwTimeLeft => '残り時間, 長さ';
+
+  @override
+  String get kwTransport => '再生, 一時停止, 次へ, 前へ, ボタン';
+
+  @override
+  String get kwVolumeSlider => '音量, スライダー';
+
+  @override
+  String get kwBottomButtons => 'キュー, 歌詞, 下のボタン';
+
+  @override
+  String get kwLyrics => '歌詞, リリック';
+
+  @override
+  String get kwKaraoke => 'カラオケ, 一語ずつ, 同期';
+
+  @override
+  String get kwLyricsSize => '歌詞の大きさ, 文字サイズ';
+
+  @override
+  String get kwLyricsAlign => '左寄せ, 中央, 揃え';
+
+  @override
+  String get kwVisualizer => 'ビジュアライザー, スペクトラム, 波形';
+
+  @override
+  String get kwAlbumHeader => 'アルバムページ, ヘッダー';
+
+  @override
+  String get kwPlayingRow => '再生中の曲, ハイライト';
+
+  @override
+  String get kwHomeSections => 'ホーム, 並べ替え, 非表示';
+
+  @override
+  String get kwMiniPlayer => 'ミニプレーヤー, 小さいプレーヤー';
+
+  @override
+  String get kwTabBar => 'タブバー, ナビゲーション, 下のバー';
+
+  @override
+  String get kwDesktopBar => 'プレーヤーバー, パソコン';
+
+  @override
+  String get kwCorners => '角丸, 角, 丸み';
+
+  @override
+  String get kwDensity => '余白, 間隔, コンパクト';
+
+  @override
+  String get kwCoverSize => 'グリッド, カード, サムネイル';
+
+  @override
+  String get kwMotion => 'アニメーション, トランジション, 動き';
+
+  @override
+  String get kwWindowButtons => 'タイトルバー, 閉じる, 最小化';
+
+  @override
+  String get kwPerformance => 'パフォーマンス, バッテリー, 軽量, 負荷';
+
+  @override
+  String get kwScreen => '画面, スリープ, 点灯';
+
+  @override
+  String get kwSleep => 'スリープ, スタンバイ';
+
+  @override
+  String get kwTray => 'トレイ, バックグラウンド';
+
+  @override
+  String get kwBattery => 'バックグラウンド, 画面オフ, バッテリー';
+
+  @override
+  String get kwMusicFolders => 'スキャン, フォルダー, ライブラリ';
+
+  @override
+  String get kwDuplicates => '重複, 同じ曲, 整理';
+
+  @override
+  String get kwDownloadFormat => 'MP3, FLAC, Opus, 形式';
+
+  @override
+  String get kwDownloadQuality => 'ビットレート, 音質';
+
+  @override
+  String get kwMobileData => 'モバイルデータ, Wi-Fi';
+
+  @override
+  String get kwDownloadsFolder => '保存先, フォルダー';
+
+  @override
+  String get kwYtDlp => 'FFmpeg, ツール, ダウンローダー';
+
+  @override
+  String get kwHistory => '再生履歴, プライバシー';
+
+  @override
+  String get kwWrap => '統計, まとめ, 年間ランキング';
+
+  @override
+  String get kwBackup => 'バックアップ, 復元, エクスポート';
+
+  @override
+  String get kwYoutubeAccount => 'Google, ログイン, アカウント';
+
+  @override
+  String get kwScrobbling => 'スクロブル, プロフィール';
+
+  @override
+  String get kwLyricsServices => 'Musixmatch, APIキー';
+
+  @override
+  String get kwDiscord => 'ステータス, アクティビティ';
+
+  @override
+  String get kwExtensions => '拡張機能, プラグイン, リポジトリ';
+
+  @override
+  String get kwUpdates => 'アップデート, 新しいバージョン';
+
+  @override
+  String get kwVersion => 'バージョン, ライセンス, オープンソース';
+
+  @override
+  String get discordAppButton => '「Riflay をダウンロード」ボタン';
 }
