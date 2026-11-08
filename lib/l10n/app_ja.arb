@@ -1439,6 +1439,7 @@
   "tapToSeeListened": "タップして聴いた曲を見よう。",
   "vizOffBitPerfect": "Bit-perfect 中はオフ：DAC に届くまでの音は何も変えられない",
   "vizOffLightweight": "パフォーマンスが「軽量」のときはオフ",
+  "vizOffBalanced": "パソコンでは「バランス」のときはオフ。「全開」なら使える",
   "vizOffReducedMotion": "動きを控えめにしてる間はオフ",
   "vizHiddenDop": "この曲を DoP で DSD 再生してる間は隠れる",
   "vizHiddenCasting": "ほかのデバイスで再生中は隠れる",

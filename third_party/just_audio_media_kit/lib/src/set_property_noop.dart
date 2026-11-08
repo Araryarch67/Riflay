@@ -6,3 +6,7 @@ Future<void> setProperty(Player player, String key, dynamic value) {
   // noop
   return Future.value();
 }
+
+bool stopPositionEvents(Player player) => false;
+
+Duration? readPosition(Player player) => null;

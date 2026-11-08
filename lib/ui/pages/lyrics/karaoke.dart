@@ -84,6 +84,7 @@ class KaraokeLineState extends State<KaraokeLine> {
       if (_beat == null) _snap(p);
     });
     widget.playing?.addListener(_sync);
+    MarqueeText.playing?.addListener(_sync);
   }
 
   @override
@@ -106,7 +107,9 @@ class KaraokeLineState extends State<KaraokeLine> {
   }
 
   void _sync() {
-    final want = !LayoutPrefs.lightweight && _visible && (widget.playing?.value ?? true);
+    // With another window in front the fill moves word by word on the position ticks: no frames of its own.
+    final want =
+        !LayoutPrefs.lightweight && _visible && (widget.playing?.value ?? true) && (MarqueeText.playing?.value ?? true);
     if (!want) {
       _beat?.cancel();
       _beat = null;
@@ -114,9 +117,17 @@ class KaraokeLineState extends State<KaraokeLine> {
     }
     if (_beat == null) {
       _snap(widget.position());
-      _beat = UiBeat.listen(UiBeat.period, _advance);
+      _beat = UiBeat.listen(_every, _advance);
     }
   }
+
+  /// The rate the rest of the player moves at: 20 frames a second in Balanced, Heavy's 30. At the display's rate the
+  /// fill alone redrew the window 60 times a second.
+  static Duration get _every => LayoutPrefs.heavy
+      ? PlayingMotion.heavyEvery
+      : LayoutPrefs.frugal
+      ? LayoutPrefs.frugalEvery
+      : const Duration(milliseconds: 50);
 
   void _snap(Duration position) {
     final p = _at(position);
@@ -154,6 +165,7 @@ class KaraokeLineState extends State<KaraokeLine> {
   @override
   void dispose() {
     widget.playing?.removeListener(_sync);
+    MarqueeText.playing?.removeListener(_sync);
     _beat?.cancel();
     _sub?.cancel();
     _progress.dispose();

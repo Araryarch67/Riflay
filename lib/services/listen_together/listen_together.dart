@@ -570,7 +570,7 @@ class ListenTogether extends ChangeNotifier {
   /// A guest that starts another song leaves: only the host chooses what plays.
   void _watchOwnChanges() {
     _subs.add(
-      player.player.positionStream.listen((pos) {
+      player.secondTicks().listen((pos) {
         final d = player.player.duration;
         _nearEnd = d != null && d - pos < const Duration(seconds: 5);
       }),

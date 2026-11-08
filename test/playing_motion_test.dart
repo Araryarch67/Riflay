@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:riflay/services/layout_prefs.dart';
 import 'package:riflay/services/player_controller.dart';
 import 'package:riflay/services/ui_beat.dart';
+import 'package:riflay/ui/debug_switches.dart';
 import 'package:riflay/ui/widgets/controls.dart';
 import 'package:riflay/ui/widgets/flower_cover.dart';
 import 'package:riflay/ui/widgets/playing_motion.dart';
@@ -97,6 +98,19 @@ void main() {
       clock.addListener(() => ticks++);
       await _beats(tester, 12);
       expect(ticks, inInclusiveRange(3, 5));
+      await tester.pumpWidget(const SizedBox.shrink());
+    });
+
+    testWidgets('Balanced on a computer draws every twelfth beat (5 fps)', (tester) async {
+      DebugSwitches.fullBalanced = false;
+      addTearDown(() => DebugSwitches.fullBalanced = true);
+      await LayoutPrefs.instance.setPerformance(PerformanceMode.balanced);
+      await tester.pumpWidget(_host(c, const SeekBar(phonePlayer: true)));
+      final clock = _waveClock(tester)!;
+      var ticks = 0;
+      clock.addListener(() => ticks++);
+      await _beats(tester, 24);
+      expect(ticks, inInclusiveRange(1, 3));
       await tester.pumpWidget(const SizedBox.shrink());
     });
 

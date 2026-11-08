@@ -877,7 +877,7 @@ class Scrobbler extends ChangeNotifier {
     _tracker = ScrobbleTracker();
     _subs
       ..clear()
-      ..add(controller.player.positionStream.listen((_) => _pollThrottled()))
+      ..add(controller.secondTicks().listen((_) => _pollThrottled()))
       ..add(controller.player.playerStateStream.listen((_) => _poll()))
       ..add(controller.player.sequenceStateStream.listen((_) => _poll()));
     if (_queues.values.any((q) => q.isNotEmpty)) unawaited(send());

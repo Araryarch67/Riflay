@@ -490,6 +490,17 @@ frames/s, build and raster time a frame, the busiest threads) idle, playing and 
 `RIFLAY_CPU_LAYOUT='{"performance": "lightweight"}'` starts it with other Layout settings. Idle and paused must
 draw no frames and stay under 0.8% of one core. In a debug build (swap `--profile` for `--debug` in a copy of the
 script) `RIFLAY_CPU_STACKS=true` prints who asks for frames while playing and paused, and every running ticker.
+`RIFLAY_CPU_ENV='RIFLAY_MPV_OPTIONS=name=value;name=value'` sets mpv options over Riflay's own, for an A/B of an
+output setting. On Linux PipeWire's `data-loop.0` thread (inside the app) takes ~1.4% of one core whenever sound
+plays, at its 1024-frame quantum: plain `mpv` costs the same, and `pipewire-buffer`, `PIPEWIRE_LATENCY`, a float
+output and leaving the resampling to PipeWire don't change it. The rest of a playing song is Riflay's.
+
+Budget on Linux, as a share of the whole processor (24 threads here, so 2.4% of one core is 0.1%): playing behind
+another window, paused or idle, every mode stays under 0.1%; so does Lightweight in front. Balanced on a computer
+(`LayoutPrefs.frugal`: no visualizer, everything that moves on one 5 fps beat) is ~0.15-0.18% in front, and Heavy
+with the visualizer must stay under 0.8% (~0.6%: half of it is mpv's `astats`, the rest its 30 fps). Seed the
+visualizer with `{"visualizer": true, "visualizerStable": true}`: without the second key the old Beta migration turns
+it off.
 
 Memory: `tool/memory.sh [runs]` runs `integration_test/memory_test.dart` the
 same way (profile, headless, fresh process per run) and prints PSS / private /
@@ -587,6 +598,7 @@ device's language when Riflay has it). The words live in `lib/l10n/app_en.arb` (
   flutter run --dart-define=RIFLAY_QUICK_LIGHTWEIGHT_SEEK_BAR=true  # Lightweight's seek bar moves 2-4 times a second, not once
   flutter run --dart-define=RIFLAY_BEAT_WHILE_PAUSED=true  # the seek bar's position stays on UiBeat while paused
   flutter run --dart-define=RIFLAY_MOVE_UNFOCUSED=true  # decorations, visualizer and marquees keep moving while another window has the focus
+  flutter run --dart-define=RIFLAY_FULL_BALANCED=true  # Balanced on a computer keeps the visualizer and 20 fps decorations
   flutter run -d chrome --dart-define=RIFLAY_NO_WEB_AUDIO=true  # web: songs play straight from <audio>, no effects or visualizer
   ```
 
@@ -674,14 +686,31 @@ device's language when Riflay has it). The words live in `lib/l10n/app_en.arb` (
 - `StreakFlame` breathes three times when it comes on screen, then rests (it repeated forever at the display's rate).
 - `UiBeat`'s timer fires only as often as its busiest view needs (`_stride`): a seek bar ticking once a second wakes
   the app once a second, not 60 times. Heavy's decorations and visualizer run at 30 fps (`PlayingMotion.heavyEvery`):
-  at 60 a focused window cost ~0.9% of a 24-thread CPU. The visualizer moves while the window can be seen
-  (`PlayingMotion.visible`), at 20 fps when another window has the focus.
+  at 60 a focused window cost ~0.9% of a 24-thread CPU. The visualizer moves only while the window has the focus:
+  its mpv filter bank (`VisualizerSpectrum`: 24 band filters, then `astats` on every channel, ~90% of its cost) kept
+  mpv's core thread at ~5% of a core behind other windows, where the view drew 20 fps. Unfocused, the lease is let
+  go and mpv drops the bank.
+- Balanced on a computer is frugal (`LayoutPrefs.frugal`, `RIFLAY_FULL_BALANCED` turns it off): the visualizer is off
+  (its switch says why, like Lightweight's) and the flower, wave, karaoke and seek bar move every 200 ms
+  (`LayoutPrefs.frugalEvery`), in the same frames. A focused window went from ~0.5% to ~0.16% of the CPU. Marquees
+  keep 20 fps: they stop after a few loops, and at 5 fps a title jumps 7 px. Phones keep the full Balanced; tests
+  run as a phone (`test/flutter_test_config.dart`) and turn the switch back for frugal's own tests.
+- Karaoke fills at the player's rate (Balanced 20, Heavy 30 fps; it was the display's) and only with the window in
+  front (`MarqueeText.playing`); the Heavy marquee moves at 30, not 60.
+- Hidden views take no beats: the pages under Now Playing and a player bar slid away (`AutoHideBar`) sit in
+  `TickerMode(enabled: false)`, and `SeekBar`, `EqualizerIcon` and the signal path badge stop on it.
 - Measured on a 24-thread laptop (Windows, playing a YouTube song with its video and the visualizer on, % of the
   whole CPU / private working set): Lightweight 0.01-0.16% / 30-85 MB after the first idle trim (~15 s, see
   `MemoryTrim`), Balanced 0.2-0.7% / up to ~260 MB, Heavy 0.4-0.7% / up to ~275 MB in front and ~0.1% behind.
-- `third_party/just_audio_media_kit` sends a playback event for mpv's `time-pos` only when just_audio's own
-  extrapolation would be 250 ms off (or every 2 s), and for the read-ahead per second: mpv reports both dozens of
-  times a second.
+- mpv doesn't report `time-pos` (`stopPositionEvents` in `third_party/just_audio_media_kit`): it did for every
+  audio chunk, 16+ times a second, each waking the app. The position is read on the spot when an event goes out
+  that used to carry mpv's latest report, and checked once a second while playing; a playback event goes out only
+  when just_audio's own extrapolation would be 250 ms off (or every 2 s), and for the read-ahead per second.
+  `--dart-define=RIFLAY_TIME_POS_EVENTS=true` brings mpv's reports back.
+- Everything that only needs to know how far a song has got (scrobbling, play history, YouTube Music's play
+  reports, Listen together) listens to `PlayerController.secondTicks()`: one `UiBeat` listener a second while the
+  player plays. just_audio's `positionStream` / `createPositionStream` are 5 Hz timers that never stop once made:
+  don't use them. Paused, no position stream has a timer: seeks come in as position discontinuities.
 - `EqualizerIcon` (a playing row's bars) rides `UiBeat` at 10 fps and `MarqueeText.playing`; its own repeating
   `AnimationController` redrew the window at the display's rate.
 - Decorations (the flower, the wave, the visualizer) and marquees move only while the window has the focus

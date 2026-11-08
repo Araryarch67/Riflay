@@ -8727,6 +8727,12 @@ abstract class AppLocalizations {
   /// **'Off in the Lightweight performance mode'**
   String get vizOffLightweight;
 
+  /// No description provided for @vizOffBalanced.
+  ///
+  /// In en, this message translates to:
+  /// **'Off in the Balanced performance mode on a computer. Heavy has it'**
+  String get vizOffBalanced;
+
   /// No description provided for @vizOffReducedMotion.
   ///
   /// In en, this message translates to:

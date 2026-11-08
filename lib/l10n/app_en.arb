@@ -2975,6 +2975,7 @@
   "tapToSeeListened": "Tap to see what you listened to.",
   "vizOffBitPerfect": "Off while Bit-perfect is on: nothing may change the sound on its way to your DAC",
   "vizOffLightweight": "Off in the Lightweight performance mode",
+  "vizOffBalanced": "Off in the Balanced performance mode on a computer. Heavy has it",
   "vizOffReducedMotion": "Off while Motion is reduced",
   "vizHiddenDop": "Hidden while this song plays as DSD over DoP",
   "vizHiddenCasting": "Hidden while playing on another device",

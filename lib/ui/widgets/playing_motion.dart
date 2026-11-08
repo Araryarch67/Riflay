@@ -60,12 +60,11 @@ class PlayingMotion extends StatefulWidget {
       state == AppLifecycleState.resumed ||
       (state == AppLifecycleState.inactive && DebugSwitches.moveUnfocused);
 
-  /// Whether the window can be seen in this lifecycle [state]: in front, or behind another window (`inactive` on a
-  /// computer), not minimized or hidden. The visualizer moves then: people watch it beside other apps.
-  static bool visible(AppLifecycleState? state) =>
-      state == null || state == AppLifecycleState.resumed || state == AppLifecycleState.inactive;
-
   final Widget Function(BuildContext context, MotionClock? clock) builder;
+
+  /// Heavy: 30 fps, every second beat. At the display's rate (60) a focused window spent ~0.9% of a 24-thread
+  /// processor on the flower and the wave alone; 30 still reads as smooth for their slow motion.
+  static const heavyEvery = Duration(microseconds: 33334);
 
   @override
   State<PlayingMotion> createState() => _PlayingMotionState();
@@ -83,10 +82,6 @@ class _PlayingMotionState extends State<PlayingMotion> with WidgetsBindingObserv
   /// 50 ms: Balanced draws 20 times a second, on the beats [UiBeat] gives every slower view. The flower turns and
   /// the wave rolls slowly, so 20 fps looks the same; at 30 each frame of a playing song cost half again as much.
   static const _slow = Duration(milliseconds: 50);
-
-  /// Heavy: 30 fps, every second beat. At the display's rate (60) a focused window spent ~0.9% of a 24-thread
-  /// processor on the flower and the wave alone; 30 still reads as smooth for their slow motion.
-  static const heavyEvery = Duration(microseconds: 33334);
 
   @override
   void initState() {
@@ -131,7 +126,11 @@ class _PlayingMotionState extends State<PlayingMotion> with WidgetsBindingObserv
     if (allowed != _allowed) setState(() => _allowed = allowed);
   }
 
-  Duration get _every => LayoutPrefs.heavy ? heavyEvery : _slow;
+  Duration get _every => LayoutPrefs.heavy
+      ? PlayingMotion.heavyEvery
+      : LayoutPrefs.frugal
+      ? LayoutPrefs.frugalEvery
+      : _slow;
 
   void _tick(Duration elapsed) {
     _clock.advance(elapsed);

@@ -118,7 +118,7 @@ class PlayerController extends ChangeNotifier {
     // Seeks move the Discord progress bar; track/play-state changes are covered above.
     _subs.add(player.positionDiscontinuityStream.listen((_) => _updatePresence(force: true)));
     // Plays count towards the YouTube Music history (signed in, setting on).
-    _subs.add(ytMusic.reportPlaysOf(player, () => currentTrack));
+    _subs.add(ytMusic.reportPlaysOf(player, secondTicks(), () => currentTrack));
     // Lets a song's music-video formats be looked up ahead with its audio ones.
     YoutubeStream.musicVideoIdLookup = (id) async => (await ytMusic.musicVideo(id))?.videoId;
   }
@@ -564,7 +564,7 @@ class PlayerController extends ChangeNotifier {
                   ? cast.positionTicks(every: Duration(milliseconds: smooth ? 50 : 200))
                   : smooth
                   ? _smoothTicks(lightweight: mode == PerformanceMode.lightweight)
-                  : player.positionStream)
+                  : _beatTicks(() => const Duration(milliseconds: 200)))
               // Nothing is drawn while the window is minimized or hidden: a tick there would only wake the
               // UI and raster threads. The next tick after it is shown again puts the views right.
               .listen((p) {
@@ -593,19 +593,35 @@ class PlayerController extends ChangeNotifier {
   /// 1/2400 of the song (half a pixel of a 1200 px bar), 60 to 4 times a second. Lightweight
   /// ticks once a second, with the elapsed time beside the bar: there a playing song draws
   /// nothing else, and on Linux each frame costs the main thread several milliseconds.
-  Stream<Duration> _smoothTicks({required bool lightweight}) {
+  Stream<Duration> _smoothTicks({required bool lightweight}) => _beatTicks(() {
+    final step = (duration ?? Duration.zero) ~/ 2400;
+    // Lightweight, or another window has the focus: once a second, with the time beside the bar.
+    final unfocused =
+        WidgetsBinding.instance.lifecycleState == AppLifecycleState.inactive && !DebugSwitches.moveUnfocused;
+    final slow = (lightweight && !DebugSwitches.quickLightweightSeekBar) || unfocused;
+    // Balanced on a computer: on the beat everything else there moves at.
+    final min = slow
+        ? const Duration(seconds: 1)
+        : (LayoutPrefs.frugal ? LayoutPrefs.frugalEvery : const Duration(milliseconds: 16));
+    final max = slow ? const Duration(seconds: 1) : const Duration(milliseconds: 250);
+    return step < min ? min : (step > max ? max : step);
+  });
+
+  /// [position] about once a second while a song plays, for what only needs to know how far it has got (scrobbling,
+  /// play history, YouTube Music's play reports, Listen together). One beat for all of them, also while the window
+  /// is hidden. just_audio's own position streams were 5 Hz timers that never stopped once made.
+  Stream<Duration> secondTicks() => _beatTicks(() => const Duration(seconds: 1), whileHidden: true);
+
+  /// [position] every [every] on the shared [UiBeat] while a song plays (and the window is shown, unless
+  /// [whileHidden]). Off the beat otherwise: a listener left on it kept its timer waking the app. A seek made
+  /// elsewhere (media keys, MPRIS) still comes through, as a position discontinuity, and so does a change of song or
+  /// state (the controller's listeners).
+  Stream<Duration> _beatTicks(Duration Function() every, {bool whileHidden = false}) {
     UiBeatListener? beat;
+    StreamSubscription<PositionDiscontinuity>? seeks;
+    StreamSubscription<bool>? playing;
+    AppLifecycleListener? shown;
     late final StreamController<Duration> out;
-    Duration every() {
-      final step = (duration ?? Duration.zero) ~/ 2400;
-      // Lightweight, or another window has the focus: once a second, with the time beside the bar.
-      final unfocused =
-          WidgetsBinding.instance.lifecycleState == AppLifecycleState.inactive && !DebugSwitches.moveUnfocused;
-      final slow = (lightweight && !DebugSwitches.quickLightweightSeekBar) || unfocused;
-      final min = Duration(milliseconds: slow ? 1000 : 16);
-      final max = Duration(milliseconds: slow ? 1000 : 250);
-      return step < min ? min : (step > max ? max : step);
-    }
 
     Duration? last;
     void tick() {
@@ -614,13 +630,11 @@ class PlayerController extends ChangeNotifier {
       if (p != last) out.add(last = p);
     }
 
-    // Paused, off the beat: a listener left on it kept its 60 Hz timer waking the app for a bar that doesn't move.
-    // A slow look once a second still catches a seek made elsewhere (the media keys, MPRIS).
-    Timer? idle;
     void sync() {
-      if (showsPlaying || DebugSwitches.beatWhilePaused) {
-        idle?.cancel();
-        idle = null;
+      // What is drawn follows what the screen shows as playing; the rest, the player itself.
+      final moving = whileHidden ? player.playing : showsPlaying || DebugSwitches.beatWhilePaused;
+      final run = moving && (whileHidden || _drawn);
+      if (run) {
         beat ??= UiBeat.listen(every(), (_) {
           beat!.period = every();
           tick();
@@ -628,7 +642,6 @@ class PlayerController extends ChangeNotifier {
       } else {
         beat?.cancel();
         beat = null;
-        idle ??= Timer.periodic(const Duration(seconds: 1), (_) => tick());
         tick();
       }
     }
@@ -638,11 +651,18 @@ class PlayerController extends ChangeNotifier {
         out.add(last = position);
         sync();
         addListener(sync);
+        seeks = player.positionDiscontinuityStream.listen((_) => tick());
+        if (whileHidden) playing = player.playingStream.listen((_) => sync());
+        // Minimized or hidden, nothing is drawn: the beat stops until the window is back.
+        if (!whileHidden) shown = AppLifecycleListener(onStateChange: (_) => sync());
       },
       onCancel: () {
         removeListener(sync);
         beat?.cancel();
-        idle?.cancel();
+        beat = null;
+        shown?.dispose();
+        playing?.cancel();
+        return seeks?.cancel();
       },
     );
     return out.stream;

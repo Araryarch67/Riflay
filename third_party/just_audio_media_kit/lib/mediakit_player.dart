@@ -34,6 +34,13 @@ class MediaKitPlayer extends AudioPlayerPlatform {
   ProcessingStateMessage _processingState = ProcessingStateMessage.idle;
   Duration _bufferedPosition = Duration.zero;
   Duration _position = Duration.zero;
+
+  /// Riflay: mpv doesn't report `time-pos` (see [readPosition]); the position is read when needed.
+  bool _readsPosition = false;
+  static const _timePosEvents = bool.fromEnvironment('RIFLAY_TIME_POS_EVENTS');
+
+  /// While playing: checks once a second that just_audio's running position is still right.
+  Timer? _drift;
   Duration? _duration;
   bool _playing = false;
   bool _mediaOpened = false;
@@ -64,7 +71,12 @@ class MediaKitPlayer extends AudioPlayerPlatform {
       title: JustAudioMediaKit.title,
       bufferSize: JustAudioMediaKit.bufferSize,
       logLevel: JustAudioMediaKit.mpvLogLevel,
-      ready: () => _readyCompleter.complete(),
+      ready: () {
+        // Riflay: the position is read when an event goes out, and checked once a second while playing, instead
+        // of mpv reporting it for every audio chunk. RIFLAY_TIME_POS_EVENTS keeps mpv's reports.
+        if (!_timePosEvents) _readsPosition = stopPositionEvents(_player);
+        _readyCompleter.complete();
+      },
     ));
 
     if (JustAudioMediaKit.prefetchPlaylist) {
@@ -80,13 +92,10 @@ class MediaKitPlayer extends AudioPlayerPlatform {
           _setPosition = null;
         }
         _updateDuration(duration);
-        _updatePlaybackEvent();
+        _updatePlaybackEvent(fresh: true);
       }),
       _player.stream.position.listen((position) {
-        _position = position;
-        final start = _currentMedia?.start;
-        if (start != null) _position -= start;
-        if (_position < Duration.zero) _position = Duration.zero;
+        _takePosition(position);
         // Riflay: mpv reports time-pos for every audio chunk (dozens a second). just_audio works the position out
         // from the last event's time while playing, so an event goes out only when that would be off: a seek, a
         // stall, a rate change.
@@ -124,7 +133,7 @@ class MediaKitPlayer extends AudioPlayerPlatform {
         }
         _errorCode = null;
         _errorMessage = null;
-        _updatePlaybackEvent();
+        _updatePlaybackEvent(fresh: true);
       }),
       _player.stream.buffer.listen((buffer) {
         _bufferedPosition = buffer;
@@ -138,13 +147,22 @@ class MediaKitPlayer extends AudioPlayerPlatform {
           if (_loadCompleter?.isCompleted != true) {
             _loadCompleter?.complete(_duration);
           }
-          _updatePlaybackEvent();
+          _updatePlaybackEvent(fresh: true);
           return;
         }
         // Riflay: a stream's read-ahead grows many times a second; the seek bar shows it to the second.
         if ((buffer - _sentBuffered).abs() >= const Duration(seconds: 1) ||
             buffer < _sentBuffered) {
-          _updatePlaybackEvent();
+          _updatePlaybackEvent(fresh: true);
+        }
+      }),
+      _player.stream.playing.listen((playing) {
+        _drift?.cancel();
+        _drift = null;
+        if (playing && _readsPosition) {
+          _drift = Timer.periodic(const Duration(seconds: 1), (_) {
+            if (_refreshPosition() && _positionNews()) _updatePlaybackEvent();
+          });
         }
       }),
       _player.stream.volume.listen((volume) {
@@ -281,8 +299,27 @@ class MediaKitPlayer extends AudioPlayerPlatform {
     return (_position - expected).abs() > const Duration(milliseconds: 250);
   }
 
-  /// Updates the playback event
-  void _updatePlaybackEvent() {
+  /// mpv's `time-pos` as just_audio counts it: from the start of a clip, never below zero.
+  void _takePosition(Duration position) {
+    _position = position;
+    final start = _currentMedia?.start;
+    if (start != null) _position -= start;
+    if (_position < Duration.zero) _position = Duration.zero;
+  }
+
+  /// Reads the position from mpv when it no longer reports it ([_readsPosition]); false when it couldn't.
+  bool _refreshPosition() {
+    if (!_readsPosition) return false;
+    final position = readPosition(_player);
+    if (position == null) return false;
+    _takePosition(position);
+    return true;
+  }
+
+  /// Updates the playback event. [fresh]: with the position read from mpv first, for an event that used to go out
+  /// with mpv's latest report; an event right after the position was set here (a seek, a new song) keeps that.
+  void _updatePlaybackEvent({bool fresh = false}) {
+    if (fresh) _refreshPosition();
     _sentPosition = _position;
     _sentBuffered = _bufferedPosition;
     _sentAt = DateTime.now();
@@ -493,6 +530,10 @@ class MediaKitPlayer extends AudioPlayerPlatform {
   Future<void> release() async {
     _logger.info('releasing player resources');
     _mediaOpened = false;
+    // Before mpv goes: reading its position afterwards would touch a freed handle.
+    _readsPosition = false;
+    _drift?.cancel();
+    _drift = null;
     await _player.dispose();
     // cancel all stream subscriptions
     for (final StreamSubscription subscription in _streamSubscriptions) {

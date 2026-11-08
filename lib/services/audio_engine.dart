@@ -1662,6 +1662,7 @@ class AudioEngine extends ChangeNotifier {
       'audio-swresample-o': await _swresampleOptions(),
       // 100 where the filter applies the volume: mpv must not scale samples too.
       'volume': _mpvVolume,
+      ..._extraMpvOptions,
     };
     // Only what changed: each write of an output option (device, rate, format, buffer, exclusive...) makes
     // mpv rebuild the sound output, even with the same value, and a streamed song is read again for it.
@@ -2151,6 +2152,13 @@ class AudioEngine extends ChangeNotifier {
 
   /// Direct USB: the signal path of the song playing, read once (see [signalPath]).
   ({NativePlayer player, String file, SignalPath path})? _directUsbSignal;
+
+  /// For measuring and debugging: mpv options set over Riflay's own, from `RIFLAY_MPV_OPTIONS`
+  /// (`name=value;name=value`, e.g. `pipewire-buffer=170`). Empty when it isn't set.
+  static final Map<String, String> _extraMpvOptions = {
+    for (final o in (Host.environment['RIFLAY_MPV_OPTIONS'] ?? '').split(';'))
+      if (o.contains('=')) o.substring(0, o.indexOf('=')).trim(): o.substring(o.indexOf('=') + 1).trim(),
+  };
 
   /// The latest [signalPath] read and when it started. Off with `RIFLAY_NO_SHARED_SIGNAL_PATH`: every caller reads.
   static const _shareSignalPath = !bool.fromEnvironment('RIFLAY_NO_SHARED_SIGNAL_PATH');

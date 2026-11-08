@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:riflay/services/appearance.dart';
 import 'package:riflay/services/layout_prefs.dart';
 import 'package:riflay/services/player_controller.dart';
+import 'package:riflay/ui/debug_switches.dart';
 import 'package:riflay/ui/widgets/audio_reactive_view.dart';
 import 'package:riflay/ui/widgets/controls.dart';
 import 'package:riflay/ui/widgets/marquee_text.dart';
@@ -74,6 +75,28 @@ void main() {
     expect(c.audio.visualizerActive, isFalse);
     await prefs.setPerformance(PerformanceMode.balanced);
     await tester.pumpWidget(view());
+    expect(c.audio.visualizerActive, isTrue);
+    await tester.pumpWidget(const SizedBox.shrink());
+    c.dispose();
+  });
+
+  testWidgets('Balanced on a computer keeps the audio analysis in standby; Heavy has it', (tester) async {
+    DebugSwitches.fullBalanced = false;
+    addTearDown(() => DebugSwitches.fullBalanced = true);
+    await prefs.setVisualizer(true);
+    final c = _PlayingController();
+    Widget view() => PlayerScope(
+      controller: c,
+      child: MaterialApp(home: AudioReactiveView(builder: (_, _) => const SizedBox.shrink())),
+    );
+    expect(LayoutPrefs.frugal, isTrue);
+    expect(visualizerBlockedBy(c), isNotNull);
+    await tester.pumpWidget(view());
+    expect(c.audio.visualizerActive, isFalse);
+    await prefs.setPerformance(PerformanceMode.heavy);
+    await tester.pumpWidget(view());
+    expect(LayoutPrefs.frugal, isFalse);
+    expect(visualizerBlockedBy(c), isNull);
     expect(c.audio.visualizerActive, isTrue);
     await tester.pumpWidget(const SizedBox.shrink());
     c.dispose();

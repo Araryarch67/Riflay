@@ -871,7 +871,12 @@ class _HomeShellState extends State<HomeShell> {
                           child: Stack(
                             children: [
                               Positioned.fill(
-                                child: Offstage(offstage: full, child: pages),
+                                // Under Now Playing nothing on the pages moves: their seek bar, visualizer and
+                                // marquees would keep the window drawing for a screen no one sees.
+                                child: Offstage(
+                                  offstage: full,
+                                  child: pages == null ? null : TickerMode(enabled: !full, child: pages),
+                                ),
                               ),
                               if (full)
                                 Positioned.fill(

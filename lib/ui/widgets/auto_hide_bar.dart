@@ -119,7 +119,11 @@ class _AutoHideBarState extends State<AutoHideBar> {
             opacity: shown ? 1 : 0,
             duration: time,
             curve: shown ? Curves.easeOut : Curves.easeIn,
-            child: IgnorePointer(ignoring: !shown, child: widget.child),
+            // Slid away, its seek bar and motion stop: they kept drawing at full rate under an invisible bar.
+            child: IgnorePointer(
+              ignoring: !shown,
+              child: TickerMode(enabled: shown, child: widget.child),
+            ),
           ),
         ),
       ),

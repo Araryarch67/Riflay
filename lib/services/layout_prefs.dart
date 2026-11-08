@@ -6,6 +6,8 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../platform/features.dart';
+import '../platform/host.dart';
+import '../ui/debug_switches.dart';
 import 'page_motion.dart';
 import 'language.dart';
 export 'page_motion.dart' show PageMotionStyle, PageMotionSpeed;
@@ -639,6 +641,17 @@ class LayoutPrefs extends ChangeNotifier {
 
   /// Performance mode: Heavy runs decorations and the seek bar at the display's full rate.
   static bool get heavy => instance.performance == PerformanceMode.heavy;
+
+  /// Balanced on a computer: no visualizer, and the decorations, karaoke, marquees and seek bar all move together
+  /// every [frugalEvery]. A playing song then stays near 0.1% of the whole processor with the window focused; at
+  /// 20 fps with the visualizer it was ~0.5%. Heavy keeps every effect. `RIFLAY_FULL_BALANCED` turns this off.
+  static bool get frugal =>
+      instance.performance == PerformanceMode.balanced &&
+      (Host.isLinux || Host.isWindows || Host.isMacOS) &&
+      !DebugSwitches.fullBalanced;
+
+  /// 5 fps: what [frugal] moves at, one beat shared by everything that moves.
+  static const frugalEvery = Duration(milliseconds: 200);
 
   /// Sliding, scaling and bouncing; only with full motion. Fades stay otherwise.
   static bool get moves => effectiveMotion == Motion.full;

@@ -57,6 +57,10 @@ abstract final class DebugSwitches {
   /// the focus, as before.
   static bool moveUnfocused = _all || const bool.fromEnvironment('RIFLAY_MOVE_UNFOCUSED');
 
+  /// Balanced on a computer keeps the visualizer and moves its decorations at 20 fps, as before, instead of 5 fps
+  /// without the visualizer (`LayoutPrefs.frugal`).
+  static bool fullBalanced = _all || const bool.fromEnvironment('RIFLAY_FULL_BALANCED');
+
   /// Prints how many widgets each palette change rebuilds, and every Material theme built.
   static bool logRestyles = const bool.fromEnvironment('RIFLAY_LOG_RESTYLES');
 

@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import '../../services/layout_prefs.dart';
 import '../../services/ui_beat.dart';
 import '../debug_switches.dart';
+import 'playing_motion.dart' show PlayingMotion;
 
 /// One line of text that slides sideways when it doesn't fit, so a long song
 /// title can be read whole: it rests at the start for [pause], scrolls at
@@ -110,9 +111,13 @@ class _MarqueeTextState extends State<MarqueeText> {
   /// On a page that isn't shown ([TickerMode] off) the scroll holds where it is, and goes on when it is shown.
   bool _shown = true, _resume = false;
 
-  /// 20 times a second in Balanced, on the beats the player's other motion uses; Heavy, every beat.
-  static Duration get _every =>
-      LayoutPrefs.heavy || DebugSwitches.endlessMarquee ? UiBeat.period : const Duration(milliseconds: 50);
+  /// 20 times a second in Balanced, on the beats the player's other motion uses; Heavy, 30 (its flower and wave's
+  /// rate: every beat, 60, cost twice the frames for a title moving 35 px a second).
+  static Duration get _every => DebugSwitches.endlessMarquee
+      ? UiBeat.period
+      : LayoutPrefs.heavy
+      ? PlayingMotion.heavyEvery
+      : const Duration(milliseconds: 50);
 
   /// Width of the text the controller is running for; null when still.
   double? _running;

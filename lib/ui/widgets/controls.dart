@@ -307,7 +307,11 @@ class _EqualizerIconState extends State<EqualizerIcon> {
   static const _every = Duration(milliseconds: 100);
   static const _loop = 900;
 
-  bool get _moving => widget.playing && !LayoutPrefs.lightweight && (MarqueeText.playing?.value ?? true);
+  /// A row on a page that isn't shown ([TickerMode] off, e.g. under Now Playing) stays still.
+  bool _shown = true;
+
+  bool get _moving =>
+      widget.playing && _shown && !LayoutPrefs.lightweight && (MarqueeText.playing?.value ?? true);
 
   void _sync() {
     if (_moving) {
@@ -322,6 +326,12 @@ class _EqualizerIconState extends State<EqualizerIcon> {
   void initState() {
     super.initState();
     MarqueeText.playing?.addListener(_sync);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _shown = TickerMode.valuesOf(context).enabled;
     _sync();
   }
 
@@ -425,8 +435,14 @@ class _SeekBarState extends State<SeekBar> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // Every frame instead of every ~200 ms: the bar glides rather than ticks.
-    _position ??= PlayerScope.read(context).smoothPosition();
+    // Every frame instead of every ~200 ms: the bar glides rather than ticks. Only while it can be seen ([TickerMode]
+    // off: under Now Playing, or a player bar slid away): a hidden bar's ticks still woke the app to draw nothing.
+    final shown = TickerMode.valuesOf(context).enabled;
+    if (!shown) {
+      _position = null;
+    } else {
+      _position ??= PlayerScope.read(context).smoothPosition();
+    }
   }
 
   @override

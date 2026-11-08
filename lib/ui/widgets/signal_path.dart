@@ -33,13 +33,24 @@ class _SignalPathBuilderState extends State<_SignalPathBuilder> {
 
   bool get _paused => !_controller.showsPlaying && !DebugSwitches.signalPathWhilePaused;
 
+  /// On a page that isn't shown ([TickerMode] off, e.g. under Now Playing) it isn't read.
+  bool _shown = true;
+
   @override
   void initState() {
     super.initState();
     _poll();
-    _syncBeat();
     _controller.addListener(_changed);
     _controller.audio.addListener(_changed);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final shown = TickerMode.valuesOf(context).enabled;
+    if (shown && !_shown) _poll();
+    _shown = shown;
+    _syncBeat();
   }
 
   /// While playing the beat reads soon enough; paused, a change is read now.
@@ -51,7 +62,7 @@ class _SignalPathBuilderState extends State<_SignalPathBuilder> {
   /// On the shared beat while playing: a second is 60 beats, the ones Lightweight's seek bar ticks on, so both draw
   /// in one frame. Paused, off it: a listener left on keeps the beat's 60 Hz timer waking the app.
   void _syncBeat() {
-    if (_paused) {
+    if (_paused || !_shown) {
       _beat?.cancel();
       _beat = null;
     } else {

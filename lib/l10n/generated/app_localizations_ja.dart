@@ -4786,6 +4786,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get vizOffLightweight => 'パフォーマンスが「軽量」のときはオフ';
 
   @override
+  String get vizOffBalanced => 'パソコンでは「バランス」のときはオフ。「全開」なら使える';
+
+  @override
   String get vizOffReducedMotion => '動きを控えめにしてる間はオフ';
 
   @override

@@ -647,7 +647,7 @@ class PlayHistory extends ChangeNotifier {
     }
     _subs
       ..clear()
-      ..add(controller.player.positionStream.listen((_) => _pollThrottled()))
+      ..add(controller.secondTicks().listen((_) => _pollThrottled()))
       ..add(controller.player.playerStateStream.listen((_) => _poll()))
       ..add(controller.player.sequenceStateStream.listen((_) => _poll()));
   }
