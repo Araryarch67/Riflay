@@ -607,6 +607,9 @@ vec4 hook() {
         final mpv = kit.platform as NativePlayer;
         // Video only: no sound track, and only half a minute read ahead (not the whole video).
         await mpv.setProperty('aid', 'no');
+        for (final o in (Host.environment['RIFLAY_VIDEO_MPV_OPTIONS'] ?? '').split(';')) {
+          if (o.contains('=')) await mpv.setProperty(o.substring(0, o.indexOf('=')), o.substring(o.indexOf('=') + 1));
+        }
         await mpv.setProperty('cache-secs', foreground ? '30' : '10');
         await mpv.setProperty('demuxer-max-bytes', '${(foreground ? 32 : 12) << 20}');
         await mpv.setProperty('demuxer-max-back-bytes', '${(foreground ? 8 : 2) << 20}');

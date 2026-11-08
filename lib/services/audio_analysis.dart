@@ -175,6 +175,9 @@ abstract final class AudioAnalysis {
     return path != null && savedFor(path) != null;
   }).length;
 
+  /// 8 of mpv's 64 KiB reads: half a megabyte of samples between the decoder and the worker.
+  static const _chunksInFlight = 8;
+
   static Future<AudioReport?> _measure(String path, {required bool spectrogram}) async {
     final pcm = await MpvPcm.decode(PcmInput.file(path), maxRate: 192000, bits: 32);
     final results = ReceivePort();
@@ -183,8 +186,15 @@ abstract final class AudioAnalysis {
     SendPort? feed;
     final queued = <TransferableTypedData>[];
     var ended = false;
+    // Chunks sent and not yet measured. mpv decodes far faster than the worker measures: without a limit the whole
+    // song piled up in the worker's queue: 180 MiB for four minutes of 24/96, twice that at 192 kHz.
+    var inFlight = 0;
+    Completer<void>? room;
     results.listen((message) {
       switch (message) {
+        case true:
+          inFlight--;
+          if (room case final r? when !r.isCompleted) r.complete();
         case SendPort port:
           feed = port;
           for (final q in queued) {
@@ -198,10 +208,17 @@ abstract final class AudioAnalysis {
           answer.complete(r);
         case String error:
           answer.completeError(StateError(error));
+          if (room case final r? when !r.isCompleted) r.complete();
       }
     });
     try {
       await for (final chunk in pcm.data) {
+        // Waiting here pauses the stream, and mpv waits on the full pipe.
+        while (inFlight >= _chunksInFlight && !answer.isCompleted) {
+          await (room = Completer<void>()).future;
+        }
+        if (answer.isCompleted) break; // the worker failed
+        inFlight++;
         final t = TransferableTypedData.fromList([chunk]);
         if (feed case final port?) {
           port.send(t);
@@ -245,6 +262,7 @@ abstract final class AudioAnalysis {
           samples[i] = ints.getInt32(i * 4, Endian.little) / 2147483648;
         }
         analyzer.add(samples);
+        out.send(true);
       } catch (e) {
         out.send('$e');
         input.close();

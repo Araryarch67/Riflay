@@ -15,7 +15,9 @@ int Function(int)? lookupMallocTrim() {
 }
 
 /// Trims free memory back to the operating system.
-/// - Linux: invokes `malloc_trim(0)` from glibc.
+/// - Linux: invokes `malloc_trim(0)` from glibc. With [workingSet] it also pages the process out
+///   (`madvise(MADV_PAGEOUT)` on its own mappings): like Windows below, nothing is freed, the pages go to swap (zram
+///   on most desktops, compressed in memory) or, for files, back to the page cache, and fault back in when touched.
 /// - Windows: compacts the process heap via `HeapCompact` (kernel32.dll). With [workingSet] it also empties the
 ///   working set (`SetProcessWorkingSetSize`): that frees nothing that is committed, it only pages it out, and
 ///   every page the app touches afterwards faults back in. Worth it only while the window is hidden.
@@ -24,9 +26,30 @@ void trimProcessMemory({bool workingSet = false}) {
     try {
       lookupMallocTrim()?.call(0);
     } catch (_) {}
+    if (workingSet) _pageOutLinux();
   } else if (Platform.isWindows) {
     _trimWindows(workingSet);
   }
+}
+
+/// `MADV_PAGEOUT` (Linux 5.4) over every private mapping of this process. Shared ones (the compositor's buffers, the
+/// GPU's) and the kernel's own ([vdso], [vvar]) are left alone; pages other processes map too are skipped by the
+/// kernel, and an older kernel just answers EINVAL.
+void _pageOutLinux() {
+  try {
+    final madvise = DynamicLibrary.process()
+        .lookupFunction<Int32 Function(IntPtr, Size, Int32), int Function(int, int, int)>('madvise');
+    const pageOut = 21;
+    for (final line in File('/proc/self/maps').readAsLinesSync()) {
+      final f = line.split(RegExp(r'\s+'));
+      if (f.length < 5 || f[1].length < 4 || f[1][0] != 'r' || f[1][3] != 'p') continue;
+      final path = f.length > 5 ? f.sublist(5).join(' ') : '';
+      if (path.startsWith('/dev/') || path.startsWith('[v') || path == '[stack]') continue;
+      final range = f[0].split('-');
+      final start = int.parse(range[0], radix: 16), end = int.parse(range[1], radix: 16);
+      madvise(start, end - start, pageOut);
+    }
+  } catch (_) {}
 }
 
 void _trimWindows(bool workingSet) {

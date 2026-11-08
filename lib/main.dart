@@ -279,6 +279,7 @@ class _RiflayAppState extends State<RiflayApp> with WidgetsBindingObserver {
       MemoryTrim.hidden();
     } else if (state == AppLifecycleState.inactive || state == AppLifecycleState.resumed) {
       MemoryTrim.shown();
+      MemoryTrim.focus(state == AppLifecycleState.resumed);
     }
   }
 
