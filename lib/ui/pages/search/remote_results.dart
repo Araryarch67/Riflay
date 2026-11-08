@@ -282,12 +282,26 @@ class ShownSongs {
   List<Track> tracks = const [];
 }
 
-/// The "Songs" chip: YouTube Music songs for the query.
+/// The "Songs" chip: YouTube Music songs for the query (or SoundCloud's, with its own [from] and notes).
 class YoutubeSongResults extends StatelessWidget {
-  const YoutubeSongResults({super.key, required this.future, required this.shown});
+  const YoutubeSongResults({
+    super.key,
+    required this.future,
+    required this.shown,
+    this.from,
+    this.failedNote,
+    this.emptyNote,
+  });
 
   final Future<List<Track>>? future;
   final ShownSongs shown;
+
+  /// What the queue says it plays from; YouTube search when null.
+  final String? from;
+
+  /// The line shown when the search fails, or finds nothing; YouTube's when null.
+  final String? failedNote;
+  final String? emptyNote;
 
   @override
   Widget build(BuildContext context) {
@@ -312,7 +326,7 @@ class YoutubeSongResults extends StatelessWidget {
                     itemBuilder: (context, i) => TrackRow(
                       track: previous[i],
                       showAlbum: false,
-                      onTap: () => c.playList(previous, i, from: tr.ytSearchSource),
+                      onTap: () => c.playList(previous, i, from: from ?? tr.ytSearchSource),
                     ),
                   ),
                 ),
@@ -323,7 +337,7 @@ class YoutubeSongResults extends StatelessWidget {
         if (loading) return SearchSpinner(pad: pad);
         final tracks = snap.data ?? const <Track>[];
         if (snap.hasError || tracks.isEmpty) {
-          return SearchNote(snap.hasError ? tr.ytSearchFailed : tr.noYtResults, pad: pad);
+          return SearchNote(snap.hasError ? failedNote ?? tr.ytSearchFailed : emptyNote ?? tr.noYtResults, pad: pad);
         }
         return SliverPadding(
           padding: EdgeInsets.symmetric(horizontal: shell.compact ? 12 : 16),
@@ -334,7 +348,7 @@ class YoutubeSongResults extends StatelessWidget {
               TrackRow(
                 track: tracks[i],
                 showAlbum: false,
-                onTap: () => c.playList(tracks, i, from: tr.ytSearchSource),
+                onTap: () => c.playList(tracks, i, from: from ?? tr.ytSearchSource),
               ),
             ),
           ),

@@ -3197,5 +3197,37 @@
   "deviceSetupContinue": "Continue",
   "deviceSetupKeep": "Keep my settings",
   "deviceSetupAgain": "Check this computer",
-  "deviceSetupAgainNote": "Looks at this computer again and suggests the look that suits it"
+  "deviceSetupAgainNote": "Looks at this computer again and suggests the look that suits it",
+  "sourceYoutubeMusic": "YouTube Music",
+  "sourceSoundcloud": "SoundCloud",
+  "sourceBoth": "Both",
+  "searchSourceTooltip": "Where to search",
+  "streamsFromSoundcloud": "SoundCloud: needs internet",
+  "soundcloudSearchSource": "SoundCloud search",
+  "onSoundcloud": "On SoundCloud",
+  "soundcloudSearchFailed": "SoundCloud search failed. Check your connection.",
+  "noSoundcloudResults": "No SoundCloud results.",
+  "soundcloudCantCast": "SoundCloud songs play on this device only.",
+  "pasteYtOrScLink": "Paste a YouTube or SoundCloud link.",
+  "soundcloudUnplayable": "SoundCloud doesn't let this track play here.",
+  "soundcloudImportNote": "SoundCloud tracks stream: play them now or save them to your library.",
+  "soundcloudLine": "SoundCloud • {author} • {count, plural, =1{1 track} other{{count} tracks}}",
+  "@soundcloudLine": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "author": {
+        "type": "String"
+      }
+    }
+  },
+  "saveCountToLibrary": "{count, plural, =1{Save to library} other{Save {count} to library}}",
+  "@saveCountToLibrary": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  }
 }

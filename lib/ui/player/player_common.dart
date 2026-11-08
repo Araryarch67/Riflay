@@ -5,6 +5,7 @@ import '../../models/track.dart';
 import '../../services/layout_prefs.dart';
 import '../../services/player_controller.dart';
 import '../theme.dart';
+import '../widgets/controls.dart' show SourceMark;
 import '../widgets/marquee_text.dart';
 import '../widgets/track_row.dart' show openArtist;
 
@@ -107,6 +108,21 @@ class _ArtistLinksState extends State<ArtistLinks> {
   @override
   Widget build(BuildContext context) {
     final track = widget.track;
+    final links = _links(context, track);
+    if (!track.streams) return links;
+    // A streamed song shows where it streams from (YouTube Music, SoundCloud) before its artists.
+    final c = PlayerScope.read(context);
+    final size = (widget.style?.fontSize ?? 14) * 0.95;
+    return Row(
+      children: [
+        SourceMark(online: !c.isOffline(track), source: track.source, size: size),
+        const SizedBox(width: 6),
+        Flexible(child: links),
+      ],
+    );
+  }
+
+  Widget _links(BuildContext context, Track track) {
     final names = track.artists;
     final c = PlayerScope.read(context);
     if (names.length < 2) {

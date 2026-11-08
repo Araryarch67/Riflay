@@ -113,7 +113,7 @@ class MediaSession extends BaseAudioHandler with SeekHandler {
       artist: t.artist,
       album: t.album,
       duration: _c.duration ?? t.duration,
-      artUri: t.isRemote && t.artworkUrl != null ? Uri.tryParse(t.artworkUrl!) : null,
+      artUri: t.streams && t.artworkUrl != null ? Uri.tryParse(t.artworkUrl!) : null,
     );
     _item = item;
     _shownLine = null;

@@ -25,14 +25,14 @@ class SongInfo {
     this.artworkUrl,
   });
 
-  /// [Track.id]: the file's address, or `yt:<videoId>` for a streamed song.
+  /// [Track.id]: the file's address, `yt:<videoId>` for a streamed song, `sc:<trackId>` for a SoundCloud one.
   final String key;
   final String title;
   final String artist;
   final String? album;
   final String? videoId;
 
-  /// Only kept for a streamed song whose cover isn't YouTube's default for it.
+  /// Only kept for a streamed song whose cover isn't YouTube's default for it, and for a SoundCloud track.
   final String? artworkUrl;
 
   factory SongInfo.of(Track t) => SongInfo(
@@ -41,7 +41,11 @@ class SongInfo {
     artist: t.artist,
     album: t.album,
     videoId: t.videoId,
-    artworkUrl: t.videoId != null && t.artworkUrl != _defaultArt(t.videoId!) ? t.artworkUrl : null,
+    artworkUrl: t.videoId != null && t.artworkUrl != _defaultArt(t.videoId!)
+        ? t.artworkUrl
+        : t.soundcloudId != null
+        ? t.artworkUrl
+        : null,
   );
 
   static String _defaultArt(String videoId) => 'https://i.ytimg.com/vi/$videoId/hqdefault.jpg';
@@ -59,6 +63,10 @@ class SongInfo {
   Track toTrack() {
     final id = videoId;
     if (id != null) return Track.youtube(videoId: id, title: title, artist: artist, artworkUrl: artworkUrl);
+    if (key.startsWith(Track.soundcloudPrefix)) {
+      final trackId = key.substring(Track.soundcloudPrefix.length);
+      return Track.soundcloud(trackId: trackId, title: title, artist: artist, artworkUrl: artworkUrl);
+    }
     return Track(id: key, uri: Uri.parse(key), title: title, artist: artist, album: album, tagged: true);
   }
 

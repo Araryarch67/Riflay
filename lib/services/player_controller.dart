@@ -36,6 +36,8 @@ import 'media_session.dart';
 import 'metadata.dart';
 import 'sacd.dart';
 import 'sleep_timer.dart';
+import 'soundcloud.dart';
+import 'soundcloud_audio_source.dart';
 import 'shuffle.dart';
 import 'memory_trim.dart';
 import 'youtube_audio_source.dart';
@@ -162,18 +164,19 @@ class PlayerController extends ChangeNotifier {
   bool holdAutoplay = false;
 
   /// Near the end of the queue (last two songs), appends YouTube Music's
-  /// "Up next" for the current song. Streamed songs only: radio needs a video id.
+  /// "Up next" for the current song, or SoundCloud's related tracks for a SoundCloud one. Streamed songs only:
+  /// radio needs a video (or SoundCloud track) id.
   void _maybeAutoplay() {
     if (!_autoplay || holdAutoplay || _extending || player.loopMode != LoopMode.off) return;
     final current = currentTrack;
-    if (current == null || !current.isRemote || _autoplaySeed == current.id) return;
+    if (current == null || !current.streams || _autoplaySeed == current.id) return;
     final seq = player.sequenceState;
     final at = seq.currentIndex;
     if (at == null || at < seq.sequence.length - 2) return;
     _autoplaySeed = current.id;
     _extending = true;
-    ytMusic
-        .upNext(current)
+    final soundcloudId = current.soundcloudId;
+    (soundcloudId != null ? soundcloud.related(soundcloudId) : ytMusic.upNext(current))
         .then((similar) async {
           final have = {for (final t in queue) t.id, ..._recentIds.take(30)};
           final fresh = similar.where((t) => have.add(t.id)).take(25).toList();
@@ -852,7 +855,7 @@ class PlayerController extends ChangeNotifier {
   }
 
   /// Whether [t] can play without internet.
-  bool isOffline(Track t) => !t.isRemote || downloadedCopy(t) != null;
+  bool isOffline(Track t) => !t.streams || downloadedCopy(t) != null;
 
   List<Collection> get albums => _views.albums;
 
@@ -899,6 +902,39 @@ class PlayerController extends ChangeNotifier {
     );
     return future;
   }
+
+  /// SoundCloud's client (search, links, streams).
+  SoundcloudClient soundcloud = SoundcloudClient.instance;
+
+  final _soundcloudSearches = <String, Future<List<Track>>>{};
+
+  /// SoundCloud tracks matching [query] that play in full; recent queries are answered from memory
+  /// (`RIFLAY_NO_SOUNDCLOUD_CACHE` asks every time).
+  Future<List<Track>> searchSoundcloud(String query) {
+    const cache = !bool.fromEnvironment('RIFLAY_NO_SOUNDCLOUD_CACHE');
+    final key = query.trim().toLowerCase();
+    if (!cache) return soundcloud.search(query);
+    final cached = _soundcloudSearches.remove(key);
+    if (cached != null) return _soundcloudSearches[key] = cached;
+    final future = soundcloud.search(query);
+    _soundcloudSearches[key] = future;
+    if (_soundcloudSearches.length > 20) _soundcloudSearches.remove(_soundcloudSearches.keys.first);
+    future.catchError((Object _) {
+      _soundcloudSearches.remove(key);
+      return const <Track>[];
+    });
+    return future;
+  }
+
+  /// Whether [t] is in the library (a SoundCloud track saved there, a file).
+  bool inLibrary(Track t) => _views.byId.containsKey(t.id);
+
+  /// Saves streamed SoundCloud tracks into the library, where they stay listed with the songs on this device.
+  /// Returns how many were new.
+  Future<int> saveToLibrary(Iterable<Track> tracks) => _addTracks([
+    for (final t in tracks)
+      if (t.soundcloudId != null) t,
+  ]);
 
   /// YouTube Music's own song search first; plain YouTube search if that fails.
   Future<List<Track>> _searchYoutube(String query) async {
@@ -1053,7 +1089,7 @@ class PlayerController extends ChangeNotifier {
     if (id == null || !isPlaying || (_recentIds.isNotEmpty && _recentIds.first == id)) return;
     _recentIds = [id, ..._recentIds.where((r) => r != id)].take(_maxRecent).toList();
     final current = currentTrack;
-    if (current != null && current.isRemote) {
+    if (current != null && current.streams) {
       _recentRemote = {
         for (final e in _recentRemote.entries)
           if (_recentIds.contains(e.key)) e.key: e.value,
@@ -1409,6 +1445,7 @@ class PlayerController extends ChangeNotifier {
       if (webAudioUri(t.videoId!) case final uri?) return AudioSource.uri(uri, tag: t);
       return YoutubeAudioSource(t.videoId!, yt: youtube.client, tag: t);
     }
+    if (t.soundcloudId case final id?) return SoundcloudAudioSource(id, client: soundcloud, tag: t);
     return t.isCueTrack
         ? ClippingAudioSource(child: AudioSource.uri(t.uri), start: t.start, end: t.end, tag: t)
         : AudioSource.uri(t.uri, tag: t);
@@ -1750,6 +1787,11 @@ class PlayerController extends ChangeNotifier {
   Future<void> _castCurrent({Duration from = Duration.zero, bool play = true}) async {
     final t = currentTrack;
     if (t == null || !casting) return;
+    // SoundCloud streams as HLS, which TVs and speakers rarely play; it stays on this device.
+    if (t.soundcloudId != null) {
+      notify(tr.soundcloudCantCast);
+      return;
+    }
     await cast.load(_castItem(t), from: from, play: play);
   }
 

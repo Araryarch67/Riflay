@@ -9260,6 +9260,96 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Looks at this computer again and suggests the look that suits it'**
   String get deviceSetupAgainNote;
+
+  /// No description provided for @sourceYoutubeMusic.
+  ///
+  /// In en, this message translates to:
+  /// **'YouTube Music'**
+  String get sourceYoutubeMusic;
+
+  /// No description provided for @sourceSoundcloud.
+  ///
+  /// In en, this message translates to:
+  /// **'SoundCloud'**
+  String get sourceSoundcloud;
+
+  /// No description provided for @sourceBoth.
+  ///
+  /// In en, this message translates to:
+  /// **'Both'**
+  String get sourceBoth;
+
+  /// No description provided for @searchSourceTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Where to search'**
+  String get searchSourceTooltip;
+
+  /// No description provided for @streamsFromSoundcloud.
+  ///
+  /// In en, this message translates to:
+  /// **'SoundCloud: needs internet'**
+  String get streamsFromSoundcloud;
+
+  /// No description provided for @soundcloudSearchSource.
+  ///
+  /// In en, this message translates to:
+  /// **'SoundCloud search'**
+  String get soundcloudSearchSource;
+
+  /// No description provided for @onSoundcloud.
+  ///
+  /// In en, this message translates to:
+  /// **'On SoundCloud'**
+  String get onSoundcloud;
+
+  /// No description provided for @soundcloudSearchFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'SoundCloud search failed. Check your connection.'**
+  String get soundcloudSearchFailed;
+
+  /// No description provided for @noSoundcloudResults.
+  ///
+  /// In en, this message translates to:
+  /// **'No SoundCloud results.'**
+  String get noSoundcloudResults;
+
+  /// No description provided for @soundcloudCantCast.
+  ///
+  /// In en, this message translates to:
+  /// **'SoundCloud songs play on this device only.'**
+  String get soundcloudCantCast;
+
+  /// No description provided for @pasteYtOrScLink.
+  ///
+  /// In en, this message translates to:
+  /// **'Paste a YouTube or SoundCloud link.'**
+  String get pasteYtOrScLink;
+
+  /// No description provided for @soundcloudUnplayable.
+  ///
+  /// In en, this message translates to:
+  /// **'SoundCloud doesn\'t let this track play here.'**
+  String get soundcloudUnplayable;
+
+  /// No description provided for @soundcloudImportNote.
+  ///
+  /// In en, this message translates to:
+  /// **'SoundCloud tracks stream: play them now or save them to your library.'**
+  String get soundcloudImportNote;
+
+  /// No description provided for @soundcloudLine.
+  ///
+  /// In en, this message translates to:
+  /// **'SoundCloud • {author} • {count, plural, =1{1 track} other{{count} tracks}}'**
+  String soundcloudLine(int count, String author);
+
+  /// No description provided for @saveCountToLibrary.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{Save to library} other{Save {count} to library}}'**
+  String saveCountToLibrary(int count);
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

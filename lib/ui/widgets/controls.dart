@@ -1065,7 +1065,16 @@ class _MediaCardState extends State<MediaCard> {
                   Row(
                     mainAxisAlignment: widget.circle ? MainAxisAlignment.center : MainAxisAlignment.start,
                     children: [
-                      if (widget.online) ...[const SourceMark(online: true, size: 13), const SizedBox(width: 4)],
+                      if (widget.online) ...[
+                        SourceMark(
+                          online: true,
+                          source: widget.track?.soundcloudId != null
+                              ? TrackSource.soundcloud
+                              : TrackSource.youtubeMusic,
+                          size: 13,
+                        ),
+                        const SizedBox(width: 4),
+                      ],
                       Flexible(
                         child: _SecondaryText(
                           widget.subtitle,
@@ -1179,23 +1188,69 @@ String formatBytes(num bytes) {
 String formatEta(Duration d) =>
     d.inMinutes >= 1 ? '${d.inMinutes}m ${d.inSeconds.remainder(60)}s left' : '${d.inSeconds}s left';
 
-/// Where a song plays from: a cloud for YouTube Music (online), a check for
-/// songs on this device (offline).
+/// Where a song plays from: the service it streams from (YouTube Music's play ring, SoundCloud's cloud), or a
+/// check for a streamed song downloaded to this device (offline).
 class SourceMark extends StatelessWidget {
-  const SourceMark({super.key, required this.online, this.size = 14});
+  const SourceMark({super.key, required this.online, this.source = TrackSource.youtubeMusic, this.size = 14});
 
   final bool online;
+  final TrackSource source;
   final double size;
 
   @override
-  Widget build(BuildContext context) => Tooltip(
-    message: online ? tr.streamsOnline : tr.playsOfflineHere,
-    child: Icon(
-      online ? Icons.cloud_outlined : Icons.offline_pin_rounded,
-      size: size,
-      color: online ? AppColors.textSecondary : AppColors.accent,
-    ),
-  );
+  Widget build(BuildContext context) {
+    final color = online ? AppColors.textSecondary : AppColors.accent;
+    return Tooltip(
+      message: !online
+          ? tr.playsOfflineHere
+          : source == TrackSource.soundcloud
+          ? tr.streamsFromSoundcloud
+          : tr.streamsOnline,
+      child: !online
+          ? Icon(Icons.offline_pin_rounded, size: size, color: color)
+          : source == TrackSource.soundcloud
+          ? Icon(Icons.cloud_rounded, size: size, color: color)
+          : SizedBox.square(
+              dimension: size,
+              child: CustomPaint(painter: _PlayRingPainter(color)),
+            ),
+    );
+  }
+}
+
+/// YouTube Music's mark drawn plainly in one colour: a ring around a play triangle.
+class _PlayRingPainter extends CustomPainter {
+  const _PlayRingPainter(this.color);
+
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final r = size.shortestSide / 2;
+    final c = size.center(Offset.zero);
+    final paint = Paint()
+      ..color = color
+      ..isAntiAlias = true;
+    // Icons leave a little room around their glyph; so does this.
+    final outer = r * 0.88;
+    canvas.drawCircle(
+      c,
+      outer - r * 0.09,
+      paint
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = r * 0.18,
+    );
+    final h = outer * 0.9;
+    final triangle = Path()
+      ..moveTo(c.dx - h * 0.36, c.dy - h * 0.48)
+      ..lineTo(c.dx + h * 0.5, c.dy)
+      ..lineTo(c.dx - h * 0.36, c.dy + h * 0.48)
+      ..close();
+    canvas.drawPath(triangle, paint..style = PaintingStyle.fill);
+  }
+
+  @override
+  bool shouldRepaint(_PlayRingPainter old) => old.color != color;
 }
 
 /// A panel that turns to frosted glass when that's on in Settings › Look & feel ›

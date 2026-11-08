@@ -33,6 +33,7 @@ abstract final class Backup {
     'wrap.scheduled',
     'library.v1',
     'library.file.v1',
+    'soundcloud.clientId.v1',
   };
   static const _keptPrefixes = ['musixmatch.'];
 

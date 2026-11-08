@@ -5098,4 +5098,55 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get deviceSetupAgainNote => 'このパソコンをもう一度調べて、合う見た目を提案する';
+
+  @override
+  String get sourceYoutubeMusic => 'YouTube Music';
+
+  @override
+  String get sourceSoundcloud => 'SoundCloud';
+
+  @override
+  String get sourceBoth => '両方';
+
+  @override
+  String get searchSourceTooltip => '検索する場所';
+
+  @override
+  String get streamsFromSoundcloud => 'SoundCloud：ネットが必要';
+
+  @override
+  String get soundcloudSearchSource => 'SoundCloudで検索';
+
+  @override
+  String get onSoundcloud => 'SoundCloudから';
+
+  @override
+  String get soundcloudSearchFailed => 'SoundCloudの検索に失敗しました。接続を確認してください。';
+
+  @override
+  String get noSoundcloudResults => 'SoundCloudに結果がない';
+
+  @override
+  String get soundcloudCantCast => 'SoundCloudの曲はこのデバイスでのみ再生できます。';
+
+  @override
+  String get pasteYtOrScLink => 'YouTubeかSoundCloudのリンクを貼り付けて';
+
+  @override
+  String get soundcloudUnplayable => 'SoundCloudではこの曲をここで再生できません。';
+
+  @override
+  String get soundcloudImportNote => 'SoundCloudの曲はストリーミング再生。今すぐ再生するか、ライブラリに保存できる';
+
+  @override
+  String soundcloudLine(int count, String author) {
+    String _temp0 = intl.Intl.pluralLogic(count, locale: localeName, other: '$count曲');
+    return 'SoundCloud • $author • $_temp0';
+  }
+
+  @override
+  String saveCountToLibrary(int count) {
+    String _temp0 = intl.Intl.pluralLogic(count, locale: localeName, other: '$count曲をライブラリに保存');
+    return '$_temp0';
+  }
 }

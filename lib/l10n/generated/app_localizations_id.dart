@@ -5207,4 +5207,55 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get deviceSetupAgainNote => 'Mengecek komputer ini lagi dan menyarankan tampilan yang cocok';
+
+  @override
+  String get sourceYoutubeMusic => 'YouTube Music';
+
+  @override
+  String get sourceSoundcloud => 'SoundCloud';
+
+  @override
+  String get sourceBoth => 'Keduanya';
+
+  @override
+  String get searchSourceTooltip => 'Tempat mencari';
+
+  @override
+  String get streamsFromSoundcloud => 'SoundCloud: butuh internet';
+
+  @override
+  String get soundcloudSearchSource => 'Pencarian SoundCloud';
+
+  @override
+  String get onSoundcloud => 'Di SoundCloud';
+
+  @override
+  String get soundcloudSearchFailed => 'Pencarian SoundCloud gagal. Cek koneksimu.';
+
+  @override
+  String get noSoundcloudResults => 'Tidak ada hasil di SoundCloud.';
+
+  @override
+  String get soundcloudCantCast => 'Lagu SoundCloud hanya bisa diputar di perangkat ini.';
+
+  @override
+  String get pasteYtOrScLink => 'Tempel link YouTube atau SoundCloud.';
+
+  @override
+  String get soundcloudUnplayable => 'SoundCloud tidak mengizinkan lagu ini diputar di sini.';
+
+  @override
+  String get soundcloudImportNote => 'Lagu SoundCloud diputar lewat internet: putar sekarang atau simpan ke koleksimu.';
+
+  @override
+  String soundcloudLine(int count, String author) {
+    String _temp0 = intl.Intl.pluralLogic(count, locale: localeName, other: '$count lagu');
+    return 'SoundCloud • $author • $_temp0';
+  }
+
+  @override
+  String saveCountToLibrary(int count) {
+    String _temp0 = intl.Intl.pluralLogic(count, locale: localeName, other: 'Simpan $count ke koleksi');
+    return '$_temp0';
+  }
 }

@@ -171,7 +171,11 @@ class DiscordPresence {
     final cover = !options.cover
         ? null
         : t.artworkUrl ?? (videoId == null ? null : 'https://i.ytimg.com/vi/$videoId/hqdefault.jpg');
-    final listenUrl = videoId == null ? null : 'https://music.youtube.com/watch?v=$videoId';
+    final listenUrl = videoId != null
+        ? 'https://music.youtube.com/watch?v=$videoId'
+        : t.soundcloudId != null
+        ? t.sourceUrl
+        : null;
     final artistUrl = t.artistId == null ? null : 'https://music.youtube.com/channel/${t.artistId}';
     final artist = t.artist.trim();
     final shown = options.quality && quality != null ? shortQuality(quality) : null;

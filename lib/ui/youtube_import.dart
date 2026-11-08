@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:youtube_explode_dart/youtube_explode_dart.dart' show Video;
 
+import '../models/track.dart';
+import '../platform/features.dart';
 import '../services/download_prefs.dart';
 import '../services/player_controller.dart';
+import '../services/soundcloud.dart';
 import '../services/youtube_importer.dart';
 import '../services/youtube_links.dart';
 import 'download_options.dart';
@@ -12,7 +15,7 @@ import 'widgets/controls.dart';
 import 'widgets/skeleton.dart';
 import '../services/language.dart';
 
-/// Opens the "paste a YouTube link" flow: bottom sheet on phones, dialog elsewhere.
+/// Opens the "paste a YouTube (or SoundCloud) link" flow: bottom sheet on phones, dialog elsewhere.
 /// Resolves to true when something was queued.
 Future<bool> showYoutubeImport(BuildContext context, {required bool compact, String? initialUrl}) async {
   final controller = PlayerScope.read(context);
@@ -57,6 +60,9 @@ class _ImportForm extends StatefulWidget {
 class _ImportFormState extends State<_ImportForm> {
   final _url = TextEditingController();
   YoutubePreview? _preview;
+
+  /// A SoundCloud link's track or tracks: they stream, so they are played or saved, not downloaded.
+  SoundcloudPage? _soundcloud;
   String? _error;
   bool _loading = false;
   int _lookup = 0;
@@ -81,10 +87,13 @@ class _ImportFormState extends State<_ImportForm> {
   /// Saves a step: if the clipboard already holds a YouTube link, use it.
   Future<void> _pasteIfYoutube() async {
     final text = (await Clipboard.getData(Clipboard.kTextPlain))?.text?.trim();
-    if (!mounted || text == null || _url.text.isNotEmpty || !YoutubeLinks.looksLikeLink(text)) return;
+    if (!mounted || text == null || _url.text.isNotEmpty || !_looksLikeLink(text)) return;
     _url.text = text;
     _resolve();
   }
+
+  static bool _looksLikeLink(String text) =>
+      YoutubeLinks.looksLikeLink(text) || (Features.soundcloud && SoundcloudLink.looksLikeLink(text));
 
   Future<void> _paste() async {
     final text = (await Clipboard.getData(Clipboard.kTextPlain))?.text?.trim();
@@ -97,8 +106,14 @@ class _ImportFormState extends State<_ImportForm> {
     final text = _url.text.trim();
     final lookup = ++_lookup;
     if (text.isEmpty) {
-      setState(() => _preview = _error = null);
+      setState(() {
+        _preview = _error = null;
+        _soundcloud = null;
+      });
       return;
+    }
+    if (Features.soundcloud) {
+      if (SoundcloudLink.parse(text) case final link?) return _resolveSoundcloud(link, lookup);
     }
     // The paste field also takes a bare video id; clipboard auto-detect never does.
     final link = YoutubeLinks.parse(text, allowBareId: true);
@@ -106,12 +121,14 @@ class _ImportFormState extends State<_ImportForm> {
     if (link == null || link is AlbumLink) {
       setState(() {
         _preview = null;
-        _error = tr.pasteYtLink;
+        _soundcloud = null;
+        _error = Features.soundcloud ? tr.pasteYtOrScLink : tr.pasteYtLink;
       });
       return;
     }
     setState(() {
       _loading = true;
+      _soundcloud = null;
       _error = null;
     });
     try {
@@ -129,6 +146,45 @@ class _ImportFormState extends State<_ImportForm> {
     }
   }
 
+  Future<void> _resolveSoundcloud(SoundcloudLink link, int lookup) async {
+    setState(() {
+      _loading = true;
+      _preview = null;
+      _error = null;
+    });
+    try {
+      final page = await PlayerScope.read(context).soundcloud.resolve(link);
+      if (!mounted || lookup != _lookup) return;
+      setState(() {
+        _soundcloud = page.tracks.isEmpty ? null : page;
+        if (page.tracks.isEmpty) _error = tr.soundcloudUnplayable;
+      });
+    } catch (e) {
+      debugPrint('SoundCloud link failed: $e');
+      if (!mounted || lookup != _lookup) return;
+      setState(() {
+        _soundcloud = null;
+        _error = e is SoundcloudUnplayable ? tr.soundcloudUnplayable : tr.linkLoadFailed;
+      });
+    } finally {
+      if (mounted && lookup == _lookup) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _playSoundcloud(SoundcloudPage page) async {
+    final c = PlayerScope.read(context);
+    Navigator.of(context).pop(true);
+    await c.playList(page.tracks, 0, from: page.title);
+  }
+
+  Future<void> _saveSoundcloud(SoundcloudPage page) async {
+    final c = PlayerScope.read(context);
+    final messenger = ScaffoldMessenger.of(context);
+    Navigator.of(context).pop(true);
+    await c.saveToLibrary(page.tracks);
+    messenger.showSnackBar(SnackBar(content: Text(tr.savedToLibrary)));
+  }
+
   Future<void> _download() async {
     final videos = switch (_preview) {
       VideoPreview(:final video) => [video],
@@ -141,6 +197,42 @@ class _ImportFormState extends State<_ImportForm> {
     if (choice == null || !mounted) return;
     final queued = youtube.enqueue(videos, choice: choice);
     Navigator.of(context).pop(queued > 0);
+  }
+
+  /// A SoundCloud link's note and its two buttons: save to the library, play now.
+  Widget _soundcloudActions(BuildContext context, SoundcloudPage page, BoxConstraints constraints) {
+    final text = Theme.of(context).textTheme;
+    final note = Text(tr.soundcloudImportNote, style: text.bodySmall?.copyWith(color: AppColors.textMuted));
+    final buttons = Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      alignment: WrapAlignment.end,
+      children: [
+        OutlinedButton(
+          style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14)),
+          onPressed: () => _saveSoundcloud(page),
+          child: Text(tr.saveCountToLibrary(page.tracks.length)),
+        ),
+        FilledButton(
+          style: FilledButton.styleFrom(
+            backgroundColor: AppColors.inverse,
+            foregroundColor: AppColors.onInverse,
+            padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
+            textStyle: text.titleSmall?.copyWith(fontWeight: FontWeight.w800),
+          ),
+          onPressed: () => _playSoundcloud(page),
+          child: Text(tr.play),
+        ),
+      ],
+    );
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        note,
+        const SizedBox(height: 12),
+        Align(alignment: Alignment.centerRight, child: buttons),
+      ],
+    );
   }
 
   @override
@@ -164,7 +256,7 @@ class _ImportFormState extends State<_ImportForm> {
             textInputAction: TextInputAction.go,
             onSubmitted: (_) => _resolve(),
             onChanged: (v) {
-              if (YoutubeLinks.looksLikeLink(v)) _resolve();
+              if (_looksLikeLink(v)) _resolve();
             },
             decoration: InputDecoration(
               hintText: 'https://youtube.com/watch?v=…',
@@ -186,6 +278,8 @@ class _ImportFormState extends State<_ImportForm> {
                     padding: const EdgeInsets.only(bottom: 8),
                     child: Text(_error!, style: text.bodyMedium?.copyWith(color: Theme.of(context).colorScheme.error)),
                   )
+                : _soundcloud != null
+                ? _SoundcloudCard(page: _soundcloud!)
                 : preview == null
                 ? const SizedBox(width: double.infinity)
                 : _PreviewCard(preview: preview),
@@ -194,6 +288,7 @@ class _ImportFormState extends State<_ImportForm> {
           LayoutBuilder(
             // Narrow windows: the note goes above the button instead of squeezing it.
             builder: (context, constraints) {
+              if (_soundcloud case final page? when !_loading) return _soundcloudActions(context, page, constraints);
               final note = Text(tr.bestQualityNote, style: text.bodySmall?.copyWith(color: AppColors.textMuted));
               final button = FilledButton(
                 style: FilledButton.styleFrom(
@@ -330,6 +425,74 @@ class _PreviewCardState extends State<_PreviewCard> {
                       style: text.bodySmall?.copyWith(color: AppColors.textMuted),
                     ),
                   ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// A SoundCloud link's track, or its playlist / profile, before it is played or saved.
+class _SoundcloudCard extends StatelessWidget {
+  const _SoundcloudCard({required this.page});
+
+  final SoundcloudPage page;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    final one = page.isPlaylist ? null : page.tracks.single;
+    final subtitle = one != null
+        ? [one.artist, if (one.duration != null) formatDuration(one.duration)].join(' • ')
+        : tr.soundcloudLine(page.tracks.length, page.subtitle);
+    final art = page.artworkUrl;
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(color: AppColors.hover, borderRadius: BorderRadius.circular(8)),
+      child: Row(
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: SizedBox.square(
+              dimension: 63,
+              child: art == null
+                  ? ColoredBox(color: AppColors.elevated)
+                  : Image.network(
+                      art,
+                      cacheWidth: (63 * MediaQuery.devicePixelRatioOf(context)).round(),
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, _, _) => ColoredBox(color: AppColors.elevated),
+                    ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  page.title,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: text.bodyLarge?.copyWith(fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    const SourceMark(online: true, source: TrackSource.soundcloud, size: 14),
+                    const SizedBox(width: 4),
+                    Flexible(
+                      child: Text(
+                        subtitle,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: text.bodySmall?.copyWith(color: AppColors.textSecondary),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),

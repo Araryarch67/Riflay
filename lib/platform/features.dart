@@ -70,6 +70,11 @@ abstract final class Features {
   /// SpotiFLAC extensions (their scripts run in an embedded JavaScript engine, which the web build doesn't have).
   static bool get extensions => !Host.isWeb;
 
+  /// SoundCloud as a second place to search and stream from. Its songs play through just_audio's loopback server
+  /// (see `SoundcloudAudioSource`), which a browser doesn't have, and api-v2 sends no CORS headers.
+  /// `RIFLAY_NO_SOUNDCLOUD` leaves it out everywhere.
+  static bool get soundcloud => !Host.isWeb && !const bool.fromEnvironment('RIFLAY_NO_SOUNDCLOUD');
+
   /// Backup & restore (reads and writes the app's own files, then restarts it).
   static bool get backup => !Host.isWeb;
 }

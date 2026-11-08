@@ -22,6 +22,7 @@ import 'search/remote_results.dart';
 import 'search/search_box.dart';
 import 'search/search_input.dart';
 import 'search/search_parts.dart';
+import 'search/soundcloud_results.dart';
 
 // The search page's other parts live in search/: the box (and its suggestions),
 // the saved searches, the library's memoised answer and the YouTube sections.
@@ -57,6 +58,11 @@ class _SearchPageState extends State<SearchPage> {
     super.initState();
     // Which extensions search is known once the store has loaded; a search already out stays as it went.
     ExtensionStore.instance.load().catchError((Object e) => debugPrint('Extensions not loaded: $e'));
+    if (Features.soundcloud) {
+      SearchSource.load().then((source) {
+        if (mounted && source != _source) _setSource(source, save: false);
+      });
+    }
     if (widget.input case final input?) {
       input.controller.addListener(_fromBar);
       input.submitted.addListener(_submittedFromBar);
@@ -110,6 +116,11 @@ class _SearchPageState extends State<SearchPage> {
 
   /// The last results shown: they stay (dimmed) while the next query loads, instead of flashing a spinner.
   final _shown = ShownSongs();
+  final _shownSoundcloud = ShownSongs();
+
+  /// Where to search online (always YouTube Music where SoundCloud isn't offered).
+  SearchSource _source = SearchSource.youtubeMusic;
+  Future<List<Track>>? _soundcloud;
 
   @override
   void dispose() {
@@ -144,6 +155,7 @@ class _SearchPageState extends State<SearchPage> {
       _videoRun++;
       setState(() {
         _youtube = _all = _only = _top = null;
+        _soundcloud = null;
         _extensions = const [];
         _videoTracks = const [];
         _videoLoading = false;
@@ -173,8 +185,14 @@ class _SearchPageState extends State<SearchPage> {
   }
 
   void _searchYoutube(String q) {
-    if (_videos) return _searchVideos(q);
     final c = PlayerScope.read(context);
+    _soundcloud = _source.usesSoundcloud ? c.searchSoundcloud(q) : null;
+    if (!_source.youtube) {
+      _youtube = _all = _only = _top = null;
+      _extensions = const [];
+      return;
+    }
+    if (_videos) return _searchVideos(q);
     _youtube = c.searchYoutube(q);
     _all = c.ytMusic.search(q);
     _top = topAndSongsFuture(_all, _youtube);
@@ -247,11 +265,21 @@ class _SearchPageState extends State<SearchPage> {
     });
   }
 
+  void _setSource(SearchSource source, {bool save = true}) {
+    if (source == _source) return;
+    if (save) source.save().ignore();
+    setState(() {
+      _source = source;
+      final q = _query.trim();
+      if (q.length >= 2) _searchYoutube(q);
+    });
+  }
+
   void _setFilter(WebResultKind? f) {
     setState(() {
       _filter = f;
       final q = _query.trim();
-      _only = f == null || f == WebResultKind.song || q.length < 2
+      _only = f == null || f == WebResultKind.song || q.length < 2 || !_source.youtube
           ? null
           : PlayerScope.read(context).ytMusic.searchOnly(q, f);
       if (f == null && q.length >= 2 && Features.extensions && _extensions.isEmpty) {
@@ -259,6 +287,23 @@ class _SearchPageState extends State<SearchPage> {
       }
     });
   }
+
+  /// "In your library": the first songs of the library that match.
+  List<Widget> _library(PlayerController c, List<Track> results, ShellScope shell) => [
+    if (results.isNotEmpty) ...[
+      SliverToBoxAdapter(child: SectionTitle(tr.inYourLibrary)),
+      SliverPadding(
+        padding: EdgeInsets.symmetric(horizontal: shell.compact ? 12 : 16),
+        sliver: SliverList.builder(
+          itemCount: results.length.clamp(0, 8),
+          itemBuilder: (context, i) => TrackRow(
+            track: results[i],
+            onTap: () => c.playList(results, i, from: tr.navSearch),
+          ),
+        ),
+      ),
+    ],
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -318,17 +363,26 @@ class _SearchPageState extends State<SearchPage> {
                   ),
                 if (searching) ...[
                   if (widget.input == null) const SizedBox(height: 16),
-                  SegmentedButton<bool>(
-                    showSelectedIcon: false,
-                    segments: [
-                      ButtonSegment(value: false, label: Text(tr.songs)),
-                      ButtonSegment(value: true, label: Text(tr.videos)),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      if (_source.youtube)
+                        SegmentedButton<bool>(
+                          showSelectedIcon: false,
+                          segments: [
+                            ButtonSegment(value: false, label: Text(tr.songs)),
+                            ButtonSegment(value: true, label: Text(tr.videos)),
+                          ],
+                          selected: {_videos},
+                          onSelectionChanged: (s) => _setVideos(s.first),
+                        ),
+                      if (Features.soundcloud) SearchSourceChoice(value: _source, onChanged: _setSource),
                     ],
-                    selected: {_videos},
-                    onSelectionChanged: (s) => _setVideos(s.first),
                   ),
-                  if (!_videos) const SizedBox(height: 12),
-                  if (!_videos)
+                  if (!_videos && _source.youtube) const SizedBox(height: 12),
+                  if (!_videos && _source.youtube)
                     Wrap(
                       spacing: 8,
                       runSpacing: 8,
@@ -383,6 +437,16 @@ class _SearchPageState extends State<SearchPage> {
               ),
             ),
           ],
+        ] else if (!_source.youtube) ...[
+          if (searching)
+            YoutubeSongResults(
+              future: _soundcloud,
+              shown: _shownSoundcloud,
+              from: tr.soundcloudSearchSource,
+              failedNote: tr.soundcloudSearchFailed,
+              emptyNote: tr.noSoundcloudResults,
+            ),
+          ..._library(c, results, shell),
         ] else if (_videos) ...[
           if (searching)
             VideoResults(
@@ -394,23 +458,13 @@ class _SearchPageState extends State<SearchPage> {
             ),
         ] else if (_filter == WebResultKind.song) ...[
           YoutubeSongResults(future: _youtube, shown: _shown),
+          if (_source.usesSoundcloud && searching) SoundcloudSection(future: _soundcloud, count: 30),
         ] else if (_filter != null) ...[
           CollectionGrid(future: _only),
         ] else ...[
           if (searching) TopAndSongs(future: _top),
-          if (results.isNotEmpty) ...[
-            SliverToBoxAdapter(child: SectionTitle(tr.inYourLibrary)),
-            SliverPadding(
-              padding: EdgeInsets.symmetric(horizontal: shell.compact ? 12 : 16),
-              sliver: SliverList.builder(
-                itemCount: results.length.clamp(0, 8),
-                itemBuilder: (context, i) => TrackRow(
-                  track: results[i],
-                  onTap: () => c.playList(results, i, from: tr.navSearch),
-                ),
-              ),
-            ),
-          ],
+          if (_source.usesSoundcloud && searching) SoundcloudSection(future: _soundcloud),
+          ..._library(c, results, shell),
           if (searching && _extensions.isNotEmpty) ExtensionResults(searches: _extensions),
           if (searching) RemoteShelves(future: _all),
           if (artists.isNotEmpty && results.isNotEmpty)

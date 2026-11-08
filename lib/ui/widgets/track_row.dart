@@ -91,7 +91,7 @@ class _TrackRowState extends State<TrackRow> {
     return PlayerSelect<(bool, bool, bool)>(
       select: (c) {
         final current = c.currentTrack?.id == t.id;
-        return (current, current && c.showsPlaying, t.isRemote && !c.isOffline(t));
+        return (current, current && c.showsPlaying, t.streams && !c.isOffline(t));
       },
       builder: (context, s, _) => _row(context, isCurrent: s.$1, playing: s.$2, online: s.$3),
     );
@@ -168,8 +168,11 @@ class _TrackRowState extends State<TrackRow> {
                         EqualizerIcon(playing: playing, size: 10),
                         const SizedBox(width: 6),
                       ],
-                      // YouTube songs: cloud = streams, green pin = downloaded, plays offline.
-                      if (t.isRemote) ...[SourceMark(online: online, size: 14), const SizedBox(width: 4)],
+                      // Streamed songs: the service they stream from; green pin = downloaded, plays offline.
+                      if (t.streams) ...[
+                        SourceMark(online: online, source: t.source, size: 14),
+                        const SizedBox(width: 4),
+                      ],
                       Flexible(
                         child: Text(
                           t.artist,
@@ -472,7 +475,26 @@ class TrackMenuButton extends StatelessWidget {
                   title: Text(tr.removeFromThisPlaylist),
                 ),
               ),
-            if (track.isRemote) ...[
+            if (track.soundcloudId != null) ...[
+              PopupMenuItem(
+                onTap: () => c.startRadio(track),
+                child: MenuRow(leading: const Icon(Icons.radio_rounded), title: Text(tr.startRadio)),
+              ),
+              // A SoundCloud track streams; saving it lists it in the library beside the songs on this device.
+              if (c.inLibrary(track))
+                PopupMenuItem(
+                  onTap: () => _queued(host, c.removeTrack(track), tr.removedFromLibrary),
+                  child: MenuRow(
+                    leading: const Icon(Icons.remove_circle_outline_rounded),
+                    title: Text(tr.removeFromLibrary),
+                  ),
+                )
+              else
+                PopupMenuItem(
+                  onTap: () => _queued(host, c.saveToLibrary([track]), tr.savedToLibrary),
+                  child: MenuRow(leading: const Icon(Icons.library_add_outlined), title: Text(tr.saveToLibrary)),
+                ),
+            ] else if (track.isRemote) ...[
               if (c.ytMusic.canEdit)
                 PopupMenuItem(
                   onTap: () => toggleLike(host, track),

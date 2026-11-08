@@ -44,6 +44,29 @@ class Track {
     artistId: artistId,
   );
 
+  /// A SoundCloud track that streams. [permalink] is its page (`soundcloud.com/<user>/<track>`), kept for sharing;
+  /// playback needs only [trackId] (see `SoundcloudClient.playlistFor`).
+  factory Track.soundcloud({
+    required String trackId,
+    required String title,
+    required String artist,
+    String? permalink,
+    Duration? duration,
+    String? artworkUrl,
+  }) => Track(
+    id: '$soundcloudPrefix$trackId',
+    uri: Uri.parse(permalink ?? 'https://api.soundcloud.com/tracks/$trackId'),
+    title: title,
+    artist: artist,
+    duration: duration,
+    tagged: true,
+    sourceUrl: permalink,
+    artworkUrl: artworkUrl,
+  );
+
+  /// [id]'s prefix for a SoundCloud track; the rest is SoundCloud's numeric track id.
+  static const soundcloudPrefix = 'sc:';
+
   /// Builds a track from a file URI, guessing title/artist from the
   /// "Artist - Title.ext" filename convention until real tags are read.
   factory Track.fromUri(Uri uri, {String? displayName}) {
@@ -130,7 +153,22 @@ class Track {
   /// The YouTube Music artist channel (`UC…`) of a streamed song, when known.
   final String? artistId;
 
+  /// A YouTube Music song that streams (it has a [videoId]). SoundCloud tracks stream too but aren't this:
+  /// everything YouTube-only (radio, likes, downloads, the music video) keys off it. See [streams].
   bool get isRemote => videoId != null;
+
+  /// SoundCloud's track id, for a SoundCloud track.
+  String? get soundcloudId => id.startsWith(soundcloudPrefix) ? id.substring(soundcloudPrefix.length) : null;
+
+  /// Played over the internet from a music service (YouTube Music or SoundCloud), not from a file here.
+  bool get streams => isRemote || soundcloudId != null;
+
+  /// Where this song comes from, for the mark beside it.
+  TrackSource get source => soundcloudId != null
+      ? TrackSource.soundcloud
+      : isRemote
+      ? TrackSource.youtubeMusic
+      : TrackSource.device;
 
   /// The YouTube video this song is: a streamed song's own id, or the one a download remembers in
   /// [sourceUrl]. Null for a file that never came from YouTube, which a YouTube Music playlist can't hold.
@@ -214,6 +252,9 @@ class Track {
     return audioExtensions.contains(ext);
   }
 }
+
+/// Where a song comes from.
+enum TrackSource { device, youtubeMusic, soundcloud }
 
 /// Album order: disc, then track number, title as a tiebreak for untagged files.
 int compareAlbumOrder(Track a, Track b) {

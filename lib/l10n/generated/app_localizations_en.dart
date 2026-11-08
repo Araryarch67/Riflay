@@ -5280,4 +5280,60 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get deviceSetupAgainNote => 'Looks at this computer again and suggests the look that suits it';
+
+  @override
+  String get sourceYoutubeMusic => 'YouTube Music';
+
+  @override
+  String get sourceSoundcloud => 'SoundCloud';
+
+  @override
+  String get sourceBoth => 'Both';
+
+  @override
+  String get searchSourceTooltip => 'Where to search';
+
+  @override
+  String get streamsFromSoundcloud => 'SoundCloud: needs internet';
+
+  @override
+  String get soundcloudSearchSource => 'SoundCloud search';
+
+  @override
+  String get onSoundcloud => 'On SoundCloud';
+
+  @override
+  String get soundcloudSearchFailed => 'SoundCloud search failed. Check your connection.';
+
+  @override
+  String get noSoundcloudResults => 'No SoundCloud results.';
+
+  @override
+  String get soundcloudCantCast => 'SoundCloud songs play on this device only.';
+
+  @override
+  String get pasteYtOrScLink => 'Paste a YouTube or SoundCloud link.';
+
+  @override
+  String get soundcloudUnplayable => 'SoundCloud doesn\'t let this track play here.';
+
+  @override
+  String get soundcloudImportNote => 'SoundCloud tracks stream: play them now or save them to your library.';
+
+  @override
+  String soundcloudLine(int count, String author) {
+    String _temp0 = intl.Intl.pluralLogic(count, locale: localeName, other: '$count tracks', one: '1 track');
+    return 'SoundCloud • $author • $_temp0';
+  }
+
+  @override
+  String saveCountToLibrary(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Save $count to library',
+      one: 'Save to library',
+    );
+    return '$_temp0';
+  }
 }

@@ -1527,5 +1527,20 @@
   "deviceSetupContinue": "続ける",
   "deviceSetupKeep": "今の設定のままにする",
   "deviceSetupAgain": "このパソコンを調べる",
-  "deviceSetupAgainNote": "このパソコンをもう一度調べて、合う見た目を提案する"
+  "deviceSetupAgainNote": "このパソコンをもう一度調べて、合う見た目を提案する",
+  "sourceYoutubeMusic": "YouTube Music",
+  "sourceSoundcloud": "SoundCloud",
+  "sourceBoth": "両方",
+  "searchSourceTooltip": "検索する場所",
+  "streamsFromSoundcloud": "SoundCloud：ネットが必要",
+  "soundcloudSearchSource": "SoundCloudで検索",
+  "onSoundcloud": "SoundCloudから",
+  "soundcloudSearchFailed": "SoundCloudの検索に失敗しました。接続を確認してください。",
+  "noSoundcloudResults": "SoundCloudに結果がない",
+  "soundcloudCantCast": "SoundCloudの曲はこのデバイスでのみ再生できます。",
+  "pasteYtOrScLink": "YouTubeかSoundCloudのリンクを貼り付けて",
+  "soundcloudUnplayable": "SoundCloudではこの曲をここで再生できません。",
+  "soundcloudImportNote": "SoundCloudの曲はストリーミング再生。今すぐ再生するか、ライブラリに保存できる",
+  "soundcloudLine": "SoundCloud • {author} • {count, plural, other{{count}曲}}",
+  "saveCountToLibrary": "{count, plural, other{{count}曲をライブラリに保存}}"
 }

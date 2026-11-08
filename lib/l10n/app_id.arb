@@ -1534,5 +1534,20 @@
   "deviceSetupContinue": "Lanjut",
   "deviceSetupKeep": "Pakai pengaturanku",
   "deviceSetupAgain": "Cek komputer ini",
-  "deviceSetupAgainNote": "Mengecek komputer ini lagi dan menyarankan tampilan yang cocok"
+  "deviceSetupAgainNote": "Mengecek komputer ini lagi dan menyarankan tampilan yang cocok",
+  "sourceYoutubeMusic": "YouTube Music",
+  "sourceSoundcloud": "SoundCloud",
+  "sourceBoth": "Keduanya",
+  "searchSourceTooltip": "Tempat mencari",
+  "streamsFromSoundcloud": "SoundCloud: butuh internet",
+  "soundcloudSearchSource": "Pencarian SoundCloud",
+  "onSoundcloud": "Di SoundCloud",
+  "soundcloudSearchFailed": "Pencarian SoundCloud gagal. Cek koneksimu.",
+  "noSoundcloudResults": "Tidak ada hasil di SoundCloud.",
+  "soundcloudCantCast": "Lagu SoundCloud hanya bisa diputar di perangkat ini.",
+  "pasteYtOrScLink": "Tempel link YouTube atau SoundCloud.",
+  "soundcloudUnplayable": "SoundCloud tidak mengizinkan lagu ini diputar di sini.",
+  "soundcloudImportNote": "Lagu SoundCloud diputar lewat internet: putar sekarang atau simpan ke koleksimu.",
+  "soundcloudLine": "SoundCloud • {author} • {count, plural, other{{count} lagu}}",
+  "saveCountToLibrary": "{count, plural, other{Simpan {count} ke koleksi}}"
 }
