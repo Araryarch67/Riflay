@@ -390,6 +390,7 @@ class VideoMode extends ChangeNotifier with WidgetsBindingObserver {
   /// only fetched and decoded while one is. [full]: the full-screen player.
   void addView({bool full = false}) {
     full ? _fullViews++ : _views++;
+    _viewsChanged();
     _release?.cancel();
     // Views come on screen while the tree builds: start the video right after.
     scheduleMicrotask(_sync);
@@ -397,6 +398,7 @@ class VideoMode extends ChangeNotifier with WidgetsBindingObserver {
 
   void removeView({bool full = false}) {
     full ? _fullViews-- : _views--;
+    _viewsChanged();
     // A page changing, or the cover moving between layouts, briefly has no view: keep the video through that.
     _release?.cancel();
     _release = Timer(_holdWithoutView, _sync);
@@ -411,12 +413,14 @@ class VideoMode extends ChangeNotifier with WidgetsBindingObserver {
   /// only fetched and decoded while one is.
   void addBackground() {
     _backgrounds++;
+    _viewsChanged();
     _release?.cancel();
     scheduleMicrotask(_sync);
   }
 
   void removeBackground() {
     _backgrounds--;
+    _viewsChanged();
     _release?.cancel();
     _release = Timer(_holdWithoutView, _sync);
   }
@@ -561,6 +565,16 @@ vec4 hook() {
   }
 
   bool get _foreground => _on && (_views > 0 || _fullViews > 0);
+
+  /// The music video's picture is on screen now: its first frame is ready and a view shows it. Decorations and the
+  /// visualizer rest meanwhile (`PlayingMotion`, `AudioReactiveView`): the video is the motion, and with its surface
+  /// over the window each frame Flutter drew cost the Linux main thread twice as much (~20 ms).
+  bool get showing => _ready && _wanted != null;
+
+  /// [showing] may change with the views: listeners hear it after the frame that changed them (never mid-build).
+  void _viewsChanged() => scheduleMicrotask(() {
+    if (!_disposed) notifyListeners();
+  });
 
   void _changed() {
     final track = _c?.currentTrack;

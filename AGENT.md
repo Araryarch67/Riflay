@@ -682,6 +682,7 @@ device's language when Riflay has it). The words live in `lib/l10n/app_en.arb` (
   flutter run --dart-define=RIFLAY_NO_PHONE_SETUP=true  # a phone under 4 GB keeps Balanced at its first start
   flutter run --dart-define=RIFLAY_NO_ANDROID_TRIM=true  # Android keeps its allocator's free pages and covers in the background
   flutter run --dart-define=RIFLAY_NO_UPDATE_CHECK=true  # no update check at start (Settings › About still checks)
+  flutter run --dart-define=RIFLAY_MOTION_WITH_VIDEO=true  # decorations, visualizer and a smooth seek bar while the music video shows
   flutter run --dart-define=RIFLAY_LYRICS_SCROLLBAR=true  # synced lyrics show a scrollbar on computers again
   flutter run --dart-define=RIFLAY_NO_PAGE_OUT=true  # Linux keeps the app resident behind other windows (no MADV_PAGEOUT)
   flutter run --dart-define=RIFLAY_ASTATS_VISUALIZER=true  # the visualizer measures its bands with astats (~3x the CPU), not aspectralstats
@@ -881,6 +882,17 @@ Windows zip, Linux AppImage and macOS dmg, so successful platforms need not be r
   first placement on the current line is a jump. In frugal Balanced the follow scroll glides on `UiBeat` at 20 fps
   (`_glideTo`, ~7 frames a line) and a line's colour changes at once (`_lineChange`). Opening the page went from
   ~800 ms of the main thread to ~320 ms; the page left open from ~1.6 s to ~0.74 s per 12 s.
+- A music video on screen (`VideoMode.showing`: its first frame ready, a view or background showing it) is the motion:
+  `PlayingMotion` and `AudioReactiveView` rest (the visualizer lets mpv drop its filter bank) and the seek bar steps
+  once a second; on a computer the full screen view's lyrics line changes at once. With the video's surface over
+  the window each frame Flutter drew cost the Linux main thread ~20 ms. `RIFLAY_MOTION_WITH_VIDEO` keeps them moving.
+  `native_video.cc`'s `detach` unrealizes the GL area: its context held ~160 MB (`/dev/nvidiactl`, NVIDIA) after the
+  video was let go. Measured with `tool/mv_app.sh` (YouTube Music's "Kyapi" by Houshou Marine with its video: Now
+  Playing, then the full screen view with its lyrics line, then another window in front; release build, % of a
+  24-thread CPU): Balanced 1.65 / 0.81 / 0.63% -> 0.81 / 0.70 / 0.49%, Heavy 1.76 / 1.09 / 0.65% -> 0.73 / 0.99 /
+  0.47%. What is left is each video frame, ~5-7 ms of the main thread (GTK's frame, mpv's GL render, NVDEC's
+  interop); `GDK_GL=always` and `__GL_YIELD=USLEEP` didn't change it. Private memory with a video is ~445-465 MiB
+  (~160 of it NVIDIA's for the video's GL and CUDA), ~45 MiB of NVIDIA's after it is let go.
 - The native video's `GtkOverlay` keeps its `GtkFixed` hidden until a video has a place on screen: shown over the
   Flutter view at all times it made GTK composite the slow way, ~2.8% of a core more while a song played (main thread
   7.5% -> 4.7% on Home). Measurements across the 2026-11 kernel update differ: the same commit measured ~5% more on

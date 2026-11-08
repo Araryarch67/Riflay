@@ -75,6 +75,9 @@ abstract final class DebugSwitches {
   /// Synced lyrics show a scrollbar on computers, as before: each line's scroll showed it and faded it out again.
   static bool lyricsScrollbar = _all || const bool.fromEnvironment('RIFLAY_LYRICS_SCROLLBAR');
 
+  /// Decorations and the visualizer keep moving while the music video shows, as before.
+  static bool motionWithVideo = _all || const bool.fromEnvironment('RIFLAY_MOTION_WITH_VIDEO');
+
   /// Prints how many widgets each palette change rebuilds, and every Material theme built.
   static bool logRestyles = const bool.fromEnvironment('RIFLAY_LOG_RESTYLES');
 

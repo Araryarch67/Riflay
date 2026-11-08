@@ -64,6 +64,10 @@ void detach(Surface* s) {
   s->frames = 0;
   gtk_widget_hide(s->area);
   gtk_widget_hide(s->fixed);
+  // The area's GL context goes too: with NVIDIA's driver it held ~160 MB of the process's memory
+  // (/dev/nvidiactl) after the video was let go. attach() realizes it again. Its "unrealize" handler calls back
+  // here, and returns at once: the renderer is gone.
+  if (!s->destroyed) gtk_widget_unrealize(s->area);
 }
 
 void render_frame(Surface* s, int target, int w, int h) {

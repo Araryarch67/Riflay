@@ -5,6 +5,7 @@ import '../../platform/host.dart';
 import '../../services/layout_prefs.dart';
 import '../../services/player_controller.dart';
 import '../../services/ui_beat.dart';
+import '../../services/video_mode.dart';
 import '../debug_switches.dart';
 
 /// Slow motion for a decoration that moves while a song plays: the seek bar's wave and the
@@ -98,6 +99,7 @@ class _PlayingMotionState extends State<PlayingMotion> with WidgetsBindingObserv
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     LayoutPrefs.instance.addListener(_sync);
+    VideoMode.instance.addListener(_sync);
     final state = WidgetsBinding.instance.lifecycleState;
     _foreground = PlayingMotion.decorates(state);
   }
@@ -124,7 +126,9 @@ class _PlayingMotionState extends State<PlayingMotion> with WidgetsBindingObserv
   void _sync({bool first = false}) {
     if (!mounted) return;
     final allowed = _controller != null && !LayoutPrefs.lightweight && LayoutPrefs.moves && !_reduceMotion;
-    final playing = allowed && _visible && _foreground && _controller!.showsPlaying;
+    // The music video showing is the motion (VideoMode.showing).
+    final video = VideoMode.instance.showing && !DebugSwitches.motionWithVideo;
+    final playing = allowed && _visible && _foreground && _controller!.showsPlaying && !video;
     if (first && !_allowed) _clock._amount = _clock._target = playing ? 1 : 0;
     _clock.moving = playing;
     if (!_clock.settled || playing) {
@@ -156,6 +160,7 @@ class _PlayingMotionState extends State<PlayingMotion> with WidgetsBindingObserv
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     LayoutPrefs.instance.removeListener(_sync);
+    VideoMode.instance.removeListener(_sync);
     _controller?.removeListener(_sync);
     _halt();
     _clock.dispose();

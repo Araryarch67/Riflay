@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:window_manager/window_manager.dart';
 
 import '../../models/track.dart';
+import '../../platform/host.dart';
 import '../../services/appearance.dart';
 import '../../services/language.dart';
 import '../../services/layout_prefs.dart';
@@ -528,7 +529,11 @@ class _LyricsLineState extends State<_LyricsLine> {
   Widget build(BuildContext context) {
     final line = _index < 0 ? '' : _lines[_index].text;
     return AnimatedSwitcher(
-      duration: LayoutPrefs.dur(const Duration(milliseconds: 200)),
+      // On a computer the next line comes at once: each 200 ms fade drew ~12 frames over the video's own surface, ~20 ms
+      // of the Linux main thread each (Heavy's full screen was ~1% of the CPU with it). Phones keep the fade.
+      duration: Host.isLinux || Host.isWindows || Host.isMacOS
+          ? Duration.zero
+          : LayoutPrefs.dur(const Duration(milliseconds: 200)),
       child: Text(
         line,
         key: ValueKey(_index),

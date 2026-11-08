@@ -46,6 +46,7 @@ import 'youtube_importer.dart';
 import 'youtube_stream.dart';
 import 'library_views.dart';
 import 'ui_beat.dart';
+import 'video_mode.dart';
 import 'language.dart';
 import '../ui/debug_switches.dart';
 
@@ -604,7 +605,10 @@ class PlayerController extends ChangeNotifier {
     // Lightweight, or another window has the focus: once a second, with the time beside the bar.
     final unfocused =
         WidgetsBinding.instance.lifecycleState == AppLifecycleState.inactive && !DebugSwitches.moveUnfocused;
-    final slow = (lightweight && !DebugSwitches.quickLightweightSeekBar) || unfocused;
+    // The music video on screen shows the song moving; each frame drawn over its surface costs the Linux main thread
+    // ~20 ms, so the bar steps once a second then too (VideoMode.showing).
+    final video = VideoMode.instance.showing && !DebugSwitches.motionWithVideo;
+    final slow = (lightweight && !DebugSwitches.quickLightweightSeekBar) || unfocused || video;
     // Balanced on a computer: on the beat everything else there moves at.
     final min = slow
         ? const Duration(seconds: 1)

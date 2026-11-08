@@ -7,7 +7,9 @@ import '../../services/audio_engine.dart';
 import '../../services/layout_prefs.dart';
 import '../../services/player_controller.dart';
 import '../../services/ui_beat.dart';
+import '../../services/video_mode.dart';
 import '../../services/visualizer_levels.dart';
+import '../debug_switches.dart';
 import 'playing_motion.dart';
 import '../../services/language.dart';
 
@@ -90,6 +92,7 @@ class _AudioReactiveViewState extends State<AudioReactiveView> with WidgetsBindi
     // focused, see PlayingMotion.visible); otherwise the meter is let go and mpv drops its filter bank too.
     _foreground = PlayingMotion.visible(WidgetsBinding.instance.lifecycleState);
     _focused = PlayingMotion.decorates(WidgetsBinding.instance.lifecycleState);
+    VideoMode.instance.addListener(_sync);
   }
 
   @override
@@ -173,6 +176,8 @@ class _AudioReactiveViewState extends State<AudioReactiveView> with WidgetsBindi
         _visible &&
         _foreground &&
         c.showsPlaying &&
+        // The music video showing is the motion; the meter and mpv's filter bank rest (VideoMode.showing).
+        (!VideoMode.instance.showing || DebugSwitches.motionWithVideo) &&
         !c.casting &&
         !c.audio.bitPerfect &&
         c.audio.dopPlaying == null &&
@@ -188,6 +193,7 @@ class _AudioReactiveViewState extends State<AudioReactiveView> with WidgetsBindi
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    VideoMode.instance.removeListener(_sync);
     _controller?.audio.removeListener(_sync);
     _controller?.audio.visualizerLevels.removeListener(_animate);
     _playState?.cancel();
