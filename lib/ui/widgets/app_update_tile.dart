@@ -4,12 +4,15 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../services/app_updates.dart';
 import '../pages/sound_settings.dart' show settingsMuted;
+import 'controls.dart' show formatBytes;
 import 'skeleton.dart';
 import '../../services/language.dart';
 
 /// An explicit check, followed by an Android download and system installation.
 class AppUpdateTile extends StatefulWidget {
-  const AppUpdateTile({super.key, this.updates, this.release});
+  const AppUpdateTile({super.key, this.updates, this.release}) : _dialog = false;
+  const AppUpdateTile._dialog({required this.updates, required this.release}) : _dialog = true;
+  final bool _dialog;
   final AppUpdates? updates;
 
   /// A newer release already found ([showUpdatePopup]): the tile starts at getting it.
@@ -27,6 +30,7 @@ class _AppUpdateTileState extends State<AppUpdateTile> {
   String? _path;
   // Null until a check starts: the idle line, read in the language shown.
   String? _message;
+  bool _failed = false;
 
   @override
   void dispose() {
@@ -36,7 +40,10 @@ class _AppUpdateTileState extends State<AppUpdateTile> {
 
   Future<void> _act() async {
     if (_busy) return;
-    setState(() => _busy = true);
+    setState(() {
+      _busy = true;
+      _failed = false;
+    });
     try {
       if (_release == null) {
         setState(() => _message = tr.checkingUpdates);
@@ -76,6 +83,7 @@ class _AppUpdateTileState extends State<AppUpdateTile> {
       debugPrint('App update: $error');
       if (!mounted) return;
       setState(() {
+        _failed = true;
         _progress = null;
         _message = switch (error) {
           PlatformException(code: 'signature') => tr.differentSigningKey,
@@ -98,6 +106,7 @@ class _AppUpdateTileState extends State<AppUpdateTile> {
         : _updates.android && _updates.assetFor(_release!) != null
         ? tr.downloadUpdate
         : tr.getUpdate;
+    if (widget._dialog) return _buildDialog(context, label);
     return ListTile(
       leading: const Icon(Icons.system_update_rounded),
       title: Text(_busy && _progress != null ? 'Downloading… ${(_progress! * 100).round()}%' : label),
@@ -116,6 +125,133 @@ class _AppUpdateTileState extends State<AppUpdateTile> {
       onTap: _busy ? null : _act,
     );
   }
+
+  Widget _buildDialog(BuildContext context, String label) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    final asset = _updates.android ? _updates.assetFor(_release!) : null;
+    final progress = _progress;
+    final ready = _path != null;
+    final icon = _failed
+        ? Icons.error_outline_rounded
+        : ready
+        ? Icons.task_alt_rounded
+        : Icons.system_update_rounded;
+    final actionIcon = ready
+        ? Icons.install_mobile_rounded
+        : asset != null
+        ? Icons.download_rounded
+        : Icons.open_in_new_rounded;
+
+    return PopScope(
+      canPop: !_busy,
+      child: AlertDialog(
+        constraints: const BoxConstraints(maxWidth: 400),
+        scrollable: true,
+        icon: Center(
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: _failed ? colors.errorContainer : colors.primaryContainer,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Icon(icon, size: 32, color: _failed ? colors.onErrorContainer : colors.onPrimaryContainer),
+          ),
+        ),
+        title: Text(tr.versionAvailable(_release!.version), textAlign: TextAlign.center),
+        content: SizedBox(
+          width: 352,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: colors.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.file_download_outlined, color: colors.primary),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text.rich(
+                            TextSpan(
+                              children: [
+                                const TextSpan(text: 'Riflay'),
+                                TextSpan(text: ' ${_release!.version}'),
+                              ],
+                            ),
+                            style: theme.textTheme.titleSmall,
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            asset == null ? 'GitHub Releases' : asset.name,
+                            style: theme.textTheme.bodySmall?.copyWith(color: colors.onSurfaceVariant),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          if (asset != null) ...[
+                            const SizedBox(height: 4),
+                            Text(formatBytes(asset.bytes), style: theme.textTheme.labelMedium),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (_message != null) ...[
+                const SizedBox(height: 20),
+                Semantics(
+                  liveRegion: true,
+                  child: Text(
+                    _message!,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: _failed ? colors.error : colors.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+              ],
+              if (progress != null) ...[
+                const SizedBox(height: 16),
+                LinearProgressIndicator(value: progress, minHeight: 8, borderRadius: BorderRadius.circular(4)),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    if (asset != null)
+                      Expanded(
+                        child: Text(
+                          tr.bytesOf(formatBytes(asset.bytes * progress), formatBytes(asset.bytes)),
+                          style: theme.textTheme.bodySmall?.copyWith(color: colors.onSurfaceVariant),
+                        ),
+                      )
+                    else
+                      const Spacer(),
+                    Text('${(progress * 100).round()}%', style: theme.textTheme.labelLarge),
+                  ],
+                ),
+              ],
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: _busy ? null : () => Navigator.of(context).pop(), child: Text(tr.notNow)),
+          FilledButton.icon(
+            onPressed: _busy ? null : _act,
+            icon: _busy
+                ? const SizedBox.square(dimension: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                : Icon(actionIcon, size: 18),
+            label: Text(label),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 /// Tells about a newer [release] that the check at start found ([AppUpdates.checkAtStart]): its version, and the tile
@@ -123,10 +259,6 @@ class _AppUpdateTileState extends State<AppUpdateTile> {
 /// it, and is disposed with the tile.
 Future<void> showUpdatePopup(BuildContext context, AppUpdates updates, AppRelease release) => showDialog<void>(
   context: context,
-  builder: (context) => AlertDialog(
-    title: Text(tr.versionAvailable(release.version)),
-    contentPadding: const EdgeInsets.fromLTRB(8, 16, 8, 0),
-    content: AppUpdateTile(updates: updates, release: release),
-    actions: [TextButton(onPressed: () => Navigator.of(context).pop(), child: Text(tr.notNow))],
-  ),
+  barrierDismissible: false,
+  builder: (context) => AppUpdateTile._dialog(updates: updates, release: release),
 );

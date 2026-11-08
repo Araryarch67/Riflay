@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:riflay/services/app_updates.dart';
@@ -12,6 +14,7 @@ class FakeUpdates extends AppUpdates {
   int installs = 0;
   bool fail = false;
   String currentVersion = '1.9.9';
+  Completer<String>? pendingDownload;
 
   @override
   Future<AppRelease> check() async {
@@ -26,6 +29,7 @@ class FakeUpdates extends AppUpdates {
     downloads++;
     progress(0.5);
     if (fail) throw const FormatException('Bad APK');
+    if (pendingDownload != null) return pendingDownload!.future;
     return '/cache/app-updates/update.apk';
   }
 
@@ -72,6 +76,72 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(AlertDialog), findsNothing);
     expect(updates.downloads, 0);
+  });
+
+  testWidgets('popup shows download progress, blocks dismissal, then offers installation', (tester) async {
+    final pending = Completer<String>();
+    final updates = FakeUpdates()..pendingDownload = pending;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Builder(
+          builder: (context) => TextButton(
+            onPressed: () => showUpdatePopup(context, updates, AppRelease.parse(releaseJson())),
+            child: const Text('open'),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+    expect(find.text('Riflay-android.apk'), findsOneWidget);
+    await tester.tap(find.text('Download update'));
+    await tester.pump();
+    expect(find.text('50%'), findsOneWidget);
+    expect(tester.widget<LinearProgressIndicator>(find.byType(LinearProgressIndicator)).value, 0.5);
+    expect(tester.widget<TextButton>(find.widgetWithText(TextButton, 'Not now')).onPressed, isNull);
+    await tester.binding.handlePopRoute();
+    await tester.pump();
+    expect(find.byType(AlertDialog), findsOneWidget);
+    expect(updates.downloads, 1);
+    pending.complete('/cache/app-updates/update.apk');
+    await tester.pumpAndSettle();
+    expect(find.text('Install update'), findsOneWidget);
+    expect(find.byType(LinearProgressIndicator), findsNothing);
+    await tester.tap(find.text('Install update'));
+    await tester.pumpAndSettle();
+    expect(updates.installs, 1);
+    expect(find.text('Complete the update in the Android installer'), findsOneWidget);
+    await tester.tap(find.text('Not now'));
+    await tester.pumpAndSettle();
+    expect(find.byType(AlertDialog), findsNothing);
+  });
+
+  testWidgets('popup fits a small screen with enlarged text', (tester) async {
+    tester.view.physicalSize = const Size(320, 568);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(
+      MaterialApp(
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(context).copyWith(textScaler: const TextScaler.linear(1.5)),
+          child: child!,
+        ),
+        home: Builder(
+          builder: (context) => TextButton(
+            onPressed: () => showUpdatePopup(context, FakeUpdates(), AppRelease.parse(releaseJson())),
+            child: const Text('open'),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    await tester.tap(find.text('Download update'));
+    await tester.pumpAndSettle();
+    expect(find.text('Install update'), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('updates happen only on tap: check, download, then system installer', (tester) async {
