@@ -723,6 +723,9 @@ device's language when Riflay has it). The words live in `lib/l10n/app_en.arb` (
    `Araryarch67/homebrew-riflay`; the AUR files are copied by hand. Runtime dependencies live in those files: change them all
    when the Linux build links something new.
 
+The Linux build doesn't download mimalloc: `media_kit_libs_linux` fetches its source archive in CMake with no
+retry and an MD5 check, and GitHub's archive route returned 504 to CI (v1.2.18). `linux/CMakeLists.txt` copies
+`third_party/mimalloc/mimalloc-2.1.2.tar.gz` (the same archive, byte for byte) to where the plugin looks first.
 Release recovery: if GitHub's `/releases/download` route returns HTTP 504, `tool/download_release_asset.py`
 uses the asset API through `gh` first, then a retried direct download. Pinned checksums still apply; an
 incomplete or mismatched download never replaces an existing file. CI uses this for Gradle, Carla,

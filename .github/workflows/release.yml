@@ -240,15 +240,6 @@ jobs:
           cache: true
       - name: Version from the tag
         run: echo "BUILD_ARGS=$(tool/ci_version.sh)" >> "$GITHUB_ENV"
-      # media_kit_libs_linux downloads mimalloc in CMake, once and without a retry, and stops the build when the
-      # archive's MD5 doesn't match (v1.2.18's build failed on a broken download). Fetched here with retries and the
-      # same check; CMake then finds it in place and skips its own download.
-      - name: mimalloc for media_kit
-        run: |
-          mkdir -p build/linux/x64/release
-          curl -fsSL --retry 5 --retry-all-errors -o build/linux/x64/release/mimalloc-2.1.2.tar.gz \
-            https://github.com/microsoft/mimalloc/archive/refs/tags/v2.1.2.tar.gz
-          echo "5179c8f5cf1237d2300e2d8559a7bc55  build/linux/x64/release/mimalloc-2.1.2.tar.gz" | md5sum -c -
       - name: Build
         run: flutter build linux --release $BUILD_ARGS
       - name: Archive

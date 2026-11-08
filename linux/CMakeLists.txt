@@ -77,6 +77,13 @@ set_target_properties(${BINARY_NAME}
 )
 
 
+# media_kit_libs_linux downloads mimalloc's source archive in CMake, once and
+# without a retry, and stops the build when its MD5 doesn't match (GitHub's
+# archive route returned 504 to CI for v1.2.18). A copy kept in the repository
+# goes where the plugin looks first; with a matching MD5 it skips its download.
+file(COPY "${CMAKE_CURRENT_SOURCE_DIR}/../third_party/mimalloc/mimalloc-2.1.2.tar.gz"
+  DESTINATION "${CMAKE_BINARY_DIR}")
+
 # Generated plugin build rules, which manage building the plugins and adding
 # them to the application.
 include(flutter/generated_plugins.cmake)
