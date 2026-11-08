@@ -339,7 +339,7 @@ test/                          Unit and widget tests
   `createPlaylist` / `addToPlaylist` leave those out (`YoutubeMusicAccount.youtubeSongs`)
   and "Add to playlist" says so ("This song isn't on YouTube Music", or how many
   were skipped). Not a shortcut, so no `RIFLAY_*` switch.
-- Links opened with Riflay (`lib/services/incoming_links.dart`): Android's
+- Links opened with Riflay (`lib/services/incoming_links.dart`; SoundCloud's too, see SoundCloud): Android's
   "Open with" and Share sheet (intent filters in `AndroidManifest.xml`, no
   `autoVerify` since Riflay can't own the domains; `MainActivity.kt` keeps the
   link until Dart takes it over `riflay/incoming_link`, cold start and
@@ -375,13 +375,25 @@ test/                          Unit and widget tests
   `application/vnd.apple.mpegurl` (FFmpeg only treats an address without `.m3u8` as HLS with that type); mpv then
   fetches the segments from SoundCloud itself and seeks in them. The segments' signatures last about two hours.
   `absolutePlaylist` makes relative addresses absolute: mpv reads the playlist from the loopback server.
-- Search: chips on the search page (`SearchSource`: YouTube Music, SoundCloud, both; `search.source.v1`). Both adds
-  an "On SoundCloud" section under YouTube Music's songs; SoundCloud alone leaves out Songs/Videos and the filters.
+  Before the segments' signatures run out (`playlistExpiry`, the first `expires=`), `PlayerController` loads the
+  playing track again where it is with a fresh playlist: one `Timer` set when the playlist is served
+  (`SoundcloudClient.served`), 10 minutes early (mpv reads ahead), plus a check on play and seek, since timers stop
+  while a phone sleeps. Nothing ticks meanwhile. `integration_test/soundcloud_playback_test.dart` covers it.
+- Search: a button beside Songs / Videos (`SearchSourceChoice`, the mark alone on phones so no row is added;
+  `SearchSource`: YouTube Music, SoundCloud, both; `search.source.v1`). Both adds an "On SoundCloud" section under
+  YouTube Music's songs and SoundCloud's artists and playlists after YouTube Music's shelves; SoundCloud alone shows
+  its top songs, then its artists and playlists, and leaves out Songs/Videos and the filters.
   Autoplay and Start radio follow SoundCloud's related tracks for a SoundCloud song.
+- Pages (`ui/soundcloud_pages.dart`, `openSoundcloud`): a playlist (`CollectionKind.remote`) or a profile
+  (`CollectionKind.remoteArtist`, labelled Artist) as a `RemoteCollectionPage`, with Save to library and, for a
+  playlist, Save as playlist (a Riflay playlist). "Go to artist" on a SoundCloud track opens its uploader's
+  profile (`Track.artistId` holds the SoundCloud user id there; YouTube-only code checks `isRemote` first). The side
+  panel's About the artist (YouTube Music's) is left out for SoundCloud tracks.
 - A SoundCloud link pasted in the import sheet (`ui/youtube_import.dart`, `SoundcloudLink.parse`: tracks, sets,
-  profiles, private links, `on.soundcloud.com` short links) plays or saves its tracks; nothing is downloaded.
-  Not casting (renderers rarely play HLS: the song stays on this device, with a note), not the web build, and not
-  yet links shared to or opened with Riflay (`incoming_links.dart` is YouTube's).
+  profiles, private links, `on.soundcloud.com` short links) plays, saves or (a set) becomes a playlist; nothing is
+  downloaded. Shared to or opened with Riflay (`IncomingLinks.readSoundcloud`, Android's intent filter for the
+  SoundCloud hosts, a link on the command line, Ctrl+V) a track plays and a playlist or profile opens.
+  Not casting (renderers rarely play HLS: the song stays on this device, with a note), not the web build.
 - Shortcuts: the client id, recent searches and each track's playlist (two minutes, four at most: mpv asks twice,
   probe then open) are kept; `RIFLAY_NO_SOUNDCLOUD_CACHE` asks SoundCloud every time.
 - Terms: api-v2 is SoundCloud's private API and its API terms don't cover third-party players using the web
