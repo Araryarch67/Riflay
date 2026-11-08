@@ -68,6 +68,8 @@ class HomeShell extends StatefulWidget {
 
 class _HomeShellState extends State<HomeShell> {
   PhoneTab _tab = PhoneTab.home;
+  final _visitedTabs = <PhoneTab>{PhoneTab.home};
+  bool _desktopVisited = false;
   bool _sidePanel = true;
 
   /// The phone's Liquid glass bar: shrinks on scroll, and carries the search field (its focus is Search's).
@@ -401,7 +403,10 @@ class _HomeShellState extends State<HomeShell> {
     if (tab == _tab) {
       _nav?.popUntil((r) => r.isFirst);
     } else {
-      setState(() => _tab = tab);
+      setState(() {
+        _visitedTabs.add(tab);
+        _tab = tab;
+      });
     }
   }
 
@@ -698,6 +703,7 @@ class _HomeShellState extends State<HomeShell> {
     final phone = mobile && size.shortestSide < 600;
     // Stay in the phone layout for the one frame it takes to close its full-screen pages.
     final compact = width < 700 || phone || _phoneRoutes.isNotEmpty;
+    if (!compact) _desktopVisited = true;
     if (width >= 700 && !phone && _phoneRoutes.isNotEmpty) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _closePhoneRoutes());
     }
@@ -741,7 +747,15 @@ class _HomeShellState extends State<HomeShell> {
       index: _tab.index,
       child: IndexedStack(
         index: _tab.index,
-        children: [for (final t in PhoneTab.values) TickerMode(enabled: t == _tab, child: _tabNavigator(t))],
+        children: [
+          for (final t in PhoneTab.values)
+            TickerMode(
+              enabled: t == _tab,
+              // Unopened tabs used to build their pages, listeners and network requests on every phone start.
+              // Once visited, keep their navigator alive so returning preserves its history and scroll position.
+              child: _visitedTabs.contains(t) ? _tabNavigator(t) : const SizedBox.shrink(),
+            ),
+        ],
       ),
     );
 
@@ -760,9 +774,10 @@ class _HomeShellState extends State<HomeShell> {
           children: [
             Positioned.fill(child: tabs()),
             // Full size even while hidden: laid out at width 0 its pages would break.
-            Positioned.fill(
-              child: Offstage(child: TickerMode(enabled: false, child: _desktopNavigator())),
-            ),
+            if (_desktopVisited)
+              Positioned.fill(
+                child: Offstage(child: TickerMode(enabled: false, child: _desktopNavigator())),
+              ),
           ],
         ),
       );

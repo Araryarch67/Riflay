@@ -17,6 +17,11 @@ import 'package:riflay/ui/widgets/controls.dart';
 import 'package:riflay/ui/shell_scope.dart';
 import 'package:riflay/ui/pages/collection_page.dart';
 import 'package:riflay/ui/pages/youtube_music_page.dart' show RemoteCollectionPage;
+import 'package:riflay/ui/pages/home_page.dart';
+import 'package:riflay/ui/pages/search_page.dart';
+import 'package:riflay/ui/pages/library_page.dart';
+import 'package:riflay/ui/pages/downloads_page.dart';
+import 'package:riflay/ui/pages/settings_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class _ControlPlayer extends PlayerController {
@@ -86,6 +91,35 @@ Future<void> _finishMotion(WidgetTester tester) async {
 }
 
 void main() {
+  testWidgets('phone startup builds only its visible home, without hidden tab pages or a desktop copy', (tester) async {
+    await _app(tester, const Size(400, 800));
+    debugPrint(
+      'PHONE_STARTUP elements=${tester.allElements.length} navigators=${find.byType(Navigator, skipOffstage: false).evaluate().length}',
+    );
+    expect(find.byType(HomePage, skipOffstage: false), findsOneWidget);
+    expect(find.byType(SearchPage, skipOffstage: false), findsNothing);
+    expect(find.byType(LibraryPage, skipOffstage: false), findsNothing);
+    expect(find.byType(DownloadsPage, skipOffstage: false), findsNothing);
+    expect(find.byType(SettingsPage, skipOffstage: false), findsNothing);
+    expect(find.byType(Navigator, skipOffstage: false), findsNWidgets(2));
+  });
+
+  testWidgets('a phone tab loads on first visit and keeps its state on return', (tester) async {
+    await _app(tester, const Size(400, 800));
+    expect(find.byType(SearchPage, skipOffstage: false), findsNothing);
+    await tester.tap(find.byTooltip('Search').last);
+    await _finishMotion(tester);
+    final search = tester.state(find.byType(SearchPage));
+    await tester.tap(find.byTooltip('Home').last);
+    await _finishMotion(tester);
+    expect(find.byType(SearchPage), findsNothing);
+    expect(find.byType(SearchPage, skipOffstage: false), findsOneWidget);
+    await tester.tap(find.byTooltip('Search').last);
+    await _finishMotion(tester);
+    expect(identical(tester.state(find.byType(SearchPage)), search), true);
+    expect(find.byType(LibraryPage, skipOffstage: false), findsNothing);
+  });
+
   testWidgets('Search waits for a tap before showing the phone keyboard, including revisits', (tester) async {
     await _app(tester, const Size(400, 800));
     await tester.tap(find.byTooltip('Search').last);
