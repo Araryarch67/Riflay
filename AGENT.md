@@ -79,6 +79,8 @@ lib/
     listen_together/           Listen together: one queue shared over the LAN or the internet
     video_mode.dart            Video mode: a YouTube song's music video on Now Playing
     youtube_stream.dart        A YouTube song's audio stream in one player request (yt-dlp is the fallback)
+    soundcloud.dart            SoundCloud over api-v2: search, links, related tracks, a track's HLS playlist (see SoundCloud)
+    soundcloud_audio_source.dart  Plays a SoundCloud track: hands mpv its HLS playlist through just_audio's loopback server
     usb_dac.dart / linux_alsa.dart  Direct outputs: Android USB DACs, Linux ALSA cards
     direct_usb.dart            Android Direct USB: libusbdac streams to the DAC itself (DirectUsb.kt), any phone
     media_session.dart         System media controls (Android notification, Control Center, MPRIS)
@@ -149,10 +151,13 @@ test/                          Unit and widget tests
 
 ## Library model
 
-- There is no "source" switch: Home, Search and Library always show files on
-  this device, Riflay playlists and YouTube Music together.
-- `Track.isRemote` (has a `videoId`) means it streams. Mark those with
-  `SourceMark` / `MediaCard(online: true)`. `PlayerController.downloadedCopy`
+- There is no "source" switch: Home and Library always show files on this device, Riflay playlists, YouTube
+  Music and saved SoundCloud tracks together. Search picks where it looks online (see SoundCloud).
+- `Track.isRemote` (has a `videoId`) means a YouTube Music song that streams; everything YouTube-only (radio
+  through `upNext`, likes, downloads, the music video) keys off it. `Track.streams` is true for SoundCloud
+  tracks too, and `Track.source` (`TrackSource`) says which service. Mark streamed songs with
+  `SourceMark(online:, source:)` (YouTube Music's play ring, SoundCloud's cloud, a green pin once downloaded) /
+  `MediaCard(online: true)`; `ArtistLinks` puts the mark before the artist in every player view. `PlayerController.downloadedCopy`
   finds a downloaded file for a YouTube song; `_sourceFor` plays that instead,
   so `isOffline(track)` is what the UI should show.
 - Riflay playlists are `UserPlaylist` (in `models/track.dart`), stored in
@@ -351,6 +356,37 @@ test/                          Unit and widget tests
   (`upload.youtube.com/upload/usermusic/http`, resumable start + finalize), but
   YouTube processes the file for minutes before it gets a video id, so adding it
   to a playlist would mean polling the uploads list; no web build (CORS).
+
+## SoundCloud
+
+- A second place to search and stream from (`Features.soundcloud`: native builds; `RIFLAY_NO_SOUNDCLOUD` leaves it
+  out). `services/soundcloud.dart` talks to api-v2, the API soundcloud.com's own web player calls, with the web
+  player's public `client_id`: read from soundcloud.com's last script bundles (`scriptUrls`, `clientIdIn`), kept
+  in `soundcloud.clientId.v1` (left out of backups), read again once when a request answers 401/403. No API key and
+  no sign-in; never add a "paste your client id" field.
+- A SoundCloud track is `Track.soundcloud`: id `sc:<trackId>`, `sourceUrl` its permalink, no `videoId`, so the
+  YouTube code never sees it. It is saved like any track (library, Riflay playlists, history, recently played);
+  "Save to library" (`PlayerController.saveToLibrary`) puts it in the library without a file.
+- Playback: only full, unencrypted HLS. `pickTranscoding` takes AAC (best bitrate), then MP3, Opus, then the
+  adaptive master playlist; `snipped` (Go+ previews), `*-encrypted-hls` (DRM) and `progressive` are never used,
+  and `parseTrack` drops tracks whose `policy` is `SNIP` or `BLOCK`, so search never lists a song that can't play.
+  Don't work around any of these. The playlist's address is signed for a few minutes only, so
+  `SoundcloudAudioSource` (a `StreamAudioSource`) looks it up when mpv asks and serves the playlist text as
+  `application/vnd.apple.mpegurl` (FFmpeg only treats an address without `.m3u8` as HLS with that type); mpv then
+  fetches the segments from SoundCloud itself and seeks in them. The segments' signatures last about two hours.
+  `absolutePlaylist` makes relative addresses absolute: mpv reads the playlist from the loopback server.
+- Search: chips on the search page (`SearchSource`: YouTube Music, SoundCloud, both; `search.source.v1`). Both adds
+  an "On SoundCloud" section under YouTube Music's songs; SoundCloud alone leaves out Songs/Videos and the filters.
+  Autoplay and Start radio follow SoundCloud's related tracks for a SoundCloud song.
+- A SoundCloud link pasted in the import sheet (`ui/youtube_import.dart`, `SoundcloudLink.parse`: tracks, sets,
+  profiles, private links, `on.soundcloud.com` short links) plays or saves its tracks; nothing is downloaded.
+  Not casting (renderers rarely play HLS: the song stays on this device, with a note), not the web build, and not
+  yet links shared to or opened with Riflay (`incoming_links.dart` is YouTube's).
+- Shortcuts: the client id, recent searches and each track's playlist (two minutes, four at most: mpv asks twice,
+  probe then open) are kept; `RIFLAY_NO_SOUNDCLOUD_CACHE` asks SoundCloud every time.
+- Terms: api-v2 is SoundCloud's private API and its API terms don't cover third-party players using the web
+  player's id; it may change or be refused without notice. Riflay plays only what that player gives a signed-out
+  visitor and links back to the track (Share).
 
 ## Web build
 
@@ -585,6 +621,8 @@ device's language when Riflay has it). The words live in `lib/l10n/app_en.arb` (
   flutter run --dart-define=RIFLAY_NO_GLASS_RENDERER=true    # its pills in Riflay's own blur, not liquid_glass_renderer
   flutter run --dart-define=RIFLAY_NO_DIRECT_USB_GUARD=true  # Android Direct USB crashes for real (logcat)
   flutter run --dart-define=RIFLAY_NO_OPEN_LINKS=true     # ignore links opened or shared with Riflay
+  flutter run --dart-define=RIFLAY_NO_SOUNDCLOUD=true     # no SoundCloud anywhere (search, links, the source chips)
+  flutter run --dart-define=RIFLAY_NO_SOUNDCLOUD_CACHE=true  # SoundCloud's client id, searches and stream playlists looked up every time
   flutter run --dart-define=RIFLAY_NO_SHARED_SIGNAL_PATH=true  # every signalPath() caller reads mpv itself
   flutter run --dart-define=RIFLAY_NO_STREAK_CACHE=true  # the listening streak counted afresh every build
   flutter run --dart-define=RIFLAY_NO_MV_SEARCH=true     # a song YouTube Music pairs with no video gets none (no search for its official video)
