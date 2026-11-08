@@ -42,14 +42,15 @@ class VideoMode extends ChangeNotifier with WidgetsBindingObserver {
 
   static final instance = VideoMode._();
 
-  /// The tallest the video comes in, wherever it shows: on phones 1440p; on computers by performance mode, 1080p in
-  /// Heavy, 720p in Balanced and 480p in Lightweight. A phone fills its tall screen with it cropped to cover, so only
+  /// The tallest the video comes in, wherever it shows: on phones 1440p, 720p in Lightweight (what a low-end phone
+  /// starts in, see `DeviceSetup.fitPhone`: a 1440p VP9 stream there was decoder surfaces and read-ahead it couldn't
+  /// spare); on computers by performance mode, 1080p in Heavy, 720p in Balanced and 480p in Lightweight. A phone fills its tall screen with it cropped to cover, so only
   /// a middle strip of each frame shows, stretched about 2.5 times; 1440p is VP9, which phones decode in hardware.
   /// Taller (4K) streams buffered on ordinary connections. On a computer each video frame redraws the window, and a
   /// smaller one is decoded, uploaded and kept (decoder surfaces, read-ahead) for less: the video in a cover-sized
   /// view or behind a blurred page looks the same at 720p.
   static int get maxHeight => Host.isAndroid || Host.isIOS
-      ? 1440
+      ? (LayoutPrefs.lightweight ? 720 : 1440)
       : switch (LayoutPrefs.instance.performance) {
           PerformanceMode.heavy => 1080,
           PerformanceMode.balanced => 720,

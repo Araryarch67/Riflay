@@ -97,6 +97,8 @@ Future<void> _main(List<String> args) async {
     Language.instance.load(),
     DeviceSetup.instance.load(),
   ]);
+  // After the Layout settings: a low-end phone starts in Lightweight, once.
+  await DeviceSetup.instance.fitPhone();
 
   // The window opens (sized, centred, in the theme's colour) while the player loads behind it.
   final windowShown = _showWindow(startSize);

@@ -17,10 +17,14 @@ import 'rendering_memory.dart';
 /// nobody is using it: emptying it mid-scroll would make every page the next
 /// frames touch fault back in (CPU time, and stutter). Linux pages the app out the
 /// same way (`MADV_PAGEOUT`), while hidden or left alone behind another window.
+/// Android frees its allocator's spare pages after a song change and once a minute, and in the background drops
+/// decoded covers too: Android closes the apps holding the most memory first, and a low-end phone ended the music.
 /// It runs in a background isolate rather than on the UI thread.
 abstract final class MemoryTrim {
   // Not in widget tests either: their fake clock fails on timers left running.
-  static final bool _available = (Host.isLinux || Host.isWindows) && !Host.environment.containsKey('FLUTTER_TEST');
+  static final bool _available =
+      (Host.isLinux || Host.isWindows || (Host.isAndroid && !const bool.fromEnvironment('RIFLAY_NO_ANDROID_TRIM'))) &&
+      !Host.environment.containsKey('FLUTTER_TEST');
 
   /// How long without a pointer or key event before the window counts as idle.
   static const _idleAfter = Duration(seconds: 8);

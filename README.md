@@ -84,7 +84,8 @@ On a computer Riflay picks a performance mode at first start (Settings › Power
 | Moves | the seek bar, about once a second | cover and wave at 5 fps, visualizer at 10 | everything at 30 fps |
 | CPU while a song plays, in front | ~3% of one thread | ~8% | ~14% |
 
-At least 4 GB of memory is recommended for the system, Riflay and a browser beside it. Riflay itself measured on
+Phones keep Balanced, except one with under 4 GB of memory, which starts in Lightweight (the music video at 720p
+instead of 1440p). At least 4 GB of memory is recommended on a computer for the system, Riflay and a browser beside it. Riflay itself measured on
 Linux (release build, private memory): ~150 MB idle, ~200-230 MB playing or scrolling a library of covers, ~300 MB
 with a 1080p music video, and 65-110 MB while it plays behind other windows (it hands unused memory back to the
 system then; Windows does the same). Behind other windows every mode draws about one frame a second. The app takes

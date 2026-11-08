@@ -18,6 +18,8 @@ int Function(int)? lookupMallocTrim() {
 /// - Linux: invokes `malloc_trim(0)` from glibc. With [workingSet] it also pages the process out
 ///   (`madvise(MADV_PAGEOUT)` on its own mappings): like Windows below, nothing is freed, the pages go to swap (zram
 ///   on most desktops, compressed in memory) or, for files, back to the page cache, and fault back in when touched.
+/// - Android: asks its allocator to hand free pages back (`mallopt(M_PURGE_ALL)`, Android 12's Scudo; `M_PURGE`
+///   before it). The system, not the app, decides what is paged out there.
 /// - Windows: compacts the process heap via `HeapCompact` (kernel32.dll). With [workingSet] it also empties the
 ///   working set (`SetProcessWorkingSetSize`): that frees nothing that is committed, it only pages it out, and
 ///   every page the app touches afterwards faults back in. Worth it only while the window is hidden.
@@ -27,9 +29,20 @@ void trimProcessMemory({bool workingSet = false}) {
       lookupMallocTrim()?.call(0);
     } catch (_) {}
     if (workingSet) _pageOutLinux();
+  } else if (Platform.isAndroid) {
+    _purgeAndroid();
   } else if (Platform.isWindows) {
     _trimWindows(workingSet);
   }
+}
+
+void _purgeAndroid() {
+  try {
+    final mallopt = DynamicLibrary.open('libc.so')
+        .lookupFunction<Int32 Function(Int32, Int32), int Function(int, int)>('mallopt');
+    // M_PURGE_ALL (-104) also empties the per-thread caches; an allocator without it answers 0, then M_PURGE (-101).
+    if (mallopt(-104, 0) == 0) mallopt(-101, 0);
+  } catch (_) {}
 }
 
 /// `MADV_PAGEOUT` (Linux 5.4) over every private mapping of this process. Shared ones (the compositor's buffers, the
