@@ -14,7 +14,7 @@ appdir=build/Riflay.AppDir
 export APPIMAGE_EXTRACT_AND_RUN=1 # no FUSE on CI runners
 
 mkdir -p "$tools"
-fetch() { [ -x "$tools/$1" ] || { curl -fsSL -o "$tools/$1" "$2" && chmod +x "$tools/$1"; }; }
+fetch() { [ -x "$tools/$1" ] || { python3 tool/download_release_asset.py "$2" "$tools/$1" && chmod +x "$tools/$1"; }; }
 fetch linuxdeploy https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
 fetch appimagetool https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage
 

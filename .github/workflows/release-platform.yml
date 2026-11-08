@@ -8,6 +8,10 @@ on:
       platform:
         required: true
         type: string
+      tag:
+        required: false
+        type: string
+        default: ''
 
 permissions:
   contents: read
@@ -27,6 +31,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
           PLATFORM: ${{ inputs.platform }}
+          RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
         run: |
           case "$PLATFORM" in
             android|windows|linux|macos|ios) ;;
@@ -36,8 +41,8 @@ jobs:
           (cd dist && sha256sum -- *) > "checksums/SHA256SUMS-$PLATFORM"
           # Disjoint asset names allow uploads to run concurrently. Only the first successful upload
           # needs to make the draft public; repeating the edit leaves it public on retries.
-          gh release upload "$GITHUB_REF_NAME" dist/* "checksums/SHA256SUMS-$PLATFORM" --clobber
-          gh release edit "$GITHUB_REF_NAME" --draft=false
+          gh release upload "$RELEASE_TAG" dist/* "checksums/SHA256SUMS-$PLATFORM" --clobber
+          gh release edit "$RELEASE_TAG" --draft=false
       - uses: actions/upload-artifact@v7
         with:
           name: checksums-${{ inputs.platform }}

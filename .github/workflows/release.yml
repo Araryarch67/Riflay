@@ -31,6 +31,9 @@ on:
       platforms:
         description: 'Builds to run: all, or some of android, windows, linux, macos, ios (comma-separated)'
         default: all
+      publish_tag:
+        description: 'Optional existing release tag to repair, for example v1.2.17 (blank = artifacts only)'
+        default: ''
 
 # Read-only by default: the build jobs run third-party build tools and need
 # nothing more. Only the separate publishing jobs may write release assets.
@@ -39,6 +42,7 @@ permissions:
 
 env:
   FLUTTER_VERSION: '3.47.7'
+  RIFLAY_RELEASE_TAG: ${{ inputs.publish_tag || (startsWith(github.ref, 'refs/tags/v') && github.ref_name) || '' }}
 
 jobs:
   android:
@@ -77,6 +81,16 @@ jobs:
         run: |
           echo "$KEYSTORE" | base64 -d > "$RUNNER_TEMP/release.jks"
           echo "ANDROID_KEYSTORE_PATH=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
+      - name: Gradle distribution through the asset API
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 tool/download_release_asset.py \
+            https://github.com/gradle/gradle-distributions/releases/download/v9.3.1/gradle-9.3.1-all.zip \
+            "$RUNNER_TEMP/gradle-9.3.1-all.zip" \
+            --sha256 17f277867f6914d61b1aa02efab1ba7bb439ad652ca485cd8ca6842fccec6e43
+          sed -i "s|^distributionUrl=.*|distributionUrl=file\\:$RUNNER_TEMP/gradle-9.3.1-all.zip|" \
+            android/gradle/wrapper/gradle-wrapper.properties
       - name: Build APKs
         env:
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
@@ -113,6 +127,8 @@ jobs:
   windows:
     if: github.event_name != 'workflow_dispatch' || inputs.platforms == 'all' || contains(inputs.platforms, 'windows')
     runs-on: windows-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v7
       - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
@@ -129,7 +145,8 @@ jobs:
         shell: pwsh
         run: |
           $zip = "$env:RUNNER_TEMP\carla.zip"
-          Invoke-WebRequest https://github.com/falkTX/Carla/releases/download/v2.5.10/Carla-2.5.10-win64.zip -OutFile $zip
+          python tool/download_release_asset.py https://github.com/falkTX/Carla/releases/download/v2.5.10/Carla-2.5.10-win64.zip $zip --sha256 56264cd860b3e6e7b29221fb1e46d7d8a288fb001500f830bcd739ec7b115650
+          if ($LASTEXITCODE -ne 0) { throw 'Carla download failed' }
           if ((Get-FileHash $zip -Algorithm SHA256).Hash -ne '56264CD860B3E6E7B29221FB1E46D7D8A288FB001500F830BCD739EC7B115650') { throw 'Carla download changed' }
           Expand-Archive $zip "$env:USERPROFILE\Downloads"
           flutter test integration_test/plugins_test.dart -d windows
@@ -162,6 +179,8 @@ jobs:
   linux:
     if: github.event_name != 'workflow_dispatch' || inputs.platforms == 'all' || contains(inputs.platforms, 'linux')
     runs-on: ubuntu-24.04
+    env:
+      GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v7
       - name: Build tools and libraries
@@ -234,8 +253,11 @@ jobs:
       - name: Audio plugins work (Carla)
         # Carla has no Homebrew cask; its official disk image, checked against the release's SHA-256.
         # The test plays a tone through the app's bridge and Carla's own gain plugin and measures -6 dB.
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          curl -fsSL -o "$RUNNER_TEMP/carla.dmg" https://github.com/falkTX/Carla/releases/download/v2.5.10/Carla-2.5.10-macOS-universal.dmg
+          python3 tool/download_release_asset.py https://github.com/falkTX/Carla/releases/download/v2.5.10/Carla-2.5.10-macOS-universal.dmg "$RUNNER_TEMP/carla.dmg" \
+            --sha256 a30e98409974493ade18f598566628369fee67f179a84e1c2cc3ae46a71808b1
           echo "a30e98409974493ade18f598566628369fee67f179a84e1c2cc3ae46a71808b1  $RUNNER_TEMP/carla.dmg" | shasum -a 256 -c
           hdiutil attach "$RUNNER_TEMP/carla.dmg" -nobrowse -readonly -mountpoint /Volumes/CarlaDisk
           cp -R /Volumes/CarlaDisk/Carla.app /Applications/
@@ -290,7 +312,7 @@ jobs:
       - name: Sound settings work on this libmpv (iOS Simulator)
         # By hand only: booting the Simulator and building for it is most of this job's time, and on tags the macOS
         # job has just tested the same libmpv's sound settings.
-        if: github.event_name == 'workflow_dispatch'
+        if: github.event_name == 'workflow_dispatch' && inputs.publish_tag == ''
         run: |
           udid=$(xcrun simctl list devices available --json | python3 -c '
           import json, sys
@@ -311,7 +333,7 @@ jobs:
           path: dist/*
 
   release:
-    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    if: (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) || inputs.publish_tag != ''
     runs-on: ubuntu-24.04
     permissions:
       contents: write
@@ -319,13 +341,23 @@ jobs:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0 # the commits since the last release, for the changelog
+      - name: Validate recovery target
+        if: inputs.publish_tag != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          tool/ci_version.sh
+          git rev-parse --verify "refs/tags/$RIFLAY_RELEASE_TAG"
+          gh release view "$RIFLAY_RELEASE_TAG" > /dev/null
       - name: Changelog and download guide
+        if: github.event_name == 'push'
         # What changed since the last published release, then which file to take. GitHub's own
         # generated notes only list pull requests, and most of this work is committed straight to main.
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
-          TAG: ${{ github.ref_name }}
+          TAG: ${{ env.RIFLAY_RELEASE_TAG }}
         run: |
           # A failed API call can print a JSON error to stdout (for example,
           # 404 before the first release). Never use that output as a git ref.
@@ -391,66 +423,72 @@ jobs:
           GUIDE
           { cat changelog.md; echo; echo '---'; echo; cat guide.md; } > release.md
       - name: Prepare release notes
+        if: github.event_name == 'push'
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
           # A rerun updates the notes without turning an already published release back into a draft.
-          if gh release view "$GITHUB_REF_NAME" > /dev/null 2>&1; then
-            gh release edit "$GITHUB_REF_NAME" --notes-file release.md
+          if gh release view "$RIFLAY_RELEASE_TAG" > /dev/null 2>&1; then
+            gh release edit "$RIFLAY_RELEASE_TAG" --notes-file release.md
           else
-            gh release create "$GITHUB_REF_NAME" --verify-tag --draft --title "$GITHUB_REF_NAME" --notes-file release.md
+            gh release create "$RIFLAY_RELEASE_TAG" --verify-tag --draft --title "$RIFLAY_RELEASE_TAG" --notes-file release.md
           fi
 
   android-asset:
-    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    if: (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) || inputs.publish_tag != ''
     needs: [release, android]
     permissions:
       contents: write
     uses: ./.github/workflows/release-platform.yml
     with:
       platform: android
+      tag: ${{ inputs.publish_tag || github.ref_name }}
 
   windows-asset:
-    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    if: (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) || inputs.publish_tag != ''
     needs: [release, windows]
     permissions:
       contents: write
     uses: ./.github/workflows/release-platform.yml
     with:
       platform: windows
+      tag: ${{ inputs.publish_tag || github.ref_name }}
 
   linux-asset:
-    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    if: (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) || inputs.publish_tag != ''
     needs: [release, linux]
     permissions:
       contents: write
     uses: ./.github/workflows/release-platform.yml
     with:
       platform: linux
+      tag: ${{ inputs.publish_tag || github.ref_name }}
 
   macos-asset:
-    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    if: (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) || inputs.publish_tag != ''
     needs: [release, macos]
     permissions:
       contents: write
     uses: ./.github/workflows/release-platform.yml
     with:
       platform: macos
+      tag: ${{ inputs.publish_tag || github.ref_name }}
 
   ios-asset:
-    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    if: (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) || inputs.publish_tag != ''
     needs: [release, ios]
     permissions:
       contents: write
     uses: ./.github/workflows/release-platform.yml
     with:
       platform: ios
+      tag: ${{ inputs.publish_tag || github.ref_name }}
 
   checksums:
     # Consolidate only successful uploads, even if another platform failed. Individual checksums are already live.
     if: >-
-      always() && !cancelled() && github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') &&
+      always() && !cancelled() && ((github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) || inputs.publish_tag != '') &&
       (needs.android-asset.result == 'success' || needs.windows-asset.result == 'success' ||
        needs.linux-asset.result == 'success' || needs.macos-asset.result == 'success' ||
        needs.ios-asset.result == 'success')
@@ -469,13 +507,14 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
+          gh release download "$RIFLAY_RELEASE_TAG" --pattern 'SHA256SUMS-*' --dir checksums --clobber
           LC_ALL=C sort -k2 checksums/SHA256SUMS-* > SHA256SUMS
           test -s SHA256SUMS
-          gh release upload "$GITHUB_REF_NAME" SHA256SUMS --clobber
+          gh release upload "$RIFLAY_RELEASE_TAG" SHA256SUMS --clobber
 
   package-manifests:
     # Package managers need their desktop files; Android and iOS do not delay these updates.
-    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    if: (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) || inputs.publish_tag != ''
     needs: [windows-asset, linux-asset, macos-asset]
     runs-on: ubuntu-24.04
     permissions:
@@ -500,7 +539,7 @@ jobs:
           path: manifests/aur
       - name: Package manifests
         # The combined release checksums have their own job; do not overwrite them with a desktop-only list.
-        run: packaging/update_manifests.sh "${GITHUB_REF_NAME#v}" dist manifests
+        run: packaging/update_manifests.sh "${RIFLAY_RELEASE_TAG#v}" dist manifests
       - uses: actions/upload-artifact@v7
         with:
           name: package-manifests
@@ -510,7 +549,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
-        run: gh release upload "$GITHUB_REF_NAME" manifests/riflay.json manifests/riflay.rb --clobber
+        run: gh release upload "$RIFLAY_RELEASE_TAG" manifests/riflay.json manifests/riflay.rb --clobber
       - name: Homebrew tap and Scoop bucket
         # After the release, so its files are there to download: this version's Scoop manifest goes to
         # Araryarch67/scoop-riflay (bucket/) and the cask to Araryarch67/homebrew-riflay (Casks/).
@@ -518,7 +557,7 @@ jobs:
         # skipped without it.
         env:
           TAP_TOKEN: ${{ secrets.TAP_TOKEN }}
-          VERSION: ${{ github.ref_name }}
+          VERSION: ${{ env.RIFLAY_RELEASE_TAG }}
         run: |
           if [ -z "$TAP_TOKEN" ]; then
             echo "::warning::No TAP_TOKEN secret: the Homebrew tap and Scoop bucket were not updated."

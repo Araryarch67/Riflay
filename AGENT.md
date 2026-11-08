@@ -714,6 +714,16 @@ device's language when Riflay has it). The words live in `lib/l10n/app_en.arb` (
    `Araryarch67/homebrew-riflay`; the AUR files are copied by hand. Runtime dependencies live in those files: change them all
    when the Linux build links something new.
 
+Release recovery: if GitHub's `/releases/download` route returns HTTP 504, `tool/download_release_asset.py`
+uses the asset API through `gh` first, then a retried direct download. Pinned checksums still apply; an
+incomplete or mismatched download never replaces an existing file. CI uses this for Gradle, Carla,
+Windows video libraries and Linux packaging tools (`GH_TOKEN` is the job's read-only token).
+After fixing CI on main, recover an existing release without moving its tag:
+`gh workflow run release.yml --ref main -f platforms=all -f publish_tag=v1.2.17`.
+The target must exist and match `pubspec.yaml`; version codes still advance with the run number.
+Leaving `publish_tag` blank keeps manual runs as artifacts only. Recovery preserves release notes,
+publishes successful platform assets and consolidates checksums from the whole existing release.
+
 ## Conventions
 
 - Match the surrounding code: comment *why*, not what; doc comments on public

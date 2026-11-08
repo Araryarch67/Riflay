@@ -3,7 +3,9 @@
 # tag build, else pubspec.yaml's (without the +build part).
 set -euo pipefail
 cd "$(dirname "$0")/.."
-if [[ "${GITHUB_REF:-}" == refs/tags/v* ]]; then
+if [[ -n "${RIFLAY_RELEASE_TAG:-}" ]]; then
+  echo "${RIFLAY_RELEASE_TAG#v}"
+elif [[ "${GITHUB_REF:-}" == refs/tags/v* ]]; then
   echo "${GITHUB_REF_NAME#v}"
 else
   sed -n 's/^version: *\([^+]*\).*/\1/p' pubspec.yaml

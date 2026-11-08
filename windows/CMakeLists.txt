@@ -66,13 +66,23 @@ set(CMAKE_POLICY_DEFAULT_CMP0175 OLD)
 # audio package plus its own libmpv, so fetch the very same prebuilt archive
 # here, before the plugins configure. The archive is pinned by SHA-256.
 set(ANGLE_SRC "${CMAKE_BINARY_DIR}/ANGLE")
+function(riflay_download_release URL OUTPUT SHA256)
+  if(DEFINED ENV{GH_TOKEN})
+    find_program(RIFLAY_PYTHON NAMES python python3 REQUIRED)
+    execute_process(
+      COMMAND "${RIFLAY_PYTHON}" "${CMAKE_SOURCE_DIR}/../tool/download_release_asset.py"
+        "${URL}" "${OUTPUT}" --sha256 "${SHA256}"
+      COMMAND_ERROR_IS_FATAL ANY)
+  else()
+    file(DOWNLOAD "${URL}" "${OUTPUT}" EXPECTED_HASH "SHA256=${SHA256}" TLS_VERIFY ON)
+  endif()
+endfunction()
 if(NOT EXISTS "${ANGLE_SRC}/libEGL.dll" OR NOT EXISTS "${ANGLE_SRC}/include/EGL/egl.h")
   set(ANGLE_ARCHIVE "${CMAKE_BINARY_DIR}/ANGLE.7z")
-  file(DOWNLOAD
+  riflay_download_release(
     "https://github.com/alexmercerind/flutter-windows-ANGLE-OpenGL-ES/releases/download/v1.0.1/ANGLE.7z"
     "${ANGLE_ARCHIVE}"
-    EXPECTED_HASH SHA256=cc5911bb15d596fd5a2b362613ad35b7093b427117269a7359054a65746a5f9a
-    TLS_VERIFY ON)
+    cc5911bb15d596fd5a2b362613ad35b7093b427117269a7359054a65746a5f9a)
   file(REMOVE_RECURSE "${ANGLE_SRC}")
   file(MAKE_DIRECTORY "${ANGLE_SRC}")
   file(ARCHIVE_EXTRACT INPUT "${ANGLE_ARCHIVE}" DESTINATION "${ANGLE_SRC}")
@@ -90,11 +100,10 @@ set(MPV_VIDEO_SRC "${CMAKE_BINARY_DIR}/libmpv-video")
 set(MPV_VIDEO_DLL "${MPV_VIDEO_SRC}/libmpv-video-2.dll")
 if(NOT EXISTS "${MPV_VIDEO_DLL}")
   set(MPV_VIDEO_ARCHIVE "${CMAKE_BINARY_DIR}/mpv-dev-x86_64-20230924-git-652a1dd.7z")
-  file(DOWNLOAD
+  riflay_download_release(
     "https://github.com/media-kit/libmpv-win32-video-build/releases/download/2023-09-24/mpv-dev-x86_64-20230924-git-652a1dd.7z"
     "${MPV_VIDEO_ARCHIVE}"
-    EXPECTED_HASH SHA256=dce982222d7a23e4a1c6f0fb6cc39f6e899a6714624b95ea49cff6558ee97572
-    TLS_VERIFY ON)
+    dce982222d7a23e4a1c6f0fb6cc39f6e899a6714624b95ea49cff6558ee97572)
   file(REMOVE_RECURSE "${MPV_VIDEO_SRC}")
   file(MAKE_DIRECTORY "${MPV_VIDEO_SRC}/unpacked")
   file(ARCHIVE_EXTRACT INPUT "${MPV_VIDEO_ARCHIVE}" DESTINATION "${MPV_VIDEO_SRC}/unpacked" PATTERNS "libmpv-2.dll")

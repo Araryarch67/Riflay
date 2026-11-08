@@ -18,8 +18,9 @@ if [ -z "$nfpm" ]; then
   nfpm=$tools/nfpm
   if [ ! -x "$nfpm" ]; then
     mkdir -p "$tools"
-    curl -fsSL -o "$tools/nfpm.tar.gz" \
-      "https://github.com/goreleaser/nfpm/releases/download/v$nfpm_version/nfpm_${nfpm_version}_Linux_x86_64.tar.gz"
+    python3 tool/download_release_asset.py \
+      "https://github.com/goreleaser/nfpm/releases/download/v$nfpm_version/nfpm_${nfpm_version}_Linux_x86_64.tar.gz" \
+      "$tools/nfpm.tar.gz" --sha256 "$nfpm_sha256"
     echo "$nfpm_sha256  $tools/nfpm.tar.gz" | sha256sum -c --quiet
     tar -xzf "$tools/nfpm.tar.gz" -C "$tools" nfpm
   fi
