@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:window_manager/window_manager.dart';
 
 import '../../models/track.dart';
 import '../../services/appearance.dart';
@@ -12,11 +13,13 @@ import '../../services/lyrics.dart';
 import '../../services/player_controller.dart';
 import '../../services/video_mode.dart';
 import '../debug_switches.dart';
+import '../pages/queue_page.dart';
 import '../shell_scope.dart';
 import '../theme.dart';
 import '../widgets/controls.dart';
 import '../ytmusic_edit.dart' show LikeButton;
 import '../widgets/video_mode.dart';
+import 'full_screen_player.dart' show windowFullScreen;
 
 /// The name of the full-screen video's route, so Now Playing can tell it is on top.
 const videoFullViewRouteName = 'video-full-view';
@@ -32,7 +35,8 @@ bool _isPhone(BuildContext context) =>
 Future<void> openVideoFullView(BuildContext context, {bool rotated = false}) {
   final shell = context.dependOnInheritedWidgetOfExactType<ShellScope>();
   final phone = _isPhone(context);
-  return Navigator.of(context).push(
+  // The root navigator: on a computer the cover sits in the page history, which this view must not join.
+  return Navigator.of(context, rootNavigator: true).push(
     PageRouteBuilder<void>(
       settings: const RouteSettings(name: videoFullViewRouteName),
       transitionDuration: LayoutPrefs.dur(const Duration(milliseconds: 220)),
@@ -41,8 +45,7 @@ Future<void> openVideoFullView(BuildContext context, {bool rotated = false}) {
         lockLandscape: phone && !rotated,
         closeUpright: phone && rotated,
         openQueue: shell?.openQueue,
-        // On a computer Queue opens in the window's page history, under this view: it closes first.
-        queueOver: shell?.compact ?? true,
+        shell: shell,
       ),
       transitionsBuilder: (_, anim, _, child) => FadeTransition(opacity: anim, child: child),
     ),
@@ -53,14 +56,12 @@ Future<void> openVideoFullView(BuildContext context, {bool rotated = false}) {
 /// and picture ([VideoPicture]), no second decoder. A tap shows the controls (play, previous / next, the seek bar,
 /// the title, like, a line of lyrics, Queue and a close button) for a few seconds. The phone turns sideways and the
 /// system bars hide; closing puts both back.
+///
+/// On a computer it fills the window: the controls sit above and below the picture (the native video's surface lies
+/// over anything drawn on it) and go, with the pointer, after a few seconds without a move. F11 or a double click
+/// fills the screen, Esc leaves it (then the view), and Queue opens beside the picture.
 class VideoFullView extends StatefulWidget {
-  const VideoFullView({
-    super.key,
-    this.lockLandscape = false,
-    this.closeUpright = false,
-    this.openQueue,
-    this.queueOver = true,
-  });
+  const VideoFullView({super.key, this.lockLandscape = false, this.closeUpright = false, this.openQueue, this.shell});
 
   /// Turns the phone sideways while open (opened from the button).
   final bool lockLandscape;
@@ -68,10 +69,11 @@ class VideoFullView extends StatefulWidget {
   /// Closes when the phone is held upright again (opened by turning it sideways).
   final bool closeUpright;
 
+  /// A phone's Queue, opened over this view.
   final VoidCallback? openQueue;
 
-  /// Queue opens over this view (a phone); otherwise this view closes first.
-  final bool queueOver;
+  /// The shell it was opened from: a computer's Queue panel beside the picture is built with it.
+  final ShellScope? shell;
 
   /// How long the controls stay after the last touch.
   static const controlsFor = Duration(seconds: 4);
@@ -89,6 +91,18 @@ class _VideoFullViewState extends State<VideoFullView> {
   bool _restored = false;
   bool _closing = false;
 
+  /// The pointer is over the bars: they stay.
+  bool _overBars = false;
+
+  /// A computer's Queue panel beside the picture.
+  bool _queuePanel = false;
+
+  /// This view made the window fill the screen (and puts it back on closing).
+  bool _madeFull = false;
+
+  /// A computer: the window layout, not the phone's.
+  bool get _desktop => !(widget.lockLandscape || widget.closeUpright) && !(widget.shell?.compact ?? true);
+
   @override
   void initState() {
     super.initState();
@@ -105,6 +119,29 @@ class _VideoFullViewState extends State<VideoFullView> {
     _restored = true;
     if (widget.lockLandscape) SystemChrome.setPreferredOrientations(const []);
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.manual, overlays: SystemUiOverlay.values);
+    if (_madeFull && windowFullScreen.value) _setWindowFull(false);
+  }
+
+  /// Fills the screen with the window, or leaves it (F11, a double click, the button). The title bar goes with it
+  /// ([windowFullScreen]).
+  Future<void> _setWindowFull(bool full) async {
+    windowFullScreen.value = full;
+    _madeFull = full;
+    if (mounted) setState(() {});
+    try {
+      await windowManager.setFullScreen(full);
+    } catch (e) {
+      debugPrint('Video full screen: $e'); // the view still fills the window
+    }
+  }
+
+  /// Esc: out of the screen-filling window first, then out of the view.
+  void _escape() {
+    if (_madeFull && windowFullScreen.value) {
+      _setWindowFull(false);
+    } else {
+      Navigator.of(context).maybePop();
+    }
   }
 
   @override
@@ -132,12 +169,13 @@ class _VideoFullViewState extends State<VideoFullView> {
     _hide?.cancel();
     if (!_controls) setState(() => _controls = true);
     _hide = Timer(VideoFullView.controlsFor, () {
-      if (mounted) setState(() => _controls = false);
+      if (mounted && !_overBars && !_queuePanel) setState(() => _controls = false);
     });
   }
 
   void _hideControls() {
     _hide?.cancel();
+    _overBars = false;
     setState(() => _controls = false);
   }
 
@@ -147,10 +185,12 @@ class _VideoFullViewState extends State<VideoFullView> {
   }
 
   void _queue() {
-    final open = widget.openQueue;
-    if (open == null) return;
-    if (!widget.queueOver) Navigator.of(context).maybePop();
-    open();
+    if (_desktop) {
+      setState(() => _queuePanel = !_queuePanel);
+      _showControls();
+      return;
+    }
+    widget.openQueue?.call();
   }
 
   @override
@@ -158,15 +198,16 @@ class _VideoFullViewState extends State<VideoFullView> {
     final c = PlayerScope.read(context);
     // Windows / Linux draw the video in a surface of their own over the window: nothing Flutter draws can lie over
     // it, so the controls stay above and below the picture there instead of over it. Phones draw it in the page.
-    final stacked = VideoMode.native && !_isPhone(context);
+    final stacked = _desktop || VideoMode.native && !_isPhone(context);
     return PopScope(
       onPopInvokedWithResult: (didPop, _) {
         if (didPop) _restore();
       },
       child: CallbackShortcuts(
         bindings: {
-          const SingleActivator(LogicalKeyboardKey.escape): () => Navigator.of(context).maybePop(),
+          const SingleActivator(LogicalKeyboardKey.escape): _escape,
           const SingleActivator(LogicalKeyboardKey.space): c.togglePlay,
+          if (_desktop) const SingleActivator(LogicalKeyboardKey.f11): () => _setWindowFull(!windowFullScreen.value),
         },
         child: Focus(
           autofocus: true,
@@ -227,21 +268,51 @@ class _VideoFullViewState extends State<VideoFullView> {
     );
   }
 
-  /// Windows / Linux: the controls above and below the picture, always shown.
-  Widget _stacked(BuildContext context, Track? track) => SafeArea(
-    child: Column(
+  /// Computers: the controls above and below the picture (nothing can lie over the native video's surface), gone
+  /// with the pointer after a few seconds without a move; the picture takes the whole window then.
+  Widget _stacked(BuildContext context, Track? track) {
+    Widget bars(Widget child) =>
+        MouseRegion(onEnter: (_) => _overBars = true, onExit: (_) => _overBars = false, child: child);
+    final picture = Column(
       children: [
-        _topBar(context, track),
-        Expanded(child: VideoPicture(track: track)),
+        if (_controls) bars(_topBar(context, track)),
+        Expanded(
+          child: GestureDetector(
+            key: const ValueKey('video-full-surface'),
+            behavior: HitTestBehavior.opaque,
+            onTap: () => _controls ? _hideControls() : _showControls(),
+            onDoubleTap: _desktop ? () => _setWindowFull(!windowFullScreen.value) : null,
+            child: VideoPicture(track: track),
+          ),
+        ),
         if (_lyricsShown && track != null)
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 8),
             child: _LyricsLine(track: track),
           ),
-        _bottomBar(),
+        // Taken out of the tree while hidden: a hidden seek bar would still tick.
+        if (_controls) bars(_bottomBar()),
       ],
-    ),
-  );
+    );
+    final shell = widget.shell;
+    return MouseRegion(
+      cursor: _controls ? MouseCursor.defer : SystemMouseCursors.none,
+      onHover: (_) => _showControls(),
+      child: SafeArea(
+        child: Row(
+          children: [
+            Expanded(child: picture),
+            if (_queuePanel && shell != null)
+              SizedBox(
+                key: const ValueKey('video-full-queue'),
+                width: 380,
+                child: bars(_QueuePanel(shell: shell)),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
 
   Widget _topBar(BuildContext context, Track? track) {
     final text = Theme.of(context).textTheme;
@@ -250,10 +321,11 @@ class _VideoFullViewState extends State<VideoFullView> {
       child: Row(
         children: [
           IconButton(
-            tooltip: tr.exitFullScreen,
+            // A computer's view closes back to the window; full screen is the button on the right.
+            tooltip: _desktop ? tr.close : tr.exitFullScreen,
             color: Colors.white,
             onPressed: () => Navigator.of(context).maybePop(),
-            icon: const Icon(Icons.fullscreen_exit_rounded, size: 28),
+            icon: Icon(_desktop ? Icons.close_rounded : Icons.fullscreen_exit_rounded, size: 28),
           ),
           const SizedBox(width: 4),
           Expanded(
@@ -287,10 +359,20 @@ class _VideoFullViewState extends State<VideoFullView> {
           ),
           IconButton(
             tooltip: tr.queue,
-            color: Colors.white,
-            onPressed: widget.openQueue == null ? null : _queue,
+            color: _queuePanel ? AppColors.of(context).accent : Colors.white,
+            onPressed: _desktop || widget.openQueue != null ? _queue : null,
             icon: const Icon(Icons.queue_music_rounded),
           ),
+          if (_desktop)
+            ValueListenableBuilder(
+              valueListenable: windowFullScreen,
+              builder: (context, full, _) => IconButton(
+                tooltip: full ? tr.exitFullScreen : tr.fullScreen,
+                color: Colors.white,
+                onPressed: () => _setWindowFull(!full),
+                icon: Icon(full ? Icons.fullscreen_exit_rounded : Icons.fullscreen_rounded),
+              ),
+            ),
         ],
       ),
     );
@@ -330,6 +412,37 @@ class _OnBlack extends StatelessWidget {
       ),
     );
   }
+}
+
+/// A computer's Queue beside the picture: the Queue page in a navigator of its own, so it has no back button that
+/// would close the view, and with no page history, which lies under this view.
+class _QueuePanel extends StatelessWidget {
+  const _QueuePanel({required this.shell});
+
+  final ShellScope shell;
+
+  @override
+  Widget build(BuildContext context) => ColoredBox(
+    color: AppColors.of(context).elevated,
+    child: Navigator(
+      onGenerateRoute: (_) => PageRouteBuilder<void>(
+        pageBuilder: (_, _, _) => ShellScope(
+          compact: false,
+          width: 380,
+          open: shell.open,
+          openCollection: shell.openCollection,
+          openQueue: shell.openQueue,
+          openNowPlaying: shell.openNowPlaying,
+          openLyrics: shell.openLyrics,
+          openDownloads: shell.openDownloads,
+          importFromYoutube: shell.importFromYoutube,
+          addFiles: shell.addFiles,
+          addFolder: shell.addFolder,
+          child: const Material(type: MaterialType.transparency, child: QueuePage()),
+        ),
+      ),
+    ),
+  );
 }
 
 /// Dark at the top and the foot, under the controls, so white reads over a bright frame.

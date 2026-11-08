@@ -769,8 +769,9 @@ Windows zip, Linux AppImage and macOS dmg, so successful platforms need not be r
   still keeps its 60 Hz timer waking the app.
 - The music video full screen (`ui/player/video_full_view.dart`, `VideoFullView`): the round button in the corner
   of the video on the cover (`VideoExpandButton`; over Cover: Background, `VideoBackgroundExpand`), a double tap on
-  the video, or on a computer the button beside the Song / Video switch of the expanded player (the native video's
-  window lies over anything drawn on the cover there). It shows the same player's picture uncropped
+  the video, or on a computer the button beside the Song / Video switch of the expanded player and beside Like in
+  the side panel (the native video's window lies over anything drawn on the cover there). It opens on the root
+  navigator, never in the desktop page history. It shows the same player's picture uncropped
   (`VideoPicture`, `BoxFit.contain`): no second decoder. `VideoMode.addView(full: true)` keeps the video wanted
   while the page under it lets go of its views, and doesn't reload a background video at the cover's size. On a
   phone it locks landscape and hides the system bars (`immersiveSticky`); closing puts back the app's declared
@@ -779,7 +780,12 @@ Windows zip, Linux AppImage and macOS dmg, so successful platforms need not be r
   lock, and upright again closes it (`VideoRotateWatcher`, off with `RIFLAY_NO_VIDEO_ROTATE`). The controls (title,
   like, a lyrics line, Queue, close, the seek bar and transport) fade in on a tap and leave the tree 4 s after the
   last touch, so nothing ticks over the video. The lyrics line listens to `positionUpdates()` only while shown and
-  rebuilds when the line changes. Windows and Linux keep the controls above and below the picture.
+  rebuilds when the line changes. On a computer the view fills the window and keeps the controls above and below
+  the picture (Linux's GTK surface and Windows' own video window lie over anything Flutter draws); they leave the
+  tree, the pointer hides and the picture takes the whole window after 4 s without a mouse move (not while the
+  pointer is on them or Queue is open). F11, a double click or the button fills the screen (`windowFullScreen`,
+  `windowManager`); Esc leaves full screen, then the view, and closing puts the window back. Queue opens beside the
+  picture in a navigator of its own (no back button, no page history), not in the history under the view.
 - Video mode is the most a playing song can cost on a computer (a second mpv; every video frame re-rasters the
   whole window, blur included): ~1.7% of a 24-thread CPU and ~100 MB in Balanced. While another window has the
   focus the video holds its picture, and after `VideoMode.unfocusedRelease` (20 s) its player is let go; back in
