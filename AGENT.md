@@ -723,6 +723,8 @@ After fixing CI on main, recover an existing release without moving its tag:
 The target must exist and match `pubspec.yaml`; version codes still advance with the run number.
 Leaving `publish_tag` blank keeps manual runs as artifacts only. Recovery preserves release notes,
 publishes successful platform assets and consolidates checksums from the whole existing release.
+`platforms=android,windows` can repair only those builds; desktop manifests use the release's current
+Windows zip, Linux AppImage and macOS dmg, so successful platforms need not be rebuilt.
 
 ## Conventions
 

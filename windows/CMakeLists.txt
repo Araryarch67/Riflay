@@ -99,7 +99,8 @@ endif()
 set(MPV_VIDEO_SRC "${CMAKE_BINARY_DIR}/libmpv-video")
 set(MPV_VIDEO_DLL "${MPV_VIDEO_SRC}/libmpv-video-2.dll")
 if(NOT EXISTS "${MPV_VIDEO_DLL}")
-  set(MPV_VIDEO_ARCHIVE "${CMAKE_BINARY_DIR}/mpv-dev-x86_64-20230924-git-652a1dd.7z")
+  # The audio plugin uses the same upstream filename for a different archive.
+  set(MPV_VIDEO_ARCHIVE "${CMAKE_BINARY_DIR}/mpv-video-dev-x86_64-20230924-git-652a1dd.7z")
   riflay_download_release(
     "https://github.com/media-kit/libmpv-win32-video-build/releases/download/2023-09-24/mpv-dev-x86_64-20230924-git-652a1dd.7z"
     "${MPV_VIDEO_ARCHIVE}"
@@ -113,6 +114,21 @@ endif()
 
 # Generated plugin build rules, which manage building the plugins and adding
 # them to the application.
+# The audio plugin downloads its own archive during configuration, even though Riflay replaces its DLL at
+# installation. Seed the verified archive through the API in CI so that plugin needs no direct release download.
+if(DEFINED ENV{GH_TOKEN})
+  set(MPV_AUDIO_ARCHIVE "${CMAKE_BINARY_DIR}/mpv-dev-x86_64-20230924-git-652a1dd.7z")
+  set(MPV_AUDIO_SHA "583af5a291fc99ae2641794ede1955c368eb4c19dc05f4f0a9c7f9456edeb6a8")
+  set(MPV_AUDIO_ACTUAL "")
+  if(EXISTS "${MPV_AUDIO_ARCHIVE}")
+    file(SHA256 "${MPV_AUDIO_ARCHIVE}" MPV_AUDIO_ACTUAL)
+  endif()
+  if(NOT MPV_AUDIO_ACTUAL STREQUAL MPV_AUDIO_SHA)
+    riflay_download_release(
+      "https://github.com/media-kit/libmpv-win32-audio-build/releases/download/2023-09-24/mpv-dev-x86_64-20230924-git-652a1dd.7z"
+      "${MPV_AUDIO_ARCHIVE}" "${MPV_AUDIO_SHA}")
+  endif()
+endif()
 include(flutter/generated_plugins.cmake)
 
 # Third-party plugin code built at /W4: silence the warnings that aren't ours

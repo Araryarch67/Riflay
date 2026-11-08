@@ -109,6 +109,10 @@ jobs:
           # Only this artifact comes from the local repository; its original POM retains its dependencies.
           cat > "$HOME/.gradle/init.d/riflay-kotlin.gradle" <<'GRADLE'
           gradle.beforeProject { project ->
+              // Flutter's included Gradle build forbids project repositories; change only the Android app build.
+              if (project.rootDir.canonicalFile != new File(System.getenv('GITHUB_WORKSPACE'), 'android').canonicalFile) {
+                  return
+              }
               project.repositories.exclusiveContent {
                   forRepository {
                       project.repositories.maven {
@@ -542,26 +546,27 @@ jobs:
 
   package-manifests:
     # Package managers need their desktop files; Android and iOS do not delay these updates.
-    if: (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) || inputs.publish_tag != ''
-    needs: [windows-asset, linux-asset, macos-asset]
+    if: >-
+      always() && !cancelled() && needs.release.result == 'success' &&
+      ((github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) || inputs.publish_tag != '') &&
+      (needs.windows-asset.result == 'success' || needs.linux-asset.result == 'success' || needs.macos-asset.result == 'success') &&
+      needs.windows-asset.result != 'failure' && needs.linux-asset.result != 'failure' && needs.macos-asset.result != 'failure'
+    needs: [release, windows-asset, linux-asset, macos-asset]
     runs-on: ubuntu-24.04
     permissions:
       contents: write
     steps:
       - uses: actions/checkout@v7
+      - name: Published desktop assets
+        # A recovery may rebuild just one desktop platform. Use the release's current files for the others.
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          gh release download "$RIFLAY_RELEASE_TAG" --dir dist \
+            --pattern Riflay-windows-x64.zip --pattern Riflay-linux-x86_64.AppImage --pattern Riflay-macos.dmg
       - uses: actions/download-artifact@v8
-        with:
-          name: windows
-          path: dist
-      - uses: actions/download-artifact@v8
-        with:
-          name: linux
-          path: dist
-      - uses: actions/download-artifact@v8
-        with:
-          name: macos
-          path: dist
-      - uses: actions/download-artifact@v8
+        if: needs.linux-asset.result == 'success'
         with:
           name: aur
           path: manifests/aur
