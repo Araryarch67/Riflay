@@ -5,6 +5,10 @@
 #ifndef AppVersion
   #define AppVersion "1.0.0"
 #endif
+; VersionInfo fields take numbers only (1.3.0 for a release candidate's 1.3.0-rc1).
+#ifndef NumericVersion
+  #define NumericVersion AppVersion
+#endif
 #ifndef SourceDir
   #define SourceDir "..\..\build\windows\x64\runner\Release"
 #endif
@@ -16,9 +20,9 @@
 AppId={{DC558C20-B893-4F78-A05F-6E08F3F2435E}
 AppName=Riflay
 AppVersion={#AppVersion}
-VersionInfoVersion={#AppVersion}
+VersionInfoVersion={#NumericVersion}
 VersionInfoTextVersion={#AppVersion}
-VersionInfoProductVersion={#AppVersion}
+VersionInfoProductVersion={#NumericVersion}
 VersionInfoProductTextVersion={#AppVersion}
 AppPublisher=Riflay
 AppPublisherURL=https://github.com/Araryarch67/Riflay

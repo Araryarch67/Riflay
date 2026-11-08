@@ -9,6 +9,8 @@
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 version=$1 tarball=$2 out=$(realpath -m "$3") aur=${4:-}
+# pkgver may not hold a hyphen: a release candidate's 1.3.0-rc1 is 1.3.0rc1, which pacman orders before 1.3.0.
+version=${version/-/}
 work=build/arch
 rm -rf "$work"
 mkdir -p "$work"

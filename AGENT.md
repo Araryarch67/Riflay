@@ -723,6 +723,12 @@ device's language when Riflay has it). The words live in `lib/l10n/app_en.arb` (
    `Araryarch67/homebrew-riflay`; the AUR files are copied by hand. Runtime dependencies live in those files: change them all
    when the Linux build links something new.
 
+Release candidates: set `pubspec.yaml` to `1.3.0-rc1+<n>` and `lib/app_version.dart` to `1.3.0-rc1`, then tag
+`v1.3.0-rc1` (`tool/ci_version.sh` takes `vX.Y.Z-rcN`). The release is a GitHub pre-release, so it is never
+"latest": the app's update check (stable releases only) and the Scoop bucket / Homebrew tap (`package-manifests`
+is skipped) stay on the last stable version, while someone on 1.3.0-rc1 is offered 1.3.0. Packages order it before
+the release: `.deb` / `.rpm` 1.3.0~rc1 (nfpm), Arch `pkgver` 1.3.0rc1, and the Windows installer's numeric
+VersionInfo 1.3.0 (`NumericVersion`).
 The Linux build doesn't download mimalloc: `media_kit_libs_linux` fetches its source archive in CMake with no
 retry and an MD5 check, and GitHub's archive route returned 504 to CI (v1.2.18). `linux/CMakeLists.txt` copies
 `third_party/mimalloc/mimalloc-2.1.2.tar.gz` (the same archive, byte for byte) to where the plugin looks first.
