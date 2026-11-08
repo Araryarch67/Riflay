@@ -741,6 +741,20 @@ class PlayerController extends ChangeNotifier {
   /// Library and YouTube Music songs together, most recent first.
   List<Track> get recentlyPlayed => [for (final id in _recentIds) ?(_recentRemote[id] ?? _views.byId[id])];
 
+  String? _dismissedRecentPlaying;
+
+  /// Removes an entry from the recent shelf, including its persisted streamed metadata.
+  Future<void> removeFromRecentlyPlayed(Track track) async {
+    if (!_recentIds.contains(track.id)) return;
+    _recentIds = _recentIds.where((id) => id != track.id).toList();
+    _recentRemote.remove(track.id);
+    if (currentTrack?.id == track.id) _dismissedRecentPlaying = track.id;
+    _recentsTimer?.cancel();
+    _recentsTimer = null;
+    notifyListeners();
+    await _storeRecents();
+  }
+
   Collection get allSongs => _views.allSongs;
 
   /// Everything imported from YouTube, newest first.
@@ -1151,6 +1165,9 @@ class PlayerController extends ChangeNotifier {
   /// Only counts tracks that actually start playing, not ones the queue passes through while loading.
   void _recordRecent() {
     final id = currentTrack?.id;
+    if (id != _dismissedRecentPlaying) _dismissedRecentPlaying = null;
+    // Pause, buffer and progress notifications for this same playback must not undo a manual dismissal.
+    if (id != null && id == _dismissedRecentPlaying) return;
     if (id == null || !isPlaying || (_recentIds.isNotEmpty && _recentIds.first == id)) return;
     _recentIds = [id, ..._recentIds.where((r) => r != id)].take(_maxRecent).toList();
     final current = currentTrack;

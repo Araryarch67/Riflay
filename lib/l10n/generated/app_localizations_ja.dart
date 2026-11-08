@@ -474,6 +474,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get recentlyPlayed => '最近聴いた曲';
 
   @override
+  String get removeFromRecentlyPlayed => '最近聴いた曲から削除';
+
+  @override
   String get yourPlaylists => 'プレイリスト';
 
   @override

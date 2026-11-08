@@ -474,6 +474,9 @@ class AppLocalizationsId extends AppLocalizations {
   String get recentlyPlayed => 'Baru diputar';
 
   @override
+  String get removeFromRecentlyPlayed => 'Hapus dari Baru diputar';
+
+  @override
   String get yourPlaylists => 'Playlistmu';
 
   @override

@@ -474,6 +474,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get recentlyPlayed => 'Recently played';
 
   @override
+  String get removeFromRecentlyPlayed => 'Remove from Recently played';
+
+  @override
   String get yourPlaylists => 'Your playlists';
 
   @override

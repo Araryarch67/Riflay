@@ -981,6 +981,12 @@ abstract class AppLocalizations {
   /// **'Recently played'**
   String get recentlyPlayed;
 
+  /// No description provided for @removeFromRecentlyPlayed.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove from Recently played'**
+  String get removeFromRecentlyPlayed;
+
   /// No description provided for @yourPlaylists.
   ///
   /// In en, this message translates to:

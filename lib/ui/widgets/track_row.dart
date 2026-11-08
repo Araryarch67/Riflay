@@ -560,6 +560,11 @@ class TrackMenuButton extends StatelessWidget {
                 ),
               ),
             ],
+            if (c.recentlyPlayed.any((recent) => recent.id == track.id))
+              PopupMenuItem(
+                onTap: () => c.removeFromRecentlyPlayed(track),
+                child: MenuRow(leading: const Icon(Icons.history_rounded), title: Text(tr.removeFromRecentlyPlayed)),
+              ),
             if (downloaded != null)
               PopupMenuItem(
                 onTap: () => confirmDeleteDownload(host, c, downloaded),
