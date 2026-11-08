@@ -60,7 +60,37 @@ class DeviceSetup {
   static const heavyThreads = 16;
   static const heavyMemoryGb = 16;
 
+  /// A phone with less memory than this starts in Lightweight ([fitPhone]): 2-3 GB phones, where Android closes
+  /// apps in the background to make room and Balanced's motion and the 1440p video weigh most.
+  static const lowEndPhoneGb = 4;
+
+  static const _phoneKey = 'phoneSetup.v1';
+
   bool _due = false;
+
+  /// Phones get no setup page, but one with little memory ([lowEndPhoneGb]) is put in Lightweight once, at its first
+  /// start with this version, if it is still in the default Balanced: a mode picked by hand stays, and so does any
+  /// change made later. Off with `RIFLAY_NO_PHONE_SETUP`.
+  Future<void> fitPhone() async {
+    if (!Host.isAndroid ||
+        const bool.fromEnvironment('RIFLAY_NO_PHONE_SETUP') ||
+        Host.environment.containsKey('FLUTTER_TEST')) {
+      return;
+    }
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      if (prefs.getBool(_phoneKey) == true) return;
+      await prefs.setBool(_phoneKey, true);
+      if (lowEndPhone(await read()) && LayoutPrefs.instance.performance == PerformanceMode.balanced) {
+        await LayoutPrefs.instance.setPerformance(PerformanceMode.lightweight);
+      }
+    } catch (e) {
+      debugPrint('Phone setup unavailable: $e');
+    }
+  }
+
+  /// Whether a phone with [specs] counts as low-end: its memory, when known, under [lowEndPhoneGb].
+  static bool lowEndPhone(DeviceSpecs specs) => (specs.memoryGb ?? lowEndPhoneGb) < lowEndPhoneGb;
 
   /// Whether the page should show at this start: on a computer, once, until it is answered.
   bool get due => _due;
@@ -113,10 +143,13 @@ class DeviceSetup {
     bool? battery;
     String? cpu;
     try {
-      if (Host.isLinux) {
+      if (Host.isLinux || Host.isAndroid) {
+        // Android lets apps read it too.
         final meminfo = await File('/proc/meminfo').readAsString();
         final kb = RegExp(r'MemTotal:\s+(\d+) kB').firstMatch(meminfo)?.group(1);
         if (kb != null) memory = int.parse(kb) * 1024;
+      }
+      if (Host.isLinux) {
         final cpuinfo = await File('/proc/cpuinfo').readAsString();
         cpu = RegExp(r'model name\s*:\s*(.+)').firstMatch(cpuinfo)?.group(1)?.trim();
         final supplies = Directory('/sys/class/power_supply');

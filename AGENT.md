@@ -128,6 +128,13 @@ test/                          Unit and widget tests
 
 ## First start on a computer
 
+- Low-end phones (`DeviceSetup.fitPhone`, Android): one with under 4 GB of memory (`/proc/meminfo`, which apps may
+  read) is put in Lightweight once, at its first start with that code, if still in the default Balanced; a mode
+  picked by hand stays. Lightweight on a phone also takes the music video at 720p, not 1440p
+  (`VideoMode.maxHeight`). `MemoryTrim` runs on Android too: after a song change, once a minute and in the
+  background it asks the allocator to hand free pages back (`mallopt(M_PURGE_ALL)`, then `M_PURGE`), and in the
+  background drops decoded covers, since Android closes the apps holding the most memory first. Neither is measured
+  on a phone yet. `RIFLAY_NO_PHONE_SETUP` and `RIFLAY_NO_ANDROID_TRIM` turn them off.
 - `services/app_updates.dart` checks GitHub's latest stable release: on request (Settings › About,
   `AppUpdateTile`), and once a start (`AppUpdates.checkAtStart`, from `RiflayApp`): 10 s after the window is up, one
   quiet request; a newer release shows `showUpdatePopup` (the version, the tile that gets it, Not now), the latest
@@ -671,6 +678,8 @@ device's language when Riflay has it). The words live in `lib/l10n/app_en.arb` (
   flutter run --dart-define=RIFLAY_BEAT_WHILE_PAUSED=true  # the seek bar's position stays on UiBeat while paused
   flutter run --dart-define=RIFLAY_MOVE_UNFOCUSED=true  # decorations, visualizer and marquees keep moving while another window has the focus
   flutter run --dart-define=RIFLAY_FULL_BALANCED=true  # Balanced on a computer moves at 20 fps, not 5 (visualizer 10)
+  flutter run --dart-define=RIFLAY_NO_PHONE_SETUP=true  # a phone under 4 GB keeps Balanced at its first start
+  flutter run --dart-define=RIFLAY_NO_ANDROID_TRIM=true  # Android keeps its allocator's free pages and covers in the background
   flutter run --dart-define=RIFLAY_NO_UPDATE_CHECK=true  # no update check at start (Settings › About still checks)
   flutter run --dart-define=RIFLAY_NO_PAGE_OUT=true  # Linux keeps the app resident behind other windows (no MADV_PAGEOUT)
   flutter run --dart-define=RIFLAY_ASTATS_VISUALIZER=true  # the visualizer measures its bands with astats (~3x the CPU), not aspectralstats

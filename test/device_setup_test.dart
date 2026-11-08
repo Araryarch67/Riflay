@@ -32,6 +32,16 @@ void main() {
       expect(pick(16, battery: null), PerformanceMode.heavy);
     });
 
+    test('a phone under 4 GB is low-end; 4 GB phones (about 3.7 GiB usable) and unknown memory are not', () {
+      bool low(int? kib) =>
+          DeviceSetup.lowEndPhone(DeviceSpecs(threads: 8, memoryBytes: kib == null ? null : kib * 1024));
+      expect(low(1900000), isTrue); // 2 GB, Android Go
+      expect(low(2850000), isTrue); // 3 GB
+      expect(low(3800000), isFalse); // 4 GB
+      expect(low(7600000), isFalse); // 8 GB
+      expect(low(null), isFalse);
+    });
+
     test('memory is rounded as the system shows it', () {
       expect(const DeviceSpecs(threads: 16, memoryBytes: 16297000 * 1024).memoryGb, 16);
     });
