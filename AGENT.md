@@ -895,7 +895,10 @@ Windows zip, Linux AppImage and macOS dmg, so successful platforms need not be r
   time) prints where it goes every 60 frames: in headless Weston on NVIDIA, a full-window video frame was one GTK
   paint of ~9 ms, ~2.5 of it mpv's render. Giving the area its own GDK window (a `GtkEventBox` with a visible window)
   didn't shorten the paint. Only taking the video out of GTK's paint would: a Wayland subsurface of its own, drawn by
-  mpv with EGL on its own thread and composited by the compositor. Private memory with a video is ~445-465 MiB
+  mpv with EGL on its own thread and composited by the compositor. On the real desktop (`RIFLAY_MV_DESKTOP=1`, Hyprland
+  on the laptop's Intel GPU) the same frame's paint was ~1.9 ms, and the scenario measured (Now Playing / full screen /
+  behind, % of 24 threads, private MiB): Balanced 0.62 / 0.33 / 0.22% at ~255 / ~255 / ~115, Heavy 0.54 / 0.46 /
+  0.45% at ~268 / ~287 / ~120. Headless Weston rendered on the NVIDIA GPU, so its video numbers run high. Private memory with a video is ~445-465 MiB
   (~160 of it NVIDIA's for the video's GL and CUDA), ~45 MiB of NVIDIA's after it is let go.
 - The native video's `GtkOverlay` keeps its `GtkFixed` hidden until a video has a place on screen: shown over the
   Flutter view at all times it made GTK composite the slow way, ~2.8% of a core more while a song played (main thread
