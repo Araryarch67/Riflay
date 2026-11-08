@@ -129,8 +129,7 @@ class _SearchSourceToggleState extends State<SearchSourceToggle> {
   );
 }
 
-/// The first SoundCloud tracks for the query: under YouTube Music's with both sources, on their own (as Songs, above
-/// SoundCloud's artists and playlists) with SoundCloud alone.
+/// The first SoundCloud tracks for the query, above its artist and playlist shelves when SoundCloud is selected.
 class SoundcloudSection extends StatelessWidget {
   const SoundcloudSection({super.key, required this.future, this.count = 5, this.title});
 

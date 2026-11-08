@@ -241,7 +241,12 @@
   "all": "All",
   "songs": "Songs",
   "videos": "Videos",
-  "searchIntro": "Searches your own music and all of YouTube Music together. Songs with a cloud stream online; the rest play offline.",
+  "searchIntro": "Searches your own music and {source} together. Songs with a service icon stream online; the rest play offline.",
+  "@searchIntro": {
+    "placeholders": {
+      "source": {"type": "String"}
+    }
+  },
   "browseArtists": "Browse artists",
   "inYourLibrary": "In your library",
   "searchHint": "What do you want to play?",

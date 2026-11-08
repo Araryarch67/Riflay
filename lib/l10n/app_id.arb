@@ -193,7 +193,7 @@
   "all": "Semua",
   "songs": "Lagu",
   "videos": "Video",
-  "searchIntro": "Mencari musikmu sendiri dan seluruh YouTube Music sekaligus. Lagu bertanda awan diputar online; sisanya offline.",
+  "searchIntro": "Mencari musikmu sendiri dan {source} sekaligus. Lagu dengan ikon layanan diputar online; sisanya offline.",
   "browseArtists": "Jelajahi artis",
   "inYourLibrary": "Di koleksimu",
   "searchHint": "Mau putar apa?",

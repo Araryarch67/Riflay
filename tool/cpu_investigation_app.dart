@@ -216,7 +216,7 @@ Future<void> main() async {
       };
       stdout.writeln('PROFILE_RESULT ${jsonEncode(result)}');
       await stdout.flush();
-      if (experiment.profile)
+      if (experiment.profile) {
         try {
           final cpuSamples = await rpc.call('getCpuSamples', {
             'isolateId': isolate,
@@ -227,6 +227,7 @@ Future<void> main() async {
         } catch (error) {
           stderr.writeln('PROFILE_DART_ERROR $error');
         }
+      }
       release?.call();
     }
     await c.pause();

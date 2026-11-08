@@ -589,8 +589,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get videos => 'Videos';
 
   @override
-  String get searchIntro =>
-      'Searches your own music and all of YouTube Music together. Songs with a cloud stream online; the rest play offline.';
+  String searchIntro(String source) {
+    return 'Searches your own music and $source together. Songs with a service icon stream online; the rest play offline.';
+  }
 
   @override
   String get browseArtists => 'Browse artists';

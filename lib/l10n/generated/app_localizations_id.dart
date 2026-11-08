@@ -589,8 +589,9 @@ class AppLocalizationsId extends AppLocalizations {
   String get videos => 'Video';
 
   @override
-  String get searchIntro =>
-      'Mencari musikmu sendiri dan seluruh YouTube Music sekaligus. Lagu bertanda awan diputar online; sisanya offline.';
+  String searchIntro(String source) {
+    return 'Mencari musikmu sendiri dan $source sekaligus. Lagu dengan ikon layanan diputar online; sisanya offline.';
+  }
 
   @override
   String get browseArtists => 'Jelajahi artis';

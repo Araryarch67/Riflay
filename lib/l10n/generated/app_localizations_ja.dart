@@ -588,7 +588,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videos => '動画';
 
   @override
-  String get searchIntro => '自分の音楽と YouTube Music 全体をまとめて検索。クラウドマークの曲はオンラインでストリーミング、それ以外はオフラインで再生。';
+  String searchIntro(String source) {
+    return '自分の音楽と $source をまとめて検索。サービスのアイコンが付いた曲はオンラインでストリーミング、それ以外はオフラインで再生。';
+  }
 
   @override
   String get browseArtists => 'アーティストを見る';

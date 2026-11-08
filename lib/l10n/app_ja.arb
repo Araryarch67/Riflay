@@ -186,7 +186,7 @@
   "all": "すべて",
   "songs": "曲",
   "videos": "動画",
-  "searchIntro": "自分の音楽と YouTube Music 全体をまとめて検索。クラウドマークの曲はオンラインでストリーミング、それ以外はオフラインで再生。",
+  "searchIntro": "自分の音楽と {source} をまとめて検索。サービスのアイコンが付いた曲はオンラインでストリーミング、それ以外はオフラインで再生。",
   "browseArtists": "アーティストを見る",
   "inYourLibrary": "ライブラリ内",
   "searchHint": "何を聴く？",

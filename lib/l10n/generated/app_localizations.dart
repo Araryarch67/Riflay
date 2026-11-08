@@ -1212,8 +1212,8 @@ abstract class AppLocalizations {
   /// No description provided for @searchIntro.
   ///
   /// In en, this message translates to:
-  /// **'Searches your own music and all of YouTube Music together. Songs with a cloud stream online; the rest play offline.'**
-  String get searchIntro;
+  /// **'Searches your own music and {source} together. Songs with a service icon stream online; the rest play offline.'**
+  String searchIntro(String source);
 
   /// No description provided for @browseArtists.
   ///

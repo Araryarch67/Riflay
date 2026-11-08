@@ -424,7 +424,10 @@ class _SearchPageState extends State<SearchPage> {
           SliverToBoxAdapter(
             child: Padding(
               padding: EdgeInsets.fromLTRB(pad, 8, pad, 0),
-              child: Text(tr.searchIntro, style: text.bodyLarge?.copyWith(color: AppColors.textSecondary)),
+              child: Text(
+                tr.searchIntro(_source.label),
+                style: text.bodyLarge?.copyWith(color: AppColors.textSecondary),
+              ),
             ),
           ),
           if (artists.isNotEmpty) ...[

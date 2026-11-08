@@ -386,10 +386,14 @@ test/                          Unit and widget tests
   playing track again where it is with a fresh playlist: one `Timer` set when the playlist is served
   (`SoundcloudClient.served`), 10 minutes early (mpv reads ahead), plus a check on play and seek, since timers stop
   while a phone sleeps. Nothing ticks meanwhile. `integration_test/soundcloud_playback_test.dart` covers it.
-- Search: a button beside Songs / Videos (`SearchSourceChoice`, the mark alone on phones so no row is added;
-  `SearchSource`: YouTube Music, SoundCloud, both; `search.source.v1`). Both adds an "On SoundCloud" section under
-  YouTube Music's songs and SoundCloud's artists and playlists after YouTube Music's shelves; SoundCloud alone shows
+- Search: `SearchSourceToggle` switches between YouTube Music and SoundCloud, one source at a time. It sits in
+  the desktop top bar to the right of the search box, and beside the Search title on phones. Its two service
+  marks share a pill, with the current source filled. `SearchSource.current` keeps the switch and results in sync;
+  `search.source.v1` remembers the choice (an older saved "both" falls back to YouTube Music). SoundCloud shows
   its top songs, then its artists and playlists, and leaves out Songs/Videos and the filters.
+  The empty search page names the selected source. `integration_test/search_source_layout_test.dart` covers
+  the switch in the real shell at desktop and phone widths, legacy preference fallback, and this text (`SHOTS`
+  saves screenshots). Phone widths on Linux verify layout; they do not replace tests on Android or iOS.
   Autoplay and Start radio follow SoundCloud's related tracks for a SoundCloud song.
 - Pages (`ui/soundcloud_pages.dart`, `openSoundcloud`): a playlist (`CollectionKind.remote`) or a profile
   (`CollectionKind.remoteArtist`, labelled Artist) as a `RemoteCollectionPage`, with Save to library and, for a
@@ -650,7 +654,7 @@ device's language when Riflay has it). The words live in `lib/l10n/app_en.arb` (
   flutter run --dart-define=RIFLAY_NO_GLASS_RENDERER=true    # its pills in Riflay's own blur, not liquid_glass_renderer
   flutter run --dart-define=RIFLAY_NO_DIRECT_USB_GUARD=true  # Android Direct USB crashes for real (logcat)
   flutter run --dart-define=RIFLAY_NO_OPEN_LINKS=true     # ignore links opened or shared with Riflay
-  flutter run --dart-define=RIFLAY_NO_SOUNDCLOUD=true     # no SoundCloud anywhere (search, links, the source chips)
+  flutter run --dart-define=RIFLAY_NO_SOUNDCLOUD=true     # no SoundCloud anywhere (search, links, the source switch)
   flutter run --dart-define=RIFLAY_NO_SOUNDCLOUD_CACHE=true  # SoundCloud's client id, searches and stream playlists looked up every time
   flutter run --dart-define=RIFLAY_NO_SHARED_SIGNAL_PATH=true  # every signalPath() caller reads mpv itself
   flutter run --dart-define=RIFLAY_NO_STREAK_CACHE=true  # the listening streak counted afresh every build
