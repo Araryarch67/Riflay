@@ -1191,29 +1191,44 @@ String formatEta(Duration d) =>
 /// Where a song plays from: the service it streams from (YouTube Music's play ring, SoundCloud's cloud), or a
 /// check for a streamed song downloaded to this device (offline).
 class SourceMark extends StatelessWidget {
-  const SourceMark({super.key, required this.online, this.source = TrackSource.youtubeMusic, this.size = 14});
+  const SourceMark({
+    super.key,
+    required this.online,
+    this.source = TrackSource.youtubeMusic,
+    this.size = 14,
+    this.tooltip = true,
+    this.color,
+  });
 
   final bool online;
   final TrackSource source;
   final double size;
 
+  /// False inside a control that names the service itself (Search's source switches).
+  final bool tooltip;
+
+  /// Instead of the usual muted colour (a selected chip's own foreground).
+  final Color? color;
+
   @override
   Widget build(BuildContext context) {
-    final color = online ? AppColors.textSecondary : AppColors.accent;
+    final color = this.color ?? (online ? AppColors.textSecondary : AppColors.accent);
+    final mark = !online
+        ? Icon(Icons.offline_pin_rounded, size: size, color: color)
+        : source == TrackSource.soundcloud
+        ? Icon(Icons.cloud_rounded, size: size, color: color)
+        : SizedBox.square(
+            dimension: size,
+            child: CustomPaint(painter: _PlayRingPainter(color)),
+          );
+    if (!tooltip) return mark;
     return Tooltip(
       message: !online
           ? tr.playsOfflineHere
           : source == TrackSource.soundcloud
           ? tr.streamsFromSoundcloud
           : tr.streamsOnline,
-      child: !online
-          ? Icon(Icons.offline_pin_rounded, size: size, color: color)
-          : source == TrackSource.soundcloud
-          ? Icon(Icons.cloud_rounded, size: size, color: color)
-          : SizedBox.square(
-              dimension: size,
-              child: CustomPaint(painter: _PlayRingPainter(color)),
-            ),
+      child: mark,
     );
   }
 }

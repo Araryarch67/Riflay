@@ -9,99 +9,124 @@ import '../../shell_scope.dart';
 import '../../soundcloud_pages.dart';
 import '../../theme.dart';
 import '../../widgets/controls.dart';
-import '../../widgets/menus.dart';
 import '../../widgets/page_scaffold.dart';
 import '../../widgets/shelf.dart';
 import '../../widgets/track_row.dart';
 import 'search_parts.dart';
 
-/// Where Search looks online: YouTube Music, SoundCloud or both. The library is always searched too.
+/// Where Search looks online: YouTube Music (the default) or SoundCloud, one at a time. The library is always
+/// searched too.
 enum SearchSource {
   youtubeMusic,
-  soundcloud,
-  both;
-
-  bool get youtube => this != soundcloud;
-  bool get usesSoundcloud => this != youtubeMusic;
+  soundcloud;
 
   String get label => switch (this) {
     youtubeMusic => tr.sourceYoutubeMusic,
     soundcloud => tr.sourceSoundcloud,
-    both => tr.sourceBoth,
   };
 
   static const _key = 'search.source.v1';
 
-  /// The choice last made (YouTube Music until one is).
-  static Future<SearchSource> load() async {
+  /// The source in use, shared by the switch (the desktop top bar, the phone's search page) and the search page.
+  static final current = ValueNotifier<SearchSource>(youtubeMusic);
+
+  static bool _loaded = false;
+
+  /// Reads the choice last made, once (YouTube Music until one is; an older saved "both" is YouTube Music).
+  static Future<void> load() async {
+    if (_loaded) return;
+    _loaded = true;
     final saved = (await SharedPreferences.getInstance()).getString(_key);
-    return values.where((s) => s.name == saved).firstOrNull ?? youtubeMusic;
+    current.value = values.where((s) => s.name == saved).firstOrNull ?? youtubeMusic;
   }
 
-  Future<void> save() async => (await SharedPreferences.getInstance()).setString(_key, name);
+  /// Makes this the source, and remembers it.
+  void choose() {
+    current.value = this;
+    SharedPreferences.getInstance().then((p) => p.setString(_key, name)).ignore();
+  }
+
+  @visibleForTesting
+  static void reset() {
+    _loaded = false;
+    current.value = youtubeMusic;
+  }
 }
 
-/// Picks [SearchSource]: a small button showing the current choice's mark, beside Songs / Videos (no row of its
-/// own, so the results start as high as before), opening a menu of the three.
-class SearchSourceChoice extends StatelessWidget {
-  const SearchSourceChoice({super.key, required this.value, required this.onChanged});
+/// The switch between YouTube Music and SoundCloud: a pill with both marks, the source in use filled. A tap
+/// switches to the other one. On computers it sits in the top bar beside the search box; on phones beside the
+/// search page's title.
+class SearchSourceToggle extends StatefulWidget {
+  const SearchSourceToggle({super.key, this.height = 40});
 
-  final SearchSource value;
-  final ValueChanged<SearchSource> onChanged;
-
-  static Widget mark(SearchSource s, {double size = 18}) => switch (s) {
-    SearchSource.youtubeMusic => SourceMark(online: true, source: TrackSource.youtubeMusic, size: size),
-    SearchSource.soundcloud => SourceMark(online: true, source: TrackSource.soundcloud, size: size),
-    SearchSource.both => Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        SourceMark(online: true, source: TrackSource.youtubeMusic, size: size),
-        const SizedBox(width: 2),
-        SourceMark(online: true, source: TrackSource.soundcloud, size: size),
-      ],
-    ),
-  };
+  final double height;
 
   @override
-  Widget build(BuildContext context) => PopupMenuButton<SearchSource>(
-    tooltip: tr.searchSourceTooltip,
-    initialValue: value,
-    onSelected: onChanged,
-    itemBuilder: (_) => [
-      for (final s in SearchSource.values)
-        PopupMenuItem(
-          value: s,
-          child: MenuRow(leading: mark(s, size: 20), title: Text(s.label)),
-        ),
-    ],
-    child: _button(context),
-  );
+  State<SearchSourceToggle> createState() => _SearchSourceToggleState();
+}
 
-  Widget _button(BuildContext context) {
-    final colors = AppColors.of(context);
-    // Phones: the mark alone, small enough to stay beside Songs / Videos on a 320 px screen.
-    final compact = ShellScope.of(context).compact;
-    return Container(
-      height: 40,
-      padding: EdgeInsets.symmetric(horizontal: compact ? 6 : 12),
-      decoration: BoxDecoration(
-        border: Border.all(color: colors.textMuted.withValues(alpha: 0.5)),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          mark(value, size: compact && value == SearchSource.both ? 14 : 18),
-          if (!compact) ...[
-            const SizedBox(width: 8),
-            Text(value.label, style: Theme.of(context).textTheme.labelLarge),
-            const SizedBox(width: 4),
-            Icon(Icons.arrow_drop_down_rounded, size: 20, color: colors.textSecondary),
-          ],
-        ],
-      ),
-    );
+class _SearchSourceToggleState extends State<SearchSourceToggle> {
+  @override
+  void initState() {
+    super.initState();
+    SearchSource.load().ignore();
   }
+
+  @override
+  Widget build(BuildContext context) => ValueListenableBuilder(
+    valueListenable: SearchSource.current,
+    builder: (context, source, _) {
+      final colors = AppColors.of(context);
+      final next = source == SearchSource.youtubeMusic ? SearchSource.soundcloud : SearchSource.youtubeMusic;
+      Widget half(SearchSource s, TrackSource service) {
+        final on = s == source;
+        return AnimatedContainer(
+          duration: const Duration(milliseconds: 160),
+          width: widget.height + 4,
+          height: widget.height - 8,
+          decoration: BoxDecoration(
+            color: on ? colors.accent : Colors.transparent,
+            borderRadius: BorderRadius.circular(widget.height),
+          ),
+          alignment: Alignment.center,
+          child: SourceMark(
+            online: true,
+            source: service,
+            size: 18,
+            tooltip: false,
+            color: on ? colors.onAccent : colors.textSecondary,
+          ),
+        );
+      }
+
+      return Tooltip(
+        message: tr.searchOnSource(next.label),
+        child: Semantics(
+          button: true,
+          toggled: source == SearchSource.soundcloud,
+          label: tr.searchOnSource(source.label),
+          child: Material(
+            color: colors.tile,
+            shape: const StadiumBorder(),
+            child: InkWell(
+              customBorder: const StadiumBorder(),
+              onTap: next.choose,
+              child: Padding(
+                padding: const EdgeInsets.all(4),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    half(SearchSource.youtubeMusic, TrackSource.youtubeMusic),
+                    half(SearchSource.soundcloud, TrackSource.soundcloud),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    },
+  );
 }
 
 /// The first SoundCloud tracks for the query: under YouTube Music's with both sources, on their own (as Songs, above

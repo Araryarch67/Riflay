@@ -1530,8 +1530,6 @@
   "deviceSetupAgainNote": "このパソコンをもう一度調べて、合う見た目を提案する",
   "sourceYoutubeMusic": "YouTube Music",
   "sourceSoundcloud": "SoundCloud",
-  "sourceBoth": "両方",
-  "searchSourceTooltip": "検索する場所",
   "streamsFromSoundcloud": "SoundCloud：ネットが必要",
   "soundcloudSearchSource": "SoundCloudで検索",
   "onSoundcloud": "SoundCloudから",
@@ -1545,5 +1543,6 @@
   "saveCountToLibrary": "{count, plural, other{{count}曲をライブラリに保存}}",
   "soundcloudArtists": "SoundCloudのアーティスト",
   "soundcloudPlaylists": "SoundCloudのプレイリスト",
-  "linkNotSupported": "共有されたものに YouTube や SoundCloud のリンクがない。"
+  "linkNotSupported": "共有されたものに YouTube や SoundCloud のリンクがない。",
+  "searchOnSource": "{source}で検索"
 }

@@ -5106,12 +5106,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get sourceSoundcloud => 'SoundCloud';
 
   @override
-  String get sourceBoth => '両方';
-
-  @override
-  String get searchSourceTooltip => '検索する場所';
-
-  @override
   String get streamsFromSoundcloud => 'SoundCloud：ネットが必要';
 
   @override
@@ -5158,4 +5152,9 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get linkNotSupported => '共有されたものに YouTube や SoundCloud のリンクがない。';
+
+  @override
+  String searchOnSource(String source) {
+    return '$sourceで検索';
+  }
 }

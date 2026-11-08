@@ -3200,8 +3200,6 @@
   "deviceSetupAgainNote": "Looks at this computer again and suggests the look that suits it",
   "sourceYoutubeMusic": "YouTube Music",
   "sourceSoundcloud": "SoundCloud",
-  "sourceBoth": "Both",
-  "searchSourceTooltip": "Where to search",
   "streamsFromSoundcloud": "SoundCloud: needs internet",
   "soundcloudSearchSource": "SoundCloud search",
   "onSoundcloud": "On SoundCloud",
@@ -3232,5 +3230,13 @@
   },
   "soundcloudArtists": "Artists on SoundCloud",
   "soundcloudPlaylists": "Playlists on SoundCloud",
-  "linkNotSupported": "There's no YouTube or SoundCloud link in what was shared."
+  "linkNotSupported": "There's no YouTube or SoundCloud link in what was shared.",
+  "searchOnSource": "Search on {source}",
+  "@searchOnSource": {
+    "placeholders": {
+      "source": {
+        "type": "String"
+      }
+    }
+  }
 }

@@ -9273,18 +9273,6 @@ abstract class AppLocalizations {
   /// **'SoundCloud'**
   String get sourceSoundcloud;
 
-  /// No description provided for @sourceBoth.
-  ///
-  /// In en, this message translates to:
-  /// **'Both'**
-  String get sourceBoth;
-
-  /// No description provided for @searchSourceTooltip.
-  ///
-  /// In en, this message translates to:
-  /// **'Where to search'**
-  String get searchSourceTooltip;
-
   /// No description provided for @streamsFromSoundcloud.
   ///
   /// In en, this message translates to:
@@ -9368,6 +9356,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'There\'s no YouTube or SoundCloud link in what was shared.'**
   String get linkNotSupported;
+
+  /// No description provided for @searchOnSource.
+  ///
+  /// In en, this message translates to:
+  /// **'Search on {source}'**
+  String searchOnSource(String source);
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

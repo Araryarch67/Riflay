@@ -12,6 +12,7 @@ import 'package:riflay/ui/pages/search/soundcloud_results.dart';
 import 'package:riflay/ui/pages/search_page.dart';
 import 'package:riflay/ui/shell_scope.dart';
 import 'package:riflay/ui/widgets/controls.dart';
+import 'package:riflay/ui/widgets/track_row.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 Map<String, dynamic> _track(int id, String title) => {
@@ -33,7 +34,12 @@ Map<String, dynamic> _track(int id, String title) => {
 };
 
 http.Response _answer(http.Request r) => switch (r.url.path) {
-  '/search/tracks' => http.Response(jsonEncode({'collection': [_track(1, 'Night Drive'), _track(2, 'Rain')]}), 200),
+  '/search/tracks' => http.Response(
+    jsonEncode({
+      'collection': [_track(1, 'Night Drive'), _track(2, 'Rain')],
+    }),
+    200,
+  ),
   '/search/users' => http.Response(
     jsonEncode({
       'collection': [
@@ -45,7 +51,12 @@ http.Response _answer(http.Request r) => switch (r.url.path) {
   '/search/playlists' => http.Response(
     jsonEncode({
       'collection': [
-        {'kind': 'playlist', 'id': 9, 'title': 'Study Mix', 'user': {'username': 'Lofi Girl'}},
+        {
+          'kind': 'playlist',
+          'id': 9,
+          'title': 'Study Mix',
+          'user': {'username': 'Lofi Girl'},
+        },
       ],
     }),
     200,
@@ -62,6 +73,8 @@ void main() {
 
   testWidgets('SoundCloud search lists its songs, artists and playlists, each with its mark', (tester) async {
     SharedPreferences.setMockInitialValues({'search.source.v1': 'soundcloud', 'soundcloud.clientId.v1': 'id'});
+    SearchSource.reset();
+    addTearDown(SearchSource.reset);
     final c = PlayerController();
     await tester.runAsync(c.load);
     addTearDown(() => tester.runAsync(() async => c.dispose()));
@@ -100,11 +113,12 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 600)); // results fade in
 
-    expect(find.text(SearchSource.soundcloud.label), findsOneWidget, reason: 'the source button shows the choice');
     expect(find.text('Videos'), findsNothing, reason: 'YouTube-only controls are left out');
     expect(find.text('Night Drive'), findsOneWidget);
     expect(find.text('Rain'), findsOneWidget);
-    final marks = tester.widgetList<SourceMark>(find.byType(SourceMark));
+    final marks = tester.widgetList<SourceMark>(
+      find.descendant(of: find.byType(TrackRow), matching: find.byType(SourceMark)),
+    );
     expect(marks.where((m) => m.source.name == 'soundcloud'), isNotEmpty);
     expect(marks.where((m) => m.source.name == 'youtubeMusic'), isEmpty);
     await tester.scrollUntilVisible(find.text('Study Mix'), 200, scrollable: find.byType(Scrollable).first);
@@ -126,5 +140,24 @@ void main() {
     expect(c.search('night drive').single.soundcloudId, '1');
     await tester.runAsync(() => c.removeTrack(track));
     expect(c.inLibrary(track), isFalse);
+  });
+
+  testWidgets('the source switch flips between YouTube Music and SoundCloud, one at a time', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    SearchSource.reset();
+    addTearDown(SearchSource.reset);
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(body: Center(child: SearchSourceToggle())),
+      ),
+    );
+    await tester.pump();
+    expect(SearchSource.current.value, SearchSource.youtubeMusic);
+    await tester.tap(find.byType(SearchSourceToggle));
+    await tester.pump();
+    expect(SearchSource.current.value, SearchSource.soundcloud);
+    await tester.tap(find.byType(SearchSourceToggle));
+    await tester.pump();
+    expect(SearchSource.current.value, SearchSource.youtubeMusic);
   });
 }

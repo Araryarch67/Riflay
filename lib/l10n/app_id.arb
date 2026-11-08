@@ -1537,8 +1537,6 @@
   "deviceSetupAgainNote": "Mengecek komputer ini lagi dan menyarankan tampilan yang cocok",
   "sourceYoutubeMusic": "YouTube Music",
   "sourceSoundcloud": "SoundCloud",
-  "sourceBoth": "Keduanya",
-  "searchSourceTooltip": "Tempat mencari",
   "streamsFromSoundcloud": "SoundCloud: butuh internet",
   "soundcloudSearchSource": "Pencarian SoundCloud",
   "onSoundcloud": "Di SoundCloud",
@@ -1552,5 +1550,6 @@
   "saveCountToLibrary": "{count, plural, other{Simpan {count} ke koleksi}}",
   "soundcloudArtists": "Artis di SoundCloud",
   "soundcloudPlaylists": "Playlist di SoundCloud",
-  "linkNotSupported": "Tidak ada tautan YouTube atau SoundCloud di yang dibagikan."
+  "linkNotSupported": "Tidak ada tautan YouTube atau SoundCloud di yang dibagikan.",
+  "searchOnSource": "Cari di {source}"
 }

@@ -5215,12 +5215,6 @@ class AppLocalizationsId extends AppLocalizations {
   String get sourceSoundcloud => 'SoundCloud';
 
   @override
-  String get sourceBoth => 'Keduanya';
-
-  @override
-  String get searchSourceTooltip => 'Tempat mencari';
-
-  @override
   String get streamsFromSoundcloud => 'SoundCloud: butuh internet';
 
   @override
@@ -5267,4 +5261,9 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get linkNotSupported => 'Tidak ada tautan YouTube atau SoundCloud di yang dibagikan.';
+
+  @override
+  String searchOnSource(String source) {
+    return 'Cari di $source';
+  }
 }

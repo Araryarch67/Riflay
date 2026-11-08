@@ -29,6 +29,7 @@ import 'pages/wrap_page.dart';
 import 'navigation.dart';
 import 'player_panels.dart';
 import 'shell_scope.dart';
+import 'pages/search/soundcloud_results.dart' show SearchSourceToggle;
 import 'soundcloud_pages.dart';
 import 'widgets/power_settings.dart';
 import 'shortcuts.dart';
@@ -376,6 +377,8 @@ class _HomeShellState extends State<HomeShell> {
               },
             ),
           ),
+          // Where Search looks: YouTube Music or SoundCloud.
+          if (Features.soundcloud) ...[const SizedBox(width: 8), const SearchSourceToggle(height: 48)],
         ],
       ),
     ),

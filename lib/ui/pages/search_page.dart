@@ -60,9 +60,8 @@ class _SearchPageState extends State<SearchPage> {
     // Which extensions search is known once the store has loaded; a search already out stays as it went.
     ExtensionStore.instance.load().catchError((Object e) => debugPrint('Extensions not loaded: $e'));
     if (Features.soundcloud) {
-      SearchSource.load().then((source) {
-        if (mounted && source != _source) _setSource(source, save: false);
-      });
+      SearchSource.current.addListener(_followSource);
+      SearchSource.load().ignore();
     }
     if (widget.input case final input?) {
       input.controller.addListener(_fromBar);
@@ -119,7 +118,8 @@ class _SearchPageState extends State<SearchPage> {
   final _shown = ShownSongs();
 
   /// Where to search online (always YouTube Music where SoundCloud isn't offered).
-  SearchSource _source = SearchSource.youtubeMusic;
+  SearchSource get _source => Features.soundcloud ? SearchSource.current.value : SearchSource.youtubeMusic;
+  bool get _onSoundcloud => _source == SearchSource.soundcloud;
   Future<List<Track>>? _soundcloud;
   Future<({List<SoundcloudCollection> playlists, List<SoundcloudCollection> users})>? _soundcloudShelves;
 
@@ -128,6 +128,7 @@ class _SearchPageState extends State<SearchPage> {
     _debounce?.cancel();
     _localTimer?.cancel();
     _videoSearch?.dispose();
+    SearchSource.current.removeListener(_followSource);
     if (widget.input case final input?) {
       input.controller.removeListener(_fromBar);
       input.submitted.removeListener(_submittedFromBar);
@@ -187,14 +188,14 @@ class _SearchPageState extends State<SearchPage> {
 
   void _searchYoutube(String q) {
     final c = PlayerScope.read(context);
-    _soundcloud = _source.usesSoundcloud ? c.searchSoundcloud(q) : null;
-    _soundcloudShelves = _source.usesSoundcloud
+    _soundcloud = _onSoundcloud ? c.searchSoundcloud(q) : null;
+    _soundcloudShelves = _onSoundcloud
         ? c.soundcloud.searchCollections(q).catchError((Object e) {
             debugPrint('SoundCloud playlist / artist search failed: $e');
             return (playlists: <SoundcloudCollection>[], users: <SoundcloudCollection>[]);
           })
         : null;
-    if (!_source.youtube) {
+    if (_onSoundcloud) {
       _youtube = _all = _only = _top = null;
       _extensions = const [];
       return;
@@ -272,11 +273,10 @@ class _SearchPageState extends State<SearchPage> {
     });
   }
 
-  void _setSource(SearchSource source, {bool save = true}) {
-    if (source == _source) return;
-    if (save) source.save().ignore();
+  /// The source was switched (here or in the top bar): the query is searched there.
+  void _followSource() {
+    if (!mounted) return;
     setState(() {
-      _source = source;
       final q = _query.trim();
       if (q.length >= 2) _searchYoutube(q);
     });
@@ -286,7 +286,7 @@ class _SearchPageState extends State<SearchPage> {
     setState(() {
       _filter = f;
       final q = _query.trim();
-      _only = f == null || f == WebResultKind.song || q.length < 2 || !_source.youtube
+      _only = f == null || f == WebResultKind.song || q.length < 2 || _onSoundcloud
           ? null
           : PlayerScope.read(context).ytMusic.searchOnly(q, f);
       if (f == null && q.length >= 2 && Features.extensions && _extensions.isEmpty) {
@@ -352,7 +352,15 @@ class _SearchPageState extends State<SearchPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 if (shell.compact) ...[
-                  Text(tr.navSearch, style: text.headlineMedium?.copyWith(fontWeight: FontWeight.w800)),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(tr.navSearch, style: text.headlineMedium?.copyWith(fontWeight: FontWeight.w800)),
+                      ),
+                      // Phones: the sources' switches sit beside the title, so no row is added above the results.
+                      if (Features.soundcloud) const SearchSourceToggle(height: 36),
+                    ],
+                  ),
                   const SizedBox(height: 16),
                 ],
                 if (widget.input == null)
@@ -375,7 +383,7 @@ class _SearchPageState extends State<SearchPage> {
                     runSpacing: 8,
                     crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
-                      if (_source.youtube)
+                      if (!_onSoundcloud)
                         SegmentedButton<bool>(
                           showSelectedIcon: false,
                           segments: [
@@ -385,11 +393,10 @@ class _SearchPageState extends State<SearchPage> {
                           selected: {_videos},
                           onSelectionChanged: (s) => _setVideos(s.first),
                         ),
-                      if (Features.soundcloud) SearchSourceChoice(value: _source, onChanged: _setSource),
                     ],
                   ),
-                  if (!_videos && _source.youtube) const SizedBox(height: 12),
-                  if (!_videos && _source.youtube)
+                  if (!_videos && !_onSoundcloud) const SizedBox(height: 12),
+                  if (!_videos && !_onSoundcloud)
                     Wrap(
                       spacing: 8,
                       runSpacing: 8,
@@ -444,7 +451,7 @@ class _SearchPageState extends State<SearchPage> {
               ),
             ),
           ],
-        ] else if (!_source.youtube) ...[
+        ] else if (_onSoundcloud) ...[
           if (searching) SoundcloudSection(future: _soundcloud, count: 10, title: tr.songs),
           if (searching) SoundcloudShelves(future: _soundcloudShelves),
           ..._library(c, results, shell),
@@ -459,17 +466,13 @@ class _SearchPageState extends State<SearchPage> {
             ),
         ] else if (_filter == WebResultKind.song) ...[
           YoutubeSongResults(future: _youtube, shown: _shown),
-          if (_source.usesSoundcloud && searching) SoundcloudSection(future: _soundcloud, count: 30),
         ] else if (_filter != null) ...[
           CollectionGrid(future: _only),
         ] else ...[
           if (searching) TopAndSongs(future: _top),
-          if (_source.usesSoundcloud && searching) SoundcloudSection(future: _soundcloud),
           ..._library(c, results, shell),
           if (searching && _extensions.isNotEmpty) ExtensionResults(searches: _extensions),
           if (searching) RemoteShelves(future: _all),
-          // YouTube Music is the heart of Riflay: SoundCloud's artists and playlists come after its own.
-          if (_source.usesSoundcloud && searching) SoundcloudShelves(future: _soundcloudShelves),
           if (artists.isNotEmpty && results.isNotEmpty)
             libraryShelf(tr.yourArtists, [
               for (final a in artists)
