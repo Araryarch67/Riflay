@@ -433,6 +433,8 @@
   "miniPlayer": "Mini player",
   "fullScreen": "Full screen",
   "exitFullScreen": "Exit full screen",
+  "watchVideo": "Watch full screen",
+  "showLyrics": "Show lyrics",
   "sidePanelEmpty": "Play something and it will show up here.",
   "nextInQueue": "Next in queue",
   "openQueue": "Open queue",

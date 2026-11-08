@@ -879,6 +879,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get exitFullScreen => 'Exit full screen';
 
   @override
+  String get watchVideo => 'Watch full screen';
+
+  @override
+  String get showLyrics => 'Show lyrics';
+
+  @override
   String get sidePanelEmpty => 'Play something and it will show up here.';
 
   @override

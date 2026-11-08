@@ -18,6 +18,7 @@ import '../widgets/stats_for_nerds.dart';
 import '../widgets/track_row.dart';
 import '../widgets/video_mode.dart';
 import 'player_common.dart';
+import 'video_full_view.dart';
 
 /// Right-hand panel on large screens: big cover, title, and what's next.
 class NowPlayingSidePanel extends StatelessWidget {
@@ -247,6 +248,18 @@ class _HeroPanel extends StatelessWidget {
               ),
             ],
           ),
+        ),
+        // The music video full screen: the native video's window lies over anything drawn on the picture above.
+        ListenableBuilder(
+          listenable: VideoMode.instance,
+          builder: (context, _) => VideoMode.instance.on && VideoMode.instance.videoOf(track) != null
+              ? IconButton(
+                  tooltip: tr.watchVideo,
+                  color: AppColors.textPrimary,
+                  onPressed: () => openVideoFullView(context),
+                  icon: const Icon(Icons.fullscreen_rounded),
+                )
+              : const SizedBox.shrink(),
         ),
         LikeButton(track: track, size: 24),
         TrackMenuButton(track: track, nowPlaying: true),

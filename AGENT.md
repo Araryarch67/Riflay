@@ -77,7 +77,7 @@ lib/
     layout_prefs.dart          Corners, density and motion (Settings › Look & feel › Layout)
     beta_features.dart         Optional feature preferences (legacy name); switches live in their respective settings pages
     listen_together/           Listen together: one queue shared over the LAN or the internet
-    video_mode.dart            Video mode: a YouTube song's music video on Now Playing
+    video_mode.dart            Video mode: a YouTube song's music video on Now Playing (and full screen, see Conventions)
     youtube_stream.dart        A YouTube song's audio stream in one player request (yt-dlp is the fallback)
     soundcloud.dart            SoundCloud over api-v2: search, links, related tracks, a track's HLS playlist (see SoundCloud)
     soundcloud_audio_source.dart  Plays a SoundCloud track: hands mpv its HLS playlist through just_audio's loopback server
@@ -665,6 +665,7 @@ device's language when Riflay has it). The words live in `lib/l10n/app_en.arb` (
   flutter run --dart-define=RIFLAY_NO_SOUNDCLOUD_CACHE=true  # SoundCloud's client id, searches and stream playlists looked up every time
   flutter run --dart-define=RIFLAY_NO_SHARED_SIGNAL_PATH=true  # every signalPath() caller reads mpv itself
   flutter run --dart-define=RIFLAY_NO_STREAK_CACHE=true  # the listening streak counted afresh every build
+  flutter run --dart-define=RIFLAY_NO_VIDEO_ROTATE=true  # turning a phone sideways on Now Playing doesn't open the music video full screen
   flutter run --dart-define=RIFLAY_NO_MV_SEARCH=true     # a song YouTube Music pairs with no video gets none (no search for its official video)
   flutter run --dart-define=RIFLAY_NO_MV_ALIGN=true      # a music video with no map of its parts plays on the song's timeline, not lined up by their sound
   flutter run --dart-define=RIFLAY_NO_SCANNED_GAIN=true  # a song without ReplayGain tags plays unleveled, measured or not
@@ -724,6 +725,12 @@ device's language when Riflay has it). The words live in `lib/l10n/app_en.arb` (
    `Araryarch67/homebrew-riflay`; the AUR files are copied by hand. Runtime dependencies live in those files: change them all
    when the Linux build links something new.
 
+Release candidates: set `pubspec.yaml` to `1.3.0-rc1+<n>` and `lib/app_version.dart` to `1.3.0-rc1`, then tag
+`v1.3.0-rc1` (`tool/ci_version.sh` takes `vX.Y.Z-rcN`). The release is a GitHub pre-release, so it is never
+"latest": the app's update check (stable releases only) and the Scoop bucket / Homebrew tap (`package-manifests`
+is skipped) stay on the last stable version, while someone on 1.3.0-rc1 is offered 1.3.0. Packages order it before
+the release: `.deb` / `.rpm` 1.3.0~rc1 (nfpm), Arch `pkgver` 1.3.0rc1, and the Windows installer's numeric
+VersionInfo 1.3.0 (`NumericVersion`).
 The Linux build doesn't download mimalloc: `media_kit_libs_linux` fetches its source archive in CMake with no
 retry and an MD5 check, and GitHub's archive route returned 504 to CI (v1.2.18). `linux/CMakeLists.txt` copies
 `third_party/mimalloc/mimalloc-2.1.2.tar.gz` (the same archive, byte for byte) to where the plugin looks first.
@@ -761,6 +768,25 @@ Windows zip, Linux AppImage and macOS dmg, so successful platforms need not be r
   Lightweight's seek bar and the quality badge tick once a second on the same beat (about 1 frame a second while
   playing). Paused, nothing stays on the beat (`tool/cpu.sh` prints how many are): a listener that only returns
   still keeps its 60 Hz timer waking the app.
+- The music video full screen (`ui/player/video_full_view.dart`, `VideoFullView`): the round button in the corner
+  of the video on the cover (`VideoExpandButton`; over Cover: Background, `VideoBackgroundExpand`), a double tap on
+  the video, or on a computer the button beside the Song / Video switch of the expanded player and beside Like in
+  the side panel (the native video's window lies over anything drawn on the cover there). It opens on the root
+  navigator, never in the desktop page history. It shows the same player's picture uncropped
+  (`VideoPicture`, `BoxFit.contain`): no second decoder. `VideoMode.addView(full: true)` keeps the video wanted
+  while the page under it lets go of its views, and doesn't reload a background video at the cover's size. On a
+  phone it locks landscape and hides the system bars (`immersiveSticky`); closing puts back the app's declared
+  orientations (`[]`) and both bars. A tablet keeps its orientation (turning it wide swaps the phone layout and its
+  Now Playing for the desktop one). Turning a phone sideways while Now Playing shows the video opens it without the
+  lock, and upright again closes it (`VideoRotateWatcher`, off with `RIFLAY_NO_VIDEO_ROTATE`). The controls (title,
+  like, a lyrics line, Queue, close, the seek bar and transport) fade in on a tap and leave the tree 4 s after the
+  last touch, so nothing ticks over the video. The lyrics line listens to `positionUpdates()` only while shown and
+  rebuilds when the line changes. On a computer the view fills the window and keeps the controls above and below
+  the picture (Linux's GTK surface and Windows' own video window lie over anything Flutter draws); they leave the
+  tree, the pointer hides and the picture takes the whole window after 4 s without a mouse move (not while the
+  pointer is on them or Queue is open). F11, a double click or the button fills the screen (`windowFullScreen`,
+  `windowManager`); Esc leaves full screen, then the view, and closing puts the window back. Queue opens beside the
+  picture in a navigator of its own (no back button, no page history), not in the history under the view.
 - Video mode is the most a playing song can cost on a computer (a second mpv; every video frame re-rasters the
   whole window, blur included): ~1.7% of a 24-thread CPU and ~100 MB in Balanced. While another window has the
   focus the video holds its picture, and after `VideoMode.unfocusedRelease` (20 s) its player is let go; back in

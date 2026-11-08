@@ -1719,6 +1719,18 @@ abstract class AppLocalizations {
   /// **'Exit full screen'**
   String get exitFullScreen;
 
+  /// No description provided for @watchVideo.
+  ///
+  /// In en, this message translates to:
+  /// **'Watch full screen'**
+  String get watchVideo;
+
+  /// No description provided for @showLyrics.
+  ///
+  /// In en, this message translates to:
+  /// **'Show lyrics'**
+  String get showLyrics;
+
   /// No description provided for @sidePanelEmpty.
   ///
   /// In en, this message translates to:

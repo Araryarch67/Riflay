@@ -27,6 +27,7 @@ import 'more_sheet.dart';
 import 'player_common.dart' show ArtistLinks;
 import 'player_glass.dart';
 import 'player_parts.dart';
+import 'video_full_view.dart';
 
 /// The name of Now Playing's route, so a page above it can tell whether it is underneath.
 const nowPlayingRouteName = 'now-playing';
@@ -97,6 +98,8 @@ class NowPlayingPage extends StatelessWidget {
             child: Stack(
               fit: StackFit.expand,
               children: [
+                // Turned sideways with the music video showing: it opens full screen.
+                VideoRotateWatcher(track: track),
                 if (coverPage) Positioned.fill(child: FadedCover(track: track, darken: 0.65, blurStart: 0.42)),
                 // Cover: Background: a song that has a music video plays it over the cover, soft under the title and the
                 // controls (as the baked cover is), with a dark gradient to keep them readable. Songs without one keep

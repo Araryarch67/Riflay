@@ -52,6 +52,16 @@ void main() {
     expect(release.newerThan('2.0.0'), isFalse);
   });
 
+  test('a release candidate is never offered, and its stable version is offered to it', () {
+    // v1.3.0-rc1 is published as a pre-release, with an rc tag: not a stable release.
+    final rc = {...releaseJson(), 'tag_name': 'v1.3.0-rc1', 'prerelease': true};
+    expect(() => AppRelease.parse(rc), throwsFormatException);
+    expect(() => AppRelease.parse({...rc, 'prerelease': false}), throwsFormatException);
+    // Someone on 1.3.0-rc1: the last stable 1.2.19 is older; 1.3.0 is newer.
+    expect(AppRelease('1.2.19', Uri(), const []).newerThan('1.3.0-rc1'), isFalse);
+    expect(AppRelease('1.3.0', Uri(), const []).newerThan('1.3.0-rc1'), isTrue);
+  });
+
   test('ABI selection follows Android preference and falls back to universal', () {
     final release = AppRelease.parse(releaseJson());
     expect(release.androidAsset(['arm64-v8a', 'armeabi-v7a'])!.name, 'Riflay-android-arm64.apk');

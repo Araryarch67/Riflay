@@ -879,6 +879,12 @@ class AppLocalizationsId extends AppLocalizations {
   String get exitFullScreen => 'Keluar dari layar penuh';
 
   @override
+  String get watchVideo => 'Tonton layar penuh';
+
+  @override
+  String get showLyrics => 'Tampilkan lirik';
+
+  @override
   String get sidePanelEmpty => 'Putar sesuatu, nanti muncul di sini.';
 
   @override

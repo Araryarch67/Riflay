@@ -382,17 +382,21 @@ class VideoMode extends ChangeNotifier with WidgetsBindingObserver {
   static Duration get _holdWithoutView =>
       Host.isWindows && instance._native != null ? const Duration(minutes: 1) : const Duration(seconds: 2);
 
+  /// Full-screen views ([VideoPicture] in the landscape player): they show whatever is playing, a background
+  /// video too, without asking for it again at the cover's size (a reload would show the cover for seconds).
+  int _fullViews = 0;
+
   /// A view that shows the video came on screen (or went away). The video is
-  /// only fetched and decoded while one is.
-  void addView() {
-    _views++;
+  /// only fetched and decoded while one is. [full]: the full-screen player.
+  void addView({bool full = false}) {
+    full ? _fullViews++ : _views++;
     _release?.cancel();
     // Views come on screen while the tree builds: start the video right after.
     scheduleMicrotask(_sync);
   }
 
-  void removeView() {
-    _views--;
+  void removeView({bool full = false}) {
+    full ? _fullViews-- : _views--;
     // A page changing, or the cover moving between layouts, briefly has no view: keep the video through that.
     _release?.cancel();
     _release = Timer(_holdWithoutView, _sync);
@@ -556,7 +560,7 @@ vec4 hook() {
     return null;
   }
 
-  bool get _foreground => _on && _views > 0;
+  bool get _foreground => _on && (_views > 0 || _fullViews > 0);
 
   void _changed() {
     final track = _c?.currentTrack;
@@ -575,7 +579,7 @@ vec4 hook() {
     // A background video is small: the Song / Video switch asks for the full size again.
     if (_opening != null ||
         _loaded != want.videoId ||
-        _foreground && !_loadedForeground ||
+        _on && _views > 0 && !_loadedForeground ||
         Host.isLinux && !_foreground && _native != null) {
       _start(want, foreground: _foreground);
     }
