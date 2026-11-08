@@ -126,6 +126,11 @@ test/                          Unit and widget tests
 
 ## First start on a computer
 
+- `services/app_updates.dart` checks GitHub's latest stable release: on request (Settings › About,
+  `AppUpdateTile`), and once a start (`AppUpdates.checkAtStart`, from `RiflayApp`): 10 s after the window is up, one
+  quiet request; a newer release shows `showUpdatePopup` (the version, the tile that gets it, Not now), the latest
+  version or no connection show nothing. Not in widget tests, `tool/cpu.sh` or `tool/memory_app.sh`;
+  `RIFLAY_NO_UPDATE_CHECK` turns the check at start off.
 - `services/device_setup.dart` reads the computer (processor name, threads, memory, battery: `/proc` and
   `/sys/class/power_supply` on Linux, `GlobalMemoryStatusEx` / `GetSystemPowerStatus` and the registry on Windows,
   `sysctl` / `pmset` on macOS) and recommends a `PerformanceMode` by kind of computer: Lightweight under 8 GB or 8
@@ -610,6 +615,7 @@ device's language when Riflay has it). The words live in `lib/l10n/app_en.arb` (
   flutter run --dart-define=RIFLAY_BEAT_WHILE_PAUSED=true  # the seek bar's position stays on UiBeat while paused
   flutter run --dart-define=RIFLAY_MOVE_UNFOCUSED=true  # decorations, visualizer and marquees keep moving while another window has the focus
   flutter run --dart-define=RIFLAY_FULL_BALANCED=true  # Balanced on a computer moves at 20 fps, not 5 (visualizer 10)
+  flutter run --dart-define=RIFLAY_NO_UPDATE_CHECK=true  # no update check at start (Settings › About still checks)
   flutter run --dart-define=RIFLAY_NO_PAGE_OUT=true  # Linux keeps the app resident behind other windows (no MADV_PAGEOUT)
   flutter run --dart-define=RIFLAY_ASTATS_VISUALIZER=true  # the visualizer measures its bands with astats (~3x the CPU), not aspectralstats
   flutter run -d chrome --dart-define=RIFLAY_NO_WEB_AUDIO=true  # web: songs play straight from <audio>, no effects or visualizer

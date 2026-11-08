@@ -32,7 +32,7 @@ ffmpeg -loglevel error -y -f lavfi -i 'testsrc2=s=1920x1080:r=30:d=120' -f lavfi
   "$scratch/songs/a0_video.mp4"
 
 build=${RIFLAY_MEM_BUILD:-profile}
-flutter build linux --$build -t tool/memory_app.dart >/dev/null
+flutter build linux --$build --dart-define=RIFLAY_NO_UPDATE_CHECK=true -t tool/memory_app.dart >/dev/null
 weston --backend=headless --renderer=gl --socket=om-mem-app --width=2560 --height=1600 >/dev/null 2>&1 &
 weston=$!
 sleep 1

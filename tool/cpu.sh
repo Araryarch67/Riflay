@@ -23,7 +23,7 @@ for i in 1 2 3; do
     -metadata artist="Some Artist With A Long Name" -metadata album="An Album $i" "$scratch/songs/song$i.flac"
 done
 
-flutter build linux --profile -t tool/cpu_app.dart >/dev/null
+flutter build linux --profile --dart-define=RIFLAY_NO_UPDATE_CHECK=true -t tool/cpu_app.dart >/dev/null
 weston --backend=headless --renderer=gl --socket=om-cpu --width=${RIFLAY_CPU_WIDTH:-2560} --height=${RIFLAY_CPU_HEIGHT:-1600} >/dev/null 2>&1 &
 weston=$!
 sleep 1
