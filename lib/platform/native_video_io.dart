@@ -5,6 +5,7 @@ import 'dart:isolate';
 
 import 'package:ffi/ffi.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:path/path.dart' as p;
 
 import '../services/video_engine.dart';
@@ -46,7 +47,9 @@ class _Mpv {
       waitEvent = l.lookupFunction<_WaitC, _WaitD>('mpv_wait_event'),
       destroy = l.lookupFunction<_DestroyC, _DestroyD>('mpv_terminate_destroy');
 
-  static String get path => p.join(p.dirname(Platform.resolvedExecutable), _dll);
+  // Use the same SONAME as the Linux runner, so its render API receives a
+  // handle from the very same loaded library (including bundled builds).
+  static String get path => Platform.isLinux ? 'libmpv.so.2' : p.join(p.dirname(Platform.resolvedExecutable), _dll);
   static _Mpv? _instance;
   static _Mpv get instance => _instance ??= _Mpv(DynamicLibrary.open(path));
 
@@ -62,8 +65,8 @@ class _Mpv {
   final _DestroyD destroy;
 }
 
-/// The music video in a window of its own on Windows (see native_video.dart): mpv draws into [window] with
-/// Direct3D 11 and decodes on the graphics card. Muted, no input of its own; Video mode drives it.
+/// Muted music video in a Windows child window or Linux GTK OpenGL surface.
+/// Video mode drives it; native frames do not invalidate a Flutter texture.
 class NativeVideoPlayer implements VideoEngine {
   NativeVideoPlayer({required int window, required String hwdec, int? maxFps, required bool foreground}) {
     final mpv = _mpv;
@@ -87,9 +90,14 @@ class NativeVideoPlayer implements VideoEngine {
     option('idle', 'yes');
     option('keep-open', 'yes');
     option('force-window', 'no');
-    option('wid', '$window');
-    option('vo', 'gpu');
-    option('gpu-context', 'd3d11');
+    if (Platform.isLinux) {
+      option('vo', 'libmpv');
+      option('video-timing-offset', '0');
+    } else {
+      option('wid', '$window');
+      option('vo', 'gpu');
+      option('gpu-context', 'd3d11');
+    }
     option('hwdec', hwdec);
     option('keepaspect', 'yes');
     // A music video beside the page, not a film: plain bilinear scaling (no extra scaler passes or their lookup
@@ -124,8 +132,9 @@ class NativeVideoPlayer implements VideoEngine {
     }
   }
 
-  /// Whether this build carries the video libmpv (Windows; the build fetches it, see windows/CMakeLists.txt).
+  /// Linux links libmpv in the runner; Windows bundles a separate video DLL.
   static bool get available {
+    if (Platform.isLinux) return true;
     if (!Platform.isWindows) return false;
     return _available ??= File(_Mpv.path).existsSync();
   }
@@ -135,6 +144,18 @@ class NativeVideoPlayer implements VideoEngine {
   static _Mpv get _mpv => _Mpv.instance;
   Pointer<Void>? _h;
   bool _playing = false;
+  bool _attached = false;
+
+  static const _surface = MethodChannel('riflay/video_window');
+
+  /// The Linux runner owns the GL context; attach on its GTK thread before
+  /// opening media. Failure lets Video mode use the texture backend instead.
+  Future<void> attach() async {
+    if (Platform.isLinux) {
+      await _surface.invokeMethod<void>('attach', _h!.address);
+      _attached = true;
+    }
+  }
 
   T? _read<T>(String name, int format, T Function(Pointer<Void>) read, int size) {
     final h = _h;
@@ -183,7 +204,15 @@ class NativeVideoPlayer implements VideoEngine {
   /// Starts [url] paused at [start].
   Future<void> open(String url, {Duration start = Duration.zero}) async {
     _playing = false;
-    _command(['loadfile', url, 'replace', 'start=${_seconds(start)},pause=yes']);
+    if (Platform.isWindows) {
+      _command(['loadfile', url, 'replace', 'start=${_seconds(start)},pause=yes']);
+      return;
+    }
+    // mpv 0.38 inserted an index argument before loadfile's per-file options.
+    // Properties avoid depending on the Linux system mpv's command signature.
+    _set('pause', 'yes');
+    _set('start', _seconds(start));
+    _command(['loadfile', url, 'replace']);
   }
 
   /// Waits until the first picture is out (its size is known and it has a position); false when it never came.
@@ -256,6 +285,12 @@ class NativeVideoPlayer implements VideoEngine {
     final h = _h;
     if (h == null) return;
     _h = null;
+    // Free the render context with its GL context current before destroying
+    // mpv. A handle in the request prevents an old player detaching a new one.
+    if (_attached) {
+      await _surface.invokeMethod<void>('detach', h.address);
+      _attached = false;
+    }
     final address = h.address;
     final path = _Mpv.path;
     await Isolate.run(() => _Mpv(DynamicLibrary.open(path)).destroy(Pointer<Void>.fromAddress(address)));

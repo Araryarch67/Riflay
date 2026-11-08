@@ -51,6 +51,29 @@ void main() {
     expect(find.text('Download update'), findsNothing);
   });
 
+  testWidgets('the popup from the check at start offers the found release, and Not now closes it', (tester) async {
+    final updates = FakeUpdates();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Builder(
+          builder: (context) => TextButton(
+            onPressed: () => showUpdatePopup(context, updates, AppRelease.parse(releaseJson())),
+            child: const Text('open'),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+    expect(find.text('Version 1.10.0 is available'), findsOneWidget);
+    expect(find.text('Download update'), findsOneWidget, reason: 'no second check');
+    expect(updates.checks, 0);
+    await tester.tap(find.text('Not now'));
+    await tester.pumpAndSettle();
+    expect(find.byType(AlertDialog), findsNothing);
+    expect(updates.downloads, 0);
+  });
+
   testWidgets('updates happen only on tap: check, download, then system installer', (tester) async {
     final updates = FakeUpdates();
     await tester.pumpWidget(

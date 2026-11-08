@@ -582,7 +582,7 @@
   "highlightLyricLine": "Sorot baris yang sedang dinyanyikan",
   "highlightLyricLineSubtitle": "Panel kaca buram gelap yang tipis di belakang seluruh baris",
   "lockScreenLyrics": "Lirik di layar kunci",
-  "lockScreenLyricsSubtitle": "Baris yang sedang dinyanyikan menggantikan nama artis di notifikasi, layar kunci, dan layar mobil",
+  "lockScreenLyricsSubtitle": "Baris yang sedang dinyanyikan menggantikan nama artis di notifikasi, layar kunci, dan layar mobil. Jika Pelafalan di lirik aktif, baris beraksara lain juga menampilkan cara bacanya",
   "visualizer": "Visualizer",
   "visualizerHint": "Bentuk yang bergerak mengikuti musik",
   "pages": "Halaman",

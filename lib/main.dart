@@ -40,6 +40,7 @@ import 'services/system_tray.dart';
 import 'services/taskbar_buttons.dart';
 import 'services/window_focus.dart';
 import 'services/wrap_notifications.dart';
+import 'ui/widgets/app_update_tile.dart' show showUpdatePopup;
 import 'ui/home_shell.dart';
 import 'ui/player_panels.dart' show MiniPlayerWindow, miniPlayer, windowFullScreen;
 import 'ui/theme.dart';
@@ -227,6 +228,7 @@ class _RiflayAppState extends State<RiflayApp> with WidgetsBindingObserver {
   final _appearance = Appearance.instance;
   final _layout = LayoutPrefs.instance;
   final _messenger = GlobalKey<ScaffoldMessengerState>();
+  final _navigator = GlobalKey<NavigatorState>();
 
   /// The music video moved to another height to keep up with the connection: said once, briefly.
   void _videoQuality() {
@@ -256,6 +258,13 @@ class _RiflayAppState extends State<RiflayApp> with WidgetsBindingObserver {
     _syncTint();
     VideoMode.instance.qualityChanged.addListener(_videoQuality);
     MemoryTrim.schedule();
+    unawaited(
+      AppUpdates.checkAtStart((updates, release) {
+        final context = _navigator.currentContext;
+        if (!mounted || context == null) return updates.dispose();
+        unawaited(showUpdatePopup(context, updates, release));
+      }),
+    );
   }
 
   @override
@@ -279,6 +288,7 @@ class _RiflayAppState extends State<RiflayApp> with WidgetsBindingObserver {
       MemoryTrim.hidden();
     } else if (state == AppLifecycleState.inactive || state == AppLifecycleState.resumed) {
       MemoryTrim.shown();
+      MemoryTrim.focus(state == AppLifecycleState.resumed);
     }
   }
 
@@ -380,6 +390,7 @@ class _RiflayAppState extends State<RiflayApp> with WidgetsBindingObserver {
       controller: widget.controller,
       child: MaterialApp(
         scaffoldMessengerKey: _messenger,
+        navigatorKey: _navigator,
         // The playing song on the web, where this is the tab's title (see `network.dart`).
         title: pageTitle,
         debugShowCheckedModeBanner: false,

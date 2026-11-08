@@ -1892,7 +1892,7 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get lockScreenLyricsSubtitle =>
-      'Baris yang sedang dinyanyikan menggantikan nama artis di notifikasi, layar kunci, dan layar mobil';
+      'Baris yang sedang dinyanyikan menggantikan nama artis di notifikasi, layar kunci, dan layar mobil. Jika Pelafalan di lirik aktif, baris beraksara lain juga menampilkan cara bacanya';
 
   @override
   String get visualizer => 'Visualizer';

@@ -9,6 +9,8 @@ import 'package:riflay/services/layout_prefs.dart';
 import 'package:riflay/services/lyrics.dart';
 import 'package:riflay/services/player_controller.dart';
 import 'package:riflay/services/player_presets.dart';
+import 'package:riflay/services/video_mode.dart';
+import 'package:riflay/ui/debug_switches.dart';
 import 'package:riflay/ui/pages/collection_page.dart';
 import 'package:riflay/ui/pages/layout_settings.dart';
 import 'package:riflay/ui/pages/lyrics_page.dart';
@@ -364,34 +366,41 @@ void main() {
   });
 
   group('side panel', () {
-    for (final cover in PlayerCover.values) {
-      for (final header in PlayerHeader.values) {
-        testWidgets('$cover and $header fit a 340 px panel', (tester) async {
-          p
-            ..playerCover = cover
-            ..playerHeader = header;
-          final c = await _show(
-            tester,
-            Scaffold(
-              body: Align(
-                alignment: Alignment.centerRight,
-                child: SizedBox(width: 340, child: NowPlayingSidePanel(onClose: () {})),
+    for (final textures in [false, true]) {
+      for (final cover in PlayerCover.values) {
+        for (final header in PlayerHeader.values) {
+          testWidgets('$cover and $header fit a 340 px panel (textures: $textures)', (tester) async {
+            final previous = DebugSwitches.noNativeVideo;
+            DebugSwitches.noNativeVideo = textures;
+            addTearDown(() => DebugSwitches.noNativeVideo = previous);
+            p
+              ..playerCover = cover
+              ..playerHeader = header;
+            final c = await _show(
+              tester,
+              Scaffold(
+                body: Align(
+                  alignment: Alignment.centerRight,
+                  child: SizedBox(width: 340, child: NowPlayingSidePanel(onClose: () {})),
+                ),
               ),
-            ),
-            const Size(1280, 800),
-          );
-          expect(_real, isEmpty);
-          final art = tester.getRect(
-            cover == PlayerCover.background ? find.byType(FadedCover) : find.byType(Artwork).first,
-          );
-          // Background: the picture across the panel's top, a little taller than wide; else the card in the margins.
-          expect(art.width, cover == PlayerCover.background ? 340 : 340 - 32);
-          expect(art.height, closeTo(cover == PlayerCover.background ? 340 / 0.82 : art.width, 0.5));
-          // No header row: the bar's Now playing view button shows and hides the panel.
-          expect(find.text('Now Playing'), findsNothing);
-          expect(find.byTooltip('Close'), findsNothing);
-          await _close(tester, c);
-        });
+              const Size(1280, 800),
+            );
+            expect(_real, isEmpty);
+            final art = tester.getRect(
+              cover == PlayerCover.background ? find.byType(FadedCover) : find.byType(Artwork).first,
+            );
+            // Native video needs its title below a square surface. Texture video
+            // keeps the taller hero with text above the image.
+            expect(art.width, cover == PlayerCover.background ? 340 : 340 - 32);
+            final heroHeight = VideoMode.native ? 340.0 : 340 / 0.82;
+            expect(art.height, closeTo(cover == PlayerCover.background ? heroHeight : art.width, 0.5));
+            // No header row: the bar's Now playing view button shows and hides the panel.
+            expect(find.text('Now Playing'), findsNothing);
+            expect(find.byTooltip('Close'), findsNothing);
+            await _close(tester, c);
+          });
+        }
       }
     }
   });

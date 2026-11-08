@@ -575,7 +575,7 @@
   "highlightLyricLine": "歌ってる行をハイライト",
   "highlightLyricLineSubtitle": "行全体の後ろに、うっすら暗いすりガラスを敷くよ",
   "lockScreenLyrics": "ロック画面に歌詞",
-  "lockScreenLyricsSubtitle": "通知やロック画面、車のディスプレイで、アーティスト名の代わりに今歌ってる行を出すよ",
+  "lockScreenLyricsSubtitle": "通知やロック画面、車のディスプレイで、アーティスト名の代わりに今歌ってる行を出すよ。歌詞の「読み方」がオンなら、ほかの文字の行には読み方も付くよ",
   "visualizer": "ビジュアライザー",
   "visualizerHint": "音楽に合わせて動く図形",
   "pages": "ページ",

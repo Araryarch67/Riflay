@@ -1861,7 +1861,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get lockScreenLyrics => 'ロック画面に歌詞';
 
   @override
-  String get lockScreenLyricsSubtitle => '通知やロック画面、車のディスプレイで、アーティスト名の代わりに今歌ってる行を出すよ';
+  String get lockScreenLyricsSubtitle => '通知やロック画面、車のディスプレイで、アーティスト名の代わりに今歌ってる行を出すよ。歌詞の「読み方」がオンなら、ほかの文字の行には読み方も付くよ';
 
   @override
   String get visualizer => 'ビジュアライザー';

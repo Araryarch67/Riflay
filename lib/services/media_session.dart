@@ -14,6 +14,7 @@ import '../models/track.dart';
 import '../platform/host.dart';
 import '../platform/network.dart';
 import 'lyrics.dart';
+import 'lyrics_translation.dart';
 import 'metadata.dart';
 import 'player_controller.dart';
 
@@ -35,6 +36,7 @@ class MediaSession extends BaseAudioHandler with SeekHandler {
       p.positionDiscontinuityStream.listen((_) => _followLyrics()),
     ]);
     showLyrics.addListener(_onShowLyrics);
+    LyricsTranslation.romanize.addListener(_loadPronunciation);
     _c.addListener(_onController);
     _publishItem();
     _publishState();
@@ -81,6 +83,9 @@ class MediaSession extends BaseAudioHandler with SeekHandler {
   MediaItem? _item;
   Lyrics? _lyrics;
   String? _lyricsFor;
+
+  /// Each line's pronunciation, fetched once per song while the lyrics page's Pronunciation is on.
+  List<LineExtras>? _extras;
   Timer? _nextLine;
   String? _shownLine;
   String? _shownId;
@@ -137,6 +142,7 @@ class MediaSession extends BaseAudioHandler with SeekHandler {
   Future<void> _loadLyrics() async {
     final t = _c.currentTrack;
     _lyrics = null;
+    _extras = null;
     _lyricsFor = t?.id;
     _followLyrics();
     if (t == null || !lyricsSupported || !showLyrics.value) return;
@@ -145,8 +151,30 @@ class MediaSession extends BaseAudioHandler with SeekHandler {
       if (_lyricsFor != t.id || !l.synced) return;
       _lyrics = l;
       _followLyrics();
+      _loadPronunciation();
     } catch (_) {
       // No lyrics site reachable: the artist stays.
+    }
+  }
+
+  /// How the song's lines in another script are read (kanji, hangul, Cyrillic…), for the line shown. One request
+  /// per song, the same one the lyrics page makes (and caches); the line ticks over without asking again.
+  Future<void> _loadPronunciation() async {
+    final l = _lyrics, id = _lyricsFor;
+    if (!LyricsTranslation.romanize.value) {
+      _extras = null;
+      return _publishLine();
+    }
+    if (l == null || _extras != null) return;
+    final lines = [for (final line in l.lines) line.text];
+    if (!lines.any(LyricsTranslation.hasNonLatin)) return;
+    try {
+      final extras = await LyricsTranslation.of(lines);
+      if (_lyricsFor != id || !identical(_lyrics, l) || !LyricsTranslation.romanize.value) return;
+      _extras = extras;
+      _publishLine();
+    } catch (_) {
+      // Unreachable: the line shows without it.
     }
   }
 
@@ -172,22 +200,28 @@ class MediaSession extends BaseAudioHandler with SeekHandler {
     if (item == null || t == null) return;
     final line = l == null || !showLyrics.value || !lyricsSupported
         ? null
-        : lineFor(l, _c.position - LyricsTiming.of(t).value);
+        : lineFor(l, _c.position - LyricsTiming.of(t).value, extras: _extras);
     if (!force && line == _shownLine && mediaItem.value?.id == item.id) return;
     _shownLine = line;
     mediaItem.add(line == null ? item : item.copyWith(artist: line, album: item.artist));
   }
 
   /// The words of the line sung at [position], or null between lines (an empty or ♪ line, or before the first).
-  /// A little early, as the lyrics page lights it.
+  /// A little early, as the lyrics page lights it. A line in another script is followed by its pronunciation from
+  /// [extras] (one per line of [lyrics]): "今日もまた始まる — kyō mo mata hajimaru", one field being all a phone's
+  /// notification and lock screen show under the title.
   @visibleForTesting
-  static String? lineFor(Lyrics lyrics, Duration position) {
+  static String? lineFor(Lyrics lyrics, Duration position, {List<LineExtras>? extras}) {
     final i = lyrics.lineAt(position + _early);
     if (i < 0) return null;
     final line = lyrics.lines[i];
     if (line.end case final end? when position + _early >= end) return null;
     final text = line.text.trim();
-    return text.isEmpty || RegExp(r'^[♪♫\s]+$').hasMatch(text) ? null : text;
+    if (text.isEmpty || RegExp(r'^[♪♫\s]+$').hasMatch(text)) return null;
+    final said = extras != null && i < extras.length && LyricsTranslation.hasNonLatin(text)
+        ? extras[i].romanized
+        : null;
+    return said == null ? text : '$text — $said';
   }
 
   /// When the shown line next changes after [position]: the next line's start, or this one's end.
