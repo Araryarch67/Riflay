@@ -1904,7 +1904,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get lockScreenLyricsSubtitle =>
-      'The line being sung takes the artist\'s place in the notification, on the lock screen and on a car\'s display';
+      'The line being sung takes the artist\'s place in the notification, on the lock screen and on a car\'s display. With Pronunciation on in the lyrics, a line in another script shows how it\'s read too';
 
   @override
   String get visualizer => 'Visualizer';
