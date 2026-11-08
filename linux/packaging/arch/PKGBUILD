@@ -31,6 +31,7 @@ package() {
   install -d "$pkgdir/opt" "$pkgdir/usr/bin"
   cp -a Riflay "$pkgdir/opt/riflay"
   ln -s /opt/riflay/riflay "$pkgdir/usr/bin/riflay"
+  ln -s /opt/riflay/riflay-cli "$pkgdir/usr/bin/riflay-cli"
   install -Dm644 "riflay-$pkgver.desktop" "$pkgdir/usr/share/applications/riflay.desktop"
   install -Dm644 "riflay-$pkgver.png" "$pkgdir/usr/share/icons/hicolor/256x256/apps/riflay.png"
   install -Dm644 "riflay-$pkgver.svg" "$pkgdir/usr/share/icons/hicolor/scalable/apps/riflay.svg"

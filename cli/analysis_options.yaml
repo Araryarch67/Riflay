@@ -1,0 +1,8 @@
+# This package builds without Flutter or any third-party dependencies.
+formatter:
+  page_width: 120
+linter:
+  rules:
+    - curly_braces_in_flow_control_structures
+    - avoid_relative_lib_imports
+    - prefer_final_locals

@@ -372,6 +372,15 @@ class PlayerController extends ChangeNotifier {
 
   List<Track> get queue => player.sequenceState.effectiveSequence.map((s) => s.tag as Track).toList();
 
+  /// Current occurrence in play order, even when a track is queued more than once.
+  int? get queueIndex {
+    final state = player.sequenceState;
+    final source = state.currentSource;
+    if (source == null) return null;
+    final index = state.effectiveSequence.indexOf(source);
+    return index < 0 ? null : index;
+  }
+
   /// Whether anything is queued (without copying the queue, as [queue] does).
   bool get hasQueue => player.sequenceState.sequence.isNotEmpty;
 
@@ -1602,6 +1611,12 @@ class PlayerController extends ChangeNotifier {
   Future<void> playQueueItem(Track track) async {
     final index = player.sequenceState.sequence.indexWhere((s) => (s.tag as Track).id == track.id);
     if (index < 0) return;
+    await playQueueIndex(index);
+  }
+
+  /// Plays the exact queue occurrence, including a repeated copy of the same track.
+  Future<void> playQueueIndex(int index) async {
+    RangeError.checkValidIndex(index, player.sequenceState.sequence);
     await player.seek(Duration.zero, index: index);
     unawaited(_play(restart: true));
   }
@@ -1660,8 +1675,15 @@ class PlayerController extends ChangeNotifier {
     if (at == null) return;
     final i = at + 1 + index;
     if (i >= sequence.length) return;
-    final track = sequence[i].tag as Track;
-    await player.removeAudioSourceAt(i);
+    await removeQueueIndex(i);
+  }
+
+  /// Removes an absolute queue index, as returned by the CLI's queue listing.
+  Future<void> removeQueueIndex(int index) async {
+    final sequence = player.sequenceState.sequence;
+    RangeError.checkValidIndex(index, sequence);
+    final track = sequence[index].tag as Track;
+    await player.removeAudioSourceAt(index);
     // Out of the play-in-order list too, so turning shuffle off doesn't bring it back.
     final inOrder = _ordered.indexWhere((t) => t.id == track.id);
     if (inOrder >= 0) _ordered = [..._ordered]..removeAt(inOrder);

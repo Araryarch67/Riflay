@@ -27,6 +27,9 @@ contents:
   - src: /opt/riflay/riflay
     dst: /usr/bin/riflay
     type: symlink
+  - src: /opt/riflay/riflay-cli
+    dst: /usr/bin/riflay-cli
+    type: symlink
   - src: linux/packaging/riflay.desktop
     dst: /usr/share/applications/riflay.desktop
   - src: linux/runner/riflay.png

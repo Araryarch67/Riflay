@@ -22,6 +22,7 @@ import 'services/device_setup.dart';
 import 'services/app_updates.dart';
 import 'platform/web_audio.dart';
 import 'services/incoming_links.dart';
+import 'platform/cli_server.dart';
 import 'services/appearance.dart';
 import 'services/language.dart';
 import 'services/video_mode.dart';
@@ -169,6 +170,7 @@ Future<void> _startServices(PlayerController controller) async {
   await Future.wait(
     [
       MediaSession.start(controller),
+      DesktopCli.start(controller),
       // Windows: Previous, Play / Pause and Next on the taskbar thumbnail.
       Future(() => TaskbarButtons.start(controller)),
       // Computers: the tray icon, and closing the window hides Riflay there (Settings › Performance & power).
@@ -271,6 +273,7 @@ class _RiflayAppState extends State<RiflayApp> with WidgetsBindingObserver {
 
   @override
   void dispose() {
+    unawaited(DesktopCli.close());
     WidgetsBinding.instance.removeObserver(this);
     _appearance.removeListener(_restyle);
     _layout.removeListener(_restyle);

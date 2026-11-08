@@ -105,6 +105,7 @@ flutter run -d linux          # or: windows, macos, android, ios
 
 ## More
 
+- [Riflay CLI](docs/cli.md): control the desktop player from a terminal or AI agent, with JSON output.
 - [Audio and platform notes](docs/platforms.md): YouTube Music sign-in, every audio setting, and what works on which system.
 - [Riflay in a browser](docs/web.md): the web version and its proxy.
 - [Contributing](CONTRIBUTING.md) and [AGENT.md](AGENT.md) (how the code is organized and tested).

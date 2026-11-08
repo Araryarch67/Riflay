@@ -199,6 +199,12 @@ jobs:
       - name: Build
         shell: bash
         run: flutter build windows --release $BUILD_ARGS
+      - name: Build standalone CLI
+        shell: bash
+        working-directory: cli
+        run: |
+          dart pub get
+          dart compile exe bin/riflay_cli.dart -o ../build/windows/x64/runner/Release/riflay-cli.exe
       - name: Visual C++ runtime next to the exe
         # So it starts on PCs without the redistributable installed.
         shell: pwsh
@@ -244,6 +250,11 @@ jobs:
         run: echo "BUILD_ARGS=$(tool/ci_version.sh)" >> "$GITHUB_ENV"
       - name: Build
         run: flutter build linux --release $BUILD_ARGS
+      - name: Build standalone CLI
+        working-directory: cli
+        run: |
+          dart pub get
+          dart compile exe bin/riflay_cli.dart -o ../build/linux/x64/release/bundle/riflay-cli
       - name: Archive
         run: |
           mkdir -p dist
@@ -317,6 +328,11 @@ jobs:
           flutter test integration_test/zz_ffmpeg_download_test.dart -d macos
       - name: Build
         run: flutter build macos --release $BUILD_ARGS
+      - name: Build standalone CLI
+        working-directory: cli
+        run: |
+          dart pub get
+          dart compile exe bin/riflay_cli.dart -o ../build/macos/Build/Products/Release/Riflay.app/Contents/MacOS/riflay-cli
       - name: .dmg and .zip
         run: |
           app=build/macos/Build/Products/Release/Riflay.app

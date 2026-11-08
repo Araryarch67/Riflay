@@ -3,6 +3,7 @@
     "description": "Music player for your own music and YouTube Music, with hi-fi audio",
     "homepage": "https://github.com/Araryarch67/Riflay",
     "license": "AGPL-3.0-only",
+    "bin": "riflay-cli.exe",
     "notes": "Your library, settings and sign-ins are kept in %APPDATA%\\dev.riflay\\riflay, so updating or uninstalling keeps them.",
     "architecture": {
         "64bit": {
