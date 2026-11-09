@@ -963,7 +963,9 @@ Windows zip, Linux AppImage and macOS dmg, so successful platforms need not be r
   visualizer measured 24 bands over 1024-point FFTs read 25 times a second. It now measures 12 bands over 4096
   points (`VisualizerSpectrum.frugalBands`, the bars in between drawn from their neighbours, the dB 6.02 up for
   the longer window), read 10 times a second: ffmpeg -benchmark 19.0 -> 5.9 ms per second of music. Kyapi, Home in
-  front: peak 0.41 -> ~0.31% (mpv's `core` thread 40-80 -> 20 ms per 2 s); with the video, private ~265 -> ~212 MiB.
+  front: peak 0.41 -> ~0.31% (mpv's `core` thread 40-80 -> 20 ms per 2 s). Private memory with the video stayed
+  ~265 MiB (one run showed ~212; two more did not). Pages opening instantly instead of in 160 ms changed their peaks
+  little (lyrics 0.68 vs 0.75%): the cost is building the page, not its slide.
 
 - Opening the lyrics page (`RIFLAY_CPU_ENV='RIFLAY_CPU_SPIKE=lyrics' tool/cpu.sh`: CPU and frames every 100 ms,
   each thread, `RIFLAY_CPU_PROFILE=true` the Dart profile, `RIFLAY_CPU_STACKS=true` in a debug build who asks for
