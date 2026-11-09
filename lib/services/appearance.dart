@@ -861,6 +861,14 @@ class Appearance extends ChangeNotifier {
   /// The colours of the song now playing (null: nothing plays, or it has no artwork). With the Dynamic
   /// theme the palette eases to them over about 600 ms, in a dozen steps; with reduced motion it jumps.
   void setCoverColors(CoverColors? c) {
+    // Nothing playing (as at launch) or no artwork: the last song's colours stay, rather than the plain grey.
+    c ??= _lastCover;
+    if (c != null && c != _lastCover) {
+      _lastCover = c;
+      SharedPreferences.getInstance()
+          .then((p) => p.setString(_lastCoverKey, '${c!.base.toARGB32()},${c.accent.toARGB32()}'))
+          .ignore();
+    }
     if (c == _dynTarget) return;
     if (theme != ThemeChoice.dynamic) {
       _dynTarget = c;
@@ -878,6 +886,10 @@ class Appearance extends ChangeNotifier {
     _dynFrom = shown;
     _dynFade.start();
   }
+
+  /// The last song's cover colours, kept across launches ([_lastCoverKey]): the Dynamic theme opens in them.
+  CoverColors? _lastCover;
+  static const _lastCoverKey = 'appearance.lastCover';
 
   /// The colours the Dynamic theme is heading for.
   CoverColors? get coverColorsNow => _dynTarget;
@@ -1033,6 +1045,11 @@ class Appearance extends ChangeNotifier {
       await BetaFeatures.instance.load();
       final raw = (await SharedPreferences.getInstance()).getString(_key);
       matugenPath = (await SharedPreferences.getInstance()).getString('appearance.matugenPath');
+      final last = (await SharedPreferences.getInstance()).getString(_lastCoverKey)?.split(',');
+      if (last != null && last.length == 2) {
+        final base = int.tryParse(last[0]), accent = int.tryParse(last[1]);
+        if (base != null && accent != null) _dynTarget = _lastCover = CoverColors(Color(base), Color(accent));
+      }
       if (raw == null) return;
       final j = jsonDecode(raw) as Map<String, dynamic>;
       theme = ThemeChoice.values.asNameMap()[j['theme']] ?? ThemeChoice.dynamic;

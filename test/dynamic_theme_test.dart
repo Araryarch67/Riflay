@@ -254,4 +254,24 @@ void main() {
       await a.reset();
     });
   });
+
+  group('last cover colours', () {
+    test('a song\'s colours are kept for the next launch and while nothing plays', () async {
+      const pink = CoverColors(Color(0xFFFF6FAE), Color(0xFFB0004F));
+      SharedPreferences.setMockInitialValues({});
+      final a = Appearance.instance;
+      await a.setTheme(ThemeChoice.dynamic);
+      a.setCoverColors(pink);
+      a.setCoverColors(null);
+      expect(a.coverColorsNow, pink);
+      await pumpEventQueue();
+      final saved = (await SharedPreferences.getInstance()).getString('appearance.lastCover');
+      expect(saved, '${pink.base.toARGB32()},${pink.accent.toARGB32()}');
+
+      SharedPreferences.setMockInitialValues({'appearance.lastCover': saved!});
+      await a.load();
+      expect(a.coverColorsNow, pink);
+      await a.reset();
+    });
+  });
 }
