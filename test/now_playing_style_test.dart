@@ -534,6 +534,20 @@ void main() {
     await _close(tester, c);
   });
 
+  testWidgets('a phone held sideways: no Cover: Background behind the page, and a one-line Playing from', (
+    tester,
+  ) async {
+    await tester.runAsync(() => PlayerPreset.liquidStacked.apply(p));
+    // A 20:9 phone turned sideways, in logical pixels.
+    final c = await _show(tester, const NowPlayingPage(), const Size(817, 375));
+    expect(find.byType(FadedCover), findsNothing, reason: 'the cover (or its video) sits beside the controls instead');
+    final label = find.text('PLAYING FROM');
+    expect(label, findsOneWidget);
+    expect(tester.getSize(label).height, lessThan(24), reason: 'one line, not a word a line');
+    expect(tester.takeException(), isNull);
+    await _close(tester, c);
+  });
+
   testWidgets('normal Stacked and Kawaii keep their original player surfaces', (tester) async {
     for (final preset in [PlayerPreset.stacked, PlayerPreset.kawaii]) {
       await tester.runAsync(() => preset.apply(p));

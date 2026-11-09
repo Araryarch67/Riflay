@@ -79,7 +79,11 @@ class NowPlayingPage extends StatelessWidget {
     // Music video lies over the blurred cover (Lightweight: the plain colour).
     final look = chosen.effective(lightweight: LayoutPrefs.lightweight);
     // Cover: Background is the whole page: sharp at the top, soft below, instead of any background.
-    final coverPage = LayoutPrefs.instance.playerCover == PlayerCover.background && track != null;
+    // Not on a phone held sideways: its layout puts the cover (or the music video) beside the controls, and a
+    // video behind the page as well showed the video twice.
+    final size = MediaQuery.sizeOf(context);
+    final sideways = size.width > size.height && size.height < 480;
+    final coverPage = LayoutPrefs.instance.playerCover == PlayerCover.background && track != null && !sideways;
     return AccentBuilder(
       track: track,
       builder: (context, accent) => GestureDetector(
@@ -220,6 +224,8 @@ class NowPlayingPage extends StatelessWidget {
                                     children: [
                                       Text(
                                         tr.playingFromCaps,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
                                         style: text.labelSmall?.copyWith(
                                           letterSpacing: 1.2,
                                           color: AppColors.of(context).textSecondary,
@@ -284,7 +290,13 @@ class NowPlayingPage extends StatelessWidget {
                               ],
                             );
                             if (sideways) {
-                              final art = math.min(constraints.maxHeight - 32, constraints.maxWidth * 0.4);
+                              // A music video is 16:9: its box takes the height and up to 58% of the width, so the
+                              // controls keep the rest. The square cover stays square.
+                              final wide = showsVideo;
+                              final art = wide
+                                  ? math.min(constraints.maxHeight - 32, constraints.maxWidth * 0.58 * 9 / 16)
+                                  : math.min(constraints.maxHeight - 32, constraints.maxWidth * 0.4);
+                              final artWidth = wide ? art * 16 / 9 : art;
                               return Padding(
                                 padding: const EdgeInsets.symmetric(horizontal: 24),
                                 child: Row(
@@ -293,7 +305,7 @@ class NowPlayingPage extends StatelessWidget {
                                       // A video has its own aspect ratio: in an unconstrained Row it otherwise
                                       // grows to the full viewport height and squeezes the controls into a sliver.
                                       SizedBox(
-                                        width: art,
+                                        width: artWidth,
                                         height: art,
                                         child: Center(child: cover(art)),
                                       ),
@@ -382,9 +394,11 @@ class NowPlayingPage extends StatelessWidget {
                 // without opening ⋯. Only for a song with a music video (the switch draws nothing otherwise).
                 if (track != null && LayoutPrefs.instance.showVideoSwitch)
                   Positioned(
-                    top: MediaQuery.paddingOf(context).top + 60,
+                    // Sideways: above the cover, over the left part of the page it takes (up to 58%), not over the
+                    // middle of the video or the controls.
+                    top: MediaQuery.paddingOf(context).top + (sideways ? 12 : 60),
                     left: 0,
-                    right: 0,
+                    right: sideways ? size.width * 0.42 : 0,
                     child: Center(
                       child: _AutoHide(
                         track: track,

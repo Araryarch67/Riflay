@@ -398,7 +398,10 @@ class _VideoFullViewState extends State<VideoFullView> {
 
   Widget _bottomBar() => const Padding(
     padding: EdgeInsets.fromLTRB(24, 0, 24, 4),
-    child: Column(mainAxisSize: MainAxisSize.min, children: [SeekBar(phonePlayer: true), TransportControls()]),
+    child: Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [SeekBar(phonePlayer: true, overVideo: true), TransportControls()],
+    ),
   );
 }
 
@@ -473,13 +476,15 @@ class _Shade extends StatelessWidget {
       gradient: LinearGradient(
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
+        // Strong enough for white text over a bright picture: the title above, the lyrics, seek bar and buttons below.
         colors: [
-          Colors.black.withValues(alpha: 0.6),
+          Colors.black.withValues(alpha: 0.72),
           Colors.transparent,
           Colors.transparent,
           Colors.black.withValues(alpha: 0.7),
+          Colors.black.withValues(alpha: 0.9),
         ],
-        stops: const [0, 0.3, 0.6, 1],
+        stops: const [0, 0.3, 0.4, 0.72, 1],
       ),
     ),
   );
@@ -598,7 +603,10 @@ class _LyricsLineState extends State<_LyricsLine> {
       // of the Linux main thread each (Heavy's full screen was ~1% of the CPU with it). Phones keep the fade.
       duration: Host.isLinux || Host.isWindows || Host.isMacOS
           ? Duration.zero
-          : LayoutPrefs.dur(const Duration(milliseconds: 200)),
+          : LayoutPrefs.dur(const Duration(milliseconds: 320)),
+      // The old line fades out in the first half, the new one in during the second: never two lines over each other.
+      switchInCurve: const Interval(0.5, 1, curve: Curves.easeOut),
+      switchOutCurve: const Interval(0.5, 1, curve: Curves.easeIn),
       child: Column(
         key: ValueKey((_for, _index)),
         mainAxisSize: MainAxisSize.min,
@@ -608,11 +616,8 @@ class _LyricsLineState extends State<_LyricsLine> {
             textAlign: TextAlign.center,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-              color: Colors.white,
-              fontWeight: FontWeight.w700,
-              shadows: const [Shadow(blurRadius: 8, color: Colors.black)],
-            ),
+            style: Theme.of(context).textTheme.titleLarge
+                ?.copyWith(color: Colors.white, fontWeight: FontWeight.w700, shadows: _lyricShadows),
           ),
           if (pronunciation != null && pronunciation.isNotEmpty) ...[
             const SizedBox(height: 4),
@@ -622,10 +627,7 @@ class _LyricsLineState extends State<_LyricsLine> {
               textAlign: TextAlign.center,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                color: Colors.white70,
-                shadows: const [Shadow(blurRadius: 8, color: Colors.black)],
-              ),
+              style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: Colors.white70, shadows: _lyricShadows),
             ),
           ],
         ],
@@ -667,3 +669,9 @@ class _VideoRotateWatcherState extends State<VideoRotateWatcher> {
   @override
   Widget build(BuildContext context) => const SizedBox.shrink();
 }
+
+/// Over a bright picture too: a tight dark edge and a wide soft glow.
+const _lyricShadows = [
+  Shadow(blurRadius: 3, color: Color(0xCC000000)),
+  Shadow(blurRadius: 16, color: Color(0x99000000)),
+];

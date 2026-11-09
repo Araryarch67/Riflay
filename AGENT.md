@@ -812,6 +812,19 @@ Windows zip, Linux AppImage and macOS dmg, so successful platforms need not be r
   Lightweight's seek bar and the quality badge tick once a second on the same beat (about 1 frame a second while
   playing). Paused, nothing stays on the beat (`tool/cpu.sh` prints how many are): a listener that only returns
   still keeps its 60 Hz timer waking the app.
+- A phone held sideways (`NowPlayingPage`, `sideways`: wider than tall and under 480 dp tall): Cover: Background is
+  not used (the cover or video sits beside the controls; a video behind the page too showed it twice), a music video
+  gets a 16:9 box (the height, up to 58% of the width) instead of a square it spilled out of, "Playing from" stays on
+  one line, and the Song / Video switch sits over the left part above the cover. In the full screen view the shade
+  is darker at the foot, the seek bar is always thin over the video (`SeekBar.overVideo`: a preset's pill was a block
+  across the picture) and a phone's lyrics line fades out before the next fades in (never two lines at once).
+- Trying a local build on a phone without replacing the installed release (its key isn't here, and replacing would
+  mean uninstalling, losing the library): `flutter build apk --android-project-arg=riflayDev=true` builds "Riflay
+  Dev" (`dev.riflay.riflay.dev`), installed beside it with data of its own. `tool/phone_mv_app.dart` as its target
+  (`-t`) applies a preset (`RIFLAY_PHONE_PRESET`, Liquid Stacked), turns Video mode on, plays a YouTube Music song
+  (`RIFLAY_PHONE_QUERY`, Kyapi by Houshou Marine) and opens Now Playing; turn it with `adb shell cmd window
+  user-rotation lock 1` (`lock 0` back; Xiaomi's HyperOS ignores `settings put system user_rotation`) and take
+  `adb exec-out screencap -p` screenshots. HyperOS also asks for "Install via USB" in Developer options.
 - The music video full screen (`ui/player/video_full_view.dart`, `VideoFullView`): the round button in the corner
   of the video on the cover (`VideoExpandButton`; over Cover: Background, `VideoBackgroundExpand`), a double tap on
   the video, or on a computer the button beside the Song / Video switch of the expanded player and beside Like in

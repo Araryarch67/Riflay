@@ -310,8 +310,7 @@ class _EqualizerIconState extends State<EqualizerIcon> {
   /// A row on a page that isn't shown ([TickerMode] off, e.g. under Now Playing) stays still.
   bool _shown = true;
 
-  bool get _moving =>
-      widget.playing && _shown && !LayoutPrefs.lightweight && (MarqueeText.playing?.value ?? true);
+  bool get _moving => widget.playing && _shown && !LayoutPrefs.lightweight && (MarqueeText.playing?.value ?? true);
 
   void _sync() {
     if (_moving) {
@@ -390,8 +389,13 @@ class SeekBar extends StatefulWidget {
     this.compact = false,
     this.phonePlayer = false,
     this.desktopPlayer = false,
+    this.overVideo = false,
     this.middle,
   });
+
+  /// Over a music video full screen: always the thin bar, whatever shape the player uses. A preset's pill or wave
+  /// was a block across the picture.
+  final bool overVideo;
 
   /// Something centred between the two times (the quality badge).
   final Widget? middle;
@@ -467,16 +471,18 @@ class _SeekBarState extends State<SeekBar> {
             // The compact desktop bar's 20 px row takes a slimmer pill; the full bar the phone's track, 4 px shorter
             // handle to fit under its buttons.
             final slim = widget.desktopPlayer && widget.compact;
-            final pill = parts && LayoutPrefs.instance.progressShape == ProgressBarShape.pill;
-            final thin = parts && LayoutPrefs.instance.progressShape == ProgressBarShape.thin;
+            final video = widget.overVideo;
+            final pill = !video && parts && LayoutPrefs.instance.progressShape == ProgressBarShape.pill;
+            final thin = video || parts && LayoutPrefs.instance.progressShape == ProgressBarShape.thin;
             final colors = AppColors.of(context);
             final wavy =
-                !pill && LayoutPrefs.instance.progressShape == ProgressBarShape.wavy && !LayoutPrefs.lightweight;
-            _wantBars(
-              player.currentTrack,
-              LayoutPrefs.instance.progressShape == ProgressBarShape.waveform && !LayoutPrefs.lightweight,
-            );
-            final bars = LayoutPrefs.instance.progressShape == ProgressBarShape.waveform ? _bars : null;
+                !video &&
+                !pill &&
+                LayoutPrefs.instance.progressShape == ProgressBarShape.wavy &&
+                !LayoutPrefs.lightweight;
+            final waveform = !video && LayoutPrefs.instance.progressShape == ProgressBarShape.waveform;
+            _wantBars(player.currentTrack, waveform && !LayoutPrefs.lightweight);
+            final bars = waveform ? _bars : null;
             Widget sliderWith(MotionClock? clock) => MouseRegion(
               onEnter: (_) => setState(() => _hovering = true),
               onExit: (_) => setState(() => _hovering = false),

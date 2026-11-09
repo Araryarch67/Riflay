@@ -21,6 +21,10 @@ android {
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId = "dev.riflay.riflay"
+        // `flutter build apk --android-project-arg=riflayDev=true`: "Riflay Dev" (dev.riflay.riflay.dev), installed
+        // beside the release one with data of its own, to try a local build on a phone without replacing the app.
+        if (project.hasProperty("riflayDev")) applicationIdSuffix = ".dev"
+        manifestPlaceholders["appLabel"] = if (project.hasProperty("riflayDev")) "Riflay Dev" else "Riflay"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
