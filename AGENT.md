@@ -949,6 +949,12 @@ Windows zip, Linux AppImage and macOS dmg, so successful platforms need not be r
   adds ~40 MiB of driver memory (anonymous, vaapi in use) and its share of the C heap; without Video mode it is
   ~190-200. `malloc_trim` every 10 s instead of each minute changed nothing (the heap it frees is in use again at
   once), nor did `MALLOC_ARENA_MAX=2`.
+- Balanced on a computer keeps the cover in the side panel (`panelVideo` in `side_panel.dart`); the music video
+  plays on Now Playing and full screen. Kyapi: Home and the lyrics page went from ~245-255 to ~197-208 MiB private
+  and ~350 to ~290 MiB RSS. Home in front costs ~0.38% again (the visualizer around the cover, which a showing video
+  paused; mpv's audio `core` thread ~3% of a core), ~0.09% behind another window. Back with `RIFLAY_FULL_BALANCED`.
+  Tried and dropped: the video at 10 fps instead of 15 while another window is in front (0.13% vs 0.14% on Now
+  Playing, within noise; Flutter draws ~1.5 frames a second there, the rest of the main thread is GTK and the video).
 - Opening the lyrics page (`RIFLAY_CPU_ENV='RIFLAY_CPU_SPIKE=lyrics' tool/cpu.sh`: CPU and frames every 100 ms,
   each thread, `RIFLAY_CPU_PROFILE=true` the Dart profile, `RIFLAY_CPU_STACKS=true` in a debug build who asks for
   frames). On Linux a frame costs the main thread ~10 ms natively (GTK composites the whole window; Dart is a small

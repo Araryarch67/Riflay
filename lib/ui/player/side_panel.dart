@@ -176,20 +176,21 @@ class _PanelCover extends StatelessWidget {
     listenable: LayoutPrefs.instance,
     builder: (context, _) {
       final bleed = LayoutPrefs.instance.playerCover == PlayerCover.background;
+      final art = AudioVisualizer(
+        radialOnly: true,
+        child: TrackSwitcher(
+          trackId: track.id,
+          slide: false,
+          child: Artwork(key: ValueKey(track.id), track: track, radius: 8),
+        ),
+      );
       final cover = NowPlayingCover(
         child: bleed
             ? FadedCover(track: track, fade: AppColors.panel, blurStart: 0.5)
-            : TrackVisual(
-                track: track,
-                cover: AudioVisualizer(
-                  radialOnly: true,
-                  child: TrackSwitcher(
-                    trackId: track.id,
-                    slide: false,
-                    child: Artwork(key: ValueKey(track.id), track: track, radius: 8),
-                  ),
-                ),
-              ),
+            // The music video plays on Now Playing and full screen only in Balanced (see [panelVideo]).
+            : panelVideo
+            ? TrackVisual(track: track, cover: art)
+            : art,
       );
       if (!bleed) return AspectRatio(aspectRatio: 1, child: cover);
       // Out past the list's 16 px margins on both sides.
@@ -279,8 +280,9 @@ class _HeroPanel extends StatelessWidget {
                 fit: StackFit.expand,
                 children: [
                   FadedCover(track: track, fade: AppColors.panel, blurStart: 0.7),
-                  // Not in Lightweight, as the video behind the panel never was there.
-                  if (!LayoutPrefs.lightweight)
+                  // Not in Lightweight, as the video behind the panel never was there, nor in Balanced (see
+                  // [panelVideo]).
+                  if (panelVideo)
                     TrackVisual(track: track, cover: const SizedBox.expand(), fill: true, fade: AppColors.panel),
                 ],
               ),
@@ -374,3 +376,9 @@ class _HeroPanel extends StatelessWidget {
     );
   }
 }
+
+/// Whether the side panel plays the music video: Heavy only on a computer (and on any other build, which has no
+/// Performance limits). Balanced keeps the cover there: the video held ~60 MB more private memory on Home and the
+/// lyrics page (decoder and driver memory, Kyapi), and plays on Now Playing and full screen still. Lightweight never
+/// had it. Back with `RIFLAY_FULL_BALANCED`, as Balanced's other limits.
+bool get panelVideo => !LayoutPrefs.lightweight && !LayoutPrefs.frugal;

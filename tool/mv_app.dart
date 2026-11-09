@@ -67,6 +67,9 @@ String _parts() {
   return [for (final e in top.take(12)) '${e.key} ${(e.value / 1024).toStringAsFixed(0)}'].join(', ');
 }
 
+/// Flutter frames drawn so far.
+var frames = 0;
+
 Element? _find(bool Function(Element) test) {
   Element? found;
   void visit(Element e) {
@@ -86,7 +89,6 @@ Future<void> main() async {
   final query = Platform.environment['RIFLAY_MV_QUERY'] ?? 'Houshou Marine Kyapi';
   final seconds = int.parse(Platform.environment['RIFLAY_MV_SECONDS'] ?? '40');
   await app.main(const []);
-  var frames = 0;
   SchedulerBinding.instance.addTimingsCallback((t) => frames += t.length);
   Element? page;
   while ((page = _find((e) => e.widget is PageScaffold)) == null) {
@@ -241,7 +243,12 @@ Future<void> _btopFlow(PlayerController c, String query) async {
 /// and after a `malloc_trim(0)` (what glibc held freed).
 Future<void> _steadyFlow(PlayerController c, String query) async {
   final clock = Stopwatch()..start();
-  void at(String step) => stdout.writeln('MV at ${(clock.elapsedMilliseconds / 1000).toStringAsFixed(1)} s: $step');
+  var framesAt = 0;
+  void at(String step) {
+    stdout.writeln('MV at ${(clock.elapsedMilliseconds / 1000).toStringAsFixed(1)} s: $step (${frames - framesAt} frames before)');
+    framesAt = frames;
+  }
+
   ShellScope shell() => ShellScope.of(_find((e) => e.widget is PageScaffold)!);
   final binding = WidgetsBinding.instance;
   Future<void> hold(String step) async {
