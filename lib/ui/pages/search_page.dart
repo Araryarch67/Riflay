@@ -369,8 +369,12 @@ class _SearchPageState extends State<SearchPage> {
                   // Typing reaches [_onQuery] through the input's listener.
                   ValueListenableBuilder(
                     valueListenable: inBar,
+                    // Carried by the Liquid glass bar: its suggestions are drawn here, the field being at the bottom.
                     builder: (context, carried, _) => carried
-                        ? const SizedBox.shrink()
+                        ? Padding(
+                            padding: EdgeInsets.only(bottom: searching ? 16 : 0),
+                            child: SearchSuggestions(input: widget.input!),
+                          )
                         : Padding(
                             padding: EdgeInsets.only(bottom: searching ? 16 : 0),
                             child: box(onChanged: (_) {}),

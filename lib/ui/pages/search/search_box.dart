@@ -263,115 +263,21 @@ class _SearchBoxState extends State<SearchBox> {
   }
 
   Widget _dropdown(BuildContext context) {
-    final text = Theme.of(context).textTheme;
-    final typed = _text;
-    final rows = <Widget>[];
-    var i = 0;
-    Widget row({
-      required Widget leading,
-      required Widget title,
-      Widget? subtitle,
-      Widget? trailing,
-      required VoidCallback onTap,
-    }) {
-      final index = i++;
-      return InkWell(
-        onTap: onTap,
-        child: Container(
-          color: index == _highlight ? AppColors.tile : null,
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-          child: Row(
-            children: [
-              leading,
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [title, ?subtitle],
-                ),
-              ),
-              ?trailing,
-            ],
-          ),
-        ),
-      );
-    }
-
-    if (typed.isEmpty) {
-      rows.add(
-        Padding(
-          padding: const EdgeInsets.fromLTRB(14, 12, 14, 4),
-          child: Text(tr.recentSearches, style: text.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
-        ),
-      );
-      for (final q in _recent) {
-        rows.add(
-          row(
-            leading: Icon(Icons.history_rounded, color: AppColors.textSecondary, size: 22),
-            title: Text(q, maxLines: 1, overflow: TextOverflow.ellipsis, style: text.bodyLarge),
-            trailing: IconButton(
-              tooltip: tr.remove,
-              iconSize: 18,
-              color: AppColors.textSecondary,
-              onPressed: () async {
-                await RecentSearches.remove(q);
-                _recent = await RecentSearches.load();
-                _sync();
-              },
-              icon: const Icon(Icons.close_rounded),
-            ),
-            onTap: () => _pickQuery(q),
-          ),
-        );
-      }
-    } else {
-      for (final q in _queries) {
-        // What you typed stays plain; the completion is bold, as in YouTube Music.
-        final match = q.toLowerCase().startsWith(typed.toLowerCase());
-        rows.add(
-          row(
-            leading: Icon(Icons.search_rounded, color: AppColors.textSecondary, size: 22),
-            title: Text.rich(
-              TextSpan(
-                children: [
-                  TextSpan(text: match ? q.substring(0, typed.length) : ''),
-                  TextSpan(
-                    text: match ? q.substring(typed.length) : q,
-                    style: const TextStyle(fontWeight: FontWeight.w700),
-                  ),
-                ],
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: text.bodyLarge,
-            ),
-            onTap: () => _pickQuery(q),
-          ),
-        );
-      }
-      if (_queries.isNotEmpty && _hits.isNotEmpty) rows.add(Divider(height: 9, color: AppColors.hover));
-      for (final h in _hits) {
-        rows.add(
-          row(
-            leading: Artwork(track: h.cover, size: 44, radius: 4, circle: h.kind == WebResultKind.artist),
-            title: Text(
-              h.title,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: text.bodyLarge?.copyWith(fontWeight: FontWeight.w600),
-            ),
-            subtitle: Text(
-              h.subtitle,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: text.bodySmall?.copyWith(color: AppColors.textSecondary),
-            ),
-            onTap: () => _pickHit(h),
-          ),
-        );
-      }
-    }
+    final rows = suggestionRows(
+      context,
+      typed: _text,
+      recent: _recent,
+      queries: _queries,
+      hits: _hits,
+      highlight: _highlight,
+      onQuery: _pickQuery,
+      onHit: _pickHit,
+      onRemoveRecent: (q) async {
+        await RecentSearches.remove(q);
+        _recent = await RecentSearches.load();
+        _sync();
+      },
+    );
     return Material(
       color: AppColors.elevated,
       elevation: 12,
@@ -381,6 +287,267 @@ class _SearchBoxState extends State<SearchBox> {
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxHeight: 460),
         child: ListView(padding: const EdgeInsets.symmetric(vertical: 6), shrinkWrap: true, children: rows),
+      ),
+    );
+  }
+}
+
+/// The rows of the suggestions under a search field ([SearchBox]'s dropdown, and the Liquid glass bar's, drawn on
+/// the search page): recent searches while [typed] is empty; else completed searches (what was typed plain, the
+/// rest bold), then artists, songs and albums to open. [highlight] is the keyboard's row, -1 for none.
+List<Widget> suggestionRows(
+  BuildContext context, {
+  required String typed,
+  required List<String> recent,
+  required List<String> queries,
+  required List<SearchHit> hits,
+  int highlight = -1,
+  required ValueChanged<String> onQuery,
+  required ValueChanged<SearchHit> onHit,
+  required ValueChanged<String> onRemoveRecent,
+}) {
+  final text = Theme.of(context).textTheme;
+  final rows = <Widget>[];
+  var i = 0;
+  Widget row({
+    required Widget leading,
+    required Widget title,
+    Widget? subtitle,
+    Widget? trailing,
+    required VoidCallback onTap,
+  }) {
+    final index = i++;
+    return InkWell(
+      onTap: onTap,
+      child: Container(
+        color: index == highlight ? AppColors.tile : null,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        child: Row(
+          children: [
+            leading,
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [title, ?subtitle],
+              ),
+            ),
+            ?trailing,
+          ],
+        ),
+      ),
+    );
+  }
+
+  if (typed.isEmpty) {
+    rows.add(
+      Padding(
+        padding: const EdgeInsets.fromLTRB(14, 12, 14, 4),
+        child: Text(tr.recentSearches, style: text.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+      ),
+    );
+    for (final q in recent) {
+      rows.add(
+        row(
+          leading: Icon(Icons.history_rounded, color: AppColors.textSecondary, size: 22),
+          title: Text(q, maxLines: 1, overflow: TextOverflow.ellipsis, style: text.bodyLarge),
+          trailing: IconButton(
+            tooltip: tr.remove,
+            iconSize: 18,
+            color: AppColors.textSecondary,
+            onPressed: () => onRemoveRecent(q),
+            icon: const Icon(Icons.close_rounded),
+          ),
+          onTap: () => onQuery(q),
+        ),
+      );
+    }
+  } else {
+    for (final q in queries) {
+      // What you typed stays plain; the completion is bold, as in YouTube Music.
+      final match = q.toLowerCase().startsWith(typed.toLowerCase());
+      rows.add(
+        row(
+          leading: Icon(Icons.search_rounded, color: AppColors.textSecondary, size: 22),
+          title: Text.rich(
+            TextSpan(
+              children: [
+                TextSpan(text: match ? q.substring(0, typed.length) : ''),
+                TextSpan(
+                  text: match ? q.substring(typed.length) : q,
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                ),
+              ],
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: text.bodyLarge,
+          ),
+          onTap: () => onQuery(q),
+        ),
+      );
+    }
+    if (queries.isNotEmpty && hits.isNotEmpty) rows.add(Divider(height: 9, color: AppColors.hover));
+    for (final h in hits) {
+      rows.add(
+        row(
+          leading: Artwork(track: h.cover, size: 44, radius: 4, circle: h.kind == WebResultKind.artist),
+          title: Text(
+            h.title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: text.bodyLarge?.copyWith(fontWeight: FontWeight.w600),
+          ),
+          subtitle: Text(
+            h.subtitle,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: text.bodySmall?.copyWith(color: AppColors.textSecondary),
+          ),
+          onTap: () => onHit(h),
+        ),
+      );
+    }
+  }
+  return rows;
+}
+
+/// [SearchBox]'s suggestions for a field that isn't on the page: the Liquid glass bar carries the search field at the
+/// bottom, over the keyboard, so these are drawn on the search page instead of in a dropdown under it, while that
+/// field has the focus. A picked search runs through [input]'s submit, as Enter does; a picked artist, song or album
+/// opens.
+class SearchSuggestions extends StatefulWidget {
+  const SearchSuggestions({super.key, required this.input});
+
+  final SearchInput input;
+
+  @override
+  State<SearchSuggestions> createState() => _SearchSuggestionsState();
+}
+
+class _SearchSuggestionsState extends State<SearchSuggestions> {
+  Timer? _debounce;
+  int _request = 0;
+  List<String> _recent = const [];
+  List<String> _queries = const [];
+  List<SearchHit> _hits = const [];
+  String _typed = '';
+
+  /// Closed by a pick until the next keystroke.
+  bool _dismissed = false;
+
+  SearchInput get _input => widget.input;
+
+  @override
+  void initState() {
+    super.initState();
+    _typed = _input.controller.text.trim();
+    _input.controller.addListener(_changed);
+    _input.focus.addListener(_refresh);
+    _input.submitted.addListener(_submitted);
+    _loadRecent();
+    if (_typed.isNotEmpty) _fetch(_typed);
+  }
+
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    _input.controller.removeListener(_changed);
+    _input.focus.removeListener(_refresh);
+    _input.submitted.removeListener(_submitted);
+    super.dispose();
+  }
+
+  void _refresh() {
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _loadRecent() async {
+    final r = await RecentSearches.load();
+    if (!mounted) return;
+    setState(() => _recent = r);
+  }
+
+  void _submitted() {
+    _dismissed = true;
+    _loadRecent();
+  }
+
+  void _changed() {
+    final q = _input.controller.text.trim();
+    if (q == _typed) return;
+    _typed = q;
+    _dismissed = false;
+    _debounce?.cancel();
+    if (q.isEmpty) {
+      _queries = const [];
+      _hits = const [];
+      _loadRecent();
+      return;
+    }
+    _debounce = Timer(const Duration(milliseconds: 120), () => _fetch(q));
+  }
+
+  Future<void> _fetch(String q) async {
+    final id = ++_request;
+    try {
+      final s = await PlayerScope.read(context).ytMusic.suggestions(q);
+      if (!mounted || id != _request) return;
+      setState(() {
+        _queries = s.queries.take(6).toList();
+        _hits = s.hits.take(5).toList();
+      });
+    } catch (_) {
+      if (!mounted || id != _request) return;
+      setState(() {
+        _queries = const [];
+        _hits = const [];
+      });
+    }
+  }
+
+  void _pickQuery(String q) {
+    _input.controller
+      ..text = q
+      ..selection = TextSelection.collapsed(offset: q.length);
+    _input.focus.unfocus();
+    _input.submit(q);
+  }
+
+  void _pickHit(SearchHit hit) {
+    if (_typed.isNotEmpty) RecentSearches.add(_typed);
+    setState(() => _dismissed = true);
+    _input.focus.unfocus();
+    openSearchHit(context, hit);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final count = _typed.isEmpty ? _recent.length : _queries.length + _hits.length;
+    if (!_input.focus.hasFocus || _dismissed || count == 0) return const SizedBox.shrink();
+    return Material(
+      color: AppColors.elevated,
+      borderRadius: BorderRadius.circular(12),
+      clipBehavior: Clip.antiAlias,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: suggestionRows(
+            context,
+            typed: _typed,
+            recent: _recent,
+            queries: _queries,
+            hits: _hits,
+            onQuery: _pickQuery,
+            onHit: _pickHit,
+            onRemoveRecent: (q) async {
+              await RecentSearches.remove(q);
+              await _loadRecent();
+            },
+          ),
+        ),
       ),
     );
   }
