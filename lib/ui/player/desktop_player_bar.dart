@@ -18,7 +18,6 @@ import '../widgets/menus.dart';
 import '../widgets/sleep_timer_button.dart';
 import '../widgets/stats_for_nerds.dart';
 import '../widgets/track_row.dart';
-import '../ytmusic_edit.dart';
 import 'full_screen_player.dart';
 import 'mini_window.dart';
 import 'player_common.dart';
@@ -169,7 +168,6 @@ class DesktopPlayerBar extends StatelessWidget {
                     ],
                   ),
                 ),
-                LikeButton(track: track),
               ],
             ),
     );
