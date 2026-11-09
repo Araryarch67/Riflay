@@ -700,6 +700,7 @@ device's language when Riflay has it). The words live in `lib/l10n/app_en.arb` (
   flutter run --dart-define=RIFLAY_LASTFM_KEY=… --dart-define=RIFLAY_LASTFM_SECRET=…
   flutter run --dart-define=RIFLAY_NO_TRAY=true           # no tray icon; closing the window quits
   flutter run --dart-define=RIFLAY_NO_TAB_BAR_COLLAPSE=true  # the phone's Liquid glass tab bar never shrinks on scroll
+  flutter run --dart-define=RIFLAY_TAB_BAR_COLLAPSE_IDLE=true  # it shrinks on scroll with no song in the player too (two lone round buttons)
   flutter run --dart-define=RIFLAY_MOVING_PREVIEWS=true  # Settings' previews move and follow the player, not still pictures
   flutter run --dart-define=RIFLAY_NO_GLASS_RENDERER=true    # its pills in Riflay's own blur, not liquid_glass_renderer
   flutter run --dart-define=RIFLAY_NO_DIRECT_USB_GUARD=true  # Android Direct USB crashes for real (logcat)

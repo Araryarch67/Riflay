@@ -299,7 +299,17 @@ class _GlassBarState extends State<_GlassBar> with TickerProviderStateMixin {
   /// A row's height, the round buttons' size, and the space between pills.
   static const _size = 58.0, _gap = 8.0;
 
-  late final _collapse = _anim(widget.link.collapsed.value && !DebugSwitches.noTabBarCollapse);
+  late final _collapse = _anim(_collapses);
+
+  /// A song is in the player (playing or paused): its mini player joins the shrunk row. With none the bar shrank to
+  /// two round buttons at its ends with nothing between them; it stays full then (`RIFLAY_TAB_BAR_COLLAPSE_IDLE`: as
+  /// it was).
+  bool _hasSong = false;
+
+  /// Scrolled down, with a song in the player.
+  bool get _collapses =>
+      widget.link.collapsed.value && !DebugSwitches.noTabBarCollapse && (_hasSong || DebugSwitches.tabBarCollapseIdle);
+
   late final _search = _anim(widget.tab == PhoneTab.search);
   late final _typing = _anim(false);
 
@@ -353,7 +363,7 @@ class _GlassBarState extends State<_GlassBar> with TickerProviderStateMixin {
 
   void _follow() {
     final search = widget.tab == PhoneTab.search;
-    _to(_collapse, widget.link.collapsed.value && !DebugSwitches.noTabBarCollapse);
+    _to(_collapse, _collapses);
     _to(_search, search);
     _to(_typing, search && _input.focus.hasFocus);
   }
@@ -381,39 +391,52 @@ class _GlassBarState extends State<_GlassBar> with TickerProviderStateMixin {
     final keyboard = MediaQuery.viewInsetsOf(context).bottom;
     return PlayerSelect<Track?>(
       select: (c) => c.currentTrack,
-      builder: (context, track, _) => AnimatedBuilder(
-        animation: Listenable.merge([_collapse, _search, _typing]),
-        builder: (context, _) {
-          final typing = _typing.value;
-          final mini = track != null && typing < 1;
-          final height = mini ? _size * 2 + _gap : _size;
-          return SafeArea(
-            top: false,
-            child: Padding(
-              // While typing, the row rides on the keyboard (the scaffold leaves its bar under it).
-              padding: EdgeInsets.fromLTRB(12, 0, 12, 10 + keyboard * typing),
-              // As wide as a phone at most, as the other floating bars.
-              child: Center(
-                heightFactor: 1,
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 520),
-                  child: SizedBox(
-                    width: double.infinity,
-                    height: height,
-                    child: MediaQuery.withClampedTextScaling(
-                      maxScaleFactor: 1.3,
-                      child: LayoutBuilder(
-                        builder: (context, box) =>
-                            _layer(context, Stack(children: _parts(context, box.maxWidth, height, track))),
-                      ),
+      builder: (context, track, _) {
+        if ((track != null) != _hasSong) {
+          _hasSong = track != null;
+          // After this frame: the bar animates from where it is to the new rule.
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) _follow();
+          });
+        }
+        return _bar(context, track, keyboard);
+      },
+    );
+  }
+
+  Widget _bar(BuildContext context, Track? track, double keyboard) {
+    return AnimatedBuilder(
+      animation: Listenable.merge([_collapse, _search, _typing]),
+      builder: (context, _) {
+        final typing = _typing.value;
+        final mini = track != null && typing < 1;
+        final height = mini ? _size * 2 + _gap : _size;
+        return SafeArea(
+          top: false,
+          child: Padding(
+            // While typing, the row rides on the keyboard (the scaffold leaves its bar under it).
+            padding: EdgeInsets.fromLTRB(12, 0, 12, 10 + keyboard * typing),
+            // As wide as a phone at most, as the other floating bars.
+            child: Center(
+              heightFactor: 1,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 520),
+                child: SizedBox(
+                  width: double.infinity,
+                  height: height,
+                  child: MediaQuery.withClampedTextScaling(
+                    maxScaleFactor: 1.3,
+                    child: LayoutBuilder(
+                      builder: (context, box) =>
+                          _layer(context, Stack(children: _parts(context, box.maxWidth, height, track))),
                     ),
                   ),
                 ),
               ),
             ),
-          );
-        },
-      ),
+          ),
+        );
+      },
     );
   }
 

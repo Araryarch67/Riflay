@@ -34,6 +34,9 @@ abstract final class DebugSwitches {
   /// is about rendering.
   static bool noTabBarCollapse = const bool.fromEnvironment('RIFLAY_NO_TAB_BAR_COLLAPSE');
 
+  /// The Liquid glass tab bar shrinks on a scroll with no song in the player too (two round buttons, nothing between).
+  static bool tabBarCollapseIdle = _all || const bool.fromEnvironment('RIFLAY_TAB_BAR_COLLAPSE_IDLE');
+
   /// Settings' previews ([LivePreview]) run their animations and follow the player, instead of standing still and
   /// being built afresh on each change of look.
   static bool movingPreviews = _all || const bool.fromEnvironment('RIFLAY_MOVING_PREVIEWS');

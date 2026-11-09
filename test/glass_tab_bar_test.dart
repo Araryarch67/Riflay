@@ -216,16 +216,13 @@ void main() {
       expect(find.byTooltip('Settings'), findsOneWidget);
     });
 
-    testWidgets('$w px: with nothing playing the shrunk row is the tab button and Search', (tester) async {
+    testWidgets('$w px: with nothing playing a scroll keeps the bar full (no two lone buttons)', (tester) async {
       await show(tester, size, playing: false);
       expect(find.byType(GlassMiniPlayer), findsNothing);
       await tester.drag(list, const Offset(0, -300));
       await tester.pumpAndSettle();
-      final button = rectOf(tester, collapsedButton);
-      final search = rectOf(tester, find.byTooltip('Search'));
-      expect(button.left, 12);
-      expect(search.right, size.width - 12);
-      expect(button.center.dy, search.center.dy);
+      expect(collapsedButton, findsNothing);
+      expect(find.byTooltip('Settings'), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
 
