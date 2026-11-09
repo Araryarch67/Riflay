@@ -636,13 +636,12 @@ vec4 hook() {
         // Linux retains its texture backend there; cover/side-panel video is native.
         if (native && (foreground || !Host.isLinux)) {
           try {
-            // The mode's frame rate here too: Flutter doesn't redraw for the own window's frames, but mpv still
-            // renders each one (Windows, Balanced: the video's threads and the GPU driver's ~1.4% -> ~0.9% of a
-            // core, the whole app ~0.27% -> ~0.21% of 24 threads).
+            // Linux caps the frame rate with an fps filter. Windows' bundled video mpv has no such filter
+            // (`vf=fps` is refused; `lavfi=[fps]` makes the video fail to load), so it plays at the video's own.
             own = NativeVideoPlayer(
               window: await NativeVideoWindow.ensure(),
               hwdec: _nativeHwdec(hwdec),
-              maxFps: maxFps,
+              maxFps: Host.isLinux ? maxFps : null,
               foreground: foreground,
             );
             await own!.attach();
