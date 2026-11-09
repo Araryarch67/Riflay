@@ -24,6 +24,16 @@ void main() {
     expect(p.choice, const DownloadChoice(DownloadFormat.opus));
   });
 
+  test('a downloads folder iOS moved is followed; another folder moving leaves it alone', () async {
+    final p = await _load({'downloads.folder': '/old/Music'});
+    await p.repointFolder({'/elsewhere': '/elsewhere2'});
+    expect(p.folder, '/old/Music');
+    await p.repointFolder({'/old/Music': '/new/Music'});
+    expect(p.folder, '/new/Music');
+    expect((await SharedPreferences.getInstance()).getString('downloads.folder'), '/new/Music');
+    expect(DownloadPrefs.phoneFolders, isTrue);
+  });
+
   test('the bitrate is kept per format and read back', () async {
     final p = await _load({});
     await p.setKbps(DownloadFormat.opus, 96);

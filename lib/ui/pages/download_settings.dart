@@ -6,6 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../platform/host.dart';
 import '../../services/download_prefs.dart';
+import '../../services/ios_folders.dart';
 import '../../services/video_download.dart';
 import '../../services/youtube_importer.dart';
 import '../../services/ytdlp.dart';
@@ -29,6 +30,9 @@ class _DownloadSettingsState extends State<DownloadSettings> {
 
   static bool get _phone => Host.isAndroid || Host.isIOS;
 
+  /// Phones kept downloads in Riflay's own storage; `RIFLAY_NO_PHONE_DOWNLOADS_FOLDER` keeps them there.
+  static bool get _fixed => _phone && !DownloadPrefs.phoneFolders;
+
   @override
   void initState() {
     super.initState();
@@ -43,8 +47,17 @@ class _DownloadSettingsState extends State<DownloadSettings> {
   }
 
   Future<void> _chooseFolder() async {
-    final chosen = await FilePicker.getDirectoryPath(dialogTitle: tr.chooseDownloadsFolder);
+    // iOS: through Files, which keeps Riflay's access to the folder after a restart (FolderAccess.swift).
+    final chosen = Host.isIOS
+        ? await IosFolders.pick()
+        : await FilePicker.getDirectoryPath(dialogTitle: tr.chooseDownloadsFolder);
     if (chosen == null) return;
+    if (!await YoutubeImporter.canSaveIn(chosen)) {
+      if (mounted) {
+        ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(content: Text(tr.downloadsFolderUnusable)));
+      }
+      return;
+    }
     await _prefs.setFolder(chosen);
     if (mounted) setState(() => _folder = YoutubeImporter.downloadsDir());
   }
@@ -180,20 +193,22 @@ class _DownloadSettingsState extends State<DownloadSettings> {
                   leading: const Icon(Icons.folder_rounded),
                   title: Text(tr.downloadsFolder),
                   subtitle: Text(
-                    _phone ? tr.phoneDownloadsFixed(snap.data?.path ?? '…') : snap.data?.path ?? '…',
+                    _fixed ? tr.phoneDownloadsFixed(snap.data?.path ?? '…') : snap.data?.path ?? '…',
                     style: muted,
                   ),
                   isThreeLine: _phone,
-                  trailing: _phone || !snap.hasData
+                  trailing: _fixed || !snap.hasData
                       ? null
                       : Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            IconButton(
-                              tooltip: tr.openFolder,
-                              onPressed: () => launchUrl(Uri.directory(snap.data!.path)),
-                              icon: const Icon(Icons.folder_open_rounded),
-                            ),
+                            // A phone has no file manager to hand a folder to.
+                            if (!_phone)
+                              IconButton(
+                                tooltip: tr.openFolder,
+                                onPressed: () => launchUrl(Uri.directory(snap.data!.path)),
+                                icon: const Icon(Icons.folder_open_rounded),
+                              ),
                             TextButton(onPressed: _chooseFolder, child: Text(tr.change)),
                             if (_prefs.folder != null)
                               TextButton(

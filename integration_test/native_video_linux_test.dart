@@ -81,7 +81,7 @@ void main() {
         final own = NativeVideoPlayer(
           window: await NativeVideoWindow.ensure(),
           hwdec: 'no',
-          maxFps: 15,
+          maxFps: '15',
           foreground: true,
         );
         player = own;

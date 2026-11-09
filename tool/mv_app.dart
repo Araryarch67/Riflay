@@ -246,7 +246,9 @@ Future<void> _steadyFlow(PlayerController c, String query) async {
   final clock = Stopwatch()..start();
   var framesAt = 0;
   void at(String step) {
-    stdout.writeln('MV at ${(clock.elapsedMilliseconds / 1000).toStringAsFixed(1)} s: $step (${frames - framesAt} frames before)');
+    stdout.writeln(
+      'MV at ${(clock.elapsedMilliseconds / 1000).toStringAsFixed(1)} s: $step (${frames - framesAt} frames before)',
+    );
     framesAt = frames;
   }
 
@@ -312,11 +314,13 @@ Future<void> _resumeFlow(PlayerController c, String query) async {
   ShellScope.of(_find((e) => e.widget is PageScaffold)!).openNowPlaying();
   await Future<void>.delayed(const Duration(seconds: 8));
   String state() {
+    // This benchmark reads the same diagnostic snapshot as the integration tests.
+    // ignore: invalid_use_of_visible_for_testing_member
     final v = VideoMode.instance.videoState;
     return v == null
         ? 'no player'
         : '${(v.position.inMilliseconds / 1000).toStringAsFixed(1)}${v.playing ? '' : ' paused'}${v.buffering ? ' buffering' : ''}'
-            ' (song ${(c.position.inMilliseconds / 1000).toStringAsFixed(1)})';
+              ' (song ${(c.position.inMilliseconds / 1000).toStringAsFixed(1)})';
   }
 
   stdout.writeln('MV before: ${state()}');

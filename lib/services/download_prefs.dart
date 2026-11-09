@@ -431,8 +431,12 @@ class DownloadPrefs extends ChangeNotifier {
   /// On until the user turns it off: each download asks for its format and size.
   bool askEveryTime = true;
 
-  /// A folder the user chose (computers); null keeps the default.
+  /// A folder the user chose; null keeps the default. On phones too: one in Android's shared storage, or one
+  /// picked in iOS's Files (`IosFolders`, which keeps the access to it).
   String? folder;
+
+  /// Off with `RIFLAY_NO_PHONE_DOWNLOADS_FOLDER`: phones keep downloads in Riflay's own storage, as they did.
+  static const phoneFolders = !bool.fromEnvironment('RIFLAY_NO_PHONE_DOWNLOADS_FOLDER');
 
   /// Phones: download on mobile data too.
   bool mobileData = true;
@@ -543,6 +547,13 @@ class DownloadPrefs extends ChangeNotifier {
   Future<void> setFolder(String? v) {
     folder = v;
     return _save('downloads.folder', v);
+  }
+
+  /// iOS may move a picked folder between launches ([moved]: old path -> current path): follow it.
+  Future<void> repointFolder(Map<String, String> moved) async {
+    await load();
+    final now = moved[folder];
+    if (now != null && now != folder) await setFolder(now);
   }
 
   Future<void> setMobileData(bool v) {

@@ -1,7 +1,19 @@
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:riflay/services/youtube_importer.dart';
 
 void main() {
+  test('a downloads folder is taken only when a download could be written there', () async {
+    final dir = Directory.systemTemp.createTempSync('riflay-downloads');
+    addTearDown(() => dir.deleteSync(recursive: true));
+    expect(await YoutubeImporter.canSaveIn('${dir.path}/new/one'), isTrue, reason: 'made when missing');
+    expect(Directory('${dir.path}/new/one').listSync(), isEmpty, reason: 'the check leaves nothing behind');
+    // A file where the folder should be: nothing can be written under it.
+    final file = File('${dir.path}/file')..writeAsStringSync('x');
+    expect(await YoutubeImporter.canSaveIn('${file.path}/inside'), isFalse);
+  });
+
   group('parseTitle', () {
     test('"Artist | Song" when the left side is the channel', () {
       final r = YoutubeImporter.parseTitle('Codfish | Boulevard of Broken Dreams', "Codfish - Boots n' cats!");

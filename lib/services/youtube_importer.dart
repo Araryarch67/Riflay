@@ -334,17 +334,22 @@ class YoutubeImporter extends ChangeNotifier {
 
   static bool looksLikeYoutubeUrl(String text) => YoutubeLinks.looksLikeLink(text);
 
-  /// Where downloads live: ~/Documents/Riflay/YouTube on desktop, the app's
-  /// private documents folder on mobile.
+  /// Where downloads live: the folder chosen in Settings, or [defaultDownloadsDir].
   static Future<Directory> downloadsDir() async {
-    // A folder the user chose (computers); the default if it can't be used any more.
-    if (DownloadPrefs.instance.folder case final chosen? when !Host.isAndroid && !Host.isIOS) {
+    // A folder the user chose; the default if it can't be used any more.
+    if (DownloadPrefs.instance.folder case final chosen?
+        when DownloadPrefs.phoneFolders || !(Host.isAndroid || Host.isIOS)) {
       try {
         return await Directory(chosen).create(recursive: true);
       } catch (e) {
         debugPrint('Downloads folder $chosen unusable: $e');
       }
     }
+    return defaultDownloadsDir();
+  }
+
+  /// ~/Documents/Riflay/YouTube on desktop, the app's private documents folder on mobile.
+  static Future<Directory> defaultDownloadsDir() async {
     final docs = await getApplicationDocumentsDirectory();
     final mobile = Host.isAndroid || Host.isIOS;
     final dir = Directory(mobile ? p.join(docs.path, 'YouTube') : p.join(docs.path, 'Riflay', 'YouTube'));
@@ -1488,8 +1493,33 @@ class YoutubeImporter extends ChangeNotifier {
   static Future<Track> relocate(Track track) async {
     final path = track.path;
     if (track.sourceUrl == null || path == null || File(path).existsSync()) return track;
-    final moved = File(p.join((await downloadsDir()).path, p.basename(path)));
-    return moved.existsSync() ? track.copyWith(uri: Uri.file(moved.path)) : track;
+    // In the app's own folder (the default), which is the one that moves; a chosen folder is followed by its bookmark.
+    for (final dir in {(await defaultDownloadsDir()).path, (await downloadsDir()).path}) {
+      final moved = File(p.join(dir, p.basename(path)));
+      if (moved.existsSync()) return track.copyWith(uri: Uri.file(moved.path));
+    }
+    return track;
+  }
+
+  /// Whether downloads can be saved in [folder]: it takes a partial file and its rename to a song or a video, the
+  /// way a download writes. Android's shared storage only takes those in some folders (Download and Documents take
+  /// any file; Music refuses a partial file or a video), and nothing outside it without a file-by-file picker.
+  static Future<bool> canSaveIn(String folder) async {
+    File? made;
+    try {
+      final dir = await Directory(folder).create(recursive: true);
+      final stamp = DateTime.now().microsecondsSinceEpoch;
+      made = await File(p.join(dir.path, 'riflay-check-$stamp.opus.part')).writeAsBytes(const [0], flush: true);
+      made = await made.rename(p.join(dir.path, 'riflay-check-$stamp.mp4'));
+      return true;
+    } catch (e) {
+      debugPrint('Downloads folder $folder refused: $e');
+      return false;
+    } finally {
+      try {
+        made?.deleteSync();
+      } catch (_) {}
+    }
   }
 
   @override

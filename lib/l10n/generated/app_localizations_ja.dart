@@ -3678,6 +3678,9 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
+  String get downloadsFolderUnusable => 'そのフォルダには保存できない。Android では Download か Documents の中のフォルダを選んで。';
+
+  @override
   String get openFolder => 'フォルダを開く';
 
   @override

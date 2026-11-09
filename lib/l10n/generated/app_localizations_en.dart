@@ -3772,6 +3772,10 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get downloadsFolderUnusable =>
+      'Riflay can\'t save downloads in that folder. On Android, choose one inside Download or Documents.';
+
+  @override
   String get openFolder => 'Open folder';
 
   @override

@@ -2130,6 +2130,7 @@
       }
     }
   },
+  "downloadsFolderUnusable": "Riflay can't save downloads in that folder. On Android, choose one inside Download or Documents.",
   "openFolder": "Open folder",
   "ytDlp": "YouTube downloader (yt-dlp)",
   "ytDlpMissing": "Not available. Install it (e.g. pacman -S yt-dlp) for YouTube downloads.",

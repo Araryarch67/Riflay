@@ -1118,6 +1118,7 @@
   "downloadOverMobileOff": "Wi-Fi になるまで待つので、データ通信量を使わない。",
   "downloadsFolder": "ダウンロードフォルダ",
   "phoneDownloadsFixed": "{path}\nスマホでは Riflay 専用の領域に保存するので、変えられない。",
+  "downloadsFolderUnusable": "そのフォルダには保存できない。Android では Download か Documents の中のフォルダを選んで。",
   "openFolder": "フォルダを開く",
   "ytDlp": "YouTube ダウンローダー（yt-dlp）",
   "ytDlpMissing": "見つからない。YouTube からダウンロードするならインストールしてね（例：pacman -S yt-dlp）。",

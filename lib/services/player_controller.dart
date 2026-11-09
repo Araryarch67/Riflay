@@ -26,6 +26,7 @@ import 'dlna.dart';
 import 'dop.dart';
 import 'ffmpeg.dart';
 import 'folder_watch.dart';
+import 'download_prefs.dart';
 import 'ios_folders.dart';
 import 'audio_analysis.dart';
 import 'layout_prefs.dart';
@@ -1050,6 +1051,8 @@ class PlayerController extends ChangeNotifier {
     // iOS: picked folders have to be reopened before any of their songs can be read.
     final folders = Host.isIOS ? IosFolders.restore() : Future.value(const <String, String>{});
     await Future.wait([library, folders, ytMusic.load(), audio.load()]);
+    // A downloads folder picked in Files is one of them.
+    if (Host.isIOS) await DownloadPrefs.instance.repointFolder(await folders);
     _followTempo(); // a tempo or pitch kept from last time
     // iOS moves the app's folder on updates; elsewhere downloads stay put.
     _library = Host.isIOS

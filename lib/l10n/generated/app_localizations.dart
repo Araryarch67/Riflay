@@ -6801,6 +6801,12 @@ abstract class AppLocalizations {
   /// **'{path}\nPhones keep downloads in Riflay\'s own storage, so this can\'t be changed.'**
   String phoneDownloadsFixed(String path);
 
+  /// No description provided for @downloadsFolderUnusable.
+  ///
+  /// In en, this message translates to:
+  /// **'Riflay can\'t save downloads in that folder. On Android, choose one inside Download or Documents.'**
+  String get downloadsFolderUnusable;
+
   /// No description provided for @openFolder.
   ///
   /// In en, this message translates to:

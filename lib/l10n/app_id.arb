@@ -1125,6 +1125,7 @@
   "downloadOverMobileOff": "Lagu menunggu Wi-Fi, jadi kuota datamu tidak terpakai.",
   "downloadsFolder": "Folder unduhan",
   "phoneDownloadsFixed": "{path}\nHP menyimpan unduhan di penyimpanan Riflay sendiri, jadi ini tidak bisa diubah.",
+  "downloadsFolderUnusable": "Riflay tidak bisa menyimpan unduhan di folder itu. Di Android, pilih folder di dalam Download atau Documents.",
   "openFolder": "Buka folder",
   "ytDlp": "Pengunduh YouTube (yt-dlp)",
   "ytDlpMissing": "Tidak tersedia. Pasang (misalnya pacman -S yt-dlp) untuk unduhan YouTube.",

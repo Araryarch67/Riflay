@@ -3747,6 +3747,10 @@ class AppLocalizationsId extends AppLocalizations {
   }
 
   @override
+  String get downloadsFolderUnusable =>
+      'Riflay tidak bisa menyimpan unduhan di folder itu. Di Android, pilih folder di dalam Download atau Documents.';
+
+  @override
   String get openFolder => 'Buka folder';
 
   @override

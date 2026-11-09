@@ -169,6 +169,16 @@ test/                          Unit and widget tests
 
 ## Library model
 
+- **Downloads folder** (Settings › Library & downloads › Downloads; `DownloadPrefs.folder`,
+  `YoutubeImporter.downloadsDir`): the default is `~/Documents/Riflay/YouTube` on computers and the app's own
+  documents folder on phones; Change picks another, on phones too. Android: a real path from the system's folder
+  picker, written with `dart:io`; scoped storage only takes that in some shared folders (Download and Documents
+  take any file, Music refuses a partial file or a video), so `YoutubeImporter.canSaveIn` first writes a partial
+  file there and renames it the way a download does, and a folder that refuses is not taken (a message says to
+  pick one inside Download or Documents). iOS: picked in Files through `IosFolders.pick` (`FolderAccess.swift`
+  keeps the security-scoped bookmark and reopens it at start; `DownloadPrefs.repointFolder` follows a folder iOS
+  moved). Songs already downloaded stay where they are; a folder that can't be used any more falls back to the
+  default. `RIFLAY_NO_PHONE_DOWNLOADS_FOLDER` keeps phones on their own storage. Not tried on an iPhone.
 - There is no "source" switch: Home and Library always show files on this device, Riflay playlists, YouTube
   Music and saved SoundCloud tracks together. Search picks where it looks online (see SoundCloud).
 - `Track.isRemote` (has a `videoId`) means a YouTube Music song that streams; everything YouTube-only (radio
@@ -755,6 +765,7 @@ device's language when Riflay has it). The words live in `lib/l10n/app_en.arb` (
   flutter run --dart-define=RIFLAY_BEAT_WHILE_PAUSED=true  # the seek bar's position stays on UiBeat while paused
   flutter run --dart-define=RIFLAY_MOVE_UNFOCUSED=true  # decorations, visualizer and marquees keep moving while another window has the focus
   flutter run --dart-define=RIFLAY_FULL_BALANCED=true  # Balanced on a computer moves at 20 fps, not 5 (visualizer 10)
+  flutter run --dart-define=RIFLAY_NO_PHONE_DOWNLOADS_FOLDER=true  # phones keep downloads in Riflay's own storage (no Change in Settings)
   flutter run --dart-define=RIFLAY_NO_PHONE_SETUP=true  # a phone under 4 GB keeps Balanced at its first start
   flutter run --dart-define=RIFLAY_NO_ANDROID_TRIM=true  # Android keeps its allocator's free pages and covers in the background
   flutter run --dart-define=RIFLAY_NO_UPDATE_CHECK=true  # no update check at start (Settings › About still checks)
