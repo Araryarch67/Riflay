@@ -30,6 +30,8 @@ class PlayerPreset {
     this.volume = true,
     this.glassControls = false,
     this.glassTransport,
+    this.glassSeekBar,
+    this.glassVolume,
     this.bottomRow = PlayerBottomRow.classic,
     this.lyrics = LyricsLayout.classic,
     this.mini = MiniPlayerStyle.classic,
@@ -60,6 +62,10 @@ class PlayerPreset {
   /// Glass previous and next (`LayoutPrefs.glassTransport`, set with [glassControls]); the Pill's play button stays
   /// solid either way. Null leaves the switch as it is, as the other glass part switches survive presets.
   final bool? glassTransport;
+
+  /// Glass seek bar and volume (`LayoutPrefs.glassSeekBar`, `glassVolume`); null leaves them as they are.
+  final bool? glassSeekBar;
+  final bool? glassVolume;
   final PlayerBottomRow bottomRow;
   final LyricsLayout lyrics;
   final MiniPlayerStyle mini;
@@ -170,6 +176,10 @@ class PlayerPreset {
     volumeSlider: VolumeSliderShape.pill,
     tabBar: TabBarStyle.glass,
     glassControls: true,
+    // Only the buttons around the solid parts are glass: the seek bar, playback and volume stay plain.
+    glassTransport: false,
+    glassSeekBar: false,
+    glassVolume: false,
   );
 
   static const all = [classic, stacked, liquidStacked, kawaii, liquidKawaii];
@@ -188,6 +198,8 @@ class PlayerPreset {
     differ(p.showVolumeRow, volume);
     differ(p.playerGlassControls, glassControls);
     if (glassTransport != null) differ(p.glassTransport, glassTransport!);
+    if (glassSeekBar != null) differ(p.glassSeekBar, glassSeekBar!);
+    if (glassVolume != null) differ(p.glassVolume, glassVolume!);
     differ(p.bottomRow, bottomRow);
     differ(p.lyricsLayout, lyrics);
     differ(p.miniPlayer, mini);
@@ -223,6 +235,8 @@ class PlayerPreset {
       p.showVolumeRow = volume;
       p.playerGlassControls = glassControls;
       if (glassTransport != null) p.glassTransport = glassTransport!;
+      if (glassSeekBar != null) p.glassSeekBar = glassSeekBar!;
+      if (glassVolume != null) p.glassVolume = glassVolume!;
       p.bottomRow = bottomRow;
       p.lyricsLayout = lyrics;
       p.miniPlayer = mini;

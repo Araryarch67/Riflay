@@ -261,15 +261,18 @@ void main() {
     expect(p.playerGlassControls, isFalse);
   });
 
-  test('Liquid glass part switches start off, persist, and survive presets', () async {
+  test('Liquid glass part switches start off, persist, and survive presets but Liquid Kawaii', () async {
     expect((p.glassSeekBar, p.glassTransport, p.glassVolume), (false, false, false));
     await p.setGlassSeekBar(true);
     await p.setGlassTransport(true);
     await p.setGlassVolume(true);
     await p.load();
     expect((p.glassSeekBar, p.glassTransport, p.glassVolume), (true, true, true));
-    await PlayerPreset.liquidKawaii.apply(p);
+    await PlayerPreset.kawaii.apply(p);
     expect((p.glassSeekBar, p.glassTransport, p.glassVolume), (true, true, true));
+    // Liquid Kawaii is Liquid Glass controls alone: its seek bar, playback and volume are plain.
+    await PlayerPreset.liquidKawaii.apply(p);
+    expect((p.glassSeekBar, p.glassTransport, p.glassVolume), (false, false, false));
     await p.reset();
     expect((p.glassSeekBar, p.glassTransport, p.glassVolume), (false, false, false));
   });

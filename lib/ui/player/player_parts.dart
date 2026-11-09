@@ -309,12 +309,16 @@ class PlayerMoreAction extends StatelessWidget {
     this.icon = Icons.more_horiz_rounded,
     this.size = 44,
     this.iconSize = 22,
+    this.glass = true,
   });
 
   final PartLook look;
   final IconData icon;
   final double size;
   final double iconSize;
+
+  /// False keeps it plain under Liquid Glass controls (see [PartButton.glass]).
+  final bool glass;
 
   @override
   Widget build(BuildContext context) {
@@ -325,6 +329,7 @@ class PlayerMoreAction extends StatelessWidget {
         tooltip: tr.more,
         icon: icon,
         look: look,
+        glass: glass,
         round: true,
         size: size,
         iconSize: iconSize,
@@ -424,10 +429,18 @@ class PlayerTitleBlock extends StatelessWidget {
                     lit: false,
                     size: 40,
                     iconSize: 28,
+                    // Plain icons beside the title, Liquid Glass or not (as Liquid Kawaii asks).
+                    glass: false,
                     onPressed: toggle,
                   ),
                 ),
-                const PlayerMoreAction(look: PartLook.plain, icon: Icons.more_horiz_rounded, size: 40, iconSize: 28),
+                const PlayerMoreAction(
+                  look: PartLook.plain,
+                  icon: Icons.more_horiz_rounded,
+                  size: 40,
+                  iconSize: 28,
+                  glass: false,
+                ),
               ],
             ),
           };

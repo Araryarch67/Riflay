@@ -460,6 +460,8 @@ void main() {
       expect(find.descendant(of: find.byType(PlayerVolumeRow), matching: find.byType(LiquidGlass)), findsNothing);
       if (preset == PlayerPreset.liquidKawaii) {
         expect(find.ancestor(of: _tip('Volume').first, matching: find.byType(LiquidGlass)), findsNothing);
+        // More beside the title stays a plain icon (as Like does; this test's song can't be liked).
+        expect(find.ancestor(of: _tip('More').first, matching: find.byType(LiquidGlass)), findsNothing);
       }
       await tester.tap(_tip('Play').first);
       await tester.pump();
@@ -468,6 +470,18 @@ void main() {
       await _close(tester, c);
     });
   }
+
+  testWidgets('Liquid Kawaii turns on Liquid Glass controls alone', (tester) async {
+    await tester.runAsync(() async {
+      await p.setGlassSeekBar(true);
+      await p.setGlassTransport(true);
+      await p.setGlassVolume(true);
+      await PlayerPreset.liquidKawaii.apply(p);
+    });
+    expect(p.playerGlassControls, isTrue);
+    expect([p.glassSeekBar, p.glassTransport, p.glassVolume], [false, false, false]);
+    expect(PlayerPreset.liquidKawaii.changesTo(p), 0);
+  });
 
   for (final preset in [PlayerPreset.liquidStacked, PlayerPreset.liquidKawaii]) {
     testWidgets('${preset.name} frosts the seek bar, transport and volume when their switches are on', (tester) async {
