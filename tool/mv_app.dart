@@ -9,9 +9,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:riflay/main.dart' as app;
 import 'package:riflay/services/language.dart';
+import 'package:riflay/services/player_controller.dart';
 import 'package:riflay/services/video_mode.dart';
 import 'package:riflay/ui/player/video_full_view.dart';
-import 'package:riflay/ui/player_scope.dart';
 import 'package:riflay/ui/shell_scope.dart';
 import 'package:riflay/ui/widgets/page_scaffold.dart';
 
@@ -93,6 +93,7 @@ Future<void> main() async {
   final c = PlayerScope.read(page!);
   WidgetsBinding.instance.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
 
+  if (Platform.environment['RIFLAY_MV_FLOW'] == 'btop') return _btopFlow(c, query);
   final found = await c.searchYoutube(query);
   stdout.writeln('MV search "$query": ${[for (final t in found.take(3)) '${t.title} · ${t.artist}'].join(' | ')}');
   final song = found.firstWhere((t) => t.videoId != null);
@@ -115,6 +116,8 @@ Future<void> main() async {
     final ticks0 = _ticks(), threads0 = _threads();
     frames = 0;
     final cpu = <int>[];
+    final perSecond = <int>[];
+    var framesBefore = 0;
     final private = <double>[], pss = <double>[], rss = <double>[];
     var last = _ticks();
     final sw = Stopwatch()..start();
@@ -125,6 +128,10 @@ Future<void> main() async {
       cpu.add(((now - last) * 10 * 1000 / (at - sampled).inMicroseconds * 100).round());
       last = now;
       sampled = at;
+      if (cpu.length % 4 == 0) {
+        perSecond.add(frames - framesBefore);
+        framesBefore = frames;
+      }
       final (pr, ps, rs) = _memory();
       private.add(pr);
       pss.add(ps);
@@ -149,6 +156,7 @@ Future<void> main() async {
       '(${(total / Platform.numberOfProcessors).toStringAsFixed(2)}% of all ${Platform.numberOfProcessors} threads), '
       'highest 250 ms ${sorted.last}%, ${(frames / secs).toStringAsFixed(1)} frames/s',
     );
+    stdout.writeln('MV   frames each second: ${perSecond.join(' ')}');
     stdout.writeln(
       'MV   threads: ${[for (final e in top.take(7)) '${e.key} ${(e.value / secs).toStringAsFixed(1)}%'].join(', ')}',
     );
@@ -188,5 +196,38 @@ Future<void> main() async {
   await phase('full screen video with lyrics', Duration(seconds: seconds));
   WidgetsBinding.instance.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
   await phase('full screen video with lyrics, another window in front', Duration(seconds: seconds ~/ 2));
+  exit(0);
+}
+
+/// RIFLAY_MV_FLOW=btop: what a listener does, each step marked with the time since start ("MV at"), for a sampler
+/// outside the app that reads its CPU the way btop does (tool/btop_watch.py): the song with its video on Home, the
+/// lyrics page, Now Playing, the full screen video with its lyrics line, then back.
+Future<void> _btopFlow(PlayerController c, String query) async {
+  final clock = Stopwatch()..start();
+  void at(String step) => stdout.writeln('MV at ${(clock.elapsedMilliseconds / 1000).toStringAsFixed(1)} s: $step');
+  ShellScope shell() => ShellScope.of(_find((e) => e.widget is PageScaffold)!);
+  Future<void> rest(int s) => Future<void>.delayed(Duration(seconds: s));
+  at('searching');
+  final song = (await c.searchYoutube(query)).firstWhere((t) => t.videoId != null);
+  at('play ${song.title}');
+  await c.playList([song], 0, from: 'MV benchmark');
+  await rest(10);
+  at('open lyrics');
+  shell().openLyrics();
+  await rest(10);
+  at('back to Home');
+  shell().history?.back();
+  await rest(8);
+  at('open Now Playing (video)');
+  shell().openNowPlaying();
+  await rest(10);
+  at('open the full screen video');
+  unawaited(openVideoFullView(_find((e) => e.widget is PageScaffold)!));
+  await rest(2);
+  final lyrics = _find((e) => e.widget is IconButton && (e.widget as IconButton).tooltip == tr.showLyrics);
+  (lyrics?.widget as IconButton?)?.onPressed?.call();
+  at('lyrics line on');
+  await rest(12);
+  at('done');
   exit(0);
 }

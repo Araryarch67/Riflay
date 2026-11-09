@@ -605,7 +605,14 @@ class LayoutPrefs extends ChangeNotifier {
               p.pageMotion == PageMotionStyle.wipe)
         ? (reverse ? 480 : 620)
         : (reverse ? 340 : 440);
-    return dur(Duration(milliseconds: (base * p.pageSpeed.factor).round()));
+    final d = dur(Duration(milliseconds: (base * p.pageSpeed.factor).round()));
+    // Frugal Balanced on a computer: the same motion, quicker. Each frame of a page sliding in costs the Linux main
+    // thread ~10 ms (the whole window composited); 440 ms was ~26 frames, a one-sample spike in btop on every page.
+    if (frugal) {
+      final most = Duration(milliseconds: reverse ? 120 : 160);
+      return d < most ? d : most;
+    }
+    return d;
   }
 
   static Widget pageTransition(

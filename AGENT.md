@@ -956,6 +956,17 @@ Windows zip, Linux AppImage and macOS dmg, so successful platforms need not be r
   behind, % of 24 threads, private MiB): Balanced 0.62 / 0.33 / 0.22% at ~255 / ~255 / ~115, Heavy 0.54 / 0.46 /
   0.45% at ~268 / ~287 / ~120. Headless Weston rendered on the NVIDIA GPU, so its video numbers run high. Private memory with a video is ~445-465 MiB
   (~160 of it NVIDIA's for the video's GL and CUDA), ~45 MiB of NVIDIA's after it is let go.
+- What btop shows (`tool/btop_watch.py`: a command's CPU read from /proc as btop does, % of all threads every 2 s,
+  with the threads behind a high sample and the app's "MV at" step lines). With `RIFLAY_MV_FLOW=btop`,
+  `tool/mv_app.dart` goes through what a listener does on the real desktop: Kyapi by Houshou Marine with its video,
+  the lyrics page, Now Playing, the full screen video with its lyrics line. Measured 2026-11-09 (Balanced, the
+  laptop's Intel GPU): start, search and first play 2.6% (the main thread ~750 ms), playing on Home 0.15-0.2%, the
+  lyrics page 0.44%, Now Playing starting the video 1.7% (mpv's core thread ~290 ms opening the stream and the
+  hardware decoder, once a song: the player is kept a minute without a view), the full screen view 0.25-0.46%.
+  Starting the tray and the CLI's server 3 s later didn't change the first sample (the start itself is the main
+  thread's), so they start with the first frame as before.
+- Frugal Balanced's page transitions take at most 160 ms in, 120 out (`LayoutPrefs.pageDuration`): ~10 frames
+  instead of ~26 at 440 ms, each ~10 ms of the Linux main thread.
 - The native video's `GtkOverlay` keeps its `GtkFixed` hidden until a video has a place on screen: shown over the
   Flutter view at all times it made GTK composite the slow way, ~2.8% of a core more while a song played (main thread
   7.5% -> 4.7% on Home). Measurements across the 2026-11 kernel update differ: the same commit measured ~5% more on
