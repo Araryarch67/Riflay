@@ -57,11 +57,8 @@ abstract final class DebugSwitches {
   /// The visualizer's meter goes into mpv's audio graph at once on every change, even when it is already there.
   static bool meterEverySync = _all || const bool.fromEnvironment('RIFLAY_METER_EVERY_SYNC');
 
-  /// Balanced on a computer lines a music video up with its song at full speed, not spread over a few seconds.
-  static bool alignFullSpeed = _all || const bool.fromEnvironment('RIFLAY_ALIGN_FULL_SPEED');
-
-  /// Balanced on a computer opens a music video as its page comes on screen, not a moment after.
-  static bool videoWithPage = _all || const bool.fromEnvironment('RIFLAY_VIDEO_WITH_PAGE');
+  /// A music video holds still while another window has the focus (and is let go after 20 s), as it did.
+  static bool videoHoldsBehind = _all || const bool.fromEnvironment('RIFLAY_VIDEO_HOLDS_BEHIND');
 
   /// Balanced's visualizer measures 24 bands over 1024-point windows, 25 times a second, as Heavy does.
   static bool fullVisualizer = _all || const bool.fromEnvironment('RIFLAY_FULL_VISUALIZER');

@@ -68,7 +68,7 @@ class _Mpv {
 /// Muted music video in a Windows child window or Linux GTK OpenGL surface.
 /// Video mode drives it; native frames do not invalidate a Flutter texture.
 class NativeVideoPlayer implements VideoEngine {
-  NativeVideoPlayer({required int window, required String hwdec, int? maxFps, required bool foreground}) {
+  NativeVideoPlayer({required int window, required String hwdec, String? maxFps, required bool foreground}) {
     final mpv = _mpv;
     final h = mpv.create();
     if (h == nullptr) throw StateError('mpv could not be made');

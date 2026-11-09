@@ -732,8 +732,7 @@ device's language when Riflay has it). The words live in `lib/l10n/app_en.arb` (
   flutter run --dart-define=RIFLAY_FULL_VISUALIZER=true  # Balanced's visualizer measures 24 bands / 1024 points, read 25 times a second, as Heavy
   flutter run --dart-define=RIFLAY_SIGNAL_PATH_EVERY_READ=true  # the quality badge redraws every second, even showing the same
   flutter run --dart-define=RIFLAY_METER_EVERY_SYNC=true  # the visualizer's meter goes into mpv's audio graph at once on every change, even unchanged
-  flutter run --dart-define=RIFLAY_VIDEO_WITH_PAGE=true  # Balanced opens a music video with its page, not 2.5 s after
-  flutter run --dart-define=RIFLAY_ALIGN_FULL_SPEED=true  # Balanced lines a music video up with its song at full speed, not over ~5 s
+  flutter run --dart-define=RIFLAY_VIDEO_HOLDS_BEHIND=true  # a music video holds still while another window has the focus (let go after 20 s), as before
   flutter run --dart-define=RIFLAY_ASTATS_VISUALIZER=true  # the visualizer measures its bands with astats (~3x the CPU), not aspectralstats
   flutter run -d chrome --dart-define=RIFLAY_NO_WEB_AUDIO=true  # web: songs play straight from <audio>, no effects or visualizer
   ```
@@ -851,11 +850,11 @@ Windows zip, Linux AppImage and macOS dmg, so successful platforms need not be r
   `windowManager`); Esc leaves full screen, then the view, and closing puts the window back. Queue opens beside the
   picture in a navigator of its own (no back button, no page history), not in the history under the view.
 - Video mode is the most a playing song can cost on a computer (a second mpv; every video frame re-rasters the
-  whole window, blur included): ~1.7% of a 24-thread CPU and ~100 MB in Balanced. While another window has the
-  focus the video holds its picture, and after `VideoMode.unfocusedRelease` (20 s) its player is let go; back in
-  front it starts again where the song is. Its height follows the mode on computers (Heavy 1080p, Balanced 720p,
-  Lightweight 480p), and so does its frame rate (`VideoMode.maxFps`: Balanced 15, Lightweight 10, an mpv `fps`
-  filter that keeps hardware decoding; `RIFLAY_VIDEO_FPS` overrides Balanced's for measuring). Windows renders with
+  whole window, blur included): ~1.7% of a 24-thread CPU and ~100 MB in Balanced (measured long ago; Kyapi now
+  ~0.3%). It plays on while another window has the focus (`RIFLAY_VIDEO_HOLDS_BEHIND` holds its picture there and
+  lets the player go after `VideoMode.unfocusedRelease`, 20 s, as it did). Its height follows the mode on computers (Heavy 1080p, Balanced 720p,
+  Lightweight 480p), and so does its frame rate (`VideoMode.maxFps`: 23.976 below Heavy, an mpv `fps` filter that
+  keeps hardware decoding; `RIFLAY_VIDEO_FPS` overrides it for measuring). Windows renders with
   Impeller on ANGLE, which has no raster cache: each video frame redraws every layer of the window (~15 render
   passes, ~17 ms of CPU a frame), so the video in front costs ~1.5-3% of a 24-thread CPU in Balanced.
   `services/window_focus.dart` tells the app `inactive` when the window opens without the focus
@@ -958,8 +957,7 @@ Windows zip, Linux AppImage and macOS dmg, so successful platforms need not be r
   plays on Now Playing and full screen. Kyapi: Home and the lyrics page went from ~245-255 to ~197-208 MiB private
   and ~350 to ~290 MiB RSS. Home in front costs ~0.38% again (the visualizer around the cover, which a showing video
   paused; mpv's audio `core` thread ~3% of a core), ~0.09% behind another window. Back with `RIFLAY_FULL_BALANCED`.
-  Tried and dropped: the video at 10 fps instead of 15 while another window is in front (0.13% vs 0.14% on Now
-  Playing, within noise; Flutter draws ~1.5 frames a second there, the rest of the main thread is GTK and the video).
+  (Measured while the video still held still behind other windows; it plays on there now, see below.)
 - CPU and memory targets are for PEAKS (the worst 2 s btop sample, the most memory), not averages; `btop_watch.py`
   prints each step's peak. Two steady costs went: the quality badge redrew the window each second for an Opus
   song's bitrate (122, 127, 128 kbps; now the bitrate is drawn every 10 s, other changes at once), and Balanced's
@@ -969,15 +967,19 @@ Windows zip, Linux AppImage and macOS dmg, so successful platforms need not be r
   front: peak 0.41 -> ~0.31% (mpv's `core` thread 40-80 -> 20 ms per 2 s). Private memory with the video stayed
   ~265 MiB (one run showed ~212; two more did not). Pages opening instantly instead of in 160 ms changed their peaks
   little (lyrics 0.68 vs 0.75%): the cost is building the page, not its slide.
-- Opening Now Playing with Kyapi's video peaked at ~2.2% (one 2 s sample): mpv's audio graph rebuilt four times
-  (the meter added three times as the views came, then removed as the video paused the visualizer: now changes
-  wait 300 ms for the last and a meter already as wanted is left alone), the music video's first alignment decoding
-  both soundtracks at full speed (~270 ms of an mpv `core` thread; now read at 15x real time in Balanced, ~5 s), and
-  the video opening with the page (now 2.5 s after, in Balanced). Now ~1.2% then ~0.8%, ~0.6%; the rest of the first
-  sample is the raster thread drawing the page (~240 ms). The alignment is kept per song and video, so only a music
-  video's first showing pays it; the reference flow starts with fresh data each run. Semantics are always on in the
-  Linux embedder (`fl_engine.cc` enables them): leaving them out of the tree cut the lyrics page's opening peak only
-  0.70 -> 0.56% and was not kept (screen readers need them).
+- Opening Now Playing with Kyapi's video peaks at ~1.7-2.2% (one 2 s sample): the music video's first alignment
+  decodes both soundtracks at once (~270 ms of an mpv `core` thread; kept per song and video, so only a video's first
+  showing pays it), and drawing the page (~240 ms raster). mpv's audio graph was rebuilt four times on the way (the
+  meter added three times as the views came, then removed): changes now wait 300 ms for the last, and a meter
+  already as wanted is left alone (`RIFLAY_METER_EVERY_SYNC`). Spreading the alignment over ~5 s and opening the video
+  2.5 s after its page brought the peak to ~1.2%, but the video then waited, still, for its answer: both were
+  dropped. Semantics are always on in the Linux embedder (`fl_engine.cc` enables them): leaving them out of the tree
+  cut the lyrics page's opening peak only 0.70 -> 0.56% and was not kept (screen readers need them).
+- Music videos play at most 23.976 fps below Heavy (`fps=24000/1001`; 15 and 10 could not be watched; Heavy plays
+  the video's own rate), and play on behind other windows: held still there (to save the CPU) they read as frozen,
+  and back in front they sought and fetched again for ~2 s (`RIFLAY_MV_FLOW=resume` in `tool/mv_app.dart` shows the
+  video's own position after 5 s and 30 s away). Minimized or hidden they stop. Kyapi behind another window with its
+  video on Now Playing or full screen: ~0.29% (peak ~0.4-0.5%), against ~0.12% held still.
 
 - Opening the lyrics page (`RIFLAY_CPU_ENV='RIFLAY_CPU_SPIKE=lyrics' tool/cpu.sh`: CPU and frames every 100 ms,
   each thread, `RIFLAY_CPU_PROFILE=true` the Dart profile, `RIFLAY_CPU_STACKS=true` in a debug build who asks for

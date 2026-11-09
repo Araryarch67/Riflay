@@ -99,6 +99,7 @@ Future<void> main() async {
 
   if (Platform.environment['RIFLAY_MV_FLOW'] == 'btop') return _btopFlow(c, query);
   if (Platform.environment['RIFLAY_MV_FLOW'] == 'steady') return _steadyFlow(c, query);
+  if (Platform.environment['RIFLAY_MV_FLOW'] == 'resume') return _resumeFlow(c, query);
   final found = await c.searchYoutube(query);
   stdout.writeln('MV search "$query": ${[for (final t in found.take(3)) '${t.title} · ${t.artist}'].join(' | ')}');
   final song = found.firstWhere((t) => t.videoId != null);
@@ -298,5 +299,38 @@ Future<void> _steadyFlow(PlayerController c, String query) async {
   at('paused');
   await Future<void>.delayed(const Duration(seconds: 15));
   at('done');
+  exit(0);
+}
+
+/// RIFLAY_MV_FLOW=resume: Now Playing with the video, another window in front for a while (5 s, then 30 s, past the
+/// 20 s the video's player is kept), and back: the video's own position each half second after, to see it go on.
+Future<void> _resumeFlow(PlayerController c, String query) async {
+  final binding = WidgetsBinding.instance;
+  final song = (await c.searchYoutube(query)).firstWhere((t) => t.videoId != null);
+  await c.playList([song], 0, from: 'MV benchmark');
+  await Future<void>.delayed(const Duration(seconds: 3));
+  ShellScope.of(_find((e) => e.widget is PageScaffold)!).openNowPlaying();
+  await Future<void>.delayed(const Duration(seconds: 8));
+  String state() {
+    final v = VideoMode.instance.videoState;
+    return v == null
+        ? 'no player'
+        : '${(v.position.inMilliseconds / 1000).toStringAsFixed(1)}${v.playing ? '' : ' paused'}${v.buffering ? ' buffering' : ''}'
+            ' (song ${(c.position.inMilliseconds / 1000).toStringAsFixed(1)})';
+  }
+
+  stdout.writeln('MV before: ${state()}');
+  for (final away in [5, 30]) {
+    binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+    await Future<void>.delayed(Duration(seconds: away));
+    stdout.writeln('MV after $away s behind: ${state()}');
+    binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    final seen = <String>[];
+    for (var i = 0; i < 16; i++) {
+      await Future<void>.delayed(const Duration(milliseconds: 500));
+      seen.add(state());
+    }
+    stdout.writeln('MV back from $away s, every 0.5 s: ${seen.join(' | ')}');
+  }
   exit(0);
 }

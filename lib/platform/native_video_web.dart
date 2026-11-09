@@ -2,7 +2,7 @@ import '../services/video_engine.dart';
 
 /// The web has no window of its own for the video (see native_video.dart).
 class NativeVideoPlayer implements VideoEngine {
-  NativeVideoPlayer({required int window, required String hwdec, int? maxFps, required bool foreground}) {
+  NativeVideoPlayer({required int window, required String hwdec, String? maxFps, required bool foreground}) {
     throw UnsupportedError('No native video player on the web');
   }
 

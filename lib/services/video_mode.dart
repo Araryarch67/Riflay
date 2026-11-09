@@ -62,17 +62,14 @@ class VideoMode extends ChangeNotifier with WidgetsBindingObserver {
 
   // ---- Fitting the connection ----
 
-  /// The most video frames a second on a computer, null for the video's own rate (Heavy, phones). Every frame is
-  /// a full redraw of the window (Flutter has no partial redraw there): a 30 fps video beside Balanced's 20 fps
-  /// decorations made about 50 a second, ~3% of a 24-thread processor. The fps filter only passes or drops the
-  /// decoded GPU frames, so hardware decoding stays.
-  static int? get maxFps => Host.isAndroid || Host.isIOS
+  /// The most video frames a second on a computer below Heavy, as mpv's fps filter takes it, null for the video's
+  /// own rate (Heavy, phones). Film's 23.976 (24000/1001): fewer could not be watched (15 and 10 were), and a film or
+  /// most music videos are that already, so nothing of them is dropped; a 30 or 60 fps video comes down to it. Every
+  /// frame is a full redraw of the window on Linux. The filter only passes or drops the decoded GPU frames, so
+  /// hardware decoding stays. `RIFLAY_VIDEO_FPS` for another (`30`, `30000/1001`).
+  static String? get maxFps => Host.isAndroid || Host.isIOS || LayoutPrefs.instance.performance == PerformanceMode.heavy
       ? null
-      : switch (LayoutPrefs.instance.performance) {
-          PerformanceMode.heavy => null,
-          PerformanceMode.balanced => int.tryParse(Host.environment['RIFLAY_VIDEO_FPS'] ?? '') ?? 15,
-          PerformanceMode.lightweight => 10,
-        };
+      : Host.environment['RIFLAY_VIDEO_FPS'] ?? '24000/1001';
 
   /// Off with `RIFLAY_NO_ADAPTIVE_VIDEO`: the video always comes at [maxHeight], however often it stalls.
   static const adaptive = !bool.fromEnvironment('RIFLAY_NO_ADAPTIVE_VIDEO');
@@ -342,7 +339,13 @@ class VideoMode extends ChangeNotifier with WidgetsBindingObserver {
     // the song is. Phones pass through `inactive` for a pulled-down shade: they keep playing.
     // Windows' own-window video costs next to nothing to keep playing (the graphics card decodes and draws it), and
     // a window behind another is often still watched: it plays on until the window is minimized or hidden.
-    final unfocused = _computer && (Host.isLinux || _native == null) && state == AppLifecycleState.inactive;
+    // Off now: a video held still in a window still on screen read as frozen, and coming back it sought and fetched
+    // again for seconds. It plays on behind other windows, as a browser's does; minimized or hidden it stops ([_away]).
+    // `RIFLAY_VIDEO_HOLDS_BEHIND` holds it again.
+    final unfocused = DebugSwitches.videoHoldsBehind &&
+        _computer &&
+        (Host.isLinux || _native == null) &&
+        state == AppLifecycleState.inactive;
     if (unfocused != _unfocused) {
       _unfocused = unfocused;
       _unfocusedRelease?.cancel();
@@ -396,22 +399,9 @@ class VideoMode extends ChangeNotifier with WidgetsBindingObserver {
     full ? _fullViews++ : _views++;
     _viewsChanged();
     _release?.cancel();
-    // Views come on screen while the tree builds: start the video right after. Balanced on a computer opens a new
-    // video a moment later instead ([startAfterPage]), not in the same moment as the page.
-    final later = _player == null && LayoutPrefs.frugal && !DebugSwitches.videoWithPage;
-    if (!later) return scheduleMicrotask(_sync);
-    _startSoon ??= Timer(startAfterPage, () {
-      _startSoon = null;
-      _sync();
-    });
+    // Views come on screen while the tree builds: start the video right after.
+    scheduleMicrotask(_sync);
   }
-
-  /// Balanced on a computer: how long after its page comes on screen a video is opened. Opening it (mpv probing the
-  /// stream, the decoder starting: ~270 ms on its thread) and building the page (~450 ms of the main and raster
-  /// threads) fell in one of btop's 2 s samples, ~2.2% of the processor with Kyapi; apart, each is about half. The
-  /// cover shows meanwhile. Off with `RIFLAY_VIDEO_WITH_PAGE`.
-  static const startAfterPage = Duration(milliseconds: 2500);
-  Timer? _startSoon;
 
   void removeView({bool full = false}) {
     full ? _fullViews-- : _views--;
@@ -587,6 +577,13 @@ vec4 hook() {
   /// visualizer rest meanwhile (`PlayingMotion`, `AudioReactiveView`): the video is the motion, and with its surface
   /// over the window each frame Flutter drew cost the Linux main thread twice as much (~20 ms).
   bool get showing => _ready && _wanted != null;
+
+  /// For measuring (tool/mv_app.dart): the video's own position and state, null with no player.
+  @visibleForTesting
+  ({Duration position, bool playing, bool buffering})? get videoState {
+    final p = _player;
+    return p == null ? null : (position: p.position, playing: p.playing, buffering: p.buffering);
+  }
 
   /// [showing] may change with the views: listeners hear it after the frame that changed them (never mid-build).
   void _viewsChanged() => scheduleMicrotask(() {
@@ -919,7 +916,6 @@ vec4 hook() {
 
   @override
   void dispose() {
-    _startSoon?.cancel();
     _disposed = true;
     _c?.removeListener(_changed);
     WidgetsBinding.instance.removeObserver(this);
