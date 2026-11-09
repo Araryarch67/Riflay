@@ -2193,6 +2193,90 @@ abstract class AppLocalizations {
   /// **'Tap to apply'**
   String get tapToApply;
 
+  /// No description provided for @presetCustomNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Your own preset'**
+  String get presetCustomNote;
+
+  /// No description provided for @yourPresets.
+  ///
+  /// In en, this message translates to:
+  /// **'Your presets'**
+  String get yourPresets;
+
+  /// No description provided for @riflayPresets.
+  ///
+  /// In en, this message translates to:
+  /// **'Riflay presets'**
+  String get riflayPresets;
+
+  /// No description provided for @saveAsPreset.
+  ///
+  /// In en, this message translates to:
+  /// **'Save this look as a preset'**
+  String get saveAsPreset;
+
+  /// No description provided for @saveAsPresetBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Keeps the player as it is set up now, to put back in one tap.'**
+  String get saveAsPresetBody;
+
+  /// No description provided for @presetName.
+  ///
+  /// In en, this message translates to:
+  /// **'Preset name'**
+  String get presetName;
+
+  /// No description provided for @presetNameBuiltIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Riflay already has a preset with this name'**
+  String get presetNameBuiltIn;
+
+  /// No description provided for @presetNameReplaces.
+  ///
+  /// In en, this message translates to:
+  /// **'Replaces your preset with this name'**
+  String get presetNameReplaces;
+
+  /// No description provided for @presetNameTaken.
+  ///
+  /// In en, this message translates to:
+  /// **'You already have a preset with this name'**
+  String get presetNameTaken;
+
+  /// No description provided for @renamePreset.
+  ///
+  /// In en, this message translates to:
+  /// **'Rename preset'**
+  String get renamePreset;
+
+  /// No description provided for @updatePresetToCurrent.
+  ///
+  /// In en, this message translates to:
+  /// **'Save this look into it'**
+  String get updatePresetToCurrent;
+
+  /// No description provided for @deletePresetQuestion.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete {preset}?'**
+  String deletePresetQuestion(String preset);
+
+  /// No description provided for @deletePresetBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Your player stays as it is; only the preset goes.'**
+  String get deletePresetBody;
+
+  /// No description provided for @presetSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved {preset}'**
+  String presetSaved(String preset);
+
   /// No description provided for @autoplayKeepGoing.
   ///
   /// In en, this message translates to:

@@ -258,7 +258,7 @@ class _HomeShellState extends State<HomeShell> {
         _goHome();
       case 'preset':
         final want = args['name']!.toLowerCase();
-        await PlayerPreset.all.firstWhere((p) => p.name.toLowerCase() == want).apply(LayoutPrefs.instance);
+        await (CustomPresets.named(want) ?? (throw ArgumentError('No preset "$want"'))).apply(LayoutPrefs.instance);
       case 'nowplaying':
         _openNowPlaying();
       case 'more':

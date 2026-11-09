@@ -26,6 +26,7 @@ import 'platform/cli_server.dart';
 import 'services/appearance.dart';
 import 'services/language.dart';
 import 'services/video_mode.dart';
+import 'services/player_presets.dart';
 import 'services/layout_prefs.dart';
 import 'services/media_session.dart';
 import 'services/metadata.dart';
@@ -95,6 +96,7 @@ Future<void> _main(List<String> args) async {
   await Future.wait([
     Appearance.instance.load(),
     LayoutPrefs.instance.load(),
+    CustomPresets.instance.load(),
     Language.instance.load(),
     DeviceSetup.instance.load(),
   ]);

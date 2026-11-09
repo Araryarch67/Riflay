@@ -410,6 +410,46 @@ void main() {
     await tester.pumpWidget(const SizedBox());
   });
 
+  testWidgets('the presets page saves the look under a name, and renames and deletes it', (tester) async {
+    CustomPresets.instance.presets = const [];
+    await _show(tester, const PlayerPresetsPage(), const Size(412, 915));
+    await tester.tap(find.text('Save this look as a preset'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), 'Stacked');
+    await tester.pump();
+    expect(find.text('Riflay already has a preset with this name'), findsOneWidget);
+    await tester.enterText(find.byType(TextField), 'Mine');
+    await tester.pump();
+    await tester.tap(find.widgetWithText(FilledButton, 'Save'));
+    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 50)));
+    await tester.pumpAndSettle();
+    expect(CustomPresets.instance.presets.single.name, 'Mine');
+    expect(find.text('Your presets'), findsOneWidget);
+    expect(find.text('Your settings match Classic'), findsOneWidget, reason: 'Riflay\'s own name comes first');
+
+    await tester.tap(find.byTooltip('More').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Rename preset').last);
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), 'Ours');
+    await tester.pump();
+    await tester.tap(find.widgetWithText(FilledButton, 'Rename'));
+    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 50)));
+    await tester.pumpAndSettle();
+    expect(find.text('Ours'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('More').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Delete'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, 'Delete'));
+    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 50)));
+    await tester.pumpAndSettle();
+    expect(CustomPresets.instance.presets, isEmpty);
+    expect(find.text('Your presets'), findsNothing);
+    await tester.pumpWidget(const SizedBox());
+  });
+
   testWidgets('the presets page can select the normal and Liquid variants separately', (tester) async {
     final c = await _show(tester, const PlayerPresetsPage(), const Size(412, 915));
     await tester.runAsync(() => PlayerPreset.liquidKawaii.apply(p));

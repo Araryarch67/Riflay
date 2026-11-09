@@ -1,3 +1,8 @@
+import 'dart:convert';
+
+import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
 import '../platform/features.dart';
 import 'appearance.dart';
 import 'layout_prefs.dart';
@@ -13,6 +18,7 @@ String presetNote(PlayerPreset p) => switch (p.name) {
   'Liquid Stacked' => tr.presetLiquidStackedNote,
   'Kawaii' => tr.presetKawaiiNote,
   'Liquid Kawaii' => tr.presetLiquidKawaiiNote,
+  _ when p.custom => tr.presetCustomNote,
   _ => p.note,
 };
 
@@ -45,7 +51,112 @@ class PlayerPreset {
     this.visualizer = false,
     this.visualizerStyle = VisualizerStyle.pulse,
     this.videoSwitch = true,
+    this.custom = false,
   });
+
+  /// The player as it is set up now, under [name]: a preset of the user's own ([CustomPresets]).
+  factory PlayerPreset.fromCurrent(String name, [LayoutPrefs? prefs]) {
+    final p = prefs ?? LayoutPrefs.instance;
+    return PlayerPreset(
+      name: name,
+      note: '',
+      cover: p.playerCover,
+      header: p.playerHeader,
+      titleActions: p.titleActions,
+      progressBar: p.progressBar,
+      progressShape: p.progressShape,
+      timeLeft: p.showTimeLeft,
+      transport: p.transport,
+      volume: p.showVolumeRow,
+      glassControls: p.playerGlassControls,
+      glassTransport: p.glassTransport,
+      glassSeekBar: p.glassSeekBar,
+      glassVolume: p.glassVolume,
+      bottomRow: p.bottomRow,
+      lyrics: p.lyricsLayout,
+      mini: p.miniPlayer,
+      album: p.albumHeader,
+      playingRow: p.playingRow,
+      badge: p.qualityBadgePlace,
+      lyricsLines: p.lyricsLines,
+      volumeSlider: p.volumeSlider,
+      background: Appearance.instance.nowPlaying,
+      tabBar: p.tabBar,
+      visualizer: p.visualizer,
+      visualizerStyle: p.visualizerStyle,
+      videoSwitch: p.showVideoSwitch,
+      custom: true,
+    );
+  }
+
+  Map<String, Object?> toJson() => {
+    'name': name,
+    'cover': cover.name,
+    'header': header.name,
+    'titleActions': titleActions.name,
+    'progressBar': progressBar.name,
+    'progressShape': progressShape.name,
+    'timeLeft': timeLeft,
+    'transport': transport.name,
+    'volume': volume,
+    'glassControls': glassControls,
+    'glassTransport': glassTransport,
+    'glassSeekBar': glassSeekBar,
+    'glassVolume': glassVolume,
+    'bottomRow': bottomRow.name,
+    'lyrics': lyrics.name,
+    'mini': mini.name,
+    'album': album.name,
+    'playingRow': playingRow.name,
+    'badge': badge.name,
+    'lyricsLines': lyricsLines.name,
+    'volumeSlider': volumeSlider.name,
+    'background': background?.name,
+    'tabBar': tabBar?.name,
+    'visualizer': visualizer,
+    'visualizerStyle': visualizerStyle.name,
+    'videoSwitch': videoSwitch,
+  };
+
+  /// A saved preset of the user's own; a value an older or newer Riflay doesn't know falls back to the default.
+  factory PlayerPreset.fromJson(Map<String, dynamic> j) {
+    const d = PlayerPreset(name: '', note: '');
+    T pick<T extends Enum>(List<T> values, Object? name, T fallback) => values.asNameMap()[name] ?? fallback;
+    T? maybe<T extends Enum>(List<T> values, Object? name) => values.asNameMap()[name];
+    return PlayerPreset(
+      name: j['name'] as String? ?? '',
+      note: '',
+      cover: pick(PlayerCover.values, j['cover'], d.cover),
+      header: pick(PlayerHeader.values, j['header'], d.header),
+      titleActions: pick(TitleActions.values, j['titleActions'], d.titleActions),
+      progressBar: pick(ProgressBarStyle.values, j['progressBar'], d.progressBar),
+      progressShape: pick(ProgressBarShape.values, j['progressShape'], d.progressShape),
+      timeLeft: j['timeLeft'] as bool? ?? d.timeLeft,
+      transport: pick(PlayerTransport.values, j['transport'], d.transport),
+      volume: j['volume'] as bool? ?? d.volume,
+      glassControls: j['glassControls'] as bool? ?? d.glassControls,
+      glassTransport: j['glassTransport'] as bool?,
+      glassSeekBar: j['glassSeekBar'] as bool?,
+      glassVolume: j['glassVolume'] as bool?,
+      bottomRow: pick(PlayerBottomRow.values, j['bottomRow'], d.bottomRow),
+      lyrics: pick(LyricsLayout.values, j['lyrics'], d.lyrics),
+      mini: pick(MiniPlayerStyle.values, j['mini'], d.mini),
+      album: pick(AlbumHeaderStyle.values, j['album'], d.album),
+      playingRow: pick(PlayingRowStyle.values, j['playingRow'], d.playingRow),
+      badge: pick(QualityBadgePlace.values, j['badge'], d.badge),
+      lyricsLines: pick(LyricsLines.values, j['lyricsLines'], d.lyricsLines),
+      volumeSlider: pick(VolumeSliderShape.values, j['volumeSlider'], d.volumeSlider),
+      background: maybe(NowPlayingBackground.values, j['background']),
+      tabBar: maybe(TabBarStyle.values, j['tabBar']),
+      visualizer: j['visualizer'] as bool? ?? d.visualizer,
+      visualizerStyle: pick(VisualizerStyle.values, j['visualizerStyle'], d.visualizerStyle),
+      videoSwitch: j['videoSwitch'] as bool? ?? d.videoSwitch,
+      custom: true,
+    );
+  }
+
+  /// [name] in place of this one's.
+  PlayerPreset renamed(String name) => PlayerPreset.fromJson({...toJson(), 'name': name});
 
   final String name;
   final String note;
@@ -89,6 +200,9 @@ class PlayerPreset {
 
   /// The Song / Video switch at the top of Now Playing: shown by every preset.
   final bool videoSwitch;
+
+  /// Made by the user ([CustomPresets]), rather than one of Riflay's own.
+  final bool custom;
 
   /// Today's look, with the visualizer pulsing around the cover.
   static const classic = PlayerPreset(
@@ -262,8 +376,69 @@ String? playerPresetName([LayoutPrefs? prefs]) {
   for (final preset in [
     ...PlayerPreset.all.where((preset) => preset.tabBar != null),
     ...PlayerPreset.all.where((preset) => preset.tabBar == null),
+    ...CustomPresets.instance.presets,
   ]) {
     if (preset.matches(p)) return preset.name;
   }
   return null;
+}
+
+/// The presets the user made and named in Settings › Presets: the player as it was set up when saved.
+class CustomPresets extends ChangeNotifier {
+  CustomPresets._();
+  static final instance = CustomPresets._();
+
+  static const _key = 'presets.custom.v1';
+
+  List<PlayerPreset> presets = const [];
+
+  /// Riflay's own and the user's, by [name] (ignoring case); null when there is none.
+  static PlayerPreset? named(String name) {
+    final want = name.trim().toLowerCase();
+    for (final p in [...PlayerPreset.all, ...instance.presets]) {
+      if (p.name.toLowerCase() == want) return p;
+    }
+    return null;
+  }
+
+  /// Whether [name] is one of Riflay's own presets' (those can't be replaced).
+  static bool isBuiltIn(String name) => PlayerPreset.all.any((p) => p.name.toLowerCase() == name.trim().toLowerCase());
+
+  Future<void> load() async {
+    try {
+      final raw = (await SharedPreferences.getInstance()).getString(_key);
+      if (raw == null) return;
+      presets = [for (final j in jsonDecode(raw) as List<dynamic>) PlayerPreset.fromJson(j as Map<String, dynamic>)]
+          .where((p) => p.name.isNotEmpty)
+          .toList();
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Custom presets not read: $e');
+    }
+  }
+
+  Future<void> _save() async {
+    notifyListeners();
+    await (await SharedPreferences.getInstance()).setString(_key, jsonEncode([for (final p in presets) p.toJson()]));
+  }
+
+  /// Saves the player as it is now under [name]; one of the user's own with that name is replaced in place.
+  Future<PlayerPreset> saveCurrent(String name) async {
+    final preset = PlayerPreset.fromCurrent(name.trim());
+    final at = presets.indexWhere((p) => p.name.toLowerCase() == preset.name.toLowerCase());
+    presets = [...presets];
+    at < 0 ? presets.add(preset) : presets[at] = preset;
+    await _save();
+    return preset;
+  }
+
+  Future<void> rename(PlayerPreset preset, String name) async {
+    presets = [for (final p in presets) p.name == preset.name ? p.renamed(name.trim()) : p];
+    await _save();
+  }
+
+  Future<void> remove(PlayerPreset preset) async {
+    presets = presets.where((p) => p.name != preset.name).toList();
+    await _save();
+  }
 }

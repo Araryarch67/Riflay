@@ -1153,6 +1153,52 @@ class AppLocalizationsId extends AppLocalizations {
   String get tapToApply => 'Ketuk untuk memakai';
 
   @override
+  String get presetCustomNote => 'Preset buatanmu';
+
+  @override
+  String get yourPresets => 'Preset kamu';
+
+  @override
+  String get riflayPresets => 'Preset Riflay';
+
+  @override
+  String get saveAsPreset => 'Simpan tampilan ini sebagai preset';
+
+  @override
+  String get saveAsPresetBody => 'Menyimpan pemutar seperti sekarang, untuk dipakai lagi dengan sekali ketuk.';
+
+  @override
+  String get presetName => 'Nama preset';
+
+  @override
+  String get presetNameBuiltIn => 'Riflay sudah punya preset dengan nama ini';
+
+  @override
+  String get presetNameReplaces => 'Menimpa presetmu yang bernama sama';
+
+  @override
+  String get presetNameTaken => 'Kamu sudah punya preset dengan nama ini';
+
+  @override
+  String get renamePreset => 'Ganti nama preset';
+
+  @override
+  String get updatePresetToCurrent => 'Simpan tampilan ini ke preset ini';
+
+  @override
+  String deletePresetQuestion(String preset) {
+    return 'Hapus $preset?';
+  }
+
+  @override
+  String get deletePresetBody => 'Pemutarmu tetap seperti sekarang; hanya presetnya yang dihapus.';
+
+  @override
+  String presetSaved(String preset) {
+    return '$preset disimpan';
+  }
+
+  @override
   String get autoplayKeepGoing => 'Saat antrean habis, lanjut dengan lagu yang mirip';
 
   @override

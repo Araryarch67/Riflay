@@ -1144,6 +1144,52 @@ class AppLocalizationsJa extends AppLocalizations {
   String get tapToApply => 'タップで適用';
 
   @override
+  String get presetCustomNote => '自分のプリセット';
+
+  @override
+  String get yourPresets => '自分のプリセット';
+
+  @override
+  String get riflayPresets => 'Riflay のプリセット';
+
+  @override
+  String get saveAsPreset => '今の見た目をプリセットとして保存';
+
+  @override
+  String get saveAsPresetBody => '今のプレイヤーの設定を保存し、ワンタップで戻せます。';
+
+  @override
+  String get presetName => 'プリセット名';
+
+  @override
+  String get presetNameBuiltIn => 'Riflay に同じ名前のプリセットがあります';
+
+  @override
+  String get presetNameReplaces => '同じ名前の自分のプリセットを置き換えます';
+
+  @override
+  String get presetNameTaken => '同じ名前の自分のプリセットがあります';
+
+  @override
+  String get renamePreset => 'プリセット名を変更';
+
+  @override
+  String get updatePresetToCurrent => '今の見た目で上書き';
+
+  @override
+  String deletePresetQuestion(String preset) {
+    return '「$preset」を削除しますか？';
+  }
+
+  @override
+  String get deletePresetBody => 'プレイヤーはそのままで、プリセットだけが消えます。';
+
+  @override
+  String presetSaved(String preset) {
+    return '「$preset」を保存しました';
+  }
+
+  @override
   String get autoplayKeepGoing => 'キューが終わったら、似た曲で続ける';
 
   @override

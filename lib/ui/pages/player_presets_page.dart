@@ -20,9 +20,14 @@ class PlayerPresetsPage extends StatelessWidget {
       backgroundColor: AppColors.background,
       appBar: AppBar(title: Text(tr.playerPresets), backgroundColor: AppColors.background),
       body: ListenableBuilder(
-        listenable: Listenable.merge([p, Appearance.instance]),
+        listenable: Listenable.merge([p, Appearance.instance, CustomPresets.instance]),
         builder: (context, _) {
           final current = playerPresetName(p);
+          final own = CustomPresets.instance.presets;
+          Widget heading(String label) => Padding(
+            padding: const EdgeInsets.only(top: 8, bottom: 8),
+            child: Text(label, style: text.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+          );
           return ListView(
             // Clears the phone's floating player and tab bar, so the last preset scrolls out from under them.
             padding: EdgeInsets.fromLTRB(16, 16, 16, 32 + MediaQuery.paddingOf(context).bottom),
@@ -32,6 +37,23 @@ class PlayerPresetsPage extends StatelessWidget {
                 style: text.bodyMedium?.copyWith(color: AppColors.textSecondary),
               ),
               const SizedBox(height: 12),
+              Align(
+                alignment: AlignmentDirectional.centerStart,
+                child: FilledButton.tonalIcon(
+                  onPressed: () => _saveCurrent(context),
+                  icon: const Icon(Icons.add_rounded),
+                  label: Text(tr.saveAsPreset),
+                ),
+              ),
+              const SizedBox(height: 12),
+              if (own.isNotEmpty) ...[
+                heading(tr.yourPresets),
+                for (final preset in own) ...[
+                  _PresetCard(preset: preset, current: preset.name == current),
+                  const SizedBox(height: 12),
+                ],
+                heading(tr.riflayPresets),
+              ],
               for (final preset in PlayerPreset.all) ...[
                 _PresetCard(preset: preset, current: preset.name == current),
                 const SizedBox(height: 12),
@@ -42,6 +64,137 @@ class PlayerPresetsPage extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Asks for a name and saves the player as it is now under it.
+Future<void> _saveCurrent(BuildContext context) async {
+  final messenger = ScaffoldMessenger.of(context);
+  final name = await showDialog<String>(
+    context: context,
+    builder: (_) => _PresetNameDialog(title: tr.saveAsPreset, body: tr.saveAsPresetBody, action: tr.save),
+  );
+  if (name == null) return;
+  final preset = await CustomPresets.instance.saveCurrent(name);
+  messenger.showSnackBar(SnackBar(content: Text(tr.presetSaved(preset.name))));
+}
+
+/// A preset's name: not one of Riflay's own; another of the user's is replaced when saving, refused when renaming.
+class _PresetNameDialog extends StatefulWidget {
+  const _PresetNameDialog({required this.title, required this.action, this.body, this.initial, this.renaming});
+
+  final String title;
+  final String? body;
+  final String action;
+  final String? initial;
+
+  /// The preset being renamed: its own name is free, another of the user's is taken.
+  final PlayerPreset? renaming;
+
+  @override
+  State<_PresetNameDialog> createState() => _PresetNameDialogState();
+}
+
+class _PresetNameDialogState extends State<_PresetNameDialog> {
+  late final name = TextEditingController(text: widget.initial);
+
+  @override
+  void dispose() {
+    name.dispose();
+    super.dispose();
+  }
+
+  String get _value => name.text.trim();
+
+  bool get _builtIn => CustomPresets.isBuiltIn(_value);
+
+  bool get _another => CustomPresets.instance.presets.any(
+    (p) => p.name.toLowerCase() == _value.toLowerCase() && p.name != widget.renaming?.name,
+  );
+
+  bool get _valid => _value.isNotEmpty && !_builtIn && !(widget.renaming != null && _another);
+
+  void _submit() {
+    if (_valid) Navigator.pop(context, _value);
+  }
+
+  @override
+  Widget build(BuildContext context) => AppDialog(
+    title: widget.title,
+    width: DialogWidth.compact,
+    scrollable: false,
+    content: Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (widget.body != null) ...[Text(widget.body!), const SizedBox(height: 16)],
+        TextField(
+          controller: name,
+          autofocus: true,
+          maxLength: 40,
+          textInputAction: TextInputAction.done,
+          onChanged: (_) => setState(() {}),
+          onSubmitted: (_) => _submit(),
+          decoration: InputDecoration(
+            labelText: tr.presetName,
+            border: const OutlineInputBorder(),
+            errorText: _builtIn
+                ? tr.presetNameBuiltIn
+                : widget.renaming != null && _another
+                ? tr.presetNameTaken
+                : null,
+            helperText: widget.renaming == null && _another ? tr.presetNameReplaces : null,
+          ),
+        ),
+      ],
+    ),
+    actions: [
+      TextButton(onPressed: () => Navigator.pop(context), child: Text(tr.cancel)),
+      FilledButton(onPressed: _valid ? _submit : null, child: Text(widget.action)),
+    ],
+  );
+}
+
+/// Rename, save the current look into it, or delete: a preset of the user's own.
+class _CustomPresetMenu extends StatelessWidget {
+  const _CustomPresetMenu({required this.preset});
+
+  final PlayerPreset preset;
+
+  Future<void> _pick(BuildContext context, String choice) async {
+    final presets = CustomPresets.instance;
+    switch (choice) {
+      case 'rename':
+        final name = await showDialog<String>(
+          context: context,
+          builder: (_) =>
+              _PresetNameDialog(title: tr.renamePreset, action: tr.rename, initial: preset.name, renaming: preset),
+        );
+        if (name != null && name != preset.name) await presets.rename(preset, name);
+      case 'update':
+        await presets.saveCurrent(preset.name);
+      case 'delete':
+        final ok = await confirmDialog(
+          context,
+          title: tr.deletePresetQuestion(preset.name),
+          body: tr.deletePresetBody,
+          confirmLabel: tr.delete,
+          destructive: true,
+        );
+        if (ok) await presets.remove(preset);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => PopupMenuButton<String>(
+    tooltip: tr.more,
+    icon: const Icon(Icons.more_vert_rounded),
+    onSelected: (choice) => _pick(context, choice),
+    itemBuilder: (_) => [
+      PopupMenuItem(value: 'rename', child: Text(tr.renamePreset)),
+      PopupMenuItem(value: 'update', child: Text(tr.updatePresetToCurrent)),
+      PopupMenuItem(value: 'delete', child: Text(tr.delete)),
+    ],
+  );
 }
 
 class _PresetCard extends StatelessWidget {
@@ -96,6 +249,7 @@ class _PresetCard extends StatelessWidget {
                   ],
                 ),
               ),
+              if (preset.custom) _CustomPresetMenu(preset: preset),
             ],
           ),
         ),

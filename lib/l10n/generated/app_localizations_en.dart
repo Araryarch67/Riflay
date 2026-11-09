@@ -1164,6 +1164,52 @@ class AppLocalizationsEn extends AppLocalizations {
   String get tapToApply => 'Tap to apply';
 
   @override
+  String get presetCustomNote => 'Your own preset';
+
+  @override
+  String get yourPresets => 'Your presets';
+
+  @override
+  String get riflayPresets => 'Riflay presets';
+
+  @override
+  String get saveAsPreset => 'Save this look as a preset';
+
+  @override
+  String get saveAsPresetBody => 'Keeps the player as it is set up now, to put back in one tap.';
+
+  @override
+  String get presetName => 'Preset name';
+
+  @override
+  String get presetNameBuiltIn => 'Riflay already has a preset with this name';
+
+  @override
+  String get presetNameReplaces => 'Replaces your preset with this name';
+
+  @override
+  String get presetNameTaken => 'You already have a preset with this name';
+
+  @override
+  String get renamePreset => 'Rename preset';
+
+  @override
+  String get updatePresetToCurrent => 'Save this look into it';
+
+  @override
+  String deletePresetQuestion(String preset) {
+    return 'Delete $preset?';
+  }
+
+  @override
+  String get deletePresetBody => 'Your player stays as it is; only the preset goes.';
+
+  @override
+  String presetSaved(String preset) {
+    return 'Saved $preset';
+  }
+
+  @override
   String get autoplayKeepGoing => 'When the queue ends, keep going with similar songs';
 
   @override
