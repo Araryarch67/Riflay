@@ -54,6 +54,12 @@ abstract final class DebugSwitches {
   /// The signal path on screen is read from mpv every second while paused too, as it was.
   static bool signalPathWhilePaused = _all || const bool.fromEnvironment('RIFLAY_SIGNAL_PATH_WHILE_PAUSED');
 
+  /// Balanced's visualizer measures 24 bands over 1024-point windows, 25 times a second, as Heavy does.
+  static bool fullVisualizer = _all || const bool.fromEnvironment('RIFLAY_FULL_VISUALIZER');
+
+  /// The quality badge redraws at every read of the signal path (each second), as before, even when it shows the same.
+  static bool signalPathEveryRead = _all || const bool.fromEnvironment('RIFLAY_SIGNAL_PATH_EVERY_READ');
+
   /// Views on [UiBeat] each count their own beats instead of sharing one count, as before: views at the same
   /// rate draw in separate frames.
   static bool unalignedBeats = _all || const bool.fromEnvironment('RIFLAY_UNALIGNED_BEATS');

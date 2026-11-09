@@ -265,6 +265,15 @@ Future<void> _steadyFlow(PlayerController c, String query) async {
     }
     binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
     at('$step, another window in front');
+    // A debug build: who asks for frames on the lyrics page behind another window.
+    if (Platform.environment['RIFLAY_MV_STACKS'] == 'lyrics-behind' && step == 'lyrics page') {
+      await Future<void>.delayed(const Duration(seconds: 8));
+      stdout.writeln('STACKS from here');
+      debugPrintScheduleFrameStacks = true;
+      await Future<void>.delayed(const Duration(seconds: 10));
+      debugPrintScheduleFrameStacks = false;
+      exit(0);
+    }
     await Future<void>.delayed(const Duration(seconds: 20));
   }
 

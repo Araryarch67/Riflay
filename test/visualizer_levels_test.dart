@@ -137,4 +137,23 @@ void main() {
     expect(at60Hz.frame, source.frame);
     expect(at60Hz.backgroundEnergy, source.backgroundEnergy);
   });
+
+  test('Balanced\'s 12 measured bands are spread over the 24 bars, its 4096-point window read 6 dB up', () {
+    expect(
+      VisualizerLevels.spectralDb(1, 0, window: 4096)! - VisualizerLevels.spectralDb(1, 0)!,
+      closeTo(6.02, 0.01),
+    );
+    // Bass loud, treble silent: the bars fall from the first to the last, through the middle.
+    final metadata = StringBuffer('{');
+    for (var band = 0; band < 12; band++) {
+      metadata.write('"lavfi.astats.${band + 3}.RMS_level":"${band == 0 ? -6 : -60}",');
+    }
+    metadata.write('"x":"0"}');
+    final levels = VisualizerLevels()..addMetadata(metadata.toString(), bands: 12);
+    expect(levels.value.length, 24);
+    expect(levels.value.first, greaterThan(0.7));
+    expect(levels.value[1], greaterThan(levels.value[2]));
+    expect(levels.value[2], greaterThan(0), reason: 'between band 0 and band 1');
+    expect(levels.value.last, 0);
+  });
 }

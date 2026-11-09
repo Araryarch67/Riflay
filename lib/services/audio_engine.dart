@@ -787,6 +787,15 @@ class AudioEngine extends ChangeNotifier {
 
   /// The visualizer switch (Settings > Look & feel > Layout) changed; other layout changes are none of its business.
   void _onVisualizerBetaChanged() {
+    // Balanced and Heavy measure different bands ([_frugalMeter]): a change of mode rebuilds the meter.
+    if (_frugalMeter != _meterWasFrugal) {
+      _meterWasFrugal = _frugalMeter;
+      if (_visualizerTimer != null) {
+        _visualizerTimer!.cancel();
+        _visualizerTimer = Timer.periodic(_visualizerEvery, (_) => _readVisualizer());
+      }
+      if (visualizerActive) _syncVisualizer();
+    }
     if (LayoutPrefs.instance.visualizerEnabled == _visualizerWasOn) return;
     _visualizerWasOn = LayoutPrefs.instance.visualizerEnabled;
     if (!visualizerActive) visualizerLevels.clear();
@@ -796,6 +805,17 @@ class AudioEngine extends ChangeNotifier {
 
   static String get visualizerFilter => VisualizerSpectrum.filter();
   ({int channels, String layout, int rate})? _visualizerFormat;
+
+  /// Balanced on a computer: fewer, longer-windowed bands ([VisualizerSpectrum.frugalBands]), read as often as its
+  /// visualizer draws. Off with `RIFLAY_FULL_VISUALIZER`.
+  static bool get _frugalMeter => LayoutPrefs.frugal && !DebugSwitches.fullVisualizer;
+  bool _meterWasFrugal = _frugalMeter;
+
+  /// The bands and window of the meter in the filter chain now (what the metadata read back is made of).
+  int _meterBands = VisualizerSpectrum.bands, _meterWindow = 1024;
+
+  /// How often the meter is read: 25 times a second, 10 in Balanced on a computer (its visualizer's rate).
+  static Duration get _visualizerEvery => Duration(milliseconds: _frugalMeter ? 100 : 40);
   String get _currentVisualizerFilter {
     final format = _visualizerFormat;
     return format == null
@@ -805,6 +825,8 @@ class AudioEngine extends ChangeNotifier {
             layout: format.layout,
             rate: format.rate,
             spectral: _spectral,
+            count: _meterBands,
+            window: _meterWindow,
           );
   }
 
@@ -824,7 +846,7 @@ class AudioEngine extends ChangeNotifier {
   VoidCallback watchVisualizer() {
     _visualizerUsers++;
     if (_visualizerUsers == 1) _syncVisualizer();
-    _visualizerTimer ??= Timer.periodic(const Duration(milliseconds: 40), (_) => _readVisualizer());
+    _visualizerTimer ??= Timer.periodic(_visualizerEvery, (_) => _readVisualizer());
     var released = false;
     return () {
       if (released || _disposed) return;
@@ -862,6 +884,8 @@ class AudioEngine extends ChangeNotifier {
               } catch (_) {
                 _visualizerFormat = null;
               }
+              _meterBands = _frugalMeter ? VisualizerSpectrum.frugalBands : VisualizerSpectrum.bands;
+              _meterWindow = _frugalMeter ? VisualizerSpectrum.frugalWindow : 1024;
               await p.command(['af', 'add', _currentVisualizerFilter]);
               // mpv logs a graph it can't build and plays on without it, so look for the filter.
               if (_spectral && _visualizerFormat != null && !(await p.getProperty('af')).contains('visualizer')) {
@@ -891,7 +915,12 @@ class AudioEngine extends ChangeNotifier {
       }
       final metadata = await p.getProperty(visualizerMetadataProperty);
       if (!_disposed && visualizerActive && identical(p, _native) && _visualizerFormat != null) {
-        visualizerLevels.addMetadata(metadata, firstBandChannel: _visualizerFormat!.channels + 1);
+        visualizerLevels.addMetadata(
+          metadata,
+          firstBandChannel: _visualizerFormat!.channels + 1,
+          bands: _meterBands,
+          window: _meterWindow,
+        );
       }
     } catch (_) {
       // A player can be replaced or disposed while the asynchronous read runs.

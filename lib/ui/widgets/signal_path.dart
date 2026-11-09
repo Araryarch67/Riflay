@@ -15,9 +15,14 @@ import '../../services/language.dart';
 /// it moves: it is read again only when the song, the player or a sound setting changes (a read and a rebuild
 /// every second kept an idle window drawing).
 class _SignalPathBuilder extends StatefulWidget {
-  const _SignalPathBuilder({required this.builder});
+  const _SignalPathBuilder({required this.builder, this.shows});
 
   final Widget Function(BuildContext context, SignalPath? path) builder;
+
+  /// What [builder] shows of a path that must show at once: a read that changes only the rest is drawn every
+  /// [_refresh] (a whole frame of the window each second, for an Opus song's bitrate going 122, 127, 128 kbps).
+  /// Null: every read.
+  final Object? Function(SignalPath path)? shows;
 
   @override
   State<_SignalPathBuilder> createState() => _SignalPathBuilderState();
@@ -25,6 +30,8 @@ class _SignalPathBuilder extends StatefulWidget {
 
 class _SignalPathBuilderState extends State<_SignalPathBuilder> {
   SignalPath? _path;
+  DateTime _drawnAt = DateTime.now();
+  static const _refresh = Duration(seconds: 10);
   UiBeatListener? _beat;
   late final PlayerController _controller = PlayerScope.read(context);
 
@@ -78,7 +85,18 @@ class _SignalPathBuilderState extends State<_SignalPathBuilder> {
     _reading = true;
     try {
       final path = await _controller.audio.signalPath();
-      if (mounted) setState(() => _path = path);
+      final shows = widget.shows, old = _path;
+      final same =
+          shows != null &&
+          !DebugSwitches.signalPathEveryRead &&
+          path != null &&
+          old != null &&
+          shows(path) == shows(old) &&
+          DateTime.now().difference(_drawnAt) < _refresh;
+      if (mounted && !same) {
+        _drawnAt = DateTime.now();
+        setState(() => _path = path);
+      }
     } finally {
       _reading = false;
     }
@@ -141,6 +159,20 @@ class QualityBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     if (!AudioEngine.supported) return const SizedBox.shrink();
     return _SignalPathBuilder(
+      // The badge's words but the bitrate: a VBR song's swings each second (Opus: 112-160 kbps) are drawn every
+      // [_SignalPathBuilderState._refresh] instead.
+      shows: (p) => (
+        _codecName(p),
+        p.bitPerfect,
+        _tier(p),
+        p.isDop,
+        p.isDsd,
+        p.lossless,
+        p.inFormat,
+        p.inRate,
+        p.sourceBits,
+        p.bitrate == null || p.bitrate == 0,
+      ),
       builder: (context, p) {
         if (p == null) return const SizedBox(height: 24);
         final (tier, icon) = p.bitPerfect ? ('Bit-perfect', Icons.verified_rounded) : _tier(p);

@@ -729,6 +729,8 @@ device's language when Riflay has it). The words live in `lib/l10n/app_en.arb` (
   flutter run --dart-define=RIFLAY_LYRICS_SCROLLBAR=true  # synced lyrics show a scrollbar on computers again
   flutter run --dart-define=RIFLAY_NO_PAGE_OUT=true  # Linux keeps the app resident behind other windows (no MADV_PAGEOUT)
   RIFLAY_ALL_EGL_VENDORS=1 riflay  # Linux loads every EGL vendor again (NVIDIA's too) on a laptop whose screens hang off another GPU
+  flutter run --dart-define=RIFLAY_FULL_VISUALIZER=true  # Balanced's visualizer measures 24 bands / 1024 points, read 25 times a second, as Heavy
+  flutter run --dart-define=RIFLAY_SIGNAL_PATH_EVERY_READ=true  # the quality badge redraws every second, even showing the same
   flutter run --dart-define=RIFLAY_ASTATS_VISUALIZER=true  # the visualizer measures its bands with astats (~3x the CPU), not aspectralstats
   flutter run -d chrome --dart-define=RIFLAY_NO_WEB_AUDIO=true  # web: songs play straight from <audio>, no effects or visualizer
   ```
@@ -955,6 +957,14 @@ Windows zip, Linux AppImage and macOS dmg, so successful platforms need not be r
   paused; mpv's audio `core` thread ~3% of a core), ~0.09% behind another window. Back with `RIFLAY_FULL_BALANCED`.
   Tried and dropped: the video at 10 fps instead of 15 while another window is in front (0.13% vs 0.14% on Now
   Playing, within noise; Flutter draws ~1.5 frames a second there, the rest of the main thread is GTK and the video).
+- CPU and memory targets are for PEAKS (the worst 2 s btop sample, the most memory), not averages; `btop_watch.py`
+  prints each step's peak. Two steady costs went: the quality badge redrew the window each second for an Opus
+  song's bitrate (122, 127, 128 kbps; now the bitrate is drawn every 10 s, other changes at once), and Balanced's
+  visualizer measured 24 bands over 1024-point FFTs read 25 times a second. It now measures 12 bands over 4096
+  points (`VisualizerSpectrum.frugalBands`, the bars in between drawn from their neighbours, the dB 6.02 up for
+  the longer window), read 10 times a second: ffmpeg -benchmark 19.0 -> 5.9 ms per second of music. Kyapi, Home in
+  front: peak 0.41 -> ~0.31% (mpv's `core` thread 40-80 -> 20 ms per 2 s); with the video, private ~265 -> ~212 MiB.
+
 - Opening the lyrics page (`RIFLAY_CPU_ENV='RIFLAY_CPU_SPIKE=lyrics' tool/cpu.sh`: CPU and frames every 100 ms,
   each thread, `RIFLAY_CPU_PROFILE=true` the Dart profile, `RIFLAY_CPU_STACKS=true` in a debug build who asks for
   frames). On Linux a frame costs the main thread ~10 ms natively (GTK composites the whole window; Dart is a small

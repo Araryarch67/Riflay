@@ -25,30 +25,60 @@ class VisualizerLevels extends ValueNotifier<List<double>> {
   /// One value per frequency band in the current audio frame, ordered bass to treble, from `aspectralstats` (mean
   /// and variance per channel) or `astats` (RMS per channel). The map is read whole to avoid the bundled mpv's unsafe
   /// sub-key lookup; the keys are scanned in place rather than jsonDecoded, since this runs every 40 ms.
-  void addMetadata(String metadata, {int firstBandChannel = 3}) {
+  /// [bands] measured (fewer than [samples]: Balanced's, see [VisualizerSpectrum.frugalBands]) are spread over the
+  /// bars, each bar from the two measured bands either side of it; [window] is the FFT's length.
+  void addMetadata(String metadata, {int firstBandChannel = 3, int bands = samples, int window = 1024}) {
     final levels = _scratch..fillRange(0, samples, 0);
     if (metadata.contains(_spectral)) {
       final mean = _mean..fillRange(0, samples, 0);
       final variance = _variance..fillRange(0, samples, 0);
-      _scan(metadata, _spectral, '.mean"', firstBandChannel, (band, v) => mean[band] = double.tryParse(v) ?? 0);
-      _scan(metadata, _spectral, '.variance"', firstBandChannel, (band, v) => variance[band] = double.tryParse(v) ?? 0);
-      for (var i = 0; i < samples; i++) {
-        levels[i] = amplitudeOfDb(spectralDb(mean[i], variance[i]));
+      _scan(metadata, _spectral, '.mean"', firstBandChannel, bands, (band, v) => mean[band] = double.tryParse(v) ?? 0);
+      _scan(
+        metadata,
+        _spectral,
+        '.variance"',
+        firstBandChannel,
+        bands,
+        (band, v) => variance[band] = double.tryParse(v) ?? 0,
+      );
+      for (var i = 0; i < bands; i++) {
+        levels[i] = amplitudeOfDb(spectralDb(mean[i], variance[i], window: window));
       }
     } else {
-      _scan(metadata, '"lavfi.astats.', '.RMS_level"', firstBandChannel, (band, v) => levels[band] = amplitude(v));
+      _scan(
+        metadata,
+        '"lavfi.astats.',
+        '.RMS_level"',
+        firstBandChannel,
+        bands,
+        (band, v) => levels[band] = amplitude(v),
+      );
     }
+    if (bands < samples) _spread(levels, bands);
     addBands(levels);
+  }
+
+  /// [measured] bands in the first slots of [levels], spread over all [samples] bars in place.
+  static void _spread(Float64List levels, int measured) {
+    final from = Float64List.fromList(levels.sublist(0, measured));
+    for (var i = 0; i < samples; i++) {
+      final at = i * (measured - 1) / (samples - 1);
+      final lo = at.floor(), hi = math.min(lo + 1, measured - 1);
+      levels[i] = from[lo] + (from[hi] - from[lo]) * (at - lo);
+    }
   }
 
   static const _spectral = '"lavfi.aspectralstats.';
 
-  /// A band's RMS in dB from `aspectralstats`' mean and variance of its 1024-point magnitude spectrum: variance plus
-  /// mean squared is the window's power (Parseval), 34.6 dB under what `astats` reports for the same samples, for a
-  /// tone, noise or any band (within 0.4 dB). So the bars stand as tall as they did with `astats`.
-  static double? spectralDb(double mean, double variance) {
+  /// A band's RMS in dB from `aspectralstats`' mean and variance of its [window]-point magnitude spectrum: variance
+  /// plus mean squared is the window's power (Parseval), 34.6 dB under what `astats` reports for the same samples at
+  /// 1024 points, for a tone, noise or any band (within 0.4 dB), and 6 dB further under at 4096 (measured: 6.06-6.42).
+  /// So the bars stand as tall as they did with `astats`.
+  static double? spectralDb(double mean, double variance, {int window = 1024}) {
     final power = variance + mean * mean;
-    return power > 0 && power.isFinite ? 10 * math.log(power) / math.ln10 + 34.6 : null;
+    return power > 0 && power.isFinite
+        ? 10 * math.log(power) / math.ln10 + 34.6 + 10 * math.log(window / 1024) / math.ln10
+        : null;
   }
 
   /// Calls [found] with the band and raw value of every `<prefix><channel><suffix>` key in [metadata].
@@ -57,6 +87,7 @@ class VisualizerLevels extends ValueNotifier<List<double>> {
     String prefix,
     String suffix,
     int firstBandChannel,
+    int bands,
     void Function(int band, String value) found,
   ) {
     var at = metadata.indexOf(prefix);
@@ -70,7 +101,7 @@ class VisualizerLevels extends ValueNotifier<List<double>> {
         i++;
       }
       final band = channel - firstBandChannel;
-      if (i > at + prefix.length && band >= 0 && band < samples && metadata.startsWith(suffix, i)) {
+      if (i > at + prefix.length && band >= 0 && band < bands && metadata.startsWith(suffix, i)) {
         i += suffix.length;
         while (i < metadata.length && (metadata.codeUnitAt(i) == 0x3a || metadata.codeUnitAt(i) == 0x20)) {
           i++;
