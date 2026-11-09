@@ -865,6 +865,13 @@ Windows zip, Linux AppImage and macOS dmg, so successful platforms need not be r
   windows are disabled: the main window hands their mouse input to the Flutter view. Playing in front: ~0.1% of
   a 24-thread CPU (it was ~3%). It plays on behind other windows (only minimized or hidden lets it go), keeps its
   player a minute without a view (`_holdWithoutView`), and the side panel has none in Lightweight.
+  It takes the mode's `maxFps` too (Balanced 15, Lightweight 10): mpv still renders every frame into its window.
+  Measured 2026-11-09 (Balanced, Kyapi with its video in the side panel, release, % of 24 threads / private working
+  set from 50 s on): ~0.27% -> ~0.21%, 60-90 MiB, scrolling Home ~0.5-0.9% and under 100 MiB. What is left is
+  mostly mpv: the sound's WASAPI output ~1.2% of a core (`ao=null` takes it away; the EQ and the buffer size change
+  nothing), the video's decoding and the GPU driver's threads ~1-1.5%. Riflay asks for the NVIDIA GPU
+  (`NvOptimusEnablement`), whose driver starts ~110 threads (~190 with the video). `RIFLAY_VIDEO_MPV_OPTIONS` sets
+  mpv options on this player as well.
   `RIFLAY_IMPELLER=on|off` (runner/main.cpp) picks the renderer for measuring; Skia saved no memory here.
 - Linux uses the same FFI video player with system `libmpv.so.2`, `vo=libmpv`, and a GTK3 `GtkGLArea`
   (`linux/runner/native_video.cc`). A `GtkOverlay` places the surface above the Flutter view, passing input through.

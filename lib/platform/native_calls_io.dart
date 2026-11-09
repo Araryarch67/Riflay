@@ -97,11 +97,12 @@ void _trimWindows(bool workingSet) {
     final getProcessHeap = k.lookupFunction<IntPtr Function(), int Function()>('GetProcessHeap');
     final heapCompact = k.lookupFunction<IntPtr Function(IntPtr, Uint32), int Function(int, int)>('HeapCompact');
 
-    if (workingSet) setWorkingSet(getCurrentProcess(), -1, -1);
+    // Compacting walks the heap and touches its pages: first, or the pages just emptied fault straight back in.
     final heap = getProcessHeap();
     if (heap != 0) {
       heapCompact(heap, 0);
     }
+    if (workingSet) setWorkingSet(getCurrentProcess(), -1, -1);
   } catch (_) {}
 }
 

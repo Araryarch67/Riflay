@@ -126,6 +126,10 @@ class NativeVideoPlayer implements VideoEngine {
     option('vd-lavc-threads', '1');
     option('hwdec-extra-frames', '2');
     if (maxFps != null) option('vf', 'fps=$maxFps');
+    // For measuring: `RIFLAY_VIDEO_MPV_OPTIONS='name=value;…'`, as on the media_kit video player.
+    for (final o in (Platform.environment['RIFLAY_VIDEO_MPV_OPTIONS'] ?? '').split(';')) {
+      if (o.contains('=')) option(o.substring(0, o.indexOf('=')), o.substring(o.indexOf('=') + 1));
+    }
     if (mpv.initialize(h) < 0) {
       mpv.destroy(h);
       throw StateError('mpv could not start');
