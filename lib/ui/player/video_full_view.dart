@@ -277,7 +277,14 @@ class _VideoFullViewState extends State<VideoFullView> {
         MouseRegion(onEnter: (_) => _overBars = true, onExit: (_) => _overBars = false, child: child);
     final picture = Column(
       children: [
-        if (_controls) bars(_topBar(context, track)),
+        // Below the bar, room for its buttons' tooltips: under the native video's surface they never showed.
+        if (_controls)
+          bars(
+            Padding(
+              padding: EdgeInsets.only(bottom: VideoMode.native ? 36 : 0),
+              child: _topBar(context, track),
+            ),
+          ),
         Expanded(
           child: GestureDetector(
             key: const ValueKey('video-full-surface'),

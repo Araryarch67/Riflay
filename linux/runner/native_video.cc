@@ -289,7 +289,10 @@ void method_call(FlMethodChannel*, FlMethodCall* call, gpointer data) {
           gtk_widget_hide(s->area);
           gtk_widget_hide(s->fixed);
         } else {
+          // Shown before it is sized: a size set while the area was hidden only marked it, never reached the
+          // GtkFixed, and the video kept its last place's size (the side panel's square on Now Playing).
           gtk_widget_show(s->fixed);
+          gtk_widget_show(s->area);
           const double scale = gtk_widget_get_scale_factor(s->area);
           gtk_fixed_move(GTK_FIXED(s->fixed), s->area,
                          std::lround(s->clip[0] / scale),
@@ -298,7 +301,7 @@ void method_call(FlMethodChannel*, FlMethodCall* call, gpointer data) {
               s->area,
               std::max(1L, std::lround((s->clip[2] - s->clip[0]) / scale)),
               std::max(1L, std::lround((s->clip[3] - s->clip[1]) / scale)));
-          gtk_widget_show(s->area);
+          gtk_widget_queue_resize(s->fixed);
           gtk_gl_area_queue_render(GTK_GL_AREA(s->area));
         }
       }

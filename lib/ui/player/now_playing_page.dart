@@ -338,26 +338,34 @@ class NowPlayingPage extends StatelessWidget {
                                 showBadge: showBadge,
                               );
                             }
-                            final art = largeCover
-                                ? math.min(
-                                    constraints.maxWidth - 24,
-                                    constraints.maxHeight -
-                                        (showBadge ? 364 : 328) -
-                                        playerVolumeRowHeight -
-                                        stripHeight,
-                                  )
-                                : math.min(
-                                    constraints.maxWidth - 48,
-                                    constraints.maxHeight -
-                                        (showBadge ? 400 : 364) -
-                                        playerVolumeRowHeight -
-                                        stripHeight,
-                                  );
+                            // Nothing Flutter draws shows over a native video (Windows/Linux): the Song / Video
+                            // switch and the top bar's tooltips get a row of their own above it.
+                            final switchRow = showsVideo && VideoMode.native && LayoutPrefs.instance.showVideoSwitch
+                                ? nativeVideoSwitchRow
+                                : 0.0;
+                            final art =
+                                (largeCover
+                                    ? math.min(
+                                        constraints.maxWidth - 24,
+                                        constraints.maxHeight -
+                                            (showBadge ? 364 : 328) -
+                                            playerVolumeRowHeight -
+                                            stripHeight,
+                                      )
+                                    : math.min(
+                                        constraints.maxWidth - 48,
+                                        constraints.maxHeight -
+                                            (showBadge ? 400 : 364) -
+                                            playerVolumeRowHeight -
+                                            stripHeight,
+                                      )) -
+                                switchRow;
                             return Padding(
                               padding: const EdgeInsets.symmetric(horizontal: 24),
                               child: Column(
                                 children: [
                                   topBar,
+                                  SizedBox(height: switchRow),
                                   const Spacer(),
                                   // The large cover runs 12 px into the page's margin on each side.
                                   if (art >= 96)
@@ -366,7 +374,10 @@ class NowPlayingPage extends StatelessWidget {
                                             height: art,
                                             child: OverflowBox(maxWidth: art, child: cover(art)),
                                           )
-                                        : cover(art),
+                                        // As tall as the cover: the music video is 16:9 and, unbounded in the
+                                        // Column, took the full width's height and pushed the controls off a
+                                        // wide window.
+                                        : SizedBox(height: art, child: cover(art)),
                                   const Spacer(),
                                   if (stripHeight > 0) ...[
                                     const AudioVisualizer(linearOnly: true, height: 80),

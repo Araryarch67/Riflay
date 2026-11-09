@@ -22,6 +22,7 @@ import '../widgets/signal_path.dart';
 import '../widgets/stats_for_nerds.dart' show NowPlayingCover;
 import '../widgets/sleep_timer_button.dart';
 import '../widgets/track_row.dart';
+import '../../services/video_mode.dart';
 import '../widgets/video_mode.dart' show VideoBackgroundExpand;
 import '../ytmusic_edit.dart';
 import 'more_sheet.dart';
@@ -1015,6 +1016,10 @@ Future<void> showVolumePopup(BuildContext context) => showModalBottomSheet<void>
 
 /// Now Playing when any part is not Classic: the chosen header, cover, title buttons, controls and bottom
 /// row, in the same order as Classic. The background is the page's own.
+/// Over a native music video (Windows/Linux), which nothing Flutter draws can lie over, the row under the top bar
+/// kept for the Song / Video switch and the bar's tooltips.
+const nativeVideoSwitchRow = 56.0;
+
 class ComposedNowPlaying extends StatelessWidget {
   const ComposedNowPlaying({
     super.key,
@@ -1115,6 +1120,12 @@ class ComposedNowPlaying extends StatelessWidget {
       builder: (context, outer) => Column(
         children: [
           Padding(padding: const EdgeInsets.symmetric(horizontal: 24), child: header),
+          if (track != null &&
+              VideoMode.native &&
+              p.showVideoSwitch &&
+              VideoMode.instance.on &&
+              VideoMode.instance.videoOf(track) != null)
+            const SizedBox(height: nativeVideoSwitchRow),
           Expanded(
             child: LayoutBuilder(
               builder: (context, box) {
