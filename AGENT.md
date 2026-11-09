@@ -121,6 +121,10 @@ test/                          Unit and widget tests
   (the Adreno workaround in its manifest), so it and the other platforms get the package's FakeGlass. Lightweight
   draws the plain raised surface. `test/glass_tab_bar_test.dart` and `integration_test/glass_tab_bar_test.dart`
   (screenshots with `SHOTS`) cover it.
+- With that tab bar, a phone page's sticky top bar (`PageScaffold`) fills in on scroll as frosted glass too (a
+  `BackdropFilter` as strong as the pills' frost over a light tint, fading in with the bar; none while it is clear),
+  not the solid tint the other styles and Lightweight keep. `RIFLAY_NO_GLASS_TOP_BAR` keeps it solid;
+  `test/page_wash_test.dart` covers both. Not looked at on a phone yet.
 - Stacked and Kawaii use Capsule navigation. Liquid Stacked and Liquid Kawaii use Liquid Glass navigation and
   `playerGlassControls`: transparent player surfaces use `ui/player/player_glass.dart`, sharing a backdrop in the
   composed player. Opaque filled controls retain their fill; the seek bar, previous/play/next and the volume (row, or Kawaii's speaker pill) stay solid unless their own switches (`glassSeekBar`, `glassTransport`, `glassVolume`, shown under Liquid Glass controls) are on. Presets leave those three alone. Lightweight uses solid surfaces without a glass layer.
@@ -728,6 +732,7 @@ device's language when Riflay has it). The words live in `lib/l10n/app_en.arb` (
   flutter run --dart-define=RIFLAY_TAB_BAR_COLLAPSE_IDLE=true  # it shrinks on scroll with no song in the player too (two lone round buttons)
   flutter run --dart-define=RIFLAY_MOVING_PREVIEWS=true  # Settings' previews move and follow the player, not still pictures
   flutter run --dart-define=RIFLAY_NO_GLASS_RENDERER=true    # its pills in Riflay's own blur, not liquid_glass_renderer
+  flutter run --dart-define=RIFLAY_NO_GLASS_TOP_BAR=true     # with it, a page's top bar fills in solid on scroll, not as glass
   flutter run --dart-define=RIFLAY_NO_DIRECT_USB_GUARD=true  # Android Direct USB crashes for real (logcat)
   flutter run --dart-define=RIFLAY_NO_ENGINE_EXIT=true    # Android keeps its process after audio_service ends the Flutter engine
   flutter run --dart-define=RIFLAY_NO_OPEN_LINKS=true     # ignore links opened or shared with Riflay

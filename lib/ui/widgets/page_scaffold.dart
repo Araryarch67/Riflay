@@ -1,5 +1,10 @@
+import 'dart:ui' show ImageFilter;
+
 import 'package:flutter/material.dart';
 
+import '../../services/appearance.dart';
+import '../../services/layout_prefs.dart';
+import '../debug_switches.dart';
 import '../shell_scope.dart';
 import '../theme.dart';
 import 'app_logo.dart';
@@ -65,6 +70,15 @@ class _PageScaffoldState extends State<PageScaffold> {
     final brand = widget.brand && shell.compact && !hasCustomTitleBar;
     final showBar = history != null || canPop || widget.actions.isNotEmpty || brand;
     final barOpacity = (widget.overHero ? (_offset - 240) / 60 : (_offset - 180) / 80).clamp(0.0, 1.0);
+    // Phones with the Liquid glass tab bar: the bar fills in as frosted glass, not a solid colour (Lightweight keeps
+    // the solid one, as it does for the tab bar). `RIFLAY_NO_GLASS_TOP_BAR` keeps it solid.
+    final glassBar =
+        shell.compact &&
+        LayoutPrefs.instance.tabBar == TabBarStyle.glass &&
+        !LayoutPrefs.lightweight &&
+        !DebugSwitches.noGlassTopBar;
+    // As frosted as the tab bar's pills.
+    final glassBlur = Appearance.instance.glass ? Appearance.instance.blur.clamp(18.0, 40.0) : 24.0;
     const barHeight = 56.0;
     final topInset = shell.compact ? MediaQuery.paddingOf(context).top : 0.0;
 
@@ -124,7 +138,23 @@ class _PageScaffoldState extends State<PageScaffold> {
               children: [
                 Positioned.fill(
                   child: IgnorePointer(
-                    child: ColoredBox(color: AppColors.sink(color, 0.45).withValues(alpha: barOpacity)),
+                    child: glassBar
+                        // Glass, as the tab bar at the other end of the page: what scrolls under shows through,
+                        // frosted. Nothing is blurred until the bar starts to fill in.
+                        ? (barOpacity == 0
+                              ? const SizedBox.shrink()
+                              : ClipRect(
+                                  child: BackdropFilter(
+                                    filter: ImageFilter.blur(
+                                      sigmaX: glassBlur * barOpacity,
+                                      sigmaY: glassBlur * barOpacity,
+                                    ),
+                                    child: ColoredBox(
+                                      color: AppColors.sink(color, 0.45).withValues(alpha: 0.4 * barOpacity),
+                                    ),
+                                  ),
+                                ))
+                        : ColoredBox(color: AppColors.sink(color, 0.45).withValues(alpha: barOpacity)),
                   ),
                 ),
                 Container(

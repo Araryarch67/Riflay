@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:riflay/services/layout_prefs.dart';
 import 'package:riflay/ui/shell_scope.dart';
 import 'package:riflay/ui/widgets/page_scaffold.dart';
 
 void main() {
-  testWidgets('the colour wash behind a page\'s header scrolls away with the page', (tester) async {
+  Future<void> pumpPage(WidgetTester tester) async {
     await tester.pumpWidget(
       MaterialApp(
         home: ShellScope(
@@ -29,6 +30,24 @@ void main() {
         ),
       ),
     );
+  }
+
+  testWidgets('with the Liquid glass tab bar, a phone page\'s top bar fills in as glass on scroll', (tester) async {
+    final before = LayoutPrefs.instance.tabBar;
+    addTearDown(() => LayoutPrefs.instance.tabBar = before);
+    for (final style in [TabBarStyle.capsule, TabBarStyle.glass]) {
+      LayoutPrefs.instance.tabBar = style;
+      await pumpPage(tester);
+      expect(find.byType(BackdropFilter), findsNothing, reason: 'nothing is blurred while the bar is clear');
+      await tester.drag(find.text('Row 3'), const Offset(0, -600));
+      await tester.pumpAndSettle();
+      expect(find.byType(BackdropFilter), style == TabBarStyle.glass ? findsOneWidget : findsNothing);
+      await tester.pumpWidget(const SizedBox.shrink());
+    }
+  });
+
+  testWidgets('the colour wash behind a page\'s header scrolls away with the page', (tester) async {
+    await pumpPage(tester);
     final wash = find.byWidgetPredicate(
       (w) => w is AnimatedContainer && (w.decoration as BoxDecoration?)?.gradient != null,
     );
