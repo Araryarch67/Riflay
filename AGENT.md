@@ -953,11 +953,9 @@ Windows zip, Linux AppImage and macOS dmg, so successful platforms need not be r
   adds ~40 MiB of driver memory (anonymous, vaapi in use) and its share of the C heap; without Video mode it is
   ~190-200. `malloc_trim` every 10 s instead of each minute changed nothing (the heap it frees is in use again at
   once), nor did `MALLOC_ARENA_MAX=2`.
-- Balanced on a computer keeps the cover in the side panel (`panelVideo` in `side_panel.dart`); the music video
-  plays on Now Playing and full screen. Kyapi: Home and the lyrics page went from ~245-255 to ~197-208 MiB private
-  and ~350 to ~290 MiB RSS. Home in front costs ~0.38% again (the visualizer around the cover, which a showing video
-  paused; mpv's audio `core` thread ~3% of a core), ~0.09% behind another window. Back with `RIFLAY_FULL_BALANCED`.
-  (Measured while the video still held still behind other windows; it plays on there now, see below.)
+- The side panel plays the music video in Balanced as in Heavy (Lightweight never had it): a feature, kept. Showing
+  the cover there instead in Balanced was tried and taken back: Home and the lyrics page went from ~245-255 to
+  ~197-208 MiB private, but the panel lost its video.
 - CPU and memory targets are for PEAKS (the worst 2 s btop sample, the most memory), not averages; `btop_watch.py`
   prints each step's peak. Two steady costs went: the quality badge redrew the window each second for an Opus
   song's bitrate (122, 127, 128 kbps; now the bitrate is drawn every 10 s, other changes at once), and Balanced's
