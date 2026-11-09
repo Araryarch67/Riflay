@@ -130,7 +130,14 @@ Riflay builds on the work of:
 | [liquid_glass_renderer](https://github.com/whynotmake-it/flutter_liquid_glass/tree/main/packages/liquid_glass_renderer) | The phone's Liquid glass tab bar | Apache-2.0 |
 | Apple Music on iOS 26 | Idea behind the Liquid glass tab bar that shrinks to one row on scroll and carries the search field (re-implemented, no code copied) | — |
 
-Riflay is not affiliated with YouTube, Google, Discord or Apple.
+### Special thanks
+
+**[Houshou Marine](https://www.youtube.com/@HoushouMarine)** (hololive). Her song "きゃぴ - Kyapi" and its music video are
+the reference test for Riflay's performance work. Every CPU and memory target is measured while it plays: the music video,
+the synced lyrics with their pronunciation, and full screen. The song and video are streamed from YouTube when the test
+runs; nothing of them ships with Riflay.
+
+Riflay is not affiliated with YouTube, Google, Discord, Apple, hololive or COVER Corporation.
 
 ## License
 
