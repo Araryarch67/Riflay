@@ -245,6 +245,21 @@ test/                          Unit and widget tests
   `adb logcat -v time -b main,system,crash AndroidRuntime:E DEBUG:V libc:V DirectUsb:V flutter:V ActivityManager:I '*:S'`
   while turning it on.
 
+- **Android: the process ends with its Flutter engine** (`EngineEnd.kt`, `services/engine_end.dart`). audio_service
+  shares one engine between the activity and its playback service and destroys it once the app is closed and the
+  service has stopped (`AudioServicePlugin.disposeFlutterEngine`); Android keeps the process. Every mpv player Dart
+  made stayed in it, never disposed, each with media_kit's wakeup callback: a Dart `NativeCallable` whose code is
+  unmapped with the engine's isolates. mpv's next event then jumped there, a native crash in `libmpv.so` after
+  Riflay was closed (reported from a phone: mpv's core thread opening the music video's MediaCodec decoder, the
+  surface already gone with the engine, the error line's wakeup calling the dead callback; frame #01 is
+  `wakeup_client` in `player/client.c`, between `mpv_request_log_messages` and `mpv_get_wakeup_pipe` in the
+  stripped library). So `onEngineWillDestroy` ends the process (after stopping the downloads' sticky foreground
+  service), before the engine lets go of anything; the next launch started Dart afresh anyway. Not hooked when
+  only the service made the engine (no activity yet: Android Auto, media resumption). Checked on an
+  Android 15 emulator ("Don't keep activities"): idle, the process goes with the engine and starts again cleanly;
+  playing, engine and process stay. The crash itself was not reproduced there, and no phone has tried it yet.
+  `RIFLAY_NO_ENGINE_EXIT` keeps the process as it was.
+
 - just_audio everywhere, with libmpv as its backend on **every platform**
   through `just_audio_media_kit`. Linux uses the system libmpv; the others use
   Riflay's own builds, which have the FFmpeg filters the sound settings
@@ -704,6 +719,7 @@ device's language when Riflay has it). The words live in `lib/l10n/app_en.arb` (
   flutter run --dart-define=RIFLAY_MOVING_PREVIEWS=true  # Settings' previews move and follow the player, not still pictures
   flutter run --dart-define=RIFLAY_NO_GLASS_RENDERER=true    # its pills in Riflay's own blur, not liquid_glass_renderer
   flutter run --dart-define=RIFLAY_NO_DIRECT_USB_GUARD=true  # Android Direct USB crashes for real (logcat)
+  flutter run --dart-define=RIFLAY_NO_ENGINE_EXIT=true    # Android keeps its process after audio_service ends the Flutter engine
   flutter run --dart-define=RIFLAY_NO_OPEN_LINKS=true     # ignore links opened or shared with Riflay
   flutter run --dart-define=RIFLAY_NO_SOUNDCLOUD=true     # no SoundCloud anywhere (search, links, the source switch)
   flutter run --dart-define=RIFLAY_NO_SOUNDCLOUD_CACHE=true  # SoundCloud's client id, searches and stream playlists looked up every time

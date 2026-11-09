@@ -35,6 +35,7 @@ import 'services/download_notifications.dart';
 import 'services/play_history.dart';
 import 'services/scrobbler.dart';
 import 'services/player_controller.dart';
+import 'services/engine_end.dart';
 import 'services/memory_trim.dart';
 import 'services/rendering_memory.dart';
 import 'services/stay_awake.dart';
@@ -178,6 +179,7 @@ Future<void> _startServices(PlayerController controller) async {
       // Computers: the tray icon, and closing the window hides Riflay there (Settings › Performance & power).
       SystemTray.start(controller),
       StayAwake.start(controller),
+      EngineEnd.start(),
       // Notifications watch the queue, so they attach once it is restored.
       controller.youtube.restoreQueue().then((_) => DownloadNotifications.attach(controller.youtube)),
       // Keeps the listening history (on this device only), then announces a monthly Wrap that is due.
