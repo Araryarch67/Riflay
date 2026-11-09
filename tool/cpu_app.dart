@@ -15,6 +15,7 @@ import 'dart:isolate';
 
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart';
+import 'package:riflay/services/lyrics_translation.dart';
 import 'package:riflay/main.dart' as app;
 import 'package:riflay/services/ui_beat.dart';
 import 'package:riflay/ui/player_scope.dart';
@@ -320,6 +321,8 @@ Future<void> main() async {
     exit(0);
   }
   if (Platform.environment['RIFLAY_CPU_SPIKE'] == 'lyrics') {
+    // With their pronunciation, as the reference listener reads them.
+    LyricsTranslation.romanize.value = true;
     final queue = [
       for (final t in c.library)
         if (t.path?.startsWith(songs) ?? false) t,

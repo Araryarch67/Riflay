@@ -861,7 +861,29 @@ class AudioEngine extends ChangeNotifier {
     };
   }
 
+  /// The meter in [_meterOn]'s `af` now (its whole filter string), or null for none. Each `af add` or `af remove`
+  /// rebuilds mpv's whole audio graph on its audio thread: opening Now Playing asked for three adds and a remove
+  /// (its views coming on screen, then the video pausing the visualizer), ~270 ms there, and nothing changed in the
+  /// end. Changes now wait [_meterSettle] for the last one, and a meter already as wanted is left alone.
+  String? _meterApplied;
+  Object? _meterOn;
+  Timer? _meterSoon;
+  static const _meterSettle = Duration(milliseconds: 300);
+
+  /// The meter in the whole chain [p] was just given ([filterChain] has it while the visualizer is on).
+  void _chainGiven(Object p, String chain) {
+    _meterOn = p;
+    _meterApplied = chain.contains('@visualizer:') ? _currentVisualizerFilter : null;
+  }
+
   void _syncVisualizer() {
+    _meterSoon?.cancel();
+    if (DebugSwitches.meterEverySync) return _syncVisualizerNow();
+    _meterSoon = Timer(_meterSettle, _syncVisualizerNow);
+  }
+
+  void _syncVisualizerNow() {
+    _meterSoon = null;
     _visualizerSync = _visualizerSync
         .then((_) async {
           if (_disposed) return;
@@ -886,15 +908,23 @@ class AudioEngine extends ChangeNotifier {
               }
               _meterBands = _frugalMeter ? VisualizerSpectrum.frugalBands : VisualizerSpectrum.bands;
               _meterWindow = _frugalMeter ? VisualizerSpectrum.frugalWindow : 1024;
-              await p.command(['af', 'add', _currentVisualizerFilter]);
+              final meter = _currentVisualizerFilter;
+              // Already in place (the same graph, on this player): a rebuild would only cost mpv's audio thread.
+              if (identical(p, _meterOn) && _meterApplied == meter && !DebugSwitches.meterEverySync) return;
+              await p.command(['af', 'add', meter]);
+              _meterOn = p;
+              _meterApplied = meter;
               // mpv logs a graph it can't build and plays on without it, so look for the filter.
               if (_spectral && _visualizerFormat != null && !(await p.getProperty('af')).contains('visualizer')) {
                 if (_disposed || !identical(p, _native) || !visualizerActive) return;
                 _spectral = false;
-                await p.command(['af', 'add', _currentVisualizerFilter]);
+                await p.command(['af', 'add', _meterApplied = _currentVisualizerFilter]);
               }
             } else {
+              if (identical(p, _meterOn) && _meterApplied == null && !DebugSwitches.meterEverySync) return;
               await p.command(['af', 'remove', '@visualizer']);
+              _meterOn = p;
+              _meterApplied = null;
             }
             _chainSent = null;
           }
@@ -1297,6 +1327,7 @@ class AudioEngine extends ChangeNotifier {
   Future<void> _setChain(NativePlayer p) async {
     final chain = filterChain;
     await p.setProperty('af', chain);
+    _chainGiven(p, chain);
     _chainSent = chain;
     _chainSetAt = DateTime.now();
   }
@@ -1720,6 +1751,7 @@ class AudioEngine extends ChangeNotifier {
     _propsSentTo = p;
     _propsSent = props;
     _chainSent = props['af'];
+    if (props['af'] case final chain?) _chainGiven(p, chain);
     _chainSetAt = DateTime.now();
     final moved = _volumeAtOutputApplied != null && _volumeAtOutputApplied != _volumeAtOutput;
     _volumeAtOutputApplied = _volumeAtOutput;
@@ -1950,6 +1982,7 @@ class AudioEngine extends ChangeNotifier {
 
   @override
   void dispose() {
+    _meterSoon?.cancel();
     _disposed = true;
     LayoutPrefs.instance.removeListener(_onVisualizerBetaChanged);
     _visualizerTimer?.cancel();

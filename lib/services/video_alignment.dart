@@ -7,6 +7,8 @@ import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../ui/debug_switches.dart';
+import 'layout_prefs.dart';
 import 'pcm_decoder.dart';
 import 'youtube_stream.dart';
 
@@ -43,6 +45,12 @@ abstract final class VideoAlignment {
   static const _window = 2000; // 20 s of 10 ms steps
   static const _maxLag = 300; // ±3 s
   static const _starts = [400, 2000, 3600, 5200];
+
+  /// Balanced on a computer reads the decoded sound at most this many times faster than it plays: mpv waits on the
+  /// full pipe meanwhile, so the decode (~270 ms of its thread for Kyapi and its video, at full speed in under a
+  /// second) is spread over ~5 s, not one of btop's 2 s samples as the Now Playing page opened. The video follows the
+  /// song's own timeline until the answer comes. Off with `RIFLAY_ALIGN_FULL_SPEED`.
+  static const _pace = 15;
 
   static const _key = 'videoAlign.v1';
   static Map<String, dynamic>? _saved;
@@ -97,8 +105,16 @@ abstract final class VideoAlignment {
     final audio = await YoutubeStream.resolve(videoId);
     final pcm = await MpvPcm.decode(PcmInput.file(audio.url.toString()), end: _decoded, rate: _rate, bits: 16);
     final bytes = BytesBuilder(copy: false);
+    final paced = LayoutPrefs.frugal && !DebugSwitches.alignFullSpeed;
+    final perSecond = _rate * 2 * pcm.channels * _pace;
+    final clock = Stopwatch()..start();
+    var got = 0;
     await for (final chunk in pcm.data) {
       bytes.add(chunk);
+      got += chunk.length;
+      if (!paced) continue;
+      final wait = Duration(microseconds: got * 1000000 ~/ perSecond) - clock.elapsed;
+      if (wait > Duration.zero) await Future<void>.delayed(wait);
     }
     await pcm.cancel();
     final samples = bytes.takeBytes().buffer.asInt16List();

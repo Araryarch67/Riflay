@@ -278,6 +278,7 @@ Future<void> _steadyFlow(PlayerController c, String query) async {
   }
 
   LyricsTranslation.romanize.value = true;
+  stdout.writeln('MV semantics enabled: ${WidgetsBinding.instance.semanticsEnabled}');
   final song = (await c.searchYoutube(query)).firstWhere((t) => t.videoId != null);
   await c.playList([song], 0, from: 'MV benchmark');
   await Future<void>.delayed(const Duration(seconds: 4));

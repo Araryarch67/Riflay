@@ -396,9 +396,22 @@ class VideoMode extends ChangeNotifier with WidgetsBindingObserver {
     full ? _fullViews++ : _views++;
     _viewsChanged();
     _release?.cancel();
-    // Views come on screen while the tree builds: start the video right after.
-    scheduleMicrotask(_sync);
+    // Views come on screen while the tree builds: start the video right after. Balanced on a computer opens a new
+    // video a moment later instead ([startAfterPage]), not in the same moment as the page.
+    final later = _player == null && LayoutPrefs.frugal && !DebugSwitches.videoWithPage;
+    if (!later) return scheduleMicrotask(_sync);
+    _startSoon ??= Timer(startAfterPage, () {
+      _startSoon = null;
+      _sync();
+    });
   }
+
+  /// Balanced on a computer: how long after its page comes on screen a video is opened. Opening it (mpv probing the
+  /// stream, the decoder starting: ~270 ms on its thread) and building the page (~450 ms of the main and raster
+  /// threads) fell in one of btop's 2 s samples, ~2.2% of the processor with Kyapi; apart, each is about half. The
+  /// cover shows meanwhile. Off with `RIFLAY_VIDEO_WITH_PAGE`.
+  static const startAfterPage = Duration(milliseconds: 2500);
+  Timer? _startSoon;
 
   void removeView({bool full = false}) {
     full ? _fullViews-- : _views--;
@@ -906,6 +919,7 @@ vec4 hook() {
 
   @override
   void dispose() {
+    _startSoon?.cancel();
     _disposed = true;
     _c?.removeListener(_changed);
     WidgetsBinding.instance.removeObserver(this);

@@ -731,6 +731,9 @@ device's language when Riflay has it). The words live in `lib/l10n/app_en.arb` (
   RIFLAY_ALL_EGL_VENDORS=1 riflay  # Linux loads every EGL vendor again (NVIDIA's too) on a laptop whose screens hang off another GPU
   flutter run --dart-define=RIFLAY_FULL_VISUALIZER=true  # Balanced's visualizer measures 24 bands / 1024 points, read 25 times a second, as Heavy
   flutter run --dart-define=RIFLAY_SIGNAL_PATH_EVERY_READ=true  # the quality badge redraws every second, even showing the same
+  flutter run --dart-define=RIFLAY_METER_EVERY_SYNC=true  # the visualizer's meter goes into mpv's audio graph at once on every change, even unchanged
+  flutter run --dart-define=RIFLAY_VIDEO_WITH_PAGE=true  # Balanced opens a music video with its page, not 2.5 s after
+  flutter run --dart-define=RIFLAY_ALIGN_FULL_SPEED=true  # Balanced lines a music video up with its song at full speed, not over ~5 s
   flutter run --dart-define=RIFLAY_ASTATS_VISUALIZER=true  # the visualizer measures its bands with astats (~3x the CPU), not aspectralstats
   flutter run -d chrome --dart-define=RIFLAY_NO_WEB_AUDIO=true  # web: songs play straight from <audio>, no effects or visualizer
   ```
@@ -966,6 +969,15 @@ Windows zip, Linux AppImage and macOS dmg, so successful platforms need not be r
   front: peak 0.41 -> ~0.31% (mpv's `core` thread 40-80 -> 20 ms per 2 s). Private memory with the video stayed
   ~265 MiB (one run showed ~212; two more did not). Pages opening instantly instead of in 160 ms changed their peaks
   little (lyrics 0.68 vs 0.75%): the cost is building the page, not its slide.
+- Opening Now Playing with Kyapi's video peaked at ~2.2% (one 2 s sample): mpv's audio graph rebuilt four times
+  (the meter added three times as the views came, then removed as the video paused the visualizer: now changes
+  wait 300 ms for the last and a meter already as wanted is left alone), the music video's first alignment decoding
+  both soundtracks at full speed (~270 ms of an mpv `core` thread; now read at 15x real time in Balanced, ~5 s), and
+  the video opening with the page (now 2.5 s after, in Balanced). Now ~1.2% then ~0.8%, ~0.6%; the rest of the first
+  sample is the raster thread drawing the page (~240 ms). The alignment is kept per song and video, so only a music
+  video's first showing pays it; the reference flow starts with fresh data each run. Semantics are always on in the
+  Linux embedder (`fl_engine.cc` enables them): leaving them out of the tree cut the lyrics page's opening peak only
+  0.70 -> 0.56% and was not kept (screen readers need them).
 
 - Opening the lyrics page (`RIFLAY_CPU_ENV='RIFLAY_CPU_SPIKE=lyrics' tool/cpu.sh`: CPU and frames every 100 ms,
   each thread, `RIFLAY_CPU_PROFILE=true` the Dart profile, `RIFLAY_CPU_STACKS=true` in a debug build who asks for
