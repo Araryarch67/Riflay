@@ -728,6 +728,7 @@ device's language when Riflay has it). The words live in `lib/l10n/app_en.arb` (
   flutter run --dart-define=RIFLAY_MOTION_WITH_VIDEO=true  # decorations, visualizer and a smooth seek bar while the music video shows
   flutter run --dart-define=RIFLAY_LYRICS_SCROLLBAR=true  # synced lyrics show a scrollbar on computers again
   flutter run --dart-define=RIFLAY_NO_PAGE_OUT=true  # Linux keeps the app resident behind other windows (no MADV_PAGEOUT)
+  RIFLAY_ALL_EGL_VENDORS=1 riflay  # Linux loads every EGL vendor again (NVIDIA's too) on a laptop whose screens hang off another GPU
   flutter run --dart-define=RIFLAY_ASTATS_VISUALIZER=true  # the visualizer measures its bands with astats (~3x the CPU), not aspectralstats
   flutter run -d chrome --dart-define=RIFLAY_NO_WEB_AUDIO=true  # web: songs play straight from <audio>, no effects or visualizer
   ```
@@ -938,6 +939,16 @@ Windows zip, Linux AppImage and macOS dmg, so successful platforms need not be r
   mouse don't fault back in each minute. Off with `RIFLAY_NO_PAGE_OUT`. The base app is most of what stays:
   Lightweight measured the same as Balanced in front (~150 MiB private idle, ~200 playing, ~220 scrolling); Heavy
   peaks ~336 MiB private / ~460 MiB RSS with a 1080p music video.
+- Linux EGL vendors (`linux/runner/main.cc`): glvnd loads every vendor to probe them, so a hybrid laptop drawing on
+  its Intel or AMD GPU still carried NVIDIA's EGL libraries, unused. When every connected screen hangs off a
+  non-NVIDIA card (`/sys/class/drm/card*-*/status` and the card's driver), the runner sets
+  `__EGL_VENDOR_LIBRARY_FILENAMES` to Mesa's before GTK starts (not when it or `__EGL_VENDOR_LIBRARY_DIRS` is set,
+  or with `RIFLAY_ALL_EGL_VENDORS`). Kyapi with its music video (`RIFLAY_MV_FLOW=steady tool/btop_watch.py`, which
+  now prints private and RSS per step): ~40 MiB less RSS at every step (~350-367 vs ~387-414) and 5-15 MiB less
+  private; video still decodes with vaapi. Private memory with the video stays ~245-262 MiB in Balanced: the video
+  adds ~40 MiB of driver memory (anonymous, vaapi in use) and its share of the C heap; without Video mode it is
+  ~190-200. `malloc_trim` every 10 s instead of each minute changed nothing (the heap it frees is in use again at
+  once), nor did `MALLOC_ARENA_MAX=2`.
 - Opening the lyrics page (`RIFLAY_CPU_ENV='RIFLAY_CPU_SPIKE=lyrics' tool/cpu.sh`: CPU and frames every 100 ms,
   each thread, `RIFLAY_CPU_PROFILE=true` the Dart profile, `RIFLAY_CPU_STACKS=true` in a debug build who asks for
   frames). On Linux a frame costs the main thread ~10 ms natively (GTK composites the whole window; Dart is a small

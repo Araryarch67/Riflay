@@ -3,12 +3,14 @@
 // process, per thread, every 100 ms) and memory (private / PSS / RSS every 250 ms) per phase. Run through
 // tool/mv_app.sh. Prints "MV ..." lines.
 import 'dart:async';
+import 'dart:ffi';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:riflay/main.dart' as app;
 import 'package:riflay/services/language.dart';
+import 'package:riflay/services/lyrics_translation.dart';
 import 'package:riflay/services/player_controller.dart';
 import 'package:riflay/services/video_mode.dart';
 import 'package:riflay/ui/player/video_full_view.dart';
@@ -234,7 +236,9 @@ Future<void> _btopFlow(PlayerController c, String query) async {
 }
 
 /// RIFLAY_MV_FLOW=steady: each state a song spends minutes in, held 20 s, with another window in front after each
-/// (as most listening is), for tool/btop_watch.py's per-step averages.
+/// (as most listening is), for tool/btop_watch.py's per-step averages. Lyrics show their pronunciation, as the
+/// reference listener reads them. RIFLAY_MV_TRIM=true: halfway through each step, private memory by part before
+/// and after a `malloc_trim(0)` (what glibc held freed).
 Future<void> _steadyFlow(PlayerController c, String query) async {
   final clock = Stopwatch()..start();
   void at(String step) => stdout.writeln('MV at ${(clock.elapsedMilliseconds / 1000).toStringAsFixed(1)} s: $step');
@@ -243,12 +247,21 @@ Future<void> _steadyFlow(PlayerController c, String query) async {
   Future<void> hold(String step) async {
     binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
     at(step);
-    await Future<void>.delayed(const Duration(seconds: 20));
+    if (Platform.environment['RIFLAY_MV_TRIM'] == 'true') {
+      await Future<void>.delayed(const Duration(seconds: 10));
+      stdout.writeln('MV   before trim: ${_parts()}');
+      DynamicLibrary.process().lookupFunction<Int32 Function(IntPtr), int Function(int)>('malloc_trim')(0);
+      stdout.writeln('MV   after trim:  ${_parts()}');
+      await Future<void>.delayed(const Duration(seconds: 10));
+    } else {
+      await Future<void>.delayed(const Duration(seconds: 20));
+    }
     binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
     at('$step, another window in front');
     await Future<void>.delayed(const Duration(seconds: 20));
   }
 
+  LyricsTranslation.romanize.value = true;
   final song = (await c.searchYoutube(query)).firstWhere((t) => t.videoId != null);
   await c.playList([song], 0, from: 'MV benchmark');
   await Future<void>.delayed(const Duration(seconds: 4));

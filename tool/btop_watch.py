@@ -39,13 +39,22 @@ def by_thread():
         f = st.rsplit(')', 1)[1].split()
         out[name] = out.get(name, 0) + int(f[11]) + int(f[12])
     return out
-samples, threads_at = [], {}
+def memory():
+    """Private (Private_Clean + Private_Dirty) and RSS in MiB, from smaps_rollup."""
+    kb = {}
+    for line in open(f'/proc/{app.pid}/smaps_rollup'):
+        k, _, v = line.partition(':')
+        if k in ('Rss', 'Private_Clean', 'Private_Dirty'):
+            kb[k] = int(v.split()[0])
+    return ((kb.get('Private_Clean', 0) + kb.get('Private_Dirty', 0)) / 1024, kb.get('Rss', 0) / 1024)
+samples, threads_at, memory_at = [], {}, {}
 while app.poll() is None:
     try:
         f = open(f'/proc/{app.pid}/stat').read().rsplit(')', 1)[1].split()
         samples.append((time.monotonic() - start, int(f[11]) + int(f[12])))
         if (len(samples) - 1) % round(args.interval / 0.1) == 0:
             threads_at[len(samples) - 1] = by_thread()
+            memory_at[len(samples) - 1] = memory()
     except OSError:
         break
     time.sleep(0.1)
@@ -73,7 +82,10 @@ if len(steps) > 1:
         inside = [i for i, s in enumerate(samples) if t0 + 3 <= s[0] <= t1]
         if len(inside) > 1:
             a, b = samples[inside[0]], samples[inside[-1]]
-            print(f'  {share(a, b):5.2f}%  {l0.split(": ", 1)[-1][:70]}')
+            mem = [memory_at[i] for i in inside if i in memory_at]
+            ram = (f'  private {sum(m[0] for m in mem) / len(mem):4.0f} (max {max(m[0] for m in mem):4.0f}) MiB, '
+                   f'RSS {sum(m[1] for m in mem) / len(mem):4.0f} (max {max(m[1] for m in mem):4.0f})') if mem else ''
+            print(f'  {share(a, b):5.2f}%  {l0.split(": ", 1)[-1][:60]}{ram}')
             marks_in = [i for i in inside if i in threads_at]
             if len(marks_in) > 1:
                 d = {k: v - threads_at[marks_in[0]].get(k, 0) for k, v in threads_at[marks_in[-1]].items()}
