@@ -94,6 +94,7 @@ Future<void> main() async {
   WidgetsBinding.instance.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
 
   if (Platform.environment['RIFLAY_MV_FLOW'] == 'btop') return _btopFlow(c, query);
+  if (Platform.environment['RIFLAY_MV_FLOW'] == 'steady') return _steadyFlow(c, query);
   final found = await c.searchYoutube(query);
   stdout.writeln('MV search "$query": ${[for (final t in found.take(3)) '${t.title} · ${t.artist}'].join(' | ')}');
   final song = found.firstWhere((t) => t.videoId != null);
@@ -228,6 +229,44 @@ Future<void> _btopFlow(PlayerController c, String query) async {
   (lyrics?.widget as IconButton?)?.onPressed?.call();
   at('lyrics line on');
   await rest(12);
+  at('done');
+  exit(0);
+}
+
+/// RIFLAY_MV_FLOW=steady: each state a song spends minutes in, held 20 s, with another window in front after each
+/// (as most listening is), for tool/btop_watch.py's per-step averages.
+Future<void> _steadyFlow(PlayerController c, String query) async {
+  final clock = Stopwatch()..start();
+  void at(String step) => stdout.writeln('MV at ${(clock.elapsedMilliseconds / 1000).toStringAsFixed(1)} s: $step');
+  ShellScope shell() => ShellScope.of(_find((e) => e.widget is PageScaffold)!);
+  final binding = WidgetsBinding.instance;
+  Future<void> hold(String step) async {
+    binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    at(step);
+    await Future<void>.delayed(const Duration(seconds: 20));
+    binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+    at('$step, another window in front');
+    await Future<void>.delayed(const Duration(seconds: 20));
+  }
+
+  final song = (await c.searchYoutube(query)).firstWhere((t) => t.videoId != null);
+  await c.playList([song], 0, from: 'MV benchmark');
+  await Future<void>.delayed(const Duration(seconds: 4));
+  await hold('Home');
+  shell().openLyrics();
+  await hold('lyrics page');
+  shell().history?.back();
+  shell().openNowPlaying();
+  await hold('Now Playing with the video');
+  unawaited(openVideoFullView(_find((e) => e.widget is PageScaffold)!));
+  await Future<void>.delayed(const Duration(seconds: 2));
+  final lyrics = _find((e) => e.widget is IconButton && (e.widget as IconButton).tooltip == tr.showLyrics);
+  (lyrics?.widget as IconButton?)?.onPressed?.call();
+  await hold('full screen video with its lyrics line');
+  binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+  await c.pause();
+  at('paused');
+  await Future<void>.delayed(const Duration(seconds: 15));
   at('done');
   exit(0);
 }

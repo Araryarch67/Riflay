@@ -919,8 +919,9 @@ Windows zip, Linux AppImage and macOS dmg, so successful platforms need not be r
   whole CPU / private working set): Lightweight 0.01-0.16% / 30-85 MB after the first idle trim (~15 s, see
   `MemoryTrim`), Balanced 0.2-0.7% / up to ~260 MB, Heavy 0.4-0.7% / up to ~275 MB in front and ~0.1% behind.
 - Linux pages the app out like Windows empties its working set (`MemoryTrim`, `trimProcessMemory`):
-  `madvise(MADV_PAGEOUT)` over its private mappings, while hidden or left alone (8 s without input) behind another
-  window: once per time away (`_pagedOut`, reset when it is focused or shown again), not each minute. Pages go to
+  `madvise(MADV_PAGEOUT)` over its private mappings, while hidden (after 2 s) or behind another window for a minute
+  (`MemoryTrim._unfocusedFor`; after 8 s a glance at another window, or a few switches a minute, paid the paging each
+  time: ~2% of a core on average): once per time away (`_pagedOut`, reset when it is focused or shown again), not each minute. Pages go to
   zram/swap or back to the page cache and fault in when touched. Compressing them into zram costs ~0.6 s of CPU on
   the trim's own isolate, so it rests as it goes (~8 ms a MB, big mappings in eighths): spread over ~2.5 s, longer
   than btop's sampling. Repeated each minute it was a spike btop showed every minute (`DartWorker` 5.7% of a core
@@ -965,6 +966,11 @@ Windows zip, Linux AppImage and macOS dmg, so successful platforms need not be r
   hardware decoder, once a song: the player is kept a minute without a view), the full screen view 0.25-0.46%.
   Starting the tray and the CLI's server 3 s later didn't change the first sample (the start itself is the main
   thread's), so they start with the first frame as before.
+- Steady states on the real desktop (`RIFLAY_MV_FLOW=steady`: each held 20 s in front, then 20 s behind another
+  window; Kyapi with its video, Balanced, % of 24 threads): Home 0.16 / 0.08, the lyrics page 0.23 / 0.10, Now
+  Playing with the video 0.27 / 0.13 (its seek bar's once-a-second frame costs ~10-20 ms with the video's surface on
+  screen, until the video is let go after 20 s), the full screen video 0.25 / 0.09, paused 0.00. Behind another
+  window synced lyrics jump to the next line (no glide nobody watches).
 - Frugal Balanced's page transitions take at most 160 ms in, 120 out (`LayoutPrefs.pageDuration`): ~10 frames
   instead of ~26 at 440 ms, each ~10 ms of the Linux main thread.
 - The native video's `GtkOverlay` keeps its `GtkFixed` hidden until a video has a place on screen: shown over the

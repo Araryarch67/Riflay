@@ -224,7 +224,8 @@ class _SyncedLyricsViewState extends State<SyncedLyricsView> with _Extras {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       if (_following) {
-        _scrollToCurrent(animate: _placed);
+        // Behind another window the next line comes at once: nobody watches the glide (~7 frames a line).
+        _scrollToCurrent(animate: _placed && PlayingMotion.decorates(WidgetsBinding.instance.lifecycleState));
         _placed = true;
       } else {
         _checkVisible();

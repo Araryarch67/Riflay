@@ -60,7 +60,14 @@ abstract final class MemoryTrim {
 
   /// Nobody is using the window: hidden, or untouched for a while; on Linux also with another window in front, so
   /// lyrics read without the mouse don't fault back in every minute.
-  static bool get _away => _hidden || (_idle && (Host.isWindows || !_focused));
+  static bool get _away =>
+      _hidden || (_idle && (Host.isWindows || (!_focused && DateTime.now().difference(_unfocusedAt) >= _unfocusedFor)));
+
+  /// Linux: how long another window must have had the focus before the app is paged out. Paging out compresses
+  /// ~200 MB into zram (~0.6 s of CPU) and what plays faults back in: after 8 s, a glance at another window or a
+  /// few switches a minute paid that each time. Left behind for a minute it is worth it; minimized, at once.
+  static const _unfocusedFor = Duration(seconds: 60);
+  static DateTime _unfocusedAt = DateTime.now();
 
   /// Empties the working set while idle or hidden: Windows, and Linux, where btop and the system monitor showed a
   /// window left playing behind others at its peak. Off on Linux with `RIFLAY_NO_PAGE_OUT`.
@@ -120,16 +127,17 @@ abstract final class MemoryTrim {
     });
   }
 
-  /// Whether the window has the focus. On Linux, losing it pages the app out once it has been left alone for
-  /// [_idleAfter]: someone looking at btop or the system monitor, or working in another window, while a song plays.
+  /// Whether the window has the focus. On Linux, losing it pages the app out once another window has had the focus
+  /// for [_unfocusedFor]: someone working in another window while a song plays.
   static void focus(bool focused) {
     if (!_available || focused == _focused) return;
     _focused = focused;
     if (focused) _pagedOut = false;
     if (focused || !Host.isLinux || !_pagesOut || _hidden) return;
+    _unfocusedAt = DateTime.now();
     _listen();
     _soon?.cancel();
-    _soon = Timer(_idleAfter, _whenIdle);
+    _soon = Timer(_unfocusedFor, _whenIdle);
   }
 
   /// The window is shown again: caches get their normal budgets back.

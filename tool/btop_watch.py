@@ -65,5 +65,20 @@ for i in range(0, len(samples) - step, step):
         d = {k: v - threads_at[i].get(k, 0) for k, v in threads_at[i + step].items()}
         top = sorted(((v, k) for k, v in d.items() if v > 0), reverse=True)[:7]
         print('           ' + ', '.join(f'{k} {v * 1000 // hz} ms' for v, k in top))
+# Each step from one "MV at" line to the next: the average over it, skipping its first 3 s (the step's own start).
+steps = [(t, line) for t, line in marks if line.startswith('MV at')]
+if len(steps) > 1:
+    print('average of each step (after its first 3 s):')
+    for (t0, l0), (t1, _) in zip(steps, steps[1:]):
+        inside = [i for i, s in enumerate(samples) if t0 + 3 <= s[0] <= t1]
+        if len(inside) > 1:
+            a, b = samples[inside[0]], samples[inside[-1]]
+            print(f'  {share(a, b):5.2f}%  {l0.split(": ", 1)[-1][:70]}')
+            marks_in = [i for i in inside if i in threads_at]
+            if len(marks_in) > 1:
+                d = {k: v - threads_at[marks_in[0]].get(k, 0) for k, v in threads_at[marks_in[-1]].items()}
+                secs = samples[marks_in[-1]][0] - samples[marks_in[0]][0]
+                top = sorted(((v, k) for k, v in d.items() if v > 0), reverse=True)[:7]
+                print('          ' + ', '.join(f'{k} {v / hz / secs * 100:.1f}%' for v, k in top) + ' of one core')
 worst = max((share(samples[j], samples[j + step]), samples[j][0]) for j in range(len(samples) - step))
 print(f'worst {args.interval:g} s window: {worst[0]:.2f}% from {worst[1]:.1f} s')
