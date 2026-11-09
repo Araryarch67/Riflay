@@ -339,6 +339,16 @@ test/                          Unit and widget tests
 
 - An output device that isn't plugged in (a USB DAC) falls back to the
   system default with a note under Output device; the choice stays saved.
+- **Measure output** (the Signal path sheet, `services/output_measure.dart`): on a tap, `pw-record` takes 10 s of
+  Riflay's own PipeWire stream (found by process id in `pw-dump`, stereo f32 at the graph's rate), `MpvPcm` decodes
+  the same stretch of the song again (2 s of margin either side), and `NullTest.compare` (`services/null_test.dart`,
+  pure Dart, in an isolate) lines them up and measures what is left: share of identical samples, gain, offset,
+  difference and null (plain and A-weighted), clock drift, fit quality. Digital only: it says what Riflay and
+  PipeWire did to the samples, not the DAC. Linux through PipeWire or its Pulse server only (an output straight to
+  the card has no stream to record); nothing runs until asked. A crossfade (two streams), a pause, a seek or a song
+  change while recording give a reason instead of a number. `RIFLAY_NO_OUTPUT_MEASURE` hides it.
+  `test/null_test_test.dart` and `test/output_measure_test.dart` cover the maths and the stream lookup; the
+  recording itself needs a playing app.
 - **Casting** (`PlayerController.castTo`): the queue stays in `player`, paused,
   while a TV plays; `_castFollow` sends each new current song. UI must use
   the controller's `position`, `duration`, `seek`, `play`, `pause`, `volume`
@@ -724,6 +734,7 @@ device's language when Riflay has it). The words live in `lib/l10n/app_en.arb` (
   flutter run --dart-define=RIFLAY_NO_SOUNDCLOUD=true     # no SoundCloud anywhere (search, links, the source switch)
   flutter run --dart-define=RIFLAY_NO_SOUNDCLOUD_CACHE=true  # SoundCloud's client id, searches and stream playlists looked up every time
   flutter run --dart-define=RIFLAY_NO_SHARED_SIGNAL_PATH=true  # every signalPath() caller reads mpv itself
+  flutter run --dart-define=RIFLAY_NO_OUTPUT_MEASURE=true  # no "Measure output" in the Signal path sheet (Linux, PipeWire)
   flutter run --dart-define=RIFLAY_NO_STREAK_CACHE=true  # the listening streak counted afresh every build
   flutter run --dart-define=RIFLAY_NO_VIDEO_ROTATE=true  # turning a phone sideways on Now Playing doesn't open the music video full screen
   flutter run --dart-define=RIFLAY_NO_MV_SEARCH=true     # a song YouTube Music pairs with no video gets none (no search for its official video)

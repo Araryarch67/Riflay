@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 
 import '../../services/audio_engine.dart';
 import '../../services/bluetooth_codec.dart';
+import '../../services/null_test.dart';
+import '../../services/output_measure.dart';
 import '../../services/player_controller.dart';
 import '../../services/ui_beat.dart';
 import '../debug_switches.dart';
@@ -400,6 +402,7 @@ class _SignalPathSheet extends StatelessWidget {
                       label: Text(tr.showBluetoothCodec),
                     ),
                   ),
+                if (OutputMeasure.availableFor(p)) const _MeasureOutput(),
               ],
             ),
           ),
@@ -413,6 +416,177 @@ class _SignalPathSheet extends StatelessWidget {
     2 => tr.spStereo,
     final n => tr.spChannels('$n'),
   };
+}
+
+/// "Measure output": on a tap, a null test of what Riflay sent PipeWire against the song ([OutputMeasure]), shown
+/// the way DeltaWave shows one. The last one is kept for its song, so closing and opening the sheet keeps it.
+class _MeasureOutput extends StatefulWidget {
+  const _MeasureOutput();
+
+  @override
+  State<_MeasureOutput> createState() => _MeasureOutputState();
+}
+
+class _MeasureOutputState extends State<_MeasureOutput> {
+  static ({String song, OutputMeasurement measurement})? _last;
+
+  late final PlayerController _controller = PlayerScope.read(context);
+  bool _running = false;
+  MeasureStage _stage = MeasureStage.recording;
+  double _progress = 0;
+  MeasureProblem? _problem;
+
+  OutputMeasurement? get _shown {
+    final last = _last;
+    return last != null && last.song == _controller.audio.songKey ? last.measurement : null;
+  }
+
+  Future<void> _measure() async {
+    setState(() {
+      _running = true;
+      _problem = null;
+      _stage = MeasureStage.recording;
+      _progress = 0;
+    });
+    final song = _controller.audio.songKey;
+    try {
+      final m = await OutputMeasure.measure(
+        _controller.audio,
+        onProgress: (stage, progress) {
+          // A redraw a tenth of the recording, not one per PipeWire chunk.
+          final step = (progress * 10).floor() != (_progress * 10).floor();
+          if (mounted && (stage != _stage || step)) {
+            setState(() {
+              _stage = stage;
+              _progress = progress;
+            });
+          }
+        },
+      );
+      _last = (song: song, measurement: m);
+    } on MeasureFailure catch (e) {
+      _problem = e.problem;
+    } catch (e) {
+      debugPrint('Output measurement: $e');
+      _problem = MeasureProblem.noMatch;
+    }
+    if (mounted) setState(() => _running = false);
+  }
+
+  static String _db(double v, String unit) => v <= NullTest.floorDb
+      ? '−∞ $unit'
+      : v >= -NullTest.floorDb
+      ? '∞ $unit'
+      : '${v.toStringAsFixed(2)} $unit';
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    final m = _shown;
+    final secondary = text.bodySmall?.copyWith(color: AppColors.textSecondary);
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Divider(height: 24),
+          Text(tr.spMeasureOutput, style: text.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+          const SizedBox(height: 4),
+          Text(tr.spMeasureOutputBody, style: secondary),
+          const SizedBox(height: 12),
+          if (_running) ...[
+            LinearProgressIndicator(value: _stage == MeasureStage.recording ? _progress : null),
+            const SizedBox(height: 6),
+            Text(switch (_stage) {
+              MeasureStage.recording => tr.spMeasureRecording(
+                '${(_progress * OutputMeasure.length.inSeconds).floor()}',
+                '${OutputMeasure.length.inSeconds}',
+              ),
+              MeasureStage.decoding => tr.spMeasureDecoding,
+              MeasureStage.comparing => tr.spMeasureComparing,
+            }, style: secondary),
+          ] else ...[
+            if (_problem case final problem?) ...[
+              Text(switch (problem) {
+                MeasureProblem.noRecorder => tr.spMeasureNoRecorder,
+                MeasureProblem.noStream => tr.spMeasureNoStream,
+                MeasureProblem.twoStreams => tr.spMeasureTwoStreams,
+                MeasureProblem.songMoved => tr.spMeasureSongMoved,
+                MeasureProblem.noSource => tr.spMeasureNoSource,
+                MeasureProblem.noMatch => tr.spMeasureNoMatch,
+              }, style: text.bodySmall?.copyWith(color: Theme.of(context).colorScheme.error)),
+              const SizedBox(height: 8),
+            ],
+            if (m != null) ...[_results(context, m), const SizedBox(height: 8)],
+            FilledButton.tonalIcon(
+              onPressed: _measure,
+              icon: const Icon(Icons.science_outlined, size: 18),
+              label: Text(m == null ? tr.spMeasure : tr.spMeasureAgain),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _results(BuildContext context, OutputMeasurement m) {
+    final text = Theme.of(context).textTheme;
+    final r = m.result;
+    final share = '${(r.identical * 100).toStringAsFixed(2)}%';
+    Widget row(String label, String value) => Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Text(label, style: text.bodyMedium?.copyWith(color: AppColors.textSecondary)),
+          ),
+          const SizedBox(width: 12),
+          Text(value, style: text.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
+        ],
+      ),
+    );
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(
+              r.bitPerfect ? Icons.verified_rounded : Icons.graphic_eq_rounded,
+              color: r.bitPerfect ? AppColors.accent : AppColors.textPrimary,
+              size: 20,
+            ),
+            const SizedBox(width: 8),
+            Flexible(
+              child: Text(
+                r.bitPerfect ? 'Bit Perfect' : tr.spNotBitPerfectShare(share),
+                style: text.titleSmall?.copyWith(
+                  color: r.bitPerfect ? AppColors.accent : AppColors.textPrimary,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        row(tr.spGain, r.gainDb.abs() < 0.005 ? '0 dB' : '${r.gainDb.toStringAsFixed(2)} dB'),
+        row(tr.spPhaseOffset, '${r.offsetMs.toStringAsFixed(2)} ms'),
+        row(tr.spDifferenceRms, '${_db(r.diffRmsDb, 'dB')} / ${_db(r.diffRmsDba, 'dBA')}'),
+        row(tr.spCorrelatedNull, '${_db(r.nullDb, 'dB')} / ${_db(r.nullDba, 'dBA')}'),
+        row(tr.spClockDrift, r.driftPpm.abs() < 0.005 ? '0 ppm' : '${r.driftPpm.toStringAsFixed(2)} ppm'),
+        row(tr.spFitQuality, switch (r.quality) {
+          FitQuality.excellent => tr.spFitExcellent,
+          FitQuality.good => tr.spFitGood,
+          FitQuality.poor => tr.spFitPoor,
+        }),
+        const SizedBox(height: 4),
+        Text(
+          tr.spMeasuredAt(r.seconds.toStringAsFixed(1), SignalPath.formatRate(m.rate)),
+          style: text.bodySmall?.copyWith(color: AppColors.textSecondary),
+        ),
+      ],
+    );
+  }
 }
 
 /// The output API and device, e.g. "WASAPI shared · {0.0.0.00000000}.{…}".

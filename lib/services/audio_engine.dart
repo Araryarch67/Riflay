@@ -1884,6 +1884,15 @@ class AudioEngine extends ChangeNotifier {
   }
 
   Future<double?> mainTimePos() => _clock(_native);
+
+  /// What the main player has open (a file's path or a stream's address), for decoding the same song again.
+  Future<String?> mainPath() async {
+    final path = await _native?.getProperty('path').timeout(_secondaryTimeout, onTimeout: () => '');
+    return path == null || path.isEmpty ? null : path;
+  }
+
+  /// Which song plays: changes when another one starts (see [_songKey]).
+  String get songKey => _songKey;
   Future<double?> secondaryTimePos() => _clock(_secondaryNative);
 
   Future<void> secondarySeek(double seconds) async {

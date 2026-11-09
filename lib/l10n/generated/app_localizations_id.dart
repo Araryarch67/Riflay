@@ -3258,6 +3258,85 @@ class AppLocalizationsId extends AppLocalizations {
   String get spIosSession => 'Sesi audio iOS (mixer sistem)';
 
   @override
+  String get spMeasureOutput => 'Ukur keluaran';
+
+  @override
+  String get spMeasureOutputBody =>
+      'Merekam 10 detik dari yang Riflay kirim ke PipeWire lalu membandingkannya, sampel demi sampel, dengan lagunya sendiri. Rekamannya digital: ini menunjukkan apakah Riflay dan mixer sistem mengubah sampel, bukan keluaran analog DAC kamu.';
+
+  @override
+  String get spMeasure => 'Ukur';
+
+  @override
+  String get spMeasureAgain => 'Ukur lagi';
+
+  @override
+  String spMeasureRecording(String seconds, String total) {
+    return 'Merekam… $seconds / $total dtk';
+  }
+
+  @override
+  String get spMeasureDecoding => 'Mendekode lagu…';
+
+  @override
+  String get spMeasureComparing => 'Membandingkan…';
+
+  @override
+  String spNotBitPerfectShare(String share) {
+    return 'TIDAK Bit Perfect $share';
+  }
+
+  @override
+  String get spGain => 'Gain';
+
+  @override
+  String get spPhaseOffset => 'Offset fase';
+
+  @override
+  String get spDifferenceRms => 'Selisih (rms)';
+
+  @override
+  String get spCorrelatedNull => 'Null terkorelasi';
+
+  @override
+  String get spClockDrift => 'Drift jam';
+
+  @override
+  String get spFitQuality => 'Kualitas fit';
+
+  @override
+  String get spFitExcellent => 'Sangat baik';
+
+  @override
+  String get spFitGood => 'Baik';
+
+  @override
+  String get spFitPoor => 'Buruk';
+
+  @override
+  String spMeasuredAt(String seconds, String rate) {
+    return '$seconds dtk dibandingkan pada $rate, 32-bit float dari PipeWire';
+  }
+
+  @override
+  String get spMeasureNoRecorder => 'pw-record dari PipeWire belum terpasang.';
+
+  @override
+  String get spMeasureNoStream => 'Tidak ada suara Riflay yang diputar lewat PipeWire. Putar lagunya lalu coba lagi.';
+
+  @override
+  String get spMeasureTwoStreams => 'Dua lagu sedang crossfade. Coba lagi sebentar lagi.';
+
+  @override
+  String get spMeasureSongMoved => 'Lagu dijeda, digeser, atau berganti saat merekam. Biarkan diputar lalu coba lagi.';
+
+  @override
+  String get spMeasureNoSource => 'Tidak bisa mendekode ulang lagu untuk dibandingkan.';
+
+  @override
+  String get spMeasureNoMatch => 'Yang keluar tidak cocok dengan lagunya (hening, atau ada suara lain).';
+
+  @override
   String get couldntOpenBrowser => 'Tidak bisa membuka browser.';
 
   @override

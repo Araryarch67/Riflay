@@ -5931,6 +5931,150 @@ abstract class AppLocalizations {
   /// **'iOS audio session (system mixer)'**
   String get spIosSession;
 
+  /// No description provided for @spMeasureOutput.
+  ///
+  /// In en, this message translates to:
+  /// **'Measure output'**
+  String get spMeasureOutput;
+
+  /// No description provided for @spMeasureOutputBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Records 10 s of what Riflay sends to PipeWire and compares it, sample by sample, with the song itself. The recording is digital: it shows whether Riflay and the system mixer changed the samples, not what your DAC makes of them.'**
+  String get spMeasureOutputBody;
+
+  /// No description provided for @spMeasure.
+  ///
+  /// In en, this message translates to:
+  /// **'Measure'**
+  String get spMeasure;
+
+  /// No description provided for @spMeasureAgain.
+  ///
+  /// In en, this message translates to:
+  /// **'Measure again'**
+  String get spMeasureAgain;
+
+  /// No description provided for @spMeasureRecording.
+  ///
+  /// In en, this message translates to:
+  /// **'Recording… {seconds} / {total} s'**
+  String spMeasureRecording(String seconds, String total);
+
+  /// No description provided for @spMeasureDecoding.
+  ///
+  /// In en, this message translates to:
+  /// **'Decoding the song…'**
+  String get spMeasureDecoding;
+
+  /// No description provided for @spMeasureComparing.
+  ///
+  /// In en, this message translates to:
+  /// **'Comparing…'**
+  String get spMeasureComparing;
+
+  /// No description provided for @spNotBitPerfectShare.
+  ///
+  /// In en, this message translates to:
+  /// **'NOT Bit Perfect {share}'**
+  String spNotBitPerfectShare(String share);
+
+  /// No description provided for @spGain.
+  ///
+  /// In en, this message translates to:
+  /// **'Gain'**
+  String get spGain;
+
+  /// No description provided for @spPhaseOffset.
+  ///
+  /// In en, this message translates to:
+  /// **'Phase Offset'**
+  String get spPhaseOffset;
+
+  /// No description provided for @spDifferenceRms.
+  ///
+  /// In en, this message translates to:
+  /// **'Difference (rms)'**
+  String get spDifferenceRms;
+
+  /// No description provided for @spCorrelatedNull.
+  ///
+  /// In en, this message translates to:
+  /// **'Correlated Null'**
+  String get spCorrelatedNull;
+
+  /// No description provided for @spClockDrift.
+  ///
+  /// In en, this message translates to:
+  /// **'Clock Drift'**
+  String get spClockDrift;
+
+  /// No description provided for @spFitQuality.
+  ///
+  /// In en, this message translates to:
+  /// **'Fit Quality'**
+  String get spFitQuality;
+
+  /// No description provided for @spFitExcellent.
+  ///
+  /// In en, this message translates to:
+  /// **'Excellent'**
+  String get spFitExcellent;
+
+  /// No description provided for @spFitGood.
+  ///
+  /// In en, this message translates to:
+  /// **'Good'**
+  String get spFitGood;
+
+  /// No description provided for @spFitPoor.
+  ///
+  /// In en, this message translates to:
+  /// **'Poor'**
+  String get spFitPoor;
+
+  /// No description provided for @spMeasuredAt.
+  ///
+  /// In en, this message translates to:
+  /// **'{seconds} s compared at {rate}, 32-bit float from PipeWire'**
+  String spMeasuredAt(String seconds, String rate);
+
+  /// No description provided for @spMeasureNoRecorder.
+  ///
+  /// In en, this message translates to:
+  /// **'PipeWire\'s pw-record isn\'t installed.'**
+  String get spMeasureNoRecorder;
+
+  /// No description provided for @spMeasureNoStream.
+  ///
+  /// In en, this message translates to:
+  /// **'None of Riflay\'s sound is playing through PipeWire. Play the song and try again.'**
+  String get spMeasureNoStream;
+
+  /// No description provided for @spMeasureTwoStreams.
+  ///
+  /// In en, this message translates to:
+  /// **'Two songs are fading into each other. Try again in a moment.'**
+  String get spMeasureTwoStreams;
+
+  /// No description provided for @spMeasureSongMoved.
+  ///
+  /// In en, this message translates to:
+  /// **'The song paused, moved or changed while recording. Let it play and try again.'**
+  String get spMeasureSongMoved;
+
+  /// No description provided for @spMeasureNoSource.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t decode the song again to compare.'**
+  String get spMeasureNoSource;
+
+  /// No description provided for @spMeasureNoMatch.
+  ///
+  /// In en, this message translates to:
+  /// **'What came out didn\'t line up with the song (silence, or something else playing).'**
+  String get spMeasureNoMatch;
+
   /// No description provided for @couldntOpenBrowser.
   ///
   /// In en, this message translates to:

@@ -3193,6 +3193,85 @@ class AppLocalizationsJa extends AppLocalizations {
   String get spIosSession => 'iOS のオーディオセッション（システムのミキサー）';
 
   @override
+  String get spMeasureOutput => '出力を測定';
+
+  @override
+  String get spMeasureOutputBody =>
+      'Riflay が PipeWire に送る音を 10 秒録音し、曲そのものとサンプル単位で比べます。録音はデジタルです。Riflay とシステムのミキサーがサンプルを変えたかは分かりますが、DAC のアナログ出力は分かりません。';
+
+  @override
+  String get spMeasure => '測定';
+
+  @override
+  String get spMeasureAgain => 'もう一度測定';
+
+  @override
+  String spMeasureRecording(String seconds, String total) {
+    return '録音中… $seconds / $total 秒';
+  }
+
+  @override
+  String get spMeasureDecoding => '曲をデコード中…';
+
+  @override
+  String get spMeasureComparing => '比較中…';
+
+  @override
+  String spNotBitPerfectShare(String share) {
+    return 'ビットパーフェクトではない $share';
+  }
+
+  @override
+  String get spGain => 'ゲイン';
+
+  @override
+  String get spPhaseOffset => '位相オフセット';
+
+  @override
+  String get spDifferenceRms => '差分 (rms)';
+
+  @override
+  String get spCorrelatedNull => '相関ヌル';
+
+  @override
+  String get spClockDrift => 'クロックドリフト';
+
+  @override
+  String get spFitQuality => 'フィット品質';
+
+  @override
+  String get spFitExcellent => '非常に良い';
+
+  @override
+  String get spFitGood => '良い';
+
+  @override
+  String get spFitPoor => '悪い';
+
+  @override
+  String spMeasuredAt(String seconds, String rate) {
+    return '$rate、PipeWire の 32-bit float で $seconds 秒を比較';
+  }
+
+  @override
+  String get spMeasureNoRecorder => 'PipeWire の pw-record がインストールされていません。';
+
+  @override
+  String get spMeasureNoStream => 'PipeWire で Riflay の音が再生されていません。曲を再生してもう一度お試しください。';
+
+  @override
+  String get spMeasureTwoStreams => '2 曲がクロスフェード中です。少し待ってからお試しください。';
+
+  @override
+  String get spMeasureSongMoved => '録音中に曲が一時停止・移動・変更されました。そのまま再生してもう一度お試しください。';
+
+  @override
+  String get spMeasureNoSource => '比較のために曲をもう一度デコードできませんでした。';
+
+  @override
+  String get spMeasureNoMatch => '出力が曲と一致しませんでした（無音か、別の音）。';
+
+  @override
   String get couldntOpenBrowser => 'ブラウザを開けませんでした。';
 
   @override

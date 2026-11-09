@@ -1805,6 +1805,57 @@
   "spAndroidMixer": "Android mixer",
   "spAndroidMixerParen": "(Android mixer)",
   "spIosSession": "iOS audio session (system mixer)",
+  "spMeasureOutput": "Measure output",
+  "spMeasureOutputBody": "Records 10 s of what Riflay sends to PipeWire and compares it, sample by sample, with the song itself. The recording is digital: it shows whether Riflay and the system mixer changed the samples, not what your DAC makes of them.",
+  "spMeasure": "Measure",
+  "spMeasureAgain": "Measure again",
+  "spMeasureRecording": "Recording… {seconds} / {total} s",
+  "@spMeasureRecording": {
+    "placeholders": {
+      "seconds": {
+        "type": "String"
+      },
+      "total": {
+        "type": "String"
+      }
+    }
+  },
+  "spMeasureDecoding": "Decoding the song…",
+  "spMeasureComparing": "Comparing…",
+  "spNotBitPerfectShare": "NOT Bit Perfect {share}",
+  "@spNotBitPerfectShare": {
+    "placeholders": {
+      "share": {
+        "type": "String"
+      }
+    }
+  },
+  "spGain": "Gain",
+  "spPhaseOffset": "Phase Offset",
+  "spDifferenceRms": "Difference (rms)",
+  "spCorrelatedNull": "Correlated Null",
+  "spClockDrift": "Clock Drift",
+  "spFitQuality": "Fit Quality",
+  "spFitExcellent": "Excellent",
+  "spFitGood": "Good",
+  "spFitPoor": "Poor",
+  "spMeasuredAt": "{seconds} s compared at {rate}, 32-bit float from PipeWire",
+  "@spMeasuredAt": {
+    "placeholders": {
+      "seconds": {
+        "type": "String"
+      },
+      "rate": {
+        "type": "String"
+      }
+    }
+  },
+  "spMeasureNoRecorder": "PipeWire's pw-record isn't installed.",
+  "spMeasureNoStream": "None of Riflay's sound is playing through PipeWire. Play the song and try again.",
+  "spMeasureTwoStreams": "Two songs are fading into each other. Try again in a moment.",
+  "spMeasureSongMoved": "The song paused, moved or changed while recording. Let it play and try again.",
+  "spMeasureNoSource": "Couldn't decode the song again to compare.",
+  "spMeasureNoMatch": "What came out didn't line up with the song (silence, or something else playing).",
   "couldntOpenBrowser": "Couldn't open the browser.",
   "versionNamed": "Version {version}",
   "@versionNamed": {

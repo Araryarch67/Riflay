@@ -3278,6 +3278,85 @@ class AppLocalizationsEn extends AppLocalizations {
   String get spIosSession => 'iOS audio session (system mixer)';
 
   @override
+  String get spMeasureOutput => 'Measure output';
+
+  @override
+  String get spMeasureOutputBody =>
+      'Records 10 s of what Riflay sends to PipeWire and compares it, sample by sample, with the song itself. The recording is digital: it shows whether Riflay and the system mixer changed the samples, not what your DAC makes of them.';
+
+  @override
+  String get spMeasure => 'Measure';
+
+  @override
+  String get spMeasureAgain => 'Measure again';
+
+  @override
+  String spMeasureRecording(String seconds, String total) {
+    return 'Recording… $seconds / $total s';
+  }
+
+  @override
+  String get spMeasureDecoding => 'Decoding the song…';
+
+  @override
+  String get spMeasureComparing => 'Comparing…';
+
+  @override
+  String spNotBitPerfectShare(String share) {
+    return 'NOT Bit Perfect $share';
+  }
+
+  @override
+  String get spGain => 'Gain';
+
+  @override
+  String get spPhaseOffset => 'Phase Offset';
+
+  @override
+  String get spDifferenceRms => 'Difference (rms)';
+
+  @override
+  String get spCorrelatedNull => 'Correlated Null';
+
+  @override
+  String get spClockDrift => 'Clock Drift';
+
+  @override
+  String get spFitQuality => 'Fit Quality';
+
+  @override
+  String get spFitExcellent => 'Excellent';
+
+  @override
+  String get spFitGood => 'Good';
+
+  @override
+  String get spFitPoor => 'Poor';
+
+  @override
+  String spMeasuredAt(String seconds, String rate) {
+    return '$seconds s compared at $rate, 32-bit float from PipeWire';
+  }
+
+  @override
+  String get spMeasureNoRecorder => 'PipeWire\'s pw-record isn\'t installed.';
+
+  @override
+  String get spMeasureNoStream => 'None of Riflay\'s sound is playing through PipeWire. Play the song and try again.';
+
+  @override
+  String get spMeasureTwoStreams => 'Two songs are fading into each other. Try again in a moment.';
+
+  @override
+  String get spMeasureSongMoved => 'The song paused, moved or changed while recording. Let it play and try again.';
+
+  @override
+  String get spMeasureNoSource => 'Couldn\'t decode the song again to compare.';
+
+  @override
+  String get spMeasureNoMatch => 'What came out didn\'t line up with the song (silence, or something else playing).';
+
+  @override
   String get couldntOpenBrowser => 'Couldn\'t open the browser.';
 
   @override
