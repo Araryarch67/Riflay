@@ -537,6 +537,7 @@ class _SeekBarState extends State<SeekBar> {
             // The wave moves with its own clock and repaints only the bar, not the labels or the page.
             final slider = wavy
                 ? PlayingMotion(
+                    restWithVideo: false,
                     builder: (context, clock) => RepaintBoundary(
                       child: RepaintOn(listenable: clock, child: sliderWith(clock)),
                     ),

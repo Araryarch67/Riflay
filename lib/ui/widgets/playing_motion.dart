@@ -52,7 +52,11 @@ class MotionClock extends ChangeNotifier {
 /// easing out after a pause. The widget around it is not rebuilt for a beat; painters listening
 /// to the clock repaint themselves.
 class PlayingMotion extends StatefulWidget {
-  const PlayingMotion({super.key, required this.builder});
+  const PlayingMotion({super.key, required this.builder, this.restWithVideo = true});
+
+  /// Covers can rest while a video supplies the motion. A wavy seek bar keeps
+  /// its chosen shape and motion even after the video's first frame is ready.
+  final bool restWithVideo;
 
   /// Whether decorations move in this lifecycle [state]: only with the window in front and focused. A computer
   /// reports `inactive` while another window has the focus, which is most of the time a song plays: nobody watches
@@ -123,11 +127,17 @@ class _PlayingMotionState extends State<PlayingMotion> with WidgetsBindingObserv
     _sync();
   }
 
+  @override
+  void didUpdateWidget(covariant PlayingMotion oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.restWithVideo != oldWidget.restWithVideo) _sync();
+  }
+
   void _sync({bool first = false}) {
     if (!mounted) return;
     final allowed = _controller != null && !LayoutPrefs.lightweight && LayoutPrefs.moves && !_reduceMotion;
     // The music video showing is the motion (VideoMode.showing).
-    final video = VideoMode.instance.showing && !DebugSwitches.motionWithVideo;
+    final video = widget.restWithVideo && VideoMode.instance.showing && !DebugSwitches.motionWithVideo;
     final playing = allowed && _visible && _foreground && _controller!.showsPlaying && !video;
     if (first && !_allowed) _clock._amount = _clock._target = playing ? 1 : 0;
     _clock.moving = playing;

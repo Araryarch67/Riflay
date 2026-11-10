@@ -70,6 +70,37 @@ void main() {
   final flower = FlowerCover(animate: true, fit: true, child: const ColoredBox(color: Colors.white));
 
   group('wavy seek bar', () {
+    testWidgets('phone wave keeps moving after track changes and returning to the app', (tester) async {
+      await tester.pumpWidget(_host(c, const SeekBar(phonePlayer: true)));
+      final motion = tester.widget<PlayingMotion>(find.byType(PlayingMotion));
+      expect(motion.restWithVideo, isFalse, reason: 'a loaded background video must not flatten the seek bar');
+      final clock = _waveClock(tester)!;
+      for (var song = 0; song < 3; song++) {
+        // Playback can briefly stop while the next song loads.
+        c.setPlaying(false);
+        await _beats(tester, 10);
+        c.setPlaying(true);
+        await _beats(tester, 60);
+        expect(clock.eased, 1);
+        final before = clock.time;
+        await _beats(tester, 5);
+        expect(clock.time, greaterThan(before));
+      }
+
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+      await _beats(tester, 60);
+      expect(clock.eased, 0);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await _beats(tester, 60);
+      expect(clock.eased, 1);
+      final before = clock.time;
+      await _beats(tester, 5);
+      expect(clock.time, greaterThan(before));
+      await tester.pumpWidget(const SizedBox.shrink());
+    });
+
     testWidgets('the wave travels while playing and flattens and stills when paused', (tester) async {
       await tester.pumpWidget(_host(c, const SeekBar(phonePlayer: true)));
       final clock = _waveClock(tester)!;

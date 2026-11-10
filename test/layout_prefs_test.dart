@@ -24,7 +24,7 @@ void main() {
     expect(p.homeOrder, HomeSection.values);
     expect(p.homeHidden, isEmpty);
     expect(p.progressBar, ProgressBarStyle.thin);
-    expect(p.playButton, PlayButtonShape.circle);
+    expect(p.playButton, PlayButtonShape.flower);
     expect(p.showQualityBadge, isTrue);
     expect(p.dimUnsungLyrics, isTrue);
     expect(p.motion, Motion.full);
@@ -36,14 +36,14 @@ void main() {
     expect(LayoutPrefs.dur(const Duration(milliseconds: 200)), const Duration(milliseconds: 200));
   });
 
-  test('flower play button and straight seek override persist independently', () async {
-    await p.setPlayButton(PlayButtonShape.flower);
+  test('circle play button and straight seek override persist independently', () async {
+    await p.setPlayButton(PlayButtonShape.circle);
     await p.setProgressShape(ProgressBarShape.straight);
     await p.load();
-    expect(p.playButton, PlayButtonShape.flower);
+    expect(p.playButton, PlayButtonShape.circle);
     expect(p.progressShape, ProgressBarShape.straight);
     await p.reset();
-    expect(p.playButton, PlayButtonShape.circle);
+    expect(p.playButton, PlayButtonShape.flower);
     expect(p.progressShape, ProgressBarShape.wavy);
   });
 

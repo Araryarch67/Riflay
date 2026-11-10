@@ -490,7 +490,7 @@ class LayoutPrefs extends ChangeNotifier {
 
   ProgressBarStyle progressBar = ProgressBarStyle.thin;
   ProgressBarShape progressShape = ProgressBarShape.wavy;
-  PlayButtonShape playButton = PlayButtonShape.circle;
+  PlayButtonShape playButton = PlayButtonShape.flower;
   PhoneCoverSize phoneCover = PhoneCoverSize.normal;
 
   /// The player, part by part, on phones and desktop. The defaults are how it has always looked; Settings › Look & feel ›
