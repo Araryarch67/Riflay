@@ -84,6 +84,10 @@ class QueuePage extends StatelessWidget {
               sliver: SliverReorderableList(
                 itemCount: queued.length,
                 onReorderItem: (from, to) => c.moveInQueue(place[queued[from]]!, place[queued[to]]!),
+                // Phone Queue is scoped inside a root route. The drag overlay
+                // sits above that scope, so carry the row's layout with it.
+                proxyDecorator: (child, _, _) =>
+                    shell.wrap(Material(color: AppColors.of(context).elevated, elevation: 6, child: child)),
                 itemBuilder: (context, i) => _QueueRow(
                   key: keys[queued[i]],
                   track: queued[i].track,
