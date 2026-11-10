@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../models/track.dart';
 import '../../services/language.dart';
+import '../../services/listen_together/listen_together.dart';
 import '../../services/player_controller.dart';
 import '../shell_scope.dart';
 import '../theme.dart';
@@ -13,22 +14,27 @@ class QueuePage extends StatelessWidget {
   const QueuePage({super.key});
 
   @override
-  Widget build(BuildContext context) => VisiblePlayerBuilder(builder: _build);
+  Widget build(BuildContext context) => VisiblePlayerBuilder(
+    builder: (context, c) =>
+        ListenableBuilder(listenable: ListenTogether.of(c), builder: (context, _) => _build(context, c)),
+  );
 
   Widget _build(BuildContext context, PlayerController c) {
     final shell = ShellScope.of(context);
     final text = Theme.of(context).textTheme;
-    final current = c.currentTrack;
-    final upNext = c.upNext;
+    final session = ListenTogether.of(c);
+    final guest = session.role == ListenRole.guest;
+    final current = guest ? session.hostTrack?.toTrack() : c.currentTrack;
+    final upNext = guest ? [for (final song in session.upNext) song.toTrack()] : c.upNext;
     // Each entry by its place after the current song: a song can be queued twice, so not by its id.
     final entries = [for (final (i, t) in upNext.indexed) (place: i, track: t)];
     final queued = [
       for (final e in entries)
-        if (!c.isAutoplayed(e.track)) e,
+        if (guest || !c.isAutoplayed(e.track)) e,
     ];
     final autoplayed = [
       for (final e in entries)
-        if (c.isAutoplayed(e.track)) e,
+        if (!guest && c.isAutoplayed(e.track)) e,
     ];
     final place = {for (final e in entries) e: e.place};
     // Keys that follow an entry as it moves: its song and how many times that song came before it.
@@ -50,10 +56,10 @@ class QueuePage extends StatelessWidget {
                 Expanded(
                   child: Text(tr.queue, style: text.headlineMedium?.copyWith(fontWeight: FontWeight.w800)),
                 ),
-                if (current != null)
+                if (current != null || upNext.isNotEmpty)
                   // The song playing and everything after it, autoplay included: what the page shows.
                   TextButton.icon(
-                    onPressed: () => createPlaylist(context, tracks: [current, ...upNext]),
+                    onPressed: () => createPlaylist(context, tracks: [?current, ...upNext]),
                     icon: const Icon(Icons.playlist_add_rounded),
                     label: Text(tr.saveAsPlaylist),
                   ),
@@ -61,55 +67,73 @@ class QueuePage extends StatelessWidget {
             ),
           ),
         ),
-        if (current == null)
+        if (current == null && upNext.isEmpty)
           SliverToBoxAdapter(
             child: Padding(
               padding: EdgeInsets.all(pad),
-              child: Text(tr.queueEmpty, style: text.bodyLarge?.copyWith(color: AppColors.textSecondary)),
+              child: Text(
+                guest ? tr.waitingForHost(session.hostName ?? tr.theHost) : tr.queueEmpty,
+                style: text.bodyLarge?.copyWith(color: AppColors.textSecondary),
+              ),
             ),
           )
         else ...[
-          SliverToBoxAdapter(child: SectionTitle(tr.nowPlaying)),
-          SliverPadding(
-            padding: hPad,
-            sliver: SliverToBoxAdapter(
-              child: TrackRow(track: current, index: 1, onTap: c.togglePlay),
-            ),
-          ),
-          if (queued.isNotEmpty) ...[
-            SectionTitleSliver(title: c.playingFrom == null ? tr.nextUp : tr.nextFrom(c.playingFrom!)),
+          if (current != null) ...[
+            SliverToBoxAdapter(child: SectionTitle(tr.nowPlaying)),
             SliverPadding(
               padding: hPad,
-              // Dragged by the handle (or a long press) to play sooner or later; ✕ or a swipe takes one out.
-              sliver: SliverReorderableList(
-                itemCount: queued.length,
-                onReorderItem: (from, to) => c.moveInQueue(place[queued[from]]!, place[queued[to]]!),
-                // Phone Queue is scoped inside a root route. The drag overlay
-                // sits above that scope, so carry the row's layout with it.
-                proxyDecorator: (child, _, _) =>
-                    shell.wrap(Material(color: AppColors.of(context).elevated, elevation: 6, child: child)),
-                itemBuilder: (context, i) => _QueueRow(
-                  key: keys[queued[i]],
-                  track: queued[i].track,
-                  index: i + 2,
-                  dragIndex: i,
-                  onTap: () => c.playQueueItem(queued[i].track),
-                  onRemove: () => c.removeFromQueue(place[queued[i]]!),
-                ),
+              sliver: SliverToBoxAdapter(
+                child: TrackRow(track: current, index: 1, onTap: guest ? null : c.togglePlay),
               ),
             ),
           ],
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: EdgeInsets.fromLTRB(pad - 16, 16, pad - 16, 0),
-              child: SwitchListTile(
-                title: Text(tr.autoplay),
-                subtitle: Text(tr.autoplaySubtitle, style: text.bodySmall?.copyWith(color: AppColors.textSecondary)),
-                value: c.autoplay,
-                onChanged: c.setAutoplay,
+          if (queued.isNotEmpty) ...[
+            SectionTitleSliver(
+              title: guest
+                  ? tr.listeningWith(session.hostName ?? tr.theHost)
+                  : c.playingFrom == null
+                  ? tr.nextUp
+                  : tr.nextFrom(c.playingFrom!),
+            ),
+            SliverPadding(
+              padding: hPad,
+              // Dragged by the handle (or a long press) to play sooner or later; ✕ or a swipe takes one out.
+              sliver: guest
+                  ? SliverList.builder(
+                      itemCount: queued.length,
+                      itemBuilder: (context, i) =>
+                          TrackRow(key: keys[queued[i]], track: queued[i].track, index: i + 2, onTap: null),
+                    )
+                  : SliverReorderableList(
+                      itemCount: queued.length,
+                      onReorderItem: (from, to) => c.moveInQueue(place[queued[from]]!, place[queued[to]]!),
+                      // Phone Queue is scoped inside a root route. The drag overlay
+                      // sits above that scope, so carry the row's layout with it.
+                      proxyDecorator: (child, _, _) =>
+                          shell.wrap(Material(color: AppColors.of(context).elevated, elevation: 6, child: child)),
+                      itemBuilder: (context, i) => _QueueRow(
+                        key: keys[queued[i]],
+                        track: queued[i].track,
+                        index: i + 2,
+                        dragIndex: i,
+                        onTap: () => c.playQueueItem(queued[i].track),
+                        onRemove: () => c.removeFromQueue(place[queued[i]]!),
+                      ),
+                    ),
+            ),
+          ],
+          if (!guest)
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(pad - 16, 16, pad - 16, 0),
+                child: SwitchListTile(
+                  title: Text(tr.autoplay),
+                  subtitle: Text(tr.autoplaySubtitle, style: text.bodySmall?.copyWith(color: AppColors.textSecondary)),
+                  value: c.autoplay,
+                  onChanged: c.setAutoplay,
+                ),
               ),
             ),
-          ),
           if (autoplayed.isNotEmpty) ...[
             SectionTitleSliver(title: tr.autoplaySimilar),
             SliverPadding(

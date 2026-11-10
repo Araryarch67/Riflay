@@ -55,7 +55,9 @@ class TrackRow extends StatefulWidget {
   });
 
   final Track track;
-  final VoidCallback onTap;
+
+  /// Null for a shared queue that only the host controls. Row menus remain available.
+  final VoidCallback? onTap;
 
   /// 1-based position shown in the leading column; null hides the column.
   final int? index;
@@ -257,7 +259,11 @@ class _TrackRowState extends State<TrackRow> {
             child: InkWell(
               borderRadius: LayoutPrefs.corner(card ? 16 : 6),
               hoverColor: Colors.transparent,
-              onTap: picking ? () => selection!.toggle(t) : (isCurrent && wide && hover ? c.togglePlay : widget.onTap),
+              onTap: picking
+                  ? () => selection!.toggle(t)
+                  : widget.onTap == null
+                  ? null
+                  : (isCurrent && wide && hover ? c.togglePlay : widget.onTap),
               onLongPress: selection == null ? null : () => selection.toggle(t),
               child: child,
             ),
