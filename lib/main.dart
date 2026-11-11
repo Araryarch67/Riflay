@@ -50,6 +50,7 @@ import 'ui/theme.dart';
 import 'ui/widgets/marquee_text.dart';
 import 'ui/widgets/playing_motion.dart';
 import 'ui/widgets/title_bar.dart';
+import 'ui/widgets/startup_splash.dart';
 
 // On the web every request the browser would block goes through Riflay's proxy (lib/platform/network.dart).
 // [args]: computers' command line, which may hold a YouTube link to open (lib/services/incoming_links.dart).
@@ -124,9 +125,9 @@ Future<void> _main(List<String> args) async {
   // The library is read in another isolate: meanwhile this one gets the text engine ready.
   final loading = controller.load();
   warmUpText();
-  await loading;
   await windowSettled;
-  runApp(RiflayApp(controller: controller));
+  runApp(RiflayApp(controller: controller, startup: loading));
+  await loading;
   // Nothing here is needed to draw the first frame; it starts right after it. The media session must exist
   // before anything can be played, and playing needs a tap on that first frame.
   WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -221,9 +222,12 @@ Future<void> _logErrorsToFile() async {
 }
 
 class RiflayApp extends StatefulWidget {
-  const RiflayApp({super.key, required this.controller, this.theme});
+  const RiflayApp({super.key, required this.controller, this.theme, this.startup});
 
   final PlayerController controller;
+
+  /// Actual launches show the mark while loading; embedded app views can open directly.
+  final Future<void>? startup;
 
   /// Overridable so tests can render with a locally loaded font.
   final ThemeData? theme;
@@ -435,7 +439,9 @@ class _RiflayAppState extends State<RiflayApp> with WidgetsBindingObserver {
             child: hasCustomTitleBar ? _DesktopFrame(child: scaled) : scaled,
           );
         },
-        home: const HomeShell(),
+        home: widget.startup == null
+            ? const HomeShell()
+            : StartupSplash(ready: widget.startup!, child: const HomeShell()),
       ),
     );
   }
