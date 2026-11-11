@@ -121,7 +121,14 @@ void main() {
         'Playback',
         if (AudioEngine.supported) ...['Sound effects (DSP)', 'Output & quality'],
       ],
-      'Look & feel': ['Theme & colours', 'Language & text', 'Now Playing', 'Lyrics', 'Pages & navigation'],
+      'Look & feel': [
+        'Theme & colours',
+        'Language & text',
+        'Now Playing',
+        'Lyrics',
+        'Pages & navigation',
+        'Beta features',
+      ],
       'Library & downloads': ['Library', 'Downloads', 'Listening history & Wrap', 'Backup & restore'],
       'Accounts & services': ['YouTube Music account', 'Spotify', 'Last.fm & ListenBrainz', 'Discord', 'Extensions'],
     };

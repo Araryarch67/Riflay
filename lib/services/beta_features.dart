@@ -7,6 +7,7 @@ import 'language.dart';
 
 /// Optional player features, configured in their respective settings pages.
 enum BetaFeature {
+  audioVisualizer('audioVisualizer'),
   musixmatch('musixmatch'),
   videoMode('video'),
 
@@ -19,6 +20,7 @@ enum BetaFeature {
   /// Stored as `features.<id>`; legacy beta keys are still read.
   final String id;
   String get title => switch (this) {
+    audioVisualizer => tr.audioVisualizer,
     musixmatch => tr.musixmatchLyrics,
     videoMode => tr.videoMode,
     directUsb => tr.directUsb,
@@ -26,15 +28,17 @@ enum BetaFeature {
 
   /// One plain line.
   String get description => switch (this) {
+    audioVisualizer => tr.betaAudioVisualizerBody,
     musixmatch => tr.betaMusixmatchBody,
     videoMode => tr.betaVideoModeBody,
     directUsb => tr.betaDirectUsbBody,
   };
 
-  bool get defaultOn => this != directUsb;
+  bool get defaultOn => this != directUsb && this != audioVisualizer;
 
   /// Whether this build has the feature at all (the web build has no Video mode).
   bool get available => switch (this) {
+    audioVisualizer => Features.audioVisualizer,
     videoMode => Features.videoMode,
     directUsb => Host.isAndroid,
     _ => true,
@@ -54,12 +58,13 @@ class BetaFeatures extends ChangeNotifier {
       if (!f.defaultOn) f,
   };
   Future<void>? _loading;
+  bool _readDone = false;
 
   /// Whether [f] is on.
   bool isOn(BetaFeature f) => f.available && !_off.contains(f);
 
   /// Reads the saved switches once; later calls share the first.
-  Future<void> load() => _loading ??= _read();
+  Future<void> load() => _readDone ? Future<void>.value() : _loading ??= _read().whenComplete(() => _readDone = true);
 
   Future<void> _read() async {
     try {
@@ -92,6 +97,7 @@ class BetaFeatures extends ChangeNotifier {
   @visibleForTesting
   Future<void> reload() {
     _loading = null;
+    _readDone = false;
     return load();
   }
 }

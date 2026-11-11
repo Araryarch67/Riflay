@@ -103,6 +103,34 @@ class _DetailStatsSheetState extends State<_DetailStatsSheet> {
   Timer? _timer;
   bool _polling = false;
   Animation<double>? _opening;
+  late final _scroll = ScrollController(
+    onAttach: (position) => position.isScrollingNotifier.addListener(_scrollChanged),
+    onDetach: (position) => position.isScrollingNotifier.removeListener(_scrollChanged),
+  );
+  Timer? _resume;
+  bool _dirty = false;
+
+  bool get _scrolling => _scroll.hasClients && _scroll.position.isScrollingNotifier.value;
+
+  void _refresh() {
+    if (!mounted) return;
+    if (_scrolling) {
+      _dirty = true;
+    } else {
+      _dirty = false;
+      setState(() {});
+    }
+  }
+
+  void _scrollChanged() {
+    _resume?.cancel();
+    if (_scrolling) return;
+    _resume = Timer(const Duration(milliseconds: 180), () {
+      if (!mounted || _scrolling) return;
+      if (_dirty) _refresh();
+      unawaited(_poll());
+    });
+  }
 
   /// The song's file measured (spectrum, dynamic range, loudness): once per song shown here.
   AudioReport? _report;
@@ -118,10 +146,16 @@ class _DetailStatsSheetState extends State<_DetailStatsSheet> {
     _measuring = true;
     AudioAnalysis.of(track, spectrogram: true)
         .then((r) {
-          if (mounted && _reportFor == track.id) setState(() => _report = r);
+          if (mounted && _reportFor == track.id) {
+            _report = r;
+            _refresh();
+          }
         }, onError: (Object e) => debugPrint('Measuring ${track.title}: $e'))
         .whenComplete(() {
-          if (mounted && _reportFor == track.id) setState(() => _measuring = false);
+          if (mounted && _reportFor == track.id) {
+            _measuring = false;
+            _refresh();
+          }
         });
   }
 
@@ -172,7 +206,7 @@ class _DetailStatsSheetState extends State<_DetailStatsSheet> {
   }
 
   Future<void> _poll() async {
-    if (!mounted || _polling) return;
+    if (!mounted || _polling || _scrolling) return;
     _polling = true;
     final c = PlayerScope.read(context);
     final trackId = c.currentTrack?.id;
@@ -182,7 +216,7 @@ class _DetailStatsSheetState extends State<_DetailStatsSheet> {
       final path = await audio.signalPath();
       if (!mounted || c.currentTrack?.id != trackId) return;
       final extra = await audio.nerdStats();
-      if (mounted && c.currentTrack?.id == trackId) {
+      if (mounted && !_scrolling && c.currentTrack?.id == trackId) {
         setState(() {
           _path = path;
           _extra = extra;
@@ -199,6 +233,8 @@ class _DetailStatsSheetState extends State<_DetailStatsSheet> {
   @override
   void dispose() {
     _timer?.cancel();
+    _resume?.cancel();
+    _scroll.dispose();
     _opening?.removeStatusListener(_opened);
     super.dispose();
   }
@@ -381,7 +417,7 @@ class _DetailStatsSheetState extends State<_DetailStatsSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final c = PlayerScope.of(context);
+    final c = PlayerScope.identity(context);
     final text = Theme.of(context).textTheme;
     final track = c.currentTrack;
     final p = _path;
@@ -408,41 +444,41 @@ class _DetailStatsSheetState extends State<_DetailStatsSheet> {
           ?.showSnackBar(SnackBar(content: Text(tr.statsCopied), duration: Duration(seconds: 2)));
     }
 
+    final items = <Widget>[
+      Row(
+        children: [
+          Expanded(
+            child: Text(tr.detailStats, style: text.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
+          ),
+          if (sections.isNotEmpty)
+            IconButton(tooltip: tr.copyStats, onPressed: copy, icon: const Icon(Icons.copy_rounded)),
+        ],
+      ),
+      const SizedBox(height: 8),
+      if (p != null && sections.isNotEmpty) _Badges(path: p),
+      if (status != null || sections.isEmpty)
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 24),
+          child: Text(status ?? tr.waitingForAudio, style: text.bodyMedium?.copyWith(color: AppColors.textSecondary)),
+        ),
+      for (final s in sections) ...[const SizedBox(height: 16), RepaintBoundary(child: _Card(section: s))],
+      if (_report case final r? when r.spectrogram != null && r.columns > 0) ...[
+        const SizedBox(height: 16),
+        RepaintBoundary(child: Spectrogram(report: r)),
+      ],
+      if (sections.isNotEmpty) ...[
+        const SizedBox(height: 16),
+        Text(tr.statsHint, style: text.bodySmall?.copyWith(color: AppColors.textMuted)),
+      ],
+    ];
     return SafeArea(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(tr.detailStats, style: text.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
-                ),
-                if (sections.isNotEmpty)
-                  IconButton(tooltip: tr.copyStats, onPressed: copy, icon: const Icon(Icons.copy_rounded)),
-              ],
-            ),
-            const SizedBox(height: 8),
-            if (p != null && sections.isNotEmpty) _Badges(path: p),
-            if (status != null || sections.isEmpty)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 24),
-                child: Text(
-                  status ?? tr.waitingForAudio,
-                  style: text.bodyMedium?.copyWith(color: AppColors.textSecondary),
-                ),
-              ),
-            for (final s in sections) ...[const SizedBox(height: 16), _Card(section: s)],
-            if (_report case final r? when r.spectrogram != null && r.columns > 0) ...[
-              const SizedBox(height: 16),
-              RepaintBoundary(child: Spectrogram(report: r)),
-            ],
-            if (sections.isNotEmpty) ...[
-              const SizedBox(height: 16),
-              Text(tr.statsHint, style: text.bodySmall?.copyWith(color: AppColors.textMuted)),
-            ],
-          ],
+      child: SizedBox(
+        height: MediaQuery.sizeOf(context).height * 0.85,
+        child: ListView.builder(
+          controller: _scroll,
+          padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+          itemCount: items.length,
+          itemBuilder: (_, i) => items[i],
         ),
       ),
     );

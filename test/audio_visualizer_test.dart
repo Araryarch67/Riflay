@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:riflay/services/layout_prefs.dart';
+import 'package:riflay/services/beta_features.dart';
 import 'package:riflay/services/player_controller.dart';
 import 'package:riflay/services/player_presets.dart';
 import 'package:riflay/ui/pages/layout_settings.dart';
@@ -13,6 +14,7 @@ void main() {
   final prefs = LayoutPrefs.instance;
   setUp(() async {
     SharedPreferences.setMockInitialValues({});
+    await BetaFeatures.instance.reload();
     await prefs.reset();
   });
   tearDown(prefs.reset);
@@ -63,8 +65,9 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('the visualizer is a normal setting in Layout, on (Pulse) by default', (tester) async {
+  testWidgets('visualizer is off by default and offered under Beta features', (tester) async {
     expect(prefs.visualizer, isTrue);
+    expect(prefs.visualizerEnabled, isFalse);
     expect(prefs.visualizerStyle, VisualizerStyle.pulse);
     await prefs.setVisualizer(false);
     await prefs.setVisualizerStyle(VisualizerStyle.orbit);
@@ -74,7 +77,7 @@ void main() {
     expect(find.byType(AudioReactiveView), findsNothing);
     await tester.pumpWidget(
       const MaterialApp(
-        home: Scaffold(body: SingleChildScrollView(child: NowPlayingSettings())),
+        home: Scaffold(body: SingleChildScrollView(child: BetaSettings())),
       ),
     );
     expect(find.text('Audio visualizer'), findsWidgets);
@@ -96,14 +99,14 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('Layout owns the visualizer switch and its styles', (tester) async {
+  testWidgets('Beta features owns the visualizer switch and its styles', (tester) async {
     tester.view.physicalSize = const Size(900, 4000);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
     await prefs.setVisualizer(false);
     await tester.pumpWidget(
       const MaterialApp(
-        home: Scaffold(body: SingleChildScrollView(child: NowPlayingSettings())),
+        home: Scaffold(body: SingleChildScrollView(child: BetaSettings())),
       ),
     );
     expect(find.text('Visualizer style'), findsNothing);
@@ -137,7 +140,7 @@ void main() {
       PlayerScope(
         controller: c,
         child: const MaterialApp(
-          home: Scaffold(body: SingleChildScrollView(child: NowPlayingSettings())),
+          home: Scaffold(body: SingleChildScrollView(child: BetaSettings())),
         ),
       ),
     );
@@ -159,7 +162,7 @@ void main() {
     expect(prefs.visualizerStyle, VisualizerStyle.wave, reason: 'Orbit has no frame to ring');
     await tester.pumpWidget(
       const MaterialApp(
-        home: Scaffold(body: SingleChildScrollView(child: NowPlayingSettings())),
+        home: Scaffold(body: SingleChildScrollView(child: BetaSettings())),
       ),
     );
     await tester.ensureVisible(find.text('Wave'));

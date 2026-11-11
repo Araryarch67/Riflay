@@ -1,4 +1,7 @@
 {
+  "betaFeatures": "ベータ機能",
+  "betaFeaturesSummary": "実験的な機能。初期設定ではオフ",
+  "betaAudioVisualizerBody": "実験的な機能です。端末によってはオーディオのバーやエフェクトが表示されない場合があります。初期設定ではオフです。",
   "musicFolderAlreadyAdded": "このフォルダはすでにライブラリに追加されています。",
   "@@locale": "ja",
   "language": "言語",
@@ -1681,7 +1684,7 @@
   "topicText": "言語と文字",
   "topicTextSummary": "言語、文字の大きさ、フォント",
   "topicNowPlaying": "再生画面",
-  "topicNowPlayingSummary": "カバー、操作ボタン、シークバー、Liquid Glass、ビジュアライザー",
+  "topicNowPlayingSummary": "カバー、操作ボタン、シークバー、Liquid Glass",
   "topicLyrics": "歌詞",
   "topicLyricsSummary": "歌詞の見た目と取得元"
 }

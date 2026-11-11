@@ -31,6 +31,7 @@ enum SettingsPlace {
   nowPlaying(SettingsTopic.nowPlaying),
   lyrics(SettingsTopic.lyrics),
   layout(SettingsTopic.layout),
+  beta(SettingsTopic.beta),
   library(SettingsTopic.library),
   downloads(SettingsTopic.downloads),
   history(SettingsTopic.history),
@@ -619,7 +620,7 @@ abstract final class SettingsOptions {
     ),
     SettingsOption(
       'visualizer',
-      .nowPlaying,
+      .beta,
       (t) => t.audioVisualizer,
       find: (t) => t.kwVisualizer,
       preview: .visualizer,
@@ -627,7 +628,7 @@ abstract final class SettingsOptions {
     ),
     SettingsOption(
       'visualizerStyle',
-      .nowPlaying,
+      .beta,
       (t) => t.visualizerStyle,
       find: (t) => t.kwVisualizer,
       parent: 'visualizer',
@@ -636,7 +637,7 @@ abstract final class SettingsOptions {
     ),
     SettingsOption(
       'visualizerRadius',
-      .nowPlaying,
+      .beta,
       (t) => t.radiusMovement,
       find: (t) => t.kwVisualizer,
       parent: 'visualizerStyle',
@@ -645,7 +646,7 @@ abstract final class SettingsOptions {
     ),
     SettingsOption(
       'visualizerThickness',
-      .nowPlaying,
+      .beta,
       (t) => t.lineThickness,
       find: (t) => t.kwVisualizer,
       parent: 'visualizerStyle',

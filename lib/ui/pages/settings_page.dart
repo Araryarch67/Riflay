@@ -140,6 +140,7 @@ enum SettingsTopic {
     Icons.dashboard_customize_outlined,
     'Home, the bars, corners, spacing, cover size, motion',
   ),
+  beta(SettingsGroup.look, 'beta', 'Beta features', Icons.science_outlined, 'Experimental features, off by default'),
   library(
     SettingsGroup.library,
     'library',
@@ -215,6 +216,7 @@ enum SettingsTopic {
     nowPlaying => tr.topicNowPlaying,
     lyrics => tr.topicLyrics,
     layout => tr.topicLayout,
+    beta => tr.betaFeatures,
     library => tr.topicLibrary,
     downloads => tr.topicDownloads,
     history => tr.topicHistory,
@@ -240,6 +242,7 @@ enum SettingsTopic {
     nowPlaying => tr.topicNowPlayingSummary,
     lyrics => tr.topicLyricsSummary,
     layout => tr.topicLayoutSummary,
+    beta => tr.betaFeaturesSummary,
     library => tr.topicLibrarySummary,
     downloads => tr.topicDownloadsSummary,
     history => tr.topicHistorySummary,
@@ -252,6 +255,7 @@ enum SettingsTopic {
   };
 
   bool get available => switch (this) {
+    beta => Features.audioVisualizer,
     advanced => AudioEngine.supported,
     dsp => AudioEngine.supported || AudioEngine.webEffects,
     library => Features.localLibrary,
@@ -577,6 +581,7 @@ class SettingsTopicPage extends StatelessWidget {
         children: [LyricsSettings(), SizedBox(height: 22), _LyricsServices()],
       ),
       SettingsTopic.layout => const LayoutSettings(),
+      SettingsTopic.beta => const BetaSettings(),
       SettingsTopic.playback => const PlaybackSettings(),
       SettingsTopic.dsp => const DspSettings(),
       SettingsTopic.advanced => const AdvancedAudioSettings(),

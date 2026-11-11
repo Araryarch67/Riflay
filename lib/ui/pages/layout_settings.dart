@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../../platform/features.dart';
 import '../../services/appearance.dart';
 import '../../services/layout_prefs.dart';
 import '../../services/media_session.dart';
@@ -271,10 +270,6 @@ class NowPlayingSettings extends StatelessWidget {
               ),
             ],
           ),
-          if (Features.audioVisualizer) ...[
-            _Header(tr.visualizer, hint: tr.visualizerHint),
-            _VisualizerSettings(prefs: p),
-          ],
         ],
       ),
     );
@@ -634,6 +629,22 @@ class _HomeSections extends StatelessWidget {
 
 /// The visualizer's switch and style. Says why it can't show (Bit-perfect, Lightweight, reduced motion grey the switch
 /// out; a music video or DoP hides it for one song), and offers only the styles the Cover setting can show.
+class BetaSettings extends StatelessWidget {
+  const BetaSettings({super.key});
+
+  @override
+  Widget build(BuildContext context) => ListenableBuilder(
+    listenable: LayoutPrefs.instance,
+    builder: (context, _) => Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _Header(tr.visualizer, hint: tr.betaAudioVisualizerBody),
+        _VisualizerSettings(prefs: LayoutPrefs.instance),
+      ],
+    ),
+  );
+}
+
 class _VisualizerSettings extends StatelessWidget {
   const _VisualizerSettings({required this.prefs});
   final LayoutPrefs prefs;
@@ -650,14 +661,14 @@ class _VisualizerSettings extends StatelessWidget {
             ? null
             : visualizerBlockedBy(c, reduceMotion: MediaQuery.disableAnimationsOf(context));
         final hidden = c == null || blocked != null || !p.visualizer ? null : visualizerHiddenBy(c);
-        final on = p.visualizer && blocked == null;
+        final on = p.visualizerEnabled && blocked == null;
         final styles = VisualizerStyle.fitting(p.playerCover);
         return SettingsCard(
           children: [
             SwitchListTile(
               secondary: const Icon(Icons.graphic_eq_rounded),
               title: Text(tr.audioVisualizer),
-              subtitle: Text(blocked ?? hidden ?? tr.audioVisualizerSubtitle, style: muted),
+              subtitle: Text(blocked ?? hidden ?? tr.betaAudioVisualizerBody, style: muted),
               value: on,
               onChanged: blocked == null ? p.setVisualizer : null,
             ),

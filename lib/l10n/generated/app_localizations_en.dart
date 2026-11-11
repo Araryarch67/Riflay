@@ -10,6 +10,16 @@ class AppLocalizationsEn extends AppLocalizations {
   AppLocalizationsEn([String locale = 'en']) : super(locale);
 
   @override
+  String get betaFeatures => 'Beta features';
+
+  @override
+  String get betaFeaturesSummary => 'Experimental features, off by default';
+
+  @override
+  String get betaAudioVisualizerBody =>
+      'Experimental: audio bars and effects may not appear on every device. Off by default.';
+
+  @override
   String get musicFolderAlreadyAdded => 'This folder is already in your library.';
 
   @override
@@ -5770,7 +5780,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get topicNowPlaying => 'Now Playing';
 
   @override
-  String get topicNowPlayingSummary => 'Cover, controls, progress bar, Liquid Glass, visualizer';
+  String get topicNowPlayingSummary => 'Cover, controls, progress bar, Liquid Glass';
 
   @override
   String get topicLyrics => 'Lyrics';

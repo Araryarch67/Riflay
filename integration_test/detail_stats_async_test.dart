@@ -80,6 +80,12 @@ void main() {
         }
         expect(find.text('Source'), findsOneWidget);
         expect(tester.takeException(), isNull);
+        for (var i = 0; i < 6; i++) {
+          await tester.drag(find.byType(ListView), Offset(0, i < 3 ? -220 : 220));
+          await tester.pump(const Duration(milliseconds: 120));
+        }
+        await tester.pumpAndSettle();
+        expect(tester.takeException(), isNull, reason: 'the live stats remain safe during repeated scrolling');
         Navigator.of(tester.element(find.text('Detail stats'))).pop();
         await tester.pump(const Duration(milliseconds: 400));
       } finally {

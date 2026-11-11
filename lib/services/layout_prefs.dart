@@ -10,6 +10,7 @@ import '../platform/host.dart';
 import '../ui/debug_switches.dart';
 import 'page_motion.dart';
 import 'language.dart';
+import 'beta_features.dart';
 export 'page_motion.dart' show PageMotionStyle, PageMotionSpeed;
 
 /// Desktop controls can stay full width or sit inside a floating player.
@@ -476,7 +477,9 @@ enum HomeSection {
 class LayoutPrefs extends ChangeNotifier {
   LayoutPrefs._();
 
-  static final instance = LayoutPrefs._();
+  static final instance = LayoutPrefs._().._watchBeta();
+
+  void _watchBeta() => BetaFeatures.instance.addListener(notifyListeners);
 
   static const _key = 'layout.v1';
 
@@ -525,7 +528,8 @@ class LayoutPrefs extends ChangeNotifier {
   /// The Song / Video switch at the top of Now Playing, for a song with a music video. On in every preset.
   bool showVideoSwitch = true;
   bool visualizer = true;
-  bool get visualizerEnabled => visualizer && Features.audioVisualizer;
+  bool get visualizerEnabled =>
+      visualizer && Features.audioVisualizer && BetaFeatures.instance.isOn(BetaFeature.audioVisualizer);
 
   /// The outline of the cover (and of what the visualizer pulses around): Square is the rounded square, anything else
   /// the flower. It is the Cover setting of the Player group, not a setting of its own.
@@ -664,6 +668,7 @@ class LayoutPrefs extends ChangeNotifier {
   static bool get moves => effectiveMotion == Motion.full;
 
   Future<void> load() async {
+    await BetaFeatures.instance.load();
     try {
       final prefs = await SharedPreferences.getInstance();
       final raw = prefs.getString(_key);
@@ -879,7 +884,11 @@ class LayoutPrefs extends ChangeNotifier {
       _set(() => playerCover = v == VisualizerCoverShape.square ? PlayerCover.square : PlayerCover.flower);
   Future<void> setVisualizerRadius(double v) => _set(() => visualizerRadius = v.clamp(0.5, 2.5));
   Future<void> setVisualizerThickness(double v) => _set(() => visualizerThickness = v.clamp(1, 8));
-  Future<void> setVisualizer(bool v) => _set(() => visualizer = v);
+  Future<void> setVisualizer(bool v) async {
+    await BetaFeatures.instance.set(BetaFeature.audioVisualizer, v);
+    await _set(() => visualizer = v);
+  }
+
   Future<void> setShowQualityBadge(bool v) => _set(() => showQualityBadge = v);
   Future<void> setShowVideoSwitch(bool v) => _set(() => showVideoSwitch = v);
   Future<void> setLyricsSize(LyricsSize v) => _set(() => lyricsSize = v);

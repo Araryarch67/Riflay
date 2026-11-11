@@ -10,6 +10,16 @@ class AppLocalizationsId extends AppLocalizations {
   AppLocalizationsId([String locale = 'id']) : super(locale);
 
   @override
+  String get betaFeatures => 'Fitur beta';
+
+  @override
+  String get betaFeaturesSummary => 'Fitur eksperimental, nonaktif secara default';
+
+  @override
+  String get betaAudioVisualizerBody =>
+      'Eksperimental: bar dan efek audio mungkin belum muncul di semua perangkat. Nonaktif secara default.';
+
+  @override
   String get musicFolderAlreadyAdded => 'Folder ini sudah ada di koleksi kamu.';
 
   @override
@@ -5692,7 +5702,7 @@ class AppLocalizationsId extends AppLocalizations {
   String get topicNowPlaying => 'Now Playing';
 
   @override
-  String get topicNowPlayingSummary => 'Sampul, kontrol, bar progres, Liquid Glass, visualizer';
+  String get topicNowPlayingSummary => 'Sampul, kontrol, bar progres, Liquid Glass';
 
   @override
   String get topicLyrics => 'Lirik';

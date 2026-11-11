@@ -93,6 +93,24 @@ abstract class AppLocalizations {
   /// A list of this localizations delegate's supported locales.
   static const List<Locale> supportedLocales = <Locale>[Locale('en'), Locale('id'), Locale('ja')];
 
+  /// No description provided for @betaFeatures.
+  ///
+  /// In en, this message translates to:
+  /// **'Beta features'**
+  String get betaFeatures;
+
+  /// No description provided for @betaFeaturesSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'Experimental features, off by default'**
+  String get betaFeaturesSummary;
+
+  /// No description provided for @betaAudioVisualizerBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Experimental: audio bars and effects may not appear on every device. Off by default.'**
+  String get betaAudioVisualizerBody;
+
   /// No description provided for @musicFolderAlreadyAdded.
   ///
   /// In en, this message translates to:
@@ -10182,7 +10200,7 @@ abstract class AppLocalizations {
   /// No description provided for @topicNowPlayingSummary.
   ///
   /// In en, this message translates to:
-  /// **'Cover, controls, progress bar, Liquid Glass, visualizer'**
+  /// **'Cover, controls, progress bar, Liquid Glass'**
   String get topicNowPlayingSummary;
 
   /// No description provided for @topicLyrics.

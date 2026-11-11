@@ -1,4 +1,7 @@
 {
+  "betaFeatures": "Fitur beta",
+  "betaFeaturesSummary": "Fitur eksperimental, nonaktif secara default",
+  "betaAudioVisualizerBody": "Eksperimental: bar dan efek audio mungkin belum muncul di semua perangkat. Nonaktif secara default.",
   "musicFolderAlreadyAdded": "Folder ini sudah ada di koleksi kamu.",
   "@@locale": "id",
   "language": "Bahasa",
@@ -1688,7 +1691,7 @@
   "topicText": "Bahasa & teks",
   "topicTextSummary": "Bahasa, ukuran teks, font",
   "topicNowPlaying": "Now Playing",
-  "topicNowPlayingSummary": "Sampul, kontrol, bar progres, Liquid Glass, visualizer",
+  "topicNowPlayingSummary": "Sampul, kontrol, bar progres, Liquid Glass",
   "topicLyrics": "Lirik",
   "topicLyricsSummary": "Tampilan lirik dan sumbernya"
 }

@@ -10,6 +10,15 @@ class AppLocalizationsJa extends AppLocalizations {
   AppLocalizationsJa([String locale = 'ja']) : super(locale);
 
   @override
+  String get betaFeatures => 'ベータ機能';
+
+  @override
+  String get betaFeaturesSummary => '実験的な機能。初期設定ではオフ';
+
+  @override
+  String get betaAudioVisualizerBody => '実験的な機能です。端末によってはオーディオのバーやエフェクトが表示されない場合があります。初期設定ではオフです。';
+
+  @override
   String get musicFolderAlreadyAdded => 'このフォルダはすでにライブラリに追加されています。';
 
   @override
@@ -5582,7 +5591,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get topicNowPlaying => '再生画面';
 
   @override
-  String get topicNowPlayingSummary => 'カバー、操作ボタン、シークバー、Liquid Glass、ビジュアライザー';
+  String get topicNowPlayingSummary => 'カバー、操作ボタン、シークバー、Liquid Glass';
 
   @override
   String get topicLyrics => '歌詞';

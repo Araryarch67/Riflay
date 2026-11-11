@@ -1,4 +1,7 @@
 {
+  "betaFeatures": "Beta features",
+  "betaFeaturesSummary": "Experimental features, off by default",
+  "betaAudioVisualizerBody": "Experimental: audio bars and effects may not appear on every device. Off by default.",
   "musicFolderAlreadyAdded": "This folder is already in your library.",
   "@@locale": "en",
   "language": "Language",
@@ -3410,7 +3413,7 @@
   "topicText": "Language & text",
   "topicTextSummary": "Language, text size, font",
   "topicNowPlaying": "Now Playing",
-  "topicNowPlayingSummary": "Cover, controls, progress bar, Liquid Glass, visualizer",
+  "topicNowPlayingSummary": "Cover, controls, progress bar, Liquid Glass",
   "topicLyrics": "Lyrics",
   "topicLyricsSummary": "How lyrics look, and where they come from"
 }
