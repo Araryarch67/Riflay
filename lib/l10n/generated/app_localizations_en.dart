@@ -10,6 +10,9 @@ class AppLocalizationsEn extends AppLocalizations {
   AppLocalizationsEn([String locale = 'en']) : super(locale);
 
   @override
+  String get musicFolderAlreadyAdded => 'This folder is already in your library.';
+
+  @override
   String get language => 'Language';
 
   @override

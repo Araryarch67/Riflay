@@ -27,6 +27,12 @@ class LibrarySettings extends StatelessWidget {
               title: tr.musicFolders,
               child: SettingsCard(
                 children: [
+                  if (shell.addFolder != null)
+                    ListTile(
+                      leading: const Icon(Icons.create_new_folder_outlined),
+                      title: Text(tr.addFolder),
+                      onTap: shell.addFolder,
+                    ),
                   SwitchListTile(
                     secondary: const Icon(Icons.sync_rounded),
                     title: Text(tr.keepLibraryUpToDate),

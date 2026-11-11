@@ -336,6 +336,7 @@ class YoutubeImporter extends ChangeNotifier {
 
   /// Where downloads live: the folder chosen in Settings, or [defaultDownloadsDir].
   static Future<Directory> downloadsDir() async {
+    await DownloadPrefs.instance.load();
     // A folder the user chose; the default if it can't be used any more.
     if (DownloadPrefs.instance.folder case final chosen?
         when DownloadPrefs.phoneFolders || !(Host.isAndroid || Host.isIOS)) {

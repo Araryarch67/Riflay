@@ -1,4 +1,5 @@
 {
+  "musicFolderAlreadyAdded": "This folder is already in your library.",
   "@@locale": "en",
   "language": "Language",
   "languageSubtitle": "The language of Riflay's screens",

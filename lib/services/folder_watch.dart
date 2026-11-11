@@ -34,6 +34,15 @@ class FileStamp {
 /// Every music file (and cue sheet, and SACD image) under a folder: path -> stamp.
 typedef FolderSnapshot = Map<String, FileStamp>;
 
+/// A folder's actual location, so trailing separators, `..` and symlinks compare equally.
+Future<String> canonicalFolderPath(String path) async {
+  try {
+    return p.normalize(await Directory(path).resolveSymbolicLinks());
+  } on FileSystemException {
+    return p.normalize(p.absolute(path));
+  }
+}
+
 /// Files that are music for the library: songs, cue sheets and SACD images (what a folder scan reads).
 bool isLibraryFile(String path) {
   final lower = path.toLowerCase();
@@ -370,6 +379,14 @@ class FolderWatch extends ChangeNotifier with WidgetsBindingObserver {
 
   /// The music folders being kept up to date.
   List<String> get folders => List.unmodifiable(_folders);
+
+  Future<bool> containsFolder(String path) async {
+    final chosen = await canonicalFolderPath(path);
+    for (final folder in _folders.toList()) {
+      if (p.equals(chosen, await canonicalFolderPath(folder))) return true;
+    }
+    return false;
+  }
 
   /// Whether a look at the folders is running right now.
   bool get checking => _looking;

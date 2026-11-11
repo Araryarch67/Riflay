@@ -58,6 +58,10 @@ class MusicPermissionDenied implements Exception {
   const MusicPermissionDenied();
 }
 
+class MusicFolderAlreadyAdded implements Exception {
+  const MusicFolderAlreadyAdded();
+}
+
 /// Owns the audio player, the library and the play queue.
 class PlayerController extends ChangeNotifier {
   PlayerController() {
@@ -1275,23 +1279,32 @@ class PlayerController extends ChangeNotifier {
 
   static const _musicPermission = MethodChannel('riflay/music_permission');
 
-  /// Adds every song, cue sheet and SACD image under [dir].
+  final _addingFolders = <String>{};
+
+  /// Adds every song, cue sheet and SACD image under [dir], rejecting registered folders.
   Future<int> scanFolder(String dir) async {
-    unawaited(FolderWatch.instance.remember(dir)); // from now on this folder is kept up to date
-    final entries = Directory(dir).list(recursive: true, followLinks: false);
-    final tracks = <Track>[];
-    final cues = <File>[];
-    final isos = <String>[];
-    await for (final e in entries) {
-      if (e is! File) continue;
-      if (Track.isAudioPath(e.path)) tracks.add(Track.fromUri(Uri.file(e.path)));
-      if (e.path.toLowerCase().endsWith('.cue')) cues.add(e);
-      if (e.path.toLowerCase().endsWith('.iso')) isos.add(e.path);
+    dir = await canonicalFolderPath(dir);
+    if (!_addingFolders.add(dir)) throw const MusicFolderAlreadyAdded();
+    try {
+      if (await FolderWatch.instance.containsFolder(dir)) throw const MusicFolderAlreadyAdded();
+      final entries = Directory(dir).list(recursive: true, followLinks: false);
+      final tracks = <Track>[];
+      final cues = <File>[];
+      final isos = <String>[];
+      await for (final e in entries) {
+        if (e is! File) continue;
+        if (Track.isAudioPath(e.path)) tracks.add(Track.fromUri(Uri.file(e.path)));
+        if (e.path.toLowerCase().endsWith('.cue')) cues.add(e);
+        if (e.path.toLowerCase().endsWith('.iso')) isos.add(e.path);
+      }
+      final split = await _readCues(cues);
+      tracks.removeWhere((t) => split.covers.contains(t.path));
+      tracks.sort((a, b) => a.id.compareTo(b.id));
+      await FolderWatch.instance.remember(dir);
+      return await _addTracks([...tracks, ...split.tracks, ...await _readSacds(isos)]);
+    } finally {
+      _addingFolders.remove(dir);
     }
-    final split = await _readCues(cues);
-    tracks.removeWhere((t) => split.covers.contains(t.path));
-    tracks.sort((a, b) => a.id.compareTo(b.id));
-    return _addTracks([...tracks, ...split.tracks, ...await _readSacds(isos)]);
   }
 
   Future<int> _addTracks(Iterable<Track> tracks) async {

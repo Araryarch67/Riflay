@@ -93,6 +93,12 @@ abstract class AppLocalizations {
   /// A list of this localizations delegate's supported locales.
   static const List<Locale> supportedLocales = <Locale>[Locale('en'), Locale('id'), Locale('ja')];
 
+  /// No description provided for @musicFolderAlreadyAdded.
+  ///
+  /// In en, this message translates to:
+  /// **'This folder is already in your library.'**
+  String get musicFolderAlreadyAdded;
+
   /// No description provided for @language.
   ///
   /// In en, this message translates to:

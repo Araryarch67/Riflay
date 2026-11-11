@@ -419,6 +419,8 @@ class _HomeShellState extends State<HomeShell> {
       }
     } on MusicPermissionDenied {
       messenger.showSnackBar(SnackBar(content: Text(tr.allowReadMusic)));
+    } on MusicFolderAlreadyAdded {
+      messenger.showSnackBar(SnackBar(content: Text(tr.musicFolderAlreadyAdded)));
     } catch (e) {
       debugPrint('Adding music failed: $e');
       messenger.showSnackBar(SnackBar(content: Text(tr.couldntAddMusic)));

@@ -1,4 +1,5 @@
 {
+  "musicFolderAlreadyAdded": "このフォルダはすでにライブラリに追加されています。",
   "@@locale": "ja",
   "language": "言語",
   "languageSubtitle": "Riflay の画面の言語",

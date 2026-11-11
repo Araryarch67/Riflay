@@ -10,6 +10,9 @@ class AppLocalizationsJa extends AppLocalizations {
   AppLocalizationsJa([String locale = 'ja']) : super(locale);
 
   @override
+  String get musicFolderAlreadyAdded => 'このフォルダはすでにライブラリに追加されています。';
+
+  @override
   String get language => '言語';
 
   @override

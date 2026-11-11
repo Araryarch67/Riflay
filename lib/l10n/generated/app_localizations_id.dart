@@ -10,6 +10,9 @@ class AppLocalizationsId extends AppLocalizations {
   AppLocalizationsId([String locale = 'id']) : super(locale);
 
   @override
+  String get musicFolderAlreadyAdded => 'Folder ini sudah ada di koleksi kamu.';
+
+  @override
   String get language => 'Bahasa';
 
   @override

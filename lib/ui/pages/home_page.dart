@@ -255,10 +255,8 @@ class HomePage extends StatelessWidget {
         },
         icon: const Icon(Icons.refresh_rounded),
       ),
-      if (shell.compact) ...[
-        if (Features.downloads) const DownloadsButton(),
-        if (Features.localLibrary) _AddMenu(shell: shell),
-      ],
+      if (shell.compact && Features.downloads) const DownloadsButton(),
+      if (Features.localLibrary) _AddMenu(shell: shell),
     ];
 
     // The header's colour follows the cover of what plays (or was played last). Only this leaf is redrawn when
@@ -449,6 +447,11 @@ class _AddMenu extends StatelessWidget {
           value: shell.addFiles,
           child: MenuRow(leading: Icon(Icons.audio_file_outlined), title: Text(tr.addSongs)),
         ),
+        if (shell.addFolder != null)
+          PopupMenuItem(
+            value: shell.addFolder,
+            child: MenuRow(leading: Icon(Icons.folder_open_rounded), title: Text(tr.addFolder)),
+          ),
         PopupMenuItem(
           value: shell.importFromYoutube,
           child: MenuRow(leading: Icon(Icons.add_link_rounded), title: Text(tr.importFromYouTube)),

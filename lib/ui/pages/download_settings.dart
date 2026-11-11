@@ -47,19 +47,33 @@ class _DownloadSettingsState extends State<DownloadSettings> {
   }
 
   Future<void> _chooseFolder() async {
-    // iOS: through Files, which keeps Riflay's access to the folder after a restart (FolderAccess.swift).
-    final chosen = Host.isIOS
-        ? await IosFolders.pick()
-        : await FilePicker.getDirectoryPath(dialogTitle: tr.chooseDownloadsFolder);
-    if (chosen == null) return;
-    if (!await YoutubeImporter.canSaveIn(chosen)) {
+    try {
+      // iOS: through Files, which keeps Riflay's access to the folder after a restart (FolderAccess.swift).
+      final chosen = Host.isIOS
+          ? await IosFolders.pick()
+          : await FilePicker.getDirectoryPath(
+              dialogTitle: tr.chooseDownloadsFolder,
+              initialDirectory: _phone ? null : (await _folder).path,
+            );
+      if (chosen == null || !mounted) return;
+      if (!await YoutubeImporter.canSaveIn(chosen)) {
+        if (mounted) {
+          ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(content: Text(tr.downloadsFolderUnusable)));
+        }
+        return;
+      }
+      await _prefs.setFolder(chosen);
+      if (mounted) {
+        setState(() {
+          _folder = YoutubeImporter.downloadsDir();
+        });
+      }
+    } catch (e) {
+      debugPrint('Choosing downloads folder failed: $e');
       if (mounted) {
         ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(content: Text(tr.downloadsFolderUnusable)));
       }
-      return;
     }
-    await _prefs.setFolder(chosen);
-    if (mounted) setState(() => _folder = YoutubeImporter.downloadsDir());
   }
 
   static String _bitrateAbout(int? kbps) {
@@ -192,6 +206,7 @@ class _DownloadSettingsState extends State<DownloadSettings> {
                 builder: (context, snap) => ListTile(
                   leading: const Icon(Icons.folder_rounded),
                   title: Text(tr.downloadsFolder),
+                  onTap: _fixed || !snap.hasData ? null : _chooseFolder,
                   subtitle: Text(
                     _fixed ? tr.phoneDownloadsFixed(snap.data?.path ?? '…') : snap.data?.path ?? '…',
                     style: muted,
@@ -214,7 +229,11 @@ class _DownloadSettingsState extends State<DownloadSettings> {
                               TextButton(
                                 onPressed: () async {
                                   await _prefs.setFolder(null);
-                                  if (mounted) setState(() => _folder = YoutubeImporter.downloadsDir());
+                                  if (mounted) {
+                                    setState(() {
+                                      _folder = YoutubeImporter.downloadsDir();
+                                    });
+                                  }
                                 },
                                 child: Text(tr.reset),
                               ),
