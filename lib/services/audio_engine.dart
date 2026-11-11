@@ -13,6 +13,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../platform/host.dart';
 import '../platform/mpv.dart';
+import '../platform/mpv_snapshot.dart';
 import '../platform/web_audio.dart';
 import '../platform/web_effects.dart';
 import '../ui/debug_switches.dart';
@@ -940,7 +941,9 @@ class AudioEngine extends ChangeNotifier {
     _visualizerReading = true;
     try {
       if (_visualizerFormat == null) {
-        _syncVisualizer();
+        // Polling is faster than the setup delay. Keep the pending setup rather than
+        // restarting its timer on every read and preventing the meter from ever starting.
+        if (_meterSoon == null) _syncVisualizer();
         return;
       }
       final metadata = await p.getProperty(visualizerMetadataProperty);
@@ -2202,7 +2205,13 @@ class AudioEngine extends ChangeNotifier {
   }
 
   Future<NerdStats> _readNerdStats(NativePlayer p) async {
-    Future<String> g(String k) => _read(p, k);
+    final values = await readMpvSnapshot(p, [
+      if (!directUsbActive) ...['audio-codec', 'file-size', 'cache-speed'],
+      'metadata/by-key/REPLAYGAIN_TRACK_GAIN',
+      if (effectiveLeveling == VolumeLeveling.album) 'metadata/by-key/REPLAYGAIN_ALBUM_GAIN',
+      'demuxer-cache-duration',
+    ]);
+    Future<String> g(String k) async => values[k] ?? '';
     // Direct USB: every read waits on mpv's paced core (see signalPath), so only what is needed once a second.
     final more = !directUsbActive;
     final codecName = more ? await g('audio-codec') : '';
@@ -2263,8 +2272,8 @@ class AudioEngine extends ChangeNotifier {
   /// One read of the live signal path, or null when nothing is playing.
   ///
   /// One read shared by everyone who asks within a second: the quality badge, Signal path, Detail stats and the
-  /// Discord presence each poll once a second, and every mpv property read is a synchronous call on the UI thread
-  /// (~20 of them per path), so with two or three open the player stuttered.
+  /// Discord presence each poll once a second. Native reads are batched on a worker isolate, so waiting on mpv
+  /// never blocks the sheet's animation or scrolling.
   Future<SignalPath?> signalPath() {
     if (!_shareSignalPath) return _signalPathNow();
     final now = DateTime.now();
@@ -2300,7 +2309,24 @@ class AudioEngine extends ChangeNotifier {
   Future<SignalPath?> _readSignalPath() async {
     final p = _native;
     if (p == null) return null;
-    Future<String> g(String k) => _read(p, k);
+    final values = await readMpvSnapshot(p, const [
+      'audio-params/samplerate',
+      'af',
+      'path',
+      'current-ao',
+      'audio-device',
+      'audio-codec-name',
+      'file-format',
+      'audio-params/format',
+      'audio-params/channel-count',
+      'audio-out-params/format',
+      'audio-out-params/samplerate',
+      'audio-out-params/channel-count',
+      'audio-exclusive',
+      'audio-bitrate',
+    ]);
+    if (_disposed || !identical(p, _native)) return null;
+    Future<String> g(String k) async => values[k] ?? '';
 
     final inRate = int.tryParse(await g('audio-params/samplerate')) ?? 0;
     if (inRate == 0) return null;

@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show compute;
 import 'package:flutter/services.dart';
 
 import '../../models/track.dart';
@@ -100,6 +101,8 @@ class _DetailStatsSheetState extends State<_DetailStatsSheet> {
   NerdStats _extra = const NerdStats();
   bool _read = false;
   Timer? _timer;
+  bool _polling = false;
+  Animation<double>? _opening;
 
   /// The song's file measured (spectrum, dynamic range, loudness): once per song shown here.
   AudioReport? _report;
@@ -110,6 +113,7 @@ class _DetailStatsSheetState extends State<_DetailStatsSheet> {
     if (_reportFor == track.id) return;
     _reportFor = track.id;
     _report = null;
+    _measuring = false;
     if (AudioAnalysis.fileOf(track) == null || !AudioAnalysis.supported) return;
     _measuring = true;
     AudioAnalysis.of(track, spectrogram: true)
@@ -142,28 +146,60 @@ class _DetailStatsSheetState extends State<_DetailStatsSheet> {
   @override
   void initState() {
     super.initState();
-    _poll();
-    _timer = Timer.periodic(const Duration(seconds: 1), (_) => _poll());
+    // Let the popup finish opening before starting file analysis and native reads.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final opening = ModalRoute.of(context)?.animation;
+      if (opening == null || opening.status == AnimationStatus.completed) {
+        _startPolling();
+      } else {
+        _opening = opening..addStatusListener(_opened);
+      }
+    });
+  }
+
+  void _opened(AnimationStatus status) {
+    if (status != AnimationStatus.completed) return;
+    _opening?.removeStatusListener(_opened);
+    _opening = null;
+    _startPolling();
+  }
+
+  void _startPolling() {
+    if (!mounted || _timer != null) return;
+    unawaited(_poll());
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) => unawaited(_poll()));
   }
 
   Future<void> _poll() async {
+    if (!mounted || _polling) return;
+    _polling = true;
     final c = PlayerScope.read(context);
-    if (c.currentTrack case final t?) _measure(t);
-    final audio = c.audio;
-    final path = await audio.signalPath();
-    final extra = await audio.nerdStats();
-    if (mounted) {
-      setState(() {
-        _path = path;
-        _extra = extra;
-        _read = true;
-      });
+    final trackId = c.currentTrack?.id;
+    try {
+      if (c.currentTrack case final t?) _measure(t);
+      final audio = c.audio;
+      final path = await audio.signalPath();
+      if (!mounted || c.currentTrack?.id != trackId) return;
+      final extra = await audio.nerdStats();
+      if (mounted && c.currentTrack?.id == trackId) {
+        setState(() {
+          _path = path;
+          _extra = extra;
+          _read = true;
+        });
+      }
+    } catch (e) {
+      debugPrint('Reading detail stats: $e');
+    } finally {
+      _polling = false;
     }
   }
 
   @override
   void dispose() {
     _timer?.cancel();
+    _opening?.removeStatusListener(_opened);
     super.dispose();
   }
 
@@ -400,7 +436,7 @@ class _DetailStatsSheetState extends State<_DetailStatsSheet> {
             for (final s in sections) ...[const SizedBox(height: 16), _Card(section: s)],
             if (_report case final r? when r.spectrogram != null && r.columns > 0) ...[
               const SizedBox(height: 16),
-              Spectrogram(report: r),
+              RepaintBoundary(child: Spectrogram(report: r)),
             ],
             if (sections.isNotEmpty) ...[
               const SizedBox(height: 16),
@@ -526,6 +562,7 @@ class Spectrogram extends StatefulWidget {
 
 class _SpectrogramState extends State<Spectrogram> {
   ui.Image? _image;
+  int _revision = 0;
 
   /// Dark blue through purple and orange to pale yellow: quiet to loud.
   static const _stops = [
@@ -558,8 +595,8 @@ class _SpectrogramState extends State<Spectrogram> {
     if (!identical(old.report, widget.report)) _draw();
   }
 
-  void _draw() {
-    final r = widget.report, data = r.spectrogram!, w = r.columns, h = AudioAnalyzer.rows;
+  static Uint8List _pixels(AudioReport r) {
+    final data = r.spectrogram!, w = r.columns, h = AudioAnalyzer.rows;
     final palette = [for (var v = 0; v < 256; v++) _colour(((v / 255) - 0.25).clamp(0.0, 0.75) / 0.75)];
     final pixels = Uint8List(w * h * 4);
     for (var y = 0; y < h; y++) {
@@ -573,8 +610,17 @@ class _SpectrogramState extends State<Spectrogram> {
         pixels[o + 3] = 255;
       }
     }
+    return pixels;
+  }
+
+  Future<void> _draw() async {
+    final revision = ++_revision;
+    final r = widget.report;
+    final pixels = await compute(_pixels, r);
+    if (!mounted || revision != _revision) return;
+    final w = r.columns, h = AudioAnalyzer.rows;
     ui.decodeImageFromPixels(pixels, w, h, ui.PixelFormat.rgba8888, (image) {
-      if (mounted) {
+      if (mounted && revision == _revision) {
         setState(() {
           _image?.dispose();
           _image = image;
