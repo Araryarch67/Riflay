@@ -6213,11 +6213,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get topicSources => 'Music sources';
 
   @override
-  String get topicSourcesSummary => 'Internet Archive and Radio Paradise: free music in FLAC';
+  String get topicSourcesSummary =>
+      'Internet Archive, Radio Paradise, Jamendo, Audius and ccMixter: music artists share for free';
 
   @override
   String get sourcesAbout =>
-      'Free places with lossless sound, shared with the artists\' or rights holders\' leave. Riflay plays from their own servers.';
+      'Free places where artists or rights holders share their own music. Riflay plays from their servers. The song sources are off until you turn them on.';
 
   @override
   String get sourceArchive => 'Internet Archive in search';
@@ -6233,7 +6234,8 @@ class AppLocalizationsEn extends AppLocalizations {
       'Listener-supported, commercial-free radio, every channel in FLAC (CD quality)';
 
   @override
-  String get kwSources => 'flac, lossless, internet archive, live music archive, radio paradise, free music, sources';
+  String get kwSources =>
+      'flac, lossless, internet archive, live music archive, radio paradise, jamendo, audius, ccmixter, creative commons, free music, sources';
 
   @override
   String get spotifyCanvas => 'Canvas';
@@ -6241,4 +6243,28 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get spotifyCanvasSubtitle =>
       'The looping video Spotify shows with a song, in Video mode instead of its music video (turn Video mode on in Beta features)';
+
+  @override
+  String sourceInSearch(String source) {
+    return '$source in search';
+  }
+
+  @override
+  String get sourceJamendoSubtitle => 'Independent artists releasing under Creative Commons, on search\'s All';
+
+  @override
+  String get sourceAudiusSubtitle => 'Songs artists upload to Audius themselves, on search\'s All';
+
+  @override
+  String get sourceCcmixterSubtitle => 'Creative Commons originals and remixes, some in FLAC, on search\'s All';
+
+  @override
+  String fromSource(String source) {
+    return 'From $source';
+  }
+
+  @override
+  String sourceUnavailable(String source) {
+    return 'Couldn\'t reach $source. Try again.';
+  }
 }

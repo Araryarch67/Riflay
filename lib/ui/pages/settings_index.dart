@@ -11,6 +11,7 @@ import '../../services/device_setup.dart';
 import '../../services/discord_presence.dart';
 import '../../services/language.dart';
 import '../../services/media_session.dart';
+import '../../services/sources/jamendo.dart';
 import '../../services/stay_awake.dart';
 import '../../services/system_tray.dart';
 import '../../services/ytdlp.dart';
@@ -995,6 +996,28 @@ abstract final class SettingsOptions {
       .sources,
       (t) => t.sourceRadioParadise,
       subtitle: (t) => t.sourceRadioParadiseSubtitle,
+      find: (t) => t.kwSources,
+    ),
+    SettingsOption(
+      'sourceJamendo',
+      .sources,
+      (t) => t.sourceInSearch('Jamendo'),
+      subtitle: (t) => t.sourceJamendoSubtitle,
+      find: (t) => t.kwSources,
+      available: () => Jamendo.instance.available,
+    ),
+    SettingsOption(
+      'sourceAudius',
+      .sources,
+      (t) => t.sourceInSearch('Audius'),
+      subtitle: (t) => t.sourceAudiusSubtitle,
+      find: (t) => t.kwSources,
+    ),
+    SettingsOption(
+      'sourceCcmixter',
+      .sources,
+      (t) => t.sourceInSearch('ccMixter'),
+      subtitle: (t) => t.sourceCcmixterSubtitle,
       find: (t) => t.kwSources,
     ),
     // About

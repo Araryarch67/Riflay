@@ -6135,11 +6135,12 @@ class AppLocalizationsId extends AppLocalizations {
   String get topicSources => 'Sumber musik';
 
   @override
-  String get topicSourcesSummary => 'Internet Archive dan Radio Paradise: musik gratis dalam FLAC';
+  String get topicSourcesSummary =>
+      'Internet Archive, Radio Paradise, Jamendo, Audius dan ccMixter: musik yang dibagikan gratis oleh artisnya';
 
   @override
   String get sourcesAbout =>
-      'Tempat gratis dengan suara lossless, dibagikan dengan izin artis atau pemegang hak. Riflay memutarnya langsung dari server mereka.';
+      'Tempat gratis di mana artis atau pemegang hak membagikan musik mereka sendiri. Riflay memutarnya langsung dari server mereka. Sumber lagu mati sampai kamu menyalakannya.';
 
   @override
   String get sourceArchive => 'Internet Archive di pencarian';
@@ -6156,7 +6157,8 @@ class AppLocalizationsId extends AppLocalizations {
       'Radio tanpa iklan yang didukung pendengar, semua channel dalam FLAC (kualitas CD)';
 
   @override
-  String get kwSources => 'flac, lossless, internet archive, live music archive, radio paradise, musik gratis, sumber';
+  String get kwSources =>
+      'flac, lossless, internet archive, live music archive, radio paradise, jamendo, audius, ccmixter, creative commons, musik gratis, sumber';
 
   @override
   String get spotifyCanvas => 'Canvas';
@@ -6164,4 +6166,31 @@ class AppLocalizationsId extends AppLocalizations {
   @override
   String get spotifyCanvasSubtitle =>
       'Video pendek berulang yang ditampilkan Spotify bersama lagu, diputar di Video mode menggantikan music video (nyalakan Video mode di Fitur beta)';
+
+  @override
+  String sourceInSearch(String source) {
+    return '$source di pencarian';
+  }
+
+  @override
+  String get sourceJamendoSubtitle =>
+      'Artis independen yang merilis dengan lisensi Creative Commons, di bagian Semua pada pencarian';
+
+  @override
+  String get sourceAudiusSubtitle =>
+      'Lagu yang diunggah sendiri oleh artisnya ke Audius, di bagian Semua pada pencarian';
+
+  @override
+  String get sourceCcmixterSubtitle =>
+      'Karya asli dan remix Creative Commons, sebagian dalam FLAC, di bagian Semua pada pencarian';
+
+  @override
+  String fromSource(String source) {
+    return 'Dari $source';
+  }
+
+  @override
+  String sourceUnavailable(String source) {
+    return '$source belum bisa diakses. Coba lagi.';
+  }
 }

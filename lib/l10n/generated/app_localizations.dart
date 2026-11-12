@@ -10962,13 +10962,13 @@ abstract class AppLocalizations {
   /// No description provided for @topicSourcesSummary.
   ///
   /// In en, this message translates to:
-  /// **'Internet Archive and Radio Paradise: free music in FLAC'**
+  /// **'Internet Archive, Radio Paradise, Jamendo, Audius and ccMixter: music artists share for free'**
   String get topicSourcesSummary;
 
   /// No description provided for @sourcesAbout.
   ///
   /// In en, this message translates to:
-  /// **'Free places with lossless sound, shared with the artists\' or rights holders\' leave. Riflay plays from their own servers.'**
+  /// **'Free places where artists or rights holders share their own music. Riflay plays from their servers. The song sources are off until you turn them on.'**
   String get sourcesAbout;
 
   /// No description provided for @sourceArchive.
@@ -10998,7 +10998,7 @@ abstract class AppLocalizations {
   /// No description provided for @kwSources.
   ///
   /// In en, this message translates to:
-  /// **'flac, lossless, internet archive, live music archive, radio paradise, free music, sources'**
+  /// **'flac, lossless, internet archive, live music archive, radio paradise, jamendo, audius, ccmixter, creative commons, free music, sources'**
   String get kwSources;
 
   /// No description provided for @spotifyCanvas.
@@ -11012,6 +11012,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'The looping video Spotify shows with a song, in Video mode instead of its music video (turn Video mode on in Beta features)'**
   String get spotifyCanvasSubtitle;
+
+  /// No description provided for @sourceInSearch.
+  ///
+  /// In en, this message translates to:
+  /// **'{source} in search'**
+  String sourceInSearch(String source);
+
+  /// No description provided for @sourceJamendoSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Independent artists releasing under Creative Commons, on search\'s All'**
+  String get sourceJamendoSubtitle;
+
+  /// No description provided for @sourceAudiusSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Songs artists upload to Audius themselves, on search\'s All'**
+  String get sourceAudiusSubtitle;
+
+  /// No description provided for @sourceCcmixterSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Creative Commons originals and remixes, some in FLAC, on search\'s All'**
+  String get sourceCcmixterSubtitle;
+
+  /// No description provided for @fromSource.
+  ///
+  /// In en, this message translates to:
+  /// **'From {source}'**
+  String fromSource(String source);
+
+  /// No description provided for @sourceUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t reach {source}. Try again.'**
+  String sourceUnavailable(String source);
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

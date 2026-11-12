@@ -354,6 +354,15 @@ test/                          Unit and widget tests
   are skipped; untagged files are named after the part of their file name the item's others don't share)
   on search's All, and Radio Paradise's FLAC channels on the empty search page. Only sources that share music
   with the rights holders' leave belong here; never one that pulls another service's paid streams.
+  Song sources (`SongSource` in `song_source.dart`, listed in `MusicSources.songSources`, each off until turned
+  on) add a shelf of playable songs to search's All, one per source, asked again only when the query or the
+  set of sources that are on changes: Jamendo (Creative Commons; needs a free client id from
+  devportal.jamendo.com, built in with `--dart-define=RIFLAY_JAMENDO_CLIENT_ID=…` or read from the
+  `RIFLAY_JAMENDO_CLIENT_ID` environment variable, and hidden without one), Audius (artist uploads; songs
+  gated, deleted or of deactivated accounts are skipped; the stream address redirects to a content node) and
+  ccMixter (Creative Commons; the full mix in FLAC, else MP3; stems, samples and a cappellas skipped). A new
+  source is a `SongSource` subclass added to that list, plus its subtitle in `music_sources_settings.dart`
+  and a `SettingsOption`. Jamendo is untested against the live API in CI: no client id there.
 - Clear cache (Settings › About, `lib/services/app_cache.dart`) lists every cache it empties in `_targets`:
   add a new disk cache there, and keep user data and `audio-analysis.json` out. It empties the cache folders
   rather than deleting them (covers are written into folders opened once per launch) and sweeps

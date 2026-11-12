@@ -6013,10 +6013,10 @@ class AppLocalizationsJa extends AppLocalizations {
   String get topicSources => '音楽ソース';
 
   @override
-  String get topicSourcesSummary => 'Internet ArchiveとRadio Paradise:無料のFLAC音源';
+  String get topicSourcesSummary => 'Internet Archive、Radio Paradise、Jamendo、Audius、ccMixter:アーティストが無料で公開する音楽';
 
   @override
-  String get sourcesAbout => 'アーティストや権利者の許可のもとで公開されている、無料のロスレス音源。Riflayは各サービスのサーバーから直接再生する。';
+  String get sourcesAbout => 'アーティストや権利者が自ら音楽を公開している無料のサービス。Riflayは各サービスのサーバーから直接再生する。曲のソースはオンにするまでオフ。';
 
   @override
   String get sourceArchive => '検索にInternet Archive';
@@ -6031,11 +6031,36 @@ class AppLocalizationsJa extends AppLocalizations {
   String get sourceRadioParadiseSubtitle => 'リスナーに支えられたCMなしのラジオ。全チャンネルFLAC(CD音質)';
 
   @override
-  String get kwSources => 'flac, ロスレス, internet archive, live music archive, radio paradise, 無料音楽, ソース';
+  String get kwSources =>
+      'flac, ロスレス, internet archive, live music archive, radio paradise, jamendo, audius, ccmixter, クリエイティブ・コモンズ, 無料音楽, ソース';
 
   @override
   String get spotifyCanvas => 'Canvas';
 
   @override
   String get spotifyCanvasSubtitle => 'Spotifyが曲と一緒に流すループ動画を、MVの代わりにビデオモードで表示する(ベータ機能でビデオモードをオンに)';
+
+  @override
+  String sourceInSearch(String source) {
+    return '検索に$source';
+  }
+
+  @override
+  String get sourceJamendoSubtitle => 'クリエイティブ・コモンズで作品を公開するインディーアーティスト(検索の「すべて」に表示)';
+
+  @override
+  String get sourceAudiusSubtitle => 'アーティスト自身がAudiusにアップロードした曲(検索の「すべて」に表示)';
+
+  @override
+  String get sourceCcmixterSubtitle => 'クリエイティブ・コモンズのオリジナルとリミックス、一部FLAC(検索の「すべて」に表示)';
+
+  @override
+  String fromSource(String source) {
+    return '$sourceから';
+  }
+
+  @override
+  String sourceUnavailable(String source) {
+    return '$sourceに接続できませんでした。もう一度お試しください。';
+  }
 }

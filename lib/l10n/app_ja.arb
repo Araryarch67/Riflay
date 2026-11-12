@@ -1811,13 +1811,19 @@
   "archiveCouldntLoad": "Internet Archiveから読み込めませんでした:{error}",
   "archiveNoFlac": "この録音にはここで再生できるFLACファイルがない。",
   "topicSources": "音楽ソース",
-  "topicSourcesSummary": "Internet ArchiveとRadio Paradise:無料のFLAC音源",
-  "sourcesAbout": "アーティストや権利者の許可のもとで公開されている、無料のロスレス音源。Riflayは各サービスのサーバーから直接再生する。",
+  "topicSourcesSummary": "Internet Archive、Radio Paradise、Jamendo、Audius、ccMixter:アーティストが無料で公開する音楽",
+  "sourcesAbout": "アーティストや権利者が自ら音楽を公開している無料のサービス。Riflayは各サービスのサーバーから直接再生する。曲のソースはオンにするまでオフ。",
   "sourceArchive": "検索にInternet Archive",
   "sourceArchiveSubtitle": "Live Music Archiveのライブとネットレーベルの作品をFLACで(検索の「すべて」に表示)",
   "sourceRadioParadise": "検索ページにRadio Paradise",
   "sourceRadioParadiseSubtitle": "リスナーに支えられたCMなしのラジオ。全チャンネルFLAC(CD音質)",
-  "kwSources": "flac, ロスレス, internet archive, live music archive, radio paradise, 無料音楽, ソース",
+  "kwSources": "flac, ロスレス, internet archive, live music archive, radio paradise, jamendo, audius, ccmixter, クリエイティブ・コモンズ, 無料音楽, ソース",
   "spotifyCanvas": "Canvas",
-  "spotifyCanvasSubtitle": "Spotifyが曲と一緒に流すループ動画を、MVの代わりにビデオモードで表示する(ベータ機能でビデオモードをオンに)"
+  "spotifyCanvasSubtitle": "Spotifyが曲と一緒に流すループ動画を、MVの代わりにビデオモードで表示する(ベータ機能でビデオモードをオンに)",
+  "sourceInSearch": "検索に{source}",
+  "sourceJamendoSubtitle": "クリエイティブ・コモンズで作品を公開するインディーアーティスト(検索の「すべて」に表示)",
+  "sourceAudiusSubtitle": "アーティスト自身がAudiusにアップロードした曲(検索の「すべて」に表示)",
+  "sourceCcmixterSubtitle": "クリエイティブ・コモンズのオリジナルとリミックス、一部FLAC(検索の「すべて」に表示)",
+  "fromSource": "{source}から",
+  "sourceUnavailable": "{source}に接続できませんでした。もう一度お試しください。"
 }

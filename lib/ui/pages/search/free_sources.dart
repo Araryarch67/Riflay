@@ -5,12 +5,51 @@ import '../../../services/language.dart';
 import '../../../services/player_controller.dart';
 import '../../../services/sources/internet_archive.dart';
 import '../../../services/sources/radio_paradise.dart';
+import '../../../services/sources/song_source.dart';
 import '../../shell_scope.dart';
 import '../../theme.dart';
 import '../../widgets/controls.dart';
 import '../../widgets/page_scaffold.dart';
 import '../../widgets/track_row.dart';
 import 'remote_results.dart' show libraryShelf;
+
+/// Search's "All": songs from one optional source ([SongSource]), as a shelf playing straight from it. Nothing
+/// while it loads (the last query's songs don't linger) or when there are none; a line when it can't be reached,
+/// leaving the other sections usable.
+class SourceTracksShelf extends StatelessWidget {
+  const SourceTracksShelf({super.key, required this.source, required this.future});
+
+  final SongSource source;
+  final Future<List<Track>> future;
+
+  @override
+  Widget build(BuildContext context) => FutureBuilder<List<Track>>(
+    future: future,
+    builder: (context, snap) {
+      if (snap.connectionState != ConnectionState.done) return const SliverToBoxAdapter();
+      if (snap.hasError) {
+        debugPrint('${source.name} search: ${snap.error}');
+        return SliverToBoxAdapter(
+          child: Padding(padding: const EdgeInsets.all(16), child: Text(tr.sourceUnavailable(source.name))),
+        );
+      }
+      final tracks = snap.data ?? const <Track>[];
+      if (tracks.isEmpty) return const SliverToBoxAdapter();
+      final from = tr.fromSource(source.name);
+      return libraryShelf(from, [
+        for (final (i, track) in tracks.indexed)
+          MediaCard(
+            track: track,
+            title: track.title,
+            subtitle: track.artist,
+            // No service mark: the mark is YouTube Music's or SoundCloud's, and this is neither.
+            online: false,
+            onTap: () => PlayerScope.read(context).playList(tracks, i, from: from).ignore(),
+          ),
+      ]);
+    },
+  );
+}
 
 /// Search's "All": recordings on the Internet Archive with FLAC files, as a shelf. Nothing while it loads or when
 /// there are none; a line when the archive can't be reached.

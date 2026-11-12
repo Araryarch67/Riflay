@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 
 import '../../services/language.dart';
 import '../../services/sources/music_sources.dart';
+import '../../services/sources/song_source.dart';
 import 'sound_settings.dart' show SettingsCard, settingsMuted;
 
-/// Settings › Accounts & services › Music sources: Internet Archive and Radio Paradise ([MusicSources]).
+/// Settings › Accounts & services › Music sources: Internet Archive, Radio Paradise and the optional song sources
+/// ([MusicSources]).
 class MusicSourcesSettings extends StatefulWidget {
   const MusicSourcesSettings({super.key});
 
@@ -20,6 +22,18 @@ class _MusicSourcesSettingsState extends State<MusicSourcesSettings> {
     super.initState();
     _sources.load().ignore();
   }
+
+  static const _icons = {
+    'jamendo:': Icons.album_outlined,
+    'audius:': Icons.graphic_eq,
+    'ccmixter:': Icons.tune_outlined,
+  };
+
+  static String _subtitle(SongSource source) => switch (source.prefix) {
+    'jamendo:' => tr.sourceJamendoSubtitle,
+    'audius:' => tr.sourceAudiusSubtitle,
+    _ => tr.sourceCcmixterSubtitle,
+  };
 
   @override
   Widget build(BuildContext context) {
@@ -49,6 +63,15 @@ class _MusicSourcesSettingsState extends State<MusicSourcesSettings> {
                 value: _sources.radioParadise,
                 onChanged: _sources.setRadioParadise,
               ),
+              for (final source in MusicSources.songSources)
+                if (source.available)
+                  SwitchListTile(
+                    secondary: Icon(_icons[source.prefix] ?? Icons.library_music_outlined),
+                    title: Text(tr.sourceInSearch(source.name)),
+                    subtitle: Text(_subtitle(source), style: muted),
+                    value: _sources.isOn(source),
+                    onChanged: (v) => _sources.setOn(source, v),
+                  ),
             ],
           ),
         ],

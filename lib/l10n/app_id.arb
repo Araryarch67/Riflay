@@ -1818,13 +1818,19 @@
   "archiveCouldntLoad": "Gagal memuat dari Internet Archive: {error}",
   "archiveNoFlac": "Rekaman ini tidak punya file FLAC yang bisa diputar di sini.",
   "topicSources": "Sumber musik",
-  "topicSourcesSummary": "Internet Archive dan Radio Paradise: musik gratis dalam FLAC",
-  "sourcesAbout": "Tempat gratis dengan suara lossless, dibagikan dengan izin artis atau pemegang hak. Riflay memutarnya langsung dari server mereka.",
+  "topicSourcesSummary": "Internet Archive, Radio Paradise, Jamendo, Audius dan ccMixter: musik yang dibagikan gratis oleh artisnya",
+  "sourcesAbout": "Tempat gratis di mana artis atau pemegang hak membagikan musik mereka sendiri. Riflay memutarnya langsung dari server mereka. Sumber lagu mati sampai kamu menyalakannya.",
   "sourceArchive": "Internet Archive di pencarian",
   "sourceArchiveSubtitle": "Konser Live Music Archive dan rilisan netlabel dalam FLAC, di bagian Semua pada pencarian",
   "sourceRadioParadise": "Radio Paradise di halaman cari",
   "sourceRadioParadiseSubtitle": "Radio tanpa iklan yang didukung pendengar, semua channel dalam FLAC (kualitas CD)",
-  "kwSources": "flac, lossless, internet archive, live music archive, radio paradise, musik gratis, sumber",
+  "kwSources": "flac, lossless, internet archive, live music archive, radio paradise, jamendo, audius, ccmixter, creative commons, musik gratis, sumber",
   "spotifyCanvas": "Canvas",
-  "spotifyCanvasSubtitle": "Video pendek berulang yang ditampilkan Spotify bersama lagu, diputar di Video mode menggantikan music video (nyalakan Video mode di Fitur beta)"
+  "spotifyCanvasSubtitle": "Video pendek berulang yang ditampilkan Spotify bersama lagu, diputar di Video mode menggantikan music video (nyalakan Video mode di Fitur beta)",
+  "sourceInSearch": "{source} di pencarian",
+  "sourceJamendoSubtitle": "Artis independen yang merilis dengan lisensi Creative Commons, di bagian Semua pada pencarian",
+  "sourceAudiusSubtitle": "Lagu yang diunggah sendiri oleh artisnya ke Audius, di bagian Semua pada pencarian",
+  "sourceCcmixterSubtitle": "Karya asli dan remix Creative Commons, sebagian dalam FLAC, di bagian Semua pada pencarian",
+  "fromSource": "Dari {source}",
+  "sourceUnavailable": "{source} belum bisa diakses. Coba lagi."
 }

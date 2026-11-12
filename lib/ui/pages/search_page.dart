@@ -9,6 +9,7 @@ import '../../models/track.dart';
 import '../../platform/features.dart';
 import '../../services/sources/internet_archive.dart';
 import '../../services/sources/music_sources.dart';
+import '../../services/sources/song_source.dart';
 import '../../services/language.dart';
 import '../../services/player_controller.dart';
 import '../../services/soundcloud.dart' show SoundcloudCollection;
@@ -61,6 +62,7 @@ class _SearchPageState extends State<SearchPage> {
   void initState() {
     super.initState();
     MusicSources.instance.load().ignore();
+    MusicSources.instance.addListener(_followMusicSources);
     if (Features.soundcloud) {
       SearchSource.current.addListener(_followSource);
       SearchSource.load().ignore();
@@ -106,6 +108,12 @@ class _SearchPageState extends State<SearchPage> {
   /// Internet Archive recordings with FLAC files, on "All" ([MusicSources.archive]).
   Future<List<ArchiveItem>>? _archive;
 
+  /// Songs from the optional sources that are on ([MusicSources.enabledSongSources]), on "All".
+  Map<SongSource, Future<List<Track>>> _extra = const {};
+
+  /// Which sources [_extra] asked, and for what: a settings change only searches again when this changes.
+  String _extraKey = '';
+
   /// "Videos": plain YouTube instead of YouTube Music songs.
   bool _videos = false;
   YoutubeVideoSearch? _videoSearch;
@@ -131,6 +139,7 @@ class _SearchPageState extends State<SearchPage> {
     _localTimer?.cancel();
     _videoSearch?.dispose();
     SearchSource.current.removeListener(_followSource);
+    MusicSources.instance.removeListener(_followMusicSources);
     if (widget.input case final input?) {
       input.controller.removeListener(_fromBar);
       input.submitted.removeListener(_submittedFromBar);
@@ -161,6 +170,8 @@ class _SearchPageState extends State<SearchPage> {
         _youtube = _all = _only = _top = null;
         _soundcloud = _soundcloudShelves = null;
         _archive = null;
+        _extra = const {};
+        _extraKey = '';
         _videoTracks = const [];
         _videoLoading = false;
       });
@@ -190,6 +201,7 @@ class _SearchPageState extends State<SearchPage> {
 
   void _searchYoutube(String q) {
     final c = PlayerScope.read(context);
+    _searchExtra(q, force: true);
     _soundcloud = _onSoundcloud ? c.searchSoundcloud(q) : null;
     _soundcloudShelves = _onSoundcloud
         ? c.soundcloud.searchCollections(q).catchError((Object e) {
@@ -300,7 +312,32 @@ class _SearchPageState extends State<SearchPage> {
           ? null
           : PlayerScope.read(context).ytMusic.searchOnly(q, f);
       if (f == null && q.length >= 2 && _archive == null) _archive = _searchArchive(q);
+      _searchExtra(q);
     });
+  }
+
+  /// Asks the song sources that are on for [q], on "All" of a YouTube Music search only. Without [force] a source
+  /// already asked for [q] keeps its answer.
+  void _searchExtra(String q, {bool force = false}) {
+    final sources = q.length >= 2 && !_onSoundcloud && !_videos && _filter == null
+        ? MusicSources.instance.enabledSongSources
+        : const <SongSource>[];
+    final key = '$q\u0000${sources.map((s) => s.prefix).join()}';
+    if (!force && key == _extraKey) return;
+    final before = force || !_extraKey.startsWith('$q\u0000') ? const <SongSource, Future<List<Track>>>{} : _extra;
+    _extraKey = key;
+    _extra = {
+      for (final s in sources)
+        s:
+            before[s] ??
+            (s.search(q)
+              // Attach an error listener at once, even if another search hides this future.
+              ..ignore()),
+    };
+  }
+
+  void _followMusicSources() {
+    if (mounted) setState(() => _searchExtra(_query.trim()));
   }
 
   /// "In your library": the first songs of the library that match.
@@ -490,6 +527,9 @@ class _SearchPageState extends State<SearchPage> {
           CollectionGrid(future: _only),
         ] else ...[
           if (searching) TopAndSongs(future: _top),
+          if (searching)
+            for (final MapEntry(key: source, value: future) in _extra.entries)
+              SourceTracksShelf(key: ValueKey(source.prefix), source: source, future: future),
           ..._library(c, results, shell),
           if (searching && _archive != null) ArchiveResults(future: _archive!),
           if (searching) RemoteShelves(future: _all),
