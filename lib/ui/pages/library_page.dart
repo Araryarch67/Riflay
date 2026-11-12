@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'home_page.dart' show openHomeArtist;
 import '../../models/track.dart';
 import '../../platform/features.dart';
 import '../../services/beta_features.dart';
@@ -482,7 +483,11 @@ class _LibraryRow extends StatelessWidget {
     final tile = InkWell(
       borderRadius: BorderRadius.circular(6),
       hoverColor: AppColors.tile,
-      onTap: () => shell.openCollection(collection),
+      // An artist with songs from YouTube Music opens their YouTube Music page; one from your own files alone, the
+      // library's page (as Home's Artists shelf does).
+      onTap: isArtist
+          ? openHomeArtist(context, PlayerScope.read(context), collection, shell: shell)
+          : () => shell.openCollection(collection),
       child: Padding(
         padding: const EdgeInsets.all(8),
         child: collapsed

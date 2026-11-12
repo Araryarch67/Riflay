@@ -47,7 +47,8 @@ abstract final class DebugSwitches {
   /// A phone page's top bar fills in with a solid colour on scroll with the Liquid glass tab bar too, not as glass.
   static bool noGlassTopBar = _all || const bool.fromEnvironment('RIFLAY_NO_GLASS_TOP_BAR');
 
-  /// Home's Artists shelf opens the library's artist page for every artist, as before, also for one whose songs
+  /// Home's Artists shelf, Library's artists and Search's open the library's artist page for every artist, as
+  /// before, also for one whose songs
   /// were downloaded from YouTube Music (see `openHomeArtist`). Not part of `RIFLAY_NO_SHORTCUTS`, which is about
   /// rendering.
   static bool localHomeArtists = const bool.fromEnvironment('RIFLAY_LOCAL_HOME_ARTISTS');

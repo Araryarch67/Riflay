@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'home_page.dart' show openHomeArtist;
+
 import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:flutter/material.dart';
 
@@ -463,7 +465,7 @@ class _SearchPageState extends State<SearchPage> {
                     title: artists[i].title,
                     color: color,
                     cover: Artwork(track: artists[i].cover, radius: 4),
-                    onTap: () => shell.openCollection(artists[i]),
+                    onTap: openHomeArtist(context, c, artists[i], shell: shell),
                   ),
                 ),
               ),
@@ -499,7 +501,7 @@ class _SearchPageState extends State<SearchPage> {
                   title: a.title,
                   subtitle: tr.artist,
                   circle: true,
-                  onTap: () => shell.openCollection(a),
+                  onTap: openHomeArtist(context, c, a, shell: shell),
                 ),
             ]),
           if (albums.isNotEmpty)
