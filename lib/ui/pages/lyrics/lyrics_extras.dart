@@ -131,8 +131,14 @@ class _LyricsMoreMenuState extends State<LyricsMoreMenu> {
           backgroundColor: glass ? Colors.transparent : AppColors.textPrimary.withValues(alpha: 0.1),
           foregroundColor: AppColors.textPrimary,
           fixedSize: const Size.square(44),
+          minimumSize: const Size.square(44),
+          maximumSize: const Size.square(44),
+          padding: EdgeInsets.zero,
+          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
           shape: const CircleBorder(),
         ),
+        padding: EdgeInsets.zero,
+        iconSize: 24,
         icon: const Icon(Icons.more_horiz_rounded),
         onSelected: (v) => switch (v) {
           'romanize' => LyricsTranslation.romanize.value = !LyricsTranslation.romanize.value,
@@ -155,7 +161,11 @@ class _LyricsMoreMenuState extends State<LyricsMoreMenu> {
           option('player', Icons.tune_rounded, tr.playerOptions),
         ],
       );
-      return PlayerGlassSurface(radius: 22, circle: true, child: menu);
+      // Exactly the close button's 44 px circle: the menu's own padding made its glass a larger oval.
+      return SizedBox.square(
+        dimension: 44,
+        child: PlayerGlassSurface(radius: 22, circle: true, child: Center(child: menu)),
+      );
     },
   );
 }
