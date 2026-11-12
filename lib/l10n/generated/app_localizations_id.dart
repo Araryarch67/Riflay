@@ -6146,7 +6146,7 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get sourceArchiveSubtitle =>
-      'Konser Live Music Archive, netlabel, dan rekaman domain publik dalam FLAC, di bagian Semua pada pencarian';
+      'Konser Live Music Archive dan rilisan netlabel dalam FLAC, di bagian Semua pada pencarian';
 
   @override
   String get sourceRadioParadise => 'Radio Paradise di halaman cari';

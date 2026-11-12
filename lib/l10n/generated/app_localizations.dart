@@ -10980,7 +10980,7 @@ abstract class AppLocalizations {
   /// No description provided for @sourceArchiveSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Live Music Archive concerts, netlabels and public-domain records in FLAC, on search\'s All'**
+  /// **'Live Music Archive concerts and netlabel releases in FLAC, on search\'s All'**
   String get sourceArchiveSubtitle;
 
   /// No description provided for @sourceRadioParadise.

@@ -37,9 +37,10 @@ class ArchiveItem {
   int get hashCode => id.hashCode;
 }
 
-/// The Internet Archive (archive.org): recordings shared to be listened to and downloaded freely, with the
-/// artists' or rights holders' leave (the Live Music Archive's tapers, netlabels, the public domain), many as
-/// FLAC. Its public search and metadata APIs need no account or key. A song plays straight from
+/// The Internet Archive (archive.org), its two curated music collections only: the Live Music Archive (`etree`:
+/// concerts of bands that allow taping and sharing) and Netlabels (labels releasing under free licenses). Anyone
+/// can upload to the rest of the archive and label it as they like (paid voice packs and CD rips sit there marked
+/// Creative Commons), so it is left out. Its public search and metadata APIs need no account or key. A song plays straight from
 /// `archive.org/download/…` (mpv streams it as it would any FLAC on the web).
 class InternetArchive {
   InternetArchive({this.client});
@@ -64,7 +65,7 @@ class InternetArchive {
     final q = _clean(query);
     if (q.isEmpty) return const [];
     final url = Uri.https('archive.org', '/advancedsearch.php', {
-      'q': '($q) AND mediatype:(audio OR etree) AND format:(Flac OR "24bit Flac")',
+      'q': '($q) AND mediatype:(audio OR etree) AND format:(Flac OR "24bit Flac") AND collection:(etree OR netlabels)',
       'fl[]': ['identifier', 'title', 'creator', 'year'],
       'sort[]': 'downloads desc',
       'rows': '$rows',
@@ -133,6 +134,29 @@ class InternetArchive {
         if (const {'Flac', '24bit Flac'}.contains(f['format']) && '${f['private']}' != 'true') f,
     ];
     int? number(Map f) => int.tryParse('${f['track'] ?? ''}'.split('/').first.trim());
+    // Untagged files are named for their song after what every name of the item starts with ("Album_01_Song").
+    final names = [
+      for (final f in files) '${f['name']}'.split('/').last.replaceAll(RegExp(r'\.flac$', caseSensitive: false), ''),
+    ];
+    var shared = names.length < 2
+        ? 0
+        : names.reduce((a, b) {
+            var i = 0;
+            while (i < a.length && i < b.length && a[i] == b[i]) {
+              i++;
+            }
+            return a.substring(0, i);
+          }).length;
+    // Back to a word boundary, so "Track 1" and "Track 12" keep their numbers.
+    while (shared > 0 && names.isNotEmpty && !RegExp(r'[\s_\-.~～]').hasMatch(names.first[shared - 1])) {
+      shared--;
+    }
+    String fallback(String name) {
+      final base = name.split('/').last.replaceAll(RegExp(r'\.flac$', caseSensitive: false), '');
+      final rest = base.length > shared ? base.substring(shared) : base;
+      return rest.replaceAll('_', ' ').replaceAll(RegExp(r'\s+'), ' ').trim();
+    }
+
     files.sort((a, b) {
       final (x, y) = (number(a), number(b));
       if (x != null && y != null && x != y) return x.compareTo(y);
@@ -142,11 +166,10 @@ class InternetArchive {
       for (final f in files)
         () {
           final name = '${f['name']}';
-          final fallback = name.split('/').last.replaceAll(RegExp(r'\.flac$', caseSensitive: false), '');
           return Track(
             id: '$prefix${item.id}/$name',
             uri: Uri.https('archive.org', '/download/${item.id}/$name'),
-            title: '${f['title'] ?? ''}'.trim().isEmpty ? fallback : '${f['title']}'.trim(),
+            title: '${f['title'] ?? ''}'.trim().isEmpty ? fallback(name) : '${f['title']}'.trim(),
             artist: '${f['creator'] ?? f['artist'] ?? ''}'.trim().isEmpty ? creator : '${f['creator'] ?? f['artist']}',
             album: album,
             duration: _length(f['length']),

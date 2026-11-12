@@ -41,6 +41,7 @@ void main() {
     expect(asked.host, 'archive.org');
     final q = asked.queryParameters['q']!;
     expect(q, contains('format:(Flac OR "24bit Flac")'));
+    expect(q, contains('collection:(etree OR netlabels)'), reason: 'open uploads carry licenses as typed');
     expect(q, startsWith('(demos live hall) AND'));
     expect(items.map((i) => (i.id, i.title, i.creator, i.year)), [
       ('demo1999', 'Live at the Hall', 'The Demos', 1999),
@@ -78,6 +79,24 @@ void main() {
       isEmpty,
       reason: 'a restricted item plays only on the site',
     );
+  });
+
+  test('untagged files are named for what sets them apart from the item\'s other files', () {
+    final tracks = InternetArchive.parseFiles(_item, {
+      'metadata': {'title': 'Pack'},
+      'files': [
+        {'name': 'set/Pack 2025 ～Secret～_AZKi_Special Voice.flac', 'format': 'Flac'},
+        {'name': 'set/Pack 2025 ～Secret～_Aqua_Special Voice.flac', 'format': 'Flac'},
+      ],
+    });
+    expect(tracks.map((t) => t.title), ['AZKi Special Voice', 'Aqua Special Voice']);
+    final numbered = InternetArchive.parseFiles(_item, {
+      'files': [
+        {'name': 'Track 1.flac', 'format': 'Flac'},
+        {'name': 'Track 12.flac', 'format': 'Flac'},
+      ],
+    });
+    expect(numbered.map((t) => t.title), ['1', '12'], reason: 'cut at a word, never inside a number');
   });
 
   test('Radio Paradise: four FLAC channels from its own servers, and what each plays now', () {

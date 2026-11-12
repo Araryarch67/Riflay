@@ -349,7 +349,9 @@ test/                          Unit and widget tests
   in place of the music video, playing and pausing with the song, never seeking (`MusicVideo.loops`). Stills and
   GIF canvases are skipped. Untested against a live session in CI: no account there.
 - Music sources (`lib/services/sources/`, Settings › Accounts & services › Music sources): the Internet Archive
-  (public search and metadata APIs; FLAC files stream from `archive.org/download/…`, private ones are skipped)
+  (public search and metadata APIs, limited to the curated `etree` and `netlabels` collections: the rest is open
+  uploads, licenses as the uploader typed them; FLAC files stream from `archive.org/download/…`, private ones
+  are skipped; untagged files are named after the part of their file name the item's others don't share)
   on search's All, and Radio Paradise's FLAC channels on the empty search page. Only sources that share music
   with the rights holders' leave belong here; never one that pulls another service's paid streams.
 - Clear cache (Settings › About, `lib/services/app_cache.dart`) lists every cache it empties in `_targets`:

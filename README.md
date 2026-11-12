@@ -44,7 +44,7 @@ Free and open source, for Linux, Windows, macOS, Android and iOS.
 - **Music videos.** Watch a song's video in step with it, or use it as the Now Playing background.
 - **Listen together, anywhere.** Friends play along in sync over the same Wi-Fi or the internet, end-to-end encrypted.
 - **Build your own player.** Pick the cover, top, buttons, progress bar, controls and bottom row one by one, or start from a preset (Classic, Stacked, Kawaii). On phone and desktop.
-- **Free FLAC sources.** Search shows Internet Archive recordings in FLAC (Live Music Archive concerts, netlabels, the public domain), and the search page carries Radio Paradise's FLAC channels.
+- **Free FLAC sources.** Search shows FLAC recordings from the Internet Archive's curated collections (Live Music Archive concerts, netlabel releases), and the search page carries Radio Paradise's FLAC channels.
 - **Riflay Wrap** and listening stats, kept on your device.
 - **Light on your computer.** Lightweight, Balanced and Heavy performance modes; under 2% CPU and 200 MB while playing on Windows, even with a music video.
 

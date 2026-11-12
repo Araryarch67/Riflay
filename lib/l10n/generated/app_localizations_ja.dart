@@ -6022,7 +6022,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get sourceArchive => '検索にInternet Archive';
 
   @override
-  String get sourceArchiveSubtitle => 'Live Music Archiveのライブ、ネットレーベル、パブリックドメインの録音をFLACで(検索の「すべて」に表示)';
+  String get sourceArchiveSubtitle => 'Live Music Archiveのライブとネットレーベルの作品をFLACで(検索の「すべて」に表示)';
 
   @override
   String get sourceRadioParadise => '検索ページにRadio Paradise';

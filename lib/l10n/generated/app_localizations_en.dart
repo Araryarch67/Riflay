@@ -6223,8 +6223,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sourceArchive => 'Internet Archive in search';
 
   @override
-  String get sourceArchiveSubtitle =>
-      'Live Music Archive concerts, netlabels and public-domain records in FLAC, on search\'s All';
+  String get sourceArchiveSubtitle => 'Live Music Archive concerts and netlabel releases in FLAC, on search\'s All';
 
   @override
   String get sourceRadioParadise => 'Radio Paradise on the search page';
