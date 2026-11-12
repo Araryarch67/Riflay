@@ -29,6 +29,12 @@ Free and open source, for Linux, Windows, macOS, Android and iOS.
 
 ![Riflay home](docs/screenshots/home.webp)
 
+
+
+https://github.com/user-attachments/assets/5d0f0612-4322-425e-bbbf-79baeace47be
+
+
+
 | ![Full-screen player](docs/screenshots/fullscreen.webp) | ![Lyrics](docs/screenshots/lyrics.webp) |
 |---|---|
 | ![Signal path](docs/screenshots/signal-path.webp) | ![Your listening stats](docs/screenshots/stats.webp) |
