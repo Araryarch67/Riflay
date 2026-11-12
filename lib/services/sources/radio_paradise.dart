@@ -17,9 +17,12 @@ class RadioParadiseChannel {
   /// Its FLAC stream's path on `stream.radioparadise.com`.
   final String stream;
 
+  /// The channel's own cover, from Radio Paradise's channel list: shown at once, whatever plays.
+  String get cover => 'https://img.radioparadise.com/channels/0/$number/cover_512x512/0.jpg';
+
   Track get track => trackWith();
 
-  /// The channel as a song to play, with [artworkUrl] (the cover of what plays now) when known.
+  /// The channel as a song to play, with its [cover] unless [artworkUrl] is given.
   Track trackWith({String? artworkUrl}) => Track(
     id: '${RadioParadise.prefix}$stream',
     uri: Uri.https('stream.radioparadise.com', '/$stream'),
@@ -27,7 +30,7 @@ class RadioParadiseChannel {
     artist: 'Radio Paradise',
     // No album: the four channels would share one cover (covers are remembered by album).
     sourceUrl: 'https://radioparadise.com',
-    artworkUrl: artworkUrl,
+    artworkUrl: artworkUrl ?? cover,
   );
 }
 

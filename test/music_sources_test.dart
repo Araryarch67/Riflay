@@ -87,6 +87,11 @@ void main() {
       'https://stream.radioparadise.com/rock-flac',
       'https://stream.radioparadise.com/global-flac',
     ]);
+    expect(
+      RadioParadise.channels[1].track.artworkUrl,
+      'https://img.radioparadise.com/channels/0/1/cover_512x512/0.jpg',
+      reason: 'a cover from the start',
+    );
     final song = RadioParadise.parseNowPlaying(
       '{"artist":"Energy 52","title":"Cafe del Mar","album":"Café del Mar","cover_med":"https://img/26999.jpg"}',
     );

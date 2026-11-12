@@ -60,7 +60,8 @@ class _RadioParadiseShelfState extends State<RadioParadiseShelf> {
         for (final (i, ch) in RadioParadise.channels.indexed)
           () {
             final song = now?[i];
-            final track = ch.trackWith(artworkUrl: song?.cover);
+            // The channel's own cover: there before the song on air is known, and steady as songs change.
+            final track = ch.track;
             return MediaCard(
               track: track,
               title: ch.name,
