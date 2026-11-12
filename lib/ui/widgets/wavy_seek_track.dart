@@ -131,10 +131,7 @@ class WaveformSeekTrack extends SliderTrackShape with BaseSliderTrackShape {
       final x = rtl ? rect.right - (i + 1) * step : rect.left + i * step;
       final played = rtl ? x + width / 2 >= thumb : x + width / 2 <= thumb;
       context.canvas.drawRRect(
-        RRect.fromRectAndRadius(
-          Rect.fromLTWH(x, rect.center.dy - h / 2, width, h),
-          Radius.circular(width / 2),
-        ),
+        RRect.fromRectAndRadius(Rect.fromLTWH(x, rect.center.dy - h / 2, width, h), Radius.circular(width / 2)),
         pen..color = played ? active : inactive,
       );
     }

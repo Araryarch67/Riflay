@@ -56,6 +56,7 @@ lib/
     ytdlp.dart                 Finds / downloads yt-dlp, resolves and caches stream URLs
     download_prefs.dart        Settings › Library & downloads › Downloads (format, quality, folder), and pickForDownload: which stream a download takes
     video_download.dart        Music-video downloads: stream picking (MP4 = H.264 + AAC, WebM = VP9 + Opus, AV1 only where nothing else), sizes, muxVideo
+    mv_sidecar.dart            "Download with MV": a downloaded song's music video beside it (`<song>.mv.mp4` + `.mv.json`), which Video mode plays offline
     mp4_mux.dart / webm_mux.dart  Pure-Dart muxers (no re-encoding): YouTube's DASH fMP4 and WebM streams into one file; used where there is no ffmpeg
     download_edit.dart         Editing a downloaded song: title, album, cover (never the artist); lyrics live in lyrics.dart's UserLyrics
     ffmpeg.dart                Finds / downloads ffmpeg (tag editor, AirPlay, casting conversions)
@@ -188,6 +189,29 @@ test/                          Unit and widget tests
   `MediaCard(online: true)`; `ArtistLinks` puts the mark before the artist in every player view. `PlayerController.downloadedCopy`
   finds a downloaded file for a YouTube song; `_sourceFor` plays that instead,
   so `isOffline(track)` is what the UI should show.
+- "Download with MV" (the song's ⋯ menu and the phone's More sheet; `TrackMenuButton.offersMvDownload`) is only
+  there for a streamed song known to have a music video (`VideoMode.videoOf`, asked as the menu opens), in a build
+  with `Features.downloads` and `Features.videoMode` and with Video mode's beta switch on. A plain download stays
+  audio only. It queues the usual audio download with `DownloadJob.withVideo`; once the song is saved,
+  `YoutubeImporter._saveMusicVideo` fetches the video's picture stream as YouTube serves it (no sound, nothing
+  muxed: `pickMusicVideoPicture`, at Settings' video format and size, MP4 H.264 up to 1080p by default) to
+  `<song>.mv.mp4` / `.mv.webm` beside the song, and writes `<song>.mv.json` (`MvSidecar`: the video's id and
+  where the song's parts are in it, measured with `VideoAlignment` when YouTube Music gives no map). The song never
+  fails over its video. `VideoMode.localVideoOf` / `videoOf` take that file before streaming, so the video plays
+  offline; `RIFLAY_NO_LOCAL_MV` streams it anyway. `PlayerController.deleteDownloads` and the duplicates page
+  delete it with the song; folder scans skip `*.mv.mp4` / `*.mv.webm` (`isIgnoredPath`). Unlike "Download as… ›
+  Video" (one MP4/WebM that is the song, with the video's own sound), the song keeps its audio format.
+  `test/mv_download_test.dart`. Converting such a download to FLAC under another name leaves the video behind.
+- Library's filter chips (`LibraryFilter` in `pages/library_page.dart`) end with **Local**: one row per music
+  folder the person added (`FolderWatch.folders`), then Downloaded. A folder is a `CollectionKind.folder`
+  collection (`PlayerController.folders`, from `LibraryViews.foldersOf`): the files under its path, by path, its
+  `id` the path (also its `Locations.collection`, since two folders can share a name). Songs added one by one
+  ("Add songs") are in no folder; they stay in All Songs. Not a shortcut, so no `RIFLAY_*` switch.
+- Home's Artists shelf (`openHomeArtist` in `pages/home_page.dart`): an artist with even one song from YouTube
+  Music (a download remembers its video and channel) opens their YouTube Music page through `openArtist`, not
+  the library's page holding only the downloads; an artist known from the person's own files alone opens the
+  library's page. `RIFLAY_LOCAL_HOME_ARTISTS` opens the library's page for all of them, as before. Library and
+  Search still list the library's artists as they are.
 - Riflay playlists are `UserPlaylist` (in `models/track.dart`), stored in
   SharedPreferences (`playlists.v1`) and shown as `CollectionKind.playlist`.
 - Song menus get "Remove from this playlist" from a `PlaylistEditScope` above
@@ -304,6 +328,39 @@ test/                          Unit and widget tests
   (made by `tool/make_hrir.sh`, copied to a real file at first use). It runs
   at 48 kHz or the chosen output rate: left alone, `headphone` would move the
   song to the HRIR's rate with FFmpeg's default resampler.
+- Its room follows the song (`AudioEngine.virtualRoom`, from `sourceChannels`, which `_followSong` reads
+  from mpv's `audio-params` on every platform): two speakers for stereo, a 7.1 room
+  (`hrir_kemar_71_48k.wav`, same head and gain, made by the same script) for 5.1 / 7.1 songs (a Dolby
+  Atmos bed) and for stereo under Surround upmix (`@upmix`, a passive `pan`). The 7.1 room is 8
+  convolutions instead of 2 (~2.4x the CPU), so a stereo song only gets it when the upmix is on.
+  `RIFLAY_STEREO_VIRTUAL_SPEAKERS` mixes everything down to two speakers, as before.
+- Dolby Atmos: FFmpeg decodes an Atmos song's bed only (E-AC-3 JOC, TrueHD); the height objects need
+  Dolby's decoder. `SignalPath.isAtmos` reads mpv's `codec-profile`; Passthrough (`audio-spdif`) sends
+  Dolby / DTS undecoded to a receiver over HDMI / S/PDIF, the only way to hear the heights.
+- Every libmpv Riflay ships needs `headphone` and `pan` (and `amovie`, `aformat`): check the filter list
+  in `tool/build_libmpv_*.sh` when adding one.
+- Lyrics' Pronunciation (`lib/services/romanizer.dart`): Korean (Revised Romanization with liaison,
+  nasalization, palatalization, ㅎ aspiration), kana (Hepburn), Cyrillic and Greek are romanized here, offline;
+  Chinese characters, kanji, Thai and the rest stay Google's, with scholarly marks dropped (`Romanizer.clean`).
+  Kana can't tell the particle は from ha; kanji lines need a dictionary, which Riflay doesn't ship.
+- Spotify Canvas (`lib/services/spotify_canvas.dart`, Spotify page switch, off by default): with the signed-in
+  Spotify session, the song is found through the web player's `searchSuggestions` and its Canvas read with the
+  `canvas` persisted query (`{trackUri}` → `trackUnion.canvas.url`); Video mode plays it looping (`loop-file=inf`)
+  in place of the music video, playing and pausing with the song, never seeking (`MusicVideo.loops`). Stills and
+  GIF canvases are skipped. Untested against a live session in CI: no account there.
+- Music sources (`lib/services/sources/`, Settings › Accounts & services › Music sources): the Internet Archive
+  (public search and metadata APIs; FLAC files stream from `archive.org/download/…`, private ones are skipped)
+  on search's All, and Radio Paradise's FLAC channels on the empty search page. Only sources that share music
+  with the rights holders' leave belong here; never one that pulls another service's paid streams.
+- Clear cache (Settings › About, `lib/services/app_cache.dart`) lists every cache it empties in `_targets`:
+  add a new disk cache there, and keep user data and `audio-analysis.json` out. It empties the cache folders
+  rather than deleting them (covers are written into folders opened once per launch) and sweeps
+  `riflay-stream-*` folders a crash left, never the playing session's.
+- AutoEQ (`lib/services/auto_eq.dart`, the picker in `widgets/auto_eq_picker.dart`): the list of models is
+  AutoEq's `results/INDEX.md`, kept in the app's support folder for 30 days (`RIFLAY_AUTOEQ_FRESH`
+  downloads it each time); a picked model's `ParametricEQ.txt` is downloaded then. The equalizer is ten
+  RBJ peaking bands, so a profile with shelves (most) is fitted by coordinate descent on its curve:
+  real profiles land within ~0.3 dB up to 10 kHz. `eqProfile` names it until a band or preset changes.
 - Mono audio uses mpv's own `format` filters, not FFmpeg's `pan`, so it needs
   nothing from the FFmpeg build. Mono turns Virtual speakers and crossfeed
   off; Virtual speakers turn crossfeed off.
@@ -322,6 +379,15 @@ test/                          Unit and widget tests
   nothing resamples. mpv's converter always gets TPDF dither, which only acts
   where bits are lost (a 16-bit output after EQ or volume).
   `test/resampler_test.dart` measures it through the real mpv.
+- Convert to FLAC and FLAC downloads resample the same way, outside playback and whatever its switch says:
+  ffmpeg gets `Ffmpeg.flacResampleFilter` (SoX where `Ffmpeg.hasSoxr`, TPDF dither to 16 bits), the
+  ffmpeg-less path gives mpv `AudioEngine.hqResamplerOptions`. ffmpeg's bare `-ar` used its default
+  resampler, half a decibel down at 20 kHz; `test/lossless_check_test.dart` measures it. A FLAC made from a lossy
+  file keeps what that file had: a bigger file, never more detail.
+- The lossless check (Settings › Sound › Check lossless files, `LosslessCheckPage`) reads
+  `AudioAnalysis` reports: the spectrum's wall (`SourceVerdict`) and `AudioReport.usedBits`, the lowest bit set
+  in any sample of mpv's s32 decode, against the header's `storedBits`. 24-bit holding 16 is `paddedBits`.
+  Reports saved before `usedBits` existed are measured again by the check only (`scanAll(bits: true)`).
 - The equalizer's headroom (`preamp`) comes from the curve's highest point
   (`peakGain`, the bands' combined RBJ response), not the loudest band:
   neighbouring boosts add up.
@@ -686,7 +752,8 @@ device's language when Riflay has it). The words live in `lib/l10n/app_en.arb` (
   Bit-perfect). Counters stick to the number (`{count}曲`); plurals keep only `other`.
 - Every screen is translated. `test/hardcoded_strings_test.dart` fails on English typed into what a screen
   shows (`Text('…')`, `tooltip:`, `title:`, `labelText:` …); names that stay the same everywhere are listed
-  there. Detail stats (`stats_for_nerds.dart`) stays English on purpose: its rows go into bug reports.
+  there. Detail stats (`stats_for_nerds.dart`) shows the reader's language, but Copy builds its rows again in
+  English (`_english`) because they go into bug reports.
 - Plurals: an ICU `plural` with `=1` and `other` in English, never `n == 1 ? 'song' : 'songs'`. Several
   placeholders: declare them in the order the call passes them (the metadata order is the argument order).
 - A label of an enum value: a `String get label => switch (this) { … => tr.… }` getter, not a string in the
@@ -751,10 +818,17 @@ device's language when Riflay has it). The words live in `lib/l10n/app_en.arb` (
   flutter run --dart-define=RIFLAY_NO_SHARED_SIGNAL_PATH=true  # every signalPath() caller reads mpv itself
   flutter run --dart-define=RIFLAY_NO_OUTPUT_MEASURE=true  # no "Measure output" in the Signal path sheet (Linux, PipeWire)
   flutter run --dart-define=RIFLAY_NO_STREAK_CACHE=true  # the listening streak counted afresh every build
+  flutter run --dart-define=RIFLAY_LOCAL_HOME_ARTISTS=true  # Home's artists open the library's artist page, also one downloaded from YouTube Music
   flutter run --dart-define=RIFLAY_NO_VIDEO_ROTATE=true  # turning a phone sideways on Now Playing doesn't open the music video full screen
   flutter run --dart-define=RIFLAY_NO_MV_SEARCH=true     # a song YouTube Music pairs with no video gets none (no search for its official video)
+  flutter run --dart-define=RIFLAY_NO_LOCAL_MV=true      # Video mode streams a music video even when "Download with MV" saved it beside the song
   flutter run --dart-define=RIFLAY_NO_MV_ALIGN=true      # a music video with no map of its parts plays on the song's timeline, not lined up by their sound
   flutter run --dart-define=RIFLAY_NO_SCANNED_GAIN=true  # a song without ReplayGain tags plays unleveled, measured or not
+  flutter run --dart-define=RIFLAY_NO_DOWNLOAD_COOKIES=true  # yt-dlp never retries an age-restricted song with the signed-in account's cookies
+  flutter run --dart-define=RIFLAY_STEREO_VIRTUAL_SPEAKERS=true  # Virtual speakers mix 5.1 / 7.1 songs down to two speakers, and Surround upmix does nothing
+  flutter run --dart-define=RIFLAY_AUTOEQ_FRESH=true      # AutoEQ's list of headphones is downloaded every time the picker opens
+  flutter run --dart-define=RIFLAY_GOOGLE_ROMANIZATION=true  # lyrics' Pronunciation is Google's for every script, as before (not Riflay's own Korean, kana, Cyrillic, Greek)
+  flutter run --dart-define=RIFLAY_NO_TAB_SWIPE=true       # the phone's bottom bar only takes taps (no sliding a finger along it to switch tabs)
   flutter run --dart-define=RIFLAY_NO_ADAPTIVE_VIDEO=true # a music video stays at its full height however often it stalls
   flutter run --dart-define=RIFLAY_NO_PAGE_ARTWORK=true  # Cover: Background uses the list's 544 px cover, not a 1600 px one
   flutter run --dart-define=RIFLAY_ENDLESS_MARQUEE=true  # long titles scroll forever, card titles without a hover too

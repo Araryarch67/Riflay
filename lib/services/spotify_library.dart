@@ -77,6 +77,12 @@ class SpotifyLibraryClient {
     'getAlbum': '0b6ce3511e1b02e4a40fa95440f992acbe85080eb308af9194322d708fc1914f',
   };
 
+  /// Hashes of the queries Canvas uses, for when the live bundle can't be read; not required in it.
+  static const _canvasHashes = {
+    'searchSuggestions': 'f244254b94c0e824d458ac216e0f8406a73f2f69a9ff52831a2f78fa774ff6ce',
+    'canvas': '575138ab27cd5c1b3e54da54d0a7cc8d85485402de26340c2145f0f6bb5e7a9f',
+  };
+
   Future<Map<String, String>>? _hashes;
 
   void close() {
@@ -311,11 +317,106 @@ class SpotifyLibraryClient {
         found[m.group(1)!] = m.group(2)!;
       }
       if (!_fallbackHashes.keys.every(found.containsKey)) throw 'bundle lacks some library queries';
-      return found;
+      return {..._canvasHashes, ...found};
     } catch (e) {
       debugPrint('Spotify: reading the query hashes failed, using the built-in ones: $e');
-      return _fallbackHashes;
+      return {..._fallbackHashes, ..._canvasHashes};
     }
+  }
+
+  // ── Canvas ──────────────────────────────────────────────────────────────
+
+  /// The Spotify track that is [title] by [artist] (the web player's own search), or null.
+  Future<String?> findTrack(String title, String artist, {Duration? duration}) async {
+    final r = await _query('searchSuggestions', {
+      'query': '$artist $title'.trim(),
+      'limit': 10,
+      'numberOfTopResults': 10,
+      'offset': 0,
+      'includeAuthors': false,
+      'includeAlbumPreReleases': false,
+      'includeEpisodeContentRatingsV2': false,
+    }, optional: true);
+    return bestTrack(tracksIn(r), title, artist, duration: duration);
+  }
+
+  /// Every track named in a search answer, wherever the answer puts it: uri, name, artists, length.
+  @visibleForTesting
+  static List<({String uri, String name, List<String> artists, Duration? duration})> tracksIn(Object? node) {
+    final out = <({String uri, String name, List<String> artists, Duration? duration})>[];
+    final seen = <String>{};
+    void walk(Object? n) {
+      if (n is List) {
+        for (final e in n) {
+          walk(e);
+        }
+      } else if (n is Map) {
+        final uri = n['uri'];
+        if (uri is String && uri.startsWith('spotify:track:') && n['name'] is String && seen.add(uri)) {
+          final artists = [
+            for (final a in (_at(n, const ['artists', 'items']) as List? ?? const []).whereType<Map>())
+              if (_at(a, const ['profile', 'name']) case final String name) name,
+          ];
+          final ms =
+              _at(n, const ['duration', 'totalMilliseconds']) ?? _at(n, const ['trackDuration', 'totalMilliseconds']);
+          out.add((
+            uri: uri,
+            name: n['name'] as String,
+            artists: artists,
+            duration: ms is int ? Duration(milliseconds: ms) : null,
+          ));
+        }
+        for (final v in n.values) {
+          walk(v);
+        }
+      }
+    }
+
+    walk(node);
+    return out;
+  }
+
+  /// The candidate that is the same song: its name holds the title (or the other way round), one of its artists
+  /// is in [artist], and its length (when both are known) is within ten seconds.
+  @visibleForTesting
+  static String? bestTrack(
+    List<({String uri, String name, List<String> artists, Duration? duration})> found,
+    String title,
+    String artist, {
+    Duration? duration,
+  }) {
+    String norm(String s) => s
+        .toLowerCase()
+        .replaceAll(RegExp(r'\(.*?\)|\[.*?\]|feat\..*|ft\..*'), '')
+        .replaceAll(RegExp(r'[^\p{L}\p{N}]+', unicode: true), ' ')
+        .trim();
+    final t = norm(title), a = norm(artist);
+    for (final f in found) {
+      final n = norm(f.name);
+      if (n.isEmpty || !(n.contains(t) || t.contains(n))) continue;
+      if (f.artists.isNotEmpty && !f.artists.any((x) => a.contains(norm(x)) || norm(x).contains(a))) continue;
+      if (duration != null && f.duration != null && (f.duration! - duration).abs() > const Duration(seconds: 10)) {
+        continue;
+      }
+      return f.uri;
+    }
+    return null;
+  }
+
+  /// The looping video Spotify shows with [trackUri] (its Canvas), or null when it has none, or only a still.
+  Future<Uri?> canvasUrl(String trackUri) async {
+    final r = await _query('canvas', {'trackUri': trackUri}, optional: true);
+    return canvasIn(r);
+  }
+
+  @visibleForTesting
+  static Uri? canvasIn(Object? answer) {
+    final c = _at(answer, const ['data', 'trackUnion', 'canvas']);
+    if (c is! Map || c['url'] is! String) return null;
+    final url = Uri.tryParse(c['url'] as String);
+    final type = '${c['type'] ?? ''}'.toUpperCase();
+    if (url == null || !url.hasScheme || type.contains('IMAGE') || type.contains('GIF')) return null;
+    return url;
   }
 
   /// Runs a persisted query and returns the decoded body. With [optional], a

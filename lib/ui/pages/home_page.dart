@@ -8,12 +8,14 @@ import '../../services/language.dart';
 import '../../services/layout_prefs.dart';
 import '../../services/player_controller.dart';
 import '../../services/youtube_music_account.dart';
+import '../debug_switches.dart';
 import '../shell_scope.dart';
 import '../theme.dart';
 import '../widgets/controls.dart';
 import '../widgets/page_scaffold.dart';
 import '../widgets/shelf.dart';
 import '../widgets/streak_badge.dart';
+import '../widgets/track_row.dart' show openArtist;
 import 'downloads_page.dart';
 import 'youtube_music_page.dart';
 import '../widgets/menus.dart';
@@ -193,7 +195,7 @@ class HomePage extends StatelessWidget {
               title: a.title,
               subtitle: tr.artist,
               circle: true,
-              onTap: () => shell.openCollection(a),
+              onTap: openHomeArtist(context, c, a, shell: shell),
               onPlay: () => c.playCollection(a),
             );
           }),
@@ -274,6 +276,34 @@ class HomePage extends StatelessWidget {
   Widget _shelf(String title, int count, Widget Function(int i) card, {VoidCallback? onShowAll}) => SliverToBoxAdapter(
     child: Shelf.builder(title: title, count: count, card: card, onShowAll: onShowAll),
   );
+}
+
+/// The song Home opens [artist] through: one of theirs that came from YouTube Music (a download remembers its
+/// video), so the card leads to their page there. Best is one that names them first and knows their channel;
+/// then one that names them first (the channel is looked up by name); then any (they are a featured artist).
+/// Null when every song of theirs is a file of the person's own.
+@visibleForTesting
+Track? youtubeSongOf(Collection artist) {
+  Track? first, any;
+  for (final t in artist.tracks) {
+    if (!t.isRemote && !t.isDownload) continue;
+    any ??= t;
+    if (t.artists.firstOrNull != artist.title) continue;
+    if (t.artistId != null) return t;
+    first ??= t;
+  }
+  return first ?? any;
+}
+
+/// What a tap on [artist] in Home's Artists shelf does. An artist with even one song from YouTube Music opens
+/// their YouTube Music page (albums, singles, About), not the library's page holding only what was downloaded;
+/// an artist known from the person's own files alone opens the library's page, the only one there is.
+/// `RIFLAY_LOCAL_HOME_ARTISTS` opens the library's page for all of them, as before.
+VoidCallback openHomeArtist(BuildContext host, PlayerController c, Collection artist, {ShellScope? shell}) {
+  final navigation = shell ?? ShellScope.of(host);
+  final song = DebugSwitches.localHomeArtists ? null : youtubeSongOf(artist);
+  final open = song == null ? null : openArtist(host, c, song, shell: navigation, name: artist.title);
+  return open ?? () => navigation.openCollection(artist);
 }
 
 /// Keeps a most-recent-first shelf ("Recently played") from reshuffling under the pointer: playing a card moved it

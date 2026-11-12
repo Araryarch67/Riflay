@@ -62,6 +62,7 @@ class MainActivity : AudioServiceActivity() {
         // Not disposed with the activity: it feeds the DAC while the music plays on without it.
         DirectUsb.attach(applicationContext, flutterEngine.dartExecutor.binaryMessenger)
         PowerControl(applicationContext, flutterEngine.dartExecutor.binaryMessenger)
+        AndroidOutput(applicationContext, flutterEngine.dartExecutor.binaryMessenger)
         // The process ends with the engine: mpv players left without Dart crash on their next event.
         EngineEnd.attach(applicationContext, flutterEngine)
         appUpdater = AppUpdater(this, flutterEngine.dartExecutor.binaryMessenger)

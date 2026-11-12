@@ -21,8 +21,10 @@ class VideoAlign {
   bool get none => offset.inMilliseconds.abs() < 60 && (rate - 1).abs() < 0.0005;
 
   Map<String, Object> toJson() => {'o': offset.inMilliseconds, 'r': rate};
-  static VideoAlign fromJson(Map<String, dynamic> j) =>
-      VideoAlign(offset: Duration(milliseconds: (j['o'] as num).toInt()), rate: (j['r'] as num).toDouble());
+  static VideoAlign fromJson(Map<String, dynamic> j) => VideoAlign(
+    offset: Duration(milliseconds: (j['o'] as num).toInt()),
+    rate: (j['r'] as num).toDouble(),
+  );
 
   @override
   String toString() => '${offset.inMilliseconds} ms × $rate';
@@ -43,7 +45,6 @@ abstract final class VideoAlignment {
   static const _window = 2000; // 20 s of 10 ms steps
   static const _maxLag = 300; // ±3 s
   static const _starts = [400, 2000, 3600, 5200];
-
 
   static const _key = 'videoAlign.v1';
   static Map<String, dynamic>? _saved;
@@ -177,7 +178,10 @@ abstract final class VideoAlignment {
       final (a, b) = _line(kept);
       if (b.abs() > 0.01) continue;
       if (kept.every((p) => (p.$2 - (a + b * p.$1)).abs() <= 6)) {
-        return VideoAlign(offset: Duration(milliseconds: (a * 10).round()), rate: 1 + b);
+        return VideoAlign(
+          offset: Duration(milliseconds: (a * 10).round()),
+          rate: 1 + b,
+        );
       }
     }
     return null;

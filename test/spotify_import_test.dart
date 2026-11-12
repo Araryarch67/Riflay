@@ -90,6 +90,10 @@ class FakeLibrary implements SpotifyLibraryClient {
   void close() {}
   @override
   Future<SpotifyAuth> Function({bool force}) get auth => throw UnimplementedError();
+  @override
+  Future<String?> findTrack(String title, String artist, {Duration? duration}) async => null;
+  @override
+  Future<Uri?> canvasUrl(String trackUri) async => null;
 }
 
 class FakeAccount extends SpotifyAccount {

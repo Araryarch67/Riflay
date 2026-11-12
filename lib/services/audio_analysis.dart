@@ -9,6 +9,7 @@ import 'package:path_provider/path_provider.dart';
 
 import '../models/track.dart';
 import 'audio_analysis_core.dart';
+import 'audio_engine.dart';
 import 'pcm_decoder.dart';
 import 'youtube_stream.dart';
 
@@ -26,6 +27,9 @@ abstract final class AudioAnalysis {
   static Future<void>? _loading;
   static final _measuring = <String, Future<AudioReport?>>{};
   static final _spectrograms = <String, AudioReport>{}; // the last few, with their pictures
+
+  /// Saved reports from before the bit-depth check, by key: the lossless check measures these again.
+  static final _withoutBits = <String>{};
 
   /// The library scan's progress: songs done and songs to do; null when not scanning.
   static final scan = ValueNotifier<(int, int)?>(null);
@@ -56,6 +60,7 @@ abstract final class AudioAnalysis {
       if (f.existsSync()) {
         for (final MapEntry(:key, :value) in (jsonDecode(await f.readAsString()) as Map<String, dynamic>).entries) {
           saved[key] = AudioReport.fromJson(value as Map<String, dynamic>);
+          if (AudioReport.lacksBits(value)) _withoutBits.add(key);
         }
       }
     } catch (e) {
@@ -104,6 +109,7 @@ abstract final class AudioAnalysis {
     bool spectrogram = false,
     bool streams = false,
     bool waveform = false,
+    bool fresh = false,
   }) async {
     if (!supported) return null;
     var path = fileOf(track);
@@ -120,7 +126,8 @@ abstract final class AudioAnalysis {
     if (key == null || path == null) return null;
     if (spectrogram) {
       if (_spectrograms[key] case final shown?) return shown;
-    } else if (_saved![key] case final known? when !waveform || known.waveform != null) {
+    } else if (_saved![key] case final known?
+        when (!waveform || known.waveform != null) && !(fresh && _withoutBits.contains(key))) {
       // Kept from before the waveform was measured too: measured again for it.
       return known;
     }
@@ -129,6 +136,7 @@ abstract final class AudioAnalysis {
       final r = await measuring;
       if (r != null) {
         _saved![key] = r;
+        _withoutBits.remove(key);
         _save();
         if (spectrogram) {
           _spectrograms[key] = r;
@@ -144,19 +152,20 @@ abstract final class AudioAnalysis {
   }
 
   /// Measures every song of [tracks] on this device not measured yet, one at a time, until done or [stopScan].
-  static Future<void> scanAll(List<Track> tracks) async {
+  /// With [bits], songs measured before the bit-depth check are measured again (the lossless check needs it).
+  static Future<void> scanAll(List<Track> tracks, {bool bits = false}) async {
     if (scan.value != null || !supported) return;
     await load();
     final todo = [
       for (final t in tracks)
-        if (fileOf(t) case final path? when savedFor(path) == null) t,
+        if (fileOf(t) case final path? when _needsMeasuring(path, bits: bits)) t,
     ];
     _stopScan = false;
     scan.value = (0, todo.length);
     try {
       for (var i = 0; i < todo.length && !_stopScan; i++) {
         try {
-          await of(todo[i]);
+          await of(todo[i], fresh: bits);
         } catch (e) {
           debugPrint('Audio analysis: ${todo[i].title}: $e');
         }
@@ -166,6 +175,26 @@ abstract final class AudioAnalysis {
       scan.value = null;
     }
   }
+
+  static bool _needsMeasuring(String path, {required bool bits}) {
+    final key = _key(path);
+    if (key == null) return false;
+    return _saved?[key] == null || (bits && _withoutBits.contains(key));
+  }
+
+  /// How many of [tracks] are measured well enough for the lossless check (bit depth included).
+  static int checkedOf(List<Track> tracks) => tracks.where((t) {
+    final path = fileOf(t);
+    return path != null && !_needsMeasuring(path, bits: true);
+  }).length;
+
+  /// The songs of [tracks] whose measurements say they aren't the lossless (or hi-res) files they claim to be,
+  /// with what was found.
+  static List<(Track, AudioReport)> suspiciousOf(List<Track> tracks) => [
+    for (final t in tracks)
+      if (fileOf(t) case final path?)
+        if (savedFor(path) case final r? when r.suspicious) (t, r),
+  ];
 
   static void stopScan() => _stopScan = true;
 
@@ -179,6 +208,7 @@ abstract final class AudioAnalysis {
   static const _chunksInFlight = 8;
 
   static Future<AudioReport?> _measure(String path, {required bool spectrogram}) async {
+    final stored = await AudioEngine.sourceBitsOf(path);
     final pcm = await MpvPcm.decode(PcmInput.file(path), maxRate: 192000, bits: 32);
     final results = ReceivePort();
     final worker = await Isolate.spawn(_work, (results.sendPort, pcm.rate, pcm.channels, spectrogram));
@@ -203,7 +233,7 @@ abstract final class AudioAnalysis {
           queued.clear();
           if (ended) port.send(null);
         case (Map<String, dynamic> report, TransferableTypedData? picture, int columns):
-          var r = AudioReport.fromJson(report);
+          var r = AudioReport.fromJson(report).withStoredBits(stored);
           if (picture != null) r = r.withSpectrogram(picture.materialize().asUint8List(), columns);
           answer.complete(r);
         case String error:
@@ -258,10 +288,15 @@ abstract final class AudioAnalysis {
         leftover = Uint8List.fromList(bytes.sublist(whole));
         final ints = bytes.buffer.asByteData(bytes.offsetInBytes, whole);
         final samples = Float64List(whole ~/ 4);
+        var mask = 0;
         for (var i = 0; i < samples.length; i++) {
-          samples[i] = ints.getInt32(i * 4, Endian.little) / 2147483648;
+          final v = ints.getInt32(i * 4, Endian.little);
+          mask |= v;
+          samples[i] = v / 2147483648;
         }
-        analyzer.add(samples);
+        analyzer
+          ..addBits(mask)
+          ..add(samples);
         out.send(true);
       } catch (e) {
         out.send('$e');

@@ -14,6 +14,7 @@ import '../../services/listen_together/listen_together.dart';
 import '../../services/metadata.dart';
 import '../../services/player_controller.dart';
 import '../../services/soundcloud.dart' show SoundcloudKind;
+import '../../services/video_mode.dart';
 import '../../services/youtube_stream.dart';
 import '../download_editor.dart';
 import '../download_options.dart';
@@ -375,13 +376,29 @@ class TrackMenuButton extends StatelessWidget {
   }
 
   /// Queues [tracks] for download. A plain tap follows Settings (and asks only if
-  /// "Ask every time" is on); [force] always asks, for "Download as…".
-  static Future<void> download(BuildContext host, PlayerController c, List<Track> tracks, {bool force = false}) async {
+  /// "Ask every time" is on); [force] always asks, for "Download as…". [withVideo] is "Download with MV": the
+  /// song's music video is saved beside it too.
+  static Future<void> download(
+    BuildContext host,
+    PlayerController c,
+    List<Track> tracks, {
+    bool force = false,
+    bool withVideo = false,
+  }) async {
     final one = tracks.length == 1 ? tracks.first : null;
     final choice = await chooseDownload(host, force: force, videoId: one?.videoId, track: one);
     if (choice == null) return;
-    c.youtube.enqueueTracks(tracks, choice: choice);
+    c.youtube.enqueueTracks(tracks, choice: choice, withVideo: withVideo);
   }
+
+  /// Whether "Download with MV" is offered for [track]: a streamed song not downloaded yet that is known to have a
+  /// music video (asked with [VideoMode.lookUp]), in a build with downloads and Video mode, with Video mode on.
+  static bool offersMvDownload(PlayerController c, Track track) =>
+      Features.downloads &&
+      Features.videoMode &&
+      track.isRemote &&
+      c.downloadedCopy(track) == null &&
+      VideoMode.instance.videoOf(track) != null;
 
   /// The web build: [track]'s audio as a browser download (see [Features.saveToDevice]).
   static void saveToDevice(BuildContext host, Track track) {
@@ -536,6 +553,12 @@ class TrackMenuButton extends StatelessWidget {
                   onTap: () => download(host, c, [track], force: true),
                   child: MenuRow(leading: const Icon(Icons.tune_rounded), title: Text(tr.downloadAs)),
                 ),
+                if (Features.videoMode)
+                  _DownloadWithMvEntry(
+                    track: track,
+                    controller: c,
+                    onTap: () => download(host, c, [track], withVideo: true),
+                  ),
               ],
               if (track.isRemote && Features.saveToDevice && !hide.contains(TrackMenuEntry.download))
                 PopupMenuItem(
@@ -591,6 +614,46 @@ class TrackMenuButton extends StatelessWidget {
       ),
     );
   }
+}
+
+/// "Download with MV" in a song's menu. Only songs with a music video have it, and whether one does is asked as the
+/// menu opens (the request the download choices already make), so the entry takes no room until the answer is yes.
+class _DownloadWithMvEntry extends PopupMenuEntry<void> {
+  const _DownloadWithMvEntry({required this.track, required this.controller, required this.onTap});
+
+  final Track track;
+  final PlayerController controller;
+  final VoidCallback onTap;
+
+  @override
+  double get height => kMinInteractiveDimension;
+
+  @override
+  bool represents(void value) => false;
+
+  @override
+  State<_DownloadWithMvEntry> createState() => _DownloadWithMvEntryState();
+}
+
+class _DownloadWithMvEntryState extends State<_DownloadWithMvEntry> {
+  @override
+  void initState() {
+    super.initState();
+    VideoMode.instance
+      ..follow(widget.controller)
+      ..lookUp(widget.track);
+  }
+
+  @override
+  Widget build(BuildContext context) => ListenableBuilder(
+    listenable: VideoMode.instance,
+    builder: (context, _) => TrackMenuButton.offersMvDownload(widget.controller, widget.track)
+        ? PopupMenuItem<void>(
+            onTap: widget.onTap,
+            child: MenuRow(leading: const Icon(Icons.video_library_outlined), title: Text(tr.downloadWithMv)),
+          )
+        : const SizedBox.shrink(),
+  );
 }
 
 /// Asks first, then deletes a downloaded song: out of the library and off this device.

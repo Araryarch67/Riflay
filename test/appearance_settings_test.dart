@@ -45,7 +45,9 @@ void main() {
     await open(tester, width: 360);
     final first = tester.getRect(find.bySemanticsLabel(RegExp('^Default theme')));
     final next = find.bySemanticsLabel(RegExp('^Matugen theme'));
-    final second = tester.getRect(next.evaluate().isNotEmpty ? next : find.bySemanticsLabel(RegExp('^Monochrome theme')));
+    final second = tester.getRect(
+      next.evaluate().isNotEmpty ? next : find.bySemanticsLabel(RegExp('^Monochrome theme')),
+    );
     expect(second.top, first.top);
     expect(second.right, lessThanOrEqualTo(360 - 16 + 0.5));
     expect(tester.takeException(), isNull);

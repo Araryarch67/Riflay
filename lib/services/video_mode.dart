@@ -16,9 +16,11 @@ import 'beta_features.dart';
 import 'layout_prefs.dart';
 import 'player_controller.dart';
 import 'video_alignment.dart';
+import 'mv_sidecar.dart';
 import 'video_download.dart';
 import 'video_engine.dart';
 import 'youtube_stream.dart';
+import 'spotify_canvas.dart';
 import 'ytmusic_web.dart';
 import 'language.dart';
 
@@ -152,6 +154,10 @@ class VideoMode extends ChangeNotifier with WidgetsBindingObserver {
 
   /// Starts following [c]'s current song. Called by the views; once is enough.
   void follow(PlayerController c) {
+    SpotifyCanvas.instance
+      ..load().ignore()
+      ..removeListener(_changed)
+      ..addListener(_changed);
     if (identical(_c, c)) return;
     _c?.removeListener(_changed);
     if (_c == null) WidgetsBinding.instance.addObserver(this);
@@ -207,14 +213,22 @@ class VideoMode extends ChangeNotifier with WidgetsBindingObserver {
   final _found = <String, MusicVideo?>{};
   final _asking = <String>{};
 
-  /// The downloaded music video that [track] is playing from, if it is: the file itself, or the downloaded copy of
-  /// a streamed song. Only that file, so the picture is the very recording the sound comes from.
+  /// The downloaded music video of [track], if it has one: the file it plays from when that is a video (itself, or
+  /// the downloaded copy of a streamed song), so the picture is the very recording the sound comes from; or the
+  /// video "Download with MV" saved beside the song's file ([MvSidecar]).
   File? localVideoOf(Track? track) {
     final c = _c;
     if (track == null || c == null) return null;
     final path = track.isRemote ? c.downloadedCopy(track)?.path : track.path;
-    if (path == null || !isVideoFile(path)) return null;
-    return File(path);
+    if (path == null) return null;
+    if (isVideoFile(path)) return File(path);
+    return MvSidecar.of(path)?.file;
+  }
+
+  /// The music video "Download with MV" saved beside [track]'s file, with where the song's parts are in it.
+  MusicVideo? _savedVideoOf(Track track) {
+    final path = track.isRemote ? _c?.downloadedCopy(track)?.path : track.path;
+    return path == null || isVideoFile(path) ? null : MvSidecar.of(path)?.video;
   }
 
   /// The music video of [track], when it has one and this device can show it. A downloaded one is there
@@ -222,7 +236,14 @@ class VideoMode extends ChangeNotifier with WidgetsBindingObserver {
   MusicVideo? videoOf(Track? track) {
     if (!_canDecode || !BetaFeatures.instance.isOn(BetaFeature.videoMode)) return null;
     if (localVideoOf(track) != null) {
+      // Beside the song: another recording than the sound, on the timeline saved with it.
+      final saved = track == null ? null : _savedVideoOf(track);
+      if (saved != null) return saved;
       return MusicVideo(videoId: track?.videoId ?? youtubeVideoIdOf(track?.sourceUrl) ?? track!.id);
+    }
+    // Spotify's Canvas, when turned on and the song has one: in place of the music video.
+    if (SpotifyCanvas.instance.of(track) case final canvas?) {
+      return MusicVideo(videoId: 'canvas:${track!.id}', url: canvas);
     }
     return _found[track?.videoId];
   }
@@ -230,6 +251,16 @@ class VideoMode extends ChangeNotifier with WidgetsBindingObserver {
   /// Asks YouTube Music once whether [track] has a video (one small request,
   /// made when a Now Playing view shows the song; no video data).
   void lookUp(Track? track) {
+    if (_canDecode && BetaFeatures.instance.isOn(BetaFeature.videoMode)) {
+      SpotifyCanvas.instance.lookUp(
+        track,
+        done: () {
+          if (_disposed) return;
+          _sync();
+          notifyListeners();
+        },
+      );
+    }
     final id = track?.videoId;
     final c = _c;
     if (id == null ||
@@ -342,7 +373,8 @@ class VideoMode extends ChangeNotifier with WidgetsBindingObserver {
     // Off now: a video held still in a window still on screen read as frozen, and coming back it sought and fetched
     // again for seconds. It plays on behind other windows, as a browser's does; minimized or hidden it stops ([_away]).
     // `RIFLAY_VIDEO_HOLDS_BEHIND` holds it again.
-    final unfocused = DebugSwitches.videoHoldsBehind &&
+    final unfocused =
+        DebugSwitches.videoHoldsBehind &&
         _computer &&
         (Host.isLinux || _native == null) &&
         state == AppLifecycleState.inactive;
@@ -715,8 +747,15 @@ vec4 hook() {
       }
 
       final at = v.videoTimeAt(_c?.position ?? Duration.zero) ?? Duration.zero;
-      final local = localVideoOf(_c?.currentTrack);
-      if (local != null) {
+      final local = v.loops ? null : localVideoOf(_c?.currentTrack);
+      if (v.url case final url?) {
+        // A Canvas: a few seconds that loop, whatever the song's position.
+        if (!foreground && !await YoutubeStream.prefetchAllowed()) throw StateError('metered connection');
+        if (!identical(player, _player)) return;
+        await player.setProperty('loop-file', 'inf');
+        debugPrint('Video mode: Canvas ${v.videoId}');
+        await open(url.toString(), Duration.zero);
+      } else if (local != null) {
         // The downloaded file: no network, and the size it was saved at.
         debugPrint('Video mode: ${v.videoId} from ${local.path}');
         await open(own != null ? local.path : Uri.file(local.path).toString(), at);
@@ -847,6 +886,12 @@ vec4 hook() {
     // No seeks while hidden: those decode/network loads used to compete with the opening lyrics page.
     if (_wanted == null) {
       if (player.playing) player.pause().ignore();
+      return;
+    }
+    if (v.loops) {
+      // A Canvas plays while the song does; it has no place in the song to keep.
+      final play = c.isPlaying && !_unfocused;
+      if (play != player.playing) (play ? player.play() : player.pause()).ignore();
       return;
     }
     final target = v.videoTimeAt(c.position);

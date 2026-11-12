@@ -19,7 +19,10 @@ abstract final class Locations {
   static const wrap = 'wrap';
 
   static String settingsTopic(String name) => 'settings:$name';
-  static String collection(Collection c) => 'collection:${c.kind.name}:${c.title}';
+
+  /// A folder goes by its path: two music folders can share a name.
+  static String collection(Collection c) =>
+      'collection:${c.kind.name}:${c.kind == CollectionKind.folder ? c.id ?? c.title : c.title}';
   static String remotePlaylist(String id) => 'playlist:$id';
 }
 

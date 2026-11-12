@@ -311,6 +311,9 @@ enum CollectionKind {
 
   /// A built-in list worked out from the library and the listening history (Most played…); not editable.
   smart,
+
+  /// A music folder the person added (Library › Local): the songs under it. [Collection.id] is its path.
+  folder,
   artist;
 
   String get label => switch (this) {
@@ -321,6 +324,7 @@ enum CollectionKind {
     remote => tr.playlist,
     remoteArtist => tr.artist,
     smart => tr.playlist,
+    folder => tr.folder,
     artist => tr.artist,
   };
 }

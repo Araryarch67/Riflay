@@ -57,7 +57,19 @@ class VideoSegment {
 /// (YouTube Music's OMV / UGC), or its video counterpart, with the parts both
 /// share.
 class MusicVideo {
-  const MusicVideo({required this.videoId, this.segments = const [], this.offset = Duration.zero, this.rate = 1});
+  const MusicVideo({
+    required this.videoId,
+    this.segments = const [],
+    this.offset = Duration.zero,
+    this.rate = 1,
+    this.url,
+  });
+
+  /// A video played from this address, looping on its own instead of following the song (Spotify's Canvas).
+  final Uri? url;
+
+  /// Loops by itself ([url]): no seeking to the song.
+  bool get loops => url != null;
 
   final String videoId;
 

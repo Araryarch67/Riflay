@@ -5,7 +5,8 @@ import 'package:flutter/material.dart';
 
 import '../../models/track.dart';
 import '../../platform/features.dart';
-import '../../services/extensions/extension_store.dart';
+import '../../services/sources/internet_archive.dart';
+import '../../services/sources/music_sources.dart';
 import '../../services/language.dart';
 import '../../services/player_controller.dart';
 import '../../services/soundcloud.dart' show SoundcloudCollection;
@@ -17,7 +18,7 @@ import '../theme.dart';
 import '../widgets/controls.dart';
 import '../widgets/page_scaffold.dart';
 import '../widgets/track_row.dart';
-import 'search/extension_results.dart';
+import 'search/free_sources.dart';
 import 'search/local_results.dart';
 import 'search/remote_results.dart';
 import 'search/search_box.dart';
@@ -57,8 +58,7 @@ class _SearchPageState extends State<SearchPage> {
   @override
   void initState() {
     super.initState();
-    // Which extensions search is known once the store has loaded; a search already out stays as it went.
-    ExtensionStore.instance.load().catchError((Object e) => debugPrint('Extensions not loaded: $e'));
+    MusicSources.instance.load().ignore();
     if (Features.soundcloud) {
       SearchSource.current.addListener(_followSource);
       SearchSource.load().ignore();
@@ -101,8 +101,8 @@ class _SearchPageState extends State<SearchPage> {
   WebResultKind? _filter;
   Future<List<RemotePlaylist>>? _only;
 
-  /// What the enabled SpotiFLAC extensions answer, on "All".
-  List<ExtensionSearch> _extensions = const [];
+  /// Internet Archive recordings with FLAC files, on "All" ([MusicSources.archive]).
+  Future<List<ArchiveItem>>? _archive;
 
   /// "Videos": plain YouTube instead of YouTube Music songs.
   bool _videos = false;
@@ -158,7 +158,7 @@ class _SearchPageState extends State<SearchPage> {
       setState(() {
         _youtube = _all = _only = _top = null;
         _soundcloud = _soundcloudShelves = null;
-        _extensions = const [];
+        _archive = null;
         _videoTracks = const [];
         _videoLoading = false;
       });
@@ -197,7 +197,7 @@ class _SearchPageState extends State<SearchPage> {
         : null;
     if (_onSoundcloud) {
       _youtube = _all = _only = _top = null;
-      _extensions = const [];
+      _archive = null;
       return;
     }
     if (_videos) return _searchVideos(q);
@@ -205,8 +205,16 @@ class _SearchPageState extends State<SearchPage> {
     _all = c.ytMusic.search(q);
     _top = topAndSongsFuture(_all, _youtube);
     _only = _filter == null || _filter == WebResultKind.song ? null : c.ytMusic.searchOnly(q, _filter!);
-    _extensions = _filter == null && Features.extensions ? startExtensionSearches(q) : const [];
+    _archive = _filter == null ? _searchArchive(q) : null;
   }
+
+  /// Never fails: an archive that can't be reached shows nothing.
+  static Future<List<ArchiveItem>>? _searchArchive(String q) => MusicSources.instance.archive
+      ? InternetArchive.instance.search(q).catchError((Object e) {
+          debugPrint('Internet Archive search: $e');
+          return const <ArchiveItem>[];
+        })
+      : null;
 
   void _searchVideos(String q) {
     final run = ++_videoRun;
@@ -289,9 +297,7 @@ class _SearchPageState extends State<SearchPage> {
       _only = f == null || f == WebResultKind.song || q.length < 2 || _onSoundcloud
           ? null
           : PlayerScope.read(context).ytMusic.searchOnly(q, f);
-      if (f == null && q.length >= 2 && Features.extensions && _extensions.isEmpty) {
-        _extensions = startExtensionSearches(q);
-      }
+      if (f == null && q.length >= 2 && _archive == null) _archive = _searchArchive(q);
     });
   }
 
@@ -434,6 +440,11 @@ class _SearchPageState extends State<SearchPage> {
               ),
             ),
           ),
+          ListenableBuilder(
+            listenable: MusicSources.instance,
+            builder: (context, _) =>
+                MusicSources.instance.radioParadise ? const RadioParadiseShelf() : const SliverToBoxAdapter(),
+          ),
           if (artists.isNotEmpty) ...[
             SliverToBoxAdapter(child: SectionTitle(tr.browseArtists)),
             SliverPadding(
@@ -478,7 +489,7 @@ class _SearchPageState extends State<SearchPage> {
         ] else ...[
           if (searching) TopAndSongs(future: _top),
           ..._library(c, results, shell),
-          if (searching && _extensions.isNotEmpty) ExtensionResults(searches: _extensions),
+          if (searching && _archive != null) ArchiveResults(future: _archive!),
           if (searching) RemoteShelves(future: _all),
           if (artists.isNotEmpty && results.isNotEmpty)
             libraryShelf(tr.yourArtists, [

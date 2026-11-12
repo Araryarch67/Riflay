@@ -29,8 +29,7 @@ void main() {
     ),
   );
 
-  double opacity(WidgetTester tester) =>
-      tester.widget<AnimatedOpacity>(find.byType(AnimatedOpacity)).opacity;
+  double opacity(WidgetTester tester) => tester.widget<AnimatedOpacity>(find.byType(AnimatedOpacity)).opacity;
   Offset slide(WidgetTester tester) => tester.widget<AnimatedSlide>(find.byType(AnimatedSlide)).offset;
 
   testWidgets('off: always shown', (tester) async {

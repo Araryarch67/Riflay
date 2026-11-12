@@ -5,6 +5,7 @@ import 'package:path/path.dart' as p;
 import '../models/track.dart';
 import '../platform/background.dart';
 import 'flac_convert.dart';
+import 'mv_sidecar.dart';
 
 /// Songs that are the same recording in more than one file: a FLAC and an MP3 of it, a YouTube download and
 /// the file the person already had. Everything here is a pure rule over a list of songs (sizes come in as
@@ -395,6 +396,7 @@ Future<({int deleted, int failed})> deletePlannedFiles(RemovalPlan plan) async {
       if (FileSystemEntity.typeSync(path, followLinks: false) != FileSystemEntityType.file) continue;
       await File(path).delete();
       deleted++;
+      await MvSidecar.delete(path);
     } on FileSystemException {
       failed++;
     }

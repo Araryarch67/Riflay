@@ -95,6 +95,7 @@ class CollectionPage extends StatelessWidget {
           CollectionKind.playlist => c.playlistById(collection.id),
           CollectionKind.artist => c.artistNamed(collection.title),
           CollectionKind.remoteArtist => null,
+          CollectionKind.folder => c.folderAt(collection.id),
           CollectionKind.album => c.albums.where((a) => a.title == collection.title).firstOrNull,
         } ??
         collection;

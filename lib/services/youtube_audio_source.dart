@@ -63,6 +63,9 @@ class YoutubeAudioSource extends StreamAudioSource {
     for (final id in ids) ...[id, 'aac:$id'],
   });
   static Future<void> clearCache() => _cache.clear();
+
+  /// This session's folder of streamed songs, which Clear cache leaves to the player.
+  static Future<String?> cacheFolder() => _cache.folderPath();
   @visibleForTesting
   static bool cacheCompleteFor(String id) => _cache.find(id)?.complete ?? false;
 

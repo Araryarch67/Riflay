@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'dart:ui' show ImageFilter, lerpDouble;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:liquid_glass_renderer/liquid_glass_renderer.dart';
 
 import '../../services/language.dart';
@@ -13,6 +14,7 @@ import '../../services/player_controller.dart';
 import '../debug_switches.dart';
 import '../pages/search/search_input.dart';
 import '../player/mini_player.dart';
+import '../player/player_glass.dart';
 import '../theme.dart';
 
 /// The phone's tabs. Settings is one of them, so no page needs a gear of its own;
@@ -539,19 +541,24 @@ class _GlassBarState extends State<_GlassBar> with TickerProviderStateMixin {
                   maxWidth: full,
                   child: Padding(
                     padding: const EdgeInsets.all(4),
-                    child: Row(
-                      children: [
-                        for (final i in shown)
-                          Expanded(
-                            flex: flex(i),
-                            child: _TabButton(
-                              info: i,
-                              selected: widget.tab == i.tab,
-                              onTap: () => widget.onSelect(i.tab),
-                              child: _Capsule(info: i, selected: widget.tab == i.tab),
+                    child: _SwipeTabs(
+                      tabs: [for (final i in shown) i.tab],
+                      tab: widget.tab,
+                      onSelect: widget.onSelect,
+                      child: Row(
+                        children: [
+                          for (final i in shown)
+                            Expanded(
+                              flex: flex(i),
+                              child: _TabButton(
+                                info: i,
+                                selected: widget.tab == i.tab,
+                                onTap: () => widget.onSelect(i.tab),
+                                child: _Capsule(info: i, selected: widget.tab == i.tab),
+                              ),
                             ),
-                          ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -728,15 +735,11 @@ class _GlassBarState extends State<_GlassBar> with TickerProviderStateMixin {
   /// [_gap] (as the mini player passes over the tabs).
   Widget _layer(BuildContext context, Widget child) {
     if (!_renderer) return child;
-    // The preset's own frost (4.5) leans on refraction for the look; FakeGlass (Android, desktop) has none and
-    // read almost clear. As frosted as the rest of the app's glass, and a little more tint to keep text legible.
-    final blur = Appearance.instance.glass ? Appearance.instance.blur.clamp(18.0, 40.0) : 24.0;
+    // Light frost and strong refraction ([riflayGlass]): where the shader runs (Impeller) the page bends behind the
+    // pills; the frosted fallback (no shader filters) keeps the rim light and a tint so text stays legible.
+    final blur = glassFrost();
     return LiquidGlassLayer(
-      settings: LiquidGlassSettings.ios27Regular(
-        brightness: AppColors.of(context).light ? Brightness.light : Brightness.dark,
-        frost: blur,
-        tintAmount: 0.4,
-      ),
+      settings: riflayGlass(brightness: AppColors.of(context).light ? Brightness.light : Brightness.dark, frost: blur),
       child: LiquidGlassBlendGroup(blend: _gap - 2, child: child),
     );
   }
@@ -773,23 +776,65 @@ Widget _tabRow(
   ValueChanged<PhoneTab> onSelect,
   Widget Function(_TabInfo info, bool selected) item, {
   bool wideSelected = false,
-}) => Material(
-  type: MaterialType.transparency,
-  child: Row(
-    children: [
-      for (final i in _shownTabs)
-        Expanded(
-          flex: wideSelected && tab == i.tab ? 2 : 1,
-          child: _TabButton(
-            info: i,
-            selected: tab == i.tab,
-            onTap: () => onSelect(i.tab),
-            child: item(i, tab == i.tab),
+}) => _SwipeTabs(
+  tabs: [for (final i in _shownTabs) i.tab],
+  tab: tab,
+  onSelect: onSelect,
+  child: Material(
+    type: MaterialType.transparency,
+    child: Row(
+      children: [
+        for (final i in _shownTabs)
+          Expanded(
+            flex: wideSelected && tab == i.tab ? 2 : 1,
+            child: _TabButton(
+              info: i,
+              selected: tab == i.tab,
+              onTap: () => onSelect(i.tab),
+              child: item(i, tab == i.tab),
+            ),
           ),
-        ),
-    ],
+      ],
+    ),
   ),
 );
+
+/// A finger sliding along the bar picks the tab under it as it goes, as on iOS: one light tick a tab. The tabs
+/// count as equal widths here (the open one is wider on screen), so the tab under the finger doesn't jump as the
+/// open one widens. `RIFLAY_NO_TAB_SWIPE` leaves only the taps.
+class _SwipeTabs extends StatelessWidget {
+  const _SwipeTabs({required this.tabs, required this.tab, required this.onSelect, required this.child});
+
+  final List<PhoneTab> tabs;
+  final PhoneTab tab;
+  final ValueChanged<PhoneTab> onSelect;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    if (DebugSwitches.noTabSwipe || tabs.length < 2) return child;
+    return LayoutBuilder(
+      builder: (context, box) {
+        var current = tab;
+        void at(Offset local) {
+          if (box.maxWidth <= 0) return;
+          final i = (local.dx / box.maxWidth * tabs.length).floor().clamp(0, tabs.length - 1);
+          if (tabs[i] == current) return;
+          current = tabs[i];
+          HapticFeedback.selectionClick();
+          onSelect(current);
+        }
+
+        return GestureDetector(
+          behavior: HitTestBehavior.translucent,
+          onHorizontalDragStart: (d) => current = tab,
+          onHorizontalDragUpdate: (d) => at(d.localPosition),
+          child: child,
+        );
+      },
+    );
+  }
+}
 
 /// The docked styles: flat, edge to edge, a hairline on top.
 class _DockedBar extends StatelessWidget {
@@ -834,7 +879,12 @@ class _DockedBar extends StatelessWidget {
   }
 }
 
-/// Floating and Capsule: a rounded bar on the raised surface, a soft shadow under it.
+/// How frosted the phone's glass is: about half the Appearance blur (or 10), so what is behind still reads; the
+/// refraction ([riflayGlass]) carries the look.
+double glassFrost() => (Appearance.instance.glass ? Appearance.instance.blur * 0.55 : 10.0).clamp(6.0, 20.0);
+
+/// Floating and Capsule: a rounded bar on the raised surface, a soft shadow under it; on Liquid glass under a
+/// Liquid preset's glass controls (Liquid Kawaii keeps its capsule).
 class _FloatingBar extends StatelessWidget {
   const _FloatingBar({required this.style, required this.tab, required this.onSelect});
 
@@ -845,19 +895,31 @@ class _FloatingBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final capsule = style == TabBarStyle.capsule;
-    return _RaisedSurface(
-      radius: LayoutPrefs.corner(capsule ? 32 : 22),
-      child: SizedBox(
-        height: capsule ? 60 : 64,
-        child: _tabRow(
-          tab,
-          onSelect,
-          (i, selected) =>
-              capsule ? _Capsule(info: i, selected: selected) : _IconOverLabel(info: i, selected: selected, pill: true),
-          wideSelected: capsule,
-        ),
+    final radius = LayoutPrefs.corner(capsule ? 32 : 22);
+    final bar = SizedBox(
+      height: capsule ? 60 : 64,
+      child: _tabRow(
+        tab,
+        onSelect,
+        (i, selected) =>
+            capsule ? _Capsule(info: i, selected: selected) : _IconOverLabel(info: i, selected: selected, pill: true),
+        wideSelected: capsule,
       ),
     );
+    if (LayoutPrefs.instance.playerGlassControls && !LayoutPrefs.lightweight) {
+      final colors = AppColors.of(context);
+      if (DebugSwitches.noGlassRenderer) {
+        return _LiquidGlass(shape: _PillShape(radius.topLeft.x), colors: colors, child: bar);
+      }
+      return LiquidGlassLayer(
+        settings: riflayGlass(brightness: colors.light ? Brightness.light : Brightness.dark, frost: glassFrost()),
+        child: LiquidGlass(
+          shape: LiquidRoundedSuperellipse(borderRadius: radius.topLeft.x),
+          child: Material(type: MaterialType.transparency, child: bar),
+        ),
+      );
+    }
+    return _RaisedSurface(radius: radius, child: bar);
   }
 }
 
@@ -1318,7 +1380,7 @@ class _LiquidGlass extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final blur = Appearance.instance.glass ? Appearance.instance.blur.clamp(18.0, 40.0) : 24.0;
+    final blur = glassFrost();
     return CustomPaint(
       painter: _GlassShadow(shape),
       child: RepaintBoundary(

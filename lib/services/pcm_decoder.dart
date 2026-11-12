@@ -69,6 +69,9 @@ abstract final class MpvPcm {
   /// own rate unless that is above it, and then it is brought down to the
   /// nearest standard rate (DSD's 352.8 kHz becomes 176.4 kHz).
   ///
+  /// [resampler] is libswresample's options for that conversion (`audio-swresample-o`), e.g. SoX's; mpv's
+  /// default otherwise.
+  ///
   /// Throws when mpv can't open [input] (within [openTimeout]).
   static Future<PcmStream> decode(
     PcmInput input, {
@@ -77,6 +80,7 @@ abstract final class MpvPcm {
     int? rate,
     int? maxRate,
     required int bits,
+    String? resampler,
     Duration openTimeout = const Duration(seconds: 20),
   }) async {
     assert(supported);
@@ -84,7 +88,16 @@ abstract final class MpvPcm {
     MediaKit.ensureInitialized();
     final session = _Session();
     try {
-      await session.open(input, start: start, end: end, rate: rate, maxRate: maxRate, bits: bits, timeout: openTimeout);
+      await session.open(
+        input,
+        start: start,
+        end: end,
+        rate: rate,
+        maxRate: maxRate,
+        bits: bits,
+        resampler: resampler,
+        timeout: openTimeout,
+      );
     } catch (_) {
       await session.stop();
       rethrow;
@@ -181,6 +194,7 @@ class _Session {
     required int? rate,
     required int? maxRate,
     required int bits,
+    required String? resampler,
     required Duration timeout,
   }) async {
     final dir = await MpvPcm._directory();
@@ -233,6 +247,7 @@ class _Session {
       'demuxer-max-back-bytes': '${1 << 20}',
       'sid': 'no',
       if (rate != null) 'audio-samplerate': '$rate',
+      'audio-swresample-o': ?resampler,
       if (rate == null && maxRate != null) 'af': MpvPcm.rateFilter(maxRate),
     };
     // Setting up the player is bounded too: the replies come from mpv, which may be wedged.

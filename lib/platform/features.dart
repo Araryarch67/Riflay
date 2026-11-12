@@ -67,9 +67,6 @@ abstract final class Features {
   /// Last.fm and ListenBrainz (their sign-ins and queue are kept in files; the proxy doesn't carry their hosts).
   static bool get scrobbling => !Host.isWeb;
 
-  /// SpotiFLAC extensions (their scripts run in an embedded JavaScript engine, which the web build doesn't have).
-  static bool get extensions => !Host.isWeb;
-
   /// SoundCloud as a second place to search and stream from. Its songs play through just_audio's loopback server
   /// (see `SoundcloudAudioSource`), which a browser doesn't have, and api-v2 sends no CORS headers.
   /// `RIFLAY_NO_SOUNDCLOUD` leaves it out everywhere.

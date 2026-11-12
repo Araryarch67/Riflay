@@ -1,8 +1,10 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 
 import '../../l10n/generated/app_localizations.dart';
 import '../../platform/features.dart';
 import '../../platform/host.dart';
+import '../../services/audio_analysis.dart';
 import '../../services/audio_engine.dart';
 import '../../services/beta_features.dart';
 import '../../services/device_setup.dart';
@@ -39,7 +41,7 @@ enum SettingsPlace {
   account(SettingsTopic.account),
   scrobbling(SettingsTopic.scrobbling),
   integrations(SettingsTopic.integrations),
-  extensions(SettingsTopic.extensions),
+  sources(SettingsTopic.sources),
   power(null),
   about(null);
 
@@ -211,6 +213,14 @@ abstract final class SettingsOptions {
       parent: 'virtualSpeakers',
       available: _native,
     ),
+    SettingsOption(
+      'surroundUpmix',
+      .dsp,
+      (t) => t.surroundUpmix,
+      find: (t) => t.kwSurroundUpmix,
+      parent: 'virtualSpeakers',
+      available: _native,
+    ),
     SettingsOption('crossfeed', .dsp, (t) => t.headphoneCrossfeed, find: (t) => t.kwCrossfeed),
     SettingsOption('crossfeedSoundstage', .dsp, (t) => t.crossfeedSoundstage, parent: 'crossfeed'),
     SettingsOption('mono', .dsp, (t) => t.monoAudio, subtitle: (t) => t.monoAudioSubtitle, find: (t) => t.kwMono),
@@ -275,6 +285,14 @@ abstract final class SettingsOptions {
       find: (t) => t.kwExclusiveMode,
       available: () => AudioEngine.hasExclusiveMode,
     ),
+    SettingsOption(
+      'passthrough',
+      .output,
+      (t) => t.passthrough,
+      subtitle: (t) => t.passthroughSubtitle,
+      find: (t) => t.kwPassthrough,
+      available: _native,
+    ),
     SettingsOption('sampleRate', .output, (t) => t.outputSampleRate, find: (t) => t.kwSampleRate),
     SettingsOption(
       'hqResampler',
@@ -290,6 +308,14 @@ abstract final class SettingsOptions {
       (t) => t.signalPath,
       subtitle: (t) => t.signalPathSubtitleExact,
       find: (t) => t.kwSignalPath,
+    ),
+    SettingsOption(
+      'losslessCheck',
+      .output,
+      (t) => t.losslessCheck,
+      subtitle: (t) => t.losslessCheckSubtitle,
+      find: (t) => t.kwLosslessCheck,
+      available: () => AudioAnalysis.supported,
     ),
     // Look & feel › Theme & colours
     SettingsOption(
@@ -957,7 +983,20 @@ abstract final class SettingsOptions {
       available: () => DiscordPresence.supported,
     ),
     SettingsOption('betterLyrics', .lyrics, (t) => t.betterLyricsKey, find: (t) => t.kwLyricsServices),
-    SettingsOption('repositories', .extensions, (t) => t.repositories, find: (t) => t.kwExtensions),
+    SettingsOption(
+      'sourceArchive',
+      .sources,
+      (t) => t.sourceArchive,
+      subtitle: (t) => t.sourceArchiveSubtitle,
+      find: (t) => t.kwSources,
+    ),
+    SettingsOption(
+      'sourceRadioParadise',
+      .sources,
+      (t) => t.sourceRadioParadise,
+      subtitle: (t) => t.sourceRadioParadiseSubtitle,
+      find: (t) => t.kwSources,
+    ),
     // About
     SettingsOption(
       'updates',
@@ -974,6 +1013,7 @@ abstract final class SettingsOptions {
       find: (t) => t.kwYtDlp,
       available: () => Features.downloadedTools,
     ),
+    SettingsOption('clearCache', .about, (t) => t.clearCache, find: (t) => t.kwClearCache, available: () => !kIsWeb),
     SettingsOption('version', .about, (t) => t.version, find: (t) => t.kwVersion),
     SettingsOption('whatsNew', .about, (t) => t.whatsNew, find: (t) => t.kwVersion),
     SettingsOption('reportProblem', .about, (t) => t.reportProblem, find: (t) => t.kwVersion),

@@ -155,12 +155,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get topicIntegrationsSummary => 'Show what you play on Discord';
 
   @override
-  String get topicExtensions => 'Extensions';
-
-  @override
-  String get topicExtensionsSummary => 'SpotiFLAC extension repositories: more places to search';
-
-  @override
   String get topicLyricsServices => 'Lyrics services';
 
   @override
@@ -272,6 +266,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get downloadAs => 'Download as…';
+
+  @override
+  String get downloadWithMv => 'Download with MV';
 
   @override
   String get saveToDevice => 'Save to device';
@@ -515,6 +512,15 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get playlist => 'Playlist';
+
+  @override
+  String get local => 'Local';
+
+  @override
+  String get folder => 'Folder';
+
+  @override
+  String get localEmpty => 'Music folders you add and songs you download show up here.';
 
   @override
   String get smartPlaylist => 'Smart playlist';
@@ -3798,86 +3804,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get ytDlpMissing => 'Not available. Install it (e.g. pacman -S yt-dlp) for YouTube downloads.';
 
   @override
-  String removeNamedQuestion(String name) {
-    return 'Remove $name?';
-  }
-
-  @override
-  String get removeExtensionBody => 'Its files and what it saved on this device are deleted.';
-
-  @override
-  String couldntRemoveNamed(String name) {
-    return 'Couldn\'t remove $name';
-  }
-
-  @override
-  String get extensionsIntro =>
-      'Extensions written for SpotiFLAC add more places to search, such as Apple Music, SoundCloud and JioSaavn. Their songs play from YouTube Music. Only add repositories you trust: an extension runs its own code and can reach the sites its manifest lists.';
-
-  @override
-  String get repositories => 'Repositories';
-
-  @override
   String get installed => 'Installed';
 
   @override
   String get noExtensionsYet => 'No extensions yet';
 
   @override
-  String get installFromRepo => 'Install one from a repository below';
-
-  @override
   String get available => 'Available';
 
   @override
-  String get repositoryAddress => 'Repository address';
-
-  @override
   String get reading => 'Reading…';
-
-  @override
-  String couldntReadIt(String error) {
-    return 'Couldn\'t read it: $error';
-  }
-
-  @override
-  String get notReadYet => 'Not read yet';
-
-  @override
-  String extensionsCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(count, locale: localeName, other: '$count extensions', one: '1 extension');
-    return '$_temp0';
-  }
-
-  @override
-  String get removeRepository => 'Remove repository';
-
-  @override
-  String get addsToSearch => 'Adds results to Search';
-
-  @override
-  String get downloadsUnsupported => 'downloads not supported yet';
-
-  @override
-  String get lyricsUnsupported => 'lyrics not supported yet';
-
-  @override
-  String get needsSpotiflacFeatures => 'needs SpotiFLAC features Riflay lacks, so it may not work';
-
-  @override
-  String updateTo(String version) {
-    return 'Update to $version';
-  }
-
-  @override
-  String couldntUpdateNamed(String name) {
-    return 'Couldn\'t update $name';
-  }
-
-  @override
-  String couldntInstallNamed(String name) {
-    return 'Couldn\'t install $name';
-  }
 
   @override
   String get install => 'Install';
@@ -4262,7 +4198,8 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get pastePlaylistLink => 'Paste a playlist link from Spotify, Apple Music or Deezer.';
+  String get pastePlaylistLink =>
+      'Paste a playlist link from Spotify, Apple Music, Deezer, TIDAL or NetEase Cloud Music.';
 
   @override
   String get becomesYtPlaylist => 'It becomes a playlist in your YouTube Music library.';
@@ -4274,7 +4211,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get playlistLink => 'Playlist link';
 
   @override
-  String get notAPlaylistLink => 'That isn\'t a Spotify, Apple Music or Deezer playlist link';
+  String get notAPlaylistLink =>
+      'That isn\'t a Spotify, Apple Music, Deezer, TIDAL or NetEase Cloud Music playlist link';
 
   @override
   String get readingPlaylist => 'Reading the playlist…';
@@ -5010,16 +4948,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get noInternetTryAgain => 'No internet connection. Try again.';
 
   @override
-  String extAnsweredUnreadable(String name) {
-    return '$name answered something unreadable';
-  }
-
-  @override
-  String extStopped(String name) {
-    return '$name was stopped';
-  }
-
-  @override
   String get flacBiggerOne =>
       'The FLAC file will be bigger than the original. The sound stays the same: FLAC can\'t bring back what the original already lost.';
 
@@ -5124,21 +5052,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get whileRiflayOpen => 'While Riflay is open';
-
-  @override
-  String couldntFindOnYt(String title) {
-    return 'Couldn\'t find $title on YouTube Music';
-  }
-
-  @override
-  String fromNamed(String name) {
-    return 'From $name';
-  }
-
-  @override
-  String extCouldntSearch(String name, String error) {
-    return '$name couldn\'t search: $error';
-  }
 
   @override
   String moreOptionsFor(String title) {
@@ -5531,7 +5444,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get kwSkipSilence => 'silence, quiet parts, trim';
 
   @override
-  String get kwEqualizer => 'eq, bass, treble, tone, preset';
+  String get kwEqualizer => 'eq, bass, treble, tone, preset, autoeq, iem, headphone profile';
 
   @override
   String get kwVolumeLeveling => 'replaygain, normalize, loudness, same volume';
@@ -5543,7 +5456,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get kwFadeLength => 'fade time, seconds, duration';
 
   @override
-  String get kwVirtualSpeakers => 'spatial, surround, 3d, hrtf, headphones';
+  String get kwVirtualSpeakers => 'spatial, surround, 3d, hrtf, headphones, dolby atmos';
 
   @override
   String get kwCrossfeed => 'headphones, stereo width, bs2b';
@@ -5759,9 +5672,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get kwDiscord => 'rich presence, status, activity';
 
   @override
-  String get kwExtensions => 'spotiflac, plugins, repositories, sources';
-
-  @override
   String get kwUpdates => 'new version, upgrade, update';
 
   @override
@@ -5787,4 +5697,549 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get topicLyricsSummary => 'How lyrics look, and where they come from';
+
+  @override
+  String get losslessCheck => 'Check lossless files';
+
+  @override
+  String get losslessCheckSubtitle => 'Find FLACs made from an MP3, fake hi-res and 24-bit files padded from 16-bit';
+
+  @override
+  String get losslessCheckAbout =>
+      'Reads each FLAC, WAV, AIFF, WavPack and APE once: its spectrum and the bits it really uses';
+
+  @override
+  String losslessCheckFiles(int checked, int total) {
+    return '$checked of $total lossless files checked';
+  }
+
+  @override
+  String get losslessCheckRun => 'Check';
+
+  @override
+  String get losslessCheckAllGood => 'Every checked file looks genuine';
+
+  @override
+  String losslessCheckFound(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count files are probably not what they claim',
+      one: '1 file is probably not what it claims',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String losslessCheckLossyCut(String khz) {
+    return 'cut at $khz kHz: made from an MP3 or AAC';
+  }
+
+  @override
+  String get losslessCheckUpsampled => 'nothing above 22 kHz: upsampled from 44.1 / 48 kHz';
+
+  @override
+  String losslessCheckPadded(int bits) {
+    return '$bits-bit holding only 16 bits';
+  }
+
+  @override
+  String get downloadNeedsSignIn =>
+      'This song needs a signed-in viewer (age-restricted). Sign in to YouTube Music in Settings › Accounts & services and try again.';
+
+  @override
+  String get kwLosslessCheck => 'fake flac, upscaled, transcoded, spectrum, genuine lossless, bit depth';
+
+  @override
+  String get dsSong => 'Song';
+
+  @override
+  String get dsSource => 'Source';
+
+  @override
+  String get dsSignal => 'Signal';
+
+  @override
+  String get dsAnalysis => 'Analysis';
+
+  @override
+  String get dsSound => 'Sound';
+
+  @override
+  String get dsOutput => 'Output';
+
+  @override
+  String get dsNetwork => 'Network';
+
+  @override
+  String get dsReading => 'Reading';
+
+  @override
+  String get dsTitle => 'Title';
+
+  @override
+  String get dsArtist => 'Artist';
+
+  @override
+  String get dsAlbum => 'Album';
+
+  @override
+  String get dsPosition => 'Position';
+
+  @override
+  String get dsPlaysFrom => 'Plays from';
+
+  @override
+  String get dsPlaysStream => 'YouTube Music stream';
+
+  @override
+  String get dsPlaysDownloaded => 'Downloaded copy';
+
+  @override
+  String get dsPlaysFile => 'File on this device';
+
+  @override
+  String get dsVideoIdItag => 'Video ID / itag';
+
+  @override
+  String get dsVideoId => 'Video ID';
+
+  @override
+  String get dsFile => 'File';
+
+  @override
+  String get dsQuality => 'Quality';
+
+  @override
+  String get dsFormat => 'Format';
+
+  @override
+  String get dsSampleRate => 'Sample rate';
+
+  @override
+  String get dsBitDepth => 'Bit depth';
+
+  @override
+  String dsBits(int bits) {
+    return '$bits-bit';
+  }
+
+  @override
+  String get dsBitrate => 'Bitrate';
+
+  @override
+  String dsKbpsAvg(int avg) {
+    return '$avg kbps (avg)';
+  }
+
+  @override
+  String dsKbpsNowAvg(int now, int avg) {
+    return '$now kbps (avg $avg)';
+  }
+
+  @override
+  String get dsChannels => 'Channels';
+
+  @override
+  String get dsMono => 'Mono';
+
+  @override
+  String get dsStereo => 'Stereo';
+
+  @override
+  String dsChannelCount(int count) {
+    return '$count channels';
+  }
+
+  @override
+  String get dsContainer => 'Container';
+
+  @override
+  String get dsFileSize => 'File size';
+
+  @override
+  String get dsFrequencyRange => 'Frequency range';
+
+  @override
+  String dsUpToNyquist(String khz) {
+    return 'Up to $khz (Nyquist)';
+  }
+
+  @override
+  String get dsTheoreticalRange => 'Theoretical dynamic range';
+
+  @override
+  String get dsMeasuring => 'Measuring';
+
+  @override
+  String get dsReadingFile => 'Reading the whole file…';
+
+  @override
+  String get dsSpectrum => 'Spectrum';
+
+  @override
+  String dsCutLossless(String khz) {
+    return 'Cut at $khz: probably made from an MP3 or AAC';
+  }
+
+  @override
+  String dsCutLossy(String khz) {
+    return 'Cut at $khz, as lossy files are';
+  }
+
+  @override
+  String get dsUpsampled => 'Nothing above about 22 kHz: upsampled from 44.1 / 48 kHz';
+
+  @override
+  String dsFullBand(String khz) {
+    return 'Full band, up to $khz';
+  }
+
+  @override
+  String get dsBitsUsed => 'Bits used';
+
+  @override
+  String dsBitsPadded(int used, int stored) {
+    return '$used of $stored: padded from a 16-bit file';
+  }
+
+  @override
+  String dsBitsAll(int stored) {
+    return 'All $stored';
+  }
+
+  @override
+  String dsBitsOf(int used, int stored) {
+    return '$used of $stored';
+  }
+
+  @override
+  String get dsDynamicRange => 'Dynamic range';
+
+  @override
+  String get dsDrDynamic => 'dynamic';
+
+  @override
+  String get dsDrModerate => 'moderately compressed';
+
+  @override
+  String get dsDrHeavy => 'heavily compressed';
+
+  @override
+  String get dsLoudness => 'Loudness';
+
+  @override
+  String dsPeak(String db) {
+    return 'peak $db dBFS';
+  }
+
+  @override
+  String get dsMeasuredGain => 'Measured gain';
+
+  @override
+  String dsMeasuredGainValue(String gain) {
+    return '$gain dB (leveling uses it without ReplayGain tags)';
+  }
+
+  @override
+  String get dsDecoded => 'Decoded';
+
+  @override
+  String get dsEffects => 'Effects';
+
+  @override
+  String get dsNone => 'None';
+
+  @override
+  String get dsVolume => 'Volume';
+
+  @override
+  String get dsMuted => 'muted';
+
+  @override
+  String get dsLeveling => 'Leveling';
+
+  @override
+  String get dsOff => 'Off';
+
+  @override
+  String get dsOn => 'On';
+
+  @override
+  String get dsNoReplayGain => 'no ReplayGain tag';
+
+  @override
+  String dsLoudnessTarget(String lufs, String target) {
+    return '$lufs LUFS (target $target LUFS)';
+  }
+
+  @override
+  String get dsTempoPitch => 'Tempo / pitch';
+
+  @override
+  String dsTempoPitchValue(String tempo, String pitch) {
+    return '$tempo× / $pitch semitones';
+  }
+
+  @override
+  String get dsCrossfade => 'Crossfade';
+
+  @override
+  String get dsClipProtection => 'Clip protection';
+
+  @override
+  String get dsResampled => 'Resampled';
+
+  @override
+  String get dsDevice => 'Device';
+
+  @override
+  String get dsBluetooth => 'Bluetooth';
+
+  @override
+  String get dsBtAllow => 'codec: allow Nearby devices';
+
+  @override
+  String get dsBtUnknown => 'codec unknown';
+
+  @override
+  String get dsDacReceives => 'DAC receives';
+
+  @override
+  String get dsDirectUsb => 'Direct USB';
+
+  @override
+  String get dsBitPerfect => 'Bit-perfect';
+
+  @override
+  String get dsYes => 'Yes';
+
+  @override
+  String get dsNo => 'No';
+
+  @override
+  String get dsConnectionSpeed => 'Connection speed';
+
+  @override
+  String get dsReadingNow => 'Reading now';
+
+  @override
+  String get dsReceived => 'Received';
+
+  @override
+  String dsReceivedOf(String received, String total) {
+    return '$received of $total';
+  }
+
+  @override
+  String get dsBufferHealth => 'Buffer health';
+
+  @override
+  String get dsStreamUrlFrom => 'Stream URL from';
+
+  @override
+  String get dsSpectrogram => 'Spectrogram';
+
+  @override
+  String get surroundUpmix => 'Surround upmix';
+
+  @override
+  String get surroundUpmixSubtitle =>
+      'Stereo songs fill a 7.1 room around you: the voice stays in front, the space moves to the sides and back. 5.1 / 7.1 songs, Dolby Atmos too, always get each channel in its place.';
+
+  @override
+  String get passthrough => 'Dolby / DTS passthrough';
+
+  @override
+  String get passthroughSubtitle =>
+      'For an AV receiver or soundbar over HDMI or optical: Dolby Digital, Dolby Atmos (E-AC-3, TrueHD) and DTS go out undecoded and the receiver plays them, Atmos heights included. Effects and the volume don\'t apply to those songs.';
+
+  @override
+  String get kwSurroundUpmix => 'dolby atmos, spatial audio, surround, 7.1, 3d, upmix';
+
+  @override
+  String get kwPassthrough => 'dolby atmos, hdmi, spdif, optical, receiver, soundbar, bitstream, dts, truehd';
+
+  @override
+  String get fxUpmix => 'Surround upmix';
+
+  @override
+  String dsAtmosBed(int channels) {
+    return '$channels-channel bed decoded; the height objects need a receiver (passthrough)';
+  }
+
+  @override
+  String get dsPassthrough => 'Passthrough';
+
+  @override
+  String dsPassthroughValue(String codec) {
+    return '$codec to the receiver, undecoded';
+  }
+
+  @override
+  String get dsVirtualRoom => 'Virtual speakers';
+
+  @override
+  String get dsRoomStereo => '2 speakers (stereo)';
+
+  @override
+  String get dsRoomSurround => '7.1 room, each channel in its place';
+
+  @override
+  String get dsRoomUpmix => '7.1 room, upmixed from stereo';
+
+  @override
+  String get autoEq => 'Headphone / IEM profile (AutoEQ)';
+
+  @override
+  String get autoEqSubtitle =>
+      'Sets the equalizer for your model from its measurement, so it sounds neutral (the Harman target).';
+
+  @override
+  String get autoEqPick => 'Pick your headphones or IEM';
+
+  @override
+  String get autoEqSearch => 'Search a model, e.g. KZ ZSN Pro';
+
+  @override
+  String get autoEqLoading => 'Loading the list of models…';
+
+  @override
+  String autoEqModels(int count) {
+    return '$count models, measured by crinacle, oratory1990 and others. Type a name to search.';
+  }
+
+  @override
+  String get autoEqNoResults => 'No model by that name.';
+
+  @override
+  String autoEqFailed(String error) {
+    return 'Couldn\'t load AutoEQ: $error';
+  }
+
+  @override
+  String autoEqApplied(String name) {
+    return 'Equalizer set for $name';
+  }
+
+  @override
+  String autoEqAppliedFitted(String name, String db) {
+    return 'Equalizer set for $name (within ±$db dB of its profile)';
+  }
+
+  @override
+  String get clearCache => 'Clear cache';
+
+  @override
+  String clearCacheSubtitle(String size) {
+    return '$size of covers, lyrics found online and other things Riflay fetches again. Your music stays.';
+  }
+
+  @override
+  String get clearCacheCounting => 'Counting…';
+
+  @override
+  String clearCacheConfirm(String size) {
+    return 'Clear $size of cache?';
+  }
+
+  @override
+  String get clearCacheConfirmBody =>
+      'Covers and lyrics are downloaded again when they are needed. Your library, downloads, playlists, settings, your own lyrics and the loudness measurements stay.';
+
+  @override
+  String get clearCacheAction => 'Clear';
+
+  @override
+  String clearCacheDone(String size) {
+    return 'Freed $size';
+  }
+
+  @override
+  String get kwClearCache => 'cache, storage, space, free up, clean, temporary files';
+
+  @override
+  String get dsDeviceRate => 'Device sample rate';
+
+  @override
+  String get dsDeviceFormat => 'Device format';
+
+  @override
+  String get dsMixerBuffer => 'Mixer buffer';
+
+  @override
+  String dsMixerBufferValue(String ms, int frames) {
+    return '$ms ms · $frames frames';
+  }
+
+  @override
+  String get dsLowLatency => 'Low-latency audio';
+
+  @override
+  String get dsProAudio => 'Pro audio';
+
+  @override
+  String get dsSpatialAudio => 'Spatial audio';
+
+  @override
+  String get dsSystemVolume => 'System volume';
+
+  @override
+  String get dsSupported => 'Supported';
+
+  @override
+  String get dsNotSupported => 'Not supported';
+
+  @override
+  String get fromInternetArchive => 'FLAC from the Internet Archive';
+
+  @override
+  String get radioParadiseFlac => 'Radio Paradise in FLAC';
+
+  @override
+  String onAir(String song) {
+    return 'On air: $song';
+  }
+
+  @override
+  String archiveCouldntLoad(String error) {
+    return 'Couldn\'t load from the Internet Archive: $error';
+  }
+
+  @override
+  String get archiveNoFlac => 'This recording has no FLAC files that can be played here.';
+
+  @override
+  String get topicSources => 'Music sources';
+
+  @override
+  String get topicSourcesSummary => 'Internet Archive and Radio Paradise: free music in FLAC';
+
+  @override
+  String get sourcesAbout =>
+      'Free places with lossless sound, shared with the artists\' or rights holders\' leave. Riflay plays from their own servers.';
+
+  @override
+  String get sourceArchive => 'Internet Archive in search';
+
+  @override
+  String get sourceArchiveSubtitle =>
+      'Live Music Archive concerts, netlabels and public-domain records in FLAC, on search\'s All';
+
+  @override
+  String get sourceRadioParadise => 'Radio Paradise on the search page';
+
+  @override
+  String get sourceRadioParadiseSubtitle =>
+      'Listener-supported, commercial-free radio, every channel in FLAC (CD quality)';
+
+  @override
+  String get kwSources => 'flac, lossless, internet archive, live music archive, radio paradise, free music, sources';
+
+  @override
+  String get spotifyCanvas => 'Canvas';
+
+  @override
+  String get spotifyCanvasSubtitle =>
+      'The looping video Spotify shows with a song, in Video mode instead of its music video (turn Video mode on in Beta features)';
 }

@@ -20,6 +20,7 @@ import '../widgets/stats_for_nerds.dart';
 import '../widgets/video_mode.dart';
 import 'now_playing_page.dart' show BlurredCover;
 import 'player_common.dart';
+import 'player_glass.dart';
 import 'player_parts.dart';
 import '../../services/language.dart';
 
@@ -366,9 +367,14 @@ class _PanelSwitch extends StatelessWidget {
   Widget build(BuildContext context) {
     final on = selected;
     final duration = LayoutPrefs.dur(const Duration(milliseconds: 220));
-    return Container(
+    // Liquid glass under a Liquid preset's glass controls, like the phone's capsules; the thumb stays solid.
+    final glass = LayoutPrefs.instance.playerGlassControls;
+    final capsule = Container(
       padding: const EdgeInsets.all(_pad),
-      decoration: ShapeDecoration(shape: const StadiumBorder(), color: AppColors.textPrimary.withValues(alpha: 0.1)),
+      decoration: ShapeDecoration(
+        shape: const StadiumBorder(),
+        color: glass ? Colors.transparent : AppColors.textPrimary.withValues(alpha: 0.1),
+      ),
       child: SizedBox(
         width: _width * segments.length,
         height: _height,
@@ -419,6 +425,7 @@ class _PanelSwitch extends StatelessWidget {
         ),
       ),
     );
+    return PlayerGlassSurface(radius: _height / 2 + _pad, child: capsule);
   }
 }
 

@@ -69,7 +69,9 @@ void main() {
           importFromYoutube: ({url}) {},
           addFiles: () {},
           addFolder: null,
-          child: MaterialApp(home: Scaffold(body: CollectionPage(collection: c.playlistById(p.id)!))),
+          child: MaterialApp(
+            home: Scaffold(body: CollectionPage(collection: c.playlistById(p.id)!)),
+          ),
         ),
       ),
     );

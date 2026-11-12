@@ -28,6 +28,8 @@ class AudioReport {
     this.spectrogram,
     this.columns = 0,
     this.waveform,
+    this.usedBits,
+    this.storedBits,
   });
 
   /// Integrated loudness, LUFS; null for silence.
@@ -55,6 +57,20 @@ class AudioReport {
   /// 0 to 255 on a square-root scale, so quiet parts still show): the seek bar's Waveform shape.
   final Uint8List? waveform;
 
+  /// How many bits of each sample carry anything (the lowest bit ever set, counted from the top): 16 for a CD's
+  /// samples however they are stored. Null for silence and for reports measured before this was.
+  final int? usedBits;
+
+  /// The bit depth the file's header declares (FLAC, WAV, AIFF, WavPack, APE, ALAC); null for lossy files.
+  final int? storedBits;
+
+  /// A file stored with more bits than it uses (24-bit holding only 16): made from a 16-bit file, so it carries
+  /// nothing a CD doesn't.
+  bool get paddedBits => storedBits != null && usedBits != null && storedBits! > 16 && usedBits! <= 16;
+
+  /// Whether the file is likely not the lossless or hi-res recording it claims to be.
+  bool get suspicious => verdict != SourceVerdict.fullBand || paddedBits;
+
   /// ReplayGain 2.0's gain: what brings the song to -18 LUFS.
   double? get gainDb => lufs == null ? null : (-18 - lufs!).clamp(-24.0, 12.0);
 
@@ -66,6 +82,8 @@ class AudioReport {
     'cutoff': cutoffHz,
     'verdict': verdict.name,
     if (waveform case final w?) 'wave': base64Encode(w),
+    'bits': usedBits,
+    'stored': storedBits,
   };
 
   static AudioReport fromJson(Map<String, dynamic> j) => AudioReport(
@@ -76,6 +94,26 @@ class AudioReport {
     cutoffHz: (j['cutoff'] as num?)?.toDouble(),
     verdict: SourceVerdict.values.asNameMap()[j['verdict']] ?? SourceVerdict.fullBand,
     waveform: j['wave'] is String ? base64Decode(j['wave'] as String) : null,
+    usedBits: (j['bits'] as num?)?.toInt(),
+    storedBits: (j['stored'] as num?)?.toInt(),
+  );
+
+  /// Whether this report predates the bit-depth check (saved by an older Riflay), so a lossless check measures
+  /// it again.
+  static bool lacksBits(Map<String, dynamic> j) => !j.containsKey('bits');
+
+  AudioReport withStoredBits(int? bits) => AudioReport(
+    lufs: lufs,
+    peakDb: peakDb,
+    dr: dr,
+    rate: rate,
+    cutoffHz: cutoffHz,
+    verdict: verdict,
+    spectrogram: spectrogram,
+    columns: columns,
+    waveform: waveform,
+    usedBits: usedBits,
+    storedBits: bits,
   );
 
   AudioReport withSpectrogram(Uint8List data, int columns) => AudioReport(
@@ -88,6 +126,8 @@ class AudioReport {
     spectrogram: data,
     columns: columns,
     waveform: waveform,
+    usedBits: usedBits,
+    storedBits: storedBits,
   );
 }
 
@@ -124,6 +164,21 @@ class AudioAnalyzer {
   int _blockCount = 0;
 
   double _peak = 0;
+
+  // ── Bit depth: every sample's bits OR'd together ─────────────────────────
+  int _bitMask = 0;
+
+  /// Folds in [mask], the 32-bit samples of a chunk OR'd together (see [AudioReport.usedBits]).
+  void addBits(int mask) => _bitMask |= mask & 0xFFFFFFFF;
+
+  int? get _usedBits {
+    if (_bitMask == 0) return null;
+    var low = 0;
+    while (_bitMask & (1 << low) == 0) {
+      low++;
+    }
+    return 32 - low;
+  }
 
   // ── Spectrum: one 4096-point frame every quarter second ─────────────────
   final Float64List _fftFrame;
@@ -263,6 +318,7 @@ class AudioAnalyzer {
       spectrogram: spectrogram ? _image() : null,
       columns: spectrogram ? math.min(_columns.length, 600) : 0,
       waveform: _waveform(),
+      usedBits: _usedBits,
     );
   }
 

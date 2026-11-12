@@ -37,14 +37,14 @@ Free and open source, for Linux, Windows, macOS, Android and iOS.
 
 ## What makes it different
 
-- **Local files and YouTube Music in one library.** Mix both in the same playlist; no account needed, sign in only to sync. Import from Spotify, Apple Music or Deezer.
+- **Local files and YouTube Music in one library.** Mix both in the same playlist; no account needed, sign in only to sync. Import playlists from Spotify, Apple Music, Deezer, TIDAL or NetEase Cloud Music.
 - **Real hi-fi.** Bit-perfect output, native DSD (DoP), exclusive mode and ASIO, with a **signal path** that shows every stage from file to speaker. FLAC, ALAC, WavPack, APE, DSD, SACD ISO and cue sheets.
 - **Sound tools usually found in pro apps.** Virtual speakers (HRTF) for headphones, crossfeed, room correction from REW, and VST / LV2 / CLAP plugins through Carla.
 - **Lyrics that follow every word**, from many free sources, with pronunciation and translation.
 - **Music videos.** Watch a song's video in step with it, or use it as the Now Playing background.
 - **Listen together, anywhere.** Friends play along in sync over the same Wi-Fi or the internet, end-to-end encrypted.
 - **Build your own player.** Pick the cover, top, buttons, progress bar, controls and bottom row one by one, or start from a preset (Classic, Stacked, Kawaii). On phone and desktop.
-- **Extensions.** Add SpotiFLAC extension repositories to search more sources.
+- **Free FLAC sources.** Search shows Internet Archive recordings in FLAC (Live Music Archive concerts, netlabels, the public domain), and the search page carries Radio Paradise's FLAC channels.
 - **Riflay Wrap** and listening stats, kept on your device.
 - **Light on your computer.** Lightweight, Balanced and Heavy performance modes; under 2% CPU and 200 MB while playing on Windows, even with a music video.
 
@@ -125,7 +125,10 @@ Riflay builds on the work of:
 | [ytmusicapi](https://github.com/sigma67/ytmusicapi) | Documentation of YouTube Music's API, which this app follows | MIT |
 | [LRCLIB](https://lrclib.net), [Better Lyrics](https://betterlyrics.org), Kugou, NetEase Cloud Music, QQ Music, Musixmatch, [Megalobiz](https://www.megalobiz.com), [Genius](https://genius.com), [lyrics.ovh](https://lyrics.ovh) | Free lyrics | Various; see each project |
 | [audio_metadata_reader](https://github.com/ClementBeal/audio_metadata_reader) | Tags | MIT |
-| Bill Gardner and Keith Martin's [KEMAR HRTF measurements](https://sound.media.mit.edu/resources/KEMAR.html) (MIT Media Lab) | Virtual speakers | MIT |
+| Bill Gardner and Keith Martin's [KEMAR HRTF measurements](https://sound.media.mit.edu/resources/KEMAR.html) (MIT Media Lab) | Virtual speakers and its 7.1 room | MIT |
+| [Internet Archive](https://archive.org) | Free FLAC recordings in search, streamed from archive.org | Each recording's own license |
+| [Radio Paradise](https://radioparadise.com) | Listener-supported FLAC radio channels | Free to listen; please support them |
+| [AutoEq](https://github.com/jaakkopasanen/AutoEq) by Jaakko Pasanen, with measurements by crinacle, oratory1990 and others | Headphone / IEM equalizer profiles, downloaded when picked | MIT |
 | [akagi](https://github.com/z0orb/akagi) | Ideas behind playlist reordering and Downloads storage overview (re-implemented, no code copied) | MIT |
 | [liquid_glass_renderer](https://github.com/whynotmake-it/flutter_liquid_glass/tree/main/packages/liquid_glass_renderer) | The phone's Liquid glass tab bar | Apache-2.0 |
 | Apple Music on iOS 26 | Idea behind the Liquid glass tab bar that shrinks to one row on scroll and carries the search field (re-implemented, no code copied) | — |

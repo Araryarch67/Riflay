@@ -76,7 +76,12 @@ void main() {
       ),
       isTrue,
     );
-    expect(YtMusicWeb.isLive({'icon': {'iconType': 'LIVE'}}), isTrue);
+    expect(
+      YtMusicWeb.isLive({
+        'icon': {'iconType': 'LIVE'},
+      }),
+      isTrue,
+    );
     expect(YtMusicWeb.isLive(row('3.4M views')), isFalse);
     expect(YtMusicWeb.isLive(row('Song • Hindia • 4:02')), isFalse);
   });

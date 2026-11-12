@@ -13,13 +13,16 @@ import '../models/track.dart';
 import '../platform/host.dart';
 import 'cover_art.dart';
 import 'download_prefs.dart';
+import 'audio_engine.dart';
 import 'ffmpeg.dart';
 import 'flac_stream.dart';
 import 'lyrics.dart';
 import 'pcm_decoder.dart';
 import 'private_files.dart';
 import 'metadata.dart';
+import 'mv_sidecar.dart';
 import 'ranged_download.dart';
+import 'video_alignment.dart';
 import 'video_download.dart';
 import 'webm_mux.dart' show MuxException, MuxTags;
 import 'youtube_links.dart';
@@ -75,10 +78,14 @@ class DownloadJob {
     this.knownNames = false,
     this.choice,
     this.album,
+    this.withVideo = false,
   });
 
   /// The format and quality asked for; null follows Settings when the download starts.
   DownloadChoice? choice;
+
+  /// "Download with MV": the song's music video is saved beside its audio ([MvSidecar]), when it has one.
+  final bool withVideo;
 
   final String videoId;
   final String title;
@@ -142,6 +149,7 @@ class DownloadJob {
       'thumbnailUrl': thumbnailUrl,
       'knownNames': knownNames,
       'album': album,
+      if (withVideo) 'mv': true,
       'status': status.name,
       'error': error,
       if (partItag != null && partSize != null && partExt != null)
@@ -191,6 +199,7 @@ class DownloadJob {
         knownNames: json['knownNames'] == true,
         choice: choice,
         album: json['album'] as String?,
+        withVideo: json['mv'] == true,
       )
       ..status = failed ? DownloadStatus.failed : DownloadStatus.queued
       ..error = failed ? (json['error'] as String? ?? 'Failed') : null
@@ -200,7 +209,7 @@ class DownloadJob {
 
   void readVideoParts(Object? parts) {
     if (parts is! Map) return;
-    for (final role in const ['video', 'sound', 'single']) {
+    for (final role in const ['video', 'sound', 'single', 'mv']) {
       final part = parts[role];
       if (part is! Map) continue;
       final itag = part['itag'], size = part['size'], ext = part['ext'];
@@ -297,7 +306,11 @@ class PlaylistPreview extends YoutubePreview {
 /// Resolves YouTube links and downloads their audio-only stream into the app's
 /// music folder, one job at a time.
 class YoutubeImporter extends ChangeNotifier {
-  YoutubeImporter({required this.onTrackReady, this.albumYearLookup, this._queueFile});
+  YoutubeImporter({required this.onTrackReady, this.albumYearLookup, this.musicVideoLookup, this._queueFile});
+
+  /// The music video that goes with a song, with where the song's parts are in it, for "Download with MV". The
+  /// app's YouTube Music client, which knows the pairs a signed-in account gets; signed out without it.
+  final Future<MusicVideo?> Function(String songId)? musicVideoLookup;
 
   /// Called with each finished track so it can be added to the library.
   final Future<void> Function(Track track) onTrackReady;
@@ -382,8 +395,9 @@ class YoutubeImporter extends ChangeNotifier {
       ),
   ]);
 
-  /// Saves streamed YouTube Music songs for offline playback.
-  int enqueueTracks(List<Track> tracks, {DownloadChoice? choice}) => _enqueue([
+  /// Saves streamed YouTube Music songs for offline playback. [withVideo] ("Download with MV") also saves each
+  /// song's music video beside it, for the songs that have one.
+  int enqueueTracks(List<Track> tracks, {DownloadChoice? choice, bool withVideo = false}) => _enqueue([
     for (final t in tracks.where((t) => t.isRemote))
       DownloadJob(
         videoId: t.videoId!,
@@ -393,6 +407,7 @@ class YoutubeImporter extends ChangeNotifier {
         knownNames: true,
         choice: choice,
         album: _clean(t.album),
+        withVideo: withVideo,
       ),
   ]);
 
@@ -779,12 +794,8 @@ class YoutubeImporter extends ChangeNotifier {
     final part = File('${target.path}.part');
     try {
       if (Ffmpeg.available) {
-        final r = await Process.run(await Ffmpeg.executable(), [
-          '-hide_banner', '-loglevel', 'error', '-y', '-i', source.path, '-map', '0:a:0', '-vn', //
-          '-c:a', 'flac', '-ar', '${q.rate}',
-          ...q.bits == 16 ? ['-sample_fmt', 's16'] : ['-sample_fmt', 's32', '-bits_per_raw_sample', '24'],
-          '-f', 'flac', part.path,
-        ]);
+        final ffmpeg = await Ffmpeg.executable();
+        final r = await Process.run(ffmpeg, flacArgs(source.path, part.path, q, soxr: await Ffmpeg.hasSoxr(ffmpeg)));
         if (r.exitCode != 0) throw StateError('ffmpeg could not make the FLAC: ${r.stderr}');
       } else if (MpvPcm.supported) {
         await _flacWithMpv(source, part, q, isCancelled: isCancelled);
@@ -802,8 +813,27 @@ class YoutubeImporter extends ChangeNotifier {
     }
   }
 
+  /// ffmpeg's arguments for [toFlac]: the first audio stream of [input] resampled (SoX where [soxr]) and dithered
+  /// to [q], written to [output] as FLAC at its default compression.
+  @visibleForTesting
+  static List<String> flacArgs(String input, String output, FlacQuality q, {required bool soxr}) {
+    final format = q.bits == 16 ? 's16' : 's32';
+    return [
+      '-hide_banner', '-loglevel', 'error', '-y', '-i', input, '-map', '0:a:0', '-vn', //
+      '-af', Ffmpeg.flacResampleFilter(rate: q.rate, format: format, soxr: soxr),
+      '-c:a', 'flac', '-ar', '${q.rate}', '-sample_fmt', format,
+      if (q.bits == 24) ...['-bits_per_raw_sample', '24'],
+      '-f', 'flac', output,
+    ];
+  }
+
   static Future<void> _flacWithMpv(File source, File out, FlacQuality q, {bool Function()? isCancelled}) async {
-    final pcm = await MpvPcm.decode(PcmInput.file(source.path), rate: q.rate, bits: q.bits == 16 ? 16 : 32);
+    final pcm = await MpvPcm.decode(
+      PcmInput.file(source.path),
+      rate: q.rate,
+      bits: q.bits == 16 ? 16 : 32,
+      resampler: await AudioEngine.hqResamplerOptions(),
+    );
     final file = await out.open(mode: FileMode.write);
     var pcmBytes = 0;
     try {
@@ -990,6 +1020,14 @@ class YoutubeImporter extends ChangeNotifier {
       if (cancelled()) throw const _Cancelled();
       job.totalBytes = saved.lengthSync();
       await _saveLyrics(await lyrics, saved.path);
+      if (job.withVideo) {
+        final videoBytes = await _saveMusicVideo(job, saved, dir);
+        job
+          ..phase = DownloadPhase.finishing
+          ..totalBytes = saved.lengthSync() + videoBytes
+          ..receivedBytes = saved.lengthSync() + videoBytes;
+        if (cancelled()) throw const _Cancelled();
+      }
       final track = Track(
         id: Uri.file(saved.path).toString(),
         uri: Uri.file(saved.path),
@@ -1330,6 +1368,66 @@ class YoutubeImporter extends ChangeNotifier {
       }
     }
     return true;
+  }
+
+  /// "Download with MV": saves the music video of the song beside [song] (its audio, already complete), as
+  /// [MvSidecar] names it: the picture stream as YouTube serves it, at Settings' video format and size, and the map
+  /// of where the song's parts are in it. Returns the video's size, 0 when none was saved.
+  ///
+  /// The song never fails over its video: one with no video, or a video that can't be fetched, stays a plain
+  /// audio download. Only a cancel throws (the caller then removes the song too).
+  Future<int> _saveMusicVideo(DownloadJob job, File song, Directory dir) async {
+    void discardParts() {
+      for (final ext in const ['mp4', 'webm']) {
+        discardPartial(File(p.join(dir.path, '${job.videoId}.mv.$ext.part')));
+      }
+      job.videoParts.remove('mv');
+    }
+
+    try {
+      final find = musicVideoLookup ?? (String id) => (_web ??= YtMusicWeb.anonymous()).musicVideo(id);
+      final found = await find(job.videoId).timeout(const Duration(seconds: 15));
+      if (found == null) return 0;
+      final choice = DownloadPrefs.instance.videoChoice;
+      var pick = pickMusicVideoPicture(await YoutubeStream.videoFormats(found.videoId), choice);
+      if (pick == null) return 0;
+      ({Uri url, int? size, String itag, String ext}) streamOf(VideoCandidate v) =>
+          _streamOf(v.ref, itag: v.id, size: v.sizeBytes, ext: v.ext);
+      final ext = pick.ext;
+      final audioQuality = job.quality;
+      job.phase = DownloadPhase.downloading;
+      notifyListeners();
+      final parts = await _fetchAll(job, dir, () async {
+        final fresh = pickMusicVideoPicture(await YoutubeStream.videoFormats(found.videoId), choice);
+        if (fresh == null || fresh.ext != ext) throw StateError('No video stream for this song.');
+        pick = fresh;
+        return {'mv': streamOf(fresh)};
+      }, {'mv': streamOf(pick)});
+      job.videoParts.remove('mv');
+      if (job.status == DownloadStatus.cancelled) throw const DownloadCancelled();
+      job.phase = DownloadPhase.finishing;
+      notifyListeners();
+      // A video with no map of its parts is lined up with the song by their sound, now, while there is a network.
+      var video = found;
+      if (VideoAlignment.enabled && found.segments.isEmpty && found.videoId != job.videoId) {
+        try {
+          final a = await VideoAlignment.of(job.videoId, found.videoId).timeout(const Duration(seconds: 45));
+          if (a != null && !a.none) video = found.shifted(a.offset, a.rate);
+        } catch (e) {
+          debugPrint('Download ${job.videoId}: music video not lined up: $e');
+        }
+      }
+      final target = await parts['mv']!.rename(MvSidecar.videoFile(song.path, ext).path);
+      await MvSidecar.write(song.path, video);
+      job.quality = [?audioQuality, 'MV ${videoLabel(pick!)}'].join(' + ');
+      return target.lengthSync();
+    } catch (e) {
+      discardParts();
+      await MvSidecar.delete(song.path);
+      if (e is DownloadCancelled || job.status == DownloadStatus.cancelled) throw const _Cancelled();
+      debugPrint('Download ${job.videoId}: saved without its music video: $e');
+      return 0;
+    }
   }
 
   /// The year of [album] by [artist], or null when it can't be found in time.

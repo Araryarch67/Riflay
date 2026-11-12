@@ -22,6 +22,7 @@ import '../theme.dart';
 import '../widgets/menus.dart';
 import '../widgets/signal_path.dart';
 import 'equalizer_page.dart';
+import 'lossless_check_page.dart';
 import '../widgets/app_dialog.dart';
 
 /// Settings > Sound > Playback: queue behavior and track changes (gapless, crossfade).
@@ -162,6 +163,14 @@ class DspSettings extends StatelessWidget {
                     defaultValue: 0,
                     label: '${audio.virtualSpeakerGain.toStringAsFixed(1)} dB',
                     onChanged: locked || monoOn ? null : audio.setVirtualSpeakerGain,
+                  ),
+                if (audio.virtualSpeakers)
+                  SwitchListTile(
+                    secondary: const Icon(Icons.surround_sound_rounded),
+                    title: Text(tr.surroundUpmix),
+                    subtitle: Text(lockedNote(monoOn ? tr.offWhileMono : tr.surroundUpmixSubtitle), style: muted),
+                    value: audio.surroundUpmix && speakersOn,
+                    onChanged: locked || monoOn ? null : audio.setSurroundUpmix,
                   ),
               ],
               SettingTile(
@@ -504,6 +513,13 @@ class _AdvancedAudioSettingsState extends State<AdvancedAudioSettings> {
                 value: audio.exclusive,
                 onChanged: audio.setExclusive,
               ),
+            SwitchListTile(
+              secondary: const Icon(Icons.settings_input_hdmi_rounded),
+              title: Text(tr.passthrough),
+              subtitle: Text(tr.passthroughSubtitle, style: muted),
+              value: audio.passthroughActive,
+              onChanged: audio.directUsbActive ? null : audio.setPassthrough,
+            ),
             SettingTile(
               icon: Icons.multiline_chart_rounded,
               title: Text(tr.outputSampleRate),
@@ -541,6 +557,14 @@ class _AdvancedAudioSettingsState extends State<AdvancedAudioSettings> {
               trailing: const Icon(Icons.chevron_right_rounded),
               onTap: () => showSignalPath(context),
             ),
+            if (AudioAnalysis.supported)
+              ListTile(
+                leading: const Icon(Icons.verified_outlined),
+                title: Text(tr.losslessCheck),
+                subtitle: Text(tr.losslessCheckSubtitle, style: muted),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: () => ShellScope.of(context).open(const LosslessCheckPage()),
+              ),
           ],
         );
       },

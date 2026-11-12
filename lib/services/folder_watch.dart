@@ -49,6 +49,7 @@ bool isLibraryFile(String path) {
   return Track.isAudioPath(path) || lower.endsWith('.cue') || lower.endsWith('.iso');
 }
 
+final _musicVideo = RegExp(r'\.mv\.(mp4|webm)$'); // a downloaded song's music video, kept beside it (MvSidecar)
 final _fragment = RegExp(r'\.f\d+\.\w+$'); // yt-dlp's separate video / audio pieces: name.f251.webm
 const _partialExtensions = {
   'part',
@@ -78,7 +79,7 @@ bool isIgnoredPath(String path, {String? root}) {
   if (name.startsWith('~') || name.endsWith('~') || name.startsWith('#')) return true;
   final lower = name.toLowerCase();
   if (lower.contains('.part')) return true;
-  if (_fragment.hasMatch(lower)) return true;
+  if (_fragment.hasMatch(lower) || _musicVideo.hasMatch(lower)) return true;
   return _partialExtensions.contains(p.extension(lower).replaceFirst('.', ''));
 }
 

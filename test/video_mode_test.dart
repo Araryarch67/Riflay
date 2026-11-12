@@ -104,9 +104,20 @@ void main() {
     });
 
     test('a taller stream wins over the codec, but AV1 only with nothing else', () {
-      final tall = [...formats, f(313, 'video/webm; codecs="vp9"', 2160), f(401, 'video/mp4; codecs="av01.0.12M.08"', 4320)];
-      expect(YoutubeStream.pickVideo(tall, maxHeight: 4320)?['itag'], 313, reason: '4K VP9 over 1080p H.264 and 8K AV1');
-      expect(YoutubeStream.pickVideo([f(401, 'video/mp4; codecs="av01.0.12M.08"', 2160)], maxHeight: 2160)?['itag'], 401);
+      final tall = [
+        ...formats,
+        f(313, 'video/webm; codecs="vp9"', 2160),
+        f(401, 'video/mp4; codecs="av01.0.12M.08"', 4320),
+      ];
+      expect(
+        YoutubeStream.pickVideo(tall, maxHeight: 4320)?['itag'],
+        313,
+        reason: '4K VP9 over 1080p H.264 and 8K AV1',
+      );
+      expect(
+        YoutubeStream.pickVideo([f(401, 'video/mp4; codecs="av01.0.12M.08"', 2160)], maxHeight: 2160)?['itag'],
+        401,
+      );
     });
 
     test('never audio, a stream without a URL, or nothing short enough', () {

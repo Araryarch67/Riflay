@@ -17,11 +17,18 @@ class PlayerGlassLayer extends StatelessWidget {
   }
 }
 
-LiquidGlassSettings _settings(BuildContext context) => LiquidGlassSettings.ios27Regular(
-  brightness: AppColors.of(context).light ? Brightness.light : Brightness.dark,
-  frost: 24,
-  tintAmount: 0.4,
-);
+/// Riflay's Liquid glass, everywhere it is drawn: little frost and a lot of refraction, dispersion and rim light.
+/// What makes it read as liquid glass is the page bending and catching light at the edges, not a blur (where the
+/// renderer falls back to its frosted approximation, the rim light and contour still show).
+LiquidGlassSettings riflayGlass({required Brightness brightness, double frost = 10, double tintAmount = 0.35}) =>
+    LiquidGlassSettings.ios27Regular(
+      brightness: brightness,
+      frost: frost,
+      tintAmount: tintAmount,
+    ).copyWith(refractionHeight: 28, refractionAmount: 95, dispersion: 0.35, highlight: 0.9, contourStrength: 0.75);
+
+LiquidGlassSettings _settings(BuildContext context) =>
+    riflayGlass(brightness: AppColors.of(context).light ? Brightness.light : Brightness.dark);
 
 /// Frosts a control's surface in Liquid presets, with the renderer's platform fallback.
 class PlayerGlassSurface extends StatelessWidget {

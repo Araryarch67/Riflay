@@ -9,7 +9,9 @@ import 'package:path/path.dart' as p;
 
 import '../platform/host.dart';
 import 'download_prefs.dart';
+import 'language.dart';
 import 'lookup_process.dart';
+import 'private_files.dart';
 import 'executable_store.dart';
 import 'video_download.dart';
 
@@ -68,11 +70,67 @@ class ResolvedVideo {
 /// manager), otherwise downloads the official standalone release once into the
 /// app's support folder.
 abstract final class YtDlp {
-  static final _processes = LookupProcessRunner();
+  @visibleForTesting
+  static LookupProcessRunner processes = LookupProcessRunner();
   static bool get supported => Host.isLinux || Host.isWindows || Host.isMacOS;
 
   static Future<String?>? _exe;
   static int _generation = 0;
+
+  /// The signed-in YouTube Music account's cookies (`a=b; c=d`), or null signed out. A video YouTube shows only
+  /// to a signed-in viewer (age-restricted, "confirm you're not a bot") is asked for again with them, once the
+  /// anonymous try said so; nothing else is sent with the account. Off with `RIFLAY_NO_DOWNLOAD_COOKIES`.
+  static String? Function()? accountCookies;
+
+  static const _useCookies = !bool.fromEnvironment('RIFLAY_NO_DOWNLOAD_COOKIES');
+
+  /// What yt-dlp says when only a signed-in viewer may watch.
+  static final _needsSignIn = RegExp(
+    r'sign in to confirm|confirm your age|age[- ]restricted|inappropriate for some users|login required|use --cookies',
+    caseSensitive: false,
+  );
+
+  /// Whether yt-dlp's [stderr] says the video needs a signed-in viewer.
+  @visibleForTesting
+  static bool needsSignIn(String stderr) => _needsSignIn.hasMatch(stderr);
+
+  /// [cookies] (a `Cookie:` header's `a=b; c=d`) as the Netscape cookie file yt-dlp's `--cookies` reads, for
+  /// youtube.com and its subdomains.
+  @visibleForTesting
+  static String netscapeCookies(String cookies, {DateTime? now}) {
+    final expires = (now ?? DateTime.now()).add(const Duration(days: 1)).millisecondsSinceEpoch ~/ 1000;
+    final lines = ['# Netscape HTTP Cookie File'];
+    for (final part in cookies.split(';')) {
+      final at = part.indexOf('=');
+      if (at <= 0) continue;
+      final name = part.substring(0, at).trim(), value = part.substring(at + 1).trim();
+      if (name.isEmpty || name.contains(RegExp(r'\s'))) continue;
+      lines.add(['.youtube.com', 'TRUE', '/', 'TRUE', '$expires', name, value].join('\t'));
+    }
+    return '${lines.join('\n')}\n';
+  }
+
+  /// Runs yt-dlp with [args]; when the video needs a signed-in viewer and an account is signed in, once more with
+  /// its cookies, from a file only this user can read, deleted right after.
+  static Future<ProcessResult> _run(String exe, List<String> args) async {
+    final r = await processes.run(exe, args);
+    if (r.exitCode == 0 || !_useCookies || !needsSignIn('${r.stderr}')) return r;
+    final cookies = accountCookies?.call();
+    if (cookies == null || cookies.isEmpty) {
+      return ProcessResult(r.pid, r.exitCode, r.stdout, '${r.stderr}\nERROR: $_signInHint');
+    }
+    final file = await PrivateFiles.file('yt-dlp-cookies-${DateTime.now().microsecondsSinceEpoch}.txt');
+    try {
+      await PrivateFiles.write(file, netscapeCookies(cookies), secret: true);
+      return await processes.run(exe, ['--cookies', file.path, ...args]);
+    } finally {
+      try {
+        if (file.existsSync()) file.deleteSync();
+      } catch (_) {}
+    }
+  }
+
+  static String get _signInHint => tr.downloadNeedsSignIn;
 
   static String _lastError(String stderr) {
     final line = stderr.trim().split(RegExp(r'\r?\n')).lastWhere((l) => l.isNotEmpty, orElse: () => 'yt-dlp failed');
@@ -185,9 +243,9 @@ abstract final class YtDlp {
   static Future<ResolvedAudio> _refresh(String videoId, bool aac) {
     final key = aac ? 'aac:$videoId' : videoId;
     // One retry: YouTube sometimes refuses a burst of lookups, then serves the next one.
-    final future = _run(videoId, aac).catchError((Object _) async {
+    final future = _resolve(videoId, aac).catchError((Object _) async {
       await Future<void>.delayed(const Duration(seconds: 2));
-      return _run(videoId, aac);
+      return _resolve(videoId, aac);
     });
     _resolved[key] = future;
     // Don't cache failures.
@@ -212,7 +270,16 @@ abstract final class YtDlp {
   static Future<({List<AudioCandidate> audio, List<VideoCandidate> video})> listAllFormats(String videoId) async {
     final exe = await executable();
     if (exe == null) throw StateError('yt-dlp is not available on this device.');
-    final r = await _processes.run(exe, [
+    return listAllFormatsWith(exe, videoId);
+  }
+
+  /// [listAllFormats] with the yt-dlp at [exe].
+  @visibleForTesting
+  static Future<({List<AudioCandidate> audio, List<VideoCandidate> video})> listAllFormatsWith(
+    String exe,
+    String videoId,
+  ) async {
+    final r = await _run(exe, [
       '--no-warnings',
       '--no-playlist',
       '-J',
@@ -262,7 +329,7 @@ abstract final class YtDlp {
     final exe = await executable();
     if (exe == null) throw StateError('yt-dlp is not available on this device.');
     final h = '[height<=$maxHeight]';
-    final r = await _processes.run(exe, [
+    final r = await _run(exe, [
       '--no-warnings',
       '--no-playlist',
       '-f',
@@ -282,10 +349,10 @@ abstract final class YtDlp {
     return ResolvedVideo(url: Uri.parse(lines.last.trim()), height: int.tryParse(f[0]) ?? 0, codec: f.last);
   }
 
-  static Future<ResolvedAudio> _run(String videoId, bool aac) async {
+  static Future<ResolvedAudio> _resolve(String videoId, bool aac) async {
     final exe = await executable();
     if (exe == null) throw StateError('yt-dlp is not available on this device.');
-    final r = await _processes.run(exe, [
+    final r = await _run(exe, [
       '--no-warnings',
       '--no-playlist',
       '-f',

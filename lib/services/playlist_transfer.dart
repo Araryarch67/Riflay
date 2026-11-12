@@ -20,14 +20,14 @@ class ForeignSong {
   String toString() => artist.isEmpty ? title : '$artist - $title';
 }
 
-/// A playlist (or album) read from Spotify, Apple Music or Deezer.
+/// A playlist (or album) read from another music app ([PlaylistTransfer.services]).
 class ForeignPlaylist {
   const ForeignPlaylist({required this.title, required this.service, required this.songs, int? total})
     : total = total ?? songs.length;
 
   final String title;
 
-  /// "Spotify", "Apple Music" or "Deezer".
+  /// One of [PlaylistTransfer.services].
   final String service;
   final List<ForeignSong> songs;
 
@@ -54,6 +54,9 @@ typedef _Source = ({String service, String kind, String id, Uri url});
 /// - Spotify: the embed player's page data; it lists the first 100 songs.
 /// - Apple Music: the web page's server data.
 /// - Deezer: its public API, every song.
+/// - TIDAL: the embed player's page (the first 50 songs), and the playlist page's schema.org data for its name
+///   and size. TIDAL's site sits behind bot protection; nothing here gets around it.
+/// - NetEase Cloud Music: its public web API, every song.
 class PlaylistTransfer {
   PlaylistTransfer({http.Client? client}) : _http = client ?? http.Client();
 
@@ -66,7 +69,7 @@ class PlaylistTransfer {
   /// Songs read from one playlist at most; YouTube Music playlists hold 5000.
   static const maxSongs = 1000;
 
-  static const services = ['Spotify', 'Apple Music', 'Deezer'];
+  static const services = ['Spotify', 'Apple Music', 'Deezer', 'TIDAL', 'NetEase Cloud Music'];
 
   /// Whether [text] is a playlist or album link this can read (short share
   /// links included; those are resolved when reading).
@@ -83,6 +86,30 @@ class PlaylistTransfer {
     }
     if (uri == null || !uri.hasScheme) return null;
     final segs = uri.pathSegments.where((s) => s.isNotEmpty).toList();
+    // tidal.com/playlist/<uuid>, tidal.com/browse/playlist/<uuid>, listen.tidal.com/playlist/<uuid>.
+    if (const {'tidal.com', 'www.tidal.com', 'listen.tidal.com'}.contains(uri.host)) {
+      final at = segs.indexOf('playlist');
+      final id = at >= 0 && at + 1 < segs.length ? segs[at + 1] : null;
+      if (id != null && RegExp(r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$').hasMatch(id)) {
+        return (service: 'TIDAL', kind: 'playlist', id: id, url: Uri.https('tidal.com', '/playlist/$id'));
+      }
+    }
+    // music.163.com/#/playlist?id=…, music.163.com/playlist?id=…, y.music.163.com/m/album?id=… (the web player
+    // puts the page in the fragment).
+    if (uri.host == 'music.163.com' || uri.host == 'y.music.163.com') {
+      final inner = uri.fragment.startsWith('/') ? Uri.tryParse(uri.fragment) : null;
+      final page = inner ?? uri;
+      final kind = page.pathSegments.where((s) => s.isNotEmpty).lastOrNull;
+      final id = page.queryParameters['id'] ?? uri.queryParameters['id'];
+      if ((kind == 'playlist' || kind == 'album') && id != null && RegExp(r'^\d+$').hasMatch(id)) {
+        return (
+          service: 'NetEase Cloud Music',
+          kind: kind!,
+          id: id,
+          url: Uri.parse('https://music.163.com/#/$kind?id=$id'),
+        );
+      }
+    }
     int at(String kind) => segs.indexOf(kind);
     String? after(String kind) => at(kind) >= 0 && at(kind) + 1 < segs.length ? segs[at(kind) + 1] : null;
     for (final kind in const ['playlist', 'album']) {
@@ -117,7 +144,7 @@ class PlaylistTransfer {
 
   static Uri? _shortLink(String text) {
     final uri = Uri.tryParse(text.trim());
-    const hosts = {'spotify.link', 'spotify.app.link', 'link.deezer.com', 'deezer.page.link'};
+    const hosts = {'spotify.link', 'spotify.app.link', 'link.deezer.com', 'deezer.page.link', 'tidal.link', '163cn.tv'};
     return uri != null && hosts.contains(uri.host) ? uri : null;
   }
 
@@ -130,6 +157,8 @@ class PlaylistTransfer {
     final list = await switch (source.service) {
       'Spotify' => _spotify(source),
       'Deezer' => _deezer(source),
+      'TIDAL' => _tidal(source),
+      'NetEase Cloud Music' => _netease(source),
       _ => _appleMusic(source),
     };
     if (list.songs.isEmpty) throw PlaylistTransferError(tr.playlistEmptyOrPrivate);
@@ -265,6 +294,90 @@ class PlaylistTransfer {
       service: 'Deezer',
       songs: songs,
       total: (info['nb_tracks'] as int?) ?? songs.length,
+    );
+  }
+
+  Future<ForeignPlaylist> _tidal(_Source s) async {
+    // The playlist page names it and counts its songs; it may be held back by the site's bot check, so it is
+    // only a nicety.
+    final page = _get(s.url).then<String?>((p) => p, onError: (Object _) => null);
+    final embed = await _get(Uri.https('embed.tidal.com', '/playlists/${s.id}'));
+    final songs = tidalSongs(embed);
+    final info = tidalInfo(await page ?? '');
+    return ForeignPlaylist(
+      title: info.name ?? tr.servicePlaylist('TIDAL'),
+      service: 'TIDAL',
+      songs: songs,
+      total: info.total,
+    );
+  }
+
+  /// The songs in a TIDAL embed page (`window.tidalMediaSessionMetadata`), in order.
+  static List<ForeignSong> tidalSongs(String embed) {
+    final m = RegExp(
+      r'window\.tidalMediaSessionMetadata\s*=\s*(\{.*?\});\s*$',
+      multiLine: true,
+      dotAll: true,
+    ).firstMatch(embed);
+    final data = m == null ? null : jsonDecode(m.group(1)!);
+    if (data is! Map) {
+      throw const PlaylistTransferError('TIDAL changed its player; this link can\'t be read right now.');
+    }
+    return [
+      for (final t in data.values.whereType<Map>())
+        if (t['title'] is String) ForeignSong(title: t['title'] as String, artist: (t['artist'] as String?) ?? ''),
+    ];
+  }
+
+  /// A TIDAL playlist page's name and size, from its schema.org data.
+  static ({String? name, int? total}) tidalInfo(String page) {
+    for (final m in RegExp(r'<script type="application/ld\+json">(.*?)</script>', dotAll: true).allMatches(page)) {
+      try {
+        final j = jsonDecode(m.group(1)!);
+        if (j is Map && j['@type'] == 'MusicPlaylist') {
+          return (name: j['name'] as String?, total: j['numTracks'] as int?);
+        }
+      } on FormatException {
+        // Another block.
+      }
+    }
+    return (name: null, total: null);
+  }
+
+  Future<ForeignPlaylist> _netease(_Source s) async {
+    final url = s.kind == 'album'
+        ? Uri.https('music.163.com', '/api/album/${s.id}')
+        : Uri.https('music.163.com', '/api/v6/playlist/detail', {'id': s.id, 'n': '$maxSongs'});
+    final j = jsonDecode(await _get(url));
+    if (j is! Map || j['code'] != 200) throw PlaylistTransferError(tr.playlistMissingOrPrivate);
+    return neteasePlaylist(j, s.kind);
+  }
+
+  /// NetEase Cloud Music's answer for a playlist (`/api/v6/playlist/detail`) or album (`/api/album/<id>`).
+  static ForeignPlaylist neteasePlaylist(Map j, String kind) {
+    final list = (kind == 'album' ? j['album'] : j['playlist']) as Map? ?? const {};
+    final tracks = (kind == 'album' ? list['songs'] : list['tracks']) as List? ?? const [];
+    String artists(Map t) => [
+      for (final a in ((t['ar'] ?? t['artists']) as List? ?? const []).whereType<Map>())
+        if (a['name'] is String) a['name'] as String,
+    ].join(', ');
+    final songs = [
+      for (final t in tracks.whereType<Map>())
+        if (t['name'] is String)
+          ForeignSong(
+            title: t['name'] as String,
+            artist: artists(t),
+            duration: switch (t['dt'] ?? t['duration']) {
+              final int ms => Duration(milliseconds: ms),
+              _ => null,
+            },
+          ),
+    ];
+    return ForeignPlaylist(
+      title: (list['name'] as String?) ?? tr.servicePlaylist('NetEase Cloud Music'),
+      service: 'NetEase Cloud Music',
+      songs: songs,
+      total: (list['trackCount'] ?? list['size']) as int?,
     );
   }
 

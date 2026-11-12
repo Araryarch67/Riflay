@@ -38,7 +38,10 @@ void main() {
     const m = KeepScreenOn.whilePlaying;
     expect(decideLocks(facts(screen: m, playing: true, phone: true, desktop: false)).screen, isTrue);
     expect(decideLocks(facts(screen: m, playing: false, phone: true, desktop: false)).screen, isFalse);
-    expect(decideLocks(facts(screen: m, playing: true, foreground: false, phone: true, desktop: false)).screen, isFalse);
+    expect(
+      decideLocks(facts(screen: m, playing: true, foreground: false, phone: true, desktop: false)).screen,
+      isFalse,
+    );
   });
 
   test('screen: while open follows the foreground on phones, not on computers', () {

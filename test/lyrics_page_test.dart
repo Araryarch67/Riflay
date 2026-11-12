@@ -226,7 +226,9 @@ void main() {
     expect(colorOf(tester, 'haro biggu waarudo'), _primary.withValues(alpha: 0.8), reason: 'not dim like the unsung');
   });
 
-  testWidgets('word fill advances on every Balanced beat (20 fps) without resetting at word boundaries', (tester) async {
+  testWidgets('word fill advances on every Balanced beat (20 fps) without resetting at word boundaries', (
+    tester,
+  ) async {
     final prefs = LayoutPrefs.instance;
     final previous = prefs.performance;
     prefs.performance = PerformanceMode.balanced;

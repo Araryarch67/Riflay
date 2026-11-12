@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -11,6 +12,9 @@ import '../widgets/app_update_tile.dart';
 import '../../services/language.dart';
 import 'sound_settings.dart' show SettingsCard, settingsMuted;
 import 'downloaded_tools_page.dart';
+import '../../services/app_cache.dart';
+import '../widgets/app_dialog.dart';
+import '../widgets/controls.dart' show formatBytes;
 
 const _repo = 'https://github.com/Araryarch67/Riflay';
 
@@ -113,6 +117,7 @@ class AboutSettings extends StatelessWidget {
                 onTap: () =>
                     Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const DownloadedToolsPage())),
               ),
+            if (!kIsWeb) const _ClearCacheTile(),
             ListTile(
               leading: const Icon(Icons.info_outline_rounded),
               title: Text(tr.version),
@@ -176,6 +181,67 @@ class AboutSettings extends StatelessWidget {
           ],
         ),
       ],
+    );
+  }
+}
+
+/// Clear cache, with what it would free; asks first ([AppCache]).
+class _ClearCacheTile extends StatefulWidget {
+  const _ClearCacheTile();
+
+  @override
+  State<_ClearCacheTile> createState() => _ClearCacheTileState();
+}
+
+class _ClearCacheTileState extends State<_ClearCacheTile> {
+  late Future<int> _size = AppCache.size();
+  bool _clearing = false;
+
+  Future<void> _clear(int bytes) async {
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (context) => AppDialog(
+        title: Text(tr.clearCacheConfirm(formatBytes(bytes))),
+        content: Text(tr.clearCacheConfirmBody),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: Text(tr.cancel)),
+          FilledButton(onPressed: () => Navigator.pop(context, true), child: Text(tr.clearCacheAction)),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+    setState(() => _clearing = true);
+    final freed = await AppCache.clear();
+    if (!mounted) return;
+    setState(() {
+      _clearing = false;
+      _size = AppCache.size();
+    });
+    messenger?.showSnackBar(SnackBar(content: Text(tr.clearCacheDone(formatBytes(freed)))));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final muted = settingsMuted(context);
+    return FutureBuilder(
+      future: _size,
+      builder: (context, snap) {
+        final bytes = snap.data;
+        return ListTile(
+          leading: const Icon(Icons.cleaning_services_outlined),
+          title: Text(tr.clearCache),
+          subtitle: Text(
+            bytes == null || _clearing ? tr.clearCacheCounting : tr.clearCacheSubtitle(formatBytes(bytes)),
+            style: muted,
+          ),
+          trailing: _clearing
+              ? const SizedBox.square(dimension: 20, child: CircularProgressIndicator(strokeWidth: 2))
+              : null,
+          enabled: bytes != null && bytes > 0 && !_clearing,
+          onTap: bytes == null ? null : () => _clear(bytes),
+        );
+      },
     );
   }
 }

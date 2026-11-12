@@ -47,6 +47,11 @@ abstract final class DebugSwitches {
   /// A phone page's top bar fills in with a solid colour on scroll with the Liquid glass tab bar too, not as glass.
   static bool noGlassTopBar = _all || const bool.fromEnvironment('RIFLAY_NO_GLASS_TOP_BAR');
 
+  /// Home's Artists shelf opens the library's artist page for every artist, as before, also for one whose songs
+  /// were downloaded from YouTube Music (see `openHomeArtist`). Not part of `RIFLAY_NO_SHORTCUTS`, which is about
+  /// rendering.
+  static bool localHomeArtists = const bool.fromEnvironment('RIFLAY_LOCAL_HOME_ARTISTS');
+
   /// Turning a phone sideways while Now Playing shows the music video doesn't open it full screen (the button and a
   /// double tap on the video still do). Not part of `RIFLAY_NO_SHORTCUTS`, which is about rendering.
   static bool noVideoRotate = const bool.fromEnvironment('RIFLAY_NO_VIDEO_ROTATE');
@@ -99,6 +104,27 @@ abstract final class DebugSwitches {
 
   /// Decorations and the visualizer keep moving while the music video shows, as before.
   static bool motionWithVideo = _all || const bool.fromEnvironment('RIFLAY_MOTION_WITH_VIDEO');
+
+  /// Video mode streams a song's music video even when "Download with MV" saved it beside the song. Not part of
+  /// `RIFLAY_NO_SHORTCUTS`, which is about rendering.
+  static bool noLocalMv = const bool.fromEnvironment('RIFLAY_NO_LOCAL_MV');
+
+  /// Virtual speakers mix a 5.1 / 7.1 song (a Dolby Atmos bed) down to two speakers first, as before, instead of
+  /// placing each channel in a 7.1 room, and Surround upmix does nothing. Not part of `RIFLAY_NO_SHORTCUTS`, which
+  /// is about rendering.
+  static bool stereoVirtualSpeakers = const bool.fromEnvironment('RIFLAY_STEREO_VIRTUAL_SPEAKERS');
+
+  /// AutoEQ's list of headphones is downloaded every time the picker opens, not kept for 30 days. Not part of
+  /// `RIFLAY_NO_SHORTCUTS`, which is about rendering.
+  static bool autoEqFresh = const bool.fromEnvironment('RIFLAY_AUTOEQ_FRESH');
+
+  /// Lyrics' Pronunciation is Google's for every script, as before, not Riflay's own for Korean, kana, Cyrillic and
+  /// Greek, nor tidied of scholarly marks. Not part of `RIFLAY_NO_SHORTCUTS`, which is about rendering.
+  static bool googleRomanization = const bool.fromEnvironment('RIFLAY_GOOGLE_ROMANIZATION');
+
+  /// The phone's bottom bar only takes taps: sliding a finger along it doesn't switch tabs. Not part of
+  /// `RIFLAY_NO_SHORTCUTS`, which is about rendering.
+  static bool noTabSwipe = const bool.fromEnvironment('RIFLAY_NO_TAB_SWIPE');
 
   /// Prints how many widgets each palette change rebuilds, and every Material theme built.
   static bool logRestyles = const bool.fromEnvironment('RIFLAY_LOG_RESTYLES');

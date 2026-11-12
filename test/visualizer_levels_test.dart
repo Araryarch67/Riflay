@@ -139,10 +139,7 @@ void main() {
   });
 
   test('Balanced\'s 12 measured bands are spread over the 24 bars, its 4096-point window read 6 dB up', () {
-    expect(
-      VisualizerLevels.spectralDb(1, 0, window: 4096)! - VisualizerLevels.spectralDb(1, 0)!,
-      closeTo(6.02, 0.01),
-    );
+    expect(VisualizerLevels.spectralDb(1, 0, window: 4096)! - VisualizerLevels.spectralDb(1, 0)!, closeTo(6.02, 0.01));
     // Bass loud, treble silent: the bars fall from the first to the last, through the middle.
     final metadata = StringBuffer('{');
     for (var band = 0; band < 12; band++) {

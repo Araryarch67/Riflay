@@ -154,12 +154,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get topicIntegrationsSummary => '聴いてる曲を Discord に表示';
 
   @override
-  String get topicExtensions => '拡張機能';
-
-  @override
-  String get topicExtensionsSummary => 'SpotiFLAC の拡張リポジトリ：検索先を増やせる';
-
-  @override
   String get topicLyricsServices => '歌詞サービス';
 
   @override
@@ -271,6 +265,9 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get downloadAs => '形式を選んでダウンロード…';
+
+  @override
+  String get downloadWithMv => 'MV 付きでダウンロード';
 
   @override
   String get saveToDevice => '端末に保存';
@@ -514,6 +511,15 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get playlist => 'プレイリスト';
+
+  @override
+  String get local => 'ローカル';
+
+  @override
+  String get folder => 'フォルダ';
+
+  @override
+  String get localEmpty => '追加した音楽フォルダとダウンロードした曲がここに表示される。';
 
   @override
   String get smartPlaylist => 'スマートプレイリスト';
@@ -3702,86 +3708,16 @@ class AppLocalizationsJa extends AppLocalizations {
   String get ytDlpMissing => '見つからない。YouTube からダウンロードするならインストールしてね（例：pacman -S yt-dlp）。';
 
   @override
-  String removeNamedQuestion(String name) {
-    return '$name を削除しますか？';
-  }
-
-  @override
-  String get removeExtensionBody => 'ファイルと、この端末に保存したデータが削除されます。';
-
-  @override
-  String couldntRemoveNamed(String name) {
-    return '$name を削除できませんでした';
-  }
-
-  @override
-  String get extensionsIntro =>
-      'SpotiFLAC 向けの拡張機能で、Apple Music、SoundCloud、JioSaavn などの検索先を増やせる。曲は YouTube Music から再生する。信頼できるリポジトリだけ追加してね。拡張機能は独自のコードを動かし、マニフェストに書かれたサイトにアクセスできる。';
-
-  @override
-  String get repositories => 'リポジトリ';
-
-  @override
   String get installed => 'インストール済み';
 
   @override
   String get noExtensionsYet => '拡張機能はまだない';
 
   @override
-  String get installFromRepo => '下のリポジトリからインストールしてね';
-
-  @override
   String get available => '利用可能';
 
   @override
-  String get repositoryAddress => 'リポジトリのアドレス';
-
-  @override
   String get reading => '読み込み中…';
-
-  @override
-  String couldntReadIt(String error) {
-    return '読み込めませんでした：$error';
-  }
-
-  @override
-  String get notReadYet => 'まだ読み込んでない';
-
-  @override
-  String extensionsCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(count, locale: localeName, other: '拡張機能$count個');
-    return '$_temp0';
-  }
-
-  @override
-  String get removeRepository => 'リポジトリを削除';
-
-  @override
-  String get addsToSearch => '検索結果に追加';
-
-  @override
-  String get downloadsUnsupported => 'ダウンロードはまだ未対応';
-
-  @override
-  String get lyricsUnsupported => '歌詞はまだ未対応';
-
-  @override
-  String get needsSpotiflacFeatures => 'Riflay にない SpotiFLAC の機能が必要なので、動かないかも';
-
-  @override
-  String updateTo(String version) {
-    return '$version に更新';
-  }
-
-  @override
-  String couldntUpdateNamed(String name) {
-    return '$name を更新できませんでした';
-  }
-
-  @override
-  String couldntInstallNamed(String name) {
-    return '$name をインストールできませんでした';
-  }
 
   @override
   String get install => 'インストール';
@@ -4138,7 +4074,7 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
-  String get pastePlaylistLink => 'Spotify、Apple Music、Deezer のプレイリストのリンクを貼り付けてね。';
+  String get pastePlaylistLink => 'Spotify、Apple Music、Deezer、TIDAL、NetEase Cloud Music のプレイリストのリンクを貼り付けてね。';
 
   @override
   String get becomesYtPlaylist => 'YouTube Music のライブラリのプレイリストになる。';
@@ -4150,7 +4086,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get playlistLink => 'プレイリストのリンク';
 
   @override
-  String get notAPlaylistLink => 'それは Spotify、Apple Music、Deezer のプレイリストのリンクじゃない';
+  String get notAPlaylistLink => 'それは Spotify、Apple Music、Deezer、TIDAL、NetEase Cloud Music のプレイリストのリンクじゃない';
 
   @override
   String get readingPlaylist => 'プレイリストを読み込み中…';
@@ -4848,16 +4784,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get noInternetTryAgain => 'ネットにつながってません。もう一度試してください。';
 
   @override
-  String extAnsweredUnreadable(String name) {
-    return '$name から読めない応答が返ってきた';
-  }
-
-  @override
-  String extStopped(String name) {
-    return '$name が停止された';
-  }
-
-  @override
   String get flacBiggerOne => 'FLAC ファイルは元のファイルより大きくなる。音は同じまま。元のファイルで失われた分は FLAC でも戻らない。';
 
   @override
@@ -4959,21 +4885,6 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get whileRiflayOpen => 'Riflay を開いてる間';
-
-  @override
-  String couldntFindOnYt(String title) {
-    return 'YouTube Music に $title が見つかりませんでした';
-  }
-
-  @override
-  String fromNamed(String name) {
-    return '$name から';
-  }
-
-  @override
-  String extCouldntSearch(String name, String error) {
-    return '$name で検索できませんでした：$error';
-  }
 
   @override
   String moreOptionsFor(String title) {
@@ -5342,7 +5253,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get kwSkipSilence => '無音, 静かな部分, スキップ';
 
   @override
-  String get kwEqualizer => 'EQ, 低音, 高音, 音質';
+  String get kwEqualizer => 'EQ, 低音, 高音, 音質, autoeq, iem, headphone profile';
 
   @override
   String get kwVolumeLeveling => 'ReplayGain, ノーマライズ, 音量の均一化, ラウドネス';
@@ -5354,7 +5265,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get kwFadeLength => 'フェード時間, 秒';
 
   @override
-  String get kwVirtualSpeakers => '立体音響, サラウンド, 3D, HRTF';
+  String get kwVirtualSpeakers => '立体音響, サラウンド, 3D, HRTF, dolby atmos';
 
   @override
   String get kwCrossfeed => 'ヘッドホン, ステレオ幅, bs2b';
@@ -5570,9 +5481,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get kwDiscord => 'ステータス, アクティビティ';
 
   @override
-  String get kwExtensions => '拡張機能, プラグイン, リポジトリ';
-
-  @override
   String get kwUpdates => 'アップデート, 新しいバージョン';
 
   @override
@@ -5598,4 +5506,536 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get topicLyricsSummary => '歌詞の見た目と取得元';
+
+  @override
+  String get losslessCheck => 'ロスレスファイルを検査';
+
+  @override
+  String get losslessCheckSubtitle => 'MP3から作られたFLAC、偽のハイレゾ、16ビットを水増しした24ビットを見つけます';
+
+  @override
+  String get losslessCheckAbout => 'FLAC・WAV・AIFF・WavPack・APEをそれぞれ一度読み、スペクトルと実際に使われているビット数を調べます';
+
+  @override
+  String losslessCheckFiles(int checked, int total) {
+    return 'ロスレスファイル $total 件中 $checked 件を検査済み';
+  }
+
+  @override
+  String get losslessCheckRun => '検査';
+
+  @override
+  String get losslessCheckAllGood => '検査したファイルはすべて本物のようです';
+
+  @override
+  String losslessCheckFound(int count) {
+    String _temp0 = intl.Intl.pluralLogic(count, locale: localeName, other: '$count 件のファイルは表示どおりではない可能性があります');
+    return '$_temp0';
+  }
+
+  @override
+  String losslessCheckLossyCut(String khz) {
+    return '$khz kHzでカット：MP3またはAACから作成';
+  }
+
+  @override
+  String get losslessCheckUpsampled => '22 kHz以上が空：44.1 / 48 kHzからアップサンプリング';
+
+  @override
+  String losslessCheckPadded(int bits) {
+    return '$bitsビットだが中身は16ビット';
+  }
+
+  @override
+  String get downloadNeedsSignIn => 'この曲はログインが必要です（年齢制限）。設定 › アカウントとサービスでYouTube Musicにログインしてからもう一度お試しください。';
+
+  @override
+  String get kwLosslessCheck => '偽FLAC, アップスケール, トランスコード, スペクトル, 本物のロスレス, ビット深度';
+
+  @override
+  String get dsSong => '曲';
+
+  @override
+  String get dsSource => 'ソース';
+
+  @override
+  String get dsSignal => '信号';
+
+  @override
+  String get dsAnalysis => '解析';
+
+  @override
+  String get dsSound => 'サウンド';
+
+  @override
+  String get dsOutput => '出力';
+
+  @override
+  String get dsNetwork => 'ネットワーク';
+
+  @override
+  String get dsReading => '読み込み';
+
+  @override
+  String get dsTitle => 'タイトル';
+
+  @override
+  String get dsArtist => 'アーティスト';
+
+  @override
+  String get dsAlbum => 'アルバム';
+
+  @override
+  String get dsPosition => '再生位置';
+
+  @override
+  String get dsPlaysFrom => '再生元';
+
+  @override
+  String get dsPlaysStream => 'YouTube Musicのストリーム';
+
+  @override
+  String get dsPlaysDownloaded => 'ダウンロード済みのコピー';
+
+  @override
+  String get dsPlaysFile => 'このデバイスのファイル';
+
+  @override
+  String get dsVideoIdItag => '動画ID / itag';
+
+  @override
+  String get dsVideoId => '動画ID';
+
+  @override
+  String get dsFile => 'ファイル';
+
+  @override
+  String get dsQuality => '音質';
+
+  @override
+  String get dsFormat => 'フォーマット';
+
+  @override
+  String get dsSampleRate => 'サンプルレート';
+
+  @override
+  String get dsBitDepth => 'ビット深度';
+
+  @override
+  String dsBits(int bits) {
+    return '$bitsビット';
+  }
+
+  @override
+  String get dsBitrate => 'ビットレート';
+
+  @override
+  String dsKbpsAvg(int avg) {
+    return '$avg kbps(平均)';
+  }
+
+  @override
+  String dsKbpsNowAvg(int now, int avg) {
+    return '$now kbps(平均 $avg)';
+  }
+
+  @override
+  String get dsChannels => 'チャンネル';
+
+  @override
+  String get dsMono => 'モノラル';
+
+  @override
+  String get dsStereo => 'ステレオ';
+
+  @override
+  String dsChannelCount(int count) {
+    return '$countチャンネル';
+  }
+
+  @override
+  String get dsContainer => 'コンテナ';
+
+  @override
+  String get dsFileSize => 'ファイルサイズ';
+
+  @override
+  String get dsFrequencyRange => '周波数レンジ';
+
+  @override
+  String dsUpToNyquist(String khz) {
+    return '$khzまで(ナイキスト)';
+  }
+
+  @override
+  String get dsTheoreticalRange => '理論上のダイナミックレンジ';
+
+  @override
+  String get dsMeasuring => '測定中';
+
+  @override
+  String get dsReadingFile => 'ファイル全体を読み込み中…';
+
+  @override
+  String get dsSpectrum => 'スペクトル';
+
+  @override
+  String dsCutLossless(String khz) {
+    return '$khzでカット:MP3かAACから作られたらしい';
+  }
+
+  @override
+  String dsCutLossy(String khz) {
+    return '$khzでカット(ロッシーファイルではふつう)';
+  }
+
+  @override
+  String get dsUpsampled => '約22 kHzより上が空:44.1 / 48 kHzからのアップサンプル';
+
+  @override
+  String dsFullBand(String khz) {
+    return 'フルバンド、$khzまで';
+  }
+
+  @override
+  String get dsBitsUsed => '使われているビット';
+
+  @override
+  String dsBitsPadded(int used, int stored) {
+    return '$storedのうち$used:16ビットのファイルを水増し';
+  }
+
+  @override
+  String dsBitsAll(int stored) {
+    return '$storedすべて';
+  }
+
+  @override
+  String dsBitsOf(int used, int stored) {
+    return '$storedのうち$used';
+  }
+
+  @override
+  String get dsDynamicRange => 'ダイナミックレンジ';
+
+  @override
+  String get dsDrDynamic => 'ダイナミック';
+
+  @override
+  String get dsDrModerate => 'やや圧縮';
+
+  @override
+  String get dsDrHeavy => '強く圧縮';
+
+  @override
+  String get dsLoudness => 'ラウドネス';
+
+  @override
+  String dsPeak(String db) {
+    return 'ピーク $db dBFS';
+  }
+
+  @override
+  String get dsMeasuredGain => '測定したゲイン';
+
+  @override
+  String dsMeasuredGainValue(String gain) {
+    return '$gain dB(ReplayGainタグがないときの音量調整に使う)';
+  }
+
+  @override
+  String get dsDecoded => 'デコード';
+
+  @override
+  String get dsEffects => 'エフェクト';
+
+  @override
+  String get dsNone => 'なし';
+
+  @override
+  String get dsVolume => '音量';
+
+  @override
+  String get dsMuted => 'ミュート';
+
+  @override
+  String get dsLeveling => '音量の均一化';
+
+  @override
+  String get dsOff => 'オフ';
+
+  @override
+  String get dsOn => 'オン';
+
+  @override
+  String get dsNoReplayGain => 'ReplayGainタグなし';
+
+  @override
+  String dsLoudnessTarget(String lufs, String target) {
+    return '$lufs LUFS(目標 $target LUFS)';
+  }
+
+  @override
+  String get dsTempoPitch => 'テンポ / ピッチ';
+
+  @override
+  String dsTempoPitchValue(String tempo, String pitch) {
+    return '$tempo× / $pitch半音';
+  }
+
+  @override
+  String get dsCrossfade => 'クロスフェード';
+
+  @override
+  String get dsClipProtection => 'クリップ防止';
+
+  @override
+  String get dsResampled => 'リサンプル';
+
+  @override
+  String get dsDevice => 'デバイス';
+
+  @override
+  String get dsBluetooth => 'Bluetooth';
+
+  @override
+  String get dsBtAllow => 'コーデック:付近のデバイスを許可して';
+
+  @override
+  String get dsBtUnknown => 'コーデック不明';
+
+  @override
+  String get dsDacReceives => 'DACへの入力';
+
+  @override
+  String get dsDirectUsb => 'ダイレクトUSB';
+
+  @override
+  String get dsBitPerfect => 'Bit-perfect';
+
+  @override
+  String get dsYes => 'はい';
+
+  @override
+  String get dsNo => 'いいえ';
+
+  @override
+  String get dsConnectionSpeed => '接続速度';
+
+  @override
+  String get dsReadingNow => '読み込み速度';
+
+  @override
+  String get dsReceived => '受信済み';
+
+  @override
+  String dsReceivedOf(String received, String total) {
+    return '$totalのうち$received';
+  }
+
+  @override
+  String get dsBufferHealth => 'バッファ';
+
+  @override
+  String get dsStreamUrlFrom => 'ストリームURLの取得元';
+
+  @override
+  String get dsSpectrogram => 'スペクトログラム';
+
+  @override
+  String get surroundUpmix => 'サラウンドにアップミックス';
+
+  @override
+  String get surroundUpmixSubtitle =>
+      'ステレオの曲が周りの7.1の部屋に広がる：ボーカルは前のまま、空間の響きが横と後ろへ。5.1 / 7.1の曲(Dolby Atmosも)はいつもチャンネルごとの位置で鳴る。';
+
+  @override
+  String get passthrough => 'Dolby / DTSのパススルー';
+
+  @override
+  String get passthroughSubtitle =>
+      'HDMIや光デジタルでAVアンプ・サウンドバーにつなぐとき用：Dolby Digital、Dolby Atmos(E-AC-3、TrueHD)、DTSをデコードせずに送り、アンプが再生する(Atmosの高さ方向も)。その曲にはエフェクトと音量がかからない。';
+
+  @override
+  String get kwSurroundUpmix => 'dolby atmos, 空間オーディオ, サラウンド, 7.1, 3d, アップミックス';
+
+  @override
+  String get kwPassthrough => 'dolby atmos, hdmi, spdif, 光デジタル, AVアンプ, サウンドバー, ビットストリーム, dts, truehd';
+
+  @override
+  String get fxUpmix => 'サラウンドにアップミックス';
+
+  @override
+  String dsAtmosBed(int channels) {
+    return '$channelsチャンネルのベッドをデコード。高さ方向のオブジェクトはAVアンプが必要(パススルー)';
+  }
+
+  @override
+  String get dsPassthrough => 'パススルー';
+
+  @override
+  String dsPassthroughValue(String codec) {
+    return '$codecをデコードせずにアンプへ';
+  }
+
+  @override
+  String get dsVirtualRoom => 'バーチャルスピーカー';
+
+  @override
+  String get dsRoomStereo => 'スピーカー2台(ステレオ)';
+
+  @override
+  String get dsRoomSurround => '7.1の部屋、チャンネルごとの位置';
+
+  @override
+  String get dsRoomUpmix => '7.1の部屋、ステレオからアップミックス';
+
+  @override
+  String get autoEq => 'ヘッドホン / IEMのプロファイル(AutoEQ)';
+
+  @override
+  String get autoEqSubtitle => '測定データからモデルに合わせてイコライザーを設定し、ニュートラルな音(Harmanターゲット)にする。';
+
+  @override
+  String get autoEqPick => 'ヘッドホンかIEMを選ぶ';
+
+  @override
+  String get autoEqSearch => 'モデルを検索(例:KZ ZSN Pro)';
+
+  @override
+  String get autoEqLoading => 'モデルの一覧を読み込み中…';
+
+  @override
+  String autoEqModels(int count) {
+    return '$countモデル(crinacle、oratory1990などが測定)。名前を入力して検索。';
+  }
+
+  @override
+  String get autoEqNoResults => 'その名前のモデルはない。';
+
+  @override
+  String autoEqFailed(String error) {
+    return 'AutoEQを読み込めませんでした:$error';
+  }
+
+  @override
+  String autoEqApplied(String name) {
+    return '$name向けにイコライザーを設定した';
+  }
+
+  @override
+  String autoEqAppliedFitted(String name, String db) {
+    return '$name向けにイコライザーを設定した(プロファイルとの差 ±$db dB以内)';
+  }
+
+  @override
+  String get clearCache => 'キャッシュを削除';
+
+  @override
+  String clearCacheSubtitle(String size) {
+    return 'カバー、オンラインの歌詞など、Riflayがまた取得できるもの $size。音楽は消えない。';
+  }
+
+  @override
+  String get clearCacheCounting => '計算中…';
+
+  @override
+  String clearCacheConfirm(String size) {
+    return 'キャッシュ $size を削除しますか?';
+  }
+
+  @override
+  String get clearCacheConfirmBody => 'カバーと歌詞は必要なときにまたダウンロードされます。ライブラリ、ダウンロード、プレイリスト、設定、自分で書いた歌詞、ラウドネスの測定結果は残ります。';
+
+  @override
+  String get clearCacheAction => '削除';
+
+  @override
+  String clearCacheDone(String size) {
+    return '$size を空けた';
+  }
+
+  @override
+  String get kwClearCache => 'キャッシュ, ストレージ, 容量, 空き, 掃除, 一時ファイル';
+
+  @override
+  String get dsDeviceRate => 'デバイスのサンプルレート';
+
+  @override
+  String get dsDeviceFormat => 'デバイスのフォーマット';
+
+  @override
+  String get dsMixerBuffer => 'ミキサーのバッファ';
+
+  @override
+  String dsMixerBufferValue(String ms, int frames) {
+    return '$ms ms · $framesフレーム';
+  }
+
+  @override
+  String get dsLowLatency => '低遅延オーディオ';
+
+  @override
+  String get dsProAudio => 'プロオーディオ';
+
+  @override
+  String get dsSpatialAudio => '空間オーディオ';
+
+  @override
+  String get dsSystemVolume => 'システムの音量';
+
+  @override
+  String get dsSupported => '対応';
+
+  @override
+  String get dsNotSupported => '非対応';
+
+  @override
+  String get fromInternetArchive => 'Internet ArchiveのFLAC';
+
+  @override
+  String get radioParadiseFlac => 'Radio Paradise(FLAC)';
+
+  @override
+  String onAir(String song) {
+    return 'オンエア中:$song';
+  }
+
+  @override
+  String archiveCouldntLoad(String error) {
+    return 'Internet Archiveから読み込めませんでした:$error';
+  }
+
+  @override
+  String get archiveNoFlac => 'この録音にはここで再生できるFLACファイルがない。';
+
+  @override
+  String get topicSources => '音楽ソース';
+
+  @override
+  String get topicSourcesSummary => 'Internet ArchiveとRadio Paradise:無料のFLAC音源';
+
+  @override
+  String get sourcesAbout => 'アーティストや権利者の許可のもとで公開されている、無料のロスレス音源。Riflayは各サービスのサーバーから直接再生する。';
+
+  @override
+  String get sourceArchive => '検索にInternet Archive';
+
+  @override
+  String get sourceArchiveSubtitle => 'Live Music Archiveのライブ、ネットレーベル、パブリックドメインの録音をFLACで(検索の「すべて」に表示)';
+
+  @override
+  String get sourceRadioParadise => '検索ページにRadio Paradise';
+
+  @override
+  String get sourceRadioParadiseSubtitle => 'リスナーに支えられたCMなしのラジオ。全チャンネルFLAC(CD音質)';
+
+  @override
+  String get kwSources => 'flac, ロスレス, internet archive, live music archive, radio paradise, 無料音楽, ソース';
+
+  @override
+  String get spotifyCanvas => 'Canvas';
+
+  @override
+  String get spotifyCanvasSubtitle => 'Spotifyが曲と一緒に流すループ動画を、MVの代わりにビデオモードで表示する(ベータ機能でビデオモードをオンに)';
 }

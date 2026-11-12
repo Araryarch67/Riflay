@@ -216,6 +216,19 @@ VideoPick? pickVideoDownload(VideoFormats f, DownloadChoice choice, {required bo
   return VideoPick(pick.video, audio, container);
 }
 
+/// The picture stream "Download with MV" keeps beside a song, for [choice] (a video choice: Settings' container
+/// and size). It is saved as YouTube serves it, with nothing combined, so only H.264 as MP4 and VP9 as WebM
+/// count (never an AV1 that would need ffmpeg); when the container asked for has nothing, the other one. Null
+/// when the video offers neither.
+VideoCandidate? pickMusicVideoPicture(VideoFormats f, DownloadChoice choice) {
+  final wanted = choice.container ?? VideoContainer.mp4;
+  for (final c in [wanted, ...VideoContainer.values.where((c) => c != wanted)]) {
+    final pick = pickVideoDownload(f, DownloadChoice.video(c, height: choice.height), ffmpeg: false);
+    if (pick != null) return pick.video;
+  }
+  return null;
+}
+
 /// The single-file stream (picture and sound together) to fall back on when the two can't be combined: the tallest
 /// progressive MP4, usually 360p.
 VideoCandidate? pickProgressive(VideoFormats f) {

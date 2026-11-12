@@ -137,9 +137,14 @@ String _codecName(SignalPath p) => p.isDop
         final c => c.toUpperCase(),
       };
 
+/// What kind of sound a song is ("Lossy", "Lossless", "Hi-Res", "DSD") and its icon, as the quality badge shows it.
+(String, IconData) qualityTier(SignalPath p) => _tier(p);
+
 /// What kind of sound a song is, as the badge names it: its word and its icon.
 (String, IconData) _tier(SignalPath p) {
   if (p.isDsd || p.isDop) return ('DSD', Icons.blur_on_rounded);
+  // Atmos is lossy (E-AC-3) or lossless (TrueHD); what sets it apart is the room, so it is named for that.
+  if (p.isAtmos) return ('Dolby Atmos', Icons.surround_sound_rounded);
   if (!p.lossless) return (tr.qualityLossy, Icons.graphic_eq_rounded);
   final bits = SignalPath.bitsOf(p.inFormat);
   final hiRes = p.inRate > 48000 || (p.sourceBits ?? (p.inFormat.startsWith('float') ? null : bits) ?? 16) > 16;

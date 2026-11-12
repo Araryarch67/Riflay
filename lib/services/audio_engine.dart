@@ -63,6 +63,18 @@ enum BufferSize {
 
 /// Both sides played as one sound: in both ears, or in one when the other side
 /// of the headphones doesn't work.
+/// The room Virtual speakers place the song's channels in, see [AudioEngine.virtualRoom].
+enum VirtualRoom {
+  /// Two speakers at ±30°: a stereo song.
+  stereo,
+
+  /// 7.1: a song with more channels than two, each in its place.
+  surround,
+
+  /// 7.1, a stereo song spread over it ([AudioEngine.surroundUpmix]).
+  upmix,
+}
+
 enum MonoAudio {
   off,
   both,
@@ -200,7 +212,18 @@ class SignalPath {
     this.usbDacName,
     this.usbBitPerfect = false,
     this.bluetooth,
+    this.profile,
   });
+
+  /// The codec's profile as FFmpeg names it ("LC", "Dolby Digital Plus + Dolby Atmos"), when it has one.
+  final String? profile;
+
+  /// A Dolby Atmos song: E-AC-3 with joint object coding or TrueHD with Atmos. FFmpeg decodes its 5.1 / 7.1 bed;
+  /// the height objects need Dolby's own decoder (an AV receiver, through [AudioEngine.passthrough]).
+  bool get isAtmos => profile?.contains('Atmos') ?? false;
+
+  /// The song goes out undecoded to a receiver (mpv's `spdif-…` formats), see [AudioEngine.passthrough].
+  bool get isPassthrough => outFormat.startsWith('spdif');
 
   /// Android: the Bluetooth headphones the sound goes to, and their codec.
   final BluetoothOutput? bluetooth;
@@ -503,6 +526,9 @@ class AudioEngine extends ChangeNotifier {
 
   bool eqEnabled = false;
   String eqPreset = 'Flat';
+
+  /// The AutoEQ profile the bands came from ("KZ ZSN Pro (crinacle)"), until a band or preset changes them.
+  String? eqProfile;
   List<EqBand> bands = [for (final f in defaultEqFrequencies) EqBand(f, 0)];
 
   /// Headphone crossfeed strength 0..1 (0 = off).
@@ -550,6 +576,29 @@ class AudioEngine extends ChangeNotifier {
 
   /// [hrirAsset] as a file FFmpeg can open (assets aren't files on Android, iOS or macOS).
   String? hrirPath;
+
+  /// The same head in a 7.1 room (ITU-R BS.775: front ±30°, centre, sides ±90°, backs ±135°; made by
+  /// `tool/make_hrir.sh`, at [hrirAsset]'s gain): for songs with more channels than two (5.1 / 7.1, the bed of a
+  /// Dolby Atmos song) and stereo under [surroundUpmix]. See [virtualRoom].
+  static const hrir71Asset = 'assets/audio/hrir_kemar_71_48k.wav';
+
+  /// [hrir71Asset] as a file FFmpeg can open.
+  String? hrir71Path;
+
+  /// Virtual speakers spread a stereo song over the 7.1 room too: what differs between left and right (the room,
+  /// the width) goes to the side and back speakers, what both share (the voice) stays in front.
+  bool surroundUpmix = false;
+
+  /// Channels the playing song decodes to (mpv's `audio-params`), which picks [virtualRoom]; null before one opens.
+  int? sourceChannels;
+
+  /// Dolby Digital, Dolby Digital Plus (Atmos too), TrueHD and DTS go out untouched over HDMI or S/PDIF, for an AV
+  /// receiver or soundbar to decode (the only way to hear Atmos' height objects: no free decoder has them).
+  /// Effects, volume and the visualizer don't apply to those songs; others play as always.
+  bool passthrough = false;
+
+  /// The codecs [passthrough] sends as they are (mpv's `audio-spdif`).
+  static const passthroughCodecs = 'ac3,eac3,truehd,dts,dts-hd';
 
   MonoAudio mono = MonoAudio.off;
 
@@ -998,6 +1047,7 @@ class AudioEngine extends ChangeNotifier {
       buffer = BufferSize.values.asNameMap()[j['buffer']] ?? buffer;
       eqEnabled = j['eqEnabled'] as bool? ?? eqEnabled;
       eqPreset = j['eqPreset'] as String? ?? eqPreset;
+      eqProfile = j['eqProfile'] as String?;
       final b = j['bands'] as List?;
       if (b != null && b.isNotEmpty) bands = [for (final x in b) EqBand.fromJson((x as Map).cast())];
       crossfeed = (j['crossfeed'] as num?)?.toDouble() ?? crossfeed;
@@ -1005,6 +1055,8 @@ class AudioEngine extends ChangeNotifier {
       tempo = ((j['tempo'] as num?)?.toDouble() ?? tempo).clamp(0.5, 2.0);
       pitch = ((j['pitch'] as num?)?.round() ?? pitch).clamp(-12, 12);
       virtualSpeakers = j['virtualSpeakers'] as bool? ?? virtualSpeakers;
+      surroundUpmix = j['surroundUpmix'] as bool? ?? surroundUpmix;
+      passthrough = j['passthrough'] as bool? ?? passthrough;
       crossfeedRange = ((j['crossfeedRange'] as num?)?.toDouble() ?? 0.5).clamp(0, 1);
       virtualSpeakerGain = ((j['virtualSpeakerGain'] as num?)?.toDouble() ?? 0).clamp(-12, 6);
       convolutionGain = ((j['convolutionGain'] as num?)?.toDouble() ?? 0).clamp(-24, 0);
@@ -1052,22 +1104,27 @@ class AudioEngine extends ChangeNotifier {
     if (webEffects) WebAudio.apply(webEffectsNow);
   }
 
-  /// Copies [hrirAsset] next to the app's other files, for [hrirPath].
+  /// Copies [hrirAsset] and [hrir71Asset] next to the app's other files, for [hrirPath] and [hrir71Path].
   Future<void> _installHrir() async {
-    if (hrirPath != null) return;
+    hrirPath ??= await _installAsset(hrirAsset);
+    hrir71Path ??= await _installAsset(hrir71Asset);
+  }
+
+  static Future<String?> _installAsset(String asset) async {
     try {
-      final data = await rootBundle.load(hrirAsset);
+      final data = await rootBundle.load(asset);
       final bytes = data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
-      final file = File(p.join((await getApplicationSupportDirectory()).path, p.basename(hrirAsset)));
+      final file = File(p.join((await getApplicationSupportDirectory()).path, p.basename(asset)));
       if (!file.existsSync() || !listEquals(await file.readAsBytes(), bytes)) {
         await file.parent.create(recursive: true);
         final part = File('${file.path}.part');
         await part.writeAsBytes(bytes, flush: true);
         await part.rename(file.path);
       }
-      hrirPath = file.path;
+      return file.path;
     } catch (e) {
       debugPrint('Virtual speakers: $e');
+      return null;
     }
   }
 
@@ -1082,6 +1139,7 @@ class AudioEngine extends ChangeNotifier {
       'buffer': buffer.name,
       'eqEnabled': eqEnabled,
       'eqPreset': eqPreset,
+      'eqProfile': eqProfile,
       'bands': [for (final b in bands) b.toJson()],
       'crossfeed': crossfeed,
       'skipSilence': skipSilence,
@@ -1090,6 +1148,8 @@ class AudioEngine extends ChangeNotifier {
       'virtualSpeakers': virtualSpeakers,
       'crossfeedRange': crossfeedRange,
       'virtualSpeakerGain': virtualSpeakerGain,
+      'surroundUpmix': surroundUpmix,
+      'passthrough': passthrough,
       'convolutionGain': convolutionGain,
       'mono': mono.name,
       'device': device,
@@ -1188,6 +1248,12 @@ class AudioEngine extends ChangeNotifier {
     return _set(() => virtualSpeakers = v);
   }
 
+  Future<void> setSurroundUpmix(bool v) => _set(() => surroundUpmix = v);
+  Future<void> setPassthrough(bool v) => _set(() => passthrough = v, reopen: true);
+
+  /// [passthrough] where it can reach a receiver: not through Direct USB's pipe, nor in a browser.
+  bool get passthroughActive => passthrough && !directUsbActive && !kIsWeb;
+
   Future<void> setExclusive(bool v) => _set(() => exclusive = v, reopen: true);
   Future<void> setOutputRate(int? v) => _set(() => outputRate = v, reopen: true);
   Future<void> setHqResampler(bool v) => _set(() => hqResampler = v);
@@ -1221,12 +1287,22 @@ class AudioEngine extends ChangeNotifier {
   Future<void> setBand(int i, EqBand band) => _set(() {
     bands = [...bands]..[i] = band;
     eqPreset = 'Custom';
+    eqProfile = null;
+  });
+
+  /// Bands made for a headphone or IEM ([AutoEq]), named [profile].
+  Future<void> applyEqProfile(String profile, List<EqBand> profileBands) => _set(() {
+    bands = profileBands;
+    eqPreset = 'Custom';
+    eqProfile = profile;
+    eqEnabled = true;
   });
 
   Future<void> applyPreset(String name) => _set(() {
     final gains = eqPresets[name];
     if (gains == null) return;
     eqPreset = name;
+    eqProfile = null;
     eqEnabled = true;
     bands = [for (var i = 0; i < defaultEqFrequencies.length; i++) EqBand(defaultEqFrequencies[i], gains[i])];
   });
@@ -1398,6 +1474,20 @@ class AudioEngine extends ChangeNotifier {
   /// would only colour the sound.
   bool get virtualSpeakersActive => virtualSpeakers && hrirPath != null && !bitPerfect && !monoActive;
 
+  /// The room Virtual speakers play in: 7.1 for a song with more than two channels, so each keeps its own place
+  /// around the head (they were mixed down to two speakers before), and for stereo under [surroundUpmix].
+  VirtualRoom get virtualRoom {
+    if (hrir71Path == null || DebugSwitches.stereoVirtualSpeakers) return VirtualRoom.stereo;
+    if ((sourceChannels ?? 2) > 2) return VirtualRoom.surround;
+    return surroundUpmix ? VirtualRoom.upmix : VirtualRoom.stereo;
+  }
+
+  /// Stereo into 7.1 for [VirtualRoom.upmix], passively (`pan`: in every libmpv build Riflay ships): left and right
+  /// stay in front as they were; their difference, what isn't in the middle, also goes to the sides and, lower,
+  /// to the back, in opposite phase on the two sides. A voice in the middle cancels there and stays in front.
+  static const upmixFilter =
+      'pan=7.1|FL=c0|FR=c1|SL=0.35*c0-0.35*c1|SR=0.35*c1-0.35*c0|BL=0.25*c0-0.25*c1|BR=0.25*c1-0.25*c0';
+
   /// Virtual speakers already feed each ear the other side, the way crossfeed does.
   bool get crossfeedActive => crossfeed > 0 && !bitPerfect && !monoActive && !virtualSpeakersActive;
   bool get convolutionActive => convolution && impulsePath != null && !bitPerfect;
@@ -1491,12 +1581,19 @@ class AudioEngine extends ChangeNotifier {
   /// high-quality resampler), and only the IR is resampled when the rates differ.
   String get _virtualSpeakersChain {
     final rate = outputRate ?? _hrirRate;
-    // `headphone` lowers by 3 dB per input channel; a resampled IR has rate / 48k more gain.
-    final gain = 6.0206 + 20 * math.log(_hrirRate / rate) / math.ln10 + virtualSpeakerGain;
-    final ir = 'amovie=filename=${graphPath(hrirPath!)}${rate == _hrirRate ? '' : ',aresample=$rate'}';
+    final room = virtualRoom;
+    final surround = room != VirtualRoom.stereo;
+    // `headphone` lowers by 3 dB per input channel (2, or 8 in the 7.1 room); a resampled IR has rate / 48k more
+    // gain. Both rooms play a stereo song as loud.
+    final gain = 6.0206 + (surround ? 18 : 0) + 20 * math.log(_hrirRate / rate) / math.ln10 + virtualSpeakerGain;
+    final file = surround ? hrir71Path! : hrirPath!;
+    final ir = 'amovie=filename=${graphPath(file)}${rate == _hrirRate ? '' : ',aresample=$rate'}';
+    final map = surround ? 'FL|FR|FC|LFE|BL|BR|SL|SR' : 'FL|FR';
     return [
-      'format=srate=$rate:channels=stereo',
-      _lavfi('hrtf', '$ir[ir];[in][ir]headphone=map=FL|FR:hrir=multich:type=freq:gain=${gain.toStringAsFixed(4)}[out]'),
+      // Any other layout (5.1 with back or side speakers, 6.1, mono) is put into the room's by mpv.
+      'format=srate=$rate:channels=${room == VirtualRoom.surround ? '7.1' : 'stereo'}',
+      if (room == VirtualRoom.upmix) _lavfi('upmix', upmixFilter),
+      _lavfi('hrtf', '$ir[ir];[in][ir]headphone=map=$map:hrir=multich:type=freq:gain=${gain.toStringAsFixed(4)}[out]'),
     ].join(',');
   }
 
@@ -1552,6 +1649,7 @@ class AudioEngine extends ChangeNotifier {
   }
 
   StreamSubscription<AudioParams>? _paramsSub;
+  StreamSubscription<AudioParams>? _channelsSub;
   Future<void> _mixerBusy = Future.value();
 
   /// Android bit-perfect: sets the DAC's mixer attributes to what the playing song needs, and
@@ -1598,6 +1696,17 @@ class AudioEngine extends ChangeNotifier {
 
   /// Each song that opens may need other mixer attributes (its rate), so follow what mpv decodes.
   void _followSong(Player player, NativePlayer p) {
+    // Virtual speakers' room follows the song's channels: a 5.1 song after a stereo one gets the 7.1 room.
+    _channelsSub?.cancel();
+    _channelsSub = player.stream.audioParams.listen((a) {
+      final n = a.channelCount;
+      if (n == null || n <= 0 || n == sourceChannels) return;
+      final before = filterChain;
+      sourceChannels = n;
+      if (filterChain != before && !_disposed && identical(_native, p)) {
+        _setChain(p).catchError((Object e) => debugPrint('Virtual speakers\' room: $e'));
+      }
+    });
     if (!Host.isAndroid) return;
     _paramsSub?.cancel();
     _paramsSub = player.stream.audioParams.listen((_) {
@@ -1720,6 +1829,7 @@ class AudioEngine extends ChangeNotifier {
         'ao': directUsbActive ? 'pcm' : (_defaultAo ?? ''),
       },
       'audio-buffer': buffer.seconds.toString(),
+      'audio-spdif': passthroughActive ? passthroughCodecs : '',
       'af': filterChain,
       'audio-device': _openedDevice!,
       // The app's name in the Linux mixers (PulseAudio / PipeWire); mpv's default is "mpv".
@@ -1999,6 +2109,7 @@ class AudioEngine extends ChangeNotifier {
     LayoutPrefs.instance.removeListener(_onVisualizerBetaChanged);
     _visualizerTimer?.cancel();
     visualizerLevels.dispose();
+    _channelsSub?.cancel();
     _paramsSub?.cancel();
     if (Host.isAndroid) usb.clear().ignore();
     _chainSync?.cancel();
@@ -2017,6 +2128,10 @@ class AudioEngine extends ChangeNotifier {
   /// where the sound loses bits (a 16-bit output after the equalizer or the volume): rounding to 16 bits without
   /// it leaves distortion that follows the music; with it, a steady hiss far below hearing. Bit-perfect playback
   /// at 100% converts nothing, so it is never dithered.
+  /// SoX's resampler (or libswresample's best) with TPDF dither, for converting a file outside playback (a FLAC
+  /// made without ffmpeg), whatever the playback switch says.
+  static Future<String> hqResamplerOptions() async => '${await _hqResampler()},dither_method=triangular_hp';
+
   Future<String> _swresampleOptions() async =>
       [if (hqResamplerActive) await _hqResampler(), 'dither_method=triangular_hp'].join(',');
 
@@ -2099,9 +2214,9 @@ class AudioEngine extends ChangeNotifier {
 
   static final _bitsCache = <String, int?>{};
 
-  /// Reads the stored bit depth from a FLAC / WAV / AIFF header. mpv only
+  /// Reads the stored bit depth from a FLAC / WAV / AIFF / WavPack / APE / ALAC header. mpv only
   /// reports the decoder's sample format, which pads 24-bit into 32.
-  static Future<int?> _sourceBits(String path) async {
+  static Future<int?> sourceBitsOf(String path) async {
     if (path.isEmpty || path.startsWith('http')) return null;
     try {
       final f = await File(path).open();
@@ -2316,6 +2431,7 @@ class AudioEngine extends ChangeNotifier {
       'current-ao',
       'audio-device',
       'audio-codec-name',
+      'current-tracks/audio/codec-profile',
       'file-format',
       'audio-params/format',
       'audio-params/channel-count',
@@ -2348,8 +2464,12 @@ class AudioEngine extends ChangeNotifier {
                 : LinuxAlsa.hwParams(card)
           : HwParams(format: 'FLOAT_LE', rate: iosOut.rate, channels: iosOut.channels),
       dacName: iosOut?.name ?? card?.name,
-      sourceBits: _bitsCache[file] ??= await _sourceBits(file),
+      sourceBits: _bitsCache[file] ??= await sourceBitsOf(file),
       codec: await g('audio-codec-name'),
+      profile: switch (await g('current-tracks/audio/codec-profile')) {
+        '' || '(unavailable)' => null,
+        final profile => profile,
+      },
       container: await g('file-format'),
       inFormat: await g('audio-params/format'),
       inRate: inRate,
@@ -2371,6 +2491,7 @@ class AudioEngine extends ChangeNotifier {
             'preamp' => tr.fxEqHeadroom,
             'crossfeed' => tr.headphoneCrossfeed,
             'hrtf' => tr.fxHrtf,
+            'upmix' => tr.fxUpmix,
             'mono' => tr.fxMonoBoth,
             'monoleft' => tr.fxMonoLeft,
             'monoright' => tr.fxMonoRight,

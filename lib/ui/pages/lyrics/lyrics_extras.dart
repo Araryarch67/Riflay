@@ -122,11 +122,13 @@ class _LyricsMoreMenuState extends State<LyricsMoreMenu> {
           ],
         ),
       );
-      return PopupMenuButton<String>(
+      final glass = LayoutPrefs.instance.playerGlassControls;
+      // Glass like the close button beside it under Liquid Glass controls.
+      final menu = PopupMenuButton<String>(
         tooltip: tr.more,
         useRootNavigator: true,
         style: IconButton.styleFrom(
-          backgroundColor: AppColors.textPrimary.withValues(alpha: 0.1),
+          backgroundColor: glass ? Colors.transparent : AppColors.textPrimary.withValues(alpha: 0.1),
           foregroundColor: AppColors.textPrimary,
           fixedSize: const Size.square(44),
           shape: const CircleBorder(),
@@ -153,6 +155,7 @@ class _LyricsMoreMenuState extends State<LyricsMoreMenu> {
           option('player', Icons.tune_rounded, tr.playerOptions),
         ],
       );
+      return PlayerGlassSurface(radius: 22, circle: true, child: menu);
     },
   );
 }

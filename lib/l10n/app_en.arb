@@ -48,8 +48,6 @@
   "topicScrobblingSummary": "Add the songs you play to your profile there",
   "topicIntegrations": "Discord",
   "topicIntegrationsSummary": "Show what you play on Discord",
-  "topicExtensions": "Extensions",
-  "topicExtensionsSummary": "SpotiFLAC extension repositories: more places to search",
   "topicLyricsServices": "Lyrics services",
   "topicPlaybackSummaryWeb": "Autoplay",
   "topicIntegrationsSummaryWeb": "A Better Lyrics key for word-by-word lyrics",
@@ -92,6 +90,7 @@
   "startRadio": "Start radio",
   "downloadForOffline": "Download for offline",
   "downloadAs": "Download as…",
+  "downloadWithMv": "Download with MV",
   "saveToDevice": "Save to device",
   "savingToDevice": "{title} is downloading in your browser",
   "edit": "Edit",
@@ -217,6 +216,9 @@
   "album": "Album",
   "playlists": "Playlists",
   "playlist": "Playlist",
+  "local": "Local",
+  "folder": "Folder",
+  "localEmpty": "Music folders you add and songs you download show up here.",
   "smartPlaylist": "Smart playlist",
   "recentlyAdded": "Recently added",
   "refresh": "Refresh",
@@ -2138,77 +2140,10 @@
   "openFolder": "Open folder",
   "ytDlp": "YouTube downloader (yt-dlp)",
   "ytDlpMissing": "Not available. Install it (e.g. pacman -S yt-dlp) for YouTube downloads.",
-  "removeNamedQuestion": "Remove {name}?",
-  "@removeNamedQuestion": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
-  "removeExtensionBody": "Its files and what it saved on this device are deleted.",
-  "couldntRemoveNamed": "Couldn't remove {name}",
-  "@couldntRemoveNamed": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
-  "extensionsIntro": "Extensions written for SpotiFLAC add more places to search, such as Apple Music, SoundCloud and JioSaavn. Their songs play from YouTube Music. Only add repositories you trust: an extension runs its own code and can reach the sites its manifest lists.",
-  "repositories": "Repositories",
   "installed": "Installed",
   "noExtensionsYet": "No extensions yet",
-  "installFromRepo": "Install one from a repository below",
   "available": "Available",
-  "repositoryAddress": "Repository address",
   "reading": "Reading…",
-  "couldntReadIt": "Couldn't read it: {error}",
-  "@couldntReadIt": {
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
-  "notReadYet": "Not read yet",
-  "extensionsCount": "{count, plural, =1{1 extension} other{{count} extensions}}",
-  "@extensionsCount": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "removeRepository": "Remove repository",
-  "addsToSearch": "Adds results to Search",
-  "downloadsUnsupported": "downloads not supported yet",
-  "lyricsUnsupported": "lyrics not supported yet",
-  "needsSpotiflacFeatures": "needs SpotiFLAC features Riflay lacks, so it may not work",
-  "updateTo": "Update to {version}",
-  "@updateTo": {
-    "placeholders": {
-      "version": {
-        "type": "String"
-      }
-    }
-  },
-  "couldntUpdateNamed": "Couldn't update {name}",
-  "@couldntUpdateNamed": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
-  "couldntInstallNamed": "Couldn't install {name}",
-  "@couldntInstallNamed": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
   "install": "Install",
   "scPlayPause": "Play or pause",
   "scNext": "Next song",
@@ -2433,11 +2368,11 @@
       }
     }
   },
-  "pastePlaylistLink": "Paste a playlist link from Spotify, Apple Music or Deezer.",
+  "pastePlaylistLink": "Paste a playlist link from Spotify, Apple Music, Deezer, TIDAL or NetEase Cloud Music.",
   "becomesYtPlaylist": "It becomes a playlist in your YouTube Music library.",
   "becomesRiflayPlaylist": "It becomes a Riflay playlist of YouTube Music songs.",
   "playlistLink": "Playlist link",
-  "notAPlaylistLink": "That isn't a Spotify, Apple Music or Deezer playlist link",
+  "notAPlaylistLink": "That isn't a Spotify, Apple Music, Deezer, TIDAL or NetEase Cloud Music playlist link",
   "readingPlaylist": "Reading the playlist…",
   "saving": "Saving…",
   "songsAddedOf": "{saved} of {total} songs added.",
@@ -3000,22 +2935,6 @@
   "videoUnplayable": "This video can't be played (private, age-restricted or region-locked).",
   "muxFailed": "Couldn't combine the picture and the sound. Try again, or pick another size in Settings › Library & downloads › Downloads.",
   "noInternetTryAgain": "No internet connection. Try again.",
-  "extAnsweredUnreadable": "{name} answered something unreadable",
-  "@extAnsweredUnreadable": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
-  "extStopped": "{name} was stopped",
-  "@extStopped": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
   "flacBiggerOne": "The FLAC file will be bigger than the original. The sound stays the same: FLAC can't bring back what the original already lost.",
   "flacBiggerEach": "Each FLAC file will be bigger than the original. The sound stays the same: FLAC can't bring back what the original already lost.",
   "ownSongsStay": "Songs you added yourself stay as they are, next to their FLAC.",
@@ -3063,33 +2982,6 @@
   "windowRestore": "Restore",
   "whilePlaying": "While playing",
   "whileRiflayOpen": "While Riflay is open",
-  "couldntFindOnYt": "Couldn't find {title} on YouTube Music",
-  "@couldntFindOnYt": {
-    "placeholders": {
-      "title": {
-        "type": "String"
-      }
-    }
-  },
-  "fromNamed": "From {name}",
-  "@fromNamed": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
-  "extCouldntSearch": "{name} couldn't search: {error}",
-  "@extCouldntSearch": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      },
-      "error": {
-        "type": "String"
-      }
-    }
-  },
   "moreOptionsFor": "More options for {title}",
   "@moreOptionsFor": {
     "placeholders": {
@@ -3330,11 +3222,11 @@
   "kwAutoplay": "radio, continue, keep playing, similar songs, endless",
   "kwGapless": "seamless, no gap, live album, continuous",
   "kwSkipSilence": "silence, quiet parts, trim",
-  "kwEqualizer": "eq, bass, treble, tone, preset",
+  "kwEqualizer": "eq, bass, treble, tone, preset, autoeq, iem, headphone profile",
   "kwVolumeLeveling": "replaygain, normalize, loudness, same volume",
   "kwCrossfade": "fade, blend, transition, mix songs",
   "kwFadeLength": "fade time, seconds, duration",
-  "kwVirtualSpeakers": "spatial, surround, 3d, hrtf, headphones",
+  "kwVirtualSpeakers": "spatial, surround, 3d, hrtf, headphones, dolby atmos",
   "kwCrossfeed": "headphones, stereo width, bs2b",
   "kwMono": "one channel, single ear, accessibility",
   "kwAudioPlugins": "vst, lv2, carla, effects",
@@ -3406,7 +3298,6 @@
   "kwScrobbling": "scrobble, last.fm, listenbrainz, profile",
   "kwLyricsServices": "musixmatch, better lyrics, api key",
   "kwDiscord": "rich presence, status, activity",
-  "kwExtensions": "spotiflac, plugins, repositories, sources",
   "kwUpdates": "new version, upgrade, update",
   "kwVersion": "about, licence, license, open source",
   "discordAppButton": "\"Download Riflay\" button",
@@ -3415,5 +3306,192 @@
   "topicNowPlaying": "Now Playing",
   "topicNowPlayingSummary": "Cover, controls, progress bar, Liquid Glass",
   "topicLyrics": "Lyrics",
-  "topicLyricsSummary": "How lyrics look, and where they come from"
+  "topicLyricsSummary": "How lyrics look, and where they come from",
+  "losslessCheck": "Check lossless files",
+  "losslessCheckSubtitle": "Find FLACs made from an MP3, fake hi-res and 24-bit files padded from 16-bit",
+  "losslessCheckAbout": "Reads each FLAC, WAV, AIFF, WavPack and APE once: its spectrum and the bits it really uses",
+  "losslessCheckFiles": "{checked} of {total} lossless files checked",
+  "@losslessCheckFiles": {"placeholders": {"checked": {"type": "int"}, "total": {"type": "int"}}},
+  "losslessCheckRun": "Check",
+  "losslessCheckAllGood": "Every checked file looks genuine",
+  "losslessCheckFound": "{count, plural, =1{1 file is probably not what it claims} other{{count} files are probably not what they claim}}",
+  "@losslessCheckFound": {"placeholders": {"count": {"type": "int"}}},
+  "losslessCheckLossyCut": "cut at {khz} kHz: made from an MP3 or AAC",
+  "@losslessCheckLossyCut": {"placeholders": {"khz": {"type": "String"}}},
+  "losslessCheckUpsampled": "nothing above 22 kHz: upsampled from 44.1 / 48 kHz",
+  "losslessCheckPadded": "{bits}-bit holding only 16 bits",
+  "@losslessCheckPadded": {"placeholders": {"bits": {"type": "int"}}},
+  "downloadNeedsSignIn": "This song needs a signed-in viewer (age-restricted). Sign in to YouTube Music in Settings › Accounts & services and try again.",
+  "kwLosslessCheck": "fake flac, upscaled, transcoded, spectrum, genuine lossless, bit depth",
+  "dsSong": "Song",
+  "dsSource": "Source",
+  "dsSignal": "Signal",
+  "dsAnalysis": "Analysis",
+  "dsSound": "Sound",
+  "dsOutput": "Output",
+  "dsNetwork": "Network",
+  "dsReading": "Reading",
+  "dsTitle": "Title",
+  "dsArtist": "Artist",
+  "dsAlbum": "Album",
+  "dsPosition": "Position",
+  "dsPlaysFrom": "Plays from",
+  "dsPlaysStream": "YouTube Music stream",
+  "dsPlaysDownloaded": "Downloaded copy",
+  "dsPlaysFile": "File on this device",
+  "dsVideoIdItag": "Video ID / itag",
+  "dsVideoId": "Video ID",
+  "dsFile": "File",
+  "dsQuality": "Quality",
+  "dsFormat": "Format",
+  "dsSampleRate": "Sample rate",
+  "dsBitDepth": "Bit depth",
+  "dsBits": "{bits}-bit",
+  "@dsBits": {"placeholders": {"bits": {"type": "int"}}},
+  "dsBitrate": "Bitrate",
+  "dsKbpsAvg": "{avg} kbps (avg)",
+  "@dsKbpsAvg": {"placeholders": {"avg": {"type": "int"}}},
+  "dsKbpsNowAvg": "{now} kbps (avg {avg})",
+  "@dsKbpsNowAvg": {"placeholders": {"now": {"type": "int"}, "avg": {"type": "int"}}},
+  "dsChannels": "Channels",
+  "dsMono": "Mono",
+  "dsStereo": "Stereo",
+  "dsChannelCount": "{count} channels",
+  "@dsChannelCount": {"placeholders": {"count": {"type": "int"}}},
+  "dsContainer": "Container",
+  "dsFileSize": "File size",
+  "dsFrequencyRange": "Frequency range",
+  "dsUpToNyquist": "Up to {khz} (Nyquist)",
+  "@dsUpToNyquist": {"placeholders": {"khz": {"type": "String"}}},
+  "dsTheoreticalRange": "Theoretical dynamic range",
+  "dsMeasuring": "Measuring",
+  "dsReadingFile": "Reading the whole file…",
+  "dsSpectrum": "Spectrum",
+  "dsCutLossless": "Cut at {khz}: probably made from an MP3 or AAC",
+  "@dsCutLossless": {"placeholders": {"khz": {"type": "String"}}},
+  "dsCutLossy": "Cut at {khz}, as lossy files are",
+  "@dsCutLossy": {"placeholders": {"khz": {"type": "String"}}},
+  "dsUpsampled": "Nothing above about 22 kHz: upsampled from 44.1 / 48 kHz",
+  "dsFullBand": "Full band, up to {khz}",
+  "@dsFullBand": {"placeholders": {"khz": {"type": "String"}}},
+  "dsBitsUsed": "Bits used",
+  "dsBitsPadded": "{used} of {stored}: padded from a 16-bit file",
+  "@dsBitsPadded": {"placeholders": {"used": {"type": "int"}, "stored": {"type": "int"}}},
+  "dsBitsAll": "All {stored}",
+  "@dsBitsAll": {"placeholders": {"stored": {"type": "int"}}},
+  "dsBitsOf": "{used} of {stored}",
+  "@dsBitsOf": {"placeholders": {"used": {"type": "int"}, "stored": {"type": "int"}}},
+  "dsDynamicRange": "Dynamic range",
+  "dsDrDynamic": "dynamic",
+  "dsDrModerate": "moderately compressed",
+  "dsDrHeavy": "heavily compressed",
+  "dsLoudness": "Loudness",
+  "dsPeak": "peak {db} dBFS",
+  "@dsPeak": {"placeholders": {"db": {"type": "String"}}},
+  "dsMeasuredGain": "Measured gain",
+  "dsMeasuredGainValue": "{gain} dB (leveling uses it without ReplayGain tags)",
+  "@dsMeasuredGainValue": {"placeholders": {"gain": {"type": "String"}}},
+  "dsDecoded": "Decoded",
+  "dsEffects": "Effects",
+  "dsNone": "None",
+  "dsVolume": "Volume",
+  "dsMuted": "muted",
+  "dsLeveling": "Leveling",
+  "dsOff": "Off",
+  "dsOn": "On",
+  "dsNoReplayGain": "no ReplayGain tag",
+  "dsLoudnessTarget": "{lufs} LUFS (target {target} LUFS)",
+  "@dsLoudnessTarget": {"placeholders": {"lufs": {"type": "String"}, "target": {"type": "String"}}},
+  "dsTempoPitch": "Tempo / pitch",
+  "dsTempoPitchValue": "{tempo}× / {pitch} semitones",
+  "@dsTempoPitchValue": {"placeholders": {"tempo": {"type": "String"}, "pitch": {"type": "String"}}},
+  "dsCrossfade": "Crossfade",
+  "dsClipProtection": "Clip protection",
+  "dsResampled": "Resampled",
+  "dsDevice": "Device",
+  "dsBluetooth": "Bluetooth",
+  "dsBtAllow": "codec: allow Nearby devices",
+  "dsBtUnknown": "codec unknown",
+  "dsDacReceives": "DAC receives",
+  "dsDirectUsb": "Direct USB",
+  "dsBitPerfect": "Bit-perfect",
+  "dsYes": "Yes",
+  "dsNo": "No",
+  "dsConnectionSpeed": "Connection speed",
+  "dsReadingNow": "Reading now",
+  "dsReceived": "Received",
+  "dsReceivedOf": "{received} of {total}",
+  "@dsReceivedOf": {"placeholders": {"received": {"type": "String"}, "total": {"type": "String"}}},
+  "dsBufferHealth": "Buffer health",
+  "dsStreamUrlFrom": "Stream URL from",
+  "dsSpectrogram": "Spectrogram",
+  "surroundUpmix": "Surround upmix",
+  "surroundUpmixSubtitle": "Stereo songs fill a 7.1 room around you: the voice stays in front, the space moves to the sides and back. 5.1 / 7.1 songs, Dolby Atmos too, always get each channel in its place.",
+  "passthrough": "Dolby / DTS passthrough",
+  "passthroughSubtitle": "For an AV receiver or soundbar over HDMI or optical: Dolby Digital, Dolby Atmos (E-AC-3, TrueHD) and DTS go out undecoded and the receiver plays them, Atmos heights included. Effects and the volume don't apply to those songs.",
+  "kwSurroundUpmix": "dolby atmos, spatial audio, surround, 7.1, 3d, upmix",
+  "kwPassthrough": "dolby atmos, hdmi, spdif, optical, receiver, soundbar, bitstream, dts, truehd",
+  "fxUpmix": "Surround upmix",
+  "dsAtmosBed": "{channels}-channel bed decoded; the height objects need a receiver (passthrough)",
+  "@dsAtmosBed": {"placeholders": {"channels": {"type": "int"}}},
+  "dsPassthrough": "Passthrough",
+  "dsPassthroughValue": "{codec} to the receiver, undecoded",
+  "@dsPassthroughValue": {"placeholders": {"codec": {"type": "String"}}},
+  "dsVirtualRoom": "Virtual speakers",
+  "dsRoomStereo": "2 speakers (stereo)",
+  "dsRoomSurround": "7.1 room, each channel in its place",
+  "dsRoomUpmix": "7.1 room, upmixed from stereo",
+  "autoEq": "Headphone / IEM profile (AutoEQ)",
+  "autoEqSubtitle": "Sets the equalizer for your model from its measurement, so it sounds neutral (the Harman target).",
+  "autoEqPick": "Pick your headphones or IEM",
+  "autoEqSearch": "Search a model, e.g. KZ ZSN Pro",
+  "autoEqLoading": "Loading the list of models…",
+  "autoEqModels": "{count} models, measured by crinacle, oratory1990 and others. Type a name to search.",
+  "@autoEqModels": {"placeholders": {"count": {"type": "int"}}},
+  "autoEqNoResults": "No model by that name.",
+  "autoEqFailed": "Couldn't load AutoEQ: {error}",
+  "@autoEqFailed": {"placeholders": {"error": {"type": "String"}}},
+  "autoEqApplied": "Equalizer set for {name}",
+  "@autoEqApplied": {"placeholders": {"name": {"type": "String"}}},
+  "autoEqAppliedFitted": "Equalizer set for {name} (within ±{db} dB of its profile)",
+  "@autoEqAppliedFitted": {"placeholders": {"name": {"type": "String"}, "db": {"type": "String"}}},
+  "clearCache": "Clear cache",
+  "clearCacheSubtitle": "{size} of covers, lyrics found online and other things Riflay fetches again. Your music stays.",
+  "@clearCacheSubtitle": {"placeholders": {"size": {"type": "String"}}},
+  "clearCacheCounting": "Counting…",
+  "clearCacheConfirm": "Clear {size} of cache?",
+  "@clearCacheConfirm": {"placeholders": {"size": {"type": "String"}}},
+  "clearCacheConfirmBody": "Covers and lyrics are downloaded again when they are needed. Your library, downloads, playlists, settings, your own lyrics and the loudness measurements stay.",
+  "clearCacheAction": "Clear",
+  "clearCacheDone": "Freed {size}",
+  "@clearCacheDone": {"placeholders": {"size": {"type": "String"}}},
+  "kwClearCache": "cache, storage, space, free up, clean, temporary files",
+  "dsDeviceRate": "Device sample rate",
+  "dsDeviceFormat": "Device format",
+  "dsMixerBuffer": "Mixer buffer",
+  "dsMixerBufferValue": "{ms} ms · {frames} frames",
+  "@dsMixerBufferValue": {"placeholders": {"ms": {"type": "String"}, "frames": {"type": "int"}}},
+  "dsLowLatency": "Low-latency audio",
+  "dsProAudio": "Pro audio",
+  "dsSpatialAudio": "Spatial audio",
+  "dsSystemVolume": "System volume",
+  "dsSupported": "Supported",
+  "dsNotSupported": "Not supported",
+  "fromInternetArchive": "FLAC from the Internet Archive",
+  "radioParadiseFlac": "Radio Paradise in FLAC",
+  "onAir": "On air: {song}",
+  "@onAir": {"placeholders": {"song": {"type": "String"}}},
+  "archiveCouldntLoad": "Couldn't load from the Internet Archive: {error}",
+  "@archiveCouldntLoad": {"placeholders": {"error": {"type": "String"}}},
+  "archiveNoFlac": "This recording has no FLAC files that can be played here.",
+  "topicSources": "Music sources",
+  "topicSourcesSummary": "Internet Archive and Radio Paradise: free music in FLAC",
+  "sourcesAbout": "Free places with lossless sound, shared with the artists' or rights holders' leave. Riflay plays from their own servers.",
+  "sourceArchive": "Internet Archive in search",
+  "sourceArchiveSubtitle": "Live Music Archive concerts, netlabels and public-domain records in FLAC, on search's All",
+  "sourceRadioParadise": "Radio Paradise on the search page",
+  "sourceRadioParadiseSubtitle": "Listener-supported, commercial-free radio, every channel in FLAC (CD quality)",
+  "kwSources": "flac, lossless, internet archive, live music archive, radio paradise, free music, sources",
+  "spotifyCanvas": "Canvas",
+  "spotifyCanvasSubtitle": "The looping video Spotify shows with a song, in Video mode instead of its music video (turn Video mode on in Beta features)"
 }

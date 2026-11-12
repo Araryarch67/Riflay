@@ -9,6 +9,7 @@ import '../theme.dart';
 import '../widgets/page_scaffold.dart';
 import '../../services/language.dart';
 import '../widgets/app_dialog.dart';
+import '../widgets/auto_eq_picker.dart';
 
 /// Ten-band equalizer with presets. Each band's frequency and width can be
 /// changed too (tap its label), which makes it a parametric EQ.
@@ -73,8 +74,26 @@ class EqualizerPanel extends StatelessWidget {
                     onSelected: audio.bitPerfect ? null : (_) => audio.applyPreset(name),
                   ),
                 if (audio.eqPreset == 'Custom')
-                  ChoiceChip(label: Text(tr.custom), selected: audio.eqEnabled, onSelected: (_) {}),
+                  ChoiceChip(label: Text(audio.eqProfile ?? tr.custom), selected: audio.eqEnabled, onSelected: (_) {}),
               ],
+            ),
+          ),
+          Padding(
+            padding: EdgeInsets.fromLTRB(pad - 16, 12, pad - 16, 0),
+            // Its own Material: the expanded player's side panel paints a background under it.
+            child: Material(
+              type: MaterialType.transparency,
+              child: ListTile(
+                leading: const Icon(Icons.headphones_rounded),
+                title: Text(tr.autoEq),
+                subtitle: Text(
+                  audio.eqProfile ?? tr.autoEqPick,
+                  style: text.bodyMedium?.copyWith(color: AppColors.textSecondary),
+                ),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                enabled: !audio.bitPerfect,
+                onTap: () => showAutoEqPicker(context),
+              ),
             ),
           ),
           AnimatedOpacity(

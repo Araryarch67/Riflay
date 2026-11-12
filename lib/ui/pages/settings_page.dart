@@ -31,7 +31,7 @@ import 'listen_together_page.dart';
 import 'layout_settings.dart';
 import 'library_settings.dart';
 import 'download_settings.dart';
-import 'extension_settings.dart';
+import 'music_sources_settings.dart';
 import 'privacy_settings.dart';
 import 'scrobble_settings.dart';
 import 'sound_settings.dart';
@@ -53,7 +53,7 @@ enum SettingsGroup {
     'accounts',
     'Accounts & services',
     Icons.manage_accounts_outlined,
-    'YouTube Music, Spotify, Last.fm, Discord, lyrics, extensions',
+    'YouTube Music, Spotify, Last.fm, Discord, lyrics, music sources',
   );
 
   const SettingsGroup(this.id, this._english, this.icon, this._englishSummary);
@@ -191,12 +191,12 @@ enum SettingsTopic {
     'Add the songs you play to your profile there',
   ),
   integrations(SettingsGroup.accounts, 'services', 'Discord', Icons.discord, 'Show what you play on Discord'),
-  extensions(
+  sources(
     SettingsGroup.accounts,
-    'extensions',
-    'Extensions',
-    Icons.extension_rounded,
-    'SpotiFLAC extension repositories: more places to search',
+    'sources',
+    'Music sources',
+    Icons.library_music_outlined,
+    'Internet Archive and Radio Paradise: free music in FLAC',
   );
 
   const SettingsTopic(this.group, this.id, this._english, this.icon, this._englishSummary);
@@ -225,7 +225,7 @@ enum SettingsTopic {
     spotify => tr.topicSpotify,
     scrobbling => tr.topicScrobbling,
     integrations => tr.topicIntegrations,
-    extensions => tr.topicExtensions,
+    sources => tr.topicSources,
   };
   final IconData icon;
   // ignore: unused_field
@@ -251,7 +251,7 @@ enum SettingsTopic {
     spotify => tr.topicSpotifySummary,
     scrobbling => tr.topicScrobblingSummary,
     integrations => tr.topicIntegrationsSummary,
-    extensions => tr.topicExtensionsSummary,
+    sources => tr.topicSourcesSummary,
   };
 
   bool get available => switch (this) {
@@ -265,7 +265,6 @@ enum SettingsTopic {
     spotify => Features.playlistImport,
     scrobbling => Features.scrobbling,
     backup => Features.backup,
-    extensions => Features.extensions,
     integrations => DiscordPresence.supported,
     _ => true,
   };
@@ -591,7 +590,7 @@ class SettingsTopicPage extends StatelessWidget {
       SettingsTopic.backup => const BackupSettings(),
       SettingsTopic.integrations => const _IntegrationsSettings(),
       SettingsTopic.scrobbling => const ScrobbleSettings(),
-      SettingsTopic.extensions => const ExtensionSettings(),
+      SettingsTopic.sources => const MusicSourcesSettings(),
       // Opened from its row as the Spotify page itself, so this body is never shown.
       SettingsTopic.spotify => const SizedBox.shrink(),
     };

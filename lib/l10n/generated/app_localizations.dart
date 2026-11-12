@@ -381,18 +381,6 @@ abstract class AppLocalizations {
   /// **'Show what you play on Discord'**
   String get topicIntegrationsSummary;
 
-  /// No description provided for @topicExtensions.
-  ///
-  /// In en, this message translates to:
-  /// **'Extensions'**
-  String get topicExtensions;
-
-  /// No description provided for @topicExtensionsSummary.
-  ///
-  /// In en, this message translates to:
-  /// **'SpotiFLAC extension repositories: more places to search'**
-  String get topicExtensionsSummary;
-
   /// No description provided for @topicLyricsServices.
   ///
   /// In en, this message translates to:
@@ -614,6 +602,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Download as…'**
   String get downloadAs;
+
+  /// No description provided for @downloadWithMv.
+  ///
+  /// In en, this message translates to:
+  /// **'Download with MV'**
+  String get downloadWithMv;
 
   /// No description provided for @saveToDevice.
   ///
@@ -1064,6 +1058,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Playlist'**
   String get playlist;
+
+  /// No description provided for @local.
+  ///
+  /// In en, this message translates to:
+  /// **'Local'**
+  String get local;
+
+  /// No description provided for @folder.
+  ///
+  /// In en, this message translates to:
+  /// **'Folder'**
+  String get folder;
+
+  /// No description provided for @localEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'Music folders you add and songs you download show up here.'**
+  String get localEmpty;
 
   /// No description provided for @smartPlaylist.
   ///
@@ -6849,36 +6861,6 @@ abstract class AppLocalizations {
   /// **'Not available. Install it (e.g. pacman -S yt-dlp) for YouTube downloads.'**
   String get ytDlpMissing;
 
-  /// No description provided for @removeNamedQuestion.
-  ///
-  /// In en, this message translates to:
-  /// **'Remove {name}?'**
-  String removeNamedQuestion(String name);
-
-  /// No description provided for @removeExtensionBody.
-  ///
-  /// In en, this message translates to:
-  /// **'Its files and what it saved on this device are deleted.'**
-  String get removeExtensionBody;
-
-  /// No description provided for @couldntRemoveNamed.
-  ///
-  /// In en, this message translates to:
-  /// **'Couldn\'t remove {name}'**
-  String couldntRemoveNamed(String name);
-
-  /// No description provided for @extensionsIntro.
-  ///
-  /// In en, this message translates to:
-  /// **'Extensions written for SpotiFLAC add more places to search, such as Apple Music, SoundCloud and JioSaavn. Their songs play from YouTube Music. Only add repositories you trust: an extension runs its own code and can reach the sites its manifest lists.'**
-  String get extensionsIntro;
-
-  /// No description provided for @repositories.
-  ///
-  /// In en, this message translates to:
-  /// **'Repositories'**
-  String get repositories;
-
   /// No description provided for @installed.
   ///
   /// In en, this message translates to:
@@ -6891,95 +6873,17 @@ abstract class AppLocalizations {
   /// **'No extensions yet'**
   String get noExtensionsYet;
 
-  /// No description provided for @installFromRepo.
-  ///
-  /// In en, this message translates to:
-  /// **'Install one from a repository below'**
-  String get installFromRepo;
-
   /// No description provided for @available.
   ///
   /// In en, this message translates to:
   /// **'Available'**
   String get available;
 
-  /// No description provided for @repositoryAddress.
-  ///
-  /// In en, this message translates to:
-  /// **'Repository address'**
-  String get repositoryAddress;
-
   /// No description provided for @reading.
   ///
   /// In en, this message translates to:
   /// **'Reading…'**
   String get reading;
-
-  /// No description provided for @couldntReadIt.
-  ///
-  /// In en, this message translates to:
-  /// **'Couldn\'t read it: {error}'**
-  String couldntReadIt(String error);
-
-  /// No description provided for @notReadYet.
-  ///
-  /// In en, this message translates to:
-  /// **'Not read yet'**
-  String get notReadYet;
-
-  /// No description provided for @extensionsCount.
-  ///
-  /// In en, this message translates to:
-  /// **'{count, plural, =1{1 extension} other{{count} extensions}}'**
-  String extensionsCount(int count);
-
-  /// No description provided for @removeRepository.
-  ///
-  /// In en, this message translates to:
-  /// **'Remove repository'**
-  String get removeRepository;
-
-  /// No description provided for @addsToSearch.
-  ///
-  /// In en, this message translates to:
-  /// **'Adds results to Search'**
-  String get addsToSearch;
-
-  /// No description provided for @downloadsUnsupported.
-  ///
-  /// In en, this message translates to:
-  /// **'downloads not supported yet'**
-  String get downloadsUnsupported;
-
-  /// No description provided for @lyricsUnsupported.
-  ///
-  /// In en, this message translates to:
-  /// **'lyrics not supported yet'**
-  String get lyricsUnsupported;
-
-  /// No description provided for @needsSpotiflacFeatures.
-  ///
-  /// In en, this message translates to:
-  /// **'needs SpotiFLAC features Riflay lacks, so it may not work'**
-  String get needsSpotiflacFeatures;
-
-  /// No description provided for @updateTo.
-  ///
-  /// In en, this message translates to:
-  /// **'Update to {version}'**
-  String updateTo(String version);
-
-  /// No description provided for @couldntUpdateNamed.
-  ///
-  /// In en, this message translates to:
-  /// **'Couldn\'t update {name}'**
-  String couldntUpdateNamed(String name);
-
-  /// No description provided for @couldntInstallNamed.
-  ///
-  /// In en, this message translates to:
-  /// **'Couldn\'t install {name}'**
-  String couldntInstallNamed(String name);
 
   /// No description provided for @install.
   ///
@@ -7632,7 +7536,7 @@ abstract class AppLocalizations {
   /// No description provided for @pastePlaylistLink.
   ///
   /// In en, this message translates to:
-  /// **'Paste a playlist link from Spotify, Apple Music or Deezer.'**
+  /// **'Paste a playlist link from Spotify, Apple Music, Deezer, TIDAL or NetEase Cloud Music.'**
   String get pastePlaylistLink;
 
   /// No description provided for @becomesYtPlaylist.
@@ -7656,7 +7560,7 @@ abstract class AppLocalizations {
   /// No description provided for @notAPlaylistLink.
   ///
   /// In en, this message translates to:
-  /// **'That isn\'t a Spotify, Apple Music or Deezer playlist link'**
+  /// **'That isn\'t a Spotify, Apple Music, Deezer, TIDAL or NetEase Cloud Music playlist link'**
   String get notAPlaylistLink;
 
   /// No description provided for @readingPlaylist.
@@ -8841,18 +8745,6 @@ abstract class AppLocalizations {
   /// **'No internet connection. Try again.'**
   String get noInternetTryAgain;
 
-  /// No description provided for @extAnsweredUnreadable.
-  ///
-  /// In en, this message translates to:
-  /// **'{name} answered something unreadable'**
-  String extAnsweredUnreadable(String name);
-
-  /// No description provided for @extStopped.
-  ///
-  /// In en, this message translates to:
-  /// **'{name} was stopped'**
-  String extStopped(String name);
-
   /// No description provided for @flacBiggerOne.
   ///
   /// In en, this message translates to:
@@ -9050,24 +8942,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'While Riflay is open'**
   String get whileRiflayOpen;
-
-  /// No description provided for @couldntFindOnYt.
-  ///
-  /// In en, this message translates to:
-  /// **'Couldn\'t find {title} on YouTube Music'**
-  String couldntFindOnYt(String title);
-
-  /// No description provided for @fromNamed.
-  ///
-  /// In en, this message translates to:
-  /// **'From {name}'**
-  String fromNamed(String name);
-
-  /// No description provided for @extCouldntSearch.
-  ///
-  /// In en, this message translates to:
-  /// **'{name} couldn\'t search: {error}'**
-  String extCouldntSearch(String name, String error);
 
   /// No description provided for @moreOptionsFor.
   ///
@@ -9702,7 +9576,7 @@ abstract class AppLocalizations {
   /// No description provided for @kwEqualizer.
   ///
   /// In en, this message translates to:
-  /// **'eq, bass, treble, tone, preset'**
+  /// **'eq, bass, treble, tone, preset, autoeq, iem, headphone profile'**
   String get kwEqualizer;
 
   /// No description provided for @kwVolumeLeveling.
@@ -9726,7 +9600,7 @@ abstract class AppLocalizations {
   /// No description provided for @kwVirtualSpeakers.
   ///
   /// In en, this message translates to:
-  /// **'spatial, surround, 3d, hrtf, headphones'**
+  /// **'spatial, surround, 3d, hrtf, headphones, dolby atmos'**
   String get kwVirtualSpeakers;
 
   /// No description provided for @kwCrossfeed.
@@ -10155,12 +10029,6 @@ abstract class AppLocalizations {
   /// **'rich presence, status, activity'**
   String get kwDiscord;
 
-  /// No description provided for @kwExtensions.
-  ///
-  /// In en, this message translates to:
-  /// **'spotiflac, plugins, repositories, sources'**
-  String get kwExtensions;
-
   /// No description provided for @kwUpdates.
   ///
   /// In en, this message translates to:
@@ -10214,6 +10082,936 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'How lyrics look, and where they come from'**
   String get topicLyricsSummary;
+
+  /// No description provided for @losslessCheck.
+  ///
+  /// In en, this message translates to:
+  /// **'Check lossless files'**
+  String get losslessCheck;
+
+  /// No description provided for @losslessCheckSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Find FLACs made from an MP3, fake hi-res and 24-bit files padded from 16-bit'**
+  String get losslessCheckSubtitle;
+
+  /// No description provided for @losslessCheckAbout.
+  ///
+  /// In en, this message translates to:
+  /// **'Reads each FLAC, WAV, AIFF, WavPack and APE once: its spectrum and the bits it really uses'**
+  String get losslessCheckAbout;
+
+  /// No description provided for @losslessCheckFiles.
+  ///
+  /// In en, this message translates to:
+  /// **'{checked} of {total} lossless files checked'**
+  String losslessCheckFiles(int checked, int total);
+
+  /// No description provided for @losslessCheckRun.
+  ///
+  /// In en, this message translates to:
+  /// **'Check'**
+  String get losslessCheckRun;
+
+  /// No description provided for @losslessCheckAllGood.
+  ///
+  /// In en, this message translates to:
+  /// **'Every checked file looks genuine'**
+  String get losslessCheckAllGood;
+
+  /// No description provided for @losslessCheckFound.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 file is probably not what it claims} other{{count} files are probably not what they claim}}'**
+  String losslessCheckFound(int count);
+
+  /// No description provided for @losslessCheckLossyCut.
+  ///
+  /// In en, this message translates to:
+  /// **'cut at {khz} kHz: made from an MP3 or AAC'**
+  String losslessCheckLossyCut(String khz);
+
+  /// No description provided for @losslessCheckUpsampled.
+  ///
+  /// In en, this message translates to:
+  /// **'nothing above 22 kHz: upsampled from 44.1 / 48 kHz'**
+  String get losslessCheckUpsampled;
+
+  /// No description provided for @losslessCheckPadded.
+  ///
+  /// In en, this message translates to:
+  /// **'{bits}-bit holding only 16 bits'**
+  String losslessCheckPadded(int bits);
+
+  /// No description provided for @downloadNeedsSignIn.
+  ///
+  /// In en, this message translates to:
+  /// **'This song needs a signed-in viewer (age-restricted). Sign in to YouTube Music in Settings › Accounts & services and try again.'**
+  String get downloadNeedsSignIn;
+
+  /// No description provided for @kwLosslessCheck.
+  ///
+  /// In en, this message translates to:
+  /// **'fake flac, upscaled, transcoded, spectrum, genuine lossless, bit depth'**
+  String get kwLosslessCheck;
+
+  /// No description provided for @dsSong.
+  ///
+  /// In en, this message translates to:
+  /// **'Song'**
+  String get dsSong;
+
+  /// No description provided for @dsSource.
+  ///
+  /// In en, this message translates to:
+  /// **'Source'**
+  String get dsSource;
+
+  /// No description provided for @dsSignal.
+  ///
+  /// In en, this message translates to:
+  /// **'Signal'**
+  String get dsSignal;
+
+  /// No description provided for @dsAnalysis.
+  ///
+  /// In en, this message translates to:
+  /// **'Analysis'**
+  String get dsAnalysis;
+
+  /// No description provided for @dsSound.
+  ///
+  /// In en, this message translates to:
+  /// **'Sound'**
+  String get dsSound;
+
+  /// No description provided for @dsOutput.
+  ///
+  /// In en, this message translates to:
+  /// **'Output'**
+  String get dsOutput;
+
+  /// No description provided for @dsNetwork.
+  ///
+  /// In en, this message translates to:
+  /// **'Network'**
+  String get dsNetwork;
+
+  /// No description provided for @dsReading.
+  ///
+  /// In en, this message translates to:
+  /// **'Reading'**
+  String get dsReading;
+
+  /// No description provided for @dsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Title'**
+  String get dsTitle;
+
+  /// No description provided for @dsArtist.
+  ///
+  /// In en, this message translates to:
+  /// **'Artist'**
+  String get dsArtist;
+
+  /// No description provided for @dsAlbum.
+  ///
+  /// In en, this message translates to:
+  /// **'Album'**
+  String get dsAlbum;
+
+  /// No description provided for @dsPosition.
+  ///
+  /// In en, this message translates to:
+  /// **'Position'**
+  String get dsPosition;
+
+  /// No description provided for @dsPlaysFrom.
+  ///
+  /// In en, this message translates to:
+  /// **'Plays from'**
+  String get dsPlaysFrom;
+
+  /// No description provided for @dsPlaysStream.
+  ///
+  /// In en, this message translates to:
+  /// **'YouTube Music stream'**
+  String get dsPlaysStream;
+
+  /// No description provided for @dsPlaysDownloaded.
+  ///
+  /// In en, this message translates to:
+  /// **'Downloaded copy'**
+  String get dsPlaysDownloaded;
+
+  /// No description provided for @dsPlaysFile.
+  ///
+  /// In en, this message translates to:
+  /// **'File on this device'**
+  String get dsPlaysFile;
+
+  /// No description provided for @dsVideoIdItag.
+  ///
+  /// In en, this message translates to:
+  /// **'Video ID / itag'**
+  String get dsVideoIdItag;
+
+  /// No description provided for @dsVideoId.
+  ///
+  /// In en, this message translates to:
+  /// **'Video ID'**
+  String get dsVideoId;
+
+  /// No description provided for @dsFile.
+  ///
+  /// In en, this message translates to:
+  /// **'File'**
+  String get dsFile;
+
+  /// No description provided for @dsQuality.
+  ///
+  /// In en, this message translates to:
+  /// **'Quality'**
+  String get dsQuality;
+
+  /// No description provided for @dsFormat.
+  ///
+  /// In en, this message translates to:
+  /// **'Format'**
+  String get dsFormat;
+
+  /// No description provided for @dsSampleRate.
+  ///
+  /// In en, this message translates to:
+  /// **'Sample rate'**
+  String get dsSampleRate;
+
+  /// No description provided for @dsBitDepth.
+  ///
+  /// In en, this message translates to:
+  /// **'Bit depth'**
+  String get dsBitDepth;
+
+  /// No description provided for @dsBits.
+  ///
+  /// In en, this message translates to:
+  /// **'{bits}-bit'**
+  String dsBits(int bits);
+
+  /// No description provided for @dsBitrate.
+  ///
+  /// In en, this message translates to:
+  /// **'Bitrate'**
+  String get dsBitrate;
+
+  /// No description provided for @dsKbpsAvg.
+  ///
+  /// In en, this message translates to:
+  /// **'{avg} kbps (avg)'**
+  String dsKbpsAvg(int avg);
+
+  /// No description provided for @dsKbpsNowAvg.
+  ///
+  /// In en, this message translates to:
+  /// **'{now} kbps (avg {avg})'**
+  String dsKbpsNowAvg(int now, int avg);
+
+  /// No description provided for @dsChannels.
+  ///
+  /// In en, this message translates to:
+  /// **'Channels'**
+  String get dsChannels;
+
+  /// No description provided for @dsMono.
+  ///
+  /// In en, this message translates to:
+  /// **'Mono'**
+  String get dsMono;
+
+  /// No description provided for @dsStereo.
+  ///
+  /// In en, this message translates to:
+  /// **'Stereo'**
+  String get dsStereo;
+
+  /// No description provided for @dsChannelCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} channels'**
+  String dsChannelCount(int count);
+
+  /// No description provided for @dsContainer.
+  ///
+  /// In en, this message translates to:
+  /// **'Container'**
+  String get dsContainer;
+
+  /// No description provided for @dsFileSize.
+  ///
+  /// In en, this message translates to:
+  /// **'File size'**
+  String get dsFileSize;
+
+  /// No description provided for @dsFrequencyRange.
+  ///
+  /// In en, this message translates to:
+  /// **'Frequency range'**
+  String get dsFrequencyRange;
+
+  /// No description provided for @dsUpToNyquist.
+  ///
+  /// In en, this message translates to:
+  /// **'Up to {khz} (Nyquist)'**
+  String dsUpToNyquist(String khz);
+
+  /// No description provided for @dsTheoreticalRange.
+  ///
+  /// In en, this message translates to:
+  /// **'Theoretical dynamic range'**
+  String get dsTheoreticalRange;
+
+  /// No description provided for @dsMeasuring.
+  ///
+  /// In en, this message translates to:
+  /// **'Measuring'**
+  String get dsMeasuring;
+
+  /// No description provided for @dsReadingFile.
+  ///
+  /// In en, this message translates to:
+  /// **'Reading the whole file…'**
+  String get dsReadingFile;
+
+  /// No description provided for @dsSpectrum.
+  ///
+  /// In en, this message translates to:
+  /// **'Spectrum'**
+  String get dsSpectrum;
+
+  /// No description provided for @dsCutLossless.
+  ///
+  /// In en, this message translates to:
+  /// **'Cut at {khz}: probably made from an MP3 or AAC'**
+  String dsCutLossless(String khz);
+
+  /// No description provided for @dsCutLossy.
+  ///
+  /// In en, this message translates to:
+  /// **'Cut at {khz}, as lossy files are'**
+  String dsCutLossy(String khz);
+
+  /// No description provided for @dsUpsampled.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing above about 22 kHz: upsampled from 44.1 / 48 kHz'**
+  String get dsUpsampled;
+
+  /// No description provided for @dsFullBand.
+  ///
+  /// In en, this message translates to:
+  /// **'Full band, up to {khz}'**
+  String dsFullBand(String khz);
+
+  /// No description provided for @dsBitsUsed.
+  ///
+  /// In en, this message translates to:
+  /// **'Bits used'**
+  String get dsBitsUsed;
+
+  /// No description provided for @dsBitsPadded.
+  ///
+  /// In en, this message translates to:
+  /// **'{used} of {stored}: padded from a 16-bit file'**
+  String dsBitsPadded(int used, int stored);
+
+  /// No description provided for @dsBitsAll.
+  ///
+  /// In en, this message translates to:
+  /// **'All {stored}'**
+  String dsBitsAll(int stored);
+
+  /// No description provided for @dsBitsOf.
+  ///
+  /// In en, this message translates to:
+  /// **'{used} of {stored}'**
+  String dsBitsOf(int used, int stored);
+
+  /// No description provided for @dsDynamicRange.
+  ///
+  /// In en, this message translates to:
+  /// **'Dynamic range'**
+  String get dsDynamicRange;
+
+  /// No description provided for @dsDrDynamic.
+  ///
+  /// In en, this message translates to:
+  /// **'dynamic'**
+  String get dsDrDynamic;
+
+  /// No description provided for @dsDrModerate.
+  ///
+  /// In en, this message translates to:
+  /// **'moderately compressed'**
+  String get dsDrModerate;
+
+  /// No description provided for @dsDrHeavy.
+  ///
+  /// In en, this message translates to:
+  /// **'heavily compressed'**
+  String get dsDrHeavy;
+
+  /// No description provided for @dsLoudness.
+  ///
+  /// In en, this message translates to:
+  /// **'Loudness'**
+  String get dsLoudness;
+
+  /// No description provided for @dsPeak.
+  ///
+  /// In en, this message translates to:
+  /// **'peak {db} dBFS'**
+  String dsPeak(String db);
+
+  /// No description provided for @dsMeasuredGain.
+  ///
+  /// In en, this message translates to:
+  /// **'Measured gain'**
+  String get dsMeasuredGain;
+
+  /// No description provided for @dsMeasuredGainValue.
+  ///
+  /// In en, this message translates to:
+  /// **'{gain} dB (leveling uses it without ReplayGain tags)'**
+  String dsMeasuredGainValue(String gain);
+
+  /// No description provided for @dsDecoded.
+  ///
+  /// In en, this message translates to:
+  /// **'Decoded'**
+  String get dsDecoded;
+
+  /// No description provided for @dsEffects.
+  ///
+  /// In en, this message translates to:
+  /// **'Effects'**
+  String get dsEffects;
+
+  /// No description provided for @dsNone.
+  ///
+  /// In en, this message translates to:
+  /// **'None'**
+  String get dsNone;
+
+  /// No description provided for @dsVolume.
+  ///
+  /// In en, this message translates to:
+  /// **'Volume'**
+  String get dsVolume;
+
+  /// No description provided for @dsMuted.
+  ///
+  /// In en, this message translates to:
+  /// **'muted'**
+  String get dsMuted;
+
+  /// No description provided for @dsLeveling.
+  ///
+  /// In en, this message translates to:
+  /// **'Leveling'**
+  String get dsLeveling;
+
+  /// No description provided for @dsOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Off'**
+  String get dsOff;
+
+  /// No description provided for @dsOn.
+  ///
+  /// In en, this message translates to:
+  /// **'On'**
+  String get dsOn;
+
+  /// No description provided for @dsNoReplayGain.
+  ///
+  /// In en, this message translates to:
+  /// **'no ReplayGain tag'**
+  String get dsNoReplayGain;
+
+  /// No description provided for @dsLoudnessTarget.
+  ///
+  /// In en, this message translates to:
+  /// **'{lufs} LUFS (target {target} LUFS)'**
+  String dsLoudnessTarget(String lufs, String target);
+
+  /// No description provided for @dsTempoPitch.
+  ///
+  /// In en, this message translates to:
+  /// **'Tempo / pitch'**
+  String get dsTempoPitch;
+
+  /// No description provided for @dsTempoPitchValue.
+  ///
+  /// In en, this message translates to:
+  /// **'{tempo}× / {pitch} semitones'**
+  String dsTempoPitchValue(String tempo, String pitch);
+
+  /// No description provided for @dsCrossfade.
+  ///
+  /// In en, this message translates to:
+  /// **'Crossfade'**
+  String get dsCrossfade;
+
+  /// No description provided for @dsClipProtection.
+  ///
+  /// In en, this message translates to:
+  /// **'Clip protection'**
+  String get dsClipProtection;
+
+  /// No description provided for @dsResampled.
+  ///
+  /// In en, this message translates to:
+  /// **'Resampled'**
+  String get dsResampled;
+
+  /// No description provided for @dsDevice.
+  ///
+  /// In en, this message translates to:
+  /// **'Device'**
+  String get dsDevice;
+
+  /// No description provided for @dsBluetooth.
+  ///
+  /// In en, this message translates to:
+  /// **'Bluetooth'**
+  String get dsBluetooth;
+
+  /// No description provided for @dsBtAllow.
+  ///
+  /// In en, this message translates to:
+  /// **'codec: allow Nearby devices'**
+  String get dsBtAllow;
+
+  /// No description provided for @dsBtUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'codec unknown'**
+  String get dsBtUnknown;
+
+  /// No description provided for @dsDacReceives.
+  ///
+  /// In en, this message translates to:
+  /// **'DAC receives'**
+  String get dsDacReceives;
+
+  /// No description provided for @dsDirectUsb.
+  ///
+  /// In en, this message translates to:
+  /// **'Direct USB'**
+  String get dsDirectUsb;
+
+  /// No description provided for @dsBitPerfect.
+  ///
+  /// In en, this message translates to:
+  /// **'Bit-perfect'**
+  String get dsBitPerfect;
+
+  /// No description provided for @dsYes.
+  ///
+  /// In en, this message translates to:
+  /// **'Yes'**
+  String get dsYes;
+
+  /// No description provided for @dsNo.
+  ///
+  /// In en, this message translates to:
+  /// **'No'**
+  String get dsNo;
+
+  /// No description provided for @dsConnectionSpeed.
+  ///
+  /// In en, this message translates to:
+  /// **'Connection speed'**
+  String get dsConnectionSpeed;
+
+  /// No description provided for @dsReadingNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Reading now'**
+  String get dsReadingNow;
+
+  /// No description provided for @dsReceived.
+  ///
+  /// In en, this message translates to:
+  /// **'Received'**
+  String get dsReceived;
+
+  /// No description provided for @dsReceivedOf.
+  ///
+  /// In en, this message translates to:
+  /// **'{received} of {total}'**
+  String dsReceivedOf(String received, String total);
+
+  /// No description provided for @dsBufferHealth.
+  ///
+  /// In en, this message translates to:
+  /// **'Buffer health'**
+  String get dsBufferHealth;
+
+  /// No description provided for @dsStreamUrlFrom.
+  ///
+  /// In en, this message translates to:
+  /// **'Stream URL from'**
+  String get dsStreamUrlFrom;
+
+  /// No description provided for @dsSpectrogram.
+  ///
+  /// In en, this message translates to:
+  /// **'Spectrogram'**
+  String get dsSpectrogram;
+
+  /// No description provided for @surroundUpmix.
+  ///
+  /// In en, this message translates to:
+  /// **'Surround upmix'**
+  String get surroundUpmix;
+
+  /// No description provided for @surroundUpmixSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Stereo songs fill a 7.1 room around you: the voice stays in front, the space moves to the sides and back. 5.1 / 7.1 songs, Dolby Atmos too, always get each channel in its place.'**
+  String get surroundUpmixSubtitle;
+
+  /// No description provided for @passthrough.
+  ///
+  /// In en, this message translates to:
+  /// **'Dolby / DTS passthrough'**
+  String get passthrough;
+
+  /// No description provided for @passthroughSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'For an AV receiver or soundbar over HDMI or optical: Dolby Digital, Dolby Atmos (E-AC-3, TrueHD) and DTS go out undecoded and the receiver plays them, Atmos heights included. Effects and the volume don\'t apply to those songs.'**
+  String get passthroughSubtitle;
+
+  /// No description provided for @kwSurroundUpmix.
+  ///
+  /// In en, this message translates to:
+  /// **'dolby atmos, spatial audio, surround, 7.1, 3d, upmix'**
+  String get kwSurroundUpmix;
+
+  /// No description provided for @kwPassthrough.
+  ///
+  /// In en, this message translates to:
+  /// **'dolby atmos, hdmi, spdif, optical, receiver, soundbar, bitstream, dts, truehd'**
+  String get kwPassthrough;
+
+  /// No description provided for @fxUpmix.
+  ///
+  /// In en, this message translates to:
+  /// **'Surround upmix'**
+  String get fxUpmix;
+
+  /// No description provided for @dsAtmosBed.
+  ///
+  /// In en, this message translates to:
+  /// **'{channels}-channel bed decoded; the height objects need a receiver (passthrough)'**
+  String dsAtmosBed(int channels);
+
+  /// No description provided for @dsPassthrough.
+  ///
+  /// In en, this message translates to:
+  /// **'Passthrough'**
+  String get dsPassthrough;
+
+  /// No description provided for @dsPassthroughValue.
+  ///
+  /// In en, this message translates to:
+  /// **'{codec} to the receiver, undecoded'**
+  String dsPassthroughValue(String codec);
+
+  /// No description provided for @dsVirtualRoom.
+  ///
+  /// In en, this message translates to:
+  /// **'Virtual speakers'**
+  String get dsVirtualRoom;
+
+  /// No description provided for @dsRoomStereo.
+  ///
+  /// In en, this message translates to:
+  /// **'2 speakers (stereo)'**
+  String get dsRoomStereo;
+
+  /// No description provided for @dsRoomSurround.
+  ///
+  /// In en, this message translates to:
+  /// **'7.1 room, each channel in its place'**
+  String get dsRoomSurround;
+
+  /// No description provided for @dsRoomUpmix.
+  ///
+  /// In en, this message translates to:
+  /// **'7.1 room, upmixed from stereo'**
+  String get dsRoomUpmix;
+
+  /// No description provided for @autoEq.
+  ///
+  /// In en, this message translates to:
+  /// **'Headphone / IEM profile (AutoEQ)'**
+  String get autoEq;
+
+  /// No description provided for @autoEqSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Sets the equalizer for your model from its measurement, so it sounds neutral (the Harman target).'**
+  String get autoEqSubtitle;
+
+  /// No description provided for @autoEqPick.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick your headphones or IEM'**
+  String get autoEqPick;
+
+  /// No description provided for @autoEqSearch.
+  ///
+  /// In en, this message translates to:
+  /// **'Search a model, e.g. KZ ZSN Pro'**
+  String get autoEqSearch;
+
+  /// No description provided for @autoEqLoading.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading the list of models…'**
+  String get autoEqLoading;
+
+  /// No description provided for @autoEqModels.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} models, measured by crinacle, oratory1990 and others. Type a name to search.'**
+  String autoEqModels(int count);
+
+  /// No description provided for @autoEqNoResults.
+  ///
+  /// In en, this message translates to:
+  /// **'No model by that name.'**
+  String get autoEqNoResults;
+
+  /// No description provided for @autoEqFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load AutoEQ: {error}'**
+  String autoEqFailed(String error);
+
+  /// No description provided for @autoEqApplied.
+  ///
+  /// In en, this message translates to:
+  /// **'Equalizer set for {name}'**
+  String autoEqApplied(String name);
+
+  /// No description provided for @autoEqAppliedFitted.
+  ///
+  /// In en, this message translates to:
+  /// **'Equalizer set for {name} (within ±{db} dB of its profile)'**
+  String autoEqAppliedFitted(String name, String db);
+
+  /// No description provided for @clearCache.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear cache'**
+  String get clearCache;
+
+  /// No description provided for @clearCacheSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'{size} of covers, lyrics found online and other things Riflay fetches again. Your music stays.'**
+  String clearCacheSubtitle(String size);
+
+  /// No description provided for @clearCacheCounting.
+  ///
+  /// In en, this message translates to:
+  /// **'Counting…'**
+  String get clearCacheCounting;
+
+  /// No description provided for @clearCacheConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear {size} of cache?'**
+  String clearCacheConfirm(String size);
+
+  /// No description provided for @clearCacheConfirmBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Covers and lyrics are downloaded again when they are needed. Your library, downloads, playlists, settings, your own lyrics and the loudness measurements stay.'**
+  String get clearCacheConfirmBody;
+
+  /// No description provided for @clearCacheAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear'**
+  String get clearCacheAction;
+
+  /// No description provided for @clearCacheDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Freed {size}'**
+  String clearCacheDone(String size);
+
+  /// No description provided for @kwClearCache.
+  ///
+  /// In en, this message translates to:
+  /// **'cache, storage, space, free up, clean, temporary files'**
+  String get kwClearCache;
+
+  /// No description provided for @dsDeviceRate.
+  ///
+  /// In en, this message translates to:
+  /// **'Device sample rate'**
+  String get dsDeviceRate;
+
+  /// No description provided for @dsDeviceFormat.
+  ///
+  /// In en, this message translates to:
+  /// **'Device format'**
+  String get dsDeviceFormat;
+
+  /// No description provided for @dsMixerBuffer.
+  ///
+  /// In en, this message translates to:
+  /// **'Mixer buffer'**
+  String get dsMixerBuffer;
+
+  /// No description provided for @dsMixerBufferValue.
+  ///
+  /// In en, this message translates to:
+  /// **'{ms} ms · {frames} frames'**
+  String dsMixerBufferValue(String ms, int frames);
+
+  /// No description provided for @dsLowLatency.
+  ///
+  /// In en, this message translates to:
+  /// **'Low-latency audio'**
+  String get dsLowLatency;
+
+  /// No description provided for @dsProAudio.
+  ///
+  /// In en, this message translates to:
+  /// **'Pro audio'**
+  String get dsProAudio;
+
+  /// No description provided for @dsSpatialAudio.
+  ///
+  /// In en, this message translates to:
+  /// **'Spatial audio'**
+  String get dsSpatialAudio;
+
+  /// No description provided for @dsSystemVolume.
+  ///
+  /// In en, this message translates to:
+  /// **'System volume'**
+  String get dsSystemVolume;
+
+  /// No description provided for @dsSupported.
+  ///
+  /// In en, this message translates to:
+  /// **'Supported'**
+  String get dsSupported;
+
+  /// No description provided for @dsNotSupported.
+  ///
+  /// In en, this message translates to:
+  /// **'Not supported'**
+  String get dsNotSupported;
+
+  /// No description provided for @fromInternetArchive.
+  ///
+  /// In en, this message translates to:
+  /// **'FLAC from the Internet Archive'**
+  String get fromInternetArchive;
+
+  /// No description provided for @radioParadiseFlac.
+  ///
+  /// In en, this message translates to:
+  /// **'Radio Paradise in FLAC'**
+  String get radioParadiseFlac;
+
+  /// No description provided for @onAir.
+  ///
+  /// In en, this message translates to:
+  /// **'On air: {song}'**
+  String onAir(String song);
+
+  /// No description provided for @archiveCouldntLoad.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load from the Internet Archive: {error}'**
+  String archiveCouldntLoad(String error);
+
+  /// No description provided for @archiveNoFlac.
+  ///
+  /// In en, this message translates to:
+  /// **'This recording has no FLAC files that can be played here.'**
+  String get archiveNoFlac;
+
+  /// No description provided for @topicSources.
+  ///
+  /// In en, this message translates to:
+  /// **'Music sources'**
+  String get topicSources;
+
+  /// No description provided for @topicSourcesSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'Internet Archive and Radio Paradise: free music in FLAC'**
+  String get topicSourcesSummary;
+
+  /// No description provided for @sourcesAbout.
+  ///
+  /// In en, this message translates to:
+  /// **'Free places with lossless sound, shared with the artists\' or rights holders\' leave. Riflay plays from their own servers.'**
+  String get sourcesAbout;
+
+  /// No description provided for @sourceArchive.
+  ///
+  /// In en, this message translates to:
+  /// **'Internet Archive in search'**
+  String get sourceArchive;
+
+  /// No description provided for @sourceArchiveSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Live Music Archive concerts, netlabels and public-domain records in FLAC, on search\'s All'**
+  String get sourceArchiveSubtitle;
+
+  /// No description provided for @sourceRadioParadise.
+  ///
+  /// In en, this message translates to:
+  /// **'Radio Paradise on the search page'**
+  String get sourceRadioParadise;
+
+  /// No description provided for @sourceRadioParadiseSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Listener-supported, commercial-free radio, every channel in FLAC (CD quality)'**
+  String get sourceRadioParadiseSubtitle;
+
+  /// No description provided for @kwSources.
+  ///
+  /// In en, this message translates to:
+  /// **'flac, lossless, internet archive, live music archive, radio paradise, free music, sources'**
+  String get kwSources;
+
+  /// No description provided for @spotifyCanvas.
+  ///
+  /// In en, this message translates to:
+  /// **'Canvas'**
+  String get spotifyCanvas;
+
+  /// No description provided for @spotifyCanvasSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'The looping video Spotify shows with a song, in Video mode instead of its music video (turn Video mode on in Beta features)'**
+  String get spotifyCanvasSubtitle;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

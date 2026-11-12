@@ -3,6 +3,10 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+
+import '../ui/debug_switches.dart';
+import 'romanizer.dart';
+
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// What can be shown under one lyric line.
@@ -78,6 +82,13 @@ abstract final class LyricsTranslation {
     return [for (final l in lines) found[l.trim()] ?? LineExtras.none];
   }
 
+  /// [line]'s pronunciation: worked out here for Korean, kana, Cyrillic and Greek (as fans write it, and the same
+  /// every time), else [google]'s, tidied ([Romanizer.clean]). `RIFLAY_GOOGLE_ROMANIZATION` keeps Google's as it is.
+  static String? romanizedOf(String line, String? google) {
+    if (DebugSwitches.googleRomanization) return google;
+    return Romanizer.local(line) ?? (google == null ? null : Romanizer.clean(google, line));
+  }
+
   /// Keeps a value only when it adds something to [line].
   static String? _useful(String? value, String line) {
     final v = value?.trim();
@@ -135,7 +146,7 @@ abstract final class LyricsTranslation {
       for (var i = 0; i < chunk.length; i++) {
         final line = chunk[i];
         out[line] = LineExtras(
-          romanized: hasNonLatin(line) ? _useful(r?[i], line) : null,
+          romanized: hasNonLatin(line) ? _useful(romanizedOf(line, r?[i]), line) : null,
           translation: _useful(t?[i], line),
         );
       }
@@ -163,6 +174,8 @@ abstract final class LyricsTranslation {
       return {
         for (var i = 0; i < lines.length; i++)
           lines[i]: LineExtras(
+            // This service has no pronunciation: the scripts that follow rules are romanized here.
+            romanized: hasNonLatin(lines[i]) ? _useful(Romanizer.local(lines[i]), lines[i]) : null,
             translation: out[i]['needsTranslation'] == false
                 ? null
                 : _useful(out[i]['translation'] as String?, lines[i]),

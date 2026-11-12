@@ -993,8 +993,8 @@ class Appearance extends ChangeNotifier {
   /// Frosted, see-through player bar, mini player and tab bar.
   bool glass = false;
 
-  /// Blur radius of the frosted panels.
-  double blur = 24;
+  /// Blur radius of the frosted panels (18: frosted, with what is behind still showing).
+  double blur = 18;
 
   /// How opaque the window's background is (1 = solid). Below 1 the desktop
   /// shows through, and a compositor that blurs windows (Hyprland, KDE) blurs it.
@@ -1199,7 +1199,7 @@ class Appearance extends ChangeNotifier {
       coverStrength = 1;
       nowPlaying = NowPlayingBackground.color;
       glass = false;
-      blur = 24;
+      blur = 18;
       windowOpacity = 1;
       componentOpacity = 1;
       textSize = defaultTextSize;

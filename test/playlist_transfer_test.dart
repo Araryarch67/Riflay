@@ -228,4 +228,96 @@ void main() {
     expect(r.missing.map((s) => s.title), ['Gone']);
     expect(progress, 4);
   });
+
+  test('recognises TIDAL and NetEase Cloud Music links, and nothing like them that isn\'t one', () {
+    for (final link in [
+      'https://tidal.com/playlist/edf3b7d2-cb42-41d7-93c0-afa2a395521b',
+      'https://tidal.com/browse/playlist/edf3b7d2-cb42-41d7-93c0-afa2a395521b?u',
+      'https://listen.tidal.com/playlist/edf3b7d2-cb42-41d7-93c0-afa2a395521b',
+      'https://music.163.com/#/playlist?id=3778678',
+      'https://music.163.com/playlist?id=3778678&userid=1',
+      'https://y.music.163.com/m/album?id=407156985',
+    ]) {
+      expect(PlaylistTransfer.looksLikeLink(link), isTrue, reason: link);
+    }
+    for (final link in [
+      'https://tidal.com/playlist/not-a-uuid',
+      'https://tidal.com/browse/track/123',
+      'https://music.163.com/#/song?id=1',
+    ]) {
+      expect(PlaylistTransfer.looksLikeLink(link), isFalse, reason: link);
+    }
+  });
+
+  test('reads a TIDAL playlist from its embed player, named and counted by its page', () async {
+    const id = 'edf3b7d2-cb42-41d7-93c0-afa2a395521b';
+    final embed =
+        """<script>window.tidalCountryCode='ID';     window.tidalMediaSessionMetadata=${jsonEncode({
+          '361394619': {'title': 'Not Like Us', 'artist': 'Kendrick Lamar', 'album': 'Not Like Us'},
+          '401317285': {'title': 'luther', 'artist': 'Kendrick Lamar, SZA', 'album': 'GNX'},
+        })};
+</script>""";
+    const page =
+        '<script type="application/ld+json">{"@type":"MusicPlaylist","name":"TIDAL\'s Top Hits","numTracks":100}</script>';
+    final p = await fake({
+      'https://embed.tidal.com/playlists/$id': () => html(embed),
+      'https://tidal.com/playlist/$id': () => html(page),
+    }).read('https://tidal.com/browse/playlist/$id');
+    expect((p.service, p.title, p.total), ('TIDAL', "TIDAL's Top Hits", 100));
+    expect(p.songs.map((s) => '$s'), ['Kendrick Lamar - Not Like Us', 'Kendrick Lamar, SZA - luther']);
+    // The page behind a bot check: the songs still come.
+    final held = await fake({'https://embed.tidal.com/playlists/$id': () => html(embed)})
+        .read('https://tidal.com/playlist/$id');
+    expect((held.songs.length, held.total), (2, 2));
+  });
+
+  test('reads a NetEase Cloud Music playlist and album from its web API', () async {
+    final p = await fake({
+      'https://music.163.com/api/v6/playlist/detail?id=3778678&n=1000': () => json({
+        'code': 200,
+        'playlist': {
+          'name': '热歌榜',
+          'trackCount': 2,
+          'tracks': [
+            {
+              'name': 'Hong Kong',
+              'ar': [
+                {'name': 'The Weeknd'},
+                {'name': '王菲'},
+              ],
+              'dt': 210000,
+            },
+            {
+              'name': '海屿你',
+              'ar': [
+                {'name': '马也_Crabbit'},
+              ],
+            },
+          ],
+        },
+      }),
+    }).read('https://music.163.com/#/playlist?id=3778678');
+    expect((p.service, p.title, p.total), ('NetEase Cloud Music', '热歌榜', 2));
+    expect(p.songs.first.artist, 'The Weeknd, 王菲');
+    expect(p.songs.first.duration, const Duration(seconds: 210));
+    final a = await fake({
+      'https://music.163.com/api/album/407156985': () => json({
+        'code': 200,
+        'album': {
+          'name': 'Hong Kong',
+          'size': 1,
+          'songs': [
+            {
+              'name': 'Hong Kong',
+              'artists': [
+                {'name': 'The Weeknd'},
+              ],
+              'duration': 210000,
+            },
+          ],
+        },
+      }),
+    }).read('https://y.music.163.com/m/album?id=407156985');
+    expect((a.title, a.songs.single.artist), ('Hong Kong', 'The Weeknd'));
+  });
 }

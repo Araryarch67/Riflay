@@ -65,7 +65,41 @@ abstract final class Ffmpeg {
     _path = null;
     _probed = false;
     _download = null;
+    _soxr.clear();
   }
+
+  static final _soxr = <String, Future<bool>>{};
+
+  /// Whether the ffmpeg at [executable] was built with SoX's resampler (libsoxr). The system's usually is (Arch,
+  /// Debian, Fedora, Homebrew) and so are the static builds Riflay downloads. Asked once per executable.
+  static Future<bool> hasSoxr(String executable) => _soxr[executable] ??= () async {
+    try {
+      final r = await Process.run(executable, ['-hide_banner', '-buildconf']);
+      return '${r.stdout}'.contains('--enable-libsoxr');
+    } catch (_) {
+      return false;
+    }
+  }();
+
+  /// The `-af` filter that turns any song into [rate] Hz [format] (`s16` or `s32`) for a FLAC: SoX's resampler
+  /// where there is one (the one playback uses, see AudioEngine.soxrOptions), otherwise libswresample at its
+  /// best settings, and TPDF dither whenever the samples lose bits (decoded MP3 / AAC / Opus are floats, so
+  /// 16-bit FLACs always get it). A rate that is already right passes through untouched.
+  static String flacResampleFilter({required int rate, required String format, required bool soxr}) => [
+    'aresample=osr=$rate',
+    'osf=$format',
+    if (soxr) ...[
+      'resampler=soxr',
+      'precision=28',
+      'cutoff=0.95',
+    ] else ...[
+      'filter_size=64',
+      'phase_shift=10',
+      'cutoff=0.97',
+      'linear_interp=1',
+    ],
+    'dither_method=triangular_hp',
+  ].join(':');
 
   static Future<File> _localFile() async =>
       File(p.join((await ExecutableStore.directory()).path, Host.isWindows ? 'ffmpeg.exe' : 'ffmpeg'));

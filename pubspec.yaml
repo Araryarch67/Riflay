@@ -80,8 +80,6 @@ dependencies:
   qr_flutter: ^4.1.0
   mobile_scanner: ^7.4.3
   zxing2: ^0.2.4
-  flutter_js: ^0.8.7
-  archive: ^4.6.0
   windows_taskbar: ^1.1.2
   # Desktop: the tray icon and its menu (lib/platform/tray_io.dart). Linux links libayatana-appindicator3.
   tray_manager: 0.5.3
@@ -138,6 +136,7 @@ flutter:
   assets:
     # Virtual speakers' head-related impulse responses (tool/make_hrir.sh).
     - assets/audio/hrir_kemar_48k.wav
+    - assets/audio/hrir_kemar_71_48k.wav
     - assets/audio/HRIR-NOTICE.txt
     - assets/fonts/OFL.txt
     # Windows taskbar thumbnail buttons (lib/services/taskbar_buttons.dart): white glyphs, 16–48 px.

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../models/track.dart';
 import '../../platform/features.dart';
 import '../../services/beta_features.dart';
+import '../../services/folder_watch.dart';
 import '../../services/language.dart';
 import '../../services/play_history.dart';
 import '../../services/player_controller.dart';
@@ -21,8 +22,9 @@ import '../navigation.dart';
 import '../widgets/menus.dart';
 
 /// [downloaded]: what was downloaded, grouped (the songs, and the albums and artists they're from), still in the
-/// rest of the library too.
-enum LibraryFilter { playlists, downloaded, albums, artists }
+/// rest of the library too. [local]: what is on this device by where it is, each music folder the person added
+/// (with the songs under it) and what was downloaded.
+enum LibraryFilter { playlists, downloaded, albums, artists, local }
 
 /// "Your Library": Riflay playlists, YouTube Music (liked songs and
 /// playlists, marked with a cloud) and the files on this device, in one list.
@@ -48,7 +50,14 @@ class _LibraryListState extends State<LibraryList> {
     // playing: this list sits in the sidebar the whole time.
     final c = PlayerScope.identity(context);
     return ListenableBuilder(
-      listenable: Listenable.merge([c.libraryRevision, c.ytMusic, BetaFeatures.instance, PlayHistory.instance]),
+      // The music folders too: adding or forgetting one changes Local.
+      listenable: Listenable.merge([
+        c.libraryRevision,
+        c.ytMusic,
+        BetaFeatures.instance,
+        PlayHistory.instance,
+        FolderWatch.instance,
+      ]),
       builder: (context, _) => _build(context, c, c.ytMusic.libraryNow),
     );
   }
@@ -68,12 +77,16 @@ class _LibraryListState extends State<LibraryList> {
         for (final a in c.albumsAndArtists)
           if (a.tracks.any((t) => t.sourceUrl != null)) a,
       ],
-      LibraryFilter.playlists => const <Collection>[],
+      LibraryFilter.playlists || LibraryFilter.local => const <Collection>[],
     };
+    final folders = _filter == LibraryFilter.local ? c.folders : const <Collection>[];
 
     final rows = <Widget>[
+      // Local: each music folder, then what was downloaded.
+      for (final f in folders) _LibraryRow(collection: f, collapsed: widget.collapsed),
       // First, so downloads are easy to find.
-      if (downloads != null && (show(LibraryFilter.playlists) || _filter == LibraryFilter.downloaded))
+      if (downloads != null &&
+          (show(LibraryFilter.playlists) || _filter == LibraryFilter.downloaded || _filter == LibraryFilter.local))
         _LibraryRow(collection: downloads, collapsed: widget.collapsed),
       if (show(LibraryFilter.playlists)) ...[
         if (widget.collapsed)
@@ -263,6 +276,7 @@ class _LibraryListState extends State<LibraryList> {
                           LibraryFilter.downloaded => tr.downloaded,
                           LibraryFilter.albums => tr.albums,
                           LibraryFilter.artists => tr.artists,
+                          LibraryFilter.local => tr.local,
                         }),
                         selected: _filter == f,
                         onSelected: (on) => setState(() => _filter = on ? f : null),
@@ -277,12 +291,12 @@ class _LibraryListState extends State<LibraryList> {
                 return CustomScrollView(
                   controller: scroll,
                   slivers: [
-                    if (widget.dense && count == 0 && prompts.isEmpty)
+                    if (count == 0 && (_filter == LibraryFilter.local || (widget.dense && prompts.isEmpty)))
                       SliverToBoxAdapter(
                         child: Padding(
                           padding: const EdgeInsets.all(24),
                           child: Text(
-                            tr.libraryEmpty,
+                            _filter == LibraryFilter.local ? tr.localEmpty : tr.libraryEmpty,
                             style: text.bodyMedium?.copyWith(color: AppColors.textSecondary),
                           ),
                         ),
@@ -459,7 +473,9 @@ class _LibraryRow extends StatelessWidget {
     final shell = ShellScope.of(context);
     final text = Theme.of(context).textTheme;
     final isArtist = collection.kind == CollectionKind.artist;
-    final art = collection.kind == CollectionKind.allSongs
+    final art = collection.kind == CollectionKind.folder
+        ? _IconArt(Icons.folder_rounded, flat: collapsed)
+        : collection.kind == CollectionKind.allSongs
         ? CoverMosaic(tracks: collection.tracks, size: 48)
         : Artwork(track: collection.cover, size: 48, circle: isArtist);
 
@@ -499,6 +515,7 @@ class _LibraryRow extends StatelessWidget {
                                   CollectionKind.youtube ||
                                   CollectionKind.remote => '${tr.playlist} • ${collection.subtitle}',
                                   CollectionKind.smart => '${tr.smartPlaylist} • ${collection.subtitle}',
+                                  CollectionKind.folder => '${tr.folder} • ${collection.subtitle}',
                                   CollectionKind.playlist => '${tr.playlist} • Riflay • ${collection.subtitle}',
                                   CollectionKind.album => '${tr.album} • ${collection.subtitle}',
                                   CollectionKind.artist || CollectionKind.remoteArtist => tr.artist,

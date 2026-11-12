@@ -130,7 +130,7 @@ void main() {
         'Beta features',
       ],
       'Library & downloads': ['Library', 'Downloads', 'Listening history & Wrap', 'Backup & restore'],
-      'Accounts & services': ['YouTube Music account', 'Spotify', 'Last.fm & ListenBrainz', 'Discord', 'Extensions'],
+      'Accounts & services': ['YouTube Music account', 'Spotify', 'Last.fm & ListenBrainz', 'Discord', 'Music sources'],
     };
     for (final MapEntry(key: group, value: rows) in expected.entries) {
       await tester.tap(find.text(group));
@@ -185,7 +185,7 @@ void main() {
       ),
       ('Accounts & services', 'YouTube Music account', 'Sign in with Google', 'settings:accounts/youtube-music'),
       ('Accounts & services', 'Discord', 'Discord Rich Presence', 'settings:accounts/services'),
-      ('Accounts & services', 'Extensions', 'Repositories', 'settings:accounts/extensions'),
+      ('Accounts & services', 'Music sources', 'Radio Paradise on the search page', 'settings:accounts/sources'),
     ];
     for (final (group, section, marker, location) in cases) {
       visited.clear();

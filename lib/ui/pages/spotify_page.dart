@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../services/player_controller.dart';
 import '../../services/playlist_transfer.dart';
 import '../../services/spotify_account.dart';
+import '../../services/spotify_canvas.dart';
 import '../../services/spotify_import.dart';
 import '../../services/spotify_library.dart';
 import '../../services/spotify_session.dart';
@@ -343,6 +344,22 @@ class _SpotifyPageState extends State<SpotifyPage> {
               ),
               TextButton(onPressed: () => account.signOut(), child: Text(tr.signOut)),
             ],
+          ),
+        ),
+      ),
+      // Canvas: the song's looping video from Spotify, in Video mode.
+      SliverToBoxAdapter(
+        child: Padding(
+          padding: EdgeInsets.symmetric(horizontal: pad - 16),
+          child: ListenableBuilder(
+            listenable: SpotifyCanvas.instance,
+            builder: (context, _) => SwitchListTile(
+              secondary: const Icon(Icons.motion_photos_on_outlined),
+              title: Text(tr.spotifyCanvas),
+              subtitle: Text(tr.spotifyCanvasSubtitle, style: muted),
+              value: SpotifyCanvas.instance.enabled,
+              onChanged: SpotifyCanvas.instance.setEnabled,
+            ),
           ),
         ),
       ),

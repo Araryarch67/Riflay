@@ -202,6 +202,10 @@ class YoutubeMusicAccount extends ChangeNotifier {
 
   bool get isSignedIn => _webCookies != null;
 
+  /// The session's cookies, for yt-dlp to fetch a song only a signed-in viewer may play (see
+  /// YtDlp.accountCookies); null signed out.
+  String? get downloadCookies => _webCookies;
+
   // ── Persistence ─────────────────────────────────────────────────────────
 
   static Future<File> _file() => PrivateFiles.file('youtube_music_account.json');

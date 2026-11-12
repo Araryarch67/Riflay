@@ -72,6 +72,9 @@ class AudioStreamCache<T> {
   static Future<Directory> _temporary() async =>
       Directory((await getTemporaryDirectory()).path).createTemp('riflay-stream-');
 
+  /// The folder this session's songs are in, once one was opened.
+  Future<String?> folderPath() async => (await _folder)?.path;
+
   CachedAudio<T>? find(String key) => _entries[key];
 
   Future<CachedAudio<T>?> open(

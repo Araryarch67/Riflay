@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 # Builds libmpv-2.dll for Windows on Linux (mingw-w64), with Riflay's ASIO
 # audio output (third_party/mpv_asio) and the FFmpeg filters the app uses
-# (equalizer, crossfeed, afir, amovie, and ladspa for audio plugins through
-# Carla, see linux/carla_bridge). It replaces the DLL media_kit ships,
-# which has neither.
+# (equalizer, crossfeed, afir, amovie, headphone and pan for Virtual speakers
+# and its 7.1 room, silenceremove for Skip silence, and ladspa for audio
+# plugins through Carla, see linux/carla_bridge). It replaces the DLL media_kit
+# ships, which has neither.
 #
 #   tool/build_libmpv_windows.sh            -> windows/libmpv/libmpv-2.dll
 #
@@ -95,7 +96,7 @@ if ! stamp libass; then
   done_ libass
 fi
 
-if ! stamp ffmpeg-ladspa-spectrum; then
+if ! stamp ffmpeg-spatial; then
   rm -rf "$root/build/ffmpeg" && mkdir -p "$root/build/ffmpeg"
   # The ladspa filter (audio plugins) needs ladspa.h and dlopen, which mingw lacks: third_party/ladspa has the
   # header and a dlfcn.h over LoadLibrary. The filter also only takes a path that starts with '/' or '.', so
@@ -115,9 +116,9 @@ if ! stamp ffmpeg-ladspa-spectrum; then
     --extra-cflags="-I$project/third_party/ladspa -I$project/third_party/ladspa/win" \
     --disable-videotoolbox --disable-vaapi --disable-vdpau --disable-cuda --disable-cuvid \
     --disable-nvenc --disable-nvdec --disable-d3d11va --disable-dxva2 --disable-mediafoundation \
-    --enable-filter=asplit,amerge,bandpass,astats,equalizer,crossfeed,afir,amovie,volume,aresample,anull,ladspa >/dev/null &&
+    --enable-filter=asplit,amerge,bandpass,astats,abuffer,abuffersink,aformat,equalizer,crossfeed,afir,amovie,headphone,pan,silenceremove,volume,aresample,anull,ladspa >/dev/null &&
     make -j"$jobs" install >/dev/null)
-  done_ ffmpeg-ladspa-spectrum
+  done_ ffmpeg-spatial
 fi
 
 if ! stamp mpv-patched; then

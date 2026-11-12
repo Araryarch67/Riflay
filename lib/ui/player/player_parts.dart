@@ -16,6 +16,7 @@ import '../pages/lyrics_page.dart' show LyricsMoreMenu;
 import '../shell_scope.dart';
 import '../shortcuts.dart';
 import '../theme.dart';
+import '../widgets/audio_visualizer.dart';
 import '../widgets/controls.dart';
 import '../widgets/marquee_text.dart';
 import '../widgets/signal_path.dart';
@@ -952,7 +953,8 @@ class PlayerBottomButtons extends StatelessWidget {
       size: 44,
       iconSize: 22,
       onPressed: onTap,
-      glass: LayoutPrefs.instance.glassVolume,
+      // Plain on the capsule's glass: one glass surface for both icons.
+      glass: false,
     );
     final together = Features.listenTogether;
     final output = Features.casting;
@@ -965,15 +967,14 @@ class PlayerBottomButtons extends StatelessWidget {
             builder: (context, _) => Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // The volume's own pill: glass only with the Glass volume switch.
+                // One glass capsule behind both icons under Liquid Glass controls (the icons stay plain on it).
                 PlayerGlassSurface(
                   radius: 25,
-                  enabled: LayoutPrefs.instance.glassVolume,
                   child: Container(
                     padding: const EdgeInsets.all(3),
                     decoration: ShapeDecoration(
                       shape: const StadiumBorder(),
-                      color: LayoutPrefs.instance.playerGlassControls && LayoutPrefs.instance.glassVolume
+                      color: LayoutPrefs.instance.playerGlassControls
                           ? Colors.transparent
                           : colors.textPrimary.withValues(alpha: 0.14),
                     ),
@@ -1042,12 +1043,17 @@ class ComposedNowPlaying extends StatelessWidget {
     required this.cover,
     required this.classicTopBar,
     required this.showBadge,
+    this.strip = false,
   });
 
   final Track? track;
   final String? from;
   final Color accent;
   final Widget Function(double size, {double radius}) cover;
+
+  /// The visualizer's strip above the title, as in Classic: the only place a linear style (Bars, Wave, Line...) can
+  /// draw here, and with Cover: Background (no frame for a ring) the only visualizer there is.
+  final bool strip;
 
   /// Classic's top bar; its More button can be left out when another part has it.
   final Widget Function({required bool more}) classicTopBar;
@@ -1109,6 +1115,12 @@ class ComposedNowPlaying extends StatelessWidget {
         ],
       ),
     );
+    final visualizer = strip
+        ? const Padding(
+            padding: EdgeInsets.fromLTRB(24, 0, 24, 8),
+            child: AudioVisualizer(linearOnly: true, height: 80),
+          )
+        : const SizedBox.shrink();
     if (full) {
       // The cover is the page behind (see NowPlayingPage); here only the header and the controls.
       return LayoutBuilder(
@@ -1124,6 +1136,7 @@ class ComposedNowPlaying extends StatelessWidget {
                 child: NowPlayingCover(child: VideoBackgroundExpand(track: track)),
               ),
             ),
+            visualizer,
             controlsFor(box.maxHeight >= 760),
           ],
         ),
@@ -1158,6 +1171,7 @@ class ComposedNowPlaying extends StatelessWidget {
               },
             ),
           ),
+          visualizer,
           controlsFor(outer.maxHeight >= 760),
         ],
       ),

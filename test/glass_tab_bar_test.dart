@@ -365,4 +365,38 @@ void main() {
     expect(playerPresetName(), 'Stacked');
     expect(prefs.playerGlassControls, isFalse);
   });
+
+  for (final style in [TabBarStyle.glass, TabBarStyle.capsule]) {
+    testWidgets('${style.name}: a tab is picked by a tap, or by sliding a finger along the bar', (tester) async {
+      prefs.tabBar = style;
+      await show(tester, const Size(412, 915), playing: false);
+      final home = find.byTooltip('Home');
+      expect(selectedTab('Home'), findsOneWidget);
+      // Slide from Home towards the far end: the tab under the finger is picked as it goes.
+      final start = tester.getCenter(home);
+      final gesture = await tester.startGesture(start);
+      for (var i = 0; i < 12; i++) {
+        await gesture.moveBy(const Offset(22, 0));
+        await tester.pump();
+      }
+      await gesture.up();
+      await tester.pumpAndSettle();
+      expect(selectedTab('Home'), findsNothing, reason: 'the slide moved off Home');
+      // And a plain tap still works.
+      await tester.tap(find.byTooltip('Home'));
+      await tester.pumpAndSettle();
+      expect(selectedTab('Home'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+  }
+
+  testWidgets('RIFLAY_NO_TAB_SWIPE leaves only the taps', (tester) async {
+    DebugSwitches.noTabSwipe = true;
+    addTearDown(() => DebugSwitches.noTabSwipe = false);
+    prefs.tabBar = TabBarStyle.capsule;
+    await show(tester, const Size(412, 915), playing: false);
+    await tester.dragFrom(tester.getCenter(find.byTooltip('Home')), const Offset(260, 0));
+    await tester.pumpAndSettle();
+    expect(selectedTab('Home'), findsOneWidget);
+  });
 }

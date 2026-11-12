@@ -8,6 +8,7 @@ import 'package:riflay/ui/widgets/app_dialog.dart';
 import 'package:liquid_glass_renderer/liquid_glass_renderer.dart';
 import 'package:riflay/models/track.dart';
 import 'package:riflay/services/appearance.dart';
+import 'package:riflay/services/beta_features.dart';
 import 'package:riflay/services/layout_prefs.dart';
 import 'package:riflay/services/lyrics.dart';
 import 'package:riflay/services/player_controller.dart';
@@ -22,6 +23,7 @@ import 'package:riflay/ui/player/now_playing_page.dart';
 import 'package:riflay/ui/player/player_parts.dart';
 import 'package:riflay/ui/player/player_glass.dart';
 import 'package:riflay/ui/shell_scope.dart';
+import 'package:riflay/ui/widgets/audio_visualizer.dart';
 import 'package:riflay/ui/widgets/controls.dart';
 import 'package:riflay/ui/widgets/faded_cover.dart';
 import 'package:riflay/ui/widgets/signal_path.dart';
@@ -499,7 +501,12 @@ void main() {
       }
       expect(find.descendant(of: find.byType(PlayerVolumeRow), matching: find.byType(LiquidGlass)), findsNothing);
       if (preset == PlayerPreset.liquidKawaii) {
-        expect(find.ancestor(of: _tip('Volume').first, matching: find.byType(LiquidGlass)), findsNothing);
+        // Volume and Listen together sit on one glass capsule; the icons themselves are plain on it.
+        expect(
+          find.ancestor(of: _tip('Volume').first, matching: find.byType(LiquidGlass)),
+          findsOneWidget,
+          reason: 'the capsule\'s glass, and no glass of its own inside it',
+        );
         // More beside the title stays a plain icon (as Like does; this test's song can't be liked).
         expect(find.ancestor(of: _tip('More').first, matching: find.byType(LiquidGlass)), findsNothing);
       }
@@ -587,6 +594,28 @@ void main() {
     await tester.runAsync(() => p.setGlassTransport(false));
     await _close(tester, c);
   });
+
+  // Cover: Background has no frame to ring, so the strip is its only visualizer; Stacked keeps a framed cover.
+  for (final (name, setup) in <(String, Future<void> Function())>[
+    ('Cover: Background', () => p.setPlayerCover(PlayerCover.background)),
+    ('Stacked', () => PlayerPreset.stacked.apply(p)),
+  ]) {
+    testWidgets('$name (not Classic) draws the linear visualizer styles in a strip above the title', (tester) async {
+      addTearDown(() => BetaFeatures.instance.set(BetaFeature.audioVisualizer, false));
+      await tester.runAsync(setup);
+      await tester.runAsync(() => p.setVisualizer(true));
+      await tester.runAsync(() => p.setVisualizerStyle(VisualizerStyle.bars));
+      expect(p.classicPlayerFace, isFalse);
+      final c = await _show(tester, const NowPlayingPage(), const Size(412, 915));
+      expect(
+        find.byWidgetPredicate((w) => w is AudioVisualizer && w.linearOnly),
+        findsOneWidget,
+        reason: 'Bars has nowhere else to draw',
+      );
+      expect(tester.takeException(), isNull);
+      await _close(tester, c);
+    });
+  }
 
   testWidgets('a phone held sideways: no Cover: Background behind the page, and a one-line Playing from', (
     tester,

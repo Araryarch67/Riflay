@@ -184,6 +184,24 @@ class PlayerMoreSheet extends StatelessWidget {
                     );
                   },
                 ),
+              // "Download with MV": only for a song with a music video, while it isn't downloaded or downloading.
+              if (track.isRemote && Features.downloads && Features.videoMode)
+                ListenableBuilder(
+                  listenable: Listenable.merge([c.youtube, video]),
+                  builder: (context, _) {
+                    video.lookUp(track);
+                    final job = c.youtube.jobFor(track.videoId!);
+                    if (!TrackMenuButton.offersMvDownload(c, track) ||
+                        (job != null && (job.isActive || job.status == DownloadStatus.done))) {
+                      return const SizedBox.shrink();
+                    }
+                    return tile(
+                      Icons.video_library_outlined,
+                      tr.downloadWithMv,
+                      then((host) => TrackMenuButton.download(host, c, [track], withVideo: true)),
+                    );
+                  },
+                ),
               // The cover and the music video of the song, when it has one.
               ListenableBuilder(
                 listenable: video,

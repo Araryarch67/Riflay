@@ -1,5 +1,7 @@
 import 'dart:collection';
 
+import 'package:path/path.dart' as p;
+
 import '../models/track.dart';
 import 'language.dart';
 
@@ -28,6 +30,8 @@ class LibraryViews {
   Map<String, Collection>? _artistByName;
   List<Collection>? _albumsAndArtists;
   Map<String, Collection>? _albumOfTrack;
+  List<Collection>? _folders;
+  String? _foldersKey;
 
   /// The same library after [changed] (by id: the song's new version) replaced songs in place.
   /// [old] holds the versions they replaced.
@@ -209,6 +213,35 @@ class LibraryViews {
     for (final a in albums)
       for (final t in a.tracks) t.id: a,
   };
+
+  /// One collection per music folder in [folders] (Library › Local), in their order: the files under it, by path,
+  /// so an album's folder keeps its songs together. A folder with nothing in it stays, empty. A download saved
+  /// inside one of them is in it too; streamed songs have no file and are in none.
+  List<Collection> foldersOf(List<String> folders) {
+    final key = folders.join('\u0000');
+    final cached = _folders;
+    if (cached != null && _foldersKey == key) return cached;
+    final inside = [for (final _ in folders) <(String, Track)>[]];
+    final roots = [for (final f in folders) f.endsWith(p.separator) ? f : '$f${p.separator}'];
+    for (final t in tracks) {
+      final path = t.isRemote ? null : t.path;
+      if (path == null) continue;
+      for (var i = 0; i < roots.length; i++) {
+        if (path.startsWith(roots[i])) inside[i].add((path, t));
+      }
+    }
+    _foldersKey = key;
+    return _folders = [
+      for (final (i, folder) in folders.indexed)
+        Collection(
+          kind: CollectionKind.folder,
+          id: folder,
+          title: p.basename(folder).isEmpty ? folder : p.basename(folder),
+          subtitle: tr.songsPlural(inside[i].length),
+          tracks: [for (final e in inside[i]..sort((a, b) => a.$1.compareTo(b.$1))) e.$2],
+        ),
+    ];
+  }
 
   /// [items] sorted by [key], each key computed once; equal keys keep their order.
   static List<T> _sortedBy<T>(List<T> items, String Function(T) key) {

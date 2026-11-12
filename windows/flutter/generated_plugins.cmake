@@ -5,7 +5,6 @@
 list(APPEND FLUTTER_PLUGIN_LIST
   connectivity_plus
   flutter_inappwebview_windows
-  flutter_js
   media_kit_libs_windows_audio
   media_kit_video
   screen_retriever_windows

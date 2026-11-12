@@ -155,12 +155,6 @@ class AppLocalizationsId extends AppLocalizations {
   String get topicIntegrationsSummary => 'Tampilkan lagu yang diputar di Discord';
 
   @override
-  String get topicExtensions => 'Ekstensi';
-
-  @override
-  String get topicExtensionsSummary => 'Repositori ekstensi SpotiFLAC: lebih banyak tempat mencari';
-
-  @override
   String get topicLyricsServices => 'Layanan lirik';
 
   @override
@@ -272,6 +266,9 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get downloadAs => 'Unduh sebagai…';
+
+  @override
+  String get downloadWithMv => 'Unduh dengan MV';
 
   @override
   String get saveToDevice => 'Simpan ke perangkat';
@@ -515,6 +512,15 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get playlist => 'Playlist';
+
+  @override
+  String get local => 'Lokal';
+
+  @override
+  String get folder => 'Folder';
+
+  @override
+  String get localEmpty => 'Folder musik yang kamu tambahkan dan lagu yang kamu unduh muncul di sini.';
 
   @override
   String get smartPlaylist => 'Playlist pintar';
@@ -3773,86 +3779,16 @@ class AppLocalizationsId extends AppLocalizations {
   String get ytDlpMissing => 'Tidak tersedia. Pasang (misalnya pacman -S yt-dlp) untuk unduhan YouTube.';
 
   @override
-  String removeNamedQuestion(String name) {
-    return 'Hapus $name?';
-  }
-
-  @override
-  String get removeExtensionBody => 'File dan data yang disimpannya di perangkat ini akan dihapus.';
-
-  @override
-  String couldntRemoveNamed(String name) {
-    return 'Tidak bisa menghapus $name';
-  }
-
-  @override
-  String get extensionsIntro =>
-      'Ekstensi buatan SpotiFLAC menambah tempat pencarian, seperti Apple Music, SoundCloud, dan JioSaavn. Lagunya diputar dari YouTube Music. Tambahkan hanya repositori yang kamu percaya: ekstensi menjalankan kodenya sendiri dan bisa mengakses situs yang tercantum di manifesnya.';
-
-  @override
-  String get repositories => 'Repositori';
-
-  @override
   String get installed => 'Terpasang';
 
   @override
   String get noExtensionsYet => 'Belum ada ekstensi';
 
   @override
-  String get installFromRepo => 'Pasang dari repositori di bawah';
-
-  @override
   String get available => 'Tersedia';
 
   @override
-  String get repositoryAddress => 'Alamat repositori';
-
-  @override
   String get reading => 'Membaca…';
-
-  @override
-  String couldntReadIt(String error) {
-    return 'Tidak bisa dibaca: $error';
-  }
-
-  @override
-  String get notReadYet => 'Belum dibaca';
-
-  @override
-  String extensionsCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(count, locale: localeName, other: '$count ekstensi');
-    return '$_temp0';
-  }
-
-  @override
-  String get removeRepository => 'Hapus repositori';
-
-  @override
-  String get addsToSearch => 'Menambah hasil di Pencarian';
-
-  @override
-  String get downloadsUnsupported => 'unduhan belum didukung';
-
-  @override
-  String get lyricsUnsupported => 'lirik belum didukung';
-
-  @override
-  String get needsSpotiflacFeatures => 'butuh fitur SpotiFLAC yang tidak dimiliki Riflay, jadi mungkin tidak jalan';
-
-  @override
-  String updateTo(String version) {
-    return 'Perbarui ke $version';
-  }
-
-  @override
-  String couldntUpdateNamed(String name) {
-    return 'Tidak bisa memperbarui $name';
-  }
-
-  @override
-  String couldntInstallNamed(String name) {
-    return 'Tidak bisa memasang $name';
-  }
 
   @override
   String get install => 'Pasang';
@@ -4214,7 +4150,8 @@ class AppLocalizationsId extends AppLocalizations {
   }
 
   @override
-  String get pastePlaylistLink => 'Tempel link playlist dari Spotify, Apple Music, atau Deezer.';
+  String get pastePlaylistLink =>
+      'Tempel link playlist dari Spotify, Apple Music, Deezer, TIDAL, atau NetEase Cloud Music.';
 
   @override
   String get becomesYtPlaylist => 'Jadi playlist di koleksi YouTube Music-mu.';
@@ -4226,7 +4163,8 @@ class AppLocalizationsId extends AppLocalizations {
   String get playlistLink => 'Link playlist';
 
   @override
-  String get notAPlaylistLink => 'Itu bukan link playlist Spotify, Apple Music, atau Deezer';
+  String get notAPlaylistLink =>
+      'Itu bukan link playlist Spotify, Apple Music, Deezer, TIDAL, atau NetEase Cloud Music';
 
   @override
   String get readingPlaylist => 'Membaca playlist…';
@@ -4946,16 +4884,6 @@ class AppLocalizationsId extends AppLocalizations {
   String get noInternetTryAgain => 'Tidak ada koneksi internet. Coba lagi.';
 
   @override
-  String extAnsweredUnreadable(String name) {
-    return '$name menjawab sesuatu yang tidak terbaca';
-  }
-
-  @override
-  String extStopped(String name) {
-    return '$name dihentikan';
-  }
-
-  @override
   String get flacBiggerOne =>
       'File FLAC akan lebih besar dari aslinya. Suaranya tetap sama: FLAC tidak bisa mengembalikan yang sudah hilang dari aslinya.';
 
@@ -5060,21 +4988,6 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get whileRiflayOpen => 'Selama Riflay terbuka';
-
-  @override
-  String couldntFindOnYt(String title) {
-    return '$title tidak ditemukan di YouTube Music';
-  }
-
-  @override
-  String fromNamed(String name) {
-    return 'Dari $name';
-  }
-
-  @override
-  String extCouldntSearch(String name, String error) {
-    return '$name tidak bisa mencari: $error';
-  }
 
   @override
   String moreOptionsFor(String title) {
@@ -5453,7 +5366,7 @@ class AppLocalizationsId extends AppLocalizations {
   String get kwSkipSilence => 'hening, sunyi, lewati diam';
 
   @override
-  String get kwEqualizer => 'eq, bass, treble, nada';
+  String get kwEqualizer => 'eq, bass, treble, nada, autoeq, iem, headphone profile';
 
   @override
   String get kwVolumeLeveling => 'replaygain, normalisasi, kenyaringan, volume sama';
@@ -5465,7 +5378,7 @@ class AppLocalizationsId extends AppLocalizations {
   String get kwFadeLength => 'durasi fade, detik';
 
   @override
-  String get kwVirtualSpeakers => 'spasial, surround, 3d, headphone';
+  String get kwVirtualSpeakers => 'spasial, surround, 3d, headphone, dolby atmos';
 
   @override
   String get kwCrossfeed => 'headphone, lebar stereo, bs2b';
@@ -5681,9 +5594,6 @@ class AppLocalizationsId extends AppLocalizations {
   String get kwDiscord => 'status, aktivitas';
 
   @override
-  String get kwExtensions => 'plugin, repositori, sumber';
-
-  @override
   String get kwUpdates => 'versi baru, pembaruan';
 
   @override
@@ -5709,4 +5619,549 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get topicLyricsSummary => 'Tampilan lirik dan sumbernya';
+
+  @override
+  String get losslessCheck => 'Periksa file lossless';
+
+  @override
+  String get losslessCheckSubtitle => 'Temukan FLAC hasil MP3, hi-res palsu, dan file 24-bit yang aslinya 16-bit';
+
+  @override
+  String get losslessCheckAbout =>
+      'Membaca setiap FLAC, WAV, AIFF, WavPack dan APE sekali: spektrumnya dan bit yang benar-benar dipakai';
+
+  @override
+  String losslessCheckFiles(int checked, int total) {
+    return '$checked dari $total file lossless sudah diperiksa';
+  }
+
+  @override
+  String get losslessCheckRun => 'Periksa';
+
+  @override
+  String get losslessCheckAllGood => 'Semua file yang diperiksa tampak asli';
+
+  @override
+  String losslessCheckFound(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count file kemungkinan tidak seperti klaimnya',
+      one: '1 file kemungkinan tidak seperti klaimnya',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String losslessCheckLossyCut(String khz) {
+    return 'terpotong di $khz kHz: dibuat dari MP3 atau AAC';
+  }
+
+  @override
+  String get losslessCheckUpsampled => 'tidak ada apa pun di atas 22 kHz: di-upsample dari 44.1 / 48 kHz';
+
+  @override
+  String losslessCheckPadded(int bits) {
+    return '$bits-bit tapi hanya berisi 16 bit';
+  }
+
+  @override
+  String get downloadNeedsSignIn =>
+      'Lagu ini hanya bisa diputar saat masuk akun (dibatasi umur). Masuk ke YouTube Music di Setelan › Akun & layanan lalu coba lagi.';
+
+  @override
+  String get kwLosslessCheck => 'flac palsu, upscale, transcode, spektrum, lossless asli, bit depth';
+
+  @override
+  String get dsSong => 'Lagu';
+
+  @override
+  String get dsSource => 'File sumber';
+
+  @override
+  String get dsSignal => 'Sinyal';
+
+  @override
+  String get dsAnalysis => 'Analisis';
+
+  @override
+  String get dsSound => 'Suara';
+
+  @override
+  String get dsOutput => 'Output';
+
+  @override
+  String get dsNetwork => 'Jaringan';
+
+  @override
+  String get dsReading => 'Pembacaan';
+
+  @override
+  String get dsTitle => 'Judul';
+
+  @override
+  String get dsArtist => 'Artis';
+
+  @override
+  String get dsAlbum => 'Album';
+
+  @override
+  String get dsPosition => 'Posisi';
+
+  @override
+  String get dsPlaysFrom => 'Diputar dari';
+
+  @override
+  String get dsPlaysStream => 'Stream YouTube Music';
+
+  @override
+  String get dsPlaysDownloaded => 'Salinan unduhan';
+
+  @override
+  String get dsPlaysFile => 'File di perangkat ini';
+
+  @override
+  String get dsVideoIdItag => 'ID video / itag';
+
+  @override
+  String get dsVideoId => 'ID video';
+
+  @override
+  String get dsFile => 'File';
+
+  @override
+  String get dsQuality => 'Kualitas';
+
+  @override
+  String get dsFormat => 'Format';
+
+  @override
+  String get dsSampleRate => 'Sample rate';
+
+  @override
+  String get dsBitDepth => 'Bit depth';
+
+  @override
+  String dsBits(int bits) {
+    return '$bits-bit';
+  }
+
+  @override
+  String get dsBitrate => 'Bitrate';
+
+  @override
+  String dsKbpsAvg(int avg) {
+    return '$avg kbps (rata-rata)';
+  }
+
+  @override
+  String dsKbpsNowAvg(int now, int avg) {
+    return '$now kbps (rata-rata $avg)';
+  }
+
+  @override
+  String get dsChannels => 'Kanal';
+
+  @override
+  String get dsMono => 'Mono';
+
+  @override
+  String get dsStereo => 'Stereo';
+
+  @override
+  String dsChannelCount(int count) {
+    return '$count kanal';
+  }
+
+  @override
+  String get dsContainer => 'Container';
+
+  @override
+  String get dsFileSize => 'Ukuran file';
+
+  @override
+  String get dsFrequencyRange => 'Rentang frekuensi';
+
+  @override
+  String dsUpToNyquist(String khz) {
+    return 'Hingga $khz (Nyquist)';
+  }
+
+  @override
+  String get dsTheoreticalRange => 'Rentang dinamis teoretis';
+
+  @override
+  String get dsMeasuring => 'Mengukur';
+
+  @override
+  String get dsReadingFile => 'Membaca seluruh file…';
+
+  @override
+  String get dsSpectrum => 'Spektrum';
+
+  @override
+  String dsCutLossless(String khz) {
+    return 'Terpotong di $khz: kemungkinan dibuat dari MP3 atau AAC';
+  }
+
+  @override
+  String dsCutLossy(String khz) {
+    return 'Terpotong di $khz, seperti file lossy biasanya';
+  }
+
+  @override
+  String get dsUpsampled => 'Tidak ada apa-apa di atas sekitar 22 kHz: di-upsample dari 44.1 / 48 kHz';
+
+  @override
+  String dsFullBand(String khz) {
+    return 'Pita penuh, hingga $khz';
+  }
+
+  @override
+  String get dsBitsUsed => 'Bit terpakai';
+
+  @override
+  String dsBitsPadded(int used, int stored) {
+    return '$used dari $stored: diisi dari file 16-bit';
+  }
+
+  @override
+  String dsBitsAll(int stored) {
+    return 'Semua $stored';
+  }
+
+  @override
+  String dsBitsOf(int used, int stored) {
+    return '$used dari $stored';
+  }
+
+  @override
+  String get dsDynamicRange => 'Rentang dinamis';
+
+  @override
+  String get dsDrDynamic => 'dinamis';
+
+  @override
+  String get dsDrModerate => 'cukup terkompresi';
+
+  @override
+  String get dsDrHeavy => 'sangat terkompresi';
+
+  @override
+  String get dsLoudness => 'Kenyaringan';
+
+  @override
+  String dsPeak(String db) {
+    return 'puncak $db dBFS';
+  }
+
+  @override
+  String get dsMeasuredGain => 'Gain terukur';
+
+  @override
+  String dsMeasuredGainValue(String gain) {
+    return '$gain dB (dipakai penyeimbang volume kalau tidak ada tag ReplayGain)';
+  }
+
+  @override
+  String get dsDecoded => 'Didekode';
+
+  @override
+  String get dsEffects => 'Efek';
+
+  @override
+  String get dsNone => 'Tidak ada';
+
+  @override
+  String get dsVolume => 'Volume';
+
+  @override
+  String get dsMuted => 'dibisukan';
+
+  @override
+  String get dsLeveling => 'Penyeimbang volume';
+
+  @override
+  String get dsOff => 'Mati';
+
+  @override
+  String get dsOn => 'Nyala';
+
+  @override
+  String get dsNoReplayGain => 'tanpa tag ReplayGain';
+
+  @override
+  String dsLoudnessTarget(String lufs, String target) {
+    return '$lufs LUFS (target $target LUFS)';
+  }
+
+  @override
+  String get dsTempoPitch => 'Tempo / nada';
+
+  @override
+  String dsTempoPitchValue(String tempo, String pitch) {
+    return '$tempo× / $pitch semitone';
+  }
+
+  @override
+  String get dsCrossfade => 'Crossfade';
+
+  @override
+  String get dsClipProtection => 'Perlindungan clipping';
+
+  @override
+  String get dsResampled => 'Di-resample';
+
+  @override
+  String get dsDevice => 'Perangkat';
+
+  @override
+  String get dsBluetooth => 'Bluetooth';
+
+  @override
+  String get dsBtAllow => 'codec: izinkan Perangkat sekitar';
+
+  @override
+  String get dsBtUnknown => 'codec tidak diketahui';
+
+  @override
+  String get dsDacReceives => 'DAC menerima';
+
+  @override
+  String get dsDirectUsb => 'USB langsung';
+
+  @override
+  String get dsBitPerfect => 'Bit-perfect';
+
+  @override
+  String get dsYes => 'Ya';
+
+  @override
+  String get dsNo => 'Tidak';
+
+  @override
+  String get dsConnectionSpeed => 'Kecepatan koneksi';
+
+  @override
+  String get dsReadingNow => 'Sedang dibaca';
+
+  @override
+  String get dsReceived => 'Diterima';
+
+  @override
+  String dsReceivedOf(String received, String total) {
+    return '$received dari $total';
+  }
+
+  @override
+  String get dsBufferHealth => 'Kondisi buffer';
+
+  @override
+  String get dsStreamUrlFrom => 'URL stream dari';
+
+  @override
+  String get dsSpectrogram => 'Spektrogram';
+
+  @override
+  String get surroundUpmix => 'Upmix surround';
+
+  @override
+  String get surroundUpmixSubtitle =>
+      'Lagu stereo mengisi ruang 7.1 di sekelilingmu: vokal tetap di depan, suasananya pindah ke samping dan belakang. Lagu 5.1 / 7.1, termasuk Dolby Atmos, selalu dapat tiap kanal di tempatnya.';
+
+  @override
+  String get passthrough => 'Passthrough Dolby / DTS';
+
+  @override
+  String get passthroughSubtitle =>
+      'Untuk AV receiver atau soundbar lewat HDMI atau optical: Dolby Digital, Dolby Atmos (E-AC-3, TrueHD) dan DTS dikirim tanpa didekode, lalu receiver yang memutarnya, termasuk kanal ketinggian Atmos. Efek dan volume tidak berlaku untuk lagu-lagu itu.';
+
+  @override
+  String get kwSurroundUpmix => 'dolby atmos, audio spasial, surround, 7.1, 3d, upmix';
+
+  @override
+  String get kwPassthrough => 'dolby atmos, hdmi, spdif, optical, receiver, soundbar, bitstream, dts, truehd';
+
+  @override
+  String get fxUpmix => 'Upmix surround';
+
+  @override
+  String dsAtmosBed(int channels) {
+    return 'Lapisan dasar $channels kanal didekode; objek ketinggian butuh receiver (passthrough)';
+  }
+
+  @override
+  String get dsPassthrough => 'Passthrough';
+
+  @override
+  String dsPassthroughValue(String codec) {
+    return '$codec ke receiver, tanpa didekode';
+  }
+
+  @override
+  String get dsVirtualRoom => 'Speaker virtual';
+
+  @override
+  String get dsRoomStereo => '2 speaker (stereo)';
+
+  @override
+  String get dsRoomSurround => 'Ruang 7.1, tiap kanal di tempatnya';
+
+  @override
+  String get dsRoomUpmix => 'Ruang 7.1, di-upmix dari stereo';
+
+  @override
+  String get autoEq => 'Profil headphone / IEM (AutoEQ)';
+
+  @override
+  String get autoEqSubtitle =>
+      'Menyetel equalizer untuk model kamu dari hasil pengukurannya, supaya suaranya netral (target Harman).';
+
+  @override
+  String get autoEqPick => 'Pilih headphone atau IEM kamu';
+
+  @override
+  String get autoEqSearch => 'Cari model, misalnya KZ ZSN Pro';
+
+  @override
+  String get autoEqLoading => 'Memuat daftar model…';
+
+  @override
+  String autoEqModels(int count) {
+    return '$count model, diukur oleh crinacle, oratory1990, dan lainnya. Ketik nama untuk mencari.';
+  }
+
+  @override
+  String get autoEqNoResults => 'Tidak ada model dengan nama itu.';
+
+  @override
+  String autoEqFailed(String error) {
+    return 'Gagal memuat AutoEQ: $error';
+  }
+
+  @override
+  String autoEqApplied(String name) {
+    return 'Equalizer disetel untuk $name';
+  }
+
+  @override
+  String autoEqAppliedFitted(String name, String db) {
+    return 'Equalizer disetel untuk $name (selisih maksimal ±$db dB dari profilnya)';
+  }
+
+  @override
+  String get clearCache => 'Hapus cache';
+
+  @override
+  String clearCacheSubtitle(String size) {
+    return '$size berisi cover, lirik dari internet, dan hal lain yang bisa diambil ulang oleh Riflay. Musikmu tetap aman.';
+  }
+
+  @override
+  String get clearCacheCounting => 'Menghitung…';
+
+  @override
+  String clearCacheConfirm(String size) {
+    return 'Hapus cache $size?';
+  }
+
+  @override
+  String get clearCacheConfirmBody =>
+      'Cover dan lirik akan diunduh lagi saat dibutuhkan. Library, unduhan, playlist, pengaturan, lirik buatanmu, dan hasil pengukuran loudness tidak dihapus.';
+
+  @override
+  String get clearCacheAction => 'Hapus';
+
+  @override
+  String clearCacheDone(String size) {
+    return '$size dibebaskan';
+  }
+
+  @override
+  String get kwClearCache => 'cache, penyimpanan, ruang, bersihkan, file sementara';
+
+  @override
+  String get dsDeviceRate => 'Sample rate perangkat';
+
+  @override
+  String get dsDeviceFormat => 'Format perangkat';
+
+  @override
+  String get dsMixerBuffer => 'Buffer mixer';
+
+  @override
+  String dsMixerBufferValue(String ms, int frames) {
+    return '$ms ms · $frames frame';
+  }
+
+  @override
+  String get dsLowLatency => 'Audio latensi rendah';
+
+  @override
+  String get dsProAudio => 'Audio pro';
+
+  @override
+  String get dsSpatialAudio => 'Audio spasial';
+
+  @override
+  String get dsSystemVolume => 'Volume sistem';
+
+  @override
+  String get dsSupported => 'Didukung';
+
+  @override
+  String get dsNotSupported => 'Tidak didukung';
+
+  @override
+  String get fromInternetArchive => 'FLAC dari Internet Archive';
+
+  @override
+  String get radioParadiseFlac => 'Radio Paradise dalam FLAC';
+
+  @override
+  String onAir(String song) {
+    return 'Sedang diputar: $song';
+  }
+
+  @override
+  String archiveCouldntLoad(String error) {
+    return 'Gagal memuat dari Internet Archive: $error';
+  }
+
+  @override
+  String get archiveNoFlac => 'Rekaman ini tidak punya file FLAC yang bisa diputar di sini.';
+
+  @override
+  String get topicSources => 'Sumber musik';
+
+  @override
+  String get topicSourcesSummary => 'Internet Archive dan Radio Paradise: musik gratis dalam FLAC';
+
+  @override
+  String get sourcesAbout =>
+      'Tempat gratis dengan suara lossless, dibagikan dengan izin artis atau pemegang hak. Riflay memutarnya langsung dari server mereka.';
+
+  @override
+  String get sourceArchive => 'Internet Archive di pencarian';
+
+  @override
+  String get sourceArchiveSubtitle =>
+      'Konser Live Music Archive, netlabel, dan rekaman domain publik dalam FLAC, di bagian Semua pada pencarian';
+
+  @override
+  String get sourceRadioParadise => 'Radio Paradise di halaman cari';
+
+  @override
+  String get sourceRadioParadiseSubtitle =>
+      'Radio tanpa iklan yang didukung pendengar, semua channel dalam FLAC (kualitas CD)';
+
+  @override
+  String get kwSources => 'flac, lossless, internet archive, live music archive, radio paradise, musik gratis, sumber';
+
+  @override
+  String get spotifyCanvas => 'Canvas';
+
+  @override
+  String get spotifyCanvasSubtitle =>
+      'Video pendek berulang yang ditampilkan Spotify bersama lagu, diputar di Video mode menggantikan music video (nyalakan Video mode di Fitur beta)';
 }

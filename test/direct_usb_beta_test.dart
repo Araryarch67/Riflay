@@ -19,10 +19,8 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: Builder(
-          builder: (context) => TextButton(
-            onPressed: () async => answer = await confirmDirectUsb(context),
-            child: const Text('open'),
-          ),
+          builder: (context) =>
+              TextButton(onPressed: () async => answer = await confirmDirectUsb(context), child: const Text('open')),
         ),
       ),
     );

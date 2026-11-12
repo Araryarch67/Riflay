@@ -35,6 +35,7 @@ import 'lyrics.dart';
 import 'lyrics_translation.dart';
 import 'media_session.dart';
 import 'metadata.dart';
+import 'mv_sidecar.dart';
 import 'sacd.dart';
 import 'sleep_timer.dart';
 import 'soundcloud.dart';
@@ -45,6 +46,7 @@ import 'youtube_audio_source.dart';
 import 'youtube_music_account.dart';
 import 'youtube_importer.dart';
 import 'youtube_stream.dart';
+import 'ytdlp.dart';
 import 'library_views.dart';
 import 'ui_beat.dart';
 import 'video_mode.dart';
@@ -131,6 +133,7 @@ class PlayerController extends ChangeNotifier {
     _subs.add(ytMusic.reportPlaysOf(player, secondTicks(), () => currentTrack));
     // Lets a song's music-video formats be looked up ahead with its audio ones.
     YoutubeStream.musicVideoIdLookup = (id) async => (await ytMusic.musicVideo(id))?.videoId;
+    YtDlp.accountCookies = () => ytMusic.downloadCookies;
   }
 
   String? _formatsFor;
@@ -351,7 +354,10 @@ class PlayerController extends ChangeNotifier {
     return up == null || dsd(up.current) || dsd(up.next);
   }
 
-  late final YoutubeImporter youtube = YoutubeImporter(onTrackReady: (t) => _addTracks([t]));
+  late final YoutubeImporter youtube = YoutubeImporter(
+    onTrackReady: (t) => _addTracks([t]),
+    musicVideoLookup: (id) => ytMusic.musicVideo(id),
+  );
 
   /// Equalizer, output device, gapless, leveling and the signal path (desktop).
   final AudioEngine audio = AudioEngine();
@@ -764,6 +770,12 @@ class PlayerController extends ChangeNotifier {
 
   /// Everything imported from YouTube, newest first.
   Collection? get youtubeDownloads => _views.youtubeDownloads;
+
+  /// The music folders the person added, each with the songs under it (Library › Local).
+  List<Collection> get folders => _views.foldersOf(FolderWatch.instance.folders);
+
+  /// The folder collection of [path], while that folder is still one of the music folders.
+  Collection? folderAt(String? path) => folders.where((f) => f.id == path).firstOrNull;
 
   // ── Riflay playlists ──────────────────────────────────────────────────
 
@@ -1429,6 +1441,8 @@ class PlayerController extends ChangeNotifier {
       } on FileSystemException {
         failed++;
       }
+      // Its music video ("Download with MV") goes with it.
+      await MvSidecar.delete(t.path!);
     }
     await removeTracks(gone);
     return failed;

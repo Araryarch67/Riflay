@@ -43,6 +43,16 @@ abstract final class FlacConvert {
     return Track.audioExtensions.contains(ext) && !_lossless.contains(ext);
   }
 
+  /// Whether [t] is a PCM lossless file (FLAC, WAV, AIFF, WavPack, APE…) going by its name: what the lossless
+  /// check looks at. DSD is left out (it has no "fake" form to find), and so is ALAC in an .m4a, which needs a look
+  /// inside.
+  static bool isLosslessFile(Track t) {
+    final path = t.path;
+    if (path == null || t.isRemote || t.isCueTrack || SacdDisc.isSacdTrack(t)) return false;
+    final ext = p.extension(path).replaceFirst('.', '').toLowerCase();
+    return _lossless.contains(ext) && ext != 'dsf' && ext != 'dff';
+  }
+
   /// Whether the menu should offer the conversion for [t]: a convertible file, and a device that can make FLAC.
   static bool available(Track t) => YoutubeImporter.canMakeFlac && isConvertible(t);
 

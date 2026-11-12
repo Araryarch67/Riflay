@@ -336,6 +336,7 @@ class NowPlayingPage extends StatelessWidget {
                                 cover: cover,
                                 classicTopBar: topBarFor,
                                 showBadge: showBadge,
+                                strip: stripHeight > 0,
                               );
                             }
                             // Nothing Flutter draws shows over a native video (Windows/Linux): the Song / Video
