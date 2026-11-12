@@ -31,7 +31,15 @@ Free and open source, for Linux, Windows, macOS, Android and iOS.
 
 | ![Full-screen player](docs/screenshots/fullscreen.webp) | ![Lyrics](docs/screenshots/lyrics.webp) |
 |---|---|
-| ![Signal path](docs/screenshots/signal-path.webp) | <img src="docs/screenshots/phone.webp" alt="Riflay on a phone" width="260"> |
+| ![Signal path](docs/screenshots/signal-path.webp) | ![Your listening stats](docs/screenshots/stats.webp) |
+
+<p>
+  <img src="docs/screenshots/phone-home.webp" alt="Riflay on a phone: Home with the Liquid glass tab bar" width="260">
+  <img src="docs/screenshots/phone.webp" alt="Riflay on a phone: the Liquid Kawaii player" width="260">
+  <img src="docs/screenshots/phone-library.webp" alt="Riflay on a phone: Library" width="260">
+</p>
+
+<sub>On a phone, in the Liquid Kawaii preset (Settings › Look & feel › Pages & navigation › Player presets).</sub>
 
 </div>
 

@@ -38,6 +38,7 @@ import 'package:riflay/services/download_prefs.dart';
 import 'package:riflay/services/listen_together/listen_together.dart';
 import 'package:riflay/services/play_history.dart';
 import 'package:riflay/services/player_controller.dart';
+import 'package:riflay/services/player_presets.dart';
 import 'package:riflay/services/layout_prefs.dart';
 import 'package:riflay/ui/widgets/title_bar.dart';
 import 'package:riflay/services/stay_awake.dart';
@@ -932,7 +933,7 @@ void main() {
         await settle();
       });
 
-      // Phone: home, its Library and Settings tabs, then the full-screen player.
+      // Phone, in the Liquid Kawaii preset: home, its Library and Settings tabs, then the full-screen player.
       await step('phone', () async {
         debugDefaultTargetPlatformOverride = TargetPlatform.android;
         debugCustomTitleBar = false;
@@ -946,13 +947,13 @@ void main() {
         // The tab bar's tabs are icons, named by their tooltips; Home is the round button in the middle.
         await tester.tap(find.byTooltip('Home').last);
         await settle(1500);
-        await shot('phone-home', pixelRatio: 2);
         for (final style in TabBarStyle.values) {
           await LayoutPrefs.instance.setTabBar(style);
           await shot('phone-bar-${style.name}', pixelRatio: 2);
         }
-        await LayoutPrefs.instance.setTabBar(TabBarStyle.capsule);
-        await settle();
+        await PlayerPreset.liquidKawaii.apply(LayoutPrefs.instance);
+        await settle(1500);
+        await shot('phone-home', pixelRatio: 2);
         await tester.tap(find.byTooltip('Library').last);
         await settle(1500);
         await shot('phone-library', pixelRatio: 2);
@@ -961,7 +962,8 @@ void main() {
         await shot('phone-settings', pixelRatio: 2);
         await tester.tap(find.byTooltip('Home').last);
         await settle(1500);
-        await tester.tap(find.byType(MiniPlayer));
+        // The glass tab bar carries its own mini player.
+        await tester.tap(find.byType(GlassMiniPlayer));
         await shot('phone', pixelRatio: 2);
       });
     } finally {
