@@ -27,13 +27,13 @@ Free and open source, for Linux, Windows, macOS, Android and iOS.
 [![Latest release](https://img.shields.io/github/v/release/Araryarch67/Riflay)](https://github.com/Araryarch67/Riflay/releases/latest)
 [![Downloads](https://img.shields.io/github/downloads/Araryarch67/Riflay/total)](https://github.com/Araryarch67/Riflay/releases)
 
-![Riflay home](docs/screenshots/home.webp)
-
-
-
 https://github.com/user-attachments/assets/5d0f0612-4322-425e-bbbf-79baeace47be
 
+<sub>Riflay, in its element. Turn the sound on.</sub>
 
+<br>
+
+![Riflay home](docs/screenshots/home.webp)
 
 | ![Full-screen player](docs/screenshots/fullscreen.webp) | ![Lyrics](docs/screenshots/lyrics.webp) |
 |---|---|
