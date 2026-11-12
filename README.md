@@ -43,18 +43,69 @@ Free and open source, for Linux, Windows, macOS, Android and iOS.
 
 </div>
 
-## What makes it different
+## Features
 
-- **Local files and YouTube Music in one library.** Mix both in the same playlist; no account needed, sign in only to sync. Import playlists from Spotify, Apple Music, Deezer, TIDAL or NetEase Cloud Music.
-- **Real hi-fi.** Bit-perfect output, native DSD (DoP), exclusive mode and ASIO, with a **signal path** that shows every stage from file to speaker. FLAC, ALAC, WavPack, APE, DSD, SACD ISO and cue sheets.
-- **Sound tools usually found in pro apps.** Virtual speakers (HRTF) for headphones, crossfeed, room correction from REW, and VST / LV2 / CLAP plugins through Carla.
-- **Lyrics that follow every word**, from many free sources, with pronunciation and translation.
-- **Music videos.** Watch a song's video in step with it, or use it as the Now Playing background.
-- **Listen together, anywhere.** Friends play along in sync over the same Wi-Fi or the internet, end-to-end encrypted.
-- **Build your own player.** Pick the cover, top, buttons, progress bar, controls and bottom row one by one, or start from a preset (Classic, Stacked, Kawaii). On phone and desktop.
-- **Free FLAC sources.** Search shows FLAC recordings from the Internet Archive's curated collections (Live Music Archive concerts, netlabel releases), and the search page carries Radio Paradise's FLAC channels.
-- **Riflay Wrap** and listening stats, kept on your device.
-- **Light on your computer.** Lightweight, Balanced and Heavy performance modes; under 2% CPU and 200 MB while playing on Windows, even with a music video.
+| Area | Feature | What it does | Where |
+|---|---|---|---|
+| **Library** | Local files and YouTube Music together | One library and one playlist for both; no account needed, sign in only to sync | All |
+| | Formats | FLAC, ALAC, WavPack, APE, MP3, Ogg, Opus, WAV, AIFF, DSD (DSF / DSDIFF), SACD ISO and cue sheets | All |
+| | Folder watching | Songs added to or removed from your music folders show up on their own | All |
+| | Smart playlists | Most played, Recently added, Recently played, Lossless, and more, kept up to date | All |
+| | Duplicate finder | Finds the same song in more than one file and keeps the best copy | All |
+| | Tag editor | Edits title, artist, album and cover; only the fields you change are written | All (Android: songs added with Add songs) |
+| | Import playlists | From Spotify, Apple Music, Deezer, TIDAL or NetEase Cloud Music | All |
+| | Spotify import | Brings your playlists, Liked Songs and albums over | All |
+| **Streaming** | YouTube Music | Search, home, radio, likes and your library, with **Sign in with Google** | All |
+| | SoundCloud | Search songs, artists and playlists; related tracks for autoplay | All |
+| | Music videos | Watch a song's video in step with it, or use it as the Now Playing background | All |
+| | Spotify Canvas | The looping video Spotify shows with a song, in Video mode | All |
+| | Free music sources | Internet Archive FLAC recordings, Radio Paradise FLAC channels, and (opt-in) Jamendo, Audius and ccMixter | All |
+| **Downloads** | Download songs | Choose format, quality and folder | All |
+| | Download with MV | Keeps the song's music video beside it, to watch offline | All |
+| **Hi-fi output** | Bit-perfect mode | Sends the file to the DAC untouched, no mixing or resampling | Computers, Android 14+ with a USB DAC |
+| | Exclusive mode | Takes over the device so the system mixer can't resample | Windows, macOS |
+| | ASIO | Low-latency output to pro audio interfaces | Windows |
+| | Native DSD (DoP) | DSD goes to your DAC as it is | Computers, Android 14+ with a USB DAC |
+| | USB DAC / Direct USB | Plays to a USB DAC directly, on any phone | Android |
+| | Signal path | Shows every stage from file to speaker | All |
+| **Sound effects** | Equalizer | Bands and presets of your own | All |
+| | AutoEQ | Sets the equalizer for your headphones or IEM from their measurement | All |
+| | Volume leveling | Keeps songs at the same loudness | All |
+| | Virtual speakers (HRTF) | Speakers in a room on headphones, up to a 7.1 room | All |
+| | Crossfeed | Makes headphones sound more like speakers | All |
+| | Room correction | Loads an impulse response (e.g. from REW) | All |
+| | Audio plugins | VST, LV2 and CLAP plugins through Carla | Computers |
+| | Mono audio, Skip silence | Both channels in one; silent intros, outros and gaps cut short | All |
+| **Playback** | Autoplay, gapless, crossfade | Keeps the music going, with or without gaps | All |
+| | Sleep timer | The music fades out, then stops | All |
+| | Casting | To TVs, speakers and receivers with DLNA or AirPlay | Computers, phones |
+| | Listen together | Friends play along in sync over Wi-Fi or the internet, end-to-end encrypted, joined with a QR code | All |
+| **Lyrics** | Synced lyrics | Follow every word, from LRCLIB, Better Lyrics, Kugou, NetEase, Musixmatch, QQ, Megalobiz, Genius and lyrics.ovh | All |
+| | Pronunciation and translation | Read along in lyrics you can't read | All |
+| | Your own lyrics | Use an `.lrc` file or the song's embedded lyrics, or edit them | All |
+| | Lyric cards | Pick lines and share them as a picture | All |
+| **Now Playing** | Build your own player | Pick the cover, top, buttons, progress bar, controls and bottom row one by one | All |
+| | Presets | Classic, Stacked, Liquid Stacked, Kawaii and Liquid Kawaii | All |
+| | Liquid glass | Glass controls, and a glass tab bar on phones that shrinks as you scroll | All |
+| | Visualizer | Bars, dots, line, mirror, orbit, peaks, petals, pulse, twin waves and wave | All |
+| | Backgrounds | Plain colour, blurred cover, the music video, or black | All |
+| | Full screen | A full-screen player with lyrics | All |
+| **Look & feel** | Themes | Default, Dynamic (from the playing song's cover), Monochrome, Catppuccin, Everforest, Everblush, Nord, Gruvbox, Tokyo Night, Dracula, Rosé Pine, Custom and Matugen colours; dark, light or follow the system | All |
+| | Layout | Phone tab bar styles, desktop bar styles, corners, density, cover size and motion | All |
+| | Language and text | English, Indonesian and Japanese; text size and any font on your device | All |
+| **Stats** | Listening stats | Top songs, artists and albums, kept on your device | All |
+| | Riflay Wrap | Your month in music, ready to share | All |
+| | Last.fm and ListenBrainz | Adds the songs you play to your profile there, even offline | All |
+| | Discord | Shows what you play on your Discord profile | Computers |
+| **Your device** | Performance modes | Lightweight, Balanced and Heavy | All |
+| | Media controls | Notification, Control Center and MPRIS | All |
+| | Tray icon | Close to tray and control from the tray menu | Computers |
+| | Backup and restore | Your settings, playlists and history in one file | All |
+| | Settings search | Find any setting by name, with a preview | All |
+| | Riflay CLI | Control the desktop player from a terminal or an AI agent, with JSON output | Computers |
+| | Riflay Web | YouTube Music in a browser, through its own proxy | Web |
+
+"Computers" means Windows, macOS and Linux; "All" means every app, while Riflay Web has a smaller set. [Audio and platform notes](docs/platforms.md) has every setting's details.
 
 ## Install
 
