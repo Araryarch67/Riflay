@@ -64,6 +64,12 @@ class YoutubeAudioSource extends StreamAudioSource {
   });
   static Future<void> clearCache() => _cache.clear();
 
+  /// Forgets [videoId]'s looked-up stream (its link may have expired), so playing it again resolves a new one.
+  static void forget(String videoId) {
+    _cache.forget(videoId);
+    _cache.forget('aac:$videoId');
+  }
+
   /// This session's folder of streamed songs, which Clear cache leaves to the player.
   static Future<String?> cacheFolder() => _cache.folderPath();
   @visibleForTesting

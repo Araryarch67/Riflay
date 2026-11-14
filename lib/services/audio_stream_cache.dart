@@ -77,6 +77,9 @@ class AudioStreamCache<T> {
 
   CachedAudio<T>? find(String key) => _entries[key];
 
+  /// Drops [key] (a stream that wouldn't play), so the next request looks it up afresh.
+  void forget(String key) => _entries.remove(key)?.retire();
+
   Future<CachedAudio<T>?> open(
     String key, {
     required T metadata,

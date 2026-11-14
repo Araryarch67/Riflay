@@ -433,18 +433,69 @@ class PlayerController extends ChangeNotifier {
     final failed = RegExp(r"'([^']+)'|open (.+)\.$").firstMatch(e.message ?? '');
     final path = failed?.group(1) ?? failed?.group(2);
     final at = path == null ? -1 : seq.indexWhere((s) => (s.tag as Track).path == path);
-    final title = at >= 0 ? (seq[at].tag as Track).title : currentTrack?.title;
+    final index = at >= 0 ? at : player.sequenceState.currentIndex;
+    final track = index != null && index < seq.length ? seq[index].tag as Track : currentTrack;
+    final title = track?.title;
     // In plain words: mpv's own message (paths, stream URLs) only goes to the log.
     debugPrint('Playback error: ${e.message}');
+    final wasPlaying = player.playing || _starting;
+    // Streams often fail once and play on the next try (an expired link, a dropped
+    // connection): try the same song again a few times before giving up on it.
+    if (track != null && index != null && _retryPlayback(track, index, wasPlaying)) return;
     _errors.add(tr.couldntPlay(title ?? tr.thisSong));
     // Repeat-one would retry the same broken song forever: skip it all the same. A paused player stays paused.
-    final next = _neighbour(1, from: at >= 0 ? at : null);
-    final wasPlaying = player.playing;
+    final next = _neighbour(1, from: index);
     if (next != null) {
       player.seek(Duration.zero, index: next).then((_) {
         if (wasPlaying) _play();
       }, onError: (Object _) {});
     }
+  }
+
+  static const _maxPlaybackRetries = 3;
+  String? _retryingId;
+  int _retries = 0;
+  DateTime _lastRetryAt = DateTime(0);
+
+  /// True while [playList] waits for its first song to open (the player isn't "playing" yet).
+  bool _starting = false;
+
+  /// Plays [track] (at [index]) again after a short wait, at most [_maxPlaybackRetries] times
+  /// in a row. False once it has run out of tries (the caller reports it and moves on).
+  bool _retryPlayback(Track track, int index, bool play) {
+    final now = DateTime.now();
+    // A different song, or one that played fine for a while since: start counting again.
+    if (track.id != _retryingId || now.difference(_lastRetryAt) > const Duration(minutes: 2)) {
+      _retryingId = track.id;
+      _retries = 0;
+    }
+    if (_retries >= _maxPlaybackRetries) {
+      _retryingId = null;
+      _retries = 0;
+      return false;
+    }
+    _retries++;
+    _lastRetryAt = now;
+    final attempt = _retries;
+    final sameSong = player.sequenceState.currentIndex == index;
+    final position = sameSong ? player.position : Duration.zero;
+    debugPrint('Retrying ${track.title} ($attempt/$_maxPlaybackRetries)');
+    Future<void>.delayed(Duration(milliseconds: 800 * attempt), () async {
+      // Something else was picked meanwhile: leave it.
+      final seq = player.sequenceState.sequence;
+      if (index >= seq.length || (seq[index].tag as Track).id != track.id) return;
+      // A fresh stream lookup: the old link may be what failed.
+      if (track.videoId case final id?) YoutubeAudioSource.forget(id);
+      // This try's own failure must be heard, not taken for a repeat of the last one.
+      _lastError = null;
+      try {
+        await player.seek(position, index: index);
+        if (play) await _play();
+      } catch (e) {
+        debugPrint('Retry failed: $e');
+      }
+    });
+    return true;
   }
 
   /// Keeps only the current and next song cached, and starts the next download.
@@ -1633,14 +1684,20 @@ class PlayerController extends ChangeNotifier {
       // the player reports it ([_onPlaybackError] moves on from there).
       final failed = Completer<bool>();
       final sub = player.errorStream.listen((_) => failed.isCompleted ? null : failed.complete(false));
+      _starting = true;
+      _retryingId = null;
       final loaded = await Future.any([
         _load(shuffled ? _shuffledFrom(tracks, index) : tracks, shuffled ? 0 : index).then((_) => true),
         failed.future,
-      ]).whenComplete(sub.cancel);
+      ]).whenComplete(() {
+        _starting = false;
+        return sub.cancel();
+      });
       if (loaded) unawaited(_play(restart: true));
     } on PlayerException catch (e) {
       debugPrint('Playback failed: ${e.message}');
-      _errors.add(tr.couldntPlay(tracks[index].title));
+      // Already being tried again ([_onPlaybackError] heard it too): it reports if that runs out.
+      if (_retryingId != tracks[index].id) _errors.add(tr.couldntPlay(tracks[index].title));
     }
     notifyListeners();
   }
