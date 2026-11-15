@@ -511,9 +511,7 @@ class _SearchPageState extends State<SearchPage> {
                   ),
                   if (!_videos && _onYoutube) const SizedBox(height: 12),
                   if (!_videos && _onYoutube)
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
+                    SearchChips(
                       children: [
                         for (final (label, kind) in [
                           (tr.all, null),

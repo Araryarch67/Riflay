@@ -569,14 +569,11 @@ class _Header extends StatelessWidget {
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(4, 22, 4, 8),
+      padding: const EdgeInsets.fromLTRB(16, 22, 16, 8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            label,
-            style: text.labelLarge?.copyWith(color: AppColors.textSecondary, fontWeight: FontWeight.w700),
-          ),
+          Text(label, style: settingsHeading(context)),
           if (hint != null)
             Padding(
               padding: const EdgeInsets.only(top: 2),

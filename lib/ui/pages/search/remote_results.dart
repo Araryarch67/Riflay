@@ -5,7 +5,6 @@ import '../../../services/player_controller.dart';
 import '../../../services/youtube_music_account.dart';
 import '../../../services/ytmusic_web.dart' show WebResultKind;
 import '../../shell_scope.dart';
-import '../../theme.dart';
 import '../../widgets/controls.dart';
 import '../../widgets/page_scaffold.dart';
 import '../../widgets/shelf.dart';
@@ -65,14 +64,16 @@ class TopResult extends StatelessWidget {
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
     final artist = hit.kind == WebResultKind.artist;
+    final scheme = Theme.of(context).colorScheme;
+    // A Material 3 filled card.
     return Material(
-      color: AppColors.elevated,
-      borderRadius: BorderRadius.circular(8),
+      color: scheme.surfaceContainerHighest,
+      borderRadius: searchSurfaceCorners(16),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: () => openSearchHit(context, hit),
         child: Padding(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.all(16),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
@@ -80,29 +81,29 @@ class TopResult extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Artwork(track: hit.cover, size: 96, radius: 6, circle: artist),
+                    Artwork(track: hit.cover, size: 96, radius: 8, circle: artist),
                     const SizedBox(height: 16),
                     Text(
                       hit.title,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: text.headlineMedium?.copyWith(fontWeight: FontWeight.w800, letterSpacing: -0.5),
+                      style: text.headlineSmall?.copyWith(fontWeight: FontWeight.w700),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       hit.subtitle,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: text.bodyMedium?.copyWith(color: AppColors.textSecondary),
+                      style: text.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
                     ),
                   ],
                 ),
               ),
               PlayButton(
                 playing: false,
-                size: 48,
-                color: AppColors.accent,
-                iconColor: AppColors.onAccent,
+                size: 56,
+                color: scheme.primary,
+                iconColor: scheme.onPrimary,
                 onPressed: () => hit.track != null ? openSearchHit(context, hit) : playRemote(context, hit.collection!),
               ),
             ],

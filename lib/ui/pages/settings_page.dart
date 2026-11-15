@@ -301,7 +301,8 @@ class _SettingsRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => ListTile(
-    leading: leading ?? SizedBox.square(dimension: 36, child: Icon(icon)),
+    // Material 3: the destination's icon on a tonal circle.
+    leading: leading ?? SettingsIcon(icon),
     title: Text(title),
     subtitle: Text(summary, style: settingsMuted(context)),
     trailing: const Icon(Icons.chevron_right_rounded),
@@ -363,15 +364,23 @@ class _SearchField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = AppColors.of(context);
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    const pill = OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(500)), borderSide: BorderSide.none);
+    // A Material 3 search bar, as on the Search page: 56 high, a tonal pill with no outline.
     return TextField(
       key: SettingsPage.searchKey,
       controller: controller,
       textInputAction: TextInputAction.search,
       onSubmitted: onSubmitted,
+      style: theme.textTheme.bodyLarge?.copyWith(color: scheme.onSurface),
       decoration: InputDecoration(
         hintText: tr.searchSettings,
-        prefixIcon: const Icon(Icons.search_rounded),
+        hintStyle: theme.textTheme.bodyLarge?.copyWith(color: scheme.onSurfaceVariant),
+        prefixIcon: Padding(
+          padding: const EdgeInsets.only(left: 4),
+          child: Icon(Icons.search_rounded, color: scheme.onSurface),
+        ),
         suffixIcon: ListenableBuilder(
           listenable: controller,
           builder: (context, _) => controller.text.isEmpty
@@ -379,9 +388,12 @@ class _SearchField extends StatelessWidget {
               : IconButton(tooltip: tr.clear, onPressed: controller.clear, icon: const Icon(Icons.close_rounded)),
         ),
         filled: true,
-        fillColor: colors.elevated,
-        isDense: true,
-        border: OutlineInputBorder(borderRadius: LayoutPrefs.corner(12), borderSide: BorderSide.none),
+        fillColor: scheme.surfaceContainerHigh,
+        hoverColor: scheme.onSurface.withValues(alpha: 0.08),
+        contentPadding: const EdgeInsets.symmetric(vertical: 16),
+        border: pill,
+        enabledBorder: pill,
+        focusedBorder: pill,
       ),
     );
   }
@@ -530,7 +542,7 @@ class SettingsGroupPage extends StatelessWidget {
                   title: s.label,
                   summary: c.ytMusic.isSignedIn ? tr.signedInAs(c.ytMusic.accountName ?? 'YouTube Music') : s.summary,
                   leading: CircleAvatar(
-                    radius: 18,
+                    radius: 20,
                     backgroundColor: AppColors.hover,
                     // Decoded at the avatar's size, not whatever resolution the account photo is served at.
                     foregroundImage: c.ytMusic.avatarUrl == null
@@ -687,16 +699,12 @@ class _LyricsServicesState extends State<_LyricsServices> {
   @override
   Widget build(BuildContext context) {
     final muted = settingsMuted(context);
-    final text = Theme.of(context).textTheme;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(4, 0, 4, 8),
-          child: Text(
-            tr.topicLyricsServices,
-            style: text.labelLarge?.copyWith(color: AppColors.textSecondary, fontWeight: FontWeight.w700),
-          ),
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+          child: Text(tr.topicLyricsServices, style: settingsHeading(context)),
         ),
         SettingsCard(
           children: [
@@ -878,6 +886,10 @@ class _SettingsFrameState extends State<_SettingsFrame> with SingleTickerProvide
   }
 
   void _show(SettingsOption? option) {
+    if (!_side) {
+      final change = _pinnedHeight(option) - _pinnedHeight(_preview);
+      if (change != 0) _holdRows(change, _preview == null ? option : null);
+    }
     if (option == null) {
       _looks.removeListener(_relayout);
     } else if (_preview == null) {
@@ -903,26 +915,45 @@ class _SettingsFrameState extends State<_SettingsFrame> with SingleTickerProvide
         _row = rect;
         _height = height;
       });
-      if (ShellScope.of(context).compact || !_side) _reveal();
     }
   });
 
-  /// On a phone: the card in view, along with its row.
-  void _reveal() => WidgetsBinding.instance.addPostFrameCallback((_) {
-    final card = _card.currentContext;
-    if (card == null || !mounted) return;
-    final below = _row != null && _row!.top < _cardRoom;
-    Scrollable.ensureVisible(
-      card,
-      duration: LayoutPrefs.dur(const Duration(milliseconds: 250)),
-      alignmentPolicy: below
-          ? ScrollPositionAlignmentPolicy.keepVisibleAtEnd
-          : ScrollPositionAlignmentPolicy.keepVisibleAtStart,
-    );
-  });
+  /// The picture's height in the pinned preview: about a quarter of the screen, so the options stay in reach;
+  /// more for a whole phone page (Now Playing, the lyrics), which is too small to read at that height.
+  double _pinnedPicture(SettingsOption option) {
+    final screen = MediaQuery.sizeOf(context).height;
+    return switch (option.preview) {
+      SettingPreview.nowPlaying || SettingPreview.lyrics => (screen * 0.4).clamp(180.0, 340.0),
+      _ => (screen * 0.28).clamp(140.0, 240.0),
+    };
+  }
 
-  /// The room a card needs above its row on a phone; nearer the top it goes below the row.
-  static const _cardRoom = 280.0;
+  /// The pinned preview's room at the top of the page (the card and a gap under it); none without a preview.
+  double _pinnedHeight(SettingsOption? option) =>
+      option == null ? 0 : SettingPreviewCard.chrome + _pinnedPicture(option) + 8;
+
+  /// Where there is no room beside the list the preview is pinned to the top of the page, which takes (or gives
+  /// back) that much room above the rows. The page is scrolled by as much in the same frame, so the rows stay
+  /// where they were under the finger; a row that would end up behind the preview comes to rest just under it.
+  void _holdRows(double change, SettingsOption? opened) {
+    final content = _content.currentContext;
+    final scrollable = content == null ? null : Scrollable.maybeOf(content);
+    if (content == null || scrollable == null) return;
+    final position = scrollable.position;
+    var by = change;
+    if (opened != null) {
+      final view = scrollable.context.findRenderObject();
+      final page = content.findRenderObject();
+      final row = _locate({opened.marker})[opened.marker]?.renderObject;
+      if (view is RenderBox && page is RenderBox && row is RenderBox && row.attached) {
+        // The top bar's room: where the page's content starts when nothing is scrolled.
+        final gap = page.localToGlobal(Offset.zero, ancestor: view).dy + position.pixels;
+        final top = row.localToGlobal(Offset.zero, ancestor: view).dy;
+        by = (top - gap).clamp(0.0, change);
+      }
+    }
+    position.correctBy(math.max(by, -position.pixels));
+  }
 
   /// The options on this page that have a preview.
   List<SettingsOption> get _previewed =>
@@ -959,105 +990,120 @@ class _SettingsFrameState extends State<_SettingsFrame> with SingleTickerProvide
     final pad = shell.compact ? 16.0 : 24.0;
     final previews = _previewed.isNotEmpty;
     final colors = AppColors.of(context);
-    return PageScaffold(
-      title: widget.title,
-      slivers: [
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: EdgeInsets.fromLTRB(pad, 0, pad, 28),
-            child: LayoutBuilder(
-              builder: (context, box) {
-                _side = previews && !shell.compact && box.maxWidth >= 480 + 24 + _pane;
-                final width = math.min(760.0, _side ? box.maxWidth - 24 - _pane : box.maxWidth);
-                final column = SizedBox(
-                  width: width,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if (widget.crumbs.isNotEmpty) _Breadcrumb(crumbs: widget.crumbs, current: widget.title),
-                      Text(widget.title, style: text.headlineMedium?.copyWith(fontWeight: FontWeight.w800)),
-                      const SizedBox(height: 24),
-                      widget.child,
-                    ],
+    return LayoutBuilder(
+      builder: (context, page) {
+        // Beside the list where a computer has the room; pinned to the top of the page on a phone or a narrow window.
+        _side = previews && !shell.compact && page.maxWidth - pad * 2 >= 480 + 24 + _pane;
+        final pinned = _side ? null : _preview;
+        return PageScaffold(
+          title: widget.title,
+          pinnedHeight: _pinnedHeight(pinned),
+          pinned: pinned == null
+              ? null
+              : Padding(
+                  padding: EdgeInsets.fromLTRB(pad, 0, pad, 8),
+                  child: Align(
+                    alignment: AlignmentDirectional.topStart,
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 760),
+                      child: SettingPreviewCard(
+                        key: _card,
+                        option: pinned,
+                        onClose: () => _show(null),
+                        height: _pinnedPicture(pinned),
+                        fill: true,
+                      ),
+                    ),
                   ),
-                );
-                final preview = _preview, row = _row;
-                Widget? card;
-                if (preview != null && row != null) {
-                  final c = SettingPreviewCard(
-                    key: _card,
-                    option: preview,
-                    onClose: () => _show(null),
-                    height: _side ? 440 : 260,
-                  );
-                  // Beside its row, kept on the page; on a phone over the rows above it, or below it near the top.
-                  card = _side
-                      ? Positioned(
-                          left: width + 24,
-                          width: _pane,
-                          top: math.max(0, math.min(row.top, _height - 500)),
-                          child: c,
-                        )
-                      : row.top >= _cardRoom
-                      ? Positioned(left: 0, width: width, bottom: _height - row.top + 8, child: c)
-                      : Positioned(left: 0, width: width, top: row.bottom + 8, child: c);
-                }
-                return Listener(
-                  onPointerDown: (e) => _down = e.position,
-                  onPointerUp: previews ? _tapped : null,
-                  child: Stack(
-                    key: _content,
-                    clipBehavior: Clip.none,
-                    children: [
-                      Row(
+                ),
+          slivers: [
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(pad, 0, pad, 28),
+                child: LayoutBuilder(
+                  builder: (context, box) {
+                    final width = math.min(760.0, _side ? box.maxWidth - 24 - _pane : box.maxWidth);
+                    final column = SizedBox(
+                      width: width,
+                      child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          column,
-                          if (_side) ...[
-                            const SizedBox(width: 24),
-                            SizedBox(
-                              width: _pane,
-                              child: Padding(
-                                padding: const EdgeInsets.only(top: 72),
-                                child: Row(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Icon(Icons.visibility_outlined, size: 18, color: colors.textMuted),
-                                    const SizedBox(width: 8),
-                                    Expanded(child: Text(tr.settingsPreviewHint, style: settingsMuted(context))),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ],
+                          if (widget.crumbs.isNotEmpty) _Breadcrumb(crumbs: widget.crumbs, current: widget.title),
+                          Text(widget.title, style: text.headlineMedium?.copyWith(fontWeight: FontWeight.w800)),
+                          const SizedBox(height: 24),
+                          widget.child,
                         ],
                       ),
-                      if (_flashRect case final r?)
-                        Positioned.fromRect(
-                          rect: r,
-                          child: IgnorePointer(
-                            key: SettingsPage.highlightKey,
-                            child: FadeTransition(
-                              opacity: ReverseAnimation(CurvedAnimation(parent: _flash, curve: Curves.easeInCubic)),
-                              child: DecoratedBox(
-                                decoration: BoxDecoration(
-                                  color: colors.accent.withValues(alpha: 0.16),
-                                  border: Border.all(color: colors.accent, width: 2),
-                                  borderRadius: LayoutPrefs.corner(12),
+                    );
+                    final preview = _preview, row = _row;
+                    Widget? card;
+                    if (_side && preview != null && row != null) {
+                      // Beside its row, kept on the page.
+                      card = Positioned(
+                        left: width + 24,
+                        width: _pane,
+                        top: math.max(0, math.min(row.top, _height - 500)),
+                        child: SettingPreviewCard(key: _card, option: preview, onClose: () => _show(null), height: 440),
+                      );
+                    }
+                    return Listener(
+                      onPointerDown: (e) => _down = e.position,
+                      onPointerUp: previews ? _tapped : null,
+                      child: Stack(
+                        key: _content,
+                        clipBehavior: Clip.none,
+                        children: [
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              column,
+                              if (_side) ...[
+                                const SizedBox(width: 24),
+                                SizedBox(
+                                  width: _pane,
+                                  child: Padding(
+                                    padding: const EdgeInsets.only(top: 72),
+                                    child: Row(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Icon(Icons.visibility_outlined, size: 18, color: colors.textMuted),
+                                        const SizedBox(width: 8),
+                                        Expanded(child: Text(tr.settingsPreviewHint, style: settingsMuted(context))),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                          if (_flashRect case final r?)
+                            Positioned.fromRect(
+                              rect: r,
+                              child: IgnorePointer(
+                                key: SettingsPage.highlightKey,
+                                child: FadeTransition(
+                                  opacity: ReverseAnimation(CurvedAnimation(parent: _flash, curve: Curves.easeInCubic)),
+                                  child: DecoratedBox(
+                                    decoration: BoxDecoration(
+                                      color: colors.accent.withValues(alpha: 0.16),
+                                      border: Border.all(color: colors.accent, width: 2),
+                                      borderRadius: LayoutPrefs.corner(12),
+                                    ),
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
-                        ),
-                      ?card,
-                    ],
-                  ),
-                );
-              },
+                          ?card,
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
             ),
-          ),
-        ),
-      ],
+          ],
+        );
+      },
     );
   }
 }

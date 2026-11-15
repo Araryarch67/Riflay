@@ -134,16 +134,13 @@ class _SearchSourceFiltersState extends State<SearchSourceFilters> {
       if (available.length < 2) return const SizedBox.shrink();
       return Padding(
         padding: const EdgeInsets.only(top: 12),
-        child: Wrap(
-          spacing: 8,
-          runSpacing: 8,
+        child: SearchChips(
           children: [
             for (final service in available.where((s) => s != SearchSource.extensions))
               ChoiceChip(
                 key: ValueKey('search-source-${service.name}'),
                 label: Text(service.label),
                 selected: service == source,
-                showCheckmark: false,
                 onSelected: (_) {
                   final select = widget.onSelected;
                   if (select == null) {
@@ -157,7 +154,6 @@ class _SearchSourceFiltersState extends State<SearchSourceFilters> {
               ChoiceChip(
                 key: ValueKey('search-source-extension-${plugin['id']}'),
                 label: Text(Spotiflac.instance.nameOf(plugin['id'])),
-                showCheckmark: false,
                 selected: source == SearchSource.extensions && Spotiflac.instance.selected == plugin['id'],
                 onSelected: (_) async {
                   await Spotiflac.instance.choose(plugin['id']);

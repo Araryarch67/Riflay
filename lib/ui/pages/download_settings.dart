@@ -10,7 +10,6 @@ import '../../services/ios_folders.dart';
 import '../../services/video_download.dart';
 import '../../services/youtube_importer.dart';
 import '../../services/ytdlp.dart';
-import '../theme.dart';
 import '../widgets/menus.dart';
 import 'sound_settings.dart';
 import '../../services/language.dart';
@@ -261,11 +260,7 @@ class _DownloadSettingsState extends State<DownloadSettings> {
   }
 
   static Widget _heading(BuildContext context, String label) => Padding(
-    padding: const EdgeInsets.fromLTRB(4, 8, 4, 8),
-    child: Text(
-      label,
-      style: Theme.of(context).textTheme.titleSmall
-          ?.copyWith(color: AppColors.textSecondary, fontWeight: FontWeight.w700),
-    ),
+    padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+    child: Text(label, style: settingsHeading(context)),
   );
 }

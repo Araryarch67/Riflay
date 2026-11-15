@@ -270,61 +270,88 @@ class _DesktopBarPreview extends StatelessWidget {
 
 /// The preview of [option] in its card: its name, a close button and the picture.
 class SettingPreviewCard extends StatelessWidget {
-  const SettingPreviewCard({super.key, required this.option, required this.onClose, this.height = 300});
+  const SettingPreviewCard({
+    super.key,
+    required this.option,
+    required this.onClose,
+    this.height = 300,
+    this.fill = false,
+  });
 
   final SettingsOption option;
   final VoidCallback onClose;
 
-  /// The picture's height at most.
+  /// The picture's height at most; exactly, with [fill].
   final double height;
+
+  /// The picture's box is always [height] tall, whatever is in it: the card pinned to the top of a phone's page
+  /// keeps one size from option to option, so the rows under it never move.
+  final bool fill;
 
   static const closeKey = ValueKey('settings-preview-close');
 
+  /// The card around the picture: the title's row and the padding under the picture.
+  static const double chrome = _header + _inset;
+  static const double _header = 48;
+  static const double _inset = 12;
+
   @override
   Widget build(BuildContext context) {
-    final colors = AppColors.of(context);
+    final scheme = Theme.of(context).colorScheme;
     final text = Theme.of(context).textTheme;
+    final picture = Center(
+      heightFactor: fill ? null : 1,
+      child: SettingPreviewView(kind: option.preview!),
+    );
+    // A Material 3 tonal card: the picture sits in a well of the page's own colour, as the real parts do.
     return Material(
-      color: colors.elevated,
-      elevation: 6,
-      shadowColor: Colors.black54,
-      borderRadius: LayoutPrefs.corner(12),
+      color: scheme.surfaceContainerHigh,
+      borderRadius: LayoutPrefs.corner(20),
       clipBehavior: Clip.antiAlias,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(14, 4, 4, 4),
-            child: Row(
-              children: [
-                Icon(Icons.visibility_outlined, size: 18, color: colors.textSecondary),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    '${tr.settingsPreview} · ${option.title(tr)}',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: text.labelLarge?.copyWith(fontWeight: FontWeight.w700),
+          SizedBox(
+            height: _header,
+            child: Padding(
+              padding: const EdgeInsetsDirectional.only(start: 16, end: 4),
+              child: Row(
+                children: [
+                  Icon(Icons.visibility_outlined, size: 18, color: scheme.onSurfaceVariant),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      '${tr.settingsPreview} · ${option.title(tr)}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: text.titleSmall?.copyWith(color: scheme.onSurface),
+                    ),
                   ),
-                ),
-                IconButton(
-                  key: closeKey,
-                  tooltip: tr.closePreview,
-                  iconSize: 20,
-                  onPressed: onClose,
-                  icon: const Icon(Icons.close_rounded),
-                ),
-              ],
+                  IconButton(
+                    key: closeKey,
+                    tooltip: tr.closePreview,
+                    iconSize: 20,
+                    color: scheme.onSurfaceVariant,
+                    onPressed: onClose,
+                    icon: const Icon(Icons.close_rounded),
+                  ),
+                ],
+              ),
             ),
           ),
-          ConstrainedBox(
-            constraints: BoxConstraints(maxHeight: height),
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-              child: ClipRRect(
-                borderRadius: LayoutPrefs.corner(8),
-                child: Center(heightFactor: 1, child: SettingPreviewView(kind: option.preview!)),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(_inset, 0, _inset, _inset),
+            child: ClipRRect(
+              borderRadius: LayoutPrefs.corner(12),
+              child: ColoredBox(
+                color: scheme.surfaceContainerLowest,
+                child: fill
+                    ? SizedBox(height: height, child: picture)
+                    : ConstrainedBox(
+                        constraints: BoxConstraints(maxHeight: height),
+                        child: picture,
+                      ),
               ),
             ),
           ),

@@ -22,7 +22,14 @@ class PageScaffold extends StatefulWidget {
     this.actions = const [],
     this.brand = false,
     this.overHero = false,
+    this.pinned,
+    this.pinnedHeight = 0,
   });
+
+  /// Stays under the top bar, [pinnedHeight] tall, while the page scrolls beneath it: Settings' preview on a phone,
+  /// in view as the options under it change.
+  final Widget? pinned;
+  final double pinnedHeight;
 
   final List<Widget> slivers;
   final Color? gradientColor;
@@ -121,7 +128,19 @@ class _PageScaffoldState extends State<PageScaffold> {
           CustomScrollView(
             controller: _scroll,
             slivers: [
-              SliverToBoxAdapter(child: SizedBox(height: widget.overHero ? 0 : topInset + (showBar ? barHeight : 8))),
+              if (widget.pinned case final pinned?)
+                // The room under the bar and the pinned part as one header, so it holds under the bar, not behind it.
+                SliverPersistentHeader(
+                  pinned: true,
+                  delegate: _PinnedHeader(
+                    gap: topInset + (showBar ? barHeight : 8),
+                    height: widget.pinnedHeight,
+                    color: AppColors.panel,
+                    child: pinned,
+                  ),
+                )
+              else
+                SliverToBoxAdapter(child: SizedBox(height: widget.overHero ? 0 : topInset + (showBar ? barHeight : 8))),
               ...widget.slivers,
               // Clears the phone's floating player and tab bar.
               SliverToBoxAdapter(child: SizedBox(height: 32 + MediaQuery.paddingOf(context).bottom)),
@@ -203,6 +222,36 @@ class _PageScaffoldState extends State<PageScaffold> {
       ),
     );
   }
+}
+
+/// [PageScaffold.pinned] under [gap] (the top bar's room). Clear at the top of the page; once rows scroll under it,
+/// it fills with the page's [color] so they pass behind it.
+class _PinnedHeader extends SliverPersistentHeaderDelegate {
+  const _PinnedHeader({required this.gap, required this.height, required this.color, required this.child});
+
+  final double gap;
+  final double height;
+  final Color color;
+  final Widget child;
+
+  @override
+  double get maxExtent => gap + height;
+
+  @override
+  double get minExtent => gap + height;
+
+  @override
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) => ColoredBox(
+    color: color.withValues(alpha: (shrinkOffset / 24).clamp(0.0, 1.0)),
+    child: Padding(
+      padding: EdgeInsets.only(top: gap),
+      child: child,
+    ),
+  );
+
+  @override
+  bool shouldRebuild(_PinnedHeader old) =>
+      old.gap != gap || old.height != height || old.color != color || old.child != child;
 }
 
 class SectionTitle extends StatelessWidget {

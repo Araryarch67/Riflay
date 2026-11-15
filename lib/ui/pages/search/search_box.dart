@@ -11,6 +11,7 @@ import '../../theme.dart';
 import '../../widgets/controls.dart';
 import 'remote_results.dart' show openSearchHit;
 import 'search_input.dart';
+import 'search_parts.dart' show searchSurfaceCorners;
 import 'soundcloud_results.dart' show SearchSource;
 
 /// The search field, with a dropdown of suggestions under it while typing
@@ -31,7 +32,8 @@ class SearchBox extends StatefulWidget {
   final ValueChanged<String> onChanged;
   final ValueChanged<String> onSubmitted;
 
-  /// In the dark title bar: a dark pill instead of the white one.
+  /// In the title bar: a slimmer pill with a ring while typing. On the page it is a Material 3 search bar instead
+  /// (56 high, a tonal fill, no outline).
   final bool onBar;
 
   @override
@@ -85,8 +87,6 @@ class _SearchBoxState extends State<SearchBox> {
     _hits = const [];
     _sync();
   }
-
-  Color get _ink => widget.onBar ? AppColors.textPrimary : AppColors.onInverse;
 
   /// In the title bar the results page updates as you type (like the
   /// streaming apps), so suggestions would only cover it: just recent
@@ -211,7 +211,11 @@ class _SearchBoxState extends State<SearchBox> {
 
   @override
   Widget build(BuildContext context) {
-    final text = Theme.of(context).textTheme;
+    final theme = Theme.of(context);
+    final text = theme.textTheme;
+    final scheme = theme.colorScheme;
+    final onBar = widget.onBar;
+    final soft = onBar ? AppColors.textSecondary : scheme.onSurfaceVariant;
     return LayoutBuilder(
       builder: (context, box) => TapRegion(
         groupId: _link,
@@ -255,34 +259,38 @@ class _SearchBoxState extends State<SearchBox> {
                   widget.onSubmitted(v);
                   if (v.trim().isNotEmpty) RecentSearches.load().then((r) => _recent = r);
                 },
-                style: text.bodyLarge?.copyWith(color: _ink, fontWeight: FontWeight.w500),
-                cursorColor: _ink,
+                style: text.bodyLarge?.copyWith(
+                  color: onBar ? AppColors.textPrimary : scheme.onSurface,
+                  fontWeight: onBar ? FontWeight.w500 : null,
+                ),
+                cursorColor: onBar ? AppColors.textPrimary : scheme.primary,
                 decoration: InputDecoration(
                   hintText: tr.searchHint,
-                  hintStyle: text.bodyLarge?.copyWith(
-                    color: widget.onBar ? AppColors.textSecondary : AppColors.onInverse.withValues(alpha: 0.54),
-                  ),
-                  prefixIcon: Icon(
-                    Icons.search_rounded,
-                    color: widget.onBar ? AppColors.textSecondary : AppColors.onInverse.withValues(alpha: 0.87),
+                  hintStyle: text.bodyLarge?.copyWith(color: soft),
+                  prefixIcon: Padding(
+                    padding: EdgeInsets.only(left: onBar ? 0 : 4),
+                    child: Icon(Icons.search_rounded, color: onBar ? soft : scheme.onSurface),
                   ),
                   suffixIcon: widget.controller.text.isEmpty
                       ? null
-                      : IconButton(
-                          tooltip: tr.clear,
-                          color: widget.onBar ? AppColors.textSecondary : AppColors.onInverse.withValues(alpha: 0.87),
-                          onPressed: () {
-                            widget.controller.clear();
-                            _changed('');
-                            _focus.requestFocus();
-                          },
-                          icon: const Icon(Icons.close_rounded),
+                      : Padding(
+                          padding: EdgeInsets.only(right: onBar ? 0 : 4),
+                          child: IconButton(
+                            tooltip: tr.clear,
+                            color: soft,
+                            onPressed: () {
+                              widget.controller.clear();
+                              _changed('');
+                              _focus.requestFocus();
+                            },
+                            icon: const Icon(Icons.close_rounded),
+                          ),
                         ),
                   filled: true,
-                  fillColor: widget.onBar ? AppColors.tile : AppColors.inverse,
-                  // The theme's hover is a light wash for dark tiles; over the white pill it turned it a muddy grey.
-                  hoverColor: widget.onBar ? AppColors.hover : AppColors.onInverse.withValues(alpha: 0.06),
-                  contentPadding: EdgeInsets.symmetric(vertical: widget.onBar ? 12 : 14),
+                  fillColor: onBar ? AppColors.tile : scheme.surfaceContainerHigh,
+                  // On the page: Material 3's hover state layer over the tonal fill.
+                  hoverColor: onBar ? AppColors.hover : scheme.onSurface.withValues(alpha: 0.08),
+                  contentPadding: EdgeInsets.symmetric(vertical: onBar ? 12 : 16),
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(500), borderSide: BorderSide.none),
                   // A pill when idle too: the theme's enabled border (a small radius) would otherwise win.
                   enabledBorder: OutlineInputBorder(
@@ -292,7 +300,7 @@ class _SearchBoxState extends State<SearchBox> {
                   // Focused in the bar: a light ring, like the streaming apps.
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(500),
-                    borderSide: widget.onBar ? BorderSide(color: AppColors.textPrimary, width: 2) : BorderSide.none,
+                    borderSide: onBar ? BorderSide(color: AppColors.textPrimary, width: 2) : BorderSide.none,
                   ),
                 ),
               ),
@@ -320,15 +328,17 @@ class _SearchBoxState extends State<SearchBox> {
         _sync();
       },
     );
+    // A Material 3 search view: the bar's own tone, extra-large corners, a low shadow.
     return Material(
-      color: AppColors.elevated,
-      elevation: 12,
-      shadowColor: Colors.black,
-      borderRadius: BorderRadius.circular(12),
+      color: Theme.of(context).colorScheme.surfaceContainerHigh,
+      surfaceTintColor: Colors.transparent,
+      elevation: 3,
+      shadowColor: Theme.of(context).colorScheme.shadow,
+      borderRadius: searchSurfaceCorners(),
       clipBehavior: Clip.antiAlias,
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxHeight: 460),
-        child: ListView(padding: const EdgeInsets.symmetric(vertical: 6), shrinkWrap: true, children: rows),
+        child: ListView(padding: const EdgeInsets.symmetric(vertical: 8), shrinkWrap: true, children: rows),
       ),
     );
   }
@@ -350,8 +360,10 @@ List<Widget> suggestionRows(
   required ValueChanged<String> onRemoveRecent,
 }) {
   final text = Theme.of(context).textTheme;
+  final scheme = Theme.of(context).colorScheme;
   final rows = <Widget>[];
   var i = 0;
+  // Material 3 list items: 56 high, 16 at the sides and between the leading icon and the text.
   Widget row({
     required Widget leading,
     required Widget title,
@@ -363,12 +375,13 @@ List<Widget> suggestionRows(
     return InkWell(
       onTap: onTap,
       child: Container(
-        color: index == highlight ? AppColors.tile : null,
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        color: index == highlight ? scheme.onSurface.withValues(alpha: 0.08) : null,
+        constraints: const BoxConstraints(minHeight: 56),
+        padding: EdgeInsets.only(left: 16, right: trailing == null ? 16 : 8, top: 6, bottom: 6),
         child: Row(
           children: [
             leading,
-            const SizedBox(width: 14),
+            const SizedBox(width: 16),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -397,19 +410,19 @@ List<Widget> suggestionRows(
   if (typed.isEmpty) {
     rows.add(
       Padding(
-        padding: const EdgeInsets.fromLTRB(14, 12, 14, 4),
-        child: Text(tr.recentSearches, style: text.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+        child: Text(tr.recentSearches, style: text.labelLarge?.copyWith(color: scheme.onSurfaceVariant)),
       ),
     );
     for (final q in recent) {
       rows.add(
         row(
-          leading: Icon(Icons.history_rounded, color: AppColors.textSecondary, size: 22),
+          leading: Icon(Icons.history_rounded, color: scheme.onSurfaceVariant, size: 24),
           title: Text(q, maxLines: 1, overflow: TextOverflow.ellipsis, style: text.bodyLarge),
           trailing: IconButton(
             tooltip: tr.remove,
-            iconSize: 18,
-            color: AppColors.textSecondary,
+            iconSize: 20,
+            color: scheme.onSurfaceVariant,
             onPressed: () => onRemoveRecent(q),
             icon: const Icon(Icons.close_rounded),
           ),
@@ -423,7 +436,7 @@ List<Widget> suggestionRows(
       final match = q.toLowerCase().startsWith(typed.toLowerCase());
       rows.add(
         row(
-          leading: Icon(Icons.search_rounded, color: AppColors.textSecondary, size: 22),
+          leading: Icon(Icons.search_rounded, color: scheme.onSurfaceVariant, size: 24),
           title: Text.rich(
             TextSpan(
               children: [
@@ -442,7 +455,9 @@ List<Widget> suggestionRows(
         ),
       );
     }
-    if (queries.isNotEmpty && hits.isNotEmpty) rows.add(Divider(height: 9, color: AppColors.hover));
+    if (queries.isNotEmpty && hits.isNotEmpty) {
+      rows.add(Divider(height: 17, indent: 16, endIndent: 16, color: scheme.outlineVariant));
+    }
     for (final h in hits) {
       rows.add(
         row(
@@ -457,7 +472,7 @@ List<Widget> suggestionRows(
             h.subtitle,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: text.bodySmall?.copyWith(color: AppColors.textSecondary),
+            style: text.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
           ),
           onTap: () => onHit(h),
         ),
@@ -614,11 +629,11 @@ class _SearchSuggestionsState extends State<SearchSuggestions> {
         : _queries.length + _hits.length;
     if (!_input.focus.hasFocus || _dismissed || count == 0) return const SizedBox.shrink();
     return Material(
-      color: AppColors.elevated,
-      borderRadius: BorderRadius.circular(12),
+      color: Theme.of(context).colorScheme.surfaceContainerHigh,
+      borderRadius: searchSurfaceCorners(),
       clipBehavior: Clip.antiAlias,
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 6),
+        padding: const EdgeInsets.symmetric(vertical: 8),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: suggestionRows(

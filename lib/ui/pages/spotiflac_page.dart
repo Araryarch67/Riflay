@@ -4,9 +4,11 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../services/language.dart';
 import '../../services/spotiflac.dart';
+import '../../services/layout_prefs.dart';
+import '../shell_scope.dart';
 import '../widgets/app_dialog.dart';
 import '../widgets/page_scaffold.dart';
-import 'sound_settings.dart' show SettingsCard;
+import 'sound_settings.dart' show SettingsCard, SettingsIcon, settingsHeading, settingsMuted;
 
 class SpotiflacPage extends StatefulWidget {
   const SpotiflacPage({super.key, this.engine});
@@ -95,19 +97,23 @@ class _SpotiflacPageState extends State<SpotiflacPage> {
                   Padding(
                     padding: const EdgeInsets.only(bottom: 12),
                     child: switch (field['type']) {
-                      'button' => OutlinedButton(
-                        onPressed: () async {
-                          try {
-                            await _action(id, (field['action'] ?? field['key']).toString());
-                          } catch (_) {
-                            if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(tr.spotiflacFailed)));
+                      'button' => Align(
+                        alignment: AlignmentDirectional.centerStart,
+                        child: FilledButton.tonal(
+                          onPressed: () async {
+                            try {
+                              await _action(id, (field['action'] ?? field['key']).toString());
+                            } catch (_) {
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(tr.spotiflacFailed)));
+                              }
                             }
-                          }
-                        },
-                        child: Text(field['label'].toString()),
+                          },
+                          child: Text(field['label'].toString()),
+                        ),
                       ),
                       'boolean' => SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
                         title: Text(field['label'].toString()),
                         subtitle: field['description'] is String ? Text(field['description']) : null,
                         value: values[field['key']] == true,
@@ -187,107 +193,197 @@ class _SpotiflacPageState extends State<SpotiflacPage> {
   }
 
   @override
-  Widget build(BuildContext context) => ListenableBuilder(
-    listenable: engine,
-    builder: (context, _) => PageScaffold(
-      title: tr.spotiflacExtensions,
-      slivers: [
-        SliverPadding(
-          padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-          sliver: SliverList.list(
-            children: [
-              Text(tr.spotiflacAbout),
-              const SizedBox(height: 16),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  FilledButton.icon(
-                    onPressed: busy ? null : _import,
-                    icon: const Icon(Icons.add_rounded),
-                    label: Text(tr.importSflx),
-                  ),
-                  OutlinedButton.icon(
-                    onPressed: busy ? null : () => _run(engine.refresh),
-                    icon: const Icon(Icons.refresh),
-                    label: Text(tr.retry),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: repository,
-                enabled: !busy,
-                keyboardType: TextInputType.url,
-                decoration: InputDecoration(
-                  labelText: tr.spotiflacRepository,
-                  hintText: 'https://…/registry.json',
-                  suffixIcon: IconButton(
-                    tooltip: tr.spotiflacLoadRepository,
-                    onPressed: busy
-                        ? null
-                        : () => _run(() async {
-                            final result = await engine.registry(repository.text);
-                            if (mounted) setState(() => catalog = result);
-                          }),
-                    icon: const Icon(Icons.arrow_forward_rounded),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              SwitchListTile(
-                title: Text(tr.spotiflacLocalNetwork),
-                value: engine.localNetwork,
-                onChanged: busy ? null : (value) => _run(() => engine.allowLocalNetwork(value)),
-              ),
-              if (busy) const LinearProgressIndicator(),
-              if (failed) Padding(padding: const EdgeInsets.symmetric(vertical: 12), child: Text(tr.spotiflacFailed)),
-              if (engine.plugins.isEmpty && !busy)
-                Padding(padding: const EdgeInsets.symmetric(vertical: 12), child: Text(tr.spotiflacEmpty)),
-              if (engine.plugins.isNotEmpty)
-                SettingsCard(
-                  children: [
-                    for (final plugin in engine.plugins)
-                      ListTile(
-                        title: Text(engine.nameOf(plugin['id'])),
-                        subtitle: Text('${plugin['version']} · ${plugin['description']}'),
-                        leading: Switch(
-                          value: plugin['enabled'] == true,
-                          onChanged: busy ? null : (value) => _run(() => engine.enable(plugin['id'], value)),
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final text = theme.textTheme;
+    final muted = text.bodyMedium?.copyWith(color: scheme.onSurfaceVariant);
+    final small = settingsMuted(context);
+    final pad = ShellScope.of(context).compact ? 16.0 : 24.0;
+    Widget heading(String label) => Padding(
+      padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
+      child: Text(label, style: settingsHeading(context)),
+    );
+    return ListenableBuilder(
+      listenable: engine,
+      builder: (context, _) => PageScaffold(
+        title: tr.spotiflacExtensions,
+        slivers: [
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(pad, 0, pad, 28),
+              child: Align(
+                alignment: AlignmentDirectional.topStart,
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 760),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(tr.spotiflacExtensions, style: text.headlineMedium?.copyWith(fontWeight: FontWeight.w800)),
+                      const SizedBox(height: 8),
+                      Text(tr.spotiflacAbout, style: muted),
+                      const SizedBox(height: 16),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          FilledButton.icon(
+                            onPressed: busy ? null : _import,
+                            icon: const Icon(Icons.add_rounded),
+                            label: Text(tr.importSflx),
+                          ),
+                          FilledButton.tonalIcon(
+                            onPressed: busy ? null : () => _run(engine.refresh),
+                            icon: const Icon(Icons.refresh_rounded),
+                            label: Text(tr.retry),
+                          ),
+                        ],
+                      ),
+                      // The bar's room is kept while idle, so the page doesn't jump as work starts and ends.
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        child: SizedBox(
+                          height: 4,
+                          child: busy ? LinearProgressIndicator(borderRadius: BorderRadius.circular(2)) : null,
                         ),
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            IconButton(
-                              tooltip: tr.spotiflacSettings,
-                              onPressed: busy ? null : () => _run(() => _settings(plugin)),
-                              icon: const Icon(Icons.tune_rounded),
+                      ),
+                      if (failed)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 16),
+                          child: Material(
+                            color: scheme.errorContainer,
+                            borderRadius: LayoutPrefs.corner(12),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                              child: Row(
+                                children: [
+                                  Icon(Icons.error_outline_rounded, color: scheme.onErrorContainer),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Text(
+                                      tr.spotiflacFailed,
+                                      style: text.bodyMedium?.copyWith(color: scheme.onErrorContainer),
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
-                            IconButton(
-                              tooltip: tr.remove,
-                              onPressed: busy ? null : () => _run(() => engine.remove(plugin['id'])),
-                              icon: const Icon(Icons.delete_outline),
+                          ),
+                        ),
+                      TextField(
+                        controller: repository,
+                        enabled: !busy,
+                        keyboardType: TextInputType.url,
+                        decoration: InputDecoration(
+                          labelText: tr.spotiflacRepository,
+                          hintText: 'https://…/registry.json',
+                          suffixIcon: Padding(
+                            padding: const EdgeInsetsDirectional.only(end: 6),
+                            child: IconButton.filledTonal(
+                              tooltip: tr.spotiflacLoadRepository,
+                              onPressed: busy
+                                  ? null
+                                  : () => _run(() async {
+                                      final result = await engine.registry(repository.text);
+                                      if (mounted) setState(() => catalog = result);
+                                    }),
+                              icon: const Icon(Icons.arrow_forward_rounded),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      SettingsCard(
+                        children: [
+                          SwitchListTile(
+                            secondary: const Icon(Icons.lan_outlined),
+                            title: Text(tr.spotiflacLocalNetwork),
+                            value: engine.localNetwork,
+                            onChanged: busy ? null : (value) => _run(() => engine.allowLocalNetwork(value)),
+                          ),
+                        ],
+                      ),
+                      if (engine.plugins.isNotEmpty || !busy) heading(tr.installed),
+                      if (engine.plugins.isEmpty && !busy)
+                        SettingsCard(
+                          children: [
+                            ListTile(
+                              leading: const Icon(Icons.extension_off_outlined),
+                              title: Text(tr.spotiflacEmpty, style: muted),
                             ),
                           ],
                         ),
-                      ),
-                  ],
-                ),
-              for (final entry in catalog)
-                ListTile(
-                  title: Text(
-                    (entry['display_name'] ?? entry['displayName'] ?? entry['name'] ?? entry['id']).toString(),
+                      if (engine.plugins.isNotEmpty)
+                        SettingsCard(
+                          children: [
+                            for (final plugin in engine.plugins)
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  ListTile(
+                                    leading: const SettingsIcon(Icons.extension_outlined),
+                                    title: Text(engine.nameOf(plugin['id'])),
+                                    subtitle: Text('${plugin['version']} · ${plugin['description']}', style: small),
+                                    trailing: Switch(
+                                      value: plugin['enabled'] == true,
+                                      onChanged: busy
+                                          ? null
+                                          : (value) => _run(() => engine.enable(plugin['id'], value)),
+                                    ),
+                                  ),
+                                  // Under the row rather than beside the switch, so it all fits a phone.
+                                  Padding(
+                                    padding: const EdgeInsetsDirectional.fromSTEB(4, 0, 8, 8),
+                                    child: Wrap(
+                                      spacing: 4,
+                                      children: [
+                                        TextButton.icon(
+                                          onPressed: busy ? null : () => _run(() => _settings(plugin)),
+                                          icon: const Icon(Icons.tune_rounded),
+                                          label: Text(tr.spotiflacSettings),
+                                        ),
+                                        TextButton.icon(
+                                          onPressed: busy ? null : () => _run(() => engine.remove(plugin['id'])),
+                                          icon: const Icon(Icons.delete_outline_rounded),
+                                          label: Text(tr.remove),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                          ],
+                        ),
+                      if (catalog.isNotEmpty) ...[
+                        heading(tr.available),
+                        SettingsCard(
+                          children: [
+                            for (final entry in catalog)
+                              ListTile(
+                                leading: const SettingsIcon(Icons.extension_outlined),
+                                title: Text(
+                                  (entry['display_name'] ?? entry['displayName'] ?? entry['name'] ?? entry['id'])
+                                      .toString(),
+                                ),
+                                subtitle: (entry['description'] ?? '').toString().isEmpty
+                                    ? null
+                                    : Text(entry['description'].toString(), style: small),
+                                trailing: FilledButton.tonal(
+                                  onPressed: busy ? null : () => _run(() => engine.installFromRegistry(entry)),
+                                  child: Text(tr.install),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ],
+                    ],
                   ),
-                  subtitle: Text((entry['description'] ?? '').toString()),
-                  trailing: TextButton(
-                    onPressed: busy ? null : () => _run(() => engine.installFromRegistry(entry)),
-                    child: Text(tr.install),
-                  ),
                 ),
-            ],
+              ),
+            ),
           ),
-        ),
-      ],
-    ),
-  );
+        ],
+      ),
+    );
+  }
 }

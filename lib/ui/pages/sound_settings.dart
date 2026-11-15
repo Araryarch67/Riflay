@@ -575,6 +575,11 @@ class _AdvancedAudioSettingsState extends State<AdvancedAudioSettings> {
 TextStyle? settingsMuted(BuildContext context) =>
     Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary);
 
+/// The heading over a group of settings, as Material 3 lists label a section: small, in the theme's primary colour.
+TextStyle? settingsHeading(BuildContext context) =>
+    Theme.of(context).textTheme.titleSmall
+        ?.copyWith(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w700);
+
 /// A titled group of settings.
 class SettingsSection extends StatelessWidget {
   const SettingsSection({super.key, required this.title, required this.child});
@@ -589,8 +594,8 @@ class SettingsSection extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(4, 0, 4, 10),
-          child: Text(title, style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+          child: Text(title, style: settingsHeading(context)),
         ),
         child,
       ],
@@ -598,34 +603,55 @@ class SettingsSection extends StatelessWidget {
   );
 }
 
-/// Rows on a rounded panel, with thin lines between them.
+/// A row's leading icon on a tonal circle, as Material 3 marks a destination or an item in a list.
+class SettingsIcon extends StatelessWidget {
+  const SettingsIcon(this.icon, {super.key});
+
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      width: 40,
+      height: 40,
+      decoration: BoxDecoration(color: scheme.secondaryContainer, shape: BoxShape.circle),
+      child: Icon(icon, size: 22, color: scheme.onSecondaryContainer),
+    );
+  }
+}
+
+/// Rows as a Material 3 segmented list: each row on its own tonal surface a hairline from the next, the group's
+/// outer corners large and the corners between rows small (both follow Settings › Layout › Corners).
 class SettingsCard extends StatelessWidget {
   const SettingsCard({super.key, required this.children});
 
   final List<Widget> children;
 
   @override
-  Widget build(BuildContext context) => Material(
-    color: AppColors.elevated,
-    borderRadius: LayoutPrefs.corner(12),
-    clipBehavior: Clip.antiAlias,
-    child: ListTileTheme(
+  Widget build(BuildContext context) {
+    final outer = Radius.circular(LayoutPrefs.radius(20));
+    final inner = Radius.circular(LayoutPrefs.radius(4));
+    final last = children.length - 1;
+    return ListTileTheme(
       iconColor: AppColors.textSecondary,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 2),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
       child: Column(
         children: [
-          for (final (i, row) in children.indexed) ...[if (i > 0) const SettingsDivider(), row],
+          for (final (i, row) in children.indexed) ...[
+            if (i > 0) const SizedBox(height: 2),
+            Material(
+              color: AppColors.elevated,
+              borderRadius: BorderRadius.vertical(top: i == 0 ? outer : inner, bottom: i == last ? outer : inner),
+              clipBehavior: Clip.antiAlias,
+              // Full width whatever the row; a row narrower than the group stays centred, as it always was.
+              child: Align(heightFactor: 1, child: row),
+            ),
+          ],
         ],
       ),
-    ),
-  );
-}
-
-class SettingsDivider extends StatelessWidget {
-  const SettingsDivider({super.key});
-
-  @override
-  Widget build(BuildContext context) => Divider(height: 1, thickness: 1, indent: 58, color: AppColors.divider);
+    );
+  }
 }
 
 /// A settings row whose control sits on the right, or under the text when

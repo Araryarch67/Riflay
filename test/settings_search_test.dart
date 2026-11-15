@@ -255,7 +255,7 @@ void main() {
     expect(find.byType(SettingPreviewCard), findsNothing);
   });
 
-  onLinux('on a phone the preview shows over the rows above the option, and closes', (tester) async {
+  onLinux('on a phone the preview is pinned above its row, and closes', (tester) async {
     await tester.pumpWidget(_app(PlayerController(), [], compact: true, home: SettingsPlace.layout.page));
     await tester.pump(const Duration(milliseconds: 300));
     expect(find.text(tr.settingsPreviewHint), findsNothing, reason: 'no room beside the list');
