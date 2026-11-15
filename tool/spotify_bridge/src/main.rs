@@ -322,3 +322,21 @@ fn main() {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::parse_range;
+
+    #[test]
+    fn ranges() {
+        assert_eq!(parse_range("bytes=0-99", 1000), Some((0, 100)));
+        assert_eq!(parse_range("bytes=100-", 1000), Some((100, 900)));
+        assert_eq!(parse_range("bytes=-100", 1000), Some((900, 100)));
+        // Past the end: clamped; starting past the end: not satisfiable.
+        assert_eq!(parse_range("bytes=900-5000", 1000), Some((900, 100)));
+        assert_eq!(parse_range("bytes=1000-", 1000), None);
+        assert_eq!(parse_range("bytes=5-2", 1000), None);
+        assert_eq!(parse_range("items=0-1", 1000), None);
+        assert_eq!(parse_range("bytes=-0", 1000), None);
+    }
+}

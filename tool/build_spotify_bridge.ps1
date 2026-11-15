@@ -19,8 +19,19 @@ try {
 } finally { Pop-Location }
 $built = Join-Path $targetDir 'release/spotify_bridge.exe'
 New-Item -ItemType Directory -Path (Split-Path -Parent $Output) -Force | Out-Null
-# Copied only when it changed, so an up-to-date build doesn't touch the app's folder.
-if (-not (Test-Path -LiteralPath $Output) -or
-    (Get-FileHash -LiteralPath $built).Hash -ne (Get-FileHash -LiteralPath $Output).Hash) {
-  Copy-Item -LiteralPath $built -Destination $Output -Force
+# Copied only when it changed, so an up-to-date build doesn't touch the app's folder. Plain .NET, not Get-FileHash:
+# Windows PowerShell started from PowerShell 7 inherits its module path and can't load that cmdlet. A freshly
+# linked exe can be held for a moment (a virus scanner reading it), which fails the copy: try again a few times.
+for ($try = 1; ; $try++) {
+  try {
+    $from = [System.IO.FileInfo]$built
+    $to = [System.IO.FileInfo]$Output
+    if (-not $to.Exists -or $to.Length -ne $from.Length -or $to.LastWriteTimeUtc -ne $from.LastWriteTimeUtc) {
+      [System.IO.File]::Copy($from.FullName, $to.FullName, $true)
+    }
+    break
+  } catch {
+    if ($try -ge 5) { throw }
+    Start-Sleep -Seconds 1
+  }
 }
