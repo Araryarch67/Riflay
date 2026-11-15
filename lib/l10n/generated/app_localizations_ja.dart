@@ -5168,6 +5168,67 @@ class AppLocalizationsJa extends AppLocalizations {
   String get sourceSoundcloud => 'SoundCloud';
 
   @override
+  String get sourceMonochrome => 'Monochrome';
+
+  @override
+  String get spotiflacExtensions => 'SpotiFLAC拡張機能';
+
+  @override
+  String get spotiflacAbout => '.sflxファイルまたは拡張リポジトリからプロバイダーをインストール。有効にすると検索で使えます。';
+
+  @override
+  String get importSflx => '.sflxを読み込む';
+
+  @override
+  String get spotiflacRepository => '拡張リポジトリURL';
+
+  @override
+  String get spotiflacLoadRepository => 'リポジトリを見る';
+
+  @override
+  String get spotiflacSettings => 'プロバイダー設定';
+
+  @override
+  String get spotiflacNoSettings => 'このプロバイダーに設定はありません。';
+
+  @override
+  String get spotiflacInvalidSetting => '有効な値を入力してください。';
+
+  @override
+  String get spotiflacFailed => '拡張機能のリクエストに失敗しました。設定を確認して再試行してください。';
+
+  @override
+  String get spotiflacEmpty => 'プロバイダーがまだインストールされていません。';
+
+  @override
+  String get spotiflacQuality => 'プロバイダーのダウンロード音質';
+
+  @override
+  String get spotiflacLocalNetwork => 'プラグインのローカルサーバーへの接続を許可';
+
+  @override
+  String get spotiflacOriginal => '元の音質';
+
+  @override
+  String get spotiflacCantCast => 'キャストする前にこの曲をダウンロードしてください。';
+
+  @override
+  String noSourceResults(String source) {
+    return '$sourceの検索結果はありません。';
+  }
+
+  @override
+  String enableSourceForSearch(String source) {
+    return '検索するには音楽ソース設定で$sourceを有効にしてください。';
+  }
+
+  @override
+  String get sourceSearchToggleSubtitle => '検索ページの検索元フィルターに表示し、選択したときにこのサービスを検索';
+
+  @override
+  String get noMonochromeResults => 'Monochromeの検索結果はありません。';
+
+  @override
   String get streamsFromSoundcloud => 'SoundCloud：ネットが必要';
 
   @override
@@ -6016,7 +6077,19 @@ class AppLocalizationsJa extends AppLocalizations {
   String get topicSourcesSummary => 'Internet Archive、Radio Paradise、Jamendo、Audius、ccMixter:アーティストが無料で公開する音楽';
 
   @override
-  String get sourcesAbout => 'アーティストや権利者が自ら音楽を公開している無料のサービス。Riflayは各サービスのサーバーから直接再生する。曲のソースはオンにするまでオフ。';
+  String get sourcesAbout => '追加の音楽サービス。Riflayは各サービスのサーバーから直接再生する。曲のソースはオンにするまでオフ。';
+
+  @override
+  String get sourceMonochromeSubtitle => '検索の「すべて」にMonochromeの音楽を表示。利用可能な場合はFLACで再生';
+
+  @override
+  String get openMusicLink => '音楽リンクを開く';
+
+  @override
+  String get monochromeCantCast => 'キャストする前にこのMonochromeの曲をダウンロードしてください。';
+
+  @override
+  String get openMusicLinkBody => 'YouTube、SoundCloud、Monochromeのリンクを貼り付けて音楽を再生・取り込みできます。';
 
   @override
   String get sourceArchive => '検索にInternet Archive';
@@ -6063,4 +6136,33 @@ class AppLocalizationsJa extends AppLocalizations {
   String sourceUnavailable(String source) {
     return '$sourceに接続できませんでした。もう一度お試しください。';
   }
+
+  @override
+  String addFolderNamed(String name) {
+    return '「$name」を追加';
+  }
+
+  @override
+  String get folderOnlyAdd => '追加だけ';
+
+  @override
+  String get folderOnlyAddSubtitle => '曲をライブラリに入れる';
+
+  @override
+  String get folderAsPlaylist => 'プレイリストとして追加';
+
+  @override
+  String get folderAsPlaylistSubtitle => 'このフォルダに合わせて変わるプレイリスト';
+
+  @override
+  String get folderPlaylist => 'フォルダのプレイリスト';
+
+  @override
+  String get makeFolderPlaylist => 'プレイリストとして表示';
+
+  @override
+  String get removeFolderPlaylist => 'プレイリストから外す';
+
+  @override
+  String get folderPlaylistRemoved => 'プレイリストから外しました。フォルダと曲はそのままです。';
 }

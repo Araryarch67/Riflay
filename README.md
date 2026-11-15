@@ -63,6 +63,7 @@ https://github.com/user-attachments/assets/5d0f0612-4322-425e-bbbf-79baeace47be
 | | Spotify import | Brings your playlists, Liked Songs and albums over | All |
 | **Streaming** | YouTube Music | Search, home, radio, likes and your library, with **Sign in with Google** | All |
 | | SoundCloud | Search songs, artists and playlists; related tracks for autoplay | All |
+| | [Monochrome](docs/monochrome.md) | Optional FLAC music search, downloads, track and collection links, and public playlist imports | All (downloads: native apps) |
 | | Music videos | Watch a song's video in step with it, or use it as the Now Playing background | All |
 | | Spotify Canvas | The looping video Spotify shows with a song, in Video mode | All |
 | | Free music sources | Internet Archive FLAC recordings, Radio Paradise FLAC channels, and (opt-in) Jamendo, Audius and ccMixter | All |
@@ -150,7 +151,7 @@ On a computer Riflay picks a performance mode at first start (Settings › Power
 | CPU while a song plays, in front | ~3% of one thread | ~8% | ~14% |
 
 Phones keep Balanced, except one with under 4 GB of memory, which starts in Lightweight (the music video at 720p
-instead of 1440p). At least 4 GB of memory is recommended on a computer for the system, Riflay and a browser beside it. Riflay itself measured on
+instead of Balanced's 1080p; Heavy takes 1440p). At least 4 GB of memory is recommended on a computer for the system, Riflay and a browser beside it. Riflay itself measured on
 Linux (release build, private memory): ~150 MB idle, ~200-230 MB playing or scrolling a library of covers, ~300 MB
 with a 1080p music video, and 65-110 MB while it plays behind other windows (it hands unused memory back to the
 system then; Windows does the same). Behind other windows every mode draws about one frame a second. The app takes

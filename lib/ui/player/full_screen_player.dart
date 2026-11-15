@@ -105,7 +105,6 @@ class _FullScreenPlayerState extends State<FullScreenPlayer> {
                   track: track,
                   cover: AudioVisualizer(
                     radialOnly: true,
-                    classicShape: true,
                     child: TrackSwitcher(
                       trackId: track.id,
                       slide: false,

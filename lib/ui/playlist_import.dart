@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import '../models/track.dart';
 import '../services/player_controller.dart';
 import '../services/playlist_transfer.dart';
+import '../services/monochrome.dart';
 import '../services/youtube_music_account.dart';
 import 'theme.dart';
 import 'widgets/skeleton.dart';
@@ -44,7 +45,9 @@ Future<ImportedPlaylist?> askToImportPlaylist(BuildContext context) async {
 /// songs go in 100 at a time). Otherwise a Riflay playlist of the streamed songs.
 /// Shared by the link importer and the Spotify library import.
 Future<ImportedPlaylist> saveImportedPlaylist(PlayerController c, String title, List<Track> tracks) async {
-  if (!c.ytMusic.canEdit) return (title: title, youtubeId: null, local: c.createPlaylist(title, tracks: tracks));
+  if (!c.ytMusic.canEdit || tracks.any((t) => !t.isRemote)) {
+    return (title: title, youtubeId: null, local: c.createPlaylist(title, tracks: tracks));
+  }
   final id = await c.ytMusic.createPlaylist(title, tracks: tracks.take(100).toList());
   for (var i = 100; i < tracks.length; i += 100) {
     await c.ytMusic.addToPlaylist(id, tracks.skip(i).take(100).toList());
@@ -113,6 +116,21 @@ class _PlaylistImportDialogState extends State<PlaylistImportDialog> {
     try {
       final p = await widget.read(link.text);
       if (stale()) return;
+      if (p.nativeTracks case final tracks?) {
+        setState(() {
+          playlist = p;
+          step = _Step.saving;
+        });
+        final where = await widget.save(p.title, tracks);
+        if (stale()) return;
+        setState(() {
+          result = where;
+          saved = tracks.length;
+          missing = const [];
+          step = _Step.done;
+        });
+        return;
+      }
       setState(() {
         playlist = p;
         step = _Step.matching;
@@ -160,7 +178,7 @@ class _PlaylistImportDialogState extends State<PlaylistImportDialog> {
     final text = Theme.of(context).textTheme;
     final secondary = text.bodySmall?.copyWith(color: AppColors.textSecondary);
     final p = playlist;
-    final signedIn = widget.signedIn;
+    final signedIn = widget.signedIn && MonochromeLink.parse(link.text) == null;
     return AppDialog(
       title: Text(switch (step) {
         _Step.link => tr.importPlaylist,

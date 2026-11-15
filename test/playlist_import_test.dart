@@ -55,6 +55,32 @@ Future<List<ImportedPlaylist?>> open(
 }
 
 void main() {
+  testWidgets('Monochrome imports original streams without searching YouTube', (t) async {
+    final saves = <(String, List<Track>)>[];
+    final native = Track(
+      id: 'monochrome:tracks:track:123',
+      uri: Uri.parse('https://tracks.monochrome.st/track/123'),
+      title: 'Original',
+      artist: 'Artist',
+    );
+    await open(
+      t,
+      read: (_) async => ForeignPlaylist(
+        title: 'Monochrome mix',
+        service: 'Monochrome',
+        songs: [song('Original', 'Artist')],
+        nativeTracks: [native],
+      ),
+      search: (_) async => throw StateError('YouTube must not be searched'),
+      saves: saves,
+    );
+    await t.tap(find.text('Import'));
+    await t.pumpAndSettle();
+    expect(saves.single.$1, 'Monochrome mix');
+    expect(saves.single.$2, [native]);
+    expect(find.text('Imported "Monochrome mix"'), findsOneWidget);
+  });
+
   testWidgets('imports, says what was left out, opens the playlist', (t) async {
     final saves = <(String, List<Track>)>[];
     final results = await open(

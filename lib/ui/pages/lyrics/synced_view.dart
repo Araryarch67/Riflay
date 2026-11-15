@@ -169,8 +169,9 @@ class _SyncedLyricsViewState extends State<SyncedLyricsView> with _Extras {
   /// The current line is out of view while not following: shows the button.
   final _showBack = ValueNotifier<bool>(false);
 
-  /// The follow scroll in frugal Balanced: [_scroll] eased to the current line on the shared [UiBeat] at 20 fps
-  /// (~7 frames for its 350 ms) instead of at the display's rate (~25). Cancelled by a hand scroll or a newer line.
+  /// The follow scroll in frugal Balanced: [_scroll] eased to the current line on the shared [UiBeat] at 30 fps
+  /// (~11 frames for its 350 ms; lyrics never move slower than 24 fps) instead of at the display's rate (~21).
+  /// Cancelled by a hand scroll or a newer line.
   UiBeatListener? _glide;
 
   void _glideTo(double to) {
@@ -179,7 +180,7 @@ class _SyncedLyricsViewState extends State<SyncedLyricsView> with _Extras {
     if ((to - from).abs() < 1) return;
     const length = Duration(milliseconds: 350);
     var t = Duration.zero;
-    _glide = UiBeat.listen(const Duration(milliseconds: 50), (elapsed) {
+    _glide = UiBeat.listen(PlayingMotion.heavyEvery, (elapsed) {
       t += elapsed;
       final done = t >= length;
       if (!mounted || !_scroll.hasClients) return _stopGlide();

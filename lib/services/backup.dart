@@ -35,7 +35,7 @@ abstract final class Backup {
     'library.file.v1',
     'soundcloud.clientId.v1',
   };
-  static const _keptPrefixes = ['musixmatch.'];
+  static const _keptPrefixes = ['musixmatch.', 'spotiflac.'];
 
   static bool _backedUp(String key) => !_kept.contains(key) && !_keptPrefixes.any(key.startsWith);
 

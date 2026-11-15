@@ -44,15 +44,21 @@ class VideoMode extends ChangeNotifier with WidgetsBindingObserver {
 
   static final instance = VideoMode._();
 
-  /// The tallest the video comes in, wherever it shows: on phones 1440p, 720p in Lightweight (what a low-end phone
-  /// starts in, see `DeviceSetup.fitPhone`: a 1440p VP9 stream there was decoder surfaces and read-ahead it couldn't
-  /// spare); on computers by performance mode, 1080p in Heavy, 720p in Balanced and 480p in Lightweight. A phone fills its tall screen with it cropped to cover, so only
-  /// a middle strip of each frame shows, stretched about 2.5 times; 1440p is VP9, which phones decode in hardware.
+  /// The tallest the video comes in, wherever it shows: on phones 1440p in Heavy, 1080p in Balanced and 720p in
+  /// Lightweight (what a low-end phone starts in, see `DeviceSetup.fitPhone`); on computers 1080p in Heavy, 720p in
+  /// Balanced and 480p in Lightweight. A phone fills its tall screen with it cropped to cover, so only a middle strip
+  /// of each frame shows, stretched about 2.5 times: the reason phones take a step more than computers. Each step is
+  /// decoder surfaces, the copies `mediacodec-copy` makes, the drawn texture and read-ahead: 1440p (3.7 MP a frame)
+  /// was the largest part of what Riflay held on a phone with its video, so it is Heavy's now, not Balanced's.
   /// Taller (4K) streams buffered on ordinary connections. On a computer each video frame redraws the window, and a
   /// smaller one is decoded, uploaded and kept (decoder surfaces, read-ahead) for less: the video in a cover-sized
   /// view or behind a blurred page looks the same at 720p.
   static int get maxHeight => Host.isAndroid || Host.isIOS
-      ? (LayoutPrefs.lightweight ? 720 : 1440)
+      ? switch (LayoutPrefs.instance.performance) {
+          PerformanceMode.heavy => 1440,
+          PerformanceMode.balanced => 1080,
+          PerformanceMode.lightweight => 720,
+        }
       : switch (LayoutPrefs.instance.performance) {
           PerformanceMode.heavy => 1080,
           PerformanceMode.balanced => 720,
@@ -603,7 +609,14 @@ vec4 hook() {
     return null;
   }
 
-  bool get _foreground => _on && (_views > 0 || _fullViews > 0);
+  /// A view on screen asks for the video, unless the app is away ([_away]: a phone's screen off or another app in
+  /// front, a computer's window minimized or hidden). Its views stay mounted then (nothing changes their
+  /// TickerMode), so without this the video went on decoding, buffering and holding its surface for no one; now the
+  /// player and its buffers go, and it starts again where the song is when the app is back.
+  bool get _foreground => _on && !_away && (_views > 0 || _fullViews > 0);
+
+  @visibleForTesting
+  bool get debugForeground => _foreground;
 
   /// The music video's picture is on screen now: its first frame is ready and a view shows it. Decorations and the
   /// visualizer rest meanwhile (`PlayingMotion`, `AudioReactiveView`): the video is the motion, and with its surface
@@ -733,8 +746,11 @@ vec4 hook() {
           if (o.contains('=')) await mpv.setProperty(o.substring(0, o.indexOf('=')), o.substring(o.indexOf('=') + 1));
         }
         await mpv.setProperty('cache-secs', foreground ? '30' : '10');
-        await mpv.setProperty('demuxer-max-bytes', '${(foreground ? 32 : 12) << 20}');
-        await mpv.setProperty('demuxer-max-back-bytes', '${(foreground ? 8 : 2) << 20}');
+        // A phone holds half: its 1080p VP9 is ~3-4 Mbit/s, so 16 MiB is still about the 30 s asked for, and a
+        // phone is where memory runs out (Android closes the app holding the most).
+        final phone = Host.isAndroid || Host.isIOS;
+        await mpv.setProperty('demuxer-max-bytes', '${(foreground ? (phone ? 16 : 32) : (phone ? 8 : 12)) << 20}');
+        await mpv.setProperty('demuxer-max-back-bytes', '${(foreground ? (phone ? 4 : 8) : 2) << 20}');
         // Each video frame redraws the whole window on a computer: fewer of them below Heavy (see [maxFps]).
         if (maxFps case final fps?) await mpv.setProperty('vf', 'fps=$fps');
       }

@@ -46,7 +46,7 @@ void main() {
         .where((f) => f.path.endsWith('.arb') && !f.path.endsWith('app_en.arb'));
     for (final language in AppLanguage.values.where((l) => l.code != null && l.code != 'en')) {
       expect(
-        others.map((f) => f.path),
+        others.map((f) => f.path.replaceAll(r'\', '/')),
         contains('lib/l10n/app_${language.code}.arb'),
         reason: '${language.name} has no .arb',
       );

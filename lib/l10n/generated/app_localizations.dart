@@ -9423,6 +9423,120 @@ abstract class AppLocalizations {
   /// **'SoundCloud'**
   String get sourceSoundcloud;
 
+  /// No description provided for @sourceMonochrome.
+  ///
+  /// In en, this message translates to:
+  /// **'Monochrome'**
+  String get sourceMonochrome;
+
+  /// No description provided for @spotiflacExtensions.
+  ///
+  /// In en, this message translates to:
+  /// **'SpotiFLAC extensions'**
+  String get spotiflacExtensions;
+
+  /// No description provided for @spotiflacAbout.
+  ///
+  /// In en, this message translates to:
+  /// **'Install provider plugins from .sflx files or an extension repository. Enable a provider to use it in Search.'**
+  String get spotiflacAbout;
+
+  /// No description provided for @importSflx.
+  ///
+  /// In en, this message translates to:
+  /// **'Import .sflx'**
+  String get importSflx;
+
+  /// No description provided for @spotiflacRepository.
+  ///
+  /// In en, this message translates to:
+  /// **'Extension repository URL'**
+  String get spotiflacRepository;
+
+  /// No description provided for @spotiflacLoadRepository.
+  ///
+  /// In en, this message translates to:
+  /// **'Browse repository'**
+  String get spotiflacLoadRepository;
+
+  /// No description provided for @spotiflacSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Provider settings'**
+  String get spotiflacSettings;
+
+  /// No description provided for @spotiflacNoSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'This provider has no settings.'**
+  String get spotiflacNoSettings;
+
+  /// No description provided for @spotiflacInvalidSetting.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a valid value.'**
+  String get spotiflacInvalidSetting;
+
+  /// No description provided for @spotiflacFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t complete the extension request. Check the provider settings and try again.'**
+  String get spotiflacFailed;
+
+  /// No description provided for @spotiflacEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No provider plugins installed yet.'**
+  String get spotiflacEmpty;
+
+  /// No description provided for @spotiflacQuality.
+  ///
+  /// In en, this message translates to:
+  /// **'Provider download quality'**
+  String get spotiflacQuality;
+
+  /// No description provided for @spotiflacLocalNetwork.
+  ///
+  /// In en, this message translates to:
+  /// **'Allow plugins to connect to local servers'**
+  String get spotiflacLocalNetwork;
+
+  /// No description provided for @spotiflacOriginal.
+  ///
+  /// In en, this message translates to:
+  /// **'Original quality'**
+  String get spotiflacOriginal;
+
+  /// No description provided for @spotiflacCantCast.
+  ///
+  /// In en, this message translates to:
+  /// **'Download this song before casting.'**
+  String get spotiflacCantCast;
+
+  /// No description provided for @noSourceResults.
+  ///
+  /// In en, this message translates to:
+  /// **'No {source} results.'**
+  String noSourceResults(String source);
+
+  /// No description provided for @enableSourceForSearch.
+  ///
+  /// In en, this message translates to:
+  /// **'Enable {source} in Music sources to search here.'**
+  String enableSourceForSearch(String source);
+
+  /// No description provided for @sourceSearchToggleSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Show as a source filter on Search; search this service when selected'**
+  String get sourceSearchToggleSubtitle;
+
+  /// No description provided for @noMonochromeResults.
+  ///
+  /// In en, this message translates to:
+  /// **'No Monochrome results.'**
+  String get noMonochromeResults;
+
   /// No description provided for @streamsFromSoundcloud.
   ///
   /// In en, this message translates to:
@@ -10968,8 +11082,32 @@ abstract class AppLocalizations {
   /// No description provided for @sourcesAbout.
   ///
   /// In en, this message translates to:
-  /// **'Free places where artists or rights holders share their own music. Riflay plays from their servers. The song sources are off until you turn them on.'**
+  /// **'Additional music services. Riflay plays from their servers. The song sources are off until you turn them on.'**
   String get sourcesAbout;
+
+  /// No description provided for @sourceMonochromeSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Monochrome\'s music catalog, in FLAC when available, on search\'s All'**
+  String get sourceMonochromeSubtitle;
+
+  /// No description provided for @openMusicLink.
+  ///
+  /// In en, this message translates to:
+  /// **'Open a music link'**
+  String get openMusicLink;
+
+  /// No description provided for @monochromeCantCast.
+  ///
+  /// In en, this message translates to:
+  /// **'Download this Monochrome song before casting.'**
+  String get monochromeCantCast;
+
+  /// No description provided for @openMusicLinkBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Paste a YouTube, SoundCloud or Monochrome link to play or import music.'**
+  String get openMusicLinkBody;
 
   /// No description provided for @sourceArchive.
   ///
@@ -11048,6 +11186,60 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Couldn\'t reach {source}. Try again.'**
   String sourceUnavailable(String source);
+
+  /// No description provided for @addFolderNamed.
+  ///
+  /// In en, this message translates to:
+  /// **'Add “{name}”'**
+  String addFolderNamed(String name);
+
+  /// No description provided for @folderOnlyAdd.
+  ///
+  /// In en, this message translates to:
+  /// **'Only add'**
+  String get folderOnlyAdd;
+
+  /// No description provided for @folderOnlyAddSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Its songs go into your library'**
+  String get folderOnlyAddSubtitle;
+
+  /// No description provided for @folderAsPlaylist.
+  ///
+  /// In en, this message translates to:
+  /// **'Add as playlist'**
+  String get folderAsPlaylist;
+
+  /// No description provided for @folderAsPlaylistSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'A playlist that follows this folder'**
+  String get folderAsPlaylistSubtitle;
+
+  /// No description provided for @folderPlaylist.
+  ///
+  /// In en, this message translates to:
+  /// **'Folder playlist'**
+  String get folderPlaylist;
+
+  /// No description provided for @makeFolderPlaylist.
+  ///
+  /// In en, this message translates to:
+  /// **'Show as a playlist'**
+  String get makeFolderPlaylist;
+
+  /// No description provided for @removeFolderPlaylist.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove from playlists'**
+  String get removeFolderPlaylist;
+
+  /// No description provided for @folderPlaylistRemoved.
+  ///
+  /// In en, this message translates to:
+  /// **'Removed from playlists. The folder and its songs stay.'**
+  String get folderPlaylistRemoved;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

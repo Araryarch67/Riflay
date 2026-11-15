@@ -5280,6 +5280,69 @@ class AppLocalizationsId extends AppLocalizations {
   String get sourceSoundcloud => 'SoundCloud';
 
   @override
+  String get sourceMonochrome => 'Monochrome';
+
+  @override
+  String get spotiflacExtensions => 'Ekstensi SpotiFLAC';
+
+  @override
+  String get spotiflacAbout =>
+      'Pasang plugin penyedia dari berkas .sflx atau repositori ekstensi. Aktifkan penyedia untuk menggunakannya di Pencarian.';
+
+  @override
+  String get importSflx => 'Impor .sflx';
+
+  @override
+  String get spotiflacRepository => 'URL repositori ekstensi';
+
+  @override
+  String get spotiflacLoadRepository => 'Jelajahi repositori';
+
+  @override
+  String get spotiflacSettings => 'Pengaturan penyedia';
+
+  @override
+  String get spotiflacNoSettings => 'Penyedia ini tidak memiliki pengaturan.';
+
+  @override
+  String get spotiflacInvalidSetting => 'Masukkan nilai yang valid.';
+
+  @override
+  String get spotiflacFailed => 'Permintaan ekstensi gagal. Periksa pengaturan penyedia lalu coba lagi.';
+
+  @override
+  String get spotiflacEmpty => 'Belum ada plugin penyedia yang dipasang.';
+
+  @override
+  String get spotiflacQuality => 'Kualitas unduhan penyedia';
+
+  @override
+  String get spotiflacLocalNetwork => 'Izinkan plugin terhubung ke server lokal';
+
+  @override
+  String get spotiflacOriginal => 'Kualitas asli';
+
+  @override
+  String get spotiflacCantCast => 'Unduh lagu ini sebelum mengirimnya ke perangkat lain.';
+
+  @override
+  String noSourceResults(String source) {
+    return 'Tidak ada hasil $source.';
+  }
+
+  @override
+  String enableSourceForSearch(String source) {
+    return 'Aktifkan $source di Sumber musik untuk mencari di sini.';
+  }
+
+  @override
+  String get sourceSearchToggleSubtitle =>
+      'Tampilkan sebagai filter sumber di Pencarian; cari di layanan ini saat dipilih';
+
+  @override
+  String get noMonochromeResults => 'Tidak ada hasil Monochrome.';
+
+  @override
   String get streamsFromSoundcloud => 'SoundCloud: butuh internet';
 
   @override
@@ -6140,7 +6203,21 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get sourcesAbout =>
-      'Tempat gratis di mana artis atau pemegang hak membagikan musik mereka sendiri. Riflay memutarnya langsung dari server mereka. Sumber lagu mati sampai kamu menyalakannya.';
+      'Layanan musik tambahan. Riflay memutarnya langsung dari server mereka. Sumber lagu mati sampai kamu menyalakannya.';
+
+  @override
+  String get sourceMonochromeSubtitle =>
+      'Katalog musik Monochrome, dalam FLAC jika tersedia, di bagian Semua pada pencarian';
+
+  @override
+  String get openMusicLink => 'Buka tautan musik';
+
+  @override
+  String get monochromeCantCast => 'Unduh lagu Monochrome ini sebelum mengirimnya ke perangkat lain.';
+
+  @override
+  String get openMusicLinkBody =>
+      'Tempel tautan YouTube, SoundCloud atau Monochrome untuk memutar atau mengimpor musik.';
 
   @override
   String get sourceArchive => 'Internet Archive di pencarian';
@@ -6193,4 +6270,33 @@ class AppLocalizationsId extends AppLocalizations {
   String sourceUnavailable(String source) {
     return '$source belum bisa diakses. Coba lagi.';
   }
+
+  @override
+  String addFolderNamed(String name) {
+    return 'Tambah “$name”';
+  }
+
+  @override
+  String get folderOnlyAdd => 'Tambah saja';
+
+  @override
+  String get folderOnlyAddSubtitle => 'Lagunya masuk ke library kamu';
+
+  @override
+  String get folderAsPlaylist => 'Tambah sebagai playlist';
+
+  @override
+  String get folderAsPlaylistSubtitle => 'Playlist yang mengikuti folder ini';
+
+  @override
+  String get folderPlaylist => 'Playlist folder';
+
+  @override
+  String get makeFolderPlaylist => 'Tampilkan sebagai playlist';
+
+  @override
+  String get removeFolderPlaylist => 'Hapus dari playlist';
+
+  @override
+  String get folderPlaylistRemoved => 'Dihapus dari playlist. Folder dan lagunya tetap ada.';
 }

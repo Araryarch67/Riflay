@@ -6,6 +6,7 @@ import '../platform/link_relay.dart';
 import '../platform/features.dart';
 import 'soundcloud.dart';
 import 'youtube_links.dart';
+import 'monochrome.dart';
 
 /// YouTube (and SoundCloud) links other apps hand to Riflay, wherever the system lets them:
 ///
@@ -36,7 +37,9 @@ class IncomingLinks {
 
   /// Whether a command-line argument is a link Riflay opens.
   static bool isLink(String arg) =>
-      YoutubeLinks.looksLikeLink(arg) || (Features.soundcloud && SoundcloudLink.looksLikeLink(arg));
+      YoutubeLinks.looksLikeLink(arg) ||
+      (Features.soundcloud && SoundcloudLink.looksLikeLink(arg)) ||
+      MonochromeLink.parse(arg) != null;
 
   final _waiting = <String>[];
   void Function(String text)? _handler;

@@ -7,7 +7,16 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   // Names that stay as they are in every language.
   const names = {
-    'Riflay', 'YouTube Music', 'YouTube', 'Spotify', 'Wrap', 'Riflay Wrap', 'Figtree', 'Matugen', 'Bit-perfect',
+    'Riflay',
+    'YouTube Music',
+    'YouTube',
+    'Spotify',
+    'Monochrome', 'SpotiFLAC',
+    'Wrap',
+    'Riflay Wrap',
+    'Figtree',
+    'Matugen',
+    'Bit-perfect',
     'Direct USB', 'Discord Rich Presence', 'ListenBrainz', 'Last.fm', 'Hex', 'Aa', 'DSP', 'GNU AGPL v3.0', //
     'Riflay video', 'Riflay video check', // mpv window titles, never shown
   };

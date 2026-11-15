@@ -6,10 +6,10 @@ import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:flutter/material.dart';
 
 import '../../models/track.dart';
-import '../../platform/features.dart';
 import '../../services/sources/internet_archive.dart';
 import '../../services/sources/music_sources.dart';
 import '../../services/sources/song_source.dart';
+import '../../services/spotiflac.dart';
 import '../../services/language.dart';
 import '../../services/player_controller.dart';
 import '../../services/soundcloud.dart' show SoundcloudCollection;
@@ -63,10 +63,9 @@ class _SearchPageState extends State<SearchPage> {
     super.initState();
     MusicSources.instance.load().ignore();
     MusicSources.instance.addListener(_followMusicSources);
-    if (Features.soundcloud) {
-      SearchSource.current.addListener(_followSource);
-      SearchSource.load().ignore();
-    }
+    Spotiflac.instance.addListener(_followMusicSources);
+    SearchSource.current.addListener(_followSource);
+    SearchSource.load().ignore();
     if (widget.input case final input?) {
       input.controller.addListener(_fromBar);
       input.submitted.addListener(_submittedFromBar);
@@ -89,6 +88,8 @@ class _SearchPageState extends State<SearchPage> {
   }
 
   String _query = '';
+  bool _applyingCommand = false;
+  SearchSource? _blockedSource;
 
   /// What the library is searched for: [_query], a moment after typing pauses.
   String _localQuery = '';
@@ -128,8 +129,16 @@ class _SearchPageState extends State<SearchPage> {
   final _shown = ShownSongs();
 
   /// Where to search online (always YouTube Music where SoundCloud isn't offered).
-  SearchSource get _source => Features.soundcloud ? SearchSource.current.value : SearchSource.youtubeMusic;
+  SearchSource get _source => SearchSource.available.contains(SearchSource.current.value)
+      ? SearchSource.current.value
+      : SearchSource.youtubeMusic;
   bool get _onSoundcloud => _source == SearchSource.soundcloud;
+  bool get _onMonochrome => _source == SearchSource.monochrome;
+  bool get _onYoutube => _source == SearchSource.youtubeMusic;
+  Future<List<Track>>? _monochrome;
+  Future<List<Track>>? _extensionResults;
+  String? _extensionSelection;
+  bool get _onExtensions => _source == SearchSource.extensions;
   Future<List<Track>>? _soundcloud;
   Future<({List<SoundcloudCollection> playlists, List<SoundcloudCollection> users})>? _soundcloudShelves;
 
@@ -140,6 +149,7 @@ class _SearchPageState extends State<SearchPage> {
     _videoSearch?.dispose();
     SearchSource.current.removeListener(_followSource);
     MusicSources.instance.removeListener(_followMusicSources);
+    Spotiflac.instance.removeListener(_followMusicSources);
     if (widget.input case final input?) {
       input.controller.removeListener(_fromBar);
       input.submitted.removeListener(_submittedFromBar);
@@ -149,7 +159,35 @@ class _SearchPageState extends State<SearchPage> {
     super.dispose();
   }
 
+  String _readCommand(String text) {
+    final command = SearchSource.readCommand(text);
+    _blockedSource = null;
+    if (command == null) return RegExp(r'^\s*:[a-z]*$', caseSensitive: false).hasMatch(text) ? '' : text;
+    if (!SearchSource.available.contains(command.source)) {
+      _blockedSource = command.source;
+    } else {
+      _applyingCommand = true;
+      command.source.choose();
+      _applyingCommand = false;
+    }
+    return command.query;
+  }
+
+  void _selectSource(SearchSource source) {
+    final query = SearchSource.readCommand(_controller.text)?.query ?? _controller.text;
+    _applyingCommand = true;
+    _controller.value = TextEditingValue(
+      text: query,
+      selection: TextSelection.collapsed(offset: query.length),
+    );
+    source.choose();
+    _applyingCommand = false;
+    _submit(query);
+  }
+
   void _onQuery(String value) {
+    if (_applyingCommand) return;
+    value = _readCommand(value);
     // The first letter (and clearing the box) answers at once; after that, once typing pauses.
     final now = value.trim().isEmpty || _localQuery.trim().isEmpty;
     _localTimer?.cancel();
@@ -188,6 +226,8 @@ class _SearchPageState extends State<SearchPage> {
     _debounce?.cancel();
     _localTimer?.cancel();
     if (_controller.text != value) _controller.text = value;
+    final original = value;
+    value = _readCommand(value);
     setState(() {
       _query = value;
       _localQuery = value;
@@ -195,13 +235,32 @@ class _SearchPageState extends State<SearchPage> {
     final q = value.trim();
     if (q.length >= 2) {
       setState(() => _searchYoutube(q));
-      RecentSearches.add(q);
+      RecentSearches.add(original.trim());
     }
   }
 
   void _searchYoutube(String q) {
+    if (_blockedSource != null) return;
     final c = PlayerScope.read(context);
+    if (_onExtensions) {
+      _extensionSelection = Spotiflac.instance.selected;
+      _extensionResults = Spotiflac.instance.search(q)..ignore();
+      _youtube = _all = _only = _top = null;
+      _soundcloud = null;
+      _soundcloudShelves = null;
+      _archive = null;
+      return;
+    }
     _searchExtra(q, force: true);
+    _monochrome = null;
+    if (_onMonochrome) {
+      _monochrome = c.monochrome.search(q, limit: 50)..ignore();
+      _youtube = _all = _only = _top = null;
+      _soundcloud = null;
+      _soundcloudShelves = null;
+      _archive = null;
+      return;
+    }
     _soundcloud = _onSoundcloud ? c.searchSoundcloud(q) : null;
     _soundcloudShelves = _onSoundcloud
         ? c.soundcloud.searchCollections(q).catchError((Object e) {
@@ -297,7 +356,7 @@ class _SearchPageState extends State<SearchPage> {
 
   /// The source was switched (here or in the top bar): the query is searched there.
   void _followSource() {
-    if (!mounted) return;
+    if (!mounted || _applyingCommand) return;
     setState(() {
       final q = _query.trim();
       if (q.length >= 2) _searchYoutube(q);
@@ -319,7 +378,7 @@ class _SearchPageState extends State<SearchPage> {
   /// Asks the song sources that are on for [q], on "All" of a YouTube Music search only. Without [force] a source
   /// already asked for [q] keeps its answer.
   void _searchExtra(String q, {bool force = false}) {
-    final sources = q.length >= 2 && !_onSoundcloud && !_videos && _filter == null
+    final sources = q.length >= 2 && _onYoutube && !_videos && _filter == null
         ? MusicSources.instance.enabledSongSources
         : const <SongSource>[];
     final key = '$q\u0000${sources.map((s) => s.prefix).join()}';
@@ -337,6 +396,13 @@ class _SearchPageState extends State<SearchPage> {
   }
 
   void _followMusicSources() {
+    final previous = SearchSource.current.value;
+    SearchSource.ensureAvailable();
+    if (previous != SearchSource.current.value) return;
+    if (_onExtensions && _extensionSelection != Spotiflac.instance.selected && _query.trim().length >= 2) {
+      if (mounted) setState(() => _searchYoutube(_query.trim()));
+      return;
+    }
     if (mounted) setState(() => _searchExtra(_query.trim()));
   }
 
@@ -402,8 +468,6 @@ class _SearchPageState extends State<SearchPage> {
                       Expanded(
                         child: Text(tr.navSearch, style: text.headlineMedium?.copyWith(fontWeight: FontWeight.w800)),
                       ),
-                      // Phones: the sources' switches sit beside the title, so no row is added above the results.
-                      if (Features.soundcloud) const SearchSourceToggle(height: 36),
                     ],
                   ),
                   const SizedBox(height: 16),
@@ -425,6 +489,7 @@ class _SearchPageState extends State<SearchPage> {
                             child: box(onChanged: (_) {}),
                           ),
                   ),
+                SearchSourceFilters(onSelected: _selectSource),
                 if (searching) ...[
                   if (widget.input == null) const SizedBox(height: 16),
                   Wrap(
@@ -432,7 +497,7 @@ class _SearchPageState extends State<SearchPage> {
                     runSpacing: 8,
                     crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
-                      if (!_onSoundcloud)
+                      if (_onYoutube)
                         SegmentedButton<bool>(
                           showSelectedIcon: false,
                           segments: [
@@ -444,8 +509,8 @@ class _SearchPageState extends State<SearchPage> {
                         ),
                     ],
                   ),
-                  if (!_videos && !_onSoundcloud) const SizedBox(height: 12),
-                  if (!_videos && !_onSoundcloud)
+                  if (!_videos && _onYoutube) const SizedBox(height: 12),
+                  if (!_videos && _onYoutube)
                     Wrap(
                       spacing: 8,
                       runSpacing: 8,
@@ -469,7 +534,9 @@ class _SearchPageState extends State<SearchPage> {
             ),
           ),
         ),
-        if (q.isEmpty) ...[
+        if (_blockedSource case final source?) ...[
+          SearchNote(tr.enableSourceForSearch(source.label), pad: pad),
+        ] else if (q.isEmpty) ...[
           SliverToBoxAdapter(
             child: Padding(
               padding: EdgeInsets.fromLTRB(pad, 8, pad, 0),
@@ -508,6 +575,12 @@ class _SearchPageState extends State<SearchPage> {
               ),
             ),
           ],
+        ] else if (_onExtensions) ...[
+          if (searching) MonochromeSection(future: _extensionResults, source: Spotiflac.instance.selectedName),
+          ..._library(c, results, shell),
+        ] else if (_onMonochrome) ...[
+          if (searching) MonochromeSection(future: _monochrome),
+          ..._library(c, results, shell),
         ] else if (_onSoundcloud) ...[
           if (searching) SoundcloudSection(future: _soundcloud, count: 10, title: tr.songs),
           if (searching) SoundcloudShelves(future: _soundcloudShelves),

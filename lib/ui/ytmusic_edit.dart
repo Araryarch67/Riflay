@@ -8,6 +8,8 @@ import '../services/language.dart';
 import '../services/layout_prefs.dart';
 import '../services/player_controller.dart';
 import '../services/youtube_importer.dart';
+import '../services/monochrome_download.dart';
+import '../services/spotiflac.dart';
 import '../services/youtube_music_account.dart';
 import '../services/ytmusic_web.dart';
 import 'download_options.dart';
@@ -571,11 +573,19 @@ class DownloadButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = PlayerScope.of(context);
-    if (!track.isRemote || !Features.downloads) return const SizedBox.shrink();
+    if ((!track.isRemote && track.monochromeId == null && track.extensionId == null) || !Features.downloads) {
+      return const SizedBox.shrink();
+    }
     return ListenableBuilder(
       listenable: c.youtube,
       builder: (context, _) {
-        final job = c.youtube.jobFor(track.videoId!);
+        final job = c.youtube.jobFor(
+          track.extensionId != null
+              ? Spotiflac.jobId(track)
+              : track.monochromeId != null
+              ? MonochromeDownload.jobId(track)
+              : track.videoId!,
+        );
         if (c.downloadedCopy(track) != null || job?.status == DownloadStatus.done) {
           return IconButton(
             tooltip: tr.downloaded,
@@ -617,14 +627,27 @@ class DownloadButton extends StatelessWidget {
         return ListenableBuilder(
           listenable: prefs,
           builder: (context, _) => Tooltip(
-            message: failed ? tr.downloadFailedTryAgain : tr.downloadHoldTooltip(describeChoice(prefs.choice)),
+            message: failed
+                ? tr.downloadFailedTryAgain
+                : tr.downloadHoldTooltip(
+                    track.extensionId != null
+                        ? tr.spotiflacOriginal
+                        : track.monochromeId != null
+                        ? 'FLAC'
+                        : describeChoice(prefs.choice),
+                  ),
             triggerMode: TooltipTriggerMode.manual,
             child: GestureDetector(
               behavior: HitTestBehavior.deferToChild,
               onLongPress: () async {
                 final messenger = ScaffoldMessenger.of(context);
+                if (track.extensionId != null) {
+                  c.youtube.enqueueTracks([track]);
+                  messenger.showSnackBar(SnackBar(content: Text(tr.downloadingTitle(track.title))));
+                  return;
+                }
                 await prefs.load();
-                final choice = prefs.choice;
+                final choice = track.monochromeId != null ? const DownloadChoice(DownloadFormat.flac) : prefs.choice;
                 c.youtube.enqueueTracks([track], choice: choice);
                 messenger.showSnackBar(SnackBar(content: Text(tr.downloadingIn(describeChoice(choice)))));
               },
@@ -633,7 +656,14 @@ class DownloadButton extends StatelessWidget {
                 color: failed ? Theme.of(context).colorScheme.error : color,
                 onPressed: () async {
                   final messenger = ScaffoldMessenger.of(context);
-                  final choice = await chooseDownload(context, videoId: track.videoId, track: track);
+                  if (track.extensionId != null) {
+                    c.youtube.enqueueTracks([track]);
+                    messenger.showSnackBar(SnackBar(content: Text(tr.downloadingTitle(track.title))));
+                    return;
+                  }
+                  final choice = track.monochromeId != null || track.extensionId != null
+                      ? const DownloadChoice(DownloadFormat.flac)
+                      : await chooseDownload(context, videoId: track.videoId, track: track);
                   if (choice == null) return;
                   c.youtube.enqueueTracks([track], choice: choice);
                   messenger.showSnackBar(SnackBar(content: Text(tr.downloadingTitle(track.title))));

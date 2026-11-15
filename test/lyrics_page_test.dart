@@ -226,7 +226,7 @@ void main() {
     expect(colorOf(tester, 'haro biggu waarudo'), _primary.withValues(alpha: 0.8), reason: 'not dim like the unsung');
   });
 
-  testWidgets('word fill advances on every Balanced beat (20 fps) without resetting at word boundaries', (
+  testWidgets('word fill advances on every Balanced beat (30 fps) without resetting at word boundaries', (
     tester,
   ) async {
     final prefs = LayoutPrefs.instance;
@@ -260,7 +260,7 @@ void main() {
     );
     await pump(tester, lyrics, length: const Duration(seconds: 30));
     final state = tester.state<KaraokeLineState>(find.byType(KaraokeLine));
-    // One Balanced beat (50 ms) a step.
+    // A step of 50 ms: one or two Balanced beats (30 fps).
     for (var i = 1; i <= 3; i++) {
       now = Duration(milliseconds: i * 50);
       await tester.pump(const Duration(milliseconds: 50));
@@ -275,10 +275,12 @@ void main() {
     expect(state.progress.sung + state.progress.fill, greaterThan(2));
     now = const Duration(milliseconds: 1600);
     await tester.pump(const Duration(milliseconds: 50));
-    expect(state.progress, karaokeProgress(words, now), reason: 'forward seeks snap');
+    expect(state.progress.sung, karaokeProgress(words, now).sung, reason: 'forward seeks snap');
+    expect(state.progress.fill, closeTo(karaokeProgress(words, now).fill, 1e-9), reason: 'forward seeks snap');
     now = const Duration(milliseconds: 500);
     await tester.pump(const Duration(milliseconds: 50));
-    expect(state.progress, karaokeProgress(words, now), reason: 'backward seeks snap');
+    expect(state.progress.sung, karaokeProgress(words, now).sung, reason: 'backward seeks snap');
+    expect(state.progress.fill, closeTo(karaokeProgress(words, now).fill, 1e-9), reason: 'backward seeks snap');
     expect(tester.takeException(), isNull);
   });
 

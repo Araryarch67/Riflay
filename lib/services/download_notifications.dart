@@ -108,7 +108,9 @@ int noteIdFor(String videoId) {
 int _percent(double progress) => (progress.clamp(0.0, 1.0) * 100).round();
 
 /// The notification for one download, or null when it needs none (cancelled).
-NoteContent? noteFor(JobSnapshot job, {int? idOverride}) {
+NoteContent? noteFor(JobSnapshot job, {int? idOverride, bool terminalOnly = false}) {
+  // Windows show() replaces a toast by posting another banner, so progress stays in Downloads.
+  if (terminalOnly && job.isActive) return null;
   final id = idOverride ?? noteIdFor(job.videoId);
   switch (job.status) {
     case DownloadStatus.queued:
@@ -162,7 +164,8 @@ NoteContent? noteFor(JobSnapshot job, {int? idOverride}) {
 /// The notification that stands for every running download: with one, that
 /// song (so Android's service notification is the song's own); with several,
 /// "Downloading 3 songs" and the overall progress.
-NoteContent? summaryFor(List<JobSnapshot> jobs) {
+NoteContent? summaryFor(List<JobSnapshot> jobs, {bool terminalOnly = false}) {
+  if (terminalOnly) return null;
   final active = jobs.where((j) => j.isActive).toList();
   if (active.isEmpty) return null;
   if (active.length == 1) return noteFor(active.single, idOverride: summaryNoteId);
@@ -469,7 +472,7 @@ class DownloadNotifications {
   }
 
   Future<void> _updateActive(List<JobSnapshot> active) async {
-    final summary = summaryFor(active);
+    final summary = summaryFor(active, terminalOnly: Host.isWindows);
     final wanted = <int>{};
     final serviceMode = _android;
     if (summary != null) {
@@ -481,7 +484,7 @@ class DownloadNotifications {
       }
       if (active.length > 1 || !serviceMode) {
         for (final job in active) {
-          final note = noteFor(job);
+          final note = noteFor(job, terminalOnly: Host.isWindows);
           if (note == null) continue;
           wanted.add(note.id);
           _queue(note);

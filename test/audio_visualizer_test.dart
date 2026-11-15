@@ -20,6 +20,7 @@ void main() {
   tearDown(prefs.reset);
 
   testWidgets('off preserves the cover with a minimal glow without requiring an audio player', (tester) async {
+    await prefs.setPlayerCover(PlayerCover.flower);
     await prefs.setVisualizer(false);
     const cover = SizedBox(key: ValueKey('art'), width: 200, height: 200);
     await tester.pumpWidget(
@@ -35,6 +36,7 @@ void main() {
   });
 
   testWidgets('reduced motion suppresses visualizer even when enabled', (tester) async {
+    await prefs.setPlayerCover(PlayerCover.flower);
     await prefs.setVisualizer(true);
     await prefs.setMotion(Motion.reduced);
     await tester.pumpWidget(
@@ -47,6 +49,7 @@ void main() {
   });
 
   testWidgets('linear cover previews keep a minimal glow without requiring an audio player', (tester) async {
+    await prefs.setPlayerCover(PlayerCover.flower);
     await prefs.setVisualizer(true);
     for (final style in VisualizerStyle.values.where((style) => !style.radial)) {
       await prefs.setVisualizerStyle(style);
@@ -66,6 +69,12 @@ void main() {
   });
 
   testWidgets('visualizer is off by default and offered under Beta features', (tester) async {
+    expect(prefs.playerCover, PlayerCover.square);
+    prefs.restore({});
+    expect(prefs.playerCover, PlayerCover.square);
+    prefs.restore({'visualizerCoverShape': 'flower'});
+    expect(prefs.playerCover, PlayerCover.flower);
+    prefs.restore({});
     expect(prefs.visualizer, isTrue);
     expect(prefs.visualizerEnabled, isFalse);
     expect(prefs.visualizerStyle, VisualizerStyle.pulse);
@@ -73,7 +82,7 @@ void main() {
     await prefs.setVisualizerStyle(VisualizerStyle.orbit);
     await tester.pumpWidget(const MaterialApp(home: AudioVisualizer(child: SizedBox.square(dimension: 200))));
     expect(find.byType(VisualizerCanvas), findsNothing);
-    expect(find.byType(FlowerCover), findsOneWidget);
+    expect(find.byType(FlowerCover), findsNothing);
     expect(find.byType(AudioReactiveView), findsNothing);
     await tester.pumpWidget(
       const MaterialApp(

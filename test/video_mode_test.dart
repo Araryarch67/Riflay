@@ -212,6 +212,29 @@ void main() {
     await tester.pump(const Duration(seconds: 3));
   });
 
+  test('a view on screen stops asking for the video while the app is away, and asks again when back', () {
+    final mode = VideoMode.instance;
+    final wasOn = mode.on;
+    mode.setOn(true);
+    mode.addView();
+    addTearDown(() {
+      mode.didChangeAppLifecycleState(AppLifecycleState.resumed);
+      mode.removeView();
+      mode.setOn(wasOn);
+    });
+    expect(mode.debugForeground, isTrue);
+    // Screen off / another app in front: the views stay mounted, but the video (decoder, buffers) is let go.
+    mode.didChangeAppLifecycleState(AppLifecycleState.paused);
+    expect(mode.debugForeground, isFalse);
+    mode.didChangeAppLifecycleState(AppLifecycleState.hidden);
+    expect(mode.debugForeground, isFalse);
+    // A pulled-down shade (inactive) keeps it.
+    mode.didChangeAppLifecycleState(AppLifecycleState.inactive);
+    expect(mode.debugForeground, isTrue);
+    mode.didChangeAppLifecycleState(AppLifecycleState.resumed);
+    expect(mode.debugForeground, isTrue);
+  });
+
   test('a stalling video comes down a step at a time, and back up no higher than the most allowed', () {
     expect(VideoMode.stepDown(1440), 1080);
     expect(VideoMode.stepDown(1080), 720);

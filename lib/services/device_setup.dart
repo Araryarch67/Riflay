@@ -61,7 +61,7 @@ class DeviceSetup {
   static const heavyMemoryGb = 16;
 
   /// A phone with less memory than this starts in Lightweight ([fitPhone]): 2-3 GB phones, where Android closes
-  /// apps in the background to make room and Balanced's motion and the 1440p video weigh most.
+  /// apps in the background to make room and Balanced's motion and the 1080p video weigh most.
   static const lowEndPhoneGb = 4;
 
   static const _phoneKey = 'phoneSetup.v1';

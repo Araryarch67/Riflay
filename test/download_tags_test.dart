@@ -4,6 +4,7 @@ import 'dart:typed_data';
 
 import 'package:audio_metadata_reader/audio_metadata_reader.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:path/path.dart' as p;
 import 'package:riflay/models/track.dart';
 import 'package:riflay/services/metadata.dart';
 import 'package:riflay/services/webm_opus.dart';
@@ -117,7 +118,7 @@ void main() {
     final bad = File('${dir.path}/bad.webm')..writeAsBytesSync([1, 2, 3, 4]);
     expect((await YoutubeImporter.remuxOpus(bad)).path, bad.path);
     expect(bad.existsSync(), isTrue);
-    expect(dir.listSync().map((e) => e.path.split('/').last).toSet(), {'AM3DIzTpcw4.opus', 'bad.webm'});
+    expect(dir.listSync().map((e) => p.basename(e.path)).toSet(), {'AM3DIzTpcw4.opus', 'bad.webm'});
   });
 
   test('toMp3 makes a constant-bitrate MP3 and removes the stream', () async {

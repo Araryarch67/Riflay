@@ -1,0 +1,2288 @@
+package gobackend
+
+import (
+	"bytes"
+	"encoding/binary"
+	"fmt"
+	stdimage "image"
+	_ "image/gif"
+	"image/jpeg"
+	_ "image/png"
+	"io"
+	"math"
+	"os"
+	"path/filepath"
+	"regexp"
+	"strconv"
+	"strings"
+
+	"github.com/go-flac/flacpicture/v2"
+	"github.com/go-flac/flacvorbis/v2"
+	"github.com/go-flac/go-flac/v2"
+)
+
+const artistTagModeSplitVorbis = "split_vorbis"
+
+var artistTagSplitPattern = regexp.MustCompile(`\s*(?:,|&|\bx\b)\s*|\s+\b(?:feat(?:uring)?|ft|with)\.?\s*`)
+
+func detectCoverMIME(coverPath string, coverData []byte) string {
+	// Prefer magic-byte detection over file extension.
+	// Some providers return non-JPEG data behind .jpg URLs.
+	if len(coverData) >= 8 &&
+		coverData[0] == 0x89 &&
+		coverData[1] == 0x50 &&
+		coverData[2] == 0x4E &&
+		coverData[3] == 0x47 &&
+		coverData[4] == 0x0D &&
+		coverData[5] == 0x0A &&
+		coverData[6] == 0x1A &&
+		coverData[7] == 0x0A {
+		return "image/png"
+	}
+	if len(coverData) >= 3 &&
+		coverData[0] == 0xFF &&
+		coverData[1] == 0xD8 &&
+		coverData[2] == 0xFF {
+		return "image/jpeg"
+	}
+	if len(coverData) >= 6 {
+		header := string(coverData[:6])
+		if header == "GIF87a" || header == "GIF89a" {
+			return "image/gif"
+		}
+	}
+	if len(coverData) >= 12 &&
+		string(coverData[:4]) == "RIFF" &&
+		string(coverData[8:12]) == "WEBP" {
+		return "image/webp"
+	}
+
+	switch strings.ToLower(filepath.Ext(strings.TrimSpace(coverPath))) {
+	case ".png":
+		return "image/png"
+	case ".jpg", ".jpeg":
+		return "image/jpeg"
+	case ".webp":
+		return "image/webp"
+	case ".gif":
+		return "image/gif"
+	}
+
+	return "image/jpeg"
+}
+
+// maxFlacPictureBytes keeps cover art below the 24-bit length field of a FLAC
+// metadata block; go-flac silently truncates oversized blocks into a corrupt file.
+const maxFlacPictureBytes = 16 * 1000 * 1000
+
+// fitCoverForFlac returns cover bytes that fit inside a FLAC PICTURE block,
+// re-encoding and downscaling when needed. Returns false if the data cannot be
+// decoded as an image.
+func fitCoverForFlac(coverData []byte) ([]byte, bool) {
+	if len(coverData) <= maxFlacPictureBytes {
+		return coverData, true
+	}
+
+	img, _, err := stdimage.Decode(bytes.NewReader(coverData))
+	if err != nil {
+		return nil, false
+	}
+
+	for _, quality := range []int{90, 80, 70, 60} {
+		if encoded, ok := encodeJPEGUnder(img, quality, maxFlacPictureBytes); ok {
+			return encoded, true
+		}
+	}
+
+	for _, maxDim := range []int{1500, 1200, 1000, 800} {
+		scaled := downscaleImage(img, maxDim)
+		if encoded, ok := encodeJPEGUnder(scaled, 85, maxFlacPictureBytes); ok {
+			return encoded, true
+		}
+	}
+
+	return nil, false
+}
+
+func encodeJPEGUnder(img stdimage.Image, quality, limit int) ([]byte, bool) {
+	var buf bytes.Buffer
+	if err := jpeg.Encode(&buf, img, &jpeg.Options{Quality: quality}); err != nil {
+		return nil, false
+	}
+	if buf.Len() > limit {
+		return nil, false
+	}
+	return buf.Bytes(), true
+}
+
+func downscaleImage(img stdimage.Image, maxDim int) stdimage.Image {
+	bounds := img.Bounds()
+	width, height := bounds.Dx(), bounds.Dy()
+	if width <= maxDim && height <= maxDim {
+		return img
+	}
+
+	scale := float64(maxDim) / float64(max(width, height))
+	newWidth := max(1, int(float64(width)*scale))
+	newHeight := max(1, int(float64(height)*scale))
+
+	dst := stdimage.NewRGBA(stdimage.Rect(0, 0, newWidth, newHeight))
+	for y := 0; y < newHeight; y++ {
+		srcY := bounds.Min.Y + int(float64(y)/scale)
+		for x := 0; x < newWidth; x++ {
+			srcX := bounds.Min.X + int(float64(x)/scale)
+			dst.Set(x, y, img.At(srcX, srcY))
+		}
+	}
+	return dst
+}
+
+func buildPictureBlock(coverPath string, coverData []byte) (flac.MetaDataBlock, error) {
+	if len(coverData) == 0 {
+		return flac.MetaDataBlock{}, fmt.Errorf("empty cover data")
+	}
+
+	fitted, ok := fitCoverForFlac(coverData)
+	if !ok {
+		return flac.MetaDataBlock{}, fmt.Errorf("cover too large for FLAC picture block and could not be resized")
+	}
+	coverData = fitted
+
+	mime := detectCoverMIME(coverPath, coverData)
+	picture := &flacpicture.MetadataBlockPicture{
+		PictureType: flacpicture.PictureTypeFrontCover,
+		MIME:        mime,
+		Description: "Front Cover",
+		ImageData:   coverData,
+	}
+
+	// Width/height/depth are optional in practice; keep zero when decode fails.
+	if cfg, format, err := stdimage.DecodeConfig(bytes.NewReader(coverData)); err == nil {
+		picture.Width = uint32(cfg.Width)
+		picture.Height = uint32(cfg.Height)
+		switch format {
+		case "png":
+			picture.ColorDepth = 32
+		case "jpeg":
+			picture.ColorDepth = 24
+		default:
+			picture.ColorDepth = 0
+		}
+	}
+
+	return picture.Marshal(), nil
+}
+
+type Metadata struct {
+	Title         string
+	Artist        string
+	Album         string
+	AlbumArtist   string
+	ArtistTagMode string
+	Date          string
+	TrackNumber   int
+	TotalTracks   int
+	DiscNumber    int
+	TotalDiscs    int
+	ISRC          string
+	Description   string
+	Lyrics        string
+	Genre         string
+	Label         string
+	Copyright     string
+	Composer      string
+	Comment       string
+
+	// ReplayGain fields (stored as Vorbis Comments in FLAC)
+	ReplayGainTrackGain string // e.g. "-6.50 dB"
+	ReplayGainTrackPeak string // e.g. "0.988831"
+	ReplayGainAlbumGain string // e.g. "-7.20 dB"
+	ReplayGainAlbumPeak string // e.g. "1.000000"
+}
+
+func EmbedMetadata(filePath string, metadata Metadata, coverPath string) error {
+	f, err := flac.ParseFile(filePath)
+	if err != nil {
+		return fmt.Errorf("failed to parse FLAC file: %w", err)
+	}
+
+	var cmtIdx int = -1
+	var cmt *flacvorbis.MetaDataBlockVorbisComment
+
+	for idx, meta := range f.Meta {
+		if meta.Type == flac.VorbisComment {
+			cmtIdx = idx
+			cmt, err = flacvorbis.ParseFromMetaDataBlock(*meta)
+			if err != nil {
+				return fmt.Errorf("failed to parse vorbis comment: %w", err)
+			}
+			break
+		}
+	}
+
+	if cmt == nil {
+		cmt = flacvorbis.New()
+	}
+
+	writeVorbisMetadata(cmt, metadata)
+
+	cmtBlock := cmt.Marshal()
+	if cmtIdx >= 0 {
+		f.Meta[cmtIdx] = &cmtBlock
+	} else {
+		f.Meta = append(f.Meta, &cmtBlock)
+	}
+
+	if coverPath != "" {
+		if fileExists(coverPath) {
+			coverData, err := os.ReadFile(coverPath)
+			if err != nil {
+				fmt.Printf("[Metadata] Warning: Failed to read cover file %s: %v\n", coverPath, err)
+			} else {
+				for i := len(f.Meta) - 1; i >= 0; i-- {
+					if f.Meta[i].Type == flac.Picture {
+						f.Meta = append(f.Meta[:i], f.Meta[i+1:]...)
+					}
+				}
+
+				picBlock, err := buildPictureBlock(coverPath, coverData)
+				if err != nil {
+					fmt.Printf("[Metadata] Warning: skipping cover art: %v\n", err)
+				} else {
+					f.Meta = append(f.Meta, &picBlock)
+					fmt.Printf("[Metadata] Cover art embedded successfully (%d bytes)\n", len(coverData))
+				}
+			}
+		} else {
+			fmt.Printf("[Metadata] Warning: Cover file does not exist: %s\n", coverPath)
+		}
+	}
+
+	return f.Save(filePath)
+}
+
+func EmbedMetadataWithCoverData(filePath string, metadata Metadata, coverData []byte) error {
+	f, err := flac.ParseFile(filePath)
+	if err != nil {
+		return fmt.Errorf("failed to parse FLAC file: %w", err)
+	}
+
+	var cmtIdx int = -1
+	var cmt *flacvorbis.MetaDataBlockVorbisComment
+
+	for idx, meta := range f.Meta {
+		if meta.Type == flac.VorbisComment {
+			cmtIdx = idx
+			cmt, err = flacvorbis.ParseFromMetaDataBlock(*meta)
+			if err != nil {
+				return fmt.Errorf("failed to parse vorbis comment: %w", err)
+			}
+			break
+		}
+	}
+
+	if cmt == nil {
+		cmt = flacvorbis.New()
+	}
+
+	writeVorbisMetadata(cmt, metadata)
+
+	cmtBlock := cmt.Marshal()
+	if cmtIdx >= 0 {
+		f.Meta[cmtIdx] = &cmtBlock
+	} else {
+		f.Meta = append(f.Meta, &cmtBlock)
+	}
+
+	if len(coverData) > 0 {
+		for i := len(f.Meta) - 1; i >= 0; i-- {
+			if f.Meta[i].Type == flac.Picture {
+				f.Meta = append(f.Meta[:i], f.Meta[i+1:]...)
+			}
+		}
+
+		picBlock, err := buildPictureBlock("", coverData)
+		if err != nil {
+			fmt.Printf("[Metadata] Warning: skipping cover art: %v\n", err)
+		} else {
+			f.Meta = append(f.Meta, &picBlock)
+			fmt.Printf("[Metadata] Cover art embedded successfully (%d bytes)\n", len(coverData))
+		}
+	}
+
+	return f.Save(filePath)
+}
+
+func ReadMetadata(filePath string) (*Metadata, error) {
+	f, err := flac.ParseFile(filePath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse FLAC file: %w", err)
+	}
+
+	metadata := &Metadata{}
+
+	for _, meta := range f.Meta {
+		if meta.Type == flac.VorbisComment {
+			cmt, err := flacvorbis.ParseFromMetaDataBlock(*meta)
+			if err != nil {
+				continue
+			}
+
+			metadata.Title = getComment(cmt, "TITLE")
+			metadata.Artist = getJoinedComment(cmt, "ARTIST")
+			metadata.Album = getComment(cmt, "ALBUM")
+			metadata.AlbumArtist = getJoinedComment(cmt, "ALBUMARTIST")
+			if metadata.AlbumArtist == "" {
+				metadata.AlbumArtist = getJoinedComment(cmt, "ALBUM ARTIST")
+			}
+			if metadata.AlbumArtist == "" {
+				metadata.AlbumArtist = getJoinedComment(cmt, "ALBUM_ARTIST")
+			}
+			metadata.Date = getComment(cmt, "DATE")
+			metadata.ISRC = getComment(cmt, "ISRC")
+			metadata.Description = getComment(cmt, "DESCRIPTION")
+
+			metadata.Lyrics = getComment(cmt, "LYRICS")
+			if metadata.Lyrics == "" {
+				metadata.Lyrics = getComment(cmt, "UNSYNCEDLYRICS")
+			}
+
+			trackNum := getComment(cmt, "TRACKNUMBER")
+			if trackNum != "" {
+				metadata.TrackNumber, metadata.TotalTracks = parseIndexPair(trackNum)
+			}
+			if metadata.TrackNumber == 0 {
+				trackNum = getComment(cmt, "TRACK")
+				if trackNum != "" {
+					metadata.TrackNumber, metadata.TotalTracks = parseIndexPair(trackNum)
+				}
+			}
+
+			discNum := getComment(cmt, "DISCNUMBER")
+			if discNum != "" {
+				metadata.DiscNumber, metadata.TotalDiscs = parseIndexPair(discNum)
+			}
+			if metadata.DiscNumber == 0 {
+				discNum = getComment(cmt, "DISC")
+				if discNum != "" {
+					metadata.DiscNumber, metadata.TotalDiscs = parseIndexPair(discNum)
+				}
+			}
+
+			if metadata.Date == "" {
+				metadata.Date = getComment(cmt, "YEAR")
+			}
+
+			metadata.Genre = getComment(cmt, "GENRE")
+			metadata.Label = getComment(cmt, "ORGANIZATION")
+			if metadata.Label == "" {
+				metadata.Label = getComment(cmt, "LABEL")
+			}
+			if metadata.Label == "" {
+				metadata.Label = getComment(cmt, "PUBLISHER")
+			}
+			metadata.Copyright = getComment(cmt, "COPYRIGHT")
+			metadata.Composer = getComment(cmt, "COMPOSER")
+			metadata.Comment = getComment(cmt, "COMMENT")
+
+			metadata.ReplayGainTrackGain = getComment(cmt, "REPLAYGAIN_TRACK_GAIN")
+			metadata.ReplayGainTrackPeak = getComment(cmt, "REPLAYGAIN_TRACK_PEAK")
+			metadata.ReplayGainAlbumGain = getComment(cmt, "REPLAYGAIN_ALBUM_GAIN")
+			metadata.ReplayGainAlbumPeak = getComment(cmt, "REPLAYGAIN_ALBUM_PEAK")
+
+			break
+		}
+	}
+
+	return metadata, nil
+}
+
+// EditFlacFields opens a FLAC file and updates only the Vorbis Comment keys
+// that are explicitly present in the fields map.  Keys present with a non-empty
+// value are set; keys present with an empty value are removed (cleared).  Keys
+// absent from the map are left untouched.  This is the correct function for
+// partial edits (e.g. writing only ReplayGain tags) and full editor saves alike.
+func EditFlacFields(filePath string, fields map[string]string) error {
+	f, err := flac.ParseFile(filePath)
+	if err != nil {
+		return fmt.Errorf("failed to parse FLAC file: %w", err)
+	}
+
+	var cmtIdx int = -1
+	var cmt *flacvorbis.MetaDataBlockVorbisComment
+
+	for idx, meta := range f.Meta {
+		if meta.Type == flac.VorbisComment {
+			cmtIdx = idx
+			cmt, err = flacvorbis.ParseFromMetaDataBlock(*meta)
+			if err != nil {
+				return fmt.Errorf("failed to parse vorbis comment: %w", err)
+			}
+			break
+		}
+	}
+	if cmt == nil {
+		cmt = flacvorbis.New()
+	}
+
+	artistMode := fields["artist_tag_mode"]
+
+	// Mapping from fields-map key → one or more Vorbis Comment keys.
+	// Each entry is handled with set-or-clear semantics.
+	simpleKeys := map[string]string{
+		"title":                 "TITLE",
+		"album":                 "ALBUM",
+		"date":                  "DATE",
+		"isrc":                  "ISRC",
+		"genre":                 "GENRE",
+		"label":                 "ORGANIZATION",
+		"copyright":             "COPYRIGHT",
+		"composer":              "COMPOSER",
+		"comment":               "COMMENT",
+		"replaygain_track_gain": "REPLAYGAIN_TRACK_GAIN",
+		"replaygain_track_peak": "REPLAYGAIN_TRACK_PEAK",
+		"replaygain_album_gain": "REPLAYGAIN_ALBUM_GAIN",
+		"replaygain_album_peak": "REPLAYGAIN_ALBUM_PEAK",
+	}
+
+	for fieldKey, vorbisKey := range simpleKeys {
+		if v, ok := fields[fieldKey]; ok {
+			setOrClearComment(cmt, vorbisKey, v)
+		}
+	}
+
+	// Remove known aliases for fields that were just written/cleared, so that
+	// tags from other taggers (e.g. LABEL, PUBLISHER, ALBUM ARTIST) don't
+	// conflict with the canonical keys we use.
+	aliasCleanup := map[string][]string{
+		"label":     {"LABEL", "PUBLISHER"}, // canonical: ORGANIZATION
+		"date":      {"YEAR"},               // canonical: DATE
+		"genre":     {},                     // no common aliases
+		"copyright": {},
+	}
+	for fieldKey, aliases := range aliasCleanup {
+		if _, ok := fields[fieldKey]; ok {
+			for _, alias := range aliases {
+				removeCommentKey(cmt, alias)
+			}
+		}
+	}
+
+	// Artist fields: use split-artist logic when mode is set.
+	if v, ok := fields["artist"]; ok {
+		setOrClearArtistComments(cmt, "ARTIST", v, artistMode)
+	}
+	if v, ok := fields["album_artist"]; ok {
+		setOrClearArtistComments(cmt, "ALBUMARTIST", v, artistMode)
+		// Remove aliases from other taggers.
+		removeCommentKey(cmt, "ALBUM ARTIST")
+		removeCommentKey(cmt, "ALBUM_ARTIST")
+	}
+
+	// Track/disc numbers: present + empty → clear; when only totals are edited,
+	// preserve the current index number and rewrite the combined value.
+	if _, ok := fields["track_number"]; ok || fields["track_total"] != "" || hasMapKey(fields, "track_total") {
+		currentTrackNum, currentTotalTracks := parseIndexPair(getComment(cmt, "TRACKNUMBER"))
+		if currentTrackNum == 0 && currentTotalTracks == 0 {
+			currentTrackNum, currentTotalTracks = parseIndexPair(getComment(cmt, "TRACK"))
+		}
+		if v, ok := fields["track_number"]; ok {
+			currentTrackNum = parsePositiveInt(v)
+		}
+		if v, ok := fields["track_total"]; ok {
+			currentTotalTracks = parsePositiveInt(v)
+		}
+		if currentTrackNum > 0 {
+			setOrClearComment(cmt, "TRACKNUMBER", formatIndexValue(currentTrackNum, currentTotalTracks))
+		} else {
+			removeCommentKey(cmt, "TRACKNUMBER")
+		}
+		removeCommentKey(cmt, "TRACK") // alias
+	}
+	if _, ok := fields["disc_number"]; ok || fields["disc_total"] != "" || hasMapKey(fields, "disc_total") {
+		currentDiscNum, currentTotalDiscs := parseIndexPair(getComment(cmt, "DISCNUMBER"))
+		if currentDiscNum == 0 && currentTotalDiscs == 0 {
+			currentDiscNum, currentTotalDiscs = parseIndexPair(getComment(cmt, "DISC"))
+		}
+		if v, ok := fields["disc_number"]; ok {
+			currentDiscNum = parsePositiveInt(v)
+		}
+		if v, ok := fields["disc_total"]; ok {
+			currentTotalDiscs = parsePositiveInt(v)
+		}
+		if currentDiscNum > 0 {
+			setOrClearComment(cmt, "DISCNUMBER", formatIndexValue(currentDiscNum, currentTotalDiscs))
+		} else {
+			removeCommentKey(cmt, "DISCNUMBER")
+		}
+		removeCommentKey(cmt, "DISC") // alias
+	}
+
+	// Lyrics: set both LYRICS + UNSYNCEDLYRICS, or clear both.
+	if v, ok := fields["lyrics"]; ok {
+		if v != "" {
+			setOrClearComment(cmt, "LYRICS", v)
+			setOrClearComment(cmt, "UNSYNCEDLYRICS", v)
+		} else {
+			removeCommentKey(cmt, "LYRICS")
+			removeCommentKey(cmt, "UNSYNCEDLYRICS")
+		}
+	}
+
+	cmtBlock := cmt.Marshal()
+	if cmtIdx >= 0 {
+		f.Meta[cmtIdx] = &cmtBlock
+	} else {
+		f.Meta = append(f.Meta, &cmtBlock)
+	}
+
+	coverPath := strings.TrimSpace(fields["cover_path"])
+	if coverPath != "" && fileExists(coverPath) {
+		coverData, err := os.ReadFile(coverPath)
+		if err == nil && len(coverData) > 0 {
+			for i := len(f.Meta) - 1; i >= 0; i-- {
+				if f.Meta[i].Type == flac.Picture {
+					f.Meta = append(f.Meta[:i], f.Meta[i+1:]...)
+				}
+			}
+			picBlock, err := buildPictureBlock("", coverData)
+			if err == nil {
+				f.Meta = append(f.Meta, &picBlock)
+			}
+		}
+	}
+
+	return f.Save(filePath)
+}
+
+// writeVorbisMetadata writes all metadata fields to a Vorbis Comment block.
+// Empty/zero values are simply skipped (not written, not cleared).  This is
+// used by the download embedding path where absent fields should preserve any
+// existing values.  The editor path uses EditFlacFields() instead.
+func writeVorbisMetadata(cmt *flacvorbis.MetaDataBlockVorbisComment, metadata Metadata) {
+	setComment(cmt, "TITLE", metadata.Title)
+	setArtistComments(cmt, "ARTIST", metadata.Artist, metadata.ArtistTagMode)
+	setComment(cmt, "ALBUM", metadata.Album)
+	setArtistComments(cmt, "ALBUMARTIST", metadata.AlbumArtist, metadata.ArtistTagMode)
+	setComment(cmt, "DATE", metadata.Date)
+
+	if metadata.TrackNumber > 0 {
+		setComment(cmt, "TRACKNUMBER", formatIndexValue(metadata.TrackNumber, metadata.TotalTracks))
+	}
+
+	if metadata.DiscNumber > 0 {
+		setComment(cmt, "DISCNUMBER", formatIndexValue(metadata.DiscNumber, metadata.TotalDiscs))
+	}
+
+	if metadata.ISRC != "" {
+		setComment(cmt, "ISRC", metadata.ISRC)
+	}
+
+	if metadata.Description != "" {
+		setComment(cmt, "DESCRIPTION", metadata.Description)
+	}
+
+	if metadata.Lyrics != "" {
+		setComment(cmt, "LYRICS", metadata.Lyrics)
+		setComment(cmt, "UNSYNCEDLYRICS", metadata.Lyrics)
+	}
+
+	if metadata.Genre != "" {
+		setComment(cmt, "GENRE", metadata.Genre)
+	}
+
+	if metadata.Label != "" {
+		setComment(cmt, "ORGANIZATION", metadata.Label)
+	}
+
+	if metadata.Copyright != "" {
+		setComment(cmt, "COPYRIGHT", metadata.Copyright)
+	}
+
+	if metadata.Composer != "" {
+		setComment(cmt, "COMPOSER", metadata.Composer)
+	}
+
+	if metadata.Comment != "" {
+		setComment(cmt, "COMMENT", metadata.Comment)
+	}
+
+	setComment(cmt, "REPLAYGAIN_TRACK_GAIN", metadata.ReplayGainTrackGain)
+	setComment(cmt, "REPLAYGAIN_TRACK_PEAK", metadata.ReplayGainTrackPeak)
+	setComment(cmt, "REPLAYGAIN_ALBUM_GAIN", metadata.ReplayGainAlbumGain)
+	setComment(cmt, "REPLAYGAIN_ALBUM_PEAK", metadata.ReplayGainAlbumPeak)
+}
+
+func setComment(cmt *flacvorbis.MetaDataBlockVorbisComment, key, value string) {
+	if value == "" {
+		return
+	}
+	removeCommentKey(cmt, key)
+	cmt.Comments = append(cmt.Comments, key+"="+value)
+}
+
+// setOrClearComment writes a Vorbis Comment, or removes the key if value is
+// empty.  Used by the metadata editor path where empty means "delete this tag".
+func setOrClearComment(cmt *flacvorbis.MetaDataBlockVorbisComment, key, value string) {
+	if value == "" {
+		removeCommentKey(cmt, key)
+		return
+	}
+	removeCommentKey(cmt, key)
+	cmt.Comments = append(cmt.Comments, key+"="+value)
+}
+
+func setArtistComments(cmt *flacvorbis.MetaDataBlockVorbisComment, key, value, mode string) {
+	if value == "" {
+		return
+	}
+	values := []string{value}
+	if shouldSplitVorbisArtistTags(mode) {
+		values = splitArtistTagValues(value)
+	}
+	if len(values) == 0 {
+		return
+	}
+	removeCommentKey(cmt, key)
+	for _, artist := range values {
+		if strings.TrimSpace(artist) == "" {
+			continue
+		}
+		cmt.Comments = append(cmt.Comments, key+"="+artist)
+	}
+}
+
+// setOrClearArtistComments writes artist Vorbis Comments, or removes the key
+// if value is empty.  Used by the metadata editor path.
+func setOrClearArtistComments(cmt *flacvorbis.MetaDataBlockVorbisComment, key, value, mode string) {
+	if value == "" {
+		removeCommentKey(cmt, key)
+		return
+	}
+	values := []string{value}
+	if shouldSplitVorbisArtistTags(mode) {
+		values = splitArtistTagValues(value)
+	}
+	if len(values) == 0 {
+		removeCommentKey(cmt, key)
+		return
+	}
+	removeCommentKey(cmt, key)
+	for _, artist := range values {
+		if strings.TrimSpace(artist) == "" {
+			continue
+		}
+		cmt.Comments = append(cmt.Comments, key+"="+artist)
+	}
+}
+
+// RewriteSplitArtistTags opens a FLAC file and rewrites the ARTIST and
+// ALBUMARTIST Vorbis comments as multiple separate entries (one per artist).
+// This is needed because FFmpeg's -metadata flag deduplicates keys, so only
+// the last value survives when multiple -metadata ARTIST=X flags are used.
+// The native go-flac writer correctly handles multiple Vorbis comments.
+func RewriteSplitArtistTags(filePath, artist, albumArtist string) error {
+	if !shouldSplitVorbisArtistTags(artistTagModeSplitVorbis) {
+		return nil
+	}
+
+	f, err := flac.ParseFile(filePath)
+	if err != nil {
+		return fmt.Errorf("failed to parse FLAC file: %w", err)
+	}
+
+	var cmtIdx int = -1
+	var cmt *flacvorbis.MetaDataBlockVorbisComment
+
+	for idx, meta := range f.Meta {
+		if meta.Type == flac.VorbisComment {
+			cmtIdx = idx
+			cmt, err = flacvorbis.ParseFromMetaDataBlock(*meta)
+			if err != nil {
+				return fmt.Errorf("failed to parse vorbis comment: %w", err)
+			}
+			break
+		}
+	}
+
+	if cmt == nil {
+		cmt = flacvorbis.New()
+	}
+
+	setArtistComments(cmt, "ARTIST", artist, artistTagModeSplitVorbis)
+	setArtistComments(cmt, "ALBUMARTIST", albumArtist, artistTagModeSplitVorbis)
+
+	cmtMeta := cmt.Marshal()
+	if cmtIdx >= 0 {
+		f.Meta[cmtIdx] = &cmtMeta
+	} else {
+		f.Meta = append(f.Meta, &cmtMeta)
+	}
+
+	return f.Save(filePath)
+}
+
+func removeCommentKey(cmt *flacvorbis.MetaDataBlockVorbisComment, key string) {
+	keyUpper := strings.ToUpper(key)
+	for i := len(cmt.Comments) - 1; i >= 0; i-- {
+		comment := cmt.Comments[i]
+		eqIdx := strings.Index(comment, "=")
+		if eqIdx > 0 {
+			existingKey := strings.ToUpper(comment[:eqIdx])
+			if existingKey == keyUpper {
+				cmt.Comments = append(cmt.Comments[:i], cmt.Comments[i+1:]...)
+			}
+		}
+	}
+}
+
+func getComment(cmt *flacvorbis.MetaDataBlockVorbisComment, key string) string {
+	values := getCommentValues(cmt, key)
+	if len(values) == 0 {
+		return ""
+	}
+	return values[0]
+}
+
+func getJoinedComment(cmt *flacvorbis.MetaDataBlockVorbisComment, key string) string {
+	return joinVorbisCommentValues(getCommentValues(cmt, key))
+}
+
+func getCommentValues(cmt *flacvorbis.MetaDataBlockVorbisComment, key string) []string {
+	keyUpper := strings.ToUpper(key) + "="
+	values := make([]string, 0, 1)
+	for _, comment := range cmt.Comments {
+		if len(comment) > len(key) {
+			commentUpper := strings.ToUpper(comment[:len(key)+1])
+			if commentUpper == keyUpper {
+				values = append(values, comment[len(key)+1:])
+			}
+		}
+	}
+	return values
+}
+
+func shouldSplitVorbisArtistTags(mode string) bool {
+	return strings.EqualFold(strings.TrimSpace(mode), artistTagModeSplitVorbis)
+}
+
+func splitArtistTagValues(rawArtists string) []string {
+	trimmed := strings.TrimSpace(rawArtists)
+	if trimmed == "" {
+		return nil
+	}
+
+	parts := artistTagSplitPattern.Split(trimmed, -1)
+	values := make([]string, 0, len(parts))
+	seen := make(map[string]struct{}, len(parts))
+	for _, part := range parts {
+		artist := strings.TrimSpace(part)
+		if artist == "" {
+			continue
+		}
+		key := strings.ToLower(artist)
+		if _, ok := seen[key]; ok {
+			continue
+		}
+		seen[key] = struct{}{}
+		values = append(values, artist)
+	}
+	if len(values) > 0 {
+		return values
+	}
+	return []string{trimmed}
+}
+
+func joinVorbisCommentValues(values []string) string {
+	if len(values) == 0 {
+		return ""
+	}
+
+	joined := make([]string, 0, len(values))
+	seen := make(map[string]struct{}, len(values))
+	for _, value := range values {
+		trimmed := strings.TrimSpace(value)
+		if trimmed == "" {
+			continue
+		}
+		key := strings.ToLower(trimmed)
+		if _, ok := seen[key]; ok {
+			continue
+		}
+		seen[key] = struct{}{}
+		joined = append(joined, trimmed)
+	}
+	return strings.Join(joined, ", ")
+}
+
+func fileExists(path string) bool {
+	_, err := os.Stat(path)
+	return err == nil
+}
+
+func ExtractCoverArt(filePath string) ([]byte, error) {
+	f, err := flac.ParseFile(filePath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse FLAC file: %w", err)
+	}
+
+	for _, meta := range f.Meta {
+		if meta.Type == flac.Picture {
+			pic, err := flacpicture.ParseFromMetaDataBlock(*meta)
+			if err != nil {
+				continue
+			}
+			if pic.PictureType == flacpicture.PictureTypeFrontCover && len(pic.ImageData) > 0 {
+				return pic.ImageData, nil
+			}
+		}
+	}
+
+	for _, meta := range f.Meta {
+		if meta.Type == flac.Picture {
+			pic, err := flacpicture.ParseFromMetaDataBlock(*meta)
+			if err != nil {
+				continue
+			}
+			if len(pic.ImageData) > 0 {
+				return pic.ImageData, nil
+			}
+		}
+	}
+
+	return nil, fmt.Errorf("no cover art found in file")
+}
+
+func EmbedLyrics(filePath string, lyrics string) error {
+	f, err := flac.ParseFile(filePath)
+	if err != nil {
+		return fmt.Errorf("failed to parse FLAC file: %w", err)
+	}
+
+	var cmtIdx int = -1
+	var cmt *flacvorbis.MetaDataBlockVorbisComment
+
+	for idx, meta := range f.Meta {
+		if meta.Type == flac.VorbisComment {
+			cmtIdx = idx
+			cmt, err = flacvorbis.ParseFromMetaDataBlock(*meta)
+			if err != nil {
+				return fmt.Errorf("failed to parse vorbis comment: %w", err)
+			}
+			break
+		}
+	}
+
+	if cmt == nil {
+		cmt = flacvorbis.New()
+	}
+
+	setComment(cmt, "LYRICS", lyrics)
+	setComment(cmt, "UNSYNCEDLYRICS", lyrics)
+
+	cmtBlock := cmt.Marshal()
+	if cmtIdx >= 0 {
+		f.Meta[cmtIdx] = &cmtBlock
+	} else {
+		f.Meta = append(f.Meta, &cmtBlock)
+	}
+
+	return f.Save(filePath)
+}
+
+func EmbedGenreLabel(filePath string, genre, label string) error {
+	if genre == "" && label == "" {
+		return nil
+	}
+
+	f, err := flac.ParseFile(filePath)
+	if err != nil {
+		return fmt.Errorf("failed to parse FLAC file: %w", err)
+	}
+
+	var cmtIdx int = -1
+	var cmt *flacvorbis.MetaDataBlockVorbisComment
+
+	for idx, meta := range f.Meta {
+		if meta.Type == flac.VorbisComment {
+			cmtIdx = idx
+			cmt, err = flacvorbis.ParseFromMetaDataBlock(*meta)
+			if err != nil {
+				return fmt.Errorf("failed to parse vorbis comment: %w", err)
+			}
+			break
+		}
+	}
+
+	if cmt == nil {
+		cmt = flacvorbis.New()
+	}
+
+	if genre != "" {
+		setComment(cmt, "GENRE", genre)
+	}
+	if label != "" {
+		setComment(cmt, "ORGANIZATION", label)
+	}
+
+	cmtBlock := cmt.Marshal()
+	if cmtIdx >= 0 {
+		f.Meta[cmtIdx] = &cmtBlock
+	} else {
+		f.Meta = append(f.Meta, &cmtBlock)
+	}
+
+	return f.Save(filePath)
+}
+
+func ExtractLyrics(filePath string) (string, error) {
+	lower := strings.ToLower(filePath)
+
+	if strings.HasSuffix(lower, ".flac") {
+		lyrics, err := extractLyricsFromFlac(filePath)
+		if err == nil && strings.TrimSpace(lyrics) != "" {
+			return lyrics, nil
+		}
+		return extractLyricsFromSidecarLRC(filePath)
+	}
+
+	if strings.HasSuffix(lower, ".m4a") || strings.HasSuffix(lower, ".mp4") || strings.HasSuffix(lower, ".aac") {
+		lyrics, err := extractLyricsFromM4A(filePath)
+		if err == nil && strings.TrimSpace(lyrics) != "" {
+			return lyrics, nil
+		}
+		return extractLyricsFromSidecarLRC(filePath)
+	}
+
+	if strings.HasSuffix(lower, ".mp3") {
+		meta, err := ReadID3Tags(filePath)
+		if err == nil && meta != nil {
+			if strings.TrimSpace(meta.Lyrics) != "" {
+				return meta.Lyrics, nil
+			}
+			if looksLikeEmbeddedLyrics(meta.Comment) {
+				return meta.Comment, nil
+			}
+		}
+		return extractLyricsFromSidecarLRC(filePath)
+	}
+
+	if strings.HasSuffix(lower, ".opus") || strings.HasSuffix(lower, ".ogg") {
+		meta, err := ReadOggVorbisComments(filePath)
+		if err == nil && meta != nil {
+			if strings.TrimSpace(meta.Lyrics) != "" {
+				return meta.Lyrics, nil
+			}
+			if looksLikeEmbeddedLyrics(meta.Comment) {
+				return meta.Comment, nil
+			}
+		}
+		return extractLyricsFromSidecarLRC(filePath)
+	}
+
+	if strings.HasSuffix(lower, ".wav") {
+		meta, err := ReadWAVTags(filePath)
+		if err == nil && meta != nil {
+			if strings.TrimSpace(meta.Lyrics) != "" {
+				return meta.Lyrics, nil
+			}
+			if looksLikeEmbeddedLyrics(meta.Comment) {
+				return meta.Comment, nil
+			}
+		}
+		return extractLyricsFromSidecarLRC(filePath)
+	}
+
+	if strings.HasSuffix(lower, ".aiff") || strings.HasSuffix(lower, ".aif") || strings.HasSuffix(lower, ".aifc") {
+		meta, err := ReadAIFFTags(filePath)
+		if err == nil && meta != nil {
+			if strings.TrimSpace(meta.Lyrics) != "" {
+				return meta.Lyrics, nil
+			}
+			if looksLikeEmbeddedLyrics(meta.Comment) {
+				return meta.Comment, nil
+			}
+		}
+		return extractLyricsFromSidecarLRC(filePath)
+	}
+
+	return extractLyricsFromSidecarLRC(filePath)
+}
+
+func ReadM4ATags(filePath string) (*AudioMetadata, error) {
+	f, err := os.Open(filePath)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+
+	fi, err := f.Stat()
+	if err != nil {
+		return nil, err
+	}
+
+	ilst, err := findM4AIlstAtom(f, fi.Size())
+	if err != nil {
+		return nil, err
+	}
+
+	metadata := &AudioMetadata{}
+	start := ilst.offset + ilst.headerSize
+	end := ilst.offset + ilst.size
+	for pos := start; pos+8 <= end; {
+		header, err := readAtomHeaderAt(f, pos, fi.Size())
+		if err != nil {
+			return nil, err
+		}
+		if header.size == 0 {
+			header.size = end - pos
+		}
+		if header.size < header.headerSize {
+			return nil, fmt.Errorf("invalid atom size for %s", header.typ)
+		}
+
+		switch header.typ {
+		case "\xa9nam":
+			metadata.Title, _ = readM4ATextValue(f, header, fi.Size())
+		case "\xa9ART":
+			metadata.Artist, _ = readM4ATextValue(f, header, fi.Size())
+		case "\xa9alb":
+			metadata.Album, _ = readM4ATextValue(f, header, fi.Size())
+		case "aART":
+			metadata.AlbumArtist, _ = readM4ATextValue(f, header, fi.Size())
+		case "\xa9day":
+			metadata.Date, _ = readM4ATextValue(f, header, fi.Size())
+			metadata.Year = metadata.Date
+		case "\xa9gen":
+			metadata.Genre, _ = readM4ATextValue(f, header, fi.Size())
+		case "\xa9wrt":
+			metadata.Composer, _ = readM4ATextValue(f, header, fi.Size())
+		case "\xa9cmt":
+			metadata.Comment, _ = readM4ATextValue(f, header, fi.Size())
+		case "cprt":
+			metadata.Copyright, _ = readM4ATextValue(f, header, fi.Size())
+		case "\xa9lyr":
+			metadata.Lyrics, _ = readM4ATextValue(f, header, fi.Size())
+		case "trkn":
+			metadata.TrackNumber, metadata.TotalTracks, _ = readM4AIndexPair(f, header, fi.Size())
+		case "disk":
+			metadata.DiscNumber, metadata.TotalDiscs, _ = readM4AIndexPair(f, header, fi.Size())
+		case "----":
+			name, value, freeformErr := readM4AFreeformValue(f, header, fi.Size())
+			if freeformErr == nil {
+				switch strings.ToUpper(strings.TrimSpace(name)) {
+				case "ISRC":
+					metadata.ISRC = value
+				case "LABEL", "ORGANIZATION":
+					metadata.Label = value
+				case "COMMENT":
+					if metadata.Comment == "" {
+						metadata.Comment = value
+					}
+				case "COMPOSER":
+					if metadata.Composer == "" {
+						metadata.Composer = value
+					}
+				case "COPYRIGHT":
+					if metadata.Copyright == "" {
+						metadata.Copyright = value
+					}
+				case "LYRICS", "UNSYNCEDLYRICS":
+					if metadata.Lyrics == "" {
+						metadata.Lyrics = value
+					}
+				case "REPLAYGAIN_TRACK_GAIN":
+					metadata.ReplayGainTrackGain = value
+				case "REPLAYGAIN_TRACK_PEAK":
+					metadata.ReplayGainTrackPeak = value
+				case "REPLAYGAIN_ALBUM_GAIN":
+					metadata.ReplayGainAlbumGain = value
+				case "REPLAYGAIN_ALBUM_PEAK":
+					metadata.ReplayGainAlbumPeak = value
+				}
+			}
+		}
+
+		pos += header.size
+	}
+
+	if metadata.Title == "" &&
+		metadata.Artist == "" &&
+		metadata.Album == "" &&
+		metadata.AlbumArtist == "" &&
+		metadata.Lyrics == "" &&
+		metadata.TrackNumber == 0 &&
+		metadata.DiscNumber == 0 {
+		return nil, fmt.Errorf("no M4A tags found")
+	}
+
+	return metadata, nil
+}
+
+func extractLyricsFromM4A(filePath string) (string, error) {
+	metadata, err := ReadM4ATags(filePath)
+	if err != nil {
+		return "", err
+	}
+	if metadata == nil || strings.TrimSpace(metadata.Lyrics) == "" {
+		return "", fmt.Errorf("no lyrics found in file")
+	}
+	return metadata.Lyrics, nil
+}
+
+func extractCoverFromM4A(filePath string) ([]byte, error) {
+	f, err := os.Open(filePath)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+
+	fi, err := f.Stat()
+	if err != nil {
+		return nil, err
+	}
+	fileSize := fi.Size()
+
+	ilst, err := findM4AIlstAtom(f, fileSize)
+	if err != nil {
+		return nil, err
+	}
+
+	bodyStart := ilst.offset + ilst.headerSize
+	bodySize := ilst.size - ilst.headerSize
+
+	covr, found, err := findAtomInRange(f, bodyStart, bodySize, "covr", fileSize)
+	if err != nil || !found {
+		return nil, fmt.Errorf("cover atom not found")
+	}
+
+	dataStart := covr.offset + covr.headerSize
+	dataSize := covr.size - covr.headerSize
+
+	dataAtom, found, err := findAtomInRange(f, dataStart, dataSize, "data", fileSize)
+	if err != nil || !found {
+		return nil, fmt.Errorf("data atom not found in cover")
+	}
+
+	// data atom: header + 4 bytes type indicator + 4 bytes locale
+	imgStart := dataAtom.offset + dataAtom.headerSize + 8
+	imgLen := dataAtom.size - dataAtom.headerSize - 8
+	if imgLen <= 0 {
+		return nil, fmt.Errorf("empty cover data")
+	}
+
+	buf := make([]byte, imgLen)
+	if _, err := f.ReadAt(buf, imgStart); err != nil {
+		return nil, err
+	}
+
+	return buf, nil
+}
+
+// findM4AIlstAtom locates the ilst atom that holds all iTunes-style tags.
+// It tries two common layouts:
+//  1. moov > udta > meta > ilst  (iTunes, FFmpeg default)
+//  2. moov > meta > ilst         (some encoders omit the udta wrapper)
+func findM4AIlstAtom(f *os.File, fileSize int64) (atomHeader, error) {
+	moov, found, err := findAtomInRange(f, 0, fileSize, "moov", fileSize)
+	if err != nil || !found {
+		return atomHeader{}, fmt.Errorf("moov not found")
+	}
+
+	moovBodyStart := moov.offset + moov.headerSize
+	moovBodySize := moov.size - moov.headerSize
+
+	// Path 1: moov > udta > meta > ilst
+	if udta, ok, _ := findAtomInRange(f, moovBodyStart, moovBodySize, "udta", fileSize); ok {
+		udtaBodyStart := udta.offset + udta.headerSize
+		udtaBodySize := udta.size - udta.headerSize
+		if meta, ok2, _ := findAtomInRange(f, udtaBodyStart, udtaBodySize, "meta", fileSize); ok2 {
+			if ilst, ok3 := findIlstInMeta(f, meta, fileSize); ok3 {
+				return ilst, nil
+			}
+		}
+	}
+
+	// Path 2: moov > meta > ilst (no udta wrapper)
+	if meta, ok, _ := findAtomInRange(f, moovBodyStart, moovBodySize, "meta", fileSize); ok {
+		if ilst, ok2 := findIlstInMeta(f, meta, fileSize); ok2 {
+			return ilst, nil
+		}
+	}
+
+	return atomHeader{}, fmt.Errorf("ilst not found (tried moov>udta>meta>ilst and moov>meta>ilst)")
+}
+
+// findIlstInMeta locates the ilst atom inside a meta atom, handling both
+// layouts: ISO-BMFF (4-byte version/flags before the child atoms, written by
+// FFmpeg's mp4 muxer) and QuickTime (no version/flags, written by the mov muxer
+// used for AC-4 passthrough).
+func findIlstInMeta(f *os.File, meta atomHeader, fileSize int64) (atomHeader, bool) {
+	// ISO-BMFF: skip the 4-byte version/flags that precede the child atoms.
+	isoStart := meta.offset + meta.headerSize + 4
+	isoSize := meta.size - meta.headerSize - 4
+	if ilst, ok, _ := findAtomInRange(f, isoStart, isoSize, "ilst", fileSize); ok {
+		return ilst, true
+	}
+	// QuickTime: child atoms begin immediately after the meta header.
+	qtStart := meta.offset + meta.headerSize
+	qtSize := meta.size - meta.headerSize
+	if ilst, ok, _ := findAtomInRange(f, qtStart, qtSize, "ilst", fileSize); ok {
+		return ilst, true
+	}
+	return atomHeader{}, false
+}
+
+func readM4ADataAtomPayload(f *os.File, dataAtom atomHeader) ([]byte, error) {
+	payloadStart := dataAtom.offset + dataAtom.headerSize + 8
+	payloadLen := dataAtom.size - dataAtom.headerSize - 8
+	if payloadLen <= 0 {
+		return nil, fmt.Errorf("empty data atom in %s", dataAtom.typ)
+	}
+
+	buf := make([]byte, payloadLen)
+	if _, err := f.ReadAt(buf, payloadStart); err != nil {
+		return nil, err
+	}
+	return buf, nil
+}
+
+func readM4ADataPayload(f *os.File, parent atomHeader, fileSize int64) ([]byte, error) {
+	dataStart := parent.offset + parent.headerSize
+	dataSize := parent.size - parent.headerSize
+
+	dataAtom, found, err := findAtomInRange(f, dataStart, dataSize, "data", fileSize)
+	if err != nil || !found {
+		return nil, fmt.Errorf("data atom not found in %s", parent.typ)
+	}
+	return readM4ADataAtomPayload(f, dataAtom)
+}
+
+func readM4ATextValue(f *os.File, parent atomHeader, fileSize int64) (string, error) {
+	payload, err := readM4ADataPayload(f, parent, fileSize)
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(strings.TrimRight(string(payload), "\x00")), nil
+}
+
+func readM4AIndexPair(f *os.File, parent atomHeader, fileSize int64) (int, int, error) {
+	payload, err := readM4ADataPayload(f, parent, fileSize)
+	if err != nil {
+		return 0, 0, err
+	}
+	if len(payload) < 6 {
+		return 0, 0, fmt.Errorf("index payload too short in %s", parent.typ)
+	}
+	return int(binary.BigEndian.Uint16(payload[2:4])), int(binary.BigEndian.Uint16(payload[4:6])), nil
+}
+
+func parsePositiveInt(value string) int {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return 0
+	}
+	n, _ := strconv.Atoi(value)
+	return n
+}
+
+func formatIndexValue(number, total int) string {
+	if number <= 0 {
+		return ""
+	}
+	if total > 0 {
+		return fmt.Sprintf("%d/%d", number, total)
+	}
+	return strconv.Itoa(number)
+}
+
+func hasMapKey(fields map[string]string, key string) bool {
+	_, ok := fields[key]
+	return ok
+}
+
+func readM4AFreeformValue(f *os.File, parent atomHeader, fileSize int64) (string, string, error) {
+	start := parent.offset + parent.headerSize
+	end := parent.offset + parent.size
+
+	var nameValue string
+	var dataValue string
+	for pos := start; pos+8 <= end; {
+		header, err := readAtomHeaderAt(f, pos, fileSize)
+		if err != nil {
+			return "", "", err
+		}
+		if header.size == 0 {
+			header.size = end - pos
+		}
+		if header.size < header.headerSize {
+			return "", "", fmt.Errorf("invalid atom size for %s", header.typ)
+		}
+
+		switch header.typ {
+		case "mean":
+			// Domain qualifier (e.g. "com.apple.iTunes") — not needed, skip.
+		case "name":
+			// The "name" atom payload is: 4-byte version/flags, then raw UTF-8 text.
+			// It does NOT contain a nested "data" atom, so read the payload directly.
+			payloadStart := header.offset + header.headerSize + 4
+			payloadLen := header.size - header.headerSize - 4
+			if payloadLen > 0 {
+				buf := make([]byte, payloadLen)
+				if _, readErr := f.ReadAt(buf, payloadStart); readErr == nil {
+					nameValue = strings.TrimSpace(strings.TrimRight(string(buf), "\x00"))
+				}
+			}
+		case "data":
+			payload, payloadErr := readM4ADataAtomPayload(f, header)
+			if payloadErr == nil {
+				dataValue = strings.TrimSpace(strings.TrimRight(string(payload), "\x00"))
+			}
+		}
+
+		pos += header.size
+	}
+
+	if nameValue == "" || dataValue == "" {
+		return "", "", fmt.Errorf("freeform M4A tag incomplete")
+	}
+
+	return nameValue, dataValue, nil
+}
+
+type m4aMetadataPath struct {
+	moov atomHeader
+	udta *atomHeader
+	meta atomHeader
+	ilst atomHeader
+}
+
+func findM4AMetadataPath(f *os.File, fileSize int64) (m4aMetadataPath, error) {
+	moov, found, err := findAtomInRange(f, 0, fileSize, "moov", fileSize)
+	if err != nil || !found {
+		return m4aMetadataPath{}, fmt.Errorf("moov not found")
+	}
+
+	moovBodyStart := moov.offset + moov.headerSize
+	moovBodySize := moov.size - moov.headerSize
+
+	if udta, ok, _ := findAtomInRange(f, moovBodyStart, moovBodySize, "udta", fileSize); ok {
+		udtaBodyStart := udta.offset + udta.headerSize
+		udtaBodySize := udta.size - udta.headerSize
+		if meta, ok2, _ := findAtomInRange(f, udtaBodyStart, udtaBodySize, "meta", fileSize); ok2 {
+			if ilst, ok3 := findIlstInMeta(f, meta, fileSize); ok3 {
+				udtaCopy := udta
+				return m4aMetadataPath{
+					moov: moov,
+					udta: &udtaCopy,
+					meta: meta,
+					ilst: ilst,
+				}, nil
+			}
+		}
+	}
+
+	if meta, ok, _ := findAtomInRange(f, moovBodyStart, moovBodySize, "meta", fileSize); ok {
+		if ilst, ok2 := findIlstInMeta(f, meta, fileSize); ok2 {
+			return m4aMetadataPath{
+				moov: moov,
+				meta: meta,
+				ilst: ilst,
+			}, nil
+		}
+	}
+
+	return m4aMetadataPath{}, fmt.Errorf("ilst not found (tried moov>udta>meta>ilst and moov>meta>ilst)")
+}
+
+func buildM4AAtom(typ string, payload []byte) []byte {
+	size := int64(8 + len(payload))
+	buf := make([]byte, 8+len(payload))
+	binary.BigEndian.PutUint32(buf[0:4], uint32(size))
+	copy(buf[4:8], []byte(typ))
+	copy(buf[8:], payload)
+	return buf
+}
+
+func buildM4AFreeformAtom(name, value string) []byte {
+	meanPayload := append([]byte{0, 0, 0, 0}, []byte("com.apple.iTunes")...)
+	namePayload := append([]byte{0, 0, 0, 0}, []byte(name)...)
+	dataPayload := make([]byte, 8+len(value))
+	binary.BigEndian.PutUint32(dataPayload[0:4], 1) // UTF-8 text
+	copy(dataPayload[8:], []byte(value))
+
+	payload := append([]byte{}, buildM4AAtom("mean", meanPayload)...)
+	payload = append(payload, buildM4AAtom("name", namePayload)...)
+	payload = append(payload, buildM4AAtom("data", dataPayload)...)
+	return buildM4AAtom("----", payload)
+}
+
+func buildITunNORMTag(trackGain, trackPeak string) string {
+	gainDb, ok := parseReplayGainDb(trackGain)
+	if !ok {
+		return ""
+	}
+	peakLinear, ok := parseReplayGainPeak(trackPeak)
+	if !ok {
+		return ""
+	}
+
+	clamp := func(v int64) int64 {
+		if v < 0 {
+			return 0
+		}
+		if v > 65534 {
+			return 65534
+		}
+		return v
+	}
+
+	g1 := clamp(int64(math.Round(math.Pow(10, gainDb/-10.0) * 1000.0)))
+	g2 := clamp(int64(math.Round(math.Pow(10, gainDb/-10.0) * 2500.0)))
+	peak := clamp(int64(math.Round(peakLinear * 32768.0)))
+	values := []int64{g1, g1, g2, g2, 0, 0, peak, peak, 0, 0}
+	parts := make([]string, 0, len(values))
+	for _, value := range values {
+		parts = append(parts, strings.ToUpper(fmt.Sprintf("%08x", value)))
+	}
+	return strings.Join(parts, " ")
+}
+
+func parseReplayGainDb(value string) (float64, bool) {
+	match := regexp.MustCompile(`([+-]?\d+(?:\.\d+)?)`).FindStringSubmatch(strings.TrimSpace(value))
+	if len(match) < 2 {
+		return 0, false
+	}
+	parsed, err := strconv.ParseFloat(match[1], 64)
+	if err != nil {
+		return 0, false
+	}
+	return parsed, true
+}
+
+func parseReplayGainPeak(value string) (float64, bool) {
+	parsed, err := strconv.ParseFloat(strings.TrimSpace(value), 64)
+	if err != nil || parsed <= 0 {
+		return 0, false
+	}
+	return parsed, true
+}
+
+func collectM4AReplayGainFields(fields map[string]string) map[string]string {
+	result := map[string]string{}
+	if value := strings.TrimSpace(fields["replaygain_track_gain"]); value != "" {
+		result["replaygain_track_gain"] = value
+	}
+	if value := strings.TrimSpace(fields["replaygain_track_peak"]); value != "" {
+		result["replaygain_track_peak"] = value
+	}
+	if value := strings.TrimSpace(fields["replaygain_album_gain"]); value != "" {
+		result["replaygain_album_gain"] = value
+	}
+	if value := strings.TrimSpace(fields["replaygain_album_peak"]); value != "" {
+		result["replaygain_album_peak"] = value
+	}
+
+	if norm := buildITunNORMTag(result["replaygain_track_gain"], result["replaygain_track_peak"]); norm != "" {
+		result["iTunNORM"] = norm
+	}
+
+	return result
+}
+
+func writeAtomSize(buf []byte, header atomHeader, newSize int64) error {
+	if newSize <= 0 {
+		return fmt.Errorf("invalid size for %s", header.typ)
+	}
+	if header.headerSize == 16 {
+		if int(header.offset)+16 > len(buf) {
+			return io.ErrUnexpectedEOF
+		}
+		binary.BigEndian.PutUint32(buf[header.offset:header.offset+4], 1)
+		binary.BigEndian.PutUint64(buf[header.offset+8:header.offset+16], uint64(newSize))
+		return nil
+	}
+	if newSize > math.MaxUint32 {
+		return fmt.Errorf("atom %s too large for 32-bit header", header.typ)
+	}
+	if int(header.offset)+8 > len(buf) {
+		return io.ErrUnexpectedEOF
+	}
+	binary.BigEndian.PutUint32(buf[header.offset:header.offset+4], uint32(newSize))
+	return nil
+}
+
+func EditM4AReplayGain(filePath string, fields map[string]string) error {
+	replayGainFields := collectM4AReplayGainFields(fields)
+	if len(replayGainFields) == 0 {
+		return nil
+	}
+
+	remove := map[string]struct{}{
+		"REPLAYGAIN_TRACK_GAIN": {},
+		"REPLAYGAIN_TRACK_PEAK": {},
+		"REPLAYGAIN_ALBUM_GAIN": {},
+		"REPLAYGAIN_ALBUM_PEAK": {},
+		"ITUNNORM":              {},
+	}
+
+	order := []string{
+		"replaygain_track_gain",
+		"replaygain_track_peak",
+		"replaygain_album_gain",
+		"replaygain_album_peak",
+		"iTunNORM",
+	}
+	tags := make([]m4aFreeformTag, 0, len(order))
+	for _, key := range order {
+		value := strings.TrimSpace(replayGainFields[key])
+		if value == "" {
+			continue
+		}
+		name := key
+		if key != "iTunNORM" {
+			name = strings.ToLower(key)
+		}
+		tags = append(tags, m4aFreeformTag{name: name, value: value})
+	}
+
+	return writeM4AFreeformTags(filePath, remove, tags)
+}
+
+type m4aFreeformTag struct {
+	name  string
+	value string
+}
+
+// writeM4AFreeformTags rewrites the ilst atom in place: it drops every existing
+// freeform ("----") atom whose uppercased name is in `remove`, then appends the
+// supplied tags (empty values are skipped, which effectively clears the field).
+// Atom sizes are fixed up along the ilst -> meta -> udta -> moov chain.
+//
+// FFmpeg's MP4 muxer only writes a fixed set of recognized keys to the ilst, so
+// fields like ISRC and LABEL are silently dropped when written via -metadata.
+// Writing them as iTunes freeform atoms natively is the only way they persist.
+func writeM4AFreeformTags(filePath string, remove map[string]struct{}, tags []m4aFreeformTag) error {
+	f, err := os.Open(filePath)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	info, err := f.Stat()
+	if err != nil {
+		return err
+	}
+
+	path, err := findM4AMetadataPath(f, info.Size())
+	if err != nil {
+		// MOV-style containers (e.g. AC-4 passthrough) store tags as QuickTime
+		// atoms under udta with no iTunes meta>ilst structure. There is nowhere
+		// to write freeform tags, so skip gracefully instead of failing.
+		if strings.Contains(err.Error(), "ilst not found") {
+			GoLog("[Metadata] No iTunes ilst container; skipping freeform tags")
+			return nil
+		}
+		return err
+	}
+
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		return err
+	}
+
+	bodyStart := path.ilst.offset + path.ilst.headerSize
+	bodyEnd := path.ilst.offset + path.ilst.size
+	newBody := make([]byte, 0, int(path.ilst.size))
+
+	for pos := bodyStart; pos+8 <= bodyEnd; {
+		header, readErr := readAtomHeaderAt(f, pos, info.Size())
+		if readErr != nil {
+			return readErr
+		}
+		if header.size == 0 {
+			header.size = bodyEnd - pos
+		}
+		if header.size < header.headerSize {
+			return fmt.Errorf("invalid atom size for %s", header.typ)
+		}
+
+		keep := true
+		if header.typ == "----" {
+			name, _, freeformErr := readM4AFreeformValue(f, header, info.Size())
+			if freeformErr == nil {
+				if _, ok := remove[strings.ToUpper(strings.TrimSpace(name))]; ok {
+					keep = false
+				}
+			}
+		}
+		if keep {
+			newBody = append(newBody, data[pos:pos+header.size]...)
+		}
+
+		pos += header.size
+	}
+
+	for _, tag := range tags {
+		if strings.TrimSpace(tag.value) == "" {
+			continue
+		}
+		newBody = append(newBody, buildM4AFreeformAtom(tag.name, tag.value)...)
+	}
+
+	newIlst := buildM4AAtom("ilst", newBody)
+	updated := append([]byte{}, data[:path.ilst.offset]...)
+	updated = append(updated, newIlst...)
+	updated = append(updated, data[path.ilst.offset+path.ilst.size:]...)
+
+	delta := int64(len(newIlst)) - path.ilst.size
+	if err := writeAtomSize(updated, path.ilst, path.ilst.size+delta); err != nil {
+		return err
+	}
+	if err := writeAtomSize(updated, path.meta, path.meta.size+delta); err != nil {
+		return err
+	}
+	if path.udta != nil {
+		if err := writeAtomSize(updated, *path.udta, path.udta.size+delta); err != nil {
+			return err
+		}
+	}
+	if err := writeAtomSize(updated, path.moov, path.moov.size+delta); err != nil {
+		return err
+	}
+
+	return os.WriteFile(filePath, updated, 0o644)
+}
+
+// EditM4AFreeformText writes ISRC and label tags into an M4A/MP4 file as iTunes
+// freeform atoms. These keys are not part of FFmpeg's MP4 metadata key set, so
+// they must be written natively for the values to actually persist. An empty
+// value clears the corresponding tag. Other (recognized) tags are left intact.
+func EditM4AFreeformText(filePath string, fields map[string]string) error {
+	_, hasISRC := fields["isrc"]
+	_, hasLabel := fields["label"]
+	if !hasISRC && !hasLabel {
+		return nil
+	}
+
+	remove := map[string]struct{}{}
+	tags := make([]m4aFreeformTag, 0, 2)
+	if hasISRC {
+		remove["ISRC"] = struct{}{}
+		tags = append(tags, m4aFreeformTag{name: "ISRC", value: strings.TrimSpace(fields["isrc"])})
+	}
+	if hasLabel {
+		remove["LABEL"] = struct{}{}
+		remove["ORGANIZATION"] = struct{}{}
+		tags = append(tags, m4aFreeformTag{name: "LABEL", value: strings.TrimSpace(fields["label"])})
+	}
+
+	return writeM4AFreeformTags(filePath, remove, tags)
+}
+
+func extractLyricsFromSidecarLRC(filePath string) (string, error) {
+	ext := filepath.Ext(filePath)
+	base := strings.TrimSuffix(filePath, ext)
+	if strings.TrimSpace(base) == "" {
+		return "", fmt.Errorf("no lyrics found in file")
+	}
+
+	lrcPath := base + ".lrc"
+	data, err := os.ReadFile(lrcPath)
+	if err != nil {
+		return "", fmt.Errorf("no lyrics found in file")
+	}
+
+	lyrics := strings.TrimSpace(string(data))
+	if lyrics == "" {
+		return "", fmt.Errorf("no lyrics found in file")
+	}
+	return lyrics, nil
+}
+
+func extractLyricsFromFlac(filePath string) (string, error) {
+	f, err := flac.ParseFile(filePath)
+	if err != nil {
+		return "", fmt.Errorf("failed to parse FLAC file: %w", err)
+	}
+
+	for _, meta := range f.Meta {
+		if meta.Type != flac.VorbisComment {
+			continue
+		}
+
+		cmt, err := flacvorbis.ParseFromMetaDataBlock(*meta)
+		if err != nil {
+			continue
+		}
+
+		lyrics, err := cmt.Get("LYRICS")
+		if err == nil && len(lyrics) > 0 && strings.TrimSpace(lyrics[0]) != "" {
+			return lyrics[0], nil
+		}
+
+		lyrics, err = cmt.Get("UNSYNCEDLYRICS")
+		if err == nil && len(lyrics) > 0 && strings.TrimSpace(lyrics[0]) != "" {
+			return lyrics[0], nil
+		}
+	}
+
+	return "", fmt.Errorf("no lyrics found in file")
+}
+
+func looksLikeEmbeddedLyrics(value string) bool {
+	trimmed := strings.TrimSpace(value)
+	if trimmed == "" {
+		return false
+	}
+
+	lower := strings.ToLower(trimmed)
+	if strings.Contains(lower, "[ar:") || strings.Contains(lower, "[ti:") {
+		return true
+	}
+
+	if strings.Contains(trimmed, "\n") && strings.Contains(trimmed, "[") && strings.Contains(trimmed, "]") {
+		return true
+	}
+
+	return false
+}
+
+type AudioQuality struct {
+	BitDepth     int    `json:"bit_depth"`
+	SampleRate   int    `json:"sample_rate"`
+	TotalSamples int64  `json:"total_samples"`
+	Duration     int    `json:"duration"`
+	Bitrate      int    `json:"bitrate,omitempty"` // kbps, estimated for compressed MP4-family streams
+	Codec        string `json:"codec,omitempty"`
+}
+
+func GetAudioQuality(filePath string) (AudioQuality, error) {
+	file, err := os.Open(filePath)
+	if err != nil {
+		return AudioQuality{}, fmt.Errorf("failed to open file: %w", err)
+	}
+	defer file.Close()
+
+	marker := make([]byte, 4)
+	if _, err := file.Read(marker); err != nil {
+		return AudioQuality{}, fmt.Errorf("failed to read marker: %w", err)
+	}
+
+	if string(marker) == "fLaC" {
+		header := make([]byte, 4)
+		if _, err := file.Read(header); err != nil {
+			return AudioQuality{}, fmt.Errorf("failed to read header: %w", err)
+		}
+
+		blockType := header[0] & 0x7F
+		if blockType != 0 {
+			return AudioQuality{}, fmt.Errorf("first block is not STREAMINFO")
+		}
+
+		streamInfo := make([]byte, 34)
+		if _, err := file.Read(streamInfo); err != nil {
+			return AudioQuality{}, fmt.Errorf("failed to read STREAMINFO: %w", err)
+		}
+
+		sampleRate := (int(streamInfo[10]) << 12) | (int(streamInfo[11]) << 4) | (int(streamInfo[12]) >> 4)
+
+		bitsPerSample := ((int(streamInfo[12]) & 0x01) << 4) | (int(streamInfo[13]) >> 4) + 1
+
+		totalSamples := int64(streamInfo[13]&0x0F)<<32 |
+			int64(streamInfo[14])<<24 |
+			int64(streamInfo[15])<<16 |
+			int64(streamInfo[16])<<8 |
+			int64(streamInfo[17])
+
+		duration := 0
+		if sampleRate > 0 && totalSamples > 0 {
+			duration = int(totalSamples / int64(sampleRate))
+		}
+
+		return AudioQuality{
+			BitDepth:     bitsPerSample,
+			SampleRate:   sampleRate,
+			TotalSamples: totalSamples,
+			Duration:     duration,
+			Codec:        "flac",
+		}, nil
+	}
+
+	file.Seek(0, 0)
+	header8 := make([]byte, 8)
+	if _, err := file.Read(header8); err != nil {
+		return AudioQuality{}, fmt.Errorf("failed to read header: %w", err)
+	}
+
+	if string(header8[4:8]) == "ftyp" {
+		file.Close()
+		return GetM4AQuality(filePath)
+	}
+
+	return AudioQuality{}, fmt.Errorf("unsupported file format (not FLAC or M4A)")
+}
+
+func GetM4AQuality(filePath string) (AudioQuality, error) {
+	f, err := os.Open(filePath)
+	if err != nil {
+		return AudioQuality{}, fmt.Errorf("failed to open M4A file: %w", err)
+	}
+	defer f.Close()
+
+	info, err := f.Stat()
+	if err != nil {
+		return AudioQuality{}, fmt.Errorf("failed to stat M4A file: %w", err)
+	}
+	fileSize := info.Size()
+
+	moovHeader, moovFound, err := findAtomInRange(f, 0, fileSize, "moov", fileSize)
+	if err != nil {
+		return AudioQuality{}, fmt.Errorf("failed to find moov atom: %w", err)
+	}
+	if !moovFound {
+		return AudioQuality{}, fmt.Errorf("moov atom not found")
+	}
+
+	moovStart := moovHeader.offset
+	moovEnd := moovHeader.offset + moovHeader.size
+	duration := readM4ADurationSeconds(f, moovHeader, fileSize)
+
+	sampleOffset, atomType, err := findAudioSampleEntry(f, moovStart, moovEnd, fileSize)
+	if err != nil {
+		return AudioQuality{}, err
+	}
+
+	buf := make([]byte, 32)
+	if _, err := f.ReadAt(buf, sampleOffset); err != nil {
+		return AudioQuality{}, fmt.Errorf("failed to read audio sample entry: %w", err)
+	}
+
+	// AudioSampleEntry layout from the box type field:
+	//   [0:4]   type ("mp4a"/"alac")
+	//   [4:10]  SampleEntry.reserved
+	//   [10:12] data_reference_index
+	//   [12:20] reserved[8]
+	//   [20:22] channelcount
+	//   [22:24] samplesize (bit depth)
+	//   [24:26] pre_defined
+	//   [26:28] reserved
+	//   [28:32] samplerate (16.16 fixed-point)
+	sampleRate := int(buf[28])<<8 | int(buf[29])
+	bitDepth := 0
+	codec := normalizeM4AAudioCodec(atomType)
+
+	if atomType == "alac" {
+		bitDepth = int(buf[22])<<8 | int(buf[23])
+		if alacBitDepth, alacSampleRate, ok := readALACSpecificConfig(f, sampleOffset, fileSize); ok {
+			if alacBitDepth > 0 {
+				bitDepth = alacBitDepth
+			}
+			if alacSampleRate > 0 {
+				sampleRate = alacSampleRate
+			}
+		}
+	} else if atomType == "fLaC" {
+		bitDepth = int(buf[22])<<8 | int(buf[23])
+		if flacBitDepth, flacSampleRate, flacTotalSamples, ok := readMP4FLACSpecificConfig(f, sampleOffset, fileSize); ok {
+			if flacBitDepth > 0 {
+				bitDepth = flacBitDepth
+			}
+			if flacSampleRate > 0 {
+				sampleRate = flacSampleRate
+			}
+			if flacTotalSamples > 0 && sampleRate > 0 && duration <= 0 {
+				duration = int(flacTotalSamples / int64(sampleRate))
+			}
+		}
+	}
+
+	bitrate := estimateAudioBitrateKbps(fileSize, duration)
+	if bitrate > 0 && bitrate < 16 {
+		bitrate = 0
+	}
+	return AudioQuality{
+		BitDepth:   bitDepth,
+		SampleRate: sampleRate,
+		Duration:   duration,
+		Bitrate:    bitrate,
+		Codec:      codec,
+	}, nil
+}
+
+func normalizeM4AAudioCodec(atomType string) string {
+	switch atomType {
+	case "mp4a":
+		return "aac"
+	case "alac":
+		return "alac"
+	case "fLaC":
+		return "flac"
+	case "ec-3":
+		return "eac3"
+	case "ac-3":
+		return "ac3"
+	case "ac-4":
+		return "ac4"
+	default:
+		return strings.TrimSpace(atomType)
+	}
+}
+
+func estimateAudioBitrateKbps(fileSize int64, durationSeconds int) int {
+	if fileSize <= 0 || durationSeconds <= 0 {
+		return 0
+	}
+	return int(math.Round(float64(fileSize*8) / float64(durationSeconds) / 1000.0))
+}
+
+func readM4ADurationSeconds(f *os.File, moovHeader atomHeader, fileSize int64) int {
+	childStart := moovHeader.offset + moovHeader.headerSize
+	childSize := moovHeader.size - moovHeader.headerSize
+	mvhdHeader, found, err := findAtomInRange(f, childStart, childSize, "mvhd", fileSize)
+	if err == nil && found {
+		if duration := readMP4DurationAtomSeconds(f, mvhdHeader, fileSize); duration > 0 {
+			return duration
+		}
+	}
+
+	return readM4ATrackDurationSeconds(f, moovHeader, fileSize)
+}
+
+func readMP4DurationAtomSeconds(f *os.File, header atomHeader, fileSize int64) int {
+	payloadOffset := header.offset + header.headerSize
+	versionBuf := make([]byte, 1)
+	if _, err := f.ReadAt(versionBuf, payloadOffset); err != nil {
+		return 0
+	}
+
+	if versionBuf[0] == 1 {
+		buf := make([]byte, 32)
+		if _, err := f.ReadAt(buf, payloadOffset); err != nil {
+			return 0
+		}
+		timescale := binary.BigEndian.Uint32(buf[20:24])
+		duration := binary.BigEndian.Uint64(buf[24:32])
+		if timescale == 0 || duration == 0 {
+			return 0
+		}
+		return int(math.Round(float64(duration) / float64(timescale)))
+	}
+
+	buf := make([]byte, 20)
+	if _, err := f.ReadAt(buf, payloadOffset); err != nil {
+		return 0
+	}
+	timescale := binary.BigEndian.Uint32(buf[12:16])
+	duration := binary.BigEndian.Uint32(buf[16:20])
+	if timescale == 0 || duration == 0 {
+		return 0
+	}
+	return int(math.Round(float64(duration) / float64(timescale)))
+}
+
+func readM4ATrackDurationSeconds(f *os.File, moovHeader atomHeader, fileSize int64) int {
+	childStart := moovHeader.offset + moovHeader.headerSize
+	childSize := moovHeader.size - moovHeader.headerSize
+	bestDuration := 0
+	_ = walkMP4AtomsInRange(f, childStart, childSize, fileSize, func(header atomHeader) bool {
+		if header.typ == "mdhd" {
+			if duration := readMP4DurationAtomSeconds(f, header, fileSize); duration > bestDuration {
+				bestDuration = duration
+			}
+			return false
+		}
+		return header.typ == "trak" || header.typ == "mdia"
+	})
+	return bestDuration
+}
+
+func walkMP4AtomsInRange(f *os.File, start, size, fileSize int64, visit func(atomHeader) bool) error {
+	if size <= 0 {
+		return nil
+	}
+
+	end := start + size
+	for pos := start; pos+8 <= end; {
+		header, err := readAtomHeaderAt(f, pos, fileSize)
+		if err != nil {
+			return err
+		}
+		atomSize := header.size
+		if atomSize == 0 {
+			atomSize = end - pos
+		}
+		if atomSize < header.headerSize {
+			return fmt.Errorf("invalid atom size for %s", header.typ)
+		}
+		header.size = atomSize
+		if visit(header) {
+			childStart := header.offset + header.headerSize
+			childSize := header.size - header.headerSize
+			if err := walkMP4AtomsInRange(f, childStart, childSize, fileSize, visit); err != nil {
+				return err
+			}
+		}
+		pos += atomSize
+	}
+	return nil
+}
+
+func readALACSpecificConfig(f *os.File, sampleOffset, fileSize int64) (int, int, bool) {
+	if sampleOffset < 4 {
+		return 0, 0, false
+	}
+
+	sampleEntryHeader, err := readAtomHeaderAt(f, sampleOffset-4, fileSize)
+	if err != nil {
+		return 0, 0, false
+	}
+
+	childStart := sampleOffset + 32
+	childEnd := sampleEntryHeader.offset + sampleEntryHeader.size
+	if childStart >= childEnd {
+		return 0, 0, false
+	}
+
+	configHeader, found, err := findAtomInRange(f, childStart, childEnd-childStart, "alac", fileSize)
+	if err != nil || !found {
+		return 0, 0, false
+	}
+
+	payloadSize := configHeader.size - configHeader.headerSize
+	if payloadSize <= 0 {
+		return 0, 0, false
+	}
+
+	payload := make([]byte, payloadSize)
+	if _, err := f.ReadAt(payload, configHeader.offset+configHeader.headerSize); err != nil {
+		return 0, 0, false
+	}
+
+	return parseALACSpecificConfig(payload)
+}
+
+func readMP4FLACSpecificConfig(f *os.File, sampleOffset, fileSize int64) (int, int, int64, bool) {
+	if sampleOffset < 4 {
+		return 0, 0, 0, false
+	}
+
+	sampleEntryHeader, err := readAtomHeaderAt(f, sampleOffset-4, fileSize)
+	if err != nil {
+		return 0, 0, 0, false
+	}
+
+	childStart := sampleOffset + 32
+	childEnd := sampleEntryHeader.offset + sampleEntryHeader.size
+	if childStart >= childEnd {
+		return 0, 0, 0, false
+	}
+
+	configHeader, found, err := findAtomInRange(f, childStart, childEnd-childStart, "dfLa", fileSize)
+	if err != nil || !found {
+		return 0, 0, 0, false
+	}
+
+	payloadSize := configHeader.size - configHeader.headerSize
+	if payloadSize <= 0 {
+		return 0, 0, 0, false
+	}
+
+	payload := make([]byte, payloadSize)
+	if _, err := f.ReadAt(payload, configHeader.offset+configHeader.headerSize); err != nil {
+		return 0, 0, 0, false
+	}
+
+	return parseMP4FLACSpecificConfig(payload)
+}
+
+func parseMP4FLACSpecificConfig(payload []byte) (int, int, int64, bool) {
+	if len(payload) >= 4 && string(payload[:4]) == "fLaC" {
+		payload = payload[4:]
+	} else if len(payload) >= 4 {
+		// FLACSpecificBox starts with a full-box version/flags field.
+		payload = payload[4:]
+	}
+
+	for len(payload) >= 4 {
+		blockType := payload[0] & 0x7F
+		blockLen := int(payload[1])<<16 | int(payload[2])<<8 | int(payload[3])
+		if blockLen < 0 || len(payload) < 4+blockLen {
+			return 0, 0, 0, false
+		}
+		block := payload[4 : 4+blockLen]
+		if blockType == 0 && len(block) >= 34 {
+			bitDepth, sampleRate, totalSamples := parseFLACStreamInfoQuality(block[:34])
+			return bitDepth, sampleRate, totalSamples, bitDepth > 0 || sampleRate > 0
+		}
+		payload = payload[4+blockLen:]
+	}
+
+	return 0, 0, 0, false
+}
+
+func parseFLACStreamInfoQuality(streamInfo []byte) (int, int, int64) {
+	if len(streamInfo) < 18 {
+		return 0, 0, 0
+	}
+	sampleRate := (int(streamInfo[10]) << 12) | (int(streamInfo[11]) << 4) | (int(streamInfo[12]) >> 4)
+	bitsPerSample := (((int(streamInfo[12]) & 0x01) << 4) | (int(streamInfo[13]) >> 4)) + 1
+	totalSamples := int64(streamInfo[13]&0x0F)<<32 |
+		int64(streamInfo[14])<<24 |
+		int64(streamInfo[15])<<16 |
+		int64(streamInfo[16])<<8 |
+		int64(streamInfo[17])
+	return bitsPerSample, sampleRate, totalSamples
+}
+
+func parseALACSpecificConfig(payload []byte) (int, int, bool) {
+	if len(payload) < 24 {
+		return 0, 0, false
+	}
+
+	bitDepth := int(payload[5])
+	sampleRate := int(binary.BigEndian.Uint32(payload[20:24]))
+	if bitDepth > 0 && sampleRate > 0 {
+		return bitDepth, sampleRate, true
+	}
+
+	// Some encoders prepend 4 bytes before the ALACSpecificConfig payload.
+	if len(payload) >= 28 {
+		bitDepth = int(payload[9])
+		sampleRate = int(binary.BigEndian.Uint32(payload[24:28]))
+		if bitDepth > 0 && sampleRate > 0 {
+			return bitDepth, sampleRate, true
+		}
+	}
+
+	return 0, 0, false
+}
+
+type atomHeader struct {
+	offset     int64
+	size       int64
+	headerSize int64
+	typ        string
+}
+
+func readAtomHeaderAt(f *os.File, offset, fileSize int64) (atomHeader, error) {
+	if offset+8 > fileSize {
+		return atomHeader{}, io.ErrUnexpectedEOF
+	}
+
+	headerBuf := make([]byte, 8)
+	if _, err := f.ReadAt(headerBuf, offset); err != nil {
+		return atomHeader{}, err
+	}
+
+	size32 := binary.BigEndian.Uint32(headerBuf[0:4])
+	typ := string(headerBuf[4:8])
+
+	if size32 == 1 {
+		if offset+16 > fileSize {
+			return atomHeader{}, io.ErrUnexpectedEOF
+		}
+		extBuf := make([]byte, 8)
+		if _, err := f.ReadAt(extBuf, offset+8); err != nil {
+			return atomHeader{}, err
+		}
+		size64 := binary.BigEndian.Uint64(extBuf)
+		return atomHeader{offset: offset, size: int64(size64), headerSize: 16, typ: typ}, nil
+	}
+
+	return atomHeader{offset: offset, size: int64(size32), headerSize: 8, typ: typ}, nil
+}
+
+func findAtomInRange(f *os.File, start, size int64, target string, fileSize int64) (atomHeader, bool, error) {
+	if size <= 0 {
+		return atomHeader{}, false, nil
+	}
+
+	end := start + size
+	pos := start
+
+	for pos+8 <= end {
+		header, err := readAtomHeaderAt(f, pos, fileSize)
+		if err != nil {
+			return atomHeader{}, false, err
+		}
+
+		atomSize := header.size
+		if atomSize == 0 {
+			atomSize = end - pos
+		}
+
+		if atomSize < header.headerSize {
+			return atomHeader{}, false, fmt.Errorf("invalid atom size for %s", header.typ)
+		}
+
+		header.size = atomSize
+		if header.typ == target {
+			return header, true, nil
+		}
+
+		pos += atomSize
+	}
+
+	return atomHeader{}, false, nil
+}
+
+func findAudioSampleEntry(f *os.File, start, end, fileSize int64) (int64, string, error) {
+	const chunkSize = 64 * 1024
+	patterns := [][]byte{
+		[]byte("mp4a"),
+		[]byte("alac"),
+		[]byte("fLaC"),
+		[]byte("ec-3"),
+		[]byte("ac-3"),
+		[]byte("ac-4"),
+	}
+
+	var tail []byte
+	readPos := start
+
+	for readPos < end {
+		toRead := end - readPos
+		if toRead > chunkSize {
+			toRead = chunkSize
+		}
+
+		buf := make([]byte, toRead)
+		n, err := f.ReadAt(buf, readPos)
+		if err != nil && err != io.EOF {
+			return 0, "", fmt.Errorf("failed to read M4A atom data: %w", err)
+		}
+		if n == 0 {
+			break
+		}
+
+		data := append(tail, buf[:n]...)
+		bestIdx := -1
+		bestType := ""
+		for _, pattern := range patterns {
+			idx := bytes.Index(data, pattern)
+			if idx >= 0 && (bestIdx < 0 || idx < bestIdx) {
+				bestIdx = idx
+				bestType = string(pattern)
+			}
+		}
+
+		if bestIdx >= 0 {
+			absolute := readPos - int64(len(tail)) + int64(bestIdx)
+			if absolute+32 > fileSize {
+				return 0, "", fmt.Errorf("audio info not found in M4A file")
+			}
+			return absolute, bestType, nil
+		}
+
+		if len(data) >= 3 {
+			tail = append([]byte{}, data[len(data)-3:]...)
+		} else {
+			tail = append([]byte{}, data...)
+		}
+
+		readPos += int64(n)
+	}
+
+	return 0, "", fmt.Errorf("audio info not found in M4A file")
+}

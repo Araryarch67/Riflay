@@ -52,6 +52,16 @@ android {
         }
     }
 
+    // The dex stored uncompressed: Android then maps it from the APK (file pages it can drop and read again) instead
+    // of inflating every class into the app's own memory. With Flutter's minSdk it would be compressed, and an APK
+    // installed from GitHub (no Play Store compilation) kept the whole inflated dex in RAM until Android got round to
+    // compiling it. The download is a few MB larger.
+    packaging {
+        dex {
+            useLegacyPackaging = false
+        }
+    }
+
     buildTypes {
         release {
             signingConfig = signingConfigs.getByName(if (releaseKeystore != null) "release" else "debug")

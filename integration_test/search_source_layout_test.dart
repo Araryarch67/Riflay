@@ -1,4 +1,4 @@
-// Search's source switch in the real shell, on desktop and phone layouts.
+// Search's source filters in the real shell, on desktop and phone layouts.
 // Run in headless Weston with a disposable XDG_DATA_HOME; SHOTS saves the current appearance.
 import 'dart:io';
 import 'dart:ui' as ui;
@@ -18,9 +18,14 @@ import 'package:shared_preferences/shared_preferences.dart';
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
-  testWidgets('source switch stays beside desktop search and the phone title', (tester) async {
+  testWidgets('named source filters stay on the Search page below the field', (tester) async {
     JustAudioMediaKit.ensureInitialized(linux: true);
-    SharedPreferences.setMockInitialValues({'discord.enabled': false, 'search.source.v1': 'both'});
+    SharedPreferences.setMockInitialValues({
+      'discord.enabled': false,
+      'search.source.v1': 'both',
+      'sources.soundcloud.v1': true,
+      'sources.monochrome.v1': true,
+    });
     SearchSource.reset();
     final c = PlayerController();
     await tester.runAsync(c.load);
@@ -57,19 +62,20 @@ void main() {
       tester.view.physicalSize = Size(width.toDouble(), 800);
       await tester.pumpWidget(RepaintBoundary(child: RiflayApp(controller: c)));
       await settle();
-      final toggle = find.byType(SearchSourceToggle);
       final box = find.byType(SearchBox);
-      expect(toggle, findsOneWidget);
-      expect(find.descendant(of: find.byType(AppTitleBar), matching: toggle), findsOneWidget);
-      expect(tester.getRect(toggle).left, greaterThanOrEqualTo(tester.getRect(box).right));
-      expect(tester.getCenter(toggle).dy, moreOrLessEquals(tester.getCenter(box).dy));
+      tester.widget<SearchBox>(box.first).onSubmitted('');
+      await settle();
+      final filters = find.byType(SearchSourceFilters);
+      expect(filters, findsOneWidget);
+      expect(find.descendant(of: find.byType(AppTitleBar), matching: filters), findsNothing);
+      expect(tester.getRect(filters).top, greaterThanOrEqualTo(tester.getRect(box.first).bottom));
       expect(SearchSource.current.value, SearchSource.youtubeMusic, reason: 'legacy both uses YouTube Music');
       await shot('desktop-$width-youtube');
-      await tester.tap(toggle);
+      await tester.tap(find.byKey(const ValueKey('search-source-soundcloud')));
       await settle();
       expect(SearchSource.current.value, SearchSource.soundcloud);
       await shot('desktop-$width-soundcloud');
-      await tester.tap(toggle);
+      await tester.tap(find.byKey(const ValueKey('search-source-youtubeMusic')));
       await settle();
     }
 
@@ -78,17 +84,17 @@ void main() {
       await settle();
       await tester.tap(find.byTooltip('Search').last);
       await settle();
-      final toggle = find.byType(SearchSourceToggle);
-      expect(toggle, findsOneWidget);
-      expect(tester.getRect(toggle).top, lessThan(150));
+      final filters = find.byType(SearchSourceFilters);
+      expect(filters, findsOneWidget);
+      expect(tester.getRect(filters).top, greaterThan(0));
       expect(find.textContaining('your own music and YouTube Music'), findsOneWidget);
       await shot('phone-$width-youtube');
-      await tester.tap(toggle);
+      await tester.tap(find.byKey(const ValueKey('search-source-soundcloud')));
       await settle();
       expect(SearchSource.current.value, SearchSource.soundcloud);
       expect(find.textContaining('your own music and SoundCloud'), findsOneWidget);
       await shot('phone-$width-soundcloud');
-      await tester.tap(toggle);
+      await tester.tap(find.byKey(const ValueKey('search-source-youtubeMusic')));
       await settle();
     }
   });

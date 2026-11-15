@@ -18,6 +18,7 @@ import '../debug_switches.dart';
 import '../shortcuts.dart';
 import '../theme.dart';
 import 'flower_cover.dart';
+import 'monochrome_mark.dart';
 import 'marquee_text.dart';
 import 'playing_motion.dart';
 import 'wavy_seek_track.dart';
@@ -1073,13 +1074,7 @@ class _MediaCardState extends State<MediaCard> {
                     mainAxisAlignment: widget.circle ? MainAxisAlignment.center : MainAxisAlignment.start,
                     children: [
                       if (widget.online) ...[
-                        SourceMark(
-                          online: true,
-                          source: widget.track?.soundcloudId != null
-                              ? TrackSource.soundcloud
-                              : TrackSource.youtubeMusic,
-                          size: 13,
-                        ),
+                        SourceMark(online: true, source: widget.track?.source ?? TrackSource.youtubeMusic, size: 13),
                         const SizedBox(width: 4),
                       ],
                       Flexible(
@@ -1224,6 +1219,10 @@ class SourceMark extends StatelessWidget {
         ? Icon(Icons.offline_pin_rounded, size: size, color: color)
         : source == TrackSource.soundcloud
         ? Icon(Icons.cloud_rounded, size: size, color: color)
+        : source == TrackSource.monochrome
+        ? MonochromeMark(size: size, color: color)
+        : source == TrackSource.extension
+        ? Icon(Icons.extension_outlined, size: size, color: color)
         : SizedBox.square(
             dimension: size,
             child: CustomPaint(painter: _PlayRingPainter(color)),
@@ -1234,6 +1233,8 @@ class SourceMark extends StatelessWidget {
           ? tr.playsOfflineHere
           : source == TrackSource.soundcloud
           ? tr.streamsFromSoundcloud
+          : source == TrackSource.monochrome
+          ? tr.fromSource('Monochrome')
           : tr.streamsOnline,
       child: mark,
     );

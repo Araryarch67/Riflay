@@ -99,6 +99,9 @@ class _LibraryListState extends State<LibraryList> {
             onTap: () => createPlaylist(context),
           ),
         for (final p in c.playlists) _LibraryRow(collection: c.playlistCollection(p), collapsed: widget.collapsed),
+        // Folder playlists: a music folder's songs as they are now, marked with the folder icon.
+        for (final f in c.folderPlaylists)
+          _LibraryRow(collection: f, collapsed: widget.collapsed, folderPlaylist: true),
         if (online != null) ...[
           if (online.liked.isNotEmpty)
             _LibraryRow(collection: likedCollection(online.liked), collapsed: widget.collapsed, online: true),
@@ -452,10 +455,18 @@ class _SimpleRow extends StatelessWidget {
 }
 
 class _LibraryRow extends StatelessWidget {
-  const _LibraryRow({required this.collection, required this.collapsed, this.online = false});
+  const _LibraryRow({
+    required this.collection,
+    required this.collapsed,
+    this.online = false,
+    this.folderPlaylist = false,
+  });
 
   final Collection collection;
   final bool collapsed;
+
+  /// A music folder shown among the playlists (`FolderWatch.playlistFolders`).
+  final bool folderPlaylist;
 
   /// A YouTube Music collection (Liked music): marked with a cloud.
   final bool online;
@@ -520,7 +531,8 @@ class _LibraryRow extends StatelessWidget {
                                   CollectionKind.youtube ||
                                   CollectionKind.remote => '${tr.playlist} • ${collection.subtitle}',
                                   CollectionKind.smart => '${tr.smartPlaylist} • ${collection.subtitle}',
-                                  CollectionKind.folder => '${tr.folder} • ${collection.subtitle}',
+                                  CollectionKind.folder =>
+                                    '${folderPlaylist ? tr.folderPlaylist : tr.folder} • ${collection.subtitle}',
                                   CollectionKind.playlist => '${tr.playlist} • Riflay • ${collection.subtitle}',
                                   CollectionKind.album => '${tr.album} • ${collection.subtitle}',
                                   CollectionKind.artist || CollectionKind.remoteArtist => tr.artist,

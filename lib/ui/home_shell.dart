@@ -29,14 +29,16 @@ import 'pages/wrap_page.dart';
 import 'navigation.dart';
 import 'player_panels.dart';
 import 'shell_scope.dart';
-import 'pages/search/soundcloud_results.dart' show SearchSourceToggle;
 import 'soundcloud_pages.dart';
 import 'widgets/power_settings.dart';
 import 'shortcuts.dart';
 import 'theme.dart';
 import 'youtube_import.dart';
+import 'folder_add_dialog.dart';
 import '../platform/features.dart';
 import '../services/incoming_links.dart';
+import '../services/monochrome.dart';
+import 'pages/monochrome_page.dart';
 import '../services/soundcloud.dart';
 import '../services/system_tray.dart';
 import '../services/youtube_importer.dart';
@@ -379,8 +381,6 @@ class _HomeShellState extends State<HomeShell> {
               },
             ),
           ),
-          // Where Search looks: YouTube Music or SoundCloud.
-          if (Features.soundcloud) ...[const SizedBox(width: 8), const SearchSourceToggle(height: 48)],
         ],
       ),
     ),
@@ -426,6 +426,16 @@ class _HomeShellState extends State<HomeShell> {
       messenger.showSnackBar(SnackBar(content: Text(tr.couldntAddMusic)));
     }
   }
+
+  /// Picks a music folder, then asks whether it is only added or added as a playlist that follows it.
+  Future<void> _addFolder() => _add(() async {
+    final c = PlayerScope.read(context);
+    final dir = await c.chooseFolder();
+    if (dir == null || !mounted) return 0;
+    final choice = await askFolderAddChoice(context, dir);
+    if (choice == null) return 0;
+    return c.scanFolder(dir, asPlaylist: choice == FolderAddChoice.asPlaylist);
+  });
 
   DateTime? _lastExitBack;
 
@@ -514,7 +524,7 @@ class _HomeShellState extends State<HomeShell> {
       openDownloads: () => _open(const DownloadsPage()),
       importFromYoutube: _importFromYoutube,
       addFiles: () => _add(c.pickFiles),
-      addFolder: c.canScanFolders ? () => _add(c.pickFolder) : null,
+      addFolder: c.canScanFolders ? _addFolder : null,
       child: child,
     );
   }
@@ -542,6 +552,27 @@ class _HomeShellState extends State<HomeShell> {
     // Phones: the full-screen player would cover the page or message the link brings.
     if (link is! VideoLink && _phoneRoutes.isNotEmpty) _closePhoneRoutes();
     if (link == null) {
+      if (MonochromeLink.parse(text) case final monochrome?) {
+        if (monochrome.kind != 'track') {
+          _openMonochrome(monochrome);
+          return;
+        }
+        messenger.showSnackBar(SnackBar(content: Text(tr.linkOpening)));
+        try {
+          final page = await Monochrome.instance.resolve(monochrome);
+          if (!mounted) return;
+          messenger.hideCurrentSnackBar();
+          await c.playList(page.tracks, 0, from: 'Monochrome');
+          if (mounted && _compact && _phoneRoutes.isEmpty) _openNowPlaying();
+        } catch (e) {
+          debugPrint('Monochrome link: $e');
+          if (mounted) {
+            messenger.hideCurrentSnackBar();
+            messenger.showSnackBar(SnackBar(content: Text(tr.sourceUnavailable('Monochrome'))));
+          }
+        }
+        return;
+      }
       if (IncomingLinks.readSoundcloud(text) case final soundcloud?) return _openSoundcloud(c, soundcloud);
       messenger.showSnackBar(SnackBar(content: Text(Features.soundcloud ? tr.linkNotSupported : tr.linkNotYoutube)));
       return;
@@ -630,10 +661,19 @@ class _HomeShellState extends State<HomeShell> {
   void _openRemote(RemotePlaylist p) =>
       openRemotePlaylist(context, p, shell: _scoped(const SizedBox.shrink()) as ShellScope);
 
+  void _openMonochrome(MonochromeLink link) =>
+      (_scoped(const SizedBox.shrink()) as ShellScope).open(MonochromePage(link: link));
+
   /// Ctrl/Cmd+V anywhere outside a text field: a copied YouTube link opens the importer.
   Future<void> _pasteLink() async {
     final text = (await Clipboard.getData(Clipboard.kTextPlain))?.text?.trim();
-    if (text != null && IncomingLinks.isLink(text)) await _importFromYoutube(url: text);
+    if (text != null && IncomingLinks.isLink(text)) {
+      if (MonochromeLink.parse(text) != null) {
+        await _openIncoming(text);
+      } else {
+        await _importFromYoutube(url: text);
+      }
+    }
   }
 
   /// Full-screen routes of the phone layout (now playing, queue, lyrics).

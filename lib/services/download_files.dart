@@ -19,7 +19,7 @@ class DownloadScan {
 /// device that remembers the video it came from. Streamed songs are not files.
 List<Track> downloadedFrom(Iterable<Track> library) => [
   for (final t in library)
-    if (!t.isRemote && t.path != null && youtubeVideoIdOf(t.sourceUrl) != null) t,
+    if (!t.streams && t.path != null && t.offlineId != null) t,
 ];
 
 /// Looks at the files of [downloads] without blocking: sums the sizes of the
@@ -37,13 +37,13 @@ Future<DownloadScan> scanDownloads(Iterable<Track> downloads) async {
     final size = sizes[i];
     if (size == null) continue;
     bytes += size;
-    if (youtubeVideoIdOf(tracks[i].sourceUrl) case final id?) present.add(id);
+    if (tracks[i].offlineId case final id?) present.add(id);
   }
   return DownloadScan(
     bytes: bytes,
     missing: [
       for (var i = 0; i < tracks.length; i++)
-        if (sizes[i] == null && !present.contains(youtubeVideoIdOf(tracks[i].sourceUrl))) tracks[i],
+        if (sizes[i] == null && !present.contains(tracks[i].offlineId)) tracks[i],
     ],
   );
 }

@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:path/path.dart' as p;
 import 'package:riflay/models/track.dart';
 import 'package:riflay/services/library_views.dart';
 import 'package:riflay/services/player_controller.dart';
@@ -32,7 +33,7 @@ final _library = [
   Track.youtube(videoId: 'zzz', title: 'Streamed song', artist: 'Someone'),
 ];
 
-const _folders = ['/music/Rock', '/other/Jazz', '/empty/Folder'];
+final _folders = ['/music/Rock', '/other/Jazz', '/empty/Folder'].map(p.normalize).toList();
 
 /// The real library, with the music folders given here instead of read from FolderWatch's saved list.
 class _Controller extends PlayerController {
@@ -90,7 +91,7 @@ void main() {
     });
 
     test('a download saved inside a music folder is in it', () {
-      final folders = LibraryViews(_library, 0).foldersOf(const ['/downloads']);
+      final folders = LibraryViews(_library, 0).foldersOf([p.normalize('/downloads')]);
       expect(folders.single.tracks.map((t) => t.title), ['Downloaded song']);
     });
 

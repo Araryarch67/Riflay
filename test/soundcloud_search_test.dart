@@ -8,6 +8,8 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:riflay/services/player_controller.dart';
 import 'package:riflay/services/soundcloud.dart';
+import 'package:riflay/services/monochrome.dart';
+import 'package:riflay/services/sources/music_sources.dart';
 import 'package:riflay/ui/pages/search/soundcloud_results.dart';
 import 'package:riflay/ui/pages/search_page.dart';
 import 'package:riflay/ui/shell_scope.dart';
@@ -65,6 +67,7 @@ http.Response _answer(http.Request r) => switch (r.url.path) {
 };
 
 void main() {
+  setUp(() => MusicSources.instance.reset());
   TestWidgetsFlutterBinding.ensureInitialized();
   TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(
     const MethodChannel('plugins.flutter.io/path_provider'),
@@ -72,7 +75,11 @@ void main() {
   );
 
   testWidgets('SoundCloud search lists its songs, artists and playlists, each with its mark', (tester) async {
-    SharedPreferences.setMockInitialValues({'search.source.v1': 'soundcloud', 'soundcloud.clientId.v1': 'id'});
+    SharedPreferences.setMockInitialValues({
+      'search.source.v1': 'soundcloud',
+      'soundcloud.clientId.v1': 'id',
+      'sources.soundcloud.v1': true,
+    });
     SearchSource.reset();
     addTearDown(SearchSource.reset);
     final c = PlayerController();
@@ -142,22 +149,137 @@ void main() {
     expect(c.inLibrary(track), isFalse);
   });
 
-  testWidgets('the source switch flips between YouTube Music and SoundCloud, one at a time', (tester) async {
-    SharedPreferences.setMockInitialValues({});
+  testWidgets('the source switch selects and remembers all three services', (tester) async {
+    SharedPreferences.setMockInitialValues({'sources.soundcloud.v1': true, 'sources.monochrome.v1': true});
     SearchSource.reset();
     addTearDown(SearchSource.reset);
     await tester.pumpWidget(
       const MaterialApp(
-        home: Scaffold(body: Center(child: SearchSourceToggle())),
+        home: Scaffold(body: Center(child: SearchSourceFilters())),
       ),
     );
     await tester.pump();
     expect(SearchSource.current.value, SearchSource.youtubeMusic);
-    await tester.tap(find.byType(SearchSourceToggle));
+    await tester.tap(find.byKey(const ValueKey('search-source-soundcloud')));
     await tester.pump();
     expect(SearchSource.current.value, SearchSource.soundcloud);
-    await tester.tap(find.byType(SearchSourceToggle));
+    await tester.tap(find.byKey(const ValueKey('search-source-monochrome')));
+    await tester.pump();
+    expect(SearchSource.current.value, SearchSource.monochrome);
+    expect((await SharedPreferences.getInstance()).getString('search.source.v1'), 'monochrome');
+    await tester.tap(find.byKey(const ValueKey('search-source-youtubeMusic')));
     await tester.pump();
     expect(SearchSource.current.value, SearchSource.youtubeMusic);
+  });
+
+  testWidgets('selecting Monochrome searches its catalog without calling SoundCloud', (tester) async {
+    SharedPreferences.setMockInitialValues({
+      'search.source.v1': 'youtubeMusic',
+      'soundcloud.clientId.v1': 'id',
+      'sources.monochrome.v1': true,
+      'sources.soundcloud.v1': true,
+    });
+    SearchSource.reset();
+    addTearDown(SearchSource.reset);
+    final c = PlayerController();
+    await tester.runAsync(c.load);
+    addTearDown(() => tester.runAsync(() async => c.dispose()));
+    var monochromeQueries = 0;
+    String? askedQuery;
+    var soundcloudQueries = 0;
+    c.monochrome = Monochrome(
+      client: MockClient((r) async {
+        monochromeQueries++;
+        askedQuery = r.url.queryParameters['q'];
+        return http.Response(
+          jsonEncode({
+            'tracks': [
+              {
+                'trackId': '155102871061270528',
+                'title': 'One More Time',
+                'artistNames': ['Daft Punk'],
+              },
+            ],
+          }),
+          200,
+        );
+      }),
+    );
+    c.soundcloud = SoundcloudClient(
+      prefs: await SharedPreferences.getInstance(),
+      client: MockClient((r) async {
+        soundcloudQueries++;
+        return _answer(r);
+      }),
+    );
+    final input = SearchInput();
+    addTearDown(input.dispose);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: PlayerScope(
+          controller: c,
+          child: ShellScope(
+            compact: false,
+            width: 1200,
+            open: (_, {location}) {},
+            openCollection: (_) {},
+            openQueue: () {},
+            openNowPlaying: () {},
+            openLyrics: () {},
+            openDownloads: () {},
+            importFromYoutube: () {},
+            addFiles: () {},
+            addFolder: null,
+            child: Scaffold(body: SearchPage(input: input)),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    input.controller.text = ':mc discovery';
+    await tester.pump(const Duration(milliseconds: 350));
+    await tester.pump();
+    expect(monochromeQueries, 1);
+    expect(askedQuery, 'discovery');
+    expect(SearchSource.current.value, SearchSource.monochrome);
+    expect(soundcloudQueries, 0);
+    expect(find.text('One More Time'), findsOneWidget);
+    expect(find.byType(TrackRow), findsOneWidget);
+    expect(find.text('Videos'), findsNothing);
+    expect(find.text('No YouTube results.'), findsNothing);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('only enabled services appear, disabling the selected one falls back, and an empty selector is hidden', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({'sources.monochrome.v1': true});
+    SearchSource.reset();
+    addTearDown(SearchSource.reset);
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(body: Center(child: SearchSourceFilters())),
+      ),
+    );
+    await tester.pump();
+    expect(find.byKey(const ValueKey('search-source-monochrome')), findsOneWidget);
+    expect(find.byKey(const ValueKey('search-source-soundcloud')), findsNothing);
+    await tester.tap(find.byKey(const ValueKey('search-source-monochrome')));
+    await tester.pump();
+    expect(SearchSource.current.value, SearchSource.monochrome);
+    await MusicSources.instance.setMonochrome(false);
+    await tester.pump();
+    expect(SearchSource.current.value, SearchSource.youtubeMusic);
+    expect(find.byKey(const ValueKey('search-source-youtubeMusic')), findsNothing);
+    await MusicSources.instance.setSoundcloud(true);
+    await tester.pump();
+    expect(find.byKey(const ValueKey('search-source-soundcloud')), findsOneWidget);
+    expect(find.byKey(const ValueKey('search-source-monochrome')), findsNothing);
+    MusicSources.instance.reset();
+    await MusicSources.instance.load();
+    expect(MusicSources.instance.soundcloud, isTrue);
+    expect(MusicSources.instance.monochrome, isFalse);
+    await tester.pumpWidget(const SizedBox.shrink());
   });
 }

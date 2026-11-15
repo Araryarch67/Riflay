@@ -16,6 +16,10 @@ class MusicSources extends ChangeNotifier {
 
   static const _archiveKey = 'sources.archive.v1';
   static const _radioKey = 'sources.radioParadise.v1';
+  static const _soundcloudKey = 'sources.soundcloud.v1';
+  static const _monochromeKey = 'sources.monochrome.v1';
+  bool soundcloud = false;
+  bool monochrome = false;
 
   /// Search's "All" also shows Internet Archive recordings with FLAC files.
   bool archive = true;
@@ -39,14 +43,16 @@ class MusicSources extends ChangeNotifier {
       if (isOn(s)) s,
   ];
 
-  bool _loaded = false;
+  Future<void>? _loading;
 
-  Future<void> load() async {
-    if (_loaded) return;
-    _loaded = true;
+  Future<void> load() => _loading ??= _read();
+
+  Future<void> _read() async {
     final p = await SharedPreferences.getInstance();
     archive = p.getBool(_archiveKey) ?? true;
     radioParadise = p.getBool(_radioKey) ?? true;
+    soundcloud = p.getBool(_soundcloudKey) ?? false;
+    monochrome = p.getBool(_monochromeKey) ?? false;
     _on
       ..clear()
       ..addAll([
@@ -74,10 +80,23 @@ class MusicSources extends ChangeNotifier {
     await (await SharedPreferences.getInstance()).setBool(_key(source), v);
   }
 
+  Future<void> setSoundcloud(bool value) async {
+    soundcloud = value;
+    notifyListeners();
+    await (await SharedPreferences.getInstance()).setBool(_soundcloudKey, value);
+  }
+
+  Future<void> setMonochrome(bool value) async {
+    monochrome = value;
+    notifyListeners();
+    await (await SharedPreferences.getInstance()).setBool(_monochromeKey, value);
+  }
+
   @visibleForTesting
   void reset() {
-    _loaded = false;
+    _loading = null;
     archive = radioParadise = true;
+    soundcloud = monochrome = false;
     _on.clear();
   }
 }

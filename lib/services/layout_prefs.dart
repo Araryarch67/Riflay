@@ -498,7 +498,7 @@ class LayoutPrefs extends ChangeNotifier {
 
   /// The player, part by part, on phones and desktop. The defaults are how it has always looked; Settings › Look & feel ›
   /// Layout › Player changes them one by one, and Presets sets several at once.
-  PlayerCover playerCover = PlayerCover.flower;
+  PlayerCover playerCover = PlayerCover.square;
   PlayerHeader playerHeader = PlayerHeader.classic;
   TitleActions titleActions = TitleActions.classic;
   bool showTimeLeft = false;
@@ -699,7 +699,11 @@ class LayoutPrefs extends ChangeNotifier {
     playButton = pick(PlayButtonShape.values, 'playButton', d.playButton);
     phoneCover = pick(PhoneCoverSize.values, 'phoneCover', d.phoneCover);
     // Older versions had a card or a full-width cover, and a separate flower / square setting for the card.
-    final legacyShape = j['visualizerCoverShape'] == 'square' ? PlayerCover.square : PlayerCover.flower;
+    final legacyShape = switch (j['visualizerCoverShape']) {
+      'square' => PlayerCover.square,
+      'flower' => PlayerCover.flower,
+      _ => d.playerCover,
+    };
     playerCover = switch (j['playerCover']) {
       'fullBleed' => PlayerCover.background,
       'card' => legacyShape,

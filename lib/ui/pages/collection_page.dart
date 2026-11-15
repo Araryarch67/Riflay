@@ -6,6 +6,7 @@ import '../../models/track.dart';
 import '../../platform/features.dart';
 import '../../services/artist_channels.dart';
 import '../../services/flac_convert.dart';
+import '../../services/folder_watch.dart';
 import '../../services/language.dart';
 import '../../services/layout_prefs.dart';
 import '../../services/play_history.dart';
@@ -119,6 +120,7 @@ class CollectionPage extends StatelessWidget {
     final actions = [
       ...this.actions,
       if (playlistId != null) _PlaylistMenu(id: playlistId, name: live.title, tracks: tracks),
+      if (live.kind == CollectionKind.folder && live.id != null) _FolderPlaylistMenu(path: live.id!),
     ];
 
     final hero = LayoutPrefs.instance.albumHeader == AlbumHeaderStyle.hero;
@@ -231,14 +233,17 @@ class CollectionPage extends StatelessWidget {
                           icon: const Icon(Icons.add_circle_outline_rounded),
                         ),
                       ],
-                      if (live.kind == CollectionKind.remote && tracks.isNotEmpty && Features.downloads) ...[
+                      if ((live.kind == CollectionKind.remote || tracks.any((t) => t.monochromeId != null)) &&
+                          tracks.isNotEmpty &&
+                          Features.downloads) ...[
                         const Spacer(),
                         IconButton(
                           tooltip: tr.downloadAllOffline,
                           onPressed: () async {
                             final messenger = ScaffoldMessenger.of(context);
-                            final choice = await chooseDownload(context);
-                            if (choice == null) return;
+                            final native = tracks.every((t) => t.monochromeId != null);
+                            final choice = native ? null : await chooseDownload(context);
+                            if (!native && choice == null) return;
                             final n = c.youtube.enqueueTracks(tracks, choice: choice);
                             messenger.showSnackBar(
                               SnackBar(content: Text(n == 0 ? tr.alreadyDownloaded : tr.downloadingSongs(n))),
@@ -554,6 +559,41 @@ class _ColumnHeader extends StatelessWidget {
           const SizedBox(height: 8),
         ],
       ),
+    );
+  }
+}
+
+/// A music folder's page: show it among the playlists, or take it out of them. Its songs and files stay either way.
+class _FolderPlaylistMenu extends StatelessWidget {
+  const _FolderPlaylistMenu({required this.path});
+
+  final String path;
+
+  @override
+  Widget build(BuildContext context) {
+    final watch = FolderWatch.instance;
+    return PopupMenuButton<VoidCallback>(
+      useRootNavigator: true,
+      tooltip: tr.moreOptions,
+      icon: const Icon(Icons.more_horiz_rounded, size: 30),
+      onSelected: (action) => action(),
+      // Built as it opens, so it always offers what is true now.
+      itemBuilder: (_) => [
+        if (watch.isPlaylist(path))
+          PopupMenuItem(
+            value: () {
+              final messenger = ScaffoldMessenger.of(context);
+              unawaited(watch.setPlaylist(path, false));
+              messenger.showSnackBar(SnackBar(content: Text(tr.folderPlaylistRemoved)));
+            },
+            child: MenuRow(leading: Icon(Icons.playlist_remove_rounded), title: Text(tr.removeFolderPlaylist)),
+          )
+        else
+          PopupMenuItem(
+            value: () => unawaited(watch.setPlaylist(path, true)),
+            child: MenuRow(leading: Icon(Icons.playlist_add_rounded), title: Text(tr.makeFolderPlaylist)),
+          ),
+      ],
     );
   }
 }

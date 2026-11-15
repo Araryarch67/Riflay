@@ -7,6 +7,8 @@ import '../../services/download_files.dart';
 import '../../services/language.dart';
 import '../../services/player_controller.dart';
 import '../../services/youtube_importer.dart';
+import '../../services/monochrome.dart';
+import '../../services/monochrome_download.dart';
 import '../shell_scope.dart';
 import '../theme.dart';
 import '../widgets/controls.dart';
@@ -141,6 +143,15 @@ class _DownloadedFilesState extends State<_DownloadedFiles> {
   void _downloadAgain(List<Track> songs) {
     final c = _c!;
     for (final t in songs) {
+      if (MonochromeLink.parse(t.sourceUrl ?? '') case final link? when link.kind == 'track') {
+        final source = Monochrome.track({'id': link.id, 'title': t.title, 'artist': t.artist, 'albumTitle': t.album});
+        if (source == null) continue;
+        if (c.youtube.jobFor(MonochromeDownload.jobId(source))?.status == DownloadStatus.done) {
+          c.youtube.clearFinished();
+        }
+        c.youtube.enqueueTracks([source]);
+        continue;
+      }
       final id = youtubeVideoIdOf(t.sourceUrl);
       if (id == null) continue;
       // A finished job of this song would make the importer skip it.

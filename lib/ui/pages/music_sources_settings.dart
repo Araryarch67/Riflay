@@ -3,6 +3,11 @@ import 'package:flutter/material.dart';
 import '../../services/language.dart';
 import '../../services/sources/music_sources.dart';
 import '../../services/sources/song_source.dart';
+import '../../platform/features.dart';
+import '../../services/spotiflac.dart';
+import '../shell_scope.dart';
+import 'spotiflac_page.dart';
+import '../widgets/monochrome_mark.dart';
 import 'sound_settings.dart' show SettingsCard, settingsMuted;
 
 /// Settings › Accounts & services › Music sources: Internet Archive, Radio Paradise and the optional song sources
@@ -32,6 +37,7 @@ class _MusicSourcesSettingsState extends State<MusicSourcesSettings> {
   static String _subtitle(SongSource source) => switch (source.prefix) {
     'jamendo:' => tr.sourceJamendoSubtitle,
     'audius:' => tr.sourceAudiusSubtitle,
+    'monochrome:' => tr.sourceMonochromeSubtitle,
     _ => tr.sourceCcmixterSubtitle,
   };
 
@@ -72,6 +78,29 @@ class _MusicSourcesSettingsState extends State<MusicSourcesSettings> {
                     value: _sources.isOn(source),
                     onChanged: (v) => _sources.setOn(source, v),
                   ),
+              if (Features.soundcloud)
+                SwitchListTile(
+                  secondary: const Icon(Icons.cloud_outlined),
+                  title: Text(tr.sourceInSearch(tr.sourceSoundcloud)),
+                  subtitle: Text(tr.sourceSearchToggleSubtitle, style: muted),
+                  value: _sources.soundcloud,
+                  onChanged: _sources.setSoundcloud,
+                ),
+              SwitchListTile(
+                secondary: const MonochromeMark(size: 24),
+                title: Text(tr.sourceInSearch(tr.sourceMonochrome)),
+                subtitle: Text(tr.sourceSearchToggleSubtitle, style: muted),
+                value: _sources.monochrome,
+                onChanged: _sources.setMonochrome,
+              ),
+              if (Spotiflac.supported)
+                ListTile(
+                  leading: const Icon(Icons.extension_outlined),
+                  title: Text(tr.spotiflacExtensions),
+                  subtitle: Text(tr.spotiflacAbout, style: muted),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => ShellScope.of(context).open(const SpotiflacPage()),
+                ),
             ],
           ),
         ],

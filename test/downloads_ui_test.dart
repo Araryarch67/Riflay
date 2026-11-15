@@ -8,6 +8,8 @@ import 'package:riflay/main.dart';
 import 'package:riflay/models/track.dart';
 import 'package:riflay/services/download_prefs.dart';
 import 'package:riflay/services/player_controller.dart';
+import 'package:riflay/services/monochrome.dart';
+import 'package:riflay/services/monochrome_download.dart';
 import 'package:riflay/ui/download_editor.dart';
 import 'package:riflay/ui/widgets/editable_title.dart';
 import 'package:riflay/ui/ytmusic_edit.dart';
@@ -209,7 +211,7 @@ void main() {
   group('download button', () {
     final song = Track.youtube(videoId: 'dQw4w9WgXcQ', title: 'Never Gonna', artist: 'Rick');
 
-    Future<PlayerController> pumpButton(WidgetTester tester) async {
+    Future<PlayerController> pumpButton(WidgetTester tester, {Track? track}) async {
       SharedPreferences.setMockInitialValues({'library.v1': jsonEncode(<Object>[])});
       final prefs = DownloadPrefs.instance;
       await tester.runAsync(() async {
@@ -230,7 +232,7 @@ void main() {
           home: Scaffold(
             body: PlayerScope(
               controller: c,
-              child: Center(child: DownloadButton(track: song)),
+              child: Center(child: DownloadButton(track: track ?? song)),
             ),
           ),
         ),
@@ -268,6 +270,28 @@ void main() {
       await tester.tap(find.text('Cancel'));
       await tester.pump(const Duration(milliseconds: 300));
       expect(c.youtube.jobFor('dQw4w9WgXcQ'), isNull);
+    });
+
+    testWidgets('Monochrome offers FLAC directly without the YouTube format dialog', (tester) async {
+      final track = Monochrome.track({
+        'trackId': '155102871061270528',
+        'title': 'Song',
+        'artistNames': ['Artist'],
+      }, native: true)!;
+      final c = await pumpButton(tester, track: track);
+      expect(find.byType(IconButton), findsOneWidget);
+      final tip = tester.widget<Tooltip>(find.byType(Tooltip));
+      expect(tip.message, contains('FLAC'));
+      await tester.tap(find.byType(IconButton));
+      await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 50)));
+      await tester.pump();
+      expect(find.byType(Dialog), findsNothing);
+      final job = c.youtube.jobFor(MonochromeDownload.jobId(track));
+      expect(job, isNotNull);
+      expect(job!.monochromeTrack, same(track));
+      expect(job.choice!.format, DownloadFormat.flac);
+      c.youtube.cancel(job);
+      await tester.pump(const Duration(seconds: 5));
     });
 
     testWidgets('the tooltip says what a long press does', (tester) async {

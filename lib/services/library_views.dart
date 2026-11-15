@@ -114,8 +114,7 @@ class LibraryViews {
   Collection? get youtubeDownloads {
     if (_youtubeDone) return _youtubeDownloads;
     _youtubeDone = true;
-    final downloaded = tracks.where((t) => t.sourceUrl != null).toList()
-      ..sort((a, b) => b.addedAt.compareTo(a.addedAt));
+    final downloaded = tracks.where((t) => t.isDownload).toList()..sort((a, b) => b.addedAt.compareTo(a.addedAt));
     if (downloaded.isEmpty) return null;
     return _youtubeDownloads = Collection(
       kind: CollectionKind.youtube,
@@ -131,7 +130,7 @@ class LibraryViews {
     if (cached != null) return cached;
     final out = <String, Track>{};
     for (final t in tracks) {
-      if (youtubeVideoIdOf(t.sourceUrl) case final id?) out[id] = t;
+      if (t.offlineId case final id? when t.path != null) out[id] = t;
     }
     return _downloads = out;
   }
@@ -241,6 +240,14 @@ class LibraryViews {
           tracks: [for (final e in inside[i]..sort((a, b) => a.$1.compareTo(b.$1))) e.$2],
         ),
     ];
+  }
+
+  /// The folder playlists: the collection in [folders] (from [foldersOf]) of each path in [playlistFolders], in
+  /// that order. They are the folders' own collections, so their songs are always what is in the folder now
+  /// (subfolders included); a path that is no longer a music folder is left out.
+  static List<Collection> folderPlaylistsOf(List<Collection> folders, List<String> playlistFolders) {
+    final byPath = {for (final f in folders) f.id: f};
+    return [for (final path in playlistFolders) ?byPath[path]];
   }
 
   /// [items] sorted by [key], each key computed once; equal keys keep their order.

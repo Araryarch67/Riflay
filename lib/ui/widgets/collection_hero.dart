@@ -146,14 +146,17 @@ class CollectionHero extends StatelessWidget {
                           ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(tr.toastAddedToQueue)));
                         },
                       ),
-                    if (collection.kind == CollectionKind.remote && !empty && Features.downloads)
+                    if ((collection.kind == CollectionKind.remote || tracks.any((t) => t.monochromeId != null)) &&
+                        !empty &&
+                        Features.downloads)
                       (
                         icon: Icons.download_for_offline_outlined,
                         label: tr.downloadAllOffline,
                         onTap: () async {
                           final messenger = ScaffoldMessenger.of(context);
-                          final choice = await chooseDownload(context);
-                          if (choice == null) return;
+                          final native = tracks.every((t) => t.monochromeId != null);
+                          final choice = native ? null : await chooseDownload(context);
+                          if (!native && choice == null) return;
                           final n = c.youtube.enqueueTracks(tracks, choice: choice);
                           messenger.showSnackBar(
                             SnackBar(content: Text(n == 0 ? tr.alreadyDownloaded : tr.downloadingSongs(n))),

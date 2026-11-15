@@ -10,6 +10,7 @@ import '../../services/beta_features.dart';
 import '../../services/device_setup.dart';
 import '../../services/discord_presence.dart';
 import '../../services/language.dart';
+import '../../services/spotiflac.dart';
 import '../../services/media_session.dart';
 import '../../services/sources/jamendo.dart';
 import '../../services/stay_awake.dart';
@@ -1019,6 +1020,29 @@ abstract final class SettingsOptions {
       (t) => t.sourceInSearch('ccMixter'),
       subtitle: (t) => t.sourceCcmixterSubtitle,
       find: (t) => t.kwSources,
+    ),
+    SettingsOption(
+      'sourceSoundcloud',
+      .sources,
+      (t) => t.sourceInSearch(t.sourceSoundcloud),
+      subtitle: (t) => t.sourceSearchToggleSubtitle,
+      find: (t) => '${t.kwSources}, soundcloud',
+      available: () => Features.soundcloud,
+    ),
+    SettingsOption(
+      'sourceMonochrome',
+      .sources,
+      (t) => t.sourceInSearch(t.sourceMonochrome),
+      subtitle: (t) => t.sourceSearchToggleSubtitle,
+      find: (t) => '${t.kwSources}, monochrome',
+    ),
+    SettingsOption(
+      'spotiflac',
+      .sources,
+      (t) => t.spotiflacExtensions,
+      subtitle: (t) => t.spotiflacAbout,
+      find: (_) => 'spotiflac, sflx, plugin, extension, repository',
+      available: () => Spotiflac.supported,
     ),
     // About
     SettingsOption(

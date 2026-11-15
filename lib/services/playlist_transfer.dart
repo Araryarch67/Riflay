@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 
 import '../models/track.dart';
 import 'language.dart';
+import 'monochrome.dart';
 
 /// A song as another app lists it, before it's found in YouTube Music.
 class ForeignSong {
@@ -22,14 +23,20 @@ class ForeignSong {
 
 /// A playlist (or album) read from another music app ([PlaylistTransfer.services]).
 class ForeignPlaylist {
-  const ForeignPlaylist({required this.title, required this.service, required this.songs, int? total})
-    : total = total ?? songs.length;
+  const ForeignPlaylist({
+    required this.title,
+    required this.service,
+    required this.songs,
+    this.nativeTracks,
+    int? total,
+  }) : total = total ?? songs.length;
 
   final String title;
 
   /// One of [PlaylistTransfer.services].
   final String service;
   final List<ForeignSong> songs;
+  final List<Track>? nativeTracks;
 
   /// How many songs the playlist really has; more than [songs] when the
   /// service only shows part of it without signing in.
@@ -69,11 +76,14 @@ class PlaylistTransfer {
   /// Songs read from one playlist at most; YouTube Music playlists hold 5000.
   static const maxSongs = 1000;
 
-  static const services = ['Spotify', 'Apple Music', 'Deezer', 'TIDAL', 'NetEase Cloud Music'];
+  static const services = ['Spotify', 'Apple Music', 'Deezer', 'TIDAL', 'NetEase Cloud Music', 'Monochrome'];
 
   /// Whether [text] is a playlist or album link this can read (short share
   /// links included; those are resolved when reading).
-  static bool looksLikeLink(String text) => _source(text) != null || _shortLink(text) != null;
+  static bool looksLikeLink(String text) {
+    final monochrome = MonochromeLink.parse(text);
+    return _source(text) != null || _shortLink(text) != null || (monochrome != null && monochrome.kind != 'track');
+  }
 
   static _Source? _source(String text) {
     final t = text.trim();
@@ -150,6 +160,16 @@ class PlaylistTransfer {
 
   /// Reads the songs of a playlist or album link.
   Future<ForeignPlaylist> read(String link) async {
+    if (MonochromeLink.parse(link) case final monochrome? when monochrome.kind != 'track') {
+      final page = await Monochrome(client: _http).resolve(monochrome);
+      if (page.tracks.isEmpty) throw PlaylistTransferError(tr.playlistEmptyOrPrivate);
+      return ForeignPlaylist(
+        title: page.title,
+        service: 'Monochrome',
+        nativeTracks: page.tracks,
+        songs: [for (final t in page.tracks) ForeignSong(title: t.title, artist: t.artist, duration: t.duration)],
+      );
+    }
     final source = _source(link) ?? await _resolveShortLink(link);
     if (source == null) {
       throw PlaylistTransferError(tr.notPlaylistLinkFrom(services.join(', ')));

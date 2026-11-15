@@ -9,6 +9,7 @@ import '../services/player_controller.dart';
 import '../services/soundcloud.dart';
 import '../services/youtube_importer.dart';
 import '../services/youtube_links.dart';
+import '../services/monochrome.dart';
 import 'download_options.dart';
 import 'theme.dart';
 import 'widgets/controls.dart';
@@ -63,6 +64,7 @@ class _ImportFormState extends State<_ImportForm> {
 
   /// A SoundCloud link's track or tracks: they stream, so they are played or saved, not downloaded.
   SoundcloudPage? _soundcloud;
+  MonochromeCollection? _monochrome;
   String? _error;
   bool _loading = false;
   int _lookup = 0;
@@ -93,7 +95,9 @@ class _ImportFormState extends State<_ImportForm> {
   }
 
   static bool _looksLikeLink(String text) =>
-      YoutubeLinks.looksLikeLink(text) || (Features.soundcloud && SoundcloudLink.looksLikeLink(text));
+      YoutubeLinks.looksLikeLink(text) ||
+      (Features.soundcloud && SoundcloudLink.looksLikeLink(text)) ||
+      MonochromeLink.parse(text) != null;
 
   Future<void> _paste() async {
     final text = (await Clipboard.getData(Clipboard.kTextPlain))?.text?.trim();
@@ -105,11 +109,34 @@ class _ImportFormState extends State<_ImportForm> {
   Future<void> _resolve() async {
     final text = _url.text.trim();
     final lookup = ++_lookup;
+    _monochrome = null;
     if (text.isEmpty) {
       setState(() {
         _preview = _error = null;
         _soundcloud = null;
       });
+      return;
+    }
+    if (MonochromeLink.parse(text) case final link?) {
+      setState(() {
+        _loading = true;
+        _error = null;
+        _preview = null;
+        _soundcloud = null;
+      });
+      try {
+        final page = await Monochrome.instance.resolve(link);
+        if (!mounted || lookup != _lookup) return;
+        setState(() {
+          _monochrome = page.tracks.isEmpty ? null : page;
+          if (page.tracks.isEmpty) _error = tr.playlistEmptyOrPrivate;
+        });
+      } catch (e) {
+        debugPrint('Monochrome import: $e');
+        if (mounted && lookup == _lookup) setState(() => _error = tr.sourceUnavailable('Monochrome'));
+      } finally {
+        if (mounted && lookup == _lookup) setState(() => _loading = false);
+      }
       return;
     }
     if (Features.soundcloud) {
@@ -259,9 +286,9 @@ class _ImportFormState extends State<_ImportForm> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(tr.importFromYouTube, style: text.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
+          Text(tr.openMusicLink, style: text.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
           const SizedBox(height: 4),
-          Text(tr.importFromYtBody, style: text.bodyMedium?.copyWith(color: AppColors.textSecondary)),
+          Text(tr.openMusicLinkBody, style: text.bodyMedium?.copyWith(color: AppColors.textSecondary)),
           const SizedBox(height: 20),
           TextField(
             controller: _url,
@@ -292,6 +319,12 @@ class _ImportFormState extends State<_ImportForm> {
                     padding: const EdgeInsets.only(bottom: 8),
                     child: Text(_error!, style: text.bodyMedium?.copyWith(color: Theme.of(context).colorScheme.error)),
                   )
+                : _monochrome != null
+                ? ListTile(
+                    leading: const Icon(Icons.album_outlined),
+                    title: Text(_monochrome!.title),
+                    subtitle: const Text('Monochrome'),
+                  )
                 : _soundcloud != null
                 ? _SoundcloudCard(page: _soundcloud!)
                 : preview == null
@@ -302,6 +335,47 @@ class _ImportFormState extends State<_ImportForm> {
           LayoutBuilder(
             // Narrow windows: the note goes above the button instead of squeezing it.
             builder: (context, constraints) {
+              if (_monochrome case final page? when !_loading) {
+                return Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    if (Features.downloads)
+                      OutlinedButton(
+                        onPressed: () {
+                          final c = PlayerScope.read(context);
+                          final messenger = ScaffoldMessenger.of(context);
+                          final n = c.youtube.enqueueTracks(page.tracks);
+                          Navigator.of(context).pop(n > 0);
+                          messenger.showSnackBar(
+                            SnackBar(content: Text(n == 0 ? tr.alreadyDownloaded : tr.downloadingSongs(n))),
+                          );
+                        },
+                        child: Text(tr.download),
+                      ),
+                    OutlinedButton(
+                      onPressed: () {
+                        final c = PlayerScope.read(context);
+                        final messenger = ScaffoldMessenger.of(context);
+                        c.createPlaylist(page.title, tracks: page.tracks);
+                        Navigator.of(context).pop(true);
+                        messenger.showSnackBar(
+                          SnackBar(content: Text(tr.createdPlaylistWith(page.title, page.tracks.length))),
+                        );
+                      },
+                      child: Text(tr.saveAsPlaylist),
+                    ),
+                    FilledButton(
+                      onPressed: () {
+                        final c = PlayerScope.read(context);
+                        Navigator.of(context).pop(true);
+                        c.playList(page.tracks, 0, from: page.title).ignore();
+                      },
+                      child: Text(tr.play),
+                    ),
+                  ],
+                );
+              }
               if (_soundcloud case final page? when !_loading) return _soundcloudActions(context, page, constraints);
               final note = Text(tr.bestQualityNote, style: text.bodySmall?.copyWith(color: AppColors.textMuted));
               final button = FilledButton(

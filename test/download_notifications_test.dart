@@ -11,6 +11,21 @@ JobSnapshot job(
 }) => JobSnapshot(videoId: id, title: title, status: status, progress: progress, phase: phase);
 
 void main() {
+  test('Windows never posts progress toasts, including queue, conversion and finishing', () {
+    for (final status in [DownloadStatus.queued, DownloadStatus.downloading]) {
+      for (final phase in DownloadPhase.values) {
+        for (var percent = 0; percent <= 100; percent++) {
+          final snapshot = job('mono-track', status, progress: percent / 100, phase: phase);
+          expect(noteFor(snapshot, terminalOnly: true), isNull);
+          expect(summaryFor([snapshot, job('other', DownloadStatus.queued)], terminalOnly: true), isNull);
+        }
+      }
+    }
+    expect(noteFor(job('mono-track', DownloadStatus.done), terminalOnly: true)!.title, 'Downloaded Song');
+    expect(noteFor(job('mono-track', DownloadStatus.failed), terminalOnly: true)!.actions.single.id, retryAction);
+    expect(noteFor(job('mono-track', DownloadStatus.cancelled), terminalOnly: true), isNull);
+  });
+
   group('noteFor', () {
     test('a running download shows title, percent, a bar and Cancel', () {
       final n = noteFor(job('a', DownloadStatus.downloading, progress: 0.451, title: 'Blue'))!;

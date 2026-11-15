@@ -121,13 +121,10 @@ class KaraokeLineState extends State<KaraokeLine> {
     }
   }
 
-  /// The rate the rest of the player moves at: 20 frames a second in Balanced, Heavy's 30. At the display's rate the
-  /// fill alone redrew the window 60 times a second.
-  static Duration get _every => LayoutPrefs.heavy
-      ? PlayingMotion.heavyEvery
-      : LayoutPrefs.frugal
-      ? LayoutPrefs.frugalEvery
-      : const Duration(milliseconds: 50);
+  /// 30 frames a second in Heavy and Balanced alike: the lyrics never move slower than 24 fps (a fill at 20, or at
+  /// a frugal computer's 5, read as steps). 30 is the nearest [UiBeat] stride above 24 (every second 60 Hz beat).
+  /// At the display's rate the fill alone redrew the window 60 times a second.
+  static Duration get _every => PlayingMotion.heavyEvery;
 
   void _snap(Duration position) {
     final p = _at(position);

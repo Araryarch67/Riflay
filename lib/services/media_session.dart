@@ -55,6 +55,12 @@ class MediaSession extends BaseAudioHandler with SeekHandler {
           androidNotificationIcon: 'mipmap/ic_launcher_monochrome',
           androidNotificationOngoing: true,
           androidStopForegroundOnPause: true,
+          // Android decodes the notification's cover itself (Java heap, kept in an LRU of an eighth of it). Without
+          // a size it decodes the whole embedded picture: a 3000 px cover is a 36 MB bitmap per song, which no
+          // computer build pays. It is decoded at a power-of-two step at least this size (512–1023 px, ~1–4 MB),
+          // still sharp in the notification and the lock-screen / quick-settings player.
+          artDownscaleWidth: 512,
+          artDownscaleHeight: 512,
         ),
       );
     } catch (e) {

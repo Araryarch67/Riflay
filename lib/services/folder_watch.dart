@@ -351,6 +351,7 @@ class FolderWatch extends ChangeNotifier with WidgetsBindingObserver {
   static const _enabledKey = 'library.keepUpToDate.v1';
   static const _foldersKey = 'library.folders.v1';
   static const _excludedKey = 'library.excluded.v1';
+  static const _playlistsKey = 'library.folderPlaylists.v1';
 
   static const phoneInterval = Duration(minutes: 10);
   static const pollInterval = Duration(minutes: 3);
@@ -364,6 +365,7 @@ class FolderWatch extends ChangeNotifier with WidgetsBindingObserver {
   PlayerController? _c;
   bool _enabled = true;
   List<String> _folders = [];
+  List<String> _playlists = [];
   final Set<String> _excluded = {};
   final Map<String, FolderSnapshot> _previous = {};
   final Map<String, StreamSubscription<FileSystemEvent>> _watchers = {};
@@ -380,6 +382,27 @@ class FolderWatch extends ChangeNotifier with WidgetsBindingObserver {
 
   /// The music folders being kept up to date.
   List<String> get folders => List.unmodifiable(_folders);
+
+  /// The music folders that are also playlists (Playlists), in the order they were made playlists. A folder
+  /// playlist holds no songs of its own: it is the folder's songs right now (`PlayerController.folderPlaylists`).
+  List<String> get playlistFolders => List.unmodifiable(_playlists);
+
+  /// Whether [dir] is shown as a folder playlist.
+  bool isPlaylist(String? dir) => dir != null && _playlists.contains(dir);
+
+  /// Makes the music folder [dir] a playlist, or takes that playlist away ([on] false). Its songs and files stay.
+  Future<void> setPlaylist(String dir, bool on) async {
+    final clean = p.normalize(dir);
+    if (on == _playlists.contains(clean)) return;
+    _playlists = on
+        ? [..._playlists, clean]
+        : [
+            for (final f in _playlists)
+              if (f != clean) f,
+          ];
+    notifyListeners();
+    (await SharedPreferences.getInstance()).setStringList(_playlistsKey, _playlists);
+  }
 
   Future<bool> containsFolder(String path) async {
     final chosen = await canonicalFolderPath(path);
@@ -401,12 +424,15 @@ class FolderWatch extends ChangeNotifier with WidgetsBindingObserver {
     final prefs = await SharedPreferences.getInstance();
     w._enabled = prefs.getBool(_enabledKey) ?? true;
     var folders = prefs.getStringList(_foldersKey) ?? const [];
+    var playlists = prefs.getStringList(_playlistsKey) ?? const [];
     if (Host.isIOS && folders.isNotEmpty) {
       // iOS can move an app's folders between launches; the library's songs were pointed at the new place.
       final moved = await IosFolders.restore();
       folders = [for (final f in folders) moved[f] ?? f];
+      playlists = [for (final f in playlists) moved[f] ?? f];
     }
     w._folders = folders;
+    w._playlists = playlists;
     w._excluded
       ..clear()
       ..addAll(prefs.getStringList(_excludedKey) ?? const []);
@@ -448,11 +474,20 @@ class FolderWatch extends ChangeNotifier with WidgetsBindingObserver {
     Timer(const Duration(seconds: 5), () => unawaited(_look({clean})));
   }
 
-  /// The person stopped keeping [dir] up to date. Its songs stay in the library.
+  /// The person stopped keeping [dir] up to date. Its songs stay in the library; its folder playlist goes, since
+  /// it could no longer follow the folder.
   Future<void> forget(String dir) async {
     _folders = _folders.where((f) => f != dir).toList();
     _previous.remove(dir);
-    (await SharedPreferences.getInstance()).setStringList(_foldersKey, _folders);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList(_foldersKey, _folders);
+    if (_playlists.contains(dir)) {
+      _playlists = [
+        for (final f in _playlists)
+          if (f != dir) f,
+      ];
+      await prefs.setStringList(_playlistsKey, _playlists);
+    }
     _apply();
     notifyListeners();
   }

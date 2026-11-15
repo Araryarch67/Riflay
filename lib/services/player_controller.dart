@@ -40,6 +40,9 @@ import 'sacd.dart';
 import 'sleep_timer.dart';
 import 'soundcloud.dart';
 import 'soundcloud_audio_source.dart';
+import 'monochrome_audio_source.dart';
+import 'monochrome.dart';
+import 'spotiflac_audio_source.dart';
 import 'shuffle.dart';
 import 'memory_trim.dart';
 import 'youtube_audio_source.dart';
@@ -119,7 +122,11 @@ class PlayerController extends ChangeNotifier {
     );
     _subs.add(
       player.playerStateStream.listen((state) {
-        if (state.processingState == ProcessingState.completed) YoutubeAudioSource.retainCache({});
+        if (state.processingState == ProcessingState.completed) {
+          YoutubeAudioSource.retainCache({});
+          // The queue ran out: if autoplay hasn't added anything yet (or its last try failed), add now.
+          _maybeAutoplay();
+        }
         _recordRecent();
         _updatePresence();
         notifyListeners();
@@ -174,28 +181,61 @@ class PlayerController extends ChangeNotifier {
   /// Set while following someone in Listen together: the host decides what plays next.
   bool holdAutoplay = false;
 
+  /// The song autoplay's radio starts from when [queue] is playing [at]: the nearest streamed song at or
+  /// before it (radio needs a YouTube video or SoundCloud track id). Null when none has streamed yet
+  /// (an all-local queue): then the current song is looked up on YouTube Music by name.
+  @visibleForTesting
+  static Track? autoplaySeedIn(List<Track> queue, int at) {
+    for (var i = at.clamp(-1, queue.length - 1); i >= 0; i--) {
+      if (queue[i].streams) return queue[i];
+    }
+    return null;
+  }
+
+  /// The radio for [seed]: YouTube Music's "Up next", or SoundCloud's related tracks. A local song is
+  /// first found on YouTube Music by its artist and title (that match itself isn't played again).
+  Future<List<Track>> _radioFor(Track seed) async {
+    final soundcloudId = seed.soundcloudId;
+    if (soundcloudId != null) return soundcloud.related(soundcloudId);
+    if (seed.isRemote) return ytMusic.upNext(seed);
+    final match = (await searchYoutube('${seed.artist} ${seed.title}'.trim())).where((t) => t.isRemote).firstOrNull;
+    if (match == null) return const [];
+    return [...await ytMusic.upNext(match)].where((t) => t.videoId != match.videoId).toList();
+  }
+
   /// Near the end of the queue (last two songs), appends YouTube Music's
-  /// "Up next" for the current song, or SoundCloud's related tracks for a SoundCloud one. Streamed songs only:
-  /// radio needs a video (or SoundCloud track) id.
+  /// "Up next" for the current song (or the last streamed one, or a local song's match on YouTube Music),
+  /// or SoundCloud's related tracks for a SoundCloud one. When the queue already ran out while they were
+  /// being looked up, playback carries on with the first of them.
   void _maybeAutoplay() {
     if (!_autoplay || holdAutoplay || _extending || player.loopMode != LoopMode.off) return;
     final current = currentTrack;
-    if (current == null || !current.streams || _autoplaySeed == current.id) return;
+    if (current == null || _autoplaySeed == current.id) return;
     final seq = player.sequenceState;
     final at = seq.currentIndex;
     if (at == null || at < seq.sequence.length - 2) return;
+    final order = queue;
+    final seed = autoplaySeedIn(order, queueIndex ?? order.length - 1) ?? current;
     _autoplaySeed = current.id;
     _extending = true;
-    final soundcloudId = current.soundcloudId;
-    (soundcloudId != null ? soundcloud.related(soundcloudId) : ytMusic.upNext(current))
+    _radioFor(seed)
         .then((similar) async {
           final have = {for (final t in queue) t.id, ..._recentIds.take(30)};
           final fresh = similar.where((t) => have.add(t.id)).take(25).toList();
           if (fresh.isEmpty || !_autoplay) return;
           _autoplayed.addAll(fresh.map((t) => t.id));
           _ordered = [..._ordered, ...fresh];
+          final firstNew = player.sequenceState.sequence.length;
           await player.addAudioSources([for (final t in fresh) _sourceFor(t)]);
           notifyListeners();
+          // The last song ended before these arrived: the player sits at the end, so start the first of them.
+          if (!casting &&
+              player.playing &&
+              player.processingState == ProcessingState.completed &&
+              player.loopMode == LoopMode.off) {
+            await player.seek(Duration.zero, index: firstNew);
+            await _play();
+          }
         })
         .catchError((Object e) {
           debugPrint('Autoplay failed: $e');
@@ -828,6 +868,9 @@ class PlayerController extends ChangeNotifier {
   /// The folder collection of [path], while that folder is still one of the music folders.
   Collection? folderAt(String? path) => folders.where((f) => f.id == path).firstOrNull;
 
+  /// The music folders made playlists (Playlists): each is the folder's songs right now, never a copy.
+  List<Collection> get folderPlaylists => LibraryViews.folderPlaylistsOf(folders, FolderWatch.instance.playlistFolders);
+
   // ── Riflay playlists ──────────────────────────────────────────────────
 
   List<UserPlaylist> _playlists = [];
@@ -948,7 +991,7 @@ class PlayerController extends ChangeNotifier {
 
   /// A YouTube song that was also downloaded plays from the file: no network, no buffering.
   Track? downloadedCopy(Track t) {
-    final id = t.videoId;
+    final id = t.offlineId;
     return id == null ? null : _views.downloads[id];
   }
 
@@ -1012,6 +1055,7 @@ class PlayerController extends ChangeNotifier {
   }
 
   late SoundcloudClient _soundcloud;
+  Monochrome monochrome = Monochrome.instance;
   StreamSubscription<String>? _soundcloudServed;
   Timer? _soundcloudRefresh;
 
@@ -1080,7 +1124,7 @@ class PlayerController extends ChangeNotifier {
   /// Returns how many were new.
   Future<int> saveToLibrary(Iterable<Track> tracks) => _addTracks([
     for (final t in tracks)
-      if (t.soundcloudId != null) t,
+      if (t.soundcloudId != null || t.monochromeId != null || t.extensionId != null) t,
   ]);
 
   /// YouTube Music's own song search first; plain YouTube search if that fails.
@@ -1329,23 +1373,27 @@ class PlayerController extends ChangeNotifier {
   }
 
   Future<int> pickFolder() async {
+    final dir = await chooseFolder();
+    if (dir == null) return 0;
+    return scanFolder(dir);
+  }
+
+  /// Asks for a music folder (and, on Android, the permission to read music); null when none was picked.
+  Future<String?> chooseFolder() async {
     // Android: the songs are read where they are, which takes the permission to read music.
     if (Host.isAndroid && await _musicPermission.invokeMethod<bool>('request') != true) {
       throw const MusicPermissionDenied();
     }
-    final dir = Host.isIOS
-        ? await IosFolders.pick()
-        : await FilePicker.getDirectoryPath(dialogTitle: tr.addMusicFolder);
-    if (dir == null) return 0;
-    return scanFolder(dir);
+    return Host.isIOS ? IosFolders.pick() : FilePicker.getDirectoryPath(dialogTitle: tr.addMusicFolder);
   }
 
   static const _musicPermission = MethodChannel('riflay/music_permission');
 
   final _addingFolders = <String>{};
 
-  /// Adds every song, cue sheet and SACD image under [dir], rejecting registered folders.
-  Future<int> scanFolder(String dir) async {
+  /// Adds every song, cue sheet and SACD image under [dir], rejecting registered folders. [asPlaylist] also
+  /// makes the folder a playlist that follows it (Playlists).
+  Future<int> scanFolder(String dir, {bool asPlaylist = false}) async {
     dir = await canonicalFolderPath(dir);
     if (!_addingFolders.add(dir)) throw const MusicFolderAlreadyAdded();
     try {
@@ -1364,6 +1412,7 @@ class PlayerController extends ChangeNotifier {
       tracks.removeWhere((t) => split.covers.contains(t.path));
       tracks.sort((a, b) => a.id.compareTo(b.id));
       await FolderWatch.instance.remember(dir);
+      if (asPlaylist) await FolderWatch.instance.setPlaylist(dir, true);
       return await _addTracks([...tracks, ...split.tracks, ...await _readSacds(isos)]);
     } finally {
       _addingFolders.remove(dir);
@@ -1601,6 +1650,10 @@ class PlayerController extends ChangeNotifier {
       final dsd = DsdFile.read(t.path!);
       if (dsd != null && audio.dopFits(dsd.bitRate)) return DopAudioSource(dsd, tag: t);
     }
+    if (t.monochromeId != null || t.extensionId != null) {
+      final local = downloadedCopy(t);
+      if (local?.path case final path? when File(path).existsSync()) return AudioSource.uri(local!.uri, tag: t);
+    }
     if (t.isRemote) {
       final local = downloadedCopy(t);
       if (local != null) return AudioSource.uri(local.uri, tag: t);
@@ -1609,6 +1662,8 @@ class PlayerController extends ChangeNotifier {
       return YoutubeAudioSource(t.videoId!, yt: youtube.client, tag: t);
     }
     if (t.soundcloudId case final id?) return SoundcloudAudioSource(id, client: soundcloud, tag: t);
+    if (t.extensionId != null) return SpotiflacAudioSource(t);
+    if (t.monochromeId case final id? when !id.startsWith('tracks:')) return MonochromeAudioSource(id, tag: t);
     return t.isCueTrack
         ? ClippingAudioSource(child: AudioSource.uri(t.uri), start: t.start, end: t.end, tag: t)
         : AudioSource.uri(t.uri, tag: t);
@@ -1686,13 +1741,14 @@ class PlayerController extends ChangeNotifier {
       final sub = player.errorStream.listen((_) => failed.isCompleted ? null : failed.complete(false));
       _starting = true;
       _retryingId = null;
-      final loaded = await Future.any([
-        _load(shuffled ? _shuffledFrom(tracks, index) : tracks, shuffled ? 0 : index).then((_) => true),
-        failed.future,
-      ]).whenComplete(() {
-        _starting = false;
-        return sub.cancel();
-      });
+      final loaded =
+          await Future.any([
+            _load(shuffled ? _shuffledFrom(tracks, index) : tracks, shuffled ? 0 : index).then((_) => true),
+            failed.future,
+          ]).whenComplete(() {
+            _starting = false;
+            return sub.cancel();
+          });
       if (loaded) unawaited(_play(restart: true));
     } on PlayerException catch (e) {
       debugPrint('Playback failed: ${e.message}');
@@ -1977,6 +2033,14 @@ class PlayerController extends ChangeNotifier {
       notify(tr.soundcloudCantCast);
       return;
     }
+    if (t.monochromeId != null && downloadedCopy(t) == null) {
+      notify(tr.monochromeCantCast);
+      return;
+    }
+    if (t.extensionId != null && downloadedCopy(t) == null) {
+      notify(tr.spotiflacCantCast);
+      return;
+    }
     await cast.load(_castItem(t), from: from, play: play);
   }
 
@@ -2000,7 +2064,7 @@ class PlayerController extends ChangeNotifier {
   };
 
   CastItem _castItem(Track t) {
-    final local = t.isRemote ? downloadedCopy(t) : t;
+    final local = t.isRemote || t.monochromeId != null || t.extensionId != null ? downloadedCopy(t) : t;
     final path = local?.path;
     final CastMedia Function(Duration) media;
     final sacd = SacdDisc.isSacdTrack(t) ? SacdDisc.find(t) : null;

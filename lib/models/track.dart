@@ -21,6 +21,7 @@ class Track {
     this.videoId,
     this.artworkUrl,
     this.artistId,
+    this.extensionData,
   });
 
   /// A YouTube / YouTube Music song that streams instead of playing from disk.
@@ -107,6 +108,7 @@ class Track {
     videoId: json['videoId'] as String?,
     artworkUrl: json['artworkUrl'] as String?,
     artistId: json['artistId'] as String?,
+    extensionData: json['extensionData'] is Map ? Map<String, dynamic>.from(json['extensionData']) : null,
   );
 
   static const unknownArtist = 'Unknown artist';
@@ -155,6 +157,8 @@ class Track {
   /// The YouTube Music artist channel (`UC…`) of a streamed song, or the SoundCloud uploader's user id of a
   /// SoundCloud track, when known.
   final String? artistId;
+  final Map<String, dynamic>? extensionData;
+  String? get extensionId => uri.scheme == 'spotiflac' ? uri.host : null;
 
   /// A YouTube Music song that streams (it has a [videoId]). SoundCloud tracks stream too but aren't this:
   /// everything YouTube-only (radio, likes, downloads, the music video) keys off it. See [streams].
@@ -164,10 +168,34 @@ class Track {
   String? get soundcloudId => id.startsWith(soundcloudPrefix) ? id.substring(soundcloudPrefix.length) : null;
 
   /// Played over the internet from a music service (YouTube Music or SoundCloud), not from a file here.
-  bool get streams => isRemote || soundcloudId != null;
+  String? get monochromeId => id.startsWith('monochrome:') ? id.substring('monochrome:'.length) : null;
+
+  /// Stable service key shared by a stream and its downloaded file.
+  String? get offlineId {
+    if (extensionId != null) return id;
+    if (monochromeId != null) return id;
+    if (youtubeId != null) return youtubeId;
+    final url = Uri.tryParse(sourceUrl ?? '');
+    if (url?.scheme == 'spotiflac' && url!.pathSegments.length == 1) {
+      return 'sflx:${url.host}:${Uri.encodeComponent(url.pathSegments.single)}';
+    }
+    if (url != null &&
+        const {'monochrome.st', 'monochrome.tf'}.contains(url.host) &&
+        url.pathSegments.length == 2 &&
+        url.pathSegments.first == 'track') {
+      return 'monochrome:${url.pathSegments.last}';
+    }
+    return null;
+  }
+
+  bool get streams => isRemote || soundcloudId != null || monochromeId != null || extensionId != null;
 
   /// Where this song comes from, for the mark beside it.
-  TrackSource get source => soundcloudId != null
+  TrackSource get source => extensionId != null
+      ? TrackSource.extension
+      : monochromeId != null
+      ? TrackSource.monochrome
+      : soundcloudId != null
       ? TrackSource.soundcloud
       : isRemote
       ? TrackSource.youtubeMusic
@@ -223,6 +251,7 @@ class Track {
     videoId: videoId,
     artworkUrl: artworkUrl,
     artistId: artistId,
+    extensionData: extensionData,
   );
 
   Map<String, dynamic> toJson() => {
@@ -242,6 +271,7 @@ class Track {
     'videoId': videoId,
     'artworkUrl': artworkUrl,
     if (artistId != null) 'artistId': artistId,
+    if (extensionData != null) 'extensionData': extensionData,
   };
 
   /// Everything libmpv / FFmpeg decodes. DSD (dsf/dff) plays as high-rate PCM.
@@ -257,7 +287,7 @@ class Track {
 }
 
 /// Where a song comes from.
-enum TrackSource { device, youtubeMusic, soundcloud }
+enum TrackSource { device, youtubeMusic, soundcloud, monochrome, extension }
 
 /// Album order: disc, then track number, title as a tiebreak for untagged files.
 int compareAlbumOrder(Track a, Track b) {

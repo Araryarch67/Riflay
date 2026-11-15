@@ -11,6 +11,7 @@ import '../../theme.dart';
 import '../../widgets/controls.dart';
 import 'remote_results.dart' show openSearchHit;
 import 'search_input.dart';
+import 'soundcloud_results.dart' show SearchSource;
 
 /// The search field, with a dropdown of suggestions under it while typing
 /// (completed searches, then artists / songs / albums to open directly) and
@@ -58,6 +59,7 @@ class _SearchBoxState extends State<SearchBox> {
   void initState() {
     super.initState();
     _focus.addListener(_sync);
+    SearchSource.current.addListener(_sourceChanged);
     RecentSearches.load().then((r) {
       if (!mounted) return;
       _recent = r;
@@ -69,18 +71,29 @@ class _SearchBoxState extends State<SearchBox> {
   void dispose() {
     _debounce?.cancel();
     _focus.removeListener(_sync);
+    SearchSource.current.removeListener(_sourceChanged);
     if (widget.focusNode == null) _focus.dispose();
     super.dispose();
   }
 
   String get _text => widget.controller.text.trim();
 
+  void _sourceChanged() {
+    _request++;
+    _debounce?.cancel();
+    _queries = const [];
+    _hits = const [];
+    _sync();
+  }
+
   Color get _ink => widget.onBar ? AppColors.textPrimary : AppColors.onInverse;
 
   /// In the title bar the results page updates as you type (like the
   /// streaming apps), so suggestions would only cover it: just recent
   /// searches, while the box is empty.
-  int get _count => _text.isEmpty
+  int get _count => SearchSource.commandSuggestions(_text).isNotEmpty
+      ? SearchSource.commandSuggestions(_text).length
+      : _text.isEmpty
       ? _recent.length
       : widget.onBar
       ? 0
@@ -99,6 +112,13 @@ class _SearchBoxState extends State<SearchBox> {
     _highlight = -1;
     _debounce?.cancel();
     final q = value.trim();
+    if (q.startsWith(':')) {
+      _request++;
+      _queries = const [];
+      _hits = const [];
+      _sync();
+      return;
+    }
     if (q.isEmpty) {
       _queries = const [];
       _hits = const [];
@@ -107,6 +127,10 @@ class _SearchBoxState extends State<SearchBox> {
         _sync();
       });
       _sync();
+      return;
+    }
+    if (SearchSource.current.value != SearchSource.youtubeMusic) {
+      _sourceChanged();
       return;
     }
     _debounce = Timer(const Duration(milliseconds: 120), () async {
@@ -147,9 +171,22 @@ class _SearchBoxState extends State<SearchBox> {
   }
 
   void _pick(int i) {
+    final commands = SearchSource.commandSuggestions(_text);
+    if (commands.isNotEmpty) return _pickSource(commands[i]);
     if (_text.isEmpty) return _pickQuery(_recent[i]);
     if (i < _queries.length) return _pickQuery(_queries[i]);
     _pickHit(_hits[i - _queries.length]);
+  }
+
+  void _pickSource(SearchSource source) {
+    final value = '${source.command} ';
+    widget.controller.value = TextEditingValue(
+      text: value,
+      selection: TextSelection.collapsed(offset: value.length),
+    );
+    widget.onChanged(value);
+    _focus.requestFocus();
+    _close();
   }
 
   KeyEventResult _onKey(FocusNode node, KeyEvent event) {
@@ -272,6 +309,7 @@ class _SearchBoxState extends State<SearchBox> {
       highlight: _highlight,
       onQuery: _pickQuery,
       onHit: _pickHit,
+      onSource: _pickSource,
       onRemoveRecent: (q) async {
         await RecentSearches.remove(q);
         _recent = await RecentSearches.load();
@@ -304,6 +342,7 @@ List<Widget> suggestionRows(
   int highlight = -1,
   required ValueChanged<String> onQuery,
   required ValueChanged<SearchHit> onHit,
+  ValueChanged<SearchSource>? onSource,
   required ValueChanged<String> onRemoveRecent,
 }) {
   final text = Theme.of(context).textTheme;
@@ -340,6 +379,17 @@ List<Widget> suggestionRows(
     );
   }
 
+  final commands = SearchSource.commandSuggestions(typed);
+  if (commands.isNotEmpty && onSource != null) {
+    return [
+      for (final source in commands)
+        row(
+          leading: Text(source.command, style: text.bodyMedium?.copyWith(fontWeight: FontWeight.w700)),
+          title: Text(source.label, style: text.bodyLarge),
+          onTap: () => onSource(source),
+        ),
+    ];
+  }
   if (typed.isEmpty) {
     rows.add(
       Padding(
@@ -444,6 +494,7 @@ class _SearchSuggestionsState extends State<SearchSuggestions> {
     super.initState();
     _typed = _input.controller.text.trim();
     _input.controller.addListener(_changed);
+    SearchSource.current.addListener(_sourceChanged);
     _input.focus.addListener(_refresh);
     _input.submitted.addListener(_submitted);
     _loadRecent();
@@ -454,6 +505,7 @@ class _SearchSuggestionsState extends State<SearchSuggestions> {
   void dispose() {
     _debounce?.cancel();
     _input.controller.removeListener(_changed);
+    SearchSource.current.removeListener(_sourceChanged);
     _input.focus.removeListener(_refresh);
     _input.submitted.removeListener(_submitted);
     super.dispose();
@@ -461,6 +513,17 @@ class _SearchSuggestionsState extends State<SearchSuggestions> {
 
   void _refresh() {
     if (mounted) setState(() {});
+  }
+
+  void _sourceChanged() {
+    _request++;
+    _debounce?.cancel();
+    if (mounted) {
+      setState(() {
+        _queries = const [];
+        _hits = const [];
+      });
+    }
   }
 
   Future<void> _loadRecent() async {
@@ -490,6 +553,11 @@ class _SearchSuggestionsState extends State<SearchSuggestions> {
   }
 
   Future<void> _fetch(String q) async {
+    if (q.startsWith(':')) {
+      _sourceChanged();
+      return;
+    }
+    if (SearchSource.current.value != SearchSource.youtubeMusic) return;
     final id = ++_request;
     try {
       final s = await PlayerScope.read(context).ytMusic.suggestions(q);
@@ -522,9 +590,24 @@ class _SearchSuggestionsState extends State<SearchSuggestions> {
     openSearchHit(context, hit);
   }
 
+  void _pickSource(SearchSource source) {
+    final value = '${source.command} ';
+    _input.controller.value = TextEditingValue(
+      text: value,
+      selection: TextSelection.collapsed(offset: value.length),
+    );
+    _input.focus.requestFocus();
+    setState(() => _dismissed = true);
+  }
+
   @override
   Widget build(BuildContext context) {
-    final count = _typed.isEmpty ? _recent.length : _queries.length + _hits.length;
+    final commands = SearchSource.commandSuggestions(_typed);
+    final count = commands.isNotEmpty
+        ? commands.length
+        : _typed.isEmpty
+        ? _recent.length
+        : _queries.length + _hits.length;
     if (!_input.focus.hasFocus || _dismissed || count == 0) return const SizedBox.shrink();
     return Material(
       color: AppColors.elevated,
@@ -542,6 +625,7 @@ class _SearchSuggestionsState extends State<SearchSuggestions> {
             hits: _hits,
             onQuery: _pickQuery,
             onHit: _pickHit,
+            onSource: _pickSource,
             onRemoveRecent: (q) async {
               await RecentSearches.remove(q);
               await _loadRecent();

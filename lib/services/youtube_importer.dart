@@ -31,6 +31,8 @@ import 'webm_opus.dart';
 import 'ytdlp.dart';
 import 'ytmusic_web.dart';
 import 'language.dart';
+import 'monochrome_download.dart';
+import 'spotiflac.dart';
 
 enum DownloadStatus { queued, downloading, done, failed, cancelled }
 
@@ -79,6 +81,8 @@ class DownloadJob {
     this.choice,
     this.album,
     this.withVideo = false,
+    this.monochromeTrack,
+    this.extensionTrack,
   });
 
   /// The format and quality asked for; null follows Settings when the download starts.
@@ -86,6 +90,8 @@ class DownloadJob {
 
   /// "Download with MV": the song's music video is saved beside its audio ([MvSidecar]), when it has one.
   final bool withVideo;
+  final Track? monochromeTrack;
+  final Track? extensionTrack;
 
   final String videoId;
   final String title;
@@ -144,6 +150,8 @@ class DownloadJob {
     }
     return {
       'videoId': videoId,
+      if (monochromeTrack != null) 'monochromeTrack': monochromeTrack!.toJson(),
+      if (extensionTrack != null) 'extensionTrack': extensionTrack!.toJson(),
       'title': title,
       'channel': channel,
       'thumbnailUrl': thumbnailUrl,
@@ -173,7 +181,29 @@ class DownloadJob {
   static DownloadJob? fromJson(Object? json) {
     if (json is! Map) return null;
     final id = json['videoId'], title = json['title'];
-    if (id is! String || !YoutubeImporter.isVideoId(id) || title is! String) return null;
+    Track? monochrome;
+    Track? extension;
+    if (json['extensionTrack'] is Map) {
+      try {
+        extension = Track.fromJson(Map<String, dynamic>.from(json['extensionTrack']));
+        if (extension.extensionId == null || Spotiflac.jobId(extension) != id) return null;
+      } catch (_) {
+        return null;
+      }
+    }
+    if (json['monochromeTrack'] is Map) {
+      try {
+        monochrome = Track.fromJson(Map<String, dynamic>.from(json['monochromeTrack']));
+        if (monochrome.monochromeId == null || MonochromeDownload.jobId(monochrome) != id) return null;
+      } catch (_) {
+        return null;
+      }
+    }
+    if (id is! String ||
+        (extension == null && monochrome == null && !YoutubeImporter.isVideoId(id)) ||
+        title is! String) {
+      return null;
+    }
     DownloadChoice? choice;
     if (json['choice'] case final Map c when VideoContainer.values.any((v) => v.name == c['container'])) {
       choice = DownloadChoice.video(
@@ -193,6 +223,8 @@ class DownloadJob {
     final failed = json['status'] == DownloadStatus.failed.name;
     return DownloadJob(
         videoId: id,
+        monochromeTrack: monochrome,
+        extensionTrack: extension,
         title: title,
         channel: json['channel'] as String? ?? '',
         thumbnailUrl: json['thumbnailUrl'] as String? ?? '',
@@ -398,16 +430,26 @@ class YoutubeImporter extends ChangeNotifier {
   /// Saves streamed YouTube Music songs for offline playback. [withVideo] ("Download with MV") also saves each
   /// song's music video beside it, for the songs that have one.
   int enqueueTracks(List<Track> tracks, {DownloadChoice? choice, bool withVideo = false}) => _enqueue([
-    for (final t in tracks.where((t) => t.isRemote))
+    for (final t in tracks.where((t) => t.isRemote || t.monochromeId != null || t.extensionId != null))
       DownloadJob(
-        videoId: t.videoId!,
+        videoId: t.extensionId != null
+            ? Spotiflac.jobId(t)
+            : t.monochromeId != null
+            ? MonochromeDownload.jobId(t)
+            : t.videoId!,
+        monochromeTrack: t.monochromeId != null ? t : null,
+        extensionTrack: t.extensionId != null ? t : null,
         title: t.title,
         channel: t.artist,
-        thumbnailUrl: t.artworkUrl ?? 'https://i.ytimg.com/vi/${t.videoId}/hqdefault.jpg',
+        thumbnailUrl:
+            t.artworkUrl ??
+            (t.monochromeId != null || t.extensionId != null
+                ? ''
+                : 'https://i.ytimg.com/vi/${t.videoId}/hqdefault.jpg'),
         knownNames: true,
-        choice: choice,
+        choice: t.monochromeId != null ? const DownloadChoice(DownloadFormat.flac) : choice,
         album: _clean(t.album),
-        withVideo: withVideo,
+        withVideo: withVideo && t.monochromeId == null && t.extensionId == null,
       ),
   ]);
 
@@ -517,7 +559,12 @@ class YoutubeImporter extends ChangeNotifier {
 
   int _enqueue(List<DownloadJob> fresh) {
     var added = 0;
-    for (final job in fresh.where((j) => _videoId.hasMatch(j.videoId))) {
+    for (final job in fresh.where(
+      (j) =>
+          _videoId.hasMatch(j.videoId) ||
+          (j.extensionTrack?.extensionId != null && j.videoId == Spotiflac.jobId(j.extensionTrack!)) ||
+          (j.monochromeTrack?.monochromeId != null && j.videoId == MonochromeDownload.jobId(j.monochromeTrack!)),
+    )) {
       final existing = _jobs.where((j) => j.videoId == job.videoId).firstOrNull;
       // A finished audio download doesn't stop the same song being downloaded again as a video, or the reverse.
       final otherKind =
@@ -904,6 +951,54 @@ class YoutubeImporter extends ChangeNotifier {
       await DownloadPrefs.instance.load();
       if (await _blockedByMobileData()) throw const _OnMobileData();
       final dir = await downloadsDir();
+      if (job.extensionTrack case final source?) {
+        final track = await Spotiflac.instance.download(
+          source,
+          dir,
+          cancelled: () => job.status == DownloadStatus.cancelled,
+          progress: (value) {
+            job.progress = value.clamp(0, 1);
+            notifyListeners();
+          },
+        );
+        await onTrackReady(track);
+        job
+          ..track = track
+          ..progress = 1
+          ..status = DownloadStatus.done;
+        return;
+      }
+      if (job.monochromeTrack case final source?) {
+        final watch = Stopwatch()..start();
+        var lastUpdate = -1000;
+        job.quality = 'FLAC';
+        final track = await MonochromeDownload.save(
+          source,
+          dir,
+          cancelled: () => job.status == DownloadStatus.cancelled,
+          progress: (received, total) {
+            job
+              ..receivedBytes = received
+              ..totalBytes = total
+              ..progress = total != null && total > 0 ? received / total : 0;
+            if (watch.elapsedMilliseconds - lastUpdate >= 200) {
+              lastUpdate = watch.elapsedMilliseconds;
+              job.bytesPerSecond = received / (watch.elapsedMilliseconds.clamp(1, 1 << 40) / 1000);
+              notifyListeners();
+            }
+          },
+          finishing: () {
+            job.phase = DownloadPhase.finishing;
+            notifyListeners();
+          },
+        );
+        await onTrackReady(track);
+        job
+          ..track = track
+          ..progress = 1
+          ..status = DownloadStatus.done;
+        return;
+      }
       var choice = job.choice ??= DownloadPrefs.instance.choice;
       if (choice.isVideo) {
         if (await _downloadVideo(job, choice, dir)) return;

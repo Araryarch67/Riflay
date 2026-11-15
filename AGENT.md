@@ -137,7 +137,7 @@ test/                          Unit and widget tests
 
 - Low-end phones (`DeviceSetup.fitPhone`, Android): one with under 4 GB of memory (`/proc/meminfo`, which apps may
   read) is put in Lightweight once, at its first start with that code, if still in the default Balanced; a mode
-  picked by hand stays. Lightweight on a phone also takes the music video at 720p, not 1440p
+  picked by hand stays. Lightweight on a phone also takes the music video at 720p (Balanced 1080p, Heavy 1440p)
   (`VideoMode.maxHeight`). `MemoryTrim` runs on Android too: after a song change, once a minute and in the
   background it asks the allocator to hand free pages back (`mallopt(M_PURGE_ALL)`, then `M_PURGE`), and in the
   background drops decoded covers, since Android closes the apps holding the most memory first. Neither is measured
@@ -207,6 +207,12 @@ test/                          Unit and widget tests
   collection (`PlayerController.folders`, from `LibraryViews.foldersOf`): the files under its path, by path, its
   `id` the path (also its `Locations.collection`, since two folders can share a name). Songs added one by one
   ("Add songs") are in no folder; they stay in All Songs. Not a shortcut, so no `RIFLAY_*` switch.
+- Folder playlists: adding a folder (`ShellScope.addFolder`, `_addFolder` in `home_shell.dart`) asks "Only add" or
+  "Add as playlist" (`ui/folder_add_dialog.dart`). A folder playlist is only the folder's path in
+  `FolderWatch.playlistFolders` (`library.folderPlaylists.v1`), shown in Playlists as that folder's own collection
+  (`PlayerController.folderPlaylists`, `LibraryViews.folderPlaylistsOf`): its songs are always what is under the
+  folder now, subfolders included, never a copy. A folder's page (⋯) shows it as a playlist or takes it out; files
+  and songs stay. Forgetting the folder (Settings › Library) takes its playlist away. `test/folder_playlists_test.dart`.
 - Home's Artists shelf (`openHomeArtist` in `pages/home_page.dart`): an artist with even one song from YouTube
   Music (a download remembers its video and channel) opens their YouTube Music page through `openArtist`, not
   the library's page holding only the downloads; an artist known from the person's own files alone opens the

@@ -5353,6 +5353,68 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sourceSoundcloud => 'SoundCloud';
 
   @override
+  String get sourceMonochrome => 'Monochrome';
+
+  @override
+  String get spotiflacExtensions => 'SpotiFLAC extensions';
+
+  @override
+  String get spotiflacAbout =>
+      'Install provider plugins from .sflx files or an extension repository. Enable a provider to use it in Search.';
+
+  @override
+  String get importSflx => 'Import .sflx';
+
+  @override
+  String get spotiflacRepository => 'Extension repository URL';
+
+  @override
+  String get spotiflacLoadRepository => 'Browse repository';
+
+  @override
+  String get spotiflacSettings => 'Provider settings';
+
+  @override
+  String get spotiflacNoSettings => 'This provider has no settings.';
+
+  @override
+  String get spotiflacInvalidSetting => 'Enter a valid value.';
+
+  @override
+  String get spotiflacFailed => 'Couldn\'t complete the extension request. Check the provider settings and try again.';
+
+  @override
+  String get spotiflacEmpty => 'No provider plugins installed yet.';
+
+  @override
+  String get spotiflacQuality => 'Provider download quality';
+
+  @override
+  String get spotiflacLocalNetwork => 'Allow plugins to connect to local servers';
+
+  @override
+  String get spotiflacOriginal => 'Original quality';
+
+  @override
+  String get spotiflacCantCast => 'Download this song before casting.';
+
+  @override
+  String noSourceResults(String source) {
+    return 'No $source results.';
+  }
+
+  @override
+  String enableSourceForSearch(String source) {
+    return 'Enable $source in Music sources to search here.';
+  }
+
+  @override
+  String get sourceSearchToggleSubtitle => 'Show as a source filter on Search; search this service when selected';
+
+  @override
+  String get noMonochromeResults => 'No Monochrome results.';
+
+  @override
   String get streamsFromSoundcloud => 'SoundCloud: needs internet';
 
   @override
@@ -6218,7 +6280,19 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get sourcesAbout =>
-      'Free places where artists or rights holders share their own music. Riflay plays from their servers. The song sources are off until you turn them on.';
+      'Additional music services. Riflay plays from their servers. The song sources are off until you turn them on.';
+
+  @override
+  String get sourceMonochromeSubtitle => 'Monochrome\'s music catalog, in FLAC when available, on search\'s All';
+
+  @override
+  String get openMusicLink => 'Open a music link';
+
+  @override
+  String get monochromeCantCast => 'Download this Monochrome song before casting.';
+
+  @override
+  String get openMusicLinkBody => 'Paste a YouTube, SoundCloud or Monochrome link to play or import music.';
 
   @override
   String get sourceArchive => 'Internet Archive in search';
@@ -6267,4 +6341,33 @@ class AppLocalizationsEn extends AppLocalizations {
   String sourceUnavailable(String source) {
     return 'Couldn\'t reach $source. Try again.';
   }
+
+  @override
+  String addFolderNamed(String name) {
+    return 'Add “$name”';
+  }
+
+  @override
+  String get folderOnlyAdd => 'Only add';
+
+  @override
+  String get folderOnlyAddSubtitle => 'Its songs go into your library';
+
+  @override
+  String get folderAsPlaylist => 'Add as playlist';
+
+  @override
+  String get folderAsPlaylistSubtitle => 'A playlist that follows this folder';
+
+  @override
+  String get folderPlaylist => 'Folder playlist';
+
+  @override
+  String get makeFolderPlaylist => 'Show as a playlist';
+
+  @override
+  String get removeFolderPlaylist => 'Remove from playlists';
+
+  @override
+  String get folderPlaylistRemoved => 'Removed from playlists. The folder and its songs stay.';
 }

@@ -217,7 +217,9 @@ class _TrackRowState extends State<TrackRow> {
               ),
             // Streamed songs: download right here (ring while it runs, a check once saved). Under 300 px an
             // icon-only one; on a row too narrow even for that, only the menu has it.
-            if (t.isRemote && downloadButtonFor(box.maxWidth) != RowDownload.none)
+            if ((t.isRemote || t.monochromeId != null || t.extensionId != null) &&
+                Features.downloads &&
+                downloadButtonFor(box.maxWidth) != RowDownload.none)
               downloadButtonFor(box.maxWidth) == RowDownload.compact
                   ? SizedBox.square(
                       dimension: 40,
@@ -386,6 +388,10 @@ class TrackMenuButton extends StatelessWidget {
     bool withVideo = false,
   }) async {
     final one = tracks.length == 1 ? tracks.first : null;
+    if (tracks.isNotEmpty && tracks.every((t) => t.monochromeId != null || t.extensionId != null)) {
+      c.youtube.enqueueTracks(tracks);
+      return;
+    }
     final choice = await chooseDownload(host, force: force, videoId: one?.videoId, track: one);
     if (choice == null) return;
     c.youtube.enqueueTracks(tracks, choice: choice, withVideo: withVideo);
@@ -504,11 +510,17 @@ class TrackMenuButton extends StatelessWidget {
                   title: Text(tr.removeFromThisPlaylist),
                 ),
               ),
-            if (track.soundcloudId != null) ...[
-              PopupMenuItem(
-                onTap: () => c.startRadio(track),
-                child: MenuRow(leading: const Icon(Icons.radio_rounded), title: Text(tr.startRadio)),
-              ),
+            if (track.soundcloudId != null || track.monochromeId != null || track.extensionId != null) ...[
+              if ((track.monochromeId != null || track.extensionId != null) && Features.downloads)
+                PopupMenuItem(
+                  onTap: () => download(host, c, [track]),
+                  child: MenuRow(leading: const Icon(Icons.download_rounded), title: Text(tr.download)),
+                ),
+              if (track.soundcloudId != null)
+                PopupMenuItem(
+                  onTap: () => c.startRadio(track),
+                  child: MenuRow(leading: const Icon(Icons.radio_rounded), title: Text(tr.startRadio)),
+                ),
               // A SoundCloud track streams; saving it lists it in the library beside the songs on this device.
               if (c.inLibrary(track))
                 PopupMenuItem(

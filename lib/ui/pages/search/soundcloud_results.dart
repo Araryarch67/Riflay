@@ -2,46 +2,89 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../models/track.dart';
+import '../../../platform/features.dart';
 import '../../../services/language.dart';
 import '../../../services/player_controller.dart';
 import '../../../services/soundcloud.dart';
+import '../../../services/sources/music_sources.dart';
+import '../../../services/spotiflac.dart';
 import '../../shell_scope.dart';
 import '../../soundcloud_pages.dart';
-import '../../theme.dart';
-import '../../widgets/controls.dart';
 import '../../widgets/page_scaffold.dart';
 import '../../widgets/shelf.dart';
 import '../../widgets/track_row.dart';
 import 'search_parts.dart';
 
-/// Where Search looks online: YouTube Music (the default) or SoundCloud, one at a time. The library is always
+/// Where Search looks online: YouTube Music (the default), SoundCloud or Monochrome. The library is always
 /// searched too.
 enum SearchSource {
   youtubeMusic,
-  soundcloud;
+  soundcloud,
+  monochrome,
+  extensions;
 
   String get label => switch (this) {
     youtubeMusic => tr.sourceYoutubeMusic,
     soundcloud => tr.sourceSoundcloud,
+    monochrome => tr.sourceMonochrome,
+    extensions => Spotiflac.instance.selectedName,
   };
+
+  String get command => switch (this) {
+    youtubeMusic => ':yt',
+    soundcloud => ':sc',
+    monochrome => ':mc',
+    extensions => '',
+  };
+
+  static ({SearchSource source, String query})? readCommand(String text) {
+    final match = RegExp(r'^\s*:(yt|sc|mc)(?:\s+|$)', caseSensitive: false).firstMatch(text);
+    if (match == null) return null;
+    final source = switch (match[1]!.toLowerCase()) {
+      'sc' => soundcloud,
+      'mc' => monochrome,
+      _ => youtubeMusic,
+    };
+    return (source: source, query: text.substring(match.end));
+  }
+
+  static List<SearchSource> commandSuggestions(String text) {
+    final typed = text.trimLeft().toLowerCase();
+    if (!RegExp(r'^:[a-z]*$').hasMatch(typed)) return const [];
+    return available.where((s) => s != extensions && s.command.startsWith(typed)).toList();
+  }
 
   static const _key = 'search.source.v1';
 
-  /// The source in use, shared by the switch (the desktop top bar, the phone's search page) and the search page.
+  /// The source in use, shared by Search's filters and results.
   static final current = ValueNotifier<SearchSource>(youtubeMusic);
 
   static bool _loaded = false;
+  static List<SearchSource> get available => [
+    youtubeMusic,
+    if (Features.soundcloud && MusicSources.instance.soundcloud) soundcloud,
+    if (MusicSources.instance.monochrome) monochrome,
+    if (Spotiflac.instance.searchProviders.isNotEmpty) extensions,
+  ];
+
+  static void ensureAvailable() {
+    if (!available.contains(current.value)) youtubeMusic.choose();
+  }
 
   /// Reads the choice last made, once (YouTube Music until one is; an older saved "both" is YouTube Music).
   static Future<void> load() async {
     if (_loaded) return;
     _loaded = true;
+    await MusicSources.instance.load();
+    await Spotiflac.instance.load();
     final saved = (await SharedPreferences.getInstance()).getString(_key);
-    current.value = values.where((s) => s.name == saved).firstOrNull ?? youtubeMusic;
+    final source = values.where((s) => s.name == saved).firstOrNull ?? youtubeMusic;
+    current.value = available.contains(source) ? source : youtubeMusic;
   }
 
   /// Makes this the source, and remembers it.
   void choose() {
+    if (!available.contains(this)) return;
     current.value = this;
     SharedPreferences.getInstance().then((p) => p.setString(_key, name)).ignore();
   }
@@ -53,76 +96,81 @@ enum SearchSource {
   }
 }
 
-/// The switch between YouTube Music and SoundCloud: a pill with both marks, the source in use filled. A tap
-/// switches to the other one. On computers it sits in the top bar beside the search box; on phones beside the
-/// search page's title.
-class SearchSourceToggle extends StatefulWidget {
-  const SearchSourceToggle({super.key, this.height = 40});
-
-  final double height;
+/// Named filters below the search field, limited to the services enabled in Settings.
+class SearchSourceFilters extends StatefulWidget {
+  const SearchSourceFilters({super.key, this.onSelected});
+  final ValueChanged<SearchSource>? onSelected;
 
   @override
-  State<SearchSourceToggle> createState() => _SearchSourceToggleState();
+  State<SearchSourceFilters> createState() => _SearchSourceFiltersState();
 }
 
-class _SearchSourceToggleState extends State<SearchSourceToggle> {
+class _SearchSourceFiltersState extends State<SearchSourceFilters> {
   @override
   void initState() {
     super.initState();
     SearchSource.load().ignore();
+    MusicSources.instance.addListener(_sourcesChanged);
+    Spotiflac.instance.addListener(_sourcesChanged);
+  }
+
+  void _sourcesChanged() {
+    SearchSource.ensureAvailable();
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void dispose() {
+    MusicSources.instance.removeListener(_sourcesChanged);
+    Spotiflac.instance.removeListener(_sourcesChanged);
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) => ValueListenableBuilder(
     valueListenable: SearchSource.current,
     builder: (context, source, _) {
-      final colors = AppColors.of(context);
-      final next = source == SearchSource.youtubeMusic ? SearchSource.soundcloud : SearchSource.youtubeMusic;
-      Widget half(SearchSource s, TrackSource service) {
-        final on = s == source;
-        return AnimatedContainer(
-          duration: const Duration(milliseconds: 160),
-          width: widget.height + 4,
-          height: widget.height - 8,
-          decoration: BoxDecoration(
-            color: on ? colors.accent : Colors.transparent,
-            borderRadius: BorderRadius.circular(widget.height),
-          ),
-          alignment: Alignment.center,
-          child: SourceMark(
-            online: true,
-            source: service,
-            size: 18,
-            tooltip: false,
-            color: on ? colors.onAccent : colors.textSecondary,
-          ),
-        );
-      }
-
-      return Tooltip(
-        message: tr.searchOnSource(next.label),
-        child: Semantics(
-          button: true,
-          toggled: source == SearchSource.soundcloud,
-          label: tr.searchOnSource(source.label),
-          child: Material(
-            color: colors.tile,
-            shape: const StadiumBorder(),
-            child: InkWell(
-              customBorder: const StadiumBorder(),
-              onTap: next.choose,
-              child: Padding(
-                padding: const EdgeInsets.all(4),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    half(SearchSource.youtubeMusic, TrackSource.youtubeMusic),
-                    half(SearchSource.soundcloud, TrackSource.soundcloud),
-                  ],
-                ),
+      final available = SearchSource.available;
+      if (available.length < 2) return const SizedBox.shrink();
+      return Padding(
+        padding: const EdgeInsets.only(top: 12),
+        child: Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            for (final service in available.where((s) => s != SearchSource.extensions))
+              ChoiceChip(
+                key: ValueKey('search-source-${service.name}'),
+                label: Text(service.label),
+                selected: service == source,
+                showCheckmark: false,
+                onSelected: (_) {
+                  final select = widget.onSelected;
+                  if (select == null) {
+                    service.choose();
+                  } else {
+                    select(service);
+                  }
+                },
               ),
-            ),
-          ),
+            for (final plugin in Spotiflac.instance.searchProviders)
+              ChoiceChip(
+                key: ValueKey('search-source-extension-${plugin['id']}'),
+                label: Text(Spotiflac.instance.nameOf(plugin['id'])),
+                showCheckmark: false,
+                selected: source == SearchSource.extensions && Spotiflac.instance.selected == plugin['id'],
+                onSelected: (_) async {
+                  await Spotiflac.instance.choose(plugin['id']);
+                  if (!mounted) return;
+                  final select = widget.onSelected;
+                  if (select != null) {
+                    select(SearchSource.extensions);
+                  } else {
+                    SearchSource.extensions.choose();
+                  }
+                },
+              ),
+          ],
         ),
       );
     },
