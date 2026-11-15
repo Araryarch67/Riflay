@@ -13,6 +13,7 @@ import '../../services/flac_convert.dart';
 import '../../services/listen_together/listen_together.dart';
 import '../../services/metadata.dart';
 import '../../services/player_controller.dart';
+import '../../services/smart_merge.dart';
 import '../../services/soundcloud.dart' show SoundcloudKind;
 import '../../services/video_mode.dart';
 import '../../services/youtube_stream.dart';
@@ -99,12 +100,15 @@ class _TrackRowState extends State<TrackRow> {
     // Rebuilt when this row's own state changes (it starts or stops playing, it
     // gets downloaded), not for every change of the player: on a song change
     // only two rows of a long list differ.
-    return PlayerSelect<(bool, bool, bool, String?)>(
+    return PlayerSelect<(bool, bool, bool, String?, bool)>(
       select: (c) {
         final current = widget.currentOccurrence ?? (c.currentTrack?.id == t.id);
-        return (current, current && c.showsPlaying, t.streams && !c.isOffline(t), c.qualityOf(t));
+        final source = c.player.sequenceState.currentSource;
+        final merged = current && source is SmartMergeAudioSource && source.from != null;
+        return (current, current && c.showsPlaying, t.streams && !c.isOffline(t), c.qualityOf(t), merged);
       },
-      builder: (context, s, _) => _row(context, isCurrent: s.$1, playing: s.$2, online: s.$3, quality: s.$4),
+      builder: (context, s, _) =>
+          _row(context, isCurrent: s.$1, playing: s.$2, online: s.$3, quality: s.$4, merged: s.$5),
     );
   }
 
@@ -113,6 +117,7 @@ class _TrackRowState extends State<TrackRow> {
     required bool isCurrent,
     required bool playing,
     required bool online,
+    required bool merged,
     String? quality,
   }) {
     TrackRow.debugRowBuilds++;
@@ -188,6 +193,10 @@ class _TrackRowState extends State<TrackRow> {
                       // Streamed songs: the service they stream from; green pin = downloaded, plays offline.
                       if (t.streams) ...[
                         SourceMark(online: online, source: t.source, size: 14),
+                        if (merged) ...[
+                          const SizedBox(width: 3),
+                          const SourceMark(online: true, source: TrackSource.monochrome, size: 14),
+                        ],
                         const SizedBox(width: 4),
                       ],
                       Flexible(
