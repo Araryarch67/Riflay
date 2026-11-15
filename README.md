@@ -38,11 +38,13 @@ https://github.com/user-attachments/assets/5d0f0612-4322-425e-bbbf-79baeace47be
 | ![Full-screen player](docs/screenshots/fullscreen.webp) | ![Lyrics](docs/screenshots/lyrics.webp) |
 |---|---|
 | ![Signal path](docs/screenshots/signal-path.webp) | ![Your listening stats](docs/screenshots/stats.webp) |
+| ![Settings](docs/screenshots/settings.webp) | ![Sound settings](docs/screenshots/sound.webp) |
 
 <p>
   <img src="docs/screenshots/phone-home.webp" alt="Riflay on a phone: Home with the Liquid glass tab bar" width="260">
   <img src="docs/screenshots/phone.webp" alt="Riflay on a phone: the Liquid Kawaii player" width="260">
   <img src="docs/screenshots/phone-library.webp" alt="Riflay on a phone: Library" width="260">
+  <img src="docs/screenshots/phone-settings.webp" alt="Riflay on a phone: Settings" width="260">
 </p>
 
 <sub>On a phone, in the Liquid Kawaii preset (Settings › Look & feel › Pages & navigation › Player presets).</sub>
@@ -62,12 +64,14 @@ https://github.com/user-attachments/assets/5d0f0612-4322-425e-bbbf-79baeace47be
 | | Import playlists | From Spotify, Apple Music, Deezer, TIDAL or NetEase Cloud Music | All |
 | | Spotify import | Brings your playlists, Liked Songs and albums over | All |
 | **Streaming** | YouTube Music | Search, home, radio, likes and your library, with **Sign in with Google** | All |
-| | SoundCloud | Search songs, artists and playlists; related tracks for autoplay | All |
-| | [Monochrome](docs/monochrome.md) | Optional FLAC music search, downloads, track and collection links, and public playlist imports | All (downloads: native apps) |
+| | SoundCloud | Search songs, artists and playlists; related tracks for autoplay; off until you turn it on | All |
+| | [Monochrome](docs/monochrome.md) | Optional (off until you turn it on) FLAC music search, downloads, track and collection links, and public playlist imports | All (downloads: native apps) |
+| | [SpotiFLAC extensions](docs/spotiflac.md) | Install `.sflx` extensions from a file or a repository; each enabled provider becomes a filter on Search, with its own settings and downloads | Native apps (verified on Windows) |
+| | [Spotify playback](docs/spotify-playback.md) | Opens your Spotify playlists and albums and plays them from Spotify itself, with your own Premium account (experimental) | Windows |
 | | Music videos | Watch a song's video in step with it, or use it as the Now Playing background | All |
 | | Spotify Canvas | The looping video Spotify shows with a song, in Video mode | All |
-| | Free music sources | Internet Archive FLAC recordings, Radio Paradise FLAC channels, and (opt-in) Jamendo, Audius and ccMixter | All |
 | **Downloads** | Download songs | Choose format, quality and folder | All |
+| | Download source | Download a YouTube Music song from another music source instead: pick the provider, then the recording that matches | Native apps |
 | | Download with MV | Keeps the song's music video beside it, to watch offline | All |
 | **Hi-fi output** | Bit-perfect mode | Sends the file to the DAC untouched, no mixing or resampling | Computers, Android 14+ with a USB DAC |
 | | Exclusive mode | Takes over the device so the system mixer can't resample | Windows, macOS |
@@ -98,6 +102,7 @@ https://github.com/user-attachments/assets/5d0f0612-4322-425e-bbbf-79baeace47be
 | | Backgrounds | Plain colour, blurred cover, the music video, or black | All |
 | | Full screen | A full-screen player with lyrics | All |
 | **Look & feel** | Themes | Default, Dynamic (from the playing song's cover), Monochrome, Catppuccin, Everforest, Everblush, Nord, Gruvbox, Tokyo Night, Dracula, Rosé Pine, Custom and Matugen colours; dark, light or follow the system | All |
+| | Material 3 pages | Search, Settings and the extension pages follow Material 3, in the colours of the theme you picked | All |
 | | Layout | Phone tab bar styles, desktop bar styles, corners, density, cover size and motion | All |
 | | Language and text | English, Indonesian and Japanese; text size and any font on your device | All |
 | **Stats** | Listening stats | Top songs, artists and albums, kept on your device | All |
@@ -108,7 +113,7 @@ https://github.com/user-attachments/assets/5d0f0612-4322-425e-bbbf-79baeace47be
 | | Media controls | Notification, Control Center and MPRIS | All |
 | | Tray icon | Close to tray and control from the tray menu | Computers |
 | | Backup and restore | Your settings, playlists and history in one file | All |
-| | Settings search | Find any setting by name, with a preview | All |
+| | Settings search | Find any setting by name, with a live preview that stays in view while you change it | All |
 | | Riflay CLI | Control the desktop player from a terminal or an AI agent, with JSON output | Computers |
 | | Riflay Web | YouTube Music in a browser, through its own proxy | Web |
 
@@ -173,6 +178,7 @@ flutter run -d linux          # or: windows, macos, android, ios
 
 - [Riflay CLI](docs/cli.md): control the desktop player from a terminal or AI agent, with JSON output.
 - [Audio and platform notes](docs/platforms.md): YouTube Music sign-in, every audio setting, and what works on which system.
+- [Monochrome](docs/monochrome.md), [SpotiFLAC extensions](docs/spotiflac.md) and [Spotify playback](docs/spotify-playback.md): the optional music sources, and what has been verified on which system.
 - [Riflay in a browser](docs/web.md): the web version and its proxy.
 - [Contributing](CONTRIBUTING.md) and [AGENT.md](AGENT.md) (how the code is organized and tested).
 
@@ -192,8 +198,6 @@ Riflay builds on the work of:
 | [LRCLIB](https://lrclib.net), [Better Lyrics](https://betterlyrics.org), Kugou, NetEase Cloud Music, QQ Music, Musixmatch, [Megalobiz](https://www.megalobiz.com), [Genius](https://genius.com), [lyrics.ovh](https://lyrics.ovh) | Free lyrics | Various; see each project |
 | [audio_metadata_reader](https://github.com/ClementBeal/audio_metadata_reader) | Tags | MIT |
 | Bill Gardner and Keith Martin's [KEMAR HRTF measurements](https://sound.media.mit.edu/resources/KEMAR.html) (MIT Media Lab) | Virtual speakers and its 7.1 room | MIT |
-| [Internet Archive](https://archive.org) | Free FLAC recordings in search, streamed from archive.org | Each recording's own license |
-| [Radio Paradise](https://radioparadise.com) | Listener-supported FLAC radio channels | Free to listen; please support them |
 | [AutoEq](https://github.com/jaakkopasanen/AutoEq) by Jaakko Pasanen, with measurements by crinacle, oratory1990 and others | Headphone / IEM equalizer profiles, downloaded when picked | MIT |
 | [akagi](https://github.com/z0orb/akagi) | Ideas behind playlist reordering and Downloads storage overview (re-implemented, no code copied) | MIT |
 | [liquid_glass_renderer](https://github.com/whynotmake-it/flutter_liquid_glass/tree/main/packages/liquid_glass_renderer) | The phone's Liquid glass tab bar | Apache-2.0 |
