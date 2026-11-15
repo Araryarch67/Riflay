@@ -198,17 +198,19 @@ class _TrackRowState extends State<TrackRow> {
                           style: text.bodyMedium?.copyWith(color: AppColors.textSecondary),
                         ),
                       ),
-                      ...[
+                      if (quality != null) ...[
                         const SizedBox(width: 6),
                         Flexible(
                           child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                            // No vertical padding: with the border it made this line taller than the artist's,
+                            // and the row overflowed by a pixel.
+                            padding: const EdgeInsets.symmetric(horizontal: 5),
                             decoration: BoxDecoration(
                               border: Border.all(color: AppColors.textSecondary.withValues(alpha: 0.4)),
                               borderRadius: BorderRadius.circular(4),
                             ),
                             child: Text(
-                              quality ?? tr.qualityNotKnown,
+                              quality,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: text.labelSmall?.copyWith(

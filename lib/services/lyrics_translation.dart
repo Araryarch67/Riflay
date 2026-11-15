@@ -29,12 +29,12 @@ class LineExtras {
 /// Better Lyrics' own translation service stands in when that fails.
 abstract final class LyricsTranslation {
   /// Whether to show each line's pronunciation / translation. Saved.
-  static final romanize = ValueNotifier(false);
+  static final romanize = ValueNotifier(true);
   static final translate = ValueNotifier(false);
 
   static Future<void> load() async {
     final p = await SharedPreferences.getInstance();
-    romanize.value = p.getBool('lyrics.romanize') ?? false;
+    romanize.value = p.getBool('lyrics.romanize') ?? true;
     translate.value = p.getBool('lyrics.translate') ?? false;
     romanize.addListener(() => p.setBool('lyrics.romanize', romanize.value));
     translate.addListener(() => p.setBool('lyrics.translate', translate.value));

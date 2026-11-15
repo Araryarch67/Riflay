@@ -1008,6 +1008,14 @@ abstract final class SettingsOptions {
       find: (t) => '${t.kwSources}, monochrome',
     ),
     SettingsOption(
+      'smartMerge',
+      .sources,
+      (t) => t.smartMerge,
+      subtitle: (t) => t.smartMergeSubtitle,
+      available: () => Features.smartMerge,
+      find: (t) => '${t.kwSources}, youtube music',
+    ),
+    SettingsOption(
       'spotiflac',
       .sources,
       (t) => t.spotiflacExtensions,

@@ -56,6 +56,14 @@ class _MusicSourcesSettingsState extends State<MusicSourcesSettings> {
                 value: _sources.monochrome,
                 onChanged: _sources.setMonochrome,
               ),
+              if (Features.smartMerge)
+                SwitchListTile(
+                  secondary: const Icon(Icons.merge_rounded),
+                  title: Text(tr.smartMerge),
+                  subtitle: Text(tr.smartMergeSubtitle, style: muted),
+                  value: _sources.smartMerge,
+                  onChanged: _sources.setSmartMerge,
+                ),
               if (Spotiflac.supported)
                 ListTile(
                   leading: const Icon(Icons.extension_outlined),

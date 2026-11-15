@@ -11148,8 +11148,20 @@ abstract class AppLocalizations {
   /// No description provided for @kwSources.
   ///
   /// In en, this message translates to:
-  /// **'flac, lossless, soundcloud, monochrome, spotiflac, extensions, sources'**
+  /// **'flac, lossless, soundcloud, monochrome, spotiflac, extensions, smart merge, best quality, sources'**
   String get kwSources;
+
+  /// No description provided for @smartMerge.
+  ///
+  /// In en, this message translates to:
+  /// **'Smart merge'**
+  String get smartMerge;
+
+  /// No description provided for @smartMergeSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Plays a YouTube Music song from the best source that has the same recording: a lossless file in your library first, then the music sources you turned on (Monochrome, in FLAC), and YouTube Music otherwise. Its music video, lyrics and cover stay from YouTube Music.'**
+  String get smartMergeSubtitle;
 
   /// No description provided for @spotifyCanvas.
   ///

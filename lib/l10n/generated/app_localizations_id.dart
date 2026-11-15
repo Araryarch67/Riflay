@@ -6239,7 +6239,15 @@ class AppLocalizationsId extends AppLocalizations {
       'Tempel tautan YouTube, SoundCloud atau Monochrome untuk memutar atau mengimpor musik.';
 
   @override
-  String get kwSources => 'flac, lossless, soundcloud, monochrome, spotiflac, ekstensi, sumber';
+  String get kwSources =>
+      'flac, lossless, soundcloud, monochrome, spotiflac, ekstensi, smart merge, gabung sumber, kualitas terbaik, sumber';
+
+  @override
+  String get smartMerge => 'Smart merge';
+
+  @override
+  String get smartMergeSubtitle =>
+      'Memutar lagu YouTube Music dari sumber terbaik yang punya rekaman yang sama: file lossless di library kamu dulu, lalu sumber musik yang kamu nyalakan (Monochrome, dalam FLAC), dan YouTube Music kalau tidak ada. Music video, lirik dan sampulnya tetap dari YouTube Music.';
 
   @override
   String get spotifyCanvas => 'Canvas';

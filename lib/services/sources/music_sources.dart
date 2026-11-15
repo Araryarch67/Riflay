@@ -10,8 +10,12 @@ class MusicSources extends ChangeNotifier {
 
   static const _soundcloudKey = 'sources.soundcloud.v1';
   static const _monochromeKey = 'sources.monochrome.v1';
+  static const _smartMergeKey = 'sources.smartMerge.v1';
   bool soundcloud = false;
   bool monochrome = false;
+
+  /// A YouTube Music song plays its sound from the best place that has the same recording (see `SmartMerge`).
+  bool smartMerge = false;
 
   Future<void>? _loading;
 
@@ -21,6 +25,7 @@ class MusicSources extends ChangeNotifier {
     final p = await SharedPreferences.getInstance();
     soundcloud = p.getBool(_soundcloudKey) ?? false;
     monochrome = p.getBool(_monochromeKey) ?? false;
+    smartMerge = p.getBool(_smartMergeKey) ?? false;
     notifyListeners();
   }
 
@@ -36,9 +41,15 @@ class MusicSources extends ChangeNotifier {
     await (await SharedPreferences.getInstance()).setBool(_monochromeKey, value);
   }
 
+  Future<void> setSmartMerge(bool value) async {
+    smartMerge = value;
+    notifyListeners();
+    await (await SharedPreferences.getInstance()).setBool(_smartMergeKey, value);
+  }
+
   @visibleForTesting
   void reset() {
     _loading = null;
-    soundcloud = monochrome = false;
+    soundcloud = monochrome = smartMerge = false;
   }
 }

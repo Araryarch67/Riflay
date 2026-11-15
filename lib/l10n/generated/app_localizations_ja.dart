@@ -6106,7 +6106,14 @@ class AppLocalizationsJa extends AppLocalizations {
   String get openMusicLinkBody => 'YouTube、SoundCloud、Monochromeのリンクを貼り付けて音楽を再生・取り込みできます。';
 
   @override
-  String get kwSources => 'flac, ロスレス, soundcloud, monochrome, spotiflac, 拡張機能, ソース';
+  String get kwSources => 'flac, ロスレス, soundcloud, monochrome, spotiflac, 拡張機能, スマートマージ, 最高音質, ソース';
+
+  @override
+  String get smartMerge => 'スマートマージ';
+
+  @override
+  String get smartMergeSubtitle =>
+      '同じ録音がある最良のソースからYouTube Musicの曲を再生する。まずライブラリのロスレスファイル、次にオンにした音楽ソース(Monochrome、FLAC)、なければYouTube Music。MV、歌詞、カバーはYouTube Musicのまま。';
 
   @override
   String get spotifyCanvas => 'Canvas';

@@ -16,6 +16,27 @@ Library's **Import a playlist** also accepts Monochrome collections and keeps th
 original streams, without replacing them with YouTube matches. Imported Monochrome
 playlists are stored in Riflay even when signed in to YouTube Music.
 
+## Smart merge
+
+Enable **Settings > Accounts & services > Music sources > Smart merge** to keep
+a YouTube Music song's cover, lyrics, music video and library identity while
+playing the same recording from a lossless file in your library first, then
+Monochrome when that source is enabled. With neither available, playback uses
+YouTube Music. Web playback continues through the existing YouTube proxy.
+
+Automatic matches require the same title and artist, matching version labels,
+and known lengths within three seconds. Ambiguous matches are skipped. Source
+lookups have a time limit; a failed merged stream retries using the original
+YouTube audio. Changing source settings clears cached matches and failures.
+SpotiFLAC remains a download source; its downloaded lossless files can be matched
+from the library.
+
+Shuffle reorders existing audio sources without reopening the playing stream or
+seeking it. Initial loads and reconnect attempts show buffering; pausing cancels
+pending automatic resume. Legacy manifests resolve with bounded transient-error
+retries, and byte-range requests reuse the same manifest until a player retry
+creates a fresh source.
+
 ## Downloads
 
 On native platforms, use a song's **Download** button or menu, or a collection's

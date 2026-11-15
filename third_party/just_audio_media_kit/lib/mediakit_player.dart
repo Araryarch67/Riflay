@@ -54,11 +54,16 @@ class MediaKitPlayer extends AudioPlayerPlatform {
 
   /// The index that's currently playing
   int _currentIndex = 0;
+  // Riflay: moving the playing source changes its index, not its position.
+  String? _currentSourceId;
+  Media? _movingMedia;
+  int? _movingIndex;
 
   /// [LoadRequest.initialPosition] or [seek] request before [Player.play] was called and/or finished loading.
   Duration? _setPosition;
 
   Media? get _currentMedia {
+    if (_movingMedia != null) return _movingMedia;
     var medias = _player.state.playlist.medias;
     if (medias.isEmpty) return null;
     return medias[_player.state.playlist.index];
@@ -206,19 +211,37 @@ class MediaKitPlayer extends AudioPlayerPlatform {
         }
         final errorUri = RegExp(r'Failed to open (.*)\.').firstMatch(error)?[1];
         final failedInitial = !_initialMediaReady && errorUri != null && errorUri == _loadingUri;
-        if (errorUri == null || errorUri == _currentMedia?.uri || failedInitial) {
+        // Riflay: proxy playlists open a second, remote URI. Attribute its failure
+        // to the owning source as well, otherwise recovery never hears about it.
+        final initialProxy = !_initialMediaReady && _isStreamProxy(_loadingUri);
+        final nestedFailure = errorUri != null &&
+            !_isStreamProxy(errorUri) &&
+            !_player.state.playlist.medias.any((media) => media.uri == errorUri) &&
+            (initialProxy || _isStreamProxy(_currentMedia?.uri));
+        if (errorUri == null || errorUri == _currentMedia?.uri || failedInitial || nestedFailure) {
           _processingState = ProcessingStateMessage.idle;
           _errorCode = kErrorCode;
           _errorMessage = error;
-          _updatePlaybackEvent(errorIndex: failedInitial ? _loadingIndex : null);
+          _updatePlaybackEvent(errorIndex: failedInitial || (nestedFailure && initialProxy) ? _loadingIndex : null);
         }
         _logger.severe('ERROR OCCURRED: $error');
       }),
       _player.stream.playlist.listen((playlist) {
+        // Riflay: media_kit emits the reordered list with the OLD index before
+        // mpv reports its new index. That intermediate event isn't a song change.
+        if (_movingIndex case final index?) {
+          _currentIndex = index;
+          _updatePlaybackEvent();
+          return;
+        }
+        final sourceId = _currentMedia?.extras?['riflaySourceId'] as String?;
         if (_currentIndex != playlist.index) {
-          _bufferedPosition = _position = Duration.zero;
+          if (sourceId == null || sourceId != _currentSourceId) {
+            _bufferedPosition = _position = Duration.zero;
+          }
           _currentIndex = playlist.index;
         }
+        _currentSourceId = sourceId;
         _duration = _currentMedia?.extras?['overrideDuration'];
         _updatePlaybackEvent();
       }),
@@ -348,6 +371,9 @@ class MediaKitPlayer extends AudioPlayerPlatform {
   Future<LoadResponse> load(LoadRequest request) async {
     _logger.finest('load(${request.toMap()})');
     _mediaOpened = false;
+    // Riflay: arm this load's seek before opening: duration may arrive while
+    // open is still pending. An old source's deferred seek must not survive.
+    _setPosition = request.initialPosition;
     _loadCompleter = Completer();
     _currentIndex = request.initialIndex ?? 0;
     _loadingIndex = _currentIndex;
@@ -378,10 +404,6 @@ class MediaKitPlayer extends AudioPlayerPlatform {
       await _player.open(playable, play: _playing);
     }
     _mediaOpened = true;
-
-    if (request.initialPosition != null) {
-      _setPosition = _position = request.initialPosition!;
-    }
 
     _updatePlaybackEvent();
     final duration = await _loadCompleter?.future;
@@ -480,6 +502,8 @@ class MediaKitPlayer extends AudioPlayerPlatform {
       if (jumped && nativePosition == Duration.zero) {
         _setPosition = null;
       } else if (!jumped && _player.state.duration.inSeconds > 0) {
+        // Riflay: do not let an old deferred seek overwrite this explicit one.
+        _setPosition = null;
         await _player.seek(nativePosition);
       } else {
         _setPosition = nativePosition;
@@ -528,16 +552,43 @@ class MediaKitPlayer extends AudioPlayerPlatform {
 
   @override
   Future<ConcatenatingMoveResponse> concatenatingMove(
-      ConcatenatingMoveRequest request) {
-    return _player
-        .move(
+      ConcatenatingMoveRequest request) async {
+    // Riflay: wait for the native index as well as the playlist-move command,
+    // preserving the playing occurrence and clock through intermediate events.
+    final media = _currentMedia;
+    final from = request.currentIndex, to = request.newIndex;
+    int movedIndex(int value) => value == from ? to
+        : from < value && to >= value ? value - 1
+        : from > value && to <= value ? value + 1
+        : value;
+    final index = movedIndex(_currentIndex);
+    final settled = Completer<void>();
+    final sub = _player.stream.playlist.listen((playlist) {
+      if (!settled.isCompleted && index < playlist.medias.length && playlist.index == index &&
+          playlist.medias[index].extras?['riflaySourceId'] == media?.extras?['riflaySourceId']) {
+        settled.complete();
+      }
+    });
+    _movingMedia = media;
+    _movingIndex = index;
+    _loadingIndex = movedIndex(_loadingIndex);
+    try {
+      await _player.move(
             request.currentIndex,
             // not sure why, but apparently there's an underlying difference between just_audio's move implementation
             // and media_kit, so let's fix it
             request.currentIndex > request.newIndex
                 ? request.newIndex
-                : request.newIndex + 1)
-        .then((_) => ConcatenatingMoveResponse());
+                : request.newIndex + 1);
+      await settled.future.timeout(const Duration(seconds: 2));
+      _currentIndex = index;
+    } finally {
+      await sub.cancel();
+      _movingMedia = null;
+      _movingIndex = null;
+    }
+    _updatePlaybackEvent();
+    return ConcatenatingMoveResponse();
   }
 
   /// Release the resources used by this player.
@@ -557,10 +608,20 @@ class MediaKitPlayer extends AudioPlayerPlatform {
   }
 
   /// Converts an [AudioSourceMessage] into a [Media] for playback
+  // Riflay: just_audio serves StreamAudioSource playlists from this local path.
+  static bool _isStreamProxy(String? value) {
+    final uri = value == null ? null : Uri.tryParse(value);
+    return uri != null &&
+        const {'127.0.0.1', 'localhost', '::1', '[::1]'}.contains(uri.host) &&
+        uri.path.startsWith('/id/');
+  }
+
   Media _convertAudioSourceIntoMediaKit(AudioSourceMessage audioSource) {
     switch (audioSource) {
       case final UriAudioSourceMessage uriSource:
-        return Media(uriSource.uri, httpHeaders: audioSource.headers);
+        // Riflay: stable identity survives a playlist move, even with duplicate URLs.
+        return Media(uriSource.uri, httpHeaders: audioSource.headers,
+            extras: {'riflaySourceId': audioSource.id});
 
       // removed because it doesn't seem to be actually working.
       // Related media-kit issue: https://github.com/media-kit/media-kit/issues/28
@@ -573,7 +634,8 @@ class MediaKitPlayer extends AudioPlayerPlatform {
 
       case final ClippingAudioSourceMessage clippingSource:
         return Media(clippingSource.child.uri,
-            start: clippingSource.start, end: clippingSource.end);
+            start: clippingSource.start, end: clippingSource.end,
+            extras: {'riflaySourceId': audioSource.id});
 
       default:
         throw UnsupportedError(

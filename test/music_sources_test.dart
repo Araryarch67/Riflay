@@ -11,10 +11,11 @@ void main() {
   test('every optional source is off until turned on, and stays as set', () async {
     final s = MusicSources.instance;
     await s.load();
-    expect((s.soundcloud, s.monochrome), (false, false));
+    expect((s.soundcloud, s.monochrome, s.smartMerge), (false, false, false));
     await s.setMonochrome(true);
+    await s.setSmartMerge(true);
     s.reset();
     await s.load();
-    expect((s.soundcloud, s.monochrome), (false, true));
+    expect((s.soundcloud, s.monochrome, s.smartMerge), (false, true, true));
   });
 }

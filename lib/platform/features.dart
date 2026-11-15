@@ -18,6 +18,9 @@ abstract final class Features {
   /// Music folders, adding songs and folders, the tag editor, duplicates, converting to FLAC.
   static bool get localLibrary => !Host.isWeb;
 
+  /// Local lossless matches and merged streams use the native audio source proxy.
+  static bool get smartMerge => !Host.isWeb;
+
   /// Your own lyrics from an .lrc or .txt file (kept as a file on the device).
   static bool get userLyrics => !Host.isWeb;
 

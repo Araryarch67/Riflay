@@ -6312,7 +6312,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get openMusicLinkBody => 'Paste a YouTube, SoundCloud or Monochrome link to play or import music.';
 
   @override
-  String get kwSources => 'flac, lossless, soundcloud, monochrome, spotiflac, extensions, sources';
+  String get kwSources =>
+      'flac, lossless, soundcloud, monochrome, spotiflac, extensions, smart merge, best quality, sources';
+
+  @override
+  String get smartMerge => 'Smart merge';
+
+  @override
+  String get smartMergeSubtitle =>
+      'Plays a YouTube Music song from the best source that has the same recording: a lossless file in your library first, then the music sources you turned on (Monochrome, in FLAC), and YouTube Music otherwise. Its music video, lyrics and cover stay from YouTube Music.';
 
   @override
   String get spotifyCanvas => 'Canvas';

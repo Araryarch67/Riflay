@@ -346,9 +346,10 @@ class _SignalPathSheet extends StatelessWidget {
                   title: tr.spSource,
                   value:
                       '${_codecName(p)}${p.lossless ? ' ${tr.spLosslessParen}' : ''}'
-                      '${p.sourceBits == null ? '' : ' · ${p.sourceBits}-bit'}'
-                      '${p.bitrate == null || p.bitrate == 0 ? '' : ' · ${(p.bitrate! / 1000).round()} kbps'}',
+                      '${p.sourceBits == null ? '' : ' · ${p.sourceBits}-bit'}',
                 ),
+                if (p.bitrate != null && p.bitrate! > 0)
+                  _Stage(title: tr.bitrate, value: '${(p.bitrate! / 1000).round()} kbps'),
                 _Stage(
                   title: tr.spDecoded,
                   value:

@@ -39,6 +39,8 @@ import 'mv_sidecar.dart';
 import 'sacd.dart';
 import 'sleep_timer.dart';
 import 'soundcloud.dart';
+import 'smart_merge.dart';
+import 'sources/music_sources.dart';
 import 'soundcloud_audio_source.dart';
 import 'monochrome_audio_source.dart';
 import 'monochrome.dart';
@@ -70,7 +72,13 @@ class MusicFolderAlreadyAdded implements Exception {
 
 /// Owns the audio player, the library and the play queue.
 class PlayerController extends ChangeNotifier {
-  PlayerController() {
+  // StreamAudioSource is just_audio's supported custom-stream interface.
+  // ignore: experimental_member_use
+  PlayerController({SmartMerge? smartMerge, StreamAudioSource Function(Track)? youtubeSource})
+    : _smartMerge = smartMerge ?? SmartMerge.instance,
+      // The public injection keeps test playback isolated from real accounts.
+      // ignore: prefer_initializing_formals
+      _youtubeSource = youtubeSource {
     soundcloud = SoundcloudClient.instance;
     // The first YouTube song then needs one request, not two.
     YoutubeStream.warmUp();
@@ -143,6 +151,10 @@ class PlayerController extends ChangeNotifier {
     YoutubeStream.musicVideoIdLookup = (id) async => (await ytMusic.musicVideo(id))?.videoId;
     YtDlp.accountCookies = () => ytMusic.downloadCookies;
   }
+
+  final SmartMerge _smartMerge;
+  // ignore: experimental_member_use
+  final StreamAudioSource Function(Track)? _youtubeSource;
 
   String? _formatsFor;
 
@@ -505,7 +517,7 @@ class PlayerController extends ChangeNotifier {
     final track = index != null && index < seq.length ? seq[index].tag as Track : currentTrack;
     // In plain words: mpv's own message (paths, stream URLs) only goes to the log.
     debugPrint('Playback error: ${e.message}');
-    final wasPlaying = player.playing || _starting;
+    final wasPlaying = player.playing || _starting || _retryWantsPlay;
     _recoverOrReport(track, index, wasPlaying);
   }
 
@@ -514,6 +526,8 @@ class PlayerController extends ChangeNotifier {
     // Streams often fail once and play on the next try (an expired link, a dropped
     // connection): try the same song again a few times before giving up on it.
     if (track != null && index != null && _retryPlayback(track, index, wasPlaying)) return;
+    _retryWantsPlay = false;
+    notifyListeners();
     // A Spotify song that never starts is nearly always the account: no Premium, or a sign-in that ran out.
     _errors.add(track?.spotifyId != null ? tr.spotifyCantPlay : tr.couldntPlay(track?.title ?? tr.thisSong));
     // Repeat-one would retry the same broken song forever: skip it all the same. A paused player stays paused.
@@ -543,18 +557,28 @@ class PlayerController extends ChangeNotifier {
   Timer? _playbackRetryTimer;
   int _playbackRetryGeneration = 0;
   Completer<bool>? _retryLoadFailed;
+  Completer<bool>? _openingCancelled;
+  bool _retryWantsPlay = false;
+  bool get _recovering => (_playbackRetryTimer?.isActive ?? false) || _retryLoadFailed != null;
 
   void _cancelPlaybackRetry() {
+    final wasWaiting = _recovering || _starting;
     _playbackRetryGeneration++;
     _playbackRetryTimer?.cancel();
     _playbackRetryTimer = null;
     final pending = _retryLoadFailed;
     if (pending != null && !pending.isCompleted) pending.complete(false);
     _retryLoadFailed = null;
+    final opening = _openingCancelled;
+    if (opening != null && !opening.isCompleted) opening.complete(false);
+    _openingCancelled = null;
+    _starting = false;
+    _retryWantsPlay = false;
     _retryingId = null;
     _retryingIndex = null;
     _retries = 0;
     _lastError = null;
+    if (wasWaiting) notifyListeners();
   }
 
   /// True while [playList] waits for its first song to open (the player isn't "playing" yet).
@@ -581,6 +605,8 @@ class PlayerController extends ChangeNotifier {
     final sameSong = player.sequenceState.currentIndex == index;
     final position = sameSong ? player.position : Duration.zero;
     final generation = _playbackRetryGeneration;
+    final failedSource = player.sequenceState.sequence.elementAtOrNull(index);
+    _retryWantsPlay = play;
     // Keep mpv from audibly moving on while this song is reconnecting.
     player.pause().ignore();
     debugPrint('Retrying playback ($attempt/${playbackRetryDelays.length})');
@@ -589,17 +615,23 @@ class PlayerController extends ChangeNotifier {
       if (_disposed || generation != _playbackRetryGeneration) return;
       // Something else was picked meanwhile: leave it.
       final seq = player.sequenceState.sequence;
-      if (index >= seq.length || (seq[index].tag as Track).id != track.id) {
+      final targetIndex = seq.indexWhere((source) => identical(source, failedSource));
+      if (targetIndex < 0) {
+        _retryWantsPlay = false;
+        notifyListeners();
         return;
       }
       // A fresh stream lookup: the old link may be what failed.
       if (track.videoId case final id?) {
+        // Merged sound that failed isn't tried again: the retry plays the song's own stream.
+        _smartMerge.giveUp(id);
         YoutubeAudioSource.forget(id);
         YoutubeStream.invalidateEverywhere(id);
       }
       // This try's own failure must be heard, not taken for a repeat of the last one.
       _lastError = null;
       final failed = _retryLoadFailed = Completer<bool>();
+      notifyListeners();
       var loaded = false;
       try {
         // A seek can reuse the same failed source. Rebuild the sources so each
@@ -608,7 +640,7 @@ class PlayerController extends ChangeNotifier {
           player
               .setAudioSources(
                 [for (final source in seq) _sourceFor(source.tag as Track)],
-                initialIndex: index,
+                initialIndex: targetIndex,
                 initialPosition: position,
               )
               .then((_) => true),
@@ -621,15 +653,17 @@ class PlayerController extends ChangeNotifier {
       }
       if (_disposed || generation != _playbackRetryGeneration) return;
       if (!loaded) {
-        _recoverOrReport(track, index, play);
+        _recoverOrReport(track, targetIndex, play);
       } else if (play) {
         unawaited(
           _play().catchError((Object error) {
-            if (!_disposed && generation == _playbackRetryGeneration) _recoverOrReport(track, index, play);
+            if (!_disposed && generation == _playbackRetryGeneration) _recoverOrReport(track, targetIndex, play);
           }),
         );
       }
+      notifyListeners();
     });
+    notifyListeners();
     return true;
   }
 
@@ -645,7 +679,21 @@ class PlayerController extends ChangeNotifier {
         if (s.tag case final Track t) ?t.videoId,
     });
     for (final s in seq.sequence.skip(at + 1).take(1)) {
-      if (s.tag case final Track t when t.isRemote && downloadedCopy(t) == null) _resolveAhead(t.videoId!);
+      if (s.tag case final Track t when t.isRemote && downloadedCopy(t) == null) {
+        final local = _smartMerge.local(t, _views.library, (
+          _views.library,
+          libraryRevision.value,
+        ), available: (file) => File(file.path!).existsSync());
+        if (local != null) continue;
+        if (_smartMerge.streams(t)) {
+          // Look the next song up now; its YouTube stream is only fetched ahead when it will be the one played.
+          _smartMerge.match(t).then((found) {
+            if (found.isEmpty && !_disposed && nextTrack?.id == t.id) _resolveAhead(t.videoId!);
+          }).ignore();
+        } else {
+          _resolveAhead(t.videoId!);
+        }
+      }
     }
   }
 
@@ -659,11 +707,17 @@ class PlayerController extends ChangeNotifier {
   bool get isPlaying => casting ? cast.playing : player.playing;
 
   /// What a play/pause button should show: [isPlaying] stays true at the end of the queue, where nothing is heard.
-  bool get showsPlaying =>
-      casting ? cast.playing : player.playing && player.processingState != ProcessingState.completed;
+  bool get showsPlaying => casting
+      ? cast.playing
+      : _starting ||
+            (_recovering && _retryWantsPlay) ||
+            player.playing && player.processingState != ProcessingState.completed;
   bool get isBuffering => casting
       ? cast.loading
-      : player.processingState == ProcessingState.loading || player.processingState == ProcessingState.buffering;
+      : _starting ||
+            _recovering ||
+            player.processingState == ProcessingState.loading ||
+            player.processingState == ProcessingState.buffering;
 
   /// Where the current song is, here or on the cast device.
   Duration get position => casting ? cast.position : player.position;
@@ -1266,6 +1320,7 @@ class PlayerController extends ChangeNotifier {
   // ── Persistence & import ─────────────────────────────────────────────────
 
   Future<void> load() async {
+    await MusicSources.instance.load();
     final prefs = await SharedPreferences.getInstance();
     // Side by side: the library (its own file, read in the background), the
     // YouTube Music session and the audio settings.
@@ -1756,7 +1811,8 @@ class PlayerController extends ChangeNotifier {
   bool _shuffled = false;
   final _random = math.Random();
 
-  AudioSource _sourceFor(Track t) {
+  AudioSource _sourceFor(Track t, {Track? tag}) {
+    final identity = tag ?? t;
     if (SacdDisc.isSacdTrack(t)) {
       final found = SacdDisc.find(t);
       if (found != null) {
@@ -1764,33 +1820,45 @@ class PlayerController extends ChangeNotifier {
         // DoP needs the DSD itself; DST-compressed discs play as PCM.
         if (audio.dopActive && !disc.area.dst) {
           final dsd = SacdDsd(disc, song);
-          if (audio.dopFits(dsd.bitRate)) return DopAudioSource(dsd, tag: t);
+          if (audio.dopFits(dsd.bitRate)) return DopAudioSource(dsd, tag: identity);
         }
-        return SacdAudioSource(disc, song, tag: t);
+        return SacdAudioSource(disc, song, tag: identity);
       }
     }
     if (audio.dopActive && !t.isCueTrack && t.path != null && DsdFile.isDsdPath(t.path!)) {
       final dsd = DsdFile.read(t.path!);
-      if (dsd != null && audio.dopFits(dsd.bitRate)) return DopAudioSource(dsd, tag: t);
+      if (dsd != null && audio.dopFits(dsd.bitRate)) return DopAudioSource(dsd, tag: identity);
     }
     if (t.monochromeId != null || t.extensionId != null) {
       final local = downloadedCopy(t);
-      if (local?.path case final path? when File(path).existsSync()) return AudioSource.uri(local!.uri, tag: t);
+      if (local?.path case final path? when File(path).existsSync()) return _sourceFor(local!, tag: identity);
     }
     if (t.isRemote) {
-      final local = downloadedCopy(t);
-      if (local != null) return AudioSource.uri(local.uri, tag: t);
       // The web build plays straight from the proxy; it can't feed the browser's player a byte stream.
-      if (webAudioUri(t.videoId!) case final uri?) return AudioSource.uri(uri, tag: t);
-      return YoutubeAudioSource(t.videoId!, yt: youtube.client, tag: t);
+      if (webAudioUri(t.videoId!) case final uri?) return AudioSource.uri(uri, tag: identity);
+      // Smart merge: the same recording from a lossless file here, then from a source that has it in better
+      // quality, and the song's own stream otherwise.
+      final merge = _smartMerge;
+      final file = merge.local(t, _views.library, (
+        _views.library,
+        libraryRevision.value,
+      ), available: (file) => File(file.path!).existsSync());
+      if (file != null) {
+        merge.markUsed(t.videoId!);
+        return _sourceFor(file, tag: identity);
+      }
+      final local = downloadedCopy(t);
+      if (local != null && !merge.gaveUpOn(t.videoId!)) return _sourceFor(local, tag: identity);
+      final own = _youtubeSource?.call(identity) ?? YoutubeAudioSource(t.videoId!, yt: youtube.client, tag: identity);
+      return merge.streams(t) ? SmartMergeAudioSource(t, youtube: own, merge: merge) : own;
     }
-    if (t.soundcloudId case final id?) return SoundcloudAudioSource(id, client: soundcloud, tag: t);
+    if (t.soundcloudId case final id?) return SoundcloudAudioSource(id, client: soundcloud, tag: identity);
     if (t.extensionId != null) return SpotiflacAudioSource(t);
-    if (t.spotifyId case final id?) return SpotifyAudioSource(id, tag: t);
-    if (t.monochromeId case final id? when !id.startsWith('tracks:')) return MonochromeAudioSource(id, tag: t);
+    if (t.spotifyId case final id?) return SpotifyAudioSource(id, tag: identity);
+    if (t.monochromeId case final id? when !id.startsWith('tracks:')) return MonochromeAudioSource(id, tag: identity);
     return t.isCueTrack
-        ? ClippingAudioSource(child: AudioSource.uri(t.uri), start: t.start, end: t.end, tag: t)
-        : AudioSource.uri(t.uri, tag: t);
+        ? ClippingAudioSource(child: AudioSource.uri(t.uri), start: t.start, end: t.end, tag: identity)
+        : AudioSource.uri(t.uri, tag: identity);
   }
 
   bool _dopWasActive = false;
@@ -1879,26 +1947,39 @@ class PlayerController extends ChangeNotifier {
     _autoplaySeed = null;
     _ordered = List.of(tracks);
     _shuffled = shuffled;
+    final generation = _playbackRetryGeneration;
     try {
       // A song that fails to open never finishes loading: stop waiting once
       // the player reports it ([_onPlaybackError] moves on from there).
       final failed = Completer<bool>();
+      final cancelled = _openingCancelled = Completer<bool>();
       final sub = player.errorStream.listen((_) => failed.isCompleted ? null : failed.complete(false));
       _starting = true;
+      notifyListeners();
       _retryingId = null;
       final loaded =
           await Future.any([
             _load(shuffled ? _shuffledFrom(tracks, index) : tracks, shuffled ? 0 : index).then((_) => true),
             failed.future,
-          ]).whenComplete(() {
-            _starting = false;
+            cancelled.future,
+          ]).timeout(const Duration(seconds: 45), onTimeout: () => false).whenComplete(() {
+            if (generation == _playbackRetryGeneration) _starting = false;
+            if (identical(_openingCancelled, cancelled)) _openingCancelled = null;
             return sub.cancel();
           });
-      if (loaded) unawaited(_play(restart: true));
+      if (loaded && !_disposed && generation == _playbackRetryGeneration && !_recovering) {
+        unawaited(_play(restart: true));
+      } else if (!loaded &&
+          !_disposed &&
+          generation == _playbackRetryGeneration &&
+          !_recovering &&
+          _retryingId != tracks[index].id) {
+        _recoverOrReport(tracks[index], player.sequenceState.currentIndex, true);
+      }
     } on PlayerException catch (e) {
       debugPrint('Playback failed: ${e.message}');
       // Already being tried again ([_onPlaybackError] heard it too): it reports if that runs out.
-      if (_retryingId != tracks[index].id) _onPlaybackError(e);
+      if (!_disposed && generation == _playbackRetryGeneration && _retryingId != tracks[index].id) _onPlaybackError(e);
     }
     notifyListeners();
   }
@@ -2034,6 +2115,7 @@ class PlayerController extends ChangeNotifier {
   }
 
   Future<void> togglePlay() async {
+    if (!casting && (_starting || (_recovering && _retryWantsPlay))) return pause();
     _cancelPlaybackRetry();
     if (player.audioSources.isEmpty) {
       if (canPlay) await playCollection(allSongs);
@@ -2097,21 +2179,47 @@ class PlayerController extends ChangeNotifier {
     }
   }
 
-  /// Reorders the rest of the queue (or restores it) without interrupting the current song for long.
+  bool _changingShuffle = false;
+
+  /// Moves the existing sources so the current stream and paused position survive shuffle.
   Future<void> toggleShuffle() async {
-    _cancelPlaybackRetry();
+    if (_changingShuffle) return;
     final current = currentTrack;
     if (current == null || _ordered.isEmpty) return;
     final enable = !_shuffled;
     final at = _ordered.indexWhere((t) => t.id == current.id);
     if (at < 0) return;
-    // While casting the device keeps playing; only the order here changes.
-    final wasPlaying = player.playing;
-    final position = player.position;
-    _shuffled = enable;
-    notifyListeners();
-    await _load(enable ? _shuffledFrom(_ordered, at) : _ordered, enable ? 0 : at, position: position);
-    if (wasPlaying) unawaited(player.play());
+    final state = player.sequenceState;
+    final playingSource = state.currentSource;
+    if (playingSource == null || state.sequence.length != _ordered.length) return;
+    final remaining = [...state.sequence]..remove(playingSource);
+    final target = <IndexedAudioSource>[];
+    final tracks = enable ? _shuffledFrom(_ordered, at) : _ordered;
+    for (var i = 0; i < tracks.length; i++) {
+      if (i == (enable ? 0 : at)) {
+        target.add(playingSource);
+      } else {
+        final sourceAt = remaining.indexWhere((source) => (source.tag as Track).id == tracks[i].id);
+        if (sourceAt < 0) return;
+        target.add(remaining.removeAt(sourceAt));
+      }
+    }
+    _changingShuffle = true;
+    final generation = _playbackRetryGeneration;
+    try {
+      for (var i = 0; i < target.length; i++) {
+        if (_disposed || generation != _playbackRetryGeneration) return;
+        final sequence = player.sequenceState.sequence;
+        if (sequence.length != target.length) return;
+        final from = sequence.indexOf(target[i]);
+        if (from < 0) return;
+        if (from != i) await player.moveAudioSource(from, i);
+      }
+      _shuffled = enable;
+      notifyListeners();
+    } finally {
+      _changingShuffle = false;
+    }
   }
 
   static const _loopKey = 'loop.v1';
