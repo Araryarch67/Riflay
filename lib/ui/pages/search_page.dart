@@ -20,6 +20,7 @@ import '../shell_scope.dart';
 import '../theme.dart';
 import '../widgets/controls.dart';
 import '../widgets/page_scaffold.dart';
+import '../widgets/spotiflac_notice.dart';
 import '../widgets/track_row.dart';
 import 'search/free_sources.dart';
 import 'search/local_results.dart';
@@ -490,6 +491,7 @@ class _SearchPageState extends State<SearchPage> {
                           ),
                   ),
                 SearchSourceFilters(onSelected: _selectSource),
+                if (_onExtensions) const Padding(padding: EdgeInsets.only(top: 12), child: SpotiflacNotice()),
                 if (searching) ...[
                   if (widget.input == null) const SizedBox(height: 16),
                   Wrap(

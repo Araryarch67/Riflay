@@ -643,8 +643,9 @@ class DownloadButton extends StatelessWidget {
               onLongPress: () async {
                 final messenger = ScaffoldMessenger.of(context);
                 if (track.extensionId != null) {
-                  c.youtube.enqueueTracks([track]);
-                  messenger.showSnackBar(SnackBar(content: Text(tr.downloadingTitle(track.title))));
+                  if (await downloadExtensionTracks(context, c, [track])) {
+                    messenger.showSnackBar(SnackBar(content: Text(tr.downloadingTitle(track.title))));
+                  }
                   return;
                 }
                 await prefs.load();
@@ -658,8 +659,9 @@ class DownloadButton extends StatelessWidget {
                 onPressed: () async {
                   final messenger = ScaffoldMessenger.of(context);
                   if (track.extensionId != null) {
-                    c.youtube.enqueueTracks([track]);
-                    messenger.showSnackBar(SnackBar(content: Text(tr.downloadingTitle(track.title))));
+                    if (await downloadExtensionTracks(context, c, [track])) {
+                      messenger.showSnackBar(SnackBar(content: Text(tr.downloadingTitle(track.title))));
+                    }
                     return;
                   }
                   if (track.isRemote) {

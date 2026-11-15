@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:flutter/material.dart';
 
 /// A bar that, while [enabled], slides out of sight towards its [edge] and comes back while the pointer is over the
@@ -16,10 +17,14 @@ class AutoHideBar extends StatefulWidget {
     this.hideAfter = const Duration(milliseconds: 900),
     this.firstShow = const Duration(milliseconds: 2500),
     this.shown,
+    this.visibility,
   });
 
   /// Told whether the bar is in sight, for what makes room for it while it is (the expanded player's top row).
   final ValueNotifier<bool>? shown;
+
+  /// While enabled, follows this bar's visibility instead of reacting to hover.
+  final ValueListenable<bool>? visibility;
 
   final Widget child;
 
@@ -46,23 +51,33 @@ class _AutoHideBarState extends State<AutoHideBar> {
   bool _lingering = false;
   Timer? _timer;
 
-  bool get _shown => !widget.enabled || _hovered || _focused || _lingering;
+  bool get _shown => !widget.enabled || (widget.visibility?.value ?? (_hovered || _focused || _lingering));
 
   @override
   void initState() {
     super.initState();
-    if (widget.enabled) _linger(widget.firstShow);
+    widget.visibility?.addListener(_visibilityChanged);
+    if (widget.enabled && widget.visibility == null) _linger(widget.firstShow);
   }
 
   @override
   void didUpdateWidget(AutoHideBar old) {
     super.didUpdateWidget(old);
-    if (widget.enabled && !old.enabled) _linger(widget.firstShow);
+    if (old.visibility != widget.visibility) {
+      old.visibility?.removeListener(_visibilityChanged);
+      widget.visibility?.addListener(_visibilityChanged);
+    }
+    if (widget.enabled && !old.enabled && widget.visibility == null) _linger(widget.firstShow);
+  }
+
+  void _visibilityChanged() {
+    if (mounted) setState(() {});
   }
 
   @override
   void dispose() {
     _timer?.cancel();
+    widget.visibility?.removeListener(_visibilityChanged);
     super.dispose();
   }
 
@@ -76,7 +91,7 @@ class _AutoHideBarState extends State<AutoHideBar> {
   }
 
   void _hover(bool on) {
-    if (!widget.enabled || on == _hovered) return;
+    if (!widget.enabled || widget.visibility != null || on == _hovered) return;
     setState(() {
       _hovered = on;
       if (!on) _linger(widget.hideAfter);

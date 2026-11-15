@@ -281,6 +281,14 @@ class PlayerController extends ChangeNotifier {
   /// "FLAC · 24-bit / 96 kHz" of the current song for the Discord presence, once mpv has it.
   String? _quality;
   String? get presenceQuality => _quality;
+  final _playedQualities = <String, String>{};
+
+  /// Quality of the actual file or selected stream, then catalogue metadata.
+  String? qualityOf(Track track) =>
+      (currentTrack?.id == track.id ? _quality : null) ??
+      _playedQualities[track.id] ??
+      downloadedCopy(track)?.qualityLabel ??
+      track.qualityLabel;
   bool _qualityComplete = false;
   String? _qualityFor;
   Timer? _qualityTimer;
@@ -323,19 +331,25 @@ class PlayerController extends ChangeNotifier {
   /// mpv knows a song's format and bitrate only once it plays (YouTube's bitrate a little later), so
   /// the signal path is read at 1, 4 and 10 s into a song instead of polled, stopping at the first full label.
   void _watchQuality() {
-    if (!discord.enabled || !DiscordPresence.supported || !AudioEngine.supported) return;
+    if (!AudioEngine.supported || _disposed) return;
     if ((_qualityTimer?.isActive ?? false) || _qualityComplete || _qualityReads >= 3) return;
     final wait = Duration(seconds: const [1, 3, 6][_qualityReads]);
     final id = _qualityFor;
     _qualityTimer = Timer(wait, () async {
       _qualityReads++;
       final path = await audio.signalPath();
-      if (id != _qualityFor) return;
+      if (_disposed || id != _qualityFor) return;
       _qualityComplete = path?.qualityComplete ?? false;
       final label = path?.qualityText;
       if (label != null && label != _quality) {
         _quality = label;
+        if (id != null) {
+          _playedQualities.remove(id);
+          _playedQualities[id] = label;
+          if (_playedQualities.length > 128) _playedQualities.remove(_playedQualities.keys.first);
+        }
         _updatePresence(force: true);
+        notifyListeners();
       } else if (isPlaying) {
         _watchQuality();
       }
@@ -462,6 +476,14 @@ class PlayerController extends ChangeNotifier {
 
   /// A stream that fails to resolve shouldn't stall the whole queue: report it and move on.
   void _onPlaybackError(PlayerException e) {
+    if (_disposed) return;
+    if (_retryLoadFailed case final pending? when !pending.isCompleted) {
+      pending.complete(false);
+      return;
+    }
+    // Native playlists may report several subsequent failures while the first
+    // song is already waiting to recover. Keep that original retry intact.
+    if (_playbackRetryTimer?.isActive ?? false) return;
     // mpv reports one failure in several lines ("cannot open file", "failed
     // to open"): handle it once, or the queue would skip past good songs too.
     final now = DateTime.now();
@@ -473,18 +495,27 @@ class PlayerController extends ChangeNotifier {
     final seq = player.sequenceState.sequence;
     final failed = RegExp(r"'([^']+)'|open (.+)\.$").firstMatch(e.message ?? '');
     final path = failed?.group(1) ?? failed?.group(2);
-    final at = path == null ? -1 : seq.indexWhere((s) => (s.tag as Track).path == path);
-    final index = at >= 0 ? at : player.sequenceState.currentIndex;
+    final at = path == null
+        ? -1
+        : seq.indexWhere((s) {
+            final track = s.tag as Track;
+            return track.path == path || track.uri.toString() == path;
+          });
+    final index = at >= 0 ? at : e.index ?? player.sequenceState.currentIndex;
     final track = index != null && index < seq.length ? seq[index].tag as Track : currentTrack;
-    final title = track?.title;
     // In plain words: mpv's own message (paths, stream URLs) only goes to the log.
     debugPrint('Playback error: ${e.message}');
     final wasPlaying = player.playing || _starting;
+    _recoverOrReport(track, index, wasPlaying);
+  }
+
+  void _recoverOrReport(Track? track, int? index, bool wasPlaying) {
+    if (_disposed) return;
     // Streams often fail once and play on the next try (an expired link, a dropped
     // connection): try the same song again a few times before giving up on it.
     if (track != null && index != null && _retryPlayback(track, index, wasPlaying)) return;
     // A Spotify song that never starts is nearly always the account: no Premium, or a sign-in that ran out.
-    _errors.add(track?.spotifyId != null ? tr.spotifyCantPlay : tr.couldntPlay(title ?? tr.thisSong));
+    _errors.add(track?.spotifyId != null ? tr.spotifyCantPlay : tr.couldntPlay(track?.title ?? tr.thisSong));
     // Repeat-one would retry the same broken song forever: skip it all the same. A paused player stays paused.
     final next = _neighbour(1, from: index);
     if (next != null) {
@@ -494,47 +525,109 @@ class PlayerController extends ChangeNotifier {
     }
   }
 
-  static const _maxPlaybackRetries = 3;
+  @visibleForTesting
+  static List<Duration> playbackRetryDelays = const [
+    Duration(milliseconds: 800),
+    Duration(seconds: 2),
+    Duration(seconds: 4),
+    Duration(seconds: 6),
+    Duration(seconds: 10),
+    Duration(seconds: 15),
+    Duration(seconds: 20),
+    Duration(seconds: 20),
+  ];
   String? _retryingId;
+  int? _retryingIndex;
   int _retries = 0;
   DateTime _lastRetryAt = DateTime(0);
+  Timer? _playbackRetryTimer;
+  int _playbackRetryGeneration = 0;
+  Completer<bool>? _retryLoadFailed;
+
+  void _cancelPlaybackRetry() {
+    _playbackRetryGeneration++;
+    _playbackRetryTimer?.cancel();
+    _playbackRetryTimer = null;
+    final pending = _retryLoadFailed;
+    if (pending != null && !pending.isCompleted) pending.complete(false);
+    _retryLoadFailed = null;
+    _retryingId = null;
+    _retryingIndex = null;
+    _retries = 0;
+    _lastError = null;
+  }
 
   /// True while [playList] waits for its first song to open (the player isn't "playing" yet).
   bool _starting = false;
 
-  /// Plays [track] (at [index]) again after a short wait, at most [_maxPlaybackRetries] times
+  /// Resolves and reloads [track] after a backoff, at most [playbackRetryDelays.length] times
   /// in a row. False once it has run out of tries (the caller reports it and moves on).
   bool _retryPlayback(Track track, int index, bool play) {
+    if (!track.streams && !const {'https', 'http'}.contains(track.uri.scheme)) return false;
+    if (_retryingId == track.id && _retryingIndex == index && (_playbackRetryTimer?.isActive ?? false)) return true;
     final now = DateTime.now();
     // A different song, or one that played fine for a while since: start counting again.
-    if (track.id != _retryingId || now.difference(_lastRetryAt) > const Duration(minutes: 2)) {
+    if (track.id != _retryingId ||
+        index != _retryingIndex ||
+        now.difference(_lastRetryAt) > const Duration(minutes: 2)) {
       _retryingId = track.id;
+      _retryingIndex = index;
       _retries = 0;
     }
-    if (_retries >= _maxPlaybackRetries) {
-      _retryingId = null;
-      _retries = 0;
-      return false;
-    }
-    _retries++;
+    if (_retries >= playbackRetryDelays.length) return false;
+    final delay = playbackRetryDelays[_retries++];
     _lastRetryAt = now;
     final attempt = _retries;
     final sameSong = player.sequenceState.currentIndex == index;
     final position = sameSong ? player.position : Duration.zero;
-    debugPrint('Retrying ${track.title} ($attempt/$_maxPlaybackRetries)');
-    Future<void>.delayed(Duration(milliseconds: 800 * attempt), () async {
+    final generation = _playbackRetryGeneration;
+    // Keep mpv from audibly moving on while this song is reconnecting.
+    player.pause().ignore();
+    debugPrint('Retrying playback ($attempt/${playbackRetryDelays.length})');
+    _playbackRetryTimer = Timer(delay, () async {
+      _playbackRetryTimer = null;
+      if (_disposed || generation != _playbackRetryGeneration) return;
       // Something else was picked meanwhile: leave it.
       final seq = player.sequenceState.sequence;
-      if (index >= seq.length || (seq[index].tag as Track).id != track.id) return;
+      if (index >= seq.length || (seq[index].tag as Track).id != track.id) {
+        return;
+      }
       // A fresh stream lookup: the old link may be what failed.
-      if (track.videoId case final id?) YoutubeAudioSource.forget(id);
+      if (track.videoId case final id?) {
+        YoutubeAudioSource.forget(id);
+        YoutubeStream.invalidateEverywhere(id);
+      }
       // This try's own failure must be heard, not taken for a repeat of the last one.
       _lastError = null;
+      final failed = _retryLoadFailed = Completer<bool>();
+      var loaded = false;
       try {
-        await player.seek(position, index: index);
-        if (play) await _play();
+        // A seek can reuse the same failed source. Rebuild the sources so each
+        // provider resolves a fresh URL, retaining the queue and position.
+        loaded = await Future.any([
+          player
+              .setAudioSources(
+                [for (final source in seq) _sourceFor(source.tag as Track)],
+                initialIndex: index,
+                initialPosition: position,
+              )
+              .then((_) => true),
+          failed.future,
+        ]).timeout(const Duration(seconds: 45), onTimeout: () => false);
       } catch (e) {
-        debugPrint('Retry failed: $e');
+        debugPrint('Playback retry failed: ${e.runtimeType}');
+      } finally {
+        if (identical(_retryLoadFailed, failed)) _retryLoadFailed = null;
+      }
+      if (_disposed || generation != _playbackRetryGeneration) return;
+      if (!loaded) {
+        _recoverOrReport(track, index, play);
+      } else if (play) {
+        unawaited(
+          _play().catchError((Object error) {
+            if (!_disposed && generation == _playbackRetryGeneration) _recoverOrReport(track, index, play);
+          }),
+        );
       }
     });
     return true;
@@ -578,6 +671,7 @@ class PlayerController extends ChangeNotifier {
   Duration? get duration => casting ? cast.duration ?? player.duration : player.duration;
 
   Future<void> seek(Duration to) async {
+    _cancelPlaybackRetry();
     if (ListenTogether.of(this).requestSeek(to)) return;
     if (!casting && _soundcloudExpired) return _refreshSoundcloud(at: to);
     await (casting ? cast.seek(to) : player.seek(to));
@@ -592,7 +686,10 @@ class PlayerController extends ChangeNotifier {
     return _play();
   }
 
-  Future<void> pause() => casting ? cast.pause() : player.pause();
+  Future<void> pause() {
+    _cancelPlaybackRetry();
+    return casting ? cast.pause() : player.pause();
+  }
 
   /// 0-1: where the volume slider sits, for this device or the cast device.
   ///
@@ -1480,7 +1577,8 @@ class PlayerController extends ChangeNotifier {
   Future<void> _enrichUntagged() async {
     if (_scanning) return;
     _scanning = true;
-    var pending = _library.where((t) => !t.tagged).toList();
+    bool needsMetadata(Track t) => !t.tagged || (t.path != null && t.audioQuality == null);
+    var pending = _library.where(needsMetadata).toList();
     _setProgress(0, pending.length);
     notifyListeners();
     try {
@@ -1507,7 +1605,7 @@ class PlayerController extends ChangeNotifier {
         });
         await _save();
         // Pick up anything imported while we were scanning.
-        pending = _library.where((t) => !t.tagged).toList();
+        pending = _library.where(needsMetadata).toList();
         _setProgress(0, pending.length);
       }
     } finally {
@@ -1757,6 +1855,7 @@ class PlayerController extends ChangeNotifier {
 
   /// Replaces the queue with [tracks] and starts playing at [index].
   Future<void> playList(List<Track> tracks, int index, {String? from, bool shuffled = false}) async {
+    _cancelPlaybackRetry();
     if (tracks.isEmpty) return;
     final selected = _playableQueueTrack(tracks[index.clamp(0, tracks.length - 1)]);
     if (selected == null) {
@@ -1799,7 +1898,7 @@ class PlayerController extends ChangeNotifier {
     } on PlayerException catch (e) {
       debugPrint('Playback failed: ${e.message}');
       // Already being tried again ([_onPlaybackError] heard it too): it reports if that runs out.
-      if (_retryingId != tracks[index].id) _errors.add(tr.couldntPlay(tracks[index].title));
+      if (_retryingId != tracks[index].id) _onPlaybackError(e);
     }
     notifyListeners();
   }
@@ -1822,6 +1921,7 @@ class PlayerController extends ChangeNotifier {
 
   /// Plays the exact queue occurrence, including a repeated copy of the same track.
   Future<void> playQueueIndex(int index) async {
+    _cancelPlaybackRetry();
     RangeError.checkValidIndex(index, player.sequenceState.sequence);
     await player.seek(Duration.zero, index: index);
     unawaited(_play(restart: true));
@@ -1890,6 +1990,7 @@ class PlayerController extends ChangeNotifier {
 
   /// Removes an absolute queue index, as returned by the CLI's queue listing.
   Future<void> removeQueueIndex(int index) async {
+    _cancelPlaybackRetry();
     final sequence = player.sequenceState.sequence;
     RangeError.checkValidIndex(index, sequence);
     final track = sequence[index].tag as Track;
@@ -1933,6 +2034,7 @@ class PlayerController extends ChangeNotifier {
   }
 
   Future<void> togglePlay() async {
+    _cancelPlaybackRetry();
     if (player.audioSources.isEmpty) {
       if (canPlay) await playCollection(allSongs);
     } else if (casting) {
@@ -1979,12 +2081,14 @@ class PlayerController extends ChangeNotifier {
   bool get hasPrevious => _neighbour(-1) != null;
 
   Future<void> next() async {
+    _cancelPlaybackRetry();
     final i = _neighbour(1);
     if (i != null) await player.seek(Duration.zero, index: i);
   }
 
   /// Restarts the current track unless we're near the beginning.
   Future<void> previous() async {
+    _cancelPlaybackRetry();
     final i = _neighbour(-1);
     if (position > const Duration(seconds: 3) || i == null) {
       await seek(Duration.zero);
@@ -1995,6 +2099,7 @@ class PlayerController extends ChangeNotifier {
 
   /// Reorders the rest of the queue (or restores it) without interrupting the current song for long.
   Future<void> toggleShuffle() async {
+    _cancelPlaybackRetry();
     final current = currentTrack;
     if (current == null || _ordered.isEmpty) return;
     final enable = !_shuffled;
@@ -2188,6 +2293,7 @@ class PlayerController extends ChangeNotifier {
   @override
   void dispose() {
     _disposed = true;
+    _cancelPlaybackRetry();
     _qualityTimer?.cancel();
     _soundcloudRefresh?.cancel();
     _soundcloudServed?.cancel();

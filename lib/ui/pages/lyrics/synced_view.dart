@@ -377,7 +377,7 @@ class _SyncedLyricsViewState extends State<SyncedLyricsView> with _Extras {
                   // faded it out again (~25 frames a line, ~10 ms of the main thread each on Linux). The wheel and
                   // a drag still scroll. RIFLAY_LYRICS_SCROLLBAR brings it back.
                   child: ScrollConfiguration(
-                    behavior: ScrollConfiguration.of(context).copyWith(scrollbars: DebugSwitches.lyricsScrollbar),
+                    behavior: ScrollConfiguration.of(context).copyWith(scrollbars: false),
                     child: SingleChildScrollView(
                       controller: _scroll,
                       padding: EdgeInsets.fromLTRB(pad, height / 2, pad, height / 2),

@@ -5177,6 +5177,30 @@ class AppLocalizationsJa extends AppLocalizations {
   String get spotiflacAbout => '.sflxファイルまたは拡張リポジトリからプロバイダーをインストール。有効にすると検索で使えます。';
 
   @override
+  String get spotiflacDownloadOnly => 'SpotiFLACはダウンロード専用で、ストリーミングには対応していません。先に曲をダウンロードしてから、ライブラリで再生してください。';
+
+  @override
+  String get retryingDownload => '接続が切れました。再試行しています…';
+
+  @override
+  String get qualityNotKnown => '音質情報なし';
+
+  @override
+  String get spotiflacMetadataCapability => '曲情報';
+
+  @override
+  String get spotiflacMetadataOnly => '曲情報を提供します。音声の保存には、有効なダウンロードプロバイダーを選択してください。';
+
+  @override
+  String get spotiflacAudioProvider => '音声ダウンロードを提供します。音質設定はダウンロードするファイルに適用されます。';
+
+  @override
+  String get spotiflacLyricsOnly => '歌詞を提供します。音声ダウンロードには対応していません。';
+
+  @override
+  String get spotiflacNeedsDownloader => 'このカタログの曲を保存するには、SpotiFLAC設定でダウンロードプロバイダーを有効にしてください。';
+
+  @override
   String get importSflx => '.sflxを読み込む';
 
   @override

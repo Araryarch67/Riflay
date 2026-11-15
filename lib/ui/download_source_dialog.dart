@@ -11,6 +11,62 @@ import 'download_options.dart';
 import 'widgets/app_dialog.dart';
 import 'widgets/controls.dart' show Artwork, formatDuration;
 
+/// Metadata-only catalogues need an explicit audio provider, kept with the job
+/// so retries and browser verification continue using that same provider.
+Future<bool> downloadExtensionTracks(
+  BuildContext context,
+  PlayerController player,
+  List<Track> tracks, {
+  Spotiflac? runtime,
+}) async {
+  final engine = runtime ?? Spotiflac.instance;
+  try {
+    await engine.load();
+    await engine.refresh();
+  } catch (_) {
+    if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(tr.spotiflacFailed)));
+    return false;
+  }
+  if (!context.mounted) return false;
+  final providers = engine.downloadProviders;
+  bool ownDownloader(Track track) => providers.any((provider) => provider['id'] == track.extensionId);
+  if (tracks.every(ownDownloader)) {
+    return player.youtube.enqueueTracks(tracks) > 0;
+  }
+  if (providers.isEmpty) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(tr.spotiflacNeedsDownloader)));
+    return false;
+  }
+  final provider = await showDialog<String>(
+    context: context,
+    builder: (context) => AppDialog(
+      title: tr.downloadSource,
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(tr.spotiflacMetadataOnly),
+          const SizedBox(height: 12),
+          for (final provider in providers)
+            ListTile(title: Text(engine.nameOf(provider['id'])), onTap: () => Navigator.pop(context, provider['id'])),
+        ],
+      ),
+      actions: [TextButton(onPressed: () => Navigator.pop(context), child: Text(tr.cancel))],
+    ),
+  );
+  if (provider == null || !context.mounted) return false;
+  final direct = tracks.where(ownDownloader).toList();
+  final metadata = tracks.where((track) => !ownDownloader(track)).toList();
+  final options = engine.plugin(provider)?['quality_options'];
+  final added =
+      player.youtube.enqueueTracks(direct) +
+      player.youtube.enqueueTracks(
+        metadata,
+        extensionDownloader: provider,
+        extensionQuality: options is List && options.isNotEmpty ? engine.qualityOf(provider) : null,
+      );
+  return added > 0;
+}
+
 /// Chooses an audio provider for a single YouTube song. The default provider
 /// retains its existing format dialog and preferences.
 Future<bool> downloadFromSource(
@@ -186,7 +242,10 @@ class _MatchDialogState extends State<_MatchDialog> {
       FilledButton(
         onPressed: selected == null || loading
             ? null
-            : () => Navigator.pop(context, (track: selected!, quality: widget.source == 'monochrome' ? null : quality)),
+            : () => Navigator.pop(context, (
+                track: selected!,
+                quality: widget.source == 'monochrome' || qualityOptions.isEmpty ? null : quality,
+              )),
         child: Text(tr.download),
       ),
     ],

@@ -5363,6 +5363,33 @@ class AppLocalizationsEn extends AppLocalizations {
       'Install provider plugins from .sflx files or an extension repository. Enable a provider to use it in Search.';
 
   @override
+  String get spotiflacDownloadOnly =>
+      'SpotiFLAC is a download-only source, not a streaming source. Download songs first to play them from your library.';
+
+  @override
+  String get retryingDownload => 'Connection interrupted. Retrying…';
+
+  @override
+  String get qualityNotKnown => 'Quality unavailable';
+
+  @override
+  String get spotiflacMetadataCapability => 'Metadata';
+
+  @override
+  String get spotiflacMetadataOnly =>
+      'Provides song information, not audio downloads. Choose another enabled download provider to save songs.';
+
+  @override
+  String get spotiflacAudioProvider => 'Provides audio downloads. Its quality settings apply to the downloaded file.';
+
+  @override
+  String get spotiflacLyricsOnly => 'Provides lyrics for songs; it does not provide audio downloads.';
+
+  @override
+  String get spotiflacNeedsDownloader =>
+      'Enable a download provider in SpotiFLAC settings to save songs from this catalogue.';
+
+  @override
   String get importSflx => 'Import .sflx';
 
   @override

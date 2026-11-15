@@ -933,6 +933,7 @@ class _HomeShellState extends State<HomeShell> {
               edge: AxisDirection.up,
               enabled: full,
               shown: _titleBarShown,
+              visibility: _playerBarShown,
               // Over the player it brings the window's colour with it, as it has above the pages. Always there
               // (clear above the pages), so the bar keeps its state, such as what is typed, between the two.
               child: ColoredBox(color: full ? AppColors.background : Colors.transparent, child: _titleBar()),

@@ -51,3 +51,33 @@ native FLAC with packet copy, and a full FFmpeg decode passed (16-bit/44.1 kHz,
 isolated temporary runtime without printing credentials. Fragment checkpoint,
 retry, concatenation order and network permissions are covered by the native
 `TestRiflaySegmentsResumeAndConcatenate` test.
+
+Provider search now uses each extension's declared song filter (`track`,
+`tracks`, `song`, or `songs`), rather than always sending `track`. Live public
+catalogue searches for “BTS” returned songs from Apple Music, Spotify, Amazon,
+Tidal, Deezer, SoundCloud, JioSaavn, YouTube Music, Bugs and Genie. These checks
+verify search, not downloads. Qobuz and Beatport requested verification in fresh
+sessions; Jellyfin requires a configured server. Melon's endpoint timed out from
+the test machine, including outside the sandbox.
+
+Repeat public search checks without copying any account/session data:
+
+```powershell
+flutter test --no-pub --dart-define=RIFLAY_TEST_SPOTIFLAC_SEARCH=true --dart-define=RIFLAY_SFLX_EXTENSIONS=C:/path/to/extensions test/spotiflac_search_test.dart
+```
+
+SpotiFLAC is presented as download-only in Settings and Search. Installed
+extensions are excluded from Available and return there when removed.
+
+Installed providers list their search, metadata, download and lyrics capabilities
+from the runtime manifest. Metadata-only catalogues ask for an enabled audio
+provider; that choice is stored in the download job and is also used for browser
+verification. Providers without quality options use their own defaults.
+
+Downloads have a shared eight-retry budget across lookup, transfer and URL
+refresh failures, with cancellable delays of 2, 4, 8, 15, 20, 30, 30 and 30 seconds.
+Verification, unavailable content, invalid files and disk errors require action
+instead of automatic retry. Streaming playback reloads fresh sources up to eight
+times; Pause, changing songs and closing the player cancel pending recovery.
+`test/playback_recovery_windows_test.dart` uses real libmpv, a local fixture server
+and silent output to check recovery after five failures and cancellation by Pause.

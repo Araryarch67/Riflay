@@ -21,6 +21,57 @@ PlayHistory memory({int maxPlays = 150000}) => PlayHistory(maxPlays: maxPlays);
 void main() {
   const s = Duration(seconds: 1);
 
+  test('history retains artwork from every source when Wrap reconstructs a song', () async {
+    final dir = await Directory.systemTemp.createTemp('riflay-wrap-covers-');
+    try {
+      final file = File('${dir.path}/history.jsonl');
+      final history = PlayHistory(file: file);
+      await history.load();
+      final tracks = [
+        Track.spotify(
+          trackId: 'spotify-song',
+          title: 'Spotify',
+          artist: 'Artist',
+          artworkUrl: 'https://covers.test/sp.jpg',
+        ),
+        Track(
+          id: 'mono:1',
+          uri: Uri(scheme: 'monochrome', path: '1'),
+          title: 'Mono',
+          artist: 'Artist',
+          artworkUrl: 'https://covers.test/mono.jpg',
+        ),
+        Track(
+          id: 'sflx:tidal-web:1',
+          uri: Uri(scheme: 'spotiflac', host: 'tidal-web', path: '/1'),
+          title: 'Tidal',
+          artist: 'Artist',
+          artworkUrl: 'https://covers.test/tidal.jpg',
+        ),
+        Track(
+          id: 'file:///music/download.flac',
+          uri: Uri.file('/music/download.flac'),
+          title: 'Downloaded',
+          artist: 'Artist',
+          artworkUrl: 'https://covers.test/download.jpg',
+        ),
+      ];
+      for (final track in tracks) {
+        history.record(track, const Duration(seconds: 60));
+      }
+      await history.flush();
+      final restored = PlayHistory(file: file);
+      await restored.load();
+      for (var i = 0; i < tracks.length; i++) {
+        final info = restored.songInfo(restored.songIndex(i));
+        expect(info.artworkUrl, tracks[i].artworkUrl);
+        expect(info.toTrack().artworkUrl, tracks[i].artworkUrl);
+      }
+    } finally {
+      await dir.delete(recursive: true);
+    }
+  });
+
   group('when a play counts', () {
     final a = song('a');
     final b = song('b');

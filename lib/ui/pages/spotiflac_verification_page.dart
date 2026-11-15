@@ -10,9 +10,10 @@ import '../../services/spotiflac.dart';
 
 /// The provider's verification page returns its grant to this view, never to logs.
 class SpotiflacVerificationPage extends StatefulWidget {
-  const SpotiflacVerificationPage({super.key, required this.track, required this.url});
+  const SpotiflacVerificationPage({super.key, required this.track, required this.url, this.provider});
   final Track track;
   final Uri url;
+  final String? provider;
   @override
   State<SpotiflacVerificationPage> createState() => _SpotiflacVerificationPageState();
 }
@@ -72,10 +73,11 @@ class _SpotiflacVerificationPageState extends State<SpotiflacVerificationPage> {
     try {
       final grant = deliveredGrant;
       final state = uri.queryParameters['state'];
-      if (state != null && state != widget.track.extensionId) throw const SpotiflacError();
+      final provider = widget.provider ?? Spotiflac.instance.downloadProviderOf(widget.track);
+      if (state != null && state != provider) throw const SpotiflacError();
       if (grant == null || grant.isEmpty) throw const SpotiflacError();
       _lastGrant = grant;
-      await Spotiflac.instance.completeVerification(widget.track, grant);
+      await Spotiflac.instance.completeVerification(widget.track, grant, provider: provider);
       if (mounted) Navigator.of(context).pop(true);
     } catch (_) {
       completing = false;

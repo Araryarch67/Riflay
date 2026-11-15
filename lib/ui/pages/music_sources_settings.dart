@@ -97,7 +97,7 @@ class _MusicSourcesSettingsState extends State<MusicSourcesSettings> {
                 ListTile(
                   leading: const Icon(Icons.extension_outlined),
                   title: Text(tr.spotiflacExtensions),
-                  subtitle: Text(tr.spotiflacAbout, style: muted),
+                  subtitle: Text(tr.spotiflacDownloadOnly, style: muted),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () => ShellScope.of(context).open(const SpotiflacPage()),
                 ),

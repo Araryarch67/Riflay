@@ -44,6 +44,10 @@ class MediaKitPlayer extends AudioPlayerPlatform {
   Duration? _duration;
   bool _playing = false;
   bool _mediaOpened = false;
+  // Riflay: native playlists can advance before an initial-open error arrives.
+  String? _loadingUri;
+  int _loadingIndex = 0;
+  bool _initialMediaReady = false;
   int? _errorCode;
   String? _errorMessage;
   Completer<Duration?>? _loadCompleter;
@@ -201,11 +205,12 @@ class MediaKitPlayer extends AudioPlayerPlatform {
           return;
         }
         final errorUri = RegExp(r'Failed to open (.*)\.').firstMatch(error)?[1];
-        if (errorUri == null || errorUri == _currentMedia?.uri) {
+        final failedInitial = !_initialMediaReady && errorUri != null && errorUri == _loadingUri;
+        if (errorUri == null || errorUri == _currentMedia?.uri || failedInitial) {
           _processingState = ProcessingStateMessage.idle;
           _errorCode = kErrorCode;
           _errorMessage = error;
-          _updatePlaybackEvent();
+          _updatePlaybackEvent(errorIndex: failedInitial ? _loadingIndex : null);
         }
         _logger.severe('ERROR OCCURRED: $error');
       }),
@@ -252,6 +257,7 @@ class MediaKitPlayer extends AudioPlayerPlatform {
       ).hasMatch(error);
 
   void _updateDuration(Duration duration) {
+    if (duration > Duration.zero && _currentMedia?.uri == _loadingUri) _initialMediaReady = true;
     final start = _currentMedia?.start;
     final end = _currentMedia?.end;
     if (end != null) duration = end;
@@ -301,6 +307,7 @@ class MediaKitPlayer extends AudioPlayerPlatform {
 
   /// mpv's `time-pos` as just_audio counts it: from the start of a clip, never below zero.
   void _takePosition(Duration position) {
+    if (position > Duration.zero && _currentMedia?.uri == _loadingUri) _initialMediaReady = true;
     _position = position;
     final start = _currentMedia?.start;
     if (start != null) _position -= start;
@@ -318,7 +325,7 @@ class MediaKitPlayer extends AudioPlayerPlatform {
 
   /// Updates the playback event. [fresh]: with the position read from mpv first, for an event that used to go out
   /// with mpv's latest report; an event right after the position was set here (a seek, a new song) keeps that.
-  void _updatePlaybackEvent({bool fresh = false}) {
+  void _updatePlaybackEvent({bool fresh = false, int? errorIndex}) {
     if (fresh) _refreshPosition();
     _sentPosition = _position;
     _sentBuffered = _bufferedPosition;
@@ -330,7 +337,7 @@ class MediaKitPlayer extends AudioPlayerPlatform {
       bufferedPosition: _bufferedPosition,
       duration: _duration,
       icyMetadata: null,
-      currentIndex: _currentIndex,
+      currentIndex: errorIndex ?? _currentIndex,
       androidAudioSessionId: null,
       errorCode: _errorCode,
       errorMessage: _errorMessage,
@@ -343,6 +350,8 @@ class MediaKitPlayer extends AudioPlayerPlatform {
     _mediaOpened = false;
     _loadCompleter = Completer();
     _currentIndex = request.initialIndex ?? 0;
+    _loadingIndex = _currentIndex;
+    _initialMediaReady = false;
     _bufferedPosition = Duration.zero;
     _position = Duration.zero;
     _duration = null;
@@ -358,10 +367,13 @@ class MediaKitPlayer extends AudioPlayerPlatform {
           audioSource.children.map(_convertAudioSourceIntoMediaKit).toList(),
           index: _currentIndex);
 
+      _loadingUri = playable.medias[_loadingIndex].uri;
+
       await _player.open(playable, play: _playing);
     } else {
       final playable =
           _convertAudioSourceIntoMediaKit(request.audioSourceMessage);
+      _loadingUri = playable.uri;
       _logger.finest('playable is ${playable.toString()}');
       await _player.open(playable, play: _playing);
     }
@@ -446,6 +458,8 @@ class MediaKitPlayer extends AudioPlayerPlatform {
 
   @override
   Future<SeekResponse> seek(SeekRequest request) async {
+    // Riflay: a user-selected occurrence supersedes an unfinished initial open.
+    _loadingUri = null;
     _logger.finest('seek(${request.toMap()})');
     final jumped = request.index != null;
     if (request.index != null) {

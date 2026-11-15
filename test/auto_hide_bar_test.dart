@@ -4,6 +4,66 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:riflay/ui/widgets/auto_hide_bar.dart';
 
 void main() {
+  testWidgets('expanded title bar ignores top hover and follows the bottom player', (tester) async {
+    final bottomShown = ValueNotifier(false);
+    addTearDown(bottomShown.dispose);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Stack(
+            children: [
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                child: AutoHideBar(
+                  key: const ValueKey('title'),
+                  edge: AxisDirection.up,
+                  enabled: true,
+                  visibility: bottomShown,
+                  child: const SizedBox(height: 48, child: Text('title')),
+                ),
+              ),
+              Positioned(
+                bottom: 0,
+                left: 0,
+                right: 0,
+                child: AutoHideBar(
+                  key: const ValueKey('player'),
+                  edge: AxisDirection.down,
+                  enabled: true,
+                  shown: bottomShown,
+                  firstShow: Duration.zero,
+                  child: const SizedBox(height: 48, child: Text('player')),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    double shown(String key) => tester
+        .widget<AnimatedOpacity>(find.descendant(of: find.byKey(ValueKey(key)), matching: find.byType(AnimatedOpacity)))
+        .opacity;
+    final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+    await mouse.addPointer(location: const Offset(400, 300));
+    await mouse.moveTo(const Offset(400, 24));
+    await tester.pumpAndSettle();
+    expect(shown('title'), 0);
+    expect(shown('player'), 0);
+    await mouse.moveTo(const Offset(400, 580));
+    await tester.pumpAndSettle();
+    expect(shown('title'), 1);
+    expect(shown('player'), 1);
+    await mouse.moveTo(const Offset(400, 300));
+    await tester.pump(const Duration(seconds: 1));
+    await tester.pumpAndSettle();
+    expect(shown('title'), 0);
+    expect(shown('player'), 0);
+    await mouse.removePointer();
+  });
+
   var taps = 0;
 
   Widget app({required bool enabled}) => MaterialApp(

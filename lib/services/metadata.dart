@@ -19,6 +19,7 @@ import '../platform/host.dart';
 import 'cover_palette.dart';
 import 'ffmpeg.dart';
 import 'tag_writer.dart';
+import 'audio_engine.dart' show AudioEngine, SignalPath;
 
 /// Who is waiting for a cover. A widget that leaves (scrolled away) cancels
 /// its request; a cover nobody waits for any more is not read from its file.
@@ -120,11 +121,45 @@ abstract final class Metadata {
         duration: m.duration,
         trackNumber: m.trackNumber,
         discNumber: m.discNumber,
+        audioQuality: _fileQuality(path, m),
         tagged: true,
       );
     } catch (_) {
-      return track.copyWith(tagged: true);
+      return track.copyWith(tagged: true, audioQuality: track.qualityLabel ?? '');
     }
+  }
+
+  // Read a bounded header on the same background isolate as textual metadata.
+  // Container extensions such as M4A and Ogg never imply a particular codec.
+  static String _fileQuality(String path, AudioMetadata metadata) {
+    final ext = _ext(path);
+    Uint8List head = Uint8List(0);
+    try {
+      final input = File(path).openSync();
+      try {
+        head = input.readSync(64 * 1024);
+      } finally {
+        input.closeSync();
+      }
+    } catch (_) {}
+    final bits = AudioEngine.parseSourceBits(head);
+    final magic = ascii.decode(head, allowInvalid: true);
+    final format = switch (ext) {
+      'm4a' || 'm4b' || 'mp4' when bits != null && magic.contains('alac') => 'ALAC',
+      'ogg' || 'oga' || 'webm' when magic.contains('OpusHead') => 'Opus',
+      'ogg' || 'oga' || 'webm' when magic.contains('vorbis') => 'Vorbis',
+      'opus' => 'Opus',
+      'wv' => 'WavPack',
+      'aif' || 'aifc' => 'AIFF',
+      _ => ext.toUpperCase(),
+    };
+    final lossless = const {'FLAC', 'ALAC', 'WAV', 'AIFF', 'WavPack', 'APE', 'TTA'}.contains(format);
+    final rate = metadata.sampleRate;
+    final bitrate = metadata.bitrate;
+    final parts = lossless
+        ? [if (bits != null) '$bits-bit', if (rate != null && rate > 0) SignalPath.formatRate(rate)]
+        : [if (bitrate != null && bitrate > 0) '${(bitrate / 1000).round()} kbps'];
+    return parts.isEmpty ? format : '$format · ${parts.join(' / ')}';
   }
 
   /// FLAC and MP4/M4A (AAC, ALAC) are written in-process: the bundled writers

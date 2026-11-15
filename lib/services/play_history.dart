@@ -32,7 +32,7 @@ class SongInfo {
   final String? album;
   final String? videoId;
 
-  /// Only kept for a streamed song whose cover isn't YouTube's default for it, and for a SoundCloud track.
+  /// The source's artwork, omitting only YouTube's reproducible default URL.
   final String? artworkUrl;
 
   factory SongInfo.of(Track t) => SongInfo(
@@ -41,11 +41,7 @@ class SongInfo {
     artist: t.artist,
     album: t.album,
     videoId: t.videoId,
-    artworkUrl: t.videoId != null && t.artworkUrl != _defaultArt(t.videoId!)
-        ? t.artworkUrl
-        : t.soundcloudId != null || t.spotifyId != null
-        ? t.artworkUrl
-        : null,
+    artworkUrl: t.videoId != null && t.artworkUrl == _defaultArt(t.videoId!) ? null : t.artworkUrl,
   );
 
   static String _defaultArt(String videoId) => 'https://i.ytimg.com/vi/$videoId/hqdefault.jpg';
@@ -67,7 +63,15 @@ class SongInfo {
       final trackId = key.substring(Track.soundcloudPrefix.length);
       return Track.soundcloud(trackId: trackId, title: title, artist: artist, artworkUrl: artworkUrl);
     }
-    return Track(id: key, uri: Uri.parse(key), title: title, artist: artist, album: album, tagged: true);
+    return Track(
+      id: key,
+      uri: Uri.parse(key),
+      title: title,
+      artist: artist,
+      album: album,
+      artworkUrl: artworkUrl,
+      tagged: true,
+    );
   }
 
   @override

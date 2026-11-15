@@ -33,6 +33,7 @@ import 'ytmusic_web.dart';
 import 'language.dart';
 import 'monochrome_download.dart';
 import 'spotiflac.dart';
+import 'retry_budget.dart';
 
 enum DownloadStatus { queued, downloading, done, failed, cancelled }
 
@@ -40,12 +41,14 @@ enum DownloadStatus { queued, downloading, done, failed, cancelled }
 /// [finishing] is the quick remux and tagging at the end. Neither has progress to show.
 enum DownloadPhase {
   downloading,
+  retrying,
   converting,
   finishing;
 
   /// The line a list or notification shows for this phase.
   String get label => switch (this) {
     downloading => tr.phaseDownloading,
+    retrying => tr.retryingDownload,
     converting => tr.converting,
     finishing => tr.finishing,
   };
@@ -85,6 +88,7 @@ class DownloadJob {
     this.extensionTrack,
     this.youtubeOrigin,
     this.extensionQuality,
+    this.extensionDownloader,
   });
 
   /// The format and quality asked for; null follows Settings when the download starts.
@@ -96,6 +100,7 @@ class DownloadJob {
   final Track? extensionTrack;
   final Track? youtubeOrigin;
   final String? extensionQuality;
+  final String? extensionDownloader;
 
   final String videoId;
   final String title;
@@ -158,6 +163,7 @@ class DownloadJob {
       if (extensionTrack != null) 'extensionTrack': extensionTrack!.toJson(),
       if (youtubeOrigin != null) 'youtubeOrigin': youtubeOrigin!.toJson(),
       if (extensionQuality != null) 'extensionQuality': extensionQuality,
+      if (extensionDownloader != null) 'extensionDownloader': extensionDownloader,
       'title': title,
       'channel': channel,
       'thumbnailUrl': thumbnailUrl,
@@ -246,6 +252,7 @@ class DownloadJob {
         extensionTrack: extension,
         youtubeOrigin: origin,
         extensionQuality: json['extensionQuality'] is String ? json['extensionQuality'] : null,
+        extensionDownloader: json['extensionDownloader'] is String ? json['extensionDownloader'] : null,
         title: title,
         channel: json['channel'] as String? ?? '',
         thumbnailUrl: json['thumbnailUrl'] as String? ?? '',
@@ -463,6 +470,7 @@ class YoutubeImporter extends ChangeNotifier {
     bool withVideo = false,
     Track? youtubeOrigin,
     String? extensionQuality,
+    String? extensionDownloader,
   }) {
     if (youtubeOrigin != null &&
         (!youtubeOrigin.isRemote ||
@@ -476,6 +484,7 @@ class YoutubeImporter extends ChangeNotifier {
         DownloadJob(
           youtubeOrigin: youtubeOrigin,
           extensionQuality: extensionQuality,
+          extensionDownloader: extensionDownloader,
           videoId:
               youtubeOrigin?.videoId ??
               (t.extensionId != null
@@ -600,6 +609,7 @@ class YoutubeImporter extends ChangeNotifier {
 
   @override
   void notifyListeners() {
+    if (_frozen) return;
     super.notifyListeners();
     _scheduleSave();
   }
@@ -674,6 +684,7 @@ class YoutubeImporter extends ChangeNotifier {
     // The running download notices this between chunks and cleans up.
     final waiting = job.status == DownloadStatus.queued;
     job.status = DownloadStatus.cancelled;
+    _downloadRetries[job]?.cancel();
     if (waiting) _discardPartOf(job);
     notifyListeners();
   }
@@ -692,6 +703,7 @@ class YoutubeImporter extends ChangeNotifier {
   int _running = 0;
 
   Future<void> _drain() async {
+    if (_frozen) return;
     while (_running < _parallelJobs) {
       final job = _jobs.where((j) => j.status == DownloadStatus.queued).firstOrNull;
       if (job == null) return;
@@ -962,7 +974,47 @@ class YoutubeImporter extends ChangeNotifier {
 
   /// Waits between a dropped connection and the next try; the length is the number of tries.
   @visibleForTesting
-  static List<Duration> retryDelays = const [Duration(seconds: 2), Duration(seconds: 6), Duration(seconds: 15)];
+  static List<Duration> retryDelays = const [
+    Duration(seconds: 2),
+    Duration(seconds: 4),
+    Duration(seconds: 8),
+    Duration(seconds: 15),
+    Duration(seconds: 20),
+    Duration(seconds: 30),
+    Duration(seconds: 30),
+    Duration(seconds: 30),
+  ];
+
+  final _downloadRetries = <DownloadJob, RetryBudget>{};
+
+  Future<bool> _waitToRetry(DownloadJob job, Object error) async {
+    if (_frozen || job.status == DownloadStatus.cancelled || job.track != null) return false;
+    if (error is DownloadCancelled ||
+        error is _Cancelled ||
+        error is _OnMobileData ||
+        error is _NoFlac ||
+        error is _NoMp3 ||
+        error is VideoUnplayableException ||
+        error is FileSystemException ||
+        error is FormatException ||
+        error is MuxException ||
+        error is ArgumentError ||
+        error is SpotiflacError && error.verificationRequired) {
+      return false;
+    }
+    final budget = _downloadRetries[job];
+    if (budget == null) return false;
+    job.bytesPerSecond = null;
+    job.phase = DownloadPhase.retrying;
+    notifyListeners();
+    if (job.extensionTrack == null && job.monochromeTrack == null) {
+      YoutubeStream.invalidateEverywhere(job.videoId);
+    }
+    final retry = await budget.wait() && !_frozen && job.status != DownloadStatus.cancelled;
+    job.phase = DownloadPhase.downloading;
+    if (!_frozen) notifyListeners();
+    return retry;
+  }
 
   /// Decides whether [part] continues: only when [audio] is the very stream it holds (same itag, same size).
   /// Otherwise it (and any partial of another container) is removed. Records what [part] will hold, and starts the
@@ -990,6 +1042,30 @@ class YoutubeImporter extends ChangeNotifier {
   }
 
   Future<void> _download(DownloadJob job) async {
+    final budget = _downloadRetries[job] = RetryBudget(List.of(retryDelays));
+    try {
+      while (!_frozen && job.status != DownloadStatus.cancelled) {
+        try {
+          await _downloadAttempt(job);
+          return;
+        } catch (error) {
+          if (await _waitToRetry(job, error)) continue;
+          if (!_frozen && job.status != DownloadStatus.cancelled) {
+            job
+              ..status = DownloadStatus.failed
+              ..error = _friendlyError(error);
+          }
+          return;
+        }
+      }
+    } finally {
+      budget.cancel();
+      _downloadRetries.remove(job);
+      if (!_frozen) notifyListeners();
+    }
+  }
+
+  Future<void> _downloadAttempt(DownloadJob job) async {
     notifyListeners();
     File? partFile;
     File? downloaded;
@@ -1004,6 +1080,7 @@ class YoutubeImporter extends ChangeNotifier {
           source,
           dir,
           quality: job.extensionQuality,
+          providerOverride: job.extensionDownloader,
           cancelled: () => job.status == DownloadStatus.cancelled,
           progress: (value) {
             job.progress = value.clamp(0, 1);
@@ -1011,6 +1088,7 @@ class YoutubeImporter extends ChangeNotifier {
           },
         );
         final track = downloadedTrack.copyWith(downloadYoutubeId: job.youtubeOrigin?.videoId);
+        job.track = track;
         await onTrackReady(track);
         job
           ..track = track
@@ -1043,6 +1121,7 @@ class YoutubeImporter extends ChangeNotifier {
           },
         );
         final track = downloadedTrack.copyWith(downloadYoutubeId: job.youtubeOrigin?.videoId);
+        job.track = track;
         await onTrackReady(track);
         job
           ..track = track
@@ -1115,11 +1194,8 @@ class YoutubeImporter extends ChangeNotifier {
         } catch (e) {
           // A stale cached URL is the usual cause; resolve fresh next time.
           YoutubeStream.invalidateEverywhere(job.videoId);
-          if (e is DownloadCancelled || job.status == DownloadStatus.cancelled || attempt >= retryDelays.length) {
-            rethrow;
-          }
+          if (!await _waitToRetry(job, e)) rethrow;
           debugPrint('Download ${job.videoId}: interrupted, trying again (${attempt + 1}): $e');
-          await Future<void>.delayed(retryDelays[attempt]);
           if (job.status == DownloadStatus.cancelled) throw const DownloadCancelled();
           // The URL may have expired; the stream is resolved again and the partial file continues if it matches.
           audio = await _resolveAudio(job.videoId, choice);
@@ -1205,11 +1281,7 @@ class YoutubeImporter extends ChangeNotifier {
           if (f != null && f.existsSync()) f.deleteSync();
         }
       }
-      if (job.status != DownloadStatus.cancelled) {
-        job
-          ..status = DownloadStatus.failed
-          ..error = _friendlyError(e);
-      }
+      rethrow;
     } finally {
       job.phase = DownloadPhase.downloading;
       notifyListeners();
@@ -1318,15 +1390,13 @@ class YoutubeImporter extends ChangeNotifier {
               throw e;
             });
 
-        await Future.wait([for (final e in streams.entries) fetch(e.key, e.value)], eagerError: true);
+        // Finish aborting the other writer before a retry reopens these files.
+        await Future.wait([for (final e in streams.entries) fetch(e.key, e.value)]);
         return {for (final e in streams.entries) e.key: partOf(e.key, e.value.ext)};
       } catch (e) {
         abort = true;
-        if (e is DownloadCancelled || job.status == DownloadStatus.cancelled || attempt >= retryDelays.length) {
-          rethrow;
-        }
+        if (!await _waitToRetry(job, e)) rethrow;
         debugPrint('Download ${job.videoId}: interrupted, trying again (${attempt + 1}): $e');
-        await Future<void>.delayed(retryDelays[attempt]);
         if (job.status == DownloadStatus.cancelled) throw const DownloadCancelled();
         // The URLs may have expired.
         streams = await resolve();
@@ -1507,11 +1577,7 @@ class YoutubeImporter extends ChangeNotifier {
           if (f.existsSync()) f.deleteSync();
         }
       }
-      if (job.status != DownloadStatus.cancelled) {
-        job
-          ..status = DownloadStatus.failed
-          ..error = _friendlyError(e);
-      }
+      rethrow;
     }
     return true;
   }
@@ -1779,6 +1845,9 @@ class YoutubeImporter extends ChangeNotifier {
       } catch (_) {}
     }
     _frozen = true;
+    for (final budget in _downloadRetries.values) {
+      budget.cancel();
+    }
     _web?.close();
     for (final j in _jobs.where((j) => j.isActive)) {
       j.status = DownloadStatus.cancelled;

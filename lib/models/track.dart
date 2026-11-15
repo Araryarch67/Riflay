@@ -4,6 +4,16 @@ import 'package:path/path.dart' as p;
 
 /// A single playable audio file in the library.
 class Track {
+  /// Measured file/stream quality takes precedence over catalogue information.
+  String? get qualityLabel {
+    if (audioQuality != null && audioQuality!.isNotEmpty) return audioQuality;
+    if (extensionQualityLabel case final label?) return label;
+    final file = path;
+    if (file == null) return null;
+    final ext = p.extension(file).replaceFirst('.', '').toLowerCase();
+    return audioExtensions.contains(ext) ? (ext == 'opus' ? 'Opus' : ext.toUpperCase()) : null;
+  }
+
   /// Quality advertised by the extension's catalogue, not a measured playback format.
   /// Do not infer it from the provider's selected download preference.
   String? get extensionQualityLabel {
@@ -53,6 +63,7 @@ class Track {
     this.artistId,
     this.extensionData,
     this.downloadYoutubeId,
+    this.audioQuality,
   });
 
   /// A YouTube / YouTube Music song that streams instead of playing from disk.
@@ -164,6 +175,7 @@ class Track {
     artworkUrl: json['artworkUrl'] as String?,
     artistId: json['artistId'] as String?,
     downloadYoutubeId: json['downloadYoutubeId'] as String?,
+    audioQuality: json['audioQuality'] as String?,
     extensionData: json['extensionData'] is Map ? Map<String, dynamic>.from(json['extensionData']) : null,
   );
 
@@ -185,6 +197,9 @@ class Track {
   List<String> get artists => splitArtists(artist);
 
   final String id;
+
+  /// Format and source quality read from the file header or the selected stream.
+  final String? audioQuality;
   final Uri uri;
   final String title;
   final String artist;
@@ -305,6 +320,7 @@ class Track {
     int? discNumber,
     bool? tagged,
     String? downloadYoutubeId,
+    String? audioQuality,
   }) => Track(
     id: id,
     uri: uri ?? this.uri,
@@ -323,6 +339,7 @@ class Track {
     artworkUrl: artworkUrl,
     artistId: artistId,
     downloadYoutubeId: downloadYoutubeId ?? this.downloadYoutubeId,
+    audioQuality: audioQuality ?? this.audioQuality,
     extensionData: extensionData,
   );
 
@@ -342,6 +359,7 @@ class Track {
     'sourceUrl': sourceUrl,
     'videoId': videoId,
     if (downloadYoutubeId != null) 'downloadYoutubeId': downloadYoutubeId,
+    if (audioQuality != null) 'audioQuality': audioQuality,
     'artworkUrl': artworkUrl,
     if (artistId != null) 'artistId': artistId,
     if (extensionData != null) 'extensionData': extensionData,

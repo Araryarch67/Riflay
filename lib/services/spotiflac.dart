@@ -21,12 +21,17 @@ class SpotiflacError implements Exception {
   factory SpotiflacError.fromProvider(dynamic error) {
     final text = error.toString().toLowerCase();
     return SpotiflacError(
-      verificationRequired: text.contains('verify_required') || text.contains('verification_required'),
+      verificationRequired:
+          text.contains('verify_required') ||
+          text.contains('verification_required') ||
+          text.contains('verification required'),
     );
   }
   @override
   String toString() => 'Extension request failed';
 }
+
+enum SpotiflacCapability { search, metadata, download, lyrics }
 
 /// The upstream SpotiFLAC engine, isolated from Flutter behind a local pipe.
 class Spotiflac extends ChangeNotifier {
@@ -57,6 +62,18 @@ class Spotiflac extends ChangeNotifier {
   ];
 
   Map<String, dynamic>? plugin(String id) => plugins.where((e) => e['id'] == id).firstOrNull;
+
+  static Set<SpotiflacCapability> capabilitiesOf(Map<String, dynamic> plugin) => {
+    if (plugin['has_metadata_provider'] == true ||
+        plugin['search_behavior'] is Map && plugin['search_behavior']['enabled'] == true)
+      SpotiflacCapability.search,
+    if (plugin['has_metadata_provider'] == true) SpotiflacCapability.metadata,
+    if (plugin['has_download_provider'] == true) SpotiflacCapability.download,
+    if (plugin['has_lyrics_provider'] == true) SpotiflacCapability.lyrics,
+  };
+
+  List<Map<String, dynamic>> get downloadProviders =>
+      plugins.where((plugin) => plugin['enabled'] == true && plugin['has_download_provider'] == true).toList();
   String nameOf(String id) => (plugin(id)?['display_name'] ?? id).toString();
   String get selectedName => selected == null ? 'SpotiFLAC' : nameOf(selected!);
   Future<Directory> _root() async => directory ?? Directory(p.join((await PrivateFiles.dir()).path, 'spotiflac'));
@@ -316,10 +333,27 @@ class Spotiflac extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Metadata-only sources use a stable enabled downloader for both transfer
+  /// and verification, including after the application restarts.
+  String downloadProviderOf(Track source) {
+    final id = source.extensionId;
+    if (id == null) throw const SpotiflacError();
+    if (plugin(id)?['enabled'] == true && plugin(id)?['has_download_provider'] == true) return id;
+    final candidates =
+        plugins
+            .where((entry) => entry['enabled'] == true && entry['has_download_provider'] == true)
+            .map((entry) => entry['id'] as String)
+            .toList()
+          ..sort();
+    if (candidates.isEmpty) throw const SpotiflacError();
+    return candidates.first;
+  }
+
   Future<Track> download(
     Track source,
     Directory destination, {
     String? quality,
+    String? providerOverride,
     bool Function()? cancelled,
     void Function(double)? progress,
   }) async {
@@ -327,12 +361,8 @@ class Spotiflac extends ChangeNotifier {
     await refresh();
     if (!_mobile) await call('ffmpegExecutable', {'path': await Ffmpeg.executable()});
     final provider = source.extensionId!;
-    final details = plugin(provider);
-    final downloader = details?['has_download_provider'] == true
-        ? provider
-        : plugins.where((e) => e['enabled'] == true && e['has_download_provider'] == true).firstOrNull?['id']
-              as String?;
-    if (downloader == null) throw const SpotiflacError();
+    final downloader = providerOverride ?? downloadProviderOf(source);
+    if (!downloadProviders.any((plugin) => plugin['id'] == downloader)) throw const SpotiflacError();
     final options = plugin(downloader)?['quality_options'];
     if (quality != null && (options is! List || !options.any((option) => option is Map && option['id'] == quality))) {
       throw const SpotiflacError();
@@ -492,15 +522,18 @@ class Spotiflac extends ChangeNotifier {
     }
   }
 
-  Future<Uri> verificationUrl(Track source) async {
-    final id = source.extensionId;
-    if (id == null) throw const SpotiflacError();
+  Future<Uri> verificationUrl(Track source, {String? provider}) async {
     await load();
+    final id = provider ?? downloadProviderOf(source);
     // Generate a fresh verification request if the previous app session ended.
     var pending = await call('pendingAuth', {'extension': id});
     if (pending is! Map || pending['auth_url'] is! String) {
       try {
-        await stream(source);
+        await call('call', {
+          'extension': id,
+          'operation': 'stream',
+          'args': {'track': source.uri.pathSegments.single, 'quality': qualityOf(id)},
+        });
       } catch (_) {
         /* Pending auth is read below. */
       }
@@ -513,8 +546,8 @@ class Spotiflac extends ChangeNotifier {
     return uri;
   }
 
-  Future<void> completeVerification(Track source, String grant) async {
-    final result = await call('sessionGrant', {'extension': source.extensionId, 'grant': grant});
+  Future<void> completeVerification(Track source, String grant, {String? provider}) async {
+    final result = await call('sessionGrant', {'extension': provider ?? downloadProviderOf(source), 'grant': grant});
     if (result is! Map || result['success'] != true) throw const SpotiflacError();
   }
 
@@ -524,8 +557,11 @@ class Spotiflac extends ChangeNotifier {
       if (!request.isCompleted) request.completeError(const SpotiflacError());
     }
     _pending.clear();
-    await _process?.stdin.close();
-    _process?.kill();
+    final process = _process;
+    await process?.stdin.close();
+    process?.kill();
+    // Wait for the host to release extension storage before callers remove it.
+    await process?.exitCode;
     _process = null;
     _starting = null;
   }

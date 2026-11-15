@@ -2237,7 +2237,7 @@ class AudioEngine extends ChangeNotifier {
     }
   }
 
-  @visibleForTesting
+  /// Stored PCM bit depth from a bounded file header, when the format exposes it.
   static int? parseSourceBits(Uint8List b) {
     String tag(int at) => at + 4 <= b.length ? String.fromCharCodes(b.sublist(at, at + 4)) : '';
     int le32(int at) => b[at] | b[at + 1] << 8 | b[at + 2] << 16 | b[at + 3] << 24;

@@ -99,16 +99,22 @@ class _TrackRowState extends State<TrackRow> {
     // Rebuilt when this row's own state changes (it starts or stops playing, it
     // gets downloaded), not for every change of the player: on a song change
     // only two rows of a long list differ.
-    return PlayerSelect<(bool, bool, bool)>(
+    return PlayerSelect<(bool, bool, bool, String?)>(
       select: (c) {
         final current = widget.currentOccurrence ?? (c.currentTrack?.id == t.id);
-        return (current, current && c.showsPlaying, t.streams && !c.isOffline(t));
+        return (current, current && c.showsPlaying, t.streams && !c.isOffline(t), c.qualityOf(t));
       },
-      builder: (context, s, _) => _row(context, isCurrent: s.$1, playing: s.$2, online: s.$3),
+      builder: (context, s, _) => _row(context, isCurrent: s.$1, playing: s.$2, online: s.$3, quality: s.$4),
     );
   }
 
-  Widget _row(BuildContext context, {required bool isCurrent, required bool playing, required bool online}) {
+  Widget _row(
+    BuildContext context, {
+    required bool isCurrent,
+    required bool playing,
+    required bool online,
+    String? quality,
+  }) {
     TrackRow.debugRowBuilds++;
     final c = PlayerScope.read(context);
     final shell = ShellScope.of(context);
@@ -192,7 +198,7 @@ class _TrackRowState extends State<TrackRow> {
                           style: text.bodyMedium?.copyWith(color: AppColors.textSecondary),
                         ),
                       ),
-                      if (t.extensionQualityLabel case final quality?) ...[
+                      ...[
                         const SizedBox(width: 6),
                         Flexible(
                           child: Container(
@@ -202,7 +208,7 @@ class _TrackRowState extends State<TrackRow> {
                               borderRadius: BorderRadius.circular(4),
                             ),
                             child: Text(
-                              quality,
+                              quality ?? tr.qualityNotKnown,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: text.labelSmall?.copyWith(
@@ -301,7 +307,7 @@ class _TrackRowState extends State<TrackRow> {
                         body: tr.spotiflacDownloadToPlay,
                         confirmLabel: tr.download,
                       );
-                      if (download) c.youtube.enqueueTracks([t]);
+                      if (download && context.mounted) await downloadExtensionTracks(context, c, [t]);
                     }
                   : (isCurrent && wide && hover ? c.togglePlay : widget.onTap),
               onLongPress: selection == null ? null : () => selection.toggle(t),
@@ -426,7 +432,9 @@ class TrackMenuButton extends StatelessWidget {
   }) async {
     final one = tracks.length == 1 ? tracks.first : null;
     if (tracks.isNotEmpty && tracks.every((t) => t.monochromeId != null || t.extensionId != null)) {
-      c.youtube.enqueueTracks(tracks);
+      final extensions = tracks.where((track) => track.extensionId != null).toList();
+      if (extensions.isNotEmpty && !await downloadExtensionTracks(host, c, extensions)) return;
+      c.youtube.enqueueTracks(tracks.where((track) => track.monochromeId != null).toList());
       return;
     }
     if (one?.isRemote == true && !withVideo) {

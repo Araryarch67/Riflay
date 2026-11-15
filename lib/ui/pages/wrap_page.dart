@@ -118,7 +118,12 @@ class WrapPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final d = data ?? MonthlyWrap.compute(history ?? PlayHistory.instance, month, now: now);
     final c = PlayerScope.read(context);
-    final library = {for (final t in c.library) t.id: t};
+    // Older history entries may lack artwork that is still available in the
+    // recent songs or queue, including tracks outside the local library.
+    final known = <String, Track>{};
+    for (final track in [...c.library, ...c.recentlyPlayed, ...c.queue, ?c.currentTrack]) {
+      if (!known.containsKey(track.id) || track.artworkUrl != null) known[track.id] = track;
+    }
     if (d == null) {
       return Material(
         color: AppColors.panel,
@@ -130,7 +135,7 @@ class WrapPage extends StatelessWidget {
         ),
       );
     }
-    return WrapStory(data: d, trackFor: (s) => library[s.key] ?? s.toTrack());
+    return WrapStory(data: d, trackFor: (s) => known[s.key] ?? s.toTrack());
   }
 }
 

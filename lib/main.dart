@@ -402,6 +402,7 @@ class _RiflayAppState extends State<RiflayApp> with WidgetsBindingObserver {
     return PlayerScope(
       controller: widget.controller,
       child: MaterialApp(
+        scrollBehavior: const MaterialScrollBehavior().copyWith(scrollbars: false),
         scaffoldMessengerKey: _messenger,
         navigatorKey: _navigator,
         // The playing song on the web, where this is the tab's title (see `network.dart`).

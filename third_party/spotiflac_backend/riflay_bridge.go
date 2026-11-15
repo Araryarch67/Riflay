@@ -30,7 +30,11 @@ func RiflayProviderCall(id, method, argsJSON string) (string, error) {
 	switch method {
 	case "search":
 		if ext.Manifest.HasCustomSearch() {
-			return CustomSearchWithExtensionJSON(id, args.Query, `{"limit":50,"filter":"track"}`)
+			options, marshalErr := json.Marshal(riflaySearchOptions(ext.Manifest, args.Limit))
+			if marshalErr != nil {
+				return "", marshalErr
+			}
+			return CustomSearchWithExtensionJSON(id, args.Query, string(options))
 		}
 		result, err = p.SearchTracks(args.Query, args.Limit)
 	case "track":
@@ -53,6 +57,25 @@ func RiflayProviderCall(id, method, argsJSON string) (string, error) {
 	}
 	data, err := json.Marshal(result)
 	return string(data), err
+}
+
+// Riflay: extensions choose their own song filter IDs. An unknown filter can
+// suppress every result even when the upstream catalogue returns matching songs.
+func riflaySearchOptions(manifest *ExtensionManifest, limit int) map[string]interface{} {
+	if limit <= 0 {
+		limit = 50
+	}
+	options := map[string]interface{}{"limit": limit}
+	if manifest.SearchBehavior != nil {
+		for _, filter := range manifest.SearchBehavior.Filters {
+			switch filter.ID {
+			case "track", "tracks", "song", "songs":
+				options["filter"] = filter.ID
+				return options
+			}
+		}
+	}
+	return options
 }
 
 // Complete a grant returned by the provider's own verification page.

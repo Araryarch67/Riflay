@@ -91,11 +91,7 @@ abstract class AppLocalizations {
   ];
 
   /// A list of this localizations delegate's supported locales.
-  static const List<Locale> supportedLocales = <Locale>[
-    Locale('en'),
-    Locale('id'),
-    Locale('ja')
-  ];
+  static const List<Locale> supportedLocales = <Locale>[Locale('en'), Locale('id'), Locale('ja')];
 
   /// No description provided for @betaFeatures.
   ///
@@ -9445,6 +9441,54 @@ abstract class AppLocalizations {
   /// **'Install provider plugins from .sflx files or an extension repository. Enable a provider to use it in Search.'**
   String get spotiflacAbout;
 
+  /// No description provided for @spotiflacDownloadOnly.
+  ///
+  /// In en, this message translates to:
+  /// **'SpotiFLAC is a download-only source, not a streaming source. Download songs first to play them from your library.'**
+  String get spotiflacDownloadOnly;
+
+  /// No description provided for @retryingDownload.
+  ///
+  /// In en, this message translates to:
+  /// **'Connection interrupted. Retrying…'**
+  String get retryingDownload;
+
+  /// No description provided for @qualityNotKnown.
+  ///
+  /// In en, this message translates to:
+  /// **'Quality unavailable'**
+  String get qualityNotKnown;
+
+  /// No description provided for @spotiflacMetadataCapability.
+  ///
+  /// In en, this message translates to:
+  /// **'Metadata'**
+  String get spotiflacMetadataCapability;
+
+  /// No description provided for @spotiflacMetadataOnly.
+  ///
+  /// In en, this message translates to:
+  /// **'Provides song information, not audio downloads. Choose another enabled download provider to save songs.'**
+  String get spotiflacMetadataOnly;
+
+  /// No description provided for @spotiflacAudioProvider.
+  ///
+  /// In en, this message translates to:
+  /// **'Provides audio downloads. Its quality settings apply to the downloaded file.'**
+  String get spotiflacAudioProvider;
+
+  /// No description provided for @spotiflacLyricsOnly.
+  ///
+  /// In en, this message translates to:
+  /// **'Provides lyrics for songs; it does not provide audio downloads.'**
+  String get spotiflacLyricsOnly;
+
+  /// No description provided for @spotiflacNeedsDownloader.
+  ///
+  /// In en, this message translates to:
+  /// **'Enable a download provider in SpotiFLAC settings to save songs from this catalogue.'**
+  String get spotiflacNeedsDownloader;
+
   /// No description provided for @importSflx.
   ///
   /// In en, this message translates to:
@@ -11340,19 +11384,20 @@ class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> 
 }
 
 AppLocalizations lookupAppLocalizations(Locale locale) {
-
-
   // Lookup logic when only language code is specified.
   switch (locale.languageCode) {
-    case 'en': return AppLocalizationsEn();
-    case 'id': return AppLocalizationsId();
-    case 'ja': return AppLocalizationsJa();
+    case 'en':
+      return AppLocalizationsEn();
+    case 'id':
+      return AppLocalizationsId();
+    case 'ja':
+      return AppLocalizationsJa();
   }
 
   throw FlutterError(
     'AppLocalizations.delegate failed to load unsupported locale "$locale". This is likely '
     'an issue with the localizations generation tool. Please file an issue '
     'on GitHub with a reproducible sample app and the gen-l10n configuration '
-    'that was used.'
+    'that was used.',
   );
 }

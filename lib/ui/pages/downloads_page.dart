@@ -374,11 +374,14 @@ class _JobRow extends StatelessWidget {
                 onPressed: () async {
                   final messenger = ScaffoldMessenger.of(context);
                   try {
-                    final uri = await Spotiflac.instance.verificationUrl(job.extensionTrack!);
+                    final provider =
+                        job.extensionDownloader ?? Spotiflac.instance.downloadProviderOf(job.extensionTrack!);
+                    final uri = await Spotiflac.instance.verificationUrl(job.extensionTrack!, provider: provider);
                     if (!context.mounted) return;
                     final verified = await Navigator.of(context).push<bool>(
                       MaterialPageRoute(
-                        builder: (_) => SpotiflacVerificationPage(track: job.extensionTrack!, url: uri),
+                        builder: (_) =>
+                            SpotiflacVerificationPage(track: job.extensionTrack!, url: uri, provider: provider),
                       ),
                     );
                     if (verified == true) c.youtube.retry(job);

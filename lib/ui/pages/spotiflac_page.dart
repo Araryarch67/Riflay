@@ -8,6 +8,7 @@ import '../../services/layout_prefs.dart';
 import '../shell_scope.dart';
 import '../widgets/app_dialog.dart';
 import '../widgets/page_scaffold.dart';
+import '../widgets/spotiflac_notice.dart';
 import 'sound_settings.dart' show SettingsCard, SettingsIcon, settingsHeading, settingsMuted;
 
 class SpotiflacPage extends StatefulWidget {
@@ -23,6 +24,11 @@ class _SpotiflacPageState extends State<SpotiflacPage> {
   List<Map<String, dynamic>> catalog = [];
   bool busy = false;
   bool failed = false;
+
+  List<Map<String, dynamic>> get availableCatalog {
+    final installed = engine.plugins.map((plugin) => plugin['id']).toSet();
+    return catalog.where((entry) => !installed.contains(entry['id'] ?? entry['name'])).toList();
+  }
 
   @override
   void initState() {
@@ -76,7 +82,9 @@ class _SpotiflacPageState extends State<SpotiflacPage> {
     final id = plugin['id'] as String;
     final values = await engine.settings(id);
     final fields = (plugin['settings'] as List? ?? const []).whereType<Map>().toList();
-    final qualityOptions = (plugin['quality_options'] as List? ?? const []).whereType<Map>().toList();
+    final qualityOptions = plugin['has_download_provider'] == true
+        ? (plugin['quality_options'] as List? ?? const []).whereType<Map>().toList()
+        : <Map>[];
     var quality = engine.qualityOf(id);
     for (final field in fields) {
       values.putIfAbsent(field['key'] as String, () => field['default']);
@@ -187,9 +195,48 @@ class _SpotiflacPageState extends State<SpotiflacPage> {
       ),
     );
     if (save == true) {
-      await engine.setQuality(id, quality);
+      if (qualityOptions.isNotEmpty) await engine.setQuality(id, quality);
       await engine.saveSettings(id, values);
     }
+  }
+
+  Widget _capabilities(Map<String, dynamic> plugin) {
+    final capabilities = Spotiflac.capabilitiesOf(plugin);
+    final downloads = capabilities.contains(SpotiflacCapability.download);
+    final metadata = capabilities.contains(SpotiflacCapability.metadata);
+    return Padding(
+      padding: const EdgeInsetsDirectional.fromSTEB(16, 0, 16, 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Wrap(
+            spacing: 6,
+            runSpacing: 4,
+            children: [
+              for (final capability in capabilities)
+                Chip(
+                  label: Text(switch (capability) {
+                    SpotiflacCapability.search => tr.navSearch,
+                    SpotiflacCapability.metadata => tr.spotiflacMetadataCapability,
+                    SpotiflacCapability.download => tr.download,
+                    SpotiflacCapability.lyrics => tr.lyrics,
+                  }),
+                ),
+            ],
+          ),
+          Text(
+            downloads
+                ? tr.spotiflacAudioProvider
+                : !metadata &&
+                      capabilities.contains(SpotiflacCapability.lyrics) &&
+                      !capabilities.contains(SpotiflacCapability.search)
+                ? tr.spotiflacLyricsOnly
+                : tr.spotiflacMetadataOnly,
+            style: settingsMuted(context),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -222,6 +269,8 @@ class _SpotiflacPageState extends State<SpotiflacPage> {
                       Text(tr.spotiflacExtensions, style: text.headlineMedium?.copyWith(fontWeight: FontWeight.w800)),
                       const SizedBox(height: 8),
                       Text(tr.spotiflacAbout, style: muted),
+                      const SizedBox(height: 16),
+                      const SpotiflacNotice(),
                       const SizedBox(height: 16),
                       Wrap(
                         spacing: 8,
@@ -331,6 +380,7 @@ class _SpotiflacPageState extends State<SpotiflacPage> {
                                           : (value) => _run(() => engine.enable(plugin['id'], value)),
                                     ),
                                   ),
+                                  _capabilities(plugin),
                                   // Under the row rather than beside the switch, so it all fits a phone.
                                   Padding(
                                     padding: const EdgeInsetsDirectional.fromSTEB(4, 0, 8, 8),
@@ -354,11 +404,11 @@ class _SpotiflacPageState extends State<SpotiflacPage> {
                               ),
                           ],
                         ),
-                      if (catalog.isNotEmpty) ...[
+                      if (availableCatalog.isNotEmpty) ...[
                         heading(tr.available),
                         SettingsCard(
                           children: [
-                            for (final entry in catalog)
+                            for (final entry in availableCatalog)
                               ListTile(
                                 leading: const SettingsIcon(Icons.extension_outlined),
                                 title: Text(

@@ -5290,6 +5290,34 @@ class AppLocalizationsId extends AppLocalizations {
       'Pasang plugin penyedia dari berkas .sflx atau repositori ekstensi. Aktifkan penyedia untuk menggunakannya di Pencarian.';
 
   @override
+  String get spotiflacDownloadOnly =>
+      'SpotiFLAC hanya untuk mengunduh lagu, bukan sumber streaming. Unduh lagu terlebih dahulu untuk memutarnya dari koleksi.';
+
+  @override
+  String get retryingDownload => 'Koneksi terputus. Mencoba lagi…';
+
+  @override
+  String get qualityNotKnown => 'Kualitas belum tersedia';
+
+  @override
+  String get spotiflacMetadataCapability => 'Metadata';
+
+  @override
+  String get spotiflacMetadataOnly =>
+      'Menyediakan informasi lagu, bukan unduhan audio. Pilih penyedia download lain yang aktif untuk menyimpan lagu.';
+
+  @override
+  String get spotiflacAudioProvider =>
+      'Menyediakan unduhan audio. Pengaturan kualitasnya berlaku untuk berkas yang diunduh.';
+
+  @override
+  String get spotiflacLyricsOnly => 'Menyediakan lirik lagu, bukan unduhan audio.';
+
+  @override
+  String get spotiflacNeedsDownloader =>
+      'Aktifkan penyedia download di pengaturan SpotiFLAC untuk menyimpan lagu dari katalog ini.';
+
+  @override
   String get importSflx => 'Impor .sflx';
 
   @override
