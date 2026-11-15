@@ -6214,34 +6214,15 @@ class AppLocalizationsId extends AppLocalizations {
   String get dsNotSupported => 'Tidak didukung';
 
   @override
-  String get fromInternetArchive => 'FLAC dari Internet Archive';
-
-  @override
-  String get radioParadiseFlac => 'Radio Paradise dalam FLAC';
-
-  @override
-  String onAir(String song) {
-    return 'Sedang diputar: $song';
-  }
-
-  @override
-  String archiveCouldntLoad(String error) {
-    return 'Gagal memuat dari Internet Archive: $error';
-  }
-
-  @override
-  String get archiveNoFlac => 'Rekaman ini tidak punya file FLAC yang bisa diputar di sini.';
-
-  @override
   String get topicSources => 'Sumber musik';
 
   @override
   String get topicSourcesSummary =>
-      'Internet Archive, Radio Paradise, Jamendo, Audius dan ccMixter: musik yang dibagikan gratis oleh artisnya';
+      'SoundCloud, Monochrome dan ekstensi SpotiFLAC: tempat lain untuk mencari dan memutar musik';
 
   @override
   String get sourcesAbout =>
-      'Layanan musik tambahan. Riflay memutarnya langsung dari server mereka. Sumber lagu mati sampai kamu menyalakannya.';
+      'Layanan musik tambahan. Riflay memutarnya langsung dari server mereka. Semuanya mati sampai kamu menyalakannya.';
 
   @override
   String get sourceMonochromeSubtitle =>
@@ -6258,22 +6239,7 @@ class AppLocalizationsId extends AppLocalizations {
       'Tempel tautan YouTube, SoundCloud atau Monochrome untuk memutar atau mengimpor musik.';
 
   @override
-  String get sourceArchive => 'Internet Archive di pencarian';
-
-  @override
-  String get sourceArchiveSubtitle =>
-      'Konser Live Music Archive dan rilisan netlabel dalam FLAC, di bagian Semua pada pencarian';
-
-  @override
-  String get sourceRadioParadise => 'Radio Paradise di halaman cari';
-
-  @override
-  String get sourceRadioParadiseSubtitle =>
-      'Radio tanpa iklan yang didukung pendengar, semua channel dalam FLAC (kualitas CD)';
-
-  @override
-  String get kwSources =>
-      'flac, lossless, internet archive, live music archive, radio paradise, jamendo, audius, ccmixter, creative commons, musik gratis, sumber';
+  String get kwSources => 'flac, lossless, soundcloud, monochrome, spotiflac, ekstensi, sumber';
 
   @override
   String get spotifyCanvas => 'Canvas';
@@ -6286,18 +6252,6 @@ class AppLocalizationsId extends AppLocalizations {
   String sourceInSearch(String source) {
     return '$source di pencarian';
   }
-
-  @override
-  String get sourceJamendoSubtitle =>
-      'Artis independen yang merilis dengan lisensi Creative Commons, di bagian Semua pada pencarian';
-
-  @override
-  String get sourceAudiusSubtitle =>
-      'Lagu yang diunggah sendiri oleh artisnya ke Audius, di bagian Semua pada pencarian';
-
-  @override
-  String get sourceCcmixterSubtitle =>
-      'Karya asli dan remix Creative Commons, sebagian dalam FLAC, di bagian Semua pada pencarian';
 
   @override
   String fromSource(String source) {

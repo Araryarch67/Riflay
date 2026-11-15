@@ -196,7 +196,7 @@ enum SettingsTopic {
     'sources',
     'Music sources',
     Icons.library_music_outlined,
-    'Internet Archive and Radio Paradise: free music in FLAC',
+    'SoundCloud, Monochrome and SpotiFLAC extensions: more places to search and play from',
   );
 
   const SettingsTopic(this.group, this.id, this._english, this.icon, this._englishSummary);

@@ -6,9 +6,7 @@ import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:flutter/material.dart';
 
 import '../../models/track.dart';
-import '../../services/sources/internet_archive.dart';
 import '../../services/sources/music_sources.dart';
-import '../../services/sources/song_source.dart';
 import '../../services/spotiflac.dart';
 import '../../services/language.dart';
 import '../../services/player_controller.dart';
@@ -107,15 +105,6 @@ class _SearchPageState extends State<SearchPage> {
   WebResultKind? _filter;
   Future<List<RemotePlaylist>>? _only;
 
-  /// Internet Archive recordings with FLAC files, on "All" ([MusicSources.archive]).
-  Future<List<ArchiveItem>>? _archive;
-
-  /// Songs from the optional sources that are on ([MusicSources.enabledSongSources]), on "All".
-  Map<SongSource, Future<List<Track>>> _extra = const {};
-
-  /// Which sources [_extra] asked, and for what: a settings change only searches again when this changes.
-  String _extraKey = '';
-
   /// "Videos": plain YouTube instead of YouTube Music songs.
   bool _videos = false;
   YoutubeVideoSearch? _videoSearch;
@@ -208,9 +197,6 @@ class _SearchPageState extends State<SearchPage> {
       setState(() {
         _youtube = _all = _only = _top = null;
         _soundcloud = _soundcloudShelves = null;
-        _archive = null;
-        _extra = const {};
-        _extraKey = '';
         _videoTracks = const [];
         _videoLoading = false;
       });
@@ -249,17 +235,14 @@ class _SearchPageState extends State<SearchPage> {
       _youtube = _all = _only = _top = null;
       _soundcloud = null;
       _soundcloudShelves = null;
-      _archive = null;
       return;
     }
-    _searchExtra(q, force: true);
     _monochrome = null;
     if (_onMonochrome) {
       _monochrome = c.monochrome.search(q, limit: 50)..ignore();
       _youtube = _all = _only = _top = null;
       _soundcloud = null;
       _soundcloudShelves = null;
-      _archive = null;
       return;
     }
     _soundcloud = _onSoundcloud ? c.searchSoundcloud(q) : null;
@@ -271,7 +254,6 @@ class _SearchPageState extends State<SearchPage> {
         : null;
     if (_onSoundcloud) {
       _youtube = _all = _only = _top = null;
-      _archive = null;
       return;
     }
     if (_videos) return _searchVideos(q);
@@ -279,16 +261,7 @@ class _SearchPageState extends State<SearchPage> {
     _all = c.ytMusic.search(q);
     _top = topAndSongsFuture(_all, _youtube);
     _only = _filter == null || _filter == WebResultKind.song ? null : c.ytMusic.searchOnly(q, _filter!);
-    _archive = _filter == null ? _searchArchive(q) : null;
   }
-
-  /// Never fails: an archive that can't be reached shows nothing.
-  static Future<List<ArchiveItem>>? _searchArchive(String q) => MusicSources.instance.archive
-      ? InternetArchive.instance.search(q).catchError((Object e) {
-          debugPrint('Internet Archive search: $e');
-          return const <ArchiveItem>[];
-        })
-      : null;
 
   void _searchVideos(String q) {
     final run = ++_videoRun;
@@ -371,29 +344,7 @@ class _SearchPageState extends State<SearchPage> {
       _only = f == null || f == WebResultKind.song || q.length < 2 || _onSoundcloud
           ? null
           : PlayerScope.read(context).ytMusic.searchOnly(q, f);
-      if (f == null && q.length >= 2 && _archive == null) _archive = _searchArchive(q);
-      _searchExtra(q);
     });
-  }
-
-  /// Asks the song sources that are on for [q], on "All" of a YouTube Music search only. Without [force] a source
-  /// already asked for [q] keeps its answer.
-  void _searchExtra(String q, {bool force = false}) {
-    final sources = q.length >= 2 && _onYoutube && !_videos && _filter == null
-        ? MusicSources.instance.enabledSongSources
-        : const <SongSource>[];
-    final key = '$q\u0000${sources.map((s) => s.prefix).join()}';
-    if (!force && key == _extraKey) return;
-    final before = force || !_extraKey.startsWith('$q\u0000') ? const <SongSource, Future<List<Track>>>{} : _extra;
-    _extraKey = key;
-    _extra = {
-      for (final s in sources)
-        s:
-            before[s] ??
-            (s.search(q)
-              // Attach an error listener at once, even if another search hides this future.
-              ..ignore()),
-    };
   }
 
   void _followMusicSources() {
@@ -404,7 +355,7 @@ class _SearchPageState extends State<SearchPage> {
       if (mounted) setState(() => _searchYoutube(_query.trim()));
       return;
     }
-    if (mounted) setState(() => _searchExtra(_query.trim()));
+    if (mounted) setState(() {});
   }
 
   /// "In your library": the first songs of the library that match.
@@ -546,11 +497,6 @@ class _SearchPageState extends State<SearchPage> {
               ),
             ),
           ),
-          ListenableBuilder(
-            listenable: MusicSources.instance,
-            builder: (context, _) =>
-                MusicSources.instance.radioParadise ? const RadioParadiseShelf() : const SliverToBoxAdapter(),
-          ),
           if (artists.isNotEmpty) ...[
             SliverToBoxAdapter(child: SectionTitle(tr.browseArtists)),
             SliverPadding(
@@ -600,11 +546,7 @@ class _SearchPageState extends State<SearchPage> {
           CollectionGrid(future: _only),
         ] else ...[
           if (searching) TopAndSongs(future: _top),
-          if (searching)
-            for (final MapEntry(key: source, value: future) in _extra.entries)
-              SourceTracksShelf(key: ValueKey(source.prefix), source: source, future: future),
           ..._library(c, results, shell),
-          if (searching && _archive != null) ArchiveResults(future: _archive!),
           if (searching) RemoteShelves(future: _all),
           if (artists.isNotEmpty && results.isNotEmpty)
             libraryShelf(tr.yourArtists, [

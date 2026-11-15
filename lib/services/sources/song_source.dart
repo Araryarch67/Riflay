@@ -2,9 +2,8 @@ import 'package:http/http.dart' as http;
 
 import '../../models/track.dart';
 
-/// An optional place search's "All" also looks for songs (Settings › Accounts & services › Music sources), each
-/// one where artists share their own music. A song's `uri` is the file or stream mpv plays, so nothing has to
-/// resolve it later.
+/// An optional place Search looks for songs (Settings › Accounts & services › Music sources). A song's `uri` is
+/// the file or stream mpv plays, so nothing has to resolve it later.
 abstract class SongSource {
   SongSource({this.client});
 
@@ -17,7 +16,7 @@ abstract class SongSource {
   /// Ids of songs from here start with this.
   String get prefix;
 
-  /// False when this build can't reach the service (Jamendo without a client id): its switch is hidden.
+  /// False when this build can't reach the service: its switch is hidden.
   bool get available => true;
 
   /// Up to [limit] songs matching [query]. Throws when the service can't be reached or refuses, so a failure is

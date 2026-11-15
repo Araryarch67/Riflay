@@ -11103,36 +11103,6 @@ abstract class AppLocalizations {
   /// **'Not supported'**
   String get dsNotSupported;
 
-  /// No description provided for @fromInternetArchive.
-  ///
-  /// In en, this message translates to:
-  /// **'FLAC from the Internet Archive'**
-  String get fromInternetArchive;
-
-  /// No description provided for @radioParadiseFlac.
-  ///
-  /// In en, this message translates to:
-  /// **'Radio Paradise in FLAC'**
-  String get radioParadiseFlac;
-
-  /// No description provided for @onAir.
-  ///
-  /// In en, this message translates to:
-  /// **'On air: {song}'**
-  String onAir(String song);
-
-  /// No description provided for @archiveCouldntLoad.
-  ///
-  /// In en, this message translates to:
-  /// **'Couldn\'t load from the Internet Archive: {error}'**
-  String archiveCouldntLoad(String error);
-
-  /// No description provided for @archiveNoFlac.
-  ///
-  /// In en, this message translates to:
-  /// **'This recording has no FLAC files that can be played here.'**
-  String get archiveNoFlac;
-
   /// No description provided for @topicSources.
   ///
   /// In en, this message translates to:
@@ -11142,13 +11112,13 @@ abstract class AppLocalizations {
   /// No description provided for @topicSourcesSummary.
   ///
   /// In en, this message translates to:
-  /// **'Internet Archive, Radio Paradise, Jamendo, Audius and ccMixter: music artists share for free'**
+  /// **'SoundCloud, Monochrome and SpotiFLAC extensions: more places to search and play from'**
   String get topicSourcesSummary;
 
   /// No description provided for @sourcesAbout.
   ///
   /// In en, this message translates to:
-  /// **'Additional music services. Riflay plays from their servers. The song sources are off until you turn them on.'**
+  /// **'Additional music services. Riflay plays from their servers. Each one is off until you turn it on.'**
   String get sourcesAbout;
 
   /// No description provided for @sourceMonochromeSubtitle.
@@ -11175,34 +11145,10 @@ abstract class AppLocalizations {
   /// **'Paste a YouTube, SoundCloud or Monochrome link to play or import music.'**
   String get openMusicLinkBody;
 
-  /// No description provided for @sourceArchive.
-  ///
-  /// In en, this message translates to:
-  /// **'Internet Archive in search'**
-  String get sourceArchive;
-
-  /// No description provided for @sourceArchiveSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Live Music Archive concerts and netlabel releases in FLAC, on search\'s All'**
-  String get sourceArchiveSubtitle;
-
-  /// No description provided for @sourceRadioParadise.
-  ///
-  /// In en, this message translates to:
-  /// **'Radio Paradise on the search page'**
-  String get sourceRadioParadise;
-
-  /// No description provided for @sourceRadioParadiseSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Listener-supported, commercial-free radio, every channel in FLAC (CD quality)'**
-  String get sourceRadioParadiseSubtitle;
-
   /// No description provided for @kwSources.
   ///
   /// In en, this message translates to:
-  /// **'flac, lossless, internet archive, live music archive, radio paradise, jamendo, audius, ccmixter, creative commons, free music, sources'**
+  /// **'flac, lossless, soundcloud, monochrome, spotiflac, extensions, sources'**
   String get kwSources;
 
   /// No description provided for @spotifyCanvas.
@@ -11222,24 +11168,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{source} in search'**
   String sourceInSearch(String source);
-
-  /// No description provided for @sourceJamendoSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Independent artists releasing under Creative Commons, on search\'s All'**
-  String get sourceJamendoSubtitle;
-
-  /// No description provided for @sourceAudiusSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Songs artists upload to Audius themselves, on search\'s All'**
-  String get sourceAudiusSubtitle;
-
-  /// No description provided for @sourceCcmixterSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Creative Commons originals and remixes, some in FLAC, on search\'s All'**
-  String get sourceCcmixterSubtitle;
 
   /// No description provided for @fromSource.
   ///

@@ -185,7 +185,7 @@ void main() {
       ),
       ('Accounts & services', 'YouTube Music account', 'Sign in with Google', 'settings:accounts/youtube-music'),
       ('Accounts & services', 'Discord', 'Discord Rich Presence', 'settings:accounts/services'),
-      ('Accounts & services', 'Music sources', 'Radio Paradise on the search page', 'settings:accounts/sources'),
+      ('Accounts & services', 'Music sources', 'Monochrome in search', 'settings:accounts/sources'),
     ];
     for (final (group, section, marker, location) in cases) {
       visited.clear();

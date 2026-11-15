@@ -6085,32 +6085,13 @@ class AppLocalizationsJa extends AppLocalizations {
   String get dsNotSupported => '非対応';
 
   @override
-  String get fromInternetArchive => 'Internet ArchiveのFLAC';
-
-  @override
-  String get radioParadiseFlac => 'Radio Paradise(FLAC)';
-
-  @override
-  String onAir(String song) {
-    return 'オンエア中:$song';
-  }
-
-  @override
-  String archiveCouldntLoad(String error) {
-    return 'Internet Archiveから読み込めませんでした:$error';
-  }
-
-  @override
-  String get archiveNoFlac => 'この録音にはここで再生できるFLACファイルがない。';
-
-  @override
   String get topicSources => '音楽ソース';
 
   @override
-  String get topicSourcesSummary => 'Internet Archive、Radio Paradise、Jamendo、Audius、ccMixter:アーティストが無料で公開する音楽';
+  String get topicSourcesSummary => 'SoundCloud、Monochrome、SpotiFLAC拡張機能:検索と再生に使える追加のソース';
 
   @override
-  String get sourcesAbout => '追加の音楽サービス。Riflayは各サービスのサーバーから直接再生する。曲のソースはオンにするまでオフ。';
+  String get sourcesAbout => '追加の音楽サービス。Riflayは各サービスのサーバーから直接再生する。どれもオンにするまでオフ。';
 
   @override
   String get sourceMonochromeSubtitle => '検索の「すべて」にMonochromeの音楽を表示。利用可能な場合はFLACで再生';
@@ -6125,20 +6106,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get openMusicLinkBody => 'YouTube、SoundCloud、Monochromeのリンクを貼り付けて音楽を再生・取り込みできます。';
 
   @override
-  String get sourceArchive => '検索にInternet Archive';
-
-  @override
-  String get sourceArchiveSubtitle => 'Live Music Archiveのライブとネットレーベルの作品をFLACで(検索の「すべて」に表示)';
-
-  @override
-  String get sourceRadioParadise => '検索ページにRadio Paradise';
-
-  @override
-  String get sourceRadioParadiseSubtitle => 'リスナーに支えられたCMなしのラジオ。全チャンネルFLAC(CD音質)';
-
-  @override
-  String get kwSources =>
-      'flac, ロスレス, internet archive, live music archive, radio paradise, jamendo, audius, ccmixter, クリエイティブ・コモンズ, 無料音楽, ソース';
+  String get kwSources => 'flac, ロスレス, soundcloud, monochrome, spotiflac, 拡張機能, ソース';
 
   @override
   String get spotifyCanvas => 'Canvas';
@@ -6150,15 +6118,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String sourceInSearch(String source) {
     return '検索に$source';
   }
-
-  @override
-  String get sourceJamendoSubtitle => 'クリエイティブ・コモンズで作品を公開するインディーアーティスト(検索の「すべて」に表示)';
-
-  @override
-  String get sourceAudiusSubtitle => 'アーティスト自身がAudiusにアップロードした曲(検索の「すべて」に表示)';
-
-  @override
-  String get sourceCcmixterSubtitle => 'クリエイティブ・コモンズのオリジナルとリミックス、一部FLAC(検索の「すべて」に表示)';
 
   @override
   String fromSource(String source) {

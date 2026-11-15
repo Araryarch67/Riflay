@@ -6289,34 +6289,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dsNotSupported => 'Not supported';
 
   @override
-  String get fromInternetArchive => 'FLAC from the Internet Archive';
-
-  @override
-  String get radioParadiseFlac => 'Radio Paradise in FLAC';
-
-  @override
-  String onAir(String song) {
-    return 'On air: $song';
-  }
-
-  @override
-  String archiveCouldntLoad(String error) {
-    return 'Couldn\'t load from the Internet Archive: $error';
-  }
-
-  @override
-  String get archiveNoFlac => 'This recording has no FLAC files that can be played here.';
-
-  @override
   String get topicSources => 'Music sources';
 
   @override
   String get topicSourcesSummary =>
-      'Internet Archive, Radio Paradise, Jamendo, Audius and ccMixter: music artists share for free';
+      'SoundCloud, Monochrome and SpotiFLAC extensions: more places to search and play from';
 
   @override
   String get sourcesAbout =>
-      'Additional music services. Riflay plays from their servers. The song sources are off until you turn them on.';
+      'Additional music services. Riflay plays from their servers. Each one is off until you turn it on.';
 
   @override
   String get sourceMonochromeSubtitle => 'Monochrome\'s music catalog, in FLAC when available, on search\'s All';
@@ -6331,21 +6312,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get openMusicLinkBody => 'Paste a YouTube, SoundCloud or Monochrome link to play or import music.';
 
   @override
-  String get sourceArchive => 'Internet Archive in search';
-
-  @override
-  String get sourceArchiveSubtitle => 'Live Music Archive concerts and netlabel releases in FLAC, on search\'s All';
-
-  @override
-  String get sourceRadioParadise => 'Radio Paradise on the search page';
-
-  @override
-  String get sourceRadioParadiseSubtitle =>
-      'Listener-supported, commercial-free radio, every channel in FLAC (CD quality)';
-
-  @override
-  String get kwSources =>
-      'flac, lossless, internet archive, live music archive, radio paradise, jamendo, audius, ccmixter, creative commons, free music, sources';
+  String get kwSources => 'flac, lossless, soundcloud, monochrome, spotiflac, extensions, sources';
 
   @override
   String get spotifyCanvas => 'Canvas';
@@ -6358,15 +6325,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String sourceInSearch(String source) {
     return '$source in search';
   }
-
-  @override
-  String get sourceJamendoSubtitle => 'Independent artists releasing under Creative Commons, on search\'s All';
-
-  @override
-  String get sourceAudiusSubtitle => 'Songs artists upload to Audius themselves, on search\'s All';
-
-  @override
-  String get sourceCcmixterSubtitle => 'Creative Commons originals and remixes, some in FLAC, on search\'s All';
 
   @override
   String fromSource(String source) {

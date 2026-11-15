@@ -353,7 +353,7 @@ abstract final class Metadata {
 
   /// Tracks on the same album share one cover lookup.
   /// An album's songs share their cover; a song from the network without an album is known by its cover's address
-  /// too, so a cover that arrives later (Radio Paradise's song on air) isn't held back by a remembered "none".
+  /// too, so a cover that arrives later isn't held back by a remembered "none".
   static String _artKey(Track t) =>
       t.albumKey ?? (t.path == null && t.artworkUrl != null ? '${t.id}\u0000${t.artworkUrl}' : t.id);
 
