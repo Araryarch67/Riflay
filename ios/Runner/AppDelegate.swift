@@ -72,7 +72,12 @@ private final class SpotiflacHost {
             guard let path = args["directory"] else { throw NSError(domain: "extension", code: 1) }
             lock.lock()
             defer { lock.unlock() }
-            if root != path { _ = try BridgeInitialize(path); root = path }
+            if root != path {
+              // A Go function that returns an error comes over as a C function with an error pointer, not `throws`.
+              var failure: NSError?
+              guard BridgeInitialize(path, &failure) else { throw failure ?? NSError(domain: "extension", code: 2) }
+              root = path
+            }
           case "invoke":
             lock.lock(); let directory = root; lock.unlock()
             guard let directory = directory, let payload = args["payload"] else { throw NSError(domain: "extension", code: 1) }
