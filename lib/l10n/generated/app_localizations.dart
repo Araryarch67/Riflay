@@ -9573,6 +9573,24 @@ abstract class AppLocalizations {
   /// **'SoundCloud songs play on this device only.'**
   String get soundcloudCantCast;
 
+  /// No description provided for @spotifyCantCast.
+  ///
+  /// In en, this message translates to:
+  /// **'Spotify songs play on this device only.'**
+  String get spotifyCantCast;
+
+  /// No description provided for @spotifyTapToPlay.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap a playlist or album to play it here with Spotify Premium. Tick the ones to copy.'**
+  String get spotifyTapToPlay;
+
+  /// No description provided for @spotifyCantPlay.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t play from Spotify. Check that the account has Premium, then sign in again.'**
+  String get spotifyCantPlay;
+
   /// No description provided for @pasteYtOrScLink.
   ///
   /// In en, this message translates to:

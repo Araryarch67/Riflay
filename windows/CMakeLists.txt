@@ -17,6 +17,15 @@ add_custom_command(OUTPUT "${SPOTIFLAC_HOST}"
   VERBATIM)
 add_custom_target(spotiflac_host ALL DEPENDS "${SPOTIFLAC_HOST}")
 
+# Spotify playback (tool/spotify_bridge, librespot): cargo decides what is out of date, so this runs every build.
+# Without Rust installed nothing is built and the app goes without it (see tool/build_spotify_bridge.ps1).
+set(SPOTIFY_BRIDGE "${CMAKE_BINARY_DIR}/spotify_bridge.exe")
+add_custom_target(spotify_bridge_host ALL
+  COMMAND powershell -NoProfile -ExecutionPolicy Bypass -File
+    "${CMAKE_CURRENT_SOURCE_DIR}/../tool/build_spotify_bridge.ps1" -Output "${SPOTIFY_BRIDGE}"
+  BYPRODUCTS "${SPOTIFY_BRIDGE}"
+  VERBATIM)
+
 # The name of the executable created for the application. Change this to change
 # the on-disk name of your application.
 set(BINARY_NAME "riflay")
@@ -178,6 +187,7 @@ set(INSTALL_BUNDLE_DATA_DIR "${CMAKE_INSTALL_PREFIX}/data")
 set(INSTALL_BUNDLE_LIB_DIR "${CMAKE_INSTALL_PREFIX}")
 
 install(PROGRAMS "${SPOTIFLAC_HOST}" DESTINATION "${CMAKE_INSTALL_PREFIX}" COMPONENT Runtime)
+install(PROGRAMS "${SPOTIFY_BRIDGE}" DESTINATION "${CMAKE_INSTALL_PREFIX}" COMPONENT Runtime OPTIONAL)
 install(TARGETS ${BINARY_NAME} RUNTIME DESTINATION "${CMAKE_INSTALL_PREFIX}"
   COMPONENT Runtime)
 

@@ -173,7 +173,7 @@ class DiscordPresence {
         : t.artworkUrl ?? (videoId == null ? null : 'https://i.ytimg.com/vi/$videoId/hqdefault.jpg');
     final listenUrl = videoId != null
         ? 'https://music.youtube.com/watch?v=$videoId'
-        : t.soundcloudId != null
+        : t.soundcloudId != null || t.spotifyId != null
         ? t.sourceUrl
         : null;
     final artistUrl = t.artistId == null || t.soundcloudId != null

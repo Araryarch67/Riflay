@@ -6,6 +6,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
+import '../models/track.dart';
 import 'playlist_transfer.dart';
 
 /// What Spotify's web player sends with every request, from its own sign-in.
@@ -232,7 +233,14 @@ class SpotifyLibraryClient {
           (e) => _at(e, const ['itemV2', 'data']),
           tracksOnly: true,
         ),
-        _ => _pair(data, const ['data', 'albumUnion', 'tracksV2'], (e) => _at(e, const ['track'])),
+        // An album's songs don't repeat its name and cover.
+        _ => _pair(
+          data,
+          const ['data', 'albumUnion', 'tracksV2'],
+          (e) => _at(e, const ['track']),
+          album: item.name,
+          artwork: item.imageUrl,
+        ),
       };
       final raw = _at(page, const ['items']);
       if (raw is! List) throw _bad('$operation had no items');
@@ -254,6 +262,8 @@ class SpotifyLibraryClient {
     List<Object> path,
     Object? Function(Object?) pick, {
     bool tracksOnly = false,
+    String? album,
+    String? artwork,
   }) {
     final page = _at(data, path);
     final raw = _at(page, const ['items']);
@@ -262,8 +272,9 @@ class SpotifyLibraryClient {
       for (final entry in raw) {
         var t = pick(entry);
         // Liked Songs: track{_uri, data{…}}.
+        final outer = t is Map ? t['_uri'] : null;
         if (t is Map && t['data'] is Map && t['name'] == null) t = t['data'];
-        final song = _song(t, tracksOnly: tracksOnly);
+        final song = _song(t, tracksOnly: tracksOnly, uri: outer, album: album, artwork: artwork);
         if (song != null) out.add(song);
       }
     }
@@ -271,18 +282,54 @@ class SpotifyLibraryClient {
   }
 
   /// Skips episodes, local files and anything without a name.
-  static ForeignSong? _song(Object? t, {bool tracksOnly = false}) {
+  static ForeignSong? _song(Object? t, {bool tracksOnly = false, Object? uri, String? album, String? artwork}) {
     if (t is! Map) return null;
     final type = t['__typename'];
     if (tracksOnly ? type != 'Track' : (type != null && type != 'Track')) return null;
     final title = t['name'];
     if (title is! String || title.trim().isEmpty) return null;
     final ms = _at(t, const ['trackDuration', 'totalMilliseconds']) ?? _at(t, const ['duration', 'totalMilliseconds']);
+    final artist = _names(_at(t, const ['artists', 'items']));
+    final duration = ms is int && ms > 0 ? Duration(milliseconds: ms) : null;
+    final id = trackIdOf(t['uri'] ?? uri);
     return ForeignSong(
       title: title.trim(),
-      artist: _names(_at(t, const ['artists', 'items'])),
-      duration: ms is int && ms > 0 ? Duration(milliseconds: ms) : null,
+      artist: artist,
+      duration: duration,
+      native: id == null
+          ? null
+          : Track.spotify(
+              trackId: id,
+              title: title.trim(),
+              artist: artist.isEmpty ? Track.unknownArtist : artist,
+              album: switch (_at(t, const ['albumOfTrack', 'name'])) {
+                final String name when name.trim().isNotEmpty => name.trim(),
+                _ => album,
+              },
+              duration: duration,
+              artworkUrl: _cover(_at(t, const ['albumOfTrack', 'coverArt', 'sources'])) ?? artwork,
+            ),
     );
+  }
+
+  /// The id in `spotify:track:<id>` (22 letters and digits); null for anything else (a local file, an episode).
+  @visibleForTesting
+  static String? trackIdOf(Object? uri) {
+    if (uri is! String) return null;
+    return RegExp(r'^spotify:track:([0-9A-Za-z]{22})$').firstMatch(uri)?.group(1);
+  }
+
+  /// The largest of a cover's sizes (Spotify lists 64, 300 and 640 px).
+  static String? _cover(Object? sources) {
+    if (sources is! List) return null;
+    String? best;
+    var width = -1;
+    for (final s in sources) {
+      if (s is! Map || s['url'] is! String) continue;
+      final w = s['width'] is int ? s['width'] as int : 0;
+      if (w > width) (best, width) = (s['url'] as String, w);
+    }
+    return best;
   }
 
   static String _names(Object? artists) {

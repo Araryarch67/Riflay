@@ -5247,6 +5247,15 @@ class AppLocalizationsJa extends AppLocalizations {
   String get soundcloudCantCast => 'SoundCloudの曲はこのデバイスでのみ再生できます。';
 
   @override
+  String get spotifyCantCast => 'Spotifyの曲はこのデバイスでのみ再生できます。';
+
+  @override
+  String get spotifyTapToPlay => 'プレイリストやアルバムをタップすると、Spotify Premiumでここで再生します。コピーするものにはチェックを。';
+
+  @override
+  String get spotifyCantPlay => 'Spotifyから再生できませんでした。Premiumアカウントか確認して、もう一度サインインしてください。';
+
+  @override
   String get pasteYtOrScLink => 'YouTubeかSoundCloudのリンクを貼り付けて';
 
   @override

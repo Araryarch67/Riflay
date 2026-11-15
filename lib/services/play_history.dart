@@ -43,7 +43,7 @@ class SongInfo {
     videoId: t.videoId,
     artworkUrl: t.videoId != null && t.artworkUrl != _defaultArt(t.videoId!)
         ? t.artworkUrl
-        : t.soundcloudId != null
+        : t.soundcloudId != null || t.spotifyId != null
         ? t.artworkUrl
         : null,
   );

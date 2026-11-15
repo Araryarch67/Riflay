@@ -1223,6 +1223,8 @@ class SourceMark extends StatelessWidget {
         ? MonochromeMark(size: size, color: color)
         : source == TrackSource.extension
         ? Icon(Icons.extension_outlined, size: size, color: color)
+        : source == TrackSource.spotify
+        ? Icon(Icons.graphic_eq_rounded, size: size, color: color)
         : SizedBox.square(
             dimension: size,
             child: CustomPaint(painter: _PlayRingPainter(color)),
@@ -1235,6 +1237,8 @@ class SourceMark extends StatelessWidget {
           ? tr.streamsFromSoundcloud
           : source == TrackSource.monochrome
           ? tr.fromSource('Monochrome')
+          : source == TrackSource.spotify
+          ? tr.fromSource('Spotify')
           : tr.streamsOnline,
       child: mark,
     );

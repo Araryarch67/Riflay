@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'playlist_transfer.dart';
 import 'private_files.dart';
+import 'spotify_bridge.dart';
 import 'spotify_library.dart';
 import 'spotify_session.dart';
 import 'language.dart';
@@ -13,7 +14,7 @@ import 'language.dart';
 /// The signed-in Spotify account: the web-player session kept in the
 /// app's private folder, fresh tokens on demand, and what was imported so far.
 ///
-/// Only the Spotify import page uses it; it is not part of the player.
+/// The Spotify page uses it, and [SpotifyBridge] takes its token to play Spotify songs.
 class SpotifyAccount extends ChangeNotifier {
   SpotifyAccount({
     Future<SpotifySession?> Function(String cookies)? refresher,
@@ -164,6 +165,7 @@ class SpotifyAccount extends ChangeNotifier {
       (await SharedPreferences.getInstance()).remove(_importedKey);
     } catch (_) {}
     await SpotifyLogin.clearWebViewCookies();
+    if (SpotifyBridge.supported) await SpotifyBridge.instance.signOut();
   }
 
   // ── Tokens ──────────────────────────────────────────────────────────────

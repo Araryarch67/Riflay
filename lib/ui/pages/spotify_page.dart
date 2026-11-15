@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 
+import '../../models/track.dart';
 import '../../services/player_controller.dart';
 import '../../services/playlist_transfer.dart';
 import '../../services/spotify_account.dart';
+import '../../services/spotify_bridge.dart';
 import '../../services/spotify_canvas.dart';
 import '../../services/spotify_import.dart';
 import '../../services/spotify_library.dart';
@@ -13,6 +15,7 @@ import '../shell_scope.dart';
 import '../theme.dart';
 import '../widgets/page_scaffold.dart';
 import 'spotify_login_page.dart';
+import 'youtube_music_page.dart' show RemoteCollectionPage;
 import '../widgets/skeleton.dart';
 import '../../services/language.dart';
 
@@ -327,7 +330,10 @@ class _SpotifyPageState extends State<SpotifyPage> {
     final muted = text.bodySmall?.copyWith(color: AppColors.textSecondary);
     final state = _tabs[_tab]!;
     final youtube = _youtubeSignedIn;
-    final note = youtube ? tr.playlistsGoToYt : tr.playlistsBecomeRiflay;
+    final note = [
+      if (SpotifyBridge.supported) tr.spotifyTapToPlay,
+      youtube ? tr.playlistsGoToYt : tr.playlistsBecomeRiflay,
+    ].join(' ');
     return [
       SliverToBoxAdapter(
         child: Padding(
@@ -422,23 +428,57 @@ class _SpotifyPageState extends State<SpotifyPage> {
       if (item.kind != SpotifyItemKind.artist && item.kind != SpotifyItemKind.album && (item.count ?? 0) > 0)
         '${item.count} songs',
     ].join(' · ');
+    final details = subtitle.isEmpty && imported == null
+        ? null
+        : Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (subtitle.isNotEmpty) Text(subtitle, maxLines: 1, overflow: TextOverflow.ellipsis, style: muted),
+              if (imported != null) Text(tr.imported, style: muted?.copyWith(color: AppColors.accent)),
+            ],
+          );
+    void pick(bool? v) => setState(() => v == true ? _selected.add(item.uri) : _selected.remove(item.uri));
+    // Where Riflay plays Spotify itself, a tap opens the songs and the tick alone picks what to copy.
+    if (SpotifyBridge.supported) {
+      return ListTile(
+        key: ValueKey(item.uri),
+        contentPadding: EdgeInsets.symmetric(horizontal: pad),
+        leading: _Cover(item),
+        title: Text(item.name, maxLines: 1, overflow: TextOverflow.ellipsis),
+        subtitle: details,
+        trailing: Checkbox(value: _selected.contains(item.uri), onChanged: pick),
+        onTap: () => _open(item),
+      );
+    }
     return CheckboxListTile(
       key: ValueKey(item.uri),
       value: _selected.contains(item.uri),
-      onChanged: (v) => setState(() => v == true ? _selected.add(item.uri) : _selected.remove(item.uri)),
+      onChanged: pick,
       contentPadding: EdgeInsets.symmetric(horizontal: pad),
       controlAffinity: ListTileControlAffinity.trailing,
       secondary: _Cover(item),
       title: Text(item.name, maxLines: 1, overflow: TextOverflow.ellipsis),
-      subtitle: subtitle.isEmpty && imported == null
-          ? null
-          : Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (subtitle.isNotEmpty) Text(subtitle, maxLines: 1, overflow: TextOverflow.ellipsis, style: muted),
-                if (imported != null) Text(tr.imported, style: muted?.copyWith(color: AppColors.accent)),
-              ],
-            ),
+      subtitle: details,
+    );
+  }
+
+  /// Opens [item]'s songs as a page that plays them from Spotify.
+  void _open(SpotifyItem item) {
+    final client = account.client;
+    ShellScope.of(context).open(
+      RemoteCollectionPage(
+        title: item.name,
+        load: () async {
+          final list = await client.songs(item);
+          return Collection(
+            kind: item.kind == SpotifyItemKind.album ? CollectionKind.album : CollectionKind.remote,
+            title: item.name,
+            subtitle: item.subtitle ?? 'Spotify',
+            tracks: [for (final s in list.songs) ?s.native],
+          );
+        },
+      ),
+      location: 'spotify:${item.uri}',
     );
   }
 

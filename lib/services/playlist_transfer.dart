@@ -9,13 +9,16 @@ import 'monochrome.dart';
 
 /// A song as another app lists it, before it's found in YouTube Music.
 class ForeignSong {
-  const ForeignSong({required this.title, required this.artist, this.duration});
+  const ForeignSong({required this.title, required this.artist, this.duration, this.native});
 
   final String title;
 
   /// All of its artists, comma separated.
   final String artist;
   final Duration? duration;
+
+  /// The song as its own service streams it (a Spotify track), when Riflay can play it from there.
+  final Track? native;
 
   @override
   String toString() => artist.isEmpty ? title : '$artist - $title';

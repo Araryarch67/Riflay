@@ -5433,6 +5433,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get soundcloudCantCast => 'SoundCloud songs play on this device only.';
 
   @override
+  String get spotifyCantCast => 'Spotify songs play on this device only.';
+
+  @override
+  String get spotifyTapToPlay => 'Tap a playlist or album to play it here with Spotify Premium. Tick the ones to copy.';
+
+  @override
+  String get spotifyCantPlay => 'Couldn\'t play from Spotify. Check that the account has Premium, then sign in again.';
+
+  @override
   String get pasteYtOrScLink => 'Paste a YouTube or SoundCloud link.';
 
   @override

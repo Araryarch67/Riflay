@@ -5361,6 +5361,16 @@ class AppLocalizationsId extends AppLocalizations {
   String get soundcloudCantCast => 'Lagu SoundCloud hanya bisa diputar di perangkat ini.';
 
   @override
+  String get spotifyCantCast => 'Lagu Spotify hanya bisa diputar di perangkat ini.';
+
+  @override
+  String get spotifyTapToPlay =>
+      'Ketuk playlist atau album untuk memutarnya di sini dengan Spotify Premium. Centang yang mau disalin.';
+
+  @override
+  String get spotifyCantPlay => 'Tidak bisa memutar dari Spotify. Pastikan akunnya Premium, lalu masuk lagi.';
+
+  @override
   String get pasteYtOrScLink => 'Tempel link YouTube atau SoundCloud.';
 
   @override

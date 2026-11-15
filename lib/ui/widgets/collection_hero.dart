@@ -148,6 +148,8 @@ class CollectionHero extends StatelessWidget {
                       ),
                     if ((collection.kind == CollectionKind.remote || tracks.any((t) => t.monochromeId != null)) &&
                         !empty &&
+                        // Spotify streams only; there is nothing to save for offline.
+                        !tracks.every((t) => t.spotifyId != null) &&
                         Features.downloads)
                       (
                         icon: Icons.download_for_offline_outlined,

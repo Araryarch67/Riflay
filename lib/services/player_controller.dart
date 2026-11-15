@@ -43,6 +43,7 @@ import 'soundcloud_audio_source.dart';
 import 'monochrome_audio_source.dart';
 import 'monochrome.dart';
 import 'spotiflac_audio_source.dart';
+import 'spotify_audio_source.dart';
 import 'shuffle.dart';
 import 'memory_trim.dart';
 import 'youtube_audio_source.dart';
@@ -482,7 +483,8 @@ class PlayerController extends ChangeNotifier {
     // Streams often fail once and play on the next try (an expired link, a dropped
     // connection): try the same song again a few times before giving up on it.
     if (track != null && index != null && _retryPlayback(track, index, wasPlaying)) return;
-    _errors.add(tr.couldntPlay(title ?? tr.thisSong));
+    // A Spotify song that never starts is nearly always the account: no Premium, or a sign-in that ran out.
+    _errors.add(track?.spotifyId != null ? tr.spotifyCantPlay : tr.couldntPlay(title ?? tr.thisSong));
     // Repeat-one would retry the same broken song forever: skip it all the same. A paused player stays paused.
     final next = _neighbour(1, from: index);
     if (next != null) {
@@ -1124,7 +1126,7 @@ class PlayerController extends ChangeNotifier {
   /// Returns how many were new.
   Future<int> saveToLibrary(Iterable<Track> tracks) => _addTracks([
     for (final t in tracks)
-      if (t.soundcloudId != null || t.monochromeId != null || t.extensionId != null) t,
+      if (t.soundcloudId != null || t.monochromeId != null || t.extensionId != null || t.spotifyId != null) t,
   ]);
 
   /// YouTube Music's own song search first; plain YouTube search if that fails.
@@ -1663,6 +1665,7 @@ class PlayerController extends ChangeNotifier {
     }
     if (t.soundcloudId case final id?) return SoundcloudAudioSource(id, client: soundcloud, tag: t);
     if (t.extensionId != null) return SpotiflacAudioSource(t);
+    if (t.spotifyId case final id?) return SpotifyAudioSource(id, tag: t);
     if (t.monochromeId case final id? when !id.startsWith('tracks:')) return MonochromeAudioSource(id, tag: t);
     return t.isCueTrack
         ? ClippingAudioSource(child: AudioSource.uri(t.uri), start: t.start, end: t.end, tag: t)
@@ -2031,6 +2034,11 @@ class PlayerController extends ChangeNotifier {
     // SoundCloud streams as HLS, which TVs and speakers rarely play; it stays on this device.
     if (t.soundcloudId != null) {
       notify(tr.soundcloudCantCast);
+      return;
+    }
+    // Spotify's audio only leaves the bridge on this device's loopback.
+    if (t.spotifyId != null) {
+      notify(tr.spotifyCantCast);
       return;
     }
     if (t.monochromeId != null && downloadedCopy(t) == null) {

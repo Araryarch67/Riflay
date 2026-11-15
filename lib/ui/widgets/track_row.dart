@@ -510,7 +510,10 @@ class TrackMenuButton extends StatelessWidget {
                   title: Text(tr.removeFromThisPlaylist),
                 ),
               ),
-            if (track.soundcloudId != null || track.monochromeId != null || track.extensionId != null) ...[
+            if (track.soundcloudId != null ||
+                track.monochromeId != null ||
+                track.extensionId != null ||
+                track.spotifyId != null) ...[
               if ((track.monochromeId != null || track.extensionId != null) && Features.downloads)
                 PopupMenuItem(
                   onTap: () => download(host, c, [track]),

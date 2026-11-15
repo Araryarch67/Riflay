@@ -70,6 +70,30 @@ class Track {
   /// [id]'s prefix for a SoundCloud track; the rest is SoundCloud's numeric track id.
   static const soundcloudPrefix = 'sc:';
 
+  /// A Spotify track that streams from the signed-in Premium account (see `SpotifyBridge`). [trackId] is
+  /// Spotify's own (the end of `spotify:track:…`); its page is kept for sharing.
+  factory Track.spotify({
+    required String trackId,
+    required String title,
+    required String artist,
+    String? album,
+    Duration? duration,
+    String? artworkUrl,
+  }) => Track(
+    id: '$spotifyPrefix$trackId',
+    uri: Uri.parse('https://open.spotify.com/track/$trackId'),
+    title: title,
+    artist: artist,
+    album: album,
+    duration: duration,
+    tagged: true,
+    sourceUrl: 'https://open.spotify.com/track/$trackId',
+    artworkUrl: artworkUrl,
+  );
+
+  /// [id]'s prefix for a Spotify track; the rest is Spotify's track id.
+  static const spotifyPrefix = 'sp:';
+
   /// Builds a track from a file URI, guessing title/artist from the
   /// "Artist - Title.ext" filename convention until real tags are read.
   factory Track.fromUri(Uri uri, {String? displayName}) {
@@ -167,6 +191,9 @@ class Track {
   /// SoundCloud's track id, for a SoundCloud track.
   String? get soundcloudId => id.startsWith(soundcloudPrefix) ? id.substring(soundcloudPrefix.length) : null;
 
+  /// Spotify's track id, for a Spotify track.
+  String? get spotifyId => id.startsWith(spotifyPrefix) ? id.substring(spotifyPrefix.length) : null;
+
   /// Played over the internet from a music service (YouTube Music or SoundCloud), not from a file here.
   String? get monochromeId => id.startsWith('monochrome:') ? id.substring('monochrome:'.length) : null;
 
@@ -188,7 +215,8 @@ class Track {
     return null;
   }
 
-  bool get streams => isRemote || soundcloudId != null || monochromeId != null || extensionId != null;
+  bool get streams =>
+      isRemote || soundcloudId != null || monochromeId != null || extensionId != null || spotifyId != null;
 
   /// Where this song comes from, for the mark beside it.
   TrackSource get source => extensionId != null
@@ -197,6 +225,8 @@ class Track {
       ? TrackSource.monochrome
       : soundcloudId != null
       ? TrackSource.soundcloud
+      : spotifyId != null
+      ? TrackSource.spotify
       : isRemote
       ? TrackSource.youtubeMusic
       : TrackSource.device;
@@ -287,7 +317,7 @@ class Track {
 }
 
 /// Where a song comes from.
-enum TrackSource { device, youtubeMusic, soundcloud, monochrome, extension }
+enum TrackSource { device, youtubeMusic, soundcloud, monochrome, extension, spotify }
 
 /// Album order: disc, then track number, title as a tiebreak for untagged files.
 int compareAlbumOrder(Track a, Track b) {
