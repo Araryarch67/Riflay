@@ -523,6 +523,7 @@ class LayoutPrefs extends ChangeNotifier {
   /// The phone's tab bar: docked under the mini player like most music apps, by default.
   TabBarStyle tabBar = TabBarStyle.capsule;
   DesktopBarStyle desktopBar = DesktopBarStyle.classic;
+  bool showPlayerClose = false;
   bool showQualityBadge = true;
 
   /// The Song / Video switch at the top of Now Playing, for a song with a music video. On in every preset.
@@ -732,6 +733,7 @@ class LayoutPrefs extends ChangeNotifier {
       'capsule' => DesktopBarStyle.compact,
       _ => pick(DesktopBarStyle.values, 'desktopBar', d.desktopBar),
     };
+    showPlayerClose = j['showPlayerClose'] as bool? ?? d.showPlayerClose;
     showQualityBadge = j['showQualityBadge'] as bool? ?? d.showQualityBadge;
     showVideoSwitch = j['showVideoSwitch'] as bool? ?? d.showVideoSwitch;
     visualizer = j['visualizer'] as bool? ?? d.visualizer;
@@ -796,6 +798,7 @@ class LayoutPrefs extends ChangeNotifier {
     'volumeSlider': volumeSlider.name,
     'tabBar': tabBar.name,
     'desktopBar': desktopBar.name,
+    'showPlayerClose': showPlayerClose,
     'showQualityBadge': showQualityBadge,
     'showVideoSwitch': showVideoSwitch,
     'visualizer': visualizer,
@@ -893,6 +896,7 @@ class LayoutPrefs extends ChangeNotifier {
     await _set(() => visualizer = v);
   }
 
+  Future<void> setShowPlayerClose(bool v) => _set(() => showPlayerClose = v);
   Future<void> setShowQualityBadge(bool v) => _set(() => showQualityBadge = v);
   Future<void> setShowVideoSwitch(bool v) => _set(() => showVideoSwitch = v);
   Future<void> setLyricsSize(LyricsSize v) => _set(() => lyricsSize = v);

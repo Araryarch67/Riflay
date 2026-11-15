@@ -186,6 +186,27 @@ class _TrackRowState extends State<TrackRow> {
                           style: text.bodyMedium?.copyWith(color: AppColors.textSecondary),
                         ),
                       ),
+                      if (t.extensionQualityLabel case final quality?) ...[
+                        const SizedBox(width: 6),
+                        Flexible(
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                            decoration: BoxDecoration(
+                              border: Border.all(color: AppColors.textSecondary.withValues(alpha: 0.4)),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              quality,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: text.labelSmall?.copyWith(
+                                color: AppColors.textSecondary,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ],
@@ -266,6 +287,16 @@ class _TrackRowState extends State<TrackRow> {
                   ? () => selection!.toggle(t)
                   : widget.onTap == null
                   ? null
+                  : t.extensionId != null && online
+                  ? () async {
+                      final download = await confirmDialog(
+                        context,
+                        title: t.title,
+                        body: tr.spotiflacDownloadToPlay,
+                        confirmLabel: tr.download,
+                      );
+                      if (download) c.youtube.enqueueTracks([t]);
+                    }
                   : (isCurrent && wide && hover ? c.togglePlay : widget.onTap),
               onLongPress: selection == null ? null : () => selection.toggle(t),
               child: child,
@@ -452,13 +483,16 @@ class TrackMenuButton extends StatelessWidget {
           final convertible = downloaded ?? track;
           return [
             PopupMenuItem(
-              enabled: ListenTogether.of(c).role != ListenRole.guest || (_canSuggest(c) && track.videoId != null),
+              enabled:
+                  c.canQueue(track) &&
+                  (ListenTogether.of(c).role != ListenRole.guest || (_canSuggest(c) && track.videoId != null)),
               onTap: () => _canSuggest(c)
                   ? _queued(host, ListenTogether.of(c).suggest(track), tr.toastRequestedNext)
                   : _queued(host, c.playNext([track]), tr.toastPlaysNext),
               child: MenuRow(leading: const Icon(Icons.playlist_play_rounded), title: Text(tr.playNext)),
             ),
             PopupMenuItem(
+              enabled: c.canQueue(track),
               onTap: () => _queued(host, c.addToQueue([track]), tr.toastAddedToQueue),
               child: MenuRow(leading: const Icon(Icons.queue_music_rounded), title: Text(tr.addToQueue)),
             ),

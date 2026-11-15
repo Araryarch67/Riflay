@@ -160,3 +160,19 @@ if(NOT CMAKE_BUILD_TYPE MATCHES "Debug")
   install(FILES "${AOT_LIBRARY}" DESTINATION "${INSTALL_BUNDLE_LIB_DIR}"
     COMPONENT Runtime)
 endif()
+
+# Bundle the same extension host as Windows, compiled for the current Linux CPU.
+find_package(Python3 REQUIRED COMPONENTS Interpreter)
+file(GLOB_RECURSE SPOTIFLAC_SOURCES CONFIGURE_DEPENDS
+  "${CMAKE_CURRENT_SOURCE_DIR}/../tool/spotiflac_bridge/*.go"
+  "${CMAKE_CURRENT_SOURCE_DIR}/../third_party/spotiflac_backend/*.go")
+set(SPOTIFLAC_HOST "${CMAKE_BINARY_DIR}/spotiflac_bridge")
+add_custom_command(OUTPUT "${SPOTIFLAC_HOST}"
+  COMMAND ${Python3_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/../tool/build_spotiflac.py"
+    --target desktop --output "${SPOTIFLAC_HOST}"
+  DEPENDS ${SPOTIFLAC_SOURCES} "${CMAKE_CURRENT_SOURCE_DIR}/../tool/build_spotiflac.py"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../tool/spotiflac_bridge/go.mod"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../tool/spotiflac_bridge/go.sum"
+  VERBATIM)
+add_custom_target(spotiflac_host ALL DEPENDS "${SPOTIFLAC_HOST}")
+install(PROGRAMS "${SPOTIFLAC_HOST}" DESTINATION "${INSTALL_BUNDLE_LIB_DIR}/.." COMPONENT Runtime)

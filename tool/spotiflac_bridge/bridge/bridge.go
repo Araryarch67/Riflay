@@ -105,6 +105,8 @@ func dispatch(r request, root string) (string, error) {
 		return engine.InvokeExtensionActionJSON(r.text("extension"), r.text("action"))
 	case "pendingAuth":
 		return engine.GetExtensionPendingAuthJSON(r.text("extension"))
+	case "sessionGrant":
+		return engine.RiflayCompleteGrant(r.text("extension"), r.text("grant"))
 	case "authCode":
 		engine.SetExtensionAuthCodeByID(r.text("extension"), r.text("code"))
 		return "null", nil

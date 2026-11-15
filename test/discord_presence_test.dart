@@ -126,6 +126,30 @@ while ($true) {
 }
 
 void main() {
+  test('old Monochrome downloads recover their cover and send it over Discord IPC', () async {
+    final fake = await FakeDiscord.start();
+    final cover = Completer<String?>();
+    final presence = DiscordPresence('id', socketPaths: () => [fake.path], monochromeCover: (_) => cover.future);
+    try {
+      final track = Track(
+        id: 'file:///song.flac',
+        uri: Uri.file('/song.flac'),
+        title: 'I I I',
+        artist: 'Artist',
+        sourceUrl: 'https://monochrome.st/track/tracks:track:165781419838844928',
+      );
+      presence.update(track: track, playing: true, position: Duration.zero);
+      await fake.waitForFrames(2);
+      cover.complete('https://tracks.monochrome.st/proxy/mi/cover.jpg');
+      await fake.waitForFrames(3);
+      final activity = (fake.frames[2].$2['args'] as Map)['activity'] as Map;
+      expect((activity['assets'] as Map)['large_image'], 'https://tracks.monochrome.st/proxy/mi/cover.jpg');
+    } finally {
+      presence.dispose();
+      await fake.close();
+    }
+  });
+
   test('handshake, listening activity with progress and button, then clear on pause', () async {
     final fake = await FakeDiscord.start();
     final presence = DiscordPresence('1561368591297941655', socketPaths: () => [fake.path]);

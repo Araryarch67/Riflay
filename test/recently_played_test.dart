@@ -1,4 +1,7 @@
 import 'dart:convert';
+import 'dart:io';
+
+import 'package:riflay/services/spotiflac.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -33,6 +36,87 @@ class _CurrentRecentPlayer extends PlayerController {
 }
 
 void main() {
+  final extension = Spotiflac.track('tidal-web', {'id': 'tidal:1', 'name': 'Undownloaded', 'artists': 'Artist'})!;
+  test('undownloaded extension entries are removed from restored and persisted recents', () async {
+    SharedPreferences.setMockInitialValues({
+      'library.v1': jsonEncode([_local.toJson()]),
+      'recent.v1': [extension.id, _local.id],
+      'recent.remote.v1': jsonEncode([extension.toJson()]),
+    });
+    final player = await _load();
+    try {
+      expect(player.recentlyPlayed.map((track) => track.id), [_local.id]);
+      final prefs = await SharedPreferences.getInstance();
+      expect(prefs.getStringList('recent.v1'), [_local.id]);
+      expect(jsonDecode(prefs.getString('recent.remote.v1')!), isEmpty);
+    } finally {
+      player.dispose();
+    }
+  });
+
+  test('undownloaded extensions cannot enter any playback queue operation', () async {
+    final player = await _load();
+    try {
+      expect(player.canQueue(extension), isFalse);
+      await player.addToQueue([extension]);
+      await player.playNext([extension]);
+      await player.queueAfter([extension], after: {});
+      await player.playList([extension], 0);
+      expect(player.queue, isEmpty);
+    } finally {
+      player.dispose();
+    }
+  });
+
+  test('extension playback events do not record an undownloaded track', () async {
+    final player = _CurrentRecentPlayer();
+    await player.load();
+    try {
+      player.current = extension;
+      await player.player.setLoopMode(LoopMode.one);
+      await Future<void>.delayed(Duration.zero);
+      await player.flushSaves();
+      expect(player.recentlyPlayed.any((track) => track.id == extension.id), isFalse);
+      expect((await SharedPreferences.getInstance()).getStringList('recent.v1'), isNot(contains(extension.id)));
+    } finally {
+      player.dispose();
+    }
+  });
+
+  test('downloaded extension recents use the existing local file', () async {
+    final dir = await Directory.systemTemp.createTemp('riflay-extension-recent-');
+    final file = await File('test/fixtures/sine.flac').copy('${dir.path}/song.flac');
+    final local = Track(
+      id: file.uri.toString(),
+      uri: file.uri,
+      title: 'Downloaded',
+      artist: 'Artist',
+      sourceUrl: extension.uri.toString(),
+    );
+    SharedPreferences.setMockInitialValues({
+      'library.v1': jsonEncode([local.toJson()]),
+      'recent.v1': [extension.id],
+      'recent.remote.v1': jsonEncode([extension.toJson()]),
+    });
+    final player = await _load();
+    try {
+      expect(player.recentlyPlayed.single.uri, file.uri);
+      for (var attempt = 0; ; attempt++) {
+        try {
+          await file.delete();
+          break;
+        } on PathAccessException {
+          if (attempt == 20) rethrow;
+          await Future<void>.delayed(const Duration(milliseconds: 20));
+        }
+      }
+      expect(player.recentlyPlayed, isEmpty);
+    } finally {
+      player.dispose();
+      await dir.delete(recursive: true);
+    }
+  });
+
   TestWidgetsFlutterBinding.ensureInitialized();
   setUp(() {
     SharedPreferences.setMockInitialValues({

@@ -9,6 +9,7 @@ import 'package:flutter/foundation.dart';
 import '../models/track.dart';
 import '../platform/host.dart';
 import 'language.dart';
+import 'monochrome.dart';
 
 /// What the Discord presence shows (Settings › Accounts & services › Discord).
 @immutable
@@ -95,11 +96,20 @@ class DiscordOptions {
 /// `discord-ipc-N` (a Unix socket on Linux/macOS, a named pipe on Windows).
 /// Opcode 0 is the handshake; opcode 1 carries commands such as SET_ACTIVITY.
 class DiscordPresence {
-  DiscordPresence(this.clientId, {@visibleForTesting Iterable<String> Function()? socketPaths})
-    : _socketPaths = socketPaths ?? _candidatePaths;
+  DiscordPresence(
+    this.clientId, {
+    @visibleForTesting Iterable<String> Function()? socketPaths,
+    @visibleForTesting Future<String?> Function(Track)? monochromeCover,
+  }) : _socketPaths = socketPaths ?? _candidatePaths,
+       _monochromeCover = monochromeCover ?? _findMonochromeCover;
 
   final String clientId;
   final Iterable<String> Function() _socketPaths;
+  final Future<String?> Function(Track) _monochromeCover;
+  static Future<String?> _findMonochromeCover(Track track) async {
+    final songs = await Monochrome.instance.search(track.title, limit: 50);
+    return songs.where((song) => song.offlineId == track.offlineId).firstOrNull?.artworkUrl;
+  }
 
   /// Discord allows 5 activity updates per 20 s; stay comfortably under that.
   static const _minInterval = Duration(seconds: 4);
@@ -112,6 +122,8 @@ class DiscordPresence {
   DateTime _lastSent = DateTime(0);
   Timer? _pending;
   Map<String, dynamic>? _wanted;
+  bool _disposed = false;
+  final _monochromeCovers = <String, Future<String?>>{};
   bool _enabled = true;
 
   /// What the presence shows; Settings sets it.
@@ -147,6 +159,29 @@ class DiscordPresence {
       return;
     }
     _schedule();
+    if (track != null &&
+        options.cover &&
+        track.artworkUrl == null &&
+        (track.offlineId?.startsWith('monochrome:') ?? false)) {
+      final wanted = _wanted;
+      final key = track.offlineId!;
+      if (!_monochromeCovers.containsKey(key)) {
+        if (_monochromeCovers.length >= 64) _monochromeCovers.remove(_monochromeCovers.keys.first);
+        _monochromeCovers[key] = _monochromeCover(track).then((cover) => cover, onError: (Object _) => null);
+      }
+      _monochromeCovers[key]!.then((cover) {
+        if (_disposed ||
+            !_enabled ||
+            !options.cover ||
+            cover == null ||
+            wanted == null ||
+            !identical(_wanted, wanted)) {
+          return;
+        }
+        (wanted['assets'] as Map)['large_image'] = cover;
+        _schedule();
+      });
+    }
   }
 
   void _schedule() {
@@ -305,6 +340,7 @@ class DiscordPresence {
   }
 
   void dispose() {
+    _disposed = true;
     _pending?.cancel();
     final conn = _conn;
     if (conn != null) {

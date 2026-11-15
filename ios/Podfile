@@ -26,8 +26,14 @@ require File.expand_path(File.join('packages', 'flutter_tools', 'bin', 'podhelpe
 
 flutter_ios_podfile_setup
 
+runtime = File.expand_path('SpotiflacRuntime/Spotiflac.xcframework', __dir__)
+unless system('python3', File.expand_path('../tool/build_spotiflac.py', __dir__), '--target', 'ios', '--output', runtime)
+  raise 'SpotiFLAC iOS runtime build failed'
+end
+
 target 'Runner' do
   use_frameworks!
+  pod 'SpotiflacRuntime', :path => 'SpotiflacRuntime'
 
   flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
   target 'RunnerTests' do

@@ -29,10 +29,12 @@ void main() {
     var received = 0;
     final client = MockClient((r) async {
       expect(r.url.scheme, 'https');
+      if (r.url.host == 'tracks.monochrome.st') expect(r.headers['User-Agent'], startsWith('Riflay/'));
       return http.Response.bytes(r.url.host == 'example.org' ? cover : audio, 200);
     });
     final saved = await MonochromeDownload.save(source, dir, client: client, progress: (bytes, _) => received = bytes);
     expect(received, audio.length);
+    expect(saved.artworkUrl, source.artworkUrl);
     expect(saved.streams, isFalse);
     expect(saved.isDownload, isTrue);
     expect(saved.offlineId, source.offlineId);
@@ -59,6 +61,31 @@ void main() {
       );
       expect(dir.listSync(), isEmpty);
     }
+  });
+
+  test('continues completed ranges and retries a disconnected range without corrupting FLAC', () async {
+    final audio = File('test/fixtures/sine.flac').readAsBytesSync();
+    var interrupted = false;
+    final offsets = <int>[];
+    final client = MockClient.streaming((request, _) async {
+      if (request.url.host == 'example.org') return http.StreamedResponse(const Stream.empty(), 404);
+      final start = int.parse(RegExp(r'bytes=(\d+)-').firstMatch(request.headers['Range']!)![1]!);
+      offsets.add(start);
+      final end = start == 0 ? 8 : audio.length;
+      final headers = {'content-range': 'bytes $start-${end - 1}/${audio.length}', 'etag': '"same-file"'};
+      if (start == 8 && !interrupted) {
+        interrupted = true;
+        return http.StreamedResponse(
+          Stream<List<int>>.error(http.ClientException('Connection closed')),
+          206,
+          headers: headers,
+        );
+      }
+      return http.StreamedResponse(Stream.value(audio.sublist(start, end)), 206, headers: headers);
+    });
+    final saved = await MonochromeDownload.save(source, dir, client: client);
+    expect(offsets, [0, 8, 8]);
+    expect(readMetadata(File(saved.path!), getImage: false).title, source.title);
   });
 
   test('cancelling during transfer removes the partial audio', () async {

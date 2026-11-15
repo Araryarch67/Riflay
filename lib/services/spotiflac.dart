@@ -4,6 +4,7 @@ import 'dart:io';
 
 import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as p;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -15,7 +16,14 @@ import 'metadata.dart';
 import 'ffmpeg.dart';
 
 class SpotiflacError implements Exception {
-  const SpotiflacError();
+  const SpotiflacError({this.verificationRequired = false});
+  final bool verificationRequired;
+  factory SpotiflacError.fromProvider(dynamic error) {
+    final text = error.toString().toLowerCase();
+    return SpotiflacError(
+      verificationRequired: text.contains('verify_required') || text.contains('verification_required'),
+    );
+  }
   @override
   String toString() => 'Extension request failed';
 }
@@ -24,9 +32,11 @@ class SpotiflacError implements Exception {
 class Spotiflac extends ChangeNotifier {
   Spotiflac({this.executable, this.directory});
   static final instance = Spotiflac();
-  static bool get supported => Host.isWindows;
+  static bool get supported => !Host.isWeb;
   final String? executable;
   final Directory? directory;
+  static const _native = MethodChannel("riflay/spotiflac");
+  bool get _mobile => executable == null && (Host.isAndroid || Host.isIOS);
   Process? _process;
   Future<void>? _starting;
   final _pending = <int, Completer<dynamic>>{};
@@ -73,7 +83,23 @@ class Spotiflac extends ChangeNotifier {
 
   Future<void> _start() => _starting ??= _spawn();
   Future<void> _spawn() async {
-    final host = executable ?? p.join(File(Platform.resolvedExecutable).parent.path, 'spotiflac_bridge.exe');
+    if (_mobile) {
+      try {
+        await _native.invokeMethod<void>('initialize', {'directory': (await _root()).path});
+      } catch (_) {
+        _starting = null;
+        throw const SpotiflacError();
+      }
+      return;
+    }
+    final host =
+        executable ??
+        (Host.isMacOS
+            ? p.normalize(p.join(File(Platform.resolvedExecutable).parent.path, '../Resources/spotiflac_bridge'))
+            : p.join(
+                File(Platform.resolvedExecutable).parent.path,
+                Host.isWindows ? 'spotiflac_bridge.exe' : 'spotiflac_bridge',
+              ));
     if (!await File(host).exists()) {
       _starting = null;
       throw const SpotiflacError();
@@ -89,7 +115,7 @@ class Spotiflac extends ChangeNotifier {
         final done = _pending.remove(response['id']);
         if (done == null) return;
         if (response.containsKey('error')) {
-          done.completeError(const SpotiflacError());
+          done.completeError(SpotiflacError.fromProvider(response['error']));
         } else {
           done.complete(response['result']);
         }
@@ -115,6 +141,22 @@ class Spotiflac extends ChangeNotifier {
   ]) async {
     await _start();
     final id = ++_nextId;
+    if (_mobile) {
+      try {
+        final raw = await _native
+            .invokeMethod<String>('invoke', {
+              'payload': jsonEncode({'id': id, 'method': method, 'params': params}),
+            })
+            .timeout(timeout);
+        final response = jsonDecode(raw!) as Map;
+        if (response.containsKey('error')) throw SpotiflacError.fromProvider(response['error']);
+        return response['result'];
+      } on SpotiflacError {
+        rethrow;
+      } catch (_) {
+        throw const SpotiflacError();
+      }
+    }
     final request = Completer<dynamic>();
     _pending[id] = request;
     try {
@@ -258,6 +300,7 @@ class Spotiflac extends ChangeNotifier {
   String qualityOf(String id) {
     final quality = plugin(id)?['quality_options'];
     if (quality is List && quality.any((q) => q is Map && q['id'] == qualities[id])) return qualities[id]!;
+    if (quality is List && quality.any((q) => q is Map && q['id'] == 'LOSSLESS')) return 'LOSSLESS';
     return quality is List && quality.isNotEmpty && quality.first is Map ? quality.first['id'].toString() : 'LOSSLESS';
   }
 
@@ -281,7 +324,7 @@ class Spotiflac extends ChangeNotifier {
   }) async {
     await load();
     await refresh();
-    await call('ffmpegExecutable', {'path': await Ffmpeg.executable()});
+    if (!_mobile) await call('ffmpegExecutable', {'path': await Ffmpeg.executable()});
     final provider = source.extensionId!;
     final details = plugin(provider);
     final downloader = details?['has_download_provider'] == true
@@ -338,14 +381,42 @@ class Spotiflac extends ChangeNotifier {
         'directory': destination.path,
         'request': request,
       }, const Duration(minutes: 30));
-      if (result is! Map || result['success'] != true || result['file_path'] is! String || (cancelled?.call() ?? false)) {
+      if (result is Map &&
+          (result['error_type'] == 'verification_required' ||
+              SpotiflacError.fromProvider(result['error']).verificationRequired)) {
+        throw const SpotiflacError(verificationRequired: true);
+      }
+      if (result is! Map ||
+          result['success'] != true ||
+          result['file_path'] is! String ||
+          (cancelled?.call() ?? false)) {
         throw const SpotiflacError();
       }
-      final path = p.normalize(result['file_path']);
+      var path = p.normalize(result['file_path']);
       if (!p.isWithin(p.normalize(destination.absolute.path), File(path).absolute.path) || !await File(path).exists()) {
         throw const SpotiflacError();
       }
+      if (result['requires_container_conversion'] == true && result['audio_codec'] == 'flac') {
+        path = await _flacContainer(path, destination, cancelled);
+      }
       final edit = TagEdit(title: source.title, artist: source.artist, album: source.album)..comment = source.sourceUrl;
+      if (source.artworkUrl case final coverUrl?) {
+        try {
+          final response = await http.get(Uri.parse(coverUrl)).timeout(const Duration(seconds: 10));
+          final bytes = response.bodyBytes;
+          if (response.statusCode == 200 && bytes.length >= 8 && bytes.length <= 10 * 1024 * 1024) {
+            if (bytes[0] == 0xff && bytes[1] == 0xd8) {
+              edit.cover = bytes;
+              edit.coverMime = 'image/jpeg';
+            } else if (bytes[0] == 0x89 && bytes[1] == 0x50) {
+              edit.cover = bytes;
+              edit.coverMime = 'image/png';
+            }
+          }
+        } catch (_) {
+          /* An artwork server failure must not discard the downloaded audio. */
+        }
+      }
       try {
         await Metadata.tagFile(path, edit);
       } catch (_) {
@@ -360,6 +431,7 @@ class Spotiflac extends ChangeNotifier {
         album: source.album,
         duration: source.duration,
         sourceUrl: source.sourceUrl,
+        artworkUrl: source.artworkUrl,
         extensionData: source.extensionData,
         tagged: true,
         addedAt: DateTime.now().millisecondsSinceEpoch,
@@ -369,7 +441,84 @@ class Spotiflac extends ChangeNotifier {
     }
   }
 
+  Future<String> _flacContainer(String input, Directory directory, bool Function()? cancelled) async {
+    final work = await directory.createTemp('.spotiflac-container-');
+    final temporary = p.join(work.path, 'audio.flac');
+    try {
+      final process = await Process.start(await Ffmpeg.executable(), [
+        '-nostdin',
+        '-hide_banner',
+        '-loglevel',
+        'error',
+        '-i',
+        input,
+        '-map',
+        '0:a:0',
+        '-c:a',
+        'copy',
+        temporary,
+      ]);
+      final output = process.stdout.drain<void>();
+      final errors = process.stderr.drain<void>();
+      final timer = Timer.periodic(const Duration(milliseconds: 250), (_) {
+        if (cancelled?.call() ?? false) process.kill();
+      });
+      int code;
+      try {
+        code = await process.exitCode.timeout(
+          const Duration(minutes: 5),
+          onTimeout: () {
+            process.kill();
+            throw const SpotiflacError();
+          },
+        );
+      } finally {
+        timer.cancel();
+      }
+      await Future.wait([output, errors]);
+      if (code != 0 || (cancelled?.call() ?? false)) throw const SpotiflacError();
+      final target = p.setExtension(input, '.flac');
+      if (await File(target).exists()) throw const SpotiflacError();
+      await File(temporary).rename(target);
+      await File(input).delete();
+      return target;
+    } finally {
+      await work.delete(recursive: true);
+    }
+  }
+
+  Future<Uri> verificationUrl(Track source) async {
+    final id = source.extensionId;
+    if (id == null) throw const SpotiflacError();
+    await load();
+    // Generate a fresh verification request if the previous app session ended.
+    var pending = await call('pendingAuth', {'extension': id});
+    if (pending is! Map || pending['auth_url'] is! String) {
+      try {
+        await stream(source);
+      } catch (_) {
+        /* Pending auth is read below. */
+      }
+      pending = await call('pendingAuth', {'extension': id});
+    }
+    final uri = pending is Map ? Uri.tryParse(pending['auth_url']?.toString() ?? '') : null;
+    if (uri == null || uri.scheme != 'https' || uri.host.isEmpty) {
+      throw const SpotiflacError();
+    }
+    return uri;
+  }
+
+  Future<void> completeVerification(Track source, String grant) async {
+    final result = await call('sessionGrant', {'extension': source.extensionId, 'grant': grant});
+    if (result is! Map || result['success'] != true) throw const SpotiflacError();
+  }
+
   Future<void> close() async {
+    if (_mobile && _starting != null) await _native.invokeMethod<void>('shutdown');
+    for (final request in _pending.values) {
+      if (!request.isCompleted) request.completeError(const SpotiflacError());
+    }
+    _pending.clear();
     await _process?.stdin.close();
     _process?.kill();
     _process = null;

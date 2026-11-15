@@ -1,4 +1,4 @@
-# SpotiFLAC extensions on Windows
+# SpotiFLAC extensions
 
 Riflay bundles the actual upstream SpotiFLAC Go/Goja extension runtime. `.sflx`
 packages run through its provider wrappers and host APIs; they are not converted
@@ -34,3 +34,20 @@ flutter test --no-pub --dart-define=RIFLAY_TEST_SPOTIFLAC=true --dart-define=RIF
 The live test expects `build/spotiflac_bridge.exe`. Build it with
 `tool/build_spotiflac.ps1 -Output "$PWD/build/spotiflac_bridge.exe"`.
 Normal Windows builds automatically build and bundle the host beside Riflay.
+
+Platform status: Windows has passed the live download/decode test. Linux/macOS
+host bundling and Android/iOS native bindings are implemented but still require
+validation with their platform SDKs and devices. Mobile providers requiring
+FFmpeg conversion currently fail explicitly; direct audio downloads use the
+shared upstream downloader. Browser builds are unsupported. Build machines need
+Go 1.25+, Python 3 and the target platform SDK; end-user devices need no Go.
+
+Verified after adding the native `file.downloadSegments` API: the installed
+Tidal provider, with an existing verified session, downloaded “HELP!!” by Kobo
+Kanaeru through the Dart service. Riflay remuxed the FLAC stream from MP4 into
+native FLAC with packet copy, and a full FFmpeg decode passed (16-bit/44.1 kHz,
+187.79 seconds). `test/spotiflac_tidal_download_test.dart` is opt-in via
+`RIFLAY_TEST_TIDAL_DOWNLOAD=true` and copies the current verified session into an
+isolated temporary runtime without printing credentials. Fragment checkpoint,
+retry, concatenation order and network permissions are covered by the native
+`TestRiflaySegmentsResumeAndConcatenate` test.

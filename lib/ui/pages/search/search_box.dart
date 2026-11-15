@@ -237,6 +237,10 @@ class _SearchBoxState extends State<SearchBox> {
               skipTraversal: true,
               onKeyEvent: _onKey,
               child: TextField(
+                // Keep clicks in the suggestions inside the field's tap region.
+                // Otherwise a mouse-down unfocuses it and removes the dropdown
+                // before the suggestion receives mouse-up.
+                groupId: _link,
                 controller: widget.controller,
                 focusNode: _focus,
                 onChanged: _changed,

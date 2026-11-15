@@ -213,12 +213,15 @@ class NowPlayingPage extends StatelessWidget {
                                 constraints.maxWidth > constraints.maxHeight && constraints.maxHeight < 480;
                             Widget topBarFor({required bool more}) => Row(
                               children: [
-                                IconButton(
-                                  tooltip: tr.close,
-                                  color: AppColors.of(context).textPrimary,
-                                  onPressed: () => Navigator.of(context).pop(),
-                                  icon: const Icon(Icons.keyboard_arrow_down_rounded, size: 30),
-                                ),
+                                if (LayoutPrefs.instance.classicPlayerFace || LayoutPrefs.instance.showPlayerClose)
+                                  IconButton(
+                                    tooltip: tr.close,
+                                    color: AppColors.of(context).textPrimary,
+                                    onPressed: () => Navigator.of(context).pop(),
+                                    icon: const Icon(Icons.keyboard_arrow_down_rounded, size: 30),
+                                  )
+                                else
+                                  const SizedBox(width: 48),
                                 Expanded(
                                   child: Column(
                                     children: [

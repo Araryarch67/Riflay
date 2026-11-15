@@ -222,7 +222,7 @@ class PlayerController extends ChangeNotifier {
     _radioFor(seed)
         .then((similar) async {
           final have = {for (final t in queue) t.id, ..._recentIds.take(30)};
-          final fresh = similar.where((t) => have.add(t.id)).take(25).toList();
+          final fresh = _playableQueueTracks(similar).where((t) => have.add(t.id)).take(25).toList();
           if (fresh.isEmpty || !_autoplay) return;
           _autoplayed.addAll(fresh.map((t) => t.id));
           _ordered = [..._ordered, ...fresh];
@@ -843,7 +843,19 @@ class PlayerController extends ChangeNotifier {
   Map<String, Track> _recentRemote = {};
 
   /// Library and YouTube Music songs together, most recent first.
-  List<Track> get recentlyPlayed => [for (final id in _recentIds) ?(_recentRemote[id] ?? _views.byId[id])];
+  bool _unavailableExtensionRecent(Track track) {
+    final extensionDownload = Uri.tryParse(track.sourceUrl ?? '')?.scheme == 'spotiflac';
+    if (track.extensionId == null && !extensionDownload) return false;
+    final local = track.extensionId == null ? track : downloadedCopy(track);
+    final path = local?.path;
+    return path == null || !File(path).existsSync();
+  }
+
+  List<Track> get recentlyPlayed => [
+    for (final id in _recentIds)
+      if ((_recentRemote[id] ?? _views.byId[id]) case final track?)
+        if (!_unavailableExtensionRecent(track)) track.extensionId == null ? track : downloadedCopy(track)!,
+  ];
 
   String? _dismissedRecentPlaying;
 
@@ -1198,6 +1210,16 @@ class PlayerController extends ChangeNotifier {
     } catch (e) {
       debugPrint('Ignoring unreadable playlists: $e');
     }
+    final blockedRecents = {
+      for (final id in _recentIds)
+        if ((_recentRemote[id] ?? _views.byId[id]) case final track?)
+          if (_unavailableExtensionRecent(track)) id,
+    };
+    if (blockedRecents.isNotEmpty) {
+      _recentIds.removeWhere(blockedRecents.contains);
+      _recentRemote.removeWhere((id, _) => blockedRecents.contains(id));
+      await _storeRecents();
+    }
     discord.enabled = prefs.getBool(_discordKey) ?? true;
     try {
       final saved = prefs.getString(_discordOptionsKey);
@@ -1280,13 +1302,14 @@ class PlayerController extends ChangeNotifier {
 
   /// Only counts tracks that actually start playing, not ones the queue passes through while loading.
   void _recordRecent() {
-    final id = currentTrack?.id;
+    final current = currentTrack;
+    if (current != null && _unavailableExtensionRecent(current)) return;
+    final id = current?.id;
     if (id != _dismissedRecentPlaying) _dismissedRecentPlaying = null;
     // Pause, buffer and progress notifications for this same playback must not undo a manual dismissal.
     if (id != null && id == _dismissedRecentPlaying) return;
     if (id == null || !isPlaying || (_recentIds.isNotEmpty && _recentIds.first == id)) return;
     _recentIds = [id, ..._recentIds.where((r) => r != id)].take(_maxRecent).toList();
-    final current = currentTrack;
     if (current != null && current.streams) {
       _recentRemote = {
         for (final e in _recentRemote.entries)
@@ -1723,9 +1746,29 @@ class PlayerController extends ChangeNotifier {
     }
   }
 
+  Track? _playableQueueTrack(Track track) {
+    if (_unavailableExtensionRecent(track)) return null;
+    return track.extensionId == null ? track : downloadedCopy(track);
+  }
+
+  bool canQueue(Track track) => _playableQueueTrack(track) != null;
+
+  List<Track> _playableQueueTracks(List<Track> tracks) => [for (final track in tracks) ?_playableQueueTrack(track)];
+
   /// Replaces the queue with [tracks] and starts playing at [index].
   Future<void> playList(List<Track> tracks, int index, {String? from, bool shuffled = false}) async {
     if (tracks.isEmpty) return;
+    final selected = _playableQueueTrack(tracks[index.clamp(0, tracks.length - 1)]);
+    if (selected == null) {
+      _errors.add(tr.spotiflacDownloadToPlay);
+      return;
+    }
+    final selectedIndex = tracks
+        .take(index.clamp(0, tracks.length - 1))
+        .where((track) => _playableQueueTrack(track) != null)
+        .length;
+    tracks = _playableQueueTracks(tracks);
+    index = selectedIndex;
     // A guest picking a song doesn't leave Listen together: the song goes to the host's queue (when the host
     // lets friends add songs). Following the host's own song still loads it here.
     final session = ListenTogether.of(this);
@@ -1786,6 +1829,8 @@ class PlayerController extends ChangeNotifier {
 
   /// Puts [tracks] right after the current song ("Play next").
   Future<void> playNext(List<Track> tracks) async {
+    tracks = _playableQueueTracks(tracks);
+    if (tracks.isEmpty) return;
     final session = ListenTogether.of(this);
     if (session.role == ListenRole.guest) {
       for (final track in tracks) {
@@ -1805,6 +1850,8 @@ class PlayerController extends ChangeNotifier {
   /// Puts [tracks] after the current song and after any of [after] still ahead in the queue: songs friends
   /// add in Listen together play in the order they came.
   Future<void> queueAfter(List<Track> tracks, {required Set<String> after}) async {
+    tracks = _playableQueueTracks(tracks);
+    if (tracks.isEmpty) return;
     final current = currentTrack;
     final at = player.sequenceState.currentIndex;
     if (current == null || at == null) return playList(tracks, 0);
@@ -1855,6 +1902,8 @@ class PlayerController extends ChangeNotifier {
 
   /// Puts [tracks] at the end of the queue ("Add to queue").
   Future<void> addToQueue(List<Track> tracks) async {
+    tracks = _playableQueueTracks(tracks);
+    if (tracks.isEmpty) return;
     // A guest adds to the host's queue instead (when the host lets them).
     final session = ListenTogether.of(this);
     if (session.role == ListenRole.guest) {

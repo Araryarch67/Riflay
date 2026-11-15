@@ -506,6 +506,7 @@ func (r *extensionRuntime) RegisterAPIs(vm *goja.Runtime) {
 
 	fileObj := vm.NewObject()
 	fileObj.Set("download", r.fileDownload)
+	fileObj.Set("downloadSegments", r.riflayDownloadSegments)
 	fileObj.Set("exists", r.fileExists)
 	fileObj.Set("delete", r.fileDelete)
 	fileObj.Set("read", r.fileRead)

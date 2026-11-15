@@ -1,9 +1,11 @@
+import Spotiflac
 import Flutter
 import UIKit
 import UserNotifications
 
 @main
 @objc class AppDelegate: FlutterAppDelegate, FlutterImplicitEngineDelegate {
+  private let spotiflac = SpotiflacHost()
   private let folders = FolderAccess()
   private let route = AudioRoute()
   private var downloadTask = UIBackgroundTaskIdentifier.invalid
@@ -19,6 +21,9 @@ import UserNotifications
 
   func didInitializeImplicitFlutterEngine(_ engineBridge: FlutterImplicitEngineBridge) {
     GeneratedPluginRegistrant.register(with: engineBridge.pluginRegistry)
+    if let messenger = engineBridge.pluginRegistry.registrar(forPlugin: "Spotiflac")?.messenger() {
+      spotiflac.register(messenger)
+    }
     if let messenger = engineBridge.pluginRegistry.registrar(forPlugin: "FolderAccess")?.messenger() {
       folders.register(with: messenger)
     }
@@ -47,6 +52,41 @@ import UserNotifications
           }
           result(nil)
         default: result(FlutterMethodNotImplemented)
+        }
+      }
+    }
+  }
+}
+
+private final class SpotiflacHost {
+  private var root: String?
+  private let lock = NSLock()
+  func register(_ messenger: FlutterBinaryMessenger) {
+    FlutterMethodChannel(name: "riflay/spotiflac", binaryMessenger: messenger).setMethodCallHandler { [self] call, result in
+      DispatchQueue.global(qos: .utility).async {
+        do {
+          let args = call.arguments as? [String: String] ?? [:]
+          var reply: Any? = nil
+          switch call.method {
+          case "initialize":
+            guard let path = args["directory"] else { throw NSError(domain: "extension", code: 1) }
+            lock.lock()
+            defer { lock.unlock() }
+            if root != path { _ = try BridgeInitialize(path); root = path }
+          case "invoke":
+            lock.lock(); let directory = root; lock.unlock()
+            guard let directory = directory, let payload = args["payload"] else { throw NSError(domain: "extension", code: 1) }
+            reply = BridgeInvoke(payload, directory)
+          case "shutdown":
+            lock.lock(); defer { lock.unlock() }
+            BridgeShutdown(); root = nil
+          default:
+            DispatchQueue.main.async { result(FlutterMethodNotImplemented) }; return
+          }
+          let response = reply
+          DispatchQueue.main.async { result(response) }
+        } catch {
+          DispatchQueue.main.async { result(FlutterError(code: "extension", message: "Couldn't complete the extension request.", details: nil)) }
         }
       }
     }

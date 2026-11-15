@@ -13,10 +13,20 @@ void main() {
     await p.reset();
   });
 
+  test('player close button is hidden by default and its override persists', () async {
+    expect(p.showPlayerClose, isFalse);
+    await p.setShowPlayerClose(true);
+    final saved = p.toJson();
+    p.restore(const {});
+    expect(p.showPlayerClose, isFalse);
+    p.restore(saved);
+    expect(p.showPlayerClose, isTrue);
+  });
+
   test('defaults use capsule navigation and standard player appearance', () {
     expect(p.visualizer, isTrue, reason: 'Classic pulses around the cover');
     expect(p.visualizerStyle, VisualizerStyle.pulse);
-    expect(p.visualizerCoverShape, VisualizerCoverShape.flower);
+    expect(p.visualizerCoverShape, VisualizerCoverShape.square);
     expect(p.tabBar, TabBarStyle.capsule);
     expect(p.corners, CornerStyle.rounded);
     expect(p.density, Density.comfortable);
@@ -79,7 +89,7 @@ void main() {
     expect(p.visualizerCoverShape, VisualizerCoverShape.square);
     expect(p.visualizer, isTrue);
     p.restore({'visualizerCoverShape': 'future-shape'});
-    expect(p.visualizerCoverShape, VisualizerCoverShape.flower);
+    expect(p.visualizerCoverShape, VisualizerCoverShape.square);
     await p.reset();
     expect(p.pageMotion, PageMotionStyle.classic);
     expect(p.pageSpeed, PageMotionSpeed.relaxed);

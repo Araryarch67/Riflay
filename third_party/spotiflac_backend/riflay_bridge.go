@@ -30,7 +30,7 @@ func RiflayProviderCall(id, method, argsJSON string) (string, error) {
 	switch method {
 	case "search":
 		if ext.Manifest.HasCustomSearch() {
-			return CustomSearchWithExtensionJSON(id, args.Query, `{"limit":50,"filter":"tracks"}`)
+			return CustomSearchWithExtensionJSON(id, args.Query, `{"limit":50,"filter":"track"}`)
 		}
 		result, err = p.SearchTracks(args.Query, args.Limit)
 	case "track":
@@ -53,4 +53,24 @@ func RiflayProviderCall(id, method, argsJSON string) (string, error) {
 	}
 	data, err := json.Marshal(result)
 	return string(data), err
+}
+
+// Complete a grant returned by the provider's own verification page.
+func RiflayCompleteGrant(id, grant string) (string, error) {
+	ext, err := getExtensionManager().GetExtension(id)
+	if err != nil {
+		return "", err
+	}
+	p := newExtensionProviderWrapper(ext)
+	if err = p.lockReadyVM(); err != nil {
+		return "", err
+	}
+	defer ext.VMMu.Unlock()
+	SetExtensionSessionGrantByID(id, grant)
+	value, err := ext.runtime.vm.RunString(`extension.completeGrant()`)
+	if err != nil {
+		return "", err
+	}
+	encoded, err := json.Marshal(value.Export())
+	return string(encoded), err
 }

@@ -4,6 +4,36 @@ import 'package:path/path.dart' as p;
 
 /// A single playable audio file in the library.
 class Track {
+  /// Quality advertised by the extension's catalogue, not a measured playback format.
+  /// Do not infer it from the provider's selected download preference.
+  String? get extensionQualityLabel {
+    if (extensionId == null) return null;
+    final data = extensionData;
+    final raw = (data?['audio_quality'] ?? data?['audioQuality'] ?? data?['codec'] ?? '').toString().trim();
+    if (raw.isEmpty) return null;
+    final quality = raw.toUpperCase();
+    if (extensionId == 'tidal-web') {
+      if (quality == 'HI_RES_LOSSLESS' || quality == '24BIT') return 'FLAC 24-bit';
+      if (quality == 'LOSSLESS' || quality == '16BIT/44.1KHZ') return 'FLAC 16-bit / 44.1 kHz';
+      if (quality == 'HIGH' || quality == '320KBPS') return 'AAC 320 kbps';
+      if (quality == 'LOW' || quality == '96KBPS') return 'AAC 96 kbps';
+      if (quality == 'HI_RES' || quality == 'MQA') return 'MQA';
+    }
+    return switch (quality) {
+      'FLAC' => 'FLAC',
+      'ALAC' => 'ALAC',
+      'WAV' => 'WAV',
+      'AAC' ||
+      'AAC_320' ||
+      'AAC_256' ||
+      'AAC_128' => quality.replaceFirst('_', ' ') + (quality.contains('_') ? ' kbps' : ''),
+      'MP3' || 'MP3_320' || 'MP3_128' => quality.replaceFirst('_', ' ') + (quality.contains('_') ? ' kbps' : ''),
+      'OPUS' => 'Opus',
+      'VORBIS' => 'Vorbis',
+      _ => null,
+    };
+  }
+
   const Track({
     required this.id,
     required this.uri,

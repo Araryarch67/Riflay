@@ -1867,5 +1867,10 @@
   "folderPlaylist": "Playlist folder",
   "makeFolderPlaylist": "Tampilkan sebagai playlist",
   "removeFolderPlaylist": "Hapus dari playlist",
-  "folderPlaylistRemoved": "Dihapus dari playlist. Folder dan lagunya tetap ada."
+  "folderPlaylistRemoved": "Dihapus dari playlist. Folder dan lagunya tetap ada.",
+  "spotiflacDownloadToPlay": "Lagu ini hanya bisa diputar setelah diunduh.",
+  "spotiflacVerify": "Verifikasi sumber",
+  "spotiflacVerificationRequired": "Verifikasi sumber ini di browser, lalu coba unduh lagi.",
+  "showPlayerClose": "Tampilkan tombol tutup player",
+  "showPlayerCloseSubtitle": "Tampilkan panah atas pada gaya player selain Classic. Geser ke bawah untuk menutup saat tombol disembunyikan."
 }

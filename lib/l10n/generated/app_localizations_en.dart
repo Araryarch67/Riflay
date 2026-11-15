@@ -6379,4 +6379,20 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get folderPlaylistRemoved => 'Removed from playlists. The folder and its songs stay.';
+
+  @override
+  String get spotiflacDownloadToPlay => 'This song can only be played after downloading.';
+
+  @override
+  String get spotiflacVerify => 'Verify source';
+
+  @override
+  String get spotiflacVerificationRequired => 'Verify this source in your browser, then retry the download.';
+
+  @override
+  String get showPlayerClose => 'Show player close button';
+
+  @override
+  String get showPlayerCloseSubtitle =>
+      'Show the top arrow in player styles other than Classic. Swipe down to close when hidden.';
 }

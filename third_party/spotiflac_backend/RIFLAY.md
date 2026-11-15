@@ -15,3 +15,9 @@ No local TCP server is exposed. `riflay_ffmpeg.go` and one hook in
 arguments are parsed without a shell, file paths use the upstream sandbox, and
 unsupported FFmpeg flags/network inputs fail explicitly. Extension data lives under Riflay's private support
 directory and is not included in Riflay backups.
+
+`riflay_segments.go` implements the provider `file.downloadSegments` API with
+ordered concatenation, per-fragment retries, cancellation and persistent completed
+fragment checkpoints. Requests use the upstream permission-checked HTTP clients;
+output paths remain sandboxed. Riflay remuxes FLAC-in-MP4 downloads into a native
+FLAC container without audio re-encoding when the provider requests it.

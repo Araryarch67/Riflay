@@ -6174,4 +6174,19 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get folderPlaylistRemoved => 'プレイリストから外しました。フォルダと曲はそのままです。';
+
+  @override
+  String get spotiflacDownloadToPlay => 'この曲を再生するには、先にダウンロードしてください。';
+
+  @override
+  String get spotiflacVerify => 'ソースを認証';
+
+  @override
+  String get spotiflacVerificationRequired => 'ブラウザでソースを認証してから、ダウンロードを再試行してください。';
+
+  @override
+  String get showPlayerClose => 'プレーヤーを閉じるボタンを表示';
+
+  @override
+  String get showPlayerCloseSubtitle => 'Classic以外のスタイルで上部の矢印を表示します。非表示のときは下にスワイプして閉じます。';
 }

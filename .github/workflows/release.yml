@@ -52,6 +52,10 @@ jobs:
       KEYSTORE: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
     steps:
       - uses: actions/checkout@v7
+      - uses: actions/setup-go@v6
+        with:
+          go-version: '1.27.4'
+          cache-dependency-path: tool/spotiflac_bridge/go.sum
       - uses: actions/setup-java@v6
         with:
           distribution: temurin
@@ -177,6 +181,10 @@ jobs:
       GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v7
+      - uses: actions/setup-go@v6
+        with:
+          go-version: '1.27.4'
+          cache-dependency-path: tool/spotiflac_bridge/go.sum
       - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
         with:
           channel: stable
@@ -237,6 +245,10 @@ jobs:
       GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v7
+      - uses: actions/setup-go@v6
+        with:
+          go-version: '1.27.4'
+          cache-dependency-path: tool/spotiflac_bridge/go.sum
       - name: Build tools and libraries
         run: |
           sudo apt-get update
@@ -282,6 +294,10 @@ jobs:
     runs-on: macos-26
     steps:
       - uses: actions/checkout@v7
+      - uses: actions/setup-go@v6
+        with:
+          go-version: '1.27.4'
+          cache-dependency-path: tool/spotiflac_bridge/go.sum
       - name: Build tools
         run: brew install meson ninja nasm pkgconf
       - name: libmpv from the cache
@@ -353,6 +369,10 @@ jobs:
     runs-on: macos-26
     steps:
       - uses: actions/checkout@v7
+      - uses: actions/setup-go@v6
+        with:
+          go-version: '1.27.4'
+          cache-dependency-path: tool/spotiflac_bridge/go.sum
       - name: Build tools
         run: brew install meson ninja nasm pkgconf
       - name: libmpv from the cache
@@ -596,6 +616,10 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v7
+      - uses: actions/setup-go@v6
+        with:
+          go-version: '1.27.4'
+          cache-dependency-path: tool/spotiflac_bridge/go.sum
       - name: Published desktop assets
         # A recovery may rebuild just one desktop platform. Use the release's current files for the others.
         env:

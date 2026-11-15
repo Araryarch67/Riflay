@@ -1630,6 +1630,7 @@ class YoutubeImporter extends ChangeNotifier {
 
   /// What the downloads list says, in plain words (yt-dlp's own errors only go to the log).
   static String _friendlyError(Object e) {
+    if (e is SpotiflacError && e.verificationRequired) return tr.spotiflacVerificationRequired;
     debugPrint('Download failed: $e');
     return switch (e) {
       // Subclass first: VideoUnavailableException extends VideoUnplayableException.

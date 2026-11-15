@@ -5,6 +5,7 @@ project(riflay LANGUAGES CXX)
 # The actual SpotiFLAC extension host is bundled beside Riflay, not installed on the user's PATH.
 file(GLOB SPOTIFLAC_GO_SOURCES CONFIGURE_DEPENDS
   "${CMAKE_CURRENT_SOURCE_DIR}/../tool/spotiflac_bridge/*.go"
+  "${CMAKE_CURRENT_SOURCE_DIR}/../tool/spotiflac_bridge/bridge/*.go"
   "${CMAKE_CURRENT_SOURCE_DIR}/../third_party/spotiflac_backend/*.go")
 set(SPOTIFLAC_HOST "${CMAKE_BINARY_DIR}/spotiflac_bridge.exe")
 add_custom_command(OUTPUT "${SPOTIFLAC_HOST}"

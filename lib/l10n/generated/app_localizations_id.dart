@@ -6309,4 +6309,20 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get folderPlaylistRemoved => 'Dihapus dari playlist. Folder dan lagunya tetap ada.';
+
+  @override
+  String get spotiflacDownloadToPlay => 'Lagu ini hanya bisa diputar setelah diunduh.';
+
+  @override
+  String get spotiflacVerify => 'Verifikasi sumber';
+
+  @override
+  String get spotiflacVerificationRequired => 'Verifikasi sumber ini di browser, lalu coba unduh lagi.';
+
+  @override
+  String get showPlayerClose => 'Tampilkan tombol tutup player';
+
+  @override
+  String get showPlayerCloseSubtitle =>
+      'Tampilkan panah atas pada gaya player selain Classic. Geser ke bawah untuk menutup saat tombol disembunyikan.';
 }

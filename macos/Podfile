@@ -45,3 +45,20 @@ post_install do |installer|
     end
   end
 end
+
+# Build directly into the application Resources before its final signing step.
+post_integrate do |installer|
+  installer.aggregate_targets.map(&:user_project).uniq.each do |project|
+    runner = project.targets.find { |target| target.name == 'Runner' }
+    next unless runner
+    phase = runner.shell_script_build_phases.find { |item| item.name == 'Build SpotiFLAC' } || runner.new_shell_script_build_phase('Build SpotiFLAC')
+    phase.shell_script = <<~SH
+      set -eu
+      python3 "$SRCROOT/../tool/build_spotiflac.py" --target desktop --output "$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/spotiflac_bridge"
+      if [ -n "${EXPANDED_CODE_SIGN_IDENTITY:-}" ]; then
+        codesign --force --sign "$EXPANDED_CODE_SIGN_IDENTITY" "$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/spotiflac_bridge"
+      fi
+    SH
+    project.save
+  end
+end

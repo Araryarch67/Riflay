@@ -8,6 +8,8 @@ import '../../services/language.dart';
 import '../../services/player_controller.dart';
 import '../../services/youtube_importer.dart';
 import '../../services/monochrome.dart';
+import '../../services/spotiflac.dart';
+import 'spotiflac_verification_page.dart';
 import '../../services/monochrome_download.dart';
 import '../shell_scope.dart';
 import '../theme.dart';
@@ -365,6 +367,26 @@ class _JobRow extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 8),
+            if (job.status == DownloadStatus.failed && job.extensionTrack != null)
+              IconButton(
+                tooltip: tr.spotiflacVerify,
+                icon: const Icon(Icons.open_in_browser_rounded),
+                onPressed: () async {
+                  final messenger = ScaffoldMessenger.of(context);
+                  try {
+                    final uri = await Spotiflac.instance.verificationUrl(job.extensionTrack!);
+                    if (!context.mounted) return;
+                    final verified = await Navigator.of(context).push<bool>(
+                      MaterialPageRoute(
+                        builder: (_) => SpotiflacVerificationPage(track: job.extensionTrack!, url: uri),
+                      ),
+                    );
+                    if (verified == true) c.youtube.retry(job);
+                  } catch (_) {
+                    messenger.showSnackBar(SnackBar(content: Text(tr.spotiflacFailed)));
+                  }
+                },
+              ),
             switch (job.status) {
               DownloadStatus.queued || DownloadStatus.downloading => IconButton(
                 tooltip: tr.cancel,

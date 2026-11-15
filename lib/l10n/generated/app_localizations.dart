@@ -11258,6 +11258,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Removed from playlists. The folder and its songs stay.'**
   String get folderPlaylistRemoved;
+
+  /// No description provided for @spotiflacDownloadToPlay.
+  ///
+  /// In en, this message translates to:
+  /// **'This song can only be played after downloading.'**
+  String get spotiflacDownloadToPlay;
+
+  /// No description provided for @spotiflacVerify.
+  ///
+  /// In en, this message translates to:
+  /// **'Verify source'**
+  String get spotiflacVerify;
+
+  /// No description provided for @spotiflacVerificationRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Verify this source in your browser, then retry the download.'**
+  String get spotiflacVerificationRequired;
+
+  /// No description provided for @showPlayerClose.
+  ///
+  /// In en, this message translates to:
+  /// **'Show player close button'**
+  String get showPlayerClose;
+
+  /// No description provided for @showPlayerCloseSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Show the top arrow in player styles other than Classic. Swipe down to close when hidden.'**
+  String get showPlayerCloseSubtitle;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

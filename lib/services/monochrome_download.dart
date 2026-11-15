@@ -7,6 +7,7 @@ import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as p;
 
 import '../models/track.dart';
+import '../app_version.dart';
 import 'ffmpeg.dart';
 import 'metadata.dart';
 import 'monochrome.dart';
@@ -86,25 +87,7 @@ class MonochromeDownload {
         check();
         if (code != 0) throw const HttpException('Monochrome DASH download failed');
       } else {
-        final response = await httpClient
-            .send(http.Request('GET', Uri.parse(manifest)))
-            .timeout(const Duration(seconds: 30));
-        if (response.statusCode != 200) throw HttpException('Monochrome download: HTTP ${response.statusCode}');
-        final total = response.contentLength;
-        var received = 0;
-        final sink = file.openWrite();
-        try {
-          await for (final bytes in response.stream.timeout(const Duration(seconds: 30))) {
-            check();
-            sink.add(bytes);
-            received += bytes.length;
-            progress?.call(received, total);
-          }
-          await sink.flush();
-        } finally {
-          await sink.close();
-        }
-        if (total != null && total != received) throw const HttpException('Incomplete Monochrome download');
+        await _transfer(httpClient, Uri.parse(manifest), file, check, progress);
       }
       check();
       final reader = await file.open();
@@ -166,10 +149,100 @@ class MonochromeDownload {
         tagged: true,
         addedAt: DateTime.now().millisecondsSinceEpoch,
         sourceUrl: track.sourceUrl,
+        artworkUrl: track.artworkUrl,
       );
     } finally {
       if (owned) httpClient.close();
       await work.delete(recursive: true);
+    }
+  }
+
+  // Short ranges avoid long-lived transfers being cut off by the source proxy.
+  // A failed range is overwritten; completed bytes are retained within this job.
+  static Future<void> _transfer(
+    http.Client client,
+    Uri url,
+    File file,
+    void Function() check,
+    void Function(int, int?)? progress,
+  ) async {
+    const chunkSize = 1024 * 1024;
+    final output = await file.open(mode: FileMode.write);
+    var offset = 0;
+    int? total;
+    String? validator;
+    try {
+      while (total == null || offset < total) {
+        var complete = false;
+        for (var attempt = 0; attempt < 4; attempt++) {
+          check();
+          await output.setPosition(offset);
+          await output.truncate(offset);
+          try {
+            final request = http.Request('GET', url)
+              ..headers.addAll({
+                'User-Agent': 'Riflay/$appVersion',
+                'Range': 'bytes=$offset-${offset + chunkSize - 1}',
+                'If-Range': ?validator,
+              });
+            final response = await client.send(request).timeout(const Duration(seconds: 30));
+            int? expected;
+            if (response.statusCode == 206) {
+              final range = RegExp(r'^bytes (\d+)-(\d+)/(\d+)$').firstMatch(response.headers['content-range'] ?? '');
+              if (range == null || int.parse(range[1]!) != offset) {
+                await response.stream.drain<void>();
+                throw const FormatException('Invalid Monochrome range');
+              }
+              final size = int.parse(range[3]!);
+              if (total != null && total != size) {
+                await response.stream.drain<void>();
+                throw const FormatException('Monochrome file changed');
+              }
+              total = size;
+              expected = int.parse(range[2]!) - offset + 1;
+              if (expected <= 0 || expected > chunkSize || offset + expected > size) {
+                await response.stream.drain<void>();
+                throw const FormatException('Invalid Monochrome range length');
+              }
+            } else if (response.statusCode == 200 && offset == 0) {
+              total = expected = response.contentLength;
+            } else {
+              await response.stream.drain<void>();
+              throw HttpException('Monochrome download: HTTP ${response.statusCode}');
+            }
+            final currentValidator = response.headers['etag'];
+            if (validator != null && currentValidator != null && currentValidator != validator) {
+              await response.stream.drain<void>();
+              throw const FormatException('Monochrome file changed');
+            }
+            validator ??= currentValidator;
+            var received = 0;
+            await for (final bytes in response.stream.timeout(const Duration(seconds: 30))) {
+              check();
+              received += bytes.length;
+              if (expected != null && received > expected) throw const FormatException('Oversized Monochrome range');
+              await output.writeFrom(bytes);
+              progress?.call(offset + received, total);
+            }
+            if (expected != null && received != expected) {
+              throw http.ClientException('Incomplete Monochrome range', url);
+            }
+            offset += received;
+            total ??= offset;
+            complete = true;
+            break;
+          } on Object catch (error) {
+            check();
+            final transient = error is http.ClientException || error is SocketException || error is TimeoutException;
+            if (!transient || attempt == 3) rethrow;
+            await Future<void>.delayed(Duration(milliseconds: 250 * (attempt + 1)));
+          }
+        }
+        if (!complete) throw const HttpException('Incomplete Monochrome download');
+      }
+      await output.flush();
+    } finally {
+      await output.close();
     }
   }
 }

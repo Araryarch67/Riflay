@@ -3540,5 +3540,10 @@
   "folderPlaylist": "Folder playlist",
   "makeFolderPlaylist": "Show as a playlist",
   "removeFolderPlaylist": "Remove from playlists",
-  "folderPlaylistRemoved": "Removed from playlists. The folder and its songs stay."
+  "folderPlaylistRemoved": "Removed from playlists. The folder and its songs stay.",
+  "spotiflacDownloadToPlay": "This song can only be played after downloading.",
+  "spotiflacVerify": "Verify source",
+  "spotiflacVerificationRequired": "Verify this source in your browser, then retry the download.",
+  "showPlayerClose": "Show player close button",
+  "showPlayerCloseSubtitle": "Show the top arrow in player styles other than Classic. Swipe down to close when hidden."
 }

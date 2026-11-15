@@ -88,3 +88,18 @@ dependencies {
 flutter {
     source = "../.."
 }
+
+val spotiflacAar = layout.buildDirectory.file("spotiflac/spotiflac.aar")
+val buildSpotiflac by tasks.registering(Exec::class) {
+    val repo = rootProject.projectDir.parentFile
+    inputs.files(fileTree("$repo/tool/spotiflac_bridge") { include("**/*.go", "go.mod", "go.sum") })
+    inputs.files(fileTree("$repo/third_party/spotiflac_backend") { include("*.go", "go.mod", "go.sum") })
+    inputs.file("$repo/tool/build_spotiflac.py")
+    outputs.file(spotiflacAar)
+    environment("ANDROID_HOME", android.sdkDirectory.absolutePath)
+    environment("ANDROID_NDK_HOME", android.ndkDirectory.absolutePath)
+    commandLine(if (System.getProperty("os.name").startsWith("Windows")) "python" else "python3",
+        "$repo/tool/build_spotiflac.py", "--target", "android", "--output", spotiflacAar.get().asFile.absolutePath)
+}
+tasks.named("preBuild").configure { dependsOn(buildSpotiflac) }
+dependencies { implementation(files(spotiflacAar).builtBy(buildSpotiflac)) }

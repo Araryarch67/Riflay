@@ -1860,5 +1860,10 @@
   "folderPlaylist": "フォルダのプレイリスト",
   "makeFolderPlaylist": "プレイリストとして表示",
   "removeFolderPlaylist": "プレイリストから外す",
-  "folderPlaylistRemoved": "プレイリストから外しました。フォルダと曲はそのままです。"
+  "folderPlaylistRemoved": "プレイリストから外しました。フォルダと曲はそのままです。",
+  "spotiflacDownloadToPlay": "この曲を再生するには、先にダウンロードしてください。",
+  "spotiflacVerify": "ソースを認証",
+  "spotiflacVerificationRequired": "ブラウザでソースを認証してから、ダウンロードを再試行してください。",
+  "showPlayerClose": "プレーヤーを閉じるボタンを表示",
+  "showPlayerCloseSubtitle": "Classic以外のスタイルで上部の矢印を表示します。非表示のときは下にスワイプして閉じます。"
 }

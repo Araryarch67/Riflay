@@ -442,6 +442,14 @@ abstract final class SettingsOptions {
       preview: .nowPlaying,
     ),
     SettingsOption(
+      'showPlayerClose',
+      .nowPlaying,
+      (t) => t.showPlayerClose,
+      subtitle: (t) => t.showPlayerCloseSubtitle,
+      find: (t) => t.kwPlayerHeader,
+      preview: .nowPlaying,
+    ),
+    SettingsOption(
       'showQualityBadge',
       .nowPlaying,
       (t) => t.showSoundQuality,

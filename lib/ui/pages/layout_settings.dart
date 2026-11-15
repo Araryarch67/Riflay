@@ -90,6 +90,13 @@ class NowPlayingSettings extends StatelessWidget {
                 ),
               ),
               SwitchListTile(
+                secondary: const Icon(Icons.keyboard_arrow_down_rounded),
+                title: Text(tr.showPlayerClose),
+                subtitle: Text(tr.showPlayerCloseSubtitle, style: muted),
+                value: p.showPlayerClose,
+                onChanged: p.setShowPlayerClose,
+              ),
+              SwitchListTile(
                 secondary: const Icon(Icons.high_quality_outlined),
                 title: Text(tr.showSoundQuality),
                 subtitle: Text(tr.showSoundQualitySubtitle, style: muted),
