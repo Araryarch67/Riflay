@@ -193,6 +193,7 @@ Track movedTo(Track old, String newPath) {
     addedAt: old.addedAt,
     tagged: old.tagged,
     sourceUrl: old.sourceUrl,
+    downloadYoutubeId: old.downloadYoutubeId,
     artworkUrl: old.artworkUrl,
     artistId: old.artistId,
   );

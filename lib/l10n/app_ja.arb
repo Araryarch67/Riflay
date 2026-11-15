@@ -1865,5 +1865,11 @@
   "spotiflacVerify": "ソースを認証",
   "spotiflacVerificationRequired": "ブラウザでソースを認証してから、ダウンロードを再試行してください。",
   "showPlayerClose": "プレーヤーを閉じるボタンを表示",
-  "showPlayerCloseSubtitle": "Classic以外のスタイルで上部の矢印を表示します。非表示のときは下にスワイプして閉じます。"
+  "showPlayerCloseSubtitle": "Classic以外のスタイルで上部の矢印を表示します。非表示のときは下にスワイプして閉じます。",
+  "downloadSource": "ダウンロード元",
+  "downloadMatchTitle": "{source}で一致する曲を探す",
+  "downloadMatchReview": "ダウンロードする音源を選び、アーティスト・バージョン・再生時間を確認してください。",
+  "downloadMatchFailed": "このソースを検索できませんでした。再試行するか別のソースを選んでください。",
+  "downloadMatchEmpty": "一致する曲がありません。短い曲名か別のソースをお試しください。",
+  "@downloadMatchTitle": {"placeholders": {"source": {"type": "String"}}}
 }

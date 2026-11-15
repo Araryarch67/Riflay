@@ -319,6 +319,7 @@ class Spotiflac extends ChangeNotifier {
   Future<Track> download(
     Track source,
     Directory destination, {
+    String? quality,
     bool Function()? cancelled,
     void Function(double)? progress,
   }) async {
@@ -332,6 +333,10 @@ class Spotiflac extends ChangeNotifier {
         : plugins.where((e) => e['enabled'] == true && e['has_download_provider'] == true).firstOrNull?['id']
               as String?;
     if (downloader == null) throw const SpotiflacError();
+    final options = plugin(downloader)?['quality_options'];
+    if (quality != null && (options is! List || !options.any((option) => option is Map && option['id'] == quality))) {
+      throw const SpotiflacError();
+    }
     final item = jobId(source);
     final data = source.extensionData ?? const <String, dynamic>{};
     final request = {
@@ -347,7 +352,7 @@ class Spotiflac extends ChangeNotifier {
       'output_dir': destination.path,
       'filename_format': '{artist} - {title}',
       'item_id': item,
-      'quality': qualityOf(downloader),
+      'quality': quality ?? qualityOf(downloader),
       'embed_metadata': true,
       'use_fallback': false,
     };

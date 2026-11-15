@@ -131,6 +131,7 @@ class LibraryViews {
     final out = <String, Track>{};
     for (final t in tracks) {
       if (t.offlineId case final id? when t.path != null) out[id] = t;
+      if (t.downloadSourceId case final id? when t.path != null) out[id] = t;
     }
     return _downloads = out;
   }

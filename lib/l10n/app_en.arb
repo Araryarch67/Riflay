@@ -3545,5 +3545,11 @@
   "spotiflacVerify": "Verify source",
   "spotiflacVerificationRequired": "Verify this source in your browser, then retry the download.",
   "showPlayerClose": "Show player close button",
-  "showPlayerCloseSubtitle": "Show the top arrow in player styles other than Classic. Swipe down to close when hidden."
+  "showPlayerCloseSubtitle": "Show the top arrow in player styles other than Classic. Swipe down to close when hidden.",
+  "downloadSource": "Download source",
+  "downloadMatchTitle": "Find a match on {source}",
+  "downloadMatchReview": "Choose the recording to download. Check the artist, version and duration.",
+  "downloadMatchFailed": "Couldn't search this source. Try again or choose another source.",
+  "downloadMatchEmpty": "No matching songs found. Try a shorter title or a different source.",
+  "@downloadMatchTitle": {"placeholders": {"source": {"type": "String"}}}
 }

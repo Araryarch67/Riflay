@@ -91,7 +91,11 @@ abstract class AppLocalizations {
   ];
 
   /// A list of this localizations delegate's supported locales.
-  static const List<Locale> supportedLocales = <Locale>[Locale('en'), Locale('id'), Locale('ja')];
+  static const List<Locale> supportedLocales = <Locale>[
+    Locale('en'),
+    Locale('id'),
+    Locale('ja')
+  ];
 
   /// No description provided for @betaFeatures.
   ///
@@ -11288,6 +11292,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Show the top arrow in player styles other than Classic. Swipe down to close when hidden.'**
   String get showPlayerCloseSubtitle;
+
+  /// No description provided for @downloadSource.
+  ///
+  /// In en, this message translates to:
+  /// **'Download source'**
+  String get downloadSource;
+
+  /// No description provided for @downloadMatchTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Find a match on {source}'**
+  String downloadMatchTitle(String source);
+
+  /// No description provided for @downloadMatchReview.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose the recording to download. Check the artist, version and duration.'**
+  String get downloadMatchReview;
+
+  /// No description provided for @downloadMatchFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t search this source. Try again or choose another source.'**
+  String get downloadMatchFailed;
+
+  /// No description provided for @downloadMatchEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No matching songs found. Try a shorter title or a different source.'**
+  String get downloadMatchEmpty;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {
@@ -11306,20 +11340,19 @@ class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> 
 }
 
 AppLocalizations lookupAppLocalizations(Locale locale) {
+
+
   // Lookup logic when only language code is specified.
   switch (locale.languageCode) {
-    case 'en':
-      return AppLocalizationsEn();
-    case 'id':
-      return AppLocalizationsId();
-    case 'ja':
-      return AppLocalizationsJa();
+    case 'en': return AppLocalizationsEn();
+    case 'id': return AppLocalizationsId();
+    case 'ja': return AppLocalizationsJa();
   }
 
   throw FlutterError(
     'AppLocalizations.delegate failed to load unsupported locale "$locale". This is likely '
     'an issue with the localizations generation tool. Please file an issue '
     'on GitHub with a reproducible sample app and the gen-l10n configuration '
-    'that was used.',
+    'that was used.'
   );
 }

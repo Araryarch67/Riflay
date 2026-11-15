@@ -13,6 +13,7 @@ import '../services/spotiflac.dart';
 import '../services/youtube_music_account.dart';
 import '../services/ytmusic_web.dart';
 import 'download_options.dart';
+import 'download_source_dialog.dart';
 import 'theme.dart';
 import 'widgets/app_dialog.dart';
 
@@ -659,6 +660,11 @@ class DownloadButton extends StatelessWidget {
                   if (track.extensionId != null) {
                     c.youtube.enqueueTracks([track]);
                     messenger.showSnackBar(SnackBar(content: Text(tr.downloadingTitle(track.title))));
+                    return;
+                  }
+                  if (track.isRemote) {
+                    final queued = await downloadFromSource(context, c, track);
+                    if (queued) messenger.showSnackBar(SnackBar(content: Text(tr.downloadingTitle(track.title))));
                     return;
                   }
                   final choice = track.monochromeId != null || track.extensionId != null

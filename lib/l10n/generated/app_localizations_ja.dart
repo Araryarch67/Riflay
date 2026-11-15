@@ -6189,4 +6189,21 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get showPlayerCloseSubtitle => 'Classic以外のスタイルで上部の矢印を表示します。非表示のときは下にスワイプして閉じます。';
+
+  @override
+  String get downloadSource => 'ダウンロード元';
+
+  @override
+  String downloadMatchTitle(String source) {
+    return '$sourceで一致する曲を探す';
+  }
+
+  @override
+  String get downloadMatchReview => 'ダウンロードする音源を選び、アーティスト・バージョン・再生時間を確認してください。';
+
+  @override
+  String get downloadMatchFailed => 'このソースを検索できませんでした。再試行するか別のソースを選んでください。';
+
+  @override
+  String get downloadMatchEmpty => '一致する曲がありません。短い曲名か別のソースをお試しください。';
 }

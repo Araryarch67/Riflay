@@ -83,7 +83,7 @@ class QueuePage extends StatelessWidget {
             SliverPadding(
               padding: hPad,
               sliver: SliverToBoxAdapter(
-                child: TrackRow(track: current, index: 1, onTap: guest ? null : c.togglePlay),
+                child: TrackRow(track: current, index: 1, currentOccurrence: true, onTap: guest ? null : c.togglePlay),
               ),
             ),
           ],
@@ -101,8 +101,13 @@ class QueuePage extends StatelessWidget {
               sliver: guest
                   ? SliverList.builder(
                       itemCount: queued.length,
-                      itemBuilder: (context, i) =>
-                          TrackRow(key: keys[queued[i]], track: queued[i].track, index: i + 2, onTap: null),
+                      itemBuilder: (context, i) => TrackRow(
+                        key: keys[queued[i]],
+                        track: queued[i].track,
+                        index: i + 2,
+                        currentOccurrence: false,
+                        onTap: null,
+                      ),
                     )
                   : SliverReorderableList(
                       itemCount: queued.length,
@@ -190,7 +195,7 @@ class _QueueRow extends StatelessWidget {
     final row = Row(
       children: [
         Expanded(
-          child: TrackRow(track: track, index: index, onTap: onTap),
+          child: TrackRow(track: track, index: index, currentOccurrence: false, onTap: onTap),
         ),
         IconButton(
           tooltip: tr.removeFromQueue,

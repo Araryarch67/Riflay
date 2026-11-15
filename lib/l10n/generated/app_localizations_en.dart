@@ -6395,4 +6395,21 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get showPlayerCloseSubtitle =>
       'Show the top arrow in player styles other than Classic. Swipe down to close when hidden.';
+
+  @override
+  String get downloadSource => 'Download source';
+
+  @override
+  String downloadMatchTitle(String source) {
+    return 'Find a match on $source';
+  }
+
+  @override
+  String get downloadMatchReview => 'Choose the recording to download. Check the artist, version and duration.';
+
+  @override
+  String get downloadMatchFailed => 'Couldn\'t search this source. Try again or choose another source.';
+
+  @override
+  String get downloadMatchEmpty => 'No matching songs found. Try a shorter title or a different source.';
 }

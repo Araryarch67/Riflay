@@ -83,6 +83,8 @@ class DownloadJob {
     this.withVideo = false,
     this.monochromeTrack,
     this.extensionTrack,
+    this.youtubeOrigin,
+    this.extensionQuality,
   });
 
   /// The format and quality asked for; null follows Settings when the download starts.
@@ -92,6 +94,8 @@ class DownloadJob {
   final bool withVideo;
   final Track? monochromeTrack;
   final Track? extensionTrack;
+  final Track? youtubeOrigin;
+  final String? extensionQuality;
 
   final String videoId;
   final String title;
@@ -152,6 +156,8 @@ class DownloadJob {
       'videoId': videoId,
       if (monochromeTrack != null) 'monochromeTrack': monochromeTrack!.toJson(),
       if (extensionTrack != null) 'extensionTrack': extensionTrack!.toJson(),
+      if (youtubeOrigin != null) 'youtubeOrigin': youtubeOrigin!.toJson(),
+      if (extensionQuality != null) 'extensionQuality': extensionQuality,
       'title': title,
       'channel': channel,
       'thumbnailUrl': thumbnailUrl,
@@ -183,10 +189,19 @@ class DownloadJob {
     final id = json['videoId'], title = json['title'];
     Track? monochrome;
     Track? extension;
+    Track? origin;
+    if (json['youtubeOrigin'] is Map) {
+      try {
+        origin = Track.fromJson(Map<String, dynamic>.from(json['youtubeOrigin']));
+        if (!origin.isRemote || !YoutubeImporter.isVideoId(origin.videoId!) || origin.videoId != id) return null;
+      } catch (_) {
+        return null;
+      }
+    }
     if (json['extensionTrack'] is Map) {
       try {
         extension = Track.fromJson(Map<String, dynamic>.from(json['extensionTrack']));
-        if (extension.extensionId == null || Spotiflac.jobId(extension) != id) return null;
+        if (extension.extensionId == null || (origin?.videoId ?? Spotiflac.jobId(extension)) != id) return null;
       } catch (_) {
         return null;
       }
@@ -194,7 +209,9 @@ class DownloadJob {
     if (json['monochromeTrack'] is Map) {
       try {
         monochrome = Track.fromJson(Map<String, dynamic>.from(json['monochromeTrack']));
-        if (monochrome.monochromeId == null || MonochromeDownload.jobId(monochrome) != id) return null;
+        if (monochrome.monochromeId == null || (origin?.videoId ?? MonochromeDownload.jobId(monochrome)) != id) {
+          return null;
+        }
       } catch (_) {
         return null;
       }
@@ -204,6 +221,8 @@ class DownloadJob {
         title is! String) {
       return null;
     }
+    if (origin != null && extension == null && monochrome == null) return null;
+    if (extension != null && monochrome != null) return null;
     DownloadChoice? choice;
     if (json['choice'] case final Map c when VideoContainer.values.any((v) => v.name == c['container'])) {
       choice = DownloadChoice.video(
@@ -225,6 +244,8 @@ class DownloadJob {
         videoId: id,
         monochromeTrack: monochrome,
         extensionTrack: extension,
+        youtubeOrigin: origin,
+        extensionQuality: json['extensionQuality'] is String ? json['extensionQuality'] : null,
         title: title,
         channel: json['channel'] as String? ?? '',
         thumbnailUrl: json['thumbnailUrl'] as String? ?? '',
@@ -338,7 +359,14 @@ class PlaylistPreview extends YoutubePreview {
 /// Resolves YouTube links and downloads their audio-only stream into the app's
 /// music folder, one job at a time.
 class YoutubeImporter extends ChangeNotifier {
-  YoutubeImporter({required this.onTrackReady, this.albumYearLookup, this.musicVideoLookup, this._queueFile});
+  YoutubeImporter({
+    required this.onTrackReady,
+    this.albumYearLookup,
+    this.musicVideoLookup,
+    this._queueFile,
+    Spotiflac? extensionRuntime,
+  }) : _extensionRuntime = extensionRuntime ?? Spotiflac.instance;
+  final Spotiflac _extensionRuntime;
 
   /// The music video that goes with a song, with where the song's parts are in it, for "Download with MV". The
   /// app's YouTube Music client, which knows the pairs a signed-in account gets; signed out without it.
@@ -429,29 +457,48 @@ class YoutubeImporter extends ChangeNotifier {
 
   /// Saves streamed YouTube Music songs for offline playback. [withVideo] ("Download with MV") also saves each
   /// song's music video beside it, for the songs that have one.
-  int enqueueTracks(List<Track> tracks, {DownloadChoice? choice, bool withVideo = false}) => _enqueue([
-    for (final t in tracks.where((t) => t.isRemote || t.monochromeId != null || t.extensionId != null))
-      DownloadJob(
-        videoId: t.extensionId != null
-            ? Spotiflac.jobId(t)
-            : t.monochromeId != null
-            ? MonochromeDownload.jobId(t)
-            : t.videoId!,
-        monochromeTrack: t.monochromeId != null ? t : null,
-        extensionTrack: t.extensionId != null ? t : null,
-        title: t.title,
-        channel: t.artist,
-        thumbnailUrl:
-            t.artworkUrl ??
-            (t.monochromeId != null || t.extensionId != null
-                ? ''
-                : 'https://i.ytimg.com/vi/${t.videoId}/hqdefault.jpg'),
-        knownNames: true,
-        choice: t.monochromeId != null ? const DownloadChoice(DownloadFormat.flac) : choice,
-        album: _clean(t.album),
-        withVideo: withVideo && t.monochromeId == null && t.extensionId == null,
-      ),
-  ]);
+  int enqueueTracks(
+    List<Track> tracks, {
+    DownloadChoice? choice,
+    bool withVideo = false,
+    Track? youtubeOrigin,
+    String? extensionQuality,
+  }) {
+    if (youtubeOrigin != null &&
+        (!youtubeOrigin.isRemote ||
+            !isVideoId(youtubeOrigin.videoId!) ||
+            tracks.length != 1 ||
+            (tracks.single.monochromeId == null && tracks.single.extensionId == null))) {
+      return 0;
+    }
+    return _enqueue([
+      for (final t in tracks.where((t) => t.isRemote || t.monochromeId != null || t.extensionId != null))
+        DownloadJob(
+          youtubeOrigin: youtubeOrigin,
+          extensionQuality: extensionQuality,
+          videoId:
+              youtubeOrigin?.videoId ??
+              (t.extensionId != null
+                  ? Spotiflac.jobId(t)
+                  : t.monochromeId != null
+                  ? MonochromeDownload.jobId(t)
+                  : t.videoId!),
+          monochromeTrack: t.monochromeId != null ? t : null,
+          extensionTrack: t.extensionId != null ? t : null,
+          title: t.title,
+          channel: t.artist,
+          thumbnailUrl:
+              t.artworkUrl ??
+              (t.monochromeId != null || t.extensionId != null
+                  ? ''
+                  : 'https://i.ytimg.com/vi/${t.videoId}/hqdefault.jpg'),
+          knownNames: true,
+          choice: t.monochromeId != null ? const DownloadChoice(DownloadFormat.flac) : choice,
+          album: _clean(t.album),
+          withVideo: withVideo && t.monochromeId == null && t.extensionId == null,
+        ),
+    ]);
+  }
 
   /// The newest download of [videoId], if any (queued, running, done or failed).
   DownloadJob? jobFor(String videoId) => _jobs.where((j) => j.videoId == videoId).lastOrNull;
@@ -952,15 +999,18 @@ class YoutubeImporter extends ChangeNotifier {
       if (await _blockedByMobileData()) throw const _OnMobileData();
       final dir = await downloadsDir();
       if (job.extensionTrack case final source?) {
-        final track = await Spotiflac.instance.download(
+        job.quality = tr.spotiflacOriginal;
+        final downloadedTrack = await _extensionRuntime.download(
           source,
           dir,
+          quality: job.extensionQuality,
           cancelled: () => job.status == DownloadStatus.cancelled,
           progress: (value) {
             job.progress = value.clamp(0, 1);
             notifyListeners();
           },
         );
+        final track = downloadedTrack.copyWith(downloadYoutubeId: job.youtubeOrigin?.videoId);
         await onTrackReady(track);
         job
           ..track = track
@@ -972,7 +1022,7 @@ class YoutubeImporter extends ChangeNotifier {
         final watch = Stopwatch()..start();
         var lastUpdate = -1000;
         job.quality = 'FLAC';
-        final track = await MonochromeDownload.save(
+        final downloadedTrack = await MonochromeDownload.save(
           source,
           dir,
           cancelled: () => job.status == DownloadStatus.cancelled,
@@ -992,6 +1042,7 @@ class YoutubeImporter extends ChangeNotifier {
             notifyListeners();
           },
         );
+        final track = downloadedTrack.copyWith(downloadYoutubeId: job.youtubeOrigin?.videoId);
         await onTrackReady(track);
         job
           ..track = track

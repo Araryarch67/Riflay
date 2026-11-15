@@ -1872,5 +1872,11 @@
   "spotiflacVerify": "Verifikasi sumber",
   "spotiflacVerificationRequired": "Verifikasi sumber ini di browser, lalu coba unduh lagi.",
   "showPlayerClose": "Tampilkan tombol tutup player",
-  "showPlayerCloseSubtitle": "Tampilkan panah atas pada gaya player selain Classic. Geser ke bawah untuk menutup saat tombol disembunyikan."
+  "showPlayerCloseSubtitle": "Tampilkan panah atas pada gaya player selain Classic. Geser ke bawah untuk menutup saat tombol disembunyikan.",
+  "downloadSource": "Sumber unduhan",
+  "downloadMatchTitle": "Cari padanan di {source}",
+  "downloadMatchReview": "Pilih rekaman yang akan diunduh. Periksa artis, versi, dan durasinya.",
+  "downloadMatchFailed": "Tidak dapat mencari di sumber ini. Coba lagi atau pilih sumber lain.",
+  "downloadMatchEmpty": "Tidak ada lagu yang cocok. Coba judul lebih pendek atau sumber lain.",
+  "@downloadMatchTitle": {"placeholders": {"source": {"type": "String"}}}
 }

@@ -8,6 +8,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:riflay/services/monochrome.dart';
+import 'package:riflay/services/ytmusic_web.dart';
+import 'package:riflay/services/library_views.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -38,9 +40,24 @@ void main() {
         }
       });
       try {
-        expect(importer.enqueueTracks([source]), 1);
+        final results = await YtMusicWeb.anonymous().search('I I I Houshou Marine Kobo Kanaeru');
+        expect(results.songs, isNotEmpty);
+        final hit = results.songs.firstWhere((song) => song.title.replaceAll(' ', '').toUpperCase() == 'III');
+        final origin = Track.youtube(
+          videoId: hit.videoId,
+          title: hit.title,
+          artist: hit.artist,
+          duration: hit.duration,
+        );
+        expect(importer.enqueueTracks([source], youtubeOrigin: origin), 1);
         final saved = await ready.future.timeout(const Duration(minutes: 4));
         expect(await File(saved.path!).length(), greaterThan(1024 * 1024));
+        expect(saved.youtubeId, origin.videoId);
+        expect(saved.streams, isFalse);
+        final restored = Track.fromJson(saved.toJson());
+        final views = LibraryViews([restored], 1);
+        expect(views.downloads[origin.offlineId]?.id, restored.id);
+        expect(views.downloads[source.offlineId]?.id, restored.id);
         final decoded = await Process.run('ffmpeg', ['-v', 'error', '-i', saved.path!, '-f', 'null', '-']);
         expect(decoded.exitCode, 0, reason: '${decoded.stderr}');
         expect('${decoded.stderr}'.trim(), isEmpty);

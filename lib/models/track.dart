@@ -52,6 +52,7 @@ class Track {
     this.artworkUrl,
     this.artistId,
     this.extensionData,
+    this.downloadYoutubeId,
   });
 
   /// A YouTube / YouTube Music song that streams instead of playing from disk.
@@ -162,6 +163,7 @@ class Track {
     videoId: json['videoId'] as String?,
     artworkUrl: json['artworkUrl'] as String?,
     artistId: json['artistId'] as String?,
+    downloadYoutubeId: json['downloadYoutubeId'] as String?,
     extensionData: json['extensionData'] is Map ? Map<String, dynamic>.from(json['extensionData']) : null,
   );
 
@@ -205,6 +207,9 @@ class Track {
   /// Set for streamed YouTube songs (not downloaded); playback resolves the audio on demand.
   final String? videoId;
 
+  /// YouTube song fulfilled by a download from another provider. Does not make a local file remote.
+  final String? downloadYoutubeId;
+
   /// Cover art fetched over the network (streamed songs have no file to read it from).
   final String? artworkUrl;
 
@@ -232,6 +237,11 @@ class Track {
     if (extensionId != null) return id;
     if (monochromeId != null) return id;
     if (youtubeId != null) return youtubeId;
+    return downloadSourceId;
+  }
+
+  /// Provider identity retained alongside a YouTube-origin download association.
+  String? get downloadSourceId {
     final url = Uri.tryParse(sourceUrl ?? '');
     if (url?.scheme == 'spotiflac' && url!.pathSegments.length == 1) {
       return 'sflx:${url.host}:${Uri.encodeComponent(url.pathSegments.single)}';
@@ -263,7 +273,7 @@ class Track {
 
   /// The YouTube video this song is: a streamed song's own id, or the one a download remembers in
   /// [sourceUrl]. Null for a file that never came from YouTube, which a YouTube Music playlist can't hold.
-  String? get youtubeId => videoId ?? youtubeVideoIdOf(sourceUrl);
+  String? get youtubeId => videoId ?? downloadYoutubeId ?? youtubeVideoIdOf(sourceUrl);
 
   /// This song as YouTube Music streams it (for a YouTube Music playlist), or null without a [youtubeId].
   Track? get onYoutube => isRemote
@@ -294,6 +304,7 @@ class Track {
     int? trackNumber,
     int? discNumber,
     bool? tagged,
+    String? downloadYoutubeId,
   }) => Track(
     id: id,
     uri: uri ?? this.uri,
@@ -311,6 +322,7 @@ class Track {
     videoId: videoId,
     artworkUrl: artworkUrl,
     artistId: artistId,
+    downloadYoutubeId: downloadYoutubeId ?? this.downloadYoutubeId,
     extensionData: extensionData,
   );
 
@@ -329,6 +341,7 @@ class Track {
     'tagged': tagged,
     'sourceUrl': sourceUrl,
     'videoId': videoId,
+    if (downloadYoutubeId != null) 'downloadYoutubeId': downloadYoutubeId,
     'artworkUrl': artworkUrl,
     if (artistId != null) 'artistId': artistId,
     if (extensionData != null) 'extensionData': extensionData,

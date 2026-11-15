@@ -18,6 +18,7 @@ import '../../services/video_mode.dart';
 import '../../services/youtube_stream.dart';
 import '../download_editor.dart';
 import '../download_options.dart';
+import '../download_source_dialog.dart';
 import '../flac_convert_dialog.dart';
 import '../shell_scope.dart';
 import '../soundcloud_pages.dart' show openSoundcloud;
@@ -53,6 +54,7 @@ class TrackRow extends StatefulWidget {
     this.index,
     this.showAlbum = true,
     this.showArtwork = true,
+    this.currentOccurrence,
   });
 
   final Track track;
@@ -64,6 +66,10 @@ class TrackRow extends StatefulWidget {
   final int? index;
   final bool showAlbum;
   final bool showArtwork;
+
+  /// Queue entries are occurrences, so an upcoming copy must not inherit the
+  /// current song's highlight or pause-on-click behavior just because IDs match.
+  final bool? currentOccurrence;
 
   /// Row bodies built, and hover-only leaf rebuilds, for tests.
   @visibleForTesting
@@ -95,7 +101,7 @@ class _TrackRowState extends State<TrackRow> {
     // only two rows of a long list differ.
     return PlayerSelect<(bool, bool, bool)>(
       select: (c) {
-        final current = c.currentTrack?.id == t.id;
+        final current = widget.currentOccurrence ?? (c.currentTrack?.id == t.id);
         return (current, current && c.showsPlaying, t.streams && !c.isOffline(t));
       },
       builder: (context, s, _) => _row(context, isCurrent: s.$1, playing: s.$2, online: s.$3),
@@ -421,6 +427,10 @@ class TrackMenuButton extends StatelessWidget {
     final one = tracks.length == 1 ? tracks.first : null;
     if (tracks.isNotEmpty && tracks.every((t) => t.monochromeId != null || t.extensionId != null)) {
       c.youtube.enqueueTracks(tracks);
+      return;
+    }
+    if (one?.isRemote == true && !withVideo) {
+      await downloadFromSource(host, c, one!, force: force);
       return;
     }
     final choice = await chooseDownload(host, force: force, videoId: one?.videoId, track: one);

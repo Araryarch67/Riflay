@@ -1,4 +1,11 @@
 import 'dart:io';
+import 'dart:async';
+
+import 'package:riflay/services/youtube_importer.dart';
+import 'package:riflay/services/download_prefs.dart';
+import 'package:riflay/services/ytmusic_web.dart';
+import 'package:riflay/models/track.dart';
+import 'package:riflay/services/library_views.dart';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
@@ -12,6 +19,8 @@ void main() {
   test(
     'verified Tidal downloads HELP through Riflay, remuxes FLAC and decodes the entire song',
     () async {
+      final previousHttpOverrides = HttpOverrides.current;
+      HttpOverrides.global = null;
       SharedPreferences.setMockInitialValues({});
       final support = Directory(p.join(Platform.environment['APPDATA']!, 'dev.riflay', 'riflay', 'spotiflac'));
       final root = await Directory.systemTemp.createTemp('riflay-tidal-live-');
@@ -36,14 +45,54 @@ void main() {
           'args': {'track': 'tidal:352392340'},
         });
         final source = Spotiflac.track('tidal-web', Map<String, dynamic>.from(data as Map))!;
-        final saved = await engine.download(source, await Directory(p.join(root.path, 'downloads')).create());
+        final results = await YtMusicWeb.anonymous().search('HELP!! Kobo Kanaeru');
+        final hit = results.songs.firstWhere(
+          (song) => song.title.toUpperCase().contains('HELP') && song.artist.toLowerCase().contains('kobo'),
+        );
+        final origin = Track.youtube(
+          videoId: hit.videoId,
+          title: hit.title,
+          artist: hit.artist,
+          duration: hit.duration,
+        );
+        final folder = await Directory(p.join(root.path, 'downloads')).create();
+        await DownloadPrefs.instance.load();
+        await DownloadPrefs.instance.setFolder(folder.path);
+        final ready = Completer<Track>();
+        final importer = YoutubeImporter(
+          extensionRuntime: engine,
+          onTrackReady: (track) async {
+            ready.complete(track);
+          },
+        );
+        importer.addListener(() {
+          for (final job in importer.jobs) {
+            if (job.status == DownloadStatus.failed && !ready.isCompleted) {
+              ready.completeError(StateError(job.error ?? 'Download failed'));
+            }
+          }
+        });
+        late Track saved;
+        try {
+          expect(importer.enqueueTracks([source], youtubeOrigin: origin, extensionQuality: 'LOSSLESS'), 1);
+          saved = await ready.future.timeout(const Duration(minutes: 4));
+        } finally {
+          await Future<void>.delayed(Duration.zero);
+          importer.dispose();
+        }
+        expect(saved.youtubeId, origin.videoId);
+        final restored = Track.fromJson(saved.toJson());
+        final views = LibraryViews([restored], 1);
+        expect(views.downloads[origin.offlineId]?.id, restored.id);
+        expect(views.downloads[source.offlineId]?.id, restored.id);
         expect(saved.path, endsWith('.flac'));
         expect(await File(saved.path!).length(), greaterThan(1024 * 1024));
         final decoded = await Process.run('ffmpeg', ['-v', 'error', '-i', saved.path!, '-f', 'null', '-']);
         expect(decoded.exitCode, 0, reason: '${decoded.stderr}');
         expect('${decoded.stderr}'.trim(), isEmpty);
-        expect(saved.offlineId, source.offlineId);
+        expect(saved.streams, isFalse);
       } finally {
+        HttpOverrides.global = previousHttpOverrides;
         await engine.close();
         await root.delete(recursive: true);
       }

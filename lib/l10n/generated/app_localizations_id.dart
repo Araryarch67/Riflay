@@ -6325,4 +6325,21 @@ class AppLocalizationsId extends AppLocalizations {
   @override
   String get showPlayerCloseSubtitle =>
       'Tampilkan panah atas pada gaya player selain Classic. Geser ke bawah untuk menutup saat tombol disembunyikan.';
+
+  @override
+  String get downloadSource => 'Sumber unduhan';
+
+  @override
+  String downloadMatchTitle(String source) {
+    return 'Cari padanan di $source';
+  }
+
+  @override
+  String get downloadMatchReview => 'Pilih rekaman yang akan diunduh. Periksa artis, versi, dan durasinya.';
+
+  @override
+  String get downloadMatchFailed => 'Tidak dapat mencari di sumber ini. Coba lagi atau pilih sumber lain.';
+
+  @override
+  String get downloadMatchEmpty => 'Tidak ada lagu yang cocok. Coba judul lebih pendek atau sumber lain.';
 }
