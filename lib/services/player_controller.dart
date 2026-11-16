@@ -692,8 +692,8 @@ class PlayerController extends ChangeNotifier {
         if (local != null) continue;
         if (_smartMerge.streams(t)) {
           // Look the next song up now; its YouTube stream is only fetched ahead when it will be the one played.
-          _smartMerge.match(t).then((found) {
-            if (found.isEmpty && !_disposed && nextTrack?.id == t.id) _resolveAhead(t.videoId!);
+          _smartMerge.choose(t).then((choice) {
+            if (choice == null && !_disposed && nextTrack?.id == t.id) _resolveAhead(t.videoId!);
           }).ignore();
         } else {
           _resolveAhead(t.videoId!);
@@ -1388,6 +1388,13 @@ class PlayerController extends ChangeNotifier {
       _recentIds.removeWhere(blockedRecents.contains);
       _recentRemote.removeWhere((id, _) => blockedRecents.contains(id));
       await _storeRecents();
+    }
+    // Warm the shared catalogue connection and first audio bytes before the
+    // first click, using only the two most recently played YouTube songs.
+    if (!Host.isWeb) {
+      for (final track in recentlyPlayed.where((track) => track.isRemote).take(2)) {
+        _smartMerge.prefetch(track);
+      }
     }
     discord.enabled = prefs.getBool(_discordKey) ?? true;
     try {

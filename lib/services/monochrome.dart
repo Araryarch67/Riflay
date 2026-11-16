@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:http/http.dart' as http;
 
 import '../models/track.dart';
 import 'merged_download.dart';
@@ -36,7 +37,10 @@ class MonochromeCollection {
 /// Monochrome's current public Tracks API, plus the HiFi API for older shares.
 /// No Origin/Referer impersonation: a refusing service remains unavailable.
 class Monochrome extends SongSource {
-  Monochrome({super.client});
+  Monochrome({http.Client? client}) : super(client: client ?? _sharedClient);
+  // Reuse TLS connections across catalogue queries instead of creating and
+  // closing a new connection for every title and artist search.
+  static final _sharedClient = _SharedClient();
   static final instance = Monochrome();
   static const tracksBase = 'https://tracks.monochrome.st';
   static const hifiBase = String.fromEnvironment('RIFLAY_MONOCHROME_API', defaultValue: 'https://arran.monochrome.tf');
@@ -190,7 +194,10 @@ class Monochrome extends SongSource {
   /// a file that starts as one. Some songs are only on the service as AAC, which is no better than YouTube's own.
   Future<bool> lossless(String stream) async {
     if (stream.trimLeft().startsWith('<')) {
-      final codecs = RegExp(r'codecs="([^"]*)"', caseSensitive: false).allMatches(stream).map((m) => m[1]!.toLowerCase());
+      final codecs = RegExp(
+        r'codecs="([^"]*)"',
+        caseSensitive: false,
+      ).allMatches(stream).map((m) => m[1]!.toLowerCase());
       return codecs.isNotEmpty && codecs.every((c) => c.contains('flac') || c.contains('alac'));
     }
     final url = Uri.tryParse(stream);
@@ -219,4 +226,16 @@ class Monochrome extends SongSource {
     }
     throw const FormatException('Monochrome stream unavailable');
   }
+}
+
+/// One connection pool for every Monochrome request, opened on the first one: not when Smart merge or a test merely
+/// creates [Monochrome.instance]. Shared, so it is never closed.
+class _SharedClient extends http.BaseClient {
+  http.Client? _inner;
+
+  @override
+  Future<http.StreamedResponse> send(http.BaseRequest request) => (_inner ??= http.Client()).send(request);
+
+  @override
+  void close() {}
 }
