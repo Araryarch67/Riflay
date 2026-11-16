@@ -64,6 +64,15 @@ class AppRelease {
     return installed.contains('-');
   }
 
+  /// Newer than [installed] by its patch number only (1.5.0 to 1.5.1): fixes, not worth interrupting for. It is
+  /// still offered in Settings › About.
+  bool patchAbove(String installed) {
+    final match = RegExp(r'^(\d+)\.(\d+)\.(\d+)').firstMatch(installed);
+    if (match == null || !newerThan(installed)) return false;
+    final latest = version.split('.').map(int.parse).toList();
+    return latest[0] == int.parse(match.group(1)!) && latest[1] == int.parse(match.group(2)!);
+  }
+
   /// Prefer the first supported ABI reported by Android, then the universal APK.
   UpdateAsset? androidAsset(List<String> abis) {
     for (final abi in abis) {
@@ -102,7 +111,10 @@ class AppUpdates {
     final updates = AppUpdates();
     try {
       final release = await updates.check();
-      if (release.newerThan(updates.installedVersion)) return found(updates, release);
+      // A patch release (x.y.Z) doesn't pop up: it waits in Settings › About.
+      if (release.newerThan(updates.installedVersion) && !release.patchAbove(updates.installedVersion)) {
+        return found(updates, release);
+      }
     } catch (e) {
       debugPrint('Update check at start: $e');
     }

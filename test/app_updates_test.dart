@@ -52,6 +52,22 @@ void main() {
     expect(release.newerThan('2.0.0'), isFalse);
   });
 
+  test('only a minor or major release pops up; a patch release waits in Settings', () {
+    final release = AppRelease.parse(releaseJson()); // 1.10.0
+    expect(release.patchAbove('1.9.9'), isFalse, reason: 'a minor release pops up');
+    expect(release.patchAbove('0.10.0'), isFalse, reason: 'a major release pops up');
+    expect(release.patchAbove('1.10.0'), isFalse, reason: 'not newer');
+    final patch = AppRelease.parse({
+      ...releaseJson(),
+      'tag_name': 'v1.10.3',
+      'html_url': '${AppRelease.repository}/releases/tag/v1.10.3',
+      'assets': const [],
+    });
+    expect(patch.patchAbove('1.10.0'), isTrue);
+    expect(patch.patchAbove('1.10.0+104'), isTrue);
+    expect(patch.patchAbove('1.10.3'), isFalse);
+  });
+
   test('a release candidate is never offered, and its stable version is offered to it', () {
     // v1.3.0-rc1 is published as a pre-release, with an rc tag: not a stable release.
     final rc = {...releaseJson(), 'tag_name': 'v1.3.0-rc1', 'prerelease': true};
