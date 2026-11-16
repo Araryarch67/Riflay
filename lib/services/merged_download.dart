@@ -163,7 +163,7 @@ class MergedDownload {
         } catch (e) {
           if (_disposed) return;
           if (++failures > _tries) rethrow;
-          debugPrint('Smart merge download: ${e.runtimeType}, again from byte $_received ($failures)');
+          debugPrint('Smart merge download: $e, again from byte $_received ($failures)');
           await Future<void>.delayed(Duration(milliseconds: math.min(5000, 500 * failures)));
         }
       }
