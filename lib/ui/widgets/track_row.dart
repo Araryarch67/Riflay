@@ -178,6 +178,9 @@ class _TrackRowState extends State<TrackRow> {
                       color: isCurrent && !card ? AppColors.accent : AppColors.textPrimary,
                       fontWeight: FontWeight.w600,
                     ),
+                    // The line keeps the app font's height: a symbol drawn from a taller fallback font ("♡" from
+                    // Segoe UI Symbol on Windows) made the row a pixel too tall for its room.
+                    strutStyle: _line(text.bodyLarge),
                   ),
                   const SizedBox(height: 2),
                   Row(
@@ -204,6 +207,7 @@ class _TrackRowState extends State<TrackRow> {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: text.bodyMedium?.copyWith(color: AppColors.textSecondary),
+                          strutStyle: _line(text.bodyMedium),
                         ),
                       ),
                       if (quality != null) ...[
@@ -753,3 +757,6 @@ Future<void> confirmDeleteDownload(BuildContext context, PlayerController c, Tra
   final failed = await c.deleteDownloads([download]);
   messenger?.showSnackBar(SnackBar(content: Text(failed > 0 ? tr.removedFileNotDeleted : tr.downloadDeleted)));
 }
+
+/// A line exactly as tall as [style]'s own font, whatever fallback font a character is drawn from.
+StrutStyle? _line(TextStyle? style) => style == null ? null : StrutStyle.fromTextStyle(style, forceStrutHeight: true);
