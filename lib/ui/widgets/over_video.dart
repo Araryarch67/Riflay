@@ -5,9 +5,10 @@ import 'package:flutter/widgets.dart';
 /// Dialogs, sheets and menus open over the app (Signal path, the ⋮ menu…), so the music video can make room for
 /// them instead of going away.
 ///
-/// On Windows the video is a window of its own over the app ([NativeVideoSurface]): nothing the app draws can lie
-/// over it. It used to hide whenever one of these was open, as if it weren't being watched; now it only gives up
-/// the part of the screen they take. Navigators report what they open here: one observer for each.
+/// On Linux the video is a GTK surface over the app ([NativeVideoSurface]): nothing the app draws can lie over it.
+/// It used to hide whenever one of these was open, as if it weren't being watched; now it only gives up the part of
+/// the screen they take. (Windows' video window lies under the app, which draws them over the playing video.)
+/// Navigators report what they open here: one observer for each.
 class OverVideo extends NavigatorObserver {
   OverVideo._();
 

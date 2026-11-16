@@ -1,10 +1,12 @@
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:flutter/rendering.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
+import '../../platform/host.dart';
 import 'over_video.dart';
 
 /// A Windows child window or Linux GTK surface that mpv draws into independently of Flutter.
@@ -20,6 +22,11 @@ abstract final class NativeVideoWindow {
     _placed = null;
     return _window ??= (await _channel.invokeMethod<int>('ensure'))!;
   }
+
+  /// Windows: the video's window lies under the Flutter view, which leaves the video's box clear, so whatever the
+  /// app draws over the box (a menu, a sheet, a dialog, its barrier) lies over the playing video. Linux's GTK
+  /// surface stays over the view and makes room for them instead ([OverVideo]).
+  static bool get behind => Host.isWindows;
 
   /// Whether the box now showing the video wants it to cover the box (cropped), not fit inside it.
   static final cover = ValueNotifier(false);
@@ -58,9 +65,10 @@ abstract final class NativeVideoWindow {
   }
 }
 
-/// Where the video goes: the native window is kept over this box after every frame that moves it (a scroll, a
-/// resize, the panel opening), cut to the scroll view it sits in, and hidden while a menu or dialog is on top
-/// (Flutter can't draw over another window). [child] is what shows when the window is hidden (the cover).
+/// Where the video goes: the native window is kept on this box after every frame that moves it (a scroll, a
+/// resize, the panel opening) and cut to the scroll view it sits in. Windows: it lies under the Flutter view and
+/// the box goes clear, so menus and dialogs draw over the playing video. Linux: it lies over the view and makes
+/// room for them ([OverVideo]). [child] is what shows when the window is hidden (the cover).
 ///
 /// The newest one on screen gets the video; Video mode has one player.
 class NativeVideoSurface extends StatefulWidget {
@@ -85,16 +93,29 @@ class _NativeVideoSurfaceState extends State<NativeVideoSurface> {
 
   /// After every frame (none while nothing changes): where the newest showing surface is now.
   static void _afterFrame(Duration _) {
+    _NativeVideoSurfaceState? showing;
     for (final s in _surfaces.reversed) {
       final rects = s._rects();
       if (rects != null) {
         NativeVideoWindow.cover.value = s.widget.cover;
         NativeVideoWindow.fade.value = s.widget.fade;
-        return NativeVideoWindow._place(rects.clip, rects.full);
+        NativeVideoWindow._place(rects.clip, rects.full);
+        showing = s;
+        break;
       }
     }
-    NativeVideoWindow._place(null, Rect.zero);
+    if (showing == null) NativeVideoWindow._place(null, Rect.zero);
+    // The box with the video under it goes clear (its cover drawn again once the video leaves it), from the next
+    // frame: this one is already painted.
+    if (!NativeVideoWindow.behind) return;
+    for (final s in _surfaces) {
+      final on = identical(s, showing);
+      if (s._clear.value != on) SchedulerBinding.instance.addPostFrameCallback((_) => s._clear.value = on);
+    }
   }
+
+  /// Whether this box is clear, the video showing through it.
+  final _clear = ValueNotifier(false);
 
   ({Rect clip, Rect full})? _rects() {
     if (!mounted) return null;
@@ -110,9 +131,10 @@ class _NativeVideoSurfaceState extends State<NativeVideoSurface> {
     }
     final window = Offset.zero & View.of(context).physicalSize / ratio;
     clip = clip.intersect(window);
-    // A dialog, sheet or menu open over the app: the video makes room for it (nothing the app draws can lie over
-    // the video's window) and plays on beside it, unless too little of it would be left.
-    if (OverVideo.covering(clip) case final covered?) {
+    // Linux: a dialog, sheet or menu open over the app: the video makes room for it (nothing the app draws can lie
+    // over the video's surface) and plays on beside it, unless too little of it would be left. Windows' lies under.
+    final covered = NativeVideoWindow.behind ? null : OverVideo.covering(clip);
+    if (covered != null) {
       clip = OverVideo.beside(clip, covered);
       if (clip.width * clip.height < full.width * full.height * 0.15) return null;
     }
@@ -151,11 +173,59 @@ class _NativeVideoSurfaceState extends State<NativeVideoSurface> {
   @override
   void dispose() {
     _surfaces.remove(this);
+    _clear.dispose();
     // Gone (a page closed, the song changed): the next frame hides or moves the window.
     SchedulerBinding.instance.scheduleFrame();
     super.dispose();
   }
 
   @override
-  Widget build(BuildContext context) => widget.child;
+  Widget build(BuildContext context) => _Clear(clear: _clear, child: widget.child);
+}
+
+/// Paints [child] (the cover), or clears its box while [clear] is on: the video's window under the Flutter view
+/// shows there, and what is painted after it (menus, dialogs) lies over the video.
+class _Clear extends SingleChildRenderObjectWidget {
+  const _Clear({required this.clear, required super.child});
+
+  final ValueListenable<bool> clear;
+
+  @override
+  RenderObject createRenderObject(BuildContext context) => _RenderClear(clear);
+
+  @override
+  void updateRenderObject(BuildContext context, _RenderClear renderObject) => renderObject.clear = clear;
+}
+
+class _RenderClear extends RenderProxyBox {
+  _RenderClear(this._clear);
+
+  ValueListenable<bool> _clear;
+  set clear(ValueListenable<bool> v) {
+    if (identical(v, _clear)) return;
+    if (attached) {
+      _clear.removeListener(markNeedsPaint);
+      v.addListener(markNeedsPaint);
+    }
+    _clear = v;
+    markNeedsPaint();
+  }
+
+  @override
+  void attach(PipelineOwner owner) {
+    super.attach(owner);
+    _clear.addListener(markNeedsPaint);
+  }
+
+  @override
+  void detach() {
+    _clear.removeListener(markNeedsPaint);
+    super.detach();
+  }
+
+  @override
+  void paint(PaintingContext context, Offset offset) {
+    if (!_clear.value) return super.paint(context, offset);
+    context.canvas.drawRect(offset & size, Paint()..blendMode = BlendMode.clear);
+  }
 }

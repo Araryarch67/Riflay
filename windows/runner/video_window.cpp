@@ -44,7 +44,9 @@ void Place(const RECT& clip, const RECT& full) {
   }
   SetWindowPos(host_, nullptr, full.left - clip.left, full.top - clip.top, full.right - full.left,
                full.bottom - full.top, SWP_NOZORDER | SWP_NOACTIVATE);
-  SetWindowPos(clip_, HWND_TOP, clip.left, clip.top, w, h, SWP_NOACTIVATE | SWP_SHOWWINDOW);
+  // Under the Flutter view, which leaves its box clear (NativeVideoSurface): menus, sheets and dialogs the app
+  // opens draw over the video, which plays on beneath them.
+  SetWindowPos(clip_, HWND_BOTTOM, clip.left, clip.top, w, h, SWP_NOACTIVATE | SWP_SHOWWINDOW);
 }
 
 void Destroy() {

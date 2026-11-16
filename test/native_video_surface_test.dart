@@ -74,4 +74,48 @@ void main() {
     await tester.pumpWidget(const SizedBox());
     await tester.pump();
   });
+
+  testWidgets('Windows: the box goes clear while the video plays under it, and shows its cover once it leaves', (
+    tester,
+  ) async {
+    await NativeVideoWindow.ensure();
+    final visible = ValueNotifier(true);
+    addTearDown(visible.dispose);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ValueListenableBuilder(
+          valueListenable: visible,
+          builder: (context, on, _) => Center(
+            child: SizedBox(
+              width: 160,
+              height: 90,
+              child: TickerMode(
+                enabled: on,
+                child: const NativeVideoSurface(child: ColoredBox(color: Color(0xFF00FF00))),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    final box = tester.renderObject(find.byType(NativeVideoSurface));
+    bool clears(Symbol method, List<dynamic> args) =>
+        method == #drawRect && (args[1] as Paint).blendMode == BlendMode.clear;
+    if (NativeVideoWindow.behind) {
+      expect(box, paints..something(clears));
+      expect(box, isNot(paints..rect(color: const Color(0xFF00FF00))));
+    } else {
+      expect(box, paints..rect(color: const Color(0xFF00FF00)));
+    }
+
+    // Hidden (another page over it): the window goes away and the cover is back.
+    visible.value = false;
+    await tester.pump();
+    await tester.pump();
+    expect(placements.last, List.filled(8, 0));
+    expect(box, paints..rect(color: const Color(0xFF00FF00)));
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump();
+  });
 }
