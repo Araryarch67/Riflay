@@ -5695,6 +5695,11 @@ class AppLocalizationsJa extends AppLocalizations {
   String get dsPlaysFile => 'このデバイスのファイル';
 
   @override
+  String dsPlaysMerged(String source) {
+    return '$source(スマートマージ)';
+  }
+
+  @override
   String get dsVideoIdItag => '動画ID / itag';
 
   @override
@@ -6091,7 +6096,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get topicSourcesSummary => 'SoundCloud、Monochrome、SpotiFLAC拡張機能:検索と再生に使える追加のソース';
 
   @override
-  String get sourcesAbout => '追加の音楽サービス。Riflayは各サービスのサーバーから直接再生する。どれもオンにするまでオフ。';
+  String get sourcesAbout => '追加の音楽サービス。Riflayは各サービスのサーバーから直接再生する。どれもオフにするまでオン。';
 
   @override
   String get sourceMonochromeSubtitle => '検索の「すべて」にMonochromeの音楽を表示。利用可能な場合はFLACで再生';
@@ -6114,6 +6119,11 @@ class AppLocalizationsJa extends AppLocalizations {
   @override
   String get smartMergeSubtitle =>
       '同じ録音がある最良のソースからYouTube Musicの曲を再生する。まずライブラリのロスレスファイル、次にオンにした音楽ソース(Monochrome、FLAC)、なければYouTube Music。MV、歌詞、カバーはYouTube Musicのまま。';
+
+  @override
+  String smartMergeBadge(String source) {
+    return '音声:$source';
+  }
 
   @override
   String get spotifyCanvas => 'Canvas';

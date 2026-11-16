@@ -142,6 +142,7 @@ class HomePage extends StatelessWidget {
                   title: t.title,
                   subtitle: t.artist,
                   online: !c.isOffline(t),
+                  mergedMark: true,
                   onTap: () => shell.playAndOpen(() => c.playList(recent, i, from: tr.recentlyPlayed)),
                   onPlay: () => c.playList(recent, i, from: tr.recentlyPlayed),
                 );

@@ -13,6 +13,7 @@ import '../../services/audio_analysis.dart';
 import '../../services/audio_engine.dart';
 import '../../services/language.dart';
 import '../../services/player_controller.dart';
+import '../../services/smart_merge.dart';
 import '../../services/youtube_audio_source.dart';
 import '../theme.dart';
 import 'controls.dart';
@@ -285,7 +286,12 @@ class _DetailStatsSheetState extends State<_DetailStatsSheet> {
   static String _db(double gain) => '${(20 * math.log(gain) / math.ln10).toStringAsFixed(1)} dB';
 
   List<_Section> _sections(PlayerController c, Track track, SignalPath p, AppLocalizations t) {
-    final streaming = c.player.sequenceState.currentSource is YoutubeAudioSource;
+    final source = c.player.sequenceState.currentSource;
+    // Smart merge: the sound is a better source's (Monochrome) or a lossless file in the library, and the song's
+    // own YouTube stream until one is found.
+    final merged = track.videoId == null ? null : SmartMerge.instance.soundFrom(track.videoId!);
+    final mergedStream = source is SmartMergeAudioSource && source.from != null;
+    final streaming = source is YoutubeAudioSource || (source is SmartMergeAudioSource && source.from == null);
     final yt = track.videoId == null ? null : YoutubeAudioSource.statsOf(track.videoId!);
     final stream = streaming ? yt?.stream : null;
     final audio = c.audio;
@@ -307,6 +313,10 @@ class _DetailStatsSheetState extends State<_DetailStatsSheet> {
             t.dsPlaysFrom,
             streaming
                 ? t.dsPlaysStream
+                : mergedStream
+                ? t.dsPlaysMerged(source.from!.name)
+                : merged?.source == TrackSource.device
+                ? t.dsPlaysMerged(t.yourLibrary)
                 : track.videoId != null
                 ? t.dsPlaysDownloaded
                 : t.dsPlaysFile,

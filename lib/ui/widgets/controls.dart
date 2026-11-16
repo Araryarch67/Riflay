@@ -13,6 +13,7 @@ import '../../services/audio_analysis.dart';
 import '../../services/layout_prefs.dart';
 import '../../services/metadata.dart';
 import '../../services/player_controller.dart';
+import '../../services/smart_merge.dart';
 import '../../services/ui_beat.dart';
 import '../debug_switches.dart';
 import '../shortcuts.dart';
@@ -932,6 +933,7 @@ class MediaCard extends StatefulWidget implements ColorFreeSelf {
     this.onPlay,
     this.circle = false,
     this.online = false,
+    this.mergedMark = false,
   });
 
   final Track? track;
@@ -943,6 +945,10 @@ class MediaCard extends StatefulWidget implements ColorFreeSelf {
 
   /// Streams from YouTube Music (needs internet): a small cloud before the subtitle.
   final bool online;
+
+  /// A song card (Recently played): when Smart merge played its sound from another source this session, the
+  /// mark shows both, as in rows.
+  final bool mergedMark;
 
   @override
   State<MediaCard> createState() => _MediaCardState();
@@ -994,10 +1000,12 @@ class _MediaCardState extends State<MediaCard> {
     return MouseRegion(
       onEnter: (_) => setState(() {
         _hover = true;
+        SmartMerge.instance.pointerOn(widget.track);
         _built = null;
       }),
       onExit: (_) => setState(() {
         _hover = false;
+        SmartMerge.instance.pointerOff();
         _built = null;
       }),
       child: _HoverFill(
@@ -1074,7 +1082,14 @@ class _MediaCardState extends State<MediaCard> {
                     mainAxisAlignment: widget.circle ? MainAxisAlignment.center : MainAxisAlignment.start,
                     children: [
                       if (widget.online) ...[
-                        SourceMark(online: true, source: widget.track?.source ?? TrackSource.youtubeMusic, size: 13),
+                        if (widget.mergedMark && widget.track != null)
+                          SmartMergeMark(
+                            track: widget.track!,
+                            size: 13,
+                            fallback: SourceMark(online: true, source: widget.track!.source, size: 13),
+                          )
+                        else
+                          SourceMark(online: true, source: widget.track?.source ?? TrackSource.youtubeMusic, size: 13),
                         const SizedBox(width: 4),
                       ],
                       Flexible(
@@ -1241,6 +1256,125 @@ class SourceMark extends StatelessWidget {
           ? tr.fromSource('Spotify')
           : tr.streamsOnline,
       child: mark,
+    );
+  }
+}
+
+/// Where a song's sound comes from, kept up to date: the song's own mark ([fallback]) until Smart merge plays it
+/// from a lossless file in the library or a better source, then the two joined ([MergedSourceMark]).
+class SmartMergeMark extends StatelessWidget {
+  const SmartMergeMark({super.key, required this.track, required this.fallback, this.size = 14});
+
+  final Track track;
+  final Widget fallback;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    final id = track.videoId;
+    if (id == null) return fallback;
+    final merge = SmartMerge.instance;
+    return ListenableBuilder(
+      listenable: merge.changes,
+      builder: (context, _) {
+        final sound = merge.soundFrom(id);
+        return AnimatedSwitcher(
+          duration: LayoutPrefs.dur(const Duration(milliseconds: 220)),
+          layoutBuilder: (current, previous) =>
+              Stack(alignment: Alignment.centerLeft, children: [...previous, ?current]),
+          child: sound == null
+              ? KeyedSubtree(key: const ValueKey('own'), child: fallback)
+              : MergedSourceMark(
+                  key: ValueKey(sound),
+                  song: track.source,
+                  sound: sound.source,
+                  soundName: sound.source == TrackSource.device ? tr.yourLibrary : sound.name,
+                  size: size * 0.93,
+                ),
+        );
+      },
+    );
+  }
+}
+
+/// Smart merge's mark: the song's own service and the one its sound comes from, joined in one badge
+/// ("YouTube Music × Monochrome"), so it reads as the two working together and not as two separate facts. When it
+/// comes on screen the second mark slides out of the first and the × turns into place.
+class MergedSourceMark extends StatelessWidget {
+  const MergedSourceMark({
+    super.key,
+    this.song = TrackSource.youtubeMusic,
+    this.sound = TrackSource.monochrome,
+    this.soundName = 'Monochrome',
+    this.size = 14,
+  });
+
+  /// Where the song is from: its video, lyrics, cover and likes.
+  final TrackSource song;
+
+  /// Where its sound comes from ([TrackSource.device]: a file in the library), and its name for the tooltip.
+  final TrackSource sound;
+  final String soundName;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final ink = scheme.onSecondaryContainer;
+    final soundMark = sound == TrackSource.device
+        ? Icon(Icons.library_music_rounded, size: size, color: ink)
+        : SourceMark(online: true, source: sound, size: size, tooltip: false, color: ink);
+    return Tooltip(
+      message: tr.smartMergeBadge(soundName),
+      child: TweenAnimationBuilder<double>(
+        tween: Tween(begin: 0, end: 1),
+        duration: LayoutPrefs.dur(const Duration(milliseconds: 650)),
+        curve: Curves.easeOutCubic,
+        builder: (context, t, joined) => DecoratedBox(
+          decoration: ShapeDecoration(
+            color: Color.lerp(scheme.secondaryContainer.withValues(alpha: 0), scheme.secondaryContainer, t),
+            shape: const StadiumBorder(),
+          ),
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: size * 0.45 * t, vertical: 1),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SourceMark(
+                  online: true,
+                  source: song,
+                  size: size,
+                  tooltip: false,
+                  color: Color.lerp(AppColors.textSecondary, ink, t),
+                ),
+                ClipRect(
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    widthFactor: t,
+                    child: Opacity(
+                      opacity: t,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Padding(
+                            padding: EdgeInsets.symmetric(horizontal: size * 0.28),
+                            child: Transform.rotate(
+                              angle: (1 - t) * 1.5708,
+                              child: Icon(Icons.close_rounded, size: size * 0.72, color: ink.withValues(alpha: 0.7)),
+                            ),
+                          ),
+                          joined!,
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        child: soundMark,
+      ),
     );
   }
 }

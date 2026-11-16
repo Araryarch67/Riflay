@@ -3,8 +3,11 @@ import 'dart:convert';
 import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:riflay/models/track.dart';
+import 'package:riflay/services/merged_download.dart';
 import 'package:riflay/services/monochrome.dart';
 import 'package:riflay/services/smart_merge.dart';
 import 'package:riflay/services/sources/music_sources.dart';
@@ -48,6 +51,8 @@ class _Source implements MergeProvider {
   @override
   final String name;
   @override
+  TrackSource get source => TrackSource.monochrome;
+  @override
   bool on;
   final List<Track> results;
   final bool fails;
@@ -73,8 +78,18 @@ class _Source implements MergeProvider {
 }
 
 class _Monochrome extends Monochrome {
+  _Monochrome({this.flac = true});
+  final bool flac;
+  final checked = <String>[];
+
   @override
   Future<String> manifest(String id) async => 'https://cdn.example/$id.flac';
+
+  @override
+  Future<bool> lossless(String stream) async {
+    checked.add(stream);
+    return flac;
+  }
 }
 
 class _Youtube extends StreamAudioSource {
@@ -93,7 +108,8 @@ class _Youtube extends StreamAudioSource {
   }
 }
 
-SmartMerge _merge(List<MergeProvider> providers) => SmartMerge(providers: providers, enabled: () => true);
+SmartMerge _merge(List<MergeProvider> providers) =>
+    SmartMerge(providers: providers, enabled: () => true, downloads: false);
 
 Future<String> _body(StreamAudioResponse r) async => utf8.decode([await for (final chunk in r.stream) ...chunk]);
 
@@ -139,29 +155,33 @@ void main() {
     expect(await merge.match(_youtube()), isEmpty);
     preferred.on = true;
     expect((await merge.match(_youtube())).single.provider, same(preferred));
-    expect(preferred.asked.length, 2);
+    expect(preferred.asked.length, 4, reason: 'two lookups, each by title and by artist');
     expect(await merge.match(_youtube(title: 'Other Song')), isEmpty);
   });
 
   test('a late old failure cannot evict a newer cached match', () async {
     final pending = Completer<List<Track>>();
     var calls = 0;
+    var hanging = true;
     final provider = _Source(
       'source',
       [],
       searcher: (_) async {
-        if (++calls == 1) return pending.future;
+        calls++;
+        // The old lookup's questions (title and artist) wait; the new one's are answered.
+        if (hanging) return pending.future;
         return [_mono('2')];
       },
     );
     final merge = _merge([provider]);
     final old = merge.match(_youtube());
+    hanging = false;
     merge.clear();
     expect((await merge.match(_youtube())).single.track.id, 'monochrome:2');
     pending.completeError(const FormatException('old failure'));
     await old;
     await merge.match(_youtube());
-    expect(calls, 2);
+    expect(calls, 4);
   });
 
   test('a hanging catalogue is bounded and does not suppress another source', () async {
@@ -188,10 +208,25 @@ void main() {
       ],
       enabled: () => true,
       streamTimeout: const Duration(milliseconds: 5),
+      downloads: false,
     );
     final source = SmartMergeAudioSource(_youtube(), youtube: _Youtube(), merge: merge);
     expect(await _body(await source.request()), contains('https://working.example/'));
     expect(source.from?.name, 'working');
+  });
+
+  test('a source that is only slow to answer is asked again next time, not given up on', () async {
+    final merge = SmartMerge(
+      providers: [_Source('slow', [_mono('1')], resolver: (_) => Completer<String>().future)],
+      enabled: () => true,
+      streamTimeout: const Duration(milliseconds: 5),
+      downloads: false,
+    );
+    final source = SmartMergeAudioSource(_youtube(), youtube: _Youtube(), merge: merge);
+    expect((await source.request()).contentType, 'audio/webm');
+    await Future<void>.delayed(const Duration(milliseconds: 20));
+    expect(merge.gaveUpOn('abcdefghijk'), isFalse);
+    expect(merge.wants(_youtube()), isTrue);
   });
 
   test('queued sources honour disable and discard stale in-flight resolution', () async {
@@ -202,6 +237,7 @@ void main() {
         _Source('source', [_mono('1')], resolver: (_) => pending.future),
       ],
       enabled: () => enabled,
+      downloads: false,
     );
     final youtube = _Youtube();
     final source = SmartMergeAudioSource(_youtube(), youtube: youtube, merge: merge);
@@ -277,6 +313,28 @@ void main() {
       expect(SmartMerge.best(_youtube(artist: 'Marlow Band'), [_mono('1', artist: 'Marlow B')]), isNull);
     });
 
+    test('a title given in two scripts matches its own half; an artist in another script needs the source', () {
+      final song = _youtube(
+        title: 'A Horny Money World ～伝説の夜～ - A Horny Money World ~legendary night~',
+        artist: 'Houshou Marine',
+        seconds: 196,
+      );
+      final match = _mono('1', title: 'A Horny Money World ～伝説の夜～', artist: '宝鐘マリン', seconds: 197);
+      expect(SmartMerge.best(song, [match]), isNull, reason: 'the names alone cannot be compared');
+      expect(SmartMerge.best(song, [match], byArtist: true), same(match));
+      expect(
+        SmartMerge.best(song, [
+          _mono('2', title: 'A Horny Money World', artist: 'Someone Else', seconds: 197),
+        ], byArtist: true),
+        isNull,
+        reason: 'a name that can be compared and differs is another artist',
+      );
+      expect(
+        SmartMerge.best(song, [_mono('3', title: 'Legendary Night', artist: '宝鐘マリン', seconds: 197)], byArtist: true),
+        isNull,
+      );
+    });
+
     test('the closest in length wins among the same recording', () {
       final near = _mono('2', seconds: 200), far = _mono('1', seconds: 202);
       expect(SmartMerge.best(_youtube(), [far, near]), same(near));
@@ -293,14 +351,14 @@ void main() {
     final merge = _merge([found]);
     expect((await merge.match(_youtube())).single.track.id, 'monochrome:tracks:track:1');
     await merge.match(_youtube());
-    expect(found.asked, ['Glass Weather'], reason: 'by title; the artist is only asked when that finds nothing');
+    expect(found.asked, unorderedEquals(['Glass Weather', 'Marlow Quartet']), reason: 'title and artist, once each');
 
     final down = _Source('b', const [], fails: true);
     final failing = _merge([down]);
     expect(await failing.match(_youtube()), isEmpty);
     await pumpEventQueue();
     await failing.match(_youtube());
-    expect(down.asked, hasLength(2));
+    expect(down.asked, hasLength(4));
   });
 
   test('every source that is on is asked, in order of preference, and one that is off is left alone', () async {
@@ -343,10 +401,96 @@ void main() {
     expect(await _body(await source.request()), contains('https://second.example/monochrome:88'));
   });
 
+  test('a song waits a while for its better sound, then plays from YouTube; the next play has it at once', () async {
+    final answer = Completer<List<Track>>();
+    final merge = SmartMerge(
+      providers: [_Source('slow', [], searcher: (_) => answer.future)],
+      enabled: () => true,
+      downloads: false,
+      patience: const Duration(milliseconds: 20),
+    );
+    final first = SmartMergeAudioSource(_youtube(), youtube: _Youtube(), merge: merge);
+    expect((await first.request()).contentType, 'audio/webm', reason: 'past its patience the song plays from YouTube');
+    expect(first.from, isNull, reason: 'and stays there: no switch in the middle of the song');
+    answer.complete([_mono('tracks:track:1')]);
+    await pumpEventQueue();
+    final again = SmartMergeAudioSource(_youtube(), youtube: _Youtube(), merge: merge);
+    expect((await again.request()).contentType, 'application/vnd.apple.mpegurl', reason: 'the lookup carried on');
+    expect(again.from?.name, 'slow');
+    expect(merge.soundFrom('abcdefghijk')?.name, 'slow', reason: 'its cards (Recently played) show where the sound came from');
+    merge.giveUp('abcdefghijk');
+    expect(merge.soundFrom('abcdefghijk'), isNull);
+  });
+
+  test('a song got ready ahead (the next one, or one the pointer rests on) is asked once and opens at once', () async {
+    final source = _Source('source', [_mono('tracks:track:1')]);
+    final merge = _merge([source]);
+    merge.pointerOn(_youtube());
+    merge.pointerOff();
+    await Future<void>.delayed(const Duration(milliseconds: 400));
+    expect(source.asked, isEmpty, reason: 'passing over a row fetches nothing');
+    merge.pointerOn(_youtube());
+    await Future<void>.delayed(const Duration(milliseconds: 400));
+    expect(source.asked, isNotEmpty, reason: 'resting on it gets it ready');
+    final asked = source.asked.length;
+    final playing = SmartMergeAudioSource(_youtube(), youtube: _Youtube(), merge: merge);
+    await playing.request();
+    expect(playing.from?.name, 'source');
+    expect(source.asked, hasLength(asked), reason: 'playing it asks nothing more');
+  });
+
+  test('a match is remembered between sessions, so a song played before is not looked up again', () async {
+    SharedPreferences.setMockInitialValues({});
+    final first = _Source('Monochrome', [_mono('tracks:track:1')]);
+    final before = SmartMerge(providers: [first], enabled: () => true, downloads: false, remembers: true);
+    await before.choose(_youtube());
+    await pumpEventQueue();
+    final later = _Source('Monochrome', [_mono('tracks:track:1')]);
+    final after = SmartMerge(providers: [later], enabled: () => true, downloads: false, remembers: true);
+    final playing = SmartMergeAudioSource(_youtube(), youtube: _Youtube(), merge: after);
+    await playing.request();
+    expect(playing.from, same(later));
+    expect(later.asked, isEmpty, reason: 'the remembered match answers at once');
+    after.giveUp('abcdefghijk');
+    await pumpEventQueue();
+    final third = _Source('Monochrome', [_mono('tracks:track:1')]);
+    await SmartMerge(providers: [third], enabled: () => true, downloads: false, remembers: true).choose(_youtube());
+    expect(third.asked, isNotEmpty, reason: 'one that failed is forgotten and looked up afresh');
+  });
+
   test('Monochrome: a native song plays from its address, an older share from a fresh manifest', () async {
     final provider = MonochromeMerge(_Monochrome());
     expect(await provider.stream(_mono('tracks:track:77')), 'https://tracks.monochrome.st/track/77');
     expect(await provider.stream(_mono('12345')), 'https://cdn.example/12345.flac');
+  });
+
+  test('Monochrome: a song it has only in AAC is not merged, and each song is checked once', () async {
+    final lossy = _Monochrome(flac: false);
+    await expectLater(MonochromeMerge(lossy).stream(_mono('tracks:track:77')), throwsFormatException);
+    final flac = _Monochrome();
+    final provider = MonochromeMerge(flac);
+    await provider.stream(_mono('tracks:track:77'));
+    await provider.stream(_mono('tracks:track:77'));
+    expect(flac.checked, hasLength(1));
+  });
+
+  test('Monochrome: FLAC is told by its first bytes, or by the codecs a manifest names', () async {
+    addTearDown(MergedDownload.forgetAll);
+    Monochrome serving(List<int> file) => Monochrome(
+      client: MockClient.streaming(
+        (request, _) async => http.StreamedResponse(
+          Stream.value(file),
+          206,
+          contentLength: file.length,
+          headers: {'content-range': 'bytes 0-${file.length - 1}/${file.length}'},
+        ),
+      ),
+    );
+    expect(await serving(ascii.encode('fLaC')).lossless('https://tracks.example/1'), isTrue);
+    expect(await serving([0, 0, 0, 0x20, ...ascii.encode('ftyp')]).lossless('https://tracks.example/2'), isFalse);
+    final m = Monochrome();
+    expect(await m.lossless('<MPD><Representation codecs="flac"/></MPD>'), isTrue);
+    expect(await m.lossless('<MPD><Representation codecs="mp4a.40.2"/></MPD>'), isFalse);
   });
 
   test('without a match, or when no source can stream it, the song plays from YouTube', () async {
@@ -391,8 +535,8 @@ void main() {
     expect(merge.local(_youtube(), const [], 4), isNull);
   });
 
-  test('off until turned on; the streaming sources are asked only when one is on', () async {
-    SharedPreferences.setMockInitialValues({});
+  test('off once turned off; the streaming sources are asked only when one is on', () async {
+    SharedPreferences.setMockInitialValues({'sources.smartMerge.v1': false, 'sources.monochrome.v1': false});
     final sources = MusicSources.instance..reset();
     await sources.load();
     final song = _youtube();

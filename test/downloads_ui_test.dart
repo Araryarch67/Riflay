@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:riflay/main.dart';
 import 'package:riflay/models/track.dart';
+import 'package:riflay/services/sources/music_sources.dart';
 import 'package:riflay/services/download_prefs.dart';
 import 'package:riflay/services/player_controller.dart';
 import 'package:riflay/services/monochrome.dart';
@@ -212,7 +213,9 @@ void main() {
     final song = Track.youtube(videoId: 'dQw4w9WgXcQ', title: 'Never Gonna', artist: 'Rick');
 
     Future<PlayerController> pumpButton(WidgetTester tester, {Track? track}) async {
-      SharedPreferences.setMockInitialValues({'library.v1': jsonEncode(<Object>[])});
+      // Monochrome off: with it on, a YouTube song asks which source to download from first.
+      SharedPreferences.setMockInitialValues({'library.v1': jsonEncode(<Object>[]), 'sources.monochrome.v1': false});
+      MusicSources.instance.reset();
       final prefs = DownloadPrefs.instance;
       await tester.runAsync(() async {
         await prefs.load();

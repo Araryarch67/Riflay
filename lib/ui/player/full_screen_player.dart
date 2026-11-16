@@ -16,6 +16,7 @@ import '../theme.dart';
 import '../widgets/controls.dart';
 import '../widgets/audio_visualizer.dart';
 import '../widgets/marquee_text.dart';
+import '../widgets/signal_path.dart';
 import '../widgets/stats_for_nerds.dart';
 import '../widgets/video_mode.dart';
 import 'now_playing_page.dart' show BlurredCover;
@@ -134,6 +135,11 @@ class _FullScreenPlayerState extends State<FullScreenPlayer> {
                         suffix: next == null ? '' : '   ·   Next: ${next.title}',
                         style: text.bodyLarge?.copyWith(color: AppColors.textSecondary),
                       ),
+                      // The file's type, its quality and the bitrate as it plays.
+                      if (LayoutPrefs.instance.showQualityBadge) ...[
+                        const SizedBox(height: 6),
+                        Transform.translate(offset: const Offset(-6, 0), child: const QualityBadge(liveBitrate: true)),
+                      ],
                     ],
                   ),
                 ),

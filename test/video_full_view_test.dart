@@ -73,7 +73,8 @@ void main() {
   });
 
   Future<_Player> show(WidgetTester tester, {Size size = _portrait}) async {
-    SharedPreferences.setMockInitialValues({'library.v1': jsonEncode(<Object>[])});
+    // Pronunciation is on until turned off; these tests start with it off and turn it on.
+    SharedPreferences.setMockInitialValues({'library.v1': jsonEncode(<Object>[]), 'lyrics.romanize': false});
     tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.platform, (call) async {
       if (call.method.startsWith('SystemChrome.')) calls.add(call);
       return null;
@@ -170,6 +171,8 @@ void main() {
     expect(VideoMode.instance.debugVisibleViews.full, 1);
     final navigator = Navigator.of(tester.element(find.byType(VideoFullView)));
     navigator.push(MaterialPageRoute<void>(builder: (_) => const Scaffold(body: Text('Lyrics route'))));
+    // Covered once the page has finished coming in: only then is the one under it off screen.
+    await settle(tester);
     await settle(tester);
     expect(VideoMode.instance.debugVisibleViews.full, 0);
     expect(VideoMode.instance.debugVisibleViews.covers, 0);
@@ -182,6 +185,19 @@ void main() {
     await close(tester, c);
     expect(VideoMode.instance.debugVisibleViews.covers, 0);
     expect(VideoMode.instance.debugVisibleViews.full, 0);
+  });
+
+  testWidgets('a dialog or sheet over the video leaves it playing', (tester) async {
+    final c = await show(tester);
+    expect(VideoMode.instance.debugVisibleViews.covers, 1);
+    final context = tester.element(find.byTooltip('Watch full screen'));
+    showDialog<void>(context: context, builder: (_) => const AlertDialog(content: Text('Signal path')));
+    await settle(tester);
+    expect(VideoMode.instance.debugVisibleViews.covers, 1, reason: 'the video is still on screen under a dialog');
+    Navigator.of(tester.element(find.text('Signal path'))).pop();
+    await settle(tester);
+    expect(VideoMode.instance.debugVisibleViews.covers, 1);
+    await close(tester, c);
   });
 
   testWidgets('fullscreen pronunciation shows under the synced line and can be toggled without leaving the video', (

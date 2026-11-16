@@ -36,12 +36,23 @@ class _SmoothScrollPosition extends ScrollPositionWithSingleContext {
 
   static const _duration = Duration(milliseconds: 260);
 
+  /// The most one wheel event moves: mice with a free-spinning wheel, or Windows' wheel acceleration, send
+  /// events many notches big that would otherwise leap a whole page.
+  static const _maxStep = 160.0;
+
+  /// How far the glide may run ahead of where the list is: a fast spin keeps scrolling briskly, but ticks can't
+  /// pile up into a jump past a whole album.
+  double get _maxLead => (viewportDimension * 0.6).clamp(240.0, 720.0);
+
   @override
   void pointerScroll(double delta) {
     if (delta == 0.0) return super.pointerScroll(delta);
+    final step = delta.clamp(-_maxStep, _maxStep);
     final animating = _target != null && activity is DrivenScrollActivity;
-    final from = animating ? _target! : pixels;
-    final target = (from + delta).clamp(minScrollExtent, maxScrollExtent);
+    // Turning the wheel the other way starts from where the list is, not from where it was headed.
+    final sameWay = animating && (_target! - pixels) * step > 0;
+    final from = sameWay ? _target! : pixels;
+    final target = (from + step).clamp(pixels - _maxLead, pixels + _maxLead).clamp(minScrollExtent, maxScrollExtent);
     if (target == from) return;
     _target = target;
     animateTo(target, duration: _duration, curve: Curves.easeOutCubic).whenComplete(() {

@@ -5,7 +5,7 @@ import '../../models/track.dart';
 import '../../services/layout_prefs.dart';
 import '../../services/player_controller.dart';
 import '../theme.dart';
-import '../widgets/controls.dart' show SourceMark;
+import '../widgets/controls.dart' show SmartMergeMark, SourceMark;
 import '../widgets/marquee_text.dart';
 import '../widgets/track_row.dart' show openArtist;
 
@@ -115,7 +115,15 @@ class _ArtistLinksState extends State<ArtistLinks> {
     final size = (widget.style?.fontSize ?? 14) * 0.95;
     return Row(
       children: [
-        SourceMark(online: !c.isOffline(track), source: track.source, size: size),
+        // Smart merge: the sound is another source's, the song still this one's. One badge for both, as in rows.
+        if (c.isOffline(track))
+          SourceMark(online: false, source: track.source, size: size)
+        else
+          SmartMergeMark(
+            track: track,
+            size: size,
+            fallback: SourceMark(online: true, source: track.source, size: size),
+          ),
         const SizedBox(width: 6),
         Flexible(child: links),
       ],

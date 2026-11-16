@@ -110,8 +110,11 @@ void main() {
         ),
       ),
     );
-    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 50))); // the saved choice loads
-    await tester.pump();
+    // The saved choice loads: its file checks finish outside the test's clock, a step each round.
+    for (var i = 0; i < 4; i++) {
+      await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 50)));
+      await tester.pump();
+    }
 
     input.controller.text = 'lofi';
     await tester.pump();
@@ -254,7 +257,7 @@ void main() {
   testWidgets('only enabled services appear, disabling the selected one falls back, and an empty selector is hidden', (
     tester,
   ) async {
-    SharedPreferences.setMockInitialValues({'sources.monochrome.v1': true});
+    SharedPreferences.setMockInitialValues({'sources.monochrome.v1': true, 'sources.soundcloud.v1': false});
     SearchSource.reset();
     addTearDown(SearchSource.reset);
     await tester.pumpWidget(

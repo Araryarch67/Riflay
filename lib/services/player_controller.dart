@@ -39,6 +39,7 @@ import 'mv_sidecar.dart';
 import 'sacd.dart';
 import 'sleep_timer.dart';
 import 'soundcloud.dart';
+import 'merged_download.dart';
 import 'smart_merge.dart';
 import 'sources/music_sources.dart';
 import 'soundcloud_audio_source.dart';
@@ -97,6 +98,10 @@ class PlayerController extends ChangeNotifier {
         if (d.reason == PositionDiscontinuityReason.seek) audio.directUsb.flush();
       }),
     );
+    // Smart merge: a song playing from its better sound's download is watched; the next song is got ready.
+    _subs.add(player.sequenceStateStream.listen((_) => _followSmartMerge()));
+    // The choice of sound is made once the song is the player's current one: that is when it starts being watched.
+    _smartMerge.changes.addListener(_followSmartMerge);
     _crossfader = Crossfader(
       main: player,
       audio: audio,
@@ -1002,11 +1007,23 @@ class PlayerController extends ChangeNotifier {
     return path == null || !File(path).existsSync();
   }
 
-  List<Track> get recentlyPlayed => [
-    for (final id in _recentIds)
-      if ((_recentRemote[id] ?? _views.byId[id]) case final track?)
-        if (!_unavailableExtensionRecent(track)) track.extensionId == null ? track : downloadedCopy(track)!,
-  ];
+  List<Track> get recentlyPlayed {
+    final tracks = <Track>[];
+    for (final id in _recentIds) {
+      final track = _recentRemote[id] ?? _views.byId[id];
+      if (track == null || _unavailableExtensionRecent(track)) continue;
+      final playable = track.extensionId == null ? track : downloadedCopy(track)!;
+      final duplicate = tracks.indexWhere((other) => SmartMerge.same(other, playable));
+      if (duplicate < 0) {
+        tracks.add(playable);
+      } else if (playable.videoId != null && tracks[duplicate].videoId == null) {
+        // One recording played from YouTube Music and Monochrome is one recent
+        // song; keep YouTube's identity, lyrics and artwork for its card.
+        tracks[duplicate] = playable;
+      }
+    }
+    return tracks;
+  }
 
   String? _dismissedRecentPlaying;
 
@@ -1844,7 +1861,8 @@ class PlayerController extends ChangeNotifier {
         libraryRevision.value,
       ), available: (file) => File(file.path!).existsSync());
       if (file != null) {
-        merge.markUsed(t.videoId!);
+        // The name is the UI's to give (Your Library, in the reader's language).
+        merge.markUsed(t.videoId!, sound: (source: TrackSource.device, name: ''));
         return _sourceFor(file, tag: identity);
       }
       final local = downloadedCopy(t);
@@ -2130,6 +2148,97 @@ class PlayerController extends ChangeNotifier {
     }
   }
 
+  /// While a song plays from its better sound's download: should the download fall behind where the song is (the
+  /// connection died, or is slower than the sound), the song goes back to its own sound there before it runs out.
+  Timer? _mergeWatch;
+  String? _mergeWatched;
+
+  void _watchMergedDownload() {
+    final source = player.sequenceState.currentSource;
+    final id = source is SmartMergeAudioSource && source.from != null ? source.track.videoId : null;
+    final download = id == null ? null : _smartMerge.downloadOf(id);
+    if (download == null || download.done) {
+      _mergeWatch?.cancel();
+      _mergeWatch = null;
+      _mergeWatched = null;
+      return;
+    }
+    if (_mergeWatched == id && _mergeWatch != null) return;
+    _mergeWatch?.cancel();
+    _mergeWatched = id;
+    _mergeWaitingSince = null;
+    _mergeWatch = Timer.periodic(const Duration(milliseconds: 500), (_) => _checkMergedDownload(id!, download));
+  }
+
+  bool _leavingMerge = false;
+  DateTime? _mergeWaitingSince;
+
+  /// How long a song waits on its better sound's download, with nothing coming, before it goes back to YouTube.
+  static const _mergeGivesUpAfter = Duration(seconds: 8);
+
+  Future<void> _checkMergedDownload(String id, MergedDownload download) async {
+    final state = player.sequenceState;
+    final source = state.currentSource;
+    if (_disposed || source is! SmartMergeAudioSource || source.track.videoId != id || source.from == null) {
+      _mergeWatch?.cancel();
+      _mergeWatch = null;
+      _mergeWatched = null;
+      return;
+    }
+    if (download.done || _leavingMerge || !player.playing) return;
+    final length = player.duration ?? source.track.duration;
+    if (length == null) return;
+    final total = download.total;
+    if (total == null) return;
+    // Close to where the song is, or waiting on it (it hasn't got going, or it is buffering).
+    final edge = ((player.position + const Duration(seconds: 2)).inMilliseconds / length.inMilliseconds).clamp(
+      0.0,
+      1.0,
+    );
+    final waiting = !download.covers((total * edge).ceil()) || player.processingState != ProcessingState.ready;
+    // A short lag is waited out (the player buffers a moment, and the download comes back faster than the song
+    // plays). Only a download that has given up, or one that sends nothing for a long while as the song waits
+    // on it, takes the song back to YouTube.
+    final now = DateTime.now();
+    if (!waiting) _mergeWaitingSince = null;
+    final since = _mergeWaitingSince ??= now;
+    // Counted from when the song began waiting, or from the last bytes if any came since.
+    final last = download.lastProgress.isAfter(since) ? download.lastProgress : since;
+    if (!download.failed && !(waiting && now.difference(last) > _mergeGivesUpAfter)) return;
+    // Behind: back to the song's own sound, from here.
+    _leavingMerge = true;
+    debugPrint('Smart merge: the download of $id stopped coming, back to YouTube');
+    try {
+      _smartMerge.giveUp(id);
+      _cancelPlaybackRetry();
+      final index = state.currentIndex;
+      if (index == null) return;
+      await player.setAudioSources(
+        [for (final s in state.sequence) _sourceFor(s.tag as Track)],
+        initialIndex: index,
+        initialPosition: player.position,
+      );
+      if (!_disposed) unawaited(_play());
+    } catch (e) {
+      debugPrint('Smart merge: going back to YouTube failed: $e');
+    } finally {
+      _leavingMerge = false;
+    }
+  }
+
+  String? _prefetched;
+
+  void _followSmartMerge() {
+    if (_disposed) return;
+    _watchMergedDownload();
+    // The next song is looked up and its download begun while this one plays, so it opens at once.
+    final up = _crossfadeUpcoming();
+    final next = up?.next;
+    if (next == null || next.id == _prefetched) return;
+    _prefetched = next.id;
+    _smartMerge.prefetch(next);
+  }
+
   /// Plays here, or on the cast device. [restart]: the song was just chosen,
   /// so start it from the top even if it's the one already on the device.
   Future<void> _play({bool restart = false}) async {
@@ -2412,6 +2521,8 @@ class PlayerController extends ChangeNotifier {
     }
     MemoryTrim.stop();
     cast.dispose();
+    _smartMerge.changes.removeListener(_followSmartMerge);
+    _mergeWatch?.cancel();
     _crossfader.dispose();
     sleep.dispose();
     for (final s in _subs) {

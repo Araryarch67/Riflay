@@ -110,5 +110,7 @@ void main() {
     await tester.tap(find.text('Song 1'));
     await tester.pump();
     expect(c.currentTrack, isNotNull, reason: 'a tap plays again');
+    // The song never opens here: stop waiting for it, so its 45 second limit isn't left running.
+    c.pause().ignore();
   });
 }

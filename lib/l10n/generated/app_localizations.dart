@@ -10431,6 +10431,12 @@ abstract class AppLocalizations {
   /// **'File on this device'**
   String get dsPlaysFile;
 
+  /// No description provided for @dsPlaysMerged.
+  ///
+  /// In en, this message translates to:
+  /// **'{source} (Smart merge)'**
+  String dsPlaysMerged(String source);
+
   /// No description provided for @dsVideoIdItag.
   ///
   /// In en, this message translates to:
@@ -11118,7 +11124,7 @@ abstract class AppLocalizations {
   /// No description provided for @sourcesAbout.
   ///
   /// In en, this message translates to:
-  /// **'Additional music services. Riflay plays from their servers. Each one is off until you turn it on.'**
+  /// **'Additional music services. Riflay plays from their servers. Each one is on until you turn it off.'**
   String get sourcesAbout;
 
   /// No description provided for @sourceMonochromeSubtitle.
@@ -11162,6 +11168,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Plays a YouTube Music song from the best source that has the same recording: a lossless file in your library first, then the music sources you turned on (Monochrome, in FLAC), and YouTube Music otherwise. Its music video, lyrics and cover stay from YouTube Music.'**
   String get smartMergeSubtitle;
+
+  /// No description provided for @smartMergeBadge.
+  ///
+  /// In en, this message translates to:
+  /// **'Audio from {source}'**
+  String smartMergeBadge(String source);
 
   /// No description provided for @spotifyCanvas.
   ///

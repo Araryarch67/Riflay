@@ -365,7 +365,8 @@ mixin _Extras<T extends StatefulWidget> on State<T> {
   }
 
   void _fetch() {
-    if (_asked || !(showRomanized || showTranslation)) return;
+    // Settings' preview shows made-up lines: nothing to ask a service for, and no page to report a failure on.
+    if (_asked || !(showRomanized || showTranslation) || LivePreview.of(context)) return;
     _asked = true;
     LyricsTranslation.of(_lyricLines(lyrics)).then(
       (e) {

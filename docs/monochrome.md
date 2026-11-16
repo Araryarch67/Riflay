@@ -18,11 +18,27 @@ playlists are stored in Riflay even when signed in to YouTube Music.
 
 ## Smart merge
 
-Enable **Settings > Accounts & services > Music sources > Smart merge** to keep
-a YouTube Music song's cover, lyrics, music video and library identity while
-playing the same recording from a lossless file in your library first, then
-Monochrome when that source is enabled. With neither available, playback uses
-YouTube Music. Web playback continues through the existing YouTube proxy.
+**Settings > Accounts & services > Music sources > Smart merge** (on by default,
+like SoundCloud and Monochrome in search) keeps a YouTube Music song's cover,
+lyrics, music video and library identity while playing the same recording from a
+lossless file in your library first, then Monochrome when that source is enabled.
+Monochrome is used only when its stream is FLAC; a song it has only as AAC plays
+from YouTube Music, whose Opus stream is no worse. With neither available,
+playback uses YouTube Music. Web playback continues through the existing YouTube proxy.
+
+A song waits up to 8 seconds for its Monochrome stream (found, confirmed FLAC,
+first bytes received); otherwise it plays from YouTube Music for that play, with
+no switch mid-song, while the lookup and download continue for next time.
+Monochrome audio is downloaded sequentially from the first byte over one
+connection and played from memory, so playback never seeks against the server
+(an unindexed FLAC needs many slow range requests to seek); a dropped connection
+resumes from the last byte, and the file's last megabyte is fetched separately so
+seeking within the song is immediate. If the download falls behind playback (or
+stalls before the song starts), the song continues from YouTube Music at the same
+position. The next song in the queue, and a song row or card the pointer rests on,
+are looked up and their downloads started ahead of time; matches are remembered
+between sessions. Rows, the player and Recently played show a joined
+"YouTube Music × Monochrome" (or × library) mark for songs played this way.
 
 Automatic matches require the same title and artist, matching version labels,
 and known lengths within three seconds. Ambiguous matches are skipped. Source

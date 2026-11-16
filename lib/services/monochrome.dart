@@ -1,6 +1,8 @@
 import 'dart:convert';
 
+
 import '../models/track.dart';
+import 'merged_download.dart';
 import 'sources/song_source.dart';
 
 /// Official Monochrome share URLs. Provider prefixes are part of the id.
@@ -182,6 +184,23 @@ class Monochrome extends SongSource {
     }
     if (total != null && offset < total) throw const FormatException('Monochrome collection too large');
     return MonochromeCollection(title, result);
+  }
+
+  /// Whether [stream] (an address or a DASH manifest from [manifest]) is lossless: a manifest that names FLAC, or
+  /// a file that starts as one. Some songs are only on the service as AAC, which is no better than YouTube's own.
+  Future<bool> lossless(String stream) async {
+    if (stream.trimLeft().startsWith('<')) {
+      final codecs = RegExp(r'codecs="([^"]*)"', caseSensitive: false).allMatches(stream).map((m) => m[1]!.toLowerCase());
+      return codecs.isNotEmpty && codecs.every((c) => c.contains('flac') || c.contains('alac'));
+    }
+    final url = Uri.tryParse(stream);
+    if (url == null || !url.hasScheme) return false;
+    // The first bytes of the download the song will play from: no request of its own.
+    final download = MergedDownload.of(stream, client: client);
+    final head = await download.head(4).timeout(const Duration(seconds: 20));
+    final flac = head.length >= 4 && String.fromCharCodes(head.take(4)) == 'fLaC';
+    if (!flac) download.dispose();
+    return flac;
   }
 
   /// Legacy HiFi shares resolve to a fresh direct URL or a DASH manifest.

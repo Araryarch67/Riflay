@@ -185,9 +185,9 @@ mixin _VisibleVideoView<T extends StatefulWidget> on State<T> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _register(
-      TickerMode.valuesOf(context).enabled && ModalRoute.isCurrentOf(context) != false && !LivePreview.of(context),
-    );
+    // A page that covers this one turns its tickers off (TickerMode). A dialog or sheet over it (Signal path, the
+    // ⋮ menu) leaves it on screen: the video plays on under it.
+    _register(TickerMode.valuesOf(context).enabled && !LivePreview.of(context));
   }
 
   @override
@@ -426,8 +426,7 @@ class _VideoBackgroundState extends State<VideoBackground> {
   @override
   Widget build(BuildContext context) {
     final mode = VideoMode.instance..follow(PlayerScope.read(context));
-    final visible =
-        TickerMode.valuesOf(context).enabled && ModalRoute.isCurrentOf(context) != false && !LivePreview.of(context);
+    final visible = TickerMode.valuesOf(context).enabled && !LivePreview.of(context);
     return ListenableBuilder(
       listenable: Listenable.merge([mode, LayoutPrefs.instance]),
       builder: (context, _) {

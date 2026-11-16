@@ -449,9 +449,10 @@ class AudioEngine extends ChangeNotifier {
     LayoutPrefs.instance.addListener(_onVisualizerBetaChanged);
     // Pitch control makes media_kit own the `af` property (scaletempo); the app needs it for EQ.
     JustAudioMediaKit.pitch = false;
-    // mpv's read-ahead (media_kit: 32 MiB ahead and 32 MiB behind, per open
-    // file). 8 MiB is a whole YouTube song, or 15 s of 24/192 FLAC from disk.
-    JustAudioMediaKit.bufferSize = 8 << 20;
+    // Network sources can briefly slow down without interrupting playback.
+    // 32 MiB gives high-resolution FLAC streams a useful cushion; mpv bounds
+    // this per player, and it is memory-only (disk cache stays off below).
+    JustAudioMediaKit.bufferSize = 32 << 20;
     // mpv's `title`: the app's name in Windows' volume mixer (media_kit's default is "JustAudioMediaKit").
     // PulseAudio / PipeWire take `audio-client-name` instead (see [_applyProps]).
     JustAudioMediaKit.title = 'Riflay';
@@ -1805,7 +1806,13 @@ class AudioEngine extends ChangeNotifier {
       'cache-on-disk': 'no',
       // Seeking back a few seconds stays instant; further back re-reads the file.
       'demuxer-max-bytes': '${JustAudioMediaKit.bufferSize}',
+      // Keep enough recent audio for small seeks without reducing forward read-ahead.
       'demuxer-max-back-bytes': '${2 << 20}',
+      // Smooth over brief stalls from remote lossless sources such as Monochrome.
+      'cache': 'yes',
+      'cache-secs': '30',
+      'cache-pause': 'yes',
+      'cache-pause-wait': '2',
       'gapless-audio': gapless ? 'weak' : 'no',
       'prefetch-playlist': gapless ? 'yes' : 'no',
       'replaygain': effectiveLeveling.mpv,
@@ -1944,6 +1951,10 @@ class AudioEngine extends ChangeNotifier {
           'cache-on-disk': 'no',
           'demuxer-max-bytes': '${JustAudioMediaKit.bufferSize}',
           'demuxer-max-back-bytes': '${2 << 20}',
+          'cache': 'yes',
+          'cache-secs': '30',
+          'cache-pause': 'yes',
+          'cache-pause-wait': '2',
           'gapless-audio': 'no',
           'prefetch-playlist': 'no',
           'replaygain': effectiveLeveling.mpv,

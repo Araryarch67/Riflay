@@ -1,8 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// Settings › Accounts & services › Music sources: the places Riflay looks besides YouTube Music. Each one is off
-/// until turned on.
+/// Settings › Accounts & services › Music sources: the places Riflay looks besides YouTube Music. Each one is on
+/// until turned off.
 class MusicSources extends ChangeNotifier {
   MusicSources._();
 
@@ -11,11 +11,11 @@ class MusicSources extends ChangeNotifier {
   static const _soundcloudKey = 'sources.soundcloud.v1';
   static const _monochromeKey = 'sources.monochrome.v1';
   static const _smartMergeKey = 'sources.smartMerge.v1';
-  bool soundcloud = false;
-  bool monochrome = false;
+  bool soundcloud = true;
+  bool monochrome = true;
 
   /// A YouTube Music song plays its sound from the best place that has the same recording (see `SmartMerge`).
-  bool smartMerge = false;
+  bool smartMerge = true;
 
   Future<void>? _loading;
 
@@ -23,9 +23,9 @@ class MusicSources extends ChangeNotifier {
 
   Future<void> _read() async {
     final p = await SharedPreferences.getInstance();
-    soundcloud = p.getBool(_soundcloudKey) ?? false;
-    monochrome = p.getBool(_monochromeKey) ?? false;
-    smartMerge = p.getBool(_smartMergeKey) ?? false;
+    soundcloud = p.getBool(_soundcloudKey) ?? true;
+    monochrome = p.getBool(_monochromeKey) ?? true;
+    smartMerge = p.getBool(_smartMergeKey) ?? true;
     notifyListeners();
   }
 
@@ -50,6 +50,6 @@ class MusicSources extends ChangeNotifier {
   @visibleForTesting
   void reset() {
     _loading = null;
-    soundcloud = monochrome = smartMerge = false;
+    soundcloud = monochrome = smartMerge = true;
   }
 }

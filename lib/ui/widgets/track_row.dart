@@ -100,15 +100,12 @@ class _TrackRowState extends State<TrackRow> {
     // Rebuilt when this row's own state changes (it starts or stops playing, it
     // gets downloaded), not for every change of the player: on a song change
     // only two rows of a long list differ.
-    return PlayerSelect<(bool, bool, bool, String?, bool)>(
+    return PlayerSelect<(bool, bool, bool, String?)>(
       select: (c) {
         final current = widget.currentOccurrence ?? (c.currentTrack?.id == t.id);
-        final source = c.player.sequenceState.currentSource;
-        final merged = current && source is SmartMergeAudioSource && source.from != null;
-        return (current, current && c.showsPlaying, t.streams && !c.isOffline(t), c.qualityOf(t), merged);
+        return (current, current && c.showsPlaying, t.streams && !c.isOffline(t), c.qualityOf(t));
       },
-      builder: (context, s, _) =>
-          _row(context, isCurrent: s.$1, playing: s.$2, online: s.$3, quality: s.$4, merged: s.$5),
+      builder: (context, s, _) => _row(context, isCurrent: s.$1, playing: s.$2, online: s.$3, quality: s.$4),
     );
   }
 
@@ -117,7 +114,6 @@ class _TrackRowState extends State<TrackRow> {
     required bool isCurrent,
     required bool playing,
     required bool online,
-    required bool merged,
     String? quality,
   }) {
     TrackRow.debugRowBuilds++;
@@ -192,11 +188,14 @@ class _TrackRowState extends State<TrackRow> {
                       ],
                       // Streamed songs: the service they stream from; green pin = downloaded, plays offline.
                       if (t.streams) ...[
-                        SourceMark(online: online, source: t.source, size: 14),
-                        if (merged) ...[
-                          const SizedBox(width: 3),
-                          const SourceMark(online: true, source: TrackSource.monochrome, size: 14),
-                        ],
+                        // Smart merge: one badge for the song's service and the one its sound comes from.
+                        if (online)
+                          SmartMergeMark(
+                            track: t,
+                            fallback: SourceMark(online: true, source: t.source, size: 14),
+                          )
+                        else
+                          SourceMark(online: false, source: t.source, size: 14),
                         const SizedBox(width: 4),
                       ],
                       Flexible(
@@ -285,8 +284,14 @@ class _TrackRowState extends State<TrackRow> {
     );
 
     return MouseRegion(
-      onEnter: (_) => _hover.value = true,
-      onExit: (_) => _hover.value = false,
+      onEnter: (_) {
+        _hover.value = true;
+        SmartMerge.instance.pointerOn(t);
+      },
+      onExit: (_) {
+        _hover.value = false;
+        SmartMerge.instance.pointerOff();
+      },
       // The only part that changes with hover: the tint and what a tap does.
       child: ListenableBuilder(
         listenable: selection == null ? _hover : Listenable.merge([_hover, selection]),

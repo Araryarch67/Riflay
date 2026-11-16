@@ -5822,6 +5822,11 @@ class AppLocalizationsId extends AppLocalizations {
   String get dsPlaysFile => 'File di perangkat ini';
 
   @override
+  String dsPlaysMerged(String source) {
+    return '$source (Smart merge)';
+  }
+
+  @override
   String get dsVideoIdItag => 'ID video / itag';
 
   @override
@@ -6222,7 +6227,7 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get sourcesAbout =>
-      'Layanan musik tambahan. Riflay memutarnya langsung dari server mereka. Semuanya mati sampai kamu menyalakannya.';
+      'Layanan musik tambahan. Riflay memutarnya langsung dari server mereka. Semuanya aktif sampai kamu mematikannya.';
 
   @override
   String get sourceMonochromeSubtitle =>
@@ -6248,6 +6253,11 @@ class AppLocalizationsId extends AppLocalizations {
   @override
   String get smartMergeSubtitle =>
       'Memutar lagu YouTube Music dari sumber terbaik yang punya rekaman yang sama: file lossless di library kamu dulu, lalu sumber musik yang kamu nyalakan (Monochrome, dalam FLAC), dan YouTube Music kalau tidak ada. Music video, lirik dan sampulnya tetap dari YouTube Music.';
+
+  @override
+  String smartMergeBadge(String source) {
+    return 'Audio dari $source';
+  }
 
   @override
   String get spotifyCanvas => 'Canvas';
