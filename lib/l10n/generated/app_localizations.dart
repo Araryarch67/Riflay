@@ -11378,6 +11378,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Skip intro'**
   String get introSkip;
+
+  /// No description provided for @trayShuffle.
+  ///
+  /// In en, this message translates to:
+  /// **'Shuffle'**
+  String get trayShuffle;
+
+  /// No description provided for @trayRepeat.
+  ///
+  /// In en, this message translates to:
+  /// **'Repeat'**
+  String get trayRepeat;
+
+  /// No description provided for @trayRepeatOne.
+  ///
+  /// In en, this message translates to:
+  /// **'One song'**
+  String get trayRepeatOne;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

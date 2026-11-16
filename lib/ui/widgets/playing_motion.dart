@@ -52,11 +52,15 @@ class MotionClock extends ChangeNotifier {
 /// easing out after a pause. The widget around it is not rebuilt for a beat; painters listening
 /// to the clock repaint themselves.
 class PlayingMotion extends StatefulWidget {
-  const PlayingMotion({super.key, required this.builder, this.restWithVideo = true});
+  const PlayingMotion({super.key, required this.builder, this.restWithVideo = true, this.moveUnfocused = false});
 
   /// Covers can rest while a video supplies the motion. A wavy seek bar keeps
   /// its chosen shape and motion even after the video's first frame is ready.
   final bool restWithVideo;
+
+  /// Keeps moving while another window has the focus, as the visualizer does ([visible]): for a view that stays
+  /// in sight over other apps, the desktop mini player.
+  final bool moveUnfocused;
 
   /// Whether decorations move in this lifecycle [state]: only with the window in front and focused. A computer
   /// reports `inactive` while another window has the focus, which is most of the time a song plays: nobody watches
@@ -104,9 +108,11 @@ class _PlayingMotionState extends State<PlayingMotion> with WidgetsBindingObserv
     WidgetsBinding.instance.addObserver(this);
     LayoutPrefs.instance.addListener(_sync);
     VideoMode.instance.addListener(_sync);
-    final state = WidgetsBinding.instance.lifecycleState;
-    _foreground = PlayingMotion.decorates(state);
+    _foreground = _inFront(WidgetsBinding.instance.lifecycleState);
   }
+
+  bool _inFront(AppLifecycleState? state) =>
+      widget.moveUnfocused ? PlayingMotion.visible(state) : PlayingMotion.decorates(state);
 
   @override
   void didChangeDependencies() {
@@ -123,7 +129,7 @@ class _PlayingMotionState extends State<PlayingMotion> with WidgetsBindingObserv
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    _foreground = PlayingMotion.decorates(state);
+    _foreground = _inFront(state);
     _sync();
   }
 

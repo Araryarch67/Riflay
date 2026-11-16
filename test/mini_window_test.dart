@@ -1,7 +1,11 @@
+import 'dart:io';
+
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:riflay/models/track.dart';
+import 'package:riflay/platform/features.dart';
 import 'package:riflay/services/layout_prefs.dart';
 import 'package:riflay/services/lyrics.dart';
 import 'package:riflay/services/lyrics_translation.dart';
@@ -9,6 +13,7 @@ import 'package:riflay/services/player_controller.dart';
 import 'package:riflay/services/language.dart';
 import 'package:riflay/ui/player/mini_window.dart';
 import 'package:riflay/ui/widgets/controls.dart';
+import 'package:riflay/ui/widgets/wavy_seek_track.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 final _track = Track(id: 'mini', uri: Uri.parse('file:///mini.mp3'), title: 'Mini song', artist: 'Mini artist');
@@ -62,6 +67,12 @@ void main() {
     expect(find.text('Mini artist'), findsOneWidget);
     expect(find.byType(PlayButton), findsOneWidget);
     expect(find.byTooltip(tr.showLyrics), findsOneWidget, reason: 'the lyrics switch, off here');
+    expect(find.byTooltip(tr.mute), findsOneWidget, reason: 'the volume, beside the transport');
+    expect(find.byType(Slider), findsNWidgets(2), reason: 'the seek bar and the volume');
+    final seek = tester.widget<SliderTheme>(
+      find.ancestor(of: find.byType(Slider).first, matching: find.byType(SliderTheme)).first,
+    );
+    expect(seek.data.trackShape, isA<WavySeekTrack>(), reason: 'the wave by default');
 
     await mouse.moveTo(tester.getCenter(find.byType(PlayButton)));
     await tester.pump(const Duration(seconds: 2));
@@ -87,7 +98,7 @@ void main() {
       expect(tester.takeException(), isNull, reason: 'no overflow while it grows');
     }
     expect(find.text('Mini artist'), findsOneWidget);
-    expect(find.byType(Slider), findsOneWidget);
+    expect(find.byType(Slider), findsNWidgets(2), reason: 'the seek bar and the volume');
     expect(find.byType(PlayButton), findsOneWidget);
     expect(find.byTooltip(tr.miniSwitchToWindow), findsOneWidget);
     expect(find.byTooltip(tr.miniSwitchToIsland), findsNothing);
@@ -100,6 +111,31 @@ void main() {
     }
     expect(tester.takeException(), isNull);
     expect(find.byType(PlayButton), findsNothing, reason: 'folded back');
+  });
+
+  testWidgets('the island cuts the window to its pill only while the window is the island', (tester) async {
+    const channel = MethodChannel('riflay/window');
+    final hits = <List<Object?>>[];
+    final messenger = TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+    messenger.setMockMethodCallHandler(channel, (call) async {
+      if (call.method == 'setIsland') hits.add(call.arguments as List<Object?>);
+      return null;
+    });
+    addTearDown(() => messenger.setMockMethodCallHandler(channel, null));
+    miniPlayer.value = true;
+    addTearDown(() => miniPlayer.value = false);
+
+    await _show(tester, const Size(500, 264), DesktopMiniStyle.island);
+    expect(hits, Platform.isWindows ? isNotEmpty : isEmpty, reason: 'the closed pill');
+
+    // A frame of the island left over after the window became something else (the mini window, the full app)
+    // used to send its pill last, leaving the window cut down to a strip.
+    hits.clear();
+    miniPlayer.value = false;
+    await tester.binding.setSurfaceSize(const Size(460, 224));
+    await tester.pump();
+    await tester.pump();
+    expect(hits, isEmpty);
   });
 
   test('the desktop mini player style is the window by default and its choice persists', () async {
@@ -144,5 +180,38 @@ void main() {
     ));
     expect(miniLyricAt(lyrics, const Duration(seconds: 5), extras: extras).said, isNull);
     expect(miniLyricAt(lyrics, const Duration(seconds: 2)).said, isNull, reason: 'before the pronunciation arrives');
+  });
+  test('the mini player keeps off the taskbar, except minimized', () {
+    expect(miniSkipsTaskbar(mini: true, minimized: false), isTrue);
+    expect(miniSkipsTaskbar(mini: true, minimized: true), isFalse, reason: 'the button is the way back');
+    expect(miniSkipsTaskbar(mini: false, minimized: false), isFalse);
+    expect(miniSkipsTaskbar(mini: false, minimized: true), isFalse);
+  });
+
+  test('entering the mini player takes the taskbar button away, leaving brings it back', () async {
+    TestWidgetsFlutterBinding.ensureInitialized();
+    const channel = MethodChannel('window_manager');
+    final skips = <bool>[];
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(channel, (call) async {
+      switch (call.method) {
+        case 'isMaximized':
+          return false;
+        case 'getBounds':
+          return <String, double>{'x': 10, 'y': 10, 'width': 1200, 'height': 800};
+        case 'setSkipTaskbar':
+          skips.add((call.arguments as Map)['isSkipTaskbar'] as bool);
+      }
+      return null;
+    });
+    addTearDown(() {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(channel, null);
+    });
+
+    await setMiniPlayer(true, style: DesktopMiniStyle.window);
+    expect(miniPlayer.value, isTrue);
+    await setMiniPlayer(true, style: DesktopMiniStyle.island);
+    await setMiniPlayer(false);
+    expect(miniPlayer.value, isFalse);
+    expect(skips, Features.miniPlayerOffTaskbar ? [true, true, false] : isEmpty);
   });
 }

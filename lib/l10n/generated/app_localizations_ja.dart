@@ -6238,4 +6238,13 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get introSkip => 'イントロをスキップ';
+
+  @override
+  String get trayShuffle => 'シャッフル';
+
+  @override
+  String get trayRepeat => 'リピート';
+
+  @override
+  String get trayRepeatOne => '1曲';
 }

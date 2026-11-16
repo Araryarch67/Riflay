@@ -60,6 +60,11 @@ abstract final class Features {
   /// tablet, where the window manager isn't there and the switch left the app stuck in a mini state).
   static bool get miniPlayer => Host.isWindows || Host.isLinux || Host.isMacOS;
 
+  /// The mini player keeps off the taskbar (it stays on top, in Alt+Tab and behind the tray icon). Windows takes
+  /// the button away; Linux sets the window's skip-taskbar hint. Not macOS: window_manager does it there by
+  /// turning the whole app into an accessory, which also takes away its menu bar.
+  static bool get miniPlayerOffTaskbar => Host.isWindows || Host.isLinux;
+
   /// The listening history, Stats and the monthly Wrap (kept in a file on the device, in the browser's local
   /// storage on the web).
   static bool get listeningHistory => !Host.isWeb || WebStorage.available;

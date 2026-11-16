@@ -3562,5 +3562,8 @@
   "downloadMatchFailed": "Couldn't search this source. Try again or choose another source.",
   "downloadMatchEmpty": "No matching songs found. Try a shorter title or a different source.",
   "@downloadMatchTitle": {"placeholders": {"source": {"type": "String"}}},
-  "introSkip": "Skip intro"
+  "introSkip": "Skip intro",
+  "trayShuffle": "Shuffle",
+  "trayRepeat": "Repeat",
+  "trayRepeatOne": "One song"
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:just_audio/just_audio.dart' show LoopMode;
 import 'package:riflay/platform/tray.dart';
 import 'package:riflay/services/system_tray.dart';
 import 'package:riflay/ui/debug_switches.dart';
@@ -62,28 +63,76 @@ void main() {
   });
 
   group('tray menu', () {
-    List<TrayEntry> menu(TrayState s) =>
-        trayMenu(s, toggleWindow: () {}, playPause: () {}, previous: () {}, next: () {}, quit: () {});
+    TrayState state({
+      bool windowShown = true,
+      String? song = 'Song · Artist',
+      bool playing = true,
+      bool hasNext = true,
+      bool shuffle = false,
+      LoopMode loop = LoopMode.off,
+      bool? mini = false,
+    }) => (
+      windowShown: windowShown,
+      song: song,
+      playing: playing,
+      hasQueue: song != null,
+      hasNext: hasNext,
+      shuffle: shuffle,
+      loop: loop,
+      mini: mini,
+    );
+    final picked = <LoopMode>[];
+    List<TrayEntry> menu(TrayState s) => trayMenu(
+      s,
+      toggleWindow: () {},
+      playPause: () {},
+      previous: () {},
+      next: () {},
+      toggleShuffle: () {},
+      setLoop: picked.add,
+      toggleMini: () {},
+      quit: () {},
+    );
     TrayEntry find(List<TrayEntry> m, String label) => m.firstWhere((e) => e.label == label);
 
     test('shows the song and Pause while it plays', () {
-      final m = menu((windowShown: true, song: 'Song · Artist', playing: true, hasNext: true));
+      final m = menu(state());
       expect(m.first.label, 'Hide Riflay');
       expect(find(m, 'Song · Artist').enabled, isFalse, reason: 'the song is a label, not a button');
       expect(find(m, 'Pause').enabled, isTrue);
       expect(find(m, 'Previous').enabled, isTrue);
       expect(find(m, 'Next').enabled, isTrue);
       expect(find(m, 'Quit Riflay').enabled, isTrue);
+      expect(m.last.label, 'Quit Riflay');
     });
 
     test('greys out the controls with nothing to play', () {
-      final m = menu((windowShown: false, song: null, playing: false, hasNext: false));
+      final m = menu(state(windowShown: false, song: null, playing: false, hasNext: false));
       expect(m.first.label, 'Show Riflay');
       expect(find(m, 'Nothing playing').enabled, isFalse);
       expect(find(m, 'Play').enabled, isFalse);
       expect(find(m, 'Previous').enabled, isFalse);
       expect(find(m, 'Next').enabled, isFalse);
+      expect(find(m, 'Shuffle').enabled, isFalse);
+      expect(find(m, 'Repeat').enabled, isFalse);
       expect(find(m, 'Quit Riflay').enabled, isTrue);
+    });
+
+    test('ticks Shuffle, the repeat mode and Mini player', () {
+      final m = menu(state(shuffle: true, loop: LoopMode.one, mini: true));
+      expect(find(m, 'Shuffle').checked, isTrue);
+      expect(find(m, 'Mini player').checked, isTrue);
+      final repeat = find(m, 'Repeat').children!;
+      expect([for (final e in repeat) e.label], ['Off', 'All', 'One song']);
+      expect([for (final e in repeat) e.checked], [false, false, true]);
+      picked.clear();
+      repeat[1].onTap!();
+      expect(picked, [LoopMode.all]);
+    });
+
+    test('leaves Mini player out where there is none', () {
+      final m = menu(state(mini: null));
+      expect(m.where((e) => e.label == 'Mini player'), isEmpty);
     });
 
     test('keeps a long song name to one menu line', () {

@@ -8,7 +8,11 @@ class NativeTray {
 
   static Future<bool> available() async => false;
 
-  static Future<NativeTray?> show({required String tooltip, required VoidCallback onOpen}) async => null;
+  static Future<NativeTray?> show({
+    required String tooltip,
+    required VoidCallback onOpen,
+    Future<void> Function()? beforeMenu,
+  }) async => null;
 
   Future<void> setMenu(List<TrayEntry> entries) async {}
 

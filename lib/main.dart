@@ -46,7 +46,8 @@ import 'services/window_focus.dart';
 import 'services/wrap_notifications.dart';
 import 'ui/widgets/app_update_tile.dart' show showUpdatePopup;
 import 'ui/home_shell.dart';
-import 'ui/player_panels.dart' show MiniPlayerWindow, miniPlayer, windowFullScreen;
+import 'ui/player_panels.dart' show MiniPlayerWindow, miniPlayer, setMiniPlayer, windowFullScreen;
+import 'platform/features.dart';
 import 'ui/theme.dart';
 import 'ui/widgets/marquee_text.dart';
 import 'ui/widgets/playing_motion.dart';
@@ -179,6 +180,11 @@ Future<void> _showWindow(Size? size) async {
 
 /// Media controls, wake locks, the download queue, notifications and the listening history.
 Future<void> _startServices(PlayerController controller) async {
+  // Computers: Mini player in the tray menu.
+  if (Features.miniPlayer) {
+    SystemTray.miniPlayer = miniPlayer;
+    SystemTray.setMiniPlayer = (on) => setMiniPlayer(on);
+  }
   await Future.wait(
     [
       MediaSession.start(controller),

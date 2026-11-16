@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+import 'package:just_audio/just_audio.dart' show LoopMode;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:window_manager/window_manager.dart';
 
@@ -40,26 +41,52 @@ class CloseToTray extends ChangeNotifier {
   }
 }
 
-/// What the tray menu shows; the menu is sent again only when this changes.
-typedef TrayState = ({bool windowShown, String? song, bool playing, bool hasNext});
+/// What the tray menu shows; the menu is sent again only when this changes. [mini] is null where there is no mini
+/// player.
+typedef TrayState = ({
+  bool windowShown,
+  String? song,
+  bool playing,
+  bool hasQueue,
+  bool hasNext,
+  bool shuffle,
+  LoopMode loop,
+  bool? mini,
+});
 
-/// The tray menu: open or hide the window, the song (a greyed-out label), Play / Pause, Previous, Next, Quit.
+/// The tray menu, the way a music player's is laid out: the window (Show / Hide, Mini player), then the music (the
+/// song as a greyed-out heading, Play / Pause, Previous, Next, Shuffle, Repeat ▸ Off / All / One song), then Quit.
 List<TrayEntry> trayMenu(
   TrayState s, {
   required VoidCallback toggleWindow,
   required VoidCallback playPause,
   required VoidCallback previous,
   required VoidCallback next,
+  required VoidCallback toggleShuffle,
+  required void Function(LoopMode) setLoop,
+  VoidCallback? toggleMini,
   required VoidCallback quit,
 }) {
   final song = s.song;
+  final queue = song != null && s.hasQueue;
+  TrayEntry loop(String label, LoopMode mode) =>
+      TrayEntry.check(label, checked: s.loop == mode, onTap: queue ? () => setLoop(mode) : null);
   return [
     TrayEntry(s.windowShown ? tr.hideRiflay : tr.showRiflay, toggleWindow),
+    if (s.mini case final mini? when toggleMini != null)
+      TrayEntry.check(tr.miniPlayer, checked: mini, onTap: toggleMini),
     const TrayEntry.divider(),
     TrayEntry(song ?? tr.nothingPlaying),
     TrayEntry(s.playing ? tr.pause : tr.play, song == null ? null : playPause),
     TrayEntry(tr.previous, song == null ? null : previous),
     TrayEntry(tr.next, s.hasNext ? next : null),
+    const TrayEntry.divider(),
+    TrayEntry.check(tr.trayShuffle, checked: s.shuffle, onTap: queue ? toggleShuffle : null),
+    TrayEntry.submenu(tr.trayRepeat, [
+      loop(tr.off, LoopMode.off),
+      loop(tr.all, LoopMode.all),
+      loop(tr.trayRepeatOne, LoopMode.one),
+    ]),
     const TrayEntry.divider(),
     TrayEntry(tr.quitRiflay, quit),
   ];
@@ -114,6 +141,11 @@ class SystemTray with WindowListener {
 
   static SystemTray? _running;
 
+  /// The mini player's state and switch, from the UI (the services don't know its window); null leaves Mini player
+  /// out of the menu.
+  static ValueListenable<bool>? miniPlayer;
+  static Future<void> Function(bool on)? setMiniPlayer;
+
   /// Computers: brings the window back from the tray, or from under other windows (a link opened with Riflay).
   static Future<void> bringToFront() async {
     if (_running case final tray?) return tray._showWindow();
@@ -130,11 +162,16 @@ class SystemTray with WindowListener {
     try {
       final want = CloseToTray.instance.active && available.value == true;
       if (want && _tray == null) {
-        final tray = await NativeTray.show(tooltip: 'Riflay', onOpen: () => unawaited(_showWindow()));
+        final tray = await NativeTray.show(
+          tooltip: 'Riflay',
+          onOpen: () => unawaited(_showWindow()),
+          beforeMenu: _refresh,
+        );
         if (tray == null) return;
         _tray = tray;
         _shown = null;
         _c.addListener(_sync);
+        miniPlayer?.addListener(_sync);
         _sync();
         _closer = WindowCloseHandler(hideOnClose: () => CloseToTray.instance.active, hide: _hideWindow, quit: quit);
         windowManager.addListener(_closer!);
@@ -144,6 +181,7 @@ class SystemTray with WindowListener {
         windowManager.removeListener(_closer!);
         _closer = null;
         _c.removeListener(_sync);
+        miniPlayer?.removeListener(_sync);
         await _tray!.remove();
         _tray = null;
       }
@@ -152,7 +190,11 @@ class SystemTray with WindowListener {
     }
   });
 
-  void _sync() {
+  void _sync() => unawaited(_refresh());
+
+  /// Sends the menu again if what it shows changed. Also just before the right-click opens it: a repeat mode
+  /// changed in the app tells no listener.
+  Future<void> _refresh() async {
     final tray = _tray;
     if (tray == null) return;
     final t = _c.currentTrack;
@@ -160,24 +202,47 @@ class SystemTray with WindowListener {
       windowShown: _windowShown,
       song: t == null ? null : traySongLabel(t.title, t.artist),
       playing: _c.isPlaying,
+      hasQueue: _c.hasQueue,
       hasNext: _c.hasNext,
+      shuffle: _c.shuffle,
+      loop: _c.loopMode,
+      mini: setMiniPlayer == null ? null : miniPlayer?.value,
     );
     if (now == _shown) return;
     _shown = now;
-    unawaited(
-      tray
-          .setMenu(
-            trayMenu(
-              now,
-              toggleWindow: () => unawaited(_windowShown ? _hideWindow() : _showWindow()),
-              playPause: () => unawaited(_c.togglePlay()),
-              previous: () => unawaited(_c.previous()),
-              next: () => unawaited(_c.next()),
-              quit: () => unawaited(quit()),
-            ),
-          )
-          .catchError((Object e) => debugPrint('Tray menu: $e')),
-    );
+    await tray
+        .setMenu(
+          trayMenu(
+            now,
+            toggleWindow: () => unawaited(_windowShown ? _hideWindow() : _showWindow()),
+            playPause: () => unawaited(_c.togglePlay()),
+            previous: () => unawaited(_c.previous()),
+            next: () => unawaited(_c.next()),
+            toggleShuffle: () => unawaited(_c.toggleShuffle().whenComplete(_sync)),
+            setLoop: (mode) => unawaited(_setLoop(mode)),
+            toggleMini: () => unawaited(_toggleMini()),
+            quit: () => unawaited(quit()),
+          ),
+        )
+        .catchError((Object e) => debugPrint('Tray menu: $e'));
+  }
+
+  /// Repeat ▸ Off / All / One song: the player's own cycle (it remembers the choice) until it lands there.
+  Future<void> _setLoop(LoopMode mode) async {
+    for (var i = 0; i < LoopMode.values.length && _c.loopMode != mode; i++) {
+      await _c.cycleLoopMode();
+    }
+    _sync();
+  }
+
+  /// Mini player on or off, the window shown either way (it may have been in the tray).
+  Future<void> _toggleMini() async {
+    final set = setMiniPlayer;
+    if (set == null) return;
+    final on = !(miniPlayer?.value ?? false);
+    if (!_windowShown) await _showWindow();
+    await set(on);
+    _sync();
   }
 
   void _setShown(bool shown) {

@@ -6375,4 +6375,13 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get introSkip => 'Lewati intro';
+
+  @override
+  String get trayShuffle => 'Acak';
+
+  @override
+  String get trayRepeat => 'Ulangi';
+
+  @override
+  String get trayRepeatOne => 'Satu lagu';
 }

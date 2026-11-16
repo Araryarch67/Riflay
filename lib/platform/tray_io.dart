@@ -10,9 +10,12 @@ import 'tray_entry.dart';
 ///
 /// Windows and macOS open the app on a click and the menu on a right-click; Linux opens the menu on any click.
 class NativeTray with TrayListener {
-  NativeTray._(this._onOpen);
+  NativeTray._(this._onOpen, this._beforeMenu);
 
   final VoidCallback _onOpen;
+
+  /// Brings the menu up to date just before the right-click opens it.
+  final Future<void> Function()? _beforeMenu;
 
   /// Whether this desktop shows tray icons. A Linux desktop without a StatusNotifier host (GNOME without
   /// the AppIndicator extension, a bare window manager) would take the icon and show nothing, leaving a
@@ -32,9 +35,13 @@ class NativeTray with TrayListener {
   }
 
   /// Puts the icon in the tray; null when there is no tray to put it in.
-  static Future<NativeTray?> show({required String tooltip, required VoidCallback onOpen}) async {
+  static Future<NativeTray?> show({
+    required String tooltip,
+    required VoidCallback onOpen,
+    Future<void> Function()? beforeMenu,
+  }) async {
     if (!await available()) return null;
-    final tray = NativeTray._(onOpen);
+    final tray = NativeTray._(onOpen, beforeMenu);
     await trayManager.setIcon(Platform.isWindows ? 'assets/tray/tray.ico' : 'assets/tray/tray.png');
     // An AppIndicator has no hover text.
     if (!Platform.isLinux) await trayManager.setToolTip(tooltip);
@@ -43,16 +50,25 @@ class NativeTray with TrayListener {
     return tray;
   }
 
-  Future<void> setMenu(List<TrayEntry> entries) => trayManager.setContextMenu(
-    Menu(
-      items: [
-        for (final e in entries)
-          if (e.divider)
-            MenuItem.separator()
-          else
-            MenuItem(label: _plain(e.label), disabled: !e.enabled, onClick: (_) => e.onTap?.call()),
-      ],
-    ),
+  Future<void> setMenu(List<TrayEntry> entries) => trayManager.setContextMenu(_menu(entries));
+
+  static Menu _menu(List<TrayEntry> entries) => Menu(
+    items: [
+      for (final e in entries)
+        if (e.divider)
+          MenuItem.separator()
+        else if (e.children case final children?)
+          MenuItem.submenu(label: _plain(e.label), disabled: !e.enabled, submenu: _menu(children))
+        else if (e.checked case final checked?)
+          MenuItem.checkbox(
+            label: _plain(e.label),
+            checked: checked,
+            disabled: !e.enabled,
+            onClick: (_) => e.onTap?.call(),
+          )
+        else
+          MenuItem(label: _plain(e.label), disabled: !e.enabled, onClick: (_) => e.onTap?.call()),
+    ],
   );
 
   Future<void> remove() async {
@@ -67,5 +83,12 @@ class NativeTray with TrayListener {
   void onTrayIconMouseDown() => _onOpen();
 
   @override
-  void onTrayIconRightMouseDown() => trayManager.popUpContextMenu();
+  Future<void> onTrayIconRightMouseDown() async {
+    try {
+      await _beforeMenu?.call();
+    } catch (e) {
+      debugPrint('Tray menu: $e');
+    }
+    await trayManager.popUpContextMenu();
+  }
 }

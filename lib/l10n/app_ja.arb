@@ -1881,5 +1881,8 @@
   "downloadMatchFailed": "このソースを検索できませんでした。再試行するか別のソースを選んでください。",
   "downloadMatchEmpty": "一致する曲がありません。短い曲名か別のソースをお試しください。",
   "@downloadMatchTitle": {"placeholders": {"source": {"type": "String"}}},
-  "introSkip": "イントロをスキップ"
+  "introSkip": "イントロをスキップ",
+  "trayShuffle": "シャッフル",
+  "trayRepeat": "リピート",
+  "trayRepeatOne": "1曲"
 }

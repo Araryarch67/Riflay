@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math' as math;
 import 'dart:ui' show ImageFilter, lerpDouble;
 
+import 'package:flutter/gestures.dart' show PointerScrollEvent;
 import 'package:flutter/material.dart';
 import 'package:flutter/physics.dart';
 import 'package:flutter/services.dart';
@@ -21,6 +22,8 @@ import '../theme.dart';
 import '../widgets/audio_reactive_view.dart';
 import '../widgets/controls.dart';
 import '../widgets/marquee_text.dart';
+import '../widgets/playing_motion.dart';
+import '../widgets/wavy_seek_track.dart';
 import '../widgets/signal_path.dart' show QualityChip;
 import 'full_screen_player.dart';
 import 'player_common.dart';
@@ -97,10 +100,15 @@ Future<void> _switch(bool on, DesktopMiniStyle style) async {
       if (!island) await _islandHit(null);
       await windowManager.setBounds(bounds);
       miniPlayerStyle.value = style;
+      // Again, now the island's view is gone: one last frame of it, laid out at the new size while the window grew,
+      // may have sent its pill after the first, and the window then showed only a pill-shaped strip of itself.
+      if (!island) await _islandHit(null);
       await windowManager.setAlwaysOnTop(true);
+      await _followTaskbar();
     } else {
       await _rememberSpot();
       miniPlayer.value = false;
+      await _followTaskbar();
       await windowManager.setAlwaysOnTop(false);
       await _islandHit(null);
       await windowManager.setResizable(true);
@@ -115,7 +123,44 @@ Future<void> _switch(bool on, DesktopMiniStyle style) async {
     // Tiling compositors may refuse to resize; the view switches anyway.
     debugPrint('Mini player window: $e');
     miniPlayer.value = on;
+    await _followTaskbar();
   }
+}
+
+/// Whether the window keeps off the taskbar: while it's the mini player (always on top, so it needs no button),
+/// except minimized, where the button is the way back (otherwise only Alt+Tab or the tray would find it).
+@visibleForTesting
+bool miniSkipsTaskbar({required bool mini, required bool minimized}) => mini && !minimized;
+
+bool _minimized = false;
+_TaskbarFollower? _taskbarFollower;
+
+/// Takes the taskbar button away or brings it back to match [miniSkipsTaskbar]. Sent again on every focus too:
+/// Windows puts a removed button back when the window is shown again (from the tray, say).
+Future<void> _followTaskbar() async {
+  if (!Features.miniPlayerOffTaskbar) return;
+  if (miniPlayer.value && _taskbarFollower == null) windowManager.addListener(_taskbarFollower = _TaskbarFollower());
+  try {
+    await windowManager.setSkipTaskbar(miniSkipsTaskbar(mini: miniPlayer.value, minimized: _minimized));
+  } catch (e) {
+    debugPrint('Mini player taskbar: $e');
+  }
+}
+
+class _TaskbarFollower with WindowListener {
+  void _set(bool minimized) {
+    _minimized = minimized;
+    if (miniPlayer.value) unawaited(_enqueue(_followTaskbar));
+  }
+
+  @override
+  void onWindowMinimize() => _set(true);
+
+  @override
+  void onWindowRestore() => _set(false);
+
+  @override
+  void onWindowFocus() => _set(false);
 }
 
 Future<void> _rememberSpot() async {
@@ -323,6 +368,7 @@ class _Deck extends StatelessWidget {
                                 style: text.titleMedium?.copyWith(fontWeight: FontWeight.w700, color: ink.text),
                               ),
                             ),
+                            const _LyricsToggle(),
                             island
                                 ? _SmallIcon(
                                     icon: Icons.picture_in_picture_alt_rounded,
@@ -425,41 +471,128 @@ class _WindowControls extends StatelessWidget {
           ),
         ),
         _Transport(c: c, now: now, size: 46),
-        Expanded(
-          child: Align(
-            alignment: Alignment.centerRight,
-            child: ListenableBuilder(
-              listenable: LayoutPrefs.instance,
-              builder: (context, _) {
-                final on = LayoutPrefs.instance.miniLyrics;
-                return _Toggle(
-                  icon: Icons.lyrics_outlined,
-                  tooltip: on ? tr.hideLyrics : tr.showLyrics,
-                  on: on,
-                  onPressed: () => LayoutPrefs.instance.setMiniLyrics(!on),
-                );
-              },
-            ),
-          ),
-        ),
+        const Expanded(child: _MiniVolume()),
       ],
     ),
   );
 }
 
+/// The lyrics switch, small beside the window buttons at the top: on, the line being sung shows under the song.
+class _LyricsToggle extends StatelessWidget {
+  const _LyricsToggle();
+
+  @override
+  Widget build(BuildContext context) => ListenableBuilder(
+    listenable: LayoutPrefs.instance,
+    builder: (context, _) {
+      final on = LayoutPrefs.instance.miniLyrics;
+      return _Toggle(
+        icon: Icons.lyrics_outlined,
+        tooltip: on ? tr.hideLyrics : tr.showLyrics,
+        on: on,
+        small: true,
+        onPressed: () => LayoutPrefs.instance.setMiniLyrics(!on),
+      );
+    },
+  );
+}
+
+/// Mute and a volume slider, in the ink of the shape around them (light on the island). The same level as the
+/// player bar's: the cast device's while casting, fixed at full for DoP (the DAC's own volume is the one to use);
+/// the scroll wheel nudges it.
+class _MiniVolume extends StatelessWidget {
+  const _MiniVolume();
+
+  @override
+  Widget build(BuildContext context) {
+    final c = PlayerScope.read(context);
+    final ink = _Ink.of(context);
+    return PlayerSelect<({bool casting, double device, bool canSet, bool dop})>(
+      select: (c) => (
+        casting: c.casting,
+        device: c.casting ? c.volume : 0,
+        canSet: c.canSetVolume,
+        dop: !c.casting && c.audio.dopPlaying != null,
+      ),
+      builder: (context, v, _) => ValueListenableBuilder<double>(
+        valueListenable: c.volumeLevel,
+        builder: (context, level, _) {
+          final volume = v.dop ? 1.0 : (v.casting ? v.device : level);
+          final setVolume = v.canSet && !v.dop ? c.setVolume : null;
+          final row = Listener(
+            onPointerSignal: (e) {
+              if (e is PointerScrollEvent && setVolume != null) c.nudgeVolume(e.scrollDelta.dy < 0 ? 0.05 : -0.05);
+            },
+            child: Row(
+              children: [
+                IconButton(
+                  tooltip: volume == 0 ? tr.unmute : tr.mute,
+                  iconSize: 20,
+                  visualDensity: VisualDensity.compact,
+                  color: ink.muted,
+                  onPressed: setVolume == null ? null : c.toggleMute,
+                  icon: Icon(
+                    volume == 0
+                        ? Icons.volume_off_rounded
+                        : volume < 0.5
+                        ? Icons.volume_down_rounded
+                        : Icons.volume_up_rounded,
+                  ),
+                ),
+                Expanded(
+                  child: SliderTheme(
+                    data: SliderTheme.of(context).copyWith(
+                      trackHeight: 4,
+                      padding: const EdgeInsets.symmetric(horizontal: 6),
+                      thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6, elevation: 0),
+                      overlayShape: const RoundSliderOverlayShape(overlayRadius: 12),
+                      activeTrackColor: ink.text,
+                      inactiveTrackColor: ink.text.withValues(alpha: 0.18),
+                      thumbColor: ink.text,
+                    ),
+                    child: SizedBox(
+                      height: 24,
+                      child: Slider(
+                        value: volume.clamp(0, 1),
+                        onChangeStart: setVolume == null ? null : (_) => c.volumeDragStarted(),
+                        onChanged: setVolume,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+          return v.dop ? Tooltip(message: tr.dsdUseDacVolume, child: row) : row;
+        },
+      ),
+    );
+  }
+}
+
 class _Toggle extends StatelessWidget {
-  const _Toggle({required this.icon, required this.tooltip, required this.on, required this.onPressed});
+  const _Toggle({
+    required this.icon,
+    required this.tooltip,
+    required this.on,
+    required this.onPressed,
+    this.small = false,
+  });
 
   final IconData icon;
   final String tooltip;
   final bool on;
   final VoidCallback? onPressed;
 
+  /// The size of the window buttons beside it ([_SmallIcon]).
+  final bool small;
+
   @override
   Widget build(BuildContext context) => IconButton(
     tooltip: tooltip,
     isSelected: on,
-    iconSize: 20,
+    iconSize: small ? 18 : 20,
+    visualDensity: small ? VisualDensity.compact : null,
     color: _Ink.of(context).muted,
     selectedIcon: Icon(icon, color: AppColors.accent),
     style: IconButton.styleFrom(backgroundColor: on ? AppColors.accent.withValues(alpha: 0.16) : null),
@@ -518,7 +651,9 @@ class _IslandViewState extends State<_IslandView> with TickerProviderStateMixin 
 
   /// Opening, the whole window takes clicks at once, so the pill never grows into a part that lets them through.
   void _syncHit({bool force = false}) {
-    if (!mounted) return;
+    // Only while the window is the island: a frame of it left over from a switch to the mini window (or out of the
+    // mini player) would cut that window down to the pill.
+    if (!mounted || !miniPlayer.value || miniPlayerStyle.value != DesktopMiniStyle.island) return;
     final open = _open || _h.value > 0.01;
     final size = MediaQuery.sizeOf(context);
     if (!force && _sent == (open, size)) return;
@@ -1020,33 +1155,49 @@ class _MiniSeekState extends State<_MiniSeek> {
       builder: (context, snap) {
         final total = (widget.c.duration?.inMilliseconds ?? 0).toDouble();
         final pos = (_drag ?? snap.data?.inMilliseconds.toDouble() ?? 0).clamp(0.0, total);
+        // The wave by default (the plain track in Lightweight); it rolls while the song plays, also with another
+        // window focused (the mini player stays in sight on top), and flattens on a pause.
+        final wavy = !LayoutPrefs.lightweight;
+        Widget slider(MotionClock? clock) => SliderTheme(
+          data: SliderTheme.of(context).copyWith(
+            trackHeight: 4,
+            trackShape: wavy ? WavySeekTrack(motion: clock) : null,
+            thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
+            overlayShape: const RoundSliderOverlayShape(overlayRadius: 14),
+            activeTrackColor: AppColors.accent,
+            inactiveTrackColor: _Ink.of(context).text.withValues(alpha: 0.18),
+            thumbColor: AppColors.accent,
+          ),
+          child: SizedBox(
+            height: 24,
+            child: Slider(
+              value: total == 0 ? 0 : pos,
+              max: total == 0 ? 1 : total,
+              onChanged: widget.enabled && total > 0 ? (v) => setState(() => _drag = v) : null,
+              onChangeEnd: (v) {
+                widget.c.seek(Duration(milliseconds: v.round()));
+                setState(() => _drag = null);
+              },
+            ),
+          ),
+        );
         return Row(
           children: [
             Text(formatDuration(Duration(milliseconds: pos.round())), style: small),
+            // Room between the times and the bar: the wave runs to its very ends.
+            const SizedBox(width: 10),
             Expanded(
-              child: SliderTheme(
-                data: SliderTheme.of(context).copyWith(
-                  trackHeight: 4,
-                  thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
-                  overlayShape: const RoundSliderOverlayShape(overlayRadius: 14),
-                  activeTrackColor: AppColors.accent,
-                  inactiveTrackColor: _Ink.of(context).text.withValues(alpha: 0.18),
-                  thumbColor: AppColors.accent,
-                ),
-                child: SizedBox(
-                  height: 24,
-                  child: Slider(
-                    value: total == 0 ? 0 : pos,
-                    max: total == 0 ? 1 : total,
-                    onChanged: widget.enabled && total > 0 ? (v) => setState(() => _drag = v) : null,
-                    onChangeEnd: (v) {
-                      widget.c.seek(Duration(milliseconds: v.round()));
-                      setState(() => _drag = null);
-                    },
-                  ),
-                ),
-              ),
+              child: wavy
+                  ? PlayingMotion(
+                      restWithVideo: false,
+                      moveUnfocused: true,
+                      builder: (context, clock) => RepaintBoundary(
+                        child: RepaintOn(listenable: clock, child: slider(clock)),
+                      ),
+                    )
+                  : slider(null),
             ),
+            const SizedBox(width: 10),
             Text(formatDuration(widget.c.duration), style: small),
           ],
         );

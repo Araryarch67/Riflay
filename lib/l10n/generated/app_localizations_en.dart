@@ -6448,4 +6448,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get introSkip => 'Skip intro';
+
+  @override
+  String get trayShuffle => 'Shuffle';
+
+  @override
+  String get trayRepeat => 'Repeat';
+
+  @override
+  String get trayRepeatOne => 'One song';
 }

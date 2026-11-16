@@ -1888,5 +1888,8 @@
   "downloadMatchFailed": "Tidak dapat mencari di sumber ini. Coba lagi atau pilih sumber lain.",
   "downloadMatchEmpty": "Tidak ada lagu yang cocok. Coba judul lebih pendek atau sumber lain.",
   "@downloadMatchTitle": {"placeholders": {"source": {"type": "String"}}},
-  "introSkip": "Lewati intro"
+  "introSkip": "Lewati intro",
+  "trayShuffle": "Acak",
+  "trayRepeat": "Ulangi",
+  "trayRepeatOne": "Satu lagu"
 }
