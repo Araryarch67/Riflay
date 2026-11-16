@@ -74,6 +74,17 @@ class MediaSession extends BaseAudioHandler with SeekHandler {
   static final showLyrics = ValueNotifier(true);
   static bool get lyricsSupported => Host.isAndroid || Host.isIOS;
 
+  /// The words of the line being sung now, null between lines or without synced lyrics. The home-screen widget
+  /// shows them, changing as the notification's line does: once a line, not on a clock.
+  static final lyricLine = ValueNotifier<String?>(null);
+
+  /// How [lyricLine] is read when it is in another script and the lyrics page's Pronunciation is on
+  /// ("kyō mo mata hajimaru"); null otherwise. The widget shows it under the line.
+  static final lyricSaid = ValueNotifier<String?>(null);
+
+  /// The line sung after [lyricLine], which the widget shows under it when there is no pronunciation.
+  static final lyricNext = ValueNotifier<String?>(null);
+
   static Future<void> loadLyricsSetting() async {
     final p = await SharedPreferences.getInstance();
     showLyrics.value = p.getBool(_lyricsKey) ?? true;
@@ -131,7 +142,7 @@ class MediaSession extends BaseAudioHandler with SeekHandler {
     _publishLine();
     if (item.artUri == null) {
       // Local cover art lives in the file's tags; the system needs a file or URL.
-      final art = await _artFile(t);
+      final art = await artFile(t);
       if (art != null && _shownId == t.id) {
         _item = item.copyWith(artUri: art.uri);
         _publishLine(force: true);
@@ -203,10 +214,19 @@ class MediaSession extends BaseAudioHandler with SeekHandler {
   /// The song's item, with the line being sung (if any) as its artist.
   void _publishLine({bool force = false}) {
     final item = _item, t = _c.currentTrack, l = _lyrics;
-    if (item == null || t == null) return;
-    final line = l == null || !showLyrics.value || !lyricsSupported
-        ? null
-        : lineFor(l, _c.position - LyricsTiming.of(t).value, extras: _extras);
+    if (item == null || t == null) {
+      lyricLine.value = null;
+      lyricSaid.value = null;
+      lyricNext.value = null;
+      return;
+    }
+    final follow = l != null && showLyrics.value && lyricsSupported;
+    final at = _c.position - LyricsTiming.of(t).value;
+    final line = follow ? lineFor(l, at, extras: _extras) : null;
+    // The widget has a row for each: the words, and their pronunciation under them.
+    lyricLine.value = follow ? lineFor(l, at) : null;
+    lyricSaid.value = follow ? saidFor(l, at, _extras) : null;
+    lyricNext.value = follow ? upcomingFor(l, at) : null;
     if (!force && line == _shownLine && mediaItem.value?.id == item.id) return;
     _shownLine = line;
     mediaItem.add(line == null ? item : item.copyWith(artist: line, album: item.artist));
@@ -228,6 +248,30 @@ class MediaSession extends BaseAudioHandler with SeekHandler {
         ? extras[i].romanized
         : null;
     return said == null ? text : '$text — $said';
+  }
+
+  /// The pronunciation from [extras] of the line sung at [position], when that line is in another script; null
+  /// between lines, for a line in Latin script, or without [extras].
+  @visibleForTesting
+  static String? saidFor(Lyrics lyrics, Duration position, List<LineExtras>? extras) {
+    if (extras == null) return null;
+    final i = lyrics.lineAt(position + _early);
+    if (i < 0 || i >= extras.length) return null;
+    final line = lyrics.lines[i];
+    if (line.end case final end? when position + _early >= end) return null;
+    final text = line.text.trim();
+    if (text.isEmpty || !LyricsTranslation.hasNonLatin(text)) return null;
+    return extras[i].romanized;
+  }
+
+  /// The words of the next line to be sung after [position] (skipping empty and ♪ lines), null after the last.
+  @visibleForTesting
+  static String? upcomingFor(Lyrics lyrics, Duration position) {
+    for (var j = lyrics.lineAt(position + _early) + 1; j < lyrics.lines.length; j++) {
+      final text = lyrics.lines[j].text.trim();
+      if (text.isNotEmpty && !RegExp(r'^[♪♫\s]+$').hasMatch(text)) return text;
+    }
+    return null;
   }
 
   /// When the shown line next changes after [position]: the next line's start, or this one's end.
@@ -303,7 +347,8 @@ class MediaSession extends BaseAudioHandler with SeekHandler {
     return dir;
   }
 
-  static Future<File?> _artFile(Track t) async {
+  /// A picture file of [t]'s cover (the system and the home-screen widget need a file), null without one.
+  static Future<File?> artFile(Track t) async {
     final bytes = Metadata.cachedArtwork(t) ?? await Metadata.artwork(t);
     if (bytes == null) return null;
     final dir = await (_artDir ??= _openArtDir());

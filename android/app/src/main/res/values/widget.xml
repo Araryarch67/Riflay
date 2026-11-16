@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The home-screen player's own colours, for a song without cover colours. Before Android 12: a dark card, as the
+     mini player is in the dark theme. Android 12 and later take Material You's (values-v31, values-night-v31). -->
+<resources>
+    <color name="widget_surface">#FF202124</color>
+    <color name="widget_on_surface">#FFFFFFFF</color>
+    <color name="widget_on_surface_variant">#B3FFFFFF</color>
+    <!-- The accent: the line being sung, the progress wave, play / pause's disc, and what is on (shuffle, repeat,
+         a liked song). -->
+    <color name="widget_button">#FFFFFFFF</color>
+    <color name="widget_on_accent">#FF202124</color>
+    <color name="widget_track">#33FFFFFF</color>
+    <color name="widget_chip">#26FFFFFF</color>
+    <!-- The glass's light rim, the same in every theme, as the Liquid glass mini player's. -->
+    <color name="widget_rim">#40FFFFFF</color>
+    <dimen name="widget_radius">28dp</dimen>
+    <!-- Shuffle, previous, play / pause, next and like: plain icons, as in the Liquid glass mini player. -->
+    <style name="WidgetButton">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">44dp</item>
+        <item name="android:layout_weight">1</item>
+        <item name="android:padding">10dp</item>
+        <item name="android:scaleType">fitCenter</item>
+        <item name="android:background">?android:attr/selectableItemBackgroundBorderless</item>
+        <item name="android:tint">@color/widget_on_surface</item>
+    </style>
+</resources>

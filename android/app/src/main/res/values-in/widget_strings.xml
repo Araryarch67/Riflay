@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The home-screen player's text before the app has sent its own (in the app's language), and the widget
+     picker's. Keep in step with lib/l10n/app_*.arb. -->
+<resources>
+    <string name="widget_name">Sedang diputar</string>
+    <string name="widget_description">Lagu yang diputar, dengan putar, lewati, acak, dan suka</string>
+    <string name="widget_nothing_playing">Tidak ada yang diputar</string>
+    <string name="widget_open_app">Buka Riflay</string>
+    <string name="widget_play">Putar</string>
+    <string name="widget_pause">Jeda</string>
+    <string name="widget_previous">Sebelumnya</string>
+    <string name="widget_next">Berikutnya</string>
+    <string name="widget_shuffle">Acak</string>
+    <string name="widget_repeat">Ulangi</string>
+    <string name="widget_like">Tambah ke Musik yang disukai</string>
+    <string name="widget_unlike">Hapus dari Musik yang disukai</string>
+    <string name="widget_preview_title">Judul lagu</string>
+    <string name="widget_preview_artist">Artis</string>
+</resources>

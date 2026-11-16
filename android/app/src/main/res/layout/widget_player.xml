@@ -1,0 +1,270 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The home-screen player (PlayerWidget.kt), laid out as the app's mini window: the cover large on the left; the
+     title, the artist with the song's format, the line being sung in the accent and the next one faintly; the
+     elapsed time, the progress wave and the length; then shuffle and repeat, previous / play / next round the
+     scalloped accent button, and like where the window has its volume. On a lower widget the next line goes first,
+     then the lyric row (the line takes the artist's place). The texts and colours here are only the widget picker's
+     preview: PlayerWidget sets them all. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@android:id/background"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:clipToOutline="true">
+
+    <ImageView
+        android:id="@+id/widget_card"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:importantForAccessibility="no"
+        android:scaleType="fitXY"
+        android:src="@drawable/widget_card" />
+
+    <ImageView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:importantForAccessibility="no"
+        android:scaleType="fitXY"
+        android:src="@drawable/widget_rim" />
+
+    <LinearLayout
+        android:id="@+id/widget_body"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:paddingStart="14dp"
+        android:paddingTop="14dp"
+        android:paddingEnd="12dp"
+        android:paddingBottom="6dp">
+
+        <!-- The cover takes the height this row is given and stays square (adjustViewBounds). -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <ImageView
+                android:id="@+id/widget_cover"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:adjustViewBounds="true"
+                android:importantForAccessibility="no"
+                android:maxWidth="150dp"
+                android:scaleType="fitCenter"
+                android:src="@drawable/widget_cover_preview" />
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="14dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/widget_title"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:ellipsize="end"
+                    android:singleLine="true"
+                    android:text="@string/widget_preview_title"
+                    android:textColor="@color/widget_on_surface"
+                    android:textSize="17sp"
+                    android:textStyle="bold" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:id="@+id/widget_artist"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:ellipsize="end"
+                        android:singleLine="true"
+                        android:text="@string/widget_preview_artist"
+                        android:textColor="@color/widget_on_surface_variant"
+                        android:textSize="14sp" />
+
+                    <!-- The song's format, "FLAC 24/96", on a small tonal chip as the mini window's. Gone until known. -->
+                    <TextView
+                        android:id="@+id/widget_quality"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:background="@drawable/widget_chip"
+                        android:ellipsize="end"
+                        android:fontFeatureSettings="tnum"
+                        android:letterSpacing="0.03"
+                        android:maxWidth="110dp"
+                        android:paddingStart="6dp"
+                        android:paddingTop="2dp"
+                        android:paddingEnd="6dp"
+                        android:paddingBottom="2dp"
+                        android:singleLine="true"
+                        android:text="FLAC 24/96"
+                        android:textColor="@color/widget_on_surface_variant"
+                        android:textSize="11sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/widget_lyric"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:ellipsize="end"
+                    android:singleLine="true"
+                    android:text="♪"
+                    android:textColor="@color/widget_button"
+                    android:textSize="15sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/widget_lyric_next"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:ellipsize="end"
+                    android:singleLine="true"
+                    android:textColor="@color/widget_on_surface_variant"
+                    android:textSize="13sp" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- Elapsed (counting by itself), the wave, the length. -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <Chronometer
+                android:id="@+id/widget_elapsed"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:minWidth="30dp"
+                android:textColor="@color/widget_on_surface_variant"
+                android:textSize="12sp" />
+
+            <ImageView
+                android:id="@+id/widget_wave"
+                android:layout_width="0dp"
+                android:layout_height="14dp"
+                android:layout_marginStart="8dp"
+                android:layout_marginEnd="8dp"
+                android:layout_weight="1"
+                android:importantForAccessibility="no"
+                android:scaleType="fitXY"
+                android:src="@drawable/widget_wave_preview" />
+
+            <TextView
+                android:id="@+id/widget_duration"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:minWidth="30dp"
+                android:gravity="end"
+                android:text="3:30"
+                android:textColor="@color/widget_on_surface_variant"
+                android:textSize="12sp" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:gravity="start|center_vertical"
+                android:orientation="horizontal">
+
+                <ImageView
+                    android:id="@+id/widget_shuffle"
+                    style="@style/WidgetButton"
+                    android:layout_width="40dp"
+                    android:layout_weight="0"
+                    android:contentDescription="@string/widget_shuffle"
+                    android:src="@drawable/ic_widget_shuffle"
+                    android:tint="@color/widget_on_surface_variant" />
+
+                <ImageView
+                    android:id="@+id/widget_repeat"
+                    style="@style/WidgetButton"
+                    android:layout_width="40dp"
+                    android:layout_weight="0"
+                    android:contentDescription="@string/widget_repeat"
+                    android:src="@drawable/ic_widget_repeat"
+                    android:tint="@color/widget_on_surface_variant" />
+            </LinearLayout>
+
+            <ImageView
+                android:id="@+id/widget_previous"
+                style="@style/WidgetButton"
+                android:layout_width="44dp"
+                android:layout_weight="0"
+                android:padding="9dp"
+                android:contentDescription="@string/widget_previous"
+                android:src="@drawable/ic_widget_previous" />
+
+            <FrameLayout
+                android:id="@+id/widget_play"
+                android:layout_width="56dp"
+                android:layout_height="56dp"
+                android:layout_marginStart="4dp"
+                android:layout_marginEnd="4dp"
+                android:contentDescription="@string/widget_play">
+
+                <ImageView
+                    android:id="@+id/widget_play_disc"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/widget_flower"
+                    android:tint="@color/widget_button" />
+
+                <ImageView
+                    android:id="@+id/widget_play_icon"
+                    android:layout_width="28dp"
+                    android:layout_height="28dp"
+                    android:layout_gravity="center"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/ic_widget_play"
+                    android:tint="@color/widget_on_accent" />
+            </FrameLayout>
+
+            <ImageView
+                android:id="@+id/widget_next"
+                style="@style/WidgetButton"
+                android:layout_width="44dp"
+                android:layout_weight="0"
+                android:padding="9dp"
+                android:contentDescription="@string/widget_next"
+                android:src="@drawable/ic_widget_next" />
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:gravity="end|center_vertical"
+                android:orientation="horizontal">
+
+                <ImageView
+                    android:id="@+id/widget_like"
+                    style="@style/WidgetButton"
+                    android:layout_width="40dp"
+                    android:layout_weight="0"
+                    android:contentDescription="@string/widget_like"
+                    android:src="@drawable/ic_widget_favorite_border" />
+            </LinearLayout>
+        </LinearLayout>
+    </LinearLayout>
+</FrameLayout>

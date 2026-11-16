@@ -1,0 +1,160 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The home-screen player one cell high: the app's Liquid glass mini player, a pill of tinted glass with a light rim,
+     the round cover, the title over the artist (or the line being sung), then shuffle, previous, play / pause, next
+     and like, over a thin progress line. Same ids as widget_player.xml, less the quality chip, repeat and the lyric rows. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@android:id/background"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:clipToOutline="true">
+
+    <ImageView
+        android:id="@+id/widget_card"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:importantForAccessibility="no"
+        android:scaleType="fitXY"
+        android:src="@drawable/widget_pill" />
+
+    <ImageView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:importantForAccessibility="no"
+        android:scaleType="fitXY"
+        android:src="@drawable/widget_pill_rim" />
+
+    <LinearLayout
+        android:id="@+id/widget_body"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:gravity="center_vertical"
+        android:orientation="vertical"
+        android:paddingStart="8dp"
+        android:paddingTop="6dp"
+        android:paddingEnd="10dp"
+        android:paddingBottom="6dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <ImageView
+                android:id="@+id/widget_cover"
+                android:layout_width="42dp"
+                android:layout_height="42dp"
+                android:background="@drawable/widget_round"
+                android:importantForAccessibility="no"
+                android:scaleType="centerInside"
+                android:src="@drawable/ic_widget_note" />
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="10dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/widget_title"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:ellipsize="end"
+                    android:singleLine="true"
+                    android:text="@string/widget_preview_title"
+                    android:textColor="@color/widget_on_surface"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/widget_artist"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:ellipsize="end"
+                    android:singleLine="true"
+                    android:text="@string/widget_preview_artist"
+                    android:textColor="@color/widget_on_surface_variant"
+                    android:textSize="12sp" />
+            </LinearLayout>
+
+            <ImageView
+                android:id="@+id/widget_shuffle"
+                style="@style/WidgetButton"
+                android:layout_width="32dp"
+                android:layout_weight="0"
+                android:padding="7dp"
+                android:contentDescription="@string/widget_shuffle"
+                android:src="@drawable/ic_widget_shuffle"
+                android:tint="@color/widget_on_surface_variant" />
+
+            <ImageView
+                android:id="@+id/widget_previous"
+                style="@style/WidgetButton"
+                android:layout_width="34dp"
+                android:layout_weight="0"
+                android:padding="7dp"
+                android:contentDescription="@string/widget_previous"
+                android:src="@drawable/ic_widget_previous" />
+
+            <FrameLayout
+                android:id="@+id/widget_play"
+                android:layout_width="42dp"
+                android:layout_height="42dp"
+                android:layout_marginStart="2dp"
+                android:layout_marginEnd="2dp"
+                android:contentDescription="@string/widget_play">
+
+                <ImageView
+                    android:id="@+id/widget_play_disc"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/widget_flower"
+                    android:tint="@color/widget_button" />
+
+                <ImageView
+                    android:id="@+id/widget_play_icon"
+                    android:layout_width="22dp"
+                    android:layout_height="22dp"
+                    android:layout_gravity="center"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/ic_widget_play"
+                    android:tint="@color/widget_on_accent" />
+            </FrameLayout>
+
+            <ImageView
+                android:id="@+id/widget_next"
+                style="@style/WidgetButton"
+                android:layout_width="34dp"
+                android:layout_weight="0"
+                android:padding="7dp"
+                android:contentDescription="@string/widget_next"
+                android:src="@drawable/ic_widget_next" />
+
+            <ImageView
+                android:id="@+id/widget_like"
+                style="@style/WidgetButton"
+                android:layout_width="32dp"
+                android:layout_weight="0"
+                android:padding="7dp"
+                android:contentDescription="@string/widget_like"
+                android:src="@drawable/ic_widget_favorite_border" />
+        </LinearLayout>
+
+        <!-- Inset by the pill's rounded ends, so the line stays inside the glass. -->
+        <ProgressBar
+            android:id="@+id/widget_progress"
+            style="@android:style/Widget.ProgressBar.Horizontal"
+            android:layout_width="match_parent"
+            android:layout_height="2dp"
+            android:layout_marginStart="18dp"
+            android:layout_marginTop="3dp"
+            android:layout_marginEnd="16dp"
+            android:max="1000"
+            android:progress="350"
+            android:progressBackgroundTint="@color/widget_track"
+            android:progressDrawable="@drawable/widget_progress"
+            android:progressTint="@color/widget_on_surface" />
+    </LinearLayout>
+</FrameLayout>

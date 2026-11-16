@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The cover's place in the widget picker's preview: a rounded square with a note. PlayerWidget draws the real one. -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="112dp" android:height="112dp">
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="@color/widget_chip"/>
+            <corners android:radius="14dp"/>
+        </shape>
+    </item>
+    <item android:width="40dp" android:height="40dp" android:gravity="center" android:drawable="@drawable/ic_widget_note"/>
+</layer-list>

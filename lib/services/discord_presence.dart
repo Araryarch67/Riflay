@@ -248,8 +248,7 @@ class DiscordPresence {
   }
 
   /// [quality] ("FLAC · 24-bit / 96 kHz") as short as a profile line wants it: "FLAC 24/96", "Opus 160 kbps",
-  /// "WAV 32-bit float/48".
-  @visibleForTesting
+  /// "WAV 32-bit float/48". The home-screen widget's quality chip shows it too.
   static String shortQuality(String quality) => quality
       .replaceAllMapped(RegExp(r'(\d+)-bit / ([\d.]+) kHz'), (m) => '${m[1]}/${m[2]}')
       .replaceAllMapped(RegExp(r'(\d+-bit float) / ([\d.]+) kHz'), (m) => '${m[1]}/${m[2]}')

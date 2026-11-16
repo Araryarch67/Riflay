@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The one-row player's glass: a pill (the radius is clamped to half the height), in the widget's own colour; a
+     song's colour is laid over it with setColorFilter. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="@color/widget_surface"/>
+    <corners android:radius="999dp"/>
+</shape>

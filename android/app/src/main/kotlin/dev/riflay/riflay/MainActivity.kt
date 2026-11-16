@@ -67,6 +67,8 @@ class MainActivity : AudioServiceActivity() {
         // The process ends with the engine: mpv players left without Dart crash on their next event.
         EngineEnd.attach(applicationContext, flutterEngine)
         appUpdater = AppUpdater(this, flutterEngine.dartExecutor.binaryMessenger)
+        // The home-screen player: Dart sends it the song (not disposed with the activity, as the music isn't).
+        PlayerWidget.attach(applicationContext, flutterEngine)
         // Share: Android's own share sheet (messaging apps, Nearby Share…) with the song's name and link.
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "riflay/share").setMethodCallHandler { call, result ->
             val text = call.argument<String>("text")

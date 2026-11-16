@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The widget picker's picture of the home-screen player before Android 12 (later ones draw widget_player itself):
+     the card, the cover, the title and artist lines, play / pause's disc and the progress line. -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="250dp" android:height="120dp">
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="@color/widget_surface"/>
+            <corners android:radius="24dp"/>
+        </shape>
+    </item>
+    <item android:left="14dp" android:top="14dp" android:width="44dp" android:height="44dp" android:gravity="top|start">
+        <shape android:shape="rectangle">
+            <solid android:color="#59FFFFFF"/>
+            <corners android:radius="10dp"/>
+        </shape>
+    </item>
+    <item android:left="68dp" android:top="20dp" android:width="96dp" android:height="10dp" android:gravity="top|start">
+        <shape android:shape="rectangle">
+            <solid android:color="#E6FFFFFF"/>
+            <corners android:radius="5dp"/>
+        </shape>
+    </item>
+    <item android:left="68dp" android:top="38dp" android:width="64dp" android:height="8dp" android:gravity="top|start">
+        <shape android:shape="rectangle">
+            <solid android:color="#80FFFFFF"/>
+            <corners android:radius="4dp"/>
+        </shape>
+    </item>
+    <item android:top="64dp" android:width="40dp" android:height="40dp" android:gravity="top|center_horizontal">
+        <shape android:shape="oval">
+            <solid android:color="#FFFFFFFF"/>
+        </shape>
+    </item>
+    <item android:left="14dp" android:right="14dp" android:bottom="8dp" android:height="3dp" android:gravity="bottom|fill_horizontal">
+        <shape android:shape="rectangle">
+            <solid android:color="#59FFFFFF"/>
+            <corners android:radius="2dp"/>
+        </shape>
+    </item>
+</layer-list>

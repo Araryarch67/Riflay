@@ -29,6 +29,7 @@ import 'services/language.dart';
 import 'services/video_mode.dart';
 import 'services/player_presets.dart';
 import 'services/layout_prefs.dart';
+import 'services/home_widget.dart';
 import 'services/media_session.dart';
 import 'services/metadata.dart';
 import 'services/legacy_data.dart';
@@ -189,6 +190,8 @@ Future<void> _startServices(PlayerController controller) async {
   await Future.wait(
     [
       MediaSession.start(controller),
+      // Android: the player on the home screen, sent the song as it changes.
+      Future.sync(() => HomeWidget.start(controller)),
       DesktopCli.start(controller),
       // Windows: Previous, Play / Pause and Next on the taskbar thumbnail.
       // After the start-up intro: its window has no taskbar button to put them on.
@@ -327,12 +330,6 @@ class _RiflayAppState extends State<RiflayApp> with WidgetsBindingObserver {
     }
   }
 
-  @override
-  Future<AppExitResponse> didRequestAppExit() async {
-    await widget.controller.flushSaves();
-    return AppExitResponse.exit;
-  }
-
   void _windowVisibilityChanged() {
     final state = WidgetsBinding.instance.lifecycleState;
     final animate =
@@ -342,6 +339,12 @@ class _RiflayAppState extends State<RiflayApp> with WidgetsBindingObserver {
         state != AppLifecycleState.detached;
     if (_animate != animate) setState(() => _animate = animate);
     animate ? MemoryTrim.shown() : MemoryTrim.hidden();
+  }
+
+  @override
+  Future<AppExitResponse> didRequestAppExit() async {
+    await widget.controller.flushSaves();
+    return AppExitResponse.exit;
   }
 
   @override

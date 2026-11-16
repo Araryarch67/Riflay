@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The home-screen player's text before the app has sent its own (in the app's language), and the widget
+     picker's. Keep in step with lib/l10n/app_*.arb. -->
+<resources>
+    <string name="widget_name">再生中</string>
+    <string name="widget_description">再生中の曲と、再生・スキップ・シャッフル・お気に入り</string>
+    <string name="widget_nothing_playing">再生してない</string>
+    <string name="widget_open_app">Riflay を開く</string>
+    <string name="widget_play">再生</string>
+    <string name="widget_pause">一時停止</string>
+    <string name="widget_previous">前へ</string>
+    <string name="widget_next">次へ</string>
+    <string name="widget_shuffle">シャッフル</string>
+    <string name="widget_repeat">リピート</string>
+    <string name="widget_like">お気に入りに追加</string>
+    <string name="widget_unlike">お気に入りから外す</string>
+    <string name="widget_preview_title">曲名</string>
+    <string name="widget_preview_artist">アーティスト</string>
+</resources>

@@ -458,11 +458,7 @@ class YoutubeMusicAccount extends ChangeNotifier {
 
   /// Watches [player]: each YouTube song that plays for 30 seconds (or ends)
   /// is reported once. [ticks] is its position about once a second; [current] says which song is playing.
-  StreamSubscription<Duration> reportPlaysOf(
-    AudioPlayer player,
-    Stream<Duration> ticks,
-    Track? Function() current,
-  ) {
+  StreamSubscription<Duration> reportPlaysOf(AudioPlayer player, Stream<Duration> ticks, Track? Function() current) {
     final clock = PlayReportClock();
     return ticks.listen((position) {
       final track = current();

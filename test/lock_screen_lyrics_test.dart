@@ -22,6 +22,13 @@ void main() {
     expect(MediaSession.lineFor(lyrics, s(60)), 'Third line');
   });
 
+  test('the line after the one being sung, past ♪ lines, and none after the last', () {
+    expect(MediaSession.upcomingFor(lyrics, s(2)), 'First line', reason: 'before the first line, the first');
+    expect(MediaSession.upcomingFor(lyrics, s(8)), 'Second line');
+    expect(MediaSession.upcomingFor(lyrics, s(10)), 'Third line', reason: 'the ♪ break is skipped');
+    expect(MediaSession.upcomingFor(lyrics, s(60)), isNull);
+  });
+
   test('wakes at the next line, not on a clock', () {
     expect(MediaSession.nextLineAt(lyrics, s(2)), s(4.85));
     expect(MediaSession.nextLineAt(lyrics, s(6)), s(8.85));
@@ -54,5 +61,14 @@ void main() {
       '今日もまた始まる',
       reason: 'no pronunciation came back',
     );
+  });
+
+  test('the widget gets the pronunciation on its own, only for a line in another script', () {
+    final sung = Lyrics.parse('[00:05.00]今日もまた始まる\n[00:09.00]Baby, give me some time\n', source: 'test');
+    const extras = [LineExtras(romanized: 'kyō mo mata hajimaru'), LineExtras(romanized: 'beibi')];
+    expect(MediaSession.saidFor(sung, s(6), extras), 'kyō mo mata hajimaru');
+    expect(MediaSession.saidFor(sung, s(10), extras), isNull, reason: 'a Latin line needs none');
+    expect(MediaSession.saidFor(sung, s(6), null), isNull, reason: 'Pronunciation off');
+    expect(MediaSession.saidFor(sung, s(2), extras), isNull, reason: 'before the first line');
   });
 }
