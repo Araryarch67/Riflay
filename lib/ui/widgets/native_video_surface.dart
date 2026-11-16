@@ -5,6 +5,8 @@ import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
+import 'over_video.dart';
+
 /// A Windows child window or Linux GTK surface that mpv draws into independently of Flutter.
 abstract final class NativeVideoWindow {
   static const _channel = MethodChannel('riflay/video_window');
@@ -97,7 +99,6 @@ class _NativeVideoSurfaceState extends State<NativeVideoSurface> {
   ({Rect clip, Rect full})? _rects() {
     if (!mounted) return null;
     if (!TickerMode.valuesOf(context).enabled) return null;
-    if (ModalRoute.of(context)?.isCurrent == false) return null;
     final box = context.findRenderObject();
     if (box is! RenderBox || !box.attached || !box.hasSize) return null;
     final ratio = View.of(context).devicePixelRatio;
@@ -109,6 +110,12 @@ class _NativeVideoSurfaceState extends State<NativeVideoSurface> {
     }
     final window = Offset.zero & View.of(context).physicalSize / ratio;
     clip = clip.intersect(window);
+    // A dialog, sheet or menu open over the app: the video makes room for it (nothing the app draws can lie over
+    // the video's window) and plays on beside it, unless too little of it would be left.
+    if (OverVideo.covering(clip) case final covered?) {
+      clip = OverVideo.beside(clip, covered);
+      if (clip.width * clip.height < full.width * full.height * 0.15) return null;
+    }
     if (clip.width < 1 || clip.height < 1) return null;
     Rect px(Rect r) => Rect.fromLTRB(r.left * ratio, r.top * ratio, r.right * ratio, r.bottom * ratio);
     // Whole pixels, the clip inside the box.

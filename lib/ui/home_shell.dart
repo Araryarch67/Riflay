@@ -51,6 +51,7 @@ import 'shell/first_frame_gate.dart';
 import 'shell/phone_navigation.dart';
 import 'shell/resize_handle.dart';
 import 'widgets/auto_hide_bar.dart';
+import 'widgets/over_video.dart';
 import 'widgets/title_bar.dart';
 
 /// Root layout.
@@ -719,7 +720,7 @@ class _HomeShellState extends State<HomeShell> {
 
   Widget _desktopNavigator() => Navigator(
     key: _history.navigatorKey,
-    observers: [_history.observer],
+    observers: [_history.observer, OverVideo.pages],
     onGenerateRoute: (_) => _route(const HomePage(), location: Locations.home, firstFrame: true),
   );
 

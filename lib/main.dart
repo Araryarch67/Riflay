@@ -49,6 +49,7 @@ import 'ui/player_panels.dart' show MiniPlayerWindow, miniPlayer, windowFullScre
 import 'ui/theme.dart';
 import 'ui/widgets/marquee_text.dart';
 import 'ui/widgets/playing_motion.dart';
+import 'ui/widgets/over_video.dart';
 import 'ui/widgets/title_bar.dart';
 import 'ui/widgets/startup_splash.dart';
 
@@ -405,6 +406,8 @@ class _RiflayAppState extends State<RiflayApp> with WidgetsBindingObserver {
         scrollBehavior: const MaterialScrollBehavior().copyWith(scrollbars: false),
         scaffoldMessengerKey: _messenger,
         navigatorKey: _navigator,
+        // Dialogs open over the music video's window: it makes room for them (see OverVideo).
+        navigatorObservers: [OverVideo.root],
         // The playing song on the web, where this is the tab's title (see `network.dart`).
         title: pageTitle,
         debugShowCheckedModeBanner: false,
