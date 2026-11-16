@@ -512,9 +512,15 @@ class VideoMode extends ChangeNotifier with WidgetsBindingObserver {
     }
   }
 
-  /// Windows/Linux: video has its own native surface over the page. Views place
-  /// it with [NativeVideoSurface] instead of drawing [controller].
-  static bool get native => !DebugSwitches.noNativeVideo && !_nativeUnavailable && NativeVideoPlayer.available;
+  /// Video is drawn in the page ([controller]) on every platform, so a menu, a sheet or a dialog lies over the
+  /// playing video. Windows and Linux used to give it a native surface of its own ([NativeVideoPlayer],
+  /// [NativeVideoSurface]): over the app it could only be pushed aside by what opened over it (nothing the app draws
+  /// can lie over another surface), and under the app it showed black. `RIFLAY_NATIVE_VIDEO` brings it back.
+  static bool get native =>
+      const bool.fromEnvironment('RIFLAY_NATIVE_VIDEO') &&
+      !DebugSwitches.noNativeVideo &&
+      !_nativeUnavailable &&
+      NativeVideoPlayer.available;
   static bool _nativeUnavailable = false;
 
   static String _nativeHwdec(String hwdec) => Host.isWindows && hwdec == 'auto' ? 'd3d11va' : hwdec;
