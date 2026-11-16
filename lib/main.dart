@@ -24,6 +24,7 @@ import 'platform/web_audio.dart';
 import 'services/incoming_links.dart';
 import 'platform/cli_server.dart';
 import 'services/appearance.dart';
+import 'services/splash_window.dart';
 import 'services/language.dart';
 import 'services/video_mode.dart';
 import 'services/player_presets.dart';
@@ -152,22 +153,28 @@ void warmUpText() {
 
 Future<void> _showWindow(Size? size) async {
   if (!hasNativeWindow) return;
+  const minimum = Size(320, 420);
+  final appSize = size ?? const Size(1280, 820);
+  // Full motion on Windows and Linux: the window first opens small and see-through for the intro, and shows itself
+  // once the intro has drawn (StartupSplash); it becomes the app's window afterwards.
+  final splash = SplashWindow.wanted;
   await windowManager.waitUntilReadyToShow(
     WindowOptions(
       title: 'Riflay',
       // Opens in the middle of the screen, sized to it (tiling WMs place it themselves).
-      size: size ?? const Size(1280, 820),
+      size: splash ? SplashWindow.size : appSize,
       center: true,
-      minimumSize: const Size(320, 420),
+      minimumSize: splash ? null : minimum,
       // Linux: the window has an alpha channel; Flutter paints the background.
-      backgroundColor: Host.isLinux ? Colors.transparent : AppColors.background,
+      backgroundColor: Host.isLinux || splash ? Colors.transparent : AppColors.background,
       titleBarStyle: TitleBarStyle.hidden,
     ),
-    () async {
-      await windowManager.show();
-      await windowManager.focus();
-    },
   );
+  // Not in waitUntilReadyToShow's callback: it isn't awaited, and the app must not start before the window is the
+  // intro's (StartupSplash reads SplashWindow.active once, at its first build).
+  if (splash && await SplashWindow.open(appSize: appSize, appMinimum: minimum)) return;
+  await windowManager.show();
+  await windowManager.focus();
 }
 
 /// Media controls, wake locks, the download queue, notifications and the listening history.
@@ -177,7 +184,8 @@ Future<void> _startServices(PlayerController controller) async {
       MediaSession.start(controller),
       DesktopCli.start(controller),
       // Windows: Previous, Play / Pause and Next on the taskbar thumbnail.
-      Future(() => TaskbarButtons.start(controller)),
+      // After the start-up intro: its window has no taskbar button to put them on.
+      SplashWindow.appShown.then((_) => TaskbarButtons.start(controller)),
       // Computers: the tray icon, and closing the window hides Riflay there (Settings › Performance & power).
       SystemTray.start(controller),
       StayAwake.start(controller),
@@ -460,16 +468,21 @@ class _DesktopFrame extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final frame = ColoredBox(
-      color: AppColors.of(context).background,
+    // The start-up intro's window (SplashWindow) is see-through and frameless: no background and no title bar.
+    final frame = ValueListenableBuilder(
+      valueListenable: SplashWindow.active,
+      builder: (context, splash, column) =>
+          ColoredBox(color: splash ? Colors.transparent : AppColors.of(context).background, child: column),
       child: Column(
         children: [
           // Hidden while the player fills the screen (the expanded player inside the window keeps it).
           ListenableBuilder(
-            listenable: Listenable.merge([windowFullScreen, titleBarInShell]),
+            listenable: Listenable.merge([windowFullScreen, titleBarInShell, SplashWindow.active]),
             // A browser tab has its own title: the web build only draws the desktop layout's bar.
             builder: (context, bar) =>
-                windowFullScreen.value || titleBarInShell.value || !hasNativeWindow ? const SizedBox.shrink() : bar!,
+                windowFullScreen.value || titleBarInShell.value || SplashWindow.active.value || !hasNativeWindow
+                ? const SizedBox.shrink()
+                : bar!,
             child: const AppTitleBar(),
           ),
           Expanded(

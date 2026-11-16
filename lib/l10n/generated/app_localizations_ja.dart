@@ -6230,4 +6230,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get downloadMatchEmpty => '一致する曲がありません。短い曲名か別のソースをお試しください。';
+
+  @override
+  String get introSkip => 'イントロをスキップ';
 }

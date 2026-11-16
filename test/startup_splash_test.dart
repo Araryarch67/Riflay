@@ -8,6 +8,7 @@ import 'package:riflay/ui/widgets/startup_splash.dart';
 Widget _app(Future<void> ready) => MaterialApp(
   home: StartupSplash(
     ready: ready,
+    intro: false,
     child: const SizedBox(key: ValueKey('home')),
   ),
 );

@@ -6440,4 +6440,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get downloadMatchEmpty => 'No matching songs found. Try a shorter title or a different source.';
+
+  @override
+  String get introSkip => 'Skip intro';
 }

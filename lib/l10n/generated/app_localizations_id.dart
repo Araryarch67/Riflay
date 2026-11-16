@@ -6367,4 +6367,7 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get downloadMatchEmpty => 'Tidak ada lagu yang cocok. Coba judul lebih pendek atau sumber lain.';
+
+  @override
+  String get introSkip => 'Lewati intro';
 }

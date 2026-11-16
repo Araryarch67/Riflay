@@ -11366,6 +11366,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No matching songs found. Try a shorter title or a different source.'**
   String get downloadMatchEmpty;
+
+  /// No description provided for @introSkip.
+  ///
+  /// In en, this message translates to:
+  /// **'Skip intro'**
+  String get introSkip;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

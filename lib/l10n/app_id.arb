@@ -1886,5 +1886,6 @@
   "downloadMatchReview": "Pilih rekaman yang akan diunduh. Periksa artis, versi, dan durasinya.",
   "downloadMatchFailed": "Tidak dapat mencari di sumber ini. Coba lagi atau pilih sumber lain.",
   "downloadMatchEmpty": "Tidak ada lagu yang cocok. Coba judul lebih pendek atau sumber lain.",
-  "@downloadMatchTitle": {"placeholders": {"source": {"type": "String"}}}
+  "@downloadMatchTitle": {"placeholders": {"source": {"type": "String"}}},
+  "introSkip": "Lewati intro"
 }
