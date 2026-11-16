@@ -569,6 +569,34 @@ void main() {
     expect(merge.local(_youtube(), const [], 4), isNull);
   });
 
+  test('a title given twice finds the library file named by one half of it', () {
+    final merge = _merge(const []);
+    final kyapi = _file('/music/Kyapi.flac', title: 'Kyapi', artist: 'Houshou Marine', seconds: 200);
+    final other = _file('/music/Ahoy!!.flac', title: 'Ahoy!!', artist: 'Houshou Marine', seconds: 200);
+    final song = _youtube(title: 'きゃぴ - Kyapi', artist: 'Houshou Marine', seconds: 199);
+    expect(merge.local(song, [other, kyapi], 1), same(kyapi));
+    expect(SmartMerge.same(song, kyapi), isTrue);
+    expect(SmartMerge.same(_youtube(title: 'Kyapi', artist: 'Houshou Marine', seconds: 199), kyapi), isTrue);
+    // The library file given twice, the song once.
+    final twice = _file('/music/きゃぴ - Kyapi.flac', title: 'きゃぴ - Kyapi', artist: 'Houshou Marine');
+    expect(merge.local(_youtube(title: 'Kyapi', artist: 'Houshou Marine'), [twice], 2), same(twice));
+    // Another song by the same artist, or a version of it, is not it.
+    expect(merge.local(_youtube(title: 'きゃぴ - Ahoy', artist: 'Houshou Marine'), [kyapi], 3), isNull);
+    final instrumental = _youtube(title: 'きゃぴ (Instrumental) - Kyapi', artist: 'Houshou Marine', seconds: 201);
+    expect(merge.local(instrumental, [kyapi], 4), isNull);
+    // The same title by someone else is not it.
+    expect(merge.local(_youtube(title: 'きゃぴ - Kyapi', artist: 'Someone Else'), [kyapi], 5), isNull);
+  });
+
+  test("a half that is only the artist's name doesn't make two titles the same", () {
+    final named = _file('/music/Houshou Marine.flac', title: 'Houshou Marine', artist: 'Houshou Marine');
+    final song = _youtube(title: 'Houshou Marine - Kyapi', artist: 'Houshou Marine');
+    expect(SmartMerge.same(song, named), isFalse);
+    expect(_merge(const []).local(song, [named], 1), isNull);
+    final kyapi = _file('/music/Kyapi.flac', title: 'Kyapi', artist: 'Houshou Marine');
+    expect(_merge(const []).local(song, [kyapi], 1), same(kyapi));
+  });
+
   test('off once turned off; the streaming sources are asked only when one is on', () async {
     SharedPreferences.setMockInitialValues({'sources.smartMerge.v1': false, 'sources.monochrome.v1': false});
     final sources = MusicSources.instance..reset();

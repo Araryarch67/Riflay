@@ -287,7 +287,13 @@ class SmartMerge {
     final isrc = origin.extensionData?['isrc']?.toString().trim().toUpperCase();
     final otherIsrc = candidate.extensionData?['isrc']?.toString().trim().toUpperCase();
     if (isrc != null && isrc.isNotEmpty && otherIsrc != null && otherIsrc.isNotEmpty && isrc != otherIsrc) return false;
-    return _sameTitle(origin.title, candidate.title) &&
+    return _sameTitle(
+          origin.title,
+          candidate.title,
+          names: {
+            for (final name in {..._artists(origin.artist), ..._artists(candidate.artist)}) name.replaceAll(' ', ''),
+          },
+        ) &&
         (_shareArtist(origin, candidate) || (byArtist && _otherScript(origin.artist, candidate.artist)));
   }
 
@@ -310,14 +316,19 @@ class SmartMerge {
 
   /// The same title, however it is spaced ("I I I" and "III"). Fuzzy title
   /// matching is appropriate for a reviewed download, not an automatic swap.
-  static bool _sameTitle(String one, String other) {
+  ///
+  /// [names]: the artists' names ([_key]); a half that is only one of them ("Houshou Marine - Kyapi") names the
+  /// artist, not the song, and doesn't make two titles the same.
+  static bool _sameTitle(String one, String other, {Set<String> names = const {}}) {
     final a = _title(one), b = _title(other);
     if (a.isEmpty || b.isEmpty) return false;
     if (a.replaceAll(' ', '') == b.replaceAll(' ', '')) return true;
     // A title given twice, in its own script and in Latin letters ("伝説の夜 - legendary night"): either half
     // being the other title is the same title.
-    final ours = _halves(one), theirs = _halves(other);
-    return (ours.length > 1 || theirs.length > 1) && ours.intersection(theirs).isNotEmpty;
+    // Whether a title is given twice counts every half, a short one too ("きゃぴ - Kyapi"); only the longer
+    // halves are compared.
+    if (one.split(_dash).length < 2 && other.split(_dash).length < 2) return false;
+    return _halves(one).intersection(_halves(other)).difference(names).isNotEmpty;
   }
 
   static final _dash = RegExp(r'\s+[-–—|/]\s+');
@@ -345,7 +356,7 @@ class SmartMerge {
 
   static String _key(String title) => _title(title).replaceAll(' ', '');
 
-  /// The library's lossless files by their title ([_key]), rebuilt when the library changes ([_indexOf]).
+  /// The library's lossless files by their title ([_keys]), rebuilt when the library changes ([_indexOf]).
   Map<String, List<Track>> _index = const {};
   Object? _indexOf;
 
@@ -362,13 +373,22 @@ class SmartMerge {
         if (path == null || file.isCueTrack || (!_lossless.contains(p.extension(path).toLowerCase()) && !alac)) {
           continue;
         }
-        (index[_key(file.title)] ??= []).add(file);
+        for (final key in _keys(file.title)) {
+          (index[key] ??= []).add(file);
+        }
       }
       _index = index;
     }
-    final same = _index[_key(track.title)];
-    return same == null ? null : best(track, available == null ? same : same.where(available));
+    // A title given twice ("きゃぴ - Kyapi") is found by either half, as a file titled with one half ("Kyapi") is.
+    final same = {for (final key in _keys(track.title)) ...?_index[key]};
+    return same.isEmpty ? null : best(track, available == null ? same : same.where(available));
   }
+
+  /// What a title is looked up by in the library's index: the whole title, and each half of one given twice.
+  static Set<String> _keys(String title) => {
+    if (_key(title) case final key when key.isNotEmpty) key,
+    ..._halves(title),
+  };
 
   /// What each video plays from, decided (or being decided): found, checked, its download begun. Asked once by
   /// whatever comes first (a card the pointer rests on, the next song in the queue, the song being played).
