@@ -642,41 +642,9 @@ jobs:
           path: manifests/
           include-hidden-files: true
       - name: Attach package manifests
+        # The Scoop bucket and the Homebrew tap are updated from these by hand, once the release is out:
+        # `packaging/publish_taps.sh <version>` (a stored token for it expired and failed releases).
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: gh release upload "$RIFLAY_RELEASE_TAG" manifests/riflay.json manifests/riflay.rb --clobber
-      - name: Homebrew tap and Scoop bucket
-        # After the release, so its files are there to download: this version's Scoop manifest goes to
-        # Araryarch67/scoop-riflay (bucket/) and the cask to Araryarch67/homebrew-riflay (Casks/).
-        # Needs the TAP_TOKEN secret (a fine-grained token with Contents: read and write on those two repositories);
-        # skipped without it.
-        env:
-          TAP_TOKEN: ${{ secrets.TAP_TOKEN }}
-          VERSION: ${{ env.RIFLAY_RELEASE_TAG }}
-        run: |
-          # A pasted secret may contain spaces or a trailing newline. Keep credentials out of URLs:
-          # GitHub CLI supplies the token through Git's credential helper for both clone and push.
-          export GH_TOKEN="$(printf '%s' "$TAP_TOKEN" | tr -d '[:space:]')"
-          if [ -z "$GH_TOKEN" ]; then
-            echo "::warning::No TAP_TOKEN secret: the Homebrew tap and Scoop bucket were not updated."
-            exit 0
-          fi
-          gh api user --silent
-          gh auth setup-git --hostname github.com
-          publish() { # <repository> <folder> <file>
-            local repo="$RUNNER_TEMP/$1"
-            git clone -q --depth 1 "https://github.com/Araryarch67/$1.git" "$repo"
-            mkdir -p "$repo/$2"
-            cp "$3" "$repo/$2/"
-            git -C "$repo" add -A
-            if git -C "$repo" diff --cached --quiet; then
-              echo "$1 already has Riflay ${VERSION#v}"
-              return
-            fi
-            git -C "$repo" -c user.name='github-actions[bot]' \
-              -c user.email='41898282+github-actions[bot]@users.noreply.github.com' commit -qm "riflay ${VERSION#v}"
-            git -C "$repo" push -q origin HEAD
-          }
-          publish scoop-riflay bucket manifests/riflay.json
-          publish homebrew-riflay Casks manifests/riflay.rb
