@@ -151,15 +151,65 @@ String _codecName(SignalPath p) => p.isDop
   return hiRes ? ('Hi-Res', Icons.diamond_rounded) : (tr.qualityLossless, Icons.diamond_outlined);
 }
 
+/// The song's format in a few characters: "FLAC 24/44.1", "ALAC 16/48", "AAC 256 kbps", "DSD64".
+String shortQuality(SignalPath p) {
+  final codec = _codecName(p);
+  if (p.isDop || p.isDsd) return codec;
+  if (p.lossless) {
+    // The bits stored in the file: a song decoded to float still says what it was made at.
+    final bits = p.sourceBits ?? (p.inFormat.startsWith('float') ? null : SignalPath.bitsOf(p.inFormat));
+    final khz = p.inRate / 1000;
+    final rate = khz == khz.roundToDouble() ? '${khz.round()}' : khz.toStringAsFixed(1);
+    return bits == null ? '$codec $rate kHz' : '$codec $bits/$rate';
+  }
+  final kbps = p.bitrate == null || p.bitrate == 0 ? null : (p.bitrate! / 1000).round();
+  return kbps == null ? codec : '$codec $kbps kbps';
+}
+
+/// [shortQuality] on a small tonal chip, for the mini player; the accent when bit-perfect. It opens nothing (the
+/// signal path's sheet needs the app's Navigator, which the mini player sits outside of).
+class QualityChip extends StatelessWidget {
+  const QualityChip({super.key, required this.color});
+
+  /// The text's colour; the chip is a faint fill of it.
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!AudioEngine.supported) return const SizedBox.shrink();
+    return _SignalPathBuilder(
+      shows: (p) => (shortQuality(p), p.bitPerfect),
+      builder: (context, p) {
+        if (p == null) return const SizedBox.shrink();
+        final ink = p.bitPerfect ? AppColors.accent : color;
+        return Tooltip(
+          message: p.bitPerfect ? 'Bit-perfect' : qualityTier(p).$1,
+          child: DecoratedBox(
+            decoration: BoxDecoration(color: ink.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(6)),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              child: Text(
+                shortQuality(p),
+                maxLines: 1,
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: ink,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.3,
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
 /// "Opus · Lossy · 160 kbps", "FLAC · Hi-Res · 24-bit / 96 kHz" with the tier's icon, no frame: tap for the full
 /// signal path.
 class QualityBadge extends StatelessWidget {
-  const QualityBadge({
-    super.key,
-    this.onDark = false,
-    this.alignment = Alignment.centerLeft,
-    this.liveBitrate = false,
-  });
+  const QualityBadge({super.key, this.onDark = false, this.alignment = Alignment.centerLeft, this.liveBitrate = false});
 
   /// On a coloured background (phone now playing): white text instead of grey.
   final bool onDark;

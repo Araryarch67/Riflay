@@ -21,6 +21,7 @@ import '../theme.dart';
 import '../widgets/audio_reactive_view.dart';
 import '../widgets/controls.dart';
 import '../widgets/marquee_text.dart';
+import '../widgets/signal_path.dart' show QualityChip;
 import 'full_screen_player.dart';
 import 'player_common.dart';
 import '../../services/language.dart';
@@ -341,11 +342,20 @@ class _Deck extends StatelessWidget {
                           ],
                         ),
                         if (track != null)
-                          Text(
-                            track.artist,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: text.bodyMedium?.copyWith(color: ink.muted),
+                          Row(
+                            children: [
+                              Flexible(
+                                child: Text(
+                                  track.artist,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: text.bodyMedium?.copyWith(color: ink.muted),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              // "FLAC 24/44.1": what's playing, as the player's quality badge says it.
+                              QualityChip(color: ink.muted),
+                            ],
                           ),
                         const SizedBox(height: 8),
                         Expanded(
