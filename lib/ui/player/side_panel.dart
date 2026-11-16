@@ -299,7 +299,13 @@ class _HeroPanel extends StatelessWidget {
                   children: [
                     // The cover, sharp up top and soft into the panel; the video over it once it plays.
                     FadedCover(track: track, fade: AppColors.panel, blurStart: 0.7),
-                    VideoBackground(track: track, shareForeground: true),
+                    // Stops short of the foot, where the gradient is solid: the box's height falls between pixels, and the
+                    // video, snapped to whole ones, filled the last one that the gradient's edge only partly covered (a line of
+                    // the video under the title, moving as the panel scrolled).
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 4),
+                      child: VideoBackground(track: track, shareForeground: true),
+                    ),
                     // Readable words over any picture: darker at the foot, where the title sits.
                     IgnorePointer(
                       child: DecoratedBox(
@@ -313,19 +319,14 @@ class _HeroPanel extends StatelessWidget {
                               Colors.transparent,
                               AppColors.panel.withValues(alpha: 0.85),
                               AppColors.panel,
+                              AppColors.panel,
                             ],
-                            stops: const [0, 0.22, 0.5, 0.88, 1],
+                            // Solid before the foot, not only on its last pixel: the video's bottom edge lies
+                            // there, and through a gradient still a few percent clear it showed as a line.
+                            stops: const [0, 0.22, 0.5, 0.82, 0.94, 1],
                           ),
                         ),
                       ),
-                    ),
-                    // The foot is the panel itself, whatever pixel the picture's edge lands on.
-                    Positioned(
-                      left: 0,
-                      right: 0,
-                      bottom: 0,
-                      height: 2,
-                      child: ColoredBox(color: AppColors.panel),
                     ),
                     Positioned(left: 16, right: 8, bottom: 12, child: titleRow),
                   ],
