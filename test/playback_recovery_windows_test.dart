@@ -18,7 +18,11 @@ void main() {
     (tester) async {
       await tester.pumpWidget(const MaterialApp(home: SizedBox.shrink()));
       await tester.runAsync(() async {
-        MediaKit.ensureInitialized(libmpv: File('build/windows/x64/libmpv/libmpv-2.dll').absolute.path);
+        MediaKit.ensureInitialized(
+          libmpv: File(
+            const String.fromEnvironment('RIFLAY_TEST_MPV_DLL', defaultValue: 'build/windows/x64/libmpv/libmpv-2.dll'),
+          ).absolute.path,
+        );
         JustAudioMediaKit.ensureInitialized(windows: true);
         SharedPreferences.setMockInitialValues({'discord.enabled': false});
         final directory = await Directory.systemTemp.createTemp('riflay-playback-retry-');

@@ -396,9 +396,13 @@ class _VideoPictureState extends State<VideoPicture> with _VisibleVideoView<Vide
 /// The video is only fetched and decoded while this is on screen; a page covered by another one, or an app in
 /// the background, lets it go.
 class VideoBackground extends StatefulWidget {
-  const VideoBackground({super.key, required this.track});
+  const VideoBackground({super.key, required this.track, this.shareForeground = false});
 
   final Track? track;
+
+  /// A visible side-panel picture can reuse the active player's texture. A
+  /// decorative backdrop behind a foreground cover keeps the cover instead.
+  final bool shareForeground;
 
   @override
   State<VideoBackground> createState() => _VideoBackgroundState();
@@ -438,7 +442,7 @@ class _VideoBackgroundState extends State<VideoBackground> {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted) _register(active);
         });
-        final video = active ? mode.backgroundController(widget.track) : null;
+        final video = active ? mode.backgroundController(widget.track, shareForeground: widget.shareForeground) : null;
         if (video == null) return const SizedBox.shrink();
         return IgnorePointer(
           child: RepaintBoundary(

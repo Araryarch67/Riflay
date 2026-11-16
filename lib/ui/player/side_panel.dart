@@ -291,33 +291,45 @@ class _HeroPanel extends StatelessWidget {
           ] else
             AspectRatio(
               aspectRatio: 0.82,
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  // The cover, sharp up top and soft into the panel; the video over it once it plays.
-                  FadedCover(track: track, fade: AppColors.panel, blurStart: 0.7),
-                  VideoBackground(track: track),
-                  // Readable words over any picture: darker at the foot, where the title sits.
-                  IgnorePointer(
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [
-                            Colors.black.withValues(alpha: 0.45),
-                            Colors.transparent,
-                            Colors.transparent,
-                            AppColors.panel.withValues(alpha: 0.85),
-                            AppColors.panel,
-                          ],
-                          stops: const [0, 0.22, 0.5, 0.88, 1],
+              // Nothing drawn past the box: its height falls between pixels, and the video, snapped to whole
+              // ones, showed a line of itself under the panel's colour while the list scrolled.
+              child: ClipRect(
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    // The cover, sharp up top and soft into the panel; the video over it once it plays.
+                    FadedCover(track: track, fade: AppColors.panel, blurStart: 0.7),
+                    VideoBackground(track: track, shareForeground: true),
+                    // Readable words over any picture: darker at the foot, where the title sits.
+                    IgnorePointer(
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              Colors.black.withValues(alpha: 0.45),
+                              Colors.transparent,
+                              Colors.transparent,
+                              AppColors.panel.withValues(alpha: 0.85),
+                              AppColors.panel,
+                            ],
+                            stops: const [0, 0.22, 0.5, 0.88, 1],
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                  Positioned(left: 16, right: 8, bottom: 12, child: titleRow),
-                ],
+                    // The foot is the panel itself, whatever pixel the picture's edge lands on.
+                    Positioned(
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      height: 2,
+                      child: ColoredBox(color: AppColors.panel),
+                    ),
+                    Positioned(left: 16, right: 8, bottom: 12, child: titleRow),
+                  ],
+                ),
               ),
             ),
           Padding(

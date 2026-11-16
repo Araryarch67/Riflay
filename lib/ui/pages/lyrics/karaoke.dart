@@ -55,6 +55,7 @@ class KaraokeLine extends StatefulWidget {
 }
 
 class KaraokeLineState extends State<KaraokeLine> {
+  _KaraokePainter? _painter;
   late final ValueNotifier<({int sung, double fill})> _progress = ValueNotifier(_at(widget.position()));
   StreamSubscription<Duration>? _sub;
   UiBeatListener? _beat;
@@ -107,7 +108,7 @@ class KaraokeLineState extends State<KaraokeLine> {
   }
 
   void _sync() {
-    // With another window in front the fill moves word by word on the position ticks: no frames of its own.
+    // Only the visible, playing line needs its own animation beats.
     final want =
         !LayoutPrefs.lightweight && _visible && (widget.playing?.value ?? true) && (MarqueeText.playing?.value ?? true);
     if (!want) {
@@ -161,6 +162,7 @@ class KaraokeLineState extends State<KaraokeLine> {
 
   @override
   void dispose() {
+    _painter?.disposeTexture();
     widget.playing?.removeListener(_sync);
     MarqueeText.playing?.removeListener(_sync);
     _beat?.cancel();
@@ -173,20 +175,29 @@ class KaraokeLineState extends State<KaraokeLine> {
   Widget build(BuildContext context) {
     final text = widget.words.map((w) => w.text).join();
     final style = DefaultTextStyle.of(context).style;
+    final next = _KaraokePainter(
+      words: widget.words,
+      text: text,
+      style: style.copyWith(color: widget.sungColor, shadows: const []),
+      align: _textAlign,
+      direction: Directionality.of(context),
+      scaler: MediaQuery.textScalerOf(context),
+      pixelRatio: MediaQuery.devicePixelRatioOf(context),
+      progress: _progress,
+    );
+    final previous = _painter;
+    final _KaraokePainter painter;
+    if (previous != null && !next.shouldRepaint(previous)) {
+      painter = previous;
+    } else {
+      previous?.disposeTexture();
+      painter = _painter = next;
+    }
     // Its own layer: each fill tick repaints this line, not every line of the song around it.
     return RepaintBoundary(
       child: CustomPaint(
-        foregroundPainter: _KaraokePainter(
-          words: widget.words,
-          text: text,
-          // The line below already casts the shadow; the fill's layers would stack theirs darker.
-          style: style.copyWith(color: widget.sungColor, shadows: const []),
-          align: _textAlign,
-          direction: Directionality.of(context),
-          scaler: MediaQuery.textScalerOf(context),
-          progress: _progress,
-        ),
-        child: Text(text, textAlign: _textAlign),
+        foregroundPainter: painter,
+        child: RepaintBoundary(child: Text(text, textAlign: _textAlign)),
       ),
     );
   }
@@ -200,6 +211,7 @@ class _KaraokePainter extends CustomPainter {
     required this.align,
     required this.direction,
     required this.scaler,
+    required this.pixelRatio,
     required this.progress,
   }) : super(repaint: progress);
 
@@ -209,40 +221,42 @@ class _KaraokePainter extends CustomPainter {
   final TextAlign align;
   final TextDirection direction;
   final TextScaler scaler;
+  final double pixelRatio;
   final ValueListenable<({int sung, double fill})> progress;
 
   /// One soft edge across the line, in [_steps] strips of falling opacity.
   static const _feather = 18.0;
   static const _steps = 8;
 
-  /// The sung colour at full strength, then at the strengths of the edge's strips. Laid out once per width.
-  final _layers = <TextPainter>[];
+  // Rasterize glyphs once. Fill ticks draw clipped GPU texture slices instead
+  // of submitting the whole paragraph for each of the eight feather strips.
+  ui.Image? _glyphs;
+  Rect _textureBounds = Rect.zero;
+  final _alpha = [
+    for (var i = 0; i <= _steps; i++)
+      Paint()..color = Colors.white.withValues(alpha: i == 0 ? 1 : 1 - (i - 0.5) / _steps),
+  ];
   double _width = -1;
+
+  void disposeTexture() {
+    _glyphs?.dispose();
+    _glyphs = null;
+  }
 
   /// Each word's boxes (more than one when it wraps), measured with the layout.
   final _boxes = <List<TextBox>>[];
   final _widths = <double>[];
 
   void _layout(double width) {
-    if (_layers.isNotEmpty && width == _width) return;
+    if (_glyphs != null && width == _width) return;
     _width = width;
-    _layers.clear();
-    for (var i = 0; i <= _steps; i++) {
-      // Layer 0 is solid; layer k is the k-th strip of the edge, fainter towards where the fill ends.
-      final alpha = i == 0 ? 1.0 : 1 - (i - 0.5) / _steps;
-      _layers.add(
-        TextPainter(
-          text: TextSpan(
-            text: text,
-            style: style.copyWith(color: (style.color ?? Colors.white).withValues(alpha: alpha)),
-          ),
-          textAlign: align,
-          textDirection: direction,
-          textScaler: scaler,
-        )..layout(minWidth: width, maxWidth: width),
-      );
-    }
-    final tp = _layers.first;
+    disposeTexture();
+    final tp = TextPainter(
+      text: TextSpan(text: text, style: style),
+      textAlign: align,
+      textDirection: direction,
+      textScaler: scaler,
+    )..layout(minWidth: width, maxWidth: width);
     _boxes.clear();
     _widths.clear();
     var start = 0;
@@ -256,6 +270,27 @@ class _KaraokePainter extends CustomPainter {
       _widths.add(_boxes.last.fold(0.0, (sum, box) => sum + box.right - box.left));
       start = end;
     }
+    final ratio = pixelRatio.clamp(1.0, 4.0);
+    final imageWidth = math.max(1, (width * ratio).ceil());
+    final imageHeight = math.max(1, (tp.height * ratio).ceil());
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(recorder)..scale(ratio);
+    tp.paint(canvas, Offset.zero);
+    final picture = recorder.endRecording();
+    _glyphs = picture.toImageSync(imageWidth, imageHeight);
+    _textureBounds = Rect.fromLTWH(0, 0, imageWidth / ratio, imageHeight / ratio);
+    picture.dispose();
+    tp.dispose();
+  }
+
+  void _draw(Canvas canvas, int layer) {
+    final image = _glyphs!;
+    canvas.drawImageRect(
+      image,
+      Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble()),
+      _textureBounds,
+      _alpha[layer],
+    );
   }
 
   @override
@@ -295,13 +330,13 @@ class _KaraokePainter extends CustomPainter {
     canvas
       ..save()
       ..clipPath(solid);
-    _layers.first.paint(canvas, Offset.zero);
+    _draw(canvas, 0);
     canvas.restore();
     for (final (rect, layer) in edge) {
       canvas
         ..save()
         ..clipRect(rect);
-      _layers[layer].paint(canvas, Offset.zero);
+      _draw(canvas, layer);
       canvas.restore();
     }
   }
@@ -313,5 +348,6 @@ class _KaraokePainter extends CustomPainter {
       old.style != style ||
       old.align != align ||
       old.direction != direction ||
-      old.scaler != scaler;
+      old.scaler != scaler ||
+      old.pixelRatio != pixelRatio;
 }

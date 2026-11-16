@@ -42,6 +42,7 @@ import 'services/rendering_memory.dart';
 import 'services/stay_awake.dart';
 import 'services/system_tray.dart';
 import 'services/taskbar_buttons.dart';
+import 'services/desktop_visibility.dart';
 import 'services/window_focus.dart';
 import 'services/wrap_notifications.dart';
 import 'ui/widgets/app_update_tile.dart' show showUpdatePopup;
@@ -117,8 +118,8 @@ Future<void> _main(List<String> args) async {
   });
 
   final controller = PlayerController();
-  // Song titles that don't fit slide only while something plays and the window has the focus
-  // (MarqueeText.whilePaused, PlayingMotion.decorates).
+  // Titles move while music plays and the desktop window is visible, including
+  // behind another app; minimized/hidden windows stop their visual clocks.
   final playing = ValueNotifier(false);
   void syncPlaying() =>
       playing.value = controller.showsPlaying && PlayingMotion.decorates(WidgetsBinding.instance.lifecycleState);
@@ -252,6 +253,10 @@ class RiflayApp extends StatefulWidget {
 }
 
 class _RiflayAppState extends State<RiflayApp> with WidgetsBindingObserver {
+  bool _animate =
+      WidgetsBinding.instance.lifecycleState != AppLifecycleState.hidden &&
+      WidgetsBinding.instance.lifecycleState != AppLifecycleState.paused &&
+      WidgetsBinding.instance.lifecycleState != AppLifecycleState.detached;
   final _appearance = Appearance.instance;
   final _layout = LayoutPrefs.instance;
   final _messenger = GlobalKey<ScaffoldMessengerState>();
@@ -277,6 +282,8 @@ class _RiflayAppState extends State<RiflayApp> with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
+    DesktopVisibility.instance.start();
+    DesktopVisibility.instance.addListener(_windowVisibilityChanged);
     WidgetsBinding.instance.addObserver(this);
     _appearance.addListener(_restyle);
     _layout.addListener(_restyle);
@@ -297,6 +304,8 @@ class _RiflayAppState extends State<RiflayApp> with WidgetsBindingObserver {
   @override
   void dispose() {
     unawaited(DesktopCli.close());
+    DesktopVisibility.instance.removeListener(_windowVisibilityChanged);
+    DesktopVisibility.instance.stop();
     WidgetsBinding.instance.removeObserver(this);
     _appearance.removeListener(_restyle);
     _layout.removeListener(_restyle);
@@ -309,13 +318,11 @@ class _RiflayAppState extends State<RiflayApp> with WidgetsBindingObserver {
   // Library changes are saved after a short pause; write them before the system may end the app.
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    _windowVisibilityChanged();
     if (state == AppLifecycleState.paused || state == AppLifecycleState.detached) {
       unawaited(widget.controller.flushSaves());
     }
-    if (state == AppLifecycleState.hidden || state == AppLifecycleState.paused) {
-      MemoryTrim.hidden();
-    } else if (state == AppLifecycleState.inactive || state == AppLifecycleState.resumed) {
-      MemoryTrim.shown();
+    if (state == AppLifecycleState.inactive || state == AppLifecycleState.resumed) {
       MemoryTrim.focus(state == AppLifecycleState.resumed);
     }
   }
@@ -324,6 +331,17 @@ class _RiflayAppState extends State<RiflayApp> with WidgetsBindingObserver {
   Future<AppExitResponse> didRequestAppExit() async {
     await widget.controller.flushSaves();
     return AppExitResponse.exit;
+  }
+
+  void _windowVisibilityChanged() {
+    final state = WidgetsBinding.instance.lifecycleState;
+    final animate =
+        DesktopVisibility.instance.value &&
+        state != AppLifecycleState.hidden &&
+        state != AppLifecycleState.paused &&
+        state != AppLifecycleState.detached;
+    if (_animate != animate) setState(() => _animate = animate);
+    animate ? MemoryTrim.shown() : MemoryTrim.hidden();
   }
 
   @override
@@ -447,7 +465,7 @@ class _RiflayAppState extends State<RiflayApp> with WidgetsBindingObserver {
               disableAnimations: LayoutPrefs.effectiveMotion != Motion.full,
               textScaler: TextScaler.linear(MediaQuery.textScalerOf(context).scale(1) * _appearance.textScale),
             ),
-            child: child!,
+            child: TickerMode(enabled: _animate, child: child!),
           );
           // The title bar sits above every route (including full-screen ones like Now Playing).
           // Component opacity lives in the panel, card and menu colours ([AppColors]), so text,

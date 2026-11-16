@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:riflay/platform/host.dart';
 import 'package:riflay/services/layout_prefs.dart';
 import 'package:riflay/services/player_controller.dart';
 import 'package:riflay/services/ui_beat.dart';
@@ -68,6 +69,15 @@ void main() {
   });
 
   final flower = FlowerCover(animate: true, fit: true, child: const ColoredBox(color: Colors.white));
+
+  test('desktop decorations keep moving when unfocused and stop only when hidden', () {
+    if (!Host.isWindows && !Host.isMacOS && !Host.isLinux) return;
+    expect(PlayingMotion.decorates(AppLifecycleState.resumed), isTrue);
+    expect(PlayingMotion.decorates(AppLifecycleState.inactive), isTrue);
+    expect(PlayingMotion.decorates(AppLifecycleState.hidden), isFalse);
+    expect(PlayingMotion.decorates(AppLifecycleState.paused), isFalse);
+    expect(PlayingMotion.decorates(AppLifecycleState.detached), isFalse);
+  });
 
   group('wavy seek bar', () {
     testWidgets('phone wave keeps moving after track changes and returning to the app', (tester) async {

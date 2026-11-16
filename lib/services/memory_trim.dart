@@ -12,10 +12,10 @@ import 'rendering_memory.dart';
 ///
 /// glibc keeps freed blocks in its per-thread arenas for reuse, so after a song
 /// change or a long scroll the process stays at its peak size; `malloc_trim`
-/// releases them. On Windows the heap is compacted after a song change, and the
-/// working set is emptied while the window is hidden, or once a minute while
-/// nobody is using it: emptying it mid-scroll would make every page the next
-/// frames touch fault back in (CPU time, and stutter). Linux pages the app out the
+/// releases them. On Windows trimming waits until the window is hidden:
+/// compacting the heap or emptying the working set while video or lyrics
+/// animate makes the next frames fault those pages back in (CPU and stutter).
+/// Linux pages the app out the
 /// same way (`MADV_PAGEOUT`), while hidden or left alone behind another window.
 /// Android frees its allocator's spare pages after a song change and once a minute, and in the background drops
 /// decoded covers too: Android closes the apps holding the most memory first, and a low-end phone ended the music.
@@ -36,6 +36,10 @@ abstract final class MemoryTrim {
   static bool _pagedOut = false;
 
   static void _trim({bool workingSet = false}) {
+    // A visible Windows player is actively using its textures, glyphs and
+    // decoder buffers even without mouse input. Compacting/paging it out then
+    // faults those pages straight back in on the next video/lyric frame.
+    if (Host.isWindows && !_hidden) return;
     if (workingSet && Host.isLinux) {
       if (_pagedOut) {
         workingSet = false;
@@ -61,7 +65,7 @@ abstract final class MemoryTrim {
   /// Nobody is using the window: hidden, or untouched for a while; on Linux also with another window in front, so
   /// lyrics read without the mouse don't fault back in every minute.
   static bool get _away =>
-      _hidden || (_idle && (Host.isWindows || (!_focused && DateTime.now().difference(_unfocusedAt) >= _unfocusedFor)));
+      _hidden || (!Host.isWindows && _idle && !_focused && DateTime.now().difference(_unfocusedAt) >= _unfocusedFor);
 
   /// Linux: how long another window must have had the focus before the app is paged out. Paging out compresses
   /// ~200 MB into zram (~0.6 s of CPU) and what plays faults back in: after 8 s, a glance at another window or a
@@ -81,6 +85,9 @@ abstract final class MemoryTrim {
   }
 
   static void _listen() {
+    // Windows only trims when hidden now; tracking every pointer/key event
+    // for the old idle heuristic no longer serves any purpose there.
+    if (Host.isWindows) return;
     if (_listening) return;
     _listening = true;
     GestureBinding.instance.pointerRouter.addGlobalRoute(_input);
@@ -91,6 +98,7 @@ abstract final class MemoryTrim {
 
   /// Empties the working set once the window is idle, looking again every [_idleAfter] until it is.
   static void _whenIdle() {
+    if (Host.isWindows && !_hidden) return;
     if (_away) return _trim(workingSet: _pagesOut);
     // Linux, back in front: the next time it loses the focus starts this again ([focus]).
     if (Host.isLinux && _focused && !_hidden) return;
@@ -108,7 +116,7 @@ abstract final class MemoryTrim {
       _trim(workingSet: _pagesOut && _away);
       // Still in use: the working set goes back once nobody has touched the window for a while, not at the next
       // minute (after a start or a song change it stood near its peak, ~190 MB on Windows, for up to a minute).
-      if (_pagesOut && !_away) _soon = Timer(_idleAfter, _whenIdle);
+      if (_pagesOut && !_away && !Host.isWindows) _soon = Timer(_idleAfter, _whenIdle);
     });
   }
 

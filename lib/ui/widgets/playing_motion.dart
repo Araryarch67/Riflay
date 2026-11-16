@@ -48,7 +48,7 @@ class MotionClock extends ChangeNotifier {
 /// move: Lightweight, reduced motion, no player, or this part of the app isn't the page in view.
 ///
 /// The clock rides the shared [UiBeat] (a ticker would wake the app on every vsync) at 60 fps in
-/// Heavy and 30 fps otherwise, and only while it's needed: playing, on screen, app in front, or
+/// Heavy and 30 fps otherwise, and only while it's needed: playing, on screen, or
 /// easing out after a pause. The widget around it is not rebuilt for a beat; painters listening
 /// to the clock repaint themselves.
 class PlayingMotion extends StatefulWidget {
@@ -62,13 +62,13 @@ class PlayingMotion extends StatefulWidget {
   /// in sight over other apps, the desktop mini player.
   final bool moveUnfocused;
 
-  /// Whether decorations move in this lifecycle [state]: only with the window in front and focused. A computer
-  /// reports `inactive` while another window has the focus, which is most of the time a song plays: nobody watches
-  /// the flower then, and on a small laptop its frames were most of what a playing song cost.
+  /// A desktop window can still be visible behind another app. Keep its motion
+  /// until minimized/hidden; mobile inactive states retain their existing policy.
   static bool decorates(AppLifecycleState? state) =>
       state == null ||
       state == AppLifecycleState.resumed ||
-      (state == AppLifecycleState.inactive && DebugSwitches.moveUnfocused);
+      (state == AppLifecycleState.inactive &&
+          (Host.isWindows || Host.isMacOS || Host.isLinux || DebugSwitches.moveUnfocused));
 
   /// Whether the visualizer moves in this lifecycle [state]: in front, or behind another window (`inactive` on a
   /// computer; people watch it beside other apps), not minimized or hidden. On Linux only in front: there its mpv

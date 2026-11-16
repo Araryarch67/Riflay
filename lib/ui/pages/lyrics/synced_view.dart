@@ -624,40 +624,42 @@ class _LineState extends State<_Line> {
   }
 
   @override
-  Widget build(BuildContext context) => MouseRegion(
-    cursor: SystemMouseCursors.click,
-    onEnter: (e) => _hovered(e, true),
-    onExit: (e) => _hovered(e, false),
-    child: GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: widget.onTap,
-      onLongPress: widget.onHold,
-      onSecondaryTap: widget.onHold,
-      child: _Glass(
-        on: widget.highlight,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: _centred ? CrossAxisAlignment.stretch : CrossAxisAlignment.start,
-          children: [
-            AnimatedDefaultTextStyle(
-              duration: _lineChange(200),
-              style: (widget.style ?? const TextStyle()).copyWith(
-                color: _hover && widget.karaoke == null ? AppColors.textPrimary : widget.color,
-              ),
-              child: widget.karaoke ?? Text(widget.text, textAlign: _textAlign),
-            ),
-            if (widget.extra case final extra?)
+  Widget build(BuildContext context) => RepaintBoundary(
+    child: MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (e) => _hovered(e, true),
+      onExit: (e) => _hovered(e, false),
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: widget.onTap,
+        onLongPress: widget.onHold,
+        onSecondaryTap: widget.onHold,
+        child: _Glass(
+          on: widget.highlight,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: _centred ? CrossAxisAlignment.stretch : CrossAxisAlignment.start,
+            children: [
               AnimatedDefaultTextStyle(
                 duration: _lineChange(200),
-                style: (_extraStyle(context) ?? const TextStyle()).copyWith(
-                  color: (_hover ? AppColors.textPrimary : widget.extraColor ?? widget.color).withValues(alpha: 0.8),
+                style: (widget.style ?? const TextStyle()).copyWith(
+                  color: _hover && widget.karaoke == null ? AppColors.textPrimary : widget.color,
                 ),
-                child: Padding(
-                  padding: const EdgeInsets.only(top: 2),
-                  child: Text(extra, textAlign: _textAlign),
-                ),
+                child: widget.karaoke ?? Text(widget.text, textAlign: _textAlign),
               ),
-          ],
+              if (widget.extra case final extra?)
+                AnimatedDefaultTextStyle(
+                  duration: _lineChange(200),
+                  style: (_extraStyle(context) ?? const TextStyle()).copyWith(
+                    color: (_hover ? AppColors.textPrimary : widget.extraColor ?? widget.color).withValues(alpha: 0.8),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 2),
+                    child: Text(extra, textAlign: _textAlign),
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
     ),

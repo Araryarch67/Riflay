@@ -116,9 +116,8 @@ if(NOT EXISTS "${ANGLE_SRC}/libEGL.dll" OR NOT EXISTS "${ANGLE_SRC}/include/EGL/
   endif()
 endif()
 
-# Video mode's own libmpv: Riflay's (windows/libmpv) is sound only, so the music
-# video was decoded and drawn on the processor and copied into Flutter every
-# frame. This is media_kit's video build (Direct3D 11 output, d3d11va
+# Video mode's dedicated libmpv keeps Direct3D 11 child-window output separate
+# from the main audio/ANGLE render-API instance. This is media_kit's video build (Direct3D 11 output, d3d11va
 # decoding), renamed so it loads beside Riflay's; lib/platform/native_video.dart
 # hands it a window of its own (runner/video_window.cpp). Pinned by SHA-256.
 set(MPV_VIDEO_SRC "${CMAKE_BINARY_DIR}/libmpv-video")
@@ -155,6 +154,23 @@ if(DEFINED ENV{GH_TOKEN})
   endif()
 endif()
 include(flutter/generated_plugins.cmake)
+
+# Riflay: keep the Windows rendering fixes local and reproducible without
+# modifying the global Pub cache or the other platforms' plugin code.
+if(TARGET media_kit_video_plugin)
+  set(RIFLAY_VIDEO_SRC "${CMAKE_CURRENT_SOURCE_DIR}/../third_party/media_kit_video_windows")
+  get_target_property(RIFLAY_VIDEO_SOURCES media_kit_video_plugin SOURCES)
+  set(RIFLAY_VIDEO_PATCHED_SOURCES "")
+  foreach(source IN LISTS RIFLAY_VIDEO_SOURCES)
+    get_filename_component(filename "${source}" NAME)
+    if(EXISTS "${RIFLAY_VIDEO_SRC}/${filename}")
+      list(APPEND RIFLAY_VIDEO_PATCHED_SOURCES "${RIFLAY_VIDEO_SRC}/${filename}")
+    else()
+      list(APPEND RIFLAY_VIDEO_PATCHED_SOURCES "${source}")
+    endif()
+  endforeach()
+  set_property(TARGET media_kit_video_plugin PROPERTY SOURCES "${RIFLAY_VIDEO_PATCHED_SOURCES}")
+endif()
 
 # Third-party plugin code built at /W4: silence the warnings that aren't ours
 # to fix (shadowed members, int64 -> int in flutter_inappwebview).

@@ -4,7 +4,13 @@
 # (equalizer, crossfeed, afir, amovie, headphone and pan for Virtual speakers
 # and its 7.1 room, silenceremove for Skip silence, and ladspa for audio
 # plugins through Carla, see linux/carla_bridge). It replaces the DLL media_kit
-# ships, which has neither.
+# ships, which has neither. Video mode's music video is decoded and drawn on the
+# graphics card: D3D11VA/DXVA2 in FFmpeg, and in mpv OpenGL through ANGLE (what
+# media_kit's video draws with on Windows) with the D3D11 hardware decoding that
+# hands its pictures to it. Without them a 1080p video took the processor.
+#
+# Builds on Linux, or on Windows in MSYS2's MINGW64 shell (mingw-w64-x86_64-gcc,
+# -meson, -ninja, -nasm, -pkgconf and the Khronos EGL headers).
 #
 #   tool/build_libmpv_windows.sh            -> windows/libmpv/libmpv-2.dll
 #
@@ -18,6 +24,34 @@ prefix=$root/prefix
 mkdir -p "$root/src" "$root/build" "$prefix"
 jobs=$(nproc)
 host=x86_64-w64-mingw32
+cc=$host-gcc
+cpp=$host-g++
+ar=$host-ar
+strip=$host-strip
+windres=$host-windres
+cross_prefix=$host-
+angle_cflags=
+# Riflay: MSYS2's native binutils have unprefixed names, unlike Linux's
+# cross toolchain. Keep the same target while allowing the interrupted build
+# to run in the documented MINGW64 shell.
+if [[ ${MSYSTEM:-} == MINGW64 ]]; then
+  # Native Meson/Python interprets /c/... as C:/c/..., not MSYS2's drive mount.
+  prefix=$(cygpath -m "$prefix")
+  cc=gcc
+  cpp=g++
+  ar=ar
+  strip=strip
+  windres=windres
+  cross_prefix=
+  # Reuse the ANGLE headers already verified and extracted by CMake.
+  if [[ -f $project/build/windows/x64/ANGLE/include/EGL/eglext_angle.h ]]; then
+    angle_cflags="-I$(cygpath -m "$project/build/windows/x64/ANGLE/include")"
+  fi
+fi
+union_cflags=
+if "$cc" -fzero-init-padding-bits=unions -E -x c /dev/null >/dev/null 2>&1; then
+  union_cflags=-fzero-init-padding-bits=unions
+fi
 
 # name url sha256
 sources=(
@@ -48,11 +82,11 @@ done
 cross=$root/cross.txt
 cat >"$cross" <<EOF
 [binaries]
-c = '$host-gcc'
-cpp = '$host-g++'
-ar = '$host-ar'
-strip = '$host-strip'
-windres = '$host-windres'
+c = '$cc'
+cpp = '$cpp'
+ar = '$ar'
+strip = '$strip'
+windres = '$windres'
 pkg-config = 'pkg-config'
 [host_machine]
 system = 'windows'
@@ -73,7 +107,7 @@ meson_dep() { # name meson-options...
   stamp "$name" && return
   rm -rf "$root/build/$name"
   meson setup "$root/build/$name" "$root/src/$name" --cross-file "$cross" --buildtype=release "$@" >/dev/null
-  ninja -C "$root/build/$name" install >/dev/null
+  ninja -C "$root/build/$name" install
   done_ "$name"
 }
 
@@ -81,7 +115,7 @@ if ! stamp freetype; then
   rm -rf "$root/build/freetype"
   meson setup "$root/build/freetype" "$root/src/freetype" --cross-file "$cross" --buildtype=release \
     -Dbrotli=disabled -Dbzip2=disabled -Dharfbuzz=disabled -Dpng=disabled -Dzlib=disabled >/dev/null
-  ninja -C "$root/build/freetype" install >/dev/null
+  ninja -C "$root/build/freetype" install
   done_ freetype
 fi
 meson_dep fribidi -Ddocs=false -Dtests=false -Dbin=false
@@ -96,7 +130,7 @@ if ! stamp libass; then
   done_ libass
 fi
 
-if ! stamp ffmpeg-spatial; then
+if ! stamp ffmpeg-gpu; then
   rm -rf "$root/build/ffmpeg" && mkdir -p "$root/build/ffmpeg"
   # The ladspa filter (audio plugins) needs ladspa.h and dlopen, which mingw lacks: third_party/ladspa has the
   # header and a dlfcn.h over LoadLibrary. The filter also only takes a path that starts with '/' or '.', so
@@ -106,19 +140,19 @@ if ! stamp ffmpeg-spatial; then
       "$root/src/ffmpeg/libavfilter/af_ladspa.c"
     grep -q "Riflay:" "$root/src/ffmpeg/libavfilter/af_ladspa.c"
   fi
-  # Playback only: no encoders, muxers, devices or hardware video. https
-  # through Windows' own TLS (schannel), as media_kit's build does.
+  # Playback only: no encoders, muxers or devices. Video decodes on the graphics
+  # card (D3D11VA, DXVA2). https through Windows' own TLS (schannel), as media_kit's build does.
   (cd "$root/build/ffmpeg" && "$root/src/ffmpeg/configure" --prefix="$prefix" --target-os=mingw32 \
-    --arch=x86_64 --cross-prefix=$host- --pkg-config=pkg-config --enable-static --disable-shared \
+    --arch=x86_64 --cross-prefix=$cross_prefix --pkg-config=pkg-config --enable-static --disable-shared \
     --disable-programs --disable-doc --disable-debug --disable-encoders --disable-muxers --disable-devices \
-    --disable-avdevice --disable-postproc --disable-hwaccels --disable-indevs --disable-outdevs \
+    --disable-avdevice --disable-postproc --disable-indevs --disable-outdevs \
     --enable-schannel --enable-network --disable-autodetect --enable-w32threads --enable-ladspa \
     --extra-cflags="-I$project/third_party/ladspa -I$project/third_party/ladspa/win" \
     --disable-videotoolbox --disable-vaapi --disable-vdpau --disable-cuda --disable-cuvid \
-    --disable-nvenc --disable-nvdec --disable-d3d11va --disable-dxva2 --disable-mediafoundation \
+    --disable-nvenc --disable-nvdec --enable-d3d11va --enable-dxva2 --disable-mediafoundation \
     --enable-filter=asplit,amerge,bandpass,astats,abuffer,abuffersink,aformat,equalizer,crossfeed,afir,amovie,headphone,pan,silenceremove,volume,aresample,anull,ladspa >/dev/null &&
     make -j"$jobs" install >/dev/null)
-  done_ ffmpeg-spatial
+  done_ ffmpeg-gpu
 fi
 
 if ! stamp mpv-patched; then
@@ -126,20 +160,38 @@ if ! stamp mpv-patched; then
   "$project/third_party/mpv_asio/apply.sh" "$root/src/mpv" "$project"
   done_ mpv-patched
 fi
+# Zero-copy hardware decoding into media_kit's ANGLE context: mpv of 2023 looks for EGL_EXT_device_query among the
+# display's extensions, and current ANGLE lists it only among the client ones (EGL_NO_DISPLAY), so the D3D11 interop
+# gave up without a word and every frame went back through memory (d3d11va-copy). Applied once.
+python3 - "$root/src/mpv/video/out/opengl/hwdec_d3d11egl.c" <<'EOF'
+import sys
+p = sys.argv[1]
+s = open(p).read()
+old = '        !gl_check_extension(exts, "EGL_EXT_device_query") ||'
+new = ('        !(gl_check_extension(exts, "EGL_EXT_device_query") ||\n'
+       '          gl_check_extension(eglQueryString(EGL_NO_DISPLAY, EGL_EXTENSIONS), "EGL_EXT_device_query")) ||')
+if new not in s:
+    assert s.count(old) == 1, 'hwdec_d3d11egl.c changed'
+    open(p, 'w').write(s.replace(old, new))
+EOF
 rm -rf "$root/build/mpv"
+# Riflay: iconv's Meson dependency otherwise names its import library directly,
+# bypassing -static and requiring the developer's MSYS2 DLL at runtime.
+sed -i "s/iconv = dependency('iconv', required:/iconv = dependency('iconv', static: true, required:/" "$root/src/mpv/meson.build"
+sed -i "s/libass = dependency('libass', version:/libass = dependency('libass', static: true, version:/" "$root/src/mpv/meson.build"
 meson setup "$root/build/mpv" "$root/src/mpv" --cross-file "$cross" --buildtype="${MPV_BUILDTYPE:-release}" \
   -Ddefault_library=shared -Dlibmpv=true -Dcplayer=false -Dtests=false -Dmanpage-build=disabled \
   -Dlua=disabled -Djavascript=disabled -Dlibarchive=disabled -Dlibbluray=disabled -Ddvdnav=disabled \
   -Dcdda=disabled -Duchardet=disabled -Drubberband=disabled -Dlcms2=disabled -Dzimg=disabled \
   -Djpeg=disabled -Dlibplacebo=disabled -Dvulkan=disabled -Dshaderc=disabled -Dspirv-cross=disabled \
-  -Dgl=disabled -Dd3d11=disabled -Ddirect3d=disabled -Degl-angle=disabled -Dvapoursynth=disabled \
+  -Dgl=enabled -Degl-angle=enabled -Dd3d-hwaccel=enabled -Dd3d11=disabled -Ddirect3d=disabled -Dvapoursynth=disabled \
   -Dsdl2-audio=disabled -Dsdl2-video=disabled -Dopenal=disabled -Dwasapi=enabled -Dasio=enabled \
   `# mpv of 2023 relies on "= {0}" zeroing a whole union, which GCC 15+ only does with this flag.` \
-  -Dc_args="-fzero-init-padding-bits=unions" \
-  -Dc_link_args="-static-libgcc -static-libstdc++ -Wl,-Bstatic -lstdc++ -lwinpthread -Wl,-Bdynamic" \
-  -Dcpp_link_args="-static-libgcc -static-libstdc++ -Wl,-Bstatic -lstdc++ -lwinpthread -Wl,-Bdynamic"
-ninja -C "$root/build/mpv" | grep -E "error|warning: implicit|FAILED" || true
+  -Dc_args="$union_cflags $angle_cflags" \
+  -Dc_link_args="-static -static-libgcc -static-libstdc++" \
+  -Dcpp_link_args="-static -static-libgcc -static-libstdc++"
+ninja -C "$root/build/mpv"
 [[ -f $root/build/mpv/libmpv-2.dll ]]
 mkdir -p "$project/windows/libmpv"
-$host-strip -o "$project/windows/libmpv/libmpv-2.dll" "$root/build/mpv/libmpv-2.dll"
+$strip -o "$project/windows/libmpv/libmpv-2.dll" "$root/build/mpv/libmpv-2.dll"
 echo "Built $project/windows/libmpv/libmpv-2.dll"

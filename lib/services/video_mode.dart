@@ -13,6 +13,7 @@ import '../ui/widgets/native_video_surface.dart';
 import '../ui/debug_switches.dart';
 import '../models/track.dart';
 import 'beta_features.dart';
+import 'desktop_visibility.dart';
 import 'layout_prefs.dart';
 import 'player_controller.dart';
 import 'video_alignment.dart';
@@ -40,7 +41,9 @@ import 'language.dart';
 /// The same player also serves the Music video Now Playing background, at a
 /// small size and without being asked for by the Song / Video switch.
 class VideoMode extends ChangeNotifier with WidgetsBindingObserver {
-  VideoMode._();
+  VideoMode._() {
+    DesktopVisibility.instance.addListener(_windowVisibilityChanged);
+  }
 
   static final instance = VideoMode._();
 
@@ -363,13 +366,9 @@ class VideoMode extends ChangeNotifier with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     // Phones: the screen went off or another app is in front. The song plays on alone.
-    final away = state == AppLifecycleState.paused || state == AppLifecycleState.hidden;
+    _lifecycleAway = state == AppLifecycleState.paused || state == AppLifecycleState.hidden;
+    _windowVisibilityChanged();
     // The video stops with it, and starts again when the app is back; the choice of Song or Video stays.
-    if (away != _away) {
-      _away = away;
-      _sync();
-      notifyListeners();
-    }
     // Computers: another window has the focus. The video holds its picture (nothing decodes, nothing is drawn: in
     // Balanced a playing video was most of what a song cost, about 1.7% of a 24-thread processor), and after
     // [unfocusedRelease] it lets go of its player and buffers (about 100 MB). Back in front it starts again where
@@ -403,6 +402,15 @@ class VideoMode extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   bool _away = false;
+  bool _lifecycleAway = false;
+
+  void _windowVisibilityChanged() {
+    final away = _lifecycleAway || !DesktopVisibility.instance.value;
+    if (away == _away) return;
+    _away = away;
+    _sync();
+    notifyListeners();
+  }
 
   static bool get _computer => Host.isLinux || Host.isWindows || Host.isMacOS;
 
@@ -484,8 +492,14 @@ class VideoMode extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   /// The background's video, once its first picture is ready; null shows the blurred cover.
-  VideoController? backgroundController(Track? track) =>
-      showsAsBackground(track) && _loaded == videoOf(track)?.videoId && !_foreground ? controller : null;
+  VideoController? backgroundController(Track? track, {bool shareForeground = false}) {
+    if (!_on || LayoutPrefs.lightweight) return null;
+    // A failed automatic background fetch must not hide a foreground player
+    // that subsequently loaded successfully (for example through Expand).
+    if (!shareForeground && (!showsAsBackground(track) || _foreground)) return null;
+    final video = videoOf(track);
+    return video != null && _loaded == video.videoId ? controller : null;
+  }
 
   /// The background video of [track] is playing and covers the page: what lies under it is not drawn.
   bool coversBackground(Track? track) => backgroundController(track) != null;
@@ -984,6 +998,7 @@ vec4 hook() {
   @override
   void dispose() {
     _disposed = true;
+    DesktopVisibility.instance.removeListener(_windowVisibilityChanged);
     _c?.removeListener(_changed);
     WidgetsBinding.instance.removeObserver(this);
     _release?.cancel();
