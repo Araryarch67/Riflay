@@ -3777,6 +3777,54 @@ abstract class AppLocalizations {
   /// **'Along the window\'s foot: full-width controls, a compact row beside the song, or a minimal strip'**
   String get desktopPlayerBarSubtitle;
 
+  /// No description provided for @desktopMiniPlayer.
+  ///
+  /// In en, this message translates to:
+  /// **'Desktop mini player'**
+  String get desktopMiniPlayer;
+
+  /// No description provided for @desktopMiniPlayerSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'The small player that stays on top: a window with the cover, or a dynamic island at the top of the screen that opens when you point at it'**
+  String get desktopMiniPlayerSubtitle;
+
+  /// No description provided for @miniStyleWindow.
+  ///
+  /// In en, this message translates to:
+  /// **'Window'**
+  String get miniStyleWindow;
+
+  /// No description provided for @miniStyleIsland.
+  ///
+  /// In en, this message translates to:
+  /// **'Dynamic island'**
+  String get miniStyleIsland;
+
+  /// No description provided for @kwDesktopMini.
+  ///
+  /// In en, this message translates to:
+  /// **'mini player, island, dynamic island, always on top, picture in picture, small window'**
+  String get kwDesktopMini;
+
+  /// No description provided for @miniBackToApp.
+  ///
+  /// In en, this message translates to:
+  /// **'Back to the full window'**
+  String get miniBackToApp;
+
+  /// No description provided for @miniSwitchToIsland.
+  ///
+  /// In en, this message translates to:
+  /// **'Switch to the dynamic island'**
+  String get miniSwitchToIsland;
+
+  /// No description provided for @miniSwitchToWindow.
+  ///
+  /// In en, this message translates to:
+  /// **'Switch to the mini window'**
+  String get miniSwitchToWindow;
+
   /// No description provided for @shapesAndMotion.
   ///
   /// In en, this message translates to:

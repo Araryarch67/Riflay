@@ -5,6 +5,7 @@
 #include <flutter/standard_method_codec.h>
 
 #include <optional>
+#include <vector>
 
 #include "flutter/generated_plugin_registrant.h"
 #include "video_window.h"
@@ -51,6 +52,77 @@ void SetSeeThrough(HWND hwnd, bool on) {
   }
 }
 
+#ifndef DWMWA_WINDOW_CORNER_PREFERENCE
+#define DWMWA_WINDOW_CORNER_PREFERENCE 33
+#endif
+#ifndef DWMWA_BORDER_COLOR
+#define DWMWA_BORDER_COLOR 34
+#endif
+
+// The mini player's island. The window stays the size of the open island and is
+// see-through (Flutter draws the pill, anti-aliased, and animates it); only
+// [hit], a rectangle in logical client pixels, is kept as the window's region, so
+// clicks around the closed pill reach the windows behind. Windows 11's own rounded
+// corners and border would outline the whole window, so they go while it's on.
+// An empty [hit] gives the plain window back, see-through again only if the
+// Appearance settings asked for it ([see_through]).
+void SetIsland(HWND hwnd, const std::vector<double>& hit, bool see_through) {
+  const bool on = hit.size() == 4;
+  const int corner = on ? 1 /* DWMWCP_DONOTROUND */ : 0 /* DWMWCP_DEFAULT */;
+  DwmSetWindowAttribute(hwnd, DWMWA_WINDOW_CORNER_PREFERENCE, &corner, sizeof(corner));
+  const COLORREF border = on ? 0xFFFFFFFE /* DWMWA_COLOR_NONE */ : 0xFFFFFFFF /* DWMWA_COLOR_DEFAULT */;
+  DwmSetWindowAttribute(hwnd, DWMWA_BORDER_COLOR, &border, sizeof(border));
+  if (!on) {
+    SetWindowRgn(hwnd, nullptr, TRUE);
+    SetSeeThrough(hwnd, see_through);
+    return;
+  }
+  // Fully clear where Flutter draws nothing: no system backdrop, the frame over the
+  // whole client area and a transparent accent (what SetSeeThrough does on Windows 10).
+  const int backdrop = 1 /* none */;
+  DwmSetWindowAttribute(hwnd, DWMWA_SYSTEMBACKDROP_TYPE, &backdrop, sizeof(backdrop));
+  MARGINS margins = {-1, -1, -1, -1};
+  DwmExtendFrameIntoClientArea(hwnd, &margins);
+  struct AccentPolicy {
+    int state;
+    int flags;
+    int color;
+    int animation;
+  };
+  struct CompositionData {
+    int attribute;
+    void* data;
+    ULONG size;
+  };
+  using SetWindowCompositionAttributeFn = BOOL(WINAPI*)(HWND, CompositionData*);
+  HMODULE user32 = GetModuleHandle(TEXT("user32.dll"));
+  auto set_attribute = user32 ? reinterpret_cast<SetWindowCompositionAttributeFn>(
+                                    GetProcAddress(user32, "SetWindowCompositionAttribute"))
+                              : nullptr;
+  if (set_attribute) {
+    AccentPolicy policy = {2 /* transparent gradient */, 2, 0, 0};
+    CompositionData data = {19 /* WCA_ACCENT_POLICY */, &policy, sizeof(policy)};
+    set_attribute(hwnd, &data);
+  }
+
+  // The region is in window coordinates; the client area starts inside the
+  // window's resize borders (invisible until a region is set, then a grey rim).
+  // Never past the client area: the borders around it would show as a white rim.
+  RECT window, client;
+  if (!GetWindowRect(hwnd, &window) || !GetClientRect(hwnd, &client)) return;
+  POINT origin = {0, 0};
+  ClientToScreen(hwnd, &origin);
+  const int x = origin.x - window.left, y = origin.y - window.top;
+  const double scale = GetDpiForWindow(hwnd) / 96.0;
+  auto px = [scale](double v) { return static_cast<int>(v * scale + 0.5); };
+  auto clamp = [](int v, int lo, int hi) { return v < lo ? lo : (v > hi ? hi : v); };
+  const int left = clamp(px(hit[0]), 0, client.right), top = clamp(px(hit[1]), 0, client.bottom);
+  const int right = clamp(px(hit[0] + hit[2]), 0, client.right);
+  const int bottom = clamp(px(hit[1] + hit[3]), 0, client.bottom);
+  // The region belongs to the window from here on (no DeleteObject).
+  SetWindowRgn(hwnd, CreateRectRgn(x + left, y + top, x + right, y + bottom), TRUE);
+}
+
 }  // namespace
 
 FlutterWindow::FlutterWindow(const flutter::DartProject& project)
@@ -80,10 +152,26 @@ bool FlutterWindow::OnCreate() {
       flutter_controller_->engine()->messenger(), "riflay/window",
       &flutter::StandardMethodCodec::GetInstance());
   window_channel_->SetMethodCallHandler([this](const auto& call, auto result) {
+    if (call.method_name() == "setIsland") {
+      // [left, top, width, height] of the part that takes clicks, or nothing to turn it off.
+      const auto* list = std::get_if<flutter::EncodableList>(call.arguments());
+      if (list == nullptr) return result->Error("bad-args", "A list is expected");
+      island_hit_.clear();
+      for (const auto& e : *list) {
+        const auto* n = std::get_if<double>(&e);
+        if (n == nullptr) return result->Error("bad-args", "Numbers are expected");
+        island_hit_.push_back(*n);
+      }
+      if (island_hit_.size() != 4) island_hit_.clear();
+      SetIsland(GetHandle(), island_hit_, see_through_);
+      return result->Success();
+    }
     if (call.method_name() != "setSeeThrough") return result->NotImplemented();
     const auto* on = std::get_if<bool>(call.arguments());
     if (on == nullptr) return result->Error("bad-args", "A bool is expected");
-    SetSeeThrough(GetHandle(), *on);
+    see_through_ = *on;
+    // The island keeps its own clear window; the setting returns with the plain one.
+    if (island_hit_.empty()) SetSeeThrough(GetHandle(), *on);
     result->Success();
   });
 
@@ -154,6 +242,9 @@ FlutterWindow::MessageHandler(HWND hwnd, UINT const message,
   if (message >= WM_MOUSEFIRST && message <= WM_MOUSELAST && flutter_controller_ && video_window::Visible()) {
     return SendMessage(flutter_controller_->view()->GetNativeWindow(), message, wparam, lparam);
   }
+
+  // The island's pill follows the window as it grows and shrinks.
+  if (message == WM_SIZE && !island_hit_.empty()) SetIsland(hwnd, island_hit_, see_through_);
 
   // Give Flutter, including plugins, an opportunity to handle window messages.
   if (flutter_controller_) {

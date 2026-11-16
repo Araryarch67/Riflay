@@ -735,6 +735,14 @@ abstract final class SettingsOptions {
       preview: .desktopBar,
     ),
     SettingsOption(
+      'desktopMini',
+      .layout,
+      (t) => t.desktopMiniPlayer,
+      subtitle: (t) => t.desktopMiniPlayerSubtitle,
+      find: (t) => t.kwDesktopMini,
+      available: () => Features.miniPlayer,
+    ),
+    SettingsOption(
       'corners',
       .layout,
       (t) => t.corners,

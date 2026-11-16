@@ -27,6 +27,18 @@ enum DesktopBarStyle {
   };
 }
 
+/// The desktop mini player: a small always-on-top window with the cover, or an island, a pill at the top of the
+/// screen that opens into the controls when pointed at.
+enum DesktopMiniStyle {
+  window,
+  island;
+
+  String get label => switch (this) {
+    window => tr.miniStyleWindow,
+    island => tr.miniStyleIsland,
+  };
+}
+
 /// The same visual language in a player strip or a radial artwork surround.
 enum VisualizerStyle {
   wave,
@@ -523,6 +535,10 @@ class LayoutPrefs extends ChangeNotifier {
   /// The phone's tab bar: docked under the mini player like most music apps, by default.
   TabBarStyle tabBar = TabBarStyle.capsule;
   DesktopBarStyle desktopBar = DesktopBarStyle.classic;
+  DesktopMiniStyle desktopMini = DesktopMiniStyle.window;
+
+  /// The line being sung, in the desktop mini player (its Lyrics button).
+  bool miniLyrics = true;
   bool showPlayerClose = false;
   bool showQualityBadge = true;
 
@@ -733,6 +749,8 @@ class LayoutPrefs extends ChangeNotifier {
       'capsule' => DesktopBarStyle.compact,
       _ => pick(DesktopBarStyle.values, 'desktopBar', d.desktopBar),
     };
+    desktopMini = pick(DesktopMiniStyle.values, 'desktopMini', d.desktopMini);
+    miniLyrics = j['miniLyrics'] as bool? ?? d.miniLyrics;
     showPlayerClose = j['showPlayerClose'] as bool? ?? d.showPlayerClose;
     showQualityBadge = j['showQualityBadge'] as bool? ?? d.showQualityBadge;
     showVideoSwitch = j['showVideoSwitch'] as bool? ?? d.showVideoSwitch;
@@ -798,6 +816,8 @@ class LayoutPrefs extends ChangeNotifier {
     'volumeSlider': volumeSlider.name,
     'tabBar': tabBar.name,
     'desktopBar': desktopBar.name,
+    'desktopMini': desktopMini.name,
+    'miniLyrics': miniLyrics,
     'showPlayerClose': showPlayerClose,
     'showQualityBadge': showQualityBadge,
     'showVideoSwitch': showVideoSwitch,
@@ -885,6 +905,8 @@ class LayoutPrefs extends ChangeNotifier {
   /// Several settings at once (a preset): one notify, one save.
   Future<void> change(VoidCallback changes) => _set(changes);
   Future<void> setDesktopBar(DesktopBarStyle v) => _set(() => desktopBar = v);
+  Future<void> setDesktopMini(DesktopMiniStyle v) => _set(() => desktopMini = v);
+  Future<void> setMiniLyrics(bool v) => _set(() => miniLyrics = v);
   Future<void> setTabBar(TabBarStyle v) => _set(() => tabBar = v);
   Future<void> setVisualizerStyle(VisualizerStyle v) => _set(() => visualizerStyle = v);
   Future<void> setVisualizerCoverShape(VisualizerCoverShape v) =>

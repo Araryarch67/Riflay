@@ -8,7 +8,9 @@ import '../../services/beta_features.dart';
 import '../../services/video_mode.dart';
 import '../theme.dart';
 import '../widgets/title_bar.dart' show hasNativeWindow;
+import '../../platform/features.dart';
 import '../../platform/host.dart';
+import '../player/mini_window.dart' show miniPlayer, setMiniPlayer;
 import 'player_presets_page.dart';
 import 'sound_settings.dart';
 import '../widgets/menus.dart';
@@ -456,6 +458,21 @@ class LayoutSettings extends StatelessWidget {
                   options: [for (final v in DesktopBarStyle.values) (v, v.label)],
                 ),
               ),
+              if (Features.miniPlayer)
+                SettingTile(
+                  icon: Icons.picture_in_picture_alt_rounded,
+                  title: Text(tr.desktopMiniPlayer),
+                  subtitle: Text(tr.desktopMiniPlayerSubtitle, style: muted),
+                  control: OptionPicker<DesktopMiniStyle>(
+                    value: p.desktopMini,
+                    onChanged: (v) {
+                      p.setDesktopMini(v);
+                      // Already small: it takes the new shape at once.
+                      if (miniPlayer.value) setMiniPlayer(true);
+                    },
+                    options: [for (final v in DesktopMiniStyle.values) (v, v.label)],
+                  ),
+                ),
             ],
           ),
           _Header(tr.shapesAndMotion),

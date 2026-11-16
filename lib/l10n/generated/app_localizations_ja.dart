@@ -1984,6 +1984,30 @@ class AppLocalizationsJa extends AppLocalizations {
   String get desktopPlayerBarSubtitle => 'ウィンドウの下端に：横幅いっぱいのコントロール、曲の横のコンパクトな行、またはミニマルな帯';
 
   @override
+  String get desktopMiniPlayer => 'デスクトップのミニプレイヤー';
+
+  @override
+  String get desktopMiniPlayerSubtitle => '常に手前に表示される小さなプレイヤー：ジャケット付きのウィンドウ、または画面上部でポインターを合わせると開くダイナミックアイランド';
+
+  @override
+  String get miniStyleWindow => 'ウィンドウ';
+
+  @override
+  String get miniStyleIsland => 'ダイナミックアイランド';
+
+  @override
+  String get kwDesktopMini => 'ミニプレイヤー, アイランド, ダイナミックアイランド, 常に手前, 小さいウィンドウ';
+
+  @override
+  String get miniBackToApp => 'フルウィンドウに戻る';
+
+  @override
+  String get miniSwitchToIsland => 'ダイナミックアイランドに切り替え';
+
+  @override
+  String get miniSwitchToWindow => 'ミニウィンドウに切り替え';
+
+  @override
   String get shapesAndMotion => '形と動き';
 
   @override

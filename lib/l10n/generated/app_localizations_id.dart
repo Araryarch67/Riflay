@@ -2018,6 +2018,31 @@ class AppLocalizationsId extends AppLocalizations {
       'Di kaki jendela: kontrol selebar layar, baris ringkas di samping lagu, atau strip minimal';
 
   @override
+  String get desktopMiniPlayer => 'Pemutar mini desktop';
+
+  @override
+  String get desktopMiniPlayerSubtitle =>
+      'Pemutar kecil yang selalu di atas: jendela dengan sampul, atau dynamic island di atas layar yang terbuka saat kursor diarahkan ke sana';
+
+  @override
+  String get miniStyleWindow => 'Jendela';
+
+  @override
+  String get miniStyleIsland => 'Dynamic island';
+
+  @override
+  String get kwDesktopMini => 'pemutar mini, island, dynamic island, selalu di atas, jendela kecil';
+
+  @override
+  String get miniBackToApp => 'Kembali ke jendela penuh';
+
+  @override
+  String get miniSwitchToIsland => 'Ganti ke dynamic island';
+
+  @override
+  String get miniSwitchToWindow => 'Ganti ke jendela mini';
+
+  @override
   String get shapesAndMotion => 'Bentuk dan gerak';
 
   @override

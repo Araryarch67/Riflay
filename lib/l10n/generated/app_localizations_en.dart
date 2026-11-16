@@ -2030,6 +2030,31 @@ class AppLocalizationsEn extends AppLocalizations {
       'Along the window\'s foot: full-width controls, a compact row beside the song, or a minimal strip';
 
   @override
+  String get desktopMiniPlayer => 'Desktop mini player';
+
+  @override
+  String get desktopMiniPlayerSubtitle =>
+      'The small player that stays on top: a window with the cover, or a dynamic island at the top of the screen that opens when you point at it';
+
+  @override
+  String get miniStyleWindow => 'Window';
+
+  @override
+  String get miniStyleIsland => 'Dynamic island';
+
+  @override
+  String get kwDesktopMini => 'mini player, island, dynamic island, always on top, picture in picture, small window';
+
+  @override
+  String get miniBackToApp => 'Back to the full window';
+
+  @override
+  String get miniSwitchToIsland => 'Switch to the dynamic island';
+
+  @override
+  String get miniSwitchToWindow => 'Switch to the mini window';
+
+  @override
   String get shapesAndMotion => 'Shapes and motion';
 
   @override

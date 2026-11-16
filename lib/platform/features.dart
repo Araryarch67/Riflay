@@ -56,8 +56,9 @@ abstract final class Features {
   /// Decoded audio analysis for experimental player decorations: mpv's filters natively, Web Audio in a browser.
   static bool get audioVisualizer => !Host.isWeb || WebAudio.available;
 
-  /// The mini player, which shrinks the app's own window.
-  static bool get miniPlayer => !Host.isWeb;
+  /// The mini player, which shrinks the app's own window: only where the app has one to shrink (not a phone or
+  /// tablet, where the window manager isn't there and the switch left the app stuck in a mini state).
+  static bool get miniPlayer => Host.isWindows || Host.isLinux || Host.isMacOS;
 
   /// The listening history, Stats and the monthly Wrap (kept in a file on the device, in the browser's local
   /// storage on the web).
