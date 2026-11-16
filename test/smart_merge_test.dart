@@ -217,7 +217,9 @@ void main() {
 
   test('a source that is only slow to answer is asked again next time, not given up on', () async {
     final merge = SmartMerge(
-      providers: [_Source('slow', [_mono('1')], resolver: (_) => Completer<String>().future)],
+      providers: [
+        _Source('slow', [_mono('1')], resolver: (_) => Completer<String>().future),
+      ],
       enabled: () => true,
       streamTimeout: const Duration(milliseconds: 5),
       downloads: false,
@@ -417,7 +419,11 @@ void main() {
     final again = SmartMergeAudioSource(_youtube(), youtube: _Youtube(), merge: merge);
     expect((await again.request()).contentType, 'application/vnd.apple.mpegurl', reason: 'the lookup carried on');
     expect(again.from?.name, 'slow');
-    expect(merge.soundFrom('abcdefghijk')?.name, 'slow', reason: 'its cards (Recently played) show where the sound came from');
+    expect(
+      merge.soundFrom('abcdefghijk')?.name,
+      'slow',
+      reason: 'its cards (Recently played) show where the sound came from',
+    );
     merge.giveUp('abcdefghijk');
     expect(merge.soundFrom('abcdefghijk'), isNull);
   });
@@ -506,6 +512,34 @@ void main() {
     expect(youtube.requests, 2);
     expect(merge.gaveUpOn('abcdefghijk'), isTrue);
     expect(merge.wants(_youtube()), isFalse, reason: 'the rest of the session stays on YouTube');
+  });
+
+  test('a source that has the song only in lossier quality plays it from YouTube, and is shown as checked', () async {
+    final youtube = _Youtube();
+    final merge = _merge([
+      _Source('Monochrome', [_mono('tracks:track:1')], resolver: (_) async => throw const LossierMatch('AAC only')),
+    ]);
+    final playing = SmartMergeAudioSource(_youtube(), youtube: youtube, merge: merge);
+    expect((await playing.request()).contentType, 'audio/webm');
+    expect(merge.soundFrom('abcdefghijk'), isNull);
+    expect(merge.lossierAt('abcdefghijk'), (source: TrackSource.monochrome, name: 'Monochrome'));
+    expect(merge.wants(_youtube()), isFalse, reason: 'the rest of the session stays on YouTube');
+
+    final broken = _merge([
+      _Source('Monochrome', [_mono('tracks:track:1')], streamFails: true),
+    ]);
+    await broken.choose(_youtube());
+    expect(broken.lossierAt('abcdefghijk'), isNull, reason: 'a source that failed for another reason is not "worse"');
+
+    merge.markUsed('abcdefghijk', sound: (source: TrackSource.device, name: ''));
+    expect(merge.lossierAt('abcdefghijk'), isNull, reason: 'a better sound found later replaces the mark');
+  });
+
+  test('Monochrome: a song only in AAC is a lossier match', () async {
+    await expectLater(
+      MonochromeMerge(_Monochrome(flac: false)).stream(_mono('tracks:track:78')),
+      throwsA(isA<LossierMatch>()),
+    );
   });
 
   test('merged sound that failed to play is not tried again', () async {

@@ -1261,7 +1261,8 @@ class SourceMark extends StatelessWidget {
 }
 
 /// Where a song's sound comes from, kept up to date: the song's own mark ([fallback]) until Smart merge plays it
-/// from a lossless file in the library or a better source, then the two joined ([MergedSourceMark]).
+/// from a lossless file in the library or a better source, then the two joined ([MergedSourceMark]). A source that
+/// has the song only in quality no better than YouTube's joins it with ≠ instead.
 class SmartMergeMark extends StatelessWidget {
   const SmartMergeMark({super.key, required this.track, required this.fallback, this.size = 14});
 
@@ -1278,19 +1279,29 @@ class SmartMergeMark extends StatelessWidget {
       listenable: merge.changes,
       builder: (context, _) {
         final sound = merge.soundFrom(id);
+        final lossier = sound == null ? merge.lossierAt(id) : null;
         return AnimatedSwitcher(
           duration: LayoutPrefs.dur(const Duration(milliseconds: 220)),
           layoutBuilder: (current, previous) =>
               Stack(alignment: Alignment.centerLeft, children: [...previous, ?current]),
-          child: sound == null
-              ? KeyedSubtree(key: const ValueKey('own'), child: fallback)
-              : MergedSourceMark(
-                  key: ValueKey(sound),
-                  song: track.source,
-                  sound: sound.source,
-                  soundName: sound.source == TrackSource.device ? tr.yourLibrary : sound.name,
-                  size: size * 0.93,
-                ),
+          child: switch ((sound, lossier)) {
+            (final sound?, _) => MergedSourceMark(
+              key: ValueKey(sound),
+              song: track.source,
+              sound: sound.source,
+              soundName: sound.source == TrackSource.device ? tr.yourLibrary : sound.name,
+              size: size * 0.93,
+            ),
+            (null, final lossier?) => MergedSourceMark(
+              key: ValueKey(('lossier', lossier)),
+              song: track.source,
+              sound: lossier.source,
+              soundName: lossier.name,
+              lossier: true,
+              size: size * 0.93,
+            ),
+            _ => KeyedSubtree(key: const ValueKey('own'), child: fallback),
+          },
         );
       },
     );
@@ -1300,12 +1311,16 @@ class SmartMergeMark extends StatelessWidget {
 /// Smart merge's mark: the song's own service and the one its sound comes from, joined in one badge
 /// ("YouTube Music × Monochrome"), so it reads as the two working together and not as two separate facts. When it
 /// comes on screen the second mark slides out of the first and the × turns into place.
+///
+/// [lossier]: the second source has the song only in quality no better than the first's (Monochrome with only
+/// AAC), so the sound stays the song's own; the two are joined with ≠ instead of ×, as proof it was checked.
 class MergedSourceMark extends StatelessWidget {
   const MergedSourceMark({
     super.key,
     this.song = TrackSource.youtubeMusic,
     this.sound = TrackSource.monochrome,
     this.soundName = 'Monochrome',
+    this.lossier = false,
     this.size = 14,
   });
 
@@ -1315,17 +1330,19 @@ class MergedSourceMark extends StatelessWidget {
   /// Where its sound comes from ([TrackSource.device]: a file in the library), and its name for the tooltip.
   final TrackSource sound;
   final String soundName;
+  final bool lossier;
   final double size;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final ink = scheme.onSecondaryContainer;
+    final join = ink.withValues(alpha: 0.7);
     final soundMark = sound == TrackSource.device
         ? Icon(Icons.library_music_rounded, size: size, color: ink)
         : SourceMark(online: true, source: sound, size: size, tooltip: false, color: ink);
     return Tooltip(
-      message: tr.smartMergeBadge(soundName),
+      message: lossier ? tr.smartMergeLossierBadge(soundName) : tr.smartMergeBadge(soundName),
       child: TweenAnimationBuilder<double>(
         tween: Tween(begin: 0, end: 1),
         duration: LayoutPrefs.dur(const Duration(milliseconds: 650)),
@@ -1360,7 +1377,13 @@ class MergedSourceMark extends StatelessWidget {
                             padding: EdgeInsets.symmetric(horizontal: size * 0.28),
                             child: Transform.rotate(
                               angle: (1 - t) * 1.5708,
-                              child: Icon(Icons.close_rounded, size: size * 0.72, color: ink.withValues(alpha: 0.7)),
+                              child: lossier
+                                  ? CustomPaint(
+                                      key: const ValueKey('notEqual'),
+                                      size: Size.square(size * 0.72),
+                                      painter: _NotEqualPainter(join),
+                                    )
+                                  : Icon(Icons.close_rounded, size: size * 0.72, color: join),
                             ),
                           ),
                           joined!,
@@ -1377,6 +1400,32 @@ class MergedSourceMark extends StatelessWidget {
       ),
     );
   }
+}
+
+/// ≠, drawn to match the rounded × it stands in for: two bars and a slash through them.
+class _NotEqualPainter extends CustomPainter {
+  const _NotEqualPainter(this.color);
+
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final s = size.shortestSide;
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round
+      ..strokeWidth = s * 0.13
+      ..isAntiAlias = true;
+    final left = s * 0.2, right = s * 0.8;
+    canvas
+      ..drawLine(Offset(left, s * 0.38), Offset(right, s * 0.38), paint)
+      ..drawLine(Offset(left, s * 0.62), Offset(right, s * 0.62), paint)
+      ..drawLine(Offset(s * 0.64, s * 0.18), Offset(s * 0.36, s * 0.82), paint);
+  }
+
+  @override
+  bool shouldRepaint(_NotEqualPainter old) => old.color != color;
 }
 
 /// YouTube Music's mark drawn plainly in one colour: a ring around a play triangle.

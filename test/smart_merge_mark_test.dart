@@ -54,4 +54,23 @@ void main() {
     expect(find.byType(MergedSourceMark), findsNothing);
     expect(find.text('own'), findsOneWidget);
   });
+
+  testWidgets('a source that only has a lossier copy joins the mark with ≠ instead of ×', (tester) async {
+    await show(tester);
+    SmartMerge.instance.markLossier('abcdefghijk', (source: TrackSource.monochrome, name: 'Monochrome'));
+    await tester.pumpAndSettle();
+    final mark = tester.widget<MergedSourceMark>(find.byType(MergedSourceMark));
+    expect(mark.lossier, isTrue);
+    expect(mark.sound, TrackSource.monochrome);
+    expect(find.byKey(const ValueKey('notEqual')), findsOneWidget);
+    expect(find.byIcon(Icons.close_rounded), findsNothing);
+    expect(
+      find.byTooltip('Monochrome only has this song in lower quality, so it plays from YouTube Music'),
+      findsOneWidget,
+    );
+    SmartMerge.instance.markUsed('abcdefghijk', sound: (source: TrackSource.monochrome, name: 'Monochrome'));
+    await tester.pumpAndSettle();
+    expect(tester.widget<MergedSourceMark>(find.byType(MergedSourceMark)).lossier, isFalse);
+    expect(find.byIcon(Icons.close_rounded), findsOneWidget);
+  });
 }

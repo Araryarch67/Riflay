@@ -1862,6 +1862,7 @@
   "smartMerge": "Smart merge",
   "smartMergeSubtitle": "Memutar lagu YouTube Music dari sumber terbaik yang punya rekaman yang sama: file lossless di library kamu dulu, lalu sumber musik yang kamu nyalakan (Monochrome, dalam FLAC), dan YouTube Music kalau tidak ada. Music video, lirik dan sampulnya tetap dari YouTube Music.",
   "smartMergeBadge": "Audio dari {source}",
+  "smartMergeLossierBadge": "{source} cuma punya lagu ini dalam kualitas lebih rendah, jadi diputar dari YouTube Music",
   "spotifyCanvas": "Canvas",
   "spotifyCanvasSubtitle": "Video pendek berulang yang ditampilkan Spotify bersama lagu, diputar di Video mode menggantikan music video (nyalakan Video mode di Fitur beta)",
   "sourceInSearch": "{source} di pencarian",

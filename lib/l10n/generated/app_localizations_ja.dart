@@ -6150,6 +6150,11 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
+  String smartMergeLossierBadge(String source) {
+    return '$sourceにはこの曲が低音質でしかないため、YouTube Musicから再生しています';
+  }
+
+  @override
   String get spotifyCanvas => 'Canvas';
 
   @override

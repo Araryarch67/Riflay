@@ -1855,6 +1855,7 @@
   "smartMerge": "スマートマージ",
   "smartMergeSubtitle": "同じ録音がある最良のソースからYouTube Musicの曲を再生する。まずライブラリのロスレスファイル、次にオンにした音楽ソース(Monochrome、FLAC)、なければYouTube Music。MV、歌詞、カバーはYouTube Musicのまま。",
   "smartMergeBadge": "音声:{source}",
+  "smartMergeLossierBadge": "{source}にはこの曲が低音質でしかないため、YouTube Musicから再生しています",
   "spotifyCanvas": "Canvas",
   "spotifyCanvasSubtitle": "Spotifyが曲と一緒に流すループ動画を、MVの代わりにビデオモードで表示する(ベータ機能でビデオモードをオンに)",
   "sourceInSearch": "検索に{source}",

@@ -3531,6 +3531,8 @@
   "smartMergeSubtitle": "Plays a YouTube Music song from the best source that has the same recording: a lossless file in your library first, then the music sources you turned on (Monochrome, in FLAC), and YouTube Music otherwise. Its music video, lyrics and cover stay from YouTube Music.",
   "smartMergeBadge": "Audio from {source}",
   "@smartMergeBadge": {"placeholders": {"source": {"type": "String"}}},
+  "smartMergeLossierBadge": "{source} only has this song in lower quality, so it plays from YouTube Music",
+  "@smartMergeLossierBadge": {"placeholders": {"source": {"type": "String"}}},
   "spotifyCanvas": "Canvas",
   "spotifyCanvasSubtitle": "The looping video Spotify shows with a song, in Video mode instead of its music video (turn Video mode on in Beta features)",
   "sourceInSearch": "{source} in search",

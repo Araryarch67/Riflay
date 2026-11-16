@@ -11223,6 +11223,12 @@ abstract class AppLocalizations {
   /// **'Audio from {source}'**
   String smartMergeBadge(String source);
 
+  /// No description provided for @smartMergeLossierBadge.
+  ///
+  /// In en, this message translates to:
+  /// **'{source} only has this song in lower quality, so it plays from YouTube Music'**
+  String smartMergeLossierBadge(String source);
+
   /// No description provided for @spotifyCanvas.
   ///
   /// In en, this message translates to:

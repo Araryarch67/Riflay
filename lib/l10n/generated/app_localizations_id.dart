@@ -6285,6 +6285,11 @@ class AppLocalizationsId extends AppLocalizations {
   }
 
   @override
+  String smartMergeLossierBadge(String source) {
+    return '$source cuma punya lagu ini dalam kualitas lebih rendah, jadi diputar dari YouTube Music';
+  }
+
+  @override
   String get spotifyCanvas => 'Canvas';
 
   @override

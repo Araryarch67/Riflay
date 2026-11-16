@@ -20,6 +20,12 @@ import 'sources/music_sources.dart';
 /// source's name for what's shown.
 typedef MergedSound = ({TrackSource source, String name});
 
+/// A provider has the same recording, but in no better quality than YouTube's own stream (Monochrome with only
+/// AAC): the song plays from YouTube, and its badge shows the source was checked and fell short.
+class LossierMatch extends FormatException {
+  const LossierMatch(super.message);
+}
+
 /// A place Smart merge may take a YouTube Music song's sound from, when it has the same recording in better
 /// quality than YouTube's lossy stream. The order of [SmartMerge.providers] is the order of preference.
 abstract class MergeProvider {
@@ -35,7 +41,7 @@ abstract class MergeProvider {
   Future<List<Track>> search(String query);
 
   /// What mpv plays for [match], one of this provider's songs: a web address, or a DASH manifest. Throws when
-  /// the song can't be streamed now.
+  /// the song can't be streamed now, and [LossierMatch] when it only has it in quality no better than YouTube's.
   Future<String> stream(Track match);
 }
 
@@ -69,7 +75,7 @@ class MonochromeMerge implements MergeProvider {
     // Only FLAC is better than YouTube's Opus: a song the service has only as AAC plays from YouTube.
     final lossless = _lossless[match.id] ?? (_lossless[match.id] = await client.lossless(stream));
     if (_lossless.length > 400) _lossless.remove(_lossless.keys.first);
-    if (!lossless) throw const FormatException('Monochrome has this song only in lossy quality');
+    if (!lossless) throw const LossierMatch('Monochrome has this song only in lossy quality');
     return stream;
   }
 }
@@ -198,6 +204,7 @@ class SmartMerge {
     _gaveUp.clear();
     _used.clear();
     _soundFrom.clear();
+    _lossier.clear();
     _streamOf.clear();
     _choosing.clear();
     changes.value++;
@@ -217,6 +224,10 @@ class SmartMerge {
 
   /// Where each video's sound came from this session, for the mark on its rows and cards.
   final _soundFrom = <String, MergedSound>{};
+
+  /// Videos a source has only in lossier quality ([LossierMatch]): they play from YouTube, and their badge says
+  /// that source was checked.
+  final _lossier = <String, MergedSound>{};
 
   /// Counts up when a song starts playing merged, for what shows where a song's sound comes from: the choice is
   /// made after the song became the player's current one.
@@ -409,6 +420,7 @@ class SmartMerge {
     if (revision != _configurationRevision) return null;
     debugPrint('Smart merge: ${matches.length} match(es) for ${track.videoId} after ${asked.elapsedMilliseconds} ms');
     var slow = false;
+    MergedSound? lossier;
     for (final match in matches) {
       try {
         if (revision != _configurationRevision) return null;
@@ -440,11 +452,15 @@ class SmartMerge {
       } catch (e) {
         // Only slow: the song is asked again the next time it plays.
         if (e is TimeoutException) slow = true;
+        if (e is LossierMatch) lossier ??= (source: match.provider.source, name: match.provider.name);
         debugPrint('Smart merge stream from ${match.provider.name}: ${e.runtimeType}');
       }
     }
     // Something matched and none of it streams (lossy only, or broken): don't ask again this session.
-    if (matches.isNotEmpty && !slow && revision == _configurationRevision) giveUp(track.videoId!);
+    if (matches.isNotEmpty && !slow && revision == _configurationRevision) {
+      if (lossier != null) markLossier(track.videoId!, lossier);
+      giveUp(track.videoId!);
+    }
     return null;
   }
 
@@ -542,6 +558,7 @@ class SmartMerge {
   void markUsed(String videoId, {MergedSound? sound}) {
     _used.add(videoId);
     if (sound != null) {
+      _lossier.remove(videoId);
       _soundFrom.remove(videoId);
       _soundFrom[videoId] = sound;
       if (_soundFrom.length > _remembered) _soundFrom.remove(_soundFrom.keys.first);
@@ -553,6 +570,18 @@ class SmartMerge {
   /// Where [videoId]'s sound came from this session: a lossless file in the library or a streaming source; null
   /// when it played from YouTube.
   MergedSound? soundFrom(String videoId) => _gaveUp.contains(videoId) ? null : _soundFrom[videoId];
+
+  /// [sound]'s source has [videoId]'s recording only in quality no better than YouTube's, so it plays from YouTube.
+  void markLossier(String videoId, MergedSound sound) {
+    _lossier.remove(videoId);
+    _lossier[videoId] = sound;
+    if (_lossier.length > _remembered) _lossier.remove(_lossier.keys.first);
+    changes.value++;
+  }
+
+  /// The source that has [videoId]'s recording only in quality no better than YouTube's, so it plays from YouTube;
+  /// null when none was found that way, or its sound comes from elsewhere.
+  MergedSound? lossierAt(String videoId) => soundFrom(videoId) == null ? _lossier[videoId] : null;
 
   /// Whether retries must use the original YouTube stream for this song.
   bool gaveUpOn(String videoId) => _gaveUp.contains(videoId);
