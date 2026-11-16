@@ -14,8 +14,9 @@ import 'layout_prefs.dart';
 /// the mini player's island uses); Linux windows already have an alpha channel. macOS plays the intro inside the
 /// normal window, where the see-through mode always blurs what is behind it.
 abstract final class SplashWindow {
-  /// The intro window's size, in logical pixels: room for the mark, its shock ring and the wordmark.
-  static const size = Size(520, 420);
+  /// The intro window's size, in logical pixels: room for the mark, its shock ring and the wordmark, drawn
+  /// `DesktopIntro.desktopScale` times larger here, and for it to grow as it leaves.
+  static const size = Size(780, 630);
 
   /// While the intro window is up: the frame paints no background or title bar.
   static final active = ValueNotifier(false);
@@ -39,7 +40,10 @@ abstract final class SplashWindow {
     _appSize = appSize;
     _appMinimum = appMinimum;
     try {
-      if (Host.isWindows) await _channel.invokeMethod('setIsland', [0.0, 0.0, size.width, size.height]);
+      if (Host.isWindows) {
+        await _channel.invokeMethod('setSwitcherVisible', false);
+        await _channel.invokeMethod('setIsland', [0.0, 0.0, size.width, size.height]);
+      }
       await windowManager.setResizable(false);
       await windowManager.setSkipTaskbar(true);
       active.value = true;
@@ -76,7 +80,10 @@ abstract final class SplashWindow {
 
   static Future<void> _toApp() async {
     try {
-      if (Host.isWindows) await _channel.invokeMethod('setIsland', <double>[]);
+      if (Host.isWindows) {
+        await _channel.invokeMethod('setSwitcherVisible', true);
+        await _channel.invokeMethod('setIsland', <double>[]);
+      }
     } catch (e) {
       debugPrint('Intro window not cleared: $e');
     }

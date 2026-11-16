@@ -152,6 +152,17 @@ bool FlutterWindow::OnCreate() {
       flutter_controller_->engine()->messenger(), "riflay/window",
       &flutter::StandardMethodCodec::GetInstance());
   window_channel_->SetMethodCallHandler([this](const auto& call, auto result) {
+    if (call.method_name() == "setSwitcherVisible") {
+      const auto* visible = std::get_if<bool>(call.arguments());
+      if (visible == nullptr) return result->Error("bad-args", "A bool is expected");
+      auto style = GetWindowLongPtr(GetHandle(), GWL_EXSTYLE);
+      style = *visible ? ((style & ~WS_EX_TOOLWINDOW) | WS_EX_APPWINDOW)
+                       : ((style & ~WS_EX_APPWINDOW) | WS_EX_TOOLWINDOW);
+      SetWindowLongPtr(GetHandle(), GWL_EXSTYLE, style);
+      SetWindowPos(GetHandle(), nullptr, 0, 0, 0, 0,
+                   SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
+      return result->Success();
+    }
     if (call.method_name() == "setIsland") {
       // [left, top, width, height] of the part that takes clicks, or nothing to turn it off.
       const auto* list = std::get_if<flutter::EncodableList>(call.arguments());

@@ -27,12 +27,12 @@ void main() {
     await tester.pump(); // the first frame starts the clock
     await tester.pump(const Duration(milliseconds: 1000));
     expect(find.byKey(_home), findsNothing);
-    expect(find.text('RIFLAY'), findsOneWidget);
-    await tester.pump(const Duration(milliseconds: 500)); // past the hold: the exit begins, Home under it
+    expect(find.byKey(const ValueKey('intro')), findsOneWidget);
+    await tester.pump(const Duration(milliseconds: 1000)); // past the hold: the exit begins, Home under it
     expect(find.byKey(_home), findsOneWidget);
     await tester.pumpAndSettle();
     expect(find.byKey(_home), findsOneWidget);
-    expect(find.text('RIFLAY'), findsNothing);
+    expect(find.byKey(const ValueKey('intro')), findsNothing);
   });
 
   testWidgets('a click skips to the end', (tester) async {
@@ -44,7 +44,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 400));
     await tester.pump();
     expect(find.byKey(_home), findsOneWidget);
-    expect(find.text('RIFLAY'), findsNothing);
+    expect(find.byKey(const ValueKey('intro')), findsNothing);
   });
 
   testWidgets('any key skips too', (tester) async {
@@ -63,7 +63,7 @@ void main() {
     await tester.pump(const Duration(seconds: 3));
     await tester.pump(const Duration(seconds: 3));
     expect(find.byKey(_home), findsNothing);
-    expect(find.text('RIFLAY'), findsOneWidget);
+    expect(find.byKey(const ValueKey('intro')), findsOneWidget);
     ready.complete();
     await tester.pumpAndSettle();
     expect(find.byKey(_home), findsOneWidget);
@@ -78,7 +78,7 @@ void main() {
       ),
     );
     await tester.pump();
-    await tester.pump(const Duration(milliseconds: 1500)); // exiting: Home is built under the intro
+    await tester.pump(const Duration(milliseconds: 2000)); // exiting: Home is built under the intro
     final state = tester.state(find.byType(_Counter));
     await tester.pumpAndSettle();
     expect(tester.state(find.byType(_Counter)), same(state));
