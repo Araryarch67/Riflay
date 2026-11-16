@@ -6,7 +6,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:riflay/models/track.dart';
 import 'package:riflay/services/player_controller.dart';
 import 'package:riflay/services/smart_merge.dart';
-import 'package:riflay/ui/player_scope.dart';
 import 'package:riflay/ui/shell_scope.dart';
 import 'package:riflay/ui/widgets/track_row.dart';
 import 'package:shared_preferences/shared_preferences.dart';
