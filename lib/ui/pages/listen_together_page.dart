@@ -242,6 +242,10 @@ class _ListenTogetherPageState extends State<ListenTogetherPage> {
                         ),
                         const SizedBox(height: 16),
                         body,
+                        if (session.role != ListenRole.none) ...[
+                          const SizedBox(height: 24),
+                          _RoomChatPanel(key: ValueKey(session.code), session: session),
+                        ],
                         if (problem != null) ...[
                           const SizedBox(height: 16),
                           Row(
@@ -538,6 +542,84 @@ class _ListenTogetherPageState extends State<ListenTogetherPage> {
     if (!mounted || code == null) return;
     _code.text = code;
     await _join(code);
+  }
+}
+
+class _RoomChatPanel extends StatefulWidget {
+  const _RoomChatPanel({super.key, required this.session});
+  final ListenTogether session;
+  @override
+  State<_RoomChatPanel> createState() => _RoomChatPanelState();
+}
+
+class _RoomChatPanelState extends State<_RoomChatPanel> {
+  final _draft = TextEditingController();
+  void _send() {
+    if (_draft.text.trim().isEmpty) return;
+    widget.session.sendChat(_draft.text);
+    _draft.clear();
+  }
+
+  @override
+  void dispose() {
+    _draft.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final messages = widget.session.chat;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(tr.roomChat, style: Theme.of(context).textTheme.titleLarge),
+        const SizedBox(height: 12),
+        if (messages.isEmpty)
+          Text(tr.roomChatEmpty)
+        else
+          SizedBox(
+            height: 240,
+            child: SingleChildScrollView(
+              primary: false,
+              reverse: true,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  for (final message in messages)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 6),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(message.name, style: const TextStyle(fontWeight: FontWeight.w700)),
+                          SelectableText(message.text),
+                        ],
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        const SizedBox(height: 12),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: TextField(
+                controller: _draft,
+                maxLength: 1000,
+                minLines: 1,
+                maxLines: 4,
+                textInputAction: TextInputAction.send,
+                onSubmitted: (_) => _send(),
+                decoration: InputDecoration(hintText: tr.roomChatHint),
+              ),
+            ),
+            IconButton(onPressed: _send, tooltip: tr.roomChatSend, icon: const Icon(Icons.send_rounded)),
+          ],
+        ),
+      ],
+    );
   }
 }
 

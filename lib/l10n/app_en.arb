@@ -3565,5 +3565,9 @@
   "introSkip": "Skip intro",
   "trayShuffle": "Shuffle",
   "trayRepeat": "Repeat",
-  "trayRepeatOne": "One song"
+  "trayRepeatOne": "One song",
+  "roomChat": "Room chat",
+  "roomChatEmpty": "Say hello to everyone listening.",
+  "roomChatHint": "Write a message…",
+  "roomChatSend": "Send message"
 }

@@ -6384,4 +6384,16 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get trayRepeatOne => 'Satu lagu';
+
+  @override
+  String get roomChat => 'Chat room';
+
+  @override
+  String get roomChatEmpty => 'Sapa teman yang sedang mendengarkan.';
+
+  @override
+  String get roomChatHint => 'Tulis pesan…';
+
+  @override
+  String get roomChatSend => 'Kirim pesan';
 }

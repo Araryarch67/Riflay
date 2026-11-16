@@ -120,6 +120,19 @@ sealed class ListenMessage {
           _ => null,
         },
         'guests' => Guests([for (final g in json['guests'] as List) g as String]),
+        'chat-send' => switch (json['text']) {
+          final String value when value.trim().isNotEmpty && value.length <= 1000 => ChatSend(value),
+          _ => null,
+        },
+        'chat' => switch (json['text']) {
+          final String value when value.trim().isNotEmpty && value.length <= 1000 => RoomChat(
+            id: json['id'] as String,
+            name: json['name'] as String,
+            text: value,
+            at: json['at'] as int,
+          ),
+          _ => null,
+        },
         'bye' => Bye(reason: json['reason'] as String?),
         _ => null,
       };
@@ -127,6 +140,27 @@ sealed class ListenMessage {
       return null;
     }
   }
+}
+
+/// A guest's text; the host assigns the sender and distributes the message.
+class ChatSend extends ListenMessage {
+  const ChatSend(this.text);
+  final String text;
+  @override
+  String get type => 'chat-send';
+  @override
+  Map<String, dynamic> body() => {'text': text};
+}
+
+/// A room message confirmed by its host, shared over the existing transport.
+class RoomChat extends ListenMessage {
+  const RoomChat({required this.id, required this.name, required this.text, required this.at});
+  final String id, name, text;
+  final int at;
+  @override
+  String get type => 'chat';
+  @override
+  Map<String, dynamic> body() => {'id': id, 'name': name, 'text': text, 'at': at};
 }
 
 /// Guest → host, first message: who is joining.

@@ -6247,4 +6247,16 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get trayRepeatOne => '1曲';
+
+  @override
+  String get roomChat => 'ルームチャット';
+
+  @override
+  String get roomChatEmpty => '一緒に聴いている人に挨拶しましょう。';
+
+  @override
+  String get roomChatHint => 'メッセージを入力…';
+
+  @override
+  String get roomChatSend => '送信';
 }

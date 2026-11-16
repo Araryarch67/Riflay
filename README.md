@@ -91,7 +91,7 @@ https://github.com/user-attachments/assets/5d0f0612-4322-425e-bbbf-79baeace47be
 | **Playback** | Autoplay, gapless, crossfade | Keeps the music going, with or without gaps | All |
 | | Sleep timer | The music fades out, then stops | All |
 | | Casting | To TVs, speakers and receivers with DLNA or AirPlay | Computers, phones |
-| | Listen together | Friends play along in sync over Wi-Fi or the internet, end-to-end encrypted, joined with a QR code | All |
+| | Listen together | Friends play along in sync over Wi-Fi or the internet, with room text chat, end-to-end encrypted internet rooms, and QR joining | All |
 | **Lyrics** | Synced lyrics | Follow every word, from LRCLIB, Better Lyrics, Kugou, NetEase, Musixmatch, QQ, Megalobiz, Genius and lyrics.ovh | All |
 | | Pronunciation and translation | Read along in lyrics you can't read | All |
 | | Your own lyrics | Use an `.lrc` file or the song's embedded lyrics, or edit them | All |

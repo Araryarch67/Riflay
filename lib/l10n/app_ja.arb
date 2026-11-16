@@ -1884,5 +1884,9 @@
   "introSkip": "イントロをスキップ",
   "trayShuffle": "シャッフル",
   "trayRepeat": "リピート",
-  "trayRepeatOne": "1曲"
+  "trayRepeatOne": "1曲",
+  "roomChat": "ルームチャット",
+  "roomChatEmpty": "一緒に聴いている人に挨拶しましょう。",
+  "roomChatHint": "メッセージを入力…",
+  "roomChatSend": "送信"
 }

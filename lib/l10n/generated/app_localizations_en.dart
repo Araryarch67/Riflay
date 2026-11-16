@@ -6457,4 +6457,16 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get trayRepeatOne => 'One song';
+
+  @override
+  String get roomChat => 'Room chat';
+
+  @override
+  String get roomChatEmpty => 'Say hello to everyone listening.';
+
+  @override
+  String get roomChatHint => 'Write a message…';
+
+  @override
+  String get roomChatSend => 'Send message';
 }

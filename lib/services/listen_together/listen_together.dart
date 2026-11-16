@@ -116,6 +116,37 @@ class ListenTogether extends ChangeNotifier {
   var _hostPlayingUnshareable = false;
   String? _problem;
   final _events = StreamController<String>.broadcast();
+  final _chat = <RoomChat>[];
+  int _chatSerial = 0;
+
+  /// Recent messages in this room, cleared when leaving it.
+  List<RoomChat> get chat => List.unmodifiable(_chat);
+
+  /// Sends plain text through the room host, without changing playback.
+  void sendChat(String text) {
+    final clean = text.trim();
+    if (_role == ListenRole.none || clean.isEmpty || clean.length > 1000) return;
+    if (_role == ListenRole.host) {
+      _publishChat(_ownName ?? tr.theHost, clean);
+    } else {
+      _conn?.send(ChatSend(clean).encode());
+    }
+  }
+
+  void _acceptChat(RoomChat message) {
+    if (_chat.any((item) => item.id == message.id)) return;
+    _chat.add(message);
+    if (_chat.length > 200) _chat.removeAt(0);
+    notifyListeners();
+  }
+
+  void _publishChat(String name, String text) {
+    final message = RoomChat(id: '${_now()}-${_chatSerial++}', name: name, text: text.trim(), at: _now());
+    _acceptChat(message);
+    for (final entry in _peers.entries) {
+      if (entry.value != null) entry.key.send(message.encode());
+    }
+  }
 
   ListenRole get role => _role;
   ListenMode? get mode => _mode;
@@ -288,6 +319,9 @@ class ListenTogether extends ChangeNotifier {
           ).encode(),
         );
         peer.send(_currentState().encode());
+        for (final message in _chat.skip(_chat.length > 50 ? _chat.length - 50 : 0)) {
+          peer.send(message.encode());
+        }
         _emit('${_peers[peer]} joined');
         _sendGuests();
       case Ping():
@@ -299,6 +333,9 @@ class ListenTogether extends ChangeNotifier {
         unawaited(player.queueAfter([song], after: _suggested));
         _suggested.add(song.id);
         _emit(tr.nameAddedToQueue(from, track.title));
+      case ChatSend(:final text):
+        final name = _peers[peer];
+        if (name != null) _publishChat(name, text);
       case SeekRequest(:final positionMs, :final videoId):
         if (_peers[peer] == null || !_seekingAllowed || player.currentTrack?.videoId != videoId) return;
         final duration = player.player.duration?.inMilliseconds ?? player.currentTrack?.duration?.inMilliseconds;
@@ -485,6 +522,8 @@ class ListenTogether extends ChangeNotifier {
   void _onHostMessage(String text) {
     final message = ListenMessage.decode(text);
     switch (message) {
+      case RoomChat():
+        if (_role == ListenRole.guest || _welcome != null) _acceptChat(message);
       case Welcome():
         if (_welcome?.isCompleted == false) {
           _welcome!.complete(message);
@@ -641,6 +680,7 @@ class ListenTogether extends ChangeNotifier {
   Future<void> _teardown() async {
     final wasGuest = _role == ListenRole.guest;
     _role = ListenRole.none;
+    _chat.clear();
     player.holdAutoplay = false;
     _mode = null;
     _tick?.cancel();

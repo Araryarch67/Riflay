@@ -98,6 +98,29 @@ class TestGuest implements ListenGuestConnection {
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
+  test('room chat is host-confirmed, attributed to the peer and cleared on leave', () async {
+    final player = TestPlayer();
+    final transport = TestHost();
+    final session = ListenTogether(player, hostTransport: (_, _) => transport);
+    await session.host(mode: ListenMode.wifi, name: 'Host');
+    final peer = TestPeer();
+    transport.connections.add(peer);
+    peer.frames.add(const ChatSend('before hello').encode());
+    expect(session.chat, isEmpty);
+    peer.frames.add(const Hello(name: 'Guest', guestId: 'guest').encode());
+    peer.frames.add(const ChatSend('hello everyone').encode());
+    expect(session.chat.single.name, 'Guest');
+    expect(peer.sent.whereType<RoomChat>().single.text, 'hello everyone');
+    session.sendChat('welcome');
+    expect(session.chat.last.name, 'Host');
+    expect(player.requested, isEmpty);
+    expect(player.seeks, isEmpty);
+    await session.leave();
+    expect(session.chat, isEmpty);
+    await player.player.dispose();
+    player.dispose();
+  });
+
   test('host enforces suggestions and seek permissions on incoming messages', () async {
     final player = TestPlayer();
     final transport = TestHost();
@@ -135,6 +158,28 @@ void main() {
     expect(player.seeks, hasLength(1));
     await session.leave();
     session.dispose();
+  });
+
+  test('guest receives host-confirmed chat once and sends text without changing playback', () async {
+    final player = TestPlayer();
+    final connection = TestGuest();
+    final session = ListenTogether(player, guestConnection: (_, _) async => connection);
+    await session.join(mode: ListenMode.wifi, code: 'K7Q2XM', name: 'Guest');
+    await Future<void>.delayed(Duration.zero);
+    final initialSeeks = player.seeks.length;
+    const message = RoomChat(id: 'host-1', name: 'Host', text: 'Welcome', at: 100);
+    connection.frames.add(message.encode());
+    connection.frames.add(message.encode());
+    expect(session.chat, hasLength(1));
+    expect(session.chat.single.text, 'Welcome');
+    session.sendChat('Hello');
+    expect(connection.sent.whereType<ChatSend>().single.text, 'Hello');
+    expect(session.chat, hasLength(1), reason: 'The host confirms messages for everyone');
+    expect(player.seeks.length, initialSeeks);
+    await session.leave();
+    expect(session.chat, isEmpty);
+    await player.player.dispose();
+    player.dispose();
   });
 
   test('guest sends next-song and seek requests and receives live permission changes', () async {

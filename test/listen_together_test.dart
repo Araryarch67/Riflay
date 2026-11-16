@@ -21,6 +21,8 @@ void main() {
         const Pong(pingAtMs: 7, hostAtMs: 8),
         const Suggest(song, from: 'Ana'),
         const Guests(['A', 'B']),
+        const ChatSend('hello'),
+        const RoomChat(id: '1', name: 'Ana', text: 'hello', at: 9),
         const Bye(reason: 'x'),
         const Bye(),
       ];
@@ -41,6 +43,8 @@ void main() {
         '{"t":"hello"}',
         '{"t":"ping","at":"x"}',
         '{"t":"suggest"}',
+        '{"t":"chat-send","text":"   "}',
+        '{"t":"chat","text":"hello"}',
       ]) {
         expect(ListenMessage.decode(bad), isNull, reason: bad);
       }

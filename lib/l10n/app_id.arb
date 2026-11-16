@@ -1891,5 +1891,9 @@
   "introSkip": "Lewati intro",
   "trayShuffle": "Acak",
   "trayRepeat": "Ulangi",
-  "trayRepeatOne": "Satu lagu"
+  "trayRepeatOne": "Satu lagu",
+  "roomChat": "Chat room",
+  "roomChatEmpty": "Sapa teman yang sedang mendengarkan.",
+  "roomChatHint": "Tulis pesan…",
+  "roomChatSend": "Kirim pesan"
 }

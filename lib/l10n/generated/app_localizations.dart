@@ -11396,6 +11396,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'One song'**
   String get trayRepeatOne;
+
+  /// No description provided for @roomChat.
+  ///
+  /// In en, this message translates to:
+  /// **'Room chat'**
+  String get roomChat;
+
+  /// No description provided for @roomChatEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'Say hello to everyone listening.'**
+  String get roomChatEmpty;
+
+  /// No description provided for @roomChatHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Write a message…'**
+  String get roomChatHint;
+
+  /// No description provided for @roomChatSend.
+  ///
+  /// In en, this message translates to:
+  /// **'Send message'**
+  String get roomChatSend;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {
