@@ -3,6 +3,7 @@
 // ignore_for_file: invalid_use_of_visible_for_testing_member, depend_on_referenced_packages
 import 'dart:io';
 
+import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:path_provider_windows/path_provider_windows.dart';
@@ -34,6 +35,7 @@ Element? _page() {
 Future<void> main() async {
   try {
     WidgetsFlutterBinding.ensureInitialized();
+    _countFrames();
     final folder = Directory(Platform.environment['APPDATA']!);
     PathProviderPlatform.instance = _IsolatedPaths(folder.path);
     SharedPreferences.setMockInitialValues({
@@ -194,4 +196,26 @@ class _IsolatedPaths extends PathProviderWindows {
   Future<String> getTemporaryPath() async => path;
   @override
   Future<String> getApplicationDocumentsPath() async => path;
+}
+
+/// Once a second: how many frames Flutter drew and what they cost on the UI (build) and raster threads, so a
+/// phase's frame rate can be read against the video's (a clock ticking at the display's rate shows up here).
+void _countFrames() {
+  var frames = 0;
+  var build = 0, raster = 0;
+  SchedulerBinding.instance.addTimingsCallback((timings) {
+    for (final t in timings) {
+      frames++;
+      build += t.buildDuration.inMicroseconds;
+      raster += t.rasterDuration.inMicroseconds;
+    }
+  });
+  Stream<void>.periodic(const Duration(seconds: 1)).listen((_) {
+    stdout.writeln(
+      'FRAMES at=${DateTime.now().millisecondsSinceEpoch} n=$frames build=${build ~/ 1000}ms raster=${raster ~/ 1000}ms',
+    );
+    frames = 0;
+    build = 0;
+    raster = 0;
+  });
 }
