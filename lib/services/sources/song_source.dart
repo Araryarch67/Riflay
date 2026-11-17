@@ -1,5 +1,7 @@
 import 'package:http/http.dart' as http;
 
+import '../request_gate.dart';
+
 import '../../models/track.dart';
 
 /// An optional place Search looks for songs (Settings › Accounts & services › Music sources). A song's `uri` is
@@ -28,6 +30,10 @@ abstract class SongSource {
       url,
       headers: const {'Accept': 'application/json', 'User-Agent': 'Riflay'},
     ).timeout(const Duration(seconds: 20));
+    // Too many requests: told apart, so the caller pauses instead of asking again at once.
+    if (response.statusCode == 429 || response.statusCode == 503) {
+      throw SourceBusy(int.tryParse(response.headers['retry-after'] ?? ''));
+    }
     if (response.statusCode != 200) {
       throw http.ClientException('$name search: HTTP ${response.statusCode}', url);
     }

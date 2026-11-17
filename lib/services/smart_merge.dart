@@ -13,6 +13,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/track.dart';
 import 'download_matches.dart';
 import 'merged_download.dart';
+import 'request_gate.dart';
+import 'smart_merge_stats.dart';
 import 'monochrome.dart';
 import 'sources/music_sources.dart';
 
@@ -199,7 +201,21 @@ class SmartMerge {
     _ => null,
   };
 
-  void _listenForSettings() => MusicSources.instance.addListener(clear);
+  /// A change of the sources' switches starts afresh; the disk cache's size (the same settings) doesn't.
+  void _listenForSettings() {
+    var was = _switches;
+    MusicSources.instance.addListener(() {
+      final now = _switches;
+      if (now == was) return;
+      was = now;
+      clear();
+    });
+  }
+
+  static (bool, bool, bool) get _switches {
+    final s = MusicSources.instance;
+    return (s.soundcloud, s.monochrome, s.smartMerge);
+  }
 
   /// A change of enabled sources starts a fresh lookup, including failed ones.
   void clear() {
@@ -211,8 +227,50 @@ class SmartMerge {
     _lossier.clear();
     _streamOf.clear();
     _choosing.clear();
+    _limited.clear();
+    _waiting.clear();
     changes.value++;
   }
+
+  /// Videos whose better sound the service is turning away for now (its request limit): they play from YouTube,
+  /// their badge turns red, and they move over once the limit is over ([afterLimit]).
+  final _limited = <String>{};
+  bool limitedOn(String videoId) => _limited.contains(videoId);
+  void markLimited(String videoId) {
+    if (_limited.add(videoId)) changes.value++;
+    if (remembers) SmartMergeStats.instance.heldBack(videoId);
+  }
+
+  /// Videos playing from YouTube while their better sound is on its way (found late, or held back by a limit):
+  /// their badge says it's coming.
+  final _waiting = <String>{};
+  bool waitingOn(String videoId) => _waiting.contains(videoId);
+  void markWaiting(String videoId, bool on) {
+    if (on ? _waiting.add(videoId) : _waiting.remove(videoId)) changes.value++;
+  }
+
+  /// [track]'s better sound once no service is pausing for its limit (null: none, or still limited after
+  /// [_limitWait]). Played from YouTube meanwhile, the song then moves over where it has got to.
+  Future<MergeChoice?> afterLimit(Track track) async {
+    final id = track.videoId;
+    if (id == null) return null;
+    final until = DateTime.now().add(_limitWait);
+    while (RequestGate.anyBusy.value && DateTime.now().isBefore(until)) {
+      final over = Completer<void>();
+      void listen() {
+        if (!RequestGate.anyBusy.value && !over.isCompleted) over.complete();
+      }
+
+      RequestGate.anyBusy.addListener(listen);
+      await over.future.timeout(const Duration(seconds: 30), onTimeout: () {});
+      RequestGate.anyBusy.removeListener(listen);
+    }
+    if (RequestGate.anyBusy.value) return null;
+    if (_limited.remove(id)) changes.value++;
+    return choose(track);
+  }
+
+  static const _limitWait = Duration(minutes: 5);
 
   /// The streaming sources, best first.
   final List<MergeProvider> providers;
@@ -430,7 +488,9 @@ class SmartMerge {
   void pointerOn(Track? track) {
     _resting?.cancel();
     if (track == null || !streams(track)) return;
-    _resting = Timer(const Duration(milliseconds: 300), () => prefetch(track));
+    // Only looked up (its match kept): a click then fetches straight from the source. Downloading every song the
+    // pointer rested on spent the service's request limit on songs never played.
+    _resting = Timer(const Duration(milliseconds: 300), () => match(track).ignore());
   }
 
   /// The pointer left before the moment was up.
@@ -475,7 +535,8 @@ class SmartMerge {
         return (provider: match.provider, stream: stream);
       } catch (e) {
         // Only slow: the song is asked again the next time it plays.
-        if (e is TimeoutException) slow = true;
+        if (e is TimeoutException || e is SourceBusy) slow = true;
+        if (e is SourceBusy || RequestGate.anyBusy.value) markLimited(track.videoId!);
         if (e is LossierMatch) lossier ??= (source: match.provider.source, name: match.provider.name);
         debugPrint('Smart merge stream from ${match.provider.name}: ${e.runtimeType}');
       }
@@ -535,6 +596,7 @@ class SmartMerge {
       for (final provider in active)
         _on(provider, track).timeout(lookupTimeout).catchError((Object e) {
           debugPrint('Smart merge lookup on ${provider.name}: ${e.runtimeType}');
+          if (e is SourceBusy || RequestGate.anyBusy.value) markLimited(id);
           failed = true;
           return null;
         }),
@@ -554,15 +616,27 @@ class SmartMerge {
     final elapsed = Stopwatch()..start();
     // Without what follows a bracket ("(feat. …)", "[MV]"), which the catalogue's title rarely has.
     final plain = track.title.replaceAll(RegExp(r'[(\[【（].*$'), '').trim();
-    // Both questions go out together: one after the other they took about as long as [lookupTimeout] allows,
-    // and a song whose artist is written in another script is only found by the second.
+    // By artist only when needed (a song whose artist is written in another script is only found that way):
+    // asked at once when the title finds nothing, or alongside once the title has been answering for
+    // [_artistAfter]. Asking both every time spent twice the service's request limit for the same songs.
     final artist = track.artist == Track.unknownArtist ? '' : track.artist.split(_between).first.trim();
-    final byArtist = artist.isEmpty ? null : (provider.search(artist)..ignore());
-    var song = best(track, await provider.search(plain.isEmpty ? track.title : plain));
+    Future<List<Track>>? byArtist;
+    Future<List<Track>> askArtist() => byArtist ??= (provider.search(artist)..ignore());
+    final slow = artist.isEmpty ? null : Timer(_artistAfter, askArtist);
+    final List<Track> byTitle;
+    try {
+      byTitle = await provider.search(plain.isEmpty ? track.title : plain);
+    } finally {
+      slow?.cancel();
+    }
+    var song = best(track, byTitle);
     if (!provider.on || !wants(track) || elapsed.elapsed >= lookupTimeout) return null;
-    if (song == null && byArtist != null) song = best(track, await byArtist, byArtist: true);
+    if (song == null && artist.isNotEmpty) song = best(track, await askArtist(), byArtist: true);
     return song == null ? null : (provider: provider, track: song);
   }
+
+  /// How long the title's answer is waited for before the artist is asked too.
+  static const _artistAfter = Duration(milliseconds: 800);
 
   /// The merged sound of [videoId] didn't play: the next try, and every later one, uses YouTube.
   void giveUp(String videoId) {
@@ -582,6 +656,8 @@ class SmartMerge {
   void markUsed(String videoId, {MergedSound? sound}) {
     _used.add(videoId);
     if (sound != null) {
+      _limited.remove(videoId);
+      _waiting.remove(videoId);
       _lossier.remove(videoId);
       _soundFrom.remove(videoId);
       _soundFrom[videoId] = sound;
@@ -638,8 +714,26 @@ class SmartMergeAudioSource extends StreamAudioSource {
   Future<MergeChoice?>? get late => _late;
   Future<MergeChoice?>? _late;
 
+  /// Follows [late] once it is set: the badge says the better sound is coming, until it plays or there is none.
+  void _waitLate(Future<MergeChoice?> late) {
+    _late = late;
+    final id = track.videoId!;
+    merge.markWaiting(id, true);
+    late.then((choice) {
+      if (choice == null) merge.markWaiting(id, false);
+    }, onError: (Object _) => merge.markWaiting(id, false));
+    // The player looks at [late] when told.
+    scheduleMicrotask(() => merge.changes.value++);
+  }
+
   Future<String?> _resolve() async {
     final revision = merge.configurationRevision;
+    final id = track.videoId!;
+    // The service is turning this song away for now: YouTube at once, and the better sound once that's over.
+    if (merge.limitedOn(id) && RequestGate.anyBusy.value) {
+      _waitLate(merge.afterLimit(track));
+      return null;
+    }
     // The song waits a while for its better sound; past that it plays from YouTube, and the lookup and download
     // carry on: the player moves the song over once they are ready ([late]).
     final candidate = _candidate();
@@ -648,20 +742,26 @@ class SmartMergeAudioSource extends StreamAudioSource {
       merge.patience,
       onTimeout: () {
         timedOut = true;
-        _late = candidate;
         return null;
       },
     );
     if (timedOut) {
-      debugPrint('Smart merge: ${track.videoId} starts from YouTube, its better sound follows when ready');
-      // The player looks at [late] when told.
-      scheduleMicrotask(() => merge.changes.value++);
+      debugPrint('Smart merge: $id starts from YouTube, its better sound follows when ready');
+      _waitLate(candidate.then((c) => c ?? (merge.limitedOn(id) ? merge.afterLimit(track) : null)));
+    } else if (result == null && merge.limitedOn(id)) {
+      debugPrint('Smart merge: $id starts from YouTube, its source is limiting requests');
+      _waitLate(merge.afterLimit(track));
     }
     if (revision != merge.configurationRevision || result == null || !merge.wants(track) || !result.provider.on) {
+      if (merge.remembers) SmartMergeStats.instance.playedYoutube(id);
       return null;
     }
     from = result.provider;
-    merge.markUsed(track.videoId!, sound: (source: result.provider.source, name: result.provider.name));
+    merge.markUsed(id, sound: (source: result.provider.source, name: result.provider.name));
+    if (merge.remembers) {
+      SmartMergeStats.instance.playedLossless(id);
+      if (MergedDownload.existing(result.stream)?.fromKept ?? false) SmartMergeStats.instance.openedKept(id);
+    }
     return result.stream;
   }
 

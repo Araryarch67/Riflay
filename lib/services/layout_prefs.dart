@@ -39,6 +39,77 @@ enum DesktopMiniStyle {
   };
 }
 
+/// Where the island sits: floating a little below the top of the screen (dragged anywhere), or docked to the top
+/// edge like a notch (flat on top, round below; it slides only sideways).
+enum IslandPlacement {
+  floating,
+  docked;
+
+  String get label => switch (this) {
+    floating => tr.islandFloating,
+    docked => tr.islandDocked,
+  };
+}
+
+/// The closed island's bars: following the music (its own audio levels, whatever the visualizer switch says),
+/// moving on their own, or none.
+enum IslandBars {
+  music,
+  animated,
+  off;
+
+  String get label => switch (this) {
+    music => tr.islandBarsMusic,
+    animated => tr.islandBarsAnimated,
+    off => tr.off,
+  };
+}
+
+/// What opens the island into its controls: the pointer resting on it, or a click.
+enum IslandOpen {
+  hover,
+  click;
+
+  String get label => switch (this) {
+    hover => tr.islandOpenHover,
+    click => tr.islandOpenClick,
+  };
+}
+
+/// How wide the closed island is.
+enum IslandWidth {
+  compact(240),
+  normal(300),
+  wide(380);
+
+  const IslandWidth(this.width);
+  final double width;
+
+  String get label => switch (this) {
+    compact => tr.islandWidthCompact,
+    normal => tr.islandWidthNormal,
+    wide => tr.islandWidthWide,
+  };
+}
+
+/// The island's colour: black, black with a breath of the cover's colour, or the cover's colour.
+enum IslandColor {
+  black(0),
+  tinted(0.16),
+  cover(0.42);
+
+  const IslandColor(this.tint);
+
+  /// How much of the cover's colour is mixed into the black.
+  final double tint;
+
+  String get label => switch (this) {
+    black => tr.islandColorBlack,
+    tinted => tr.islandColorTinted,
+    cover => tr.islandColorCover,
+  };
+}
+
 /// The same visual language in a player strip or a radial artwork surround.
 enum VisualizerStyle {
   wave,
@@ -539,6 +610,17 @@ class LayoutPrefs extends ChangeNotifier {
 
   /// The line being sung, in the desktop mini player (its Lyrics button).
   bool miniLyrics = true;
+
+  /// The desktop mini player's look and what it shows (Settings › Pages & navigation › Desktop mini player).
+  IslandPlacement islandPlacement = IslandPlacement.floating;
+  IslandBars islandBars = IslandBars.music;
+  IslandOpen islandOpen = IslandOpen.hover;
+  IslandWidth islandWidth = IslandWidth.normal;
+  IslandColor islandColor = IslandColor.tinted;
+  bool miniOnTop = true;
+  bool miniVolume = true;
+  bool miniShuffleRepeat = true;
+  bool miniQuality = true;
   bool showPlayerClose = false;
   bool showQualityBadge = true;
 
@@ -751,6 +833,15 @@ class LayoutPrefs extends ChangeNotifier {
     };
     desktopMini = pick(DesktopMiniStyle.values, 'desktopMini', d.desktopMini);
     miniLyrics = j['miniLyrics'] as bool? ?? d.miniLyrics;
+    islandPlacement = pick(IslandPlacement.values, 'islandPlacement', d.islandPlacement);
+    islandBars = pick(IslandBars.values, 'islandBars', d.islandBars);
+    islandOpen = pick(IslandOpen.values, 'islandOpen', d.islandOpen);
+    islandWidth = pick(IslandWidth.values, 'islandWidth', d.islandWidth);
+    islandColor = pick(IslandColor.values, 'islandColor', d.islandColor);
+    miniOnTop = j['miniOnTop'] as bool? ?? d.miniOnTop;
+    miniVolume = j['miniVolume'] as bool? ?? d.miniVolume;
+    miniShuffleRepeat = j['miniShuffleRepeat'] as bool? ?? d.miniShuffleRepeat;
+    miniQuality = j['miniQuality'] as bool? ?? d.miniQuality;
     showPlayerClose = j['showPlayerClose'] as bool? ?? d.showPlayerClose;
     showQualityBadge = j['showQualityBadge'] as bool? ?? d.showQualityBadge;
     showVideoSwitch = j['showVideoSwitch'] as bool? ?? d.showVideoSwitch;
@@ -818,6 +909,15 @@ class LayoutPrefs extends ChangeNotifier {
     'desktopBar': desktopBar.name,
     'desktopMini': desktopMini.name,
     'miniLyrics': miniLyrics,
+    'islandPlacement': islandPlacement.name,
+    'islandBars': islandBars.name,
+    'islandOpen': islandOpen.name,
+    'islandWidth': islandWidth.name,
+    'islandColor': islandColor.name,
+    'miniOnTop': miniOnTop,
+    'miniVolume': miniVolume,
+    'miniShuffleRepeat': miniShuffleRepeat,
+    'miniQuality': miniQuality,
     'showPlayerClose': showPlayerClose,
     'showQualityBadge': showQualityBadge,
     'showVideoSwitch': showVideoSwitch,
@@ -907,6 +1007,15 @@ class LayoutPrefs extends ChangeNotifier {
   Future<void> setDesktopBar(DesktopBarStyle v) => _set(() => desktopBar = v);
   Future<void> setDesktopMini(DesktopMiniStyle v) => _set(() => desktopMini = v);
   Future<void> setMiniLyrics(bool v) => _set(() => miniLyrics = v);
+  Future<void> setIslandPlacement(IslandPlacement v) => _set(() => islandPlacement = v);
+  Future<void> setIslandBars(IslandBars v) => _set(() => islandBars = v);
+  Future<void> setIslandOpen(IslandOpen v) => _set(() => islandOpen = v);
+  Future<void> setIslandWidth(IslandWidth v) => _set(() => islandWidth = v);
+  Future<void> setIslandColor(IslandColor v) => _set(() => islandColor = v);
+  Future<void> setMiniOnTop(bool v) => _set(() => miniOnTop = v);
+  Future<void> setMiniVolume(bool v) => _set(() => miniVolume = v);
+  Future<void> setMiniShuffleRepeat(bool v) => _set(() => miniShuffleRepeat = v);
+  Future<void> setMiniQuality(bool v) => _set(() => miniQuality = v);
   Future<void> setTabBar(TabBarStyle v) => _set(() => tabBar = v);
   Future<void> setVisualizerStyle(VisualizerStyle v) => _set(() => visualizerStyle = v);
   Future<void> setVisualizerCoverShape(VisualizerCoverShape v) =>

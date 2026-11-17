@@ -2008,6 +2008,81 @@ class AppLocalizationsJa extends AppLocalizations {
   String get miniSwitchToWindow => 'ミニウィンドウに切り替え';
 
   @override
+  String get islandPlacement => 'アイランドの位置';
+
+  @override
+  String get islandPlacementSubtitle => 'フローティングは画面上端の少し下にあり自由に動かせます。ドックはノッチのように上端に付き、横にだけ動きます';
+
+  @override
+  String get islandFloating => 'フローティング';
+
+  @override
+  String get islandDocked => 'ドック';
+
+  @override
+  String get islandBars => 'アイランドのバー';
+
+  @override
+  String get islandBarsSubtitle => '「音楽に合わせる」はオーディオビジュアライザーがオフでも動きます';
+
+  @override
+  String get islandBarsMusic => '音楽に合わせる';
+
+  @override
+  String get islandBarsAnimated => 'アニメーション';
+
+  @override
+  String get islandOpens => 'アイランドを開く';
+
+  @override
+  String get islandOpenHover => 'ポインターを合わせたとき';
+
+  @override
+  String get islandOpenClick => 'クリックしたとき';
+
+  @override
+  String get islandWidth => 'アイランドの幅';
+
+  @override
+  String get islandWidthCompact => 'コンパクト';
+
+  @override
+  String get islandWidthNormal => '標準';
+
+  @override
+  String get islandWidthWide => 'ワイド';
+
+  @override
+  String get islandColor => 'アイランドの色';
+
+  @override
+  String get islandColorBlack => '黒';
+
+  @override
+  String get islandColorTinted => 'カバーの色味';
+
+  @override
+  String get islandColorCover => 'カバーの色';
+
+  @override
+  String get miniOnTop => 'ミニプレーヤーを常に手前に表示';
+
+  @override
+  String get miniOnTopSubtitle => 'アイランドとミニウィンドウを他のウィンドウより手前に';
+
+  @override
+  String get miniShows => 'ミニウィンドウと開いたアイランドに表示';
+
+  @override
+  String get miniShowVolume => '音量';
+
+  @override
+  String get miniShowShuffleRepeat => 'シャッフルとリピート';
+
+  @override
+  String get miniShowQuality => '音質バッジ';
+
+  @override
   String get shapesAndMotion => '形と動き';
 
   @override
@@ -6145,6 +6220,25 @@ class AppLocalizationsJa extends AppLocalizations {
       '同じ録音がある最良のソースからYouTube Musicの曲を再生する。まずライブラリのロスレスファイル、次にオンにした音楽ソース(Monochrome、FLAC)、なければYouTube Music。MV、歌詞、カバーはYouTube Musicのまま。';
 
   @override
+  String get smartMergeToday => '今日';
+
+  @override
+  String smartMergeTodayStats(String lossless, String youtube, String limited, String kept) {
+    return 'ロスレス $lossless · YouTube Music $youtube · リクエスト制限で保留 $limited · ディスクキャッシュ $kept';
+  }
+
+  @override
+  String get smartMergeCache => '再生した曲をディスクに保存';
+
+  @override
+  String smartMergeCacheSubtitle(String size) {
+    return 'もう一度再生する曲はここからすぐ開き、ソースに問い合わせません(リクエスト制限に当たりにくくなります)。現在 $size 使用中';
+  }
+
+  @override
+  String get smartMergeCacheClear => '消去';
+
+  @override
   String smartMergeBadge(String source) {
     return '音声:$source';
   }
@@ -6152,6 +6246,16 @@ class AppLocalizationsJa extends AppLocalizations {
   @override
   String smartMergeLossierBadge(String source) {
     return '$sourceにはこの曲が低音質でしかないため、YouTube Musicから再生しています';
+  }
+
+  @override
+  String smartMergePendingBadge(String source) {
+    return '$sourceからロスレス音源を取得中: 準備ができ次第、同じ位置から切り替わります';
+  }
+
+  @override
+  String smartMergeLimitedBadge(String source) {
+    return '$sourceがリクエストを制限中のため、YouTube Musicから再生しています。制限が解除されると自動で$sourceに切り替わります';
   }
 
   @override

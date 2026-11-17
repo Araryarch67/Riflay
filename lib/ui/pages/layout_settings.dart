@@ -10,7 +10,7 @@ import '../theme.dart';
 import '../widgets/title_bar.dart' show hasNativeWindow;
 import '../../platform/features.dart';
 import '../../platform/host.dart';
-import '../player/mini_window.dart' show miniPlayer, setMiniPlayer;
+import '../player/mini_window.dart' show miniPlayer, refreshMiniPlayer, setMiniPlayer;
 import 'player_presets_page.dart';
 import 'sound_settings.dart';
 import '../widgets/menus.dart';
@@ -473,6 +473,85 @@ class LayoutSettings extends StatelessWidget {
                     options: [for (final v in DesktopMiniStyle.values) (v, v.label)],
                   ),
                 ),
+              // The mini player, made one's own: the island's place, bars, colour, width and how it opens, and what
+              // the mini window shows. A change shows at once on a mini player that is on.
+              if (Features.miniPlayer) ...[
+                SettingTile(
+                  icon: Icons.vertical_align_top_rounded,
+                  title: Text(tr.islandPlacement),
+                  subtitle: Text(tr.islandPlacementSubtitle, style: muted),
+                  control: OptionPicker<IslandPlacement>(
+                    value: p.islandPlacement,
+                    onChanged: (v) => p.setIslandPlacement(v).then((_) => refreshMiniPlayer()),
+                    options: [for (final v in IslandPlacement.values) (v, v.label)],
+                  ),
+                ),
+                SettingTile(
+                  icon: Icons.equalizer_rounded,
+                  title: Text(tr.islandBars),
+                  subtitle: Text(tr.islandBarsSubtitle, style: muted),
+                  control: OptionPicker<IslandBars>(
+                    value: p.islandBars,
+                    onChanged: p.setIslandBars,
+                    options: [for (final v in IslandBars.values) (v, v.label)],
+                  ),
+                ),
+                SettingTile(
+                  icon: Icons.touch_app_outlined,
+                  title: Text(tr.islandOpens),
+                  control: OptionPicker<IslandOpen>(
+                    value: p.islandOpen,
+                    onChanged: p.setIslandOpen,
+                    options: [for (final v in IslandOpen.values) (v, v.label)],
+                  ),
+                ),
+                SettingTile(
+                  icon: Icons.width_normal_rounded,
+                  title: Text(tr.islandWidth),
+                  control: OptionPicker<IslandWidth>(
+                    value: p.islandWidth,
+                    onChanged: p.setIslandWidth,
+                    options: [for (final v in IslandWidth.values) (v, v.label)],
+                  ),
+                ),
+                SettingTile(
+                  icon: Icons.palette_outlined,
+                  title: Text(tr.islandColor),
+                  control: OptionPicker<IslandColor>(
+                    value: p.islandColor,
+                    onChanged: p.setIslandColor,
+                    options: [for (final v in IslandColor.values) (v, v.label)],
+                  ),
+                ),
+                SwitchListTile(
+                  secondary: const Icon(Icons.push_pin_outlined),
+                  title: Text(tr.miniOnTop),
+                  subtitle: Text(tr.miniOnTopSubtitle, style: muted),
+                  value: p.miniOnTop,
+                  onChanged: (v) => p.setMiniOnTop(v).then((_) => refreshMiniPlayer()),
+                ),
+                SwitchListTile(
+                  secondary: const Icon(Icons.volume_up_outlined),
+                  title: Text(tr.miniShowVolume),
+                  subtitle: Text(tr.miniShows, style: muted),
+                  value: p.miniVolume,
+                  onChanged: p.setMiniVolume,
+                ),
+                SwitchListTile(
+                  secondary: const Icon(Icons.shuffle_rounded),
+                  title: Text(tr.miniShowShuffleRepeat),
+                  subtitle: Text(tr.miniShows, style: muted),
+                  value: p.miniShuffleRepeat,
+                  onChanged: p.setMiniShuffleRepeat,
+                ),
+                SwitchListTile(
+                  secondary: const Icon(Icons.high_quality_outlined),
+                  title: Text(tr.miniShowQuality),
+                  subtitle: Text(tr.miniShows, style: muted),
+                  value: p.miniQuality,
+                  onChanged: p.setMiniQuality,
+                ),
+              ],
             ],
           ),
           _Header(tr.shapesAndMotion),

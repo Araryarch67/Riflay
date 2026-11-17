@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:flutter_test/flutter_test.dart';
@@ -183,5 +184,57 @@ void main() {
     expect(identical(a, b), isTrue);
     // The request goes once its file is made.
     return Future<void>.delayed(const Duration(milliseconds: 300), () => expect(asked, 1));
+  });
+
+  test('a whole song is kept for the next session, and opens from there without a request', () async {
+    final folder = await Directory.systemTemp.createTemp('riflay-kept-');
+    MergedDownload.keepsSongs = true;
+    MergedDownload.keptFolder = folder.path;
+    MergedDownload.keptBytes = 1500;
+    addTearDown(() async {
+      MergedDownload.keepsSongs = false;
+      MergedDownload.keptFolder = null;
+      MergedDownload.keptBytes = 1 << 30;
+      await folder.delete(recursive: true).catchError((_) => folder);
+    });
+    var asked = 0;
+    final client = MockClient.streaming((request, _) async {
+      asked++;
+      return part(0, 1000);
+    });
+    Future<List<int>> play(String url) async {
+      final d = MergedDownload.of(url, client: client);
+      final read = <int>[];
+      await for (final chunk in d.read(0, 1000)) {
+        read.addAll(chunk);
+      }
+      while (!d.done) {
+        await Future<void>.delayed(const Duration(milliseconds: 5));
+      }
+      // Its mark of being whole is written once the last bytes are.
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      return read;
+    }
+
+    expect(await play('https://tracks.example/track/1'), file);
+    expect(asked, 1);
+    MergedDownload.forgetAll(); // the session ends
+
+    expect(await play('https://tracks.example/track/1'), file, reason: 'the same bytes, from the kept file');
+    expect(asked, 1, reason: 'nothing asked of the service');
+
+    // A second song takes it past the limit: the least recently played goes.
+    await Future<void>.delayed(const Duration(milliseconds: 20));
+    expect(await play('https://tracks.example/track/2'), file);
+    expect(asked, 2);
+    final kept = folder.listSync().whereType<File>().where((f) => f.path.endsWith('.flac')).toList();
+    expect(kept, hasLength(1), reason: 'only one fits in 1500 bytes');
+
+    // A signed (expiring) address is never kept.
+    MergedDownload.forgetAll();
+    await play('https://tracks.example/track/3?token=abc');
+    MergedDownload.forgetAll();
+    await play('https://tracks.example/track/3?token=abc');
+    expect(asked, 4);
   });
 }

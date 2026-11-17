@@ -41,6 +41,7 @@ import 'sleep_timer.dart';
 import 'soundcloud.dart';
 import 'merged_download.dart';
 import 'smart_merge.dart';
+import 'request_gate.dart';
 import 'sources/music_sources.dart';
 import 'soundcloud_audio_source.dart';
 import 'monochrome_audio_source.dart';
@@ -2219,7 +2220,13 @@ class PlayerController extends ChangeNotifier {
     _leavingMerge = true;
     debugPrint('Smart merge: the download of $id stopped coming, back to YouTube');
     try {
-      _smartMerge.giveUp(id);
+      // Turned away by the service's request limit: only until that is over (its next source plays YouTube and
+      // moves back once the limit is lifted, SmartMergeAudioSource.late). Otherwise for the rest of the session.
+      if (download.busy && !download.failed) {
+        _smartMerge.markLimited(id);
+      } else {
+        _smartMerge.giveUp(id);
+      }
       _cancelPlaybackRetry();
       final index = state.currentIndex;
       if (index == null) return;
@@ -2246,6 +2253,10 @@ class PlayerController extends ChangeNotifier {
 
   void _followLateMerge() {
     final source = player.sequenceState.currentSource;
+    // A song left before its better sound came no longer waits for it (its badge stops saying it's coming).
+    if (_lateFollowed case final left? when !identical(left, source) && left.from == null) {
+      _smartMerge.markWaiting(left.track.videoId!, false);
+    }
     if (source is! SmartMergeAudioSource || source.from != null || identical(source, _lateFollowed)) return;
     final late = source.late;
     if (late == null) return;
@@ -2319,7 +2330,21 @@ class PlayerController extends ChangeNotifier {
     if (next == null || next.id == _prefetched) return;
     _prefetched = next.id;
     _smartMerge.prefetch(next);
+    // The one after it too, a little later and only while the service isn't limiting requests: two songs
+    // skipped in a row still open at once (each got ready ahead is only its first 2 MB).
+    _prefetchAfter?.cancel();
+    final after = _neighbour(2);
+    if (after == null || after == up!.nextIndex) return;
+    final second = player.sequenceState.sequence[after].tag as Track;
+    // Only a song Smart merge would play from elsewhere: nothing to get ready for the others.
+    if (!_smartMerge.streams(second)) return;
+    _prefetchAfter = Timer(const Duration(seconds: 20), () {
+      if (_disposed || RequestGate.anyBusy.value || _crossfadeUpcoming()?.next.id != next.id) return;
+      _smartMerge.prefetch(second);
+    });
   }
+
+  Timer? _prefetchAfter;
 
   /// Plays here, or on the cast device. [restart]: the song was just chosen,
   /// so start it from the top even if it's the one already on the device.
@@ -2604,6 +2629,7 @@ class PlayerController extends ChangeNotifier {
     MemoryTrim.stop();
     cast.dispose();
     _smartMerge.changes.removeListener(_followSmartMerge);
+    _prefetchAfter?.cancel();
     _lateWatch?.cancel();
     _mergeWatch?.cancel();
     _crossfader.dispose();

@@ -32,7 +32,21 @@ String? visualizerHiddenBy(PlayerController c) {
 /// Shares one audio analysis stream between player decorations. No microphone,
 /// extra network requests, or player is needed for reactive visuals.
 class AudioReactiveView extends StatefulWidget {
-  const AudioReactiveView({super.key, required this.builder, this.enabled = true, this.maxFps});
+  const AudioReactiveView({
+    super.key,
+    required this.builder,
+    this.enabled = true,
+    this.maxFps,
+    this.own = false,
+    this.followsVideo = true,
+  });
+
+  /// Wants the levels whatever the visualizer switch says (the island's bars have a setting of their own).
+  final bool own;
+
+  /// Rests while the music video shows (the video is the motion). The island's bars, in a window of their own,
+  /// keep moving.
+  final bool followsVideo;
   final Widget Function(BuildContext, VisualizerLevels) builder;
   final bool enabled;
 
@@ -169,7 +183,7 @@ class _AudioReactiveViewState extends State<AudioReactiveView> with WidgetsBindi
     if (c == null || !_attached) return;
     final active =
         widget.enabled &&
-        LayoutPrefs.instance.visualizerEnabled &&
+        (widget.own || LayoutPrefs.instance.visualizerEnabled) &&
         !LayoutPrefs.lightweight &&
         LayoutPrefs.moves &&
         !_reduceMotion &&
@@ -177,13 +191,13 @@ class _AudioReactiveViewState extends State<AudioReactiveView> with WidgetsBindi
         _foreground &&
         c.showsPlaying &&
         // The music video showing is the motion; the meter and mpv's filter bank rest (VideoMode.showing).
-        (!VideoMode.instance.showing || DebugSwitches.motionWithVideo) &&
+        (!widget.followsVideo || !VideoMode.instance.showing || DebugSwitches.motionWithVideo) &&
         !c.casting &&
         !c.audio.bitPerfect &&
         c.audio.dopPlaying == null &&
         (AudioEngine.supported || AudioEngine.webEffects);
     if (active) {
-      _release ??= c.audio.watchVisualizer();
+      _release ??= c.audio.watchVisualizer(own: widget.own);
       _animate();
     } else {
       _stop();

@@ -7,6 +7,8 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:just_audio/just_audio.dart';
 
+import 'request_gate.dart';
+
 /// A song's better sound (Smart merge), fetched from its first byte over one connection and played from here.
 ///
 /// A FLAC file without a seek table is found its way through by many small range requests, and a streaming
@@ -58,6 +60,7 @@ class MergedDownload {
 
   @visibleForTesting
   static void forgetAll() {
+    RequestGate.resetAll();
     for (final d in _all.values) {
       d.dispose();
     }
@@ -66,6 +69,7 @@ class MergedDownload {
 
   final String url;
   final http.Client? _client;
+  late final _gate = RequestGate.of(Uri.parse(url).host);
 
   /// What has come, from the file's start; grown as more comes (a song got ready ahead holds only its start).
   /// Only without a [_spill] file.
@@ -81,25 +85,160 @@ class MergedDownload {
   static Directory? _folder;
   static int _made = 0;
 
-  static Future<File?> _newSpill() async {
+  static String get _root => '${Directory.systemTemp.path}${Platform.pathSeparator}riflay-smart-merge';
+  static final _sep = Platform.pathSeparator;
+
+  /// Whole songs are kept between sessions ([keptBytes] of them, the least recently played going first): a song
+  /// played again opens from here, without asking the service (or spending its request limit). Off in tests.
+  static bool keepsSongs = keepsByDefault;
+  static final bool keepsByDefault = !kIsWeb && !Platform.environment.containsKey('FLUTTER_TEST');
+
+  /// How much the kept songs may take on disk.
+  static int keptBytes = 1 << 30;
+
+  /// Where kept songs are (another folder in tests).
+  @visibleForTesting
+  static String? keptFolder;
+  static String get _keptPath => keptFolder ?? '$_root${_sep}kept';
+
+  /// Only an address that names the same file each time can be kept: one with a query (a signed, expiring link)
+  /// can't.
+  bool get _keepable {
+    if (kIsWeb || !keepsSongs) return false;
+    final uri = Uri.tryParse(url);
+    return uri != null && uri.scheme == 'https' && uri.query.isEmpty && uri.host.isNotEmpty;
+  }
+
+  /// The file of [url] among the kept songs, and its mark of being whole (the length it should have).
+  static (File, File) _keptOf(String url) {
+    // FNV-1a, 64-bit: a short, stable name from the address.
+    var h = 0xcbf29ce484222325;
+    for (final c in url.codeUnits) {
+      h ^= c;
+      h = (h * 0x100000001b3) & 0xFFFFFFFFFFFFFFFF;
+    }
+    final name = h.toUnsigned(64).toRadixString(16).padLeft(16, '0');
+    return (File('$_keptPath$_sep$name.flac'), File('$_keptPath$_sep$name.ok'));
+  }
+
+  /// This song, kept whole by an earlier session (or earlier in this one): its file, or null.
+  static Future<File?> _keptWhole(String url) async {
+    try {
+      final (file, ok) = _keptOf(url);
+      if (!await ok.exists() || !await file.exists()) return null;
+      final length = int.tryParse((await ok.readAsString()).trim());
+      if (length == null || length != await file.length()) return null;
+      // The most recently played go last.
+      await file.setLastModified(DateTime.now()).catchError((_) {});
+      return file;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Puts this whole song among the kept ones, and lets the least recently played go past [keptBytes].
+  Future<void> _keep() async {
+    if (!_keepable || _spill == null || _total == null) return;
+    try {
+      final (file, ok) = _keptOf(url);
+      if (_spill!.path != file.path) return;
+      await ok.writeAsString('$_total', flush: true);
+      _isKept = true;
+      final songs = <File, FileStat>{};
+      await for (final e in Directory(_keptPath).list()) {
+        if (e is File && e.path.endsWith('.flac')) songs[e] = await e.stat();
+      }
+      var total = songs.values.fold<int>(0, (n, s) => n + s.size);
+      final oldest = songs.keys.toList()..sort((a, b) => songs[a]!.modified.compareTo(songs[b]!.modified));
+      for (final f in oldest) {
+        if (total <= keptBytes) break;
+        if (f.path == file.path) continue;
+        try {
+          await File('${f.path.substring(0, f.path.length - 5)}.ok').delete();
+          await f.delete();
+          total -= songs[f]!.size;
+        } catch (_) {
+          // Being read: the next song kept tries again.
+        }
+      }
+    } catch (e) {
+      debugPrint('Smart merge download: not kept ($e)');
+    }
+  }
+
+  /// Whether this song's file is a kept one: closing leaves it.
+  bool _isKept = false;
+
+  /// Opened from a song kept by an earlier session (nothing asked of the service).
+  bool get fromKept => _fromKept;
+  bool _fromKept = false;
+
+  /// How much the kept songs take on disk now.
+  static Future<int> keptSize() async {
+    var total = 0;
+    try {
+      await for (final e in Directory(_keptPath).list()) {
+        if (e is File && e.path.endsWith('.flac')) total += await e.length();
+      }
+    } catch (_) {}
+    return total;
+  }
+
+  /// Deletes the kept songs (Settings › Music sources); one being played stays until it ends.
+  static Future<void> clearKept() async {
+    try {
+      await for (final e in Directory(_keptPath).list()) {
+        if (e is File) await e.delete().catchError((_) => e);
+      }
+    } catch (_) {}
+    for (final d in _all.values) {
+      if (d._isKept && d._readers == 0) d._forgetKept();
+    }
+  }
+
+  /// Its kept file was deleted: the next ask fetches it again.
+  void _forgetKept() {
+    _all.remove(url);
+    dispose();
+  }
+
+  Future<File?> _newSpill() async {
     if (kIsWeb) return null;
     try {
+      if (_keepable) {
+        await Directory(_keptPath).create(recursive: true);
+        final (file, ok) = _keptOf(url);
+        // A new download of it: whatever was there wasn't whole.
+        await ok.delete().catchError((_) => ok);
+        return file;
+      }
       var folder = _folder;
       if (folder == null) {
-        final root = Directory('${Directory.systemTemp.path}${Platform.pathSeparator}riflay-smart-merge');
-        folder = Directory('${root.path}${Platform.pathSeparator}$pid');
+        final root = _root;
+        folder = Directory('$root$_sep$pid');
         await folder.create(recursive: true);
         _folder = folder;
-        // Left by a run that ended without tidying up (one still running keeps its open files).
+        // Left by a run that ended without tidying up (one still running keeps its open files). Kept songs stay;
+        // a kept file left half fetched (no mark of being whole) goes.
         unawaited(() async {
           try {
-            await for (final old in root.list()) {
-              if (old.path != folder!.path) await old.delete(recursive: true).catchError((_) => old);
+            await for (final old in Directory(root).list()) {
+              if (old.path == folder!.path) continue;
+              if (old.path.endsWith('${_sep}kept')) {
+                await for (final f in Directory(old.path).list()) {
+                  if (f is! File || !f.path.endsWith('.flac')) continue;
+                  final ok = File('${f.path.substring(0, f.path.length - 5)}.ok');
+                  final stale = DateTime.now().difference((await f.stat()).modified) > const Duration(hours: 1);
+                  if (stale && !await ok.exists()) await f.delete().catchError((_) => f);
+                }
+                continue;
+              }
+              await old.delete(recursive: true).catchError((_) => old);
             }
           } catch (_) {}
         }());
       }
-      return File('${folder.path}${Platform.pathSeparator}${_made++}.flac.part');
+      return File('${folder.path}$_sep${_made++}.flac.part');
     } catch (_) {
       return null;
     }
@@ -193,6 +332,24 @@ class MergedDownload {
   Future<void> _run() async {
     final client = _client ?? http.Client();
     var failures = 0;
+    // Kept whole by an earlier session: nothing to fetch.
+    if (_keepable) {
+      if (await _keptWhole(url) case final file?) {
+        if (_disposed) return;
+        final length = await file.length();
+        _spill = file;
+        _isKept = true;
+        _fromKept = true;
+        _total = length;
+        _received = length;
+        _done = true;
+        if (!_sized.isCompleted) _sized.complete();
+        _lastProgress = DateTime.now();
+        debugPrint('Smart merge download: ${Uri.parse(url).pathSegments.lastOrNull} kept from before');
+        _notify();
+        return;
+      }
+    }
     final spill = await _newSpill();
     if (spill != null && !_disposed) {
       try {
@@ -210,14 +367,18 @@ class MergedDownload {
           final request = http.Request('GET', Uri.parse(url))
             ..headers['User-Agent'] = 'Riflay'
             ..headers['Range'] = 'bytes=$_received-';
+          // The song being played goes ahead of songs got ready; all wait out the service's limit together.
+          await _gate.turn(urgent: _playing.isCompleted);
+          if (_disposed) return;
           final response = await client.send(request).timeout(_silence);
           if (_disposed) return;
           final status = response.statusCode;
           if (status == 429 || status == 503) {
             // Too many requests: asking again at once only keeps the limit on. Its wait when it says one.
             response.stream.listen(null).cancel().ignore();
-            throw _Busy(int.tryParse(response.headers['retry-after'] ?? ''));
+            throw SourceBusy(int.tryParse(response.headers['retry-after'] ?? ''));
           }
+          _gate.ok();
           if (status != 200 && status != 206) throw http.ClientException('HTTP $status', request.url);
           var at = _received;
           if (status == 200) {
@@ -251,19 +412,26 @@ class MergedDownload {
           }
           if (_received >= total) {
             _done = true;
+            // Written through before it counts as whole: then kept for the next time it plays.
+            final writer = _writer;
+            if (writer != null) {
+              await _writing;
+              await writer.flush();
+              await _keep();
+            }
             _notify();
           }
         } catch (e) {
           if (_disposed) return;
-          if (e is _Busy) _busy = true;
+          if (e is SourceBusy) {
+            // The pause is the gate's: the next request waits it out ([RequestGate.turn]), as every other one to
+            // the service does.
+            _busy = true;
+            _gate.limited(e.seconds);
+          }
           if (++failures > _tries) rethrow;
           debugPrint('Smart merge download: $e, again from byte $_received ($failures)');
-          await Future<void>.delayed(
-            e is _Busy
-                // 5, 10, 20, then every 30 s; the server's own Retry-After (up to 2 min) when it gives one.
-                ? Duration(seconds: e.seconds?.clamp(1, 120) ?? math.min(30, 5 << math.min(failures - 1, 3)))
-                : Duration(milliseconds: math.min(5000, 500 * failures)),
-          );
+          if (e is! SourceBusy) await Future<void>.delayed(Duration(milliseconds: math.min(5000, 500 * failures)));
         }
       }
     } catch (e) {
@@ -286,6 +454,7 @@ class MergedDownload {
     try {
       await writer?.close();
     } catch (_) {}
+    if (_isKept) return;
     try {
       await _spill?.delete();
     } catch (_) {
@@ -325,7 +494,13 @@ class MergedDownload {
           final request = http.Request('GET', Uri.parse(url))
             ..headers['User-Agent'] = 'Riflay'
             ..headers['Range'] = 'bytes=$from-';
+          await _gate.turn(urgent: true);
           final response = await client.send(request).timeout(_silence);
+          if (response.statusCode == 429 || response.statusCode == 503) {
+            _gate.limited(int.tryParse(response.headers['retry-after'] ?? ''));
+            response.stream.listen(null).cancel().ignore();
+            continue;
+          }
           if (response.statusCode != 206) return; // no ranges: the download from the start is all there is
           final bytes = await response.stream.toBytes().timeout(_silence);
           if (bytes.length != _endSize || _disposed) return;
@@ -411,14 +586,6 @@ class MergedDownload {
     if (!_playing.isCompleted) _playing.complete();
     _notify();
   }
-}
-
-/// The server asked for fewer requests (HTTP 429 or 503), with how long to wait if it said.
-class _Busy implements Exception {
-  const _Busy(this.seconds);
-  final int? seconds;
-  @override
-  String toString() => 'HTTP 429/503 (busy${seconds == null ? '' : ', retry after $seconds s'})';
 }
 
 class _DownloadSource extends StreamAudioSource {

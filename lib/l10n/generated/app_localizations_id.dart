@@ -2043,6 +2043,82 @@ class AppLocalizationsId extends AppLocalizations {
   String get miniSwitchToWindow => 'Ganti ke jendela mini';
 
   @override
+  String get islandPlacement => 'Posisi island';
+
+  @override
+  String get islandPlacementSubtitle =>
+      'Mengambang ada sedikit di bawah tepi atas layar dan bisa digeser ke mana saja; Menempel nempel di tepi atas seperti notch dan cuma bisa digeser ke samping';
+
+  @override
+  String get islandFloating => 'Mengambang';
+
+  @override
+  String get islandDocked => 'Menempel';
+
+  @override
+  String get islandBars => 'Bar di island';
+
+  @override
+  String get islandBarsSubtitle => 'Ikuti musik tetap jalan walau audio visualizer dimatikan';
+
+  @override
+  String get islandBarsMusic => 'Ikuti musik';
+
+  @override
+  String get islandBarsAnimated => 'Animasi';
+
+  @override
+  String get islandOpens => 'Island terbuka saat';
+
+  @override
+  String get islandOpenHover => 'Diarahkan kursor';
+
+  @override
+  String get islandOpenClick => 'Diklik';
+
+  @override
+  String get islandWidth => 'Lebar island';
+
+  @override
+  String get islandWidthCompact => 'Ringkas';
+
+  @override
+  String get islandWidthNormal => 'Normal';
+
+  @override
+  String get islandWidthWide => 'Lebar';
+
+  @override
+  String get islandColor => 'Warna island';
+
+  @override
+  String get islandColorBlack => 'Hitam';
+
+  @override
+  String get islandColorTinted => 'Sentuhan warna cover';
+
+  @override
+  String get islandColorCover => 'Warna cover';
+
+  @override
+  String get miniOnTop => 'Mini player selalu di atas';
+
+  @override
+  String get miniOnTopSubtitle => 'Di atas jendela lain, untuk island dan jendela mini';
+
+  @override
+  String get miniShows => 'Di jendela mini dan island yang terbuka';
+
+  @override
+  String get miniShowVolume => 'Volume';
+
+  @override
+  String get miniShowShuffleRepeat => 'Acak dan ulang';
+
+  @override
+  String get miniShowQuality => 'Badge kualitas';
+
+  @override
   String get shapesAndMotion => 'Bentuk dan gerak';
 
   @override
@@ -6280,6 +6356,25 @@ class AppLocalizationsId extends AppLocalizations {
       'Memutar lagu YouTube Music dari sumber terbaik yang punya rekaman yang sama: file lossless di library kamu dulu, lalu sumber musik yang kamu nyalakan (Monochrome, dalam FLAC), dan YouTube Music kalau tidak ada. Music video, lirik dan sampulnya tetap dari YouTube Music.';
 
   @override
+  String get smartMergeToday => 'Hari ini';
+
+  @override
+  String smartMergeTodayStats(String lossless, String youtube, String limited, String kept) {
+    return '$lossless lossless · $youtube dari YouTube Music · $limited tertahan rate limit · $kept dari cache disk';
+  }
+
+  @override
+  String get smartMergeCache => 'Simpan lagu yang diputar di disk';
+
+  @override
+  String smartMergeCacheSubtitle(String size) {
+    return 'Lagu yang diputar lagi langsung dibuka dari sini tanpa minta ke sumbernya (jadi lebih jarang kena rate limit). Terpakai $size sekarang';
+  }
+
+  @override
+  String get smartMergeCacheClear => 'Hapus';
+
+  @override
   String smartMergeBadge(String source) {
     return 'Audio dari $source';
   }
@@ -6287,6 +6382,16 @@ class AppLocalizationsId extends AppLocalizations {
   @override
   String smartMergeLossierBadge(String source) {
     return '$source cuma punya lagu ini dalam kualitas lebih rendah, jadi diputar dari YouTube Music';
+  }
+
+  @override
+  String smartMergePendingBadge(String source) {
+    return 'Lagi ambil audio lossless dari $source: lagunya pindah ke sana di posisi yang sama begitu siap';
+  }
+
+  @override
+  String smartMergeLimitedBadge(String source) {
+    return '$source lagi membatasi permintaan (rate limit), jadi sementara diputar dari YouTube Music. Nanti pindah sendiri ke $source begitu batasnya selesai';
   }
 
   @override

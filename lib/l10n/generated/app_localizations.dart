@@ -3825,6 +3825,156 @@ abstract class AppLocalizations {
   /// **'Switch to the mini window'**
   String get miniSwitchToWindow;
 
+  /// No description provided for @islandPlacement.
+  ///
+  /// In en, this message translates to:
+  /// **'Island placement'**
+  String get islandPlacement;
+
+  /// No description provided for @islandPlacementSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Floating sits a little below the top of the screen and can be dragged anywhere; Docked sticks to the top edge like a notch and slides sideways'**
+  String get islandPlacementSubtitle;
+
+  /// No description provided for @islandFloating.
+  ///
+  /// In en, this message translates to:
+  /// **'Floating'**
+  String get islandFloating;
+
+  /// No description provided for @islandDocked.
+  ///
+  /// In en, this message translates to:
+  /// **'Docked'**
+  String get islandDocked;
+
+  /// No description provided for @islandBars.
+  ///
+  /// In en, this message translates to:
+  /// **'Island bars'**
+  String get islandBars;
+
+  /// No description provided for @islandBarsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Following the music works even with the audio visualizer off'**
+  String get islandBarsSubtitle;
+
+  /// No description provided for @islandBarsMusic.
+  ///
+  /// In en, this message translates to:
+  /// **'Follow the music'**
+  String get islandBarsMusic;
+
+  /// No description provided for @islandBarsAnimated.
+  ///
+  /// In en, this message translates to:
+  /// **'Animated'**
+  String get islandBarsAnimated;
+
+  /// No description provided for @islandOpens.
+  ///
+  /// In en, this message translates to:
+  /// **'Island opens'**
+  String get islandOpens;
+
+  /// No description provided for @islandOpenHover.
+  ///
+  /// In en, this message translates to:
+  /// **'On hover'**
+  String get islandOpenHover;
+
+  /// No description provided for @islandOpenClick.
+  ///
+  /// In en, this message translates to:
+  /// **'On click'**
+  String get islandOpenClick;
+
+  /// No description provided for @islandWidth.
+  ///
+  /// In en, this message translates to:
+  /// **'Island width'**
+  String get islandWidth;
+
+  /// No description provided for @islandWidthCompact.
+  ///
+  /// In en, this message translates to:
+  /// **'Compact'**
+  String get islandWidthCompact;
+
+  /// No description provided for @islandWidthNormal.
+  ///
+  /// In en, this message translates to:
+  /// **'Normal'**
+  String get islandWidthNormal;
+
+  /// No description provided for @islandWidthWide.
+  ///
+  /// In en, this message translates to:
+  /// **'Wide'**
+  String get islandWidthWide;
+
+  /// No description provided for @islandColor.
+  ///
+  /// In en, this message translates to:
+  /// **'Island colour'**
+  String get islandColor;
+
+  /// No description provided for @islandColorBlack.
+  ///
+  /// In en, this message translates to:
+  /// **'Black'**
+  String get islandColorBlack;
+
+  /// No description provided for @islandColorTinted.
+  ///
+  /// In en, this message translates to:
+  /// **'Cover tint'**
+  String get islandColorTinted;
+
+  /// No description provided for @islandColorCover.
+  ///
+  /// In en, this message translates to:
+  /// **'Cover colour'**
+  String get islandColorCover;
+
+  /// No description provided for @miniOnTop.
+  ///
+  /// In en, this message translates to:
+  /// **'Mini player stays on top'**
+  String get miniOnTop;
+
+  /// No description provided for @miniOnTopSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Above other windows, for the island and the mini window'**
+  String get miniOnTopSubtitle;
+
+  /// No description provided for @miniShows.
+  ///
+  /// In en, this message translates to:
+  /// **'In the mini window and the open island'**
+  String get miniShows;
+
+  /// No description provided for @miniShowVolume.
+  ///
+  /// In en, this message translates to:
+  /// **'Volume'**
+  String get miniShowVolume;
+
+  /// No description provided for @miniShowShuffleRepeat.
+  ///
+  /// In en, this message translates to:
+  /// **'Shuffle and repeat'**
+  String get miniShowShuffleRepeat;
+
+  /// No description provided for @miniShowQuality.
+  ///
+  /// In en, this message translates to:
+  /// **'Quality badge'**
+  String get miniShowQuality;
+
   /// No description provided for @shapesAndMotion.
   ///
   /// In en, this message translates to:
@@ -11217,6 +11367,36 @@ abstract class AppLocalizations {
   /// **'Plays a YouTube Music song from the best source that has the same recording: a lossless file in your library first, then the music sources you turned on (Monochrome, in FLAC), and YouTube Music otherwise. Its music video, lyrics and cover stay from YouTube Music.'**
   String get smartMergeSubtitle;
 
+  /// No description provided for @smartMergeToday.
+  ///
+  /// In en, this message translates to:
+  /// **'Today'**
+  String get smartMergeToday;
+
+  /// No description provided for @smartMergeTodayStats.
+  ///
+  /// In en, this message translates to:
+  /// **'{lossless} in lossless · {youtube} from YouTube Music · {limited} held back by a request limit · {kept} from the disk cache'**
+  String smartMergeTodayStats(String lossless, String youtube, String limited, String kept);
+
+  /// No description provided for @smartMergeCache.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep played songs on disk'**
+  String get smartMergeCache;
+
+  /// No description provided for @smartMergeCacheSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'A song played again opens from here at once, without asking the source (so its request limit is spent less). Using {size} now'**
+  String smartMergeCacheSubtitle(String size);
+
+  /// No description provided for @smartMergeCacheClear.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear'**
+  String get smartMergeCacheClear;
+
   /// No description provided for @smartMergeBadge.
   ///
   /// In en, this message translates to:
@@ -11228,6 +11408,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{source} only has this song in lower quality, so it plays from YouTube Music'**
   String smartMergeLossierBadge(String source);
+
+  /// No description provided for @smartMergePendingBadge.
+  ///
+  /// In en, this message translates to:
+  /// **'Getting the lossless sound from {source}: the song moves over to it where it is, as soon as it\'s ready'**
+  String smartMergePendingBadge(String source);
+
+  /// No description provided for @smartMergeLimitedBadge.
+  ///
+  /// In en, this message translates to:
+  /// **'{source} is limiting requests right now, so this plays from YouTube Music. It moves over to {source} by itself once the limit is over'**
+  String smartMergeLimitedBadge(String source);
 
   /// No description provided for @spotifyCanvas.
   ///

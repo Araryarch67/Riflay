@@ -1280,11 +1280,32 @@ class SmartMergeMark extends StatelessWidget {
       builder: (context, _) {
         final sound = merge.soundFrom(id);
         final lossier = sound == null ? merge.lossierAt(id) : null;
+        // The source it would come from, for a song still on its way or held back by a limit.
+        final wanted = merge.providers.where((p) => p.on).firstOrNull;
+        final limited = merge.limitedOn(id) && wanted != null;
+        final waiting = sound == null && !limited && merge.waitingOn(id) && wanted != null;
         return AnimatedSwitcher(
           duration: LayoutPrefs.dur(const Duration(milliseconds: 220)),
           layoutBuilder: (current, previous) =>
               Stack(alignment: Alignment.centerLeft, children: [...previous, ?current]),
           child: switch ((sound, lossier)) {
+            // Red: the source is turning it away for now (its request limit); it plays from YouTube meanwhile.
+            _ when limited => MergedSourceMark(
+              key: const ValueKey('limited'),
+              song: track.source,
+              sound: wanted.source,
+              soundName: wanted.name,
+              state: MergeMarkState.limited,
+              size: size * 0.93,
+            ),
+            _ when waiting => MergedSourceMark(
+              key: const ValueKey('waiting'),
+              song: track.source,
+              sound: wanted.source,
+              soundName: wanted.name,
+              state: MergeMarkState.waiting,
+              size: size * 0.93,
+            ),
             (final sound?, _) => MergedSourceMark(
               key: ValueKey(sound),
               song: track.source,
@@ -1321,8 +1342,12 @@ class MergedSourceMark extends StatelessWidget {
     this.sound = TrackSource.monochrome,
     this.soundName = 'Monochrome',
     this.lossier = false,
+    this.state = MergeMarkState.merged,
     this.size = 14,
   });
+
+  /// Merged, on its way (a ring turns where the × goes) or held back by the source's request limit (red).
+  final MergeMarkState state;
 
   /// Where the song is from: its video, lyrics, cover and likes.
   final TrackSource song;
@@ -1336,20 +1361,47 @@ class MergedSourceMark extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final ink = scheme.onSecondaryContainer;
+    final limited = state == MergeMarkState.limited;
+    final fill = limited ? scheme.errorContainer : scheme.secondaryContainer;
+    final ink = limited ? scheme.onErrorContainer : scheme.onSecondaryContainer;
     final join = ink.withValues(alpha: 0.7);
     final soundMark = sound == TrackSource.device
         ? Icon(Icons.library_music_rounded, size: size, color: ink)
         : SourceMark(online: true, source: sound, size: size, tooltip: false, color: ink);
+    final joint = switch (state) {
+      MergeMarkState.waiting => SizedBox.square(
+        key: const ValueKey('waiting'),
+        dimension: size * 0.62,
+        child: CircularProgressIndicator(strokeWidth: size * 0.11, color: join),
+      ),
+      MergeMarkState.limited => Icon(
+        key: const ValueKey('limited'),
+        Icons.hourglass_bottom_rounded,
+        size: size * 0.72,
+        color: join,
+      ),
+      MergeMarkState.merged =>
+        lossier
+            ? CustomPaint(
+                key: const ValueKey('notEqual'),
+                size: Size.square(size * 0.72),
+                painter: _NotEqualPainter(join),
+              )
+            : Icon(Icons.close_rounded, size: size * 0.72, color: join),
+    };
     return Tooltip(
-      message: lossier ? tr.smartMergeLossierBadge(soundName) : tr.smartMergeBadge(soundName),
+      message: switch (state) {
+        MergeMarkState.limited => tr.smartMergeLimitedBadge(soundName),
+        MergeMarkState.waiting => tr.smartMergePendingBadge(soundName),
+        MergeMarkState.merged => lossier ? tr.smartMergeLossierBadge(soundName) : tr.smartMergeBadge(soundName),
+      },
       child: TweenAnimationBuilder<double>(
         tween: Tween(begin: 0, end: 1),
         duration: LayoutPrefs.dur(const Duration(milliseconds: 650)),
         curve: Curves.easeOutCubic,
         builder: (context, t, joined) => DecoratedBox(
           decoration: ShapeDecoration(
-            color: Color.lerp(scheme.secondaryContainer.withValues(alpha: 0), scheme.secondaryContainer, t),
+            color: Color.lerp(fill.withValues(alpha: 0), fill, t),
             shape: const StadiumBorder(),
           ),
           child: Padding(
@@ -1375,16 +1427,7 @@ class MergedSourceMark extends StatelessWidget {
                         children: [
                           Padding(
                             padding: EdgeInsets.symmetric(horizontal: size * 0.28),
-                            child: Transform.rotate(
-                              angle: (1 - t) * 1.5708,
-                              child: lossier
-                                  ? CustomPaint(
-                                      key: const ValueKey('notEqual'),
-                                      size: Size.square(size * 0.72),
-                                      painter: _NotEqualPainter(join),
-                                    )
-                                  : Icon(Icons.close_rounded, size: size * 0.72, color: join),
-                            ),
+                            child: Transform.rotate(angle: (1 - t) * 1.5708, child: joint),
                           ),
                           joined!,
                         ],
@@ -1401,6 +1444,10 @@ class MergedSourceMark extends StatelessWidget {
     );
   }
 }
+
+/// What Smart merge's badge says: the sound comes from the second source, is on its way from it, or is held
+/// back by its request limit.
+enum MergeMarkState { merged, waiting, limited }
 
 /// ≠, drawn to match the rounded × it stands in for: two bars and a slash through them.
 class _NotEqualPainter extends CustomPainter {

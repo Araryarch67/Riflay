@@ -14,6 +14,7 @@ import 'package:riflay/ui/shell_scope.dart';
 import 'package:riflay/ui/widgets/page_scaffold.dart';
 
 import 'package:riflay/services/smart_merge.dart';
+import 'package:riflay/services/smart_merge_stats.dart';
 
 Element? _page() {
   Element? found;
@@ -36,7 +37,8 @@ Future<void> main() async {
     final folder = Directory(Platform.environment['APPDATA']!);
     PathProviderPlatform.instance = _IsolatedPaths(folder.path);
     final kept = Directory('${Directory.systemTemp.path}${Platform.pathSeparator}riflay-smart-merge');
-    if (kept.existsSync()) kept.deleteSync(recursive: true);
+    // A clean start, unless the run checks the songs kept by the one before (RIFLAY_MERGE_KEEP_CACHE).
+    if (kept.existsSync() && Platform.environment['RIFLAY_MERGE_KEEP_CACHE'] == null) kept.deleteSync(recursive: true);
     SharedPreferences.setMockInitialValues({
       'discord.enabled': false,
       'videoMode.on': false,
@@ -86,13 +88,15 @@ Future<void> main() async {
 
       stdout.writeln(
         'START ${song.title}: ${c.currentTrack?.videoId == song.videoId ? '' : 'WRONG SONG '}'
-        'playing after $started ms from ${from()}',
+        'playing after $started ms from ${from()} kept=${SmartMerge.instance.downloadOf(song.videoId!)?.fromKept}',
       );
       if (!c.isPlaying) problems++;
       var last = c.position;
       var lastFrom = from();
       var stalled = 0;
-      final until = Duration(seconds: i == songs.length - 1 ? 30 : 45);
+      final until = Duration(
+        seconds: int.tryParse(Platform.environment['RIFLAY_MERGE_SECONDS'] ?? '') ?? (i == songs.length - 1 ? 30 : 45),
+      );
       final t = Stopwatch()..start();
       while (t.elapsed < until) {
         await Future<void>.delayed(const Duration(milliseconds: 250));
@@ -122,8 +126,13 @@ Future<void> main() async {
         }
         last = now;
       }
-      stdout.writeln('END ${song.title}: at $last from ${from()}');
+      final d = SmartMerge.instance.downloadOf(song.videoId!);
+      stdout.writeln(
+        'END ${song.title}: at $last from ${from()} downloaded=${d?.received}/${d?.total} done=${d?.done}',
+      );
     }
+    final st = SmartMergeStats.instance;
+    stdout.writeln('STATS lossless=${st.lossless} youtube=${st.youtube} limited=${st.limited} kept=${st.kept}');
     stdout.writeln('DONE problems=$problems');
     exit(problems == 0 ? 0 : 2);
   } catch (error, stack) {

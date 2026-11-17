@@ -41,8 +41,10 @@ final miniPlayerStyle = ValueNotifier<DesktopMiniStyle>(DesktopMiniStyle.window)
 const _windowSize = Size(460, 224);
 const _normalMinimum = Size(320, 420);
 
-/// The island closed (one row: cover, title, playing bars) and open (the mini window's deck).
-const islandClosedSize = Size(300, 44);
+/// The island closed (one row: cover, title, playing bars; as wide as Settings says) and open (the mini window's
+/// deck).
+Size get islandClosedSize => Size(LayoutPrefs.instance.islandWidth.width, _islandDocked ? 40 : 44);
+bool get _islandDocked => LayoutPrefs.instance.islandPlacement == IslandPlacement.docked;
 const islandOpenSize = _windowSize;
 const _islandRadius = 28.0;
 
@@ -56,6 +58,33 @@ const _islandWindow = Size(500, 264);
 /// top centre (it opens downwards and sideways from there).
 Rect? _lastWindow;
 Offset? _lastIslandTop;
+
+/// The docked island's middle, across the top edge.
+double? _lastDockX;
+
+/// The mini player's settings changed while it is on (Settings › Pages & navigation): the island moves to its
+/// place (docked or floating) and the window keeps above others or not.
+Future<void> refreshMiniPlayer() => _enqueue(() async {
+  if (!miniPlayer.value) return;
+  try {
+    await windowManager.setAlwaysOnTop(LayoutPrefs.instance.miniOnTop);
+    if (miniPlayerStyle.value == DesktopMiniStyle.island) {
+      await windowManager.setBounds(await _islandBounds(_islandWindow));
+    }
+  } catch (e) {
+    debugPrint('Mini player window: $e');
+  }
+});
+
+/// Docked, the island goes back to the top edge after it was dragged (it slides only sideways).
+Future<void> _snapDocked() => _enqueue(() async {
+  if (!miniPlayer.value || miniPlayerStyle.value != DesktopMiniStyle.island || !_islandDocked) return;
+  final b = await windowManager.getBounds();
+  final top = (await _workArea())?.top ?? 0;
+  if ((b.top - top).abs() < 1) return;
+  _lastDockX = b.center.dx;
+  await windowManager.setPosition(Offset(b.left, top));
+});
 
 /// Window changes one after another: a quick second click (or the island opening while it's being left) mustn't
 /// read bounds halfway through the first.
@@ -103,7 +132,7 @@ Future<void> _switch(bool on, DesktopMiniStyle style) async {
       // Again, now the island's view is gone: one last frame of it, laid out at the new size while the window grew,
       // may have sent its pill after the first, and the window then showed only a pill-shaped strip of itself.
       if (!island) await _islandHit(null);
-      await windowManager.setAlwaysOnTop(true);
+      await windowManager.setAlwaysOnTop(LayoutPrefs.instance.miniOnTop);
       await _followTaskbar();
     } else {
       await _rememberSpot();
@@ -167,7 +196,11 @@ Future<void> _rememberSpot() async {
   if (!miniPlayer.value) return;
   final b = await windowManager.getBounds();
   if (miniPlayerStyle.value == DesktopMiniStyle.island) {
-    _lastIslandTop = b.topCenter;
+    if (_islandDocked) {
+      _lastDockX = b.center.dx;
+    } else {
+      _lastIslandTop = b.topCenter;
+    }
   } else {
     _lastWindow = b;
   }
@@ -230,11 +263,14 @@ Future<Rect> _windowBounds() async {
 
 /// First time: the top middle of the screen, where islands sit. Then wherever it was dragged.
 Future<Rect> _islandBounds(Size size) async {
-  var top = _lastIslandTop;
-  if (top == null) {
-    final area = await _workArea();
-    top = area == null ? Offset(size.width / 2, 0) : area.topCenter + const Offset(0, 8);
+  final area = await _workArea();
+  if (_islandDocked) {
+    // On the top edge (below a taskbar there), where it was slid to.
+    final x = _lastDockX ?? _lastIslandTop?.dx ?? area?.center.dx ?? size.width / 2;
+    return Rect.fromLTWH(x - size.width / 2, area?.top ?? 0, size.width, size.height);
   }
+  var top = _lastIslandTop;
+  top ??= area == null ? Offset(size.width / 2, 0) : area.topCenter + const Offset(0, 8);
   return Rect.fromLTWH(top.dx - size.width / 2, top.dy, size.width, size.height);
 }
 
@@ -305,13 +341,17 @@ class _WindowView extends StatelessWidget {
   const _WindowView();
 
   @override
-  Widget build(BuildContext context) => _nowBuilder(
-    (context, c, now) => AccentBuilder(
-      track: now.track,
-      // An M3 surface tinted by the cover, solid: it's a window of its own.
-      builder: (context, accent) => ColoredBox(
-        color: AppColors.sink(accent, 0.86).withValues(alpha: 1),
-        child: _Deck(c: c, now: now, island: false, lyricColor: AppColors.accent),
+  Widget build(BuildContext context) => ListenableBuilder(
+    // What it shows is up to Settings (volume, shuffle and repeat, the quality badge).
+    listenable: LayoutPrefs.instance,
+    builder: (context, _) => _nowBuilder(
+      (context, c, now) => AccentBuilder(
+        track: now.track,
+        // An M3 surface tinted by the cover, solid: it's a window of its own.
+        builder: (context, accent) => ColoredBox(
+          color: AppColors.sink(accent, 0.86).withValues(alpha: 1),
+          child: _Deck(c: c, now: now, island: false, lyricColor: AppColors.accent),
+        ),
       ),
     ),
   );
@@ -340,8 +380,10 @@ class _Deck extends StatelessWidget {
       child: Column(
         children: [
           Expanded(
-            // Dragging the cover or the song moves the window (not the seek bar or the buttons below).
-            child: DragToMoveArea(
+            // Dragging the cover or the song moves the window (not the seek bar or the buttons below); the docked
+            // island's only along the top edge.
+            child: _IslandDrag(
+              docked: island && _islandDocked,
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -398,9 +440,11 @@ class _Deck extends StatelessWidget {
                                   style: text.bodyMedium?.copyWith(color: ink.muted),
                                 ),
                               ),
-                              const SizedBox(width: 8),
                               // "FLAC 24/44.1": what's playing, as the player's quality badge says it.
-                              QualityChip(color: ink.muted),
+                              if (LayoutPrefs.instance.miniQuality) ...[
+                                const SizedBox(width: 8),
+                                QualityChip(color: ink.muted),
+                              ],
                             ],
                           ),
                         const SizedBox(height: 8),
@@ -451,27 +495,29 @@ class _WindowControls extends StatelessWidget {
         Expanded(
           child: Row(
             children: [
-              _Toggle(
-                icon: Icons.shuffle_rounded,
-                tooltip: q.shuffle ? tr.disableShuffle : tr.enableShuffle,
-                on: q.shuffle,
-                onPressed: q.hasQueue ? c.toggleShuffle : null,
-              ),
-              _Toggle(
-                icon: q.loop == LoopMode.one ? Icons.repeat_one_rounded : Icons.repeat_rounded,
-                tooltip: switch (q.loop) {
-                  LoopMode.off => tr.enableRepeat,
-                  LoopMode.all => tr.enableRepeatOne,
-                  LoopMode.one => tr.disableRepeat,
-                },
-                on: q.loop != LoopMode.off,
-                onPressed: q.hasQueue ? c.cycleLoopMode : null,
-              ),
+              if (LayoutPrefs.instance.miniShuffleRepeat) ...[
+                _Toggle(
+                  icon: Icons.shuffle_rounded,
+                  tooltip: q.shuffle ? tr.disableShuffle : tr.enableShuffle,
+                  on: q.shuffle,
+                  onPressed: q.hasQueue ? c.toggleShuffle : null,
+                ),
+                _Toggle(
+                  icon: q.loop == LoopMode.one ? Icons.repeat_one_rounded : Icons.repeat_rounded,
+                  tooltip: switch (q.loop) {
+                    LoopMode.off => tr.enableRepeat,
+                    LoopMode.all => tr.enableRepeatOne,
+                    LoopMode.one => tr.disableRepeat,
+                  },
+                  on: q.loop != LoopMode.off,
+                  onPressed: q.hasQueue ? c.cycleLoopMode : null,
+                ),
+              ],
             ],
           ),
         ),
         _Transport(c: c, now: now, size: 46),
-        const Expanded(child: _MiniVolume()),
+        Expanded(child: LayoutPrefs.instance.miniVolume ? const _MiniVolume() : const SizedBox.shrink()),
       ],
     ),
   );
@@ -612,7 +658,17 @@ class _IslandView extends StatefulWidget {
   State<_IslandView> createState() => _IslandViewState();
 }
 
-class _IslandViewState extends State<_IslandView> with TickerProviderStateMixin {
+class _IslandViewState extends State<_IslandView> with TickerProviderStateMixin, WindowListener {
+  @override
+  void initState() {
+    super.initState();
+    windowManager.addListener(this);
+  }
+
+  // Dragged off the top edge while docked: back onto it.
+  @override
+  void onWindowMoved() => _snapDocked();
+
   /// 0 closed, 1 open; past 1 while a spring overshoots.
   late final _w = AnimationController.unbounded(vsync: this);
   late final _h = AnimationController.unbounded(vsync: this);
@@ -627,7 +683,7 @@ class _IslandViewState extends State<_IslandView> with TickerProviderStateMixin 
   bool _open = false;
 
   /// What the window was last told about clicks: the island's state and its size.
-  (bool, Size)? _sent;
+  (bool, Size, Size)? _sent;
 
   void _later(Duration after, bool open) {
     _timer?.cancel();
@@ -656,13 +712,15 @@ class _IslandViewState extends State<_IslandView> with TickerProviderStateMixin 
     if (!mounted || !miniPlayer.value || miniPlayerStyle.value != DesktopMiniStyle.island) return;
     final open = _open || _h.value > 0.01;
     final size = MediaQuery.sizeOf(context);
-    if (!force && _sent == (open, size)) return;
-    _sent = (open, size);
+    // The closed pill's size too: Settings may change its width or placement while it shows.
+    if (!force && _sent == (open, size, islandClosedSize)) return;
+    _sent = (open, size, islandClosedSize);
     _islandHit(open, size);
   }
 
   @override
   void dispose() {
+    windowManager.removeListener(this);
     _timer?.cancel();
     _w.dispose();
     _h.dispose();
@@ -673,98 +731,187 @@ class _IslandViewState extends State<_IslandView> with TickerProviderStateMixin 
   Widget build(BuildContext context) {
     // After the frame: the window's size (it changes as the island takes over the window) and state.
     WidgetsBinding.instance.addPostFrameCallback((_) => _syncHit());
-    return _nowBuilder(
-      (context, c, now) => AccentBuilder(
-        track: now.track,
-        builder: (context, accent) {
-          // Black like an island, with a breath of the cover's colour; its text is light whatever the theme.
-          final panel = Color.alphaBlend(accent.withValues(alpha: 0.16), const Color(0xFF0A0A0C));
-          final lyric = Color.lerp(accent, Colors.white, 0.45)!;
-          return Align(
-            alignment: Alignment.topCenter,
-            child: AnimatedBuilder(
-              animation: _both,
-              builder: (context, _) {
-                final w = _w.value, h = _h.value, p = h.clamp(0.0, 1.0);
-                final size = Size(
-                  lerpDouble(islandClosedSize.width, islandOpenSize.width, w)!,
-                  lerpDouble(islandClosedSize.height, islandOpenSize.height, h)!,
-                );
-                final radius = lerpDouble(islandClosedSize.height / 2, _islandRadius, p)!;
-                // The row blurs away at once; the deck comes into focus over the second half.
-                final closed = (1 - p * 3).clamp(0.0, 1.0);
-                final open = ((p - 0.35) / 0.65).clamp(0.0, 1.0);
-                return MouseRegion(
-                  // A short wait, so a pointer only passing over it on the way elsewhere leaves it closed.
-                  onEnter: (_) => _later(const Duration(milliseconds: 160), true),
-                  onExit: (_) => _later(const Duration(milliseconds: 420), false),
-                  child: SizedBox.fromSize(
-                    size: size,
-                    child: DecoratedBox(
-                      decoration: ShapeDecoration(
-                        color: panel,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(radius)),
-                        // Lifted while open; none closed, where the window keeps only the pill.
-                        shadows: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.3 * p),
-                            blurRadius: 8,
-                            offset: const Offset(0, 3),
-                          ),
-                        ],
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(radius),
-                        child: _Ink(
-                          text: Colors.white,
-                          muted: Colors.white.withValues(alpha: 0.68),
-                          child: Stack(
-                            children: [
-                              if (open > 0)
-                                _Morph(
-                                  amount: open,
-                                  blur: 10,
-                                  scale: 0.9,
-                                  child: OverflowBox(
-                                    alignment: Alignment.topCenter,
-                                    minWidth: islandOpenSize.width,
-                                    maxWidth: islandOpenSize.width,
-                                    minHeight: islandOpenSize.height,
-                                    maxHeight: islandOpenSize.height,
-                                    child: _Deck(c: c, now: now, island: true, lyricColor: lyric),
+    return ListenableBuilder(
+      listenable: LayoutPrefs.instance,
+      builder: (context, _) => _nowBuilder(
+        (context, c, now) => AccentBuilder(
+          track: now.track,
+          builder: (context, accent) {
+            final prefs = LayoutPrefs.instance;
+            final docked = _islandDocked;
+            // Black like an island, with as much of the cover's colour as Settings says; its text is light whatever
+            // the theme.
+            final panel = Color.alphaBlend(accent.withValues(alpha: prefs.islandColor.tint), const Color(0xFF0A0A0C));
+            final lyric = Color.lerp(accent, Colors.white, 0.45)!;
+            return Align(
+              alignment: Alignment.topCenter,
+              child: AnimatedBuilder(
+                animation: _both,
+                builder: (context, _) {
+                  final w = _w.value, h = _h.value, p = h.clamp(0.0, 1.0);
+                  final size = Size(
+                    lerpDouble(islandClosedSize.width, islandOpenSize.width, w)!,
+                    lerpDouble(islandClosedSize.height, islandOpenSize.height, h)!,
+                  );
+                  final radius = lerpDouble(islandClosedSize.height / 2, _islandRadius, p)!;
+                  // Docked: flat against the top edge, round below, like a notch.
+                  final corners = docked
+                      ? BorderRadius.vertical(bottom: Radius.circular(radius))
+                      : BorderRadius.circular(radius);
+                  // The row blurs away at once; the deck comes into focus over the second half.
+                  final closed = (1 - p * 3).clamp(0.0, 1.0);
+                  final open = ((p - 0.35) / 0.65).clamp(0.0, 1.0);
+                  return MouseRegion(
+                    // A short wait, so a pointer only passing over it on the way elsewhere leaves it closed. Set to open
+                    // on a click, resting on it does nothing.
+                    onEnter: (_) {
+                      if (prefs.islandOpen == IslandOpen.hover) _later(const Duration(milliseconds: 160), true);
+                    },
+                    onExit: (_) => _later(const Duration(milliseconds: 420), false),
+                    child: SizedBox.fromSize(
+                      size: size,
+                      child: DecoratedBox(
+                        decoration: ShapeDecoration(
+                          color: panel,
+                          shape: RoundedRectangleBorder(borderRadius: corners),
+                          // Lifted while open; none closed, where the window keeps only the pill.
+                          shadows: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.3 * p),
+                              blurRadius: 8,
+                              offset: const Offset(0, 3),
+                            ),
+                          ],
+                        ),
+                        child: ClipRRect(
+                          borderRadius: corners,
+                          child: _Ink(
+                            text: Colors.white,
+                            muted: Colors.white.withValues(alpha: 0.68),
+                            child: Stack(
+                              children: [
+                                if (open > 0)
+                                  _Morph(
+                                    amount: open,
+                                    blur: 10,
+                                    scale: 0.9,
+                                    child: OverflowBox(
+                                      alignment: Alignment.topCenter,
+                                      minWidth: islandOpenSize.width,
+                                      maxWidth: islandOpenSize.width,
+                                      minHeight: islandOpenSize.height,
+                                      maxHeight: islandOpenSize.height,
+                                      child: _Deck(c: c, now: now, island: true, lyricColor: lyric),
+                                    ),
                                   ),
-                                ),
-                              if (closed > 0)
-                                _Morph(
-                                  amount: closed,
-                                  blur: 6,
-                                  scale: 1.06,
-                                  child: DragToMoveArea(
-                                    child: GestureDetector(
-                                      behavior: HitTestBehavior.opaque,
-                                      onTap: () => _later(Duration.zero, true),
-                                      child: SizedBox(
-                                        width: size.width,
-                                        height: islandClosedSize.height,
-                                        child: _IslandClosed(now: now),
+                                if (closed > 0)
+                                  _Morph(
+                                    amount: closed,
+                                    blur: 6,
+                                    scale: 1.06,
+                                    // Docked it slides along the top edge only; floating it goes anywhere.
+                                    // Pressed to drag it, it stays closed: opening on the pointer resting there would
+                                    // swap the pill being dragged for the deck.
+                                    child: Listener(
+                                      onPointerDown: (_) => _timer?.cancel(),
+                                      child: _IslandDrag(
+                                        docked: docked,
+                                        child: GestureDetector(
+                                          behavior: HitTestBehavior.opaque,
+                                          onTap: () => _later(Duration.zero, true),
+                                          child: SizedBox(
+                                            width: size.width,
+                                            height: islandClosedSize.height,
+                                            child: _IslandClosed(now: now),
+                                          ),
+                                        ),
                                       ),
                                     ),
                                   ),
-                                ),
-                            ],
+                              ],
+                            ),
                           ),
                         ),
                       ),
                     ),
-                  ),
-                );
-              },
-            ),
-          );
-        },
+                  );
+                },
+              ),
+            );
+          },
+        ),
       ),
     );
   }
+}
+
+/// Dragging the closed island: docked it slides along the top edge ([_SlideAlongTop]), floating it goes anywhere.
+class _IslandDrag extends StatelessWidget {
+  const _IslandDrag({required this.docked, required this.child});
+
+  final bool docked;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => docked ? _SlideAlongTop(child: child) : DragToMoveArea(child: child);
+}
+
+/// The docked island dragged: it follows the pointer sideways and stays on the top edge (a window dragged by the
+/// system would go anywhere, and only be put back after).
+class _SlideAlongTop extends StatefulWidget {
+  const _SlideAlongTop({required this.child});
+
+  final Widget child;
+
+  @override
+  State<_SlideAlongTop> createState() => _SlideAlongTopState();
+}
+
+class _SlideAlongTopState extends State<_SlideAlongTop> {
+  /// Where the pointer took hold, from the window's left edge; the top edge it stays on.
+  double? _grab;
+  double _top = 0;
+  bool _moving = false;
+  Offset? _pending;
+
+  Future<void> _start(DragStartDetails _) async {
+    final cursor = await screenRetriever.getCursorScreenPoint();
+    final b = await windowManager.getBounds();
+    _top = (await _workArea())?.top ?? b.top;
+    _grab = cursor.dx - b.left;
+  }
+
+  Future<void> _move(DragUpdateDetails _) async {
+    final grab = _grab;
+    if (grab == null) return;
+    final cursor = await screenRetriever.getCursorScreenPoint();
+    _pending = Offset(cursor.dx - grab, _top);
+    // One move at a time: the latest place wins.
+    if (_moving) return;
+    _moving = true;
+    try {
+      for (var to = _pending; to != null; to = _pending) {
+        _pending = null;
+        await windowManager.setPosition(to);
+      }
+    } finally {
+      _moving = false;
+    }
+  }
+
+  void _end(DragEndDetails _) {
+    _grab = null;
+    _snapDocked();
+  }
+
+  @override
+  Widget build(BuildContext context) => GestureDetector(
+    behavior: HitTestBehavior.opaque,
+    onHorizontalDragStart: _start,
+    onHorizontalDragUpdate: _move,
+    onHorizontalDragEnd: _end,
+    child: widget.child,
+  );
 }
 
 /// Content coming into focus as [amount] goes to 1: faded, blurred by up to [blur] and scaled from [scale] before.
@@ -801,12 +948,28 @@ class _IslandBars extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = AppColors.accent;
-    if (!Features.audioVisualizer || LayoutPrefs.lightweight) {
-      return EqualizerIcon(playing: playing, size: 16, color: color);
+    final c = PlayerScope.read(context);
+    final music =
+        LayoutPrefs.instance.islandBars == IslandBars.music &&
+        Features.audioVisualizer &&
+        visualizerBlockedBy(c, reduceMotion: MediaQuery.disableAnimationsOf(context)) == null &&
+        visualizerHiddenBy(c) == null;
+    switch (LayoutPrefs.instance.islandBars) {
+      case IslandBars.off:
+        return const SizedBox.shrink();
+      case IslandBars.animated:
+      case IslandBars.music when !music:
+        // Where the levels can't be had (bit-perfect, casting, Lightweight): bars that move by themselves.
+        return EqualizerIcon(playing: playing, size: 16, color: color);
+      case IslandBars.music:
+        break;
     }
     return AudioReactiveView(
       enabled: playing,
       maxFps: 30,
+      // Its own levels, whatever the visualizer switch says; the island has no music video under it.
+      own: true,
+      followsVideo: false,
       builder: (context, levels) => RepaintBoundary(
         child: CustomPaint(size: const Size(22, 16), painter: _BarsPainter(levels, color, playing)),
       ),

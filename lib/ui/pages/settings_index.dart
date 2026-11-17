@@ -742,6 +742,26 @@ abstract final class SettingsOptions {
       find: (t) => t.kwDesktopMini,
       available: () => Features.miniPlayer,
     ),
+    for (final (id, title, subtitle)
+        in <(String, String Function(AppLocalizations), String Function(AppLocalizations)?)>[
+          ('islandPlacement', (t) => t.islandPlacement, (t) => t.islandPlacementSubtitle),
+          ('islandBars', (t) => t.islandBars, (t) => t.islandBarsSubtitle),
+          ('islandOpen', (t) => t.islandOpens, null),
+          ('islandWidth', (t) => t.islandWidth, null),
+          ('islandColor', (t) => t.islandColor, null),
+          ('miniOnTop', (t) => t.miniOnTop, (t) => t.miniOnTopSubtitle),
+          ('miniVolume', (t) => t.miniShowVolume, (t) => t.miniShows),
+          ('miniShuffleRepeat', (t) => t.miniShowShuffleRepeat, (t) => t.miniShows),
+          ('miniQuality', (t) => t.miniShowQuality, (t) => t.miniShows),
+        ])
+      SettingsOption(
+        id,
+        .layout,
+        title,
+        subtitle: subtitle,
+        find: (t) => t.kwDesktopMini,
+        available: () => Features.miniPlayer,
+      ),
     SettingsOption(
       'corners',
       .layout,
@@ -1022,6 +1042,21 @@ abstract final class SettingsOptions {
       subtitle: (t) => t.smartMergeSubtitle,
       available: () => Features.smartMerge,
       find: (t) => '${t.kwSources}, youtube music',
+    ),
+    SettingsOption(
+      'smartMergeToday',
+      .sources,
+      (t) => t.smartMergeToday,
+      available: () => Features.smartMerge,
+      find: (t) => '${t.smartMerge}, ${t.kwSources}',
+    ),
+    SettingsOption(
+      'smartMergeCache',
+      .sources,
+      (t) => t.smartMergeCache,
+      subtitle: (t) => t.smartMergeCacheSubtitle(''),
+      available: () => Features.smartMerge,
+      find: (t) => '${t.smartMerge}, cache, ${t.kwSources}',
     ),
     SettingsOption(
       'spotiflac',

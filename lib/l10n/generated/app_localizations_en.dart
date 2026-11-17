@@ -2055,6 +2055,82 @@ class AppLocalizationsEn extends AppLocalizations {
   String get miniSwitchToWindow => 'Switch to the mini window';
 
   @override
+  String get islandPlacement => 'Island placement';
+
+  @override
+  String get islandPlacementSubtitle =>
+      'Floating sits a little below the top of the screen and can be dragged anywhere; Docked sticks to the top edge like a notch and slides sideways';
+
+  @override
+  String get islandFloating => 'Floating';
+
+  @override
+  String get islandDocked => 'Docked';
+
+  @override
+  String get islandBars => 'Island bars';
+
+  @override
+  String get islandBarsSubtitle => 'Following the music works even with the audio visualizer off';
+
+  @override
+  String get islandBarsMusic => 'Follow the music';
+
+  @override
+  String get islandBarsAnimated => 'Animated';
+
+  @override
+  String get islandOpens => 'Island opens';
+
+  @override
+  String get islandOpenHover => 'On hover';
+
+  @override
+  String get islandOpenClick => 'On click';
+
+  @override
+  String get islandWidth => 'Island width';
+
+  @override
+  String get islandWidthCompact => 'Compact';
+
+  @override
+  String get islandWidthNormal => 'Normal';
+
+  @override
+  String get islandWidthWide => 'Wide';
+
+  @override
+  String get islandColor => 'Island colour';
+
+  @override
+  String get islandColorBlack => 'Black';
+
+  @override
+  String get islandColorTinted => 'Cover tint';
+
+  @override
+  String get islandColorCover => 'Cover colour';
+
+  @override
+  String get miniOnTop => 'Mini player stays on top';
+
+  @override
+  String get miniOnTopSubtitle => 'Above other windows, for the island and the mini window';
+
+  @override
+  String get miniShows => 'In the mini window and the open island';
+
+  @override
+  String get miniShowVolume => 'Volume';
+
+  @override
+  String get miniShowShuffleRepeat => 'Shuffle and repeat';
+
+  @override
+  String get miniShowQuality => 'Quality badge';
+
+  @override
   String get shapesAndMotion => 'Shapes and motion';
 
   @override
@@ -6353,6 +6429,25 @@ class AppLocalizationsEn extends AppLocalizations {
       'Plays a YouTube Music song from the best source that has the same recording: a lossless file in your library first, then the music sources you turned on (Monochrome, in FLAC), and YouTube Music otherwise. Its music video, lyrics and cover stay from YouTube Music.';
 
   @override
+  String get smartMergeToday => 'Today';
+
+  @override
+  String smartMergeTodayStats(String lossless, String youtube, String limited, String kept) {
+    return '$lossless in lossless · $youtube from YouTube Music · $limited held back by a request limit · $kept from the disk cache';
+  }
+
+  @override
+  String get smartMergeCache => 'Keep played songs on disk';
+
+  @override
+  String smartMergeCacheSubtitle(String size) {
+    return 'A song played again opens from here at once, without asking the source (so its request limit is spent less). Using $size now';
+  }
+
+  @override
+  String get smartMergeCacheClear => 'Clear';
+
+  @override
   String smartMergeBadge(String source) {
     return 'Audio from $source';
   }
@@ -6360,6 +6455,16 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String smartMergeLossierBadge(String source) {
     return '$source only has this song in lower quality, so it plays from YouTube Music';
+  }
+
+  @override
+  String smartMergePendingBadge(String source) {
+    return 'Getting the lossless sound from $source: the song moves over to it where it is, as soon as it\'s ready';
+  }
+
+  @override
+  String smartMergeLimitedBadge(String source) {
+    return '$source is limiting requests right now, so this plays from YouTube Music. It moves over to $source by itself once the limit is over';
   }
 
   @override

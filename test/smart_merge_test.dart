@@ -155,7 +155,7 @@ void main() {
     expect(await merge.match(_youtube()), isEmpty);
     preferred.on = true;
     expect((await merge.match(_youtube())).single.provider, same(preferred));
-    expect(preferred.asked.length, 4, reason: 'two lookups, each by title and by artist');
+    expect(preferred.asked.length, 2, reason: "two lookups, by title (found: the artist isn't asked)");
     expect(await merge.match(_youtube(title: 'Other Song')), isEmpty);
   });
 
@@ -181,7 +181,8 @@ void main() {
     pending.completeError(const FormatException('old failure'));
     await old;
     await merge.match(_youtube());
-    expect(calls, 4);
+    // Each lookup asks the title; the artist only when the title finds nothing or is slow.
+    expect(calls, 2);
   });
 
   test('a hanging catalogue is bounded and does not suppress another source', () async {
@@ -353,14 +354,14 @@ void main() {
     final merge = _merge([found]);
     expect((await merge.match(_youtube())).single.track.id, 'monochrome:tracks:track:1');
     await merge.match(_youtube());
-    expect(found.asked, unorderedEquals(['Glass Weather', 'Marlow Quartet']), reason: 'title and artist, once each');
+    expect(found.asked, ['Glass Weather'], reason: "the title once (it found it: the artist isn't asked)");
 
     final down = _Source('b', const [], fails: true);
     final failing = _merge([down]);
     expect(await failing.match(_youtube()), isEmpty);
     await pumpEventQueue();
     await failing.match(_youtube());
-    expect(down.asked, hasLength(4));
+    expect(down.asked, hasLength(2), reason: 'asked again (a source that is down is asked only by title)');
   });
 
   test('every source that is on is asked, in order of preference, and one that is off is left alone', () async {

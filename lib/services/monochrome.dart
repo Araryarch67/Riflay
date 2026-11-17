@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 
 import '../models/track.dart';
 import 'merged_download.dart';
+import 'request_gate.dart';
 import 'sources/song_source.dart';
 
 /// Official Monochrome share URLs. Provider prefixes are part of the id.
@@ -51,7 +52,18 @@ class Monochrome extends SongSource {
 
   Future<dynamic> _json(String base, String path, [Map<String, String>? query]) async {
     final url = Uri.parse('$base$path').replace(queryParameters: query);
-    final data = jsonDecode((await get(url)).body);
+    // One client to the service: a gap between requests, and every one of them waits out its limit together.
+    final gate = RequestGate.of(url.host);
+    await gate.turn();
+    final http.Response response;
+    try {
+      response = await get(url);
+    } on SourceBusy catch (e) {
+      gate.limited(e.seconds);
+      rethrow;
+    }
+    gate.ok();
+    final data = jsonDecode(response.body);
     return data is Map && data['data'] != null ? data['data'] : data;
   }
 

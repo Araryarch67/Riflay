@@ -828,11 +828,18 @@ class AudioEngine extends ChangeNotifier {
   /// Metering is leased by visible player views, never by background playback.
   final visualizerLevels = VisualizerLevels();
   int _visualizerUsers = 0;
+
+  /// Leases that want the levels whatever the visualizer switch says: the mini player island's bars, a setting of
+  /// their own (Settings › Pages & navigation).
+  int _ownMeterUsers = 0;
   Timer? _visualizerTimer;
   bool _visualizerReading = false;
   Future<void> _visualizerSync = Future.value();
   bool get visualizerActive =>
-      LayoutPrefs.instance.visualizerEnabled && _visualizerUsers > 0 && !bitPerfect && _dop == null;
+      (LayoutPrefs.instance.visualizerEnabled || _ownMeterUsers > 0) &&
+      _visualizerUsers > 0 &&
+      !bitPerfect &&
+      _dop == null;
 
   bool _visualizerWasOn = false;
 
@@ -894,15 +901,21 @@ class AudioEngine extends ChangeNotifier {
   static const visualizerMetadataProperty = 'af-metadata/visualizer';
 
   /// The caller releases its lease when hidden, paused, or disposed.
-  VoidCallback watchVisualizer() {
+  /// [own]: the levels are wanted even with the visualizer switch off (the island's bars).
+  VoidCallback watchVisualizer({bool own = false}) {
     _visualizerUsers++;
-    if (_visualizerUsers == 1) _syncVisualizer();
+    if (own) _ownMeterUsers++;
+    if (_visualizerUsers == 1 || (own && _ownMeterUsers == 1)) _syncVisualizer();
     _visualizerTimer ??= Timer.periodic(_visualizerEvery, (_) => _readVisualizer());
     var released = false;
     return () {
       if (released || _disposed) return;
       released = true;
       _visualizerUsers--;
+      if (own && --_ownMeterUsers == 0 && _visualizerUsers > 0 && !LayoutPrefs.instance.visualizerEnabled) {
+        visualizerLevels.clear();
+        _syncVisualizer();
+      }
       if (_visualizerUsers == 0) {
         _visualizerTimer?.cancel();
         _visualizerTimer = null;
