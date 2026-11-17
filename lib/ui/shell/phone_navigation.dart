@@ -162,7 +162,6 @@ class PhoneSideTabs extends StatelessWidget {
 /// - Floating: a rounded bar of icons and labels, the selected icon in an accent pill.
 /// - Capsule: icons; the selected tab widens into an accent capsule with its name.
 /// - Dock: a small bar in the middle, icons only, the selected one in an accent circle.
-/// - Centre button: Home raised in the middle, in a notch cut into a plain bar.
 /// - Liquid glass: the page blurring behind glass pills. The mini player sits on its own row above the tabs, with
 ///   Search as a round button beside them; scrolling down shrinks it all to one row (see [GlassBarLink]). On the
 ///   Search tab the search field moves into the bar, and while typing it rides on the keyboard.
@@ -225,7 +224,6 @@ class PhoneBottomBar extends StatelessWidget {
                   child: ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: 520),
                     child: switch (style) {
-                      TabBarStyle.centre => _NotchBar(tab: tab, onSelect: onSelect),
                       TabBarStyle.dock => Center(
                         child: _DockBar(tab: tab, onSelect: onSelect),
                       ),
@@ -1189,104 +1187,6 @@ class _Capsule extends StatelessWidget {
   }
 }
 
-/// Centre button: Search raised in a notch in the middle of the bar, the other tabs as icons with a dot under the
-/// selected one.
-class _NotchBar extends StatelessWidget {
-  const _NotchBar({required this.tab, required this.onSelect});
-
-  final PhoneTab tab;
-  final ValueChanged<PhoneTab> onSelect;
-
-  static const _height = 60.0;
-
-  /// The Search button's size, and how far it stands above the bar.
-  static const _hub = 56.0;
-  static const _rise = 34.0;
-
-  static const _left = [PhoneTab.home, PhoneTab.library];
-  static const _right = [PhoneTab.downloads, PhoneTab.settings];
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = AppColors.of(context);
-    final radius = LayoutPrefs.corner(28);
-    final shape = _NotchedBar(radius: radius, hub: _hub, rise: _rise);
-    Widget cell(PhoneTab t) => Expanded(
-      child: _BarTab(info: _info(t), selected: tab == t, onTap: () => onSelect(t)),
-    );
-    // Each side takes half of what the Search button leaves, however many tabs it has (the web build has no Downloads).
-    Widget side(List<PhoneTab> tabs) => Expanded(
-      child: Row(
-        children: [
-          for (final t in tabs)
-            if (t.available) cell(t),
-        ],
-      ),
-    );
-    final row = Row(
-      children: [
-        side(_left),
-        // Under the Search button: its dot, when Search is the tab shown.
-        SizedBox(
-          width: _hub + 24,
-          child: Align(
-            alignment: const Alignment(0, 0.62),
-            child: _Dot(on: tab == PhoneTab.search),
-          ),
-        ),
-        side(_right),
-      ],
-    );
-    final surface = _SolidSurface(shape: shape, colors: colors, child: row);
-    return SizedBox(
-      height: _height + _rise,
-      child: Stack(
-        alignment: Alignment.topCenter,
-        children: [
-          Positioned(left: 0, right: 0, bottom: 0, height: _height, child: surface),
-          Positioned(
-            top: 0,
-            child: _SearchHub(size: _hub, selected: tab == PhoneTab.search, onTap: () => onSelect(PhoneTab.search)),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// One icon tab of the bottom bar: accent and a dot under it when selected.
-class _BarTab extends StatelessWidget {
-  const _BarTab({required this.info, required this.selected, required this.onTap});
-
-  final _TabInfo info;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = AppColors.of(context);
-    return Semantics(
-      button: true,
-      selected: selected,
-      child: Tooltip(
-        message: info.label,
-        child: InkResponse(
-          onTap: onTap,
-          radius: 28,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              _TabIcon(info: info, selected: selected, color: selected ? colors.accent : colors.textSecondary),
-              const SizedBox(height: 6),
-              _Dot(on: selected),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 /// The small accent dot under the selected tab.
 class _Dot extends StatelessWidget {
   const _Dot({required this.on});
@@ -1303,57 +1203,6 @@ class _Dot extends StatelessWidget {
       child: const SizedBox.square(dimension: 5),
     ),
   );
-}
-
-/// Search: the round accent button standing in the bar's notch.
-class _SearchHub extends StatelessWidget {
-  const _SearchHub({required this.size, required this.selected, required this.onTap});
-
-  final double size;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = AppColors.of(context);
-    return Semantics(
-      button: true,
-      selected: selected,
-      child: Tooltip(
-        message: tr.navSearch,
-        child: Material(
-          color: colors.accent,
-          shape: const CircleBorder(),
-          elevation: 2,
-          shadowColor: const Color(0x55000000),
-          clipBehavior: Clip.antiAlias,
-          child: InkWell(
-            onTap: onTap,
-            child: Ink(
-              width: size,
-              height: size,
-              // Glass over the accent: a light top fading out, and a bright rim.
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(color: const Color(0x59FFFFFF), width: 1),
-                gradient: const LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [Color(0x47FFFFFF), Color(0x00FFFFFF), Color(0x14000000)],
-                  stops: [0, 0.55, 1],
-                ),
-              ),
-              child: Icon(
-                selected ? Icons.manage_search_rounded : Icons.search_rounded,
-                color: colors.onAccent,
-                size: 28,
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
 }
 
 /// Liquid glass. What scrolls behind is blurred and its colours lifted, then tinted with the theme's raised surface
@@ -1521,27 +1370,4 @@ class _PillShape extends CustomClipper<Path> {
 
   @override
   bool shouldReclip(_PillShape old) => old.radius != radius;
-}
-
-/// The bar's outline: a rounded rectangle with a smooth notch around the Search button.
-class _NotchedBar extends CustomClipper<Path> {
-  const _NotchedBar({required this.radius, required this.hub, required this.rise});
-
-  final BorderRadius radius;
-  final double hub, rise;
-
-  /// The gap left between the button and the notch's edge.
-  static const _gap = 5.0;
-
-  @override
-  Path getClip(Size size) {
-    final host = Offset.zero & size;
-    // The button's centre, in the bar's coordinates (it starts [rise] above the bar).
-    final guest = Rect.fromCircle(center: Offset(size.width / 2, hub / 2 - rise), radius: hub / 2 + _gap);
-    final notched = const CircularNotchedRectangle().getOuterPath(host, guest);
-    return Path.combine(PathOperation.intersect, notched, Path()..addRRect(radius.toRRect(host)));
-  }
-
-  @override
-  bool shouldReclip(_NotchedBar old) => old.radius != radius || old.hub != hub || old.rise != rise;
 }

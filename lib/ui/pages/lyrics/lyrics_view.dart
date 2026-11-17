@@ -18,24 +18,34 @@ class LyricsView extends StatelessWidget {
       colors: [Colors.transparent, Colors.black, Colors.black, Colors.transparent],
       stops: [0, 0.08, 0.92, 1],
     ).createShader(rect),
-    child: _LyricsLoader(key: ValueKey(track.id), track: track),
+    child: context.getInheritedWidgetOfExactType<PlayerScope>() == null
+        ? _LyricsLoader(key: ValueKey(track.id), track: track)
+        : PlayerSelect<Track?>(
+            select: (c) => c.currentTrack?.id == track.id ? c.currentAudioTrack : null,
+            builder: (context, audio, _) =>
+                _LyricsLoader(key: ValueKey((track.id, audio?.id, audio?.uri)), track: track, audio: audio),
+          ),
   );
 }
 
 class _LyricsLoader extends StatefulWidget {
-  const _LyricsLoader({super.key, required this.track});
+  const _LyricsLoader({super.key, required this.track, this.audio});
 
   final Track track;
+  final Track? audio;
 
   @override
   State<_LyricsLoader> createState() => _LyricsLoaderState();
 }
 
 class _LyricsLoaderState extends State<_LyricsLoader> {
-  late Future<Lyrics> _lyrics = LyricsService.forTrack(widget.track);
+  Future<Lyrics> _load() => LyricsService.forPlayback(widget.track, widget.audio);
+  late Future<Lyrics> _lyrics = _load();
 
   /// Found before this page opened: shown in its first frame, with no loading bars and no fade-in.
-  late Lyrics? _ready = LyricsService.loaded(widget.track);
+  late Lyrics? _ready = widget.audio == null || widget.audio?.id == widget.track.id
+      ? LyricsService.loaded(widget.track)
+      : null;
 
   @override
   void initState() {
@@ -51,7 +61,7 @@ class _LyricsLoaderState extends State<_LyricsLoader> {
 
   void _reload() => setState(() {
     _ready = null;
-    _lyrics = LyricsService.forTrack(widget.track);
+    _lyrics = _load();
   });
 
   @override
@@ -64,7 +74,7 @@ class _LyricsLoaderState extends State<_LyricsLoader> {
           tr.lyricsLoadFailed,
           action: TextButton(
             style: TextButton.styleFrom(foregroundColor: AppColors.textPrimary),
-            onPressed: () => setState(() => _lyrics = LyricsService.forTrack(widget.track)),
+            onPressed: () => setState(() => _lyrics = _load()),
             child: Text(tr.tryAgain),
           ),
         );

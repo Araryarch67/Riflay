@@ -1759,9 +1759,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get styleDock => 'ドック';
 
   @override
-  String get styleCentreButton => '中央ボタン';
-
-  @override
   String get styleLiquidGlass => 'リキッドグラス';
 
   @override
@@ -3632,6 +3629,12 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get adjustTiming => 'タイミングを調整';
+
+  @override
+  String get adjustVideoTiming => '動画のタイミングを調整';
+
+  @override
+  String get adjustVideoTimingBody => '曲や歌詞に合うように動画を早めたり遅らせたりできます。1回押すと0.5秒ずつ調整されます。リセットすると自動調整に戻ります。';
 
   @override
   String get removeMyLyrics => '自分の歌詞を削除';

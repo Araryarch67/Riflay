@@ -82,5 +82,28 @@ void main() {
       expect(found.synced, isTrue);
       expect(found.lines.last.text, 'Still mine');
     });
+
+    test('recording timing uses local lyrics without an online fallback', () async {
+      final song = _song(id: '${dir.uri}recording.flac');
+      expect(await LyricsService.localForTrack(song), isNull);
+      final sidecar = File('${dir.path}/recording.lrc');
+      await sidecar.writeAsString('[00:10.00]Local line\n[00:20.00]Another line');
+      final local = await LyricsService.localForTrack(song);
+      expect(local?.source, 'Lyrics file');
+      expect(local?.lines.first.time, const Duration(seconds: 10));
+      await UserLyrics.save(song, '[00:08.00]Adjusted line');
+      expect((await LyricsService.localForTrack(song))?.lines.first.time, const Duration(seconds: 8));
+    });
+
+    test('playback lyrics follow the selected recording and revert with the source', () async {
+      final song = _song(videoId: 'playbackLyrics1', id: 'yt:playbackLyrics1');
+      final audio = _song(id: '${dir.uri}alternate.flac');
+      await UserLyrics.save(song, '[00:12.00]Original timing');
+      await UserLyrics.save(audio, '[00:10.00]Local timing');
+      expect((await LyricsService.forPlayback(song, audio)).lines.first.time, const Duration(seconds: 10));
+      expect((await LyricsService.forPlayback(song, song)).lines.first.time, const Duration(seconds: 12));
+      await UserLyrics.remove(audio);
+      expect((await LyricsService.forPlayback(song, audio)).lines.first.time, const Duration(seconds: 12));
+    });
   });
 }

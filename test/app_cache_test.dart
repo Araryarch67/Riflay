@@ -28,6 +28,7 @@ void main() {
   test('clears what is fetched again, and keeps the person\'s own things', () async {
     put(p.join(cache, 'artwork', 'a1b2.img'), 1000);
     put(p.join(cache, 'now-playing-art', 'c3.img'), 200);
+    put(p.join(cache, 'video-streams', 'chunk.bin'), 500);
     put(p.join(support, 'lyrics-cache', 'abc.json'), 300);
     put(p.join(support, 'autoeq_index.md'), 400);
     put(p.join(support, 'discover-cache.json'), 50);
@@ -39,8 +40,8 @@ void main() {
     final library = put(p.join(support, 'library.json'), 10);
     final otherTemp = put(p.join(temp, 'someone-else', 'x'), 10);
 
-    expect(await AppCache.size(), 5975);
-    expect(await AppCache.clear(), 5975);
+    expect(await AppCache.size(), 6475);
+    expect(await AppCache.clear(), 6475);
     expect(await AppCache.size(), 0);
 
     for (final f in [ownLyrics, analysis, library, otherTemp]) {

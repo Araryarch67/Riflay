@@ -513,7 +513,6 @@ enum TabBarStyle {
   floating,
   capsule,
   dock,
-  centre,
   glass;
 
   const TabBarStyle({this.docked = false});
@@ -526,7 +525,6 @@ enum TabBarStyle {
     floating => tr.styleFloating,
     capsule => tr.styleCapsule,
     dock => tr.styleDock,
-    centre => tr.styleCentreButton,
     glass => tr.styleLiquidGlass,
   };
   final bool docked;

@@ -199,6 +199,18 @@ void main() {
     await tester.tap(find.text('Video'));
     await tester.pump();
     expect(VideoMode.instance.on, isTrue);
+    expect(find.byTooltip('Adjust video timing'), findsOneWidget);
+    await tester.tap(find.byTooltip('Adjust video timing'));
+    await tester.pumpAndSettle();
+    expect(find.text('Earlier'), findsOneWidget);
+    expect(find.text('Later'), findsOneWidget);
+    await tester.tap(find.text('Earlier'));
+    await tester.pump();
+    expect(find.text('0.5 s earlier'), findsOneWidget);
+    await tester.tap(find.text('Reset'));
+    await tester.pump();
+    await tester.tapAt(const Offset(5, 5));
+    await tester.pumpAndSettle();
     // Nothing is playing here, so no video loads: the cover stays.
     expect(find.text('cover'), findsOneWidget);
 

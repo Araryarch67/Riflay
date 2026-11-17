@@ -414,6 +414,8 @@ abstract final class YoutubeStream {
         url: Uri.parse(best['url'] as String),
         height: (best['height'] as num?)?.toInt() ?? 0,
         codec: RegExp(r'codecs="([^"]+)"').firstMatch(best['mimeType'] as String)?.group(1) ?? '',
+        size: int.tryParse('${best['contentLength'] ?? ''}'),
+        formatId: best['itag']?.toString(),
       );
     } catch (e) {
       if (!YtDlp.supported) rethrow;

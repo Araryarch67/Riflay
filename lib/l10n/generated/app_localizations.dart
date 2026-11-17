@@ -3339,12 +3339,6 @@ abstract class AppLocalizations {
   /// **'Dock'**
   String get styleDock;
 
-  /// No description provided for @styleCentreButton.
-  ///
-  /// In en, this message translates to:
-  /// **'Centre button'**
-  String get styleCentreButton;
-
   /// No description provided for @styleLiquidGlass.
   ///
   /// In en, this message translates to:
@@ -6752,6 +6746,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Adjust timing'**
   String get adjustTiming;
+
+  /// No description provided for @adjustVideoTiming.
+  ///
+  /// In en, this message translates to:
+  /// **'Adjust video timing'**
+  String get adjustVideoTiming;
+
+  /// No description provided for @adjustVideoTimingBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Move the video earlier or later until it matches the song and lyrics. Each tap adjusts it by 0.5 seconds. Reset restores automatic timing.'**
+  String get adjustVideoTimingBody;
 
   /// No description provided for @removeMyLyrics.
   ///

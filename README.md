@@ -81,6 +81,9 @@ https://github.com/user-attachments/assets/5d0f0612-4322-425e-bbbf-79baeace47be
 | | [SpotiFLAC extensions](docs/spotiflac.md) | Install `.sflx` extensions from a file or a repository; each enabled provider becomes a filter on Search, with its own settings and downloads | Native apps (verified on Windows) |
 | | [Spotify playback](docs/spotify-playback.md) | Opens your Spotify playlists and albums and plays them from Spotify itself, with your own Premium account (experimental) | Windows |
 | | Music videos | Watch a song's video in step with it, or use it as the Now Playing background | All |
+| | Video timing | Earlier / Later in half-second steps, saved for each audio source and video | Native apps |
+| | Video cache | Reuses fetched video chunks for seeking and replay; bounded to 384 MiB with automatic cleanup | Native apps |
+| | Lyrics-based video sync | Matches a local recording's timed lyrics to YouTube's when enough lines agree, preserving the MV's intro | Native apps; matching timed lyrics required |
 | | Spotify Canvas | The looping video Spotify shows with a song, in Video mode | All |
 | **Downloads** | Download songs | Choose format, quality and folder | All |
 | | Download source | Download a YouTube Music song from another music source instead: pick the provider, then the recording that matches | Native apps |

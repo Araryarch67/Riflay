@@ -54,10 +54,15 @@ Future<PlayerController> _app(WidgetTester tester, Size size, {PlayerController?
 }
 
 /// The two panels on their own, in the scope the shell gives them.
-Future<PlayerController> _panels(WidgetTester tester, Widget panel, {PlayerController? controller}) async {
-  SharedPreferences.setMockInitialValues({'library.v1': jsonEncode(<Object>[])});
+Future<PlayerController> _panels(
+  WidgetTester tester,
+  Widget panel, {
+  PlayerController? controller,
+  bool initialize = true,
+}) async {
+  if (initialize) SharedPreferences.setMockInitialValues({'library.v1': jsonEncode(<Object>[])});
   final c = controller ?? PlayerController();
-  await tester.runAsync(c.load);
+  if (initialize) await tester.runAsync(c.load);
   await tester.pumpWidget(
     PlayerScope(
       controller: c,
@@ -268,6 +273,7 @@ void main() {
   });
 
   testWidgets('lyrics and now playing keep shuffle and repeat at the same horizontal positions', (tester) async {
+    SharedPreferences.setMockInitialValues({'library.v1': jsonEncode(<Object>[])});
     final player = _ControlPlayer();
     final dir = Directory.systemTemp.createTempSync('riflay-control-test');
     UserLyrics.dirOverride = dir;
@@ -276,6 +282,9 @@ void main() {
       dir.deleteSync(recursive: true);
     });
     await tester.runAsync(() => UserLyrics.save(player.track, '[00:00.00]Lyrics'));
+    // This test compares controls, so finish local lyric I/O before rendering
+    // and before Windows deletes the fixture directory in teardown.
+    await tester.runAsync(() => LyricsService.forTrack(player.track));
     tester.view.physicalSize = const Size(400, 800);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
@@ -285,7 +294,8 @@ void main() {
       for (final element in find.byType(ModeButton).evaluate()) tester.getRect(find.byWidget(element.widget)),
     ];
     expect(before, hasLength(2));
-    await _panels(tester, const LyricsPage(fullScreen: true), controller: player);
+    // Reusing the controller must not reset preferences under pending readers.
+    await _panels(tester, const LyricsPage(fullScreen: true), controller: player, initialize: false);
     await tester.pump();
     final after = [
       for (final element in find.byType(ModeButton).evaluate()) tester.getRect(find.byWidget(element.widget)),

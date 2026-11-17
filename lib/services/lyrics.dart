@@ -439,6 +439,16 @@ abstract final class LyricsService {
   /// opening costs the main thread ~10 ms on Linux).
   static Lyrics? loaded(Track track) => _cache.containsKey(track.id) ? _found[track.id] : null;
 
+  /// Prefer the selected file's timed lyrics while retaining the queue song's
+  /// normal lyrics lookup when that file has no timing of its own.
+  static Future<Lyrics> forPlayback(Track track, Track? audio) async {
+    if (audio != null && audio.id != track.id && audio.path != null && !audio.isCueTrack) {
+      final local = await localForTrack(audio);
+      if (local != null && local.synced) return local;
+    }
+    return forTrack(track);
+  }
+
   /// [Lyrics.none] when there are none; throws when no source could be
   /// reached (that isn't cached, so the next try asks again).
   static Future<Lyrics> forTrack(Track track) {
@@ -473,17 +483,24 @@ abstract final class LyricsService {
   @visibleForTesting
   static Duration sourceTimeout = const Duration(seconds: 8);
 
-  static Future<({Lyrics lyrics, bool missed})> _find(Track track) async {
+  /// Lyrics supplied for this recording, without looking up another version
+  /// online. Useful when comparing the timing of two different audio sources.
+  static Future<Lyrics?> localForTrack(Track track) async {
     // Lyrics the person added to a song always win over any other source.
     if (await UserLyrics.read(track) case final text?) {
       final mine = Lyrics.parse(text, source: 'Your lyrics');
-      if (!mine.isEmpty) return (lyrics: mine, missed: false);
+      if (!mine.isEmpty) return mine;
     }
     final path = track.path;
     if (path != null) {
       final local = await inBackground(() => _local(path));
-      if (local != null && !local.isEmpty) return (lyrics: local, missed: false);
+      if (local != null && !local.isEmpty) return local;
     }
+    return null;
+  }
+
+  static Future<({Lyrics lyrics, bool missed})> _find(Track track) async {
+    if (await localForTrack(track) case final local?) return (lyrics: local, missed: false);
     if (await LyricsCache.read(track) case final kept?) return (lyrics: kept, missed: false);
     final r = await _online(track);
     if (!r.missed && !r.lyrics.isEmpty) await LyricsCache.write(track, r.lyrics);

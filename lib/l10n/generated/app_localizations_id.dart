@@ -1780,9 +1780,6 @@ class AppLocalizationsId extends AppLocalizations {
   String get styleDock => 'Dock';
 
   @override
-  String get styleCentreButton => 'Tombol tengah';
-
-  @override
   String get styleLiquidGlass => 'Kaca cair';
 
   @override
@@ -3704,6 +3701,13 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get adjustTiming => 'Atur waktu';
+
+  @override
+  String get adjustVideoTiming => 'Atur waktu video';
+
+  @override
+  String get adjustVideoTimingBody =>
+      'Geser video lebih awal atau lebih lambat sampai pas dengan lagu dan lirik. Setiap ketukan mengubah waktu 0,5 detik. Reset mengembalikan pengaturan waktu otomatis.';
 
   @override
   String get removeMyLyrics => 'Hapus lirikku';

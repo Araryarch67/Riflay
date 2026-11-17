@@ -48,6 +48,14 @@ void main() {
     expect(LayoutPrefs.dur(const Duration(milliseconds: 200)), const Duration(milliseconds: 200));
   });
 
+  test('Centre button is removed and old preferences fall back to Capsule', () {
+    expect(TabBarStyle.values.map((style) => style.name), isNot(contains('centre')));
+    expect(TabBarStyle.values, hasLength(9));
+    p.restore({'tabBar': 'centre'});
+    expect(p.tabBar, TabBarStyle.capsule);
+    expect(p.toJson()['tabBar'], 'capsule');
+  });
+
   test('Lightweight limits covers and replaces Background across switching, restore and presets', () async {
     await p.setPerformance(PerformanceMode.balanced);
     await p.setPlayerCover(PlayerCover.background);

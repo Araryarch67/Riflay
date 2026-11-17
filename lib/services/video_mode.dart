@@ -15,8 +15,12 @@ import '../models/track.dart';
 import 'beta_features.dart';
 import 'desktop_visibility.dart';
 import 'layout_prefs.dart';
+import 'lyrics.dart';
+import 'lyrics_video_alignment.dart';
 import 'player_controller.dart';
 import 'video_alignment.dart';
+import 'video_timing.dart';
+import 'video_stream_cache.dart';
 import 'mv_sidecar.dart';
 import 'video_download.dart';
 import 'video_engine.dart';
@@ -171,6 +175,9 @@ class VideoMode extends ChangeNotifier with WidgetsBindingObserver {
     _c?.removeListener(_changed);
     if (_c == null) WidgetsBinding.instance.addObserver(this);
     _c = c;
+    _lyricsFor = null;
+    _lyricsOffset = Duration.zero;
+    _lyricsRequest++;
     c.addListener(_changed);
     _loadOn();
     LayoutPrefs.instance
@@ -321,6 +328,70 @@ class VideoMode extends ChangeNotifier with WidgetsBindingObserver {
   /// Stands in for YouTube Music's answer in [lookUp] (tests).
   @visibleForTesting
   static Future<MusicVideo?> Function(String videoId)? debugLookUp;
+
+  (String, String, Uri)? _lyricsFor;
+  Duration _lyricsOffset = Duration.zero;
+  int _lyricsRequest = 0;
+  VideoTiming? _manualTiming;
+
+  /// Manual picture timing for this song's current audio and video pair.
+  VideoTiming? timingOf(Track? track) {
+    final video = videoOf(track);
+    if (track == null || video == null || video.loops) return null;
+    final audio = _c?.currentTrack?.id == track.id ? _c?.currentAudioTrack ?? track : track;
+    return VideoTiming.of(track, audio, video.videoId);
+  }
+
+  void _timingChanged() {
+    _lastSeek = DateTime(0);
+    _seekedTo = null;
+    _follow(seekNow: true);
+  }
+
+  /// Match the actual local recording to the catalogue song, then retain the
+  /// existing catalogue-to-video map. Never infer local timing from lyrics
+  /// fetched by title: those can belong to the very recording we're correcting.
+  void _alignLyrics() {
+    final c = _c;
+    final song = c?.currentTrack;
+    final audio = c?.currentAudioTrack;
+    final id = song?.videoId;
+    // A file supplying both the picture and sound is already on one timeline.
+    final ownPicture = audio?.path != null && localVideoOf(song)?.path == audio?.path;
+    final key = id != null && audio?.path != null && !audio!.isCueTrack && !ownPicture
+        ? (id, audio.id, audio.uri)
+        : null;
+    if (key == _lyricsFor) return;
+    _lyricsFor = key;
+    _lyricsOffset = Duration.zero;
+    final request = ++_lyricsRequest;
+    if (key == null || c == null || audio == null || debugLookUp != null || !VideoAlignment.enabled) return;
+    () async {
+      final local = await LyricsService.localForTrack(audio);
+      if (_disposed || request != _lyricsRequest) return;
+      if (local == null || !local.synced) return;
+      final web = YtMusicWeb.anonymous();
+      WebLyrics? remote;
+      try {
+        remote = await web.lyrics(key.$1).timeout(const Duration(seconds: 15));
+      } finally {
+        web.close();
+      }
+      if (_disposed || request != _lyricsRequest || remote == null) return;
+      final offset = LyricsVideoAlignment.offset(
+        local,
+        Lyrics(source: 'YouTube Music', lines: [for (final line in remote.lines) LyricLine(line.time, line.text)]),
+      );
+      if (offset == null) return;
+      _lyricsOffset = offset;
+      _lastSeek = DateTime(0);
+      _seekedTo = null;
+      _follow(seekNow: true);
+    }().catchError((Object e) {
+      // Retry when this recording is entered again; never interrupt playback.
+      debugPrint('Video lyric alignment: $e');
+    });
+  }
 
   @visibleForTesting
   void debugSetFound(String videoId, MusicVideo? video) {
@@ -765,15 +836,18 @@ vec4 hook() {
         for (final o in (Host.environment['RIFLAY_VIDEO_MPV_OPTIONS'] ?? '').split(';')) {
           if (o.contains('=')) await mpv.setProperty(o.substring(0, o.indexOf('=')), o.substring(o.indexOf('=') + 1));
         }
-        await mpv.setProperty('cache-secs', foreground ? '30' : '10');
-        // A phone holds half: its 1080p VP9 is ~3-4 Mbit/s, so 16 MiB is still about the 30 s asked for, and a
-        // phone is where memory runs out (Android closes the app holding the most).
-        final phone = Host.isAndroid || Host.isIOS;
-        await mpv.setProperty('demuxer-max-bytes', '${(foreground ? (phone ? 16 : 32) : (phone ? 8 : 12)) << 20}');
-        await mpv.setProperty('demuxer-max-back-bytes', '${(foreground ? (phone ? 4 : 8) : 2) << 20}');
         // Each video frame redraws the whole window on a computer: fewer of them below Heavy (see [maxFps]).
         if (maxFps case final fps?) await mpv.setProperty('vf', 'fps=$fps');
       }
+      // Both rendering engines use the same read-ahead and seek-back policy.
+      // Original bytes also live in the bounded disk cache, so increasing the
+      // time window doesn't require keeping a whole MV in RAM.
+      await player.setProperty('cache', 'yes');
+      await player.setProperty('cache-secs', foreground ? '60' : '20');
+      final phone = Host.isAndroid || Host.isIOS;
+      await player.setProperty('demuxer-max-bytes', '${(foreground ? (phone ? 24 : 48) : (phone ? 8 : 12)) << 20}');
+      await player.setProperty('demuxer-max-back-bytes', '${(foreground ? (phone ? 8 : 16) : 4) << 20}');
+      await player.setProperty('demuxer-seekable-cache', 'yes');
       Future<void> open(String url, Duration at) async {
         if (player case _KitEngine(:final kit)) {
           await kit.open(Media(url, start: at), play: false);
@@ -782,7 +856,9 @@ vec4 hook() {
         }
       }
 
-      final at = v.videoTimeAt(_c?.position ?? Duration.zero) ?? Duration.zero;
+      final position = _c?.position ?? Duration.zero;
+      final timing = timingOf(_c?.currentTrack);
+      final at = (timing == null ? v.videoTimeAt(position) : timing.videoTimeAt(v, position)) ?? Duration.zero;
       final local = v.loops ? null : localVideoOf(_c?.currentTrack);
       if (v.url case final url?) {
         // A Canvas: a few seconds that loop, whatever the song's position.
@@ -804,7 +880,9 @@ vec4 hook() {
         _streamed = true;
         _streamHeight = stream.height;
         debugPrint('Video mode: ${v.videoId} at ${stream.height}p ${stream.codec}');
-        await open(stream.url.toString(), at);
+        final url = await VideoStreamCache.instance.open(v.videoId, stream);
+        if (!identical(player, _player)) return;
+        await open(url.toString(), at);
       }
       if (own != null) {
         if (!await own!.firstFrame(const Duration(seconds: 25))) throw TimeoutException('no first picture');
@@ -894,6 +972,11 @@ vec4 hook() {
 
   Future<void> _disposePlayer() async {
     final player = _player;
+    _manualTiming?.removeListener(_timingChanged);
+    _manualTiming = null;
+    _lyricsRequest++;
+    _lyricsFor = null;
+    _lyricsOffset = Duration.zero;
     _tick?.cancel();
     _tick = null;
     _player = null;
@@ -930,7 +1013,19 @@ vec4 hook() {
       if (play != player.playing) (play ? player.play() : player.pause()).ignore();
       return;
     }
-    final target = v.videoTimeAt(c.position);
+    _alignLyrics();
+    final timing = timingOf(c.currentTrack);
+    if (!identical(timing, _manualTiming)) {
+      _manualTiming?.removeListener(_timingChanged);
+      _manualTiming = timing;
+      timing?.addListener(_timingChanged);
+    }
+    final songTime = c.position + _lyricsOffset;
+    final target = timing != null
+        ? timing.videoTimeAt(v, c.position, lyricsOffset: _lyricsOffset)
+        : songTime.isNegative
+        ? null
+        : v.videoTimeAt(songTime);
     final play = target != null && c.isPlaying && !c.isBuffering && !_unfocused;
     var rate = 1.0;
     if (target != null) {

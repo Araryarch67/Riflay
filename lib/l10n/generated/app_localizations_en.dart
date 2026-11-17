@@ -1791,9 +1791,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get styleDock => 'Dock';
 
   @override
-  String get styleCentreButton => 'Centre button';
-
-  @override
   String get styleLiquidGlass => 'Liquid glass';
 
   @override
@@ -3729,6 +3726,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get adjustTiming => 'Adjust timing';
+
+  @override
+  String get adjustVideoTiming => 'Adjust video timing';
+
+  @override
+  String get adjustVideoTimingBody =>
+      'Move the video earlier or later until it matches the song and lyrics. Each tap adjusts it by 0.5 seconds. Reset restores automatic timing.';
 
   @override
   String get removeMyLyrics => 'Remove my lyrics';

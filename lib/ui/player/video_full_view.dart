@@ -12,6 +12,7 @@ import '../../services/language.dart';
 import '../../services/layout_prefs.dart';
 import '../../services/lyrics.dart';
 import '../../services/lyrics_translation.dart';
+import '../widgets/video_timing_sheet.dart';
 import '../../services/player_controller.dart';
 import '../../services/video_mode.dart';
 import '../debug_switches.dart';
@@ -244,7 +245,7 @@ class _VideoFullViewState extends State<VideoFullView> {
             left: 48,
             right: 48,
             bottom: _controls ? 132 : 24,
-            child: IgnorePointer(child: _LyricsLine(track: track)),
+            child: IgnorePointer(child: _playbackLyrics(track)),
           ),
         // Taken out of the tree once faded: a hidden seek bar would still tick.
         AnimatedSwitcher(
@@ -295,10 +296,7 @@ class _VideoFullViewState extends State<VideoFullView> {
           ),
         ),
         if (_lyricsShown && track != null)
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 8),
-            child: _LyricsLine(track: track),
-          ),
+          Padding(padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 8), child: _playbackLyrics(track)),
         // Taken out of the tree while hidden: a hidden seek bar would still tick.
         if (_controls) bars(_bottomBar()),
       ],
@@ -359,6 +357,7 @@ class _VideoFullViewState extends State<VideoFullView> {
             ),
           ),
           if (track != null) LikeButton(track: track, size: 24, color: Colors.white),
+          VideoTimingButton(track: track, color: Colors.white),
           IconButton(
             tooltip: _lyricsShown ? tr.hideLyrics : tr.showLyrics,
             color: _lyricsShown ? AppColors.of(context).accent : Colors.white,
@@ -497,12 +496,19 @@ class _Shade extends StatelessWidget {
   );
 }
 
+Widget _playbackLyrics(Track track) => PlayerSelect<Track?>(
+  select: (c) => c.currentTrack?.id == track.id ? c.currentAudioTrack : null,
+  builder: (context, audio, _) =>
+      _LyricsLine(key: ValueKey((track.id, audio?.id, audio?.uri)), track: track, audio: audio),
+);
+
 /// The line of synced lyrics being sung, over the video. Redrawn only when the line changes; position comes a few
 /// times a second while playing and stops while paused ([PlayerController.positionUpdates]).
 class _LyricsLine extends StatefulWidget {
-  const _LyricsLine({required this.track});
+  const _LyricsLine({super.key, required this.track, this.audio});
 
   final Track track;
+  final Track? audio;
 
   @override
   State<_LyricsLine> createState() => _LyricsLineState();
@@ -572,11 +578,13 @@ class _LyricsLineState extends State<_LyricsLine> {
     _generation++;
     _asked = false;
     _extras = null;
-    _lines = LyricsService.loaded(track)?.lines ?? const [];
+    _lines = widget.audio == null || widget.audio?.id == track.id
+        ? LyricsService.loaded(track)?.lines ?? const []
+        : const [];
     _index = -1;
     _at(PlayerScope.read(context).position);
     _loadExtras();
-    LyricsService.forTrack(track).then((l) {
+    LyricsService.forPlayback(track, widget.audio).then((l) {
       if (!mounted || _for != track.id) return;
       setState(() => _lines = l.lines);
       _at(PlayerScope.read(context).position);

@@ -499,6 +499,15 @@ class PlayerController extends ChangeNotifier {
 
   Track? get currentTrack => player.sequenceState.currentSource?.tag as Track?;
 
+  final _audioTracks = Expando<Track>();
+
+  /// The actual file behind the queue identity, including manual audio and
+  /// Smart Merge. Timing must follow the selected recording's own lyrics.
+  Track? get currentAudioTrack {
+    final source = player.sequenceState.currentSource;
+    return source == null ? null : _audioTracks[source] ?? currentTrack;
+  }
+
   List<Track> get queue => player.sequenceState.effectiveSequence.map((s) => s.tag as Track).toList();
 
   /// Current occurrence in play order, even when a track is queued more than once.
@@ -1931,6 +1940,12 @@ class PlayerController extends ChangeNotifier {
   final _random = math.Random();
 
   AudioSource _sourceFor(Track t, {Track? tag}) {
+    final source = _buildSourceFor(t, tag: tag);
+    if (t.path != null) _audioTracks[source] = t;
+    return source;
+  }
+
+  AudioSource _buildSourceFor(Track t, {Track? tag}) {
     final identity = tag ?? t;
     if (SacdDisc.isSacdTrack(t)) {
       final found = SacdDisc.find(t);

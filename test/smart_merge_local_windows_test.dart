@@ -129,6 +129,7 @@ void main() {
       expect(source is SmartMergeAudioSource, isFalse, reason: 'not the streaming merge');
       expect(source is ja.UriAudioSource ? File.fromUri(source.uri).path : null, flac.path, reason: 'the FLAC plays');
       expect(c.currentTrack?.videoId, 'kyapiVideo1', reason: 'the song stays the YouTube Music one');
+      expect(c.currentAudioTrack?.path, flac.path, reason: 'lyric timing follows the actual local recording');
       expect(merge.soundFrom('kyapiVideo1')?.source, TrackSource.device, reason: 'its badge shows the library file');
       expect(youtube.fold<int>(0, (sum, s) => sum + s.requests), 0, reason: 'YouTube is never asked');
     }),
@@ -148,6 +149,7 @@ void main() {
       await c.playList([song], 0);
       await until(() => c.player.playing && c.position > Duration.zero);
       expect(merge.soundFrom('ahoyVideo01'), isNull);
+      expect(c.currentAudioTrack?.id, song.id);
       expect(youtube.fold<int>(0, (sum, s) => sum + s.requests), greaterThan(0), reason: 'played from YouTube');
     }),
     skip: !Platform.isWindows || !enabled,
@@ -194,6 +196,7 @@ void main() {
       expect(File.fromUri(source.uri).path, flac.path);
       expect(c.currentTrack?.id, song.id);
       expect(c.player.playing, isFalse);
+      expect(c.currentAudioTrack?.path, flac.path);
       expect((c.position - const Duration(milliseconds: 500)).abs(), lessThan(const Duration(milliseconds: 150)));
       expect(merge.soundFrom(song.videoId!)?.source, TrackSource.device);
       final before = youtube.fold<int>(0, (sum, s) => sum + s.requests);
@@ -202,6 +205,7 @@ void main() {
       expect(c.currentTrack?.id, song.id);
       expect(c.player.playing, isFalse);
       expect(merge.soundFrom(song.videoId!), isNull);
+      expect(c.currentAudioTrack?.id, song.id, reason: 'returning to YouTube clears local lyric timing');
       await c.setAudioChoice(song, null);
       expect(c.audioChoice(song), isNull);
       expect(c.currentTrack?.id, song.id);

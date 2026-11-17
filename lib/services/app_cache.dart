@@ -38,6 +38,7 @@ abstract final class AppCache {
     return [
       Directory(p.join(f.cache, 'artwork')),
       Directory(p.join(f.cache, 'now-playing-art')),
+      Directory(p.join(f.cache, 'video-streams')),
       Directory(p.join(f.support, 'lyrics-cache')),
       File(p.join(f.support, 'autoeq_index.md')),
       File(p.join(f.support, 'discover-cache.json')),
