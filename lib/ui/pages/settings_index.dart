@@ -423,6 +423,7 @@ abstract final class SettingsOptions {
       subtitle: (t) => t.coverSizeOnPhonesSubtitle,
       find: (t) => t.kwCover,
       preview: .nowPlaying,
+      available: () => Features.phoneLayout,
     ),
     SettingsOption(
       'playerHeader',
@@ -470,6 +471,7 @@ abstract final class SettingsOptions {
       subtitle: (t) => t.qualityBadgeSubtitle,
       find: (t) => t.kwQualityBadge,
       preview: .nowPlaying,
+      available: () => Features.phoneLayout,
     ),
     SettingsOption(
       'playerBackground',
@@ -572,6 +574,7 @@ abstract final class SettingsOptions {
       subtitle: (t) => t.volumeSliderSubtitle,
       find: (t) => t.kwVolumeSlider,
       preview: .nowPlaying,
+      available: () => Features.phoneLayout,
     ),
     SettingsOption(
       'sliderLook',
@@ -717,6 +720,7 @@ abstract final class SettingsOptions {
       subtitle: (t) => t.miniPlayerSubtitle,
       find: (t) => t.kwMiniPlayer,
       preview: .tabBar,
+      available: () => Features.phoneLayout,
     ),
     SettingsOption(
       'tabBar',
@@ -725,6 +729,7 @@ abstract final class SettingsOptions {
       subtitle: (t) => t.tabBarOnPhonesSubtitle,
       find: (t) => t.kwTabBar,
       preview: .tabBar,
+      available: () => Features.phoneLayout,
     ),
     SettingsOption(
       'desktopBar',
@@ -733,6 +738,7 @@ abstract final class SettingsOptions {
       subtitle: (t) => t.desktopPlayerBarSubtitle,
       find: (t) => t.kwDesktopBar,
       preview: .desktopBar,
+      available: () => Features.desktopLayout,
     ),
     SettingsOption(
       'desktopMini',

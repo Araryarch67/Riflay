@@ -10,7 +10,8 @@ import 'package:riflay/ui/pages/settings_index.dart';
 import 'package:riflay/ui/pages/settings_page.dart';
 import 'package:riflay/ui/pages/settings_preview.dart';
 import 'package:riflay/ui/player/now_playing_page.dart';
-import 'package:riflay/ui/shell/phone_navigation.dart';
+import 'package:riflay/platform/features.dart';
+import 'package:riflay/ui/player/desktop_player_bar.dart';
 import 'package:riflay/ui/shell_scope.dart';
 import 'package:riflay/ui/widgets/live_preview.dart';
 import 'package:riflay/ui/widgets/shelf.dart';
@@ -68,6 +69,47 @@ void main() {
         }
       });
 
+  // A phone lists the phone layout's settings and not the desktop bar's; a computer the other way round; a tablet,
+  // which uses both layouts, both. In the page and in search alike.
+  for (final (device, platform, size, phone, desktop) in [
+    ('phone', TargetPlatform.android, const Size(412, 915), true, false),
+    ('computer', TargetPlatform.windows, const Size(1280, 1800), false, true),
+    ('tablet', TargetPlatform.android, const Size(1280, 1800), true, true),
+  ]) {
+    testWidgets('a $device lists only the settings of the layouts it uses', (tester) async {
+      debugDefaultTargetPlatformOverride = platform;
+      tester.view.physicalSize = size;
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      try {
+        SharedPreferences.setMockInitialValues({});
+        await tester.runAsync(() => Appearance.instance.setNowPlaying(NowPlayingBackground.color));
+        expect(Features.phoneLayout, phone);
+        expect(Features.desktopLayout, desktop);
+        await tester.pumpWidget(
+          _app(PlayerController(), [], compact: phone && !desktop, home: SettingsPlace.layout.page),
+        );
+        await tester.pump(const Duration(milliseconds: 300));
+        Future<bool> listed(String title) async {
+          final list = find.byType(Scrollable).first;
+          await tester.scrollUntilVisible(find.text(title), 300, scrollable: list).catchError((_) {});
+          return find.text(title).evaluate().isNotEmpty;
+        }
+
+        expect(await listed('Tab bar on phones'), phone);
+        expect(await listed('Desktop player bar'), desktop);
+        final ids = {for (final o in SettingsOptions.all.where((o) => o.available?.call() ?? true)) o.id};
+        expect(ids.containsAll(['tabBar', 'miniPlayer', 'phoneCover', 'volumeRow', 'qualityBadgePlace']), phone);
+        expect(ids.contains('desktopBar'), desktop);
+        await tester.pumpWidget(const SizedBox());
+        await tester.pump(const Duration(seconds: 5));
+      } finally {
+        debugDefaultTargetPlatformOverride = null;
+        await tester.runAsync(LayoutPrefs.instance.reset);
+      }
+    });
+  }
+
   Future<void> search(WidgetTester tester, String query) async {
     await tester.enterText(find.byKey(SettingsPage.searchKey), query);
     await tester.pump();
@@ -121,14 +163,15 @@ void main() {
   onLinux('a result opens its page, scrolled to the option and lit up for a moment', (tester) async {
     final visited = <String>[];
     await tester.pumpWidget(_app(PlayerController(), visited));
-    await search(tester, 'tab bar on phones');
-    await tester.tap(find.text('Tab bar on phones'));
+    // A computer's own row (the phone layout's are only on phones and tablets).
+    await search(tester, 'desktop player bar');
+    await tester.tap(find.text('Desktop player bar'));
     for (var i = 0; i < 8; i++) {
       await tester.pump(const Duration(milliseconds: 100));
     }
     expect(visited.last, 'settings:look/layout');
     expect(find.byKey(SettingsPage.highlightKey), findsOneWidget);
-    final row = find.ancestor(of: find.text('Tab bar on phones'), matching: find.byType(ListTile)).first;
+    final row = find.ancestor(of: find.text('Desktop player bar'), matching: find.byType(ListTile)).first;
     final light = tester.getRect(find.byKey(SettingsPage.highlightKey));
     expect(light, tester.getRect(row), reason: 'the light is over the row');
     // Scrolled into view, about a third of the way down.
@@ -235,8 +278,8 @@ void main() {
     );
     expect(after.key, isNot(before.key), reason: 'built afresh with the new look');
 
-    await tapRow('Tab bar on phones');
-    expect(find.descendant(of: find.byType(LivePreview), matching: find.byType(PhoneBottomBar)), findsOneWidget);
+    await tapRow('Desktop player bar');
+    expect(find.descendant(of: find.byType(LivePreview), matching: find.byType(DesktopPlayerBar)), findsOneWidget);
 
     await tester.pumpWidget(_app(PlayerController(), [], home: SettingsPlace.lyrics.page));
     await tester.pump(const Duration(milliseconds: 300));

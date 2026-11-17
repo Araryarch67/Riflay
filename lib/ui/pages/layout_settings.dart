@@ -61,16 +61,17 @@ class NowPlayingSettings extends StatelessWidget {
                   options: [for (final v in PlayerCover.values) (v, v.label)],
                 ),
               ),
-              SettingTile(
-                icon: Icons.fit_screen_rounded,
-                title: Text(tr.coverSizeOnPhones),
-                subtitle: Text(tr.coverSizeOnPhonesSubtitle, style: muted),
-                control: OptionPicker<PhoneCoverSize>(
-                  value: p.phoneCover,
-                  onChanged: p.setPhoneCover,
-                  options: [for (final v in PhoneCoverSize.values) (v, v.label)],
+              if (Features.phoneLayout)
+                SettingTile(
+                  icon: Icons.fit_screen_rounded,
+                  title: Text(tr.coverSizeOnPhones),
+                  subtitle: Text(tr.coverSizeOnPhonesSubtitle, style: muted),
+                  control: OptionPicker<PhoneCoverSize>(
+                    value: p.phoneCover,
+                    onChanged: p.setPhoneCover,
+                    options: [for (final v in PhoneCoverSize.values) (v, v.label)],
+                  ),
                 ),
-              ),
               SettingTile(
                 icon: Icons.vertical_align_top_rounded,
                 title: Text(tr.topOfPlayer),
@@ -116,16 +117,17 @@ class NowPlayingSettings extends StatelessWidget {
                   options: [(true, tr.adaptive), (false, tr.off)],
                 ),
               ),
-              SettingTile(
-                icon: Icons.high_quality_outlined,
-                title: Text(tr.qualityBadge),
-                subtitle: Text(tr.qualityBadgeSubtitle, style: muted),
-                control: OptionPicker<QualityBadgePlace>(
-                  value: p.qualityBadgePlace,
-                  onChanged: p.setQualityBadgePlace,
-                  options: [for (final v in QualityBadgePlace.values) (v, v.label)],
+              if (Features.phoneLayout)
+                SettingTile(
+                  icon: Icons.high_quality_outlined,
+                  title: Text(tr.qualityBadge),
+                  subtitle: Text(tr.qualityBadgeSubtitle, style: muted),
+                  control: OptionPicker<QualityBadgePlace>(
+                    value: p.qualityBadgePlace,
+                    onChanged: p.setQualityBadgePlace,
+                    options: [for (final v in QualityBadgePlace.values) (v, v.label)],
+                  ),
                 ),
-              ),
               SettingTile(
                 icon: Icons.wallpaper_rounded,
                 title: Text(tr.background),
@@ -250,13 +252,14 @@ class NowPlayingSettings extends StatelessWidget {
                   options: [for (final v in PlayButtonShape.values) (v, v.label)],
                 ),
               ),
-              SwitchListTile(
-                secondary: const Icon(Icons.volume_up_rounded),
-                title: Text(tr.volumeSlider),
-                subtitle: Text(tr.volumeSliderSubtitle, style: muted),
-                value: p.showVolumeRow,
-                onChanged: p.setShowVolumeRow,
-              ),
+              if (Features.phoneLayout)
+                SwitchListTile(
+                  secondary: const Icon(Icons.volume_up_rounded),
+                  title: Text(tr.volumeSlider),
+                  subtitle: Text(tr.volumeSliderSubtitle, style: muted),
+                  value: p.showVolumeRow,
+                  onChanged: p.setShowVolumeRow,
+                ),
               SettingTile(
                 icon: Icons.tune_rounded,
                 title: Text(tr.sliderLook),
@@ -428,36 +431,39 @@ class LayoutSettings extends StatelessWidget {
           _Header(tr.bars, hint: tr.barsHint),
           SettingsCard(
             children: [
-              SettingTile(
-                icon: Icons.call_to_action_rounded,
-                title: Text(tr.miniPlayer),
-                subtitle: Text(tr.miniPlayerSubtitle, style: muted),
-                control: OptionPicker<MiniPlayerStyle>(
-                  value: p.miniPlayer,
-                  onChanged: p.setMiniPlayer,
-                  options: [for (final v in MiniPlayerStyle.values) (v, v.label)],
+              if (Features.phoneLayout)
+                SettingTile(
+                  icon: Icons.call_to_action_rounded,
+                  title: Text(tr.miniPlayer),
+                  subtitle: Text(tr.miniPlayerSubtitle, style: muted),
+                  control: OptionPicker<MiniPlayerStyle>(
+                    value: p.miniPlayer,
+                    onChanged: p.setMiniPlayer,
+                    options: [for (final v in MiniPlayerStyle.values) (v, v.label)],
+                  ),
                 ),
-              ),
-              SettingTile(
-                icon: Icons.call_to_action_outlined,
-                title: Text(tr.tabBarOnPhones),
-                subtitle: Text(tr.tabBarOnPhonesSubtitle, style: muted),
-                control: OptionPicker<TabBarStyle>(
-                  value: p.tabBar,
-                  onChanged: p.setTabBar,
-                  options: [for (final v in TabBarStyle.values) (v, v.label)],
+              if (Features.phoneLayout)
+                SettingTile(
+                  icon: Icons.call_to_action_outlined,
+                  title: Text(tr.tabBarOnPhones),
+                  subtitle: Text(tr.tabBarOnPhonesSubtitle, style: muted),
+                  control: OptionPicker<TabBarStyle>(
+                    value: p.tabBar,
+                    onChanged: p.setTabBar,
+                    options: [for (final v in TabBarStyle.values) (v, v.label)],
+                  ),
                 ),
-              ),
-              SettingTile(
-                icon: Icons.view_stream_rounded,
-                title: Text(tr.desktopPlayerBar),
-                subtitle: Text(tr.desktopPlayerBarSubtitle, style: muted),
-                control: OptionPicker<DesktopBarStyle>(
-                  value: p.desktopBar,
-                  onChanged: p.setDesktopBar,
-                  options: [for (final v in DesktopBarStyle.values) (v, v.label)],
+              if (Features.desktopLayout)
+                SettingTile(
+                  icon: Icons.view_stream_rounded,
+                  title: Text(tr.desktopPlayerBar),
+                  subtitle: Text(tr.desktopPlayerBarSubtitle, style: muted),
+                  control: OptionPicker<DesktopBarStyle>(
+                    value: p.desktopBar,
+                    onChanged: p.setDesktopBar,
+                    options: [for (final v in DesktopBarStyle.values) (v, v.label)],
+                  ),
                 ),
-              ),
               if (Features.miniPlayer)
                 SettingTile(
                   icon: Icons.picture_in_picture_alt_rounded,

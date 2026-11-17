@@ -1,3 +1,6 @@
+import 'package:flutter/foundation.dart' show TargetPlatform, defaultTargetPlatform;
+import 'package:flutter/widgets.dart' show WidgetsBinding;
+
 import 'host.dart';
 import 'web_audio.dart';
 import 'web_storage.dart';
@@ -59,6 +62,27 @@ abstract final class Features {
   /// The mini player, which shrinks the app's own window: only where the app has one to shrink (not a phone or
   /// tablet, where the window manager isn't there and the switch left the app stuck in a mini state).
   static bool get miniPlayer => Host.isWindows || Host.isLinux || Host.isMacOS;
+
+  /// Settings of the phone layout alone (its tab bar, the bar above it, the phone player's cover, quality badge and
+  /// volume row): shown on phones and tablets, and in a browser. A computer's window made narrow uses the phone
+  /// layout too, with their defaults; its Settings don't list them.
+  static bool get phoneLayout => _mobile || Host.isWeb;
+
+  /// Settings of the desktop layout alone (the player bar along the window's foot): computers, tablets (wide, they
+  /// use it) and browsers; never a phone, which keeps the phone layout even turned sideways.
+  static bool get desktopLayout => !_mobile || _tablet;
+
+  // The platform the layout follows (the shell's own check, which tests can set).
+  static bool get _mobile =>
+      defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS;
+
+  static bool get _tablet {
+    // The binding's: the screen the app (or a test) lays out on.
+    final views = WidgetsBinding.instance.platformDispatcher.views;
+    if (views.isEmpty) return false;
+    final view = views.first;
+    return (view.physicalSize / view.devicePixelRatio).shortestSide >= 600;
+  }
 
   /// The mini player keeps off the taskbar (it stays on top, in Alt+Tab and behind the tray icon). Windows takes
   /// the button away; Linux sets the window's skip-taskbar hint. Not macOS: window_manager does it there by
