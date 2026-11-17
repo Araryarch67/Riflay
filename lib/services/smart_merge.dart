@@ -337,6 +337,18 @@ class SmartMerge {
   /// shared artist only when the two names can't be compared, one being in Latin letters and the other not
   /// ("Houshou Marine" and "宝鐘マリン"): the source's own index is then what ties them together.
   static bool same(Track origin, Track candidate, {bool byArtist = false}) {
+    if (!_sameRecordingDetails(origin, candidate)) return false;
+    return _sameTitle(
+          origin.title,
+          candidate.title,
+          names: {
+            for (final name in {..._artists(origin.artist), ..._artists(candidate.artist)}) name.replaceAll(' ', ''),
+          },
+        ) &&
+        (_shareArtist(origin, candidate) || (byArtist && _otherScript(origin.artist, candidate.artist)));
+  }
+
+  static bool _sameRecordingDetails(Track origin, Track candidate) {
     final a = origin.duration, b = candidate.duration;
     if (a == null ||
         b == null ||
@@ -350,14 +362,7 @@ class SmartMerge {
     final isrc = origin.extensionData?['isrc']?.toString().trim().toUpperCase();
     final otherIsrc = candidate.extensionData?['isrc']?.toString().trim().toUpperCase();
     if (isrc != null && isrc.isNotEmpty && otherIsrc != null && otherIsrc.isNotEmpty && isrc != otherIsrc) return false;
-    return _sameTitle(
-          origin.title,
-          candidate.title,
-          names: {
-            for (final name in {..._artists(origin.artist), ..._artists(candidate.artist)}) name.replaceAll(' ', ''),
-          },
-        ) &&
-        (_shareArtist(origin, candidate) || (byArtist && _otherScript(origin.artist, candidate.artist)));
+    return true;
   }
 
   static final _latin = RegExp('[A-Za-z]');
@@ -421,6 +426,7 @@ class SmartMerge {
 
   /// The library's lossless files by their title ([_keys]), rebuilt when the library changes ([_indexOf]).
   Map<String, List<Track>> _index = const {};
+  Map<String, Set<Track>> _artistIndex = const {};
   Object? _indexOf;
 
   /// A lossless file of [track]'s recording in [library], or null. [revision] changes when the library does; the
@@ -430,6 +436,7 @@ class SmartMerge {
     if (_indexOf != revision) {
       _indexOf = revision;
       final index = <String, List<Track>>{};
+      final artists = <String, Set<Track>>{};
       for (final file in library) {
         final path = file.path;
         final quality = file.audioQuality?.trim();
@@ -444,12 +451,131 @@ class SmartMerge {
         for (final key in _keys(file.title)) {
           (index[key] ??= []).add(file);
         }
+        for (final artist in _artists(file.artist)) {
+          (artists[artist] ??= {}).add(file);
+        }
       }
       _index = index;
+      _artistIndex = artists;
     }
     // A title given twice ("きゃぴ - Kyapi") is found by either half, as a file titled with one half ("Kyapi") is.
     final same = {for (final key in _keys(track.title)) ...?_index[key]};
-    return same.isEmpty ? null : best(track, available == null ? same : same.where(available));
+    final exact = best(track, available == null ? same : same.where(available));
+    if (exact != null) return exact;
+    // Metadata differs across sources. Search only this artist's lossless files,
+    // not the whole library, and keep the duration/version/recording-ID checks.
+    final candidates = {for (final artist in _artists(track.artist)) ...?_artistIndex[artist]};
+    final ranked = <({Track track, double score})>[];
+    for (final candidate in candidates) {
+      if (!_sameRecordingDetails(track, candidate) || (available != null && !available(candidate))) continue;
+      final score = _localSimilarity(track, candidate);
+      if (score >= .88) ranked.add((track: candidate, score: score));
+    }
+    ranked.sort((a, b) {
+      final confidence = b.score.compareTo(a.score);
+      return confidence != 0
+          ? confidence
+          : (track.duration! - a.track.duration!).abs().compareTo((track.duration! - b.track.duration!).abs());
+    });
+    if (ranked.isEmpty) return null;
+    final winner = ranked.first;
+    // Several copies of the same title are fine; competing near titles need a
+    // clear winner instead of whichever file happens to come first.
+    if (ranked
+        .skip(1)
+        .any((other) => winner.score - other.score < .04 && _key(winner.track.title) != _key(other.track.title))) {
+      return null;
+    }
+    return winner.track;
+  }
+
+  static final _localVersion = RegExp(
+    r'\b(mix|cover|demo|edit|version|rework|session|nightcore|reprise|rehearsal)\b',
+    caseSensitive: false,
+  );
+  static final _cjk = RegExp(r'[\u3040-\u30ff\u3400-\u9fff\uac00-\ud7af]');
+
+  static Set<String> _editionDetails(String title) => {
+    for (final part in [
+      ...RegExp(r'[(\[【（]([^)\]】）]+)[)\]】）]').allMatches(title).map((m) => m[1]!),
+      ...title.split(_dash).skip(1),
+    ])
+      if (_localVersion.hasMatch(part) || DownloadMatches.versions(part).isNotEmpty) _title(part),
+  };
+
+  /// Comparable title variants without changing recording/version words.
+  static Set<String> _localTitles(String title, Set<String> artists) {
+    final width = String.fromCharCodes(title.runes.map((r) => r >= 0xFF01 && r <= 0xFF5E ? r - 0xFEE0 : r));
+    final clean = width.replaceFirst(RegExp(r'^\s*\d{1,3}[._-]\s*'), '');
+    return {
+      for (final part in [
+        clean,
+        ...clean.split(_dash),
+        if (_cjk.hasMatch(clean) && _latin.hasMatch(clean)) ...[
+          // Services also write bilingual titles without a dash: "きゃぴ Kyapi".
+          ...RegExp(r'[A-Za-z0-9][\x20-\x7E]*').allMatches(clean).map((m) => m[0]!),
+          ...RegExp(r'[\u3040-\u30ff\u3400-\u9fff\uac00-\ud7af]+').allMatches(clean).map((m) => m[0]!),
+        ],
+      ])
+        if (_title(part) case final value when value.isNotEmpty && !artists.contains(value.replaceAll(' ', ''))) value,
+    };
+  }
+
+  static double _localSimilarity(Track origin, Track candidate) {
+    final ours = _localVersion.allMatches(origin.title).map((m) => m[0]!.toLowerCase()).toSet();
+    final theirs = _localVersion.allMatches(candidate.title).map((m) => m[0]!.toLowerCase()).toSet();
+    if (!setEquals(ours, theirs)) return 0;
+    if (!setEquals(_editionDetails(origin.title), _editionDetails(candidate.title))) return 0;
+    final artists = {
+      for (final name in {..._artists(origin.artist), ..._artists(candidate.artist)}) name.replaceAll(' ', ''),
+    };
+    var best = 0.0;
+    for (final a in _localTitles(origin.title, artists)) {
+      for (final b in _localTitles(candidate.title, artists)) {
+        final left = a.replaceAll(' ', ''), right = b.replaceAll(' ', '');
+        if (left == right) return 1;
+        // A title's number distinguishes sequels/parts even with the same artist.
+        final digits = RegExp(r'\d+');
+        if (!listEquals(
+          digits.allMatches(a).map((m) => m[0]).toList(),
+          digits.allMatches(b).map((m) => m[0]).toList(),
+        )) {
+          continue;
+        }
+        final words = a.split(' ').toSet(), otherWords = b.split(' ').toSet();
+        if (setEquals(words, otherWords)) return 1;
+        // Adding a real word can name another song, not a spelling difference.
+        if (words.containsAll(otherWords) || otherWords.containsAll(words)) continue;
+        if (left.length < 6 || right.length < 6 || left.length > 256 || right.length > 256) continue;
+        final longest = left.length > right.length ? left.length : right.length;
+        final allowed = (longest * .12).floor().clamp(0, 3);
+        if ((left.length - right.length).abs() > allowed) continue;
+        final edits = _titleDistance(left, right, allowed);
+        if (edits > allowed) continue;
+        final score = 1 - edits / longest;
+        if (score > best) best = score;
+      }
+    }
+    return best;
+  }
+
+  /// Bounded edit distance: a few typos qualify, unrelated titles stop early.
+  static int _titleDistance(String a, String b, int allowed) {
+    var previous = List<int>.generate(b.length + 1, (i) => i);
+    for (var i = 1; i <= a.length; i++) {
+      final row = List<int>.filled(b.length + 1, i);
+      var minimum = i;
+      for (var j = 1; j <= b.length; j++) {
+        final substitute = previous[j - 1] + (a.codeUnitAt(i - 1) == b.codeUnitAt(j - 1) ? 0 : 1);
+        final insert = row[j - 1] + 1, delete = previous[j] + 1;
+        final smaller = insert < delete ? insert : delete;
+        row[j] = substitute < smaller ? substitute : smaller;
+        if (row[j] < minimum) minimum = row[j];
+      }
+      if (minimum > allowed) return allowed + 1;
+      previous = row;
+    }
+    return previous.last;
   }
 
   /// What a title is looked up by in the library's index: the whole title, and each half of one given twice.

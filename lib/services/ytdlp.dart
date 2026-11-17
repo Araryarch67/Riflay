@@ -10,6 +10,7 @@ import 'package:path/path.dart' as p;
 import '../platform/host.dart';
 import 'download_prefs.dart';
 import 'language.dart';
+import 'network_settings.dart';
 import 'lookup_process.dart';
 import 'private_files.dart';
 import 'executable_store.dart';
@@ -115,6 +116,7 @@ abstract final class YtDlp {
   /// Runs yt-dlp with [args]; when the video needs a signed-in viewer and an account is signed in, once more with
   /// its cookies, from a file only this user can read, deleted right after.
   static Future<ProcessResult> _run(String exe, List<String> args) async {
+    args = [...NetworkSettings.instance.extractorArguments(Uri.parse('https://www.youtube.com')), ...args];
     final r = await processes.run(exe, args);
     if (r.exitCode == 0 || !_useCookies || !needsSignIn('${r.stderr}')) return r;
     final cookies = accountCookies?.call();

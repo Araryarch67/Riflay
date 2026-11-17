@@ -17,6 +17,14 @@ providers. Package installation rejects unsafe archive paths. The native FFmpeg
 adapter accepts supported audio conversion arguments and local sandboxed files;
 unsupported arguments fail explicitly.
 
+When a download reports that verification is required, Riflay automatically opens
+the existing provider verification view. Complete the provider's challenge there;
+its grant is stored by the extension runtime and the waiting downloads from that
+provider retry together. Cancelling leaves the jobs available for manual Verify
+source/Retry without reopening the page repeatedly. The provider controls session
+expiry and may request verification again. No verification page is opened for
+ordinary connection or rate-limit errors.
+
 Verified on Windows with the real `jiosaavn.sflx` package from
 https://github.com/mornyeapp/Mornye-Extension: installation, enable/disable, search,
 settings persistence, downloading an entire track, full FFmpeg decode and offline

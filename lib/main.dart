@@ -26,6 +26,7 @@ import 'platform/cli_server.dart';
 import 'services/appearance.dart';
 import 'services/splash_window.dart';
 import 'services/language.dart';
+import 'services/network_settings.dart';
 import 'services/video_mode.dart';
 import 'services/player_presets.dart';
 import 'services/layout_prefs.dart';
@@ -101,6 +102,7 @@ Future<void> _main(List<String> args) async {
       }(),
   ]);
   await Future.wait([
+    NetworkSettings.instance.load(),
     Appearance.instance.load(),
     LayoutPrefs.instance.load(),
     CustomPresets.instance.load(),

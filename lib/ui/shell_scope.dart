@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 
 import '../models/track.dart';
 import 'navigation.dart';
+import 'pages/home_page.dart';
 
 /// Layout facts and navigation actions the pages need from the app shell.
 class ShellScope extends InheritedWidget {
@@ -38,6 +39,18 @@ class ShellScope extends InheritedWidget {
   final VoidCallback openNowPlaying;
   final VoidCallback openLyrics;
   final VoidCallback openDownloads;
+
+  /// Player-bar shortcuts return to Home when their desktop page is already open.
+  void toggleLyrics() => _togglePlayerPage(Locations.lyrics, openLyrics);
+  void toggleQueue() => _togglePlayerPage(Locations.queue, openQueue);
+
+  void _togglePlayerPage(String location, VoidCallback openPage) {
+    if (!compact && history?.location == location) {
+      open(const HomePage(), location: Locations.home);
+    } else {
+      openPage();
+    }
+  }
 
   /// Opens the paste-a-link sheet / dialog.
   final VoidCallback importFromYoutube;

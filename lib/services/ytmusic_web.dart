@@ -7,6 +7,7 @@ import 'package:http/http.dart' as http;
 
 import '../platform/background.dart';
 import 'language.dart';
+import 'request_gate.dart';
 
 /// A song row as YouTube Music returns it.
 class WebTrack {
@@ -379,6 +380,9 @@ class YtMusicWeb {
   static const _androidUa = 'com.google.android.apps.youtube.music/7.21.50 (Linux; U; Android 14) gzip';
 
   Future<Map<String, dynamic>> _send(String endpoint, Map<String, dynamic> body, {bool android = false}) async {
+    final gate = RequestGate.of('music.youtube.com');
+    // Playback and account actions stay responsive, but share any server cooldown.
+    await gate.turn(urgent: true);
     final res = await _http
         .post(
           Uri.parse('$_base$endpoint?prettyPrint=false'),
@@ -397,13 +401,17 @@ class YtMusicWeb {
         )
         .timeout(const Duration(seconds: 30));
     if (res.statusCode != 200) {
+      if (res.statusCode == 429 || res.statusCode == 503) {
+        gate.limited(RequestGate.retryAfter(res.headers['retry-after']));
+      }
       debugPrint('YouTube Music $endpoint: HTTP ${res.statusCode}');
       throw YtMusicWebError(switch (res.statusCode) {
         401 || 403 => tr.ytSignInAgain,
-        429 => tr.ytBusy,
+        429 || 503 => tr.ytBusy,
         _ => tr.ytNotAnswering,
       });
     }
+    gate.ok();
     final bytes = res.bodyBytes;
     // Pages run to a megabyte or two of JSON: decoded on the UI thread, that dropped frames.
     // Fused, the bytes are parsed without first building the whole page as one big string.

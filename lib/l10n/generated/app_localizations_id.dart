@@ -6527,4 +6527,41 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get roomChatSend => 'Kirim pesan';
+
+  @override
+  String get copySongTitle => 'Salin judul lagu';
+
+  @override
+  String get copyFailed => 'Tidak bisa menyalin. Coba lagi.';
+
+  @override
+  String get networkProxy => 'Proxy jaringan';
+
+  @override
+  String get networkProxyAbout =>
+      'Gunakan proxy HTTP milikmu untuk permintaan aplikasi. Batas permintaan layanan tetap berlaku.';
+
+  @override
+  String get networkProxyAddress => 'Alamat proxy HTTP';
+
+  @override
+  String get networkProxyBypass => 'Lewati proxy untuk domain ini';
+
+  @override
+  String get networkProxyBypassHint =>
+      'Pisahkan domain dengan koma atau baris baru. Termasuk subdomain. Perangkat lokal dan alamat LAN selalu terhubung langsung.';
+
+  @override
+  String get networkProxyScope =>
+      'Berlaku untuk permintaan HTTP aplikasi berikutnya dan yt-dlp. Mulai ulang pemutaran setelah mengubahnya. Browser login memakai pengaturan jaringannya sendiri.';
+
+  @override
+  String get networkProxyInvalid =>
+      'Masukkan http://host:port tanpa nama pengguna atau sandi, serta domain pengecualian yang valid.';
+
+  @override
+  String get networkProxySaved => 'Pengaturan proxy disimpan. Permintaan berikutnya memakai aturan baru.';
+
+  @override
+  String get networkProxySaveFailed => 'Tidak bisa menyimpan pengaturan proxy. Coba lagi.';
 }

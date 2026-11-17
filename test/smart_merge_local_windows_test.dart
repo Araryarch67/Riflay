@@ -115,11 +115,11 @@ void main() {
   }
 
   testWidgets(
-    '"きゃぴ - Kyapi" from YouTube Music plays the library\'s FLAC of "Kyapi"',
+    '"きゃぴ Kyapi" without a separator plays the library\'s FLAC of "Kyapi"',
     (tester) => withPlayer(tester, (c, merge, youtube, flac) async {
       final song = Track.youtube(
         videoId: 'kyapiVideo1',
-        title: 'きゃぴ - Kyapi',
+        title: 'きゃぴ Kyapi',
         artist: 'Houshou Marine',
         duration: const Duration(seconds: 199),
       );

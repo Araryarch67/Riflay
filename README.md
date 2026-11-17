@@ -79,7 +79,10 @@ https://github.com/user-attachments/assets/5d0f0612-4322-425e-bbbf-79baeace47be
 | | SoundCloud | Search songs, artists and playlists; related tracks for autoplay; off until you turn it on | All |
 | | [Monochrome](docs/monochrome.md) | Optional (off until you turn it on) FLAC music search, downloads, track and collection links, and public playlist imports | All (downloads: native apps) |
 | | [Smart merge](docs/monochrome.md#smart-merge) | Keeps YouTube Music metadata and uses a matching lossless library file or enabled Monochrome stream; falls back to YouTube when unavailable | Native apps |
+| | Local title matching | Recognizes bilingual titles such as `きゃぴ Kyapi` / `Kyapi`, formatting differences and small typos, with artist, duration and recording checks | Native apps |
+| | [Network proxy](docs/network-proxy.md) | Optional HTTP proxy for app HTTP requests and yt-dlp, with domain bypass rules; local devices stay direct and server cooldowns are respected | Native apps |
 | | [SpotiFLAC extensions](docs/spotiflac.md) | Install `.sflx` extensions from a file or a repository; each enabled provider becomes a filter on Search, with its own settings and downloads | Native apps (verified on Windows) |
+| | Source verification | Opens a provider's verification page when needed and retries the waiting batch after a successful grant; sessions remain subject to provider expiry | Native apps |
 | | [Spotify playback](docs/spotify-playback.md) | Opens your Spotify playlists and albums and plays them from Spotify itself, with your own Premium account (experimental) | Windows |
 | | Music videos | Watch a song's video in step with it, or use it as the Now Playing background | All |
 | | Video timing | Earlier / Later in half-second steps, saved for each audio source and video | Native apps |

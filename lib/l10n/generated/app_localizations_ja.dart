@@ -6387,4 +6387,37 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get roomChatSend => '送信';
+
+  @override
+  String get copySongTitle => '曲名をコピー';
+
+  @override
+  String get copyFailed => 'コピーできませんでした。もう一度お試しください。';
+
+  @override
+  String get networkProxy => 'ネットワークプロキシ';
+
+  @override
+  String get networkProxyAbout => 'アプリのリクエストに自分のHTTPプロキシを使用します。サービスのリクエスト制限は引き続き適用されます。';
+
+  @override
+  String get networkProxyAddress => 'HTTPプロキシのアドレス';
+
+  @override
+  String get networkProxyBypass => 'プロキシを使用しないドメイン';
+
+  @override
+  String get networkProxyBypassHint => 'ドメインはカンマまたは改行で区切ります。サブドメインも含まれます。ローカル機器とLANには常に直接接続します。';
+
+  @override
+  String get networkProxyScope => '以降のアプリのHTTPリクエストとyt-dlpに適用されます。変更後は再生を再開してください。ログイン用ブラウザは独自のネットワーク設定を使用します。';
+
+  @override
+  String get networkProxyInvalid => 'ユーザー名やパスワードを含まないhttp://host:portと、有効な除外ドメインを入力してください。';
+
+  @override
+  String get networkProxySaved => 'プロキシ設定を保存しました。以降のリクエストに新しいルールを使用します。';
+
+  @override
+  String get networkProxySaveFailed => 'プロキシ設定を保存できませんでした。もう一度お試しください。';
 }

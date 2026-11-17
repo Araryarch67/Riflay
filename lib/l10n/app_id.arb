@@ -1935,5 +1935,16 @@
   "roomChat": "Chat room",
   "roomChatEmpty": "Sapa teman yang sedang mendengarkan.",
   "roomChatHint": "Tulis pesan…",
-  "roomChatSend": "Kirim pesan"
+  "roomChatSend": "Kirim pesan",
+  "copySongTitle": "Salin judul lagu",
+  "copyFailed": "Tidak bisa menyalin. Coba lagi.",
+  "networkProxy": "Proxy jaringan",
+  "networkProxyAbout": "Gunakan proxy HTTP milikmu untuk permintaan aplikasi. Batas permintaan layanan tetap berlaku.",
+  "networkProxyAddress": "Alamat proxy HTTP",
+  "networkProxyBypass": "Lewati proxy untuk domain ini",
+  "networkProxyBypassHint": "Pisahkan domain dengan koma atau baris baru. Termasuk subdomain. Perangkat lokal dan alamat LAN selalu terhubung langsung.",
+  "networkProxyScope": "Berlaku untuk permintaan HTTP aplikasi berikutnya dan yt-dlp. Mulai ulang pemutaran setelah mengubahnya. Browser login memakai pengaturan jaringannya sendiri.",
+  "networkProxyInvalid": "Masukkan http://host:port tanpa nama pengguna atau sandi, serta domain pengecualian yang valid.",
+  "networkProxySaved": "Pengaturan proxy disimpan. Permintaan berikutnya memakai aturan baru.",
+  "networkProxySaveFailed": "Tidak bisa menyimpan pengaturan proxy. Coba lagi."
 }

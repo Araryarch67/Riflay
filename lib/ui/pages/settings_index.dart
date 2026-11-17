@@ -1065,6 +1065,14 @@ abstract final class SettingsOptions {
       find: (t) => '${t.smartMerge}, cache, ${t.kwSources}',
     ),
     SettingsOption(
+      'networkProxy',
+      .sources,
+      (t) => t.networkProxy,
+      subtitle: (t) => t.networkProxyAbout,
+      find: (t) => '${t.networkProxyAddress}, ${t.networkProxyBypass}, HTTP, proxy, network',
+      available: () => Features.networkProxy,
+    ),
+    SettingsOption(
       'spotiflac',
       .sources,
       (t) => t.spotiflacExtensions,

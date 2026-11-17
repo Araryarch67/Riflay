@@ -11660,6 +11660,72 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Send message'**
   String get roomChatSend;
+
+  /// No description provided for @copySongTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy song title'**
+  String get copySongTitle;
+
+  /// No description provided for @copyFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t copy. Try again.'**
+  String get copyFailed;
+
+  /// No description provided for @networkProxy.
+  ///
+  /// In en, this message translates to:
+  /// **'Network proxy'**
+  String get networkProxy;
+
+  /// No description provided for @networkProxyAbout.
+  ///
+  /// In en, this message translates to:
+  /// **'Use your own HTTP proxy for app requests. Service rate limits still apply.'**
+  String get networkProxyAbout;
+
+  /// No description provided for @networkProxyAddress.
+  ///
+  /// In en, this message translates to:
+  /// **'HTTP proxy address'**
+  String get networkProxyAddress;
+
+  /// No description provided for @networkProxyBypass.
+  ///
+  /// In en, this message translates to:
+  /// **'Bypass proxy for these domains'**
+  String get networkProxyBypass;
+
+  /// No description provided for @networkProxyBypassHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Separate domains with commas or new lines. Includes subdomains. Local devices and LAN addresses always connect directly.'**
+  String get networkProxyBypassHint;
+
+  /// No description provided for @networkProxyScope.
+  ///
+  /// In en, this message translates to:
+  /// **'Applies to new app HTTP requests and yt-dlp. Restart playback after changing it. Sign-in browsers use their own network settings.'**
+  String get networkProxyScope;
+
+  /// No description provided for @networkProxyInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter http://host:port without a username or password, and valid bypass domains.'**
+  String get networkProxyInvalid;
+
+  /// No description provided for @networkProxySaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Proxy settings saved. New requests use the updated rules.'**
+  String get networkProxySaved;
+
+  /// No description provided for @networkProxySaveFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t save proxy settings. Try again.'**
+  String get networkProxySaveFailed;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

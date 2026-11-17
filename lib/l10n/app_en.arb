@@ -3613,5 +3613,16 @@
   "roomChat": "Room chat",
   "roomChatEmpty": "Say hello to everyone listening.",
   "roomChatHint": "Write a message…",
-  "roomChatSend": "Send message"
+  "roomChatSend": "Send message",
+  "copySongTitle": "Copy song title",
+  "copyFailed": "Couldn't copy. Try again.",
+  "networkProxy": "Network proxy",
+  "networkProxyAbout": "Use your own HTTP proxy for app requests. Service rate limits still apply.",
+  "networkProxyAddress": "HTTP proxy address",
+  "networkProxyBypass": "Bypass proxy for these domains",
+  "networkProxyBypassHint": "Separate domains with commas or new lines. Includes subdomains. Local devices and LAN addresses always connect directly.",
+  "networkProxyScope": "Applies to new app HTTP requests and yt-dlp. Restart playback after changing it. Sign-in browsers use their own network settings.",
+  "networkProxyInvalid": "Enter http://host:port without a username or password, and valid bypass domains.",
+  "networkProxySaved": "Proxy settings saved. New requests use the updated rules.",
+  "networkProxySaveFailed": "Couldn't save proxy settings. Try again."
 }

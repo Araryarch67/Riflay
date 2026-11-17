@@ -1,18 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- The home-screen player (PlayerWidget.kt). 4 × 2 cells by default; resizable down to one row, where it keeps
-     the mini player's row (PlayerWidget picks the layout from the height). Never woken on a timer: the app sends the
-     song as it changes. -->
+<!-- The home-screen player (PlayerWidget.kt). Width × height: 5 × 3 cells by default, 4 × 3 minimum.
+     The dp dimensions also supply defaults and resize limits for older launchers.
+     Never woken on a timer: the app sends the song as it changes. -->
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
     android:description="@string/widget_description"
     android:initialLayout="@layout/widget_player"
-    android:minWidth="250dp"
+    android:minWidth="320dp"
     android:minHeight="180dp"
-    android:minResizeWidth="180dp"
-    android:minResizeHeight="40dp"
+    android:minResizeWidth="250dp"
+    android:minResizeHeight="180dp"
     android:previewImage="@drawable/widget_preview"
     android:previewLayout="@layout/widget_player"
     android:resizeMode="horizontal|vertical"
-    android:targetCellWidth="4"
-    android:targetCellHeight="2"
+    android:targetCellWidth="5"
+    android:targetCellHeight="3"
     android:updatePeriodMillis="0"
     android:widgetCategory="home_screen" />

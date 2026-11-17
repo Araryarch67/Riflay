@@ -8,6 +8,27 @@ import '../../models/track.dart';
 import '../../services/language.dart';
 import '../../services/spotiflac.dart';
 
+/// Returns to the caller after the provider has stored its grant in extension storage.
+Future<bool> showSpotiflacVerification(BuildContext context, Track track, {required String provider}) async {
+  final messenger = ScaffoldMessenger.maybeOf(context);
+  try {
+    final url = await Spotiflac.instance.verificationUrl(track, provider: provider);
+    if (!context.mounted) return false;
+    return await Navigator.of(context, rootNavigator: true).push<bool>(
+          MaterialPageRoute(
+            builder: (_) => SpotiflacVerificationPage(track: track, url: url, provider: provider),
+          ),
+        ) ??
+        false;
+  } catch (e) {
+    debugPrint('Open source verification: ${e.runtimeType}');
+    if (messenger?.mounted ?? false) {
+      messenger!.showSnackBar(SnackBar(content: Text(tr.spotiflacFailed)));
+    }
+    return false;
+  }
+}
+
 /// The provider's verification page returns its grant to this view, never to logs.
 class SpotiflacVerificationPage extends StatefulWidget {
   const SpotiflacVerificationPage({super.key, required this.track, required this.url, this.provider});

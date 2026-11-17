@@ -9,6 +9,8 @@ import '../services/language.dart';
 /// Identifies a screen, so the sidebar can highlight where you are.
 abstract final class Locations {
   static const home = 'home';
+  static const lyrics = 'lyrics';
+  static const queue = 'queue';
   static const search = 'search';
   static const downloads = 'downloads';
   static const listen = 'listen';

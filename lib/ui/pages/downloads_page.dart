@@ -376,15 +376,9 @@ class _JobRow extends StatelessWidget {
                   try {
                     final provider =
                         job.extensionDownloader ?? Spotiflac.instance.downloadProviderOf(job.extensionTrack!);
-                    final uri = await Spotiflac.instance.verificationUrl(job.extensionTrack!, provider: provider);
                     if (!context.mounted) return;
-                    final verified = await Navigator.of(context).push<bool>(
-                      MaterialPageRoute(
-                        builder: (_) =>
-                            SpotiflacVerificationPage(track: job.extensionTrack!, url: uri, provider: provider),
-                      ),
-                    );
-                    if (verified == true) c.youtube.retry(job);
+                    final verified = await showSpotiflacVerification(context, job.extensionTrack!, provider: provider);
+                    if (verified) c.youtube.retry(job);
                   } catch (_) {
                     messenger.showSnackBar(SnackBar(content: Text(tr.spotiflacFailed)));
                   }

@@ -376,7 +376,7 @@ class MergedDownload {
           if (status == 429 || status == 503) {
             // Too many requests: asking again at once only keeps the limit on. Its wait when it says one.
             response.stream.listen(null).cancel().ignore();
-            throw SourceBusy(int.tryParse(response.headers['retry-after'] ?? ''));
+            throw SourceBusy(RequestGate.retryAfter(response.headers['retry-after']));
           }
           _gate.ok();
           if (status != 200 && status != 206) throw http.ClientException('HTTP $status', request.url);

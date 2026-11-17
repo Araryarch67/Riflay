@@ -28,7 +28,7 @@ import '../../services/youtube_music_account.dart';
 import '../../services/ytmusic_web.dart' show WebResultKind;
 import '../pages/youtube_music_page.dart' show openRemotePlaylist, RemoteCollectionPage;
 import '../ytmusic_edit.dart';
-import '../player/player_parts.dart' show shareTrack;
+import '../player/player_parts.dart' show shareTrack, copySongTitle;
 import '../theme.dart';
 import 'app_dialog.dart';
 import 'audio_source_picker.dart';
@@ -416,7 +416,7 @@ VoidCallback? openArtist(BuildContext host, PlayerController c, Track track, {Sh
 
 /// Entries this menu can leave out, for a host surface that already lists them
 /// itself (the player's More sheet has Add to playlist and the download states).
-enum TrackMenuEntry { addToPlaylist, download, share, audioSource }
+enum TrackMenuEntry { addToPlaylist, download, share, audioSource, copySongTitle }
 
 /// The ⋯ menu of a song: play next, add to playlist, like, download, go to artist…
 class TrackMenuButton extends StatelessWidget {
@@ -561,6 +561,11 @@ class TrackMenuButton extends StatelessWidget {
                 onTap: () => shell.openCollection(album),
                 child: MenuRow(leading: const Icon(Icons.album_outlined), title: Text(tr.goToAlbum)),
               ),
+            if (!hide.contains(TrackMenuEntry.copySongTitle))
+              PopupMenuItem(
+                onTap: () => copySongTitle(host, track),
+                child: MenuRow(leading: const Icon(Icons.content_copy_rounded), title: Text(tr.copySongTitle)),
+              ),
             // The song's YouTube Music link, or its name and artist for a file here.
             if (!hide.contains(TrackMenuEntry.share))
               PopupMenuItem(
@@ -699,7 +704,8 @@ class TrackMenuButton extends StatelessWidget {
               ),
             if (nowPlaying && AudioEngine.supported) ...[
               const PopupMenuDivider(),
-              for (final e in NowPlayingCover.menuItems())
+              // The phone's More sheet already has Tempo & pitch in Sound.
+              for (final e in NowPlayingCover.menuItems(includeTempoPitch: !shell.compact))
                 PopupMenuItem(onTap: () => NowPlayingCover.handle(host, e.value), child: e.child),
             ],
           ];

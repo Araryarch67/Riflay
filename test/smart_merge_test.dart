@@ -114,6 +114,61 @@ SmartMerge _merge(List<MergeProvider> providers) =>
 Future<String> _body(StreamAudioResponse r) async => utf8.decode([await for (final chunk in r.stream) ...chunk]);
 
 void main() {
+  group('local titles across sources', () {
+    for (final titles in [
+      ('きゃぴ Kyapi', 'Kyapi'),
+      ('Kyapi きゃぴ', 'Kyapi'),
+      ('Glass Wheather', 'Glass Weather'),
+      ('01. Ｇｌａｓｓ Ｗｅａｔｈｅｒ', 'Glass Weather'),
+      ('Weather Glass', 'Glass Weather'),
+    ]) {
+      test('${titles.$1} finds ${titles.$2}', () {
+        final file = _file('/recording.flac', title: titles.$2);
+        expect(_merge([]).local(_youtube(title: titles.$1), [file], 1), same(file));
+      });
+    }
+    test('similar local titles still require artist, duration and edition agreement', () {
+      final origin = _youtube(title: 'Glass Wheather');
+      final wrong = [
+        _file('/other-artist.flac', artist: 'Other Artist'),
+        _file('/other-length.flac', seconds: 215),
+        _file('/live.flac', title: 'Glass Weather (Live)'),
+        _file('/instrumental.flac', title: 'Glass Weather (Instrumental)'),
+        _file('/cover.flac', title: 'Glass Weather (Cover)'),
+        _file('/mix.flac', title: 'Glass Weather (Soft Mix)'),
+      ];
+      expect(_merge([]).local(origin, wrong, 1), isNull);
+      expect(
+        _merge([]).local(_youtube(title: 'One Two Three Four'), [
+          _file('/another-song.flac', title: 'One Two Three Four Five'),
+        ], 1),
+        isNull,
+      );
+      expect(_merge([]).local(_youtube(title: 'Song Part 1'), [_file('/part2.flac', title: 'Song Part 2')], 1), isNull);
+    });
+    test('nearby competing titles remain manual while an exact match wins', () {
+      final origin = _youtube(title: 'Glass Wheather');
+      final one = _file('/one.flac', title: 'Glass Weather');
+      final two = _file('/two.flac', title: 'Glass Wheathers');
+      final merge = _merge([]);
+      expect(merge.local(origin, [one, two], 1), isNull);
+      final exact = _file('/exact.flac', title: origin.title);
+      expect(merge.local(origin, [one, two, exact], 2), same(exact));
+      expect(merge.local(origin, [one], 3, available: (_) => false), isNull);
+    });
+    test('conflicting recording IDs also reject fuzzy local matches', () {
+      final origin = Track.fromJson({
+        ..._youtube(title: 'Glass Wheather').toJson(),
+        'extensionData': {'isrc': 'A1'},
+      });
+      final other = Track.fromJson({
+        ..._file('/recording.flac').toJson(),
+        'extensionData': {'isrc': 'B2'},
+      });
+      expect(_merge([]).local(origin, [other], 1), isNull);
+    });
+  });
+
   test('automatic matching rejects near titles, misleading credits and unknown artists', () {
     expect(
       SmartMerge.same(_youtube(title: 'One Two Three Four'), _mono('1', title: 'One Two Three Four Five')),

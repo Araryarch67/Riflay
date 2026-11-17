@@ -1928,5 +1928,16 @@
   "roomChat": "ルームチャット",
   "roomChatEmpty": "一緒に聴いている人に挨拶しましょう。",
   "roomChatHint": "メッセージを入力…",
-  "roomChatSend": "送信"
+  "roomChatSend": "送信",
+  "copySongTitle": "曲名をコピー",
+  "copyFailed": "コピーできませんでした。もう一度お試しください。",
+  "networkProxy": "ネットワークプロキシ",
+  "networkProxyAbout": "アプリのリクエストに自分のHTTPプロキシを使用します。サービスのリクエスト制限は引き続き適用されます。",
+  "networkProxyAddress": "HTTPプロキシのアドレス",
+  "networkProxyBypass": "プロキシを使用しないドメイン",
+  "networkProxyBypassHint": "ドメインはカンマまたは改行で区切ります。サブドメインも含まれます。ローカル機器とLANには常に直接接続します。",
+  "networkProxyScope": "以降のアプリのHTTPリクエストとyt-dlpに適用されます。変更後は再生を再開してください。ログイン用ブラウザは独自のネットワーク設定を使用します。",
+  "networkProxyInvalid": "ユーザー名やパスワードを含まないhttp://host:portと、有効な除外ドメインを入力してください。",
+  "networkProxySaved": "プロキシ設定を保存しました。以降のリクエストに新しいルールを使用します。",
+  "networkProxySaveFailed": "プロキシ設定を保存できませんでした。もう一度お試しください。"
 }

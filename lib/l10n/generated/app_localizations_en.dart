@@ -6600,4 +6600,39 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get roomChatSend => 'Send message';
+
+  @override
+  String get copySongTitle => 'Copy song title';
+
+  @override
+  String get copyFailed => 'Couldn\'t copy. Try again.';
+
+  @override
+  String get networkProxy => 'Network proxy';
+
+  @override
+  String get networkProxyAbout => 'Use your own HTTP proxy for app requests. Service rate limits still apply.';
+
+  @override
+  String get networkProxyAddress => 'HTTP proxy address';
+
+  @override
+  String get networkProxyBypass => 'Bypass proxy for these domains';
+
+  @override
+  String get networkProxyBypassHint =>
+      'Separate domains with commas or new lines. Includes subdomains. Local devices and LAN addresses always connect directly.';
+
+  @override
+  String get networkProxyScope =>
+      'Applies to new app HTTP requests and yt-dlp. Restart playback after changing it. Sign-in browsers use their own network settings.';
+
+  @override
+  String get networkProxyInvalid => 'Enter http://host:port without a username or password, and valid bypass domains.';
+
+  @override
+  String get networkProxySaved => 'Proxy settings saved. New requests use the updated rules.';
+
+  @override
+  String get networkProxySaveFailed => 'Couldn\'t save proxy settings. Try again.';
 }

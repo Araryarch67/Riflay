@@ -39,5 +39,9 @@ void main() {
     await shareTrack(ctx, own);
     await tester.pump();
     expect(copied, ['https://music.youtube.com/watch?v=abc123', 'Mine – Me']);
+    await copySongTitle(ctx, downloaded);
+    await copySongTitle(ctx, own);
+    await tester.pump();
+    expect(copied.skip(2), ['Kyapi', 'Mine'], reason: 'Copy title excludes the artist and source link');
   });
 }

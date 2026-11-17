@@ -10,10 +10,12 @@ import '../../services/layout_prefs.dart';
 import '../../services/listen_together/listen_together.dart';
 import '../../services/player_controller.dart';
 import '../cast_picker.dart';
+import '../navigation.dart';
 import '../pages/listen_together_page.dart';
 import '../shell_scope.dart';
 import '../theme.dart';
 import '../widgets/controls.dart';
+import '../widgets/audio_source_picker.dart';
 import '../widgets/menus.dart';
 import '../widgets/sleep_timer_button.dart';
 import '../widgets/stats_for_nerds.dart';
@@ -68,7 +70,7 @@ class DesktopPlayerBar extends StatelessWidget {
                       const SizedBox(width: 16),
                       Expanded(child: info),
                       const SizedBox(width: 20),
-                      SizedBox(width: availableWidth > 860 ? 244 : 120, child: actions),
+                      SizedBox(width: availableWidth > 860 ? 244 : 160, child: actions),
                     ],
                   ),
                 ),
@@ -197,17 +199,20 @@ class DesktopPlayerBar extends StatelessWidget {
         children: [
           // Always on the bar, never folded into the menu: lyrics are one of the most used views.
           ListenableBuilder(
-            listenable: Listenable.merge([fullScreenPlayer, expandedPlayerPanel]),
+            listenable: Listenable.merge([fullScreenPlayer, expandedPlayerPanel, ?shell.history]),
             builder: (context, _) {
-              final on = fullScreenPlayer.value && expandedPlayerPanel.value == ExpandedPanel.lyrics;
-              final VoidCallback? open = track == null
+              final on = fullScreenPlayer.value
+                  ? expandedPlayerPanel.value == ExpandedPanel.lyrics
+                  : shell.history?.location == Locations.lyrics;
+              final VoidCallback? open = track == null && !on
                   ? null
                   : fullScreenPlayer.value
                   ? () => toggleExpandedPanel(ExpandedPanel.lyrics)
-                  : shell.openLyrics;
+                  : shell.toggleLyrics;
               return row == PlayerBottomRow.classic
                   ? IconButton(
                       tooltip: on ? tr.hideLyrics : tr.lyrics,
+                      isSelected: on,
                       onPressed: open,
                       icon: Icon(Icons.lyrics_outlined, size: 20, color: on ? AppColors.accent : null),
                     )
@@ -226,16 +231,23 @@ class DesktopPlayerBar extends StatelessWidget {
                 color: sidePanelOpen ? AppColors.accent : null,
               ),
             ),
-          if (row == PlayerBottomRow.classic)
-            IconButton(
-              tooltip: tr.queue,
-              onPressed: shell.openQueue,
-              icon: const Icon(Icons.queue_music_rounded, size: 20),
-            )
-          else ...[
-            const SizedBox(width: 6),
-            part(Icons.queue_music_rounded, tr.queue, shell.openQueue),
-          ],
+          ListenableBuilder(
+            listenable: Listenable.merge([fullScreenPlayer, ?shell.history]),
+            builder: (context, _) {
+              final on = !fullScreenPlayer.value && shell.history?.location == Locations.queue;
+              return row == PlayerBottomRow.classic
+                  ? IconButton(
+                      tooltip: tr.queue,
+                      isSelected: on,
+                      onPressed: shell.toggleQueue,
+                      icon: Icon(Icons.queue_music_rounded, size: 20, color: on ? AppColors.accent : null),
+                    )
+                  : Padding(
+                      padding: const EdgeInsets.only(left: 6),
+                      child: part(Icons.queue_music_rounded, tr.queue, shell.toggleQueue, lit: on),
+                    );
+            },
+          ),
           if (row == PlayerBottomRow.chips) ...[
             const SizedBox(width: 6),
             ListenableBuilder(
@@ -251,6 +263,16 @@ class DesktopPlayerBar extends StatelessWidget {
               },
             ),
           ],
+          if (Features.miniPlayer)
+            ValueListenableBuilder<bool>(
+              valueListenable: miniPlayer,
+              builder: (context, on, _) => IconButton(
+                tooltip: tr.miniPlayer,
+                isSelected: on,
+                onPressed: () => setMiniPlayer(!on),
+                icon: Icon(Icons.picture_in_picture_alt_rounded, size: 20, color: on ? AppColors.accent : null),
+              ),
+            ),
           if (slider) const VolumeSlider() else const _VolumeMenu(),
           _MoreMenu(track: track, sidePanelOpen: sidePanelOpen, onToggleSidePanel: onToggleSidePanel),
         ],
@@ -347,6 +369,7 @@ class _MoreMenu extends StatelessWidget {
         c.cast,
         session,
         c.youtube,
+        ?ShellScope.of(context).history,
       ]),
       builder: (context, _) {
         final expanded = fullScreenPlayer.value, full = windowFullScreen.value;
@@ -381,12 +404,21 @@ class _MoreMenu extends StatelessWidget {
           onSelected: (open) => open(),
           itemBuilder: (_) => [
             item(
+              Icons.content_copy_rounded,
+              tr.copySongTitle,
+              track == null ? null : () => copySongTitle(context, track!),
+            ),
+            if (track != null && track!.isRemote && Features.smartMerge && !c.casting)
+              item(Icons.swap_horiz_rounded, tr.audioSource, () => showAudioSourcePicker(context, track!)),
+            item(
               Icons.lyrics_outlined,
               tr.lyrics,
               hasTrack
-                  ? (expanded ? () => toggleExpandedPanel(ExpandedPanel.lyrics) : ShellScope.of(context).openLyrics)
+                  ? (expanded ? () => toggleExpandedPanel(ExpandedPanel.lyrics) : ShellScope.of(context).toggleLyrics)
                   : null,
-              on: expanded && expandedPlayerPanel.value == ExpandedPanel.lyrics,
+              on: expanded
+                  ? expandedPlayerPanel.value == ExpandedPanel.lyrics
+                  : ShellScope.of(context).history?.location == Locations.lyrics,
             ),
             const PopupMenuDivider(),
             item(
@@ -423,8 +455,6 @@ class _MoreMenu extends StatelessWidget {
                 toggle,
                 on: sidePanelOpen,
               ),
-            if (Features.miniPlayer)
-              item(Icons.picture_in_picture_alt_rounded, tr.miniPlayer, () => setMiniPlayer(true)),
             if (hasTrack || expanded)
               item(
                 expanded ? Icons.close_fullscreen_rounded : Icons.open_in_full_rounded,

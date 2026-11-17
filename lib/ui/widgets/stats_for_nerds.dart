@@ -19,9 +19,10 @@ import '../theme.dart';
 import 'controls.dart';
 import 'menus.dart';
 import 'signal_path.dart';
+import 'tempo_pitch.dart';
 
 /// The now-playing cover, with a menu on right-click / long-press for Detail
-/// stats and Signal path (as YouTube's video has).
+/// stats, Signal path and Tempo & pitch.
 class NowPlayingCover extends StatelessWidget {
   const NowPlayingCover({super.key, required this.child});
 
@@ -29,7 +30,12 @@ class NowPlayingCover extends StatelessWidget {
 
   /// The menu's entries; [handle] runs the one picked. Also in the ⋯ menu of
   /// the now-playing views, so it isn't only behind a right-click.
-  static List<PopupMenuItem<String>> menuItems() => [
+  static List<PopupMenuItem<String>> menuItems({bool includeTempoPitch = true}) => [
+    if (includeTempoPitch)
+      PopupMenuItem(
+        value: 'tempoPitch',
+        child: MenuRow(leading: const Icon(Icons.speed_rounded), title: Text(tr.tempoPitch)),
+      ),
     PopupMenuItem(
       value: 'stats',
       child: MenuRow(leading: const Icon(Icons.query_stats_rounded), title: Text(tr.detailStats)),
@@ -43,6 +49,8 @@ class NowPlayingCover extends StatelessWidget {
   /// Does what the picked [menuItems] entry says.
   static Future<void> handle(BuildContext context, String? choice) async {
     switch (choice) {
+      case 'tempoPitch':
+        await showTempoPitch(context);
       case 'stats':
         await showDetailStats(context);
       case 'path':

@@ -12,6 +12,9 @@ import 'web_storage.dart';
 /// over a WebSocket. It has none of what needs the device itself: files, the mpv sound engine, a Google or Spotify
 /// session, the local network or other apps. Hide a control whose feature is off; never leave it dead.
 abstract final class Features {
+  /// A browser controls its own forward proxy; native app requests can configure one.
+  static bool get networkProxy => !Host.isWeb;
+
   /// On-demand release checks and native Android APK updates.
   static bool get appUpdates => !Host.isWeb;
 

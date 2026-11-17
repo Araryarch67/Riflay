@@ -10,7 +10,9 @@ import '../../services/spotiflac.dart';
 import '../shell_scope.dart';
 import 'spotiflac_page.dart';
 import '../widgets/monochrome_mark.dart';
-import 'sound_settings.dart' show SettingsCard, settingsMuted;
+import '../widgets/menus.dart';
+import '../widgets/network_proxy_settings.dart';
+import 'sound_settings.dart' show SettingsCard, SettingTile, settingsMuted;
 
 /// Settings › Accounts & services › Music sources: SoundCloud, Monochrome and the SpotiFLAC extensions
 /// ([MusicSources]).
@@ -44,6 +46,7 @@ class _MusicSourcesSettingsState extends State<MusicSourcesSettings> {
             padding: const EdgeInsets.fromLTRB(4, 0, 4, 12),
             child: Text(tr.sourcesAbout, style: muted),
           ),
+          if (Features.networkProxy) ...[const NetworkProxySettings(), const SizedBox(height: 16)],
           SettingsCard(
             children: [
               if (Features.soundcloud)
@@ -89,26 +92,21 @@ class _MusicSourcesSettingsState extends State<MusicSourcesSettings> {
                   // Asked again whenever the page rebuilds (a change of size, a clear).
                   key: ValueKey((_sources.smartMergeCacheMb, _cleared)),
                   future: MergedDownload.keptSize(),
-                  builder: (context, size) => ListTile(
-                    leading: const Icon(Icons.save_outlined),
+                  builder: (context, size) => SettingTile(
+                    icon: Icons.save_outlined,
                     title: Text(tr.smartMergeCache),
                     subtitle: Text(tr.smartMergeCacheSubtitle(formatBytes(size.data ?? 0)), style: muted),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
+                    control: Wrap(
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      spacing: 8,
                       children: [
-                        DropdownButton<int>(
+                        OptionPicker<int>(
                           value: _sources.smartMergeCacheMb,
-                          underline: const SizedBox.shrink(),
-                          items: [
+                          options: [
                             for (final mb in MusicSources.cacheChoices)
-                              DropdownMenuItem(
-                                value: mb,
-                                child: Text(mb == 0 ? tr.off : (mb >= 1024 ? '${mb ~/ 1024} GB' : '$mb MB')),
-                              ),
+                              (mb, mb == 0 ? tr.off : (mb >= 1024 ? '${mb ~/ 1024} GB' : '$mb MB')),
                           ],
-                          onChanged: (mb) {
-                            if (mb != null) _sources.setSmartMergeCacheMb(mb);
-                          },
+                          onChanged: _sources.setSmartMergeCacheMb,
                         ),
                         TextButton(
                           onPressed: (size.data ?? 0) == 0

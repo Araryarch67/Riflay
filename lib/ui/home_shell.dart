@@ -37,6 +37,8 @@ import 'youtube_import.dart';
 import 'folder_add_dialog.dart';
 import '../platform/features.dart';
 import '../services/incoming_links.dart';
+import '../services/source_verification.dart';
+import 'pages/spotiflac_verification_page.dart';
 import '../services/monochrome.dart';
 import 'pages/monochrome_page.dart';
 import '../services/soundcloud.dart';
@@ -99,6 +101,7 @@ class _HomeShellState extends State<HomeShell> {
   StreamSubscription<String>? _errors;
   StreamSubscription<String>? _listenEvents;
   PlayerController? _player;
+  SourceVerificationQueue? _sourceVerification;
   bool _hasTrack = false;
 
   @override
@@ -145,7 +148,16 @@ class _HomeShellState extends State<HomeShell> {
     final c = PlayerScope.identity(context);
     if (identical(c, _player)) return;
     _player?.removeListener(_followTrack);
+    _sourceVerification?.dispose();
     _player = c..addListener(_followTrack);
+    _sourceVerification = SourceVerificationQueue(
+      c.youtube,
+      verify: (job, provider) async {
+        await WidgetsBinding.instance.endOfFrame;
+        if (!mounted) return false;
+        return showSpotiflacVerification(context, job.extensionTrack!, provider: provider);
+      },
+    );
     _hasTrack = c.currentTrack != null;
     _errors?.cancel();
     _errors = c.errors.listen((message) {
@@ -171,6 +183,7 @@ class _HomeShellState extends State<HomeShell> {
   @override
   void dispose() {
     GateHooks.detach(_gate);
+    _sourceVerification?.dispose();
     _titleBarShown.dispose();
     _playerBarShown.dispose();
     _playerBarHeight.dispose();
@@ -215,6 +228,8 @@ class _HomeShellState extends State<HomeShell> {
 
   static String _locationOf(Widget page) => switch (page) {
     HomePage() => Locations.home,
+    LyricsPage() => Locations.lyrics,
+    QueuePage() => Locations.queue,
     SearchPage() => Locations.search,
     SettingsPage() => Locations.settings,
     DownloadsPage() => Locations.downloads,

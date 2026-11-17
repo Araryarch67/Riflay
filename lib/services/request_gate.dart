@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
+import 'package:intl/intl.dart';
 
 /// A server asked for fewer requests (HTTP 429 or 503), with how long to wait if it said.
 class SourceBusy implements Exception {
@@ -41,6 +42,20 @@ class RequestGate {
   /// Between two requests that aren't urgent.
   static const gap = Duration(milliseconds: 250);
 
+  /// Retry-After may be either seconds or an HTTP date (RFC 9110).
+  static int? retryAfter(String? value, {DateTime? now}) {
+    if (value == null) return null;
+    final text = value.trim();
+    final seconds = int.tryParse(text);
+    if (seconds != null) return seconds < 0 ? null : seconds.clamp(0, 86400);
+    try {
+      final until = DateFormat("EEE, dd MMM yyyy HH:mm:ss 'GMT'", 'en_US').parseStrict(text, true);
+      return (until.difference(now ?? DateTime.now()).inMilliseconds / 1000).ceil().clamp(0, 86400);
+    } on FormatException {
+      return null;
+    }
+  }
+
   DateTime? _coolUntil;
   int _strikes = 0;
   DateTime _next = DateTime.fromMillisecondsSinceEpoch(0);
@@ -63,10 +78,9 @@ class RequestGate {
         _next = now.add(gap);
         return;
       }
-      final wait = _next.difference(now);
-      _next = _next.add(gap);
-      await Future<void>.delayed(wait);
-      return;
+      await Future<void>.delayed(_next.difference(now));
+      // A request ahead of us may have received 429 during the wait. Recheck
+      // the shared cooldown before granting another slot.
     }
   }
 
@@ -74,7 +88,7 @@ class RequestGate {
   void limited([int? seconds]) {
     _strikes++;
     final wait = seconds != null
-        ? Duration(seconds: seconds.clamp(1, 120))
+        ? Duration(seconds: seconds.clamp(1, 86400))
         : Duration(seconds: math.min(120, 15 << math.min(_strikes - 1, 3)));
     final until = DateTime.now().add(wait);
     if (_coolUntil == null || until.isAfter(_coolUntil!)) _coolUntil = until;

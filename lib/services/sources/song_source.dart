@@ -32,7 +32,7 @@ abstract class SongSource {
     ).timeout(const Duration(seconds: 20));
     // Too many requests: told apart, so the caller pauses instead of asking again at once.
     if (response.statusCode == 429 || response.statusCode == 503) {
-      throw SourceBusy(int.tryParse(response.headers['retry-after'] ?? ''));
+      throw SourceBusy(RequestGate.retryAfter(response.headers['retry-after']));
     }
     if (response.statusCode != 200) {
       throw http.ClientException('$name search: HTTP ${response.statusCode}', url);

@@ -148,6 +148,7 @@ class DownloadJob {
   bool get converting => phase == DownloadPhase.converting;
 
   String? error;
+  bool verificationRequired = false;
   Track? track;
 
   bool get isActive => status == DownloadStatus.queued || status == DownloadStatus.downloading;
@@ -172,6 +173,7 @@ class DownloadJob {
       if (withVideo) 'mv': true,
       'status': status.name,
       'error': error,
+      if (verificationRequired) 'verificationRequired': true,
       if (partItag != null && partSize != null && partExt != null)
         'part': {'itag': partItag, 'size': partSize, 'ext': partExt},
       if (videoParts.isNotEmpty)
@@ -263,6 +265,7 @@ class DownloadJob {
       )
       ..status = failed ? DownloadStatus.failed : DownloadStatus.queued
       ..error = failed ? (json['error'] as String? ?? 'Failed') : null
+      ..verificationRequired = failed && extension != null && json['verificationRequired'] == true
       ..readPart(json['part'])
       ..readVideoParts(json['videoParts']);
   }
@@ -647,6 +650,7 @@ class YoutubeImporter extends ChangeNotifier {
     job
       ..status = DownloadStatus.queued
       ..progress = 0
+      ..verificationRequired = false
       ..error = null;
     notifyListeners();
     unawaited(_drain());
@@ -1053,6 +1057,7 @@ class YoutubeImporter extends ChangeNotifier {
           if (!_frozen && job.status != DownloadStatus.cancelled) {
             job
               ..status = DownloadStatus.failed
+              ..verificationRequired = error is SpotiflacError && error.verificationRequired
               ..error = _friendlyError(error);
           }
           return;

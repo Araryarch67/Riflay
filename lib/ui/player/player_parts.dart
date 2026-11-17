@@ -64,6 +64,22 @@ Future<void> shareTrack(BuildContext context, Track track) async {
   messenger?.showSnackBar(SnackBar(content: Text(link != null ? tr.linkCopied : tr.songNameCopied)));
 }
 
+/// Copies only the title, including its original spelling, for searching or pasting elsewhere.
+Future<void> copySongTitle(BuildContext context, Track track) async {
+  final messenger = ScaffoldMessenger.maybeOf(context);
+  try {
+    await Clipboard.setData(ClipboardData(text: track.title));
+    if (messenger?.mounted ?? false) {
+      messenger!.showSnackBar(SnackBar(content: Text(tr.songNameCopied)));
+    }
+  } catch (e) {
+    debugPrint('Copy song title: $e');
+    if (messenger?.mounted ?? false) {
+      messenger!.showSnackBar(SnackBar(content: Text(tr.copyFailed)));
+    }
+  }
+}
+
 /// How a [PartButton] is filled.
 enum PartLook { outlined, filled, muted, plain }
 

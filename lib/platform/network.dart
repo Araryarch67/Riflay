@@ -1,4 +1,4 @@
-/// The network as the app sees it. Native builds call every service directly. The web build sends the ones a
+/// The network as the app sees it. Native builds use direct HTTP or the user's configured forward proxy. The web build sends the ones a
 /// browser may not call (YouTube Music, its streams, lyrics) through Riflay's proxy, whose address comes from
 /// `--dart-define=RIFLAY_PROXY=<url>` (the page's own address when unset, for a proxy that also serves the app).
 library;
