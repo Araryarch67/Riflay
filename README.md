@@ -1,14 +1,3 @@
-> [!WARNING]
-> **Free and Open-Source Android is under threat.**
->
-> Google will turn Android into a locked-down platform, restricting your essential freedom to install apps of your choice. Make your voice heard.
->
-> **[Keep Android Open](https://keepandroidopen.org).**
-
-> [!NOTE]
-> **Riflay is in maintenance mode.** Work is limited to fixing issues: bug reports are welcome, new features
-> are on hold for now.
-
 <div align="center">
 
 <picture>
@@ -16,16 +5,38 @@
   <img src="assets/icon/riflay-transparent-light.svg" width="112" height="112" alt="Riflay logo">
 </picture>
 
-# Riflay
+# Riflay — Open-source hi-fi music player
 
 **Your local music and YouTube Music, together in one hi-fi player.**
 
-Free and open source, for Linux, Windows, macOS, Android and iOS.
+Riflay is a free, open-source music player for **Windows, Linux, macOS, Android and iOS**.
+Bring your local music library and YouTube Music together, with **FLAC and lossless audio**, synced lyrics,
+Smart Merge and bit-perfect playback on supported devices.
+
+**[Download Riflay](https://github.com/Araryarch67/Riflay/releases/latest)** ·
+[Explore features](#features) · [Installation guide](#install) ·
+[Support on Tako](https://tako.id/ararya/gift)
 
 [![License: AGPL v3](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)](LICENSE)
 ![Platforms](https://img.shields.io/badge/platforms-Linux%20%7C%20Windows%20%7C%20macOS%20%7C%20Android%20%7C%20iOS-555)
 [![Latest release](https://img.shields.io/github/v/release/Araryarch67/Riflay)](https://github.com/Araryarch67/Riflay/releases/latest)
 [![Downloads](https://img.shields.io/github/downloads/Araryarch67/Riflay/total)](https://github.com/Araryarch67/Riflay/releases)
+[![Support Riflay on Tako](https://img.shields.io/badge/Support%20Riflay-Tako-FF7A1A)](https://tako.id/ararya/gift)
+
+</div>
+
+> [!NOTE]
+> **Riflay is in maintenance mode.** Work is limited to fixing issues: bug reports are welcome, new features
+> are on hold for now.
+
+> [!WARNING]
+> **Free and Open-Source Android is under threat.**
+>
+> Google will turn Android into a locked-down platform, restricting your essential freedom to install apps of your choice. Make your voice heard.
+>
+> **[Keep Android Open](https://keepandroidopen.org).**
+
+<div align="center">
 
 https://github.com/user-attachments/assets/5d0f0612-4322-425e-bbbf-79baeace47be
 
@@ -33,12 +44,12 @@ https://github.com/user-attachments/assets/5d0f0612-4322-425e-bbbf-79baeace47be
 
 <br>
 
-![Riflay home](docs/screenshots/home.webp)
+![Riflay music player on desktop, with a local music library, playlists and playback controls](docs/screenshots/home.webp)
 
-| ![Full-screen player](docs/screenshots/fullscreen.webp) | ![Lyrics](docs/screenshots/lyrics.webp) |
+| ![Riflay full-screen music player](docs/screenshots/fullscreen.webp) | ![Riflay synced lyrics view](docs/screenshots/lyrics.webp) |
 |---|---|
-| ![Signal path](docs/screenshots/signal-path.webp) | ![Your listening stats](docs/screenshots/stats.webp) |
-| ![Settings](docs/screenshots/settings.webp) | ![Sound settings](docs/screenshots/sound.webp) |
+| ![Riflay hi-fi signal path and lossless audio details](docs/screenshots/signal-path.webp) | ![Riflay listening statistics](docs/screenshots/stats.webp) |
+| ![Riflay settings](docs/screenshots/settings.webp) | ![Riflay sound settings and audio processing](docs/screenshots/sound.webp) |
 
 <p>
   <img src="docs/screenshots/phone-home.webp" alt="Riflay on a phone: Home with the Liquid glass tab bar" width="260">
@@ -138,6 +149,25 @@ Every file is on the [latest release](https://github.com/Araryarch67/Riflay/rele
 
 The macOS app is unsigned: on first launch use System Settings › Privacy & Security › **Open Anyway**. The iOS file is attached to a release a little after the others.
 
+## Frequently asked questions
+
+### What is Riflay?
+
+Riflay is a cross-platform, open-source music player built with Flutter. It combines local audio files and
+YouTube Music in one library, with synced lyrics, music videos and listening statistics.
+
+### Does Riflay support lossless music?
+
+Yes. Riflay plays local FLAC, ALAC and other lossless formats. [Smart Merge](docs/monochrome.md#smart-merge)
+can pair YouTube Music metadata with a matching local lossless file or an enabled Monochrome stream.
+Availability depends on the track and provider; a YouTube stream itself does not become lossless.
+
+### Can I import playlists from other music services?
+
+Yes. Riflay supports playlist imports from Spotify, Apple Music, Deezer, TIDAL and NetEase Cloud Music.
+Importing a playlist does not grant streaming access to those services. See the Features table for playback
+providers and platform support, including the experimental Spotify Premium integration on Windows.
+
 ## System requirements
 
 | System | Version | Processor |
@@ -182,6 +212,11 @@ flutter run -d linux          # or: windows, macos, android, ios
 - [Monochrome](docs/monochrome.md), [SpotiFLAC extensions](docs/spotiflac.md) and [Spotify playback](docs/spotify-playback.md): the optional music sources, and what has been verified on which system.
 - [Riflay in a browser](docs/web.md): the web version and its proxy.
 - [Contributing](CONTRIBUTING.md) and [AGENT.md](AGENT.md) (how the code is organized and tested).
+
+## Support Riflay
+
+If Riflay makes your listening better, you can support its development through **[Tako](https://tako.id/ararya/gift)**.
+Bug reports, documentation improvements and sharing Riflay with other music listeners also help.
 
 ## Acknowledgements
 
