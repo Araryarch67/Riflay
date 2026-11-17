@@ -122,7 +122,11 @@ class SmartMerge {
   }) : providers = providers ?? [MonochromeMerge()],
        _enabled = enabled ?? (() => MusicSources.instance.smartMerge);
 
-  static final instance = SmartMerge(remembers: true).._listenForSettings();
+  static final instance = SmartMerge(
+    remembers: true,
+    // Measuring only (tool/smart_merge_app.dart): a shorter wait makes a song start from YouTube and move over.
+    patience: const Duration(milliseconds: int.fromEnvironment('RIFLAY_MERGE_PATIENCE_MS', defaultValue: 8000)),
+  ).._listenForSettings();
 
   /// The better sound is fetched from its start and played from here ([MergedDownload]); false plays it from its
   /// address (tests that don't reach a server).
@@ -629,11 +633,30 @@ class SmartMergeAudioSource extends StreamAudioSource {
 
   Future<MergeChoice?> _candidate() => merge.choose(track);
 
+  /// Set when the song ran out of [SmartMerge.patience] and began from YouTube: the lookup carries on, and its
+  /// answer (null: nothing better) lets the player move this song over to its better sound where it has got to.
+  Future<MergeChoice?>? get late => _late;
+  Future<MergeChoice?>? _late;
+
   Future<String?> _resolve() async {
     final revision = merge.configurationRevision;
     // The song waits a while for its better sound; past that it plays from YouTube, and the lookup and download
-    // carry on for the next time it plays.
-    final result = await _candidate().timeout(merge.patience, onTimeout: () => null);
+    // carry on: the player moves the song over once they are ready ([late]).
+    final candidate = _candidate();
+    var timedOut = false;
+    final result = await candidate.timeout(
+      merge.patience,
+      onTimeout: () {
+        timedOut = true;
+        _late = candidate;
+        return null;
+      },
+    );
+    if (timedOut) {
+      debugPrint('Smart merge: ${track.videoId} starts from YouTube, its better sound follows when ready');
+      // The player looks at [late] when told.
+      scheduleMicrotask(() => merge.changes.value++);
+    }
     if (revision != merge.configurationRevision || result == null || !merge.wants(track) || !result.provider.on) {
       return null;
     }

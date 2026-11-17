@@ -185,6 +185,7 @@ Future<void> _startServices(PlayerController controller) async {
   // Computers: Mini player in the tray menu.
   if (Features.miniPlayer) {
     SystemTray.miniPlayer = miniPlayer;
+    miniPlayer.addListener(() => MemoryTrim.mini(miniPlayer.value));
     SystemTray.setMiniPlayer = (on) => setMiniPlayer(on);
   }
   await Future.wait(
@@ -524,7 +525,13 @@ class _DesktopFrame extends StatelessWidget {
       builder: (context, mini, app) => Stack(
         fit: StackFit.expand,
         children: [
-          Offstage(offstage: mini, child: app),
+          // Kept, not drawn: its tickers stop too, so the music video under it lets go of its player and the
+          // pages' animations rest (Offstage alone left the video decoding for nobody: more memory than the full
+          // window).
+          TickerMode(
+            enabled: !mini,
+            child: Offstage(offstage: mini, child: app),
+          ),
           if (mini) const Material(type: MaterialType.transparency, child: MiniPlayerWindow()),
         ],
       ),

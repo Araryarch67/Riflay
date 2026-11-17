@@ -2211,7 +2211,10 @@ class PlayerController extends ChangeNotifier {
     final since = _mergeWaitingSince ??= now;
     // Counted from when the song began waiting, or from the last bytes if any came since.
     final last = download.lastProgress.isAfter(since) ? download.lastProgress : since;
-    if (!download.failed && !(waiting && now.difference(last) > _mergeGivesUpAfter)) return;
+    // Turned away (too many requests): no use waiting, it goes back while the song still has its last seconds.
+    if (!download.failed && !(waiting && download.busy) && !(waiting && now.difference(last) > _mergeGivesUpAfter)) {
+      return;
+    }
     // Behind: back to the song's own sound, from here.
     _leavingMerge = true;
     debugPrint('Smart merge: the download of $id stopped coming, back to YouTube');
@@ -2235,9 +2238,81 @@ class PlayerController extends ChangeNotifier {
 
   String? _prefetched;
 
+  /// A song that began from YouTube because its better sound took longer than [SmartMerge.patience] (a slow
+  /// catalogue): once that sound is found and its download has got past where the song is, the song moves over
+  /// to it there, so the first play is merged too instead of only the next one.
+  SmartMergeAudioSource? _lateFollowed;
+  Timer? _lateWatch;
+
+  void _followLateMerge() {
+    final source = player.sequenceState.currentSource;
+    if (source is! SmartMergeAudioSource || source.from != null || identical(source, _lateFollowed)) return;
+    final late = source.late;
+    if (late == null) return;
+    _lateFollowed = source;
+    _lateWatch?.cancel();
+    late.then((choice) {
+      if (choice == null || _disposed || !identical(player.sequenceState.currentSource, source)) return;
+      _lateWatch?.cancel();
+      _lateWatch = Timer.periodic(const Duration(milliseconds: 500), (_) => _joinLateMerge(source));
+    }).ignore();
+  }
+
+  /// How much of the song must be left for moving over to be worth it.
+  static const _lateMergeLeft = Duration(seconds: 15);
+
+  /// How far past the song's position its better sound's download must be, so the song carries on at once there.
+  static const _lateMergeAhead = Duration(seconds: 10);
+
+  Future<void> _joinLateMerge(SmartMergeAudioSource source) async {
+    void stop() {
+      _lateWatch?.cancel();
+      _lateWatch = null;
+    }
+
+    final id = source.track.videoId;
+    if (_disposed || id == null || !identical(player.sequenceState.currentSource, source) || casting) return stop();
+    if (_smartMerge.gaveUpOn(id) || !_smartMerge.wants(source.track)) return stop();
+    if (_leavingMerge) return;
+    final length = player.duration ?? source.track.duration;
+    if (length == null || length <= Duration.zero) return;
+    if (length - player.position < _lateMergeLeft) return stop();
+    // Fetched from its start: wait until it is past where the song is (a stream played from its address needs no
+    // wait).
+    if (_smartMerge.downloadOf(id) case final download?) {
+      // Got ready ahead it holds only its start: this song is moving over to it, so the whole file comes.
+      download.play();
+      final total = download.total;
+      if (total == null) return;
+      final edge = ((player.position + _lateMergeAhead).inMilliseconds / length.inMilliseconds).clamp(0.0, 1.0);
+      if (!download.covers((total * edge).ceil())) return;
+    }
+    stop();
+    final state = player.sequenceState;
+    final index = state.currentIndex;
+    if (index == null) return;
+    _leavingMerge = true;
+    final playing = player.playing;
+    debugPrint('Smart merge: $id moves over to its better sound at ${player.position}');
+    try {
+      _cancelPlaybackRetry();
+      await player.setAudioSources(
+        [for (final s in state.sequence) _sourceFor(s.tag as Track)],
+        initialIndex: index,
+        initialPosition: player.position,
+      );
+      if (playing && !_disposed) unawaited(_play());
+    } catch (e) {
+      debugPrint('Smart merge: moving over to the better sound failed: $e');
+    } finally {
+      _leavingMerge = false;
+    }
+  }
+
   void _followSmartMerge() {
     if (_disposed) return;
     _watchMergedDownload();
+    _followLateMerge();
     // The next song is looked up and its download begun while this one plays, so it opens at once.
     final up = _crossfadeUpcoming();
     final next = up?.next;
@@ -2529,6 +2604,7 @@ class PlayerController extends ChangeNotifier {
     MemoryTrim.stop();
     cast.dispose();
     _smartMerge.changes.removeListener(_followSmartMerge);
+    _lateWatch?.cancel();
     _mergeWatch?.cancel();
     _crossfader.dispose();
     sleep.dispose();

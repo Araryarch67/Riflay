@@ -148,17 +148,39 @@ abstract final class MemoryTrim {
     _soon = Timer(_unfocusedFor, _whenIdle);
   }
 
-  /// The window is shown again: caches get their normal budgets back.
+  /// The window is shown again: caches get their normal budgets back (the mini player's smaller ones).
   static void shown() {
     if (!_hidden) return;
     _hidden = false;
     _pagedOut = false;
     _soon?.cancel();
-    unawaited(RenderingMemory.restore());
+    unawaited(_mini ? RenderingMemory.mini() : RenderingMemory.restore());
+  }
+
+  static bool _mini = false;
+  static Timer? _miniSoon;
+
+  /// The window became the mini player (true), or the full window again. The app stays alive under the mini
+  /// player but draws nothing there: once its music video has let go of its player, the pages' images and GPU
+  /// resources go and the working set is handed back, once (the mini player's few pages come straight back).
+  static void mini(bool on) {
+    if (!_available || on == _mini) return;
+    _mini = on;
+    _miniSoon?.cancel();
+    if (!on) {
+      if (!_hidden) unawaited(RenderingMemory.restore());
+      return;
+    }
+    _miniSoon = Timer(const Duration(seconds: 4), () async {
+      if (!_mini || _hidden) return;
+      await RenderingMemory.mini();
+      inBackground(() => trimProcessMemory(workingSet: _pagesOut)).ignore();
+    });
   }
 
   static void stop() {
     _soon?.cancel();
+    _miniSoon?.cancel();
     _every?.cancel();
     _soon = _every = null;
     if (_listening) {

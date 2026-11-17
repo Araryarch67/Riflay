@@ -46,6 +46,25 @@ void main() {
     expect(download.received, 1000);
   });
 
+  test('too many requests waits as long as the server asks, then carries on', () async {
+    final asked = <DateTime>[];
+    final client = MockClient.streaming((request, _) async {
+      asked.add(DateTime.now());
+      if (asked.length == 1) {
+        return http.StreamedResponse(const Stream.empty(), 429, headers: {'retry-after': '1'});
+      }
+      return part(0, 1000);
+    });
+    final download = MergedDownload.of('https://tracks.example/busy', client: client);
+    final read = <int>[];
+    await for (final chunk in download.read(0, 1000)) {
+      read.addAll(chunk);
+    }
+    expect(read, file);
+    expect(asked, hasLength(2));
+    expect(asked[1].difference(asked[0]), greaterThanOrEqualTo(const Duration(milliseconds: 950)));
+  });
+
   test('a read waits for bytes that are on their way', () async {
     final rest = Completer<void>();
     final client = MockClient.streaming((request, _) async {
@@ -61,7 +80,10 @@ void main() {
     });
     final download = MergedDownload.of('https://tracks.example/slow', client: client);
     await download.sized;
-    await Future<void>.delayed(Duration.zero);
+    // Written to its file first: that takes a moment.
+    for (var i = 0; i < 200 && !download.covers(250); i++) {
+      await Future<void>.delayed(const Duration(milliseconds: 5));
+    }
     expect(download.covers(250), isTrue);
     expect(download.covers(251), isFalse);
     final reading = download.read(200, 600).fold<int>(0, (n, chunk) => n + chunk.length);
@@ -159,6 +181,7 @@ void main() {
     final a = MergedDownload.of('https://tracks.example/once', client: client);
     final b = MergedDownload.of('https://tracks.example/once', client: client);
     expect(identical(a, b), isTrue);
-    return Future<void>.delayed(Duration.zero, () => expect(asked, 1));
+    // The request goes once its file is made.
+    return Future<void>.delayed(const Duration(milliseconds: 300), () => expect(asked, 1));
   });
 }

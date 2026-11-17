@@ -34,6 +34,15 @@ abstract final class RenderingMemory {
 
   static Future<void> restore() => _gpuCache(gpuCacheBytes);
 
+  /// The mini player: only its own cover and controls are drawn. The pages' decoded images go (they come back from
+  /// the disk cache when the full window does), Skia's cache is emptied, and the mini player keeps [miniGpuCacheBytes].
+  static const miniGpuCacheBytes = 16 << 20;
+  static Future<void> mini() async {
+    PaintingBinding.instance.imageCache.clear();
+    await _gpuCache(0);
+    await _gpuCache(miniGpuCacheBytes);
+  }
+
   static Future<void> _gpuCache(int bytes) async {
     if (!Host.isWindows && !Host.isLinux) return;
     try {

@@ -1,5 +1,6 @@
 // ignore_for_file: experimental_member_use
 import 'dart:async';
+import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
@@ -16,6 +17,10 @@ import 'package:just_audio/just_audio.dart';
 /// A song got ready ahead (the next in the queue, one the pointer rests on) fetches only its first stretch
 /// ([readyBytes]): enough to start at once, without taking the connection from the song playing. Playing it
 /// ([play]) fetches the rest.
+///
+/// What has come is kept in a file in the temporary folder, not in memory: a hi-res FLAC is 50-150 MB, and with
+/// several songs kept that alone took the app past 500 MB. The disk's cache makes reading it back as quick. Where
+/// no file can be made (the web) it stays in memory.
 class MergedDownload {
   MergedDownload._(this.url, this._client) {
     _run();
@@ -63,7 +68,76 @@ class MergedDownload {
   final http.Client? _client;
 
   /// What has come, from the file's start; grown as more comes (a song got ready ahead holds only its start).
+  /// Only without a [_spill] file.
   Uint8List _bytes = Uint8List(0);
+
+  /// The file what has come is written to, and the write under way (closing waits for it).
+  File? _spill;
+  RandomAccessFile? _writer;
+  Future<void> _writing = Future<void>.value();
+  Future<void>? _closed;
+
+  /// The folder of this run's files; those an earlier run left behind are deleted the first time.
+  static Directory? _folder;
+  static int _made = 0;
+
+  static Future<File?> _newSpill() async {
+    if (kIsWeb) return null;
+    try {
+      var folder = _folder;
+      if (folder == null) {
+        final root = Directory('${Directory.systemTemp.path}${Platform.pathSeparator}riflay-smart-merge');
+        folder = Directory('${root.path}${Platform.pathSeparator}$pid');
+        await folder.create(recursive: true);
+        _folder = folder;
+        // Left by a run that ended without tidying up (one still running keeps its open files).
+        unawaited(() async {
+          try {
+            await for (final old in root.list()) {
+              if (old.path != folder!.path) await old.delete(recursive: true).catchError((_) => old);
+            }
+          } catch (_) {}
+        }());
+      }
+      return File('${folder.path}${Platform.pathSeparator}${_made++}.flac.part');
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Puts [chunk] at [at]: in the file, or in memory.
+  Future<void> _put(int at, List<int> chunk, int count) async {
+    final writer = _writer;
+    if (writer == null) {
+      _grow(at + count);
+      _bytes.setRange(at, at + count, chunk);
+      return;
+    }
+    final done = _writing = () async {
+      await writer.setPosition(at);
+      await writer.writeFrom(chunk, 0, count);
+    }();
+    await done;
+  }
+
+  /// [count] bytes from [at], all of them already here.
+  Future<Uint8List> _get(int at, int count, [RandomAccessFile? reader]) async {
+    if (_writer == null && _spill == null) {
+      // A copy: the player may hold on to it after this download is let go.
+      return Uint8List.fromList(Uint8List.sublistView(_bytes, at, at + count));
+    }
+    final own = reader ?? await _spill!.open();
+    try {
+      await own.setPosition(at);
+      return await own.read(count);
+    } finally {
+      if (reader == null) await own.close();
+    }
+  }
+
+  /// The most handed over at once: a player asking from the start of a song already fetched would otherwise get
+  /// the whole file (100 MB) as one copy.
+  static const _chunk = 256 << 10;
   int? _total;
   int _received = 0;
   bool _done = false;
@@ -93,6 +167,10 @@ class MergedDownload {
   /// Gave up: the connection kept failing.
   bool get failed => _error != null;
 
+  /// The server is asking for fewer requests (HTTP 429/503) and nothing has come since: it won't catch up soon.
+  bool get busy => _busy;
+  bool _busy = false;
+
   /// The file's size is known (its first answer came).
   Future<void> get sized => _sized.future;
 
@@ -115,6 +193,15 @@ class MergedDownload {
   Future<void> _run() async {
     final client = _client ?? http.Client();
     var failures = 0;
+    final spill = await _newSpill();
+    if (spill != null && !_disposed) {
+      try {
+        _writer = await spill.open(mode: FileMode.write);
+        _spill = spill;
+      } catch (e) {
+        debugPrint('Smart merge download: kept in memory ($e)');
+      }
+    }
     try {
       while (!_disposed && !_done) {
         if (_limit case final limit? when _received >= limit) await _playing.future;
@@ -126,6 +213,11 @@ class MergedDownload {
           final response = await client.send(request).timeout(_silence);
           if (_disposed) return;
           final status = response.statusCode;
+          if (status == 429 || status == 503) {
+            // Too many requests: asking again at once only keeps the limit on. Its wait when it says one.
+            response.stream.listen(null).cancel().ignore();
+            throw _Busy(int.tryParse(response.headers['retry-after'] ?? ''));
+          }
           if (status != 200 && status != 206) throw http.ClientException('HTTP $status', request.url);
           var at = _received;
           if (status == 200) {
@@ -143,12 +235,13 @@ class MergedDownload {
           await for (final chunk in response.stream.timeout(_silence)) {
             if (_disposed) return;
             final end = math.min(at + chunk.length, total);
-            _grow(end);
-            _bytes.setRange(at, end, chunk);
+            await _put(at, chunk, end - at);
+            if (_disposed) return;
             at = end;
             // Bytes already had (a whole file sent again) don't count twice.
             if (at > _received) {
               _received = at;
+              _busy = false;
               _lastProgress = DateTime.now();
               failures = 0;
               _notify();
@@ -162,9 +255,15 @@ class MergedDownload {
           }
         } catch (e) {
           if (_disposed) return;
+          if (e is _Busy) _busy = true;
           if (++failures > _tries) rethrow;
           debugPrint('Smart merge download: $e, again from byte $_received ($failures)');
-          await Future<void>.delayed(Duration(milliseconds: math.min(5000, 500 * failures)));
+          await Future<void>.delayed(
+            e is _Busy
+                // 5, 10, 20, then every 30 s; the server's own Retry-After (up to 2 min) when it gives one.
+                ? Duration(seconds: e.seconds?.clamp(1, 120) ?? math.min(30, 5 << math.min(failures - 1, 3)))
+                : Duration(milliseconds: math.min(5000, 500 * failures)),
+          );
         }
       }
     } catch (e) {
@@ -173,8 +272,26 @@ class MergedDownload {
       _notify();
     } finally {
       if (_client == null) client.close();
+      if (_disposed) unawaited(_close());
     }
   }
+
+  /// Closes and deletes the file (after the write under way).
+  Future<void> _close() => _closed ??= () async {
+    final writer = _writer;
+    _writer = null;
+    try {
+      await _writing;
+    } catch (_) {}
+    try {
+      await writer?.close();
+    } catch (_) {}
+    try {
+      await _spill?.delete();
+    } catch (_) {
+      // Still open for a read: the next run's tidy-up deletes it.
+    }
+  }();
 
   void _size(int? length) {
     if (_total != null || length == null || length <= 0) return;
@@ -183,7 +300,7 @@ class MergedDownload {
     if (_playing.isCompleted && length > 4 * _endSize) unawaited(_fetchEnd(length));
   }
 
-  /// Room for the first [bytes]: doubled as it fills, the whole file once it is played.
+  /// In memory: room for the first [bytes]: doubled as it fills, the whole file once it is played.
   void _grow(int bytes) {
     if (bytes <= _bytes.length) return;
     final total = _total!;
@@ -240,7 +357,7 @@ class MergedDownload {
       await _progress.future;
     }
     if (_error != null && _received < count) throw _error!;
-    return Uint8List.sublistView(_bytes, 0, math.min(count, _received));
+    return _get(0, math.min(count, _received));
   }
 
   /// Bytes [start] to [end] (exclusive), each as soon as it is here.
@@ -250,15 +367,21 @@ class MergedDownload {
   /// back to its own sound.
   Stream<List<int>> read(int start, int end) async* {
     _readers++;
+    RandomAccessFile? reader;
     try {
       await sized;
       var at = start;
       while (at < end) {
-        if (_disposed) await Completer<void>().future;
+        if (_disposed) {
+          // Its file goes: nothing more is read from it.
+          await reader?.close();
+          reader = null;
+          await Completer<void>().future;
+        }
         if (at < _received) {
-          final upTo = math.min(end, _received);
-          // A copy: the player may hold on to it after this download is let go.
-          yield Uint8List.fromList(Uint8List.sublistView(_bytes, at, upTo));
+          final upTo = math.min(math.min(end, _received), at + _chunk);
+          if (_spill case final spill? when reader == null) reader = await spill.open();
+          yield await _get(at, upTo - at, reader);
           at = upTo;
         } else if (_end case final tail? when at >= _endStart) {
           final upTo = math.min(end, _endStart + tail.length);
@@ -271,6 +394,7 @@ class MergedDownload {
       }
     } finally {
       _readers--;
+      await reader?.close();
     }
   }
 
@@ -282,9 +406,19 @@ class MergedDownload {
     _disposed = true;
     _bytes = Uint8List(0);
     _end = null;
+    // A download still under way closes it when its write ends ([_run]).
+    if (_done || _error != null) unawaited(_close());
     if (!_playing.isCompleted) _playing.complete();
     _notify();
   }
+}
+
+/// The server asked for fewer requests (HTTP 429 or 503), with how long to wait if it said.
+class _Busy implements Exception {
+  const _Busy(this.seconds);
+  final int? seconds;
+  @override
+  String toString() => 'HTTP 429/503 (busy${seconds == null ? '' : ', retry after $seconds s'})';
 }
 
 class _DownloadSource extends StreamAudioSource {
