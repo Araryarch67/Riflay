@@ -274,6 +274,15 @@ void main() {
   });
 
   group('the same recording', () {
+    test('measured lossless codec wins over filename, and measured lossy audio is excluded', () {
+      final merge = _merge([]);
+      final flac = _file('/recording.m4a').copyWith(audioQuality: 'FLAC · 24-bit / 48 kHz');
+      expect(merge.local(_youtube(), [flac], 1), same(flac));
+      final aac = _file('/recording.flac').copyWith(audioQuality: 'AAC · 256 kbps');
+      expect(merge.local(_youtube(), [aac], 2), isNull);
+      expect(merge.local(_youtube(), [_file('/recording.m4a')], 3), isNull);
+    });
+
     test('is taken when title, artist and length agree', () {
       final match = _mono('tracks:track:1');
       expect(SmartMerge.best(_youtube(), [_mono('tracks:track:9', title: 'Other Song'), match]), same(match));

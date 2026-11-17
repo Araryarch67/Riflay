@@ -31,6 +31,7 @@ import '../ytmusic_edit.dart';
 import '../player/player_parts.dart' show shareTrack;
 import '../theme.dart';
 import 'app_dialog.dart';
+import 'audio_source_picker.dart';
 import 'controls.dart';
 import 'menus.dart';
 import 'stats_for_nerds.dart';
@@ -415,7 +416,7 @@ VoidCallback? openArtist(BuildContext host, PlayerController c, Track track, {Sh
 
 /// Entries this menu can leave out, for a host surface that already lists them
 /// itself (the player's More sheet has Add to playlist and the download states).
-enum TrackMenuEntry { addToPlaylist, download, share }
+enum TrackMenuEntry { addToPlaylist, download, share, audioSource }
 
 /// The ⋯ menu of a song: play next, add to playlist, like, download, go to artist…
 class TrackMenuButton extends StatelessWidget {
@@ -534,6 +535,11 @@ class TrackMenuButton extends StatelessWidget {
               onTap: () => _queued(host, c.addToQueue([track]), tr.toastAddedToQueue),
               child: MenuRow(leading: const Icon(Icons.queue_music_rounded), title: Text(tr.addToQueue)),
             ),
+            if (track.isRemote && Features.smartMerge && !c.casting && !hide.contains(TrackMenuEntry.audioSource))
+              PopupMenuItem(
+                onTap: () => showAudioSourcePicker(host, track),
+                child: MenuRow(leading: const Icon(Icons.swap_horiz_rounded), title: Text(tr.audioSource)),
+              ),
             // A song by several artists: one entry each, so any of them can be opened.
             if (track.artists.length > 1) ...[
               for (final name in track.artists)

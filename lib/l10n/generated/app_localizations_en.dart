@@ -10,6 +10,28 @@ class AppLocalizationsEn extends AppLocalizations {
   AppLocalizationsEn([String locale = 'en']) : super(locale);
 
   @override
+  String get audioSource => 'Audio source';
+
+  @override
+  String get audioSourceHint =>
+      'Choose audio for this song. YouTube Music keeps its cover, lyrics and video. Your choice is remembered.';
+
+  @override
+  String get audioSourceAutomatic => 'Automatic (Smart Merge)';
+
+  @override
+  String get audioSourceSearch => 'Find a recording in your library…';
+
+  @override
+  String get audioSourceSearchMonochrome => 'Search Monochrome';
+
+  @override
+  String get audioSourceEmpty => 'No recordings found. Try another title or artist.';
+
+  @override
+  String get audioSourceFailed => 'Couldn\'t switch audio. Check the source and try again.';
+
+  @override
   String get betaFeatures => 'Beta features';
 
   @override
@@ -6426,7 +6448,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get smartMergeSubtitle =>
-      'Plays a YouTube Music song from the best source that has the same recording: a lossless file in your library first, then the music sources you turned on (Monochrome, in FLAC), and YouTube Music otherwise. Its music video, lyrics and cover stay from YouTube Music.';
+      'Combines YouTube Music with better-quality audio of the same recording from your library or enabled playback sources. Keeps its cover, lyrics and video. Uses YouTube when no better audio is available. Choose a source manually from the song menu.';
 
   @override
   String get smartMergeToday => 'Today';

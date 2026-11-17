@@ -15,6 +15,8 @@ import 'package:path/path.dart' as p;
 import 'package:riflay/models/track.dart';
 import 'package:riflay/services/player_controller.dart';
 import 'package:riflay/services/smart_merge.dart';
+import 'package:riflay/services/manual_audio.dart';
+import 'package:riflay/services/metadata.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// The song's own YouTube stream: counts what is asked of it.
@@ -63,9 +65,10 @@ void main() {
       MediaKit.ensureInitialized(libmpv: File('build/windows/x64/libmpv/libmpv-2.dll').absolute.path);
       JustAudioMediaKit.ensureInitialized(windows: true);
       final directory = await Directory.systemTemp.createTemp('riflay-smart-merge-local-');
-      final flac = await File('test/fixtures/sine.flac').copy(p.join(directory.path, 'Houshou Marine - Kyapi.flac'));
+      final flac = await File('test/fixtures/sine.flac').copy(p.join(directory.path, 'Houshou Marine - Kyapi.m4a'));
       SharedPreferences.setMockInitialValues({
         'discord.enabled': false,
+        'library.codecQuality.v1': true,
         'library.v1': jsonEncode([kyapi(flac)]),
       });
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(
@@ -146,6 +149,62 @@ void main() {
       await until(() => c.player.playing && c.position > Duration.zero);
       expect(merge.soundFrom('ahoyVideo01'), isNull);
       expect(youtube.fold<int>(0, (sum, s) => sum + s.requests), greaterThan(0), reason: 'played from YouTube');
+    }),
+    skip: !Platform.isWindows || !enabled,
+    timeout: const Timeout(Duration(minutes: 2)),
+  );
+
+  testWidgets(
+    'a YouTube card without duration joins local audio once the decoder measures its length',
+    (tester) => withPlayer(tester, (c, merge, youtube, flac) async {
+      final measured = await Metadata.enrich(c.library.single);
+      await c.replaceTrack(measured);
+      final song = Track.youtube(videoId: 'noDuration1', title: 'きゃぴ - Kyapi', artist: 'Houshou Marine');
+      await c.playList([song], 0);
+      await until(() => merge.soundFrom(song.videoId!)?.source == TrackSource.device);
+      final source = c.player.sequenceState.currentSource! as ja.UriAudioSource;
+      expect(File.fromUri(source.uri).path, flac.path);
+      expect(c.currentTrack?.id, song.id);
+      expect(c.audioChoice(song), isNull, reason: 'automatic, without a manual override');
+      expect(
+        youtube.fold<int>(0, (sum, s) => sum + s.requests),
+        greaterThan(0),
+        reason: 'YouTube starts before length is known',
+      );
+    }),
+    skip: !Platform.isWindows || !enabled,
+    timeout: const Timeout(Duration(minutes: 2)),
+  );
+
+  testWidgets(
+    'manual audio keeps YouTube identity and position, respects pause, and can return to YouTube or automatic',
+    (tester) => withPlayer(tester, (c, merge, youtube, flac) async {
+      final song = Track.youtube(
+        videoId: 'manualAudio1',
+        title: 'Different title',
+        artist: 'Different artist',
+        duration: const Duration(seconds: 200),
+      );
+      await c.playList([song], 0);
+      await until(() => c.player.playing && c.position > Duration.zero);
+      await c.player.pause();
+      await c.player.seek(const Duration(milliseconds: 500));
+      await c.setAudioChoice(song, ManualAudioChoice.track(c.library.single));
+      final source = c.player.sequenceState.currentSource! as ja.UriAudioSource;
+      expect(File.fromUri(source.uri).path, flac.path);
+      expect(c.currentTrack?.id, song.id);
+      expect(c.player.playing, isFalse);
+      expect((c.position - const Duration(milliseconds: 500)).abs(), lessThan(const Duration(milliseconds: 150)));
+      expect(merge.soundFrom(song.videoId!)?.source, TrackSource.device);
+      final before = youtube.fold<int>(0, (sum, s) => sum + s.requests);
+      await c.setAudioChoice(song, const ManualAudioChoice.youtube());
+      expect(youtube.fold<int>(0, (sum, s) => sum + s.requests), greaterThan(before));
+      expect(c.currentTrack?.id, song.id);
+      expect(c.player.playing, isFalse);
+      expect(merge.soundFrom(song.videoId!), isNull);
+      await c.setAudioChoice(song, null);
+      expect(c.audioChoice(song), isNull);
+      expect(c.currentTrack?.id, song.id);
     }),
     skip: !Platform.isWindows || !enabled,
     timeout: const Timeout(Duration(minutes: 2)),

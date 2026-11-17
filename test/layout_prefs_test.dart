@@ -36,6 +36,8 @@ void main() {
     expect(p.progressBar, ProgressBarStyle.thin);
     expect(p.playButton, PlayButtonShape.flower);
     expect(p.showQualityBadge, isTrue);
+    expect(p.qualityBadgePlace, QualityBadgePlace.timeRow);
+    expect(p.volumeSlider, VolumeSliderShape.pill);
     expect(p.dimUnsungLyrics, isTrue);
     expect(p.motion, Motion.full);
     expect(p.pageMotion, PageMotionStyle.classic);
@@ -44,6 +46,53 @@ void main() {
     expect(p.isCustomised, isFalse);
     expect(LayoutPrefs.radius(8), 8);
     expect(LayoutPrefs.dur(const Duration(milliseconds: 200)), const Duration(milliseconds: 200));
+  });
+
+  test('Lightweight limits covers and replaces Background across switching, restore and presets', () async {
+    await p.setPerformance(PerformanceMode.balanced);
+    await p.setPlayerCover(PlayerCover.background);
+    await p.setPerformance(PerformanceMode.lightweight);
+    expect(p.playerCoverChoices, [PlayerCover.flower, PlayerCover.square]);
+    expect(p.playerCover, PlayerCover.square);
+    await p.load();
+    expect(p.playerCover, PlayerCover.square);
+    await p.setPlayerCover(PlayerCover.flower);
+    expect(p.playerCover, PlayerCover.flower);
+    await p.setPlayerCover(PlayerCover.background);
+    expect(p.playerCover, PlayerCover.square);
+    await PlayerPreset.stacked.apply(p);
+    expect(p.playerCover, PlayerCover.square);
+    p.restore({'performance': 'lightweight', 'playerCover': 'background'});
+    expect(p.playerCover, PlayerCover.square);
+    await p.setPerformance(PerformanceMode.balanced);
+    expect(p.playerCoverChoices, PlayerCover.values);
+    expect(p.playerCover, PlayerCover.square);
+    await p.setPlayerCover(PlayerCover.background);
+    expect(p.playerCover, PlayerCover.background);
+  });
+
+  test('a visible volume slider limits bottom buttons and normalises saved or preset Icons', () async {
+    expect(p.bottomRowChoices, [PlayerBottomRow.classic, PlayerBottomRow.chips]);
+    await p.setShowVolumeRow(false);
+    expect(p.bottomRowChoices, PlayerBottomRow.values);
+    await p.setBottomRow(PlayerBottomRow.minimal);
+    expect(p.bottomRow, PlayerBottomRow.minimal);
+    await p.setShowVolumeRow(true);
+    expect(p.bottomRow, PlayerBottomRow.classic);
+    await p.setBottomRow(PlayerBottomRow.chips);
+    await p.load();
+    expect(p.bottomRow, PlayerBottomRow.chips);
+    p.restore({'showVolumeRow': true, 'bottomRow': 'minimal'});
+    expect(p.bottomRow, PlayerBottomRow.classic);
+    await p.change(() {
+      p.bottomRow = PlayerBottomRow.minimal;
+      p.showVolumeRow = true;
+    });
+    expect(p.bottomRow, PlayerBottomRow.classic);
+    await p.setShowVolumeRow(false);
+    await p.setBottomRow(PlayerBottomRow.minimal);
+    await p.load();
+    expect(p.bottomRow, PlayerBottomRow.minimal);
   });
 
   test('circle play button and straight seek override persist independently', () async {
@@ -212,10 +261,10 @@ void main() {
   });
 
   test('the quality badge place persists; the visualizer survives out of Beta only if it was opted in', () async {
-    expect(p.qualityBadgePlace, QualityBadgePlace.underArtist);
-    await p.setQualityBadgePlace(QualityBadgePlace.timeRow);
-    await p.load();
     expect(p.qualityBadgePlace, QualityBadgePlace.timeRow);
+    await p.setQualityBadgePlace(QualityBadgePlace.underArtist);
+    await p.load();
+    expect(p.qualityBadgePlace, QualityBadgePlace.underArtist);
     await p.reset();
 
     // An older save: the visualizer was on in the layout, but only counted with its Beta switch.
@@ -294,7 +343,7 @@ void main() {
   });
 
   test('the volume slider look persists, and Stacked makes it a pill with the row shown', () async {
-    expect(p.volumeSlider, VolumeSliderShape.classic);
+    expect(p.volumeSlider, VolumeSliderShape.pill);
     await p.setVolumeSlider(VolumeSliderShape.thin);
     await p.load();
     expect(p.volumeSlider, VolumeSliderShape.thin);
@@ -304,6 +353,7 @@ void main() {
     await PlayerPreset.kawaii.apply(p);
     expect(p.volumeSlider, VolumeSliderShape.pill, reason: 'the volume under the lyrics is a pill');
     await PlayerPreset.classic.apply(p);
-    expect(p.volumeSlider, VolumeSliderShape.classic);
+    expect(p.volumeSlider, VolumeSliderShape.pill);
+    expect(p.qualityBadgePlace, QualityBadgePlace.timeRow);
   });
 }

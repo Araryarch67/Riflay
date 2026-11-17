@@ -213,7 +213,7 @@ class NowPlayingPage extends StatelessWidget {
                                 constraints.maxWidth > constraints.maxHeight && constraints.maxHeight < 480;
                             Widget topBarFor({required bool more}) => Row(
                               children: [
-                                if (LayoutPrefs.instance.classicPlayerFace || LayoutPrefs.instance.showPlayerClose)
+                                if (LayoutPrefs.instance.classicPlayerStyle || LayoutPrefs.instance.showPlayerClose)
                                   IconButton(
                                     tooltip: tr.close,
                                     color: AppColors.of(context).textPrimary,

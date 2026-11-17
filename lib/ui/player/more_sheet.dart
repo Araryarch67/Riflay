@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../services/language.dart';
 import '../widgets/tempo_pitch.dart';
+import '../widgets/audio_source_picker.dart';
 import '../../models/track.dart';
 import '../../platform/features.dart';
 import '../../services/audio_engine.dart';
@@ -144,7 +145,12 @@ class PlayerMoreSheet extends StatelessWidget {
                   // action, one entry. Detail stats and Signal path are in Sound.
                   TrackMenuButton(
                     track: track,
-                    hide: const {TrackMenuEntry.addToPlaylist, TrackMenuEntry.download, TrackMenuEntry.share},
+                    hide: const {
+                      TrackMenuEntry.addToPlaylist,
+                      TrackMenuEntry.download,
+                      TrackMenuEntry.share,
+                      TrackMenuEntry.audioSource,
+                    },
                   ),
                 ],
               ),
@@ -156,6 +162,8 @@ class PlayerMoreSheet extends StatelessWidget {
                 tile(Icons.close_rounded, tr.closePlayer, then((_) => c.closePlayer())),
               ]),
             group(tr.sectionSong, [
+              if (track.isRemote && Features.smartMerge && !c.casting)
+                tile(Icons.swap_horiz_rounded, tr.audioSource, then((host) => showAudioSourcePicker(host, track))),
               tile(Icons.share_outlined, tr.share, then((host) => shareTrack(host, track))),
               tile(Icons.playlist_add_rounded, tr.addToPlaylist, then((host) => addToPlaylist(host, [track]))),
               if (track.isRemote && Features.saveToDevice)

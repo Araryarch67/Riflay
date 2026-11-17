@@ -8,7 +8,7 @@ import '../../l10n/generated/app_localizations.dart';
 import '../theme.dart';
 import 'app_logo.dart';
 
-/// The desktop launch's intro: the mark's four pieces slam together, the mark punches and shakes with a ring, a glint
+/// The shared launch intro: the mark's four pieces slam together, the mark punches and shakes with a ring, a glint
 /// sweeps it and the wordmark settles in, then the whole thing zooms out of the way. About 1.8 s; a click or any key
 /// skips to the end. If the library is still loading the mark breathes until it is ready.
 ///

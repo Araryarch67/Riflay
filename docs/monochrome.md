@@ -47,6 +47,22 @@ YouTube audio. Changing source settings clears cached matches and failures.
 SpotiFLAC remains a download source; its downloaded lossless files can be matched
 from the library.
 
+Local matches use the detected audio codec, not just the filename. FLAC audio
+named `.m4a` is still lossless; AAC renamed `.flac` is not. Existing libraries
+refresh their saved quality information once after updating.
+
+### Manual audio selection
+
+For a YouTube Music song, open **More > Audio source** to choose **Automatic
+(Smart Merge)**, **YouTube Music**, or a specific library recording. With
+Monochrome enabled, the same picker can search and select its recordings too.
+The choice is saved for that song and keeps its YouTube cover, lyrics and video.
+Switching retains the queue, playback position and pause state. Selecting
+Automatic removes the override for that song. Manual selection can use a lossy
+local recording too; its actual quality remains visible. A missing or failed
+manual source falls back to YouTube. Source selection is available for native
+playback on this device, rather than while casting.
+
 Shuffle reorders existing audio sources without reopening the playing stream or
 seeking it. Initial loads and reconnect attempts show buffering; pausing cancels
 pending automatic resume. Legacy manifests resolve with bounded transient-error

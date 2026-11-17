@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:riflay/l10n/generated/app_localizations.dart';
 import 'package:riflay/ui/widgets/desktop_intro.dart';
 import 'package:riflay/ui/widgets/startup_splash.dart';
+import 'package:riflay/services/layout_prefs.dart';
 
 const _home = ValueKey('home');
 
@@ -20,6 +21,35 @@ Widget _app(Future<void> ready, {bool intro = true}) => MaterialApp(
 );
 
 void main() {
+  testWidgets('native phone-sized launch uses animated logo and stops drawing when Home opens', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(375, 812));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final motion = LayoutPrefs.instance.motion;
+    final performance = LayoutPrefs.instance.performance;
+    LayoutPrefs.instance.motion = Motion.full;
+    LayoutPrefs.instance.performance = PerformanceMode.balanced;
+    addTearDown(() {
+      LayoutPrefs.instance.motion = motion;
+      LayoutPrefs.instance.performance = performance;
+    });
+    await tester.pumpWidget(
+      MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: StartupSplash(
+          ready: Future<void>.value(),
+          child: const SizedBox(key: _home),
+        ),
+      ),
+    );
+    expect(find.byType(DesktopIntro), findsOneWidget);
+    await tester.pumpAndSettle();
+    expect(find.byKey(_home), findsOneWidget);
+    expect(find.byKey(const ValueKey('intro')), findsNothing);
+    expect(tester.binding.hasScheduledFrame, isFalse);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('plays the whole intro, then opens Home once', (tester) async {
     await tester.pumpWidget(_app(Future<void>.value()));
     expect(find.byType(DesktopIntro), findsOneWidget);

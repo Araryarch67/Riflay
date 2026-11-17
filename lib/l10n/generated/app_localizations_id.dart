@@ -10,6 +10,28 @@ class AppLocalizationsId extends AppLocalizations {
   AppLocalizationsId([String locale = 'id']) : super(locale);
 
   @override
+  String get audioSource => 'Sumber audio';
+
+  @override
+  String get audioSourceHint =>
+      'Pilih audio untuk lagu ini. Sampul, lirik, dan video tetap dari YouTube Music. Pilihanmu akan disimpan.';
+
+  @override
+  String get audioSourceAutomatic => 'Otomatis (Smart Merge)';
+
+  @override
+  String get audioSourceSearch => 'Cari rekaman di library…';
+
+  @override
+  String get audioSourceSearchMonochrome => 'Cari di Monochrome';
+
+  @override
+  String get audioSourceEmpty => 'Rekaman tidak ditemukan. Coba judul atau artis lain.';
+
+  @override
+  String get audioSourceFailed => 'Audio belum bisa diganti. Periksa sumbernya lalu coba lagi.';
+
+  @override
   String get betaFeatures => 'Fitur beta';
 
   @override
@@ -6353,7 +6375,7 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get smartMergeSubtitle =>
-      'Memutar lagu YouTube Music dari sumber terbaik yang punya rekaman yang sama: file lossless di library kamu dulu, lalu sumber musik yang kamu nyalakan (Monochrome, dalam FLAC), dan YouTube Music kalau tidak ada. Music video, lirik dan sampulnya tetap dari YouTube Music.';
+      'Memadukan YouTube Music dengan audio berkualitas lebih baik dari rekaman yang sama di library atau sumber pemutaran aktif. Sampul, lirik, dan video tetap dari YouTube. Jika audio yang lebih baik tidak tersedia, gunakan YouTube. Sumber juga bisa dipilih manual lewat menu lagu.';
 
   @override
   String get smartMergeToday => 'Hari ini';

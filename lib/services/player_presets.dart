@@ -43,9 +43,9 @@ class PlayerPreset {
     this.mini = MiniPlayerStyle.classic,
     this.album = AlbumHeaderStyle.classic,
     this.playingRow = PlayingRowStyle.classic,
-    this.badge = QualityBadgePlace.underArtist,
+    this.badge = QualityBadgePlace.timeRow,
     this.lyricsLines = LyricsLines.all,
-    this.volumeSlider = VolumeSliderShape.classic,
+    this.volumeSlider = VolumeSliderShape.pill,
     this.background,
     this.tabBar,
     this.visualizer = false,
@@ -302,7 +302,10 @@ class PlayerPreset {
   int changesTo(LayoutPrefs p) {
     var n = 0;
     void differ(Object a, Object b) => n += a == b ? 0 : 1;
-    differ(p.playerCover, cover);
+    differ(
+      p.playerCover,
+      p.performance == PerformanceMode.lightweight && cover == PlayerCover.background ? PlayerCover.square : cover,
+    );
     differ(p.playerHeader, header);
     differ(p.titleActions, titleActions);
     differ(p.progressBar, progressBar);
@@ -314,7 +317,7 @@ class PlayerPreset {
     if (glassTransport != null) differ(p.glassTransport, glassTransport!);
     if (glassSeekBar != null) differ(p.glassSeekBar, glassSeekBar!);
     if (glassVolume != null) differ(p.glassVolume, glassVolume!);
-    differ(p.bottomRow, bottomRow);
+    differ(p.bottomRow, volume && bottomRow == PlayerBottomRow.minimal ? PlayerBottomRow.classic : bottomRow);
     differ(p.lyricsLayout, lyrics);
     differ(p.miniPlayer, mini);
     differ(p.albumHeader, album);

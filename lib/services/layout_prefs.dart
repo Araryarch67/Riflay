@@ -237,7 +237,7 @@ enum VideoDecoder {
 }
 
 /// How much the app spends on looks. [lightweight] caps the user's own Look & feel choices
-/// (it never overwrites them); [heavy] lifts the frame-rate limits on decorations.
+/// (Background covers become Square); [heavy] lifts the frame-rate limits on decorations.
 enum PerformanceMode {
   lightweight,
   balanced,
@@ -582,11 +582,27 @@ class LayoutPrefs extends ChangeNotifier {
   /// The player, part by part, on phones and desktop. The defaults are how it has always looked; Settings › Look & feel ›
   /// Layout › Player changes them one by one, and Presets sets several at once.
   PlayerCover playerCover = PlayerCover.square;
+
+  /// Background artwork is unavailable in Lightweight; framed covers stay selectable.
+  List<PlayerCover> get playerCoverChoices =>
+      performance == PerformanceMode.lightweight ? const [PlayerCover.flower, PlayerCover.square] : PlayerCover.values;
+
+  void _fitPlayerOptions() {
+    if (performance == PerformanceMode.lightweight && playerCover == PlayerCover.background) {
+      playerCover = PlayerCover.square;
+    }
+    if (showVolumeRow && bottomRow == PlayerBottomRow.minimal) bottomRow = PlayerBottomRow.classic;
+  }
+
   PlayerHeader playerHeader = PlayerHeader.classic;
   TitleActions titleActions = TitleActions.classic;
   bool showTimeLeft = false;
   PlayerTransport transport = PlayerTransport.classic;
   bool showVolumeRow = true;
+
+  /// Icons include their own volume control; a visible slider uses Classic or Chips.
+  List<PlayerBottomRow> get bottomRowChoices =>
+      showVolumeRow ? const [PlayerBottomRow.classic, PlayerBottomRow.chips] : PlayerBottomRow.values;
 
   /// Liquid presets frost the player's transparent control surfaces.
   bool playerGlassControls = false;
@@ -600,8 +616,8 @@ class LayoutPrefs extends ChangeNotifier {
   MiniPlayerStyle miniPlayer = MiniPlayerStyle.classic;
   AlbumHeaderStyle albumHeader = AlbumHeaderStyle.classic;
   PlayingRowStyle playingRow = PlayingRowStyle.classic;
-  QualityBadgePlace qualityBadgePlace = QualityBadgePlace.underArtist;
-  VolumeSliderShape volumeSlider = VolumeSliderShape.classic;
+  QualityBadgePlace qualityBadgePlace = QualityBadgePlace.timeRow;
+  VolumeSliderShape volumeSlider = VolumeSliderShape.pill;
 
   /// The phone's tab bar: docked under the mini player like most music apps, by default.
   TabBarStyle tabBar = TabBarStyle.capsule;
@@ -735,6 +751,17 @@ class LayoutPrefs extends ChangeNotifier {
   );
 
   /// The phone player's parts are all as they have always been (Classic keeps its original layout).
+  /// The player in its Classic style as far as its top goes, whatever its quality badge's place or volume slider's
+  /// shape (they sit lower down): it keeps its Close arrow, as Classic always has. The other styles show it with
+  /// [showPlayerClose].
+  bool get classicPlayerStyle =>
+      playerCover != PlayerCover.background &&
+      playerHeader == PlayerHeader.classic &&
+      titleActions == TitleActions.classic &&
+      transport == PlayerTransport.classic &&
+      bottomRow == PlayerBottomRow.classic &&
+      !playerGlassControls;
+
   bool get classicPlayerFace =>
       playerCover != PlayerCover.background &&
       playerHeader == PlayerHeader.classic &&
@@ -878,6 +905,7 @@ class LayoutPrefs extends ChangeNotifier {
     }
     homeOrder = order.toSet().toList();
     homeHidden = {for (final n in (j['homeHidden'] as List?) ?? const []) ?byName[n]};
+    _fitPlayerOptions();
   }
 
   Map<String, dynamic> toJson() => {
@@ -960,6 +988,7 @@ class LayoutPrefs extends ChangeNotifier {
 
   Future<void> _set(VoidCallback change) async {
     change();
+    _fitPlayerOptions();
     notifyListeners();
     try {
       await (await SharedPreferences.getInstance()).setString(_key, jsonEncode(toJson()));

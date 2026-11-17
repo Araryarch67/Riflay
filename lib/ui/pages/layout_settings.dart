@@ -58,7 +58,7 @@ class NowPlayingSettings extends StatelessWidget {
                 control: OptionPicker<PlayerCover>(
                   value: p.playerCover,
                   onChanged: p.setPlayerCover,
-                  options: [for (final v in PlayerCover.values) (v, v.label)],
+                  options: [for (final v in p.playerCoverChoices) (v, v.label)],
                 ),
               ),
               if (Features.phoneLayout)
@@ -277,7 +277,7 @@ class NowPlayingSettings extends StatelessWidget {
                 control: OptionPicker<PlayerBottomRow>(
                   value: p.bottomRow,
                   onChanged: p.setBottomRow,
-                  options: [for (final v in PlayerBottomRow.values) (v, v.label)],
+                  options: [for (final v in p.bottomRowChoices) (v, v.label)],
                 ),
               ),
             ],

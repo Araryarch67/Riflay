@@ -9,7 +9,7 @@ import '../theme.dart';
 import 'app_logo.dart';
 import 'desktop_intro.dart';
 
-/// Shows the app mark while the library loads, once per launch: on a computer with full motion the animated
+/// Shows the app mark while the library loads, once per launch: on native apps with full motion the animated
 /// [DesktopIntro] (in its own see-through window where [SplashWindow] made one), otherwise the plain mark briefly.
 class StartupSplash extends StatefulWidget {
   const StartupSplash({super.key, required this.ready, required this.child, this.intro});
@@ -17,12 +17,11 @@ class StartupSplash extends StatefulWidget {
   final Future<void> ready;
   final Widget child;
 
-  /// Whether to play the animated intro; by default on Windows, Linux and macOS with full motion (Reduced, Off and
+  /// Whether to play the animated intro; by default on native apps with full motion (Reduced, Off and
   /// Lightweight keep the plain mark).
   final bool? intro;
 
-  static bool get _introByDefault =>
-      (Host.isWindows || Host.isLinux || Host.isMacOS) && LayoutPrefs.effectiveMotion == Motion.full;
+  static bool get _introByDefault => !Host.isWeb && LayoutPrefs.effectiveMotion == Motion.full;
 
   @override
   State<StartupSplash> createState() => _StartupSplashState();

@@ -41,6 +41,7 @@ import 'sleep_timer.dart';
 import 'soundcloud.dart';
 import 'merged_download.dart';
 import 'smart_merge.dart';
+import 'manual_audio.dart';
 import 'request_gate.dart';
 import 'sources/music_sources.dart';
 import 'soundcloud_audio_source.dart';
@@ -159,6 +160,50 @@ class PlayerController extends ChangeNotifier {
   }
 
   final SmartMerge _smartMerge;
+  final _manualAudio = ManualAudio();
+
+  ManualAudioChoice? audioChoice(Track track) => track.videoId == null ? null : _manualAudio.choice(track.videoId!);
+
+  /// Changes only the audio, retaining YouTube metadata, queue, position and pause state.
+  /// A null choice restores automatic Smart Merge for this song.
+  Future<void> setAudioChoice(Track track, ManualAudioChoice? choice) async {
+    final id = track.videoId;
+    if (id == null || casting) throw StateError('Audio source cannot be changed here');
+    if (choice?.track?.path case final path? when !File(path).existsSync()) {
+      throw StateError('Audio file is unavailable');
+    }
+    await _manualAudio.set(id, choice);
+    _smartMerge.resetPlayback(id);
+    if (_disposed) return;
+    final state = player.sequenceState;
+    final index = state.currentIndex;
+    final current = currentTrack;
+    if (index != null && state.sequence.any((source) => (source.tag as Track).videoId == id)) {
+      _cancelPlaybackRetry();
+      _lateWatch?.cancel();
+      final generation = _playbackRetryGeneration;
+      final wasPlaying = player.playing;
+      final length = current?.videoId == id ? choice?.track?.duration : null;
+      final position = length != null && length > Duration.zero && player.position >= length
+          ? length - const Duration(milliseconds: 1)
+          : player.position;
+      _quality = null;
+      _qualityComplete = false;
+      _qualityReads = 0;
+      _qualityTimer?.cancel();
+      await player.setAudioSources(
+        [for (final source in state.sequence) _sourceFor(source.tag as Track)],
+        initialIndex: index,
+        initialPosition: position,
+      );
+      // Android's native backend applies initialPosition asynchronously. An
+      // explicit seek after loading also commits it while the song is paused.
+      if (!_disposed && generation == _playbackRetryGeneration) await player.seek(position);
+      if (wasPlaying && !_disposed && generation == _playbackRetryGeneration) unawaited(_play());
+    }
+    notifyListeners();
+  }
+
   // ignore: experimental_member_use
   final StreamAudioSource Function(Track)? _youtubeSource;
 
@@ -686,6 +731,10 @@ class PlayerController extends ChangeNotifier {
     });
     for (final s in seq.sequence.skip(at + 1).take(1)) {
       if (s.tag case final Track t when t.isRemote && downloadedCopy(t) == null) {
+        if (_manualAudio.choice(t.videoId!) case final choice?) {
+          if (choice.track == null) _resolveAhead(t.videoId!);
+          continue;
+        }
         final local = _smartMerge.local(t, _views.library, (
           _views.library,
           libraryRevision.value,
@@ -1340,6 +1389,7 @@ class PlayerController extends ChangeNotifier {
   Future<void> load() async {
     await MusicSources.instance.load();
     final prefs = await SharedPreferences.getInstance();
+    _manualAudio.load(prefs);
     // Side by side: the library (its own file, read in the background), the
     // YouTube Music session and the audio settings.
     final library = LibraryStore.load(prefs);
@@ -1521,6 +1571,7 @@ class PlayerController extends ChangeNotifier {
     final track = currentTrack;
     if (actual == null || actual <= Duration.zero || track == null) return;
     final known = track.duration;
+    if (track.isRemote && known == null) _joinScannedLocal().ignore();
     if (known != null && (known - actual).abs() < const Duration(seconds: 1)) return;
     final i = _library.indexWhere((t) => t.id == track.id);
     if (i < 0) return;
@@ -1657,11 +1708,16 @@ class PlayerController extends ChangeNotifier {
   Future<void> _enrichUntagged() async {
     if (_scanning) return;
     _scanning = true;
+    const qualityVersionKey = 'library.codecQuality.v1';
     bool needsMetadata(Track t) => !t.tagged || (t.path != null && t.audioQuality == null);
-    var pending = _library.where(needsMetadata).toList();
-    _setProgress(0, pending.length);
-    notifyListeners();
     try {
+      final prefs = await SharedPreferences.getInstance();
+      // Older scans saved the extension as the codec (FLAC named .m4a was "M4A").
+      // Refresh once off the UI isolate; existing libraries then merge without reimporting.
+      final refreshQuality = prefs.getBool(qualityVersionKey) != true;
+      var pending = _library.where((t) => needsMetadata(t) || (refreshQuality && t.path != null)).toList();
+      _setProgress(0, pending.length);
+      notifyListeners();
       while (pending.isNotEmpty) {
         // Where each song sits, worked out again only if the library was replaced meanwhile.
         List<Track>? indexed;
@@ -1675,6 +1731,9 @@ class PlayerController extends ChangeNotifier {
           for (final t in batch) {
             if (at[t.id] case final i?) _replaceAt(i, t);
           }
+          // A first play can start before an old library's codec refresh finishes.
+          // Join its newly recognised file now instead of requiring another tap.
+          _joinScannedLocal().ignore();
           _setProgress(scanProgress.value.done + batch.length, scanProgress.value.total);
           // Sorting and grouping the library again is the costly part, so the UI hears of the new tags every
           // [scanNotifyEvery] and once at the end; progress has its own notifier.
@@ -1688,10 +1747,45 @@ class PlayerController extends ChangeNotifier {
         pending = _library.where(needsMetadata).toList();
         _setProgress(0, pending.length);
       }
+      if (refreshQuality) await prefs.setBool(qualityVersionKey, true);
     } finally {
       _scanning = false;
       notifyListeners();
       MemoryTrim.schedule();
+    }
+  }
+
+  Future<void> _joinScannedLocal() async {
+    if (_disposed || casting || _leavingMerge) return;
+    final state = player.sequenceState;
+    final source = state.currentSource;
+    final track = currentTrack;
+    final index = state.currentIndex;
+    if (track?.videoId == null || index == null || _manualAudio.choice(track!.videoId!) != null) return;
+    // A song streamed from YouTube (the type test only; just_audio marks the class experimental).
+    // ignore: experimental_member_use
+    if (source is! StreamAudioSource || (source is SmartMergeAudioSource && source.from != null)) return;
+    if (_smartMerge.soundFrom(track.videoId!)?.source == TrackSource.device) return;
+    final matching = _withMeasuredDuration(track);
+    final file = _smartMerge.local(matching, _views.library, (
+      _views.library,
+      libraryRevision.value,
+    ), available: (candidate) => File(candidate.path!).existsSync());
+    if (file == null) return;
+    _leavingMerge = true;
+    final playing = player.playing;
+    final generation = _playbackRetryGeneration;
+    try {
+      await player.setAudioSources(
+        [for (final item in state.sequence) _sourceFor(item.tag as Track)],
+        initialIndex: index,
+        initialPosition: player.position,
+      );
+      if (playing && !_disposed && generation == _playbackRetryGeneration) unawaited(_play());
+    } catch (error) {
+      debugPrint('Smart merge: joining scanned local audio failed: ${error.runtimeType}');
+    } finally {
+      _leavingMerge = false;
     }
   }
 
@@ -1861,10 +1955,28 @@ class PlayerController extends ChangeNotifier {
     if (t.isRemote) {
       // The web build plays straight from the proxy; it can't feed the browser's player a byte stream.
       if (webAudioUri(t.videoId!) case final uri?) return AudioSource.uri(uri, tag: identity);
+      if (_manualAudio.choice(t.videoId!) case final choice?) {
+        final chosen = choice.track;
+        final available = chosen != null && (chosen.path == null || File(chosen.path!).existsSync());
+        if (available && !_smartMerge.gaveUpOn(t.videoId!)) {
+          _smartMerge.markUsed(
+            t.videoId!,
+            sound: (
+              source: chosen.path != null ? TrackSource.device : TrackSource.monochrome,
+              name: chosen.path != null ? '' : monochrome.name,
+            ),
+          );
+          return _sourceFor(chosen, tag: identity);
+        }
+        // An explicit YouTube choice, a missing file or a failed override uses the
+        // original audio, never a different automatic recording.
+        return _youtubeSource?.call(identity) ?? YoutubeAudioSource(t.videoId!, yt: youtube.client, tag: identity);
+      }
       // Smart merge: the same recording from a lossless file here, then from a source that has it in better
       // quality, and the song's own stream otherwise.
       final merge = _smartMerge;
-      final file = merge.local(t, _views.library, (
+      final matching = _withMeasuredDuration(t);
+      final file = merge.local(matching, _views.library, (
         _views.library,
         libraryRevision.value,
       ), available: (file) => File(file.path!).existsSync());
@@ -1876,7 +1988,7 @@ class PlayerController extends ChangeNotifier {
       final local = downloadedCopy(t);
       if (local != null && !merge.gaveUpOn(t.videoId!)) return _sourceFor(local, tag: identity);
       final own = _youtubeSource?.call(identity) ?? YoutubeAudioSource(t.videoId!, yt: youtube.client, tag: identity);
-      return merge.streams(t) ? SmartMergeAudioSource(t, youtube: own, merge: merge) : own;
+      return merge.streams(matching) ? SmartMergeAudioSource(matching, youtube: own, merge: merge) : own;
     }
     if (t.soundcloudId case final id?) return SoundcloudAudioSource(id, client: soundcloud, tag: identity);
     if (t.extensionId != null) return SpotiflacAudioSource(t);
@@ -1885,6 +1997,19 @@ class PlayerController extends ChangeNotifier {
     return t.isCueTrack
         ? ClippingAudioSource(child: AudioSource.uri(t.uri), start: t.start, end: t.end, tag: identity)
         : AudioSource.uri(t.uri, tag: identity);
+  }
+
+  /// Search cards and shared links can omit length. Only the playing song may
+  /// borrow the decoder's measured duration; another queued song must never do so.
+  Track _withMeasuredDuration(Track track) {
+    final actual = player.duration;
+    return track.duration == null &&
+            track.videoId != null &&
+            track.videoId == currentTrack?.videoId &&
+            actual != null &&
+            actual > Duration.zero
+        ? track.copyWith(duration: actual)
+        : track;
   }
 
   bool _dopWasActive = false;
@@ -2329,7 +2454,7 @@ class PlayerController extends ChangeNotifier {
     final next = up?.next;
     if (next == null || next.id == _prefetched) return;
     _prefetched = next.id;
-    _smartMerge.prefetch(next);
+    if (next.videoId == null || _manualAudio.choice(next.videoId!) == null) _smartMerge.prefetch(next);
     // The one after it too, a little later and only while the service isn't limiting requests: two songs
     // skipped in a row still open at once (each got ready ahead is only its first 2 MB).
     _prefetchAfter?.cancel();
@@ -2337,7 +2462,7 @@ class PlayerController extends ChangeNotifier {
     if (after == null || after == up!.nextIndex) return;
     final second = player.sequenceState.sequence[after].tag as Track;
     // Only a song Smart merge would play from elsewhere: nothing to get ready for the others.
-    if (!_smartMerge.streams(second)) return;
+    if (!_smartMerge.streams(second) || _manualAudio.choice(second.videoId!) != null) return;
     _prefetchAfter = Timer(const Duration(seconds: 20), () {
       if (_disposed || RequestGate.anyBusy.value || _crossfadeUpcoming()?.next.id != next.id) return;
       _smartMerge.prefetch(second);

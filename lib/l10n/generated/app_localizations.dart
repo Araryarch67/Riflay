@@ -93,6 +93,48 @@ abstract class AppLocalizations {
   /// A list of this localizations delegate's supported locales.
   static const List<Locale> supportedLocales = <Locale>[Locale('en'), Locale('id'), Locale('ja')];
 
+  /// No description provided for @audioSource.
+  ///
+  /// In en, this message translates to:
+  /// **'Audio source'**
+  String get audioSource;
+
+  /// No description provided for @audioSourceHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose audio for this song. YouTube Music keeps its cover, lyrics and video. Your choice is remembered.'**
+  String get audioSourceHint;
+
+  /// No description provided for @audioSourceAutomatic.
+  ///
+  /// In en, this message translates to:
+  /// **'Automatic (Smart Merge)'**
+  String get audioSourceAutomatic;
+
+  /// No description provided for @audioSourceSearch.
+  ///
+  /// In en, this message translates to:
+  /// **'Find a recording in your library…'**
+  String get audioSourceSearch;
+
+  /// No description provided for @audioSourceSearchMonochrome.
+  ///
+  /// In en, this message translates to:
+  /// **'Search Monochrome'**
+  String get audioSourceSearchMonochrome;
+
+  /// No description provided for @audioSourceEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No recordings found. Try another title or artist.'**
+  String get audioSourceEmpty;
+
+  /// No description provided for @audioSourceFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t switch audio. Check the source and try again.'**
+  String get audioSourceFailed;
+
   /// No description provided for @betaFeatures.
   ///
   /// In en, this message translates to:
@@ -11364,7 +11406,7 @@ abstract class AppLocalizations {
   /// No description provided for @smartMergeSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Plays a YouTube Music song from the best source that has the same recording: a lossless file in your library first, then the music sources you turned on (Monochrome, in FLAC), and YouTube Music otherwise. Its music video, lyrics and cover stay from YouTube Music.'**
+  /// **'Combines YouTube Music with better-quality audio of the same recording from your library or enabled playback sources. Keeps its cover, lyrics and video. Uses YouTube when no better audio is available. Choose a source manually from the song menu.'**
   String get smartMergeSubtitle;
 
   /// No description provided for @smartMergeToday.

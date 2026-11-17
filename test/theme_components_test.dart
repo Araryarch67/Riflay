@@ -16,6 +16,10 @@ void main() {
   tearDown(look.reset);
 
   test('component surfaces and selected controls follow every chosen scheme', () async {
+    // The Classic slider look (the default is the pill, drawn in the text's colour app-wide).
+    final slider = LayoutPrefs.instance.volumeSlider;
+    LayoutPrefs.instance.volumeSlider = VolumeSliderShape.classic;
+    addTearDown(() => LayoutPrefs.instance.volumeSlider = slider);
     for (final choice in [ThemeChoice.nord, ThemeChoice.catppuccinLatte, ThemeChoice.gruvbox]) {
       await look.setTheme(choice);
       final theme = appThemeNow();

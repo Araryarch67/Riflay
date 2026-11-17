@@ -306,6 +306,7 @@ class SmartMerge {
 
   /// File types that keep the recording whole. `.m4a` is left out: it holds AAC as often as ALAC.
   static const _lossless = {'.flac', '.wav', '.aiff', '.aif', '.ape', '.wv', '.tta', '.dsf', '.dff'};
+  static const _losslessCodecs = {'FLAC', 'ALAC', 'WAV', 'AIFF', 'WAVPACK', 'APE', 'TTA', 'DSD', 'DSF', 'DFF'};
 
   /// Whether Smart merge is on for [track], a YouTube Music song that hasn't failed merged before.
   bool wants(Track track) => track.videoId != null && _enabled() && !_gaveUp.contains(track.videoId);
@@ -431,8 +432,13 @@ class SmartMerge {
       final index = <String, List<Track>>{};
       for (final file in library) {
         final path = file.path;
-        final alac = file.audioQuality?.startsWith('ALAC') ?? false;
-        if (path == null || file.isCueTrack || (!_lossless.contains(p.extension(path).toLowerCase()) && !alac)) {
+        final quality = file.audioQuality?.trim();
+        final codec = quality == null || quality.isEmpty ? null : quality.split(RegExp(r'[\s·]')).first.toUpperCase();
+        // Measured audio wins: FLAC in .m4a is lossless, AAC renamed .flac is not.
+        final lossless = codec == null
+            ? path != null && _lossless.contains(p.extension(path).toLowerCase())
+            : _losslessCodecs.contains(codec);
+        if (path == null || file.isCueTrack || !lossless) {
           continue;
         }
         for (final key in _keys(file.title)) {
@@ -685,6 +691,17 @@ class SmartMerge {
 
   /// Whether retries must use the original YouTube stream for this song.
   bool gaveUpOn(String videoId) => _gaveUp.contains(videoId);
+
+  /// An explicit source change retries this song without invalidating other matches.
+  void resetPlayback(String videoId) {
+    _gaveUp.remove(videoId);
+    _used.remove(videoId);
+    _soundFrom.remove(videoId);
+    _lossier.remove(videoId);
+    _limited.remove(videoId);
+    _waiting.remove(videoId);
+    changes.value++;
+  }
 }
 
 /// A YouTube Music song whose sound comes from the first of [SmartMerge.providers] that has the same recording

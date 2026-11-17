@@ -144,8 +144,22 @@ abstract final class Metadata {
     } catch (_) {}
     final bits = AudioEngine.parseSourceBits(head);
     final magic = ascii.decode(head, allowInvalid: true);
+    // A download or Android picker can give FLAC audio an .m4a filename. Trust the
+    // file signature before the extension, just as the metadata parser does.
     final format = switch (ext) {
-      'm4a' || 'm4b' || 'mp4' when bits != null && magic.contains('alac') => 'ALAC',
+      _ when magic.startsWith('fLaC') => 'FLAC',
+      _ when magic.startsWith('RIFF') && magic.length >= 12 && magic.substring(8, 12) == 'WAVE' => 'WAV',
+      _ when magic.startsWith('FORM') && (magic.contains('AIFF') || magic.contains('AIFC')) => 'AIFF',
+      _ when magic.startsWith('wvpk') => 'WavPack',
+      _ when magic.startsWith('MAC ') => 'APE',
+      _ when magic.startsWith('TTA1') => 'TTA',
+      _ when magic.startsWith('DSD ') => 'DSF',
+      _ when magic.startsWith('FRM8') && magic.contains('DSD ') => 'DFF',
+      _ when magic.startsWith('ID3') => 'MP3',
+      _ when magic.contains('OpusHead') => 'Opus',
+      _ when magic.startsWith('OggS') && magic.contains('vorbis') => 'Vorbis',
+      _ when bits != null && magic.contains('alac') => 'ALAC',
+      _ when magic.contains('ftyp') && magic.contains('mp4a') => 'AAC',
       'ogg' || 'oga' || 'webm' when magic.contains('OpusHead') => 'Opus',
       'ogg' || 'oga' || 'webm' when magic.contains('vorbis') => 'Vorbis',
       'opus' => 'Opus',

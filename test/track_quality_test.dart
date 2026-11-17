@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:riflay/models/track.dart';
 import 'package:riflay/services/metadata.dart';
+import 'package:riflay/services/smart_merge.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -21,6 +22,31 @@ void main() {
     final track = Track.fromUri(Uri.file('/music/unknown.m4a'));
     expect(track.qualityLabel, 'M4A');
     expect(Track.youtube(videoId: '1', title: 'Song', artist: 'Artist').qualityLabel, isNull);
+  });
+
+  test('FLAC named .m4a is measured as lossless and can replace YouTube audio', () async {
+    final dir = await Directory.systemTemp.createTemp('riflay-codec-quality-');
+    addTearDown(() => dir.delete(recursive: true));
+    final file = await File('test/fixtures/sine.flac').copy('${dir.path}/recording.m4a');
+    final local = await Metadata.enrich(Track.fromUri(file.uri).copyWith(title: 'Recording', artist: 'Test Artist'));
+    expect(local.audioQuality, startsWith('FLAC'));
+    expect(local.audioQuality, contains('16-bit / 16 kHz'));
+    final youtube = Track.youtube(
+      videoId: 'codec-test1',
+      title: local.title,
+      artist: local.artist,
+      duration: local.duration,
+    );
+    final merge = SmartMerge(providers: [], enabled: () => true);
+    expect(merge.local(youtube, [local], 1), same(local));
+  });
+
+  test('MP3 renamed .flac is measured as lossy', () async {
+    final dir = await Directory.systemTemp.createTemp('riflay-codec-quality-');
+    addTearDown(() => dir.delete(recursive: true));
+    final file = await File('test/fixtures/sine.mp3').copy('${dir.path}/recording.flac');
+    final local = await Metadata.enrich(Track.fromUri(file.uri));
+    expect(local.audioQuality, startsWith('MP3'));
   });
 
   test('measured quality takes precedence over advertised source quality', () {

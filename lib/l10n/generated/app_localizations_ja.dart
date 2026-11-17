@@ -10,6 +10,27 @@ class AppLocalizationsJa extends AppLocalizations {
   AppLocalizationsJa([String locale = 'ja']) : super(locale);
 
   @override
+  String get audioSource => '音声ソース';
+
+  @override
+  String get audioSourceHint => 'この曲の音声を選択します。カバー、歌詞、動画はYouTube Musicのままです。選択は保存されます。';
+
+  @override
+  String get audioSourceAutomatic => '自動（Smart Merge）';
+
+  @override
+  String get audioSourceSearch => 'ライブラリの音源を検索…';
+
+  @override
+  String get audioSourceSearchMonochrome => 'Monochromeで検索';
+
+  @override
+  String get audioSourceEmpty => '音源が見つかりません。別の曲名やアーティスト名でお試しください。';
+
+  @override
+  String get audioSourceFailed => '音声を切り替えられませんでした。ソースを確認して再試行してください。';
+
+  @override
   String get betaFeatures => 'ベータ機能';
 
   @override
@@ -6217,7 +6238,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get smartMergeSubtitle =>
-      '同じ録音がある最良のソースからYouTube Musicの曲を再生する。まずライブラリのロスレスファイル、次にオンにした音楽ソース(Monochrome、FLAC)、なければYouTube Music。MV、歌詞、カバーはYouTube Musicのまま。';
+      'YouTube Musicの曲を、ライブラリや有効な再生ソースにある同じ録音の高音質な音声と組み合わせます。カバー、歌詞、動画はそのままです。高音質な音源がなければYouTubeを使います。曲メニューから音声ソースを手動で選ぶこともできます。';
 
   @override
   String get smartMergeToday => '今日';
