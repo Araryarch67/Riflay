@@ -8,6 +8,7 @@ import '../../services/folder_watch.dart';
 import '../../services/language.dart';
 import '../../services/play_history.dart';
 import '../../services/player_controller.dart';
+import '../../services/playlist_covers.dart';
 import '../../services/smart_playlists.dart';
 import '../../services/youtube_music_account.dart';
 import '../ytmusic_edit.dart';
@@ -58,6 +59,7 @@ class _LibraryListState extends State<LibraryList> {
         BetaFeatures.instance,
         PlayHistory.instance,
         FolderWatch.instance,
+        PlaylistCovers.instance,
       ]),
       builder: (context, _) => _build(context, c, c.ytMusic.libraryNow),
     );
@@ -108,7 +110,10 @@ class _LibraryListState extends State<LibraryList> {
           for (final p in online.playlists)
             _SimpleRow(
               collapsed: widget.collapsed,
-              art: Artwork(track: playlistCover(p), size: 48),
+              art: Artwork(
+                track: PlaylistCovers.instance.coverOr(PlaylistCovers.remoteKey(p.id), playlistCover(p)),
+                size: 48,
+              ),
               title: p.title,
               subtitle: p.count == 0
                   ? '${tr.playlist} • YouTube Music'
@@ -489,7 +494,11 @@ class _LibraryRow extends StatelessWidget {
         ? _IconArt(Icons.folder_rounded, flat: collapsed)
         : collection.kind == CollectionKind.allSongs
         ? CoverMosaic(tracks: collection.tracks, size: 48)
-        : Artwork(track: collection.cover, size: 48, circle: isArtist);
+        : Artwork(
+            track: PlaylistCovers.instance.coverOr(collection.coverKey, collection.cover),
+            size: 48,
+            circle: isArtist,
+          );
 
     final tile = InkWell(
       borderRadius: BorderRadius.circular(6),

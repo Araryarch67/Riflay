@@ -7,8 +7,10 @@ import '../../platform/features.dart';
 import '../../services/language.dart';
 import '../../services/layout_prefs.dart';
 import '../../services/player_controller.dart';
+import '../../services/playlist_covers.dart';
 import '../../services/youtube_music_account.dart';
 import '../debug_switches.dart';
+import '../playlist_cover_edit.dart';
 import '../shell_scope.dart';
 import '../theme.dart';
 import '../widgets/controls.dart';
@@ -51,7 +53,7 @@ class HomePage extends StatelessWidget {
     // (a song starting, play / pause): what shows that is a small leaf below.
     final c = PlayerScope.identity(context);
     return ListenableBuilder(
-      listenable: Listenable.merge([c.libraryRevision, c.ytMusic, LayoutPrefs.instance]),
+      listenable: Listenable.merge([c.libraryRevision, c.ytMusic, LayoutPrefs.instance, PlaylistCovers.instance]),
       builder: (context, _) => _build(context, c, c.ytMusic.libraryNow),
     );
   }
@@ -80,21 +82,30 @@ class HomePage extends StatelessWidget {
       if (liked != null)
         QuickTile(
           title: tr.likedMusic,
-          leading: CoverMosaic(tracks: liked.tracks, radius: 0),
+          leading: PlaylistArtwork(
+            coverKey: liked.coverKey,
+            fallback: CoverMosaic(tracks: liked.tracks, radius: 0),
+          ),
           onTap: () => shell.openCollection(liked),
           onPlay: () => c.playCollection(liked),
         ),
       for (final p in playlists.take(3))
         QuickTile(
           title: p.name,
-          leading: CoverMosaic(tracks: p.tracks, radius: 0),
+          leading: PlaylistArtwork(
+            coverKey: PlaylistCovers.playlistKey(p.id),
+            fallback: CoverMosaic(tracks: p.tracks, radius: 0),
+          ),
           onTap: () => shell.openCollection(c.playlistCollection(p)),
           onPlay: p.tracks.isEmpty ? null : () => c.playCollection(c.playlistCollection(p)),
         ),
       for (final p in remotePlaylists.take(3))
         QuickTile(
           title: p.title,
-          leading: Artwork(track: playlistCover(p), radius: 0),
+          leading: PlaylistArtwork(
+            coverKey: PlaylistCovers.remoteKey(p.id),
+            fallback: Artwork(track: playlistCover(p), radius: 0),
+          ),
           onTap: () => openRemotePlaylist(context, p),
         ),
       for (final a in albums.take(3))
@@ -157,7 +168,7 @@ class HomePage extends StatelessWidget {
             if (i < playlists.length) {
               final p = playlists[i];
               return MediaCard(
-                track: p.tracks.firstOrNull,
+                track: PlaylistCovers.instance.coverOr(PlaylistCovers.playlistKey(p.id), p.tracks.firstOrNull),
                 title: p.name,
                 subtitle: tr.playlistOnRiflay(p.tracks.length),
                 onTap: () => shell.openCollection(c.playlistCollection(p)),
@@ -166,7 +177,7 @@ class HomePage extends StatelessWidget {
             }
             final p = remotePlaylists[i - playlists.length];
             return MediaCard(
-              track: playlistCover(p),
+              track: PlaylistCovers.instance.coverOr(PlaylistCovers.remoteKey(p.id), playlistCover(p)),
               title: p.title,
               subtitle: p.count == 0 ? 'YouTube Music' : tr.playlistOnYoutubeMusic(p.count),
               online: true,

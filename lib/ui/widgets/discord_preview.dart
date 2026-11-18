@@ -35,6 +35,7 @@ class DiscordPresenceSettings extends StatelessWidget {
         option(tr.discordAppButton, o.appButton, (v) => o.copyWith(appButton: v)),
         option(tr.discordWhilePaused, o.whilePaused, (v) => o.copyWith(whilePaused: v)),
         option(tr.discordShowQuality, o.quality, (v) => o.copyWith(quality: v)),
+        option(tr.discordShowWhenIdle, o.showWhenIdle, (v) => o.copyWith(showWhenIdle: v)),
       ],
     );
   }

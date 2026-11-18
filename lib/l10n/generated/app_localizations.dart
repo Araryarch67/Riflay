@@ -2163,6 +2163,66 @@ abstract class AppLocalizations {
   /// **'Show the sound quality (FLAC 24/96, Opus 160 kbps)'**
   String get discordShowQuality;
 
+  /// No description provided for @discordShowWhenIdle.
+  ///
+  /// In en, this message translates to:
+  /// **'Show while browsing or idle'**
+  String get discordShowWhenIdle;
+
+  /// No description provided for @discordBrowsingMusic.
+  ///
+  /// In en, this message translates to:
+  /// **'Browsing music'**
+  String get discordBrowsingMusic;
+
+  /// No description provided for @discordBrowsingLibrary.
+  ///
+  /// In en, this message translates to:
+  /// **'Exploring library'**
+  String get discordBrowsingLibrary;
+
+  /// No description provided for @discordSearchingMusic.
+  ///
+  /// In en, this message translates to:
+  /// **'Searching for music'**
+  String get discordSearchingMusic;
+
+  /// No description provided for @discordBrowsingDownloads.
+  ///
+  /// In en, this message translates to:
+  /// **'Viewing downloads'**
+  String get discordBrowsingDownloads;
+
+  /// No description provided for @discordViewingQueue.
+  ///
+  /// In en, this message translates to:
+  /// **'Viewing queue'**
+  String get discordViewingQueue;
+
+  /// No description provided for @discordViewingLyrics.
+  ///
+  /// In en, this message translates to:
+  /// **'Viewing lyrics'**
+  String get discordViewingLyrics;
+
+  /// No description provided for @discordInSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'In settings'**
+  String get discordInSettings;
+
+  /// No description provided for @discordListeningTogether.
+  ///
+  /// In en, this message translates to:
+  /// **'Listening together'**
+  String get discordListeningTogether;
+
+  /// No description provided for @discordViewingStats.
+  ///
+  /// In en, this message translates to:
+  /// **'Viewing music stats'**
+  String get discordViewingStats;
+
   /// No description provided for @shareLyrics.
   ///
   /// In en, this message translates to:
@@ -7550,6 +7610,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Change cover'**
   String get changeCover;
+
+  /// No description provided for @playlistCover.
+  ///
+  /// In en, this message translates to:
+  /// **'Playlist cover'**
+  String get playlistCover;
+
+  /// No description provided for @removeCover.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove cover'**
+  String get removeCover;
+
+  /// No description provided for @playlistCoverUpdated.
+  ///
+  /// In en, this message translates to:
+  /// **'Cover updated'**
+  String get playlistCoverUpdated;
+
+  /// No description provided for @playlistCoverRemoved.
+  ///
+  /// In en, this message translates to:
+  /// **'Cover removed'**
+  String get playlistCoverRemoved;
+
+  /// No description provided for @couldntUsePicture.
+  ///
+  /// In en, this message translates to:
+  /// **'That picture couldn\'t be used'**
+  String get couldntUsePicture;
 
   /// No description provided for @searching.
   ///

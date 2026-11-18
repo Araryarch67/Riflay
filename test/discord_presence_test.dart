@@ -152,7 +152,8 @@ void main() {
 
   test('handshake, listening activity with progress and button, then clear on pause', () async {
     final fake = await FakeDiscord.start();
-    final presence = DiscordPresence('1561368591297941655', socketPaths: () => [fake.path]);
+    final presence = DiscordPresence('1561368591297941655', socketPaths: () => [fake.path])
+      ..options = const DiscordOptions(showWhenIdle: false);
     final track = Track.youtube(videoId: 'kJQP7kiw5Fk', title: 'Despacito', artist: 'Luis Fonsi');
 
     presence.update(
@@ -195,7 +196,8 @@ void main() {
 
   test('the artist is the state line; the quality sits on the logo over the cover', () async {
     final fake = await FakeDiscord.start();
-    final presence = DiscordPresence('1561368591297941655', socketPaths: () => [fake.path]);
+    final presence = DiscordPresence('1561368591297941655', socketPaths: () => [fake.path])
+      ..options = const DiscordOptions(showWhenIdle: false);
     final track = Track.youtube(videoId: 'kJQP7kiw5Fk', title: 'Despacito', artist: 'Luis Fonsi');
     Map activity(int i) => (fake.frames[i].$2['args'] as Map)['activity'] as Map;
 
@@ -223,6 +225,34 @@ void main() {
     presence.update(track: track, playing: true, position: Duration.zero, quality: 'Opus · 160 kbps');
     await fake.waitForFrames(2);
     expect(((fake.frames[1].$2['args'] as Map)['activity'] as Map)['state'], 'Opus · 160 kbps');
+
+    presence.dispose();
+    await fake.close();
+  });
+
+  test('when showWhenIdle is true, browsing and idle activities are sent', () async {
+    final fake = await FakeDiscord.start();
+    final startTime = DateTime(2026, 1, 1, 12, 0);
+    final presence = DiscordPresence('1561368591297941655', socketPaths: () => [fake.path])
+      ..appStartTimeForTesting = startTime;
+
+    // No track: sends idle browsing activity.
+    presence.update(track: null, playing: false, position: Duration.zero, browsingLocation: 'library');
+    await fake.waitForFrames(2);
+    final a1 = (fake.frames[1].$2['args'] as Map)['activity'] as Map;
+    expect(a1['type'], 2);
+    expect(a1['status_display_type'], 0);
+    expect(a1['details'], 'Exploring library');
+    expect(a1['state'], 'Riflay');
+    expect((a1['timestamps'] as Map)['start'], startTime.millisecondsSinceEpoch);
+    expect((a1['assets'] as Map)['large_image'], 'openmusic');
+    expect([for (final b in a1['buttons'] as List) (b as Map)['label']], ['Download Riflay']);
+
+    // Changing location updates the browsing details.
+    presence.update(track: null, playing: false, position: Duration.zero, browsingLocation: 'search');
+    await fake.waitForFrames(3);
+    final a2 = (fake.frames[2].$2['args'] as Map)['activity'] as Map;
+    expect(a2['details'], 'Searching for music');
 
     presence.dispose();
     await fake.close();
@@ -295,7 +325,7 @@ void main() {
     });
 
     test('kept as JSON, and an old save without them keeps the defaults', () {
-      const o = DiscordOptions(cover: false, whilePaused: true, quality: false);
+      const o = DiscordOptions(cover: false, whilePaused: true, quality: false, showWhenIdle: false);
       expect(DiscordOptions.fromJson(o.toJson()), o);
       expect(DiscordOptions.fromJson(const {}), const DiscordOptions());
     });

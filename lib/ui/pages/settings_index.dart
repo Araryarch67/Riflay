@@ -1025,6 +1025,14 @@ abstract final class SettingsOptions {
       parent: 'discord',
       available: () => DiscordPresence.supported,
     ),
+    SettingsOption(
+      'discordShowWhenIdle',
+      .integrations,
+      (t) => t.discordShowWhenIdle,
+      find: (t) => t.kwDiscord,
+      parent: 'discord',
+      available: () => DiscordPresence.supported,
+    ),
     SettingsOption('betterLyrics', .lyrics, (t) => t.betterLyricsKey, find: (t) => t.kwLyricsServices),
     SettingsOption(
       'sourceSoundcloud',

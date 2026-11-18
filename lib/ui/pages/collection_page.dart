@@ -11,9 +11,11 @@ import '../../services/language.dart';
 import '../../services/layout_prefs.dart';
 import '../../services/play_history.dart';
 import '../../services/player_controller.dart';
+import '../../services/playlist_covers.dart';
 import '../../services/smart_playlists.dart';
 import '../download_options.dart';
 import '../flac_convert_dialog.dart';
+import '../playlist_cover_edit.dart';
 import '../shell_scope.dart';
 import '../theme.dart';
 import '../player/player_parts.dart' show PartButton, PartLook;
@@ -55,10 +57,10 @@ class CollectionPage extends StatelessWidget {
     Widget page([Track? picture]) => TrackSelectionHost(
       child: ListenableBuilder(
         listenable: collection.id == likedMusicId
-            ? Listenable.merge([c.libraryRevision, c.ytMusic])
+            ? Listenable.merge([c.libraryRevision, c.ytMusic, PlaylistCovers.instance])
             : collection.kind == CollectionKind.smart
-            ? Listenable.merge([c.libraryRevision, PlayHistory.instance])
-            : c.libraryRevision,
+            ? Listenable.merge([c.libraryRevision, PlayHistory.instance, PlaylistCovers.instance])
+            : Listenable.merge([c.libraryRevision, PlaylistCovers.instance]),
         builder: (context, _) => _build(context, c, picture),
       ),
     );
@@ -89,6 +91,7 @@ class CollectionPage extends StatelessWidget {
               title: collection.title,
               subtitle: collection.subtitle,
               tracks: liked,
+              coverKey: collection.coverKey,
             ),
             _ => null,
           },
@@ -101,6 +104,8 @@ class CollectionPage extends StatelessWidget {
         } ??
         collection;
     if (picture != null) live = live.withPicture(picture);
+    // A picture the person picked takes the place of the automatic one on the whole page.
+    if (PlaylistCovers.instance.coverOf(live.coverKey) case final own?) live = live.withPicture(own);
     final tracks = live.tracks;
     final isArtist = live.kind == CollectionKind.artist;
     final isAll = live.kind == CollectionKind.allSongs;
@@ -120,6 +125,7 @@ class CollectionPage extends StatelessWidget {
     final actions = [
       ...this.actions,
       if (playlistId != null) _PlaylistMenu(id: playlistId, name: live.title, tracks: tracks),
+      if (live.coverKey case final key?) PlaylistCoverMenu(coverKey: key, name: live.title),
       if (live.kind == CollectionKind.folder && live.id != null) _FolderPlaylistMenu(path: live.id!),
     ];
 

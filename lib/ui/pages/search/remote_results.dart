@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../models/track.dart';
 import '../../../services/player_controller.dart';
+import '../../../services/playlist_covers.dart';
 import '../../../services/youtube_music_account.dart';
 import '../../../services/ytmusic_web.dart' show WebResultKind;
 import '../../shell_scope.dart';
@@ -44,7 +45,7 @@ class RemoteCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => MediaCard(
-    track: playlistCover(collection),
+    track: PlaylistCovers.instance.coverOr(PlaylistCovers.remoteKey(collection.id), playlistCover(collection)),
     title: collection.title,
     subtitle: collection.subtitle ?? '',
     circle: collection.browseId?.startsWith('UC') ?? false,

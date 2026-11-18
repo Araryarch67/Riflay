@@ -26,4 +26,9 @@ void main() {
     expect(a.tracks, [song]);
     expect(a.title, 'Someone');
   });
+
+  test('a chosen cover keeps its key when another picture replaces it', () {
+    final p = Collection(kind: CollectionKind.playlist, title: 'Mix', subtitle: '', tracks: [song], coverKey: 'pl:1');
+    expect(p.withPicture(photo).coverKey, 'pl:1');
+  });
 }

@@ -397,6 +397,7 @@ class Collection {
     required this.tracks,
     this.id,
     this.picture,
+    this.coverKey,
   });
 
   final CollectionKind kind;
@@ -410,11 +411,14 @@ class Collection {
   /// A picture of its own (an artist's photo), drawn instead of its first song's cover.
   final Track? picture;
 
+  /// Where a cover the person picked lives (see `PlaylistCovers`); null for collections that can't have one.
+  final String? coverKey;
+
   Track? get cover => picture ?? (tracks.isEmpty ? null : tracks.first);
 
   /// The same, with [p] as its picture.
   Collection withPicture(Track p) =>
-      Collection(kind: kind, title: title, subtitle: subtitle, tracks: tracks, id: id, picture: p);
+      Collection(kind: kind, title: title, subtitle: subtitle, tracks: tracks, id: id, picture: p, coverKey: coverKey);
 }
 
 /// [Collection.id] of YouTube Music's "Liked music".

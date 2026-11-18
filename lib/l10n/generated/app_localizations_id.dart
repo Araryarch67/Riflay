@@ -1121,6 +1121,36 @@ class AppLocalizationsId extends AppLocalizations {
   String get discordShowQuality => 'Tampilkan kualitas suara (FLAC 24/96, Opus 160 kbps)';
 
   @override
+  String get discordShowWhenIdle => 'Tampilkan saat menjelajah atau tidak memutar lagu';
+
+  @override
+  String get discordBrowsingMusic => 'Menjelajah musik';
+
+  @override
+  String get discordBrowsingLibrary => 'Menjelajah koleksi';
+
+  @override
+  String get discordSearchingMusic => 'Mencari musik';
+
+  @override
+  String get discordBrowsingDownloads => 'Melihat unduhan';
+
+  @override
+  String get discordViewingQueue => 'Melihat antrean';
+
+  @override
+  String get discordViewingLyrics => 'Melihat lirik';
+
+  @override
+  String get discordInSettings => 'Di pengaturan';
+
+  @override
+  String get discordListeningTogether => 'Mendengarkan bersama';
+
+  @override
+  String get discordViewingStats => 'Melihat statistik musik';
+
+  @override
   String get shareLyrics => 'Bagikan lirik';
 
   @override
@@ -4157,6 +4187,21 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get changeCover => 'Ganti sampul';
+
+  @override
+  String get playlistCover => 'Sampul playlist';
+
+  @override
+  String get removeCover => 'Hapus sampul';
+
+  @override
+  String get playlistCoverUpdated => 'Sampul diperbarui';
+
+  @override
+  String get playlistCoverRemoved => 'Sampul dihapus';
+
+  @override
+  String get couldntUsePicture => 'Foto itu tidak bisa dipakai';
 
   @override
   String get searching => 'Mencari…';

@@ -22,6 +22,7 @@ class DiscordOptions {
     this.songInList = true,
     this.whilePaused = false,
     this.quality = true,
+    this.showWhenIdle = true,
   });
 
   /// The song's cover; off: Riflay's logo.
@@ -41,6 +42,9 @@ class DiscordOptions {
   /// The sound's quality ("FLAC 24/96", "Opus 160 kbps") on the line under the song, beside the album.
   final bool quality;
 
+  /// Shows presence while browsing or idle; off: only shows when music is playing.
+  final bool showWhenIdle;
+
   DiscordOptions copyWith({
     bool? cover,
     bool? time,
@@ -49,6 +53,7 @@ class DiscordOptions {
     bool? songInList,
     bool? whilePaused,
     bool? quality,
+    bool? showWhenIdle,
   }) => DiscordOptions(
     cover: cover ?? this.cover,
     time: time ?? this.time,
@@ -57,6 +62,7 @@ class DiscordOptions {
     songInList: songInList ?? this.songInList,
     whilePaused: whilePaused ?? this.whilePaused,
     quality: quality ?? this.quality,
+    showWhenIdle: showWhenIdle ?? this.showWhenIdle,
   );
 
   Map<String, Object> toJson() => {
@@ -67,6 +73,7 @@ class DiscordOptions {
     'songInList': songInList,
     'whilePaused': whilePaused,
     'quality': quality,
+    'showWhenIdle': showWhenIdle,
   };
 
   factory DiscordOptions.fromJson(Map<String, Object?> j) {
@@ -80,6 +87,7 @@ class DiscordOptions {
       songInList: b('songInList', d.songInList),
       whilePaused: b('whilePaused', d.whilePaused),
       quality: b('quality', d.quality),
+      showWhenIdle: b('showWhenIdle', d.showWhenIdle),
     );
   }
 
@@ -125,6 +133,12 @@ class DiscordPresence {
   bool _disposed = false;
   final _monochromeCovers = <String, Future<String?>>{};
   bool _enabled = true;
+  DateTime _appStartTime = DateTime.now();
+
+  @visibleForTesting
+  set appStartTimeForTesting(DateTime t) => _appStartTime = t;
+
+  DateTime get appStartTime => _appStartTime;
 
   /// What the presence shows; Settings sets it.
   DiscordOptions options = const DiscordOptions();
@@ -140,19 +154,26 @@ class DiscordPresence {
     }
   }
 
-  /// Shows [track] as playing from [position] ([quality]: "FLAC · 24-bit / 96 kHz"), or clears the presence when
-  /// [track] is null or paused.
+  /// Shows [track] as playing from [position] ([quality]: "FLAC · 24-bit / 96 kHz"), or shows browsing presence
+  /// when [options.showWhenIdle] is true, or clears the presence.
   void update({
     required Track? track,
     required bool playing,
     required Duration position,
     Duration? duration,
     String? quality,
+    String? browsingLocation,
   }) {
     if (!supported || !_enabled) return;
-    _wanted = track == null || (!playing && !options.whilePaused)
-        ? null
-        : activity(track, position: position, duration: duration, quality: quality, playing: playing);
+    if (track != null && playing) {
+      _wanted = activity(track, position: position, duration: duration, quality: quality, playing: true);
+    } else if (track != null && !playing && options.whilePaused) {
+      _wanted = activity(track, position: position, duration: duration, quality: quality, playing: false);
+    } else if (options.showWhenIdle) {
+      _wanted = idleActivity(location: browsingLocation);
+    } else {
+      _wanted = null;
+    }
     // Nothing shown yet and nothing to show: don't wake Discord up just to clear.
     if (_wanted == null && _conn == null) {
       _pending?.cancel();
@@ -188,6 +209,37 @@ class DiscordPresence {
     _pending?.cancel();
     final wait = _minInterval - DateTime.now().difference(_lastSent);
     _pending = Timer(wait.isNegative ? Duration.zero : wait, () => _send(_wanted));
+  }
+
+  /// Maps an in-app location to a friendly, localized browsing description.
+  static String browsingDetails(String? location) {
+    final loc = location?.toLowerCase().trim();
+    if (loc == null || loc.isEmpty || loc == 'home') return tr.discordBrowsingMusic;
+    if (loc == 'library' || loc.startsWith('collection')) return tr.discordBrowsingLibrary;
+    if (loc == 'search') return tr.discordSearchingMusic;
+    if (loc == 'downloads') return tr.discordBrowsingDownloads;
+    if (loc == 'queue') return tr.discordViewingQueue;
+    if (loc == 'lyrics') return tr.discordViewingLyrics;
+    if (loc == 'settings' || loc.startsWith('settings')) return tr.discordInSettings;
+    if (loc == 'listen') return tr.discordListeningTogether;
+    if (loc == 'stats' || loc == 'wrap') return tr.discordViewingStats;
+    return tr.discordBrowsingMusic;
+  }
+
+  /// What is sent to Discord when the user is browsing Riflay or idle (no music playing).
+  Map<String, dynamic> idleActivity({String? location}) {
+    final details = browsingDetails(location);
+    return {
+      'type': 2, // "Listening to"
+      'status_display_type': 0, // In member list: "Listening to Riflay"
+      'details': _clip(details),
+      'state': _clip('Riflay'),
+      if (options.time) 'timestamps': {'start': _appStartTime.millisecondsSinceEpoch},
+      'assets': {'large_image': 'openmusic', 'large_text': 'Riflay'},
+      'buttons': [
+        if (options.appButton) {'label': 'Download Riflay', 'url': downloadUrl},
+      ],
+    };
   }
 
   /// What is sent to Discord for [t] at [position], as [options] say. Settings' preview draws this very map, so

@@ -1131,6 +1131,36 @@ class AppLocalizationsEn extends AppLocalizations {
   String get discordShowQuality => 'Show the sound quality (FLAC 24/96, Opus 160 kbps)';
 
   @override
+  String get discordShowWhenIdle => 'Show while browsing or idle';
+
+  @override
+  String get discordBrowsingMusic => 'Browsing music';
+
+  @override
+  String get discordBrowsingLibrary => 'Exploring library';
+
+  @override
+  String get discordSearchingMusic => 'Searching for music';
+
+  @override
+  String get discordBrowsingDownloads => 'Viewing downloads';
+
+  @override
+  String get discordViewingQueue => 'Viewing queue';
+
+  @override
+  String get discordViewingLyrics => 'Viewing lyrics';
+
+  @override
+  String get discordInSettings => 'In settings';
+
+  @override
+  String get discordListeningTogether => 'Listening together';
+
+  @override
+  String get discordViewingStats => 'Viewing music stats';
+
+  @override
   String get shareLyrics => 'Share lyrics';
 
   @override
@@ -4205,6 +4235,21 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get changeCover => 'Change cover';
+
+  @override
+  String get playlistCover => 'Playlist cover';
+
+  @override
+  String get removeCover => 'Remove cover';
+
+  @override
+  String get playlistCoverUpdated => 'Cover updated';
+
+  @override
+  String get playlistCoverRemoved => 'Cover removed';
+
+  @override
+  String get couldntUsePicture => 'That picture couldn\'t be used';
 
   @override
   String get searching => 'Searching…';

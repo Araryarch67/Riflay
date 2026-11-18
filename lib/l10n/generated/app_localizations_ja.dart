@@ -1114,6 +1114,36 @@ class AppLocalizationsJa extends AppLocalizations {
   String get discordShowQuality => '音質も表示する（FLAC 24/96、Opus 160 kbps）';
 
   @override
+  String get discordShowWhenIdle => 'ブラウズ中や待機中も表示';
+
+  @override
+  String get discordBrowsingMusic => '音楽をブラウズ中';
+
+  @override
+  String get discordBrowsingLibrary => 'ライブラリを探索中';
+
+  @override
+  String get discordSearchingMusic => '音楽を検索中';
+
+  @override
+  String get discordBrowsingDownloads => 'ダウンロードを表示中';
+
+  @override
+  String get discordViewingQueue => 'キューを表示中';
+
+  @override
+  String get discordViewingLyrics => '歌詞を表示中';
+
+  @override
+  String get discordInSettings => '設定を表示中';
+
+  @override
+  String get discordListeningTogether => '一緒に聴く';
+
+  @override
+  String get discordViewingStats => '音楽の統計を表示中';
+
+  @override
   String get shareLyrics => '歌詞をシェア';
 
   @override
@@ -4079,6 +4109,21 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get changeCover => 'ジャケットを変更';
+
+  @override
+  String get playlistCover => 'プレイリストのカバー';
+
+  @override
+  String get removeCover => 'カバーを削除';
+
+  @override
+  String get playlistCoverUpdated => 'カバーを変更しました';
+
+  @override
+  String get playlistCoverRemoved => 'カバーを削除しました';
+
+  @override
+  String get couldntUsePicture => 'その画像は使えませんでした';
 
   @override
   String get searching => '検索中…';

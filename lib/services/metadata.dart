@@ -625,13 +625,20 @@ abstract final class Metadata {
       for (final path in paths)
         () {
           try {
-            return _embeddedPicture(path) ?? _sidecarImage(path);
+            return _imageFile(path) ?? _embeddedPicture(path) ?? _sidecarImage(path);
           } catch (_) {
             return null;
           }
         }(),
     ],
   );
+
+  /// A picture that is a file of its own (a playlist cover the person picked), not a song with tags.
+  static Uint8List? _imageFile(String path) {
+    const imageExtensions = {'jpg', 'jpeg', 'png', 'webp', 'gif', 'bmp'};
+    if (!imageExtensions.contains(_ext(path))) return null;
+    return File(path).readAsBytesSync();
+  }
 
   /// One connection pool for every cover: a fresh client per image would pay
   /// a TLS handshake each time.
@@ -662,6 +669,16 @@ abstract final class Metadata {
 
   static Future<Uint8List?> _networkArtwork(String? url) async {
     if (url == null) return null;
+    // A browser has no app folder to keep a picked playlist cover in, so it is kept as a data URL in the settings.
+    if (url.startsWith('data:')) {
+      final comma = url.indexOf(',');
+      if (comma < 0) return null;
+      try {
+        return base64Decode(url.substring(comma + 1));
+      } catch (_) {
+        return null;
+      }
+    }
     final dir = await _artDir;
     final file = dir == null ? null : File('${dir.path}${Host.pathSeparator}${sha1.convert(url.codeUnits)}');
     try {

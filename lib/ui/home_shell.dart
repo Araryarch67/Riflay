@@ -135,6 +135,7 @@ class _HomeShellState extends State<HomeShell> {
   void _followLocation() {
     if (_history.location == _location) return;
     _location = _history.location;
+    _player?.setBrowsingLocation(_location);
     _leaveExpandedPlayer();
   }
 
@@ -150,6 +151,7 @@ class _HomeShellState extends State<HomeShell> {
     _player?.removeListener(_followTrack);
     _sourceVerification?.dispose();
     _player = c..addListener(_followTrack);
+    _player?.setBrowsingLocation(_location ?? _history.location);
     _sourceVerification = SourceVerificationQueue(
       c.youtube,
       verify: (job, provider) async {
@@ -423,6 +425,7 @@ class _HomeShellState extends State<HomeShell> {
         _visitedTabs.add(tab);
         _tab = tab;
       });
+      _player?.setBrowsingLocation(tab.name);
     }
   }
 

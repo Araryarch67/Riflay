@@ -4,6 +4,7 @@ import '../../models/track.dart';
 import '../../platform/features.dart';
 import '../../services/metadata.dart';
 import '../../services/player_controller.dart';
+import '../../services/playlist_covers.dart';
 import '../../services/youtube_music_account.dart';
 import '../../services/desktop_login.dart';
 import '../shell_scope.dart';
@@ -54,6 +55,7 @@ Collection likedCollection(List<Track> liked) => Collection(
   title: tr.likedMusic,
   subtitle: 'YouTube Music',
   tracks: liked,
+  coverKey: PlaylistCovers.likedKey,
 );
 
 /// "Join a shared playlist": joins from a friend's invite link, then opens it.
@@ -102,6 +104,7 @@ void openRemotePlaylist(BuildContext context, RemotePlaylist p, {ShellScope? she
         title: p.title,
         subtitle: artistId != null ? tr.artist : p.subtitle ?? 'YouTube Music',
         tracks: await music.collectionTracks(p),
+        coverKey: artistId == null && p.browseId == null ? PlaylistCovers.remoteKey(p.id) : null,
       ),
     ),
   );
@@ -291,7 +294,10 @@ List<Widget> remoteShelfWidgets(BuildContext context, PlayerController c, List<R
               FutureBuilder<String?>(
                 future: firstSongCover(c.ytMusic, p),
                 builder: (context, first) => MediaCard(
-                  track: playlistCover(p, fallback: first.data),
+                  track: PlaylistCovers.instance.coverOr(
+                    PlaylistCovers.remoteKey(p.id),
+                    playlistCover(p, fallback: first.data),
+                  ),
                   title: p.title,
                   subtitle: p.subtitle ?? tr.playlist,
                   online: true,
@@ -525,6 +531,7 @@ class _LibraryPlaylistPageState extends State<LibraryPlaylistPage> {
       title: _title,
       subtitle: [if (d.privacy != null) d.privacy!.label, if (d.collaborative) tr.shared, 'YouTube Music'].join(' · '),
       tracks: d.tracks,
+      coverKey: PlaylistCovers.remoteKey(widget.playlist.id),
     );
     return PlaylistEditScope(
       canRemove: (t) => (d.owned || d.collaborative) && d.rowIds.containsKey(t.id),

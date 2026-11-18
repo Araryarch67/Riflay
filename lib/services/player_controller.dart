@@ -42,6 +42,7 @@ import 'soundcloud.dart';
 import 'merged_download.dart';
 import 'smart_merge.dart';
 import 'manual_audio.dart';
+import 'playlist_covers.dart';
 import 'request_gate.dart';
 import 'sources/music_sources.dart';
 import 'soundcloud_audio_source.dart';
@@ -341,6 +342,18 @@ class PlayerController extends ChangeNotifier {
 
   String? _presenceKey;
 
+  /// In-app screen currently shown (e.g. "home", "library", "search"), for the Discord idle presence.
+  String? _browsingLocation;
+  String? get browsingLocation => _browsingLocation;
+
+  void setBrowsingLocation(String? location) {
+    if (_browsingLocation == location) return;
+    _browsingLocation = location;
+    if (currentTrack == null || (!isPlaying && !discordOptions.whilePaused)) {
+      _updatePresence();
+    }
+  }
+
   /// "FLAC · 24-bit / 96 kHz" of the current song for the Discord presence, once mpv has it.
   String? _quality;
   String? get presenceQuality => _quality;
@@ -367,10 +380,17 @@ class PlayerController extends ChangeNotifier {
       _qualityTimer?.cancel();
     }
     // Skip no-op updates (playerStateStream fires on every buffering change).
-    final key = '${track?.id}|$isPlaying|$duration|$_quality';
+    final key = '${track?.id}|$isPlaying|$duration|$_quality|$_browsingLocation';
     if (key != _presenceKey || force) {
       _presenceKey = key;
-      discord.update(track: track, playing: isPlaying, position: position, duration: duration, quality: _quality);
+      discord.update(
+        track: track,
+        playing: isPlaying,
+        position: position,
+        duration: duration,
+        quality: _quality,
+        browsingLocation: _browsingLocation,
+      );
     }
     if (track != null && isPlaying) _watchQuality();
   }
@@ -1123,6 +1143,7 @@ class PlayerController extends ChangeNotifier {
     title: p.name,
     subtitle: tr.songsPlural(p.tracks.length),
     tracks: p.tracks,
+    coverKey: PlaylistCovers.playlistKey(p.id),
   );
 
   Collection? playlistById(String? id) => _playlists.where((p) => p.id == id).map(playlistCollection).firstOrNull;
@@ -1404,7 +1425,7 @@ class PlayerController extends ChangeNotifier {
     final library = LibraryStore.load(prefs);
     // iOS: picked folders have to be reopened before any of their songs can be read.
     final folders = Host.isIOS ? IosFolders.restore() : Future.value(const <String, String>{});
-    await Future.wait([library, folders, ytMusic.load(), audio.load()]);
+    await Future.wait([library, folders, ytMusic.load(), audio.load(), PlaylistCovers.instance.load()]);
     // A downloads folder picked in Files is one of them.
     if (Host.isIOS) await DownloadPrefs.instance.repointFolder(await folders);
     _followTempo(); // a tempo or pitch kept from last time
@@ -1463,6 +1484,7 @@ class PlayerController extends ChangeNotifier {
     } catch (e) {
       debugPrint('Discord options unreadable: $e');
     }
+    _updatePresence();
     _autoplay = prefs.getBool(_autoplayKey) ?? true;
     final loop = LoopMode.values.asNameMap()[prefs.getString(_loopKey)];
     final level = prefs.getDouble(_volumeKey);
