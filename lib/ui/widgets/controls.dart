@@ -13,6 +13,7 @@ import '../../services/audio_analysis.dart';
 import '../../services/layout_prefs.dart';
 import '../../services/metadata.dart';
 import '../../services/player_controller.dart';
+import '../../services/rendering_memory.dart';
 import '../../services/smart_merge.dart';
 import '../../services/ui_beat.dart';
 import '../debug_switches.dart';
@@ -254,7 +255,12 @@ class _CoverImageState extends State<_CoverImage> {
     _shown = bytes;
     return Image(
       key: ValueKey(t.albumKey ?? t.id),
-      image: ResizeImage(MemoryImage(bytes), width: widget.width, allowUpscaling: false),
+      image: ResizeImage(
+        MemoryImage(bytes),
+        width: widget.width.clamp(1, RenderingMemory.artworkSide),
+        height: widget.width.clamp(1, RenderingMemory.artworkSide),
+        policy: ResizeImagePolicy.fit,
+      ),
       fit: BoxFit.cover,
       width: double.infinity,
       height: double.infinity,

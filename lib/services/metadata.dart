@@ -524,11 +524,8 @@ abstract final class Metadata {
       // Ask the native decoder for the thumbnail, rather than expanding full
       // resolution pixels and JPEG decoder arrays in a Dart isolate. Keep the
       // short side at 256 so square cover crops retain their original quality.
-      final landscape = descriptor.width >= descriptor.height;
-      codec = await descriptor.instantiateCodec(
-        targetWidth: landscape ? (thumbnailSide * descriptor.width / descriptor.height).round() : thumbnailSide,
-        targetHeight: landscape ? thumbnailSide : (thumbnailSide * descriptor.height / descriptor.width).round(),
-      );
+      final (targetWidth, targetHeight) = _thumbnailSize(descriptor.width, descriptor.height);
+      codec = await descriptor.instantiateCodec(targetWidth: targetWidth, targetHeight: targetHeight);
       image = (await codec.getNextFrame()).image;
       width = image.width;
       height = image.height;
@@ -547,10 +544,18 @@ abstract final class Metadata {
   static Uint8List _shrinkWebThumbnail(Uint8List full) {
     final image = img.decodeImage(full);
     if (image == null || (image.width <= thumbnailSide && image.height <= thumbnailSide)) return full;
-    final small = image.width >= image.height
-        ? img.copyResize(image, height: thumbnailSide, interpolation: img.Interpolation.average)
-        : img.copyResize(image, width: thumbnailSide, interpolation: img.Interpolation.average);
+    final (width, height) = _thumbnailSize(image.width, image.height);
+    final small = img.copyResize(image, width: width, height: height, interpolation: img.Interpolation.average);
     return img.encodeJpg(small, quality: 88);
+  }
+
+  static (int, int) _thumbnailSize(int width, int height) {
+    // Embedded art can be a tall scan or panoramic image. Preserve the aspect
+    // ratio without turning a thumbnail's longer edge into a full-size bitmap.
+    final scale = math
+        .min(thumbnailSide / math.min(width, height), 3 * thumbnailSide / math.max(width, height))
+        .clamp(0.0, 1.0);
+    return (math.max(1, (width * scale).round()), math.max(1, (height * scale).round()));
   }
 
   // Only thumbnail-size pixels cross to the isolate; the full cover, native

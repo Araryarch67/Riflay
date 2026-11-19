@@ -24,34 +24,37 @@ void main() {
       return true;
     });
     await RenderingMemory.configure();
-    // Balanced, the default mode: 24 MiB of decoded covers.
-    expect(PaintingBinding.instance.imageCache.maximumSizeBytes, 24 << 20);
+    expect(PaintingBinding.instance.imageCache.maximumSizeBytes, 14 << 20);
     if (!Host.isLinux && !Host.isWindows) {
       expect(calls, isEmpty);
       return;
     }
     expect(calls, hasLength(1));
     expect(calls.single.method, 'Skia.setResourceCacheMaxBytes');
-    expect(calls.single.arguments, 96 << 20);
+    expect(calls.single.arguments, 32 << 20);
   });
 
   test('renderers without the Skia channel still start normally', () async {
     messenger.setMockMethodCallHandler(SystemChannels.skia, (_) async => throw MissingPluginException());
     await RenderingMemory.configure();
-    expect(PaintingBinding.instance.imageCache.maximumSizeBytes, 24 << 20);
+    expect(PaintingBinding.instance.imageCache.maximumSizeBytes, 14 << 20);
   });
 
-  test('the decoded image budget follows the performance mode', () async {
+  test('decoded and individual image budgets follow the performance mode', () async {
     addTearDown(() => LayoutPrefs.instance.setPerformance(PerformanceMode.balanced));
     SharedPreferences.setMockInitialValues({});
     final budgets = {
       for (final mode in PerformanceMode.values)
-        mode: await LayoutPrefs.instance.setPerformance(mode).then((_) => RenderingMemory.decodedImageBytes),
+        mode: await LayoutPrefs.instance
+            .setPerformance(mode)
+            .then(
+              (_) => (RenderingMemory.decodedImageBytes, RenderingMemory.artworkSide, RenderingMemory.gpuCacheBytes),
+            ),
     };
     expect(budgets, {
-      PerformanceMode.lightweight: 16 << 20,
-      PerformanceMode.balanced: 24 << 20,
-      PerformanceMode.heavy: 40 << 20,
+      PerformanceMode.lightweight: (6 << 20, 512, 12 << 20),
+      PerformanceMode.balanced: (14 << 20, 1024, 32 << 20),
+      PerformanceMode.heavy: (24 << 20, 1536, 56 << 20),
     });
   });
 }

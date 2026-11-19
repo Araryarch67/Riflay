@@ -8,15 +8,25 @@ import 'layout_prefs.dart';
 /// Independent budgets: Flutter's decoded image LRU does not bound Skia's GPU
 /// textures, blur masks or other cached drawing resources.
 abstract final class RenderingMemory {
-  /// Decoded covers kept: 40 MiB in Heavy, 24 in Balanced, 16 in Lightweight (covers are decoded at their
-  /// on-screen size, so even 16 holds a page of them). Read again when the mode changes (`RiflayApp.build`).
+  /// Decoded covers that are kept after leaving the screen.
   static int get decodedImageBytes => switch (LayoutPrefs.instance.performance) {
-    PerformanceMode.heavy => 40 << 20,
-    PerformanceMode.balanced => 24 << 20,
-    PerformanceMode.lightweight => 16 << 20,
+    PerformanceMode.heavy => 24 << 20,
+    PerformanceMode.balanced => 14 << 20,
+    PerformanceMode.lightweight => 6 << 20,
   };
   static const maxImageCount = 40;
-  static const gpuCacheBytes = 96 << 20;
+  static int get gpuCacheBytes => switch (LayoutPrefs.instance.performance) {
+    PerformanceMode.heavy => 56 << 20,
+    PerformanceMode.balanced => 32 << 20,
+    PerformanceMode.lightweight => 12 << 20,
+  };
+
+  /// Bounds each visible cover too. Flutter's image cache only limits evictable images.
+  static int get artworkSide => switch (LayoutPrefs.instance.performance) {
+    PerformanceMode.heavy => 1536,
+    PerformanceMode.balanced => 1024,
+    PerformanceMode.lightweight => 512,
+  };
 
   static Future<void> configure() async {
     final cache = PaintingBinding.instance.imageCache;
@@ -40,7 +50,7 @@ abstract final class RenderingMemory {
   static Future<void> mini() async {
     PaintingBinding.instance.imageCache.clear();
     await _gpuCache(0);
-    await _gpuCache(miniGpuCacheBytes);
+    await _gpuCache(gpuCacheBytes < miniGpuCacheBytes ? gpuCacheBytes : miniGpuCacheBytes);
   }
 
   static Future<void> _gpuCache(int bytes) async {

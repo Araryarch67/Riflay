@@ -840,13 +840,19 @@ vec4 hook() {
         if (maxFps case final fps?) await mpv.setProperty('vf', 'fps=$fps');
       }
       // Both rendering engines use the same read-ahead and seek-back policy.
-      // Original bytes also live in the bounded disk cache, so increasing the
-      // time window doesn't require keeping a whole MV in RAM.
+      // Original bytes also live in the bounded disk cache. Keep enough for a
+      // short stall without holding the whole video in the demuxer.
       await player.setProperty('cache', 'yes');
       await player.setProperty('cache-secs', foreground ? '60' : '20');
-      final phone = Host.isAndroid || Host.isIOS;
-      await player.setProperty('demuxer-max-bytes', '${(foreground ? (phone ? 24 : 48) : (phone ? 8 : 12)) << 20}');
-      await player.setProperty('demuxer-max-back-bytes', '${(foreground ? (phone ? 8 : 16) : 4) << 20}');
+      final (ahead, back) = switch ((LayoutPrefs.instance.performance, foreground)) {
+        (PerformanceMode.heavy, true) => (32, 4),
+        (PerformanceMode.balanced, true) => (16, 2),
+        (PerformanceMode.lightweight, true) => (8, 1),
+        (PerformanceMode.lightweight, false) => (4, 1),
+        _ => (8, 2),
+      };
+      await player.setProperty('demuxer-max-bytes', '${ahead << 20}');
+      await player.setProperty('demuxer-max-back-bytes', '${back << 20}');
       await player.setProperty('demuxer-seekable-cache', 'yes');
       Future<void> open(String url, Duration at) async {
         if (player case _KitEngine(:final kit)) {

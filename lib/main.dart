@@ -67,7 +67,6 @@ Future<void> _main(List<String> args) async {
   WidgetsFlutterBinding.ensureInitialized();
   // Riflay already runs: the link goes to it, and this process ends before showing a window.
   await IncomingLinks.instance.claimDesktop(args);
-  unawaited(RenderingMemory.configure());
   if (Host.isAndroid || Host.isWindows) {
     final updates = AppUpdates();
     unawaited(updates.cleanUp().whenComplete(updates.dispose));
@@ -112,6 +111,7 @@ Future<void> _main(List<String> args) async {
   ]);
   // After the Layout settings: a low-end phone starts in Lightweight, once.
   await DeviceSetup.instance.fitPhone();
+  unawaited(RenderingMemory.configure());
 
   // The window opens (sized, centred, in the theme's colour) while the player loads behind it.
   final windowShown = _showWindow(startSize);
@@ -289,6 +289,7 @@ class _RiflayAppState extends State<RiflayApp> with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
+    _memoryMode = _layout.performance;
     DesktopVisibility.instance.start();
     DesktopVisibility.instance.addListener(_windowVisibilityChanged);
     WidgetsBinding.instance.addObserver(this);
@@ -425,7 +426,13 @@ class _RiflayAppState extends State<RiflayApp> with WidgetsBindingObserver {
   /// the colours itself); widgets that read colours through [AppColors.of] or [Theme] follow by dependency.
   /// Widgets that still read [AppColors] statically are rebuilt by [restyleTree], which leaves out everything
   /// that cannot show a colour.
+  late PerformanceMode _memoryMode;
+
   void _restyle() {
+    if (_memoryMode != _layout.performance) {
+      _memoryMode = _layout.performance;
+      if (_animate && !miniPlayer.value) unawaited(RenderingMemory.restore());
+    }
     _syncTint();
     setState(() {});
     restyleTree(context as Element);
@@ -433,8 +440,7 @@ class _RiflayAppState extends State<RiflayApp> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
-    // Decoded images: covers are decoded at their on-screen size, so 40 MiB
-    // still holds a few hundred (Flutter's default is 100 MiB).
+    // The decoded image budget follows the selected mode, including when hidden.
     final imageCache = PaintingBinding.instance.imageCache;
     imageCache.maximumSizeBytes = RenderingMemory.decodedImageBytes;
     imageCache.maximumSize = RenderingMemory.maxImageCount;

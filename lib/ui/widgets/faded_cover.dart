@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import '../../models/track.dart';
 import '../../services/layout_prefs.dart';
 import '../../services/metadata.dart';
+import '../../services/rendering_memory.dart';
 import '../theme.dart';
 
 /// A cover with no frame (Cover: Background): the artwork fills its box, sharp at the top and softer and softer
@@ -69,7 +70,7 @@ class _FadedCoverState extends State<FadedCover> {
   int _up(num v) => ((v / 8).ceil() * 8).toInt();
 
   void _want(Track track, Size box) {
-    final w = math.min(_maxWidth, _up(box.width));
+    final w = math.min(math.min(_maxWidth, RenderingMemory.artworkSide), _up(box.width));
     final h = math.min(1800, _up(box.height * w / box.width));
     final key = [
       track.albumKey ?? track.id,
@@ -98,13 +99,32 @@ class _FadedCoverState extends State<FadedCover> {
     ui.Image? big, small, soft;
     try {
       Future<ui.Image> decode(int width) async {
-        final codec = await ui.instantiateImageCodec(bytes, targetWidth: width);
-        final frame = await codec.getNextFrame();
-        codec.dispose();
-        return frame.image;
+        final buffer = await ui.ImmutableBuffer.fromUint8List(bytes);
+        try {
+          final descriptor = await ui.ImageDescriptor.encoded(buffer);
+          try {
+            final landscape = descriptor.width >= descriptor.height;
+            final codec = await descriptor.instantiateCodec(
+              targetWidth: landscape ? math.min(width, descriptor.width) : null,
+              targetHeight: landscape ? null : math.min(width, descriptor.height),
+            );
+            try {
+              return (await codec.getNextFrame()).image;
+            } finally {
+              codec.dispose();
+            }
+          } finally {
+            descriptor.dispose();
+          }
+        } finally {
+          buffer.dispose();
+        }
       }
 
-      big = await decode(math.min(1024, math.max(w, h)));
+      if (widget.sharp) {
+        big = await decode(math.min(RenderingMemory.artworkSide, math.min(1024, math.max(w, h))));
+        if (!mounted || key != _key) return;
+      }
       // Behind text (lyrics: no sharp cover) the picture is only its colours: a far smaller copy, stretched, so no
       // shape of the artwork is left to read through the words.
       small = await decode(widget.sharp ? 48 : 16);
@@ -127,8 +147,11 @@ class _FadedCoverState extends State<FadedCover> {
             ),
         );
         final picture = tiny.endRecording();
-        soft = await picture.toImage(small.width, small.height);
-        picture.dispose();
+        try {
+          soft = await picture.toImage(small.width, small.height);
+        } finally {
+          picture.dispose();
+        }
       }
       if (!mounted || key != _key) return;
       final rect = Rect.fromLTWH(0, 0, w.toDouble(), h.toDouble());
@@ -147,14 +170,14 @@ class _FadedCoverState extends State<FadedCover> {
       if (soft != null) {
         canvas.drawImageRect(soft, source(soft, rect), rect, Paint()..filterQuality = FilterQuality.high);
       } else {
-        canvas.drawImageRect(big, source(big, rect), rect, Paint()..filterQuality = FilterQuality.medium);
+        canvas.drawImageRect(big!, source(big, rect), rect, Paint()..filterQuality = FilterQuality.medium);
       }
       // The sharp cover across the top, fading out into the blur. Its own layer, once: this runs while baking.
       final sharpHeight = math.min(h.toDouble(), w * 1.25);
       if (widget.sharp && soft != null) {
         final top = Rect.fromLTWH(0, 0, w.toDouble(), sharpHeight);
         canvas.saveLayer(top, Paint());
-        canvas.drawImageRect(big, source(big, top), top, Paint()..filterQuality = FilterQuality.medium);
+        canvas.drawImageRect(big!, source(big, top), top, Paint()..filterQuality = FilterQuality.medium);
         canvas.drawRect(
           top,
           Paint()
@@ -207,8 +230,12 @@ class _FadedCoverState extends State<FadedCover> {
         );
       }
       final picture = recorder.endRecording();
-      final baked = await picture.toImage(w, h);
-      picture.dispose();
+      final ui.Image baked;
+      try {
+        baked = await picture.toImage(w, h);
+      } finally {
+        picture.dispose();
+      }
       if (!mounted || key != _key) {
         baked.dispose();
         return;

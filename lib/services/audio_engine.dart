@@ -446,13 +446,10 @@ class SignalPath {
 class AudioEngine extends ChangeNotifier {
   AudioEngine() {
     _visualizerWasOn = LayoutPrefs.instance.visualizerEnabled;
-    LayoutPrefs.instance.addListener(_onVisualizerBetaChanged);
+    LayoutPrefs.instance.addListener(_onLayoutChanged);
     // Pitch control makes media_kit own the `af` property (scaletempo); the app needs it for EQ.
     JustAudioMediaKit.pitch = false;
-    // Network sources can briefly slow down without interrupting playback.
-    // 32 MiB gives high-resolution FLAC streams a useful cushion; mpv bounds
-    // this per player, and it is memory-only (disk cache stays off below).
-    JustAudioMediaKit.bufferSize = 32 << 20;
+    JustAudioMediaKit.bufferSize = _audioCacheBytes = audioCacheBytes;
     // mpv's `title`: the app's name in Windows' volume mixer (media_kit's default is "JustAudioMediaKit").
     // PulseAudio / PipeWire take `audio-client-name` instead (see [_applyProps]).
     JustAudioMediaKit.title = 'Riflay';
@@ -845,8 +842,22 @@ class AudioEngine extends ChangeNotifier {
 
   bool _visualizerWasOn = false;
 
-  /// The visualizer switch (Settings > Look & feel > Layout) changed; other layout changes are none of its business.
-  void _onVisualizerBetaChanged() {
+  /// The RAM cap for each mpv audio demuxer, including a second player during a crossfade.
+  static int get audioCacheBytes => switch (LayoutPrefs.instance.performance) {
+    PerformanceMode.heavy => 32 << 20,
+    PerformanceMode.balanced => 20 << 20,
+    PerformanceMode.lightweight => 10 << 20,
+  };
+
+  int _audioCacheBytes = 0;
+
+  void _onLayoutChanged() {
+    final bytes = audioCacheBytes;
+    if (bytes != _audioCacheBytes) {
+      JustAudioMediaKit.bufferSize = _audioCacheBytes = bytes;
+      _native?.setProperty('demuxer-max-bytes', '$bytes').ignore();
+      _secondaryNative?.setProperty('demuxer-max-bytes', '$bytes').ignore();
+    }
     // Balanced and Heavy measure different bands ([_frugalMeter]): a change of mode rebuilds the meter.
     if (_frugalMeter != _meterWasFrugal) {
       _meterWasFrugal = _frugalMeter;
@@ -2140,7 +2151,7 @@ class AudioEngine extends ChangeNotifier {
   void dispose() {
     _meterSoon?.cancel();
     _disposed = true;
-    LayoutPrefs.instance.removeListener(_onVisualizerBetaChanged);
+    LayoutPrefs.instance.removeListener(_onLayoutChanged);
     _visualizerTimer?.cancel();
     visualizerLevels.dispose();
     _channelsSub?.cancel();
