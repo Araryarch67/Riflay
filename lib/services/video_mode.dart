@@ -739,6 +739,14 @@ vec4 hook() {
   void _sync() {
     final want = _wanted;
     if (want == null) {
+      final id = _c?.currentTrack?.videoId;
+      if (Host.isWindows && _player is _KitEngine && _ready && _foreground && _asking.contains(id)) {
+        // Keep the texture while the next song's video is being looked up.
+        // It will either receive the new video or be disposed by this path
+        // when the lookup completes. The old picture does not stay visible.
+        _player?.pause().ignore();
+        return;
+      }
       if (_player != null || _opening != null) _stop();
       return;
     }
@@ -758,10 +766,21 @@ vec4 hook() {
     VideoEngine? selected;
     VideoController? video;
     NativeVideoPlayer? own;
+    var reuseTexture = false;
     try {
       await _withSurface(() async {
         if (request != _videoRequest) return;
-        await _disposePlayer();
+        // Windows retained driver allocations when the texture and its D3D
+        // renderer were destroyed and recreated for every music video.
+        reuseTexture =
+            Host.isWindows && _ready && _player is _KitEngine && _video != null && _loadedForeground == foreground;
+        if (reuseTexture) {
+          selected = _player;
+          video = _video;
+          _resetLoadedVideo();
+        } else {
+          await _disposePlayer();
+        }
         if (request != _videoRequest) return;
         // A minute and a half without a stall: this song may try a step higher.
         if (adaptive && _cap != null && DateTime.now().difference(_smoothSince) > const Duration(seconds: 90)) {
@@ -780,7 +799,7 @@ vec4 hook() {
         final hwdec = LayoutPrefs.instance.videoDecoder.hwdec;
         // A full-page background needs Flutter text and effects above the video.
         // Linux retains its texture backend there; cover/side-panel video is native.
-        if (native && (foreground || !Host.isLinux)) {
+        if (!reuseTexture && native && (foreground || !Host.isLinux)) {
           try {
             // Linux caps the frame rate with an fps filter. Windows' bundled video mpv has no such filter
             // (`vf=fps` is refused; `lavfi=[fps]` makes the video fail to load), so it plays at the video's own.
@@ -806,7 +825,7 @@ vec4 hook() {
         if (own != null) {
           selected = _player = _native = own;
           _fit();
-        } else {
+        } else if (!reuseTexture) {
           final kit = Player(
             configuration: PlayerConfiguration(
               muted: true,
@@ -827,7 +846,9 @@ vec4 hook() {
       if (request == _videoRequest) _opening = null;
     }
     final player = selected;
-    if (player == null || request != _videoRequest) return;
+    if (player == null) return;
+    bool active() => request == _videoRequest && identical(player, _player);
+    if (!active()) return;
     try {
       if (player case _KitEngine(:final kit)) {
         final mpv = kit.platform as NativePlayer;
@@ -854,9 +875,32 @@ vec4 hook() {
       await player.setProperty('demuxer-max-bytes', '${ahead << 20}');
       await player.setProperty('demuxer-max-back-bytes', '${back << 20}');
       await player.setProperty('demuxer-seekable-cache', 'yes');
+      if (reuseTexture) await player.setRate(1);
+      await player.setProperty('loop-file', v.loops ? 'inf' : 'no');
       Future<void> open(String url, Duration at) async {
+        if (!active()) return;
         if (player case _KitEngine(:final kit)) {
-          await kit.open(Media(url, start: at), play: false);
+          if (!reuseTexture) {
+            await kit.open(Media(url, start: at), play: false);
+          } else {
+            // VideoController's first-frame future belongs to the texture,
+            // so a reused texture must wait for the new media's dimensions.
+            final frame = Completer<void>();
+            final dimensions = kit.stream.videoParams.listen(
+              (params) {
+                if ((params.dw ?? 0) > 1 && (params.dh ?? 0) > 1 && !frame.isCompleted) frame.complete();
+              },
+              onDone: () {
+                if (!frame.isCompleted) frame.complete();
+              },
+            );
+            try {
+              await kit.open(Media(url, start: at), play: false);
+              await frame.future.timeout(const Duration(seconds: 25));
+            } finally {
+              await dimensions.cancel();
+            }
+          }
         } else {
           await own!.open(url, start: at);
         }
@@ -867,8 +911,7 @@ vec4 hook() {
       if (v.url case final url?) {
         // A Canvas: a few seconds that loop, whatever the song's position.
         if (!foreground && !await YoutubeStream.prefetchAllowed()) throw StateError('metered connection');
-        if (!identical(player, _player)) return;
-        await player.setProperty('loop-file', 'inf');
+        if (!active()) return;
         debugPrint('Video mode: Canvas ${v.videoId}');
         await open(url.toString(), Duration.zero);
       } else if (local != null) {
@@ -878,17 +921,18 @@ vec4 hook() {
       } else {
         // Nobody asked for this video: a phone on mobile data (or on a saver) doesn't spend it.
         if (!foreground && !await YoutubeStream.prefetchAllowed()) throw StateError('metered connection');
-        if (!identical(player, _player)) return;
+        if (!active()) return;
         final stream = await YoutubeStream.video(v.videoId, maxHeight: _height(foreground));
-        if (!identical(player, _player)) return;
+        if (!active()) return;
         _streamed = true;
         _streamHeight = stream.height;
         debugPrint('Video mode: ${v.videoId} at ${stream.height}p ${stream.codec}');
         final url = await VideoStreamCache.instance.open(v.videoId, stream);
-        if (!identical(player, _player)) return;
+        if (!active()) return;
         // Resolving the stream can take seconds. Start from the song's position after that work.
         await open(url.toString(), _targetFor(v) ?? Duration.zero);
       }
+      if (!active()) return;
       if (own != null) {
         if (!await own!.firstFrame(const Duration(seconds: 25))) throw TimeoutException('no first picture');
       } else {
@@ -909,14 +953,14 @@ vec4 hook() {
           }
         }
       }
-      if (!identical(player, _player)) return;
+      if (!active()) return;
       _readDecoder();
       _ready = true;
       _tick = Timer.periodic(const Duration(milliseconds: 250), (_) => _follow());
       _timingChanged();
       notifyListeners();
     } catch (e) {
-      if (!identical(player, _player)) return;
+      if (!active()) return;
       debugPrint('Video mode: ${v.videoId} failed: $e');
       if (!foreground) {
         // The page falls back to the blurred cover, with no message; don't try this video again.
@@ -977,21 +1021,26 @@ vec4 hook() {
 
   Future<void> _disposePlayer() async {
     final player = _player;
+    _resetLoadedVideo();
+    _player = null;
+    _video = null;
+    _native = null;
+    _shader = null;
+    if (!_disposed) notifyListeners();
+    await player?.dispose();
+  }
+
+  void _resetLoadedVideo() {
     _manualTiming?.removeListener(_timingChanged);
     _manualTiming = null;
     _tick?.cancel();
     _tick = null;
-    _player = null;
-    _video = null;
-    _native = null;
     _loaded = null;
     _loadedForeground = true;
     _playing = null;
     _ready = false;
     _rate = 1;
     _seekedTo = null;
-    if (!_disposed) notifyListeners();
-    await player?.dispose();
   }
 
   static bool _sized(VideoController video) => (video.rect.value?.width ?? 0) > 1;
