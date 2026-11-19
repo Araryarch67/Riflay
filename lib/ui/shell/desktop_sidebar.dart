@@ -73,7 +73,8 @@ class ShellPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
-    final tinted = Color.lerp(colors.panel, colors.accent, 0.1)!;
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final tinted = Color.lerp(colors.panel, colors.accent, dark ? 0.24 : 0.13)!;
     return Material(
       color: colors.panel,
       borderRadius: BorderRadius.circular(8),
@@ -84,7 +85,10 @@ class ShellPanel extends StatelessWidget {
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
-                  colors: [Color.lerp(tinted, Colors.black, 0.14)!, Color.lerp(tinted, Colors.white, 0.06)!],
+                  colors: dark
+                      ? [Color.lerp(tinted, Colors.black, 0.44)!, Color.lerp(tinted, Colors.black, 0.19)!, tinted]
+                      : [Color.lerp(tinted, colors.textPrimary, 0.13)!, tinted, Color.lerp(tinted, colors.panel, 0.3)!],
+                  stops: const [0, 0.52, 1],
                 ),
               ),
               child: child,
