@@ -658,12 +658,30 @@ abstract final class Metadata {
   }();
 
   /// Keeps the newest few thousand covers (each ~20-60 KB).
-  static Future<void> _pruneArtCache(Directory dir, {int keep = 3000}) async {
-    final files = await dir.list().where((e) => e is File).cast<File>().toList();
-    if (files.length <= keep) return;
-    final dated = [for (final f in files) (f, (await f.stat()).modified)]..sort((a, b) => b.$2.compareTo(a.$2));
-    for (final (f, _) in dated.skip(keep)) {
-      f.delete().ignore();
+  static int artLimit = 128 << 20;
+  static Timer? _pruneTimer;
+  static Future<void> setArtLimit(int bytes) async {
+    artLimit = bytes;
+    final dir = await _artDir;
+    if (dir != null) await _pruneArtCache(dir);
+  }
+
+  static Future<void> _pruneArtCache(Directory dir) async {
+    final files = await dir
+        .list(followLinks: false)
+        .where((e) => e is File && !e.path.endsWith('.part'))
+        .cast<File>()
+        .toList();
+    final dated = [for (final f in files) (f, await f.stat())]..sort((a, b) => a.$2.modified.compareTo(b.$2.modified));
+    var total = dated.fold(0, (n, e) => n + e.$2.size);
+    for (final (f, s) in dated) {
+      if (total <= artLimit) break;
+      try {
+        await f.delete();
+        total -= s.size;
+      } on FileSystemException {
+        continue;
+      }
     }
   }
 
@@ -687,10 +705,15 @@ abstract final class Metadata {
     try {
       final res = await _artHttp.get(Uri.parse(url));
       if (res.statusCode != 200) return null;
-      if (file != null) {
+      if (file != null && res.bodyBytes.length <= artLimit) {
         // Written aside and renamed, so a half-written cover never gets read.
         final part = File('${file.path}.part');
-        part.writeAsBytes(res.bodyBytes).then((_) => part.rename(file.path)).ignore();
+        part.writeAsBytes(res.bodyBytes).then((_) => part.rename(file.path)).then((_) {
+          _pruneTimer ??= Timer(const Duration(seconds: 2), () {
+            _pruneTimer = null;
+            _pruneArtCache(dir!).ignore();
+          });
+        }).ignore();
       }
       return res.bodyBytes;
     } catch (_) {

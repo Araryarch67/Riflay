@@ -24,7 +24,15 @@ class VideoStreamCache {
        _client = client ?? http.Client();
 
   static final instance = VideoStreamCache();
-  final int maxBytes;
+  int maxBytes;
+  Future<void> setLimit(int bytes) async {
+    maxBytes = bytes;
+    final dir = await (_folder ??= _initialize());
+    await (_writes = _writes.catchError((Object _) {}).then((_) async {
+      await _makeRoom(dir, 0);
+    }));
+  }
+
   final int chunkSize;
   final Future<Directory> Function() _directory;
   final http.Client _client;

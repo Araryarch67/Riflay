@@ -108,6 +108,15 @@ abstract final class YoutubeStream {
     if (YtDlp.supported) YtDlp.invalidate(videoId);
   }
 
+  static int playbackKbps = 0;
+  static bool saver = false;
+  static void configurePlayback(int cap, bool dataSaver) {
+    if (playbackKbps == cap && saver == dataSaver) return;
+    playbackKbps = cap;
+    saver = dataSaver;
+    _resolved.clear();
+  }
+
   static final _resolved = <String, Future<ResolvedAudio>>{};
 
   /// The best original audio stream of [videoId], cached while its URL is fresh.
@@ -137,7 +146,7 @@ abstract final class YoutubeStream {
 
   static Future<ResolvedAudio> _player(String videoId, {bool aac = false, bool freshVisitor = false}) async {
     final j = await _playerResponse(videoId, freshVisitor: freshVisitor);
-    final best = pickBest(_adaptiveFormats(j), aacOnly: aac);
+    final best = YoutubePlayerApi.pickBest(_adaptiveFormats(j), aacOnly: aac, maxKbps: saver ? 64 : playbackKbps);
     if (best == null) throw StateError('No audio stream for this song.');
     return _resolvedFrom(best, j);
   }
@@ -279,6 +288,7 @@ abstract final class YoutubeStream {
 
   /// [shouldPrefetchAhead] for this device right now; unknown connectivity counts as metered on a phone.
   static Future<bool> prefetchAllowed() async {
+    if (saver) return false;
     final phone = Host.isAndroid || Host.isIOS;
     if (!phone) return true;
     try {

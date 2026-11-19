@@ -13,7 +13,8 @@ import '../../services/play_history.dart';
 import '../../services/player_controller.dart';
 import '../../services/playlist_covers.dart';
 import '../../services/smart_playlists.dart';
-import '../download_options.dart';
+import '../playlist_tools.dart';
+import '../playlist_offline.dart';
 import '../flac_convert_dialog.dart';
 import '../playlist_cover_edit.dart';
 import '../shell_scope.dart';
@@ -125,7 +126,7 @@ class CollectionPage extends StatelessWidget {
     final actions = [
       ...this.actions,
       if (playlistId != null) _PlaylistMenu(id: playlistId, name: live.title, tracks: tracks),
-      if (live.coverKey case final key?) PlaylistCoverMenu(coverKey: key, name: live.title),
+
       if (live.kind == CollectionKind.folder && live.id != null) _FolderPlaylistMenu(path: live.id!),
     ];
 
@@ -239,7 +240,9 @@ class CollectionPage extends StatelessWidget {
                           icon: const Icon(Icons.add_circle_outline_rounded),
                         ),
                       ],
-                      if ((live.kind == CollectionKind.remote || tracks.any((t) => t.monochromeId != null)) &&
+                      if ((live.kind == CollectionKind.remote ||
+                              live.kind == CollectionKind.playlist ||
+                              tracks.any((t) => t.monochromeId != null)) &&
                           tracks.isNotEmpty &&
                           // Spotify streams only; there is nothing to save for offline.
                           !tracks.every((t) => t.spotifyId != null) &&
@@ -248,14 +251,7 @@ class CollectionPage extends StatelessWidget {
                         IconButton(
                           tooltip: tr.downloadAllOffline,
                           onPressed: () async {
-                            final messenger = ScaffoldMessenger.of(context);
-                            final native = tracks.every((t) => t.monochromeId != null);
-                            final choice = native ? null : await chooseDownload(context);
-                            if (!native && choice == null) return;
-                            final n = c.youtube.enqueueTracks(tracks, choice: choice);
-                            messenger.showSnackBar(
-                              SnackBar(content: Text(n == 0 ? tr.alreadyDownloaded : tr.downloadingSongs(n))),
-                            );
+                            await playlistOffline(context, c, tracks);
                           },
                           icon: const Icon(Icons.download_for_offline_outlined),
                         ),
@@ -466,17 +462,36 @@ class _Header extends StatelessWidget {
       if (total.isNotEmpty) total,
     ].join(' • ');
 
-    final art = Container(
+    final image = Container(
       decoration: BoxDecoration(
         shape: isArtist ? BoxShape.circle : BoxShape.rectangle,
         borderRadius: isArtist ? null : BorderRadius.circular(6),
         boxShadow: const [BoxShadow(color: Color(0x80000000), blurRadius: 48, offset: Offset(0, 4))],
       ),
       child: isAll
-          ? CoverMosaic(tracks: collection.tracks, size: shell.compact ? 200 : 220, radius: 6)
+          ? PlaylistArtwork(
+              coverKey: collection.coverKey,
+              fallback: CoverMosaic(tracks: collection.tracks, size: shell.compact ? 200 : 220, radius: 6),
+              size: shell.compact ? 200 : 220,
+              radius: 6,
+            )
           : Artwork(track: collection.cover, size: shell.compact ? 200 : 220, radius: 6, circle: isArtist),
     );
 
+    final art = Stack(
+      children: [
+        image,
+        if (collection.coverKey case final key?)
+          Positioned(
+            right: 4,
+            bottom: 4,
+            child: Material(
+              shape: const CircleBorder(),
+              child: PlaylistCoverMenu(coverKey: key, name: collection.title, tracks: collection.tracks),
+            ),
+          ),
+      ],
+    );
     final titleSize = shell.compact
         ? 30.0
         : collection.title.length > 24
@@ -632,6 +647,10 @@ class _PlaylistMenu extends StatelessWidget {
             if (answer != null) c.renamePlaylist(id, answer.title);
           },
           child: MenuRow(leading: Icon(Icons.edit_outlined), title: Text(tr.rename)),
+        ),
+        PopupMenuItem(
+          value: () => playlistTools(context, c, id, name, tracks),
+          child: MenuRow(leading: const Icon(Icons.playlist_play), title: Text(tr.playlistTools)),
         ),
         if (files.isNotEmpty)
           PopupMenuItem(

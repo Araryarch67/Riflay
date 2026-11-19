@@ -80,7 +80,7 @@ abstract final class YoutubePlayerApi {
   /// Highest-bitrate original audio: Opus wins near-ties (better per bit),
   /// unless [aacOnly] (for TVs and speakers). Leaves out "stable volume" (DRC)
   /// and dubbed tracks, and streams needing a signature.
-  static Map<String, dynamic>? pickBest(List<Map<String, dynamic>> formats, {required bool aacOnly}) {
+  static Map<String, dynamic>? pickBest(List<Map<String, dynamic>> formats, {required bool aacOnly, int maxKbps = 0}) {
     bool usable(Map<String, dynamic> f) {
       final mime = f['mimeType'] as String? ?? '';
       if (!mime.startsWith('audio/') || f['url'] is! String) return false;
@@ -94,6 +94,13 @@ abstract final class YoutubePlayerApi {
         ((f['averageBitrate'] ?? f['bitrate']) as num? ?? 0).toInt() +
         ((f['mimeType'] as String).contains('opus') ? 16000 : 0);
     final candidates = formats.where(usable).toList()..sort((a, b) => score(b).compareTo(score(a)));
+    if (maxKbps > 0 && candidates.isNotEmpty) {
+      int rate(Map<String, dynamic> f) => ((f['averageBitrate'] ?? f['bitrate']) as num? ?? 0).toInt();
+      final known = candidates.where((f) => rate(f) > 0);
+      final fits = known.where((f) => rate(f) <= maxKbps * 1000).firstOrNull;
+      if (fits != null) return fits;
+      if (known.isNotEmpty) return known.reduce((a, b) => rate(a) < rate(b) ? a : b);
+    }
     return candidates.firstOrNull;
   }
 

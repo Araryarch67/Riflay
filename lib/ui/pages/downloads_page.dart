@@ -15,6 +15,8 @@ import '../shell_scope.dart';
 import '../theme.dart';
 import '../widgets/controls.dart';
 import '../widgets/page_scaffold.dart';
+import '../widgets/app_dialog.dart';
+import '../widgets/track_row.dart';
 
 /// Progress and history of YouTube imports.
 class DownloadsPage extends StatelessWidget {
@@ -176,6 +178,7 @@ class _DownloadedFilesState extends State<_DownloadedFiles> {
     final text = Theme.of(context).textTheme;
     final pad = shell.compact ? 16.0 : 24.0;
     final missing = scan.missing;
+    final files = downloadedFrom(_c!.library).where((t) => !missing.contains(t)).toList();
     return SliverMainAxisGroup(
       slivers: [
         if (scan.bytes > 0)
@@ -188,6 +191,48 @@ class _DownloadedFilesState extends State<_DownloadedFiles> {
               ),
             ),
           ),
+        if (files.isNotEmpty) ...[
+          SliverToBoxAdapter(
+            child: ExpansionTile(
+              title: Text('${tr.downloaded} (${files.length})'),
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.delete_sweep_outlined),
+                  title: Text(tr.deleteAllDownloads),
+                  onTap: () async {
+                    final c = _c!;
+                    if (!await confirmDialog(
+                      context,
+                      title: tr.deleteAllDownloads,
+                      body: tr.songsPlural(files.length),
+                      confirmLabel: tr.delete,
+                      destructive: true,
+                    )) {
+                      return;
+                    }
+                    final failed = await c.deleteDownloads(files);
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text(failed > 0 ? tr.removedFileNotDeleted : tr.downloadDeleted)),
+                      );
+                    }
+                  },
+                ),
+                for (final t in files)
+                  ListTile(
+                    title: Text(t.title),
+                    subtitle: Text(t.path ?? t.artist, maxLines: 1, overflow: TextOverflow.ellipsis),
+                    onTap: () => _c!.playList(files, files.indexOf(t)),
+                    trailing: IconButton(
+                      tooltip: tr.delete,
+                      icon: const Icon(Icons.delete_outline),
+                      onPressed: () => confirmDeleteDownload(context, _c!, t),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
         if (missing.isNotEmpty) ...[
           SliverToBoxAdapter(
             child: Padding(

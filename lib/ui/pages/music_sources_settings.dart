@@ -1,18 +1,15 @@
 import 'package:flutter/material.dart';
 
 import '../../services/language.dart';
-import '../../services/merged_download.dart';
 import '../../services/smart_merge_stats.dart';
 import '../../services/sources/music_sources.dart';
-import '../widgets/controls.dart' show formatBytes;
 import '../../platform/features.dart';
 import '../../services/spotiflac.dart';
 import '../shell_scope.dart';
 import 'spotiflac_page.dart';
 import '../widgets/monochrome_mark.dart';
-import '../widgets/menus.dart';
 import '../widgets/network_proxy_settings.dart';
-import 'sound_settings.dart' show SettingsCard, SettingTile, settingsMuted;
+import 'sound_settings.dart' show SettingsCard, settingsMuted;
 
 /// Settings › Accounts & services › Music sources: SoundCloud, Monochrome and the SpotiFLAC extensions
 /// ([MusicSources]).
@@ -25,7 +22,6 @@ class MusicSourcesSettings extends StatefulWidget {
 
 class _MusicSourcesSettingsState extends State<MusicSourcesSettings> {
   final _sources = MusicSources.instance;
-  int _cleared = 0;
 
   @override
   void initState() {
@@ -87,39 +83,6 @@ class _MusicSourcesSettingsState extends State<MusicSourcesSettings> {
                       ),
                     );
                   },
-                ),
-                FutureBuilder<int>(
-                  // Asked again whenever the page rebuilds (a change of size, a clear).
-                  key: ValueKey((_sources.smartMergeCacheMb, _cleared)),
-                  future: MergedDownload.keptSize(),
-                  builder: (context, size) => SettingTile(
-                    icon: Icons.save_outlined,
-                    title: Text(tr.smartMergeCache),
-                    subtitle: Text(tr.smartMergeCacheSubtitle(formatBytes(size.data ?? 0)), style: muted),
-                    control: Wrap(
-                      crossAxisAlignment: WrapCrossAlignment.center,
-                      spacing: 8,
-                      children: [
-                        OptionPicker<int>(
-                          value: _sources.smartMergeCacheMb,
-                          options: [
-                            for (final mb in MusicSources.cacheChoices)
-                              (mb, mb == 0 ? tr.off : (mb >= 1024 ? '${mb ~/ 1024} GB' : '$mb MB')),
-                          ],
-                          onChanged: _sources.setSmartMergeCacheMb,
-                        ),
-                        TextButton(
-                          onPressed: (size.data ?? 0) == 0
-                              ? null
-                              : () async {
-                                  await MergedDownload.clearKept();
-                                  if (mounted) setState(() => _cleared++);
-                                },
-                          child: Text(tr.smartMergeCacheClear),
-                        ),
-                      ],
-                    ),
-                  ),
                 ),
               ],
               if (Spotiflac.supported)

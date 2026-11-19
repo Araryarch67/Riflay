@@ -330,7 +330,7 @@ void main() {
     expect(badge.dy, greaterThan(tester.getCenter(find.byType(Slider)).dy), reason: 'under the bar, on the time row');
     await _close(tester, c);
     await PlayerPreset.classic.apply(p);
-    expect(p.qualityBadgePlace, QualityBadgePlace.timeRow, reason: 'the time row is the default now, Classic too');
+    expect(p.qualityBadgePlace, QualityBadgePlace.underArtist, reason: 'Classic restores the badge under the artist');
   });
 
   testWidgets('the quality badge is on every preset until its own switch hides it', (tester) async {

@@ -9,6 +9,7 @@ import 'listening_stats_page.dart';
 import '../../services/language.dart';
 import 'sound_settings.dart' show SettingsCard, settingsMuted;
 import '../widgets/app_dialog.dart';
+import '../widgets/menus.dart';
 
 /// Settings › Library & downloads › Listening history & Wrap: the listening history kept on this device.
 class PrivacySettings extends StatefulWidget {
@@ -61,6 +62,28 @@ class _PrivacySettingsState extends State<PrivacySettings> {
             subtitle: Text(tr.keepHistorySubtitle, style: muted),
             value: _history.enabled,
             onChanged: _history.setEnabled,
+          ),
+          ListTile(
+            title: Text(tr.keepHistoryFor),
+            trailing: OptionPicker<int>(
+              value: _history.retentionDays,
+              options: [
+                (0, tr.noTimeLimit),
+                for (final days in [7, 30, 90, 365]) (days, tr.daysCount(days)),
+              ],
+              onChanged: (days) async {
+                if (days > 0 &&
+                    !await confirmDialog(
+                      context,
+                      title: tr.keepHistoryFor,
+                      body: tr.trimHistoryNotice,
+                      confirmLabel: tr.apply,
+                    )) {
+                  return;
+                }
+                await _history.setRetentionDays(days);
+              },
+            ),
           ),
           if (Features.systemNotifications)
             SwitchListTile(

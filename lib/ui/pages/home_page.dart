@@ -75,7 +75,10 @@ class HomePage extends StatelessWidget {
       if (c.library.isNotEmpty)
         QuickTile(
           title: tr.allSongs,
-          leading: CoverMosaic(tracks: c.allSongs.tracks, radius: 0),
+          leading: PlaylistArtwork(
+            coverKey: c.allSongs.coverKey,
+            fallback: CoverMosaic(tracks: c.allSongs.tracks, radius: 0),
+          ),
           onTap: () => shell.openCollection(c.allSongs),
           onPlay: () => c.playCollection(c.allSongs),
         ),

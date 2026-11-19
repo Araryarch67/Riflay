@@ -27,6 +27,18 @@ LiquidGlassSettings riflayGlass({required Brightness brightness, double frost = 
       tintAmount: tintAmount,
     ).copyWith(refractionHeight: 28, refractionAmount: 95, dispersion: 0.35, highlight: 0.9, contourStrength: 0.75);
 
+LiquidGlassAppearance riflayGlassAppearance({required bool themeIsLight}) {
+  final light = switch (LayoutPrefs.instance.glassTint) {
+    GlassTint.theme => themeIsLight,
+    GlassTint.light => true,
+    GlassTint.black => false,
+  };
+  return LiquidGlassAppearance.ios27Regular(
+    brightness: light ? Brightness.light : Brightness.dark,
+    tint: light ? const Color(0x80FFFFFF) : const Color(0xAD000000),
+  );
+}
+
 LiquidGlassSettings _settings(BuildContext context) =>
     riflayGlass(brightness: AppColors.of(context).light ? Brightness.light : Brightness.dark);
 
@@ -64,6 +76,7 @@ class PlayerGlassSurface extends StatelessWidget {
       );
     }
     return LiquidGlass.auto(
+      appearance: riflayGlassAppearance(themeIsLight: AppColors.of(context).light),
       settings: _settings(context),
       useBackdropGroup: true,
       shape: circle ? const LiquidOval() : LiquidRoundedSuperellipse(borderRadius: corners),

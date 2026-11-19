@@ -144,6 +144,15 @@ class MergedDownload {
       if (_spill!.path != file.path) return;
       await ok.writeAsString('$_total', flush: true);
       _isKept = true;
+      await trimKept();
+    } catch (e) {
+      debugPrint('Smart merge download: not kept ($e)');
+    }
+  }
+
+  static Future<void> trimKept() async {
+    try {
+      if (!await Directory(_keptPath).exists()) return;
       final songs = <File, FileStat>{};
       await for (final e in Directory(_keptPath).list()) {
         if (e is File && e.path.endsWith('.flac')) songs[e] = await e.stat();
@@ -152,7 +161,7 @@ class MergedDownload {
       final oldest = songs.keys.toList()..sort((a, b) => songs[a]!.modified.compareTo(songs[b]!.modified));
       for (final f in oldest) {
         if (total <= keptBytes) break;
-        if (f.path == file.path) continue;
+        if (_all.values.any((d) => d._spill?.path == f.path)) continue;
         try {
           await File('${f.path.substring(0, f.path.length - 5)}.ok').delete();
           await f.delete();

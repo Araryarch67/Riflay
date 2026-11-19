@@ -5470,6 +5470,185 @@ class AppLocalizationsEn extends AppLocalizations {
   String get glassVolume => 'Glass volume';
 
   @override
+  String get setupWelcome => 'Welcome to Riflay';
+
+  @override
+  String get setupImportHint => 'Bring playlists from a link or a local M3U file.';
+
+  @override
+  String get importM3u => 'Import M3U file';
+
+  @override
+  String get m3uReadFailed => 'Could not read any local music files from this playlist.';
+
+  @override
+  String get coverCollage => 'Four-cover collage';
+
+  @override
+  String get dragCover => 'Drag to set the focal point';
+
+  @override
+  String get playlistTools => 'Playlist tools';
+
+  @override
+  String get copyThrough => 'Duplicate through song';
+
+  @override
+  String get trackNote => 'Playlist song note';
+
+  @override
+  String get compareLists => 'Compare playlists';
+
+  @override
+  String get inBoth => 'In both playlists';
+
+  @override
+  String get exportRelative => 'Export local songs as relative M3U';
+
+  @override
+  String get songBookmarks => 'Song bookmarks';
+
+  @override
+  String get addBookmark => 'Name this position';
+
+  @override
+  String get inPlaylists => 'Playlists containing this song';
+
+  @override
+  String get copyAtTime => 'Copy link at current time';
+
+  @override
+  String get insertAfter => 'Move after song';
+
+  @override
+  String get skipOnce => 'Skip once';
+
+  @override
+  String get stopAfter => 'Stop after this song';
+
+  @override
+  String get regenerateQueue => 'Regenerate upcoming queue';
+
+  @override
+  String get queueRefreshFailed => 'Could not refresh the queue. Try again.';
+
+  @override
+  String get replaceFolder => 'Replace missing folder';
+
+  @override
+  String get replaceMatch => 'Replace a matched song';
+
+  @override
+  String get retryMissing => 'Retry unmatched songs';
+
+  @override
+  String get copyMissing => 'Copy unmatched songs';
+
+  @override
+  String get mergePlaylist => 'Save into playlist';
+
+  @override
+  String get undoImport => 'Undo this import';
+
+  @override
+  String get duplicatesCount => 'Duplicates';
+
+  @override
+  String get glassTint => 'Liquid Glass tint';
+
+  @override
+  String get followTheme => 'Follow theme';
+
+  @override
+  String get lyricsTarget => 'Lyrics translation language';
+
+  @override
+  String get systemLanguage => 'Device language';
+
+  @override
+  String get languageCode => 'Other language code';
+
+  @override
+  String get privacySearch => 'Privacy';
+
+  @override
+  String get clearSearches => 'Clear search history';
+
+  @override
+  String get clearSearchesBody => 'Remove all searches saved on this device?';
+
+  @override
+  String get musicCacheLimit => 'Music cache limit';
+
+  @override
+  String get videoCacheLimit => 'Video cache limit';
+
+  @override
+  String get imageCacheLimit => 'Image cache limit';
+
+  @override
+  String get offlineReady => 'Available offline';
+
+  @override
+  String get downloadMissing => 'Download remaining songs';
+
+  @override
+  String get spaceEstimate => 'Estimated size';
+
+  @override
+  String get availableSpace => 'Available disk space';
+
+  @override
+  String get deleteAllDownloads => 'Delete all downloaded songs';
+
+  @override
+  String get importPlaylistFile => 'Import M3U or CSV file';
+
+  @override
+  String get csvReadFailed => 'Use a CSV with title and artist columns.';
+
+  @override
+  String get loudnessTarget => 'Normalization target';
+
+  @override
+  String get defaultLibraryFilter => 'Default library filter';
+
+  @override
+  String get startupTab => 'Startup tab';
+
+  @override
+  String get swipeDistance => 'Track swipe distance';
+
+  @override
+  String get varispeed => 'Change pitch with playback speed';
+
+  @override
+  String get streamQuality => 'YouTube Music streaming quality';
+
+  @override
+  String get streamSaver => 'Save data on YouTube Music';
+
+  @override
+  String get keepHistoryFor => 'Keep listening history for';
+
+  @override
+  String get noTimeLimit => 'No time limit';
+
+  @override
+  String get trimHistoryNotice => 'Older plays outside this period will be removed.';
+
+  @override
+  String daysCount(int days) {
+    return '$days days';
+  }
+
+  @override
+  String get storageCache => 'Storage & cache';
+
+  @override
+  String get storageCacheHint => 'Space for streamed music, videos and artwork';
+
+  @override
   String get deviceSetupTitle => 'Set up Riflay for this computer';
 
   @override
@@ -6604,6 +6783,9 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get showPlayerCloseSubtitle =>
       'Show the top arrow in player styles other than Classic. Swipe down to close when hidden.';
+
+  @override
+  String get catalogueDownloader => 'Download provider for metadata-only catalogues';
 
   @override
   String get downloadSource => 'Download source';

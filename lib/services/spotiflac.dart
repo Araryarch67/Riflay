@@ -46,7 +46,7 @@ class Spotiflac extends ChangeNotifier {
   Future<void>? _starting;
   final _pending = <int, Completer<dynamic>>{};
   int _nextId = 0;
-  bool _loaded = false;
+  Future<void>? _loading;
   List<Map<String, dynamic>> plugins = [];
   String? selected;
   String registryUrl = '';
@@ -78,9 +78,10 @@ class Spotiflac extends ChangeNotifier {
   String get selectedName => selected == null ? 'SpotiFLAC' : nameOf(selected!);
   Future<Directory> _root() async => directory ?? Directory(p.join((await PrivateFiles.dir()).path, 'spotiflac'));
 
-  Future<void> load() async {
-    if (_loaded || !supported) return;
-    _loaded = true;
+  Future<void> load() => _loading ??= _load();
+
+  Future<void> _load() async {
+    if (!supported) return;
     final prefs = await SharedPreferences.getInstance();
     selected = prefs.getString('spotiflac.selected');
     registryUrl = prefs.getString('spotiflac.registry') ?? '';

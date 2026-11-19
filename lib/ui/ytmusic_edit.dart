@@ -649,6 +649,13 @@ class DownloadButton extends StatelessWidget {
                   return;
                 }
                 await prefs.load();
+                if (!context.mounted) return;
+                if (track.isRemote && prefs.source != 'youtube') {
+                  if (await downloadFromSource(context, c, track)) {
+                    messenger.showSnackBar(SnackBar(content: Text(tr.downloadingTitle(track.title))));
+                  }
+                  return;
+                }
                 final choice = track.monochromeId != null ? const DownloadChoice(DownloadFormat.flac) : prefs.choice;
                 c.youtube.enqueueTracks([track], choice: choice);
                 messenger.showSnackBar(SnackBar(content: Text(tr.downloadingIn(describeChoice(choice)))));

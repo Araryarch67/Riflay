@@ -23,6 +23,11 @@ class SearchInput {
 abstract final class RecentSearches {
   static const _key = 'search.recent.v1';
   static const _max = 8;
+  static final cleared = ValueNotifier(0);
+  static Future<void> clear() async {
+    await (await SharedPreferences.getInstance()).remove(_key);
+    cleared.value++;
+  }
 
   static Future<List<String>> load() async => (await SharedPreferences.getInstance()).getStringList(_key) ?? const [];
 
@@ -37,6 +42,6 @@ abstract final class RecentSearches {
 
   static Future<void> remove(String query) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setStringList(_key, [...(prefs.getStringList(_key) ?? const <String>[])..remove(query)]);
+    await prefs.setStringList(_key, (prefs.getStringList(_key) ?? <String>[]).where((q) => q != query).toList());
   }
 }

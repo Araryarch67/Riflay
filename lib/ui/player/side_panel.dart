@@ -83,6 +83,7 @@ class NowPlayingSidePanel extends StatelessWidget {
                       // No header row: the player bar's Now playing view button shows and hides the panel, and
                       // the song's menu sits by its title.
                       _PanelCover(track: track),
+                      if (LayoutPrefs.instance.showVideoSwitch) Center(child: VideoModeSwitch(track: track)),
                       // A linear style (Bars, Wave, Line...) has no ring to draw around the cover: its strip.
                       const AudioVisualizer(linearOnly: true, height: 56),
                       const SizedBox(height: 16),
@@ -340,6 +341,7 @@ class _HeroPanel extends StatelessWidget {
               children: [
                 // Cover: Background has no frame to ring: the visualizer is this strip.
                 const AudioVisualizer(linearOnly: true, height: 56),
+                if (LayoutPrefs.instance.showVideoSwitch) Center(child: VideoModeSwitch(track: track)),
                 if (LayoutPrefs.instance.showQualityBadge) ...[const QualityBadge(), const SizedBox(height: 16)],
                 // What is next stays on the panel, before anything else below the picture.
                 Container(

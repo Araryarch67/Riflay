@@ -26,15 +26,13 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
   ::CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
 
   flutter::DartProject project(L"data");
-  // Skia's GPU backend is cheaper here than experimental Windows Impeller.
-  // RIFLAY_IMPELLER=on remains available for equivalent renderer measurements.
-  project.set_impeller_switch(flutter::ImpellerSwitch::Disabled);
+  // Use Skia by default. Impeller is opt-in for renderer profiling.
   wchar_t impeller[8] = {};
-  if (::GetEnvironmentVariableW(L"RIFLAY_IMPELLER", impeller, 8) > 0) {
-    project.set_impeller_switch(wcscmp(impeller, L"off") == 0 ? flutter::ImpellerSwitch::Disabled
-                                                               : flutter::ImpellerSwitch::Enabled);
-    project.set_enable_flutter_gpu(wcscmp(impeller, L"off") != 0);
-  }
+  const DWORD length = ::GetEnvironmentVariableW(L"RIFLAY_IMPELLER", impeller, 8);
+  const bool use_impeller = length == 2 && wcscmp(impeller, L"on") == 0;
+  project.set_impeller_switch(use_impeller ? flutter::ImpellerSwitch::Enabled
+                                          : flutter::ImpellerSwitch::Disabled);
+  project.set_enable_flutter_gpu(use_impeller);
 
   std::vector<std::string> command_line_arguments =
       GetCommandLineArguments();

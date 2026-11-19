@@ -7,6 +7,8 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../platform/host.dart';
 import '../../services/download_prefs.dart';
 import '../../services/ios_folders.dart';
+import '../../services/spotiflac.dart';
+import '../../services/sources/music_sources.dart';
 import '../../services/video_download.dart';
 import '../../services/youtube_importer.dart';
 import '../../services/ytdlp.dart';
@@ -36,6 +38,8 @@ class _DownloadSettingsState extends State<DownloadSettings> {
   void initState() {
     super.initState();
     _prefs.load();
+    MusicSources.instance.load();
+    Spotiflac.instance.load();
   }
 
   static Future<String?> _ytdlpVersion() async {
@@ -85,13 +89,49 @@ class _DownloadSettingsState extends State<DownloadSettings> {
   Widget build(BuildContext context) {
     final muted = settingsMuted(context);
     return ListenableBuilder(
-      listenable: _prefs,
+      listenable: Listenable.merge([_prefs, MusicSources.instance, Spotiflac.instance]),
       builder: (context, _) => Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _heading(context, tr.whatToSave),
           SettingsCard(
             children: [
+              SettingTile(
+                icon: Icons.swap_horiz_rounded,
+                title: Text(tr.downloadSource),
+                control: OptionPicker<String>(
+                  value: _prefs.source,
+                  options: [
+                    ('youtube', 'YouTube Music'),
+                    if (MusicSources.instance.monochrome || _prefs.source == 'monochrome') ('monochrome', 'Monochrome'),
+                    for (final p in Spotiflac.instance.searchProviders)
+                      if (p['has_download_provider'] == true) (p['id'] as String, Spotiflac.instance.nameOf(p['id'])),
+                    if (_prefs.source != 'youtube' &&
+                        _prefs.source != 'monochrome' &&
+                        !Spotiflac.instance.searchProviders.any(
+                          (p) => p['id'] == _prefs.source && p['has_download_provider'] == true,
+                        ))
+                      (_prefs.source, Spotiflac.instance.nameOf(_prefs.source)),
+                  ],
+                  onChanged: _prefs.setSource,
+                ),
+              ),
+              if (Spotiflac.instance.downloadProviders.isNotEmpty)
+                SettingTile(
+                  icon: Icons.extension_outlined,
+                  title: Text(tr.catalogueDownloader),
+                  control: OptionPicker<String>(
+                    value: _prefs.catalogueDownloader ?? Spotiflac.instance.downloadProviders.first['id'] as String,
+                    options: [
+                      for (final p in Spotiflac.instance.downloadProviders)
+                        (p['id'] as String, Spotiflac.instance.nameOf(p['id'])),
+                      if (_prefs.catalogueDownloader case final id?)
+                        if (!Spotiflac.instance.downloadProviders.any((p) => p['id'] == id))
+                          (id, Spotiflac.instance.nameOf(id)),
+                    ],
+                    onChanged: _prefs.setCatalogueDownloader,
+                  ),
+                ),
               SettingTile(
                 icon: Icons.movie_outlined,
                 title: Text(tr.saveAs),

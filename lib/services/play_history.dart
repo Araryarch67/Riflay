@@ -228,6 +228,18 @@ class PlayHistory extends ChangeNotifier {
   final _song = <int>[];
   final _heard = <int>[];
 
+  int retentionDays = 0;
+  int get _cutoff =>
+      retentionDays == 0 ? 0 : DateTime.now().subtract(Duration(days: retentionDays)).millisecondsSinceEpoch ~/ 1000;
+  bool get _needsTrim => _at.length > maxPlays || (retentionDays > 0 && _at.isNotEmpty && _at.first < _cutoff);
+  Future<void> setRetentionDays(int days) async {
+    retentionDays = days;
+    await (await SharedPreferences.getInstance()).setInt('history.retentionDays', days);
+    await flush();
+    if (_needsTrim) await (_io = _io.then((_) => _compact()));
+    notifyListeners();
+  }
+
   bool _enabled = true;
   bool _loaded = false;
   int _revision = 0;
@@ -344,7 +356,7 @@ class PlayHistory extends ChangeNotifier {
     if (_pending.isEmpty) return _io;
     final lines = List<String>.of(_pending);
     _pending.clear();
-    final tooBig = _at.length > maxPlays;
+    final tooBig = _needsTrim;
     return _io = _io.then((_) async {
       if (tooBig) return _compact();
       await _append(lines);
@@ -376,7 +388,7 @@ class PlayHistory extends ChangeNotifier {
       ..at.addAll(_at)
       ..song.addAll(_song)
       ..heard.addAll(_heard);
-    final kept = trimmed(data, keepPlays);
+    final kept = trimmed(data, data.plays > maxPlays ? keepPlays : data.plays, after: _cutoff);
     _adopt(kept);
     final file = await _resolveFile();
     if (file == null) return;
@@ -399,6 +411,7 @@ class PlayHistory extends ChangeNotifier {
     _loaded = true;
     try {
       final prefs = await SharedPreferences.getInstance();
+      retentionDays = prefs.getInt('history.retentionDays') ?? 0;
       _enabled = prefs.getBool(enabledKey) ?? true;
     } catch (_) {
       // No preferences (a bare test): on by default.
@@ -418,8 +431,8 @@ class PlayHistory extends ChangeNotifier {
     }
     _revision++;
     notifyListeners();
-    if (_at.length > maxPlays) unawaited(flush());
-    if (_at.length > maxPlays) {
+    if (_needsTrim) unawaited(flush());
+    if (_needsTrim) {
       _io = _io.then((_) => _compact());
     }
   }
@@ -799,11 +812,12 @@ class PlayHistory extends ChangeNotifier {
 
   /// [data] with only its newest [keep] plays, and only the songs those refer to.
   @visibleForTesting
-  static HistoryData trimmed(HistoryData data, int keep) {
+  static HistoryData trimmed(HistoryData data, int keep, {int after = 0}) {
     final from = data.plays > keep ? data.plays - keep : 0;
     final used = <int, int>{};
     final out = HistoryData();
     for (var p = from; p < data.plays; p++) {
+      if (after > 0 && data.at[p] < after) continue;
       final i = used.putIfAbsent(data.song[p], () {
         out.songs.add(data.songs[data.song[p]]);
         return out.songs.length - 1;

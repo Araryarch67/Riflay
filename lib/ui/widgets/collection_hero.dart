@@ -8,7 +8,8 @@ import '../../platform/features.dart';
 import '../../services/language.dart';
 import '../../services/layout_prefs.dart';
 import '../../services/player_controller.dart';
-import '../download_options.dart';
+import '../playlist_cover_edit.dart';
+import '../playlist_offline.dart';
 import '../player/player_parts.dart';
 import '../shell_scope.dart';
 import '../theme.dart';
@@ -65,6 +66,15 @@ class CollectionHero extends StatelessWidget {
                 children: [
                   // The cover is the whole header: sharp at the top, softer below, ending in the page's own colour.
                   FadedCover(track: collection.cover, fade: fadeTo, blurStart: 0.45, darken: 0.3),
+                  if (collection.coverKey case final key?)
+                    Positioned(
+                      right: 12,
+                      top: topInset + 12,
+                      child: Material(
+                        shape: const CircleBorder(),
+                        child: PlaylistCoverMenu(coverKey: key, name: collection.title, tracks: tracks),
+                      ),
+                    ),
                   Positioned(
                     left: 24,
                     right: 24,
@@ -146,7 +156,9 @@ class CollectionHero extends StatelessWidget {
                           ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(tr.toastAddedToQueue)));
                         },
                       ),
-                    if ((collection.kind == CollectionKind.remote || tracks.any((t) => t.monochromeId != null)) &&
+                    if ((collection.kind == CollectionKind.remote ||
+                            collection.kind == CollectionKind.playlist ||
+                            tracks.any((t) => t.monochromeId != null)) &&
                         !empty &&
                         // Spotify streams only; there is nothing to save for offline.
                         !tracks.every((t) => t.spotifyId != null) &&
@@ -155,14 +167,7 @@ class CollectionHero extends StatelessWidget {
                         icon: Icons.download_for_offline_outlined,
                         label: tr.downloadAllOffline,
                         onTap: () async {
-                          final messenger = ScaffoldMessenger.of(context);
-                          final native = tracks.every((t) => t.monochromeId != null);
-                          final choice = native ? null : await chooseDownload(context);
-                          if (!native && choice == null) return;
-                          final n = c.youtube.enqueueTracks(tracks, choice: choice);
-                          messenger.showSnackBar(
-                            SnackBar(content: Text(n == 0 ? tr.alreadyDownloaded : tr.downloadingSongs(n))),
-                          );
+                          await playlistOffline(context, c, tracks);
                         },
                       ),
                   ];

@@ -9675,6 +9675,360 @@ abstract class AppLocalizations {
   /// **'Glass volume'**
   String get glassVolume;
 
+  /// No description provided for @setupWelcome.
+  ///
+  /// In en, this message translates to:
+  /// **'Welcome to Riflay'**
+  String get setupWelcome;
+
+  /// No description provided for @setupImportHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Bring playlists from a link or a local M3U file.'**
+  String get setupImportHint;
+
+  /// No description provided for @importM3u.
+  ///
+  /// In en, this message translates to:
+  /// **'Import M3U file'**
+  String get importM3u;
+
+  /// No description provided for @m3uReadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not read any local music files from this playlist.'**
+  String get m3uReadFailed;
+
+  /// No description provided for @coverCollage.
+  ///
+  /// In en, this message translates to:
+  /// **'Four-cover collage'**
+  String get coverCollage;
+
+  /// No description provided for @dragCover.
+  ///
+  /// In en, this message translates to:
+  /// **'Drag to set the focal point'**
+  String get dragCover;
+
+  /// No description provided for @playlistTools.
+  ///
+  /// In en, this message translates to:
+  /// **'Playlist tools'**
+  String get playlistTools;
+
+  /// No description provided for @copyThrough.
+  ///
+  /// In en, this message translates to:
+  /// **'Duplicate through song'**
+  String get copyThrough;
+
+  /// No description provided for @trackNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Playlist song note'**
+  String get trackNote;
+
+  /// No description provided for @compareLists.
+  ///
+  /// In en, this message translates to:
+  /// **'Compare playlists'**
+  String get compareLists;
+
+  /// No description provided for @inBoth.
+  ///
+  /// In en, this message translates to:
+  /// **'In both playlists'**
+  String get inBoth;
+
+  /// No description provided for @exportRelative.
+  ///
+  /// In en, this message translates to:
+  /// **'Export local songs as relative M3U'**
+  String get exportRelative;
+
+  /// No description provided for @songBookmarks.
+  ///
+  /// In en, this message translates to:
+  /// **'Song bookmarks'**
+  String get songBookmarks;
+
+  /// No description provided for @addBookmark.
+  ///
+  /// In en, this message translates to:
+  /// **'Name this position'**
+  String get addBookmark;
+
+  /// No description provided for @inPlaylists.
+  ///
+  /// In en, this message translates to:
+  /// **'Playlists containing this song'**
+  String get inPlaylists;
+
+  /// No description provided for @copyAtTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy link at current time'**
+  String get copyAtTime;
+
+  /// No description provided for @insertAfter.
+  ///
+  /// In en, this message translates to:
+  /// **'Move after song'**
+  String get insertAfter;
+
+  /// No description provided for @skipOnce.
+  ///
+  /// In en, this message translates to:
+  /// **'Skip once'**
+  String get skipOnce;
+
+  /// No description provided for @stopAfter.
+  ///
+  /// In en, this message translates to:
+  /// **'Stop after this song'**
+  String get stopAfter;
+
+  /// No description provided for @regenerateQueue.
+  ///
+  /// In en, this message translates to:
+  /// **'Regenerate upcoming queue'**
+  String get regenerateQueue;
+
+  /// No description provided for @queueRefreshFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not refresh the queue. Try again.'**
+  String get queueRefreshFailed;
+
+  /// No description provided for @replaceFolder.
+  ///
+  /// In en, this message translates to:
+  /// **'Replace missing folder'**
+  String get replaceFolder;
+
+  /// No description provided for @replaceMatch.
+  ///
+  /// In en, this message translates to:
+  /// **'Replace a matched song'**
+  String get replaceMatch;
+
+  /// No description provided for @retryMissing.
+  ///
+  /// In en, this message translates to:
+  /// **'Retry unmatched songs'**
+  String get retryMissing;
+
+  /// No description provided for @copyMissing.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy unmatched songs'**
+  String get copyMissing;
+
+  /// No description provided for @mergePlaylist.
+  ///
+  /// In en, this message translates to:
+  /// **'Save into playlist'**
+  String get mergePlaylist;
+
+  /// No description provided for @undoImport.
+  ///
+  /// In en, this message translates to:
+  /// **'Undo this import'**
+  String get undoImport;
+
+  /// No description provided for @duplicatesCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Duplicates'**
+  String get duplicatesCount;
+
+  /// No description provided for @glassTint.
+  ///
+  /// In en, this message translates to:
+  /// **'Liquid Glass tint'**
+  String get glassTint;
+
+  /// No description provided for @followTheme.
+  ///
+  /// In en, this message translates to:
+  /// **'Follow theme'**
+  String get followTheme;
+
+  /// No description provided for @lyricsTarget.
+  ///
+  /// In en, this message translates to:
+  /// **'Lyrics translation language'**
+  String get lyricsTarget;
+
+  /// No description provided for @systemLanguage.
+  ///
+  /// In en, this message translates to:
+  /// **'Device language'**
+  String get systemLanguage;
+
+  /// No description provided for @languageCode.
+  ///
+  /// In en, this message translates to:
+  /// **'Other language code'**
+  String get languageCode;
+
+  /// No description provided for @privacySearch.
+  ///
+  /// In en, this message translates to:
+  /// **'Privacy'**
+  String get privacySearch;
+
+  /// No description provided for @clearSearches.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear search history'**
+  String get clearSearches;
+
+  /// No description provided for @clearSearchesBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove all searches saved on this device?'**
+  String get clearSearchesBody;
+
+  /// No description provided for @musicCacheLimit.
+  ///
+  /// In en, this message translates to:
+  /// **'Music cache limit'**
+  String get musicCacheLimit;
+
+  /// No description provided for @videoCacheLimit.
+  ///
+  /// In en, this message translates to:
+  /// **'Video cache limit'**
+  String get videoCacheLimit;
+
+  /// No description provided for @imageCacheLimit.
+  ///
+  /// In en, this message translates to:
+  /// **'Image cache limit'**
+  String get imageCacheLimit;
+
+  /// No description provided for @offlineReady.
+  ///
+  /// In en, this message translates to:
+  /// **'Available offline'**
+  String get offlineReady;
+
+  /// No description provided for @downloadMissing.
+  ///
+  /// In en, this message translates to:
+  /// **'Download remaining songs'**
+  String get downloadMissing;
+
+  /// No description provided for @spaceEstimate.
+  ///
+  /// In en, this message translates to:
+  /// **'Estimated size'**
+  String get spaceEstimate;
+
+  /// No description provided for @availableSpace.
+  ///
+  /// In en, this message translates to:
+  /// **'Available disk space'**
+  String get availableSpace;
+
+  /// No description provided for @deleteAllDownloads.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete all downloaded songs'**
+  String get deleteAllDownloads;
+
+  /// No description provided for @importPlaylistFile.
+  ///
+  /// In en, this message translates to:
+  /// **'Import M3U or CSV file'**
+  String get importPlaylistFile;
+
+  /// No description provided for @csvReadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Use a CSV with title and artist columns.'**
+  String get csvReadFailed;
+
+  /// No description provided for @loudnessTarget.
+  ///
+  /// In en, this message translates to:
+  /// **'Normalization target'**
+  String get loudnessTarget;
+
+  /// No description provided for @defaultLibraryFilter.
+  ///
+  /// In en, this message translates to:
+  /// **'Default library filter'**
+  String get defaultLibraryFilter;
+
+  /// No description provided for @startupTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Startup tab'**
+  String get startupTab;
+
+  /// No description provided for @swipeDistance.
+  ///
+  /// In en, this message translates to:
+  /// **'Track swipe distance'**
+  String get swipeDistance;
+
+  /// No description provided for @varispeed.
+  ///
+  /// In en, this message translates to:
+  /// **'Change pitch with playback speed'**
+  String get varispeed;
+
+  /// No description provided for @streamQuality.
+  ///
+  /// In en, this message translates to:
+  /// **'YouTube Music streaming quality'**
+  String get streamQuality;
+
+  /// No description provided for @streamSaver.
+  ///
+  /// In en, this message translates to:
+  /// **'Save data on YouTube Music'**
+  String get streamSaver;
+
+  /// No description provided for @keepHistoryFor.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep listening history for'**
+  String get keepHistoryFor;
+
+  /// No description provided for @noTimeLimit.
+  ///
+  /// In en, this message translates to:
+  /// **'No time limit'**
+  String get noTimeLimit;
+
+  /// No description provided for @trimHistoryNotice.
+  ///
+  /// In en, this message translates to:
+  /// **'Older plays outside this period will be removed.'**
+  String get trimHistoryNotice;
+
+  /// No description provided for @daysCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{days} days'**
+  String daysCount(int days);
+
+  /// No description provided for @storageCache.
+  ///
+  /// In en, this message translates to:
+  /// **'Storage & cache'**
+  String get storageCache;
+
+  /// No description provided for @storageCacheHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Space for streamed music, videos and artwork'**
+  String get storageCacheHint;
+
   /// No description provided for @deviceSetupTitle.
   ///
   /// In en, this message translates to:
@@ -11672,6 +12026,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Show the top arrow in player styles other than Classic. Swipe down to close when hidden.'**
   String get showPlayerCloseSubtitle;
+
+  /// No description provided for @catalogueDownloader.
+  ///
+  /// In en, this message translates to:
+  /// **'Download provider for metadata-only catalogues'**
+  String get catalogueDownloader;
 
   /// No description provided for @downloadSource.
   ///

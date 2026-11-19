@@ -48,6 +48,10 @@ class _SearchBoxState extends State<SearchBox> {
   int _request = 0;
 
   List<String> _recent = const [];
+  void _forgetSearches() {
+    if (mounted) setState(() => _recent = const []);
+  }
+
   List<String> _queries = const [];
   List<SearchHit> _hits = const [];
 
@@ -60,6 +64,7 @@ class _SearchBoxState extends State<SearchBox> {
   @override
   void initState() {
     super.initState();
+    RecentSearches.cleared.addListener(_forgetSearches);
     _focus.addListener(_sync);
     SearchSource.current.addListener(_sourceChanged);
     RecentSearches.load().then((r) {
@@ -71,6 +76,7 @@ class _SearchBoxState extends State<SearchBox> {
 
   @override
   void dispose() {
+    RecentSearches.cleared.removeListener(_forgetSearches);
     _debounce?.cancel();
     _focus.removeListener(_sync);
     SearchSource.current.removeListener(_sourceChanged);
@@ -499,6 +505,10 @@ class _SearchSuggestionsState extends State<SearchSuggestions> {
   Timer? _debounce;
   int _request = 0;
   List<String> _recent = const [];
+  void _forgetSearches() {
+    if (mounted) setState(() => _recent = const []);
+  }
+
   List<String> _queries = const [];
   List<SearchHit> _hits = const [];
   String _typed = '';
@@ -511,6 +521,7 @@ class _SearchSuggestionsState extends State<SearchSuggestions> {
   @override
   void initState() {
     super.initState();
+    RecentSearches.cleared.addListener(_forgetSearches);
     _typed = _input.controller.text.trim();
     _input.controller.addListener(_changed);
     SearchSource.current.addListener(_sourceChanged);
@@ -522,6 +533,7 @@ class _SearchSuggestionsState extends State<SearchSuggestions> {
 
   @override
   void dispose() {
+    RecentSearches.cleared.removeListener(_forgetSearches);
     _debounce?.cancel();
     _input.controller.removeListener(_changed);
     SearchSource.current.removeListener(_sourceChanged);

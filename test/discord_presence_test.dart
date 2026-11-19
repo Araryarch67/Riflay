@@ -240,10 +240,10 @@ void main() {
     presence.update(track: null, playing: false, position: Duration.zero, browsingLocation: 'library');
     await fake.waitForFrames(2);
     final a1 = (fake.frames[1].$2['args'] as Map)['activity'] as Map;
-    expect(a1['type'], 2);
+    expect(a1['type'], 0);
     expect(a1['status_display_type'], 0);
     expect(a1['details'], 'Exploring library');
-    expect(a1['state'], 'Riflay');
+    expect(a1.containsKey('state'), isFalse);
     expect((a1['timestamps'] as Map)['start'], startTime.millisecondsSinceEpoch);
     expect((a1['assets'] as Map)['large_image'], 'openmusic');
     expect([for (final b in a1['buttons'] as List) (b as Map)['label']], ['Download Riflay']);

@@ -107,6 +107,8 @@ class _HomeShellState extends State<HomeShell> {
   @override
   void initState() {
     super.initState();
+    final initial = PhoneTab.values.asNameMap()[LayoutPrefs.instance.startupTab];
+    if (initial != null && initial.available) _tab = initial;
     GateHooks.attach(_gate);
     LayoutPrefs.instance.addListener(_syncWidths);
     _history.addListener(_followLocation);

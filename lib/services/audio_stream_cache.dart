@@ -58,7 +58,7 @@ Stream<List<int>> cancellableAudio(Stream<List<int>> Function(StreamCancellation
 class AudioStreamCache<T> {
   AudioStreamCache({this.maxBytes = 64 << 20, this.maxSongBytes = 32 << 20, Future<Directory> Function()? directory})
     : _directory = directory ?? _temporary;
-  final int maxBytes;
+  int maxBytes;
   final int maxSongBytes;
   final Future<Directory> Function() _directory;
   Future<Directory>? _folder;

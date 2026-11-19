@@ -4,6 +4,7 @@ import 'package:path/path.dart' as p;
 
 import '../models/track.dart';
 import 'language.dart';
+import 'playlist_covers.dart';
 
 /// What the UI reads from one version of the library, each part worked out on
 /// first use. A new library gets a new one. Songs whose tags were filled in
@@ -107,6 +108,7 @@ class LibraryViews {
     title: tr.allSongs,
     subtitle: tr.songsPlural(tracks.length),
     tracks: _sortedBy(tracks, (t) => t.title.toLowerCase()),
+    coverKey: PlaylistCovers.allSongsKey,
   );
 
   List<Track> get recentlyAdded => _recentlyAdded ??= ([...tracks]..sort((a, b) => b.addedAt.compareTo(a.addedAt)));
@@ -121,6 +123,7 @@ class LibraryViews {
       title: tr.downloaded,
       subtitle: tr.songsPlural(downloaded.length),
       tracks: downloaded,
+      coverKey: PlaylistCovers.downloadsKey,
     );
   }
 

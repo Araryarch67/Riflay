@@ -2,6 +2,10 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../merged_download.dart';
+import '../metadata.dart';
+import '../youtube_stream.dart';
+import '../youtube_audio_source.dart';
+import '../video_stream_cache.dart';
 
 /// Settings › Accounts & services › Music sources: the places Riflay looks besides YouTube Music. Each one is on
 /// until turned off.
@@ -17,7 +21,38 @@ class MusicSources extends ChangeNotifier {
 
   /// How much Smart merge keeps on disk of the songs it played (MB), so a song played again opens from there
   /// without asking the service; 0 keeps none.
+  int audioCap = 0;
+  bool dataSaver = false;
+  Future<void> setAudioCap(int cap) async {
+    audioCap = cap;
+    YoutubeStream.configurePlayback(cap, dataSaver);
+    notifyListeners();
+    await (await SharedPreferences.getInstance()).setInt('stream.audioCap', cap);
+  }
+
+  Future<void> setDataSaver(bool value) async {
+    dataSaver = value;
+    YoutubeStream.configurePlayback(audioCap, value);
+    notifyListeners();
+    await (await SharedPreferences.getInstance()).setBool('stream.dataSaver', value);
+  }
+
   int smartMergeCacheMb = 1024;
+  int videoMb = 384, imageMb = 128;
+  Future<void> setVideoMb(int mb) async {
+    videoMb = mb;
+    notifyListeners();
+    await (await SharedPreferences.getInstance()).setInt('cache.videoMb', mb);
+    await VideoStreamCache.instance.setLimit(mb << 20);
+  }
+
+  Future<void> setImageMb(int mb) async {
+    imageMb = mb;
+    notifyListeners();
+    await (await SharedPreferences.getInstance()).setInt('cache.imageMb', mb);
+    await Metadata.setArtLimit(mb << 20);
+  }
+
   static const cacheChoices = [0, 512, 1024, 2048, 5120];
   bool soundcloud = true;
   bool monochrome = true;
@@ -31,9 +66,16 @@ class MusicSources extends ChangeNotifier {
 
   Future<void> _read() async {
     final p = await SharedPreferences.getInstance();
+    audioCap = p.getInt('stream.audioCap') ?? 0;
+    dataSaver = p.getBool('stream.dataSaver') ?? false;
+    YoutubeStream.configurePlayback(audioCap, dataSaver);
     soundcloud = p.getBool(_soundcloudKey) ?? true;
     monochrome = p.getBool(_monochromeKey) ?? true;
     smartMerge = p.getBool(_smartMergeKey) ?? true;
+    videoMb = (p.getInt('cache.videoMb') ?? 384).clamp(0, 5120);
+    imageMb = (p.getInt('cache.imageMb') ?? 128).clamp(0, 5120);
+    VideoStreamCache.instance.maxBytes = videoMb << 20;
+    Metadata.artLimit = imageMb << 20;
     smartMergeCacheMb = p.getInt(_cacheKey) ?? 1024;
     _applyCache();
     notifyListeners();
@@ -62,10 +104,14 @@ class MusicSources extends ChangeNotifier {
     _applyCache();
     notifyListeners();
     await (await SharedPreferences.getInstance()).setInt(_cacheKey, mb);
+    await MergedDownload.trimKept();
   }
 
   void _applyCache() {
-    MergedDownload.keptBytes = smartMergeCacheMb << 20;
+    // Reserve a small share of the music budget for YouTube's streaming session.
+    final sessionMb = (smartMergeCacheMb ~/ 8).clamp(0, 64);
+    YoutubeAudioSource.setCacheBudget(sessionMb << 20);
+    MergedDownload.keptBytes = (smartMergeCacheMb - sessionMb) << 20;
     MergedDownload.keepsSongs = smartMergeCacheMb > 0 && MergedDownload.keepsByDefault;
   }
 

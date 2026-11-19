@@ -200,10 +200,14 @@ void main() {
     );
     await tester.tap(find.byTooltip('More options for Local recent'));
     await tester.pumpAndSettle();
+    await tester.tap(find.text('More options'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Remove from Recently played'));
     await tester.pumpAndSettle();
     expect(player.recentlyPlayed.map((t) => t.id), [_remote.id]);
     await tester.tap(find.byTooltip('More options for Local recent'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('More options'));
     await tester.pumpAndSettle();
     expect(find.text('Remove from Recently played'), findsNothing);
     await tester.pumpWidget(const SizedBox());

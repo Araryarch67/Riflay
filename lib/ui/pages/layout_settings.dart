@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../services/appearance.dart';
+import '../../services/lyrics_translation.dart';
+import '../widgets/app_dialog.dart';
 import '../../services/layout_prefs.dart';
 import '../../services/media_session.dart';
 import '../../services/player_presets.dart';
@@ -304,6 +306,70 @@ class LyricsSettings extends StatelessWidget {
           _Header(tr.lyrics, hint: tr.lyricsHint),
           SettingsCard(
             children: [
+              ValueListenableBuilder<String>(
+                valueListenable: LyricsTranslation.language,
+                builder: (context, value, _) {
+                  final names = {
+                    '': tr.systemLanguage,
+                    'id': 'Bahasa Indonesia',
+                    'en': 'English',
+                    'ja': '日本語',
+                    'ko': '한국어',
+                    'zh-CN': '简体中文',
+                    'zh-TW': '繁體中文',
+                    'es': 'Español',
+                    'de': 'Deutsch',
+                    'fr': 'Français',
+                    'pt': 'Português',
+                    'ar': 'العربية',
+                    'hi': 'हिन्दी',
+                  };
+                  return SettingTile(
+                    icon: Icons.translate,
+                    title: Text(tr.lyricsTarget),
+                    control: OptionPicker<String>(
+                      value: value,
+                      options: [
+                        for (final e in names.entries) (e.key, e.value),
+                        if (!names.containsKey(value)) (value, value),
+                        ('*', tr.languageCode),
+                      ],
+                      onChanged: (v) async {
+                        if (v != '*') {
+                          LyricsTranslation.language.value = v;
+                          return;
+                        }
+                        final code = await showDialog<String>(
+                          context: context,
+                          builder: (dialog) {
+                            var code = '';
+                            return StatefulBuilder(
+                              builder: (_, update) => AppDialog(
+                                title: tr.languageCode,
+                                content: TextField(
+                                  autofocus: true,
+                                  decoration: const InputDecoration(hintText: 'es, pt-BR, zh-TW'),
+                                  onChanged: (s) => update(() => code = s.trim()),
+                                ),
+                                actions: [
+                                  TextButton(onPressed: () => Navigator.pop(dialog), child: Text(tr.cancel)),
+                                  FilledButton(
+                                    onPressed: RegExp(r'^[a-zA-Z]{2,3}(-[a-zA-Z0-9]{2,8})*$').hasMatch(code)
+                                        ? () => Navigator.pop(dialog, code)
+                                        : null,
+                                    child: Text(tr.save),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        );
+                        if (code != null) LyricsTranslation.language.value = code;
+                      },
+                    ),
+                  );
+                },
+              ),
               SettingTile(
                 icon: Icons.lyrics_outlined,
                 title: Text(tr.lyricsPage),
@@ -431,6 +497,34 @@ class LayoutSettings extends StatelessWidget {
           _Header(tr.bars, hint: tr.barsHint),
           SettingsCard(
             children: [
+              if (Features.phoneLayout) ...[
+                SettingTile(
+                  icon: Icons.home_outlined,
+                  title: Text(tr.startupTab),
+                  control: OptionPicker<String>(
+                    value: p.startupTab,
+                    options: [
+                      ('home', tr.navHome),
+                      ('search', tr.navSearch),
+                      ('library', tr.navLibrary),
+                      if (Features.downloads) ('downloads', tr.navDownloads),
+                      ('settings', tr.navSettings),
+                    ],
+                    onChanged: p.setStartupTab,
+                  ),
+                ),
+                SettingTile(
+                  icon: Icons.swipe,
+                  title: Text(tr.swipeDistance),
+                  control: OptionPicker<int>(
+                    value: p.swipeDistance,
+                    options: [
+                      for (final n in [40, 72, 104]) (n, '$n dp'),
+                    ],
+                    onChanged: p.setSwipeDistance,
+                  ),
+                ),
+              ],
               if (Features.phoneLayout)
                 SettingTile(
                   icon: Icons.call_to_action_rounded,

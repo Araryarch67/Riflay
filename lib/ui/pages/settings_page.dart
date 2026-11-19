@@ -26,6 +26,8 @@ import 'appearance_settings.dart';
 import 'settings_index.dart';
 import 'settings_preview.dart';
 import 'backup_settings.dart';
+import 'storage_settings.dart';
+import 'search/search_input.dart';
 import 'about_settings.dart';
 import 'listen_together_page.dart';
 import 'layout_settings.dart';
@@ -155,6 +157,8 @@ enum SettingsTopic {
     Icons.download_rounded,
     'Format, quality, where songs are saved',
   ),
+  storage(SettingsGroup.library, 'storage', 'Storage & cache', Icons.storage, 'Offline cache sizes'),
+  privacy(SettingsGroup.library, 'privacy', 'Privacy', Icons.privacy_tip_outlined, 'Search history on this device'),
   history(
     SettingsGroup.library,
     'history',
@@ -219,6 +223,8 @@ enum SettingsTopic {
     beta => tr.betaFeatures,
     library => tr.topicLibrary,
     downloads => tr.topicDownloads,
+    storage => tr.storageCache,
+    privacy => tr.privacySearch,
     history => tr.topicHistory,
     backup => tr.topicBackup,
     account => tr.topicAccount,
@@ -245,6 +251,8 @@ enum SettingsTopic {
     beta => tr.betaFeaturesSummary,
     library => tr.topicLibrarySummary,
     downloads => tr.topicDownloadsSummary,
+    storage => tr.storageCacheHint,
+    privacy => tr.clearSearches,
     history => tr.topicHistorySummary,
     backup => tr.topicBackupSummary,
     account => tr.topicAccountSummary,
@@ -259,6 +267,7 @@ enum SettingsTopic {
     advanced => AudioEngine.supported,
     dsp => AudioEngine.supported || AudioEngine.webEffects,
     library => Features.localLibrary,
+    storage => !Host.isWeb,
     downloads => Features.downloads,
     history => Features.listeningHistory,
     account => Features.youtubeSignIn,
@@ -597,7 +606,31 @@ class SettingsTopicPage extends StatelessWidget {
       SettingsTopic.dsp => const DspSettings(),
       SettingsTopic.advanced => const AdvancedAudioSettings(),
       SettingsTopic.library => const LibrarySettings(),
+      SettingsTopic.storage => const StorageSettings(),
       SettingsTopic.downloads => const DownloadSettings(),
+      SettingsTopic.privacy => SettingsCard(
+        children: [
+          ListTile(
+            leading: const Icon(Icons.history),
+            title: Text(tr.clearSearches),
+            onTap: () async {
+              if (!await confirmDialog(
+                context,
+                title: tr.clearSearches,
+                body: tr.clearSearchesBody,
+                confirmLabel: tr.clear,
+                destructive: true,
+              )) {
+                return;
+              }
+              await RecentSearches.clear();
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(tr.historyCleared)));
+              }
+            },
+          ),
+        ],
+      ),
       SettingsTopic.history => const PrivacySettings(),
       SettingsTopic.backup => const BackupSettings(),
       SettingsTopic.integrations => const _IntegrationsSettings(),

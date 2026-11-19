@@ -25,6 +25,21 @@ class PlaylistCovers extends ChangeNotifier {
   /// [Collection.coverKey] of YouTube Music's Liked music.
   static const likedKey = 'liked';
 
+  /// [Collection.coverKey] of the library's All songs.
+  static const allSongsKey = 'allSongs';
+
+  /// [Collection.coverKey] of the library's downloaded songs.
+  static const downloadsKey = 'downloads';
+
+  /// [Collection.coverKey] of a smart playlist ([SmartList.id]).
+  static String smartKey(String id) => 'smartList:$id';
+
+  /// [Collection.coverKey] of a music folder, by its path.
+  static String folderKey(String path) => 'folder:$path';
+
+  /// [Collection.coverKey] of an album, by its title and artist.
+  static String albumKey(String title, String artist) => 'album:${title.toLowerCase()}\u0000${artist.toLowerCase()}';
+
   /// [Collection.coverKey] of a Riflay playlist.
   static String playlistKey(String id) => 'pl:$id';
 

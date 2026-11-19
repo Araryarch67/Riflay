@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../models/track.dart';
 import '../services/download_matches.dart';
+import '../services/download_prefs.dart';
 import '../services/language.dart';
 import '../services/monochrome.dart';
 import '../services/player_controller.dart';
@@ -22,7 +23,7 @@ Future<bool> downloadExtensionTracks(
   final engine = runtime ?? Spotiflac.instance;
   try {
     await engine.load();
-    await engine.refresh();
+    await DownloadPrefs.instance.load();
   } catch (_) {
     if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(tr.spotiflacFailed)));
     return false;
@@ -37,23 +38,11 @@ Future<bool> downloadExtensionTracks(
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(tr.spotiflacNeedsDownloader)));
     return false;
   }
-  final provider = await showDialog<String>(
-    context: context,
-    builder: (context) => AppDialog(
-      title: tr.downloadSource,
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(tr.spotiflacMetadataOnly),
-          const SizedBox(height: 12),
-          for (final provider in providers)
-            ListTile(title: Text(engine.nameOf(provider['id'])), onTap: () => Navigator.pop(context, provider['id'])),
-        ],
-      ),
-      actions: [TextButton(onPressed: () => Navigator.pop(context), child: Text(tr.cancel))],
-    ),
-  );
-  if (provider == null || !context.mounted) return false;
+  final provider = DownloadPrefs.instance.catalogueDownloader ?? providers.first['id'] as String;
+  if (!providers.any((entry) => entry['id'] == provider)) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(tr.sourceUnavailable(engine.nameOf(provider)))));
+    return false;
+  }
   final direct = tracks.where(ownDownloader).toList();
   final metadata = tracks.where((track) => !ownDownloader(track)).toList();
   final options = engine.plugin(provider)?['quality_options'];
@@ -75,41 +64,27 @@ Future<bool> downloadFromSource(
   Track origin, {
   bool force = false,
 }) async {
-  await Future.wait([MusicSources.instance.load(), Spotiflac.instance.load()]);
+  await DownloadPrefs.instance.load();
   if (!context.mounted) return false;
-  final providers = Spotiflac.instance.searchProviders
-      .where((provider) => provider['has_download_provider'] == true)
-      .toList();
-  if (!MusicSources.instance.monochrome && providers.isEmpty) {
-    final choice = await chooseDownload(context, force: force, videoId: origin.videoId, track: origin);
-    if (choice == null) return false;
-    return player.youtube.enqueueTracks([origin], choice: choice) > 0;
-  }
-  final source = await showDialog<String>(
-    context: context,
-    builder: (context) => AppDialog(
-      title: tr.downloadSource,
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          ListTile(title: const Text('YouTube Music'), onTap: () => Navigator.pop(context, 'youtube')),
-          if (MusicSources.instance.monochrome)
-            ListTile(title: const Text('Monochrome'), onTap: () => Navigator.pop(context, 'monochrome')),
-          for (final provider in providers)
-            ListTile(
-              title: Text(Spotiflac.instance.nameOf(provider['id'])),
-              onTap: () => Navigator.pop(context, provider['id']),
-            ),
-        ],
-      ),
-      actions: [TextButton(onPressed: () => Navigator.pop(context), child: Text(tr.cancel))],
-    ),
-  );
-  if (source == null || !context.mounted) return false;
+  final source = DownloadPrefs.instance.source;
   if (source == 'youtube') {
     final choice = await chooseDownload(context, force: force, videoId: origin.videoId, track: origin);
     if (choice == null) return false;
     return player.youtube.enqueueTracks([origin], choice: choice) > 0;
+  }
+  if (source == 'monochrome') {
+    await MusicSources.instance.load();
+  } else {
+    await Spotiflac.instance.load();
+  }
+  if (!context.mounted) return false;
+  final available = source == 'monochrome'
+      ? MusicSources.instance.monochrome
+      : Spotiflac.instance.searchProviders.any((p) => p['id'] == source && p['has_download_provider'] == true);
+  if (!available) {
+    final name = source == 'monochrome' ? 'Monochrome' : Spotiflac.instance.nameOf(source);
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(tr.sourceUnavailable(name))));
+    return false;
   }
   final match = await showDialog<({Track track, String? quality})>(
     context: context,

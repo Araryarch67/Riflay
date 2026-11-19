@@ -27,22 +27,21 @@ import '../widgets/app_dialog.dart';
 
 /// The one sign-in: Google's own page, in a window on Linux (WebKitGTK helper)
 /// and inside the app everywhere else.
-Future<void> signInToYoutubeMusic(BuildContext context) async {
+Future<void> signInToYoutubeMusic(BuildContext context, {bool fullscreen = false}) async {
   final account = PlayerScope.read(context).ytMusic;
   if (DesktopLogin.supported) {
     final messenger = ScaffoldMessenger.of(context);
     final ok = await account.signInWithWindow();
     if (!ok && account.error != null) messenger.showSnackBar(SnackBar(content: Text(account.error!)));
   } else if (YoutubeMusicAccount.canSignInInWindow) {
-    final shell = ShellScope.of(context);
-    if (shell.compact) {
+    if (fullscreen || ShellScope.of(context).compact) {
       // Above the tab bar and mini player, which float over a tab's own pages and would cover Google's buttons.
       Navigator.of(
         context,
         rootNavigator: true,
       ).push(MaterialPageRoute<void>(builder: (_) => const YoutubeMusicLoginPage()));
     } else {
-      shell.open(const YoutubeMusicLoginPage());
+      ShellScope.of(context).open(const YoutubeMusicLoginPage());
     }
   } else {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(tr.needsWebkit)));

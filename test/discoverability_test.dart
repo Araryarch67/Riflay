@@ -92,6 +92,8 @@ void main() {
     await tester.pumpWidget(app(true));
     await tester.tap(find.byType(PopupMenuButton<void>));
     await tester.pumpAndSettle();
+    await tester.tap(find.text('More options'));
+    await tester.pumpAndSettle();
     expect(find.text('Detail stats'), findsOneWidget, skip: !AudioEngine.supported);
     expect(find.text('Signal path'), findsOneWidget, skip: !AudioEngine.supported);
   });

@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -55,6 +56,24 @@ Future<List<ImportedPlaylist?>> open(
 }
 
 void main() {
+  test('CSV imports quoted fields, escaped quotes, and semicolon exports', () {
+    final songs = parsePlaylistCsv('Track Name,Artist Name(s)\r\n"Hello, ""World""","A, B"');
+    expect(songs.single.title, 'Hello, "World"');
+    expect(songs.single.artist, 'A, B');
+    expect(parsePlaylistCsv('judul;artis\nSatu;Dua').single.title, 'Satu');
+    expect(() => parsePlaylistCsv('invalid\nrow'), throwsFormatException);
+  });
+  test('local M3U resolves relative paths and file URIs and counts missing songs', () async {
+    final folder = await Directory.systemTemp.createTemp('riflay-m3u');
+    addTearDown(() => folder.delete(recursive: true));
+    final first = await File.fromUri(folder.uri.resolve('first.flac')).create();
+    final second = await File.fromUri(folder.uri.resolve('second.mp3')).create();
+    final playlist = File.fromUri(folder.uri.resolve('Mix.m3u8'));
+    await playlist.writeAsString('#EXTM3U\nfirst.flac\nmissing.mp3\n${second.uri}\n');
+    final result = await readLocalM3u(playlist.path);
+    expect(result.total, 3);
+    expect(result.tracks.map((t) => t.uri), [first.uri, second.uri]);
+  });
   testWidgets('Monochrome imports original streams without searching YouTube', (t) async {
     final saves = <(String, List<Track>)>[];
     final native = Track(

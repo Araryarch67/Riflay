@@ -524,75 +524,71 @@ class _GlassBarState extends State<_GlassBar> with TickerProviderStateMixin {
       centre += flex(i) * unit;
     }
     final last = _info(round);
-    return _glass(
-      colors,
-      Stack(
-        children: [
-          if (shrink < 1)
-            Opacity(
-              opacity: (1 - shrink * 2).clamp(0.0, 1.0),
-              child: IgnorePointer(
-                ignoring: shrink > 0.5,
-                child: OverflowBox(
-                  alignment: Alignment.centerLeft,
-                  minWidth: full,
-                  maxWidth: full,
-                  child: Padding(
-                    padding: const EdgeInsets.all(4),
-                    child: _SwipeTabs(
-                      tabs: [for (final i in shown) i.tab],
-                      tab: widget.tab,
-                      onSelect: widget.onSelect,
-                      child: Row(
-                        children: [
-                          for (final i in shown)
-                            Expanded(
-                              flex: flex(i),
-                              child: _TabButton(
-                                info: i,
-                                selected: widget.tab == i.tab,
-                                onTap: () => widget.onSelect(i.tab),
-                                child: _Capsule(info: i, selected: widget.tab == i.tab),
-                              ),
+    return Stack(
+      children: [
+        Positioned.fill(child: IgnorePointer(child: _glass(colors, const SizedBox.expand()))),
+        if (shrink < 1)
+          Opacity(
+            opacity: (1 - shrink * 2).clamp(0.0, 1.0),
+            child: IgnorePointer(
+              ignoring: shrink > 0.5,
+              child: OverflowBox(
+                alignment: Alignment.centerLeft,
+                minWidth: full,
+                maxWidth: full,
+                child: Padding(
+                  padding: const EdgeInsets.all(4),
+                  child: _SwipeTabs(
+                    tabs: [for (final i in shown) i.tab],
+                    tab: widget.tab,
+                    onSelect: widget.onSelect,
+                    child: Row(
+                      children: [
+                        for (final i in shown)
+                          Expanded(
+                            flex: flex(i),
+                            child: _TabButton(
+                              info: i,
+                              selected: widget.tab == i.tab,
+                              onTap: () => widget.onSelect(i.tab),
+                              child: _Capsule(info: i, selected: widget.tab == i.tab, glass: true, renderer: _renderer),
                             ),
-                        ],
-                      ),
+                          ),
+                      ],
                     ),
                   ),
                 ),
               ),
             ),
-          if (shrink > 0)
-            Positioned(
-              left: lerpDouble(centre - _size / 2, 0, shrink),
-              top: 0,
-              width: _size,
-              height: _size,
-              child: Opacity(
-                opacity: shrink,
-                child: IgnorePointer(
-                  ignoring: shrink < 0.5,
-                  child: _TabButton(
-                    key: PhoneBottomBar.tabsButtonKey,
-                    info: last,
-                    selected: widget.tab == round,
-                    // Shrunk by scrolling it brings the tabs back; on Search it goes Home.
-                    onTap: search > 0.5 ? () => widget.onSelect(round) : () => widget.link.collapsed.value = false,
-                    // The open tab on its accent disc, as its capsule was; Home on Search is plain.
-                    child: Center(
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: search > 0.5 ? colors.accent.withValues(alpha: 0) : colors.accent,
-                        ),
-                        child: SizedBox.square(
-                          dimension: 44,
-                          child: Center(
-                            child: _TabIcon(
-                              info: last,
-                              selected: true,
-                              color: search > 0.5 ? colors.textPrimary : colors.onAccent,
-                            ),
+          ),
+        if (shrink > 0)
+          Positioned(
+            left: lerpDouble(centre - _size / 2, 0, shrink),
+            top: 0,
+            width: _size,
+            height: _size,
+            child: Opacity(
+              opacity: shrink,
+              child: IgnorePointer(
+                ignoring: shrink < 0.5,
+                child: _TabButton(
+                  key: PhoneBottomBar.tabsButtonKey,
+                  info: last,
+                  selected: widget.tab == round,
+                  // Shrunk by scrolling it brings the tabs back; on Search it goes Home.
+                  onTap: search > 0.5 ? () => widget.onSelect(round) : () => widget.link.collapsed.value = false,
+                  // The open tab on its accent disc, as its capsule was; Home on Search is plain.
+                  child: Center(
+                    child: _GlassButtonFace(
+                      renderer: _renderer,
+                      active: search <= 0.5,
+                      child: SizedBox.square(
+                        dimension: 44,
+                        child: Center(
+                          child: _TabIcon(
+                            info: last,
+                            selected: true,
+                            color: search > 0.5 ? colors.textPrimary : _glassInk(colors),
                           ),
                         ),
                       ),
@@ -601,8 +597,8 @@ class _GlassBarState extends State<_GlassBar> with TickerProviderStateMixin {
                 ),
               ),
             ),
-        ],
-      ),
+          ),
+      ],
     );
   }
 
@@ -752,6 +748,7 @@ class _GlassBarState extends State<_GlassBar> with TickerProviderStateMixin {
     final radius = math.min(LayoutPrefs.radius(_size / 2), _size / 2);
     if (_renderer) {
       return LiquidGlass.grouped(
+        appearance: riflayGlassAppearance(themeIsLight: colors.light),
         shape: LiquidRoundedSuperellipse(borderRadius: radius),
         child: Material(type: MaterialType.transparency, child: child),
       );
@@ -912,6 +909,7 @@ class _FloatingBar extends StatelessWidget {
       return LiquidGlassLayer(
         settings: riflayGlass(brightness: colors.light ? Brightness.light : Brightness.dark, frost: glassFrost()),
         child: LiquidGlass(
+          appearance: riflayGlassAppearance(themeIsLight: colors.light),
           shape: LiquidRoundedSuperellipse(borderRadius: radius.topLeft.x),
           child: Material(type: MaterialType.transparency, child: bar),
         ),
@@ -1151,38 +1149,75 @@ class _IconAndDot extends StatelessWidget {
 }
 
 /// Capsule: the icon alone, or for the selected tab the icon and its name on an accent capsule.
+Color _glassInk(AppColorsView colors) => switch (LayoutPrefs.instance.glassTint) {
+  GlassTint.black => Colors.white,
+  GlassTint.light => Colors.black,
+  GlassTint.theme => colors.textPrimary,
+};
+
+class _GlassButtonFace extends StatelessWidget {
+  const _GlassButtonFace({required this.renderer, required this.active, required this.child});
+  final bool renderer, active;
+  final Widget child;
+  @override
+  Widget build(BuildContext context) {
+    if (!active) return child;
+    final appearance = riflayGlassAppearance(themeIsLight: AppColors.of(context).light);
+    const shape = StadiumBorder();
+    final content = DecoratedBox(
+      decoration: ShapeDecoration(
+        shape: shape.copyWith(side: BorderSide(color: _glassInk(AppColors.of(context)).withValues(alpha: 0.24))),
+      ),
+      child: child,
+    );
+    if (!renderer) {
+      return DecoratedBox(
+        decoration: ShapeDecoration(shape: shape, color: appearance.tint),
+        child: content,
+      );
+    }
+    return LiquidGlass(
+      shape: const LiquidRoundedSuperellipse(borderRadius: 22),
+      appearance: appearance,
+      child: content,
+    );
+  }
+}
+
 class _Capsule extends StatelessWidget {
-  const _Capsule({required this.info, required this.selected});
+  const _Capsule({required this.info, required this.selected, this.glass = false, this.renderer = false});
 
   final _TabInfo info;
-  final bool selected;
+  final bool selected, glass, renderer;
 
   @override
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
-    return Center(
-      child: AnimatedContainer(
-        duration: LayoutPrefs.dur(const Duration(milliseconds: 220)),
-        curve: Curves.easeOut,
-        height: 40,
-        padding: EdgeInsets.symmetric(horizontal: selected ? 10 : 0),
-        decoration: BoxDecoration(
-          color: selected ? colors.accent : colors.accent.withValues(alpha: 0),
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _TabIcon(info: info, selected: selected, color: selected ? colors.onAccent : colors.textSecondary),
-            if (selected) ...[
-              const SizedBox(width: 6),
-              Flexible(
-                child: _TabLabel(info: info, selected: true, color: colors.onAccent),
-              ),
-            ],
-          ],
-        ),
+    final ink = glass ? _glassInk(colors) : colors.onAccent;
+    final button = AnimatedContainer(
+      duration: LayoutPrefs.dur(const Duration(milliseconds: 220)),
+      curve: Curves.easeOut,
+      height: 40,
+      padding: EdgeInsets.symmetric(horizontal: selected ? 10 : 0),
+      decoration: BoxDecoration(
+        color: selected && !glass ? colors.accent : Colors.transparent,
+        borderRadius: BorderRadius.circular(20),
       ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _TabIcon(info: info, selected: selected, color: selected ? ink : colors.textSecondary),
+          if (selected) ...[
+            const SizedBox(width: 6),
+            Flexible(
+              child: _TabLabel(info: info, selected: true, color: ink),
+            ),
+          ],
+        ],
+      ),
+    );
+    return Center(
+      child: glass ? _GlassButtonFace(renderer: renderer, active: selected, child: button) : button,
     );
   }
 }
@@ -1241,7 +1276,19 @@ class _LiquidGlass extends StatelessWidget {
               inner: _saturate(1.6),
             ),
             child: CustomPaint(
-              painter: _GlassFace(shape, colors.elevated, light: colors.light),
+              painter: _GlassFace(
+                shape,
+                switch (LayoutPrefs.instance.glassTint) {
+                  GlassTint.black => Colors.black,
+                  GlassTint.light => Colors.white,
+                  _ => colors.elevated,
+                },
+                light: switch (LayoutPrefs.instance.glassTint) {
+                  GlassTint.black => false,
+                  GlassTint.light => true,
+                  _ => colors.light,
+                },
+              ),
               child: Material(type: MaterialType.transparency, child: child),
             ),
           ),

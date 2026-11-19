@@ -15,6 +15,8 @@ export 'page_motion.dart' show PageMotionStyle, PageMotionSpeed;
 
 /// Desktop controls can stay full width or sit inside a floating player.
 /// The desktop's player bar. Every look sits flush along the window's foot; none floats over the page.
+enum GlassTint { theme, light, black }
+
 enum DesktopBarStyle {
   classic,
   compact,
@@ -579,7 +581,7 @@ class LayoutPrefs extends ChangeNotifier {
 
   /// The player, part by part, on phones and desktop. The defaults are how it has always looked; Settings › Look & feel ›
   /// Layout › Player changes them one by one, and Presets sets several at once.
-  PlayerCover playerCover = PlayerCover.square;
+  PlayerCover playerCover = PlayerCover.flower;
 
   /// Background artwork is unavailable in Lightweight; framed covers stay selectable.
   List<PlayerCover> get playerCoverChoices =>
@@ -603,6 +605,21 @@ class LayoutPrefs extends ChangeNotifier {
       showVolumeRow ? const [PlayerBottomRow.classic, PlayerBottomRow.chips] : PlayerBottomRow.values;
 
   /// Liquid presets frost the player's transparent control surfaces.
+  String startupTab = 'home', libraryChip = '';
+  int swipeDistance = 72;
+  Set<String> hiddenCollections = {};
+  Future<void> setStartupTab(String value) => _set(() => startupTab = value);
+  Future<void> setLibraryChip(String value) => _set(() => libraryChip = value);
+  Future<void> setSwipeDistance(int value) => _set(() => swipeDistance = value.clamp(32, 120));
+  Future<void> showCollection(String key, bool show) => _set(() {
+    hiddenCollections = {...hiddenCollections};
+    if (show) {
+      hiddenCollections.remove(key);
+    } else {
+      hiddenCollections.add(key);
+    }
+  });
+  GlassTint glassTint = GlassTint.theme;
   bool playerGlassControls = false;
 
   /// Which solid parts Liquid Glass controls also frost; off by default, so only the buttons around them are glass.
@@ -614,11 +631,11 @@ class LayoutPrefs extends ChangeNotifier {
   MiniPlayerStyle miniPlayer = MiniPlayerStyle.classic;
   AlbumHeaderStyle albumHeader = AlbumHeaderStyle.classic;
   PlayingRowStyle playingRow = PlayingRowStyle.classic;
-  QualityBadgePlace qualityBadgePlace = QualityBadgePlace.timeRow;
-  VolumeSliderShape volumeSlider = VolumeSliderShape.pill;
+  QualityBadgePlace qualityBadgePlace = QualityBadgePlace.underArtist;
+  VolumeSliderShape volumeSlider = VolumeSliderShape.classic;
 
   /// The phone's tab bar: docked under the mini player like most music apps, by default.
-  TabBarStyle tabBar = TabBarStyle.capsule;
+  TabBarStyle tabBar = TabBarStyle.classic;
   DesktopBarStyle desktopBar = DesktopBarStyle.classic;
   DesktopMiniStyle desktopMini = DesktopMiniStyle.window;
 
@@ -838,6 +855,11 @@ class LayoutPrefs extends ChangeNotifier {
     showTimeLeft = j['showTimeLeft'] as bool? ?? d.showTimeLeft;
     transport = pick(PlayerTransport.values, 'transport', d.transport);
     showVolumeRow = j['showVolumeRow'] as bool? ?? d.showVolumeRow;
+    startupTab = j['startupTab'] as String? ?? d.startupTab;
+    libraryChip = j['libraryChip'] as String? ?? d.libraryChip;
+    swipeDistance = (j['swipeDistance'] as num?)?.round().clamp(32, 120) ?? d.swipeDistance;
+    hiddenCollections = (j['hiddenCollections'] as List?)?.whereType<String>().toSet() ?? {...d.hiddenCollections};
+    glassTint = pick(GlassTint.values, 'glassTint', d.glassTint);
     playerGlassControls = j['playerGlassControls'] as bool? ?? d.playerGlassControls;
     glassSeekBar = j['glassSeekBar'] as bool? ?? d.glassSeekBar;
     glassTransport = j['glassTransport'] as bool? ?? d.glassTransport;
@@ -920,6 +942,11 @@ class LayoutPrefs extends ChangeNotifier {
     'showTimeLeft': showTimeLeft,
     'transport': transport.name,
     'showVolumeRow': showVolumeRow,
+    'startupTab': startupTab,
+    'libraryChip': libraryChip,
+    'swipeDistance': swipeDistance,
+    'hiddenCollections': hiddenCollections.toList(),
+    'glassTint': glassTint.name,
     'playerGlassControls': playerGlassControls,
     'glassSeekBar': glassSeekBar,
     'glassTransport': glassTransport,
@@ -1017,6 +1044,7 @@ class LayoutPrefs extends ChangeNotifier {
   Future<void> setShowTimeLeft(bool v) => _set(() => showTimeLeft = v);
   Future<void> setTransport(PlayerTransport v) => _set(() => transport = v);
   Future<void> setShowVolumeRow(bool v) => _set(() => showVolumeRow = v);
+  Future<void> setGlassTint(GlassTint value) => _set(() => glassTint = value);
   Future<void> setPlayerGlassControls(bool v) => _set(() => playerGlassControls = v);
   Future<void> setGlassSeekBar(bool v) => _set(() => glassSeekBar = v);
   Future<void> setGlassTransport(bool v) => _set(() => glassTransport = v);

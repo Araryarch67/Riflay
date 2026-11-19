@@ -4,6 +4,9 @@ import '../../services/device_setup.dart';
 import '../../services/language.dart';
 import '../../services/layout_prefs.dart';
 import '../theme.dart';
+import '../../services/player_controller.dart';
+import '../playlist_import.dart';
+import 'youtube_music_page.dart';
 import '../widgets/title_bar.dart';
 
 /// Opens the setup page over the app: on the first start of a computer ([DeviceSetup.due]), and from Settings ›
@@ -28,6 +31,7 @@ class DeviceSetupPage extends StatefulWidget {
 class _DeviceSetupPageState extends State<DeviceSetupPage> {
   late final Future<DeviceSpecs> _specs = widget.specs ?? DeviceSetup.read();
   PerformanceMode? _picked;
+  bool _showPerformance = false;
 
   Future<void> _finish(PerformanceMode? mode) async {
     if (mode != null) await LayoutPrefs.instance.setPerformance(mode);
@@ -41,62 +45,111 @@ class _DeviceSetupPageState extends State<DeviceSetupPage> {
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
     final muted = text.bodyMedium?.copyWith(color: AppColors.textSecondary);
+    final player = context.getInheritedWidgetOfExactType<PlayerScope>()?.notifier;
     final page = SafeArea(
-      child: FutureBuilder<DeviceSpecs>(
-        future: _specs,
-        builder: (context, snap) {
-          final specs = snap.data;
-          if (specs == null) return const Center(child: CircularProgressIndicator());
-          final recommended = DeviceSetup.recommend(specs);
-          final picked = _picked ?? recommended;
-          return Center(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 560),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Text(tr.deviceSetupTitle, style: text.headlineSmall?.copyWith(fontWeight: FontWeight.w800)),
-                    const SizedBox(height: 12),
-                    Text(tr.deviceSetupIntro, style: muted),
-                    const SizedBox(height: 24),
-                    _Specs(specs),
-                    const SizedBox(height: 24),
-                    Text(tr.performance, style: text.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
-                    const SizedBox(height: 8),
-                    for (final mode in PerformanceMode.values)
-                      _ModeTile(
-                        mode: mode,
-                        cost: _percent(DeviceSetup.share(mode, specs)),
-                        recommended: mode == recommended,
-                        selected: mode == picked,
-                        onTap: () => setState(() => _picked = mode),
-                      ),
-                    const SizedBox(height: 24),
-                    Wrap(
-                      alignment: WrapAlignment.end,
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: [
-                        TextButton(onPressed: () => _finish(null), child: Text(tr.deviceSetupKeep)),
-                        FilledButton(
-                          style: FilledButton.styleFrom(
-                            backgroundColor: AppColors.inverse,
-                            foregroundColor: AppColors.onInverse,
+      child: !_showPerformance && player != null
+          ? Center(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(24),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 560),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(tr.setupWelcome, style: text.headlineMedium),
+                      const SizedBox(height: 24),
+                      Card.filled(
+                        child: ListenableBuilder(
+                          listenable: player.ytMusic,
+                          builder: (context, _) => ListTile(
+                            leading: const Icon(Icons.account_circle_outlined),
+                            title: Text(player.ytMusic.isSignedIn ? 'YouTube Music' : tr.signInToYt),
+                            subtitle: Text(player.ytMusic.isSignedIn ? tr.connected : tr.ytSignInPrompt),
+                            trailing: Icon(player.ytMusic.isSignedIn ? Icons.check : Icons.chevron_right),
+                            onTap: player.ytMusic.isSignedIn || player.ytMusic.connecting
+                                ? null
+                                : () => signInToYoutubeMusic(context, fullscreen: true),
                           ),
-                          onPressed: () => _finish(picked),
-                          child: Text(tr.deviceSetupContinue),
                         ),
-                      ],
-                    ),
-                  ],
+                      ),
+                      Card.filled(
+                        child: ListTile(
+                          leading: const Icon(Icons.playlist_add_rounded),
+                          title: Text(tr.importPlaylist),
+                          subtitle: Text(tr.setupImportHint),
+                          trailing: const Icon(Icons.chevron_right),
+                          onTap: () => askToImportPlaylist(context, offerOpen: false),
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      Align(
+                        alignment: AlignmentDirectional.centerEnd,
+                        child: FilledButton.icon(
+                          onPressed: () => setState(() => _showPerformance = true),
+                          icon: const Icon(Icons.arrow_forward),
+                          label: Text(tr.deviceSetupContinue),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
+            )
+          : FutureBuilder<DeviceSpecs>(
+              future: _specs,
+              builder: (context, snap) {
+                final specs = snap.data;
+                if (specs == null) return const Center(child: CircularProgressIndicator());
+                final recommended = DeviceSetup.recommend(specs);
+                final picked = _picked ?? recommended;
+                return Center(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 560),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Text(tr.deviceSetupTitle, style: text.headlineSmall?.copyWith(fontWeight: FontWeight.w800)),
+                          const SizedBox(height: 12),
+                          Text(tr.deviceSetupIntro, style: muted),
+                          const SizedBox(height: 24),
+                          _Specs(specs),
+                          const SizedBox(height: 24),
+                          Text(tr.performance, style: text.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+                          const SizedBox(height: 8),
+                          for (final mode in PerformanceMode.values)
+                            _ModeTile(
+                              mode: mode,
+                              cost: _percent(DeviceSetup.share(mode, specs)),
+                              recommended: mode == recommended,
+                              selected: mode == picked,
+                              onTap: () => setState(() => _picked = mode),
+                            ),
+                          const SizedBox(height: 24),
+                          Wrap(
+                            alignment: WrapAlignment.end,
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: [
+                              TextButton(onPressed: () => _finish(null), child: Text(tr.deviceSetupKeep)),
+                              FilledButton(
+                                style: FilledButton.styleFrom(
+                                  backgroundColor: AppColors.inverse,
+                                  foregroundColor: AppColors.onInverse,
+                                ),
+                                onPressed: () => _finish(picked),
+                                child: Text(tr.deviceSetupContinue),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              },
             ),
-          );
-        },
-      ),
     );
     return Scaffold(
       backgroundColor: AppColors.background,

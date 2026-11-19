@@ -71,7 +71,7 @@ void main() {
   final list = find.byKey(const ValueKey('list'));
 
   setUp(() async {
-    SharedPreferences.setMockInitialValues({'library.v1': jsonEncode(<Object>[])});
+    SharedPreferences.setMockInitialValues({'discord.enabled': false, 'library.v1': jsonEncode(<Object>[])});
     await prefs.reset();
     prefs.tabBar = TabBarStyle.glass;
   });

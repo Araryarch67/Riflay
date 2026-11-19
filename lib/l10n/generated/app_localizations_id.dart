@@ -5397,6 +5397,185 @@ class AppLocalizationsId extends AppLocalizations {
   String get glassVolume => 'Volume kaca';
 
   @override
+  String get setupWelcome => 'Selamat datang di Riflay';
+
+  @override
+  String get setupImportHint => 'Impor playlist dari tautan atau file M3U lokal.';
+
+  @override
+  String get importM3u => 'Impor file M3U';
+
+  @override
+  String get m3uReadFailed => 'Tidak ada file musik lokal yang bisa dibaca dari playlist ini.';
+
+  @override
+  String get coverCollage => 'Kolase empat sampul';
+
+  @override
+  String get dragCover => 'Geser untuk menentukan titik fokus';
+
+  @override
+  String get playlistTools => 'Alat playlist';
+
+  @override
+  String get copyThrough => 'Duplikat sampai lagu';
+
+  @override
+  String get trackNote => 'Catatan lagu di playlist';
+
+  @override
+  String get compareLists => 'Bandingkan playlist';
+
+  @override
+  String get inBoth => 'Ada di keduanya';
+
+  @override
+  String get exportRelative => 'Ekspor lagu lokal ke M3U relatif';
+
+  @override
+  String get songBookmarks => 'Penanda bagian lagu';
+
+  @override
+  String get addBookmark => 'Namai posisi ini';
+
+  @override
+  String get inPlaylists => 'Playlist yang memuat lagu ini';
+
+  @override
+  String get copyAtTime => 'Salin tautan pada posisi ini';
+
+  @override
+  String get insertAfter => 'Pindahkan setelah lagu';
+
+  @override
+  String get skipOnce => 'Lewati sekali';
+
+  @override
+  String get stopAfter => 'Berhenti setelah lagu ini';
+
+  @override
+  String get regenerateQueue => 'Buat ulang antrean berikutnya';
+
+  @override
+  String get queueRefreshFailed => 'Antrean belum bisa diperbarui. Coba lagi.';
+
+  @override
+  String get replaceFolder => 'Ganti folder yang hilang';
+
+  @override
+  String get replaceMatch => 'Ganti hasil pencocokan';
+
+  @override
+  String get retryMissing => 'Coba lagi lagu yang belum cocok';
+
+  @override
+  String get copyMissing => 'Salin lagu yang belum cocok';
+
+  @override
+  String get mergePlaylist => 'Simpan ke playlist';
+
+  @override
+  String get undoImport => 'Batalkan impor ini';
+
+  @override
+  String get duplicatesCount => 'Duplikat';
+
+  @override
+  String get glassTint => 'Warna Liquid Glass';
+
+  @override
+  String get followTheme => 'Ikuti tema';
+
+  @override
+  String get lyricsTarget => 'Bahasa tujuan terjemahan lirik';
+
+  @override
+  String get systemLanguage => 'Bahasa perangkat';
+
+  @override
+  String get languageCode => 'Kode bahasa lainnya';
+
+  @override
+  String get privacySearch => 'Privasi';
+
+  @override
+  String get clearSearches => 'Hapus riwayat pencarian';
+
+  @override
+  String get clearSearchesBody => 'Hapus semua pencarian yang tersimpan di perangkat ini?';
+
+  @override
+  String get musicCacheLimit => 'Batas cache musik';
+
+  @override
+  String get videoCacheLimit => 'Batas cache video';
+
+  @override
+  String get imageCacheLimit => 'Batas cache gambar';
+
+  @override
+  String get offlineReady => 'Tersedia offline';
+
+  @override
+  String get downloadMissing => 'Unduh lagu yang belum tersedia';
+
+  @override
+  String get spaceEstimate => 'Perkiraan ukuran';
+
+  @override
+  String get availableSpace => 'Ruang penyimpanan tersedia';
+
+  @override
+  String get deleteAllDownloads => 'Hapus semua lagu unduhan';
+
+  @override
+  String get importPlaylistFile => 'Impor file M3U atau CSV';
+
+  @override
+  String get csvReadFailed => 'Gunakan CSV dengan kolom judul dan artis.';
+
+  @override
+  String get loudnessTarget => 'Target kelantangan';
+
+  @override
+  String get defaultLibraryFilter => 'Filter awal koleksi';
+
+  @override
+  String get startupTab => 'Tab saat aplikasi dibuka';
+
+  @override
+  String get swipeDistance => 'Jarak geser untuk ganti lagu';
+
+  @override
+  String get varispeed => 'Ubah nada mengikuti kecepatan putar';
+
+  @override
+  String get streamQuality => 'Kualitas streaming YouTube Music';
+
+  @override
+  String get streamSaver => 'Hemat data YouTube Music';
+
+  @override
+  String get keepHistoryFor => 'Durasi simpan riwayat dengar';
+
+  @override
+  String get noTimeLimit => 'Tanpa batas waktu';
+
+  @override
+  String get trimHistoryNotice => 'Riwayat yang lebih lama dari periode ini akan dihapus.';
+
+  @override
+  String daysCount(int days) {
+    return '$days hari';
+  }
+
+  @override
+  String get storageCache => 'Penyimpanan & cache';
+
+  @override
+  String get storageCacheHint => 'Ruang untuk cache musik, video, dan sampul';
+
+  @override
   String get deviceSetupTitle => 'Siapkan Riflay untuk komputer ini';
 
   @override
@@ -6531,6 +6710,9 @@ class AppLocalizationsId extends AppLocalizations {
   @override
   String get showPlayerCloseSubtitle =>
       'Tampilkan panah atas pada gaya player selain Classic. Geser ke bawah untuk menutup saat tombol disembunyikan.';
+
+  @override
+  String get catalogueDownloader => 'Sumber unduhan untuk katalog metadata';
 
   @override
   String get downloadSource => 'Sumber unduhan';

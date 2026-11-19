@@ -349,6 +349,7 @@ mixin _Extras<T extends StatefulWidget> on State<T> {
     super.initState();
     LyricsTranslation.romanize.addListener(_changed);
     LyricsTranslation.translate.addListener(_changed);
+    LyricsTranslation.language.addListener(_languageChanged);
     _fetch();
   }
 
@@ -356,7 +357,14 @@ mixin _Extras<T extends StatefulWidget> on State<T> {
   void dispose() {
     LyricsTranslation.romanize.removeListener(_changed);
     LyricsTranslation.translate.removeListener(_changed);
+    LyricsTranslation.language.removeListener(_languageChanged);
     super.dispose();
+  }
+
+  void _languageChanged() {
+    _asked = false;
+    extras = null;
+    _changed();
   }
 
   void _changed() {
@@ -368,11 +376,13 @@ mixin _Extras<T extends StatefulWidget> on State<T> {
     // Settings' preview shows made-up lines: nothing to ask a service for, and no page to report a failure on.
     if (_asked || !(showRomanized || showTranslation) || LivePreview.of(context)) return;
     _asked = true;
-    LyricsTranslation.of(_lyricLines(lyrics)).then(
+    final language = LyricsTranslation.targetLanguage;
+    LyricsTranslation.of(_lyricLines(lyrics), to: language).then(
       (e) {
-        if (mounted) setState(() => extras = e);
+        if (mounted && language == LyricsTranslation.targetLanguage) setState(() => extras = e);
       },
       onError: (Object _) {
+        if (language != LyricsTranslation.targetLanguage) return;
         _asked = false; // switching it off and on again retries
         if (!mounted) return;
         ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(content: Text(tr.couldntTranslateLyrics)));

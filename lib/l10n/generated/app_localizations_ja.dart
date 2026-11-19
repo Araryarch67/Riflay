@@ -5286,6 +5286,185 @@ class AppLocalizationsJa extends AppLocalizations {
   String get glassVolume => '音量をガラスに';
 
   @override
+  String get setupWelcome => 'Riflay へようこそ';
+
+  @override
+  String get setupImportHint => 'リンクまたはローカルの M3U ファイルからプレイリストを取り込めます。';
+
+  @override
+  String get importM3u => 'M3U ファイルを読み込む';
+
+  @override
+  String get m3uReadFailed => 'このプレイリストからローカルの音楽ファイルを読み込めませんでした。';
+
+  @override
+  String get coverCollage => '4枚のコラージュ';
+
+  @override
+  String get dragCover => 'ドラッグして焦点を調整';
+
+  @override
+  String get playlistTools => 'プレイリストツール';
+
+  @override
+  String get copyThrough => '選んだ曲まで複製';
+
+  @override
+  String get trackNote => '曲のプレイリストメモ';
+
+  @override
+  String get compareLists => 'プレイリストを比較';
+
+  @override
+  String get inBoth => '両方に含まれる曲';
+
+  @override
+  String get exportRelative => 'ローカル曲を相対パスのM3Uで書き出す';
+
+  @override
+  String get songBookmarks => '曲のブックマーク';
+
+  @override
+  String get addBookmark => 'この位置に名前を付ける';
+
+  @override
+  String get inPlaylists => 'この曲を含むプレイリスト';
+
+  @override
+  String get copyAtTime => '現在位置のリンクをコピー';
+
+  @override
+  String get insertAfter => '指定した曲の後へ移動';
+
+  @override
+  String get skipOnce => '一度だけスキップ';
+
+  @override
+  String get stopAfter => 'この曲の後で停止';
+
+  @override
+  String get regenerateQueue => '次のキューを再生成';
+
+  @override
+  String get queueRefreshFailed => 'キューを更新できませんでした。';
+
+  @override
+  String get replaceFolder => '見つからないフォルダを置換';
+
+  @override
+  String get replaceMatch => '一致した曲を変更';
+
+  @override
+  String get retryMissing => '未一致の曲を再検索';
+
+  @override
+  String get copyMissing => '未一致の曲をコピー';
+
+  @override
+  String get mergePlaylist => '保存先プレイリスト';
+
+  @override
+  String get undoImport => 'この取り込みを元に戻す';
+
+  @override
+  String get duplicatesCount => '重複';
+
+  @override
+  String get glassTint => 'Liquid Glass の色';
+
+  @override
+  String get followTheme => 'テーマに合わせる';
+
+  @override
+  String get lyricsTarget => '歌詞の翻訳先言語';
+
+  @override
+  String get systemLanguage => '端末の言語';
+
+  @override
+  String get languageCode => 'その他の言語コード';
+
+  @override
+  String get privacySearch => 'プライバシー';
+
+  @override
+  String get clearSearches => '検索履歴を消去';
+
+  @override
+  String get clearSearchesBody => 'この端末の検索履歴をすべて消去しますか？';
+
+  @override
+  String get musicCacheLimit => '音楽キャッシュの上限';
+
+  @override
+  String get videoCacheLimit => '動画キャッシュの上限';
+
+  @override
+  String get imageCacheLimit => '画像キャッシュの上限';
+
+  @override
+  String get offlineReady => 'オフライン再生可能';
+
+  @override
+  String get downloadMissing => '残りの曲をダウンロード';
+
+  @override
+  String get spaceEstimate => '推定サイズ';
+
+  @override
+  String get availableSpace => 'ディスク空き容量';
+
+  @override
+  String get deleteAllDownloads => 'ダウンロードした曲をすべて削除';
+
+  @override
+  String get importPlaylistFile => 'M3U または CSV を読み込む';
+
+  @override
+  String get csvReadFailed => 'タイトルとアーティスト列のあるCSVを選んでください。';
+
+  @override
+  String get loudnessTarget => '音量正規化の目標値';
+
+  @override
+  String get defaultLibraryFilter => 'ライブラリの初期フィルタ';
+
+  @override
+  String get startupTab => '起動時のタブ';
+
+  @override
+  String get swipeDistance => '曲送りのスワイプ距離';
+
+  @override
+  String get varispeed => '再生速度に合わせて音程を変更';
+
+  @override
+  String get streamQuality => 'YouTube Music のストリーミング音質';
+
+  @override
+  String get streamSaver => 'YouTube Music のデータを節約';
+
+  @override
+  String get keepHistoryFor => '再生履歴の保存期間';
+
+  @override
+  String get noTimeLimit => '期間制限なし';
+
+  @override
+  String get trimHistoryNotice => 'この期間より古い再生履歴を削除します。';
+
+  @override
+  String daysCount(int days) {
+    return '$days 日';
+  }
+
+  @override
+  String get storageCache => 'ストレージとキャッシュ';
+
+  @override
+  String get storageCacheHint => '音楽・動画・アートワークのキャッシュ容量';
+
+  @override
   String get deviceSetupTitle => 'このパソコンに合わせて設定';
 
   @override
@@ -6391,6 +6570,9 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get showPlayerCloseSubtitle => 'Classic以外のスタイルで上部の矢印を表示します。非表示のときは下にスワイプして閉じます。';
+
+  @override
+  String get catalogueDownloader => 'メタデータ専用カタログのダウンロード元';
 
   @override
   String get downloadSource => 'ダウンロード元';

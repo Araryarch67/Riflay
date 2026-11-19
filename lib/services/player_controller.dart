@@ -125,6 +125,7 @@ class PlayerController extends ChangeNotifier {
           )
           .listen((_) {
             _maybeAutoplay();
+            _followQueueRules();
             _followSoundcloudExpiry();
             _castFollow();
             _followDop();
@@ -140,6 +141,12 @@ class PlayerController extends ChangeNotifier {
     _subs.add(
       player.playerStateStream.listen((state) {
         if (state.processingState == ProcessingState.completed) {
+          if (_stopAfter != null && identical(_stopAfter, player.sequenceState.currentSource)) {
+            _stopAfter = null;
+            unawaited(pause());
+            notifyListeners();
+            return;
+          }
           YoutubeAudioSource.retainCache({});
           // The queue ran out: if autoplay hasn't added anything yet (or its last try failed), add now.
           _maybeAutoplay();
@@ -242,6 +249,44 @@ class PlayerController extends ChangeNotifier {
 
   String? _autoplaySeed;
   bool _extending = false;
+  bool _regenerating = false;
+  bool get regenerating => _regenerating;
+  int _radioGeneration = 0;
+  Future<bool> regenerateQueue() async {
+    final original = player.sequenceState;
+    final current = currentTrack;
+    if (current == null || original.currentIndex == null || holdAutoplay || _regenerating) return false;
+    _regenerating = true;
+    _radioGeneration++;
+    notifyListeners();
+    try {
+      final seed = autoplaySeedIn(queue, queueIndex ?? 0) ?? current;
+      final similar = await _radioFor(seed);
+      final state = player.sequenceState;
+      if (!identical(state.currentSource, original.currentSource) || !listEquals(state.sequence, original.sequence)) {
+        return false;
+      }
+      final cut = state.currentIndex! + 1;
+      final retained = state.sequence.take(cut).map((s) => s.tag as Track).toList();
+      final seen = retained.map((t) => t.id).toSet();
+      final fresh = _playableQueueTracks(similar).where((t) => seen.add(t.id)).take(25).toList();
+      if (fresh.isEmpty) return false;
+      await player.addAudioSources([for (final t in fresh) _sourceFor(t)]);
+      if (cut < state.sequence.length) await player.removeAudioSourceRange(cut, state.sequence.length);
+      _ordered = [...retained, ...fresh];
+      _autoplayed
+        ..clear()
+        ..addAll(fresh.map((t) => t.id));
+      _autoplaySeed = current.id;
+      return true;
+    } catch (e) {
+      debugPrint('Regenerate queue: $e');
+      return false;
+    } finally {
+      _regenerating = false;
+      notifyListeners();
+    }
+  }
 
   /// Set while following someone in Listen together: the host decides what plays next.
   bool holdAutoplay = false;
@@ -273,7 +318,7 @@ class PlayerController extends ChangeNotifier {
   /// or SoundCloud's related tracks for a SoundCloud one. When the queue already ran out while they were
   /// being looked up, playback carries on with the first of them.
   void _maybeAutoplay() {
-    if (!_autoplay || holdAutoplay || _extending || player.loopMode != LoopMode.off) return;
+    if (_regenerating || !_autoplay || holdAutoplay || _extending || player.loopMode != LoopMode.off) return;
     final current = currentTrack;
     if (current == null || _autoplaySeed == current.id) return;
     final seq = player.sequenceState;
@@ -283,8 +328,10 @@ class PlayerController extends ChangeNotifier {
     final seed = autoplaySeedIn(order, queueIndex ?? order.length - 1) ?? current;
     _autoplaySeed = current.id;
     _extending = true;
+    final generation = _radioGeneration;
     _radioFor(seed)
         .then((similar) async {
+          if (generation != _radioGeneration) return;
           final have = {for (final t in queue) t.id, ..._recentIds.take(30)};
           final fresh = _playableQueueTracks(similar).where((t) => have.add(t.id)).take(25).toList();
           if (fresh.isEmpty || !_autoplay) return;
@@ -320,7 +367,8 @@ class PlayerController extends ChangeNotifier {
   static const _discordKey = 'discord.enabled';
   static const _discordOptionsKey = 'discord.options';
 
-  final DiscordPresence discord = DiscordPresence(_discordAppId);
+  // Read the saved privacy preference before sending the first activity.
+  final DiscordPresence discord = DiscordPresence(_discordAppId)..enabled = false;
 
   bool get discordEnabled => discord.enabled;
 
@@ -543,6 +591,36 @@ class PlayerController extends ChangeNotifier {
   bool get hasQueue => player.sequenceState.sequence.isNotEmpty;
 
   /// Tracks after the current one in play order.
+  final _skipOnce = <IndexedAudioSource>{};
+  IndexedAudioSource? _stopAfter, _lastQueueSource;
+  bool skipping(IndexedAudioSource source) => _skipOnce.contains(source);
+  bool stopping(IndexedAudioSource source) => identical(_stopAfter, source);
+  void toggleSkip(IndexedAudioSource source) {
+    if (!_skipOnce.remove(source)) _skipOnce.add(source);
+    notifyListeners();
+  }
+
+  void toggleStop(IndexedAudioSource source) {
+    _stopAfter = stopping(source) ? null : source;
+    notifyListeners();
+  }
+
+  void _followQueueRules() {
+    final seq = player.sequenceState;
+    final now = seq.currentSource;
+    final old = _lastQueueSource;
+    _lastQueueSource = now;
+    if (_skipOnce.isNotEmpty) _skipOnce.removeWhere((s) => !seq.sequence.contains(s));
+    if (_stopAfter != null && !seq.sequence.contains(_stopAfter)) _stopAfter = null;
+    if (now == null || identical(old, now)) return;
+    if (old != null && stopping(old)) {
+      _stopAfter = null;
+      unawaited(pause());
+    } else if (_skipOnce.remove(now)) {
+      unawaited(hasNext ? next() : pause());
+    }
+  }
+
   List<Track> get upNext {
     final seq = player.sequenceState;
     return [for (final s in seq.sequence.skip((seq.currentIndex ?? -1) + 1)) s.tag as Track];
@@ -1484,7 +1562,7 @@ class PlayerController extends ChangeNotifier {
     } catch (e) {
       debugPrint('Discord options unreadable: $e');
     }
-    _updatePresence();
+    _updatePresence(force: true);
     _autoplay = prefs.getBool(_autoplayKey) ?? true;
     final loop = LoopMode.values.asNameMap()[prefs.getString(_loopKey)];
     final level = prefs.getDouble(_volumeKey);

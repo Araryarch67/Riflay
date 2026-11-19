@@ -4,6 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../platform/host.dart';
 import '../../services/appearance.dart';
+import '../../services/layout_prefs.dart';
 import '../../services/color_tools.dart';
 import '../../services/language.dart';
 import '../../services/system_fonts.dart';
@@ -25,7 +26,7 @@ class AppearanceSettings extends StatelessWidget {
     final look = Appearance.instance;
     final muted = settingsMuted(context);
     return ListenableBuilder(
-      listenable: look,
+      listenable: Listenable.merge([look, LayoutPrefs.instance]),
       builder: (context, _) => SettingsCard(
         children: [
           ListTile(leading: const Icon(Icons.dark_mode_outlined), title: Text(tr.theme)),
@@ -176,6 +177,19 @@ class AppearanceSettings extends StatelessWidget {
             subtitle: Text(tr.highContrastSubtitle, style: muted),
             value: look.highContrast,
             onChanged: look.setHighContrast,
+          ),
+          SettingTile(
+            icon: Icons.tonality,
+            title: Text(tr.glassTint),
+            control: OptionPicker<GlassTint>(
+              value: LayoutPrefs.instance.glassTint,
+              options: [
+                (GlassTint.theme, tr.followTheme),
+                (GlassTint.light, tr.modeLight),
+                (GlassTint.black, tr.modeBlack),
+              ],
+              onChanged: LayoutPrefs.instance.setGlassTint,
+            ),
           ),
           SwitchListTile(
             secondary: const Icon(Icons.blur_on_rounded),

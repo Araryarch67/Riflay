@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:riflay/models/track.dart';
+import 'package:riflay/services/download_prefs.dart';
 import 'package:riflay/services/player_controller.dart';
 import 'package:riflay/services/sources/music_sources.dart';
 import 'package:riflay/services/spotiflac.dart';
@@ -18,11 +19,10 @@ class _CatalogueRuntime extends Spotiflac {
 }
 
 void main() {
-  testWidgets('a metadata catalogue asks for an enabled audio provider and cancellation queues nothing', (
-    tester,
-  ) async {
-    SharedPreferences.setMockInitialValues({});
+  testWidgets('a disabled preferred catalogue downloader queues nothing', (tester) async {
+    SharedPreferences.setMockInitialValues({'downloads.catalogueDownloader': 'disabled'});
     final player = PlayerController();
+    await tester.runAsync(DownloadPrefs.instance.load);
     final runtime = _CatalogueRuntime()
       ..plugins = [
         {'id': 'metadata', 'display_name': 'Catalogue', 'enabled': true, 'has_metadata_provider': true},
@@ -46,12 +46,11 @@ void main() {
       ),
     );
     await tester.tap(find.text('Save'));
+    await tester.runAsync(() => Future<void>.delayed(Duration.zero));
     await tester.pumpAndSettle();
-    expect(find.text('Audio provider'), findsOneWidget);
+    expect(find.text('Audio provider'), findsNothing);
     expect(find.text('Disabled provider'), findsNothing);
     expect(find.text('Catalogue'), findsNothing);
-    await tester.tap(find.text('Cancel'));
-    await tester.pumpAndSettle();
     expect(queued, isFalse);
     expect(player.youtube.jobs, isEmpty);
     await tester.pumpWidget(const SizedBox.shrink());
@@ -60,9 +59,14 @@ void main() {
   });
 
   testWidgets('a failed alternate-source lookup never starts an unrequested YouTube download', (tester) async {
-    SharedPreferences.setMockInitialValues({'sources.monochrome.v1': true, 'library.v1': jsonEncode([])});
+    SharedPreferences.setMockInitialValues({
+      'discord.enabled': false,
+      'sources.monochrome.v1': true,
+      'library.v1': jsonEncode([]),
+    });
     final player = PlayerController();
     await tester.runAsync(() async {
+      await DownloadPrefs.instance.setSource('monochrome');
       await MusicSources.instance.load();
       await Spotiflac.instance.load();
       await player.load();
@@ -79,12 +83,12 @@ void main() {
       ),
     );
     await tester.tap(find.byType(IconButton));
-    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 50)));
-    await tester.pumpAndSettle();
-    expect(find.text('Download source'), findsOneWidget);
-    await tester.tap(find.text('Monochrome'));
-    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 100)));
-    await tester.pumpAndSettle();
+    final failure = find.text("Couldn't search this source. Try again or choose another source.");
+    for (var i = 0; i < 50 && failure.evaluate().isEmpty; i++) {
+      await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 20)));
+      await tester.pumpAndSettle();
+    }
+    expect(find.text('Download source'), findsNothing);
     expect(find.text('Find a match on Monochrome'), findsOneWidget);
     expect(find.text("Couldn't search this source. Try again or choose another source."), findsOneWidget);
     expect(player.youtube.jobs, isEmpty);

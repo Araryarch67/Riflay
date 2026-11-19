@@ -30,6 +30,8 @@ import '../pages/youtube_music_page.dart' show openRemotePlaylist, RemoteCollect
 import '../ytmusic_edit.dart';
 import '../player/player_parts.dart' show shareTrack, copySongTitle;
 import '../theme.dart';
+import '../playlist_tools.dart';
+import 'item_picker.dart';
 import 'app_dialog.dart';
 import 'audio_source_picker.dart';
 import 'controls.dart';
@@ -520,21 +522,33 @@ class TrackMenuButton extends StatelessWidget {
           final downloaded = track.isRemote ? c.downloadedCopy(track) : (track.isDownload ? track : null);
           // A streamed song that was downloaded converts its file; one with no file has nothing to convert.
           final convertible = downloaded ?? track;
-          return [
-            PopupMenuItem(
-              enabled:
-                  c.canQueue(track) &&
-                  (ListenTogether.of(c).role != ListenRole.guest || (_canSuggest(c) && track.videoId != null)),
-              onTap: () => _canSuggest(c)
-                  ? _queued(host, ListenTogether.of(c).suggest(track), tr.toastRequestedNext)
-                  : _queued(host, c.playNext([track]), tr.toastPlaysNext),
-              child: MenuRow(leading: const Icon(Icons.playlist_play_rounded), title: Text(tr.playNext)),
-            ),
-            PopupMenuItem(
-              enabled: c.canQueue(track),
-              onTap: () => _queued(host, c.addToQueue([track]), tr.toastAddedToQueue),
-              child: MenuRow(leading: const Icon(Icons.queue_music_rounded), title: Text(tr.addToQueue)),
-            ),
+          final overlay = Navigator.of(context, rootNavigator: true).overlay!.context.findRenderObject()! as RenderBox;
+          final anchor = context.findRenderObject()! as RenderBox;
+          final position = RelativeRect.fromSize(
+            anchor.localToGlobal(Offset.zero, ancestor: overlay) & anchor.size,
+            overlay.size,
+          );
+          final lists = c.playlists.where((p) => p.tracks.any((t) => t.id == track.id)).toList();
+          final secondary = <PopupMenuEntry<void>>[
+            if (lists.isNotEmpty)
+              PopupMenuItem(
+                onTap: () async {
+                  final list = await pickListItem(host, tr.inPlaylists, lists, (p) => p.name);
+                  if (list != null) shell.openCollection(c.playlistCollection(list));
+                },
+                child: MenuRow(leading: const Icon(Icons.playlist_play), title: Text(tr.inPlaylists)),
+              ),
+            if (nowPlaying && c.currentTrack?.id == track.id) ...[
+              PopupMenuItem(
+                onTap: () => songBookmarks(host, c, track),
+                child: MenuRow(leading: const Icon(Icons.bookmark_outline), title: Text(tr.songBookmarks)),
+              ),
+              if ((track.videoId ?? track.onYoutube?.videoId) != null)
+                PopupMenuItem(
+                  onTap: () => copyTrackTime(c, track),
+                  child: MenuRow(leading: const Icon(Icons.link), title: Text(tr.copyAtTime)),
+                ),
+            ],
             if (track.isRemote && Features.smartMerge && !c.casting && !hide.contains(TrackMenuEntry.audioSource))
               PopupMenuItem(
                 onTap: () => showAudioSourcePicker(host, track),
@@ -566,6 +580,42 @@ class TrackMenuButton extends StatelessWidget {
                 onTap: () => copySongTitle(host, track),
                 child: MenuRow(leading: const Icon(Icons.content_copy_rounded), title: Text(tr.copySongTitle)),
               ),
+            if (c.recentlyPlayed.any((recent) => recent.id == track.id))
+              PopupMenuItem(
+                onTap: () => c.removeFromRecentlyPlayed(track),
+                child: MenuRow(leading: const Icon(Icons.history_rounded), title: Text(tr.removeFromRecentlyPlayed)),
+              ),
+            if (downloaded != null)
+              PopupMenuItem(
+                onTap: () => confirmDeleteDownload(host, c, downloaded),
+                child: MenuRow(leading: const Icon(Icons.delete_outline_rounded), title: Text(tr.deleteDownload)),
+              ),
+            if (FlacConvert.available(convertible))
+              PopupMenuItem(
+                onTap: () => showFlacConvert(host, c, [convertible]),
+                child: MenuRow(leading: const Icon(Icons.graphic_eq_rounded), title: Text(tr.convertToFlac)),
+              ),
+            if (nowPlaying && AudioEngine.supported) ...[
+              // The phone's More sheet already has Tempo & pitch in Sound.
+              for (final e in NowPlayingCover.menuItems(includeTempoPitch: !shell.compact))
+                PopupMenuItem(onTap: () => NowPlayingCover.handle(host, e.value), child: e.child),
+            ],
+          ];
+          return [
+            PopupMenuItem(
+              enabled:
+                  c.canQueue(track) &&
+                  (ListenTogether.of(c).role != ListenRole.guest || (_canSuggest(c) && track.videoId != null)),
+              onTap: () => _canSuggest(c)
+                  ? _queued(host, ListenTogether.of(c).suggest(track), tr.toastRequestedNext)
+                  : _queued(host, c.playNext([track]), tr.toastPlaysNext),
+              child: MenuRow(leading: const Icon(Icons.playlist_play_rounded), title: Text(tr.playNext)),
+            ),
+            PopupMenuItem(
+              enabled: c.canQueue(track),
+              onTap: () => _queued(host, c.addToQueue([track]), tr.toastAddedToQueue),
+              child: MenuRow(leading: const Icon(Icons.queue_music_rounded), title: Text(tr.addToQueue)),
+            ),
             // The song's YouTube Music link, or its name and artist for a file here.
             if (!hide.contains(TrackMenuEntry.share))
               PopupMenuItem(
@@ -687,27 +737,12 @@ class TrackMenuButton extends StatelessWidget {
                 ),
               ),
             ],
-            if (c.recentlyPlayed.any((recent) => recent.id == track.id))
+            if (secondary.isNotEmpty)
               PopupMenuItem(
-                onTap: () => c.removeFromRecentlyPlayed(track),
-                child: MenuRow(leading: const Icon(Icons.history_rounded), title: Text(tr.removeFromRecentlyPlayed)),
+                onTap: () =>
+                    showMenu<void>(context: host, useRootNavigator: true, position: position, items: secondary),
+                child: MenuRow(leading: const Icon(Icons.more_horiz_rounded), title: Text(tr.moreOptions)),
               ),
-            if (downloaded != null)
-              PopupMenuItem(
-                onTap: () => confirmDeleteDownload(host, c, downloaded),
-                child: MenuRow(leading: const Icon(Icons.delete_outline_rounded), title: Text(tr.deleteDownload)),
-              ),
-            if (FlacConvert.available(convertible))
-              PopupMenuItem(
-                onTap: () => showFlacConvert(host, c, [convertible]),
-                child: MenuRow(leading: const Icon(Icons.graphic_eq_rounded), title: Text(tr.convertToFlac)),
-              ),
-            if (nowPlaying && AudioEngine.supported) ...[
-              const PopupMenuDivider(),
-              // The phone's More sheet already has Tempo & pitch in Sound.
-              for (final e in NowPlayingCover.menuItems(includeTempoPitch: !shell.compact))
-                PopupMenuItem(onTap: () => NowPlayingCover.handle(host, e.value), child: e.child),
-            ],
           ];
         },
       ),

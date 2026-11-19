@@ -17,6 +17,7 @@ import '../../services/crossfade.dart';
 import '../../services/language.dart';
 import '../../services/layout_prefs.dart';
 import '../../services/player_controller.dart';
+import '../../services/sources/music_sources.dart';
 import '../shell_scope.dart';
 import '../theme.dart';
 import '../widgets/menus.dart';
@@ -33,9 +34,27 @@ class PlaybackSettings extends StatelessWidget {
     final c = PlayerScope.of(context);
     final muted = settingsMuted(context);
     return ListenableBuilder(
-      listenable: c.audio,
+      listenable: Listenable.merge([c.audio, MusicSources.instance]),
       builder: (context, _) => SettingsCard(
         children: [
+          SettingTile(
+            icon: Icons.high_quality,
+            title: Text(tr.streamQuality),
+            control: OptionPicker<int>(
+              value: MusicSources.instance.audioCap,
+              options: [
+                (0, tr.adaptive),
+                for (final n in [64, 128, 256]) (n, '≤ $n kbps'),
+              ],
+              onChanged: MusicSources.instance.dataSaver ? null : MusicSources.instance.setAudioCap,
+            ),
+          ),
+          SwitchListTile(
+            secondary: const Icon(Icons.data_saver_on),
+            title: Text(tr.streamSaver),
+            value: MusicSources.instance.dataSaver,
+            onChanged: MusicSources.instance.setDataSaver,
+          ),
           SwitchListTile(
             secondary: const Icon(Icons.radio_rounded),
             title: Text(tr.autoplay),
@@ -144,6 +163,24 @@ class DspSettings extends StatelessWidget {
                     onChanged: locked ? null : audio.setLeveling,
                     options: [for (final v in VolumeLeveling.values) (v, v.label)],
                   ),
+                ),
+                if (audio.leveling != VolumeLeveling.off)
+                  SettingTile(
+                    icon: Icons.volume_up_outlined,
+                    title: Text(tr.loudnessTarget),
+                    control: OptionPicker<int>(
+                      value: audio.levelingTarget,
+                      onChanged: locked ? null : audio.setLevelingTarget,
+                      options: [
+                        for (var lu = -30; lu <= -7; lu++) (lu, '$lu LUFS (${lu - (-18) > 0 ? "+" : ""}${lu + 18} dB)'),
+                      ],
+                    ),
+                  ),
+                SwitchListTile(
+                  secondary: const Icon(Icons.speed),
+                  title: Text(tr.varispeed),
+                  value: audio.varispeed,
+                  onChanged: locked ? null : audio.setVarispeed,
                 ),
                 if (audio.leveling != VolumeLeveling.off && AudioAnalysis.supported) const _MeasureLoudness(),
                 SwitchListTile(

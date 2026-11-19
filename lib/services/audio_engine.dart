@@ -523,6 +523,7 @@ class AudioEngine extends ChangeNotifier {
   bool crossfadeSkipAlbums = true;
 
   VolumeLeveling leveling = VolumeLeveling.off;
+  int levelingTarget = -18;
   BufferSize buffer = BufferSize.balanced;
 
   bool eqEnabled = false;
@@ -541,6 +542,7 @@ class AudioEngine extends ChangeNotifier {
   /// Tempo & pitch (the player's ⋯ › Tempo & pitch): how fast songs play (1 as recorded) and how many semitones
   /// higher or lower. Kept between songs, until reset.
   double tempo = 1;
+  bool varispeed = false;
   int pitch = 0;
 
   /// Off in bit-perfect mode (they change every sample), on DSD sent as DoP, and while listening together
@@ -549,7 +551,7 @@ class AudioEngine extends ChangeNotifier {
   bool tempoPitchHeld = false;
 
   double get effectiveTempo => tempoPitchActive ? tempo : 1;
-  int get effectivePitch => tempoPitchActive ? pitch : 0;
+  int get effectivePitch => tempoPitchActive && !varispeed ? pitch : 0;
 
   /// mpv's `speed`. A pitch shift plays faster or slower without pitch correction (the pitch moves with it), and
   /// the `@pitch` scaletempo brings the tempo back: mpv's own filters only, so every platform's build has them.
@@ -1057,6 +1059,8 @@ class AudioEngine extends ChangeNotifier {
         CrossfadeRules.maxSeconds,
       );
       crossfadeSkipAlbums = j['crossfadeSkipAlbums'] as bool? ?? crossfadeSkipAlbums;
+      varispeed = j['varispeed'] as bool? ?? false;
+      levelingTarget = (j['levelingTarget'] as num?)?.round().clamp(-30, -7) ?? -18;
       leveling = VolumeLeveling.values.asNameMap()[j['leveling']] ?? leveling;
       buffer = BufferSize.values.asNameMap()[j['buffer']] ?? buffer;
       eqEnabled = j['eqEnabled'] as bool? ?? eqEnabled;
@@ -1149,6 +1153,8 @@ class AudioEngine extends ChangeNotifier {
       'crossfade': crossfade,
       'crossfadeSeconds': crossfadeSeconds,
       'crossfadeSkipAlbums': crossfadeSkipAlbums,
+      'varispeed': varispeed,
+      'levelingTarget': levelingTarget,
       'leveling': leveling.name,
       'buffer': buffer.name,
       'eqEnabled': eqEnabled,
@@ -1248,6 +1254,8 @@ class AudioEngine extends ChangeNotifier {
   Future<void> setCrossfadeSeconds(int v) =>
       _set(() => crossfadeSeconds = v.clamp(CrossfadeRules.minSeconds, CrossfadeRules.maxSeconds));
   Future<void> setCrossfadeSkipAlbums(bool v) => _set(() => crossfadeSkipAlbums = v);
+  Future<void> setVarispeed(bool value) => _set(() => varispeed = value);
+  Future<void> setLevelingTarget(int target) => _set(() => levelingTarget = target.clamp(-30, -7));
   Future<void> setLeveling(VolumeLeveling v) => _set(() => leveling = v);
   Future<void> setBuffer(BufferSize v) => _set(() => buffer = v, reopen: true);
   Future<void> setCrossfeed(double v) => _set(() => crossfeed = v.clamp(0, 1));
@@ -1829,11 +1837,12 @@ class AudioEngine extends ChangeNotifier {
       'gapless-audio': gapless ? 'weak' : 'no',
       'prefetch-playlist': gapless ? 'yes' : 'no',
       'replaygain': effectiveLeveling.mpv,
+      'replaygain-preamp': effectiveLeveling == VolumeLeveling.off ? '0' : (levelingTarget + 18).toString(),
       'replaygain-clip': 'no',
       'replaygain-fallback': '0',
       // A pitch shift moves the pitch with the speed on purpose (the `@pitch` filter fixes the tempo); otherwise
       // mpv keeps the pitch while the tempo changes.
-      'audio-pitch-correction': effectivePitch == 0 ? 'yes' : 'no',
+      'audio-pitch-correction': effectivePitch == 0 && !(varispeed && tempoPitchActive) ? 'yes' : 'no',
       // An output that can't open (busy device, a format or exclusive mode it can't take) must not
       // end the song: with no audio output mpv treats an audio file as finished and moves on to the
       // next one. The null output keeps it going, silently and in time, from the same place.
@@ -1971,6 +1980,7 @@ class AudioEngine extends ChangeNotifier {
           'gapless-audio': 'no',
           'prefetch-playlist': 'no',
           'replaygain': effectiveLeveling.mpv,
+          'replaygain-preamp': effectiveLeveling == VolumeLeveling.off ? '0' : (levelingTarget + 18).toString(),
           'replaygain-clip': 'no',
           'replaygain-fallback': '0',
           'audio-fallback-to-null': 'yes',

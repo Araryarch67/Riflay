@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../services/folder_watch.dart';
+import '../../services/layout_prefs.dart';
+import '../widgets/menus.dart';
 import '../navigation.dart';
 import '../shell_scope.dart';
 import 'duplicates_page.dart';
@@ -17,12 +19,42 @@ class LibrarySettings extends StatelessWidget {
     final shell = ShellScope.of(context);
     final muted = settingsMuted(context);
     return ListenableBuilder(
-      listenable: watch,
+      listenable: Listenable.merge([watch, LayoutPrefs.instance]),
       builder: (context, _) {
         final folders = watch.folders;
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            SettingsCard(
+              children: [
+                SettingTile(
+                  icon: Icons.filter_list,
+                  title: Text(tr.defaultLibraryFilter),
+                  control: OptionPicker<String>(
+                    value: LayoutPrefs.instance.libraryChip,
+                    onChanged: LayoutPrefs.instance.setLibraryChip,
+                    options: [
+                      ('', tr.all),
+                      ('playlists', tr.playlists),
+                      ('downloaded', tr.downloaded),
+                      ('albums', tr.albums),
+                      ('artists', tr.artists),
+                      ('local', tr.local),
+                    ],
+                  ),
+                ),
+                for (final (id, label) in [
+                  ('liked', tr.likedMusic),
+                  ('downloaded', tr.downloaded),
+                  ('top', tr.mostPlayed),
+                ])
+                  SwitchListTile(
+                    title: Text(label),
+                    value: !LayoutPrefs.instance.hiddenCollections.contains(id),
+                    onChanged: (on) => LayoutPrefs.instance.showCollection(id, on),
+                  ),
+              ],
+            ),
             SettingsSection(
               title: tr.musicFolders,
               child: SettingsCard(

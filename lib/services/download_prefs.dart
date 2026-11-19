@@ -459,10 +459,15 @@ class DownloadPrefs extends ChangeNotifier {
   /// What a download follows: the video choice when Video is picked, else the audio one.
   DownloadChoice get choice => kind == DownloadKind.video ? videoChoice : audioChoice;
 
+  String source = 'youtube';
+  String? catalogueDownloader;
+
   Future<void>? _loaded;
 
   Future<void> load() => _loaded ??= () async {
     final prefs = await SharedPreferences.getInstance();
+    source = prefs.getString('downloads.source') ?? 'youtube';
+    catalogueDownloader = prefs.getString('downloads.catalogueDownloader');
     format = DownloadFormat.values.asNameMap()[prefs.getString('downloads.format')] ?? format;
     // Before bitrates: one "quality" step for both formats.
     final legacy = switch (prefs.getString('downloads.quality')) {
@@ -537,6 +542,16 @@ class DownloadPrefs extends ChangeNotifier {
   Future<void> setFlac(FlacQuality v) {
     flac = v;
     return _save('downloads.flac', v.name);
+  }
+
+  Future<void> setSource(String value) {
+    source = value;
+    return _save('downloads.source', value);
+  }
+
+  Future<void> setCatalogueDownloader(String value) {
+    catalogueDownloader = value;
+    return _save('downloads.catalogueDownloader', value);
   }
 
   Future<void> setAskEveryTime(bool v) {

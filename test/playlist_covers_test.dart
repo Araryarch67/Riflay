@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
 import 'package:riflay/models/track.dart';
+import 'package:riflay/services/library_views.dart';
 import 'package:riflay/services/metadata.dart';
 import 'package:riflay/services/playlist_covers.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -68,8 +69,11 @@ void main() {
     expect(await Metadata.artwork(cover), isNotEmpty);
   });
 
-  test('Liked music and YouTube Music playlists have their own cover keys', () {
+  test('All songs, Liked music and YouTube Music playlists have their own cover keys', () {
+    expect(PlaylistCovers.allSongsKey, isNot(PlaylistCovers.likedKey));
+    expect(PlaylistCovers.allSongsKey, isNot(PlaylistCovers.remoteKey('LM')));
     expect(PlaylistCovers.likedKey, isNot(PlaylistCovers.remoteKey('LM')));
     expect(PlaylistCovers.playlistKey('pl1'), isNot(PlaylistCovers.remoteKey('pl1')));
+    expect(LibraryViews(const [], 0).allSongs.coverKey, PlaylistCovers.allSongsKey);
   });
 }

@@ -18,6 +18,7 @@ import '../../services/ui_beat.dart';
 import '../debug_switches.dart';
 import '../shortcuts.dart';
 import '../theme.dart';
+import 'app_logo.dart';
 import 'flower_cover.dart';
 import 'monochrome_mark.dart';
 import 'marquee_text.dart';
@@ -119,29 +120,29 @@ class Artwork extends StatelessWidget implements ColorFreeSubtree {
 
   // The placeholder and flower glow follow the theme in their own widgets,
   // leaving the picture itself alone during palette changes.
-  Widget _placeholder(Track? t) =>
-      _ArtPlaceholder(icon: icon ?? (circle ? Icons.person_outline_rounded : Icons.music_note_outlined));
+  Widget _placeholder(Track? t) => _ArtPlaceholder(icon: icon ?? (circle ? Icons.person_outline_rounded : null));
 }
 
 class _ArtPlaceholder extends StatelessWidget {
   const _ArtPlaceholder({required this.icon});
 
-  final IconData icon;
+  final IconData? icon;
 
   @override
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
     return LayoutBuilder(
-      builder: (context, c) => ColoredBox(
-        color: colors.hover,
-        child: Center(
-          child: Icon(
-            icon,
-            size: c.biggest.shortestSide.isFinite ? c.biggest.shortestSide * 0.38 : 24,
-            color: colors.textMuted,
+      builder: (context, c) {
+        final size = c.biggest.shortestSide.isFinite ? c.biggest.shortestSide * 0.38 : 24.0;
+        return ColoredBox(
+          color: colors.hover,
+          child: Center(
+            child: icon == null
+                ? AppLogo(size: size, monochromeColor: colors.textMuted)
+                : Icon(icon, size: size, color: colors.textMuted),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }

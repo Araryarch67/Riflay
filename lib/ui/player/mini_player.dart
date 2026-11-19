@@ -38,9 +38,11 @@ mixin _SongSwipe<T extends StatefulWidget> on State<T> {
     final v = d.primaryVelocity ?? 0;
     final dx = _drag.value;
     _drag.value = 0;
-    if (dx < -72 || v < -600) {
+    final threshold = LayoutPrefs.instance.swipeDistance;
+    final velocity = 600 * threshold / 72;
+    if (dx < -threshold || v < -velocity) {
       c.next();
-    } else if (dx > 72 || v > 600) {
+    } else if (dx > threshold || v > velocity) {
       c.previous();
     }
   }
@@ -83,7 +85,15 @@ class _MiniPlayerState extends State<MiniPlayer> with _SongSwipe {
       track: track,
       builder: (context, accent) => Dismissible(
         key: const ValueKey('mini-player'),
-        direction: DismissDirection.down,
+        direction: DismissDirection.vertical,
+        dismissThresholds: const {DismissDirection.up: 0.42, DismissDirection.down: 0.4},
+        confirmDismiss: (direction) async {
+          if (direction == DismissDirection.up) {
+            widget.onOpen();
+            return false;
+          }
+          return true;
+        },
         onDismissed: (_) => c.closePlayer(),
         child: Padding(
           padding: const EdgeInsets.fromLTRB(8, 0, 8, 6),
@@ -206,7 +216,15 @@ class _GlassMiniPlayerState extends State<GlassMiniPlayer> with _SongSwipe {
     final compact = widget.compact;
     return Dismissible(
       key: const ValueKey('glass-mini-player'),
-      direction: DismissDirection.down,
+      direction: DismissDirection.vertical,
+      dismissThresholds: const {DismissDirection.up: 0.42, DismissDirection.down: 0.4},
+      confirmDismiss: (direction) async {
+        if (direction == DismissDirection.up) {
+          widget.onOpen();
+          return false;
+        }
+        return true;
+      },
       onDismissed: (_) => c.closePlayer(),
       child: Material(
         type: MaterialType.transparency,

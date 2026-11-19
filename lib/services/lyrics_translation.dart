@@ -32,8 +32,13 @@ abstract final class LyricsTranslation {
   static final romanize = ValueNotifier(true);
   static final translate = ValueNotifier(false);
 
-  static Future<void> load() async {
+  static final language = ValueNotifier('');
+  static Future<void>? _loading;
+  static Future<void> load() => _loading ??= _load();
+  static Future<void> _load() async {
     final p = await SharedPreferences.getInstance();
+    language.value = p.getString('lyrics.targetLanguage') ?? '';
+    language.addListener(() => p.setString('lyrics.targetLanguage', language.value));
     romanize.value = p.getBool('lyrics.romanize') ?? true;
     translate.value = p.getBool('lyrics.translate') ?? false;
     romanize.addListener(() => p.setBool('lyrics.romanize', romanize.value));
@@ -41,7 +46,8 @@ abstract final class LyricsTranslation {
   }
 
   /// The device's language ("id", "en"…).
-  static String get targetLanguage => PlatformDispatcher.instance.locale.languageCode;
+  static String get targetLanguage =>
+      language.value.isEmpty ? PlatformDispatcher.instance.locale.languageCode : language.value;
 
   /// Letters outside the Latin script: kana, kanji, hangul, Cyrillic, Arabic…
   static final _nonLatin = RegExp(r'(?![\p{Script=Latin}])\p{L}', unicode: true);

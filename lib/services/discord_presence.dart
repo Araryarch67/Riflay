@@ -150,7 +150,8 @@ class DiscordPresence {
     _enabled = value;
     if (!value) {
       _wanted = null;
-      _send(null);
+      _pending?.cancel();
+      if (_conn != null) _send(null);
     }
   }
 
@@ -230,12 +231,11 @@ class DiscordPresence {
   Map<String, dynamic> idleActivity({String? location}) {
     final details = browsingDetails(location);
     return {
-      'type': 2, // "Listening to"
-      'status_display_type': 0, // In member list: "Listening to Riflay"
+      'type': 0, // Show the app name first while browsing.
+      'status_display_type': 0,
       'details': _clip(details),
-      'state': _clip('Riflay'),
       if (options.time) 'timestamps': {'start': _appStartTime.millisecondsSinceEpoch},
-      'assets': {'large_image': 'openmusic', 'large_text': 'Riflay'},
+      'assets': {'large_image': 'openmusic'},
       'buttons': [
         if (options.appButton) {'label': 'Download Riflay', 'url': downloadUrl},
       ],
@@ -319,7 +319,7 @@ class DiscordPresence {
   Future<void> _send(Map<String, dynamic>? activity) async {
     _lastSent = DateTime.now();
     final conn = await _ensureConnected();
-    if (conn == null) return;
+    if (conn == null || _disposed || (activity != null && !_enabled)) return;
     try {
       conn.send(1, {
         'cmd': 'SET_ACTIVITY',

@@ -8,16 +8,17 @@ import '../theme.dart';
 /// (assets/icon/riflay-transparent.svg). The light parts take the theme's
 /// text colour, so the mark reads on light themes too; the orange stays.
 class AppLogo extends StatelessWidget {
-  const AppLogo({super.key, this.size = 16});
+  const AppLogo({super.key, this.size = 16, this.monochromeColor});
 
   final double size;
+  final Color? monochromeColor;
 
   static const orange = Color(0xFFFF7A1A);
 
   @override
   Widget build(BuildContext context) => SizedBox.square(
     dimension: size,
-    child: CustomPaint(painter: _LogoPainter(AppColors.textPrimary)),
+    child: CustomPaint(painter: _LogoPainter(monochromeColor ?? AppColors.textPrimary, monochromeColor ?? orange)),
   );
 }
 
@@ -68,9 +69,10 @@ abstract final class LogoMark {
 }
 
 class _LogoPainter extends CustomPainter {
-  _LogoPainter(this.light);
+  _LogoPainter(this.light, this.accent);
 
   final Color light;
+  final Color accent;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -80,9 +82,9 @@ class _LogoPainter extends CustomPainter {
       ..drawPath(LogoMark.top, white)
       ..drawPath(LogoMark.bottom, white)
       ..drawPath(LogoMark.left, white)
-      ..drawPath(LogoMark.right, Paint()..color = AppLogo.orange);
+      ..drawPath(LogoMark.right, Paint()..color = accent);
   }
 
   @override
-  bool shouldRepaint(_LogoPainter old) => old.light != light;
+  bool shouldRepaint(_LogoPainter old) => old.light != light || old.accent != accent;
 }

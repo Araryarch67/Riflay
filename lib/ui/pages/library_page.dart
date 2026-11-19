@@ -6,12 +6,14 @@ import '../../platform/features.dart';
 import '../../services/beta_features.dart';
 import '../../services/folder_watch.dart';
 import '../../services/language.dart';
+import '../../services/layout_prefs.dart';
 import '../../services/play_history.dart';
 import '../../services/player_controller.dart';
 import '../../services/playlist_covers.dart';
 import '../../services/smart_playlists.dart';
 import '../../services/youtube_music_account.dart';
 import '../ytmusic_edit.dart';
+import '../playlist_cover_edit.dart';
 import '../shell_scope.dart';
 import '../theme.dart';
 import '../widgets/controls.dart';
@@ -44,7 +46,7 @@ class LibraryList extends StatefulWidget {
 }
 
 class _LibraryListState extends State<LibraryList> {
-  LibraryFilter? _filter;
+  LibraryFilter? _filter = LibraryFilter.values.asNameMap()[LayoutPrefs.instance.libraryChip];
 
   @override
   Widget build(BuildContext context) {
@@ -59,6 +61,7 @@ class _LibraryListState extends State<LibraryList> {
         BetaFeatures.instance,
         PlayHistory.instance,
         FolderWatch.instance,
+        LayoutPrefs.instance,
         PlaylistCovers.instance,
       ]),
       builder: (context, _) => _build(context, c, c.ytMusic.libraryNow),
@@ -71,6 +74,7 @@ class _LibraryListState extends State<LibraryList> {
     final account = c.ytMusic;
     bool show(LibraryFilter f) => _filter == null || _filter == f;
 
+    final hidden = LayoutPrefs.instance.hiddenCollections;
     final downloads = c.youtubeDownloads;
     final local = switch (_filter) {
       null => c.albumsAndArtists,
@@ -88,7 +92,8 @@ class _LibraryListState extends State<LibraryList> {
       // Local: each music folder, then what was downloaded.
       for (final f in folders) _LibraryRow(collection: f, collapsed: widget.collapsed),
       // First, so downloads are easy to find.
-      if (downloads != null &&
+      if (!hidden.contains('downloaded') &&
+          downloads != null &&
           (show(LibraryFilter.playlists) || _filter == LibraryFilter.downloaded || _filter == LibraryFilter.local))
         _LibraryRow(collection: downloads, collapsed: widget.collapsed),
       if (show(LibraryFilter.playlists)) ...[
@@ -105,7 +110,7 @@ class _LibraryListState extends State<LibraryList> {
         for (final f in c.folderPlaylists)
           _LibraryRow(collection: f, collapsed: widget.collapsed, folderPlaylist: true),
         if (online != null) ...[
-          if (online.liked.isNotEmpty)
+          if (!hidden.contains('liked') && online.liked.isNotEmpty)
             _LibraryRow(collection: likedCollection(online.liked), collapsed: widget.collapsed, online: true),
           for (final p in online.playlists)
             _SimpleRow(
@@ -125,14 +130,15 @@ class _LibraryListState extends State<LibraryList> {
         ],
         if (c.library.isNotEmpty) _LibraryRow(collection: c.allSongs, collapsed: widget.collapsed),
         for (final entry in SmartPlaylists.of(c, PlayHistory.instance).entries)
-          _SimpleRow(
-            collapsed: widget.collapsed,
-            art: _IconArt(_smartIcon(entry.key)),
-            title: entry.value.title,
-            subtitle: '${tr.smartPlaylist} • ${entry.value.subtitle}',
-            location: Locations.collection(entry.value),
-            onTap: () => shell.openCollection(entry.value),
-          ),
+          if (entry.key != SmartList.mostPlayed || !hidden.contains('top'))
+            _SimpleRow(
+              collapsed: widget.collapsed,
+              art: _IconArt(_smartIcon(entry.key)),
+              title: entry.value.title,
+              subtitle: '${tr.smartPlaylist} • ${entry.value.subtitle}',
+              location: Locations.collection(entry.value),
+              onTap: () => shell.openCollection(entry.value),
+            ),
         if (!PlayHistory.instance.isEmpty)
           _SimpleRow(
             collapsed: widget.collapsed,
@@ -493,7 +499,11 @@ class _LibraryRow extends StatelessWidget {
     final art = collection.kind == CollectionKind.folder
         ? _IconArt(Icons.folder_rounded, flat: collapsed)
         : collection.kind == CollectionKind.allSongs
-        ? CoverMosaic(tracks: collection.tracks, size: 48)
+        ? PlaylistArtwork(
+            coverKey: collection.coverKey,
+            fallback: CoverMosaic(tracks: collection.tracks, size: 48),
+            size: 48,
+          )
         : Artwork(
             track: PlaylistCovers.instance.coverOr(collection.coverKey, collection.cover),
             size: 48,

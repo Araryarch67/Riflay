@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:riflay/ui/player/player_glass.dart';
 import 'package:riflay/services/layout_prefs.dart';
 import 'package:riflay/services/player_presets.dart';
 import 'package:riflay/ui/pages/layout_settings.dart';
@@ -23,11 +24,11 @@ void main() {
     expect(p.showPlayerClose, isTrue);
   });
 
-  test('defaults use capsule navigation and standard player appearance', () {
+  test('defaults use Classic navigation and player appearance', () {
     expect(p.visualizer, isTrue, reason: 'Classic pulses around the cover');
     expect(p.visualizerStyle, VisualizerStyle.pulse);
-    expect(p.visualizerCoverShape, VisualizerCoverShape.square);
-    expect(p.tabBar, TabBarStyle.capsule);
+    expect(p.visualizerCoverShape, VisualizerCoverShape.flower);
+    expect(p.tabBar, TabBarStyle.classic);
     expect(p.corners, CornerStyle.rounded);
     expect(p.density, Density.comfortable);
     expect(p.coverSize, CoverSize.medium);
@@ -36,8 +37,8 @@ void main() {
     expect(p.progressBar, ProgressBarStyle.thin);
     expect(p.playButton, PlayButtonShape.flower);
     expect(p.showQualityBadge, isTrue);
-    expect(p.qualityBadgePlace, QualityBadgePlace.timeRow);
-    expect(p.volumeSlider, VolumeSliderShape.pill);
+    expect(p.qualityBadgePlace, QualityBadgePlace.underArtist);
+    expect(p.volumeSlider, VolumeSliderShape.classic);
     expect(p.dimUnsungLyrics, isTrue);
     expect(p.motion, Motion.full);
     expect(p.pageMotion, PageMotionStyle.classic);
@@ -48,12 +49,35 @@ void main() {
     expect(LayoutPrefs.dur(const Duration(milliseconds: 200)), const Duration(milliseconds: 200));
   });
 
-  test('Centre button is removed and old preferences fall back to Capsule', () {
+  test('glass follows theme and explicit overrides round trip', () async {
+    await p.setGlassTint(GlassTint.theme);
+    final light = riflayGlassAppearance(themeIsLight: true);
+    final dark = riflayGlassAppearance(themeIsLight: false);
+    expect(dark.tint.toARGB32(), 0xAD000000);
+    expect(light.tint.toARGB32(), 0x80FFFFFF);
+    expect(dark.colorModel, isNot(light.colorModel));
+    await p.setGlassTint(GlassTint.black);
+    final saved = p.toJson();
+    p.restore({});
+    p.restore(saved);
+    expect(riflayGlassAppearance(themeIsLight: true), dark);
+    await p.setGlassTint(GlassTint.light);
+    expect(riflayGlassAppearance(themeIsLight: false), light);
+  });
+
+  test('fresh player matches Classic and explicit saved bar styles survive', () {
+    p.restore({});
+    expect(PlayerPreset.classic.changesTo(p), 0);
+    p.restore({'tabBar': 'glass'});
+    expect(p.tabBar, TabBarStyle.glass);
+  });
+
+  test('Centre button is removed and old preferences fall back to Classic', () {
     expect(TabBarStyle.values.map((style) => style.name), isNot(contains('centre')));
     expect(TabBarStyle.values, hasLength(9));
     p.restore({'tabBar': 'centre'});
-    expect(p.tabBar, TabBarStyle.capsule);
-    expect(p.toJson()['tabBar'], 'capsule');
+    expect(p.tabBar, TabBarStyle.classic);
+    expect(p.toJson()['tabBar'], 'classic');
   });
 
   test('Lightweight limits covers and replaces Background across switching, restore and presets', () async {
@@ -146,7 +170,7 @@ void main() {
     expect(p.visualizerCoverShape, VisualizerCoverShape.square);
     expect(p.visualizer, isTrue);
     p.restore({'visualizerCoverShape': 'future-shape'});
-    expect(p.visualizerCoverShape, VisualizerCoverShape.square);
+    expect(p.visualizerCoverShape, VisualizerCoverShape.flower);
     await p.reset();
     expect(p.pageMotion, PageMotionStyle.classic);
     expect(p.pageSpeed, PageMotionSpeed.relaxed);
@@ -269,10 +293,10 @@ void main() {
   });
 
   test('the quality badge place persists; the visualizer survives out of Beta only if it was opted in', () async {
-    expect(p.qualityBadgePlace, QualityBadgePlace.timeRow);
-    await p.setQualityBadgePlace(QualityBadgePlace.underArtist);
-    await p.load();
     expect(p.qualityBadgePlace, QualityBadgePlace.underArtist);
+    await p.setQualityBadgePlace(QualityBadgePlace.timeRow);
+    await p.load();
+    expect(p.qualityBadgePlace, QualityBadgePlace.timeRow);
     await p.reset();
 
     // An older save: the visualizer was on in the layout, but only counted with its Beta switch.
@@ -351,7 +375,7 @@ void main() {
   });
 
   test('the volume slider look persists, and Stacked makes it a pill with the row shown', () async {
-    expect(p.volumeSlider, VolumeSliderShape.pill);
+    expect(p.volumeSlider, VolumeSliderShape.classic);
     await p.setVolumeSlider(VolumeSliderShape.thin);
     await p.load();
     expect(p.volumeSlider, VolumeSliderShape.thin);
@@ -361,7 +385,7 @@ void main() {
     await PlayerPreset.kawaii.apply(p);
     expect(p.volumeSlider, VolumeSliderShape.pill, reason: 'the volume under the lyrics is a pill');
     await PlayerPreset.classic.apply(p);
-    expect(p.volumeSlider, VolumeSliderShape.pill);
-    expect(p.qualityBadgePlace, QualityBadgePlace.timeRow);
+    expect(p.volumeSlider, VolumeSliderShape.classic);
+    expect(p.qualityBadgePlace, QualityBadgePlace.underArtist);
   });
 }

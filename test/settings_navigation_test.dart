@@ -13,6 +13,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 /// Settings in a small app of its own: [open] pushes the page and writes down its location, as the shell does.
 Widget _app(PlayerController c, List<String> visited, {bool compact = false}) {
+  c.discord.enabled = false;
   final navigator = GlobalKey<NavigatorState>();
   return MaterialApp(
     navigatorKey: navigator,
@@ -50,7 +51,7 @@ void main() {
   void onLinux(String name, Future<void> Function(WidgetTester tester) body) => testWidgets(name, (tester) async {
     debugDefaultTargetPlatformOverride = TargetPlatform.linux;
     try {
-      SharedPreferences.setMockInitialValues({});
+      SharedPreferences.setMockInitialValues({'discord.enabled': false});
       tester.view.physicalSize = const Size(1000, 1800);
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.reset);
@@ -129,7 +130,14 @@ void main() {
         'Pages & navigation',
         'Beta features',
       ],
-      'Library & downloads': ['Library', 'Downloads', 'Listening history & Wrap', 'Backup & restore'],
+      'Library & downloads': [
+        'Library',
+        'Downloads',
+        'Storage & cache',
+        'Privacy',
+        'Listening history & Wrap',
+        'Backup & restore',
+      ],
       'Accounts & services': ['YouTube Music account', 'Spotify', 'Last.fm & ListenBrainz', 'Discord', 'Music sources'],
     };
     for (final MapEntry(key: group, value: rows) in expected.entries) {
@@ -170,12 +178,14 @@ void main() {
       ('Sound', 'Playback', 'Gapless playback', 'settings:sound/playback'),
       if (AudioEngine.supported) ('Sound', 'Sound effects (DSP)', 'Crossfade', 'settings:sound/dsp'),
       if (AudioEngine.supported) ('Sound', 'Output & quality', 'Output sample rate', 'settings:sound/hifi'),
-      ('Look & feel', 'Theme & colours', 'Theme', 'settings:look/appearance'),
+      ('Look & feel', 'Theme & colours', 'Liquid Glass tint', 'settings:look/appearance'),
       ('Look & feel', 'Language & text', 'Font', 'settings:look/text'),
       ('Look & feel', 'Now Playing', 'Liquid Glass controls', 'settings:look/now-playing'),
       ('Look & feel', 'Lyrics', 'Better Lyrics API key', 'settings:look/lyrics'),
       ('Look & feel', 'Pages & navigation', 'Shapes and motion', 'settings:look/layout'),
       ('Library & downloads', 'Library', 'Find songs you have twice', 'settings:library/library'),
+      ('Library & downloads', 'Storage & cache', 'Music cache limit', 'settings:library/storage'),
+      ('Library & downloads', 'Privacy', 'Clear search history', 'settings:library/privacy'),
       ('Library & downloads', 'Downloads', 'Ask every time', 'settings:library/downloads'),
       (
         'Library & downloads',

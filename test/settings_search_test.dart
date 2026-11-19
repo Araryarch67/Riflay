@@ -19,6 +19,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 /// Settings in a small app of its own, as in settings_navigation_test.
 Widget _app(PlayerController c, List<String> visited, {bool compact = false, Widget home = const SettingsPage()}) {
+  c.discord.enabled = false;
   final navigator = GlobalKey<NavigatorState>();
   return MaterialApp(
     navigatorKey: navigator,
@@ -51,7 +52,7 @@ void main() {
       testWidgets(name, (tester) async {
         debugDefaultTargetPlatformOverride = TargetPlatform.linux;
         try {
-          SharedPreferences.setMockInitialValues({});
+          SharedPreferences.setMockInitialValues({'discord.enabled': false});
           // A music video background would start the video machinery: not what this is about.
           await tester.runAsync(() => Appearance.instance.setNowPlaying(NowPlayingBackground.color));
           tester.view.physicalSize = size;
@@ -82,7 +83,7 @@ void main() {
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.reset);
       try {
-        SharedPreferences.setMockInitialValues({});
+        SharedPreferences.setMockInitialValues({'discord.enabled': false});
         await tester.runAsync(() => Appearance.instance.setNowPlaying(NowPlayingBackground.color));
         expect(Features.phoneLayout, phone);
         expect(Features.desktopLayout, desktop);
@@ -114,6 +115,13 @@ void main() {
     await tester.enterText(find.byKey(SettingsPage.searchKey), query);
     await tester.pump();
   }
+
+  test('cache controls and glass tint open their owning sections', () {
+    for (final id in ['musicCacheLimit', 'videoCacheLimit', 'imageCacheLimit', 'clearCache', 'smartMergeCache']) {
+      expect(SettingsOptions.byId(id)?.place, SettingsPlace.storage, reason: id);
+    }
+    expect(SettingsOptions.byId('glassTint')?.place, SettingsPlace.appearance);
+  });
 
   test('every option has its own id, and every parent is an option on the same page', () {
     final ids = [for (final o in SettingsOptions.all) o.id];

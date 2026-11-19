@@ -207,6 +207,9 @@ class PlayerPreset {
   /// Today's look, with the visualizer pulsing around the cover.
   static const classic = PlayerPreset(
     name: 'Classic',
+    badge: QualityBadgePlace.underArtist,
+    volumeSlider: VolumeSliderShape.classic,
+    tabBar: TabBarStyle.classic,
     note: 'The player as it has always been, the cover pulsing with the music',
     visualizer: true,
   );

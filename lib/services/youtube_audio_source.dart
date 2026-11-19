@@ -57,6 +57,7 @@ class YoutubeAudioSource extends StreamAudioSource {
 
   final bool cacheAudio;
   static final _cache = AudioStreamCache<ResolvedAudio>();
+  static void setCacheBudget(int bytes) => _cache.maxBytes = bytes;
 
   static String _key(String id, bool aac) => aac ? 'aac:$id' : id;
   static void retainCache(Set<String> ids) => _cache.retain({

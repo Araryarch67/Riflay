@@ -6,6 +6,7 @@ import '../../services/listen_together/listen_together.dart';
 import '../../services/player_controller.dart';
 import '../shell_scope.dart';
 import '../theme.dart';
+import '../widgets/item_picker.dart';
 import '../widgets/page_scaffold.dart';
 import '../widgets/track_row.dart';
 import '../ytmusic_edit.dart' show createPlaylist;
@@ -27,6 +28,55 @@ class QueuePage extends StatelessWidget {
     final current = guest ? session.hostTrack?.toTrack() : c.currentTrack;
     final upNext = guest ? [for (final song in session.upNext) song.toTrack()] : c.upNext;
     // Each entry by its place after the current song: a song can be queued twice, so not by its id.
+    final sequence = c.player.sequenceState;
+    final sources = sequence.sequence.skip((sequence.currentIndex ?? -1) + 1).toList();
+    final eta = <String?>[];
+    var time = !guest && c.isPlaying && !c.player.shuffleModeEnabled && c.duration != null
+        ? DateTime.now().add((c.duration! - c.position) * (1 / c.player.speed))
+        : null;
+    for (var i = 0; i < upNext.length; i++) {
+      eta.add(time == null ? null : TimeOfDay.fromDateTime(time).format(context));
+      if (time != null && i < sources.length && !c.skipping(sources[i])) {
+        final length = upNext[i].duration;
+        time = length == null || c.stopping(sources[i]) ? null : time.add(length * (1 / c.player.speed));
+      }
+    }
+    Widget actions(int i) {
+      final source = sources[i];
+      return PopupMenuButton<String>(
+        tooltip: tr.queue,
+        icon: Icon(
+          c.skipping(source)
+              ? Icons.skip_next
+              : c.stopping(source)
+              ? Icons.stop_circle
+              : Icons.more_vert,
+        ),
+        onSelected: (value) async {
+          if (value == 'skip') {
+            c.toggleSkip(source);
+            return;
+          }
+          if (value == 'stop') {
+            c.toggleStop(source);
+            return;
+          }
+          final targets = sources.where((s) => s != source).toList();
+          final target = await pickListItem(context, tr.insertAfter, targets, (s) => (s.tag as Track).title);
+          if (target == null) return;
+          final seq = c.player.sequenceState;
+          final offset = (seq.currentIndex ?? -1) + 1;
+          final from = seq.sequence.indexOf(source) - offset, after = seq.sequence.indexOf(target) - offset;
+          if (from >= 0 && after >= 0) await c.moveInQueue(from, from < after ? after : after + 1);
+        },
+        itemBuilder: (_) => [
+          CheckedPopupMenuItem(value: 'skip', checked: c.skipping(source), child: Text(tr.skipOnce)),
+          CheckedPopupMenuItem(value: 'stop', checked: c.stopping(source), child: Text(tr.stopAfter)),
+          if (sources.length > 1) PopupMenuItem(value: 'move', child: Text(tr.insertAfter)),
+        ],
+      );
+    }
+
     final entries = [for (final (i, t) in upNext.indexed) (place: i, track: t)];
     final queued = [
       for (final e in entries)
@@ -56,6 +106,20 @@ class QueuePage extends StatelessWidget {
                 Expanded(
                   child: Text(tr.queue, style: text.headlineMedium?.copyWith(fontWeight: FontWeight.w800)),
                 ),
+                if (!guest && current != null)
+                  IconButton(
+                    tooltip: tr.regenerateQueue,
+                    icon: const Icon(Icons.refresh),
+                    onPressed: c.regenerating
+                        ? null
+                        : () async {
+                            final ok = await c.regenerateQueue();
+                            if (!ok && context.mounted) {
+                              ScaffoldMessenger.of(context)
+                                  .showSnackBar(SnackBar(content: Text(tr.queueRefreshFailed)));
+                            }
+                          },
+                  ),
                 if (current != null || upNext.isNotEmpty)
                   // The song playing and everything after it, autoplay included: what the page shows.
                   TextButton.icon(
@@ -121,6 +185,8 @@ class QueuePage extends StatelessWidget {
                         track: queued[i].track,
                         index: i + 2,
                         dragIndex: i,
+                        actions: actions(queued[i].place),
+                        eta: eta[queued[i].place],
                         onTap: () => c.playQueueItem(queued[i].track),
                         onRemove: () => c.removeFromQueue(place[queued[i]]!),
                       ),
@@ -149,6 +215,8 @@ class QueuePage extends StatelessWidget {
                   key: keys[autoplayed[i]],
                   track: autoplayed[i].track,
                   index: queued.length + i + 2,
+                  actions: actions(autoplayed[i].place),
+                  eta: eta[autoplayed[i].place],
                   onTap: () => c.playQueueItem(autoplayed[i].track),
                   onRemove: () => c.removeFromQueue(place[autoplayed[i]]!),
                 ),
@@ -179,6 +247,8 @@ class _QueueRow extends StatelessWidget {
     required this.onTap,
     required this.onRemove,
     this.dragIndex,
+    required this.actions,
+    this.eta,
   });
 
   final Track track;
@@ -188,6 +258,8 @@ class _QueueRow extends StatelessWidget {
 
   /// Its place in a reorderable list; null where songs can't be moved.
   final int? dragIndex;
+  final Widget actions;
+  final String? eta;
 
   @override
   Widget build(BuildContext context) {
@@ -197,6 +269,8 @@ class _QueueRow extends StatelessWidget {
         Expanded(
           child: TrackRow(track: track, index: index, currentOccurrence: false, onTap: onTap),
         ),
+        if (eta != null) Text(eta!, style: Theme.of(context).textTheme.labelSmall),
+        actions,
         IconButton(
           tooltip: tr.removeFromQueue,
           color: muted,
