@@ -21,10 +21,17 @@ import 'widgets/app_dialog.dart';
 /// Riflay playlist or their own YouTube Music one), so each song's menu
 /// can offer "Remove from this playlist".
 class PlaylistEditScope extends InheritedWidget {
-  const PlaylistEditScope({super.key, required this.canRemove, required this.remove, required super.child});
+  const PlaylistEditScope({
+    super.key,
+    required this.canRemove,
+    required this.remove,
+    this.removeMany,
+    required super.child,
+  });
 
   final bool Function(Track track) canRemove;
   final Future<void> Function(BuildContext context, Track track) remove;
+  final Future<bool> Function(BuildContext context, List<Track> tracks)? removeMany;
 
   static PlaylistEditScope? maybeOf(BuildContext context) =>
       context.dependOnInheritedWidgetOfExactType<PlaylistEditScope>();
@@ -229,42 +236,79 @@ Future<void> addToPlaylist(BuildContext context, List<Track> tracks) async {
   final text = Theme.of(context).textTheme;
   final noneThere = onYoutube.songs.isEmpty;
   final notThere = tracks.length == 1 ? tr.notOnYoutubeMusic : tr.noneOnYoutubeMusic;
+  final remember = ExtraFeature.recentPlaylist.enabled;
+  final choices = <({Object entry, String key, String title, String detail, bool remote})>[
+    for (final p in c.playlists)
+      (entry: p, key: 'local:${p.id}', title: p.name, detail: tr.playlistOnRiflay(p.tracks.length), remote: false),
+    for (final p in remote)
+      (
+        entry: p,
+        key: 'youtube:${p.id}',
+        title: p.title,
+        detail: noneThere
+            ? notThere
+            : p.count == 0
+            ? 'YouTube Music'
+            : tr.playlistOnYoutubeMusic(p.count),
+        remote: true,
+      ),
+  ];
+  if (remember) {
+    final recent = choices.indexWhere((p) => p.key == LayoutPrefs.instance.lastPlaylistChoice);
+    if (recent > 0) choices.insert(0, choices.removeAt(recent));
+  }
+  var query = '';
   final choice = await showDialog<Object>(
     context: context,
-    builder: (context) => SimpleDialog(
-      title: Text(tr.addToPlaylist),
-      children: [
-        SimpleDialogOption(
-          onPressed: () => Navigator.pop(context, #create),
-          child: ListTile(leading: const Icon(Icons.add_rounded), title: Text(tr.newPlaylist)),
-        ),
-        for (final p in c.playlists)
-          SimpleDialogOption(
-            onPressed: () => Navigator.pop(context, p),
-            child: ListTile(
-              leading: const Icon(Icons.queue_music_rounded),
-              title: Text(p.name, maxLines: 1, overflow: TextOverflow.ellipsis),
-              subtitle: Text(tr.playlistOnRiflay(p.tracks.length), style: text.bodySmall),
+    builder: (dialog) => StatefulBuilder(
+      builder: (context, update) {
+        final visible = query.isEmpty ? choices : choices.where((p) => p.title.toLowerCase().contains(query)).toList();
+        return AppDialog(
+          title: tr.addToPlaylist,
+          scrollable: false,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+          content: SizedBox(
+            height: 360,
+            child: Column(
+              children: [
+                if (remember)
+                  Padding(
+                    padding: const EdgeInsets.all(8),
+                    child: SearchBar(
+                      hintText: tr.searchPlaylists,
+                      leading: const Icon(Icons.search_rounded),
+                      onChanged: (value) => update(() => query = value.trim().toLowerCase()),
+                    ),
+                  ),
+                Expanded(
+                  child: ListView.builder(
+                    itemCount: 1 + visible.length,
+                    itemBuilder: (context, index) {
+                      if (index == 0) {
+                        return ListTile(
+                          leading: const Icon(Icons.add_rounded),
+                          title: Text(tr.newPlaylist),
+                          onTap: () => Navigator.pop(dialog, #create),
+                        );
+                      }
+                      final p = visible[index - 1];
+                      final enabled = !p.remote || !noneThere;
+                      return ListTile(
+                        enabled: enabled,
+                        leading: Icon(p.remote ? Icons.cloud_outlined : Icons.queue_music_rounded),
+                        title: Text(p.title, maxLines: 1, overflow: TextOverflow.ellipsis),
+                        subtitle: Text(p.detail, style: text.bodySmall),
+                        onTap: enabled ? () => Navigator.pop(dialog, p.entry) : null,
+                      );
+                    },
+                  ),
+                ),
+              ],
             ),
           ),
-        for (final p in remote)
-          SimpleDialogOption(
-            onPressed: () => Navigator.pop(context, p),
-            child: ListTile(
-              enabled: !noneThere,
-              leading: const Icon(Icons.cloud_outlined),
-              title: Text(p.title, maxLines: 1, overflow: TextOverflow.ellipsis),
-              subtitle: Text(
-                noneThere
-                    ? notThere
-                    : p.count == 0
-                    ? 'YouTube Music'
-                    : tr.playlistOnYoutubeMusic(p.count),
-                style: text.bodySmall,
-              ),
-            ),
-          ),
-      ],
+          actions: [TextButton(onPressed: () => Navigator.pop(dialog), child: Text(tr.cancel))],
+        );
+      },
     ),
   );
   if (!context.mounted) return;
@@ -274,6 +318,7 @@ Future<void> addToPlaylist(BuildContext context, List<Track> tracks) async {
       return createPlaylist(context, tracks: tracks);
     case final UserPlaylist p:
       final n = c.addToPlaylist(p.id, tracks);
+      if (remember) await LayoutPrefs.instance.rememberPlaylist('local:${p.id}');
       messenger.showSnackBar(
         SnackBar(
           content: Text(addedMessage(name: p.name, tracks: tracks.length, added: n)),
@@ -286,6 +331,7 @@ Future<void> addToPlaylist(BuildContext context, List<Track> tracks) async {
       }
       try {
         final n = await account.addToPlaylist(p.id, onYoutube.songs);
+        if (remember) await LayoutPrefs.instance.rememberPlaylist('youtube:${p.id}');
         messenger.showSnackBar(
           SnackBar(
             content: Text(addedMessage(name: p.title, tracks: tracks.length, added: n, skipped: onYoutube.skipped)),
@@ -308,6 +354,29 @@ Future<bool> removeFromRemotePlaylist(BuildContext context, String playlistId, T
   () => PlayerScope.read(context).ytMusic.removeFromPlaylist(playlistId, track, rowId),
   tr.removedFromThisPlaylist,
 );
+
+Future<bool> removeSelectedFromRemotePlaylist(
+  BuildContext context,
+  String playlistId,
+  List<Track> tracks,
+  Map<String, String> rowIds,
+) async {
+  final account = PlayerScope.read(context).ytMusic;
+  final rows = {
+    for (final track in tracks)
+      if (track.videoId != null && rowIds.containsKey(track.id)) track: rowIds[track.id]!,
+  };
+  if (rows.isEmpty) return false;
+  final confirmed = await confirmDialog(
+    context,
+    title: tr.removeFromThisPlaylist,
+    body: tr.removeSelectedTracksBody(rows.length),
+    confirmLabel: tr.remove,
+    destructive: true,
+  );
+  if (!confirmed || !context.mounted) return false;
+  return _report(context, () => account.removePlaylistTracks(playlistId, rows), tr.removedFromThisPlaylist);
+}
 
 /// "Invite friends": turns on collaboration and hands over the link to send.
 /// A private playlist has to become unlisted first, so that's asked.

@@ -64,61 +64,96 @@ class _NetworkProxySettingsState extends State<NetworkProxySettings> {
     }
   }
 
+  void _edited(String _) {
+    if (_dirty && _error == null) return;
+    setState(() {
+      _dirty = true;
+      _error = null;
+    });
+  }
+
   @override
-  Widget build(BuildContext context) => SettingsCard(
-    children: [
-      SwitchListTile(
-        secondary: const Icon(Icons.public_rounded),
-        title: Text(tr.networkProxy),
-        subtitle: Text(tr.networkProxyAbout, style: settingsMuted(context)),
-        value: _enabled,
-        onChanged: _saving
-            ? null
-            : (value) => setState(() {
-                _dirty = true;
-                _enabled = value;
-              }),
-      ),
-      if (_enabled)
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              TextField(
-                controller: _address,
-                enabled: !_saving,
-                autocorrect: false,
-                keyboardType: TextInputType.url,
-                decoration: InputDecoration(labelText: tr.networkProxyAddress, hintText: 'http://127.0.0.1:7890'),
-                onChanged: (_) => _dirty = true,
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: _bypass,
-                enabled: !_saving,
-                autocorrect: false,
-                maxLines: 3,
-                decoration: InputDecoration(
-                  labelText: tr.networkProxyBypass,
-                  helperText: tr.networkProxyBypassHint,
-                  helperMaxLines: 3,
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final muted = settingsMuted(context);
+    Widget label(String title) => ExcludeSemantics(child: Text(title, style: theme.textTheme.labelLarge));
+
+    return SettingsCard(
+      children: [
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            SwitchListTile(
+              secondary: const Icon(Icons.public_rounded),
+              title: Text(tr.networkProxy),
+              subtitle: Text(tr.networkProxyAbout, style: muted),
+              value: _enabled,
+              onChanged: _saving
+                  ? null
+                  : (value) => setState(() {
+                      _enabled = value;
+                      _dirty = true;
+                      _error = null;
+                    }),
+            ),
+            if (_enabled || _dirty)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    if (_enabled) ...[
+                      label(tr.networkProxyAddress),
+                      const SizedBox(height: 8),
+                      Semantics(
+                        label: tr.networkProxyAddress,
+                        child: TextField(
+                          controller: _address,
+                          enabled: !_saving,
+                          autocorrect: false,
+                          keyboardType: TextInputType.url,
+                          decoration: const InputDecoration(hintText: 'http://127.0.0.1:7890'),
+                          onChanged: _edited,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      label(tr.networkProxyBypass),
+                      const SizedBox(height: 8),
+                      Semantics(
+                        label: tr.networkProxyBypass,
+                        child: TextField(
+                          controller: _bypass,
+                          enabled: !_saving,
+                          autocorrect: false,
+                          minLines: 2,
+                          maxLines: 4,
+                          decoration: const InputDecoration(),
+                          onChanged: _edited,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(tr.networkProxyBypassHint, style: muted),
+                      const SizedBox(height: 12),
+                      Text(tr.networkProxyScope, style: muted),
+                    ],
+                    if (_error case final error?) ...[
+                      const SizedBox(height: 12),
+                      Semantics(
+                        liveRegion: true,
+                        child: Text(error, style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.error)),
+                      ),
+                    ],
+                    if (_enabled) const SizedBox(height: 16),
+                    Align(
+                      alignment: AlignmentDirectional.centerEnd,
+                      child: FilledButton(onPressed: _dirty && !_saving ? _save : null, child: Text(tr.save)),
+                    ),
+                  ],
                 ),
-                onChanged: (_) => _dirty = true,
               ),
-              const SizedBox(height: 12),
-              Text(tr.networkProxyScope, style: settingsMuted(context)),
-            ],
-          ),
+          ],
         ),
-      if (_error != null) Padding(padding: const EdgeInsets.symmetric(horizontal: 16), child: Text(_error!)),
-      Padding(
-        padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-        child: Align(
-          alignment: Alignment.centerRight,
-          child: FilledButton(onPressed: _saving ? null : _save, child: Text(tr.save)),
-        ),
-      ),
-    ],
-  );
+      ],
+    );
+  }
 }

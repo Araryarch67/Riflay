@@ -748,7 +748,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get shufflePlay => 'シャッフル再生';
 
   @override
-  String get addAllToPlaylist => 'すべてプレイリストに追加';
+  String get addAllToPlaylist => 'すべての曲をプレイリストに追加';
 
   @override
   String get select => '選択';
@@ -5346,6 +5346,15 @@ class AppLocalizationsJa extends AppLocalizations {
   String get regenerateQueue => '次のキューを再生成';
 
   @override
+  String get clearUpcomingQueue => '次に再生する曲をすべて削除';
+
+  @override
+  String get clearUpcomingQueueBody => '次に再生する曲をすべて削除します。現在の曲はプレーヤーに残ります。';
+
+  @override
+  String get clearQueueFailed => 'キューを消去できませんでした。もう一度お試しください。';
+
+  @override
   String get queueRefreshFailed => 'キューを更新できませんでした。';
 
   @override
@@ -5370,7 +5379,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get duplicatesCount => '重複';
 
   @override
-  String get glassTint => 'Liquid Glass の色';
+  String get glassTint => '下部バーのLiquid Glassの色';
 
   @override
   String get followTheme => 'テーマに合わせる';
@@ -6715,4 +6724,81 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get hidePhoneNavLabels => '下部ナビゲーションのラベルを隠す';
+
+  @override
+  String removeSelectedTracksBody(int count) {
+    return '選択した$count曲をこのプレイリストから削除しますか？';
+  }
+
+  @override
+  String get editPlaylists => 'プレイリストを編集';
+
+  @override
+  String get pinTrack => '曲を固定';
+
+  @override
+  String get unpinTrack => '曲の固定を解除';
+
+  @override
+  String get miniGlassTint => 'ミニプレーヤーのLiquid Glassの色';
+
+  @override
+  String get playerGlassTint => '再生画面のLiquid Glassの色';
+
+  @override
+  String get followCover => 'アートワークに合わせる';
+
+  @override
+  String get playingFromLabel => '再生元';
+
+  @override
+  String get optionalTools => 'オプション機能';
+
+  @override
+  String get playlistSearch => 'プレイリスト内を検索';
+
+  @override
+  String get recentPlaylistPicker => '最後に選んだプレイリストを記憶';
+
+  @override
+  String get undoRemoval => '曲の削除を取り消す';
+
+  @override
+  String get resumeLongTracks => '長時間の音声を再開';
+
+  @override
+  String get playlistDownloadStatus => 'プレイリストのダウンロード状況';
+
+  @override
+  String get jumpToPlaying => '再生中の曲へ移動';
+
+  @override
+  String get copyLyricsLines => '長押しで歌詞の行をコピー';
+
+  @override
+  String get hideRecommendations => '曲をおすすめに表示しない';
+
+  @override
+  String get noMatchingSongs => '一致する曲がありません';
+
+  @override
+  String get searchPlaylists => 'プレイリストを検索';
+
+  @override
+  String get dontRecommendAgain => '今後おすすめに表示しない';
+
+  @override
+  String resumeAt(String time) {
+    return '$timeから再開';
+  }
+
+  @override
+  String playlistOfflineProgress(int ready, int total) {
+    return '$total曲中$ready曲をオフラインで再生可能';
+  }
+
+  @override
+  String playlistDownloadsFailed(int count) {
+    return 'ダウンロード失敗: $count件';
+  }
 }

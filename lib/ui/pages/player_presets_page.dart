@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../widgets/top_bar_surface.dart';
+
 import '../../services/appearance.dart';
 import '../../services/layout_prefs.dart';
 import '../../services/player_presets.dart';
@@ -18,7 +20,7 @@ class PlayerPresetsPage extends StatelessWidget {
     final text = Theme.of(context).textTheme;
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(title: Text(tr.playerPresets), backgroundColor: AppColors.background),
+      appBar: RiflayAppBar(title: Text(tr.playerPresets)),
       body: ListenableBuilder(
         listenable: Listenable.merge([p, Appearance.instance, CustomPresets.instance]),
         builder: (context, _) {

@@ -150,6 +150,7 @@ class PlayerController extends ChangeNotifier {
       player.playerStateStream.listen((state) {
         if (!state.playing) _saveQueue();
         if (state.processingState == ProcessingState.completed) {
+          _saveLongPosition();
           if (_stopAfter != null && identical(_stopAfter, player.sequenceState.currentSource)) {
             _stopAfter = null;
             unawaited(pause());
@@ -266,27 +267,31 @@ class PlayerController extends ChangeNotifier {
     final current = currentTrack;
     if (current == null || original.currentIndex == null || holdAutoplay || _regenerating) return false;
     _regenerating = true;
-    _radioGeneration++;
+    final generation = ++_radioGeneration;
     notifyListeners();
     try {
       final seed = autoplaySeedIn(queue, queueIndex ?? 0) ?? current;
       final similar = await _radioFor(seed);
       final state = player.sequenceState;
-      if (!identical(state.currentSource, original.currentSource) || !listEquals(state.sequence, original.sequence)) {
+      if (generation != _radioGeneration ||
+          !identical(state.currentSource, original.currentSource) ||
+          !listEquals(state.sequence, original.sequence)) {
         return false;
       }
       final cut = state.currentIndex! + 1;
       final retained = state.sequence.take(cut).map((s) => s.tag as Track).toList();
       final seen = retained.map((t) => t.id).toSet();
-      final fresh = _playableQueueTracks(similar).where((t) => seen.add(t.id)).take(25).toList();
+      final fresh = _playableQueueTracks(similar).where((t) => _canRecommend(t) && seen.add(t.id)).take(25).toList();
       if (fresh.isEmpty) return false;
       await player.addAudioSources([for (final t in fresh) _sourceFor(t)]);
+      if (generation != _radioGeneration) return false;
       if (cut < state.sequence.length) await player.removeAudioSourceRange(cut, state.sequence.length);
       _ordered = [...retained, ...fresh];
       _autoplayed
         ..clear()
         ..addAll(fresh.map((t) => t.id));
       _autoplaySeed = current.id;
+      _saveQueue();
       return true;
     } catch (e) {
       debugPrint('Regenerate queue: $e');
@@ -349,7 +354,10 @@ class PlayerController extends ChangeNotifier {
         .then((similar) async {
           if (generation != _radioGeneration) return;
           final have = {for (final t in queue) t.id, ..._recentIds.take(30)};
-          final fresh = _playableQueueTracks(similar).where((t) => have.add(t.id)).take(25).toList();
+          final fresh = _playableQueueTracks(similar)
+              .where((t) => _canRecommend(t) && have.add(t.id))
+              .take(25)
+              .toList();
           if (fresh.isEmpty || !_autoplay) return;
           _autoplayed.addAll(fresh.map((t) => t.id));
           _ordered = [..._ordered, ...fresh];
@@ -367,7 +375,7 @@ class PlayerController extends ChangeNotifier {
         })
         .catchError((Object e) {
           debugPrint('Autoplay failed: $e');
-          _autoplaySeed = null; // try again on the next song change
+          if (generation == _radioGeneration) _autoplaySeed = null;
         })
         .whenComplete(() => _extending = false);
   }
@@ -404,7 +412,7 @@ class PlayerController extends ChangeNotifier {
     await (await SharedPreferences.getInstance()).setBool(_discordKey, value);
   }
 
-  String? _presenceKey;
+  (Track?, bool, Duration?, String?, String?)? _presenceKey;
 
   /// In-app screen currently shown (e.g. "home", "library", "search"), for the Discord idle presence.
   String? _browsingLocation;
@@ -435,7 +443,13 @@ class PlayerController extends ChangeNotifier {
   int _qualityReads = 0;
 
   void _updatePresence({bool force = false}) {
-    final track = currentTrack;
+    final current = currentTrack;
+    final onDevice = casting;
+    final track = onDevice
+        ? (cast.loadedKey == current?.id ? current : null)
+        : (player.processingState == ProcessingState.completed ? null : current);
+    final playing = track != null && (onDevice ? cast.playing && !cast.loading : player.playing);
+    final length = track == null ? null : (onDevice ? cast.duration : player.duration) ?? track.duration;
     if (track?.id != _qualityFor) {
       _quality = null;
       _qualityComplete = false;
@@ -444,19 +458,19 @@ class PlayerController extends ChangeNotifier {
       _qualityTimer?.cancel();
     }
     // Skip no-op updates (playerStateStream fires on every buffering change).
-    final key = '${track?.id}|$isPlaying|$duration|$_quality|$_browsingLocation';
+    final key = (track, playing, length, _quality, _browsingLocation);
     if (key != _presenceKey || force) {
       _presenceKey = key;
       discord.update(
         track: track,
-        playing: isPlaying,
+        playing: playing,
         position: position,
-        duration: duration,
+        duration: length,
         quality: _quality,
         browsingLocation: _browsingLocation,
       );
     }
-    if (track != null && isPlaying) _watchQuality();
+    if (playing && !onDevice) _watchQuality();
   }
 
   /// With leveling on, the next song (and this one, for next time) is measured if it is a file without a
@@ -902,7 +916,7 @@ class PlayerController extends ChangeNotifier {
 
   Duration? get duration => casting ? cast.duration ?? player.duration : player.duration;
 
-  static const seekSteps = [2, 5, 10, 15, 30];
+  static const seekSteps = [0, 2, 5, 10, 15, 30];
   static const _seekStepKey = 'playback.seekStepSeconds';
   int _seekStepSeconds = 5;
   int get seekStepSeconds => _seekStepSeconds;
@@ -915,7 +929,7 @@ class PlayerController extends ChangeNotifier {
   }
 
   Future<void> seekByStep({required bool forward}) async {
-    if (currentTrack == null) return;
+    if (_seekStepSeconds == 0 || currentTrack == null) return;
     final target = position + Duration(seconds: forward ? _seekStepSeconds : -_seekStepSeconds);
     final end = duration;
     await seek(
@@ -1334,15 +1348,31 @@ class PlayerController extends ChangeNotifier {
     return added;
   }
 
-  void removeFromPlaylist(String id, Track track) => _updatePlaylist(
-    id,
-    (p) => p.copyWith(
-      tracks: [
-        for (final t in p.tracks)
-          if (t.id != track.id) t,
-      ],
-    ),
-  );
+  /// Removes the selected songs with one library update and records their positions for Undo.
+  List<({int index, Track track})> removePlaylistTracks(String id, List<Track> tracks) {
+    final playlist = playlistById(id);
+    if (playlist == null) return const [];
+    final ids = tracks.map((track) => track.id).toSet();
+    final removed = [
+      for (final (index, track) in playlist.tracks.indexed)
+        if (ids.contains(track.id)) (index: index, track: track),
+    ];
+    if (removed.isEmpty) return removed;
+    _updatePlaylist(id, (p) => p.copyWith(tracks: p.tracks.where((t) => !ids.contains(t.id)).toList()));
+    return removed;
+  }
+
+  /// Restores removed songs in their previous positions, leaving any intervening edits in place.
+  void restorePlaylistTracks(String id, List<({int index, Track track})> removed) => _updatePlaylist(id, (p) {
+    final tracks = [...p.tracks];
+    final ids = tracks.map((track) => track.id).toSet();
+    for (final row in removed) {
+      if (ids.add(row.track.id)) tracks.insert(row.index.clamp(0, tracks.length), row.track);
+    }
+    return p.copyWith(tracks: tracks);
+  });
+
+  void removeFromPlaylist(String id, Track track) => removePlaylistTracks(id, [track]);
 
   void movePlaylistItem(String id, int from, int to) => _updatePlaylist(id, (p) {
     final list = [...p.tracks];
@@ -2083,6 +2113,51 @@ class PlayerController extends ChangeNotifier {
   bool _shuffled = false;
   final _random = math.Random();
 
+  static const _longPositionKey = 'playback.longPositions.v1';
+  final _longPositions = <String, int>{};
+
+  Duration? resumePosition(Track track) => ExtraFeature.resumeLongTracks.enabled && _longPositions.containsKey(track.id)
+      ? Duration(milliseconds: _longPositions[track.id]!)
+      : null;
+
+  Future<void> resumeLongTrack(Track track, {String? from}) async {
+    final saved = resumePosition(track);
+    if (saved != null) await _playList([track], 0, from: from, startPosition: saved);
+  }
+
+  void _saveLongPosition() {
+    final track = currentTrack;
+    final length = duration;
+    if (!ExtraFeature.resumeLongTracks.enabled ||
+        track == null ||
+        length == null ||
+        length < const Duration(minutes: 15) ||
+        ListenTogether.of(this).role == ListenRole.guest) {
+      return;
+    }
+    final at = position;
+    final stored = _longPositions[track.id];
+    if (at < const Duration(seconds: 12) || length - at < const Duration(seconds: 20)) {
+      if (_longPositions.remove(track.id) == null) return;
+    } else {
+      if (stored == at.inMilliseconds) return;
+      _longPositions.remove(track.id);
+      _longPositions[track.id] = at.inMilliseconds;
+      if (_longPositions.length > 200) _longPositions.remove(_longPositions.keys.first);
+    }
+    _queuePrefs?.setString(_longPositionKey, jsonEncode(_longPositions)).ignore();
+  }
+
+  Future<void> hideRecommendedTrack(Track track) async {
+    await LayoutPrefs.instance.hideRecommendation(track.id);
+    final state = player.sequenceState;
+    final at = state.sequence.indexWhere((s) => (s.tag as Track?)?.id == track.id, (state.currentIndex ?? -1) + 1);
+    if (at >= 0 && isAutoplayed(track)) await removeQueueIndex(at);
+  }
+
+  bool _canRecommend(Track track) =>
+      !ExtraFeature.hideRecommendations.enabled || !LayoutPrefs.instance.hiddenRecommendations.contains(track.id);
+
   static const _queuePrefsKey = 'playback.queue.v1';
   SharedPreferences? _queuePrefs;
   AppLifecycleListener? _queueLifecycle;
@@ -2091,6 +2166,16 @@ class PlayerController extends ChangeNotifier {
 
   Future<void> _restoreQueue(SharedPreferences prefs) async {
     _queuePrefs = prefs;
+    try {
+      final decoded = jsonDecode(prefs.getString(_longPositionKey) ?? '{}') as Map<String, dynamic>;
+      _longPositions.addEntries(
+        decoded.entries.where((entry) => entry.value is int).map((entry) => MapEntry(entry.key, entry.value as int)),
+      );
+    } on FormatException catch (error) {
+      debugPrint('Long playback positions unreadable: $error');
+    } on TypeError catch (error) {
+      debugPrint('Long playback positions unreadable: $error');
+    }
     _queueLifecycle ??= AppLifecycleListener(onPause: _saveQueue, onHide: _saveQueue);
     final raw = prefs.getString(_queuePrefsKey);
     if (raw == null || player.audioSources.isNotEmpty) return;
@@ -2133,6 +2218,7 @@ class PlayerController extends ChangeNotifier {
   void _writeQueue() {
     final prefs = _queuePrefs;
     if (prefs == null || _restoringQueue || ListenTogether.of(this).role == ListenRole.guest) return;
+    _saveLongPosition();
     final state = player.sequenceState;
     if (state.sequence.any((source) => source.tag is! Track)) return;
     if (state.sequence.isEmpty) {
@@ -2301,7 +2387,17 @@ class PlayerController extends ChangeNotifier {
   List<Track> _playableQueueTracks(List<Track> tracks) => [for (final track in tracks) ?_playableQueueTrack(track)];
 
   /// Replaces the queue with [tracks] and starts playing at [index].
-  Future<void> playList(List<Track> tracks, int index, {String? from, bool shuffled = false}) async {
+  Future<void> playList(List<Track> tracks, int index, {String? from, bool shuffled = false}) =>
+      _playList(tracks, index, from: from, shuffled: shuffled);
+
+  Future<void> _playList(
+    List<Track> tracks,
+    int index, {
+    String? from,
+    bool shuffled = false,
+    Duration? startPosition,
+  }) async {
+    _saveLongPosition();
     _cancelPlaybackRetry();
     if (tracks.isEmpty) return;
     final selected = _playableQueueTrack(tracks[index.clamp(0, tracks.length - 1)]);
@@ -2338,7 +2434,11 @@ class PlayerController extends ChangeNotifier {
       _retryingId = null;
       final loaded =
           await Future.any([
-            _load(shuffled ? _shuffledFrom(tracks, index) : tracks, shuffled ? 0 : index).then((_) => true),
+            _load(
+              shuffled ? _shuffledFrom(tracks, index) : tracks,
+              shuffled ? 0 : index,
+              position: startPosition,
+            ).then((_) => true),
             failed.future,
             cancelled.future,
           ]).timeout(const Duration(seconds: 45), onTimeout: () => false).whenComplete(() {
@@ -2381,6 +2481,7 @@ class PlayerController extends ChangeNotifier {
 
   /// Plays the exact queue occurrence, including a repeated copy of the same track.
   Future<void> playQueueIndex(int index) async {
+    _saveLongPosition();
     _cancelPlaybackRetry();
     RangeError.checkValidIndex(index, player.sequenceState.sequence);
     await player.seek(Duration.zero, index: index);
@@ -2448,6 +2549,57 @@ class PlayerController extends ChangeNotifier {
     await removeQueueIndex(i);
   }
 
+  /// Clears the upcoming queue while keeping the current occurrence and playback position.
+  Future<void> clearUpcomingQueue() async {
+    if (ListenTogether.of(this).role == ListenRole.guest) return;
+    final state = player.sequenceState;
+    final current = state.currentIndex;
+    if (current == null || current + 1 >= state.sequence.length) return;
+    _radioGeneration++;
+    _autoplaySeed = currentTrack?.id;
+    final counts = <String, int>{};
+    for (final source in state.sequence.take(current + 1)) {
+      final track = source.tag as Track;
+      counts.update(track.id, (count) => count + 1, ifAbsent: () => 1);
+    }
+    final retainedIds = counts.keys.toSet();
+    await player.removeAudioSourceRange(current + 1, state.sequence.length);
+    _ordered = [
+      for (final track in _ordered)
+        if (counts.update(track.id, (count) => count - 1, ifAbsent: () => -1) >= 0) track,
+    ];
+    _autoplayed.retainAll(retainedIds);
+    _saveQueue();
+    notifyListeners();
+  }
+
+  /// Removes an upcoming row and returns an Undo action tied to the same queue.
+  Future<Future<void> Function()?> removeUpcomingWithUndo(int index) async {
+    final seq = player.sequenceState;
+    if (index < 0 || index >= seq.sequence.length || seq.currentIndex == null || index <= seq.currentIndex!) {
+      return null;
+    }
+    final track = seq.sequence[index].tag as Track;
+    final before = seq.sequence[index - 1];
+    final next = index + 1 < seq.sequence.length ? seq.sequence[index + 1] : null;
+    final orderedAt = _ordered.indexWhere((t) => t.id == track.id);
+    final wasAutoplay = isAutoplayed(track);
+    await removeQueueIndex(index);
+    return () async {
+      if (_disposed) return;
+      final now = player.sequenceState;
+      final sourceBefore = now.sequence.indexOf(before);
+      final sourceAfter = next == null ? -1 : now.sequence.indexOf(next);
+      if (sourceBefore < 0 && sourceAfter < 0) return;
+      final index = math.max((now.currentIndex ?? -1) + 1, sourceAfter >= 0 ? sourceAfter : sourceBefore + 1);
+      _ordered = [..._ordered]..insert(orderedAt < 0 ? _ordered.length : orderedAt.clamp(0, _ordered.length), track);
+      if (wasAutoplay) _autoplayed.add(track.id);
+      await player.insertAudioSources(index, [_sourceFor(track)]);
+      _saveQueue();
+      notifyListeners();
+    };
+  }
+
   /// Removes an absolute queue index, as returned by the CLI's queue listing.
   Future<void> removeQueueIndex(int index) async {
     _cancelPlaybackRetry();
@@ -2482,6 +2634,7 @@ class PlayerController extends ChangeNotifier {
 
   /// Stops and empties the queue: the mini player and the notification go away.
   Future<void> closePlayer() async {
+    _radioGeneration++;
     sleep.cancel();
     await player.stop();
     await player.clearAudioSources();
@@ -2733,6 +2886,7 @@ class PlayerController extends ChangeNotifier {
   bool get hasPrevious => _neighbour(-1) != null;
 
   Future<void> next() async {
+    _saveLongPosition();
     _cancelPlaybackRetry();
     final i = _neighbour(1);
     if (i != null) await player.seek(Duration.zero, index: i);
@@ -2740,6 +2894,7 @@ class PlayerController extends ChangeNotifier {
 
   /// Restarts the current track unless we're near the beginning.
   Future<void> previous() async {
+    _saveLongPosition();
     _cancelPlaybackRetry();
     final i = _neighbour(-1);
     if (position > const Duration(seconds: 3) || i == null) {
@@ -2822,9 +2977,14 @@ class PlayerController extends ChangeNotifier {
       // The device went away: carry on here, from where it was.
       if (!casting) _updatePresence(force: true);
     },
-  )..addListener(notifyListeners);
+  )..addListener(_castChanged);
 
   bool get casting => cast.active;
+
+  void _castChanged() {
+    _updatePresence();
+    notifyListeners();
+  }
 
   /// Plays on [renderer] from where this device is, or back here (null).
   Future<void> castTo(CastTarget? renderer) async {

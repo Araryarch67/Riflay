@@ -944,19 +944,24 @@ class YoutubeMusicAccount extends ChangeNotifier {
     return added.length;
   }
 
-  Future<void> removeFromPlaylist(String id, Track t, String rowId) async {
-    await _editing((web) => web.removeFromPlaylist(id, [(videoId: t.videoId!, setVideoId: rowId)]));
+  Future<void> removeFromPlaylist(String id, Track t, String rowId) => removePlaylistTracks(id, {t: rowId});
+
+  /// Uses the provider's row IDs so one edit request removes the selection.
+  Future<void> removePlaylistTracks(String id, Map<Track, String> tracks) async {
+    final byTrack = {for (final e in tracks.entries) e.key.id: (videoId: e.key.videoId!, setVideoId: e.value)};
+    if (byTrack.isEmpty) return;
+    await _editing((web) => web.removeFromPlaylist(id, byTrack.values.toList()));
     _patchDetails(
       id,
       (d) => d.copyWith(
         tracks: [
           for (final x in d.tracks)
-            if (x.id != t.id) x,
+            if (!byTrack.containsKey(x.id)) x,
         ],
-        rowIds: {...d.rowIds}..remove(t.id),
+        rowIds: {...d.rowIds}..removeWhere((id, _) => byTrack.containsKey(id)),
       ),
     );
-    _patchPlaylist(id, (p) => p.copyWith(count: p.count > 0 ? p.count - 1 : 0));
+    _patchPlaylist(id, (p) => p.copyWith(count: (p.count - byTrack.length).clamp(0, p.count)));
   }
 
   Future<void> movePlaylistItem(String id, String rowId, String? beforeRowId) =>

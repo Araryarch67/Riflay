@@ -59,6 +59,8 @@ class TrackRow extends StatefulWidget {
     this.showAlbum = true,
     this.showArtwork = true,
     this.currentOccurrence,
+    this.pinned = false,
+    this.onTogglePin,
   });
 
   final Track track;
@@ -74,6 +76,8 @@ class TrackRow extends StatefulWidget {
   /// Queue entries are occurrences, so an upcoming copy must not inherit the
   /// current song's highlight or pause-on-click behavior just because IDs match.
   final bool? currentOccurrence;
+  final bool pinned;
+  final VoidCallback? onTogglePin;
 
   /// Row bodies built, and hover-only leaf rebuilds, for tests.
   @visibleForTesting
@@ -276,15 +280,20 @@ class _TrackRowState extends State<TrackRow> {
                       child: FittedBox(child: DownloadButton(track: t)),
                     )
                   : DownloadButton(track: t),
+            if (widget.pinned)
+              Padding(
+                padding: const EdgeInsets.only(left: 6),
+                child: Icon(Icons.push_pin_rounded, size: 16, color: AppColors.accent),
+              ),
             // Shown on hover on a wide row; the button itself is made once.
             if (wide)
               _Hovering(
                 hover: _hover,
-                child: TrackMenuButton(track: t),
+                child: TrackMenuButton(track: t, pinned: widget.pinned, onTogglePin: widget.onTogglePin),
                 builder: (context, hover, child) => Opacity(opacity: hover ? 1 : 0, child: child),
               )
             else
-              TrackMenuButton(track: t),
+              TrackMenuButton(track: t, pinned: widget.pinned, onTogglePin: widget.onTogglePin),
           ],
         ),
       ),
@@ -425,6 +434,8 @@ class TrackMenuButton extends StatelessWidget {
   const TrackMenuButton({
     super.key,
     required this.track,
+    this.pinned = false,
+    this.onTogglePin,
     this.visible = true,
     this.color,
     this.nowPlaying = false,
@@ -487,6 +498,8 @@ class TrackMenuButton extends StatelessWidget {
   }
 
   final Track track;
+  final bool pinned;
+  final VoidCallback? onTogglePin;
   final bool visible;
   final Color? color;
 
@@ -633,6 +646,27 @@ class TrackMenuButton extends StatelessWidget {
                 child: MenuRow(
                   leading: const Icon(Icons.check_circle_outline_rounded),
                   title: Text(selection.contains(track) ? tr.unselect : tr.select),
+                ),
+              ),
+            if (c.resumePosition(track) case final position?)
+              PopupMenuItem(
+                onTap: () => c.resumeLongTrack(track),
+                child: MenuRow(
+                  leading: const Icon(Icons.play_circle_outline),
+                  title: Text(tr.resumeAt(formatDuration(position))),
+                ),
+              ),
+            if (ExtraFeature.hideRecommendations.enabled && c.isAutoplayed(track))
+              PopupMenuItem(
+                onTap: () => c.hideRecommendedTrack(track),
+                child: MenuRow(leading: const Icon(Icons.not_interested_rounded), title: Text(tr.dontRecommendAgain)),
+              ),
+            if (onTogglePin != null)
+              PopupMenuItem(
+                onTap: onTogglePin,
+                child: MenuRow(
+                  leading: Icon(pinned ? Icons.push_pin_rounded : Icons.push_pin_outlined),
+                  title: Text(pinned ? tr.unpinTrack : tr.pinTrack),
                 ),
               ),
             if (editScope?.canRemove(track) ?? false)

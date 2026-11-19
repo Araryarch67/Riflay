@@ -13,6 +13,7 @@ import '../../services/play_history.dart';
 import '../../services/player_controller.dart';
 import '../../services/playlist_covers.dart';
 import '../../services/smart_playlists.dart';
+import '../../services/youtube_importer.dart';
 import '../playlist_tools.dart';
 import '../playlist_offline.dart';
 import '../flac_convert_dialog.dart';
@@ -33,7 +34,7 @@ import '../widgets/menus.dart';
 import '../widgets/app_dialog.dart';
 
 /// Album / artist / "All Songs" page with a colour-washed header.
-class CollectionPage extends StatelessWidget {
+class CollectionPage extends StatefulWidget {
   const CollectionPage({super.key, required this.collection, this.actions = const [], this.onRename, this.onReorder});
 
   final Collection collection;
@@ -49,6 +50,23 @@ class CollectionPage extends StatelessWidget {
   final List<Widget> actions;
 
   @override
+  State<CollectionPage> createState() => _CollectionPageState();
+}
+
+class _CollectionPageState extends State<CollectionPage> {
+  Collection get collection => widget.collection;
+  List<Widget> get actions => widget.actions;
+  Future<void> Function(String)? get onRename => widget.onRename;
+  void Function(int, int)? get onReorder => widget.onReorder;
+  bool _searching = false;
+  String _query = '';
+
+  void _toggleSearch() => setState(() {
+    _searching = !_searching;
+    _query = '';
+  });
+
+  @override
   Widget build(BuildContext context) {
     // Rebuilt when the library changes (and Liked music with every like,
     // wherever in the app it's made), not on every change of what's playing:
@@ -58,10 +76,10 @@ class CollectionPage extends StatelessWidget {
     Widget page([Track? picture]) => TrackSelectionHost(
       child: ListenableBuilder(
         listenable: collection.id == likedMusicId
-            ? Listenable.merge([c.libraryRevision, c.ytMusic, PlaylistCovers.instance])
+            ? Listenable.merge([c.libraryRevision, c.ytMusic, PlaylistCovers.instance, LayoutPrefs.instance])
             : collection.kind == CollectionKind.smart
             ? Listenable.merge([c.libraryRevision, PlayHistory.instance, PlaylistCovers.instance])
-            : Listenable.merge([c.libraryRevision, PlaylistCovers.instance]),
+            : Listenable.merge([c.libraryRevision, PlaylistCovers.instance, LayoutPrefs.instance]),
         builder: (context, _) => _build(context, c, picture),
       ),
     );
@@ -107,9 +125,54 @@ class CollectionPage extends StatelessWidget {
     if (picture != null) live = live.withPicture(picture);
     // A picture the person picked takes the place of the automatic one on the whole page.
     if (PlaylistCovers.instance.coverOf(live.coverKey) case final own?) live = live.withPicture(own);
-    final tracks = live.tracks;
+    final raw = live.tracks;
+    final preferences = LayoutPrefs.instance;
+    final liked = live.id == likedMusicId;
+    final pinKey = switch (live.kind) {
+      CollectionKind.allSongs ||
+      CollectionKind.youtube ||
+      CollectionKind.playlist ||
+      CollectionKind.remote ||
+      CollectionKind.folder => live.coverKey,
+      _ => null,
+    };
+    final pins = preferences.pinnedTracks[pinKey] ?? const <String>{};
+    var tracks = raw;
+    if (liked && preferences.likedTrackOrder.isNotEmpty) {
+      final byId = {for (final track in raw) track.id: track};
+      tracks = [for (final id in preferences.likedTrackOrder) ?byId.remove(id), ...byId.values];
+    }
+    if (pins.isNotEmpty) {
+      tracks = [
+        for (final track in tracks)
+          if (pins.contains(track.id)) track,
+        for (final track in tracks)
+          if (!pins.contains(track.id)) track,
+      ];
+    }
+    if (!identical(tracks, raw)) live = live.withTracks(tracks);
+    final searchable =
+        ExtraFeature.playlistSearch.enabled &&
+        (live.kind == CollectionKind.playlist ||
+            live.kind == CollectionKind.remote ||
+            live.kind == CollectionKind.youtube);
+    final unfiltered = tracks;
+    final query = _query.trim().toLowerCase();
+    if (searchable && _searching && query.isNotEmpty) {
+      tracks = tracks.where((t) => '${t.title} ${t.artist}'.toLowerCase().contains(query)).toList();
+    }
     final isArtist = live.kind == CollectionKind.artist;
     final isAll = live.kind == CollectionKind.allSongs;
+    final addAll =
+        liked ||
+        switch (live.kind) {
+          CollectionKind.allSongs ||
+          CollectionKind.album ||
+          CollectionKind.youtube ||
+          CollectionKind.smart ||
+          CollectionKind.folder => true,
+          _ => false,
+        };
     final multiDisc = live.kind == CollectionKind.album && tracks.map((t) => t.discNumber ?? 1).toSet().length > 1;
     // Song i is row i; a disc heading (multi-disc albums) is -1 - the index of the song it heads.
     final rows = multiDisc
@@ -122,9 +185,52 @@ class CollectionPage extends StatelessWidget {
         : List<int>.generate(tracks.length, (i) => i);
     final text = Theme.of(context).textTheme;
     final playlistId = live.kind == CollectionKind.playlist ? live.id : null;
-    final reorder = playlistId != null ? (int from, int to) => c.movePlaylistTrack(playlistId, from, to) : onReorder;
+    final reorderPlaylist = playlistId != null
+        ? (int from, int to) => c.movePlaylistTrack(playlistId, from, to)
+        : onReorder;
+    void reorderTracks(int from, int to) {
+      final pinnedCount = tracks.where((t) => pins.contains(t.id)).length;
+      final target = from < pinnedCount ? to.clamp(0, pinnedCount - 1) : to.clamp(pinnedCount, tracks.length - 1);
+      if (from == target) return;
+      if (liked) {
+        final ids = [for (final track in tracks) track.id];
+        ids.insert(target, ids.removeAt(from));
+        preferences.setLikedTrackOrder(ids);
+      } else {
+        reorderPlaylist?.call(
+          raw.indexWhere((t) => t.id == tracks[from].id),
+          raw.indexWhere((t) => t.id == tracks[target].id),
+        );
+      }
+    }
+
+    final reorder = identical(unfiltered, tracks) && (liked || reorderPlaylist != null) ? reorderTracks : null;
+    final resume = ExtraFeature.resumeLongTracks.enabled
+        ? unfiltered.where((track) => c.resumePosition(track) != null).firstOrNull
+        : null;
     final actions = [
-      ...this.actions,
+      ...widget.actions,
+      if (addAll && unfiltered.isNotEmpty)
+        PartButton(
+          icon: Icons.playlist_add_rounded,
+          tooltip: tr.addAllToPlaylist,
+          look: PartLook.muted,
+          round: true,
+          size: 48,
+          onPressed: () => addToPlaylist(context, unfiltered),
+        ),
+      if (resume != null)
+        TextButton.icon(
+          onPressed: () => c.resumeLongTrack(resume, from: live.title),
+          icon: const Icon(Icons.play_circle_outline),
+          label: Text(tr.resumeAt(formatDuration(c.resumePosition(resume)))),
+        ),
+      if (searchable)
+        IconButton(
+          tooltip: _searching ? tr.close : tr.playlistSearch,
+          onPressed: _toggleSearch,
+          icon: Icon(_searching ? Icons.close_rounded : Icons.search_rounded),
+        ),
       if (playlistId != null) _PlaylistMenu(id: playlistId, name: live.title, tracks: tracks),
 
       if (live.kind == CollectionKind.folder && live.id != null) _FolderPlaylistMenu(path: live.id!),
@@ -226,7 +332,7 @@ class CollectionPage extends StatelessWidget {
                       ),
                       ...actions,
                       // An artist (yours, or a YouTube Music one with Follow): all of their songs into a playlist.
-                      if ((isArtist || actions.any((a) => a is FollowButton)) && tracks.isNotEmpty)
+                      if (!addAll && (isArtist || actions.any((a) => a is FollowButton)) && tracks.isNotEmpty)
                         IconButton(
                           tooltip: tr.addAllToPlaylist,
                           onPressed: () => addToPlaylist(context, tracks),
@@ -280,6 +386,40 @@ class CollectionPage extends StatelessWidget {
                   ),
                 ),
               ),
+            if (searchable && _searching)
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
+                  child: SearchBar(
+                    hintText: tr.playlistSearch,
+                    leading: const Icon(Icons.search_rounded),
+                    onChanged: (value) => setState(() => _query = value),
+                  ),
+                ),
+              ),
+            if (searchable && _searching && tracks.isEmpty)
+              SliverToBoxAdapter(
+                child: Padding(padding: const EdgeInsets.all(16), child: Text(tr.noMatchingSongs)),
+              ),
+            if (ExtraFeature.playlistDownloadStatus.enabled && Features.downloads && pinKey != null && !isAll)
+              SliverToBoxAdapter(
+                child: ListenableBuilder(
+                  listenable: c.youtube,
+                  builder: (context, _) {
+                    final offline = unfiltered.where(c.isOffline).length;
+                    final failed = unfiltered
+                        .where(
+                          (t) => !c.isOffline(t) && c.youtube.jobFor(t.videoId ?? '')?.status == DownloadStatus.failed,
+                        )
+                        .length;
+                    return ListTile(
+                      leading: const Icon(Icons.download_for_offline_outlined),
+                      title: Text(tr.playlistOfflineProgress(offline, unfiltered.length)),
+                      subtitle: failed == 0 ? null : Text(tr.playlistDownloadsFailed(failed)),
+                    );
+                  },
+                ),
+              ),
             if (!shell.compact) SliverToBoxAdapter(child: _ColumnHeader(showAlbum: live.kind != CollectionKind.album)),
             SliverPadding(
               padding: EdgeInsets.symmetric(horizontal: shell.compact ? 12 : 16),
@@ -324,7 +464,12 @@ class CollectionPage extends StatelessWidget {
                     index: multiDisc ? (tracks[i].trackNumber ?? i + 1) : i + 1,
                     showArtwork: live.kind != CollectionKind.album,
                     showAlbum: live.kind != CollectionKind.album,
-                    onTap: () => c.playCollection(live, index: i),
+                    pinned: pins.contains(tracks[i].id),
+                    onTogglePin: pinKey == null ? null : () => preferences.toggleTrackPin(pinKey, tracks[i].id),
+                    onTap: () => c.playCollection(
+                      live,
+                      index: identical(unfiltered, tracks) ? i : unfiltered.indexOf(tracks[i]),
+                    ),
                   );
                   if (reorder == null) return row;
                   // The handle sits at the row's end; the list needs a key per song to follow it while dragging.
@@ -379,18 +524,25 @@ class CollectionPage extends StatelessWidget {
             ],
           );
     if (playlistId == null) return withBar;
-    // A Riflay playlist: every song in it can be taken out.
+    Future<bool> remove(BuildContext context, List<Track> tracks) async {
+      final removed = c.removePlaylistTracks(playlistId, tracks);
+      if (removed.isEmpty) return false;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(tr.removedFrom(live.title)),
+          action: tracks.length == 1 || ExtraFeature.undoRemoval.enabled
+              ? SnackBarAction(label: tr.undo, onPressed: () => c.restorePlaylistTracks(playlistId, removed))
+              : null,
+        ),
+      );
+      return true;
+    }
+
+    final ids = tracks.map((t) => t.id).toSet();
     return PlaylistEditScope(
-      canRemove: (t) => tracks.any((x) => x.id == t.id),
-      remove: (context, t) async {
-        c.removeFromPlaylist(playlistId, t);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(tr.removedFrom(live.title)),
-            action: SnackBarAction(label: tr.undo, onPressed: () => c.addToPlaylist(playlistId, [t])),
-          ),
-        );
-      },
+      canRemove: (track) => ids.contains(track.id),
+      remove: (context, track) => remove(context, [track]),
+      removeMany: remove,
       child: withBar,
     );
   }
@@ -414,7 +566,10 @@ class CollectionPage extends StatelessWidget {
       itemBuilder: itemBuilder,
       onReorderItem: onReorder,
       // Handles are ours, so a long press on the row still opens its menu.
-      proxyDecorator: (child, _, _) => Material(color: AppColors.elevated, elevation: 6, child: child),
+      proxyDecorator: (child, _, _) => PlayerScope(
+        controller: PlayerScope.read(context),
+        child: ShellScope.of(context).wrap(Material(color: AppColors.elevated, elevation: 6, child: child)),
+      ),
     );
   }
 

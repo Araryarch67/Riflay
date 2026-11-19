@@ -89,6 +89,29 @@ void main() {
       expect(frame, findsNothing);
       expect(find.byType(NowPlayingPage), findsOneWidget);
       expect(ModalRoute.of(tester.element(find.byType(NowPlayingPage)))?.settings.name, nowPlayingRouteName);
+      final closing = find.byKey(const ValueKey('interactive-player-dismiss-frame'));
+      final shortDown = await tester.startGesture(const Offset(205, 150));
+      await shortDown.moveBy(const Offset(0, 32));
+      await shortDown.moveBy(const Offset(0, 52));
+      await tester.pump();
+      expect(tester.getRect(closing).top, greaterThan(25));
+      await shortDown.cancel();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(closing, findsNothing);
+      expect(find.byType(NowPlayingPage), findsOneWidget);
+
+      final down = await tester.startGesture(const Offset(205, 150));
+      await down.moveBy(const Offset(0, 32));
+      await down.moveBy(const Offset(0, 330));
+      await tester.pump();
+      expect(tester.getRect(closing).top, greaterThan(250));
+      await down.up();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 450));
+      await tester.pump();
+      expect(find.byType(NowPlayingPage), findsNothing);
+      expect(mini, findsOneWidget);
       await _settle(tester);
     });
   }

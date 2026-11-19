@@ -27,8 +27,24 @@ LiquidGlassSettings riflayGlass({required Brightness brightness, double frost = 
       tintAmount: tintAmount,
     ).copyWith(refractionHeight: 28, refractionAmount: 95, dispersion: 0.35, highlight: 0.9, contourStrength: 0.75);
 
-LiquidGlassAppearance riflayGlassAppearance({required bool themeIsLight}) {
-  final light = switch (LayoutPrefs.instance.glassTint) {
+class PlayerGlassBackdrop extends InheritedWidget {
+  const PlayerGlassBackdrop({super.key, required this.color, required super.child});
+
+  final Color color;
+
+  static bool isLight(BuildContext context) {
+    final backdrop = context.dependOnInheritedWidgetOfExactType<PlayerGlassBackdrop>()?.color;
+    return backdrop == null
+        ? AppColors.of(context).light
+        : ThemeData.estimateBrightnessForColor(backdrop) == Brightness.light;
+  }
+
+  @override
+  bool updateShouldNotify(PlayerGlassBackdrop oldWidget) => oldWidget.color != color;
+}
+
+LiquidGlassAppearance riflayGlassAppearance({required bool themeIsLight, GlassTint? tint}) {
+  final light = switch (tint ?? LayoutPrefs.instance.glassTint) {
     GlassTint.theme => themeIsLight,
     GlassTint.light => true,
     GlassTint.black => false,
@@ -39,8 +55,14 @@ LiquidGlassAppearance riflayGlassAppearance({required bool themeIsLight}) {
   );
 }
 
-LiquidGlassSettings _settings(BuildContext context) =>
-    riflayGlass(brightness: AppColors.of(context).light ? Brightness.light : Brightness.dark);
+LiquidGlassSettings _settings(BuildContext context) {
+  final brightness = switch (LayoutPrefs.instance.playerGlassTint) {
+    GlassTint.theme => PlayerGlassBackdrop.isLight(context) ? Brightness.light : Brightness.dark,
+    GlassTint.light => Brightness.light,
+    GlassTint.black => Brightness.dark,
+  };
+  return riflayGlass(brightness: brightness);
+}
 
 /// Frosts a control's surface in Liquid presets, with the renderer's platform fallback.
 class PlayerGlassSurface extends StatelessWidget {
@@ -76,7 +98,10 @@ class PlayerGlassSurface extends StatelessWidget {
       );
     }
     return LiquidGlass.auto(
-      appearance: riflayGlassAppearance(themeIsLight: AppColors.of(context).light),
+      appearance: riflayGlassAppearance(
+        themeIsLight: PlayerGlassBackdrop.isLight(context),
+        tint: LayoutPrefs.instance.playerGlassTint,
+      ),
       settings: _settings(context),
       useBackdropGroup: true,
       shape: circle ? const LiquidOval() : LiquidRoundedSuperellipse(borderRadius: corners),

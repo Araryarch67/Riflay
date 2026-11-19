@@ -416,6 +416,16 @@ class Collection {
 
   Track? get cover => picture ?? (tracks.isEmpty ? null : tracks.first);
 
+  Collection withTracks(List<Track> ordered) => Collection(
+    kind: kind,
+    title: title,
+    subtitle: subtitle,
+    tracks: ordered,
+    id: id,
+    picture: picture,
+    coverKey: coverKey,
+  );
+
   /// The same, with [p] as its picture.
   Collection withPicture(Track p) =>
       Collection(kind: kind, title: title, subtitle: subtitle, tracks: tracks, id: id, picture: p, coverKey: coverKey);

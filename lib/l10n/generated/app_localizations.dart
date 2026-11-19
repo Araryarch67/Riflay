@@ -1512,7 +1512,7 @@ abstract class AppLocalizations {
   /// No description provided for @addAllToPlaylist.
   ///
   /// In en, this message translates to:
-  /// **'Add all to playlist'**
+  /// **'Add all songs to playlist'**
   String get addAllToPlaylist;
 
   /// No description provided for @select.
@@ -9795,6 +9795,24 @@ abstract class AppLocalizations {
   /// **'Regenerate upcoming queue'**
   String get regenerateQueue;
 
+  /// No description provided for @clearUpcomingQueue.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear upcoming queue'**
+  String get clearUpcomingQueue;
+
+  /// No description provided for @clearUpcomingQueueBody.
+  ///
+  /// In en, this message translates to:
+  /// **'All upcoming songs will be removed. The current song stays in the player.'**
+  String get clearUpcomingQueueBody;
+
+  /// No description provided for @clearQueueFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not clear the queue. Try again.'**
+  String get clearQueueFailed;
+
   /// No description provided for @queueRefreshFailed.
   ///
   /// In en, this message translates to:
@@ -9846,7 +9864,7 @@ abstract class AppLocalizations {
   /// No description provided for @glassTint.
   ///
   /// In en, this message translates to:
-  /// **'Liquid Glass tint'**
+  /// **'Bottom bar Liquid Glass tint'**
   String get glassTint;
 
   /// No description provided for @followTheme.
@@ -12308,6 +12326,144 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Hide bottom navigation labels'**
   String get hidePhoneNavLabels;
+
+  /// No description provided for @removeSelectedTracksBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove {count} selected songs from this playlist?'**
+  String removeSelectedTracksBody(int count);
+
+  /// No description provided for @editPlaylists.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit playlists'**
+  String get editPlaylists;
+
+  /// No description provided for @pinTrack.
+  ///
+  /// In en, this message translates to:
+  /// **'Pin song'**
+  String get pinTrack;
+
+  /// No description provided for @unpinTrack.
+  ///
+  /// In en, this message translates to:
+  /// **'Unpin song'**
+  String get unpinTrack;
+
+  /// No description provided for @miniGlassTint.
+  ///
+  /// In en, this message translates to:
+  /// **'Mini-player Liquid Glass tint'**
+  String get miniGlassTint;
+
+  /// No description provided for @playerGlassTint.
+  ///
+  /// In en, this message translates to:
+  /// **'Now Playing Liquid Glass tint'**
+  String get playerGlassTint;
+
+  /// No description provided for @followCover.
+  ///
+  /// In en, this message translates to:
+  /// **'Match artwork'**
+  String get followCover;
+
+  /// No description provided for @playingFromLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Playing from'**
+  String get playingFromLabel;
+
+  /// No description provided for @optionalTools.
+  ///
+  /// In en, this message translates to:
+  /// **'Optional tools'**
+  String get optionalTools;
+
+  /// No description provided for @playlistSearch.
+  ///
+  /// In en, this message translates to:
+  /// **'Search within playlists'**
+  String get playlistSearch;
+
+  /// No description provided for @recentPlaylistPicker.
+  ///
+  /// In en, this message translates to:
+  /// **'Remember the last playlist'**
+  String get recentPlaylistPicker;
+
+  /// No description provided for @undoRemoval.
+  ///
+  /// In en, this message translates to:
+  /// **'Undo track removals'**
+  String get undoRemoval;
+
+  /// No description provided for @resumeLongTracks.
+  ///
+  /// In en, this message translates to:
+  /// **'Resume long tracks'**
+  String get resumeLongTracks;
+
+  /// No description provided for @playlistDownloadStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Playlist download status'**
+  String get playlistDownloadStatus;
+
+  /// No description provided for @jumpToPlaying.
+  ///
+  /// In en, this message translates to:
+  /// **'Jump to the playing song'**
+  String get jumpToPlaying;
+
+  /// No description provided for @copyLyricsLines.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy lyric lines on long press'**
+  String get copyLyricsLines;
+
+  /// No description provided for @hideRecommendations.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide songs from recommendations'**
+  String get hideRecommendations;
+
+  /// No description provided for @noMatchingSongs.
+  ///
+  /// In en, this message translates to:
+  /// **'No matching songs'**
+  String get noMatchingSongs;
+
+  /// No description provided for @searchPlaylists.
+  ///
+  /// In en, this message translates to:
+  /// **'Search playlists'**
+  String get searchPlaylists;
+
+  /// No description provided for @dontRecommendAgain.
+  ///
+  /// In en, this message translates to:
+  /// **'Don\'t recommend again'**
+  String get dontRecommendAgain;
+
+  /// No description provided for @resumeAt.
+  ///
+  /// In en, this message translates to:
+  /// **'Resume at {time}'**
+  String resumeAt(String time);
+
+  /// No description provided for @playlistOfflineProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'{ready} of {total} songs available offline'**
+  String playlistOfflineProgress(int ready, int total);
+
+  /// No description provided for @playlistDownloadsFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed downloads: {count}'**
+  String playlistDownloadsFailed(int count);
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

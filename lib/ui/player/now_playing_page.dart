@@ -40,7 +40,11 @@ const nowPlayingRouteName = 'now-playing';
 /// Song / Video, Download, Add to playlist, the equalizer, Signal path and
 /// Detail stats are in the ⋯ sheet ([showPlayerMore]).
 class NowPlayingPage extends StatelessWidget {
-  const NowPlayingPage({super.key});
+  const NowPlayingPage({super.key, this.onDragUpdate, this.onDragEnd, this.onDragCancel});
+
+  final GestureDragUpdateCallback? onDragUpdate;
+  final GestureDragEndCallback? onDragEnd;
+  final GestureDragCancelCallback? onDragCancel;
 
   @override
   Widget build(BuildContext context) {
@@ -89,342 +93,363 @@ class NowPlayingPage extends StatelessWidget {
     final coverPage = LayoutPrefs.instance.playerCover == PlayerCover.background && track != null && !sideways;
     return AccentBuilder(
       track: track,
-      builder: (context, accent) => GestureDetector(
-        onVerticalDragEnd: (d) {
-          if ((d.primaryVelocity ?? 0) > 400) Navigator.of(context).pop();
-        },
-        child: Scaffold(
-          backgroundColor: AppColors.background,
-          // A touch on the top half (the cover or the video) brings the Song / Video switch back; buttons below
-          // don't. Listened to, not taken: the touch still reaches whatever is there.
-          body: Listener(
-            behavior: HitTestBehavior.translucent,
-            onPointerDown: (e) {
-              if (e.localPosition.dy < MediaQuery.sizeOf(context).height / 2) _AutoHideState.reveal.value++;
-            },
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                // Turned sideways with the music video showing: it opens full screen.
-                VideoRotateWatcher(track: track),
-                if (coverPage) Positioned.fill(child: FadedCover(track: track, darken: 0.65, blurStart: 0.42)),
-                // Cover: Background: a song that has a music video plays it over the cover, soft under the title and the
-                // controls (as the baked cover is), with a dark gradient to keep them readable. Songs without one keep
-                // the baked cover. Not in Lightweight.
-                if (coverPage && !LayoutPrefs.lightweight) ...[
-                  Positioned.fill(child: VideoBackground(track: track)),
-                  // Frosted under the title and the controls: the video is only a soft glow there, never in the way.
-                  Positioned.fill(child: SoftVideo(track: track, shrink: 28, from: 0.38)),
-                  Positioned.fill(
-                    child: ListenableBuilder(
-                      listenable: VideoMode.instance,
-                      builder: (context, _) => VideoMode.instance.coversBackground(track)
-                          ? IgnorePointer(
-                              child: DecoratedBox(
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    begin: Alignment.topCenter,
-                                    end: Alignment.bottomCenter,
-                                    colors: [
-                                      Colors.black.withValues(alpha: 0.35),
-                                      Colors.transparent,
-                                      Colors.black.withValues(alpha: 0.55),
-                                      Colors.black.withValues(alpha: 0.8),
-                                    ],
-                                    stops: const [0, 0.2, 0.5, 1],
-                                  ),
-                                ),
-                              ),
-                            )
-                          : const SizedBox.shrink(),
-                    ),
-                  ),
-                ],
-                // Not drawn under a playing music video, which covers it.
-                if (!coverPage &&
-                    look == NowPlayingBackground.blurredCover &&
-                    track != null &&
-                    !LayoutPrefs.lightweight)
-                  ListenableBuilder(
-                    listenable: VideoMode.instance,
-                    builder: (context, child) =>
-                        VideoMode.instance.coversBackground(track) ? const SizedBox.shrink() : child!,
-                    child: RepaintBoundary(child: BlurredCover(track: track)),
-                  ),
-                if (!coverPage && chosen == NowPlayingBackground.video && look != NowPlayingBackground.color)
-                  Positioned.fill(child: VideoBackground(track: track)),
-                AnimatedContainer(
-                  duration: LayoutPrefs.dur(const Duration(milliseconds: 500)),
-                  decoration: coverPage
-                      ? const BoxDecoration()
-                      : BoxDecoration(
-                          color: look == NowPlayingBackground.black ? Colors.black : null,
-                          gradient: switch (look) {
-                            NowPlayingBackground.color => LinearGradient(
-                              begin: Alignment.topCenter,
-                              end: Alignment.bottomCenter,
-                              colors: [
-                                AppColors.sink(accent, 0.55),
-                                AppColors.sink(accent, 0.85),
-                                AppColors.solidBackground,
-                              ],
-                              stops: const [0, 0.6, 1],
-                            ),
-                            // Darkens the blurred cover towards the controls, so text stays readable.
-                            NowPlayingBackground.blurredCover => LinearGradient(
-                              begin: Alignment.topCenter,
-                              end: Alignment.bottomCenter,
-                              colors: [
-                                // A moving picture needs more dimming than a still blur to keep the text readable.
-                                AppColors.solidBackground.withValues(
-                                  alpha: chosen == NowPlayingBackground.video ? 0.55 : 0.4,
-                                ),
-                                AppColors.solidBackground.withValues(
-                                  alpha: chosen == NowPlayingBackground.video ? 0.82 : 0.75,
-                                ),
-                                AppColors.solidBackground,
-                              ],
-                              stops: [0, 0.6, 1],
-                            ),
-                            _ => null,
-                          },
-                        ),
-                  // Over a picture, the text gets a soft shadow to stay readable on a bright cover.
-                  child: OverPicture(
-                    enabled:
-                        coverPage || look == NowPlayingBackground.blurredCover || chosen == NowPlayingBackground.video,
-                    child: SafeArea(
+      builder: (context, accent) => PlayerGlassBackdrop(
+        color: look == NowPlayingBackground.black
+            ? Colors.black
+            : Color.lerp(accent, Colors.black, coverPage ? 0.38 : 0.20)!,
+        child: GestureDetector(
+          onVerticalDragUpdate: onDragUpdate,
+          onVerticalDragCancel: onDragCancel,
+          onVerticalDragEnd:
+              onDragEnd ??
+              (d) {
+                if ((d.primaryVelocity ?? 0) > 400) Navigator.of(context).pop();
+              },
+          child: Scaffold(
+            backgroundColor: AppColors.background,
+            // A touch on the top half (the cover or the video) brings the Song / Video switch back; buttons below
+            // don't. Listened to, not taken: the touch still reaches whatever is there.
+            body: Listener(
+              behavior: HitTestBehavior.translucent,
+              onPointerDown: (e) {
+                if (e.localPosition.dy < MediaQuery.sizeOf(context).height / 2) _AutoHideState.reveal.value++;
+              },
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  // Turned sideways with the music video showing: it opens full screen.
+                  VideoRotateWatcher(track: track),
+                  if (coverPage) Positioned.fill(child: FadedCover(track: track, darken: 0.65, blurStart: 0.42)),
+                  // Cover: Background: a song that has a music video plays it over the cover, soft under the title and the
+                  // controls (as the baked cover is), with a dark gradient to keep them readable. Songs without one keep
+                  // the baked cover. Not in Lightweight.
+                  if (coverPage && !LayoutPrefs.lightweight) ...[
+                    Positioned.fill(child: VideoBackground(track: track)),
+                    // Frosted under the title and the controls: the video is only a soft glow there, never in the way.
+                    Positioned.fill(child: SoftVideo(track: track, shrink: 28, from: 0.38)),
+                    Positioned.fill(
                       child: ListenableBuilder(
                         listenable: VideoMode.instance,
-                        builder: (context, _) => LayoutBuilder(
-                          builder: (context, constraints) {
-                            final showsVideo = VideoMode.instance.videoOf(track) != null && VideoMode.instance.on;
-                            // Leave room for the controls; never let the cover push them off-screen.
-                            // On very short windows the cover (then the quality badge) makes way.
-                            final showBadge = constraints.maxHeight >= 480 && LayoutPrefs.instance.showQualityBadge;
-                            final largeCover = LayoutPrefs.instance.phoneCover == PhoneCoverSize.large;
-                            final showStrip =
-                                track != null &&
-                                LayoutPrefs.instance.visualizerEnabled &&
-                                // With the video in the cover's place a radial style draws in the strip instead.
-                                (!LayoutPrefs.instance.visualizerStyle.radial || showsVideo) &&
-                                LayoutPrefs.moves &&
-                                !MediaQuery.disableAnimationsOf(context);
-                            final stripHeight = showStrip && constraints.maxHeight >= 560 ? 88.0 : 0.0;
-                            // A phone held sideways: the cover goes beside the controls.
-                            final sideways =
-                                constraints.maxWidth > constraints.maxHeight && constraints.maxHeight < 480;
-                            Widget topBarFor({required bool more}) => Row(
-                              children: [
-                                if (LayoutPrefs.instance.classicPlayerStyle || LayoutPrefs.instance.showPlayerClose)
-                                  IconButton(
-                                    tooltip: tr.close,
-                                    color: AppColors.of(context).textPrimary,
-                                    onPressed: () => Navigator.of(context).pop(),
-                                    icon: const Icon(Icons.keyboard_arrow_down_rounded, size: 30),
-                                  )
-                                else
-                                  const SizedBox(width: 48),
-                                Expanded(
-                                  child: Column(
-                                    children: [
-                                      Text(
-                                        tr.playingFromCaps,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: text.labelSmall?.copyWith(
-                                          letterSpacing: 1.2,
-                                          color: AppColors.of(context).textSecondary,
-                                        ),
-                                      ),
-                                      Text(
-                                        from ?? tr.yourLibrarySource,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: text.labelLarge?.copyWith(fontWeight: FontWeight.w700),
-                                      ),
-                                    ],
+                        builder: (context, _) => VideoMode.instance.coversBackground(track)
+                            ? IgnorePointer(
+                                child: DecoratedBox(
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      begin: Alignment.topCenter,
+                                      end: Alignment.bottomCenter,
+                                      colors: [
+                                        Colors.black.withValues(alpha: 0.35),
+                                        Colors.transparent,
+                                        Colors.black.withValues(alpha: 0.55),
+                                        Colors.black.withValues(alpha: 0.8),
+                                      ],
+                                      stops: const [0, 0.2, 0.5, 1],
+                                    ),
                                   ),
                                 ),
-                                if (more) const _MoreButton() else const SizedBox(width: 48),
-                              ],
-                            );
-                            final topBar = topBarFor(more: true);
-                            Widget cover(double size, {double radius = 8}) => NowPlayingCover(
-                              child: Hero(
-                                tag: 'now-playing-art',
-                                child: DecoratedBox(
-                                  // The video is wider than the square: a square shadow would show around it.
-                                  decoration: const BoxDecoration(),
-                                  child: TrackVisual(
-                                    track: track,
-                                    cover: SizedBox.square(
-                                      dimension: size,
-                                      child: AudioVisualizer(
-                                        child: Artwork(track: useLogo ? null : track, size: size, radius: radius),
+                              )
+                            : const SizedBox.shrink(),
+                      ),
+                    ),
+                  ],
+                  // Not drawn under a playing music video, which covers it.
+                  if (!coverPage &&
+                      look == NowPlayingBackground.blurredCover &&
+                      track != null &&
+                      !LayoutPrefs.lightweight)
+                    ListenableBuilder(
+                      listenable: VideoMode.instance,
+                      builder: (context, child) =>
+                          VideoMode.instance.coversBackground(track) ? const SizedBox.shrink() : child!,
+                      child: RepaintBoundary(child: BlurredCover(track: track)),
+                    ),
+                  if (!coverPage && chosen == NowPlayingBackground.video && look != NowPlayingBackground.color)
+                    Positioned.fill(child: VideoBackground(track: track)),
+                  AnimatedContainer(
+                    duration: LayoutPrefs.dur(const Duration(milliseconds: 500)),
+                    decoration: coverPage
+                        ? const BoxDecoration()
+                        : BoxDecoration(
+                            color: look == NowPlayingBackground.black ? Colors.black : null,
+                            gradient: switch (look) {
+                              NowPlayingBackground.color => LinearGradient(
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                                colors: [
+                                  AppColors.sink(accent, 0.55),
+                                  AppColors.sink(accent, 0.85),
+                                  AppColors.solidBackground,
+                                ],
+                                stops: const [0, 0.6, 1],
+                              ),
+                              // Darkens the blurred cover towards the controls, so text stays readable.
+                              NowPlayingBackground.blurredCover => LinearGradient(
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                                colors: [
+                                  // A moving picture needs more dimming than a still blur to keep the text readable.
+                                  AppColors.solidBackground.withValues(
+                                    alpha: chosen == NowPlayingBackground.video ? 0.55 : 0.4,
+                                  ),
+                                  AppColors.solidBackground.withValues(
+                                    alpha: chosen == NowPlayingBackground.video ? 0.82 : 0.75,
+                                  ),
+                                  AppColors.solidBackground,
+                                ],
+                                stops: [0, 0.6, 1],
+                              ),
+                              _ => null,
+                            },
+                          ),
+                    // Over a picture, the text gets a soft shadow to stay readable on a bright cover.
+                    child: OverPicture(
+                      enabled:
+                          coverPage ||
+                          look == NowPlayingBackground.blurredCover ||
+                          chosen == NowPlayingBackground.video,
+                      child: SafeArea(
+                        child: ListenableBuilder(
+                          listenable: VideoMode.instance,
+                          builder: (context, _) => LayoutBuilder(
+                            builder: (context, constraints) {
+                              final showsVideo = VideoMode.instance.videoOf(track) != null && VideoMode.instance.on;
+                              // Leave room for the controls; never let the cover push them off-screen.
+                              // On very short windows the cover (then the quality badge) makes way.
+                              final showBadge = constraints.maxHeight >= 480 && LayoutPrefs.instance.showQualityBadge;
+                              final largeCover = LayoutPrefs.instance.phoneCover == PhoneCoverSize.large;
+                              final showStrip =
+                                  track != null &&
+                                  LayoutPrefs.instance.visualizerEnabled &&
+                                  // With the video in the cover's place a radial style draws in the strip instead.
+                                  (!LayoutPrefs.instance.visualizerStyle.radial || showsVideo) &&
+                                  LayoutPrefs.moves &&
+                                  !MediaQuery.disableAnimationsOf(context);
+                              final stripHeight = !showStrip
+                                  ? 0.0
+                                  : constraints.maxHeight >= 560
+                                  ? 88.0
+                                  : showsVideo && constraints.maxHeight >= 500
+                                  ? 44.0
+                                  : 0.0;
+                              // A phone held sideways: the cover goes beside the controls.
+                              final sideways =
+                                  constraints.maxWidth > constraints.maxHeight && constraints.maxHeight < 480;
+                              Widget topBarFor({required bool more}) => Row(
+                                children: [
+                                  if (LayoutPrefs.instance.classicPlayerStyle || LayoutPrefs.instance.showPlayerClose)
+                                    IconButton(
+                                      tooltip: tr.close,
+                                      color: AppColors.of(context).textPrimary,
+                                      onPressed: () => Navigator.of(context).pop(),
+                                      icon: const Icon(Icons.keyboard_arrow_down_rounded, size: 30),
+                                    )
+                                  else
+                                    const SizedBox(width: 48),
+                                  Expanded(
+                                    child: Column(
+                                      children: [
+                                        Text(
+                                          tr.playingFromCaps,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: text.labelSmall?.copyWith(
+                                            letterSpacing: 1.2,
+                                            color: AppColors.of(context).textSecondary,
+                                          ),
+                                        ),
+                                        Text(
+                                          from ?? tr.yourLibrarySource,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: text.labelLarge?.copyWith(fontWeight: FontWeight.w700),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  if (more) const _MoreButton() else const SizedBox(width: 48),
+                                ],
+                              );
+                              final topBar = topBarFor(more: true);
+                              Widget cover(double size, {double radius = 8}) => NowPlayingCover(
+                                child: Hero(
+                                  tag: 'now-playing-art',
+                                  child: DecoratedBox(
+                                    // The video is wider than the square: a square shadow would show around it.
+                                    decoration: const BoxDecoration(),
+                                    child: TrackVisual(
+                                      track: track,
+                                      cover: SizedBox.square(
+                                        dimension: size,
+                                        child: AudioVisualizer(
+                                          child: Artwork(track: useLogo ? null : track, size: size, radius: radius),
+                                        ),
                                       ),
                                     ),
                                   ),
                                 ),
-                              ),
-                            );
-                            final info = Row(
-                              children: [
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                              );
+                              final info = Row(
+                                children: [
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        MarqueeText(
+                                          track?.title ?? tr.nothingPlaying,
+                                          style: text.headlineSmall?.copyWith(
+                                            fontWeight: FontWeight.w800,
+                                            letterSpacing: -0.5,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 2),
+                                        if (track != null)
+                                          ArtistLinks(
+                                            track: track,
+                                            style: text.titleMedium?.copyWith(
+                                              color: AppColors.of(context).textSecondary,
+                                            ),
+                                          ),
+                                        if (showBadge) ...[const SizedBox(height: 8), const QualityBadge(onDark: true)],
+                                      ],
+                                    ),
+                                  ),
+                                  if (track != null)
+                                    LikeButton(track: track, size: 28, color: AppColors.of(context).textPrimary),
+                                ],
+                              );
+                              if (sideways) {
+                                // A music video is 16:9: its box takes the height and up to 58% of the width, so the
+                                // controls keep the rest. The square cover stays square.
+                                final wide = showsVideo;
+                                final art = wide
+                                    ? math.min(constraints.maxHeight - 32, constraints.maxWidth * 0.58 * 9 / 16)
+                                    : math.min(constraints.maxHeight - 32, constraints.maxWidth * 0.4);
+                                final artWidth = wide ? art * 16 / 9 : art;
+                                return Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                                  child: Row(
                                     children: [
-                                      MarqueeText(
-                                        track?.title ?? tr.nothingPlaying,
-                                        style: text.headlineSmall?.copyWith(
-                                          fontWeight: FontWeight.w800,
-                                          letterSpacing: -0.5,
+                                      if (art >= 96) ...[
+                                        // A video has its own aspect ratio: in an unconstrained Row it otherwise
+                                        // grows to the full viewport height and squeezes the controls into a sliver.
+                                        SizedBox(
+                                          width: artWidth,
+                                          height: art,
+                                          child: Center(child: cover(art)),
+                                        ),
+                                        const SizedBox(width: 32),
+                                      ],
+                                      Expanded(
+                                        child: Column(
+                                          children: [
+                                            topBar,
+                                            const Spacer(),
+                                            if (showsVideo && showStrip && constraints.maxHeight >= 350)
+                                              const AudioVisualizer(linearOnly: true, height: 36),
+                                            info,
+                                            const SizedBox(height: 8),
+                                            const SeekBar(phonePlayer: true),
+                                            const TransportControls(large: true),
+                                            const _SecondaryRow(),
+                                          ],
                                         ),
                                       ),
-                                      const SizedBox(height: 2),
-                                      if (track != null)
-                                        ArtistLinks(
-                                          track: track,
-                                          style: text.titleMedium?.copyWith(color: AppColors.of(context).textSecondary),
-                                        ),
-                                      if (showBadge) ...[const SizedBox(height: 8), const QualityBadge(onDark: true)],
                                     ],
                                   ),
-                                ),
-                                if (track != null)
-                                  LikeButton(track: track, size: 28, color: AppColors.of(context).textPrimary),
-                              ],
-                            );
-                            if (sideways) {
-                              // A music video is 16:9: its box takes the height and up to 58% of the width, so the
-                              // controls keep the rest. The square cover stays square.
-                              final wide = showsVideo;
-                              final art = wide
-                                  ? math.min(constraints.maxHeight - 32, constraints.maxWidth * 0.58 * 9 / 16)
-                                  : math.min(constraints.maxHeight - 32, constraints.maxWidth * 0.4);
-                              final artWidth = wide ? art * 16 / 9 : art;
+                                );
+                              }
+                              if (!LayoutPrefs.instance.classicPlayerFace) {
+                                return ComposedNowPlaying(
+                                  track: track,
+                                  from: from,
+                                  accent: accent,
+                                  cover: cover,
+                                  classicTopBar: topBarFor,
+                                  showBadge: showBadge,
+                                  strip: stripHeight > 0,
+                                );
+                              }
+                              // Nothing Flutter draws shows over a native video (Windows/Linux): the Song / Video
+                              // switch and the top bar's tooltips get a row of their own above it.
+                              final switchRow = showsVideo && VideoMode.native && LayoutPrefs.instance.showVideoSwitch
+                                  ? nativeVideoSwitchRow
+                                  : 0.0;
+                              final art =
+                                  (largeCover
+                                      ? math.min(
+                                          constraints.maxWidth - 24,
+                                          constraints.maxHeight -
+                                              (showBadge ? 364 : 328) -
+                                              playerVolumeRowHeight -
+                                              stripHeight,
+                                        )
+                                      : math.min(
+                                          constraints.maxWidth - 48,
+                                          constraints.maxHeight -
+                                              (showBadge ? 400 : 364) -
+                                              playerVolumeRowHeight -
+                                              stripHeight,
+                                        )) -
+                                  switchRow;
                               return Padding(
                                 padding: const EdgeInsets.symmetric(horizontal: 24),
-                                child: Row(
+                                child: Column(
                                   children: [
-                                    if (art >= 96) ...[
-                                      // A video has its own aspect ratio: in an unconstrained Row it otherwise
-                                      // grows to the full viewport height and squeezes the controls into a sliver.
-                                      SizedBox(
-                                        width: artWidth,
-                                        height: art,
-                                        child: Center(child: cover(art)),
-                                      ),
-                                      const SizedBox(width: 32),
+                                    topBar,
+                                    SizedBox(height: switchRow),
+                                    const Spacer(),
+                                    // The large cover runs 12 px into the page's margin on each side.
+                                    if (art >= 96)
+                                      largeCover
+                                          ? SizedBox(
+                                              height: art,
+                                              child: OverflowBox(maxWidth: art, child: cover(art)),
+                                            )
+                                          // As tall as the cover: the music video is 16:9 and, unbounded in the
+                                          // Column, took the full width's height and pushed the controls off a
+                                          // wide window.
+                                          : SizedBox(height: art, child: cover(art)),
+                                    const Spacer(),
+                                    if (stripHeight > 0) ...[
+                                      AudioVisualizer(linearOnly: true, height: stripHeight - 8),
+                                      const SizedBox(height: 8),
                                     ],
-                                    Expanded(
-                                      child: Column(
-                                        children: [
-                                          topBar,
-                                          const Spacer(),
-                                          info,
-                                          const SizedBox(height: 8),
-                                          const SeekBar(phonePlayer: true),
-                                          const TransportControls(large: true),
-                                          const _SecondaryRow(),
-                                        ],
-                                      ),
-                                    ),
+                                    info,
+                                    const SizedBox(height: 16),
+                                    const SeekBar(phonePlayer: true),
+                                    const SizedBox(height: 8),
+                                    const TransportControls(large: true),
+                                    const SizedBox(height: 4),
+                                    const _SecondaryRow(),
+                                    const PlayerVolumeRow(),
+                                    const SizedBox(height: 8),
                                   ],
                                 ),
                               );
-                            }
-                            if (!LayoutPrefs.instance.classicPlayerFace) {
-                              return ComposedNowPlaying(
-                                track: track,
-                                from: from,
-                                accent: accent,
-                                cover: cover,
-                                classicTopBar: topBarFor,
-                                showBadge: showBadge,
-                                strip: stripHeight > 0,
-                              );
-                            }
-                            // Nothing Flutter draws shows over a native video (Windows/Linux): the Song / Video
-                            // switch and the top bar's tooltips get a row of their own above it.
-                            final switchRow = showsVideo && VideoMode.native && LayoutPrefs.instance.showVideoSwitch
-                                ? nativeVideoSwitchRow
-                                : 0.0;
-                            final art =
-                                (largeCover
-                                    ? math.min(
-                                        constraints.maxWidth - 24,
-                                        constraints.maxHeight -
-                                            (showBadge ? 364 : 328) -
-                                            playerVolumeRowHeight -
-                                            stripHeight,
-                                      )
-                                    : math.min(
-                                        constraints.maxWidth - 48,
-                                        constraints.maxHeight -
-                                            (showBadge ? 400 : 364) -
-                                            playerVolumeRowHeight -
-                                            stripHeight,
-                                      )) -
-                                switchRow;
-                            return Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 24),
-                              child: Column(
-                                children: [
-                                  topBar,
-                                  SizedBox(height: switchRow),
-                                  const Spacer(),
-                                  // The large cover runs 12 px into the page's margin on each side.
-                                  if (art >= 96)
-                                    largeCover
-                                        ? SizedBox(
-                                            height: art,
-                                            child: OverflowBox(maxWidth: art, child: cover(art)),
-                                          )
-                                        // As tall as the cover: the music video is 16:9 and, unbounded in the
-                                        // Column, took the full width's height and pushed the controls off a
-                                        // wide window.
-                                        : SizedBox(height: art, child: cover(art)),
-                                  const Spacer(),
-                                  if (stripHeight > 0) ...[
-                                    const AudioVisualizer(linearOnly: true, height: 80),
-                                    const SizedBox(height: 8),
-                                  ],
-                                  info,
-                                  const SizedBox(height: 16),
-                                  const SeekBar(phonePlayer: true),
-                                  const SizedBox(height: 8),
-                                  const TransportControls(large: true),
-                                  const SizedBox(height: 4),
-                                  const _SecondaryRow(),
-                                  const PlayerVolumeRow(),
-                                  const SizedBox(height: 8),
-                                ],
-                              ),
-                            );
-                          },
+                            },
+                          ),
                         ),
                       ),
                     ),
                   ),
-                ),
-                // Song / Video at the top, over every layout (classic, the composed presets, sideways): one tap to switch,
-                // without opening ⋯. Only for a song with a music video (the switch draws nothing otherwise).
-                if (track != null && LayoutPrefs.instance.showVideoSwitch)
-                  Positioned(
-                    // Sideways: above the cover, over the left part of the page it takes (up to 58%), not over the
-                    // middle of the video or the controls.
-                    top: MediaQuery.paddingOf(context).top + (sideways ? 12 : 60),
-                    left: 0,
-                    right: sideways ? size.width * 0.42 : 0,
-                    child: Center(
-                      child: _AutoHide(
-                        track: track,
-                        child: VideoModeSwitch(track: track, onDark: true),
+                  // Song / Video at the top, over every layout (classic, the composed presets, sideways): one tap to switch,
+                  // without opening ⋯. Only for a song with a music video (the switch draws nothing otherwise).
+                  if (track != null && LayoutPrefs.instance.showVideoSwitch)
+                    Positioned(
+                      // Sideways: above the cover, over the left part of the page it takes (up to 58%), not over the
+                      // middle of the video or the controls.
+                      top: MediaQuery.paddingOf(context).top + (sideways ? 12 : 60),
+                      left: 0,
+                      right: sideways ? size.width * 0.42 : 0,
+                      child: Center(
+                        child: _AutoHide(
+                          track: track,
+                          child: VideoModeSwitch(track: track, onDark: true),
+                        ),
                       ),
                     ),
-                  ),
-              ],
+                ],
+              ),
             ),
           ),
         ),

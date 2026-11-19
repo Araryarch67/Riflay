@@ -144,7 +144,8 @@ The matrix reflects source inspection before extending the 89-item checklist. Im
 | Feature | Production behavior | Files |
 |---|---|---|
 | Queue and shuffle persistence | Restores the saved order and current occurrence in the paused player. Checkpoints use queue changes, seeks, pauses and lifecycle events. The original order remains available when shuffle is turned off. | player_controller.dart |
-| Seek steps | Playback settings persist the step size. Shift and the arrow keys seek repeatedly in the chosen increments. | sound_settings.dart, player_controller.dart, shortcuts.dart |
+| Seek steps | Playback settings persist the step size or disable keyboard seek steps. Shift and the arrow keys seek in the chosen increments. | sound_settings.dart, player_controller.dart, shortcuts.dart |
+| MV sync | Video opens at the current audio position after stream resolution, resynchronizes on seek, and uses the audio speed and video timeline rate. Lyric-derived alignment survives a video decoder reload. | video_mode.dart, video_timing.dart, lyrics_video_alignment.dart |
 | Logo cover | Choose the Riflay mark as the artwork in Now Playing, fullscreen, and the sidebar. Lightweight mode offers the logo too. | layout_prefs.dart, now_playing_page.dart, full_screen_player.dart, side_panel.dart |
 | Phone navigation | The glass bar can stay expanded while scrolling. Bottom navigation labels can be hidden with accessible tab names preserved. | layout_settings.dart, phone_navigation.dart |
 | Playlist order and pins | The Library offers default, alphabetical and custom ordering for Riflay, folder and connected YouTube Music playlists. Pinned playlists appear above the rest. | library_page.dart, layout_prefs.dart |
@@ -153,3 +154,28 @@ The matrix reflects source inspection before extending the 89-item checklist. Im
 | Discord reconnection | Connection retries use backoff. The latest activity is applied when the handshake completes, including after a Discord restart. | discord_presence.dart |
 | Interactive mini-player expansion | Drag follows the pointer from the mini-player bounds. A short drag settles back and a committed drag hands off to the real Now Playing route. | home_shell.dart, mini_player.dart |
 | Draggable glass tab selection | The selection pill follows a horizontal drag and settles into the chosen tab on release. The tint picker labels white explicitly. | phone_navigation.dart, appearance_settings.dart |
+
+## Remaining requirements
+
+These rows supersede the initial status where the same item appears in both tables.
+
+| Area | Status | Feature or remaining work | Evidence |
+|---|---|---|---|
+| Audio | Partial | Instant silence skipping needs a separate mode and tested filter thresholds. The standard silence filter is available on supported native builds. | `audio_engine.dart` |
+| Audio | Implemented, native checks pending | The target includes −7 dB. Check ReplayGain, peak behavior, and varispeed on actual outputs with DSP, exclusive output, and bit-perfect modes. | `audio_engine.dart`, `sound_settings.dart` |
+| Audio | Unsupported by current backend | Compressed AudioTrack offload and hardware AudioTrack speed and pitch need a compatible Android output backend. | `just_audio_media_kit`, `audio_engine.dart` |
+| Sleep | Partial | Manual duration, end of track, and fading work. Automatic arming and recurring schedules are missing. | `sleep_timer.dart`, `sleep_timer_button.dart` |
+| Alarms | Missing | Playback alarms, scheduled playlists, exact-alarm permission, and alarm-specific battery guidance. The existing battery exemption setting can be reused. | `stay_awake.dart`, `power_settings.dart`, `AndroidManifest.xml` |
+| Queue | Partial | Autoplay already filters the queue and the 30 most recent tracks. Preventing repeats throughout the entire listening session needs a longer memory. | `player_controller.dart` |
+| Queue | Missing | Automatically download liked tracks and optionally move existing queue entries on duplicate insertion. | `player_controller.dart`, `youtube_music_account.dart` |
+| Queue | Implemented | Clear upcoming tracks and retain position on the current track. The existing regenerate action can then create a new set of recommendations. | `queue_page.dart`, `player_controller.dart` |
+| Playback | Partial | Desktop Close to tray controls playback on window close. The screen wake setting covers playback and foreground app use. Mobile task-dismiss behavior and a Now Playing-only wake setting need separate handling. | `system_tray.dart`, `stay_awake.dart`, `power_policy.dart` |
+| Playback | Missing | Pause on system media mute and resume on reconnection of the matching Bluetooth device. | `player_controller.dart`, native audio route channels |
+| Playback | Partial | Animated artwork is available when the provider supplies it. Search results in the Videos tab start playback through the audio queue. Explicitly selecting Video mode on tap still requires wiring. | `video_mode.dart`, `remote_results.dart` |
+| Appearance | Partial | Rounded glyphs are already used, with no global icon family selector. Android provides monochrome launcher resources, with tint controlled by the launcher. User-selected launcher styles are missing. | `layout_prefs.dart`, `AndroidManifest.xml`, `ic_launcher.xml` |
+| Appearance | Missing | High refresh-rate mode and landscape-specific UI scaling. | `layout_prefs.dart`, native display integration |
+| Player | Partial | Mini-player tint can be chosen independently in Liquid Glass. A background selector for all mini-player styles and independent playback-button colors are missing. | `mini_player.dart`, `appearance_settings.dart`, `player_parts.dart` |
+| Lyrics | Missing | A separate experimental mode, alignment per vocalist role, and a status-bar preference for fullscreen lyrics. | `lyrics.dart`, `lyrics_sources.dart`, `synced_view.dart` |
+| Floating player | Partial | Desktop mini-window supports always-on-top. The mobile system overlay is missing. | `mini_window.dart` |
+| Navigation | Partial | Scroll collapse and keep-expanded behavior are available on the glass bar. Cover grid size presets exist. General UI scaling with native 100% and track swipes for queue, play next, and playlist removal are missing. | `phone_navigation.dart`, `layout_settings.dart`, `track_row.dart` |
+| Automatic playlists | Partial or unsupported | Liked, Downloaded, and Top Tracks have visibility controls. Saved needs a real track collection. The current provider model has no verified personal uploads collection. | `library_settings.dart`, `library_page.dart`, `youtube_music_account.dart` |

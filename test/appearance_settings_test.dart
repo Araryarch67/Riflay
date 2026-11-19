@@ -74,7 +74,7 @@ void main() {
     await prefs.setGlassTint(GlassTint.black);
     addTearDown(() => prefs.setGlassTint(GlassTint.theme));
     await open(tester);
-    final picker = find.byType(OptionPicker<GlassTint>);
+    final picker = find.byType(OptionPicker<GlassTint>).first;
     expect(picker, findsOneWidget);
     await tester.tap(picker);
     await tester.pumpAndSettle();

@@ -11,6 +11,7 @@ import 'app_logo.dart';
 import 'smooth_scroll.dart';
 import '../../services/language.dart';
 import 'title_bar.dart' show hasCustomTitleBar;
+import 'top_bar_surface.dart';
 
 /// Scrolling page with a top colour wash and a sticky title bar that fades in on scroll.
 class PageScaffold extends StatefulWidget {
@@ -77,15 +78,12 @@ class _PageScaffoldState extends State<PageScaffold> {
     final brand = widget.brand && shell.compact && !hasCustomTitleBar;
     final showBar = history != null || canPop || widget.actions.isNotEmpty || brand;
     final barOpacity = (widget.overHero ? (_offset - 240) / 60 : (_offset - 180) / 80).clamp(0.0, 1.0);
-    // Phones with the Liquid glass tab bar: the bar fills in as frosted glass, not a solid colour (Lightweight keeps
-    // the solid one, as it does for the tab bar). `RIFLAY_NO_GLASS_TOP_BAR` keeps it solid.
-    final glassBar =
+    final phoneGlass =
         shell.compact &&
         LayoutPrefs.instance.tabBar == TabBarStyle.glass &&
         !LayoutPrefs.lightweight &&
         !DebugSwitches.noGlassTopBar;
-    // As frosted as the tab bar's pills.
-    final glassBlur = Appearance.instance.glass ? Appearance.instance.blur.clamp(18.0, 40.0) : 24.0;
+    final phoneBlur = (Appearance.instance.glass ? Appearance.instance.blur.clamp(18.0, 40.0) : 24.0) * barOpacity;
     const barHeight = 56.0;
     final topInset = shell.compact ? MediaQuery.paddingOf(context).top : 0.0;
 
@@ -157,22 +155,15 @@ class _PageScaffoldState extends State<PageScaffold> {
               children: [
                 Positioned.fill(
                   child: IgnorePointer(
-                    child: glassBar
-                        // Glass, as the tab bar at the other end of the page: what scrolls under shows through,
-                        // frosted. Nothing is blurred until the bar starts to fill in.
-                        ? (barOpacity == 0
-                              ? const SizedBox.shrink()
-                              : ClipRect(
-                                  child: BackdropFilter(
-                                    filter: ImageFilter.blur(
-                                      sigmaX: glassBlur * barOpacity,
-                                      sigmaY: glassBlur * barOpacity,
-                                    ),
-                                    child: ColoredBox(
-                                      color: AppColors.sink(color, 0.45).withValues(alpha: 0.4 * barOpacity),
-                                    ),
-                                  ),
-                                ))
+                    child: !shell.compact
+                        ? TopBarSurface(color: color, opacity: barOpacity, blurBehind: true)
+                        : phoneGlass && barOpacity > 0
+                        ? ClipRect(
+                            child: BackdropFilter(
+                              filter: ImageFilter.blur(sigmaX: phoneBlur, sigmaY: phoneBlur),
+                              child: ColoredBox(color: AppColors.sink(color, 0.45).withValues(alpha: 0.4 * barOpacity)),
+                            ),
+                          )
                         : ColoredBox(color: AppColors.sink(color, 0.45).withValues(alpha: barOpacity)),
                   ),
                 ),

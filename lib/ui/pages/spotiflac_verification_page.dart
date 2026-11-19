@@ -2,6 +2,9 @@ import 'dart:collection';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+
+import '../widgets/top_bar_surface.dart';
+
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 
 import '../../models/track.dart';
@@ -109,7 +112,7 @@ class _SpotiflacVerificationPageState extends State<SpotiflacVerificationPage> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: Text(tr.spotiflacVerify)),
+    appBar: RiflayAppBar(title: Text(tr.spotiflacVerify)),
     body: InAppWebView(
       initialUrlRequest: URLRequest(url: WebUri(widget.url.toString())),
       initialSettings: InAppWebViewSettings(

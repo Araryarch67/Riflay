@@ -152,6 +152,13 @@ void main() {
     expect(VideoMode.catchUpRate(const Duration(seconds: 5)), 0.7);
   });
 
+  test('the video stays at the audio and timeline rate after correcting drift', () {
+    const rate = 1.5 * 0.98;
+    expect(VideoMode.catchUpRate(Duration.zero, baseRate: rate), rate);
+    expect(VideoMode.catchUpRate(const Duration(milliseconds: -300), baseRate: rate), closeTo(rate + 0.1, 1e-9));
+    expect(VideoMode.catchUpRate(const Duration(milliseconds: 300), baseRate: rate), closeTo(rate - 0.1, 1e-9));
+  });
+
   test('a sound-only mpv build keeps the switch hidden', () {
     expect(VideoMode.decodesVideo('aac,alac,flac,mp3,opus,vorbis,wavpack'), isFalse);
     expect(VideoMode.decodesVideo('aac (AAC), h264 (H.264 / AVC), vp9 (Google VP9)'), isTrue);

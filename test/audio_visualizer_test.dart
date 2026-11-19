@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:riflay/models/track.dart';
 import 'package:riflay/services/layout_prefs.dart';
+import 'package:riflay/services/video_mode.dart';
+import 'package:riflay/services/ytmusic_web.dart' show MusicVideo;
 import 'package:riflay/services/beta_features.dart';
 import 'package:riflay/services/player_controller.dart';
 import 'package:riflay/services/player_presets.dart';
@@ -9,6 +12,11 @@ import 'package:riflay/ui/widgets/audio_visualizer.dart';
 import 'package:riflay/ui/widgets/flower_cover.dart';
 import 'package:riflay/ui/widgets/audio_reactive_view.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+class _VideoTrackPlayer extends PlayerController {
+  @override
+  final currentTrack = Track.youtube(videoId: 'viz-video', title: 'Video test', artist: 'Artist');
+}
 
 void main() {
   final prefs = LayoutPrefs.instance;
@@ -19,6 +27,29 @@ void main() {
   });
   tearDown(prefs.reset);
 
+  testWidgets('video gets a live strip when the selected visualizer normally surrounds the cover', (tester) async {
+    final c = _VideoTrackPlayer();
+    addTearDown(c.dispose);
+    await prefs.setVisualizer(true);
+    await prefs.setVisualizerStyle(VisualizerStyle.pulse);
+    final mode = VideoMode.instance;
+    mode.setOn(true);
+    mode.debugSetFound('viz-video', const MusicVideo(videoId: 'viz-video'));
+    addTearDown(() => mode.debugSetFound('viz-video', null));
+    await tester.pumpWidget(
+      PlayerScope(
+        controller: c,
+        child: const MaterialApp(home: Center(child: AudioVisualizer(linearOnly: true, height: 44))),
+      ),
+    );
+    expect(tester.widget<VisualizerCanvas>(find.byType(VisualizerCanvas)).style, VisualizerStyle.wave);
+    expect(tester.widget<AudioReactiveView>(find.byType(AudioReactiveView)).followsVideo, isFalse);
+    mode.setOn(false);
+    await tester.pump();
+    expect(find.byType(VisualizerCanvas), findsNothing);
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump(const Duration(seconds: 4));
+  });
   testWidgets('off preserves the cover with a minimal glow without requiring an audio player', (tester) async {
     await prefs.setPlayerCover(PlayerCover.flower);
     await prefs.setVisualizer(false);
@@ -69,9 +100,9 @@ void main() {
   });
 
   testWidgets('visualizer is off by default and offered under Beta features', (tester) async {
-    expect(prefs.playerCover, PlayerCover.square);
+    expect(prefs.playerCover, PlayerCover.flower);
     prefs.restore({});
-    expect(prefs.playerCover, PlayerCover.square);
+    expect(prefs.playerCover, PlayerCover.flower);
     prefs.restore({'visualizerCoverShape': 'flower'});
     expect(prefs.playerCover, PlayerCover.flower);
     prefs.restore({});
@@ -82,7 +113,7 @@ void main() {
     await prefs.setVisualizerStyle(VisualizerStyle.orbit);
     await tester.pumpWidget(const MaterialApp(home: AudioVisualizer(child: SizedBox.square(dimension: 200))));
     expect(find.byType(VisualizerCanvas), findsNothing);
-    expect(find.byType(FlowerCover), findsNothing);
+    expect(find.byType(FlowerCover), findsOneWidget, reason: 'Classic retains the flower artwork');
     expect(find.byType(AudioReactiveView), findsNothing);
     await tester.pumpWidget(
       const MaterialApp(

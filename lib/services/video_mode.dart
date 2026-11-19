@@ -164,6 +164,7 @@ class VideoMode extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   PlayerController? _c;
+  StreamSubscription<void>? _audioPositionChanges;
 
   /// Starts following [c]'s current song. Called by the views; once is enough.
   void follow(PlayerController c) {
@@ -173,12 +174,17 @@ class VideoMode extends ChangeNotifier with WidgetsBindingObserver {
       ..addListener(_changed);
     if (identical(_c, c)) return;
     _c?.removeListener(_changed);
+    _audioPositionChanges?.cancel().ignore();
     if (_c == null) WidgetsBinding.instance.addObserver(this);
     _c = c;
     _lyricsFor = null;
     _lyricsOffset = Duration.zero;
     _lyricsRequest++;
     c.addListener(_changed);
+    _audioPositionChanges = c.player.positionDiscontinuityStream.listen((_) {
+      if (!identical(_c, c) || c.casting) return;
+      _timingChanged();
+    });
     _loadOn();
     LayoutPrefs.instance
       ..removeListener(_decoderChanged)
@@ -318,9 +324,7 @@ class VideoMode extends ChangeNotifier with WidgetsBindingObserver {
       final shifted = _found[songId] = v.shifted(a.offset, a.rate);
       if (identical(_playing, v)) {
         _playing = shifted;
-        _lastSeek = DateTime(0);
-        _seekedTo = null;
-        _follow(seekNow: true);
+        _timingChanged();
       }
     }).ignore();
   }
@@ -384,9 +388,7 @@ class VideoMode extends ChangeNotifier with WidgetsBindingObserver {
       );
       if (offset == null) return;
       _lyricsOffset = offset;
-      _lastSeek = DateTime(0);
-      _seekedTo = null;
-      _follow(seekNow: true);
+      _timingChanged();
     }().catchError((Object e) {
       // Retry when this recording is entered again; never interrupt playback.
       debugPrint('Video lyric alignment: $e');
@@ -709,9 +711,7 @@ vec4 hook() {
   @visibleForTesting
   bool get debugForeground => _foreground;
 
-  /// The music video's picture is on screen now: its first frame is ready and a view shows it. Decorations and the
-  /// visualizer rest meanwhile (`PlayingMotion`, `AudioReactiveView`): the video is the motion, and with its surface
-  /// over the window each frame Flutter drew cost the Linux main thread twice as much (~20 ms).
+  /// The music video's picture is on screen now. Cover animations can rest while the video is showing.
   bool get showing => _ready && _wanted != null;
 
   /// For measuring (tool/mv_app.dart): the video's own position and state, null with no player.
@@ -856,9 +856,7 @@ vec4 hook() {
         }
       }
 
-      final position = _c?.position ?? Duration.zero;
-      final timing = timingOf(_c?.currentTrack);
-      final at = (timing == null ? v.videoTimeAt(position) : timing.videoTimeAt(v, position)) ?? Duration.zero;
+      if (!v.loops) _alignLyrics();
       final local = v.loops ? null : localVideoOf(_c?.currentTrack);
       if (v.url case final url?) {
         // A Canvas: a few seconds that loop, whatever the song's position.
@@ -870,7 +868,7 @@ vec4 hook() {
       } else if (local != null) {
         // The downloaded file: no network, and the size it was saved at.
         debugPrint('Video mode: ${v.videoId} from ${local.path}');
-        await open(own != null ? local.path : Uri.file(local.path).toString(), at);
+        await open(own != null ? local.path : Uri.file(local.path).toString(), _targetFor(v) ?? Duration.zero);
       } else {
         // Nobody asked for this video: a phone on mobile data (or on a saver) doesn't spend it.
         if (!foreground && !await YoutubeStream.prefetchAllowed()) throw StateError('metered connection');
@@ -882,7 +880,8 @@ vec4 hook() {
         debugPrint('Video mode: ${v.videoId} at ${stream.height}p ${stream.codec}');
         final url = await VideoStreamCache.instance.open(v.videoId, stream);
         if (!identical(player, _player)) return;
-        await open(url.toString(), at);
+        // Resolving the stream can take seconds. Start from the song's position after that work.
+        await open(url.toString(), _targetFor(v) ?? Duration.zero);
       }
       if (own != null) {
         if (!await own!.firstFrame(const Duration(seconds: 25))) throw TimeoutException('no first picture');
@@ -908,7 +907,7 @@ vec4 hook() {
       _readDecoder();
       _ready = true;
       _tick = Timer.periodic(const Duration(milliseconds: 250), (_) => _follow());
-      _follow();
+      _timingChanged();
       notifyListeners();
     } catch (e) {
       if (!identical(player, _player)) return;
@@ -974,9 +973,6 @@ vec4 hook() {
     final player = _player;
     _manualTiming?.removeListener(_timingChanged);
     _manualTiming = null;
-    _lyricsRequest++;
-    _lyricsFor = null;
-    _lyricsOffset = Duration.zero;
     _tick?.cancel();
     _tick = null;
     _player = null;
@@ -994,6 +990,15 @@ vec4 hook() {
 
   static bool _sized(VideoController video) => (video.rect.value?.width ?? 0) > 1;
 
+  Duration? _targetFor(MusicVideo video, {VideoTiming? timing}) {
+    final c = _c;
+    if (c == null) return null;
+    timing ??= timingOf(c.currentTrack);
+    if (timing != null) return timing.videoTimeAt(video, c.position, lyricsOffset: _lyricsOffset);
+    final song = c.position + _lyricsOffset;
+    return song.isNegative ? null : video.videoTimeAt(song);
+  }
+
   /// Keeps the video with the song: same play / pause; a small gap closes by
   /// running the video a little faster or slower (invisible, and no new
   /// buffering), a big one (a seek, a stall) with a seek of its own, aimed
@@ -1003,13 +1008,13 @@ vec4 hook() {
     if (c == null || player == null || v == null || !_ready) return;
     // Stop invisible video work as a route is covered, while retaining the decoder for the short handoff period.
     // No seeks while hidden: those decode/network loads used to compete with the opening lyrics page.
-    if (_wanted == null) {
+    if (_wanted?.videoId != v.videoId) {
       if (player.playing) player.pause().ignore();
       return;
     }
     if (v.loops) {
       // A Canvas plays while the song does; it has no place in the song to keep.
-      final play = c.isPlaying && !_unfocused;
+      final play = c.showsPlaying && !c.isBuffering && !_unfocused;
       if (play != player.playing) (play ? player.play() : player.pause()).ignore();
       return;
     }
@@ -1020,14 +1025,10 @@ vec4 hook() {
       _manualTiming = timing;
       timing?.addListener(_timingChanged);
     }
-    final songTime = c.position + _lyricsOffset;
-    final target = timing != null
-        ? timing.videoTimeAt(v, c.position, lyricsOffset: _lyricsOffset)
-        : songTime.isNegative
-        ? null
-        : v.videoTimeAt(songTime);
-    final play = target != null && c.isPlaying && !c.isBuffering && !_unfocused;
-    var rate = 1.0;
+    final target = _targetFor(v, timing: timing);
+    final play = target != null && c.showsPlaying && !c.isBuffering && !_unfocused;
+    final baseRate = (c.casting ? 1.0 : c.player.speed) * (v.segments.isEmpty ? v.rate : 1);
+    var rate = baseRate;
     if (target != null) {
       final drift = player.position - target;
       final now = DateTime.now();
@@ -1045,11 +1046,11 @@ vec4 hook() {
       // seconds the video froze two or three seconds after each one, then overshot into the next (a 1 s limit
       // swung the gap between -1.4 and +1.3 s for twelve seconds).
       // Held while another window has the focus: it catches up once back in front.
-      if (_unfocused) {
-        // Nothing to match.
+      if (_unfocused || c.isBuffering && !seekNow) {
+        // Wait for the audio clock to resume unless the user moved it explicitly.
       } else if (seekNow && drift.abs() > const Duration(milliseconds: 100) ||
           drift.abs() > seekBeyond ||
-          !c.isPlaying && drift.abs() > const Duration(milliseconds: 100)) {
+          !c.showsPlaying && drift.abs() > const Duration(milliseconds: 100)) {
         // Not until the last seek has landed: the stream comes only a little faster than it plays, so each seek
         // fetches for a second or two first, and a new one would throw that away and start again.
         if (_seekedTo == null && now.difference(_lastSeek) > const Duration(milliseconds: 700)) {
@@ -1058,11 +1059,11 @@ vec4 hook() {
           player.seek(_seekedTo ?? target).ignore();
         }
       } else if (play) {
-        rate = catchUpRate(drift);
+        rate = catchUpRate(drift, baseRate: baseRate);
       }
     }
     // In steps: every change of speed makes mpv retime its frames, which shows as a stutter.
-    if ((rate - _rate).abs() >= 0.02 || rate == 1 && _rate != 1) {
+    if ((rate - _rate).abs() >= 0.02 || rate == baseRate && _rate != baseRate) {
       _rate = rate;
       player.setRate(rate).ignore();
     }
@@ -1084,15 +1085,17 @@ vec4 hook() {
   /// about three seconds; within 40 ms it is in step. Between 0.7 and 1.4
   /// times, so a gap up to [seekBeyond] closes in a few seconds without a seek.
   @visibleForTesting
-  static double catchUpRate(Duration drift) {
+  static double catchUpRate(Duration drift, {double baseRate = 1}) {
     final ms = drift.inMilliseconds;
-    if (ms.abs() <= 40) return 1;
-    return (1 - ms / 3000).clamp(0.7, 1.4);
+    if (ms.abs() <= 40) return baseRate;
+    return (baseRate - ms / 3000).clamp(baseRate * 0.7, baseRate * 1.4);
   }
 
   @override
   void dispose() {
     _disposed = true;
+    _lyricsRequest++;
+    _audioPositionChanges?.cancel().ignore();
     DesktopVisibility.instance.removeListener(_windowVisibilityChanged);
     _c?.removeListener(_changed);
     WidgetsBinding.instance.removeObserver(this);

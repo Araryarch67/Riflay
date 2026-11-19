@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:flutter/gestures.dart' show PointerDeviceKind;
 import 'package:flutter/material.dart';
 
 import '../../models/track.dart';
@@ -13,6 +16,7 @@ import '../widgets/faded_cover.dart';
 import '../widgets/about_artist.dart';
 import '../widgets/audio_visualizer.dart';
 import '../widgets/signal_path.dart';
+import '../widgets/native_video_surface.dart';
 import '../widgets/smooth_scroll.dart';
 import '../widgets/stats_for_nerds.dart';
 import '../widgets/track_row.dart';
@@ -75,7 +79,7 @@ class NowPlayingSidePanel extends StatelessWidget {
                     LayoutPrefs.instance.playerCover == PlayerCover.background ||
                     (LayoutPrefs.instance.playerCover != PlayerCover.logo &&
                         VideoMode.instance.showsAsBackground(track));
-                final content = hero
+                return hero
                     ? _HeroPanel(track: track, from: from, next: next, onClose: onClose)
                     : SmoothScroll(
                         builder: (context, scroll) => ListView(
@@ -166,15 +170,96 @@ class NowPlayingSidePanel extends StatelessWidget {
                           ],
                         ),
                       );
-                if (!LayoutPrefs.instance.showVideoSwitch) return content;
-                return Column(
-                  children: [
-                    Center(child: VideoModeSwitch(track: track)),
-                    Expanded(child: content),
-                  ],
-                );
               },
             ),
+    );
+  }
+}
+
+/// Keeps the Song / Video control over the subject it changes, within the scrollable artwork.
+class _CoverSwitch extends StatefulWidget {
+  const _CoverSwitch({required this.track, required this.child});
+
+  final Track track;
+  final Widget child;
+
+  @override
+  State<_CoverSwitch> createState() => _CoverSwitchState();
+}
+
+class _CoverSwitchState extends State<_CoverSwitch> {
+  bool _hovered = false;
+  bool _focused = false;
+  Timer? _touch;
+
+  void _revealOnTouch() {
+    setState(() {
+      _touch?.cancel();
+      _touch = Timer(const Duration(seconds: 4), () => setState(() => _touch = null));
+    });
+  }
+
+  @override
+  void dispose() {
+    _touch?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!LayoutPrefs.instance.showVideoSwitch) return widget.child;
+    final visible = _hovered || _focused || _touch != null;
+    final mode = VideoMode.instance;
+    // The optional Linux GTK surface is above Flutter. Give the switch its own strip
+    // while that surface is in use, so it keeps receiving pointer events.
+    final useStrip =
+        VideoMode.native &&
+        !NativeVideoWindow.behind &&
+        !LayoutPrefs.lightweight &&
+        mode.on &&
+        mode.videoOf(widget.track) != null;
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: Listener(
+        behavior: HitTestBehavior.translucent,
+        onPointerDown: (event) {
+          if (event.kind == PointerDeviceKind.touch || event.kind == PointerDeviceKind.stylus) {
+            _revealOnTouch();
+          }
+        },
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            Padding(
+              padding: EdgeInsets.only(top: useStrip ? 56 : 0),
+              child: widget.child,
+            ),
+            Positioned(
+              top: 4,
+              left: 4,
+              right: 4,
+              child: Focus(
+                canRequestFocus: false,
+                onFocusChange: (focused) => setState(() => _focused = focused),
+                child: IgnorePointer(
+                  ignoring: !visible,
+                  child: ExcludeSemantics(
+                    excluding: !visible,
+                    child: AnimatedOpacity(
+                      duration: LayoutPrefs.dur(const Duration(milliseconds: 160)),
+                      opacity: visible ? 1 : 0,
+                      child: Center(
+                        child: VideoModeSwitch(track: widget.track, onDark: !useStrip),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -210,14 +295,25 @@ class _PanelCover extends StatelessWidget {
                 ),
               ),
       );
-      if (!bleed) return AspectRatio(aspectRatio: 1, child: cover);
+      if (!bleed) {
+        return AspectRatio(
+          aspectRatio: 1,
+          child: _CoverSwitch(track: track, child: cover),
+        );
+      }
       // Out past the list's 16 px margins on both sides.
       return LayoutBuilder(
         builder: (context, box) {
           final side = box.maxWidth + 32;
           return SizedBox(
             height: side,
-            child: OverflowBox(minWidth: side, maxWidth: side, minHeight: side, maxHeight: side, child: cover),
+            child: OverflowBox(
+              minWidth: side,
+              maxWidth: side,
+              minHeight: side,
+              maxHeight: side,
+              child: _CoverSwitch(track: track, child: cover),
+            ),
           );
         },
       );
@@ -289,19 +385,21 @@ class _HeroPanel extends StatelessWidget {
         controller: scroll,
         padding: EdgeInsets.only(bottom: 16 + MediaQuery.paddingOf(context).bottom),
         children: [
-          // Windows/Linux: the native video surface sits above Flutter, so it covers the whole
-          // picture and the title sits under it. Elsewhere the video is drawn behind the title.
+          // The native video layout keeps the title under the picture.
           if (VideoMode.native) ...[
             AspectRatio(
               aspectRatio: 1,
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  FadedCover(track: track, fade: AppColors.panel, blurStart: 0.7),
-                  // Not in Lightweight, as the video behind the panel never was there.
-                  if (!LayoutPrefs.lightweight)
-                    TrackVisual(track: track, cover: const SizedBox.expand(), fill: true, fade: AppColors.panel),
-                ],
+              child: _CoverSwitch(
+                track: track,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    FadedCover(track: track, fade: AppColors.panel, blurStart: 0.7),
+                    // Not in Lightweight, as the video behind the panel never was there.
+                    if (!LayoutPrefs.lightweight)
+                      TrackVisual(track: track, cover: const SizedBox.expand(), fill: true, fade: AppColors.panel),
+                  ],
+                ),
               ),
             ),
             Padding(padding: const EdgeInsets.fromLTRB(16, 12, 8, 0), child: titleRow),
@@ -310,43 +408,46 @@ class _HeroPanel extends StatelessWidget {
               aspectRatio: 0.82,
               // Nothing drawn past the box: its height falls between pixels, and the video, snapped to whole
               // ones, showed a line of itself under the panel's colour while the list scrolled.
-              child: ClipRect(
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    // The cover, sharp up top and soft into the panel; the video over it once it plays.
-                    FadedCover(track: track, fade: AppColors.panel, blurStart: 0.7),
-                    // Stops short of the foot, where the gradient is solid: the box's height falls between pixels, and the
-                    // video, snapped to whole ones, filled the last one that the gradient's edge only partly covered (a line of
-                    // the video under the title, moving as the panel scrolled).
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 4),
-                      child: VideoBackground(track: track, shareForeground: true),
-                    ),
-                    // Readable words over any picture: darker at the foot, where the title sits.
-                    IgnorePointer(
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            colors: [
-                              Colors.black.withValues(alpha: 0.45),
-                              Colors.transparent,
-                              Colors.transparent,
-                              AppColors.panel.withValues(alpha: 0.85),
-                              AppColors.panel,
-                              AppColors.panel,
-                            ],
-                            // Solid before the foot, not only on its last pixel: the video's bottom edge lies
-                            // there, and through a gradient still a few percent clear it showed as a line.
-                            stops: const [0, 0.22, 0.5, 0.82, 0.94, 1],
+              child: _CoverSwitch(
+                track: track,
+                child: ClipRect(
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      // The cover, sharp up top and soft into the panel; the video over it once it plays.
+                      FadedCover(track: track, fade: AppColors.panel, blurStart: 0.7),
+                      // Stops short of the foot, where the gradient is solid: the box's height falls between pixels, and the
+                      // video, snapped to whole ones, filled the last one that the gradient's edge only partly covered (a line of
+                      // the video under the title, moving as the panel scrolled).
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 4),
+                        child: VideoBackground(track: track, shareForeground: true),
+                      ),
+                      // Readable words over any picture: darker at the foot, where the title sits.
+                      IgnorePointer(
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                              colors: [
+                                Colors.black.withValues(alpha: 0.45),
+                                Colors.transparent,
+                                Colors.transparent,
+                                AppColors.panel.withValues(alpha: 0.85),
+                                AppColors.panel,
+                                AppColors.panel,
+                              ],
+                              // Solid before the foot, not only on its last pixel: the video's bottom edge lies
+                              // there, and through a gradient still a few percent clear it showed as a line.
+                              stops: const [0, 0.22, 0.5, 0.82, 0.94, 1],
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                    Positioned(left: 16, right: 8, bottom: 12, child: titleRow),
-                  ],
+                      Positioned(left: 16, right: 8, bottom: 12, child: titleRow),
+                    ],
+                  ),
                 ),
               ),
             ),

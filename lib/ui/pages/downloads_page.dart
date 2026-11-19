@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 
 import '../../models/track.dart';
 import '../../services/download_files.dart';
+import '../../services/layout_prefs.dart';
+import '../../services/playlist_covers.dart';
 import '../../services/language.dart';
 import '../../services/player_controller.dart';
 import '../../services/youtube_importer.dart';
@@ -13,10 +15,11 @@ import 'spotiflac_verification_page.dart';
 import '../../services/monochrome_download.dart';
 import '../shell_scope.dart';
 import '../theme.dart';
+import '../widgets/app_dialog.dart';
 import '../widgets/controls.dart';
 import '../widgets/page_scaffold.dart';
-import '../widgets/app_dialog.dart';
 import '../widgets/track_row.dart';
+import '../ytmusic_edit.dart';
 
 /// Progress and history of YouTube imports.
 class DownloadsPage extends StatelessWidget {
@@ -172,13 +175,21 @@ class _DownloadedFilesState extends State<_DownloadedFiles> {
 
   @override
   Widget build(BuildContext context) {
+    return ListenableBuilder(listenable: LayoutPrefs.instance, builder: (context, _) => _files(context));
+  }
+
+  Widget _files(BuildContext context) {
     final scan = _scan;
     if (scan == null) return const SliverToBoxAdapter(child: SizedBox.shrink());
     final shell = ShellScope.of(context);
     final text = Theme.of(context).textTheme;
     final pad = shell.compact ? 16.0 : 24.0;
     final missing = scan.missing;
-    final files = downloadedFrom(_c!.library).where((t) => !missing.contains(t)).toList();
+    final found = downloadedFrom(_c!.library).where((t) => !missing.contains(t));
+    final preferences = LayoutPrefs.instance;
+    const pinKey = PlaylistCovers.downloadsKey;
+    final pins = preferences.pinnedTracks[pinKey] ?? const <String>{};
+    final files = [...found.where((t) => pins.contains(t.id)), ...found.where((t) => !pins.contains(t.id))];
     return SliverMainAxisGroup(
       slivers: [
         if (scan.bytes > 0)
@@ -196,6 +207,11 @@ class _DownloadedFilesState extends State<_DownloadedFiles> {
             child: ExpansionTile(
               title: Text('${tr.downloaded} (${files.length})'),
               children: [
+                ListTile(
+                  leading: const Icon(Icons.playlist_add_rounded),
+                  title: Text(tr.addAllToPlaylist),
+                  onTap: () => addToPlaylist(context, files),
+                ),
                 ListTile(
                   leading: const Icon(Icons.delete_sweep_outlined),
                   title: Text(tr.deleteAllDownloads),
@@ -223,10 +239,22 @@ class _DownloadedFilesState extends State<_DownloadedFiles> {
                     title: Text(t.title),
                     subtitle: Text(t.path ?? t.artist, maxLines: 1, overflow: TextOverflow.ellipsis),
                     onTap: () => _c!.playList(files, files.indexOf(t)),
-                    trailing: IconButton(
-                      tooltip: tr.delete,
-                      icon: const Icon(Icons.delete_outline),
-                      onPressed: () => confirmDeleteDownload(context, _c!, t),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          tooltip: pins.contains(t.id) ? tr.unpinTrack : tr.pinTrack,
+                          isSelected: pins.contains(t.id),
+                          selectedIcon: const Icon(Icons.push_pin_rounded),
+                          icon: const Icon(Icons.push_pin_outlined),
+                          onPressed: () => preferences.toggleTrackPin(pinKey, t.id),
+                        ),
+                        IconButton(
+                          tooltip: tr.delete,
+                          icon: const Icon(Icons.delete_outline),
+                          onPressed: () => confirmDeleteDownload(context, _c!, t),
+                        ),
+                      ],
                     ),
                   ),
               ],

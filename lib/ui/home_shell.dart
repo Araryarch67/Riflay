@@ -83,6 +83,7 @@ class _HomeShellState extends State<HomeShell> with SingleTickerProviderStateMix
   /// The phone's Liquid glass bar: shrinks on scroll, and carries the search field (its focus is Search's).
   final _bar = GlassBarLink();
   final _phonePlayerArea = GlobalKey();
+  final _miniPlayerAnchor = GlobalKey();
   late final _playerExpansion = AnimationController(vsync: this);
   Rect? _playerDragOrigin;
   FocusNode get _searchFocus => _bar.search.focus;
@@ -834,16 +835,24 @@ class _HomeShellState extends State<HomeShell> with SingleTickerProviderStateMix
   );
 
   void _openNowPlaying({bool expanded = false}) {
-    _pushPhoneRoute(
-      PageRouteBuilder(
-        settings: const RouteSettings(name: nowPlayingRouteName),
-        transitionDuration: expanded ? Duration.zero : LayoutPrefs.pageDuration(player: true),
-        reverseTransitionDuration: LayoutPrefs.pageDuration(reverse: true, player: true),
-        pageBuilder: (_, _, _) => _scoped(const NowPlayingPage()),
-        transitionsBuilder: (context, anim, secondary, child) =>
-            LayoutPrefs.pageTransition(context, anim, secondary, child, player: true),
+    final box = _miniPlayerAnchor.currentContext?.findRenderObject() as RenderBox?;
+    final overlay = Navigator.of(context).overlay?.context.findRenderObject() as RenderBox?;
+    final origin = box == null || !box.hasSize || overlay == null
+        ? null
+        : (box.localToGlobal(Offset.zero, ancestor: overlay) & box.size);
+    late final _PhonePlayerRoute route;
+    route = _PhonePlayerRoute(
+      origin: origin,
+      expanded: expanded,
+      buildPage: () => _scoped(
+        NowPlayingPage(
+          onDragUpdate: (details) => route.drag(details.delta.dy),
+          onDragEnd: (details) => route.finish(details.primaryVelocity ?? 0),
+          onDragCancel: () => route.finish(0, cancelled: true),
+        ),
       ),
     );
+    _pushPhoneRoute(route);
   }
 
   Widget _desktopNavigator() => Navigator(
@@ -979,6 +988,7 @@ class _HomeShellState extends State<HomeShell> with SingleTickerProviderStateMix
                     )
                   : pages,
               bottomNavigationBar: MiniPlayerExpansion(
+                anchorKey: _miniPlayerAnchor,
                 update: _updatePlayerExpansion,
                 finish: _finishPlayerExpansion,
                 child: PhoneBottomBar(
@@ -1276,6 +1286,94 @@ class _Insets extends StatelessWidget {
 }
 
 /// [child], telling [height] how tall it is after each layout.
+/// The open player remains the scroll target while its route shrinks toward the mini-player.
+class _PhonePlayerRoute extends PageRouteBuilder<void> {
+  _PhonePlayerRoute({required this.origin, required bool expanded, required Widget Function() buildPage})
+    : super(
+        settings: const RouteSettings(name: nowPlayingRouteName),
+        transitionDuration: expanded ? Duration.zero : LayoutPrefs.pageDuration(player: true),
+        reverseTransitionDuration: LayoutPrefs.pageDuration(reverse: true, player: true),
+        pageBuilder: (_, _, _) => buildPage(),
+      );
+
+  final Rect? origin;
+  bool _dragging = false;
+
+  void drag(double dy) {
+    final animation = controller;
+    if (!isCurrent || animation == null || animation.isAnimating || (!_dragging && dy <= 0)) return;
+    if (!_dragging) {
+      _dragging = true;
+      changedInternalState();
+    }
+    final travel = (origin?.top ?? 560).clamp(1.0, double.infinity);
+    animation.value = (animation.value - dy / travel).clamp(0.015, 1);
+  }
+
+  void finish(double velocity, {bool cancelled = false}) {
+    final animation = controller;
+    if (!_dragging || animation == null || !isCurrent) return;
+    final travelled = 1 - animation.value;
+    if (!cancelled && velocity > -520 && (travelled >= 0.24 || (travelled > 0.035 && velocity > 640))) {
+      navigator?.pop();
+      return;
+    }
+    animation
+        .animateTo(1, duration: LayoutPrefs.dur(const Duration(milliseconds: 220)), curve: Curves.easeOutCubic)
+        .whenComplete(() {
+          if (!isActive) return;
+          _dragging = false;
+          changedInternalState();
+        });
+  }
+
+  @override
+  Widget buildTransitions(
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+    Widget child,
+  ) {
+    if (!_dragging) return LayoutPrefs.pageTransition(context, animation, secondaryAnimation, child, player: true);
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final size = constraints.biggest;
+        final anchor = origin ?? Rect.fromLTWH(8, size.height - 86, size.width - 16, 60);
+        return AnimatedBuilder(
+          animation: animation,
+          child: child,
+          builder: (context, page) {
+            final t = animation.value;
+            final rect = Rect.lerp(anchor, Offset.zero & size, t)!;
+            return Stack(
+              children: [
+                Positioned.fromRect(
+                  rect: rect,
+                  child: ClipRRect(
+                    key: const ValueKey('interactive-player-dismiss-frame'),
+                    borderRadius: BorderRadius.circular(lerpDouble(LayoutPrefs.radius(12), 0, t)!),
+                    child: Opacity(
+                      opacity: const Interval(0.04, 0.34, curve: Curves.easeOut).transform(t),
+                      child: OverflowBox(
+                        alignment: Alignment.topCenter,
+                        minWidth: size.width,
+                        maxWidth: size.width,
+                        minHeight: size.height,
+                        maxHeight: size.height,
+                        child: page,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+}
+
 class _ReportHeight extends StatefulWidget {
   const _ReportHeight({required this.height, required this.child});
 

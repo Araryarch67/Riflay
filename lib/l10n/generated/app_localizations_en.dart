@@ -752,7 +752,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get shufflePlay => 'Shuffle play';
 
   @override
-  String get addAllToPlaylist => 'Add all to playlist';
+  String get addAllToPlaylist => 'Add all songs to playlist';
 
   @override
   String get select => 'Select';
@@ -5530,6 +5530,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get regenerateQueue => 'Regenerate upcoming queue';
 
   @override
+  String get clearUpcomingQueue => 'Clear upcoming queue';
+
+  @override
+  String get clearUpcomingQueueBody => 'All upcoming songs will be removed. The current song stays in the player.';
+
+  @override
+  String get clearQueueFailed => 'Could not clear the queue. Try again.';
+
+  @override
   String get queueRefreshFailed => 'Could not refresh the queue. Try again.';
 
   @override
@@ -5554,7 +5563,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get duplicatesCount => 'Duplicates';
 
   @override
-  String get glassTint => 'Liquid Glass tint';
+  String get glassTint => 'Bottom bar Liquid Glass tint';
 
   @override
   String get followTheme => 'Follow theme';
@@ -6930,4 +6939,81 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get hidePhoneNavLabels => 'Hide bottom navigation labels';
+
+  @override
+  String removeSelectedTracksBody(int count) {
+    return 'Remove $count selected songs from this playlist?';
+  }
+
+  @override
+  String get editPlaylists => 'Edit playlists';
+
+  @override
+  String get pinTrack => 'Pin song';
+
+  @override
+  String get unpinTrack => 'Unpin song';
+
+  @override
+  String get miniGlassTint => 'Mini-player Liquid Glass tint';
+
+  @override
+  String get playerGlassTint => 'Now Playing Liquid Glass tint';
+
+  @override
+  String get followCover => 'Match artwork';
+
+  @override
+  String get playingFromLabel => 'Playing from';
+
+  @override
+  String get optionalTools => 'Optional tools';
+
+  @override
+  String get playlistSearch => 'Search within playlists';
+
+  @override
+  String get recentPlaylistPicker => 'Remember the last playlist';
+
+  @override
+  String get undoRemoval => 'Undo track removals';
+
+  @override
+  String get resumeLongTracks => 'Resume long tracks';
+
+  @override
+  String get playlistDownloadStatus => 'Playlist download status';
+
+  @override
+  String get jumpToPlaying => 'Jump to the playing song';
+
+  @override
+  String get copyLyricsLines => 'Copy lyric lines on long press';
+
+  @override
+  String get hideRecommendations => 'Hide songs from recommendations';
+
+  @override
+  String get noMatchingSongs => 'No matching songs';
+
+  @override
+  String get searchPlaylists => 'Search playlists';
+
+  @override
+  String get dontRecommendAgain => 'Don\'t recommend again';
+
+  @override
+  String resumeAt(String time) {
+    return 'Resume at $time';
+  }
+
+  @override
+  String playlistOfflineProgress(int ready, int total) {
+    return '$ready of $total songs available offline';
+  }
+
+  @override
+  String playlistDownloadsFailed(int count) {
+    return 'Failed downloads: $count';
+  }
 }

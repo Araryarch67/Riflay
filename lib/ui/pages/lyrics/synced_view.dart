@@ -58,8 +58,16 @@ class _SyncedLyricsState extends State<_SyncedLyrics> {
       _c.seek(at.isNegative ? Duration.zero : at);
       if (!_c.isPlaying) _c.play();
     },
-    onHold: (i) =>
-        showLyricCard(context, track: widget.track, lines: [for (final l in widget.lyrics.lines) l.text], initial: i),
+    onHold: (i) async {
+      final lines = [for (final line in widget.lyrics.lines) line.text];
+      if (!ExtraFeature.copyLyrics.enabled) {
+        await showLyricCard(context, track: widget.track, lines: lines, initial: i);
+        return;
+      }
+      final messenger = ScaffoldMessenger.of(context);
+      await Clipboard.setData(ClipboardData(text: lines[i]));
+      if (context.mounted) messenger.showSnackBar(SnackBar(content: Text(tr.lyricsCopied)));
+    },
   );
 }
 

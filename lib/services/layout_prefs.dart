@@ -17,6 +17,30 @@ export 'page_motion.dart' show PageMotionStyle, PageMotionSpeed;
 /// The desktop's player bar. Every look sits flush along the window's foot; none floats over the page.
 enum GlassTint { theme, light, black }
 
+enum ExtraFeature {
+  playlistSearch,
+  recentPlaylist,
+  undoRemoval,
+  resumeLongTracks,
+  playlistDownloadStatus,
+  jumpToPlaying,
+  copyLyrics,
+  hideRecommendations;
+
+  String get label => switch (this) {
+    playlistSearch => tr.playlistSearch,
+    recentPlaylist => tr.recentPlaylistPicker,
+    undoRemoval => tr.undoRemoval,
+    resumeLongTracks => tr.resumeLongTracks,
+    playlistDownloadStatus => tr.playlistDownloadStatus,
+    jumpToPlaying => tr.jumpToPlaying,
+    copyLyrics => tr.copyLyricsLines,
+    hideRecommendations => tr.hideRecommendations,
+  };
+
+  bool get enabled => LayoutPrefs.instance.extraFeatures.contains(this);
+}
+
 enum DesktopBarStyle {
   classic,
   compact,
@@ -616,6 +640,37 @@ class LayoutPrefs extends ChangeNotifier {
   PlaylistOrder playlistOrder = PlaylistOrder.library;
   List<String> customPlaylistOrder = const [];
   Set<String> pinnedPlaylists = const {};
+  Map<String, Set<String>> pinnedTracks = const {};
+  List<String> likedTrackOrder = const [];
+  Set<ExtraFeature> extraFeatures = const {};
+  String? lastPlaylistChoice;
+  Set<String> hiddenRecommendations = const {};
+
+  Future<void> hideRecommendation(String id) => _set(() => hiddenRecommendations = {...hiddenRecommendations, id});
+
+  Future<void> setExtraFeature(ExtraFeature feature, bool enabled) => _set(() {
+    extraFeatures = {...extraFeatures};
+    if (enabled) {
+      extraFeatures.add(feature);
+    } else {
+      extraFeatures.remove(feature);
+    }
+  });
+
+  Future<void> rememberPlaylist(String key) => _set(() => lastPlaylistChoice = key);
+
+  Future<void> toggleTrackPin(String collection, String id) => _set(() {
+    final pins = {...?pinnedTracks[collection]};
+    if (!pins.remove(id)) pins.add(id);
+    pinnedTracks = {...pinnedTracks};
+    if (pins.isEmpty) {
+      pinnedTracks.remove(collection);
+    } else {
+      pinnedTracks[collection] = pins;
+    }
+  });
+
+  Future<void> setLikedTrackOrder(List<String> ids) => _set(() => likedTrackOrder = List.of(ids));
 
   Future<void> setPlaylistOrder(PlaylistOrder order) => _set(() => playlistOrder = order);
 
@@ -649,6 +704,8 @@ class LayoutPrefs extends ChangeNotifier {
     }
   });
   GlassTint glassTint = GlassTint.theme;
+  GlassTint playerGlassTint = GlassTint.theme;
+  GlassTint miniGlassTint = GlassTint.theme;
   bool playerGlassControls = false;
 
   /// Which solid parts Liquid Glass controls also frost; off by default, so only the buttons around them are glass.
@@ -891,9 +948,23 @@ class LayoutPrefs extends ChangeNotifier {
     playlistOrder = pick(PlaylistOrder.values, 'playlistOrder', d.playlistOrder);
     customPlaylistOrder = (j['customPlaylistOrder'] as List?)?.whereType<String>().toList() ?? const [];
     pinnedPlaylists = (j['pinnedPlaylists'] as List?)?.whereType<String>().toSet() ?? const {};
+    pinnedTracks = {
+      for (final entry in (j['pinnedTracks'] as Map? ?? const {}).entries)
+        if (entry.key is String && entry.value is List)
+          entry.key as String: (entry.value as List).whereType<String>().toSet(),
+    };
+    likedTrackOrder = (j['likedTrackOrder'] as List?)?.whereType<String>().toList() ?? const [];
+    extraFeatures = {
+      for (final key in (j['extraFeatures'] as List? ?? const []).whereType<String>())
+        ?ExtraFeature.values.asNameMap()[key],
+    };
+    lastPlaylistChoice = j['lastPlaylistChoice'] as String?;
+    hiddenRecommendations = (j['hiddenRecommendations'] as List?)?.whereType<String>().toSet() ?? const {};
     swipeDistance = (j['swipeDistance'] as num?)?.round().clamp(32, 120) ?? d.swipeDistance;
     hiddenCollections = (j['hiddenCollections'] as List?)?.whereType<String>().toSet() ?? {...d.hiddenCollections};
     glassTint = pick(GlassTint.values, 'glassTint', d.glassTint);
+    playerGlassTint = pick(GlassTint.values, 'playerGlassTint', d.playerGlassTint);
+    miniGlassTint = pick(GlassTint.values, 'miniGlassTint', d.miniGlassTint);
     playerGlassControls = j['playerGlassControls'] as bool? ?? d.playerGlassControls;
     glassSeekBar = j['glassSeekBar'] as bool? ?? d.glassSeekBar;
     glassTransport = j['glassTransport'] as bool? ?? d.glassTransport;
@@ -983,9 +1054,19 @@ class LayoutPrefs extends ChangeNotifier {
     'playlistOrder': playlistOrder.name,
     'customPlaylistOrder': customPlaylistOrder,
     'pinnedPlaylists': pinnedPlaylists.toList(),
+    'pinnedTracks': {for (final entry in pinnedTracks.entries) entry.key: entry.value.toList()},
+    'likedTrackOrder': likedTrackOrder,
+    'extraFeatures': [
+      for (final feature in ExtraFeature.values)
+        if (extraFeatures.contains(feature)) feature.name,
+    ],
+    'lastPlaylistChoice': lastPlaylistChoice,
+    'hiddenRecommendations': hiddenRecommendations.toList(),
     'swipeDistance': swipeDistance,
     'hiddenCollections': hiddenCollections.toList(),
     'glassTint': glassTint.name,
+    'playerGlassTint': playerGlassTint.name,
+    'miniGlassTint': miniGlassTint.name,
     'playerGlassControls': playerGlassControls,
     'glassSeekBar': glassSeekBar,
     'glassTransport': glassTransport,
@@ -1086,6 +1167,8 @@ class LayoutPrefs extends ChangeNotifier {
   Future<void> setTransport(PlayerTransport v) => _set(() => transport = v);
   Future<void> setShowVolumeRow(bool v) => _set(() => showVolumeRow = v);
   Future<void> setGlassTint(GlassTint value) => _set(() => glassTint = value);
+  Future<void> setPlayerGlassTint(GlassTint value) => _set(() => playerGlassTint = value);
+  Future<void> setMiniGlassTint(GlassTint value) => _set(() => miniGlassTint = value);
   Future<void> setPlayerGlassControls(bool v) => _set(() => playerGlassControls = v);
   Future<void> setGlassSeekBar(bool v) => _set(() => glassSeekBar = v);
   Future<void> setGlassTransport(bool v) => _set(() => glassTransport = v);

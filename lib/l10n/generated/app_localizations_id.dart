@@ -752,7 +752,7 @@ class AppLocalizationsId extends AppLocalizations {
   String get shufflePlay => 'Putar acak';
 
   @override
-  String get addAllToPlaylist => 'Tambah semua ke playlist';
+  String get addAllToPlaylist => 'Tambah semua lagu ke playlist';
 
   @override
   String get select => 'Pilih';
@@ -5457,6 +5457,16 @@ class AppLocalizationsId extends AppLocalizations {
   String get regenerateQueue => 'Buat ulang antrean berikutnya';
 
   @override
+  String get clearUpcomingQueue => 'Hapus semua lagu berikutnya';
+
+  @override
+  String get clearUpcomingQueueBody =>
+      'Semua lagu berikutnya akan dihapus dari antrean. Lagu saat ini tetap ada di pemutar.';
+
+  @override
+  String get clearQueueFailed => 'Antrean belum bisa dikosongkan. Coba lagi.';
+
+  @override
   String get queueRefreshFailed => 'Antrean belum bisa diperbarui. Coba lagi.';
 
   @override
@@ -5481,7 +5491,7 @@ class AppLocalizationsId extends AppLocalizations {
   String get duplicatesCount => 'Duplikat';
 
   @override
-  String get glassTint => 'Warna Liquid Glass';
+  String get glassTint => 'Warna Liquid Glass bilah bawah';
 
   @override
   String get followTheme => 'Ikuti tema';
@@ -6859,4 +6869,81 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get hidePhoneNavLabels => 'Sembunyikan label navigasi bawah';
+
+  @override
+  String removeSelectedTracksBody(int count) {
+    return 'Hapus $count lagu terpilih dari playlist ini?';
+  }
+
+  @override
+  String get editPlaylists => 'Edit playlist';
+
+  @override
+  String get pinTrack => 'Sematkan lagu';
+
+  @override
+  String get unpinTrack => 'Lepas sematan lagu';
+
+  @override
+  String get miniGlassTint => 'Warna Liquid Glass pemutar mini';
+
+  @override
+  String get playerGlassTint => 'Warna Liquid Glass Sedang diputar';
+
+  @override
+  String get followCover => 'Ikuti cover';
+
+  @override
+  String get playingFromLabel => 'Memutar dari';
+
+  @override
+  String get optionalTools => 'Fitur opsional';
+
+  @override
+  String get playlistSearch => 'Cari di dalam playlist';
+
+  @override
+  String get recentPlaylistPicker => 'Ingat playlist terakhir';
+
+  @override
+  String get undoRemoval => 'Batalkan penghapusan lagu';
+
+  @override
+  String get resumeLongTracks => 'Lanjutkan audio berdurasi panjang';
+
+  @override
+  String get playlistDownloadStatus => 'Status unduhan playlist';
+
+  @override
+  String get jumpToPlaying => 'Lompat ke lagu yang diputar';
+
+  @override
+  String get copyLyricsLines => 'Salin baris lirik dengan tekan lama';
+
+  @override
+  String get hideRecommendations => 'Sembunyikan lagu dari rekomendasi';
+
+  @override
+  String get noMatchingSongs => 'Tidak ada lagu yang cocok';
+
+  @override
+  String get searchPlaylists => 'Cari playlist';
+
+  @override
+  String get dontRecommendAgain => 'Jangan rekomendasikan lagi';
+
+  @override
+  String resumeAt(String time) {
+    return 'Lanjutkan dari $time';
+  }
+
+  @override
+  String playlistOfflineProgress(int ready, int total) {
+    return '$ready dari $total lagu tersedia offline';
+  }
+
+  @override
+  String playlistDownloadsFailed(int count) {
+    return 'Unduhan gagal: $count';
+  }
 }

@@ -20,6 +20,7 @@ import '../pages/queue_page.dart';
 import '../shell_scope.dart';
 import '../theme.dart';
 import '../widgets/controls.dart';
+import '../widgets/audio_visualizer.dart';
 import '../ytmusic_edit.dart' show LikeButton;
 import '../widgets/video_mode.dart';
 import 'full_screen_player.dart' show windowFullScreen;
@@ -231,6 +232,11 @@ class _VideoFullViewState extends State<VideoFullView> {
   /// Phones (and macOS): the picture fills the screen, the controls fade in over it on a tap.
   Widget _overlaid(BuildContext context, Track? track) {
     final lyrics = _lyricsShown && track != null;
+    final visualizer =
+        track != null &&
+        LayoutPrefs.instance.visualizerEnabled &&
+        LayoutPrefs.moves &&
+        !MediaQuery.disableAnimationsOf(context);
     return Stack(
       fit: StackFit.expand,
       children: [
@@ -244,8 +250,15 @@ class _VideoFullViewState extends State<VideoFullView> {
           Positioned(
             left: 48,
             right: 48,
-            bottom: _controls ? 132 : 24,
+            bottom: (_controls ? 132.0 : 24.0) + (visualizer ? 40 : 0),
             child: IgnorePointer(child: _playbackLyrics(track)),
+          ),
+        if (visualizer)
+          Positioned(
+            left: 24,
+            right: 24,
+            bottom: _controls ? 88 : 6,
+            child: const SafeArea(top: false, child: AudioVisualizer(linearOnly: true, height: 40)),
           ),
         // Taken out of the tree once faded: a hidden seek bar would still tick.
         AnimatedSwitcher(
@@ -295,6 +308,7 @@ class _VideoFullViewState extends State<VideoFullView> {
             child: VideoPicture(track: track),
           ),
         ),
+        if (track != null) const AudioVisualizer(linearOnly: true, height: 42),
         if (_lyricsShown && track != null)
           Padding(padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 8), child: _playbackLyrics(track)),
         // Taken out of the tree while hidden: a hidden seek bar would still tick.

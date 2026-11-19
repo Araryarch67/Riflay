@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../widgets/top_bar_surface.dart';
+
 import '../../services/downloaded_tools.dart';
 import '../../services/language.dart';
 import '../theme.dart';
@@ -71,9 +73,8 @@ class _DownloadedToolsPageState extends State<DownloadedToolsPage> {
   @override
   Widget build(BuildContext context) => Scaffold(
     backgroundColor: AppColors.background,
-    appBar: AppBar(
+    appBar: RiflayAppBar(
       title: Text(tr.downloadedTools),
-      backgroundColor: AppColors.background,
       actions: [
         IconButton(tooltip: tr.refresh, onPressed: _busy ? null : _scan, icon: const Icon(Icons.refresh_rounded)),
       ],

@@ -28,6 +28,12 @@ class _Controller extends PlayerController {
   bool get showsPlaying => false;
 
   @override
+  Future<void> clearUpcomingQueue() async {
+    upcoming.clear();
+    notifyListeners();
+  }
+
+  @override
   Future<void> moveInQueue(int from, int to) async {
     upcoming.insert(to, upcoming.removeAt(from));
     notifyListeners();
@@ -72,6 +78,32 @@ Widget _app(PlayerController c) => PlayerScope(
 );
 
 void main() {
+  testWidgets('clear queue confirms before removing every upcoming row', (tester) async {
+    tester.view.physicalSize = const Size(360, 850);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    SharedPreferences.setMockInitialValues({});
+    final c = _Controller();
+    addTearDown(c.dispose);
+    await tester.pumpWidget(_app(c));
+    await tester.pumpAndSettle();
+    final clearQueue = find.byTooltip(tr.clearUpcomingQueue);
+    await tester.tap(clearQueue);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(tr.cancel));
+    await tester.pumpAndSettle();
+    expect(c.upcoming, hasLength(4));
+    await tester.tap(clearQueue);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(tr.clear));
+    await tester.pumpAndSettle();
+    expect(c.upcoming, isEmpty);
+    expect(find.text('playing'), findsOneWidget);
+    expect(find.byTooltip(tr.regenerateQueue), findsOneWidget);
+    expect(clearQueue, findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('guest queue follows the room, live updates and leaving the session', (tester) async {
     tester.view.physicalSize = const Size(400, 850);
     tester.view.devicePixelRatio = 1;
@@ -88,6 +120,7 @@ void main() {
     expect(find.text('Shared B'), findsOneWidget);
     expect(find.text('first'), findsNothing, reason: 'local songs are not the host queue');
     expect(find.byIcon(Icons.drag_handle_rounded), findsNothing);
+    expect(find.byTooltip(tr.clearUpcomingQueue), findsNothing);
     expect(find.byIcon(Icons.close_rounded), findsNothing);
     expect(find.byType(SwitchListTile), findsNothing, reason: 'the host controls autoplay');
     for (final row in tester.widgetList<TrackRow>(find.byType(TrackRow))) {

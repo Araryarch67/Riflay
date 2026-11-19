@@ -5,7 +5,7 @@ import '../../models/track.dart';
 import '../../services/language.dart';
 import '../../services/player_controller.dart';
 import '../theme.dart';
-import '../ytmusic_edit.dart' show addToPlaylist;
+import '../ytmusic_edit.dart' show PlaylistEditScope, addToPlaylist;
 
 /// Songs picked on a page, to add them to a playlist or the queue together. Hold a row (or "Select" in its
 /// menu) to start; while anything is picked, a tap on a row picks or unpicks it instead of playing.
@@ -23,6 +23,11 @@ class TrackSelection extends ChangeNotifier {
 
   void selectAll(Iterable<Track> tracks) {
     _ids.addAll(tracks.map((t) => t.id));
+    notifyListeners();
+  }
+
+  void unselect(Iterable<Track> tracks) {
+    _ids.removeAll(tracks.map((t) => t.id));
     notifyListeners();
   }
 
@@ -105,73 +110,105 @@ class TrackSelectMark extends StatelessWidget {
 }
 
 /// What can be done with the songs picked out of [tracks]: shown at the bottom of the page while any are.
-class TrackSelectionBar extends StatelessWidget {
+class TrackSelectionBar extends StatefulWidget {
   const TrackSelectionBar({super.key, required this.selection, required this.tracks});
 
   final TrackSelection selection;
   final List<Track> tracks;
 
   @override
-  Widget build(BuildContext context) => ListenableBuilder(
-    listenable: selection,
-    builder: (context, _) {
-      final picked = selection.of(tracks);
-      if (picked.isEmpty) return const SizedBox.shrink();
-      final text = Theme.of(context).textTheme;
-      return Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 560),
-          child: Material(
-            color: AppColors.elevated,
-            elevation: 8,
-            borderRadius: BorderRadius.circular(28),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-              child: Row(
-                children: [
-                  IconButton(
-                    tooltip: tr.cancelSelection,
-                    onPressed: selection.clear,
-                    icon: const Icon(Icons.close_rounded),
-                  ),
-                  Expanded(
-                    child: Text(
-                      tr.selectedCount(picked.length),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: text.titleSmall?.copyWith(fontWeight: FontWeight.w700),
-                    ),
-                  ),
-                  if (picked.length < tracks.length)
+  State<TrackSelectionBar> createState() => _TrackSelectionBarState();
+}
+
+class _TrackSelectionBarState extends State<TrackSelectionBar> {
+  bool _removing = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final scope = PlaylistEditScope.maybeOf(context);
+    final remove = scope?.removeMany;
+    final selection = widget.selection;
+    final tracks = widget.tracks;
+    return ListenableBuilder(
+      listenable: selection,
+      builder: (context, _) {
+        final picked = selection.of(tracks);
+        if (picked.isEmpty) return const SizedBox.shrink();
+        final removable = remove == null ? const <Track>[] : picked.where(scope!.canRemove).toList();
+        final text = Theme.of(context).textTheme;
+        return Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 560),
+            child: Material(
+              color: AppColors.elevated,
+              elevation: 8,
+              borderRadius: BorderRadius.circular(28),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                child: Row(
+                  children: [
                     IconButton(
-                      tooltip: tr.selectAll,
-                      onPressed: () => selection.selectAll(tracks),
-                      icon: const Icon(Icons.select_all_rounded),
+                      tooltip: tr.cancelSelection,
+                      onPressed: selection.clear,
+                      icon: const Icon(Icons.close_rounded),
                     ),
-                  IconButton(
-                    tooltip: tr.addToQueue,
-                    onPressed: () async {
-                      final messenger = ScaffoldMessenger.of(context);
-                      selection.clear();
-                      await PlayerScope.read(context).addToQueue(picked);
-                      messenger.showSnackBar(SnackBar(content: Text(tr.toastAddedToQueue)));
-                    },
-                    icon: const Icon(Icons.queue_music_rounded),
-                  ),
-                  IconButton(
-                    tooltip: tr.addToPlaylist,
-                    onPressed: () async {
-                      await addToPlaylist(context, picked);
-                      selection.clear();
-                    },
-                    icon: const Icon(Icons.playlist_add_rounded),
-                  ),
-                ],
+                    Expanded(
+                      child: Text(
+                        tr.selectedCount(picked.length),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: text.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+                      ),
+                    ),
+                    if (picked.length < tracks.length)
+                      IconButton(
+                        tooltip: tr.selectAll,
+                        onPressed: () => selection.selectAll(tracks),
+                        icon: const Icon(Icons.select_all_rounded),
+                      ),
+                    IconButton(
+                      tooltip: tr.addToQueue,
+                      onPressed: () async {
+                        final messenger = ScaffoldMessenger.of(context);
+                        selection.clear();
+                        await PlayerScope.read(context).addToQueue(picked);
+                        messenger.showSnackBar(SnackBar(content: Text(tr.toastAddedToQueue)));
+                      },
+                      icon: const Icon(Icons.queue_music_rounded),
+                    ),
+                    IconButton(
+                      tooltip: tr.addToPlaylist,
+                      onPressed: () async {
+                        await addToPlaylist(context, picked);
+                        selection.clear();
+                      },
+                      icon: const Icon(Icons.playlist_add_rounded),
+                    ),
+                    if (removable.isNotEmpty)
+                      IconButton(
+                        tooltip: tr.removeFromThisPlaylist,
+                        color: Theme.of(context).colorScheme.error,
+                        onPressed: _removing
+                            ? null
+                            : () async {
+                                setState(() => _removing = true);
+                                try {
+                                  if (await remove!(context, removable) && mounted) selection.unselect(removable);
+                                } finally {
+                                  if (mounted) setState(() => _removing = false);
+                                }
+                              },
+                        icon: _removing
+                            ? const SizedBox.square(dimension: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                            : const Icon(Icons.playlist_remove_rounded),
+                      ),
+                  ],
+                ),
               ),
             ),
           ),
-        ),
-      );
-    },
-  );
+        );
+      },
+    );
+  }
 }

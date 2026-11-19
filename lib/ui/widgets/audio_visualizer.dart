@@ -80,6 +80,9 @@ class AudioVisualizer extends StatelessWidget {
         return FlowerCover(animate: true, shape: shape, child: child!);
       }
       return AudioReactiveView(
+        // The dedicated strip is still visible when the music video replaces the cover.
+        // Cover decorations can rest as usual while the video is onscreen.
+        followsVideo: !linearOnly,
         builder: (context, levels) {
           final canvas = VisualizerCanvas(
             levels: levels,

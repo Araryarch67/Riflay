@@ -41,7 +41,7 @@ class FakeDiscord {
     _received.add(null);
   }
 
-  static Future<FakeDiscord> start() => Platform.isWindows ? _pipe() : _socket();
+  static Future<FakeDiscord> start({int replyDelayMs = 0}) => Platform.isWindows ? _pipe(replyDelayMs) : _socket();
 
   static Future<FakeDiscord> _socket() async {
     final dir = Directory.systemTemp.createTempSync('fake-discord');
@@ -86,6 +86,7 @@ while ($true) {
   [Console]::Out.WriteLine('FRAME ' + [BitConverter]::ToInt32($h, 0) + ' ' + [Text.Encoding]::UTF8.GetString($body))
   [Console]::Out.Flush()
   $op = [BitConverter]::ToInt32($h, 0)
+  if ($op -eq 1) { Start-Sleep -Milliseconds DELAY_MS }
   $json = if ($op -eq 0) { '{"cmd":"DISPATCH","evt":"READY","data":{"v":1}}' } else { '{"cmd":"SET_ACTIVITY","evt":null,"data":{}}' }
   $body = [Text.Encoding]::UTF8.GetBytes($json)
   $reply = [BitConverter]::GetBytes([int]1) + [BitConverter]::GetBytes([int]$body.Length) + $body
@@ -93,12 +94,12 @@ while ($true) {
 }
 """;
 
-  static Future<FakeDiscord> _pipe() async {
+  static Future<FakeDiscord> _pipe(int replyDelayMs) async {
     final name = 'riflay-test-discord-$pid';
     final proc = await Process.start('powershell', [
       '-NoProfile',
       '-Command',
-      _pipeServer.replaceFirst('PIPE_NAME', name),
+      _pipeServer.replaceFirst('PIPE_NAME', name).replaceFirst('DELAY_MS', '$replyDelayMs'),
     ]);
     final listening = Completer<void>();
     late final FakeDiscord fake;
@@ -126,6 +127,28 @@ while ($true) {
 }
 
 void main() {
+  test('rapid skips send the latest song even while Discord is handling an earlier activity', () async {
+    final fake = await FakeDiscord.start(replyDelayMs: 400);
+    final rpc = DiscordPresence(
+      'test',
+      socketPaths: () => [fake.path],
+      activityInterval: const Duration(milliseconds: 150),
+    );
+    addTearDown(fake.close);
+    addTearDown(rpc.dispose);
+    void show(String title) => rpc.update(
+      track: Track(id: title, uri: Uri.file('/music/$title.flac'), title: title, artist: 'Artist'),
+      playing: true,
+      position: Duration.zero,
+    );
+    show('First song');
+    await fake.waitForFrames(2);
+    show('Skipped song');
+    show('Current song');
+    await fake.waitForFrames(3);
+    expect(fake.frames.skip(1).map((frame) => frame.$2['args']['activity']['details']), ['First song', 'Current song']);
+  });
+
   test('old Monochrome downloads recover their cover and send it over Discord IPC', () async {
     final fake = await FakeDiscord.start();
     final cover = Completer<String?>();

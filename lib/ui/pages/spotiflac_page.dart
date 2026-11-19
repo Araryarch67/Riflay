@@ -127,16 +127,18 @@ class _SpotiflacPageState extends State<SpotiflacPage> {
                         value: values[field['key']] == true,
                         onChanged: (value) => update(() => values[field['key']] = value),
                       ),
-                      'select' => DropdownButtonFormField<String>(
-                        initialValue: (field['options'] as List? ?? []).contains(values[field['key']])
+                      'select' => DropdownMenu<String>(
+                        selectOnly: true,
+                        expandedInsets: EdgeInsets.zero,
+                        initialSelection: (field['options'] as List? ?? []).contains(values[field['key']])
                             ? values[field['key']] as String?
                             : null,
-                        decoration: InputDecoration(labelText: field['label'].toString()),
-                        items: [
+                        label: Text(field['label'].toString()),
+                        dropdownMenuEntries: [
                           for (final option in field['options'] as List? ?? [])
-                            DropdownMenuItem(value: option.toString(), child: Text(option.toString())),
+                            DropdownMenuEntry(value: option.toString(), label: option.toString()),
                         ],
-                        onChanged: (value) => values[field['key']] = value,
+                        onSelected: (value) => values[field['key']] = value,
                       ),
                       _ => TextFormField(
                         initialValue: values[field['key']]?.toString() ?? '',
@@ -164,17 +166,19 @@ class _SpotiflacPageState extends State<SpotiflacPage> {
                     },
                   ),
                 if (qualityOptions.isNotEmpty)
-                  DropdownButtonFormField<String>(
-                    initialValue: quality,
-                    decoration: InputDecoration(labelText: tr.spotiflacQuality),
-                    items: [
+                  DropdownMenu<String>(
+                    selectOnly: true,
+                    expandedInsets: EdgeInsets.zero,
+                    initialSelection: quality,
+                    label: Text(tr.spotiflacQuality),
+                    dropdownMenuEntries: [
                       for (final option in qualityOptions)
-                        DropdownMenuItem(
+                        DropdownMenuEntry(
                           value: option['id'].toString(),
-                          child: Text((option['label'] ?? option['id']).toString()),
+                          label: (option['label'] ?? option['id']).toString(),
                         ),
                     ],
-                    onChanged: (value) {
+                    onSelected: (value) {
                       if (value != null) quality = value;
                     },
                   ),

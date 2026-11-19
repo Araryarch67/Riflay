@@ -109,6 +109,7 @@ class DiscordPresence {
     @visibleForTesting Iterable<String> Function()? socketPaths,
     @visibleForTesting Future<String?> Function(Track)? monochromeCover,
     @visibleForTesting Duration heartbeat = const Duration(seconds: 30),
+    @visibleForTesting this.activityInterval = _minInterval,
   }) : _socketPaths = socketPaths ?? candidatePaths,
        _monochromeCover = monochromeCover ?? _findMonochromeCover,
        _heartbeatEvery = heartbeat;
@@ -138,6 +139,7 @@ class DiscordPresence {
   Timer? _reconnect;
   Timer? _heartbeat;
   final Duration _heartbeatEvery;
+  final Duration activityInterval;
   Duration _backoff = _minBackoff;
   DateTime _lastSent = DateTime(0);
   Timer? _pending;
@@ -202,6 +204,7 @@ class DiscordPresence {
     }
     _schedule();
     if (track != null &&
+        (playing || options.whilePaused) &&
         options.cover &&
         track.artworkUrl == null &&
         (track.offlineId?.startsWith('monochrome:') ?? false)) {
@@ -220,7 +223,10 @@ class DiscordPresence {
             !identical(_wanted, wanted)) {
           return;
         }
-        (wanted['assets'] as Map)['large_image'] = cover;
+        _wanted = {
+          ...wanted,
+          'assets': {...(wanted['assets'] as Map<String, dynamic>), 'large_image': cover},
+        };
         _schedule();
       });
     }
@@ -228,9 +234,9 @@ class DiscordPresence {
 
   void _schedule() {
     _pending?.cancel();
-    var wait = _minInterval - DateTime.now().difference(_lastSent);
+    var wait = activityInterval - DateTime.now().difference(_lastSent);
     // A clock change must not stall the presence for longer than one rate-limit window.
-    if (wait > _minInterval) wait = _minInterval;
+    if (wait > activityInterval) wait = activityInterval;
     _pending = Timer(wait.isNegative ? Duration.zero : wait, _send);
   }
 
@@ -341,31 +347,35 @@ class DiscordPresence {
   Future<void> _send() async {
     if (_disposed || _sending || (_conn == null && (_wanted == null || _reconnect != null))) return;
     _sending = true;
+    Map<String, dynamic>? sent;
+    var wrote = false;
     try {
       final conn = await _ensureConnected();
       if (conn == null || !identical(conn, _conn) || _disposed) return;
       // The player can skip, pause or disable RPC while Discord is handshaking.
-      final activity = _enabled ? _wanted : null;
+      sent = _enabled ? _wanted : null;
+      _pending?.cancel();
       final nonce = '${DateTime.now().microsecondsSinceEpoch}-${Random().nextInt(1 << 32)}';
-      conn.send(1, {
+      _lastSent = DateTime.now();
+      await conn.send(1, {
         'cmd': 'SET_ACTIVITY',
-        'args': {'pid': pid, 'activity': activity},
+        'args': {'pid': pid, 'activity': sent},
         'nonce': nonce,
       });
-      if (activity == null) {
+      wrote = true;
+      if (sent == null) {
         _heartbeat?.cancel();
         _heartbeat = null;
       } else {
         _startHeartbeat();
       }
-      _lastSent = DateTime.now();
-      _pending?.cancel();
-      _log('SET_ACTIVITY sent (nonce $nonce${activity == null ? ', clearing' : ''})');
+      _log('SET_ACTIVITY sent (nonce $nonce${sent == null ? ', clearing' : ''})');
     } catch (e) {
       _log('SET_ACTIVITY failed to send ($e); will reconnect');
       _drop();
     } finally {
       _sending = false;
+      if (wrote && !_disposed && !identical(sent, _wanted)) _schedule();
     }
   }
 
@@ -387,7 +397,7 @@ class DiscordPresence {
         conn = await _IpcConnection.open(path, onClosed: _lost, onMessage: _onMessage);
         if (conn == null) continue;
         _log('IPC connected: $path');
-        conn.send(0, {'v': 1, 'client_id': clientId});
+        await conn.send(0, {'v': 1, 'client_id': clientId});
         _log('handshake sent to $path (v1, client $clientId)');
         final ready = await conn.ready.timeout(const Duration(seconds: 3), onTimeout: () => false);
         if (ready && !_disposed && _enabled) {
@@ -468,7 +478,7 @@ class DiscordPresence {
         return;
       }
       // Never let the keepalive push a burst past Discord's 5 updates per 20 s.
-      if (_wanted != null && DateTime.now().difference(_lastSent) >= _minInterval) unawaited(_send());
+      if (_wanted != null && DateTime.now().difference(_lastSent) >= activityInterval) unawaited(_send());
     });
   }
 
@@ -522,7 +532,7 @@ class DiscordPresence {
           'cmd': 'SET_ACTIVITY',
           'args': {'pid': pid, 'activity': null},
           'nonce': 'bye',
-        });
+        }).ignore();
       } catch (_) {}
     }
     _drop();
@@ -535,7 +545,7 @@ class _IpcConnection {
 
   /// The endpoint this came from, for logs.
   final String path;
-  final void Function(List<int> bytes) _write;
+  final Future<void> Function(List<int> bytes) _write;
   final void Function() _closer;
   final void Function(_IpcConnection conn) _onLost;
   final void Function(int op, Map<String, dynamic> payload)? _onMessage;
@@ -558,15 +568,19 @@ class _IpcConnection {
         // Discord made every write fail ("an async operation is currently pending").
         // Discord answers each message with one frame, so each write reads its answer.
         var queue = Future<void>.value();
-        void enqueue(Future<void> Function() op) =>
-            queue = queue.then((_) => op()).catchError((Object _) => conn._onClosed());
+        Future<void> enqueue(Future<void> Function() op) {
+          final next = queue.then((_) => op());
+          queue = next.catchError((Object _) => conn._onClosed());
+          return next;
+        }
+
         conn = _IpcConnection._(
           path,
           (b) => enqueue(() async {
             await pipe.writeFrom(b);
             await conn._readFrame(pipe).timeout(const Duration(seconds: 5));
           }),
-          () => enqueue(pipe.close),
+          () => enqueue(pipe.close).ignore(),
           onClosed,
           onMessage,
         );
@@ -577,7 +591,7 @@ class _IpcConnection {
         InternetAddress(path, type: InternetAddressType.unix),
         0,
       ).timeout(const Duration(seconds: 2));
-      final conn = _IpcConnection._(path, socket.add, socket.destroy, onClosed, onMessage);
+      final conn = _IpcConnection._(path, (bytes) async => socket.add(bytes), socket.destroy, onClosed, onMessage);
       // A write after Discord hung up fails here, not in send(): listen does the cleanup.
       socket.done.ignore();
       socket.listen(conn._onData, onDone: conn._onClosed, onError: (_) => conn._onClosed());
@@ -657,19 +671,19 @@ class _IpcConnection {
       return;
     }
     if (op == 3 && !Host.isWindows) {
-      send(4, payload);
+      send(4, payload).ignore();
       return;
     }
     _onMessage?.call(op, payload);
   }
 
-  void send(int op, Map<String, dynamic> payload) {
+  Future<void> send(int op, Map<String, dynamic> payload) {
     if (_closed) throw const SocketException('closed');
     final body = utf8.encode(jsonEncode(payload));
     final header = ByteData(8)
       ..setInt32(0, op, Endian.little)
       ..setInt32(4, body.length, Endian.little);
-    _write([...header.buffer.asUint8List(), ...body]);
+    return _write([...header.buffer.asUint8List(), ...body]);
   }
 
   void close() {

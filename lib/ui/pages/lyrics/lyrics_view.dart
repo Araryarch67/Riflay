@@ -210,6 +210,19 @@ class _PlainLyricsState extends State<_PlainLyrics> with _Extras {
     // Softer than a sung line: untimed lyrics all lit in white read as if every line were selected.
     final style = _lineStyle(context)?.copyWith(color: AppColors.textPrimary.withValues(alpha: 0.8));
     final lines = lyrics.plain!.split('\n');
+    final canCopy = ExtraFeature.copyLyrics.enabled;
+    Widget lyric(String line) {
+      final child = Text(line, style: style, textAlign: _textAlign);
+      if (!canCopy || line.trim().isEmpty) return child;
+      return GestureDetector(
+        onLongPress: () {
+          unawaited(Clipboard.setData(ClipboardData(text: line)));
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(tr.lyricsCopied)));
+        },
+        child: child,
+      );
+    }
+
     return SmoothScroll(
       builder: (context, scroll) => ListView(
         controller: scroll,
@@ -224,11 +237,11 @@ class _PlainLyricsState extends State<_PlainLyrics> with _Extras {
               style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.textMuted),
             ),
           ),
-          if (extras == null)
+          if (extras == null && !canCopy)
             Text(lyrics.plain!, style: style, textAlign: _textAlign)
           else
             for (var i = 0; i < lines.length; i++) ...[
-              Text(lines[i], style: style, textAlign: _textAlign),
+              lyric(lines[i]),
               if (extraFor(i) case final extra?)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 6),

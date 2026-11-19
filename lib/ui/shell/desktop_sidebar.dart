@@ -65,16 +65,32 @@ class SlidingPanel extends StatelessWidget {
 }
 
 class ShellPanel extends StatelessWidget {
-  const ShellPanel({super.key, required this.child});
+  const ShellPanel({super.key, required this.child, this.gradient = false});
 
   final Widget child;
+  final bool gradient;
 
   @override
-  Widget build(BuildContext context) => ClipRRect(
-    borderRadius: BorderRadius.circular(8),
-    // Material (not ColoredBox) so ink splashes from InkWells inside stay visible.
-    child: Material(color: AppColors.panel, child: child),
-  );
+  Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
+    return Material(
+      color: colors.panel,
+      borderRadius: BorderRadius.circular(8),
+      clipBehavior: Clip.antiAlias,
+      child: gradient
+          ? Ink(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [Color.lerp(colors.panel, colors.accent, 0.12)!, colors.panel],
+                ),
+              ),
+              child: child,
+            )
+          : child,
+    );
+  }
 }
 
 class DesktopSidebar extends StatelessWidget {
@@ -154,6 +170,7 @@ class DesktopSidebar extends StatelessWidget {
         // one scrolling panel and reach the library through a link instead.
         if (constraints.maxHeight < 440) {
           return ShellPanel(
+            gradient: true,
             child: SmoothScroll(
               builder: (context, scroll) => ListView(
                 controller: scroll,
@@ -185,6 +202,7 @@ class DesktopSidebar extends StatelessWidget {
             Expanded(
               // The list (thousands of albums and artists behind it) fills in right after the first frame.
               child: ShellPanel(
+                gradient: true,
                 child: FirstFrameGate(child: LibraryList(dense: true, collapsed: collapsed)),
               ),
             ),

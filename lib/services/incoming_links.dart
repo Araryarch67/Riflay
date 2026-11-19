@@ -7,6 +7,7 @@ import '../platform/features.dart';
 import 'soundcloud.dart';
 import 'youtube_links.dart';
 import 'monochrome.dart';
+import 'system_tray.dart';
 
 /// YouTube (and SoundCloud) links other apps hand to Riflay, wherever the system lets them:
 ///
@@ -66,14 +67,33 @@ class IncomingLinks {
     }
   }
 
-  /// Computers, before the window shows: a link given while Riflay already runs goes to that copy, and
-  /// this process quits there and then.
-  static Future<void> handOff(List<String> args) async {
-    if (enabled) await handOffToRunningCopy(args.where(isLink).toList());
+  bool _windowReady = false;
+  bool _activationWaiting = false;
+
+  void _activate() {
+    if (_windowReady) {
+      SystemTray.bringToFront().ignore();
+    } else {
+      _activationWaiting = true;
+    }
   }
+
+  /// Claims the production desktop instance before initializing the player and tray.
+  Future<void> claimDesktop(List<String> args) => startDesktopRelay(
+    enabled ? args.where(isLink).toList() : const [],
+    onLink: (text) {
+      if (isLink(text)) add(text);
+    },
+    onActivate: _activate,
+  );
 
   /// Starts taking links. [args] are the command line's (computers).
   Future<void> start(List<String> args) async {
+    _windowReady = true;
+    if (_activationWaiting) {
+      _activationWaiting = false;
+      _activate();
+    }
     if (!enabled) return;
     args.where(isLink).forEach(add);
     pageLinks().forEach(add);
@@ -83,7 +103,6 @@ class IncomingLinks {
       });
       await _take();
     }
-    await listenForHandOffs(add);
   }
 
   Future<void> _take() async {

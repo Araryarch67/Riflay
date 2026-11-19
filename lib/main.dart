@@ -65,7 +65,7 @@ Future<void> main(List<String> args) => runWithNetwork(() => _main(args));
 Future<void> _main(List<String> args) async {
   WidgetsFlutterBinding.ensureInitialized();
   // Riflay already runs: the link goes to it, and this process ends before showing a window.
-  await IncomingLinks.handOff(args);
+  await IncomingLinks.instance.claimDesktop(args);
   unawaited(RenderingMemory.configure());
   if (Host.isAndroid) {
     final updates = AppUpdates();

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:ui' show PointerDeviceKind;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -321,31 +322,60 @@ void main() {
     await tester.pump(const Duration(minutes: 1));
   });
 
-  testWidgets('sidebar Song / Video switch stays above the scroll area and follows its visibility preference', (
-    tester,
-  ) async {
-    final song = Track.youtube(videoId: 'sidebar-switch', title: 'Sidebar song', artist: 'Artist');
-    final mode = VideoMode.instance;
-    mode.setOn(false);
-    mode.debugSetFound('sidebar-switch', const MusicVideo(videoId: 'sidebar-switch'));
-    addTearDown(() => mode.debugSetFound('sidebar-switch', null));
-    final c = await _show(
+  for (final cover in [PlayerCover.square, PlayerCover.background]) {
+    testWidgets('sidebar Song / Video overlays the ${cover.name} cover and hides when the pointer leaves', (
       tester,
-      Scaffold(body: NowPlayingSidePanel(onClose: () {})),
-      const Size(400, 750),
-      track: song,
-    );
+    ) async {
+      final song = Track.youtube(videoId: 'sidebar-switch', title: 'Sidebar song', artist: 'Artist');
+      final mode = VideoMode.instance;
+      mode.setOn(false);
+      mode.debugSetFound('sidebar-switch', const MusicVideo(videoId: 'sidebar-switch'));
+      addTearDown(() => mode.debugSetFound('sidebar-switch', null));
+      await tester.runAsync(() => p.setPlayerCover(cover));
+      final c = await _show(
+        tester,
+        Scaffold(body: NowPlayingSidePanel(onClose: () {})),
+        const Size(400, 750),
+        track: song,
+      );
 
-    final switchLabel = find.text('Video');
-    expect(switchLabel, findsOneWidget);
-    expect(tester.getBottomLeft(switchLabel).dy, lessThan(tester.getTopLeft(find.byType(ListView)).dy));
-    await tester.runAsync(() => p.setShowVideoSwitch(false));
-    await tester.pump();
-    expect(switchLabel, findsNothing);
-    expect(find.text('Sidebar song'), findsOneWidget);
-    await _close(tester, c);
-    await tester.pump(const Duration(minutes: 1));
-  });
+      final switchLabel = find.text('Video');
+      final picture = cover == PlayerCover.square ? find.byType(NowPlayingCover) : find.byType(FadedCover);
+      final pictureRect = tester.getRect(picture.first);
+      expect(switchLabel.hitTestable(), findsNothing);
+      expect(pictureRect.contains(tester.getCenter(switchLabel)), isTrue);
+
+      final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+      await mouse.addPointer(location: const Offset(200, 730));
+      await mouse.moveTo(pictureRect.center);
+      await tester.pumpAndSettle();
+      expect(switchLabel.hitTestable(), findsOneWidget);
+
+      await mouse.moveTo(tester.getCenter(switchLabel));
+      await tester.pumpAndSettle();
+      expect(switchLabel.hitTestable(), findsOneWidget);
+
+      await mouse.moveTo(const Offset(200, 730));
+      await tester.pumpAndSettle();
+      expect(switchLabel.hitTestable(), findsNothing);
+      expect(tester.getRect(picture.first), pictureRect);
+      await mouse.removePointer();
+
+      await tester.tapAt(pictureRect.center);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 180));
+      expect(switchLabel.hitTestable(), findsOneWidget);
+      await tester.pump(const Duration(seconds: 4));
+      await tester.pump(const Duration(milliseconds: 180));
+      expect(switchLabel.hitTestable(), findsNothing);
+
+      await tester.runAsync(() => p.setShowVideoSwitch(false));
+      await tester.pump();
+      expect(switchLabel, findsNothing);
+      await _close(tester, c);
+      await tester.pump(const Duration(minutes: 1));
+    });
+  }
   testWidgets('Kawaii puts the quality badge in the time row, between the two times', (tester) async {
     await tester.runAsync(() => PlayerPreset.kawaii.apply(p));
     expect(p.qualityBadgePlace, QualityBadgePlace.timeRow);

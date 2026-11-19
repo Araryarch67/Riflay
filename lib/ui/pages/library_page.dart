@@ -46,6 +46,7 @@ class LibraryList extends StatefulWidget {
 }
 
 class _LibraryListState extends State<LibraryList> {
+  bool _editingPlaylists = false;
   LibraryFilter? _filter = LibraryFilter.values.asNameMap()[LayoutPrefs.instance.libraryChip];
 
   @override
@@ -90,6 +91,7 @@ class _LibraryListState extends State<LibraryList> {
 
     final prefs = LayoutPrefs.instance;
     final playlistRows = <Widget>[];
+    final editing = _editingPlaylists && !widget.collapsed;
     if (show(LibraryFilter.playlists)) {
       final entries = <({String key, String title, Widget Function(Widget? action) row})>[
         for (final collection in [...c.playlists.map(c.playlistCollection), ...c.folderPlaylists])
@@ -140,10 +142,94 @@ class _LibraryListState extends State<LibraryList> {
         return result == 0 ? original[a.key]!.compareTo(original[b.key]!) : result;
       });
       final visible = [for (final entry in entries) entry.key];
-      for (final (index, entry) in entries.indexed) {
+      if (editing) {
+        final pinnedCount = visible.where(prefs.pinnedPlaylists.contains).length;
+        return Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 12, 8),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      tr.editPlaylists,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: text.titleMedium,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  FilledButton.tonal(onPressed: () => setState(() => _editingPlaylists = false), child: Text(tr.done)),
+                ],
+              ),
+            ),
+            Expanded(
+              child: SmoothScroll(
+                builder: (context, scroll) => CustomScrollView(
+                  controller: scroll,
+                  slivers: [
+                    SliverPadding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      sliver: SliverReorderableList(
+                        itemCount: entries.length,
+                        onReorderItem: (from, to) {
+                          final target = from < pinnedCount
+                              ? to.clamp(0, pinnedCount - 1)
+                              : to.clamp(pinnedCount, entries.length - 1);
+                          if (target != from) prefs.movePlaylist(visible, visible[from], target - from);
+                        },
+                        // Flutter moves the drag proxy into the root overlay.
+                        proxyDecorator: (child, _, _) => PlayerScope(
+                          controller: c,
+                          child: shell.wrap(
+                            Material(
+                              color: Theme.of(context).colorScheme.surfaceContainerHigh,
+                              elevation: 6,
+                              borderRadius: LayoutPrefs.corner(12),
+                              child: child,
+                            ),
+                          ),
+                        ),
+                        itemBuilder: (context, index) {
+                          final entry = entries[index];
+                          final pinned = prefs.pinnedPlaylists.contains(entry.key);
+                          return Row(
+                            key: ValueKey(entry.key),
+                            children: [
+                              Expanded(
+                                child: ExcludeFocus(child: IgnorePointer(child: entry.row(null))),
+                              ),
+                              IconButton(
+                                tooltip: pinned ? tr.unpinPlaylist : tr.pinPlaylist,
+                                isSelected: pinned,
+                                onPressed: () => prefs.togglePinnedPlaylist(entry.key),
+                                selectedIcon: const Icon(Icons.push_pin_rounded),
+                                icon: const Icon(Icons.push_pin_outlined),
+                              ),
+                              ReorderableDragStartListener(
+                                index: index,
+                                child: Tooltip(
+                                  message: tr.dragToMove,
+                                  child: const Padding(
+                                    padding: EdgeInsets.all(12),
+                                    child: Icon(Icons.drag_handle_rounded),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        );
+      }
+      for (final entry in entries) {
         final pinned = prefs.pinnedPlaylists.contains(entry.key);
-        final moveUp = index > 0 && prefs.pinnedPlaylists.contains(entries[index - 1].key) == pinned;
-        final moveDown = index + 1 < entries.length && prefs.pinnedPlaylists.contains(entries[index + 1].key) == pinned;
         playlistRows.add(
           entry.row(
             widget.collapsed
@@ -157,16 +243,6 @@ class _LibraryListState extends State<LibraryList> {
                         value: () => prefs.togglePinnedPlaylist(entry.key),
                         child: Text(pinned ? tr.unpinPlaylist : tr.pinPlaylist),
                       ),
-                      if (moveUp)
-                        PopupMenuItem(
-                          value: () => prefs.movePlaylist(visible, entry.key, -1),
-                          child: Text(tr.movePlaylistUp),
-                        ),
-                      if (moveDown)
-                        PopupMenuItem(
-                          value: () => prefs.movePlaylist(visible, entry.key, 1),
-                          child: Text(tr.movePlaylistDown),
-                        ),
                     ],
                   ),
           ),
@@ -258,10 +334,109 @@ class _LibraryListState extends State<LibraryList> {
         ),
     ];
 
+    final headerTitle = Row(
+      children: [
+        Icon(Icons.library_music_rounded, color: AppColors.textSecondary),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Text(
+            tr.yourLibrary,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: (widget.dense ? text.titleMedium : text.headlineSmall)?.copyWith(
+              fontWeight: FontWeight.w800,
+              color: widget.dense ? AppColors.textSecondary : null,
+            ),
+          ),
+        ),
+      ],
+    );
+    final actions = <Widget>[
+      // The phone layout has Settings as a tab of its own.
+      if (!widget.dense && !shell.compact)
+        IconButton(
+          tooltip: tr.navSettings,
+          onPressed: () => shell.open(const SettingsPage()),
+          icon: const Icon(Icons.settings_outlined),
+        ),
+      if (playlistRows.isNotEmpty)
+        IconButton(
+          tooltip: tr.editPlaylists,
+          onPressed: () => setState(() => _editingPlaylists = true),
+          icon: const Icon(Icons.edit_outlined),
+        ),
+      if (playlistRows.length > 1)
+        PopupMenuButton<PlaylistOrder>(
+          tooltip: tr.sortPlaylists,
+          icon: const Icon(Icons.sort_rounded),
+          onSelected: prefs.setPlaylistOrder,
+          itemBuilder: (_) => [
+            for (final (value, label) in [
+              (PlaylistOrder.library, tr.playlistLibraryOrder),
+              (PlaylistOrder.nameAscending, '${tr.name} A–Z'),
+              (PlaylistOrder.nameDescending, '${tr.name} Z–A'),
+              (PlaylistOrder.custom, tr.playlistCustomOrder),
+            ])
+              CheckedPopupMenuItem(value: value, checked: prefs.playlistOrder == value, child: Text(label)),
+          ],
+        ),
+      if (!widget.dense && c.library.isNotEmpty)
+        IconButton(
+          tooltip: tr.addAllToPlaylist,
+          onPressed: () => addToPlaylist(context, c.allSongs.tracks),
+          icon: const Icon(Icons.playlist_add_rounded),
+        ),
+      PopupMenuButton<VoidCallback>(
+        // Over the whole window, so a click anywhere (sidebar included) closes it.
+        useRootNavigator: true,
+        tooltip: tr.add,
+        icon: const Icon(Icons.add_rounded),
+        onSelected: (action) => action(),
+        itemBuilder: (_) => [
+          PopupMenuItem(
+            value: () => createPlaylist(context),
+            child: MenuRow(leading: Icon(Icons.playlist_add_rounded), title: Text(tr.newPlaylist)),
+          ),
+          if (account.canEdit)
+            PopupMenuItem(
+              value: () => joinSharedPlaylist(context),
+              child: MenuRow(leading: Icon(Icons.group_add_outlined), title: Text(tr.joinSharedPlaylist)),
+            ),
+          if (Features.playlistImport) ...[
+            PopupMenuItem(
+              value: () => importPlaylist(context),
+              child: MenuRow(leading: Icon(Icons.playlist_add_rounded), title: Text(tr.importPlaylist)),
+            ),
+            PopupMenuItem(
+              value: () => shell.open(const SpotifyPage(), location: Locations.spotify),
+              child: MenuRow(leading: Icon(Icons.library_music_outlined), title: Text(tr.spotifyLibrary)),
+            ),
+          ],
+          if (widget.dense && c.library.isNotEmpty)
+            PopupMenuItem(
+              value: () => addToPlaylist(context, c.allSongs.tracks),
+              child: MenuRow(leading: const Icon(Icons.playlist_add_rounded), title: Text(tr.addAllToPlaylist)),
+            ),
+          const PopupMenuDivider(),
+          PopupMenuItem(
+            value: shell.addFiles,
+            child: MenuRow(leading: Icon(Icons.audio_file_outlined), title: Text(tr.addSongs)),
+          ),
+          if (shell.addFolder != null)
+            PopupMenuItem(
+              value: shell.addFolder,
+              child: MenuRow(leading: Icon(Icons.folder_open_rounded), title: Text(tr.addFolder)),
+            ),
+          PopupMenuItem(
+            value: shell.importFromYoutube,
+            child: MenuRow(leading: Icon(Icons.add_link_rounded), title: Text(tr.importFromYouTube)),
+          ),
+        ],
+      ),
+    ];
     final header = Padding(
       padding: EdgeInsets.fromLTRB(widget.collapsed ? 0 : 16, 12, widget.collapsed ? 0 : 8, 4),
       child: widget.collapsed
-          // Centred over the rows; New playlist is already the first of them.
           ? Center(
               child: IconButton(
                 tooltip: tr.yourLibrary,
@@ -269,84 +444,25 @@ class _LibraryListState extends State<LibraryList> {
                 icon: Icon(Icons.library_music_rounded, color: AppColors.textSecondary),
               ),
             )
-          : Row(
-              children: [
-                Icon(Icons.library_music_rounded, color: AppColors.textSecondary),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    tr.yourLibrary,
-                    style: (widget.dense ? text.titleMedium : text.headlineSmall)?.copyWith(
-                      fontWeight: FontWeight.w800,
-                      color: widget.dense ? AppColors.textSecondary : null,
-                    ),
-                  ),
-                ),
-                // The phone layout has Settings as a tab of its own.
-                if (!widget.dense && !shell.compact)
-                  IconButton(
-                    tooltip: tr.navSettings,
-                    onPressed: () => shell.open(const SettingsPage()),
-                    icon: const Icon(Icons.settings_outlined),
-                  ),
-                if (playlistRows.length > 1)
-                  PopupMenuButton<PlaylistOrder>(
-                    tooltip: tr.sortPlaylists,
-                    icon: const Icon(Icons.sort_rounded),
-                    onSelected: prefs.setPlaylistOrder,
-                    itemBuilder: (_) => [
-                      for (final (value, label) in [
-                        (PlaylistOrder.library, tr.playlistLibraryOrder),
-                        (PlaylistOrder.nameAscending, '${tr.name} A–Z'),
-                        (PlaylistOrder.nameDescending, '${tr.name} Z–A'),
-                        (PlaylistOrder.custom, tr.playlistCustomOrder),
-                      ])
-                        CheckedPopupMenuItem(value: value, checked: prefs.playlistOrder == value, child: Text(label)),
+          : LayoutBuilder(
+              builder: (context, constraints) {
+                final titleSpace = MediaQuery.textScalerOf(context).scale(154);
+                if (constraints.maxWidth >= titleSpace + actions.length * 48) {
+                  return Row(
+                    children: [
+                      Expanded(child: headerTitle),
+                      ...actions,
                     ],
-                  ),
-                PopupMenuButton<VoidCallback>(
-                  // Over the whole window, so a click anywhere (sidebar included) closes it.
-                  useRootNavigator: true,
-                  tooltip: tr.add,
-                  icon: const Icon(Icons.add_rounded),
-                  onSelected: (action) => action(),
-                  itemBuilder: (_) => [
-                    PopupMenuItem(
-                      value: () => createPlaylist(context),
-                      child: MenuRow(leading: Icon(Icons.playlist_add_rounded), title: Text(tr.newPlaylist)),
-                    ),
-                    if (account.canEdit)
-                      PopupMenuItem(
-                        value: () => joinSharedPlaylist(context),
-                        child: MenuRow(leading: Icon(Icons.group_add_outlined), title: Text(tr.joinSharedPlaylist)),
-                      ),
-                    if (Features.playlistImport) ...[
-                      PopupMenuItem(
-                        value: () => importPlaylist(context),
-                        child: MenuRow(leading: Icon(Icons.playlist_add_rounded), title: Text(tr.importPlaylist)),
-                      ),
-                      PopupMenuItem(
-                        value: () => shell.open(const SpotifyPage(), location: Locations.spotify),
-                        child: MenuRow(leading: Icon(Icons.library_music_outlined), title: Text(tr.spotifyLibrary)),
-                      ),
-                    ],
-                    const PopupMenuDivider(),
-                    PopupMenuItem(
-                      value: shell.addFiles,
-                      child: MenuRow(leading: Icon(Icons.audio_file_outlined), title: Text(tr.addSongs)),
-                    ),
-                    if (shell.addFolder != null)
-                      PopupMenuItem(
-                        value: shell.addFolder,
-                        child: MenuRow(leading: Icon(Icons.folder_open_rounded), title: Text(tr.addFolder)),
-                      ),
-                    PopupMenuItem(
-                      value: shell.importFromYoutube,
-                      child: MenuRow(leading: Icon(Icons.add_link_rounded), title: Text(tr.importFromYouTube)),
-                    ),
+                  );
+                }
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    headerTitle,
+                    Wrap(alignment: WrapAlignment.end, children: actions),
                   ],
-                ),
-              ],
+                );
+              },
             ),
     );
 
@@ -367,6 +483,7 @@ class _LibraryListState extends State<LibraryList> {
                   for (final f in LibraryFilter.values)
                     if (f != LibraryFilter.downloaded || downloads != null || _filter == f)
                       FilterChip(
+                        visualDensity: widget.dense && constraints.maxWidth < 270 ? VisualDensity.compact : null,
                         label: Text(switch (f) {
                           LibraryFilter.playlists => tr.playlists,
                           LibraryFilter.downloaded => tr.downloaded,

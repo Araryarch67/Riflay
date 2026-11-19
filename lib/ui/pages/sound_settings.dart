@@ -67,7 +67,9 @@ class PlaybackSettings extends StatelessWidget {
             title: Text(tr.seekStep),
             control: OptionPicker<int>(
               value: c.seekStepSeconds,
-              options: [for (final step in PlayerController.seekSteps) (step, tr.seekStepSeconds(step))],
+              options: [
+                for (final step in PlayerController.seekSteps) (step, step == 0 ? tr.off : tr.seekStepSeconds(step)),
+              ],
               onChanged: c.setSeekStepSeconds,
             ),
           ),

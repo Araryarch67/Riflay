@@ -308,6 +308,7 @@ class _GlassBarState extends State<_GlassBar> with TickerProviderStateMixin {
   /// two round buttons at its ends with nothing between them; it stays full then (`RIFLAY_TAB_BAR_COLLAPSE_IDLE`: as
   /// it was).
   bool _hasSong = false;
+  bool _draggingLens = false;
 
   /// Scrolled down, with a song in the player.
   bool get _collapses =>
@@ -503,7 +504,11 @@ class _GlassBarState extends State<_GlassBar> with TickerProviderStateMixin {
           )!,
           child: _fade(
             1 - typing,
-            _glass(colors, GlassMiniPlayer(track: track, onOpen: widget.onOpenPlayer, compact: collapse)),
+            _glass(
+              colors,
+              GlassMiniPlayer(track: track, onOpen: widget.onOpenPlayer, compact: collapse),
+              tint: LayoutPrefs.instance.miniGlassTint,
+            ),
           ),
         ),
     ];
@@ -549,6 +554,9 @@ class _GlassBarState extends State<_GlassBar> with TickerProviderStateMixin {
                     tab: widget.tab,
                     renderer: _renderer,
                     onSelect: widget.onSelect,
+                    onDragChanged: (dragging) {
+                      if (mounted && dragging != _draggingLens) setState(() => _draggingLens = dragging);
+                    },
                   ),
                 ),
               ),
@@ -725,8 +733,12 @@ class _GlassBarState extends State<_GlassBar> with TickerProviderStateMixin {
     // Light frost and strong refraction ([riflayGlass]): where the shader runs (Impeller) the page bends behind the
     // pills; the frosted fallback (no shader filters) keeps the rim light and a tint so text stays legible.
     final blur = glassFrost();
+    final optics = riflayGlass(
+      brightness: AppColors.of(context).light ? Brightness.light : Brightness.dark,
+      frost: _draggingLens ? math.max(4, blur * 0.65) : blur,
+    ).copyWith(refractionHeight: _draggingLens ? 34 : 30, refractionAmount: _draggingLens ? 125 : 105);
     return LiquidGlassLayer(
-      settings: riflayGlass(brightness: AppColors.of(context).light ? Brightness.light : Brightness.dark, frost: blur),
+      settings: optics,
       child: LiquidGlassBlendGroup(blend: _gap - 2, child: child),
     );
   }
@@ -737,11 +749,11 @@ class _GlassBarState extends State<_GlassBar> with TickerProviderStateMixin {
       : Opacity(opacity: visibility, child: child);
 
   /// [child] on a glass pill.
-  Widget _glass(AppColorsView colors, Widget child) {
+  Widget _glass(AppColorsView colors, Widget child, {GlassTint? tint}) {
     final radius = math.min(LayoutPrefs.radius(_size / 2), _size / 2);
     if (_renderer) {
       return LiquidGlass.grouped(
-        appearance: riflayGlassAppearance(themeIsLight: colors.light),
+        appearance: riflayGlassAppearance(themeIsLight: colors.light, tint: tint),
         shape: LiquidRoundedSuperellipse(borderRadius: radius),
         child: Material(type: MaterialType.transparency, child: child),
       );
@@ -827,12 +839,19 @@ class _SwipeTabs extends StatelessWidget {
 /// The bar keeps the page stable during the scrub. Only the glass indicator
 /// follows the pointer, and the tab opens once the gesture is committed.
 class _DraggableGlassTabs extends StatefulWidget {
-  const _DraggableGlassTabs({required this.tabs, required this.tab, required this.renderer, required this.onSelect});
+  const _DraggableGlassTabs({
+    required this.tabs,
+    required this.tab,
+    required this.renderer,
+    required this.onSelect,
+    required this.onDragChanged,
+  });
 
   final List<_TabInfo> tabs;
   final PhoneTab tab;
   final bool renderer;
   final ValueChanged<PhoneTab> onSelect;
+  final ValueChanged<bool> onDragChanged;
 
   @override
   State<_DraggableGlassTabs> createState() => _DraggableGlassTabsState();
@@ -853,6 +872,7 @@ class _DraggableGlassTabsState extends State<_DraggableGlassTabs> {
 
   void _update(double x, List<double> edges) {
     _settleEnd?.cancel();
+    if (_finger == null) widget.onDragChanged(true);
     var index = 0;
     while (index < edges.length - 2 && x >= edges[index + 1]) {
       index++;
@@ -868,6 +888,7 @@ class _DraggableGlassTabsState extends State<_DraggableGlassTabs> {
   void _finish({required bool commit}) {
     final target = _target;
     if (_finger == null) return;
+    widget.onDragChanged(false);
     setState(() {
       _finger = null;
       _target = null;
@@ -937,12 +958,16 @@ class _DraggableGlassTabsState extends State<_DraggableGlassTabs> {
                       info: info,
                       selected: i == selected,
                       onTap: () => widget.onSelect(info.tab),
-                      child: _Capsule(
-                        info: info,
-                        selected: i == selected,
-                        glass: true,
-                        renderer: widget.renderer,
-                        paintGlass: !moving,
+                      child: AnimatedScale(
+                        scale: finger != null && i == _target ? 1.16 : 1,
+                        duration: LayoutPrefs.dur(const Duration(milliseconds: 115)),
+                        child: _Capsule(
+                          info: info,
+                          selected: i == selected,
+                          glass: true,
+                          renderer: widget.renderer,
+                          paintGlass: !moving,
+                        ),
                       ),
                     ),
                   ),

@@ -62,8 +62,7 @@ class _LyricCardPageState extends State<LyricCardPage> {
       track: t,
       builder: (context, accent) => Scaffold(
         backgroundColor: AppColors.panel,
-        appBar: AppBar(
-          backgroundColor: Colors.transparent,
+        appBar: RiflayAppBar(
           title: Text(tr.shareLyrics),
           leading: IconButton(
             tooltip: tr.close,

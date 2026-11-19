@@ -1,7 +1,9 @@
 /// One web page is one copy of Riflay: nothing to hand a link to.
-Future<void> handOffToRunningCopy(List<String> links) async {}
-
-Future<void> listenForHandOffs(void Function(String text) onLink) async {}
+Future<void> startDesktopRelay(
+  List<String> links, {
+  required void Function(String text) onLink,
+  required void Function() onActivate,
+}) async {}
 
 /// What the installed web app was shared (its manifest's `share_target`), or a `?url=` / `?text=` link,
 /// as one text: the link may be in any of them.

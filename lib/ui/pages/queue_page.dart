@@ -2,17 +2,27 @@ import 'package:flutter/material.dart';
 
 import '../../models/track.dart';
 import '../../services/language.dart';
+import '../../services/layout_prefs.dart';
 import '../../services/listen_together/listen_together.dart';
 import '../../services/player_controller.dart';
 import '../shell_scope.dart';
 import '../theme.dart';
+import '../widgets/app_dialog.dart';
 import '../widgets/item_picker.dart';
+import '../widgets/menus.dart';
 import '../widgets/page_scaffold.dart';
 import '../widgets/track_row.dart';
 import '../ytmusic_edit.dart' show createPlaylist;
 
-class QueuePage extends StatelessWidget {
+class QueuePage extends StatefulWidget {
   const QueuePage({super.key});
+
+  @override
+  State<QueuePage> createState() => _QueuePageState();
+}
+
+class _QueuePageState extends State<QueuePage> {
+  final _playingRow = GlobalKey();
 
   @override
   Widget build(BuildContext context) => VisiblePlayerBuilder(
@@ -41,6 +51,22 @@ class QueuePage extends StatelessWidget {
         time = length == null || c.stopping(sources[i]) ? null : time.add(length * (1 / c.player.speed));
       }
     }
+    Future<void> remove(int i) async {
+      if (!ExtraFeature.undoRemoval.enabled) {
+        await c.removeFromQueue(i);
+        return;
+      }
+      final messenger = ScaffoldMessenger.of(context);
+      final undo = await c.removeUpcomingWithUndo((c.queueIndex ?? -1) + 1 + i);
+      if (undo == null || !context.mounted) return;
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(tr.removedFrom(tr.queue)),
+          action: SnackBarAction(label: tr.undo, onPressed: undo),
+        ),
+      );
+    }
+
     Widget actions(int i) {
       if (i >= sources.length) return const SizedBox.shrink();
       final source = sources[i];
@@ -71,9 +97,18 @@ class QueuePage extends StatelessWidget {
           if (from >= 0 && after >= 0) await c.moveInQueue(from, from < after ? after : after + 1);
         },
         itemBuilder: (_) => [
-          CheckedPopupMenuItem(value: 'skip', checked: c.skipping(source), child: Text(tr.skipOnce)),
-          CheckedPopupMenuItem(value: 'stop', checked: c.stopping(source), child: Text(tr.stopAfter)),
-          if (sources.length > 1) PopupMenuItem(value: 'move', child: Text(tr.insertAfter)),
+          for (final (value, label, icon, checked) in [
+            ('skip', tr.skipOnce, Icons.skip_next_rounded, c.skipping(source)),
+            ('stop', tr.stopAfter, Icons.stop_circle_outlined, c.stopping(source)),
+            if (sources.length > 1) ('move', tr.insertAfter, Icons.low_priority_rounded, null),
+          ])
+            PopupMenuItem(
+              value: value,
+              child: Semantics(
+                checked: checked,
+                child: MenuRow(leading: Icon(checked == true ? Icons.check_rounded : icon), title: Text(label)),
+              ),
+            ),
         ],
       );
     }
@@ -98,6 +133,18 @@ class QueuePage extends StatelessWidget {
 
     return PageScaffold(
       title: tr.queue,
+      actions: [
+        if (ExtraFeature.jumpToPlaying.enabled && current != null)
+          IconButton(
+            tooltip: tr.jumpToPlaying,
+            icon: const Icon(Icons.my_location_rounded),
+            onPressed: () {
+              if (_playingRow.currentContext case final row?) {
+                Scrollable.ensureVisible(row, duration: LayoutPrefs.dur(const Duration(milliseconds: 260)));
+              }
+            },
+          ),
+      ],
       slivers: [
         SliverToBoxAdapter(
           child: Padding(
@@ -121,13 +168,43 @@ class QueuePage extends StatelessWidget {
                             }
                           },
                   ),
+                if (!guest && upNext.isNotEmpty)
+                  IconButton(
+                    tooltip: tr.clearUpcomingQueue,
+                    icon: const Icon(Icons.playlist_remove_rounded),
+                    onPressed: () async {
+                      final clear = await confirmDialog(
+                        context,
+                        title: tr.clearUpcomingQueue,
+                        body: tr.clearUpcomingQueueBody,
+                        confirmLabel: tr.clear,
+                        destructive: true,
+                      );
+                      if (!clear || !context.mounted) return;
+                      try {
+                        await c.clearUpcomingQueue();
+                      } catch (e) {
+                        debugPrint('Clear upcoming queue: $e');
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(tr.clearQueueFailed)));
+                        }
+                      }
+                    },
+                  ),
                 if (current != null || upNext.isNotEmpty)
                   // The song playing and everything after it, autoplay included: what the page shows.
-                  TextButton.icon(
-                    onPressed: () => createPlaylist(context, tracks: [?current, ...upNext]),
-                    icon: const Icon(Icons.playlist_add_rounded),
-                    label: Text(tr.saveAsPlaylist),
-                  ),
+                  if (shell.compact)
+                    IconButton(
+                      tooltip: tr.saveAsPlaylist,
+                      onPressed: () => createPlaylist(context, tracks: [?current, ...upNext]),
+                      icon: const Icon(Icons.playlist_add_rounded),
+                    )
+                  else
+                    TextButton.icon(
+                      onPressed: () => createPlaylist(context, tracks: [?current, ...upNext]),
+                      icon: const Icon(Icons.playlist_add_rounded),
+                      label: Text(tr.saveAsPlaylist),
+                    ),
               ],
             ),
           ),
@@ -148,7 +225,13 @@ class QueuePage extends StatelessWidget {
             SliverPadding(
               padding: hPad,
               sliver: SliverToBoxAdapter(
-                child: TrackRow(track: current, index: 1, currentOccurrence: true, onTap: guest ? null : c.togglePlay),
+                child: TrackRow(
+                  key: _playingRow,
+                  track: current,
+                  index: 1,
+                  currentOccurrence: true,
+                  onTap: guest ? null : c.togglePlay,
+                ),
               ),
             ),
           ],
@@ -189,7 +272,7 @@ class QueuePage extends StatelessWidget {
                         actions: actions(queued[i].place),
                         eta: eta[queued[i].place],
                         onTap: () => c.playQueueItem(queued[i].track),
-                        onRemove: () => c.removeFromQueue(place[queued[i]]!),
+                        onRemove: () => remove(queued[i].place),
                       ),
                     ),
             ),
@@ -219,7 +302,7 @@ class QueuePage extends StatelessWidget {
                   actions: actions(autoplayed[i].place),
                   eta: eta[autoplayed[i].place],
                   onTap: () => c.playQueueItem(autoplayed[i].track),
-                  onRemove: () => c.removeFromQueue(place[autoplayed[i]]!),
+                  onRemove: () => remove(autoplayed[i].place),
                 ),
               ),
             ),

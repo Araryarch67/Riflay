@@ -178,7 +178,7 @@ void main() {
       ('Sound', 'Playback', 'Gapless playback', 'settings:sound/playback'),
       if (AudioEngine.supported) ('Sound', 'Sound effects (DSP)', 'Crossfade', 'settings:sound/dsp'),
       if (AudioEngine.supported) ('Sound', 'Output & quality', 'Output sample rate', 'settings:sound/hifi'),
-      ('Look & feel', 'Theme & colours', 'Liquid Glass tint', 'settings:look/appearance'),
+      ('Look & feel', 'Theme & colours', 'Bottom bar Liquid Glass tint', 'settings:look/appearance'),
       ('Look & feel', 'Language & text', 'Font', 'settings:look/text'),
       ('Look & feel', 'Now Playing', 'Liquid Glass controls', 'settings:look/now-playing'),
       ('Look & feel', 'Lyrics', 'Better Lyrics API key', 'settings:look/lyrics'),

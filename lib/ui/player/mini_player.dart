@@ -66,7 +66,15 @@ mixin _SongSwipe<T extends StatefulWidget> on State<T> {
 
 /// Connects either mini-player skin to the phone shell's interactive expansion.
 class MiniPlayerExpansion extends InheritedWidget {
-  const MiniPlayerExpansion({super.key, required this.update, required this.finish, required super.child});
+  const MiniPlayerExpansion({
+    super.key,
+    required this.anchorKey,
+    required this.update,
+    required this.finish,
+    required super.child,
+  });
+
+  final GlobalKey anchorKey;
 
   final void Function(Rect origin, double distance) update;
   final void Function(double velocity, {required bool cancelled}) finish;
@@ -131,6 +139,7 @@ class _MiniPlayerDragState extends State<_MiniPlayerDrag> {
     }
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
+      key: expansion.anchorKey,
       onVerticalDragStart: (_) {
         final box = context.findRenderObject() as RenderBox;
         _origin = box.localToGlobal(Offset.zero) & box.size;
@@ -301,6 +310,11 @@ class _GlassMiniPlayerState extends State<GlassMiniPlayer> with _SongSwipe {
     final text = Theme.of(context).textTheme;
     final track = widget.track;
     final compact = widget.compact;
+    final foreground = switch (LayoutPrefs.instance.miniGlassTint) {
+      GlassTint.theme => AppColors.of(context).textPrimary,
+      GlassTint.light => Colors.black87,
+      GlassTint.black => Colors.white,
+    };
     return _MiniPlayerDrag(
       onOpen: widget.onOpen,
       onDismiss: c.closePlayer,
@@ -343,14 +357,14 @@ class _GlassMiniPlayerState extends State<GlassMiniPlayer> with _SongSwipe {
                                 children: [
                                   MarqueeText(
                                     track.title,
-                                    style: text.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
+                                    style: text.bodyMedium?.copyWith(fontWeight: FontWeight.w700, color: foreground),
                                   ),
                                   // Plain text, as in the other mini player: a tap opens the player.
                                   Text(
                                     track.artist,
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
-                                    style: text.bodySmall?.copyWith(color: AppColors.textSecondary),
+                                    style: text.bodySmall?.copyWith(color: foreground.withValues(alpha: 0.72)),
                                   ),
                                 ],
                               ),
@@ -360,7 +374,7 @@ class _GlassMiniPlayerState extends State<GlassMiniPlayer> with _SongSwipe {
                       ),
                     ),
                   ),
-                  _MiniPlay(c: c),
+                  _MiniPlay(c: c, foreground: foreground),
                   if (compact < 1)
                     ClipRect(
                       child: Align(
@@ -368,7 +382,7 @@ class _GlassMiniPlayerState extends State<GlassMiniPlayer> with _SongSwipe {
                         widthFactor: 1 - compact,
                         child: Opacity(
                           opacity: (1 - compact * 2).clamp(0.0, 1.0),
-                          child: _MiniNext(c: c),
+                          child: _MiniNext(c: c, foreground: foreground),
                         ),
                       ),
                     ),
@@ -384,9 +398,10 @@ class _GlassMiniPlayerState extends State<GlassMiniPlayer> with _SongSwipe {
 
 /// Play / pause (or the spinner while buffering): the only part of the bar that follows each play state change.
 class _MiniPlay extends StatelessWidget {
-  const _MiniPlay({required this.c, this.capsule = false});
+  const _MiniPlay({required this.c, this.capsule = false, this.foreground});
 
   final PlayerController c;
+  final Color? foreground;
 
   /// The capsule's round, accent-filled button.
   final bool capsule;
@@ -401,12 +416,12 @@ class _MiniPlay extends StatelessWidget {
           ? Center(
               child: SizedBox.square(
                 dimension: 22,
-                child: CircularProgressIndicator(strokeWidth: 2.2, color: AppColors.textPrimary),
+                child: CircularProgressIndicator(strokeWidth: 2.2, color: foreground ?? AppColors.textPrimary),
               ),
             )
           : IconButton(
               tooltip: s.playing ? tr.pause : tr.play,
-              color: capsule ? AppColors.onAccent : AppColors.textPrimary,
+              color: capsule ? AppColors.onAccent : foreground ?? AppColors.textPrimary,
               style: capsule
                   ? IconButton.styleFrom(backgroundColor: AppColors.accent, fixedSize: const Size(40, 40))
                   : null,
@@ -443,9 +458,10 @@ class _MiniPrev extends StatelessWidget {
 }
 
 class _MiniNext extends StatelessWidget {
-  const _MiniNext({required this.c, this.capsule = false});
+  const _MiniNext({required this.c, this.capsule = false, this.foreground});
 
   final PlayerController c;
+  final Color? foreground;
   final bool capsule;
 
   @override
@@ -453,7 +469,7 @@ class _MiniNext extends StatelessWidget {
     select: (c) => c.hasNext,
     builder: (context, hasNext, _) => IconButton(
       tooltip: tr.next,
-      color: AppColors.textPrimary,
+      color: foreground ?? AppColors.textPrimary,
       style: capsule
           ? IconButton.styleFrom(
               backgroundColor: AppColors.textPrimary.withValues(alpha: 0.1),

@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/gestures.dart' show PointerDeviceKind;
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
@@ -12,6 +13,7 @@ import 'package:riflay/services/player_controller.dart';
 import 'package:riflay/ui/navigation.dart';
 import 'package:riflay/ui/pages/collection_page.dart';
 import 'package:riflay/ui/pages/library_page.dart';
+import 'package:riflay/ui/shell/desktop_sidebar.dart';
 import 'package:riflay/ui/shell_scope.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -79,6 +81,46 @@ void main() {
     (_) async => Directory.systemTemp.path,
   );
 
+  testWidgets('the sidebar title stays on one line and the actions fit when resized', (tester) async {
+    final c = await _controller(tester);
+    c.createPlaylist('First mix');
+    c.createPlaylist('Second mix');
+    final title = find.text('Your Library');
+    final edit = find.byTooltip('Edit playlists');
+    for (final width in [360.0, 200.0, 260.0, 360.0]) {
+      await tester.pumpWidget(
+        _app(
+          c,
+          Align(
+            alignment: Alignment.topLeft,
+            child: SizedBox(
+              width: width,
+              child: const ShellPanel(gradient: true, child: LibraryList(dense: true)),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(tester.widget<Text>(title).maxLines, 1);
+      final titleRect = tester.getRect(title);
+      final editRect = tester.getRect(edit);
+      expect(tester.getRect(find.byTooltip('Add')).right, lessThanOrEqualTo(width));
+      if (width < 300) {
+        expect(editRect.top, greaterThanOrEqualTo(titleRect.bottom));
+      } else {
+        expect(titleRect.center.dy, closeTo(editRect.center.dy, 1));
+      }
+      expect(
+        find.byWidgetPredicate((w) {
+          final decoration = w is Ink ? w.decoration : null;
+          return decoration is BoxDecoration && decoration.gradient != null;
+        }),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+    }
+  });
+
   testWidgets('Library sorts playlists by name and moves the pinned playlist above them', (tester) async {
     SharedPreferences.setMockInitialValues({
       'library.v1': '[]',
@@ -97,7 +139,7 @@ void main() {
     await tester.pumpWidget(_app(c, const LibraryList()));
     await tester.tap(find.byTooltip('Sort playlists'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Name A–Z'));
+    await tester.tap(find.widgetWithText(CheckedPopupMenuItem<PlaylistOrder>, 'Name A–Z'));
     await tester.pumpAndSettle();
     double row(String name) => tester.getCenter(find.text(name)).dy;
     expect(row('Alpha'), lessThan(row('Zulu')));
@@ -107,6 +149,28 @@ void main() {
     await tester.pumpAndSettle();
     expect(row('Zulu'), lessThan(row('Alpha')));
     expect(find.byIcon(Icons.push_pin_rounded), findsOneWidget);
+    expect(find.byIcon(Icons.drag_handle_rounded), findsNothing);
+    await tester.tap(find.byTooltip('Edit playlists'));
+    await tester.pumpAndSettle();
+    final handles = find.byIcon(Icons.drag_handle_rounded);
+    expect(handles, findsNWidgets(3));
+    final gesture = await tester.startGesture(tester.getCenter(handles.at(2)), kind: PointerDeviceKind.mouse);
+    await gesture.moveBy(const Offset(0, -20));
+    await tester.pump();
+    for (var step = 0; step < 5; step++) {
+      await gesture.moveBy(const Offset(0, -14));
+      await tester.pump(const Duration(milliseconds: 45));
+    }
+    expect(tester.takeException(), isNull);
+    expect(find.text('Beta'), findsWidgets, reason: 'the drag proxy still has the row layout');
+    await gesture.up();
+    await tester.pumpAndSettle();
+    expect(row('Zulu'), lessThan(row('Beta')));
+    expect(row('Beta'), lessThan(row('Alpha')));
+    await tester.tap(find.text('Done'));
+    await tester.pumpAndSettle();
+    expect(handles, findsNothing);
+    expect(row('Beta'), lessThan(row('Alpha')));
     await tester.pumpWidget(const SizedBox());
     await tester.runAsync(LayoutPrefs.instance.reset);
   });

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../services/folder_watch.dart';
+import '../../platform/features.dart';
 import '../../services/layout_prefs.dart';
 import '../widgets/menus.dart';
 import '../navigation.dart';
@@ -110,6 +111,20 @@ class LibrarySettings extends StatelessWidget {
                       location: Locations.settingsTopic('library/library/duplicates'),
                     ),
                   ),
+                ],
+              ),
+            ),
+            SettingsSection(
+              title: tr.optionalTools,
+              child: SettingsCard(
+                children: [
+                  for (final feature in ExtraFeature.values)
+                    if (feature != ExtraFeature.playlistDownloadStatus || Features.downloads)
+                      SwitchListTile(
+                        title: Text(feature.label),
+                        value: feature.enabled,
+                        onChanged: (value) => LayoutPrefs.instance.setExtraFeature(feature, value),
+                      ),
                 ],
               ),
             ),

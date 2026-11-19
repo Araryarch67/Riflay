@@ -178,19 +178,34 @@ class AppearanceSettings extends StatelessWidget {
             value: look.highContrast,
             onChanged: look.setHighContrast,
           ),
-          SettingTile(
-            icon: Icons.tonality,
-            title: Text(tr.glassTint),
-            control: OptionPicker<GlassTint>(
-              value: LayoutPrefs.instance.glassTint,
-              options: [
-                (GlassTint.theme, tr.followTheme),
-                (GlassTint.light, tr.accentWhite),
-                (GlassTint.black, tr.modeBlack),
-              ],
-              onChanged: LayoutPrefs.instance.setGlassTint,
+          for (final (label, automatic, value, change) in [
+            (tr.glassTint, tr.followTheme, LayoutPrefs.instance.glassTint, LayoutPrefs.instance.setGlassTint),
+            (
+              tr.miniGlassTint,
+              tr.followTheme,
+              LayoutPrefs.instance.miniGlassTint,
+              LayoutPrefs.instance.setMiniGlassTint,
             ),
-          ),
+            (
+              tr.playerGlassTint,
+              tr.followCover,
+              LayoutPrefs.instance.playerGlassTint,
+              LayoutPrefs.instance.setPlayerGlassTint,
+            ),
+          ])
+            SettingTile(
+              icon: Icons.tonality,
+              title: Text(label),
+              control: OptionPicker<GlassTint>(
+                value: value,
+                options: [
+                  (GlassTint.theme, automatic),
+                  (GlassTint.light, tr.accentWhite),
+                  (GlassTint.black, tr.modeBlack),
+                ],
+                onChanged: change,
+              ),
+            ),
           SwitchListTile(
             secondary: const Icon(Icons.blur_on_rounded),
             title: Text(tr.frostedGlass),

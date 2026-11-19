@@ -176,17 +176,16 @@ class _MatchDialogState extends State<_MatchDialog> {
         ),
         const SizedBox(height: 12),
         if (widget.source != 'monochrome' && qualityOptions.isNotEmpty)
-          DropdownButtonFormField<String>(
-            initialValue: quality,
-            decoration: InputDecoration(labelText: tr.spotiflacQuality),
-            items: [
+          DropdownMenu<String>(
+            selectOnly: true,
+            expandedInsets: EdgeInsets.zero,
+            initialSelection: quality,
+            label: Text(tr.spotiflacQuality),
+            dropdownMenuEntries: [
               for (final option in qualityOptions)
-                DropdownMenuItem(
-                  value: option['id'].toString(),
-                  child: Text((option['label'] ?? option['id']).toString()),
-                ),
+                DropdownMenuEntry(value: option['id'].toString(), label: (option['label'] ?? option['id']).toString()),
             ],
-            onChanged: (value) {
+            onSelected: (value) {
               if (value != null) setState(() => quality = value);
             },
           ),

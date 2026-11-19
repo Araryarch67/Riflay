@@ -8,6 +8,41 @@ import 'package:shared_preferences/shared_preferences.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
+  test('clearing upcoming tracks keeps the current occurrence and persists the retained order', () async {
+    Track song(String id) => Track(id: id, uri: Uri.file('/music/$id.wav'), title: id, artist: 'Artist');
+    final a = song('a'), b = song('b'), c = song('c');
+    const key = 'playback.queue.v1';
+    SharedPreferences.setMockInitialValues({
+      'library.v1': '[]',
+      'discord.enabled': false,
+      'autoplay.v1': false,
+      key: jsonEncode({
+        'tracks': [b.toJson(), a.toJson(), c.toJson(), a.toJson()],
+        'ordered': [a.toJson(), a.toJson(), b.toJson(), c.toJson()],
+        'index': 1,
+        'positionMs': 12345,
+        'shuffled': true,
+      }),
+    });
+    final controller = PlayerController();
+    addTearDown(controller.dispose);
+    await controller.load();
+    final current = controller.player.sequenceState.currentSource;
+    await controller.clearUpcomingQueue();
+    expect(controller.queue.map((t) => t.id), ['b', 'a']);
+    expect(controller.upNext, isEmpty);
+    expect(controller.player.sequenceState.currentSource, same(current));
+    expect(controller.position, const Duration(milliseconds: 12345));
+    final prefs = await SharedPreferences.getInstance();
+    final snapshot = jsonDecode(prefs.getString(key)!) as Map<String, dynamic>;
+    expect((snapshot['tracks'] as List).map((t) => t['id']), ['b', 'a']);
+    expect((snapshot['ordered'] as List).map((t) => t['id']), ['a', 'b']);
+    await controller.toggleShuffle();
+    expect(controller.queue.map((t) => t.id), ['a', 'b']);
+    expect(controller.upNext.map((t) => t.id), ['b']);
+    expect(controller.player.sequenceState.currentSource, same(current));
+  });
+
   test('restores a shuffled queue paused at the exact duplicate occurrence and clears it on close', () async {
     final first = Track(id: 'a', uri: Uri.file('/music/a.wav'), title: 'First', artist: 'Artist');
     final second = Track(id: 'b', uri: Uri.file('/music/b.wav'), title: 'Second', artist: 'Artist');
@@ -48,6 +83,11 @@ void main() {
     final prefs = await SharedPreferences.getInstance();
     expect(prefs.getInt('playback.seekStepSeconds'), 15);
     expect((jsonDecode(prefs.getString(key)!) as Map)['shuffled'], isFalse);
+    await controller.seek(const Duration(seconds: 12));
+    await controller.setSeekStepSeconds(0);
+    await controller.seekByStep(forward: false);
+    expect(controller.position, const Duration(seconds: 12));
+    expect(prefs.getInt('playback.seekStepSeconds'), 0);
 
     await controller.closePlayer();
     expect(prefs.containsKey(key), isFalse);

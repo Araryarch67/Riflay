@@ -533,7 +533,10 @@ class _LibraryPlaylistPageState extends State<LibraryPlaylistPage> {
       coverKey: PlaylistCovers.remoteKey(widget.playlist.id),
     );
     return PlaylistEditScope(
-      canRemove: (t) => (d.owned || d.collaborative) && d.rowIds.containsKey(t.id),
+      canRemove: (t) => (d.owned || d.collaborative) && t.videoId != null && d.rowIds.containsKey(t.id),
+      removeMany: d.owned || d.collaborative
+          ? (context, tracks) => removeSelectedFromRemotePlaylist(context, widget.playlist.id, tracks, d.rowIds)
+          : null,
       remove: (context, t) async {
         final row = d.rowIds[t.id];
         if (row != null) await removeFromRemotePlaylist(context, widget.playlist.id, t, row);

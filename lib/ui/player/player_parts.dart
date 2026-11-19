@@ -357,6 +357,35 @@ class PlayerMoreAction extends StatelessWidget {
   }
 }
 
+class _PlayingFromLabel extends StatelessWidget {
+  const _PlayingFromLabel({required this.source, required this.muted});
+
+  final String source;
+  final Color muted;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          tr.playingFromLabel,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: text.labelMedium?.copyWith(color: muted),
+        ),
+        Text(
+          source,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: text.titleSmall?.copyWith(fontWeight: FontWeight.w700, color: muted),
+        ),
+      ],
+    );
+  }
+}
+
 /// The top of Now Playing when it isn't Classic: a close arrow and either "Now Playing" over the name of where
 /// it plays from, or one small line.
 class PlayerTopBar extends StatelessWidget {
@@ -392,13 +421,7 @@ class PlayerTopBar extends StatelessWidget {
           const SizedBox(width: 48),
         Expanded(
           child: single
-              ? Text(
-                  tr.playingFrom(from ?? tr.yourLibraryInline),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.center,
-                  style: text.labelMedium?.copyWith(color: muted, fontWeight: FontWeight.w600),
-                )
+              ? _PlayingFromLabel(source: from ?? tr.yourLibraryInline, muted: muted)
               : Column(
                   children: [
                     Text(tr.nowPlayingTitle, style: text.labelSmall?.copyWith(color: muted)),
@@ -733,13 +756,7 @@ class PlayerFromLabel extends StatelessWidget {
             ),
           ],
         ),
-        PlayerHeader.playingFrom => Text(
-          tr.playingFrom(from ?? album ?? tr.yourLibraryInline),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          textAlign: TextAlign.center,
-          style: text.labelMedium?.copyWith(color: muted, fontWeight: FontWeight.w600),
-        ),
+        PlayerHeader.playingFrom => _PlayingFromLabel(source: from ?? album ?? tr.yourLibraryInline, muted: muted),
       };
     },
   );
@@ -1135,9 +1152,11 @@ class ComposedNowPlaying extends StatelessWidget {
       ),
     );
     final visualizer = strip
-        ? const Padding(
-            padding: EdgeInsets.fromLTRB(24, 0, 24, 8),
-            child: AudioVisualizer(linearOnly: true, height: 80),
+        ? LayoutBuilder(
+            builder: (context, _) => Padding(
+              padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
+              child: AudioVisualizer(linearOnly: true, height: MediaQuery.sizeOf(context).height < 600 ? 36 : 80),
+            ),
           )
         : const SizedBox.shrink();
     if (full) {
