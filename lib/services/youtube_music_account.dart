@@ -1055,14 +1055,26 @@ class YoutubeMusicAccount extends ChangeNotifier {
 
   /// Songs YouTube Music would play after [seed] (its radio), without the seed itself.
   Future<List<Track>> upNext(Track seed) async {
-    final rows = await _browseClient.radio(seed.videoId!);
+    final client = _browseClient;
+    var rows = const <WebTrack>[];
+    try {
+      rows = await client.radio(seed.videoId!);
+    } on YtMusicWebError catch (error) {
+      if (identical(client, _public) || error.message != tr.ytSignInAgain) rethrow;
+    }
+    if (!identical(client, _public) && !rows.any((row) => row.videoId != seed.videoId)) {
+      rows = await _public.radio(seed.videoId!);
+    }
     return _webTracks(rows.where((r) => r.videoId != seed.videoId).toList());
   }
 
   /// [videoId] as YouTube Music lists it (the song's own title and artist, not the video's), read from the
   /// head of its radio; null when it isn't there.
   Future<Track?> song(String videoId) async {
-    final own = (await _browseClient.radio(videoId)).where((r) => r.videoId == videoId).take(1).toList();
+    final own = (await _browseClient.radio(
+      videoId,
+      includeRelated: false,
+    )).where((r) => r.videoId == videoId).take(1).toList();
     return own.isEmpty ? null : _webTracks(own).first;
   }
 

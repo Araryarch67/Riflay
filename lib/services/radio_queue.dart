@@ -29,14 +29,18 @@ abstract final class RadioQueue {
     required Future<List<Track>> Function(Track) upNext,
   }) async {
     final known = seed.onYoutube;
-    if (known != null) return upNext(known);
+    if (known != null) {
+      final recommendations = await upNext(known);
+      if (recommendations.isNotEmpty) return recommendations;
+    }
     if (seed.artists.isEmpty || _title(seed).isEmpty) return const [];
-    final match = _match(seed, await searchSongs('${seed.artist} ${seed.title}'.trim()));
+    final results = await searchSongs('${seed.artist} ${seed.title}'.trim());
+    final match = _match(seed, results.where((track) => track.youtubeId != known?.youtubeId));
     if (match == null) return const [];
     return (await upNext(match)).where((track) => track.youtubeId != match.youtubeId).toList();
   }
 
-  static Track? _match(Track seed, List<Track> results) {
+  static Track? _match(Track seed, Iterable<Track> results) {
     final artists = _artists(seed);
     final title = _title(seed);
     final versions = DownloadMatches.versions(seed.title);

@@ -45,7 +45,7 @@ void main() {
       searchSongs: (_) async => fail('Should use the known YouTube identity'),
       upNext: (track) async {
         expect(track, same(known));
-        return [];
+        return [song('related', 'Related', 'Artist')];
       },
     );
     final local = Track(id: 'local', uri: Uri.file('/music/title.mp3'), title: 'Title', artist: 'Artist');
@@ -55,6 +55,23 @@ void main() {
       upNext: (_) async => fail('The unrelated artist must never seed radio'),
     );
     expect(results, isEmpty);
+  });
+
+  test('an empty video queue retries the same recording under a different YouTube Music ID', () async {
+    final video = song('video', 'Title', 'Artist', seconds: 210);
+    final audio = song('audio', 'Title', 'Artist', seconds: 210);
+    final related = song('related', 'Related', 'Other artist');
+    final seeds = <String?>[];
+    final results = await RadioQueue.load(
+      video,
+      searchSongs: (_) async => [video, audio],
+      upNext: (track) async {
+        seeds.add(track.videoId);
+        return track.videoId == audio.videoId ? [related] : [];
+      },
+    );
+    expect(seeds, ['video', 'audio']);
+    expect(results, [related]);
   });
 
   test('radio filters library and video duplicates, and spaces out lead artists within the provider order', () {

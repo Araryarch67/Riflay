@@ -278,4 +278,50 @@ void main() {
     expect(songs.single.artist, 'Hindia');
     expect(songs.single.duration, const Duration(minutes: 4, seconds: 27));
   });
+
+  test('radio reads the Related tab when YouTube Music returns an empty queue', () async {
+    final f = fake(
+      (endpoint) => endpoint == 'next'
+          ? {
+              'contents': {
+                'musicQueueRenderer': {'header': {}},
+                'tabRenderer': {
+                  'endpoint': {
+                    'browseEndpoint': {'browseId': 'MPTRrelated', 'params': 'related-params'},
+                  },
+                },
+              },
+            }
+          : {
+              'contents': {
+                'musicCarouselShelfRenderer': {
+                  'header': {
+                    'musicCarouselShelfBasicHeaderRenderer': {
+                      'title': {'simpleText': 'Similar songs'},
+                    },
+                  },
+                  'contents': [
+                    for (final id in ['seed', 'other', 'other'])
+                      {
+                        'musicTwoRowItemRenderer': {
+                          'title': {'simpleText': id},
+                          'navigationEndpoint': {
+                            'watchEndpoint': {'videoId': id},
+                          },
+                        },
+                      },
+                  ],
+                },
+              },
+            },
+    );
+    expect((await f.web.radio('seed')).map((song) => song.videoId), ['other']);
+    expect(f.sent.map((request) => request.$1), ['next', 'browse']);
+    expect(f.sent.last.$2['browseId'], 'MPTRrelated');
+    expect(f.sent.last.$2['params'], 'related-params');
+
+    f.sent.clear();
+    expect(await f.web.radio('seed', includeRelated: false), isEmpty);
+    expect(f.sent.single.$1, 'next');
+  });
 }

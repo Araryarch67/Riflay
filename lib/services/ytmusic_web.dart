@@ -644,7 +644,7 @@ class YtMusicWeb {
   /// YouTube Music's "Up next" radio for a song: what the app itself queues
   /// after it (personalised when signed in). `RDAMVM<id>` is the song's radio
   /// playlist; the first entry is the seed song itself.
-  Future<List<WebTrack>> radio(String videoId) async {
+  Future<List<WebTrack>> radio(String videoId, {bool includeRelated = true}) async {
     final res = await _send('next', {
       'videoId': videoId,
       'playlistId': 'RDAMVM$videoId',
@@ -656,10 +656,29 @@ class YtMusicWeb {
       },
     });
     final panel = _asMap(_deepFind(res, 'playlistPanelRenderer'));
-    return _withArtists([
+    final queued = [
       for (final item in _list(panel?['contents']))
         if (_asMap(_deepFind(item, 'playlistPanelVideoRenderer')) case final row?) ?_panelSong(row),
-    ]);
+    ];
+    if (!includeRelated || queued.any((song) => song.videoId != videoId)) return _withArtists(queued);
+
+    // Some public sessions return an empty "Your Queue" panel. The same
+    // response can include the provider's Related page for this exact song.
+    for (final node in _deepFindAll(res, 'tabRenderer')) {
+      final endpoint = _asMap(_at(node, const ['endpoint', 'browseEndpoint']));
+      final id = endpoint?['browseId'];
+      if (id is! String || !id.startsWith('MPTR')) continue;
+      final shelvesForSong = await shelves(id, params: endpoint?['params'] as String?);
+      final seen = {videoId};
+      final related = [
+        for (final shelf in shelvesForSong)
+          for (final song in shelf.tracks)
+            if (seen.add(song.videoId)) song,
+      ];
+      if (related.isNotEmpty) return related;
+      break;
+    }
+    return _withArtists(queued);
   }
 
   /// The music video of [videoId], or null when it has none: the song is a
