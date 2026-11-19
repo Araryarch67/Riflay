@@ -86,7 +86,7 @@ void main() {
     c.createPlaylist('First mix');
     c.createPlaylist('Second mix');
     final title = find.text('Your Library');
-    final edit = find.byTooltip('Edit playlists');
+    final menu = find.byTooltip('More options');
     for (final width in [360.0, 200.0, 260.0, 360.0]) {
       await tester.pumpWidget(
         _app(
@@ -103,13 +103,9 @@ void main() {
       await tester.pumpAndSettle();
       expect(tester.widget<Text>(title).maxLines, 1);
       final titleRect = tester.getRect(title);
-      final editRect = tester.getRect(edit);
-      expect(tester.getRect(find.byTooltip('Add')).right, lessThanOrEqualTo(width));
-      if (width < 300) {
-        expect(editRect.top, greaterThanOrEqualTo(titleRect.bottom));
-      } else {
-        expect(titleRect.center.dy, closeTo(editRect.center.dy, 1));
-      }
+      final menuRect = tester.getRect(menu);
+      expect(menuRect.right, lessThanOrEqualTo(width));
+      expect(titleRect.center.dy, closeTo(menuRect.center.dy, 1));
       expect(
         find.byWidgetPredicate((w) {
           final decoration = w is Ink ? w.decoration : null;
@@ -137,9 +133,11 @@ void main() {
       await c.load();
     });
     await tester.pumpWidget(_app(c, const LibraryList()));
-    await tester.tap(find.byTooltip('Sort playlists'));
+    await tester.tap(find.byTooltip('More options'));
     await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(CheckedPopupMenuItem<PlaylistOrder>, 'Name A–Z'));
+    await tester.tap(find.text('Sort playlists'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Name A–Z'));
     await tester.pumpAndSettle();
     double row(String name) => tester.getCenter(find.text(name)).dy;
     expect(row('Alpha'), lessThan(row('Zulu')));
@@ -150,7 +148,9 @@ void main() {
     expect(row('Zulu'), lessThan(row('Alpha')));
     expect(find.byIcon(Icons.push_pin_rounded), findsOneWidget);
     expect(find.byIcon(Icons.drag_handle_rounded), findsNothing);
-    await tester.tap(find.byTooltip('Edit playlists'));
+    await tester.tap(find.byTooltip('More options'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Edit playlists'));
     await tester.pumpAndSettle();
     final handles = find.byIcon(Icons.drag_handle_rounded);
     expect(handles, findsNWidgets(3));

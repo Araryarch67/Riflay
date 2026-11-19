@@ -1,4 +1,8 @@
 {
+  "expandLibrary": "Buka Library penuh",
+  "restoreLibrarySidebar": "Kembali ke sidebar Library",
+  "searchYourLibrary": "Cari di Library",
+  "noLibraryMatches": "Tidak ada hasil di Library",
   "homeStyle": "Tampilan Beranda",
   "homeStyleClassic": "Klasik",
   "homeStyleCarousel": "Karusel sampul",

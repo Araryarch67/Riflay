@@ -10,6 +10,18 @@ class AppLocalizationsId extends AppLocalizations {
   AppLocalizationsId([String locale = 'id']) : super(locale);
 
   @override
+  String get expandLibrary => 'Buka Library penuh';
+
+  @override
+  String get restoreLibrarySidebar => 'Kembali ke sidebar Library';
+
+  @override
+  String get searchYourLibrary => 'Cari di Library';
+
+  @override
+  String get noLibraryMatches => 'Tidak ada hasil di Library';
+
+  @override
   String get homeStyle => 'Tampilan Beranda';
 
   @override

@@ -1,4 +1,8 @@
 {
+  "expandLibrary": "Expand library",
+  "restoreLibrarySidebar": "Return to library sidebar",
+  "searchYourLibrary": "Search your library",
+  "noLibraryMatches": "No matching items in your library",
   "homeStyle": "Home layout",
   "homeStyleClassic": "Classic",
   "homeStyleCarousel": "Artwork carousel",

@@ -1,4 +1,8 @@
 {
+  "expandLibrary": "ライブラリを展開",
+  "restoreLibrarySidebar": "ライブラリのサイドバーに戻る",
+  "searchYourLibrary": "ライブラリを検索",
+  "noLibraryMatches": "ライブラリに一致する項目がありません",
   "homeStyle": "ホームのレイアウト",
   "homeStyleClassic": "クラシック",
   "homeStyleCarousel": "アートワークカルーセル",

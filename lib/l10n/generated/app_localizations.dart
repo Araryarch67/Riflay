@@ -93,6 +93,30 @@ abstract class AppLocalizations {
   /// A list of this localizations delegate's supported locales.
   static const List<Locale> supportedLocales = <Locale>[Locale('en'), Locale('id'), Locale('ja')];
 
+  /// No description provided for @expandLibrary.
+  ///
+  /// In en, this message translates to:
+  /// **'Expand library'**
+  String get expandLibrary;
+
+  /// No description provided for @restoreLibrarySidebar.
+  ///
+  /// In en, this message translates to:
+  /// **'Return to library sidebar'**
+  String get restoreLibrarySidebar;
+
+  /// No description provided for @searchYourLibrary.
+  ///
+  /// In en, this message translates to:
+  /// **'Search your library'**
+  String get searchYourLibrary;
+
+  /// No description provided for @noLibraryMatches.
+  ///
+  /// In en, this message translates to:
+  /// **'No matching items in your library'**
+  String get noLibraryMatches;
+
   /// No description provided for @homeStyle.
   ///
   /// In en, this message translates to:

@@ -159,7 +159,9 @@ class _HomeShellState extends State<HomeShell> with SingleTickerProviderStateMix
   /// under the expanded player, unseen: it steps aside.
   void _followLocation() {
     if (_history.location == _location) return;
+    final wasLibrary = _location == Locations.library;
     _location = _history.location;
+    if (!_compact && mounted && wasLibrary != (_location == Locations.library)) setState(() {});
     _player?.setBrowsingLocation(_location);
     _leaveExpandedPlayer();
   }
@@ -539,7 +541,7 @@ class _HomeShellState extends State<HomeShell> with SingleTickerProviderStateMix
       : 84.0;
 
   void _dragSidePanel(double dx) {
-    final left = _leftWidth(_window, sideOpen: true);
+    final left = _history.location == Locations.library ? 0.0 : _leftWidth(_window, sideOpen: true);
     _sidePanelWidth.value = SidebarFit.right(_sidePanelWidth.value - dx, _window, left: left);
   }
 
@@ -1027,33 +1029,41 @@ class _HomeShellState extends State<HomeShell> with SingleTickerProviderStateMix
       _sideOpenNow = sideOpen;
       // The rail at narrow widths is fixed; the dragged widths apply to the expanded layout only.
       final sidebarWidth = expanded ? SidebarFit.left(_sidebarWidth.value, width, sideOpen: sideOpen) : 84.0;
-      final panelWidth = SidebarFit.right(_sidePanelWidth.value, width, left: sidebarWidth);
-      _contentWidth = width - sidebarWidth - (sideOpen ? panelWidth + 8 : 0) - 24;
+      final libraryExpanded = _history.location == Locations.library;
+      final left = libraryExpanded ? 0.0 : sidebarWidth;
+      final panelWidth = SidebarFit.right(_sidePanelWidth.value, width, left: left);
+      _contentWidth = width - left - (sideOpen ? panelWidth + 8 : 0) - (libraryExpanded ? 16 : 24);
       // Expanded: the cover takes the whole window and both bars slide away until the pointer comes to them.
       // The pages stay alive (and their history) underneath.
       final pages = Padding(
         padding: EdgeInsets.fromLTRB(8, hasCustomTitleBar ? 0 : 8, 8, 0),
         child: Row(
           children: [
-            ValueListenableBuilder(
-              valueListenable: _sidebarWidth,
-              builder: (context, want, sidebar) => SizedBox(
-                width: expanded ? SidebarFit.left(want, width, sideOpen: sideOpen) : sidebarWidth,
-                child: sidebar,
-              ),
-              child: ListenableBuilder(
-                listenable: _history,
-                builder: (context, _) => DesktopSidebar(
-                  collapsed: !expanded,
-                  location: _history.location,
-                  onHome: _goHome,
-                  onSearch: _goSearch,
-                  // Home and search sit in the title bar instead.
-                  inTitleBar: hasCustomTitleBar,
+            Visibility(
+              visible: !libraryExpanded,
+              maintainState: true,
+              child: ValueListenableBuilder(
+                valueListenable: _sidebarWidth,
+                builder: (context, want, sidebar) => SizedBox(
+                  width: expanded ? SidebarFit.left(want, width, sideOpen: sideOpen) : sidebarWidth,
+                  child: sidebar,
+                ),
+                child: ListenableBuilder(
+                  listenable: _history,
+                  builder: (context, _) => DesktopSidebar(
+                    collapsed: !expanded,
+                    location: _history.location,
+                    onHome: _goHome,
+                    onSearch: _goSearch,
+                    // Home and search sit in the title bar instead.
+                    inTitleBar: hasCustomTitleBar,
+                  ),
                 ),
               ),
             ),
-            expanded
+            libraryExpanded
+                ? const SizedBox.shrink()
+                : expanded
                 ? ResizeHandle(
                     label: tr.resizeSidebar,
                     onDrag: _dragSidebar,
@@ -1071,7 +1081,11 @@ class _HomeShellState extends State<HomeShell> with SingleTickerProviderStateMix
                 listenable: Listenable.merge([_sidePanelWidth, _sidebarWidth]),
                 builder: (context, panel) => SlidingPanel(
                   open: sideOpen,
-                  width: SidebarFit.right(_sidePanelWidth.value, width, left: _leftWidth(width, sideOpen: sideOpen)),
+                  width: SidebarFit.right(
+                    _sidePanelWidth.value,
+                    width,
+                    left: libraryExpanded ? 0 : _leftWidth(width, sideOpen: sideOpen),
+                  ),
                   handle: ResizeHandle(
                     label: tr.resizeSidePanel,
                     onDrag: _dragSidePanel,
@@ -1080,7 +1094,7 @@ class _HomeShellState extends State<HomeShell> with SingleTickerProviderStateMix
                       _sidePanelWidth.value = SidebarFit.right(
                         LayoutPrefs.sidePanelDefault,
                         width,
-                        left: _leftWidth(width, sideOpen: true),
+                        left: libraryExpanded ? 0 : _leftWidth(width, sideOpen: true),
                       );
                       _saveWidths();
                     },

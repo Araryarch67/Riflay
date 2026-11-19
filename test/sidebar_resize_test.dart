@@ -5,8 +5,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:riflay/main.dart';
 import 'package:riflay/models/track.dart';
+import 'package:riflay/services/language.dart';
 import 'package:riflay/services/layout_prefs.dart';
 import 'package:riflay/services/player_controller.dart';
+import 'package:riflay/ui/pages/library_page.dart';
 import 'package:riflay/ui/player_panels.dart';
 import 'package:riflay/ui/shell/desktop_sidebar.dart';
 import 'package:riflay/ui/shell/resize_handle.dart';
@@ -61,6 +63,59 @@ Finder _handle(String label) => find.byWidgetPredicate((w) => w is ResizeHandle 
 double _sidebarW(WidgetTester t) => t.getSize(find.byType(DesktopSidebar)).width;
 
 void main() {
+  testWidgets('the Library menu opens a searchable desktop grid and restores the sidebar', (tester) async {
+    final player = await _app(tester, const Size(1440, 900));
+    player.createPlaylist('Morning mix');
+    player.createPlaylist('Evening mix');
+    await tester.pump();
+    final sidebar = find.byType(DesktopSidebar);
+    final width = tester.getSize(sidebar).width;
+    final gradient = tester
+        .widgetList<Ink>(find.descendant(of: sidebar, matching: find.byType(Ink)))
+        .map((ink) => ink.decoration)
+        .whereType<BoxDecoration>()
+        .map((decoration) => decoration.gradient)
+        .whereType<LinearGradient>()
+        .single;
+    expect(gradient.begin, Alignment.topCenter);
+    expect(gradient.end, Alignment.bottomCenter);
+    expect(gradient.colors.first.computeLuminance(), lessThan(gradient.colors.last.computeLuminance()));
+
+    Finder menu() => find.descendant(
+      of: find.byType(LibraryList),
+      matching: find.byWidgetPredicate((widget) => widget is IconButton && widget.tooltip == tr.moreOptions),
+    );
+    expect(menu(), findsOneWidget);
+    await tester.tap(menu());
+    await tester.pumpAndSettle();
+    expect(find.text(tr.editPlaylists), findsOneWidget);
+    expect(find.text(tr.sortPlaylists), findsOneWidget);
+    await tester.tap(find.text(tr.expandLibrary));
+    await tester.pumpAndSettle();
+
+    expect(sidebar, findsNothing);
+    expect(find.byType(NowPlayingSidePanel), findsOneWidget);
+    expect(find.byType(SliverGrid), findsOneWidget);
+    expect(find.text('Morning mix'), findsOneWidget);
+    expect(find.text('Evening mix'), findsOneWidget);
+    final field = find.descendant(of: find.byType(SearchBar), matching: find.byType(TextField));
+    await tester.enterText(field, 'morning');
+    await tester.pump();
+    expect(find.text('Morning mix'), findsOneWidget);
+    expect(find.text('Evening mix'), findsNothing);
+    await tester.enterText(field, 'missing');
+    await tester.pump();
+    expect(find.text(tr.noLibraryMatches), findsOneWidget);
+
+    await tester.tap(menu());
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(tr.restoreLibrarySidebar));
+    await tester.pumpAndSettle();
+    expect(sidebar, findsOneWidget);
+    expect(tester.getSize(sidebar).width, width);
+    await _settle(tester);
+  });
+
   for (final style in [TabBarStyle.classic, TabBarStyle.glass]) {
     testWidgets('${style.name}: swipe left goes to the previous track and right goes to the next', (tester) async {
       final c = await _app(tester, const Size(412, 915));

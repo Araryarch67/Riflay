@@ -73,6 +73,7 @@ class ShellPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
+    final tinted = Color.lerp(colors.panel, colors.accent, 0.1)!;
     return Material(
       color: colors.panel,
       borderRadius: BorderRadius.circular(8),
@@ -81,9 +82,9 @@ class ShellPanel extends StatelessWidget {
           ? Ink(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [Color.lerp(colors.panel, colors.accent, 0.12)!, colors.panel],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [Color.lerp(tinted, Colors.black, 0.14)!, Color.lerp(tinted, Colors.white, 0.06)!],
                 ),
               ),
               child: child,

@@ -10,6 +10,18 @@ class AppLocalizationsEn extends AppLocalizations {
   AppLocalizationsEn([String locale = 'en']) : super(locale);
 
   @override
+  String get expandLibrary => 'Expand library';
+
+  @override
+  String get restoreLibrarySidebar => 'Return to library sidebar';
+
+  @override
+  String get searchYourLibrary => 'Search your library';
+
+  @override
+  String get noLibraryMatches => 'No matching items in your library';
+
+  @override
   String get homeStyle => 'Home layout';
 
   @override

@@ -10,6 +10,18 @@ class AppLocalizationsJa extends AppLocalizations {
   AppLocalizationsJa([String locale = 'ja']) : super(locale);
 
   @override
+  String get expandLibrary => 'ライブラリを展開';
+
+  @override
+  String get restoreLibrarySidebar => 'ライブラリのサイドバーに戻る';
+
+  @override
+  String get searchYourLibrary => 'ライブラリを検索';
+
+  @override
+  String get noLibraryMatches => 'ライブラリに一致する項目がありません';
+
+  @override
   String get homeStyle => 'ホームのレイアウト';
 
   @override
