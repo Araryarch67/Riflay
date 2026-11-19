@@ -93,6 +93,72 @@ abstract class AppLocalizations {
   /// A list of this localizations delegate's supported locales.
   static const List<Locale> supportedLocales = <Locale>[Locale('en'), Locale('id'), Locale('ja')];
 
+  /// No description provided for @homeStyle.
+  ///
+  /// In en, this message translates to:
+  /// **'Home layout'**
+  String get homeStyle;
+
+  /// No description provided for @homeStyleClassic.
+  ///
+  /// In en, this message translates to:
+  /// **'Classic'**
+  String get homeStyleClassic;
+
+  /// No description provided for @homeStyleCarousel.
+  ///
+  /// In en, this message translates to:
+  /// **'Artwork carousel'**
+  String get homeStyleCarousel;
+
+  /// No description provided for @customizeHome.
+  ///
+  /// In en, this message translates to:
+  /// **'Customize Home'**
+  String get customizeHome;
+
+  /// No description provided for @speedDial.
+  ///
+  /// In en, this message translates to:
+  /// **'Speed dial'**
+  String get speedDial;
+
+  /// No description provided for @dailyMix.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily Mix'**
+  String get dailyMix;
+
+  /// No description provided for @dailyMixDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Recent favorites and more from those artists'**
+  String get dailyMixDescription;
+
+  /// No description provided for @madeForYou.
+  ///
+  /// In en, this message translates to:
+  /// **'Made for you'**
+  String get madeForYou;
+
+  /// No description provided for @artistMusicVideos.
+  ///
+  /// In en, this message translates to:
+  /// **'Music videos'**
+  String get artistMusicVideos;
+
+  /// No description provided for @artistSoloSongs.
+  ///
+  /// In en, this message translates to:
+  /// **'Solo songs'**
+  String get artistSoloSongs;
+
+  /// No description provided for @artistCollaborations.
+  ///
+  /// In en, this message translates to:
+  /// **'Collaborations'**
+  String get artistCollaborations;
+
   /// No description provided for @audioSource.
   ///
   /// In en, this message translates to:
@@ -276,19 +342,19 @@ abstract class AppLocalizations {
   /// No description provided for @topicPlaybackSummary.
   ///
   /// In en, this message translates to:
-  /// **'Autoplay, gapless playback and crossfade'**
+  /// **'Play similar songs automatically and choose how songs change'**
   String get topicPlaybackSummary;
 
   /// No description provided for @topicDsp.
   ///
   /// In en, this message translates to:
-  /// **'Sound effects (DSP)'**
+  /// **'Sound effects'**
   String get topicDsp;
 
   /// No description provided for @topicDspSummary.
   ///
   /// In en, this message translates to:
-  /// **'Equalizer, volume leveling, spatial audio and room correction'**
+  /// **'Adjust bass and treble, even out volume, and change how sound fills the room'**
   String get topicDspSummary;
 
   /// No description provided for @topicOutput.
@@ -300,7 +366,7 @@ abstract class AppLocalizations {
   /// No description provided for @topicOutputSummary.
   ///
   /// In en, this message translates to:
-  /// **'Output device, bit-perfect mode, sample rate'**
+  /// **'Choose where sound plays and how Riflay sends it'**
   String get topicOutputSummary;
 
   /// No description provided for @topicAppearance.
@@ -324,7 +390,7 @@ abstract class AppLocalizations {
   /// No description provided for @topicLayoutSummary.
   ///
   /// In en, this message translates to:
-  /// **'Home, the bars, corners, spacing, cover size, motion'**
+  /// **'Choose what appears on Home and how the app looks and moves'**
   String get topicLayoutSummary;
 
   /// No description provided for @topicLibrary.
@@ -632,6 +698,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Start radio'**
   String get startRadio;
+
+  /// No description provided for @radioFrom.
+  ///
+  /// In en, this message translates to:
+  /// **'{title} radio'**
+  String radioFrom(String title);
 
   /// No description provided for @downloadForOffline.
   ///
@@ -2430,7 +2502,7 @@ abstract class AppLocalizations {
   /// No description provided for @gaplessPlaybackSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'No added silence between tracks. Crossfade is under Sound effects (DSP).'**
+  /// **'Songs play back to back without an added gap. Find the fade between songs below.'**
   String get gaplessPlaybackSubtitle;
 
   /// No description provided for @skipSilence.
@@ -2448,7 +2520,7 @@ abstract class AppLocalizations {
   /// No description provided for @skipSilenceSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Silent intros, outros and gaps are cut short. Soft passages play whole'**
+  /// **'Shortens silent parts of a track while keeping quiet music intact'**
   String get skipSilenceSubtitle;
 
   /// No description provided for @off.
@@ -2460,13 +2532,13 @@ abstract class AppLocalizations {
   /// No description provided for @volumeLeveling.
   ///
   /// In en, this message translates to:
-  /// **'Volume leveling'**
+  /// **'Keep song volumes similar'**
   String get volumeLeveling;
 
   /// No description provided for @volumeLevelingSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Plays songs at a similar loudness, using their ReplayGain tags'**
+  /// **'Makes quiet and loud tracks play at a more consistent volume'**
   String get volumeLevelingSubtitle;
 
   /// No description provided for @measureLoudness.
@@ -2496,25 +2568,25 @@ abstract class AppLocalizations {
   /// No description provided for @crossfade.
   ///
   /// In en, this message translates to:
-  /// **'Crossfade'**
+  /// **'Fade between songs'**
   String get crossfade;
 
   /// No description provided for @crossfadeSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'The end of a song fades into the start of the next. Off in bit-perfect and exclusive modes'**
+  /// **'The next song starts as the current one fades out. Unavailable in bit-perfect and exclusive modes.'**
   String get crossfadeSubtitle;
 
   /// No description provided for @fadeLength.
   ///
   /// In en, this message translates to:
-  /// **'Fade length'**
+  /// **'How long songs overlap'**
   String get fadeLength;
 
   /// No description provided for @skipForAlbums.
   ///
   /// In en, this message translates to:
-  /// **'Skip for albums'**
+  /// **'Keep album transitions as recorded'**
   String get skipForAlbums;
 
   /// No description provided for @skipForAlbumsSubtitle.
@@ -2730,7 +2802,7 @@ abstract class AppLocalizations {
   /// No description provided for @bitPerfectMode.
   ///
   /// In en, this message translates to:
-  /// **'Bit-perfect mode'**
+  /// **'Play audio unchanged (bit-perfect)'**
   String get bitPerfectMode;
 
   /// No description provided for @needsAndroid14.
@@ -2814,7 +2886,7 @@ abstract class AppLocalizations {
   /// No description provided for @exclusiveMode.
   ///
   /// In en, this message translates to:
-  /// **'Exclusive mode'**
+  /// **'Reserve the output for Riflay'**
   String get exclusiveMode;
 
   /// No description provided for @exclusiveMac.
@@ -2874,7 +2946,7 @@ abstract class AppLocalizations {
   /// No description provided for @bufferSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Raise it if you hear crackles or dropouts'**
+  /// **'Increase this if sound crackles or cuts out. A larger buffer can make controls respond more slowly.'**
   String get bufferSubtitle;
 
   /// No description provided for @signalPathSubtitleExact.
@@ -2886,7 +2958,7 @@ abstract class AppLocalizations {
   /// No description provided for @directUsbIntro.
   ///
   /// In en, this message translates to:
-  /// **'Riflay talks to your USB DAC itself, past Android, so songs reach it untouched even on phones where Bit-perfect mode can\'t. Experimental.'**
+  /// **'Send sound straight to your USB audio device instead of through Android. Experimental.'**
   String get directUsbIntro;
 
   /// No description provided for @directUsbPlugIn.
@@ -3528,7 +3600,7 @@ abstract class AppLocalizations {
   /// No description provided for @qualityBadgeSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Where FLAC or Opus 130 kbps sits on the phone player: under the artist, or between the two times'**
+  /// **'Choose where the phone player shows audio details such as FLAC or Opus.'**
   String get qualityBadgeSubtitle;
 
   /// No description provided for @background.
@@ -8301,6 +8373,18 @@ abstract class AppLocalizations {
   /// **'Opening the Android installer…'**
   String get openingInstaller;
 
+  /// No description provided for @windowsUpdateNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Riflay will close and reopen after the update. Your library and settings will stay in place.'**
+  String get windowsUpdateNote;
+
+  /// No description provided for @windowsUpdateRestart.
+  ///
+  /// In en, this message translates to:
+  /// **'Installing the update. Riflay will reopen when it’s ready…'**
+  String get windowsUpdateRestart;
+
   /// No description provided for @completeInInstaller.
   ///
   /// In en, this message translates to:
@@ -9972,7 +10056,7 @@ abstract class AppLocalizations {
   /// No description provided for @loudnessTarget.
   ///
   /// In en, this message translates to:
-  /// **'Normalization target'**
+  /// **'Volume level to aim for'**
   String get loudnessTarget;
 
   /// No description provided for @defaultLibraryFilter.
@@ -11652,13 +11736,13 @@ abstract class AppLocalizations {
   /// No description provided for @autoEq.
   ///
   /// In en, this message translates to:
-  /// **'Headphone / IEM profile (AutoEQ)'**
+  /// **'EQ for your headphones or earphones'**
   String get autoEq;
 
   /// No description provided for @autoEqSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Sets the equalizer for your model from its measurement, so it sounds neutral (the Harman target).'**
+  /// **'Search for your exact model to adjust its sound using measured profiles.'**
   String get autoEqSubtitle;
 
   /// No description provided for @autoEqPick.
@@ -11682,14 +11766,20 @@ abstract class AppLocalizations {
   /// No description provided for @autoEqModels.
   ///
   /// In en, this message translates to:
-  /// **'{count} models, measured by crinacle, oratory1990 and others. Type a name to search.'**
+  /// **'{count} profiles available. Search by brand and model.'**
   String autoEqModels(int count);
 
   /// No description provided for @autoEqNoResults.
   ///
   /// In en, this message translates to:
-  /// **'No model by that name.'**
+  /// **'No matching model. Try the brand and model name, without extra words.'**
   String get autoEqNoResults;
+
+  /// No description provided for @autoEqLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn’t load the EQ profiles. Check your connection and try again.'**
+  String get autoEqLoadFailed;
 
   /// No description provided for @autoEqFailed.
   ///
@@ -12150,7 +12240,7 @@ abstract class AppLocalizations {
   /// No description provided for @networkProxyAbout.
   ///
   /// In en, this message translates to:
-  /// **'Use your own HTTP proxy for app requests. Service rate limits still apply.'**
+  /// **'Use a proxy server if your network requires it. Each music service still applies its own request limits.'**
   String get networkProxyAbout;
 
   /// No description provided for @networkProxyAddress.
@@ -12200,6 +12290,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Seek step'**
   String get seekStep;
+
+  /// No description provided for @seekStepHint.
+  ///
+  /// In en, this message translates to:
+  /// **'How far Shift + Left or Right Arrow jumps within a song. Off disables those shortcuts.'**
+  String get seekStepHint;
 
   /// No description provided for @scSeekBackward.
   ///

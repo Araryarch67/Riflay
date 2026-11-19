@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:riflay/services/audio_engine.dart';
+import 'package:riflay/services/language.dart';
 import 'package:riflay/services/player_controller.dart';
 import 'package:riflay/services/sleep_timer.dart';
 import 'package:riflay/ui/pages/sound_settings.dart';
@@ -128,20 +129,20 @@ void main() {
       addTearDown(tester.view.reset);
       final c = PlayerController();
       await tester.pumpWidget(_app(c, const PlaybackSettings()));
-      expect(find.text('Crossfade'), findsOneWidget, skip: !AudioEngine.supported);
+      expect(find.text(tr.crossfade), findsOneWidget, skip: !AudioEngine.supported);
       expect(c.audio.crossfade, isFalse);
-      expect(find.text('Fade length'), findsNothing);
-      expect(find.text('Skip for albums'), findsNothing);
+      expect(find.text(tr.fadeLength), findsNothing);
+      expect(find.text(tr.skipForAlbums), findsNothing);
 
-      await tester.tap(find.text('Crossfade'));
+      await tester.tap(find.text(tr.crossfade));
       await tester.pumpAndSettle();
       expect(c.audio.crossfade, isTrue);
-      expect(find.text('Fade length'), findsOneWidget);
+      expect(find.text(tr.fadeLength), findsOneWidget);
       expect(find.text('5 s'), findsWidgets);
-      expect(find.text('Skip for albums'), findsOneWidget);
+      expect(find.text(tr.skipForAlbums), findsOneWidget);
       expect(c.audio.crossfadeSkipAlbums, isTrue, reason: 'on by default');
 
-      await tester.tap(find.text('Skip for albums'));
+      await tester.tap(find.text(tr.skipForAlbums));
       await tester.pumpAndSettle();
       expect(c.audio.crossfadeSkipAlbums, isFalse);
 
@@ -160,8 +161,8 @@ void main() {
       await tester.pumpWidget(_app(c, const PlaybackSettings()));
       expect(c.audio.bitPerfect, isTrue);
       expect(find.text('Off while bit-perfect mode is on'), findsWidgets);
-      expect(find.text('Fade length'), findsNothing);
-      final tile = tester.widget<SwitchListTile>(find.widgetWithText(SwitchListTile, 'Crossfade'));
+      expect(find.text(tr.fadeLength), findsNothing);
+      final tile = tester.widget<SwitchListTile>(find.widgetWithText(SwitchListTile, tr.crossfade));
       expect(tile.onChanged, isNull);
     });
   });

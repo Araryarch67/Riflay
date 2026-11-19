@@ -32,11 +32,14 @@ void main() {
         );
         final oldDelays = PlayerController.playbackRetryDelays;
         PlayerController.playbackRetryDelays = List.filled(8, const Duration(milliseconds: 100));
-        final controller = PlayerController();
+        late Track radioTrack;
+        final controller = PlayerController(radioLookup: (_) async => [radioTrack]);
         controller.discord.enabled = false;
         final apply = JustAudioMediaKit.onPlayerCreated;
+        NativePlayer? backend;
         JustAudioMediaKit.onPlayerCreated = (player) {
-          unawaited((player.platform as NativePlayer).setProperty('ao', 'null').then((_) => apply?.call(player)));
+          backend = player.platform as NativePlayer;
+          unawaited(backend!.setProperty('ao', 'null').then((_) => apply?.call(player)));
         };
         final errors = <String>[];
         final friendly = controller.errors.listen(errors.add);
@@ -66,6 +69,12 @@ void main() {
           for (final id in ['first', 'next'])
             Track(id: id, uri: Uri.parse('http://127.0.0.1:${server.port}/$id.flac'), title: id, artist: 'Test'),
         ];
+        radioTrack = Track(
+          id: 'radio',
+          uri: Uri.parse('http://127.0.0.1:${server.port}/radio.flac'),
+          title: 'Radio',
+          artist: 'Test',
+        );
         Future<void> until(bool Function() ready) async {
           final watch = Stopwatch()..start();
           while (!ready() && watch.elapsed < const Duration(seconds: 20)) {
@@ -82,6 +91,20 @@ void main() {
           expect(requests, greaterThan(1));
           expect(controller.currentTrack?.id, 'first');
           expect(controller.queue.map((track) => track.id), ['first', 'next']);
+          expect(errors, isEmpty);
+          final source = controller.player.sequenceState.currentSource;
+          final at = controller.position;
+          await controller.startRadio(tracks.first);
+          expect(controller.player.sequenceState.currentSource, same(source));
+          expect(controller.position, greaterThanOrEqualTo(at - const Duration(milliseconds: 100)));
+          expect(controller.queue.map((track) => track.id), ['first', 'radio']);
+
+          // Simulate an error log while the real decoder is still advancing.
+          // ignore: invalid_use_of_protected_member
+          backend!.errorController.add('Decoder recovered after a bad packet');
+          await Future<void>.delayed(const Duration(milliseconds: 550));
+          expect(controller.currentTrack?.id, 'first');
+          expect(controller.player.playing, isTrue);
           expect(errors, isEmpty);
 
           PlayerController.playbackRetryDelays = [const Duration(milliseconds: 100)];

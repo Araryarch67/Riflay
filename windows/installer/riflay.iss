@@ -40,6 +40,7 @@ Compression=lzma2/max
 SolidCompression=yes
 WizardStyle=modern
 CloseApplications=yes
+SetupMutex=RiflaySetup
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"
@@ -53,11 +54,41 @@ Name: "{autodesktop}\Riflay"; Filename: "{app}\riflay.exe"; Tasks: desktopicon
 
 [Run]
 Filename: "{app}\riflay.exe"; Description: "{cm:LaunchProgram,Riflay}"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\riflay.exe"; Flags: nowait skipifnotsilent; Check: IsRiflayUpdate
+
+[CustomMessages]
+RiflayCloseForUpdate=Close Riflay and run the update again.
 
 [Code]
 const
   // OpenMusic, as Riflay was called before (up to 1.11.1), installed under an id of its own.
   OldAppUninstallKey = 'Software\Microsoft\Windows\CurrentVersion\Uninstall\{6F1D2C7E-4B9A-4E8B-9E7A-0C3F5B2A9D41}_is1';
+
+function OpenProcess(Access: LongWord; InheritHandle: Boolean; ProcessId: LongWord): LongWord;
+  external 'OpenProcess@kernel32.dll stdcall';
+function WaitForSingleObject(Handle, Timeout: LongWord): LongWord;
+  external 'WaitForSingleObject@kernel32.dll stdcall';
+function CloseHandle(Handle: LongWord): Boolean;
+  external 'CloseHandle@kernel32.dll stdcall';
+
+function IsRiflayUpdate: Boolean;
+begin
+  Result := StrToIntDef(ExpandConstant('{param:RIFLAYPID|0}'), 0) > 0;
+end;
+
+function PrepareToInstall(var NeedsRestart: Boolean): String;
+var
+  ProcessHandle: LongWord;
+begin
+  Result := '';
+  if not IsRiflayUpdate then Exit;
+  // Riflay saves and exits itself. Never replace the files while it is still holding them open.
+  ProcessHandle := OpenProcess($00100000, False, StrToIntDef(ExpandConstant('{param:RIFLAYPID|0}'), 0));
+  if ProcessHandle = 0 then Exit;
+  if WaitForSingleObject(ProcessHandle, 30000) <> 0 then
+    Result := CustomMessage('RiflayCloseForUpdate');
+  CloseHandle(ProcessHandle);
+end;
 
 // OpenMusic goes first, so the Start menu doesn't keep both. Its settings, library
 // and sign-in stay in AppData: Riflay brings them over when it first starts.

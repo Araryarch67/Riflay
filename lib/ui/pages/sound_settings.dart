@@ -65,6 +65,7 @@ class PlaybackSettings extends StatelessWidget {
           SettingTile(
             icon: Icons.fast_forward_rounded,
             title: Text(tr.seekStep),
+            subtitle: Text(tr.seekStepHint, style: muted),
             control: OptionPicker<int>(
               value: c.seekStepSeconds,
               options: [

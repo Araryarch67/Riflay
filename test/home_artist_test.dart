@@ -5,8 +5,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:riflay/models/track.dart';
+import 'package:riflay/services/language.dart';
+import 'package:riflay/services/layout_prefs.dart';
+import 'package:riflay/services/player_presets.dart';
 import 'package:riflay/services/player_controller.dart';
 import 'package:riflay/ui/debug_switches.dart';
+import 'package:riflay/ui/pages/collection_page.dart';
 import 'package:riflay/ui/pages/home_page.dart';
 import 'package:riflay/ui/shell_scope.dart';
 import 'package:riflay/ui/widgets/controls.dart';
@@ -60,15 +64,27 @@ void main() {
     });
   });
 
-  Future<({List<String?> pages, List<Collection> collections})> home(WidgetTester tester) async {
+  Future<({List<String?> pages, List<Collection> collections})> home(
+    WidgetTester tester, {
+    bool carousel = false,
+    bool compact = false,
+    bool withMix = false,
+    Widget page = const HomePage(),
+  }) async {
     SharedPreferences.setMockInitialValues({
       'library.v1': jsonEncode([for (final t in _library) t.toJson()]),
+      if (withMix) 'recent.v1': [_library[1].id],
     });
     final c = PlayerController();
     await tester.runAsync(c.load);
+    if (carousel) {
+      await tester.runAsync(() => PlayerPreset.liquidKawaii.apply(LayoutPrefs.instance));
+      addTearDown(() => tester.runAsync(LayoutPrefs.instance.reset));
+    }
     addTearDown(() => tester.runAsync(() async => c.dispose()));
     // Tall enough for the Artists shelf to be built.
-    await tester.binding.setSurfaceSize(const Size(1200, 2400));
+    final width = compact ? 356.0 : 1200.0;
+    await tester.binding.setSurfaceSize(Size(width, compact ? 760 : 2400));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     final pages = <String?>[];
     final collections = <Collection>[];
@@ -77,8 +93,8 @@ void main() {
         home: PlayerScope(
           controller: c,
           child: ShellScope(
-            compact: false,
-            width: 1200,
+            compact: compact,
+            width: width,
             open: (_, {location}) => pages.add(location),
             openCollection: collections.add,
             openQueue: () {},
@@ -88,7 +104,7 @@ void main() {
             importFromYoutube: () {},
             addFiles: () {},
             addFolder: null,
-            child: const Scaffold(body: HomePage()),
+            child: Scaffold(body: page),
           ),
         ),
       ),
@@ -126,5 +142,59 @@ void main() {
     await tester.pump();
     expect(opened.pages, isEmpty);
     expect(opened.collections.single.title, 'Kobo Kanaeru');
+  });
+
+  testWidgets('Liquid Kawaii shows a Material carousel and lets Home hide its sections', (tester) async {
+    await home(tester, carousel: true);
+    expect(find.byType(CarouselView), findsOneWidget);
+    expect(find.text(tr.speedDial), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    await tester.tap(find.byTooltip(tr.customizeHome));
+    await tester.pumpAndSettle();
+    expect(find.text(tr.homeStyle), findsOneWidget);
+    final toggle = find.byKey(const ValueKey(HomeSection.quickPicks));
+    await tester.tap(toggle);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(tr.done));
+    await tester.pumpAndSettle();
+    expect(find.byType(CarouselView), findsNothing);
+  });
+
+  testWidgets('Liquid Kawaii can scroll its artwork carousel on a narrow phone', (tester) async {
+    await home(tester, carousel: true, compact: true);
+    final carousel = find.byType(CarouselView);
+    final scroll = tester.state<ScrollableState>(
+      find.descendant(of: carousel, matching: find.byType(Scrollable)).first,
+    );
+    final before = scroll.position.pixels;
+    expect(scroll.position.maxScrollExtent, greaterThan(0));
+    await tester.fling(carousel, const Offset(-260, 0), 1000);
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    expect(scroll.position.pixels, greaterThan(before));
+    expect(find.byTooltip(tr.customizeHome), findsOneWidget);
+  });
+
+  testWidgets('Home opens a daily mix with real related songs', (tester) async {
+    final opened = await home(tester, withMix: true);
+    await tester.tap(find.text(tr.dailyMix));
+    await tester.pump();
+    expect(opened.collections.single.title, tr.dailyMix);
+    expect(opened.collections.single.tracks.map((track) => track.title), ['Fugue', 'Toccata']);
+  });
+
+  testWidgets('an artist page shows separate music video, solo, and collaboration shelves', (tester) async {
+    final artist = Collection(
+      kind: CollectionKind.remoteArtist,
+      title: 'Bach',
+      subtitle: '',
+      tracks: [_file('Solo song', 'Bach'), _file('Joint song', 'Bach, Another artist')],
+      artistVideos: [Track.youtube(videoId: 'mv', title: 'An MV', artist: 'Bach')],
+    );
+    await home(tester, page: CollectionPage(collection: artist));
+    expect(find.text(tr.artistMusicVideos), findsOneWidget);
+    expect(find.text(tr.artistSoloSongs), findsOneWidget);
+    expect(find.text(tr.artistCollaborations), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 }

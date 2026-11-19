@@ -43,6 +43,7 @@ import 'merged_download.dart';
 import 'smart_merge.dart';
 import 'manual_audio.dart';
 import 'playlist_covers.dart';
+import 'radio_queue.dart';
 import 'request_gate.dart';
 import 'sources/music_sources.dart';
 import 'soundcloud_audio_source.dart';
@@ -76,13 +77,16 @@ class MusicFolderAlreadyAdded implements Exception {
 
 /// Owns the audio player, the library and the play queue.
 class PlayerController extends ChangeNotifier {
-  // StreamAudioSource is just_audio's supported custom-stream interface.
-  // ignore: experimental_member_use
-  PlayerController({SmartMerge? smartMerge, StreamAudioSource Function(Track)? youtubeSource})
-    : _smartMerge = smartMerge ?? SmartMerge.instance,
-      // The public injection keeps test playback isolated from real accounts.
-      // ignore: prefer_initializing_formals
-      _youtubeSource = youtubeSource {
+  PlayerController({
+    SmartMerge? smartMerge,
+    // StreamAudioSource is just_audio's supported custom-stream interface.
+    // ignore: experimental_member_use
+    StreamAudioSource Function(Track)? youtubeSource,
+    @visibleForTesting this.radioLookup,
+  }) : _smartMerge = smartMerge ?? SmartMerge.instance,
+       // The public injection keeps test playback isolated from real accounts.
+       // ignore: prefer_initializing_formals
+       _youtubeSource = youtubeSource {
     soundcloud = SoundcloudClient.instance;
     // The first YouTube song then needs one request, not two.
     YoutubeStream.warmUp();
@@ -258,19 +262,28 @@ class PlayerController extends ChangeNotifier {
   bool isAutoplayed(Track t) => _autoplayed.contains(t.id);
 
   String? _autoplaySeed;
-  bool _extending = false;
+  int? _autoplayGeneration;
   bool _regenerating = false;
   bool get regenerating => _regenerating;
   int _radioGeneration = 0;
-  Future<bool> regenerateQueue() async {
-    final original = player.sequenceState;
-    final current = currentTrack;
-    if (current == null || original.currentIndex == null || holdAutoplay || _regenerating) return false;
+  Future<bool> regenerateQueue() => _regenerateQueue();
+
+  Future<bool> _regenerateQueue({Track? radioSeed}) async {
+    if (holdAutoplay || _regenerating || (radioSeed == null && currentTrack == null)) return false;
     _regenerating = true;
-    final generation = ++_radioGeneration;
+    var generation = ++_radioGeneration;
     notifyListeners();
     try {
-      final seed = autoplaySeedIn(queue, queueIndex ?? 0) ?? current;
+      if (radioSeed != null && !_matchesRadioSeed(currentTrack, radioSeed)) {
+        final started = playList([radioSeed], 0, from: tr.radioFrom(radioSeed.title));
+        generation = _radioGeneration;
+        await started;
+        if (generation != _radioGeneration || !_matchesRadioSeed(currentTrack, radioSeed)) return false;
+      }
+      final original = player.sequenceState;
+      final current = currentTrack;
+      if (current == null || original.currentIndex == null) return false;
+      final seed = radioSeed ?? _autoplaySeedFor(current);
       final similar = await _radioFor(seed);
       final state = player.sequenceState;
       if (generation != _radioGeneration ||
@@ -280,8 +293,11 @@ class PlayerController extends ChangeNotifier {
       }
       final cut = state.currentIndex! + 1;
       final retained = state.sequence.take(cut).map((s) => s.tag as Track).toList();
-      final seen = retained.map((t) => t.id).toSet();
-      final fresh = _playableQueueTracks(similar).where((t) => _canRecommend(t) && seen.add(t.id)).take(25).toList();
+      final fresh = RadioQueue.arrange(
+        seed: seed,
+        candidates: _playableQueueTracks(similar).where(_canRecommend),
+        excluded: retained,
+      );
       if (fresh.isEmpty) return false;
       await player.addAudioSources([for (final t in fresh) _sourceFor(t)]);
       if (generation != _radioGeneration) return false;
@@ -291,7 +307,12 @@ class PlayerController extends ChangeNotifier {
         ..clear()
         ..addAll(fresh.map((t) => t.id));
       _autoplaySeed = current.id;
+      if (radioSeed != null) playingFrom = tr.radioFrom(radioSeed.title);
       _saveQueue();
+      if (!casting && player.playing && player.processingState == ProcessingState.completed) {
+        await player.seek(Duration.zero, index: cut);
+        unawaited(_play());
+      }
       return true;
     } catch (e) {
       debugPrint('Regenerate queue: $e');
@@ -299,44 +320,44 @@ class PlayerController extends ChangeNotifier {
     } finally {
       _regenerating = false;
       notifyListeners();
+      if (generation != _radioGeneration) _maybeAutoplay();
     }
   }
 
   /// Set while following someone in Listen together: the host decides what plays next.
   bool holdAutoplay = false;
 
-  /// The song autoplay's radio starts from when [queue] is playing [at]: the nearest streamed song at or
-  /// before it (radio needs a YouTube video or SoundCloud track id). Null when none has streamed yet
-  /// (an all-local queue): then the current song is looked up on YouTube Music by name.
+  /// The most recent song linked to YouTube Music, used when the current song has no artist metadata.
   @visibleForTesting
   static Track? autoplaySeedIn(List<Track> queue, int at) {
     for (var i = at.clamp(-1, queue.length - 1); i >= 0; i--) {
-      if (queue[i].streams) return queue[i];
+      if (queue[i].youtubeId != null) return queue[i];
     }
     return null;
   }
 
-  /// The radio for [seed]: YouTube Music's "Up next", or SoundCloud's related tracks. A local song is
-  /// first found on YouTube Music by its artist and title (that match itself isn't played again).
-  Future<List<Track>> _radioFor(Track seed) async {
-    final soundcloudId = seed.soundcloudId;
-    if (soundcloudId != null) return soundcloud.related(soundcloudId);
-    if (seed.isRemote) return ytMusic.upNext(seed);
-    final match = (await searchYoutube('${seed.artist} ${seed.title}'.trim())).where((t) => t.isRemote).firstOrNull;
-    if (match == null) return const [];
-    return [...await ytMusic.upNext(match)].where((t) => t.videoId != match.videoId).toList();
-  }
+  Track _autoplaySeedFor(Track current) => current.youtubeId != null || current.artists.isNotEmpty
+      ? current
+      : autoplaySeedIn(queue, queueIndex ?? queue.length - 1) ?? current;
+
+  Future<List<Track>> _radioFor(Track seed) =>
+      radioLookup?.call(seed) ?? RadioQueue.load(seed, searchSongs: ytMusic.searchSongs, upNext: ytMusic.upNext);
+
+  @visibleForTesting
+  final Future<List<Track>> Function(Track)? radioLookup;
+
+  static bool _matchesRadioSeed(Track? current, Track seed) =>
+      current?.id == seed.id || (seed.offlineId != null && current?.offlineId == seed.offlineId);
 
   /// Near the end of the queue (last two songs), appends YouTube Music's
-  /// "Up next" for the current song (or the last streamed one, or a local song's match on YouTube Music),
-  /// or SoundCloud's related tracks for a SoundCloud one. When the queue already ran out while they were
+  /// "Up next" for the current song's match on YouTube Music. When the queue already ran out while they were
   /// being looked up, playback carries on with the first of them.
   void _maybeAutoplay() {
     if (_restoringQueue ||
         _regenerating ||
         !_autoplay ||
         holdAutoplay ||
-        _extending ||
+        _autoplayGeneration == _radioGeneration ||
         player.loopMode != LoopMode.off) {
       return;
     }
@@ -345,24 +366,25 @@ class PlayerController extends ChangeNotifier {
     final seq = player.sequenceState;
     final at = seq.currentIndex;
     if (at == null || at < seq.sequence.length - 2) return;
-    final order = queue;
-    final seed = autoplaySeedIn(order, queueIndex ?? order.length - 1) ?? current;
+    final seed = _autoplaySeedFor(current);
     _autoplaySeed = current.id;
-    _extending = true;
     final generation = _radioGeneration;
+    _autoplayGeneration = generation;
     _radioFor(seed)
         .then((similar) async {
           if (generation != _radioGeneration) return;
-          final have = {for (final t in queue) t.id, ..._recentIds.take(30)};
-          final fresh = _playableQueueTracks(similar)
-              .where((t) => _canRecommend(t) && have.add(t.id))
-              .take(25)
-              .toList();
+          final recentIds = _recentIds.take(30).toSet();
+          final fresh = RadioQueue.arrange(
+            seed: seed,
+            candidates: _playableQueueTracks(similar).where((t) => _canRecommend(t) && !recentIds.contains(t.id)),
+            excluded: queue.followedBy(recentlyPlayed.take(30)),
+          );
           if (fresh.isEmpty || !_autoplay) return;
           _autoplayed.addAll(fresh.map((t) => t.id));
           _ordered = [..._ordered, ...fresh];
           final firstNew = player.sequenceState.sequence.length;
           await player.addAudioSources([for (final t in fresh) _sourceFor(t)]);
+          if (generation != _radioGeneration) return;
           notifyListeners();
           // The last song ended before these arrived: the player sits at the end, so start the first of them.
           if (!casting &&
@@ -377,14 +399,20 @@ class PlayerController extends ChangeNotifier {
           debugPrint('Autoplay failed: $e');
           if (generation == _radioGeneration) _autoplaySeed = null;
         })
-        .whenComplete(() => _extending = false);
+        .whenComplete(() {
+          if (_autoplayGeneration == generation) _autoplayGeneration = null;
+        });
   }
 
   /// Plays [seed] followed by its radio, like "Start radio" in YouTube Music.
   Future<void> startRadio(Track seed) async {
-    await playList([seed], 0, from: '${seed.title} radio');
-    _autoplaySeed = null;
-    _maybeAutoplay();
+    if (_regenerating) return;
+    final session = ListenTogether.of(this);
+    if (session.role == ListenRole.guest) return session.suggest(seed);
+    if (!canQueue(seed)) return notify(tr.spotiflacDownloadToPlay);
+    if (!await _regenerateQueue(radioSeed: seed) && !_disposed && _matchesRadioSeed(currentTrack, seed)) {
+      notify(tr.queueRefreshFailed);
+    }
   }
 
   static const _discordAppId = '1561368591297941655';
@@ -702,7 +730,12 @@ class PlayerController extends ChangeNotifier {
             return track.path == path || track.uri.toString() == path;
           });
     final index = at >= 0 ? at : e.index ?? player.sequenceState.currentIndex;
-    final track = index != null && index < seq.length ? seq[index].tag as Track : currentTrack;
+    final currentIndex = player.sequenceState.currentIndex;
+    // A delayed failure can describe the previous source after a good track has already opened.
+    if (!_starting && player.processingState == ProcessingState.ready && index != null && index != currentIndex) {
+      return;
+    }
+    final track = index != null ? seq.elementAtOrNull(index)?.tag as Track? : currentTrack;
     // In plain words: mpv's own message (paths, stream URLs) only goes to the log.
     debugPrint('Playback error: ${e.message}');
     final wasPlaying = player.playing || _starting || _retryWantsPlay;
@@ -1031,6 +1064,9 @@ class PlayerController extends ChangeNotifier {
   /// [position] a few times a second, for views that rebuild a lot per tick.
   Stream<Duration> positionUpdates() => _positionStream(smooth: false);
 
+  /// The lyric highlight's position budget is independent of the seek bar and window focus.
+  Stream<Duration> lyricsPosition() => _beatTicks(() => const Duration(milliseconds: 50));
+
   static bool get _drawn => switch (WidgetsBinding.instance.lifecycleState) {
     AppLifecycleState.hidden || AppLifecycleState.paused || AppLifecycleState.detached => false,
     _ => true,
@@ -1209,6 +1245,9 @@ class PlayerController extends ChangeNotifier {
 
   /// Streamed songs played recently (they aren't in the library, so they're remembered here).
   Map<String, Track> _recentRemote = {};
+
+  /// Identity token for views that rebuild when the order or membership of recents changes.
+  Object get recentlyPlayedRevision => _recentIds;
 
   /// Library and YouTube Music songs together, most recent first.
   bool _unavailableExtensionRecent(Track track) {
@@ -2417,6 +2456,7 @@ class PlayerController extends ChangeNotifier {
     if (session.role == ListenRole.guest && !session.followingHost) {
       return session.suggest(tracks[index.clamp(0, tracks.length - 1)], announce: true);
     }
+    _radioGeneration++;
     playingFrom = from;
     _autoplayed.clear();
     _autoplaySeed = null;
@@ -2893,13 +2933,18 @@ class PlayerController extends ChangeNotifier {
   }
 
   /// Restarts the current track unless we're near the beginning.
-  Future<void> previous() async {
+  Future<void> previous() => _previous(restartCurrent: true);
+
+  /// Goes straight to the previous queue entry when the mini player is swiped.
+  Future<void> previousTrack() => _previous(restartCurrent: false);
+
+  Future<void> _previous({required bool restartCurrent}) async {
     _saveLongPosition();
     _cancelPlaybackRetry();
     final i = _neighbour(-1);
-    if (position > const Duration(seconds: 3) || i == null) {
+    if (restartCurrent && (position > const Duration(seconds: 3) || i == null)) {
       await seek(Duration.zero);
-    } else {
+    } else if (i != null) {
       await player.seek(Duration.zero, index: i);
     }
   }

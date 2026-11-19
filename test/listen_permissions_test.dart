@@ -1,11 +1,16 @@
 import 'dart:async';
 
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:riflay/models/track.dart';
+import 'package:riflay/services/language.dart';
 import 'package:riflay/services/player_controller.dart';
 import 'package:riflay/services/listen_together/listen_together.dart';
 import 'package:riflay/services/listen_together/protocol.dart';
 import 'package:riflay/services/listen_together/transport.dart';
+import 'package:riflay/ui/pages/listen_together_page.dart';
+import 'package:riflay/ui/shell_scope.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class TestPlayer extends PlayerController {
   final song = Track.youtube(
@@ -98,6 +103,63 @@ class TestGuest implements ListenGuestConnection {
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
+  testWidgets('room chat aligns own bubbles to the right and sends from the composer', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    await tester.binding.setSurfaceSize(const Size(500, 1280));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final player = TestPlayer();
+    final transport = TestHost();
+    final session = ListenTogether(player, hostTransport: (_, _) => transport);
+    ListenTogether.use(player, session);
+    await tester.runAsync(() => session.host(mode: ListenMode.wifi, name: 'Host'));
+    final peer = TestPeer();
+    transport.connections.add(peer);
+    peer.frames.add(const Hello(name: 'Host', guestId: 'other').encode());
+    peer.frames.add(const ChatSend('Incoming bubble').encode());
+    session.sendChat('Outgoing bubble');
+    await tester.pumpWidget(
+      MaterialApp(
+        home: PlayerScope(
+          controller: player,
+          child: ShellScope(
+            compact: true,
+            width: 500,
+            open: (_, {location}) {},
+            openCollection: (_) {},
+            openQueue: () {},
+            openNowPlaying: () {},
+            openLyrics: () {},
+            openDownloads: () {},
+            importFromYoutube: () {},
+            addFiles: () {},
+            addFolder: null,
+            child: const Scaffold(body: ListenTogetherPage()),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    expect(
+      tester.getCenter(find.text('Incoming bubble')).dx,
+      lessThan(tester.getCenter(find.text('Outgoing bubble')).dx),
+    );
+    final send = find.byWidgetPredicate((widget) => widget is IconButton && widget.tooltip == tr.roomChatSend);
+    expect(tester.widget<IconButton>(send).onPressed, isNull);
+    final composer = find.byWidgetPredicate(
+      (widget) => widget is TextField && widget.decoration?.hintText == tr.roomChatHint,
+    );
+    await tester.enterText(composer, 'From the composer');
+    await tester.pump();
+    await tester.tap(send);
+    await tester.pump();
+    expect(session.chat.last.text, 'From the composer');
+    expect(tester.widget<TextField>(composer).controller!.text, isEmpty);
+    await tester.pumpWidget(const SizedBox.shrink());
+    session.dispose();
+    player.dispose();
+    await tester.pump(const Duration(seconds: 4));
+  });
+
   test('room chat is host-confirmed, attributed to the peer and cleared on leave', () async {
     final player = TestPlayer();
     final transport = TestHost();
@@ -107,12 +169,14 @@ void main() {
     transport.connections.add(peer);
     peer.frames.add(const ChatSend('before hello').encode());
     expect(session.chat, isEmpty);
-    peer.frames.add(const Hello(name: 'Guest', guestId: 'guest').encode());
+    peer.frames.add(const Hello(name: 'Host', guestId: 'guest').encode());
     peer.frames.add(const ChatSend('hello everyone').encode());
-    expect(session.chat.single.name, 'Guest');
+    expect(session.chat.single.name, 'Host');
+    expect(session.isOwnChat(session.chat.single), isFalse, reason: 'two participants can share a name');
     expect(peer.sent.whereType<RoomChat>().single.text, 'hello everyone');
     session.sendChat('welcome');
     expect(session.chat.last.name, 'Host');
+    expect(session.isOwnChat(session.chat.last), isTrue);
     expect(player.requested, isEmpty);
     expect(player.seeks, isEmpty);
     await session.leave();
@@ -172,9 +236,15 @@ void main() {
     connection.frames.add(message.encode());
     expect(session.chat, hasLength(1));
     expect(session.chat.single.text, 'Welcome');
+    expect(session.isOwnChat(session.chat.single), isFalse, reason: 'messages from older hosts have no sender ID');
     session.sendChat('Hello');
     expect(connection.sent.whereType<ChatSend>().single.text, 'Hello');
     expect(session.chat, hasLength(1), reason: 'The host confirms messages for everyone');
+    final hello = connection.sent.whereType<Hello>().single;
+    connection.frames.add(
+      RoomChat(id: 'host-2', name: 'Guest', text: 'Hello', at: 110, sender: 'guest:${hello.guestId}').encode(),
+    );
+    expect(session.isOwnChat(session.chat.last), isTrue);
     expect(player.seeks.length, initialSeeks);
     await session.leave();
     expect(session.chat, isEmpty);

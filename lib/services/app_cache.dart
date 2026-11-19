@@ -6,6 +6,7 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
 import 'auto_eq.dart';
+import 'opra_eq.dart';
 import 'youtube_audio_source.dart';
 
 /// Settings › About › Clear cache: what Riflay keeps only to save the network or time, and fetches again when
@@ -41,6 +42,7 @@ abstract final class AppCache {
       Directory(p.join(f.cache, 'video-streams')),
       Directory(p.join(f.support, 'lyrics-cache')),
       File(p.join(f.support, 'autoeq_index.md')),
+      File(p.join(f.support, OpraEq.cacheName)),
       File(p.join(f.support, 'discover-cache.json')),
       Directory(p.join(f.temp, 'shared')),
       if (temp.existsSync())
@@ -100,6 +102,7 @@ abstract final class AppCache {
       }
     }
     AutoEq.forgetIndex();
+    OpraEq.forgetIndex();
     PaintingBinding.instance.imageCache
       ..clear()
       ..clearLiveImages();

@@ -10,6 +10,39 @@ class AppLocalizationsJa extends AppLocalizations {
   AppLocalizationsJa([String locale = 'ja']) : super(locale);
 
   @override
+  String get homeStyle => 'ホームのレイアウト';
+
+  @override
+  String get homeStyleClassic => 'クラシック';
+
+  @override
+  String get homeStyleCarousel => 'アートワークカルーセル';
+
+  @override
+  String get customizeHome => 'ホームをカスタマイズ';
+
+  @override
+  String get speedDial => 'クイックアクセス';
+
+  @override
+  String get dailyMix => 'デイリーミックス';
+
+  @override
+  String get dailyMixDescription => '最近聴いた曲と同じアーティストのほかの曲';
+
+  @override
+  String get madeForYou => 'あなたへのおすすめ';
+
+  @override
+  String get artistMusicVideos => 'ミュージックビデオ';
+
+  @override
+  String get artistSoloSongs => 'ソロ曲';
+
+  @override
+  String get artistCollaborations => 'コラボ曲';
+
+  @override
   String get audioSource => '音声ソース';
 
   @override
@@ -100,19 +133,19 @@ class AppLocalizationsJa extends AppLocalizations {
   String get topicPlayback => '再生';
 
   @override
-  String get topicPlaybackSummary => '自動再生、ギャップレス再生、クロスフェード';
+  String get topicPlaybackSummary => '似た曲の自動再生や曲の切り替え方を設定';
 
   @override
-  String get topicDsp => '音響効果（DSP）';
+  String get topicDsp => '音の調整';
 
   @override
-  String get topicDspSummary => 'イコライザー、音量の均一化、空間オーディオ、ルーム補正';
+  String get topicDspSummary => '低音や高音、曲ごとの音量、音の広がりを調整';
 
   @override
   String get topicOutput => '出力と音質';
 
   @override
-  String get topicOutputSummary => '出力デバイス、Bit-perfect モード、サンプルレート';
+  String get topicOutputSummary => '音を出す機器と、音の送り方を設定';
 
   @override
   String get topicAppearance => 'テーマと色';
@@ -124,7 +157,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get topicLayout => 'ページとナビゲーション';
 
   @override
-  String get topicLayoutSummary => 'ホーム、バー、角、余白、カバーの大きさ、動き';
+  String get topicLayoutSummary => 'ホームの内容やボタン、一覧、アニメーションを設定';
 
   @override
   String get topicLibrary => 'ライブラリ';
@@ -280,6 +313,11 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get startRadio => 'ラジオを開始';
+
+  @override
+  String radioFrom(String title) {
+    return '$title のラジオ';
+  }
 
   @override
   String get downloadForOffline => 'オフライン用にダウンロード';
@@ -1265,7 +1303,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get gaplessPlayback => 'ギャップレス再生';
 
   @override
-  String get gaplessPlaybackSubtitle => '曲間に無音を入れない。クロスフェードは「音響効果（DSP）」にある。';
+  String get gaplessPlaybackSubtitle => '曲と曲の間に余分な無音を入れません。曲を重ねる設定はこの下にあります。';
 
   @override
   String get skipSilence => '無音をスキップ';
@@ -1274,16 +1312,16 @@ class AppLocalizationsJa extends AppLocalizations {
   String get offWhileBitPerfect => 'Bit-perfect モード中はオフ';
 
   @override
-  String get skipSilenceSubtitle => '無音のイントロ、アウトロ、曲間を短くする。静かなパートはそのまま';
+  String get skipSilenceSubtitle => '曲の無音部分を短くし、音の小さい演奏はそのまま残します';
 
   @override
   String get off => 'オフ';
 
   @override
-  String get volumeLeveling => '音量の均一化';
+  String get volumeLeveling => '曲ごとの音量をそろえる';
 
   @override
-  String get volumeLevelingSubtitle => 'ReplayGain タグを使って、曲ごとの音量をそろえる';
+  String get volumeLevelingSubtitle => '音量の小さい曲と大きい曲を、近い音量で再生します';
 
   @override
   String get measureLoudness => 'ReplayGain タグのない曲を測る';
@@ -1302,16 +1340,16 @@ class AppLocalizationsJa extends AppLocalizations {
   String get measure => '測る';
 
   @override
-  String get crossfade => 'クロスフェード';
+  String get crossfade => '曲を重ねてなめらかに切り替える';
 
   @override
-  String get crossfadeSubtitle => '曲の終わりを次の曲の始まりに重ねる。Bit-perfect と排他モードではオフ';
+  String get crossfadeSubtitle => '今の曲が消えていく間に次の曲が始まります。ビットパーフェクトと排他出力では使えません。';
 
   @override
-  String get fadeLength => 'フェードの長さ';
+  String get fadeLength => '曲を重ねる時間';
 
   @override
-  String get skipForAlbums => 'アルバムでは使わない';
+  String get skipForAlbums => 'アルバムの曲間を録音どおりにする';
 
   @override
   String get skipForAlbumsSubtitle => 'アルバムで続く曲はフェードなしで、アーティストが作ったとおりに流す';
@@ -1425,7 +1463,7 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
-  String get bitPerfectMode => 'Bit-perfect モード';
+  String get bitPerfectMode => '音を加工せずに再生（ビットパーフェクト）';
 
   @override
   String get needsAndroid14 => 'Android 14 以降が必要';
@@ -1476,7 +1514,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get needsBitPerfect => 'Bit-perfect モードが必要';
 
   @override
-  String get exclusiveMode => '排他モード';
+  String get exclusiveMode => '出力機器を Riflay 専用にする';
 
   @override
   String get exclusiveMac => 'デバイスを占有して、macOS がミックスもリサンプリングもできないようにする。DAC は曲ごとのサンプルレートに切り替わる。Riflay の再生中、ほかのアプリは鳴らない。';
@@ -1507,13 +1545,13 @@ class AppLocalizationsJa extends AppLocalizations {
   String get buffer => 'バッファ';
 
   @override
-  String get bufferSubtitle => 'プチプチ音や途切れがあるなら上げてね';
+  String get bufferSubtitle => '音が途切れたり雑音が出る場合は増やしてください。大きくすると操作への反応が遅くなることがあります。';
 
   @override
   String get signalPathSubtitleExact => '再生中の曲に何が起きてるか、そのまま見られる';
 
   @override
-  String get directUsbIntro => 'Riflay が Android を通さず USB DAC と直接やりとりするので、Bit-perfect モードが使えないスマホでも曲がそのまま届く。試験的な機能。';
+  String get directUsbIntro => 'Android の音声処理を通さず、USB オーディオ機器に直接音を送ります。試験機能です。';
 
   @override
   String get directUsbPlugIn => 'オン。USB DAC をつないでね。';
@@ -1854,7 +1892,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get qualityBadge => '音質バッジ';
 
   @override
-  String get qualityBadgeSubtitle => 'スマホのプレイヤーで FLAC や Opus 130 kbps を出す場所：アーティスト名の下か、2つの時間の間';
+  String get qualityBadgeSubtitle => 'スマートフォンの再生画面で、FLAC や Opus などの音質情報を表示する場所を選びます。';
 
   @override
   String get background => '背景';
@@ -4502,6 +4540,12 @@ class AppLocalizationsJa extends AppLocalizations {
   String get openingInstaller => 'Android のインストーラーを開いてる…';
 
   @override
+  String get windowsUpdateNote => 'アップデート後に Riflay が再起動します。ライブラリと設定は保持されます。';
+
+  @override
+  String get windowsUpdateRestart => 'アップデートをインストールしています。完了すると Riflay が再起動します…';
+
+  @override
   String get completeInInstaller => 'Android のインストーラーでアップデートを完了してね';
 
   @override
@@ -5433,7 +5477,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get csvReadFailed => 'タイトルとアーティスト列のあるCSVを選んでください。';
 
   @override
-  String get loudnessTarget => '音量正規化の目標値';
+  String get loudnessTarget => '曲の音量をそろえる基準';
 
   @override
   String get defaultLibraryFilter => 'ライブラリの初期フィルタ';
@@ -6346,10 +6390,10 @@ class AppLocalizationsJa extends AppLocalizations {
   String get dsRoomUpmix => '7.1の部屋、ステレオからアップミックス';
 
   @override
-  String get autoEq => 'ヘッドホン / IEMのプロファイル(AutoEQ)';
+  String get autoEq => 'ヘッドホン・イヤホンに合わせた EQ';
 
   @override
-  String get autoEqSubtitle => '測定データからモデルに合わせてイコライザーを設定し、ニュートラルな音(Harmanターゲット)にする。';
+  String get autoEqSubtitle => '機種名で検索し、測定データに基づいて音を調整します。';
 
   @override
   String get autoEqPick => 'ヘッドホンかIEMを選ぶ';
@@ -6362,11 +6406,14 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String autoEqModels(int count) {
-    return '$countモデル(crinacle、oratory1990などが測定)。名前を入力して検索。';
+    return '$count 件のプロファイルがあります。メーカー名と機種名で検索できます。';
   }
 
   @override
-  String get autoEqNoResults => 'その名前のモデルはない。';
+  String get autoEqNoResults => '機種が見つかりません。メーカー名と機種名だけで検索してみてください。';
+
+  @override
+  String get autoEqLoadFailed => 'EQ プロファイルを読み込めませんでした。接続を確認して再試行してください。';
 
   @override
   String autoEqFailed(String error) {
@@ -6634,7 +6681,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get networkProxy => 'ネットワークプロキシ';
 
   @override
-  String get networkProxyAbout => 'アプリのリクエストに自分のHTTPプロキシを使用します。サービスのリクエスト制限は引き続き適用されます。';
+  String get networkProxyAbout => '接続先のネットワークで必要な場合にプロキシを使います。音楽サービスごとの利用制限は引き続き適用されます。';
 
   @override
   String get networkProxyAddress => 'HTTPプロキシのアドレス';
@@ -6659,6 +6706,9 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get seekStep => 'シーク間隔';
+
+  @override
+  String get seekStepHint => 'Shift＋左右の矢印キーで曲の中を移動する秒数です。オフにすると、このショートカットが無効になります。';
 
   @override
   String get scSeekBackward => '巻き戻す';

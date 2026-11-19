@@ -15,6 +15,7 @@ import '../../models/track.dart';
 import '../../platform/features.dart';
 import '../../services/language.dart';
 import '../../services/layout_prefs.dart';
+import '../../services/desktop_visibility.dart';
 import '../player/player_glass.dart';
 import '../../services/lyrics.dart';
 import '../../services/lyrics_translation.dart';

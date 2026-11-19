@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import 'glass_toast.dart';
+
 import '../../services/artist_channels.dart';
 import '../../services/language.dart';
 import '../../models/track.dart';
@@ -409,11 +411,16 @@ VoidCallback? openArtist(BuildContext host, PlayerController c, Track track, {Sh
             final artist =
                 matches.where((a) => a.title.toLowerCase() == who.toLowerCase()).firstOrNull ?? matches.firstOrNull;
             if (artist == null) throw StateError('No artist result for $who');
+            final channel = artist.browseId;
+            if (channel == null) throw StateError('No artist channel for $who');
+            final catalog = await c.ytMusic.artistTracks(channel);
             return Collection(
-              kind: CollectionKind.remote,
+              kind: CollectionKind.remoteArtist,
+              id: channel,
               title: artist.title,
               subtitle: tr.artist,
-              tracks: await c.ytMusic.collectionTracks(artist),
+              tracks: catalog.songs,
+              artistVideos: catalog.videos,
             );
           },
         ),
@@ -442,10 +449,14 @@ class TrackMenuButton extends StatelessWidget {
     this.hide = const {},
   });
 
-  static Future<void> _queued(BuildContext context, Future<void> change, String done) async {
+  static Future<void> _queued(BuildContext context, Future<void> change, String done, [VoidCallback? openQueue]) async {
     final messenger = ScaffoldMessenger.of(context);
     await change;
-    messenger.showSnackBar(SnackBar(content: Text(done), duration: const Duration(seconds: 2)));
+    messenger.showSnackBar(
+      openQueue == null
+          ? SnackBar(content: Text(done), duration: const Duration(seconds: 2))
+          : LinkedToast(done, label: tr.openQueue, open: openQueue),
+    );
   }
 
   /// A guest of a session whose host takes suggestions.
@@ -620,13 +631,13 @@ class TrackMenuButton extends StatelessWidget {
                   c.canQueue(track) &&
                   (ListenTogether.of(c).role != ListenRole.guest || (_canSuggest(c) && track.videoId != null)),
               onTap: () => _canSuggest(c)
-                  ? _queued(host, ListenTogether.of(c).suggest(track), tr.toastRequestedNext)
-                  : _queued(host, c.playNext([track]), tr.toastPlaysNext),
+                  ? _queued(host, ListenTogether.of(c).suggest(track), tr.toastRequestedNext, shell.openQueue)
+                  : _queued(host, c.playNext([track]), tr.toastPlaysNext, shell.openQueue),
               child: MenuRow(leading: const Icon(Icons.playlist_play_rounded), title: Text(tr.playNext)),
             ),
             PopupMenuItem(
               enabled: c.canQueue(track),
-              onTap: () => _queued(host, c.addToQueue([track]), tr.toastAddedToQueue),
+              onTap: () => _queued(host, c.addToQueue([track]), tr.toastAddedToQueue, shell.openQueue),
               child: MenuRow(leading: const Icon(Icons.queue_music_rounded), title: Text(tr.addToQueue)),
             ),
             // The song's YouTube Music link, or its name and artist for a file here.

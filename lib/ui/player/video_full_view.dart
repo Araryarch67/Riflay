@@ -62,7 +62,7 @@ Future<void> openVideoFullView(BuildContext context, {bool rotated = false}) {
 /// system bars hide; closing puts both back.
 ///
 /// On a computer it fills the window: the controls sit above and below the picture (the native video's surface lies
-/// over anything drawn on it) and go, with the pointer, after a few seconds without a move. F11 or a double click
+/// over anything drawn on it) and go, with the pointer, after a few seconds without a move. F11 or a centre double click
 /// fills the screen, Esc leaves it (then the view), and Queue opens beside the picture.
 class VideoFullView extends StatefulWidget {
   const VideoFullView({super.key, this.lockLandscape = false, this.closeUpright = false, this.openQueue, this.shell});
@@ -92,6 +92,8 @@ class _VideoFullViewState extends State<VideoFullView> {
 
   bool _controls = true;
   Timer? _hide;
+  Timer? _seekHintTimer;
+  bool? _seekForward;
   bool _restored = false;
   bool _closing = false;
 
@@ -165,6 +167,7 @@ class _VideoFullViewState extends State<VideoFullView> {
   @override
   void dispose() {
     _hide?.cancel();
+    _seekHintTimer?.cancel();
     _restore();
     super.dispose();
   }
@@ -187,6 +190,60 @@ class _VideoFullViewState extends State<VideoFullView> {
     setState(() => _lyricsShown = !_lyricsShown);
     _showControls();
   }
+
+  void _toggleControls() => _controls ? _hideControls() : _showControls();
+
+  Widget _videoGestures({Key? key, required Widget child, required VoidCallback onTap}) => LayoutBuilder(
+    builder: (context, box) {
+      var tap = 0.5;
+      return GestureDetector(
+        key: key,
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        onDoubleTapDown: (event) => tap = event.localPosition.dx / box.maxWidth,
+        onDoubleTap: () {
+          if (tap >= 0.44 && tap <= 0.56) {
+            if (_desktop) {
+              _setWindowFull(!windowFullScreen.value).ignore();
+            } else {
+              onTap();
+            }
+            return;
+          }
+          final c = PlayerScope.read(context);
+          if (c.currentTrack == null) return;
+          final forward = tap > 0.56;
+          final target = c.position + Duration(seconds: forward ? 10 : -10);
+          final length = c.duration ?? c.currentTrack?.duration;
+          c
+              .seek(
+                target.isNegative
+                    ? Duration.zero
+                    : length != null && target > length
+                    ? length
+                    : target,
+              )
+              .ignore();
+          _seekHintTimer?.cancel();
+          setState(() => _seekForward = forward);
+          _seekHintTimer = Timer(const Duration(milliseconds: 650), () {
+            if (mounted) setState(() => _seekForward = null);
+          });
+        },
+        child: child,
+      );
+    },
+  );
+
+  Widget _seekHint(bool forward) => IgnorePointer(
+    child: Align(
+      alignment: Alignment(forward ? 0.68 : -0.68, 0),
+      child: Chip(
+        avatar: Icon(forward ? Icons.forward_10_rounded : Icons.replay_10_rounded),
+        label: Text(tr.seekStepSeconds(10)),
+      ),
+    ),
+  );
 
   void _queue() {
     if (_desktop) {
@@ -240,10 +297,9 @@ class _VideoFullViewState extends State<VideoFullView> {
     return Stack(
       fit: StackFit.expand,
       children: [
-        GestureDetector(
+        _videoGestures(
           key: const ValueKey('video-full-surface'),
-          behavior: HitTestBehavior.opaque,
-          onTap: () => _controls ? _hideControls() : _showControls(),
+          onTap: _toggleControls,
           child: VideoPicture(track: track),
         ),
         if (lyrics)
@@ -272,7 +328,7 @@ class _VideoFullViewState extends State<VideoFullView> {
                     fit: StackFit.expand,
                     children: [
                       // The empty middle closes them again, as a tap on the picture opened them.
-                      GestureDetector(behavior: HitTestBehavior.translucent, onTap: _hideControls),
+                      _videoGestures(onTap: _hideControls, child: const SizedBox.expand()),
                       const IgnorePointer(child: _Shade()),
                       SafeArea(child: Column(children: [_topBar(context, track), const Spacer(), _bottomBar()])),
                     ],
@@ -280,6 +336,7 @@ class _VideoFullViewState extends State<VideoFullView> {
                 )
               : const SizedBox.shrink(),
         ),
+        if (_seekForward case final forward?) _seekHint(forward),
       ],
     );
   }
@@ -300,12 +357,16 @@ class _VideoFullViewState extends State<VideoFullView> {
             ),
           ),
         Expanded(
-          child: GestureDetector(
-            key: const ValueKey('video-full-surface'),
-            behavior: HitTestBehavior.opaque,
-            onTap: () => _controls ? _hideControls() : _showControls(),
-            onDoubleTap: _desktop ? () => _setWindowFull(!windowFullScreen.value) : null,
-            child: VideoPicture(track: track),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              _videoGestures(
+                key: const ValueKey('video-full-surface'),
+                onTap: _toggleControls,
+                child: VideoPicture(track: track),
+              ),
+              if (_seekForward case final forward?) _seekHint(forward),
+            ],
           ),
         ),
         if (track != null) const AudioVisualizer(linearOnly: true, height: 42),
@@ -575,7 +636,7 @@ class _LyricsLineState extends State<_LyricsLine> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _ticks ??= PlayerScope.read(context).positionUpdates().listen(_at);
+    _ticks ??= PlayerScope.read(context).lyricsPosition().listen(_at);
     _load();
   }
 

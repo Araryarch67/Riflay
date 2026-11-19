@@ -3,6 +3,8 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import 'glass_toast.dart';
+
 import '../../models/track.dart';
 import '../../platform/features.dart';
 import '../../services/language.dart';
@@ -153,7 +155,10 @@ class CollectionHero extends StatelessWidget {
                         label: tr.addAllToQueue,
                         onTap: () {
                           c.addToQueue(tracks);
-                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(tr.toastAddedToQueue)));
+                          final shell = ShellScope.of(context);
+                          ScaffoldMessenger.of(
+                            context,
+                          ).showSnackBar(LinkedToast(tr.toastAddedToQueue, label: tr.openQueue, open: shell.openQueue));
                         },
                       ),
                     if ((collection.kind == CollectionKind.remote ||

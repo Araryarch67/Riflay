@@ -124,13 +124,16 @@ sealed class ListenMessage {
           final String value when value.trim().isNotEmpty && value.length <= 1000 => ChatSend(value),
           _ => null,
         },
-        'chat' => switch (json['text']) {
-          final String value when value.trim().isNotEmpty && value.length <= 1000 => RoomChat(
-            id: json['id'] as String,
-            name: json['name'] as String,
-            text: value,
-            at: json['at'] as int,
-          ),
+        'chat' => switch ((json['text'], json['at'])) {
+          (final String value, final int at)
+              when value.trim().isNotEmpty && value.length <= 1000 && at >= 0 && at <= 8640000000000000 =>
+            RoomChat(
+              id: json['id'] as String,
+              name: json['name'] as String,
+              text: value,
+              at: at,
+              sender: json['sender'] as String?,
+            ),
           _ => null,
         },
         'bye' => Bye(reason: json['reason'] as String?),
@@ -154,13 +157,14 @@ class ChatSend extends ListenMessage {
 
 /// A room message confirmed by its host, shared over the existing transport.
 class RoomChat extends ListenMessage {
-  const RoomChat({required this.id, required this.name, required this.text, required this.at});
+  const RoomChat({required this.id, required this.name, required this.text, required this.at, this.sender});
   final String id, name, text;
   final int at;
+  final String? sender;
   @override
   String get type => 'chat';
   @override
-  Map<String, dynamic> body() => {'id': id, 'name': name, 'text': text, 'at': at};
+  Map<String, dynamic> body() => {'id': id, 'name': name, 'text': text, 'at': at, 'sender': ?sender};
 }
 
 /// Guest → host, first message: who is joining.
@@ -170,7 +174,7 @@ class Hello extends ListenMessage {
   /// Shown to the host and other guests ("Ana joined").
   final String name;
 
-  /// Random per guest app install; lets the host tell two guests of the same name apart.
+  /// Random per join, so the host can tell two guests of the same name apart.
   final String guestId;
   final int version;
 

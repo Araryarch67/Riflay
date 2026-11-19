@@ -10,6 +10,8 @@ import 'package:path_provider/path_provider.dart';
 
 import '../app_version.dart';
 import '../platform/host.dart';
+import '../platform/windows_setup.dart';
+import 'system_tray.dart';
 
 /// A verified download advertised by the official GitHub release.
 class UpdateAsset {
@@ -28,6 +30,7 @@ class AppRelease {
   final List<UpdateAsset> assets;
 
   static const repository = 'https://github.com/Araryarch67/Riflay';
+  static const windowsInstallerName = 'Riflay-windows-x64-setup.exe';
 
   static AppRelease parse(Map<String, dynamic> json) {
     final tag = json['tag_name'] as String? ?? '';
@@ -42,7 +45,10 @@ class AppRelease {
       final name = raw['name'];
       final size = raw['size'];
       final digest = raw['digest'];
-      if (name is! String || !RegExp(r'^Riflay-android(?:-arm64|-arm32|-x86_64)?\.apk$').hasMatch(name)) continue;
+      if (name is! String ||
+          name != windowsInstallerName && !RegExp(r'^Riflay-android(?:-arm64|-arm32|-x86_64)?\.apk$').hasMatch(name)) {
+        continue;
+      }
       if (size is! int || size <= 0 || size > 512 * 1024 * 1024) continue;
       if (digest is! String || !RegExp(r'^sha256:[a-fA-F0-9]{64}$').hasMatch(digest)) continue;
       final url = Uri.parse('$repository/releases/download/$tag/$name');
@@ -92,6 +98,8 @@ class AppRelease {
     }
     return null;
   }
+
+  UpdateAsset? get windowsAsset => assets.where((asset) => asset.name == windowsInstallerName).firstOrNull;
 }
 
 /// Checks on request (Settings › About), and once a start in the background ([checkAtStart]). Android downloads are
@@ -111,8 +119,9 @@ class AppUpdates {
     final updates = AppUpdates();
     try {
       final release = await updates.check();
-      // A patch release (x.y.Z) doesn't pop up: it waits in Settings › About.
-      if (release.newerThan(updates.installedVersion) && !release.patchAbove(updates.installedVersion)) {
+      final installerReady = updates.windowsInstaller && updates.assetFor(release) != null;
+      if (release.newerThan(updates.installedVersion) &&
+          (installerReady || !release.patchAbove(updates.installedVersion))) {
         return found(updates, release);
       }
     } catch (e) {
@@ -121,15 +130,30 @@ class AppUpdates {
     updates.dispose();
   }
 
-  AppUpdates({http.Client? client, bool? android, Future<Directory> Function()? cacheDirectory})
-    : _client = client ?? http.Client(),
-      android = android ?? Host.isAndroid,
-      _cacheDirectory = cacheDirectory ?? getTemporaryDirectory;
+  AppUpdates({
+    http.Client? client,
+    bool? android,
+    Future<Directory> Function()? cacheDirectory,
+    @visibleForTesting Future<String?> Function()? findWindowsInstall,
+    @visibleForTesting Future<void> Function(String, String)? launchWindowsSetup,
+    @visibleForTesting Future<void> Function()? quitWindows,
+  }) : _client = client ?? http.Client(),
+       android = android ?? Host.isAndroid,
+       _findWindowsInstall = findWindowsInstall ?? WindowsSetup.installedDirectory,
+       _launchWindowsSetup = launchWindowsSetup ?? WindowsSetup.install,
+       _quitWindows = quitWindows ?? SystemTray.quitForUpdate,
+       _cacheDirectory = cacheDirectory ?? getTemporaryDirectory;
 
   static const _channel = MethodChannel('riflay/updates');
   final http.Client _client;
   final Future<Directory> Function() _cacheDirectory;
+  final Future<String?> Function() _findWindowsInstall;
+  final Future<void> Function(String, String) _launchWindowsSetup;
+  final Future<void> Function() _quitWindows;
   final bool android;
+  String? _windowsDirectory;
+  ({String path, UpdateAsset asset})? _verifiedSetup;
+  bool get windowsInstaller => _windowsDirectory != null;
   String installedVersion = appVersion;
   List<String> _abis = const [];
 
@@ -138,6 +162,8 @@ class AppUpdates {
       final info = await _channel.invokeMapMethod<String, dynamic>('info');
       installedVersion = info?['version'] as String? ?? appVersion;
       _abis = (info?['abis'] as List? ?? const []).cast<String>();
+    } else {
+      _windowsDirectory = await _findWindowsInstall();
     }
     final response = await _client
         .get(
@@ -149,22 +175,31 @@ class AppUpdates {
     return AppRelease.parse(jsonDecode(response.body) as Map<String, dynamic>);
   }
 
-  UpdateAsset? assetFor(AppRelease release) => release.androidAsset(_abis);
+  UpdateAsset? assetFor(AppRelease release) => android
+      ? release.androidAsset(_abis)
+      : windowsInstaller
+      ? release.windowsAsset
+      : null;
 
   /// Deletes update files left from before: an installed update's APK (the installer was done with it before this
   /// version could start) and an unfinished download. Tens of megabytes each, which otherwise stayed in the cache
   /// until the next update.
   Future<int> cleanUp() async {
-    if (!android) return 0;
+    if (!android && !Host.isWindows) return 0;
     var removed = 0;
     try {
       final folder = Directory(p.join((await _cacheDirectory()).path, 'app-updates'));
       if (!folder.existsSync()) return 0;
       await for (final file in folder.list()) {
         final name = p.basename(file.path);
-        if (file is File && name.startsWith('riflay-') && (name.endsWith('.apk') || name.endsWith('.apk.part'))) {
-          await file.delete();
-          removed++;
+        final pattern = android ? r'\.apk(?:\.part)?$' : r'\.exe(?:\.part)?$';
+        if (file is File && RegExp('^riflay-[0-9]+\\.[0-9]+\\.[0-9]+$pattern').hasMatch(name)) {
+          try {
+            await file.delete();
+            removed++;
+          } on FileSystemException {
+            // An installer can still be exiting while the updated app starts.
+          }
         }
       }
     } catch (e) {
@@ -174,23 +209,23 @@ class AppUpdates {
   }
 
   Future<String> download(AppRelease release, void Function(double) progress) async {
-    if (!android) throw StateError('APK installation requires Android');
     final asset = assetFor(release);
-    if (asset == null) throw StateError('No verified APK available for this device');
+    if (asset == null || !release.newerThan(installedVersion)) throw StateError('No verified update for this device');
+    if (!android) _verifiedSetup = null;
     final folder = Directory(p.join((await _cacheDirectory()).path, 'app-updates'));
     await folder.create(recursive: true);
     await for (final file in folder.list()) {
-      if (file is File && p.basename(file.path).startsWith('riflay-') && file.path.endsWith('.apk')) {
+      if (android && file is File && p.basename(file.path).startsWith('riflay-') && file.path.endsWith('.apk')) {
         await file.delete();
       }
     }
-    final target = File(p.join(folder.path, 'riflay-${release.version}.apk'));
+    final target = File(p.join(folder.path, 'riflay-${release.version}.${android ? 'apk' : 'exe'}'));
     final partial = File('${target.path}.part');
     // Never hand the installer an old, unfinished or unchecked download.
     final response = await _client.send(http.Request('GET', asset.url)).timeout(const Duration(seconds: 20));
     if (response.statusCode != 200 || (response.contentLength != null && response.contentLength != asset.bytes)) {
       await response.stream.listen((_) {}).cancel();
-      throw const FormatException('Unexpected APK size');
+      throw const FormatException('Unexpected update size');
     }
     final sink = partial.openWrite();
     var closed = false;
@@ -198,16 +233,17 @@ class AppUpdates {
     try {
       await for (final chunk in response.stream.timeout(const Duration(seconds: 30))) {
         received += chunk.length;
-        if (received > asset.bytes) throw const FormatException('APK exceeds its advertised size');
+        if (received > asset.bytes) throw const FormatException('Update exceeds its advertised size');
         sink.add(chunk);
         progress(received / asset.bytes);
       }
       await sink.close();
       closed = true;
-      if (received != asset.bytes) throw const FormatException('Incomplete APK');
+      if (received != asset.bytes) throw const FormatException('Incomplete update');
       final digest = await sha256.bind(partial.openRead()).first;
-      if (digest.toString() != asset.sha256Digest) throw const FormatException('APK checksum mismatch');
+      if (digest.toString() != asset.sha256Digest) throw const FormatException('Update checksum mismatch');
       await partial.rename(target.path);
+      if (!android) _verifiedSetup = (path: target.path, asset: asset);
       return target.path;
     } finally {
       if (!closed) await sink.close();
@@ -215,8 +251,23 @@ class AppUpdates {
     }
   }
 
-  /// True once Android's installer opens; false if install permission was declined.
-  Future<bool> install(String path) async => await _channel.invokeMethod<bool>('install', path) ?? false;
+  /// Opens the platform installer. Windows Setup waits for this process to exit before copying files.
+  Future<bool> install(String path) async {
+    if (android) return await _channel.invokeMethod<bool>('install', path) ?? false;
+    final setup = _verifiedSetup;
+    final directory = _windowsDirectory;
+    if (setup == null || path != setup.path || directory == null || await _findWindowsInstall() != directory) {
+      throw StateError('Could not verify the registered Windows installation');
+    }
+    final file = File(path);
+    if (await file.length() != setup.asset.bytes ||
+        (await sha256.bind(file.openRead()).first).toString() != setup.asset.sha256Digest) {
+      throw const FormatException('Setup checksum mismatch');
+    }
+    await _launchWindowsSetup(path, directory);
+    await _quitWindows();
+    return true;
+  }
 
   void dispose() => _client.close();
 }

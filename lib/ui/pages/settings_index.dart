@@ -724,6 +724,7 @@ abstract final class SettingsOptions {
       find: (t) => t.kwHomeSections,
       locate: (t) => t.dragToReorderSections,
     ),
+    SettingsOption('homeStyle', .layout, (t) => t.homeStyle, find: (t) => t.kwHomeSections),
     SettingsOption('startupTab', .layout, (t) => t.startupTab, available: () => Features.phoneLayout),
     SettingsOption('swipeDistance', .layout, (t) => t.swipeDistance, available: () => Features.phoneLayout),
     SettingsOption('defaultLibraryFilter', .library, (t) => t.defaultLibraryFilter),

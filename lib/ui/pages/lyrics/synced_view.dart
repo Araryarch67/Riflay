@@ -37,11 +37,7 @@ class _SyncedLyricsState extends State<_SyncedLyrics> {
   }
 
   late final Stream<Duration> _ticks = _c
-      .positionUpdates()
-      .map((p) => p - _shift.value)
-      .asBroadcastStream(onListen: (s) => s.resume(), onCancel: (s) => s.pause());
-  late final Stream<Duration> _smooth = _c
-      .smoothPosition()
+      .lyricsPosition()
       .map((p) => p - _shift.value)
       .asBroadcastStream(onListen: (s) => s.resume(), onCancel: (s) => s.pause());
 
@@ -49,7 +45,7 @@ class _SyncedLyricsState extends State<_SyncedLyrics> {
   Widget build(BuildContext context) => SyncedLyricsView(
     lyrics: widget.lyrics,
     ticks: _ticks,
-    smoothTicks: _smooth,
+    smoothTicks: _ticks,
     playing: _playing,
     position: () => _c.position - _shift.value,
     length: () => _c.currentTrack?.duration ?? _c.duration,
@@ -158,7 +154,6 @@ class _SyncedLyricsViewState extends State<SyncedLyricsView> with _Extras {
 
   @override
   void dispose() {
-    _stopGlide();
     _sub?.cancel();
     _showBack.dispose();
     _at.dispose();
@@ -177,44 +172,9 @@ class _SyncedLyricsViewState extends State<SyncedLyricsView> with _Extras {
   /// The current line is out of view while not following: shows the button.
   final _showBack = ValueNotifier<bool>(false);
 
-  /// The follow scroll in frugal Balanced: [_scroll] eased to the current line on the shared [UiBeat] at 30 fps
-  /// (~11 frames for its 350 ms; lyrics never move slower than 24 fps) instead of at the display's rate (~21).
-  /// Cancelled by a hand scroll or a newer line.
-  UiBeatListener? _glide;
-
-  void _glideTo(double to) {
-    _glide?.cancel();
-    final from = _scroll.position.pixels;
-    if ((to - from).abs() < 1) return;
-    const length = Duration(milliseconds: 350);
-    var t = Duration.zero;
-    _glide = UiBeat.listen(PlayingMotion.heavyEvery, (elapsed) {
-      t += elapsed;
-      final done = t >= length;
-      if (!mounted || !_scroll.hasClients) return _stopGlide();
-      final eased = Curves.easeOutCubic.transform(done ? 1 : t.inMicroseconds / length.inMicroseconds);
-      _scroll.jumpTo(from + (to - from) * eased);
-      if (done) _stopGlide();
-    });
-  }
-
-  void _stopGlide() {
-    _glide?.cancel();
-    _glide = null;
-  }
-
   void _scrollToCurrent({bool animate = true}) {
     final ctx = _current < 0 ? null : _keys[_current].currentContext;
     if (ctx == null) return;
-    if (animate && LayoutPrefs.frugal && LayoutPrefs.dur(const Duration(milliseconds: 350)) > Duration.zero) {
-      final ro = ctx.findRenderObject();
-      final viewport = ro == null ? null : RenderAbstractViewport.maybeOf(ro);
-      if (ro != null && viewport != null && _scroll.hasClients) {
-        final p = _scroll.position;
-        return _glideTo(viewport.getOffsetToReveal(ro, 0.5).offset.clamp(p.minScrollExtent, p.maxScrollExtent));
-      }
-    }
-    _stopGlide();
     Scrollable.ensureVisible(
       ctx,
       alignment: 0.5,
@@ -233,7 +193,6 @@ class _SyncedLyricsViewState extends State<SyncedLyricsView> with _Extras {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       if (_following) {
-        // Behind another window the next line comes at once: nobody watches the glide (~7 frames a line).
         _scrollToCurrent(animate: _placed && PlayingMotion.decorates(WidgetsBinding.instance.lifecycleState));
         _placed = true;
       } else {
@@ -258,7 +217,6 @@ class _SyncedLyricsViewState extends State<SyncedLyricsView> with _Extras {
   }
 
   void _pauseFollowing() {
-    _stopGlide();
     _following = false;
     _checkVisible();
   }
@@ -717,6 +675,5 @@ class _Glass extends StatelessWidget {
 }
 
 /// How long a line takes to change look when the song moves on to the next one. Frugal Balanced on a computer
-/// (`LayoutPrefs.frugal`): at once. Each fade drew at the display's rate, ~15 frames a line beside the scroll (which
-/// glides on the beat there, see `_glide`), on a page where everything else moves 5-10 times a second.
+/// (`LayoutPrefs.frugal`): change the highlight at once to avoid repainting inactive lines during the scroll.
 Duration _lineChange(int ms) => LayoutPrefs.frugal ? Duration.zero : LayoutPrefs.dur(Duration(milliseconds: ms));

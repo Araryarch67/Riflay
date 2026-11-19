@@ -11,9 +11,10 @@ void main() {
     expect(PlayerController.autoplaySeedIn(queue, 2), queue[2]);
   });
 
-  test('a local song at the end of the queue seeds from the last streamed song before it', () {
+  test('the fallback prefers the last YouTube Music song over another service', () {
     final queue = [yt('a'), yt('b'), local('x'), local('y')];
-    expect(PlayerController.autoplaySeedIn(queue, 3), queue[1]);
+    final other = Track.soundcloud(trackId: 'other', title: 'SoundCloud song', artist: 'A');
+    expect(PlayerController.autoplaySeedIn([...queue, other], 4), queue[1]);
   });
 
   test('an all-local queue has no streamed seed (the current song is looked up by name)', () {

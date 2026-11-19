@@ -6,6 +6,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import 'package:path/path.dart' as p;
+import 'package:riflay/platform/windows_setup.dart';
 import 'package:riflay/services/app_updates.dart';
 
 Map<String, dynamic> releaseJson({String version = '1.10.0', List<int> data = const [1, 2, 3, 4]}) => {
@@ -22,6 +24,19 @@ Map<String, dynamic> releaseJson({String version = '1.10.0', List<int> data = co
         'digest': 'sha256:${sha256.convert(data)}',
         'browser_download_url': '${AppRelease.repository}/releases/download/v$version/Riflay-android$suffix.apk',
       },
+  ],
+};
+
+Map<String, dynamic> windowsReleaseJson({List<int> data = const [1, 2, 3, 4]}) => {
+  ...releaseJson(),
+  'assets': [
+    <String, dynamic>{
+      'name': AppRelease.windowsInstallerName,
+      'state': 'uploaded',
+      'size': data.length,
+      'digest': 'sha256:${sha256.convert(data)}',
+      'browser_download_url': '${AppRelease.repository}/releases/download/v1.10.0/${AppRelease.windowsInstallerName}',
+    },
   ],
 };
 
@@ -126,6 +141,54 @@ void main() {
     await expectLater(updates.check(), throwsStateError);
   });
 
+  test('only the registered Windows executable matches, even when path casing differs', () {
+    const registered = r'C:\Users\User\Local Apps\Riflay\riflay.exe';
+    expect(WindowsSetup.sameExecutable(registered, r'c:\users\user\Local Apps\Riflay\RIFLAY.exe'), isTrue);
+    expect(WindowsSetup.sameExecutable(registered, r'C:\Users\User\scoop\apps\riflay\current\riflay.exe'), isFalse);
+    expect(WindowsSetup.sameExecutable(registered, r'D:\Portable\Riflay\riflay.exe'), isFalse);
+  });
+
+  test('Windows checks the setup again before launching and quits only after setup starts', () async {
+    final folder = Directory.systemTemp.createTempSync('riflay-update-windows-');
+    addTearDown(() => folder.deleteSync(recursive: true));
+    final actions = <String>[];
+    String? location;
+    final updates = AppUpdates(
+      android: false,
+      cacheDirectory: () async => folder,
+      findWindowsInstall: () async => location,
+      client: MockClient(
+        (request) async => request.url.host == 'api.github.com'
+            ? http.Response(jsonEncode(windowsReleaseJson()), 200)
+            : http.Response.bytes([1, 2, 3, 4], 200),
+      ),
+      launchWindowsSetup: (file, directory) async {
+        expect(directory, location);
+        expect(File(file).readAsBytesSync(), [1, 2, 3, 4]);
+        actions.add('setup');
+      },
+      quitWindows: () async => actions.add('quit'),
+    );
+    addTearDown(updates.dispose);
+    final outsideInstaller = await updates.check();
+    expect(
+      updates.assetFor(outsideInstaller),
+      isNull,
+      reason: 'Scoop and portable builds only link to the release page',
+    );
+    location = r'C:\Users\User\Local Apps\Riflay';
+    final release = await updates.check();
+    expect(updates.assetFor(release)?.name, AppRelease.windowsInstallerName);
+    final path = await updates.download(release, (_) {});
+    expect(path, endsWith('.exe'));
+    File(path).writeAsBytesSync([4, 3, 2, 1]);
+    await expectLater(updates.install(path), throwsFormatException);
+    expect(actions, isEmpty);
+    File(path).writeAsBytesSync([1, 2, 3, 4]);
+    expect(await updates.install(path), isTrue);
+    expect(actions, ['setup', 'quit']);
+  });
+
   for (final corrupt in [false, true]) {
     test(
       'APK download ${corrupt ? 'rejects corruption and removes partial files' : 'checks size and SHA-256'}',
@@ -163,7 +226,7 @@ void main() {
     final updates = AppUpdates(android: true, cacheDirectory: () async => temp);
     addTearDown(updates.dispose);
     expect(await updates.cleanUp(), 2);
-    expect(folder.listSync().map((f) => f.path), [other.path]);
+    expect(folder.listSync().map((f) => p.normalize(f.path)), [p.normalize(other.path)]);
     expect(await AppUpdates(android: false, cacheDirectory: () async => temp).cleanUp(), 0);
   });
 }

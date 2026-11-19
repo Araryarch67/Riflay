@@ -10,6 +10,39 @@ class AppLocalizationsId extends AppLocalizations {
   AppLocalizationsId([String locale = 'id']) : super(locale);
 
   @override
+  String get homeStyle => 'Tampilan Beranda';
+
+  @override
+  String get homeStyleClassic => 'Klasik';
+
+  @override
+  String get homeStyleCarousel => 'Karusel sampul';
+
+  @override
+  String get customizeHome => 'Sesuaikan Beranda';
+
+  @override
+  String get speedDial => 'Akses cepat';
+
+  @override
+  String get dailyMix => 'Mix harian';
+
+  @override
+  String get dailyMixDescription => 'Lagu yang baru kamu putar dan lagu lain dari artis yang sama';
+
+  @override
+  String get madeForYou => 'Dibuat untukmu';
+
+  @override
+  String get artistMusicVideos => 'Video musik';
+
+  @override
+  String get artistSoloSongs => 'Lagu solo';
+
+  @override
+  String get artistCollaborations => 'Kolaborasi';
+
+  @override
   String get audioSource => 'Sumber audio';
 
   @override
@@ -102,19 +135,19 @@ class AppLocalizationsId extends AppLocalizations {
   String get topicPlayback => 'Pemutaran';
 
   @override
-  String get topicPlaybackSummary => 'Autoplay, pemutaran tanpa jeda, dan crossfade';
+  String get topicPlaybackSummary => 'Putar lagu serupa secara otomatis dan atur perpindahan lagu';
 
   @override
-  String get topicDsp => 'Efek suara (DSP)';
+  String get topicDsp => 'Efek suara';
 
   @override
-  String get topicDspSummary => 'Equalizer, penyeimbang volume, audio spasial dan koreksi ruangan';
+  String get topicDspSummary => 'Atur bass dan treble, ratakan volume, dan sesuaikan efek ruang';
 
   @override
   String get topicOutput => 'Output & kualitas';
 
   @override
-  String get topicOutputSummary => 'Perangkat output, mode bit-perfect, sample rate';
+  String get topicOutputSummary => 'Pilih perangkat pemutaran dan cara Riflay mengirim suara';
 
   @override
   String get topicAppearance => 'Tema & warna';
@@ -126,7 +159,7 @@ class AppLocalizationsId extends AppLocalizations {
   String get topicLayout => 'Halaman & navigasi';
 
   @override
-  String get topicLayoutSummary => 'Beranda, bar, sudut, jarak, ukuran sampul, gerakan';
+  String get topicLayoutSummary => 'Atur isi Beranda, tampilan tombol dan daftar, serta animasi';
 
   @override
   String get topicLibrary => 'Koleksi';
@@ -282,6 +315,11 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get startRadio => 'Mulai radio';
+
+  @override
+  String radioFrom(String title) {
+    return 'Radio $title';
+  }
 
   @override
   String get downloadForOffline => 'Unduh untuk offline';
@@ -1276,7 +1314,8 @@ class AppLocalizationsId extends AppLocalizations {
   String get gaplessPlayback => 'Pemutaran tanpa jeda';
 
   @override
-  String get gaplessPlaybackSubtitle => 'Tanpa hening tambahan antarlagu. Crossfade ada di Efek suara (DSP).';
+  String get gaplessPlaybackSubtitle =>
+      'Lagu diputar berurutan tanpa jeda tambahan. Pengaturan transisi halus ada di bawah.';
 
   @override
   String get skipSilence => 'Lewati hening';
@@ -1285,16 +1324,16 @@ class AppLocalizationsId extends AppLocalizations {
   String get offWhileBitPerfect => 'Mati saat mode bit-perfect aktif';
 
   @override
-  String get skipSilenceSubtitle => 'Intro, outro, dan jeda yang hening dipersingkat. Bagian pelan tetap utuh';
+  String get skipSilenceSubtitle => 'Persingkat bagian hening tanpa memotong musik yang pelan';
 
   @override
   String get off => 'Mati';
 
   @override
-  String get volumeLeveling => 'Penyetaraan volume';
+  String get volumeLeveling => 'Ratakan volume antarlagu';
 
   @override
-  String get volumeLevelingSubtitle => 'Memutar lagu dengan kerasnya serupa, pakai tag ReplayGain';
+  String get volumeLevelingSubtitle => 'Lagu yang pelan dan keras diputar dengan volume yang lebih seragam';
 
   @override
   String get measureLoudness => 'Ukur lagu tanpa tag ReplayGain';
@@ -1313,16 +1352,17 @@ class AppLocalizationsId extends AppLocalizations {
   String get measure => 'Ukur';
 
   @override
-  String get crossfade => 'Crossfade';
+  String get crossfade => 'Haluskan perpindahan lagu';
 
   @override
-  String get crossfadeSubtitle => 'Akhir lagu memudar ke awal lagu berikutnya. Mati di mode bit-perfect dan eksklusif';
+  String get crossfadeSubtitle =>
+      'Lagu berikutnya mulai saat lagu saat ini memudar. Pilihan ini mati pada mode bit-perfect dan mode eksklusif.';
 
   @override
-  String get fadeLength => 'Lama fade';
+  String get fadeLength => 'Lama transisi antarlagu';
 
   @override
-  String get skipForAlbums => 'Lewati untuk album';
+  String get skipForAlbums => 'Pertahankan transisi asli album';
 
   @override
   String get skipForAlbumsSubtitle =>
@@ -1444,7 +1484,7 @@ class AppLocalizationsId extends AppLocalizations {
   }
 
   @override
-  String get bitPerfectMode => 'Mode bit-perfect';
+  String get bitPerfectMode => 'Putar audio tanpa diubah (bit-perfect)';
 
   @override
   String get needsAndroid14 => 'Butuh Android 14 atau lebih baru';
@@ -1495,7 +1535,7 @@ class AppLocalizationsId extends AppLocalizations {
   String get needsBitPerfect => 'Butuh mode Bit-perfect';
 
   @override
-  String get exclusiveMode => 'Mode eksklusif';
+  String get exclusiveMode => 'Gunakan perangkat suara khusus untuk Riflay';
 
   @override
   String get exclusiveMac =>
@@ -1527,14 +1567,15 @@ class AppLocalizationsId extends AppLocalizations {
   String get buffer => 'Buffer';
 
   @override
-  String get bufferSubtitle => 'Naikkan kalau terdengar kresek atau putus-putus';
+  String get bufferSubtitle =>
+      'Naikkan jika suara berderak atau terputus. Nilai lebih besar bisa membuat tombol merespons lebih lambat.';
 
   @override
   String get signalPathSubtitleExact => 'Lihat persis apa yang terjadi pada lagu yang kamu putar';
 
   @override
   String get directUsbIntro =>
-      'Riflay berbicara langsung ke USB DAC, melewati Android, jadi lagu sampai tanpa diubah bahkan di HP yang tidak bisa mode Bit-perfect. Eksperimental.';
+      'Kirim suara langsung ke perangkat audio USB tanpa melalui pemrosesan Android. Masih eksperimental.';
 
   @override
   String get directUsbPlugIn => 'Aktif. Colokkan USB DAC.';
@@ -1878,8 +1919,7 @@ class AppLocalizationsId extends AppLocalizations {
   String get qualityBadge => 'Lencana kualitas';
 
   @override
-  String get qualityBadgeSubtitle =>
-      'Letak FLAC atau Opus 130 kbps di pemutar HP: di bawah artis, atau di antara dua waktu';
+  String get qualityBadgeSubtitle => 'Pilih letak informasi format audio, seperti FLAC atau Opus, di pemutar HP.';
 
   @override
   String get background => 'Latar';
@@ -4590,6 +4630,13 @@ class AppLocalizationsId extends AppLocalizations {
   String get openingInstaller => 'Membuka penginstal Android…';
 
   @override
+  String get windowsUpdateNote =>
+      'Riflay akan ditutup dan dibuka kembali setelah pembaruan. Library dan pengaturanmu tetap tersimpan.';
+
+  @override
+  String get windowsUpdateRestart => 'Memasang pembaruan. Riflay akan dibuka kembali setelah selesai…';
+
+  @override
   String get completeInInstaller => 'Selesaikan pembaruan di penginstal Android';
 
   @override
@@ -5545,7 +5592,7 @@ class AppLocalizationsId extends AppLocalizations {
   String get csvReadFailed => 'Gunakan CSV dengan kolom judul dan artis.';
 
   @override
-  String get loudnessTarget => 'Target kelantangan';
+  String get loudnessTarget => 'Volume yang dituju';
 
   @override
   String get defaultLibraryFilter => 'Filter awal koleksi';
@@ -6478,11 +6525,10 @@ class AppLocalizationsId extends AppLocalizations {
   String get dsRoomUpmix => 'Ruang 7.1, di-upmix dari stereo';
 
   @override
-  String get autoEq => 'Profil headphone / IEM (AutoEQ)';
+  String get autoEq => 'EQ untuk headphone atau earphone';
 
   @override
-  String get autoEqSubtitle =>
-      'Menyetel equalizer untuk model kamu dari hasil pengukurannya, supaya suaranya netral (target Harman).';
+  String get autoEqSubtitle => 'Cari nama model yang tepat untuk menyesuaikan suara dengan profil hasil pengukuran.';
 
   @override
   String get autoEqPick => 'Pilih headphone atau IEM kamu';
@@ -6495,11 +6541,14 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String autoEqModels(int count) {
-    return '$count model, diukur oleh crinacle, oratory1990, dan lainnya. Ketik nama untuk mencari.';
+    return '$count profil tersedia. Cari berdasarkan merek dan model.';
   }
 
   @override
-  String get autoEqNoResults => 'Tidak ada model dengan nama itu.';
+  String get autoEqNoResults => 'Model belum ditemukan. Coba ketik merek dan nama model tanpa kata tambahan.';
+
+  @override
+  String get autoEqLoadFailed => 'Profil EQ belum bisa dimuat. Periksa koneksi dan coba lagi.';
 
   @override
   String autoEqFailed(String error) {
@@ -6776,7 +6825,7 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get networkProxyAbout =>
-      'Gunakan proxy HTTP milikmu untuk permintaan aplikasi. Batas permintaan layanan tetap berlaku.';
+      'Gunakan server proxy jika jaringanmu memerlukannya. Batas pemakaian tiap layanan musik tetap berlaku.';
 
   @override
   String get networkProxyAddress => 'Alamat proxy HTTP';
@@ -6804,6 +6853,10 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get seekStep => 'Jarak lompatan pemutaran';
+
+  @override
+  String get seekStepHint =>
+      'Atur seberapa jauh Shift + Panah Kiri atau Kanan melompat dalam lagu. Pilih Nonaktif untuk mematikan pintasan ini.';
 
   @override
   String get scSeekBackward => 'Mundur dalam lagu';

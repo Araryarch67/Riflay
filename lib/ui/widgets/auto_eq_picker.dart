@@ -1,9 +1,11 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../services/auto_eq.dart';
 import '../../services/language.dart';
+import '../../services/opra_eq.dart';
 import '../../services/player_controller.dart';
 import '../theme.dart';
 
@@ -30,6 +32,7 @@ class _AutoEqSheet extends StatefulWidget {
 
 class _AutoEqSheetState extends State<_AutoEqSheet> {
   late Future<List<AutoEqEntry>> _index = AutoEq.index();
+  late Future<List<AutoEqEntry>> _extra = OpraEq.index();
   final _query = TextEditingController();
   AutoEqEntry? _applying;
   String? _error;
@@ -60,7 +63,8 @@ class _AutoEqSheetState extends State<_AutoEqSheet> {
         ),
       );
     } catch (err) {
-      if (mounted) setState(() => _error = tr.autoEqFailed('$err'));
+      debugPrint('EQ profile: ${err.runtimeType}');
+      if (mounted) setState(() => _error = tr.autoEqLoadFailed);
     } finally {
       if (mounted) setState(() => _applying = null);
     }
@@ -106,62 +110,79 @@ class _AutoEqSheetState extends State<_AutoEqSheet> {
             Expanded(
               child: FutureBuilder(
                 future: _index,
-                builder: (context, snap) {
-                  if (snap.hasError) {
-                    return Padding(
-                      padding: const EdgeInsets.all(24),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(tr.autoEqFailed('${snap.error}'), style: muted),
-                          const SizedBox(height: 12),
-                          FilledButton.tonal(
-                            onPressed: () => setState(() => _index = AutoEq.index()),
-                            child: Text(tr.retry),
-                          ),
-                        ],
-                      ),
-                    );
-                  }
-                  final all = snap.data;
-                  if (all == null) {
-                    return Padding(
-                      padding: const EdgeInsets.all(24),
-                      child: Row(
-                        children: [
-                          const SizedBox.square(dimension: 20, child: CircularProgressIndicator(strokeWidth: 2)),
-                          const SizedBox(width: 16),
-                          Expanded(child: Text(tr.autoEqLoading, style: muted)),
-                        ],
-                      ),
-                    );
-                  }
-                  final found = AutoEq.search(all, _query.text);
-                  if (_query.text.trim().isEmpty || found.isEmpty) {
-                    return Padding(
-                      padding: const EdgeInsets.all(24),
-                      child: Text(
-                        _query.text.trim().isEmpty ? tr.autoEqModels(all.length) : tr.autoEqNoResults,
-                        style: muted,
-                      ),
-                    );
-                  }
-                  return ListView.builder(
-                    padding: const EdgeInsets.fromLTRB(8, 0, 8, 24),
-                    itemCount: found.length,
-                    itemBuilder: (context, i) {
-                      final e = found[i];
-                      return ListTile(
-                        title: Text(e.name, maxLines: 1, overflow: TextOverflow.ellipsis),
-                        subtitle: Text(e.by, style: muted),
-                        trailing: _applying == e
-                            ? const SizedBox.square(dimension: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                            : null,
-                        onTap: _applying == null ? () => unawaited(_apply(e)) : null,
+                builder: (context, snap) => FutureBuilder(
+                  future: _extra,
+                  builder: (context, extra) {
+                    if (snap.hasError && extra.hasError) {
+                      return Padding(
+                        padding: const EdgeInsets.all(24),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(tr.autoEqLoadFailed, style: muted),
+                            const SizedBox(height: 12),
+                            FilledButton.tonal(
+                              onPressed: () => setState(() {
+                                _index = AutoEq.index();
+                                _extra = OpraEq.index();
+                              }),
+                              child: Text(tr.retry),
+                            ),
+                          ],
+                        ),
                       );
-                    },
-                  );
-                },
+                    }
+                    final all = [...?snap.data, ...?extra.data];
+                    if (all.isEmpty && (!snap.hasError || !extra.hasError) && !snap.hasData && !extra.hasData) {
+                      return Padding(
+                        padding: const EdgeInsets.all(24),
+                        child: Row(
+                          children: [
+                            const SizedBox.square(dimension: 20, child: CircularProgressIndicator(strokeWidth: 2)),
+                            const SizedBox(width: 16),
+                            Expanded(child: Text(tr.autoEqLoading, style: muted)),
+                          ],
+                        ),
+                      );
+                    }
+                    final found = AutoEq.search(all, _query.text);
+                    if (_query.text.trim().isEmpty || found.isEmpty) {
+                      return Padding(
+                        padding: const EdgeInsets.all(24),
+                        child: Text(
+                          _query.text.trim().isEmpty
+                              ? tr.autoEqModels(all.length)
+                              : extra.connectionState != ConnectionState.done
+                              ? tr.autoEqLoading
+                              : tr.autoEqNoResults,
+                          style: muted,
+                        ),
+                      );
+                    }
+                    return ListView.builder(
+                      padding: const EdgeInsets.fromLTRB(8, 0, 8, 24),
+                      itemCount: found.length,
+                      itemBuilder: (context, i) {
+                        final e = found[i];
+                        return ListTile(
+                          title: Text(e.name, maxLines: 1, overflow: TextOverflow.ellipsis),
+                          subtitle: Text(e.by, style: muted),
+                          trailing: _applying == e
+                              ? const SizedBox.square(dimension: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                              : null,
+                          onTap: _applying == null ? () => unawaited(_apply(e)) : null,
+                        );
+                      },
+                    );
+                  },
+                ),
+              ),
+            ),
+            Align(
+              alignment: AlignmentDirectional.centerEnd,
+              child: TextButton(
+                onPressed: () => launchUrl(OpraEq.attribution, mode: LaunchMode.externalApplication),
+                child: const Text('OPRA · CC BY-SA 4.0'),
               ),
             ),
           ],

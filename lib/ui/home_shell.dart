@@ -10,6 +10,7 @@ import '../services/device_setup.dart';
 import '../services/language.dart';
 import '../models/track.dart';
 import '../services/download_notifications.dart';
+import 'widgets/glass_toast.dart';
 import '../services/gate_hooks.dart';
 import 'pages/youtube_music_page.dart' show likedCollection, openRemotePlaylist;
 import 'widgets/track_row.dart' show openArtist;
@@ -123,6 +124,21 @@ class _HomeShellState extends State<HomeShell> with SingleTickerProviderStateMix
     DownloadNotifications.registerOpenDownloads(() {
       if (mounted) _open(const DownloadsPage());
     });
+    DownloadNotifications.registerInAppDownloadToast((note) {
+      if (!mounted || WidgetsBinding.instance.lifecycleState != AppLifecycleState.resumed) return false;
+      final messenger = ScaffoldMessenger.maybeOf(context);
+      if (messenger == null) return false;
+      messenger.showSnackBar(
+        LinkedToast(
+          note.title,
+          label: tr.navDownloads,
+          open: () {
+            if (mounted) _open(const DownloadsPage());
+          },
+        ),
+      );
+      return true;
+    });
     // Tapping "Your <Month> in music is ready" opens that Wrap.
     DownloadNotifications.registerOpenWrap((key) {
       final month = WrapMonth.parse(key);
@@ -204,6 +220,7 @@ class _HomeShellState extends State<HomeShell> with SingleTickerProviderStateMix
     _player?.removeListener(_followTrack);
     _history.removeListener(_followLocation);
     DownloadNotifications.registerOpenDownloads(null);
+    DownloadNotifications.registerInAppDownloadToast(null);
     DownloadNotifications.registerOpenWrap(null);
     IncomingLinks.instance.stopListening(_openIncoming);
     _errors?.cancel();

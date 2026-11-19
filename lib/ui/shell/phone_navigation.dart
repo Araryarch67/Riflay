@@ -733,10 +733,15 @@ class _GlassBarState extends State<_GlassBar> with TickerProviderStateMixin {
     // Light frost and strong refraction ([riflayGlass]): where the shader runs (Impeller) the page bends behind the
     // pills; the frosted fallback (no shader filters) keeps the rim light and a tint so text stays legible.
     final blur = glassFrost();
-    final optics = riflayGlass(
-      brightness: AppColors.of(context).light ? Brightness.light : Brightness.dark,
-      frost: _draggingLens ? math.max(4, blur * 0.65) : blur,
-    ).copyWith(refractionHeight: _draggingLens ? 34 : 30, refractionAmount: _draggingLens ? 125 : 105);
+    final optics =
+        riflayGlass(
+          brightness: AppColors.of(context).light ? Brightness.light : Brightness.dark,
+          frost: _draggingLens ? math.max(4, blur * 0.65) : blur,
+        ).copyWith(
+          refractionHeight: _draggingLens ? 34 : 30,
+          refractionAmount: _draggingLens ? 125 : 105,
+          dispersion: _draggingLens ? 0.70 : 0.35,
+        );
     return LiquidGlassLayer(
       settings: optics,
       child: LiquidGlassBlendGroup(blend: _gap - 2, child: child),
@@ -916,7 +921,9 @@ class _DraggableGlassTabsState extends State<_DraggableGlassTabs> {
       final finger = _finger;
       final moving = finger != null || _settling;
       final dragEnabled = !DebugSwitches.noTabSwipe && widget.tabs.length > 1;
-      final indicatorWidth = (unit * 1.6).clamp(40.0, box.maxWidth < 40 ? 40.0 : box.maxWidth);
+      final indicatorWidth = (unit * (finger != null ? 1.95 : 1.6))
+          .clamp(40.0, math.max(40.0, box.maxWidth))
+          .toDouble();
       final center = finger ?? (selected < 0 ? indicatorWidth / 2 : (edges[selected] + edges[selected + 1]) / 2);
       final left = (center - indicatorWidth / 2).clamp(
         0.0,
@@ -937,7 +944,7 @@ class _DraggableGlassTabsState extends State<_DraggableGlassTabs> {
                 curve: Curves.easeOutCubic,
                 left: left,
                 width: indicatorWidth,
-                height: 40,
+                height: math.min(box.maxHeight, finger != null && !LayoutPrefs.lightweight ? 48.0 : 40.0).toDouble(),
                 onEnd: () {
                   if (_settling && _finger == null) setState(() => _settling = false);
                 },
@@ -945,7 +952,10 @@ class _DraggableGlassTabsState extends State<_DraggableGlassTabs> {
                   child: _GlassButtonFace(
                     renderer: widget.renderer,
                     active: true,
-                    child: const SizedBox.expand(key: ValueKey('glass-tab-drag-indicator')),
+                    child: CustomPaint(
+                      foregroundPainter: LayoutPrefs.lightweight ? null : _GlassLensRim(active: finger != null),
+                      child: const SizedBox.expand(key: ValueKey('glass-tab-drag-indicator')),
+                    ),
                   ),
                 ),
               ),
@@ -978,6 +988,41 @@ class _DraggableGlassTabsState extends State<_DraggableGlassTabs> {
       );
     },
   );
+}
+
+/// The lens catches a thin split highlight on its edge, including on the Skia fallback.
+class _GlassLensRim extends CustomPainter {
+  const _GlassLensRim({required this.active});
+
+  final bool active;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final bounds = (Offset.zero & size).deflate(1);
+    final edge = RRect.fromRectAndRadius(bounds, Radius.circular(bounds.height / 2));
+    final strength = active ? 1.0 : 0.35;
+    canvas.drawRRect(
+      edge,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.5
+        ..shader = LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            const Color(0xFF78F4ED).withValues(alpha: .8 * strength),
+            Colors.white.withValues(alpha: .62 * strength),
+            Colors.transparent,
+            const Color(0xFFA98AFF).withValues(alpha: .65 * strength),
+            const Color(0xFFFF8D79).withValues(alpha: .82 * strength),
+          ],
+          stops: const [0, .18, .52, .78, 1],
+        ).createShader(bounds),
+    );
+  }
+
+  @override
+  bool shouldRepaint(_GlassLensRim oldDelegate) => oldDelegate.active != active;
 }
 
 /// The docked styles: flat, edge to edge, a hairline on top.

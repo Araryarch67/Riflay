@@ -216,6 +216,14 @@ class NowPlayingPage extends StatelessWidget {
                               // Leave room for the controls; never let the cover push them off-screen.
                               // On very short windows the cover (then the quality badge) makes way.
                               final showBadge = constraints.maxHeight >= 480 && LayoutPrefs.instance.showQualityBadge;
+                              final badgeBelowArtist =
+                                  showBadge && LayoutPrefs.instance.qualityBadgePlace == QualityBadgePlace.underArtist;
+                              final seekBar = SeekBar(
+                                phonePlayer: true,
+                                middle: showBadge && !badgeBelowArtist
+                                    ? const QualityBadge(onDark: true, alignment: Alignment.center)
+                                    : null,
+                              );
                               final largeCover = LayoutPrefs.instance.phoneCover == PhoneCoverSize.large;
                               final showStrip =
                                   track != null &&
@@ -309,7 +317,10 @@ class NowPlayingPage extends StatelessWidget {
                                               color: AppColors.of(context).textSecondary,
                                             ),
                                           ),
-                                        if (showBadge) ...[const SizedBox(height: 8), const QualityBadge(onDark: true)],
+                                        if (badgeBelowArtist) ...[
+                                          const SizedBox(height: 8),
+                                          const QualityBadge(onDark: true),
+                                        ],
                                       ],
                                     ),
                                   ),
@@ -348,7 +359,7 @@ class NowPlayingPage extends StatelessWidget {
                                               const AudioVisualizer(linearOnly: true, height: 36),
                                             info,
                                             const SizedBox(height: 8),
-                                            const SeekBar(phonePlayer: true),
+                                            seekBar,
                                             const TransportControls(large: true),
                                             const _SecondaryRow(),
                                           ],
@@ -379,14 +390,22 @@ class NowPlayingPage extends StatelessWidget {
                                       ? math.min(
                                           constraints.maxWidth - 24,
                                           constraints.maxHeight -
-                                              (showBadge ? 364 : 328) -
+                                              (badgeBelowArtist
+                                                  ? 364
+                                                  : showBadge
+                                                  ? 344
+                                                  : 328) -
                                               playerVolumeRowHeight -
                                               stripHeight,
                                         )
                                       : math.min(
                                           constraints.maxWidth - 48,
                                           constraints.maxHeight -
-                                              (showBadge ? 400 : 364) -
+                                              (badgeBelowArtist
+                                                  ? 400
+                                                  : showBadge
+                                                  ? 380
+                                                  : 364) -
                                               playerVolumeRowHeight -
                                               stripHeight,
                                         )) -
@@ -416,7 +435,7 @@ class NowPlayingPage extends StatelessWidget {
                                     ],
                                     info,
                                     const SizedBox(height: 16),
-                                    const SeekBar(phonePlayer: true),
+                                    seekBar,
                                     const SizedBox(height: 8),
                                     const TransportControls(large: true),
                                     const SizedBox(height: 4),

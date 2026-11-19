@@ -14,11 +14,16 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class _SongPlayer extends PlayerController {
   final track = Track(id: 'resize', uri: Uri.parse('file:///resize.mp3'), title: 'Resize', artist: 'Artist');
+  final swipeActions = <String>[];
   @override
   Track get currentTrack => track;
+  @override
+  Future<void> previousTrack() async => swipeActions.add('previous');
+  @override
+  Future<void> next() async => swipeActions.add('next');
 }
 
-Future<void> _app(WidgetTester tester, Size size) async {
+Future<_SongPlayer> _app(WidgetTester tester, Size size) async {
   SharedPreferences.setMockInitialValues({'library.v1': jsonEncode(<Object>[]), 'discord.enabled': false});
   await LayoutPrefs.instance.reset();
   final c = _SongPlayer();
@@ -34,6 +39,7 @@ Future<void> _app(WidgetTester tester, Size size) async {
   addTearDown(() => FlutterError.onError = orig);
   await tester.pumpWidget(RiflayApp(controller: c));
   await tester.pump(const Duration(milliseconds: 500));
+  return c;
 }
 
 /// Lets the app's own timers run out before the binding checks for stragglers.
@@ -56,6 +62,22 @@ double _sidebarW(WidgetTester t) => t.getSize(find.byType(DesktopSidebar)).width
 
 void main() {
   for (final style in [TabBarStyle.classic, TabBarStyle.glass]) {
+    testWidgets('${style.name}: swipe left goes to the previous track and right goes to the next', (tester) async {
+      final c = await _app(tester, const Size(412, 915));
+      await tester.runAsync(() => LayoutPrefs.instance.setTabBar(style));
+      await tester.pump(const Duration(milliseconds: 350));
+      final mini = style == TabBarStyle.glass ? find.byType(GlassMiniPlayer) : find.byType(MiniPlayer);
+      for (final distance in [-115.0, 115.0]) {
+        final finger = await tester.startGesture(tester.getCenter(mini));
+        await finger.moveBy(Offset(distance.sign * 24, 0));
+        await finger.moveBy(Offset(distance, 0));
+        await finger.up();
+        await tester.pump();
+      }
+      expect(c.swipeActions, ['previous', 'next']);
+      await _settle(tester);
+    });
+
     testWidgets('${style.name}: the mini-player expands under the finger and a short drag snaps back', (tester) async {
       await _app(tester, const Size(412, 915));
       await tester.runAsync(() => LayoutPrefs.instance.setTabBar(style));

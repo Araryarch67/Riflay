@@ -29,6 +29,19 @@ abstract final class MvSidecar {
   /// Whether [path] is one of these files (a folder scan must not take the video for a song).
   static bool isSidecar(String path) => _name.hasMatch(path);
 
+  /// Checks for an offline video without opening its metadata on the UI isolate.
+  static Future<bool> exists(String songPath) async {
+    if (DebugSwitches.noLocalMv) return false;
+    for (final extension in _extensions) {
+      try {
+        if (await videoFile(songPath, extension).exists()) return true;
+      } on FileSystemException catch (error) {
+        debugPrint('Music video beside $songPath: $error');
+      }
+    }
+    return false;
+  }
+
   static final _known = <String, ({File file, MusicVideo video})?>{};
 
   /// The downloaded music video of the song at [songPath], or null when it has none. Looked at once per song

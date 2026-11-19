@@ -5,7 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:riflay/services/app_updates.dart';
 import 'package:riflay/ui/widgets/app_update_tile.dart';
 
-import 'app_updates_test.dart' show releaseJson;
+import 'app_updates_test.dart' show releaseJson, windowsReleaseJson;
 
 class FakeUpdates extends AppUpdates {
   FakeUpdates() : super(android: true);
@@ -40,7 +40,36 @@ class FakeUpdates extends AppUpdates {
   }
 }
 
+class FakeWindowsUpdates extends FakeUpdates {
+  @override
+  bool get windowsInstaller => true;
+
+  @override
+  UpdateAsset? assetFor(AppRelease release) => release.windowsAsset;
+}
+
 void main() {
+  testWidgets('the Windows popup downloads and installs from a single Install click', (tester) async {
+    final updates = FakeWindowsUpdates();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Builder(
+          builder: (context) => TextButton(
+            onPressed: () => showUpdatePopup(context, updates, AppRelease.parse(windowsReleaseJson())),
+            child: const Text('open'),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+    expect(find.text(AppRelease.windowsInstallerName), findsOneWidget);
+    await tester.tap(find.text('Install update'));
+    await tester.pumpAndSettle();
+    expect(updates.downloads, 1);
+    expect(updates.installs, 1);
+  });
+
   testWidgets('an up-to-date install can check again without offering a download', (tester) async {
     final updates = FakeUpdates()..currentVersion = '1.10.0';
     await tester.pumpWidget(

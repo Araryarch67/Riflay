@@ -8,7 +8,7 @@ import 'controls.dart' show formatBytes;
 import 'skeleton.dart';
 import '../../services/language.dart';
 
-/// An explicit check, followed by an Android download and system installation.
+/// An explicit check, followed by platform installation when a verified installer is available.
 class AppUpdateTile extends StatefulWidget {
   const AppUpdateTile({super.key, this.updates, this.release}) : _dialog = false;
   const AppUpdateTile._dialog({required this.updates, required this.release}) : _dialog = true;
@@ -53,30 +53,34 @@ class _AppUpdateTileState extends State<AppUpdateTile> {
           _release = release.newerThan(_updates.installedVersion) ? release : null;
           _message = _release == null ? tr.latestVersion : tr.versionAvailable(release.version);
         });
-      } else if (!_updates.android || _updates.assetFor(_release!) == null) {
+      } else if (_updates.assetFor(_release!) == null) {
         if (!await launchUrl(_release!.url, mode: LaunchMode.externalApplication)) {
           throw StateError('Could not open release page');
         }
-      } else if (_path == null) {
-        setState(() {
-          _message = tr.downloadingVersion(_release!.version);
-          _progress = 0;
-        });
-        final path = await _updates.download(_release!, (progress) {
-          if (mounted) setState(() => _progress = progress);
-        });
-        if (!mounted) return;
-        setState(() {
-          _path = path;
-          _progress = null;
-          _message = tr.versionReady(_release!.version);
-        });
       } else {
-        setState(() => _message = tr.openingInstaller);
+        if (_path == null) {
+          setState(() {
+            _message = tr.downloadingVersion(_release!.version);
+            _progress = 0;
+          });
+          final path = await _updates.download(_release!, (progress) {
+            if (mounted) setState(() => _progress = progress);
+          });
+          if (!mounted) return;
+          setState(() {
+            _path = path;
+            _progress = null;
+            _message = tr.versionReady(_release!.version);
+          });
+          if (!_updates.windowsInstaller) return;
+        }
+        setState(() => _message = _updates.windowsInstaller ? tr.windowsUpdateRestart : tr.openingInstaller);
         final opened = await _updates.install(_path!);
         if (!mounted) return;
         setState(() {
-          _message = opened ? tr.completeInInstaller : tr.allowInstallUpdates;
+          _message = opened
+              ? (_updates.windowsInstaller ? tr.windowsUpdateRestart : tr.completeInInstaller)
+              : tr.allowInstallUpdates;
         });
       }
     } catch (error) {
@@ -85,6 +89,7 @@ class _AppUpdateTileState extends State<AppUpdateTile> {
       setState(() {
         _failed = true;
         _progress = null;
+        if (_updates.windowsInstaller && error is FormatException) _path = null;
         _message = switch (error) {
           PlatformException(code: 'signature') => tr.differentSigningKey,
           FormatException() when _release != null => tr.couldntVerifyUpdate,
@@ -99,17 +104,17 @@ class _AppUpdateTileState extends State<AppUpdateTile> {
 
   @override
   Widget build(BuildContext context) {
-    final label = _path != null
-        ? tr.installUpdate
-        : _release == null
+    final label = _release == null
         ? tr.checkForUpdates
-        : _updates.android && _updates.assetFor(_release!) != null
+        : _path != null || _updates.windowsInstaller && _updates.assetFor(_release!) != null
+        ? tr.installUpdate
+        : _updates.assetFor(_release!) != null
         ? tr.downloadUpdate
         : tr.getUpdate;
     if (widget._dialog) return _buildDialog(context, label);
     return ListTile(
       leading: const Icon(Icons.system_update_rounded),
-      title: Text(_busy && _progress != null ? 'Downloading… ${(_progress! * 100).round()}%' : label),
+      title: Text(label),
       subtitle: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -129,7 +134,7 @@ class _AppUpdateTileState extends State<AppUpdateTile> {
   Widget _buildDialog(BuildContext context, String label) {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
-    final asset = _updates.android ? _updates.assetFor(_release!) : null;
+    final asset = _updates.assetFor(_release!);
     final progress = _progress;
     final ready = _path != null;
     final icon = _failed
@@ -137,7 +142,9 @@ class _AppUpdateTileState extends State<AppUpdateTile> {
         : ready
         ? Icons.task_alt_rounded
         : Icons.system_update_rounded;
-    final actionIcon = ready
+    final actionIcon = _updates.windowsInstaller && asset != null
+        ? Icons.system_update_alt_rounded
+        : ready
         ? Icons.install_mobile_rounded
         : asset != null
         ? Icons.download_rounded
@@ -205,12 +212,12 @@ class _AppUpdateTileState extends State<AppUpdateTile> {
                   ],
                 ),
               ),
-              if (_message != null) ...[
+              if (_message != null || _updates.windowsInstaller && asset != null) ...[
                 const SizedBox(height: 20),
                 Semantics(
                   liveRegion: true,
                   child: Text(
-                    _message!,
+                    _message ?? tr.windowsUpdateNote,
                     style: theme.textTheme.bodyMedium?.copyWith(
                       color: _failed ? colors.error : colors.onSurfaceVariant,
                     ),

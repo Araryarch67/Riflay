@@ -98,13 +98,26 @@ void openRemotePlaylist(BuildContext context, RemotePlaylist p, {ShellScope? she
         if (artistId != null) FollowButton(artistId: artistId, name: p.title),
         if (artistId == null && p.browseId != null) SaveToLibraryButton(browseId: p.browseId!),
       ],
-      load: () async => Collection(
-        kind: CollectionKind.remote,
-        title: p.title,
-        subtitle: artistId != null ? tr.artist : p.subtitle ?? 'YouTube Music',
-        tracks: await music.collectionTracks(p),
-        coverKey: artistId == null && p.browseId == null ? PlaylistCovers.remoteKey(p.id) : null,
-      ),
+      load: () async {
+        if (artistId != null) {
+          final catalog = await music.artistTracks(artistId);
+          return Collection(
+            kind: CollectionKind.remoteArtist,
+            id: artistId,
+            title: p.title,
+            subtitle: tr.artist,
+            tracks: catalog.songs,
+            artistVideos: catalog.videos,
+          );
+        }
+        return Collection(
+          kind: CollectionKind.remote,
+          title: p.title,
+          subtitle: p.subtitle ?? 'YouTube Music',
+          tracks: await music.collectionTracks(p),
+          coverKey: p.browseId == null ? PlaylistCovers.remoteKey(p.id) : null,
+        );
+      },
     ),
   );
 }

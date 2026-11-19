@@ -8,6 +8,38 @@ import 'package:shared_preferences/shared_preferences.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
+  test('starting radio for the current song preserves its source and position even with autoplay off', () async {
+    Track song(String id) => Track(id: id, uri: Uri.file('/music/$id.wav'), title: id, artist: 'Artist');
+    final current = song('current'), upcoming = song('upcoming'), similar = song('similar');
+    SharedPreferences.setMockInitialValues({
+      'library.v1': '[]',
+      'autoplay.v1': false,
+      'discord.enabled': false,
+      'playback.queue.v1': jsonEncode({
+        'tracks': [current.toJson(), upcoming.toJson()],
+        'index': 0,
+        'positionMs': 32122,
+      }),
+    });
+    final seeds = <String>[];
+    final c = PlayerController(
+      radioLookup: (track) async {
+        seeds.add(track.id);
+        return [current, similar, similar];
+      },
+    );
+    addTearDown(c.dispose);
+    await c.load();
+    final source = c.player.sequenceState.currentSource;
+    await c.startRadio(current);
+    expect(seeds, [current.id]);
+    expect(c.autoplay, isFalse);
+    expect(c.player.sequenceState.currentSource, same(source));
+    expect(c.position, const Duration(milliseconds: 32122));
+    expect(c.queue.map((track) => track.id), [current.id, similar.id]);
+    expect(c.isAutoplayed(similar), isTrue);
+  });
+
   test('clearing upcoming tracks keeps the current occurrence and persists the retained order', () async {
     Track song(String id) => Track(id: id, uri: Uri.file('/music/$id.wav'), title: id, artist: 'Artist');
     final a = song('a'), b = song('b'), c = song('c');

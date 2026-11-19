@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:convert';
 import 'dart:math' as math;
 
 import 'package:flutter/services.dart';
@@ -7,6 +8,7 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:riflay/services/audio_engine.dart';
 import 'package:riflay/services/auto_eq.dart';
+import 'package:riflay/services/opra_eq.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// KZ ZSN Pro measured by crinacle, as AutoEQ has it: two shelves among peaking filters, out of frequency order.
@@ -49,6 +51,7 @@ void main() {
       (_) async => support.path,
     );
     AutoEq.forgetIndex();
+    OpraEq.forgetIndex();
   });
   tearDown(() => support.deleteSync(recursive: true));
 
@@ -59,6 +62,24 @@ void main() {
     expect(all.first.path, 'crinacle/711%20in-ear/KZ%20ZSN%20Pro');
     expect(all.first.by, 'crinacle · 711');
     expect(all[1].by, 'oratory1990');
+  });
+
+  test('OPRA adds earphone models, distinguishes variants, and fits their embedded profiles offline', () async {
+    const records = '''
+{"type":"eq","id":"v:p:eq","data":{"type":"parametric_eq","product_id":"v:p","author":"Tester","details":"Balanced tips","parameters":{"gain_db":-3,"bands":[{"type":"peak_dip","frequency":2800,"gain_db":2,"q":1.5}]}}}
+{"type":"product","id":"v:p","data":{"name":"New Model II","vendor_id":"v","subtype":"in_ear"}}
+{"type":"vendor","id":"v","data":{"name":"Example"}}
+{"type":"eq","id":"v:p:bad","data":{"type":"parametric_eq","product_id":"v:p","author":"Tester","parameters":{"bands":[{"type":"low_pass","frequency":1000}]}}}
+''';
+    final client = MockClient((_) async => http.Response.bytes(utf8.encode(records), 200));
+    final list = await OpraEq.index(client: client);
+    final entry = AutoEq.search(list, 'example newmodel 2').single;
+    expect(entry.name, 'Example New Model II');
+    expect(entry.by, 'Tester (OPRA) · Balanced tips');
+    final fit = await AutoEq.fitFor(entry, client: MockClient((_) async => throw StateError('must stay offline')));
+    expect(fit.bands.singleWhere((b) => b.gain == 2).frequency, 2800);
+    OpraEq.forgetIndex();
+    expect(await OpraEq.index(client: MockClient((_) async => throw StateError('offline'))), list);
   });
 
   test('search finds every word, the closest names first', () {

@@ -59,7 +59,7 @@ void main() {
     expect(p.visualizer, isTrue, reason: 'Classic pulses around the cover');
     expect(p.visualizerStyle, VisualizerStyle.pulse);
     expect(p.visualizerCoverShape, VisualizerCoverShape.flower);
-    expect(p.tabBar, TabBarStyle.classic);
+    expect(p.tabBar, TabBarStyle.capsule);
     expect(p.corners, CornerStyle.rounded);
     expect(p.density, Density.comfortable);
     expect(p.coverSize, CoverSize.medium);
@@ -68,7 +68,7 @@ void main() {
     expect(p.progressBar, ProgressBarStyle.thin);
     expect(p.playButton, PlayButtonShape.flower);
     expect(p.showQualityBadge, isTrue);
-    expect(p.qualityBadgePlace, QualityBadgePlace.underArtist);
+    expect(p.qualityBadgePlace, QualityBadgePlace.timeRow);
     expect(p.volumeSlider, VolumeSliderShape.classic);
     expect(p.dimUnsungLyrics, isTrue);
     expect(p.motion, Motion.full);
@@ -107,8 +107,8 @@ void main() {
     expect(TabBarStyle.values.map((style) => style.name), isNot(contains('centre')));
     expect(TabBarStyle.values, hasLength(9));
     p.restore({'tabBar': 'centre'});
-    expect(p.tabBar, TabBarStyle.classic);
-    expect(p.toJson()['tabBar'], 'classic');
+    expect(p.tabBar, TabBarStyle.capsule);
+    expect(p.toJson()['tabBar'], 'capsule');
   });
 
   test('Lightweight limits covers and replaces Background across switching, restore and presets', () async {
@@ -250,12 +250,15 @@ void main() {
   test('saved settings come back, and reset clears them', () async {
     await p.setCorners(CornerStyle.square);
     await p.setHomeSectionShown(HomeSection.artists, false);
-    await p.moveHomeSection(6, 0);
+    await p.setHomeStyle(HomeStyle.carousel);
+    await p.moveHomeSection(p.homeOrder.indexOf(HomeSection.recentlyAdded), 0);
     final saved = p.toJson();
     await p.reset();
     expect(p.isCustomised, isFalse);
+    expect(p.homeStyle, HomeStyle.classic);
     p.restore(saved);
     expect(p.corners, CornerStyle.square);
+    expect(p.homeStyle, HomeStyle.carousel);
     expect(p.homeShown.first, HomeSection.recentlyAdded);
     expect(p.homeShown, isNot(contains(HomeSection.artists)));
     expect(p.isCustomised, isTrue);
@@ -324,10 +327,10 @@ void main() {
   });
 
   test('the quality badge place persists; the visualizer survives out of Beta only if it was opted in', () async {
-    expect(p.qualityBadgePlace, QualityBadgePlace.underArtist);
-    await p.setQualityBadgePlace(QualityBadgePlace.timeRow);
-    await p.load();
     expect(p.qualityBadgePlace, QualityBadgePlace.timeRow);
+    await p.setQualityBadgePlace(QualityBadgePlace.underArtist);
+    await p.load();
+    expect(p.qualityBadgePlace, QualityBadgePlace.underArtist);
     await p.reset();
 
     // An older save: the visualizer was on in the layout, but only counted with its Beta switch.
@@ -417,6 +420,6 @@ void main() {
     expect(p.volumeSlider, VolumeSliderShape.pill, reason: 'the volume under the lyrics is a pill');
     await PlayerPreset.classic.apply(p);
     expect(p.volumeSlider, VolumeSliderShape.classic);
-    expect(p.qualityBadgePlace, QualityBadgePlace.underArtist);
+    expect(p.qualityBadgePlace, QualityBadgePlace.timeRow);
   });
 }

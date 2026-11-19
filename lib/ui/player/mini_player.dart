@@ -23,7 +23,7 @@ class MiniPlayer extends StatefulWidget {
   State<MiniPlayer> createState() => _MiniPlayerState();
 }
 
-/// Swiping the song sideways changes it: left for the next one, right for the previous one.
+/// Swiping the song sideways changes it: left goes to the previous song, right goes to the next.
 mixin _SongSwipe<T extends StatefulWidget> on State<T> {
   /// How far the song is being dragged sideways.
   final _drag = ValueNotifier<double>(0);
@@ -41,9 +41,9 @@ mixin _SongSwipe<T extends StatefulWidget> on State<T> {
     final threshold = LayoutPrefs.instance.swipeDistance;
     final velocity = 600 * threshold / 72;
     if (dx < -threshold || v < -velocity) {
-      c.next();
+      c.previousTrack();
     } else if (dx > threshold || v > velocity) {
-      c.previous();
+      c.next();
     }
   }
 

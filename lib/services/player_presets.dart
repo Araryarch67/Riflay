@@ -48,6 +48,7 @@ class PlayerPreset {
     this.volumeSlider = VolumeSliderShape.pill,
     this.background,
     this.tabBar,
+    this.homeStyle,
     this.visualizer = false,
     this.visualizerStyle = VisualizerStyle.pulse,
     this.videoSwitch = true,
@@ -82,6 +83,7 @@ class PlayerPreset {
       volumeSlider: p.volumeSlider,
       background: Appearance.instance.nowPlaying,
       tabBar: p.tabBar,
+      homeStyle: p.homeStyle,
       visualizer: p.visualizer,
       visualizerStyle: p.visualizerStyle,
       videoSwitch: p.showVideoSwitch,
@@ -113,6 +115,7 @@ class PlayerPreset {
     'volumeSlider': volumeSlider.name,
     'background': background?.name,
     'tabBar': tabBar?.name,
+    'homeStyle': homeStyle?.name,
     'visualizer': visualizer,
     'visualizerStyle': visualizerStyle.name,
     'videoSwitch': videoSwitch,
@@ -148,6 +151,7 @@ class PlayerPreset {
       volumeSlider: pick(VolumeSliderShape.values, j['volumeSlider'], d.volumeSlider),
       background: maybe(NowPlayingBackground.values, j['background']),
       tabBar: maybe(TabBarStyle.values, j['tabBar']),
+      homeStyle: maybe(HomeStyle.values, j['homeStyle']),
       visualizer: j['visualizer'] as bool? ?? d.visualizer,
       visualizerStyle: pick(VisualizerStyle.values, j['visualizerStyle'], d.visualizerStyle),
       videoSwitch: j['videoSwitch'] as bool? ?? d.videoSwitch,
@@ -193,6 +197,7 @@ class PlayerPreset {
 
   /// The phone's tab bar that goes with the look; null leaves the user's choice alone.
   final TabBarStyle? tabBar;
+  final HomeStyle? homeStyle;
 
   /// The audio visualizer around the cover, and its style. Only counted where the visualizer exists (not on the web).
   final bool visualizer;
@@ -207,9 +212,14 @@ class PlayerPreset {
   /// Today's look, with the visualizer pulsing around the cover.
   static const classic = PlayerPreset(
     name: 'Classic',
-    badge: QualityBadgePlace.underArtist,
+    homeStyle: HomeStyle.classic,
+    badge: QualityBadgePlace.timeRow,
     volumeSlider: VolumeSliderShape.classic,
-    tabBar: TabBarStyle.classic,
+    tabBar: TabBarStyle.capsule,
+    background: NowPlayingBackground.color,
+    glassTransport: false,
+    glassSeekBar: false,
+    glassVolume: false,
     note: 'The player as it has always been, the cover pulsing with the music',
     visualizer: true,
   );
@@ -276,6 +286,7 @@ class PlayerPreset {
   /// Kawaii, with the Liquid glass tab bar on phones.
   static const liquidKawaii = PlayerPreset(
     name: 'Liquid Kawaii',
+    homeStyle: HomeStyle.carousel,
     note: 'Kawaii, with Liquid Glass controls and glass tabs on phones',
     cover: PlayerCover.background,
     header: PlayerHeader.playingFrom,
@@ -331,6 +342,7 @@ class PlayerPreset {
     differ(p.showVideoSwitch, videoSwitch);
     if (background != null) differ(Appearance.instance.nowPlaying, background!);
     if (tabBar != null) differ(p.tabBar, tabBar!);
+    if (homeStyle != null) differ(p.homeStyle, homeStyle!);
     if (Features.audioVisualizer) {
       differ(p.visualizer, visualizer);
       // The style only shows while it is on.
@@ -367,6 +379,7 @@ class PlayerPreset {
       p.volumeSlider = volumeSlider;
       p.showVideoSwitch = videoSwitch;
       if (tabBar != null) p.tabBar = tabBar!;
+      if (homeStyle != null) p.homeStyle = homeStyle!;
       p.visualizer = visualizer;
       if (visualizer) p.visualizerStyle = visualizerStyle;
       p.fitVisualizerStyle();

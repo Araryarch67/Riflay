@@ -398,6 +398,7 @@ class Collection {
     this.id,
     this.picture,
     this.coverKey,
+    this.artistVideos = const [],
   });
 
   final CollectionKind kind;
@@ -407,6 +408,9 @@ class Collection {
   final String title;
   final String subtitle;
   final List<Track> tracks;
+
+  /// Confirmed videos from the artist's provider, separate from the song list.
+  final List<Track> artistVideos;
 
   /// A picture of its own (an artist's photo), drawn instead of its first song's cover.
   final Track? picture;
@@ -424,11 +428,33 @@ class Collection {
     id: id,
     picture: picture,
     coverKey: coverKey,
+    artistVideos: artistVideos,
   );
 
   /// The same, with [p] as its picture.
-  Collection withPicture(Track p) =>
-      Collection(kind: kind, title: title, subtitle: subtitle, tracks: tracks, id: id, picture: p, coverKey: coverKey);
+  Collection withPicture(Track p) => Collection(
+    kind: kind,
+    title: title,
+    subtitle: subtitle,
+    tracks: tracks,
+    id: id,
+    picture: p,
+    coverKey: coverKey,
+    artistVideos: artistVideos,
+  );
+}
+
+/// Splits songs by their available credits. Missing credits stay in the general song list.
+({List<Track> solo, List<Track> collaborations}) artistSongSections(String artist, Iterable<Track> tracks) {
+  final who = artist.trim().toLowerCase();
+  final solo = <Track>[];
+  final collaborations = <Track>[];
+  for (final track in tracks) {
+    final names = track.artists.map((name) => name.toLowerCase()).toSet();
+    if (!names.contains(who)) continue;
+    (names.length == 1 ? solo : collaborations).add(track);
+  }
+  return (solo: solo, collaborations: collaborations);
 }
 
 /// [Collection.id] of YouTube Music's "Liked music".

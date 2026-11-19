@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'dart:ui' show AppExitType;
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:just_audio/just_audio.dart' show LoopMode;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:window_manager/window_manager.dart';
@@ -140,6 +142,12 @@ class SystemTray with WindowListener {
   }
 
   static SystemTray? _running;
+
+  /// Exits the process so an installer can replace its executable and libraries.
+  static Future<void> quitForUpdate() async {
+    if (_running case final tray?) return tray.quit();
+    await ServicesBinding.instance.exitApplication(AppExitType.cancelable);
+  }
 
   /// The mini player's state and switch, from the UI (the services don't know its window); null leaves Mini player
   /// out of the menu.

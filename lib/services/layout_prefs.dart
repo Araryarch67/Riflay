@@ -560,9 +560,21 @@ enum TabBarStyle {
   final bool docked;
 }
 
-/// The sections of Home, in today's order.
+/// The presentation of the Quick picks section.
+enum HomeStyle {
+  classic,
+  carousel;
+
+  String get label => switch (this) {
+    classic => tr.homeStyleClassic,
+    carousel => tr.homeStyleCarousel,
+  };
+}
+
+/// The sections of Home, in their default order.
 enum HomeSection {
   quickPicks,
+  dailyMix,
   recentlyPlayed,
   playlists,
   albums,
@@ -572,6 +584,7 @@ enum HomeSection {
 
   String get label => switch (this) {
     quickPicks => tr.quickPicks,
+    dailyMix => tr.dailyMix,
     recentlyPlayed => tr.recentlyPlayed,
     playlists => tr.yourPlaylists,
     albums => tr.yourAlbums,
@@ -601,6 +614,7 @@ class LayoutPrefs extends ChangeNotifier {
   /// Home's sections in the order shown, and the ones switched off.
   List<HomeSection> homeOrder = List.of(HomeSection.values);
   Set<HomeSection> homeHidden = {};
+  HomeStyle homeStyle = HomeStyle.classic;
 
   ProgressBarStyle progressBar = ProgressBarStyle.thin;
   ProgressBarShape progressShape = ProgressBarShape.wavy;
@@ -717,11 +731,11 @@ class LayoutPrefs extends ChangeNotifier {
   MiniPlayerStyle miniPlayer = MiniPlayerStyle.classic;
   AlbumHeaderStyle albumHeader = AlbumHeaderStyle.classic;
   PlayingRowStyle playingRow = PlayingRowStyle.classic;
-  QualityBadgePlace qualityBadgePlace = QualityBadgePlace.underArtist;
+  QualityBadgePlace qualityBadgePlace = QualityBadgePlace.timeRow;
   VolumeSliderShape volumeSlider = VolumeSliderShape.classic;
 
-  /// The phone's tab bar: docked under the mini player like most music apps, by default.
-  TabBarStyle tabBar = TabBarStyle.classic;
+  /// The Classic preset uses the Capsule navigation surface.
+  TabBarStyle tabBar = TabBarStyle.capsule;
   bool keepPhoneNavOpen = false;
   bool hidePhoneNavLabels = false;
   DesktopBarStyle desktopBar = DesktopBarStyle.classic;
@@ -871,7 +885,6 @@ class LayoutPrefs extends ChangeNotifier {
       titleActions == TitleActions.classic &&
       transport == PlayerTransport.classic &&
       bottomRow == PlayerBottomRow.classic &&
-      qualityBadgePlace == QualityBadgePlace.underArtist &&
       volumeSlider == VolumeSliderShape.classic &&
       !playerGlassControls &&
       showVolumeRow;
@@ -1024,6 +1037,7 @@ class LayoutPrefs extends ChangeNotifier {
     performance = pick(PerformanceMode.values, 'performance', d.performance);
     videoDecoder = pick(VideoDecoder.values, 'videoDecoder', d.videoDecoder);
     windowButtons = j['windowButtons'] as bool? ?? d.windowButtons;
+    homeStyle = pick(HomeStyle.values, 'homeStyle', d.homeStyle);
     final byName = HomeSection.values.asNameMap();
     final order = <HomeSection>[for (final n in (j['homeOrder'] as List?) ?? const []) ?byName[n]];
     // A section added by a newer version joins at its default place.
@@ -1117,6 +1131,7 @@ class LayoutPrefs extends ChangeNotifier {
     'performance': performance.name,
     'videoDecoder': videoDecoder.name,
     'windowButtons': windowButtons,
+    'homeStyle': homeStyle.name,
     'homeOrder': [for (final s in homeOrder) s.name],
     'homeHidden': [for (final s in homeHidden) s.name],
   };
@@ -1225,6 +1240,8 @@ class LayoutPrefs extends ChangeNotifier {
   Future<void> setPerformance(PerformanceMode v) => _set(() => performance = v);
   Future<void> setVideoDecoder(VideoDecoder v) => _set(() => videoDecoder = v);
   Future<void> setWindowButtons(bool v) => _set(() => windowButtons = v);
+
+  Future<void> setHomeStyle(HomeStyle style) => _set(() => homeStyle = style);
 
   Future<void> setHomeSectionShown(HomeSection s, bool shown) =>
       _set(() => shown ? homeHidden.remove(s) : homeHidden.add(s));

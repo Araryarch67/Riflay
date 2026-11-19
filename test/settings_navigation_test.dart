@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:riflay/services/audio_engine.dart';
+import 'package:riflay/services/language.dart';
 import 'package:riflay/services/player_controller.dart';
 import 'package:riflay/services/stay_awake.dart';
 import 'package:riflay/services/power_policy.dart';
@@ -95,15 +96,15 @@ void main() {
     await tester.tap(find.text('Playback'));
     await tester.pumpAndSettle();
     expect(find.text('Autoplay'), findsOneWidget);
-    expect(find.text('Crossfade'), findsOneWidget);
+    expect(find.text(tr.crossfade), findsOneWidget);
     expect(find.text('Keep screen on'), findsNothing);
     await tester.tap(find.text('Sound'));
     await tester.pumpAndSettle();
     c.audio.virtualSpeakers = true;
     c.audio.hrirPath = AudioEngine.hrirAsset;
-    await tester.tap(find.text('Sound effects (DSP)'));
+    await tester.tap(find.text(tr.topicDsp));
     await tester.pumpAndSettle();
-    expect(find.text('Crossfade'), findsNothing);
+    expect(find.text(tr.crossfade), findsNothing);
     expect(find.text('Virtual speaker level'), findsOneWidget);
     final level = find.ancestor(of: find.text('Virtual speaker level'), matching: find.byType(SettingTile));
     tester.widget<Slider>(find.descendant(of: level, matching: find.byType(Slider))).onChanged!(-3);
@@ -120,7 +121,7 @@ void main() {
     final expected = {
       'Sound': [
         'Playback',
-        if (AudioEngine.supported) ...['Sound effects (DSP)', 'Output & quality'],
+        if (AudioEngine.supported) ...[tr.topicDsp, 'Output & quality'],
       ],
       'Look & feel': [
         'Theme & colours',
@@ -176,7 +177,7 @@ void main() {
     // group, section, something only that page shows, location
     final cases = [
       ('Sound', 'Playback', 'Gapless playback', 'settings:sound/playback'),
-      if (AudioEngine.supported) ('Sound', 'Sound effects (DSP)', 'Crossfade', 'settings:sound/dsp'),
+      if (AudioEngine.supported) ('Sound', tr.topicDsp, tr.volumeLeveling, 'settings:sound/dsp'),
       if (AudioEngine.supported) ('Sound', 'Output & quality', 'Output sample rate', 'settings:sound/hifi'),
       ('Look & feel', 'Theme & colours', 'Bottom bar Liquid Glass tint', 'settings:look/appearance'),
       ('Look & feel', 'Language & text', 'Font', 'settings:look/text'),

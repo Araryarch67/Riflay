@@ -48,6 +48,7 @@ import 'services/desktop_visibility.dart';
 import 'services/window_focus.dart';
 import 'services/wrap_notifications.dart';
 import 'ui/widgets/app_update_tile.dart' show showUpdatePopup;
+import 'ui/widgets/glass_toast.dart';
 import 'ui/home_shell.dart';
 import 'ui/player_panels.dart' show MiniPlayerWindow, miniPlayer, setMiniPlayer, windowFullScreen;
 import 'platform/features.dart';
@@ -67,7 +68,7 @@ Future<void> _main(List<String> args) async {
   // Riflay already runs: the link goes to it, and this process ends before showing a window.
   await IncomingLinks.instance.claimDesktop(args);
   unawaited(RenderingMemory.configure());
-  if (Host.isAndroid) {
+  if (Host.isAndroid || Host.isWindows) {
     final updates = AppUpdates();
     unawaited(updates.cleanUp().whenComplete(updates.dispose));
   }
@@ -442,7 +443,6 @@ class _RiflayAppState extends State<RiflayApp> with WidgetsBindingObserver {
       controller: widget.controller,
       child: MaterialApp(
         scrollBehavior: const MaterialScrollBehavior().copyWith(scrollbars: false),
-        scaffoldMessengerKey: _messenger,
         navigatorKey: _navigator,
         // Dialogs open over the music video's window: it makes room for them (see OverVideo).
         navigatorObservers: [OverVideo.root],
@@ -478,7 +478,10 @@ class _RiflayAppState extends State<RiflayApp> with WidgetsBindingObserver {
           // artwork and controls on them stay solid.
           return AppColorsScope(
             colors: AppColorsScope.current(),
-            child: hasCustomTitleBar ? _DesktopFrame(child: scaled) : scaled,
+            child: GlassToastMessenger(
+              key: _messenger,
+              child: hasCustomTitleBar ? _DesktopFrame(child: scaled) : scaled,
+            ),
           );
         },
         home: widget.startup == null

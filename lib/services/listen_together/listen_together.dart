@@ -122,12 +122,15 @@ class ListenTogether extends ChangeNotifier {
   /// Recent messages in this room, cleared when leaving it.
   List<RoomChat> get chat => List.unmodifiable(_chat);
 
+  /// Whether the host confirmed this as a message from this participant.
+  bool isOwnChat(RoomChat message) => message.sender == (_role == ListenRole.host ? 'host' : 'guest:$_guestId');
+
   /// Sends plain text through the room host, without changing playback.
   void sendChat(String text) {
     final clean = text.trim();
     if (_role == ListenRole.none || clean.isEmpty || clean.length > 1000) return;
     if (_role == ListenRole.host) {
-      _publishChat(_ownName ?? tr.theHost, clean);
+      _publishChat(_ownName ?? tr.theHost, clean, 'host');
     } else {
       _conn?.send(ChatSend(clean).encode());
     }
@@ -140,8 +143,9 @@ class ListenTogether extends ChangeNotifier {
     notifyListeners();
   }
 
-  void _publishChat(String name, String text) {
-    final message = RoomChat(id: '${_now()}-${_chatSerial++}', name: name, text: text.trim(), at: _now());
+  void _publishChat(String name, String text, String? sender) {
+    final at = _now();
+    final message = RoomChat(id: '$at-${_chatSerial++}', name: name, text: text.trim(), at: at, sender: sender);
     _acceptChat(message);
     for (final entry in _peers.entries) {
       if (entry.value != null) entry.key.send(message.encode());
@@ -182,6 +186,7 @@ class ListenTogether extends ChangeNotifier {
   // Host side.
   ListenHostTransport? _transport;
   final _peers = <ListenPeer, String?>{}; // name once the Hello arrived
+  final _chatSenders = <ListenPeer, String>{};
   Timer? _broadcastSoon;
 
   // Guest side.
@@ -195,7 +200,7 @@ class ListenTogether extends ChangeNotifier {
   var _nearEnd = false;
   Completer<Welcome>? _welcome;
 
-  static final String _guestId = _randomId();
+  String _guestId = '';
 
   static String _randomId() {
     final r = Random.secure();
@@ -295,6 +300,7 @@ class ListenTogether extends ChangeNotifier {
   void _dropped(ListenPeer peer) {
     if (!_peers.containsKey(peer)) return;
     final name = _peers.remove(peer);
+    _chatSenders.remove(peer);
     if (name == null || _role != ListenRole.host) return;
     _emit(tr.nameLeft(name));
     _sendGuests();
@@ -306,10 +312,11 @@ class ListenTogether extends ChangeNotifier {
     if (_role != ListenRole.host) return;
     final message = ListenMessage.decode(text);
     switch (message) {
-      case Hello(:final name):
+      case Hello(:final name, :final guestId):
         if (_peers[peer] != null) return;
         final clean = name.trim().isEmpty ? tr.someone : name.trim();
         _peers[peer] = clean.length > 30 ? clean.substring(0, 30) : clean;
+        _chatSenders[peer] = 'guest:$guestId';
         peer.send(
           Welcome(
             hostName: _ownName!,
@@ -335,7 +342,7 @@ class ListenTogether extends ChangeNotifier {
         _emit(tr.nameAddedToQueue(from, track.title));
       case ChatSend(:final text):
         final name = _peers[peer];
-        if (name != null) _publishChat(name, text);
+        if (name != null) _publishChat(name, text, _chatSenders[peer]);
       case SeekRequest(:final positionMs, :final videoId):
         if (_peers[peer] == null || !_seekingAllowed || player.currentTrack?.videoId != videoId) return;
         final duration = player.player.duration?.inMilliseconds ?? player.currentTrack?.duration?.inMilliseconds;
@@ -479,6 +486,7 @@ class ListenTogether extends ChangeNotifier {
         onError: (Object e) => debugPrint('Listen together: host: $e'),
       ),
     );
+    _guestId = _randomId();
     conn.send(Hello(name: name, guestId: _guestId).encode());
     try {
       final w = await welcome.future.timeout(const Duration(seconds: 8));
@@ -695,6 +703,7 @@ class ListenTogether extends ChangeNotifier {
     }
     final peers = _peers.keys.toList();
     _peers.clear();
+    _chatSenders.clear();
     final transport = _transport, conn = _conn;
     _transport = null;
     _conn = null;

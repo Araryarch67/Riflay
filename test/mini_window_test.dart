@@ -55,6 +55,22 @@ void main() {
 
   tearDown(() => miniPlayerStyle.value = DesktopMiniStyle.window);
 
+  testWidgets('mini player volume follows Pill and Thin without changing the seek bar', (tester) async {
+    await _show(tester, const Size(460, 224), DesktopMiniStyle.window);
+    SliderTheme look(Finder slider) =>
+        tester.widget<SliderTheme>(find.ancestor(of: slider, matching: find.byType(SliderTheme)).first);
+    final sliders = find.byType(Slider);
+    expect(look(sliders.last).data.trackShape, isA<RoundedRectSliderTrackShape>());
+    await tester.runAsync(() => LayoutPrefs.instance.setVolumeSlider(VolumeSliderShape.pill));
+    await tester.pump();
+    expect(look(sliders.last).data.trackShape, isA<PillSeekTrack>());
+    expect(look(sliders.last).data.thumbShape, isA<BarThumbShape>());
+    expect(look(sliders.first).data.trackShape, isA<WavySeekTrack>());
+    await tester.runAsync(() => LayoutPrefs.instance.setVolumeSlider(VolumeSliderShape.thin));
+    await tester.pump();
+    expect(look(sliders.last).data.trackShape, isA<ThinSeekTrack>());
+  });
+
   testWidgets('pointing at the mini window\'s play button shows its tooltip instead of throwing', (tester) async {
     await _show(tester, const Size(460, 224), DesktopMiniStyle.window);
     final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);

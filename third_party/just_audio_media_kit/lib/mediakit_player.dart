@@ -41,6 +41,8 @@ class MediaKitPlayer extends AudioPlayerPlatform {
 
   /// While playing: checks once a second that just_audio's running position is still right.
   Timer? _drift;
+  // Riflay: mpv also emits recoverable decoder messages on the error stream.
+  Timer? _checkingPlaybackError;
   Duration? _duration;
   bool _playing = false;
   bool _mediaOpened = false;
@@ -218,11 +220,11 @@ class MediaKitPlayer extends AudioPlayerPlatform {
             !_isStreamProxy(errorUri) &&
             !_player.state.playlist.medias.any((media) => media.uri == errorUri) &&
             (initialProxy || _isStreamProxy(_currentMedia?.uri));
-        if (errorUri == null || errorUri == _currentMedia?.uri || failedInitial || nestedFailure) {
-          _processingState = ProcessingStateMessage.idle;
-          _errorCode = kErrorCode;
-          _errorMessage = error;
-          _updatePlaybackEvent(errorIndex: failedInitial || (nestedFailure && initialProxy) ? _loadingIndex : null);
+        if (errorUri == null && _mediaOpened && _playing &&
+            _processingState == ProcessingStateMessage.ready) {
+          _verifyPlaybackStopped(error);
+        } else if (errorUri == null || errorUri == _currentMedia?.uri || failedInitial || nestedFailure) {
+          _reportPlaybackError(error, index: failedInitial || (nestedFailure && initialProxy) ? _loadingIndex : null);
         }
         _logger.severe('ERROR OCCURRED: $error');
       }),
@@ -278,6 +280,27 @@ class MediaKitPlayer extends AudioPlayerPlatform {
         r'|WAV size headers',
         caseSensitive: false,
       ).hasMatch(error);
+
+  // Riflay: continue through a decoder warning if this occurrence is still making progress.
+  void _verifyPlaybackStopped(String error) {
+    if (_checkingPlaybackError?.isActive ?? false) return;
+    final source = _currentMedia?.extras?['riflaySourceId'];
+    final at = readPosition(_player) ?? _player.state.position;
+    _checkingPlaybackError = Timer(const Duration(milliseconds: 450), () {
+      if (!_mediaOpened || !_playing || _currentMedia?.extras?['riflaySourceId'] != source) return;
+      final now = readPosition(_player) ?? _player.state.position;
+      if (now > at || _player.state.buffering) return;
+      _reportPlaybackError(error);
+    });
+  }
+
+  void _reportPlaybackError(String error, {int? index}) {
+    _checkingPlaybackError?.cancel();
+    _processingState = ProcessingStateMessage.idle;
+    _errorCode = kErrorCode;
+    _errorMessage = error;
+    _updatePlaybackEvent(errorIndex: index);
+  }
 
   void _updateDuration(Duration duration) {
     if (duration > Duration.zero && _currentMedia?.uri == _loadingUri) _initialMediaReady = true;
@@ -369,6 +392,7 @@ class MediaKitPlayer extends AudioPlayerPlatform {
 
   @override
   Future<LoadResponse> load(LoadRequest request) async {
+    _checkingPlaybackError?.cancel();
     _logger.finest('load(${request.toMap()})');
     _mediaOpened = false;
     // Riflay: arm this load's seek before opening: duration may arrive while
@@ -480,6 +504,7 @@ class MediaKitPlayer extends AudioPlayerPlatform {
 
   @override
   Future<SeekResponse> seek(SeekRequest request) async {
+    _checkingPlaybackError?.cancel();
     // Riflay: a user-selected occurrence supersedes an unfinished initial open.
     _loadingUri = null;
     _logger.finest('seek(${request.toMap()})');
@@ -599,6 +624,7 @@ class MediaKitPlayer extends AudioPlayerPlatform {
     _readsPosition = false;
     _drift?.cancel();
     _drift = null;
+    _checkingPlaybackError?.cancel();
     await _player.dispose();
     // cancel all stream subscriptions
     for (final StreamSubscription subscription in _streamSubscriptions) {

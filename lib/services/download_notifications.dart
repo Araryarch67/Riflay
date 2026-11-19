@@ -329,6 +329,7 @@ class DownloadNotifications {
   // ---- taps ----
 
   static void Function()? _openDownloads;
+  static bool Function(NoteContent)? _presentInApp;
   static bool _openWhenReady = false;
 
   /// The shell says how to show the Downloads page. A tap that came before it was ready (the app was started by
@@ -340,6 +341,9 @@ class DownloadNotifications {
       open();
     }
   }
+
+  /// Presents a terminal download in the foreground if the shell is visible.
+  static void registerInAppDownloadToast(bool Function(NoteContent)? present) => _presentInApp = present;
 
   static void Function(String month)? _openWrap;
   static String? _wrapWhenReady;
@@ -397,6 +401,7 @@ class DownloadNotifications {
     _openWhenReady = false;
     _openWrap = null;
     _wrapWhenReady = null;
+    _presentInApp = null;
   }
 
   void _tapped(NotificationResponse r) => handleTap(actionId: r.actionId, payload: r.payload, importer: _importer);
@@ -438,8 +443,6 @@ class DownloadNotifications {
         if (!_asked && _ready) await _askPermission();
       }
       _background(active.isNotEmpty);
-      if (!_ready) return;
-
       final seenNow = <String>{};
       final terminal = <NoteContent>[];
       for (final job in jobs) {
@@ -447,13 +450,14 @@ class DownloadNotifications {
         final before = _seen[job.videoId];
         _seen[job.videoId] = job.status;
         if (job.status == DownloadStatus.cancelled) {
-          await _remove(noteIdFor(job.videoId));
+          if (_ready) await _remove(noteIdFor(job.videoId));
         } else if (!job.isActive && before != job.status && before != null) {
           final note = noteFor(job);
-          if (note != null) terminal.add(note);
+          if (note != null && _presentInApp?.call(note) != true) terminal.add(note);
         }
       }
       _seen.removeWhere((id, _) => !seenNow.contains(id));
+      if (!_ready) return;
 
       // The service's notification goes before the finished ones appear.
       await _updateActive(active);

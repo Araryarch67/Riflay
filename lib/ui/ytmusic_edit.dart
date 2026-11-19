@@ -14,8 +14,11 @@ import '../services/youtube_music_account.dart';
 import '../services/ytmusic_web.dart';
 import 'download_options.dart';
 import 'download_source_dialog.dart';
+import 'pages/youtube_music_page.dart' show openRemotePlaylist;
+import 'shell_scope.dart';
 import 'theme.dart';
 import 'widgets/app_dialog.dart';
+import 'widgets/glass_toast.dart';
 
 /// Marks the songs below as rows of a playlist the user can edit (an
 /// Riflay playlist or their own YouTube Music one), so each song's menu
@@ -198,12 +201,12 @@ Future<void> createPlaylist(BuildContext context, {List<Track> tracks = const []
     );
     return;
   }
-  c.createPlaylist(answer.title, tracks: tracks);
+  final playlist = c.createPlaylist(answer.title, tracks: tracks);
+  final shell = context.getInheritedWidgetOfExactType<ShellScope>();
   ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(
-      content: Text(
-        tracks.isEmpty ? tr.createdPlaylist(answer.title) : tr.createdPlaylistWith(answer.title, tracks.length),
-      ),
+    _playlistToast(
+      tracks.isEmpty ? tr.createdPlaylist(answer.title) : tr.createdPlaylistWith(answer.title, tracks.length),
+      shell == null ? null : () => shell.openCollection(c.playlistCollection(playlist)),
     ),
   );
 }
@@ -313,6 +316,7 @@ Future<void> addToPlaylist(BuildContext context, List<Track> tracks) async {
   );
   if (!context.mounted) return;
   final messenger = ScaffoldMessenger.of(context);
+  final shell = context.getInheritedWidgetOfExactType<ShellScope>();
   switch (choice) {
     case #create:
       return createPlaylist(context, tracks: tracks);
@@ -320,8 +324,14 @@ Future<void> addToPlaylist(BuildContext context, List<Track> tracks) async {
       final n = c.addToPlaylist(p.id, tracks);
       if (remember) await LayoutPrefs.instance.rememberPlaylist('local:${p.id}');
       messenger.showSnackBar(
-        SnackBar(
-          content: Text(addedMessage(name: p.name, tracks: tracks.length, added: n)),
+        _playlistToast(
+          addedMessage(name: p.name, tracks: tracks.length, added: n),
+          shell == null
+              ? null
+              : () {
+                  final updated = c.playlistById(p.id);
+                  if (updated != null) shell.openCollection(updated);
+                },
         ),
       );
     case final RemotePlaylist p:
@@ -333,8 +343,9 @@ Future<void> addToPlaylist(BuildContext context, List<Track> tracks) async {
         final n = await account.addToPlaylist(p.id, onYoutube.songs);
         if (remember) await LayoutPrefs.instance.rememberPlaylist('youtube:${p.id}');
         messenger.showSnackBar(
-          SnackBar(
-            content: Text(addedMessage(name: p.title, tracks: tracks.length, added: n, skipped: onYoutube.skipped)),
+          _playlistToast(
+            addedMessage(name: p.title, tracks: tracks.length, added: n, skipped: onYoutube.skipped),
+            shell == null ? null : () => openRemotePlaylist(context, p, shell: shell, account: account),
           ),
         );
       } catch (e) {
@@ -342,6 +353,9 @@ Future<void> addToPlaylist(BuildContext context, List<Track> tracks) async {
       }
   }
 }
+
+SnackBar _playlistToast(String message, VoidCallback? open) =>
+    open == null ? SnackBar(content: Text(message)) : LinkedToast(message, label: tr.openPlaylist, open: open);
 
 Future<void> removeFromPlaylist(BuildContext context, Track track) async {
   final scope = PlaylistEditScope.maybeOf(context);

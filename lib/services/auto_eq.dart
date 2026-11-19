@@ -13,12 +13,13 @@ import 'audio_engine.dart';
 /// its files are ([path], URL-encoded, under the results folder).
 @immutable
 class AutoEqEntry {
-  const AutoEqEntry({required this.name, required this.path, required this.source, this.rig});
+  const AutoEqEntry({required this.name, required this.path, required this.source, this.rig, this.filters});
 
   final String name;
   final String path;
   final String source;
   final String? rig;
+  final List<AutoEqFilter>? filters;
 
   /// "crinacle · 711", or the source alone.
   String get by => rig == null ? source : '$source · $rig';
@@ -57,12 +58,13 @@ typedef AutoEqFit = ({List<EqBand> bands, double error});
 /// bands that follow the profile's curve ([toBands]).
 abstract final class AutoEq {
   static const _base = 'https://raw.githubusercontent.com/jaakkopasanen/AutoEq/master/results';
-  static const _maxAge = Duration(days: 30);
+  static const _maxAge = Duration(days: 7);
 
   /// The rate the curves are worked out at (the equalizer's filters differ little between 44.1 and 48 kHz).
   static const _rate = 48000;
 
   static List<AutoEqEntry>? _index;
+  static final _searchNames = Expando<String>('eq model name');
 
   /// Every model in AutoEQ's results, from `results/INDEX.md`: lines like
   /// `- [KZ ZSN Pro](./crinacle/711%20in-ear/KZ%20ZSN%20Pro) by crinacle on 711`.
@@ -112,13 +114,11 @@ abstract final class AutoEq {
   static List<AutoEqEntry> search(List<AutoEqEntry> entries, String query, {int limit = 100}) {
     final words = _words(query);
     if (words.isEmpty) return const [];
-    final q = words.join(' ');
+    final q = words.join();
     final found = <(AutoEqEntry, int)>[];
     for (final e in entries) {
-      final name = _words(e.name);
-      final joined = name.join();
-      if (!words.every(joined.contains)) continue;
-      final n = name.join(' ');
+      final n = _searchNames[e] ??= _words(e.name).join();
+      if (!words.every(n.contains)) continue;
       found.add((
         e,
         n == q
@@ -319,6 +319,7 @@ abstract final class AutoEq {
 
   /// Downloads [e]'s profile and makes the equalizer's bands of it.
   static Future<AutoEqFit> fitFor(AutoEqEntry e, {http.Client? client}) async {
+    if (e.filters case final filters?) return compute(_fit, filters);
     final get = client?.get ?? http.get;
     final r = await get(_profileUrl(e)).timeout(const Duration(seconds: 30));
     if (r.statusCode != 200) throw HttpException('AutoEQ profile: HTTP ${r.statusCode}');

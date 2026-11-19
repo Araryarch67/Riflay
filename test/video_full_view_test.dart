@@ -30,6 +30,7 @@ final _song = Track.youtube(videoId: 'full-view-test', title: 'Full view', artis
 class _Player extends PlayerController {
   bool playing = false;
   int toggles = 0;
+  Duration at = Duration.zero;
 
   @override
   Track get currentTrack => _song;
@@ -39,6 +40,10 @@ class _Player extends PlayerController {
   bool get showsPlaying => playing;
   @override
   Duration? get duration => const Duration(minutes: 3);
+  @override
+  Duration get position => at;
+  @override
+  Future<void> seek(Duration position) async => at = position;
   @override
   Future<void> togglePlay() async {
     toggles++;
@@ -191,7 +196,10 @@ void main() {
     final c = await show(tester);
     expect(VideoMode.instance.debugVisibleViews.covers, 1);
     final context = tester.element(find.byTooltip('Watch full screen'));
-    showDialog<void>(context: context, builder: (_) => const AlertDialog(content: Text('Signal path')));
+    showDialog<void>(
+      context: context,
+      builder: (_) => const AlertDialog(content: Text('Signal path')),
+    );
     await settle(tester);
     expect(VideoMode.instance.debugVisibleViews.covers, 1, reason: 'the video is still on screen under a dialog');
     Navigator.of(tester.element(find.text('Signal path'))).pop();
@@ -288,6 +296,33 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('video-full-surface')));
     await settle(tester);
     expect(inView(find.byType(SeekBar)), findsOneWidget, reason: 'a tap brings them back');
+    await close(tester, c);
+  });
+
+  testWidgets('double tapping either side seeks ten seconds and clamps to the song', (tester) async {
+    final c = await show(tester, size: _landscape);
+    c.at = const Duration(seconds: 60);
+    await tester.tap(find.byTooltip('Watch full screen'));
+    await settle(tester);
+    final surface = tester.getRect(find.byKey(const ValueKey('video-full-surface')));
+    Future<void> twice(double x) async {
+      final point = Offset(surface.left + surface.width * x, surface.center.dy);
+      await tester.tapAt(point);
+      await tester.pump(const Duration(milliseconds: 60));
+      await tester.tapAt(point);
+      await tester.pump();
+    }
+
+    await twice(.20);
+    expect(c.at, const Duration(seconds: 50));
+    expect(find.byIcon(Icons.replay_10_rounded), findsOneWidget);
+    await settle(tester);
+    await twice(.80);
+    expect(c.at, const Duration(seconds: 60));
+    c.at = const Duration(seconds: 178);
+    await settle(tester);
+    await twice(.80);
+    expect(c.at, const Duration(minutes: 3));
     await close(tester, c);
   });
 

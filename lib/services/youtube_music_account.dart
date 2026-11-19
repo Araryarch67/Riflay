@@ -1108,6 +1108,27 @@ class YoutubeMusicAccount extends ChangeNotifier {
   /// so those are always fetched.)
   final _publicPages = <String, (DateTime, Future<List<Track>>)>{};
 
+  final _artistPages = <String, Future<({List<Track> songs, List<Track> videos})>>{};
+
+  /// Songs and confirmed music videos from a public artist's channel.
+  Future<({List<Track> songs, List<Track> videos})> artistTracks(String channelId) {
+    final cached = _artistPages.remove(channelId);
+    final page =
+        cached ??
+        _browseClient
+            .browseArtist(channelId, limit: _maxItems)
+            .then((page) => (songs: _webTracks(page.songs), videos: _webTracks(page.videos)));
+    _artistPages[channelId] = page;
+    if (_artistPages.length > 24) _artistPages.remove(_artistPages.keys.first);
+    page.then<void>(
+      (_) {},
+      onError: (Object _) {
+        if (identical(_artistPages[channelId], page)) _artistPages.remove(channelId);
+      },
+    );
+    return page;
+  }
+
   /// Songs of a playlist from the library or of a public album / playlist.
   Future<List<Track>> collectionTracks(RemotePlaylist p) async {
     final browseId = p.browseId;

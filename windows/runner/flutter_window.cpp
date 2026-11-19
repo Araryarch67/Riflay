@@ -3,11 +3,13 @@
 #include <dwmapi.h>
 #include <flutter/method_channel.h>
 #include <flutter/standard_method_codec.h>
+#include <flutter_windows.h>
 
 #include <optional>
 #include <vector>
 
 #include "flutter/generated_plugin_registrant.h"
+#include "utils.h"
 #include "video_window.h"
 
 namespace {
@@ -152,6 +154,47 @@ bool FlutterWindow::OnCreate() {
       flutter_controller_->engine()->messenger(), "riflay/window",
       &flutter::StandardMethodCodec::GetInstance());
   window_channel_->SetMethodCallHandler([this](const auto& call, auto result) {
+    if (call.method_name() == "innoInstallLocation") {
+      // This per-user registration is written by windows/installer/riflay.iss.
+      constexpr wchar_t key[] = L"Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\"
+                               L"{DC558C20-B893-4F78-A05F-6E08F3F2435E}_is1";
+      constexpr DWORD flags = RRF_RT_REG_SZ | RRF_SUBKEY_WOW6464KEY;
+      DWORD bytes = 0;
+      if (RegGetValueW(HKEY_CURRENT_USER, key, L"InstallLocation", flags, nullptr, nullptr, &bytes) != ERROR_SUCCESS ||
+          bytes < sizeof(wchar_t) || bytes > 65536) {
+        return result->Success();
+      }
+      std::vector<wchar_t> location(bytes / sizeof(wchar_t) + 1, L'\0');
+      if (RegGetValueW(HKEY_CURRENT_USER, key, L"InstallLocation", flags, nullptr, location.data(), &bytes) !=
+          ERROR_SUCCESS) {
+        return result->Success();
+      }
+      return result->Success(flutter::EncodableValue(Utf8FromUtf16(location.data())));
+    }
+    if (call.method_name() == "currentMonitorWorkArea") {
+      auto hwnd = GetHandle();
+      auto monitor = MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST);
+      MONITORINFO info{};
+      info.cbSize = sizeof(info);
+      if (!GetMonitorInfo(monitor, &info)) return result->Error("monitor", "No monitor for this window");
+      const double scale = GetDpiForWindow(hwnd) / 96.0;
+      return result->Success(flutter::EncodableValue(flutter::EncodableList{
+          info.rcWork.left / scale, info.rcWork.top / scale,
+          info.rcWork.right / scale, info.rcWork.bottom / scale}));
+    }
+    if (call.method_name() == "moveDockedIsland") {
+      const auto* grab = std::get_if<double>(call.arguments());
+      POINT cursor{};
+      if (!grab || !GetCursorPos(&cursor)) return result->Error("position", "No island drag position");
+      auto monitor = MonitorFromPoint(cursor, MONITOR_DEFAULTTONEAREST);
+      MONITORINFO info{};
+      info.cbSize = sizeof(info);
+      if (!GetMonitorInfo(monitor, &info)) return result->Error("monitor", "No monitor for the pointer");
+      const double scale = FlutterDesktopGetDpiForMonitor(monitor) / 96.0;
+      SetWindowPos(GetHandle(), nullptr, cursor.x - static_cast<int>(*grab * scale), info.rcWork.top,
+                   0, 0, SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
+      return result->Success();
+    }
     if (call.method_name() == "setSwitcherVisible") {
       const auto* visible = std::get_if<bool>(call.arguments());
       if (visible == nullptr) return result->Error("bad-args", "A bool is expected");

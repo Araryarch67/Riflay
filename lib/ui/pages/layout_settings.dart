@@ -493,7 +493,7 @@ class LayoutSettings extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 12),
-          const _HomeSections(),
+          const HomeCustomization(),
           _Header(tr.bars, hint: tr.barsHint),
           SettingsCard(
             children: [
@@ -796,6 +796,38 @@ class _Header extends StatelessWidget {
 }
 
 /// Home's sections: a switch to show or hide each, a handle to drag it to a new place.
+class HomeCustomization extends StatelessWidget {
+  const HomeCustomization({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final p = LayoutPrefs.instance;
+    return ListenableBuilder(
+      listenable: p,
+      builder: (context, _) => Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SettingsCard(
+            children: [
+              SettingTile(
+                icon: Icons.view_carousel_outlined,
+                title: Text(tr.homeStyle),
+                control: OptionPicker<HomeStyle>(
+                  value: p.homeStyle,
+                  onChanged: p.setHomeStyle,
+                  options: [for (final style in HomeStyle.values) (style, style.label)],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          const _HomeSections(),
+        ],
+      ),
+    );
+  }
+}
+
 class _HomeSections extends StatelessWidget {
   const _HomeSections();
 

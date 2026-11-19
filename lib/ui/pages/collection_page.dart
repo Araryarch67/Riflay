@@ -9,10 +9,12 @@ import '../../services/flac_convert.dart';
 import '../../services/folder_watch.dart';
 import '../../services/language.dart';
 import '../../services/layout_prefs.dart';
+import '../../services/mv_sidecar.dart';
 import '../../services/play_history.dart';
 import '../../services/player_controller.dart';
 import '../../services/playlist_covers.dart';
 import '../../services/smart_playlists.dart';
+import '../../services/video_mode.dart';
 import '../../services/youtube_importer.dart';
 import '../playlist_tools.dart';
 import '../playlist_offline.dart';
@@ -60,6 +62,8 @@ class _CollectionPageState extends State<CollectionPage> {
   void Function(int, int)? get onReorder => widget.onReorder;
   bool _searching = false;
   String _query = '';
+  List<Track>? _checkedArtistTracks;
+  Future<List<Track>>? _offlineVideos;
 
   void _toggleSearch() => setState(() {
     _searching = !_searching;
@@ -114,7 +118,10 @@ class _CollectionPageState extends State<CollectionPage> {
             ),
             _ => null,
           },
-          CollectionKind.smart => SmartPlaylists.of(c, PlayHistory.instance)[SmartList.byId(collection.id)],
+          CollectionKind.smart => switch (SmartList.byId(collection.id)) {
+            final list? => SmartPlaylists.of(c, PlayHistory.instance)[list],
+            null => null,
+          },
           CollectionKind.playlist => c.playlistById(collection.id),
           CollectionKind.artist => c.artistNamed(collection.title),
           CollectionKind.remoteArtist => null,
@@ -162,6 +169,10 @@ class _CollectionPageState extends State<CollectionPage> {
       tracks = tracks.where((t) => '${t.title} ${t.artist}'.toLowerCase().contains(query)).toList();
     }
     final isArtist = live.kind == CollectionKind.artist;
+    final isArtistPage = isArtist || live.kind == CollectionKind.remoteArtist;
+    final artistChannel =
+        widget.actions.whereType<FollowButton>().firstOrNull?.artistId ??
+        (live.kind == CollectionKind.remoteArtist && live.id?.startsWith('UC') == true ? live.id : null);
     final isAll = live.kind == CollectionKind.allSongs;
     final addAll =
         liked ||
@@ -332,7 +343,7 @@ class _CollectionPageState extends State<CollectionPage> {
                       ),
                       ...actions,
                       // An artist (yours, or a YouTube Music one with Follow): all of their songs into a playlist.
-                      if (!addAll && (isArtist || actions.any((a) => a is FollowButton)) && tracks.isNotEmpty)
+                      if (!addAll && isArtistPage && tracks.isNotEmpty)
                         IconButton(
                           tooltip: tr.addAllToPlaylist,
                           onPressed: () => addToPlaylist(context, tracks),
@@ -347,6 +358,7 @@ class _CollectionPageState extends State<CollectionPage> {
                         ),
                       ],
                       if ((live.kind == CollectionKind.remote ||
+                              live.kind == CollectionKind.remoteArtist ||
                               live.kind == CollectionKind.playlist ||
                               tracks.any((t) => t.monochromeId != null)) &&
                           tracks.isNotEmpty &&
@@ -375,17 +387,17 @@ class _CollectionPageState extends State<CollectionPage> {
                 ),
               ),
             // An artist's page says who they are: yours by name, a YouTube Music one by its channel.
-            if (isArtist || actions.any((a) => a is FollowButton))
+            if (isArtist || artistChannel != null)
               SliverToBoxAdapter(
                 child: Padding(
                   padding: EdgeInsets.fromLTRB(shell.compact ? 16 : 24, 8, shell.compact ? 16 : 24, 8),
-                  child: AboutArtist(
-                    name: live.title,
-                    channelId: actions.whereType<FollowButton>().firstOrNull?.artistId,
-                    full: true,
-                  ),
+                  child: AboutArtist(name: live.title, channelId: artistChannel, full: true),
                 ),
               ),
+            if (isArtistPage) ...[
+              ..._artistSections(context, c, live),
+              if (tracks.isNotEmpty) SliverToBoxAdapter(child: SectionTitle(tr.songs)),
+            ],
             if (searchable && _searching)
               SliverToBoxAdapter(
                 child: Padding(
@@ -545,6 +557,83 @@ class _CollectionPageState extends State<CollectionPage> {
       removeMany: remove,
       child: withBar,
     );
+  }
+
+  List<Widget> _artistSections(BuildContext context, PlayerController player, Collection artist) {
+    final shell = ShellScope.of(context);
+    final songs = artistSongSections(artist.title, artist.tracks);
+    Widget shelf(String title, List<Track> tracks, {bool video = false}) => Shelf.builder(
+      title: title,
+      count: tracks.length,
+      onShowAll: video
+          ? null
+          : () => shell.open(
+              CollectionPage(
+                collection: Collection(
+                  kind: CollectionKind.remote,
+                  title: title,
+                  subtitle: artist.title,
+                  tracks: tracks,
+                ),
+              ),
+              location: 'artist-section:${artist.id ?? artist.title}:$title',
+            ),
+      card: (i) {
+        final track = tracks[i];
+        Future<void> play() => player.playList(tracks, i, from: title);
+        void watch() {
+          VideoMode.instance.setOn(true);
+          play().ignore();
+          shell.openNowPlaying();
+        }
+
+        return MediaCard(
+          track: track,
+          title: track.title,
+          subtitle: track.artist,
+          onTap: video && Features.videoMode ? watch : () => shell.playAndOpen(play),
+          onPlay: video && Features.videoMode ? watch : play,
+        );
+      },
+    );
+
+    final local = Features.videoMode && artist.kind == CollectionKind.artist;
+    if (local && !identical(_checkedArtistTracks, artist.tracks)) {
+      _checkedArtistTracks = artist.tracks;
+      _offlineVideos = _findOfflineVideos(artist.tracks);
+    }
+    return [
+      if (artist.artistVideos.isNotEmpty)
+        SliverToBoxAdapter(child: shelf(tr.artistMusicVideos, artist.artistVideos, video: true))
+      else if (local)
+        SliverToBoxAdapter(
+          child: FutureBuilder(
+            future: _offlineVideos,
+            builder: (context, snapshot) {
+              final videos = snapshot.data ?? const <Track>[];
+              return videos.isEmpty ? const SizedBox.shrink() : shelf(tr.artistMusicVideos, videos, video: true);
+            },
+          ),
+        ),
+      if (songs.solo.isNotEmpty) SliverToBoxAdapter(child: shelf(tr.artistSoloSongs, songs.solo)),
+      if (songs.collaborations.isNotEmpty)
+        SliverToBoxAdapter(child: shelf(tr.artistCollaborations, songs.collaborations)),
+    ];
+  }
+
+  Future<List<Track>> _findOfflineVideos(List<Track> tracks) async {
+    final paths = tracks.where((track) => track.path != null).toList();
+    final videos = <Track>[];
+    for (var start = 0; start < paths.length && mounted; start += 24) {
+      final matches = await Future.wait(
+        paths.skip(start).take(24).map((track) async {
+          final path = track.path!;
+          return await MvSidecar.exists(path) ? track : null;
+        }),
+      );
+      videos.addAll(matches.nonNulls);
+    }
+    return videos;
   }
 
   /// The song rows: a plain lazy list, or for a playlist of yours a drag-to-reorder one (same sliver, so scrolling is unchanged).

@@ -25,9 +25,8 @@ part of '../lyrics_page.dart';
 /// frame is that clip, so no widget rebuilds, no relayout, and the text is measured once per width.
 ///
 /// While the line is the current one, the page is on screen and the song plays, the fill runs on the shared
-/// [UiBeat] clock, reading the player's interpolated position on each beat (60 times a second), so it
-/// glides rather than stepping with the position stream. Lightweight, a paused song and a hidden page take no beats at
-/// all: the stream's ticks move the fill then.
+/// display clock in [UiBeat], so it glides at the monitor's refresh rate. A paused song or hidden page
+/// takes no display frames: the stream's ticks move the fill then.
 class KaraokeLine extends StatefulWidget {
   const KaraokeLine({
     super.key,
@@ -54,11 +53,11 @@ class KaraokeLine extends StatefulWidget {
   State<KaraokeLine> createState() => KaraokeLineState();
 }
 
-class KaraokeLineState extends State<KaraokeLine> {
+class KaraokeLineState extends State<KaraokeLine> with WidgetsBindingObserver {
   _KaraokePainter? _painter;
   late final ValueNotifier<({int sung, double fill})> _progress = ValueNotifier(_at(widget.position()));
   StreamSubscription<Duration>? _sub;
-  UiBeatListener? _beat;
+  VoidCallback? _stopFrames;
   bool _visible = true;
   Duration? _lastPosition;
   late double _cursor = _progress.value.sung + _progress.value.fill;
@@ -74,7 +73,7 @@ class KaraokeLineState extends State<KaraokeLine> {
 
   /// Whether the frame clock is moving the fill (tests).
   @visibleForTesting
-  bool get onBeat => _beat != null;
+  bool get onBeat => _stopFrames != null;
 
   @override
   void initState() {
@@ -82,11 +81,15 @@ class KaraokeLineState extends State<KaraokeLine> {
     _lastPosition = widget.trusted(widget.position());
     // While the beat runs it holds the newer position; the stream's older ticks would pull the fill back.
     _sub = widget.ticks.listen((p) {
-      if (_beat == null) _snap(p);
+      if (_stopFrames == null) _snap(p);
     });
     widget.playing?.addListener(_sync);
-    MarqueeText.playing?.addListener(_sync);
+    DesktopVisibility.instance.addListener(_sync);
+    WidgetsBinding.instance.addObserver(this);
   }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) => _sync();
 
   @override
   void didChangeDependencies() {
@@ -110,22 +113,20 @@ class KaraokeLineState extends State<KaraokeLine> {
   void _sync() {
     // Only the visible, playing line needs its own animation beats.
     final want =
-        !LayoutPrefs.lightweight && _visible && (widget.playing?.value ?? true) && (MarqueeText.playing?.value ?? true);
+        _visible &&
+        DesktopVisibility.instance.value &&
+        PlayingMotion.decorates(WidgetsBinding.instance.lifecycleState) &&
+        (widget.playing?.value ?? true);
     if (!want) {
-      _beat?.cancel();
-      _beat = null;
+      _stopFrames?.call();
+      _stopFrames = null;
       return;
     }
-    if (_beat == null) {
+    if (_stopFrames == null) {
       _snap(widget.position());
-      _beat = UiBeat.listen(_every, _advance);
+      _stopFrames = UiBeat.listenFrames(_advance);
     }
   }
-
-  /// 30 frames a second in Heavy and Balanced alike: the lyrics never move slower than 24 fps (a fill at 20, or at
-  /// a frugal computer's 5, read as steps). 30 is the nearest [UiBeat] stride above 24 (every second 60 Hz beat).
-  /// At the display's rate the fill alone redrew the window 60 times a second.
-  static Duration get _every => PlayingMotion.heavyEvery;
 
   void _snap(Duration position) {
     final p = _at(position);
@@ -164,8 +165,9 @@ class KaraokeLineState extends State<KaraokeLine> {
   void dispose() {
     _painter?.disposeTexture();
     widget.playing?.removeListener(_sync);
-    MarqueeText.playing?.removeListener(_sync);
-    _beat?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
+    DesktopVisibility.instance.removeListener(_sync);
+    _stopFrames?.call();
     _sub?.cancel();
     _progress.dispose();
     super.dispose();

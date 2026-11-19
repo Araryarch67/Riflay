@@ -569,40 +569,60 @@ class _RoomChatPanelState extends State<_RoomChatPanel> {
   @override
   Widget build(BuildContext context) {
     final messages = widget.session.chat;
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(tr.roomChat, style: Theme.of(context).textTheme.titleLarge),
+        Text(tr.roomChat, style: theme.textTheme.titleLarge),
         const SizedBox(height: 12),
-        if (messages.isEmpty)
-          Text(tr.roomChatEmpty)
-        else
-          SizedBox(
-            height: 240,
-            child: SingleChildScrollView(
-              primary: false,
-              reverse: true,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  for (final message in messages)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 6),
+        Material(
+          color: colors.surfaceContainerLow,
+          borderRadius: BorderRadius.circular(24),
+          clipBehavior: Clip.antiAlias,
+          child: SizedBox(
+            height: (MediaQuery.sizeOf(context).height * .38).clamp(190.0, 420.0),
+            child: messages.isEmpty
+                ? Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(20),
                       child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text(message.name, style: const TextStyle(fontWeight: FontWeight.w700)),
-                          SelectableText(message.text),
+                          Icon(Icons.chat_bubble_outline_rounded, color: colors.onSurfaceVariant),
+                          const SizedBox(height: 8),
+                          Text(tr.roomChatEmpty, textAlign: TextAlign.center),
                         ],
                       ),
                     ),
-                ],
-              ),
-            ),
+                  )
+                : ListView.builder(
+                    key: const PageStorageKey('room-chat-messages'),
+                    primary: false,
+                    reverse: true,
+                    padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
+                    itemCount: messages.length,
+                    itemBuilder: (context, index) {
+                      final position = messages.length - index - 1;
+                      final message = messages[position];
+                      final previous = position == 0 ? null : messages[position - 1];
+                      final sameGroup =
+                          previous != null &&
+                          message.sender != null &&
+                          message.sender == previous.sender &&
+                          message.at - previous.at < const Duration(minutes: 3).inMilliseconds;
+                      return _RoomChatBubble(
+                        message: message,
+                        own: widget.session.isOwnChat(message),
+                        startsGroup: !sameGroup,
+                      );
+                    },
+                  ),
           ),
+        ),
         const SizedBox(height: 12),
         Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.end,
           children: [
             Expanded(
               child: TextField(
@@ -612,13 +632,86 @@ class _RoomChatPanelState extends State<_RoomChatPanel> {
                 maxLines: 4,
                 textInputAction: TextInputAction.send,
                 onSubmitted: (_) => _send(),
-                decoration: InputDecoration(hintText: tr.roomChatHint),
+                decoration: InputDecoration(
+                  hintText: tr.roomChatHint,
+                  filled: true,
+                  fillColor: colors.surfaceContainerHigh,
+                  counterText: '',
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(24)),
+                ),
               ),
             ),
-            IconButton(onPressed: _send, tooltip: tr.roomChatSend, icon: const Icon(Icons.send_rounded)),
+            const SizedBox(width: 8),
+            ValueListenableBuilder(
+              valueListenable: _draft,
+              builder: (context, value, _) => IconButton.filled(
+                onPressed: value.text.trim().isEmpty ? null : _send,
+                tooltip: tr.roomChatSend,
+                icon: const Icon(Icons.send_rounded),
+              ),
+            ),
           ],
         ),
       ],
+    );
+  }
+}
+
+class _RoomChatBubble extends StatelessWidget {
+  const _RoomChatBubble({required this.message, required this.own, required this.startsGroup});
+
+  final RoomChat message;
+  final bool own;
+  final bool startsGroup;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    final date = DateTime.fromMillisecondsSinceEpoch(message.at);
+    final time = MaterialLocalizations.of(
+      context,
+    ).formatTimeOfDay(TimeOfDay.fromDateTime(date), alwaysUse24HourFormat: MediaQuery.alwaysUse24HourFormatOf(context));
+    final ink = own ? colors.onPrimaryContainer : colors.onSurface;
+    return LayoutBuilder(
+      builder: (context, limits) => Align(
+        alignment: own ? AlignmentDirectional.centerEnd : AlignmentDirectional.centerStart,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: (limits.maxWidth * .84).clamp(0.0, 480.0)),
+          child: Padding(
+            padding: EdgeInsets.only(top: startsGroup ? 8 : 3),
+            child: Material(
+              color: own ? colors.primaryContainer : colors.surfaceContainerHighest,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadiusDirectional.only(
+                  topStart: Radius.circular(own || !startsGroup ? 20 : 5),
+                  topEnd: Radius.circular(!own || !startsGroup ? 20 : 5),
+                  bottomStart: const Radius.circular(20),
+                  bottomEnd: const Radius.circular(20),
+                ),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (!own && startsGroup)
+                      Text(
+                        message.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.labelLarge?.copyWith(color: colors.primary),
+                      ),
+                    SelectableText(message.text, style: theme.textTheme.bodyMedium?.copyWith(color: ink)),
+                    Text(time, style: theme.textTheme.labelSmall?.copyWith(color: ink.withValues(alpha: .76))),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

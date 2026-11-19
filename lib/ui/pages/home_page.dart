@@ -1,9 +1,11 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
 import '../../models/track.dart';
 import '../../platform/features.dart';
+import '../../services/daily_mix.dart';
 import '../../services/language.dart';
 import '../../services/layout_prefs.dart';
 import '../../services/player_controller.dart';
@@ -13,12 +15,14 @@ import '../debug_switches.dart';
 import '../playlist_cover_edit.dart';
 import '../shell_scope.dart';
 import '../theme.dart';
+import '../widgets/app_dialog.dart';
 import '../widgets/controls.dart';
 import '../widgets/page_scaffold.dart';
 import '../widgets/shelf.dart';
 import '../widgets/streak_badge.dart';
 import '../widgets/track_row.dart' show openArtist;
 import 'downloads_page.dart';
+import 'layout_settings.dart';
 import 'youtube_music_page.dart';
 import '../widgets/menus.dart';
 import '../widgets/skeleton.dart';
@@ -45,7 +49,7 @@ class HomePage extends StatelessWidget {
   static int debugBuilds = 0;
 
   /// The ids of what was played last, in order: a change here (and not each song change) redraws "Recently played".
-  static String _recentKey(PlayerController c) => c.recentlyPlayed.map((t) => t.id).join('\u0000');
+  static Object _recentKey(PlayerController c) => c.recentlyPlayedRevision;
 
   @override
   Widget build(BuildContext context) {
@@ -71,7 +75,10 @@ class HomePage extends StatelessWidget {
     final playlists = c.playlists;
     final remotePlaylists = online?.playlists ?? const <RemotePlaylist>[];
 
-    final quickPicks = <Widget>[
+    final carousel =
+        LayoutPrefs.instance.homeStyle == HomeStyle.carousel &&
+        LayoutPrefs.instance.performance != PerformanceMode.lightweight;
+    final quickPicks = <QuickTile>[
       if (c.library.isNotEmpty)
         QuickTile(
           title: tr.allSongs,
@@ -114,7 +121,7 @@ class HomePage extends StatelessWidget {
       for (final a in albums.take(3))
         QuickTile(
           title: a.title,
-          leading: Artwork(track: a.cover),
+          leading: Artwork(track: a.cover, radius: 0),
           onTap: () => shell.openCollection(a),
           onPlay: () => c.playCollection(a),
         ),
@@ -123,7 +130,48 @@ class HomePage extends StatelessWidget {
     // Home's sections, in the order and with the ones switched on in Settings › Look & feel › Pages & navigation.
     final sections = <HomeSection, List<Widget>>{
       HomeSection.quickPicks: [
-        if (quickPicks.isNotEmpty)
+        if (carousel)
+          PlayerSelect<Object>(
+            select: _recentKey,
+            builder: (context, _, _) {
+              final picks = {
+                for (final track in [
+                  ...c.recentlyPlayed.take(8),
+                  ...c.recentlyAdded.take(8),
+                  ...?account.discovered?.expand((shelf) => shelf.tracks).take(8),
+                ])
+                  track.id: track,
+              }.values.take(8).toList();
+              if (picks.isEmpty) return const SliverToBoxAdapter(child: SizedBox.shrink());
+              return SliverToBoxAdapter(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    SectionTitle(tr.quickPicks),
+                    Padding(
+                      padding: EdgeInsets.symmetric(horizontal: pad),
+                      child: _QuickPicksCarousel(tracks: picks),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        if (carousel && quickPicks.isNotEmpty)
+          _shelf(tr.speedDial, quickPicks.length, (i) {
+            final pick = quickPicks[i];
+            return Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: Align(
+                alignment: Alignment.topCenter,
+                child: AspectRatio(
+                  aspectRatio: 1,
+                  child: _HomeArtworkCard(artwork: pick.leading, title: pick.title, onTap: pick.onTap, compact: true),
+                ),
+              ),
+            );
+          }),
+        if (quickPicks.isNotEmpty && !carousel)
           SliverPadding(
             padding: EdgeInsets.symmetric(horizontal: pad),
             sliver: SliverGrid.builder(
@@ -139,10 +187,19 @@ class HomePage extends StatelessWidget {
           ),
         if (!account.isSignedIn) const SliverToBoxAdapter(child: SignInBanner()),
       ],
+      HomeSection.dailyMix: [
+        _DailyMixShelf(
+          key: const ValueKey(HomeSection.dailyMix),
+          player: c,
+          available: c.library
+              .followedBy(online?.liked ?? const [])
+              .followedBy(account.discovered?.expand((shelf) => shelf.tracks) ?? const []),
+        ),
+      ],
       HomeSection.recentlyPlayed: [
         // What was played changes with each song, but the shelf only when the list does. Keyed: a section
         // appearing above it must not rebuild it from scratch (SteadyOrder would forget the order it shows).
-        PlayerSelect<String>(
+        PlayerSelect<Object>(
           key: const ValueKey(HomeSection.recentlyPlayed),
           select: _recentKey,
           builder: (context, _, _) => SteadyOrder(
@@ -258,6 +315,18 @@ class HomePage extends StatelessWidget {
         const SliverToBoxAdapter(child: _AddYourMusic()),
     ];
     final actions = <Widget>[
+      IconButton(
+        tooltip: tr.customizeHome,
+        icon: const Icon(Icons.tune_rounded),
+        onPressed: () => showDialog<void>(
+          context: context,
+          builder: (context) => AppDialog(
+            title: tr.customizeHome,
+            content: const HomeCustomization(),
+            actions: [FilledButton(onPressed: () => Navigator.of(context).pop(), child: Text(tr.done))],
+          ),
+        ),
+      ),
       PlayerSelect<bool>(
         select: (c) => c.scanning,
         builder: (context, scanning, _) => scanning
@@ -291,6 +360,196 @@ class HomePage extends StatelessWidget {
   Widget _shelf(String title, int count, Widget Function(int i) card, {VoidCallback? onShowAll}) => SliverToBoxAdapter(
     child: Shelf.builder(title: title, count: count, card: card, onShowAll: onShowAll),
   );
+}
+
+class _DailyMixShelf extends StatefulWidget {
+  const _DailyMixShelf({super.key, required this.player, required this.available});
+
+  final PlayerController player;
+  final Iterable<Track> available;
+
+  @override
+  State<_DailyMixShelf> createState() => _DailyMixShelfState();
+}
+
+class _DailyMixShelfState extends State<_DailyMixShelf> {
+  late Timer _midnight;
+
+  @override
+  void initState() {
+    super.initState();
+    _scheduleRefresh();
+  }
+
+  void _scheduleRefresh() {
+    final now = DateTime.now();
+    final tomorrow = DateTime(now.year, now.month, now.day + 1);
+    _midnight = Timer(tomorrow.difference(now), () {
+      setState(() {});
+      _scheduleRefresh();
+    });
+  }
+
+  @override
+  void dispose() {
+    _midnight.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => PlayerSelect<Object>(
+    select: HomePage._recentKey,
+    builder: (context, _, _) {
+      final player = widget.player;
+      final tracks = buildDailyMix(recent: player.recentlyPlayed, available: widget.available, day: DateTime.now());
+      if (tracks.isEmpty) return const SliverToBoxAdapter(child: SizedBox.shrink());
+      final mix = Collection(
+        kind: CollectionKind.smart,
+        id: 'daily-mix',
+        title: tr.dailyMix,
+        subtitle: tr.dailyMixDescription,
+        tracks: tracks,
+      );
+      return SliverToBoxAdapter(
+        child: Shelf.builder(
+          title: tr.madeForYou,
+          count: 1,
+          card: (_) => MediaCard(
+            track: mix.cover,
+            title: mix.title,
+            subtitle: mix.subtitle,
+            onTap: () => ShellScope.of(context).openCollection(mix),
+            onPlay: () => player.playCollection(mix),
+          ),
+        ),
+      );
+    },
+  );
+}
+
+class _QuickPicksCarousel extends StatelessWidget {
+  const _QuickPicksCarousel({required this.tracks});
+
+  final List<Track> tracks;
+
+  @override
+  Widget build(BuildContext context) {
+    final shell = ShellScope.of(context);
+    final player = PlayerScope.read(context);
+    final height = (shell.width * .74).clamp(180.0, 300.0);
+    Widget item(int index) {
+      final track = tracks[index];
+      Future<void> play() => player.playList(tracks, index, from: tr.quickPicks);
+      return _HomeArtworkCard(
+        artwork: Artwork(track: track, radius: 0),
+        title: track.title,
+        subtitle: track.artist,
+        onTap: () => shell.playAndOpen(play),
+        onPlay: play,
+      );
+    }
+
+    return SizedBox(
+      height: height,
+      child: tracks.length == 1
+          ? Align(
+              alignment: AlignmentDirectional.centerStart,
+              child: SizedBox(width: height, height: height, child: item(0)),
+            )
+          : CarouselView.weightedBuilder(
+              enableSplash: false,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+              flexWeights: shell.compact ? const [8, 2, 1] : const [6, 3, 1],
+              itemSnapping: true,
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              itemCount: tracks.length,
+              itemBuilder: (context, index) => item(index),
+            ),
+    );
+  }
+}
+
+class _HomeArtworkCard extends StatelessWidget {
+  const _HomeArtworkCard({
+    required this.artwork,
+    required this.title,
+    required this.onTap,
+    this.subtitle,
+    this.onPlay,
+    this.compact = false,
+  });
+
+  final Widget artwork;
+  final String title;
+  final String? subtitle;
+  final VoidCallback onTap;
+  final VoidCallback? onPlay;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    final radius = BorderRadius.circular(compact ? 20 : 28);
+    final text = Theme.of(context).textTheme;
+    return Semantics(
+      label: title,
+      child: Material(
+        clipBehavior: Clip.antiAlias,
+        borderRadius: radius,
+        child: InkWell(
+          onTap: onTap,
+          child: LayoutBuilder(
+            builder: (context, limits) => Stack(
+              fit: StackFit.expand,
+              children: [
+                artwork,
+                if (limits.maxWidth >= 80)
+                  Align(
+                    alignment: Alignment.bottomCenter,
+                    child: ColoredBox(
+                      color: Colors.black.withValues(alpha: .68),
+                      child: Padding(
+                        padding: EdgeInsets.all(compact ? 8 : 12),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    title,
+                                    maxLines: compact ? 1 : 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: (compact ? text.labelLarge : text.titleLarge)?.copyWith(color: Colors.white),
+                                  ),
+                                  if (subtitle case final subtitle? when !compact)
+                                    Text(
+                                      subtitle,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: text.bodyMedium?.copyWith(color: Colors.white),
+                                    ),
+                                ],
+                              ),
+                            ),
+                            if (onPlay != null && !compact && limits.maxWidth > 145)
+                              IconButton.filled(
+                                tooltip: tr.play,
+                                onPressed: onPlay,
+                                icon: const Icon(Icons.play_arrow_rounded),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 /// The song Home opens [artist] through: one of theirs that came from YouTube Music (a download remembers its

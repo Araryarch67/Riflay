@@ -5,7 +5,9 @@ import '../../models/track.dart';
 import '../../services/language.dart';
 import '../../services/player_controller.dart';
 import '../theme.dart';
+import '../shell_scope.dart';
 import '../ytmusic_edit.dart' show PlaylistEditScope, addToPlaylist;
+import 'glass_toast.dart';
 
 /// Songs picked on a page, to add them to a playlist or the queue together. Hold a row (or "Select" in its
 /// menu) to start; while anything is picked, a tap on a row picks or unpicks it instead of playing.
@@ -170,9 +172,14 @@ class _TrackSelectionBarState extends State<TrackSelectionBar> {
                       tooltip: tr.addToQueue,
                       onPressed: () async {
                         final messenger = ScaffoldMessenger.of(context);
+                        final shell = context.getInheritedWidgetOfExactType<ShellScope>();
                         selection.clear();
                         await PlayerScope.read(context).addToQueue(picked);
-                        messenger.showSnackBar(SnackBar(content: Text(tr.toastAddedToQueue)));
+                        messenger.showSnackBar(
+                          shell == null
+                              ? SnackBar(content: Text(tr.toastAddedToQueue))
+                              : LinkedToast(tr.toastAddedToQueue, label: tr.openQueue, open: shell.openQueue),
+                        );
                       },
                       icon: const Icon(Icons.queue_music_rounded),
                     ),

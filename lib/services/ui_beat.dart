@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:math' as math;
 
+import 'package:flutter/scheduler.dart';
+
 import '../ui/debug_switches.dart';
 
 /// One clock for everything on screen that moves by itself: the seek bars, the
@@ -31,6 +33,36 @@ class UiBeat {
   /// Beats between two firings of [_timer]: as many as the busiest view allows. A seek bar ticking once a second
   /// alone wakes the app once a second, not 60 times (each wake-up is the Dart thread's own work, ~5% of a core).
   static int _stride = 1;
+
+  static final _frameListeners = <FrameCallback>{};
+  static int? _frameCallback;
+  static Duration? _lastFrame;
+
+  /// Shares the display's actual frame clock for visible, time-sensitive painting.
+  static VoidCallback listenFrames(FrameCallback onFrame) {
+    _frameListeners.add(onFrame);
+    _scheduleFrame();
+    return () {
+      _frameListeners.remove(onFrame);
+      if (_frameListeners.isNotEmpty) return;
+      if (_frameCallback case final id?) SchedulerBinding.instance.cancelFrameCallbackWithId(id);
+      _frameCallback = null;
+      _lastFrame = null;
+    };
+  }
+
+  static void _scheduleFrame() {
+    if (_frameListeners.isEmpty || _frameCallback != null) return;
+    _frameCallback = SchedulerBinding.instance.scheduleFrameCallback((time) {
+      _frameCallback = null;
+      final elapsed = time - (_lastFrame ?? time - period);
+      _lastFrame = time;
+      for (final listener in List.of(_frameListeners)) {
+        if (_frameListeners.contains(listener)) listener(elapsed);
+      }
+      _scheduleFrame();
+    });
+  }
 
   /// Calls [onBeat] about every [every] (rounded to whole beats; at least one)
   /// with the time since its last call, until [UiBeatListener.cancel].

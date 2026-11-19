@@ -10,6 +10,39 @@ class AppLocalizationsEn extends AppLocalizations {
   AppLocalizationsEn([String locale = 'en']) : super(locale);
 
   @override
+  String get homeStyle => 'Home layout';
+
+  @override
+  String get homeStyleClassic => 'Classic';
+
+  @override
+  String get homeStyleCarousel => 'Artwork carousel';
+
+  @override
+  String get customizeHome => 'Customize Home';
+
+  @override
+  String get speedDial => 'Speed dial';
+
+  @override
+  String get dailyMix => 'Daily Mix';
+
+  @override
+  String get dailyMixDescription => 'Recent favorites and more from those artists';
+
+  @override
+  String get madeForYou => 'Made for you';
+
+  @override
+  String get artistMusicVideos => 'Music videos';
+
+  @override
+  String get artistSoloSongs => 'Solo songs';
+
+  @override
+  String get artistCollaborations => 'Collaborations';
+
+  @override
   String get audioSource => 'Audio source';
 
   @override
@@ -102,19 +135,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get topicPlayback => 'Playback';
 
   @override
-  String get topicPlaybackSummary => 'Autoplay, gapless playback and crossfade';
+  String get topicPlaybackSummary => 'Play similar songs automatically and choose how songs change';
 
   @override
-  String get topicDsp => 'Sound effects (DSP)';
+  String get topicDsp => 'Sound effects';
 
   @override
-  String get topicDspSummary => 'Equalizer, volume leveling, spatial audio and room correction';
+  String get topicDspSummary => 'Adjust bass and treble, even out volume, and change how sound fills the room';
 
   @override
   String get topicOutput => 'Output & quality';
 
   @override
-  String get topicOutputSummary => 'Output device, bit-perfect mode, sample rate';
+  String get topicOutputSummary => 'Choose where sound plays and how Riflay sends it';
 
   @override
   String get topicAppearance => 'Theme & colours';
@@ -126,7 +159,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get topicLayout => 'Pages & navigation';
 
   @override
-  String get topicLayoutSummary => 'Home, the bars, corners, spacing, cover size, motion';
+  String get topicLayoutSummary => 'Choose what appears on Home and how the app looks and moves';
 
   @override
   String get topicLibrary => 'Library';
@@ -282,6 +315,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get startRadio => 'Start radio';
+
+  @override
+  String radioFrom(String title) {
+    return '$title radio';
+  }
 
   @override
   String get downloadForOffline => 'Download for offline';
@@ -1287,7 +1325,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get gaplessPlayback => 'Gapless playback';
 
   @override
-  String get gaplessPlaybackSubtitle => 'No added silence between tracks. Crossfade is under Sound effects (DSP).';
+  String get gaplessPlaybackSubtitle =>
+      'Songs play back to back without an added gap. Find the fade between songs below.';
 
   @override
   String get skipSilence => 'Skip silence';
@@ -1296,16 +1335,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get offWhileBitPerfect => 'Off while bit-perfect mode is on';
 
   @override
-  String get skipSilenceSubtitle => 'Silent intros, outros and gaps are cut short. Soft passages play whole';
+  String get skipSilenceSubtitle => 'Shortens silent parts of a track while keeping quiet music intact';
 
   @override
   String get off => 'Off';
 
   @override
-  String get volumeLeveling => 'Volume leveling';
+  String get volumeLeveling => 'Keep song volumes similar';
 
   @override
-  String get volumeLevelingSubtitle => 'Plays songs at a similar loudness, using their ReplayGain tags';
+  String get volumeLevelingSubtitle => 'Makes quiet and loud tracks play at a more consistent volume';
 
   @override
   String get measureLoudness => 'Measure songs without ReplayGain tags';
@@ -1324,17 +1363,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get measure => 'Measure';
 
   @override
-  String get crossfade => 'Crossfade';
+  String get crossfade => 'Fade between songs';
 
   @override
   String get crossfadeSubtitle =>
-      'The end of a song fades into the start of the next. Off in bit-perfect and exclusive modes';
+      'The next song starts as the current one fades out. Unavailable in bit-perfect and exclusive modes.';
 
   @override
-  String get fadeLength => 'Fade length';
+  String get fadeLength => 'How long songs overlap';
 
   @override
-  String get skipForAlbums => 'Skip for albums';
+  String get skipForAlbums => 'Keep album transitions as recorded';
 
   @override
   String get skipForAlbumsSubtitle =>
@@ -1455,7 +1494,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get bitPerfectMode => 'Bit-perfect mode';
+  String get bitPerfectMode => 'Play audio unchanged (bit-perfect)';
 
   @override
   String get needsAndroid14 => 'Needs Android 14 or later';
@@ -1506,7 +1545,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get needsBitPerfect => 'Needs Bit-perfect mode';
 
   @override
-  String get exclusiveMode => 'Exclusive mode';
+  String get exclusiveMode => 'Reserve the output for Riflay';
 
   @override
   String get exclusiveMac =>
@@ -1538,14 +1577,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get buffer => 'Buffer';
 
   @override
-  String get bufferSubtitle => 'Raise it if you hear crackles or dropouts';
+  String get bufferSubtitle =>
+      'Increase this if sound crackles or cuts out. A larger buffer can make controls respond more slowly.';
 
   @override
   String get signalPathSubtitleExact => 'See exactly what happens to the song you\'re playing';
 
   @override
-  String get directUsbIntro =>
-      'Riflay talks to your USB DAC itself, past Android, so songs reach it untouched even on phones where Bit-perfect mode can\'t. Experimental.';
+  String get directUsbIntro => 'Send sound straight to your USB audio device instead of through Android. Experimental.';
 
   @override
   String get directUsbPlugIn => 'On. Plug in a USB DAC.';
@@ -1889,8 +1928,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get qualityBadge => 'Quality badge';
 
   @override
-  String get qualityBadgeSubtitle =>
-      'Where FLAC or Opus 130 kbps sits on the phone player: under the artist, or between the two times';
+  String get qualityBadgeSubtitle => 'Choose where the phone player shows audio details such as FLAC or Opus.';
 
   @override
   String get background => 'Background';
@@ -4644,6 +4682,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get openingInstaller => 'Opening the Android installer…';
 
   @override
+  String get windowsUpdateNote =>
+      'Riflay will close and reopen after the update. Your library and settings will stay in place.';
+
+  @override
+  String get windowsUpdateRestart => 'Installing the update. Riflay will reopen when it’s ready…';
+
+  @override
   String get completeInInstaller => 'Complete the update in the Android installer';
 
   @override
@@ -5617,7 +5662,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get csvReadFailed => 'Use a CSV with title and artist columns.';
 
   @override
-  String get loudnessTarget => 'Normalization target';
+  String get loudnessTarget => 'Volume level to aim for';
 
   @override
   String get defaultLibraryFilter => 'Default library filter';
@@ -6552,11 +6597,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dsRoomUpmix => '7.1 room, upmixed from stereo';
 
   @override
-  String get autoEq => 'Headphone / IEM profile (AutoEQ)';
+  String get autoEq => 'EQ for your headphones or earphones';
 
   @override
-  String get autoEqSubtitle =>
-      'Sets the equalizer for your model from its measurement, so it sounds neutral (the Harman target).';
+  String get autoEqSubtitle => 'Search for your exact model to adjust its sound using measured profiles.';
 
   @override
   String get autoEqPick => 'Pick your headphones or IEM';
@@ -6569,11 +6613,14 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String autoEqModels(int count) {
-    return '$count models, measured by crinacle, oratory1990 and others. Type a name to search.';
+    return '$count profiles available. Search by brand and model.';
   }
 
   @override
-  String get autoEqNoResults => 'No model by that name.';
+  String get autoEqNoResults => 'No matching model. Try the brand and model name, without extra words.';
+
+  @override
+  String get autoEqLoadFailed => 'Couldn’t load the EQ profiles. Check your connection and try again.';
 
   @override
   String autoEqFailed(String error) {
@@ -6847,7 +6894,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get networkProxy => 'Network proxy';
 
   @override
-  String get networkProxyAbout => 'Use your own HTTP proxy for app requests. Service rate limits still apply.';
+  String get networkProxyAbout =>
+      'Use a proxy server if your network requires it. Each music service still applies its own request limits.';
 
   @override
   String get networkProxyAddress => 'HTTP proxy address';
@@ -6874,6 +6922,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get seekStep => 'Seek step';
+
+  @override
+  String get seekStepHint => 'How far Shift + Left or Right Arrow jumps within a song. Off disables those shortcuts.';
 
   @override
   String get scSeekBackward => 'Seek backward';

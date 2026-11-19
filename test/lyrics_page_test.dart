@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:riflay/models/track.dart';
+import 'package:riflay/services/desktop_visibility.dart';
 import 'package:riflay/services/layout_prefs.dart';
 import 'package:riflay/services/lyrics.dart';
 import 'package:riflay/services/lyrics_translation.dart';
@@ -212,6 +213,27 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('visible karaoke moves on short display frames and resumes after minimizing', (tester) async {
+    await pump(tester, _karaoke(), length: const Duration(seconds: 30));
+    final state = tester.state<KaraokeLineState>(find.byType(KaraokeLine));
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+    addTearDown(() => tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed));
+    for (var frame = 1; frame <= 6; frame++) {
+      final previous = state.progress.fill;
+      now = Duration(milliseconds: 8 * frame);
+      await tester.pump(const Duration(milliseconds: 8));
+      expect(state.progress.fill, greaterThan(previous));
+    }
+    final window = DesktopVisibility.instance;
+    addTearDown(window.onWindowRestore);
+    window.onWindowMinimize();
+    expect(state.onBeat, isFalse);
+    now = const Duration(milliseconds: 1400);
+    window.onWindowRestore();
+    expect(state.onBeat, isTrue);
+    expect(state.progress, (sung: 1, fill: .4));
+  });
+
   testWidgets('the pronunciation under a word-timed line lights up whole while the line is sung', (tester) async {
     await pump(tester, _karaoke(), length: const Duration(seconds: 30));
     // Pronunciation as the translation service would bring it (no word timings of its own).
@@ -226,7 +248,7 @@ void main() {
     expect(colorOf(tester, 'haro biggu waarudo'), _primary.withValues(alpha: 0.8), reason: 'not dim like the unsung');
   });
 
-  testWidgets('word fill advances on every Balanced beat (30 fps) without resetting at word boundaries', (
+  testWidgets('word fill advances on every display frame in Balanced without resetting at word boundaries', (
     tester,
   ) async {
     final prefs = LayoutPrefs.instance;

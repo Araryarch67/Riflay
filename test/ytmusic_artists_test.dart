@@ -50,6 +50,30 @@ Map<String, dynamic> row(String title, String videoId, List<List<Map<String, dyn
 };
 
 void main() {
+  test('artist videos require a music video type and exclude ordinary cover-art songs', () {
+    Map<String, dynamic> video(String id, String type) => {
+      'musicTwoRowItemRenderer': {
+        'title': {'simpleText': id},
+        'navigationEndpoint': {
+          'watchEndpoint': {
+            'videoId': id,
+            'watchEndpointMusicSupportedConfigs': {
+              'watchEndpointMusicConfig': {'musicVideoType': type},
+            },
+          },
+        },
+      },
+    };
+    final page = {
+      'contents': [
+        video('mv', 'MUSIC_VIDEO_TYPE_OMV'),
+        video('audio', 'MUSIC_VIDEO_TYPE_ATV'),
+        video('mv', 'MUSIC_VIDEO_TYPE_OMV'),
+      ],
+    };
+    expect(YtMusicWeb.artistVideosOf(page).map((track) => track.videoId), ['mv']);
+  });
+
   test('an upload names the channel that uploaded it, not its views or length', () async {
     final web = fake({
       'contents': [

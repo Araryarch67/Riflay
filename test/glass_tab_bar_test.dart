@@ -270,6 +270,14 @@ void main() {
     await tester.pump(const Duration(milliseconds: 16));
     expect(selectedTab('Home'), findsOneWidget);
     final x = tester.getCenter(indicator).dx;
+    expect(tester.getSize(indicator).height, greaterThan(40));
+    expect(
+      find.ancestor(
+        of: indicator,
+        matching: find.byWidgetPredicate((w) => w is CustomPaint && w.foregroundPainter != null),
+      ),
+      findsWidgets,
+    );
     await drag.moveTo(settings);
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 16));

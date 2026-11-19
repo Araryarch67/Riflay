@@ -235,17 +235,41 @@ Future<void> _islandHit(bool? open, [Size client = Size.zero]) async {
 
 /// The visible part of the screen the window is on (without the taskbar).
 Future<Rect?> _workArea() async {
+  if (Host.isWindows) {
+    try {
+      final edges = await _channel.invokeListMethod<double>('currentMonitorWorkArea');
+      if (edges?.length == 4) return Rect.fromLTRB(edges![0], edges[1], edges[2], edges[3]);
+    } on PlatformException catch (e) {
+      debugPrint('Monitor work area: ${e.code}');
+    } on MissingPluginException {
+      // An older Windows runner can still report the displays through the plugin.
+    }
+  }
   try {
     final centre = (await windowManager.getBounds()).center;
-    Rect area(Display d) => (d.visiblePosition ?? Offset.zero) & (d.visibleSize ?? d.size);
-    for (final d in await screenRetriever.getAllDisplays()) {
-      if (area(d).contains(centre)) return area(d);
-    }
-    return area(await screenRetriever.getPrimaryDisplay());
+    return nearestMonitorWorkArea(centre, (await screenRetriever.getAllDisplays()).map(_displayArea));
   } catch (e) {
     debugPrint('Screen size: $e');
     return null;
   }
+}
+
+Rect _displayArea(Display display) => (display.visiblePosition ?? Offset.zero) & (display.visibleSize ?? display.size);
+
+@visibleForTesting
+Rect? nearestMonitorWorkArea(Offset point, Iterable<Rect> areas) {
+  Rect? nearest;
+  var distance = double.infinity;
+  for (final area in areas) {
+    if (area.contains(point)) return area;
+    final edge = Offset(point.dx.clamp(area.left, area.right), point.dy.clamp(area.top, area.bottom));
+    final gap = (point - edge).distanceSquared;
+    if (gap < distance) {
+      distance = gap;
+      nearest = area;
+    }
+  }
+  return nearest;
 }
 
 /// First time: the bottom-right corner of the screen, out of the way. Then wherever it was left.
@@ -586,23 +610,33 @@ class _MiniVolume extends StatelessWidget {
                   ),
                 ),
                 Expanded(
-                  child: SliderTheme(
-                    data: SliderTheme.of(context).copyWith(
-                      trackHeight: 4,
-                      padding: const EdgeInsets.symmetric(horizontal: 6),
-                      thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6, elevation: 0),
-                      overlayShape: const RoundSliderOverlayShape(overlayRadius: 12),
-                      activeTrackColor: ink.text,
-                      inactiveTrackColor: ink.text.withValues(alpha: 0.18),
-                      thumbColor: ink.text,
-                    ),
-                    child: SizedBox(
-                      height: 24,
-                      child: Slider(
-                        value: volume.clamp(0, 1),
-                        onChangeStart: setVolume == null ? null : (_) => c.volumeDragStarted(),
-                        onChanged: setVolume,
-                      ),
+                  child: ListenableBuilder(
+                    listenable: LayoutPrefs.instance,
+                    builder: (context, slider) {
+                      final base = SliderTheme.of(context);
+                      final look = LayoutPrefs.instance.volumeSlider;
+                      final theme = switch (look) {
+                        VolumeSliderShape.classic => base.copyWith(
+                          trackHeight: 4,
+                          trackShape: const RoundedRectSliderTrackShape(),
+                          thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6, elevation: 0),
+                          overlayShape: const RoundSliderOverlayShape(overlayRadius: 12),
+                          activeTrackColor: ink.text,
+                          inactiveTrackColor: ink.text.withValues(alpha: 0.18),
+                          thumbColor: ink.text,
+                        ),
+                        VolumeSliderShape.thin => thinSliderTheme(base, ink.text),
+                        VolumeSliderShape.pill => pillSliderTheme(base, ink.text, height: 12, thumb: 28),
+                      };
+                      return SliderTheme(
+                        data: theme.copyWith(padding: const EdgeInsets.symmetric(horizontal: 6)),
+                        child: SizedBox(height: look == VolumeSliderShape.pill ? 28 : 24, child: slider),
+                      );
+                    },
+                    child: Slider(
+                      value: volume.clamp(0, 1),
+                      onChangeStart: setVolume == null ? null : (_) => c.volumeDragStarted(),
+                      onChanged: setVolume,
                     ),
                   ),
                 ),
@@ -856,8 +890,7 @@ class _IslandDrag extends StatelessWidget {
   Widget build(BuildContext context) => docked ? _SlideAlongTop(child: child) : DragToMoveArea(child: child);
 }
 
-/// The docked island dragged: it follows the pointer sideways and stays on the top edge (a window dragged by the
-/// system would go anywhere, and only be put back after).
+/// The docked island follows the pointer across displays and stays on that monitor's top edge.
 class _SlideAlongTop extends StatefulWidget {
   const _SlideAlongTop({required this.child});
 
@@ -870,22 +903,26 @@ class _SlideAlongTop extends StatefulWidget {
 class _SlideAlongTopState extends State<_SlideAlongTop> {
   /// Where the pointer took hold, from the window's left edge; the top edge it stays on.
   double? _grab;
-  double _top = 0;
+  List<Rect> _monitors = const [];
   bool _moving = false;
   Offset? _pending;
 
   Future<void> _start(DragStartDetails _) async {
     final cursor = await screenRetriever.getCursorScreenPoint();
     final b = await windowManager.getBounds();
-    _top = (await _workArea())?.top ?? b.top;
+    if (!Host.isWindows) _monitors = (await screenRetriever.getAllDisplays()).map(_displayArea).toList();
     _grab = cursor.dx - b.left;
   }
 
   Future<void> _move(DragUpdateDetails _) async {
     final grab = _grab;
     if (grab == null) return;
+    if (Host.isWindows) {
+      await _channel.invokeMethod<void>('moveDockedIsland', grab);
+      return;
+    }
     final cursor = await screenRetriever.getCursorScreenPoint();
-    _pending = Offset(cursor.dx - grab, _top);
+    _pending = Offset(cursor.dx - grab, nearestMonitorWorkArea(cursor, _monitors)?.top ?? 0);
     // One move at a time: the latest place wins.
     if (_moving) return;
     _moving = true;
@@ -901,15 +938,16 @@ class _SlideAlongTopState extends State<_SlideAlongTop> {
 
   void _end(DragEndDetails _) {
     _grab = null;
-    _snapDocked();
+    if (!Host.isWindows) _snapDocked();
   }
 
   @override
   Widget build(BuildContext context) => GestureDetector(
     behavior: HitTestBehavior.opaque,
-    onHorizontalDragStart: _start,
-    onHorizontalDragUpdate: _move,
-    onHorizontalDragEnd: _end,
+    onPanStart: _start,
+    onPanUpdate: _move,
+    onPanEnd: _end,
+    onPanCancel: () => _grab = null,
     child: widget.child,
   );
 }

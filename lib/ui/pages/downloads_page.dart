@@ -381,14 +381,15 @@ class _JobRow extends StatelessWidget {
     };
     final statusColor = switch (job.status) {
       DownloadStatus.failed => Theme.of(context).colorScheme.error,
-      DownloadStatus.done => AppColors.accent,
+      DownloadStatus.done =>
+        Theme.of(context).brightness == Brightness.dark ? const Color(0xFF8CDB9E) : const Color(0xFF21683A),
       _ => AppColors.textSecondary,
     };
     final track = job.track;
 
     return InkWell(
       borderRadius: BorderRadius.circular(6),
-      hoverColor: AppColors.tile,
+      hoverColor: job.status == DownloadStatus.done ? statusColor.withValues(alpha: .10) : AppColors.tile,
       onTap: track == null ? null : () => c.playList([track], 0, from: tr.downloaded),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
@@ -420,11 +421,21 @@ class _JobRow extends StatelessWidget {
                     style: text.bodyLarge?.copyWith(fontWeight: FontWeight.w600),
                   ),
                   const SizedBox(height: 2),
-                  Text(
-                    status,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: text.bodySmall?.copyWith(color: statusColor),
+                  Row(
+                    children: [
+                      if (job.status == DownloadStatus.done) ...[
+                        Icon(Icons.check_circle_outline_rounded, color: statusColor, size: 15),
+                        const SizedBox(width: 5),
+                      ],
+                      Flexible(
+                        child: Text(
+                          status,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: text.bodySmall?.copyWith(color: statusColor),
+                        ),
+                      ),
+                    ],
                   ),
                   if (job.status == DownloadStatus.downloading) ...[
                     const SizedBox(height: 6),

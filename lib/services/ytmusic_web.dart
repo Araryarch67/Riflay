@@ -873,6 +873,43 @@ class YtMusicWeb {
     return _tracksOf(res, limit);
   }
 
+  /// An artist's song list plus the verified music videos on their channel page.
+  Future<({List<WebTrack> songs, List<WebTrack> videos})> browseArtist(String channelId, {int limit = 500}) async {
+    final page = await _send('browse', {'browseId': channelId});
+    final all = _at(_deepFind(page, 'musicShelfRenderer'), const ['bottomEndpoint', 'browseEndpoint', 'browseId']);
+    final videos = artistVideosOf(page);
+    final songs = all is String && all != channelId
+        ? await browseTracks(all, limit: limit).catchError((Object error) {
+            debugPrint('Artist full song list: $error');
+            return _tracksOf(page, limit);
+          })
+        : await _tracksOf(page, limit);
+    final videoIds = videos.map((video) => video.videoId).toSet();
+    return (songs: songs.where((song) => !videoIds.contains(song.videoId)).toList(), videos: videos);
+  }
+
+  @visibleForTesting
+  static List<WebTrack> artistVideosOf(Map<String, dynamic> page) {
+    final videos = <String, WebTrack>{};
+    void add(Object? node, bool twoRow) {
+      final row = _asMap(node);
+      if (row == null) return;
+      final endpoint = row['navigationEndpoint'] ?? _at(row, const ['playButton', 'playNavigationEndpoint']);
+      if (!_videoTypes.contains(_deepFind(endpoint, 'musicVideoType'))) return;
+      final id = _at(endpoint, const ['watchEndpoint', 'videoId']);
+      final video = twoRow ? (id is String ? _twoRowSong(row, id) : null) : _songOf(row);
+      if (video != null) videos.putIfAbsent(video.videoId, () => video);
+    }
+
+    for (final node in _deepFindAll(page, 'musicTwoRowItemRenderer')) {
+      add(node, true);
+    }
+    for (final node in _deepFindAll(page, 'musicResponsiveListItemRenderer')) {
+      add(node, false);
+    }
+    return videos.values.toList();
+  }
+
   static final _albumYears = <String, int?>{};
 
   /// The year an album (`MPRE…`) came out, from its page header ("Album • 2019"); null when it can't be told.
