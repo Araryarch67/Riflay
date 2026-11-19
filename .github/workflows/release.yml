@@ -1,13 +1,12 @@
 # Builds Riflay for Android, Windows, Linux, macOS and iOS and attaches the files to a
 # GitHub release. Runs when a version tag is pushed (`git tag v1.2.0
-# && git push origin v1.2.0`), or by hand from the Actions tab. Manual runs keep
+# && git push origin v1.2.0`), from main for Nightly, or by hand. Manual runs keep
 # artifacts only unless publish_tag names an existing release to repair;
 # platforms picks which builds run.
 #
-# Each platform uploads as soon as its own build finishes. A draft holds the notes
-# until the first upload publishes it; slower or failed platforms do not block the
-# others. On tags iOS skips its Simulator test, which checks the same libmpv sound
-# settings the macOS job already tests.
+# Tagged releases publish platform assets as each build finishes. Nightly
+# prereleases publish after all five platform builds succeed. The iOS Simulator
+# test runs in manual builds and checks the same settings as the macOS test.
 #
 # Android signing: add these repository secrets so every release is signed with
 # the same key (otherwise phones refuse to update over an earlier version):
@@ -25,6 +24,7 @@ name: Release
 
 on:
   push:
+    branches: [main]
     tags: ['v*']
   workflow_dispatch:
     inputs:
@@ -40,9 +40,16 @@ on:
 permissions:
   contents: read
 
+# A newer main build supersedes an older in-progress nightly. Tagged releases
+# and manual recovery runs stay independent.
+concurrency:
+  group: riflay-release-${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && 'nightly' || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+
 env:
   FLUTTER_VERSION: '3.47.7'
   RIFLAY_RELEASE_TAG: ${{ inputs.publish_tag || (startsWith(github.ref, 'refs/tags/v') && github.ref_name) || '' }}
+  RIFLAY_NIGHTLY: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
 
 jobs:
   android:
@@ -52,6 +59,10 @@ jobs:
       KEYSTORE: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
     steps:
       - uses: actions/checkout@v7
+      - uses: ./.github/actions/nightly-branding
+        if: env.RIFLAY_NIGHTLY == 'true'
+        with:
+          platform: android
       - uses: actions/setup-go@v6
         with:
           go-version: '1.27.4'
@@ -181,6 +192,10 @@ jobs:
       GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v7
+      - uses: ./.github/actions/nightly-branding
+        if: env.RIFLAY_NIGHTLY == 'true'
+        with:
+          platform: windows
       - uses: actions/setup-go@v6
         with:
           go-version: '1.27.4'
@@ -245,6 +260,10 @@ jobs:
       GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v7
+      - uses: ./.github/actions/nightly-branding
+        if: env.RIFLAY_NIGHTLY == 'true'
+        with:
+          platform: linux
       - uses: actions/setup-go@v6
         with:
           go-version: '1.27.4'
@@ -294,6 +313,10 @@ jobs:
     runs-on: macos-26
     steps:
       - uses: actions/checkout@v7
+      - uses: ./.github/actions/nightly-branding
+        if: env.RIFLAY_NIGHTLY == 'true'
+        with:
+          platform: macos
       - uses: actions/setup-go@v6
         with:
           go-version: '1.27.4'
@@ -369,6 +392,10 @@ jobs:
     runs-on: macos-26
     steps:
       - uses: actions/checkout@v7
+      - uses: ./.github/actions/nightly-branding
+        if: env.RIFLAY_NIGHTLY == 'true'
+        with:
+          platform: ios
       - uses: actions/setup-go@v6
         with:
           go-version: '1.27.4'
@@ -415,6 +442,38 @@ jobs:
         with:
           name: ios
           path: dist/*
+
+  nightly:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [android, windows, linux, macos, ios]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          path: artifacts
+      - name: Publish main-branch build as a prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          tag="nightly-$GITHUB_SHA"
+          mkdir dist
+          for platform in android windows linux macos ios; do
+            cp -- "artifacts/$platform/"* dist/
+          done
+          (cd dist && sha256sum -- *) > SHA256SUMS
+          if draft=$(gh release view "$tag" --json isDraft --jq '.isDraft' 2>/dev/null); then
+            # A successful rerun of the same commit has nothing to replace.
+            if [[ "$draft" == false ]]; then exit 0; fi
+          else
+            printf 'Nightly build from main at %s.\n\nNightly uses the same app identity and settings as the stable app. Use the stable release for daily use.\n' "$GITHUB_SHA" > nightly.md
+            gh release create "$tag" --target "$GITHUB_SHA" --draft --prerelease --latest=false \
+              --title "Riflay Nightly (${GITHUB_SHA:0:7})" --notes-file nightly.md
+          fi
+          gh release upload "$tag" dist/* SHA256SUMS --clobber
+          gh release edit "$tag" --draft=false --prerelease --latest=false
 
   release:
     if: (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) || inputs.publish_tag != ''
