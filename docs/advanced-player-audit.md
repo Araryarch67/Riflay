@@ -139,3 +139,17 @@ The matrix reflects source inspection before extending the 89-item checklist. Im
 | Liked, Downloaded and Top Tracks visibility | Library settings control visibility of the corresponding real collections. | library_settings.dart, library_page.dart |
 | Liquid Glass | Theme, light and black tints apply to the player and glass navigation, including its selected button. | player_glass.dart, phone_navigation.dart, appearance_settings.dart |
 | Cache and search privacy | Library & downloads contains Storage & cache and Privacy. Cache budgets, cache clearing and search-history removal are indexed at their owning pages. | storage_settings.dart, settings_index.dart, settings_page.dart |
+## Follow-up after v1.7.0
+
+| Feature | Production behavior | Files |
+|---|---|---|
+| Queue and shuffle persistence | Restores the saved order and current occurrence in the paused player. Checkpoints use queue changes, seeks, pauses and lifecycle events. The original order remains available when shuffle is turned off. | player_controller.dart |
+| Seek steps | Playback settings persist the step size. Shift and the arrow keys seek repeatedly in the chosen increments. | sound_settings.dart, player_controller.dart, shortcuts.dart |
+| Logo cover | Choose the Riflay mark as the artwork in Now Playing, fullscreen, and the sidebar. Lightweight mode offers the logo too. | layout_prefs.dart, now_playing_page.dart, full_screen_player.dart, side_panel.dart |
+| Phone navigation | The glass bar can stay expanded while scrolling. Bottom navigation labels can be hidden with accessible tab names preserved. | layout_settings.dart, phone_navigation.dart |
+| Playlist order and pins | The Library offers default, alphabetical and custom ordering for Riflay, folder and connected YouTube Music playlists. Pinned playlists appear above the rest. | library_page.dart, layout_prefs.dart |
+| Cover editor | The editor previews the exported square crop and supports pan, zoom, rotation, flip and reset. | playlist_cover_edit.dart |
+| Song / Video placement | The sidebar switch sits above the scroll area and follows the existing Now Playing visibility preference. | side_panel.dart |
+| Discord reconnection | Connection retries use backoff. The latest activity is applied when the handshake completes, including after a Discord restart. | discord_presence.dart |
+| Interactive mini-player expansion | Drag follows the pointer from the mini-player bounds. A short drag settles back and a committed drag hands off to the real Now Playing route. | home_shell.dart, mini_player.dart |
+| Draggable glass tab selection | The selection pill follows a horizontal drag and settles into the chosen tab on release. The tint picker labels white explicitly. | phone_navigation.dart, appearance_settings.dart |

@@ -77,7 +77,10 @@ class NowPlayingPage extends StatelessWidget {
     final text = Theme.of(context).textTheme;
     final chosen = Appearance.instance.nowPlaying;
     // Music video lies over the blurred cover (Lightweight: the plain colour).
-    final look = chosen.effective(lightweight: LayoutPrefs.lightweight);
+    final useLogo = LayoutPrefs.instance.playerCover == PlayerCover.logo;
+    final look = useLogo && chosen == NowPlayingBackground.blurredCover
+        ? NowPlayingBackground.color
+        : chosen.effective(lightweight: LayoutPrefs.lightweight);
     // Cover: Background is the whole page: sharp at the top, soft below, instead of any background.
     // Not on a phone held sideways: its layout puts the cover (or the music video) beside the controls, and a
     // video behind the page as well showed the video twice.
@@ -258,7 +261,7 @@ class NowPlayingPage extends StatelessWidget {
                                     cover: SizedBox.square(
                                       dimension: size,
                                       child: AudioVisualizer(
-                                        child: Artwork(track: track, size: size, radius: radius),
+                                        child: Artwork(track: useLogo ? null : track, size: size, radius: radius),
                                       ),
                                     ),
                                   ),

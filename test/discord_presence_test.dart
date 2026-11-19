@@ -1,8 +1,8 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:riflay/models/track.dart';
 import 'package:riflay/services/discord_presence.dart';
@@ -147,6 +147,103 @@ void main() {
     } finally {
       presence.dispose();
       await fake.close();
+    }
+  });
+
+  test('retries with backoff when Discord is not running yet, then shows the presence', () async {
+    // Discord often starts after Riflay, or its pipe is not up when the first update comes.
+    final missing = Platform.isWindows
+        ? r'\\?\pipe\riflay-missing-discord-ipc'
+        : '${Directory.systemTemp.path}/riflay-missing-discord-ipc';
+    final paths = <String>[missing];
+    final presence = DiscordPresence(
+      '1561368591297941655',
+      socketPaths: () => paths,
+      heartbeat: const Duration(milliseconds: 100),
+    )..options = const DiscordOptions(showWhenIdle: false);
+    final fake = await FakeDiscord.start();
+    final track = Track.youtube(videoId: 'kJQP7kiw5Fk', title: 'Despacito', artist: 'Luis Fonsi');
+    try {
+      presence.update(track: track, playing: true, position: Duration.zero);
+      // The first attempt fails; no further update() comes, only the retry timer.
+      await Future<void>.delayed(const Duration(milliseconds: 400));
+      paths
+        ..clear()
+        ..add(fake.path);
+
+      await fake.waitForFrames(2);
+      expect(fake.frames.first.$1, 0);
+      final activity = (fake.frames[1].$2['args'] as Map)['activity'] as Map;
+      expect(activity['details'], 'Despacito');
+    } finally {
+      presence.dispose();
+      await fake.close();
+    }
+  });
+
+  test('reconnects after Discord restarts and restores the presence by itself', () async {
+    final first = await FakeDiscord.start();
+    final paths = <String>[first.path];
+    final presence = DiscordPresence(
+      '1561368591297941655',
+      socketPaths: () => paths,
+      heartbeat: const Duration(milliseconds: 100),
+    )..options = const DiscordOptions(showWhenIdle: false);
+    final track = Track.youtube(videoId: 'kJQP7kiw5Fk', title: 'Despacito', artist: 'Luis Fonsi');
+    FakeDiscord? second;
+    try {
+      presence.update(track: track, playing: true, position: Duration.zero);
+      await first.waitForFrames(2);
+
+      // Discord quits and comes back: the presence must return without another update().
+      await first.close();
+      final restarted = await FakeDiscord.start();
+      second = restarted;
+      paths
+        ..clear()
+        ..add(restarted.path);
+
+      await restarted.waitForFrames(2);
+      expect(restarted.frames.first.$1, 0);
+      final activity = (restarted.frames[1].$2['args'] as Map)['activity'] as Map;
+      expect(activity['details'], 'Despacito');
+    } finally {
+      presence.dispose();
+      await second?.close();
+    }
+  });
+
+  test('logs the endpoint, the handshake and the SET_ACTIVITY answer', () async {
+    final logs = <String>[];
+    final original = debugPrint;
+    debugPrint = (String? message, {int? wrapWidth}) {
+      if (message != null) logs.add(message);
+    };
+    final fake = await FakeDiscord.start();
+    final presence = DiscordPresence('1561368591297941655', socketPaths: () => [fake.path])
+      ..options = const DiscordOptions(showWhenIdle: false);
+    try {
+      final track = Track.youtube(videoId: 'kJQP7kiw5Fk', title: 'Despacito', artist: 'Luis Fonsi');
+      presence.update(track: track, playing: true, position: Duration.zero);
+      await fake.waitForFrames(2);
+      await Future<void>.delayed(const Duration(milliseconds: 200));
+      final all = logs.join('\n');
+      expect(all, contains('IPC connected: ${fake.path}'));
+      expect(all, contains('handshake sent'));
+      expect(all, contains('handshake accepted'));
+      expect(all, contains('SET_ACTIVITY sent'));
+      expect(all, contains('SET_ACTIVITY ok'));
+    } finally {
+      debugPrint = original;
+      presence.dispose();
+      await fake.close();
+    }
+  });
+
+  test('scans discord-ipc-0 through discord-ipc-9, not only the first endpoint', () {
+    final paths = DiscordPresence.candidatePaths().toList();
+    for (var i = 0; i < 10; i++) {
+      expect(paths, contains(endsWith('discord-ipc-$i')), reason: 'discord-ipc-$i must be tried');
     }
   });
 

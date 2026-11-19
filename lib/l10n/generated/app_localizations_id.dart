@@ -1869,7 +1869,7 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get songVideoSwitchSubtitle =>
-      'Di atas layar Sedang diputar. Adaptif hanya menampilkannya kalau lagunya punya video musik';
+      'Di bagian atas layar dan sidebar Sedang diputar. Adaptif menampilkannya saat lagu memiliki video musik';
 
   @override
   String get adaptive => 'Adaptif';
@@ -6791,4 +6791,72 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get networkProxySaveFailed => 'Tidak bisa menyimpan pengaturan proxy. Coba lagi.';
+
+  @override
+  String get seekStep => 'Jarak lompatan pemutaran';
+
+  @override
+  String get scSeekBackward => 'Mundur dalam lagu';
+
+  @override
+  String get scSeekForward => 'Maju dalam lagu';
+
+  @override
+  String seekStepSeconds(int seconds) {
+    return '$seconds dtk';
+  }
+
+  @override
+  String get coverAppLogo => 'Logo Riflay';
+
+  @override
+  String get keepPhoneNavOpen => 'Jaga navigasi tetap terbuka';
+
+  @override
+  String get coverZoomIn => 'Perbesar';
+
+  @override
+  String get coverZoomOut => 'Perkecil';
+
+  @override
+  String get coverPreview => 'Pratinjau mini cover';
+
+  @override
+  String get coverRotate => 'Putar ke kanan';
+
+  @override
+  String get coverFlip => 'Balik horizontal';
+
+  @override
+  String get coverReset => 'Reset crop';
+
+  @override
+  String get coverGestureHint => 'Geser untuk mengatur posisi foto. Cubit, gulir, atau gunakan slider untuk zoom.';
+
+  @override
+  String get playlistOptions => 'Opsi playlist';
+
+  @override
+  String get pinPlaylist => 'Sematkan playlist';
+
+  @override
+  String get unpinPlaylist => 'Lepas sematan playlist';
+
+  @override
+  String get movePlaylistUp => 'Pindahkan playlist ke atas';
+
+  @override
+  String get movePlaylistDown => 'Pindahkan playlist ke bawah';
+
+  @override
+  String get sortPlaylists => 'Urutkan playlist';
+
+  @override
+  String get playlistLibraryOrder => 'Urutan pustaka';
+
+  @override
+  String get playlistCustomOrder => 'Urutan kustom';
+
+  @override
+  String get hidePhoneNavLabels => 'Sembunyikan label navigasi bawah';
 }

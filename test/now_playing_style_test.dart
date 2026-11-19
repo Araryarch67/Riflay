@@ -20,6 +20,7 @@ import 'package:riflay/ui/pages/lyrics_page.dart';
 import 'package:riflay/ui/pages/player_presets_page.dart';
 import 'package:riflay/ui/player/mini_player.dart';
 import 'package:riflay/ui/player/now_playing_page.dart';
+import 'package:riflay/ui/player/side_panel.dart';
 import 'package:riflay/ui/player/player_parts.dart';
 import 'package:riflay/ui/player/player_glass.dart';
 import 'package:riflay/ui/shell_scope.dart';
@@ -103,7 +104,7 @@ Widget _tree(_Player c, Size size, Widget page) => PlayerScope(
 );
 
 Future<_Player> _show(WidgetTester tester, Widget page, Size size, {Track? track}) async {
-  SharedPreferences.setMockInitialValues({'library.v1': jsonEncode(<Object>[])});
+  SharedPreferences.setMockInitialValues({'library.v1': jsonEncode(<Object>[]), 'discord.enabled': false});
   final c = _Player(track);
   await tester.runAsync(c.load);
   // Kawaii's Music video background starts the video machinery (timers, a decoder): not what these tests are about.
@@ -320,6 +321,31 @@ void main() {
     await tester.pump(const Duration(minutes: 1));
   });
 
+  testWidgets('sidebar Song / Video switch stays above the scroll area and follows its visibility preference', (
+    tester,
+  ) async {
+    final song = Track.youtube(videoId: 'sidebar-switch', title: 'Sidebar song', artist: 'Artist');
+    final mode = VideoMode.instance;
+    mode.setOn(false);
+    mode.debugSetFound('sidebar-switch', const MusicVideo(videoId: 'sidebar-switch'));
+    addTearDown(() => mode.debugSetFound('sidebar-switch', null));
+    final c = await _show(
+      tester,
+      Scaffold(body: NowPlayingSidePanel(onClose: () {})),
+      const Size(400, 750),
+      track: song,
+    );
+
+    final switchLabel = find.text('Video');
+    expect(switchLabel, findsOneWidget);
+    expect(tester.getBottomLeft(switchLabel).dy, lessThan(tester.getTopLeft(find.byType(ListView)).dy));
+    await tester.runAsync(() => p.setShowVideoSwitch(false));
+    await tester.pump();
+    expect(switchLabel, findsNothing);
+    expect(find.text('Sidebar song'), findsOneWidget);
+    await _close(tester, c);
+    await tester.pump(const Duration(minutes: 1));
+  });
   testWidgets('Kawaii puts the quality badge in the time row, between the two times', (tester) async {
     await tester.runAsync(() => PlayerPreset.kawaii.apply(p));
     expect(p.qualityBadgePlace, QualityBadgePlace.timeRow);

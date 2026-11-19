@@ -7,6 +7,7 @@ import 'package:riflay/main.dart';
 import 'package:riflay/models/track.dart';
 import 'package:riflay/services/layout_prefs.dart';
 import 'package:riflay/services/player_controller.dart';
+import 'package:riflay/ui/player_panels.dart';
 import 'package:riflay/ui/shell/desktop_sidebar.dart';
 import 'package:riflay/ui/shell/resize_handle.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -18,7 +19,7 @@ class _SongPlayer extends PlayerController {
 }
 
 Future<void> _app(WidgetTester tester, Size size) async {
-  SharedPreferences.setMockInitialValues({'library.v1': jsonEncode(<Object>[])});
+  SharedPreferences.setMockInitialValues({'library.v1': jsonEncode(<Object>[]), 'discord.enabled': false});
   await LayoutPrefs.instance.reset();
   final c = _SongPlayer();
   await tester.runAsync(c.load);
@@ -54,6 +55,43 @@ Finder _handle(String label) => find.byWidgetPredicate((w) => w is ResizeHandle 
 double _sidebarW(WidgetTester t) => t.getSize(find.byType(DesktopSidebar)).width;
 
 void main() {
+  for (final style in [TabBarStyle.classic, TabBarStyle.glass]) {
+    testWidgets('${style.name}: the mini-player expands under the finger and a short drag snaps back', (tester) async {
+      await _app(tester, const Size(412, 915));
+      await tester.runAsync(() => LayoutPrefs.instance.setTabBar(style));
+      await tester.pump(const Duration(milliseconds: 350));
+      final mini = style == TabBarStyle.glass ? find.byType(GlassMiniPlayer) : find.byType(MiniPlayer);
+      final frame = find.byKey(const ValueKey('interactive-player-frame'));
+      final origin = tester.getRect(mini);
+      final point = Offset(origin.left + 30, origin.top + 24);
+
+      final short = await tester.startGesture(point);
+      await short.moveBy(const Offset(0, -24));
+      await short.moveBy(const Offset(0, -32));
+      await tester.pump();
+      expect(frame, findsOneWidget);
+      expect(tester.getRect(frame).top, lessThan(origin.top));
+      await short.cancel();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(frame, findsNothing);
+      expect(find.byType(NowPlayingPage), findsNothing);
+
+      final long = await tester.startGesture(point);
+      await long.moveBy(const Offset(0, -24));
+      await long.moveBy(const Offset(0, -270));
+      await tester.pump();
+      expect(tester.getRect(frame).top, lessThan(origin.top - 200));
+      await long.up();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.pump();
+      expect(frame, findsNothing);
+      expect(find.byType(NowPlayingPage), findsOneWidget);
+      expect(ModalRoute.of(tester.element(find.byType(NowPlayingPage)))?.settings.name, nowPlayingRouteName);
+      await _settle(tester);
+    });
+  }
   testWidgets('the sidebar handle resizes live, clamps, saves on release and resets on double click', (tester) async {
     await _app(tester, const Size(1600, 900));
     final handle = _handle('Resize sidebar');

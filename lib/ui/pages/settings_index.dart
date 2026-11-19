@@ -747,6 +747,14 @@ abstract final class SettingsOptions {
       preview: .tabBar,
       available: () => Features.phoneLayout,
     ),
+    SettingsOption('hidePhoneNavLabels', .layout, (t) => t.hidePhoneNavLabels, available: () => Features.phoneLayout),
+    SettingsOption(
+      'keepPhoneNavOpen',
+      .layout,
+      (t) => t.keepPhoneNavOpen,
+      available: () => Features.phoneLayout,
+      parent: 'tabBar',
+    ),
     SettingsOption(
       'desktopBar',
       .layout,
@@ -915,6 +923,7 @@ abstract final class SettingsOptions {
     ),
     SettingsOption('downloadsFolder', .downloads, (t) => t.downloadsFolder, find: (t) => t.kwDownloadsFolder),
     SettingsOption('ytDlp', .downloads, (t) => t.ytDlp, find: (t) => t.kwYtDlp, available: () => YtDlp.supported),
+    SettingsOption('seekStep', .playback, (t) => t.seekStep, find: (t) => '${t.scSeekForward} ${t.scSeekBackward}'),
     SettingsOption('streamQuality', .playback, (t) => t.streamQuality),
     SettingsOption('streamSaver', .playback, (t) => t.streamSaver),
     SettingsOption('keepHistoryFor', .history, (t) => t.keepHistoryFor),

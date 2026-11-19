@@ -14,6 +14,20 @@ void main() {
     await p.reset();
   });
 
+  test('custom playlist order, pins, logo cover and expanded navigation persist', () async {
+    await p.movePlaylist(['a', 'b', 'c'], 'c', -1);
+    await p.togglePinnedPlaylist('b');
+    await p.setPlayerCover(PlayerCover.logo);
+    await p.setKeepPhoneNavOpen(true);
+    p.restore(const {});
+    expect(p.keepPhoneNavOpen, isFalse);
+    await p.load();
+    expect(p.playlistOrder, PlaylistOrder.custom);
+    expect(p.customPlaylistOrder, ['a', 'c', 'b']);
+    expect(p.pinnedPlaylists, {'b'});
+    expect(p.playerCover, PlayerCover.logo);
+    expect(p.keepPhoneNavOpen, isTrue);
+  });
   test('player close button is hidden by default and its override persists', () async {
     expect(p.showPlayerClose, isFalse);
     await p.setShowPlayerClose(true);
@@ -84,7 +98,7 @@ void main() {
     await p.setPerformance(PerformanceMode.balanced);
     await p.setPlayerCover(PlayerCover.background);
     await p.setPerformance(PerformanceMode.lightweight);
-    expect(p.playerCoverChoices, [PlayerCover.flower, PlayerCover.square]);
+    expect(p.playerCoverChoices, [PlayerCover.flower, PlayerCover.square, PlayerCover.logo]);
     expect(p.playerCover, PlayerCover.square);
     await p.load();
     expect(p.playerCover, PlayerCover.square);

@@ -314,14 +314,18 @@ enum PhoneCoverSize {
   };
 }
 
-/// The shape of the player's cover, on phones and desktop alike: a rounded square, a flower, or no frame at all
-/// ([background]: the artwork fills the top of the page and fades into it).
+/// The order of playlists in Library, after pinned entries.
+enum PlaylistOrder { library, nameAscending, nameDescending, custom }
+
+/// The artwork treatment in the player, including a full-bleed cover or the Riflay mark.
 enum PlayerCover {
   square,
   flower,
-  background;
+  background,
+  logo;
 
   String get label => switch (this) {
+    logo => tr.coverAppLogo,
     square => tr.shapeSquare,
     flower => tr.shapeFlower,
     background => tr.coverBackground,
@@ -584,8 +588,9 @@ class LayoutPrefs extends ChangeNotifier {
   PlayerCover playerCover = PlayerCover.flower;
 
   /// Background artwork is unavailable in Lightweight; framed covers stay selectable.
-  List<PlayerCover> get playerCoverChoices =>
-      performance == PerformanceMode.lightweight ? const [PlayerCover.flower, PlayerCover.square] : PlayerCover.values;
+  List<PlayerCover> get playerCoverChoices => performance == PerformanceMode.lightweight
+      ? const [PlayerCover.flower, PlayerCover.square, PlayerCover.logo]
+      : PlayerCover.values;
 
   void _fitPlayerOptions() {
     if (performance == PerformanceMode.lightweight && playerCover == PlayerCover.background) {
@@ -608,6 +613,30 @@ class LayoutPrefs extends ChangeNotifier {
   String startupTab = 'home', libraryChip = '';
   int swipeDistance = 72;
   Set<String> hiddenCollections = {};
+  PlaylistOrder playlistOrder = PlaylistOrder.library;
+  List<String> customPlaylistOrder = const [];
+  Set<String> pinnedPlaylists = const {};
+
+  Future<void> setPlaylistOrder(PlaylistOrder order) => _set(() => playlistOrder = order);
+
+  Future<void> movePlaylist(List<String> visible, String moved, int delta) {
+    final at = visible.indexOf(moved);
+    final to = at + delta;
+    if (at < 0 || to < 0 || to >= visible.length) return Future.value();
+    final order = [...visible];
+    order.insert(to, order.removeAt(at));
+    return _set(() {
+      final visibleKeys = visible.toSet();
+      customPlaylistOrder = [...order, ...customPlaylistOrder.where((key) => !visibleKeys.contains(key))];
+      playlistOrder = PlaylistOrder.custom;
+    });
+  }
+
+  Future<void> togglePinnedPlaylist(String key) => _set(() {
+    final pins = {...pinnedPlaylists};
+    if (!pins.remove(key)) pins.add(key);
+    pinnedPlaylists = pins;
+  });
   Future<void> setStartupTab(String value) => _set(() => startupTab = value);
   Future<void> setLibraryChip(String value) => _set(() => libraryChip = value);
   Future<void> setSwipeDistance(int value) => _set(() => swipeDistance = value.clamp(32, 120));
@@ -636,6 +665,8 @@ class LayoutPrefs extends ChangeNotifier {
 
   /// The phone's tab bar: docked under the mini player like most music apps, by default.
   TabBarStyle tabBar = TabBarStyle.classic;
+  bool keepPhoneNavOpen = false;
+  bool hidePhoneNavLabels = false;
   DesktopBarStyle desktopBar = DesktopBarStyle.classic;
   DesktopMiniStyle desktopMini = DesktopMiniStyle.window;
 
@@ -857,6 +888,9 @@ class LayoutPrefs extends ChangeNotifier {
     showVolumeRow = j['showVolumeRow'] as bool? ?? d.showVolumeRow;
     startupTab = j['startupTab'] as String? ?? d.startupTab;
     libraryChip = j['libraryChip'] as String? ?? d.libraryChip;
+    playlistOrder = pick(PlaylistOrder.values, 'playlistOrder', d.playlistOrder);
+    customPlaylistOrder = (j['customPlaylistOrder'] as List?)?.whereType<String>().toList() ?? const [];
+    pinnedPlaylists = (j['pinnedPlaylists'] as List?)?.whereType<String>().toSet() ?? const {};
     swipeDistance = (j['swipeDistance'] as num?)?.round().clamp(32, 120) ?? d.swipeDistance;
     hiddenCollections = (j['hiddenCollections'] as List?)?.whereType<String>().toSet() ?? {...d.hiddenCollections};
     glassTint = pick(GlassTint.values, 'glassTint', d.glassTint);
@@ -872,6 +906,8 @@ class LayoutPrefs extends ChangeNotifier {
     qualityBadgePlace = pick(QualityBadgePlace.values, 'qualityBadgePlace', d.qualityBadgePlace);
     volumeSlider = pick(VolumeSliderShape.values, 'volumeSlider', d.volumeSlider);
     tabBar = pick(TabBarStyle.values, 'tabBar', d.tabBar);
+    keepPhoneNavOpen = j['keepPhoneNavOpen'] as bool? ?? d.keepPhoneNavOpen;
+    hidePhoneNavLabels = j['hidePhoneNavLabels'] as bool? ?? d.hidePhoneNavLabels;
     // The floating looks are gone: Floating became Classic, Capsule (a one-row floating dock) Compact.
     desktopBar = switch (j['desktopBar']) {
       'floating' => DesktopBarStyle.classic,
@@ -944,6 +980,9 @@ class LayoutPrefs extends ChangeNotifier {
     'showVolumeRow': showVolumeRow,
     'startupTab': startupTab,
     'libraryChip': libraryChip,
+    'playlistOrder': playlistOrder.name,
+    'customPlaylistOrder': customPlaylistOrder,
+    'pinnedPlaylists': pinnedPlaylists.toList(),
     'swipeDistance': swipeDistance,
     'hiddenCollections': hiddenCollections.toList(),
     'glassTint': glassTint.name,
@@ -959,6 +998,8 @@ class LayoutPrefs extends ChangeNotifier {
     'qualityBadgePlace': qualityBadgePlace.name,
     'volumeSlider': volumeSlider.name,
     'tabBar': tabBar.name,
+    'keepPhoneNavOpen': keepPhoneNavOpen,
+    'hidePhoneNavLabels': hidePhoneNavLabels,
     'desktopBar': desktopBar.name,
     'desktopMini': desktopMini.name,
     'miniLyrics': miniLyrics,
@@ -1071,6 +1112,8 @@ class LayoutPrefs extends ChangeNotifier {
   Future<void> setMiniVolume(bool v) => _set(() => miniVolume = v);
   Future<void> setMiniShuffleRepeat(bool v) => _set(() => miniShuffleRepeat = v);
   Future<void> setMiniQuality(bool v) => _set(() => miniQuality = v);
+  Future<void> setHidePhoneNavLabels(bool value) => _set(() => hidePhoneNavLabels = value);
+  Future<void> setKeepPhoneNavOpen(bool value) => _set(() => keepPhoneNavOpen = value);
   Future<void> setTabBar(TabBarStyle v) => _set(() => tabBar = v);
   Future<void> setVisualizerStyle(VisualizerStyle v) => _set(() => visualizerStyle = v);
   Future<void> setVisualizerCoverShape(VisualizerCoverShape v) =>

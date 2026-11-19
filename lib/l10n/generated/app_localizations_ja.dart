@@ -1845,7 +1845,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get songVideoSwitch => '曲／動画の切り替え';
 
   @override
-  String get songVideoSwitchSubtitle => '再生中の画面の上部。「自動」だとMVがある曲のときだけ出る';
+  String get songVideoSwitchSubtitle => '再生中の画面とサイドバーの上部に表示します。「自動」ではMVがある曲にだけ表示します。';
 
   @override
   String get adaptive => '自動';
@@ -6647,4 +6647,72 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get networkProxySaveFailed => 'プロキシ設定を保存できませんでした。もう一度お試しください。';
+
+  @override
+  String get seekStep => 'シーク間隔';
+
+  @override
+  String get scSeekBackward => '巻き戻す';
+
+  @override
+  String get scSeekForward => '早送りする';
+
+  @override
+  String seekStepSeconds(int seconds) {
+    return '$seconds 秒';
+  }
+
+  @override
+  String get coverAppLogo => 'Riflayロゴ';
+
+  @override
+  String get keepPhoneNavOpen => 'ナビゲーションを常に展開';
+
+  @override
+  String get coverZoomIn => '拡大';
+
+  @override
+  String get coverZoomOut => '縮小';
+
+  @override
+  String get coverPreview => 'カバーのサムネイルプレビュー';
+
+  @override
+  String get coverRotate => '右に回転';
+
+  @override
+  String get coverFlip => '左右反転';
+
+  @override
+  String get coverReset => '切り抜きをリセット';
+
+  @override
+  String get coverGestureHint => 'ドラッグして写真を移動します。ピンチ、スクロール、またはスライダーで拡大縮小できます。';
+
+  @override
+  String get playlistOptions => 'プレイリストのオプション';
+
+  @override
+  String get pinPlaylist => 'プレイリストを固定';
+
+  @override
+  String get unpinPlaylist => 'プレイリストの固定を解除';
+
+  @override
+  String get movePlaylistUp => 'プレイリストを上に移動';
+
+  @override
+  String get movePlaylistDown => 'プレイリストを下に移動';
+
+  @override
+  String get sortPlaylists => 'プレイリストを並べ替え';
+
+  @override
+  String get playlistLibraryOrder => 'ライブラリ順';
+
+  @override
+  String get playlistCustomOrder => 'カスタム順';
+
+  @override
+  String get hidePhoneNavLabels => '下部ナビゲーションのラベルを隠す';
 }

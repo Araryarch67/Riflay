@@ -64,6 +64,102 @@ mixin _SongSwipe<T extends StatefulWidget> on State<T> {
   );
 }
 
+/// Connects either mini-player skin to the phone shell's interactive expansion.
+class MiniPlayerExpansion extends InheritedWidget {
+  const MiniPlayerExpansion({super.key, required this.update, required this.finish, required super.child});
+
+  final void Function(Rect origin, double distance) update;
+  final void Function(double velocity, {required bool cancelled}) finish;
+
+  static MiniPlayerExpansion? of(BuildContext context) => context.dependOnInheritedWidgetOfExactType();
+
+  @override
+  bool updateShouldNotify(MiniPlayerExpansion oldWidget) => update != oldWidget.update || finish != oldWidget.finish;
+}
+
+class _MiniPlayerDrag extends StatefulWidget {
+  const _MiniPlayerDrag({required this.onOpen, required this.onDismiss, required this.child});
+
+  final VoidCallback onOpen;
+  final VoidCallback onDismiss;
+  final Widget child;
+
+  @override
+  State<_MiniPlayerDrag> createState() => _MiniPlayerDragState();
+}
+
+class _MiniPlayerDragState extends State<_MiniPlayerDrag> {
+  final _offset = ValueNotifier<double>(0);
+  double _distance = 0;
+  Rect? _origin;
+  bool _expanding = false;
+
+  @override
+  void dispose() {
+    _offset.dispose();
+    super.dispose();
+  }
+
+  void _finish(MiniPlayerExpansion expansion, double velocity, {bool cancelled = false}) {
+    final origin = _origin;
+    if (_expanding) {
+      expansion.finish(velocity, cancelled: cancelled);
+    } else if (!cancelled && origin != null && (_distance > origin.height * 0.4 || velocity > 650)) {
+      widget.onDismiss();
+    }
+    _offset.value = 0;
+    _origin = null;
+    _expanding = false;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final expansion = MiniPlayerExpansion.of(context);
+    if (expansion == null) {
+      return Dismissible(
+        key: const ValueKey('mini-player-dismiss'),
+        direction: DismissDirection.vertical,
+        dismissThresholds: const {DismissDirection.up: 0.42, DismissDirection.down: 0.4},
+        confirmDismiss: (direction) async {
+          if (direction == DismissDirection.down) return true;
+          widget.onOpen();
+          return false;
+        },
+        onDismissed: (_) => widget.onDismiss(),
+        child: widget.child,
+      );
+    }
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onVerticalDragStart: (_) {
+        final box = context.findRenderObject() as RenderBox;
+        _origin = box.localToGlobal(Offset.zero) & box.size;
+        _distance = 0;
+        _expanding = false;
+      },
+      onVerticalDragUpdate: (details) {
+        final origin = _origin;
+        if (origin == null) return;
+        _distance += details.delta.dy;
+        if (_distance < 0 || _expanding) {
+          _expanding = true;
+          _offset.value = 0;
+          expansion.update(origin, (-_distance).clamp(0, double.infinity));
+        } else {
+          _offset.value = _distance.clamp(0, origin.height);
+        }
+      },
+      onVerticalDragEnd: (details) => _finish(expansion, details.primaryVelocity ?? 0),
+      onVerticalDragCancel: () => _finish(expansion, 0, cancelled: true),
+      child: ValueListenableBuilder<double>(
+        valueListenable: _offset,
+        child: widget.child,
+        builder: (context, down, child) => Transform.translate(offset: Offset(0, down), child: child),
+      ),
+    );
+  }
+}
+
 class _MiniPlayerState extends State<MiniPlayer> with _SongSwipe {
   @override
   Widget build(BuildContext context) {
@@ -83,18 +179,9 @@ class _MiniPlayerState extends State<MiniPlayer> with _SongSwipe {
     final capsule = LayoutPrefs.instance.miniPlayer == MiniPlayerStyle.capsule;
     return AccentBuilder(
       track: track,
-      builder: (context, accent) => Dismissible(
-        key: const ValueKey('mini-player'),
-        direction: DismissDirection.vertical,
-        dismissThresholds: const {DismissDirection.up: 0.42, DismissDirection.down: 0.4},
-        confirmDismiss: (direction) async {
-          if (direction == DismissDirection.up) {
-            widget.onOpen();
-            return false;
-          }
-          return true;
-        },
-        onDismissed: (_) => c.closePlayer(),
+      builder: (context, accent) => _MiniPlayerDrag(
+        onOpen: widget.onOpen,
+        onDismiss: c.closePlayer,
         child: Padding(
           padding: const EdgeInsets.fromLTRB(8, 0, 8, 6),
           child: GlassPanel(
@@ -214,18 +301,9 @@ class _GlassMiniPlayerState extends State<GlassMiniPlayer> with _SongSwipe {
     final text = Theme.of(context).textTheme;
     final track = widget.track;
     final compact = widget.compact;
-    return Dismissible(
-      key: const ValueKey('glass-mini-player'),
-      direction: DismissDirection.vertical,
-      dismissThresholds: const {DismissDirection.up: 0.42, DismissDirection.down: 0.4},
-      confirmDismiss: (direction) async {
-        if (direction == DismissDirection.up) {
-          widget.onOpen();
-          return false;
-        }
-        return true;
-      },
-      onDismissed: (_) => c.closePlayer(),
+    return _MiniPlayerDrag(
+      onOpen: widget.onOpen,
+      onDismiss: c.closePlayer,
       child: Material(
         type: MaterialType.transparency,
         child: InkWell(

@@ -3510,7 +3510,7 @@ abstract class AppLocalizations {
   /// No description provided for @songVideoSwitchSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'At the top of Now Playing. Adaptive shows it only when the song has a music video'**
+  /// **'At the top of Now Playing and its sidebar. Adaptive shows it only when the song has a music video'**
   String get songVideoSwitchSubtitle;
 
   /// No description provided for @adaptive.
@@ -12176,6 +12176,138 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Couldn\'t save proxy settings. Try again.'**
   String get networkProxySaveFailed;
+
+  /// No description provided for @seekStep.
+  ///
+  /// In en, this message translates to:
+  /// **'Seek step'**
+  String get seekStep;
+
+  /// No description provided for @scSeekBackward.
+  ///
+  /// In en, this message translates to:
+  /// **'Seek backward'**
+  String get scSeekBackward;
+
+  /// No description provided for @scSeekForward.
+  ///
+  /// In en, this message translates to:
+  /// **'Seek forward'**
+  String get scSeekForward;
+
+  /// No description provided for @seekStepSeconds.
+  ///
+  /// In en, this message translates to:
+  /// **'{seconds} s'**
+  String seekStepSeconds(int seconds);
+
+  /// No description provided for @coverAppLogo.
+  ///
+  /// In en, this message translates to:
+  /// **'Riflay logo'**
+  String get coverAppLogo;
+
+  /// No description provided for @keepPhoneNavOpen.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep navigation expanded'**
+  String get keepPhoneNavOpen;
+
+  /// No description provided for @coverZoomIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Zoom in'**
+  String get coverZoomIn;
+
+  /// No description provided for @coverZoomOut.
+  ///
+  /// In en, this message translates to:
+  /// **'Zoom out'**
+  String get coverZoomOut;
+
+  /// No description provided for @coverPreview.
+  ///
+  /// In en, this message translates to:
+  /// **'Cover thumbnail preview'**
+  String get coverPreview;
+
+  /// No description provided for @coverRotate.
+  ///
+  /// In en, this message translates to:
+  /// **'Rotate right'**
+  String get coverRotate;
+
+  /// No description provided for @coverFlip.
+  ///
+  /// In en, this message translates to:
+  /// **'Flip horizontally'**
+  String get coverFlip;
+
+  /// No description provided for @coverReset.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset crop'**
+  String get coverReset;
+
+  /// No description provided for @coverGestureHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Drag to position the photo. Pinch, scroll or use the slider to zoom.'**
+  String get coverGestureHint;
+
+  /// No description provided for @playlistOptions.
+  ///
+  /// In en, this message translates to:
+  /// **'Playlist options'**
+  String get playlistOptions;
+
+  /// No description provided for @pinPlaylist.
+  ///
+  /// In en, this message translates to:
+  /// **'Pin playlist'**
+  String get pinPlaylist;
+
+  /// No description provided for @unpinPlaylist.
+  ///
+  /// In en, this message translates to:
+  /// **'Unpin playlist'**
+  String get unpinPlaylist;
+
+  /// No description provided for @movePlaylistUp.
+  ///
+  /// In en, this message translates to:
+  /// **'Move playlist up'**
+  String get movePlaylistUp;
+
+  /// No description provided for @movePlaylistDown.
+  ///
+  /// In en, this message translates to:
+  /// **'Move playlist down'**
+  String get movePlaylistDown;
+
+  /// No description provided for @sortPlaylists.
+  ///
+  /// In en, this message translates to:
+  /// **'Sort playlists'**
+  String get sortPlaylists;
+
+  /// No description provided for @playlistLibraryOrder.
+  ///
+  /// In en, this message translates to:
+  /// **'Library order'**
+  String get playlistLibraryOrder;
+
+  /// No description provided for @playlistCustomOrder.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom order'**
+  String get playlistCustomOrder;
+
+  /// No description provided for @hidePhoneNavLabels.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide bottom navigation labels'**
+  String get hidePhoneNavLabels;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

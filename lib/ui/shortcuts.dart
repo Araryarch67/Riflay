@@ -8,7 +8,21 @@ import '../services/language.dart';
 import 'widgets/app_dialog.dart';
 
 /// What a keyboard shortcut does. The shell maps each to a callback.
-enum AppAction { playPause, next, previous, volumeUp, volumeDown, search, back, forward, pasteLink, fullScreen, help }
+enum AppAction {
+  playPause,
+  next,
+  previous,
+  seekForward,
+  seekBackward,
+  volumeUp,
+  volumeDown,
+  search,
+  back,
+  forward,
+  pasteLink,
+  fullScreen,
+  help,
+}
 
 /// One shortcut: the keys that trigger it and how it's shown to people.
 class AppShortcut {
@@ -44,6 +58,12 @@ List<AppShortcut> get appShortcuts => <AppShortcut>[
     SingleActivator(LogicalKeyboardKey.arrowLeft, control: true),
     SingleActivator(LogicalKeyboardKey.mediaTrackPrevious),
   ], 'Ctrl+←'),
+  AppShortcut(AppAction.seekBackward, tr.scSeekBackward, [
+    SingleActivator(LogicalKeyboardKey.arrowLeft, shift: true),
+  ], 'Shift+←'),
+  AppShortcut(AppAction.seekForward, tr.scSeekForward, [
+    SingleActivator(LogicalKeyboardKey.arrowRight, shift: true),
+  ], 'Shift+→'),
   AppShortcut(AppAction.volumeUp, tr.scVolumeUp, [
     SingleActivator(LogicalKeyboardKey.arrowUp, control: true),
   ], 'Ctrl+↑'),

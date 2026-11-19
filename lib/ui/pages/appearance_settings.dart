@@ -185,7 +185,7 @@ class AppearanceSettings extends StatelessWidget {
               value: LayoutPrefs.instance.glassTint,
               options: [
                 (GlassTint.theme, tr.followTheme),
-                (GlassTint.light, tr.modeLight),
+                (GlassTint.light, tr.accentWhite),
                 (GlassTint.black, tr.modeBlack),
               ],
               onChanged: LayoutPrefs.instance.setGlassTint,

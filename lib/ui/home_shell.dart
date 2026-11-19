@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui' show lerpDouble;
 
 import 'package:flutter/foundation.dart' show defaultTargetPlatform;
 import 'package:flutter/gestures.dart';
@@ -28,6 +29,8 @@ import 'pages/settings_page.dart';
 import 'pages/wrap_page.dart';
 import 'navigation.dart';
 import 'player_panels.dart';
+import 'widgets/controls.dart' show AccentBuilder;
+import 'widgets/live_preview.dart';
 import 'shell_scope.dart';
 import 'soundcloud_pages.dart';
 import 'widgets/power_settings.dart';
@@ -71,7 +74,7 @@ class HomeShell extends StatefulWidget {
   State<HomeShell> createState() => _HomeShellState();
 }
 
-class _HomeShellState extends State<HomeShell> {
+class _HomeShellState extends State<HomeShell> with SingleTickerProviderStateMixin {
   PhoneTab _tab = PhoneTab.home;
   final _visitedTabs = <PhoneTab>{PhoneTab.home};
   bool _desktopVisited = false;
@@ -79,6 +82,9 @@ class _HomeShellState extends State<HomeShell> {
 
   /// The phone's Liquid glass bar: shrinks on scroll, and carries the search field (its focus is Search's).
   final _bar = GlassBarLink();
+  final _phonePlayerArea = GlobalKey();
+  late final _playerExpansion = AnimationController(vsync: this);
+  Rect? _playerDragOrigin;
   FocusNode get _searchFocus => _bar.search.focus;
 
   /// Whether the title bar is in sight over the expanded player.
@@ -202,6 +208,7 @@ class _HomeShellState extends State<HomeShell> {
     _errors?.cancel();
     _listenEvents?.cancel();
     _bar.dispose();
+    _playerExpansion.dispose();
     _search.dispose();
     if (titleBarInShell.value) titleBarInShell.value = false;
     super.dispose();
@@ -725,11 +732,112 @@ class _HomeShellState extends State<HomeShell> {
     _pushPhoneRoute(MaterialPageRoute(builder: (_) => _scoped(const LyricsPage(fullScreen: true))));
   }
 
-  void _openNowPlaying() {
+  void _updatePlayerExpansion(Rect origin, double distance) {
+    if (!_compact || _phoneRoutes.isNotEmpty || _playerExpansion.isAnimating) return;
+    final box = _phonePlayerArea.currentContext?.findRenderObject() as RenderBox?;
+    if (box == null || !box.hasSize) return;
+    if (_playerDragOrigin == null) {
+      final local = box.globalToLocal(origin.topLeft) & origin.size;
+      setState(() => _playerDragOrigin = local);
+    }
+    final top = _playerDragOrigin!.top;
+    if (top > 0) _playerExpansion.value = (distance / top).clamp(0, 1);
+  }
+
+  void _finishPlayerExpansion(double velocity, {required bool cancelled}) {
+    if (_playerDragOrigin == null || _playerExpansion.isAnimating) return;
+    final progress = _playerExpansion.value;
+    final open = !cancelled && velocity < 520 && (progress >= 0.24 || (progress > 0.035 && velocity < -680));
+    final goal = open ? 1.0 : 0.0;
+    final settle = LayoutPrefs.dur(Duration(milliseconds: (160 + 160 * (goal - progress).abs()).round()));
+    _playerExpansion.animateTo(goal, duration: settle, curve: Curves.easeOutCubic).whenComplete(() {
+      if (!mounted) return;
+      setState(() => _playerDragOrigin = null);
+      _playerExpansion.value = 0;
+      if (open && _compact && _phoneRoutes.isEmpty && _player?.currentTrack != null) {
+        _openNowPlaying(expanded: true);
+      }
+    });
+  }
+
+  Widget _phonePlayerPreview(Rect origin) => Positioned.fill(
+    child: IgnorePointer(
+      child: ExcludeSemantics(
+        child: AccentBuilder(
+          track: _player?.currentTrack,
+          builder: (context, accent) => LayoutBuilder(
+            builder: (context, constraints) {
+              final size = constraints.biggest;
+              return Stack(
+                children: [
+                  AnimatedBuilder(
+                    animation: _playerExpansion,
+                    child: LivePreview(canvas: size, preserveInsets: true, child: const NowPlayingPage()),
+                    builder: (context, page) {
+                      final progress = _playerExpansion.value;
+                      final frame = Rect.lerp(origin, Offset.zero & size, progress)!;
+                      final opacity = const Interval(0.15, 0.58, curve: Curves.easeOut).transform(progress);
+                      final corner = lerpDouble(LayoutPrefs.radius(12), 0, progress)!;
+                      return Positioned.fromRect(
+                        rect: frame,
+                        child: ClipRRect(
+                          key: const ValueKey('interactive-player-frame'),
+                          borderRadius: BorderRadius.circular(corner),
+                          child: ColoredBox(
+                            color: AppColors.sink(accent, 0.75),
+                            child: Stack(
+                              fit: StackFit.expand,
+                              children: [
+                                if (opacity < 1)
+                                  Positioned(
+                                    left: -8,
+                                    right: -8,
+                                    top: 0,
+                                    child: Opacity(
+                                      opacity: 1 - opacity,
+                                      child: HeroMode(
+                                        enabled: false,
+                                        child:
+                                            LayoutPrefs.instance.tabBar == TabBarStyle.glass &&
+                                                _player?.currentTrack != null
+                                            ? GlassMiniPlayer(track: _player!.currentTrack!, onOpen: () {})
+                                            : MiniPlayer(onOpen: () {}),
+                                      ),
+                                    ),
+                                  ),
+                                if (opacity > 0)
+                                  Opacity(
+                                    opacity: opacity,
+                                    child: OverflowBox(
+                                      alignment: Alignment.topCenter,
+                                      minWidth: size.width,
+                                      maxWidth: size.width,
+                                      minHeight: size.height,
+                                      maxHeight: size.height,
+                                      child: page,
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ],
+              );
+            },
+          ),
+        ),
+      ),
+    ),
+  );
+
+  void _openNowPlaying({bool expanded = false}) {
     _pushPhoneRoute(
       PageRouteBuilder(
         settings: const RouteSettings(name: nowPlayingRouteName),
-        transitionDuration: LayoutPrefs.pageDuration(player: true),
+        transitionDuration: expanded ? Duration.zero : LayoutPrefs.pageDuration(player: true),
         reverseTransitionDuration: LayoutPrefs.pageDuration(reverse: true, player: true),
         pageBuilder: (_, _, _) => _scoped(const NowPlayingPage()),
         transitionsBuilder: (context, anim, secondary, child) =>
@@ -789,6 +897,8 @@ class _HomeShellState extends State<HomeShell> {
         AppAction.playPause: c.togglePlay,
         AppAction.next: c.next,
         AppAction.previous: c.previous,
+        AppAction.seekBackward: () => c.seekByStep(forward: false),
+        AppAction.seekForward: () => c.seekByStep(forward: true),
         AppAction.volumeUp: () => c.nudgeVolume(0.05),
         AppAction.volumeDown: () => c.nudgeVolume(-0.05),
         AppAction.search: () => _goSearch(focusInput: true),
@@ -845,32 +955,43 @@ class _HomeShellState extends State<HomeShell> {
         ),
       );
       body = _scoped(
-        Scaffold(
-          // Pages scroll on under the see-through tab bar; they pad their ends by its height.
-          extendBody: true,
-          body: sideways
-              ? Row(
-                  children: [
-                    PhoneSideTabs(tab: _tab, onSelect: _selectTab),
-                    Expanded(
-                      // The rail took the left inset; a camera cutout on the right stays clear.
-                      child: SafeArea(
-                        left: false,
-                        top: false,
-                        bottom: false,
-                        child: MediaQuery.removePadding(context: context, removeLeft: true, child: pages),
-                      ),
-                    ),
-                  ],
-                )
-              : pages,
-          bottomNavigationBar: PhoneBottomBar(
-            onOpenPlayer: _openNowPlaying,
-            link: _bar,
-            tab: _tab,
-            onSelect: _selectTab,
-            showTabs: !sideways,
-          ),
+        Stack(
+          key: _phonePlayerArea,
+          fit: StackFit.expand,
+          children: [
+            Scaffold(
+              // Pages scroll on under the see-through tab bar; they pad their ends by its height.
+              extendBody: true,
+              body: sideways
+                  ? Row(
+                      children: [
+                        PhoneSideTabs(tab: _tab, onSelect: _selectTab),
+                        Expanded(
+                          // The rail took the left inset; a camera cutout on the right stays clear.
+                          child: SafeArea(
+                            left: false,
+                            top: false,
+                            bottom: false,
+                            child: MediaQuery.removePadding(context: context, removeLeft: true, child: pages),
+                          ),
+                        ),
+                      ],
+                    )
+                  : pages,
+              bottomNavigationBar: MiniPlayerExpansion(
+                update: _updatePlayerExpansion,
+                finish: _finishPlayerExpansion,
+                child: PhoneBottomBar(
+                  onOpenPlayer: _openNowPlaying,
+                  link: _bar,
+                  tab: _tab,
+                  onSelect: _selectTab,
+                  showTabs: !sideways,
+                ),
+              ),
+            ),
+            if (_playerDragOrigin case final origin?) _phonePlayerPreview(origin),
+          ],
         ),
       );
     } else {

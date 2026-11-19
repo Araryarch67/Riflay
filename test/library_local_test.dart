@@ -7,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
 import 'package:riflay/models/track.dart';
 import 'package:riflay/services/library_views.dart';
+import 'package:riflay/services/layout_prefs.dart';
 import 'package:riflay/services/player_controller.dart';
 import 'package:riflay/ui/navigation.dart';
 import 'package:riflay/ui/pages/collection_page.dart';
@@ -78,6 +79,37 @@ void main() {
     (_) async => Directory.systemTemp.path,
   );
 
+  testWidgets('Library sorts playlists by name and moves the pinned playlist above them', (tester) async {
+    SharedPreferences.setMockInitialValues({
+      'library.v1': '[]',
+      'discord.enabled': false,
+      'playlists.v1': jsonEncode([
+        for (final name in ['Zulu', 'Alpha', 'Beta'])
+          UserPlaylist(id: name, name: name, tracks: const [], createdAt: 0).toJson(),
+      ]),
+    });
+    final c = PlayerController();
+    addTearDown(c.dispose);
+    await tester.runAsync(() async {
+      await LayoutPrefs.instance.reset();
+      await c.load();
+    });
+    await tester.pumpWidget(_app(c, const LibraryList()));
+    await tester.tap(find.byTooltip('Sort playlists'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Name A–Z'));
+    await tester.pumpAndSettle();
+    double row(String name) => tester.getCenter(find.text(name)).dy;
+    expect(row('Alpha'), lessThan(row('Zulu')));
+    await tester.tap(find.byTooltip('Playlist options').at(2));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Pin playlist'));
+    await tester.pumpAndSettle();
+    expect(row('Zulu'), lessThan(row('Alpha')));
+    expect(find.byIcon(Icons.push_pin_rounded), findsOneWidget);
+    await tester.pumpWidget(const SizedBox());
+    await tester.runAsync(LayoutPrefs.instance.reset);
+  });
   group('LibraryViews.foldersOf', () {
     test('each folder holds the files under it, by path; a streamed song is in none', () {
       final folders = LibraryViews(_library, 0).foldersOf(_folders);

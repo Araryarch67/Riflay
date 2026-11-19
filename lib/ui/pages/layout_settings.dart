@@ -547,6 +547,20 @@ class LayoutSettings extends StatelessWidget {
                     options: [for (final v in TabBarStyle.values) (v, v.label)],
                   ),
                 ),
+              if (Features.phoneLayout)
+                SwitchListTile(
+                  secondary: const Icon(Icons.label_off_outlined),
+                  title: Text(tr.hidePhoneNavLabels),
+                  value: p.hidePhoneNavLabels,
+                  onChanged: p.setHidePhoneNavLabels,
+                ),
+              if (Features.phoneLayout && p.tabBar == TabBarStyle.glass)
+                SwitchListTile(
+                  secondary: const Icon(Icons.visibility_outlined),
+                  title: Text(tr.keepPhoneNavOpen),
+                  value: p.keepPhoneNavOpen,
+                  onChanged: p.setKeepPhoneNavOpen,
+                ),
               if (Features.desktopLayout)
                 SettingTile(
                   icon: Icons.view_stream_rounded,

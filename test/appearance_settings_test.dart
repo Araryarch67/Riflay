@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:riflay/services/appearance.dart';
+import 'package:riflay/services/layout_prefs.dart';
+import 'package:riflay/ui/widgets/menus.dart';
 import 'package:riflay/ui/pages/appearance_settings.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -67,6 +69,21 @@ void main() {
     expect(find.text('Mode'), findsNothing);
   });
 
+  testWidgets('Liquid Glass tint offers White independent of the theme', (tester) async {
+    final prefs = LayoutPrefs.instance;
+    await prefs.setGlassTint(GlassTint.black);
+    addTearDown(() => prefs.setGlassTint(GlassTint.theme));
+    await open(tester);
+    final picker = find.byType(OptionPicker<GlassTint>);
+    expect(picker, findsOneWidget);
+    await tester.tap(picker);
+    await tester.pumpAndSettle();
+    final white = find.widgetWithText(MenuItemButton, 'White');
+    expect(white, findsOneWidget);
+    await tester.tap(white);
+    await tester.pumpAndSettle();
+    expect(prefs.glassTint, GlassTint.light);
+  });
   testWidgets('High contrast toggles', (tester) async {
     await open(tester);
     expect(look.highContrast, isFalse);

@@ -258,6 +258,46 @@ void main() {
     });
   }
 
+  testWidgets('glass selection follows the finger before the next tab opens', (tester) async {
+    await show(tester, const Size(412, 915));
+    final home = tester.getCenter(find.byTooltip('Home'));
+    final library = tester.getCenter(find.byTooltip('Library'));
+    final settings = tester.getCenter(find.byTooltip('Settings'));
+    final indicator = find.byKey(const ValueKey('glass-tab-drag-indicator'));
+    final drag = await tester.startGesture(home);
+    await drag.moveTo(library);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 16));
+    expect(selectedTab('Home'), findsOneWidget);
+    final x = tester.getCenter(indicator).dx;
+    await drag.moveTo(settings);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 16));
+    expect(tester.getCenter(indicator).dx, greaterThan(x));
+    expect(selectedTab('Home'), findsOneWidget);
+
+    await drag.up();
+    await tester.pumpAndSettle();
+    expect(selectedTab('Settings'), findsOneWidget);
+    expect(indicator, findsNothing);
+  });
+  testWidgets('hidden navigation labels keep the tab targets and tooltips', (tester) async {
+    await tester.runAsync(() => prefs.setHidePhoneNavLabels(true));
+    final bar = await show(tester, const Size(412, 915));
+    expect(find.text('Home'), findsNothing);
+    expect(find.byTooltip('Home'), findsOneWidget);
+    expect(bar.link.collapsed.value, isFalse);
+  });
+  testWidgets('Keep navigation expanded leaves all glass tabs visible while scrolling', (tester) async {
+    await tester.runAsync(() => prefs.setKeepPhoneNavOpen(true));
+    final bar = await show(tester, const Size(412, 915));
+    await tester.drag(list, const Offset(0, -300));
+    await tester.pumpAndSettle();
+    expect(bar.link.collapsed.value, isFalse);
+    expect(collapsedButton, findsNothing);
+    expect(find.byTooltip('Settings'), findsOneWidget);
+  });
+
   testWidgets('on Search the round button is Home, whichever tab came before; Close returns to that tab', (
     tester,
   ) async {

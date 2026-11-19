@@ -98,7 +98,10 @@ class PlayerController extends ChangeNotifier {
     _subs.add(player.playingStream.listen((on) => on ? audio.directUsb.play() : audio.directUsb.pause()));
     _subs.add(
       player.positionDiscontinuityStream.listen((d) {
-        if (d.reason == PositionDiscontinuityReason.seek) audio.directUsb.flush();
+        if (d.reason == PositionDiscontinuityReason.seek) {
+          audio.directUsb.flush();
+          _saveQueue();
+        }
       }),
     );
     // Smart merge: a song playing from its better sound's download is watched; the next song is got ready.
@@ -124,6 +127,11 @@ class PlayerController extends ChangeNotifier {
                 listEquals(a.sequence, b.sequence),
           )
           .listen((_) {
+            _saveQueue();
+            if (_restoringQueue) {
+              notifyListeners();
+              return;
+            }
             _maybeAutoplay();
             _followQueueRules();
             _followSoundcloudExpiry();
@@ -140,6 +148,7 @@ class PlayerController extends ChangeNotifier {
     );
     _subs.add(
       player.playerStateStream.listen((state) {
+        if (!state.playing) _saveQueue();
         if (state.processingState == ProcessingState.completed) {
           if (_stopAfter != null && identical(_stopAfter, player.sequenceState.currentSource)) {
             _stopAfter = null;
@@ -318,7 +327,14 @@ class PlayerController extends ChangeNotifier {
   /// or SoundCloud's related tracks for a SoundCloud one. When the queue already ran out while they were
   /// being looked up, playback carries on with the first of them.
   void _maybeAutoplay() {
-    if (_regenerating || !_autoplay || holdAutoplay || _extending || player.loopMode != LoopMode.off) return;
+    if (_restoringQueue ||
+        _regenerating ||
+        !_autoplay ||
+        holdAutoplay ||
+        _extending ||
+        player.loopMode != LoopMode.off) {
+      return;
+    }
     final current = currentTrack;
     if (current == null || _autoplaySeed == current.id) return;
     final seq = player.sequenceState;
@@ -646,7 +662,7 @@ class PlayerController extends ChangeNotifier {
 
   /// A stream that fails to resolve shouldn't stall the whole queue: report it and move on.
   void _onPlaybackError(PlayerException e) {
-    if (_disposed) return;
+    if (_disposed || _restoringQueue) return;
     if (_retryLoadFailed case final pending? when !pending.isCompleted) {
       pending.complete(false);
       return;
@@ -885,6 +901,31 @@ class PlayerController extends ChangeNotifier {
   Duration get position => casting ? cast.position : player.position;
 
   Duration? get duration => casting ? cast.duration ?? player.duration : player.duration;
+
+  static const seekSteps = [2, 5, 10, 15, 30];
+  static const _seekStepKey = 'playback.seekStepSeconds';
+  int _seekStepSeconds = 5;
+  int get seekStepSeconds => _seekStepSeconds;
+
+  Future<void> setSeekStepSeconds(int seconds) async {
+    if (!seekSteps.contains(seconds)) return;
+    _seekStepSeconds = seconds;
+    notifyListeners();
+    await (await SharedPreferences.getInstance()).setInt(_seekStepKey, seconds);
+  }
+
+  Future<void> seekByStep({required bool forward}) async {
+    if (currentTrack == null) return;
+    final target = position + Duration(seconds: forward ? _seekStepSeconds : -_seekStepSeconds);
+    final end = duration;
+    await seek(
+      target.isNegative
+          ? Duration.zero
+          : end != null && target > end
+          ? end
+          : target,
+    );
+  }
 
   Future<void> seek(Duration to) async {
     _cancelPlaybackRetry();
@@ -1564,6 +1605,8 @@ class PlayerController extends ChangeNotifier {
     }
     _updatePresence(force: true);
     _autoplay = prefs.getBool(_autoplayKey) ?? true;
+    final seekStep = prefs.getInt(_seekStepKey);
+    _seekStepSeconds = seekSteps.contains(seekStep) ? seekStep! : 5;
     final loop = LoopMode.values.asNameMap()[prefs.getString(_loopKey)];
     final level = prefs.getDouble(_volumeKey);
     if (level != null) _level.value = level.clamp(0, 1);
@@ -1582,6 +1625,7 @@ class PlayerController extends ChangeNotifier {
     session.addListener(() => audio.holdTempoPitch(session.role != ListenRole.none));
     notifyListeners();
     // The player's own loop mode and volume are not needed before the first frame; they follow it.
+    await _restoreQueue(prefs);
     unawaited(_applyPlayerSettings(loop, level));
     if (Host.isWeb) return;
     unawaited(_enrichUntagged());
@@ -2039,6 +2083,75 @@ class PlayerController extends ChangeNotifier {
   bool _shuffled = false;
   final _random = math.Random();
 
+  static const _queuePrefsKey = 'playback.queue.v1';
+  SharedPreferences? _queuePrefs;
+  AppLifecycleListener? _queueLifecycle;
+  bool _restoringQueue = false;
+  bool _queueSaveScheduled = false;
+
+  Future<void> _restoreQueue(SharedPreferences prefs) async {
+    _queuePrefs = prefs;
+    _queueLifecycle ??= AppLifecycleListener(onPause: _saveQueue, onHide: _saveQueue);
+    final raw = prefs.getString(_queuePrefsKey);
+    if (raw == null || player.audioSources.isNotEmpty) return;
+    _restoringQueue = true;
+    try {
+      final saved = jsonDecode(raw) as Map<String, dynamic>;
+      final tracks = (saved['tracks'] as List).map((item) => Track.fromJson((item as Map).cast())).toList();
+      if (tracks.isEmpty) return;
+      final ordered = (saved['ordered'] as List?)?.map((item) => Track.fromJson((item as Map).cast())).toList();
+      final index = (saved['index'] as int).clamp(0, tracks.length - 1);
+      final position = Duration(milliseconds: math.max(0, saved['positionMs'] as int));
+      _ordered = ordered ?? tracks;
+      _shuffled = saved['shuffled'] == true && ordered != null;
+      playingFrom = saved['from'] as String?;
+      // Populate the idle playlist. The media engine opens it only when the listener presses Play.
+      await player.setAudioSources([for (final track in tracks) _sourceFor(track)], preload: false);
+      await player.seek(position, index: index);
+    } catch (e) {
+      debugPrint('Restoring playback queue failed: $e');
+      if (player.audioSources.isEmpty) {
+        _ordered = const [];
+        _shuffled = false;
+        playingFrom = null;
+      }
+    } finally {
+      _restoringQueue = false;
+    }
+    if (!_disposed) notifyListeners();
+  }
+
+  void _saveQueue() {
+    if (_queuePrefs == null || _queueSaveScheduled || _restoringQueue || _changingShuffle) return;
+    _queueSaveScheduled = true;
+    scheduleMicrotask(() {
+      _queueSaveScheduled = false;
+      if (!_disposed) _writeQueue();
+    });
+  }
+
+  void _writeQueue() {
+    final prefs = _queuePrefs;
+    if (prefs == null || _restoringQueue || ListenTogether.of(this).role == ListenRole.guest) return;
+    final state = player.sequenceState;
+    if (state.sequence.any((source) => source.tag is! Track)) return;
+    if (state.sequence.isEmpty) {
+      if (prefs.containsKey(_queuePrefsKey)) prefs.remove(_queuePrefsKey).ignore();
+      return;
+    }
+    final snapshot = jsonEncode({
+      'tracks': [for (final source in state.sequence) (source.tag as Track).toJson()],
+      if (_shuffled) 'ordered': [for (final track in _ordered) track.toJson()],
+      'shuffled': _shuffled,
+      'index': state.currentIndex ?? 0,
+      'positionMs': position.inMilliseconds,
+      'from': playingFrom,
+    });
+    if (prefs.getString(_queuePrefsKey) != snapshot) {
+      prefs.setString(_queuePrefsKey, snapshot).ignore();
+    }
+  }
+
   AudioSource _sourceFor(Track t, {Track? tag}) {
     final source = _buildSourceFor(t, tag: tag);
     if (t.path != null) _audioTracks[source] = t;
@@ -2345,6 +2458,7 @@ class PlayerController extends ChangeNotifier {
     // Out of the play-in-order list too, so turning shuffle off doesn't bring it back.
     final inOrder = _ordered.indexWhere((t) => t.id == track.id);
     if (inOrder >= 0) _ordered = [..._ordered]..removeAt(inOrder);
+    _saveQueue();
     notifyListeners();
   }
 
@@ -2392,7 +2506,7 @@ class PlayerController extends ChangeNotifier {
     } else {
       // At the end of the queue play() would do nothing: start it over.
       if (player.processingState == ProcessingState.completed) await player.seek(Duration.zero, index: 0);
-      unawaited(player.play());
+      unawaited(_play());
     }
   }
 
@@ -2561,7 +2675,7 @@ class PlayerController extends ChangeNotifier {
   }
 
   void _followSmartMerge() {
-    if (_disposed) return;
+    if (_disposed || _restoringQueue) return;
     _watchMergedDownload();
     _followLateMerge();
     // The next song is looked up and its download begun while this one plays, so it opens at once.
@@ -2675,6 +2789,7 @@ class PlayerController extends ChangeNotifier {
       notifyListeners();
     } finally {
       _changingShuffle = false;
+      _saveQueue();
     }
   }
 
@@ -2856,6 +2971,8 @@ class PlayerController extends ChangeNotifier {
 
   @override
   void dispose() {
+    _writeQueue();
+    _queueLifecycle?.dispose();
     _disposed = true;
     _cancelPlaybackRetry();
     _qualityTimer?.cancel();

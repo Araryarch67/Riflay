@@ -34,7 +34,7 @@ class PlaybackSettings extends StatelessWidget {
     final c = PlayerScope.of(context);
     final muted = settingsMuted(context);
     return ListenableBuilder(
-      listenable: Listenable.merge([c.audio, MusicSources.instance]),
+      listenable: Listenable.merge([c, c.audio, MusicSources.instance]),
       builder: (context, _) => SettingsCard(
         children: [
           SettingTile(
@@ -61,6 +61,15 @@ class PlaybackSettings extends StatelessWidget {
             subtitle: Text(tr.autoplayKeepGoing),
             value: c.autoplay,
             onChanged: c.setAutoplay,
+          ),
+          SettingTile(
+            icon: Icons.fast_forward_rounded,
+            title: Text(tr.seekStep),
+            control: OptionPicker<int>(
+              value: c.seekStepSeconds,
+              options: [for (final step in PlayerController.seekSteps) (step, tr.seekStepSeconds(step))],
+              onChanged: c.setSeekStepSeconds,
+            ),
           ),
           if (AudioEngine.supported)
             SwitchListTile(

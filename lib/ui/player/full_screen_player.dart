@@ -109,7 +109,11 @@ class _FullScreenPlayerState extends State<FullScreenPlayer> {
                     child: TrackSwitcher(
                       trackId: track.id,
                       slide: false,
-                      child: Artwork(key: ValueKey(track.id), track: track, radius: 12),
+                      child: Artwork(
+                        key: ValueKey(track.id),
+                        track: LayoutPrefs.instance.playerCover == PlayerCover.logo ? null : track,
+                        radius: 12,
+                      ),
                     ),
                   ),
                 ),
@@ -173,7 +177,7 @@ class _FullScreenPlayerState extends State<FullScreenPlayer> {
             // Music video: the blurred cover first, the video over it once it plays, then a dimming for the text.
             // Lightweight keeps the plain colour.
             if (Appearance.instance.nowPlaying == NowPlayingBackground.video && !LayoutPrefs.lightweight) ...[
-              if (track != null)
+              if (track != null && LayoutPrefs.instance.playerCover != PlayerCover.logo)
                 Positioned.fill(
                   child: _UnlessVideo(
                     track: track,

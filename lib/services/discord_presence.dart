@@ -108,8 +108,10 @@ class DiscordPresence {
     this.clientId, {
     @visibleForTesting Iterable<String> Function()? socketPaths,
     @visibleForTesting Future<String?> Function(Track)? monochromeCover,
-  }) : _socketPaths = socketPaths ?? _candidatePaths,
-       _monochromeCover = monochromeCover ?? _findMonochromeCover;
+    @visibleForTesting Duration heartbeat = const Duration(seconds: 30),
+  }) : _socketPaths = socketPaths ?? candidatePaths,
+       _monochromeCover = monochromeCover ?? _findMonochromeCover,
+       _heartbeatEvery = heartbeat;
 
   final String clientId;
   final Iterable<String> Function() _socketPaths;
@@ -122,11 +124,21 @@ class DiscordPresence {
   /// Discord allows 5 activity updates per 20 s; stay comfortably under that.
   static const _minInterval = Duration(seconds: 4);
 
+  /// A failed connection retries at 1 s, 2 s, 4 s… up to half a minute, so Discord starting late is picked up
+  /// without hammering a closed pipe on every update.
+  static const _minBackoff = Duration(seconds: 1);
+  static const _maxBackoff = Duration(seconds: 30);
+
   /// Where the "Download Riflay" button leads: the newest release, files for every OS.
   static const downloadUrl = 'https://github.com/Araryarch67/Riflay/releases/latest';
 
   _IpcConnection? _conn;
-  bool _connecting = false;
+  Future<_IpcConnection?>? _connecting;
+  bool _sending = false;
+  Timer? _reconnect;
+  Timer? _heartbeat;
+  final Duration _heartbeatEvery;
+  Duration _backoff = _minBackoff;
   DateTime _lastSent = DateTime(0);
   Timer? _pending;
   Map<String, dynamic>? _wanted;
@@ -134,6 +146,8 @@ class DiscordPresence {
   final _monochromeCovers = <String, Future<String?>>{};
   bool _enabled = true;
   DateTime _appStartTime = DateTime.now();
+
+  static void _log(String message) => debugPrint('[Discord RPC] $message');
 
   @visibleForTesting
   set appStartTimeForTesting(DateTime t) => _appStartTime = t;
@@ -147,11 +161,17 @@ class DiscordPresence {
 
   bool get enabled => _enabled;
   set enabled(bool value) {
+    if (_enabled == value) return;
     _enabled = value;
     if (!value) {
       _wanted = null;
       _pending?.cancel();
-      if (_conn != null) _send(null);
+      _reconnect?.cancel();
+      _reconnect = null;
+      _heartbeat?.cancel();
+      _heartbeat = null;
+      _backoff = _minBackoff;
+      if (_conn != null) unawaited(_send());
     }
   }
 
@@ -176,7 +196,7 @@ class DiscordPresence {
       _wanted = null;
     }
     // Nothing shown yet and nothing to show: don't wake Discord up just to clear.
-    if (_wanted == null && _conn == null) {
+    if (_wanted == null && _conn == null && _connecting == null) {
       _pending?.cancel();
       return;
     }
@@ -208,8 +228,10 @@ class DiscordPresence {
 
   void _schedule() {
     _pending?.cancel();
-    final wait = _minInterval - DateTime.now().difference(_lastSent);
-    _pending = Timer(wait.isNegative ? Duration.zero : wait, () => _send(_wanted));
+    var wait = _minInterval - DateTime.now().difference(_lastSent);
+    // A clock change must not stall the presence for longer than one rate-limit window.
+    if (wait > _minInterval) wait = _minInterval;
+    _pending = Timer(wait.isNegative ? Duration.zero : wait, _send);
   }
 
   /// Maps an in-app location to a friendly, localized browsing description.
@@ -316,48 +338,143 @@ class DiscordPresence {
     return t.length > 128 ? '${t.substring(0, 127)}…' : t;
   }
 
-  Future<void> _send(Map<String, dynamic>? activity) async {
-    _lastSent = DateTime.now();
-    final conn = await _ensureConnected();
-    if (conn == null || _disposed || (activity != null && !_enabled)) return;
+  Future<void> _send() async {
+    if (_disposed || _sending || (_conn == null && (_wanted == null || _reconnect != null))) return;
+    _sending = true;
     try {
+      final conn = await _ensureConnected();
+      if (conn == null || !identical(conn, _conn) || _disposed) return;
+      // The player can skip, pause or disable RPC while Discord is handshaking.
+      final activity = _enabled ? _wanted : null;
+      final nonce = '${DateTime.now().microsecondsSinceEpoch}-${Random().nextInt(1 << 32)}';
       conn.send(1, {
         'cmd': 'SET_ACTIVITY',
         'args': {'pid': pid, 'activity': activity},
-        'nonce': '${DateTime.now().microsecondsSinceEpoch}-${Random().nextInt(1 << 32)}',
+        'nonce': nonce,
       });
+      if (activity == null) {
+        _heartbeat?.cancel();
+        _heartbeat = null;
+      } else {
+        _startHeartbeat();
+      }
+      _lastSent = DateTime.now();
+      _pending?.cancel();
+      _log('SET_ACTIVITY sent (nonce $nonce${activity == null ? ', clearing' : ''})');
     } catch (e) {
-      debugPrint('Discord presence: send failed ($e); will reconnect');
+      _log('SET_ACTIVITY failed to send ($e); will reconnect');
       _drop();
+    } finally {
+      _sending = false;
     }
   }
 
-  Future<_IpcConnection?> _ensureConnected() async {
-    if (_conn != null) return _conn;
-    if (_connecting) return null;
-    _connecting = true;
-    try {
-      for (final path in _socketPaths()) {
-        final conn = await _IpcConnection.open(path, onClosed: _drop);
+  /// Shares one connection attempt between calls: an update arriving while the handshake is in flight now waits
+  /// for it instead of being dropped.
+  Future<_IpcConnection?> _ensureConnected() {
+    final conn = _conn;
+    if (conn != null) return Future.value(conn);
+    return _connecting ??= _connect().whenComplete(() => _connecting = null);
+  }
+
+  Future<_IpcConnection?> _connect() async {
+    final paths = _socketPaths().toList();
+    _log('scanning ${paths.length} IPC endpoint(s)');
+    for (final path in paths) {
+      if (_disposed || !_enabled) return null;
+      _IpcConnection? conn;
+      try {
+        conn = await _IpcConnection.open(path, onClosed: _lost, onMessage: _onMessage);
         if (conn == null) continue;
+        _log('IPC connected: $path');
         conn.send(0, {'v': 1, 'client_id': clientId});
-        if (await conn.ready.timeout(const Duration(seconds: 3), onTimeout: () => false)) {
-          return _conn = conn;
+        _log('handshake sent to $path (v1, client $clientId)');
+        final ready = await conn.ready.timeout(const Duration(seconds: 3), onTimeout: () => false);
+        if (ready && !_disposed && _enabled) {
+          _log('handshake accepted by $path');
+          _conn = conn;
+          _backoff = _minBackoff;
+          _reconnect?.cancel();
+          _reconnect = null;
+
+          return conn;
         }
+        _log('handshake refused by $path; trying the next endpoint');
         conn.close();
+      } catch (e) {
+        _log('IPC handshake on $path failed ($e); trying the next endpoint');
+        conn?.close();
       }
-      return null; // Discord isn't running; try again on the next update.
-    } finally {
-      _connecting = false;
     }
+    if (!_disposed && _enabled) {
+      _log('no Discord IPC endpoint answered; retrying in ${_backoff.inMilliseconds} ms');
+      _scheduleReconnect();
+    }
+    return null; // Discord isn't running; the retry timer tries again.
+  }
+
+  /// Logs what Discord answered, so a device where the presence silently stays empty can be told apart from one
+  /// whose activity Discord rejected.
+  void _onMessage(int op, Map<String, dynamic> payload) {
+    if (payload['evt'] == 'READY') return; // The handshake's own await logs it.
+    final cmd = payload['cmd'];
+    final nonce = payload['nonce'];
+    final suffix = nonce == null ? '' : ' (nonce $nonce)';
+    if (payload['evt'] == 'ERROR') {
+      _log('$cmd rejected$suffix: ${payload['data']}');
+    } else if (cmd == 'SET_ACTIVITY') {
+      _log('SET_ACTIVITY ok$suffix');
+    }
+  }
+
+  /// A connection was closed by Discord (quit, restart, or a pipe error): retry with backoff and put the last
+  /// presence back once it is listening again.
+  void _lost(_IpcConnection conn) {
+    if (!identical(conn, _conn)) return; // An abandoned attempt must not drop the live connection.
+    _log('IPC closed: ${conn.path}');
+    _conn = null;
+    conn.close();
+    _scheduleReconnect();
   }
 
   void _drop() {
-    _conn?.close();
+    final conn = _conn;
+    if (conn == null) return;
     _conn = null;
+    conn.close();
+    _scheduleReconnect();
   }
 
-  static Iterable<String> _candidatePaths() sync* {
+  void _scheduleReconnect() {
+    // Nothing to restore: reconnecting only to clear a presence Discord already forgot would be wasted work.
+    if (_disposed || !_enabled || _wanted == null || _reconnect != null) return;
+    final delay = _backoff;
+    _reconnect = Timer(delay, () {
+      _reconnect = null;
+      if (_disposed || !_enabled || _conn != null) return;
+      unawaited(_send());
+    });
+    _backoff = Duration(milliseconds: min(_backoff.inMilliseconds * 2, _maxBackoff.inMilliseconds));
+  }
+
+  /// While connected, resend now and then: a restarted Discord forgets the activity, and on Windows the pipe
+  /// only reports the hang-up on the next write.
+  void _startHeartbeat() {
+    if (_heartbeat != null || _heartbeatEvery <= Duration.zero) return;
+    _heartbeat = Timer.periodic(_heartbeatEvery, (_) {
+      if (_disposed || !_enabled) return;
+      if (_conn == null) {
+        _scheduleReconnect();
+        return;
+      }
+      // Never let the keepalive push a burst past Discord's 5 updates per 20 s.
+      if (_wanted != null && DateTime.now().difference(_lastSent) >= _minInterval) unawaited(_send());
+    });
+  }
+
+  /// Every endpoint Discord may be listening on: `discord-ipc-0` to `discord-ipc-9`, in the order Discord's own
+  /// client tries them, since another client (Canary, PTB, Vesktop…) can hold the first ones.
+  static Iterable<String> candidatePaths() sync* {
     if (Host.isWindows) {
       for (var i = 0; i < 10; i++) {
         yield r'\\?\pipe\discord-ipc-'
@@ -365,16 +482,17 @@ class DiscordPresence {
       }
       return;
     }
-    // Where Discord itself puts the socket: the first of these that is set. Not
-    // every one of them: a shared /tmp is open to other accounts on the
-    // machine, which could stand in for Discord there and hear what's playing.
+    // Where Discord itself looks for the socket: every one of these that is set,
+    // in its order, then /tmp. A shared /tmp is last because it is open to other
+    // accounts on the machine, which could stand in for Discord there and hear
+    // what's playing; the user's own runtime directories are preferred.
     final env = Host.environment;
-    final base = [
-      env['XDG_RUNTIME_DIR'],
-      env['TMPDIR'],
-      env['TMP'],
-      env['TEMP'],
-    ].firstWhere((d) => d != null && d.isNotEmpty, orElse: () => '/tmp')!;
+    final bases = <String>[];
+    for (final key in const ['XDG_RUNTIME_DIR', 'TMPDIR', 'TMP', 'TEMP']) {
+      final dir = env[key];
+      if (dir != null && dir.isNotEmpty && !bases.contains(dir)) bases.add(dir);
+    }
+    if (!bases.contains('/tmp')) bases.add('/tmp');
     // Plain installs, then Flatpak and Snap sandboxes.
     const subdirs = [
       '',
@@ -383,9 +501,11 @@ class DiscordPresence {
       'snap.discord/',
       '.flatpak/com.discordapp.Discord/xdg-run/',
     ];
-    for (final sub in subdirs) {
-      for (var i = 0; i < 10; i++) {
-        yield '$base/${sub}discord-ipc-$i';
+    for (final base in bases) {
+      for (final sub in subdirs) {
+        for (var i = 0; i < 10; i++) {
+          yield '$base/${sub}discord-ipc-$i';
+        }
       }
     }
   }
@@ -393,6 +513,8 @@ class DiscordPresence {
   void dispose() {
     _disposed = true;
     _pending?.cancel();
+    _reconnect?.cancel();
+    _heartbeat?.cancel();
     final conn = _conn;
     if (conn != null) {
       try {
@@ -409,17 +531,25 @@ class DiscordPresence {
 
 /// One framed IPC connection (socket or named pipe).
 class _IpcConnection {
-  _IpcConnection._(this._write, this._closer);
+  _IpcConnection._(this.path, this._write, this._closer, this._onLost, this._onMessage);
 
+  /// The endpoint this came from, for logs.
+  final String path;
   final void Function(List<int> bytes) _write;
   final void Function() _closer;
+  final void Function(_IpcConnection conn) _onLost;
+  final void Function(int op, Map<String, dynamic> payload)? _onMessage;
   final _ready = Completer<bool>();
   final _buffer = BytesBuilder();
   bool _closed = false;
 
   Future<bool> get ready => _ready.future;
 
-  static Future<_IpcConnection?> open(String path, {required void Function() onClosed}) async {
+  static Future<_IpcConnection?> open(
+    String path, {
+    required void Function(_IpcConnection conn) onClosed,
+    void Function(int op, Map<String, dynamic> payload)? onMessage,
+  }) async {
     try {
       if (Host.isWindows) {
         final pipe = await File(path).open(mode: FileMode.append);
@@ -429,13 +559,16 @@ class _IpcConnection {
         // Discord answers each message with one frame, so each write reads its answer.
         var queue = Future<void>.value();
         void enqueue(Future<void> Function() op) =>
-            queue = queue.then((_) => op()).catchError((Object _) => conn._onClosed(onClosed));
+            queue = queue.then((_) => op()).catchError((Object _) => conn._onClosed());
         conn = _IpcConnection._(
+          path,
           (b) => enqueue(() async {
             await pipe.writeFrom(b);
             await conn._readFrame(pipe).timeout(const Duration(seconds: 5));
           }),
           () => enqueue(pipe.close),
+          onClosed,
+          onMessage,
         );
         return conn;
       }
@@ -444,10 +577,10 @@ class _IpcConnection {
         InternetAddress(path, type: InternetAddressType.unix),
         0,
       ).timeout(const Duration(seconds: 2));
-      final conn = _IpcConnection._(socket.add, socket.destroy);
+      final conn = _IpcConnection._(path, socket.add, socket.destroy, onClosed, onMessage);
       // A write after Discord hung up fails here, not in send(): listen does the cleanup.
       socket.done.ignore();
-      socket.listen(conn._onData, onDone: () => conn._onClosed(onClosed), onError: (_) => conn._onClosed(onClosed));
+      socket.listen(conn._onData, onDone: conn._onClosed, onError: (_) => conn._onClosed());
       return conn;
     } catch (_) {
       return null;
@@ -475,10 +608,14 @@ class _IpcConnection {
   /// Discord's replies are a few hundred bytes; anything this big isn't Discord.
   static const _maxFrame = 64 << 10;
 
-  void _onClosed(void Function() onClosed) {
-    if (!_ready.isCompleted) _ready.complete(false);
-    if (!_closed) onClosed();
+  void _onClosed() {
+    if (_closed) return;
     _closed = true;
+    if (!_ready.isCompleted) _ready.complete(false);
+    try {
+      _closer();
+    } catch (_) {}
+    _onLost(this);
   }
 
   void _onData(List<int> data) {
@@ -489,12 +626,17 @@ class _IpcConnection {
       final op = header.getInt32(0, Endian.little);
       final len = header.getInt32(4, Endian.little);
       if (len < 0 || len > _maxFrame) {
-        _closed = true;
-        _closer();
+        _onClosed();
         return;
       }
       if (bytes.length < 8 + len) break;
-      final payload = jsonDecode(utf8.decode(bytes.sublist(8, 8 + len))) as Map<String, dynamic>;
+      final Map<String, dynamic> payload;
+      try {
+        payload = jsonDecode(utf8.decode(bytes.sublist(8, 8 + len))) as Map<String, dynamic>;
+      } catch (_) {
+        _onClosed(); // Not a Discord frame; start over on a fresh connection.
+        return;
+      }
       _handle(op, payload);
       bytes = bytes.sublist(8 + len);
     }
@@ -504,9 +646,21 @@ class _IpcConnection {
   }
 
   void _handle(int op, Map<String, dynamic> payload) {
-    if (op == 1 && payload['evt'] == 'READY' && !_ready.isCompleted) _ready.complete(true);
-    if (payload['evt'] == 'ERROR') debugPrint('Discord presence error: ${payload['data']}');
-    if (op == 2) _ready.isCompleted ? null : _ready.complete(false); // CLOSE: bad client id, etc.
+    if (op == 1 && payload['evt'] == 'READY' && !_ready.isCompleted) {
+      _ready.complete(true);
+      return;
+    }
+    if (op == 2) {
+      // CLOSE: bad client id, a second client for the same app, etc.
+      if (!_ready.isCompleted) _ready.complete(false);
+      _onClosed();
+      return;
+    }
+    if (op == 3 && !Host.isWindows) {
+      send(4, payload);
+      return;
+    }
+    _onMessage?.call(op, payload);
   }
 
   void send(int op, Map<String, dynamic> payload) {

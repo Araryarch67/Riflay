@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 import 'dart:ui' show ImageFilter, lerpDouble;
 
@@ -257,7 +258,9 @@ class GlassBarLink {
     // The page's own list, not a shelf of covers across it or a list inside it.
     if (n.depth != 0 || n.metrics.axis != Axis.vertical) return false;
     final m = n.metrics;
-    if (DebugSwitches.noTabBarCollapse || m.pixels <= m.minScrollExtent + _top) {
+    if (DebugSwitches.noTabBarCollapse ||
+        LayoutPrefs.instance.keepPhoneNavOpen ||
+        m.pixels <= m.minScrollExtent + _top) {
       _run = 0;
       collapsed.value = false;
     } else if (n is ScrollUpdateNotification && m.pixels <= m.maxScrollExtent) {
@@ -308,7 +311,10 @@ class _GlassBarState extends State<_GlassBar> with TickerProviderStateMixin {
 
   /// Scrolled down, with a song in the player.
   bool get _collapses =>
-      widget.link.collapsed.value && !DebugSwitches.noTabBarCollapse && (_hasSong || DebugSwitches.tabBarCollapseIdle);
+      widget.link.collapsed.value &&
+      !LayoutPrefs.instance.keepPhoneNavOpen &&
+      !DebugSwitches.noTabBarCollapse &&
+      (_hasSong || DebugSwitches.tabBarCollapseIdle);
 
   late final _search = _anim(widget.tab == PhoneTab.search);
   late final _typing = _anim(false);
@@ -538,24 +544,11 @@ class _GlassBarState extends State<_GlassBar> with TickerProviderStateMixin {
                 maxWidth: full,
                 child: Padding(
                   padding: const EdgeInsets.all(4),
-                  child: _SwipeTabs(
-                    tabs: [for (final i in shown) i.tab],
+                  child: _DraggableGlassTabs(
+                    tabs: shown,
                     tab: widget.tab,
+                    renderer: _renderer,
                     onSelect: widget.onSelect,
-                    child: Row(
-                      children: [
-                        for (final i in shown)
-                          Expanded(
-                            flex: flex(i),
-                            child: _TabButton(
-                              info: i,
-                              selected: widget.tab == i.tab,
-                              onTap: () => widget.onSelect(i.tab),
-                              child: _Capsule(info: i, selected: widget.tab == i.tab, glass: true, renderer: _renderer),
-                            ),
-                          ),
-                      ],
-                    ),
                   ),
                 ),
               ),
@@ -831,6 +824,137 @@ class _SwipeTabs extends StatelessWidget {
   }
 }
 
+/// The bar keeps the page stable during the scrub. Only the glass indicator
+/// follows the pointer, and the tab opens once the gesture is committed.
+class _DraggableGlassTabs extends StatefulWidget {
+  const _DraggableGlassTabs({required this.tabs, required this.tab, required this.renderer, required this.onSelect});
+
+  final List<_TabInfo> tabs;
+  final PhoneTab tab;
+  final bool renderer;
+  final ValueChanged<PhoneTab> onSelect;
+
+  @override
+  State<_DraggableGlassTabs> createState() => _DraggableGlassTabsState();
+}
+
+class _DraggableGlassTabsState extends State<_DraggableGlassTabs> {
+  double? _finger;
+  int? _target;
+  bool _settling = false;
+  Timer? _settleEnd;
+  static const _snap = Duration(milliseconds: 160);
+
+  @override
+  void dispose() {
+    _settleEnd?.cancel();
+    super.dispose();
+  }
+
+  void _update(double x, List<double> edges) {
+    _settleEnd?.cancel();
+    var index = 0;
+    while (index < edges.length - 2 && x >= edges[index + 1]) {
+      index++;
+    }
+    if (_target != index) HapticFeedback.selectionClick();
+    setState(() {
+      _finger = x;
+      _target = index;
+      _settling = false;
+    });
+  }
+
+  void _finish({required bool commit}) {
+    final target = _target;
+    if (_finger == null) return;
+    setState(() {
+      _finger = null;
+      _target = null;
+      _settling = LayoutPrefs.moves;
+    });
+    if (_settling) {
+      _settleEnd = Timer(_snap + const Duration(milliseconds: 32), () {
+        if (mounted && _settling) setState(() => _settling = false);
+      });
+    }
+    if (commit && target != null && target < widget.tabs.length && widget.tabs[target].tab != widget.tab) {
+      widget.onSelect(widget.tabs[target].tab);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, box) {
+      final selected = widget.tabs.indexWhere((info) => info.tab == widget.tab);
+      final unit = box.maxWidth / (widget.tabs.length + (selected < 0 ? 0 : 1));
+      final edges = <double>[0];
+      for (var i = 0; i < widget.tabs.length; i++) {
+        edges.add(edges.last + (i == selected ? 2 : 1) * unit);
+      }
+      final finger = _finger;
+      final moving = finger != null || _settling;
+      final dragEnabled = !DebugSwitches.noTabSwipe && widget.tabs.length > 1;
+      final indicatorWidth = (unit * 1.6).clamp(40.0, box.maxWidth < 40 ? 40.0 : box.maxWidth);
+      final center = finger ?? (selected < 0 ? indicatorWidth / 2 : (edges[selected] + edges[selected + 1]) / 2);
+      final left = (center - indicatorWidth / 2).clamp(
+        0.0,
+        (box.maxWidth - indicatorWidth).clamp(0.0, double.infinity),
+      );
+      return GestureDetector(
+        behavior: HitTestBehavior.translucent,
+        onHorizontalDragStart: !dragEnabled ? null : (details) => _update(details.localPosition.dx, edges),
+        onHorizontalDragUpdate: !dragEnabled ? null : (details) => _update(details.localPosition.dx, edges),
+        onHorizontalDragEnd: !dragEnabled ? null : (_) => _finish(commit: true),
+        onHorizontalDragCancel: !dragEnabled ? null : () => _finish(commit: false),
+        child: Stack(
+          alignment: Alignment.centerLeft,
+          children: [
+            if (moving)
+              AnimatedPositioned(
+                duration: finger != null ? Duration.zero : _snap,
+                curve: Curves.easeOutCubic,
+                left: left,
+                width: indicatorWidth,
+                height: 40,
+                onEnd: () {
+                  if (_settling && _finger == null) setState(() => _settling = false);
+                },
+                child: IgnorePointer(
+                  child: _GlassButtonFace(
+                    renderer: widget.renderer,
+                    active: true,
+                    child: const SizedBox.expand(key: ValueKey('glass-tab-drag-indicator')),
+                  ),
+                ),
+              ),
+            Row(
+              children: [
+                for (final (i, info) in widget.tabs.indexed)
+                  Expanded(
+                    flex: i == selected ? 2 : 1,
+                    child: _TabButton(
+                      info: info,
+                      selected: i == selected,
+                      onTap: () => widget.onSelect(info.tab),
+                      child: _Capsule(
+                        info: info,
+                        selected: i == selected,
+                        glass: true,
+                        renderer: widget.renderer,
+                        paintGlass: !moving,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ],
+        ),
+      );
+    },
+  );
+}
+
 /// The docked styles: flat, edge to edge, a hairline on top.
 class _DockedBar extends StatelessWidget {
   const _DockedBar({required this.style, required this.tab, required this.onSelect});
@@ -862,6 +986,7 @@ class _DockedBar extends StatelessWidget {
               TabBarStyle.material => _IconOverLabel(info: i, selected: selected, pill: true),
               TabBarStyle.underline => _Underlined(info: i, selected: selected),
               TabBarStyle.minimal => _IconAndDot(info: i, selected: selected),
+              TabBarStyle.text when LayoutPrefs.instance.hidePhoneNavLabels => _IconAndDot(info: i, selected: selected),
               TabBarStyle.text => Center(
                 child: _TabLabel(info: i, selected: selected, accent: true),
               ),
@@ -1086,8 +1211,10 @@ class _IconOverLabel extends StatelessWidget {
           )
         else
           icon,
-        const SizedBox(height: 4),
-        _TabLabel(info: info, selected: selected),
+        if (!LayoutPrefs.instance.hidePhoneNavLabels) ...[
+          const SizedBox(height: 4),
+          _TabLabel(info: info, selected: selected),
+        ],
       ],
     );
   }
@@ -1121,8 +1248,10 @@ class _Underlined extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             _icon(context, info, selected),
-            const SizedBox(height: 4),
-            _TabLabel(info: info, selected: selected),
+            if (!LayoutPrefs.instance.hidePhoneNavLabels) ...[
+              const SizedBox(height: 4),
+              _TabLabel(info: info, selected: selected),
+            ],
           ],
         ),
       ),
@@ -1185,10 +1314,16 @@ class _GlassButtonFace extends StatelessWidget {
 }
 
 class _Capsule extends StatelessWidget {
-  const _Capsule({required this.info, required this.selected, this.glass = false, this.renderer = false});
+  const _Capsule({
+    required this.info,
+    required this.selected,
+    this.glass = false,
+    this.renderer = false,
+    this.paintGlass = true,
+  });
 
   final _TabInfo info;
-  final bool selected, glass, renderer;
+  final bool selected, glass, renderer, paintGlass;
 
   @override
   Widget build(BuildContext context) {
@@ -1207,7 +1342,7 @@ class _Capsule extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           _TabIcon(info: info, selected: selected, color: selected ? ink : colors.textSecondary),
-          if (selected) ...[
+          if (selected && !LayoutPrefs.instance.hidePhoneNavLabels) ...[
             const SizedBox(width: 6),
             Flexible(
               child: _TabLabel(info: info, selected: true, color: ink),
@@ -1217,7 +1352,7 @@ class _Capsule extends StatelessWidget {
       ),
     );
     return Center(
-      child: glass ? _GlassButtonFace(renderer: renderer, active: selected, child: button) : button,
+      child: glass && paintGlass ? _GlassButtonFace(renderer: renderer, active: selected, child: button) : button,
     );
   }
 }

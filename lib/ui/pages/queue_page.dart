@@ -42,6 +42,7 @@ class QueuePage extends StatelessWidget {
       }
     }
     Widget actions(int i) {
+      if (i >= sources.length) return const SizedBox.shrink();
       final source = sources[i];
       return PopupMenuButton<String>(
         tooltip: tr.queue,

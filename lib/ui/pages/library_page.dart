@@ -88,6 +88,92 @@ class _LibraryListState extends State<LibraryList> {
     };
     final folders = _filter == LibraryFilter.local ? c.folders : const <Collection>[];
 
+    final prefs = LayoutPrefs.instance;
+    final playlistRows = <Widget>[];
+    if (show(LibraryFilter.playlists)) {
+      final entries = <({String key, String title, Widget Function(Widget? action) row})>[
+        for (final collection in [...c.playlists.map(c.playlistCollection), ...c.folderPlaylists])
+          if (collection.coverKey case final key?)
+            (
+              key: key,
+              title: collection.title,
+              row: (action) => _LibraryRow(
+                collection: collection,
+                collapsed: widget.collapsed,
+                folderPlaylist: collection.kind == CollectionKind.folder,
+                action: action,
+              ),
+            ),
+        for (final p in online?.playlists ?? const [])
+          (
+            key: PlaylistCovers.remoteKey(p.id),
+            title: p.title,
+            row: (action) => _SimpleRow(
+              collapsed: widget.collapsed,
+              art: Artwork(
+                track: PlaylistCovers.instance.coverOr(PlaylistCovers.remoteKey(p.id), playlistCover(p)),
+                size: 48,
+              ),
+              title: p.title,
+              subtitle: p.count == 0
+                  ? '${tr.playlist} • YouTube Music'
+                  : '${tr.playlist} • YouTube Music • ${tr.songsCount(p.count)}',
+              online: true,
+              location: Locations.remotePlaylist(p.id),
+              onTap: () => openRemotePlaylist(context, p),
+              action: action,
+            ),
+          ),
+      ];
+      final order = prefs.playlistOrder;
+      final rank = {for (final (index, key) in prefs.customPlaylistOrder.indexed) key: index};
+      final original = {for (final (index, entry) in entries.indexed) entry.key: index};
+      entries.sort((a, b) {
+        final pin = (prefs.pinnedPlaylists.contains(b.key) ? 1 : 0) - (prefs.pinnedPlaylists.contains(a.key) ? 1 : 0);
+        if (pin != 0) return pin;
+        final result = switch (order) {
+          PlaylistOrder.library => 0,
+          PlaylistOrder.nameAscending => a.title.toLowerCase().compareTo(b.title.toLowerCase()),
+          PlaylistOrder.nameDescending => b.title.toLowerCase().compareTo(a.title.toLowerCase()),
+          PlaylistOrder.custom => (rank[a.key] ?? rank.length).compareTo(rank[b.key] ?? rank.length),
+        };
+        return result == 0 ? original[a.key]!.compareTo(original[b.key]!) : result;
+      });
+      final visible = [for (final entry in entries) entry.key];
+      for (final (index, entry) in entries.indexed) {
+        final pinned = prefs.pinnedPlaylists.contains(entry.key);
+        final moveUp = index > 0 && prefs.pinnedPlaylists.contains(entries[index - 1].key) == pinned;
+        final moveDown = index + 1 < entries.length && prefs.pinnedPlaylists.contains(entries[index + 1].key) == pinned;
+        playlistRows.add(
+          entry.row(
+            widget.collapsed
+                ? null
+                : PopupMenuButton<VoidCallback>(
+                    tooltip: tr.playlistOptions,
+                    icon: Icon(pinned ? Icons.push_pin_rounded : Icons.more_horiz_rounded, size: 18),
+                    onSelected: (action) => action(),
+                    itemBuilder: (_) => [
+                      PopupMenuItem(
+                        value: () => prefs.togglePinnedPlaylist(entry.key),
+                        child: Text(pinned ? tr.unpinPlaylist : tr.pinPlaylist),
+                      ),
+                      if (moveUp)
+                        PopupMenuItem(
+                          value: () => prefs.movePlaylist(visible, entry.key, -1),
+                          child: Text(tr.movePlaylistUp),
+                        ),
+                      if (moveDown)
+                        PopupMenuItem(
+                          value: () => prefs.movePlaylist(visible, entry.key, 1),
+                          child: Text(tr.movePlaylistDown),
+                        ),
+                    ],
+                  ),
+          ),
+        );
+      }
+    }
+
     final rows = <Widget>[
       // Local: each music folder, then what was downloaded.
       for (final f in folders) _LibraryRow(collection: f, collapsed: widget.collapsed),
@@ -105,29 +191,9 @@ class _LibraryListState extends State<LibraryList> {
             subtitle: tr.newPlaylistSubtitle,
             onTap: () => createPlaylist(context),
           ),
-        for (final p in c.playlists) _LibraryRow(collection: c.playlistCollection(p), collapsed: widget.collapsed),
-        // Folder playlists: a music folder's songs as they are now, marked with the folder icon.
-        for (final f in c.folderPlaylists)
-          _LibraryRow(collection: f, collapsed: widget.collapsed, folderPlaylist: true),
-        if (online != null) ...[
-          if (!hidden.contains('liked') && online.liked.isNotEmpty)
-            _LibraryRow(collection: likedCollection(online.liked), collapsed: widget.collapsed, online: true),
-          for (final p in online.playlists)
-            _SimpleRow(
-              collapsed: widget.collapsed,
-              art: Artwork(
-                track: PlaylistCovers.instance.coverOr(PlaylistCovers.remoteKey(p.id), playlistCover(p)),
-                size: 48,
-              ),
-              title: p.title,
-              subtitle: p.count == 0
-                  ? '${tr.playlist} • YouTube Music'
-                  : '${tr.playlist} • YouTube Music • ${tr.songsCount(p.count)}',
-              online: true,
-              location: Locations.remotePlaylist(p.id),
-              onTap: () => openRemotePlaylist(context, p),
-            ),
-        ],
+        ...playlistRows,
+        if (online != null && !hidden.contains('liked') && online.liked.isNotEmpty)
+          _LibraryRow(collection: likedCollection(online.liked), collapsed: widget.collapsed, online: true),
         if (c.library.isNotEmpty) _LibraryRow(collection: c.allSongs, collapsed: widget.collapsed),
         for (final entry in SmartPlaylists.of(c, PlayHistory.instance).entries)
           if (entry.key != SmartList.mostPlayed || !hidden.contains('top'))
@@ -222,6 +288,21 @@ class _LibraryListState extends State<LibraryList> {
                     tooltip: tr.navSettings,
                     onPressed: () => shell.open(const SettingsPage()),
                     icon: const Icon(Icons.settings_outlined),
+                  ),
+                if (playlistRows.length > 1)
+                  PopupMenuButton<PlaylistOrder>(
+                    tooltip: tr.sortPlaylists,
+                    icon: const Icon(Icons.sort_rounded),
+                    onSelected: prefs.setPlaylistOrder,
+                    itemBuilder: (_) => [
+                      for (final (value, label) in [
+                        (PlaylistOrder.library, tr.playlistLibraryOrder),
+                        (PlaylistOrder.nameAscending, '${tr.name} A–Z'),
+                        (PlaylistOrder.nameDescending, '${tr.name} Z–A'),
+                        (PlaylistOrder.custom, tr.playlistCustomOrder),
+                      ])
+                        CheckedPopupMenuItem(value: value, checked: prefs.playlistOrder == value, child: Text(label)),
+                    ],
                   ),
                 PopupMenuButton<VoidCallback>(
                   // Over the whole window, so a click anywhere (sidebar included) closes it.
@@ -401,6 +482,7 @@ class _SimpleRow extends StatelessWidget {
     required this.onTap,
     this.location,
     this.online = false,
+    this.action,
   });
 
   final bool collapsed;
@@ -410,6 +492,7 @@ class _SimpleRow extends StatelessWidget {
   final VoidCallback onTap;
   final String? location;
   final bool online;
+  final Widget? action;
 
   @override
   Widget build(BuildContext context) {
@@ -454,6 +537,7 @@ class _SimpleRow extends StatelessWidget {
                       ],
                     ),
                   ),
+                  ?action,
                 ],
               ),
       ),
@@ -470,6 +554,7 @@ class _LibraryRow extends StatelessWidget {
     required this.collection,
     required this.collapsed,
     this.online = false,
+    this.action,
     this.folderPlaylist = false,
   });
 
@@ -481,6 +566,7 @@ class _LibraryRow extends StatelessWidget {
 
   /// A YouTube Music collection (Liked music): marked with a cloud.
   final bool online;
+  final Widget? action;
 
   @override
   Widget build(BuildContext context) => PlayerSelect<(bool, bool)>(
@@ -572,6 +658,7 @@ class _LibraryRow extends StatelessWidget {
                       color: AppColors.accent,
                       size: 18,
                     ),
+                  ?action,
                 ],
               ),
       ),

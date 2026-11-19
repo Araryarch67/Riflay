@@ -1880,7 +1880,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get songVideoSwitchSubtitle =>
-      'At the top of Now Playing. Adaptive shows it only when the song has a music video';
+      'At the top of Now Playing and its sidebar. Adaptive shows it only when the song has a music video';
 
   @override
   String get adaptive => 'Adaptive';
@@ -6862,4 +6862,72 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get networkProxySaveFailed => 'Couldn\'t save proxy settings. Try again.';
+
+  @override
+  String get seekStep => 'Seek step';
+
+  @override
+  String get scSeekBackward => 'Seek backward';
+
+  @override
+  String get scSeekForward => 'Seek forward';
+
+  @override
+  String seekStepSeconds(int seconds) {
+    return '$seconds s';
+  }
+
+  @override
+  String get coverAppLogo => 'Riflay logo';
+
+  @override
+  String get keepPhoneNavOpen => 'Keep navigation expanded';
+
+  @override
+  String get coverZoomIn => 'Zoom in';
+
+  @override
+  String get coverZoomOut => 'Zoom out';
+
+  @override
+  String get coverPreview => 'Cover thumbnail preview';
+
+  @override
+  String get coverRotate => 'Rotate right';
+
+  @override
+  String get coverFlip => 'Flip horizontally';
+
+  @override
+  String get coverReset => 'Reset crop';
+
+  @override
+  String get coverGestureHint => 'Drag to position the photo. Pinch, scroll or use the slider to zoom.';
+
+  @override
+  String get playlistOptions => 'Playlist options';
+
+  @override
+  String get pinPlaylist => 'Pin playlist';
+
+  @override
+  String get unpinPlaylist => 'Unpin playlist';
+
+  @override
+  String get movePlaylistUp => 'Move playlist up';
+
+  @override
+  String get movePlaylistDown => 'Move playlist down';
+
+  @override
+  String get sortPlaylists => 'Sort playlists';
+
+  @override
+  String get playlistLibraryOrder => 'Library order';
+
+  @override
+  String get playlistCustomOrder => 'Custom order';
+
+  @override
+  String get hidePhoneNavLabels => 'Hide bottom navigation labels';
 }

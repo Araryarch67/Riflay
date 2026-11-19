@@ -14,10 +14,12 @@ import '../debug_switches.dart';
 /// it afresh, as an implicit animation frozen part-way would show the old look. Covers decode at the size drawn.
 /// `RIFLAY_MOVING_PREVIEWS` lets it move, to tell whether a bug is the freezing's.
 class LivePreview extends StatefulWidget {
-  const LivePreview({super.key, required this.canvas, required this.child});
+  const LivePreview({super.key, required this.canvas, required this.child, this.preserveInsets = false});
 
   /// The size the widgets are laid out at; an infinite height takes the child's own.
   final Size canvas;
+
+  final bool preserveInsets;
   final Widget child;
 
   /// Whether [context] is inside a preview: what would start a player or a native surface draws its still
@@ -58,9 +60,9 @@ class _LivePreviewState extends State<LivePreview> {
         final inner = MediaQuery(
           data: mq.copyWith(
             size: Size(canvas.width, canvas.height.isFinite ? canvas.height : mq.size.height),
-            padding: EdgeInsets.zero,
-            viewPadding: EdgeInsets.zero,
-            viewInsets: EdgeInsets.zero,
+            padding: widget.preserveInsets ? mq.padding : EdgeInsets.zero,
+            viewPadding: widget.preserveInsets ? mq.viewPadding : EdgeInsets.zero,
+            viewInsets: widget.preserveInsets ? mq.viewInsets : EdgeInsets.zero,
             devicePixelRatio: mq.devicePixelRatio * math.min(1, scale),
             disableAnimations: !moving,
           ),
