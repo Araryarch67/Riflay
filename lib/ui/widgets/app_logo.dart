@@ -6,19 +6,19 @@ import '../theme.dart';
 
 /// Riflay's mark, drawn from the same shapes as the app icon
 /// (assets/icon/riflay-transparent.svg). The light parts take the theme's
-/// text colour, so the mark reads on light themes too; the orange stays.
+/// text colour, while the right chevron uses the build's brand accent.
 class AppLogo extends StatelessWidget {
   const AppLogo({super.key, this.size = 16, this.monochromeColor});
 
   final double size;
   final Color? monochromeColor;
 
-  static const orange = Color(0xFFFF7A1A);
+  static const accent = bool.fromEnvironment('RIFLAY_NIGHTLY') ? Color(0xFFA878F7) : Color(0xFFFF7A1A);
 
   @override
   Widget build(BuildContext context) => SizedBox.square(
     dimension: size,
-    child: CustomPaint(painter: _LogoPainter(monochromeColor ?? AppColors.textPrimary, monochromeColor ?? orange)),
+    child: CustomPaint(painter: _LogoPainter(monochromeColor ?? AppColors.textPrimary, monochromeColor ?? accent)),
   );
 }
 
@@ -46,7 +46,7 @@ abstract final class LogoMark {
       ..close();
   }();
 
-  /// The orange chevron.
+  /// The accent chevron.
   static final right = _poly(const [
     Offset(859, 468),
     Offset(1111, 719.5),

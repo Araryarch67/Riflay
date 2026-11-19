@@ -7,14 +7,19 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
 import 'package:riflay/models/track.dart';
+import 'package:riflay/services/language.dart';
 import 'package:riflay/services/library_views.dart';
 import 'package:riflay/services/layout_prefs.dart';
 import 'package:riflay/services/player_controller.dart';
+import 'package:riflay/services/youtube_music_account.dart';
 import 'package:riflay/ui/navigation.dart';
 import 'package:riflay/ui/pages/collection_page.dart';
 import 'package:riflay/ui/pages/library_page.dart';
+import 'package:riflay/ui/pages/settings_page.dart';
 import 'package:riflay/ui/shell/desktop_sidebar.dart';
 import 'package:riflay/ui/shell_scope.dart';
+import 'package:riflay/ui/theme.dart';
+import 'package:riflay/ui/widgets/track_row.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 Track _file(String path, String title, {String artist = 'Someone', String? sourceUrl}) => Track(
@@ -40,27 +45,61 @@ final _folders = ['/music/Rock', '/other/Jazz', '/empty/Folder'].map(p.normalize
 
 /// The real library, with the music folders given here instead of read from FolderWatch's saved list.
 class _Controller extends PlayerController {
+  _Controller({YoutubeMusicLibrary? online}) : _account = _LibraryAccount(online);
+
+  final _LibraryAccount _account;
+
+  @override
+  YoutubeMusicAccount get ytMusic => _account;
+
   @override
   List<Collection> get folders => LibraryViews(library, 0).foldersOf(_folders);
 }
 
-Future<PlayerController> _controller(WidgetTester tester) async {
+class _LibraryAccount extends YoutubeMusicAccount {
+  _LibraryAccount(this.libraryNow);
+
+  @override
+  final YoutubeMusicLibrary? libraryNow;
+
+  @override
+  bool get isSignedIn => libraryNow != null;
+}
+
+class _RadioController extends _Controller {
+  final similar = Track.youtube(videoId: 'nearby', title: 'Related track', artist: 'Someone');
+
+  @override
+  Future<Collection?> startRadio(Track seed) async => Collection(
+    kind: CollectionKind.radio,
+    title: tr.radioFrom(seed.title),
+    subtitle: seed.artist,
+    tracks: [seed, similar],
+  );
+}
+
+Future<PlayerController> _controller(WidgetTester tester, {YoutubeMusicLibrary? online}) async {
   SharedPreferences.setMockInitialValues({
     'library.v1': jsonEncode([for (final t in _library) t.toJson()]),
   });
-  final c = _Controller();
+  final c = _Controller(online: online);
   await tester.runAsync(c.load);
   addTearDown(() => tester.runAsync(() async => c.dispose()));
   return c;
 }
 
-Widget _app(PlayerController c, Widget page, {void Function(Collection)? openCollection}) => MaterialApp(
+Widget _app(
+  PlayerController c,
+  Widget page, {
+  void Function(Collection)? openCollection,
+  void Function(Widget, {String? location})? open,
+}) => MaterialApp(
   home: PlayerScope(
     controller: c,
     child: ShellScope(
       compact: false,
       width: 1200,
-      open: (_, {location}) {},
+      open: open ?? (_, {location}) {},
       openCollection: openCollection ?? (_) {},
       openQueue: () {},
       openNowPlaying: () {},
@@ -81,6 +120,81 @@ void main() {
     (_) async => Directory.systemTemp.path,
   );
 
+  testWidgets('Start radio opens a labeled temporary playlist from the song menu', (tester) async {
+    final player = _RadioController();
+    addTearDown(player.dispose);
+    final seed = Track.youtube(videoId: 'seed', title: 'Radio seed', artist: 'Someone');
+    final opened = <Collection>[];
+    await tester.pumpWidget(
+      _app(
+        player,
+        Center(child: TrackMenuButton(track: seed)),
+        openCollection: opened.add,
+      ),
+    );
+    await tester.tap(find.byType(TrackMenuButton));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text(tr.startRadio));
+    await tester.tap(find.text(tr.startRadio));
+    await tester.pumpAndSettle();
+    expect(opened.single.kind, CollectionKind.radio);
+    expect(opened.single.tracks, [seed, player.similar]);
+
+    await tester.pumpWidget(_app(player, CollectionPage(collection: opened.single)));
+    await tester.pumpAndSettle();
+    expect(find.text(tr.temporaryRadio), findsOneWidget);
+    expect(find.text('Related track'), findsOneWidget);
+  });
+
+  testWidgets('expanded Library shows artists, online playlists, local music and smart collections in order', (
+    tester,
+  ) async {
+    final c = await _controller(
+      tester,
+      online: const YoutubeMusicLibrary(
+        liked: [],
+        recent: [],
+        artists: [RemotePlaylist(id: 'UCtest', browseId: 'UCtest', title: 'Followed artist', count: 0)],
+        playlists: [RemotePlaylist(id: 'PLtest', title: 'Online mix', count: 0)],
+      ),
+    );
+    c.createPlaylist('Local mix');
+    await tester.binding.setSurfaceSize(const Size(1500, 1200));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final opened = <Widget>[];
+    await tester.pumpWidget(_app(c, const LibraryList(full: true), open: (page, {location}) => opened.add(page)));
+    await tester.pumpAndSettle();
+    final items = [
+      'Followed artist',
+      'Someone',
+      'Online mix',
+      'Local mix',
+      'Rock',
+      tr.musicFolders,
+      tr.qualityLossless,
+    ];
+    final sorted = items.toList()
+      ..sort((a, b) {
+        final first = tester.getTopLeft(find.text(a));
+        final second = tester.getTopLeft(find.text(b));
+        return first.dy == second.dy ? first.dx.compareTo(second.dx) : first.dy.compareTo(second.dy);
+      });
+    expect(sorted, items);
+    await tester.tap(find.text(tr.musicFolders));
+    expect((opened.single as SettingsTopicPage).section, SettingsTopic.library);
+
+    await tester.tap(find.byTooltip(tr.moreOptions));
+    await tester.pumpAndSettle();
+    expect(find.text(tr.importPlaylist), findsNothing);
+    await tester.tap(find.text(tr.manageLibrary));
+    await tester.pumpAndSettle();
+    final settings = opened.last as SettingsTopicPage;
+    expect(settings.section, SettingsTopic.library);
+    await tester.pumpWidget(_app(c, settings));
+    await tester.pumpAndSettle();
+    expect(find.widgetWithText(ListTile, tr.importPlaylist), findsOneWidget);
+  });
+
   testWidgets('the sidebar title stays on one line and the actions fit when resized', (tester) async {
     final c = await _controller(tester);
     c.createPlaylist('First mix');
@@ -95,7 +209,7 @@ void main() {
             alignment: Alignment.topLeft,
             child: SizedBox(
               width: width,
-              child: const ShellPanel(gradient: true, child: LibraryList(dense: true)),
+              child: const ShellPanel(child: LibraryList(dense: true)),
             ),
           ),
         ),
@@ -106,13 +220,9 @@ void main() {
       final menuRect = tester.getRect(menu);
       expect(menuRect.right, lessThanOrEqualTo(width));
       expect(titleRect.center.dy, closeTo(menuRect.center.dy, 1));
-      expect(
-        find.byWidgetPredicate((w) {
-          final decoration = w is Ink ? w.decoration : null;
-          return decoration is BoxDecoration && decoration.gradient != null;
-        }),
-        findsOneWidget,
-      );
+      final panel = find.byType(ShellPanel);
+      final material = find.descendant(of: panel, matching: find.byType(Material)).first;
+      expect(tester.widget<Material>(material).color, AppColors.of(tester.element(panel)).panel);
       expect(tester.takeException(), isNull);
     }
   });

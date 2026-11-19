@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 
-import '../../services/language.dart';
 import '../../platform/features.dart';
+import '../../services/language.dart';
 import '../../services/layout_prefs.dart';
 import '../../services/player_controller.dart';
 import '../navigation.dart';
 import '../pages/library_page.dart';
 import '../pages/listen_together_page.dart';
+import '../pages/listening_stats_page.dart';
 import '../pages/settings_page.dart';
+import '../pages/youtube_music_page.dart' show likedCollection;
 import '../shell_scope.dart';
 import '../theme.dart';
 import '../widgets/smooth_scroll.dart';
@@ -65,35 +67,18 @@ class SlidingPanel extends StatelessWidget {
 }
 
 class ShellPanel extends StatelessWidget {
-  const ShellPanel({super.key, required this.child, this.gradient = false});
+  const ShellPanel({super.key, required this.child});
 
   final Widget child;
-  final bool gradient;
 
   @override
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
-    final dark = Theme.of(context).brightness == Brightness.dark;
-    final tinted = Color.lerp(colors.panel, colors.accent, dark ? 0.24 : 0.13)!;
     return Material(
       color: colors.panel,
       borderRadius: BorderRadius.circular(8),
       clipBehavior: Clip.antiAlias,
-      child: gradient
-          ? Ink(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: dark
-                      ? [Color.lerp(tinted, Colors.black, 0.44)!, Color.lerp(tinted, Colors.black, 0.19)!, tinted]
-                      : [Color.lerp(tinted, colors.textPrimary, 0.13)!, tinted, Color.lerp(tinted, colors.panel, 0.3)!],
-                  stops: const [0, 0.52, 1],
-                ),
-              ),
-              child: child,
-            )
-          : child,
+      child: child,
     );
   }
 }
@@ -106,10 +91,12 @@ class DesktopSidebar extends StatelessWidget {
     required this.onHome,
     required this.onSearch,
     this.inTitleBar = false,
+    this.shortcuts = false,
   });
 
   final bool collapsed;
   final bool inTitleBar;
+  final bool shortcuts;
 
   /// What's on screen, so its entry can be highlighted.
   final String location;
@@ -169,13 +156,54 @@ class DesktopSidebar extends StatelessWidget {
       ],
     ];
 
+    if (shortcuts) {
+      final player = PlayerScope.read(context);
+      final shell = ShellScope.of(context);
+      void library([LibraryFilter? filter]) =>
+          shell.open(LibraryPage(initialFilter: filter), location: Locations.library);
+      Widget shortcut(IconData icon, String label, VoidCallback open, {double iconSize = 26}) =>
+          NavLink(collapsed: true, icon: icon, label: label, onTap: open, iconSize: iconSize);
+      return ShellPanel(
+        child: SmoothScroll(
+          builder: (context, scroll) => ListView(
+            controller: scroll,
+            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
+            children: [
+              shortcut(Icons.open_in_full_rounded, tr.expandLibrary, library, iconSize: 16),
+              const Divider(),
+              ...navItems,
+              ListenableBuilder(
+                listenable: player.ytMusic,
+                builder: (context, _) {
+                  final liked = player.ytMusic.libraryNow?.liked;
+                  if (liked == null || liked.isEmpty) return const SizedBox.shrink();
+                  return shortcut(
+                    Icons.favorite_outline_rounded,
+                    tr.likedMusic,
+                    () => shell.openCollection(likedCollection(liked)),
+                  );
+                },
+              ),
+              shortcut(Icons.playlist_play_rounded, tr.playlists, () => library(LibraryFilter.playlists)),
+              if (Features.localLibrary) shortcut(Icons.album_outlined, tr.albums, () => library(LibraryFilter.albums)),
+              if (Features.downloads && inTitleBar)
+                DownloadsLink(collapsed: true, selected: location == Locations.downloads),
+              shortcut(Icons.history_rounded, tr.yourListeningStats, () {
+                shell.open(const ListeningStatsPage(), location: Locations.stats);
+              }),
+              if (inTitleBar) shortcut(Icons.settings_outlined, tr.navSettings, () => shell.open(const SettingsPage())),
+            ],
+          ),
+        ),
+      );
+    }
+
     return LayoutBuilder(
       builder: (context, constraints) {
         // Short windows can't fit the nav and a usable library list: collapse into
         // one scrolling panel and reach the library through a link instead.
         if (constraints.maxHeight < 440) {
           return ShellPanel(
-            gradient: true,
             child: SmoothScroll(
               builder: (context, scroll) => ListView(
                 controller: scroll,
@@ -184,8 +212,9 @@ class DesktopSidebar extends StatelessWidget {
                   ...navItems,
                   NavLink(
                     collapsed: collapsed,
-                    icon: Icons.video_library_outlined,
-                    label: tr.yourLibrary,
+                    icon: Icons.open_in_full_rounded,
+                    iconSize: 16,
+                    label: tr.expandLibrary,
                     onTap: () => ShellScope.of(context).open(const LibraryPage()),
                   ),
                 ],
@@ -207,7 +236,6 @@ class DesktopSidebar extends StatelessWidget {
             Expanded(
               // The list (thousands of albums and artists behind it) fills in right after the first frame.
               child: ShellPanel(
-                gradient: true,
                 child: FirstFrameGate(child: LibraryList(dense: true, collapsed: collapsed)),
               ),
             ),
@@ -220,10 +248,18 @@ class DesktopSidebar extends StatelessWidget {
 
 /// Sidebar entry that opens a page (rather than switching tab).
 class NavLink extends StatelessWidget {
-  const NavLink({super.key, required this.collapsed, required this.icon, required this.label, required this.onTap});
+  const NavLink({
+    super.key,
+    required this.collapsed,
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    this.iconSize = 26,
+  });
 
   final bool collapsed;
   final IconData icon;
+  final double iconSize;
   final String label;
   final VoidCallback onTap;
 
@@ -239,7 +275,7 @@ class NavLink extends StatelessWidget {
         child: Row(
           mainAxisAlignment: collapsed ? MainAxisAlignment.center : MainAxisAlignment.start,
           children: [
-            Icon(icon, color: AppColors.textSecondary, size: 26),
+            Icon(icon, color: AppColors.textSecondary, size: iconSize),
             if (!collapsed) ...[
               const SizedBox(width: 18),
               Expanded(

@@ -257,7 +257,7 @@ class _IntroPainter extends CustomPainter {
   /// outline fades.
   void _drawPiece(Canvas canvas, int i) {
     final piece = _pieces[i];
-    final color = identical(piece, LogoMark.right) ? AppLogo.orange : light;
+    final color = identical(piece, LogoMark.right) ? AppLogo.accent : light;
     final drawn = Curves.easeInOutCubic.transform(_seg(ms, i * _drawEvery, i * _drawEvery + _drawFor));
     final filled = Curves.easeOutCubic.transform(
       _seg(ms, _fillFrom + i * _fillEvery, _fillFrom + i * _fillEvery + _fillFor),

@@ -65,4 +65,20 @@ void main() {
     expect(preset.transport, PlayerTransport.classic);
     expect(preset.timeLeft, isTrue);
   });
+
+  test('both Kawaii presets use blurred desktop lyrics and Classic restores solid colour', () async {
+    for (final preset in [PlayerPreset.kawaii, PlayerPreset.liquidKawaii]) {
+      await preset.apply(p);
+      await p.load();
+      expect(p.desktopLyricsBackground, LyricsBackground.blurredCover);
+      expect(p.showHomeToolbar, isFalse);
+      expect(
+        PlayerPreset.fromJson(PlayerPreset.fromCurrent('Mine', p).toJson()).lyricsBackground,
+        LyricsBackground.blurredCover,
+      );
+    }
+    await PlayerPreset.classic.apply(p);
+    expect(p.desktopLyricsBackground, LyricsBackground.color);
+    expect(p.showHomeToolbar, isTrue);
+  });
 }

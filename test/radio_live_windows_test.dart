@@ -57,12 +57,14 @@ void main() {
         await player.playList([seed], 0);
         await player.seek(const Duration(milliseconds: 1800));
         final current = player.player.sequenceState.currentSource;
-        await player.startRadio(seed);
+        final station = await player.startRadio(seed);
 
         expect(player.player.sequenceState.currentSource, same(current));
         expect(player.position, greaterThanOrEqualTo(const Duration(milliseconds: 1700)));
         expect(player.upNext.length, greaterThanOrEqualTo(3), reason: errors.join(', '));
         expect(player.upNext.every((song) => song.isRemote && song.youtubeId != seed.youtubeId), isTrue);
+        expect(station?.kind, CollectionKind.radio);
+        expect(station?.tracks.map((song) => song.id), [seed.id, ...player.upNext.map((song) => song.id)]);
         stdout.writeln(
           'Live YouTube Music returned ${player.upNext.length} radio tracks: '
           '${player.upNext.take(3).map((song) => song.title).join(', ')}',

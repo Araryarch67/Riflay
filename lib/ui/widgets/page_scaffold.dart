@@ -22,6 +22,7 @@ class PageScaffold extends StatefulWidget {
     this.title,
     this.actions = const [],
     this.brand = false,
+    this.hideToolbar = false,
     this.overHero = false,
     this.pinned,
     this.pinnedHeight = 0,
@@ -39,6 +40,7 @@ class PageScaffold extends StatefulWidget {
 
   /// The app's mark and name at the left of the bar, on phones (desktop windows have it in the title bar).
   final bool brand;
+  final bool hideToolbar;
 
   /// The first thing on the page is a picture that goes to the very top, under the status bar: the bar then floats over
   /// it (a round back button) and only fills in once the picture has scrolled away.
@@ -56,9 +58,18 @@ class _PageScaffoldState extends State<PageScaffold> {
   void initState() {
     super.initState();
     _scroll.addListener(() {
+      if (widget.hideToolbar) return;
       final o = _scroll.offset.clamp(0.0, 300.0);
       if ((o - _offset).abs() > 4 || o == 0 || o == 300) setState(() => _offset = o);
     });
+  }
+
+  @override
+  void didUpdateWidget(covariant PageScaffold oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.hideToolbar && !widget.hideToolbar && _scroll.hasClients) {
+      _offset = _scroll.offset.clamp(0.0, 300.0);
+    }
   }
 
   @override
@@ -76,7 +87,7 @@ class _PageScaffoldState extends State<PageScaffold> {
     // Desktop: Back / Forward live in the title bar; the bar here only carries the title.
     final history = shell.history;
     final brand = widget.brand && shell.compact && !hasCustomTitleBar;
-    final showBar = history != null || canPop || widget.actions.isNotEmpty || brand;
+    final showBar = !widget.hideToolbar && (history != null || canPop || widget.actions.isNotEmpty || brand);
     final barOpacity = (widget.overHero ? (_offset - 240) / 60 : (_offset - 180) / 80).clamp(0.0, 1.0);
     final phoneGlass =
         shell.compact &&
@@ -145,70 +156,73 @@ class _PageScaffoldState extends State<PageScaffold> {
             ],
           ),
           // Sticky top bar.
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            // Only the buttons take clicks: the bar's empty area must not swallow
-            // taps meant for what scrolls under it (e.g. the search box).
-            child: Stack(
-              children: [
-                Positioned.fill(
-                  child: IgnorePointer(
-                    child: !shell.compact
-                        ? TopBarSurface(color: color, opacity: barOpacity, blurBehind: true)
-                        : phoneGlass && barOpacity > 0
-                        ? ClipRect(
-                            child: BackdropFilter(
-                              filter: ImageFilter.blur(sigmaX: phoneBlur, sigmaY: phoneBlur),
-                              child: ColoredBox(color: AppColors.sink(color, 0.45).withValues(alpha: 0.4 * barOpacity)),
-                            ),
-                          )
-                        : ColoredBox(color: AppColors.sink(color, 0.45).withValues(alpha: barOpacity)),
+          if (!widget.hideToolbar)
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              // Only the buttons take clicks: the bar's empty area must not swallow
+              // taps meant for what scrolls under it (e.g. the search box).
+              child: Stack(
+                children: [
+                  Positioned.fill(
+                    child: IgnorePointer(
+                      child: !shell.compact
+                          ? TopBarSurface(color: color, opacity: barOpacity, blurBehind: true)
+                          : phoneGlass && barOpacity > 0
+                          ? ClipRect(
+                              child: BackdropFilter(
+                                filter: ImageFilter.blur(sigmaX: phoneBlur, sigmaY: phoneBlur),
+                                child: ColoredBox(
+                                  color: AppColors.sink(color, 0.45).withValues(alpha: 0.4 * barOpacity),
+                                ),
+                              ),
+                            )
+                          : ColoredBox(color: AppColors.sink(color, 0.45).withValues(alpha: barOpacity)),
+                    ),
                   ),
-                ),
-                Container(
-                  height: (showBar ? barHeight : 8) + topInset,
-                  padding: EdgeInsets.only(top: topInset, left: 8, right: 8),
-                  child: Row(
-                    children: [
-                      if (history == null && canPop)
-                        IconButton.filled(
-                          tooltip: tr.back,
-                          style: IconButton.styleFrom(backgroundColor: Colors.black45, foregroundColor: Colors.white),
-                          onPressed: () => Navigator.of(context).maybePop(),
-                          icon: const Icon(Icons.chevron_left_rounded),
-                        ),
-                      const SizedBox(width: 8),
-                      if (brand) ...[
-                        const AppLogo(size: 22),
+                  Container(
+                    height: (showBar ? barHeight : 8) + topInset,
+                    padding: EdgeInsets.only(top: topInset, left: 8, right: 8),
+                    child: Row(
+                      children: [
+                        if (history == null && canPop)
+                          IconButton.filled(
+                            tooltip: tr.back,
+                            style: IconButton.styleFrom(backgroundColor: Colors.black45, foregroundColor: Colors.white),
+                            onPressed: () => Navigator.of(context).maybePop(),
+                            icon: const Icon(Icons.chevron_left_rounded),
+                          ),
                         const SizedBox(width: 8),
-                        Text(
-                          'Riflay',
-                          style: Theme.of(context).textTheme.titleMedium
-                              ?.copyWith(fontWeight: FontWeight.w800, letterSpacing: -0.3),
-                        ),
-                      ],
-                      Expanded(
-                        child: IgnorePointer(
-                          child: Opacity(
-                            opacity: barOpacity,
-                            child: Text(
-                              widget.title ?? '',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
+                        if (brand) ...[
+                          const AppLogo(size: 22),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Riflay',
+                            style: Theme.of(context).textTheme.titleMedium
+                                ?.copyWith(fontWeight: FontWeight.w800, letterSpacing: -0.3),
+                          ),
+                        ],
+                        Expanded(
+                          child: IgnorePointer(
+                            child: Opacity(
+                              opacity: barOpacity,
+                              child: Text(
+                                widget.title ?? '',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                      ...widget.actions,
-                    ],
+                        ...widget.actions,
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
         ],
       ),
     );
@@ -246,17 +260,23 @@ class _PinnedHeader extends SliverPersistentHeaderDelegate {
 }
 
 class SectionTitle extends StatelessWidget {
-  const SectionTitle(this.title, {super.key, this.onShowAll});
+  const SectionTitle(this.title, {super.key, this.onShowAll, this.compactSpacing = false});
 
   final String title;
   final VoidCallback? onShowAll;
+  final bool compactSpacing;
 
   @override
   Widget build(BuildContext context) {
     final shell = ShellScope.of(context);
     final text = Theme.of(context).textTheme;
     return Padding(
-      padding: EdgeInsets.fromLTRB(shell.compact ? 16 : 24, 24, shell.compact ? 8 : 16, 4),
+      padding: EdgeInsets.fromLTRB(
+        shell.compact ? 16 : 24,
+        compactSpacing ? 16 : 24,
+        shell.compact ? 8 : 16,
+        compactSpacing ? 10 : 4,
+      ),
       child: Row(
         children: [
           Expanded(

@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../../models/track.dart';
@@ -199,87 +201,71 @@ class _MiniPlayerState extends State<MiniPlayer> with _SongSwipe {
             child: InkWell(
               onTap: widget.onOpen,
               onLongPress: () => showPlayerMore(context, openPlayer: widget.onOpen),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(8, 8, 2, 6),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: _swipeable(
-                            c,
-                            TrackSwitcher(
-                              trackId: track.id,
-                              slide: false,
-                              child: Row(
-                                key: ValueKey(track.id),
-                                children: [
-                                  Hero(
-                                    tag: 'now-playing-art',
-                                    child: Artwork(
-                                      track: track,
-                                      size: 40,
-                                      radius: capsule ? LayoutPrefs.radius(20) : 4,
-                                      flower: true,
-                                      scalloped: capsule,
-                                    ),
+              child: _MiniPlaybackBorder(
+                track: track,
+                color: AppColors.of(context).textPrimary,
+                radius: LayoutPrefs.radius(capsule ? 32 : 8),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(8, 8, 2, 6),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: _swipeable(
+                          c,
+                          TrackSwitcher(
+                            trackId: track.id,
+                            slide: false,
+                            child: Row(
+                              key: ValueKey(track.id),
+                              children: [
+                                Hero(
+                                  tag: 'now-playing-art',
+                                  child: Artwork(
+                                    track: track,
+                                    size: 40,
+                                    radius: capsule ? LayoutPrefs.radius(20) : 4,
+                                    flower: true,
+                                    scalloped: capsule,
                                   ),
-                                  const SizedBox(width: 10),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        MarqueeText(
-                                          track.title,
-                                          style: text.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
-                                        ),
-                                        // Plain text, not links: a thumb on its way to the bar landed on the
-                                        // artist and left for their page. A tap opens the player, as the rest
-                                        // of the bar does; Go to artist is in its menu.
-                                        Text(
-                                          track.artist,
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: text.bodySmall?.copyWith(color: AppColors.textSecondary),
-                                        ),
-                                      ],
-                                    ),
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      MarqueeText(
+                                        track.title,
+                                        style: text.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
+                                      ),
+                                      // Plain text, not links: a thumb on its way to the bar landed on the
+                                      // artist and left for their page. A tap opens the player, as the rest
+                                      // of the bar does; Go to artist is in its menu.
+                                      Text(
+                                        track.artist,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: text.bodySmall?.copyWith(color: AppColors.textSecondary),
+                                      ),
+                                    ],
                                   ),
-                                ],
-                              ),
+                                ),
+                              ],
                             ),
                           ),
                         ),
-                        if (capsule) ...[
-                          _MiniPrev(c: c),
-                          _MiniPlay(c: c, capsule: true),
-                          _MiniNext(c: c, capsule: true),
-                        ] else ...[
-                          LikeButton(track: track, size: 24, color: AppColors.textPrimary),
-                          _MiniPlay(c: c),
-                          _MiniNext(c: c),
-                        ],
+                      ),
+                      if (capsule) ...[
+                        _MiniPrev(c: c),
+                        _MiniPlay(c: c, capsule: true),
+                        _MiniNext(c: c, capsule: true),
+                      ] else ...[
+                        LikeButton(track: track, size: 24, color: AppColors.textPrimary),
+                        _MiniPlay(c: c),
+                        _MiniNext(c: c),
                       ],
-                    ),
+                    ],
                   ),
-                  MiniProgress(
-                    builder: (context, snap) {
-                      final total = c.duration?.inMilliseconds ?? 0;
-                      final pos = snap.data?.inMilliseconds ?? 0;
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 8),
-                        child: LinearProgressIndicator(
-                          value: total == 0 ? 0 : (pos / total).clamp(0, 1),
-                          minHeight: 2,
-                          color: AppColors.textPrimary,
-                          backgroundColor: AppColors.border,
-                          borderRadius: BorderRadius.circular(2),
-                        ),
-                      );
-                    },
-                  ),
-                ],
+                ),
               ),
             ),
           ),
@@ -324,69 +310,74 @@ class _GlassMiniPlayerState extends State<GlassMiniPlayer> with _SongSwipe {
           onTap: widget.onOpen,
           onLongPress: () => showPlayerMore(context, openPlayer: widget.onOpen),
           // Two lines of text in a bar of fixed height: large text grows them only so far.
-          child: MediaQuery.withClampedTextScaling(
-            maxScaleFactor: 1.3,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(8, 0, 4, 0),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: _swipeable(
-                      c,
-                      TrackSwitcher(
-                        trackId: track.id,
-                        slide: false,
-                        child: Row(
-                          key: ValueKey(track.id),
-                          children: [
-                            Hero(
-                              tag: 'now-playing-art',
-                              child: Artwork(
-                                track: track,
-                                size: 42,
-                                radius: LayoutPrefs.radius(21),
-                                flower: true,
-                                scalloped: true,
+          child: _MiniPlaybackBorder(
+            track: track,
+            color: foreground,
+            radius: LayoutPrefs.radius(29),
+            child: MediaQuery.withClampedTextScaling(
+              maxScaleFactor: 1.3,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(8, 0, 4, 0),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: _swipeable(
+                        c,
+                        TrackSwitcher(
+                          trackId: track.id,
+                          slide: false,
+                          child: Row(
+                            key: ValueKey(track.id),
+                            children: [
+                              Hero(
+                                tag: 'now-playing-art',
+                                child: Artwork(
+                                  track: track,
+                                  size: 42,
+                                  radius: LayoutPrefs.radius(21),
+                                  flower: true,
+                                  scalloped: true,
+                                ),
                               ),
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  MarqueeText(
-                                    track.title,
-                                    style: text.bodyMedium?.copyWith(fontWeight: FontWeight.w700, color: foreground),
-                                  ),
-                                  // Plain text, as in the other mini player: a tap opens the player.
-                                  Text(
-                                    track.artist,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: text.bodySmall?.copyWith(color: foreground.withValues(alpha: 0.72)),
-                                  ),
-                                ],
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    MarqueeText(
+                                      track.title,
+                                      style: text.bodyMedium?.copyWith(fontWeight: FontWeight.w700, color: foreground),
+                                    ),
+                                    // Plain text, as in the other mini player: a tap opens the player.
+                                    Text(
+                                      track.artist,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: text.bodySmall?.copyWith(color: foreground.withValues(alpha: 0.72)),
+                                    ),
+                                  ],
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                  _MiniPlay(c: c, foreground: foreground),
-                  if (compact < 1)
-                    ClipRect(
-                      child: Align(
-                        alignment: Alignment.centerLeft,
-                        widthFactor: 1 - compact,
-                        child: Opacity(
-                          opacity: (1 - compact * 2).clamp(0.0, 1.0),
-                          child: _MiniNext(c: c, foreground: foreground),
+                    _MiniPlay(c: c, foreground: foreground),
+                    if (compact < 1)
+                      ClipRect(
+                        child: Align(
+                          alignment: Alignment.centerLeft,
+                          widthFactor: 1 - compact,
+                          child: Opacity(
+                            opacity: (1 - compact * 2).clamp(0.0, 1.0),
+                            child: _MiniNext(c: c, foreground: foreground),
+                          ),
                         ),
                       ),
-                    ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
@@ -394,6 +385,79 @@ class _GlassMiniPlayerState extends State<GlassMiniPlayer> with _SongSwipe {
       ),
     );
   }
+}
+
+class _MiniPlaybackBorder extends StatelessWidget {
+  const _MiniPlaybackBorder({required this.track, required this.color, required this.radius, required this.child});
+
+  final Track track;
+  final Color color;
+  final double radius;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final player = PlayerScope.read(context);
+    final progress = RepaintBoundary(
+      child: MiniProgress(
+        key: ValueKey(track.id),
+        builder: (context, snap) {
+          final duration = player.duration?.inMilliseconds ?? 0;
+          if (duration <= 0) return const SizedBox.shrink();
+          final position = (snap.data ?? player.position).inMilliseconds;
+          final fraction = (position / duration).clamp(0.0, 1.0);
+          final percent = MaterialLocalizations.of(context).formatDecimal((fraction * 100).round());
+          return Semantics(
+            key: const ValueKey('mini-playback-progress'),
+            value: '$percent%',
+            child: CustomPaint(painter: _TopProgressStroke(fraction, radius, color.withValues(alpha: .72))),
+          );
+        },
+      ),
+    );
+    return Stack(
+      fit: StackFit.passthrough,
+      children: [
+        child,
+        Positioned.fill(child: IgnorePointer(child: progress)),
+      ],
+    );
+  }
+}
+
+class _TopProgressStroke extends CustomPainter {
+  const _TopProgressStroke(this.fraction, this.radius, this.color);
+
+  final double fraction;
+  final double radius;
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    const inset = 1.25;
+    if (fraction == 0 || size.shortestSide <= 2 * inset) return;
+    final right = size.width - inset;
+    final corner = math.min(radius, size.shortestSide / 2) - inset;
+    final rounding = Radius.circular(math.max(0, corner));
+    final edge = math.max(0.0, corner);
+    final top = Path()
+      ..moveTo(inset, inset + edge)
+      ..arcToPoint(Offset(inset + edge, inset), radius: rounding)
+      ..lineTo(right - edge, inset)
+      ..arcToPoint(Offset(right, inset + edge), radius: rounding);
+    final length = top.computeMetrics().first;
+    canvas.drawPath(
+      length.extractPath(0, length.length * fraction),
+      Paint()
+        ..color = color
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2
+        ..strokeCap = StrokeCap.round,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_TopProgressStroke old) => fraction != old.fraction || radius != old.radius || color != old.color;
 }
 
 /// Play / pause (or the spinner while buffering): the only part of the bar that follows each play state change.

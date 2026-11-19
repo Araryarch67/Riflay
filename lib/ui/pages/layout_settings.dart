@@ -380,6 +380,17 @@ class LyricsSettings extends StatelessWidget {
                   options: [for (final v in LyricsLayout.values) (v, v.label)],
                 ),
               ),
+              if (Features.desktopLayout && !LayoutPrefs.lightweight)
+                SettingTile(
+                  icon: Icons.wallpaper_rounded,
+                  title: Text(tr.lyricsDesktopBackground),
+                  subtitle: Text(tr.lyricsDesktopBackgroundHint, style: muted),
+                  control: OptionPicker<LyricsBackground>(
+                    value: p.desktopLyricsBackground,
+                    onChanged: p.setDesktopLyricsBackground,
+                    options: [for (final background in LyricsBackground.values) (background, background.label)],
+                  ),
+                ),
               SettingTile(
                 icon: Icons.view_agenda_outlined,
                 title: Text(tr.linesShown),
@@ -560,6 +571,17 @@ class LayoutSettings extends StatelessWidget {
                   title: Text(tr.keepPhoneNavOpen),
                   value: p.keepPhoneNavOpen,
                   onChanged: p.setKeepPhoneNavOpen,
+                ),
+              if (Features.desktopLayout)
+                SettingTile(
+                  icon: Icons.view_sidebar_outlined,
+                  title: Text(tr.desktopSidebarStyle),
+                  subtitle: Text(tr.desktopSidebarStyleHint, style: muted),
+                  control: OptionPicker<DesktopSidebarStyle>(
+                    value: p.desktopSidebarStyle,
+                    options: [for (final style in DesktopSidebarStyle.values) (style, style.label)],
+                    onChanged: p.setDesktopSidebarStyle,
+                  ),
                 ),
               if (Features.desktopLayout)
                 SettingTile(
@@ -817,6 +839,12 @@ class HomeCustomization extends StatelessWidget {
                   onChanged: p.setHomeStyle,
                   options: [for (final style in HomeStyle.values) (style, style.label)],
                 ),
+              ),
+              SwitchListTile(
+                secondary: const Icon(Icons.web_asset_outlined),
+                title: Text(tr.showHomeToolbar),
+                value: p.showHomeToolbar,
+                onChanged: p.setShowHomeToolbar,
               ),
             ],
           ),

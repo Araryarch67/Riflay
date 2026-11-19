@@ -40,6 +40,7 @@ class PlayerPreset {
     this.glassVolume,
     this.bottomRow = PlayerBottomRow.classic,
     this.lyrics = LyricsLayout.classic,
+    this.lyricsBackground = LyricsBackground.color,
     this.mini = MiniPlayerStyle.classic,
     this.album = AlbumHeaderStyle.classic,
     this.playingRow = PlayingRowStyle.classic,
@@ -49,6 +50,7 @@ class PlayerPreset {
     this.background,
     this.tabBar,
     this.homeStyle,
+    this.showHomeToolbar = true,
     this.visualizer = false,
     this.visualizerStyle = VisualizerStyle.pulse,
     this.videoSwitch = true,
@@ -75,6 +77,7 @@ class PlayerPreset {
       glassVolume: p.glassVolume,
       bottomRow: p.bottomRow,
       lyrics: p.lyricsLayout,
+      lyricsBackground: p.desktopLyricsBackground,
       mini: p.miniPlayer,
       album: p.albumHeader,
       playingRow: p.playingRow,
@@ -84,6 +87,7 @@ class PlayerPreset {
       background: Appearance.instance.nowPlaying,
       tabBar: p.tabBar,
       homeStyle: p.homeStyle,
+      showHomeToolbar: p.showHomeToolbar,
       visualizer: p.visualizer,
       visualizerStyle: p.visualizerStyle,
       videoSwitch: p.showVideoSwitch,
@@ -107,6 +111,7 @@ class PlayerPreset {
     'glassVolume': glassVolume,
     'bottomRow': bottomRow.name,
     'lyrics': lyrics.name,
+    'lyricsBackground': lyricsBackground?.name,
     'mini': mini.name,
     'album': album.name,
     'playingRow': playingRow.name,
@@ -116,6 +121,7 @@ class PlayerPreset {
     'background': background?.name,
     'tabBar': tabBar?.name,
     'homeStyle': homeStyle?.name,
+    'showHomeToolbar': showHomeToolbar,
     'visualizer': visualizer,
     'visualizerStyle': visualizerStyle.name,
     'videoSwitch': videoSwitch,
@@ -143,6 +149,7 @@ class PlayerPreset {
       glassVolume: j['glassVolume'] as bool?,
       bottomRow: pick(PlayerBottomRow.values, j['bottomRow'], d.bottomRow),
       lyrics: pick(LyricsLayout.values, j['lyrics'], d.lyrics),
+      lyricsBackground: maybe(LyricsBackground.values, j['lyricsBackground']),
       mini: pick(MiniPlayerStyle.values, j['mini'], d.mini),
       album: pick(AlbumHeaderStyle.values, j['album'], d.album),
       playingRow: pick(PlayingRowStyle.values, j['playingRow'], d.playingRow),
@@ -152,6 +159,7 @@ class PlayerPreset {
       background: maybe(NowPlayingBackground.values, j['background']),
       tabBar: maybe(TabBarStyle.values, j['tabBar']),
       homeStyle: maybe(HomeStyle.values, j['homeStyle']),
+      showHomeToolbar: j['showHomeToolbar'] as bool?,
       visualizer: j['visualizer'] as bool? ?? d.visualizer,
       visualizerStyle: pick(VisualizerStyle.values, j['visualizerStyle'], d.visualizerStyle),
       videoSwitch: j['videoSwitch'] as bool? ?? d.videoSwitch,
@@ -183,6 +191,7 @@ class PlayerPreset {
   final bool? glassVolume;
   final PlayerBottomRow bottomRow;
   final LyricsLayout lyrics;
+  final LyricsBackground? lyricsBackground;
   final MiniPlayerStyle mini;
   final AlbumHeaderStyle album;
   final PlayingRowStyle playingRow;
@@ -198,6 +207,7 @@ class PlayerPreset {
   /// The phone's tab bar that goes with the look; null leaves the user's choice alone.
   final TabBarStyle? tabBar;
   final HomeStyle? homeStyle;
+  final bool? showHomeToolbar;
 
   /// The audio visualizer around the cover, and its style. Only counted where the visualizer exists (not on the web).
   final bool visualizer;
@@ -265,6 +275,7 @@ class PlayerPreset {
   /// Kawaii uses Capsule navigation; applying it must also leave Liquid Kawaii's glass bar behind.
   static const kawaii = PlayerPreset(
     name: 'Kawaii',
+    showHomeToolbar: false,
     note: 'The cover fades into the page, with plain icons, a wavy line and the volume behind a button',
     cover: PlayerCover.background,
     header: PlayerHeader.playingFrom,
@@ -274,6 +285,7 @@ class PlayerPreset {
     volume: false,
     bottomRow: PlayerBottomRow.minimal,
     lyrics: LyricsLayout.topHeader,
+    lyricsBackground: LyricsBackground.blurredCover,
     mini: MiniPlayerStyle.capsule,
     album: AlbumHeaderStyle.hero,
     playingRow: PlayingRowStyle.card,
@@ -286,6 +298,7 @@ class PlayerPreset {
   /// Kawaii, with the Liquid glass tab bar on phones.
   static const liquidKawaii = PlayerPreset(
     name: 'Liquid Kawaii',
+    showHomeToolbar: false,
     homeStyle: HomeStyle.carousel,
     note: 'Kawaii, with Liquid Glass controls and glass tabs on phones',
     cover: PlayerCover.background,
@@ -296,6 +309,7 @@ class PlayerPreset {
     volume: false,
     bottomRow: PlayerBottomRow.minimal,
     lyrics: LyricsLayout.topHeader,
+    lyricsBackground: LyricsBackground.blurredCover,
     mini: MiniPlayerStyle.capsule,
     album: AlbumHeaderStyle.hero,
     playingRow: PlayingRowStyle.card,
@@ -333,6 +347,7 @@ class PlayerPreset {
     if (glassVolume != null) differ(p.glassVolume, glassVolume!);
     differ(p.bottomRow, volume && bottomRow == PlayerBottomRow.minimal ? PlayerBottomRow.classic : bottomRow);
     differ(p.lyricsLayout, lyrics);
+    if (Features.desktopLayout && lyricsBackground != null) differ(p.desktopLyricsBackground, lyricsBackground!);
     differ(p.miniPlayer, mini);
     differ(p.albumHeader, album);
     differ(p.playingRow, playingRow);
@@ -343,6 +358,7 @@ class PlayerPreset {
     if (background != null) differ(Appearance.instance.nowPlaying, background!);
     if (tabBar != null) differ(p.tabBar, tabBar!);
     if (homeStyle != null) differ(p.homeStyle, homeStyle!);
+    if (showHomeToolbar != null) differ(p.showHomeToolbar, showHomeToolbar!);
     if (Features.audioVisualizer) {
       differ(p.visualizer, visualizer);
       // The style only shows while it is on.
@@ -371,6 +387,7 @@ class PlayerPreset {
       if (glassVolume != null) p.glassVolume = glassVolume!;
       p.bottomRow = bottomRow;
       p.lyricsLayout = lyrics;
+      if (lyricsBackground != null) p.desktopLyricsBackground = lyricsBackground!;
       p.miniPlayer = mini;
       p.albumHeader = album;
       p.playingRow = playingRow;
@@ -380,6 +397,7 @@ class PlayerPreset {
       p.showVideoSwitch = videoSwitch;
       if (tabBar != null) p.tabBar = tabBar!;
       if (homeStyle != null) p.homeStyle = homeStyle!;
+      if (showHomeToolbar != null) p.showHomeToolbar = showHomeToolbar!;
       p.visualizer = visualizer;
       if (visualizer) p.visualizerStyle = visualizerStyle;
       p.fitVisualizerStyle();

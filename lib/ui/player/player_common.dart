@@ -163,7 +163,7 @@ class _ArtistLinksState extends State<ArtistLinks> {
   }
 }
 
-/// The mini player's progress line, updated every frame.
+/// Listens to playback position for small player indicators.
 class MiniProgress extends StatefulWidget {
   const MiniProgress({super.key, required this.builder});
 

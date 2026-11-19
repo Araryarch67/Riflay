@@ -10,6 +10,39 @@ class AppLocalizationsEn extends AppLocalizations {
   AppLocalizationsEn([String locale = 'en']) : super(locale);
 
   @override
+  String get temporaryRadio => 'Temporary radio playlist';
+
+  @override
+  String get showHomeToolbar => 'Show Home toolbar';
+
+  @override
+  String get manageLibrary => 'Manage library';
+
+  @override
+  String get lyricsDesktopBackground => 'Desktop lyrics background';
+
+  @override
+  String get lyricsDesktopBackgroundHint => 'Choose an album cover blur or a solid colour for the desktop lyrics page';
+
+  @override
+  String get lyricsBackgroundColor => 'Solid colour';
+
+  @override
+  String get lyricsBackgroundCover => 'Blurred cover';
+
+  @override
+  String get desktopSidebarStyle => 'Desktop sidebar';
+
+  @override
+  String get desktopSidebarStyleHint => 'Show the library list or a narrow rail with shortcuts';
+
+  @override
+  String get desktopSidebarLibrary => 'Library list';
+
+  @override
+  String get desktopSidebarShortcuts => 'Shortcut rail';
+
+  @override
   String get expandLibrary => 'Expand library';
 
   @override
@@ -1506,7 +1539,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get bitPerfectMode => 'Play audio unchanged (bit-perfect)';
+  String get bitPerfectMode => 'Bit-perfect';
 
   @override
   String get needsAndroid14 => 'Needs Android 14 or later';
@@ -1526,19 +1559,19 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get bitPerfectAndroid =>
-      'Sends the file to your USB DAC untouched: no equalizer, leveling or resampling. Other apps and system sounds are muted on the DAC, and the phone\'s volume keys stop working: use your DAC\'s volume, since lowering Riflay\'s own volume changes the sound.';
+      'Sends audio directly to the USB DAC with effects off. Other sounds are muted on the DAC. Use the DAC\'s volume control.';
 
   @override
   String get bitPerfectMac =>
-      'No equalizer, leveling or resampling in Riflay, and your DAC follows each song\'s sample rate. Volume still works; at 100% nothing is changed. Other apps keep playing, so macOS still mixes the sound: turn on Exclusive mode too to send the file to your DAC untouched.';
+      'Turns off audio processing in Riflay. For unchanged output, set the volume to 100% and enable Exclusive mode.';
 
   @override
   String get bitPerfectWindows =>
-      'No equalizer, leveling or resampling in Riflay. Volume still works; at 100% nothing is changed. Other apps keep playing, so Windows still mixes the sound: turn on Exclusive mode too to send the file to your DAC untouched.';
+      'Turns off audio processing in Riflay. For unchanged output, set the volume to 100% and enable Exclusive mode.';
 
   @override
   String get bitPerfectLinux =>
-      'Sends the file to your DAC untouched: no equalizer, leveling or resampling. Volume still works; at 100% nothing is changed. Takes over your DAC so the system mixer can\'t resample. Meanwhile other apps play through another output.';
+      'Turns off audio processing and reserves the DAC. Set the volume to 100% for unchanged output. Other apps use another output.';
 
   @override
   String get nativeDsd => 'Native DSD (DoP)';
@@ -1557,15 +1590,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get needsBitPerfect => 'Needs Bit-perfect mode';
 
   @override
-  String get exclusiveMode => 'Reserve the output for Riflay';
+  String get exclusiveMode => 'Exclusive mode';
 
   @override
-  String get exclusiveMac =>
-      'Takes over the device so macOS can\'t mix or resample: the DAC switches to each song\'s sample rate. Other apps go silent while Riflay plays.';
+  String get exclusiveMac => 'Gives Riflay sole use of the output. The DAC follows each song\'s sample rate.';
 
   @override
-  String get exclusiveWindows =>
-      'Takes over the device so Windows\' mixer can\'t resample: the DAC switches to each song\'s sample rate. Other apps go silent while Riflay plays, and Windows\' volume mixer can\'t control it.';
+  String get exclusiveWindows => 'Gives Riflay sole use of the output. The Windows volume mixer can\'t control it.';
 
   @override
   String get outputSampleRate => 'Output sample rate';
@@ -6568,11 +6599,11 @@ class AppLocalizationsEn extends AppLocalizations {
       'Stereo songs fill a 7.1 room around you: the voice stays in front, the space moves to the sides and back. 5.1 / 7.1 songs, Dolby Atmos too, always get each channel in its place.';
 
   @override
-  String get passthrough => 'Dolby / DTS passthrough';
+  String get passthrough => 'Dolby Atmos';
 
   @override
   String get passthroughSubtitle =>
-      'For an AV receiver or soundbar over HDMI or optical: Dolby Digital, Dolby Atmos (E-AC-3, TrueHD) and DTS go out undecoded and the receiver plays them, Atmos heights included. Effects and the volume don\'t apply to those songs.';
+      'Sends supported Dolby and DTS audio directly to your receiver or soundbar, bypassing Riflay\'s volume and effects.';
 
   @override
   String get kwSurroundUpmix => 'dolby atmos, spatial audio, surround, 7.1, 3d, upmix';

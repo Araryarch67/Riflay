@@ -125,6 +125,7 @@ class _CollectionPageState extends State<CollectionPage> {
           CollectionKind.playlist => c.playlistById(collection.id),
           CollectionKind.artist => c.artistNamed(collection.title),
           CollectionKind.remoteArtist => null,
+          CollectionKind.radio => null,
           CollectionKind.folder => c.folderAt(collection.id),
           CollectionKind.album => c.albums.where((a) => a.title == collection.title).firstOrNull,
         } ??
@@ -181,6 +182,7 @@ class _CollectionPageState extends State<CollectionPage> {
           CollectionKind.album ||
           CollectionKind.youtube ||
           CollectionKind.smart ||
+          CollectionKind.radio ||
           CollectionKind.folder => true,
           _ => false,
         };
@@ -701,7 +703,9 @@ class _Header extends StatelessWidget {
     final total = formatTotal(collection.tracks);
     final count = tr.songsPlural(collection.tracks.length);
     final meta = [
-      if (collection.kind == CollectionKind.album) collection.subtitle,
+      if (collection.kind == CollectionKind.album ||
+          (collection.kind == CollectionKind.radio && collection.subtitle.isNotEmpty))
+        collection.subtitle,
       count,
       if (total.isNotEmpty) total,
     ].join(' • ');
@@ -751,7 +755,8 @@ class _Header extends StatelessWidget {
       crossAxisAlignment: shell.compact ? CrossAxisAlignment.center : CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        if (!shell.compact) Text(collection.kind.label, style: text.labelLarge?.copyWith(fontWeight: FontWeight.w600)),
+        if (!shell.compact || collection.kind == CollectionKind.radio)
+          Text(collection.kind.label, style: text.labelLarge?.copyWith(fontWeight: FontWeight.w600)),
         const SizedBox(height: 4),
         if (onRename != null)
           EditableTitle(

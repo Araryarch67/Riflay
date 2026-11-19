@@ -16,17 +16,30 @@ const _maxCardWidth = 240.0;
 ///  * Wider: exactly one row whose cards stretch to fill the width; anything that
 ///    doesn't fit is reachable through "Show all".
 class Shelf extends StatelessWidget {
-  Shelf({super.key, required this.title, required List<Widget> cards, this.onShowAll})
-    : count = cards.length,
+  Shelf({super.key, required this.title, required List<Widget> cards, this.onShowAll, this.compactSpacing = false})
+    : artworkOnly = false,
+      count = cards.length,
       card = ((i) => cards[i]);
 
   /// Cards made only when shown: a shelf of every album in the library can
   /// hold thousands, and a desktop row shows a handful.
-  const Shelf.builder({super.key, required this.title, required this.count, required this.card, this.onShowAll});
+  const Shelf.builder({
+    super.key,
+    required this.title,
+    required this.count,
+    required this.card,
+    this.onShowAll,
+    this.compactSpacing = false,
+    this.artworkOnly = false,
+  });
 
   final String title;
   final int count;
   final Widget Function(int index) card;
+  final bool compactSpacing;
+
+  /// The square card contains its label, so it needs no extra room underneath.
+  final bool artworkOnly;
 
   /// Overrides the default "Show all" (a grid of [cards]).
   final VoidCallback? onShowAll;
@@ -41,10 +54,15 @@ class Shelf extends StatelessWidget {
         final available = constraints.maxWidth - hPad * 2;
         final columns = math.max(2, (available / (_minCardWidth * LayoutPrefs.instance.coverSize.scale)).floor());
         final overflow = count > columns;
-        void showAll() =>
-            onShowAll != null ? onShowAll!() : shell.open(CardGridPage.builder(title: title, count: count, card: card));
+        void showAll() => onShowAll != null
+            ? onShowAll!()
+            : shell.open(CardGridPage.builder(title: title, count: count, card: card, artworkOnly: artworkOnly));
 
-        final header = SectionTitle(title, onShowAll: shell.compact || overflow || onShowAll != null ? showAll : null);
+        final header = SectionTitle(
+          title,
+          onShowAll: shell.compact || overflow || onShowAll != null ? showAll : null,
+          compactSpacing: compactSpacing,
+        );
         if (shell.compact) {
           final size = LayoutPrefs.instance.coverSize.scale;
           final cardWidth = (available / 2.4 * size).clamp(132.0 * size, 180.0 * size);
@@ -53,7 +71,7 @@ class Shelf extends StatelessWidget {
             children: [
               header,
               SizedBox(
-                height: cardWidth + _cardChrome,
+                height: artworkOnly ? cardWidth : cardWidth + _cardChrome,
                 child: ListView.builder(
                   scrollDirection: Axis.horizontal,
                   padding: const EdgeInsets.symmetric(horizontal: 6),
@@ -88,14 +106,22 @@ class Shelf extends StatelessWidget {
 /// "Show all" destination: every card in a grid that reflows with the width.
 class CardGridPage extends StatelessWidget {
   CardGridPage({super.key, required this.title, required List<Widget> cards})
-    : count = cards.length,
+    : artworkOnly = false,
+      count = cards.length,
       card = ((i) => cards[i]);
 
-  const CardGridPage.builder({super.key, required this.title, required this.count, required this.card});
+  const CardGridPage.builder({
+    super.key,
+    required this.title,
+    required this.count,
+    required this.card,
+    this.artworkOnly = false,
+  });
 
   final String title;
   final int count;
   final Widget Function(int index) card;
+  final bool artworkOnly;
 
   @override
   Widget build(BuildContext context) {
@@ -123,7 +149,7 @@ class CardGridPage extends StatelessWidget {
               sliver: SliverGrid.builder(
                 gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: columns,
-                  mainAxisExtent: cardWidth + _cardChrome,
+                  mainAxisExtent: artworkOnly ? cardWidth : cardWidth + _cardChrome,
                 ),
                 itemCount: count,
                 itemBuilder: (_, i) => card(i),

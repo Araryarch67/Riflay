@@ -3,11 +3,14 @@ import 'package:flutter/material.dart';
 import '../../services/folder_watch.dart';
 import '../../platform/features.dart';
 import '../../services/layout_prefs.dart';
+import '../../services/player_controller.dart';
 import '../widgets/menus.dart';
 import '../navigation.dart';
 import '../shell_scope.dart';
 import 'duplicates_page.dart';
 import 'sound_settings.dart';
+import 'spotify_page.dart';
+import 'youtube_music_page.dart';
 import '../../services/language.dart';
 
 /// Settings › Library & downloads › Library: keeping the music folders up to date, and finding songs you have twice.
@@ -18,14 +21,50 @@ class LibrarySettings extends StatelessWidget {
   Widget build(BuildContext context) {
     final watch = FolderWatch.instance;
     final shell = ShellScope.of(context);
+    final account = PlayerScope.read(context).ytMusic;
     final muted = settingsMuted(context);
     return ListenableBuilder(
-      listenable: Listenable.merge([watch, LayoutPrefs.instance]),
+      listenable: Listenable.merge([watch, LayoutPrefs.instance, account]),
       builder: (context, _) {
         final folders = watch.folders;
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            SettingsSection(
+              title: tr.addMusic,
+              child: SettingsCard(
+                children: [
+                  if (Features.playlistImport) ...[
+                    ListTile(
+                      leading: const Icon(Icons.file_upload_outlined),
+                      title: Text(tr.importPlaylist),
+                      onTap: () => importPlaylist(context),
+                    ),
+                    ListTile(
+                      leading: const Icon(Icons.library_music_outlined),
+                      title: Text(tr.spotifyLibrary),
+                      onTap: () => shell.open(const SpotifyPage(), location: Locations.spotify),
+                    ),
+                  ],
+                  if (account.canEdit)
+                    ListTile(
+                      leading: const Icon(Icons.group_add_outlined),
+                      title: Text(tr.joinSharedPlaylist),
+                      onTap: () => joinSharedPlaylist(context),
+                    ),
+                  ListTile(
+                    leading: const Icon(Icons.audio_file_outlined),
+                    title: Text(tr.addSongs),
+                    onTap: shell.addFiles,
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.add_link_rounded),
+                    title: Text(tr.importFromYouTube),
+                    onTap: shell.importFromYoutube,
+                  ),
+                ],
+              ),
+            ),
             SettingsCard(
               children: [
                 SettingTile(

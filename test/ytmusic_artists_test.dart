@@ -50,6 +50,64 @@ Map<String, dynamic> row(String title, String videoId, List<List<Map<String, dyn
 };
 
 void main() {
+  test('followed artists are loaded past 500, including legacy continuations', () async {
+    Map<String, dynamic> artist(int id) => {
+      'musicResponsiveListItemRenderer': {
+        'navigationEndpoint': {
+          'browseEndpoint': {'browseId': 'UC$id'},
+        },
+        'flexColumns': [
+          {
+            'musicResponsiveListItemFlexColumnRenderer': {
+              'text': {
+                'runs': [text('Artist $id')],
+              },
+            },
+          },
+        ],
+      },
+    };
+
+    Map<String, dynamic> shelf(List<Map<String, dynamic>> items, [String? next]) => {
+      'contents': items,
+      if (next != null)
+        'continuations': [
+          {
+            'nextContinuationData': {'continuation': next},
+          },
+        ],
+    };
+
+    final web = YtMusicWeb(
+      cookies: '',
+      visitorData: '',
+      client: MockClient((request) async {
+        final body = jsonDecode(request.body) as Map<String, dynamic>;
+        final response = switch (body['continuation']) {
+          null => {
+            'musicShelfRenderer': shelf([for (var i = 0; i < 500; i++) artist(i)], 'second'),
+          },
+          'second' => {
+            'continuationContents': {
+              'musicShelfContinuation': shelf([artist(500)], 'third'),
+            },
+          },
+          'third' => {
+            'continuationContents': {
+              'musicShelfContinuation': shelf([artist(501)], 'third'),
+            },
+          },
+          _ => throw StateError('Unknown continuation'),
+        };
+        return http.Response(jsonEncode(response), 200);
+      }),
+    );
+    addTearDown(web.close);
+    final artists = await web.followedArtists();
+    expect(artists, hasLength(502));
+    expect(artists.last.browseId, 'UC501');
+  });
+
   test('artist videos require a music video type and exclude ordinary cover-art songs', () {
     Map<String, dynamic> video(String id, String type) => {
       'musicTwoRowItemRenderer': {

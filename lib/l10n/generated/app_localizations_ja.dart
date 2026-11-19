@@ -10,6 +10,39 @@ class AppLocalizationsJa extends AppLocalizations {
   AppLocalizationsJa([String locale = 'ja']) : super(locale);
 
   @override
+  String get temporaryRadio => '一時的なラジオプレイリスト';
+
+  @override
+  String get showHomeToolbar => 'ホームのツールバーを表示';
+
+  @override
+  String get manageLibrary => 'ライブラリを管理';
+
+  @override
+  String get lyricsDesktopBackground => 'デスクトップの歌詞背景';
+
+  @override
+  String get lyricsDesktopBackgroundHint => 'デスクトップの歌詞画面に、ぼかしたアルバムアートまたは単色を使用します';
+
+  @override
+  String get lyricsBackgroundColor => '単色';
+
+  @override
+  String get lyricsBackgroundCover => 'ぼかしたアルバムアート';
+
+  @override
+  String get desktopSidebarStyle => 'デスクトップのサイドバー';
+
+  @override
+  String get desktopSidebarStyleHint => 'ライブラリ一覧またはアイコンのショートカットバーを表示します';
+
+  @override
+  String get desktopSidebarLibrary => 'ライブラリ一覧';
+
+  @override
+  String get desktopSidebarShortcuts => 'ショートカットバー';
+
+  @override
   String get expandLibrary => 'ライブラリを展開';
 
   @override
@@ -1475,7 +1508,7 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
-  String get bitPerfectMode => '音を加工せずに再生（ビットパーフェクト）';
+  String get bitPerfectMode => 'ビットパーフェクト';
 
   @override
   String get needsAndroid14 => 'Android 14 以降が必要';
@@ -1494,20 +1527,16 @@ class AppLocalizationsJa extends AppLocalizations {
   String get plugInDacForBitPerfect => 'USB DAC をつなぐと Bit-perfect で再生できる';
 
   @override
-  String get bitPerfectAndroid =>
-      'ファイルをそのまま USB DAC に送る。イコライザーも音量の均一化もリサンプリングもなし。ほかのアプリやシステム音は DAC で消音され、スマホの音量ボタンも効かなくなる。Riflay の音量を下げると音が変わるので、DAC の音量を使ってね。';
+  String get bitPerfectAndroid => 'エフェクトをかけずに USB DAC へ直接出力します。DAC ではほかの音がミュートされます。音量は DAC で調整してください。';
 
   @override
-  String get bitPerfectMac =>
-      'Riflay ではイコライザーも音量の均一化もリサンプリングもなし。DAC は曲ごとのサンプルレートに合わせる。音量は使えて、100% なら何も変わらない。ほかのアプリも鳴るので macOS がまだ音をミックスする。ファイルをそのまま DAC に送るなら排他モードもオンにしてね。';
+  String get bitPerfectMac => 'Riflay の音声処理をオフにします。音をそのまま出力するには、音量を 100% にして排他モードをオンにしてください。';
 
   @override
-  String get bitPerfectWindows =>
-      'Riflay ではイコライザーも音量の均一化もリサンプリングもなし。音量は使えて、100% なら何も変わらない。ほかのアプリも鳴るので Windows がまだ音をミックスする。ファイルをそのまま DAC に送るなら排他モードもオンにしてね。';
+  String get bitPerfectWindows => 'Riflay の音声処理をオフにします。音をそのまま出力するには、音量を 100% にして排他モードをオンにしてください。';
 
   @override
-  String get bitPerfectLinux =>
-      'ファイルをそのまま DAC に送る。イコライザーも音量の均一化もリサンプリングもなし。音量は使えて、100% なら何も変わらない。システムのミキサーがリサンプリングできないよう DAC を占有する。その間、ほかのアプリは別の出力から鳴る。';
+  String get bitPerfectLinux => '音声処理をオフにして DAC を占有します。音量を 100% にすると音をそのまま出力します。ほかのアプリは別の出力を使います。';
 
   @override
   String get nativeDsd => 'ネイティブ DSD（DoP）';
@@ -1526,14 +1555,13 @@ class AppLocalizationsJa extends AppLocalizations {
   String get needsBitPerfect => 'Bit-perfect モードが必要';
 
   @override
-  String get exclusiveMode => '出力機器を Riflay 専用にする';
+  String get exclusiveMode => '排他モード';
 
   @override
-  String get exclusiveMac => 'デバイスを占有して、macOS がミックスもリサンプリングもできないようにする。DAC は曲ごとのサンプルレートに切り替わる。Riflay の再生中、ほかのアプリは鳴らない。';
+  String get exclusiveMac => 'Riflay が出力機器を専有します。DAC は曲ごとのサンプルレートに切り替わります。';
 
   @override
-  String get exclusiveWindows =>
-      'デバイスを占有して、Windows のミキサーがリサンプリングできないようにする。DAC は曲ごとのサンプルレートに切り替わる。Riflay の再生中、ほかのアプリは鳴らず、Windows の音量ミキサーでも操作できない。';
+  String get exclusiveWindows => 'Riflay が出力機器を専有します。Windows の音量ミキサーでは調整できません。';
 
   @override
   String get outputSampleRate => '出力サンプルレート';
@@ -6361,11 +6389,10 @@ class AppLocalizationsJa extends AppLocalizations {
       'ステレオの曲が周りの7.1の部屋に広がる：ボーカルは前のまま、空間の響きが横と後ろへ。5.1 / 7.1の曲(Dolby Atmosも)はいつもチャンネルごとの位置で鳴る。';
 
   @override
-  String get passthrough => 'Dolby / DTSのパススルー';
+  String get passthrough => 'Dolby Atmos';
 
   @override
-  String get passthroughSubtitle =>
-      'HDMIや光デジタルでAVアンプ・サウンドバーにつなぐとき用：Dolby Digital、Dolby Atmos(E-AC-3、TrueHD)、DTSをデコードせずに送り、アンプが再生する(Atmosの高さ方向も)。その曲にはエフェクトと音量がかからない。';
+  String get passthroughSubtitle => '対応する Dolby や DTS の音声を AV アンプやサウンドバーへ直接送ります。Riflay の音量調整やエフェクトは適用されません。';
 
   @override
   String get kwSurroundUpmix => 'dolby atmos, 空間オーディオ, サラウンド, 7.1, 3d, アップミックス';

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math' as math;
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
 import '../../models/track.dart';
@@ -70,7 +71,11 @@ class HomePage extends StatelessWidget {
     final account = c.ytMusic;
 
     final albums = c.albums;
-    final artists = c.artists;
+    final followedArtists = online?.artists ?? const <RemotePlaylist>[];
+    final followedChannels = followedArtists.map((artist) => artist.id).toSet();
+    final artists = followedChannels.isEmpty
+        ? c.artists
+        : c.artists.where((artist) => !followedChannels.contains(youtubeSongOf(artist)?.artistId)).toList();
     final liked = online == null || online.liked.isEmpty ? null : likedCollection(online.liked);
     final playlists = c.playlists;
     final remotePlaylists = online?.playlists ?? const <RemotePlaylist>[];
@@ -147,7 +152,7 @@ class HomePage extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    SectionTitle(tr.quickPicks),
+                    SectionTitle(tr.quickPicks, compactSpacing: true),
                     Padding(
                       padding: EdgeInsets.symmetric(horizontal: pad),
                       child: _QuickPicksCarousel(tracks: picks),
@@ -170,7 +175,7 @@ class HomePage extends StatelessWidget {
                 ),
               ),
             );
-          }),
+          }, artworkOnly: true),
         if (quickPicks.isNotEmpty && !carousel)
           SliverPadding(
             padding: EdgeInsets.symmetric(horizontal: pad),
@@ -259,9 +264,20 @@ class HomePage extends StatelessWidget {
           }),
       ],
       HomeSection.artists: [
-        if (artists.isNotEmpty)
-          _shelf(tr.artists, artists.length, (i) {
-            final a = artists[i];
+        if (artists.isNotEmpty || followedArtists.isNotEmpty)
+          _shelf(tr.artists, followedArtists.length + artists.length, (i) {
+            if (i < followedArtists.length) {
+              final artist = followedArtists[i];
+              return MediaCard(
+                track: playlistCover(artist),
+                title: artist.title,
+                subtitle: tr.artist,
+                circle: true,
+                online: true,
+                onTap: () => openRemotePlaylist(context, artist),
+              );
+            }
+            final a = artists[i - followedArtists.length];
             return MediaCard(
               track: a.cover,
               title: a.title,
@@ -351,14 +367,32 @@ class HomePage extends StatelessWidget {
       select: (c) => c.currentTrack ?? c.recentlyPlayed.firstOrNull,
       builder: (context, track, _) => AccentBuilder(
         track: track,
-        builder: (context, accent) =>
-            PageScaffold(gradientColor: accent, brand: true, actions: actions, slivers: slivers),
+        builder: (context, accent) => PageScaffold(
+          gradientColor: accent,
+          brand: true,
+          hideToolbar: !LayoutPrefs.instance.showHomeToolbar,
+          actions: actions,
+          slivers: slivers,
+        ),
       ),
     );
   }
 
-  Widget _shelf(String title, int count, Widget Function(int i) card, {VoidCallback? onShowAll}) => SliverToBoxAdapter(
-    child: Shelf.builder(title: title, count: count, card: card, onShowAll: onShowAll),
+  Widget _shelf(
+    String title,
+    int count,
+    Widget Function(int i) card, {
+    VoidCallback? onShowAll,
+    bool artworkOnly = false,
+  }) => SliverToBoxAdapter(
+    child: Shelf.builder(
+      title: title,
+      count: count,
+      card: card,
+      onShowAll: onShowAll,
+      compactSpacing: true,
+      artworkOnly: artworkOnly,
+    ),
   );
 }
 
@@ -414,6 +448,7 @@ class _DailyMixShelfState extends State<_DailyMixShelf> {
         child: Shelf.builder(
           title: tr.madeForYou,
           count: 1,
+          compactSpacing: true,
           card: (_) => MediaCard(
             track: mix.cover,
             title: mix.title,
@@ -449,6 +484,7 @@ class _QuickPicksCarousel extends StatelessWidget {
       );
     }
 
+    final scrollBehavior = ScrollConfiguration.of(context);
     return SizedBox(
       height: height,
       child: tracks.length == 1
@@ -456,14 +492,17 @@ class _QuickPicksCarousel extends StatelessWidget {
               alignment: AlignmentDirectional.centerStart,
               child: SizedBox(width: height, height: height, child: item(0)),
             )
-          : CarouselView.weightedBuilder(
-              enableSplash: false,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
-              flexWeights: shell.compact ? const [8, 2, 1] : const [6, 3, 1],
-              itemSnapping: true,
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-              itemCount: tracks.length,
-              itemBuilder: (context, index) => item(index),
+          : ScrollConfiguration(
+              behavior: scrollBehavior.copyWith(dragDevices: {...scrollBehavior.dragDevices, PointerDeviceKind.mouse}),
+              child: CarouselView.weightedBuilder(
+                enableSplash: false,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+                flexWeights: shell.compact ? const [8, 2, 1] : const [6, 3, 1],
+                itemSnapping: true,
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                itemCount: tracks.length,
+                itemBuilder: (context, index) => item(index),
+              ),
             ),
     );
   }

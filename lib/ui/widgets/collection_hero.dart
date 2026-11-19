@@ -50,7 +50,12 @@ class CollectionHero extends StatelessWidget {
         : 0;
     final meta = isArtist
         ? [tr.songsPlural(tracks.length), tr.albumsPlural(albums)].join(' • ')
-        : [tr.songsPlural(tracks.length), if (total.isNotEmpty) total].join(' • ');
+        : [
+            if (collection.kind == CollectionKind.radio) collection.kind.label,
+            if (collection.kind == CollectionKind.radio && collection.subtitle.isNotEmpty) collection.subtitle,
+            tr.songsPlural(tracks.length),
+            if (total.isNotEmpty) total,
+          ].join(' • ');
     final artist = collection.kind == CollectionKind.album ? c.artistNamed(collection.subtitle) : null;
     // The page behind the fade: the desktop's content panel, the phone's background.
     final fadeTo = AppColors.panel.withValues(alpha: 1);
@@ -147,7 +152,11 @@ class CollectionHero extends StatelessWidget {
                         onTap: () => addToPlaylist(context, tracks),
                       ),
                     if (artistPage && radioSeed != null)
-                      (icon: Icons.sensors_rounded, label: tr.startRadio, onTap: () => c.startRadio(radioSeed)),
+                      (
+                        icon: Icons.sensors_rounded,
+                        label: tr.startRadio,
+                        onTap: () => shell.startRadio(context, c, radioSeed),
+                      ),
                     // Albums and playlists: everything into the queue.
                     if (!artistPage && !empty)
                       (

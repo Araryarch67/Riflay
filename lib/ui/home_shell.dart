@@ -516,16 +516,22 @@ class _HomeShellState extends State<HomeShell> with SingleTickerProviderStateMix
   // The sidebars' widths while dragging: only the sized boxes listen, so a drag doesn't rebuild the shell.
   final _sidebarWidth = ValueNotifier(LayoutPrefs.instance.sidebarWidth);
   final _sidePanelWidth = ValueNotifier(LayoutPrefs.instance.sidePanelWidth);
+  DesktopSidebarStyle _sidebarStyle = LayoutPrefs.instance.desktopSidebarStyle;
 
   // What the last build knew, for the drag to clamp against.
   double _window = 0;
   bool _sideOpenNow = false;
 
-  /// Reset layout (or a restored backup) changed the saved widths.
+  /// Apply sidebar preferences when settings change or a backup is restored.
   void _syncWidths() {
     if (_saving) return;
     final p = LayoutPrefs.instance;
-    if (_sidebarWidth.value == p.sidebarWidth && _sidePanelWidth.value == p.sidePanelWidth) return;
+    if (_sidebarWidth.value == p.sidebarWidth &&
+        _sidePanelWidth.value == p.sidePanelWidth &&
+        _sidebarStyle == p.desktopSidebarStyle) {
+      return;
+    }
+    _sidebarStyle = p.desktopSidebarStyle;
     _sidebarWidth.value = p.sidebarWidth;
     _sidePanelWidth.value = p.sidePanelWidth;
     if (mounted) setState(() {});
@@ -536,9 +542,12 @@ class _HomeShellState extends State<HomeShell> with SingleTickerProviderStateMix
 
   /// The library sidebar's width: dragged in the expanded layout, the fixed rail when it doesn't fit.
   double _leftWidth(double window, {required bool sideOpen}) =>
-      window >= 1200 || window >= HomeShell.sidePanelFrom && SidebarFit.fullFits(window, sideOpen: sideOpen)
+      !_shortcutRail &&
+          (window >= 1200 || window >= HomeShell.sidePanelFrom && SidebarFit.fullFits(window, sideOpen: sideOpen))
       ? SidebarFit.left(_sidebarWidth.value, window, sideOpen: sideOpen)
       : 84.0;
+
+  bool get _shortcutRail => _sidebarStyle == DesktopSidebarStyle.shortcuts;
 
   void _dragSidePanel(double dx) {
     final left = _history.location == Locations.library ? 0.0 : _leftWidth(_window, sideOpen: true);
@@ -909,7 +918,8 @@ class _HomeShellState extends State<HomeShell> with SingleTickerProviderStateMix
     final sideRoom = width >= HomeShell.sidePanelFrom;
     // The full (resizable) library sidebar whenever it fits at its narrowest beside the pages and an open side
     // panel; the rail only when it doesn't.
-    final expanded = width >= 1200 || sideRoom && SidebarFit.fullFits(width, sideOpen: _sidePanel && _hasTrack);
+    final expanded =
+        !_shortcutRail && (width >= 1200 || sideRoom && SidebarFit.fullFits(width, sideOpen: _sidePanel && _hasTrack));
 
     _compact = compact;
     // The frame's plain title bar steps aside while this layout draws the full one.
@@ -1033,77 +1043,94 @@ class _HomeShellState extends State<HomeShell> with SingleTickerProviderStateMix
       final left = libraryExpanded ? 0.0 : sidebarWidth;
       final panelWidth = SidebarFit.right(_sidePanelWidth.value, width, left: left);
       _contentWidth = width - left - (sideOpen ? panelWidth + 8 : 0) - (libraryExpanded ? 16 : 24);
-      // Expanded: the cover takes the whole window and both bars slide away until the pointer comes to them.
-      // The pages stay alive (and their history) underneath.
-      final pages = Padding(
-        padding: EdgeInsets.fromLTRB(8, hasCustomTitleBar ? 0 : 8, 8, 0),
+      final sidebar = RepaintBoundary(
         child: Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Visibility(
-              visible: !libraryExpanded,
-              maintainState: true,
-              child: ValueListenableBuilder(
-                valueListenable: _sidebarWidth,
-                builder: (context, want, sidebar) => SizedBox(
-                  width: expanded ? SidebarFit.left(want, width, sideOpen: sideOpen) : sidebarWidth,
-                  child: sidebar,
-                ),
-                child: ListenableBuilder(
-                  listenable: _history,
-                  builder: (context, _) => DesktopSidebar(
-                    collapsed: !expanded,
-                    location: _history.location,
-                    onHome: _goHome,
-                    onSearch: _goSearch,
-                    // Home and search sit in the title bar instead.
-                    inTitleBar: hasCustomTitleBar,
-                  ),
+            ValueListenableBuilder(
+              valueListenable: _sidebarWidth,
+              builder: (context, want, sidebar) => SizedBox(
+                width: expanded ? SidebarFit.left(want, width, sideOpen: sideOpen) : sidebarWidth,
+                child: sidebar,
+              ),
+              child: ListenableBuilder(
+                listenable: _history,
+                builder: (context, _) => DesktopSidebar(
+                  collapsed: !expanded,
+                  shortcuts: _shortcutRail,
+                  location: _history.location,
+                  onHome: _goHome,
+                  onSearch: _goSearch,
+                  inTitleBar: hasCustomTitleBar,
                 ),
               ),
             ),
-            libraryExpanded
-                ? const SizedBox.shrink()
-                : expanded
-                ? ResizeHandle(
-                    label: tr.resizeSidebar,
-                    onDrag: _dragSidebar,
-                    onEnd: _saveWidths,
-                    onReset: () {
-                      _sidebarWidth.value = SidebarFit.left(LayoutPrefs.sidebarDefault, width, sideOpen: sideOpen);
-                      _saveWidths();
-                    },
-                  )
-                : const SizedBox(width: 8),
-            Expanded(child: ShellPanel(child: _desktopNavigator())),
-            if (sideRoom)
-              // The sidebar listens too: widening it takes the room from this panel.
-              ListenableBuilder(
-                listenable: Listenable.merge([_sidePanelWidth, _sidebarWidth]),
-                builder: (context, panel) => SlidingPanel(
-                  open: sideOpen,
-                  width: SidebarFit.right(
-                    _sidePanelWidth.value,
-                    width,
-                    left: libraryExpanded ? 0 : _leftWidth(width, sideOpen: sideOpen),
-                  ),
-                  handle: ResizeHandle(
-                    label: tr.resizeSidePanel,
-                    onDrag: _dragSidePanel,
-                    onEnd: _saveWidths,
-                    onReset: () {
-                      _sidePanelWidth.value = SidebarFit.right(
-                        LayoutPrefs.sidePanelDefault,
-                        width,
-                        left: libraryExpanded ? 0 : _leftWidth(width, sideOpen: true),
-                      );
-                      _saveWidths();
-                    },
-                  ),
-                  child: panel!,
-                ),
-                child: ShellPanel(child: NowPlayingSidePanel(onClose: () => setState(() => _sidePanel = false))),
-              ),
+            if (expanded)
+              ResizeHandle(
+                label: tr.resizeSidebar,
+                onDrag: _dragSidebar,
+                onEnd: _saveWidths,
+                onReset: () {
+                  _sidebarWidth.value = SidebarFit.left(LayoutPrefs.sidebarDefault, width, sideOpen: sideOpen);
+                  _saveWidths();
+                },
+              )
+            else
+              const SizedBox(width: 8),
           ],
+        ),
+      );
+      final mainPanel = ShellPanel(child: _desktopNavigator());
+      final playingPanel = ShellPanel(child: NowPlayingSidePanel(onClose: () => setState(() => _sidePanel = false)));
+      final panelWidths = Listenable.merge([_sidePanelWidth, _sidebarWidth]);
+      final pages = Padding(
+        padding: EdgeInsets.fromLTRB(8, hasCustomTitleBar ? 0 : 8, 8, 0),
+        child: TweenAnimationBuilder<double>(
+          tween: Tween(end: libraryExpanded ? 0 : 1),
+          duration: LayoutPrefs.pageDuration(reverse: !libraryExpanded),
+          curve: Curves.easeInOutCubic,
+          builder: (context, fraction, _) => Row(
+            children: [
+              Visibility(
+                visible: fraction > 0,
+                maintainState: true,
+                child: IgnorePointer(
+                  ignoring: libraryExpanded || fraction < 1,
+                  child: ClipRect(
+                    child: Align(alignment: Alignment.centerRight, widthFactor: fraction, child: sidebar),
+                  ),
+                ),
+              ),
+              Expanded(child: mainPanel),
+              if (sideRoom)
+                ListenableBuilder(
+                  listenable: panelWidths,
+                  builder: (context, panel) => SlidingPanel(
+                    open: sideOpen,
+                    width: SidebarFit.right(
+                      _sidePanelWidth.value,
+                      width,
+                      left: fraction * _leftWidth(width, sideOpen: sideOpen),
+                    ),
+                    handle: ResizeHandle(
+                      label: tr.resizeSidePanel,
+                      onDrag: _dragSidePanel,
+                      onEnd: _saveWidths,
+                      onReset: () {
+                        _sidePanelWidth.value = SidebarFit.right(
+                          LayoutPrefs.sidePanelDefault,
+                          width,
+                          left: libraryExpanded ? 0 : _leftWidth(width, sideOpen: true),
+                        );
+                        _saveWidths();
+                      },
+                    ),
+                    child: panel!,
+                  ),
+                  child: playingPanel,
+                ),
+            ],
+          ),
         ),
       );
       body = _scoped(

@@ -470,7 +470,7 @@ class YtMusicWeb {
   Future<List<T>> _allPages<T>(
     Map<String, dynamic> renderer,
     Object? items,
-    int limit,
+    int? limit,
     T? Function(Map<String, dynamic> item) read,
   ) async {
     final out = <T>[];
@@ -484,12 +484,13 @@ class YtMusicWeb {
 
     take(items);
     var token = _nextToken(renderer);
-    while (token != null && out.length < limit) {
+    final seen = <String>{};
+    while (token != null && (limit == null || out.length < limit) && seen.add(token)) {
       final page = await _send('browse', {'continuation': token});
-      final items = _continuationItems(page);
+      final (items, next) = _continuationPage(page);
       if (items.isEmpty) break;
       take(items);
-      token = _nextToken({'items': items});
+      token = next;
     }
     return out;
   }
@@ -973,7 +974,7 @@ class YtMusicWeb {
   }
 
   /// Artists the account follows (YouTube Music's library "Subscriptions").
-  Future<List<WebArtist>> followedArtists({int limit = 500}) async {
+  Future<List<WebArtist>> followedArtists({int? limit}) async {
     final res = await _send('browse', const {'browseId': 'FEmusic_library_corpus_artists'});
     final shelf = _asMap(_deepFind(res, 'musicShelfRenderer'));
     if (shelf == null) return const [];
@@ -1632,18 +1633,19 @@ class YtMusicWeb {
     return token is String && token.isNotEmpty ? token : null;
   }
 
-  /// Items from a continuation reply, in either of the two shapes YouTube
+  /// Items and next token from a continuation reply, in either of the two shapes YouTube
   /// Music uses: `continuationContents` or appended actions.
-  static List<Object?> _continuationItems(Map<String, dynamic> response) {
+  static (List<Object?>, String?) _continuationPage(Map<String, dynamic> response) {
     final contents = _asMap(response['continuationContents']);
     if (contents != null && contents.isNotEmpty) {
       final sub = contents.values.first;
       final items = _at(sub, const ['items']) ?? _at(sub, const ['contents']);
-      if (items is List) return items;
+      if (items is List) return (items, _nextToken(sub));
     }
-    return _list(
+    final items = _list(
       _at(response, const ['onResponseReceivedActions', 0, 'appendContinuationItemsAction', 'continuationItems']),
     );
+    return (items, _nextToken({'items': items}));
   }
 
   static Duration? _duration(String? text) {

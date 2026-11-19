@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 
 import '../models/track.dart';
+import '../services/player_controller.dart';
 import 'navigation.dart';
 import 'pages/home_page.dart';
 
@@ -64,6 +65,12 @@ class ShellScope extends InheritedWidget {
   void playAndOpen(Future<void> Function() play) {
     play().ignore();
     if (compact) openNowPlaying();
+  }
+
+  /// Shows the temporary playlist once the radio queue has been generated.
+  Future<void> startRadio(BuildContext context, PlayerController player, Track seed) async {
+    final station = await player.startRadio(seed);
+    if (context.mounted && station != null) openCollection(station);
   }
 
   /// The same scope around [child]: for what is built in a route of its own (a sheet),

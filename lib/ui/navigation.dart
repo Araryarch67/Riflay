@@ -22,9 +22,15 @@ abstract final class Locations {
 
   static String settingsTopic(String name) => 'settings:$name';
 
-  /// A folder goes by its path: two music folders can share a name.
-  static String collection(Collection c) =>
-      'collection:${c.kind.name}:${c.kind == CollectionKind.folder ? c.id ?? c.title : c.title}';
+  /// Folders with the same name and repeated sessions from the same seed have separate pages.
+  static String collection(Collection c) {
+    final key = switch (c.kind) {
+      CollectionKind.folder || CollectionKind.radio => c.id ?? c.title,
+      _ => c.title,
+    };
+    return 'collection:${c.kind.name}:$key';
+  }
+
   static String remotePlaylist(String id) => 'playlist:$id';
 }
 

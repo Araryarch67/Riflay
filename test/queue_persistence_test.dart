@@ -31,7 +31,11 @@ void main() {
     addTearDown(c.dispose);
     await c.load();
     final source = c.player.sequenceState.currentSource;
-    await c.startRadio(current);
+    final station = await c.startRadio(current);
+    expect(station?.kind, CollectionKind.radio);
+    expect(station?.tracks.map((track) => track.id), [current.id, similar.id]);
+    expect(c.playingFrom, station?.title);
+    expect(c.playlists, isEmpty);
     expect(seeds, [current.id]);
     expect(c.autoplay, isFalse);
     expect(c.player.sequenceState.currentSource, same(source));

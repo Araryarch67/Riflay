@@ -1,22 +1,35 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:riflay/main.dart';
 import 'package:riflay/models/track.dart';
 import 'package:riflay/services/language.dart';
 import 'package:riflay/services/layout_prefs.dart';
 import 'package:riflay/services/player_controller.dart';
+import 'package:riflay/ui/navigation.dart';
 import 'package:riflay/ui/pages/library_page.dart';
+import 'package:riflay/ui/pages/lyrics_page.dart';
 import 'package:riflay/ui/player_panels.dart';
 import 'package:riflay/ui/shell/desktop_sidebar.dart';
 import 'package:riflay/ui/shell/resize_handle.dart';
+import 'package:riflay/ui/shell_scope.dart';
+import 'package:riflay/ui/theme.dart';
+import 'package:riflay/ui/widgets/faded_cover.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class _SongPlayer extends PlayerController {
   final track = Track(id: 'resize', uri: Uri.parse('file:///resize.mp3'), title: 'Resize', artist: 'Artist');
   final swipeActions = <String>[];
+  Duration? progressDuration;
+  Stream<Duration>? miniTicks;
+  @override
+  Duration? get duration => progressDuration ?? super.duration;
+  @override
+  Stream<Duration> smoothPosition() => miniTicks ?? super.smoothPosition();
   @override
   Track get currentTrack => track;
   @override
@@ -25,10 +38,10 @@ class _SongPlayer extends PlayerController {
   Future<void> next() async => swipeActions.add('next');
 }
 
-Future<_SongPlayer> _app(WidgetTester tester, Size size) async {
+Future<_SongPlayer> _app(WidgetTester tester, Size size, {_SongPlayer? player}) async {
   SharedPreferences.setMockInitialValues({'library.v1': jsonEncode(<Object>[]), 'discord.enabled': false});
   await LayoutPrefs.instance.reset();
-  final c = _SongPlayer();
+  final c = player ?? _SongPlayer();
   await tester.runAsync(c.load);
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
@@ -63,23 +76,25 @@ Finder _handle(String label) => find.byWidgetPredicate((w) => w is ResizeHandle 
 double _sidebarW(WidgetTester t) => t.getSize(find.byType(DesktopSidebar)).width;
 
 void main() {
-  testWidgets('the Library menu opens a searchable desktop grid and restores the sidebar', (tester) async {
+  testWidgets('the Library header opens a searchable desktop grid and restores the sidebar', (tester) async {
     final player = await _app(tester, const Size(1440, 900));
     player.createPlaylist('Morning mix');
     player.createPlaylist('Evening mix');
     await tester.pump();
     final sidebar = find.byType(DesktopSidebar);
     final width = tester.getSize(sidebar).width;
-    final gradient = tester
-        .widgetList<Ink>(find.descendant(of: sidebar, matching: find.byType(Ink)))
-        .map((ink) => ink.decoration)
-        .whereType<BoxDecoration>()
-        .map((decoration) => decoration.gradient)
-        .whereType<LinearGradient>()
-        .single;
-    expect(gradient.begin, Alignment.topCenter);
-    expect(gradient.end, Alignment.bottomCenter);
-    expect(gradient.colors.first.computeLuminance(), lessThan(gradient.colors.last.computeLuminance()));
+    final restingLeft = tester.getTopLeft(sidebar).dx;
+    final search = find.byType(SearchBar);
+    final filters = find.byType(FilterChip);
+    expect(tester.getTopLeft(search).dy, greaterThan(tester.getBottomLeft(filters.first).dy));
+    final panelColor = AppColors.of(tester.element(sidebar)).panel;
+    expect(
+      find.descendant(
+        of: sidebar,
+        matching: find.byWidgetPredicate((widget) => widget is Material && widget.color == panelColor),
+      ),
+      findsWidgets,
+    );
 
     Finder menu() => find.descendant(
       of: find.byType(LibraryList),
@@ -90,7 +105,14 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text(tr.editPlaylists), findsOneWidget);
     expect(find.text(tr.sortPlaylists), findsOneWidget);
-    await tester.tap(find.text(tr.expandLibrary));
+    expect(find.text(tr.expandLibrary), findsNothing);
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip(tr.expandLibrary));
+    await tester.pump();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 72));
+    expect(tester.getTopLeft(sidebar).dx, lessThan(restingLeft));
     await tester.pumpAndSettle();
 
     expect(sidebar, findsNothing);
@@ -98,6 +120,20 @@ void main() {
     expect(find.byType(SliverGrid), findsOneWidget);
     expect(find.text('Morning mix'), findsOneWidget);
     expect(find.text('Evening mix'), findsOneWidget);
+    expect(tester.getSize(search).height, 40);
+    expect(tester.getSize(search).width, lessThanOrEqualTo(248));
+    expect(tester.getTopLeft(search).dx, greaterThan(tester.getTopRight(find.text(tr.yourLibrary)).dx));
+    expect(tester.getBottomLeft(search).dy, lessThan(tester.getTopLeft(filters.first).dy));
+    final firstCard = find.ancestor(of: find.text('Morning mix'), matching: find.byType(Card)).first;
+    final artScale = find.descendant(of: firstCard, matching: find.byType(AnimatedScale));
+    final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+    await mouse.addPointer(location: tester.getCenter(firstCard));
+    await tester.pump();
+    expect(tester.widget<AnimatedScale>(artScale).scale, 1.04);
+    final transition = find.descendant(of: artScale, matching: find.byType(ScaleTransition));
+    await tester.pump(const Duration(milliseconds: 60));
+    expect(tester.widget<ScaleTransition>(transition).scale.value, allOf(greaterThan(1), lessThan(1.04)));
+    await mouse.removePointer();
     final field = find.descendant(of: find.byType(SearchBar), matching: find.byType(TextField));
     await tester.enterText(field, 'morning');
     await tester.pump();
@@ -107,16 +143,86 @@ void main() {
     await tester.pump();
     expect(find.text(tr.noLibraryMatches), findsOneWidget);
 
-    await tester.tap(menu());
-    await tester.pumpAndSettle();
-    await tester.tap(find.text(tr.restoreLibrarySidebar));
+    await tester.tap(find.byTooltip(tr.restoreLibrarySidebar));
+    await tester.pump();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 72));
+    expect(tester.getTopLeft(sidebar).dx, lessThan(restingLeft));
     await tester.pumpAndSettle();
     expect(sidebar, findsOneWidget);
     expect(tester.getSize(sidebar).width, width);
     await _settle(tester);
   });
 
+  testWidgets('desktop lyrics use the blurred cover when selected and skip it in Lightweight', (tester) async {
+    final player = await _app(tester, const Size(1440, 900));
+    final prefs = LayoutPrefs.instance;
+    final sidebar = find.byType(DesktopSidebar);
+    ShellScope.of(tester.element(sidebar)).open(const LyricsPage(), location: Locations.lyrics);
+    await tester.pumpAndSettle();
+    expect(find.byType(FadedCover), findsNothing);
+
+    await tester.runAsync(() => prefs.setDesktopLyricsBackground(LyricsBackground.blurredCover));
+    await tester.pumpAndSettle();
+    final cover = tester.widget<FadedCover>(find.byType(FadedCover));
+    expect(cover.track, player.track);
+    expect(cover.sharp, isFalse);
+
+    await tester.runAsync(() => prefs.setPerformance(PerformanceMode.lightweight));
+    await tester.pumpAndSettle();
+    expect(find.byType(FadedCover), findsNothing);
+    await _settle(tester);
+  });
+
+  testWidgets('the desktop shortcut rail opens the Library and survives a settings reload', (tester) async {
+    final player = await _app(tester, const Size(1440, 900));
+    player.createPlaylist('Morning mix');
+    final prefs = LayoutPrefs.instance;
+    expect(prefs.desktopSidebarStyle, DesktopSidebarStyle.library);
+    await tester.runAsync(() => prefs.setDesktopSidebarStyle(DesktopSidebarStyle.shortcuts));
+    await tester.pumpAndSettle();
+
+    final sidebar = find.byType(DesktopSidebar);
+    expect(tester.widget<DesktopSidebar>(sidebar).shortcuts, isTrue);
+    expect(_sidebarW(tester), 84);
+    await tester.tap(find.byTooltip(tr.playlists));
+    await tester.pumpAndSettle();
+    expect(sidebar, findsNothing);
+    expect(find.byType(NowPlayingSidePanel), findsOneWidget);
+    expect(find.text('Morning mix'), findsOneWidget);
+
+    await tester.tap(find.byTooltip(tr.restoreLibrarySidebar));
+    await tester.pumpAndSettle();
+    expect(find.byTooltip(tr.expandLibrary), findsOneWidget);
+    expect(_sidebarW(tester), 84);
+    await tester.runAsync(prefs.load);
+    expect(prefs.desktopSidebarStyle, DesktopSidebarStyle.shortcuts);
+    await _settle(tester);
+  });
+
   for (final style in [TabBarStyle.classic, TabBarStyle.glass]) {
+    testWidgets('${style.name}: the mini-player border follows the current position', (tester) async {
+      final ticks = StreamController<Duration>.broadcast(sync: true);
+      addTearDown(ticks.close);
+      final player = _SongPlayer()
+        ..progressDuration = const Duration(minutes: 2)
+        ..miniTicks = ticks.stream;
+      await _app(tester, const Size(412, 915), player: player);
+      await tester.runAsync(() => LayoutPrefs.instance.setTabBar(style));
+      await tester.pump(const Duration(milliseconds: 400));
+      final progress = find.byKey(const ValueKey('mini-playback-progress'));
+      ticks.add(const Duration(seconds: 30));
+      await tester.pump();
+      expect(tester.widget<Semantics>(progress).properties.value, '25%');
+      ticks.add(const Duration(seconds: 90));
+      await tester.pump();
+      expect(tester.widget<Semantics>(progress).properties.value, '75%');
+      ticks.add(const Duration(minutes: 2));
+      await tester.pump();
+      expect(tester.widget<Semantics>(progress).properties.value, '100%');
+      await _settle(tester);
+    });
+
     testWidgets('${style.name}: swipe left goes to the previous track and right goes to the next', (tester) async {
       final c = await _app(tester, const Size(412, 915));
       await tester.runAsync(() => LayoutPrefs.instance.setTabBar(style));

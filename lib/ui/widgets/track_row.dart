@@ -699,7 +699,7 @@ class TrackMenuButton extends StatelessWidget {
                 ),
               if (track.soundcloudId != null)
                 PopupMenuItem(
-                  onTap: () => c.startRadio(track),
+                  onTap: () => shell.startRadio(host, c, track),
                   child: MenuRow(leading: const Icon(Icons.radio_rounded), title: Text(tr.startRadio)),
                 ),
               // A SoundCloud track streams; saving it lists it in the library beside the songs on this device.
@@ -726,7 +726,7 @@ class TrackMenuButton extends StatelessWidget {
                   ),
                 ),
               PopupMenuItem(
-                onTap: () => c.startRadio(track),
+                onTap: () => shell.startRadio(host, c, track),
                 child: MenuRow(leading: const Icon(Icons.radio_rounded), title: Text(tr.startRadio)),
               ),
               if (_canSuggest(c))

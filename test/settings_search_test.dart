@@ -99,9 +99,10 @@ void main() {
 
         expect(await listed('Tab bar on phones'), phone);
         expect(await listed('Desktop player bar'), desktop);
+        expect(await listed('Desktop sidebar'), desktop);
         final ids = {for (final o in SettingsOptions.all.where((o) => o.available?.call() ?? true)) o.id};
         expect(ids.containsAll(['tabBar', 'miniPlayer', 'phoneCover', 'volumeRow', 'qualityBadgePlace']), phone);
-        expect(ids.contains('desktopBar'), desktop);
+        expect(ids.containsAll(['desktopBar', 'desktopSidebarStyle']), desktop);
         await tester.pumpWidget(const SizedBox());
         await tester.pump(const Duration(seconds: 5));
       } finally {

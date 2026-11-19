@@ -473,6 +473,9 @@ enum CollectionKind {
   /// A built-in list worked out from the library and the listening history (Most played…); not editable.
   smart,
 
+  /// A playback session's radio snapshot, outside the saved library playlists.
+  radio,
+
   /// A music folder the person added (Library › Local): the songs under it. [Collection.id] is its path.
   folder,
   artist;
@@ -485,6 +488,7 @@ enum CollectionKind {
     remote => tr.playlist,
     remoteArtist => tr.artist,
     smart => tr.playlist,
+    radio => tr.temporaryRadio,
     folder => tr.folder,
     artist => tr.artist,
   };

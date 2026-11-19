@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../../l10n/generated/app_localizations.dart';
 import '../../platform/features.dart';
+import '../../services/layout_prefs.dart';
 import '../../platform/host.dart';
 import '../../services/audio_analysis.dart';
 import '../../services/audio_engine.dart';
@@ -612,6 +613,13 @@ abstract final class SettingsOptions {
       preview: .lyrics,
     ),
     SettingsOption(
+      'desktopLyricsBackground',
+      .lyrics,
+      (t) => t.lyricsDesktopBackground,
+      subtitle: (t) => t.lyricsDesktopBackgroundHint,
+      available: () => Features.desktopLayout && !LayoutPrefs.lightweight,
+    ),
+    SettingsOption(
       'lyricsLines',
       .lyrics,
       (t) => t.linesShown,
@@ -725,6 +733,7 @@ abstract final class SettingsOptions {
       locate: (t) => t.dragToReorderSections,
     ),
     SettingsOption('homeStyle', .layout, (t) => t.homeStyle, find: (t) => t.kwHomeSections),
+    SettingsOption('showHomeToolbar', .layout, (t) => t.showHomeToolbar),
     SettingsOption('startupTab', .layout, (t) => t.startupTab, available: () => Features.phoneLayout),
     SettingsOption('swipeDistance', .layout, (t) => t.swipeDistance, available: () => Features.phoneLayout),
     SettingsOption('defaultLibraryFilter', .library, (t) => t.defaultLibraryFilter),
@@ -770,6 +779,13 @@ abstract final class SettingsOptions {
       (t) => t.keepPhoneNavOpen,
       available: () => Features.phoneLayout,
       parent: 'tabBar',
+    ),
+    SettingsOption(
+      'desktopSidebarStyle',
+      .layout,
+      (t) => t.desktopSidebarStyle,
+      subtitle: (t) => t.desktopSidebarStyleHint,
+      available: () => Features.desktopLayout,
     ),
     SettingsOption(
       'desktopBar',
@@ -896,6 +912,15 @@ abstract final class SettingsOptions {
       available: () => _awake() && BatteryExemption.supported,
     ),
     // Library & downloads
+    SettingsOption(
+      'libraryImportPlaylist',
+      .library,
+      (t) => t.importPlaylist,
+      available: () => Features.playlistImport,
+    ),
+    SettingsOption('librarySpotify', .library, (t) => t.spotifyLibrary, available: () => Features.playlistImport),
+    SettingsOption('libraryAddSongs', .library, (t) => t.addSongs),
+    SettingsOption('libraryImportYouTube', .library, (t) => t.importFromYouTube),
     SettingsOption('keepLibrary', .library, (t) => t.keepLibraryUpToDate, find: (t) => t.kwMusicFolders),
     SettingsOption('checkNow', .library, (t) => t.checkNow, find: (t) => t.kwMusicFolders),
     SettingsOption(

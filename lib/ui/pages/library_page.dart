@@ -18,8 +18,8 @@ import '../shell_scope.dart';
 import '../theme.dart';
 import '../widgets/controls.dart';
 import 'listening_stats_page.dart';
+import 'settings_index.dart';
 import 'settings_page.dart';
-import 'spotify_page.dart';
 import 'youtube_music_page.dart';
 import '../widgets/smooth_scroll.dart';
 import '../navigation.dart';
@@ -34,7 +34,14 @@ enum LibraryFilter { playlists, downloaded, albums, artists, local }
 /// playlists, marked with a cloud) and the files on this device, in one list.
 /// Used both as the phone tab and (with [dense]) inside the desktop sidebar.
 class LibraryList extends StatefulWidget {
-  const LibraryList({super.key, this.dense = false, this.collapsed = false, this.full = false, this.initialFilter});
+  const LibraryList({
+    super.key,
+    this.dense = false,
+    this.collapsed = false,
+    this.full = false,
+    this.initialFilter,
+    this.initialQuery = '',
+  });
 
   final bool dense;
 
@@ -42,6 +49,7 @@ class LibraryList extends StatefulWidget {
   final bool collapsed;
   final bool full;
   final LibraryFilter? initialFilter;
+  final String initialQuery;
 
   @override
   State<LibraryList> createState() => _LibraryListState();
@@ -52,8 +60,8 @@ class _LibraryListState extends State<LibraryList> {
   late LibraryFilter? _filter = widget.full
       ? widget.initialFilter
       : LibraryFilter.values.asNameMap()[LayoutPrefs.instance.libraryChip];
-  final _search = TextEditingController();
-  String _query = '';
+  late final _search = TextEditingController(text: widget.initialQuery);
+  late String _query = widget.initialQuery.trim().toLowerCase();
 
   @override
   void dispose() {
@@ -92,6 +100,7 @@ class _LibraryListState extends State<LibraryList> {
     final hidden = LayoutPrefs.instance.hiddenCollections;
     final downloads = c.youtubeDownloads;
     final localCollections = switch (_filter) {
+      null when widget.full => c.artists,
       null => c.albumsAndArtists,
       LibraryFilter.albums => c.albums,
       LibraryFilter.artists => c.artists,
@@ -101,25 +110,38 @@ class _LibraryListState extends State<LibraryList> {
       ],
       LibraryFilter.playlists || LibraryFilter.local => const <Collection>[],
     };
-    final local = _query.isEmpty
-        ? localCollections
+    List<Collection> matching(List<Collection> collections) => _query.isEmpty
+        ? collections
         : [
-            for (final collection in localCollections)
-              if (matches(collection.title, collection.subtitle)) collection,
+            for (final item in collections)
+              if (matches(item.title, item.subtitle)) item,
           ];
-    final folders = _filter == LibraryFilter.local ? c.folders : const <Collection>[];
+    final local = matching(localCollections);
+    final albums = widget.full && _filter == null ? matching(c.albums) : const <Collection>[];
+    final folderPlaylists = show(LibraryFilter.playlists) ? c.folderPlaylists : const <Collection>[];
+    final playlistFolders = {for (final folder in folderPlaylists) folder.id};
+    final folders = switch (_filter) {
+      LibraryFilter.local => c.folders,
+      null when widget.full => [
+        for (final folder in c.folders)
+          if (!playlistFolders.contains(folder.id)) folder,
+      ],
+      _ => const <Collection>[],
+    };
 
     final prefs = LayoutPrefs.instance;
     final playlistRows = <Widget>[];
+    final onlinePlaylistRows = <Widget>[];
     var playlistCount = 0;
     final editing = _editingPlaylists && !widget.collapsed;
     if (show(LibraryFilter.playlists)) {
-      final entries = <({String key, String title, Widget Function(Widget? action) row})>[
-        for (final collection in [...c.playlists.map(c.playlistCollection), ...c.folderPlaylists])
+      final entries = <({String key, String title, bool online, Widget Function(Widget? action) row})>[
+        for (final collection in [...c.playlists.map(c.playlistCollection), ...folderPlaylists])
           if (collection.coverKey case final key?)
             (
               key: key,
               title: collection.title,
+              online: false,
               row: (action) => _LibraryRow(
                 collection: collection,
                 collapsed: widget.collapsed,
@@ -132,6 +154,7 @@ class _LibraryListState extends State<LibraryList> {
           (
             key: PlaylistCovers.remoteKey(p.id),
             title: p.title,
+            online: true,
             row: (action) => _SimpleRow(
               collapsed: widget.collapsed,
               art: Artwork(
@@ -255,7 +278,8 @@ class _LibraryListState extends State<LibraryList> {
       for (final entry in entries) {
         if (!matches(entry.title)) continue;
         final pinned = prefs.pinnedPlaylists.contains(entry.key);
-        playlistRows.add(
+        final destination = widget.full && entry.online ? onlinePlaylistRows : playlistRows;
+        destination.add(
           entry.row(
             widget.collapsed
                 ? null
@@ -275,35 +299,36 @@ class _LibraryListState extends State<LibraryList> {
       }
     }
 
-    final rows = <Widget>[
-      // Local: each music folder, then what was downloaded.
+    final folderRows = <Widget>[
       for (final f in folders)
         if (matches(f.title, f.subtitle)) _LibraryRow(collection: f, collapsed: widget.collapsed, grid: widget.full),
-      // First, so downloads are easy to find.
+    ];
+    final downloadRows = <Widget>[
       if (!hidden.contains('downloaded') &&
           downloads != null &&
           matches(downloads.title, downloads.subtitle) &&
           (show(LibraryFilter.playlists) || _filter == LibraryFilter.downloaded || _filter == LibraryFilter.local))
         _LibraryRow(collection: downloads, collapsed: widget.collapsed, grid: widget.full),
+    ];
+    final likedRows = <Widget>[
+      if (show(LibraryFilter.playlists) &&
+          online != null &&
+          !hidden.contains('liked') &&
+          online.liked.isNotEmpty &&
+          matches(tr.likedMusic))
+        _LibraryRow(
+          collection: likedCollection(online.liked),
+          collapsed: widget.collapsed,
+          online: true,
+          grid: widget.full,
+        ),
+    ];
+    final allSongsRows = <Widget>[
+      if (show(LibraryFilter.playlists) && c.library.isNotEmpty && matches(c.allSongs.title, c.allSongs.subtitle))
+        _LibraryRow(collection: c.allSongs, collapsed: widget.collapsed, grid: widget.full),
+    ];
+    final smartRows = <Widget>[
       if (show(LibraryFilter.playlists)) ...[
-        if (widget.collapsed)
-          _SimpleRow(
-            collapsed: true,
-            art: const _IconArt(Icons.add_rounded),
-            title: tr.newPlaylist,
-            subtitle: tr.newPlaylistSubtitle,
-            onTap: () => createPlaylist(context),
-          ),
-        ...playlistRows,
-        if (online != null && !hidden.contains('liked') && online.liked.isNotEmpty && matches(tr.likedMusic))
-          _LibraryRow(
-            collection: likedCollection(online.liked),
-            collapsed: widget.collapsed,
-            online: true,
-            grid: widget.full,
-          ),
-        if (c.library.isNotEmpty && matches(c.allSongs.title, c.allSongs.subtitle))
-          _LibraryRow(collection: c.allSongs, collapsed: widget.collapsed, grid: widget.full),
         for (final entry in SmartPlaylists.of(c, PlayHistory.instance).entries)
           if ((entry.key != SmartList.mostPlayed || !hidden.contains('top')) &&
               matches(entry.value.title, entry.value.subtitle))
@@ -328,8 +353,7 @@ class _LibraryListState extends State<LibraryList> {
           ),
       ],
     ];
-    // Albums and artists (there can be thousands) are made as they scroll into view.
-    final after = <Widget>[
+    final onlineArtistRows = <Widget>[
       if (online != null && show(LibraryFilter.artists))
         for (final a in online.artists)
           if (matches(a.title))
@@ -344,6 +368,52 @@ class _LibraryListState extends State<LibraryList> {
               grid: widget.full,
             ),
     ];
+    final leading = widget.full
+        ? onlineArtistRows
+        : <Widget>[
+            ...folderRows,
+            ...downloadRows,
+            if (widget.collapsed && show(LibraryFilter.playlists))
+              _SimpleRow(
+                collapsed: true,
+                art: const _IconArt(Icons.add_rounded),
+                title: tr.newPlaylist,
+                subtitle: tr.newPlaylistSubtitle,
+                onTap: () => createPlaylist(context),
+              ),
+            ...playlistRows,
+            ...likedRows,
+            ...allSongsRows,
+            ...smartRows,
+          ];
+    final afterLocal = widget.full
+        ? <Widget>[
+            ...onlinePlaylistRows,
+            ...likedRows,
+            ...playlistRows,
+            ...folderRows,
+            ...downloadRows,
+            ...allSongsRows,
+            if (Features.localLibrary &&
+                (_filter == null || _filter == LibraryFilter.local) &&
+                matches(tr.musicFolders))
+              _SimpleRow(
+                collapsed: false,
+                art: const _IconArt(Icons.create_new_folder_outlined),
+                title: tr.musicFolders,
+                subtitle: tr.navSettings,
+                grid: true,
+                onTap: () {
+                  if (SettingsOptions.byId('keepLibrary') case final option?) {
+                    openSettingsOption(shell, option);
+                  } else {
+                    SettingsPlace.library.open(shell);
+                  }
+                },
+              ),
+          ]
+        : onlineArtistRows;
+    final trailing = widget.full ? smartRows : const <Widget>[];
     // The two invitations are taller than a row, so they sit apart from the rows' fixed height.
     final prompts = <Widget>[
       if (_query.isEmpty &&
@@ -373,9 +443,10 @@ class _LibraryListState extends State<LibraryList> {
         ),
     ];
 
+    final desktop = widget.dense || widget.full;
     final headerTitle = Row(
       children: [
-        Icon(Icons.library_music_rounded, color: AppColors.textSecondary),
+        Icon(Icons.library_music_rounded, size: desktop ? 18 : null, color: AppColors.textSecondary),
         const SizedBox(width: 12),
         Expanded(
           child: Text(
@@ -390,7 +461,10 @@ class _LibraryListState extends State<LibraryList> {
         ),
       ],
     );
-    void openFullLibrary() => shell.open(LibraryPage(initialFilter: _filter), location: Locations.library);
+    void openFullLibrary() => shell.open(
+      LibraryPage(initialFilter: _filter, initialQuery: _search.text),
+      location: Locations.library,
+    );
 
     MenuItemButton item(IconData icon, String label, VoidCallback onPressed) =>
         MenuItemButton(leadingIcon: Icon(icon), onPressed: onPressed, child: Text(label));
@@ -399,9 +473,6 @@ class _LibraryListState extends State<LibraryList> {
       useRootOverlay: true,
       style: MenuStyle(shape: WidgetStatePropertyAll(menuShape)),
       menuChildren: [
-        if (widget.dense && shell.history != null) item(Icons.open_in_full_rounded, tr.expandLibrary, openFullLibrary),
-        if (widget.full && shell.history?.canGoBack == true)
-          item(Icons.close_fullscreen_rounded, tr.restoreLibrarySidebar, shell.history!.back),
         if (playlistCount != 0)
           item(Icons.edit_outlined, tr.editPlaylists, () => setState(() => _editingPlaylists = true)),
         if (playlistCount > 1)
@@ -429,25 +500,43 @@ class _LibraryListState extends State<LibraryList> {
           item(Icons.playlist_add_rounded, tr.addAllToPlaylist, () => addToPlaylist(context, c.allSongs.tracks)),
         const Divider(height: 8),
         item(Icons.add_rounded, tr.newPlaylist, () => createPlaylist(context)),
-        if (account.canEdit) item(Icons.group_add_outlined, tr.joinSharedPlaylist, () => joinSharedPlaylist(context)),
-        if (Features.playlistImport) ...[
-          item(Icons.file_upload_outlined, tr.importPlaylist, () => importPlaylist(context)),
-          item(
-            Icons.library_music_outlined,
-            tr.spotifyLibrary,
-            () => shell.open(const SpotifyPage(), location: Locations.spotify),
-          ),
+        if (SettingsPlace.library.available)
+          item(Icons.settings_outlined, tr.manageLibrary, () => SettingsPlace.library.open(shell))
+        else ...[
+          item(Icons.audio_file_outlined, tr.addSongs, shell.addFiles),
+          item(Icons.add_link_rounded, tr.importFromYouTube, shell.importFromYoutube),
+          if (widget.full) item(Icons.settings_outlined, tr.navSettings, () => shell.open(const SettingsPage())),
         ],
-        item(Icons.audio_file_outlined, tr.addSongs, shell.addFiles),
-        if (shell.addFolder case final addFolder?) item(Icons.folder_open_rounded, tr.addFolder, addFolder),
-        item(Icons.add_link_rounded, tr.importFromYouTube, shell.importFromYoutube),
-        if (widget.full) item(Icons.settings_outlined, tr.navSettings, () => shell.open(const SettingsPage())),
       ],
       builder: (context, controller, _) => IconButton(
         tooltip: tr.moreOptions,
+        iconSize: desktop ? 20 : null,
         icon: const Icon(Icons.more_horiz_rounded),
         onPressed: () => controller.isOpen ? controller.close() : controller.open(),
       ),
+    );
+    Widget search() => SearchBar(
+      constraints: const BoxConstraints(minHeight: 40, maxHeight: 40, maxWidth: 248),
+      elevation: const WidgetStatePropertyAll(0),
+      padding: const WidgetStatePropertyAll(EdgeInsets.symmetric(horizontal: 10)),
+      textStyle: WidgetStatePropertyAll(text.bodyMedium),
+      hintStyle: WidgetStatePropertyAll(text.bodyMedium?.copyWith(color: AppColors.textSecondary)),
+      controller: _search,
+      hintText: tr.searchYourLibrary,
+      leading: const Icon(Icons.search_rounded, size: 18),
+      trailing: [
+        if (_query.isNotEmpty)
+          IconButton(
+            visualDensity: VisualDensity.compact,
+            tooltip: tr.clear,
+            onPressed: () {
+              _search.clear();
+              setState(() => _query = '');
+            },
+            icon: const Icon(Icons.close_rounded, size: 16),
+          ),
+      ],
+      onChanged: (value) => setState(() => _query = value.trim().toLowerCase()),
     );
     final header = Padding(
       padding: EdgeInsets.fromLTRB(widget.collapsed ? 0 : 16, 12, widget.collapsed ? 0 : 8, 4),
@@ -455,13 +544,32 @@ class _LibraryListState extends State<LibraryList> {
           ? Center(
               child: IconButton(
                 tooltip: tr.expandLibrary,
+                iconSize: 16,
                 onPressed: openFullLibrary,
-                icon: Icon(Icons.library_music_rounded, color: AppColors.textSecondary),
+                icon: const Icon(Icons.open_in_full_rounded),
               ),
             )
           : Row(
               children: [
                 Expanded(child: headerTitle),
+                if (widget.full)
+                  Flexible(
+                    child: Align(alignment: AlignmentDirectional.centerEnd, child: search()),
+                  ),
+                if (widget.dense && shell.history != null)
+                  IconButton(
+                    tooltip: tr.expandLibrary,
+                    iconSize: 16,
+                    onPressed: openFullLibrary,
+                    icon: const Icon(Icons.open_in_full_rounded),
+                  ),
+                if (widget.full && shell.history?.canGoBack == true)
+                  IconButton(
+                    tooltip: tr.restoreLibrarySidebar,
+                    iconSize: 16,
+                    onPressed: shell.history!.back,
+                    icon: const Icon(Icons.close_fullscreen_rounded),
+                  ),
                 menu,
               ],
             ),
@@ -472,30 +580,6 @@ class _LibraryListState extends State<LibraryList> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           header,
-          if (widget.full)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 460),
-                child: SearchBar(
-                  controller: _search,
-                  hintText: tr.searchYourLibrary,
-                  leading: const Padding(padding: EdgeInsets.only(left: 8), child: Icon(Icons.search_rounded)),
-                  trailing: [
-                    if (_query.isNotEmpty)
-                      IconButton(
-                        tooltip: tr.clear,
-                        onPressed: () {
-                          _search.clear();
-                          setState(() => _query = '');
-                        },
-                        icon: const Icon(Icons.close_rounded),
-                      ),
-                  ],
-                  onChanged: (value) => setState(() => _query = value.trim().toLowerCase()),
-                ),
-              ),
-            ),
           // Albums and artists are the device's own music (and the signed-in account's); the web build has playlists.
           if (!widget.collapsed && constraints.maxHeight >= 300 && Features.localLibrary)
             Padding(
@@ -521,15 +605,26 @@ class _LibraryListState extends State<LibraryList> {
                 ],
               ),
             ),
+          if (widget.dense && !widget.collapsed && constraints.maxHeight >= 300)
+            Padding(padding: const EdgeInsets.fromLTRB(16, 4, 16, 8), child: search()),
           Expanded(
             child: SmoothScroll(
               builder: (context, scroll) {
-                final count = rows.length + local.length + after.length;
-                Widget rowAt(BuildContext context, int i) => i < rows.length
-                    ? rows[i]
-                    : i < rows.length + local.length
-                    ? _LibraryRow(collection: local[i - rows.length], collapsed: widget.collapsed, grid: widget.full)
-                    : after[i - rows.length - local.length];
+                final count = leading.length + local.length + afterLocal.length + albums.length + trailing.length;
+                // Albums and artists are built only as they scroll into view.
+                Widget rowAt(BuildContext context, int i) {
+                  if (i < leading.length) return leading[i];
+                  i -= leading.length;
+                  if (i < local.length) {
+                    return _LibraryRow(collection: local[i], collapsed: widget.collapsed, grid: widget.full);
+                  }
+                  i -= local.length;
+                  if (i < afterLocal.length) return afterLocal[i];
+                  i -= afterLocal.length;
+                  if (i < albums.length) return _LibraryRow(collection: albums[i], collapsed: false, grid: true);
+                  return trailing[i - albums.length];
+                }
+
                 return CustomScrollView(
                   controller: scroll,
                   slivers: [
@@ -664,7 +759,6 @@ class _SimpleRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
     final shell = ShellScope.of(context);
-    final colors = Theme.of(context).colorScheme;
     final labels = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -696,44 +790,7 @@ class _SimpleRow extends StatelessWidget {
       ],
     );
     if (grid) {
-      return Card.filled(
-        margin: EdgeInsets.zero,
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.all(10),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Expanded(
-                  child: ClipRRect(
-                    borderRadius: LayoutPrefs.corner(12),
-                    child: Stack(
-                      fit: StackFit.expand,
-                      children: [
-                        art,
-                        if (action != null)
-                          PositionedDirectional(
-                            end: 4,
-                            top: 4,
-                            child: Material(
-                              color: colors.surfaceContainerHighest,
-                              shape: const CircleBorder(),
-                              child: action,
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 10),
-                labels,
-              ],
-            ),
-          ),
-        ),
-      );
+      return _LibraryGridCard(art: art, labels: labels, action: action, onTap: onTap);
     }
     final tile = InkWell(
       borderRadius: BorderRadius.circular(6),
@@ -763,6 +820,89 @@ class _SimpleRow extends StatelessWidget {
         ? tile
         : SelectedHighlight(history: shell.history, location: location!, child: tile);
     return collapsed ? Tooltip(message: title, child: highlighted) : highlighted;
+  }
+}
+
+class _LibraryGridCard extends StatefulWidget {
+  const _LibraryGridCard({required this.art, required this.labels, required this.action, required this.onTap});
+
+  final Widget art;
+  final Widget labels;
+  final Widget? action;
+  final VoidCallback onTap;
+
+  @override
+  State<_LibraryGridCard> createState() => _LibraryGridCardState();
+}
+
+class _LibraryGridCardState extends State<_LibraryGridCard> {
+  final _states = WidgetStatesController();
+
+  @override
+  void dispose() {
+    _states.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final moves = LayoutPrefs.moves && !MediaQuery.disableAnimationsOf(context);
+    final artwork = IconTheme.merge(data: const IconThemeData(size: 36), child: widget.art);
+    return Card.filled(
+      margin: EdgeInsets.zero,
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        statesController: _states,
+        onTap: widget.onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(10),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(
+                child: ClipRRect(
+                  borderRadius: LayoutPrefs.corner(12),
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      if (moves)
+                        ValueListenableBuilder<Set<WidgetState>>(
+                          valueListenable: _states,
+                          builder: (context, states, child) {
+                            final pressed = states.contains(WidgetState.pressed);
+                            return AnimatedScale(
+                              scale: pressed ? .97 : (states.contains(WidgetState.hovered) ? 1.04 : 1),
+                              duration: Duration(milliseconds: pressed ? 100 : 180),
+                              curve: Curves.easeOutCubic,
+                              child: child,
+                            );
+                          },
+                          child: artwork,
+                        )
+                      else
+                        artwork,
+                      if (widget.action case final action?)
+                        PositionedDirectional(
+                          end: 4,
+                          top: 4,
+                          child: Material(
+                            color: colors.surfaceContainerHighest,
+                            shape: const CircleBorder(),
+                            child: action,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+              widget.labels,
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
 
@@ -819,6 +959,7 @@ class _LibraryRow extends StatelessWidget {
       CollectionKind.youtube ||
       CollectionKind.remote => '${tr.playlist} • ${collection.subtitle}',
       CollectionKind.smart => '${tr.smartPlaylist} • ${collection.subtitle}',
+      CollectionKind.radio => collection.kind.label,
       CollectionKind.folder => '${folderPlaylist ? tr.folderPlaylist : tr.folder} • ${collection.subtitle}',
       CollectionKind.playlist => '${tr.playlist} • Riflay • ${collection.subtitle}',
       CollectionKind.album => '${tr.album} • ${collection.subtitle}',
@@ -876,9 +1017,10 @@ class _Prompt extends StatelessWidget {
 
 /// The library tab on a phone and the expanded library on desktop.
 class LibraryPage extends StatelessWidget {
-  const LibraryPage({super.key, this.initialFilter});
+  const LibraryPage({super.key, this.initialFilter, this.initialQuery = ''});
 
   final LibraryFilter? initialFilter;
+  final String initialQuery;
 
   @override
   Widget build(BuildContext context) {
@@ -886,7 +1028,11 @@ class LibraryPage extends StatelessWidget {
       color: AppColors.background,
       child: SafeArea(
         bottom: false,
-        child: LibraryList(full: !ShellScope.of(context).compact, initialFilter: initialFilter),
+        child: LibraryList(
+          full: !ShellScope.of(context).compact,
+          initialFilter: initialFilter,
+          initialQuery: initialQuery,
+        ),
       ),
     );
   }

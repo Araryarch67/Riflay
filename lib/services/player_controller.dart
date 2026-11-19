@@ -266,10 +266,10 @@ class PlayerController extends ChangeNotifier {
   bool _regenerating = false;
   bool get regenerating => _regenerating;
   int _radioGeneration = 0;
-  Future<bool> regenerateQueue() => _regenerateQueue();
+  Future<bool> regenerateQueue() async => await _regenerateQueue() != null;
 
-  Future<bool> _regenerateQueue({Track? radioSeed}) async {
-    if (holdAutoplay || _regenerating || (radioSeed == null && currentTrack == null)) return false;
+  Future<List<Track>?> _regenerateQueue({Track? radioSeed}) async {
+    if (holdAutoplay || _regenerating || (radioSeed == null && currentTrack == null)) return null;
     _regenerating = true;
     var generation = ++_radioGeneration;
     notifyListeners();
@@ -278,18 +278,18 @@ class PlayerController extends ChangeNotifier {
         final started = playList([radioSeed], 0, from: tr.radioFrom(radioSeed.title));
         generation = _radioGeneration;
         await started;
-        if (generation != _radioGeneration || !_matchesRadioSeed(currentTrack, radioSeed)) return false;
+        if (generation != _radioGeneration || !_matchesRadioSeed(currentTrack, radioSeed)) return null;
       }
       final original = player.sequenceState;
       final current = currentTrack;
-      if (current == null || original.currentIndex == null) return false;
+      if (current == null || original.currentIndex == null) return null;
       final seed = radioSeed ?? _autoplaySeedFor(current);
       final similar = await _radioFor(seed);
       final state = player.sequenceState;
       if (generation != _radioGeneration ||
           !identical(state.currentSource, original.currentSource) ||
           !listEquals(state.sequence, original.sequence)) {
-        return false;
+        return null;
       }
       final cut = state.currentIndex! + 1;
       final retained = state.sequence.take(cut).map((s) => s.tag as Track).toList();
@@ -298,10 +298,11 @@ class PlayerController extends ChangeNotifier {
         candidates: _playableQueueTracks(similar).where(_canRecommend),
         excluded: retained,
       );
-      if (fresh.isEmpty) return false;
+      if (fresh.isEmpty) return null;
       await player.addAudioSources([for (final t in fresh) _sourceFor(t)]);
-      if (generation != _radioGeneration) return false;
+      if (generation != _radioGeneration) return null;
       if (cut < state.sequence.length) await player.removeAudioSourceRange(cut, state.sequence.length);
+      if (generation != _radioGeneration) return null;
       _ordered = [...retained, ...fresh];
       _autoplayed
         ..clear()
@@ -313,10 +314,10 @@ class PlayerController extends ChangeNotifier {
         await player.seek(Duration.zero, index: cut);
         unawaited(_play());
       }
-      return true;
+      return generation == _radioGeneration ? [current, ...fresh] : null;
     } catch (e) {
       debugPrint('Regenerate queue: $e');
-      return false;
+      return null;
     } finally {
       _regenerating = false;
       notifyListeners();
@@ -404,15 +405,32 @@ class PlayerController extends ChangeNotifier {
         });
   }
 
-  /// Plays [seed] followed by its radio, like "Start radio" in YouTube Music.
-  Future<void> startRadio(Track seed) async {
-    if (_regenerating) return;
+  /// Starts [seed]'s radio and returns a temporary playlist for the new session.
+  Future<Collection?> startRadio(Track seed) async {
+    if (_regenerating) return null;
     final session = ListenTogether.of(this);
-    if (session.role == ListenRole.guest) return session.suggest(seed);
-    if (!canQueue(seed)) return notify(tr.spotiflacDownloadToPlay);
-    if (!await _regenerateQueue(radioSeed: seed) && !_disposed && _matchesRadioSeed(currentTrack, seed)) {
+    if (session.role == ListenRole.guest) {
+      await session.suggest(seed);
+      return null;
+    }
+    if (!canQueue(seed)) {
+      notify(tr.spotiflacDownloadToPlay);
+      return null;
+    }
+    final tracks = await _regenerateQueue(radioSeed: seed);
+    if (tracks != null && !_disposed) {
+      return Collection(
+        kind: CollectionKind.radio,
+        id: 'radio:$_radioGeneration',
+        title: tr.radioFrom(seed.title),
+        subtitle: seed.artist,
+        tracks: List.unmodifiable(tracks),
+      );
+    }
+    if (!_disposed && _matchesRadioSeed(currentTrack, seed)) {
       notify(tr.queueRefreshFailed);
     }
+    return null;
   }
 
   static const _discordAppId = '1561368591297941655';

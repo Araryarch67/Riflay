@@ -10,6 +10,40 @@ class AppLocalizationsId extends AppLocalizations {
   AppLocalizationsId([String locale = 'id']) : super(locale);
 
   @override
+  String get temporaryRadio => 'Playlist radio sementara';
+
+  @override
+  String get showHomeToolbar => 'Tampilkan bilah atas Beranda';
+
+  @override
+  String get manageLibrary => 'Kelola Library';
+
+  @override
+  String get lyricsDesktopBackground => 'Latar lirik desktop';
+
+  @override
+  String get lyricsDesktopBackgroundHint =>
+      'Pilih sampul album yang diburamkan atau warna solid untuk halaman lirik desktop';
+
+  @override
+  String get lyricsBackgroundColor => 'Warna solid';
+
+  @override
+  String get lyricsBackgroundCover => 'Sampul buram';
+
+  @override
+  String get desktopSidebarStyle => 'Sidebar desktop';
+
+  @override
+  String get desktopSidebarStyleHint => 'Tampilkan daftar Library atau bilah ikon pintasan';
+
+  @override
+  String get desktopSidebarLibrary => 'Daftar Library';
+
+  @override
+  String get desktopSidebarShortcuts => 'Ikon pintasan';
+
+  @override
   String get expandLibrary => 'Buka Library penuh';
 
   @override
@@ -1496,7 +1530,7 @@ class AppLocalizationsId extends AppLocalizations {
   }
 
   @override
-  String get bitPerfectMode => 'Putar audio tanpa diubah (bit-perfect)';
+  String get bitPerfectMode => 'Bit-perfect';
 
   @override
   String get needsAndroid14 => 'Butuh Android 14 atau lebih baru';
@@ -1516,19 +1550,19 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get bitPerfectAndroid =>
-      'Mengirim file ke USB DAC tanpa diubah: tanpa equalizer, penyetaraan, atau resampling. Aplikasi lain dan suara sistem dibisukan di DAC, dan tombol volume HP tidak berfungsi: pakai volume DAC, karena menurunkan volume Riflay mengubah suaranya.';
+      'Mengirim audio langsung ke USB DAC tanpa efek. Suara lain di DAC dibisukan. Gunakan pengatur volume DAC.';
 
   @override
   String get bitPerfectMac =>
-      'Tanpa equalizer, penyetaraan, atau resampling di Riflay, dan DAC mengikuti sample rate tiap lagu. Volume tetap berfungsi; di 100% tidak ada yang diubah. Aplikasi lain tetap berbunyi, jadi macOS masih mencampur suara: nyalakan juga Mode eksklusif untuk mengirim file ke DAC tanpa diubah.';
+      'Mematikan pengolahan audio di Riflay. Agar audio tetap asli, atur volume ke 100% dan aktifkan Mode eksklusif.';
 
   @override
   String get bitPerfectWindows =>
-      'Tanpa equalizer, penyetaraan, atau resampling di Riflay. Volume tetap berfungsi; di 100% tidak ada yang diubah. Aplikasi lain tetap berbunyi, jadi Windows masih mencampur suara: nyalakan juga Mode eksklusif untuk mengirim file ke DAC tanpa diubah.';
+      'Mematikan pengolahan audio di Riflay. Agar audio tetap asli, atur volume ke 100% dan aktifkan Mode eksklusif.';
 
   @override
   String get bitPerfectLinux =>
-      'Mengirim file ke DAC tanpa diubah: tanpa equalizer, penyetaraan, atau resampling. Volume tetap berfungsi; di 100% tidak ada yang diubah. DAC dipakai sendiri agar mixer sistem tidak bisa resample. Sementara itu aplikasi lain lewat output lain.';
+      'Mematikan pengolahan audio dan memakai DAC secara eksklusif. Atur volume ke 100% agar audio tetap asli. Aplikasi lain memakai output lain.';
 
   @override
   String get nativeDsd => 'DSD asli (DoP)';
@@ -1547,15 +1581,14 @@ class AppLocalizationsId extends AppLocalizations {
   String get needsBitPerfect => 'Butuh mode Bit-perfect';
 
   @override
-  String get exclusiveMode => 'Gunakan perangkat suara khusus untuk Riflay';
+  String get exclusiveMode => 'Mode eksklusif';
 
   @override
-  String get exclusiveMac =>
-      'Mengambil alih perangkat agar macOS tidak bisa mencampur atau resample: DAC berganti ke sample rate tiap lagu. Aplikasi lain senyap selama Riflay memutar.';
+  String get exclusiveMac => 'Perangkat output dipakai khusus oleh Riflay. DAC mengikuti sample rate tiap lagu.';
 
   @override
   String get exclusiveWindows =>
-      'Mengambil alih perangkat agar mixer Windows tidak bisa resample: DAC berganti ke sample rate tiap lagu. Aplikasi lain senyap selama Riflay memutar, dan mixer volume Windows tidak bisa mengaturnya.';
+      'Perangkat output dipakai khusus oleh Riflay. Mixer volume Windows tidak bisa mengaturnya.';
 
   @override
   String get outputSampleRate => 'Sample rate output';
@@ -6496,11 +6529,11 @@ class AppLocalizationsId extends AppLocalizations {
       'Lagu stereo mengisi ruang 7.1 di sekelilingmu: vokal tetap di depan, suasananya pindah ke samping dan belakang. Lagu 5.1 / 7.1, termasuk Dolby Atmos, selalu dapat tiap kanal di tempatnya.';
 
   @override
-  String get passthrough => 'Passthrough Dolby / DTS';
+  String get passthrough => 'Dolby Atmos';
 
   @override
   String get passthroughSubtitle =>
-      'Untuk AV receiver atau soundbar lewat HDMI atau optical: Dolby Digital, Dolby Atmos (E-AC-3, TrueHD) dan DTS dikirim tanpa didekode, lalu receiver yang memutarnya, termasuk kanal ketinggian Atmos. Efek dan volume tidak berlaku untuk lagu-lagu itu.';
+      'Mengirim audio Dolby dan DTS yang didukung langsung ke receiver atau soundbar. Volume dan efek Riflay dilewati.';
 
   @override
   String get kwSurroundUpmix => 'dolby atmos, audio spasial, surround, 7.1, 3d, upmix';

@@ -234,6 +234,9 @@ class SignInBanner extends StatelessWidget {
 class DiscoverShelves extends StatelessWidget {
   const DiscoverShelves({super.key});
 
+  // YtMusicWeb requests English metadata, including when the app uses another language.
+  static final _trending = RegExp(r'\btrending\b', caseSensitive: false);
+
   @override
   Widget build(BuildContext context) {
     final c = PlayerScope.read(context);
@@ -277,12 +280,26 @@ class DiscoverShelves extends StatelessWidget {
     );
   }
 
-  Widget _shelves(BuildContext context, PlayerController c, List<RemoteShelf> shelves) =>
-      SliverList.list(children: [const YtmBrowseLinks(), ...remoteShelfWidgets(context, c, shelves)]);
+  Widget _shelves(BuildContext context, PlayerController c, List<RemoteShelf> shelves) => SliverList.list(
+    children: [
+      const YtmBrowseLinks(),
+      ...remoteShelfWidgets(
+        context,
+        c,
+        shelves.where((shelf) => !_trending.hasMatch(shelf.title)).toList(),
+        compactSpacing: true,
+      ),
+    ],
+  );
 }
 
 /// YouTube Music's carousels as widgets: songs play, albums and playlists open.
-List<Widget> remoteShelfWidgets(BuildContext context, PlayerController c, List<RemoteShelf> shelves) {
+List<Widget> remoteShelfWidgets(
+  BuildContext context,
+  PlayerController c,
+  List<RemoteShelf> shelves, {
+  bool compactSpacing = false,
+}) {
   final shell = ShellScope.of(context);
   return [
     for (final (si, shelf) in shelves.indexed)
@@ -290,6 +307,7 @@ List<Widget> remoteShelfWidgets(BuildContext context, PlayerController c, List<R
         delay: Duration(milliseconds: 70 * (si < 5 ? si : 5)),
         child: Shelf(
           title: shelf.title,
+          compactSpacing: compactSpacing,
           cards: [
             for (final (i, t) in shelf.tracks.indexed)
               MediaCard(

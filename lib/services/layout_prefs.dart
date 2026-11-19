@@ -53,6 +53,16 @@ enum DesktopBarStyle {
   };
 }
 
+enum DesktopSidebarStyle {
+  library,
+  shortcuts;
+
+  String get label => switch (this) {
+    library => tr.desktopSidebarLibrary,
+    shortcuts => tr.desktopSidebarShortcuts,
+  };
+}
+
 /// The desktop mini player: a small always-on-top window with the cover, or an island, a pill at the top of the
 /// screen that opens into the controls when pointed at.
 enum DesktopMiniStyle {
@@ -410,6 +420,16 @@ enum PlayerBottomRow {
 }
 
 /// The lyrics page: its header and the player under the lyrics (on desktop a song card on top or at the bottom).
+enum LyricsBackground {
+  color,
+  blurredCover;
+
+  String get label => switch (this) {
+    color => tr.lyricsBackgroundColor,
+    blurredCover => tr.lyricsBackgroundCover,
+  };
+}
+
 enum LyricsLayout {
   classic,
   bottomCard,
@@ -615,6 +635,7 @@ class LayoutPrefs extends ChangeNotifier {
   List<HomeSection> homeOrder = List.of(HomeSection.values);
   Set<HomeSection> homeHidden = {};
   HomeStyle homeStyle = HomeStyle.classic;
+  bool showHomeToolbar = true;
 
   ProgressBarStyle progressBar = ProgressBarStyle.thin;
   ProgressBarShape progressShape = ProgressBarShape.wavy;
@@ -728,6 +749,7 @@ class LayoutPrefs extends ChangeNotifier {
   bool glassVolume = false;
   PlayerBottomRow bottomRow = PlayerBottomRow.classic;
   LyricsLayout lyricsLayout = LyricsLayout.classic;
+  LyricsBackground desktopLyricsBackground = LyricsBackground.color;
   MiniPlayerStyle miniPlayer = MiniPlayerStyle.classic;
   AlbumHeaderStyle albumHeader = AlbumHeaderStyle.classic;
   PlayingRowStyle playingRow = PlayingRowStyle.classic;
@@ -789,6 +811,7 @@ class LayoutPrefs extends ChangeNotifier {
   static const sidePanelMin = 260.0;
   static const sidePanelMax = 520.0;
   double sidebarWidth = sidebarDefault;
+  DesktopSidebarStyle desktopSidebarStyle = DesktopSidebarStyle.library;
   double sidePanelWidth = sidePanelDefault;
 
   Motion motion = Motion.full;
@@ -984,6 +1007,7 @@ class LayoutPrefs extends ChangeNotifier {
     glassVolume = j['glassVolume'] as bool? ?? d.glassVolume;
     bottomRow = pick(PlayerBottomRow.values, 'bottomRow', d.bottomRow);
     lyricsLayout = pick(LyricsLayout.values, 'lyricsLayout', d.lyricsLayout);
+    desktopLyricsBackground = pick(LyricsBackground.values, 'desktopLyricsBackground', d.desktopLyricsBackground);
     miniPlayer = pick(MiniPlayerStyle.values, 'miniPlayer', d.miniPlayer);
     albumHeader = pick(AlbumHeaderStyle.values, 'albumHeader', d.albumHeader);
     playingRow = pick(PlayingRowStyle.values, 'playingRow', d.playingRow);
@@ -1026,6 +1050,7 @@ class LayoutPrefs extends ChangeNotifier {
     lyricsLines = pick(LyricsLines.values, 'lyricsLines', d.lyricsLines);
     lyricsSync = pick(LyricsSync.values, 'lyricsSync', d.lyricsSync);
     sidebarWidth = (j['sidebarWidth'] as num?)?.toDouble().clamp(sidebarMin, sidebarMax) ?? d.sidebarWidth;
+    desktopSidebarStyle = pick(DesktopSidebarStyle.values, 'desktopSidebarStyle', d.desktopSidebarStyle);
     sidePanelWidth = (j['sidePanelWidth'] as num?)?.toDouble().clamp(sidePanelMin, sidePanelMax) ?? d.sidePanelWidth;
     motion = pick(Motion.values, 'motion', d.motion);
     // Side reveal was the default until 1.1.3, and every save holds it: those saves start on Classic, the new
@@ -1038,6 +1063,7 @@ class LayoutPrefs extends ChangeNotifier {
     videoDecoder = pick(VideoDecoder.values, 'videoDecoder', d.videoDecoder);
     windowButtons = j['windowButtons'] as bool? ?? d.windowButtons;
     homeStyle = pick(HomeStyle.values, 'homeStyle', d.homeStyle);
+    showHomeToolbar = j['showHomeToolbar'] as bool? ?? d.showHomeToolbar;
     final byName = HomeSection.values.asNameMap();
     final order = <HomeSection>[for (final n in (j['homeOrder'] as List?) ?? const []) ?byName[n]];
     // A section added by a newer version joins at its default place.
@@ -1087,6 +1113,7 @@ class LayoutPrefs extends ChangeNotifier {
     'glassVolume': glassVolume,
     'bottomRow': bottomRow.name,
     'lyricsLayout': lyricsLayout.name,
+    'desktopLyricsBackground': desktopLyricsBackground.name,
     'miniPlayer': miniPlayer.name,
     'albumHeader': albumHeader.name,
     'playingRow': playingRow.name,
@@ -1123,6 +1150,7 @@ class LayoutPrefs extends ChangeNotifier {
     'lyricsLines': lyricsLines.name,
     'lyricsSync': lyricsSync.name,
     'sidebarWidth': sidebarWidth,
+    'desktopSidebarStyle': desktopSidebarStyle.name,
     'sidePanelWidth': sidePanelWidth,
     'motion': motion.name,
     'pageMotion': pageMotion.name,
@@ -1132,6 +1160,7 @@ class LayoutPrefs extends ChangeNotifier {
     'videoDecoder': videoDecoder.name,
     'windowButtons': windowButtons,
     'homeStyle': homeStyle.name,
+    'showHomeToolbar': showHomeToolbar,
     'homeOrder': [for (final s in homeOrder) s.name],
     'homeHidden': [for (final s in homeHidden) s.name],
   };
@@ -1190,6 +1219,7 @@ class LayoutPrefs extends ChangeNotifier {
   Future<void> setGlassVolume(bool v) => _set(() => glassVolume = v);
   Future<void> setBottomRow(PlayerBottomRow v) => _set(() => bottomRow = v);
   Future<void> setLyricsLayout(LyricsLayout v) => _set(() => lyricsLayout = v);
+  Future<void> setDesktopLyricsBackground(LyricsBackground v) => _set(() => desktopLyricsBackground = v);
   Future<void> setMiniPlayer(MiniPlayerStyle v) => _set(() => miniPlayer = v);
   Future<void> setAlbumHeader(AlbumHeaderStyle v) => _set(() => albumHeader = v);
   Future<void> setPlayingRow(PlayingRowStyle v) => _set(() => playingRow = v);
@@ -1235,6 +1265,7 @@ class LayoutPrefs extends ChangeNotifier {
   Future<void> setPageMotion(PageMotionStyle v) => _set(() => pageMotion = v);
   Future<void> setPageSpeed(PageMotionSpeed v) => _set(() => pageSpeed = v);
   Future<void> setSidebarWidth(double v) => _set(() => sidebarWidth = v.clamp(sidebarMin, sidebarMax));
+  Future<void> setDesktopSidebarStyle(DesktopSidebarStyle v) => _set(() => desktopSidebarStyle = v);
   Future<void> setSidePanelWidth(double v) => _set(() => sidePanelWidth = v.clamp(sidePanelMin, sidePanelMax));
   Future<void> setMotion(Motion v) => _set(() => motion = v);
   Future<void> setPerformance(PerformanceMode v) => _set(() => performance = v);
@@ -1242,6 +1273,7 @@ class LayoutPrefs extends ChangeNotifier {
   Future<void> setWindowButtons(bool v) => _set(() => windowButtons = v);
 
   Future<void> setHomeStyle(HomeStyle style) => _set(() => homeStyle = style);
+  Future<void> setShowHomeToolbar(bool value) => _set(() => showHomeToolbar = value);
 
   Future<void> setHomeSectionShown(HomeSection s, bool shown) =>
       _set(() => shown ? homeHidden.remove(s) : homeHidden.add(s));

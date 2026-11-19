@@ -93,6 +93,72 @@ abstract class AppLocalizations {
   /// A list of this localizations delegate's supported locales.
   static const List<Locale> supportedLocales = <Locale>[Locale('en'), Locale('id'), Locale('ja')];
 
+  /// No description provided for @temporaryRadio.
+  ///
+  /// In en, this message translates to:
+  /// **'Temporary radio playlist'**
+  String get temporaryRadio;
+
+  /// No description provided for @showHomeToolbar.
+  ///
+  /// In en, this message translates to:
+  /// **'Show Home toolbar'**
+  String get showHomeToolbar;
+
+  /// No description provided for @manageLibrary.
+  ///
+  /// In en, this message translates to:
+  /// **'Manage library'**
+  String get manageLibrary;
+
+  /// No description provided for @lyricsDesktopBackground.
+  ///
+  /// In en, this message translates to:
+  /// **'Desktop lyrics background'**
+  String get lyricsDesktopBackground;
+
+  /// No description provided for @lyricsDesktopBackgroundHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose an album cover blur or a solid colour for the desktop lyrics page'**
+  String get lyricsDesktopBackgroundHint;
+
+  /// No description provided for @lyricsBackgroundColor.
+  ///
+  /// In en, this message translates to:
+  /// **'Solid colour'**
+  String get lyricsBackgroundColor;
+
+  /// No description provided for @lyricsBackgroundCover.
+  ///
+  /// In en, this message translates to:
+  /// **'Blurred cover'**
+  String get lyricsBackgroundCover;
+
+  /// No description provided for @desktopSidebarStyle.
+  ///
+  /// In en, this message translates to:
+  /// **'Desktop sidebar'**
+  String get desktopSidebarStyle;
+
+  /// No description provided for @desktopSidebarStyleHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Show the library list or a narrow rail with shortcuts'**
+  String get desktopSidebarStyleHint;
+
+  /// No description provided for @desktopSidebarLibrary.
+  ///
+  /// In en, this message translates to:
+  /// **'Library list'**
+  String get desktopSidebarLibrary;
+
+  /// No description provided for @desktopSidebarShortcuts.
+  ///
+  /// In en, this message translates to:
+  /// **'Shortcut rail'**
+  String get desktopSidebarShortcuts;
+
   /// No description provided for @expandLibrary.
   ///
   /// In en, this message translates to:
@@ -2826,7 +2892,7 @@ abstract class AppLocalizations {
   /// No description provided for @bitPerfectMode.
   ///
   /// In en, this message translates to:
-  /// **'Play audio unchanged (bit-perfect)'**
+  /// **'Bit-perfect'**
   String get bitPerfectMode;
 
   /// No description provided for @needsAndroid14.
@@ -2856,25 +2922,25 @@ abstract class AppLocalizations {
   /// No description provided for @bitPerfectAndroid.
   ///
   /// In en, this message translates to:
-  /// **'Sends the file to your USB DAC untouched: no equalizer, leveling or resampling. Other apps and system sounds are muted on the DAC, and the phone\'s volume keys stop working: use your DAC\'s volume, since lowering Riflay\'s own volume changes the sound.'**
+  /// **'Sends audio directly to the USB DAC with effects off. Other sounds are muted on the DAC. Use the DAC\'s volume control.'**
   String get bitPerfectAndroid;
 
   /// No description provided for @bitPerfectMac.
   ///
   /// In en, this message translates to:
-  /// **'No equalizer, leveling or resampling in Riflay, and your DAC follows each song\'s sample rate. Volume still works; at 100% nothing is changed. Other apps keep playing, so macOS still mixes the sound: turn on Exclusive mode too to send the file to your DAC untouched.'**
+  /// **'Turns off audio processing in Riflay. For unchanged output, set the volume to 100% and enable Exclusive mode.'**
   String get bitPerfectMac;
 
   /// No description provided for @bitPerfectWindows.
   ///
   /// In en, this message translates to:
-  /// **'No equalizer, leveling or resampling in Riflay. Volume still works; at 100% nothing is changed. Other apps keep playing, so Windows still mixes the sound: turn on Exclusive mode too to send the file to your DAC untouched.'**
+  /// **'Turns off audio processing in Riflay. For unchanged output, set the volume to 100% and enable Exclusive mode.'**
   String get bitPerfectWindows;
 
   /// No description provided for @bitPerfectLinux.
   ///
   /// In en, this message translates to:
-  /// **'Sends the file to your DAC untouched: no equalizer, leveling or resampling. Volume still works; at 100% nothing is changed. Takes over your DAC so the system mixer can\'t resample. Meanwhile other apps play through another output.'**
+  /// **'Turns off audio processing and reserves the DAC. Set the volume to 100% for unchanged output. Other apps use another output.'**
   String get bitPerfectLinux;
 
   /// No description provided for @nativeDsd.
@@ -2910,19 +2976,19 @@ abstract class AppLocalizations {
   /// No description provided for @exclusiveMode.
   ///
   /// In en, this message translates to:
-  /// **'Reserve the output for Riflay'**
+  /// **'Exclusive mode'**
   String get exclusiveMode;
 
   /// No description provided for @exclusiveMac.
   ///
   /// In en, this message translates to:
-  /// **'Takes over the device so macOS can\'t mix or resample: the DAC switches to each song\'s sample rate. Other apps go silent while Riflay plays.'**
+  /// **'Gives Riflay sole use of the output. The DAC follows each song\'s sample rate.'**
   String get exclusiveMac;
 
   /// No description provided for @exclusiveWindows.
   ///
   /// In en, this message translates to:
-  /// **'Takes over the device so Windows\' mixer can\'t resample: the DAC switches to each song\'s sample rate. Other apps go silent while Riflay plays, and Windows\' volume mixer can\'t control it.'**
+  /// **'Gives Riflay sole use of the output. The Windows volume mixer can\'t control it.'**
   String get exclusiveWindows;
 
   /// No description provided for @outputSampleRate.
@@ -11688,13 +11754,13 @@ abstract class AppLocalizations {
   /// No description provided for @passthrough.
   ///
   /// In en, this message translates to:
-  /// **'Dolby / DTS passthrough'**
+  /// **'Dolby Atmos'**
   String get passthrough;
 
   /// No description provided for @passthroughSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'For an AV receiver or soundbar over HDMI or optical: Dolby Digital, Dolby Atmos (E-AC-3, TrueHD) and DTS go out undecoded and the receiver plays them, Atmos heights included. Effects and the volume don\'t apply to those songs.'**
+  /// **'Sends supported Dolby and DTS audio directly to your receiver or soundbar, bypassing Riflay\'s volume and effects.'**
   String get passthroughSubtitle;
 
   /// No description provided for @kwSurroundUpmix.

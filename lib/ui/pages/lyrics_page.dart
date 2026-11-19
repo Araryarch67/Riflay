@@ -65,13 +65,17 @@ class LyricsPage extends StatelessWidget {
   Widget _layout(BuildContext context, Track? track) {
     final text = Theme.of(context).textTheme;
     final canPop = ModalRoute.of(context)?.canPop ?? false;
-    final layout = track != null ? LayoutPrefs.instance.lyricsLayout : LyricsLayout.classic;
-    // Cover: Background is the page here too, all soft, so the lyrics stay easy to read.
-    final coverPage = fullScreen && track != null && LayoutPrefs.instance.playerCover == PlayerCover.background;
+    final prefs = LayoutPrefs.instance;
+    final layout = track != null ? prefs.lyricsLayout : LyricsLayout.classic;
+    final desktopCover =
+        !fullScreen && !LayoutPrefs.lightweight && prefs.desktopLyricsBackground == LyricsBackground.blurredCover;
+    final coverPage = track != null && (fullScreen ? prefs.playerCover == PlayerCover.background : desktopCover);
     return AccentBuilder(
       track: track,
       builder: (context, accent) => _behind(
         coverPage ? track : null,
+        track == null ? AppColors.panel : AppColors.sink(accent, 0.75),
+        desktopCover && AppColors.of(context).light,
         Material(
           color: coverPage ? Colors.transparent : (track == null ? AppColors.panel : AppColors.sink(accent, 0.75)),
           child: SafeArea(
@@ -155,12 +159,14 @@ class LyricsPage extends StatelessWidget {
     );
   }
 
-  Widget _behind(Track? cover, Widget page) => cover == null
+  Widget _behind(Track? cover, Color background, bool lighten, Widget page) => cover == null
       ? page
       : Stack(
           fit: StackFit.expand,
           children: [
-            Positioned.fill(child: FadedCover(track: cover, darken: 0.55, sharp: false)),
+            ColoredBox(color: background),
+            FadedCover(track: cover, darken: 0.55, sharp: false),
+            if (lighten) ColoredBox(color: AppColors.solidBackground.withValues(alpha: .68)),
             // No glow behind the lines: plain white text over the darkened cover.
             page,
           ],
