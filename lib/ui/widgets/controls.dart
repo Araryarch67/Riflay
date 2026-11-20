@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:typed_data';
 import 'dart:ui' show ImageFilter;
 
@@ -638,51 +639,90 @@ class PlayButton extends StatelessWidget implements ColorFreeSelf {
     final iconColor = this.iconColor ?? colors!.onAccent;
     return ListenableBuilder(
       listenable: LayoutPrefs.instance,
-      builder: (context, _) => Tooltip(
-        message: tipWith(playing ? tr.pause : tr.play, AppAction.playPause),
-        child: _Pressable(
-          onPressed: onPressed,
-          child: Container(
-            width: size,
-            height: size,
-            decoration: ShapeDecoration(
-              color: onPressed == null ? color.withValues(alpha: 0.4) : color,
-              shape: switch (LayoutPrefs.instance.playButton) {
-                PlayButtonShape.circle => const CircleBorder(),
-                PlayButtonShape.roundedSquare => RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(size * 0.3),
-                ),
-                PlayButtonShape.flower => const FlowerBorder(),
-              },
-            ),
-            child: loading
-                ? Padding(
-                    padding: EdgeInsets.all(size * 0.3),
-                    child: CircularProgressIndicator(strokeWidth: 2.5, color: iconColor),
-                  )
-                : AnimatedSwitcher(
-                    duration: LayoutPrefs.dur(const Duration(milliseconds: 180)),
-                    transitionBuilder: (child, anim) => LayoutPrefs.moves
-                        ? ScaleTransition(
-                            scale: Tween(
-                              begin: 0.6,
-                              end: 1.0,
-                            ).animate(CurvedAnimation(parent: anim, curve: Curves.easeOutBack)),
-                            child: FadeTransition(opacity: anim, child: child),
-                          )
-                        : FadeTransition(opacity: anim, child: child),
-                    child: Icon(
-                      playing ? Icons.pause_rounded : Icons.play_arrow_rounded,
-                      key: ValueKey(playing),
-                      color: iconColor,
-                      size: size * 0.6,
+      builder: (context, _) {
+        final shape = LayoutPrefs.instance.playButton;
+        final fill = onPressed == null ? color.withValues(alpha: 0.4) : color;
+        final spinning = playing && !loading && shape == PlayButtonShape.flower && LayoutPrefs.moves;
+        return Tooltip(
+          message: tipWith(playing ? tr.pause : tr.play, AppAction.playPause),
+          child: _Pressable(
+            onPressed: onPressed,
+            child: Container(
+              width: size,
+              height: size,
+              decoration: spinning
+                  ? null
+                  : ShapeDecoration(
+                      color: fill,
+                      shape: switch (shape) {
+                        PlayButtonShape.circle => const CircleBorder(),
+                        PlayButtonShape.roundedSquare => RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(size * 0.3),
+                        ),
+                        PlayButtonShape.flower => const FlowerBorder(),
+                      },
                     ),
-                  ),
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  if (spinning)
+                    PlayingMotion(
+                      restWithVideo: false,
+                      builder: (context, clock) =>
+                          RepaintBoundary(child: CustomPaint(painter: _SpinningPlayFlower(fill, clock))),
+                    ),
+                  if (loading)
+                    Padding(
+                      padding: EdgeInsets.all(size * 0.3),
+                      child: CircularProgressIndicator(strokeWidth: 2.5, color: iconColor),
+                    )
+                  else
+                    AnimatedSwitcher(
+                      duration: LayoutPrefs.dur(const Duration(milliseconds: 180)),
+                      transitionBuilder: (child, anim) => LayoutPrefs.moves
+                          ? ScaleTransition(
+                              scale: Tween(
+                                begin: 0.6,
+                                end: 1.0,
+                              ).animate(CurvedAnimation(parent: anim, curve: Curves.easeOutBack)),
+                              child: FadeTransition(opacity: anim, child: child),
+                            )
+                          : FadeTransition(opacity: anim, child: child),
+                      child: Icon(
+                        playing ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                        key: ValueKey(playing),
+                        color: iconColor,
+                        size: size * 0.6,
+                      ),
+                    ),
+                ],
+              ),
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
+}
+
+class _SpinningPlayFlower extends CustomPainter {
+  _SpinningPlayFlower(this.color, this.clock) : super(repaint: clock);
+
+  final Color color;
+  final MotionClock? clock;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = size.center(Offset.zero);
+    canvas
+      ..translate(center.dx, center.dy)
+      ..rotate((clock?.time ?? 0) * 2 * math.pi / 24)
+      ..translate(-center.dx, -center.dy)
+      ..drawPath(const FlowerBorder().getOuterPath(Offset.zero & size), Paint()..color = color);
+  }
+
+  @override
+  bool shouldRepaint(_SpinningPlayFlower old) => old.color != color || old.clock != clock;
 }
 
 /// Grows slightly on hover and shrinks on press, like streaming-app buttons.

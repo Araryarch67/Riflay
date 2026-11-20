@@ -3,11 +3,11 @@ import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:path/path.dart' as path;
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../models/track.dart';
+import '../platform/features.dart';
 import '../services/player_controller.dart';
 import '../services/playlist_transfer.dart';
 import '../services/monochrome.dart';
@@ -123,9 +123,25 @@ typedef ImportedPlaylist = ({String title, String? youtubeId, UserPlaylist? loca
 /// its songs in YouTube Music and saves them as a playlist: in the YouTube
 /// Music library when signed in, as a Riflay playlist otherwise.
 /// Returns the playlist once the user asks to open it.
-Future<ImportedPlaylist?> askToImportPlaylist(BuildContext context, {bool offerOpen = true}) async {
+Future<ImportedPlaylist?> askToImportPlaylist(
+  BuildContext context, {
+  bool offerOpen = true,
+  bool fromFile = false,
+}) async {
   final c = PlayerScope.read(context);
-  final copied = (await Clipboard.getData(Clipboard.kTextPlain))?.text?.trim();
+  String? file;
+  if (fromFile) {
+    try {
+      file = await _pickPlaylistFile();
+    } catch (_) {
+      if (context.mounted) {
+        ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(content: Text(tr.m3uReadFailed)));
+      }
+      return null;
+    }
+    if (file == null || !context.mounted) return null;
+  }
+  final copied = fromFile ? null : (await Clipboard.getData(Clipboard.kTextPlain))?.text?.trim();
   if (!context.mounted) return null;
   final transfer = PlaylistTransfer();
   try {
@@ -134,6 +150,7 @@ Future<ImportedPlaylist?> askToImportPlaylist(BuildContext context, {bool offerO
       barrierDismissible: false,
       builder: (_) => PlaylistImportDialog(
         initial: copied != null && PlaylistTransfer.looksLikeLink(copied) ? copied : null,
+        initialFile: file,
         signedIn: c.ytMusic.canEdit,
         offerOpen: offerOpen,
         player: c,
@@ -146,6 +163,11 @@ Future<ImportedPlaylist?> askToImportPlaylist(BuildContext context, {bool offerO
   } finally {
     transfer.close();
   }
+}
+
+Future<String?> _pickPlaylistFile() async {
+  final picked = await FilePicker.pickFiles(type: FileType.custom, allowedExtensions: ['m3u', 'm3u8', 'csv']);
+  return picked.firstOrNull?.path;
 }
 
 /// Saves matched songs as a playlist. Signed in: a YouTube Music playlist (the
@@ -169,6 +191,7 @@ class PlaylistImportDialog extends StatefulWidget {
   const PlaylistImportDialog({
     super.key,
     required this.initial,
+    this.initialFile,
     required this.signedIn,
     this.offerOpen = true,
     this.player,
@@ -179,6 +202,7 @@ class PlaylistImportDialog extends StatefulWidget {
   });
 
   final String? initial;
+  final String? initialFile;
 
   /// Where it's saved: the YouTube Music library, or Riflay playlists.
   final bool signedIn;
@@ -213,6 +237,17 @@ class _PlaylistImportDialogState extends State<PlaylistImportDialog> {
   final folders = <String, String>{};
   List<String> absent = [];
   int duplicates = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.initialFile case final file?) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) importFile(file);
+      });
+    }
+  }
+
   void review(ForeignPlaylist p, List<Track> songs, List<ForeignSong> failed) {
     setState(() {
       playlist = p;
@@ -360,7 +395,7 @@ class _PlaylistImportDialogState extends State<PlaylistImportDialog> {
     super.dispose();
   }
 
-  Future<void> importFile() async {
+  Future<void> importFile([String? selected]) async {
     final me = ++run;
     var csv = false;
     setState(() {
@@ -368,9 +403,8 @@ class _PlaylistImportDialogState extends State<PlaylistImportDialog> {
       error = null;
     });
     try {
-      final picked = await FilePicker.pickFiles(type: FileType.custom, allowedExtensions: ['m3u', 'm3u8', 'csv']);
+      final file = selected ?? await _pickPlaylistFile();
       if (!mounted || me != run) return;
-      final file = picked.firstOrNull?.path;
       if (file == null) {
         setState(() => step = _Step.link);
         return;
@@ -505,7 +539,7 @@ class _PlaylistImportDialogState extends State<PlaylistImportDialog> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: switch (step) {
           _Step.link => [
-            if (!kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS))
+            if (Features.playlistFileImport)
               OutlinedButton.icon(
                 onPressed: importFile,
                 icon: const Icon(Icons.file_open_outlined),

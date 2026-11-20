@@ -1,9 +1,45 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
+import 'package:riflay/models/track.dart';
+import 'package:riflay/services/language.dart';
 import 'package:riflay/ui/playlist_cover_edit.dart';
 
 void main() {
+  testWidgets('collage selects and removes four covers in a single dialog', (tester) async {
+    final tracks = [
+      for (var index = 1; index <= 5; index++)
+        Track(id: 'test-$index', uri: Uri.file('/music/song-$index.mp3'), title: 'Song $index', artist: 'Artist'),
+    ];
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Builder(
+            builder: (context) =>
+                TextButton(onPressed: () => collageCover(context, 'test', tracks), child: const Text('Open')),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('Open'));
+    await tester.pumpAndSettle();
+    final preview = find.widgetWithText(FilledButton, tr.settingsPreview);
+    expect(tester.widget<FilledButton>(preview).onPressed, isNull);
+    for (final track in tracks.take(4)) {
+      final row = find.widgetWithText(ListTile, track.title);
+      await tester.scrollUntilVisible(row, 100, scrollable: find.byType(Scrollable).last);
+      await tester.tap(row);
+      await tester.pump();
+    }
+    expect(tester.widget<FilledButton>(preview).onPressed, isNotNull);
+    await tester.tap(find.byTooltip('${tr.unselect} · Song 1'));
+    await tester.pump();
+    expect(tester.widget<FilledButton>(preview).onPressed, isNull);
+    await tester.tap(find.text(tr.cancel));
+    await tester.pumpAndSettle();
+    expect(find.text(tr.coverCollage), findsNothing);
+  });
+
   test('crop exports the selected area at 900 pixels and applies rotation and flip', () {
     final photo = img.Image(width: 160, height: 80);
     for (var y = 0; y < photo.height; y++) {

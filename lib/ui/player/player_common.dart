@@ -83,11 +83,12 @@ class _LinkTextState extends State<LinkText> {
 /// A song's artist line where each artist is its own link: "Kobo Kanaeru, Takanashi Kiara" opens either one.
 /// One artist is a plain [LinkText]. [suffix] follows the names as plain text.
 class ArtistLinks extends StatefulWidget {
-  const ArtistLinks({super.key, required this.track, required this.style, this.suffix = ''});
+  const ArtistLinks({super.key, required this.track, required this.style, this.suffix = '', this.showSource = true});
 
   final Track track;
   final TextStyle? style;
   final String suffix;
+  final bool showSource;
 
   @override
   State<ArtistLinks> createState() => _ArtistLinksState();
@@ -109,7 +110,7 @@ class _ArtistLinksState extends State<ArtistLinks> {
   Widget build(BuildContext context) {
     final track = widget.track;
     final links = _links(context, track);
-    if (!track.streams) return links;
+    if (!track.streams || !widget.showSource) return links;
     // A streamed song shows where it streams from (YouTube Music, SoundCloud) before its artists.
     final c = PlayerScope.read(context);
     final size = (widget.style?.fontSize ?? 14) * 0.95;

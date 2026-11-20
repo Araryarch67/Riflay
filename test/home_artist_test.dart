@@ -263,7 +263,7 @@ void main() {
     final scroll = tester.state<ScrollableState>(
       find.descendant(of: carousel, matching: find.byType(Scrollable)).first,
     );
-    final play = find.descendant(of: carousel, matching: find.byTooltip(tr.play)).first;
+    final play = find.descendant(of: carousel, matching: find.byType(PlayButton)).first;
     final cardLabels = find.descendant(
       of: carousel,
       matching: find.byWidgetPredicate(

@@ -8,7 +8,7 @@ import 'package:image/image.dart' as img;
 
 import '../models/track.dart';
 import '../services/metadata.dart';
-import 'widgets/item_picker.dart';
+import 'widgets/app_dialog.dart';
 
 import '../services/language.dart';
 import '../services/playlist_covers.dart';
@@ -365,22 +365,17 @@ Uint8List _collage(List<Uint8List> parts) {
 }
 
 Future<void> collageCover(BuildContext context, String key, List<Track> tracks) async {
-  final remaining = tracks.toList(), parts = <Uint8List>[];
   try {
-    while (parts.length < 4) {
-      if (!context.mounted) return;
-      final pick = await pickListItem(
-        context,
-        '${tr.coverCollage} (${parts.length + 1}/4)',
-        remaining,
-        (t) => t.title,
-        subtitle: (t) => t.artist,
-      );
-      if (pick == null) return;
-      final art = await Metadata.artwork(pick);
+    final picks = await showDialog<List<Track>>(
+      context: context,
+      builder: (_) => _CollagePicker(tracks: tracks),
+    );
+    if (picks == null || !context.mounted) return;
+    final parts = <Uint8List>[];
+    for (final track in picks) {
+      final art = await Metadata.artwork(track);
       if (art == null) throw const FormatException();
       parts.add(art);
-      remaining.remove(pick);
     }
     if (!context.mounted) return;
     final bytes = await compute(_collage, parts);
@@ -393,6 +388,120 @@ Future<void> collageCover(BuildContext context, String key, List<Track> tracks) 
     }
   } catch (_) {
     if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(tr.couldntUsePicture)));
+  }
+}
+
+class _CollagePicker extends StatefulWidget {
+  const _CollagePicker({required this.tracks});
+
+  final List<Track> tracks;
+
+  @override
+  State<_CollagePicker> createState() => _CollagePickerState();
+}
+
+class _CollagePickerState extends State<_CollagePicker> {
+  late final _tracks = {for (final track in widget.tracks) track.id: track}.values.toList();
+  final _selected = <Track>[];
+  String _query = '';
+
+  void _toggle(Track track) => setState(() {
+    if (!_selected.remove(track) && _selected.length < 4) _selected.add(track);
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final matches = _query.isEmpty
+        ? _tracks
+        : _tracks.where((track) => '${track.title} ${track.artist}'.toLowerCase().contains(_query)).toList();
+    return AppDialog(
+      title: tr.coverCollage,
+      width: DialogWidth.wide,
+      scrollable: false,
+      content: SizedBox(
+        height: 440,
+        child: LayoutBuilder(
+          builder: (context, bounds) => Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (bounds.maxHeight >= 235)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Row(
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: Column(
+                          children: [
+                            for (var row = 0; row < 2; row++)
+                              Row(
+                                children: [
+                                  for (var i = row * 2; i < row * 2 + 2; i++)
+                                    if (i < _selected.length)
+                                      Tooltip(
+                                        message: '${tr.unselect} · ${_selected[i].title}',
+                                        child: InkWell(
+                                          onTap: () => _toggle(_selected[i]),
+                                          child: Artwork(track: _selected[i], size: 36, radius: 0),
+                                        ),
+                                      )
+                                    else
+                                      SizedBox.square(
+                                        dimension: 36,
+                                        child: ColoredBox(
+                                          color: colors.surfaceContainerHighest,
+                                          child: Icon(Icons.image_outlined, size: 16, color: colors.onSurfaceVariant),
+                                        ),
+                                      ),
+                                ],
+                              ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(child: Text('${tr.selectedCount(_selected.length)} / 4')),
+                    ],
+                  ),
+                ),
+              TextField(
+                decoration: InputDecoration(
+                  hintText: tr.navSearch,
+                  prefixIcon: const Icon(Icons.search_rounded),
+                  isDense: true,
+                ),
+                onChanged: (value) => setState(() => _query = value.trim().toLowerCase()),
+              ),
+              const SizedBox(height: 8),
+              Expanded(
+                child: ListView.builder(
+                  itemCount: matches.length,
+                  itemBuilder: (context, index) {
+                    final track = matches[index];
+                    final checked = _selected.contains(track);
+                    return ListTile(
+                      leading: Artwork(track: track, size: 40),
+                      title: Text(track.title, maxLines: 1, overflow: TextOverflow.ellipsis),
+                      subtitle: Text(track.artist, maxLines: 1, overflow: TextOverflow.ellipsis),
+                      selected: checked,
+                      trailing: Icon(checked ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded),
+                      onTap: checked || _selected.length < 4 ? () => _toggle(track) : null,
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context), child: Text(tr.cancel)),
+        FilledButton(
+          onPressed: _selected.length == 4 ? () => Navigator.pop(context, _selected.toList()) : null,
+          child: Text(tr.settingsPreview),
+        ),
+      ],
+    );
   }
 }
 

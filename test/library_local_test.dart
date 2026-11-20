@@ -64,6 +64,19 @@ class _LibraryAccount extends YoutubeMusicAccount {
 
   @override
   bool get isSignedIn => libraryNow != null;
+
+  final songsByPlaylist = <String, List<Track>>{};
+  final detailRequests = <String>[];
+  final _shown = <String, RemotePlaylistDetails>{};
+
+  @override
+  RemotePlaylistDetails? cachedPlaylist(String id) => _shown[id];
+
+  @override
+  Future<RemotePlaylistDetails> playlistDetails(String playlistId) async {
+    detailRequests.add(playlistId);
+    return _shown[playlistId] = RemotePlaylistDetails(tracks: songsByPlaylist[playlistId] ?? [], owned: true);
+  }
 }
 
 class _RadioController extends _Controller {
@@ -78,7 +91,7 @@ class _RadioController extends _Controller {
   );
 }
 
-Future<PlayerController> _controller(WidgetTester tester, {YoutubeMusicLibrary? online}) async {
+Future<_Controller> _controller(WidgetTester tester, {YoutubeMusicLibrary? online}) async {
   SharedPreferences.setMockInitialValues({
     'library.v1': jsonEncode([for (final t in _library) t.toJson()]),
   });
@@ -119,6 +132,35 @@ void main() {
     const MethodChannel('plugins.flutter.io/path_provider'),
     (_) async => Directory.systemTemp.path,
   );
+
+  testWidgets('Library search finds songs inside local and online playlists', (tester) async {
+    final player = await _controller(
+      tester,
+      online: const YoutubeMusicLibrary(
+        liked: [],
+        recent: [],
+        playlists: [RemotePlaylist(id: 'PLtest', title: 'Online mix', count: 1)],
+      ),
+    );
+    final local = Track.youtube(videoId: 'localHidden', title: 'Hidden local song', artist: 'Someone');
+    final online = Track.youtube(videoId: 'onlineHidden', title: 'Hidden online song', artist: 'Someone');
+    player.createPlaylist('Local mix', tracks: [local]);
+    player._account.songsByPlaylist['PLtest'] = [local, online];
+    await tester.pumpWidget(_app(player, const LibraryList(full: true)));
+    await tester.enterText(find.byType(TextField), 'hidden');
+    await tester.pump();
+    expect(find.text('Hidden local song'), findsOneWidget);
+    expect(find.text('Hidden online song'), findsNothing);
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.pumpAndSettle();
+    expect(find.text('Hidden local song'), findsOneWidget);
+    expect(find.text('Hidden online song'), findsOneWidget);
+    await tester.enterText(find.byType(TextField), 'online song');
+    await tester.pumpAndSettle();
+    expect(find.text('Hidden local song'), findsNothing);
+    expect(find.text('Hidden online song'), findsOneWidget);
+    expect(player._account.detailRequests, ['PLtest']);
+  });
 
   testWidgets('Start radio opens a labeled temporary playlist from the song menu', (tester) async {
     final player = _RadioController();
@@ -175,11 +217,15 @@ void main() {
     ];
     final sorted = items.toList()
       ..sort((a, b) {
-        final first = tester.getTopLeft(find.text(a));
-        final second = tester.getTopLeft(find.text(b));
+        final first = tester.getTopLeft(find.ancestor(of: find.text(a), matching: find.byType(InkWell)).first);
+        final second = tester.getTopLeft(find.ancestor(of: find.text(b), matching: find.byType(InkWell)).first);
         return first.dy == second.dy ? first.dx.compareTo(second.dx) : first.dy.compareTo(second.dy);
       });
     expect(sorted, items);
+    for (final artist in ['Followed artist', 'Someone']) {
+      expect(find.ancestor(of: find.text(artist), matching: find.byType(Card)), findsNothing);
+    }
+    expect(find.ancestor(of: find.text('Online mix'), matching: find.byType(Card)), findsOneWidget);
     await tester.tap(find.text(tr.musicFolders));
     expect((opened.single as SettingsTopicPage).section, SettingsTopic.library);
 
@@ -193,6 +239,7 @@ void main() {
     await tester.pumpWidget(_app(c, settings));
     await tester.pumpAndSettle();
     expect(find.widgetWithText(ListTile, tr.importPlaylist), findsOneWidget);
+    expect(find.widgetWithText(ListTile, tr.importPlaylistFile), findsOneWidget);
   });
 
   testWidgets('the sidebar title stays on one line and the actions fit when resized', (tester) async {

@@ -95,6 +95,16 @@ Future<void> _finishMotion(WidgetTester tester) async {
   await tester.pump();
 }
 
+Future<void> _chooseArtistFromMenu(WidgetTester tester, String title) async {
+  final action = find.text(title);
+  if (action.evaluate().isEmpty) {
+    await tester.tap(find.text('More options'));
+    await tester.pump();
+    await _finishMotion(tester);
+  }
+  await tester.tap(action);
+}
+
 void main() {
   testWidgets('phone startup builds only its visible home, without hidden tab pages or a desktop copy', (tester) async {
     await _app(tester, const Size(400, 800));
@@ -154,7 +164,7 @@ void main() {
         await tester.tap(find.byTooltip('More options for Control test').last);
         await tester.pump();
         await _finishMotion(tester);
-        await tester.tap(find.text('Go to artist'));
+        await _chooseArtistFromMenu(tester, 'Go to artist');
       } else {
         await tester.tap(find.descendant(of: find.byType(NowPlayingPage), matching: find.text('Artist')).first);
       }
@@ -182,7 +192,7 @@ void main() {
         await tester.tap(find.byTooltip('More options for Duet test').last);
         await tester.pump();
         await _finishMotion(tester);
-        await tester.tap(find.text('Go to Vestia Zeta'));
+        await _chooseArtistFromMenu(tester, 'Go to Vestia Zeta');
       } else {
         final line = find.descendant(of: find.byType(NowPlayingPage), matching: find.byType(ArtistLinks)).first;
         // The second name, right of the middle of the line.
@@ -206,7 +216,7 @@ void main() {
     await tester.tap(menus.last);
     await tester.pump();
     await _finishMotion(tester);
-    await tester.tap(find.text('Go to artist'));
+    await _chooseArtistFromMenu(tester, 'Go to artist');
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 800));
     expect(find.byType(CollectionPage), findsOneWidget);
@@ -230,7 +240,7 @@ void main() {
         await tester.tap(find.byTooltip('More options for Remote duet').last);
         await tester.pump();
         await _finishMotion(tester);
-        await tester.tap(find.text('Go to Vestia Zeta'));
+        await _chooseArtistFromMenu(tester, 'Go to Vestia Zeta');
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 800));
         expect(find.byType(RemoteCollectionPage), findsOneWidget);
@@ -248,7 +258,7 @@ void main() {
     await tester.tap(find.byTooltip('More options for Downloaded test').last);
     await tester.pump();
     await _finishMotion(tester);
-    await tester.tap(find.text('Go to artist'));
+    await _chooseArtistFromMenu(tester, 'Go to artist');
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 800));
     expect(find.byType(RemoteCollectionPage), findsOneWidget, reason: 'the artist\'s page on YouTube Music');

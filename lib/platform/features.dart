@@ -43,6 +43,9 @@ abstract final class Features {
   /// Spotify sign-in and import, and importing playlists from other services.
   static bool get playlistImport => !Host.isWeb;
 
+  /// Import a playlist file with filesystem paths on desktop.
+  static bool get playlistFileImport => Host.isWindows || Host.isLinux || Host.isMacOS;
+
   /// Playing on a TV or speaker (DLNA, AirPlay).
   static bool get casting => !Host.isWeb;
 

@@ -40,6 +40,12 @@ class LibrarySettings extends StatelessWidget {
                       title: Text(tr.importPlaylist),
                       onTap: () => importPlaylist(context),
                     ),
+                    if (Features.playlistFileImport)
+                      ListTile(
+                        leading: const Icon(Icons.file_open_outlined),
+                        title: Text(tr.importPlaylistFile),
+                        onTap: () => importPlaylist(context, fromFile: true),
+                      ),
                     ListTile(
                       leading: const Icon(Icons.library_music_outlined),
                       title: Text(tr.spotifyLibrary),

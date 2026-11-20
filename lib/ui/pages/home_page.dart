@@ -14,6 +14,7 @@ import '../../services/playlist_covers.dart';
 import '../../services/youtube_music_account.dart';
 import '../debug_switches.dart';
 import '../playlist_cover_edit.dart';
+import '../player/player_common.dart' show ArtistLinks;
 import '../shell_scope.dart';
 import '../theme.dart';
 import '../widgets/app_dialog.dart';
@@ -478,9 +479,13 @@ class _QuickPicksCarousel extends StatelessWidget {
       return _HomeArtworkCard(
         artwork: Artwork(track: track, radius: 0),
         title: track.title,
-        subtitle: track.artist,
+        credits: track,
         onTap: () => shell.playAndOpen(play),
-        onPlay: play,
+        playButton: PlayerSelect<bool>(
+          select: (c) => c.currentTrack?.id == track.id && c.showsPlaying,
+          builder: (context, playing, _) =>
+              PlayButton(playing: playing, size: 40, onPressed: playing ? player.togglePlay : play),
+        ),
       );
     }
 
@@ -513,16 +518,16 @@ class _HomeArtworkCard extends StatelessWidget {
     required this.artwork,
     required this.title,
     required this.onTap,
-    this.subtitle,
-    this.onPlay,
+    this.credits,
+    this.playButton,
     this.compact = false,
   });
 
   final Widget artwork;
   final String title;
-  final String? subtitle;
+  final Track? credits;
   final VoidCallback onTap;
-  final VoidCallback? onPlay;
+  final Widget? playButton;
   final bool compact;
 
   @override
@@ -561,22 +566,16 @@ class _HomeArtworkCard extends StatelessWidget {
                                     overflow: TextOverflow.ellipsis,
                                     style: (compact ? text.labelLarge : text.titleLarge)?.copyWith(color: Colors.white),
                                   ),
-                                  if (subtitle case final subtitle? when !compact)
-                                    Text(
-                                      subtitle,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
+                                  if (credits case final track? when !compact)
+                                    ArtistLinks(
+                                      track: track,
+                                      showSource: false,
                                       style: text.bodyMedium?.copyWith(color: Colors.white),
                                     ),
                                 ],
                               ),
                             ),
-                            if (onPlay != null && !compact && limits.maxWidth > 145)
-                              IconButton.filled(
-                                tooltip: tr.play,
-                                onPressed: onPlay,
-                                icon: const Icon(Icons.play_arrow_rounded),
-                              ),
+                            if (!compact && limits.maxWidth > 145) ?playButton,
                           ],
                         ),
                       ),

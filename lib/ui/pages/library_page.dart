@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/material.dart';
 
 import 'home_page.dart' show openHomeArtist;
@@ -17,6 +20,7 @@ import '../playlist_cover_edit.dart';
 import '../shell_scope.dart';
 import '../theme.dart';
 import '../widgets/controls.dart';
+import '../widgets/track_row.dart' show TrackRow;
 import 'listening_stats_page.dart';
 import 'settings_index.dart';
 import 'settings_page.dart';
@@ -366,6 +370,7 @@ class _LibraryListState extends State<LibraryList> {
               location: Locations.remotePlaylist(a.id),
               onTap: () => openRemotePlaylist(context, a),
               grid: widget.full,
+              artist: true,
             ),
     ];
     final leading = widget.full
@@ -611,6 +616,7 @@ class _LibraryListState extends State<LibraryList> {
             child: SmoothScroll(
               builder: (context, scroll) {
                 final count = leading.length + local.length + afterLocal.length + albums.length + trailing.length;
+                final searchSongs = _query.isNotEmpty && show(LibraryFilter.playlists);
                 // Albums and artists are built only as they scroll into view.
                 Widget rowAt(BuildContext context, int i) {
                   if (i < leading.length) return leading[i];
@@ -628,7 +634,16 @@ class _LibraryListState extends State<LibraryList> {
                 return CustomScrollView(
                   controller: scroll,
                   slivers: [
-                    if (count == 0 &&
+                    if (searchSongs)
+                      _LibrarySongSearch(
+                        player: c,
+                        remote: online,
+                        query: _query,
+                        grid: widget.full,
+                        hasCollections: count > 0,
+                      ),
+                    if (!searchSongs &&
+                        count == 0 &&
                         (_query.isNotEmpty ||
                             _filter == LibraryFilter.local ||
                             ((widget.dense || widget.full) && prompts.isEmpty)))
@@ -699,6 +714,153 @@ class _LibraryListState extends State<LibraryList> {
   }
 }
 
+/// Searches playlist contents lazily and fills remote results in small batches.
+class _LibrarySongSearch extends StatefulWidget {
+  const _LibrarySongSearch({
+    required this.player,
+    required this.remote,
+    required this.query,
+    required this.grid,
+    required this.hasCollections,
+  });
+
+  final PlayerController player;
+  final YoutubeMusicLibrary? remote;
+  final String query;
+  final bool grid;
+  final bool hasCollections;
+
+  @override
+  State<_LibrarySongSearch> createState() => _LibrarySongSearchState();
+}
+
+class _LibrarySongSearchState extends State<_LibrarySongSearch> {
+  Timer? _timer;
+  int _generation = 0;
+  bool _loading = false;
+  bool _failed = false;
+
+  List<String> _ids(YoutubeMusicLibrary? library) => [
+    for (final playlist in library?.playlists ?? const <RemotePlaylist>[]) playlist.id,
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _schedule();
+  }
+
+  @override
+  void didUpdateWidget(covariant _LibrarySongSearch oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.player != oldWidget.player || !listEquals(_ids(widget.remote), _ids(oldWidget.remote))) _schedule();
+  }
+
+  void _schedule() {
+    _timer?.cancel();
+    final generation = ++_generation;
+    final account = widget.player.ytMusic;
+    final pending = _ids(widget.remote).where((id) => account.cachedPlaylist(id) == null).toList();
+    _loading = pending.isNotEmpty;
+    _failed = false;
+    if (_loading) _timer = Timer(const Duration(milliseconds: 250), () => _load(pending, account, generation));
+  }
+
+  Future<void> _load(List<String> pending, YoutubeMusicAccount account, int generation) async {
+    var failed = false;
+    const batchSize = 4;
+    for (var start = 0; start < pending.length; start += batchSize) {
+      final batch = pending.skip(start).take(batchSize);
+      await Future.wait(
+        batch.map((id) async {
+          if (account.cachedPlaylist(id) != null) return;
+          try {
+            await account.playlistDetails(id);
+          } catch (_) {
+            failed = true;
+          }
+        }),
+      );
+      if (!mounted || generation != _generation) return;
+      setState(() {
+        _loading = start + batchSize < pending.length;
+        _failed = failed;
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    _generation++;
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final c = widget.player;
+    final seen = <String>{};
+    final candidates = c.library
+        .followedBy(c.playlists.expand((playlist) => playlist.tracks))
+        .followedBy(widget.remote?.liked ?? const [])
+        .followedBy(_ids(widget.remote).expand((id) => c.ytMusic.cachedPlaylist(id)?.tracks ?? const []));
+    final songs = [
+      for (final track in candidates)
+        if ('${track.title} ${track.artist}'.toLowerCase().contains(widget.query) && seen.add(track.id)) track,
+    ];
+    if (songs.isEmpty && !_loading && !_failed && widget.hasCollections) {
+      return const SliverToBoxAdapter(child: SizedBox.shrink());
+    }
+    final shell = ShellScope.of(context);
+    return SliverPadding(
+      padding: const EdgeInsets.fromLTRB(8, 0, 8, 12),
+      sliver: SliverMainAxisGroup(
+        slivers: [
+          if (songs.isNotEmpty)
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(8, 8, 8, 4),
+                child: Text(tr.songs, style: Theme.of(context).textTheme.titleMedium),
+              ),
+            ),
+          SliverList.builder(
+            itemCount: songs.length,
+            itemBuilder: (context, i) {
+              final track = songs[i];
+              void play() => shell.playAndOpen(() => c.playList(songs, i, from: tr.searchYourLibrary));
+              return widget.grid
+                  ? TrackRow(track: track, onTap: play, showAlbum: false)
+                  : ListTile(
+                      dense: true,
+                      leading: Artwork(track: track, size: 36),
+                      title: Text(track.title, maxLines: 1, overflow: TextOverflow.ellipsis),
+                      subtitle: Text(track.artist, maxLines: 1, overflow: TextOverflow.ellipsis),
+                      onTap: play,
+                    );
+            },
+          ),
+          if (_loading || _failed || songs.isEmpty)
+            SliverToBoxAdapter(
+              child: ListTile(
+                dense: true,
+                title: Text(
+                  _loading
+                      ? tr.searching
+                      : _failed
+                      ? tr.ytLoadFailed
+                      : tr.noLibraryMatches,
+                ),
+                trailing: _failed && !_loading
+                    ? TextButton(onPressed: () => setState(_schedule), child: Text(tr.tryAgain))
+                    : null,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
 IconData _smartIcon(SmartList l) => switch (l) {
   SmartList.mostPlayed => Icons.trending_up_rounded,
   SmartList.notPlayedForAWhile => Icons.history_toggle_off_rounded,
@@ -739,6 +901,7 @@ class _SimpleRow extends StatelessWidget {
     this.online = false,
     this.action,
     this.grid = false,
+    this.artist = false,
     this.playingHere = false,
     this.playing = false,
   });
@@ -752,6 +915,7 @@ class _SimpleRow extends StatelessWidget {
   final bool online;
   final Widget? action;
   final bool grid;
+  final bool artist;
   final bool playingHere;
   final bool playing;
 
@@ -759,18 +923,28 @@ class _SimpleRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
     final shell = ShellScope.of(context);
+    final name = Text(
+      title,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      style: text.bodyLarge?.copyWith(
+        fontWeight: FontWeight.w600,
+        color: playingHere ? AppColors.accent : AppColors.textPrimary,
+      ),
+    );
+    if (grid && artist) {
+      return _LibraryGridCard(
+        art: art,
+        labels: Center(child: name),
+        action: null,
+        onTap: onTap,
+        artist: true,
+      );
+    }
     final labels = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          title,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: text.bodyLarge?.copyWith(
-            fontWeight: FontWeight.w600,
-            color: playingHere ? AppColors.accent : AppColors.textPrimary,
-          ),
-        ),
+        name,
         const SizedBox(height: 2),
         Row(
           children: [
@@ -824,12 +998,19 @@ class _SimpleRow extends StatelessWidget {
 }
 
 class _LibraryGridCard extends StatefulWidget {
-  const _LibraryGridCard({required this.art, required this.labels, required this.action, required this.onTap});
+  const _LibraryGridCard({
+    required this.art,
+    required this.labels,
+    required this.action,
+    required this.onTap,
+    this.artist = false,
+  });
 
   final Widget art;
   final Widget labels;
   final Widget? action;
   final VoidCallback onTap;
+  final bool artist;
 
   @override
   State<_LibraryGridCard> createState() => _LibraryGridCardState();
@@ -849,60 +1030,61 @@ class _LibraryGridCardState extends State<_LibraryGridCard> {
     final colors = Theme.of(context).colorScheme;
     final moves = LayoutPrefs.moves && !MediaQuery.disableAnimationsOf(context);
     final artwork = IconTheme.merge(data: const IconThemeData(size: 36), child: widget.art);
-    return Card.filled(
-      margin: EdgeInsets.zero,
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        statesController: _states,
-        onTap: widget.onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(10),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Expanded(
-                child: ClipRRect(
-                  borderRadius: LayoutPrefs.corner(12),
-                  child: Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      if (moves)
-                        ValueListenableBuilder<Set<WidgetState>>(
-                          valueListenable: _states,
-                          builder: (context, states, child) {
-                            final pressed = states.contains(WidgetState.pressed);
-                            return AnimatedScale(
-                              scale: pressed ? .97 : (states.contains(WidgetState.hovered) ? 1.04 : 1),
-                              duration: Duration(milliseconds: pressed ? 100 : 180),
-                              curve: Curves.easeOutCubic,
-                              child: child,
-                            );
-                          },
-                          child: artwork,
-                        )
-                      else
-                        artwork,
-                      if (widget.action case final action?)
-                        PositionedDirectional(
-                          end: 4,
-                          top: 4,
-                          child: Material(
-                            color: colors.surfaceContainerHighest,
-                            shape: const CircleBorder(),
-                            child: action,
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 10),
-              widget.labels,
-            ],
-          ),
+    final tile = InkWell(
+      statesController: _states,
+      onTap: widget.onTap,
+      child: Padding(
+        padding: const EdgeInsets.all(10),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Expanded(
+              child: widget.artist
+                  ? Center(child: AspectRatio(aspectRatio: 1, child: artwork))
+                  : ClipRRect(
+                      borderRadius: LayoutPrefs.corner(12),
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          if (moves)
+                            ValueListenableBuilder<Set<WidgetState>>(
+                              valueListenable: _states,
+                              builder: (context, states, child) {
+                                final pressed = states.contains(WidgetState.pressed);
+                                return AnimatedScale(
+                                  scale: pressed ? .97 : (states.contains(WidgetState.hovered) ? 1.04 : 1),
+                                  duration: Duration(milliseconds: pressed ? 100 : 180),
+                                  curve: Curves.easeOutCubic,
+                                  child: child,
+                                );
+                              },
+                              child: artwork,
+                            )
+                          else
+                            artwork,
+                          if (widget.action case final action?)
+                            PositionedDirectional(
+                              end: 4,
+                              top: 4,
+                              child: Material(
+                                color: colors.surfaceContainerHighest,
+                                shape: const CircleBorder(),
+                                child: action,
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+            ),
+            const SizedBox(height: 10),
+            widget.labels,
+          ],
         ),
       ),
     );
+    return widget.artist
+        ? Material(type: MaterialType.transparency, child: tile)
+        : Card.filled(margin: EdgeInsets.zero, clipBehavior: Clip.antiAlias, child: tile);
   }
 }
 
@@ -976,6 +1158,7 @@ class _LibraryRow extends StatelessWidget {
       playing: playing,
       action: action,
       grid: grid,
+      artist: isArtist,
       onTap: isArtist
           ? openHomeArtist(context, PlayerScope.read(context), collection, shell: shell)
           : () => shell.openCollection(collection),

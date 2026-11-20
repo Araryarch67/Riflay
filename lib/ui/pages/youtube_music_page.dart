@@ -70,8 +70,8 @@ Future<void> joinSharedPlaylist(BuildContext context) async {
 }
 
 /// "Import a playlist" from Spotify, Apple Music or Deezer, then opens it.
-Future<void> importPlaylist(BuildContext context) async {
-  final imported = await askToImportPlaylist(context);
+Future<void> importPlaylist(BuildContext context, {bool fromFile = false}) async {
+  final imported = await askToImportPlaylist(context, fromFile: fromFile);
   if (imported == null || !context.mounted) return;
   if (imported.local case final p?) {
     ShellScope.of(context).openCollection(PlayerScope.read(context).playlistCollection(p));

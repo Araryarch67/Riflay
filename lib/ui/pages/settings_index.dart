@@ -918,6 +918,12 @@ abstract final class SettingsOptions {
       (t) => t.importPlaylist,
       available: () => Features.playlistImport,
     ),
+    SettingsOption(
+      'libraryImportPlaylistFile',
+      .library,
+      (t) => t.importPlaylistFile,
+      available: () => Features.playlistFileImport,
+    ),
     SettingsOption('librarySpotify', .library, (t) => t.spotifyLibrary, available: () => Features.playlistImport),
     SettingsOption('libraryAddSongs', .library, (t) => t.addSongs),
     SettingsOption('libraryImportYouTube', .library, (t) => t.importFromYouTube),
