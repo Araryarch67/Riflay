@@ -1,6 +1,6 @@
 # Builds Riflay for Android, Windows, Linux, macOS and iOS and attaches the files to a
 # GitHub release. Runs when a version tag is pushed (`git tag v1.2.0
-# && git push origin v1.2.0`), from main for Nightly, or by hand. Manual runs keep
+# && git push origin v1.2.0`) or by hand. Manual runs keep
 # artifacts only unless publish_tag names an existing release to repair;
 # platforms picks which builds run.
 #
@@ -24,7 +24,7 @@ name: Release
 
 on:
   push:
-    branches: [main]
+    # Rolling Nightly is paused. Re-enable the main branch trigger to resume it.
     tags: ['v*']
   workflow_dispatch:
     inputs:
