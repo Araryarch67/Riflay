@@ -40,11 +40,11 @@ on:
 permissions:
   contents: read
 
-# A newer main build supersedes an older in-progress nightly. Tagged releases
-# and manual recovery runs stay independent.
+# Serialize rolling Nightlies so a new push cannot interrupt asset replacement.
+# Tagged releases and manual recovery runs stay independent.
 concurrency:
   group: riflay-release-${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && 'nightly' || github.run_id }}
-  cancel-in-progress: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+  cancel-in-progress: false
 
 env:
   FLUTTER_VERSION: '3.47.7'
@@ -450,30 +450,15 @@ jobs:
     permissions:
       contents: write
     steps:
+      - uses: actions/checkout@v7
       - uses: actions/download-artifact@v8
         with:
           path: artifacts
-      - name: Publish main-branch build as a prerelease
+      - name: Refresh the rolling Nightly prerelease
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
-        run: |
-          tag="nightly-$GITHUB_SHA"
-          mkdir dist
-          for platform in android windows linux macos ios; do
-            cp -- "artifacts/$platform/"* dist/
-          done
-          (cd dist && sha256sum -- *) > SHA256SUMS
-          if draft=$(gh release view "$tag" --json isDraft --jq '.isDraft' 2>/dev/null); then
-            # A successful rerun of the same commit has nothing to replace.
-            if [[ "$draft" == false ]]; then exit 0; fi
-          else
-            printf 'Nightly build from main at %s.\n\nNightly uses the same app identity and settings as the stable app. Use the stable release for daily use.\n' "$GITHUB_SHA" > nightly.md
-            gh release create "$tag" --target "$GITHUB_SHA" --draft --prerelease --latest=false \
-              --title "Riflay Nightly (${GITHUB_SHA:0:7})" --notes-file nightly.md
-          fi
-          gh release upload "$tag" dist/* SHA256SUMS --clobber
-          gh release edit "$tag" --draft=false --prerelease --latest=false
+        run: bash tool/publish_nightly.sh
 
   release:
     if: (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) || inputs.publish_tag != ''
