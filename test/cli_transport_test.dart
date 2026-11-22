@@ -5,6 +5,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:riflay_cli/protocol.dart';
 import 'package:riflay_cli/transport.dart';
 
+import 'support/environment.dart';
+
 void main() {
   late Directory directory;
   late File endpoint;
@@ -104,8 +106,13 @@ void main() {
 
   test('standalone CLI can discover commands, validate arguments and talk to the server', () async {
     // Use the standalone package's configuration; the app has native Flutter build hooks.
+    // `dart` on the PATH, else the one in the Flutter SDK running these tests.
+    final root = Platform.environment['FLUTTER_ROOT'];
+    final dart = hasCommand('dart') || root == null
+        ? 'dart'
+        : '$root/bin/cache/dart-sdk/bin/dart${Platform.isWindows ? '.exe' : ''}';
     Future<ProcessResult> run(List<String> args) =>
-        Process.run('dart', ['bin/riflay_cli.dart', ...args], workingDirectory: 'cli');
+        Process.run(dart, ['bin/riflay_cli.dart', ...args], workingDirectory: 'cli');
     final schema = await run(['schema']);
     expect(schema.exitCode, 0, reason: '${schema.stderr}');
     expect(jsonDecode(schema.stdout as String)['result']['commands'], contains('queue add'));

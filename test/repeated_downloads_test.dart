@@ -36,7 +36,17 @@ void main() {
     'loading a library with a song downloaded twice keeps the playable one, in the library and in playlists',
     () async {
       final dir = Directory.systemTemp.createTempSync('riflay-dupes');
-      addTearDown(() => dir.deleteSync(recursive: true));
+      addTearDown(() async {
+        // The controller's last writes may still hold a file there (Windows won't delete an open file).
+        for (var i = 0; i < 20; i++) {
+          try {
+            dir.deleteSync(recursive: true);
+            return;
+          } on FileSystemException {
+            await Future<void>.delayed(const Duration(milliseconds: 100));
+          }
+        }
+      });
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(
         const MethodChannel('plugins.flutter.io/path_provider'),
         (_) async => dir.path,

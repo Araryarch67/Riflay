@@ -142,6 +142,9 @@ class AppLocalizationsId extends AppLocalizations {
   String get podcastShows => 'Acara';
 
   @override
+  String get olderEpisodes => 'Muat episode lama';
+
+  @override
   String get podcastEpisodes => 'Episode';
 
   @override

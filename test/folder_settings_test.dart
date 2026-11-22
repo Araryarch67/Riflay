@@ -4,6 +4,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:path/path.dart' as p;
 import 'package:riflay/models/track.dart';
 import 'package:riflay/services/download_prefs.dart';
 import 'package:riflay/services/folder_watch.dart';
@@ -134,6 +135,9 @@ void main() {
     final c = _Library();
     var added = 0;
     await tester.pumpWidget(_app(const SingleChildScrollView(child: LibrarySettings()), c, () => added++, 800));
+    // Below the sections above it: scrolled into view first.
+    await tester.ensureVisible(find.text('Add a folder'));
+    await tester.pump();
     await tester.tap(find.text('Add a folder'));
     await tester.tap(find.text('Add a folder'));
     expect(added, 2);
@@ -143,8 +147,9 @@ void main() {
 
   testWidgets('Downloads loads the saved folder, changes it and keeps it on cancellation', (tester) async {
     final root = Directory.systemTemp.createTempSync('riflay-folders-');
-    final first = Directory('${root.path}/First')..createSync();
-    final second = Directory('${root.path}/Second folder')..createSync();
+    // In the computer's own form, as the settings show them.
+    final first = Directory(p.join(root.path, 'First'))..createSync();
+    final second = Directory(p.join(root.path, 'Second folder'))..createSync();
     const paths = MethodChannel('plugins.flutter.io/path_provider');
     final messenger = TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
     messenger.setMockMethodCallHandler(paths, (_) async => root.path);
@@ -178,7 +183,8 @@ void main() {
     await tester.pump();
     expect(picker.initial, first.path);
     expect(find.byType(SnackBar), findsNothing);
-    expect(find.text(second.path), findsOneWidget);
+    // The folder by its name; the full path is in the picker.
+    expect(find.text(p.basename(second.path)), findsOneWidget);
     expect((await tester.runAsync(YoutubeImporter.downloadsDir))!.path, second.path);
     expect((await SharedPreferences.getInstance()).getString('downloads.folder'), second.path);
     expect(second.listSync(), isEmpty, reason: 'folder validation cleans up its probe');

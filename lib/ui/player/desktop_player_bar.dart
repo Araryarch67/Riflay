@@ -158,7 +158,10 @@ class DesktopPlayerBar extends StatelessWidget {
                             },
                           ),
                           const SizedBox(height: 2),
-                          ArtistLinks(track: track, style: text.bodySmall?.copyWith(color: AppColors.textSecondary)),
+                          ArtistLinks(
+                            track: track,
+                            style: text.bodySmall?.copyWith(color: AppColors.textSecondary),
+                          ),
                         ],
                       ),
                     ),
@@ -184,10 +187,7 @@ class DesktopPlayerBar extends StatelessWidget {
                         Flexible(
                           child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 240), child: card),
                         ),
-                        if (track != null) ...[
-                          const SizedBox(width: 8),
-                          LikeButton(track: track, size: 22),
-                        ],
+                        if (track != null) ...[const SizedBox(width: 8), LikeButton(track: track, size: 22)],
                       ],
                     ),
                   ),

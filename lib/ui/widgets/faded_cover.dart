@@ -25,7 +25,12 @@ class FadedCover extends StatefulWidget {
     this.sharp = true,
     this.darken = 0.4,
     this.fadeSide = false,
+    this.dissolve = false,
   });
+
+  /// Fades the picture itself out at its foot (it becomes see-through) instead of ending it in [fade]: for a page
+  /// with no colour of its own, the glass over the cover, where any colour there would be a band.
+  final bool dissolve;
 
   final Track? track;
 
@@ -48,6 +53,20 @@ class FadedCover extends StatefulWidget {
 
   @override
   State<FadedCover> createState() => _FadedCoverState();
+
+  /// [child] fading to see-through towards its foot, with [dissolve].
+  Widget _dissolved(Widget child) => !dissolve
+      ? child
+      : ShaderMask(
+          blendMode: BlendMode.dstIn,
+          shaderCallback: (rect) => const LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Colors.white, Colors.white, Colors.transparent],
+            stops: [0, 0.55, 1],
+          ).createShader(rect),
+          child: child,
+        );
 }
 
 class _FadedCoverState extends State<FadedCover> {
@@ -301,7 +320,11 @@ class _FadedCoverState extends State<FadedCover> {
           _want(t, box.biggest);
         }
         final image = _image;
-        if (image == null) return ColoredBox(color: widget.fade ?? AppColors.of(context).hover);
+        if (image == null) {
+          return widget.dissolve
+              ? const SizedBox.expand()
+              : ColoredBox(color: widget.fade ?? AppColors.of(context).hover);
+        }
         final fade = widget.fade;
         final clear = fade?.withValues(alpha: 0);
         return Stack(
@@ -309,12 +332,14 @@ class _FadedCoverState extends State<FadedCover> {
           children: [
             // Its own layer: the page above changes often, this picture never does.
             RepaintBoundary(
-              child: RawImage(
-                image: image,
-                fit: BoxFit.fill,
-                filterQuality: FilterQuality.medium,
-                width: double.infinity,
-                height: double.infinity,
+              child: widget._dissolved(
+                RawImage(
+                  image: image,
+                  fit: BoxFit.fill,
+                  filterQuality: FilterQuality.medium,
+                  width: double.infinity,
+                  height: double.infinity,
+                ),
               ),
             ),
             // The ends that meet the page are plain gradients over it, so they always match the page's colour as it

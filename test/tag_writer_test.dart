@@ -22,7 +22,8 @@ Future<bool> _ffmpeg(List<String> args) async {
 Future<Map<String, String>> _probe(String path) async {
   final r = await Process.run('ffprobe', [
     '-v', 'error', '-select_streams', 'a', '-show_entries', 'format_tags:stream_tags', '-of', 'json', path, //
-  ]);
+    // ffprobe writes UTF-8; the system's code page (Windows) would garble anything outside it.
+  ], stdoutEncoding: utf8);
   final json = jsonDecode(r.stdout as String) as Map<String, dynamic>;
   final tags = <String, String>{};
   void add(Object? m) {

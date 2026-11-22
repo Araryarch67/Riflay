@@ -52,7 +52,7 @@ void main() {
     test('goes beside the original', () {
       expect(
         FlacConvert.targetPath('/music/a.mp3', keepOriginal: true, downloadsDir: '/dl', exists: (_) => false),
-        '/music/a.flac',
+        p.join('/music', 'a.flac'),
       );
     });
 
@@ -65,7 +65,7 @@ void main() {
           folderWritable: false,
           exists: (_) => false,
         ),
-        '/dl/a.flac',
+        p.join('/dl', 'a.flac'),
       );
       // A download is replaced where it is, whatever else.
       expect(
@@ -76,15 +76,15 @@ void main() {
           folderWritable: false,
           exists: (_) => false,
         ),
-        '/dl/a.flac',
+        p.join('/dl', 'a.flac'),
       );
     });
 
     test('never takes a name that exists', () {
-      final taken = {'/music/a.flac', '/music/a (2).flac'};
+      final taken = {p.join('/music', 'a.flac'), p.join('/music', 'a (2).flac')};
       expect(
         FlacConvert.targetPath('/music/a.mp3', keepOriginal: true, downloadsDir: '/dl', exists: taken.contains),
-        '/music/a (3).flac',
+        p.join('/music', 'a (3).flac'),
       );
     });
   });

@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:riflay/models/track.dart';
+import 'package:riflay/services/request_gate.dart';
 import 'package:riflay/services/lyrics.dart';
 import 'package:riflay/services/ytmusic_web.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -204,6 +205,8 @@ void main() {
     final first = await http.runWithClient(() => LyricsService.forTrack(song), services);
     expect(first.isEmpty, isTrue);
     down = false;
+    // The service's "too many" pause (RequestGate) is over by the time it is asked again.
+    RequestGate.resetAll();
     final again = await http.runWithClient(() => LyricsService.forTrack(song), services);
     expect(again.synced, isTrue, reason: 'asked again, not answered from the first try');
   });

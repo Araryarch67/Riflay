@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:path/path.dart' as p;
 import 'package:riflay/models/track.dart';
 import 'package:riflay/services/duplicate_finder.dart';
 
@@ -140,7 +141,7 @@ void main() {
       final flac = item('/m/a.flac', bytes: 20000000);
       final mp3 = item('/m/a.mp3', bytes: 8000000); // 320 kbps
       expect(compareQuality(flac, mp3), lessThan(0));
-      expect(findDuplicates([mp3, flac]).single.best.path, '/m/a.flac');
+      expect(findDuplicates([mp3, flac]).single.best.path, p.normalize('/m/a.flac'));
     });
 
     test('higher bitrate beats lower, and a codec counts for what it is', () {
@@ -170,7 +171,7 @@ void main() {
       final fwd = findDuplicates(all).single.items.map((i) => i.path).toList();
       final rev = findDuplicates(all.reversed).single.items.map((i) => i.path).toList();
       expect(fwd, rev);
-      expect(fwd.first, '/m/b.flac');
+      expect(fwd.first, p.normalize('/m/b.flac'));
     });
 
     test('bitrate comes from size and length', () {
@@ -187,7 +188,7 @@ void main() {
       final g = group([flac, mp3]);
       final plan = planRemoval([RemovalChoice(g, flac.track.id)], deleteFiles: true, library: [flac.track, mp3.track]);
       expect(plan.removeFromLibrary.map((t) => t.id), [mp3.track.id]);
-      expect(plan.filesToDelete.map((i) => i.path), ['/m/a.mp3']);
+      expect(plan.filesToDelete.map((i) => i.path), [p.normalize('/m/a.mp3')]);
       expect(plan.bytesFreed, 8000000);
       expect(plan.keptInstead[mp3.track.id]!.id, flac.track.id);
     });

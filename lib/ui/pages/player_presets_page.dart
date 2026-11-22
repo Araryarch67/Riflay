@@ -42,7 +42,7 @@ class PlayerPresetsPage extends StatelessWidget {
               Align(
                 alignment: AlignmentDirectional.centerStart,
                 child: FilledButton.tonalIcon(
-                  onPressed: () => _saveCurrent(context),
+                  onPressed: () => savePresetFromCurrent(context),
                   icon: const Icon(Icons.add_rounded),
                   label: Text(tr.saveAsPreset),
                 ),
@@ -68,16 +68,17 @@ class PlayerPresetsPage extends StatelessWidget {
   }
 }
 
-/// Asks for a name and saves the player as it is now under it.
-Future<void> _saveCurrent(BuildContext context) async {
+/// Asks for a name and saves the player as it is now under it; null when the person cancels.
+Future<PlayerPreset?> savePresetFromCurrent(BuildContext context) async {
   final messenger = ScaffoldMessenger.of(context);
   final name = await showDialog<String>(
     context: context,
     builder: (_) => _PresetNameDialog(title: tr.saveAsPreset, body: tr.saveAsPresetBody, action: tr.save),
   );
-  if (name == null) return;
+  if (name == null) return null;
   final preset = await CustomPresets.instance.saveCurrent(name);
   messenger.showSnackBar(SnackBar(content: Text(tr.presetSaved(preset.name))));
+  return preset;
 }
 
 /// A preset's name: not one of Riflay's own; another of the user's is replaced when saving, refused when renaming.

@@ -364,9 +364,8 @@ class _QueueRow extends StatelessWidget {
                   child: Text(
                     eta!,
                     textAlign: TextAlign.right,
-                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      fontFeatures: const [FontFeature.tabularFigures()],
-                    ),
+                    style: Theme.of(context).textTheme.labelSmall
+                        ?.copyWith(fontFeatures: const [FontFeature.tabularFigures()]),
                   ),
                 ),
         ),

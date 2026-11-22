@@ -321,6 +321,20 @@ class YoutubeMusicAccount extends ChangeNotifier {
     return _discover!;
   }
 
+  /// The mixes YouTube Music made for the signed-in account (My Supermix, My Mix 1…, Discover mix…), from its
+  /// Home: Riflay's "Made for you" shows them beside its own.
+  List<RemotePlaylist> get personalMixes => isSignedIn ? personalMixesIn(_discovered ?? const []) : const [];
+
+  @visibleForTesting
+  static List<RemotePlaylist> personalMixesIn(List<RemoteShelf> shelves) {
+    final seen = <String>{};
+    return [
+      for (final shelf in shelves)
+        for (final p in shelf.collections)
+          if (RegExp(r'^(VL)?RDTMAK5uy_').hasMatch(p.id) && seen.add(p.id.replaceFirst('VL', ''))) p,
+    ];
+  }
+
   String get _discoverOwner => accountName ?? '';
 
   static Future<File> _discoverFile() => PrivateFiles.file('discover-cache.json');
@@ -1155,13 +1169,44 @@ class YoutubeMusicAccount extends ChangeNotifier {
     return page;
   }
 
+  /// Where each podcast show opened so far goes on: the next (older) page's token, null once the oldest is shown.
+  final _episodesAfter = <String, ({String? next, String show})>{};
+
+  /// A show opens on its newest page of episodes (a long show's every page would take seconds more).
+  Future<List<WebTrack>> _firstEpisodes(String browseId) async {
+    final page = await _browseClient.podcastEpisodePage(browseId);
+    _episodesAfter[browseId] = (next: page.next, show: page.show);
+    return page.episodes;
+  }
+
+  /// Whether the show [browseId] (`MPSP…`), as opened, has older episodes than those shown.
+  bool hasOlderEpisodes(String browseId) => _episodesAfter[browseId]?.next != null;
+
+  /// The show's next page of older episodes; they stay with the show for the next time it opens.
+  Future<List<Track>> olderEpisodes(String browseId) async {
+    final at = _episodesAfter[browseId];
+    final token = at?.next;
+    if (at == null || token == null) return const [];
+    final page = await _browseClient.podcastEpisodePage(browseId, continuation: token, show: at.show);
+    _episodesAfter[browseId] = (next: page.next, show: at.show);
+    final more = _webTracks(page.episodes);
+    if (_publicPages[browseId] case final hit?) {
+      _publicPages[browseId] = (hit.$1, hit.$2.then((shown) => [...shown, ...more]));
+    }
+    return more;
+  }
+
   /// Songs of a playlist from the library or of a public album / playlist.
   Future<List<Track>> collectionTracks(RemotePlaylist p) async {
     final browseId = p.browseId;
     if (browseId != null) {
       final hit = _publicPages[browseId];
       if (hit != null && DateTime.now().difference(hit.$1) < const Duration(minutes: 30)) return hit.$2;
-      final future = _browseClient.browseTracks(browseId, limit: _maxItems).then(_webTracks);
+      final future =
+          (browseId.startsWith('MPSP')
+                  ? _firstEpisodes(browseId)
+                  : _browseClient.browseTracks(browseId, limit: _maxItems))
+              .then(_webTracks);
       _publicPages[browseId] = (DateTime.now(), future);
       if (_publicPages.length > 50) _publicPages.remove(_publicPages.keys.first);
       future.then<void>(

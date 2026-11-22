@@ -139,6 +139,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get podcastShows => '番組';
 
   @override
+  String get olderEpisodes => '以前のエピソードを読み込む';
+
+  @override
   String get podcastEpisodes => 'エピソード';
 
   @override

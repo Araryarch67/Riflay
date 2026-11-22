@@ -32,11 +32,12 @@ class IosFolders {
     return [for (final t in tracks) t.uri.isScheme('file') ? t.copyWith(uri: _repointUri(t.uri, changed)) : t];
   }
 
+  // iOS paths are always POSIX: the URI's own path, so this reads the same on any computer running the tests.
   static Uri _repointUri(Uri uri, Map<String, String> changed) {
-    final path = uri.toFilePath();
+    final path = Uri.decodeFull(uri.path);
     for (final e in changed.entries) {
       final dir = e.key.endsWith('/') ? e.key : '${e.key}/';
-      if (path.startsWith(dir)) return Uri.file(e.value + path.substring(e.key.length));
+      if (path.startsWith(dir)) return Uri(scheme: 'file', path: e.value + path.substring(e.key.length));
     }
     return uri;
   }

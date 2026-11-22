@@ -148,6 +148,12 @@ Future<void> _main(List<String> args) async {
     if (!Host.isAndroid) unawaited(_startServices(controller));
     unawaited(IncomingLinks.instance.start(args));
   });
+  // Downloads from before they were named "Artist - Title" get that name, once the app is up.
+  unawaited(
+    Future<void>.delayed(const Duration(seconds: 8), controller.renameDownloads).catchError((Object e) {
+      debugPrint('Renaming downloads failed: $e');
+    }),
+  );
 }
 
 /// The first line of text laid out in a process makes the engine list the computer's fonts (a few dozen

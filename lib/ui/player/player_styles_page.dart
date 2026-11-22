@@ -6,7 +6,7 @@ import '../../services/layout_prefs.dart';
 import '../../services/player_controller.dart';
 import '../../services/player_presets.dart';
 import '../pages/layout_settings.dart' show NowPlayingSettings;
-import '../pages/player_presets_page.dart' show PresetSchematic;
+import '../pages/player_presets_page.dart' show PresetSchematic, savePresetFromCurrent;
 import '../shell_scope.dart';
 import '../theme.dart';
 import '../widgets/live_preview.dart';
@@ -82,7 +82,7 @@ class _PlayerStylesPageState extends State<PlayerStylesPage> {
     final at = _presets.indexWhere((p) => p.name == name);
     return at < 0 ? 0 : at;
   }();
-  late final _pages = PageController(viewportFraction: 0.78, initialPage: _start);
+  late var _pages = PageController(viewportFraction: 0.78, initialPage: _start);
   late int _index = _start;
 
   /// Whether the look on screen is the one picked here, to be kept on leaving.
@@ -118,6 +118,23 @@ class _PlayerStylesPageState extends State<PlayerStylesPage> {
   void _set() {
     _keep = true;
     Navigator.of(context).pop();
+  }
+
+  /// Saves the look on screen as one of the person's own presets, which then joins the row (and stays on).
+  Future<void> _save() async {
+    final preset = await savePresetFromCurrent(context);
+    if (preset == null || !mounted) return;
+    final at = _presets.indexWhere((p) => p.name.toLowerCase() == preset.name.toLowerCase());
+    setState(() {
+      at < 0 ? _presets.add(preset) : _presets[at] = preset;
+      _index = at < 0 ? _presets.length - 1 : at;
+      // What was saved is kept: leaving doesn't put the look from before back.
+      _keep = true;
+      // The row is built anew (see the PageView's key) on the new card: a row already laid out doesn't lengthen.
+      final old = _pages;
+      _pages = PageController(viewportFraction: 0.78, initialPage: _index);
+      WidgetsBinding.instance.addPostFrameCallback((_) => old.dispose());
+    });
   }
 
   void _edit() {
@@ -164,6 +181,15 @@ class _PlayerStylesPageState extends State<PlayerStylesPage> {
                         icon: const Icon(Icons.chevron_left_rounded),
                       ),
                     ),
+                    Positioned(
+                      right: 12,
+                      child: IconButton.filled(
+                        style: IconButton.styleFrom(backgroundColor: _dark, foregroundColor: Colors.white),
+                        tooltip: tr.saveAsPreset,
+                        onPressed: _save,
+                        icon: const Icon(Icons.bookmark_add_outlined),
+                      ),
+                    ),
                     Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
@@ -179,6 +205,7 @@ class _PlayerStylesPageState extends State<PlayerStylesPage> {
                   child: SizedBox(
                     height: cardHeight,
                     child: PageView.builder(
+                      key: ValueKey(_presets.length),
                       controller: _pages,
                       itemCount: _presets.length,
                       onPageChanged: _tryOn,

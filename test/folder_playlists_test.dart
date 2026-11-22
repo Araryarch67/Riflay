@@ -161,6 +161,10 @@ void main() {
   });
 
   testWidgets('Playlists shows a folder playlist with its folder name, marked as a folder', (tester) async {
+    // Tall enough for the sign-in and add-music invitations above the rows.
+    tester.view.physicalSize = const Size(1200, 1400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
     SharedPreferences.setMockInitialValues({});
     final c = _Controller(_library, [_rock]);
     await tester.runAsync(c.load);

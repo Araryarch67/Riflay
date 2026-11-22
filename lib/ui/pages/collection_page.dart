@@ -37,7 +37,14 @@ import '../widgets/app_dialog.dart';
 
 /// Album / artist / "All Songs" page with a colour-washed header.
 class CollectionPage extends StatefulWidget {
-  const CollectionPage({super.key, required this.collection, this.actions = const [], this.onRename, this.onReorder});
+  const CollectionPage({
+    super.key,
+    required this.collection,
+    this.actions = const [],
+    this.onRename,
+    this.onReorder,
+    this.footer,
+  });
 
   final Collection collection;
 
@@ -50,6 +57,9 @@ class CollectionPage extends StatefulWidget {
 
   /// Extra buttons next to Play / Shuffle (e.g. editing one of your playlists).
   final List<Widget> actions;
+
+  /// Below the songs (a show's "Load older episodes").
+  final Widget? footer;
 
   @override
   State<CollectionPage> createState() => _CollectionPageState();
@@ -508,6 +518,7 @@ class _CollectionPageState extends State<CollectionPage> {
               ),
             ),
             if (isArtist) ..._artistAlbums(context, c, live),
+            if (widget.footer case final footer?) SliverToBoxAdapter(child: footer),
             // Room for the bar of picked songs, so it never covers the last ones.
             if (TrackSelectionScope.maybeOf(context) case final selection?)
               SliverToBoxAdapter(

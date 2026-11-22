@@ -9,9 +9,10 @@ import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:just_audio/just_audio.dart';
-import 'package:media_kit/media_kit.dart';
 import 'package:riflay/services/airplay.dart';
 import 'package:riflay/services/pcm_decoder.dart';
+
+import 'support/environment.dart';
 
 /// A speaker that answers RTSP and keeps the RTP audio packets it is sent.
 class _Speaker {
@@ -134,7 +135,8 @@ class _BytesSource extends StreamAudioSource {
 }
 
 void main() {
-  setUpAll(MediaKit.ensureInitialized);
+  // Protocol tests run anywhere; what plays sound skips without libmpv ([needsLibmpv]).
+  setUpAll(() => hasLibmpv);
 
   const rate = 44100;
   final rng = math.Random(5);

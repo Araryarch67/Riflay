@@ -72,7 +72,14 @@ class CollectionHero extends StatelessWidget {
                 fit: StackFit.expand,
                 children: [
                   // The cover is the whole header: sharp at the top, softer below, ending in the page's own colour.
-                  FadedCover(track: collection.cover, fade: fadeTo, blurStart: 0.45, darken: 0.3),
+                  // On glass there is no page colour to end in: the picture fades into the glass instead.
+                  FadedCover(
+                    track: collection.cover,
+                    fade: AppColors.glass ? null : fadeTo,
+                    dissolve: AppColors.glass,
+                    blurStart: 0.45,
+                    darken: 0.3,
+                  ),
                   if (collection.coverKey case final key?)
                     Positioned(
                       right: 12,

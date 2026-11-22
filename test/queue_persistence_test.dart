@@ -43,6 +43,16 @@ void main() {
     expect(c.position, const Duration(milliseconds: 32122));
     expect(c.queue.map((track) => track.id), [current.id, similar.id]);
     expect(c.isAutoplayed(similar), isTrue);
+
+    // After a restart Made for you still has the station, songs and all.
+    await Future<void>.delayed(Duration.zero);
+    final saved = (await SharedPreferences.getInstance()).getString('radio.recent.v1');
+    final back = PlayerController.recentRadiosFrom(saved).single;
+    expect(back.id, station!.id);
+    expect(back.title, station.title);
+    expect(back.kind, CollectionKind.radio);
+    expect(back.tracks.map((t) => t.id), [current.id, similar.id]);
+    expect(PlayerController.recentRadiosFrom('not json'), isEmpty);
   });
 
   test('clearing upcoming tracks keeps the current occurrence and persists the retained order', () async {

@@ -141,7 +141,9 @@ class _LibraryListState extends State<LibraryList> {
     if (show(LibraryFilter.playlists)) {
       final entries = <({String key, String title, bool online, Widget Function(Widget? action) row})>[
         for (final collection in [...c.playlists.map(c.playlistCollection), ...folderPlaylists])
-          if (collection.coverKey case final key?)
+          // A folder playlist has no cover of its own: its folder is its key (for the order and pins).
+          if (collection.coverKey ?? (collection.kind == CollectionKind.folder ? 'folder:${collection.id}' : null)
+              case final key?)
             (
               key: key,
               title: collection.title,

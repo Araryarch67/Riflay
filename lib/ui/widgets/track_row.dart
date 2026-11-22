@@ -38,6 +38,7 @@ import 'item_picker.dart';
 import 'app_dialog.dart';
 import 'audio_source_picker.dart';
 import 'controls.dart';
+import 'marquee_text.dart';
 import 'menus.dart';
 import 'stats_for_nerds.dart';
 import 'track_selection.dart';
@@ -64,9 +65,13 @@ class TrackRow extends StatefulWidget {
     this.currentOccurrence,
     this.pinned = false,
     this.onTogglePin,
+    this.marquee = false,
   });
 
   final Track track;
+
+  /// Title and artist scroll when they don't fit, instead of being cut short (a narrow panel).
+  final bool marquee;
 
   /// Null for a shared queue that only the host controls. Row menus remain available.
   final VoidCallback? onTap;
@@ -181,18 +186,27 @@ class _TrackRowState extends State<TrackRow> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    t.title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: text.bodyLarge?.copyWith(
-                      color: isCurrent && !card ? AppColors.accent : AppColors.textPrimary,
-                      fontWeight: FontWeight.w600,
+                  if (widget.marquee)
+                    MarqueeText(
+                      t.title,
+                      style: text.bodyLarge?.copyWith(
+                        color: isCurrent && !card ? AppColors.accent : AppColors.textPrimary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    )
+                  else
+                    Text(
+                      t.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: text.bodyLarge?.copyWith(
+                        color: isCurrent && !card ? AppColors.accent : AppColors.textPrimary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      // The line keeps the app font's height: a symbol drawn from a taller fallback font ("♡" from
+                      // Segoe UI Symbol on Windows) made the row a pixel too tall for its room.
+                      strutStyle: _line(text.bodyLarge),
                     ),
-                    // The line keeps the app font's height: a symbol drawn from a taller fallback font ("♡" from
-                    // Segoe UI Symbol on Windows) made the row a pixel too tall for its room.
-                    strutStyle: _line(text.bodyLarge),
-                  ),
                   const SizedBox(height: 2),
                   Row(
                     children: [
@@ -213,13 +227,15 @@ class _TrackRowState extends State<TrackRow> {
                         const SizedBox(width: 4),
                       ],
                       Flexible(
-                        child: Text(
-                          t.artist,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: text.bodyMedium?.copyWith(color: AppColors.textSecondary),
-                          strutStyle: _line(text.bodyMedium),
-                        ),
+                        child: widget.marquee
+                            ? MarqueeText(t.artist, style: text.bodyMedium?.copyWith(color: AppColors.textSecondary))
+                            : Text(
+                                t.artist,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: text.bodyMedium?.copyWith(color: AppColors.textSecondary),
+                                strutStyle: _line(text.bodyMedium),
+                              ),
                       ),
                       if (quality != null) ...[
                         const SizedBox(width: 6),

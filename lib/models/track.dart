@@ -311,6 +311,7 @@ class Track {
   String? get albumKey => album == null ? null : '${album!.toLowerCase()}|${artist.toLowerCase()}';
 
   Track copyWith({
+    String? id,
     Uri? uri,
     String? title,
     String? artist,
@@ -322,7 +323,7 @@ class Track {
     String? downloadYoutubeId,
     String? audioQuality,
   }) => Track(
-    id: id,
+    id: id ?? this.id,
     uri: uri ?? this.uri,
     title: title ?? this.title,
     artist: artist ?? this.artist,

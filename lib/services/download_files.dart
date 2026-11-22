@@ -73,10 +73,7 @@ String formatFileSize(int bytes) {
 /// "Artist - Title" for a downloaded file: what people recognise in their music folder, without the characters
 /// Windows, macOS, Android or Linux refuse in a file name, and not too long for any of them.
 String readableDownloadName({required String artist, required String title}) {
-  String clean(String s) => s
-      .replaceAll(RegExp(r'[<>:"/\\|?*\x00-\x1F]'), ' ')
-      .replaceAll(RegExp(r'\s+'), ' ')
-      .trim();
+  String clean(String s) => s.replaceAll(RegExp(r'[<>:"/\\|?*\x00-\x1F]'), ' ').replaceAll(RegExp(r'\s+'), ' ').trim();
   final a = clean(artist), t = clean(title);
   var name = a.isEmpty || a == Track.unknownArtist ? t : (t.isEmpty ? a : '$a - $t');
   if (name.length > 150) name = name.substring(0, 150).trim();

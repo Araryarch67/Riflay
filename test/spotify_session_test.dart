@@ -81,7 +81,8 @@ void main() {
   });
 
   test('the capture script is the same in Dart and in the Linux helper', () {
-    final cc = File('linux/spotify_helper/riflay_spotify.cc').readAsStringSync();
+    // Line endings as Git checks the file out (CRLF on Windows) don't count.
+    final cc = File('linux/spotify_helper/riflay_spotify.cc').readAsStringSync().replaceAll('\r\n', '\n');
     const open = 'R"JS(';
     final start = cc.indexOf(open);
     final end = cc.indexOf(')JS";');

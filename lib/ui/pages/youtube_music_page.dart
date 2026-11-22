@@ -90,6 +90,7 @@ void openRemotePlaylist(BuildContext context, RemotePlaylist p, {ShellScope? she
     return;
   }
   final artistId = p.browseId?.startsWith('UC') ?? false ? p.browseId : null;
+  final podcast = p.browseId?.startsWith('MPSP') ?? false;
   navigation.open(
     location: Locations.remotePlaylist(p.id),
     RemoteCollectionPage(
@@ -99,6 +100,8 @@ void openRemotePlaylist(BuildContext context, RemotePlaylist p, {ShellScope? she
         if (artistId == null && p.browseId != null && !p.browseId!.startsWith('MPSP'))
           SaveToLibraryButton(browseId: p.browseId!),
       ],
+      hasMore: podcast ? () => music.hasOlderEpisodes(p.browseId!) : null,
+      loadMore: podcast ? () => music.olderEpisodes(p.browseId!) : null,
       load: () async {
         if (artistId != null) {
           final catalog = await music.artistTracks(artistId);
@@ -320,36 +323,55 @@ List<Widget> remoteShelfWidgets(
                 onTap: () => shell.playAndOpen(() => c.playList(shelf.tracks, i, from: shelf.title)),
                 onPlay: () => c.playList(shelf.tracks, i, from: shelf.title),
               ),
-            for (final p in shelf.collections)
-              // A card whose picture doesn't load (Fresh finds' mixes, a playlist's missing thumbnail): its first
-              // song's cover.
-              FutureBuilder<String?>(
-                future: firstSongCover(c.ytMusic, p),
-                builder: (context, first) => MediaCard(
-                  track: PlaylistCovers.instance.coverOr(
-                    PlaylistCovers.remoteKey(p.id),
-                    playlistCover(p, fallback: first.data),
-                  ),
-                  title: p.title,
-                  subtitle: p.subtitle ?? tr.playlist,
-                  online: true,
-                  onTap: () => openRemotePlaylist(context, p),
-                ),
-              ),
+            for (final p in shelf.collections) RemotePlaylistCard(playlist: p),
           ],
         ),
       ),
   ];
 }
 
+/// A YouTube Music album, playlist or mix as a card that opens it. A card whose picture doesn't load (Fresh finds'
+/// mixes, a playlist's missing thumbnail) shows its first song's cover.
+class RemotePlaylistCard extends StatelessWidget {
+  const RemotePlaylistCard({super.key, required this.playlist});
+
+  final RemotePlaylist playlist;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = playlist;
+    return FutureBuilder<String?>(
+      future: firstSongCover(PlayerScope.read(context).ytMusic, p),
+      builder: (context, first) => MediaCard(
+        track: PlaylistCovers.instance.coverOr(PlaylistCovers.remoteKey(p.id), playlistCover(p, fallback: first.data)),
+        title: p.title,
+        subtitle: p.subtitle ?? tr.playlist,
+        online: true,
+        onTap: () => openRemotePlaylist(context, p),
+      ),
+    );
+  }
+}
+
 // ── Signed-in home ──────────────────────────────────────────────────────────
 
 /// Loads a remote playlist, then shows it like any other collection.
 class RemoteCollectionPage extends StatefulWidget {
-  const RemoteCollectionPage({super.key, required this.title, required this.load, this.actions = const []});
+  const RemoteCollectionPage({
+    super.key,
+    required this.title,
+    required this.load,
+    this.actions = const [],
+    this.hasMore,
+    this.loadMore,
+  });
 
   final String title;
   final Future<Collection> Function() load;
+
+  /// For a podcast show: whether older episodes are there to load, and loading the next page of them.
+  final bool Function()? hasMore;
+  final Future<List<Track>> Function()? loadMore;
 
   /// Extra buttons next to Play / Shuffle (Follow on artist pages).
   final List<Widget> actions;
@@ -361,12 +383,50 @@ class RemoteCollectionPage extends StatefulWidget {
 class _RemoteCollectionPageState extends State<RemoteCollectionPage> {
   late final Future<Collection> _future = widget.load();
 
+  /// The collection with the older episodes loaded since.
+  Collection? _grown;
+  bool _loadingMore = false;
+
+  Future<void> _more(Collection shown) async {
+    setState(() => _loadingMore = true);
+    try {
+      final more = await widget.loadMore!();
+      if (mounted) setState(() => _grown = shown.withTracks([...shown.tracks, ...more]));
+    } catch (e) {
+      debugPrint('Older episodes: $e');
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(tr.playlistLoadFailed)));
+    } finally {
+      if (mounted) setState(() => _loadingMore = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return FutureBuilder(
       future: _future,
       builder: (context, snap) {
-        if (snap.hasData) return CollectionPage(collection: snap.data!, actions: widget.actions);
+        if (snap.data case final loaded?) {
+          final shown = _grown ?? loaded;
+          final more = widget.loadMore != null && (widget.hasMore?.call() ?? false);
+          return CollectionPage(
+            collection: shown,
+            actions: widget.actions,
+            footer: !more
+                ? null
+                : Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+                    child: Center(
+                      child: _loadingMore
+                          ? const SizedBox.square(dimension: 24, child: CircularProgressIndicator(strokeWidth: 2.5))
+                          : OutlinedButton.icon(
+                              onPressed: () => _more(shown),
+                              icon: const Icon(Icons.expand_more_rounded),
+                              label: Text(tr.olderEpisodes),
+                            ),
+                    ),
+                  ),
+          );
+        }
         return PageScaffold(
           title: widget.title,
           slivers: [

@@ -351,6 +351,12 @@ abstract class AppLocalizations {
   /// **'Shows'**
   String get podcastShows;
 
+  /// No description provided for @olderEpisodes.
+  ///
+  /// In en, this message translates to:
+  /// **'Load older episodes'**
+  String get olderEpisodes;
+
   /// No description provided for @podcastEpisodes.
   ///
   /// In en, this message translates to:

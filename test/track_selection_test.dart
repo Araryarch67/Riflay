@@ -136,7 +136,14 @@ void main() {
       await tester.pumpWidget(_app(c, page));
       await tester.pump();
       expect(find.textContaining('selected'), findsNothing);
-      await tester.tap(find.byTooltip('Add all songs to playlist'));
+      if (fromLibrary) {
+        // The Library has it in its menu.
+        await tester.tap(find.byTooltip('More options'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Add all songs to playlist'));
+      } else {
+        await tester.tap(find.byTooltip('Add all songs to playlist'));
+      }
       await tester.pumpAndSettle();
       final dialog = find.byType(Dialog);
       await tester.tap(find.descendant(of: dialog, matching: find.text('Bulk mix')));

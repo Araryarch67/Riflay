@@ -223,8 +223,10 @@ void main() {
     expect(await play('https://tracks.example/track/1'), file, reason: 'the same bytes, from the kept file');
     expect(asked, 1, reason: 'nothing asked of the service');
 
-    // A second song takes it past the limit: the least recently played goes.
+    // A second song takes it past the limit: the least recently played goes. The player has let the first go by
+    // then (a song still being played is never deleted).
     await Future<void>.delayed(const Duration(milliseconds: 20));
+    MergedDownload.forgetAll();
     expect(await play('https://tracks.example/track/2'), file);
     expect(asked, 2);
     final kept = folder.listSync().whereType<File>().where((f) => f.path.endsWith('.flac')).toList();

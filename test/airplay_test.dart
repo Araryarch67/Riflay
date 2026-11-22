@@ -3,8 +3,9 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:media_kit/media_kit.dart';
 import 'package:riflay/services/airplay.dart';
+
+import 'support/environment.dart';
 
 /// A shairport-sync built for classic AirPlay (`--without-airplay-2`, with
 /// `--with-tinysvcmdns` and `--with-stdout`): the speaker these tests send to.
@@ -12,7 +13,8 @@ import 'package:riflay/services/airplay.dart';
 final _shairport = Platform.environment['SHAIRPORT'];
 
 void main() {
-  setUpAll(MediaKit.ensureInitialized);
+  // Protocol tests run anywhere; what plays sound skips without libmpv ([needsLibmpv]).
+  setUpAll(() => hasLibmpv);
 
   test('ALAC frames carry the samples as they are', () {
     final pcm = Uint8List.fromList(List.generate(352 * 4, (i) => (i * 37) & 0xFF));

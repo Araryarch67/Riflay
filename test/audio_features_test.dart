@@ -15,6 +15,8 @@ import 'package:riflay/services/metadata.dart';
 import 'package:riflay/services/player_controller.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'support/environment.dart';
+
 /// A 1x1 PNG, for cover tests.
 const _png1x1 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
 
@@ -387,6 +389,7 @@ FILE "album.wav" WAVE
     });
 
     test('clip protection: peaks past full scale are softened, everything else passes exactly (through mpv)', () async {
+      if (!hasCommand('mpv')) return markTestSkipped('mpv is not on the PATH here');
       final dir = Directory.systemTemp.createTempSync('clip');
       addTearDown(() => dir.deleteSync(recursive: true));
       // Like a loud song decoded from Opus: float, a 100 Hz tone, and every 0.1 s a short 3 kHz burst on top
@@ -440,6 +443,7 @@ FILE "album.wav" WAVE
     });
 
     test('the filter chain really changes the sound (measured through mpv)', () async {
+      if (!hasCommand('mpv')) return markTestSkipped('mpv is not on the PATH here');
       final dir = Directory.systemTemp.createTempSync('dsp');
       addTearDown(() => dir.deleteSync(recursive: true));
       final sine = '${dir.path}/sine.wav';
@@ -554,6 +558,7 @@ FILE "album.wav" WAVE
     });
 
     test('mono and virtual speakers really change the sound (measured through mpv)', () async {
+      if (!hasCommand('mpv')) return markTestSkipped('mpv is not on the PATH here');
       final dir = Directory.systemTemp.createTempSync('dsp');
       addTearDown(() => dir.deleteSync(recursive: true));
       // 440 Hz on the left only, at half scale.

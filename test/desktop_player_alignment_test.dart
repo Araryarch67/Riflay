@@ -75,7 +75,9 @@ void main() {
     addTearDown(tester.view.reset);
     await tester.pumpWidget(RiflayApp(controller: c));
     await tester.pump(const Duration(milliseconds: 500));
-    await tester.tap(find.byTooltip('More options'));
+    // The player bar's own menu (the Library beside it has a More options of its own).
+    final more = find.descendant(of: find.byType(DesktopPlayerBar), matching: find.byTooltip('More options'));
+    await tester.tap(more);
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
     expect(find.text('Audio source'), findsOneWidget);
@@ -84,7 +86,7 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
     expect(copied, 'Remote song');
-    await tester.tap(find.byTooltip('More options'));
+    await tester.tap(more);
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
     await tester.tap(find.text('Audio source'));
@@ -248,7 +250,7 @@ void main() {
     LayoutPrefs.instance.restore(const {});
   });
 
-  testWidgets('library creation and import actions share the Add menu', (tester) async {
+  testWidgets('the Add music menu on Home adds songs and imports, the rest is left to the library', (tester) async {
     SharedPreferences.setMockInitialValues({'discord.enabled': false});
     await LayoutPrefs.instance.reset();
     final c = _SongPlayer();
@@ -261,10 +263,10 @@ void main() {
     for (final label in ['New playlist', 'Import a playlist', 'Spotify library']) {
       expect(find.text(label), findsNothing, reason: 'one-off actions leave space for the library');
     }
-    await tester.tap(find.byTooltip('Add').first);
+    await tester.tap(find.byTooltip('Add music').first);
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
-    for (final label in ['New playlist', 'Import a playlist', 'Spotify library', 'Add songs']) {
+    for (final label in ['Add songs', 'Import from YouTube']) {
       expect(
         find.descendant(of: find.byWidgetPredicate((widget) => widget is PopupMenuItem), matching: find.text(label)),
         findsOneWidget,

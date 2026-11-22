@@ -10,13 +10,13 @@ void main() {
       [song('/old/Music/a/one.flac'), song('/other/two.flac')],
       {'/old/Music': '/new/Music'},
     );
-    expect(out[0].path, '/new/Music/a/one.flac');
-    expect(out[1].path, '/other/two.flac');
+    expect(out[0].uri.path, '/new/Music/a/one.flac');
+    expect(out[1].uri.path, '/other/two.flac');
   });
 
   test('a folder with the same name prefix is left alone', () {
     final out = IosFolders.repoint([song('/old/Music2/x.flac')], {'/old/Music': '/new/Music'});
-    expect(out.single.path, '/old/Music2/x.flac');
+    expect(out.single.uri.path, '/old/Music2/x.flac');
   });
 
   test('nothing moved changes nothing', () {

@@ -141,6 +141,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get podcastShows => 'Shows';
 
   @override
+  String get olderEpisodes => 'Load older episodes';
+
+  @override
   String get podcastEpisodes => 'Episodes';
 
   @override

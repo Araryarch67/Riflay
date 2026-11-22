@@ -15,6 +15,7 @@ void main() {
     'Wrap',
     'Riflay Wrap',
     'Figtree', 'Space Grotesk',
+    'es, pt-BR, zh-TW', // language codes, the hint of Settings › Language code
     'Matugen',
     'Bit-perfect',
     'Direct USB', 'Discord Rich Presence', 'ListenBrainz', 'Last.fm', 'Hex', 'Aa', 'DSP', 'GNU AGPL v3.0', //

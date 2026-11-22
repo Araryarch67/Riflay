@@ -9,6 +9,8 @@ import 'package:riflay/ui/debug_switches.dart';
 import 'package:riflay/ui/widgets/signal_path.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'support/environment.dart';
+
 SignalPath _path({String codec = 'eac3', String? profile, int channels = 6, String out = 'float'}) => SignalPath(
   codec: codec,
   container: 'mov,mp4,m4a',
@@ -111,6 +113,7 @@ void main() {
     });
 
     test('through mpv: each channel of a 5.1 song keeps its place, and stereo sounds as loud in both rooms', () async {
+      if (!hasCommand('mpv')) return markTestSkipped('mpv is not on the PATH here');
       final dir = Directory.systemTemp.createTempSync('spatial');
       addTearDown(() => dir.deleteSync(recursive: true));
       Future<String?> make(String name, String expr, String layout) async {

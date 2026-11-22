@@ -499,19 +499,22 @@ class _DailyMixShelfState extends State<_DailyMixShelf> {
             tracks: mix.tracks,
           ),
       ];
-      // The radios started lately come first: their temporary playlists stay reachable here.
-      return ValueListenableBuilder<List<Collection>>(
-        valueListenable: player.recentRadios,
-        builder: (context, radios, _) {
-          final all = [...radios, ...made];
-          if (all.isEmpty) return const SliverToBoxAdapter(child: SizedBox.shrink());
+      // The radios started lately come first: their temporary playlists stay reachable here. YouTube Music's own
+      // mixes for the account (signed in) come after Riflay's.
+      return ListenableBuilder(
+        listenable: Listenable.merge([player.recentRadios, player.ytMusic]),
+        builder: (context, _) {
+          final all = [...player.recentRadios.value, ...made];
+          final online = player.ytMusic.personalMixes;
+          if (all.isEmpty && online.isEmpty) return const SliverToBoxAdapter(child: SizedBox.shrink());
           return SliverToBoxAdapter(
             child: Shelf.builder(
               title: tr.madeForYou,
               icon: Icons.auto_awesome_rounded,
-              count: all.length,
+              count: all.length + online.length,
               compactSpacing: true,
               card: (i) {
+                if (i >= all.length) return RemotePlaylistCard(playlist: online[i - all.length]);
                 final mix = all[i];
                 return MediaCard(
                   track: mix.cover,

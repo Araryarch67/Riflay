@@ -297,7 +297,7 @@ class CardReservation {
   static bool playbackClosed(int card, {String root = '/proc/asound'}) {
     try {
       for (final pcm in Directory('$root/card$card').listSync().whereType<Directory>()) {
-        if (!RegExp(r'/pcm\d+p$').hasMatch(pcm.path)) continue;
+        if (!RegExp(r'[/\\]pcm\d+p$').hasMatch(pcm.path)) continue;
         for (final sub in pcm.listSync().whereType<Directory>()) {
           final status = File('${sub.path}/status');
           if (status.existsSync() && status.readAsStringSync().trim() != 'closed') return false;

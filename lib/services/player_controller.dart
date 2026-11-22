@@ -10,6 +10,7 @@ import 'package:flutter/foundation.dart' show ValueListenable, listEquals, visib
 import 'package:flutter/services.dart' show MethodChannel;
 import 'package:flutter/widgets.dart';
 import 'package:just_audio/just_audio.dart';
+import 'package:path/path.dart' as p;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/track.dart';
@@ -35,6 +36,7 @@ import 'lyrics.dart';
 import 'lyrics_translation.dart';
 import 'media_session.dart';
 import 'metadata.dart';
+import 'download_files.dart' show nameDownload;
 import 'mv_sidecar.dart';
 import 'sacd.dart';
 import 'sleep_timer.dart';
@@ -408,6 +410,46 @@ class PlayerController extends ChangeNotifier {
   /// The radios started lately (newest first), as the temporary playlists they began with: Home's "Made for you"
   /// keeps them, so a station can be gone back to after the queue has moved on.
   final recentRadios = ValueNotifier<List<Collection>>(const []);
+  static const _recentRadiosKey = 'radio.recent.v1';
+
+  /// Kept across restarts: each station's title, seed artist and songs.
+  Future<void> _saveRecentRadios() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(
+      _recentRadiosKey,
+      jsonEncode([
+        for (final r in recentRadios.value)
+          {
+            'id': r.id,
+            'title': r.title,
+            'subtitle': r.subtitle,
+            'tracks': [for (final t in r.tracks) t.toJson()],
+          },
+      ]),
+    );
+  }
+
+  @visibleForTesting
+  static List<Collection> recentRadiosFrom(String? saved) {
+    if (saved == null) return const [];
+    try {
+      return [
+        for (final r in (jsonDecode(saved) as List).cast<Map>())
+          Collection(
+            kind: CollectionKind.radio,
+            id: r['id'] as String?,
+            title: r['title'] as String? ?? '',
+            subtitle: r['subtitle'] as String? ?? '',
+            tracks: List.unmodifiable([
+              for (final t in (r['tracks'] as List? ?? const []).cast<Map>()) Track.fromJson(t.cast()),
+            ]),
+          ),
+      ].where((r) => r.tracks.isNotEmpty).toList(growable: false);
+    } catch (e) {
+      debugPrint('Recent radios not read: $e');
+      return const [];
+    }
+  }
 
   /// Starts [seed]'s radio and returns a temporary playlist for the new session.
   Future<Collection?> startRadio(Track seed) async {
@@ -425,7 +467,8 @@ class PlayerController extends ChangeNotifier {
     if (tracks != null && !_disposed) {
       final station = Collection(
         kind: CollectionKind.radio,
-        id: 'radio:$_radioGeneration',
+        // Unique across restarts: kept stations come back with their ids.
+        id: 'radio:${DateTime.now().microsecondsSinceEpoch}',
         title: tr.radioFrom(seed.title),
         subtitle: seed.artist,
         tracks: List.unmodifiable(tracks),
@@ -435,6 +478,7 @@ class PlayerController extends ChangeNotifier {
         station,
         ...recentRadios.value.where((old) => old.title != station.title),
       ].take(5).toList(growable: false);
+      unawaited(_saveRecentRadios());
       return station;
     }
     if (!_disposed && _matchesRadioSeed(currentTrack, seed)) {
@@ -1786,6 +1830,7 @@ class PlayerController extends ChangeNotifier {
       }
     }
     _recentIds = prefs.getStringList(_recentKey) ?? [];
+    recentRadios.value = recentRadiosFrom(prefs.getString(_recentRadiosKey));
     try {
       _playlists = [
         for (final j in jsonDecode(prefs.getString(_playlistsKey) ?? '[]') as List)
@@ -2237,6 +2282,47 @@ class PlayerController extends ChangeNotifier {
     }
     await removeTracks(gone);
     return failed;
+  }
+
+  // ── Downloads' file names ──
+
+  /// A download still named after its source's id: `mono_…`, `sflx_…`, or an 11-character YouTube video id.
+  static final _idName = RegExp(r'^(mono_[A-Za-z0-9_-]+|sflx_[0-9a-f]{64}|[A-Za-z0-9_-]{11})$');
+
+  /// Gives downloads made before they were named "Artist - Title" that name, with their lyrics and music video
+  /// beside them, and points the library and playlists at the new files. The song playing (its file open) and
+  /// anything that can't be moved keep their names. Returns how many were renamed.
+  Future<int> renameDownloads() async {
+    if (Host.isWeb) return 0;
+    final moved = <String, Track>{};
+    for (final t in List.of(_library)) {
+      final path = t.path;
+      if (!t.isDownload || path == null || t.start != null || t.id == currentTrack?.id) continue;
+      if (!_idName.hasMatch(p.basenameWithoutExtension(path))) continue;
+      final file = File(path);
+      try {
+        if (!await file.exists()) continue;
+        final named = await nameDownload(file, artist: t.artist, title: t.title);
+        if (named.path == path) continue;
+        // What follows the song's name moves with it.
+        final from = p.withoutExtension(path), to = p.withoutExtension(named.path);
+        for (final ext in ['.lrc', '.mv.mp4', '.mv.webm', '.mv.json']) {
+          final side = File('$from$ext');
+          if (await side.exists()) await side.rename('$to$ext').catchError((_) => side);
+        }
+        final uri = Uri.file(named.path);
+        moved[t.id] = t.copyWith(id: uri.toString(), uri: uri);
+      } catch (e) {
+        debugPrint('Download not renamed ($path): $e');
+      }
+    }
+    if (moved.isEmpty) return 0;
+    _library = [for (final t in _library) moved[t.id] ?? t];
+    libraryRevision.value++;
+    notifyListeners();
+    await _save();
+    await swapTrackRefs(moved);
+    return moved.length;
   }
 
   // ── Folder watching and duplicates (folder_watch.dart, duplicate_finder.dart) ──

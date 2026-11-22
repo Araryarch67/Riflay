@@ -701,9 +701,7 @@ class AudioEngine extends ChangeNotifier {
   /// Which output the sound goes to, for remembering the volume of each: on Android the phone's own output, or a
   /// USB DAC that Android holds at full volume (bit-perfect, Direct USB), where only the app's volume turns it
   /// down; on a computer the device actually opened ("auto" while a chosen one is unplugged).
-  String get outputKey => Host.isAndroid
-      ? (bitPerfect ? 'android-dac' : 'android')
-      : (_openedDevice ?? device);
+  String get outputKey => Host.isAndroid ? (bitPerfect ? 'android-dac' : 'android') : (_openedDevice ?? device);
 
   /// Whether Bit-perfect mode can be offered here: a computer's own output choice, or Android 14+.
   bool get hasBitPerfect => hasOutputChoice || (Host.isAndroid && usb.supported);

@@ -10,6 +10,7 @@ import '../../services/layout_prefs.dart';
 import '../../services/metadata.dart';
 import '../../services/player_controller.dart';
 import '../../services/splash_window.dart';
+import '../player/mini_window.dart' show miniPlayer;
 import '../player/now_playing_page.dart' show BlurredCover;
 import '../theme.dart';
 import 'controls.dart' show Artwork;
@@ -38,10 +39,12 @@ class CoverBackdrop extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => ListenableBuilder(
-    listenable: Listenable.merge([LayoutPrefs.instance, SplashWindow.active]),
+    listenable: Listenable.merge([LayoutPrefs.instance, SplashWindow.active, miniPlayer]),
     builder: (context, app) {
       final prefs = LayoutPrefs.instance;
-      if (!prefs.coverGlass || SplashWindow.active.value) return app!;
+      // Not behind the see-through windows: the start-up intro, and the mini player (the island floats on the
+      // desktop itself).
+      if (!prefs.coverGlass || SplashWindow.active.value || miniPlayer.value) return app!;
       final image = prefs.glassBackground == GlassBackground.image ? prefs.glassImage : null;
       return Stack(
         fit: StackFit.expand,

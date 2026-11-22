@@ -23,10 +23,9 @@ class Shelf extends StatelessWidget {
     this.onShowAll,
     this.compactSpacing = false,
     this.icon,
-  })
-    : artworkOnly = false,
-      count = cards.length,
-      card = ((i) => cards[i]);
+  }) : artworkOnly = false,
+       count = cards.length,
+       card = ((i) => cards[i]);
 
   /// Cards made only when shown: a shelf of every album in the library can
   /// hold thousands, and a desktop row shows a handful.

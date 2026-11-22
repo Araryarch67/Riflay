@@ -908,6 +908,34 @@ class YtMusicWeb {
     });
   }
 
+  /// One page of a show's episodes: its first (newest) page, or the one [continuation] (from the page before)
+  /// points at. [next] is null on the oldest page.
+  Future<({List<WebTrack> episodes, String? next, String show})> podcastEpisodePage(
+    String browseId, {
+    String? continuation,
+    String show = '',
+  }) async {
+    List<Object?> items;
+    String? next;
+    if (continuation == null) {
+      final res = await _send('browse', {'browseId': browseId});
+      show = _text(_asMap(_deepFind(res, 'musicResponsiveHeaderRenderer'))?['title']) ?? show;
+      final shelf = _asMap(_deepFind(res, 'musicShelfRenderer'));
+      items = _list(shelf?['contents']);
+      next = _nextToken(shelf);
+    } else {
+      (items, next) = _continuationPage(await _send('browse', {'continuation': continuation}));
+    }
+    return (
+      episodes: [
+        for (final item in items)
+          if (_asMap(_asMap(item)?['musicMultiRowListItemRenderer']) case final row?) ?episodeRowOf(row, show: show),
+      ],
+      next: items.isEmpty ? null : next,
+      show: show,
+    );
+  }
+
   /// One episode on a show's page (a multi-row item: title, date, description and length).
   @visibleForTesting
   static WebTrack? episodeRowOf(Map<String, dynamic> row, {String show = ''}) {

@@ -45,7 +45,7 @@ abstract final class LegacyData {
   @visibleForTesting
   static String oldSupportPath(String support, {bool? windows}) => (windows ?? Host.isWindows)
       ? p.windows.join(p.windows.dirname(p.windows.dirname(support)), 'dev.openmusic', 'openmusic')
-      : p.join(p.dirname(support), _oldId);
+      : p.posix.join(p.posix.dirname(support), _oldId);
 
   /// Copies [old] into [support] and moves [oldDownloads] to [downloads], then
   /// points the paths saved in the copied files at the new places. Leaves

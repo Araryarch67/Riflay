@@ -8,13 +8,14 @@ import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:just_audio/just_audio.dart';
-import 'package:media_kit/media_kit.dart';
 import 'package:riflay/services/cast.dart';
 import 'package:riflay/services/dlna.dart';
 import 'package:riflay/services/youtube_stream.dart';
 import 'package:xml/xml.dart';
 
 import 'support/fake_renderer.dart';
+
+import 'support/environment.dart';
 
 /// Serves fixed bytes the way YoutubeAudioSource serves a stream.
 class _BytesSource extends StreamAudioSource {
@@ -44,7 +45,8 @@ Future<void> _until(bool Function() done, {Duration timeout = const Duration(sec
 }
 
 void main() {
-  setUpAll(MediaKit.ensureInitialized);
+  // Protocol tests run anywhere; what plays sound skips without libmpv ([needsLibmpv]).
+  setUpAll(() => hasLibmpv);
 
   group('protocol', () {
     test('search replies: renderers only, with an http LOCATION', () {

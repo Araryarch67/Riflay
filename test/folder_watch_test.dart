@@ -201,15 +201,15 @@ void main() {
       final old = song('/music/a.mp3', title: 'Real Title');
       final plan = planSync(
         root: root,
-        disk: {'/music/Sorted/a-renamed.mp3': const FileStamp(500, 9)},
-        previous: {'/music/a.mp3': const FileStamp(500, 1)},
+        disk: {p.normalize('/music/Sorted/a-renamed.mp3'): const FileStamp(500, 9)},
+        previous: {p.normalize('/music/a.mp3'): const FileStamp(500, 1)},
         library: [old],
         exists: never,
       );
       expect(plan.addedPaths, isEmpty);
       expect(plan.removedIds, isEmpty);
       final moved = plan.moved[old.id]!;
-      expect(moved.path, '/music/Sorted/a-renamed.mp3');
+      expect(moved.path, p.normalize('/music/Sorted/a-renamed.mp3'));
       expect(moved.id, Uri.file('/music/Sorted/a-renamed.mp3').toString());
       expect(moved.title, 'Real Title');
       expect(moved.addedAt, old.addedAt);
@@ -277,8 +277,8 @@ void main() {
       final b = song('/music/b.mp3');
       final plan = planSync(
         root: root,
-        disk: {'/music/a.mp3': const FileStamp(10, 5), '/music/b.mp3': const FileStamp(20, 1)},
-        previous: {'/music/a.mp3': const FileStamp(10, 1), '/music/b.mp3': const FileStamp(20, 1)},
+        disk: {p.normalize('/music/a.mp3'): const FileStamp(10, 5), p.normalize('/music/b.mp3'): const FileStamp(20, 1)},
+        previous: {p.normalize('/music/a.mp3'): const FileStamp(10, 1), p.normalize('/music/b.mp3'): const FileStamp(20, 1)},
         library: [a, b],
         exists: (_) => true,
       );

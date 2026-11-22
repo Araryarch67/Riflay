@@ -12,7 +12,6 @@ import 'package:riflay/main.dart';
 import 'package:riflay/services/player_controller.dart';
 import 'package:riflay/ui/pages/search/search_box.dart';
 import 'package:riflay/ui/pages/search/soundcloud_results.dart';
-import 'package:riflay/ui/widgets/title_bar.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
@@ -65,16 +64,19 @@ void main() {
       final box = find.byType(SearchBox);
       tester.widget<SearchBox>(box.first).onSubmitted('');
       await settle();
-      final filters = find.byType(SearchSourceFilters);
-      expect(filters, findsOneWidget);
-      expect(find.descendant(of: find.byType(AppTitleBar), matching: filters), findsNothing);
-      expect(tester.getRect(filters).top, greaterThanOrEqualTo(tester.getRect(box.first).bottom));
+      // The source is picked from the search box's own menu.
+      final sources = find.byKey(const ValueKey('search-source-menu'));
+      expect(sources, findsWidgets);
       expect(SearchSource.current.value, SearchSource.youtubeMusic, reason: 'legacy both uses YouTube Music');
       await shot('desktop-$width-youtube');
+      await tester.tap(find.byKey(const ValueKey('search-source-menu')).last);
+      await settle();
       await tester.tap(find.byKey(const ValueKey('search-source-soundcloud')));
       await settle();
       expect(SearchSource.current.value, SearchSource.soundcloud);
       await shot('desktop-$width-soundcloud');
+      await tester.tap(find.byKey(const ValueKey('search-source-menu')).last);
+      await settle();
       await tester.tap(find.byKey(const ValueKey('search-source-youtubeMusic')));
       await settle();
     }
@@ -84,16 +86,19 @@ void main() {
       await settle();
       await tester.tap(find.byTooltip('Search').last);
       await settle();
-      final filters = find.byType(SearchSourceFilters);
-      expect(filters, findsOneWidget);
-      expect(tester.getRect(filters).top, greaterThan(0));
+      final sources = find.byKey(const ValueKey('search-source-menu'));
+      expect(sources, findsWidgets);
       expect(find.textContaining('your own music and YouTube Music'), findsOneWidget);
       await shot('phone-$width-youtube');
+      await tester.tap(find.byKey(const ValueKey('search-source-menu')).last);
+      await settle();
       await tester.tap(find.byKey(const ValueKey('search-source-soundcloud')));
       await settle();
       expect(SearchSource.current.value, SearchSource.soundcloud);
       expect(find.textContaining('your own music and SoundCloud'), findsOneWidget);
       await shot('phone-$width-soundcloud');
+      await tester.tap(find.byKey(const ValueKey('search-source-menu')).last);
+      await settle();
       await tester.tap(find.byKey(const ValueKey('search-source-youtubeMusic')));
       await settle();
     }

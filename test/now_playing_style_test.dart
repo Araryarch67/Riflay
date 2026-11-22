@@ -916,4 +916,26 @@ void main() {
     expect(PlayerPreset.all[1].matches(p), isTrue, reason: 'Set keeps the preset');
     await _close(tester, c);
   });
+
+  testWidgets('Styles saves the look on screen as one of your own presets, which joins the row', (tester) async {
+    await PlayerPreset.classic.apply(p);
+    final c = await _show(tester, const NowPlayingPage(), const Size(412, 915));
+    await tester.longPressAt(const Offset(206, 300));
+    await tester.pumpAndSettle();
+    await tester.fling(find.byType(PageView), const Offset(-300, 0), 1000);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Save this look as a preset').hitTestable());
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), 'Mine');
+    await tester.pump();
+    await tester.tap(find.widgetWithText(FilledButton, 'Save'));
+    await tester.pumpAndSettle();
+    expect(CustomPresets.instance.presets.map((x) => x.name), contains('Mine'));
+    expect(find.text('Mine'), findsWidgets, reason: 'the saved one is the card in the middle');
+    await tester.tap(find.byTooltip('Back').hitTestable());
+    await tester.pumpAndSettle();
+    expect(PlayerPreset.all[1].matches(p), isTrue, reason: 'what was saved stays on');
+    await CustomPresets.instance.remove(CustomPresets.instance.presets.firstWhere((x) => x.name == 'Mine'));
+    await _close(tester, c);
+  });
 }

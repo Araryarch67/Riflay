@@ -21,6 +21,7 @@ import '../widgets/video_quality.dart';
 import '../player_scope.dart';
 import '../widgets/audio_reactive_view.dart';
 import '../../services/language.dart';
+import '../../services/glass_image.dart';
 
 /// Settings › Look & feel › Now Playing: presets, the cover, the top, the title's buttons, the progress bar, the
 /// controls, Liquid Glass and the visualizer.
@@ -648,7 +649,7 @@ class LayoutSettings extends StatelessWidget {
                         dialogTitle: tr.glassChooseImage,
                       )).firstOrNull;
                       final path = file?.path;
-                      if (path != null) await p.setGlassBackground(v, image: path);
+                      if (path != null) await p.setGlassBackground(v, image: await keepGlassImage(path));
                     },
                   ),
                 ),

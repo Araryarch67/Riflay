@@ -35,6 +35,10 @@ abstract final class LyricsTranslation {
   static final language = ValueNotifier('');
   static Future<void>? _loading;
   static Future<void> load() => _loading ??= _load();
+
+  /// Lets [load] read the settings again (tests that change them between loads).
+  @visibleForTesting
+  static void debugForgetLoad() => _loading = null;
   static Future<void> _load() async {
     final p = await SharedPreferences.getInstance();
     language.value = p.getString('lyrics.targetLanguage') ?? '';

@@ -1,4 +1,8 @@
+import 'dart:convert';
+
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:riflay/models/track.dart';
 import 'package:riflay/services/youtube_video_search.dart';
 import 'package:riflay/services/ytmusic_web.dart';
@@ -23,6 +27,7 @@ Map<String, dynamic> _thumb(String url) => {
 Track _song(String id) => Track.youtube(videoId: id, title: id, artist: 'Artist');
 
 void main() {
+  podcastPagingTests();
   test('a podcast show row keeps its MPSP id, which opens as its episodes', () {
     final row = {
       'thumbnail': _thumb('https://i.ytimg.com/show.jpg'),
@@ -142,5 +147,80 @@ void main() {
     expect(search.hasMore, isFalse);
     expect(await search.more(), isEmpty);
     expect(asked, [null, 'p2']);
+  });
+}
+
+Map<String, dynamic> _episode(String id) => {
+  'musicMultiRowListItemRenderer': {
+    'title': {
+      'runs': [
+        {'text': 'Episode $id'},
+      ],
+    },
+    'onTap': {
+      'watchEndpoint': {'videoId': id},
+    },
+  },
+};
+
+void podcastPagingTests() {
+  test('a show opens on its newest page, and older episodes follow page by page', () async {
+    final asked = <Map<String, dynamic>>[];
+    final web = YtMusicWeb(
+      cookies: '',
+      visitorData: '',
+      client: MockClient((request) async {
+        final body = jsonDecode(request.body) as Map<String, dynamic>;
+        asked.add(body);
+        final page = switch (body['continuation']) {
+          null => {
+            'header': {
+              'musicResponsiveHeaderRenderer': {
+                'title': {
+                  'runs': [
+                    {'text': 'The Show'},
+                  ],
+                },
+              },
+            },
+            'contents': {
+              'musicShelfRenderer': {
+                'contents': [
+                  _episode('e1'),
+                  _episode('e2'),
+                  {
+                    'continuationItemRenderer': {
+                      'continuationEndpoint': {
+                        'continuationCommand': {'token': 'page2'},
+                      },
+                    },
+                  },
+                ],
+              },
+            },
+          },
+          'page2' => {
+            'onResponseReceivedActions': [
+              {
+                'appendContinuationItemsAction': {
+                  'continuationItems': [_episode('e3')],
+                },
+              },
+            ],
+          },
+          _ => <String, dynamic>{},
+        };
+        return http.Response(jsonEncode(page), 200, headers: {'content-type': 'application/json'});
+      }),
+    );
+    final first = await web.podcastEpisodePage('MPSPPLabc');
+    expect(first.episodes.map((e) => e.videoId), ['e1', 'e2']);
+    expect(first.episodes.first.artist, 'The Show');
+    expect(first.next, 'page2');
+    final older = await web.podcastEpisodePage('MPSPPLabc', continuation: first.next, show: first.show);
+    expect(older.episodes.single.videoId, 'e3');
+    expect(older.episodes.single.artist, 'The Show');
+    expect(older.next, isNull);
+    expect(asked.last['continuation'], 'page2');
   });
 }
