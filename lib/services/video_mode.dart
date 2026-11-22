@@ -1023,6 +1023,8 @@ vec4 hook() {
       if (!active()) return;
       _readDecoder();
       _ready = true;
+      // A timer from an earlier open that was never reset would otherwise keep running beside this one.
+      _tick?.cancel();
       _tick = Timer.periodic(const Duration(milliseconds: 250), (_) => _follow());
       _timingChanged();
       notifyListeners();

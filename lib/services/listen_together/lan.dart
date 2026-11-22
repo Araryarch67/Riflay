@@ -160,6 +160,7 @@ class LanHostTransport implements ListenHostTransport {
       final server = _server = await HttpServer.bind(InternetAddress.anyIPv4, 0);
       server.listen(_onRequest, onError: (Object e) => debugPrint('Listen together: server: $e'));
       unawaited(_announce());
+      _beacon?.cancel();
       _beacon = Timer.periodic(const Duration(milliseconds: 1500), (_) => _announce());
     } catch (e) {
       await stop();

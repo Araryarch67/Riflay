@@ -825,6 +825,18 @@ abstract final class Metadata {
   /// Neutral grey for anything without cover art.
   static const fallbackAccent = Color(0xFF535353);
 
+  /// Cover colours kept per cover: a few bytes each, but a library played through for days adds one per song, so
+  /// the oldest go past this many (they are worked out again from the cached cover if needed).
+  static const _maxCoverColors = 1024;
+
+  static V _remember<V>(Map<String, V> into, String key, V value) {
+    into[key] = value;
+    while (into.length > _maxCoverColors) {
+      into.remove(into.keys.first);
+    }
+    return value;
+  }
+
   static Color? cachedAccent(Track track) => _accents[_artKey(track)];
 
   /// A punchy colour sampled from the cover art, for gradients and the mini player.
@@ -836,7 +848,7 @@ abstract final class Metadata {
       final bytes = await artwork(track);
       final color = (bytes == null ? null : await _averageColor(bytes)) ?? fallbackAccent;
       _pendingAccents.remove(key);
-      return _accents[key] = color;
+      return _remember(_accents, key, color);
     }();
   }
 
@@ -858,7 +870,7 @@ abstract final class Metadata {
         debugPrint('Cover colours not read: $e');
       }
       _pendingCoverColors.remove(key);
-      return _coverColors[key] = result;
+      return _remember(_coverColors, key, result);
     }();
   }
 

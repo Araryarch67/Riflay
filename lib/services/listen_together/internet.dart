@@ -382,6 +382,7 @@ class InternetHostTransport implements ListenHostTransport {
     );
     link.subscribe(_keys!.fromGuestsFilter);
     _announce();
+    _presence?.cancel();
     _presence = Timer.periodic(internetPresenceEvery, (_) => _announce());
   }
 
