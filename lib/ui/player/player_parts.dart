@@ -97,6 +97,7 @@ class PartButton extends StatelessWidget {
     this.round = false,
     this.iconSize = 22,
     this.glass = true,
+    this.circle = false,
   });
 
   final IconData icon;
@@ -115,9 +116,12 @@ class PartButton extends StatelessWidget {
   /// False keeps the plain surface under Liquid Glass controls too (the transport, unless its own switch is on).
   final bool glass;
 
+  /// Always a full circle, whatever Settings › Corners says (Stacked's row of round buttons).
+  final bool circle;
+
   @override
   Widget build(BuildContext context) {
-    final radius = math.min(size / 2, LayoutPrefs.radius(round ? size / 2 : 14));
+    final radius = circle ? size / 2 : math.min(size / 2, LayoutPrefs.radius(round ? size / 2 : 14));
     final glass = this.glass && LayoutPrefs.instance.playerGlassControls && look != PartLook.filled;
     final c = PlayerGlassSurface.colorsOf(context, enabled: glass);
     final (fill, color, side) = lit
@@ -146,16 +150,15 @@ class PartButton extends StatelessWidget {
         minimumSize: Size.square(size),
         padding: EdgeInsets.zero,
         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(radius),
-          side: glass ? BorderSide.none : side,
-        ),
+        shape: circle
+            ? CircleBorder(side: glass ? BorderSide.none : side)
+            : RoundedRectangleBorder(borderRadius: BorderRadius.circular(radius), side: glass ? BorderSide.none : side),
       ),
       icon: Icon(icon),
     );
     // A dark icon on the white fill: the picture's text shadow would ring it in black.
     // Fully round (the Corners setting allows it): a circle of glass, not a squircle.
-    if (glass) return PlayerGlassSurface(radius: radius, circle: round && radius == size / 2, child: button);
+    if (glass) return PlayerGlassSurface(radius: radius, circle: circle || round && radius == size / 2, child: button);
     return fill == c.inverse ? OffPicture(child: button) : button;
   }
 }
@@ -944,53 +947,88 @@ class PlayerBottomButtons extends StatelessWidget {
     final shell = ShellScope.of(context);
     final c = PlayerScope.read(context);
     if (LayoutPrefs.instance.bottomRow == PlayerBottomRow.minimal) return _minimal(context, c, shell);
-    // Chips: the five buttons are one outlined group; More is its own white circle.
+    // Chips: the five buttons as one capsule in five pieces a hairline apart (as the Share and Like pair), fully
+    // round only at its two ends; then More as its own white circle.
     return LayoutBuilder(
       builder: (context, box) {
-        final more = withMore ? 48.0 : 0.0;
-        final width = math.min(48.0, (box.maxWidth - more - 12) / 5);
-        return PlayerSelect<_Transport>(
-          select: _selectTransport,
-          builder: (context, t, _) => Row(
-            children: [
-              ListenableBuilder(
-                listenable: c.sleep,
-                builder: (context, _) => JoinedButtons(
-                  outlined: true,
-                  height: 48,
-                  segmentWidth: width,
-                  iconSize: 22,
-                  segments: [
-                    joinedSegment(Icons.queue_music_rounded, tr.queue, shell.openQueue),
-                    joinedSegment(
-                      c.sleep.active ? Icons.bedtime_rounded : Icons.bedtime_outlined,
-                      c.sleep.active ? tr.sleepTimerWith(SleepTimerLabel.of(c.sleep)) : tr.sleepTimer,
-                      () => showSleepTimer(context),
-                      lit: c.sleep.active,
-                    ),
-                    joinedSegment(
-                      Icons.shuffle_rounded,
-                      t.shuffle ? tr.disableShuffle : tr.enableShuffle,
-                      t.hasQueue ? c.toggleShuffle : null,
-                      lit: t.shuffle,
-                    ),
-                    joinedSegment(Icons.lyrics_outlined, tr.lyrics, shell.openLyrics),
-                    joinedSegment(
-                      t.loop == LoopMode.one ? Icons.repeat_one_rounded : Icons.repeat_rounded,
-                      switch (t.loop) {
-                        LoopMode.off => tr.enableRepeat,
-                        LoopMode.all => tr.enableRepeatOne,
-                        LoopMode.one => tr.disableRepeat,
-                      },
-                      t.hasQueue ? c.cycleLoopMode : null,
-                      lit: t.loop != LoopMode.off,
-                    ),
-                  ],
+        const height = 48.0, gap = 2.0;
+        final more = withMore ? height + 12 : 0.0;
+        final width = math.min(64.0, (box.maxWidth - more - 4 * gap) / 5);
+        final colors = PlayerGlassSurface.colorsOf(context, enabled: LayoutPrefs.instance.playerGlassControls);
+        final outer = Radius.circular(height / 2);
+        final inner = Radius.circular(math.min(height / 2, LayoutPrefs.radius(8)));
+        Widget piece(int i, IconData icon, String tooltip, VoidCallback? onTap, {bool lit = false}) {
+          final shape = RoundedRectangleBorder(
+            borderRadius: BorderRadius.horizontal(left: i == 0 ? outer : inner, right: i == 4 ? outer : inner),
+          );
+          final ink = lit ? colors.accent : colors.textPrimary;
+          return Material(
+            // Each piece its own soft fill, on glass presets too: pieces a hairline apart, not one glass with lines.
+            color: lit ? colors.accent.withValues(alpha: 0.2) : colors.textPrimary.withValues(alpha: 0.14),
+            shape: shape,
+            clipBehavior: Clip.antiAlias,
+            child: Tooltip(
+              message: tooltip,
+              child: InkWell(
+                onTap: onTap,
+                child: SizedBox(
+                  width: width,
+                  height: height,
+                  child: Icon(icon, size: 22, color: onTap == null ? ink.withValues(alpha: 0.38) : ink),
                 ),
               ),
-              const Spacer(),
-              if (withMore) const PlayerMoreAction(size: 48, icon: Icons.more_vert_rounded),
-            ],
+            ),
+          );
+        }
+
+        return PlayerSelect<_Transport>(
+          select: _selectTransport,
+          builder: (context, t, _) => ListenableBuilder(
+            listenable: c.sleep,
+            builder: (context, _) {
+              final pieces = [
+                piece(0, Icons.queue_music_rounded, tr.queue, shell.openQueue),
+                piece(
+                  1,
+                  c.sleep.active ? Icons.bedtime_rounded : Icons.bedtime_outlined,
+                  c.sleep.active ? tr.sleepTimerWith(SleepTimerLabel.of(c.sleep)) : tr.sleepTimer,
+                  () => showSleepTimer(context),
+                  lit: c.sleep.active,
+                ),
+                piece(
+                  2,
+                  Icons.shuffle_rounded,
+                  t.shuffle ? tr.disableShuffle : tr.enableShuffle,
+                  t.hasQueue ? c.toggleShuffle : null,
+                  lit: t.shuffle,
+                ),
+                piece(3, Icons.lyrics_outlined, tr.lyrics, shell.openLyrics),
+                piece(
+                  4,
+                  t.loop == LoopMode.one ? Icons.repeat_one_rounded : Icons.repeat_rounded,
+                  switch (t.loop) {
+                    LoopMode.off => tr.enableRepeat,
+                    LoopMode.all => tr.enableRepeatOne,
+                    LoopMode.one => tr.disableRepeat,
+                  },
+                  t.hasQueue ? c.cycleLoopMode : null,
+                  lit: t.loop != LoopMode.off,
+                ),
+              ];
+              final group = Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  for (final (i, p) in pieces.indexed) ...[if (i > 0) const SizedBox(width: gap), p],
+                ],
+              );
+              return Row(
+                children: [
+                  group,
+                  const Spacer(),
+                  if (withMore) const PlayerMoreAction(size: height, icon: Icons.more_vert_rounded),
+                ],
+              );
+            },
           ),
         );
       },
@@ -1167,7 +1205,11 @@ class ComposedNowPlaying extends StatelessWidget {
           else
             PlayerBottomButtons(withMore: p.titleActions != TitleActions.plain),
           if (p.showVolumeRow) ...[
-            if (p.playerGlassControls && p.glassVolume) const SizedBox(height: 8),
+            // Stacked's buttons are a row of their own above the volume: the same air as between the other parts.
+            if (p.bottomRow == PlayerBottomRow.chips)
+              SizedBox(height: roomy ? 20 : 12)
+            else if (p.playerGlassControls && p.glassVolume)
+              const SizedBox(height: 8),
             PlayerVolumeRow(mute: plainControls),
           ],
           const SizedBox(height: 8),

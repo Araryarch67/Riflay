@@ -207,17 +207,17 @@ void main() {
     );
 
     await tester.pumpWidget(app(plain));
-    expect(find.text('Video'), findsNothing);
+    expect(find.byTooltip('Video'), findsNothing);
     expect(find.text('Beta'), findsNothing);
 
     VideoMode.instance.setOn(false);
     await tester.pumpWidget(app(song));
-    expect(find.text('Song'), findsOneWidget);
-    expect(find.text('Video'), findsOneWidget);
+    expect(find.byTooltip('Song'), findsOneWidget);
+    expect(find.byTooltip('Video'), findsOneWidget);
     expect(find.text('Beta'), findsNothing);
     expect(VideoMode.instance.on, isFalse);
 
-    await tester.tap(find.text('Video'));
+    await tester.tap(find.byTooltip('Video'));
     await tester.pump();
     expect(VideoMode.instance.on, isTrue);
     expect(find.byTooltip('Adjust video timing'), findsOneWidget);

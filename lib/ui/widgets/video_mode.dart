@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 
@@ -6,7 +8,6 @@ import '../../services/layout_prefs.dart';
 import '../../services/player_controller.dart';
 import '../../services/video_mode.dart';
 import '../theme.dart';
-import '../player/player_glass.dart';
 import '../player/video_full_view.dart';
 import 'controls.dart';
 import 'live_preview.dart';
@@ -50,27 +51,41 @@ class VideoModeSwitch extends StatelessWidget {
                 );
         }
         final fg = onDark ? Colors.white : AppColors.textPrimary;
-        Widget segment(String label, bool video) {
+        // Two icon buttons joined into one capsule, as the Share and Like pair. The words are their tooltips (and
+        // what a screen reader says).
+        Widget segment(String label, IconData icon, bool video) {
           final picked = mode.on == video;
+          // Shaped as the Share and Like pair: one capsule in two pieces a hairline apart, fully round only at its
+          // two ends, small corners where they meet. The picked one white (as those are), the other dim.
+          const height = 40.0, outer = Radius.circular(height / 2);
+          final inner = Radius.circular(math.min(height / 2, LayoutPrefs.radius(8)));
+          final radius = video
+              ? BorderRadius.horizontal(left: inner, right: outer)
+              : BorderRadius.horizontal(left: outer, right: inner);
+          final on = onDark ? Colors.white : AppColors.textPrimary;
+          final onInk = onDark ? Colors.black : AppColors.onInverse;
           return Semantics(
             button: true,
             selected: picked,
-            child: InkWell(
-              borderRadius: BorderRadius.circular(20),
-              onTap: () => mode.setOn(video),
-              child: AnimatedContainer(
-                duration: LayoutPrefs.dur(const Duration(milliseconds: 180)),
-                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 6),
-                decoration: BoxDecoration(
-                  color: picked ? fg : Colors.transparent,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  label,
-                  style: TextStyle(
-                    fontWeight: FontWeight.w700,
-                    fontSize: 13,
-                    color: picked ? (onDark ? Colors.black : AppColors.onInverse) : fg,
+            label: label,
+            excludeSemantics: true,
+            child: Tooltip(
+              message: label,
+              child: Material(
+                type: MaterialType.transparency,
+                child: InkWell(
+                  borderRadius: radius,
+                  onTap: () => mode.setOn(video),
+                  child: AnimatedContainer(
+                    duration: LayoutPrefs.dur(const Duration(milliseconds: 200)),
+                    curve: Curves.easeOutCubic,
+                    width: 52,
+                    height: height,
+                    decoration: BoxDecoration(
+                      color: picked ? on : (onDark ? Colors.white.withValues(alpha: 0.14) : AppColors.tile),
+                      borderRadius: radius,
+                    ),
+                    child: Icon(icon, size: 22, color: picked ? onInk : fg),
                   ),
                 ),
               ),
@@ -83,27 +98,14 @@ class VideoModeSwitch extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              PlayerGlassSurface(
-                radius: 22,
-                child: Container(
-                  padding: const EdgeInsets.all(3),
-                  decoration: BoxDecoration(
-                    color: LayoutPrefs.instance.playerGlassControls
-                        ? Colors.transparent
-                        : onDark
-                        ? Colors.white.withValues(alpha: 0.14)
-                        : AppColors.tile,
-                    borderRadius: BorderRadius.circular(22),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [segment(tr.sectionSong, false), segment(tr.kindVideo, true)],
-                  ),
-                ),
-              ),
+              segment(tr.sectionSong, Icons.headphones_rounded, false),
+              const SizedBox(width: 2),
+              segment(tr.kindVideo, Icons.smart_display_outlined, true),
               const SizedBox(width: 8),
               if (mode.on) VideoTimingButton(track: track, color: fg),
-              if (mode.on) VideoQualityButton(color: fg),
+              // Whenever a streamed video shows, the page's background included (Song picked, the video behind the
+              // page): it hides itself with nothing to choose.
+              VideoQualityButton(color: fg),
               if (expandable && mode.on)
                 IconButton(
                   tooltip: tr.watchVideo,

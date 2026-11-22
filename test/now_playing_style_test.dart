@@ -335,9 +335,11 @@ void main() {
     addTearDown(() => VideoMode.instance.setOn(true));
     final c = await _show(tester, const NowPlayingPage(), const Size(412, 915), track: song);
     double shown() => tester
-        .widget<AnimatedOpacity>(find.ancestor(of: find.text('Video'), matching: find.byType(AnimatedOpacity)).first)
+        .widget<AnimatedOpacity>(
+          find.ancestor(of: find.byTooltip('Video'), matching: find.byType(AnimatedOpacity)).first,
+        )
         .opacity;
-    expect(find.text('Video'), findsOneWidget, reason: 'at the top, no ⋯ needed');
+    expect(find.byTooltip('Video'), findsOneWidget, reason: 'at the top, no ⋯ needed');
     expect(shown(), 1);
     await tester.pump(const Duration(seconds: 4));
     expect(shown(), 0, reason: 'out of the way of the cover');
@@ -351,7 +353,7 @@ void main() {
     await _close(tester, c);
     await tester.runAsync(() => p.setShowVideoSwitch(false));
     final off = await _show(tester, const NowPlayingPage(), const Size(412, 915), track: song);
-    expect(find.text('Video'), findsNothing, reason: 'Off in Settings');
+    expect(find.byTooltip('Video'), findsNothing, reason: 'Off in Settings');
     await _close(tester, off);
     // VideoMode lets go of its views a moment after they close.
     await tester.pump(const Duration(minutes: 1));
@@ -374,7 +376,7 @@ void main() {
         track: song,
       );
 
-      final switchLabel = find.text('Video');
+      final switchLabel = find.byTooltip('Video');
       final picture = cover == PlayerCover.square ? find.byType(NowPlayingCover) : find.byType(FadedCover);
       final pictureRect = tester.getRect(picture.first);
       expect(switchLabel.hitTestable(), findsNothing);
@@ -474,11 +476,24 @@ void main() {
     await _close(tester, c);
   });
 
-  testWidgets('Stacked: a joined Share pair, a joined bottom group and a round More', (tester) async {
+  testWidgets('Stacked: a joined Share pair, the bottom buttons each on its own, and a round More', (tester) async {
     await tester.runAsync(() => PlayerPreset.stacked.apply(p));
     final c = await _show(tester, const NowPlayingPage(), const Size(412, 915));
-    expect(find.byType(JoinedButtons), findsNWidgets(2));
-    expect(tester.widgetList<JoinedButtons>(find.byType(JoinedButtons)).where((j) => j.outlined), hasLength(1));
+    // Only the Share pair is joined; Queue, Sleep timer, Shuffle, Lyrics and Repeat are separate round buttons.
+    expect(find.byType(JoinedButtons), findsOneWidget);
+    expect(tester.widgetList<JoinedButtons>(find.byType(JoinedButtons)).where((j) => j.outlined), isEmpty);
+    // One capsule in five pieces: round only at its two ends (Queue on the left, Repeat on the right).
+    for (final tip in ['Queue', 'Sleep timer', 'Lyrics']) {
+      expect(_tip(tip), findsWidgets, reason: tip);
+    }
+    BorderRadius corners(String tip) =>
+        ((tester.widget<Material>(find.ancestor(of: _tip(tip), matching: find.byType(Material)).first).shape!
+                    as RoundedRectangleBorder)
+                .borderRadius
+            as BorderRadius);
+    expect(corners('Queue').topLeft.x, 24);
+    expect(corners('Queue').topRight.x, lessThan(24));
+    expect(corners('Lyrics').topLeft.x, lessThan(24));
     expect(_tip('More'), findsOneWidget);
     expect(tester.takeException(), isNull);
     await _close(tester, c);
