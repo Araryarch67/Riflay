@@ -1603,8 +1603,9 @@ class _LiquidGlass extends StatelessWidget {
                   color: switch (LayoutPrefs.instance.glassTint) {
                     GlassTint.black => Colors.black.withValues(alpha: 0.72),
                     GlassTint.light => Colors.white.withValues(alpha: 0.45),
+                    // A dark theme's glass is Black's.
                     GlassTint.theme =>
-                      light ? Colors.white.withValues(alpha: 0.26) : Colors.black.withValues(alpha: 0.30),
+                      light ? Colors.white.withValues(alpha: 0.26) : Colors.black.withValues(alpha: 0.72),
                   },
                 ),
                 CustomPaint(painter: _LiquidRim(shape, light: light, strength: 0.7)),

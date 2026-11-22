@@ -63,14 +63,19 @@ class _GlassToastFace extends StatelessWidget {
     final theme = Theme.of(context).snackBarTheme;
     final radius = BorderRadius.circular(LayoutPrefs.radius(14));
     final glass = !LayoutPrefs.lightweight;
+    // Over the cover's glass the panels are see-through, and a toast in their colour was too: there it is dark
+    // smoked glass with white words, whatever the theme, so it reads over any picture.
+    final smoked = AppColors.glass;
     final shape = RoundedRectangleBorder(
       borderRadius: radius,
-      side: BorderSide(color: colors.border),
+      side: BorderSide(color: smoked ? Colors.white.withValues(alpha: 0.14) : colors.border),
     );
     final action = toast.action;
     final linked = toast is LinkedToast ? toast as LinkedToast : null;
     final content = Material(
-      color: colors.elevated.withValues(alpha: glass ? .82 : .96),
+      color: smoked
+          ? Colors.black.withValues(alpha: glass ? .62 : .88)
+          : colors.elevated.withValues(alpha: glass ? .82 : .96),
       shape: shape,
       child: InkWell(
         onTap: linked == null
@@ -84,13 +89,24 @@ class _GlassToastFace extends StatelessWidget {
           padding: toast.padding ?? const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           child: LayoutBuilder(
             builder: (context, box) {
-              final text = Padding(padding: const EdgeInsets.symmetric(vertical: 4), child: toast.content);
+              final text = Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: smoked
+                    ? DefaultTextStyle.merge(
+                        style: const TextStyle(color: Colors.white),
+                        child: IconTheme.merge(
+                          data: const IconThemeData(color: Colors.white),
+                          child: toast.content,
+                        ),
+                      )
+                    : toast.content,
+              );
               final buttons = [
                 ?action,
                 if (toast.showCloseIcon ?? theme.showCloseIcon ?? false)
                   IconButton(
                     icon: const Icon(Icons.close_rounded),
-                    color: toast.closeIconColor ?? theme.closeIconColor,
+                    color: smoked ? Colors.white70 : toast.closeIconColor ?? theme.closeIconColor,
                     tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
                     onPressed: () => ScaffoldMessenger.of(context).hideCurrentSnackBar(),
                   ),
@@ -120,7 +136,12 @@ class _GlassToastFace extends StatelessWidget {
     );
     return ClipRRect(
       borderRadius: radius,
-      child: glass ? BackdropFilter(filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14), child: content) : content,
+      child: glass
+          ? BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: smoked ? 20 : 14, sigmaY: smoked ? 20 : 14),
+              child: content,
+            )
+          : content,
     );
   }
 }

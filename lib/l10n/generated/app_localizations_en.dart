@@ -6404,6 +6404,18 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get losslessCheckHow =>
+      'Press Check and Riflay reads every lossless file of your library on this device (FLAC, WAV, AIFF, WavPack, APE), one after another. The ones that are probably not real lossless are listed below with the reason; tap one to hear it. Streams are not checked.';
+
+  @override
+  String get losslessCheckNoFiles =>
+      'Your library has no lossless files on this device yet. Add a folder with FLAC or WAV files first.';
+
+  @override
+  String get losslessCheckNeedsFfmpeg =>
+      'On Windows the check reads the files with ffmpeg: it is downloaded once when you start.';
+
+  @override
   String get losslessCheckRun => 'Check';
 
   @override

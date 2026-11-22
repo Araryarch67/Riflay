@@ -319,15 +319,14 @@ void main() {
                   expect(find.byType(DesktopControlsRow), findsNothing, reason: mix);
                   expect(_tip('Previous'), findsOneWidget, reason: mix);
                   expect(_tip('Next'), findsOneWidget, reason: mix);
-                  // Minimal and Dock run a thin line along the top (the length at its end), not the shaped bar.
-                  final thinLine = style == DesktopBarStyle.minimal || style == DesktopBarStyle.dock;
+                  // Every bar's progress line takes Settings › Progress bar shape, Minimal's and Dock's slim one too.
                   expect(
                     _seekShape(tester).pill,
-                    shape == ProgressBarShape.pill && !thinLine,
+                    shape == ProgressBarShape.pill,
                     reason: '$mix: the progress line has the phone\'s shape',
                   );
                   // The length, or (Time left, as on the phone) the time left, counting down.
-                  final left = p.showTimeLeft && !thinLine;
+                  final left = p.showTimeLeft;
                   expect(
                     left ? find.textContaining(RegExp(r'^-\d+:\d\d$')) : find.text('2:30'),
                     findsOneWidget,

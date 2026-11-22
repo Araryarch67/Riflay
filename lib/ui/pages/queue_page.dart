@@ -231,6 +231,8 @@ class _QueuePageState extends State<QueuePage> {
                   index: 1,
                   currentOccurrence: true,
                   onTap: guest ? null : c.togglePlay,
+                  // Titles and artists too long for the row slide by to be read whole (rows are narrow here).
+                  marquee: true,
                 ),
               ),
             ),
@@ -255,6 +257,7 @@ class _QueuePageState extends State<QueuePage> {
                         index: i + 2,
                         currentOccurrence: false,
                         onTap: null,
+                        marquee: true,
                       ),
                     )
                   : SliverReorderableList(
@@ -351,7 +354,7 @@ class _QueueRow extends StatelessWidget {
     final row = Row(
       children: [
         Expanded(
-          child: TrackRow(track: track, index: index, currentOccurrence: false, onTap: onTap),
+          child: TrackRow(track: track, index: index, currentOccurrence: false, onTap: onTap, marquee: true),
         ),
         // When it starts, in a slot of its own width even when unknown, so the buttons after it line up row to row.
         SizedBox(

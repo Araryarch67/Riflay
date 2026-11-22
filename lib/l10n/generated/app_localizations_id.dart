@@ -6334,6 +6334,18 @@ class AppLocalizationsId extends AppLocalizations {
   }
 
   @override
+  String get losslessCheckHow =>
+      'Tekan Periksa dan Riflay membaca semua file lossless di library-mu di perangkat ini (FLAC, WAV, AIFF, WavPack, APE) satu per satu. File yang kemungkinan bukan lossless asli muncul di bawah beserta alasannya; ketuk untuk mendengarkan. Lagu streaming tidak diperiksa.';
+
+  @override
+  String get losslessCheckNoFiles =>
+      'Library-mu belum punya file lossless di perangkat ini. Tambahkan folder berisi file FLAC atau WAV dulu.';
+
+  @override
+  String get losslessCheckNeedsFfmpeg =>
+      'Di Windows pemeriksaan membaca file dengan ffmpeg: diunduh sekali saat kamu mulai.';
+
+  @override
   String get losslessCheckRun => 'Periksa';
 
   @override

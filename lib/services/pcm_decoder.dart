@@ -3,6 +3,7 @@
 // ignore_for_file: experimental_member_use
 
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'dart:math' as math;
 import 'dart:typed_data';
@@ -16,6 +17,7 @@ import '../platform/host.dart';
 import '../platform/mpv.dart';
 import '../platform/native_calls.dart';
 import 'dlna.dart' show CastServer;
+import 'ffmpeg.dart';
 
 /// What [MpvPcm] decodes: a file (or URL) mpv opens itself, or bytes from a
 /// [StreamAudioSource] (a YouTube stream, an SACD song built on the fly).
@@ -29,9 +31,11 @@ class PcmInput {
 
 /// Decoded audio from [MpvPcm.decode]: interleaved little-endian PCM.
 class PcmStream {
-  PcmStream._(this._session, this.rate, this.bits, this.channels);
+  PcmStream._(_Session session, this.rate, this.bits, this.channels) : data = session.out.stream, _stop = session.stop;
 
-  final _Session _session;
+  PcmStream._from(this.data, this._stop, this.rate, this.bits, this.channels);
+
+  final Future<void> Function() _stop;
 
   /// Samples per second per channel.
   final int rate;
@@ -42,11 +46,78 @@ class PcmStream {
 
   /// The samples. Ends when the song (or the requested slice) does; cancelling
   /// the subscription stops the decoder.
-  Stream<Uint8List> get data => _session.out.stream;
+  final Stream<Uint8List> data;
 
   /// Stops decoding and frees everything. Safe to call more than once, and
   /// after [data] has ended.
-  Future<void> cancel() => _session.stop();
+  Future<void> cancel() => _stop();
+}
+
+/// Windows, where [MpvPcm] has no named pipe to read: the same decoded stream from an ffmpeg process's standard
+/// output, a plain pipe Windows has. Only with an ffmpeg that is here already (installed, or fetched earlier for
+/// something else): nothing is downloaded for it. Used by the audio analysis (the seek bar's waveform, the
+/// lossless check); the other decoders on Windows have ffmpeg paths of their own.
+abstract final class FfmpegPcm {
+  static bool get supported => Host.isWindows && Ffmpeg.installed;
+
+  /// Decodes [path] (a file or a URL) whole, as stereo PCM of [bits] (16 or 32), at its own rate unless that is
+  /// above [maxRate].
+  static Future<PcmStream> decode(String path, {int? maxRate, required int bits}) async {
+    assert(bits == 16 || bits == 32);
+    final ffmpeg = await Ffmpeg.executable();
+    final format = bits == 16 ? 's16le' : 's32le';
+    // Above [maxRate] the file comes down to the highest common rate under it: its own rate first, read from its
+    // header (ffmpeg's filters can't pick a rate from a list the way mpv's do).
+    int? to;
+    if (maxRate != null) {
+      final probe = await Process.run(ffmpeg, ['-hide_banner', '-nostdin', '-i', path]);
+      // "Audio: flac, 96000 Hz, stereo": the codec, then its rate.
+      final own = RegExp(r'Audio: [^,]+, (\d+) Hz').firstMatch('${probe.stderr}');
+      final hz = own == null ? null : int.parse(own.group(1)!);
+      if (hz != null && hz > maxRate) to = MpvPcm.highestRate(maxRate);
+    }
+    final process = await Process.start(ffmpeg, [
+      '-hide_banner', '-nostdin', '-v', 'info', //
+      '-i', path,
+      '-vn', '-ac', '2',
+      if (to != null) ...['-ar', '$to'],
+      '-c:a', 'pcm_$format', '-f', format, 'pipe:1',
+    ]);
+    // The rate ffmpeg settled on, from its description of the output: "Audio: pcm_s32le, 44100 Hz".
+    final rate = Completer<int>();
+    var output = false;
+    process.stderr
+        .transform(const SystemEncoding().decoder)
+        .transform(const LineSplitter())
+        .listen(
+          (line) {
+            if (line.startsWith('Output #0')) output = true;
+            if (!output || rate.isCompleted) return;
+            final m = RegExp(r'Audio: pcm_s(?:16|32)le[^,]*, (\d+) Hz').firstMatch(line);
+            if (m != null) rate.complete(int.parse(m.group(1)!));
+          },
+          onDone: () {
+            if (!rate.isCompleted) rate.completeError(StateError('ffmpeg could not decode $path'));
+          },
+        );
+    Future<void> stop() async {
+      process.kill();
+    }
+
+    try {
+      final hz = await rate.future.timeout(const Duration(seconds: 20));
+      return PcmStream._from(
+        process.stdout.map((chunk) => chunk is Uint8List ? chunk : Uint8List.fromList(chunk)),
+        stop,
+        hz,
+        bits,
+        2,
+      );
+    } catch (_) {
+      process.kill();
+      rethrow;
+    }
+  }
 }
 
 /// Decodes audio with libmpv instead of an `ffmpeg` process, which phones
@@ -153,6 +224,9 @@ abstract final class MpvPcm {
   /// The `af` graph that keeps a song's rate if it is at most [maxRate] and
   /// otherwise lets libavfilter pick the closest rate that is allowed.
   @visibleForTesting
+  /// The highest rate renderers take that is not above [maxRate] (or [maxRate] itself, as [rateFilter] allows it).
+  static int highestRate(int maxRate) => _rates.lastWhere((r) => r <= maxRate, orElse: () => maxRate);
+
   static String rateFilter(int maxRate) {
     final allowed = [
       for (final r in _rates)

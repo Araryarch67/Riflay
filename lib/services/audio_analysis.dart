@@ -35,7 +35,8 @@ abstract final class AudioAnalysis {
   static final scan = ValueNotifier<(int, int)?>(null);
   static bool _stopScan = false;
 
-  static bool get supported => MpvPcm.supported;
+  /// mpv's pipe, or on Windows ffmpeg's ([FfmpegPcm]).
+  static bool get supported => MpvPcm.supported || FfmpegPcm.supported;
 
   /// The file [track] plays from, if it is one on this device.
   static String? fileOf(Track track) => track.path ?? (track.uri.isScheme('file') ? track.uri.toFilePath() : null);
@@ -209,7 +210,9 @@ abstract final class AudioAnalysis {
 
   static Future<AudioReport?> _measure(String path, {required bool spectrogram}) async {
     final stored = await AudioEngine.sourceBitsOf(path);
-    final pcm = await MpvPcm.decode(PcmInput.file(path), maxRate: 192000, bits: 32);
+    final pcm = MpvPcm.supported
+        ? await MpvPcm.decode(PcmInput.file(path), maxRate: 192000, bits: 32)
+        : await FfmpegPcm.decode(path, maxRate: 192000, bits: 32);
     final results = ReceivePort();
     final worker = await Isolate.spawn(_work, (results.sendPort, pcm.rate, pcm.channels, spectrogram));
     final answer = Completer<AudioReport?>();

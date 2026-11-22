@@ -6197,6 +6197,16 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
+  String get losslessCheckHow =>
+      '「検査」を押すと、このデバイスのライブラリにあるロスレスファイル（FLAC、WAV、AIFF、WavPack、APE）を順番に読み取ります。本物のロスレスではない可能性があるファイルが理由とともに下に表示されます。タップすると再生します。ストリーミングは検査しません。';
+
+  @override
+  String get losslessCheckNoFiles => 'このデバイスのライブラリにはまだロスレスファイルがありません。先にFLACやWAVのフォルダを追加してください。';
+
+  @override
+  String get losslessCheckNeedsFfmpeg => 'Windowsではffmpegでファイルを読み取ります。開始時に一度だけダウンロードされます。';
+
+  @override
   String get losslessCheckRun => '検査';
 
   @override

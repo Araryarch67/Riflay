@@ -11439,6 +11439,24 @@ abstract class AppLocalizations {
   /// **'{checked} of {total} lossless files checked'**
   String losslessCheckFiles(int checked, int total);
 
+  /// No description provided for @losslessCheckHow.
+  ///
+  /// In en, this message translates to:
+  /// **'Press Check and Riflay reads every lossless file of your library on this device (FLAC, WAV, AIFF, WavPack, APE), one after another. The ones that are probably not real lossless are listed below with the reason; tap one to hear it. Streams are not checked.'**
+  String get losslessCheckHow;
+
+  /// No description provided for @losslessCheckNoFiles.
+  ///
+  /// In en, this message translates to:
+  /// **'Your library has no lossless files on this device yet. Add a folder with FLAC or WAV files first.'**
+  String get losslessCheckNoFiles;
+
+  /// No description provided for @losslessCheckNeedsFfmpeg.
+  ///
+  /// In en, this message translates to:
+  /// **'On Windows the check reads the files with ffmpeg: it is downloaded once when you start.'**
+  String get losslessCheckNeedsFfmpeg;
+
   /// No description provided for @losslessCheckRun.
   ///
   /// In en, this message translates to:

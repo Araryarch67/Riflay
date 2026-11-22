@@ -84,7 +84,9 @@ class DesktopPlayerBar extends StatelessWidget {
                   padding: const EdgeInsets.fromLTRB(12, 0, 20, 0),
                   child: Column(
                     children: [
-                      if (minimal && track != null) const SizedBox(height: 16, child: SeekBar(inline: true)),
+                      // Settings › Progress bar shape here too (a slim pill in the low row).
+                      if (minimal && track != null)
+                        const SizedBox(height: 16, child: SeekBar(inline: true, compact: true, desktopPlayer: true)),
                       Expanded(
                         child: Row(
                           children: [
@@ -175,7 +177,10 @@ class DesktopPlayerBar extends StatelessWidget {
       height: height,
       child: Column(
         children: [
-          SizedBox(height: 12, child: track == null ? null : const SeekBar(inline: true)),
+          SizedBox(
+            height: 12,
+            child: track == null ? null : const SeekBar(inline: true, compact: true, desktopPlayer: true),
+          ),
           Expanded(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(8, 0, 12, 8),

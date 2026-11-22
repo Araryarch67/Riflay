@@ -81,9 +81,6 @@ enum SettingsPlace {
   void open(ShellScope shell) => shell.open(page, location: location);
 }
 
-/// What a [SettingPreview] shows: the real widgets the option changes, small (see `settings_preview.dart`).
-enum SettingPreview { nowPlaying, lyrics, visualizer, cards, tabBar, desktopBar }
-
 /// One option on a page of settings, as search finds it and as the page finds it again to scroll to.
 ///
 /// Register a new option in [SettingsOptions.all] with the same words its row shows: the page needs no change.
@@ -96,7 +93,6 @@ class SettingsOption {
     this.find,
     this.locate,
     this.parent,
-    this.preview,
     this.available,
   });
 
@@ -118,8 +114,6 @@ class SettingsOption {
 
   /// The option shown in its place while this one is hidden (a part only shown once its switch is on).
   final String? parent;
-
-  final SettingPreview? preview;
 
   /// Whether this build or device has the option at all; null for always.
   final bool Function()? available;
@@ -412,21 +406,13 @@ abstract final class SettingsOptions {
     ),
     // Look & feel › Pages & navigation
     SettingsOption('presets', .nowPlaying, (t) => t.presets, find: (t) => t.kwPresets),
-    SettingsOption(
-      'cover',
-      .nowPlaying,
-      (t) => t.cover,
-      subtitle: (t) => t.coverSubtitle,
-      find: (t) => t.kwCover,
-      preview: .nowPlaying,
-    ),
+    SettingsOption('cover', .nowPlaying, (t) => t.cover, subtitle: (t) => t.coverSubtitle, find: (t) => t.kwCover),
     SettingsOption(
       'phoneCover',
       .nowPlaying,
       (t) => t.coverSizeOnPhones,
       subtitle: (t) => t.coverSizeOnPhonesSubtitle,
       find: (t) => t.kwCover,
-      preview: .nowPlaying,
       available: () => Features.phoneLayout,
     ),
     SettingsOption(
@@ -435,7 +421,6 @@ abstract final class SettingsOptions {
       (t) => t.topOfPlayer,
       subtitle: (t) => t.topOfPlayerSubtitle,
       find: (t) => t.kwPlayerHeader,
-      preview: .nowPlaying,
     ),
     SettingsOption(
       'titleActions',
@@ -443,7 +428,6 @@ abstract final class SettingsOptions {
       (t) => t.buttonsByTitle,
       subtitle: (t) => t.buttonsByTitleSubtitle,
       find: (t) => t.kwTitleButtons,
-      preview: .nowPlaying,
     ),
     SettingsOption(
       'showPlayerClose',
@@ -451,7 +435,6 @@ abstract final class SettingsOptions {
       (t) => t.showPlayerClose,
       subtitle: (t) => t.showPlayerCloseSubtitle,
       find: (t) => t.kwPlayerHeader,
-      preview: .nowPlaying,
     ),
     SettingsOption(
       'showQualityBadge',
@@ -459,7 +442,6 @@ abstract final class SettingsOptions {
       (t) => t.showSoundQuality,
       subtitle: (t) => t.showSoundQualitySubtitle,
       find: (t) => t.kwQualityBadge,
-      preview: .nowPlaying,
     ),
     SettingsOption(
       'videoSwitch',
@@ -474,16 +456,9 @@ abstract final class SettingsOptions {
       (t) => t.qualityBadge,
       subtitle: (t) => t.qualityBadgeSubtitle,
       find: (t) => t.kwQualityBadge,
-      preview: .nowPlaying,
       available: () => Features.phoneLayout,
     ),
-    SettingsOption(
-      'playerBackground',
-      .nowPlaying,
-      (t) => t.background,
-      find: (t) => t.kwPlayerBackground,
-      preview: .nowPlaying,
-    ),
+    SettingsOption('playerBackground', .nowPlaying, (t) => t.background, find: (t) => t.kwPlayerBackground),
     SettingsOption(
       'videoMode',
       .nowPlaying,
@@ -513,7 +488,6 @@ abstract final class SettingsOptions {
       (t) => t.liquidGlassControls,
       subtitle: (t) => t.liquidGlassControlsSubtitle,
       find: (t) => t.kwLiquidGlass,
-      preview: .nowPlaying,
     ),
     SettingsOption(
       'glassSeekBar',
@@ -521,7 +495,6 @@ abstract final class SettingsOptions {
       (t) => t.glassSeekBar,
       find: (t) => t.kwLiquidGlass,
       parent: 'glassControls',
-      preview: .nowPlaying,
     ),
     SettingsOption(
       'glassTransport',
@@ -530,7 +503,6 @@ abstract final class SettingsOptions {
       subtitle: (t) => t.glassTransportSubtitle,
       find: (t) => t.kwLiquidGlass,
       parent: 'glassControls',
-      preview: .nowPlaying,
     ),
     SettingsOption(
       'glassVolume',
@@ -538,22 +510,14 @@ abstract final class SettingsOptions {
       (t) => t.glassVolume,
       find: (t) => t.kwLiquidGlass,
       parent: 'glassControls',
-      preview: .nowPlaying,
     ),
-    SettingsOption(
-      'progressShape',
-      .nowPlaying,
-      (t) => t.progressBarShape,
-      find: (t) => t.kwSeekBar,
-      preview: .nowPlaying,
-    ),
+    SettingsOption('progressShape', .nowPlaying, (t) => t.progressBarShape, find: (t) => t.kwSeekBar),
     SettingsOption(
       'progressBar',
       .nowPlaying,
       (t) => t.progressBar,
       subtitle: (t) => t.progressBarSubtitle,
       find: (t) => t.kwSeekBar,
-      preview: .nowPlaying,
     ),
     SettingsOption(
       'showTimeLeft',
@@ -561,7 +525,6 @@ abstract final class SettingsOptions {
       (t) => t.showTimeLeft,
       subtitle: (t) => t.showTimeLeftSubtitle,
       find: (t) => t.kwTimeLeft,
-      preview: .nowPlaying,
     ),
     SettingsOption(
       'transport',
@@ -569,7 +532,6 @@ abstract final class SettingsOptions {
       (t) => t.controls,
       subtitle: (t) => t.controlsSubtitle,
       find: (t) => t.kwTransport,
-      preview: .nowPlaying,
     ),
     SettingsOption(
       'playButton',
@@ -577,7 +539,6 @@ abstract final class SettingsOptions {
       (t) => t.playButton,
       subtitle: (t) => t.playButtonSubtitle,
       find: (t) => t.kwTransport,
-      preview: .nowPlaying,
     ),
     SettingsOption(
       'volumeRow',
@@ -585,7 +546,6 @@ abstract final class SettingsOptions {
       (t) => t.volumeSlider,
       subtitle: (t) => t.volumeSliderSubtitle,
       find: (t) => t.kwVolumeSlider,
-      preview: .nowPlaying,
       available: () => Features.phoneLayout,
     ),
     SettingsOption(
@@ -594,7 +554,6 @@ abstract final class SettingsOptions {
       (t) => t.sliderLook,
       subtitle: (t) => t.sliderLookSubtitle,
       find: (t) => t.kwVolumeSlider,
-      preview: .nowPlaying,
     ),
     SettingsOption(
       'bottomRow',
@@ -602,7 +561,6 @@ abstract final class SettingsOptions {
       (t) => t.bottomButtons,
       subtitle: (t) => t.bottomButtonsSubtitle,
       find: (t) => t.kwBottomButtons,
-      preview: .nowPlaying,
     ),
     SettingsOption('clearSearches', .privacy, (t) => t.clearSearches),
     SettingsOption('glassTint', .appearance, (t) => t.glassTint),
@@ -618,7 +576,6 @@ abstract final class SettingsOptions {
       (t) => t.lyricsPage,
       subtitle: (t) => t.lyricsPageSubtitle,
       find: (t) => t.kwLyrics,
-      preview: .lyrics,
     ),
     SettingsOption(
       'desktopLyricsBackground',
@@ -633,23 +590,14 @@ abstract final class SettingsOptions {
       (t) => t.linesShown,
       subtitle: (t) => t.linesShownSubtitle,
       find: (t) => t.kwLyrics,
-      preview: .lyrics,
     ),
-    SettingsOption(
-      'lyricsSync',
-      .lyrics,
-      (t) => t.sync,
-      subtitle: (t) => t.syncSubtitle,
-      find: (t) => t.kwKaraoke,
-      preview: .lyrics,
-    ),
+    SettingsOption('lyricsSync', .lyrics, (t) => t.sync, subtitle: (t) => t.syncSubtitle, find: (t) => t.kwKaraoke),
     SettingsOption(
       'lyricsSize',
       .lyrics,
       (t) => t.textSize,
       subtitle: (t) => t.lyricsTextSizeSubtitle,
       find: (t) => t.kwLyricsSize,
-      preview: .lyrics,
     ),
     SettingsOption(
       'lyricsAlign',
@@ -657,7 +605,6 @@ abstract final class SettingsOptions {
       (t) => t.alignment,
       subtitle: (t) => t.alignmentSubtitle,
       find: (t) => t.kwLyricsAlign,
-      preview: .lyrics,
     ),
     SettingsOption(
       'dimUnsung',
@@ -665,7 +612,6 @@ abstract final class SettingsOptions {
       (t) => t.dimUnsung,
       subtitle: (t) => t.dimUnsungSubtitle,
       find: (t) => t.kwKaraoke,
-      preview: .lyrics,
     ),
     SettingsOption(
       'highlightLine',
@@ -673,7 +619,6 @@ abstract final class SettingsOptions {
       (t) => t.highlightLyricLine,
       subtitle: (t) => t.highlightLyricLineSubtitle,
       find: (t) => t.kwLyrics,
-      preview: .lyrics,
     ),
     SettingsOption(
       'lockScreenLyrics',
@@ -688,7 +633,6 @@ abstract final class SettingsOptions {
       .beta,
       (t) => t.audioVisualizer,
       find: (t) => t.kwVisualizer,
-      preview: .visualizer,
       available: () => Features.audioVisualizer,
     ),
     SettingsOption(
@@ -697,7 +641,6 @@ abstract final class SettingsOptions {
       (t) => t.visualizerStyle,
       find: (t) => t.kwVisualizer,
       parent: 'visualizer',
-      preview: .visualizer,
       available: () => Features.audioVisualizer,
     ),
     SettingsOption(
@@ -706,7 +649,6 @@ abstract final class SettingsOptions {
       (t) => t.radiusMovement,
       find: (t) => t.kwVisualizer,
       parent: 'visualizerStyle',
-      preview: .visualizer,
       available: () => Features.audioVisualizer,
     ),
     SettingsOption(
@@ -715,7 +657,6 @@ abstract final class SettingsOptions {
       (t) => t.lineThickness,
       find: (t) => t.kwVisualizer,
       parent: 'visualizerStyle',
-      preview: .visualizer,
       available: () => Features.audioVisualizer,
     ),
     SettingsOption(
@@ -768,7 +709,6 @@ abstract final class SettingsOptions {
       (t) => t.miniPlayer,
       subtitle: (t) => t.miniPlayerSubtitle,
       find: (t) => t.kwMiniPlayer,
-      preview: .tabBar,
       available: () => Features.phoneLayout,
     ),
     SettingsOption(
@@ -777,7 +717,6 @@ abstract final class SettingsOptions {
       (t) => t.tabBarOnPhones,
       subtitle: (t) => t.tabBarOnPhonesSubtitle,
       find: (t) => t.kwTabBar,
-      preview: .tabBar,
       available: () => Features.phoneLayout,
     ),
     SettingsOption('hidePhoneNavLabels', .layout, (t) => t.hidePhoneNavLabels, available: () => Features.phoneLayout),
@@ -847,7 +786,6 @@ abstract final class SettingsOptions {
       (t) => t.desktopPlayerBar,
       subtitle: (t) => t.desktopPlayerBarSubtitle,
       find: (t) => t.kwDesktopBar,
-      preview: .desktopBar,
       available: () => Features.desktopLayout,
     ),
     SettingsOption(
@@ -878,29 +816,14 @@ abstract final class SettingsOptions {
         find: (t) => t.kwDesktopMini,
         available: () => Features.miniPlayer,
       ),
-    SettingsOption(
-      'corners',
-      .layout,
-      (t) => t.corners,
-      subtitle: (t) => t.cornersSubtitle,
-      find: (t) => t.kwCorners,
-      preview: .cards,
-    ),
-    SettingsOption(
-      'density',
-      .layout,
-      (t) => t.spacing,
-      subtitle: (t) => t.spacingSubtitle,
-      find: (t) => t.kwDensity,
-      preview: .cards,
-    ),
+    SettingsOption('corners', .layout, (t) => t.corners, subtitle: (t) => t.cornersSubtitle, find: (t) => t.kwCorners),
+    SettingsOption('density', .layout, (t) => t.spacing, subtitle: (t) => t.spacingSubtitle, find: (t) => t.kwDensity),
     SettingsOption(
       'coverSize',
       .layout,
       (t) => t.coverSizeInGrids,
       subtitle: (t) => t.coverSizeInGridsSubtitle,
       find: (t) => t.kwCoverSize,
-      preview: .cards,
     ),
     SettingsOption(
       'pageMotion',
@@ -932,7 +855,7 @@ abstract final class SettingsOptions {
       available: () => hasNativeWindow && !Host.isMacOS,
     ),
     // Performance & power
-    SettingsOption('performance', .power, (t) => t.performance, find: (t) => t.kwPerformance, preview: .nowPlaying),
+    SettingsOption('performance', .power, (t) => t.performance, find: (t) => t.kwPerformance),
     SettingsOption(
       'deviceSetup',
       .power,
@@ -1253,10 +1176,6 @@ abstract final class SettingsOptions {
     SettingsOption('licence', .about, (t) => t.licence, find: (t) => t.kwVersion),
     SettingsOption('licences', .about, (t) => t.openSourceLicences, find: (t) => t.kwVersion),
   ];
-
-  /// Options on [place] this device has, that show a preview.
-  static Iterable<SettingsOption> previewedOn(SettingsPlace place) =>
-      all.where((o) => o.place == place && o.preview != null && o.offered);
 }
 
 /// One search result: the option, and how well it matched.

@@ -48,10 +48,10 @@ bool glassIsLight(bool themeIsLight, [GlassTint? tint]) => switch (tint ?? Layou
   GlassTint.black => false,
 };
 
-/// The bottom bar glass's own colour. Following the theme it is barely there (a touch of shade); Light is a clear
-/// white glass, Black a dark smoked glass the page still shows through.
+/// The bottom bar glass's own colour. Light is a clear white glass, Black a dark smoked glass the page still shows
+/// through; following the theme a dark theme takes Black's, a light one a touch of white.
 Color glassTintColor(bool themeIsLight, [GlassTint? tint]) => switch (tint ?? LayoutPrefs.instance.glassTint) {
-  GlassTint.theme => themeIsLight ? const Color(0x24FFFFFF) : const Color(0x2E000000),
+  GlassTint.theme => themeIsLight ? const Color(0x24FFFFFF) : const Color(0xB8000000),
   GlassTint.light => const Color(0x66FFFFFF),
   GlassTint.black => const Color(0xB8000000),
 };

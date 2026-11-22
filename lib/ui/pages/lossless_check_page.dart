@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../models/track.dart';
 import '../../services/audio_analysis.dart';
+import '../../platform/host.dart';
+import '../../services/ffmpeg.dart';
 import '../../services/flac_convert.dart';
 import '../../services/language.dart';
 import '../player_scope.dart';
@@ -45,9 +47,43 @@ class LosslessCheckPage extends StatelessWidget {
             builder: (context, progress, _) {
               final found = progress == null ? AudioAnalysis.suspiciousOf(files) : const <(Track, AudioReport)>[];
               final checked = AudioAnalysis.checkedOf(files);
+              // Windows reads the files with ffmpeg: fetched once, on Check, where it isn't here yet.
+              final fetchesFfmpeg = !AudioAnalysis.supported && Host.isWindows && Ffmpeg.available;
+              final canRun = files.isNotEmpty && (AudioAnalysis.supported || fetchesFfmpeg);
+              Future<void> run() async {
+                if (fetchesFfmpeg) {
+                  try {
+                    await Ffmpeg.executable();
+                  } catch (e) {
+                    debugPrint('Lossless check: no ffmpeg: $e');
+                    return;
+                  }
+                }
+                await AudioAnalysis.scanAll(files, bits: true);
+              }
+
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  // What it does and how to use it, before anything is pressed.
+                  SettingsCard(
+                    children: [
+                      ListTile(
+                        leading: const Icon(Icons.help_outline_rounded),
+                        title: Text(tr.losslessCheckHow, style: muted),
+                      ),
+                      if (files.isEmpty)
+                        ListTile(
+                          leading: const Icon(Icons.library_music_outlined),
+                          title: Text(tr.losslessCheckNoFiles),
+                        )
+                      else if (fetchesFfmpeg)
+                        ListTile(
+                          leading: const Icon(Icons.download_outlined),
+                          title: Text(tr.losslessCheckNeedsFfmpeg, style: muted),
+                        ),
+                    ],
+                  ),
                   SettingsCard(
                     children: [
                       ListTile(
@@ -58,12 +94,7 @@ class LosslessCheckPage extends StatelessWidget {
                           style: muted,
                         ),
                         trailing: progress == null
-                            ? FilledButton.tonal(
-                                onPressed: files.isEmpty || !AudioAnalysis.supported
-                                    ? null
-                                    : () => AudioAnalysis.scanAll(files, bits: true),
-                                child: Text(tr.losslessCheckRun),
-                              )
+                            ? FilledButton.tonal(onPressed: canRun ? run : null, child: Text(tr.losslessCheckRun))
                             : OutlinedButton(onPressed: AudioAnalysis.stopScan, child: Text(tr.stop)),
                       ),
                       if (progress != null)

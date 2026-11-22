@@ -210,14 +210,10 @@ class QualityChip extends StatelessWidget {
 /// "Opus · Lossy · 160 kbps", "FLAC · Hi-Res · 24-bit / 96 kHz" with the tier's icon, no frame: tap for the full
 /// signal path.
 class QualityBadge extends StatelessWidget {
-  const QualityBadge({super.key, this.onDark = false, this.alignment = Alignment.centerLeft, this.liveBitrate = false});
+  const QualityBadge({super.key, this.onDark = false, this.alignment = Alignment.centerLeft});
 
   /// On a coloured background (phone now playing): white text instead of grey.
   final bool onDark;
-
-  /// The bitrate as it plays, for a lossless song too ("FLAC  Hi-Res  ·  24-bit / 96 kHz  ·  2304 kbps"), counted
-  /// again each second: the room the expanded player has.
-  final bool liveBitrate;
 
   /// Where it sits in the room it is given.
   final Alignment alignment;
@@ -226,20 +222,9 @@ class QualityBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     if (!AudioEngine.supported) return const SizedBox.shrink();
     return _SignalPathBuilder(
-      // The badge's words but the bitrate: a VBR song's swings each second (Opus: 112-160 kbps) are drawn every
-      // [_SignalPathBuilderState._refresh] instead.
-      shows: (p) => (
-        _codecName(p),
-        p.bitPerfect,
-        _tier(p),
-        p.isDop,
-        p.isDsd,
-        p.lossless,
-        p.inFormat,
-        p.inRate,
-        p.sourceBits,
-        p.bitrate == null || p.bitrate == 0,
-      ),
+      // The badge's words. No bitrate: a tap on the badge opens the signal path, which has it.
+      shows: (p) =>
+          (_codecName(p), p.bitPerfect, _tier(p), p.isDop, p.isDsd, p.lossless, p.inFormat, p.inRate, p.sourceBits),
       builder: (context, p) {
         if (p == null) return const SizedBox(height: 24);
         final (tier, icon) = p.bitPerfect ? ('Bit-perfect', Icons.verified_rounded) : _tier(p);
@@ -249,10 +234,7 @@ class QualityBadge extends StatelessWidget {
             ? 'PCM ${SignalPath.formatRate(p.inRate)}'
             : p.lossless
             ? SignalPath.describe(p.inFormat, p.inRate, stored: p.sourceBits)
-            : p.bitrate == null || p.bitrate == 0
-            ? null
-            : '${(p.bitrate! / 1000).round()} kbps';
-        final kbps = liveBitrate && p.lossless && (p.bitrate ?? 0) > 0 ? '${(p.bitrate! / 1000).round()} kbps' : null;
+            : null;
         final color = p.bitPerfect
             ? AppColors.accent
             : onDark
@@ -289,16 +271,6 @@ class QualityBadge extends StatelessWidget {
                               TextSpan(
                                 text: '  ·  $detail',
                                 style: TextStyle(fontWeight: FontWeight.w500, color: color.withValues(alpha: 0.7)),
-                              ),
-                            if (kbps != null)
-                              TextSpan(
-                                text: '  ·  $kbps',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w500,
-                                  color: color.withValues(alpha: 0.7),
-                                  // The digits keep their width as the count changes each second.
-                                  fontFeatures: const [FontFeature.tabularFigures()],
-                                ),
                               ),
                           ],
                         ),

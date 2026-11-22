@@ -1,7 +1,5 @@
 import 'dart:async';
-import 'dart:math' as math;
 
-import 'package:flutter/gestures.dart' show kTouchSlop;
 import 'package:flutter/material.dart';
 
 import '../../platform/features.dart';
@@ -20,11 +18,9 @@ import '../shortcuts.dart';
 import '../theme.dart';
 import '../widgets/page_scaffold.dart';
 import '../../services/audio_engine.dart';
-import '../../services/appearance.dart';
 import '../../services/layout_prefs.dart';
 import 'appearance_settings.dart';
 import 'settings_index.dart';
-import 'settings_preview.dart';
 import 'backup_settings.dart';
 import 'storage_settings.dart';
 import 'search/search_input.dart';
@@ -780,8 +776,7 @@ class _LyricsServicesState extends State<_LyricsServices> {
 /// A settings page: on inner pages a "Settings › Sound › Playback" trail, then the heading and [child].
 ///
 /// On a page of options ([place]) it finds an option again by the words its row shows ([SettingsOption.marker]):
-/// to scroll to it and light it up after a search, and to preview it. A tap on an option with a preview shows the
-/// real parts it changes: beside the list on a computer, over the rows above it (or below, near the top) on a phone.
+/// to scroll to it and light it up after a search.
 class _SettingsFrame extends StatefulWidget {
   const _SettingsFrame({required this.title, required this.child, this.crumbs = const [], this.place});
 
@@ -801,26 +796,12 @@ class _SettingsFrameState extends State<_SettingsFrame> with SingleTickerProvide
   /// The option a search result opens; its page takes it as it is built.
   static SettingsOption? _pending;
 
-  /// The preview's width beside the list.
-  static const _pane = 320.0;
-
   final _content = GlobalKey();
-  final _card = GlobalKey();
 
   /// The lit row, while it fades.
   Rect? _flashRect;
   late final _flash = AnimationController(vsync: this, duration: const Duration(milliseconds: 1600));
   Timer? _flashOff;
-
-  /// The option previewed, where its row is (in [_content]) and how tall the page is.
-  SettingsOption? _preview;
-  Rect? _row;
-  double _height = 0;
-
-  /// Where a touch went down: a drag (a scroll) is no tap on a row.
-  Offset? _down;
-
-  final _looks = Listenable.merge([LayoutPrefs.instance, Appearance.instance]);
 
   @override
   void initState() {
@@ -838,7 +819,6 @@ class _SettingsFrameState extends State<_SettingsFrame> with SingleTickerProvide
   @override
   void dispose() {
     if (identical(_live[widget.place], this)) _live.remove(widget.place);
-    _looks.removeListener(_relayout);
     _flashOff?.cancel();
     _flash.dispose();
     super.dispose();
@@ -859,7 +839,7 @@ class _SettingsFrameState extends State<_SettingsFrame> with SingleTickerProvide
   }
 
   /// The rows marked by [markers], found in one walk: the [ListTile] around the words, or the words themselves
-  /// (a section's heading). The preview itself is left out.
+  /// (a section's heading).
   Map<String, Element> _locate(Set<String> markers) {
     final root = _content.currentContext as Element?;
     final found = <String, Element>{};
@@ -867,7 +847,6 @@ class _SettingsFrameState extends State<_SettingsFrame> with SingleTickerProvide
     final loose = <String, Element>{};
     void visit(Element e) {
       final w = e.widget;
-      if (w is SettingPreviewCard) return;
       if (w is Text && markers.contains(w.data) && !found.containsKey(w.data)) {
         Element? tile;
         e.visitAncestorElements((a) {
@@ -894,7 +873,7 @@ class _SettingsFrameState extends State<_SettingsFrame> with SingleTickerProvide
     return box.localToGlobal(Offset.zero, ancestor: page) & box.size;
   }
 
-  /// Scrolls to [option] (or the switch that shows it), lights it up and previews it.
+  /// Scrolls to [option] (or the switch that shows it) and lights it up.
   void _jumpTo(SettingsOption option) {
     SettingsOption? target = option;
     Element? row;
@@ -920,105 +899,6 @@ class _SettingsFrameState extends State<_SettingsFrame> with SingleTickerProvide
         if (mounted) setState(() => _flashRect = null);
       });
     }
-    if (target.preview != null) _show(target);
-  }
-
-  void _show(SettingsOption? option) {
-    if (!_side) {
-      final change = _pinnedHeight(option) - _pinnedHeight(_preview);
-      if (change != 0) _holdRows(change, _preview == null ? option : null);
-    }
-    if (option == null) {
-      _looks.removeListener(_relayout);
-    } else if (_preview == null) {
-      _looks.addListener(_relayout);
-    }
-    setState(() {
-      _preview = option;
-      _row = null;
-    });
-    if (option != null) _relayout();
-  }
-
-  /// Finds the previewed row again after this frame: a change can add or take away rows above it.
-  void _relayout() => WidgetsBinding.instance.addPostFrameCallback((_) {
-    final option = _preview;
-    if (!mounted || option == null) return;
-    final row = _locate({option.marker})[option.marker];
-    final rect = row == null ? null : _rectOf(row);
-    final height = (_content.currentContext?.findRenderObject() as RenderBox?)?.size.height ?? 0;
-    if (rect == null) return _show(null);
-    if (rect != _row || height != _height) {
-      setState(() {
-        _row = rect;
-        _height = height;
-      });
-    }
-  });
-
-  /// The picture's height in the pinned preview: about a quarter of the screen, so the options stay in reach;
-  /// more for a whole phone page (Now Playing, the lyrics), which is too small to read at that height.
-  double _pinnedPicture(SettingsOption option) {
-    final screen = MediaQuery.sizeOf(context).height;
-    return switch (option.preview) {
-      SettingPreview.nowPlaying || SettingPreview.lyrics => (screen * 0.4).clamp(180.0, 340.0),
-      _ => (screen * 0.28).clamp(140.0, 240.0),
-    };
-  }
-
-  /// The pinned preview's room at the top of the page (the card and a gap under it); none without a preview.
-  double _pinnedHeight(SettingsOption? option) =>
-      option == null ? 0 : SettingPreviewCard.chrome + _pinnedPicture(option) + 8;
-
-  /// Where there is no room beside the list the preview is pinned to the top of the page, which takes (or gives
-  /// back) that much room above the rows. The page is scrolled by as much in the same frame, so the rows stay
-  /// where they were under the finger; a row that would end up behind the preview comes to rest just under it.
-  void _holdRows(double change, SettingsOption? opened) {
-    final content = _content.currentContext;
-    final scrollable = content == null ? null : Scrollable.maybeOf(content);
-    if (content == null || scrollable == null) return;
-    final position = scrollable.position;
-    var by = change;
-    if (opened != null) {
-      final view = scrollable.context.findRenderObject();
-      final page = content.findRenderObject();
-      final row = _locate({opened.marker})[opened.marker]?.renderObject;
-      if (view is RenderBox && page is RenderBox && row is RenderBox && row.attached) {
-        // The top bar's room: where the page's content starts when nothing is scrolled.
-        final gap = page.localToGlobal(Offset.zero, ancestor: view).dy + position.pixels;
-        final top = row.localToGlobal(Offset.zero, ancestor: view).dy;
-        by = (top - gap).clamp(0.0, change);
-      }
-    }
-    position.correctBy(math.max(by, -position.pixels));
-  }
-
-  /// The options on this page that have a preview.
-  List<SettingsOption> get _previewed =>
-      widget.place == null ? const [] : SettingsOptions.previewedOn(widget.place!).toList();
-
-  /// Whether previews show beside the list (set as the page is laid out).
-  bool _side = false;
-
-  void _tapped(PointerUpEvent e) {
-    final down = _down;
-    _down = null;
-    if (down == null || (e.position - down).distance > kTouchSlop) return;
-    final options = _previewed;
-    if (options.isEmpty) return;
-    final card = _card.currentContext?.findRenderObject();
-    if (card is RenderBox && card.attached && (Offset.zero & card.size).contains(card.globalToLocal(e.position))) {
-      return;
-    }
-    final rows = _locate({for (final o in options) o.marker});
-    for (final o in options) {
-      final box = rows[o.marker]?.renderObject;
-      if (box is RenderBox && box.attached && (Offset.zero & box.size).contains(box.globalToLocal(e.position))) {
-        if (o != _preview) _show(o);
-        return;
-      }
-    }
-    if (_preview != null) _show(null);
   }
 
   @override
@@ -1026,122 +906,54 @@ class _SettingsFrameState extends State<_SettingsFrame> with SingleTickerProvide
     final shell = ShellScope.of(context);
     final text = Theme.of(context).textTheme;
     final pad = shell.compact ? 16.0 : 24.0;
-    final previews = _previewed.isNotEmpty;
     final colors = AppColors.of(context);
-    return LayoutBuilder(
-      builder: (context, page) {
-        // Beside the list where a computer has the room; pinned to the top of the page on a phone or a narrow window.
-        _side = previews && !shell.compact && page.maxWidth - pad * 2 >= 480 + 24 + _pane;
-        final pinned = _side ? null : _preview;
-        return PageScaffold(
-          title: widget.title,
-          pinnedHeight: _pinnedHeight(pinned),
-          pinned: pinned == null
-              ? null
-              : Padding(
-                  padding: EdgeInsets.fromLTRB(pad, 0, pad, 8),
-                  child: Align(
-                    alignment: AlignmentDirectional.topStart,
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 760),
-                      child: SettingPreviewCard(
-                        key: _card,
-                        option: pinned,
-                        onClose: () => _show(null),
-                        height: _pinnedPicture(pinned),
-                        fill: true,
-                      ),
+    return PageScaffold(
+      title: widget.title,
+      slivers: [
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(pad, 0, pad, 28),
+            child: Align(
+              alignment: AlignmentDirectional.topStart,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 760),
+                child: Stack(
+                  key: _content,
+                  clipBehavior: Clip.none,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (widget.crumbs.isNotEmpty) _Breadcrumb(crumbs: widget.crumbs, current: widget.title),
+                        Text(widget.title, style: text.headlineMedium?.copyWith(fontWeight: FontWeight.w800)),
+                        const SizedBox(height: 24),
+                        widget.child,
+                      ],
                     ),
-                  ),
-                ),
-          slivers: [
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: EdgeInsets.fromLTRB(pad, 0, pad, 28),
-                child: LayoutBuilder(
-                  builder: (context, box) {
-                    final width = math.min(760.0, _side ? box.maxWidth - 24 - _pane : box.maxWidth);
-                    final column = SizedBox(
-                      width: width,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          if (widget.crumbs.isNotEmpty) _Breadcrumb(crumbs: widget.crumbs, current: widget.title),
-                          Text(widget.title, style: text.headlineMedium?.copyWith(fontWeight: FontWeight.w800)),
-                          const SizedBox(height: 24),
-                          widget.child,
-                        ],
-                      ),
-                    );
-                    final preview = _preview, row = _row;
-                    Widget? card;
-                    if (_side && preview != null && row != null) {
-                      // Beside its row, kept on the page.
-                      card = Positioned(
-                        left: width + 24,
-                        width: _pane,
-                        top: math.max(0, math.min(row.top, _height - 500)),
-                        child: SettingPreviewCard(key: _card, option: preview, onClose: () => _show(null), height: 440),
-                      );
-                    }
-                    return Listener(
-                      onPointerDown: (e) => _down = e.position,
-                      onPointerUp: previews ? _tapped : null,
-                      child: Stack(
-                        key: _content,
-                        clipBehavior: Clip.none,
-                        children: [
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              column,
-                              if (_side) ...[
-                                const SizedBox(width: 24),
-                                SizedBox(
-                                  width: _pane,
-                                  child: Padding(
-                                    padding: const EdgeInsets.only(top: 72),
-                                    child: Row(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Icon(Icons.visibility_outlined, size: 18, color: colors.textMuted),
-                                        const SizedBox(width: 8),
-                                        Expanded(child: Text(tr.settingsPreviewHint, style: settingsMuted(context))),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ],
-                          ),
-                          if (_flashRect case final r?)
-                            Positioned.fromRect(
-                              rect: r,
-                              child: IgnorePointer(
-                                key: SettingsPage.highlightKey,
-                                child: FadeTransition(
-                                  opacity: ReverseAnimation(CurvedAnimation(parent: _flash, curve: Curves.easeInCubic)),
-                                  child: DecoratedBox(
-                                    decoration: BoxDecoration(
-                                      color: colors.accent.withValues(alpha: 0.16),
-                                      border: Border.all(color: colors.accent, width: 2),
-                                      borderRadius: LayoutPrefs.corner(12),
-                                    ),
-                                  ),
-                                ),
+                    if (_flashRect case final r?)
+                      Positioned.fromRect(
+                        rect: r,
+                        child: IgnorePointer(
+                          key: SettingsPage.highlightKey,
+                          child: FadeTransition(
+                            opacity: ReverseAnimation(CurvedAnimation(parent: _flash, curve: Curves.easeInCubic)),
+                            child: DecoratedBox(
+                              decoration: BoxDecoration(
+                                color: colors.accent.withValues(alpha: 0.16),
+                                border: Border.all(color: colors.accent, width: 2),
+                                borderRadius: LayoutPrefs.corner(12),
                               ),
                             ),
-                          ?card,
-                        ],
+                          ),
+                        ),
                       ),
-                    );
-                  },
+                  ],
                 ),
               ),
             ),
-          ],
-        );
-      },
+          ),
+        ),
+      ],
     );
   }
 }

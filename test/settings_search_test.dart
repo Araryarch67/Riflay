@@ -5,16 +5,10 @@ import 'package:riflay/services/appearance.dart';
 import 'package:riflay/services/language.dart';
 import 'package:riflay/services/layout_prefs.dart';
 import 'package:riflay/services/player_controller.dart';
-import 'package:riflay/ui/pages/lyrics_page.dart';
 import 'package:riflay/ui/pages/settings_index.dart';
 import 'package:riflay/ui/pages/settings_page.dart';
-import 'package:riflay/ui/pages/settings_preview.dart';
-import 'package:riflay/ui/player/now_playing_page.dart';
 import 'package:riflay/platform/features.dart';
-import 'package:riflay/ui/player/desktop_player_bar.dart';
 import 'package:riflay/ui/shell_scope.dart';
-import 'package:riflay/ui/widgets/live_preview.dart';
-import 'package:riflay/ui/widgets/shelf.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Settings in a small app of its own, as in settings_navigation_test.
@@ -186,8 +180,6 @@ void main() {
     // Scrolled into view, about a third of the way down.
     final y = tester.getCenter(row).dy;
     expect(y, inInclusiveRange(0, 1800 * 0.6));
-    // Its preview shows beside the list.
-    expect(find.byType(SettingPreviewCard), findsOneWidget);
     await tester.pumpAndSettle();
     expect(find.byKey(SettingsPage.highlightKey), findsNothing, reason: 'the light goes out');
   });
@@ -248,80 +240,4 @@ void main() {
     }
     expect(missing, isEmpty, reason: 'add these to SettingsOptions.all (settings_index.dart)');
   });
-
-  onLinux('tapping an option that changes the look previews it beside the list', (tester) async {
-    await tester.pumpWidget(_app(PlayerController(), [], home: SettingsPlace.layout.page));
-    await tester.pump(const Duration(milliseconds: 300));
-    expect(find.text(tr.settingsPreviewHint), findsOneWidget, reason: 'a computer has room beside the list');
-    expect(find.byType(SettingPreviewCard), findsNothing);
-
-    Future<void> tapRow(String title) async {
-      final row = find.ancestor(of: find.text(title), matching: find.byType(ListTile)).first;
-      await tester.ensureVisible(row);
-      await tester.pumpAndSettle();
-      await tester.tapAt(tester.getTopLeft(row) + const Offset(80, 12));
-      await tester.pump();
-      await tester.pump();
-    }
-
-    // Corners and spacing: covers and song rows, the real ones.
-    await tapRow('Corners');
-    expect(find.byType(SettingPreviewCard), findsOneWidget);
-    expect(find.descendant(of: find.byType(LivePreview), matching: find.byType(Shelf)), findsOneWidget);
-    final card = tester.getRect(find.byType(SettingPreviewCard));
-    final list = tester.getRect(find.ancestor(of: find.text('Corners'), matching: find.byType(ListTile)).first);
-    expect(card.left, greaterThan(list.right), reason: 'beside the list');
-    expect((card.top - list.top).abs(), lessThan(40), reason: 'level with its row');
-    // Standing still: nothing asks for frames while it is on screen.
-    await tester.pumpAndSettle();
-    expect(tester.binding.hasScheduledFrame, isFalse);
-
-    // It follows the option as it changes.
-    final before = tester.widget<KeyedSubtree>(
-      find.descendant(of: find.byType(LivePreview), matching: find.byType(KeyedSubtree)).first,
-    );
-    await tester.runAsync(() => LayoutPrefs.instance.setCorners(CornerStyle.values.last));
-    await tester.pump();
-    final after = tester.widget<KeyedSubtree>(
-      find.descendant(of: find.byType(LivePreview), matching: find.byType(KeyedSubtree)).first,
-    );
-    expect(after.key, isNot(before.key), reason: 'built afresh with the new look');
-
-    await tapRow('Desktop player bar');
-    expect(find.descendant(of: find.byType(LivePreview), matching: find.byType(DesktopPlayerBar)), findsOneWidget);
-
-    await tester.pumpWidget(_app(PlayerController(), [], home: SettingsPlace.lyrics.page));
-    await tester.pump(const Duration(milliseconds: 300));
-    await tapRow('Lyrics page');
-    expect(find.descendant(of: find.byType(LivePreview), matching: find.byType(SyncedLyricsView)), findsOneWidget);
-
-    await tester.pumpWidget(_app(PlayerController(), [], home: SettingsPlace.nowPlaying.page));
-    await tester.pump(const Duration(milliseconds: 300));
-    await tapRow('Cover');
-    expect(find.descendant(of: find.byType(LivePreview), matching: find.byType(NowPlayingPage)), findsOneWidget);
-    await tester.pumpAndSettle();
-    expect(tester.binding.hasScheduledFrame, isFalse);
-
-    // A row without a preview closes it.
-    await tapRow('Song / Video switch');
-    expect(find.byType(SettingPreviewCard), findsNothing);
-  });
-
-  onLinux('on a phone the preview is pinned above its row, and closes', (tester) async {
-    await tester.pumpWidget(_app(PlayerController(), [], compact: true, home: SettingsPlace.layout.page));
-    await tester.pump(const Duration(milliseconds: 300));
-    expect(find.text(tr.settingsPreviewHint), findsNothing, reason: 'no room beside the list');
-    final row = find.ancestor(of: find.text('Spacing'), matching: find.byType(ListTile)).first;
-    await tester.ensureVisible(row);
-    await tester.pumpAndSettle();
-    await tester.tapAt(tester.getTopLeft(row) + const Offset(60, 12));
-    await tester.pumpAndSettle();
-    expect(find.byType(SettingPreviewCard), findsOneWidget);
-    final card = tester.getRect(find.byType(SettingPreviewCard));
-    expect(card.bottom, lessThanOrEqualTo(tester.getRect(row).top), reason: 'above its row');
-    expect(tester.takeException(), isNull);
-    await tester.tap(find.byKey(SettingPreviewCard.closeKey));
-    await tester.pumpAndSettle();
-    expect(find.byType(SettingPreviewCard), findsNothing);
-  }, size: const Size(400, 860));
 }
