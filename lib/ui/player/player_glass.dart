@@ -35,7 +35,7 @@ LiquidGlassSettings riflayClearGlass({bool dragging = false}) =>
     LiquidGlassSettings.ios27Clear(tintAmount: 0.1, frost: dragging ? 0.3 : 0.6).copyWith(
       refractionHeight: dragging ? 30 : 24,
       refractionAmount: dragging ? 160 : 125,
-      dispersion: dragging ? 1.0 : 0.8,
+      dispersion: dragging ? 0.45 : 0.3,
       highlight: 1,
       contourStrength: 0.7,
     );

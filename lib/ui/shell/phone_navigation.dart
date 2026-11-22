@@ -726,7 +726,8 @@ class _GlassBarState extends State<_GlassBar> with TickerProviderStateMixin {
   /// Whether the pills are drawn by liquid_glass_renderer, which refracts the page behind them and melts pills that
   /// touch into one (it falls back to its own frosted glass where the GPU path isn't there, as on the web).
   /// Lightweight draws the plain raised surface instead; `RIFLAY_NO_GLASS_RENDERER` Riflay's own blur.
-  static bool get _renderer => !LayoutPrefs.lightweight && !DebugSwitches.noGlassRenderer;
+  static bool get _renderer =>
+      !LayoutPrefs.lightweight && !DebugSwitches.noGlassRenderer && ImageFilter.isShaderFilterSupported;
 
   /// The one layer every pill of the bar renders into, the pills melting together where they come closer than
   /// [_gap] (as the mini player passes over the tabs).
@@ -1362,7 +1363,10 @@ class _GlassButtonFace extends StatelessWidget {
     if (!renderer) {
       return DecoratedBox(
         decoration: ShapeDecoration(shape: const StadiumBorder(), color: bubble),
-        child: child,
+        child: CustomPaint(
+          foregroundPainter: _LiquidRim(const _StadiumShape(), light: light, strength: 0.7),
+          child: child,
+        ),
       );
     }
     return LiquidGlass(
@@ -1478,40 +1482,177 @@ class _LiquidGlass extends StatelessWidget {
     ]);
   }
 
+  /// How far in from the edge the glass bends what is behind it.
+  static const _lens = 11.0;
+
   @override
   Widget build(BuildContext context) {
-    final blur = glassFrost();
+    final light = switch (LayoutPrefs.instance.glassTint) {
+      GlassTint.black => false,
+      GlassTint.light => true,
+      _ => colors.light,
+    };
+    // Liquid glass without the shader: the page only lightly softened (and its colours kept), bent and magnified
+    // in a band along the edge as a drop of glass bends it, edged with a rim that splits the light into colours,
+    // and a glint where the light falls. A little shade keeps the labels readable over a busy page.
     return CustomPaint(
       painter: _GlassShadow(shape),
       child: RepaintBoundary(
         child: ClipPath(
           clipper: shape,
-          child: BackdropFilter(
-            filter: ImageFilter.compose(
-              outer: ImageFilter.blur(sigmaX: blur, sigmaY: blur),
-              inner: _saturate(1.6),
-            ),
-            child: CustomPaint(
-              painter: _GlassFace(
-                shape,
-                switch (LayoutPrefs.instance.glassTint) {
-                  GlassTint.black => Colors.black,
-                  GlassTint.light => Colors.white,
-                  _ => colors.elevated,
-                },
-                light: switch (LayoutPrefs.instance.glassTint) {
-                  GlassTint.black => false,
-                  GlassTint.light => true,
-                  _ => colors.light,
-                },
-              ),
-              child: Material(type: MaterialType.transparency, child: child),
+          child: LayoutBuilder(
+            builder: (context, box) => Stack(
+              fit: StackFit.expand,
+              children: [
+                BackdropFilter(
+                  filter: ImageFilter.compose(outer: ImageFilter.blur(sigmaX: 1.2, sigmaY: 1.2), inner: _saturate(1.4)),
+                  child: const SizedBox.expand(),
+                ),
+                // The bend, in steps that grow towards the edge (a smooth lens, not a ring): what is behind is
+                // magnified about the middle, so near the rim it slides outward the most.
+                for (final (depth, scale) in const [(_lens, 1.06), (_lens * 0.62, 1.12), (_lens * 0.3, 1.2)])
+                  ClipPath(
+                    clipper: _EdgeBand(shape, depth),
+                    child: RawMagnifier(
+                      size: box.biggest,
+                      magnificationScale: scale,
+                      decoration: const MagnifierDecoration(shadows: []),
+                    ),
+                  ),
+                // One shade over all of it, so the bent edge and the middle read as one piece of glass.
+                ColoredBox(color: light ? Colors.white.withValues(alpha: 0.26) : Colors.black.withValues(alpha: 0.30)),
+                CustomPaint(painter: _LiquidRim(shape, light: light)),
+                Material(type: MaterialType.transparency, child: child),
+              ],
             ),
           ),
         ),
       ),
     );
   }
+}
+
+/// The band along the inside of [shape], [width] deep: where liquid glass bends what is behind it.
+class _EdgeBand extends CustomClipper<Path> {
+  const _EdgeBand(this.shape, this.width);
+
+  final CustomClipper<Path> shape;
+  final double width;
+
+  @override
+  Path getClip(Size size) {
+    final outer = shape.getClip(size);
+    if (size.width <= width * 2 || size.height <= width * 2) return outer;
+    final sx = (size.width - width * 2) / size.width, sy = (size.height - width * 2) / size.height;
+    final inner = outer.transform(
+      (Matrix4.identity()
+            ..translateByDouble(width, width, 0, 1)
+            ..scaleByDouble(sx, sy, 1, 1))
+          .storage,
+    );
+    return Path.combine(PathOperation.difference, outer, inner);
+  }
+
+  @override
+  bool shouldReclip(_EdgeBand old) => old.width != width || old.shape != shape;
+}
+
+/// A stadium (fully round ends) the size of what it is painted on.
+class _StadiumShape extends CustomClipper<Path> {
+  const _StadiumShape();
+
+  @override
+  Path getClip(Size size) =>
+      Path()..addRRect(RRect.fromRectAndRadius(Offset.zero & size, Radius.circular(size.shortestSide / 2)));
+
+  @override
+  bool shouldReclip(_StadiumShape old) => false;
+}
+
+/// Liquid glass's light: a rim that splits into colours as it goes round, brightest where the light comes from
+/// (top left), a glint there, and a little shade along the bottom inside.
+class _LiquidRim extends CustomPainter {
+  const _LiquidRim(this.shape, {required this.light, this.strength = 1});
+
+  final CustomClipper<Path> shape;
+  final bool light;
+  final double strength;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (size.isEmpty) return;
+    final path = shape.getClip(size);
+    final rect = Offset.zero & size;
+    // Shade low inside, so the glass reads as a body and not a flat film.
+    canvas.save();
+    canvas.clipPath(path);
+    canvas.drawRect(
+      rect,
+      Paint()
+        ..shader = LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            Colors.transparent,
+            Colors.black.withValues(alpha: (light ? 0.06 : 0.16) * strength),
+          ],
+          stops: const [0.55, 1],
+        ).createShader(rect),
+    );
+    // The glint: a soft spot of light near the top left.
+    final glint = Rect.fromCenter(
+      center: Offset(size.width * 0.18, size.height * 0.12),
+      width: size.width * 0.5,
+      height: size.height * 0.7,
+    );
+    canvas.drawOval(
+      glint,
+      Paint()
+        ..shader = RadialGradient(
+          colors: [
+            Colors.white.withValues(alpha: 0.22 * strength),
+            Colors.white.withValues(alpha: 0),
+          ],
+        ).createShader(glint),
+    );
+    canvas.restore();
+    // The rim: a fine edge of light, only faintly cool on one side and warm on the other (a lens's dispersion,
+    // kept quiet).
+    canvas.drawPath(
+      path,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.1
+        ..shader = SweepGradient(
+          colors: [
+            const Color(0xFFFFFFFF).withValues(alpha: 0.30 * strength),
+            const Color(0xFFDDEEFF).withValues(alpha: 0.22 * strength),
+            const Color(0xFFFFFFFF).withValues(alpha: 0.12 * strength),
+            const Color(0xFFFFEEE6).withValues(alpha: 0.22 * strength),
+            const Color(0xFFFFFFFF).withValues(alpha: 0.30 * strength),
+          ],
+        ).createShader(rect),
+    );
+    // ...and its highlight, bright at the top left and gone by the bottom right.
+    canvas.drawPath(
+      path.shift(const Offset(0.6, 0.6)),
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.2
+        ..shader = LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Colors.white.withValues(alpha: 0.6 * strength),
+            Colors.white.withValues(alpha: 0),
+          ],
+          stops: const [0, 0.5],
+        ).createShader(rect),
+    );
+  }
+
+  @override
+  bool shouldRepaint(_LiquidRim old) => old.light != light || old.strength != strength || old.shape != shape;
 }
 
 /// A bar without the glass: the theme's raised colour under a hairline, and the same shadow.
@@ -1565,56 +1706,6 @@ class _GlassShadow extends CustomPainter {
 
   @override
   bool shouldRepaint(_GlassShadow old) => _reshaped(old.shape, shape);
-}
-
-class _GlassFace extends CustomPainter {
-  const _GlassFace(this.shape, this.tint, {required this.light});
-
-  final CustomClipper<Path> shape;
-  final Color tint;
-  final bool light;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final path = shape.getClip(size);
-    final rect = Offset.zero & size;
-    canvas.drawPath(
-      path,
-      Paint()
-        ..shader = LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            tint.withValues(alpha: light ? 0.62 : 0.48),
-            tint.withValues(alpha: light ? 0.78 : 0.66),
-          ],
-        ).createShader(rect),
-    );
-    // The sheen: light pooled along the top edge.
-    canvas.drawPath(
-      path,
-      Paint()
-        ..shader = const LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.center,
-          colors: [Color(0x1FFFFFFF), Color(0x00FFFFFF)],
-        ).createShader(rect),
-    );
-    canvas.drawPath(
-      path,
-      Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1
-        ..shader = LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [Color(light ? 0xB3FFFFFF : 0x59FFFFFF), const Color(0x0DFFFFFF)],
-        ).createShader(rect),
-    );
-  }
-
-  @override
-  bool shouldRepaint(_GlassFace old) => old.tint != tint || old.light != light || _reshaped(old.shape, shape);
 }
 
 /// Whether [now] cuts a different outline than [old] did (a clipper only compares with its own kind).
