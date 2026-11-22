@@ -1430,9 +1430,11 @@ class _GlassButtonFace extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (!active) return child;
-    // The selection bubble: a lighter drop of glass inside the bar, with no outline of its own.
-    final light = AppColors.of(context).light;
-    final bubble = light ? const Color(0x33000000) : const Color(0x2EFFFFFF);
+    // The selection bubble: a drop of the accent inside the bar, so the open tab shows on clear, light or black
+    // glass alike (a faint white one was lost on clear glass over a busy page).
+    final colors = AppColors.of(context);
+    final light = glassIsLight(colors.light);
+    final bubble = colors.accent.withValues(alpha: light ? 0.26 : 0.32);
     if (!renderer) {
       return DecoratedBox(
         decoration: ShapeDecoration(shape: const StadiumBorder(), color: bubble),
@@ -1497,7 +1499,11 @@ class _GlassTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
-    final ink = selected ? colors.accent : _glassInk(colors).withValues(alpha: 0.85);
+    // The open tab sits on the accent bubble ([_GlassButtonFace]): its icon and name in the glass's full ink there,
+    // the others a little softer.
+    final ink = selected && paintGlass
+        ? _glassInk(colors)
+        : (selected ? colors.accent : _glassInk(colors).withValues(alpha: 0.78));
     final labels = !LayoutPrefs.instance.hidePhoneNavLabels;
     final face = SizedBox.expand(
       child: Column(
@@ -1583,7 +1589,7 @@ class _LiquidGlass extends StatelessWidget {
                 ),
                 // The bend, in steps that grow towards the edge (a smooth lens, not a ring): what is behind is
                 // magnified about the middle, so near the rim it slides outward the most.
-                for (final (depth, scale) in const [(_lens, 1.06), (_lens * 0.62, 1.12), (_lens * 0.3, 1.2)])
+                for (final (depth, scale) in const [(_lens, 1.04), (_lens * 0.62, 1.08), (_lens * 0.3, 1.14)])
                   ClipPath(
                     clipper: _EdgeBand(shape, depth),
                     child: RawMagnifier(
@@ -1593,8 +1599,15 @@ class _LiquidGlass extends StatelessWidget {
                     ),
                   ),
                 // One shade over all of it, so the bent edge and the middle read as one piece of glass.
-                ColoredBox(color: light ? Colors.white.withValues(alpha: 0.26) : Colors.black.withValues(alpha: 0.30)),
-                CustomPaint(painter: _LiquidRim(shape, light: light)),
+                ColoredBox(
+                  color: switch (LayoutPrefs.instance.glassTint) {
+                    GlassTint.black => Colors.black.withValues(alpha: 0.72),
+                    GlassTint.light => Colors.white.withValues(alpha: 0.45),
+                    GlassTint.theme =>
+                      light ? Colors.white.withValues(alpha: 0.26) : Colors.black.withValues(alpha: 0.30),
+                  },
+                ),
+                CustomPaint(painter: _LiquidRim(shape, light: light, strength: 0.7)),
                 Material(type: MaterialType.transparency, child: child),
               ],
             ),

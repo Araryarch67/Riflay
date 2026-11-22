@@ -33,23 +33,33 @@ LiquidGlassSettings riflayGlass({required Brightness brightness, double frost = 
 /// glint, not a blur. [dragging]: the lens under a finger bends a little more.
 LiquidGlassSettings riflayClearGlass({bool dragging = false}) =>
     LiquidGlassSettings.ios27Clear(tintAmount: 0.1, frost: dragging ? 0.3 : 0.6).copyWith(
-      refractionHeight: dragging ? 30 : 24,
-      refractionAmount: dragging ? 160 : 125,
-      dispersion: dragging ? 0.45 : 0.3,
-      highlight: 1,
-      contourStrength: 0.7,
+      // Bent and lit enough to read as liquid, not so much the page behind turns into a funhouse mirror.
+      refractionHeight: dragging ? 28 : 22,
+      refractionAmount: dragging ? 120 : 85,
+      dispersion: dragging ? 0.3 : 0.18,
+      highlight: 0.6,
+      contourStrength: 0.5,
     );
+
+/// Whether the bottom bar's glass reads light: Settings › Bottom bar Liquid Glass tint, or the theme's.
+bool glassIsLight(bool themeIsLight, [GlassTint? tint]) => switch (tint ?? LayoutPrefs.instance.glassTint) {
+  GlassTint.theme => themeIsLight,
+  GlassTint.light => true,
+  GlassTint.black => false,
+};
+
+/// The bottom bar glass's own colour. Following the theme it is barely there (a touch of shade); Light is a clear
+/// white glass, Black a dark smoked glass the page still shows through.
+Color glassTintColor(bool themeIsLight, [GlassTint? tint]) => switch (tint ?? LayoutPrefs.instance.glassTint) {
+  GlassTint.theme => themeIsLight ? const Color(0x24FFFFFF) : const Color(0x2E000000),
+  GlassTint.light => const Color(0x66FFFFFF),
+  GlassTint.black => const Color(0xB8000000),
+};
 
 /// Clear glass's material: a touch of shade on a dark theme (or light on a light one, or as Settings › Glass
 /// tint asks) so the white or dark labels on it keep their contrast over a busy page.
-LiquidGlassAppearance riflayClearGlassAppearance({required bool themeIsLight, GlassTint? tint}) {
-  final light = switch (tint ?? LayoutPrefs.instance.glassTint) {
-    GlassTint.theme => themeIsLight,
-    GlassTint.light => true,
-    GlassTint.black => false,
-  };
-  return LiquidGlassAppearance.ios27Clear(tint: light ? const Color(0x24FFFFFF) : const Color(0x2E000000));
-}
+LiquidGlassAppearance riflayClearGlassAppearance({required bool themeIsLight, GlassTint? tint}) =>
+    LiquidGlassAppearance.ios27Clear(tint: glassTintColor(themeIsLight, tint));
 
 class PlayerGlassBackdrop extends InheritedWidget {
   const PlayerGlassBackdrop({super.key, required this.color, required super.child});
