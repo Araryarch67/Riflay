@@ -13,6 +13,11 @@
 // mpv is sent to its null output (no sound device is touched) and muted. Run it from a copy of the project (see
 // AGENT.md), then turn the PNGs into docs/screenshots/*.webp (ffmpeg -c:v libwebp -quality 80).
 //
+// On Windows (no XDG_DATA_HOME there) every app folder path_provider gives is a temporary one ([_ShotPaths]): the
+// library, history and caches the run writes never touch the Riflay data of whoever runs it.
+//
+//   flutter test integration_test/readme_screenshots_test.dart -d windows --dart-define=SHOTS=C:/tmp/om-shots
+//
 // Skipped on purpose: Video mode (it only exists for the music video of a YouTube song, which needs a real song)
 // and the Search page (its YouTube Music half fails offline, and online it lists real artists).
 
@@ -29,6 +34,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:just_audio_media_kit/just_audio_media_kit.dart';
+import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:media_kit/media_kit.dart' show NativePlayer;
 import 'package:riflay/main.dart';
 import 'package:riflay/models/track.dart';
@@ -56,6 +62,34 @@ import 'package:riflay/ui/shell_scope.dart';
 import 'package:riflay/ui/widgets/signal_path.dart';
 import 'package:riflay/ui/widgets/sleep_timer_button.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+/// Every folder the app asks path_provider for, under one temporary [root].
+class _ShotPaths extends PathProviderPlatform {
+  _ShotPaths(this.root);
+
+  final String root;
+
+  String _dir(String name) => (Directory('$root/$name')..createSync(recursive: true)).path;
+
+  @override
+  Future<String?> getTemporaryPath() async => _dir('temp');
+  @override
+  Future<String?> getApplicationSupportPath() async => _dir('support');
+  @override
+  Future<String?> getLibraryPath() async => _dir('library');
+  @override
+  Future<String?> getApplicationDocumentsPath() async => _dir('documents');
+  @override
+  Future<String?> getApplicationCachePath() async => _dir('cache');
+  @override
+  Future<String?> getExternalStoragePath() async => _dir('external');
+  @override
+  Future<List<String>?> getExternalCachePaths() async => [_dir('external-cache')];
+  @override
+  Future<List<String>?> getExternalStoragePaths({StorageDirectory? type}) async => [_dir('external')];
+  @override
+  Future<String?> getDownloadsPath() async => _dir('downloads');
+}
 
 class _ScreenshotPower implements PowerBackend {
   @override
@@ -252,6 +286,9 @@ void main() {
       return true;
     };
     HttpOverrides.global = _Offline();
+    if (Platform.isWindows) {
+      PathProviderPlatform.instance = _ShotPaths(Directory.systemTemp.createTempSync('om-shots-data').path);
+    }
     JustAudioMediaKit.ensureInitialized(linux: true, windows: true);
     Directory(shots).createSync(recursive: true);
     await makeLibrary();
@@ -296,10 +333,7 @@ void main() {
     String thumb(int i) => 'http://127.0.0.1:${server.port}/$i.jpg';
 
     // Discord off: the real one, if running, would show these songs on the user's profile.
-    SharedPreferences.setMockInitialValues({
-      'discord.enabled': false,
-      'listen.name': 'Ana',
-    });
+    SharedPreferences.setMockInitialValues({'discord.enabled': false, 'listen.name': 'Ana'});
     await BetaFeatures.instance.reload();
 
     // No sound device: mpv's null output, and muted besides.
@@ -486,7 +520,7 @@ void main() {
         await c.playList([lantern], 0, from: 'Dusk Signals');
         await playing();
         await c.player.seek(const Duration(seconds: 33));
-        await tester.tap(find.byTooltip('More options'));
+        await tester.tap(find.descendant(of: find.byType(DesktopPlayerBar), matching: find.byTooltip('More options')));
         await settle();
         await tester.tap(find.text('Lyrics'));
         await settle(5000);
@@ -563,25 +597,17 @@ void main() {
         await settle();
         await tester.tap(find.text('Sound'));
         await settle();
-        await tester.tap(find.text('Sound effects (DSP)'));
+        await tester.tap(find.text('Sound effects').first);
         await settle();
         await tester.ensureVisible(find.text('Virtual speakers'));
         await tester.tap(find.text('Virtual speakers'));
         await shot('sound');
         await tester.tap(find.text('Virtual speakers'));
         await settle();
-        await Scrollable.ensureVisible(tester.element(find.text('Crossfade').first), alignment: 0.3);
+        // The equalizer is on this page (Sound effects); crossfade on Playback.
+        await Scrollable.ensureVisible(tester.element(find.text('Equalizer').first), alignment: 0.5);
         await settle();
-        await tester.tap(find.widgetWithText(SwitchListTile, 'Crossfade'));
-        await settle();
-        await Scrollable.ensureVisible(tester.element(find.text('Skip for albums')), alignment: 0.6);
-        await settle();
-        await shot('settings-crossfade');
-        await tester.tap(find.widgetWithText(SwitchListTile, 'Crossfade'));
-        await settle();
-        await Scrollable.ensureVisible(tester.element(find.text('Equalizer')), alignment: 0.5);
-        await settle();
-        await tester.tap(find.text('Equalizer'));
+        await tester.tap(find.text('Equalizer').first);
         await settle();
         await tester.tap(find.widgetWithText(ChoiceChip, 'Bass boost'));
         await shot('equalizer');
@@ -790,7 +816,7 @@ void main() {
       await step('fullscreen', () async {
         await c.playList(c.library.where((t) => t.album == 'Open Meridian').toList(), 0, from: 'Open Meridian');
         await playing();
-        await tester.tap(find.byTooltip('More options'));
+        await tester.tap(find.descendant(of: find.byType(DesktopPlayerBar), matching: find.byTooltip('More options')));
         await settle();
         await tester.tap(find.text('Full screen'));
         await settle(4000); // past the "Press Esc" hint
@@ -885,7 +911,7 @@ void main() {
         await openMore('Settings');
         await tester.tap(find.text('Sound'));
         await settle();
-        await tester.tap(find.text('Sound effects (DSP)'));
+        await tester.tap(find.text('Sound effects').first);
         await shot('matugen-components-dark');
         await Appearance.instance.setBrightness(ThemeBrightness.light);
         await shot('matugen-components-light');

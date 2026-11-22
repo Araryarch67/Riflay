@@ -124,6 +124,8 @@ dev_dependencies:
   flutter_lints: ^6.0.0
   integration_test:
     sdk: flutter
+  # The screenshots' app folders in a temporary place (integration_test/readme_screenshots_test.dart).
+  path_provider_platform_interface: ^2.1.3
 flutter:
   # Generates lib/l10n/generated from the .arb files in lib/l10n.
   generate: true
