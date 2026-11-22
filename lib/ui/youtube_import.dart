@@ -15,6 +15,7 @@ import 'theme.dart';
 import 'widgets/controls.dart';
 import 'widgets/skeleton.dart';
 import '../services/language.dart';
+import 'widgets/frosted.dart';
 
 /// Opens the "paste a YouTube (or SoundCloud) link" flow: bottom sheet on phones, dialog elsewhere.
 /// Resolves to true when something was queued.
@@ -25,7 +26,7 @@ Future<bool> showYoutubeImport(BuildContext context, {required bool compact, Str
     child: _ImportForm(initialUrl: initialUrl),
   );
   final queued = compact
-      ? await showModalBottomSheet<bool>(
+      ? await showAppSheet<bool>(
           context: context,
           isScrollControlled: true,
           useSafeArea: true,

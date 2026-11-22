@@ -5,6 +5,7 @@ import '../../services/layout_prefs.dart';
 import '../../services/listening_streak.dart';
 import '../../services/play_history.dart';
 import '../theme.dart';
+import 'frosted.dart';
 
 /// The flame of [tier]: the fire icon filled with the tier's colours and lit from behind. [dim] greys it (a tier
 /// not reached yet, or no streak at all).
@@ -138,7 +139,7 @@ class StreakBadge extends StatelessWidget {
 /// The streak explained: how long, whether today counts yet, the longest, and the flames still to come.
 Future<void> showStreak(BuildContext context, {PlayHistory? history}) {
   final h = history ?? PlayHistory.instance;
-  return showModalBottomSheet<void>(
+  return showAppSheet<void>(
     context: context,
     backgroundColor: AppColors.elevated,
     showDragHandle: true,

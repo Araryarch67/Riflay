@@ -11,6 +11,7 @@ import '../services/player_controller.dart';
 import 'theme.dart';
 import 'widgets/controls.dart';
 import '../services/language.dart';
+import 'widgets/frosted.dart';
 
 /// "Edit" for a downloaded song: title, album, cover and the person's own
 /// lyrics. The artist is shown but can't be changed. A bottom sheet on phones,
@@ -43,7 +44,7 @@ Future<void> showDownloadEditor(BuildContext context, Track track, {required boo
 
   final form = DownloadEditForm(track: track, myLyrics: mine, onSave: save);
   if (compact) {
-    await showModalBottomSheet<void>(
+    await showAppSheet<void>(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,

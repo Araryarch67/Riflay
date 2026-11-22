@@ -6,6 +6,8 @@ void trimProcessMemory({bool workingSet = false}) {}
 
 String get currentAbi => 'web';
 
+bool windowsSoftwareRendering() => false;
+
 void mkfifo(String path) => throw UnsupportedError('No named pipes in a browser');
 
 bool pokeWriter(String path) => false;

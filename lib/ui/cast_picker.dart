@@ -7,6 +7,7 @@ import 'shell_scope.dart';
 import 'theme.dart';
 import 'widgets/skeleton.dart';
 import '../services/language.dart';
+import 'widgets/frosted.dart';
 
 /// The "Play on" button: lights up while a TV or speaker is playing.
 class CastButton extends StatelessWidget {
@@ -34,7 +35,7 @@ Future<void> showCastPicker(BuildContext context) {
   final controller = PlayerScope.read(context);
   final body = PlayerScope(controller: controller, child: const _CastPicker());
   if (ShellScope.of(context).compact) {
-    return showModalBottomSheet<void>(
+    return showAppSheet<void>(
       context: context,
       useRootNavigator: true,
       useSafeArea: true,

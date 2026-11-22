@@ -42,6 +42,7 @@ import 'marquee_text.dart';
 import 'menus.dart';
 import 'stats_for_nerds.dart';
 import 'track_selection.dart';
+import 'frosted.dart';
 
 /// How a row of [width] px shows its download button.
 enum RowDownload { full, compact, none }
@@ -391,7 +392,7 @@ class _TrackRowState extends State<TrackRow> {
           }
           return;
         }
-        final remove = await showModalBottomSheet<bool>(
+        final remove = await showAppSheet<bool>(
           context: context,
           builder: (sheet) => SafeArea(
             child: Column(
@@ -834,6 +835,11 @@ class TrackMenuButton extends StatelessWidget {
                   child: MenuRow(leading: const Icon(Icons.edit_outlined), title: Text(tr.edit)),
                 ),
             ] else ...[
+              // A song on this device: its radio mixes the library with YouTube Music's picks for its match.
+              PopupMenuItem(
+                onTap: () => shell.startRadio(host, c, track),
+                child: MenuRow(leading: const Icon(Icons.radio_rounded), title: Text(tr.startRadio)),
+              ),
               if (downloaded != null)
                 PopupMenuItem(
                   onTap: () => showDownloadEditor(host, downloaded, compact: shell.compact),

@@ -31,6 +31,7 @@ import 'now_playing_page.dart';
 import 'player_glass.dart';
 import 'full_screen_player.dart' show ExpandedPanel, expandedPlayerPanel, showExpandedPlayer;
 import 'player_common.dart' show ArtistLinks;
+import '../widgets/frosted.dart';
 
 // The parts the player is assembled from (Settings › Look & feel › Now Playing). The phone builds its Now
 // Playing from them; the desktop's expanded player, side panel and bar take the ones that fit a wide window.
@@ -1077,7 +1078,7 @@ class PlayerBottomButtons extends StatelessWidget {
 
 /// The volume as a small sheet from the speaker button: a slider in the Slider look (Settings › Now Playing), with a
 /// mute and a speaker icon at its ends.
-Future<void> showVolumePopup(BuildContext context) => showModalBottomSheet<void>(
+Future<void> showVolumePopup(BuildContext context) => showAppSheet<void>(
   context: context,
   backgroundColor: AppColors.of(context).elevated,
   showDragHandle: true,

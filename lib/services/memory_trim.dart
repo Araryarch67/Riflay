@@ -48,7 +48,7 @@ abstract final class MemoryTrim {
         _pagedOut = true;
       }
     }
-    final pageOut = workingSet;
+    final pageOut = workingSet && !_software;
     inBackground(() => trimProcessMemory(workingSet: pageOut)).ignore();
   }
 
@@ -95,7 +95,14 @@ abstract final class MemoryTrim {
     HardwareKeyboard.instance.addHandler(_key);
   }
 
-  static void _tick() => _trim(workingSet: _pagesOut && _away);
+  static void _tick() => _trim(workingSet: _pagesOut && _away && !_software);
+
+  /// Windows without a graphics card (WARP, see [windowsSoftwareRendering]): the drawing's textures are in this
+  /// process's own memory. Emptying the working set (and Skia's cache) while minimized paged all of them out, and
+  /// showing the window again froze it while the processor faulted them back in and drew everything again; music
+  /// playing behind a minimized window was paged out each minute too. There the heap is compacted and nothing more.
+  static bool get _software => _softwareRendering ??= windowsSoftwareRendering();
+  static bool? _softwareRendering;
 
   /// Empties the working set once the window is idle, looking again every [_idleAfter] until it is.
   static void _whenIdle() {
@@ -131,6 +138,7 @@ abstract final class MemoryTrim {
     _every ??= Timer.periodic(const Duration(minutes: 1), (_) => _tick());
     _soon?.cancel();
     _soon = Timer(const Duration(seconds: 2), () async {
+      if (_software) return _trim();
       await RenderingMemory.release();
       _trim(workingSet: _pagesOut);
     });
@@ -175,7 +183,8 @@ abstract final class MemoryTrim {
     _miniSoon = Timer(const Duration(seconds: 4), () async {
       if (!_mini || _hidden) return;
       await RenderingMemory.mini();
-      inBackground(() => trimProcessMemory(workingSet: _pagesOut)).ignore();
+      final pageOut = _pagesOut && !_software;
+      inBackground(() => trimProcessMemory(workingSet: pageOut)).ignore();
     });
   }
 
@@ -191,7 +200,8 @@ abstract final class MemoryTrim {
       await (_mini ? RenderingMemory.mini() : RenderingMemory.restore());
       // After the frames that drop and decode again, so what is trimmed stays trimmed.
       await Future<void>.delayed(const Duration(seconds: 2));
-      inBackground(() => trimProcessMemory(workingSet: lighter && (Host.isWindows || _pagesOut))).ignore();
+      final pageOut = lighter && (Host.isWindows || _pagesOut) && !_software;
+      inBackground(() => trimProcessMemory(workingSet: pageOut)).ignore();
     }());
   }
 

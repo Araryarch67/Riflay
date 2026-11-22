@@ -43,7 +43,8 @@ class CollectionHero extends StatelessWidget {
     final total = formatTotal(tracks);
     // An artist page: your own artist, or a YouTube Music one (it has a Follow button).
     final artistPage = isArtist || actions.any((a) => a is FollowButton);
-    final radioSeed = tracks.where((t) => t.isRemote).firstOrNull;
+    // A YouTube Music song when there is one; else a song on this device (its radio leans on the library).
+    final radioSeed = tracks.where((t) => t.isRemote).firstOrNull ?? tracks.where((t) => !t.streams).firstOrNull;
     // An artist: how many songs and albums; an album or playlist: its songs and length.
     final albums = isArtist
         ? c.albums.where((a) => Track.splitArtists(a.subtitle).contains(collection.title)).length

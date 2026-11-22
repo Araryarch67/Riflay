@@ -48,8 +48,12 @@ abstract final class AppColors {
   /// Secondary and muted text on glass: firmer than on a solid panel, where the cover behind takes contrast away.
   static Color glassText(Color text, double alpha) => text.withValues(alpha: alpha);
 
-  /// What floats over the window on glass (the search popup): solid and neutral, so it reads over anything.
-  static Color get glassSolid => _p.light ? const Color(0xF5F3F3F5) : const Color(0xF51C1C1F);
+  /// What floats over the window on glass and can't blur what is behind it (menus, the search popup): the theme's
+  /// own surface, nearly solid, so it reads over anything and takes the theme's colour (not a neutral white or grey).
+  static Color get glassSolid => _p.menu.withValues(alpha: 0.96);
+
+  /// Sheets and dialogs on glass: the theme's surface, see-through over the page blurred behind it ([Frosted]).
+  static Color get glassPopup => _p.menu.withValues(alpha: 0.72);
 
   /// Whether panels are glass over the cover (Settings › Glass over the cover).
   static bool get glass => _glass;

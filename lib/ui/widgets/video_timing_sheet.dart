@@ -5,6 +5,7 @@ import '../../services/language.dart';
 import '../../services/video_mode.dart';
 import '../../services/video_timing.dart';
 import '../theme.dart';
+import 'frosted.dart';
 
 /// Opens Earlier / Later controls alongside the Song / Video switch and in
 /// full-screen video, where native surfaces can otherwise cover controls.
@@ -22,7 +23,7 @@ class VideoTimingButton extends StatelessWidget {
       tooltip: tr.adjustVideoTiming,
       color: color,
       icon: const Icon(Icons.timer_outlined),
-      onPressed: () => showModalBottomSheet<void>(
+      onPressed: () => showAppSheet<void>(
         context: context,
         useRootNavigator: true,
         useSafeArea: true,

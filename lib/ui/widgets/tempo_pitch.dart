@@ -4,6 +4,7 @@ import '../../services/audio_engine.dart';
 import '../../services/language.dart';
 import '../../services/player_controller.dart';
 import '../theme.dart';
+import 'frosted.dart';
 
 /// "1.25× · +2": what Tempo & pitch are set to.
 String tempoPitchLabel(AudioEngine a) => [
@@ -14,7 +15,7 @@ String tempoPitchLabel(AudioEngine a) => [
 /// Tempo & pitch: how fast songs play, and how many semitones higher or lower, apart from each other.
 Future<void> showTempoPitch(BuildContext context) {
   final c = PlayerScope.read(context);
-  return showModalBottomSheet<void>(
+  return showAppSheet<void>(
     context: context,
     useRootNavigator: true,
     showDragHandle: true,

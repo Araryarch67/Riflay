@@ -6,6 +6,7 @@ import '../../services/player_controller.dart';
 import '../../services/sleep_timer.dart';
 import '../theme.dart';
 import 'app_dialog.dart';
+import 'frosted.dart';
 
 /// The moon in the player: opens the sleep timer, and while it runs shows how long is left.
 class SleepTimerButton extends StatelessWidget {
@@ -83,7 +84,7 @@ Future<void> showSleepTimer(BuildContext context) {
   final controller = PlayerScope.read(context);
   final body = PlayerScope(controller: controller, child: const SleepTimerPanel());
   if (MediaQuery.sizeOf(context).width < 700) {
-    return showModalBottomSheet<void>(
+    return showAppSheet<void>(
       context: context,
       useRootNavigator: true,
       useSafeArea: true,

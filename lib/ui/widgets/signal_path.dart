@@ -12,6 +12,7 @@ import '../../services/ui_beat.dart';
 import '../debug_switches.dart';
 import '../theme.dart';
 import '../../services/language.dart';
+import 'frosted.dart';
 
 /// Polls mpv for the live signal path while it's on screen, once a second while a song plays. Paused, nothing in
 /// it moves: it is read again only when the song, the player or a sound setting changes (a read and a rebuild
@@ -319,7 +320,7 @@ class QualityBadge extends StatelessWidget {
 
 Future<void> showSignalPath(BuildContext context) {
   final c = PlayerScope.read(context);
-  return showModalBottomSheet<void>(
+  return showAppSheet<void>(
     context: context,
     backgroundColor: AppColors.elevated,
     showDragHandle: true,

@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/foundation.dart' show setEquals;
 
 import '../models/track.dart';
@@ -66,6 +68,56 @@ abstract final class RadioQueue {
     }
     return best;
   }
+
+  /// Songs from the person's own library to play after [seed], for a radio that needs no internet. Only songs that
+  /// play from this device count (not saved streams). Closest first: the seed's album, then any song credited to one
+  /// of its artists, then everything else; each group shuffled with [random]. Songs in [excluded] (recent plays,
+  /// what is already queued) never come back, nor other copies of [seed].
+  static List<Track> fromLibrary({
+    required Track seed,
+    required Iterable<Track> library,
+    Iterable<Track> excluded = const [],
+    int limit = 25,
+    Random? random,
+  }) {
+    random ??= Random();
+    final skip = <String>{};
+    for (final track in [seed, ...excluded]) {
+      skip.addAll({track.id, ?track.offlineId});
+    }
+    final seedTitle = _title(seed);
+    final seedArtists = _artists(seed).toSet();
+    final seedAlbum = seed.album == null ? null : _key(seed.album!);
+    final groups = [<Track>[], <Track>[], <Track>[]];
+    final seen = <String>{};
+    for (final track in library) {
+      if (track.streams || skip.contains(track.id) || (track.offlineId != null && skip.contains(track.offlineId))) {
+        continue;
+      }
+      if (!seen.add(track.id)) continue;
+      final artists = _artists(track);
+      final sharesArtist = artists.any(seedArtists.contains);
+      // Another copy of the seed itself (a download beside the original file, say).
+      if (sharesArtist && seedTitle.isNotEmpty && _title(track) == seedTitle) continue;
+      final sameAlbum =
+          seedAlbum != null && seedAlbum.isNotEmpty && track.album != null && _key(track.album!) == seedAlbum;
+      groups[sameAlbum && (sharesArtist || seedArtists.isEmpty)
+              ? 0
+              : sharesArtist
+              ? 1
+              : 2]
+          .add(track);
+    }
+    return [for (final group in groups) ...(group..shuffle(random))].take(limit).toList();
+  }
+
+  /// [first] and [second] taken in turn, so neither crowds the other out of a capped queue.
+  static List<Track> interleave(List<Track> first, List<Track> second) => [
+    for (var i = 0; i < max(first.length, second.length); i++) ...[
+      if (i < first.length) first[i],
+      if (i < second.length) second[i],
+    ],
+  ];
 
   /// Keeps the provider's order when possible, spacing consecutive songs by the same lead artist.
   static List<Track> arrange({

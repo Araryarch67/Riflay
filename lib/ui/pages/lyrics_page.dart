@@ -33,6 +33,7 @@ import '../widgets/playing_motion.dart';
 import '../widgets/smooth_scroll.dart';
 import '../widgets/skeleton.dart';
 import 'wrap_page.dart' show showLyricCard;
+import '../widgets/frosted.dart';
 
 part 'lyrics/lyrics_view.dart';
 part 'lyrics/lyrics_extras.dart';

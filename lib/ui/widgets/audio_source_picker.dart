@@ -8,10 +8,11 @@ import '../../services/language.dart';
 import '../../services/manual_audio.dart';
 import '../../services/player_controller.dart';
 import '../../services/sources/music_sources.dart';
+import 'frosted.dart';
 
 Future<void> showAudioSourcePicker(BuildContext context, Track track) {
   final controller = PlayerScope.read(context);
-  return showModalBottomSheet<void>(
+  return showAppSheet<void>(
     context: context,
     useRootNavigator: true,
     isScrollControlled: true,

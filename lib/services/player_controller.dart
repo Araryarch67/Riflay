@@ -286,7 +286,7 @@ class PlayerController extends ChangeNotifier {
       final current = currentTrack;
       if (current == null || original.currentIndex == null) return null;
       final seed = radioSeed ?? _autoplaySeedFor(current);
-      final similar = await _radioFor(seed);
+      final similar = await _radioFor(seed, station: radioSeed != null);
       final state = player.sequenceState;
       if (generation != _radioGeneration ||
           !identical(state.currentSource, original.currentSource) ||
@@ -343,8 +343,40 @@ class PlayerController extends ChangeNotifier {
       ? current
       : autoplaySeedIn(queue, queueIndex ?? queue.length - 1) ?? current;
 
-  Future<List<Track>> _radioFor(Track seed) =>
-      radioLookup?.call(seed) ?? RadioQueue.load(seed, searchSongs: ytMusic.searchSongs, upNext: ytMusic.upNext);
+  /// What could follow [seed]. A song streaming from a service gets that service's recommendations only. A song
+  /// from this device (a download or the person's own file) gets YouTube Music's recommendations for its match
+  /// when there is one (a download's own video, else a search by artist and title), plus songs from the library
+  /// like it. Offline, or when nothing matches, the library alone keeps it going. A [station] mixes the two in
+  /// turn; autoplay keeps YouTube Music's first and the library after.
+  Future<List<Track>> _radioFor(Track seed, {bool station = false}) async {
+    Future<List<Track>> online() =>
+        radioLookup?.call(seed) ?? RadioQueue.load(seed, searchSongs: ytMusic.searchSongs, upNext: ytMusic.upNext);
+    if (seed.streams) return online();
+    final fromLibrary = _libraryRadioFor(seed, station: station);
+    List<Track> recommended;
+    try {
+      recommended = await online().timeout(const Duration(seconds: 15));
+    } catch (e) {
+      debugPrint('Radio for a song on this device, YouTube Music skipped: $e');
+      recommended = const [];
+    }
+    return station ? RadioQueue.interleave(fromLibrary, recommended) : [...recommended, ...fromLibrary];
+  }
+
+  /// Library songs for [seed]'s radio, never one of the recent plays nor (for autoplay) one already queued.
+  List<Track> _libraryRadioFor(Track seed, {required bool station}) {
+    final recent = _recentIds.take(30).toSet();
+    return RadioQueue.fromLibrary(
+      seed: seed,
+      library: library.where((t) => !recent.contains(t.id)),
+      excluded: station ? const [] : queue,
+      random: libraryRadioRandom,
+    );
+  }
+
+  /// Fixed in tests, so the library's part of a radio comes in a known order.
+  @visibleForTesting
+  math.Random? libraryRadioRandom;
 
   @visibleForTesting
   final Future<List<Track>> Function(Track)? radioLookup;

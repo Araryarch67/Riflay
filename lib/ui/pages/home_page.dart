@@ -472,17 +472,36 @@ class _DailyMixShelfState extends State<_DailyMixShelf> {
     super.dispose();
   }
 
+  /// The mixes, worked out again only when what they are made of changes: what was played, the library and the
+  /// songs on offer, or the day. Home is built again on every visit (and a page coming in builds it in the frames of
+  /// its transition): working the mixes out each time cost those frames ten milliseconds and more.
+  static List<HomeMix>? _made;
+  static Object? _madeFor;
+
+  List<HomeMix> _mixes(PlayerController player) {
+    final now = DateTime.now();
+    final available = widget.available;
+    final key = (
+      player.recentlyPlayedRevision,
+      player.libraryRevision.value,
+      available.length,
+      available.isEmpty ? null : available.first.id,
+      now.year,
+      now.month,
+      now.day,
+    );
+    if (_made != null && key == _madeFor) return _made!;
+    _madeFor = key;
+    return _made = buildHomeMixes(recent: player.recentlyPlayed, available: available, day: now);
+  }
+
   @override
   Widget build(BuildContext context) => PlayerSelect<Object>(
     select: HomePage._recentKey,
     builder: (context, _, _) {
       final player = widget.player;
       final made = [
-        for (final mix in buildHomeMixes(
-          recent: player.recentlyPlayed,
-          available: widget.available,
-          day: DateTime.now(),
-        ))
+        for (final mix in _mixes(player))
           Collection(
             kind: CollectionKind.smart,
             id: mix.id,

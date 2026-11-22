@@ -21,6 +21,7 @@ import 'controls.dart';
 import 'menus.dart';
 import 'signal_path.dart';
 import 'tempo_pitch.dart';
+import 'frosted.dart';
 
 /// The now-playing cover, with a menu on right-click / long-press for Detail
 /// stats, Signal path and Tempo & pitch.
@@ -88,7 +89,7 @@ class NowPlayingCover extends StatelessWidget {
 /// sheet of cards (the song, its source, what is done to the sound, where it goes, the connection).
 Future<void> showDetailStats(BuildContext context) {
   final c = PlayerScope.read(context);
-  return showModalBottomSheet<void>(
+  return showAppSheet<void>(
     context: context,
     backgroundColor: AppColors.elevated,
     showDragHandle: true,

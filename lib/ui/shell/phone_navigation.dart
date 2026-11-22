@@ -531,6 +531,8 @@ class _GlassBarState extends State<_GlassBar> with TickerProviderStateMixin {
       centre += flex(i) * unit;
     }
     final last = _info(round);
+    // The open tab's place in the full row: where the round button's glass starts from.
+    final glassFrom = unit;
     return Stack(
       children: [
         Positioned.fill(child: IgnorePointer(child: _glass(colors, const SizedBox.expand()))),
@@ -549,6 +551,9 @@ class _GlassBarState extends State<_GlassBar> with TickerProviderStateMixin {
                     tabs: shown,
                     tab: widget.tab,
                     renderer: _renderer,
+                    // While the bar shrinks the round button's glass is the open tab's, moving: one drop of glass,
+                    // not this one left behind (glass ignores the fade around it) and that one already there.
+                    hideGlass: shrink > 0 && search <= 0.5,
                     onSelect: widget.onSelect,
                     onDragChanged: (dragging) {
                       if (mounted && dragging != _draggingLens) setState(() => _draggingLens = dragging);
@@ -560,9 +565,9 @@ class _GlassBarState extends State<_GlassBar> with TickerProviderStateMixin {
           ),
         if (shrink > 0)
           Positioned(
-            left: lerpDouble(centre - _size / 2, 0, shrink),
+            left: lerpDouble(centre - glassFrom / 2, 0, shrink),
             top: 0,
-            width: _size,
+            width: lerpDouble(glassFrom, _size, shrink),
             height: _size,
             child: Opacity(
               opacity: shrink,
@@ -579,8 +584,10 @@ class _GlassBarState extends State<_GlassBar> with TickerProviderStateMixin {
                     child: _GlassButtonFace(
                       renderer: _renderer,
                       active: search <= 0.5,
-                      child: SizedBox.square(
-                        dimension: 44,
+                      // The open tab's bubble (a tab wide, the row's height) growing round into the button.
+                      child: SizedBox(
+                        width: lerpDouble(glassFrom - 4, 44, shrink),
+                        height: lerpDouble(_size - 8, 44, shrink),
                         child: Center(
                           child: _TabIcon(info: last, selected: true, color: _glassInk(colors)),
                         ),
@@ -845,11 +852,15 @@ class _DraggableGlassTabs extends StatefulWidget {
     required this.renderer,
     required this.onSelect,
     required this.onDragChanged,
+    this.hideGlass = false,
   });
 
   final List<_TabInfo> tabs;
   final PhoneTab tab;
   final bool renderer;
+
+  /// The open tab's glass is drawn elsewhere for now (the bar shrinking into its round button).
+  final bool hideGlass;
   final ValueChanged<PhoneTab> onSelect;
   final ValueChanged<bool> onDragChanged;
 
@@ -864,10 +875,68 @@ class _DraggableGlassTabsState extends State<_DraggableGlassTabs> {
   Timer? _settleEnd;
   static const _snap = Duration(milliseconds: 160);
 
+  /// The tab picked (tapped, or let go over) that the page hasn't switched to yet: the glass and the tab's colour go
+  /// there at once, not after the new page has been built (a page taking a few frames left the glass on the old tab,
+  /// then jumping).
+  int? _picked;
+
+  /// Where the glass settles to while [_settling]: the picked tab.
+  int? _settleTo;
+
+  @override
+  void didUpdateWidget(_DraggableGlassTabs old) {
+    super.didUpdateWidget(old);
+    final now = widget.tabs.indexWhere((info) => info.tab == widget.tab);
+    if (_picked != null && (now == _picked || old.tab != widget.tab)) _picked = null;
+  }
+
   @override
   void dispose() {
     _settleEnd?.cancel();
+    _forget?.cancel();
     super.dispose();
+  }
+
+  void _settle() {
+    _settleEnd?.cancel();
+    _settleEnd = Timer(_snap + const Duration(milliseconds: 32), () {
+      if (mounted && _settling) setState(() => _settling = false);
+    });
+  }
+
+  /// A tab that didn't open (it shows something over the page instead): the glass goes back to the page's tab.
+  Timer? _forget;
+  void _forgetPickLater(int index) {
+    _forget?.cancel();
+    _forget = Timer(const Duration(milliseconds: 800), () {
+      if (mounted && _picked == index && widget.tabs[index].tab != widget.tab) setState(() => _picked = null);
+    });
+  }
+
+  /// A tap: the glass slides from the tab shown to [index] (mounted where it was, then moved on the next frame, so it
+  /// animates), and the tab opens.
+  void _tap(int index, int shown) {
+    final info = widget.tabs[index];
+    if (index == shown || !LayoutPrefs.moves) {
+      if (index != shown) {
+        setState(() => _picked = index);
+        _forgetPickLater(index);
+      }
+      widget.onSelect(info.tab);
+      return;
+    }
+    setState(() {
+      _picked = index;
+      _settling = true;
+      _settleTo = shown;
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_settling) return;
+      setState(() => _settleTo = index);
+      _settle();
+    });
+    _forgetPickLater(index);
+    widget.onSelect(info.tab);
   }
 
   void _update(double x, List<double> edges) {
@@ -889,17 +958,18 @@ class _DraggableGlassTabsState extends State<_DraggableGlassTabs> {
     final target = _target;
     if (_finger == null) return;
     widget.onDragChanged(false);
+    final opens = commit && target != null && target < widget.tabs.length && widget.tabs[target].tab != widget.tab;
     setState(() {
       _finger = null;
       _target = null;
       _settling = LayoutPrefs.moves;
+      // Let go over another tab: the glass settles there, and stays there while its page is being built.
+      if (opens) _picked = target;
+      _settleTo = opens ? target : null;
     });
-    if (_settling) {
-      _settleEnd = Timer(_snap + const Duration(milliseconds: 32), () {
-        if (mounted && _settling) setState(() => _settling = false);
-      });
-    }
-    if (commit && target != null && target < widget.tabs.length && widget.tabs[target].tab != widget.tab) {
+    if (_settling) _settle();
+    if (opens) {
+      _forgetPickLater(target);
       widget.onSelect(widget.tabs[target].tab);
     }
   }
@@ -908,6 +978,8 @@ class _DraggableGlassTabsState extends State<_DraggableGlassTabs> {
   Widget build(BuildContext context) => LayoutBuilder(
     builder: (context, box) {
       final selected = widget.tabs.indexWhere((info) => info.tab == widget.tab);
+      // What the glass and the tab's colour show: the tab picked, until the page catches up.
+      final shown = _picked ?? selected;
       final unit = box.maxWidth / widget.tabs.length;
       final edges = <double>[0];
       for (var i = 0; i < widget.tabs.length; i++) {
@@ -918,7 +990,8 @@ class _DraggableGlassTabsState extends State<_DraggableGlassTabs> {
       final dragEnabled = !DebugSwitches.noTabSwipe && widget.tabs.length > 1;
       // The lens is a tab wide, swelling a little under the finger.
       final indicatorWidth = (unit * (finger != null ? 1.2 : 1.0)).clamp(40.0, math.max(40.0, box.maxWidth)).toDouble();
-      final center = finger ?? (selected < 0 ? indicatorWidth / 2 : (edges[selected] + edges[selected + 1]) / 2);
+      final at = _settling ? (_settleTo ?? shown) : shown;
+      final center = finger ?? (at < 0 ? indicatorWidth / 2 : (edges[at] + edges[at + 1]) / 2);
       final left = (center - indicatorWidth / 2).clamp(
         0.0,
         (box.maxWidth - indicatorWidth).clamp(0.0, double.infinity),
@@ -964,15 +1037,15 @@ class _DraggableGlassTabsState extends State<_DraggableGlassTabs> {
                     child: _TabButton(
                       info: info,
                       selected: i == selected,
-                      onTap: () => widget.onSelect(info.tab),
+                      onTap: () => _tap(i, shown),
                       child: AnimatedScale(
                         scale: finger != null && i == _target ? 1.12 : 1,
                         duration: LayoutPrefs.dur(const Duration(milliseconds: 115)),
                         child: _GlassTab(
                           info: info,
-                          selected: i == selected,
+                          selected: i == shown,
                           renderer: widget.renderer,
-                          paintGlass: !moving,
+                          paintGlass: !moving && !widget.hideGlass,
                         ),
                       ),
                     ),

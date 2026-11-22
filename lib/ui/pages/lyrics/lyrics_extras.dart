@@ -246,7 +246,7 @@ Future<void> removeMyLyrics(BuildContext context, Track track) async {
 }
 
 /// "Earlier" / "Later" for a song's timed lyrics, saved for that song.
-Future<void> showLyricsTiming(BuildContext context, Track track) => showModalBottomSheet<void>(
+Future<void> showLyricsTiming(BuildContext context, Track track) => showAppSheet<void>(
   context: context,
   useRootNavigator: true,
   useSafeArea: true,

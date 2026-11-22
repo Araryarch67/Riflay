@@ -8,12 +8,13 @@ import '../../services/language.dart';
 import '../../services/opra_eq.dart';
 import '../../services/player_controller.dart';
 import '../theme.dart';
+import 'frosted.dart';
 
 /// Picks a headphone or IEM from AutoEQ and sets the equalizer for it. A sheet, so the equalizer can open it from
 /// Settings and from the expanded player's side panel alike.
 Future<void> showAutoEqPicker(BuildContext context) {
   final c = PlayerScope.read(context);
-  return showModalBottomSheet<void>(
+  return showAppSheet<void>(
     context: context,
     backgroundColor: AppColors.elevated,
     showDragHandle: true,

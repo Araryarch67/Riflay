@@ -12,6 +12,7 @@ import '../pages/sound_settings.dart' show SettingTile, settingsMuted;
 import '../theme.dart';
 import 'menus.dart';
 import '../../services/language.dart';
+import 'frosted.dart';
 
 /// Settings › Performance & power: keeping the screen on, keeping a computer awake
 /// while music plays, closing to the tray (computers), and (Android) letting Riflay
@@ -46,7 +47,7 @@ class PowerSettings {
         }
         await awake.markBatteryAsked();
         if (!context.mounted) return;
-        final yes = await showModalBottomSheet<bool>(
+        final yes = await showAppSheet<bool>(
           context: context,
           backgroundColor: AppColors.elevated,
           showDragHandle: true,

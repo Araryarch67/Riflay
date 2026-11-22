@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../services/language.dart';
 import '../../services/layout_prefs.dart';
 import '../theme.dart';
+import 'frosted.dart';
 
 /// Gaps inside a dialog, so every popup breathes the same way: [section] between groups of options, [label]
 /// under a group's heading, [note] above a muted line that explains the pick.
@@ -84,75 +85,80 @@ class AppDialog extends StatelessWidget {
       insetPadding: phone
           ? const EdgeInsets.symmetric(horizontal: 16, vertical: 24)
           : const EdgeInsets.symmetric(horizontal: 40, vertical: 24),
-      child: SizedBox(
-        width: width,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: icon == null ? CrossAxisAlignment.start : CrossAxisAlignment.center,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (icon != null) ...[
-                    IconTheme.merge(
-                      data: IconThemeData(size: 24, color: AppColors.accent),
-                      child: icon!,
-                    ),
-                    const SizedBox(height: 16),
-                  ],
-                  Row(
-                    children: [
-                      Expanded(
-                        child: DefaultTextStyle.merge(
-                          style: titleStyle,
-                          textAlign: icon == null ? TextAlign.start : TextAlign.center,
-                          child: Semantics(header: true, child: heading),
-                        ),
+      // On glass: the theme's surface over the page blurred, not a see-through card words get lost on.
+      backgroundColor: AppColors.glass ? AppColors.glassPopup : null,
+      clipBehavior: AppColors.glass ? Clip.antiAlias : Clip.none,
+      child: Frosted.wrap(
+        SizedBox(
+          width: width,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: icon == null ? CrossAxisAlignment.start : CrossAxisAlignment.center,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (icon != null) ...[
+                      IconTheme.merge(
+                        data: IconThemeData(size: 24, color: AppColors.accent),
+                        child: icon!,
                       ),
-                      if (onClose != null)
-                        // Pulled into the corner so the cross lines up with the content's edge, not its padding.
-                        Transform.translate(
-                          offset: const Offset(8, 0),
-                          child: IconButton(
-                            tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
-                            onPressed: onClose,
-                            icon: Icon(Icons.close_rounded, color: AppColors.textSecondary),
+                      const SizedBox(height: 16),
+                    ],
+                    Row(
+                      children: [
+                        Expanded(
+                          child: DefaultTextStyle.merge(
+                            style: titleStyle,
+                            textAlign: icon == null ? TextAlign.start : TextAlign.center,
+                            child: Semantics(header: true, child: heading),
                           ),
                         ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            Flexible(
-              child: DefaultTextStyle.merge(
-                style: theme.textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary),
-                child: body,
-              ),
-            ),
-            if (actions.isNotEmpty || destructive != null)
-              Padding(
-                padding: EdgeInsets.fromLTRB(24, 24, 24, footer == null ? 24 : 12),
-                child: DialogActions(destructive: destructive, children: actions),
-              )
-            else
-              const SizedBox(height: 24),
-            if (footer != null)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
-                child: Center(
-                  child: DefaultTextStyle.merge(
-                    style: theme.textTheme.bodySmall?.copyWith(color: AppColors.textMuted),
-                    textAlign: TextAlign.center,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    child: footer!,
-                  ),
+                        if (onClose != null)
+                          // Pulled into the corner so the cross lines up with the content's edge, not its padding.
+                          Transform.translate(
+                            offset: const Offset(8, 0),
+                            child: IconButton(
+                              tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
+                              onPressed: onClose,
+                              icon: Icon(Icons.close_rounded, color: AppColors.textSecondary),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ],
                 ),
               ),
-          ],
+              Flexible(
+                child: DefaultTextStyle.merge(
+                  style: theme.textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary),
+                  child: body,
+                ),
+              ),
+              if (actions.isNotEmpty || destructive != null)
+                Padding(
+                  padding: EdgeInsets.fromLTRB(24, 24, 24, footer == null ? 24 : 12),
+                  child: DialogActions(destructive: destructive, children: actions),
+                )
+              else
+                const SizedBox(height: 24),
+              if (footer != null)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
+                  child: Center(
+                    child: DefaultTextStyle.merge(
+                      style: theme.textTheme.bodySmall?.copyWith(color: AppColors.textMuted),
+                      textAlign: TextAlign.center,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      child: footer!,
+                    ),
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
     );

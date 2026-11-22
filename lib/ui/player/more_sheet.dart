@@ -22,6 +22,7 @@ import '../widgets/track_row.dart';
 import '../widgets/video_mode.dart';
 import '../ytmusic_edit.dart';
 import 'player_parts.dart' show shareTrack, copySongTitle;
+import '../widgets/frosted.dart';
 
 /// The player's "More" sheet: everything the phone's player keeps off its
 /// face, in labelled groups. Used by the full-screen player's ⋯ and by a
@@ -38,7 +39,7 @@ Future<void> showPlayerMore(BuildContext context, {bool closePlayer = false, Voi
   if (track == null) return Future.value();
   VideoMode.instance.follow(c);
   final shell = ShellScope.of(context);
-  return showModalBottomSheet<void>(
+  return showAppSheet<void>(
     context: context,
     useRootNavigator: true,
     isScrollControlled: true,

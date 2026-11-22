@@ -106,6 +106,25 @@ void _trimWindows(bool workingSet) {
   } catch (_) {}
 }
 
+/// Windows: whether the window is drawn without a graphics card. With no Direct3D 11 hardware, Flutter's ANGLE
+/// falls back to WARP, Direct3D in software (`d3d10warp.dll` loaded into the process): every texture lives in the
+/// process's own memory and is drawn by the processor.
+bool windowsSoftwareRendering() {
+  if (!Platform.isWindows) return false;
+  try {
+    final getModule = DynamicLibrary.open('kernel32.dll')
+        .lookupFunction<IntPtr Function(Pointer<Utf16>), int Function(Pointer<Utf16>)>('GetModuleHandleW');
+    final name = 'd3d10warp.dll'.toNativeUtf16();
+    try {
+      return getModule(name) != 0;
+    } finally {
+      malloc.free(name);
+    }
+  } catch (_) {
+    return false;
+  }
+}
+
 /// The CPU and operating system the app was built for, as `Abi.toString()` names it ("linux_x64").
 String get currentAbi => Abi.current().toString();
 
