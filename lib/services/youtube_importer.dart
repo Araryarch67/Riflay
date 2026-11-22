@@ -6,6 +6,7 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as p;
+import 'download_files.dart' show nameDownload;
 import 'package:path_provider/path_provider.dart';
 import 'package:youtube_explode_dart/youtube_explode_dart.dart';
 
@@ -1245,6 +1246,8 @@ class YoutubeImporter extends ChangeNotifier {
           ..coverMime = cover?.mime ?? 'image/jpeg',
       );
       if (cancelled()) throw const _Cancelled();
+      // The song's own name ("Artist - Title.opus"), before its lyrics and video take theirs from it.
+      converted = saved = await nameDownload(saved, artist: names.artist, title: names.title);
       job.totalBytes = saved.lengthSync();
       await _saveLyrics(await lyrics, saved.path);
       if (job.withVideo) {
@@ -1556,6 +1559,7 @@ class YoutubeImporter extends ChangeNotifier {
         saved.deleteSync();
         throw const _Cancelled();
       }
+      saved = await nameDownload(saved, artist: names.artist, title: names.title);
       made.add(saved);
       job.totalBytes = saved.lengthSync();
       await _saveLyrics(await lyrics, saved.path);

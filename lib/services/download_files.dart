@@ -1,5 +1,7 @@
 import 'dart:io';
 
+import 'package:path/path.dart' as p;
+
 import '../models/track.dart';
 
 export '../models/track.dart' show youtubeVideoIdOf;
@@ -66,4 +68,40 @@ String formatFileSize(int bytes) {
   if (bytes < mb) return '${(bytes / kb).round()} KB';
   if (bytes < gb) return '${(bytes / mb).toStringAsFixed(1)} MB';
   return '${(bytes / gb).toStringAsFixed(1)} GB';
+}
+
+/// "Artist - Title" for a downloaded file: what people recognise in their music folder, without the characters
+/// Windows, macOS, Android or Linux refuse in a file name, and not too long for any of them.
+String readableDownloadName({required String artist, required String title}) {
+  String clean(String s) => s
+      .replaceAll(RegExp(r'[<>:"/\\|?*\x00-\x1F]'), ' ')
+      .replaceAll(RegExp(r'\s+'), ' ')
+      .trim();
+  final a = clean(artist), t = clean(title);
+  var name = a.isEmpty || a == Track.unknownArtist ? t : (t.isEmpty ? a : '$a - $t');
+  if (name.length > 150) name = name.substring(0, 150).trim();
+  // Windows drops trailing dots and spaces, and reserves a few device names.
+  name = name.replaceAll(RegExp(r'[. ]+$'), '');
+  if (RegExp(r'^(con|prn|aux|nul|com\d|lpt\d)$', caseSensitive: false).hasMatch(name)) name = '$name song';
+  return name.isEmpty ? 'Song' : name;
+}
+
+/// [file] moved, in its folder, to the [readableDownloadName] of the song, "(2)", "(3)"... added when the name is
+/// taken. The song's identity lives in its tags and the library, never in the file name, so any name works; when
+/// the rename fails the file keeps its own.
+Future<File> nameDownload(File file, {required String artist, required String title}) async {
+  final dir = file.parent.path;
+  final ext = p.extension(file.path);
+  final base = readableDownloadName(artist: artist, title: title);
+  for (var n = 1; n < 100; n++) {
+    final target = File(p.join(dir, n == 1 ? '$base$ext' : '$base ($n)$ext'));
+    if (target.path == file.path) return file;
+    if (await target.exists()) continue;
+    try {
+      return await file.rename(target.path);
+    } on FileSystemException {
+      return file;
+    }
+  }
+  return file;
 }

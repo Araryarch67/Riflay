@@ -28,6 +28,29 @@ LiquidGlassSettings riflayGlass({required Brightness brightness, double frost = 
       tintAmount: tintAmount,
     ).copyWith(refractionHeight: 28, refractionAmount: 95, dispersion: 0.35, highlight: 0.9, contourStrength: 0.75);
 
+/// The phone's Liquid glass bar: clear glass (iOS's `.clear`), not frosted. The page stays sharp and readable
+/// through it; what makes it liquid is the edge bending the page, splitting its colours along the rim, and the
+/// glint, not a blur. [dragging]: the lens under a finger bends a little more.
+LiquidGlassSettings riflayClearGlass({bool dragging = false}) =>
+    LiquidGlassSettings.ios27Clear(tintAmount: 0.1, frost: dragging ? 0.3 : 0.6).copyWith(
+      refractionHeight: dragging ? 30 : 24,
+      refractionAmount: dragging ? 160 : 125,
+      dispersion: dragging ? 1.0 : 0.8,
+      highlight: 1,
+      contourStrength: 0.7,
+    );
+
+/// Clear glass's material: a touch of shade on a dark theme (or light on a light one, or as Settings › Glass
+/// tint asks) so the white or dark labels on it keep their contrast over a busy page.
+LiquidGlassAppearance riflayClearGlassAppearance({required bool themeIsLight, GlassTint? tint}) {
+  final light = switch (tint ?? LayoutPrefs.instance.glassTint) {
+    GlassTint.theme => themeIsLight,
+    GlassTint.light => true,
+    GlassTint.black => false,
+  };
+  return LiquidGlassAppearance.ios27Clear(tint: light ? const Color(0x24FFFFFF) : const Color(0x2E000000));
+}
+
 class PlayerGlassBackdrop extends InheritedWidget {
   const PlayerGlassBackdrop({super.key, required this.color, required super.child});
 

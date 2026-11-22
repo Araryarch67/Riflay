@@ -734,21 +734,8 @@ class _GlassBarState extends State<_GlassBar> with TickerProviderStateMixin {
     if (!_renderer) return child;
     // Light frost and strong refraction ([riflayGlass]): where the shader runs (Impeller) the page bends behind the
     // pills; the frosted fallback (no shader filters) keeps the rim light and a tint so text stays legible.
-    // Liquid, not frosted: a light blur so the page stays clear through the glass, and strong refraction, colour
-    // dispersion and rim light where the edges bend it, which is what reads as a drop of liquid glass.
-    final blur = glassFrost() * 0.35;
-    final optics =
-        riflayGlass(
-          brightness: AppColors.of(context).light ? Brightness.light : Brightness.dark,
-          frost: _draggingLens ? math.max(1.5, blur * 0.6) : blur,
-          tintAmount: 0.2,
-        ).copyWith(
-          refractionHeight: _draggingLens ? 44 : 38,
-          refractionAmount: _draggingLens ? 175 : 150,
-          dispersion: _draggingLens ? 0.9 : 0.6,
-          highlight: 1,
-          contourStrength: 0.95,
-        );
+    // Clear liquid glass ([riflayClearGlass]): the page sharp through it, bent and split into colours at the edges.
+    final optics = riflayClearGlass(dragging: _draggingLens);
     return LiquidGlassLayer(
       settings: optics,
       child: LiquidGlassBlendGroup(blend: _gap - 2, child: child),
@@ -765,7 +752,7 @@ class _GlassBarState extends State<_GlassBar> with TickerProviderStateMixin {
     final radius = math.min(LayoutPrefs.radius(_size / 2), _size / 2);
     if (_renderer) {
       return LiquidGlass.grouped(
-        appearance: riflayGlassAppearance(themeIsLight: colors.light, tint: tint),
+        appearance: riflayClearGlassAppearance(themeIsLight: colors.light, tint: tint),
         shape: LiquidRoundedSuperellipse(borderRadius: radius),
         child: Material(type: MaterialType.transparency, child: child),
       );
@@ -1380,10 +1367,7 @@ class _GlassButtonFace extends StatelessWidget {
     }
     return LiquidGlass(
       shape: const LiquidRoundedSuperellipse(borderRadius: 24),
-      appearance: LiquidGlassAppearance.ios27Regular(
-        brightness: light ? Brightness.light : Brightness.dark,
-        tint: bubble,
-      ),
+      appearance: LiquidGlassAppearance.ios27Clear(tint: bubble),
       child: child,
     );
   }

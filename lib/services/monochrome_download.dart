@@ -6,6 +6,8 @@ import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as p;
 
+import 'download_files.dart' show nameDownload;
+
 import '../models/track.dart';
 import '../app_version.dart';
 import 'ffmpeg.dart';
@@ -135,9 +137,10 @@ class MonochromeDownload {
       }
       await Metadata.tagFile(file.path, edit);
       check();
+      // Moved in under its job's name, then given the song's ("Artist - Title.flac").
       final target = File(p.join(directory.path, '${jobId(track)}.flac'));
       if (await target.exists()) throw const FileSystemException('Monochrome download already exists');
-      final saved = await file.rename(target.path);
+      final saved = await nameDownload(await file.rename(target.path), artist: track.artist, title: track.title);
       final uri = Uri.file(saved.path);
       return Track(
         id: uri.toString(),
