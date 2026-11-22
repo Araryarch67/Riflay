@@ -5,4 +5,5 @@ abstract interface class NativePlayer {
   Future<void> command(List<String> command, {bool waitForInitialization = true});
   List<Future<void> Function()> get onLoadHooks;
   List<Future<void> Function()> get onUnloadHooks;
+  Future<int> get handle;
 }

@@ -447,8 +447,11 @@ class _RiflayAppState extends State<RiflayApp> with WidgetsBindingObserver {
 
   void _restyle() {
     if (_memoryMode != _layout.performance) {
+      final lighter = _layout.performance.index < _memoryMode.index;
       _memoryMode = _layout.performance;
-      if (_animate && !miniPlayer.value) unawaited(RenderingMemory.restore());
+      if (_animate && !miniPlayer.value) {
+        MemoryTrim.performanceChanged(lighter: lighter);
+      }
     }
     _syncTint();
     setState(() {});

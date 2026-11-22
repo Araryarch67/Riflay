@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/gestures.dart';
+import 'package:flutter/painting.dart';
 import 'package:flutter/services.dart';
 
 import '../platform/background.dart';
@@ -176,6 +177,22 @@ abstract final class MemoryTrim {
       await RenderingMemory.mini();
       inBackground(() => trimProcessMemory(workingSet: _pagesOut)).ignore();
     });
+  }
+
+  /// Another performance mode was picked. Its budgets apply now, not as things come and go: the decoded images
+  /// kept off screen go (those on screen are decoded again at the new mode's size), Skia's cache is emptied down to
+  /// the new budget, and the process heap is compacted. A lighter mode also hands the working set back once, so the
+  /// memory the system shows drops with it (what is in use faults back in; once, not every minute).
+  static void performanceChanged({required bool lighter}) {
+    if (!_available) return;
+    PaintingBinding.instance.imageCache.clear();
+    unawaited(() async {
+      await RenderingMemory.release();
+      await (_mini ? RenderingMemory.mini() : RenderingMemory.restore());
+      // After the frames that drop and decode again, so what is trimmed stays trimmed.
+      await Future<void>.delayed(const Duration(seconds: 2));
+      inBackground(() => trimProcessMemory(workingSet: lighter && (Host.isWindows || _pagesOut))).ignore();
+    }());
   }
 
   static void stop() {

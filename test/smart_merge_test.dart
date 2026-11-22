@@ -663,7 +663,7 @@ void main() {
   });
 
   test('off once turned off; the streaming sources are asked only when one is on', () async {
-    SharedPreferences.setMockInitialValues({'sources.smartMerge.v1': false, 'sources.monochrome.v1': false});
+    SharedPreferences.setMockInitialValues({'sources.smartMerge.v2': false, 'sources.monochrome.v2': false});
     final sources = MusicSources.instance..reset();
     await sources.load();
     final song = _youtube();

@@ -184,6 +184,17 @@ mixin _VisibleVideoView<T extends StatefulWidget> on State<T> {
     if (visible == _registered) return;
     _registered = visible;
     visible ? VideoMode.instance.addView(full: fullVideoView) : VideoMode.instance.removeView(full: fullVideoView);
+    if (!visible) VideoMode.instance.reportViewBox(this, null);
+  }
+
+  /// The box this view shows the video in, in physical pixels: the video is drawn no bigger than the views need
+  /// ([VideoMode.reportViewBox]). Told after the frame that laid it out.
+  void _reportBox(BoxConstraints constraints) {
+    if (fullVideoView || !constraints.hasBoundedWidth || !constraints.hasBoundedHeight) return;
+    final box = VideoBox(constraints.biggest * MediaQuery.devicePixelRatioOf(context));
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && _registered) VideoMode.instance.reportViewBox(this, box);
+    });
   }
 
   @override
@@ -225,7 +236,14 @@ class _VideoViewState extends State<_VideoView> with _VisibleVideoView<_VideoVie
       : child;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, constraints) {
+      _reportBox(constraints);
+      return _content(context);
+    },
+  );
+
+  Widget _content(BuildContext context) {
     final mode = VideoMode.instance;
     // Windows/Linux: a native surface covers this box; the cover shows while it is hidden. Nothing drawn here shows
     // over it: the full-screen button sits beside the Song / Video switch there.
@@ -423,6 +441,7 @@ class _VideoBackgroundState extends State<VideoBackground> {
     if (active == _registered) return;
     _registered = active;
     active ? VideoMode.instance.addBackground() : VideoMode.instance.removeBackground();
+    if (!active) VideoMode.instance.reportViewBox(this, null);
   }
 
   @override
@@ -448,27 +467,45 @@ class _VideoBackgroundState extends State<VideoBackground> {
         });
         final video = active ? mode.backgroundController(widget.track, shareForeground: widget.shareForeground) : null;
         if (video == null) return const SizedBox.shrink();
-        return IgnorePointer(
-          child: RepaintBoundary(
-            // A little larger than the page and clipped: on Android the video's picture falls a few pixels short
-            // of its box (a dark strip down the right, a band along the top), which a background must not show.
-            child: ClipRect(
-              child: Transform.scale(
-                scale: _overscan,
-                child: Video(
-                  controller: video,
-                  controls: NoVideoControls,
-                  fit: BoxFit.cover,
-                  fill: Colors.black,
-                  // VideoMode stops it itself when the app goes to the background.
-                  pauseUponEnteringBackgroundMode: false,
-                  resumeUponEnteringForegroundMode: false,
-                ),
-              ),
-            ),
-          ),
+        // The size it fills (with the overscan), so the video is drawn no bigger than that.
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            if (constraints.hasBoundedWidth && constraints.hasBoundedHeight) {
+              final box = VideoBox(
+                constraints.biggest * MediaQuery.devicePixelRatioOf(context) * _overscan,
+                cover: true,
+              );
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (mounted && _registered) VideoMode.instance.reportViewBox(this, box);
+              });
+            }
+            return _video(video);
+          },
         );
       },
+    );
+  }
+
+  Widget _video(VideoController video) {
+    return IgnorePointer(
+      child: RepaintBoundary(
+        // A little larger than the page and clipped: on Android the video's picture falls a few pixels short
+        // of its box (a dark strip down the right, a band along the top), which a background must not show.
+        child: ClipRect(
+          child: Transform.scale(
+            scale: _overscan,
+            child: Video(
+              controller: video,
+              controls: NoVideoControls,
+              fit: BoxFit.cover,
+              fill: Colors.black,
+              // VideoMode stops it itself when the app goes to the background.
+              pauseUponEnteringBackgroundMode: false,
+              resumeUponEnteringForegroundMode: false,
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

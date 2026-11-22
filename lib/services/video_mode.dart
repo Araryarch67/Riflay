@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:math' as math;
 
+import 'package:flutter/services.dart' show MethodChannel;
 import 'package:flutter/widgets.dart';
 import 'package:media_kit/media_kit.dart' hide NativePlayer, Track;
 import 'package:media_kit_video/media_kit_video.dart';
@@ -153,15 +155,39 @@ class VideoMode extends ChangeNotifier with WidgetsBindingObserver {
   Future<void> setQuality(int height) => LayoutPrefs.instance.setVideoQuality(height);
 
   int? _quality;
+  PerformanceMode? _mode;
+
+  /// The video's read-ahead and seek-back (MB) in the performance mode now.
+  static (int, int) _readAheadMb(bool foreground) => switch ((LayoutPrefs.instance.performance, foreground)) {
+    (PerformanceMode.heavy, true) => (32, 4),
+    (PerformanceMode.balanced, true) => (16, 2),
+    (PerformanceMode.lightweight, true) => (8, 1),
+    (PerformanceMode.lightweight, false) => (4, 1),
+    _ => (8, 2),
+  };
+
+  static Future<void> _setReadAhead(VideoEngine player, bool foreground) async {
+    final (ahead, back) = _readAheadMb(foreground);
+    await player.setProperty('demuxer-max-bytes', '${ahead << 20}');
+    await player.setProperty('demuxer-max-back-bytes', '${back << 20}');
+  }
 
   /// A new quality applies to the video that is playing, unless it would come at the height it has already.
   void _qualityChanged() {
     final want = LayoutPrefs.instance.videoQuality;
-    if (want == _quality) return;
+    final mode = LayoutPrefs.instance.performance;
+    if (want == _quality && mode == _mode) return;
+    final qualityChanged = want != _quality;
     _quality = want;
+    // Another performance mode applies to the video playing now, not from the next one: its read-ahead at once, and
+    // on Auto the mode's height (switched in place, as a quality picked in the menu is).
+    if (mode != _mode) {
+      _mode = mode;
+      if (_player case final player? when _ready) _setReadAhead(player, _loadedForeground).ignore();
+    }
     final video = _wanted;
     if (video == null || !_streamed || (_player == null && _opening == null)) return;
-    if (want == 0) _cap = null;
+    if (qualityChanged && want == 0) _cap = null;
     if (heightFor(_height(_foreground), _heights) == _streamHeight && _ready) return;
     debugPrint('Video mode: quality ${want == 0 ? 'auto' : '${want}p'}');
     _start(video, foreground: _foreground);
@@ -245,6 +271,7 @@ class VideoMode extends ChangeNotifier with WidgetsBindingObserver {
     });
     _loadOn();
     _quality = LayoutPrefs.instance.videoQuality;
+    _mode = LayoutPrefs.instance.performance;
     LayoutPrefs.instance
       ..removeListener(_decoderChanged)
       ..addListener(_decoderChanged)
@@ -785,6 +812,7 @@ vec4 hook() {
   /// [showing] may change with the views: listeners hear it after the frame that changed them (never mid-build).
   void _viewsChanged() => scheduleMicrotask(() {
     if (!_disposed) {
+      _fitOutput();
       _follow();
       notifyListeners();
     }
@@ -835,14 +863,21 @@ vec4 hook() {
         // renderer were destroyed and recreated for every music video.
         reuseTexture =
             Host.isWindows && _ready && _player is _KitEngine && _video != null && _loadedForeground == foreground;
+        if (!reuseTexture) await _disposePlayer();
+        if (request != _videoRequest) return;
+        // Windows: the player let go before (parked, see [_disposePlayer]) plays this one, texture and all.
+        final parked = _parked;
+        if (!reuseTexture && Host.isWindows && !native && parked != null) {
+          _parked = null;
+          _player = parked.engine;
+          _video = parked.video;
+          reuseTexture = true;
+        }
         if (reuseTexture) {
           selected = _player;
           video = _video;
           _resetLoadedVideo();
-        } else {
-          await _disposePlayer();
         }
-        if (request != _videoRequest) return;
         // A minute and a half without a stall: this song may try a step higher.
         if (adaptive &&
             fixedQuality == null &&
@@ -929,15 +964,7 @@ vec4 hook() {
       // short stall without holding the whole video in the demuxer.
       await player.setProperty('cache', 'yes');
       await player.setProperty('cache-secs', foreground ? '60' : '20');
-      final (ahead, back) = switch ((LayoutPrefs.instance.performance, foreground)) {
-        (PerformanceMode.heavy, true) => (32, 4),
-        (PerformanceMode.balanced, true) => (16, 2),
-        (PerformanceMode.lightweight, true) => (8, 1),
-        (PerformanceMode.lightweight, false) => (4, 1),
-        _ => (8, 2),
-      };
-      await player.setProperty('demuxer-max-bytes', '${ahead << 20}');
-      await player.setProperty('demuxer-max-back-bytes', '${back << 20}');
+      await _setReadAhead(player, foreground);
       await player.setProperty('demuxer-seekable-cache', 'yes');
       if (reuseTexture) await player.setRate(1);
       await player.setProperty('loop-file', v.loops ? 'inf' : 'no');
@@ -1023,6 +1050,7 @@ vec4 hook() {
       if (!active()) return;
       _readDecoder();
       _ready = true;
+      _fitOutput();
       _tick = Timer.periodic(const Duration(milliseconds: 250), (_) => _follow());
       _timingChanged();
       notifyListeners();
@@ -1088,14 +1116,125 @@ vec4 hook() {
 
   Future<void> _disposePlayer() async {
     final player = _player;
+    final video = _video;
     _resetLoadedVideo();
     _player = null;
     _video = null;
     _native = null;
     _shader = null;
+    _fitOutput(); // lets go of the texture's size listener
     if (!_disposed) notifyListeners();
+    // Windows: a media_kit player and its texture made anew each time a video stops and starts (a page changing, the
+    // window hidden and shown) left their driver threads and memory behind: about 80 threads and 200 MB more per
+    // start, for good, and the processor busier with each. The player is parked instead: its file closed (the
+    // decoder, buffers and network go), the player and texture kept for the next video.
+    if (!_disposed && Host.isWindows && player is _KitEngine && video != null) {
+      final before = _parked;
+      _parked = (engine: player, video: video);
+      if (before != null && !identical(before.engine, player)) await before.engine.dispose();
+      try {
+        await player.kit.stop();
+      } catch (e) {
+        debugPrint('Video mode: parking the player: $e');
+      }
+      return;
+    }
     await player?.dispose();
+    if (_disposed) {
+      final parked = _parked;
+      _parked = null;
+      await parked?.engine.dispose();
+    }
   }
+
+  // ---- The drawn size ----
+
+  /// The boxes (physical pixels) the views show the video in, by view; [VideoBox.cover] for one that fills its box.
+  final _viewBoxes = <Object, VideoBox>{};
+
+  /// A view shows the video in [box] (physical pixels), or no longer ([box] null).
+  void reportViewBox(Object view, VideoBox? box) {
+    if (box == null ? _viewBoxes.remove(view) == null : _viewBoxes[view] == box) return;
+    if (box != null) _viewBoxes[view] = box;
+    _fitOutput();
+  }
+
+  VideoController? _sizedVideo;
+  (int, int)? _outputSize;
+  VideoController? _outputFor;
+
+  /// The size the video is drawn at for [views] (physical boxes): the video's own, or smaller to fit the biggest of
+  /// them, the video's shape kept. Null: its own size. A picture drawn larger than its box is only scaled down by the
+  /// page again: drawn at the box's size it looks the same, and the texture, its copies and each frame's drawing cost
+  /// a fraction (a 1440p video shown in a 600-pixel cover: a tenth). The full-screen view and the page's background
+  /// take the video's own size.
+  @visibleForTesting
+  static (int, int)? outputSizeFor({required int width, required int height, required Iterable<VideoBox> views}) {
+    if (width <= 0 || height <= 0 || views.isEmpty) return null;
+    // Each view's scale of the video: fitted inside its box, or filling it (cropped).
+    var scale = 0.0;
+    for (final v in views) {
+      final across = v.size.width / width, down = v.size.height / height;
+      scale = math.max(scale, v.cover ? math.max(across, down) : math.min(across, down));
+    }
+    if (scale >= 0.9 || scale <= 0) return null;
+    // Even sides (what video surfaces like), never below a sliver.
+    int even(double x) => math.max(16, (x / 2).ceil() * 2);
+    return (even(width * scale), even(height * scale));
+  }
+
+  static const _videoChannel = MethodChannel('com.alexmercerind/media_kit_video');
+
+  /// Draws the video at [outputSizeFor] its views. media_kit sets the video's own size again with each new video;
+  /// the texture's rect changing tells, and the size is set once more.
+  void _fitOutput() {
+    final video = _video;
+    if (!identical(video, _sizedVideo)) {
+      _sizedVideo?.rect.removeListener(_fitOutput);
+      _sizedVideo = video;
+      // A parked player coming back keeps the size it was drawn at; another texture starts from its video's own.
+      if (video != null && !identical(video, _outputFor)) _outputSize = null;
+      video?.rect.addListener(_fitOutput);
+    }
+    final engine = _player;
+    if (video == null || engine is! _KitEngine) return;
+    final state = engine.kit.state;
+    final width = state.width ?? 0, height = state.height ?? 0;
+    if (width <= 0 || height <= 0) return;
+    // No view has told its box yet (a page changing, a background just come): the size drawn stays as it is, rather
+    // than the video's own for a frame nobody sees (a texture several times larger, made and dropped). The
+    // full-screen view takes the video's own size.
+    final (int, int) want;
+    if (_fullViews > 0) {
+      want = (width, height);
+    } else if (_viewBoxes.isEmpty) {
+      final kept = _outputSize;
+      want = kept != null && (kept.$1 / kept.$2 - width / height).abs() < 0.02 ? kept : (width, height);
+    } else {
+      want = outputSizeFor(width: width, height: height, views: _viewBoxes.values) ?? (width, height);
+    }
+    final rect = video.rect.value;
+    final drawn = rect == null ? null : (rect.width.round(), rect.height.round());
+    if (want == _outputSize && drawn == want) return;
+    _outputSize = want;
+    _outputFor = video;
+    debugPrint(
+      'Video mode: drawn at ${want.$1}x${want.$2} (video ${width}x$height, views ${_viewBoxes.values.toList()}, '
+      'full $_fullViews, backgrounds $_backgrounds)',
+    );
+    (engine.kit.platform as NativePlayer).handle
+        .then(
+          (handle) => _videoChannel.invokeMethod<void>('VideoOutputManager.SetSize', {
+            'handle': '$handle',
+            'width': '${want.$1}',
+            'height': '${want.$2}',
+          }),
+        )
+        .catchError((Object e) => debugPrint('Video mode: drawn size: $e'));
+  }
+
+  /// Windows: the media_kit player let go of last, with its texture, to play the next video ([_disposePlayer]).
+  ({_KitEngine engine, VideoController video})? _parked;
 
   void _resetLoadedVideo() {
     _manualTiming?.removeListener(_timingChanged);
@@ -1255,4 +1394,22 @@ class _KitEngine implements VideoEngine {
   Future<void> setProperty(String name, String value) => (kit.platform as NativePlayer).setProperty(name, value);
   @override
   Future<void> dispose() => kit.dispose();
+}
+
+/// A box a view shows the video in, in physical pixels: fitted inside it, or filling it ([cover], cropped).
+@immutable
+class VideoBox {
+  const VideoBox(this.size, {this.cover = false});
+
+  final Size size;
+  final bool cover;
+
+  @override
+  bool operator ==(Object other) => other is VideoBox && other.size == size && other.cover == cover;
+
+  @override
+  int get hashCode => Object.hash(size, cover);
+
+  @override
+  String toString() => '${size.width.round()}x${size.height.round()}${cover ? ' cover' : ''}';
 }

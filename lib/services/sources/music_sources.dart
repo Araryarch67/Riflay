@@ -14,9 +14,13 @@ class MusicSources extends ChangeNotifier {
 
   static final instance = MusicSources._();
 
-  static const _soundcloudKey = 'sources.soundcloud.v1';
-  static const _monochromeKey = 'sources.monochrome.v1';
-  static const _smartMergeKey = 'sources.smartMerge.v1';
+  // v2: off for everyone once. SoundCloud and Monochrome in search, and Smart merge, were on by default and left songs
+  // stuck fetching (Monochrome above all); now each is on only once the person turns it on. The v1 choices are
+  // dropped on the first start after the update ([_read]).
+  static const _soundcloudKey = 'sources.soundcloud.v2';
+  static const _monochromeKey = 'sources.monochrome.v2';
+  static const _smartMergeKey = 'sources.smartMerge.v2';
+  static const _oldKeys = ['sources.soundcloud.v1', 'sources.monochrome.v1', 'sources.smartMerge.v1'];
   static const _cacheKey = 'sources.smartMergeCacheMb.v1';
 
   /// How much Smart merge keeps on disk of the songs it played (MB), so a song played again opens from there
@@ -54,11 +58,11 @@ class MusicSources extends ChangeNotifier {
   }
 
   static const cacheChoices = [0, 512, 1024, 2048, 5120];
-  bool soundcloud = true;
-  bool monochrome = true;
+  bool soundcloud = false;
+  bool monochrome = false;
 
   /// A YouTube Music song plays its sound from the best place that has the same recording (see `SmartMerge`).
-  bool smartMerge = true;
+  bool smartMerge = false;
 
   Future<void>? _loading;
 
@@ -69,9 +73,12 @@ class MusicSources extends ChangeNotifier {
     audioCap = p.getInt('stream.audioCap') ?? 0;
     dataSaver = p.getBool('stream.dataSaver') ?? false;
     YoutubeStream.configurePlayback(audioCap, dataSaver);
-    soundcloud = p.getBool(_soundcloudKey) ?? true;
-    monochrome = p.getBool(_monochromeKey) ?? true;
-    smartMerge = p.getBool(_smartMergeKey) ?? true;
+    soundcloud = p.getBool(_soundcloudKey) ?? false;
+    monochrome = p.getBool(_monochromeKey) ?? false;
+    smartMerge = p.getBool(_smartMergeKey) ?? false;
+    for (final old in _oldKeys) {
+      if (p.containsKey(old)) p.remove(old).ignore();
+    }
     videoMb = (p.getInt('cache.videoMb') ?? 384).clamp(0, 5120);
     imageMb = (p.getInt('cache.imageMb') ?? 128).clamp(0, 5120);
     VideoStreamCache.instance.maxBytes = videoMb << 20;
@@ -118,6 +125,6 @@ class MusicSources extends ChangeNotifier {
   @visibleForTesting
   void reset() {
     _loading = null;
-    soundcloud = monochrome = smartMerge = true;
+    soundcloud = monochrome = smartMerge = false;
   }
 }

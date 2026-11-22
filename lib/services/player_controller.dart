@@ -2969,8 +2969,11 @@ class PlayerController extends ChangeNotifier {
     } else if (player.playing && player.processingState != ProcessingState.completed) {
       await player.pause();
     } else {
-      // At the end of the queue play() would do nothing: start it over.
-      if (player.processingState == ProcessingState.completed) await player.seek(Duration.zero, index: 0);
+      // At the end of the queue play() would do nothing: the song the player shows (the last one) plays again from its
+      // start. Not the queue's first song: Play on a bar showing one song must not start another.
+      if (player.processingState == ProcessingState.completed) {
+        await player.seek(Duration.zero, index: player.currentIndex ?? 0);
+      }
       unawaited(_play());
     }
   }

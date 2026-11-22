@@ -22,8 +22,8 @@ void main() {
     SharedPreferences.setMockInitialValues({
       'discord.enabled': false,
       'search.source.v1': 'both',
-      'sources.soundcloud.v1': true,
-      'sources.monochrome.v1': true,
+      'sources.soundcloud.v2': true,
+      'sources.monochrome.v2': true,
     });
     SearchSource.reset();
     final c = PlayerController();

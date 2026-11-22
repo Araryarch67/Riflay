@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:riflay/models/track.dart';
 import 'package:riflay/services/smart_merge.dart';
+import 'package:riflay/services/sources/music_sources.dart';
 import 'package:riflay/ui/widgets/controls.dart';
 
 void main() {
@@ -13,8 +14,15 @@ void main() {
     videoId: 'abcdefghijk',
   );
 
-  setUp(SmartMerge.instance.clear);
-  tearDown(SmartMerge.instance.clear);
+  setUp(() {
+    SmartMerge.instance.clear();
+    // Off by default: the marks for a song on its way need a source turned on.
+    MusicSources.instance.monochrome = true;
+  });
+  tearDown(() {
+    SmartMerge.instance.clear();
+    MusicSources.instance.reset();
+  });
 
   Future<void> show(WidgetTester tester) => tester.pumpWidget(
     MaterialApp(

@@ -214,7 +214,7 @@ void main() {
 
     Future<PlayerController> pumpButton(WidgetTester tester, {Track? track}) async {
       // Monochrome off: with it on, a YouTube song asks which source to download from first.
-      SharedPreferences.setMockInitialValues({'library.v1': jsonEncode(<Object>[]), 'sources.monochrome.v1': false});
+      SharedPreferences.setMockInitialValues({'library.v1': jsonEncode(<Object>[]), 'sources.monochrome.v2': false});
       MusicSources.instance.reset();
       final prefs = DownloadPrefs.instance;
       await tester.runAsync(() async {

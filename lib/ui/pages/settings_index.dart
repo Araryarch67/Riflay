@@ -1198,6 +1198,8 @@ abstract final class SettingsOptions {
       'smartMergeToday',
       .sources,
       (t) => t.smartMergeToday,
+      // Shown once Smart merge is on (off by default).
+      parent: 'smartMerge',
       available: () => Features.smartMerge,
       find: (t) => '${t.smartMerge}, ${t.kwSources}',
     ),

@@ -78,7 +78,7 @@ void main() {
     SharedPreferences.setMockInitialValues({
       'search.source.v1': 'soundcloud',
       'soundcloud.clientId.v1': 'id',
-      'sources.soundcloud.v1': true,
+      'sources.soundcloud.v2': true,
     });
     SearchSource.reset();
     addTearDown(SearchSource.reset);
@@ -153,7 +153,7 @@ void main() {
   });
 
   testWidgets('the source switch selects and remembers all three services', (tester) async {
-    SharedPreferences.setMockInitialValues({'sources.soundcloud.v1': true, 'sources.monochrome.v1': true});
+    SharedPreferences.setMockInitialValues({'sources.soundcloud.v2': true, 'sources.monochrome.v2': true});
     SearchSource.reset();
     addTearDown(SearchSource.reset);
     await tester.pumpWidget(
@@ -185,8 +185,8 @@ void main() {
     SharedPreferences.setMockInitialValues({
       'search.source.v1': 'youtubeMusic',
       'soundcloud.clientId.v1': 'id',
-      'sources.monochrome.v1': true,
-      'sources.soundcloud.v1': true,
+      'sources.monochrome.v2': true,
+      'sources.soundcloud.v2': true,
     });
     SearchSource.reset();
     addTearDown(SearchSource.reset);
@@ -261,7 +261,7 @@ void main() {
   });
 
   testWidgets('the menu shows enabled services and falls back when the active one is disabled', (tester) async {
-    SharedPreferences.setMockInitialValues({'sources.monochrome.v1': true, 'sources.soundcloud.v1': false});
+    SharedPreferences.setMockInitialValues({'sources.monochrome.v2': true, 'sources.soundcloud.v2': false});
     SearchSource.reset();
     addTearDown(SearchSource.reset);
     await tester.pumpWidget(
