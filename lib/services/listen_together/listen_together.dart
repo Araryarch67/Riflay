@@ -268,6 +268,7 @@ class ListenTogether extends ChangeNotifier {
     );
     _subs.add(p.playingStream.distinct().listen((_) => _broadcastSoonDebounced()));
     _subs.add(p.positionDiscontinuityStream.listen((_) => _broadcastSoonDebounced()));
+    _tick?.cancel();
     _tick = Timer.periodic(const Duration(seconds: 5), (_) => _broadcastState());
     notifyListeners();
   }

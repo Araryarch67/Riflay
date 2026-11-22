@@ -226,6 +226,7 @@ class Cast extends ChangeNotifier {
         notifyListeners();
       }, onError: (Object _) {}).ignore();
     }
+    _poll?.cancel();
     _poll = Timer.periodic(pollEvery, (_) => _refresh());
     notifyListeners();
   }
