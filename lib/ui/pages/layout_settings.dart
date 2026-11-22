@@ -1,3 +1,4 @@
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
 import '../../services/appearance.dart';
@@ -572,6 +573,96 @@ class LayoutSettings extends StatelessWidget {
                   value: p.keepPhoneNavOpen,
                   onChanged: p.setKeepPhoneNavOpen,
                 ),
+              if (Features.desktopLayout)
+                SettingTile(
+                  icon: Icons.dashboard_customize_outlined,
+                  title: Text(tr.desktopLayout),
+                  subtitle: Text(tr.desktopLayoutHint, style: muted),
+                  control: OptionPicker<DesktopLayout>(
+                    value: p.desktopLayout,
+                    options: [for (final v in DesktopLayout.values) (v, v.label)],
+                    onChanged: p.applyDesktopLayout,
+                  ),
+                ),
+              if (Features.desktopLayout)
+                SwitchListTile(
+                  secondary: const Icon(Icons.vertical_split_outlined),
+                  title: Text(tr.fullHeightRail),
+                  subtitle: Text(tr.fullHeightRailHint, style: muted),
+                  value: p.fullHeightRail,
+                  onChanged: p.setFullHeightRail,
+                ),
+              if (Features.desktopLayout)
+                SwitchListTile(
+                  secondary: const Icon(Icons.manage_search_rounded),
+                  title: Text(tr.centeredSearch),
+                  subtitle: Text(tr.centeredSearchHint, style: muted),
+                  value: p.centeredSearch,
+                  onChanged: p.setCenteredSearch,
+                ),
+              SwitchListTile(
+                secondary: const Icon(Icons.blur_on_rounded),
+                title: Text(tr.coverGlass),
+                subtitle: Text(tr.coverGlassHint, style: muted),
+                value: p.coverGlass,
+                onChanged: p.setCoverGlass,
+              ),
+              if (p.coverGlass) ...[
+                SettingTile(
+                  icon: Icons.wallpaper_rounded,
+                  title: Text(tr.glassBackground),
+                  subtitle: Text(
+                    p.glassBackground == GlassBackground.image && p.glassImage != null
+                        ? p.glassImage!.split(RegExp(r'[\\/]')).last
+                        : tr.glassBackgroundHint,
+                    style: muted,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  control: OptionPicker<GlassBackground>(
+                    value: p.glassBackground,
+                    options: [for (final v in GlassBackground.values) (v, v.label)],
+                    onChanged: (v) async {
+                      if (v != GlassBackground.image) return p.setGlassBackground(v);
+                      // Your image: a picture file, chosen each time this is picked (it can be changed so).
+                      final file = (await FilePicker.pickFiles(
+                        type: FileType.image,
+                        dialogTitle: tr.glassChooseImage,
+                      )).firstOrNull;
+                      final path = file?.path;
+                      if (path != null) await p.setGlassBackground(v, image: path);
+                    },
+                  ),
+                ),
+                SwitchListTile(
+                  secondary: const Icon(Icons.blur_linear_rounded),
+                  title: Text(tr.glassBlur),
+                  subtitle: Text(tr.glassBlurHint, style: muted),
+                  value: p.glassBlur,
+                  onChanged: p.setGlassBlur,
+                ),
+              ],
+              SwitchListTile(
+                secondary: const Icon(Icons.wb_sunny_outlined),
+                title: Text(tr.greetingChip),
+                subtitle: Text(tr.greetingChipHint, style: muted),
+                value: p.greetingChip,
+                onChanged: p.setGreetingChip,
+              ),
+              SwitchListTile(
+                secondary: const Icon(Icons.local_fire_department_outlined),
+                title: Text(tr.sectionIcons),
+                subtitle: Text(tr.sectionIconsHint, style: muted),
+                value: p.sectionIcons,
+                onChanged: p.setSectionIcons,
+              ),
+              SwitchListTile(
+                secondary: const Icon(Icons.grid_view_rounded),
+                title: Text(tr.detailedQuickAccess),
+                subtitle: Text(tr.detailedQuickAccessHint, style: muted),
+                value: p.detailedQuickAccess,
+                onChanged: p.setDetailedQuickAccess,
+              ),
               if (Features.desktopLayout)
                 SettingTile(
                   icon: Icons.view_sidebar_outlined,

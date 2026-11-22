@@ -9,6 +9,7 @@ project(runner LANGUAGES CXX)
 add_executable(${BINARY_NAME} WIN32
   "flutter_window.cpp"
   "main.cpp"
+  "media_controls.cpp"
   "utils.cpp"
   "video_window.cpp"
   "win32_window.cpp"
@@ -35,6 +36,8 @@ target_compile_definitions(${BINARY_NAME} PRIVATE "NOMINMAX")
 # dependencies here.
 target_link_libraries(${BINARY_NAME} PRIVATE flutter flutter_wrapper_app)
 target_link_libraries(${BINARY_NAME} PRIVATE "dwmapi.lib" "advapi32.lib")
+# Windows' media session (media_controls.cpp): C++/WinRT, and the stream wrapper for covers.
+target_link_libraries(${BINARY_NAME} PRIVATE "windowsapp.lib" "shcore.lib")
 target_include_directories(${BINARY_NAME} PRIVATE "${CMAKE_SOURCE_DIR}")
 
 # Run the Flutter tool portions of the build. This must not be removed.

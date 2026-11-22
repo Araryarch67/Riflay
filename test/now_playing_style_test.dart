@@ -10,6 +10,7 @@ import 'package:liquid_glass_renderer/liquid_glass_renderer.dart';
 import 'package:riflay/models/track.dart';
 import 'package:riflay/services/appearance.dart';
 import 'package:riflay/services/beta_features.dart';
+import 'package:riflay/services/color_tools.dart';
 import 'package:riflay/services/layout_prefs.dart';
 import 'package:riflay/services/lyrics.dart';
 import 'package:riflay/services/player_controller.dart';
@@ -22,6 +23,7 @@ import 'package:riflay/ui/pages/player_presets_page.dart';
 import 'package:riflay/ui/player/mini_player.dart';
 import 'package:riflay/ui/player/now_playing_page.dart';
 import 'package:riflay/ui/player/side_panel.dart';
+import 'package:riflay/ui/player/player_styles_page.dart';
 import 'package:riflay/ui/player/player_parts.dart';
 import 'package:riflay/ui/player/player_glass.dart';
 import 'package:riflay/ui/shell_scope.dart';
@@ -134,6 +136,39 @@ void main() {
   tearDown(() async {
     await p.reset();
     await Appearance.instance.setNowPlaying(NowPlayingBackground.color);
+  });
+
+  testWidgets('plain transport keeps a contrasting Pause glyph in light mode', (tester) async {
+    final appearance = Appearance.instance;
+    addTearDown(() => tester.runAsync(appearance.reset));
+    await tester.runAsync(() => appearance.setTheme(ThemeChoice.catppuccinLatte));
+    final player = await _show(tester, const Scaffold(body: PlayerControlsRow(plain: true)), const Size(390, 800));
+    await tester.tap(find.byType(PlayButton));
+    await tester.pumpAndSettle();
+    final button = tester.widget<PlayButton>(find.byType(PlayButton));
+    expect(find.byIcon(Icons.pause_rounded), findsOneWidget);
+    expect(contrastRatio(button.iconColor!, button.color!), greaterThanOrEqualTo(4.5));
+    await _close(tester, player);
+  });
+
+  testWidgets('white player glass keeps dark control icons in a dark theme', (tester) async {
+    final appearance = Appearance.instance;
+    addTearDown(() => tester.runAsync(appearance.reset));
+    await tester.runAsync(() async {
+      await appearance.setTheme(ThemeChoice.nord);
+      await PlayerPreset.liquidKawaii.apply(p);
+      await p.setPlayerGlassTint(GlassTint.light);
+    });
+    final player = await _show(
+      tester,
+      Scaffold(
+        body: PartButton(icon: Icons.skip_next_rounded, tooltip: 'Next', onPressed: () {}),
+      ),
+      const Size(390, 800),
+    );
+    final button = tester.widget<IconButton>(find.byType(IconButton));
+    expect(contrastRatio(button.style!.foregroundColor!.resolve({})!, Colors.white), greaterThanOrEqualTo(4.5));
+    await _close(tester, player);
   });
 
   test('every player setting starts as Classic, persists and resets', () async {
@@ -540,7 +575,10 @@ void main() {
     testWidgets('${preset.name} gives transparent player controls liquid surfaces and keeps playback usable', (
       tester,
     ) async {
-      await tester.runAsync(() => preset.apply(p));
+      await tester.runAsync(() async {
+        await preset.apply(p);
+        await p.setShowPlayerClose(true);
+      });
       final c = await _show(tester, const NowPlayingPage(), const Size(360, 640));
       expect(find.byType(PlayerGlassLayer), findsOneWidget);
       expect(find.byType(LiquidGlass), findsWidgets);
@@ -623,7 +661,10 @@ void main() {
   }
 
   testWidgets('Liquid Kawaii: shuffle, repeat and Close are glass circles, not squircles', (tester) async {
-    await tester.runAsync(() => PlayerPreset.liquidKawaii.apply(p));
+    await tester.runAsync(() async {
+      await PlayerPreset.liquidKawaii.apply(p);
+      await p.setShowPlayerClose(true);
+    });
     final c = await _show(tester, const NowPlayingPage(), const Size(360, 640));
     for (final tip in ['Enable shuffle', 'Enable repeat', 'Close']) {
       final glass = find.ancestor(of: _tip(tip).first, matching: find.byType(LiquidGlass)).first;
@@ -766,7 +807,10 @@ void main() {
             // Windows may still hold the file for a moment; it is a temp folder.
           }
         });
-        await tester.runAsync(() => preset.apply(p));
+        await tester.runAsync(() async {
+          await preset.apply(p);
+          await p.setShowPlayerClose(true);
+        });
         final track = _track;
         await tester.runAsync(() => UserLyrics.save(track, '[00:00.00]Some words\n[00:10.00]More words'));
 
@@ -842,4 +886,34 @@ void main() {
       },
     );
   }
+
+  testWidgets('holding Now Playing opens Styles: a swipe tries a preset on, Back undoes it and Set keeps it', (
+    tester,
+  ) async {
+    await PlayerPreset.classic.apply(p);
+    final c = await _show(tester, const NowPlayingPage(), const Size(412, 915));
+    final before = jsonEncode(p.toJson());
+    await tester.longPressAt(const Offset(206, 300));
+    await tester.pumpAndSettle();
+    expect(find.byType(PlayerStylesPage), findsOneWidget);
+    expect(find.text('Styles'), findsOneWidget);
+    expect(find.text(PlayerPreset.classic.name), findsWidgets);
+
+    await tester.fling(find.byType(PageView), const Offset(-300, 0), 1000);
+    await tester.pumpAndSettle();
+    expect(PlayerPreset.all[1].matches(p), isTrue, reason: 'the card in the middle is tried on');
+    await tester.tap(find.byTooltip('Back').hitTestable());
+    await tester.pumpAndSettle();
+    expect(find.byType(PlayerStylesPage), findsNothing);
+    expect(jsonEncode(p.toJson()), before, reason: 'leaving without Set puts the look back');
+
+    await tester.longPressAt(const Offset(206, 300));
+    await tester.pumpAndSettle();
+    await tester.fling(find.byType(PageView), const Offset(-300, 0), 1000);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Set').hitTestable());
+    await tester.pumpAndSettle();
+    expect(PlayerPreset.all[1].matches(p), isTrue, reason: 'Set keeps the preset');
+    await _close(tester, c);
+  });
 }

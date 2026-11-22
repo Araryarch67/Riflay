@@ -1,5 +1,9 @@
-import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:async';
+
 import 'package:flutter/widgets.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+import 'soundcloud_results.dart' show SearchSource;
 
 /// The desktop title bar's search box, shared with the search page: typing
 /// there drives the page's results.
@@ -9,13 +13,24 @@ class SearchInput {
 
   /// Enter (or a picked suggestion): search now, with this text.
   final submitted = ValueNotifier<(String, int)>(('', 0));
+  final _sources = StreamController<SearchSource>.broadcast(sync: true);
+  Stream<SearchSource> get sourceSelection => _sources.stream;
 
   void submit(String query) => submitted.value = (query, submitted.value.$2 + 1);
+
+  void selectSource(SearchSource source) {
+    if (_sources.hasListener) {
+      _sources.add(source);
+    } else {
+      source.choose();
+    }
+  }
 
   void dispose() {
     controller.dispose();
     focus.dispose();
     submitted.dispose();
+    _sources.close();
   }
 }
 

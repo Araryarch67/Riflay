@@ -1085,7 +1085,7 @@ class Appearance extends ChangeNotifier {
       final family = j['fontFamily'] as String?;
       final files = (j['fontFiles'] as List?)?.cast<String>() ?? const [];
       // The saved files, not a rescan: fast, and a font that's gone falls back to the default.
-      if (family != null && await SystemFonts.load(family, files)) {
+      if (family != null && (bundledFonts.contains(family) || await SystemFonts.load(family, files))) {
         fontFamily = family;
         _fontFiles = files;
       }
@@ -1221,8 +1221,13 @@ class Appearance extends ChangeNotifier {
   Future<void> setWindowOpacity(double v) => _set(() => windowOpacity = v);
 
   /// Draws the app in [font] (null: back to Riflay's own). False when its files couldn't be loaded.
+  /// Typefaces that come with the app (beside the default): picked without loading any files.
+  static const bundledFonts = {'Figtree'};
+
   Future<bool> setFont(FontFamilyFiles? font) async {
-    if (font != null && !await SystemFonts.load(font.family, font.files)) return false;
+    if (font != null && !bundledFonts.contains(font.family) && !await SystemFonts.load(font.family, font.files)) {
+      return false;
+    }
     await _set(() {
       fontFamily = font?.family;
       _fontFiles = font?.files ?? const [];

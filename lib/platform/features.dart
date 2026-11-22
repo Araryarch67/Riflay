@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart' show TargetPlatform, defaultTargetPlatform;
 import 'package:flutter/widgets.dart' show WidgetsBinding;
 
+import '../app_version.dart';
 import 'host.dart';
 import 'web_audio.dart';
 import 'web_storage.dart';
@@ -15,8 +16,9 @@ abstract final class Features {
   /// A browser controls its own forward proxy; native app requests can configure one.
   static bool get networkProxy => !Host.isWeb;
 
-  /// On-demand release checks and native Android APK updates.
-  static bool get appUpdates => !Host.isWeb;
+  /// On-demand release checks and native Android APK updates. Nightly is a separate app from the stable
+  /// release, so it must not offer the stable build as an update; install the next nightly instead.
+  static bool get appUpdates => !Host.isWeb && !isNightly;
 
   /// FFmpeg and yt-dlp can be downloaded into Riflay's own tool folder on desktop.
   static bool get downloadedTools => Host.isLinux || Host.isWindows || Host.isMacOS;

@@ -159,6 +159,216 @@ abstract class AppLocalizations {
   /// **'Shortcut rail'**
   String get desktopSidebarShortcuts;
 
+  /// No description provided for @desktopLayout.
+  ///
+  /// In en, this message translates to:
+  /// **'Desktop layout'**
+  String get desktopLayout;
+
+  /// No description provided for @desktopLayoutHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Sets the sidebar, Home, Search and the player bar at once; each can still be changed below'**
+  String get desktopLayoutHint;
+
+  /// No description provided for @desktopLayoutRail.
+  ///
+  /// In en, this message translates to:
+  /// **'Rail'**
+  String get desktopLayoutRail;
+
+  /// No description provided for @fullHeightRail.
+  ///
+  /// In en, this message translates to:
+  /// **'Full-height rail'**
+  String get fullHeightRail;
+
+  /// No description provided for @fullHeightRailHint.
+  ///
+  /// In en, this message translates to:
+  /// **'The shortcut rail also runs beside the player bar'**
+  String get fullHeightRailHint;
+
+  /// No description provided for @greetingChip.
+  ///
+  /// In en, this message translates to:
+  /// **'Greeting chip'**
+  String get greetingChip;
+
+  /// No description provided for @greetingChipHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Shows Home\'s greeting small, with an icon for the time of day'**
+  String get greetingChipHint;
+
+  /// No description provided for @sectionIcons.
+  ///
+  /// In en, this message translates to:
+  /// **'Section icons'**
+  String get sectionIcons;
+
+  /// No description provided for @sectionIconsHint.
+  ///
+  /// In en, this message translates to:
+  /// **'An icon before each shelf title on Home'**
+  String get sectionIconsHint;
+
+  /// No description provided for @detailedQuickAccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Detailed quick access'**
+  String get detailedQuickAccess;
+
+  /// No description provided for @detailedQuickAccessHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Three columns, each tile with its subtitle and a menu'**
+  String get detailedQuickAccessHint;
+
+  /// No description provided for @centeredSearch.
+  ///
+  /// In en, this message translates to:
+  /// **'Centered search'**
+  String get centeredSearch;
+
+  /// No description provided for @centeredSearchHint.
+  ///
+  /// In en, this message translates to:
+  /// **'The search box above the results, centered on the page'**
+  String get centeredSearchHint;
+
+  /// No description provided for @openItem.
+  ///
+  /// In en, this message translates to:
+  /// **'Open'**
+  String get openItem;
+
+  /// No description provided for @coverGlass.
+  ///
+  /// In en, this message translates to:
+  /// **'Glass over the cover'**
+  String get coverGlass;
+
+  /// No description provided for @coverGlassHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Panels turn to see-through glass over the song\'s blurred cover (a random one before anything plays)'**
+  String get coverGlassHint;
+
+  /// No description provided for @glassBackground.
+  ///
+  /// In en, this message translates to:
+  /// **'Background'**
+  String get glassBackground;
+
+  /// No description provided for @glassBackgroundHint.
+  ///
+  /// In en, this message translates to:
+  /// **'What shows behind the glass'**
+  String get glassBackgroundHint;
+
+  /// No description provided for @glassBackgroundPlaying.
+  ///
+  /// In en, this message translates to:
+  /// **'Playing cover'**
+  String get glassBackgroundPlaying;
+
+  /// No description provided for @glassBackgroundRandom.
+  ///
+  /// In en, this message translates to:
+  /// **'Random cover'**
+  String get glassBackgroundRandom;
+
+  /// No description provided for @glassBackgroundImage.
+  ///
+  /// In en, this message translates to:
+  /// **'Your image'**
+  String get glassBackgroundImage;
+
+  /// No description provided for @glassChooseImage.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose an image'**
+  String get glassChooseImage;
+
+  /// No description provided for @glassBlur.
+  ///
+  /// In en, this message translates to:
+  /// **'Blur the background'**
+  String get glassBlur;
+
+  /// No description provided for @glassBlurHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Off shows it sharp'**
+  String get glassBlurHint;
+
+  /// No description provided for @setupLookTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose your look'**
+  String get setupLookTitle;
+
+  /// No description provided for @setupLookIntro.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick a layout and a player style. Everything can be changed later in Settings.'**
+  String get setupLookIntro;
+
+  /// No description provided for @setupLayoutClassicNote.
+  ///
+  /// In en, this message translates to:
+  /// **'The library beside your pages, the search box on top'**
+  String get setupLayoutClassicNote;
+
+  /// No description provided for @setupLayoutRailNote.
+  ///
+  /// In en, this message translates to:
+  /// **'A slim icon rail, search in the middle, a compact player'**
+  String get setupLayoutRailNote;
+
+  /// No description provided for @playerStyle.
+  ///
+  /// In en, this message translates to:
+  /// **'Player'**
+  String get playerStyle;
+
+  /// No description provided for @layoutLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Layout'**
+  String get layoutLabel;
+
+  /// No description provided for @podcasts.
+  ///
+  /// In en, this message translates to:
+  /// **'Podcasts'**
+  String get podcasts;
+
+  /// No description provided for @podcastShows.
+  ///
+  /// In en, this message translates to:
+  /// **'Shows'**
+  String get podcastShows;
+
+  /// No description provided for @podcastEpisodes.
+  ///
+  /// In en, this message translates to:
+  /// **'Episodes'**
+  String get podcastEpisodes;
+
+  /// No description provided for @styles.
+  ///
+  /// In en, this message translates to:
+  /// **'Styles'**
+  String get styles;
+
+  /// No description provided for @setStyle.
+  ///
+  /// In en, this message translates to:
+  /// **'Set'**
+  String get setStyle;
+
   /// No description provided for @expandLibrary.
   ///
   /// In en, this message translates to:
@@ -230,6 +440,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Made for you'**
   String get madeForYou;
+
+  /// No description provided for @artistMix.
+  ///
+  /// In en, this message translates to:
+  /// **'{artist} Mix'**
+  String artistMix(String artist);
+
+  /// No description provided for @artistMixDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'{artist} and what you play with them'**
+  String artistMixDescription(String artist);
+
+  /// No description provided for @discoveryMix.
+  ///
+  /// In en, this message translates to:
+  /// **'Discovery Mix'**
+  String get discoveryMix;
+
+  /// No description provided for @discoveryMixDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Artists you haven\'t played lately'**
+  String get discoveryMixDescription;
 
   /// No description provided for @artistMusicVideos.
   ///
@@ -12650,6 +12884,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Failed downloads: {count}'**
   String playlistDownloadsFailed(int count);
+
+  /// No description provided for @autoDownloadLiked.
+  ///
+  /// In en, this message translates to:
+  /// **'Automatically download liked songs'**
+  String get autoDownloadLiked;
+
+  /// No description provided for @dailySleepTimer.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily sleep timer'**
+  String get dailySleepTimer;
+
+  /// No description provided for @dailyPlaylistAlarm.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily playlist alarm'**
+  String get dailyPlaylistAlarm;
+
+  /// No description provided for @scheduleWhileRunning.
+  ///
+  /// In en, this message translates to:
+  /// **'Works while Riflay is running'**
+  String get scheduleWhileRunning;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

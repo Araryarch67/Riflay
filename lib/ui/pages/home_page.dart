@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 
 import '../../models/track.dart';
 import '../../platform/features.dart';
+import '../../services/appearance.dart';
 import '../../services/daily_mix.dart';
 import '../../services/language.dart';
 import '../../services/layout_prefs.dart';
@@ -34,6 +35,11 @@ import '../widgets/skeleton.dart';
 /// Streamed songs carry a cloud mark; everything else plays offline.
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
+
+  static IconData _greetingIcon() {
+    final h = DateTime.now().hour;
+    return h < 5 || h >= 18 ? Icons.nights_stay_rounded : Icons.wb_sunny_rounded;
+  }
 
   static String _greeting() {
     final h = DateTime.now().hour;
@@ -88,6 +94,7 @@ class HomePage extends StatelessWidget {
       if (c.library.isNotEmpty)
         QuickTile(
           title: tr.allSongs,
+          subtitle: tr.songsCount(c.allSongs.tracks.length),
           leading: PlaylistArtwork(
             coverKey: c.allSongs.coverKey,
             fallback: CoverMosaic(tracks: c.allSongs.tracks, radius: 0),
@@ -98,6 +105,7 @@ class HomePage extends StatelessWidget {
       if (liked != null)
         QuickTile(
           title: tr.likedMusic,
+          subtitle: tr.songsCount(liked.tracks.length),
           leading: PlaylistArtwork(
             coverKey: liked.coverKey,
             fallback: CoverMosaic(tracks: liked.tracks, radius: 0),
@@ -108,6 +116,7 @@ class HomePage extends StatelessWidget {
       for (final p in playlists.take(3))
         QuickTile(
           title: p.name,
+          subtitle: tr.playlistOnRiflay(p.tracks.length),
           leading: PlaylistArtwork(
             coverKey: PlaylistCovers.playlistKey(p.id),
             fallback: CoverMosaic(tracks: p.tracks, radius: 0),
@@ -118,6 +127,7 @@ class HomePage extends StatelessWidget {
       for (final p in remotePlaylists.take(3))
         QuickTile(
           title: p.title,
+          subtitle: p.count == 0 ? 'YouTube Music' : tr.playlistOnYoutubeMusic(p.count),
           leading: PlaylistArtwork(
             coverKey: PlaylistCovers.remoteKey(p.id),
             fallback: Artwork(track: playlistCover(p), radius: 0),
@@ -127,11 +137,13 @@ class HomePage extends StatelessWidget {
       for (final a in albums.take(3))
         QuickTile(
           title: a.title,
+          subtitle: a.subtitle,
           leading: Artwork(track: a.cover, radius: 0),
           onTap: () => shell.openCollection(a),
           onPlay: () => c.playCollection(a),
         ),
-    ].take(shell.compact ? 6 : 8).toList();
+    ].take(shell.compact || LayoutPrefs.instance.detailedQuickAccess ? 6 : 8).toList();
+    final detailedQuick = LayoutPrefs.instance.detailedQuickAccess;
 
     // Home's sections, in the order and with the ones switched on in Settings › Look & feel › Pages & navigation.
     final sections = <HomeSection, List<Widget>>{
@@ -153,7 +165,7 @@ class HomePage extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    SectionTitle(tr.quickPicks, compactSpacing: true),
+                    SectionTitle(tr.quickPicks, compactSpacing: true, icon: Icons.bolt_rounded),
                     Padding(
                       padding: EdgeInsets.symmetric(horizontal: pad),
                       child: _QuickPicksCarousel(tracks: picks),
@@ -164,29 +176,42 @@ class HomePage extends StatelessWidget {
             },
           ),
         if (carousel && quickPicks.isNotEmpty)
-          _shelf(tr.speedDial, quickPicks.length, (i) {
-            final pick = quickPicks[i];
-            return Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-              child: Align(
-                alignment: Alignment.topCenter,
-                child: AspectRatio(
-                  aspectRatio: 1,
-                  child: _HomeArtworkCard(artwork: pick.leading, title: pick.title, onTap: pick.onTap, compact: true),
+          _shelf(
+            tr.speedDial,
+            quickPicks.length,
+            (i) {
+              final pick = quickPicks[i];
+              return Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                child: Align(
+                  alignment: Alignment.topCenter,
+                  child: AspectRatio(
+                    aspectRatio: 1,
+                    child: _HomeArtworkCard(artwork: pick.leading, title: pick.title, onTap: pick.onTap, compact: true),
+                  ),
                 ),
-              ),
-            );
-          }, artworkOnly: true),
+              );
+            },
+            artworkOnly: true,
+            icon: Icons.speed_rounded,
+          ),
         if (quickPicks.isNotEmpty && !carousel)
           SliverPadding(
             padding: EdgeInsets.symmetric(horizontal: pad),
             sliver: SliverGrid.builder(
-              gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
-                maxCrossAxisExtent: shell.compact ? 260 : 360,
-                mainAxisExtent: LayoutPrefs.dense(shell.compact ? 56 : 64, shell.compact ? 48 : 52),
-                mainAxisSpacing: LayoutPrefs.dense(8, 4),
-                crossAxisSpacing: LayoutPrefs.dense(8, 4),
-              ),
+              gridDelegate: detailedQuick
+                  ? SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: shell.compact ? 2 : 3,
+                      mainAxisExtent: LayoutPrefs.dense(60, 52),
+                      mainAxisSpacing: LayoutPrefs.dense(8, 4),
+                      crossAxisSpacing: LayoutPrefs.dense(8, 4),
+                    )
+                  : SliverGridDelegateWithMaxCrossAxisExtent(
+                      maxCrossAxisExtent: shell.compact ? 260 : 360,
+                      mainAxisExtent: LayoutPrefs.dense(shell.compact ? 56 : 64, shell.compact ? 48 : 52),
+                      mainAxisSpacing: LayoutPrefs.dense(8, 4),
+                      crossAxisSpacing: LayoutPrefs.dense(8, 4),
+                    ),
               itemCount: quickPicks.length,
               itemBuilder: (_, i) => quickPicks[i],
             ),
@@ -212,7 +237,7 @@ class HomePage extends StatelessWidget {
             tracks: c.recentlyPlayed,
             builder: (context, recent) {
               if (recent.isEmpty) return const SliverToBoxAdapter(child: SizedBox.shrink());
-              return _shelf(tr.recentlyPlayed, recent.length, (i) {
+              return _shelf(tr.recentlyPlayed, icon: Icons.schedule_rounded, recent.length, (i) {
                 final t = recent[i];
                 return MediaCard(
                   track: t,
@@ -230,7 +255,7 @@ class HomePage extends StatelessWidget {
       ],
       HomeSection.playlists: [
         if (playlists.isNotEmpty || remotePlaylists.isNotEmpty)
-          _shelf(tr.yourPlaylists, playlists.length + remotePlaylists.length, (i) {
+          _shelf(tr.yourPlaylists, icon: Icons.queue_music_rounded, playlists.length + remotePlaylists.length, (i) {
             if (i < playlists.length) {
               final p = playlists[i];
               return MediaCard(
@@ -253,7 +278,7 @@ class HomePage extends StatelessWidget {
       ],
       HomeSection.albums: [
         if (albums.isNotEmpty)
-          _shelf(tr.yourAlbums, albums.length, (i) {
+          _shelf(tr.yourAlbums, icon: Icons.album_rounded, albums.length, (i) {
             final a = albums[i];
             return MediaCard(
               track: a.cover,
@@ -266,7 +291,7 @@ class HomePage extends StatelessWidget {
       ],
       HomeSection.artists: [
         if (artists.isNotEmpty || followedArtists.isNotEmpty)
-          _shelf(tr.artists, followedArtists.length + artists.length, (i) {
+          _shelf(tr.artists, icon: Icons.person_rounded, followedArtists.length + artists.length, (i) {
             if (i < followedArtists.length) {
               final artist = followedArtists[i];
               return MediaCard(
@@ -295,7 +320,7 @@ class HomePage extends StatelessWidget {
       ],
       HomeSection.recentlyAdded: [
         if (c.library.isNotEmpty)
-          _shelf(tr.recentlyAdded, math.min(20, c.recentlyAdded.length), (i) {
+          _shelf(tr.recentlyAdded, icon: Icons.new_releases_rounded, math.min(20, c.recentlyAdded.length), (i) {
             final t = c.recentlyAdded[i];
             return MediaCard(
               track: t,
@@ -308,18 +333,30 @@ class HomePage extends StatelessWidget {
       ],
     };
 
+    // What follows the greeting: the quick access grid has no title (and no room) above it.
+    final gridNext =
+        LayoutPrefs.instance.homeShown.firstOrNull == HomeSection.quickPicks && !carousel && quickPicks.isNotEmpty;
     final slivers = <Widget>[
       SliverToBoxAdapter(
         child: Padding(
-          padding: EdgeInsets.fromLTRB(pad, 0, pad, 16),
+          // The chip is shorter than the headline: room above it matches the room under it, whether a section
+          // title (which brings 16 of its own above it) or the quick access grid (none) comes next.
+          padding: LayoutPrefs.instance.greetingChip
+              ? (gridNext ? EdgeInsets.fromLTRB(pad, 12, pad, 20) : EdgeInsets.fromLTRB(pad, 20, pad, 12))
+              : EdgeInsets.fromLTRB(pad, 0, pad, 16),
           // The listening streak beside the greeting: the first thing seen, and a reason to come back tomorrow.
           child: Row(
             children: [
               Expanded(
-                child: Text(
-                  _greeting(),
-                  style: text.headlineMedium?.copyWith(fontWeight: FontWeight.w800, letterSpacing: -0.8),
-                ),
+                child: LayoutPrefs.instance.greetingChip
+                    ? Align(
+                        alignment: AlignmentDirectional.centerStart,
+                        child: GreetingChip(icon: _greetingIcon(), label: _greeting()),
+                      )
+                    : Text(
+                        _greeting(),
+                        style: text.headlineMedium?.copyWith(fontWeight: FontWeight.w800, letterSpacing: -0.8),
+                      ),
               ),
               const StreakBadge(),
             ],
@@ -362,18 +399,20 @@ class HomePage extends StatelessWidget {
       if (Features.localLibrary) _AddMenu(shell: shell),
     ];
 
-    // The header's colour follows the cover of what plays (or was played last). Only this leaf is redrawn when
-    // that changes; the sections above are the same widgets as before and are not rebuilt.
+    // Only themes that follow the cover use artwork for the header. Keep updates local to the header scaffold.
     return PlayerSelect<Track?>(
       select: (c) => c.currentTrack ?? c.recentlyPlayed.firstOrNull,
-      builder: (context, track, _) => AccentBuilder(
-        track: track,
-        builder: (context, accent) => PageScaffold(
-          gradientColor: accent,
-          brand: true,
-          hideToolbar: !LayoutPrefs.instance.showHomeToolbar,
-          actions: actions,
-          slivers: slivers,
+      builder: (context, track, _) => ListenableBuilder(
+        listenable: Appearance.instance,
+        builder: (context, _) => AccentBuilder(
+          track: Appearance.instance.followsCover ? track : null,
+          builder: (context, accent) => PageScaffold(
+            gradientColor: accent,
+            brand: true,
+            hideToolbar: !LayoutPrefs.instance.showHomeToolbar,
+            actions: actions,
+            slivers: slivers,
+          ),
         ),
       ),
     );
@@ -385,9 +424,11 @@ class HomePage extends StatelessWidget {
     Widget Function(int i) card, {
     VoidCallback? onShowAll,
     bool artworkOnly = false,
+    IconData? icon,
   }) => SliverToBoxAdapter(
     child: Shelf.builder(
       title: title,
+      icon: icon,
       count: count,
       card: card,
       onShowAll: onShowAll,
@@ -436,28 +477,53 @@ class _DailyMixShelfState extends State<_DailyMixShelf> {
     select: HomePage._recentKey,
     builder: (context, _, _) {
       final player = widget.player;
-      final tracks = buildDailyMix(recent: player.recentlyPlayed, available: widget.available, day: DateTime.now());
-      if (tracks.isEmpty) return const SliverToBoxAdapter(child: SizedBox.shrink());
-      final mix = Collection(
-        kind: CollectionKind.smart,
-        id: 'daily-mix',
-        title: tr.dailyMix,
-        subtitle: tr.dailyMixDescription,
-        tracks: tracks,
-      );
-      return SliverToBoxAdapter(
-        child: Shelf.builder(
-          title: tr.madeForYou,
-          count: 1,
-          compactSpacing: true,
-          card: (_) => MediaCard(
-            track: mix.cover,
-            title: mix.title,
-            subtitle: mix.subtitle,
-            onTap: () => ShellScope.of(context).openCollection(mix),
-            onPlay: () => player.playCollection(mix),
+      final made = [
+        for (final mix in buildHomeMixes(
+          recent: player.recentlyPlayed,
+          available: widget.available,
+          day: DateTime.now(),
+        ))
+          Collection(
+            kind: CollectionKind.smart,
+            id: mix.id,
+            title: switch (mix.kind) {
+              MixKind.daily => tr.dailyMix,
+              MixKind.artist => tr.artistMix(mix.artist ?? ''),
+              MixKind.discovery => tr.discoveryMix,
+            },
+            subtitle: switch (mix.kind) {
+              MixKind.daily => tr.dailyMixDescription,
+              MixKind.artist => tr.artistMixDescription(mix.artist ?? ''),
+              MixKind.discovery => tr.discoveryMixDescription,
+            },
+            tracks: mix.tracks,
           ),
-        ),
+      ];
+      // The radios started lately come first: their temporary playlists stay reachable here.
+      return ValueListenableBuilder<List<Collection>>(
+        valueListenable: player.recentRadios,
+        builder: (context, radios, _) {
+          final all = [...radios, ...made];
+          if (all.isEmpty) return const SliverToBoxAdapter(child: SizedBox.shrink());
+          return SliverToBoxAdapter(
+            child: Shelf.builder(
+              title: tr.madeForYou,
+              icon: Icons.auto_awesome_rounded,
+              count: all.length,
+              compactSpacing: true,
+              card: (i) {
+                final mix = all[i];
+                return MediaCard(
+                  track: mix.cover,
+                  title: mix.title,
+                  subtitle: mix.subtitle,
+                  onTap: () => ShellScope.of(context).openCollection(mix),
+                  onPlay: () => player.playCollection(mix),
+                );
+              },
+            ),
+          );
+        },
       );
     },
   );
@@ -710,9 +776,19 @@ class _AddYourMusic extends StatelessWidget {
 
 /// Compact "jump back in" tile: artwork on the left, bold title, play button on hover.
 class QuickTile extends StatefulWidget {
-  const QuickTile({super.key, required this.title, required this.leading, required this.onTap, this.onPlay});
+  const QuickTile({
+    super.key,
+    required this.title,
+    required this.leading,
+    required this.onTap,
+    this.onPlay,
+    this.subtitle,
+  });
 
   final String title;
+
+  /// Shown, with a menu, while Settings › Detailed quick access is on.
+  final String? subtitle;
   final Widget leading;
   final VoidCallback onTap;
   final VoidCallback? onPlay;
@@ -724,8 +800,11 @@ class QuickTile extends StatefulWidget {
 class _QuickTileState extends State<QuickTile> {
   bool _hover = false;
 
+  void _hovering(bool on) => setState(() => _hover = on);
+
   @override
   Widget build(BuildContext context) {
+    if (LayoutPrefs.instance.detailedQuickAccess) return _detailed(context);
     return MouseRegion(
       onEnter: (_) => setState(() => _hover = true),
       onExit: (_) => setState(() => _hover = false),
@@ -769,6 +848,98 @@ class _QuickTileState extends State<QuickTile> {
       ),
     );
   }
+}
+
+extension on _QuickTileState {
+  /// Three to a row: the cover inset on the tile, the title over its subtitle, and a menu at the end.
+  Widget _detailed(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    return MouseRegion(
+      onEnter: (_) => _hovering(true),
+      onExit: (_) => _hovering(false),
+      child: Material(
+        color: _hover ? AppColors.textPrimary.withValues(alpha: 0.12) : AppColors.tile,
+        borderRadius: LayoutPrefs.corner(6),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: widget.onTap,
+          hoverColor: Colors.transparent,
+          child: Padding(
+            padding: const EdgeInsetsDirectional.fromSTEB(8, 8, 4, 8),
+            child: Row(
+              children: [
+                ClipRRect(
+                  borderRadius: LayoutPrefs.corner(4),
+                  child: AspectRatio(aspectRatio: 1, child: widget.leading),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        widget.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: text.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+                      ),
+                      if (widget.subtitle case final subtitle? when subtitle.isNotEmpty)
+                        Text(
+                          subtitle,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: text.bodySmall?.copyWith(color: AppColors.textSecondary),
+                        ),
+                    ],
+                  ),
+                ),
+                PopupMenuButton<VoidCallback>(
+                  tooltip: tr.moreOptions,
+                  icon: const Icon(Icons.more_vert_rounded, size: 20),
+                  onSelected: (action) => action(),
+                  itemBuilder: (_) => [
+                    if (widget.onPlay case final play?) PopupMenuItem(value: play, child: Text(tr.play)),
+                    PopupMenuItem(value: widget.onTap, child: Text(tr.openItem)),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Home's greeting, small, on a chip with the time of day's icon.
+class GreetingChip extends StatelessWidget {
+  const GreetingChip({super.key, required this.icon, required this.label});
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) => DecoratedBox(
+    decoration: BoxDecoration(color: AppColors.tile, borderRadius: LayoutPrefs.corner(8)),
+    child: Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 20, color: AppColors.textPrimary),
+          const SizedBox(width: 10),
+          Flexible(
+            child: Text(
+              label,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
 }
 
 class _AddMenu extends StatelessWidget {

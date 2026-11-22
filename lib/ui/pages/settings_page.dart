@@ -375,7 +375,12 @@ class _SearchField extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    const pill = OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(500)), borderSide: BorderSide.none);
+    // On glass: the glass's own haze and small corners, as the panels around it.
+    final glass = AppColors.glass;
+    final pill = OutlineInputBorder(
+      borderRadius: BorderRadius.all(Radius.circular(glass ? 10 : 500)),
+      borderSide: BorderSide.none,
+    );
     // A Material 3 search bar, as on the Search page: 56 high, a tonal pill with no outline.
     return TextField(
       key: SettingsPage.searchKey,
@@ -397,7 +402,7 @@ class _SearchField extends StatelessWidget {
               : IconButton(tooltip: tr.clear, onPressed: controller.clear, icon: const Icon(Icons.close_rounded)),
         ),
         filled: true,
-        fillColor: scheme.surfaceContainerHigh,
+        fillColor: glass ? AppColors.tile : scheme.surfaceContainerHigh,
         hoverColor: scheme.onSurface.withValues(alpha: 0.08),
         contentPadding: const EdgeInsets.symmetric(vertical: 16),
         border: pill,

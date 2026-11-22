@@ -27,6 +27,7 @@ import 'more_sheet.dart';
 import 'player_common.dart' show ArtistLinks;
 import 'player_glass.dart';
 import 'player_parts.dart';
+import 'player_styles_page.dart';
 import 'video_full_view.dart';
 
 /// The name of Now Playing's route, so a page above it can tell whether it is underneath.
@@ -57,9 +58,13 @@ class NowPlayingPage extends StatelessWidget {
 
   Widget _page(BuildContext context, Track? track, String? from) {
     final a = Appearance.instance;
-    // "Black" is an explicit player background, even when the rest of the app
-    // is light. Keep its foreground and transport readable in that mode.
-    if (a.nowPlaying != NowPlayingBackground.black || !a.palette.light) return _surface(context, track, from);
+    final size = MediaQuery.sizeOf(context);
+    final sideways = size.width > size.height && size.height < 480;
+    final darkArtwork = LayoutPrefs.instance.playerCover == PlayerCover.background && track != null && !sideways;
+    // Full-bleed artwork is already darkened for white foreground content.
+    if ((!darkArtwork && a.nowPlaying != NowPlayingBackground.black) || !a.palette.light) {
+      return _surface(context, track, from);
+    }
     final palette = AppPalette.derive(Colors.black, accent: a.palette.accent);
     final theme = Theme.of(context);
     return AppColorsScope(
@@ -91,13 +96,18 @@ class NowPlayingPage extends StatelessWidget {
     final size = MediaQuery.sizeOf(context);
     final sideways = size.width > size.height && size.height < 480;
     final coverPage = LayoutPrefs.instance.playerCover == PlayerCover.background && track != null && !sideways;
+    final colors = AppColors.of(context);
     return AccentBuilder(
       track: track,
       builder: (context, accent) => PlayerGlassBackdrop(
         color: look == NowPlayingBackground.black
             ? Colors.black
+            : colors.light
+            ? colors.solidBackground
             : Color.lerp(accent, Colors.black, coverPage ? 0.38 : 0.20)!,
         child: GestureDetector(
+          // Holding the player opens Styles, the presets side by side.
+          onLongPress: () => openPlayerStyles(context),
           onVerticalDragUpdate: onDragUpdate,
           onVerticalDragCancel: onDragCancel,
           onVerticalDragEnd:
@@ -106,7 +116,7 @@ class NowPlayingPage extends StatelessWidget {
                 if ((d.primaryVelocity ?? 0) > 400) Navigator.of(context).pop();
               },
           child: Scaffold(
-            backgroundColor: AppColors.background,
+            backgroundColor: colors.background,
             // A touch on the top half (the cover or the video) brings the Song / Video switch back; buttons below
             // don't. Listened to, not taken: the touch still reaches whatever is there.
             body: Listener(
@@ -587,8 +597,8 @@ class PlayerVolumeRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = PlayerScope.read(context);
-    final colors = AppColors.of(context);
     final look = shape ?? LayoutPrefs.instance.volumeSlider;
+    final colors = PlayerGlassSurface.colorsOf(context, enabled: LayoutPrefs.instance.glassVolume);
     final thin = look == VolumeSliderShape.thin;
     final pill = look == VolumeSliderShape.pill;
     return PlayerSelect<({bool casting, double device, bool canSet, bool dop})>(

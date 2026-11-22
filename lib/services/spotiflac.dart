@@ -33,6 +33,10 @@ class SpotiflacError implements Exception {
 
 enum SpotiflacCapability { search, metadata, download, lyrics }
 
+class _SpotiflacBridgeLost extends SpotiflacError {
+  const _SpotiflacBridgeLost();
+}
+
 /// The upstream SpotiFLAC engine, isolated from Flutter behind a local pipe.
 class Spotiflac extends ChangeNotifier {
   Spotiflac({this.executable, this.directory});
@@ -99,15 +103,18 @@ class Spotiflac extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> _start() => _starting ??= _spawn();
+  Future<void> _start() => _starting ??= _spawn().catchError((Object error, StackTrace stack) {
+    _starting = null;
+    Error.throwWithStackTrace(error, stack);
+  });
   Future<void> _spawn() async {
     if (_mobile) {
       try {
         await _native.invokeMethod<void>('initialize', {'directory': (await _root()).path});
       } catch (_) {
-        _starting = null;
         throw const SpotiflacError();
       }
+      if (localNetwork) await _request('privateNetwork', {'enabled': true}, const Duration(seconds: 10));
       return;
     }
     final host =
@@ -119,7 +126,6 @@ class Spotiflac extends ChangeNotifier {
                 Host.isWindows ? 'spotiflac_bridge.exe' : 'spotiflac_bridge',
               ));
     if (!await File(host).exists()) {
-      _starting = null;
       throw const SpotiflacError();
     }
     final root = await _root();
@@ -146,10 +152,11 @@ class Spotiflac extends ChangeNotifier {
       _process = null;
       _starting = null;
       for (final request in _pending.values) {
-        if (!request.isCompleted) request.completeError(const SpotiflacError());
+        if (!request.isCompleted) request.completeError(const _SpotiflacBridgeLost());
       }
       _pending.clear();
     });
+    if (localNetwork) await _request('privateNetwork', {'enabled': true}, const Duration(seconds: 10));
   }
 
   Future<dynamic> call(
@@ -158,6 +165,10 @@ class Spotiflac extends ChangeNotifier {
     Duration timeout = const Duration(seconds: 60),
   ]) async {
     await _start();
+    return _request(method, params, timeout);
+  }
+
+  Future<dynamic> _request(String method, Map<String, dynamic> params, Duration timeout) async {
     final id = ++_nextId;
     if (_mobile) {
       try {
@@ -175,10 +186,12 @@ class Spotiflac extends ChangeNotifier {
         throw const SpotiflacError();
       }
     }
+    final process = _process;
+    if (process == null) throw const _SpotiflacBridgeLost();
     final request = Completer<dynamic>();
     _pending[id] = request;
     try {
-      _process!.stdin.writeln(jsonEncode({'id': id, 'method': method, 'params': params}));
+      process.stdin.writeln(jsonEncode({'id': id, 'method': method, 'params': params}));
       return await request.future.timeout(timeout);
     } finally {
       _pending.remove(id);
@@ -264,14 +277,24 @@ class Spotiflac extends ChangeNotifier {
     }
   }
 
-  Future<List<Track>> search(String query, {String? provider}) async {
+  Future<List<Track>> search(String query, {String? provider, bool fresh = false}) async {
     final id = provider ?? selected;
     if (id == null) return [];
-    final response = await call('call', {
+    Map<String, dynamic> params(bool fresh) => {
       'extension': id,
       'operation': 'search',
-      'args': {'query': query, 'limit': 50},
-    });
+      'args': {'query': query, 'limit': 50, if (fresh) 'fresh': true},
+    };
+    dynamic response;
+    try {
+      response = await call('call', params(fresh));
+    } on _SpotiflacBridgeLost {
+      response = await call('call', params(true));
+    } on SpotiflacError catch (error) {
+      // Expired provider credentials live in the extension VM; rebuild it once.
+      if (fresh || error.verificationRequired) rethrow;
+      response = await call('call', params(true));
+    }
     final list = response is List
         ? response
         : response is Map
@@ -540,6 +563,14 @@ class Spotiflac extends ChangeNotifier {
       }
       pending = await call('pendingAuth', {'extension': id});
     }
+    return _verificationUri(pending);
+  }
+
+  /// Gets the challenge raised by a search, without issuing a download request.
+  Future<Uri> searchVerificationUrl(String provider) async =>
+      _verificationUri(await call('pendingAuth', {'extension': provider}));
+
+  static Uri _verificationUri(Object? pending) {
     final uri = pending is Map ? Uri.tryParse(pending['auth_url']?.toString() ?? '') : null;
     if (uri == null || uri.scheme != 'https' || uri.host.isEmpty) {
       throw const SpotiflacError();
@@ -548,7 +579,11 @@ class Spotiflac extends ChangeNotifier {
   }
 
   Future<void> completeVerification(Track source, String grant, {String? provider}) async {
-    final result = await call('sessionGrant', {'extension': provider ?? downloadProviderOf(source), 'grant': grant});
+    await completeProviderVerification(provider ?? downloadProviderOf(source), grant);
+  }
+
+  Future<void> completeProviderVerification(String provider, String grant) async {
+    final result = await call('sessionGrant', {'extension': provider, 'grant': grant});
     if (result is! Map || result['success'] != true) throw const SpotiflacError();
   }
 

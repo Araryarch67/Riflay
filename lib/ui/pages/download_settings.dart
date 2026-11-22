@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:path/path.dart' as path;
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../platform/host.dart';
@@ -96,6 +97,11 @@ class _DownloadSettingsState extends State<DownloadSettings> {
           _heading(context, tr.whatToSave),
           SettingsCard(
             children: [
+              SwitchListTile(
+                title: Text(tr.autoDownloadLiked),
+                value: _prefs.autoDownloadLiked,
+                onChanged: _prefs.setAutoDownloadLiked,
+              ),
               SettingTile(
                 icon: Icons.swap_horiz_rounded,
                 title: Text(tr.downloadSource),
@@ -247,10 +253,13 @@ class _DownloadSettingsState extends State<DownloadSettings> {
                   title: Text(tr.downloadsFolder),
                   onTap: _fixed || !snap.hasData ? null : _chooseFolder,
                   subtitle: Text(
-                    _fixed ? tr.phoneDownloadsFixed(snap.data?.path ?? '…') : snap.data?.path ?? '…',
+                    snap.data == null
+                        ? '…'
+                        : _fixed
+                        ? tr.phoneDownloadsFixed(path.basename(snap.data!.path))
+                        : path.basename(snap.data!.path),
                     style: muted,
                   ),
-                  isThreeLine: _phone,
                   trailing: _fixed || !snap.hasData
                       ? null
                       : Row(

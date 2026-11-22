@@ -513,16 +513,23 @@ class _LineSlotState extends State<_LineSlot> {
   Widget build(BuildContext context) {
     lyricLineBuilds++;
     final line = widget.line;
+    final alignment = switch (line.vocalSide) {
+      LyricVocalSide.leading => TextAlign.start,
+      LyricVocalSide.trailing => TextAlign.end,
+      null => null,
+    };
     // Line by line never fills word by word, even where the lyrics have word timings.
     final timed =
         _place == _LinePlace.current && line.words.isNotEmpty && LayoutPrefs.instance.lyricsSync == LyricsSync.word;
     return _Line(
       text: line.text.isEmpty ? '♪' : line.text,
+      alignment: alignment,
       extra: widget.extra,
       style: widget.style,
       karaoke: timed
           ? KaraokeLine(
               words: line.words,
+              textAlign: alignment,
               sungColor: AppColors.textPrimary,
               position: widget.position,
               ticks: widget.ticks,
@@ -551,6 +558,7 @@ class _Line extends StatefulWidget {
     required this.color,
     this.extraColor,
     this.karaoke,
+    this.alignment,
     this.highlight = false,
     required this.onTap,
     this.onHold,
@@ -560,6 +568,7 @@ class _Line extends StatefulWidget {
   final bool highlight;
 
   final String text;
+  final TextAlign? alignment;
 
   /// Pronunciation / translation, smaller, under the line.
   final String? extra;
@@ -604,14 +613,16 @@ class _LineState extends State<_Line> {
           on: widget.highlight,
           child: Column(
             mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: _centred ? CrossAxisAlignment.stretch : CrossAxisAlignment.start,
+            crossAxisAlignment: _centred || widget.alignment == TextAlign.end
+                ? CrossAxisAlignment.stretch
+                : CrossAxisAlignment.start,
             children: [
               AnimatedDefaultTextStyle(
                 duration: _lineChange(200),
                 style: (widget.style ?? const TextStyle()).copyWith(
                   color: _hover && widget.karaoke == null ? AppColors.textPrimary : widget.color,
                 ),
-                child: widget.karaoke ?? Text(widget.text, textAlign: _textAlign),
+                child: widget.karaoke ?? Text(widget.text, textAlign: widget.alignment ?? _textAlign),
               ),
               if (widget.extra case final extra?)
                 AnimatedDefaultTextStyle(
@@ -621,7 +632,7 @@ class _LineState extends State<_Line> {
                   ),
                   child: Padding(
                     padding: const EdgeInsets.only(top: 2),
-                    child: Text(extra, textAlign: _textAlign),
+                    child: Text(extra, textAlign: widget.alignment ?? _textAlign),
                   ),
                 ),
             ],

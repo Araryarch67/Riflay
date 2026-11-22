@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'home_page.dart' show openHomeArtist;
 
@@ -9,6 +10,7 @@ import '../../models/track.dart';
 import '../../services/sources/music_sources.dart';
 import '../../services/spotiflac.dart';
 import '../../services/language.dart';
+import '../../services/layout_prefs.dart';
 import '../../services/player_controller.dart';
 import '../../services/soundcloud.dart' show SoundcloudCollection;
 import '../../services/youtube_music_account.dart';
@@ -21,6 +23,7 @@ import '../widgets/page_scaffold.dart';
 import '../widgets/spotiflac_notice.dart';
 import '../widgets/track_row.dart';
 import 'search/free_sources.dart';
+import 'spotiflac_verification_page.dart';
 import 'search/local_results.dart';
 import 'search/remote_results.dart';
 import 'search/search_box.dart';
@@ -37,10 +40,84 @@ export 'search/search_input.dart' show SearchInput, RecentSearches;
 /// How long typing must pause before the library is scanned again (YouTube waits longer, below).
 const _localDebounce = Duration(milliseconds: 80);
 
+/// A filter of the centred search: an icon and its name, the picked one on a soft tile, no outline.
+class SearchTab extends StatelessWidget {
+  const SearchTab({super.key, required this.icon, required this.label, required this.selected, required this.onTap});
+
+  final IconData icon;
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = selected ? AppColors.textPrimary : AppColors.textSecondary;
+    return Semantics(
+      selected: selected,
+      button: true,
+      child: Material(
+        color: selected ? AppColors.hover : Colors.transparent,
+        borderRadius: LayoutPrefs.corner(8),
+        child: InkWell(
+          borderRadius: LayoutPrefs.corner(8),
+          onTap: selected ? null : onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(icon, size: 18, color: color),
+                const SizedBox(width: 8),
+                Text(
+                  label,
+                  style: Theme.of(context).textTheme.labelLarge?.copyWith(color: color, fontWeight: FontWeight.w600),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Settings › Centered search: Search over the page, as wide as a column down its middle.
+class SearchPopup extends StatelessWidget {
+  const SearchPopup({super.key, required this.input, required this.focusNode});
+
+  final SearchInput input;
+  final FocusNode focusNode;
+
+  @override
+  Widget build(BuildContext context) {
+    final size = MediaQuery.sizeOf(context);
+    // A block of one height in the middle of the window, its box at the top: the box doesn't move as results
+    // come and go, and it sits where the eye is rather than at the window's top edge.
+    final height = math.min(640.0, size.height * 0.72);
+    return SafeArea(
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxWidth: 920, maxHeight: height),
+            child: Material(
+              type: MaterialType.transparency,
+              child: SearchPage(input: input, focusNode: focusNode, popup: true),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class SearchPage extends StatefulWidget {
-  const SearchPage({super.key, this.focusNode, this.input, this.boxInBar});
+  const SearchPage({super.key, this.focusNode, this.input, this.boxInBar, this.popup = false});
 
   final FocusNode? focusNode;
+
+  /// Drawn in [SearchPopup]: the box over the results, whatever the title bar holds.
+  final bool popup;
 
   /// Desktop: the title bar's search box types into this page, which then
   /// shows no box of its own.
@@ -56,6 +133,7 @@ class SearchPage extends StatefulWidget {
 
 class _SearchPageState extends State<SearchPage> {
   late final TextEditingController _controller = widget.input?.controller ?? TextEditingController();
+  StreamSubscription<SearchSource>? _sourceSelection;
 
   @override
   void initState() {
@@ -68,6 +146,7 @@ class _SearchPageState extends State<SearchPage> {
     if (widget.input case final input?) {
       input.controller.addListener(_fromBar);
       input.submitted.addListener(_submittedFromBar);
+      _sourceSelection = input.sourceSelection.listen(_selectSource);
       // Opened by typing: the first build already answers what's in the box (no empty page first).
       // One letter has nothing to send to YouTube; longer text goes through the usual path.
       if (_controller.text.trim().length < 2) {
@@ -105,7 +184,7 @@ class _SearchPageState extends State<SearchPage> {
   WebResultKind? _filter;
   Future<List<RemotePlaylist>>? _only;
 
-  /// "Videos": plain YouTube instead of YouTube Music songs.
+  /// "Videos": YouTube Music's videos (plain YouTube when that fails) instead of its songs.
   bool _videos = false;
   YoutubeVideoSearch? _videoSearch;
   List<Track> _videoTracks = const [];
@@ -114,6 +193,12 @@ class _SearchPageState extends State<SearchPage> {
   bool _videoLoadingMore = false;
   bool _videoEnd = false;
   int _videoRun = 0;
+
+  /// "Podcasts": YouTube Music's shows (opening as their episodes) over the episodes themselves.
+  bool _podcasts = false;
+  Future<List<RemotePlaylist>>? _podcastShows;
+  Future<List<Track>>? _episodes;
+  final _shownEpisodes = ShownSongs();
 
   /// The last results shown: they stay (dimmed) while the next query loads, instead of flashing a spinner.
   final _shown = ShownSongs();
@@ -143,6 +228,7 @@ class _SearchPageState extends State<SearchPage> {
     if (widget.input case final input?) {
       input.controller.removeListener(_fromBar);
       input.submitted.removeListener(_submittedFromBar);
+      _sourceSelection?.cancel();
     } else {
       _controller.dispose();
     }
@@ -226,12 +312,12 @@ class _SearchPageState extends State<SearchPage> {
     }
   }
 
-  void _searchYoutube(String q) {
+  void _searchYoutube(String q, {bool freshExtension = false}) {
     if (_blockedSource != null) return;
     final c = PlayerScope.read(context);
     if (_onExtensions) {
       _extensionSelection = Spotiflac.instance.selected;
-      _extensionResults = Spotiflac.instance.search(q)..ignore();
+      _extensionResults = Spotiflac.instance.search(q, fresh: freshExtension)..ignore();
       _youtube = _all = _only = _top = null;
       _soundcloud = null;
       _soundcloudShelves = null;
@@ -257,15 +343,37 @@ class _SearchPageState extends State<SearchPage> {
       return;
     }
     if (_videos) return _searchVideos(q);
+    if (_podcasts) {
+      _podcastShows = c.ytMusic.searchPodcasts(q)..ignore();
+      _episodes = c.ytMusic.searchEpisodes(q)..ignore();
+      return;
+    }
     _youtube = c.searchYoutube(q);
     _all = c.ytMusic.search(q);
     _top = topAndSongsFuture(_all, _youtube);
     _only = _filter == null || _filter == WebResultKind.song ? null : c.ytMusic.searchOnly(q, _filter!);
   }
 
+  void _retryExtension({bool fresh = true}) {
+    final query = _query.trim();
+    if (!_onExtensions || query.length < 2) return;
+    _debounce?.cancel();
+    setState(() => _searchYoutube(query, freshExtension: fresh));
+  }
+
+  Future<void> _verifySearchExtension() async {
+    final provider = _extensionSelection;
+    if (provider == null || provider != Spotiflac.instance.selected) return;
+    final verified = await showSpotiflacSearchVerification(context, provider);
+    if (mounted && verified && provider == Spotiflac.instance.selected) _retryExtension(fresh: false);
+  }
+
   void _searchVideos(String q) {
     final run = ++_videoRun;
-    final search = _videoSearch ??= YoutubeVideoSearch();
+    final music = PlayerScope.read(context).ytMusic;
+    final search = _videoSearch ??= YoutubeVideoSearch(
+      music: (query, continuation) => music.searchVideoPage(query, continuation: continuation),
+    );
     _videoLoading = true;
     _videoFailed = false;
     _videoLoadingMore = false;
@@ -315,7 +423,18 @@ class _SearchPageState extends State<SearchPage> {
     }
   }
 
+  void _setPodcasts(bool podcasts) {
+    if (podcasts == _podcasts) return;
+    setState(() {
+      _podcasts = podcasts;
+      if (podcasts) _videos = false;
+      final q = _query.trim();
+      if (q.length >= 2) _searchYoutube(q);
+    });
+  }
+
   void _setVideos(bool videos) {
+    if (videos) _podcasts = false;
     if (videos == _videos) return;
     setState(() {
       _videos = videos;
@@ -396,18 +515,26 @@ class _SearchPageState extends State<SearchPage> {
     final albums = local.albums;
     final q = _query.trim().toLowerCase();
     final searching = q.length >= 2;
+    // Settings › Centered search: the box over the results, both down the middle of the page.
+    final centered = widget.popup || !shell.compact && LayoutPrefs.instance.centeredSearch;
     Widget box({required ValueChanged<String> onChanged}) => ConstrainedBox(
-      constraints: const BoxConstraints(maxWidth: 520),
+      constraints: BoxConstraints(maxWidth: centered ? double.infinity : 520),
       child: SearchBox(
         controller: _controller,
-        focusNode: widget.focusNode,
+        // Centered beside a title bar without its box: Ctrl+F and the rail's Search still put the cursor here.
+        focusNode: widget.focusNode ?? (centered && widget.boxInBar == null ? widget.input?.focus : null),
         onChanged: onChanged,
         onSubmitted: _submit,
+        onSourceSelected: _selectSource,
+        flat: centered,
       ),
     );
 
-    return PageScaffold(
-      slivers: [
+    final field = box(onChanged: widget.input == null ? _onQuery : (_) {});
+    final page = PageScaffold(
+      transparent: widget.popup,
+      hideToolbar: widget.popup,
+      slivers: _arrange(centered, widget.popup, field, [
         SliverToBoxAdapter(
           child: Padding(
             padding: EdgeInsets.fromLTRB(pad, 0, pad, 12),
@@ -424,7 +551,7 @@ class _SearchPageState extends State<SearchPage> {
                   ),
                   const SizedBox(height: 16),
                 ],
-                if (widget.input == null)
+                if (widget.input == null && !centered)
                   box(onChanged: _onQuery)
                 else if (widget.boxInBar case final inBar?)
                   // Typing reaches [_onQuery] through the input's listener.
@@ -441,29 +568,69 @@ class _SearchPageState extends State<SearchPage> {
                             child: box(onChanged: (_) {}),
                           ),
                   ),
-                SearchSourceFilters(onSelected: _selectSource),
                 if (_onExtensions) const Padding(padding: EdgeInsets.only(top: 12), child: SpotiflacNotice()),
                 if (searching) ...[
-                  if (widget.input == null) const SizedBox(height: 16),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    children: [
-                      if (_onYoutube)
-                        SegmentedButton<bool>(
-                          showSelectedIcon: false,
-                          segments: [
-                            ButtonSegment(value: false, label: Text(tr.songs)),
-                            ButtonSegment(value: true, label: Text(tr.videos)),
-                          ],
-                          selected: {_videos},
-                          onSelectionChanged: (s) => _setVideos(s.first),
+                  if (widget.input == null && !centered) const SizedBox(height: 16),
+                  if (centered && _onYoutube)
+                    Wrap(
+                      spacing: 4,
+                      runSpacing: 4,
+                      children: [
+                        for (final (icon, label, kind) in [
+                          (Icons.grid_view_rounded, tr.all, null),
+                          (Icons.music_note_rounded, tr.songs, WebResultKind.song),
+                          (Icons.person_rounded, tr.artists, WebResultKind.artist),
+                          (Icons.album_rounded, tr.albums, WebResultKind.album),
+                          (Icons.queue_music_rounded, tr.playlists, WebResultKind.playlist),
+                        ])
+                          SearchTab(
+                            icon: icon,
+                            label: label,
+                            selected: !_videos && !_podcasts && _filter == kind,
+                            onTap: () {
+                              _setVideos(false);
+                              _setPodcasts(false);
+                              _setFilter(kind);
+                            },
+                          ),
+                        SearchTab(
+                          icon: Icons.smart_display_rounded,
+                          label: tr.videos,
+                          selected: _videos,
+                          onTap: () => _setVideos(true),
                         ),
-                    ],
-                  ),
-                  if (!_videos && _onYoutube) const SizedBox(height: 12),
-                  if (!_videos && _onYoutube)
+                        SearchTab(
+                          icon: Icons.podcasts_rounded,
+                          label: tr.podcasts,
+                          selected: _podcasts,
+                          onTap: () => _setPodcasts(true),
+                        ),
+                      ],
+                    ),
+                  if (!centered)
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        if (_onYoutube)
+                          SegmentedButton<int>(
+                            showSelectedIcon: false,
+                            segments: [
+                              ButtonSegment(value: 0, label: Text(tr.songs)),
+                              ButtonSegment(value: 1, label: Text(tr.videos)),
+                              ButtonSegment(value: 2, label: Text(tr.podcasts)),
+                            ],
+                            selected: {_podcasts ? 2 : (_videos ? 1 : 0)},
+                            onSelectionChanged: (s) {
+                              _setVideos(s.first == 1);
+                              _setPodcasts(s.first == 2);
+                            },
+                          ),
+                      ],
+                    ),
+                  if (!_videos && !_podcasts && _onYoutube && !centered) const SizedBox(height: 12),
+                  if (!_videos && !_podcasts && _onYoutube && !centered)
                     SearchChips(
                       children: [
                         for (final (label, kind) in [
@@ -522,7 +689,13 @@ class _SearchPageState extends State<SearchPage> {
             ),
           ],
         ] else if (_onExtensions) ...[
-          if (searching) MonochromeSection(future: _extensionResults, source: Spotiflac.instance.selectedName),
+          if (searching)
+            MonochromeSection(
+              future: _extensionResults,
+              source: Spotiflac.instance.selectedName,
+              onRetry: _retryExtension,
+              onVerify: _verifySearchExtension,
+            ),
           ..._library(c, results, shell),
         ] else if (_onMonochrome) ...[
           if (searching) MonochromeSection(future: _monochrome),
@@ -531,6 +704,13 @@ class _SearchPageState extends State<SearchPage> {
           if (searching) SoundcloudSection(future: _soundcloud, count: 10, title: tr.songs),
           if (searching) SoundcloudShelves(future: _soundcloudShelves),
           ..._library(c, results, shell),
+        ] else if (_podcasts) ...[
+          if (searching) ...[
+            SliverToBoxAdapter(child: SectionTitle(tr.podcastShows, compactSpacing: true)),
+            CollectionGrid(future: _podcastShows, limit: 6),
+            SliverToBoxAdapter(child: SectionTitle(tr.podcastEpisodes, compactSpacing: true)),
+            YoutubeSongResults(future: _episodes, shown: _shownEpisodes),
+          ],
         ] else if (_videos) ...[
           if (searching)
             VideoResults(
@@ -571,7 +751,56 @@ class _SearchPageState extends State<SearchPage> {
                 ),
             ]),
         ],
+      ]),
+    );
+    if (!widget.popup) return page;
+    // The popup: the box holds still on top, only the results scroll (their panel's corners clipped), so the box and
+    // anything dropping down from it never move with them.
+    return Column(
+      children: [
+        DecoratedBox(
+          decoration: BoxDecoration(color: _popupFill, borderRadius: LayoutPrefs.corner(10)),
+          child: Padding(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4), child: field),
+        ),
+        const SizedBox(height: 12),
+        Flexible(
+          child: ClipRRect(borderRadius: LayoutPrefs.corner(10), child: page),
+        ),
       ],
     );
+  }
+
+  /// Over the dimmed window the popup's parts float on their own, so they take the panel's solid colour.
+  static Color get _popupFill =>
+      AppColors.glass ? AppColors.glassSolid : Color.alphaBlend(AppColors.tile, AppColors.panel);
+
+  /// Centered: the box on top and everything else on a panel below it, the two in a column down the page's middle.
+  /// A title-bar box types into the same controller, so both stay in step.
+  static List<Widget> _arrange(bool centered, bool popup, Widget box, List<Widget> slivers) {
+    if (!centered) return slivers;
+    final fill = popup ? _popupFill : AppColors.tile;
+    return [
+      SliverLayoutBuilder(
+        builder: (context, constraints) {
+          // The popup is that column already, its box above the scrolling part.
+          final side = popup ? 0.0 : math.max(16.0, (constraints.crossAxisExtent - 880) / 2);
+          return SliverPadding(
+            padding: popup ? EdgeInsets.zero : EdgeInsets.fromLTRB(side, 8, side, 24),
+            sliver: SliverMainAxisGroup(
+              slivers: [
+                if (!popup) ...[SliverToBoxAdapter(child: box), const SliverToBoxAdapter(child: SizedBox(height: 12))],
+                DecoratedSliver(
+                  decoration: BoxDecoration(color: fill, borderRadius: LayoutPrefs.corner(10)),
+                  sliver: SliverPadding(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    sliver: SliverMainAxisGroup(slivers: slivers),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    ];
   }
 }

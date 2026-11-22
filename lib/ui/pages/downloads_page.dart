@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:path/path.dart' as path;
 
 import '../../models/track.dart';
 import '../../services/download_files.dart';
@@ -237,7 +238,11 @@ class _DownloadedFilesState extends State<_DownloadedFiles> {
                 for (final t in files)
                   ListTile(
                     title: Text(t.title),
-                    subtitle: Text(t.path ?? t.artist, maxLines: 1, overflow: TextOverflow.ellipsis),
+                    subtitle: Text(
+                      t.path == null ? t.artist : path.basename(t.path!),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                     onTap: () => _c!.playList(files, files.indexOf(t)),
                     trailing: Row(
                       mainAxisSize: MainAxisSize.min,

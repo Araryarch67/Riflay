@@ -20,6 +20,7 @@ import '../widgets/menus.dart';
 import '../widgets/sleep_timer_button.dart';
 import '../widgets/stats_for_nerds.dart';
 import '../widgets/track_row.dart';
+import '../ytmusic_edit.dart' show LikeButton;
 import 'full_screen_player.dart';
 import 'mini_window.dart';
 import 'player_common.dart';
@@ -47,6 +48,7 @@ class DesktopPlayerBar extends StatelessWidget {
             final availableWidth = box.maxWidth;
             final compact = style == DesktopBarStyle.compact;
             final minimal = style == DesktopBarStyle.minimal;
+            if (style == DesktopBarStyle.dock) return _dock(context, now.track, availableWidth);
             final track = now.track;
             final textScale = MediaQuery.textScalerOf(context).scale(14) / 14;
             final barHeight = compact
@@ -115,6 +117,101 @@ class DesktopPlayerBar extends StatelessWidget {
       },
     ),
   );
+
+  /// Dock: the song on a card at the left with its like button, the transport in the middle, the other buttons
+  /// grouped on a pill at the right, and the progress as a thin line along the top.
+  Widget _dock(BuildContext context, Track? track, double width) {
+    final text = Theme.of(context).textTheme;
+    final c = PlayerScope.read(context);
+    final shell = ShellScope.of(context);
+    final textScale = MediaQuery.textScalerOf(context).scale(14) / 14;
+    final height = math.max(80.0, 36 * textScale + 44);
+    final card = TrackSwitcher(
+      trackId: track?.id,
+      child: track == null
+          ? const SizedBox.shrink()
+          : Material(
+              key: ValueKey(track.id),
+              color: AppColors.tile,
+              borderRadius: LayoutPrefs.corner(6),
+              clipBehavior: Clip.antiAlias,
+              child: Padding(
+                padding: const EdgeInsets.all(8),
+                child: Row(
+                  children: [
+                    ClipRRect(
+                      borderRadius: LayoutPrefs.corner(4),
+                      child: Artwork(track: track, radius: 0, size: 40),
+                    ),
+                    const SizedBox(width: 12),
+                    Flexible(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          LinkText(
+                            track.title,
+                            style: text.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
+                            onTap: switch (c.albumOf(track)) {
+                              final album? => () => shell.openCollection(album),
+                              null => null,
+                            },
+                          ),
+                          const SizedBox(height: 2),
+                          ArtistLinks(track: track, style: text.bodySmall?.copyWith(color: AppColors.textSecondary)),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                  ],
+                ),
+              ),
+            ),
+    );
+    return SizedBox(
+      height: height,
+      child: Column(
+        children: [
+          SizedBox(height: 12, child: track == null ? null : const SeekBar(inline: true)),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(8, 0, 12, 8),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Row(
+                      children: [
+                        Flexible(
+                          child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 240), child: card),
+                        ),
+                        if (track != null) ...[
+                          const SizedBox(width: 8),
+                          LikeButton(track: track, size: 22),
+                        ],
+                      ],
+                    ),
+                  ),
+                  const FittedBox(fit: BoxFit.scaleDown, child: TransportControls()),
+                  Expanded(
+                    child: Align(
+                      alignment: AlignmentDirectional.centerEnd,
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(color: AppColors.tile, borderRadius: LayoutPrefs.corner(6)),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 4),
+                          child: _actions(context, track, width: width),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   Widget _info(BuildContext context, Track? track, {required bool small, bool withProgress = false}) {
     final c = PlayerScope.read(context);

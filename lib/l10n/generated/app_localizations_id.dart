@@ -44,6 +44,113 @@ class AppLocalizationsId extends AppLocalizations {
   String get desktopSidebarShortcuts => 'Ikon pintasan';
 
   @override
+  String get desktopLayout => 'Layout desktop';
+
+  @override
+  String get desktopLayoutHint =>
+      'Mengatur sidebar, Home, Search, dan player bar sekaligus; masing-masing tetap bisa diubah di bawah';
+
+  @override
+  String get desktopLayoutRail => 'Rail';
+
+  @override
+  String get fullHeightRail => 'Rail setinggi jendela';
+
+  @override
+  String get fullHeightRailHint => 'Rail ikon pintasan memanjang sampai samping player bar';
+
+  @override
+  String get greetingChip => 'Sapaan dalam kapsul';
+
+  @override
+  String get greetingChipHint => 'Sapaan Home ditampilkan kecil dengan ikon waktu';
+
+  @override
+  String get sectionIcons => 'Ikon judul seksi';
+
+  @override
+  String get sectionIconsHint => 'Ikon di depan setiap judul rak di Home';
+
+  @override
+  String get detailedQuickAccess => 'Akses cepat lengkap';
+
+  @override
+  String get detailedQuickAccessHint => 'Tiga kolom, tiap kotak dengan subjudul dan menu';
+
+  @override
+  String get centeredSearch => 'Search di tengah';
+
+  @override
+  String get centeredSearchHint => 'Kolom search di atas hasil, di tengah halaman';
+
+  @override
+  String get openItem => 'Buka';
+
+  @override
+  String get coverGlass => 'Kaca di atas cover';
+
+  @override
+  String get coverGlassHint =>
+      'Panel jadi kaca tembus pandang di atas cover lagu yang di-blur (cover acak kalau belum ada lagu)';
+
+  @override
+  String get glassBackground => 'Latar';
+
+  @override
+  String get glassBackgroundHint => 'Yang tampil di balik kaca';
+
+  @override
+  String get glassBackgroundPlaying => 'Cover lagu';
+
+  @override
+  String get glassBackgroundRandom => 'Cover acak';
+
+  @override
+  String get glassBackgroundImage => 'Gambar sendiri';
+
+  @override
+  String get glassChooseImage => 'Pilih gambar';
+
+  @override
+  String get glassBlur => 'Blur latar';
+
+  @override
+  String get glassBlurHint => 'Matikan untuk latar yang tajam';
+
+  @override
+  String get setupLookTitle => 'Pilih tampilan';
+
+  @override
+  String get setupLookIntro => 'Pilih layout dan gaya player. Semuanya tetap bisa diubah nanti di Settings.';
+
+  @override
+  String get setupLayoutClassicNote => 'Library di samping halaman, kolom search di atas';
+
+  @override
+  String get setupLayoutRailNote => 'Rail ikon ramping, search di tengah, player ringkas';
+
+  @override
+  String get playerStyle => 'Player';
+
+  @override
+  String get layoutLabel => 'Layout';
+
+  @override
+  String get podcasts => 'Podcast';
+
+  @override
+  String get podcastShows => 'Acara';
+
+  @override
+  String get podcastEpisodes => 'Episode';
+
+  @override
+  String get styles => 'Gaya';
+
+  @override
+  String get setStyle => 'Pakai';
+
+  @override
   String get expandLibrary => 'Buka Library penuh';
 
   @override
@@ -78,6 +185,22 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get madeForYou => 'Dibuat untukmu';
+
+  @override
+  String artistMix(String artist) {
+    return 'Mix $artist';
+  }
+
+  @override
+  String artistMixDescription(String artist) {
+    return '$artist dan lagu yang sering kamu putar bersamanya';
+  }
+
+  @override
+  String get discoveryMix => 'Mix Penemuan';
+
+  @override
+  String get discoveryMixDescription => 'Artis yang belum kamu putar akhir-akhir ini';
 
   @override
   String get artistMusicVideos => 'Video musik';
@@ -7044,4 +7167,16 @@ class AppLocalizationsId extends AppLocalizations {
   String playlistDownloadsFailed(int count) {
     return 'Unduhan gagal: $count';
   }
+
+  @override
+  String get autoDownloadLiked => 'Unduh otomatis lagu yang disukai';
+
+  @override
+  String get dailySleepTimer => 'Timer tidur harian';
+
+  @override
+  String get dailyPlaylistAlarm => 'Alarm playlist harian';
+
+  @override
+  String get scheduleWhileRunning => 'Berjalan selama Riflay aktif';
 }

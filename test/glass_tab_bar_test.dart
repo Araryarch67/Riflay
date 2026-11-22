@@ -7,8 +7,10 @@ import 'package:riflay/models/track.dart';
 import 'package:riflay/services/layout_prefs.dart';
 import 'package:riflay/services/player_controller.dart';
 import 'package:riflay/services/player_presets.dart';
+import 'package:riflay/services/sources/music_sources.dart';
 import 'package:riflay/ui/debug_switches.dart';
 import 'package:riflay/ui/pages/search_page.dart' show SearchBox;
+import 'package:riflay/ui/pages/search/soundcloud_results.dart' show SearchSource;
 import 'package:riflay/ui/player/mini_player.dart';
 import 'package:riflay/ui/shell/phone_navigation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -143,7 +145,7 @@ void main() {
         tester.testTextInput.enterText('led zeppelin');
         await tester.pump();
         expect(bar.link.search.controller.text, 'led zeppelin');
-        expect(find.byTooltip('Clear'), findsNothing, reason: 'the large Close button also clears the input');
+        expect(find.byTooltip('Clear'), findsOneWidget, reason: 'Clear sits beside the source menu');
         expect(tester.takeException(), isNull);
 
         await tester.pumpAndSettle();
@@ -233,8 +235,8 @@ void main() {
       await tester.pumpAndSettle();
       final field = find.byKey(PhoneBottomBar.searchFieldKey);
       expect(field, findsOneWidget);
-      expect(find.byTooltip('Close'), findsOneWidget);
-      expect(collapsedButton, findsOneWidget, reason: 'the tab before Search, as a round button');
+      expect(find.byTooltip('Close'), findsNothing);
+      expect(collapsedButton, findsOneWidget, reason: 'Home is the round button while the field is unfocused');
       expect(find.byType(GlassMiniPlayer), findsOneWidget, reason: 'full width, on its own row');
       expect(find.byTooltip('Next'), findsOneWidget);
       expect(tester.takeException(), isNull);
@@ -244,11 +246,12 @@ void main() {
       addTearDown(tester.view.resetViewInsets);
       await tester.pumpAndSettle();
       expect(collapsedButton, findsNothing);
+      expect(find.byTooltip('Close'), findsOneWidget);
       expect(find.byType(GlassMiniPlayer), findsNothing);
       expect(tester.getRect(field).bottom, lessThan(size.height * 0.6), reason: 'above the keyboard');
       await tester.enterText(field, 'led zeppelin');
       await tester.pump();
-      expect(find.byTooltip('Clear'), findsNothing);
+      expect(find.byTooltip('Clear'), findsOneWidget);
       expect(tester.takeException(), isNull);
 
       await tester.tap(find.byTooltip('Close'));
@@ -316,6 +319,8 @@ void main() {
     await tester.pumpAndSettle();
     final round = tester.widget<Tooltip>(find.descendant(of: collapsedButton, matching: find.byType(Tooltip)));
     expect(round.message, 'Home');
+    await tester.tap(find.byKey(PhoneBottomBar.searchFieldKey));
+    await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('Close'));
     await tester.pumpAndSettle();
     expect(find.byKey(PhoneBottomBar.searchFieldKey), findsNothing);
@@ -347,6 +352,32 @@ void main() {
     await tester.drag(list, const Offset(0, -300));
     await tester.pumpAndSettle();
     expect(collapsedButton, findsNothing);
+  });
+
+  testWidgets('glass search puts Clear before the source menu and keeps the query when switching', (tester) async {
+    SearchSource.reset();
+    MusicSources.instance.reset();
+    addTearDown(SearchSource.reset);
+    addTearDown(MusicSources.instance.reset);
+    await tester.runAsync(() => MusicSources.instance.setMonochrome(true));
+    final (:link, opened: _) = await show(tester, const Size(320, 720), playing: false, tab: PhoneTab.search);
+    final field = find.byKey(PhoneBottomBar.searchFieldKey);
+    final source = find.byKey(const ValueKey('search-source-menu'));
+    await tester.enterText(field, 'aa');
+    await tester.pumpAndSettle();
+    final clear = find.byTooltip('Clear');
+    expect(tester.getCenter(field).dx, lessThan(tester.getCenter(clear).dx));
+    expect(tester.getCenter(clear).dx, lessThan(tester.getCenter(source).dx));
+    await tester.tap(source);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('search-source-monochrome')));
+    await tester.pumpAndSettle();
+    expect(SearchSource.current.value, SearchSource.monochrome);
+    expect(link.search.controller.text, 'aa');
+    await tester.tap(clear);
+    await tester.pumpAndSettle();
+    expect(link.search.controller.text, isEmpty);
+    expect(source, findsOneWidget);
   });
 
   testWidgets('the app: the search page leaves its box to the Liquid glass bar', (tester) async {

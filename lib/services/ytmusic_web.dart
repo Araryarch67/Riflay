@@ -882,6 +882,8 @@ class YtMusicWeb {
   /// Every song of a playlist (`VL…`) or album (`MPRE…`) page. Album rows carry
   /// neither artist nor artwork; both come from the page header instead.
   Future<List<WebTrack>> browseTracks(String browseId, {int limit = 500}) async {
+    // A show opens on its newest episodes, one page (a second page of a long show took two seconds more).
+    if (browseId.startsWith('MPSP')) return podcastEpisodes(browseId, limit: 20);
     final res = await _send('browse', {'browseId': browseId});
     // An artist page shows a few top songs; "Show all" opens the full list.
     if (browseId.startsWith('UC')) {
@@ -891,6 +893,54 @@ class YtMusicWeb {
       if (all is String) return browseTracks(all, limit: limit);
     }
     return _tracksOf(res, limit);
+  }
+
+  /// A podcast show's episodes (`MPSP…`), newest first, read page by page up to [limit]. The show is each
+  /// episode's artist.
+  Future<List<WebTrack>> podcastEpisodes(String browseId, {int limit = 200}) async {
+    final res = await _send('browse', {'browseId': browseId});
+    final show = _text(_asMap(_deepFind(res, 'musicResponsiveHeaderRenderer'))?['title']) ?? '';
+    final shelf = _asMap(_deepFind(res, 'musicShelfRenderer'));
+    if (shelf == null) return const [];
+    return _allPages(shelf, shelf['contents'], limit, (item) {
+      final row = _asMap(item['musicMultiRowListItemRenderer']);
+      return row == null ? null : episodeRowOf(row, show: show);
+    });
+  }
+
+  /// One episode on a show's page (a multi-row item: title, date, description and length).
+  @visibleForTesting
+  static WebTrack? episodeRowOf(Map<String, dynamic> row, {String show = ''}) {
+    final videoId = _at(row, const ['onTap', 'watchEndpoint', 'videoId']);
+    final title = _text(row['title']);
+    if (videoId is! String || title == null) return null;
+    return WebTrack(
+      videoId: videoId,
+      title: title.trim(),
+      artist: show,
+      duration: spokenDuration(
+        _text(_at(row, const ['playbackProgress', 'musicPlaybackProgressRenderer', 'playbackProgressText'])),
+      ),
+      artworkUrl: _lastThumb(_at(row, const ['thumbnail', 'musicThumbnailRenderer', 'thumbnail', 'thumbnails'])),
+    );
+  }
+
+  /// "2 hr 42 min", "45 min", "1 hr", "30 sec" (an episode's length, perhaps after a "•").
+  @visibleForTesting
+  static Duration? spokenDuration(String? text) {
+    if (text == null) return null;
+    var total = Duration.zero;
+    var any = false;
+    for (final m in RegExp(r'(\d+)\s*(hr|hour|min|sec)', caseSensitive: false).allMatches(text)) {
+      final n = int.parse(m.group(1)!);
+      any = true;
+      total += switch (m.group(2)!.toLowerCase()) {
+        'hr' || 'hour' => Duration(hours: n),
+        'min' => Duration(minutes: n),
+        _ => Duration(seconds: n),
+      };
+    }
+    return any ? total : null;
   }
 
   /// An artist's song list plus the verified music videos on their channel page.
@@ -1334,7 +1384,105 @@ class YtMusicWeb {
 
   /// Music videos matching [query] ("Videos" filter): official videos and
   /// uploads of songs that aren't in the Songs catalogue.
-  Future<List<WebTrack>> searchVideos(String query) => _searchRows(query, 'EgWKAQIQAWoKEAoQCRADEAQQBQ%3D%3D');
+  Future<List<WebTrack>> searchVideos(String query) => _searchRows(query, _videoParams);
+
+  // Filter chips, as ytmusicapi builds them: "EgWKAQ" + the filter + the rest of its options.
+  static const _videoParams = 'EgWKAQIQAWoKEAoQCRADEAQQBQ%3D%3D';
+  static const _podcastParams = 'EgWKAQJQAWoKEAoQCRADEAQQBQ%3D%3D';
+  static const _episodeParams = 'EgWKAQJIAWoKEAoQCRADEAQQBQ%3D%3D';
+
+  /// One page of videos matching [query], and the token of the next ([continuation] from the previous page).
+  Future<({List<WebTrack> tracks, String? next})> searchVideoPage(String query, {String? continuation}) async {
+    final List<Object?> rows;
+    final String? next;
+    if (continuation == null) {
+      final res = await _send('search', {'query': query, 'params': _videoParams});
+      final shelf = _asMap(_deepFind(res, 'musicShelfRenderer'));
+      rows = _list(shelf?['contents']);
+      next = _nextToken(shelf);
+    } else {
+      final res = await _send('search', {'continuation': continuation});
+      (rows, next) = _continuationPage(res);
+    }
+    final tracks = [
+      for (final node in _deepFindAll(rows, 'musicResponsiveListItemRenderer'))
+        if (_asMap(node) case final row?) ?_songOf(row),
+    ];
+    return (tracks: await _withArtists(tracks), next: next);
+  }
+
+  /// Podcast shows matching [query]. Each opens as the playlist of its episodes.
+  Future<List<WebResult>> searchPodcasts(String query) async {
+    final res = await _send('search', {'query': query, 'params': _podcastParams});
+    return [
+      for (final node in _deepFindAll(res, 'musicResponsiveListItemRenderer'))
+        if (_asMap(node) case final row?) ?podcastOf(row),
+    ];
+  }
+
+  /// Podcast episodes matching [query]: they play like songs, the show standing for the artist.
+  Future<List<WebTrack>> searchEpisodes(String query) async {
+    final res = await _send('search', {'query': query, 'params': _episodeParams});
+    return [
+      for (final node in _deepFindAll(res, 'musicResponsiveListItemRenderer'))
+        if (_asMap(node) case final row?) ?episodeOf(row),
+    ];
+  }
+
+  /// A show row (`MPSP…`): it opens as a list of its episodes ([podcastEpisodes]).
+  @visibleForTesting
+  static WebResult? podcastOf(Map<String, dynamic> row) {
+    final browse = _asMap(_at(row, const ['navigationEndpoint', 'browseEndpoint']));
+    final id = browse?['browseId'];
+    final columns = _list(row['flexColumns']);
+    final title = _firstRunText(columns.firstOrNull);
+    if (id is! String || !id.startsWith('MPSP') || title == null) return null;
+    final author = columns.length > 1
+        ? _text(_at(columns[1], const ['musicResponsiveListItemFlexColumnRenderer', 'text'])) ?? ''
+        : '';
+    return WebResult(
+      kind: WebResultKind.playlist,
+      title: title,
+      subtitle: author,
+      thumbnailUrl: _lastThumb(_at(row, const ['thumbnail', 'musicThumbnailRenderer', 'thumbnail', 'thumbnails'])),
+      browseId: id,
+    );
+  }
+
+  /// An episode row ("Title" / "Nov 11 • Show"): its video on the play button, the show as who made it.
+  @visibleForTesting
+  static WebTrack? episodeOf(Map<String, dynamic> row) {
+    if (isLive(row)) return null;
+    final videoId =
+        _at(row, const [
+          'overlay',
+          'musicItemThumbnailOverlayRenderer',
+          'content',
+          'musicPlayButtonRenderer',
+          'playNavigationEndpoint',
+          'watchEndpoint',
+          'videoId',
+        ]) ??
+        _at(row, const ['playButton', 'playNavigationEndpoint', 'watchEndpoint', 'videoId']) ??
+        _at(row, const ['navigationEndpoint', 'watchEndpoint', 'videoId']);
+    final columns = _list(row['flexColumns']);
+    final title = _firstRunText(columns.firstOrNull);
+    if (videoId is! String || title == null) return null;
+    final runs = columns.length > 1
+        ? _list(_at(columns[1], const ['musicResponsiveListItemFlexColumnRenderer', 'text', 'runs']))
+              .whereType<Map<String, dynamic>>()
+              .toList()
+        : const <Map<String, dynamic>>[];
+    // The show is the linked run; the date before it is not a name.
+    final show = runs.lastWhere((r) => r['navigationEndpoint'] != null, orElse: () => const {})['text'];
+    return WebTrack(
+      videoId: videoId,
+      title: title.trim(),
+      artist: show is String ? show.trim() : '',
+      duration: _flexDuration(row),
+      artworkUrl: _lastThumb(_at(row, const ['thumbnail', 'musicThumbnailRenderer', 'thumbnail', 'thumbnails'])),
+    );
+  }
 
   Future<List<WebTrack>> _searchRows(String query, String params) async {
     // The params values are the filter chips, as ytmusicapi sends them.

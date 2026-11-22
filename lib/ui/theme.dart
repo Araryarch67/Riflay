@@ -7,6 +7,12 @@ import 'debug_switches.dart';
 import 'widgets/wavy_seek_track.dart' show pillSliderTheme, thinSliderTheme;
 
 /// Colour tokens of the theme picked in Settings › Look & feel › Theme & colours ([ThemeChoice]).
+/// How bright the cover behind the glass is (0 dark, 1 white), measured by the backdrop: a bright cover gets
+/// darker glass and a heavier veil, so white text and icons on it still read.
+abstract final class GlassShade {
+  static final brightness = ValueNotifier<double>(0);
+}
+
 abstract final class AppColors {
   static AppPalette get _p => _themeOverride ?? Appearance.instance.palette;
 
@@ -22,8 +28,34 @@ abstract final class AppColors {
 
   /// Window and panel backgrounds; see-through when the window opacity
   /// setting is below 100%.
-  static Color get background => _p.background.withValues(alpha: Appearance.instance.windowOpacity * _component);
-  static Color get panel => _p.panel.withValues(alpha: Appearance.instance.windowOpacity * _component);
+  static Color get background =>
+      _glass ? Colors.transparent : _p.background.withValues(alpha: Appearance.instance.windowOpacity * _component);
+  static Color get panel =>
+      _glass ? glassFill(_p.light) : _p.panel.withValues(alpha: Appearance.instance.windowOpacity * _component);
+
+  /// Settings › Glass over the cover: the window is the blurred cover ([CoverBackdrop]) and panels are glass on it.
+  static bool get _glass => LayoutPrefs.instance.coverGlass;
+
+  /// A glass panel's fill: neutral (no colour of its own, the cover gives it that), a little darker on a dark
+  /// theme and lighter on a light one, so text on it reads while the cover shows through.
+  static Color glassFill(bool light, [double? bright]) {
+    final b = bright ?? GlassShade.brightness.value;
+    return light
+        ? Colors.white.withValues(alpha: 0.36 + 0.20 * (1 - b))
+        : Colors.black.withValues(alpha: 0.22 + 0.30 * b);
+  }
+
+  /// Secondary and muted text on glass: firmer than on a solid panel, where the cover behind takes contrast away.
+  static Color glassText(Color text, double alpha) => text.withValues(alpha: alpha);
+
+  /// What floats over the window on glass (the search popup): solid and neutral, so it reads over anything.
+  static Color get glassSolid => _p.light ? const Color(0xF5F3F3F5) : const Color(0xF51C1C1F);
+
+  /// Whether panels are glass over the cover (Settings › Glass over the cover).
+  static bool get glass => _glass;
+
+  /// A card on glass: a faint haze of the text colour instead of a solid surface.
+  static Color glassCard(Color text) => text.withValues(alpha: 0.07);
 
   /// The desktop's component opacity: the fills of the window, panels, cards and menus, never what is on
   /// them. Below 100% the system's blurred backdrop (acrylic) shows through those fills while text,
@@ -32,14 +64,16 @@ abstract final class AppColors {
 
   /// [background] and [panel] without the window's opacity.
   static Color get solidBackground => _p.background;
-  static Color get elevated => _p.elevated.withValues(alpha: _p.elevated.a * _component);
+  static Color get elevated =>
+      _glass ? glassCard(_p.textPrimary) : _p.elevated.withValues(alpha: _p.elevated.a * _component);
   static Color get hover => _p.hover;
 
   /// Popup menus and pickers.
-  static Color get menu => _p.menu.withValues(alpha: _p.menu.a * _component);
+  // On glass: the neutral solid of what floats over the window, instead of the palette's tinted surface.
+  static Color get menu => _glass ? glassSolid : _p.menu.withValues(alpha: _p.menu.a * _component);
   static Color get textPrimary => _p.textPrimary;
-  static Color get textSecondary => _p.textSecondary;
-  static Color get textMuted => _p.textMuted;
+  static Color get textSecondary => _glass ? glassText(_p.textPrimary, 0.82) : _p.textSecondary;
+  static Color get textMuted => _glass ? glassText(_p.textPrimary, 0.62) : _p.textMuted;
 
   /// A faint fill over any surface (search box, cards on hover).
   static Color get tile => _p.textPrimary.withValues(alpha: 0.08);
@@ -67,7 +101,20 @@ abstract final class AppColors {
 /// and only then. The static [AppColors] getters give the same values to code that has no context.
 @immutable
 class AppColorsView {
-  const AppColorsView(this.palette, this.windowOpacity, this.highContrast, {this.componentOpacity = 1});
+  const AppColorsView(
+    this.palette,
+    this.windowOpacity,
+    this.highContrast, {
+    this.componentOpacity = 1,
+    this.glass = false,
+    this.bright = 0,
+  });
+
+  /// [GlassShade.brightness] when this was taken.
+  final double bright;
+
+  /// Settings › Glass over the cover (see [AppColors.panel]).
+  final bool glass;
 
   final AppPalette palette;
   final double windowOpacity;
@@ -77,15 +124,22 @@ class AppColorsView {
   final double componentOpacity;
 
   bool get light => palette.light;
-  Color get background => palette.background.withValues(alpha: windowOpacity * componentOpacity);
-  Color get panel => palette.panel.withValues(alpha: windowOpacity * componentOpacity);
+  Color get background =>
+      glass ? Colors.transparent : palette.background.withValues(alpha: windowOpacity * componentOpacity);
+  Color get panel => glass
+      ? AppColors.glassFill(palette.light, bright)
+      : palette.panel.withValues(alpha: windowOpacity * componentOpacity);
   Color get solidBackground => palette.background;
-  Color get elevated => palette.elevated.withValues(alpha: palette.elevated.a * componentOpacity);
+  Color get elevated => glass
+      ? AppColors.glassCard(palette.textPrimary)
+      : palette.elevated.withValues(alpha: palette.elevated.a * componentOpacity);
   Color get hover => palette.hover;
-  Color get menu => palette.menu.withValues(alpha: palette.menu.a * componentOpacity);
+  Color get menu => glass
+      ? (palette.light ? const Color(0xF5F3F3F5) : const Color(0xF51C1C1F))
+      : palette.menu.withValues(alpha: palette.menu.a * componentOpacity);
   Color get textPrimary => palette.textPrimary;
-  Color get textSecondary => palette.textSecondary;
-  Color get textMuted => palette.textMuted;
+  Color get textSecondary => glass ? AppColors.glassText(palette.textPrimary, 0.82) : palette.textSecondary;
+  Color get textMuted => glass ? AppColors.glassText(palette.textPrimary, 0.62) : palette.textMuted;
   Color get tile => palette.textPrimary.withValues(alpha: 0.08);
   Color get border => palette.textPrimary.withValues(alpha: highContrast ? 0.28 : 0.10);
   Color get divider => palette.textPrimary.withValues(alpha: highContrast ? 0.18 : 0.06);
@@ -100,10 +154,12 @@ class AppColorsView {
       other.palette == palette &&
       other.windowOpacity == windowOpacity &&
       other.highContrast == highContrast &&
-      other.componentOpacity == componentOpacity;
+      other.componentOpacity == componentOpacity &&
+      other.glass == glass &&
+      other.bright == bright;
 
   @override
-  int get hashCode => Object.hash(palette, windowOpacity, highContrast, componentOpacity);
+  int get hashCode => Object.hash(palette, windowOpacity, highContrast, componentOpacity, glass, bright);
 }
 
 /// Hands [AppColorsView] down the tree. Widgets that read it through [AppColors.of] are rebuilt when the
@@ -121,6 +177,8 @@ class AppColorsScope extends InheritedWidget {
       a.windowOpacity,
       a.highContrast,
       componentOpacity: Appearance.hasComponentOpacity ? a.componentOpacity : 1,
+      glass: LayoutPrefs.instance.coverGlass,
+      bright: GlassShade.brightness.value,
     );
   }
 
@@ -394,7 +452,10 @@ class _ThemeKey {
     this.pageMotion,
     this.pageSpeed,
     this.slider,
+    this.glass,
   );
+
+  final bool glass;
 
   final AppPalette palette;
   final double opacity;
@@ -419,11 +480,23 @@ class _ThemeKey {
       other.motion == motion &&
       other.pageMotion == pageMotion &&
       other.pageSpeed == pageSpeed &&
-      other.slider == slider;
+      other.slider == slider &&
+      other.glass == glass;
 
   @override
-  int get hashCode =>
-      Object.hash(palette, opacity, highContrast, wholeApp, font, corners, motion, pageMotion, pageSpeed, slider);
+  int get hashCode => Object.hash(
+    palette,
+    opacity,
+    highContrast,
+    wholeApp,
+    font,
+    corners,
+    motion,
+    pageMotion,
+    pageSpeed,
+    slider,
+    glass,
+  );
 }
 
 final _themes = <_ThemeKey, ThemeData>{};
@@ -462,6 +535,7 @@ ThemeData appThemeNow({bool desktopFrame = false}) {
     l.pageMotion,
     l.pageSpeed,
     l.volumeSlider,
+    l.coverGlass,
   );
   final hit = _themes.remove(key);
   if (hit != null) {
@@ -544,7 +618,7 @@ ThemeData buildAppTheme({String? fontFamily}) {
     scaffoldBackgroundColor: AppColors.background,
     splashFactory: InkSparkle.splashFactory,
     // Riflay's own typeface is bundled (assets/fonts); a font picked in Settings comes from the device.
-    fontFamily: fontFamily ?? 'Figtree',
+    fontFamily: fontFamily ?? AppTypeface.defaultFamily,
   );
   final text = base.textTheme.apply(bodyColor: AppColors.textPrimary, displayColor: AppColors.textPrimary);
   return base.copyWith(
@@ -701,4 +775,10 @@ ThemeData buildAppTheme({String? fontFamily}) {
     ),
     progressIndicatorTheme: ProgressIndicatorThemeData(color: AppColors.accent),
   );
+}
+
+/// Riflay's bundled typefaces: the default, and the others offered beside the computer's fonts in Settings.
+abstract final class AppTypeface {
+  static const defaultFamily = 'Space Grotesk';
+  static const bundled = ['Figtree'];
 }

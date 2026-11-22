@@ -4,9 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:riflay/l10n/generated/app_localizations.dart';
+import 'package:riflay/platform/host.dart';
+import 'package:riflay/services/layout_prefs.dart';
+import 'package:riflay/services/splash_window.dart';
 import 'package:riflay/ui/widgets/desktop_intro.dart';
 import 'package:riflay/ui/widgets/startup_splash.dart';
-import 'package:riflay/services/layout_prefs.dart';
 
 const _home = ValueKey('home');
 
@@ -124,6 +126,28 @@ void main() {
     await tester.pump(const Duration(seconds: 2));
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('Linux transparent intro hands off without changing the native window', (tester) async {
+    final nativeCalls = <MethodCall>[];
+    const channel = MethodChannel('window_manager');
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(channel, (call) async {
+      nativeCalls.add(call);
+      return true;
+    });
+    addTearDown(() {
+      SplashWindow.active.value = false;
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(channel, null);
+    });
+    expect(await SplashWindow.open(appSize: const Size(1280, 820), appMinimum: const Size(320, 420)), isTrue);
+    await tester.pumpWidget(_app(Future<void>.value()));
+    expect(tester.widget<DesktopIntro>(find.byType(DesktopIntro)).transparent, isTrue);
+    expect(SplashWindow.active.value, isTrue);
+    expect(find.byKey(_home), findsNothing);
+    await tester.pumpAndSettle();
+    expect(find.byKey(_home), findsOneWidget);
+    expect(SplashWindow.active.value, isFalse);
+    expect(nativeCalls, isEmpty);
+  }, skip: !Host.isLinux);
 
   testWidgets('without the intro the plain mark shows instead', (tester) async {
     await tester.pumpWidget(_app(Future<void>.value(), intro: false));

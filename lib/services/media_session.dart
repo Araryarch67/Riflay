@@ -5,7 +5,6 @@ import 'dart:io';
 import 'package:audio_service/audio_service.dart';
 import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
-import 'package:just_audio/just_audio.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -16,38 +15,37 @@ import '../platform/network.dart';
 import 'lyrics.dart';
 import 'lyrics_translation.dart';
 import 'metadata.dart';
+import 'media_session/media_session_service.dart';
 import 'player_controller.dart';
 
-/// The system's media controls: Android's notification and lock screen,
-/// Control Center on iOS / macOS, and MPRIS on Linux (the desktop's media
-/// widget, media keys, `playerctl`). Mirrors [PlayerController]; every button
-/// goes back to it.
-class MediaSession extends BaseAudioHandler with SeekHandler {
-  MediaSession._(this._c) {
-    final p = _c.player;
-    // Clients extrapolate the position from the last update and the speed, so
-    // state changes and seeks are enough; no per-tick updates.
-    _subs.addAll([
-      p.playerStateStream.listen((_) => _publishState()),
-      p.positionDiscontinuityStream.listen((_) => _publishState()),
-      p.durationStream.listen((_) => _publishItem()),
-      // Where the song is decides the line shown: a seek, a pause or play moves it.
-      p.playerStateStream.listen((_) => _followLyrics()),
-      p.positionDiscontinuityStream.listen((_) => _followLyrics()),
-    ]);
-    showLyrics.addListener(_onShowLyrics);
-    LyricsTranslation.romanize.addListener(_loadPronunciation);
-    _c.addListener(_onController);
-    _publishItem();
-    _publishState();
-  }
+/// The audio_service media session: Android's MediaSession (notification, lock screen, Bluetooth and wired
+/// headsets, Android Auto / Wear), MPRemoteCommandCenter and Now Playing on iOS / macOS (Control Center, AirPods,
+/// media keys), MPRIS on Linux (the desktop's media widget, media keys, `playerctl`) and the browser's Media Session
+/// on the web. One [MediaSessionAdapter] of [MediaSessionService]: it shows what the service sends and passes every
+/// button back to it, which runs it on [PlayerController].
+class AudioServiceAdapter implements MediaSessionAdapter {
+  AudioServiceAdapter(this._c);
 
-  /// Starts the session; null where the platform has none (Windows).
-  static Future<MediaSession?> start(PlayerController c) async {
-    if (Host.isWindows) return null;
+  final PlayerController _c;
+
+  /// audio_service starts once per process; a second attach (a hot restart) reuses its handler.
+  static MediaSession? _handler;
+
+  @override
+  String get name => 'audio_service';
+
+  @override
+  Future<bool> attach(void Function(MediaCommand) onCommand) async {
+    // Windows has its own adapter (SMTC); audio_service has no Windows implementation.
+    if (Host.isWindows) return false;
+    if (_handler case final h?) {
+      h._send = onCommand;
+      h._closed = false;
+      return true;
+    }
     try {
-      return await AudioService.init(
-        builder: () => MediaSession._(c),
+      _handler = await AudioService.init(
+        builder: () => MediaSession._(_c, onCommand),
         config: const AudioServiceConfig(
           androidNotificationChannelId: 'dev.riflay.riflay.playback',
           // Also the player's name in MPRIS (Linux media widgets).
@@ -63,11 +61,38 @@ class MediaSession extends BaseAudioHandler with SeekHandler {
           artDownscaleHeight: 512,
         ),
       );
+      return true;
     } catch (e) {
       debugPrint('Media controls unavailable: $e');
-      return null;
+      return false;
     }
   }
+
+  @override
+  Future<void> update(MediaSessionState state) async => _handler?.show(state);
+
+  /// audio_service can't be stopped and started again in one process: the session is put away (idle), and the
+  /// next attach takes it back.
+  @override
+  Future<void> detach() async {
+    final h = _handler;
+    if (h == null) return;
+    h._send = (_) {};
+    h.show(MediaSessionState.empty);
+  }
+}
+
+/// audio_service's handler: what Android's notification, the lock screen, Control Center, MPRIS and the browser
+/// show, and where their buttons arrive. Shows [MediaSessionState]s; every button goes to [MediaSessionService].
+class MediaSession extends BaseAudioHandler with SeekHandler {
+  MediaSession._(this._c, this._send) {
+    showLyrics.addListener(_onShowLyrics);
+    LyricsTranslation.romanize.addListener(_loadPronunciation);
+  }
+
+  /// A handler outside audio_service, whose buttons go to [send].
+  @visibleForTesting
+  factory MediaSession.test(PlayerController c, void Function(MediaCommand) send) => MediaSession._(c, send);
 
   /// The line being sung in place of the artist, in the notification, on the lock screen and on a car's
   /// display (which reads the same fields). Phones only: on a computer the media widget names the artist. Saved.
@@ -94,7 +119,13 @@ class MediaSession extends BaseAudioHandler with SeekHandler {
   static const _lyricsKey = 'lyrics.lockScreen';
 
   final PlayerController _c;
-  final _subs = <StreamSubscription<Object?>>[];
+
+  /// Where the system's buttons go: [MediaSessionService.dispatch].
+  void Function(MediaCommand) _send;
+
+  /// The state last shown.
+  MediaSessionState _state = MediaSessionState.empty;
+  MediaTrackInfo? _shownTrack;
 
   /// The song as published, with its artist: the lyric line takes the artist's place over a copy of it.
   MediaItem? _item;
@@ -105,49 +136,42 @@ class MediaSession extends BaseAudioHandler with SeekHandler {
   List<LineExtras>? _extras;
   Timer? _nextLine;
   String? _shownLine;
-  String? _shownId;
   bool? _shownPlaying;
 
   /// Swiped away from Recents: the session is put away until something plays.
   bool _closed = false;
 
-  /// Whether the session says "playing". At the end of the queue just_audio keeps `playing` on although
-  /// nothing sounds; the system must then offer Play (which starts the queue over), not Pause.
-  bool get _playing => _c.isPlaying && (_c.casting || _c.player.processingState != ProcessingState.completed);
-
-  void _onController() {
-    if (_c.currentTrack?.id != _shownId) {
-      _publishItem();
-      _loadLyrics();
-    }
-    if (_playing != _shownPlaying) _publishState();
+  /// Shows [s]: the song when it changed (and looks up its lyrics), then the playback state.
+  void show(MediaSessionState s) {
+    _state = s;
+    final changedSong = s.track?.id != _shownTrack?.id;
+    if (s.track != _shownTrack) _publishItem(s.track);
+    if (changedSong) _loadLyrics();
+    _publishState();
+    // Where the song is decides the line shown: a seek, a pause or play moves it.
+    _followLyrics();
   }
 
-  Future<void> _publishItem() async {
-    final t = _c.currentTrack;
-    _shownId = t?.id;
+  void _publishItem(MediaTrackInfo? t) {
+    _shownTrack = t;
     // The web build's tab is named after the song too (a no-op in native builds).
     pageTitle = t == null ? 'Riflay' : [t.title, if (t.artist.isNotEmpty) t.artist].join(' · ');
-    if (t == null) return mediaItem.add(null);
-    final item = MediaItem(
+    if (t == null) {
+      _item = null;
+      _publishLine();
+      mediaItem.add(null);
+      return;
+    }
+    _item = MediaItem(
       id: t.id,
       title: t.title,
       artist: t.artist,
       album: t.album,
-      duration: _c.duration ?? t.duration,
-      artUri: t.streams && t.artworkUrl != null ? Uri.tryParse(t.artworkUrl!) : null,
+      duration: t.duration,
+      artUri: t.artUri,
     );
-    _item = item;
     _shownLine = null;
-    _publishLine();
-    if (item.artUri == null) {
-      // Local cover art lives in the file's tags; the system needs a file or URL.
-      final art = await artFile(t);
-      if (art != null && _shownId == t.id) {
-        _item = item.copyWith(artUri: art.uri);
-        _publishLine(force: true);
-      }
-    }
+    _publishLine(force: true);
   }
 
   void _onShowLyrics() {
@@ -288,8 +312,8 @@ class MediaSession extends BaseAudioHandler with SeekHandler {
   static const _early = Duration(milliseconds: 150);
 
   void _publishState() {
-    final p = _c.player;
-    final playing = _playing;
+    final s = _state;
+    final playing = s.playing;
     if (playing) _closed = false;
     // Android's service forgets the song when it's stopped and started again,
     // which left a notification with only the app's name. Starting to play
@@ -299,7 +323,7 @@ class MediaSession extends BaseAudioHandler with SeekHandler {
     // Idle tells Android the session is over: it stops the service and takes
     // the notification down. Only when nothing is left to play, not when the
     // player is idle for a moment between or after songs.
-    final over = _closed || _c.currentTrack == null;
+    final over = _closed || s.track == null;
     playbackState.add(
       PlaybackState(
         controls: [
@@ -311,19 +335,17 @@ class MediaSession extends BaseAudioHandler with SeekHandler {
         androidCompactActionIndices: const [0, 1, 2],
         processingState: over
             ? AudioProcessingState.idle
-            : _c.casting
-            ? (_c.isBuffering ? AudioProcessingState.buffering : AudioProcessingState.ready)
-            : switch (p.processingState) {
-                ProcessingState.idle => AudioProcessingState.ready,
-                ProcessingState.loading => AudioProcessingState.loading,
-                ProcessingState.buffering => AudioProcessingState.buffering,
-                ProcessingState.ready => AudioProcessingState.ready,
-                ProcessingState.completed => AudioProcessingState.completed,
+            : switch (s.processing) {
+                MediaProcessing.idle => AudioProcessingState.ready,
+                MediaProcessing.loading => AudioProcessingState.loading,
+                MediaProcessing.buffering => AudioProcessingState.buffering,
+                MediaProcessing.ready => AudioProcessingState.ready,
+                MediaProcessing.completed => AudioProcessingState.completed,
               },
         playing: playing,
-        updatePosition: _c.position,
-        bufferedPosition: p.bufferedPosition,
-        speed: p.speed,
+        updatePosition: s.position,
+        bufferedPosition: s.bufferedPosition,
+        speed: s.speed,
       ),
     );
   }
@@ -364,30 +386,32 @@ class MediaSession extends BaseAudioHandler with SeekHandler {
     return file;
   }
 
-  @override
-  Future<void> play() => _c.play();
+  // Every button goes to MediaSessionService, which runs it on PlayerController (once, in order).
 
   @override
-  Future<void> pause() => _c.pause();
+  Future<void> play() async => _send(const MediaCommand.play());
 
   @override
-  Future<void> stop() => _c.pause();
+  Future<void> pause() async => _send(const MediaCommand.pause());
+
+  @override
+  Future<void> stop() async => _send(const MediaCommand.stop());
 
   /// The app was swiped away from Recents. Closing it stops the music and
   /// takes the notification down; leaving it with Home keeps playing.
   @override
   Future<void> onTaskRemoved() async {
     _closed = true;
-    await _c.pause();
+    _send(const MediaCommand.pause());
     _publishState();
   }
 
   @override
-  Future<void> seek(Duration position) => _c.seek(position);
+  Future<void> seek(Duration position) async => _send(MediaCommand.seek(position));
 
   @override
-  Future<void> skipToNext() => _c.next();
+  Future<void> skipToNext() async => _send(const MediaCommand.next());
 
   @override
-  Future<void> skipToPrevious() => _c.previous();
+  Future<void> skipToPrevious() async => _send(const MediaCommand.previous());
 }

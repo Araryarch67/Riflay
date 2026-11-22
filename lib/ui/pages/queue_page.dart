@@ -353,7 +353,23 @@ class _QueueRow extends StatelessWidget {
         Expanded(
           child: TrackRow(track: track, index: index, currentOccurrence: false, onTap: onTap),
         ),
-        if (eta != null) Text(eta!, style: Theme.of(context).textTheme.labelSmall),
+        // When it starts, in a slot of its own width even when unknown, so the buttons after it line up row to row.
+        SizedBox(
+          width: 60,
+          child: eta == null
+              ? null
+              : FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerRight,
+                  child: Text(
+                    eta!,
+                    textAlign: TextAlign.right,
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      fontFeatures: const [FontFeature.tabularFigures()],
+                    ),
+                  ),
+                ),
+        ),
         actions,
         IconButton(
           tooltip: tr.removeFromQueue,

@@ -332,7 +332,7 @@ class TextSettings extends StatelessWidget {
 
 /// The app's own typeface, the default.
 abstract final class AppFont {
-  static const ownName = 'Figtree';
+  static const ownName = AppTypeface.defaultFamily;
 }
 
 Future<void> _pickFont(BuildContext context) async {
@@ -412,6 +412,15 @@ class _FontDialogState extends State<_FontDialog> {
                     children: [
                       if (q.isEmpty || AppFont.ownName.toLowerCase().contains(q))
                         row(AppFont.ownName, tr.riflaysOwnFont, current == null, () => Navigator.pop(context, (null,))),
+                      // The other typefaces in the app: no files to load.
+                      for (final family in AppTypeface.bundled)
+                        if (q.isEmpty || family.toLowerCase().contains(q))
+                          row(
+                            family,
+                            tr.riflaysOwnFont,
+                            current == family,
+                            () => Navigator.pop(context, (FontFamilyFiles(family, const []),)),
+                          ),
                       if (snap.connectionState != ConnectionState.done)
                         const Padding(padding: EdgeInsets.all(16), child: SkeletonList(count: 6, rowSize: 28))
                       else

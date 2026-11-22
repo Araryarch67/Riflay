@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:riflay/services/sleep_timer.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// A player that records what the timer does to it.
 class _Host implements SleepHost {
@@ -26,6 +27,7 @@ class _Host implements SleepHost {
 }
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
   late DateTime now;
   late _Host host;
   late SleepTimer timer;
@@ -41,6 +43,30 @@ void main() {
     now = DateTime(2026, 1, 1, 22, 0).add(after);
     timer.tick();
   }
+
+  testWidgets('restores a daily sleep deadline and a daily playlist alarm', (tester) async {
+    SharedPreferences.setMockInitialValues({
+      'sleep.dailyMinute': 22 * 60 + 1,
+      'sleep.dailyAlarm': ['1322', 'playlist'],
+    });
+    final prefs = await SharedPreferences.getInstance();
+    final played = <String>[];
+    timer.loadSchedules(prefs, (id) async => played.add(id));
+
+    now = DateTime(2026, 1, 1, 22, 0, 30);
+    await tester.pump(const Duration(seconds: 30));
+    expect(timer.deadline, DateTime(2026, 1, 1, 22, 1));
+    now = DateTime(2026, 1, 1, 22, 1);
+    await tester.pump(const Duration(seconds: 30));
+    expect(host.pauses, 1);
+    now = DateTime(2026, 1, 1, 22, 2);
+    await tester.pump(const Duration(minutes: 1));
+    expect(played, ['playlist']);
+
+    await timer.setDailySleep(null);
+    await timer.setDailyAlarm(null, null);
+    expect(prefs.getKeys(), isEmpty);
+  });
 
   group('countdown', () {
     test('runs from a wall-clock deadline and reports what is left', () {

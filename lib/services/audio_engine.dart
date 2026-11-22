@@ -698,6 +698,13 @@ class AudioEngine extends ChangeNotifier {
   /// Android 14+ with a USB DAC that takes bit-perfect formats.
   bool get androidUsb => Host.isAndroid && usb.supported && usb.device != null;
 
+  /// Which output the sound goes to, for remembering the volume of each: on Android the phone's own output, or a
+  /// USB DAC that Android holds at full volume (bit-perfect, Direct USB), where only the app's volume turns it
+  /// down; on a computer the device actually opened ("auto" while a chosen one is unplugged).
+  String get outputKey => Host.isAndroid
+      ? (bitPerfect ? 'android-dac' : 'android')
+      : (_openedDevice ?? device);
+
   /// Whether Bit-perfect mode can be offered here: a computer's own output choice, or Android 14+.
   bool get hasBitPerfect => hasOutputChoice || (Host.isAndroid && usb.supported);
 
@@ -1831,7 +1838,10 @@ class AudioEngine extends ChangeNotifier {
   /// Whether the volume moved between mpv's volume and the filter
   /// ([_volumeAtOutput]): the output must then reopen, in float or back in the song's format.
   Future<bool> _applyProps(NativePlayer p) async {
-    _openedDevice = await _outputDevice();
+    final opened = await _outputDevice();
+    // Another device than before (a DAC pulled out: the default output): the player keeps a volume for each.
+    if (opened != _openedDevice && _openedDevice != null) scheduleMicrotask(notifyListeners);
+    _openedDevice = opened;
     final props = <String, String>{
       // media_kit turns on mpv's disk cache, which fails ("Failed to create file
       // cache") without a writable cache dir. Audio needs no more than the RAM cache.

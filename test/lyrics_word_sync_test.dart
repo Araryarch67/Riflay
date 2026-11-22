@@ -7,6 +7,24 @@ import 'package:riflay/services/lyrics.dart';
 Duration ms(int n) => Duration(milliseconds: n);
 
 void main() {
+  test('TTML duet uses the trailing side for the second vocalist', () {
+    final lyrics = Lyrics.parseTtml(
+      '<tt xmlns:ttm="http://www.w3.org/ns/ttml#metadata"><body><div>'
+      '<p begin="1s" ttm:agent="one">First</p>'
+      '<p begin="2s" ttm:agent="two">Second</p>'
+      '<p begin="3s">Together</p>'
+      '<p begin="4s" ttm:agent="one">First again</p>'
+      '</div></body></tt>',
+      source: 'test',
+    );
+    expect(lyrics.lines.map((line) => line.vocalSide), [
+      LyricVocalSide.leading,
+      LyricVocalSide.trailing,
+      null,
+      LyricVocalSide.leading,
+    ]);
+  });
+
   group('enhanced LRC', () {
     test('word tags give each word a start and an end', () {
       final l = Lyrics.parse('[00:12.00]<00:12.00>Hello <00:12.50>world<00:13.20>\n[00:15.00]Next line', source: 'x');

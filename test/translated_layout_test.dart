@@ -81,8 +81,8 @@ void main() {
   // The app's own font, so Latin words are as wide as on a device (the test font draws every letter a square).
   // Japanese has no glyphs in it and falls back to the square test font, which is about as wide as real kana.
   setUpAll(() async {
-    final figtree = FontLoader('Figtree')
-      ..addFont(File('assets/fonts/Figtree.ttf').readAsBytes().then(ByteData.sublistView));
+    final figtree = FontLoader('Space Grotesk')
+      ..addFont(File('assets/fonts/SpaceGrotesk.ttf').readAsBytes().then(ByteData.sublistView));
     await figtree.load();
   });
 

@@ -105,8 +105,9 @@ class AppRelease {
 /// Checks on request (Settings › About), and once a start in the background ([checkAtStart]). Android downloads are
 /// size- and SHA-256-checked; the native installer separately checks the package, version and signing key.
 class AppUpdates {
-  /// Off with `RIFLAY_NO_UPDATE_CHECK`: no check at start, only the one in Settings › About.
-  static const _checksAtStart = !bool.fromEnvironment('RIFLAY_NO_UPDATE_CHECK');
+  /// Off with `RIFLAY_NO_UPDATE_CHECK`: no check at start, only the one in Settings › About. Nightly builds
+  /// skip it too: the stable release is a different app, not an update.
+  static const _checksAtStart = !bool.fromEnvironment('RIFLAY_NO_UPDATE_CHECK') && !isNightly;
   static bool _checkedAtStart = false;
 
   /// Once a start, a while after the window is up and quietly: one request for the latest release. [found] gets a

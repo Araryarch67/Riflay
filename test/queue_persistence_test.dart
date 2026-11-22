@@ -36,6 +36,7 @@ void main() {
     expect(station?.tracks.map((track) => track.id), [current.id, similar.id]);
     expect(c.playingFrom, station?.title);
     expect(c.playlists, isEmpty);
+    expect(c.recentRadios.value, [same(station)], reason: "Home's Made for you keeps the temporary playlist");
     expect(seeds, [current.id]);
     expect(c.autoplay, isFalse);
     expect(c.player.sequenceState.currentSource, same(source));

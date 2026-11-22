@@ -2,16 +2,28 @@ import 'package:youtube_explode_dart/youtube_explode_dart.dart' show Video, Vide
 
 import '../models/track.dart';
 
-/// Plain YouTube search (not YouTube Music): any video can be played like a song.
-/// Holds the paging state of the latest [search]; use one instance per search box.
+/// One page of videos from YouTube Music, and the token of the next one.
+typedef MusicVideoPage = Future<({List<Track> tracks, String? next})> Function(String query, String? continuation);
+
+/// Video search: YouTube Music's Videos first (one quick request a page), plain YouTube when that fails. Any
+/// video can be played like a song. Holds the paging state of the latest [search]; use one instance per search box.
 class YoutubeVideoSearch {
-  YoutubeVideoSearch({YoutubeExplode? client}) : _yt = client ?? YoutubeExplode(), _ownsClient = client == null;
+  YoutubeVideoSearch({YoutubeExplode? client, this.music})
+    : _yt = client ?? YoutubeExplode(),
+      _ownsClient = client == null;
 
   final YoutubeExplode _yt;
   final bool _ownsClient;
+
+  /// YouTube Music's video pages; null searches plain YouTube only.
+  final MusicVideoPage? music;
   VideoSearchList? _page;
   final _seen = <String>{};
   int _generation = 0;
+
+  /// While the results come from YouTube Music: the query and its next page's token.
+  String? _musicQuery;
+  String? _musicNext;
 
   /// Shorts are at most this long.
   static const shortsMaxLength = Duration(seconds: 60);
@@ -32,13 +44,31 @@ class YoutubeVideoSearch {
   static const _maxEmptyPages = 3;
 
   /// Whether [more] may have something.
-  bool get hasMore => _page != null;
+  bool get hasMore => _musicQuery != null ? _musicNext != null : _page != null;
 
   /// First page of results for [query]; resets paging.
   Future<List<Track>> search(String query) async {
     final generation = ++_generation;
     _seen.clear();
     _page = null;
+    _musicQuery = _musicNext = null;
+    if (music case final music?) {
+      try {
+        final page = await music(query, null);
+        if (generation != _generation) return const [];
+        if (page.tracks.isNotEmpty) {
+          _musicQuery = query;
+          _musicNext = page.next;
+          return [
+            for (final t in page.tracks)
+              if (_seen.add(t.videoId ?? t.id)) t,
+          ];
+        }
+      } catch (_) {
+        // Plain YouTube below.
+      }
+      if (generation != _generation) return const [];
+    }
     final first = await _yt.search.search(query);
     if (generation != _generation) return const [];
     return _take(first);
@@ -47,6 +77,21 @@ class YoutubeVideoSearch {
   /// The next page, or empty when there are no more (or a newer [search] began meanwhile).
   Future<List<Track>> more() async {
     final generation = _generation;
+    if (_musicQuery case final query?) {
+      final token = _musicNext;
+      if (token == null) return const [];
+      for (var i = 0; i < _maxEmptyPages; i++) {
+        final page = await music!(query, token);
+        if (generation != _generation) return const [];
+        _musicNext = page.next;
+        final fresh = [
+          for (final t in page.tracks)
+            if (_seen.add(t.videoId ?? t.id)) t,
+        ];
+        if (fresh.isNotEmpty || _musicNext == null) return fresh;
+      }
+      return const [];
+    }
     var page = _page;
     for (var i = 0; i < _maxEmptyPages && page != null; i++) {
       final next = await page.nextPage();

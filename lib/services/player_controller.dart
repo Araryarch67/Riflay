@@ -95,7 +95,7 @@ class PlayerController extends ChangeNotifier {
     if (AudioEngine.webEffects) player.setWebCrossOrigin(WebCrossOrigin.anonymous).ignore();
     AudioSession.instance.then((session) {
       if (_disposed) return;
-      _subs.add(session.becomingNoisyEventStream.listen((_) => player.pause()));
+      _watchAudioRoutes(session);
     }, onError: (Object e) => debugPrint('Audio session unavailable: $e'));
     // Direct USB (Android): what is queued for the DAC follows pause and play, and is dropped on a seek or a
     // jump to another song; a song running into the next one keeps flowing.
@@ -405,6 +405,10 @@ class PlayerController extends ChangeNotifier {
         });
   }
 
+  /// The radios started lately (newest first), as the temporary playlists they began with: Home's "Made for you"
+  /// keeps them, so a station can be gone back to after the queue has moved on.
+  final recentRadios = ValueNotifier<List<Collection>>(const []);
+
   /// Starts [seed]'s radio and returns a temporary playlist for the new session.
   Future<Collection?> startRadio(Track seed) async {
     if (_regenerating) return null;
@@ -419,13 +423,19 @@ class PlayerController extends ChangeNotifier {
     }
     final tracks = await _regenerateQueue(radioSeed: seed);
     if (tracks != null && !_disposed) {
-      return Collection(
+      final station = Collection(
         kind: CollectionKind.radio,
         id: 'radio:$_radioGeneration',
         title: tr.radioFrom(seed.title),
         subtitle: seed.artist,
         tracks: List.unmodifiable(tracks),
       );
+      // One per seed song: starting the same radio again replaces the older one.
+      recentRadios.value = [
+        station,
+        ...recentRadios.value.where((old) => old.title != station.title),
+      ].take(5).toList(growable: false);
+      return station;
     }
     if (!_disposed && _matchesRadioSeed(currentTrack, seed)) {
       notify(tr.queueRefreshFailed);
@@ -719,10 +729,18 @@ class PlayerController extends ChangeNotifier {
 
   String? _lastError;
   DateTime _lastErrorAt = DateTime(0);
+  Future<void>? _closingPlayer;
+  bool _cancelledOpening = false;
 
   /// A stream that fails to resolve shouldn't stall the whole queue: report it and move on.
   void _onPlaybackError(PlayerException e) {
-    if (_disposed || _restoringQueue) return;
+    if (_disposed ||
+        _restoringQueue ||
+        _closingPlayer != null ||
+        _cancelledOpening ||
+        (!_starting && player.audioSources.isEmpty)) {
+      return;
+    }
     if (_retryLoadFailed case final pending? when !pending.isCompleted) {
       pending.complete(false);
       return;
@@ -772,8 +790,9 @@ class PlayerController extends ChangeNotifier {
     // Repeat-one would retry the same broken song forever: skip it all the same. A paused player stays paused.
     final next = _neighbour(1, from: index);
     if (next != null) {
+      final generation = _playbackRetryGeneration;
       player.seek(Duration.zero, index: next).then((_) {
-        if (wasPlaying) _play();
+        if (wasPlaying && generation == _playbackRetryGeneration) _play();
       }, onError: (Object _) {});
     }
   }
@@ -1002,6 +1021,9 @@ class PlayerController extends ChangeNotifier {
   /// Plays. At the end of the queue (nothing left to play) it starts the queue over, as [togglePlay] does:
   /// the media keys and the system's Play button call this, and would otherwise do nothing.
   Future<void> play() async {
+    if (_closingPlayer != null) return;
+    _bluetoothResume = null;
+    _bluetoothPause = null;
     if (!casting && player.audioSources.isNotEmpty && player.processingState == ProcessingState.completed) {
       await player.seek(Duration.zero, index: 0);
     }
@@ -1009,8 +1031,89 @@ class PlayerController extends ChangeNotifier {
   }
 
   Future<void> pause() {
+    _bluetoothResume = null;
+    _bluetoothPause = null;
+    if (_starting || _recovering) _cancelledOpening = true;
     _cancelPlaybackRetry();
     return casting ? cast.pause() : player.pause();
+  }
+
+  ({String device, String track})? _bluetoothResume;
+  ({String track, DateTime at})? _bluetoothPause;
+
+  void _watchAudioRoutes(AudioSession session) {
+    var outputs = <String>{};
+    String? lastRemoved;
+    DateTime? removedAt;
+    var revision = 0;
+    Future<void> refresh() async {
+      final request = ++revision;
+      try {
+        final Set<String> next;
+        if (Host.isAndroid) {
+          final devices = await AndroidAudioManager().getDevices(AndroidGetAudioDevicesFlags.outputs);
+          next = {
+            for (final device in devices)
+              if (device.type == AndroidAudioDeviceType.bluetoothA2dp &&
+                  device.address != null &&
+                  device.address!.isNotEmpty)
+                device.address!,
+          };
+        } else {
+          final devices = await session.getDevices(includeInputs: false);
+          next = {
+            for (final device in devices)
+              if (device.isOutput &&
+                  // ignore: experimental_member_use
+                  (device.type == AudioDeviceType.bluetoothA2dp || device.type == AudioDeviceType.bluetoothLe))
+                device.id,
+          };
+        }
+        if (_disposed) return;
+        if (request == revision) {
+          final removed = outputs.difference(next);
+          if (removed.length == 1 && outputs.length == 1) {
+            lastRemoved = removed.single;
+            removedAt = DateTime.now();
+          }
+          outputs = next;
+        }
+        final paused = _bluetoothPause;
+        if (paused != null &&
+            lastRemoved != null &&
+            removedAt != null &&
+            paused.at.difference(removedAt!).abs() < const Duration(seconds: 2) &&
+            DateTime.now().difference(paused.at) < const Duration(seconds: 2)) {
+          _bluetoothResume = (device: lastRemoved!, track: paused.track);
+          _bluetoothPause = null;
+        }
+        final pending = _bluetoothResume;
+        if (pending != null && outputs.length == 1 && outputs.contains(pending.device)) {
+          _bluetoothResume = null;
+          if (currentTrack?.id == pending.track && !player.playing && !casting && canPlay) {
+            unawaited(play());
+          }
+        }
+      } catch (error) {
+        debugPrint('Bluetooth audio route unavailable: $error');
+      }
+    }
+
+    final mobile = Host.isAndroid || Host.isIOS;
+    if (mobile) {
+      unawaited(refresh());
+      _subs.add(session.devicesChangedEventStream.listen((_) => unawaited(refresh())));
+    }
+    _subs.add(
+      session.becomingNoisyEventStream.listen((_) {
+        final track = player.playing && !casting ? currentTrack?.id : null;
+        unawaited(player.pause());
+        if (mobile && track != null) {
+          _bluetoothPause = (track: track, at: DateTime.now());
+          unawaited(refresh());
+        }
+      }),
+    );
   }
 
   /// 0-1: where the volume slider sits, for this device or the cast device.
@@ -1043,13 +1146,47 @@ class PlayerController extends ChangeNotifier {
     return _playAt(v);
   }
 
-  Future<void> _storeVolume() async => (await SharedPreferences.getInstance()).setDouble(_volumeKey, _level.value);
+  Future<void> _storeVolume() async {
+    if (_outputKey case final key?) _outputVolumes[key] = _level.value;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setDouble(_volumeKey, _level.value);
+    if (_outputKey != null) await prefs.setString(_outputVolumesKey, jsonEncode(_outputVolumes));
+  }
 
   /// The engine applies it to mpv (desktop and Android); elsewhere it is just_audio's.
   Future<void> _playAt(double level) =>
       AudioEngine.supported ? audio.setVolume(gainOfLevel(level)) : player.setVolume(gainOfLevel(level));
 
   static const _volumeKey = 'volume.v1';
+
+  /// The volume last used on each output ([AudioEngine.outputKey]): turned down for an IEM on a bit-perfect DAC
+  /// (which Android holds at full volume), it isn't left that low for the phone's speaker once the DAC is pulled
+  /// out, and comes back with the DAC.
+  static const _outputVolumesKey = 'volume.byOutput.v1';
+  final _outputVolumes = <String, double>{};
+  String? _outputKey;
+
+  /// The output changed: the level kept for it (if it has one) replaces the one used on the previous output.
+  void _followOutput() {
+    if (!AudioEngine.supported || casting) return;
+    final key = audio.outputKey;
+    final previous = _outputKey;
+    if (key == previous) return;
+    _outputKey = key;
+    if (previous == null) {
+      // The first output seen: it starts from the saved level.
+      _outputVolumes.putIfAbsent(key, () => _level.value);
+      return;
+    }
+    _outputVolumes[previous] = _level.value;
+    final kept = _outputVolumes[key];
+    _outputVolumes.putIfAbsent(key, () => _level.value);
+    if (kept != null && kept != _level.value) setVolume(kept).ignore();
+    _storeOutputVolumes().ignore();
+  }
+
+  Future<void> _storeOutputVolumes() async =>
+      (await SharedPreferences.getInstance()).setString(_outputVolumesKey, jsonEncode(_outputVolumes));
   Timer? _saveVolume;
 
   /// The level Unmute goes back to.
@@ -1697,6 +1834,14 @@ class PlayerController extends ChangeNotifier {
     final loop = LoopMode.values.asNameMap()[prefs.getString(_loopKey)];
     final level = prefs.getDouble(_volumeKey);
     if (level != null) _level.value = level.clamp(0, 1);
+    try {
+      final kept = jsonDecode(prefs.getString(_outputVolumesKey) ?? '{}') as Map<String, dynamic>;
+      for (final e in kept.entries) {
+        if (e.value is num) _outputVolumes[e.key] = (e.value as num).toDouble().clamp(0, 1);
+      }
+    } catch (_) {
+      // Unreadable: each output starts from the saved level.
+    }
     Ffmpeg.onDownload = _errors.add;
     // A browser has no files, tag tools or music folders (see lib/platform/host.dart).
     if (!Host.isWeb) unawaited(Metadata.probeTagTools().then((_) => notifyListeners()));
@@ -1705,6 +1850,9 @@ class PlayerController extends ChangeNotifier {
     unawaited(AudioAnalysis.load());
     unawaited(LyricsService.loadBetterLyricsKey());
     audio.addListener(notifyListeners);
+    audio.addListener(_followOutput);
+    // The output at start keeps the saved level, so moving to another one later has something to come back to.
+    _followOutput();
     _dopWasActive = audio.dopActive;
     audio.addListener(_onAudioSettings);
     audio.addListener(_followTempo);
@@ -1713,6 +1861,12 @@ class PlayerController extends ChangeNotifier {
     notifyListeners();
     // The player's own loop mode and volume are not needed before the first frame; they follow it.
     await _restoreQueue(prefs);
+    sleep.loadSchedules(prefs, (id) async {
+      final playlist = _playlists.where((playlist) => playlist.id == id).firstOrNull;
+      if (playlist != null && playlist.tracks.isNotEmpty && ListenTogether.of(this).role != ListenRole.guest) {
+        await playCollection(playlistCollection(playlist));
+      }
+    });
     unawaited(_applyPlayerSettings(loop, level));
     if (Host.isWeb) return;
     unawaited(_enrichUntagged());
@@ -2454,9 +2608,12 @@ class PlayerController extends ChangeNotifier {
     bool shuffled = false,
     Duration? startPosition,
   }) async {
+    if (_closingPlayer case final closing?) await closing;
+    if (_disposed) return;
     _saveLongPosition();
     _cancelPlaybackRetry();
     if (tracks.isEmpty) return;
+    _cancelledOpening = false;
     final selected = _playableQueueTrack(tracks[index.clamp(0, tracks.length - 1)]);
     if (selected == null) {
       _errors.add(tr.spotiflacDownloadToPlay);
@@ -2691,9 +2848,16 @@ class PlayerController extends ChangeNotifier {
   }
 
   /// Stops and empties the queue: the mini player and the notification go away.
-  Future<void> closePlayer() async {
+  Future<void> closePlayer() => _closingPlayer ??= _closePlayer().whenComplete(() => _closingPlayer = null);
+
+  Future<void> _closePlayer() async {
+    _bluetoothResume = null;
+    _bluetoothPause = null;
+    _cancelledOpening = true;
+    _cancelPlaybackRetry();
     _radioGeneration++;
     sleep.cancel();
+    if (casting) await cast.disconnect();
     await player.stop();
     await player.clearAudioSources();
     await YoutubeAudioSource.clearCache();
@@ -2701,11 +2865,15 @@ class PlayerController extends ChangeNotifier {
     _autoplayed.clear();
     _autoplaySeed = null;
     playingFrom = null;
+    _saveQueue();
     notifyListeners();
     MemoryTrim.schedule();
   }
 
   Future<void> togglePlay() async {
+    if (_closingPlayer != null) return;
+    _bluetoothResume = null;
+    _bluetoothPause = null;
     if (!casting && (_starting || (_recovering && _retryWantsPlay))) return pause();
     _cancelPlaybackRetry();
     if (player.audioSources.isEmpty) {
@@ -2914,8 +3082,14 @@ class PlayerController extends ChangeNotifier {
   /// Plays here, or on the cast device. [restart]: the song was just chosen,
   /// so start it from the top even if it's the one already on the device.
   Future<void> _play({bool restart = false}) async {
+    if (_disposed || _closingPlayer != null) return;
+    _cancelledOpening = false;
+    _bluetoothResume = null;
+    _bluetoothPause = null;
     if (!casting) {
+      final generation = _playbackRetryGeneration;
       if (_soundcloudExpired) await _refreshSoundcloud();
+      if (_disposed || generation != _playbackRetryGeneration) return;
       return player.play();
     }
     if (cast.loadedKey != currentTrack?.id) return _castCurrent(play: true);
@@ -3194,6 +3368,7 @@ class PlayerController extends ChangeNotifier {
 
   @override
   void dispose() {
+    recentRadios.dispose();
     _writeQueue();
     _queueLifecycle?.dispose();
     _disposed = true;

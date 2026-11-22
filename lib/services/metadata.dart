@@ -434,6 +434,10 @@ abstract final class Metadata {
   @visibleForTesting
   static int coversRead = 0;
 
+  /// Puts [bytes] in as [track]'s thumbnail, as if it had been read (tests).
+  @visibleForTesting
+  static void debugSetThumbnail(Track track, Uint8List bytes) => _thumbs[_artKey(track)] = bytes;
+
   static Uint8List? cachedThumbnail(Track track) {
     final key = _artKey(track);
     final t = _thumbs.remove(key);

@@ -6,7 +6,9 @@ import '../theme.dart';
 /// Menus and pickers share one look: a dark rounded card with a hairline
 /// border, compact rows with an icon.
 BorderSide get _menuBorder => BorderSide(color: AppColors.border);
-RoundedRectangleBorder get menuShape => RoundedRectangleBorder(borderRadius: LayoutPrefs.corner(12), side: _menuBorder);
+// On glass: smaller corners, as the panels and fields around it.
+RoundedRectangleBorder get menuShape =>
+    RoundedRectangleBorder(borderRadius: LayoutPrefs.corner(AppColors.glass ? 8 : 12), side: _menuBorder);
 
 /// One row of a popup menu: icon and label, sized for both mouse and touch.
 class MenuRow extends StatelessWidget {
@@ -96,8 +98,11 @@ class OptionPicker<T> extends StatelessWidget {
           ),
       ],
       builder: (context, controller, _) => Material(
-        color: AppColors.hover.withValues(alpha: enabled ? 1 : 0.5),
-        shape: const StadiumBorder(),
+        // On glass: the glass's haze (no colour of its own) and small corners.
+        color: (AppColors.glass ? AppColors.tile : AppColors.hover).withValues(
+          alpha: (AppColors.glass ? AppColors.tile.a : 1) * (enabled ? 1 : 0.5),
+        ),
+        shape: AppColors.glass ? RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)) : const StadiumBorder(),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: enabled ? () => controller.isOpen ? controller.close() : controller.open() : null,

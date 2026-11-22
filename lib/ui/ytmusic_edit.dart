@@ -56,10 +56,21 @@ Future<bool> _report(BuildContext context, Future<void> Function() change, Strin
   }
 }
 
-Future<void> toggleLike(BuildContext context, Track track) {
-  final account = PlayerScope.read(context).ytMusic;
+Future<void> toggleLike(BuildContext context, Track track) async {
+  final player = PlayerScope.read(context);
+  final account = player.ytMusic;
   final liked = account.isLiked(track);
-  return _report(context, () => account.setLiked(track, !liked), liked ? tr.removedFromLiked : tr.addedToLiked);
+  final changed = await _report(
+    context,
+    () => account.setLiked(track, !liked),
+    liked ? tr.removedFromLiked : tr.addedToLiked,
+  );
+  if (!changed || liked || !Features.downloads || track.videoId == null) return;
+  final prefs = DownloadPrefs.instance;
+  await prefs.load();
+  if (prefs.autoDownloadLiked && account.isLiked(track) && !player.isOffline(track)) {
+    player.youtube.enqueueTracks([track], choice: prefs.audioChoice);
+  }
 }
 
 /// Name + privacy for a new playlist (or a rename when [initialTitle] is set).

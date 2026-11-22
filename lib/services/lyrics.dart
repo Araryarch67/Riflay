@@ -35,15 +35,18 @@ class LyricWord {
   final String text;
 }
 
+enum LyricVocalSide { leading, trailing }
+
 /// One timed line of synced lyrics. [words] is empty unless the source times
 /// each word (karaoke); [end] is when the line stops, when the source says.
 class LyricLine {
-  const LyricLine(this.time, this.text, {this.end, this.words = const []});
+  const LyricLine(this.time, this.text, {this.end, this.words = const [], this.vocalSide});
 
   final Duration time;
   final String text;
   final Duration? end;
   final List<LyricWord> words;
+  final LyricVocalSide? vocalSide;
 }
 
 /// What [Lyrics.check] found.
@@ -310,14 +313,42 @@ class Lyrics {
   /// line, with word or syllable `<span>`s. Background vocals and
   /// translations are left out.
   static Lyrics parseTtml(String ttml, {required String source}) {
+    final document = XmlDocument.parse(ttml);
+    final ensembles = {
+      for (final agent in document.findAllElements('agent', namespace: '*'))
+        if (agent.getAttribute('type') == 'group')
+          agent.attributes.where((attr) => attr.name.local == 'id').firstOrNull?.value,
+    };
+    final timed = [
+      for (final line in document.findAllElements('p'))
+        if (_ttmlTime(line.getAttribute('begin')) case final begin?)
+          (
+            line: line,
+            begin: begin,
+            agent: line.attributes.where((attr) => attr.name.local == 'agent').firstOrNull?.value,
+          ),
+    ];
+    final vocals = {
+      for (final entry in timed)
+        if (entry.agent != null && !ensembles.contains(entry.agent)) entry.agent!,
+    };
     final lines = <LyricLine>[];
-    for (final p in XmlDocument.parse(ttml).findAllElements('p')) {
-      final begin = _ttmlTime(p.getAttribute('begin'));
-      if (begin == null) continue;
+    for (final (:line, :begin, :agent) in timed) {
+      final p = line;
       final text = _ttmlText(p).replaceAll(RegExp(r'\s+'), ' ').trim();
       final end = _ttmlTime(p.getAttribute('end'));
       final words = _ttmlWords(p, text, end);
-      lines.add(LyricLine(begin, text, end: words.isEmpty ? end : (end ?? words.last.end), words: words));
+      lines.add(
+        LyricLine(
+          begin,
+          text,
+          end: words.isEmpty ? end : (end ?? words.last.end),
+          words: words,
+          vocalSide: vocals.length > 1 && vocals.contains(agent)
+              ? (agent == vocals.first ? LyricVocalSide.leading : LyricVocalSide.trailing)
+              : null,
+        ),
+      );
     }
     lines.sort((a, b) => a.time.compareTo(b.time));
     return _timedOrPlain(lines, source: source);
@@ -985,6 +1016,7 @@ abstract final class LyricsCache {
   static Map<String, dynamic> _toJson(Lyrics l) => {
     'at': DateTime.now().millisecondsSinceEpoch,
     'source': l.source,
+    if (l.source == 'Better Lyrics') 'vocalSidesParsed': true,
     'plain': l.plain,
     'instrumental': l.instrumental,
     if (l.otherVersion) 'otherVersion': true,
@@ -993,6 +1025,7 @@ abstract final class LyricsCache {
         {
           't': _ms(line.time),
           'x': line.text,
+          if (line.vocalSide case final side?) 'vocalSide': side.name,
           if (line.end != null) 'e': _ms(line.end!),
           if (line.words.isNotEmpty)
             'w': [
@@ -1012,6 +1045,7 @@ abstract final class LyricsCache {
         LyricLine(
           Duration(milliseconds: line['t'] as int),
           line['x'] as String,
+          vocalSide: LyricVocalSide.values.asNameMap()[line['vocalSide']],
           end: line['e'] == null ? null : Duration(milliseconds: line['e'] as int),
           words: [
             for (final w in (line['w'] as List? ?? const []).cast<List>())
@@ -1031,6 +1065,7 @@ abstract final class LyricsCache {
       final j = jsonDecode(await file.readAsString()) as Map<String, dynamic>;
       final at = DateTime.fromMillisecondsSinceEpoch(j['at'] as int);
       if (DateTime.now().difference(at) > _maxAge) return null;
+      if (j['source'] == 'Better Lyrics' && j['vocalSidesParsed'] != true) return null;
       final l = _fromJson(j);
       return l.isEmpty ? null : l;
     } catch (e) {

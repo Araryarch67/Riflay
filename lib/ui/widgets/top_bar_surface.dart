@@ -19,17 +19,29 @@ class TopBarSurface extends StatelessWidget {
   Widget build(BuildContext context) {
     if (opacity == 0) return const SizedBox.shrink();
     final colors = AppColors.of(context);
-    final tint = color == null ? Color.lerp(colors.elevated, colors.accent, 0.14)! : AppColors.sink(color!, 0.45);
+    // On glass the bar is glass too: the panels' neutral fill, no colour of its own.
+    final tint = colors.glass
+        ? AppColors.glassFill(colors.light, colors.bright)
+        : color == null
+        ? Color.lerp(colors.elevated, colors.accent, 0.14)!
+        : AppColors.sink(color!, 0.45);
     final gradient = DecoratedBox(
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [
-            tint.withValues(alpha: 0.88 * opacity),
-            Color.lerp(tint, colors.panel, 0.45)!.withValues(alpha: 0.72 * opacity),
-            colors.panel.withValues(alpha: 0.22 * opacity),
-          ],
+          colors: colors.glass
+              // The glass's own strength, fading out under the bar.
+              ? [
+                  tint.withValues(alpha: tint.a * opacity),
+                  tint.withValues(alpha: tint.a * 0.7 * opacity),
+                  tint.withValues(alpha: 0),
+                ]
+              : [
+                  tint.withValues(alpha: 0.88 * opacity),
+                  Color.lerp(tint, colors.panel, 0.45)!.withValues(alpha: 0.72 * opacity),
+                  colors.panel.withValues(alpha: 0.22 * opacity),
+                ],
           stops: const [0, 0.72, 1],
         ),
       ),

@@ -58,7 +58,8 @@ class NowPlayingSidePanel extends StatelessWidget {
   ) {
     NowPlayingSidePanel.builds++;
     return ColoredBox(
-      color: AppColors.panel,
+      // On glass the panel around it is the surface.
+      color: LayoutPrefs.instance.coverGlass ? Colors.transparent : AppColors.panel,
       child: track == null
           ? Center(
               child: Padding(

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:path/path.dart' as path;
 
 import '../models/track.dart';
 import '../platform/host.dart';
@@ -54,10 +55,9 @@ Future<DownloadChoice?> chooseDownload(
   );
 }
 
-/// The downloads folder, for "Saved to" on computers. Phones keep downloads in the app's own folder, which says
-/// nothing to the person, so they get no line.
+/// The destination folder name for the "Saved to" footer.
 Future<String?> _savedTo() async {
-  if (!(Host.isLinux || Host.isWindows || Host.isMacOS)) return null;
+  if (Host.isWeb) return null;
   try {
     return (await YoutubeImporter.downloadsDir()).path;
   } catch (e) {
@@ -455,7 +455,7 @@ class _DownloadOptionsDialogState extends State<DownloadOptionsDialog> {
           child: Text(tr.downloadFormatAction(video ? _container.label : _format.shortLabel)),
         ),
       ],
-      footer: folder == null ? null : Text(tr.savedToFolder(folder)),
+      footer: folder == null ? null : Text(tr.savedToFolder(path.basename(folder))),
     );
   }
 }

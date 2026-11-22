@@ -35,6 +35,7 @@ class _SpotiflacPageState extends State<SpotiflacPage> {
     super.initState();
     _run(() async {
       await engine.load();
+      if (!mounted) return;
       repository.text = engine.registryUrl;
       await engine.refresh();
     });
@@ -65,6 +66,94 @@ class _SpotiflacPageState extends State<SpotiflacPage> {
     final result = await FilePicker.pickFiles(type: FileType.custom, allowedExtensions: ['sflx', 'spotiflac-ext']);
     final path = result.firstOrNull?.path;
     if (path != null) await _run(() => engine.install(path));
+  }
+
+  Future<void> _loadRepository() async {
+    final url = repository.text.trim();
+    if (url.isEmpty) return;
+    await _run(() async {
+      final result = await engine.registry(url);
+      if (mounted) setState(() => catalog = result);
+    });
+  }
+
+  Widget _repositoryCard(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final fieldShape = OutlineInputBorder(borderRadius: LayoutPrefs.corner(12));
+    return Card(
+      margin: EdgeInsets.zero,
+      elevation: 0,
+      color: scheme.surfaceContainer,
+      shape: RoundedRectangleBorder(borderRadius: LayoutPrefs.corner(20)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Icon(Icons.public_rounded, color: scheme.primary, size: 22),
+                const SizedBox(width: 10),
+                Expanded(child: Text(tr.spotiflacRepository, style: theme.textTheme.titleSmall)),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Semantics(
+              label: tr.spotiflacRepository,
+              child: TextField(
+              controller: repository,
+              enabled: !busy,
+              keyboardType: TextInputType.url,
+              textInputAction: TextInputAction.go,
+              autocorrect: false,
+              enableSuggestions: false,
+              onSubmitted: (_) => _loadRepository(),
+              decoration: InputDecoration(
+                hintText: 'https://…/registry.json',
+                filled: true,
+                fillColor: scheme.surface,
+                prefixIcon: const Icon(Icons.link_rounded),
+                border: fieldShape,
+                enabledBorder: fieldShape.copyWith(borderSide: BorderSide(color: scheme.outlineVariant)),
+                disabledBorder: fieldShape.copyWith(borderSide: BorderSide(color: scheme.outlineVariant)),
+                focusedBorder: fieldShape.copyWith(borderSide: BorderSide(color: scheme.primary, width: 2)),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+              ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            ValueListenableBuilder(
+              valueListenable: repository,
+              builder: (context, value, _) => Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  FilledButton.icon(
+                    onPressed: busy || value.text.trim().isEmpty ? null : _loadRepository,
+                    icon: const Icon(Icons.arrow_downward_rounded),
+                    label: Text(tr.spotiflacLoadRepository),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: scheme.primary,
+                      foregroundColor: scheme.onPrimary,
+                    ),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: busy ? null : _import,
+                    icon: const Icon(Icons.file_open_outlined),
+                    label: Text(tr.importSflx),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 8),
+            SizedBox(height: 4, child: busy ? const LinearProgressIndicator() : null),
+          ],
+        ),
+      ),
+    );
   }
 
   Future<void> _action(String id, String action) async {
@@ -276,30 +365,8 @@ class _SpotiflacPageState extends State<SpotiflacPage> {
                       const SizedBox(height: 16),
                       const SpotiflacNotice(),
                       const SizedBox(height: 16),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: [
-                          FilledButton.icon(
-                            onPressed: busy ? null : _import,
-                            icon: const Icon(Icons.add_rounded),
-                            label: Text(tr.importSflx),
-                          ),
-                          FilledButton.tonalIcon(
-                            onPressed: busy ? null : () => _run(engine.refresh),
-                            icon: const Icon(Icons.refresh_rounded),
-                            label: Text(tr.retry),
-                          ),
-                        ],
-                      ),
-                      // The bar's room is kept while idle, so the page doesn't jump as work starts and ends.
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        child: SizedBox(
-                          height: 4,
-                          child: busy ? LinearProgressIndicator(borderRadius: BorderRadius.circular(2)) : null,
-                        ),
-                      ),
+                      _repositoryCard(context),
+                      const SizedBox(height: 16),
                       if (failed)
                         Padding(
                           padding: const EdgeInsets.only(bottom: 16),
@@ -323,29 +390,6 @@ class _SpotiflacPageState extends State<SpotiflacPage> {
                             ),
                           ),
                         ),
-                      TextField(
-                        controller: repository,
-                        enabled: !busy,
-                        keyboardType: TextInputType.url,
-                        decoration: InputDecoration(
-                          labelText: tr.spotiflacRepository,
-                          hintText: 'https://…/registry.json',
-                          suffixIcon: Padding(
-                            padding: const EdgeInsetsDirectional.only(end: 6),
-                            child: IconButton.filledTonal(
-                              tooltip: tr.spotiflacLoadRepository,
-                              onPressed: busy
-                                  ? null
-                                  : () => _run(() async {
-                                      final result = await engine.registry(repository.text);
-                                      if (mounted) setState(() => catalog = result);
-                                    }),
-                              icon: const Icon(Icons.arrow_forward_rounded),
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
                       SettingsCard(
                         children: [
                           SwitchListTile(
@@ -356,7 +400,17 @@ class _SpotiflacPageState extends State<SpotiflacPage> {
                           ),
                         ],
                       ),
-                      if (engine.plugins.isNotEmpty || !busy) heading(tr.installed),
+                      if (engine.plugins.isNotEmpty || !busy)
+                        Row(
+                          children: [
+                            Expanded(child: heading(tr.installed)),
+                            IconButton(
+                              tooltip: tr.refresh,
+                              onPressed: busy ? null : () => _run(engine.refresh),
+                              icon: const Icon(Icons.refresh_rounded),
+                            ),
+                          ],
+                        ),
                       if (engine.plugins.isEmpty && !busy)
                         SettingsCard(
                           children: [

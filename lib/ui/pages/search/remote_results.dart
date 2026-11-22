@@ -247,9 +247,12 @@ Widget libraryShelf(String title, List<Widget> cards) => _row(title, cards);
 
 /// A filter chip other than Songs: every matching artist / album / playlist.
 class CollectionGrid extends StatelessWidget {
-  const CollectionGrid({super.key, required this.future});
+  const CollectionGrid({super.key, required this.future, this.limit});
 
   final Future<List<RemotePlaylist>>? future;
+
+  /// At most this many (a row of podcast shows above their episodes).
+  final int? limit;
 
   @override
   Widget build(BuildContext context) {
@@ -259,7 +262,8 @@ class CollectionGrid extends StatelessWidget {
       future: future,
       builder: (context, snap) {
         if (snap.connectionState != ConnectionState.done) return SearchSpinner(pad: pad);
-        final items = snap.data ?? const <RemotePlaylist>[];
+        final all = snap.data ?? const <RemotePlaylist>[];
+        final items = limit == null ? all : all.take(limit!).toList();
         if (items.isEmpty) {
           return SearchNote(snap.hasError ? tr.ytSearchFailed : tr.nothingFound, pad: pad);
         }

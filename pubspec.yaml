@@ -145,7 +145,11 @@ flutter:
     - assets/tray/
 
   fonts:
-    # Riflay's own typeface (SIL Open Font License, see assets/fonts/OFL.txt): bundled, never fetched at runtime.
+    # Riflay's typefaces (SIL Open Font License, see assets/fonts/*OFL.txt): bundled, never fetched at runtime.
+    # Space Grotesk is the default (one variable font, every weight); Figtree stays as a choice in Settings.
+    - family: Space Grotesk
+      fonts:
+        - asset: assets/fonts/SpaceGrotesk.ttf
     - family: Figtree
       fonts:
         - asset: assets/fonts/Figtree.ttf

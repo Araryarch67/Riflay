@@ -478,6 +478,20 @@ class YoutubeMusicAccount extends ChangeNotifier {
   /// Music videos on YouTube Music, for songs its Songs search doesn't have.
   Future<List<Track>> searchVideos(String query) async => _webTracks(await _browseClient.searchVideos(query));
 
+  /// One page of videos on YouTube Music matching [query]; [continuation] is the previous page's `next`.
+  Future<({List<Track> tracks, String? next})> searchVideoPage(String query, {String? continuation}) async {
+    final page = await _browseClient.searchVideoPage(query, continuation: continuation);
+    return (tracks: _webTracks(page.tracks), next: page.next);
+  }
+
+  /// Podcast shows on YouTube Music, each opening as the playlist of its episodes.
+  Future<List<RemotePlaylist>> searchPodcasts(String query) async => [
+    for (final r in await _browseClient.searchPodcasts(query)) _collectionOf(r),
+  ];
+
+  /// Podcast episodes on YouTube Music; they play like songs.
+  Future<List<Track>> searchEpisodes(String query) async => _webTracks(await _browseClient.searchEpisodes(query));
+
   /// Everything matching [query] (top result, songs, artists, albums, playlists).
   Future<SearchResults> search(String query) async {
     final r = await _browseClient.search(query);

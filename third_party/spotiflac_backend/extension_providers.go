@@ -1358,6 +1358,9 @@ func (p *extensionProviderWrapper) SearchTracksForItemID(query string, limit int
 		return nil, fmt.Errorf("searchTracks returned null")
 	}
 
+	if err := riflaySearchVerificationError(result); err != nil {
+		return nil, err
+	}
 	parseStartedAt := time.Now()
 	searchResult, err := parseExtensionSearchResult(p.vm, result)
 	perf.recordParse(time.Since(parseStartedAt))
@@ -3171,6 +3174,9 @@ func (p *extensionProviderWrapper) customSearch(query string, options map[string
 		return []ExtTrackMetadata{}, nil
 	}
 
+	if err := riflaySearchVerificationError(result); err != nil {
+		return nil, err
+	}
 	parseStartedAt := time.Now()
 	tracks, err := parseExtensionTrackArray(p.vm, result)
 	perf.recordParse(time.Since(parseStartedAt))

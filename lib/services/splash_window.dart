@@ -7,12 +7,9 @@ import 'package:window_manager/window_manager.dart';
 import '../platform/host.dart';
 import 'layout_prefs.dart';
 
-/// The desktop launch's frameless, see-through intro window: only the animated mark floats on the desktop, then the
-/// window turns into the app's own (sized, framed, opaque or as Appearance says) and appears.
-///
-/// Windows and Linux. Windows clears the window through the runner's island mode (`setIsland`, the same clear window
-/// the mini player's island uses); Linux windows already have an alpha channel. macOS plays the intro inside the
-/// normal window, where the see-through mode always blurs what is behind it.
+/// The frameless, see-through desktop intro. Windows uses the runner's island
+/// mode. Linux already has an alpha channel and keeps the same mapped window
+/// through the handoff to let the compositor manage its placement.
 abstract final class SplashWindow {
   /// The intro window's size, in logical pixels: room for the mark, its shock ring and the wordmark, drawn
   /// `DesktopIntro.desktopScale` times larger here, and for it to grow as it leaves.
@@ -26,7 +23,7 @@ abstract final class SplashWindow {
 
   /// Completes once the app's own window is up, at once when there was no intro window. What needs the window's
   /// taskbar button (Windows' thumbnail buttons) waits for it: the intro window has none.
-  static Future<void> get appShown => active.value ? _appShown.future : Future<void>.value();
+  static Future<void> get appShown => active.value && !Host.isLinux ? _appShown.future : Future<void>.value();
   static Size _appSize = const Size(1280, 820);
   static Size _appMinimum = const Size(320, 420);
 
@@ -37,6 +34,10 @@ abstract final class SplashWindow {
   /// Turns the not yet shown window into the intro window. False if the runner couldn't clear it: the app then opens
   /// at [appSize] as usual (the intro plays inside it).
   static Future<bool> open({required Size appSize, required Size appMinimum}) async {
+    if (Host.isLinux) {
+      active.value = true;
+      return true;
+    }
     _appSize = appSize;
     _appMinimum = appMinimum;
     try {
@@ -57,7 +58,7 @@ abstract final class SplashWindow {
 
   /// Shows the intro window once its first frame is drawn (never an empty rectangle before it).
   static Future<void> show() async {
-    if (!active.value) return;
+    if (!active.value || Host.isLinux) return;
     try {
       await windowManager.show();
     } catch (e) {
@@ -65,16 +66,18 @@ abstract final class SplashWindow {
     }
   }
 
-  /// After the intro: hides the window and gives it back the app's frame, size and place. [reveal] shows it once the
-  /// app has drawn its first frame.
+  /// After the intro, bring back the app's frame. Keeping Linux mapped lets the
+  /// compositor deliver the frame that replaces the intro.
   static Future<void> close() async {
     if (!active.value) return;
-    try {
-      await windowManager.hide();
-    } catch (e) {
-      debugPrint('Intro window not hidden: $e');
+    if (!Host.isLinux) {
+      try {
+        await windowManager.hide();
+      } catch (e) {
+        debugPrint('Intro window not hidden: $e');
+      }
+      await _toApp();
     }
-    await _toApp();
     active.value = false;
   }
 
@@ -100,6 +103,7 @@ abstract final class SplashWindow {
 
   /// Shows the app's window (the system's own opening animation plays) and gives it the focus.
   static Future<void> reveal() async {
+    if (Host.isLinux) return;
     try {
       await windowManager.show();
       await windowManager.focus();

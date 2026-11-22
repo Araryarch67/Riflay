@@ -122,6 +122,21 @@ void main() {
             expect(identical(afterPause[i], pausedSources[i]), isTrue, reason: 'Pause must prevent a source reload');
           }
           expect(errors, isEmpty);
+
+          PlayerController.playbackRetryDelays = [const Duration(milliseconds: 300)];
+          available = false;
+          final beforeClose = failures;
+          await controller.playList(tracks, 0);
+          await until(() => failures > beforeClose);
+          await Future.wait([controller.closePlayer(), controller.closePlayer()]);
+          // An HTTP request already handed off by mpv can arrive just after the stop.
+          await Future<void>.delayed(const Duration(milliseconds: 60));
+          final closedRequests = requests;
+          await Future<void>.delayed(const Duration(milliseconds: 450));
+          expect(controller.queue, isEmpty);
+          expect(controller.player.playing, isFalse);
+          expect(requests, closedRequests);
+          expect(errors, isEmpty);
         } finally {
           await rawErrors.cancel();
           await friendly.cancel();

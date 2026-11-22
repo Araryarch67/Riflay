@@ -57,11 +57,12 @@ type loadedExtension struct {
 	runtime      *extensionRuntime
 	indexProgram *goja.Program
 	initialized  bool
-	Enabled      bool   `json:"enabled"`
-	Error        string `json:"error,omitempty"`
-	DataDir      string `json:"data_dir"`
-	SourceDir    string `json:"source_dir"`
-	IconPath     string `json:"icon_path"`
+	lastVMUse    time.Time // Riflay: refresh idle search runtimes while keeping their saved storage.
+	Enabled      bool      `json:"enabled"`
+	Error        string    `json:"error,omitempty"`
+	DataDir      string    `json:"data_dir"`
+	SourceDir    string    `json:"source_dir"`
+	IconPath     string    `json:"icon_path"`
 }
 
 func getExtensionInitSettings(extensionID string) map[string]interface{} {
@@ -120,6 +121,8 @@ func (ext *loadedExtension) lockReadyVM() (*goja.Runtime, error) {
 		ext.VMMu.Unlock()
 		return nil, err
 	}
+	// Wall clock: the monotonic clock stops while the device sleeps.
+	ext.lastVMUse = time.Now().Round(0)
 	return ext.VM, nil
 }
 
@@ -571,6 +574,11 @@ func teardownVMLocked(ext *loadedExtension) {
 	if err := runCleanupLocked(ext); err != nil {
 		GoLog("[Extension] Error calling cleanup for %s: %v\n", ext.ID, err)
 	}
+	releaseVMLocked(ext)
+}
+
+// Riflay: refreshing a VM keeps the provider installed and skips its unload hook.
+func releaseVMLocked(ext *loadedExtension) {
 	if ext.runtime != nil {
 		if err := ext.runtime.flushStorageNow(); err != nil {
 			GoLog("[Extension] Failed to flush storage for %s: %v\n", ext.ID, err)

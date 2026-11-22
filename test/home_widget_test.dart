@@ -16,6 +16,7 @@ class _Player extends PlayerController {
   bool playing = false;
   bool shuffled = false;
   int shuffles = 0;
+  int playbackToggles = 0;
   String? quality;
 
   @override
@@ -37,6 +38,13 @@ class _Player extends PlayerController {
     notifyListeners();
   }
 
+  @override
+  Future<void> togglePlay() async {
+    playbackToggles++;
+    playing = !playing;
+    notifyListeners();
+  }
+
   void change() => notifyListeners();
 }
 
@@ -53,6 +61,7 @@ void main() {
   late List<Map<Object?, Object?>> lyrics;
   late ValueNotifier<String?> line;
   late ValueNotifier<String?> next;
+  late int pendingPlaybackToggles;
 
   setUp(() {
     SharedPreferences.setMockInitialValues({});
@@ -60,9 +69,15 @@ void main() {
     lyrics = [];
     line = ValueNotifier(null);
     next = ValueNotifier(null);
+    pendingPlaybackToggles = 0;
     messenger.setMockMethodCallHandler(channel, (call) async {
       if (call.method == 'update') sent.add(call.arguments as Map<Object?, Object?>);
       if (call.method == 'lyric') lyrics.add(call.arguments as Map<Object?, Object?>);
+      if (call.method == 'takePlaybackToggles') {
+        final count = pendingPlaybackToggles;
+        pendingPlaybackToggles = 0;
+        return count;
+      }
       return null;
     });
     player = _Player();
@@ -190,6 +205,30 @@ void main() {
     );
     expect(player.shuffles, 1);
     expect(sent.last['shuffle'], isTrue);
+  });
+
+  test('a pending widget tap is drained on attach and a later tap toggles the actual player', () async {
+    player
+      ..track = _song
+      ..playing = true
+      ..change();
+    await pumpEventQueue();
+    widget.detach();
+    pendingPlaybackToggles = 1;
+    widget.attach();
+    await pumpEventQueue();
+    expect(player.playbackToggles, 1);
+    expect(sent.last['playing'], isFalse);
+
+    pendingPlaybackToggles = 1;
+    await messenger.handlePlatformMessage(
+      channel.name,
+      const StandardMethodCodec().encodeMethodCall(const MethodCall('playbackActionAvailable')),
+      (_) {},
+    );
+    await pumpEventQueue();
+    expect(player.playbackToggles, 2);
+    expect(sent.last['playing'], isTrue);
   });
 
   test('white text and the accent read on the card, and play / pause on its accent button, whatever the cover', () {

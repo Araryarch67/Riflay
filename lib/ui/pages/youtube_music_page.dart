@@ -96,7 +96,8 @@ void openRemotePlaylist(BuildContext context, RemotePlaylist p, {ShellScope? she
       title: p.title,
       actions: [
         if (artistId != null) FollowButton(artistId: artistId, name: p.title),
-        if (artistId == null && p.browseId != null) SaveToLibraryButton(browseId: p.browseId!),
+        if (artistId == null && p.browseId != null && !p.browseId!.startsWith('MPSP'))
+          SaveToLibraryButton(browseId: p.browseId!),
       ],
       load: () async {
         if (artistId != null) {
@@ -308,6 +309,7 @@ List<Widget> remoteShelfWidgets(
         child: Shelf(
           title: shelf.title,
           compactSpacing: compactSpacing,
+          icon: Icons.local_fire_department_rounded,
           cards: [
             for (final (i, t) in shelf.tracks.indexed)
               MediaCard(

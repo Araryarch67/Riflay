@@ -96,16 +96,17 @@ enum SearchSource {
   }
 }
 
-/// Named filters below the search field, limited to the services enabled in Settings.
-class SearchSourceFilters extends StatefulWidget {
-  const SearchSourceFilters({super.key, this.onSelected});
+/// The menu at the right edge of a search field.
+class SearchSourceButton extends StatefulWidget {
+  const SearchSourceButton({super.key, this.onSelected, this.color});
   final ValueChanged<SearchSource>? onSelected;
+  final Color? color;
 
   @override
-  State<SearchSourceFilters> createState() => _SearchSourceFiltersState();
+  State<SearchSourceButton> createState() => _SearchSourceButtonState();
 }
 
-class _SearchSourceFiltersState extends State<SearchSourceFilters> {
+class _SearchSourceButtonState extends State<SearchSourceButton> {
   @override
   void initState() {
     super.initState();
@@ -126,48 +127,117 @@ class _SearchSourceFiltersState extends State<SearchSourceFilters> {
     super.dispose();
   }
 
+  PopupMenuItem<(SearchSource, String?)> _item(
+    BuildContext context, {
+    required String id,
+    required (SearchSource, String?) value,
+    required String label,
+    required bool selected,
+  }) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    final foreground = selected ? colors.onSecondaryContainer : colors.onSurface;
+    final icon = switch (value.$1) {
+      SearchSource.youtubeMusic => Icons.play_circle_outline_rounded,
+      SearchSource.soundcloud => Icons.cloud_outlined,
+      SearchSource.monochrome => Icons.graphic_eq_rounded,
+      SearchSource.extensions => Icons.extension_outlined,
+    };
+    return PopupMenuItem(
+      key: ValueKey('search-source-$id'),
+      value: value,
+      height: 48,
+      padding: const EdgeInsets.symmetric(horizontal: 6),
+      child: Semantics(
+        selected: selected,
+        child: Ink(
+          decoration: BoxDecoration(
+            color: selected ? colors.secondaryContainer : Colors.transparent,
+            borderRadius: searchSurfaceCorners(12),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+            child: Row(
+              children: [
+                Icon(icon, size: 20, color: selected ? foreground : colors.onSurfaceVariant),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.labelLarge?.copyWith(color: foreground),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                SizedBox(width: 18, child: selected ? Icon(Icons.check_rounded, size: 18, color: foreground) : null),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) => ValueListenableBuilder(
     valueListenable: SearchSource.current,
     builder: (context, source, _) {
       final available = SearchSource.available;
-      if (available.length < 2) return const SizedBox.shrink();
-      return Padding(
-        padding: const EdgeInsets.only(top: 12),
-        child: SearchChips(
-          children: [
-            for (final service in available.where((s) => s != SearchSource.extensions))
-              ChoiceChip(
-                key: ValueKey('search-source-${service.name}'),
-                label: Text(service.label),
-                selected: service == source,
-                onSelected: (_) {
-                  final select = widget.onSelected;
-                  if (select == null) {
-                    service.choose();
-                  } else {
-                    select(service);
-                  }
-                },
-              ),
-            for (final plugin in Spotiflac.instance.searchProviders)
-              ChoiceChip(
-                key: ValueKey('search-source-extension-${plugin['id']}'),
-                label: Text(Spotiflac.instance.nameOf(plugin['id'])),
-                selected: source == SearchSource.extensions && Spotiflac.instance.selected == plugin['id'],
-                onSelected: (_) async {
-                  await Spotiflac.instance.choose(plugin['id']);
-                  if (!mounted) return;
-                  final select = widget.onSelected;
-                  if (select != null) {
-                    select(SearchSource.extensions);
-                  } else {
-                    SearchSource.extensions.choose();
-                  }
-                },
-              ),
-          ],
-        ),
+      final colors = Theme.of(context).colorScheme;
+      final ink = widget.color ?? colors.onSurfaceVariant;
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SizedBox(height: 24, child: VerticalDivider(width: 1, color: ink.withValues(alpha: 0.45))),
+          PopupMenuButton<(SearchSource, String?)>(
+            key: const ValueKey('search-source-menu'),
+            tooltip: '${tr.topicSources} · ${source.label}',
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 224, maxWidth: 264),
+            color: colors.surfaceContainerHigh,
+            surfaceTintColor: Colors.transparent,
+            shadowColor: colors.shadow,
+            elevation: 3,
+            shape: RoundedRectangleBorder(borderRadius: searchSurfaceCorners(20)),
+            clipBehavior: Clip.antiAlias,
+            menuPadding: const EdgeInsets.symmetric(vertical: 6),
+            position: PopupMenuPosition.under,
+            icon: Icon(Icons.inventory_2_outlined, color: ink),
+            onSelected: (choice) async {
+              final (service, pluginId) = choice;
+              if (pluginId != null) {
+                if (!Spotiflac.instance.searchProviders.any((p) => p['id'] == pluginId)) return;
+                await Spotiflac.instance.choose(pluginId);
+              }
+              if (!mounted || !SearchSource.available.contains(service)) return;
+              final select = widget.onSelected;
+              if (select == null) {
+                service.choose();
+              } else {
+                select(service);
+              }
+            },
+            itemBuilder: (context) => [
+              for (final service in available.where((s) => s != SearchSource.extensions))
+                _item(
+                  context,
+                  id: service.name,
+                  value: (service, null),
+                  selected: service == source,
+                  label: service.label,
+                ),
+              for (final plugin in Spotiflac.instance.searchProviders)
+                _item(
+                  context,
+                  id: 'extension-${plugin['id']}',
+                  value: (SearchSource.extensions, plugin['id'] as String),
+                  selected: source == SearchSource.extensions && Spotiflac.instance.selected == plugin['id'],
+                  label: Spotiflac.instance.nameOf(plugin['id']),
+                ),
+            ],
+          ),
+        ],
       );
     },
   );

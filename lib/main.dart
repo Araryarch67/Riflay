@@ -14,6 +14,7 @@ import 'package:screen_retriever/screen_retriever.dart';
 import 'package:just_audio_media_kit/just_audio_media_kit.dart';
 import 'package:window_manager/window_manager.dart';
 
+import 'app_version.dart';
 import 'l10n/generated/app_localizations.dart';
 import 'models/track.dart';
 import 'platform/network.dart';
@@ -31,7 +32,7 @@ import 'services/video_mode.dart';
 import 'services/player_presets.dart';
 import 'services/layout_prefs.dart';
 import 'services/home_widget.dart';
-import 'services/media_session.dart';
+import 'services/media_session/player_binding.dart';
 import 'services/metadata.dart';
 import 'services/legacy_data.dart';
 import 'services/download_notifications.dart';
@@ -53,6 +54,7 @@ import 'ui/home_shell.dart';
 import 'ui/player_panels.dart' show MiniPlayerWindow, miniPlayer, setMiniPlayer, windowFullScreen;
 import 'platform/features.dart';
 import 'ui/theme.dart';
+import 'ui/widgets/cover_backdrop.dart';
 import 'ui/widgets/marquee_text.dart';
 import 'ui/widgets/playing_motion.dart';
 import 'ui/widgets/over_video.dart';
@@ -86,6 +88,9 @@ Future<void> _main(List<String> args) async {
   });
   // The typeface asks to be credited too.
   LicenseRegistry.addLicense(() async* {
+    yield LicenseEntryWithLineBreaks([
+      'Space Grotesk',
+    ], await rootBundle.loadString('assets/fonts/SpaceGrotesk-OFL.txt'));
     yield LicenseEntryWithLineBreaks(['Figtree'], await rootBundle.loadString('assets/fonts/OFL.txt'));
   });
 
@@ -136,10 +141,11 @@ Future<void> _main(List<String> args) async {
   await windowSettled;
   runApp(RiflayApp(controller: controller, startup: loading));
   await loading;
-  // Nothing here is needed to draw the first frame; it starts right after it. The media session must exist
-  // before anything can be played, and playing needs a tap on that first frame.
+  // Android can start this engine from a home-screen widget without ever rendering an activity.
+  if (Host.isAndroid) unawaited(_startServices(controller));
+  // Other platforms and incoming links can wait until the UI has rendered.
   WidgetsBinding.instance.addPostFrameCallback((_) {
-    unawaited(_startServices(controller));
+    if (!Host.isAndroid) unawaited(_startServices(controller));
     unawaited(IncomingLinks.instance.start(args));
   });
 }
@@ -149,7 +155,7 @@ Future<void> _main(List<String> args) async {
 void warmUpText() {
   try {
     final builder = ui.ParagraphBuilder(ui.ParagraphStyle())
-      ..pushStyle(ui.TextStyle(fontFamily: 'Figtree', fontSize: 14))
+      ..pushStyle(ui.TextStyle(fontFamily: AppTypeface.defaultFamily, fontSize: 14))
       ..addText('Riflay');
     builder.build().layout(const ui.ParagraphConstraints(width: 200));
   } catch (e) {
@@ -161,24 +167,25 @@ Future<void> _showWindow(Size? size) async {
   if (!hasNativeWindow) return;
   const minimum = Size(320, 420);
   final appSize = size ?? const Size(1280, 820);
-  // Full motion on Windows and Linux: the window first opens small and see-through for the intro, and shows itself
-  // once the intro has drawn (StartupSplash); it becomes the app's window afterwards.
+  // On Windows the intro uses a small, frameless window. On Linux it uses the
+  // app's own window so the compositor can keep the same mapped surface.
   final splash = SplashWindow.wanted;
+  final smallSplash = splash && Host.isWindows;
   await windowManager.waitUntilReadyToShow(
     WindowOptions(
-      title: 'Riflay',
-      // Opens in the middle of the screen, sized to it (tiling WMs place it themselves).
-      size: splash ? SplashWindow.size : appSize,
-      center: true,
-      minimumSize: splash ? null : minimum,
-      // Linux: the window has an alpha channel; Flutter paints the background.
-      backgroundColor: Host.isLinux || splash ? Colors.transparent : AppColors.background,
+      title: appName,
+      // Wayland compositors place the window themselves.
+      size: smallSplash ? SplashWindow.size : appSize,
+      center: !Host.isLinux,
+      minimumSize: smallSplash ? null : minimum,
+      // The Linux runner clears its GTK surface before Flutter starts.
+      backgroundColor: Host.isLinux ? null : (splash ? Colors.transparent : AppColors.background),
       titleBarStyle: TitleBarStyle.hidden,
     ),
   );
   // Not in waitUntilReadyToShow's callback: it isn't awaited, and the app must not start before the window is the
   // intro's (StartupSplash reads SplashWindow.active once, at its first build).
-  if (splash && await SplashWindow.open(appSize: appSize, appMinimum: minimum)) return;
+  if (splash && await SplashWindow.open(appSize: appSize, appMinimum: minimum) && smallSplash) return;
   await windowManager.show();
   await windowManager.focus();
 }
@@ -193,9 +200,8 @@ Future<void> _startServices(PlayerController controller) async {
   }
   await Future.wait(
     [
-      MediaSession.start(controller),
-      // Android: the player on the home screen, sent the song as it changes.
-      Future.sync(() => HomeWidget.start(controller)),
+      // One media session for every platform (SMTC, MPRIS, MediaSession, MPRemoteCommandCenter, the web's).
+      startMediaSession(controller).then((_) => HomeWidget.start(controller)),
       DesktopCli.start(controller),
       // Windows: Previous, Play / Pause and Next on the taskbar thumbnail.
       // After the start-up intro: its window has no taskbar button to put them on.
@@ -218,7 +224,12 @@ Future<void> _startServices(PlayerController controller) async {
 /// 16:10 wide, never wider than 85% of the screen. Falls back to 1280 x 820.
 Future<Size> _startSize() async {
   try {
-    final screen = (await screenRetriever.getPrimaryDisplay()).visibleSize;
+    // The Linux plugin's primary-display call can't respond when GDK has no
+    // outputs yet. The display list reports that case as an empty list.
+    final display = Host.isLinux
+        ? (await screenRetriever.getAllDisplays()).firstOrNull
+        : await screenRetriever.getPrimaryDisplay();
+    final screen = display?.visibleSize;
     if (screen == null || screen.isEmpty) throw StateError('no display size');
     final height = math.min(screen.height * 0.85, 960.0);
     final width = math.min(screen.width * 0.85, height * 1.6);
@@ -486,7 +497,7 @@ class _RiflayAppState extends State<RiflayApp> with WidgetsBindingObserver {
             colors: AppColorsScope.current(),
             child: GlassToastMessenger(
               key: _messenger,
-              child: hasCustomTitleBar ? _DesktopFrame(child: scaled) : scaled,
+              child: CoverBackdrop(child: hasCustomTitleBar ? _DesktopFrame(child: scaled) : scaled),
             ),
           );
         },
@@ -548,6 +559,12 @@ class _DesktopFrame extends StatelessWidget {
       ),
       child: frame,
     );
-    return Host.isLinux ? DragToResizeArea(resizeEdgeSize: 6, child: withMini) : withMini;
+    if (!Host.isLinux) return withMini;
+    return ValueListenableBuilder(
+      valueListenable: SplashWindow.active,
+      builder: (context, splash, child) =>
+          DragToResizeArea(resizeEdgeSize: 6, enableResizeEdges: splash ? const [] : null, child: child!),
+      child: withMini,
+    );
   }
 }

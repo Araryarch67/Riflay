@@ -27,16 +27,28 @@ final titleBarInShell = ValueNotifier<bool>(false);
 /// [leading] and [center] fill it in the desktop layout; without them it shows
 /// the app's name. The empty space around them drags the window.
 class AppTitleBar extends StatefulWidget {
-  const AppTitleBar({super.key, this.leading, this.center, this.height = AppTitleBar.plainHeight});
+  const AppTitleBar({
+    super.key,
+    this.leading,
+    this.center,
+    this.height = AppTitleBar.plainHeight,
+    this.pillControls = false,
+  });
 
   static const plainHeight = 36.0;
 
   /// With Back / Forward and the search box in it.
   static const tallHeight = 64.0;
 
+  /// Beside the full-height rail: Back / Forward only, the search being on its page.
+  static const railHeight = 52.0;
+
   final Widget? leading;
   final Widget? center;
   final double height;
+
+  /// Minimize, maximize and close grouped on a small pill, as beside the full-height rail.
+  final bool pillControls;
 
   @override
   State<AppTitleBar> createState() => _AppTitleBarState();
@@ -104,7 +116,10 @@ class _AppTitleBarState extends State<AppTitleBar> with WindowListener {
                   SizedBox(width: Host.isMacOS ? 80 : 12),
                   ?widget.leading,
                   const Spacer(),
-                  if (hasNativeWindow && !Host.isMacOS) _windowControls() else const SizedBox(width: 12),
+                  if (hasNativeWindow && !Host.isMacOS)
+                    widget.pillControls ? _pill(_windowControls()) : _windowControls()
+                  else
+                    const SizedBox(width: 12),
                 ],
               ),
             ),
@@ -149,6 +164,14 @@ class _AppTitleBarState extends State<AppTitleBar> with WindowListener {
       ),
     );
   }
+
+  Widget _pill(Widget controls) => Padding(
+    padding: const EdgeInsets.fromLTRB(0, 8, 8, 8),
+    child: DecoratedBox(
+      decoration: BoxDecoration(color: AppColors.tile, borderRadius: LayoutPrefs.corner(6)),
+      child: ClipRRect(borderRadius: LayoutPrefs.corner(6), child: controls),
+    ),
+  );
 
   /// Minimize, maximize and close; hidden with Settings › Pages & navigation › Window buttons (tiling window managers),
   /// leaving a little room at the edge.

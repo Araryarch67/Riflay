@@ -19,7 +19,7 @@ const donateUrl = 'https://tako.id/ararya/gift';
 
 /// What a bug report needs to say about this copy of Riflay: the version and the system it runs on.
 String aboutDetails() => [
-  'Riflay $appVersion',
+  '$appName $appVersion',
   debugSystem ?? _system(),
   if (Host.dartVersion.isNotEmpty) 'Dart ${Host.dartVersion}',
 ].join(' · ');
@@ -92,7 +92,7 @@ class AboutSettings extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Riflay', style: text.headlineSmall?.copyWith(fontWeight: FontWeight.w800)),
+                    Text(appName, style: text.headlineSmall?.copyWith(fontWeight: FontWeight.w800)),
                     const SizedBox(height: 2),
                     Text(tr.versionNamed(appVersion), style: text.bodyMedium?.copyWith(color: AppColors.textSecondary)),
                   ],
@@ -168,7 +168,7 @@ class AboutSettings extends StatelessWidget {
               trailing: const Icon(Icons.chevron_right_rounded),
               onTap: () => showLicensePage(
                 context: context,
-                applicationName: 'Riflay',
+                applicationName: appName,
                 applicationVersion: appVersion,
                 useRootNavigator: true,
               ),

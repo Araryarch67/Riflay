@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:riflay/models/track.dart';
+import 'package:riflay/services/appearance.dart';
 import 'package:riflay/services/language.dart';
 import 'package:riflay/services/layout_prefs.dart';
 import 'package:riflay/services/player_presets.dart';
@@ -15,7 +16,9 @@ import 'package:riflay/ui/debug_switches.dart';
 import 'package:riflay/ui/pages/collection_page.dart';
 import 'package:riflay/ui/pages/home_page.dart';
 import 'package:riflay/ui/shell_scope.dart';
+import 'package:riflay/ui/theme.dart';
 import 'package:riflay/ui/widgets/controls.dart';
+import 'package:riflay/ui/widgets/page_scaffold.dart';
 import 'package:riflay/ui/widgets/shelf.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -158,6 +161,25 @@ void main() {
 
   /// The card of [name] on the Artists shelf (a song's card names its artist too, as its subtitle).
   Finder artistCard(String name) => find.byWidgetPredicate((w) => w is MediaCard && w.title == name && w.circle);
+
+  testWidgets('Home follows the cover only when the theme or cover mode calls for it', (tester) async {
+    final look = Appearance.instance;
+    addTearDown(() => tester.runAsync(look.reset));
+    await home(tester, withMix: true);
+    await tester.runAsync(look.reset);
+    await tester.pump();
+
+    Color? gradient() => tester.widget<PageScaffold>(find.byType(PageScaffold)).gradientColor;
+
+    expect(gradient(), isNot(AppColors.elevated));
+    await tester.runAsync(() => look.setTheme(ThemeChoice.nord));
+    await tester.pump();
+    expect(gradient(), AppColors.elevated);
+
+    await tester.runAsync(() => look.setCoverMode(CoverColorMode.app));
+    await tester.pump();
+    expect(gradient(), isNot(AppColors.elevated));
+  });
 
   testWidgets('Home: an artist with one downloaded song opens their YouTube Music page', (tester) async {
     final opened = await home(tester);

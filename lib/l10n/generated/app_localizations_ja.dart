@@ -43,6 +43,111 @@ class AppLocalizationsJa extends AppLocalizations {
   String get desktopSidebarShortcuts => 'ショートカットバー';
 
   @override
+  String get desktopLayout => 'デスクトップのレイアウト';
+
+  @override
+  String get desktopLayoutHint => 'サイドバー、ホーム、検索、プレーヤーバーをまとめて設定します。個別の変更も下でできます';
+
+  @override
+  String get desktopLayoutRail => 'レール';
+
+  @override
+  String get fullHeightRail => '全高のレール';
+
+  @override
+  String get fullHeightRailHint => 'ショートカットバーをプレーヤーバーの横まで伸ばします';
+
+  @override
+  String get greetingChip => 'あいさつのチップ';
+
+  @override
+  String get greetingChipHint => 'ホームのあいさつを時間帯のアイコン付きで小さく表示します';
+
+  @override
+  String get sectionIcons => 'セクションのアイコン';
+
+  @override
+  String get sectionIconsHint => 'ホームの各棚のタイトルの前にアイコンを表示します';
+
+  @override
+  String get detailedQuickAccess => '詳しいクイックアクセス';
+
+  @override
+  String get detailedQuickAccessHint => '3列で、各タイルにサブタイトルとメニューを表示します';
+
+  @override
+  String get centeredSearch => '中央の検索';
+
+  @override
+  String get centeredSearchHint => '検索ボックスと結果をページの中央に表示します';
+
+  @override
+  String get openItem => '開く';
+
+  @override
+  String get coverGlass => 'カバーの上のガラス';
+
+  @override
+  String get coverGlassHint => 'パネルが再生中の曲のぼかしたカバーの上のガラスになります（再生前はランダムなカバー）';
+
+  @override
+  String get glassBackground => '背景';
+
+  @override
+  String get glassBackgroundHint => 'ガラスの後ろに表示するもの';
+
+  @override
+  String get glassBackgroundPlaying => '再生中のカバー';
+
+  @override
+  String get glassBackgroundRandom => 'ランダムなカバー';
+
+  @override
+  String get glassBackgroundImage => '自分の画像';
+
+  @override
+  String get glassChooseImage => '画像を選択';
+
+  @override
+  String get glassBlur => '背景をぼかす';
+
+  @override
+  String get glassBlurHint => 'オフにするとくっきり表示します';
+
+  @override
+  String get setupLookTitle => '見た目を選ぶ';
+
+  @override
+  String get setupLookIntro => 'レイアウトとプレーヤーのスタイルを選んでください。あとで設定から変更できます。';
+
+  @override
+  String get setupLayoutClassicNote => 'ページの横にライブラリ、上に検索ボックス';
+
+  @override
+  String get setupLayoutRailNote => '細いアイコンバー、中央の検索、コンパクトなプレーヤー';
+
+  @override
+  String get playerStyle => 'プレーヤー';
+
+  @override
+  String get layoutLabel => 'レイアウト';
+
+  @override
+  String get podcasts => 'ポッドキャスト';
+
+  @override
+  String get podcastShows => '番組';
+
+  @override
+  String get podcastEpisodes => 'エピソード';
+
+  @override
+  String get styles => 'スタイル';
+
+  @override
+  String get setStyle => '設定';
+
+  @override
   String get expandLibrary => 'ライブラリを展開';
 
   @override
@@ -77,6 +182,22 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get madeForYou => 'あなたへのおすすめ';
+
+  @override
+  String artistMix(String artist) {
+    return '$artist ミックス';
+  }
+
+  @override
+  String artistMixDescription(String artist) {
+    return '$artistと一緒によく聴く曲';
+  }
+
+  @override
+  String get discoveryMix => 'ディスカバリーミックス';
+
+  @override
+  String get discoveryMixDescription => '最近聴いていないアーティスト';
 
   @override
   String get artistMusicVideos => 'ミュージックビデオ';
@@ -6890,4 +7011,16 @@ class AppLocalizationsJa extends AppLocalizations {
   String playlistDownloadsFailed(int count) {
     return 'ダウンロード失敗: $count件';
   }
+
+  @override
+  String get autoDownloadLiked => '高評価した曲を自動でダウンロード';
+
+  @override
+  String get dailySleepTimer => '毎日のスリープタイマー';
+
+  @override
+  String get dailyPlaylistAlarm => '毎日のプレイリストアラーム';
+
+  @override
+  String get scheduleWhileRunning => 'Riflay の起動中に動作します';
 }

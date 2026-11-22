@@ -7,11 +7,10 @@ import '../../services/player_controller.dart';
 import '../navigation.dart';
 import '../pages/library_page.dart';
 import '../pages/listen_together_page.dart';
-import '../pages/listening_stats_page.dart';
 import '../pages/settings_page.dart';
-import '../pages/youtube_music_page.dart' show likedCollection;
 import '../shell_scope.dart';
 import '../theme.dart';
+import '../widgets/app_logo.dart';
 import '../widgets/smooth_scroll.dart';
 import 'first_frame_gate.dart';
 
@@ -74,11 +73,39 @@ class ShellPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
-    return Material(
+    final panel = Material(
       color: colors.panel,
       borderRadius: BorderRadius.circular(8),
       clipBehavior: Clip.antiAlias,
       child: child,
+    );
+    if (!colors.glass) return panel;
+    // Glass over the cover: a hairline edge, brighter at the top, and a soft sheen fading down from it.
+    const edge = Colors.white;
+    return Stack(
+      fit: StackFit.passthrough,
+      children: [
+        panel,
+        Positioned.fill(
+          child: IgnorePointer(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: edge.withValues(alpha: colors.light ? 0.55 : 0.09)),
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  stops: const [0, 0.22],
+                  colors: [
+                    edge.withValues(alpha: colors.light ? 0.25 : 0.06),
+                    edge.withValues(alpha: 0),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -156,47 +183,7 @@ class DesktopSidebar extends StatelessWidget {
       ],
     ];
 
-    if (shortcuts) {
-      final player = PlayerScope.read(context);
-      final shell = ShellScope.of(context);
-      void library([LibraryFilter? filter]) =>
-          shell.open(LibraryPage(initialFilter: filter), location: Locations.library);
-      Widget shortcut(IconData icon, String label, VoidCallback open, {double iconSize = 26}) =>
-          NavLink(collapsed: true, icon: icon, label: label, onTap: open, iconSize: iconSize);
-      return ShellPanel(
-        child: SmoothScroll(
-          builder: (context, scroll) => ListView(
-            controller: scroll,
-            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
-            children: [
-              shortcut(Icons.open_in_full_rounded, tr.expandLibrary, library, iconSize: 16),
-              const Divider(),
-              ...navItems,
-              ListenableBuilder(
-                listenable: player.ytMusic,
-                builder: (context, _) {
-                  final liked = player.ytMusic.libraryNow?.liked;
-                  if (liked == null || liked.isEmpty) return const SizedBox.shrink();
-                  return shortcut(
-                    Icons.favorite_outline_rounded,
-                    tr.likedMusic,
-                    () => shell.openCollection(likedCollection(liked)),
-                  );
-                },
-              ),
-              shortcut(Icons.playlist_play_rounded, tr.playlists, () => library(LibraryFilter.playlists)),
-              if (Features.localLibrary) shortcut(Icons.album_outlined, tr.albums, () => library(LibraryFilter.albums)),
-              if (Features.downloads && inTitleBar)
-                DownloadsLink(collapsed: true, selected: location == Locations.downloads),
-              shortcut(Icons.history_rounded, tr.yourListeningStats, () {
-                shell.open(const ListeningStatsPage(), location: Locations.stats);
-              }),
-              if (inTitleBar) shortcut(Icons.settings_outlined, tr.navSettings, () => shell.open(const SettingsPage())),
-            ],
-          ),
-        ),
-      );
-    }
+    if (shortcuts) return ShortcutRail(location: location, onHome: onHome, onSearch: onSearch);
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -244,6 +231,102 @@ class DesktopSidebar extends StatelessWidget {
       },
     );
   }
+}
+
+/// The "Shortcut rail" sidebar: the mark, the main pages as icons, and Settings at the foot.
+class ShortcutRail extends StatelessWidget {
+  const ShortcutRail({super.key, required this.location, required this.onHome, required this.onSearch});
+
+  static const width = 64.0;
+
+  final String location;
+  final VoidCallback onHome;
+  final VoidCallback onSearch;
+
+  @override
+  Widget build(BuildContext context) {
+    final shell = ShellScope.of(context);
+    Widget item(String where, IconData icon, IconData selectedIcon, String label, VoidCallback onTap) => _RailIcon(
+      icon: location == where ? selectedIcon : icon,
+      label: label,
+      selected: location == where,
+      onTap: location == where ? null : onTap,
+    );
+    final settings = item(Locations.settings, Icons.settings_outlined, Icons.settings_rounded, tr.navSettings, () {
+      shell.open(const SettingsPage());
+    });
+    return ShellPanel(
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final top = [
+            Padding(
+              padding: const EdgeInsets.only(top: 14, bottom: 10),
+              child: Tooltip(
+                message: tr.navHome,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(8),
+                  onTap: location == Locations.home ? null : onHome,
+                  child: const Padding(padding: EdgeInsets.all(6), child: AppLogo(size: 28)),
+                ),
+              ),
+            ),
+            item(Locations.home, Icons.home_outlined, Icons.home_rounded, tr.navHome, onHome),
+            item(Locations.search, Icons.search_rounded, Icons.manage_search_rounded, tr.navSearch, onSearch),
+            item(Locations.library, Icons.library_music_outlined, Icons.library_music_rounded, tr.navLibrary, () {
+              shell.open(const LibraryPage(), location: Locations.library);
+            }),
+            if (Features.downloads) DownloadsLink(collapsed: true, selected: location == Locations.downloads),
+            if (Features.listenTogether)
+              item(Locations.listen, Icons.group_outlined, Icons.group_rounded, tr.listenTogether, () {
+                shell.open(const ListenTogetherPage(), location: Locations.listen);
+              }),
+          ];
+          // Settings stays at the foot; a short window scrolls everything instead of overlapping.
+          return SingleChildScrollView(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minHeight: constraints.maxHeight),
+              child: IntrinsicHeight(
+                child: Column(
+                  children: [
+                    ...top,
+                    const Spacer(),
+                    Padding(padding: const EdgeInsets.only(bottom: 10), child: settings),
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _RailIcon extends StatelessWidget {
+  const _RailIcon({required this.icon, required this.label, required this.selected, required this.onTap});
+
+  final IconData icon;
+  final String label;
+  final bool selected;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) => Tooltip(
+    message: label,
+    child: Semantics(
+      selected: selected,
+      button: true,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(8),
+        onTap: onTap,
+        child: SizedBox(
+          width: 44,
+          height: 44,
+          child: Icon(icon, size: 24, color: selected ? AppColors.textPrimary : AppColors.textSecondary),
+        ),
+      ),
+    ),
+  );
 }
 
 /// Sidebar entry that opens a page (rather than switching tab).

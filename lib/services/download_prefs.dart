@@ -440,6 +440,7 @@ class DownloadPrefs extends ChangeNotifier {
 
   /// Phones: download on mobile data too.
   bool mobileData = true;
+  bool autoDownloadLiked = false;
 
   /// The bitrate set for [f]; null for "Best available".
   int? kbpsFor(DownloadFormat f) => _kbps[f];
@@ -489,8 +490,14 @@ class DownloadPrefs extends ChangeNotifier {
     askEveryTime = prefs.getBool('downloads.ask') ?? askEveryTime;
     folder = prefs.getString('downloads.folder');
     mobileData = prefs.getBool('downloads.mobileData') ?? mobileData;
+    autoDownloadLiked = prefs.getBool('downloads.autoDownloadLiked') ?? false;
     notifyListeners();
   }();
+
+  Future<void> setAutoDownloadLiked(bool value) {
+    autoDownloadLiked = value;
+    return _save('downloads.autoDownloadLiked', value);
+  }
 
   Future<void> _save(String key, Object? value) async {
     notifyListeners();

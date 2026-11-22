@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/gestures.dart' show PointerDeviceKind;
 import 'package:flutter/material.dart';
 
 import 'glass_toast.dart';
@@ -96,6 +97,7 @@ class _TrackRowState extends State<TrackRow> {
   /// ([_Hovering]): moving over a long list used to rebuild each row it crossed,
   /// cover, texts and menu button included.
   final _hover = ValueNotifier<bool>(false);
+  double _swipeDistance = 0;
 
   @override
   void dispose() {
@@ -301,7 +303,7 @@ class _TrackRowState extends State<TrackRow> {
       ),
     );
 
-    return MouseRegion(
+    final row = MouseRegion(
       onEnter: (_) {
         _hover.value = true;
         SmartMerge.instance.pointerOn(t);
@@ -350,6 +352,58 @@ class _TrackRowState extends State<TrackRow> {
           );
         },
       ),
+    );
+    if (wide || widget.onTap == null) return row;
+    final edit = PlaylistEditScope.maybeOf(context);
+    return GestureDetector(
+      supportedDevices: const {PointerDeviceKind.touch, PointerDeviceKind.stylus},
+      onHorizontalDragStart: (_) => _swipeDistance = 0,
+      onHorizontalDragUpdate: (details) => _swipeDistance += details.primaryDelta ?? 0,
+      onHorizontalDragEnd: (_) async {
+        if (_swipeDistance.abs() < 48 || selection?.active == true || ListenTogether.of(c).role == ListenRole.guest) {
+          return;
+        }
+        if (_swipeDistance > 0) {
+          if (c.canQueue(t)) {
+            await TrackMenuButton._queued(context, c.playNext([t]), tr.toastPlaysNext, shell.openQueue);
+          }
+          return;
+        }
+        if (edit == null || !edit.canRemove(t)) {
+          if (c.canQueue(t)) {
+            await TrackMenuButton._queued(context, c.addToQueue([t]), tr.toastAddedToQueue, shell.openQueue);
+          }
+          return;
+        }
+        final remove = await showModalBottomSheet<bool>(
+          context: context,
+          builder: (sheet) => SafeArea(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ListTile(
+                  enabled: c.canQueue(t),
+                  leading: const Icon(Icons.queue_music_rounded),
+                  title: Text(tr.addToQueue),
+                  onTap: () => Navigator.pop(sheet, false),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.playlist_remove_rounded),
+                  title: Text(tr.removeFromThisPlaylist),
+                  onTap: () => Navigator.pop(sheet, true),
+                ),
+              ],
+            ),
+          ),
+        );
+        if (!context.mounted || remove == null) return;
+        if (remove) {
+          if (edit.canRemove(t)) await edit.remove(context, t);
+        } else if (c.canQueue(t)) {
+          await TrackMenuButton._queued(context, c.addToQueue([t]), tr.toastAddedToQueue, shell.openQueue);
+        }
+      },
+      child: row,
     );
   }
 }

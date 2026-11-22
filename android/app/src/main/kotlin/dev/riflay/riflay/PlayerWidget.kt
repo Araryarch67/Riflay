@@ -50,9 +50,8 @@ import kotlin.math.sin
 // kept in preferences, so the widget can be drawn again (added, resized, the launcher restarted) without Dart. The
 // lyric lines come on their own and are swapped in without drawing the rest; the elapsed time is a Chronometer, which
 // counts by itself.
-// Play / pause, previous and next become media button presses for audio_service's MediaButtonReceiver, the way the
-// playback notification's buttons are, so they reach the media session whether or not the app's screen is open.
-// Like, shuffle and repeat aren't media session actions: they are passed to Dart over the channel.
+// Play / pause runs through the player controller's toggle, including when playback is still opening.
+// Previous and next go through audio_service; like, shuffle and repeat are passed to Dart over the channel.
 class PlayerWidget : AppWidgetProvider() {
     override fun onUpdate(context: Context, manager: AppWidgetManager, ids: IntArray) = drawLater(context, ids)
 
@@ -72,12 +71,24 @@ class PlayerWidget : AppWidgetProvider() {
 
     override fun onReceive(context: Context, intent: Intent) {
         when (intent.action) {
-            ACTION_KEY -> press(context, intent.getIntExtra(EXTRA_KEY, KeyEvent.KEYCODE_UNKNOWN))
+            ACTION_KEY -> when (val key = intent.getIntExtra(EXTRA_KEY, KeyEvent.KEYCODE_UNKNOWN)) {
+                // A launcher can keep the previous version's pending intents until it redraws the widget.
+                KeyEvent.KEYCODE_MUTE, KeyEvent.KEYCODE_MEDIA_RECORD -> togglePlayback(context)
+                else -> press(context, key)
+            }
+            ACTION_PLAYBACK -> togglePlayback(context)
             ACTION_LIKE -> toDart(context, "like")
             ACTION_SHUFFLE -> toDart(context, "shuffle")
             ACTION_REPEAT -> toDart(context, "repeat")
             else -> super.onReceive(context, intent)
         }
+    }
+
+    private fun togglePlayback(context: Context) {
+        val app = context.applicationContext
+        attach(app, AudioServicePlugin.getFlutterEngine(app))
+        pendingPlaybackToggles++
+        channel?.invokeMethod("playbackActionAvailable", null)
     }
 
     // Media keys as the notification sends them. When the app isn't running, its engine is started here, as the
@@ -105,15 +116,12 @@ class PlayerWidget : AppWidgetProvider() {
     companion object {
         private const val TAG = "PlayerWidget"
         private const val ACTION_KEY = "dev.riflay.riflay.widget.KEY"
+        private const val ACTION_PLAYBACK = "dev.riflay.riflay.widget.PLAYBACK"
         private const val ACTION_LIKE = "dev.riflay.riflay.widget.LIKE"
         private const val ACTION_SHUFFLE = "dev.riflay.riflay.widget.SHUFFLE"
         private const val ACTION_REPEAT = "dev.riflay.riflay.widget.REPEAT"
         private const val EXTRA_KEY = "key"
 
-        // audio_service's KEYCODE_BYPASS_PLAY / _PAUSE (AudioService.java), the keys its notification sends for Play
-        // and Pause; AudioService itself can't be named here (its media library isn't on this module's classpath).
-        private const val KEY_PLAY = KeyEvent.KEYCODE_MUTE
-        private const val KEY_PAUSE = KeyEvent.KEYCODE_MEDIA_RECORD
         private const val PREFS = "player_widget"
         private const val STATE = "state"
 
@@ -134,6 +142,8 @@ class PlayerWidget : AppWidgetProvider() {
 
         private var attached = WeakReference<FlutterEngine>(null)
         private var channel: MethodChannel? = null
+        // Dart may still be restoring its queue when a tap starts the engine.
+        private var pendingPlaybackToggles = 0
 
         // Called for each activity, and from the widget's own buttons; one channel per engine.
         fun attach(context: Context, engine: FlutterEngine) {
@@ -141,6 +151,11 @@ class PlayerWidget : AppWidgetProvider() {
             attached = WeakReference(engine)
             channel = MethodChannel(engine.dartExecutor.binaryMessenger, "riflay/home_widget").apply {
                 setMethodCallHandler { call, result ->
+                    if (call.method == "takePlaybackToggles") {
+                        val count = pendingPlaybackToggles
+                        pendingPlaybackToggles = 0
+                        return@setMethodCallHandler result.success(count)
+                    }
                     val args = (call.arguments as? Map<*, *>)?.let { JSONObject(it) }
                         ?: return@setMethodCallHandler result.error("args", "A map is expected", null)
                     val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
@@ -362,15 +377,13 @@ class PlayerWidget : AppWidgetProvider() {
                 views.setContentDescription(id, description)
                 views.setOnClickPendingIntent(id, intent)
             }
-            // Play / pause on the scalloped accent button, as the mini window's. Play or pause as shown, with the
-            // codes the notification's buttons send: the play / pause toggle is a headset's click, which went to
-            // Dart's click handler and on a phone missed every other press.
+            // The glyph follows the latest state, while clicks toggle the current player state.
             views.setImageViewResource(R.id.widget_play_icon, if (playing) R.drawable.ic_widget_pause else R.drawable.ic_widget_play)
             views.setInt(R.id.widget_play_icon, "setColorFilter", look.onAccent)
             views.setInt(R.id.widget_play_disc, "setColorFilter", look.accent)
             views.setContentDescription(R.id.widget_play,
                 if (playing) label("pause", R.string.widget_pause) else label("play", R.string.widget_play))
-            views.setOnClickPendingIntent(R.id.widget_play, key(context, if (playing) KEY_PAUSE else KEY_PLAY))
+            views.setOnClickPendingIntent(R.id.widget_play, broadcast(context, ACTION_PLAYBACK))
             button(R.id.widget_previous, state.optBoolean("hasQueue"), label("previous", R.string.widget_previous),
                 key(context, KeyEvent.KEYCODE_MEDIA_PREVIOUS))
             button(R.id.widget_next, state.optBoolean("hasNext"), label("next", R.string.widget_next),

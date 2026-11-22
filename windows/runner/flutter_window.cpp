@@ -149,6 +149,7 @@ bool FlutterWindow::OnCreate() {
   }
   RegisterPlugins(flutter_controller_->engine());
   SetChildContent(flutter_controller_->view()->GetNativeWindow());
+  media_controls_ = std::make_unique<MediaControls>(flutter_controller_->engine()->messenger(), GetHandle());
 
   window_channel_ = std::make_unique<flutter::MethodChannel<flutter::EncodableValue>>(
       flutter_controller_->engine()->messenger(), "riflay/window",
@@ -277,6 +278,7 @@ bool FlutterWindow::OnCreate() {
 }
 
 void FlutterWindow::OnDestroy() {
+  media_controls_ = nullptr;
   window_channel_ = nullptr;
   video_channel_ = nullptr;
   video_window::Destroy();
@@ -296,6 +298,9 @@ FlutterWindow::MessageHandler(HWND hwnd, UINT const message,
   if (message >= WM_MOUSEFIRST && message <= WM_MOUSELAST && flutter_controller_ && video_window::Visible()) {
     return SendMessage(flutter_controller_->view()->GetNativeWindow(), message, wparam, lparam);
   }
+
+  // The system's media buttons, posted from its own thread (see media_controls.h).
+  if (media_controls_ && media_controls_->HandleMessage(message, wparam, lparam)) return 0;
 
   // The island's pill follows the window as it grows and shrinks.
   if (message == WM_SIZE && !island_hit_.empty()) SetIsland(hwnd, island_hit_, see_through_);

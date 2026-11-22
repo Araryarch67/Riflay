@@ -19,7 +19,8 @@ class SleepTimerButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final sleep = PlayerScope.read(context).sleep;
+    final player = PlayerScope.read(context);
+    final sleep = player.sleep;
     return ListenableBuilder(
       listenable: sleep,
       builder: (context, _) {
@@ -109,7 +110,8 @@ class SleepTimerPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final sleep = PlayerScope.read(context).sleep;
+    final player = PlayerScope.read(context);
+    final sleep = player.sleep;
     final text = Theme.of(context).textTheme;
     final muted = text.bodySmall?.copyWith(color: AppColors.textSecondary);
     void closeAfter(VoidCallback act) {
@@ -175,10 +177,78 @@ class SleepTimerPanel extends StatelessWidget {
               ],
             ),
           ],
+          ListTile(
+            leading: const Icon(Icons.bedtime_outlined),
+            title: Text(tr.dailySleepTimer),
+            subtitle: Text(
+              sleep.sleepMinute == null
+                  ? tr.scheduleWhileRunning
+                  : '${_scheduleTime(context, sleep.sleepMinute!)} · ${tr.scheduleWhileRunning}',
+            ),
+            trailing: sleep.sleepMinute == null
+                ? null
+                : IconButton(
+                    tooltip: tr.cancelTimer,
+                    icon: const Icon(Icons.close_rounded),
+                    onPressed: () => sleep.setDailySleep(null),
+                  ),
+            onTap: () async {
+              final minute = await _pickScheduleTime(context, sleep.sleepMinute);
+              if (minute != null && context.mounted) await sleep.setDailySleep(minute);
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.alarm_rounded),
+            title: Text(tr.dailyPlaylistAlarm),
+            subtitle: Text(
+              [
+                if (sleep.alarmMinute case final minute?) _scheduleTime(context, minute),
+                if (player.playlists.where((p) => p.id == sleep.alarmPlaylistId).firstOrNull case final playlist?)
+                  playlist.name,
+                tr.scheduleWhileRunning,
+              ].join(' · '),
+            ),
+            trailing: sleep.alarmMinute == null
+                ? null
+                : IconButton(
+                    tooltip: tr.cancelTimer,
+                    icon: const Icon(Icons.close_rounded),
+                    onPressed: () => sleep.setDailyAlarm(null, null),
+                  ),
+            enabled: player.playlists.any((p) => p.tracks.isNotEmpty),
+            onTap: () async {
+              final playlists = player.playlists.where((p) => p.tracks.isNotEmpty);
+              final id = await showDialog<String>(
+                context: context,
+                builder: (dialog) => SimpleDialog(
+                  title: Text(tr.dailyPlaylistAlarm),
+                  children: [
+                    for (final p in playlists)
+                      SimpleDialogOption(onPressed: () => Navigator.pop(dialog, p.id), child: Text(p.name)),
+                  ],
+                ),
+              );
+              if (id == null || !context.mounted) return;
+              final minute = await _pickScheduleTime(context, sleep.alarmMinute);
+              if (minute != null && context.mounted) await sleep.setDailyAlarm(minute, id);
+            },
+          ),
           const SizedBox(height: 12),
         ],
       ),
     );
+  }
+
+  static TimeOfDay _time(int minute) => TimeOfDay(hour: minute ~/ 60, minute: minute % 60);
+
+  static String _scheduleTime(BuildContext context, int minute) => _time(minute).format(context);
+
+  static Future<int?> _pickScheduleTime(BuildContext context, int? minute) async {
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: minute == null ? TimeOfDay.now() : _time(minute),
+    );
+    return picked == null ? null : picked.hour * 60 + picked.minute;
   }
 }
 

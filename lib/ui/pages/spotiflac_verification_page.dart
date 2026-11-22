@@ -12,14 +12,20 @@ import '../../services/language.dart';
 import '../../services/spotiflac.dart';
 
 /// Returns to the caller after the provider has stored its grant in extension storage.
-Future<bool> showSpotiflacVerification(BuildContext context, Track track, {required String provider}) async {
+Future<bool> showSpotiflacVerification(BuildContext context, Track track, {required String provider}) =>
+    _showVerification(context, provider, () => Spotiflac.instance.verificationUrl(track, provider: provider));
+
+Future<bool> showSpotiflacSearchVerification(BuildContext context, String provider) =>
+    _showVerification(context, provider, () => Spotiflac.instance.searchVerificationUrl(provider));
+
+Future<bool> _showVerification(BuildContext context, String provider, Future<Uri> Function() challenge) async {
   final messenger = ScaffoldMessenger.maybeOf(context);
   try {
-    final url = await Spotiflac.instance.verificationUrl(track, provider: provider);
+    final url = await challenge();
     if (!context.mounted) return false;
     return await Navigator.of(context, rootNavigator: true).push<bool>(
           MaterialPageRoute(
-            builder: (_) => SpotiflacVerificationPage(track: track, url: url, provider: provider),
+            builder: (_) => SpotiflacVerificationPage(url: url, provider: provider),
           ),
         ) ??
         false;
@@ -34,10 +40,9 @@ Future<bool> showSpotiflacVerification(BuildContext context, Track track, {requi
 
 /// The provider's verification page returns its grant to this view, never to logs.
 class SpotiflacVerificationPage extends StatefulWidget {
-  const SpotiflacVerificationPage({super.key, required this.track, required this.url, this.provider});
-  final Track track;
+  const SpotiflacVerificationPage({super.key, required this.url, required this.provider});
   final Uri url;
-  final String? provider;
+  final String provider;
   @override
   State<SpotiflacVerificationPage> createState() => _SpotiflacVerificationPageState();
 }
@@ -97,11 +102,11 @@ class _SpotiflacVerificationPageState extends State<SpotiflacVerificationPage> {
     try {
       final grant = deliveredGrant;
       final state = uri.queryParameters['state'];
-      final provider = widget.provider ?? Spotiflac.instance.downloadProviderOf(widget.track);
+      final provider = widget.provider;
       if (state != null && state != provider) throw const SpotiflacError();
       if (grant == null || grant.isEmpty) throw const SpotiflacError();
       _lastGrant = grant;
-      await Spotiflac.instance.completeVerification(widget.track, grant, provider: provider);
+      await Spotiflac.instance.completeProviderVerification(provider, grant);
       if (mounted) Navigator.of(context).pop(true);
     } catch (_) {
       completing = false;

@@ -13,8 +13,11 @@ import 'package:riflay/services/player_controller.dart';
 import 'package:riflay/ui/navigation.dart';
 import 'package:riflay/ui/pages/library_page.dart';
 import 'package:riflay/ui/pages/lyrics_page.dart';
+import 'package:riflay/ui/pages/search_page.dart';
 import 'package:riflay/ui/player_panels.dart';
+import 'package:riflay/ui/widgets/title_bar.dart';
 import 'package:riflay/ui/shell/desktop_sidebar.dart';
+import 'package:riflay/ui/widgets/app_logo.dart';
 import 'package:riflay/ui/shell/resize_handle.dart';
 import 'package:riflay/ui/shell_scope.dart';
 import 'package:riflay/ui/theme.dart';
@@ -184,8 +187,12 @@ void main() {
 
     final sidebar = find.byType(DesktopSidebar);
     expect(tester.widget<DesktopSidebar>(sidebar).shortcuts, isTrue);
-    expect(_sidebarW(tester), 84);
-    await tester.tap(find.byTooltip(tr.playlists));
+    expect(_sidebarW(tester), ShortcutRail.width);
+    expect(find.descendant(of: sidebar, matching: find.byType(AppLogo)), findsOneWidget);
+    for (final label in [tr.navHome, tr.navSearch, tr.navLibrary, tr.navSettings]) {
+      expect(find.descendant(of: sidebar, matching: find.byTooltip(label)), findsWidgets);
+    }
+    await tester.tap(find.descendant(of: sidebar, matching: find.byTooltip(tr.navLibrary)));
     await tester.pumpAndSettle();
     expect(sidebar, findsNothing);
     expect(find.byType(NowPlayingSidePanel), findsOneWidget);
@@ -193,10 +200,61 @@ void main() {
 
     await tester.tap(find.byTooltip(tr.restoreLibrarySidebar));
     await tester.pumpAndSettle();
-    expect(find.byTooltip(tr.expandLibrary), findsOneWidget);
-    expect(_sidebarW(tester), 84);
+    expect(find.descendant(of: sidebar, matching: find.byTooltip(tr.navLibrary)), findsOneWidget);
+    expect(_sidebarW(tester), ShortcutRail.width);
     await tester.runAsync(prefs.load);
     expect(prefs.desktopSidebarStyle, DesktopSidebarStyle.shortcuts);
+    await _settle(tester);
+  });
+
+  testWidgets('the Rail layout puts a full-height rail beside the pages and centres Search', (tester) async {
+    await _app(tester, const Size(1440, 900));
+    final prefs = LayoutPrefs.instance;
+    await tester.runAsync(() => prefs.applyDesktopLayout(DesktopLayout.rail));
+    await tester.pumpAndSettle();
+    expect(prefs.desktopBar, DesktopBarStyle.dock);
+    expect(prefs.greetingChip && prefs.sectionIcons && prefs.detailedQuickAccess && prefs.centeredSearch, isTrue);
+    expect(prefs.showHomeToolbar, isFalse, reason: 'Rail hides the Home toolbar');
+    final rail = find.byType(ShortcutRail);
+    expect(rail, findsOneWidget);
+    expect(find.byType(DesktopSidebar), findsNothing, reason: 'the rail stands outside the pages');
+    expect(tester.getRect(rail).height, greaterThan(800), reason: 'from the top of the window to its foot');
+    expect(find.byType(SearchBox), findsNothing, reason: 'no box in the title bar');
+
+    await tester.tap(find.descendant(of: rail, matching: find.byTooltip(tr.navSearch)));
+    await tester.pumpAndSettle();
+    expect(find.byType(SearchPopup), findsOneWidget, reason: 'Search opens over the page');
+    expect(find.byType(SearchBox), findsOneWidget, reason: 'with its own box');
+    final box = tester.getRect(find.byType(SearchBox));
+    expect((box.center.dx - 720).abs(), lessThan(2), reason: 'in the middle of the window');
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pumpAndSettle();
+    expect(find.byType(SearchPopup), findsNothing, reason: 'Esc closes it');
+
+    await tester.runAsync(() => prefs.applyDesktopLayout(DesktopLayout.classic));
+    await tester.pumpAndSettle();
+    expect(find.byType(ShortcutRail), findsNothing);
+    expect(prefs.showHomeToolbar, isTrue);
+    expect(find.byType(DesktopSidebar), findsOneWidget);
+    await _settle(tester);
+  });
+
+  testWidgets('on Rail the expanded player keeps the title bar, over its own background', (tester) async {
+    await _app(tester, const Size(1440, 900));
+    await tester.runAsync(() => LayoutPrefs.instance.applyDesktopLayout(DesktopLayout.rail));
+    await tester.pumpAndSettle();
+    await tester.runAsync(() => showExpandedPlayer(true));
+    await tester.pump(const Duration(seconds: 3));
+    final bar = find.byType(AppTitleBar);
+    final player = find.byType(FullScreenPlayer);
+    expect(bar, findsOneWidget);
+    expect(player, findsOneWidget);
+    // The player runs up under the bar (no band of another background between them), and the bar stays.
+    expect(tester.getRect(player).top, 0);
+    expect(tester.getRect(bar).top, 0);
+    await tester.pump(const Duration(seconds: 5));
+    expect(tester.getRect(bar).top, 0, reason: 'Rail does not slide the bar away');
+    await tester.runAsync(() => showExpandedPlayer(false));
     await _settle(tester);
   });
 

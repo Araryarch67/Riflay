@@ -1,9 +1,6 @@
 #include "my_application.h"
 
 #include <flutter_linux/flutter_linux.h>
-#ifdef GDK_WINDOWING_X11
-#include <gdk/gdkx.h>
-#endif
 
 #include "flutter/generated_plugin_registrant.h"
 #include "native_video.h"
@@ -30,6 +27,19 @@ static void my_application_activate(GApplication* application) {
   // window is created undecorated: no GTK header bar or server-side frame.
   gtk_window_set_title(window, "Riflay");
   gtk_window_set_decorated(window, FALSE);
+
+  // GTK themes can still paint around a transparent client surface. The
+  // intro and the app both draw their own chrome, including resize handles.
+  GtkStyleContext* style = gtk_widget_get_style_context(GTK_WIDGET(window));
+  gtk_style_context_add_class(style, "riflay-window");
+  g_autoptr(GtkCssProvider) chrome = gtk_css_provider_new();
+  gtk_css_provider_load_from_data(
+      chrome,
+      "window.riflay-window, window.riflay-window decoration {"
+      "  background: transparent; border: none; box-shadow: none;"
+      "}", -1, nullptr);
+  gtk_style_context_add_provider(style, GTK_STYLE_PROVIDER(chrome),
+                                 GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
 
   gtk_window_set_default_size(window, 1280, 800);
 

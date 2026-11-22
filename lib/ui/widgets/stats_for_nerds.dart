@@ -15,6 +15,7 @@ import '../../services/language.dart';
 import '../../services/player_controller.dart';
 import '../../services/smart_merge.dart';
 import '../../services/youtube_audio_source.dart';
+import '../player/player_styles_page.dart';
 import '../theme.dart';
 import 'controls.dart';
 import 'menus.dart';
@@ -76,7 +77,8 @@ class NowPlayingCover extends StatelessWidget {
     if (!AudioEngine.supported) return child;
     return GestureDetector(
       onSecondaryTapUp: (d) => _menu(context, d.globalPosition),
-      onLongPressStart: (d) => _menu(context, d.globalPosition),
+      // Holding the player opens Styles; these stats stay in More and on a right click.
+      onLongPress: () => openPlayerStyles(context),
       child: child,
     );
   }

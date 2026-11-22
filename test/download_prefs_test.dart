@@ -34,6 +34,15 @@ void main() {
     expect(DownloadPrefs.phoneFolders, isTrue);
   });
 
+  test('automatic liked downloads are opt-in and remembered', () async {
+    final prefs = await _load({});
+    expect(prefs.autoDownloadLiked, isFalse);
+    await prefs.setAutoDownloadLiked(true);
+    final restored = DownloadPrefs();
+    await restored.load();
+    expect(restored.autoDownloadLiked, isTrue);
+  });
+
   test('the bitrate is kept per format and read back', () async {
     final p = await _load({});
     await p.setKbps(DownloadFormat.opus, 96);

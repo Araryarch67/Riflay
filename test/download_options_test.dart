@@ -199,7 +199,8 @@ void main() {
     expect(find.text('Kyapi'), findsOneWidget);
     expect(find.text('Houshou Marine'), findsOneWidget);
     expect(find.text('Download FLAC'), findsOneWidget);
-    expect(find.text('Saved to /home/me/Downloads'), findsOneWidget);
+    expect(find.text('Saved to Downloads'), findsOneWidget);
+    expect(find.textContaining('/home/me'), findsNothing);
     await tester.tap(find.byIcon(Icons.close_rounded));
     await tester.pump(const Duration(milliseconds: 400));
     expect(await result, isNull, reason: 'the cross backs out like Cancel');

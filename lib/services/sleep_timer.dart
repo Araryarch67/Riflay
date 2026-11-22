@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// What the sleep timer is waiting for.
 enum SleepMode {
@@ -76,6 +77,82 @@ class SleepTimer extends ChangeNotifier {
   double _gain = 1;
   Timer? _timer;
   Timer? _ramp;
+  Timer? _dailySleep;
+  Timer? _dailyAlarm;
+  int? sleepMinute;
+  int? alarmMinute;
+  String? alarmPlaylistId;
+  Future<void> Function(String)? _playAlarm;
+
+  /// Restores the daily schedules after the player's library has loaded.
+  void loadSchedules(SharedPreferences prefs, Future<void> Function(String) playAlarm) {
+    _playAlarm = playAlarm;
+    sleepMinute = prefs.getInt('sleep.dailyMinute');
+    final alarm = prefs.getStringList('sleep.dailyAlarm');
+    if (alarm != null && alarm.length == 2) {
+      alarmMinute = int.tryParse(alarm.first);
+      alarmPlaylistId = alarm.last;
+    }
+    _armSleep();
+    _armAlarm();
+    notifyListeners();
+  }
+
+  Future<void> setDailySleep(int? minute) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (minute == null) {
+      await prefs.remove('sleep.dailyMinute');
+    } else {
+      await prefs.setInt('sleep.dailyMinute', minute);
+    }
+    sleepMinute = minute;
+    _armSleep();
+    notifyListeners();
+  }
+
+  Future<void> setDailyAlarm(int? minute, String? playlistId) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (minute == null || playlistId == null) {
+      await prefs.remove('sleep.dailyAlarm');
+    } else {
+      await prefs.setStringList('sleep.dailyAlarm', ['$minute', playlistId]);
+    }
+    alarmMinute = minute;
+    alarmPlaylistId = playlistId;
+    _armAlarm();
+    notifyListeners();
+  }
+
+  DateTime _nextDaily(int minute, {DateTime? after}) {
+    final now = _now();
+    final at = DateTime(now.year, now.month, now.day, minute ~/ 60, minute % 60);
+    return at.isAfter(after ?? now) ? at : DateTime(now.year, now.month, now.day + 1, minute ~/ 60, minute % 60);
+  }
+
+  void _armSleep({DateTime? after}) {
+    _dailySleep?.cancel();
+    final minute = sleepMinute;
+    if (minute == null) return;
+    final at = _nextDaily(minute, after: after);
+    _dailySleep = Timer(at.subtract(fade).difference(_now()), () {
+      if (!active || (deadline?.isAfter(at) ?? true)) _begin(SleepMode.countdown, at);
+      _armSleep(after: at);
+    });
+  }
+
+  void _armAlarm() {
+    _dailyAlarm?.cancel();
+    final minute = alarmMinute;
+    final id = alarmPlaylistId;
+    if (minute == null || id == null) return;
+    final at = _nextDaily(minute);
+    _dailyAlarm = Timer(at.difference(_now()), () {
+      _armAlarm();
+      if (_now().difference(at) > const Duration(minutes: 2)) return;
+      cancel();
+      _playAlarm?.call(id).ignore();
+    });
+  }
 
   /// Connects the player. The timer does nothing before.
   void attach(SleepHost host) => _host = host;
@@ -298,6 +375,8 @@ class SleepTimer extends ChangeNotifier {
 
   @override
   void dispose() {
+    _dailySleep?.cancel();
+    _dailyAlarm?.cancel();
     _timer?.cancel();
     _ramp?.cancel();
     _host?.setFade(1);

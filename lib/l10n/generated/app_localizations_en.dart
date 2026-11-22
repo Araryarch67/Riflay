@@ -43,6 +43,113 @@ class AppLocalizationsEn extends AppLocalizations {
   String get desktopSidebarShortcuts => 'Shortcut rail';
 
   @override
+  String get desktopLayout => 'Desktop layout';
+
+  @override
+  String get desktopLayoutHint =>
+      'Sets the sidebar, Home, Search and the player bar at once; each can still be changed below';
+
+  @override
+  String get desktopLayoutRail => 'Rail';
+
+  @override
+  String get fullHeightRail => 'Full-height rail';
+
+  @override
+  String get fullHeightRailHint => 'The shortcut rail also runs beside the player bar';
+
+  @override
+  String get greetingChip => 'Greeting chip';
+
+  @override
+  String get greetingChipHint => 'Shows Home\'s greeting small, with an icon for the time of day';
+
+  @override
+  String get sectionIcons => 'Section icons';
+
+  @override
+  String get sectionIconsHint => 'An icon before each shelf title on Home';
+
+  @override
+  String get detailedQuickAccess => 'Detailed quick access';
+
+  @override
+  String get detailedQuickAccessHint => 'Three columns, each tile with its subtitle and a menu';
+
+  @override
+  String get centeredSearch => 'Centered search';
+
+  @override
+  String get centeredSearchHint => 'The search box above the results, centered on the page';
+
+  @override
+  String get openItem => 'Open';
+
+  @override
+  String get coverGlass => 'Glass over the cover';
+
+  @override
+  String get coverGlassHint =>
+      'Panels turn to see-through glass over the song\'s blurred cover (a random one before anything plays)';
+
+  @override
+  String get glassBackground => 'Background';
+
+  @override
+  String get glassBackgroundHint => 'What shows behind the glass';
+
+  @override
+  String get glassBackgroundPlaying => 'Playing cover';
+
+  @override
+  String get glassBackgroundRandom => 'Random cover';
+
+  @override
+  String get glassBackgroundImage => 'Your image';
+
+  @override
+  String get glassChooseImage => 'Choose an image';
+
+  @override
+  String get glassBlur => 'Blur the background';
+
+  @override
+  String get glassBlurHint => 'Off shows it sharp';
+
+  @override
+  String get setupLookTitle => 'Choose your look';
+
+  @override
+  String get setupLookIntro => 'Pick a layout and a player style. Everything can be changed later in Settings.';
+
+  @override
+  String get setupLayoutClassicNote => 'The library beside your pages, the search box on top';
+
+  @override
+  String get setupLayoutRailNote => 'A slim icon rail, search in the middle, a compact player';
+
+  @override
+  String get playerStyle => 'Player';
+
+  @override
+  String get layoutLabel => 'Layout';
+
+  @override
+  String get podcasts => 'Podcasts';
+
+  @override
+  String get podcastShows => 'Shows';
+
+  @override
+  String get podcastEpisodes => 'Episodes';
+
+  @override
+  String get styles => 'Styles';
+
+  @override
+  String get setStyle => 'Set';
+
+  @override
   String get expandLibrary => 'Expand library';
 
   @override
@@ -77,6 +184,22 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get madeForYou => 'Made for you';
+
+  @override
+  String artistMix(String artist) {
+    return '$artist Mix';
+  }
+
+  @override
+  String artistMixDescription(String artist) {
+    return '$artist and what you play with them';
+  }
+
+  @override
+  String get discoveryMix => 'Discovery Mix';
+
+  @override
+  String get discoveryMixDescription => 'Artists you haven\'t played lately';
 
   @override
   String get artistMusicVideos => 'Music videos';
@@ -7110,4 +7233,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String playlistDownloadsFailed(int count) {
     return 'Failed downloads: $count';
   }
+
+  @override
+  String get autoDownloadLiked => 'Automatically download liked songs';
+
+  @override
+  String get dailySleepTimer => 'Daily sleep timer';
+
+  @override
+  String get dailyPlaylistAlarm => 'Daily playlist alarm';
+
+  @override
+  String get scheduleWhileRunning => 'Works while Riflay is running';
 }

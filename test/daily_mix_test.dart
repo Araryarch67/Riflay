@@ -32,4 +32,33 @@ void main() {
     expect(sections.solo, [solo]);
     expect(sections.collaborations, [collab]);
   });
+
+  test('Made for you holds several mixes: the daily one, the artists played most, and new artists', () {
+    final recent = [
+      for (var i = 0; i < 6; i++) song('a$i', 'A $i', 'Alpha'),
+      for (var i = 0; i < 4; i++) song('b$i', 'B $i', 'Beta'),
+    ];
+    final available = [
+      for (var i = 6; i < 10; i++) song('a$i', 'A $i', 'Alpha'),
+      for (var i = 4; i < 8; i++) song('b$i', 'B $i', 'Beta'),
+      for (var i = 0; i < 6; i++) song('n$i', 'N $i', 'Newcomer'),
+    ];
+    final mixes = buildHomeMixes(recent: recent, available: available, day: day);
+    expect(mixes.map((m) => m.kind), [MixKind.daily, MixKind.artist, MixKind.artist, MixKind.discovery]);
+    expect(mixes[1].artist, 'Alpha', reason: 'the artist played most comes first');
+    expect(mixes[2].artist, 'Beta');
+    expect(mixes[1].tracks.every((t) => t.artist == 'Alpha' || t.artist == 'Beta'), isTrue);
+    expect(
+      mixes.last.tracks.every((t) => t.artist == 'Newcomer'),
+      isTrue,
+      reason: 'Discovery leaves played artists out',
+    );
+    expect(mixes.map((m) => m.id).toSet(), hasLength(mixes.length));
+    final again = buildHomeMixes(recent: recent, available: available, day: day);
+    expect([for (final m in again) m.tracks], [for (final m in mixes) m.tracks], reason: 'the same all day');
+    expect(
+      buildHomeMixes(recent: const [], available: available, day: day).map((m) => m.kind),
+      isNot(contains(MixKind.artist)),
+    );
+  });
 }

@@ -26,6 +26,24 @@ class _Runtime extends Spotiflac {
   }
 }
 
+class _StaleRuntime extends Spotiflac {
+  final calls = <Map<String, dynamic>>[];
+
+  @override
+  Future<dynamic> call(
+    String method, [
+    Map<String, dynamic> params = const {},
+    Duration timeout = const Duration(seconds: 60),
+  ]) async {
+    calls.add({'method': method, ...params});
+    final args = params['args'] as Map;
+    if (args['fresh'] != true) throw const SpotiflacError();
+    return [
+      {'id': '1', 'name': 'Song'},
+    ];
+  }
+}
+
 void main() {
   test('capabilities follow runtime flags, including lyrics-only and download-only extensions', () {
     expect(Spotiflac.capabilitiesOf({'has_lyrics_provider': true}), {SpotiflacCapability.lyrics});
@@ -84,5 +102,30 @@ void main() {
       ];
     expect(runtime.downloadProviderOf(Spotiflac.track('tidal-web', {'id': '1', 'name': 'Song'})!), 'tidal-web');
     expect(SpotiflacError.fromProvider('Verification required').verificationRequired, isTrue);
+  });
+
+  test('search retry requests a fresh runtime and verification targets the catalog provider', () async {
+    final runtime = _Runtime()..selected = 'catalog';
+    await expectLater(
+      runtime.search('song', fresh: true),
+      throwsA(isA<SpotiflacError>().having((error) => error.verificationRequired, 'needs verification', isTrue)),
+    );
+    expect(runtime.calls.single, {
+      'method': 'call',
+      'extension': 'catalog',
+      'operation': 'search',
+      'args': {'query': 'song', 'limit': 50, 'fresh': true},
+    });
+    expect((await runtime.searchVerificationUrl('catalog')).host, 'verify.example');
+    await runtime.completeProviderVerification('catalog', 'test-grant');
+    expect(runtime.calls.map((call) => call['method']), ['call', 'pendingAuth', 'sessionGrant']);
+    expect(runtime.calls.every((call) => call['extension'] == 'catalog'), isTrue);
+  });
+
+  test('a failed search rebuilds the provider runtime once before reporting an error', () async {
+    final runtime = _StaleRuntime()..selected = 'catalog';
+    final songs = await runtime.search('song');
+    expect(songs.single.title, 'Song');
+    expect(runtime.calls.map((call) => (call['args'] as Map)['fresh']), [null, true]);
   });
 }

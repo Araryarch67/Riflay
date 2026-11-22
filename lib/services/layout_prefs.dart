@@ -44,12 +44,48 @@ enum ExtraFeature {
 enum DesktopBarStyle {
   classic,
   compact,
-  minimal;
+  minimal,
+
+  /// The song on a card at the left, the transport centred, the other buttons grouped in a pill.
+  dock;
 
   String get label => switch (this) {
     classic => tr.styleClassic,
     compact => tr.styleCompact,
     minimal => tr.styleMinimal,
+    dock => tr.styleDock,
+  };
+}
+
+/// What shows behind the glass (Settings › Glass over the cover).
+enum GlassBackground {
+  /// The playing song's cover; a random one before anything plays.
+  playing,
+
+  /// A random cover from the library, the same for the whole run.
+  random,
+
+  /// A picture the user chose ([LayoutPrefs.glassImage]).
+  image;
+
+  String get label => switch (this) {
+    playing => tr.glassBackgroundPlaying,
+    random => tr.glassBackgroundRandom,
+    image => tr.glassBackgroundImage,
+  };
+}
+
+/// Desktop: the arrangement as a whole. Choosing one sets every part below it at once; each part can still be
+/// changed on its own afterwards.
+enum DesktopLayout {
+  classic,
+
+  /// A full-height icon rail, the pages on one panel beside it, a centred search and the dock player bar.
+  rail;
+
+  String get label => switch (this) {
+    classic => tr.styleClassic,
+    rail => tr.desktopLayoutRail,
   };
 }
 
@@ -814,6 +850,33 @@ class LayoutPrefs extends ChangeNotifier {
   DesktopSidebarStyle desktopSidebarStyle = DesktopSidebarStyle.library;
   double sidePanelWidth = sidePanelDefault;
 
+  /// Desktop: the layout last chosen as a whole ([applyDesktopLayout]); the parts below may differ from it since.
+  DesktopLayout desktopLayout = DesktopLayout.classic;
+
+  /// Desktop: the shortcut rail runs the window's full height, beside the player bar too.
+  bool fullHeightRail = false;
+
+  /// Home's greeting on a small chip with the time of day's icon, instead of a headline.
+  bool greetingChip = false;
+
+  /// An icon before the title of each of Home's shelves.
+  bool sectionIcons = false;
+
+  /// Home's quick access in three columns, each tile with its subtitle and a menu.
+  bool detailedQuickAccess = false;
+
+  /// Desktop: Search centred, its box above the results on a panel of their own.
+  bool centeredSearch = false;
+
+  /// The window's background is the playing song's blurred cover (a random one from the library before anything
+  /// plays) and the panels are see-through glass over it, without colours of their own.
+  bool coverGlass = false;
+
+  /// Behind the glass: the cover, a random cover or the user's own picture, blurred or sharp.
+  GlassBackground glassBackground = GlassBackground.playing;
+  String? glassImage;
+  bool glassBlur = true;
+
   Motion motion = Motion.full;
 
   /// Classic by default: the reveals felt like too much to many as the first thing they saw.
@@ -1051,6 +1114,17 @@ class LayoutPrefs extends ChangeNotifier {
     lyricsSync = pick(LyricsSync.values, 'lyricsSync', d.lyricsSync);
     sidebarWidth = (j['sidebarWidth'] as num?)?.toDouble().clamp(sidebarMin, sidebarMax) ?? d.sidebarWidth;
     desktopSidebarStyle = pick(DesktopSidebarStyle.values, 'desktopSidebarStyle', d.desktopSidebarStyle);
+    desktopLayout = pick(DesktopLayout.values, 'desktopLayout', d.desktopLayout);
+    fullHeightRail = j['fullHeightRail'] as bool? ?? d.fullHeightRail;
+    greetingChip = j['greetingChip'] as bool? ?? d.greetingChip;
+    sectionIcons = j['sectionIcons'] as bool? ?? d.sectionIcons;
+    detailedQuickAccess = j['detailedQuickAccess'] as bool? ?? d.detailedQuickAccess;
+    centeredSearch = j['centeredSearch'] as bool? ?? d.centeredSearch;
+    coverGlass = j['coverGlass'] as bool? ?? d.coverGlass;
+    glassImage = j['glassImage'] as String?;
+    glassBackground = pick(GlassBackground.values, 'glassBackground', d.glassBackground);
+    if (glassBackground == GlassBackground.image && glassImage == null) glassBackground = GlassBackground.playing;
+    glassBlur = j['glassBlur'] as bool? ?? d.glassBlur;
     sidePanelWidth = (j['sidePanelWidth'] as num?)?.toDouble().clamp(sidePanelMin, sidePanelMax) ?? d.sidePanelWidth;
     motion = pick(Motion.values, 'motion', d.motion);
     // Side reveal was the default until 1.1.3, and every save holds it: those saves start on Classic, the new
@@ -1151,6 +1225,16 @@ class LayoutPrefs extends ChangeNotifier {
     'lyricsSync': lyricsSync.name,
     'sidebarWidth': sidebarWidth,
     'desktopSidebarStyle': desktopSidebarStyle.name,
+    'desktopLayout': desktopLayout.name,
+    'fullHeightRail': fullHeightRail,
+    'greetingChip': greetingChip,
+    'sectionIcons': sectionIcons,
+    'detailedQuickAccess': detailedQuickAccess,
+    'centeredSearch': centeredSearch,
+    'coverGlass': coverGlass,
+    'glassBackground': glassBackground.name,
+    'glassImage': glassImage,
+    'glassBlur': glassBlur,
     'sidePanelWidth': sidePanelWidth,
     'motion': motion.name,
     'pageMotion': pageMotion.name,
@@ -1228,6 +1312,9 @@ class LayoutPrefs extends ChangeNotifier {
 
   /// Several settings at once (a preset): one notify, one save.
   Future<void> change(VoidCallback changes) => _set(changes);
+
+  /// Puts back settings saved with [toJson] earlier (Styles undoing a preset it tried on).
+  Future<void> restoreSnapshot(Map<String, dynamic> snapshot) => _set(() => restore(snapshot));
   Future<void> setDesktopBar(DesktopBarStyle v) => _set(() => desktopBar = v);
   Future<void> setDesktopMini(DesktopMiniStyle v) => _set(() => desktopMini = v);
   Future<void> setMiniLyrics(bool v) => _set(() => miniLyrics = v);
@@ -1266,6 +1353,35 @@ class LayoutPrefs extends ChangeNotifier {
   Future<void> setPageSpeed(PageMotionSpeed v) => _set(() => pageSpeed = v);
   Future<void> setSidebarWidth(double v) => _set(() => sidebarWidth = v.clamp(sidebarMin, sidebarMax));
   Future<void> setDesktopSidebarStyle(DesktopSidebarStyle v) => _set(() => desktopSidebarStyle = v);
+  Future<void> setFullHeightRail(bool v) => _set(() => fullHeightRail = v);
+  Future<void> setGreetingChip(bool v) => _set(() => greetingChip = v);
+  Future<void> setSectionIcons(bool v) => _set(() => sectionIcons = v);
+  Future<void> setDetailedQuickAccess(bool v) => _set(() => detailedQuickAccess = v);
+  Future<void> setCenteredSearch(bool v) => _set(() => centeredSearch = v);
+  Future<void> setCoverGlass(bool v) => _set(() => coverGlass = v);
+  Future<void> setGlassBlur(bool v) => _set(() => glassBlur = v);
+
+  /// [GlassBackground.image] needs [image], the picture's path.
+  Future<void> setGlassBackground(GlassBackground v, {String? image}) => _set(() {
+    if (image != null) glassImage = image;
+    glassBackground = v == GlassBackground.image && glassImage == null ? GlassBackground.playing : v;
+  });
+
+  /// Sets every part of the desktop layout to match [v] at once.
+  Future<void> applyDesktopLayout(DesktopLayout v) => _set(() {
+    final rail = v == DesktopLayout.rail;
+    desktopLayout = v;
+    desktopSidebarStyle = rail ? DesktopSidebarStyle.shortcuts : DesktopSidebarStyle.library;
+    fullHeightRail = rail;
+    greetingChip = rail;
+    sectionIcons = rail;
+    detailedQuickAccess = rail;
+    centeredSearch = rail;
+    coverGlass = rail;
+    // Rail keeps Home clean: its toolbar (customise, refresh, add) stays hidden until switched on.
+    showHomeToolbar = !rail;
+    desktopBar = rail ? DesktopBarStyle.dock : DesktopBarStyle.classic;
+  });
   Future<void> setSidePanelWidth(double v) => _set(() => sidePanelWidth = v.clamp(sidePanelMin, sidePanelMax));
   Future<void> setMotion(Motion v) => _set(() => motion = v);
   Future<void> setPerformance(PerformanceMode v) => _set(() => performance = v);

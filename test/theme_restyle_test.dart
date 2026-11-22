@@ -182,7 +182,7 @@ void main() {
     await a.setTheme(ThemeChoice.dynamic);
     expect(appThemeNow(), same(first), reason: 'a palette that comes back is not built again');
     expect(nord.colorScheme.primary, ThemeChoice.nord.palette.accent);
-    expect(first.textTheme.bodyMedium?.fontFamily, 'Figtree', reason: 'the bundled typeface, not a download');
+    expect(first.textTheme.bodyMedium?.fontFamily, 'Space Grotesk', reason: 'the bundled typeface, not a download');
     await a.reset();
   });
 }

@@ -158,20 +158,26 @@ void main() {
     addTearDown(SearchSource.reset);
     await tester.pumpWidget(
       const MaterialApp(
-        home: Scaffold(body: Center(child: SearchSourceFilters())),
+        home: Scaffold(body: Center(child: SearchSourceButton())),
       ),
     );
     await tester.pump();
     expect(SearchSource.current.value, SearchSource.youtubeMusic);
-    await tester.tap(find.byKey(const ValueKey('search-source-soundcloud')));
-    await tester.pump();
+    Future<void> select(String name) async {
+      await tester.tap(find.byKey(const ValueKey('search-source-menu')));
+      await tester.pumpAndSettle();
+      final current = find.byKey(ValueKey('search-source-${SearchSource.current.value.name}'));
+      expect(find.descendant(of: current, matching: find.byIcon(Icons.check_rounded)), findsOneWidget);
+      await tester.tap(find.byKey(ValueKey('search-source-$name')));
+      await tester.pumpAndSettle();
+    }
+
+    await select('soundcloud');
     expect(SearchSource.current.value, SearchSource.soundcloud);
-    await tester.tap(find.byKey(const ValueKey('search-source-monochrome')));
-    await tester.pump();
+    await select('monochrome');
     expect(SearchSource.current.value, SearchSource.monochrome);
     expect((await SharedPreferences.getInstance()).getString('search.source.v1'), 'monochrome');
-    await tester.tap(find.byKey(const ValueKey('search-source-youtubeMusic')));
-    await tester.pump();
+    await select('youtubeMusic');
     expect(SearchSource.current.value, SearchSource.youtubeMusic);
   });
 
@@ -254,31 +260,42 @@ void main() {
     await tester.pumpWidget(const SizedBox.shrink());
   });
 
-  testWidgets('only enabled services appear, disabling the selected one falls back, and an empty selector is hidden', (
-    tester,
-  ) async {
+  testWidgets('the menu shows enabled services and falls back when the active one is disabled', (tester) async {
     SharedPreferences.setMockInitialValues({'sources.monochrome.v1': true, 'sources.soundcloud.v1': false});
     SearchSource.reset();
     addTearDown(SearchSource.reset);
     await tester.pumpWidget(
       const MaterialApp(
-        home: Scaffold(body: Center(child: SearchSourceFilters())),
+        home: Scaffold(body: Center(child: SearchSourceButton())),
       ),
     );
     await tester.pump();
+    Future<void> openMenu() async {
+      await tester.tap(find.byKey(const ValueKey('search-source-menu')));
+      await tester.pumpAndSettle();
+    }
+
+    await openMenu();
     expect(find.byKey(const ValueKey('search-source-monochrome')), findsOneWidget);
     expect(find.byKey(const ValueKey('search-source-soundcloud')), findsNothing);
     await tester.tap(find.byKey(const ValueKey('search-source-monochrome')));
-    await tester.pump();
+    await tester.pumpAndSettle();
     expect(SearchSource.current.value, SearchSource.monochrome);
     await MusicSources.instance.setMonochrome(false);
     await tester.pump();
     expect(SearchSource.current.value, SearchSource.youtubeMusic);
-    expect(find.byKey(const ValueKey('search-source-youtubeMusic')), findsNothing);
+    await openMenu();
+    expect(find.byKey(const ValueKey('search-source-youtubeMusic')), findsOneWidget);
+    expect(find.byKey(const ValueKey('search-source-monochrome')), findsNothing);
+    await tester.tap(find.byKey(const ValueKey('search-source-youtubeMusic')));
+    await tester.pumpAndSettle();
     await MusicSources.instance.setSoundcloud(true);
     await tester.pump();
+    await openMenu();
     expect(find.byKey(const ValueKey('search-source-soundcloud')), findsOneWidget);
     expect(find.byKey(const ValueKey('search-source-monochrome')), findsNothing);
+    await tester.tap(find.byKey(const ValueKey('search-source-youtubeMusic')));
+    await tester.pumpAndSettle();
     MusicSources.instance.reset();
     await MusicSources.instance.load();
     expect(MusicSources.instance.soundcloud, isTrue);

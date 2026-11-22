@@ -6,6 +6,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../services/media_session/media_session_service.dart';
 import '../services/device_setup.dart';
 import '../services/language.dart';
 import '../models/track.dart';
@@ -98,6 +99,11 @@ class _HomeShellState extends State<HomeShell> with SingleTickerProviderStateMix
 
   /// The title bar's search box (desktop); the phone tab has its own.
   final _search = SearchInput();
+
+  /// Settings › Centered search: Search opens over the page (its own focus: a Search page left in the history keeps
+  /// the title bar's).
+  final _popupFocus = FocusNode(debugLabel: 'search popup');
+  BuildContext? _popupContext;
   final _navigators = {for (final t in PhoneTab.values) t: GlobalKey<NavigatorState>()};
   final _titleBarKey = GlobalKey();
 
@@ -211,6 +217,7 @@ class _HomeShellState extends State<HomeShell> with SingleTickerProviderStateMix
 
   @override
   void dispose() {
+    _popupFocus.dispose();
     GateHooks.detach(_gate);
     _sourceVerification?.dispose();
     _titleBarShown.dispose();
@@ -358,12 +365,55 @@ class _HomeShellState extends State<HomeShell> with SingleTickerProviderStateMix
       if (focusInput) WidgetsBinding.instance.addPostFrameCallback((_) => _searchFocus.requestFocus());
       return;
     }
+    if (_centeredSearch) return unawaited(_openSearchPopup());
     _showSearchResults();
     if (focusInput) WidgetsBinding.instance.addPostFrameCallback((_) => _search.focus.requestFocus());
   }
 
+  /// Search over the page: the box on top, the results on a panel under it, the page dimmed behind. A click
+  /// outside or Esc closes it, and so does going to a page from its results.
+  Future<void> _openSearchPopup() async {
+    if (_popupContext case final open? when open.mounted) {
+      _popupFocus.requestFocus();
+      return;
+    }
+    _leaveExpandedPlayer();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _popupFocus.requestFocus());
+    await showGeneralDialog<void>(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: tr.navSearch,
+      barrierColor: Colors.black.withValues(alpha: 0.55),
+      transitionDuration: LayoutPrefs.dur(const Duration(milliseconds: 200)),
+      pageBuilder: (dialog, _, _) {
+        _popupContext = dialog;
+        return _scoped(SearchPopup(input: _search, focusNode: _popupFocus));
+      },
+      transitionBuilder: (_, animation, _, child) {
+        final curved = CurvedAnimation(parent: animation, curve: Curves.easeOutCubic);
+        return FadeTransition(
+          opacity: curved,
+          child: SlideTransition(
+            position: Tween(begin: const Offset(0, -0.02), end: Offset.zero).animate(curved),
+            child: child,
+          ),
+        );
+      },
+    );
+    _popupContext = null;
+  }
+
+  /// Closes the search popup (and any menu over it) before a page opens under it.
+  void _closeSearchPopup() {
+    final popup = _popupContext;
+    if (popup == null || !popup.mounted) return;
+    _popupContext = null;
+    Navigator.of(popup).popUntil((route) => route.isFirst);
+  }
+
   /// The search page, fed by the title bar's box (opened as soon as you type).
   void _showSearchResults() {
+    if (_centeredSearch && !_compact) return unawaited(_openSearchPopup());
     _leaveExpandedPlayer();
     if (_history.location == Locations.search) return;
     final typing = _search.focus.hasFocus;
@@ -379,23 +429,32 @@ class _HomeShellState extends State<HomeShell> with SingleTickerProviderStateMix
 
   /// Back / Forward, Home and search, in the desktop title bar.
   Widget _titleBar() => AppTitleBar(
-    height: AppTitleBar.tallHeight,
+    height: _fullHeightRail ? AppTitleBar.railHeight : AppTitleBar.tallHeight,
+    pillControls: _fullHeightRail,
     leading: Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        TitleBarMenu(
-          onDownloads: () => _open(const DownloadsPage()),
-          onListen: () => _open(const ListenTogetherPage(), location: Locations.listen),
-          onSettings: _openSettings,
-        ),
-        const SizedBox(width: 4),
+        // The rail holds Downloads, Listen together and Settings.
+        if (!_fullHeightRail) ...[
+          TitleBarMenu(
+            onDownloads: () => _open(const DownloadsPage()),
+            onListen: () => _open(const ListenTogetherPage(), location: Locations.listen),
+            onSettings: _openSettings,
+          ),
+          const SizedBox(width: 4),
+        ],
         HistoryButtons(history: _history),
       ],
     ),
-    center: ConstrainedBox(
-      constraints: const BoxConstraints(maxWidth: 560),
-      child: Row(
-        children: [
+    // Centered search draws its own box on the page; the rail has Home.
+    center: _centeredSearch ? null : _titleBarSearch(),
+  );
+
+  Widget _titleBarSearch() => ConstrainedBox(
+    constraints: const BoxConstraints(maxWidth: 560),
+    child: Row(
+      children: [
+        if (!_fullHeightRail) ...[
           ListenableBuilder(
             listenable: _history,
             builder: (context, _) {
@@ -414,22 +473,23 @@ class _HomeShellState extends State<HomeShell> with SingleTickerProviderStateMix
             },
           ),
           const SizedBox(width: 8),
-          Expanded(
-            child: SearchBox(
-              onBar: true,
-              controller: _search.controller,
-              focusNode: _search.focus,
-              onChanged: (q) {
-                if (q.trim().isNotEmpty) _showSearchResults();
-              },
-              onSubmitted: (q) {
-                _showSearchResults();
-                _search.submit(q);
-              },
-            ),
-          ),
         ],
-      ),
+        Expanded(
+          child: SearchBox(
+            onBar: true,
+            controller: _search.controller,
+            focusNode: _search.focus,
+            onSourceSelected: _search.selectSource,
+            onChanged: (q) {
+              if (q.trim().isNotEmpty) _showSearchResults();
+            },
+            onSubmitted: (q) {
+              _showSearchResults();
+              _search.submit(q);
+            },
+          ),
+        ),
+      ],
     ),
   );
 
@@ -517,6 +577,8 @@ class _HomeShellState extends State<HomeShell> with SingleTickerProviderStateMix
   final _sidebarWidth = ValueNotifier(LayoutPrefs.instance.sidebarWidth);
   final _sidePanelWidth = ValueNotifier(LayoutPrefs.instance.sidePanelWidth);
   DesktopSidebarStyle _sidebarStyle = LayoutPrefs.instance.desktopSidebarStyle;
+  bool _fullHeightRailPref = LayoutPrefs.instance.fullHeightRail;
+  bool _centeredSearch = LayoutPrefs.instance.centeredSearch;
 
   // What the last build knew, for the drag to clamp against.
   double _window = 0;
@@ -528,10 +590,14 @@ class _HomeShellState extends State<HomeShell> with SingleTickerProviderStateMix
     final p = LayoutPrefs.instance;
     if (_sidebarWidth.value == p.sidebarWidth &&
         _sidePanelWidth.value == p.sidePanelWidth &&
-        _sidebarStyle == p.desktopSidebarStyle) {
+        _sidebarStyle == p.desktopSidebarStyle &&
+        _fullHeightRailPref == p.fullHeightRail &&
+        _centeredSearch == p.centeredSearch) {
       return;
     }
     _sidebarStyle = p.desktopSidebarStyle;
+    _fullHeightRailPref = p.fullHeightRail;
+    _centeredSearch = p.centeredSearch;
     _sidebarWidth.value = p.sidebarWidth;
     _sidePanelWidth.value = p.sidePanelWidth;
     if (mounted) setState(() {});
@@ -541,13 +607,19 @@ class _HomeShellState extends State<HomeShell> with SingleTickerProviderStateMix
       _sidebarWidth.value = SidebarFit.left(_sidebarWidth.value + dx, _window, sideOpen: _sideOpenNow);
 
   /// The library sidebar's width: dragged in the expanded layout, the fixed rail when it doesn't fit.
-  double _leftWidth(double window, {required bool sideOpen}) =>
-      !_shortcutRail &&
-          (window >= 1200 || window >= HomeShell.sidePanelFrom && SidebarFit.fullFits(window, sideOpen: sideOpen))
+  double _leftWidth(double window, {required bool sideOpen}) => _fullHeightRail
+      ? 0
+      : !_shortcutRail &&
+            (window >= 1200 || window >= HomeShell.sidePanelFrom && SidebarFit.fullFits(window, sideOpen: sideOpen))
       ? SidebarFit.left(_sidebarWidth.value, window, sideOpen: sideOpen)
+      : _shortcutRail
+      ? ShortcutRail.width
       : 84.0;
 
   bool get _shortcutRail => _sidebarStyle == DesktopSidebarStyle.shortcuts;
+
+  /// Settings › Full-height rail: the shortcut rail outside the pages, from the window's top to its foot.
+  bool get _fullHeightRail => _shortcutRail && _fullHeightRailPref;
 
   void _dragSidePanel(double dx) {
     final left = _history.location == Locations.library ? 0.0 : _leftWidth(_window, sideOpen: true);
@@ -573,12 +645,31 @@ class _HomeShellState extends State<HomeShell> with SingleTickerProviderStateMix
       compact: _compact,
       width: _contentWidth,
       history: _compact ? null : _history,
-      open: _open,
-      openCollection: (Collection col) => _open(CollectionPage(collection: col), location: Locations.collection(col)),
-      openQueue: _openQueue,
-      openNowPlaying: _openNowPlaying,
-      openLyrics: _openLyrics,
-      openDownloads: () => _open(const DownloadsPage()),
+      // Each closes the search popup first, when it is open, so the page isn't opened under it.
+      open: (page, {location}) {
+        _closeSearchPopup();
+        _open(page, location: location);
+      },
+      openCollection: (Collection col) {
+        _closeSearchPopup();
+        _open(CollectionPage(collection: col), location: Locations.collection(col));
+      },
+      openQueue: () {
+        _closeSearchPopup();
+        _openQueue();
+      },
+      openNowPlaying: () {
+        _closeSearchPopup();
+        _openNowPlaying();
+      },
+      openLyrics: () {
+        _closeSearchPopup();
+        _openLyrics();
+      },
+      openDownloads: () {
+        _closeSearchPopup();
+        _open(const DownloadsPage());
+      },
       importFromYoutube: _importFromYoutube,
       addFiles: () => _add(c.pickFiles),
       addFolder: c.canScanFolders ? _addFolder : null,
@@ -900,6 +991,15 @@ class _HomeShellState extends State<HomeShell> with SingleTickerProviderStateMix
     }),
   );
 
+  /// A play / next / previous key: to the media session when it runs, straight to the player otherwise.
+  static void _mediaKey(MediaCommand command, Future<void> Function() fallback) {
+    if (MediaSessionService.instance case final session?) {
+      session.dispatch(command);
+    } else {
+      unawaited(fallback());
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final c = PlayerScope.read(context);
@@ -932,9 +1032,13 @@ class _HomeShellState extends State<HomeShell> with SingleTickerProviderStateMix
 
     final shortcuts = {
       ...bindShortcuts({
-        AppAction.playPause: c.togglePlay,
-        AppAction.next: c.next,
-        AppAction.previous: c.previous,
+        // Through the media session, which runs a key seen both here and by the system (a media key while the
+        // window has focus) once.
+        AppAction.playPause: () =>
+            _mediaKey(const MediaCommand.toggle(source: MediaCommandSource.keyboard), c.togglePlay),
+        AppAction.next: () => _mediaKey(const MediaCommand.next(source: MediaCommandSource.keyboard), c.next),
+        AppAction.previous: () =>
+            _mediaKey(const MediaCommand.previous(source: MediaCommandSource.keyboard), c.previous),
         AppAction.seekBackward: () => c.seekByStep(forward: false),
         AppAction.seekForward: () => c.seekByStep(forward: true),
         AppAction.volumeUp: () => c.nudgeVolume(0.05),
@@ -1038,9 +1142,15 @@ class _HomeShellState extends State<HomeShell> with SingleTickerProviderStateMix
       _window = width;
       _sideOpenNow = sideOpen;
       // The rail at narrow widths is fixed; the dragged widths apply to the expanded layout only.
-      final sidebarWidth = expanded ? SidebarFit.left(_sidebarWidth.value, width, sideOpen: sideOpen) : 84.0;
+      final fullHeightRail = _fullHeightRail;
+      final sidebarWidth = expanded
+          ? SidebarFit.left(_sidebarWidth.value, width, sideOpen: sideOpen)
+          : _shortcutRail
+          ? ShortcutRail.width
+          : 84.0;
       final libraryExpanded = _history.location == Locations.library;
-      final left = libraryExpanded ? 0.0 : sidebarWidth;
+      // A full-height rail stands outside the pages and stays put when the Library takes the room.
+      final left = fullHeightRail ? ShortcutRail.width + 8 : (libraryExpanded ? 0.0 : sidebarWidth);
       final panelWidth = SidebarFit.right(_sidePanelWidth.value, width, left: left);
       _contentWidth = width - left - (sideOpen ? panelWidth + 8 : 0) - (libraryExpanded ? 16 : 24);
       final sidebar = RepaintBoundary(
@@ -1091,16 +1201,17 @@ class _HomeShellState extends State<HomeShell> with SingleTickerProviderStateMix
           curve: Curves.easeInOutCubic,
           builder: (context, fraction, _) => Row(
             children: [
-              Visibility(
-                visible: fraction > 0,
-                maintainState: true,
-                child: IgnorePointer(
-                  ignoring: libraryExpanded || fraction < 1,
-                  child: ClipRect(
-                    child: Align(alignment: Alignment.centerRight, widthFactor: fraction, child: sidebar),
+              if (!fullHeightRail)
+                Visibility(
+                  visible: fraction > 0,
+                  maintainState: true,
+                  child: IgnorePointer(
+                    ignoring: libraryExpanded || fraction < 1,
+                    child: ClipRect(
+                      child: Align(alignment: Alignment.centerRight, widthFactor: fraction, child: sidebar),
+                    ),
                   ),
                 ),
-              ),
               Expanded(child: mainPanel),
               if (sideRoom)
                 ListenableBuilder(
@@ -1137,18 +1248,23 @@ class _HomeShellState extends State<HomeShell> with SingleTickerProviderStateMix
         ValueListenableBuilder(
           valueListenable: fullScreenPlayer,
           builder: (context, full, pages) {
+            // Over the expanded player the bar floats on the player's own background (one picture, no seam);
+            // elsewhere it slides away, but Rail keeps it in sight.
+            final barFloats = full;
+            final barHides = full && !_fullHeightRail;
+            final barHeight = _fullHeightRail ? AppTitleBar.railHeight : AppTitleBar.tallHeight;
             // Keyed: it moves between the column and the overlay without losing what's typed in it.
             final titleBar = AutoHideBar(
               key: _titleBarKey,
               edge: AxisDirection.up,
-              enabled: full,
+              enabled: barHides,
               shown: _titleBarShown,
               visibility: _playerBarShown,
               // Over the player it brings the window's colour with it, as it has above the pages. Always there
               // (clear above the pages), so the bar keeps its state, such as what is typed, between the two.
-              child: ColoredBox(color: full ? AppColors.background : Colors.transparent, child: _titleBar()),
+              child: ColoredBox(color: barHides ? AppColors.background : Colors.transparent, child: _titleBar()),
             );
-            return Scaffold(
+            final scaffold = Scaffold(
               extendBody: full,
               // In the bottom slot so floating snackbars stack above the player instead of covering it.
               bottomNavigationBar: AutoHideBar(
@@ -1172,7 +1288,7 @@ class _HomeShellState extends State<HomeShell> with SingleTickerProviderStateMix
                   children: [
                     Column(
                       children: [
-                        if (hasCustomTitleBar && !full) titleBar,
+                        if (hasCustomTitleBar && !barFloats) titleBar,
                         Expanded(
                           child: Stack(
                             children: [
@@ -1191,8 +1307,10 @@ class _HomeShellState extends State<HomeShell> with SingleTickerProviderStateMix
                                   child: ListenableBuilder(
                                     listenable: Listenable.merge([_titleBarShown, _playerBarShown, _playerBarHeight]),
                                     builder: (context, player) => _Insets(
-                                      top: hasCustomTitleBar && _titleBarShown.value ? AppTitleBar.tallHeight : 0,
-                                      topShown: _titleBarShown.value,
+                                      top: hasCustomTitleBar && (barHides ? _titleBarShown.value : barFloats)
+                                          ? barHeight
+                                          : 0,
+                                      topShown: barHides ? _titleBarShown.value : barFloats,
                                       bottom: _playerBarShown.value ? _playerBarHeight.value : 0,
                                       bottomShown: _playerBarShown.value,
                                       child: player!,
@@ -1205,9 +1323,29 @@ class _HomeShellState extends State<HomeShell> with SingleTickerProviderStateMix
                         ),
                       ],
                     ),
-                    if (hasCustomTitleBar && full) Positioned(top: 0, left: 0, right: 0, child: titleBar),
+                    if (hasCustomTitleBar && barFloats) Positioned(top: 0, left: 0, right: 0, child: titleBar),
                   ],
                 ),
+              ),
+            );
+            if (!fullHeightRail || full) return scaffold;
+            return ColoredBox(
+              color: AppColors.background,
+              child: Row(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(8, 8, 0, 8),
+                    child: SizedBox(
+                      width: ShortcutRail.width,
+                      child: ListenableBuilder(
+                        listenable: _history,
+                        builder: (context, _) =>
+                            ShortcutRail(location: _history.location, onHome: _goHome, onSearch: _goSearch),
+                      ),
+                    ),
+                  ),
+                  Expanded(child: scaffold),
+                ],
               ),
             );
           },

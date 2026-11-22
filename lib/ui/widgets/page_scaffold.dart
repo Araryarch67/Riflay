@@ -23,6 +23,7 @@ class PageScaffold extends StatefulWidget {
     this.actions = const [],
     this.brand = false,
     this.hideToolbar = false,
+    this.transparent = false,
     this.overHero = false,
     this.pinned,
     this.pinnedHeight = 0,
@@ -41,6 +42,9 @@ class PageScaffold extends StatefulWidget {
   /// The app's mark and name at the left of the bar, on phones (desktop windows have it in the title bar).
   final bool brand;
   final bool hideToolbar;
+
+  /// No panel and no colour wash behind the page: what is under it shows (the search popup's dimmed window).
+  final bool transparent;
 
   /// The first thing on the page is a picture that goes to the very top, under the status bar: the bar then floats over
   /// it (a round back button) and only fills in once the picture has scrolled away.
@@ -99,12 +103,12 @@ class _PageScaffoldState extends State<PageScaffold> {
     final topInset = shell.compact ? MediaQuery.paddingOf(context).top : 0.0;
 
     return Material(
-      color: AppColors.panel,
+      color: widget.transparent || LayoutPrefs.instance.coverGlass ? Colors.transparent : AppColors.panel,
       child: Stack(
         children: [
           // Colour wash behind the header. It scrolls with the page, as part of it: held in place it seemed to follow
           // the content. Not under a hero: the cover is the header there.
-          if (!widget.overHero)
+          if (!widget.overHero && !widget.transparent && !LayoutPrefs.instance.coverGlass)
             Positioned(
               top: 0,
               left: 0,
@@ -149,7 +153,11 @@ class _PageScaffoldState extends State<PageScaffold> {
                   ),
                 )
               else
-                SliverToBoxAdapter(child: SizedBox(height: widget.overHero ? 0 : topInset + (showBar ? barHeight : 8))),
+                SliverToBoxAdapter(
+                  child: SizedBox(
+                    height: widget.overHero || widget.transparent ? 0 : topInset + (showBar ? barHeight : 8),
+                  ),
+                ),
               ...widget.slivers,
               // Clears the phone's floating player and tab bar.
               SliverToBoxAdapter(child: SizedBox(height: 32 + MediaQuery.paddingOf(context).bottom)),
@@ -260,11 +268,14 @@ class _PinnedHeader extends SliverPersistentHeaderDelegate {
 }
 
 class SectionTitle extends StatelessWidget {
-  const SectionTitle(this.title, {super.key, this.onShowAll, this.compactSpacing = false});
+  const SectionTitle(this.title, {super.key, this.onShowAll, this.compactSpacing = false, this.icon});
 
   final String title;
   final VoidCallback? onShowAll;
   final bool compactSpacing;
+
+  /// Shown before the title while Settings › Section icons is on.
+  final IconData? icon;
 
   @override
   Widget build(BuildContext context) {
@@ -279,8 +290,16 @@ class SectionTitle extends StatelessWidget {
       ),
       child: Row(
         children: [
+          if (icon != null && LayoutPrefs.instance.sectionIcons) ...[
+            Icon(icon, size: 22, color: AppColors.textPrimary),
+            const SizedBox(width: 10),
+          ],
           Expanded(
-            child: Text(title, style: text.headlineSmall?.copyWith(fontWeight: FontWeight.w800, letterSpacing: -0.5)),
+            child: Text(
+              title,
+              style: (icon != null && LayoutPrefs.instance.sectionIcons ? text.titleLarge : text.headlineSmall)
+                  ?.copyWith(fontWeight: FontWeight.w800, letterSpacing: -0.5),
+            ),
           ),
           if (onShowAll != null)
             TextButton(

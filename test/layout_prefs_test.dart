@@ -84,8 +84,8 @@ void main() {
     await p.setGlassTint(GlassTint.theme);
     final light = riflayGlassAppearance(themeIsLight: true);
     final dark = riflayGlassAppearance(themeIsLight: false);
-    expect(dark.tint.toARGB32(), 0xAD000000);
-    expect(light.tint.toARGB32(), 0x80FFFFFF);
+    expect(dark.tint.toARGB32(), 0x5C000000);
+    expect(light.tint.toARGB32(), 0x66FFFFFF);
     expect(dark.colorModel, isNot(light.colorModel));
     await p.setGlassTint(GlassTint.black);
     final saved = p.toJson();

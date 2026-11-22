@@ -116,9 +116,9 @@ class PartButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final c = AppColors.of(context);
     final radius = math.min(size / 2, LayoutPrefs.radius(round ? size / 2 : 14));
     final glass = this.glass && LayoutPrefs.instance.playerGlassControls && look != PartLook.filled;
+    final c = PlayerGlassSurface.colorsOf(context, enabled: glass);
     final (fill, color, side) = lit
         ? (c.accent.withValues(alpha: 0.16), c.accent, BorderSide(color: c.accent.withValues(alpha: 0.5)))
         : switch (look) {
@@ -185,7 +185,7 @@ class JoinedButtons extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final c = AppColors.of(context);
+    final c = PlayerGlassSurface.colorsOf(context, enabled: outlined);
     final outer = math.min(height / 2, LayoutPrefs.radius(height / 2));
     final inner = math.min(outer, LayoutPrefs.radius(8));
     Widget segment(int i, {required BorderRadius shape}) {
@@ -412,7 +412,9 @@ class PlayerTopBar extends StatelessWidget {
             circle: true,
             child: IconButton(
               tooltip: tr.close,
-              color: color ?? colors.textPrimary,
+              color: LayoutPrefs.instance.playerGlassControls && !LayoutPrefs.lightweight
+                  ? PlayerGlassSurface.colorsOf(context).textPrimary
+                  : color ?? colors.textPrimary,
               onPressed: () => Navigator.of(context).pop(),
               icon: const Icon(Icons.keyboard_arrow_down_rounded, size: 30),
             ),
@@ -588,6 +590,7 @@ class PlayerControlsRow extends StatelessWidget {
         final next = tipWith(tr.next, AppAction.next);
         final play = tipWith(t.playing ? tr.pause : tr.play, AppAction.playPause);
         if (plain) {
+          final transportColors = PlayerGlassSurface.colorsOf(context, enabled: LayoutPrefs.instance.glassTransport);
           Widget transport(double radius, Widget child) =>
               PlayerGlassSurface(radius: radius, enabled: LayoutPrefs.instance.glassTransport, child: child);
           // Three big glyphs spread evenly; shuffle and repeat, when they are here, wait small at the edges.
@@ -603,34 +606,44 @@ class PlayerControlsRow extends StatelessWidget {
                       IconButton(
                         tooltip: prev,
                         iconSize: 44,
-                        color: colors.textPrimary,
+                        color: transportColors.textPrimary,
                         onPressed: t.hasQueue ? c.previous : null,
                         icon: const Icon(Icons.fast_rewind_rounded),
                       ),
                     ),
-                    transport(
-                      40,
-                      t.loading
-                          ? SizedBox.square(
-                              dimension: 64,
-                              child: Center(
-                                child: CircularProgressIndicator(strokeWidth: 3, color: colors.textPrimary),
+                    if (colors.light)
+                      PlayButton(
+                        size: 64,
+                        playing: t.playing,
+                        loading: t.loading,
+                        color: colors.inverse,
+                        iconColor: colors.onInverse,
+                        onPressed: t.canPlay ? c.togglePlay : null,
+                      )
+                    else
+                      transport(
+                        40,
+                        t.loading
+                            ? SizedBox.square(
+                                dimension: 64,
+                                child: Center(
+                                  child: CircularProgressIndicator(strokeWidth: 3, color: transportColors.textPrimary),
+                                ),
+                              )
+                            : IconButton(
+                                tooltip: play,
+                                iconSize: 64,
+                                color: transportColors.textPrimary,
+                                onPressed: t.canPlay ? c.togglePlay : null,
+                                icon: Icon(t.playing ? Icons.pause_rounded : Icons.play_arrow_rounded),
                               ),
-                            )
-                          : IconButton(
-                              tooltip: play,
-                              iconSize: 64,
-                              color: colors.textPrimary,
-                              onPressed: t.canPlay ? c.togglePlay : null,
-                              icon: Icon(t.playing ? Icons.pause_rounded : Icons.play_arrow_rounded),
-                            ),
-                    ),
+                      ),
                     transport(
                       32,
                       IconButton(
                         tooltip: next,
                         iconSize: 44,
-                        color: colors.textPrimary,
+                        color: transportColors.textPrimary,
                         onPressed: t.hasNext ? c.next : null,
                         icon: const Icon(Icons.fast_forward_rounded),
                       ),
@@ -820,13 +833,22 @@ class DesktopControlsRow extends StatelessWidget {
                 onPressed: t.hasQueue ? c.previous : null,
                 icon: const Icon(Icons.fast_rewind_rounded),
               ),
-              IconButton(
-                tooltip: play,
-                iconSize: 32,
-                color: colors.textPrimary,
-                onPressed: t.canPlay ? c.togglePlay : null,
-                icon: Icon(t.playing ? Icons.pause_rounded : Icons.play_arrow_rounded),
-              ),
+              if (colors.light)
+                PlayButton(
+                  size: 34,
+                  playing: t.playing,
+                  color: colors.inverse,
+                  iconColor: colors.onInverse,
+                  onPressed: t.canPlay ? c.togglePlay : null,
+                )
+              else
+                IconButton(
+                  tooltip: play,
+                  iconSize: 32,
+                  color: colors.textPrimary,
+                  onPressed: t.canPlay ? c.togglePlay : null,
+                  icon: Icon(t.playing ? Icons.pause_rounded : Icons.play_arrow_rounded),
+                ),
               IconButton(
                 tooltip: next,
                 iconSize: 26,

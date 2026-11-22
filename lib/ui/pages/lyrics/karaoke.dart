@@ -36,9 +36,11 @@ class KaraokeLine extends StatefulWidget {
     required this.ticks,
     required this.trusted,
     this.playing,
+    this.textAlign,
   });
 
   final List<LyricWord> words;
+  final TextAlign? textAlign;
   final Color sungColor;
   final Duration Function() position;
   final Stream<Duration> ticks;
@@ -176,12 +178,13 @@ class KaraokeLineState extends State<KaraokeLine> with WidgetsBindingObserver {
   @override
   Widget build(BuildContext context) {
     final text = widget.words.map((w) => w.text).join();
+    final align = widget.textAlign ?? _textAlign;
     final style = DefaultTextStyle.of(context).style;
     final next = _KaraokePainter(
       words: widget.words,
       text: text,
       style: style.copyWith(color: widget.sungColor, shadows: const []),
-      align: _textAlign,
+      align: align,
       direction: Directionality.of(context),
       scaler: MediaQuery.textScalerOf(context),
       pixelRatio: MediaQuery.devicePixelRatioOf(context),
@@ -199,7 +202,7 @@ class KaraokeLineState extends State<KaraokeLine> with WidgetsBindingObserver {
     return RepaintBoundary(
       child: CustomPaint(
         foregroundPainter: painter,
-        child: RepaintBoundary(child: Text(text, textAlign: _textAlign)),
+        child: RepaintBoundary(child: Text(text, textAlign: align)),
       ),
     );
   }

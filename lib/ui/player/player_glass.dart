@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:liquid_glass_renderer/liquid_glass_renderer.dart';
 
+import '../../services/appearance.dart';
 import '../../services/layout_prefs.dart';
 import '../theme.dart';
 
@@ -51,18 +52,18 @@ LiquidGlassAppearance riflayGlassAppearance({required bool themeIsLight, GlassTi
   };
   return LiquidGlassAppearance.ios27Regular(
     brightness: light ? Brightness.light : Brightness.dark,
-    tint: light ? const Color(0x80FFFFFF) : const Color(0xAD000000),
+    tint: light ? const Color(0x66FFFFFF) : const Color(0x5C000000),
   );
 }
 
-LiquidGlassSettings _settings(BuildContext context) {
-  final brightness = switch (LayoutPrefs.instance.playerGlassTint) {
-    GlassTint.theme => PlayerGlassBackdrop.isLight(context) ? Brightness.light : Brightness.dark,
-    GlassTint.light => Brightness.light,
-    GlassTint.black => Brightness.dark,
-  };
-  return riflayGlass(brightness: brightness);
-}
+bool _lightGlass(BuildContext context) => switch (LayoutPrefs.instance.playerGlassTint) {
+  GlassTint.theme => PlayerGlassBackdrop.isLight(context),
+  GlassTint.light => true,
+  GlassTint.black => false,
+};
+
+LiquidGlassSettings _settings(BuildContext context) =>
+    riflayGlass(brightness: _lightGlass(context) ? Brightness.light : Brightness.dark);
 
 /// Frosts a control's surface in Liquid presets, with the renderer's platform fallback.
 class PlayerGlassSurface extends StatelessWidget {
@@ -84,6 +85,17 @@ class PlayerGlassSurface extends StatelessWidget {
   /// The part's own switch under Liquid Glass controls (the seek bar, transport and volume have one).
   final bool enabled;
 
+  static final _lightPalette = AppPalette.derive(Colors.white);
+  static final _darkPalette = AppPalette.derive(Colors.black);
+
+  /// Foreground roles for controls drawn on the selected glass tint.
+  static AppColorsView colorsOf(BuildContext context, {bool enabled = true}) {
+    final colors = AppColors.of(context);
+    if (!enabled || !LayoutPrefs.instance.playerGlassControls || LayoutPrefs.lightweight) return colors;
+    final light = _lightGlass(context);
+    return light == colors.light ? colors : AppColorsView(light ? _lightPalette : _darkPalette, 1, colors.highContrast);
+  }
+
   @override
   Widget build(BuildContext context) {
     if (!enabled || !LayoutPrefs.instance.playerGlassControls) return child;
@@ -97,6 +109,7 @@ class PlayerGlassSurface extends StatelessWidget {
         child: child,
       );
     }
+    final colors = colorsOf(context);
     return LiquidGlass.auto(
       appearance: riflayGlassAppearance(
         themeIsLight: PlayerGlassBackdrop.isLight(context),
@@ -105,7 +118,19 @@ class PlayerGlassSurface extends StatelessWidget {
       settings: _settings(context),
       useBackdropGroup: true,
       shape: circle ? const LiquidOval() : LiquidRoundedSuperellipse(borderRadius: corners),
-      child: Material(type: MaterialType.transparency, child: child),
+      child: Material(
+        type: MaterialType.transparency,
+        child: AppColorsScope(
+          colors: colors,
+          child: IconTheme.merge(
+            data: IconThemeData(color: colors.textPrimary, shadows: colors.light ? const [] : null),
+            child: DefaultTextStyle.merge(
+              style: TextStyle(color: colors.textPrimary),
+              child: child,
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

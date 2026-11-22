@@ -4,8 +4,11 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:riflay/platform/features.dart';
 import 'package:riflay/services/device_setup.dart';
 import 'package:riflay/services/layout_prefs.dart';
+import 'package:riflay/services/player_controller.dart';
+import 'package:riflay/services/player_presets.dart';
 import 'package:riflay/ui/pages/device_setup_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -120,5 +123,41 @@ void main() {
     await tester.pump();
     expect(LayoutPrefs.instance.performance, PerformanceMode.heavy);
     expect((await SharedPreferences.getInstance()).getBool('deviceSetup.v1'), isTrue);
+  });
+
+  testWidgets('after the welcome the look is picked: a layout and a player preset, applied on Continue', (tester) async {
+    SharedPreferences.setMockInitialValues({'library.v1': '[]', 'discord.enabled': false});
+    await LayoutPrefs.instance.reset();
+    addTearDown(LayoutPrefs.instance.reset);
+    tester.view.physicalSize = const Size(1200, 1100);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final c = PlayerController();
+    addTearDown(c.dispose);
+    const specs = DeviceSpecs(threads: 16, memoryBytes: 16 * _gb, battery: true);
+    await tester.pumpWidget(
+      PlayerScope(
+        controller: c,
+        child: MaterialApp(home: DeviceSetupPage(specs: Future.value(specs))),
+      ),
+    );
+    await tester.pump();
+    await tester.tap(find.text('Continue'));
+    await tester.pumpAndSettle();
+    expect(find.text('Choose your look'), findsOneWidget);
+    if (Features.desktopLayout) await tester.tap(find.text('Rail'));
+    final stacked = PlayerPreset.all[1];
+    await tester.tap(find.text(stacked.name));
+    await tester.pump();
+    expect(stacked.matches(LayoutPrefs.instance), isFalse, reason: 'nothing changes before Continue');
+
+    await tester.tap(find.text('Continue'));
+    await tester.pumpAndSettle();
+    expect(find.text('Choose your look'), findsNothing);
+    await tester.tap(find.text('Continue'));
+    await tester.pumpAndSettle();
+    expect(stacked.matches(LayoutPrefs.instance), isTrue);
+    if (Features.desktopLayout) expect(LayoutPrefs.instance.desktopLayout, DesktopLayout.rail);
+    expect(LayoutPrefs.instance.performance, PerformanceMode.balanced);
   });
 }

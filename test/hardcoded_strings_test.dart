@@ -14,7 +14,7 @@ void main() {
     'Monochrome', 'SpotiFLAC',
     'Wrap',
     'Riflay Wrap',
-    'Figtree',
+    'Figtree', 'Space Grotesk',
     'Matugen',
     'Bit-perfect',
     'Direct USB', 'Discord Rich Presence', 'ListenBrainz', 'Last.fm', 'Hex', 'Aa', 'DSP', 'GNU AGPL v3.0', //

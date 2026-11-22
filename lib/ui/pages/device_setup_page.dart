@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../../platform/features.dart';
 import '../../services/device_setup.dart';
+import '../../services/player_presets.dart';
 import '../../services/language.dart';
 import '../../services/layout_prefs.dart';
 import '../theme.dart';
@@ -8,6 +10,7 @@ import '../../services/player_controller.dart';
 import '../playlist_import.dart';
 import 'youtube_music_page.dart';
 import '../widgets/title_bar.dart';
+import 'player_presets_page.dart' show PresetSchematic;
 
 /// Opens the setup page over the app: on the first start of a computer ([DeviceSetup.due]), and from Settings ›
 /// Performance & power. The pick applies on Continue; "Keep my settings" leaves everything as it was.
@@ -33,8 +36,23 @@ class _DeviceSetupPageState extends State<DeviceSetupPage> {
   PerformanceMode? _picked;
   bool _showPerformance = false;
 
+  void _update(VoidCallback change) => setState(change);
+
+  /// After the welcome: the look, then the performance mode.
+  bool _showLook = false;
+
+  /// What the look step picked (null: as it is). Applied with the rest on Continue, kept on "Keep my settings".
+  DesktopLayout? _layout;
+  PlayerPreset? _preset;
+
   Future<void> _finish(PerformanceMode? mode) async {
-    if (mode != null) await LayoutPrefs.instance.setPerformance(mode);
+    if (mode != null) {
+      if (_layout case final layout?) await LayoutPrefs.instance.applyDesktopLayout(layout);
+      if (_preset case final preset? when !preset.matches(LayoutPrefs.instance)) {
+        await preset.apply(LayoutPrefs.instance);
+      }
+      await LayoutPrefs.instance.setPerformance(mode);
+    }
     await DeviceSetup.instance.done();
     if (mounted) Navigator.of(context).pop();
   }
@@ -47,7 +65,9 @@ class _DeviceSetupPageState extends State<DeviceSetupPage> {
     final muted = text.bodyMedium?.copyWith(color: AppColors.textSecondary);
     final player = context.getInheritedWidgetOfExactType<PlayerScope>()?.notifier;
     final page = SafeArea(
-      child: !_showPerformance && player != null
+      child: _showLook && !_showPerformance
+          ? _look(context)
+          : !_showPerformance && player != null
           ? Center(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.all(24),
@@ -85,7 +105,7 @@ class _DeviceSetupPageState extends State<DeviceSetupPage> {
                       Align(
                         alignment: AlignmentDirectional.centerEnd,
                         child: FilledButton.icon(
-                          onPressed: () => setState(() => _showPerformance = true),
+                          onPressed: () => setState(() => _showLook = true),
                           icon: const Icon(Icons.arrow_forward),
                           label: Text(tr.deviceSetupContinue),
                         ),
@@ -163,6 +183,225 @@ class _DeviceSetupPageState extends State<DeviceSetupPage> {
               ],
             )
           : page,
+    );
+  }
+}
+
+extension on _DeviceSetupPageState {
+  /// The layout (desktop) and the player preset, each a row of cards with a drawing of it.
+  Widget _look(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    final muted = text.bodyMedium?.copyWith(color: AppColors.textSecondary);
+    final prefs = LayoutPrefs.instance;
+    final layout = _layout ?? prefs.desktopLayout;
+    final presets = [...PlayerPreset.all, ...CustomPresets.instance.presets];
+    final preset = _preset ?? presets.where((p) => p.name == playerPresetName(prefs)).firstOrNull;
+    Widget heading(String label) => Padding(
+      padding: const EdgeInsets.only(top: 24, bottom: 10),
+      child: Text(label, style: text.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+    );
+    return Center(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 640),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(tr.setupLookTitle, style: text.headlineSmall?.copyWith(fontWeight: FontWeight.w800)),
+              const SizedBox(height: 12),
+              Text(tr.setupLookIntro, style: muted),
+              if (Features.desktopLayout) ...[
+                heading(tr.layoutLabel),
+                Row(
+                  children: [
+                    for (final (i, option) in DesktopLayout.values.indexed) ...[
+                      if (i > 0) const SizedBox(width: 12),
+                      Expanded(
+                        child: _LookCard(
+                          selected: option == layout,
+                          title: option.label,
+                          note: option == DesktopLayout.rail ? tr.setupLayoutRailNote : tr.setupLayoutClassicNote,
+                          picture: _LayoutSketch(option),
+                          onTap: () => _update(() => _layout = option),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ],
+              heading(tr.playerStyle),
+              Wrap(
+                spacing: 12,
+                runSpacing: 12,
+                children: [
+                  for (final option in presets)
+                    SizedBox(
+                      width: 196,
+                      child: _LookCard(
+                        selected: option.name == preset?.name,
+                        title: option.name,
+                        note: presetNote(option),
+                        picture: PresetSchematic(preset: option),
+                        onTap: () => _update(() => _preset = option),
+                      ),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 28),
+              Row(
+                children: [
+                  TextButton(onPressed: () => _update(() => _showLook = false), child: Text(tr.back)),
+                  const Spacer(),
+                  FilledButton.icon(
+                    onPressed: () => _update(() => _showPerformance = true),
+                    icon: const Icon(Icons.arrow_forward),
+                    label: Text(tr.deviceSetupContinue),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// A choice of the look step: a drawing over its name and a line about it, outlined when picked.
+class _LookCard extends StatelessWidget {
+  const _LookCard({
+    required this.selected,
+    required this.title,
+    required this.note,
+    required this.picture,
+    required this.onTap,
+  });
+
+  final bool selected;
+  final String title;
+  final String note;
+  final Widget picture;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    return Semantics(
+      selected: selected,
+      button: true,
+      child: Material(
+        color: selected ? AppColors.elevated : Colors.transparent,
+        shape: RoundedRectangleBorder(
+          borderRadius: LayoutPrefs.corner(10),
+          side: BorderSide(color: selected ? AppColors.textPrimary : AppColors.divider, width: selected ? 1.5 : 1),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(
+                  height: 96,
+                  child: Center(
+                    child: FittedBox(fit: BoxFit.scaleDown, child: picture),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Text(title, style: text.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+                const SizedBox(height: 2),
+                Text(
+                  note,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: text.bodySmall?.copyWith(color: AppColors.textSecondary),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// A desktop window in plain boxes: Classic's wide library beside the page, or Rail's slim bar with the player
+/// along the foot.
+class _LayoutSketch extends StatelessWidget {
+  const _LayoutSketch(this.layout);
+
+  final DesktopLayout layout;
+
+  @override
+  Widget build(BuildContext context) {
+    final soft = AppColors.textPrimary.withValues(alpha: 0.18);
+    final strong = AppColors.textPrimary.withValues(alpha: 0.4);
+    Widget box({double? width, double? height, Color? color, double r = 3}) => Container(
+      width: width,
+      height: height,
+      decoration: BoxDecoration(color: color ?? soft, borderRadius: BorderRadius.circular(r)),
+    );
+    final rail = layout == DesktopLayout.rail;
+    return SizedBox(
+      width: 160,
+      height: 96,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          border: Border.all(color: soft),
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(6),
+          child: rail
+              ? Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    box(width: 10, color: strong),
+                    const SizedBox(width: 5),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Expanded(child: box()),
+                          const SizedBox(height: 4),
+                          Row(
+                            children: [
+                              box(width: 28, height: 10, color: strong),
+                              const Spacer(),
+                              box(width: 20, height: 10),
+                              const Spacer(),
+                              box(width: 22, height: 10, color: strong),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                )
+              : Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Center(child: box(width: 60, height: 7, color: strong)),
+                    const SizedBox(height: 4),
+                    Expanded(
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          box(width: 36),
+                          const SizedBox(width: 5),
+                          Expanded(child: box()),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    box(height: 12, color: strong),
+                  ],
+                ),
+        ),
+      ),
     );
   }
 }

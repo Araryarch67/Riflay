@@ -3,6 +3,10 @@ package gobackend
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
+	"time"
+
+	"github.com/dop251/goja"
 )
 
 // RiflayProviderCall exposes the existing upstream wrapper without reimplementing its ABI.
@@ -21,6 +25,7 @@ func RiflayProviderCall(id, method, argsJSON string) (string, error) {
 		Path    string `json:"path"`
 		Item    string `json:"item"`
 		Limit   int    `json:"limit"`
+		Fresh   bool   `json:"fresh"`
 	}
 	if err = json.Unmarshal([]byte(argsJSON), &args); err != nil {
 		return "", err
@@ -29,6 +34,7 @@ func RiflayProviderCall(id, method, argsJSON string) (string, error) {
 	var result interface{}
 	switch method {
 	case "search":
+		riflayRefreshSearchVM(ext, time.Now(), args.Fresh)
 		if ext.Manifest.HasCustomSearch() {
 			options, marshalErr := json.Marshal(riflaySearchOptions(ext.Manifest, args.Limit))
 			if marshalErr != nil {
@@ -57,6 +63,35 @@ func RiflayProviderCall(id, method, argsJSON string) (string, error) {
 	}
 	data, err := json.Marshal(result)
 	return string(data), err
+}
+
+// Riflay: a long-lived provider may retain expired metadata credentials in JS
+// globals. Rebuild that provider's VM without reinstalling or clearing storage.
+func riflayRefreshSearchVM(ext *loadedExtension, now time.Time, fresh bool) {
+	ext.VMMu.Lock()
+	defer ext.VMMu.Unlock()
+	// Compare wall-clock time: monotonic readings exclude suspend on Windows,
+	// macOS, Linux and Android, so an overnight sleep would look like seconds.
+	idle := now.Round(0).Sub(ext.lastVMUse.Round(0))
+	if ext.VM != nil && (fresh || (!ext.lastVMUse.IsZero() && (idle >= 30*time.Minute || idle < 0))) {
+		releaseVMLocked(ext)
+	}
+}
+
+// Riflay: some providers return the signed-session response as their search
+// result. Detect it before the track parser can turn it into an empty result.
+func riflaySearchVerificationError(value goja.Value) error {
+	obj, ok := value.(*goja.Object)
+	if !ok {
+		return nil
+	}
+	needsVerification := gojaObjectValue(obj, "needsVerification", "needs_verification")
+	code := gojaObjectString(obj, "error", "error_type", "code")
+	if (!gojaValueIsEmpty(needsVerification) && needsVerification.ToBoolean()) ||
+		strings.EqualFold(code, "verify_required") || strings.EqualFold(code, "verification_required") {
+		return fmt.Errorf("verification_required")
+	}
+	return nil
 }
 
 // Riflay: extensions choose their own song filter IDs. An unknown filter can

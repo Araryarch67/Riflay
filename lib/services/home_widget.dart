@@ -184,8 +184,8 @@ class HomeWidgetState {
 
 /// Android: the player on the home screen (android/.../PlayerWidget.kt), which looks like the mini player.
 ///
-/// Its play / pause, previous and next go to the media session as the notification's do; like and shuffle come
-/// back here over the channel. It is sent the song only when something it shows changes, not on every player
+/// Previous and next go to the media session. Play / pause, like, shuffle and repeat use the Dart controller.
+/// It is sent the song only when something it shows changes, not on every player
 /// notification, plus the progress every [progressEvery] while playing: each send redraws the widget in the
 /// launcher, so the line moves in coarse steps rather than waking the phone each second.
 class HomeWidget {
@@ -224,6 +224,7 @@ class HomeWidget {
 
   HomeWidgetState? _shown;
   Timer? _progress;
+  Future<void> _playbackActions = Future.value();
 
   /// The current song's cover file and colours, once they are known.
   String? _resolvedFor;
@@ -250,6 +251,7 @@ class HomeWidget {
     _lyricSaid.addListener(_sendLyric);
     _lyricNext.addListener(_sendLyric);
     sync();
+    _takePlaybackActions();
   }
 
   /// The lines change together: sent once, after all of them.
@@ -266,6 +268,7 @@ class HomeWidget {
 
   @visibleForTesting
   void detach() {
+    _channel.setMethodCallHandler(null);
     _c.removeListener(sync);
     _c.ytMusic.removeListener(sync);
     Appearance.instance.removeListener(sync);
@@ -276,9 +279,23 @@ class HomeWidget {
     _progress?.cancel();
   }
 
-  /// Like, shuffle and repeat, pressed on the widget.
+  void _takePlaybackActions() {
+    _playbackActions = _playbackActions
+        .then((_) async {
+          final count = await _channel.invokeMethod<int>('takePlaybackToggles') ?? 0;
+          for (var i = 0; i < count; i++) {
+            // A second tap can pause while the first tap is still opening its stream.
+            unawaited(_c.togglePlay().catchError((Object e) => debugPrint('Home-screen playback control: $e')));
+          }
+        })
+        .catchError((Object e) => debugPrint('Home-screen playback control: $e'));
+  }
+
+  /// Actions pressed on the widget.
   Future<Object?> _onCall(MethodCall call) async {
     switch (call.method) {
+      case 'playbackActionAvailable':
+        _takePlaybackActions();
       case 'like':
         final t = _c.currentTrack;
         final account = _c.ytMusic;

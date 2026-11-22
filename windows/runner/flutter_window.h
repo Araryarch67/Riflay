@@ -9,6 +9,7 @@
 #include <memory>
 #include <vector>
 
+#include "media_controls.h"
 #include "win32_window.h"
 
 // A window that does nothing but host a Flutter view.
@@ -44,6 +45,9 @@ class FlutterWindow : public Win32Window {
 
   // "riflay/video_window": the music video's own windows (see video_window.cpp).
   std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>> video_channel_;
+
+  // "riflay/media_session": Windows' media flyout, media keys and headsets (see media_controls.h).
+  std::unique_ptr<MediaControls> media_controls_;
 };
 
 #endif  // RUNNER_FLUTTER_WINDOW_H_

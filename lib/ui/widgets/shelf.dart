@@ -16,7 +16,14 @@ const _maxCardWidth = 240.0;
 ///  * Wider: exactly one row whose cards stretch to fill the width; anything that
 ///    doesn't fit is reachable through "Show all".
 class Shelf extends StatelessWidget {
-  Shelf({super.key, required this.title, required List<Widget> cards, this.onShowAll, this.compactSpacing = false})
+  Shelf({
+    super.key,
+    required this.title,
+    required List<Widget> cards,
+    this.onShowAll,
+    this.compactSpacing = false,
+    this.icon,
+  })
     : artworkOnly = false,
       count = cards.length,
       card = ((i) => cards[i]);
@@ -31,9 +38,13 @@ class Shelf extends StatelessWidget {
     this.onShowAll,
     this.compactSpacing = false,
     this.artworkOnly = false,
+    this.icon,
   });
 
   final String title;
+
+  /// Before the title, while Settings › Section icons is on.
+  final IconData? icon;
   final int count;
   final Widget Function(int index) card;
   final bool compactSpacing;
@@ -62,6 +73,7 @@ class Shelf extends StatelessWidget {
           title,
           onShowAll: shell.compact || overflow || onShowAll != null ? showAll : null,
           compactSpacing: compactSpacing,
+          icon: icon,
         );
         if (shell.compact) {
           final size = LayoutPrefs.instance.coverSize.scale;

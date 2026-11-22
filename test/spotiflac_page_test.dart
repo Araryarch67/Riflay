@@ -8,6 +8,7 @@ import 'package:riflay/ui/shell_scope.dart';
 import 'package:riflay/ui/widgets/spotiflac_notice.dart';
 
 class _Extensions extends Spotiflac {
+  String? requestedRepository;
   final entry = <String, dynamic>{
     'id': 'example',
     'display_name': 'Example',
@@ -25,7 +26,10 @@ class _Extensions extends Spotiflac {
   Future<void> refresh() async => notifyListeners();
 
   @override
-  Future<List<Map<String, dynamic>>> registry(String url, {http.Client? client}) async => [entry];
+  Future<List<Map<String, dynamic>>> registry(String url, {http.Client? client}) async {
+    requestedRepository = url;
+    return [entry];
+  }
 
   @override
   Future<void> installFromRegistry(Map<String, dynamic> entry, {http.Client? client}) async {
@@ -71,8 +75,13 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(SpotiflacNotice), findsOneWidget);
     expect(find.text(tr.spotiflacDownloadOnly), findsOneWidget);
-    await tester.tap(find.byTooltip(tr.spotiflacLoadRepository));
+    final loadRepository = find.widgetWithText(FilledButton, tr.spotiflacLoadRepository);
+    expect(tester.widget<FilledButton>(loadRepository).onPressed, isNull);
+    await tester.enterText(find.byType(TextField), 'https://example.test/registry.json');
+    await tester.pump();
+    await tester.tap(loadRepository);
     await tester.pumpAndSettle();
+    expect(engine.requestedRepository, 'https://example.test/registry.json');
     expect(find.text(tr.available), findsOneWidget);
     await tester.tap(find.text(tr.install));
     await tester.pumpAndSettle();
