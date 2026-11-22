@@ -17,6 +17,7 @@ import '../player/mini_window.dart' show miniPlayer, refreshMiniPlayer, setMiniP
 import 'player_presets_page.dart';
 import 'sound_settings.dart';
 import '../widgets/menus.dart';
+import '../widgets/video_quality.dart';
 import '../player_scope.dart';
 import '../widgets/audio_reactive_view.dart';
 import '../../services/language.dart';
@@ -169,6 +170,23 @@ class NowPlayingSettings extends StatelessWidget {
                       ),
                     );
                   },
+                ),
+                SettingTile(
+                  icon: Icons.hd_outlined,
+                  title: Text(tr.videoQuality),
+                  subtitle: Text(tr.videoQualitySubtitle, style: muted),
+                  control: OptionPicker<int>(
+                    value: p.videoQuality,
+                    onChanged: VideoMode.instance.setQuality,
+                    options: [
+                      (0, tr.videoQualityAuto),
+                      for (final h in {
+                        ...videoQualitySteps,
+                        if (p.videoQuality > 0) p.videoQuality,
+                      }.toList()..sort((a, b) => b.compareTo(a)))
+                        (h, videoQualityLabel(h)),
+                    ],
+                  ),
                 ),
               ],
             ],

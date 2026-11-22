@@ -500,6 +500,14 @@ abstract final class SettingsOptions {
       available: () => BetaFeature.videoMode.available,
     ),
     SettingsOption(
+      'videoQuality',
+      .nowPlaying,
+      (t) => t.videoQuality,
+      subtitle: (t) => t.videoQualitySubtitle,
+      find: (t) => t.kwVideoQuality,
+      available: () => BetaFeature.videoMode.available,
+    ),
+    SettingsOption(
       'glassControls',
       .nowPlaying,
       (t) => t.liquidGlassControls,

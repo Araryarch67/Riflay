@@ -359,6 +359,20 @@ void main() {
     await p.setVideoDecoder(VideoDecoder.automatic);
   });
 
+  test('the video quality persists, is not a look, and Reset leaves it alone', () async {
+    expect(p.videoQuality, 0, reason: 'Auto');
+    await p.setVideoQuality(720);
+    expect(p.isCustomised, isFalse);
+    await p.load();
+    expect(p.videoQuality, 720);
+    await p.reset();
+    expect(p.videoQuality, 720);
+    await p.setVideoQuality(-5);
+    expect(p.videoQuality, 0);
+    p.restore(const {'videoQuality': 'junk'});
+    expect(p.videoQuality, 0);
+  });
+
   test('window buttons can be hidden, and Reset leaves them as they are', () async {
     expect(p.windowButtons, isTrue);
     await p.setWindowButtons(false);

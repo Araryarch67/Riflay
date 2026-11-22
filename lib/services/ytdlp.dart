@@ -57,13 +57,23 @@ class ResolvedAudio {
 
 /// A directly fetchable video-only stream (Video mode).
 class ResolvedVideo {
-  const ResolvedVideo({required this.url, required this.height, required this.codec, this.size, this.formatId});
+  const ResolvedVideo({
+    required this.url,
+    required this.height,
+    required this.codec,
+    this.size,
+    this.formatId,
+    this.heights = const [],
+  });
 
   final Uri url;
   final int height;
   final String codec;
   final int? size;
   final String? formatId;
+
+  /// Every height the video comes in, tallest first (the quality menu); empty when the lister didn't say.
+  final List<int> heights;
 }
 
 /// Wraps the yt-dlp CLI, which keeps up with YouTube's anti-download changes

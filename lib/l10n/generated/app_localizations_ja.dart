@@ -1371,6 +1371,20 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
+  String get videoQuality => '動画の画質';
+
+  @override
+  String get videoQualitySubtitle => '自動ではこのデバイスと回線に合った画質を選ぶよ。選んだ解像度は回線が遅くてもそのまま。';
+
+  @override
+  String get videoQualityAuto => '自動';
+
+  @override
+  String videoQualityAutoNow(String height) {
+    return '自動（$height）';
+  }
+
+  @override
   String get showBluetoothCodec => 'Bluetooth のコーデックを表示';
 
   @override
@@ -6013,6 +6027,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get kwVideoDecoding => 'ハードウェア, GPU, デコード';
 
   @override
+  String get kwVideoQuality => '解像度, 画質, 1080p, 720p, 480p, HD, 動画';
+
+  @override
   String get kwLiquidGlass => 'ガラス, iOS, リキッド';
 
   @override
@@ -6878,6 +6895,11 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String seekStepSeconds(int seconds) {
+    return '$seconds 秒';
+  }
+
+  @override
+  String seekSkipSeconds(int seconds) {
     return '$seconds 秒';
   }
 

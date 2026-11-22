@@ -6,6 +6,8 @@ import 'package:riflay/services/video_mode.dart';
 import 'package:riflay/services/youtube_stream.dart';
 import 'package:riflay/services/ytmusic_web.dart';
 import 'package:riflay/ui/widgets/video_mode.dart';
+import 'package:riflay/ui/widgets/video_quality.dart';
+import 'package:riflay/services/layout_prefs.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// A `next` response with one queue row, as YouTube Music sends it.
@@ -118,6 +120,18 @@ void main() {
         YoutubeStream.pickVideo([f(401, 'video/mp4; codecs="av01.0.12M.08"', 2160)], maxHeight: 2160)?['itag'],
         401,
       );
+    });
+
+    test('the quality menu lists each height the video has once, tallest first', () {
+      expect(YoutubeStream.videoHeights(formats), [1080, 720, 480]);
+      expect(YoutubeStream.videoHeights([formats.last]), isEmpty, reason: 'sound only');
+    });
+
+    test('a picked height gives the tallest stream up to it, or the shortest when all are taller', () {
+      expect(VideoMode.heightFor(1080, const [1080, 720, 480]), 1080);
+      expect(VideoMode.heightFor(900, const [1080, 720, 480]), 720);
+      expect(VideoMode.heightFor(240, const [1080, 720, 480]), 480);
+      expect(VideoMode.heightFor(720, const []), isNull);
     });
 
     test('never audio, a stream without a URL, or nothing short enough', () {
@@ -262,5 +276,50 @@ void main() {
     expect(VideoMode.stepUp(480, 1080), 720);
     expect(VideoMode.stepUp(720, 1080), 1080);
     expect(VideoMode.stepUp(1080, 1080), isNull);
+  });
+
+  testWidgets('the quality menu lists Auto and the video heights, and a pick is kept as the default', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    await LayoutPrefs.instance.load();
+    final mode = VideoMode.instance;
+    Widget app() => const MaterialApp(
+      home: Scaffold(body: Center(child: VideoQualityButton())),
+    );
+
+    mode.debugSetStream(const [], 0);
+    await tester.pumpWidget(app());
+    expect(find.byTooltip('Video quality'), findsNothing, reason: 'no streamed video: no menu');
+
+    mode.debugSetStream(const [1080, 720, 480, 360, 144], 720);
+    await tester.pump();
+    await tester.tap(find.byTooltip('Video quality'));
+    await tester.pumpAndSettle();
+    expect(find.text('Auto (720p)'), findsOneWidget);
+    for (final label in ['1080p HD', '720p HD', '480p', '360p', '144p']) {
+      expect(find.text(label), findsOneWidget);
+    }
+    Icon? check(int height) => tester
+        .widgetList<Icon>(
+          find.descendant(of: find.byKey(ValueKey('video-quality-$height')), matching: find.byType(Icon)),
+        )
+        .firstOrNull;
+    expect(check(0)?.icon, Icons.check_rounded, reason: 'Auto is the default');
+    expect(check(480), isNull);
+
+    await tester.tap(find.text('480p'));
+    await tester.pumpAndSettle();
+    expect(LayoutPrefs.instance.videoQuality, 480);
+    expect(VideoMode.fixedQuality, 480);
+    await tester.tap(find.byTooltip('Video quality'));
+    await tester.pumpAndSettle();
+    expect(check(480)?.icon, Icons.check_rounded);
+    expect(check(0), isNull);
+
+    await tester.tap(find.text('Auto (720p)'));
+    await tester.pumpAndSettle();
+    expect(LayoutPrefs.instance.videoQuality, 0);
+    expect(VideoMode.fixedQuality, isNull);
+    mode.debugSetStream(const [], 0);
+    await tester.pumpWidget(const SizedBox());
   });
 }

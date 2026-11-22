@@ -89,6 +89,9 @@ class VideoMode extends ChangeNotifier with WidgetsBindingObserver {
   /// Off with `RIFLAY_NO_ADAPTIVE_VIDEO`: the video always comes at [maxHeight], however often it stalls.
   static const adaptive = !bool.fromEnvironment('RIFLAY_NO_ADAPTIVE_VIDEO');
 
+  /// What the quality menu offers when the lister didn't say which heights a video has (yt-dlp).
+  static const fallbackQualities = [1080, 720, 480, 360, 240, 144];
+
   /// The steps the video comes down (and back up) through.
   static const ladder = [2160, 1440, 1080, 720, 480, 360];
 
@@ -106,8 +109,62 @@ class VideoMode extends ChangeNotifier with WidgetsBindingObserver {
   final qualityChanged = ValueNotifier<({int height, bool lower, int serial})?>(null);
 
   int _height(bool foreground) {
+    if (fixedQuality case final q?) return q;
     final most = foreground ? maxHeight : backgroundHeight;
     return _cap == null ? most : _cap!.clamp(ladder.last, most);
+  }
+
+  // ---- Quality menu ----
+
+  /// The height picked in the quality menu (Settings › Now Playing › Video quality), null for Auto: then
+  /// [maxHeight] and the connection decide, as before there was a menu. A picked height is kept to, stalls or not,
+  /// as YouTube does.
+  static int? get fixedQuality => LayoutPrefs.instance.videoQuality > 0 ? LayoutPrefs.instance.videoQuality : null;
+
+  /// The heights the streamed video offers, tallest first: what the quality menu lists besides Auto. Empty for a
+  /// Canvas, a downloaded video or before the video shows.
+  List<int> get qualities => _ready && _streamed ? _heights : const [];
+  List<int> _heights = const [];
+
+  /// For tests: a streamed video at [height] that offers [heights] shows (none with an empty list).
+  @visibleForTesting
+  void debugSetStream(List<int> heights, int height) {
+    _streamed = heights.isNotEmpty;
+    _streamHeight = height;
+    _heights = heights;
+    _ready = heights.isNotEmpty;
+    notifyListeners();
+  }
+
+  /// The height of the stream playing now, 0 when none is streamed.
+  int get streamHeight => _streamed ? _streamHeight : 0;
+
+  /// The stream [want] (0: Auto) gives among [heights]: the tallest no taller than it, or the shortest when all
+  /// are taller. Null when nothing is known about the heights.
+  @visibleForTesting
+  static int? heightFor(int want, List<int> heights) {
+    if (heights.isEmpty) return null;
+    final fit = heights.where((h) => h <= want);
+    return fit.isEmpty ? heights.reduce((a, b) => a < b ? a : b) : fit.reduce((a, b) => a > b ? a : b);
+  }
+
+  /// Picks the video's height (0: Auto) and keeps it as the default. The video switches in place: the song plays
+  /// on, and the new stream starts where the song is.
+  Future<void> setQuality(int height) => LayoutPrefs.instance.setVideoQuality(height);
+
+  int? _quality;
+
+  /// A new quality applies to the video that is playing, unless it would come at the height it has already.
+  void _qualityChanged() {
+    final want = LayoutPrefs.instance.videoQuality;
+    if (want == _quality) return;
+    _quality = want;
+    final video = _wanted;
+    if (video == null || !_streamed || (_player == null && _opening == null)) return;
+    if (want == 0) _cap = null;
+    if (heightFor(_height(_foreground), _heights) == _streamHeight && _ready) return;
+    debugPrint('Video mode: quality ${want == 0 ? 'auto' : '${want}p'}');
+    _start(video, foreground: _foreground);
   }
 
   /// The step under [height], or null at the bottom.
@@ -125,6 +182,7 @@ class VideoMode extends ChangeNotifier with WidgetsBindingObserver {
   /// step. A seek's own wait doesn't count. True when the video was let go to come back smaller.
   bool _watchStalls(VideoEngine player, bool play, DateTime now) {
     if (!adaptive ||
+        fixedQuality != null ||
         !_streamed ||
         !play ||
         _seekedTo != null ||
@@ -186,9 +244,12 @@ class VideoMode extends ChangeNotifier with WidgetsBindingObserver {
       _timingChanged();
     });
     _loadOn();
+    _quality = LayoutPrefs.instance.videoQuality;
     LayoutPrefs.instance
       ..removeListener(_decoderChanged)
-      ..addListener(_decoderChanged);
+      ..addListener(_decoderChanged)
+      ..removeListener(_qualityChanged)
+      ..addListener(_qualityChanged);
     _probe();
   }
 
@@ -783,7 +844,10 @@ vec4 hook() {
         }
         if (request != _videoRequest) return;
         // A minute and a half without a stall: this song may try a step higher.
-        if (adaptive && _cap != null && DateTime.now().difference(_smoothSince) > const Duration(seconds: 90)) {
+        if (adaptive &&
+            fixedQuality == null &&
+            _cap != null &&
+            DateTime.now().difference(_smoothSince) > const Duration(seconds: 90)) {
           final most = foreground ? maxHeight : backgroundHeight;
           final up = stepUp(_cap!, most);
           _cap = up == null || up >= most ? null : up;
@@ -926,6 +990,9 @@ vec4 hook() {
         if (!active()) return;
         _streamed = true;
         _streamHeight = stream.height;
+        _heights = stream.heights.isNotEmpty
+            ? stream.heights
+            : ({...fallbackQualities, if (stream.height > 0) stream.height}.toList()..sort((a, b) => b.compareTo(a)));
         debugPrint('Video mode: ${v.videoId} at ${stream.height}p ${stream.codec}');
         final url = await VideoStreamCache.instance.open(v.videoId, stream);
         if (!active()) return;
@@ -1039,6 +1106,7 @@ vec4 hook() {
     _loadedForeground = true;
     _playing = null;
     _ready = false;
+    _heights = const [];
     _rate = 1;
     _seekedTo = null;
   }

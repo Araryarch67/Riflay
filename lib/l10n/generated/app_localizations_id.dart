@@ -1381,6 +1381,21 @@ class AppLocalizationsId extends AppLocalizations {
   }
 
   @override
+  String get videoQuality => 'Kualitas video';
+
+  @override
+  String get videoQualitySubtitle =>
+      'Otomatis memilih yang sanggup ditangani perangkat dan koneksimu. Resolusi yang kamu pilih tetap dipakai, walau koneksi lambat.';
+
+  @override
+  String get videoQualityAuto => 'Otomatis';
+
+  @override
+  String videoQualityAutoNow(String height) {
+    return 'Otomatis ($height)';
+  }
+
+  @override
   String get showBluetoothCodec => 'Tampilkan codec Bluetooth';
 
   @override
@@ -6148,6 +6163,9 @@ class AppLocalizationsId extends AppLocalizations {
   String get kwVideoDecoding => 'hardware, gpu, cpu, dekoder';
 
   @override
+  String get kwVideoQuality => 'resolusi, kualitas, 1080p, 720p, 480p, hd, video';
+
+  @override
   String get kwLiquidGlass => 'kaca, ios, kontrol transparan';
 
   @override
@@ -7035,6 +7053,11 @@ class AppLocalizationsId extends AppLocalizations {
   @override
   String seekStepSeconds(int seconds) {
     return '$seconds dtk';
+  }
+
+  @override
+  String seekSkipSeconds(int seconds) {
+    return '$seconds detik';
   }
 
   @override

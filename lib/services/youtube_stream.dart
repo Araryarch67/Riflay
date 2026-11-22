@@ -418,7 +418,8 @@ abstract final class YoutubeStream {
       } catch (_) {
         j = await _playerResponse(videoId, freshVisitor: true);
       }
-      final best = pickVideo(_adaptiveFormats(j), maxHeight: maxHeight);
+      final formats = _adaptiveFormats(j);
+      final best = pickVideo(formats, maxHeight: maxHeight);
       if (best == null) throw StateError('No video stream for this song.');
       return ResolvedVideo(
         url: Uri.parse(best['url'] as String),
@@ -426,12 +427,23 @@ abstract final class YoutubeStream {
         codec: RegExp(r'codecs="([^"]+)"').firstMatch(best['mimeType'] as String)?.group(1) ?? '',
         size: int.tryParse('${best['contentLength'] ?? ''}'),
         formatId: best['itag']?.toString(),
+        heights: videoHeights(formats),
       );
     } catch (e) {
       if (!YtDlp.supported) rethrow;
       debugPrint('YouTube player API failed for the video of $videoId, using yt-dlp: $e');
       return YtDlp.resolveVideo(videoId, maxHeight: maxHeight);
     }
+  }
+
+  /// The heights [formats] offer a picture at, tallest first, each once: what the quality menu lists.
+  static List<int> videoHeights(List<Map<String, dynamic>> formats) {
+    final heights = {
+      for (final f in formats)
+        if ((f['mimeType'] as String? ?? '').startsWith('video/') && f['url'] is String)
+          if ((f['height'] as num?)?.toInt() case final h? when h > 0) h,
+    }.toList()..sort((a, b) => b.compareTo(a));
+    return heights;
   }
 
   /// The tallest video-only stream up to [maxHeight]. At the same height H.264

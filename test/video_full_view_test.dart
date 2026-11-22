@@ -299,30 +299,73 @@ void main() {
     await close(tester, c);
   });
 
-  testWidgets('double tapping either side seeks ten seconds and clamps to the song', (tester) async {
+  testWidgets('double tapping either side seeks ten seconds, each further tap ten more, clamped to the song', (
+    tester,
+  ) async {
     final c = await show(tester, size: _landscape);
     c.at = const Duration(seconds: 60);
     await tester.tap(find.byTooltip('Watch full screen'));
     await settle(tester);
     final surface = tester.getRect(find.byKey(const ValueKey('video-full-surface')));
-    Future<void> twice(double x) async {
+    Future<void> taps(double x, int count) async {
       final point = Offset(surface.left + surface.width * x, surface.center.dy);
-      await tester.tapAt(point);
-      await tester.pump(const Duration(milliseconds: 60));
-      await tester.tapAt(point);
-      await tester.pump();
+      for (var i = 0; i < count; i++) {
+        await tester.tapAt(point);
+        await tester.pump(const Duration(milliseconds: 60));
+      }
     }
 
-    await twice(.20);
-    expect(c.at, const Duration(seconds: 50));
-    expect(find.byIcon(Icons.replay_10_rounded), findsOneWidget);
-    await settle(tester);
-    await twice(.80);
-    expect(c.at, const Duration(seconds: 60));
+    // Past the skip's window and its fade: taps are single and double ones again.
+    Future<void> skipOver() async {
+      await tester.pump(VideoFullView.burstWindow);
+      await settle(tester);
+    }
+
+    // Double tap on the right: ten seconds ahead, with YouTube's overlay showing the total.
+    await taps(.80, 2);
+    expect(c.at, const Duration(seconds: 70));
+    expect(find.byIcon(Icons.fast_forward_rounded), findsOneWidget);
+    expect(find.text('10 seconds'), findsOneWidget);
+    await skipOver();
+    expect(find.byKey(const ValueKey('video-seek-hint')), findsNothing, reason: 'faded out after the last tap');
+
+    // Triple tap: twenty.
+    c.at = const Duration(seconds: 60);
+    await taps(.80, 3);
+    expect(c.at, const Duration(seconds: 80));
+    expect(find.text('20 seconds'), findsOneWidget);
+    // A tap that keeps coming within the window goes on: thirty.
+    await tester.pump(const Duration(milliseconds: 500));
+    await taps(.80, 1);
+    expect(c.at, const Duration(seconds: 90));
+    expect(find.text('30 seconds'), findsOneWidget);
+    await skipOver();
+
+    // The left side goes back.
+    await taps(.20, 2);
+    expect(c.at, const Duration(seconds: 80));
+    expect(find.byIcon(Icons.fast_rewind_rounded), findsOneWidget);
+    await taps(.20, 1);
+    expect(c.at, const Duration(seconds: 70));
+    expect(find.text('20 seconds'), findsOneWidget);
+    await skipOver();
+
+    // Clamped to the start and the end.
+    c.at = const Duration(seconds: 5);
+    await taps(.20, 3);
+    expect(c.at, Duration.zero);
+    await skipOver();
     c.at = const Duration(seconds: 178);
-    await settle(tester);
-    await twice(.80);
+    await taps(.80, 2);
     expect(c.at, const Duration(minutes: 3));
+    await skipOver();
+
+    // A single tap still waits out the double-tap time, then shows or hides the controls.
+    final shown = find.byType(SeekBar).evaluate().isNotEmpty;
+    await taps(.80, 1);
+    expect(c.at, const Duration(minutes: 3), reason: 'one tap does not seek');
+    await settle(tester);
+    expect(find.byType(SeekBar).evaluate().isNotEmpty, !shown);
     await close(tester, c);
   });
 

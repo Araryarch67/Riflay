@@ -12,6 +12,7 @@ import 'controls.dart';
 import 'live_preview.dart';
 import 'native_video_surface.dart';
 import 'skeleton.dart';
+import 'video_quality.dart';
 import 'video_timing_sheet.dart';
 import '../../services/language.dart';
 
@@ -102,6 +103,7 @@ class VideoModeSwitch extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               if (mode.on) VideoTimingButton(track: track, color: fg),
+              if (mode.on) VideoQualityButton(color: fg),
               if (expandable && mode.on)
                 IconButton(
                   tooltip: tr.watchVideo,

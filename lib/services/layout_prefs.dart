@@ -885,6 +885,10 @@ class LayoutPrefs extends ChangeNotifier {
   PerformanceMode performance = PerformanceMode.balanced;
   VideoDecoder videoDecoder = VideoDecoder.automatic;
 
+  /// The height music videos are fetched at, as YouTube's quality menu picks it; 0 is Auto (what Performance and
+  /// the connection allow, see `VideoMode.maxHeight`). A setting of this computer, like [videoDecoder].
+  int videoQuality = 0;
+
   /// Desktop: minimize, maximize and close in the title bar. Off for tiling window managers, which place and
   /// close windows themselves. A setting of this computer, like [performance].
   bool windowButtons = true;
@@ -1135,6 +1139,10 @@ class LayoutPrefs extends ChangeNotifier {
     pageSpeed = pick(PageMotionSpeed.values, 'pageSpeed', d.pageSpeed);
     performance = pick(PerformanceMode.values, 'performance', d.performance);
     videoDecoder = pick(VideoDecoder.values, 'videoDecoder', d.videoDecoder);
+    videoQuality = switch (j['videoQuality']) {
+      final num n => n.toInt().clamp(0, 4320),
+      _ => d.videoQuality,
+    };
     windowButtons = j['windowButtons'] as bool? ?? d.windowButtons;
     homeStyle = pick(HomeStyle.values, 'homeStyle', d.homeStyle);
     showHomeToolbar = j['showHomeToolbar'] as bool? ?? d.showHomeToolbar;
@@ -1242,6 +1250,7 @@ class LayoutPrefs extends ChangeNotifier {
     'pageSpeed': pageSpeed.name,
     'performance': performance.name,
     'videoDecoder': videoDecoder.name,
+    'videoQuality': videoQuality,
     'windowButtons': windowButtons,
     'homeStyle': homeStyle.name,
     'showHomeToolbar': showHomeToolbar,
@@ -1257,6 +1266,7 @@ class LayoutPrefs extends ChangeNotifier {
         (LayoutPrefs._()
               ..performance = performance
               ..videoDecoder = videoDecoder
+              ..videoQuality = videoQuality
               ..windowButtons = windowButtons)
             .toJson(),
       );
@@ -1386,6 +1396,7 @@ class LayoutPrefs extends ChangeNotifier {
   Future<void> setMotion(Motion v) => _set(() => motion = v);
   Future<void> setPerformance(PerformanceMode v) => _set(() => performance = v);
   Future<void> setVideoDecoder(VideoDecoder v) => _set(() => videoDecoder = v);
+  Future<void> setVideoQuality(int height) => _set(() => videoQuality = height.clamp(0, 4320));
   Future<void> setWindowButtons(bool v) => _set(() => windowButtons = v);
 
   Future<void> setHomeStyle(HomeStyle style) => _set(() => homeStyle = style);
@@ -1408,10 +1419,11 @@ class LayoutPrefs extends ChangeNotifier {
   /// Back to the defaults, except Performance, the video decoder and the window buttons: those are about this
   /// computer, not about looks.
   Future<void> reset() => _set(() {
-    final mode = performance, decoder = videoDecoder, buttons = windowButtons;
+    final mode = performance, decoder = videoDecoder, quality = videoQuality, buttons = windowButtons;
     restore(const {});
     performance = mode;
     videoDecoder = decoder;
+    videoQuality = quality;
     windowButtons = buttons;
   });
 

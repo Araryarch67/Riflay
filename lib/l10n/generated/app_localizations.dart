@@ -2649,6 +2649,30 @@ abstract class AppLocalizations {
   /// **'Back up to {height}: your network keeps up'**
   String videoQualityHigher(String height);
 
+  /// No description provided for @videoQuality.
+  ///
+  /// In en, this message translates to:
+  /// **'Video quality'**
+  String get videoQuality;
+
+  /// No description provided for @videoQualitySubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Auto picks what this device and your connection handle. A set resolution stays, even when the connection is slow.'**
+  String get videoQualitySubtitle;
+
+  /// No description provided for @videoQualityAuto.
+  ///
+  /// In en, this message translates to:
+  /// **'Auto'**
+  String get videoQualityAuto;
+
+  /// No description provided for @videoQualityAutoNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Auto ({height})'**
+  String videoQualityAutoNow(String height);
+
   /// No description provided for @showBluetoothCodec.
   ///
   /// In en, this message translates to:
@@ -11079,6 +11103,12 @@ abstract class AppLocalizations {
   /// **'hardware, gpu, cpu, decoder'**
   String get kwVideoDecoding;
 
+  /// No description provided for @kwVideoQuality.
+  ///
+  /// In en, this message translates to:
+  /// **'resolution, quality, 1080p, 720p, 480p, hd, video'**
+  String get kwVideoQuality;
+
   /// No description provided for @kwLiquidGlass.
   ///
   /// In en, this message translates to:
@@ -12638,6 +12668,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{seconds} s'**
   String seekStepSeconds(int seconds);
+
+  /// No description provided for @seekSkipSeconds.
+  ///
+  /// In en, this message translates to:
+  /// **'{seconds} seconds'**
+  String seekSkipSeconds(int seconds);
 
   /// No description provided for @coverAppLogo.
   ///

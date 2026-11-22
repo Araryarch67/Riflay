@@ -12,6 +12,7 @@ import '../../services/language.dart';
 import '../../services/layout_prefs.dart';
 import '../../services/lyrics.dart';
 import '../../services/lyrics_translation.dart';
+import '../widgets/video_quality.dart';
 import '../widgets/video_timing_sheet.dart';
 import '../../services/player_controller.dart';
 import '../../services/video_mode.dart';
@@ -82,6 +83,9 @@ class VideoFullView extends StatefulWidget {
   /// How long the controls stay after the last touch.
   static const controlsFor = Duration(seconds: 4);
 
+  /// How long after a double-tap skip's last tap another tap still adds to it.
+  static const burstWindow = Duration(milliseconds: 800);
+
   @override
   State<VideoFullView> createState() => _VideoFullViewState();
 }
@@ -92,8 +96,13 @@ class _VideoFullViewState extends State<VideoFullView> {
 
   bool _controls = true;
   Timer? _hide;
+
+  /// A double tap's skip, as YouTube's: [_seekForward] is its side (null: none showing), [_seekTotal] the seconds
+  /// it has gone so far, and while [_burstOpen] every further tap on that side goes [seekStep] more, at once.
   Timer? _seekHintTimer;
   bool? _seekForward;
+  int _seekTotal = 0;
+  bool _burstOpen = false;
   bool _restored = false;
   bool _closing = false;
 
@@ -193,16 +202,39 @@ class _VideoFullViewState extends State<VideoFullView> {
 
   void _toggleControls() => _controls ? _hideControls() : _showControls();
 
+  /// A double tap on either side goes back or ahead [seekStep]; each tap that follows on that side within
+  /// [VideoFullView.burstWindow] of the last goes [seekStep] more (a triple tap is 20 s), as on YouTube. The middle
+  /// toggles the window's full screen on a computer. A single tap waits out the double-tap time, as it always did;
+  /// during a skip, taps count at once.
   Widget _videoGestures({Key? key, required Widget child, required VoidCallback onTap}) => LayoutBuilder(
     builder: (context, box) {
+      double at(Offset p) => box.maxWidth > 0 ? p.dx / box.maxWidth : 0.5;
+      bool middle(double x) => x >= 0.44 && x <= 0.56;
+      if (_burstOpen) {
+        // No double-tap recognizer while skipping: each tap counts as it lands.
+        return GestureDetector(
+          key: key,
+          behavior: HitTestBehavior.opaque,
+          onTapDown: (event) {
+            final x = at(event.localPosition);
+            if (middle(x)) {
+              _endBurst();
+              onTap();
+            } else {
+              _skip(forward: x > 0.56);
+            }
+          },
+          child: child,
+        );
+      }
       var tap = 0.5;
       return GestureDetector(
         key: key,
         behavior: HitTestBehavior.opaque,
         onTap: onTap,
-        onDoubleTapDown: (event) => tap = event.localPosition.dx / box.maxWidth,
+        onDoubleTapDown: (event) => tap = at(event.localPosition),
         onDoubleTap: () {
-          if (tap >= 0.44 && tap <= 0.56) {
+          if (middle(tap)) {
             if (_desktop) {
               _setWindowFull(!windowFullScreen.value).ignore();
             } else {
@@ -210,37 +242,85 @@ class _VideoFullViewState extends State<VideoFullView> {
             }
             return;
           }
-          final c = PlayerScope.read(context);
-          if (c.currentTrack == null) return;
-          final forward = tap > 0.56;
-          final target = c.position + Duration(seconds: forward ? 10 : -10);
-          final length = c.duration ?? c.currentTrack?.duration;
-          c
-              .seek(
-                target.isNegative
-                    ? Duration.zero
-                    : length != null && target > length
-                    ? length
-                    : target,
-              )
-              .ignore();
-          _seekHintTimer?.cancel();
-          setState(() => _seekForward = forward);
-          _seekHintTimer = Timer(const Duration(milliseconds: 650), () {
-            if (mounted) setState(() => _seekForward = null);
-          });
+          _skip(forward: tap > 0.56);
         },
         child: child,
       );
     },
   );
 
+  /// How far one tap of a double-tap skip goes.
+  static const seekStep = Duration(seconds: 10);
+
+  /// One more [seekStep] from where the song is, clamped to the song; on the other side a skip starts again.
+  void _skip({required bool forward}) {
+    final c = PlayerScope.read(context);
+    if (c.currentTrack == null) return;
+    final target = c.position + (forward ? seekStep : -seekStep);
+    final length = c.duration ?? c.currentTrack?.duration;
+    c
+        .seek(
+          target.isNegative
+              ? Duration.zero
+              : length != null && target > length
+              ? length
+              : target,
+        )
+        .ignore();
+    _seekHintTimer?.cancel();
+    setState(() {
+      _seekTotal = _burstOpen && _seekForward == forward ? _seekTotal + seekStep.inSeconds : seekStep.inSeconds;
+      _seekForward = forward;
+      _burstOpen = true;
+    });
+    _seekHintTimer = Timer(VideoFullView.burstWindow, _endBurst);
+  }
+
+  /// The skip is over: its overlay fades, and taps are single and double ones again.
+  void _endBurst() {
+    _seekHintTimer?.cancel();
+    if (mounted && _burstOpen) setState(() => _burstOpen = false);
+  }
+
+  /// YouTube's ripple on the side skipped to: a shaded half-oval with the arrows and the running total, fading out
+  /// shortly after the last tap.
   Widget _seekHint(bool forward) => IgnorePointer(
-    child: Align(
-      alignment: Alignment(forward ? 0.68 : -0.68, 0),
-      child: Chip(
-        avatar: Icon(forward ? Icons.forward_10_rounded : Icons.replay_10_rounded),
-        label: Text(tr.seekStepSeconds(10)),
+    key: const ValueKey('video-seek-hint'),
+    child: AnimatedOpacity(
+      opacity: _burstOpen ? 1 : 0,
+      duration: LayoutPrefs.dur(const Duration(milliseconds: 250)),
+      onEnd: () {
+        if (mounted && !_burstOpen) setState(() => _seekForward = null);
+      },
+      child: Align(
+        alignment: forward ? Alignment.centerRight : Alignment.centerLeft,
+        child: FractionallySizedBox(
+          widthFactor: 0.4,
+          heightFactor: 1,
+          child: ClipPath(
+            clipper: _SideOval(right: forward),
+            child: ColoredBox(
+              color: Colors.white.withValues(alpha: 0.12),
+              child: Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      forward ? Icons.fast_forward_rounded : Icons.fast_rewind_rounded,
+                      color: Colors.white,
+                      size: 32,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      tr.seekSkipSeconds(_seekTotal),
+                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
       ),
     ),
   );
@@ -433,6 +513,7 @@ class _VideoFullViewState extends State<VideoFullView> {
           ),
           if (track != null) LikeButton(track: track, size: 24, color: Colors.white),
           VideoTimingButton(track: track, color: Colors.white),
+          const VideoQualityButton(color: Colors.white),
           IconButton(
             tooltip: _lyricsShown ? tr.hideLyrics : tr.showLyrics,
             color: _lyricsShown ? AppColors.of(context).accent : Colors.white,
@@ -488,6 +569,23 @@ class _VideoFullViewState extends State<VideoFullView> {
 
 /// The app's colours worked out for black, as Now Playing's Black background does: the controls read on the black
 /// around the video whatever the theme.
+/// The half-oval of a double-tap skip's ripple: rounded toward the middle of the picture, flat at its edge.
+class _SideOval extends CustomClipper<Path> {
+  const _SideOval({required this.right});
+
+  final bool right;
+
+  @override
+  Path getClip(Size size) {
+    final w = size.width, h = size.height;
+    // An oval twice as wide as the box, centred on the picture's edge, so only its inner half shows.
+    return Path()..addOval(Rect.fromLTWH(right ? 0 : -w, -h * 0.1, w * 2, h * 1.2));
+  }
+
+  @override
+  bool shouldReclip(_SideOval oldClipper) => oldClipper.right != right;
+}
+
 class _OnBlack extends StatelessWidget {
   const _OnBlack({required this.child});
 
