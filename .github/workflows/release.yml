@@ -122,9 +122,17 @@ jobs:
             python3 tool/download_release_asset.py \
               "https://github.com/JetBrains/kotlin/releases/download/v$version/kotlin-compiler-embeddable-$version.jar" \
               "$module/kotlin-compiler-embeddable-$version.jar" --sha256 "$checksum"
-            curl -fsSL --retry 3 --retry-all-errors \
-              "https://repo.maven.apache.org/maven2/org/jetbrains/kotlin/kotlin-compiler-embeddable/$version/kotlin-compiler-embeddable-$version.pom" \
-              -o "$module/kotlin-compiler-embeddable-$version.pom"
+            # Maven Central answers 429 when runners hit it at once: wait longer between tries, then take the same
+            # file from Google's mirror of Maven Central.
+            pom="org/jetbrains/kotlin/kotlin-compiler-embeddable/$version/kotlin-compiler-embeddable-$version.pom"
+            fetched=
+            for base in https://repo.maven.apache.org/maven2 https://maven-central.storage-download.googleapis.com/maven2; do
+              if curl -fsSL --retry 5 --retry-delay 15 --retry-all-errors "$base/$pom" -o "$module/kotlin-compiler-embeddable-$version.pom"; then
+                fetched=1
+                break
+              fi
+            done
+            [ -n "$fetched" ] || { echo "::error::Could not download $pom"; exit 1; }
           done
           echo "RIFLAY_KOTLIN_REPO=$repo" >> "$GITHUB_ENV"
           # Only this artifact comes from the local repository; its original POM retains its dependencies.
