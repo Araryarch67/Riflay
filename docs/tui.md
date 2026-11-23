@@ -13,8 +13,9 @@ visualizer's levels only while the visualizer is on. Idle it uses no CPU and a f
 
 ## Install
 
-`riflay-tui` comes with Riflay, next to `riflay-cli`: Scoop, Homebrew, the Arch package and the .deb/.rpm put it on
-the PATH; with the Windows installer or the zip it is in Riflay's folder.
+`riflay-tui` comes with Riflay, next to `riflay-cli`: Scoop, the Windows installer, Homebrew on macOS, the Arch
+package and the .deb/.rpm put it on the PATH (open a new terminal after installing). With the zip, the Linux tar.gz or
+the AppImage it is in Riflay's folder.
 
 ## Icons: install a Nerd Font
 

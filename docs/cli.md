@@ -27,8 +27,8 @@ Future desktop release builds include the executable next to Riflay (inside
 `riflay-cli` on PATH; Scoop creates its command shim, and the macOS Homebrew cask links it.
 For an extracted Linux bundle, run `./riflay-cli` in that directory. For an AppImage,
 extract it with `--appimage-extract` and use `squashfs-root/usr/share/riflay/riflay-cli`.
-The Windows installer includes `riflay-cli.exe` in its install directory; invoke that path
-or add the directory to PATH. The macOS CLI uses the release build machine's architecture.
+The Windows installer puts `riflay-cli` and `riflay-tui` in `bin` inside its install folder and adds that folder
+to your PATH (open a new terminal after installing). With the zip, run them from the extracted folder. The macOS CLI uses the release build machine's architecture.
 
 ## Commands
 

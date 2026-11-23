@@ -41,16 +41,24 @@ SolidCompression=yes
 WizardStyle=modern
 CloseApplications=yes
 SetupMutex=RiflaySetup
+; {app}\bin goes on the user's PATH: Explorer and new terminals see it without signing out.
+ChangesEnvironment=yes
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"
 
 [Files]
 Source: "{#SourceDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+; Only the two commands go on PATH, not the app's folder: its DLLs would be found by other programs' searches.
+Source: "{#SourceDir}\riflay-cli.exe"; DestDir: "{app}\bin"; Flags: ignoreversion skipifsourcedoesntexist
+Source: "{#SourceDir}\riflay-tui.exe"; DestDir: "{app}\bin"; Flags: ignoreversion skipifsourcedoesntexist
 
 [Icons]
 Name: "{autoprograms}\Riflay"; Filename: "{app}\riflay.exe"
 Name: "{autodesktop}\Riflay"; Filename: "{app}\riflay.exe"; Tasks: desktopicon
+
+[Registry]
+Root: HKCU; Subkey: "Environment"; ValueType: expandsz; ValueName: "Path"; ValueData: "{olddata};{app}\bin"; Check: NeedsPath('{app}\bin')
 
 [Run]
 Filename: "{app}\riflay.exe"; Description: "{cm:LaunchProgram,Riflay}"; Flags: nowait postinstall skipifsilent
@@ -70,6 +78,32 @@ function WaitForSingleObject(Handle, Timeout: LongWord): LongWord;
   external 'WaitForSingleObject@kernel32.dll stdcall';
 function CloseHandle(Handle: LongWord): Boolean;
   external 'CloseHandle@kernel32.dll stdcall';
+
+function NeedsPath(Dir: String): Boolean;
+var
+  Path: String;
+begin
+  Dir := ExpandConstant(Dir);
+  if not RegQueryStringValue(HKCU, 'Environment', 'Path', Path) then
+    Path := '';
+  Result := Pos(';' + Uppercase(Dir) + ';', ';' + Uppercase(Path) + ';') = 0;
+end;
+
+procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
+var
+  Path, Dir: String;
+  At: Integer;
+begin
+  if CurUninstallStep <> usPostUninstall then Exit;
+  if not RegQueryStringValue(HKCU, 'Environment', 'Path', Path) then Exit;
+  Dir := ExpandConstant('{app}\bin');
+  At := Pos(';' + Uppercase(Dir) + ';', ';' + Uppercase(Path) + ';');
+  if At = 0 then Exit;
+  Delete(Path, At, Length(Dir) + 1);
+  if (Length(Path) > 0) and (Path[Length(Path)] = ';') then
+    Delete(Path, Length(Path), 1);
+  RegWriteExpandStringValue(HKCU, 'Environment', 'Path', Path);
+end;
 
 function IsRiflayUpdate: Boolean;
 begin

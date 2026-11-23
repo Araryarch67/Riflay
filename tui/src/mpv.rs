@@ -98,9 +98,11 @@ fn candidates() -> Vec<PathBuf> {
         .ok()
         .and_then(|e| e.parent().map(|p| p.to_path_buf()))
     {
-        // Inside Riflay's own bundle: lib/ on Linux, Frameworks/ beside MacOS/ in the .app.
+        // Inside Riflay's own bundle: lib/ on Linux, Frameworks/ beside MacOS/ in the .app, and the app's folder
+        // above bin/ on Windows (the installer's copy on PATH).
         dirs.push(dir.join("lib"));
         dirs.push(dir.join("..").join("Frameworks"));
+        dirs.push(dir.join(".."));
         dirs.push(dir);
     }
     if cfg!(windows) {
