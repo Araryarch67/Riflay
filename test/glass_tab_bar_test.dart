@@ -293,6 +293,28 @@ void main() {
     expect(selectedTab('Settings'), findsOneWidget);
     expect(indicator, findsNothing);
   });
+  for (final (tab, label) in const [(PhoneTab.home, 'Home'), (PhoneTab.downloads, 'Downloads')]) {
+    testWidgets("the open tab's bubble holds its whole name, clear of its round ends: $label", (tester) async {
+      await show(tester, const Size(360, 640), tab: tab);
+      final name = tester.getRect(find.text(label).last);
+      final bubbles = find.byWidgetPredicate(
+        (w) =>
+            w is DecoratedBox &&
+            w.decoration is ShapeDecoration &&
+            (w.decoration as ShapeDecoration).shape is StadiumBorder,
+      );
+      final bubble = tester
+          .widgetList(bubbles)
+          .map((w) => tester.getRect(find.byWidget(w)))
+          .firstWhere((r) => r.contains(name.center));
+      final round = bubble.height / 2;
+      expect(name.left, greaterThanOrEqualTo(bubble.left + round * 0.3), reason: 'not in the left round end');
+      expect(name.right, lessThanOrEqualTo(bubble.right - round * 0.3), reason: 'not in the right round end');
+      expect(name.top, greaterThan(bubble.top));
+      expect(name.bottom, lessThan(bubble.bottom));
+    });
+  }
+
   testWidgets('hidden navigation labels keep the tab targets and tooltips', (tester) async {
     await tester.runAsync(() => prefs.setHidePhoneNavLabels(true));
     final bar = await show(tester, const Size(412, 915));

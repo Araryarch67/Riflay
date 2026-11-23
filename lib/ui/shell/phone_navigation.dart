@@ -1419,27 +1419,74 @@ Color selectionBubble(Color accent, {required bool glassIsLight}) {
   return hsl.withLightness(lightness).toColor().withValues(alpha: glassIsLight ? 0.4 : 0.48);
 }
 
-/// A thin edge around the open tab's bubble, so its shape reads on any glass and any page under it.
-class _BubbleEdge extends CustomPainter {
-  const _BubbleEdge({required this.light});
+/// The open tab's bubble as a drop of glass: a sheen across its upper half, a glint at the top left, a little shade
+/// low inside, and an edge of light brightest at the top left. Everything is drawn inside its bounds, so no stroke
+/// is cut flat by the tab's edges.
+class _BubbleGloss extends CustomPainter {
+  const _BubbleGloss({required this.light});
 
   final bool light;
 
   @override
   void paint(Canvas canvas, Size size) {
     if (size.isEmpty) return;
-    final r = (Offset.zero & size).deflate(0.75);
+    final rect = Offset.zero & size;
+    RRect stadium(Rect r) => RRect.fromRectAndRadius(r, Radius.circular(r.shortestSide / 2));
+    final body = stadium(rect);
+    canvas.save();
+    canvas.clipRRect(body);
+    canvas.drawRect(
+      rect,
+      Paint()
+        ..shader = LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            Colors.white.withValues(alpha: light ? 0.34 : 0.26),
+            Colors.white.withValues(alpha: 0),
+            Colors.transparent,
+            Colors.black.withValues(alpha: light ? 0.05 : 0.14),
+          ],
+          stops: const [0, 0.5, 0.62, 1],
+        ).createShader(rect),
+    );
+    final glint = Rect.fromCenter(
+      center: Offset(size.width * 0.22, size.height * 0.2),
+      width: size.width * 0.42,
+      height: size.height * 0.5,
+    );
+    canvas.drawOval(
+      glint,
+      Paint()
+        ..shader = RadialGradient(colors: [Colors.white.withValues(alpha: 0.3), Colors.white.withValues(alpha: 0)])
+            .createShader(glint),
+    );
+    canvas.restore();
+    // Its outline, dark on light glass and light on dark glass, so the shape reads over any page.
     canvas.drawRRect(
-      RRect.fromRectAndRadius(r, Radius.circular(math.min(24, r.shortestSide / 2))),
+      stadium(rect.deflate(0.6)),
       Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = 1.2
-        ..color = (light ? Colors.black : Colors.white).withValues(alpha: light ? 0.14 : 0.22),
+        ..color = (light ? Colors.black : Colors.white).withValues(alpha: light ? 0.14 : 0.2),
+    );
+    // The edge of light on top of it.
+    canvas.drawRRect(
+      stadium(rect.deflate(1.4)),
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.2
+        ..shader = LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Colors.white.withValues(alpha: 0.7), Colors.white.withValues(alpha: 0)],
+          stops: const [0, 0.55],
+        ).createShader(rect),
     );
   }
 
   @override
-  bool shouldRepaint(_BubbleEdge old) => old.light != light;
+  bool shouldRepaint(_BubbleGloss old) => old.light != light;
 }
 
 class _GlassButtonFace extends StatelessWidget {
@@ -1451,21 +1498,26 @@ class _GlassButtonFace extends StatelessWidget {
     if (!active) return child;
     // The selection bubble: a drop of the accent inside the bar, so the open tab shows on clear, light or black
     // glass alike. Painted, not a LiquidGlass of its own: inside the bar's LiquidGlassLayer (Impeller, phones) that
-    // one melted into the bar's pill after its first frame and the open tab no longer showed.
+    // one melted into the bar's pill after its first frame and the open tab no longer showed. Inset from the tab's
+    // edges, so the bar's own edge never cuts it.
     final colors = AppColors.of(context);
     final light = glassIsLight(colors.light);
-    return DecoratedBox(
-      decoration: ShapeDecoration(
-        shape: const StadiumBorder(),
-        color: selectionBubble(colors.accent, glassIsLight: light),
-      ),
-      child: CustomPaint(
-        foregroundPainter: _LiquidRim(const _StadiumShape(), light: light, strength: 0.7),
-        child: CustomPaint(
-          foregroundPainter: _BubbleEdge(light: light),
-          child: child,
+    return Stack(
+      children: [
+        Positioned.fill(
+          child: Padding(
+            padding: const EdgeInsets.all(2),
+            child: DecoratedBox(
+              decoration: ShapeDecoration(
+                shape: const StadiumBorder(),
+                color: selectionBubble(colors.accent, glassIsLight: light),
+              ),
+              child: CustomPaint(painter: _BubbleGloss(light: light)),
+            ),
+          ),
         ),
-      ),
+        child,
+      ],
     );
   }
 }
@@ -1523,18 +1575,38 @@ class _GlassTab extends StatelessWidget {
         ? _glassInk(colors)
         : (selected ? colors.accent : _glassInk(colors).withValues(alpha: 0.78));
     final labels = !LayoutPrefs.instance.hidePhoneNavLabels;
-    final face = SizedBox.expand(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          _TabIcon(info: info, selected: selected, color: ink),
-          if (labels) ...[const SizedBox(height: 2), _TabLabel(info: info, selected: selected, color: ink)],
-        ],
-      ),
+    final content = Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _TabIcon(info: info, selected: selected, color: ink),
+        if (labels) ...[const SizedBox(height: 2), _TabLabel(info: info, selected: selected, color: ink)],
+      ],
     );
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 2),
-      child: paintGlass ? _GlassButtonFace(active: selected, child: face) : face,
+      child: !(paintGlass && selected)
+          ? SizedBox.expand(child: Center(child: content))
+          // The bubble as wide as its icon and name with room on both sides, never wider than the tab: a name too
+          // long for it shrinks to fit inside rather than running into the bubble's round ends.
+          : LayoutBuilder(
+              builder: (context, box) => Center(
+                child: _GlassButtonFace(
+                  active: true,
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      minWidth: math.min(box.maxWidth, box.maxHeight),
+                      maxWidth: box.maxWidth,
+                      minHeight: box.maxHeight,
+                      maxHeight: box.maxHeight,
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      child: Center(widthFactor: 1, child: content),
+                    ),
+                  ),
+                ),
+              ),
+            ),
     );
   }
 }
@@ -1663,17 +1735,6 @@ class _EdgeBand extends CustomClipper<Path> {
 }
 
 /// A stadium (fully round ends) the size of what it is painted on.
-class _StadiumShape extends CustomClipper<Path> {
-  const _StadiumShape();
-
-  @override
-  Path getClip(Size size) =>
-      Path()..addRRect(RRect.fromRectAndRadius(Offset.zero & size, Radius.circular(size.shortestSide / 2)));
-
-  @override
-  bool shouldReclip(_StadiumShape old) => false;
-}
-
 /// Liquid glass's light: a rim that splits into colours as it goes round, brightest where the light comes from
 /// (top left), a glint there, and a little shade along the bottom inside.
 class _LiquidRim extends CustomPainter {
