@@ -160,6 +160,27 @@ jobs:
               }
           }
           GRADLE
+          cat > "$HOME/.gradle/init.d/riflay-mirror.gradle" <<'GRADLE'
+          // Maven Central answers 429 when many runners ask at once (it failed the Gradle plugins and the Kotlin BOM): Google's
+          // mirror of it is asked first, in every build's plugin and dependency repositories, Maven Central only for the rest.
+          def mirror = 'https://maven-central.storage-download.googleapis.com/maven2'
+          def addMirror = { repositories ->
+              repositories.maven {
+                  name = 'MavenCentralGoogleMirror'
+                  url = mirror
+              }
+          }
+          gradle.beforeSettings { settings ->
+              addMirror(settings.pluginManagement.repositories)
+              // Declaring any plugin repository drops Gradle's default one: a build that relied on it keeps it, after the mirror.
+              settings.pluginManagement.repositories.gradlePluginPortal()
+              addMirror(settings.dependencyResolutionManagement.repositories)
+          }
+          gradle.beforeProject { project ->
+              // Flutter's included build forbids project repositories (it uses its settings' ones, mirrored above).
+              if (project.gradle.parent == null) addMirror(project.repositories)
+          }
+          GRADLE
       - name: Build APKs
         env:
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
