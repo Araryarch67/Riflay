@@ -240,8 +240,6 @@ class SoundcloudClient {
     return text;
   }
 
-  // ── Reading api-v2's answers (pure, tested) ──────────────────────────────
-
   /// A track as Riflay plays it, or null when it doesn't play in full here (Go+, blocked, no open stream).
   static Track? parseTrack(Object? json) {
     if (json is! Map || json['kind'] != 'track' || json['id'] == null) return null;

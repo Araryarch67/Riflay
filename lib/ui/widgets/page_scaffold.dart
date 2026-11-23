@@ -163,7 +163,6 @@ class _PageScaffoldState extends State<PageScaffold> {
               SliverToBoxAdapter(child: SizedBox(height: 32 + MediaQuery.paddingOf(context).bottom)),
             ],
           ),
-          // Sticky top bar.
           if (!widget.hideToolbar)
             Positioned(
               top: 0,

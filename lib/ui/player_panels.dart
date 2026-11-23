@@ -1,4 +1,4 @@
-// The player's views, one file each under player/; this keeps the old import working.
+// Re-exports the player's views (one file each under player/) for existing imports.
 export 'player/desktop_player_bar.dart';
 export 'player/full_screen_player.dart';
 export 'player/mini_player.dart';

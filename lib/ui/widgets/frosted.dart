@@ -21,7 +21,7 @@ abstract final class Frosted {
 }
 
 /// [showModalBottomSheet], frosted on glass: the theme's surface over the page blurred, the drag handle on it too.
-/// Off glass it is the sheet it always was ([backgroundColor] as given).
+/// Off glass it is a plain sheet ([backgroundColor] as given).
 Future<T?> showAppSheet<T>({
   required BuildContext context,
   required WidgetBuilder builder,

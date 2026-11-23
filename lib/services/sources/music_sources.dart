@@ -14,9 +14,8 @@ class MusicSources extends ChangeNotifier {
 
   static final instance = MusicSources._();
 
-  // v2: off for everyone once. SoundCloud and Monochrome in search, and Smart merge, were on by default and left songs
-  // stuck fetching (Monochrome above all); now each is on only once the person turns it on. The v1 choices are
-  // dropped on the first start after the update ([_read]).
+  // v2: every source off by default once (they left songs stuck fetching); v1 choices are dropped on first
+  // start ([_read]).
   static const _soundcloudKey = 'sources.soundcloud.v2';
   static const _monochromeKey = 'sources.monochrome.v2';
   static const _smartMergeKey = 'sources.smartMerge.v2';

@@ -7,7 +7,6 @@ import 'package:web/web.dart' as web;
 abstract final class BrowserFiles {
   static bool get available => true;
 
-  /// Hands [bytes] to the browser as a download named [name].
   static void save(Uint8List bytes, String name, {String mime = 'application/octet-stream'}) {
     final blob = web.Blob([bytes.toJS].toJS, web.BlobPropertyBag(type: mime));
     final url = web.URL.createObjectURL(blob);

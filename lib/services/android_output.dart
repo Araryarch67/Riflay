@@ -38,7 +38,6 @@ class AndroidOutput {
   /// Bit depth the device playing takes: the mixer format set for a USB DAC, else the best it lists.
   final int? deviceBits;
 
-  /// The mixer's buffer in milliseconds.
   double? get bufferMs => switch ((framesPerBuffer, mixerRate)) {
     (final f?, final r?) when r > 0 => f * 1000 / r,
     _ => null,
@@ -58,7 +57,6 @@ class AndroidOutput {
 
   static const _channel = MethodChannel('riflay/android_output');
 
-  /// Tests stand in for the phone.
   @visibleForTesting
   static Future<AndroidOutput?> Function()? readOverride;
 

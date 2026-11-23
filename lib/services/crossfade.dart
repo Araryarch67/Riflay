@@ -89,7 +89,6 @@ abstract final class CrossfadeRules {
   static bool shouldPrepare(CrossfadePlan plan, Duration position) =>
       position >= plan.prepareAt && position < plan.startAt - const Duration(milliseconds: 2500);
 
-  /// Whether the fade should start now.
   static bool shouldStart(CrossfadePlan plan, Duration position) => position >= plan.startAt;
 
   /// Equal-power curves: the loudness stays level through the middle. [x] runs 0 to 1 over the fade.
@@ -271,8 +270,6 @@ class Crossfader {
     }
   }
 
-  // ── Getting the tail in step ────────────────────────────────────────────
-
   Future<void> _prepare(CrossfadePlan plan, ({Track current, Track next, int nextIndex}) up) async {
     _phase = _Phase.preparing;
     _tailFor = up.current.id;
@@ -366,8 +363,6 @@ class Crossfader {
     if (gone) _cancel();
     return gone;
   }
-
-  // ── The fade ────────────────────────────────────────────────────────────
 
   Future<void> _begin(CrossfadePlan plan, ({Track current, Track next, int nextIndex}) up) async {
     _plan = plan;

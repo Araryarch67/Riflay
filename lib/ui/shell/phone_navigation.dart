@@ -305,9 +305,8 @@ class _GlassBarState extends State<_GlassBar> with TickerProviderStateMixin {
 
   late final _collapse = _anim(_collapses);
 
-  /// A song is in the player (playing or paused): its mini player joins the shrunk row. With none the bar shrank to
-  /// two round buttons at its ends with nothing between them; it stays full then (`RIFLAY_TAB_BAR_COLLAPSE_IDLE`: as
-  /// it was).
+  /// A song is in the player (playing or paused): its mini player joins the shrunk row. Without one the bar stays full
+  /// (shrunk, it would be two round buttons with nothing between; `RIFLAY_TAB_BAR_COLLAPSE_IDLE` shrinks it anyway).
   bool _hasSong = false;
   bool _draggingLens = false;
 
@@ -713,7 +712,6 @@ class _GlassBarState extends State<_GlassBar> with TickerProviderStateMixin {
     );
   }
 
-  /// A round glass button.
   Widget _round({required String tooltip, required VoidCallback onTap, required Widget child}) => _glass(
     AppColors.of(context),
     Semantics(
@@ -1416,7 +1414,6 @@ class _IconAndDot extends StatelessWidget {
   );
 }
 
-/// Capsule: the icon alone, or for the selected tab the icon and its name on an accent capsule.
 Color _glassInk(AppColorsView colors) => switch (LayoutPrefs.instance.glassTint) {
   GlassTint.black => Colors.white,
   GlassTint.light => Colors.black,

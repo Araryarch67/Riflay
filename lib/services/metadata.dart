@@ -365,7 +365,6 @@ abstract final class Metadata {
 
   static bool hasCachedArtwork(Track track) => _artwork.containsKey(_artKey(track));
 
-  /// Tracks on the same album share one cover lookup.
   /// An album's songs share their cover; a song from the network without an album is known by its cover's address
   /// too, so a cover that arrives later isn't held back by a remembered "none".
   static String _artKey(Track t) =>

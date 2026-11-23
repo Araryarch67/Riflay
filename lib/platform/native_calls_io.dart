@@ -48,8 +48,8 @@ void _purgeAndroid() {
 /// `MADV_PAGEOUT` (Linux 5.4) over every private mapping of this process. Shared ones (the compositor's buffers, the
 /// GPU's) and the kernel's own ([vdso], [vvar]) are left alone; pages other processes map too are skipped by the
 /// kernel, and an older kernel just answers EINVAL. Paging out compresses the pages (zram) on this thread, so it
-/// rests as it goes, ~8 ms a MB (a big mapping in eighths): the same CPU, spread over a few seconds, longer than btop's
-/// sampling, instead of one spike it showed.
+/// rests as it goes, ~8 ms a MB (a big mapping in eighths): the same CPU spread over a few seconds instead of
+/// one spike.
 void _pageOutLinux() {
   try {
     final madvise = DynamicLibrary.process()

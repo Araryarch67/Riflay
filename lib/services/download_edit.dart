@@ -9,8 +9,6 @@ import 'player_controller.dart';
 /// cover. The artist is not among them: a download keeps the artist's name
 /// as the artist released it.
 abstract final class DownloadEdit {
-  /// A library song made by a download (not a file the person added themselves).
-
   /// Saves the new [title] and [album] and, if given, [cover]. Written into the
   /// file's tags where the format has a tag writer (M4A), else kept in the library.
   static Future<void> apply(

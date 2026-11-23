@@ -72,7 +72,7 @@ abstract final class Romanizer {
     return b.toString();
   }
 
-  // ── Korean: Revised Romanization, with liaison, nasalization, palatalization and aspiration ──
+  // Korean: Revised Romanization, with liaison, nasalization, palatalization and aspiration.
 
   static const _initials = [
     'g', 'kk', 'n', 'd', 'tt', 'r', 'm', 'b', 'pp', 's', 'ss', '', 'j', 'jj', 'ch', 'k', 't', 'p', 'h', //
@@ -149,8 +149,6 @@ abstract final class Romanizer {
     return out.toString();
   }
 
-  // ── Japanese kana: Hepburn ──
-
   static const _kanaTable = {
     'あ': 'a', 'い': 'i', 'う': 'u', 'え': 'e', 'お': 'o', //
     'か': 'ka', 'き': 'ki', 'く': 'ku', 'け': 'ke', 'こ': 'ko', 'が': 'ga', 'ぎ': 'gi', 'ぐ': 'gu', 'げ': 'ge', 'ご': 'go',
@@ -208,8 +206,6 @@ abstract final class Romanizer {
     }
     return out.toString();
   }
-
-  // ── Cyrillic (Russian, Ukrainian, Belarusian…) and Greek ──
 
   static const _cyrillicTable = {
     'а': 'a', 'б': 'b', 'в': 'v', 'г': 'g', 'д': 'd', 'е': 'e', 'ё': 'yo', 'ж': 'zh', 'з': 'z', 'и': 'i', //

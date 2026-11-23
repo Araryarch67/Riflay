@@ -78,8 +78,6 @@ class InternetRoomNotFound extends InternetException {
   const InternetRoomNotFound() : super('Couldn\'t find that session. Check the code.');
 }
 
-// ───────────────────────────── Codes ─────────────────────────────
-
 /// A fresh code for a room on `internetBrokers[brokerIndex]`.
 String newInternetCode(int brokerIndex, [Random? random]) {
   assert(brokerIndex >= 0 && brokerIndex < internetBrokers.length);
@@ -112,8 +110,6 @@ String? normalizeCode(String input) {
 
 Uri internetJoinLink(String code) =>
     Uri(scheme: 'riflay', host: 'listen', queryParameters: {'code': code, 'via': 'internet'});
-
-// ───────────────────────────── Keys and payloads ─────────────────────────────
 
 /// Everything derived from a code: where the room is and the key that opens its messages.
 class InternetRoomKeys {
@@ -207,8 +203,6 @@ String _randomId([int length = 12]) {
   return [for (var i = 0; i < length; i++) r.nextInt(36).toRadixString(36)].join();
 }
 
-// ───────────────────────────── The broker connection ─────────────────────────────
-
 /// One TLS connection to a broker.
 class _Link {
   _Link._(this._client);
@@ -293,8 +287,6 @@ class _Link {
     _onDown();
   }
 }
-
-// ───────────────────────────── Host ─────────────────────────────
 
 class _InternetPeer implements ListenPeer {
   _InternetPeer(this.id, this._host) {
@@ -431,8 +423,6 @@ class InternetHostTransport implements ListenHostTransport {
     await link?.close();
   }
 }
-
-// ───────────────────────────── Guest ─────────────────────────────
 
 class InternetGuestConnection implements ListenGuestConnection {
   InternetGuestConnection._(this._link, this._keys, this._peerId) {

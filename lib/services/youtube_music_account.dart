@@ -206,8 +206,6 @@ class YoutubeMusicAccount extends ChangeNotifier {
   /// YtDlp.accountCookies); null signed out.
   String? get downloadCookies => _webCookies;
 
-  // ── Persistence ─────────────────────────────────────────────────────────
-
   static Future<File> _file() => PrivateFiles.file('youtube_music_account.json');
 
   Future<void> load() async {
@@ -395,8 +393,6 @@ class YoutubeMusicAccount extends ChangeNotifier {
     ],
   );
 
-  // ── Moods & genres, new releases ────────────────────────────────────────
-
   /// The mood and genre tiles; no sign-in needed.
   Future<List<WebMoodGroup>> moodsAndGenres() => _browseClient.moodsAndGenres();
 
@@ -409,8 +405,6 @@ class YoutubeMusicAccount extends ChangeNotifier {
   Future<List<RemoteShelf>> newReleases() async => [
     for (final s in await _browseClient.shelves('FEmusic_new_releases')) _remoteShelf(s),
   ];
-
-  // ── Saving albums and playlists to the library ──────────────────────────
 
   final _saveStates = <String, WebSaveState>{};
 
@@ -438,8 +432,6 @@ class YoutubeMusicAccount extends ChangeNotifier {
     // Your playlists list changes with it.
     if (_library != null) library(refresh: true).then<void>((_) {}, onError: (Object _) {});
   }
-
-  // ── Play history ────────────────────────────────────────────────────────
 
   static const _reportPlaysKey = 'ytmusic.reportPlays.v1';
   bool _reportPlays = true;
@@ -620,8 +612,6 @@ class YoutubeMusicAccount extends ChangeNotifier {
     }
   }
 
-  // ── Library (cached; shared by the sidebar and pages) ───────────────────
-
   Future<YoutubeMusicLibrary>? _library;
 
   /// The library as last loaded, with every edit since applied to it: edits
@@ -737,8 +727,6 @@ class YoutubeMusicAccount extends ChangeNotifier {
       return const [];
     }
   }
-
-  // ── Editing the library (signed in through Google's page) ───────────────
 
   /// Likes and playlist edits go through YouTube Music's own API, so they show
   /// up in the YouTube Music apps too.
@@ -1057,7 +1045,6 @@ class YoutubeMusicAccount extends ChangeNotifier {
     return invite.playlistId;
   }
 
-  /// Recently played.
   Future<List<Track>> history() async {
     if (!isSignedIn) return const [];
     try {

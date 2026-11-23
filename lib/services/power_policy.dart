@@ -16,7 +16,6 @@ enum KeepScreenOn {
   };
 }
 
-/// What is true right now.
 class PowerFacts {
   const PowerFacts({
     required this.screen,
@@ -43,7 +42,6 @@ class PowerFacts {
   final bool streaming;
 }
 
-/// The locks to hold.
 class PowerLocks {
   const PowerLocks({this.screen = false, this.systemSleep = false, this.cpu = false, this.wifi = false});
 

@@ -280,6 +280,5 @@ abstract final class FlacConvert {
 
 /// A file that is already lossless (Apple Lossless in an .m4a), found while converting.
 class AlreadyLossless implements Exception {
-  /// Creates the marker.
   const AlreadyLossless();
 }

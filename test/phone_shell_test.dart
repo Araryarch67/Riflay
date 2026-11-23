@@ -271,7 +271,7 @@ void main() {
     for (final label in ['Home', 'Search', 'Library', 'Downloads', 'Settings']) {
       expect(find.byTooltip(label), findsWidgets, reason: 'tab $label');
     }
-    // No page has a gear of its own any more: the tab is the only Settings.
+    // No page has a gear of its own: the tab is the only Settings.
     await tester.tap(find.byTooltip('Library').last);
     await _finishMotion(tester);
     expect(find.byTooltip('Settings'), findsOneWidget);

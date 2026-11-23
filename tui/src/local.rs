@@ -138,12 +138,10 @@ struct Player {
     autoplay: bool,
     /// The song autoplay last looked up similar songs for, so it asks once per song.
     autoplay_seed: Option<String>,
-    /// A radio being looked up.
     radio_busy: bool,
     /// Discord Rich Presence (the app's setting when Riflay is here, else off), and what it shows now.
     discord: Option<Sender<Option<Value>>>,
     presence: Option<(String, bool, i64)>,
-    /// The lyrics' target language.
     language: String,
     /// The visualizer: on, its clock, the current song's levels, and what the song plays from (for ffmpeg).
     levels_on: bool,
@@ -577,7 +575,6 @@ impl Player {
         if !self.autoplay || self.repeat != "off" {
             return;
         }
-        // Not the songs already queued.
         seen.extend(self.queue.iter().map(|s| s.id.clone()));
         let fresh: Vec<Song> = songs
             .into_iter()
@@ -1072,9 +1069,6 @@ fn shuffle<T>(items: &mut [T]) {
     }
 }
 
-// ---- Tools on this computer ----
-
-/// yt-dlp on the PATH, or the one Riflay downloaded.
 fn yt_dlp() -> Option<PathBuf> {
     tool("yt-dlp")
 }
@@ -1167,8 +1161,6 @@ fn curl(args: &[&str], body: Option<&str>) -> Result<Vec<u8>, String> {
     }
     Ok(out.stdout)
 }
-
-// ---- YouTube Music search ----
 
 fn runs(v: &Value) -> Vec<&Value> {
     v["musicResponsiveListItemFlexColumnRenderer"]["text"]["runs"]
@@ -1298,8 +1290,6 @@ fn civil(days: u64) -> (i64, u32, u32) {
     let m = if mp < 10 { mp + 3 } else { mp - 9 } as u32;
     (yoe + era * 400 + i64::from(m <= 2), m, d)
 }
-
-// ---- The library ----
 
 fn file_from_uri(uri: &str) -> Option<PathBuf> {
     let rest = uri.strip_prefix("file://")?;
@@ -1485,8 +1475,6 @@ fn read_prefs(data_dir: &Path) -> Value {
         .unwrap_or(Value::Null)
 }
 
-// ---- Radio ----
-
 /// YouTube Music's radio for [seed]: its own when it is a YouTube Music song, else the radio of its match (the first
 /// song found by its title and artist).
 fn radio_youtube(seed: &Song) -> Result<Vec<Song>, String> {
@@ -1561,8 +1549,6 @@ fn panel_song(row: &Value) -> Option<Song> {
             .map(|u| u.replace("w60-h60", "w226-h226")),
     })
 }
-
-// ---- Pronunciation and translation of lyrics ----
 
 /// The language lyrics are translated to: RIFLAY_LANG, Riflay's own setting, else the computer's language.
 fn language(prefs: &Value) -> String {
@@ -1768,8 +1754,6 @@ fn extras(lines: &[String], to: &str) -> Result<Vec<Extras>, String> {
         .map(|l| found.get(l.trim()).cloned().unwrap_or((None, None)))
         .collect())
 }
-
-// ---- Lyrics and covers ----
 
 fn parse_lrc(text: &str) -> Vec<(u64, String)> {
     let mut lines = vec![];

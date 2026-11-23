@@ -84,8 +84,6 @@ abstract final class WebmMux {
     }
   }
 
-  // ---- writing ----
-
   static const _segmentId = 0x18538067, _seekHeadId = 0x114D9B74, _infoId = 0x1549A966, _tracksId = 0x1654AE6B;
   static const _tagsId = 0x1254C367, _attachmentsId = 0x1941A469, _cuesId = 0x1C53BB6B, _clusterId = 0x1F43B675;
 
@@ -243,8 +241,6 @@ abstract final class WebmMux {
       ]),
     ]);
   }
-
-  // ---- EBML pieces ----
 
   static Uint8List _idBytes(int id) {
     final out = <int>[];

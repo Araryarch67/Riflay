@@ -358,7 +358,6 @@ void main() {
       // Artists aren't offered: following them in YouTube Music isn't safe yet.
       expect(find.text('Artists'), findsNothing);
 
-      // Import the playlist, then see the summary.
       await t.tap(find.text('Import 1'));
       await t.pumpAndSettle();
       expect(find.text('Imported 1 of 1'), findsOneWidget);

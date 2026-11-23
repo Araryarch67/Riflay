@@ -110,8 +110,6 @@ class Cast extends ChangeNotifier {
 
   final Duration pollEvery;
 
-  // ── Finding devices ──────────────────────────────────────────────────────
-
   List<CastTarget> _devices = const [];
   List<CastTarget> get devices => _devices;
 
@@ -155,8 +153,6 @@ class Cast extends ChangeNotifier {
     _searching = false;
     notifyListeners();
   }
-
-  // ── The session ──────────────────────────────────────────────────────────
 
   final CastServer _server = CastServer();
   DlnaControl? _control;

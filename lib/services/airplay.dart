@@ -277,8 +277,6 @@ class AirPlaySession {
   /// Recently sent packets, for the speaker's resend requests.
   final _sent = <int, Uint8List>{};
 
-  // ── Connecting ─────────────────────────────────────────────────────────
-
   Future<void> connect() async {
     final s = await Socket.connect(device.host, device.port, timeout: const Duration(seconds: 5));
     _rtsp = s;
@@ -400,8 +398,6 @@ class AirPlaySession {
     }
   }
 
-  // ── Timing, control ────────────────────────────────────────────────────
-
   // Timing and resend requests are taken from the speaker only: these ports
   // are open to the whole network.
 
@@ -452,8 +448,6 @@ class AirPlaySession {
     _firstSync = false;
     c.send(b.buffer.asUint8List(), device.host, _serverControlPort);
   }
-
-  // ── Streaming ──────────────────────────────────────────────────────────
 
   AirPlaySource? _source;
   Duration? _duration;

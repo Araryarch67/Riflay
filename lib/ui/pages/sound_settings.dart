@@ -629,7 +629,6 @@ TextStyle? settingsHeading(BuildContext context) =>
     Theme.of(context).textTheme.titleSmall
         ?.copyWith(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w700);
 
-/// A titled group of settings.
 class SettingsSection extends StatelessWidget {
   const SettingsSection({super.key, required this.title, required this.child});
 
@@ -693,7 +692,7 @@ class SettingsCard extends StatelessWidget {
               color: AppColors.elevated,
               borderRadius: BorderRadius.vertical(top: i == 0 ? outer : inner, bottom: i == last ? outer : inner),
               clipBehavior: Clip.antiAlias,
-              // Full width whatever the row; a row narrower than the group stays centred, as it always was.
+              // Full width whatever the row; a row narrower than the group stays centred.
               child: Align(heightFactor: 1, child: row),
             ),
           ],
@@ -703,8 +702,6 @@ class SettingsCard extends StatelessWidget {
   }
 }
 
-/// A settings row whose control sits on the right, or under the text when
-/// the window is too narrow for both side by side.
 /// Apple's route picker (iPhone speaker, Bluetooth, AirPlay, a USB DAC): the system button, tapped as usual.
 class RoutePickerButton extends StatelessWidget {
   const RoutePickerButton({super.key});

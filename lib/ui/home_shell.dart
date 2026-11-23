@@ -205,10 +205,8 @@ class _HomeShellState extends State<HomeShell> with SingleTickerProviderStateMix
     });
   }
 
-  /// All the shell itself needs from the player is whether a song is loaded
-  /// (for the side panel). Rebuilding it on every change the player notifies
-  /// rebuilt the whole window, several times a song; whatever shows what's
-  /// playing listens on its own.
+  /// All the shell needs from the player is whether a song is loaded (for the side panel): rebuilding on every
+  /// change the player notifies would rebuild the whole window several times a song.
   void _followTrack() {
     PowerSettings.offerOnce(context, _player!);
     final has = _player!.currentTrack != null;
@@ -1066,8 +1064,7 @@ class _HomeShellState extends State<HomeShell> with SingleTickerProviderStateMix
           for (final t in PhoneTab.values)
             TickerMode(
               enabled: t == _tab,
-              // Unopened tabs used to build their pages, listeners and network requests on every phone start.
-              // Once visited, keep their navigator alive so returning preserves its history and scroll position.
+              // A tab builds nothing until first visited; then its navigator stays alive, keeping its history and scroll.
               child: _visitedTabs.contains(t) ? _tabNavigator(t) : const SizedBox.shrink(),
             ),
         ],

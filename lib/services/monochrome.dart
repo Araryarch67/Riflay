@@ -39,8 +39,7 @@ class MonochromeCollection {
 /// No Origin/Referer impersonation: a refusing service remains unavailable.
 class Monochrome extends SongSource {
   Monochrome({http.Client? client}) : super(client: client ?? _sharedClient);
-  // Reuse TLS connections across catalogue queries instead of creating and
-  // closing a new connection for every title and artist search.
+  // Reuse TLS connections across catalogue queries.
   static final _sharedClient = _SharedClient();
   static final instance = Monochrome();
   static const tracksBase = 'https://tracks.monochrome.st';

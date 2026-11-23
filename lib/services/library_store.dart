@@ -10,11 +10,9 @@ import 'private_files.dart';
 
 /// The library on disk.
 ///
-/// It used to be one SharedPreferences value, and every other setting saved
-/// (each song played, the volume, a search) rewrote it along with them,
-/// encoded on the UI isolate: tens of milliseconds each time with a big
-/// library. It now has a file of its own, read and written in a background
-/// isolate. Preferences only remember that it moved ([_movedKey]), so a fresh
+/// It has a file of its own, read and written in a background isolate: as a SharedPreferences value it was
+/// rewritten (and encoded on the UI isolate) with every other setting saved, tens of milliseconds each time
+/// with a big library. Preferences only remember that it moved ([_movedKey]), so a fresh
 /// (or test) set of preferences still means an empty library.
 abstract final class LibraryStore {
   static const _legacyKey = 'library.v1';
@@ -25,7 +23,7 @@ abstract final class LibraryStore {
     try {
       return await PrivateFiles.file(_name);
     } catch (_) {
-      return null; // no app folder (widget tests): preferences hold it, as before
+      return null; // no app folder (widget tests): preferences hold it
     }
   }
 

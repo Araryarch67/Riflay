@@ -15,8 +15,8 @@ class LocalResults {
 
 /// The library's answer to the last query, kept until the query or the library
 /// changes. The page rebuilds for reasons that have nothing to do with the
-/// library (a filter chip, a result arriving, a window resize); each used to
-/// scan every song again.
+/// library (a filter chip, a result arriving, a window resize), which must not
+/// rescan every song.
 class LocalSearchMemo {
   /// Library scans so far, for tests: an unrelated rebuild must not add to it.
   @visibleForTesting

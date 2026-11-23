@@ -299,7 +299,6 @@ abstract class MediaSessionAdapter {
   /// Tells the system about [state]. Called on changes only, in order, never two at once.
   Future<void> update(MediaSessionState state);
 
-  /// Takes the session down.
   Future<void> detach();
 }
 

@@ -136,6 +136,5 @@ abstract final class CarlaLocator {
     return Host.isWindows ? p.join(d, 'Carla.exe') : (Host.isMacOS ? p.join(d, 'Carla') : 'carla');
   }
 
-  /// Whether Carla is installed.
   static bool get installed => dir != null;
 }

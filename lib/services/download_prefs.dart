@@ -435,7 +435,7 @@ class DownloadPrefs extends ChangeNotifier {
   /// picked in iOS's Files (`IosFolders`, which keeps the access to it).
   String? folder;
 
-  /// Off with `RIFLAY_NO_PHONE_DOWNLOADS_FOLDER`: phones keep downloads in Riflay's own storage, as they did.
+  /// Off with `RIFLAY_NO_PHONE_DOWNLOADS_FOLDER`: phones keep downloads in Riflay's own storage.
   static const phoneFolders = !bool.fromEnvironment('RIFLAY_NO_PHONE_DOWNLOADS_FOLDER');
 
   /// Phones: download on mobile data too.

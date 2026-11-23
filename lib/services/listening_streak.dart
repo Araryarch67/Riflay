@@ -27,7 +27,6 @@ enum StreakTier {
   /// The flame's colours, from its tip to its base.
   final List<Color> colors;
 
-  /// The tier of a streak of [days].
   static StreakTier of(int days) => values.lastWhere((t) => days >= t.from);
 
   /// The tier after this one, or null at the top.

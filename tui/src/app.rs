@@ -365,7 +365,6 @@ impl App {
         );
     }
 
-    /// A reply to one of the requests.
     pub fn reply(&mut self, tag: u64, result: Result<Value, String>) {
         let Some(purpose) = self.pending.remove(&tag) else {
             return;

@@ -31,7 +31,7 @@ abstract final class NativeVideoWindow {
   /// Whether the box now showing the video wants it to cover the box (cropped), not fit inside it.
   static final cover = ValueNotifier(false);
 
-  /// The colour the box's foot fades into, as Flutter drew over the video before; null for none.
+  /// The colour the box's foot fades into; null for none.
   static final fade = ValueNotifier<Color?>(null);
 
   static List<int>? _placed;

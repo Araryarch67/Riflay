@@ -184,7 +184,7 @@ abstract final class YtDlp {
       }
     }
     final local = File(p.join((await ExecutableStore.directory()).path, _releaseAsset));
-    // Older versions wrote it straight to its place: a download cut short stayed there for good.
+    // Under 4 MB is a download cut short (older builds wrote straight to this path).
     final whole = local.existsSync() && local.lengthSync() > 4 << 20;
     if (!whole && !await _download(local)) return null;
     // YouTube changes break old yt-dlp releases within weeks; a copy of our own is

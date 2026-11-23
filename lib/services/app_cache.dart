@@ -19,7 +19,6 @@ import 'youtube_audio_source.dart';
 ///
 /// The cache folders themselves stay: covers are written into folders opened once per launch.
 abstract final class AppCache {
-  /// Tests point these at folders of their own.
   @visibleForTesting
   static Future<({String support, String cache, String temp})> Function()? foldersOverride;
 

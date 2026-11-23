@@ -224,8 +224,6 @@ class ListenTogether extends ChangeNotifier {
     if (!_events.isClosed) _events.add(text);
   }
 
-  // ───────────────────────────── Host ─────────────────────────────
-
   Future<void> host({required ListenMode mode, required String name}) async {
     if (_role != ListenRole.none || _busy) return;
     _busy = true;
@@ -442,8 +440,6 @@ class ListenTogether extends ChangeNotifier {
       if (e.value != null) e.key.send(text);
     }
   }
-
-  // ───────────────────────────── Guest ─────────────────────────────
 
   Stream<List<FoundSession>> findNearby() => LanDiscovery.find();
 
@@ -670,8 +666,6 @@ class ListenTogether extends ChangeNotifier {
     if (announce) _emit('Added ${track.title} to ${_hostName ?? 'the host'}\'s queue');
     notifyListeners();
   }
-
-  // ───────────────────────────── Ending ─────────────────────────────
 
   /// Host: ends the session for everyone. Guest: stops following.
   Future<void> leave() async {

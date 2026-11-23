@@ -21,8 +21,6 @@ double _codecFactor(String ext) => switch (ext) {
   _ => 1.0,
 };
 
-// ── Matching titles and artists ─────────────────────────────────────────────────────────────────────────────
-
 const _accents = {
   'à': 'a', 'á': 'a', 'â': 'a', 'ã': 'a', 'ä': 'a', 'å': 'a', 'ā': 'a', 'ç': 'c', 'è': 'e', 'é': 'e', 'ê': 'e', //
   'ë': 'e', 'ē': 'e', 'ì': 'i', 'í': 'i', 'î': 'i', 'ï': 'i', 'ī': 'i', 'ñ': 'n', 'ò': 'o', 'ó': 'o', 'ô': 'o',
@@ -97,8 +95,6 @@ String normalizeArtist(String artist) {
 }
 
 bool _unknownArtist(String normalized) => normalized.isEmpty || normalized == normalizeArtist(Track.unknownArtist);
-
-// ── One song of a group ─────────────────────────────────────────────────────────────────────────────────────
 
 /// A song with what it takes to compare it: its file's size and where it came from.
 class DuplicateItem {
@@ -184,8 +180,6 @@ class DuplicateGroup {
   String get title => best.track.title;
   String get artist => best.track.artist;
 }
-
-// ── Finding groups ──────────────────────────────────────────────────────────────────────────────────────────
 
 /// Songs worth comparing: a file of its own with a known length. Slices of a cue sheet, SACD songs and
 /// streamed-only songs are not separate files.
@@ -287,8 +281,6 @@ Future<Map<String, int>> readFileSizes(Iterable<String> paths) {
     return sizes;
   });
 }
-
-// ── Removing the extra copies ───────────────────────────────────────────────────────────────────────────────
 
 /// A group and the copy the person keeps.
 class RemovalChoice {

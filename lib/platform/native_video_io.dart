@@ -114,7 +114,7 @@ class NativeVideoPlayer implements VideoEngine {
     option('fbo-format', 'rgba8');
     option('hdr-compute-peak', 'no');
     option('swapchain-depth', '2');
-    // Video only: no sound track, no sound device, and only half a minute read ahead.
+    // Video only: no sound track and no sound device.
     option('aid', 'no');
     option('ao', 'null');
     option('cache', 'yes');

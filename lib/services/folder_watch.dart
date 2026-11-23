@@ -11,7 +11,7 @@ import '../platform/host.dart';
 import 'ios_folders.dart';
 import 'player_controller.dart';
 
-// ── Pure rules (no files, no clocks of their own: tested with fake events) ──────────────────────────────────────
+// Pure rules (no files, no clocks of their own: tested with fake events).
 
 /// What a file looked like the last time we listed its folder.
 @immutable
@@ -332,8 +332,6 @@ FolderSnapshot? readSnapshotSync(String root) {
   return found;
 }
 
-// ── The watcher ─────────────────────────────────────────────────────────────────────────────────────────────
-
 /// Keeps the library matching the music folders the person added.
 ///
 /// Computers watch each folder (`Directory.watch`, recursive) and look again once the files have settled. If
@@ -508,8 +506,6 @@ class FolderWatch extends ChangeNotifier with WidgetsBindingObserver {
   /// Looks at every folder now. Returns how many changes it applied.
   Future<int> checkNow() => _look(_folders.toSet());
 
-  // — starting and stopping the watchers —
-
   void _apply() {
     final wanted = _enabled ? _folders.toSet() : <String>{};
     for (final dir in _watchers.keys.toList()) {
@@ -598,8 +594,6 @@ class FolderWatch extends ChangeNotifier with WidgetsBindingObserver {
       unawaited(checkNow());
     }
   }
-
-  // — one look —
 
   Future<int> _look(Set<String> dirs) async {
     final c = _c;

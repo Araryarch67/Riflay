@@ -16,7 +16,6 @@ const proxyAudioPrefix = '/audio/';
 
 final _videoId = RegExp(r'^[A-Za-z0-9_-]{11}$');
 
-/// Whether [id] looks like a YouTube video id.
 bool isVideoId(String id) => _videoId.hasMatch(id);
 
 /// The query parameter that has the proxy send a song's audio as a download: its value is the file's name, without
@@ -47,7 +46,6 @@ String audioExtension(String mimeType) => mimeType.startsWith('audio/mp4') ? 'm4
 /// them back under their own name.
 const renamedRequestHeaders = {'user-agent', 'origin', 'referer', 'cookie'};
 
-/// The prefix of a renamed request header.
 const renamedHeaderPrefix = 'x-riflay-';
 
 /// Request headers passed on to the service as they are (lower case); anything else is dropped.

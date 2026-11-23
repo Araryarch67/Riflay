@@ -414,7 +414,6 @@ jobs:
           path: dist/*
 
   ios:
-    # Publishes independently, just like the other platforms.
     if: github.event_name != 'workflow_dispatch' || inputs.platforms == 'all' || contains(inputs.platforms, 'ios')
     runs-on: macos-26
     steps:

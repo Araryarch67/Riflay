@@ -658,8 +658,6 @@ class PlayerController extends ChangeNotifier {
   // unplugged headphones pause it (below), so a song doesn't suddenly come out of the speaker.
   final AudioPlayer player = AudioPlayer(handleInterruptions: false);
 
-  // ── Sleep timer and crossfade (sleep_timer.dart, crossfade.dart) ──
-
   /// "Stop the music in 30 minutes": fades the volume down and pauses.
   final SleepTimer sleep = SleepTimer();
 
@@ -1432,9 +1430,7 @@ class PlayerController extends ChangeNotifier {
   /// Every platform reads a picked folder in place (iOS through a bookmark kept by `FolderAccess.swift`).
   bool get canScanFolders => true;
 
-  // ── Derived library views ────────────────────────────────────────────────
-  //
-  // Worked out once per library change, not on every rebuild: Home, the
+  // Derived library views are worked out once per library change, not on every rebuild: Home, the
   // sidebar and every song row ask for them, and sorting or scanning the whole
   // library each time stalled every song change for tens of milliseconds.
 
@@ -1534,8 +1530,6 @@ class PlayerController extends ChangeNotifier {
 
   /// The music folders made playlists (Playlists): each is the folder's songs right now, never a copy.
   List<Collection> get folderPlaylists => LibraryViews.folderPlaylistsOf(folders, FolderWatch.instance.playlistFolders);
-
-  // ── Riflay playlists ──────────────────────────────────────────────────
 
   List<UserPlaylist> _playlists = [];
   List<UserPlaylist> get playlists => List.unmodifiable(_playlists);
@@ -1667,8 +1661,6 @@ class PlayerController extends ChangeNotifier {
         if (seen.add(t.id)) t,
     ];
   }
-
-  // ── Offline copies ───────────────────────────────────────────────────────
 
   /// A YouTube song that was also downloaded plays from the file: no network, no buffering.
   Track? downloadedCopy(Track t) {
@@ -1832,8 +1824,6 @@ class PlayerController extends ChangeNotifier {
         }(),
     ];
   }
-
-  // ── Persistence & import ─────────────────────────────────────────────────
 
   Future<void> load() async {
     await MusicSources.instance.load();
@@ -2316,8 +2306,6 @@ class PlayerController extends ChangeNotifier {
     return failed;
   }
 
-  // ── Downloads' file names ──
-
   /// A download still named after its source's id: `mono_…`, `sflx_…`, or an 11-character YouTube video id.
   static final _idName = RegExp(r'^(mono_[A-Za-z0-9_-]+|sflx_[0-9a-f]{64}|[A-Za-z0-9_-]{11})$');
 
@@ -2356,8 +2344,6 @@ class PlayerController extends ChangeNotifier {
     await swapTrackRefs(moved);
     return moved.length;
   }
-
-  // ── Folder watching and duplicates (folder_watch.dart, duplicate_finder.dart) ──
 
   /// Applies what a look at a music folder found: new files, gone files, moved files and changed files.
   Future<void> applyFolderChanges(FolderPlan plan) async {
@@ -2431,8 +2417,6 @@ class PlayerController extends ChangeNotifier {
     if (playlistsChanged) await _savePlaylists();
     if (recentChanged) (await SharedPreferences.getInstance()).setStringList(_recentKey, _recentIds);
   }
-
-  // ── Playback ─────────────────────────────────────────────────────────────
 
   /// The queue in its original order; the player holds the shuffled copy.
   ///
@@ -3322,8 +3306,6 @@ class PlayerController extends ChangeNotifier {
     await (await SharedPreferences.getInstance()).setString(_loopKey, mode.name);
   }
 
-  // ── Casting (DLNA / UPnP, AirPlay) ────────────────────────────────────────────
-  //
   // The queue stays in [player], paused, while a TV or speaker plays: next,
   // previous and queue picks move it, and [_castFollow] sends the new song.
 

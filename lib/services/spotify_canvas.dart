@@ -46,7 +46,6 @@ class SpotifyCanvas extends ChangeNotifier {
   /// [track]'s Canvas, once looked up; null before, or when it has none.
   Uri? of(Track? track) => !active || track == null ? null : _found[track.id];
 
-  /// Whether [track] was looked up already.
   bool knows(Track track) => _found.containsKey(track.id);
 
   /// Looks [track]'s Canvas up once; [done] runs when the answer is in.

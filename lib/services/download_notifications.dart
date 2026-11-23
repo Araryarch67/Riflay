@@ -326,8 +326,6 @@ class DownloadNotifications {
     }
   }
 
-  // ---- taps ----
-
   static void Function()? _openDownloads;
   static bool Function(NoteContent)? _presentInApp;
   static bool _openWhenReady = false;
@@ -613,8 +611,6 @@ class DownloadNotifications {
         ? null
         : 'download',
   );
-
-  // ---- background running ----
 
   Future<void> _service(NoteContent note) async {
     final android = _plugin.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();

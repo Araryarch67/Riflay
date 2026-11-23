@@ -198,7 +198,6 @@ Future<void> _showWindow(Size? size) async {
 
 /// Media controls, wake locks, the download queue, notifications and the listening history.
 Future<void> _startServices(PlayerController controller) async {
-  // Computers: Mini player in the tray menu.
   if (Features.miniPlayer) {
     SystemTray.miniPlayer = miniPlayer;
     miniPlayer.addListener(() => MemoryTrim.mini(miniPlayer.value));
@@ -218,9 +217,7 @@ Future<void> _startServices(PlayerController controller) async {
       EngineEnd.start(),
       // Notifications watch the queue, so they attach once it is restored.
       controller.youtube.restoreQueue().then((_) => DownloadNotifications.attach(controller.youtube)),
-      // Keeps the listening history (on this device only), then announces a monthly Wrap that is due.
       PlayHistory.instance.start(controller).then((_) => WrapNotifier.instance.run(PlayHistory.instance)),
-      // Sends what is played to Last.fm / ListenBrainz, once an account is connected.
       (Scrobbler.instance..onMessage = controller.notify).start(controller),
     ].map((f) => f.catchError((Object e) => debugPrint('Start-up task failed: $e'))),
   );
@@ -556,9 +553,8 @@ class _DesktopFrame extends StatelessWidget {
       builder: (context, mini, app) => Stack(
         fit: StackFit.expand,
         children: [
-          // Kept, not drawn: its tickers stop too, so the music video under it lets go of its player and the
-          // pages' animations rest (Offstage alone left the video decoding for nobody: more memory than the full
-          // window).
+          // Kept, not drawn: its tickers stop too, so the music video under it lets go of its player and the pages'
+          // animations rest (Offstage alone kept the video decoding for nobody).
           TickerMode(
             enabled: !mini,
             child: Offstage(offstage: mini, child: app),

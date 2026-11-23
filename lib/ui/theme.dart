@@ -6,13 +6,13 @@ import '../services/layout_prefs.dart';
 import 'debug_switches.dart';
 import 'widgets/wavy_seek_track.dart' show pillSliderTheme, thinSliderTheme;
 
-/// Colour tokens of the theme picked in Settings › Look & feel › Theme & colours ([ThemeChoice]).
 /// How bright the cover behind the glass is (0 dark, 1 white), measured by the backdrop: a bright cover gets
 /// darker glass and a heavier veil, so white text and icons on it still read.
 abstract final class GlassShade {
   static final brightness = ValueNotifier<double>(0);
 }
 
+/// Colour tokens of the theme picked in Settings › Look & feel › Theme & colours ([ThemeChoice]).
 abstract final class AppColors {
   static AppPalette get _p => _themeOverride ?? Appearance.instance.palette;
 
@@ -510,7 +510,6 @@ final _themes = <_ThemeKey, ThemeData>{};
 int _themesBuilt = 0;
 int _themesCached = 0;
 
-/// Settings › Now Playing › Slider look, for every slider in the app (the progress bar has its own shape setting).
 /// The corners of every text field (see `inputDecorationTheme`): Search's pill.
 const _field = BorderRadius.all(Radius.circular(24));
 

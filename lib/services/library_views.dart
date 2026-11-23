@@ -139,10 +139,10 @@ class LibraryViews {
     return _downloads = out;
   }
 
-  /// [library] with one entry per downloaded video. A song downloaded again (another format, after a delete)
-  /// used to be added beside the first, which may point at a file that is gone: it showed twice, and the stale
-  /// one wouldn't play. Of the entries of one video, the newest whose file [exists] stays (the newest, if none
-  /// does); a video with a single entry is never touched, so a card that is only unreadable for now loses nothing.
+  /// [library] with one entry per downloaded video: a song downloaded again (another format, after a delete)
+  /// leaves an older entry that may point at a file that is gone. Of the entries of one video, the newest whose
+  /// file [exists] stays (the newest, if none does); a video with a single entry is never touched, so a card
+  /// that is only unreadable for now loses nothing.
   static List<Track> withoutRepeatedDownloads(List<Track> library, bool Function(Track t) exists) {
     final byVideo = <String, List<int>>{};
     for (final (i, t) in library.indexed) {

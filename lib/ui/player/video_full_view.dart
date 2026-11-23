@@ -204,8 +204,8 @@ class _VideoFullViewState extends State<VideoFullView> {
 
   /// A double tap on either side goes back or ahead [seekStep]; each tap that follows on that side within
   /// [VideoFullView.burstWindow] of the last goes [seekStep] more (a triple tap is 20 s), as on YouTube. The middle
-  /// toggles the window's full screen on a computer. A single tap waits out the double-tap time, as it always did;
-  /// during a skip, taps count at once.
+  /// toggles the window's full screen on a computer. A single tap waits out the double-tap time; during a skip, taps
+  /// count at once.
   Widget _videoGestures({Key? key, required Widget child, required VoidCallback onTap}) => LayoutBuilder(
     builder: (context, box) {
       double at(Offset p) => box.maxWidth > 0 ? p.dx / box.maxWidth : 0.5;
@@ -567,8 +567,6 @@ class _VideoFullViewState extends State<VideoFullView> {
   );
 }
 
-/// The app's colours worked out for black, as Now Playing's Black background does: the controls read on the black
-/// around the video whatever the theme.
 /// The half-oval of a double-tap skip's ripple: rounded toward the middle of the picture, flat at its edge.
 class _SideOval extends CustomClipper<Path> {
   const _SideOval({required this.right});

@@ -580,7 +580,6 @@ final _tokyoNightDay = const AppPalette(
   light: true,
 ).withReadableText();
 
-/// Whether the app is drawn dark or light.
 enum ThemeBrightness {
   dark,
   light,
@@ -679,7 +678,6 @@ class _Fade {
   int _last = -1;
   int _run = 0;
 
-  /// [t] with easing.
   double get eased => Curves.easeInOut.transform(t);
 
   void start() {
@@ -938,11 +936,9 @@ class Appearance extends ChangeNotifier {
     return highContrast ? p.withHighContrast() : p;
   }
 
-  /// The accent in use: the theme's own, or the one picked.
   Color get accentColor => palette.accent;
   Color get onAccentColor => palette.onAccent;
 
-  /// Where the colour of the playing song's cover shows up.
   CoverColorMode coverMode = CoverColorMode.player;
 
   /// How strongly "Whole app" tints (0 subtle, 1 strong).
@@ -1165,7 +1161,6 @@ class Appearance extends ChangeNotifier {
   });
   Future<void> setCoverStrength(double v) => _set(() => coverStrength = v.clamp(0, 1));
 
-  /// Picks a colour of your own as the accent.
   Future<void> setCustomAccent(Color v) => _set(() {
     customAccent = v;
     accent = AccentChoice.custom;
@@ -1220,10 +1215,10 @@ class Appearance extends ChangeNotifier {
       _set(() => componentOpacity = hasComponentOpacity ? v.clamp(0.3, 1) : 1);
   Future<void> setWindowOpacity(double v) => _set(() => windowOpacity = v);
 
-  /// Draws the app in [font] (null: back to Riflay's own). False when its files couldn't be loaded.
   /// Typefaces that come with the app (beside the default): picked without loading any files.
   static const bundledFonts = {'Figtree'};
 
+  /// Draws the app in [font] (null: back to Riflay's own). False when its files couldn't be loaded.
   Future<bool> setFont(FontFamilyFiles? font) async {
     if (font != null && !bundledFonts.contains(font.family) && !await SystemFonts.load(font.family, font.files)) {
       return false;

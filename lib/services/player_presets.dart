@@ -167,7 +167,6 @@ class PlayerPreset {
     );
   }
 
-  /// [name] in place of this one's.
   PlayerPreset renamed(String name) => PlayerPreset.fromJson({...toJson(), 'name': name});
 
   final String name;

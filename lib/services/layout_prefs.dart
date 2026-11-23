@@ -13,8 +13,6 @@ import 'language.dart';
 import 'beta_features.dart';
 export 'page_motion.dart' show PageMotionStyle, PageMotionSpeed;
 
-/// Desktop controls can stay full width or sit inside a floating player.
-/// The desktop's player bar. Every look sits flush along the window's foot; none floats over the page.
 enum GlassTint { theme, light, black }
 
 enum ExtraFeature {
@@ -41,6 +39,7 @@ enum ExtraFeature {
   bool get enabled => LayoutPrefs.instance.extraFeatures.contains(this);
 }
 
+/// The desktop's player bar. Every look sits flush along the window's foot; none floats over the page.
 enum DesktopBarStyle {
   classic,
   compact,
@@ -704,7 +703,6 @@ class LayoutPrefs extends ChangeNotifier {
   List<PlayerBottomRow> get bottomRowChoices =>
       showVolumeRow ? const [PlayerBottomRow.classic, PlayerBottomRow.chips] : PlayerBottomRow.values;
 
-  /// Liquid presets frost the player's transparent control surfaces.
   String startupTab = 'home', libraryChip = '';
   int swipeDistance = 72;
   Set<String> hiddenCollections = {};
@@ -957,7 +955,6 @@ class LayoutPrefs extends ChangeNotifier {
     disabled: effectiveMotion == Motion.off,
   );
 
-  /// The phone player's parts are all as they have always been (Classic keeps its original layout).
   /// The player in its Classic style as far as its top goes, whatever its quality badge's place or volume slider's
   /// shape (they sit lower down): it keeps its Close arrow, as Classic always has. The other styles show it with
   /// [showPlayerClose].
@@ -1449,7 +1446,7 @@ class LayoutPrefs extends ChangeNotifier {
       final snackSide = base.snackBarTheme.shape is RoundedRectangleBorder
           ? (base.snackBarTheme.shape! as RoundedRectangleBorder).side
           : BorderSide.none;
-      // Buttons are pills today; only square corners change them.
+      // Buttons are pills; only square corners change them.
       final buttonShape = corner == CornerStyle.square ? const RoundedRectangleBorder() : null;
       t = t.copyWith(
         popupMenuTheme: base.popupMenuTheme.copyWith(shape: shape(12, menuSide)),

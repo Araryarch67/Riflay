@@ -299,11 +299,9 @@ class PlayerWidget : AppWidgetProvider() {
             fun label(key: String, fallback: Int) = labels?.text(key) ?: res.getString(fallback)
             val look = look(context, state)
 
-            // The card.
             views.setInt(R.id.widget_card, "setColorFilter", look.surface)
             views.setInt(R.id.widget_card, "setImageAlpha", if (pill) PILL_ALPHA else CARD_ALPHA)
 
-            // Text.
             views.setTextViewText(R.id.widget_title, state.text("title") ?: res.getString(R.string.widget_nothing_playing))
             views.setTextColor(R.id.widget_title, look.onSurface)
             views.setTextColor(R.id.widget_artist, look.onSurfaceVariant)
@@ -370,7 +368,6 @@ class PlayerWidget : AppWidgetProvider() {
                 views.setImageViewBitmap(R.id.widget_wave, wave(waveWidthDp, dp, fraction, look))
             }
 
-            // Buttons.
             fun button(id: Int, enabled: Boolean, description: String, intent: PendingIntent, tint: Int = look.onSurface) {
                 views.setInt(id, "setColorFilter", tint)
                 views.setInt(id, "setImageAlpha", if (enabled) 255 else 97)

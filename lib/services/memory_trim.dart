@@ -31,9 +31,9 @@ abstract final class MemoryTrim {
   static const _idleAfter = Duration(seconds: 8);
 
   /// Linux: paged out since the window was last in use. Paging out compresses the pages into zram on the thread that
-  /// asks (~0.5 s of CPU for a couple of hundred MB), and what the song needs faults straight back in: repeated every
-  /// minute away, it was a spike btop showed every minute. Once per time away is enough. Windows only moves its pages
-  /// to the standby list, so it keeps emptying the working set each minute.
+  /// asks (~0.5 s of CPU for a couple of hundred MB) and what the song needs faults straight back in, so it is done
+  /// once per time away. Windows only moves its pages to the standby list, so it keeps emptying the working set each
+  /// minute.
   static bool _pagedOut = false;
 
   static void _trim({bool workingSet = false}) {
@@ -86,8 +86,7 @@ abstract final class MemoryTrim {
   }
 
   static void _listen() {
-    // Windows only trims when hidden now; tracking every pointer/key event
-    // for the old idle heuristic no longer serves any purpose there.
+    // Windows only trims when hidden: it needs no idle tracking.
     if (Host.isWindows) return;
     if (_listening) return;
     _listening = true;

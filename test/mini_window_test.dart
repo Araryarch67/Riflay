@@ -145,7 +145,7 @@ void main() {
     expect(hits, Platform.isWindows ? isNotEmpty : isEmpty, reason: 'the closed pill');
 
     // A frame of the island left over after the window became something else (the mini window, the full app)
-    // used to send its pill last, leaving the window cut down to a strip.
+    // must not send its pill last, which would leave the window cut down to a strip.
     hits.clear();
     miniPlayer.value = false;
     await tester.binding.setSurfaceSize(const Size(460, 224));

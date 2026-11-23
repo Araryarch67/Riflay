@@ -151,21 +151,21 @@ class AudioAnalyzer {
   static const waveformBars = 200;
   static const _fft = 4096;
 
-  // ── Loudness: K-weighted energy in 100 ms steps, 400 ms blocks ───────────
+  // Loudness: K-weighted energy in 100 ms steps, 400 ms blocks.
   final List<double> _kb; // b0 b1 b2 a1 a2 of the shelf, then of the high pass
   final List<Float64List> _state; // per channel: x1 x2 y1 y2 of each stage
   double _stepEnergy = 0;
   int _stepCount = 0;
   final _steps = <double>[];
 
-  // ── DR: 3 s blocks per channel ──────────────────────────────────────────
+  // DR: 3 s blocks per channel.
   final List<List<double>> _drSquares, _drPeaks;
   final Float64List _blockSquares, _blockPeaks;
   int _blockCount = 0;
 
   double _peak = 0;
 
-  // ── Bit depth: every sample's bits OR'd together ─────────────────────────
+  // Bit depth: every sample's bits OR'd together.
   int _bitMask = 0;
 
   /// Folds in [mask], the 32-bit samples of a chunk OR'd together (see [AudioReport.usedBits]).
@@ -180,7 +180,7 @@ class AudioAnalyzer {
     return 32 - low;
   }
 
-  // ── Spectrum: one 4096-point frame every quarter second ─────────────────
+  // Spectrum: one 4096-point frame every quarter second.
   final Float64List _fftFrame;
   int _fftFill = 0;
   int _ring = 0;

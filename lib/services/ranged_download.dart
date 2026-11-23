@@ -80,7 +80,7 @@ Future<void> rangedDownload({
         // The data first, so a chunk listed as done is really on disk.
         return stateSaves = stateSaves.then((_) async {
           try {
-            // Flushed inside the write chain: a RandomAccessFile allows one operation at a time.
+            // Flushed inside the write chain.
             await (writes = writes.then((_) => raf.flush()));
             await _writeState(out, total, chunkSize, tag, done);
           } catch (_) {

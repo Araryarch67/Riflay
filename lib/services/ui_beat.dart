@@ -8,15 +8,9 @@ import '../ui/debug_switches.dart';
 /// One clock for everything on screen that moves by itself: the seek bars, the
 /// karaoke fill and the audio-reactive views.
 ///
-/// Each used to run its own timer. On a 144-240 Hz display their ticks rarely
-/// fell in the same vsync, so two 60 fps timers asked for up to 120 frames a
-/// second, each one a full pass on the GPU. Driven by this one 60 Hz timer,
-/// whatever changes in a beat is drawn in a single frame. Views that need less
-/// take every second or fourth beat ([UiBeatListener.period]), counted on one
-/// clock: two 20 fps views and a seek bar ticking 8 times a second land on the
-/// same beats and draw 20 frames a second, not one set each. Each frame costs the
-/// window's own work too (on Linux the main thread spends far more on a frame than
-/// Dart does), so frames that coincide are what keeps a playing song cheap.
+/// One shared 60 Hz timer, so whatever changes in a beat is drawn in a single frame: separate timers rarely share a
+/// vsync on a 144-240 Hz display and multiply full GPU passes (and, on Linux, the window's own per-frame work).
+/// Slower views take every second or fourth beat ([UiBeatListener.period]) on the same count, so their frames coincide.
 class UiBeat {
   UiBeat._();
 

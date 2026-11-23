@@ -193,7 +193,6 @@ class Track {
     return out;
   }
 
-  /// Each artist of this song (see [splitArtists]).
   List<String> get artists => splitArtists(artist);
 
   final String id;
@@ -238,13 +237,10 @@ class Track {
   /// everything YouTube-only (radio, likes, downloads, the music video) keys off it. See [streams].
   bool get isRemote => videoId != null;
 
-  /// SoundCloud's track id, for a SoundCloud track.
   String? get soundcloudId => id.startsWith(soundcloudPrefix) ? id.substring(soundcloudPrefix.length) : null;
 
-  /// Spotify's track id, for a Spotify track.
   String? get spotifyId => id.startsWith(spotifyPrefix) ? id.substring(spotifyPrefix.length) : null;
 
-  /// Played over the internet from a music service (YouTube Music or SoundCloud), not from a file here.
   String? get monochromeId => id.startsWith('monochrome:') ? id.substring('monochrome:'.length) : null;
 
   /// Stable service key shared by a stream and its downloaded file.
@@ -378,7 +374,6 @@ class Track {
   }
 }
 
-/// Where a song comes from.
 enum TrackSource { device, youtubeMusic, soundcloud, monochrome, extension, spotify }
 
 /// Album order: disc, then track number, title as a tiebreak for untagged files.
@@ -432,7 +427,6 @@ class Collection {
     artistVideos: artistVideos,
   );
 
-  /// The same, with [p] as its picture.
   Collection withPicture(Track p) => Collection(
     kind: kind,
     title: title,

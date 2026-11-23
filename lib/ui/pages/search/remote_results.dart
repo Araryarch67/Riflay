@@ -66,7 +66,6 @@ class TopResult extends StatelessWidget {
     final text = Theme.of(context).textTheme;
     final artist = hit.kind == WebResultKind.artist;
     final scheme = Theme.of(context).colorScheme;
-    // A Material 3 filled card.
     return Material(
       color: scheme.surfaceContainerHighest,
       borderRadius: searchSurfaceCorners(16),
@@ -214,7 +213,6 @@ class TopAndSongs extends StatelessWidget {
   }
 }
 
-/// A titled shelf as a sliver.
 Widget _row(String title, List<Widget> cards) => SliverToBoxAdapter(
   child: Shelf(title: title, cards: cards),
 );

@@ -338,7 +338,6 @@ void main() {
         choice: const DownloadChoice.video(VideoContainer.mp4, height: 1080),
       );
       expect(YoutubeImporter.decodeQueue(YoutubeImporter.encodeQueue([mp4])).single.choice, mp4.choice);
-      // Audio jobs are unchanged.
       final audio = DownloadJob(
         videoId: 'dQw4w9WgXcQ',
         title: 'Song',

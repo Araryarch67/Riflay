@@ -115,7 +115,6 @@ Map<ShortcutActivator, VoidCallback> bindShortcuts(Map<AppAction, VoidCallback> 
       for (final a in s.activators) a: run,
 };
 
-/// Lists the keyboard shortcuts.
 Future<void> showShortcutsDialog(BuildContext context) => showDialog<void>(
   context: context,
   builder: (context) {

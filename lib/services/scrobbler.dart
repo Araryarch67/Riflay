@@ -631,8 +631,6 @@ class Scrobbler extends ChangeNotifier {
   @visibleForTesting
   List<Listen> queueOf(ScrobbleService s) => List.unmodifiable(_queues[s.id] ?? const []);
 
-  // Saving ──────────────────────────────────────────────────────────────────
-
   Future<File?> _file() async {
     if (_fileOverride != null) return _fileOverride;
     try {
@@ -683,8 +681,6 @@ class Scrobbler extends ChangeNotifier {
     });
   }
 
-  // Accounts ────────────────────────────────────────────────────────────────
-
   /// Connects ListenBrainz with the user's token. Throws [ScrobbleError] when it isn't valid or can't be checked.
   Future<void> connectListenBrainz(String token) async {
     await listenBrainz.connect(token);
@@ -705,8 +701,6 @@ class Scrobbler extends ChangeNotifier {
     notifyListeners();
     await _save();
   }
-
-  // Sending ─────────────────────────────────────────────────────────────────
 
   /// Hands [events] to every connected service.
   void handle(List<ScrobbleEvent> events) {
@@ -796,8 +790,6 @@ class Scrobbler extends ChangeNotifier {
     await _save();
   }
 
-  // Bringing past listens in ────────────────────────────────────────────────
-
   /// The service whose past listens are being brought in, if any.
   ScrobbleService? get importing => _importing;
   ScrobbleService? _importing;
@@ -864,8 +856,6 @@ class Scrobbler extends ChangeNotifier {
     final length = local?.duration ?? l.duration;
     return ImportedPlay(song, l.startedAt, length?.inSeconds ?? _assumedLength);
   }
-
-  // Following the player ────────────────────────────────────────────────────
 
   /// Loads the accounts and starts following [controller]'s player.
   Future<void> start(PlayerController controller) async {

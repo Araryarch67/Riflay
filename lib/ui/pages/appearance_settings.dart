@@ -600,7 +600,6 @@ class _Swatch extends StatelessWidget {
   );
 }
 
-/// A round colour chip that opens the picker.
 class _ColorButton extends StatelessWidget {
   const _ColorButton({required this.color, required this.label, required this.onTap});
 

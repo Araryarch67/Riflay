@@ -266,8 +266,6 @@ class _SpotifyPageState extends State<SpotifyPage> {
     );
   }
 
-  // ── Signed out ──────────────────────────────────────────────────────────
-
   Widget _signedOut(BuildContext context) {
     final text = Theme.of(context).textTheme;
     final muted = text.bodyMedium?.copyWith(color: AppColors.textSecondary);
@@ -315,8 +313,6 @@ class _SpotifyPageState extends State<SpotifyPage> {
       ),
     );
   }
-
-  // ── Picker ──────────────────────────────────────────────────────────────
 
   List<SpotifyItem> get _items => _tabs[_tab]!.items ?? const [];
 
@@ -544,8 +540,6 @@ class _Cover extends StatelessWidget {
     );
   }
 }
-
-// ── The run and its summary ───────────────────────────────────────────────
 
 class _ImportPanel extends StatelessWidget {
   const _ImportPanel({required this.importer, required this.onDone, required this.pad});

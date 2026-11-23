@@ -53,15 +53,11 @@ class VideoMode extends ChangeNotifier with WidgetsBindingObserver {
 
   static final instance = VideoMode._();
 
-  /// The tallest the video comes in, wherever it shows: on phones 1440p in Heavy, 1080p in Balanced and 720p in
-  /// Lightweight (what a low-end phone starts in, see `DeviceSetup.fitPhone`); on computers 1080p in Heavy, 720p in
-  /// Balanced and 480p in Lightweight. A phone fills its tall screen with it cropped to cover, so only a middle strip
-  /// of each frame shows, stretched about 2.5 times: the reason phones take a step more than computers. Each step is
-  /// decoder surfaces, the copies `mediacodec-copy` makes, the drawn texture and read-ahead: 1440p (3.7 MP a frame)
-  /// was the largest part of what Riflay held on a phone with its video, so it is Heavy's now, not Balanced's.
-  /// Taller (4K) streams buffered on ordinary connections. On a computer each video frame redraws the window, and a
-  /// smaller one is decoded, uploaded and kept (decoder surfaces, read-ahead) for less: the video in a cover-sized
-  /// view or behind a blurred page looks the same at 720p.
+  /// The tallest the video comes in: on phones 1440p in Heavy, 1080p in Balanced and 720p in Lightweight (see
+  /// `DeviceSetup.fitPhone`); on computers 1080p, 720p and 480p. Phones crop to cover their tall screen (a middle strip
+  /// stretched ~2.5x), hence a step more. 1440p (3.7 MP a frame, in decoder surfaces, `mediacodec-copy` copies, the
+  /// texture and read-ahead) dominated a phone's memory, so it is Heavy only; 4K buffered on ordinary connections.
+  /// On a computer every frame redraws the window, and a cover-sized or blurred-background video looks the same at 720p.
   static int get maxHeight => Host.isAndroid || Host.isIOS
       ? switch (LayoutPrefs.instance.performance) {
           PerformanceMode.heavy => 1440,
@@ -76,8 +72,6 @@ class VideoMode extends ChangeNotifier with WidgetsBindingObserver {
 
   /// Behind the page: the same size (a background is fetched only on Wi-Fi, see `prefetchAllowed`).
   static int get backgroundHeight => maxHeight;
-
-  // ---- Fitting the connection ----
 
   /// The most video frames a second on a computer below Heavy, as mpv's fps filter takes it, null for the video's
   /// own rate (Heavy, phones). Film's 23.976 (24000/1001): fewer could not be watched (15 and 10 were), and a film or
@@ -116,11 +110,8 @@ class VideoMode extends ChangeNotifier with WidgetsBindingObserver {
     return _cap == null ? most : _cap!.clamp(ladder.last, most);
   }
 
-  // ---- Quality menu ----
-
   /// The height picked in the quality menu (Settings › Now Playing › Video quality), null for Auto: then
-  /// [maxHeight] and the connection decide, as before there was a menu. A picked height is kept to, stalls or not,
-  /// as YouTube does.
+  /// [maxHeight] and the connection decide. A picked height is kept to, stalls or not, as YouTube does.
   static int? get fixedQuality => LayoutPrefs.instance.videoQuality > 0 ? LayoutPrefs.instance.videoQuality : null;
 
   /// The heights the streamed video offers, tallest first: what the quality menu lists besides Auto. Empty for a
@@ -279,8 +270,6 @@ class VideoMode extends ChangeNotifier with WidgetsBindingObserver {
       ..addListener(_qualityChanged);
     _probe();
   }
-
-  // ---- Which songs have a video ----
 
   /// Whether this device's mpv can decode video at all. Riflay's Android and
   /// Apple builds carry h264 and vp9 (tool/build_libmpv_android.sh and
@@ -490,8 +479,6 @@ class VideoMode extends ChangeNotifier with WidgetsBindingObserver {
     notifyListeners();
   }
 
-  // ---- The switch ----
-
   bool _on = true;
   static const _onKey = 'videoMode.on';
 
@@ -529,16 +516,11 @@ class VideoMode extends ChangeNotifier with WidgetsBindingObserver {
     // Phones: the screen went off or another app is in front. The song plays on alone.
     _lifecycleAway = state == AppLifecycleState.paused || state == AppLifecycleState.hidden;
     _windowVisibilityChanged();
-    // The video stops with it, and starts again when the app is back; the choice of Song or Video stays.
-    // Computers: another window has the focus. The video holds its picture (nothing decodes, nothing is drawn: in
-    // Balanced a playing video was most of what a song cost, about 1.7% of a 24-thread processor), and after
-    // [unfocusedRelease] it lets go of its player and buffers (about 100 MB). Back in front it starts again where
-    // the song is. Phones pass through `inactive` for a pulled-down shade: they keep playing.
-    // Windows' own-window video costs next to nothing to keep playing (the graphics card decodes and draws it), and
-    // a window behind another is often still watched: it plays on until the window is minimized or hidden.
-    // Off now: a video held still in a window still on screen read as frozen, and coming back it sought and fetched
-    // again for seconds. It plays on behind other windows, as a browser's does; minimized or hidden it stops ([_away]).
-    // `RIFLAY_VIDEO_HOLDS_BEHIND` holds it again.
+    // The video stops with it and restarts where the song is when the app is back. Phones pass through `inactive`
+    // for a pulled-down shade: they keep playing. On computers it plays on behind other windows, as a browser's
+    // does (held still it read as frozen, and coming back it sought and re-fetched for seconds); minimized or hidden
+    // it stops ([_away]). `RIFLAY_VIDEO_HOLDS_BEHIND` holds it while unfocused (playing video costs ~1.7% of a
+    // 24-thread CPU in Balanced) and releases it after [unfocusedRelease] (about 100 MB).
     final unfocused =
         DebugSwitches.videoHoldsBehind &&
         _computer &&
@@ -581,8 +563,6 @@ class VideoMode extends ChangeNotifier with WidgetsBindingObserver {
   bool _released = false;
   Timer? _unfocusedRelease;
 
-  // ---- The video player ----
-
   int _views = 0;
   Timer? _release;
 
@@ -617,8 +597,6 @@ class VideoMode extends ChangeNotifier with WidgetsBindingObserver {
     _release?.cancel();
     _release = Timer(_holdWithoutView, _sync);
   }
-
-  // ---- The Now Playing background ----
 
   int _backgrounds = 0;
   final _backgroundFailed = <String>{};
@@ -687,10 +665,9 @@ class VideoMode extends ChangeNotifier with WidgetsBindingObserver {
     }
   }
 
-  /// Video is drawn in the page ([controller]) on every platform, so a menu, a sheet or a dialog lies over the
-  /// playing video. Windows and Linux used to give it a native surface of its own ([NativeVideoPlayer],
-  /// [NativeVideoSurface]): over the app it could only be pushed aside by what opened over it (nothing the app draws
-  /// can lie over another surface), and under the app it showed black. `RIFLAY_NATIVE_VIDEO` brings it back.
+  /// Video is drawn in the page ([controller]) so menus, sheets and dialogs can lie over it. A native surface
+  /// ([NativeVideoPlayer], [NativeVideoSurface]) can't be overlapped by anything the app draws and shows black under
+  /// the app; `RIFLAY_NATIVE_VIDEO` turns it on anyway.
   static bool get native =>
       const bool.fromEnvironment('RIFLAY_NATIVE_VIDEO') &&
       !DebugSwitches.noNativeVideo &&
@@ -723,8 +700,8 @@ class VideoMode extends ChangeNotifier with WidgetsBindingObserver {
 
   String? _shader;
 
-  /// An mpv user shader (written once per colour, run on the graphics card) that does what Flutter drew over the
-  /// video before: a shade across the top, and the foot faded into [into].
+  /// An mpv user shader (written once per colour, run on the graphics card): a shade across the top, and the foot
+  /// faded into [into].
   static String _fadeShader(Color into) {
     String c(double v) => v.toStringAsFixed(4);
     final hex = into.toARGB32().toRadixString(16).padLeft(8, '0');
@@ -791,9 +768,8 @@ vec4 hook() {
   }
 
   /// A view on screen asks for the video, unless the app is away ([_away]: a phone's screen off or another app in
-  /// front, a computer's window minimized or hidden). Its views stay mounted then (nothing changes their
-  /// TickerMode), so without this the video went on decoding, buffering and holding its surface for no one; now the
-  /// player and its buffers go, and it starts again where the song is when the app is back.
+  /// front, a computer's window minimized or hidden). Views stay mounted then (TickerMode doesn't change), so this is
+  /// what stops decoding and releases the player and buffers.
   bool get _foreground => _on && !_away && (_views > 0 || _fullViews > 0);
 
   @visibleForTesting
@@ -1074,8 +1050,6 @@ vec4 hook() {
     }
   }
 
-  // ---- Decoding ----
-
   VideoDecoder? _decoder;
 
   /// What decodes the video now, as mpv names it (`d3d11va`, `vaapi`, `videotoolbox`...; `no` is the
@@ -1148,8 +1122,6 @@ vec4 hook() {
       await parked?.engine.dispose();
     }
   }
-
-  // ---- The drawn size ----
 
   /// The boxes (physical pixels) the views show the video in, by view; [VideoBox.cover] for one that fills its box.
   final _viewBoxes = <Object, VideoBox>{};
@@ -1271,7 +1243,7 @@ vec4 hook() {
     final c = _c, player = _player, v = _playing;
     if (c == null || player == null || v == null || !_ready) return;
     // Stop invisible video work as a route is covered, while retaining the decoder for the short handoff period.
-    // No seeks while hidden: those decode/network loads used to compete with the opening lyrics page.
+    // No seeks while hidden: they compete with the opening lyrics page.
     if (_wanted?.videoId != v.videoId) {
       if (player.playing) player.pause().ignore();
       return;

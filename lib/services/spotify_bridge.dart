@@ -43,7 +43,7 @@ class SpotifyBridge {
       (await SpotifyAccount.instance.auth(force: force)).accessToken;
 
   /// Whether this build plays Spotify songs: Windows for now, with the bridge beside the app.
-  /// `RIFLAY_NO_SPOTIFY_PLAYBACK` leaves it out (the Spotify page then only imports, as before).
+  /// `RIFLAY_NO_SPOTIFY_PLAYBACK` leaves it out (the Spotify page then only imports).
   static final bool supported = () {
     if (!Host.isWindows || Host.environment.containsKey('RIFLAY_NO_SPOTIFY_PLAYBACK')) return false;
     return File(p.join(File(Platform.resolvedExecutable).parent.path, _name)).existsSync();

@@ -86,7 +86,6 @@ class Lyrics {
 
   bool get synced => lines.isNotEmpty;
 
-  /// Some lines are timed word by word.
   bool get wordSynced => lines.any((l) => l.words.isNotEmpty);
 
   /// Nothing found anywhere.
@@ -916,7 +915,6 @@ abstract final class LyricsService {
 /// (never inside the audio file, never touched by online sources). One file
 /// per YouTube video, so the streamed and the downloaded copy of a song share them.
 abstract final class UserLyrics {
-  /// Tests point this at a folder of their own.
   @visibleForTesting
   static Directory? dirOverride;
 
@@ -998,7 +996,6 @@ abstract final class LyricsTiming {
 /// Lyrics found online, kept on disk so the next look (even after a restart)
 /// doesn't ask the sites again. One JSON file per song; the newest few hundred stay.
 abstract final class LyricsCache {
-  /// Tests point this at a folder of their own.
   @visibleForTesting
   static Directory? dirOverride;
 

@@ -126,7 +126,7 @@ void main() {
       print('SCAN batches=$batches bumps=$bumps notifies=$playerNotifies fakeSeconds=$seconds');
       expect(c.library.every((t) => t.tagged), isTrue);
       expect(seen, 480);
-      // The 400 ms rule bumped once per batch (about $batches); now it is one per 2 s of scan, plus the end.
+      // One bump per 2 s of scan, plus the end, not one per batch.
       expect(bumps, lessThanOrEqualTo(seconds ~/ 2 + 3));
       expect(bumps, lessThan(batches));
       // The last bump came after the last tag landed.

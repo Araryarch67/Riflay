@@ -58,7 +58,6 @@ abstract final class Features {
   /// browser doesn't have. The web build meets over the internet (a secure WebSocket to the broker).
   static bool get listenOnLan => !Host.isWeb;
 
-  /// Discord Rich Presence.
   static bool get discord => !Host.isWeb;
 
   /// Video mode: a song's music video on Now Playing.

@@ -105,7 +105,7 @@ class PlayerControllerBinding implements MediaSessionPlayer {
   @override
   Future<void> previous() => _c.previous();
 
-  /// Stop keeps the queue and the place in the song, as it always has: the system's Stop pauses.
+  /// Stop keeps the queue and the place in the song: the system's Stop pauses.
   @override
   Future<void> stop() => _c.pause();
 

@@ -415,8 +415,6 @@ class PlaylistTransfer {
     return node;
   }
 
-  // ── Finding the songs in YouTube Music ──────────────────────────────────
-
   /// Looks every song up with [search] (YouTube Music's song search), a few
   /// at a time, then with [videos] for the ones it doesn't have. Returns the
   /// matches in playlist order (each video once) and the songs that weren't

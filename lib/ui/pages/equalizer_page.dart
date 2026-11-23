@@ -31,7 +31,6 @@ class EqualizerPage extends StatelessWidget {
 class EqualizerPanel extends StatelessWidget {
   const EqualizerPanel({super.key, this.pad = 24});
 
-  /// Side margin of every row.
   final double pad;
 
   @override

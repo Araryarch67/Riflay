@@ -26,7 +26,6 @@ enum BetaFeature {
     directUsb => tr.directUsb,
   };
 
-  /// One plain line.
   String get description => switch (this) {
     audioVisualizer => tr.betaAudioVisualizerBody,
     musixmatch => tr.betaMusixmatchBody,
@@ -60,7 +59,6 @@ class BetaFeatures extends ChangeNotifier {
   Future<void>? _loading;
   bool _readDone = false;
 
-  /// Whether [f] is on.
   bool isOn(BetaFeature f) => f.available && !_off.contains(f);
 
   /// Reads the saved switches once; later calls share the first.

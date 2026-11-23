@@ -610,7 +610,6 @@ Widget heroRoundButton({required IconData icon, required String tooltip, require
     );
 
 /// "Follow" / "Following" for a YouTube Music artist (signed in through the app).
-
 class FollowButton extends StatelessWidget {
   const FollowButton({super.key, required this.artistId, required this.name});
 

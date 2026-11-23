@@ -22,7 +22,6 @@ class SpotifyAccount extends ChangeNotifier {
   }) : _refresher = refresher ?? SpotifyLogin.refresh,
        _windowSignIn = windowSignIn ?? SpotifyLogin.signInWithWindow;
 
-  /// The app-wide account, created on first use.
   static final SpotifyAccount instance = SpotifyAccount();
 
   static const _file = 'spotify_account.json';
@@ -96,8 +95,6 @@ class SpotifyAccount extends ChangeNotifier {
     }
   }
 
-  // ── Signing in and out ──────────────────────────────────────────────────
-
   /// Linux: opens Spotify's sign-in window. False when it was closed or failed
   /// ([error] says why when it failed).
   Future<bool> signInWithWindow() async {
@@ -168,8 +165,6 @@ class SpotifyAccount extends ChangeNotifier {
     if (SpotifyBridge.supported) await SpotifyBridge.instance.signOut();
   }
 
-  // ── Tokens ──────────────────────────────────────────────────────────────
-
   /// Tokens for a request: the stored ones until they run out (or [force]),
   /// then a refresh from the cookies. Signs out and throws [SpotifySignedOut]
   /// when Spotify no longer accepts the cookies.
@@ -204,8 +199,6 @@ class SpotifyAccount extends ChangeNotifier {
 
   /// Reads the library with this account's tokens.
   SpotifyLibraryClient get client => _client ??= SpotifyLibraryClient(auth: auth);
-
-  // ── Imported ────────────────────────────────────────────────────────────
 
   /// When [uri] was last imported; null if it never was.
   DateTime? importedAt(String uri) => _imported[uri];

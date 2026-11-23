@@ -42,7 +42,6 @@ const EVENT_PROPERTY_CHANGE: c_int = 22;
 const END_EOF: c_int = 0;
 const END_ERROR: c_int = 4;
 
-/// What mpv tells the player.
 pub enum Event {
     /// A file finished: on its own (eof true), or it could not be played.
     Ended {

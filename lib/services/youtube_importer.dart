@@ -412,10 +412,10 @@ class YoutubeImporter extends ChangeNotifier {
   /// Whether a bitrate below the best stream's can be made (ffmpeg is there).
   static bool get canReencode => Ffmpeg.available;
 
-  /// Whether FLAC can be made: with ffmpeg, or on phones by libmpv decoding and [FlacStream] packing.
   /// Whether MP3 can be made: it needs ffmpeg (installed, or fetched on first use).
   static bool get canMakeMp3 => Ffmpeg.available;
 
+  /// Whether FLAC can be made: with ffmpeg, or on phones by libmpv decoding and [FlacStream] packing.
   static bool get canMakeFlac => Ffmpeg.available || MpvPcm.supported;
 
   static bool looksLikeYoutubeUrl(String text) => YoutubeLinks.looksLikeLink(text);
@@ -524,8 +524,6 @@ class YoutubeImporter extends ChangeNotifier {
   static final _videoId = RegExp(r'^[A-Za-z0-9_-]{11}$');
 
   static bool isVideoId(String id) => _videoId.hasMatch(id);
-
-  // ---- the queue survives the app being closed ----
 
   File? _queueFile;
   YtMusicWeb? _web;
@@ -1417,8 +1415,7 @@ class YoutubeImporter extends ChangeNotifier {
 
   /// The id of the music video a Video download of [songId] saves, or null when it has none. Asked the way the
   /// picker and Video mode ask ([YoutubeStream.musicVideoIdLookup], as the signed-in account): YouTube Music pairs
-  /// a song with its video only for a signed-in account, so asked signed out a song the picker offered as video
-  /// has none, and was quietly saved as audio. [signedOut] only where nothing set the lookup.
+  /// songs with videos only for signed-in accounts. [signedOut] only where nothing set the lookup.
   @visibleForTesting
   static Future<String?> musicVideoIdOf(String songId, {required Future<MusicVideo?> Function(String) signedOut}) {
     final find = YoutubeStream.musicVideoIdLookup;

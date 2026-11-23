@@ -8,7 +8,7 @@ import '../platform/host.dart';
 /// dispose them: their wakeup callbacks point at code that went with the engine, and mpv's next event crashed in
 /// `libmpv.so`. The Android side does it on its own; this only passes the off switch on.
 abstract final class EngineEnd {
-  /// Off with `RIFLAY_NO_ENGINE_EXIT`: the process stays after its engine, as it did.
+  /// Off with `RIFLAY_NO_ENGINE_EXIT`: the process stays after its engine.
   static const exits = !bool.fromEnvironment('RIFLAY_NO_ENGINE_EXIT');
 
   static Future<void> start({MethodChannel channel = const MethodChannel('riflay/engine_end'), bool? keep}) async {

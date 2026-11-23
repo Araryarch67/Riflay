@@ -379,8 +379,7 @@ class DiscordPresence {
     }
   }
 
-  /// Shares one connection attempt between calls: an update arriving while the handshake is in flight now waits
-  /// for it instead of being dropped.
+  /// Shares one connection attempt between calls, so an update arriving mid-handshake waits for it.
   Future<_IpcConnection?> _ensureConnected() {
     final conn = _conn;
     if (conn != null) return Future.value(conn);

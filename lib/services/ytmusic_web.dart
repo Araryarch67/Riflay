@@ -514,7 +514,6 @@ class YtMusicWeb {
     );
   }
 
-  // ── Library editing (signed in) ──────────────────────────────────────────
   // Request shapes follow ytmusicapi's create_playlist / edit_playlist /
   // add_playlist_items / remove_playlist_items / delete_playlist / rate_song.
 
@@ -1172,7 +1171,6 @@ class YtMusicWeb {
   /// A mood's page: its playlists, in shelves.
   Future<List<WebShelf>> moodShelves(String params) => shelves('FEmusic_moods_and_genres_category', params: params);
 
-  // ── Saving to the library (signed in) ────────────────────────────────────
   // Follows ytmusicapi's rate_playlist: `like/like` or `like/removelike` with
   // `target: {playlistId}`; an album goes by its audioPlaylistId.
 
@@ -1210,8 +1208,6 @@ class YtMusicWeb {
       'target': {'playlistId': playlistId},
     });
   }
-
-  // ── Play history (signed in) ─────────────────────────────────────────────
 
   static const _cpnAlphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
 
@@ -1579,8 +1575,6 @@ class YtMusicWeb {
     return _withArtists(out);
   }
 
-  // ── Who uploaded it ──────────────────────────────────────────────────────
-  //
   // Some rows have no artist at all: videos in the search suggestions, fans'
   // uploads in playlists. They're named after the channel that uploaded them
   // (not the song's real artist, but a name), never "Unknown artist".

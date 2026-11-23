@@ -12,7 +12,6 @@ import 'playlist_transfer.dart';
 /// What Spotify's web player sends with every request, from its own sign-in.
 typedef SpotifyAuth = ({String accessToken, String clientToken, String appVersion});
 
-/// What a [SpotifyItem] is.
 enum SpotifyItemKind { liked, playlist, album, artist }
 
 /// One thing in the user's Spotify library: Liked Songs, a playlist, a saved
@@ -89,8 +88,6 @@ class SpotifyLibraryClient {
   void close() {
     if (_ownsClient) _http.close();
   }
-
-  // ── Library ─────────────────────────────────────────────────────────────
 
   /// The account's display name, or null when it can't be read.
   Future<String?> profileName() async {
@@ -199,8 +196,6 @@ class SpotifyLibraryClient {
         );
     }
   }
-
-  // ── Songs ───────────────────────────────────────────────────────────────
 
   /// The songs of Liked Songs, a playlist or an album, at most [max]. The
   /// result's `total` is the real size. Artists aren't imported as songs.
@@ -340,8 +335,6 @@ class SpotifyLibraryClient {
     ].join(', ');
   }
 
-  // ── Talking to Spotify ──────────────────────────────────────────────────
-
   /// The persisted-query hashes of the live web player, scanned once.
   Future<Map<String, String>> _operationHashes({bool rescan = false}) {
     if (rescan) _hashes = null;
@@ -370,8 +363,6 @@ class SpotifyLibraryClient {
       return {..._fallbackHashes, ..._canvasHashes};
     }
   }
-
-  // ── Canvas ──────────────────────────────────────────────────────────────
 
   /// The Spotify track that is [title] by [artist] (the web player's own search), or null.
   Future<String?> findTrack(String title, String artist, {Duration? duration}) async {

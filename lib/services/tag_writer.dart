@@ -110,8 +110,6 @@ Uint8List _toSyncsafe(int v) {
 
 bool _isLatin1(String s) => s.codeUnits.every((c) => c < 0x100);
 
-// ── ID3v2 (MP3, and the ID3 chunk of WAV and AIFF) ───────────────────────────
-
 class _Id3Frame {
   _Id3Frame(this.id, this.flags, this.data);
 
@@ -306,8 +304,6 @@ class _Id3Tag {
   }
 }
 
-// ── APEv2 (WavPack, Monkey's Audio, some MP3s) ───────────────────────────────
-
 class _ApeItem {
   _ApeItem(this.key, this.flags, this.value);
 
@@ -437,8 +433,6 @@ Uint8List _editId3v1(Uint8List tag, TagEdit edit) {
   if (out[125] == 0) out[126] = (edit.trackNumber ?? 0) <= 255 ? edit.trackNumber ?? 0 : 0;
   return out;
 }
-
-// ── Files ────────────────────────────────────────────────────────────────────
 
 void _writeMp3(_Source f, RandomAccessFile out, TagEdit edit) {
   var audioStart = 0;
@@ -625,8 +619,6 @@ void _writeAiff(_Source f, RandomAccessFile out, TagEdit edit) {
 }
 
 String _latin1(String s) => String.fromCharCodes(s.runes.map((r) => r < 0x100 ? r : 0x3f));
-
-// ── Ogg (Vorbis, Opus) ───────────────────────────────────────────────────────
 
 /// Rewrites the comment header of an Ogg Vorbis or Opus file. The header
 /// packets are laid out on new pages; audio pages are copied, with their page

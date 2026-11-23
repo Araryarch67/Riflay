@@ -61,8 +61,6 @@ enum BufferSize {
   final double seconds;
 }
 
-/// Both sides played as one sound: in both ears, or in one when the other side
-/// of the headphones doesn't work.
 /// The room Virtual speakers place the song's channels in, see [AudioEngine.virtualRoom].
 enum VirtualRoom {
   /// Two speakers at ±30°: a stereo song.
@@ -75,6 +73,8 @@ enum VirtualRoom {
   upmix,
 }
 
+/// Both sides played as one sound: in both ears, or in one when the other side
+/// of the headphones doesn't work.
 enum MonoAudio {
   off,
   both,
@@ -944,9 +944,8 @@ class AudioEngine extends ChangeNotifier {
   }
 
   /// The meter in [_meterOn]'s `af` now (its whole filter string), or null for none. Each `af add` or `af remove`
-  /// rebuilds mpv's whole audio graph on its audio thread: opening Now Playing asked for three adds and a remove
-  /// (its views coming on screen, then the video pausing the visualizer), ~270 ms there, and nothing changed in the
-  /// end. Changes now wait [_meterSettle] for the last one, and a meter already as wanted is left alone.
+  /// rebuilds mpv's whole audio graph on its audio thread (~270 ms when opening Now Playing), so changes wait
+  /// [_meterSettle] for the last one, and a meter already as wanted is left alone.
   String? _meterApplied;
   Object? _meterOn;
   Timer? _meterSoon;
@@ -1053,8 +1052,6 @@ class AudioEngine extends ChangeNotifier {
     if (!WebAudio.readBands(_webBandEdges, _webBandLevels)) return;
     visualizerLevels.addBands([for (final db in _webBandLevels) VisualizerLevels.amplitudeOfDb(db)]);
   }
-
-  // ── Persistence ─────────────────────────────────────────────────────────
 
   Future<void> load() async {
     if (Host.isAndroid) {
@@ -1249,8 +1246,6 @@ class AudioEngine extends ChangeNotifier {
   Completer<void>? _done;
   bool _reopen = false;
 
-  // ── Setters used by the UI ──────────────────────────────────────────────
-
   Future<void> setGapless(bool v) => _set(() => gapless = v);
   Future<void> setSkipSilence(bool v) => _set(() => skipSilence = v);
   Future<void> setTempo(double v) => _set(() => tempo = ((v * 20).round() / 20.0).clamp(0.5, 2.0));
@@ -1349,8 +1344,6 @@ class AudioEngine extends ChangeNotifier {
     change();
     return _changed(reopenOutput: reopen);
   }
-
-  // ── mpv ─────────────────────────────────────────────────────────────────
 
   /// The player's volume (a gain, 0-1): mpv's own volume through the system
   /// mixer, the 64-bit float filter in [filterChain] otherwise (see [_volumeAtOutput]).
@@ -1513,7 +1506,7 @@ class AudioEngine extends ChangeNotifier {
   bool get virtualSpeakersActive => virtualSpeakers && hrirPath != null && !bitPerfect && !monoActive;
 
   /// The room Virtual speakers play in: 7.1 for a song with more than two channels, so each keeps its own place
-  /// around the head (they were mixed down to two speakers before), and for stereo under [surroundUpmix].
+  /// around the head, and for stereo under [surroundUpmix].
   VirtualRoom get virtualRoom {
     if (hrir71Path == null || DebugSwitches.stereoVirtualSpeakers) return VirtualRoom.stereo;
     if ((sourceChannels ?? 2) > 2) return VirtualRoom.surround;
@@ -1635,12 +1628,12 @@ class AudioEngine extends ChangeNotifier {
     ].join(',');
   }
 
-  /// The mpv `af` chain. Labels let the signal path name each stage.
-  /// See [filterChain]. arealtime sleeps in mpv's core thread until each frame is due, so property reads wait up to a
+  /// arealtime sleeps in mpv's core thread until each frame is due, so property reads wait up to a
   /// frame (85 ms for FLAC); cut into 256-sample frames first (no padding, samples untouched) they wait ~2 ms.
   /// Needs both filters in Android's libmpv (tool/build_libmpv_android.sh).
   static const directUsbPaceFilter = '@realtime:lavfi=[asetnsamples=n=256:p=0,arealtime]';
 
+  /// The mpv `af` chain. Labels let the signal path name each stage.
   String get filterChain {
     String n(double v) => v.toStringAsFixed(2);
     return [
@@ -1673,9 +1666,9 @@ class AudioEngine extends ChangeNotifier {
       if (visualizerActive) _currentVisualizerFilter,
       // Float output for mpv's volume (lossless: the system mixer works in float anyway).
       if (_volumeAtOutput) '@output:format=format=double',
-      // Last, Direct USB: mpv's pcm output has no clock, so the pipe's reader was its only pace, and mpv held its
-      // lock through each ~1.4 s write into the full pipe: every property read waited that long (the app froze).
-      // arealtime hands the samples on untouched at the song's own pace, and the pipe stays near empty.
+      // Last, Direct USB: mpv's pcm output has no clock, so without this mpv holds its lock through each ~1.4 s
+      // write into the full pipe and every property read stalls. arealtime hands the samples on untouched at the
+      // song's own pace, and the pipe stays near empty.
       if (directUsbActive) directUsbPaceFilter,
     ].join(',');
   }
@@ -1893,7 +1886,7 @@ class AudioEngine extends ChangeNotifier {
           : '${outputRate ?? await _systemMixerRate() ?? 0}',
       // Android bit-perfect: the exact format of the mixer attributes, so the track matches them. Only then: mpv
       // takes no "no" (its own default, the song's format) nor packed `s24`, and a song loaded with either fails
-      // ("unknown format name"), which left Direct USB playing nothing. Direct USB gets each song in its own format.
+      // ("unknown format name"). Direct USB gets each song in its own format.
       if (Host.isAndroid && !directUsbActive && _mixer != null) 'audio-format': _mixer!.format.mpvFormat,
       // Only used when the rate has to change; keeps the default otherwise.
       'audio-swresample-o': await _swresampleOptions(),
@@ -1903,7 +1896,7 @@ class AudioEngine extends ChangeNotifier {
     };
     // Only what changed: each write of an output option (device, rate, format, buffer, exclusive...) makes
     // mpv rebuild the sound output, even with the same value, and a streamed song is read again for it.
-    // The filters and the volume go every time, as before: other code changes them in between.
+    // The filters and the volume go every time: other code changes them in between.
     final sent = identical(_propsSentTo, p) ? _propsSent : const <String, String>{};
     for (final e in props.entries) {
       if (e.key != 'af' && e.key != 'volume' && sent[e.key] == e.value) continue;
@@ -1918,8 +1911,6 @@ class AudioEngine extends ChangeNotifier {
     _volumeAtOutputApplied = _volumeAtOutput;
     return moved;
   }
-
-  // ── Fades and the crossfade's second player ────────────────────────────
 
   /// Why crossfade can't run with the current output, in plain words; null when it can.
   /// Two players would fight over a DAC held for one, and a crossfade changes the samples.
@@ -2067,7 +2058,6 @@ class AudioEngine extends ChangeNotifier {
         .timeout(_secondaryTimeout, onTimeout: () {});
   }
 
-  /// The second player is being closed.
   void releaseSecondary() {
     _secondary = null;
     _secondaryWanted = false;
@@ -2177,14 +2167,14 @@ class AudioEngine extends ChangeNotifier {
   @visibleForTesting
   static const soxrOptions = 'resampler=soxr,precision=28,cutoff=0.95';
 
-  /// What mpv's converter is told: the high-quality resampler (when on), and always TPDF dither, which only acts
-  /// where the sound loses bits (a 16-bit output after the equalizer or the volume): rounding to 16 bits without
-  /// it leaves distortion that follows the music; with it, a steady hiss far below hearing. Bit-perfect playback
-  /// at 100% converts nothing, so it is never dithered.
   /// SoX's resampler (or libswresample's best) with TPDF dither, for converting a file outside playback (a FLAC
   /// made without ffmpeg), whatever the playback switch says.
   static Future<String> hqResamplerOptions() async => '${await _hqResampler()},dither_method=triangular_hp';
 
+  /// What mpv's converter is told: the high-quality resampler (when on), and always TPDF dither, which only acts
+  /// where the sound loses bits (a 16-bit output after the equalizer or the volume): rounding to 16 bits without
+  /// it leaves distortion that follows the music; with it, a steady hiss far below hearing. Bit-perfect playback
+  /// at 100% converts nothing, so it is never dithered.
   Future<String> _swresampleOptions() async =>
       [if (hqResamplerActive) await _hqResampler(), 'dither_method=triangular_hp'].join(',');
 

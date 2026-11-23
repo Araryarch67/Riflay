@@ -99,9 +99,8 @@ class TrackRow extends StatefulWidget {
 }
 
 class _TrackRowState extends State<TrackRow> {
-  /// Whether the pointer is over the row. Only the few things that show it listen
-  /// ([_Hovering]): moving over a long list used to rebuild each row it crossed,
-  /// cover, texts and menu button included.
+  /// Whether the pointer is over the row. Only the few things that show it listen ([_Hovering]), so moving over a
+  /// long list doesn't rebuild every row it crosses.
   final _hover = ValueNotifier<bool>(false);
   double _swipeDistance = 0;
 

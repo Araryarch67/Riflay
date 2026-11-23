@@ -82,7 +82,6 @@ enum SettingsGroup {
       ? _summary
       : sections.map((s) => s.label).join(', ');
 
-  /// This group's own page.
   String get location => Locations.settingsTopic(id);
 
   /// The sections shown on this group's page, in order, for what this device allows.
@@ -206,7 +205,6 @@ enum SettingsTopic {
   // ignore: unused_field
   final String _english;
 
-  /// The section's name.
   String get label => switch (this) {
     playback => tr.topicPlayback,
     dsp => tr.topicDsp,
@@ -360,7 +358,6 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 }
 
-/// Settings' search box.
 class _SearchField extends StatelessWidget {
   const _SearchField({required this.controller, required this.onSubmitted});
 

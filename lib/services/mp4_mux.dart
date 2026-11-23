@@ -99,8 +99,6 @@ abstract final class Mp4Mux {
     }
   }
 
-  // ---- tags ----
-
   static Uint8List _udta(MuxTags t) {
     Uint8List item(List<int> name, int type, List<int> data) => _box(String.fromCharCodes(name), [
       _box('data', [_u32(type), _u32(0), Uint8List.fromList(data)]),
@@ -119,8 +117,6 @@ abstract final class Mp4Mux {
       _box('meta', [_u32(0), hdlr, ilst]),
     ]);
   }
-
-  // ---- box pieces ----
 
   static Uint8List _u32(int v) => Uint8List(4)..buffer.asByteData().setUint32(0, v);
 

@@ -48,9 +48,8 @@ abstract final class DebugSwitches {
   static bool noGlassTopBar = _all || const bool.fromEnvironment('RIFLAY_NO_GLASS_TOP_BAR');
 
   /// Home's Artists shelf, Library's artists and Search's open the library's artist page for every artist, as
-  /// before, also for one whose songs
-  /// were downloaded from YouTube Music (see `openHomeArtist`). Not part of `RIFLAY_NO_SHORTCUTS`, which is about
-  /// rendering.
+  /// before, also for one whose songs were downloaded from YouTube Music (see `openHomeArtist`). Not part of
+  /// `RIFLAY_NO_SHORTCUTS`, which is about rendering.
   static bool localHomeArtists = const bool.fromEnvironment('RIFLAY_LOCAL_HOME_ARTISTS');
 
   /// Turning a phone sideways while Now Playing shows the music video doesn't open it full screen (the button and a

@@ -32,7 +32,7 @@ class _DownloadSettingsState extends State<DownloadSettings> {
 
   static bool get _phone => Host.isAndroid || Host.isIOS;
 
-  /// Phones kept downloads in Riflay's own storage; `RIFLAY_NO_PHONE_DOWNLOADS_FOLDER` keeps them there.
+  /// `RIFLAY_NO_PHONE_DOWNLOADS_FOLDER` keeps a phone's downloads in Riflay's own storage.
   static bool get _fixed => _phone && !DownloadPrefs.phoneFolders;
 
   @override

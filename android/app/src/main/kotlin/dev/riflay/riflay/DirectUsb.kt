@@ -361,8 +361,6 @@ object DirectUsb {
         }
     }
 
-    // ── The reader ──────────────────────────────────────────────────────────────────────────────
-
     private class Wav(val encoding: Int, val channels: Int, val rate: Int, val frameBytes: Int, val label: String)
 
     // What the pipe reader hands the feeder: a new stream's format, or samples in it.

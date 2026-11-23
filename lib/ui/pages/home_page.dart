@@ -344,7 +344,7 @@ class HomePage extends StatelessWidget {
           padding: LayoutPrefs.instance.greetingChip
               ? (gridNext ? EdgeInsets.fromLTRB(pad, 12, pad, 20) : EdgeInsets.fromLTRB(pad, 20, pad, 12))
               : EdgeInsets.fromLTRB(pad, 0, pad, 16),
-          // The listening streak beside the greeting: the first thing seen, and a reason to come back tomorrow.
+          // The listening streak beside the greeting: the first thing seen.
           child: Row(
             children: [
               Expanded(
@@ -698,7 +698,7 @@ Track? youtubeSongOf(Collection artist) {
 /// What a tap on [artist] in Home's Artists shelf does. An artist with even one song from YouTube Music opens
 /// their YouTube Music page (albums, singles, About), not the library's page holding only what was downloaded;
 /// an artist known from the person's own files alone opens the library's page, the only one there is.
-/// `RIFLAY_LOCAL_HOME_ARTISTS` opens the library's page for all of them, as before.
+/// `RIFLAY_LOCAL_HOME_ARTISTS` opens the library's page for all of them.
 VoidCallback openHomeArtist(BuildContext host, PlayerController c, Collection artist, {ShellScope? shell}) {
   final navigation = shell ?? ShellScope.of(host);
   final song = DebugSwitches.localHomeArtists ? null : youtubeSongOf(artist);

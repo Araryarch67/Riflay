@@ -25,7 +25,6 @@ cache=$flutter_root/bin/cache
 engine=$cache/artifacts/engine
 flutter precache --windows >/dev/null
 
-# ── Dart ──────────────────────────────────────────────────────────────────
 src=$work/src
 mkdir -p "$src"
 tar -C "$project" -c --exclude=./build --exclude=./.dart_tool --exclude=./android/.gradle \
@@ -54,7 +53,6 @@ wine "$engine/windows-x64-release/gen_snapshot.exe" --deterministic --snapshot_k
   --elf="$(winpath "$work/app.so")" --strip "$(winpath "$work/app.dill")" 2>&1 | grep -v DWARF || true
 [[ -s $work/app.so ]]
 
-# ── Native ────────────────────────────────────────────────────────────────
 plugins=$src/windows/flutter/ephemeral/.plugin_symlinks
 wrapper=$engine/windows-x64/cpp_client_wrapper
 # -fpermissive and msvc_compat.h: the plugins are written for MSVC.
@@ -109,7 +107,6 @@ x86_64-w64-mingw32-g++ -municode -mwindows -static $([[ -n ${DEBUG_SYMBOLS:-} ]]
   "$engine/windows-x64-release/flutter_windows.dll" \
   -ldwmapi -lole32 -luuid -loleaut32 -lshlwapi -lshell32 -luser32 -lgdi32 -ladvapi32 -lshcore -lwinmm
 
-# ── Bundle ────────────────────────────────────────────────────────────────
 # Riflay's own libmpv, as the real build bundles it (windows/CMakeLists.txt).
 libmpv=$project/windows/libmpv/libmpv-2.dll
 [[ -f $libmpv ]] || { echo "missing $libmpv: run tool/build_libmpv_windows.sh" >&2; exit 1; }

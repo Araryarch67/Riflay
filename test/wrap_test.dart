@@ -412,7 +412,6 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('You listened for'), findsOneWidget);
 
-      // Through to the last card.
       for (var i = 0; i < 20; i++) {
         await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
         await tester.pumpAndSettle();

@@ -771,7 +771,7 @@ class TransportControls extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = PlayerScope.read(context);
     // Only what the buttons show: a song change, a library batch or a position
-    // tick no longer rebuilds them.
+    // tick doesn't rebuild them.
     return PlayerSelect<_TransportState>(
       select: (c) => (
         shuffle: c.shuffle,
@@ -860,7 +860,6 @@ typedef _TransportState = ({
   bool loading,
 });
 
-/// Toggle icon with the little active dot underneath.
 /// A toggle (shuffle, repeat): accent-coloured with a dot underneath while on.
 class ModeButton extends StatelessWidget {
   const ModeButton({
@@ -1192,7 +1191,6 @@ class _AccentPlayButton extends StatelessWidget {
   }
 }
 
-/// A line of secondary-coloured text.
 class _SecondaryText extends StatelessWidget {
   const _SecondaryText(this.text, {required this.textAlign, required this.style});
 

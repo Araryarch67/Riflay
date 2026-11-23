@@ -77,7 +77,6 @@ class DirectUsbOutput extends ChangeNotifier {
 
   bool get running => fifo != null;
 
-  /// A DAC is plugged in.
   bool get hasDac => devices.isNotEmpty;
 
   /// Plugged in, but Android hasn't let Riflay use it yet.

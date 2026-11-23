@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 /// Flutter applies each wheel tick instantly on desktop, which reads as
 /// stutter. Positions from this controller animate to the target instead, and
 /// ticks that arrive mid-animation extend it, so a fast spin stays fluid.
-/// Touch, trackpad and scrollbar drags behave exactly as before.
+/// Touch, trackpad and scrollbar drags are left alone.
 class SmoothScrollController extends ScrollController {
   SmoothScrollController({super.initialScrollOffset, super.keepScrollOffset, super.debugLabel});
 

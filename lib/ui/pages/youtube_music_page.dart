@@ -197,8 +197,6 @@ class _Narrow extends StatelessWidget {
   }
 }
 
-// ── Discover (no sign-in needed) ───────────────────────────────────────────
-
 /// "Sign in with Google" strip for people not signed in to YouTube Music yet.
 class SignInBanner extends StatelessWidget {
   const SignInBanner({super.key});
@@ -352,8 +350,6 @@ class RemotePlaylistCard extends StatelessWidget {
     );
   }
 }
-
-// ── Signed-in home ──────────────────────────────────────────────────────────
 
 /// Loads a remote playlist, then shows it like any other collection.
 class RemoteCollectionPage extends StatefulWidget {

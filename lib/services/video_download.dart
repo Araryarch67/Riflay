@@ -9,7 +9,6 @@ import 'mp4_mux.dart';
 import 'webm_mux.dart';
 import 'language.dart';
 
-/// The picture codec of a video stream.
 enum VideoCodec {
   avc,
   vp9,
@@ -281,8 +280,6 @@ List<int> standardVideoHeights(VideoContainer c) => switch (c) {
 
 /// "Best available" or "1080p", for pickers.
 String videoHeightLabel(int? height) => height == null ? tr.bestAvailable : '${height}p';
-
-// ---- putting the two streams into one file ----
 
 /// Puts [video] and [audio] (the streams as YouTube serves them) into [out], without re-encoding. The Dart
 /// muxers do it everywhere ([Mp4Mux] for MP4, [WebmMux] for WebM); where ffmpeg is installed it is used instead

@@ -6,7 +6,7 @@ import 'widgets/app_dialog.dart';
 
 /// How a picked music folder joins the library.
 enum FolderAddChoice {
-  /// Its songs go into the library, as adding a folder always did.
+  /// Its songs go into the library.
   onlyAdd,
 
   /// The same, and the folder also shows in Playlists, its songs always what is in the folder now.

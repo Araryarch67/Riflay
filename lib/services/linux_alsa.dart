@@ -270,8 +270,7 @@ class CardReservation {
       await Future<void>.delayed(const Duration(milliseconds: 100));
     }
     // Closing its stdin is what ends it: `cat` returns, the shell exits and its trap stops pw-reserve. A signal
-    // alone isn't enough: sh runs its trap only after `cat` returns, so the card stayed held until Riflay quit and
-    // the system sat on "Dummy Output" (and the next bit-perfect switch took another card as well).
+    // alone isn't enough: sh runs its trap only after `cat` returns, so the card would stay held until Riflay quits.
     await _process.stdin.close().catchError((Object _) {});
     final ended = await _process.exitCode.timeout(const Duration(seconds: 2), onTimeout: () => -1);
     if (ended == -1) _process.kill(ProcessSignal.sigkill);

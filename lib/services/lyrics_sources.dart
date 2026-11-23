@@ -74,8 +74,6 @@ abstract final class MoreLyrics {
 
   static const _instrumentalNote = '纯音乐';
 
-  // ---------------------------------------------------------------- Kugou
-
   /// Kugou (KRC): every word timed. Wrong or missing songs give null.
   static Future<Lyrics?> kugou(Track track, {http.Client? client}) async {
     final want = _ask(track);
@@ -220,8 +218,6 @@ abstract final class MoreLyrics {
     return Lyrics(lines: lines, source: source);
   }
 
-  // -------------------------------------------------------------- QQ Music
-
   /// QQ Music: lines with times. (Its word-timed QRC needs a custom triple DES; not done.)
   static Future<Lyrics?> qqMusic(Track track, {http.Client? client}) async {
     final want = _ask(track);
@@ -272,8 +268,6 @@ abstract final class MoreLyrics {
     if (lyric is! String || lyric.trim().isEmpty) return null;
     return _lines(lyric, title ?? '', 'QQ Music');
   }
-
-  // ------------------------------------------------------------ Musixmatch
 
   static String? _mxmToken;
   static DateTime? _mxmPause;
@@ -466,8 +460,6 @@ abstract final class MoreLyrics {
     return lines.isEmpty ? null : Lyrics(lines: lines, source: 'Musixmatch');
   }
 
-  // ---------------------------------------------------------------- Genius
-
   /// Genius: the words of the song, no times.
   static Future<Lyrics?> genius(Track track, {http.Client? client}) async {
     final want = _ask(track);
@@ -574,8 +566,6 @@ abstract final class MoreLyrics {
         .trim();
     return text.isEmpty ? null : text;
   }
-
-  // ------------------------------------------------------------- Megalobiz
 
   /// Megalobiz (lines with times), asked through its public lyrics API.
   static Future<Lyrics?> megalobiz(Track track, {http.Client? client}) async {

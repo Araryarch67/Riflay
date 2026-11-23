@@ -6,7 +6,6 @@ import 'spotify_library.dart';
 import 'youtube_music_account.dart';
 import 'language.dart';
 
-/// How one item of the run ended.
 enum SpotifyOutcome {
   /// Songs found in YouTube Music and saved as a playlist.
   playlist,
@@ -49,7 +48,6 @@ class SpotifyImportResult {
   bool get ok =>
       outcome == SpotifyOutcome.playlist || outcome == SpotifyOutcome.albumSaved || outcome == SpotifyOutcome.followed;
 
-  /// One line for the summary.
   String get line => switch (outcome) {
     SpotifyOutcome.playlist => tr.spotifyLinePlaylist(item.name, '$found', '$total'),
     SpotifyOutcome.albumSaved => tr.spotifyLineAlbumSaved(item.name),

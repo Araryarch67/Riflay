@@ -485,7 +485,7 @@ class LyricsSettings extends StatelessWidget {
 }
 
 /// Settings › Look & feel › Pages & navigation: album pages, Home's sections, the bars, corners, spacing, cover
-/// size and motion. Every default is how the app has always looked.
+/// size and motion.
 class LayoutSettings extends StatelessWidget {
   const LayoutSettings({super.key});
 

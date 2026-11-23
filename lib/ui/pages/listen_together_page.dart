@@ -271,8 +271,6 @@ class _ListenTogetherPageState extends State<ListenTogetherPage> {
     );
   }
 
-  // Not in a session ------------------------------------------------------
-
   Widget _idle(BuildContext context) {
     final text = Theme.of(context).textTheme;
     final muted = text.bodyMedium?.copyWith(color: AppColors.textSecondary);
@@ -397,8 +395,6 @@ class _ListenTogetherPageState extends State<ListenTogetherPage> {
     );
   }
 
-  // Hosting ---------------------------------------------------------------
-
   Widget _hosting(BuildContext context, ListenTogether s) {
     final text = Theme.of(context).textTheme;
     final muted = text.bodyMedium?.copyWith(color: AppColors.textSecondary);
@@ -469,8 +465,6 @@ class _ListenTogetherPageState extends State<ListenTogetherPage> {
       ],
     );
   }
-
-  // Guest -----------------------------------------------------------------
 
   Widget _guest(BuildContext context, ListenTogether s) {
     final text = Theme.of(context).textTheme;

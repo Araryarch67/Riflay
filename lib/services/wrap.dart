@@ -13,7 +13,6 @@ class WrapMonth implements Comparable<WrapMonth> {
 
   bool get isYear => month == 0;
 
-  /// The month [t] falls in.
   WrapMonth.of(DateTime t) : this(t.year, t.month);
 
   /// `2026-03`, as saved.
@@ -185,7 +184,6 @@ abstract final class MonthlyWrap {
     return DateTime.fromMillisecondsSinceEpoch(first * 1000);
   }
 
-  /// Plays in [month].
   static int playsIn(PlayHistory h, WrapMonth month) {
     final from = month.start.millisecondsSinceEpoch ~/ 1000;
     final to = month.end.millisecondsSinceEpoch ~/ 1000;

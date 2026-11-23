@@ -19,20 +19,13 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId = "dev.riflay.riflay"
         // `flutter build apk --android-project-arg=riflayDev=true`: "Riflay Dev" (dev.riflay.riflay.dev), installed
         // beside the release one with data of its own, to try a local build on a phone without replacing the app.
         if (project.hasProperty("riflayDev")) applicationIdSuffix = ".dev"
         manifestPlaceholders["appLabel"] = if (project.hasProperty("riflayDev")) "Riflay Dev" else "Riflay"
-        // You can update the following values to match your application needs.
-        // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
-        // Uses the version code from pubspec.yaml. When using split APKs, 1000 * ABI_VERSION
-        // is added automatically by Flutter. (https://developer.android.com/studio/build/configure-apk-splits#configure-APK-versions)
-        // You can force using the value of versionCode by specifying the `-P force-version-code-ignoring-abi=true`
-        // flag during build.
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }

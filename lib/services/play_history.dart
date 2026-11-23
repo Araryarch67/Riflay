@@ -268,8 +268,6 @@ class PlayHistory extends ChangeNotifier {
 
   bool get isEmpty => _at.isEmpty;
 
-  // Reading ─────────────────────────────────────────────────────────────────
-
   /// When play [i] happened, in seconds since 1970.
   int atSec(int i) => _at[i];
 
@@ -312,8 +310,6 @@ class PlayHistory extends ChangeNotifier {
     }
     return out.toList()..sort((a, b) => b.compareTo(a));
   }
-
-  // Recording ───────────────────────────────────────────────────────────────
 
   /// Keeps one play of [t]. [at] is for tests; it defaults to now.
   void record(Track t, Duration heard, {DateTime? at}) {
@@ -402,8 +398,6 @@ class PlayHistory extends ChangeNotifier {
     _revision++;
     notifyListeners();
   }
-
-  // Loading ─────────────────────────────────────────────────────────────────
 
   /// Reads the setting and the file (once). Plays recorded before it finished are kept.
   Future<void> load() async {
@@ -510,8 +504,6 @@ class PlayHistory extends ChangeNotifier {
       return null; // no app folder (widget tests): the history lives in memory only
     }
   }
-
-  // Settings ────────────────────────────────────────────────────────────────
 
   /// Turns keeping the history on or off. Off stops recording; what is saved stays until [clear].
   Future<void> setEnabled(bool value) async {
@@ -661,8 +653,6 @@ class PlayHistory extends ChangeNotifier {
     await done;
   }
 
-  // Following the player ────────────────────────────────────────────────────
-
   /// Loads the history and starts keeping plays of [controller]'s player.
   Future<void> start(PlayerController controller) async {
     _controller = controller;
@@ -730,8 +720,6 @@ class PlayHistory extends ChangeNotifier {
     }
     super.dispose();
   }
-
-  // The file's format ───────────────────────────────────────────────────────
 
   static String _encodeSong(int i, SongInfo s) => jsonEncode({
     'i': i,

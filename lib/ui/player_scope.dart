@@ -2,7 +2,6 @@ import 'package:flutter/widgets.dart';
 
 import '../services/player_controller.dart';
 
-/// Makes the [PlayerController] available to the widget tree.
 class PlayerScope extends InheritedNotifier<PlayerController> {
   PlayerScope({super.key, required PlayerController controller, required Widget child})
     : super(
@@ -32,10 +31,8 @@ class _PlayerIdentity extends InheritedWidget {
   bool updateShouldNotify(_PlayerIdentity old) => !identical(controller, old.controller);
 }
 
-/// [builder] again for each change the controller notifies, but only while
-/// this part of the screen can be seen. A page covered by another (its tickers
-/// are off: Home under an album, a hidden phone tab) was rebuilt and laid out
-/// for every song change all the same; now it catches up once it's uncovered.
+/// [builder] again for each change the controller notifies, but only while this part of the screen can be seen
+/// (its tickers are on). A covered page (Home under an album, a hidden phone tab) catches up once uncovered.
 class VisiblePlayerBuilder extends StatefulWidget {
   const VisiblePlayerBuilder({super.key, required this.builder});
 
