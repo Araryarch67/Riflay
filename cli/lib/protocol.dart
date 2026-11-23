@@ -96,6 +96,12 @@ const cliCommands = <String, CliCommand>{
     },
   ),
   'lyrics': CliCommand('Lyrics of the current track: timed lines when they are synced, else plain text.'),
+  'lyrics.extras': CliCommand(
+    "Each lyric line's pronunciation in Latin letters (for lines in another script) and translation, in the order "
+    "lyrics lists them (its timed lines, else its plain text's lines). Asks Google Translate, Better Lyrics' service "
+    "when that fails.",
+    parameters: {'to': CliParameter('string')},
+  ),
   'cover': CliCommand(
     "The current track's cover, cropped square, as base64 RGB pixels (3 bytes each, row by row).",
     parameters: {'size': CliParameter('integer', min: 1, max: 128, fallback: 32)},
@@ -149,6 +155,28 @@ const cliCommands = <String, CliCommand>{
     parameters: {
       'mode': CliParameter('string', required: true, values: ['off', 'all', 'one']),
     },
+  ),
+  'autoplay': CliCommand(
+    'Set autoplay: when the queue runs out, keep going with similar songs.',
+    positional: 'mode',
+    mutates: true,
+    parameters: {
+      'mode': CliParameter('string', required: true, values: ['on', 'off']),
+    },
+  ),
+  'discord': CliCommand(
+    'Show what plays on your Discord profile (Rich Presence), or stop showing it.',
+    positional: 'mode',
+    mutates: true,
+    parameters: {
+      'mode': CliParameter('string', required: true, values: ['on', 'off']),
+    },
+  ),
+  'radio': CliCommand(
+    "Start a radio: the track id's (default: the current track's) similar songs replace what follows in the queue.",
+    positional: 'id',
+    mutates: true,
+    parameters: {'id': CliParameter('string')},
   ),
   'queue': CliCommand(
     'List the queue in play order; indexes are zero-based.',

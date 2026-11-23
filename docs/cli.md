@@ -59,6 +59,10 @@ riflay-cli queue clear                    # stops and clears the queue
 riflay-cli stop                           # also stops and clears the queue
 riflay-cli playlists
 riflay-cli lyrics                         # the current song's timed lyrics
+riflay-cli lyrics extras --to id          # each line's pronunciation and translation
+riflay-cli radio                          # similar songs after the current one (or: radio 'ID')
+riflay-cli autoplay on                    # similar songs when the queue runs out
+riflay-cli discord on                     # show what plays on Discord
 riflay-cli cover --size 32                # the current cover as base64 RGB (for terminal players)
 riflay-cli playlist show 'PLAYLIST_ID'
 riflay-cli playlist play 'PLAYLIST_ID'

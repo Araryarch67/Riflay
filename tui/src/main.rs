@@ -4,6 +4,7 @@
 
 mod app;
 mod client;
+mod discord;
 mod local;
 mod mpv;
 mod ui;
@@ -41,14 +42,21 @@ yt-dlp, and curl for search and lyrics.
   --standalone      play on its own even when the app is open
   --remote          only control the app (wait for it to open)
   --endpoint PATH   the app's CLI endpoint file (default: the app's own)
+  --plain-icons     plain symbols instead of a Nerd Font's icons
   -V, --version     print the version
 
-Environment: RIFLAY_LIBMPV (libmpv's path), RIFLAY_MUSIC_DIR (the folder to play without Riflay).
+Icons: riflay-tui draws a Nerd Font's icons. Install one (https://www.nerdfonts.com, e.g. JetBrainsMono
+Nerd Font) and pick it as your terminal's font; without one, use --plain-icons.
+
+Environment: RIFLAY_LIBMPV (libmpv's path), RIFLAY_MUSIC_DIR (the folder to play without Riflay),
+RIFLAY_LANG (the language lyrics are translated to), RIFLAY_TUI_ICONS=plain (as --plain-icons).
 In the player, ? lists the keys.";
 
 fn main() {
     let mut endpoint = client::default_endpoint();
     let mut mode = Mode::Auto;
+    // Nerd Font icons unless asked otherwise (RIFLAY_TUI_ICONS=plain, or --plain-icons).
+    let mut nerd = std::env::var("RIFLAY_TUI_ICONS").map_or(true, |v| v != "plain");
     let mut args = std::env::args().skip(1);
     while let Some(arg) = args.next() {
         match arg.as_str() {
@@ -59,6 +67,8 @@ fn main() {
             }
             "--standalone" => mode = Mode::Standalone,
             "--remote" => mode = Mode::Remote,
+            "--plain-icons" => nerd = false,
+            "--nerd-icons" => nerd = true,
             "-h" | "--help" => {
                 println!("{HELP}");
                 return;
@@ -119,6 +129,7 @@ fn main() {
     let mut terminal = ratatui::init();
     let mut app = app::App::new();
     app.standalone = standalone;
+    app.nerd = nerd;
     let mut dirty = true;
     loop {
         if dirty {

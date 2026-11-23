@@ -5,17 +5,18 @@
 //! Music's search is asked directly (through curl), and a song's sound address comes from yt-dlp. Lyrics: a .lrc
 //! beside the file, else LRCLIB. Everything slow runs on a thread of its own; the player's thread only keeps state.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
-use std::sync::Arc;
 use std::sync::mpsc::{self, Receiver, Sender};
+use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::{Duration, Instant};
 
 use serde_json::{Value, json};
 
 use crate::Message;
+use crate::discord;
 use crate::mpv::{Event, Mpv};
 
 #[derive(Clone)]
@@ -46,6 +47,13 @@ enum Inbox {
     Mpv(Event),
     Resolved(String, Result<String, String>),
     Library(Vec<Song>),
+    /// Similar songs for a radio (station) or for autoplay; tag 0 when nobody waits for a reply.
+    Radio {
+        tag: u64,
+        seed: Song,
+        station: bool,
+        songs: Result<Vec<Song>, String>,
+    },
     Tick,
 }
 
@@ -94,7 +102,7 @@ pub fn spawn(
     });
 
     let playlists = read_playlists(&data_dir);
-    thread::spawn(move || Player::new(mpv, out, inbox, playlists).run(rx));
+    thread::spawn(move || Player::new(mpv, out, inbox, playlists, data_dir).run(rx));
     Ok(requests)
 }
 
@@ -120,6 +128,19 @@ struct Player {
     streams: HashMap<String, (String, Instant)>,
     /// The song whose sound is being looked up, to start when it comes.
     waiting: Option<String>,
+    /// The queue ran out (the last song ended): autoplay's songs start at once when they come.
+    ran_out: bool,
+    /// When the queue runs out, keep going with similar songs (as the app does; its setting when Riflay is here).
+    autoplay: bool,
+    /// The song autoplay last looked up similar songs for, so it asks once per song.
+    autoplay_seed: Option<String>,
+    /// A radio being looked up.
+    radio_busy: bool,
+    /// Discord Rich Presence (the app's setting when Riflay is here, else off), and what it shows now.
+    discord: Option<Sender<Option<Value>>>,
+    presence: Option<(String, bool, i64)>,
+    /// The lyrics' target language.
+    language: String,
 }
 
 impl Player {
@@ -128,8 +149,12 @@ impl Player {
         out: Sender<Message>,
         inbox: Sender<Inbox>,
         playlists: Vec<(String, String, Vec<Song>)>,
+        data_dir: PathBuf,
     ) -> Player {
         mpv.set("volume", "70");
+        let prefs = read_prefs(&data_dir);
+        let autoplay = prefs["flutter.autoplay.v1"].as_bool().unwrap_or(true);
+        let discord = prefs["flutter.discord.enabled"].as_bool() == Some(true);
         Player {
             mpv,
             out,
@@ -150,6 +175,13 @@ impl Player {
             last_error: None,
             streams: HashMap::new(),
             waiting: None,
+            ran_out: false,
+            autoplay,
+            autoplay_seed: None,
+            radio_busy: false,
+            discord: discord.then(discord::spawn),
+            presence: None,
+            language: language(&prefs),
         }
     }
 
@@ -169,6 +201,12 @@ impl Player {
                     self.library = songs;
                     self.library_ready = true;
                 }
+                Inbox::Radio {
+                    tag,
+                    seed,
+                    station,
+                    songs,
+                } => self.radio_done(tag, seed, station, songs),
                 Inbox::Tick => {
                     if self.loaded && !self.paused {
                         self.status();
@@ -176,7 +214,9 @@ impl Player {
                     continue;
                 }
             }
+            self.maybe_autoplay();
             self.status();
+            self.show_presence();
         }
     }
 
@@ -217,6 +257,8 @@ impl Player {
             "canSetVolume": true,
             "shuffle": self.unshuffled.is_some(),
             "repeat": self.repeat,
+            "autoplay": self.autoplay,
+            "discord": self.discord.is_some(),
             "queueLength": self.queue.len(),
             "hasNext": self.at.is_some_and(|a| a + 1 < self.queue.len()),
             "hasPrevious": self.at.is_some(),
@@ -246,6 +288,7 @@ impl Player {
             return;
         };
         self.at = Some(index);
+        self.ran_out = false;
         self.duration = song.duration_ms.map(|d| d as f64 / 1000.0);
         self.last_error = None;
         match &song.source {
@@ -350,7 +393,198 @@ impl Player {
         } else {
             self.loaded = false;
             self.paused = true;
+            self.ran_out = true;
         }
+    }
+
+    /// Near the end of the queue (its last two songs), similar songs are looked up and added after it, once per song.
+    fn maybe_autoplay(&mut self) {
+        if !self.autoplay || self.repeat != "off" || self.radio_busy {
+            return;
+        }
+        let Some(at) = self.at else { return };
+        if at + 2 < self.queue.len() {
+            return;
+        }
+        let Some(seed) = self.queue.get(at).cloned() else {
+            return;
+        };
+        if self.autoplay_seed.as_deref() == Some(&seed.id) {
+            return;
+        }
+        self.autoplay_seed = Some(seed.id.clone());
+        self.spawn_radio(0, seed, false);
+    }
+
+    /// Looks up [seed]'s similar songs off this thread: YouTube Music's radio for it, and for a song on this computer
+    /// also the library's songs like it (the same artist first), which alone keep it going offline.
+    fn spawn_radio(&mut self, tag: u64, seed: Song, station: bool) {
+        self.radio_busy = true;
+        let mut local: Vec<Song> = vec![];
+        if let Source::File(_) = seed.source {
+            let artist = seed.artist.to_lowercase();
+            let mut same: Vec<Song> = self
+                .library
+                .iter()
+                .filter(|s| {
+                    s.id != seed.id && !artist.is_empty() && s.artist.to_lowercase() == artist
+                })
+                .cloned()
+                .collect();
+            let mut others: Vec<Song> = self
+                .library
+                .iter()
+                .filter(|s| {
+                    s.id != seed.id && (artist.is_empty() || s.artist.to_lowercase() != artist)
+                })
+                .cloned()
+                .collect();
+            shuffle(&mut same);
+            shuffle(&mut others);
+            local = same
+                .into_iter()
+                .take(10)
+                .chain(others.into_iter().take(15))
+                .collect();
+        }
+        let inbox = self.inbox.clone();
+        thread::spawn(move || {
+            let songs = match radio_youtube(&seed) {
+                Ok(mut songs) => {
+                    songs.extend(local);
+                    Ok(songs)
+                }
+                Err(_) if !local.is_empty() => Ok(local),
+                Err(e) => Err(e),
+            };
+            let _ = inbox.send(Inbox::Radio {
+                tag,
+                seed,
+                station,
+                songs,
+            });
+        });
+    }
+
+    fn radio_done(
+        &mut self,
+        tag: u64,
+        seed: Song,
+        station: bool,
+        songs: Result<Vec<Song>, String>,
+    ) {
+        self.radio_busy = false;
+        let reply = |out: &Sender<Message>, r: Result<Value, String>| {
+            if tag != 0 {
+                let _ = out.send(Message::Reply(tag, "radio".into(), r));
+            }
+        };
+        let songs = match songs {
+            Ok(s) => s,
+            Err(e) => {
+                if station {
+                    reply(&self.out, Err(e));
+                }
+                return;
+            }
+        };
+        for s in &songs {
+            self.found.insert(s.id.clone(), s.clone());
+        }
+        let mut seen: HashSet<String> = HashSet::from([seed.id.clone()]);
+        if station {
+            let fresh: Vec<Song> = songs
+                .into_iter()
+                .filter(|s| seen.insert(s.id.clone()))
+                .collect();
+            if fresh.is_empty() {
+                return reply(&self.out, Err("No similar songs were found.".into()));
+            }
+            self.unshuffled = None;
+            self.autoplay_seed = Some(seed.id.clone());
+            match self
+                .at
+                .filter(|&a| self.queue.get(a).is_some_and(|s| s.id == seed.id))
+            {
+                Some(at) => {
+                    self.queue.truncate(at + 1);
+                    self.queue.extend(fresh);
+                    self.prefetch();
+                }
+                None => {
+                    self.queue = std::iter::once(seed).chain(fresh).collect();
+                    self.start(0);
+                }
+            }
+            return reply(&self.out, Ok(json!({"accepted": true})));
+        }
+        if !self.autoplay || self.repeat != "off" {
+            return;
+        }
+        // Not the songs already queued.
+        seen.extend(self.queue.iter().map(|s| s.id.clone()));
+        let fresh: Vec<Song> = songs
+            .into_iter()
+            .filter(|s| seen.insert(s.id.clone()))
+            .take(25)
+            .collect();
+        if fresh.is_empty() {
+            return;
+        }
+        let first = self.queue.len();
+        self.queue.extend(fresh);
+        if self.ran_out && self.waiting.is_none() {
+            self.start(first);
+        } else {
+            self.prefetch();
+        }
+    }
+
+    /// What Discord shows: the song and the time left, sent when the song, pausing or the position (a seek) changed.
+    fn show_presence(&mut self) {
+        let Some(tx) = &self.discord else { return };
+        let song = self
+            .current()
+            .filter(|_| self.loaded || self.waiting.is_some())
+            .cloned();
+        let Some(song) = song else {
+            if self.presence.take().is_some() {
+                let _ = tx.send(None);
+            }
+            return;
+        };
+        let playing = self.loaded && !self.paused;
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map_or(0, |d| d.as_millis() as i64);
+        let start = now - self.position_ms() as i64;
+        if let Some((id, was_playing, was_start)) = &self.presence
+            && *id == song.id
+            && *was_playing == playing
+            && (!playing || (start - was_start).abs() < 3000)
+        {
+            return;
+        }
+        self.presence = Some((song.id.clone(), playing, start));
+        let video = match &song.source {
+            Source::YouTube(v) => Some(v.as_str()),
+            Source::File(_) => None,
+        };
+        let duration = self
+            .duration
+            .map(|d| (d * 1000.0) as u64)
+            .or(song.duration_ms);
+        let art = song.art.as_deref().filter(|a| a.starts_with("https://"));
+        let _ = tx.send(Some(discord::activity(
+            &song.title,
+            &song.artist,
+            &song.album,
+            art,
+            video,
+            playing,
+            start,
+            duration,
+        )));
     }
 
     fn page(items: Vec<Value>, params: &Value) -> Value {
@@ -616,6 +850,67 @@ impl Player {
                 self.loaded = false;
                 ok(json!({}))
             }
+            "autoplay" => {
+                self.autoplay = p["mode"].as_str() == Some("on");
+                self.autoplay_seed = None;
+                ok(json!({}))
+            }
+            "discord" => {
+                let on = p["mode"].as_str() == Some("on");
+                if on && self.discord.is_none() {
+                    self.discord = Some(discord::spawn());
+                    self.presence = None;
+                } else if !on && let Some(tx) = self.discord.take() {
+                    // Cleared, then the thread ends with the sender gone.
+                    let _ = tx.send(None);
+                    self.presence = None;
+                }
+                ok(json!({}))
+            }
+            "radio" => {
+                let seed = match p["id"].as_str() {
+                    Some(id) => self.find(id),
+                    None => self.current().cloned(),
+                };
+                let Some(seed) = seed else {
+                    return Some(Err("Nothing to start a radio from.".into()));
+                };
+                if self.radio_busy {
+                    return Some(Err("A radio is being looked up already.".into()));
+                }
+                self.spawn_radio(tag, seed, true);
+                None
+            }
+            "lyrics.extras" => {
+                let Some(song) = self.current().cloned() else {
+                    return Some(Err("Nothing playing.".into()));
+                };
+                let to = p["to"]
+                    .as_str()
+                    .map_or(self.language.clone(), str::to_string);
+                let out = self.out.clone();
+                thread::spawn(move || {
+                    let l = lyrics(&song);
+                    let texts: Vec<String> = match l["lines"].as_array() {
+                        Some(a) if !a.is_empty() => a
+                            .iter()
+                            .map(|x| x["text"].as_str().unwrap_or("").to_string())
+                            .collect(),
+                        _ => l["plain"]
+                            .as_str()
+                            .map_or(vec![], |p| p.lines().map(str::to_string).collect()),
+                    };
+                    let result = extras(&texts, &to).map(|lines| {
+                        json!({
+                            "trackId": song.id,
+                            "to": to,
+                            "lines": lines.into_iter().map(|(r, t)| json!({"romanized": r, "translation": t})).collect::<Vec<_>>(),
+                        })
+                    });
+                    let _ = out.send(Message::Reply(tag, "lyrics.extras".into(), result));
+                });
+                None
+            }
             "lyrics" => {
                 let Some(song) = self.current().cloned() else {
                     return Some(Err("Nothing playing.".into()));
@@ -810,34 +1105,10 @@ fn duration_of(text: &str) -> Option<u64> {
 
 /// Songs matching [query] on YouTube Music, as its web client asks for them (the songs filter).
 fn search_youtube_music(query: &str) -> Result<Vec<Song>, String> {
-    let now = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map_or(0, |d| d.as_secs());
-    let (y, m, d) = civil(now / 86400);
-    let body = json!({
-        "context": {"client": {"clientName": "WEB_REMIX", "clientVersion": format!("1.{y:04}{m:02}{d:02}.01.00"), "hl": "en"}, "user": {}},
-        "query": query,
-        "params": "EgWKAQIIAWoKEAoQCRADEAQQBQ%3D%3D",
-    })
-    .to_string();
-    let bytes = curl(
-        &[
-            "-X",
-            "POST",
-            "https://music.youtube.com/youtubei/v1/search?prettyPrint=false",
-            "-H",
-            "Content-Type: application/json",
-            "-H",
-            "Origin: https://music.youtube.com",
-            "-H",
-            "User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:88.0) Gecko/20100101 Firefox/88.0",
-            "--data-binary",
-            "@-",
-        ],
-        Some(&body),
+    let v = innertube(
+        "search",
+        json!({"query": query, "params": "EgWKAQIIAWoKEAoQCRADEAQQBQ%3D%3D"}),
     )?;
-    let v: Value = serde_json::from_slice(&bytes)
-        .map_err(|_| "YouTube Music answered something unreadable.".to_string())?;
     let mut rows = vec![];
     all(&v, "musicResponsiveListItemRenderer", &mut rows);
     let mut songs = vec![];
@@ -887,6 +1158,35 @@ fn search_youtube_music(query: &str) -> Result<Vec<Song>, String> {
         });
     }
     Ok(songs)
+}
+
+/// One request to YouTube Music's web API ([endpoint] "search", "next"…), as its web client sends it, signed out.
+fn innertube(endpoint: &str, mut body: Value) -> Result<Value, String> {
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_or(0, |d| d.as_secs());
+    let (y, m, d) = civil(now / 86400);
+    body["context"] = json!({"client": {"clientName": "WEB_REMIX", "clientVersion": format!("1.{y:04}{m:02}{d:02}.01.00"), "hl": "en"}, "user": {}});
+    let body = body.to_string();
+    let url = format!("https://music.youtube.com/youtubei/v1/{endpoint}?prettyPrint=false");
+    let bytes = curl(
+        &[
+            "-X",
+            "POST",
+            &url,
+            "-H",
+            "Content-Type: application/json",
+            "-H",
+            "Origin: https://music.youtube.com",
+            "-H",
+            "User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:88.0) Gecko/20100101 Firefox/88.0",
+            "--data-binary",
+            "@-",
+        ],
+        Some(&body),
+    )?;
+    serde_json::from_slice(&bytes)
+        .map_err(|_| "YouTube Music answered something unreadable.".to_string())
 }
 
 /// A day number since 1970 as (year, month, day).
@@ -1059,12 +1359,7 @@ fn song_of_file(path: &Path) -> Song {
 
 /// Riflay's playlists (its settings file) when Riflay is installed here; none on macOS, where they are not a file.
 fn read_playlists(data_dir: &Path) -> Vec<(String, String, Vec<Song>)> {
-    let Ok(text) = std::fs::read_to_string(data_dir.join("shared_preferences.json")) else {
-        return vec![];
-    };
-    let Ok(prefs) = serde_json::from_str::<Value>(&text) else {
-        return vec![];
-    };
+    let prefs = read_prefs(data_dir);
     let Some(raw) = prefs["flutter.playlists.v1"].as_str() else {
         return vec![];
     };
@@ -1083,6 +1378,298 @@ fn read_playlists(data_dir: &Path) -> Vec<(String, String, Vec<Song>)> {
             ))
         })
         .collect()
+}
+
+/// Riflay's settings file (shared_preferences.json) when Riflay is installed here, else null.
+fn read_prefs(data_dir: &Path) -> Value {
+    std::fs::read_to_string(data_dir.join("shared_preferences.json"))
+        .ok()
+        .and_then(|t| serde_json::from_str(&t).ok())
+        .unwrap_or(Value::Null)
+}
+
+// ---- Radio ----
+
+/// YouTube Music's radio for [seed]: its own when it is a YouTube Music song, else the radio of its match (the first
+/// song found by its title and artist).
+fn radio_youtube(seed: &Song) -> Result<Vec<Song>, String> {
+    let video = match &seed.source {
+        Source::YouTube(v) => v.clone(),
+        Source::File(_) => {
+            let found = search_youtube_music(&format!("{} {}", seed.title, seed.artist))?;
+            match found.into_iter().next().map(|s| s.source) {
+                Some(Source::YouTube(v)) => v,
+                _ => return Err("No match on YouTube Music.".into()),
+            }
+        }
+    };
+    let v = innertube(
+        "next",
+        json!({
+            "videoId": video,
+            "playlistId": format!("RDAMVM{video}"),
+            "isAudioOnly": true,
+            "enablePersistentPlaylistPanel": true,
+            "tunerSettingValue": "AUTOMIX_SETTING_NORMAL",
+            "watchEndpointMusicSupportedConfigs": {"watchEndpointMusicConfig": {"hasPersistentPlaylistPanel": true, "musicVideoType": "MUSIC_VIDEO_TYPE_ATV"}},
+        }),
+    )?;
+    let mut rows = vec![];
+    all(&v, "playlistPanelVideoRenderer", &mut rows);
+    let songs: Vec<Song> = rows
+        .into_iter()
+        .filter_map(panel_song)
+        .filter(|s| !matches!(&s.source, Source::YouTube(v) if *v == video))
+        .collect();
+    if songs.is_empty() {
+        return Err("YouTube Music has no radio for this song.".into());
+    }
+    Ok(songs)
+}
+
+/// A row of YouTube Music's queue panel: title, "Artist • Album • Year", length, picture.
+fn panel_song(row: &Value) -> Option<Song> {
+    let video = row["videoId"].as_str()?;
+    let title = row["title"]["runs"][0]["text"].as_str()?.to_string();
+    let byline: Vec<&str> = row["longBylineText"]["runs"]
+        .as_array()
+        .map_or(vec![], |r| {
+            r.iter().filter_map(|x| x["text"].as_str()).collect()
+        });
+    let parts: Vec<String> = byline
+        .join("")
+        .split(" • ")
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .map(str::to_string)
+        .collect();
+    let mut thumbs = vec![];
+    all(&row["thumbnail"], "url", &mut thumbs);
+    Some(Song {
+        id: format!("yt:{video}"),
+        title,
+        artist: parts.first().cloned().unwrap_or_default(),
+        album: if parts.len() >= 3 {
+            parts[1].clone()
+        } else {
+            String::new()
+        },
+        duration_ms: row["lengthText"]["runs"][0]["text"]
+            .as_str()
+            .and_then(duration_of),
+        source: Source::YouTube(video.to_string()),
+        art: thumbs
+            .last()
+            .and_then(|u| u.as_str())
+            .map(|u| u.replace("w60-h60", "w226-h226")),
+    })
+}
+
+// ---- Pronunciation and translation of lyrics ----
+
+/// The language lyrics are translated to: RIFLAY_LANG, Riflay's own setting, else the computer's language.
+fn language(prefs: &Value) -> String {
+    if let Ok(l) = std::env::var("RIFLAY_LANG")
+        && !l.is_empty()
+    {
+        return l;
+    }
+    if let Some(l) = prefs["flutter.lyrics.targetLanguage"]
+        .as_str()
+        .filter(|l| !l.is_empty())
+    {
+        return l.to_string();
+    }
+    system_language().unwrap_or_else(|| "en".into())
+}
+
+#[cfg(windows)]
+fn system_language() -> Option<String> {
+    #[link(name = "kernel32")]
+    unsafe extern "system" {
+        fn GetUserDefaultLocaleName(name: *mut u16, len: i32) -> i32;
+    }
+    let mut buf = [0u16; 85];
+    let n = unsafe { GetUserDefaultLocaleName(buf.as_mut_ptr(), buf.len() as i32) };
+    if n <= 1 {
+        return None;
+    }
+    let name = String::from_utf16_lossy(&buf[..n as usize - 1]);
+    name.split('-')
+        .next()
+        .filter(|l| !l.is_empty())
+        .map(str::to_lowercase)
+}
+
+#[cfg(not(windows))]
+fn system_language() -> Option<String> {
+    for key in ["LC_ALL", "LC_MESSAGES", "LANG"] {
+        if let Ok(v) = std::env::var(key) {
+            let l = v.split(['_', '.', '@']).next().unwrap_or("").to_lowercase();
+            if !l.is_empty() && l != "c" && l != "posix" {
+                return Some(l);
+            }
+        }
+    }
+    None
+}
+
+/// Letters outside the Latin script: kana, kanji, hangul, Cyrillic, Arabic…
+fn has_non_latin(s: &str) -> bool {
+    s.chars().any(|c| {
+        c.is_alphabetic()
+            && !matches!(c as u32, 0x41..=0x5A | 0x61..=0x7A | 0xAA | 0xBA | 0xC0..=0x24F | 0x1E00..=0x1EFF | 0x2C60..=0x2C7F | 0xA720..=0xA7FF)
+    })
+}
+
+/// Google's romanization made readable (as the app does): the scholarly marks it puts on Thai, Hindi or Arabic
+/// dropped. Chinese keeps its pinyin tones.
+fn plain_marks(romanized: &str, line: &str) -> String {
+    if line
+        .chars()
+        .any(|c| matches!(c as u32, 0x4E00..=0x9FFF | 0x3400..=0x4DBF))
+    {
+        return romanized.to_string();
+    }
+    let mut out = String::with_capacity(romanized.len());
+    for c in romanized.chars() {
+        let r = c as u32;
+        if (0x0300..=0x036F).contains(&r)
+            || (0x1AB0..=0x1AFF).contains(&r)
+            || (0x1DC0..=0x1DFF).contains(&r)
+        {
+            continue;
+        }
+        let plain = match c {
+            'ā' | 'á' | 'à' | 'ǎ' | 'ạ' | 'ă' | 'â' | 'ä' => "a",
+            'ē' | 'é' | 'è' | 'ě' | 'ẹ' | 'ê' | 'ë' => "e",
+            'ī' | 'í' | 'ì' | 'ǐ' | 'ị' | 'î' | 'ï' => "i",
+            'ō' | 'ó' | 'ò' | 'ǒ' | 'ọ' | 'ô' | 'ö' => "o",
+            'ū' | 'ú' | 'ù' | 'ǔ' | 'ụ' | 'û' | 'ü' | 'ů' => "u",
+            'ṭ' => "t",
+            'ḍ' => "d",
+            'ṇ' | 'ṅ' | 'ñ' => "n",
+            'ṁ' | 'ṃ' => "m",
+            'ḥ' => "h",
+            'ṣ' | 'ś' => "s",
+            'ẓ' => "z",
+            'ḷ' => "l",
+            'ṛ' => "r",
+            'ġ' => "g",
+            'ḳ' => "k",
+            'ç' => "c",
+            'š' => "sh",
+            'ž' => "zh",
+            'č' => "ch",
+            'Ā' | 'Á' => "A",
+            'Ē' | 'É' => "E",
+            'Ī' | 'Í' => "I",
+            'Ō' | 'Ó' => "O",
+            'Ū' | 'Ú' => "U",
+            'Ś' | 'Ṣ' => "S",
+            'Š' => "Sh",
+            'Ž' => "Zh",
+            'Č' => "Ch",
+            _ => {
+                out.push(c);
+                continue;
+            }
+        };
+        out.push_str(plain);
+    }
+    out
+}
+
+/// A value only when it adds something to [line].
+fn useful(value: Option<&str>, line: &str) -> Option<String> {
+    let v = value?.trim();
+    (!v.is_empty() && v.to_lowercase() != line.to_lowercase()).then(|| v.to_string())
+}
+
+type Extras = (Option<String>, Option<String>);
+
+/// Each line's pronunciation (for lines in another script) and translation to [to], from Google Translate's free
+/// endpoint, which returns both in one request (as the app and the Better Lyrics extension ask it).
+fn extras(lines: &[String], to: &str) -> Result<Vec<Extras>, String> {
+    let mut unique: Vec<String> = vec![];
+    for l in lines.iter().map(|l| l.trim()) {
+        if !l.is_empty() && !unique.iter().any(|u| u == l) {
+            unique.push(l.to_string());
+        }
+    }
+    let mut sep = "0000".to_string();
+    while unique.iter().any(|l| l.contains(&sep)) {
+        sep.push('0');
+    }
+    // Lines go out joined by a separator that survives translation and romanization, chunked for the URL's length.
+    let mut chunks: Vec<Vec<String>> = vec![vec![]];
+    let mut size = 0;
+    for l in &unique {
+        let cost = url_part(&format!("{l}\n{sep}\n")).len();
+        if size + cost > 8000 && chunks.last().is_some_and(|c| !c.is_empty()) {
+            chunks.push(vec![]);
+            size = 0;
+        }
+        if let Some(c) = chunks.last_mut() {
+            c.push(l.clone());
+        }
+        size += cost;
+    }
+    let mut found: HashMap<String, Extras> = HashMap::new();
+    for chunk in chunks.iter().filter(|c| !c.is_empty()) {
+        let url = format!(
+            "https://translate.googleapis.com/translate_a/single?client=dict-chrome-ex&sl=auto&tl={}&dt=t&dt=rm&q={}",
+            url_part(to),
+            url_part(&chunk.join(&format!("\n{sep}\n")))
+        );
+        let bytes = curl(&[&url, "-H", "User-Agent: Mozilla/5.0"], None)?;
+        // A blocked client gets an HTML "Sorry" page.
+        if bytes.first() != Some(&b'[') {
+            return Err("Google Translate is not answering.".into());
+        }
+        let data: Value = serde_json::from_slice(&bytes)
+            .map_err(|_| "Google Translate answered something unreadable.".to_string())?;
+        let parts: Vec<&Value> = data[0]
+            .as_array()
+            .map_or(vec![], |a| a.iter().filter(|p| p.is_array()).collect());
+        let translated: String = parts.iter().filter_map(|p| p[0].as_str()).collect();
+        let romanized: String = parts
+            .iter()
+            .filter(|p| p[0].is_null() && p.as_array().is_some_and(|a| a.len() > 2))
+            .map(|p| p[3].as_str().or(p[2].as_str()).unwrap_or(""))
+            .collect();
+        let same_language = data[2].as_str() == Some(to);
+        let split = |s: &str| -> Option<Vec<String>> {
+            let pieces: Vec<String> = s
+                .split(sep.as_str())
+                .map(|p| p.trim().to_string())
+                .collect();
+            (pieces.len() == chunk.len()).then_some(pieces)
+        };
+        // A reply that doesn't split back into the same lines can't be lined up.
+        let t = if same_language {
+            None
+        } else {
+            split(&translated)
+        };
+        let r = split(&romanized);
+        for (i, line) in chunk.iter().enumerate() {
+            let rom = if has_non_latin(line) {
+                useful(
+                    r.as_ref().map(|r| plain_marks(&r[i], line)).as_deref(),
+                    line,
+                )
+            } else {
+                None
+            };
+            let tr = useful(t.as_ref().map(|t| t[i].as_str()), line);
+            found.insert(line.clone(), (rom, tr));
+        }
+    }
+    Ok(lines
+        .iter()
+        .map(|l| found.get(l.trim()).cloned().unwrap_or((None, None)))
+        .collect())
 }
 
 // ---- Lyrics and covers ----
@@ -1122,8 +1709,25 @@ fn url_part(s: &str) -> String {
         .collect()
 }
 
-/// A .lrc beside the file, else LRCLIB's.
+/// The last song's lyrics, so its pronunciation and translation don't ask LRCLIB again.
+static LYRICS: Mutex<Option<(String, Value)>> = Mutex::new(None);
+
 fn lyrics(song: &Song) -> Value {
+    if let Ok(cache) = LYRICS.lock()
+        && let Some((id, v)) = cache.as_ref()
+        && *id == song.id
+    {
+        return v.clone();
+    }
+    let v = find_lyrics(song);
+    if let Ok(mut cache) = LYRICS.lock() {
+        *cache = Some((song.id.clone(), v.clone()));
+    }
+    v
+}
+
+/// A .lrc beside the file, else LRCLIB's.
+fn find_lyrics(song: &Song) -> Value {
     let reply = |lines: Vec<(u64, String)>, plain: Option<String>, source: &str| {
         json!({
             "trackId": song.id,
@@ -1320,5 +1924,41 @@ mod tests {
             "lyrics: synced {} from {}",
             words["synced"], words["source"]
         );
+    }
+
+    /// Asks YouTube Music for a radio and Google for pronunciation and translation. Needs the network:
+    /// RIFLAY_TUI_LIVE=1 cargo test live_radio -- --nocapture
+    #[test]
+    fn live_radio_and_extras() {
+        if std::env::var("RIFLAY_TUI_LIVE").is_err() {
+            return;
+        }
+        let seed = search_youtube_music("YOASOBI Idol").unwrap().remove(0);
+        let radio = radio_youtube(&seed).unwrap();
+        eprintln!("radio of {}: {} songs", seed.title, radio.len());
+        for s in radio.iter().take(5) {
+            eprintln!("  {} — {} ({:?} ms)", s.title, s.artist, s.duration_ms);
+        }
+        assert!(radio.len() > 5);
+        assert!(radio.iter().all(|s| !s.title.is_empty()));
+        let lines: Vec<String> = ["無敵の笑顔で荒らすメディア", "", "사랑해", "hello"]
+            .iter()
+            .map(|s| s.to_string())
+            .collect();
+        let e = extras(&lines, "id").unwrap();
+        eprintln!("{e:?}");
+        assert_eq!(e.len(), 4);
+        assert!(e[0].0.is_some() && e[0].1.is_some());
+        assert!(e[2].0.is_some());
+        assert!(e[3].0.is_none());
+    }
+
+    #[test]
+    fn tells_latin_from_other_scripts() {
+        assert!(!has_non_latin("Café déjà vu, ñandú"));
+        assert!(has_non_latin("사랑해"));
+        assert!(has_non_latin("Я тебя"));
+        assert_eq!(plain_marks("C̄hạn rạk", "ฉันรัก"), "Chan rak");
+        assert_eq!(plain_marks("wǒ ài nǐ", "我爱你"), "wǒ ài nǐ");
     }
 }

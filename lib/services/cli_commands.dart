@@ -10,6 +10,7 @@ import '../models/track.dart';
 import '../platform/features.dart';
 import 'listen_together/listen_together.dart';
 import 'lyrics.dart';
+import 'lyrics_translation.dart';
 import 'metadata.dart';
 import 'player_controller.dart';
 
@@ -36,6 +37,8 @@ class CliCommands {
     'canSetVolume': player.canSetVolume,
     'shuffle': player.shuffle,
     'repeat': player.loopMode.name,
+    'autoplay': player.autoplay,
+    'discord': player.discordEnabled,
     'queueLength': player.queue.length,
     'hasNext': player.hasNext,
     'hasPrevious': player.hasPrevious,
@@ -209,6 +212,23 @@ class CliCommands {
           ],
           'plain': found.synced ? null : found.plain,
         };
+      case 'lyrics.extras':
+        final track = player.currentTrack;
+        if (track == null) throw const CliException('empty_queue', 'There is no current track.');
+        final found = await LyricsService.forTrack(track);
+        final texts = found.synced ? [for (final line in found.lines) line.text] : (found.plain ?? '').split('\n');
+        try {
+          final extras = await LyricsTranslation.of(texts, to: params['to'] as String?);
+          return {
+            'trackId': track.id,
+            'to': params['to'] ?? LyricsTranslation.targetLanguage,
+            'lines': [
+              for (final e in extras) {'romanized': e.romanized, 'translation': e.translation},
+            ],
+          };
+        } catch (_) {
+          throw const CliException('unavailable', 'Translation could not be reached.');
+        }
       case 'cover':
         return _cover(params['size'] as int);
       case 'library':
@@ -300,6 +320,18 @@ class CliCommands {
         while (player.loopMode.name != params['mode']) {
           await player.cycleLoopMode();
         }
+      case 'autoplay':
+        await player.setAutoplay(params['mode'] == 'on');
+      case 'discord':
+        await player.setDiscordEnabled(params['mode'] == 'on');
+      case 'radio':
+        final seed = params['id'] is String ? _track(params['id'] as String) : player.currentTrack;
+        if (seed == null) throw const CliException('empty_queue', 'There is no current track.');
+        _lastError = null;
+        if (await player.startRadio(seed) == null) {
+          throw const CliException('unavailable', 'No similar songs were found.');
+        }
+        return {'accepted': true, 'status': status()};
       case 'queue.add' || 'queue.next':
         final track = _track(params['id'] as String);
         if (command == 'queue.next') {

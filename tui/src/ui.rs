@@ -11,6 +11,71 @@ use ratatui::widgets::{
 
 use crate::app::{App, COVER, SOURCES, Tab, Track};
 
+/// The symbols drawn: a Nerd Font's (the default; the font has to be the terminal's), or plain ones any font has.
+pub struct Icons {
+    pub app: &'static str,
+    pub playing: &'static str,
+    pub paused: &'static str,
+    pub buffering: &'static str,
+    pub current: &'static str,
+    pub note: &'static str,
+    pub shuffle: &'static str,
+    pub repeat: &'static str,
+    pub repeat_one: &'static str,
+    pub volume: &'static str,
+    pub muted: &'static str,
+    pub autoplay: &'static str,
+    pub discord: &'static str,
+    pub translate: &'static str,
+    pub tabs: [&'static str; 5],
+}
+
+pub const NERD: Icons = Icons {
+    app: "\u{f075a}",
+    playing: "\u{f040a}",
+    paused: "\u{f03e4}",
+    buffering: "\u{f0772}",
+    current: "\u{f040a}",
+    note: "\u{f0387}",
+    shuffle: "\u{f049d}",
+    repeat: "\u{f0456}",
+    repeat_one: "\u{f0458}",
+    volume: "\u{f057e}",
+    muted: "\u{f0581}",
+    autoplay: "\u{f06e4}",
+    discord: "\u{f066f}",
+    translate: "\u{f05ca}",
+    tabs: [
+        "\u{f0cb8}",
+        "\u{f036d}",
+        "\u{f0349}",
+        "\u{f0333}",
+        "\u{f0411}",
+    ],
+};
+
+pub const PLAIN: Icons = Icons {
+    app: "♪",
+    playing: ">",
+    paused: "||",
+    buffering: "..",
+    current: ">",
+    note: "♪",
+    shuffle: "shuffle",
+    repeat: "repeat",
+    repeat_one: "repeat one",
+    volume: "vol",
+    muted: "vol",
+    autoplay: "autoplay",
+    discord: "discord",
+    translate: "",
+    tabs: ["", "", "", "", ""],
+};
+
+fn icons(app: &App) -> &'static Icons {
+    if app.nerd { &NERD } else { &PLAIN }
+}
+
 const DIM: Color = Color::Rgb(120, 120, 128);
 const TEXT: Color = Color::Rgb(230, 230, 235);
 
@@ -81,9 +146,10 @@ pub fn draw(f: &mut Frame, app: &App) {
 }
 
 fn header(f: &mut Frame, app: &App, area: Rect) {
+    let ic = icons(app);
     let mut spans = vec![
         Span::styled(
-            " ♪ Riflay ",
+            format!(" {} Riflay ", ic.app),
             Style::default()
                 .fg(Color::Black)
                 .bg(app.accent)
@@ -100,7 +166,13 @@ fn header(f: &mut Frame, app: &App, area: Rect) {
         } else {
             Style::default().fg(DIM)
         };
-        spans.push(Span::styled(format!(" {} {} ", i + 1, tab.title()), style));
+        let icon = ic.tabs[i];
+        let label = if icon.is_empty() {
+            format!(" {} {} ", i + 1, tab.title())
+        } else {
+            format!(" {icon} {} ", tab.title())
+        };
+        spans.push(Span::styled(label, style));
     }
     spans.push(Span::styled(
         if app.standalone {
@@ -153,7 +225,7 @@ fn now_playing(f: &mut Frame, app: &App, area: Rect) {
             Paragraph::new(
                 vec![Line::raw(""); (cover_rows / 2) as usize]
                     .into_iter()
-                    .chain([Line::styled("♪", Style::default().fg(DIM))])
+                    .chain([Line::styled(icons(app).note, Style::default().fg(DIM))])
                     .collect::<Vec<_>>(),
             )
             .alignment(Alignment::Center)
@@ -273,7 +345,7 @@ fn queue(f: &mut Frame, app: &App, area: Rect, with_song: bool) {
             row(
                 t,
                 width,
-                if *current { "▶" } else { " " },
+                if *current { icons(app).current } else { " " },
                 *current,
                 app.accent,
             )
@@ -311,6 +383,53 @@ fn lyrics(f: &mut Frame, app: &App, area: Rect) {
         );
         return;
     };
+    // Each line's pronunciation and translation, when they are on and came for this song.
+    let extras = app
+        .extras
+        .as_ref()
+        .filter(|(id, _)| *id == l.track_id)
+        .map(|(_, e)| e.as_slice())
+        .unwrap_or(&[]);
+    let under = |i: usize, style: Style| -> Vec<Line<'static>> {
+        let mut out = vec![];
+        if let Some((rom, tr)) = extras.get(i) {
+            if app.show_romanized
+                && let Some(r) = rom
+            {
+                out.push(Line::styled(
+                    r.clone(),
+                    style.add_modifier(Modifier::ITALIC),
+                ));
+            }
+            if app.show_translation
+                && let Some(t) = tr
+            {
+                out.push(Line::styled(t.clone(), style.fg(DIM)));
+            }
+        }
+        out
+    };
+    let title = {
+        let mut t = if l.source.is_empty() {
+            " Lyrics".to_string()
+        } else {
+            format!(" Lyrics · {}", l.source)
+        };
+        let ic = icons(app).translate;
+        let ic = if ic.is_empty() {
+            String::new()
+        } else {
+            format!("{ic} ")
+        };
+        if app.show_romanized {
+            t.push_str(&format!(" · {ic}pronunciation"));
+        }
+        if app.show_translation {
+            t.push_str(&format!(" · {ic}translation"));
+        }
+        t.push(' ');
+        t
+    };
     if l.lines.is_empty() {
         let lines: Vec<Line> = if l.plain.is_empty() {
             vec![Line::styled(
@@ -320,49 +439,94 @@ fn lyrics(f: &mut Frame, app: &App, area: Rect) {
         } else {
             l.plain
                 .iter()
-                .map(|s| Line::styled(s.clone(), Style::default().fg(TEXT)))
+                .enumerate()
+                .flat_map(|(i, s)| {
+                    std::iter::once(Line::styled(s.clone(), Style::default().fg(TEXT)))
+                        .chain(under(i, Style::default().fg(Color::Rgb(170, 170, 178))))
+                })
                 .collect()
         };
         f.render_widget(
             Paragraph::new(lines)
                 .alignment(Alignment::Center)
                 .wrap(Wrap { trim: true })
-                .block(block),
+                .block(panel(&title, app)),
             area,
         );
         return;
     }
-    // The line sung now in the middle, the ones around it fading.
+    // The line sung now in the middle, the ones around it fading; each with its pronunciation and translation under
+    // it, so a line takes as many rows as it has.
     let now = app.position();
     let current = l.lines.iter().rposition(|(ms, _)| *ms <= now).unwrap_or(0);
-    let top = current.saturating_sub(inner_h / 2);
-    let lines: Vec<Line> = l.lines[top..l.lines.len().min(top + inner_h)]
-        .iter()
-        .enumerate()
-        .map(|(i, (_, text))| {
-            let index = top + i;
-            let style = if index == current {
-                Style::default().fg(app.accent).add_modifier(Modifier::BOLD)
-            } else if index.abs_diff(current) <= 2 {
-                Style::default().fg(TEXT)
+    let block_of = |index: usize| -> Vec<Line<'static>> {
+        let text = &l.lines[index].1;
+        let style = if index == current {
+            Style::default().fg(app.accent).add_modifier(Modifier::BOLD)
+        } else if index.abs_diff(current) <= 2 {
+            Style::default().fg(TEXT)
+        } else {
+            Style::default().fg(DIM)
+        };
+        let sub = if index == current {
+            Style::default().fg(TEXT)
+        } else {
+            Style::default().fg(DIM)
+        };
+        std::iter::once(Line::styled(
+            if text.is_empty() {
+                icons(app).note.to_string()
             } else {
-                Style::default().fg(DIM)
-            };
-            Line::styled(
-                if text.is_empty() {
-                    "♪".to_string()
-                } else {
-                    text.clone()
-                },
-                style,
-            )
+                text.clone()
+            },
+            style,
+        ))
+        .chain(if text.is_empty() {
+            vec![]
+        } else {
+            under(index, sub)
         })
-        .collect();
-    let title = if l.source.is_empty() {
-        " Lyrics ".to_string()
-    } else {
-        format!(" Lyrics · {} ", l.source)
+        .collect()
     };
+    // The current line's block, then lines above and below it in turn until the panel is full.
+    let mut lines: Vec<Line> = block_of(current);
+    let (mut up, mut down) = (current, current + 1);
+    let mut above = 0;
+    loop {
+        let mut grew = false;
+        if above < inner_h / 2 && up > 0 {
+            up -= 1;
+            let b = block_of(up);
+            if lines.len() + b.len() > inner_h {
+                break;
+            }
+            above += b.len();
+            lines.splice(0..0, b);
+            grew = true;
+        }
+        if down < l.lines.len() {
+            let b = block_of(down);
+            if lines.len() + b.len() > inner_h {
+                break;
+            }
+            lines.extend(b);
+            down += 1;
+            grew = true;
+        } else if up > 0 && above < inner_h {
+            // Near the end: the rest of the room above.
+            up -= 1;
+            let b = block_of(up);
+            if lines.len() + b.len() > inner_h {
+                break;
+            }
+            above += b.len();
+            lines.splice(0..0, b);
+            grew = true;
+        }
+        if !grew {
+            break;
+        }
+    }
     f.render_widget(
         Paragraph::new(lines)
             .alignment(Alignment::Center)
@@ -447,7 +611,13 @@ fn tracks(
         .iter()
         .map(|t| {
             let on = Some(t.id.as_str()) == playing;
-            row(t, width, if on { "♪" } else { " " }, on, app.accent)
+            row(
+                t,
+                width,
+                if on { icons(app).note } else { " " },
+                on,
+                app.accent,
+            )
         })
         .collect();
     list(
@@ -541,17 +711,17 @@ fn progress(f: &mut Frame, app: &App, area: Rect) {
             Style::default().fg(Color::Rgb(70, 70, 78)),
         ),
     ]);
+    let ic = icons(app);
     let state = if app.buffering {
-        "◌"
+        ic.buffering
     } else if app.playing {
-        "▶"
+        ic.playing
     } else {
-        "⏸"
+        ic.paused
     };
     let repeat = match app.repeat.as_str() {
-        "all" => "↻ all",
-        "one" => "↻ one",
-        _ => "↻ off",
+        "one" => ic.repeat_one,
+        _ => ic.repeat,
     };
     let on = |b: bool| {
         if b {
@@ -572,15 +742,21 @@ fn progress(f: &mut Frame, app: &App, area: Rect) {
     let info = Line::from(vec![
         Span::styled(left, Style::default().fg(TEXT)),
         Span::raw("    "),
-        Span::styled("⇄ shuffle", on(app.shuffle)),
+        Span::styled(ic.shuffle, on(app.shuffle)),
         Span::raw("   "),
         Span::styled(repeat, on(app.repeat != "off")),
         Span::raw("   "),
+        Span::styled(ic.autoplay, on(app.autoplay)),
+        Span::raw("   "),
+        Span::styled(ic.discord, on(app.discord)),
+        Span::raw("   "),
         Span::styled(
-            if app.can_set_volume {
-                format!("vol {}%", app.volume)
+            if !app.can_set_volume {
+                format!("{} fixed", ic.volume)
+            } else if app.volume == 0 {
+                format!("{} 0%", ic.muted)
             } else {
-                "vol fixed".into()
+                format!("{} {}%", ic.volume, app.volume)
             },
             Style::default().fg(DIM),
         ),
@@ -603,7 +779,7 @@ fn footer(f: &mut Frame, app: &App, area: Rect) {
         )
     } else {
         Line::styled(
-            " space play/pause · n/p next/prev · ←/→ seek · +/- volume · / search · v visualizer · ? help · q quit",
+            " space play/pause · n/p next/prev · ←/→ seek · / search · R radio · A autoplay · o/t lyrics · ? help · q quit",
             Style::default().fg(DIM),
         )
     };
@@ -624,6 +800,10 @@ fn help(f: &mut Frame, app: &App, area: Rect) {
         ("d", "remove from the queue"),
         ("/", "search (Tab: library, YouTube, SoundCloud)"),
         ("v  c", "visualizer / cover"),
+        ("o  t", "lyrics: pronunciation / translation"),
+        ("R", "radio from the selected (or current) song"),
+        ("A", "autoplay: similar songs when the queue ends"),
+        ("D", "show what plays on Discord"),
         ("q", "quit (Riflay keeps playing)"),
     ];
     let lines: Vec<Line> = keys

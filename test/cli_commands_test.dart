@@ -25,6 +25,12 @@ class FakeCliPlayer implements PlayerController {
   bool get showsPlaying => playing;
   @override
   bool get isBuffering => false;
+
+  @override
+  bool get autoplay => true;
+
+  @override
+  bool get discordEnabled => false;
   @override
   Track? get currentTrack => queued.firstOrNull;
   @override

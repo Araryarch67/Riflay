@@ -57,6 +57,9 @@ impl Track {
     }
 }
 
+/// A lyric line's pronunciation and translation.
+pub type LineExtras = (Option<String>, Option<String>);
+
 pub struct Lyrics {
     pub track_id: String,
     pub lines: Vec<(u64, String)>,
@@ -86,6 +89,8 @@ pub struct App {
     pub quit: bool,
     /// Playing on its own (no Riflay app): shown in the header; the visualizer has no levels then.
     pub standalone: bool,
+    /// Nerd Font icons (else plain symbols).
+    pub nerd: bool,
     pub disconnected: Option<String>,
 
     // The app's status, and when it came: the position counts on from there while playing.
@@ -98,6 +103,8 @@ pub struct App {
     pub can_set_volume: bool,
     pub shuffle: bool,
     pub repeat: String,
+    pub autoplay: bool,
+    pub discord: bool,
     pub last_error: Option<String>,
     received: Instant,
     queue_revision: Option<i64>,
@@ -106,6 +113,11 @@ pub struct App {
     pub queue: Vec<(usize, bool, Track)>,
     pub queue_cursor: Cursor,
     pub lyrics: Option<Lyrics>,
+    /// Each lyric line's pronunciation and translation (by line, as the lyrics list them), for one song.
+    pub extras: Option<(String, Vec<LineExtras>)>,
+    extras_for: Option<String>,
+    pub show_romanized: bool,
+    pub show_translation: bool,
     lyrics_for: Option<String>,
 
     pub search_query: String,
@@ -144,6 +156,7 @@ pub struct App {
 enum Purpose {
     Queue,
     Lyrics(String),
+    Extras(String),
     Cover(String),
     Search,
     Library,
@@ -160,6 +173,7 @@ impl App {
         App {
             quit: false,
             standalone: false,
+            nerd: true,
             disconnected: Some("Connecting to Riflay…".into()),
             playing: false,
             buffering: false,
@@ -170,6 +184,8 @@ impl App {
             can_set_volume: true,
             shuffle: false,
             repeat: "off".into(),
+            autoplay: true,
+            discord: false,
             last_error: None,
             received: Instant::now(),
             queue_revision: None,
@@ -178,6 +194,10 @@ impl App {
             queue_cursor: Cursor::default(),
             lyrics: None,
             lyrics_for: None,
+            extras: None,
+            extras_for: None,
+            show_romanized: true,
+            show_translation: false,
             search_query: String::new(),
             search_editing: false,
             search_source: 1,
@@ -293,6 +313,8 @@ impl App {
                 self.can_set_volume = v["canSetVolume"].as_bool().unwrap_or(true);
                 self.shuffle = v["shuffle"].as_bool().unwrap_or(false);
                 self.repeat = v["repeat"].as_str().unwrap_or("off").to_string();
+                self.autoplay = v["autoplay"].as_bool().unwrap_or(false);
+                self.discord = v["discord"].as_bool().unwrap_or(false);
                 self.last_error = v["lastError"].as_str().map(str::to_string);
                 self.received = Instant::now();
                 if !self.playing {
@@ -355,6 +377,17 @@ impl App {
                     Purpose::Search => self.search_busy = false,
                     Purpose::Library => self.library_loading = false,
                     Purpose::Lyrics(_) | Purpose::Cover(_) => return,
+                    Purpose::Extras(id) => {
+                        if self.extras_for.as_ref() == Some(&id) {
+                            self.extras_for = None;
+                        }
+                        self.say(if self.standalone {
+                            "Translation unavailable: Google Translate is not answering."
+                        } else {
+                            "Translation unavailable."
+                        });
+                        return;
+                    }
                     _ => {}
                 }
                 self.say(e);
@@ -406,6 +439,20 @@ impl App {
                     plain,
                     source,
                 });
+                self.want_extras();
+            }
+            Purpose::Extras(id) => {
+                let lines = v["lines"].as_array().map_or(vec![], |a| {
+                    a.iter()
+                        .map(|l| {
+                            (
+                                l["romanized"].as_str().map(str::to_string),
+                                l["translation"].as_str().map(str::to_string),
+                            )
+                        })
+                        .collect()
+                });
+                self.extras = Some((id, lines));
             }
             Purpose::Cover(id) => {
                 if self.track.as_ref().map(|t| &t.id) != Some(&id) {
@@ -452,6 +499,23 @@ impl App {
             }
             Purpose::Action => {}
         }
+    }
+
+    /// The pronunciation and translation of the lyrics shown, asked once per song while either is on.
+    fn want_extras(&mut self) {
+        if !(self.show_romanized || self.show_translation) {
+            return;
+        }
+        let Some(l) = &self.lyrics else { return };
+        if l.lines.is_empty() && l.plain.is_empty() {
+            return;
+        }
+        let id = l.track_id.clone();
+        if self.extras_for.as_ref() == Some(&id) {
+            return;
+        }
+        self.extras_for = Some(id.clone());
+        self.send("lyrics.extras", json!({}), Purpose::Extras(id));
     }
 
     fn set_tab(&mut self, tab: Tab) {
@@ -574,6 +638,52 @@ impl App {
                 self.act("repeat", json!({"mode": next}));
             }
             KeyCode::Char('v') => self.show_visualizer = !self.show_visualizer,
+            KeyCode::Char('o') => {
+                self.show_romanized = !self.show_romanized;
+                self.say(if self.show_romanized {
+                    "Pronunciation on"
+                } else {
+                    "Pronunciation off"
+                });
+                self.want_extras();
+            }
+            KeyCode::Char('t') => {
+                self.show_translation = !self.show_translation;
+                self.say(if self.show_translation {
+                    "Translation on"
+                } else {
+                    "Translation off"
+                });
+                self.want_extras();
+            }
+            KeyCode::Char('A') => {
+                let on = !self.autoplay;
+                self.act("autoplay", json!({"mode": if on { "on" } else { "off" }}));
+                self.say(if on { "Autoplay on" } else { "Autoplay off" });
+            }
+            KeyCode::Char('D') => {
+                let on = !self.discord;
+                self.act("discord", json!({"mode": if on { "on" } else { "off" }}));
+                self.say(if on {
+                    "Discord shows what plays"
+                } else {
+                    "Discord shows nothing"
+                });
+            }
+            KeyCode::Char('R') => {
+                // The selected song's radio on a list, else the current song's.
+                let seed = self
+                    .selected_track()
+                    .filter(|_| self.tab != Tab::Lyrics)
+                    .or(self.track.clone());
+                match seed {
+                    Some(t) => {
+                        self.say(format!("Starting a radio from {}…", t.title));
+                        self.act("radio", json!({"id": t.id}));
+                    }
+                    None => self.say("Play or select a song to start its radio."),
+                }
+            }
             KeyCode::Char('c') => {
                 self.show_cover = !self.show_cover;
                 self.cover_for = None;
