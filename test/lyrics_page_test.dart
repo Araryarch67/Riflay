@@ -225,11 +225,11 @@ void main() {
       expect(state.progress.fill, greaterThan(previous));
     }
     final window = DesktopVisibility.instance;
-    addTearDown(window.onWindowRestore);
-    window.onWindowMinimize();
+    addTearDown(() => window.onWindowEvent('restore'));
+    window.onWindowEvent('minimize');
     expect(state.onBeat, isFalse);
     now = const Duration(milliseconds: 1400);
-    window.onWindowRestore();
+    window.onWindowEvent('restore');
     expect(state.onBeat, isTrue);
     expect(state.progress, (sung: 1, fill: .4));
   });

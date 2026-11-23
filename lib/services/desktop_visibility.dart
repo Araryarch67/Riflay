@@ -27,24 +27,28 @@ class DesktopVisibility extends ValueNotifier<bool> with WindowListener {
 
   void _sync() => value = !_hidden && !_minimized;
 
-  @override
-  void onWindowMinimize() {
-    _minimized = true;
+  /// A window minimized while maximized comes back with "maximize", not "restore" (window_manager reports the state it
+  /// returns to). Waiting for "restore" alone left the app believing it was still minimized: no frames, the video and
+  /// animations stopped, as if frozen.
+  @visibleForTesting
+  void handle(String eventName) {
+    switch (eventName) {
+      case 'minimize':
+        _minimized = true;
+      case 'hide':
+        _hidden = true;
+      case 'show':
+        _hidden = false;
+      case 'restore' || 'maximize' || 'unmaximize' || 'enter-full-screen' || 'leave-full-screen':
+        _minimized = false;
+      default:
+        return;
+    }
     _sync();
   }
 
   @override
-  void onWindowRestore() {
-    _minimized = false;
-    _sync();
-  }
-
-  @override
-  void onWindowEvent(String eventName) {
-    if (eventName == 'hide') _hidden = true;
-    if (eventName == 'show') _hidden = false;
-    _sync();
-  }
+  void onWindowEvent(String eventName) => handle(eventName);
 
   @override
   void dispose() {

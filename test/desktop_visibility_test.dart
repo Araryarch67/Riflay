@@ -18,7 +18,6 @@ void main() {
   test('focus and Alt+Tab do not hide a shown window', () {
     final window = DesktopVisibility();
     addTearDown(window.dispose);
-    window.onWindowBlur();
     window.onWindowEvent('blur');
     expect(window.value, isTrue);
     window.onWindowEvent('focus');
@@ -28,12 +27,23 @@ void main() {
   test('minimize stops rendering without requiring Flutter hidden', () {
     final window = DesktopVisibility();
     addTearDown(window.dispose);
-    window.onWindowMinimize();
+    window.onWindowEvent('minimize');
     expect(window.value, isFalse);
     window.onWindowEvent('show');
-    window.onWindowFocus();
+    window.onWindowEvent('focus');
     expect(window.value, isFalse, reason: 'a minimized window must be restored first');
-    window.onWindowRestore();
+    window.onWindowEvent('restore');
+    expect(window.value, isTrue);
+  });
+
+  test('a window minimized while maximized is shown again when it comes back maximized', () {
+    final window = DesktopVisibility();
+    addTearDown(window.dispose);
+    window.onWindowEvent('maximize');
+    window.onWindowEvent('minimize');
+    expect(window.value, isFalse);
+    // The taskbar brings it back maximized: window_manager says "maximize", never "restore".
+    window.onWindowEvent('maximize');
     expect(window.value, isTrue);
   });
 
@@ -41,8 +51,8 @@ void main() {
     final window = DesktopVisibility();
     addTearDown(window.dispose);
     window.onWindowEvent('hide');
-    window.onWindowFocus();
-    window.onWindowRestore();
+    window.onWindowEvent('focus');
+    window.onWindowEvent('restore');
     expect(window.value, isFalse);
     window.onWindowEvent('show');
     expect(window.value, isTrue);
@@ -61,13 +71,13 @@ void main() {
     await WindowFocus.start();
     await tester.pump();
     expect(tester.binding.lifecycleState, AppLifecycleState.inactive);
-    window.onWindowMinimize();
+    window.onWindowEvent('minimize');
     await tester.pump();
     expect(tester.binding.lifecycleState, AppLifecycleState.hidden);
     expect(tester.binding.framesEnabled, isFalse);
-    window.onWindowRestore();
+    window.onWindowEvent('maximize');
     await tester.pump();
     expect(tester.binding.lifecycleState, AppLifecycleState.inactive);
-    expect(tester.binding.framesEnabled, isTrue);
+    expect(tester.binding.framesEnabled, isTrue, reason: 'back maximized from the taskbar, it draws again');
   });
 }
