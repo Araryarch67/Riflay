@@ -1,6 +1,6 @@
 [package]
 name = "riflay-tui"
-version = "1.8.4"
+version = "1.8.5"
 edition = "2024"
 description = "A terminal player for the Riflay desktop app: it controls the running app through its CLI service."
 license = "GPL-3.0-or-later"
