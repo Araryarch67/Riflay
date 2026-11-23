@@ -4712,6 +4712,32 @@ class AppLocalizationsId extends AppLocalizations {
   String get wrapNotificationSubtitle => 'Tiap tanggal 1, beri tahu kalau Wrap bulan lalu sudah siap.';
 
   @override
+  String get streakReminder => 'Pengingat streak';
+
+  @override
+  String get streakReminderSubtitle =>
+      'Sekali sehari, kalau belum ada lagu yang diputar, ingatkan sebelum streak-ku putus.';
+
+  @override
+  String get streakReminderTime => 'Ingatkan jam';
+
+  @override
+  String get streakReminderChannel => 'Pengingat harian sebelum streak dengarmu putus';
+
+  @override
+  String streakReminderTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Streak $count harimu putus tengah malam ini',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get streakReminderBody => 'Putar satu lagu minimal 30 detik biar streak-mu lanjut.';
+
+  @override
   String get clearHistory => 'Hapus riwayat dengar';
 
   @override

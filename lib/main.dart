@@ -47,6 +47,7 @@ import 'services/system_tray.dart';
 import 'services/taskbar_buttons.dart';
 import 'services/desktop_visibility.dart';
 import 'services/window_focus.dart';
+import 'services/streak_reminder.dart';
 import 'services/wrap_notifications.dart';
 import 'ui/widgets/app_update_tile.dart' show showUpdatePopup;
 import 'ui/widgets/glass_toast.dart';
@@ -203,6 +204,9 @@ Future<void> _startServices(PlayerController controller) async {
     miniPlayer.addListener(() => MemoryTrim.mini(miniPlayer.value));
     SystemTray.setMiniPlayer = (on) => setMiniPlayer(on);
   }
+  final notes = controller.youtube.restoreQueue().then((_) => DownloadNotifications.attach(controller.youtube));
+  final history = PlayHistory.instance.start(controller);
+  DownloadNotifications.bringAppToFront = SystemTray.bringToFront;
   await Future.wait(
     [
       // One media session for every platform (SMTC, MPRIS, MediaSession, MPRemoteCommandCenter, the web's).
@@ -216,8 +220,10 @@ Future<void> _startServices(PlayerController controller) async {
       StayAwake.start(controller),
       EngineEnd.start(),
       // Notifications watch the queue, so they attach once it is restored.
-      controller.youtube.restoreQueue().then((_) => DownloadNotifications.attach(controller.youtube)),
-      PlayHistory.instance.start(controller).then((_) => WrapNotifier.instance.run(PlayHistory.instance)),
+      notes,
+      history.then((_) => WrapNotifier.instance.run(PlayHistory.instance)),
+      // Its notifications go through the plugin the downloads start.
+      Future.wait([notes, history]).then((_) => StreakReminder.instance.start(PlayHistory.instance)),
       (Scrobbler.instance..onMessage = controller.notify).start(controller),
     ].map((f) => f.catchError((Object e) => debugPrint('Start-up task failed: $e'))),
   );

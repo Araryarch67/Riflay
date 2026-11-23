@@ -8553,6 +8553,42 @@ abstract class AppLocalizations {
   /// **'On the 1st, tell me when last month\'s Wrap is ready.'**
   String get wrapNotificationSubtitle;
 
+  /// No description provided for @streakReminder.
+  ///
+  /// In en, this message translates to:
+  /// **'Streak reminder'**
+  String get streakReminder;
+
+  /// No description provided for @streakReminderSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Once a day, if I haven\'t played anything yet, remind me before my streak ends.'**
+  String get streakReminderSubtitle;
+
+  /// No description provided for @streakReminderTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Remind me at'**
+  String get streakReminderTime;
+
+  /// No description provided for @streakReminderChannel.
+  ///
+  /// In en, this message translates to:
+  /// **'A daily nudge before your listening streak ends'**
+  String get streakReminderChannel;
+
+  /// No description provided for @streakReminderTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{Your 1-day streak ends at midnight} other{Your {count}-day streak ends at midnight}}'**
+  String streakReminderTitle(int count);
+
+  /// No description provided for @streakReminderBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Play a song for 30 seconds to keep it going.'**
+  String get streakReminderBody;
+
   /// No description provided for @clearHistory.
   ///
   /// In en, this message translates to:

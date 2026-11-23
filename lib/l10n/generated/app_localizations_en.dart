@@ -4762,6 +4762,33 @@ class AppLocalizationsEn extends AppLocalizations {
   String get wrapNotificationSubtitle => 'On the 1st, tell me when last month\'s Wrap is ready.';
 
   @override
+  String get streakReminder => 'Streak reminder';
+
+  @override
+  String get streakReminderSubtitle =>
+      'Once a day, if I haven\'t played anything yet, remind me before my streak ends.';
+
+  @override
+  String get streakReminderTime => 'Remind me at';
+
+  @override
+  String get streakReminderChannel => 'A daily nudge before your listening streak ends';
+
+  @override
+  String streakReminderTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Your $count-day streak ends at midnight',
+      one: 'Your 1-day streak ends at midnight',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get streakReminderBody => 'Play a song for 30 seconds to keep it going.';
+
+  @override
   String get clearHistory => 'Clear listening history';
 
   @override

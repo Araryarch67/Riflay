@@ -4615,6 +4615,27 @@ class AppLocalizationsJa extends AppLocalizations {
   String get wrapNotificationSubtitle => '毎月1日に、先月の Wrap ができたら知らせる。';
 
   @override
+  String get streakReminder => '連続記録のリマインダー';
+
+  @override
+  String get streakReminderSubtitle => 'まだ何も聴いていない日は、1日1回、連続記録が途切れる前に知らせる。';
+
+  @override
+  String get streakReminderTime => '通知する時刻';
+
+  @override
+  String get streakReminderChannel => '連続記録が途切れる前の、1日1回のお知らせ';
+
+  @override
+  String streakReminderTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(count, locale: localeName, other: '$count日の連続記録が今夜0時に途切れます');
+    return '$_temp0';
+  }
+
+  @override
+  String get streakReminderBody => '30秒以上曲を再生すると記録が続きます。';
+
+  @override
   String get clearHistory => '再生履歴を消す';
 
   @override

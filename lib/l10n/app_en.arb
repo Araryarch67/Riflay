@@ -2631,6 +2631,19 @@
   "keepHistorySubtitle": "Powers Your listening stats, monthly Wraps and lists like Most played. It is never sent anywhere. Turning it off stops recording; what is saved stays until you clear it.",
   "wrapNotification": "Monthly Wrap notification",
   "wrapNotificationSubtitle": "On the 1st, tell me when last month's Wrap is ready.",
+  "streakReminder": "Streak reminder",
+  "streakReminderSubtitle": "Once a day, if I haven't played anything yet, remind me before my streak ends.",
+  "streakReminderTime": "Remind me at",
+  "streakReminderChannel": "A daily nudge before your listening streak ends",
+  "streakReminderTitle": "{count, plural, =1{Your 1-day streak ends at midnight} other{Your {count}-day streak ends at midnight}}",
+  "@streakReminderTitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "streakReminderBody": "Play a song for 30 seconds to keep it going.",
   "clearHistory": "Clear listening history",
   "nothingSavedYet": "Nothing saved yet",
   "playsSaved": "{count} plays saved on this device",

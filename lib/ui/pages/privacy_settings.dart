@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../platform/features.dart';
 import '../../services/play_history.dart';
+import '../../services/streak_reminder.dart';
 import '../../services/wrap_notifications.dart';
 import '../navigation.dart';
 import '../shell_scope.dart';
@@ -24,6 +25,8 @@ class PrivacySettings extends StatefulWidget {
 
 class _PrivacySettingsState extends State<PrivacySettings> {
   bool _wrapNotes = true;
+  bool _streakNotes = false;
+  int _streakMinute = StreakReminder.defaultMinute;
 
   PlayHistory get _history => widget.history ?? PlayHistory.instance;
 
@@ -32,6 +35,13 @@ class _PrivacySettingsState extends State<PrivacySettings> {
     super.initState();
     WrapNotifier.isEnabled().then((v) {
       if (mounted) setState(() => _wrapNotes = v);
+    }, onError: (Object _) {});
+    StreakReminder.load().then((v) {
+      if (!mounted) return;
+      setState(() {
+        _streakNotes = v.$1;
+        _streakMinute = v.$2;
+      });
     }, onError: (Object _) {});
   }
 
@@ -48,6 +58,16 @@ class _PrivacySettingsState extends State<PrivacySettings> {
     if (ok != true) return;
     await _history.clear();
     messenger.showSnackBar(SnackBar(content: Text(tr.historyCleared)));
+  }
+
+  Future<void> _pickStreakTime() async {
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay(hour: _streakMinute ~/ 60, minute: _streakMinute % 60),
+    );
+    if (picked == null || !mounted) return;
+    setState(() => _streakMinute = picked.hour * 60 + picked.minute);
+    StreakReminder.instance.setMinute(_streakMinute).ignore();
   }
 
   @override
@@ -95,6 +115,29 @@ class _PrivacySettingsState extends State<PrivacySettings> {
                 WrapNotifier.instance.setEnabled(v, _history).ignore();
               },
             ),
+          if (Features.systemNotifications) ...[
+            SwitchListTile(
+              title: Text(tr.streakReminder),
+              subtitle: Text(tr.streakReminderSubtitle, style: muted),
+              value: _streakNotes,
+              onChanged: (v) {
+                setState(() => _streakNotes = v);
+                StreakReminder.instance.setEnabled(v).ignore();
+              },
+            ),
+            if (_streakNotes)
+              ListTile(
+                title: Text(tr.streakReminderTime),
+                trailing: TextButton(
+                  onPressed: _pickStreakTime,
+                  child: Text(
+                    MaterialLocalizations.of(context)
+                        .formatTimeOfDay(TimeOfDay(hour: _streakMinute ~/ 60, minute: _streakMinute % 60)),
+                  ),
+                ),
+                onTap: _pickStreakTime,
+              ),
+          ],
           ListTile(
             leading: const Icon(Icons.insights_rounded),
             title: Text(tr.yourListeningStats),

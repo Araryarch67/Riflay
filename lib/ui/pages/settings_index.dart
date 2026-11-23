@@ -968,6 +968,13 @@ abstract final class SettingsOptions {
       available: () => Features.systemNotifications,
     ),
     SettingsOption(
+      'streakReminder',
+      .history,
+      (t) => t.streakReminder,
+      subtitle: (t) => t.streakReminderSubtitle,
+      available: () => Features.systemNotifications,
+    ),
+    SettingsOption(
       'listeningStats',
       .history,
       (t) => t.yourListeningStats,

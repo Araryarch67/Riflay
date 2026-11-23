@@ -356,6 +356,9 @@ class DownloadNotifications {
     }
   }
 
+  /// Computers: brings the window back from the tray for a tap that only opens the app (the streak reminder).
+  static Future<void> Function()? bringAppToFront;
+
   /// The notification plugin, started and permitted, for the app's other notifications (the monthly Wrap). Null
   /// where notifications are unavailable or were refused.
   static Future<FlutterLocalNotificationsPlugin?> sharedPlugin() async {
@@ -375,6 +378,10 @@ class DownloadNotifications {
       if (job == null) return;
       if (actionId == cancelAction) importer!.cancel(job);
       if (actionId == retryAction) importer!.retry(job);
+      return;
+    }
+    if (payload == 'streak') {
+      bringAppToFront?.call().catchError((Object _) {});
       return;
     }
     if (payload != null && payload.startsWith('wrap:')) {
@@ -400,6 +407,7 @@ class DownloadNotifications {
     _openWrap = null;
     _wrapWhenReady = null;
     _presentInApp = null;
+    bringAppToFront = null;
   }
 
   void _tapped(NotificationResponse r) => handleTap(actionId: r.actionId, payload: r.payload, importer: _importer);
