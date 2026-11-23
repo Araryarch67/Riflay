@@ -7,9 +7,12 @@ import 'protocol.dart';
 
 /// One authenticated JSON line per connection, bound only to loopback.
 class CliServer {
-  CliServer(this.endpoint, this.execute);
+  CliServer(this.endpoint, this.execute, {this.subscribe});
   final File endpoint;
   final Future<Object?> Function(String command, Map<String, Object> params) execute;
+
+  /// The events a `subscribe` connection receives, one JSON line each, until it closes.
+  final Stream<Object?> Function(Map<String, Object> params)? subscribe;
   ServerSocket? _server;
   RandomAccessFile? _lock;
   final _clients = <Socket>{};
@@ -73,6 +76,12 @@ class CliServer {
       if (spec == null) throw const CliException('unknown_command', 'Unknown CLI command.');
       final params = raw['params'];
       if (params is! Map<String, dynamic>) throw const CliException('invalid_arguments', 'params must be an object.');
+      if (command == 'subscribe') {
+        final events = subscribe;
+        if (events == null) throw const CliException('unavailable', 'This app does not stream events.');
+        await _stream(socket, events(spec.validate(params)));
+        return;
+      }
       final result = await execute(command as String, spec.validate(params));
       socket.writeln(jsonEncode(cliSuccess(result)));
     } on CliException catch (e) {
@@ -95,6 +104,28 @@ class CliServer {
         socket.destroy();
       }
       _clients.remove(socket);
+    }
+  }
+
+  /// Writes each event of [events] to [socket] until the client goes away (a write fails, or the socket closes).
+  Future<void> _stream(Socket socket, Stream<Object?> events) async {
+    final gone = Completer<void>();
+    final subscription = events.listen((event) {
+      try {
+        socket.writeln(jsonEncode(cliSuccess(event)));
+      } catch (_) {
+        if (!gone.isCompleted) gone.complete();
+      }
+    });
+    unawaited(
+      socket.done.then<void>((_) {}, onError: (Object _) {}).whenComplete(() {
+        if (!gone.isCompleted) gone.complete();
+      }),
+    );
+    try {
+      await gone.future;
+    } finally {
+      await subscription.cancel();
     }
   }
 

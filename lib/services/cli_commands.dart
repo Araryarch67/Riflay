@@ -1,10 +1,16 @@
 import 'dart:async';
+import 'dart:convert';
+import 'dart:typed_data';
+import 'dart:ui' as ui;
 
+import 'package:flutter/foundation.dart' show VoidCallback;
 import 'package:riflay_cli/protocol.dart';
 
 import '../models/track.dart';
 import '../platform/features.dart';
 import 'listen_together/listen_together.dart';
+import 'lyrics.dart';
+import 'metadata.dart';
 import 'player_controller.dart';
 
 /// Commands use the same controller as the UI, including casting and saved preferences.
@@ -36,6 +42,88 @@ class CliCommands {
     'casting': player.casting,
     'lastError': _lastError,
   };
+
+  /// What the queue is now, as a number that changes when it does: a live client reads the queue again then.
+  int _queueRevision() => Object.hash(player.queueIndex, Object.hashAll(player.queue.map((t) => t.id)));
+
+  /// `subscribe`: a status event at once and after each change (a burst of changes is one event), and every five
+  /// seconds besides, so a client counting the position on its own clock stays in step and finds a dead connection.
+  /// No position ticks: the client counts on from "at". With levels on, the visualizer's levels (0-100 per band) about
+  /// 20 times a second while a song plays, and only then: the meter runs only while someone shows it.
+  Stream<Object?> subscribe(Map<String, Object> params) {
+    late final StreamController<Object?> out;
+    Timer? soon, beat, meter;
+    VoidCallback? lease;
+    void send() => out.add({
+      'type': 'status',
+      ...status(),
+      'at': DateTime.now().millisecondsSinceEpoch,
+      'queueRevision': _queueRevision(),
+    });
+    void changed() => soon ??= Timer(const Duration(milliseconds: 80), () {
+      soon = null;
+      send();
+    });
+    out = StreamController<Object?>(
+      onListen: () {
+        send();
+        player.addListener(changed);
+        beat = Timer.periodic(const Duration(seconds: 5), (_) => send());
+        if (params['levels'] == 'on') {
+          lease = player.audio.watchVisualizer(own: true);
+          meter = Timer.periodic(const Duration(milliseconds: 50), (_) {
+            if (!player.showsPlaying) return;
+            out.add({
+              'type': 'levels',
+              'v': [for (final v in player.audio.visualizerLevels.value) (v * 100).round()],
+            });
+          });
+        }
+      },
+      onCancel: () {
+        player.removeListener(changed);
+        soon?.cancel();
+        beat?.cancel();
+        meter?.cancel();
+        lease?.call();
+      },
+    );
+    return out.stream;
+  }
+
+  /// The current track's cover, center-cropped square, [size] pixels a side, as RGB.
+  Future<Map<String, Object?>> _cover(int size) async {
+    final track = player.currentTrack;
+    if (track == null) throw const CliException('empty_queue', 'There is no current track.');
+    final bytes = Metadata.cachedThumbnail(track) ?? await Metadata.thumbnail(track);
+    if (bytes == null) return {'trackId': track.id, 'size': 0, 'rgb': ''};
+    final codec = await ui.instantiateImageCodec(bytes);
+    final source = (await codec.getNextFrame()).image;
+    codec.dispose();
+    // Square from the middle (a video's 16:9 picture too), drawn at [size].
+    final side = source.width < source.height ? source.width : source.height;
+    final recorder = ui.PictureRecorder();
+    ui.Canvas(recorder).drawImageRect(
+      source,
+      ui.Rect.fromLTWH((source.width - side) / 2, (source.height - side) / 2, side.toDouble(), side.toDouble()),
+      ui.Rect.fromLTWH(0, 0, size.toDouble(), size.toDouble()),
+      ui.Paint()..filterQuality = ui.FilterQuality.medium,
+    );
+    final picture = recorder.endRecording();
+    final image = await picture.toImage(size, size);
+    picture.dispose();
+    source.dispose();
+    final rgba = await image.toByteData(format: ui.ImageByteFormat.rawRgba);
+    image.dispose();
+    if (rgba == null) return {'trackId': track.id, 'size': 0, 'rgb': ''};
+    final rgb = Uint8List(size * size * 3);
+    for (var i = 0, j = 0; i < rgb.length; i += 3, j += 4) {
+      rgb[i] = rgba.getUint8(j);
+      rgb[i + 1] = rgba.getUint8(j + 1);
+      rgb[i + 2] = rgba.getUint8(j + 2);
+    }
+    return {'trackId': track.id, 'size': size, 'rgb': base64Encode(rgb)};
+  }
 
   Future<Object?> execute(String command, Map<String, Object> params) {
     // Reads stay responsive during a remote search; mutations keep their order.
@@ -107,6 +195,22 @@ class CliCommands {
     switch (command) {
       case 'status':
         return status();
+      case 'lyrics':
+        final track = player.currentTrack;
+        if (track == null) throw const CliException('empty_queue', 'There is no current track.');
+        final found = await LyricsService.forTrack(track);
+        return {
+          'trackId': track.id,
+          'synced': found.synced,
+          'instrumental': found.instrumental,
+          'source': found.source,
+          'lines': [
+            for (final line in found.lines) {'ms': line.time.inMilliseconds, 'text': line.text},
+          ],
+          'plain': found.synced ? null : found.plain,
+        };
+      case 'cover':
+        return _cover(params['size'] as int);
       case 'library':
         return _page(_tracks(player.library), params);
       case 'search':

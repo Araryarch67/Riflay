@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -137,5 +138,59 @@ void main() {
     expect(failure.exitCode, 5);
     final missing = await run(['status', '--endpoint', '${directory.path}/absent']);
     expect(missing.exitCode, 3);
+  });
+
+  test('subscribe streams a line per event until the client goes away, then stops the events', () async {
+    await server.close();
+    final events = <String, Object>{};
+    var cancelled = false;
+    late void Function(Object) emit;
+    server = CliServer(
+      endpoint,
+      (command, params) async => null,
+      subscribe: (params) {
+        events.addAll(params);
+        final controller = StreamController<Object?>(onCancel: () => cancelled = true);
+        emit = controller.add;
+        return controller.stream;
+      },
+    );
+    await server.start();
+    final config = jsonDecode(await endpoint.readAsString());
+    final socket = await Socket.connect(InternetAddress.loopbackIPv4, config['port'] as int);
+    socket.writeln(
+      jsonEncode({
+        'apiVersion': 1,
+        'token': config['token'],
+        'command': 'subscribe',
+        'params': {'levels': 'on'},
+      }),
+    );
+    await socket.flush();
+    final lines = socket.cast<List<int>>().transform(utf8.decoder).transform(const LineSplitter());
+    final received = <Map<String, dynamic>>[];
+    final done = Completer<void>();
+    final listening = lines.listen((line) {
+      received.add(jsonDecode(line) as Map<String, dynamic>);
+      if (received.length == 2) done.complete();
+    });
+    await Future<void>.delayed(const Duration(milliseconds: 100));
+    emit({'type': 'status', 'playing': true});
+    emit({
+      'type': 'levels',
+      'v': [1, 2, 3],
+    });
+    await done.future.timeout(const Duration(seconds: 5));
+    expect(events, {'levels': 'on'});
+    expect(received.map((r) => r['result']['type']), ['status', 'levels']);
+    expect(received.every((r) => r['ok'] == true), isTrue);
+    // The client leaves: the app stops making events for it.
+    await listening.cancel();
+    socket.destroy();
+    for (var i = 0; i < 50 && !cancelled; i++) {
+      emit({'type': 'status'});
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+    }
+    expect(cancelled, isTrue);
   });
 }

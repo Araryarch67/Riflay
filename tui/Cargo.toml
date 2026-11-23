@@ -1,0 +1,30 @@
+[package]
+name = "riflay-tui"
+version = "1.8.0"
+edition = "2024"
+description = "A terminal player for the Riflay desktop app: it controls the running app through its CLI service."
+license = "GPL-3.0-or-later"
+publish = false
+
+[[bin]]
+name = "riflay-tui"
+path = "src/main.rs"
+
+[dependencies]
+# Ratatui brings crossterm (ratatui::crossterm); serde_json reads JSON lines; unicode-width (Ratatui's own) keeps wide
+# characters in their columns. No async runtime.
+# Standalone (no Riflay app open): libmpv is loaded at run time (libloading), so the binary runs without it and says
+# what is missing; lofty reads local tags and their pictures; image decodes covers (JPEG and PNG only).
+image = { version = "0.25.10", default-features = false, features = ["jpeg", "png"] }
+libloading = "0.9.1"
+lofty = "0.25.5"
+ratatui = "0.30.2"
+serde_json = "1.0.154"
+unicode-width = "0.2.3"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true

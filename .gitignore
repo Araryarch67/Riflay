@@ -49,3 +49,6 @@ app.*.map.json
 
 /ios/SpotiflacRuntime/Spotiflac.xcframework/
 /YouTube/
+
+# The terminal player (riflay-tui): Cargo build output
+/tui/target/

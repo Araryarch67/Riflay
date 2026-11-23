@@ -236,6 +236,11 @@ jobs:
         run: |
           dart pub get
           dart compile exe bin/riflay_cli.dart -o ../build/windows/x64/runner/Release/riflay-cli.exe
+      - name: Build the terminal player
+        shell: bash
+        run: |
+          cargo build --release --locked --manifest-path tui/Cargo.toml
+          cp tui/target/release/riflay-tui.exe build/windows/x64/runner/Release/
       - name: Visual C++ runtime next to the exe
         # So it starts on PCs without the redistributable installed.
         shell: pwsh
@@ -294,6 +299,10 @@ jobs:
         run: |
           dart pub get
           dart compile exe bin/riflay_cli.dart -o ../build/linux/x64/release/bundle/riflay-cli
+      - name: Build the terminal player
+        run: |
+          cargo build --release --locked --manifest-path tui/Cargo.toml
+          cp tui/target/release/riflay-tui build/linux/x64/release/bundle/
       - name: Archive
         run: |
           mkdir -p dist
@@ -380,6 +389,10 @@ jobs:
         run: |
           dart pub get
           dart compile exe bin/riflay_cli.dart -o ../build/macos/Build/Products/Release/Riflay.app/Contents/MacOS/riflay-cli
+      - name: Build the terminal player
+        run: |
+          cargo build --release --locked --manifest-path tui/Cargo.toml
+          cp tui/target/release/riflay-tui build/macos/Build/Products/Release/Riflay.app/Contents/MacOS/
       - name: .dmg and .zip
         run: |
           app=build/macos/Build/Products/Release/Riflay.app

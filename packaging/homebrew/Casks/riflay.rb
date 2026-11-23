@@ -16,6 +16,7 @@ cask "riflay" do
 
     app "Riflay.app"
     binary "#{appdir}/Riflay.app/Contents/MacOS/riflay-cli"
+    binary "#{appdir}/Riflay.app/Contents/MacOS/riflay-tui"
 
     # Signed ad hoc, not notarized (no Apple Developer ID): without this, Gatekeeper
     # says the app "is damaged" on first start.

@@ -87,6 +87,19 @@ const _offset = CliParameter('integer', min: 0, max: 1000000, fallback: 0);
 
 const cliCommands = <String, CliCommand>{
   'status': CliCommand('Read playback, current track, position, volume and latest playback error.'),
+  'subscribe': CliCommand(
+    'Keep the connection open and receive a JSON line for each change: a status event (with "at", the app clock '
+    'in ms, to count the position on from), and with levels on the visualizer levels about 20 times a second while '
+    'playing. For live clients such as riflay-tui.',
+    parameters: {
+      'levels': CliParameter('string', values: ['on', 'off'], fallback: 'off'),
+    },
+  ),
+  'lyrics': CliCommand('Lyrics of the current track: timed lines when they are synced, else plain text.'),
+  'cover': CliCommand(
+    "The current track's cover, cropped square, as base64 RGB pixels (3 bytes each, row by row).",
+    parameters: {'size': CliParameter('integer', min: 1, max: 128, fallback: 32)},
+  ),
   'search': CliCommand(
     'Find tracks; use returned ids with play or queue add. Remote results are cached for this app session.',
     positional: 'query',

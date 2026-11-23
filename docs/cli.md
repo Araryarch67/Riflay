@@ -58,6 +58,8 @@ riflay-cli queue remove 2
 riflay-cli queue clear                    # stops and clears the queue
 riflay-cli stop                           # also stops and clears the queue
 riflay-cli playlists
+riflay-cli lyrics                         # the current song's timed lyrics
+riflay-cli cover --size 32                # the current cover as base64 RGB (for terminal players)
 riflay-cli playlist show 'PLAYLIST_ID'
 riflay-cli playlist play 'PLAYLIST_ID'
 ```
@@ -147,3 +149,8 @@ libmpv player through it: playback, queue duplicates and indexes, pause/resume, 
 shuffle/repeat and stop. It uses headless Weston, throwaway XDG directories and `ao=null`,
 so it plays no sound and touches no real library or sign-in. It needs the Linux desktop toolchain
 and Weston. Close any `flutter run` using this checkout before running it; it rebuilds the debug bundle.
+
+## Live clients
+
+`subscribe` keeps its connection open and streams a JSON line per change (see [Riflay TUI](tui.md)); `riflay-cli
+subscribe` prints the first event. [riflay-tui](tui.md) uses it.

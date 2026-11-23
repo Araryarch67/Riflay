@@ -18,7 +18,11 @@ class DesktopCli {
     }
     final commands = CliCommands(player);
     final directory = await PrivateFiles.dir();
-    final server = CliServer(File('${directory.path}/cli/endpoint.json'), commands.execute);
+    final server = CliServer(
+      File('${directory.path}/cli/endpoint.json'),
+      commands.execute,
+      subscribe: commands.subscribe,
+    );
     try {
       await server.start();
       _commands = commands;
