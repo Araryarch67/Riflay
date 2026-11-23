@@ -712,12 +712,13 @@ fn progress(f: &mut Frame, app: &App, area: Rect) {
         ),
     ]);
     let ic = icons(app);
+    // As a player's button shows it: pause while a song plays, play while it is paused.
     let state = if app.buffering {
         ic.buffering
     } else if app.playing {
-        ic.playing
-    } else {
         ic.paused
+    } else {
+        ic.playing
     };
     let repeat = match app.repeat.as_str() {
         "one" => ic.repeat_one,
