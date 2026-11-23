@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -477,5 +478,23 @@ void main() {
     await tester.dragFrom(tester.getCenter(find.byTooltip('Home')), const Offset(260, 0));
     await tester.pumpAndSettle();
     expect(selectedTab('Home'), findsOneWidget);
+  });
+
+  test("the open tab's bubble stands out from black and clear glass whatever the cover's accent", () {
+    double contrast(Color a, Color b) {
+      final (x, y) = (a.computeLuminance(), b.computeLuminance());
+      return (math.max(x, y) + 0.05) / (math.min(x, y) + 0.05);
+    }
+
+    const glass = Color(0xFF1A1A1A);
+    for (final accent in const [Color(0xFF5A0F12), Color(0xFF101F4A), Color(0xFFFF8048)]) {
+      final bubble = Color.alphaBlend(selectionBubble(accent, glassIsLight: false), glass);
+      expect(contrast(bubble, glass), greaterThan(2), reason: '$accent on black glass');
+    }
+    const clear = Color(0xFFF2F2F2);
+    for (final accent in const [Color(0xFFFFE08A), Color(0xFFFF8048)]) {
+      final bubble = Color.alphaBlend(selectionBubble(accent, glassIsLight: true), clear);
+      expect(contrast(bubble, clear), greaterThan(1.35), reason: '$accent on light glass');
+    }
   });
 }

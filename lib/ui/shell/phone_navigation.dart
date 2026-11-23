@@ -549,7 +549,6 @@ class _GlassBarState extends State<_GlassBar> with TickerProviderStateMixin {
                   child: _DraggableGlassTabs(
                     tabs: shown,
                     tab: widget.tab,
-                    renderer: _renderer,
                     // While the bar shrinks the round button's glass is the open tab's, moving: one drop of glass,
                     // not this one left behind (glass ignores the fade around it) and that one already there.
                     hideGlass: shrink > 0 && search <= 0.5,
@@ -581,7 +580,6 @@ class _GlassBarState extends State<_GlassBar> with TickerProviderStateMixin {
                   // The open tab on its accent disc, as its capsule was; Home on Search is plain.
                   child: Center(
                     child: _GlassButtonFace(
-                      renderer: _renderer,
                       active: search <= 0.5,
                       // The open tab's bubble (a tab wide, the row's height) growing round into the button.
                       child: SizedBox(
@@ -847,7 +845,6 @@ class _DraggableGlassTabs extends StatefulWidget {
   const _DraggableGlassTabs({
     required this.tabs,
     required this.tab,
-    required this.renderer,
     required this.onSelect,
     required this.onDragChanged,
     this.hideGlass = false,
@@ -855,7 +852,6 @@ class _DraggableGlassTabs extends StatefulWidget {
 
   final List<_TabInfo> tabs;
   final PhoneTab tab;
-  final bool renderer;
 
   /// The open tab's glass is drawn elsewhere for now (the bar shrinking into its round button).
   final bool hideGlass;
@@ -1019,7 +1015,6 @@ class _DraggableGlassTabsState extends State<_DraggableGlassTabs> {
                 },
                 child: IgnorePointer(
                   child: _GlassButtonFace(
-                    renderer: widget.renderer,
                     active: true,
                     child: CustomPaint(
                       foregroundPainter: LayoutPrefs.lightweight ? null : _GlassLensRim(active: finger != null),
@@ -1039,12 +1034,7 @@ class _DraggableGlassTabsState extends State<_DraggableGlassTabs> {
                       child: AnimatedScale(
                         scale: finger != null && i == _target ? 1.12 : 1,
                         duration: LayoutPrefs.dur(const Duration(milliseconds: 115)),
-                        child: _GlassTab(
-                          info: info,
-                          selected: i == shown,
-                          renderer: widget.renderer,
-                          paintGlass: !moving && !widget.hideGlass,
-                        ),
+                        child: _GlassTab(info: info, selected: i == shown, paintGlass: !moving && !widget.hideGlass),
                       ),
                     ),
                   ),
@@ -1420,31 +1410,62 @@ Color _glassInk(AppColorsView colors) => switch (LayoutPrefs.instance.glassTint)
   GlassTint.theme => colors.textPrimary,
 };
 
+/// The open tab's bubble colour: the accent, kept bright on dark glass and deep on light glass. The accent follows
+/// the cover, and a dark cover's accent (a deep red, a navy) at a third of its strength vanished on the black glass.
+@visibleForTesting
+Color selectionBubble(Color accent, {required bool glassIsLight}) {
+  final hsl = HSLColor.fromColor(accent);
+  final lightness = glassIsLight ? hsl.lightness.clamp(0.28, 0.4) : hsl.lightness.clamp(0.7, 0.82);
+  return hsl.withLightness(lightness).toColor().withValues(alpha: glassIsLight ? 0.4 : 0.48);
+}
+
+/// A thin edge around the open tab's bubble, so its shape reads on any glass and any page under it.
+class _BubbleEdge extends CustomPainter {
+  const _BubbleEdge({required this.light});
+
+  final bool light;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (size.isEmpty) return;
+    final r = (Offset.zero & size).deflate(0.75);
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(r, Radius.circular(math.min(24, r.shortestSide / 2))),
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.2
+        ..color = (light ? Colors.black : Colors.white).withValues(alpha: light ? 0.14 : 0.22),
+    );
+  }
+
+  @override
+  bool shouldRepaint(_BubbleEdge old) => old.light != light;
+}
+
 class _GlassButtonFace extends StatelessWidget {
-  const _GlassButtonFace({required this.renderer, required this.active, required this.child});
-  final bool renderer, active;
+  const _GlassButtonFace({required this.active, required this.child});
+  final bool active;
   final Widget child;
   @override
   Widget build(BuildContext context) {
     if (!active) return child;
     // The selection bubble: a drop of the accent inside the bar, so the open tab shows on clear, light or black
-    // glass alike (a faint white one was lost on clear glass over a busy page).
+    // glass alike. Painted, not a LiquidGlass of its own: inside the bar's LiquidGlassLayer (Impeller, phones) that
+    // one melted into the bar's pill after its first frame and the open tab no longer showed.
     final colors = AppColors.of(context);
     final light = glassIsLight(colors.light);
-    final bubble = colors.accent.withValues(alpha: light ? 0.26 : 0.32);
-    if (!renderer) {
-      return DecoratedBox(
-        decoration: ShapeDecoration(shape: const StadiumBorder(), color: bubble),
+    return DecoratedBox(
+      decoration: ShapeDecoration(
+        shape: const StadiumBorder(),
+        color: selectionBubble(colors.accent, glassIsLight: light),
+      ),
+      child: CustomPaint(
+        foregroundPainter: _LiquidRim(const _StadiumShape(), light: light, strength: 0.7),
         child: CustomPaint(
-          foregroundPainter: _LiquidRim(const _StadiumShape(), light: light, strength: 0.7),
+          foregroundPainter: _BubbleEdge(light: light),
           child: child,
         ),
-      );
-    }
-    return LiquidGlass(
-      shape: const LiquidRoundedSuperellipse(borderRadius: 24),
-      appearance: LiquidGlassAppearance.ios27Clear(tint: bubble),
-      child: child,
+      ),
     );
   }
 }
@@ -1488,10 +1509,10 @@ class _Capsule extends StatelessWidget {
 
 /// A Liquid glass tab: its icon over its name, the open one in the accent colour on a bubble of lighter glass.
 class _GlassTab extends StatelessWidget {
-  const _GlassTab({required this.info, required this.selected, required this.renderer, this.paintGlass = true});
+  const _GlassTab({required this.info, required this.selected, this.paintGlass = true});
 
   final _TabInfo info;
-  final bool selected, renderer, paintGlass;
+  final bool selected, paintGlass;
 
   @override
   Widget build(BuildContext context) {
@@ -1513,7 +1534,7 @@ class _GlassTab extends StatelessWidget {
     );
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 2),
-      child: paintGlass ? _GlassButtonFace(renderer: renderer, active: selected, child: face) : face,
+      child: paintGlass ? _GlassButtonFace(active: selected, child: face) : face,
     );
   }
 }
