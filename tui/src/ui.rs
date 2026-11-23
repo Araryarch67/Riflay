@@ -90,10 +90,12 @@ fn time(ms: u64) -> String {
 
 pub fn draw(f: &mut Frame, app: &App) {
     let area = f.area();
-    let viz = if app.show_visualizer && area.height >= 20 {
-        5
-    } else {
-        0
+    // The visualizer's rows: fewer on a short terminal, none on a very short one.
+    let viz = match area.height {
+        _ if !app.show_visualizer => 0,
+        20.. => 5,
+        14.. => 3,
+        _ => 0,
     };
     let rows = Layout::default()
         .direction(Direction::Vertical)
@@ -135,7 +137,24 @@ pub fn draw(f: &mut Frame, app: &App) {
         ),
         Tab::Playlists => playlists(f, app, main),
     }
-    if viz > 0 {
+    if viz > 0 && app.levels.is_empty() {
+        let hint = if app.track.is_none() {
+            "The visualizer moves with the music: play a song"
+        } else if !app.playing {
+            "The visualizer moves while the song plays"
+        } else {
+            "Listening for the levels…"
+        };
+        f.render_widget(
+            Paragraph::new(Line::styled(hint, Style::default().fg(DIM)))
+                .alignment(Alignment::Center),
+            Rect {
+                y: rows[2].y + rows[2].height / 2,
+                height: 1,
+                ..rows[2]
+            },
+        );
+    } else if viz > 0 {
         visualizer(f.buffer_mut(), app, rows[2]);
     }
     progress(f, app, rows[3]);

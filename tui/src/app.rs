@@ -637,7 +637,14 @@ impl App {
                 };
                 self.act("repeat", json!({"mode": next}));
             }
-            KeyCode::Char('v') => self.show_visualizer = !self.show_visualizer,
+            KeyCode::Char('v') => {
+                self.show_visualizer = !self.show_visualizer;
+                self.levels.clear();
+                // On its own, the player decodes the levels only while they show (with the app, the subscription asks).
+                if self.standalone {
+                    self.act("_levels", json!({"on": self.show_visualizer}));
+                }
+            }
             KeyCode::Char('o') => {
                 self.show_romanized = !self.show_romanized;
                 self.say(if self.show_romanized {

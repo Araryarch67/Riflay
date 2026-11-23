@@ -45,6 +45,7 @@ cargo build --release
 | YouTube Music songs | `yt-dlp` on the PATH (or the one Riflay downloaded) |
 | YouTube Music search and radio, lyrics and their translation, online covers | `curl` (built into Windows 10+, macOS and most Linux) |
 | Discord Rich Presence | the Discord app, open |
+| The visualizer | `ffmpeg` on the PATH (or the one Riflay downloaded): it decodes the song once more, only while the visualizer shows |
 
 `RIFLAY_MUSIC_DIR` picks the folder it plays when Riflay isn't installed (default: Music in your home folder).
 `RIFLAY_LANG` the language lyrics are translated to (default: Riflay's setting, else your computer's language).

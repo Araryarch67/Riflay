@@ -8,6 +8,7 @@ mod discord;
 mod local;
 mod mpv;
 mod ui;
+mod viz;
 
 use std::sync::mpsc;
 use std::sync::{Arc, Mutex};

@@ -8,6 +8,7 @@
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{self, Receiver, Sender};
 use std::sync::{Arc, Mutex};
 use std::thread;
@@ -18,6 +19,7 @@ use serde_json::{Value, json};
 use crate::Message;
 use crate::discord;
 use crate::mpv::{Event, Mpv};
+use crate::viz::Analysis;
 
 #[derive(Clone)]
 enum Source {
@@ -55,6 +57,8 @@ enum Inbox {
         songs: Result<Vec<Song>, String>,
     },
     Tick,
+    /// 20 times a second while the visualizer is on: its levels at the position.
+    LevelTick,
 }
 
 /// Starts the standalone player. Returns where its requests go (as the app's worker takes them), or why it can't
@@ -141,6 +145,12 @@ struct Player {
     presence: Option<(String, bool, i64)>,
     /// The lyrics' target language.
     language: String,
+    /// The visualizer: on, its clock, the current song's levels, and what the song plays from (for ffmpeg).
+    levels_on: bool,
+    level_clock: Option<Arc<AtomicBool>>,
+    analysis: Option<Analysis>,
+    playing_from: Option<String>,
+    ffmpeg: Option<Option<PathBuf>>,
 }
 
 impl Player {
@@ -182,6 +192,11 @@ impl Player {
             discord: discord.then(discord::spawn),
             presence: None,
             language: language(&prefs),
+            levels_on: false,
+            level_clock: None,
+            analysis: None,
+            playing_from: None,
+            ffmpeg: None,
         }
     }
 
@@ -207,6 +222,10 @@ impl Player {
                     station,
                     songs,
                 } => self.radio_done(tag, seed, station, songs),
+                Inbox::LevelTick => {
+                    self.send_levels();
+                    continue;
+                }
                 Inbox::Tick => {
                     if self.loaded && !self.paused {
                         self.status();
@@ -314,6 +333,9 @@ impl Player {
 
     fn load(&mut self, what: &str) {
         self.mpv.command(&["loadfile", what, "replace"]);
+        self.playing_from = Some(what.to_string());
+        self.analysis = None;
+        self.analyse();
         self.mpv.set("pause", "no");
         self.paused = false;
         self.loaded = true;
@@ -394,6 +416,40 @@ impl Player {
             self.loaded = false;
             self.paused = true;
             self.ran_out = true;
+        }
+    }
+
+    /// The current song's levels decoded (once), while the visualizer is on.
+    fn analyse(&mut self) {
+        if !self.levels_on {
+            return;
+        }
+        let (Some(song), Some(from)) = (self.current().cloned(), self.playing_from.clone()) else {
+            return;
+        };
+        if self.analysis.as_ref().is_some_and(|a| a.id == song.id) {
+            return;
+        }
+        let ffmpeg = self.ffmpeg.get_or_insert_with(|| tool("ffmpeg")).clone();
+        if let Some(ffmpeg) = ffmpeg {
+            self.analysis = Some(Analysis::start(song.id, from, ffmpeg));
+        }
+    }
+
+    fn send_levels(&mut self) {
+        if !self.loaded || self.paused {
+            return;
+        }
+        let Some(id) = self.current().map(|s| s.id.clone()) else {
+            return;
+        };
+        let Some(a) = self.analysis.as_ref().filter(|a| a.id == id) else {
+            return;
+        };
+        if let Some(levels) = a.at(self.position_ms()) {
+            let _ = self.out.send(Message::Event(
+                json!({"type": "levels", "v": levels.to_vec()}),
+            ));
         }
     }
 
@@ -850,6 +906,37 @@ impl Player {
                 self.loaded = false;
                 ok(json!({}))
             }
+            // The visualizer shown or hidden: its levels (and ffmpeg) only while it shows.
+            "_levels" => {
+                let on = p["on"].as_bool().unwrap_or(false);
+                if on == self.levels_on {
+                    return ok(json!({}));
+                }
+                self.levels_on = on;
+                if let Some(clock) = self.level_clock.take() {
+                    clock.store(true, Ordering::Relaxed);
+                }
+                if !on {
+                    self.analysis = None;
+                    return ok(json!({}));
+                }
+                let stop = Arc::new(AtomicBool::new(false));
+                self.level_clock = Some(stop.clone());
+                let inbox = self.inbox.clone();
+                thread::spawn(move || {
+                    while !stop.load(Ordering::Relaxed) && inbox.send(Inbox::LevelTick).is_ok() {
+                        thread::sleep(Duration::from_millis(50));
+                    }
+                });
+                self.analyse();
+                if self.ffmpeg.get_or_insert_with(|| tool("ffmpeg")).is_none() {
+                    return Some(Err(
+                        "The visualizer needs ffmpeg: install it (or let Riflay download it)."
+                            .into(),
+                    ));
+                }
+                ok(json!({}))
+            }
             "autoplay" => {
                 self.autoplay = p["mode"].as_str() == Some("on");
                 self.autoplay_seed = None;
@@ -989,13 +1076,23 @@ fn shuffle<T>(items: &mut [T]) {
 
 /// yt-dlp on the PATH, or the one Riflay downloaded.
 fn yt_dlp() -> Option<PathBuf> {
+    tool("yt-dlp")
+}
+
+/// A program ([name]: "yt-dlp", "ffmpeg") on the PATH, or the one Riflay downloaded.
+fn tool(name: &str) -> Option<PathBuf> {
     let exe = if cfg!(windows) {
-        "yt-dlp.exe"
+        format!("{name}.exe")
     } else {
-        "yt-dlp"
+        name.to_string()
     };
+    let exe = exe.as_str();
     if Command::new(exe)
-        .arg("--version")
+        .arg(if name == "ffmpeg" {
+            "-version"
+        } else {
+            "--version"
+        })
         .stdout(Stdio::null())
         .stderr(Stdio::null())
         .status()
