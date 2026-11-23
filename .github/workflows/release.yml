@@ -239,6 +239,8 @@ jobs:
       - name: Build the terminal player
         shell: bash
         run: |
+          # The runner's Rust may be older than the edition the terminal player uses.
+          rustup update stable --no-self-update && rustup default stable
           cargo build --release --locked --manifest-path tui/Cargo.toml
           cp tui/target/release/riflay-tui.exe build/windows/x64/runner/Release/
       - name: Visual C++ runtime next to the exe
@@ -301,6 +303,8 @@ jobs:
           dart compile exe bin/riflay_cli.dart -o ../build/linux/x64/release/bundle/riflay-cli
       - name: Build the terminal player
         run: |
+          # The runner's Rust may be older than the edition the terminal player uses.
+          rustup update stable --no-self-update && rustup default stable
           cargo build --release --locked --manifest-path tui/Cargo.toml
           cp tui/target/release/riflay-tui build/linux/x64/release/bundle/
       - name: Archive
@@ -391,6 +395,8 @@ jobs:
           dart compile exe bin/riflay_cli.dart -o ../build/macos/Build/Products/Release/Riflay.app/Contents/MacOS/riflay-cli
       - name: Build the terminal player
         run: |
+          # The runner's Rust may be older than the edition the terminal player uses.
+          rustup update stable --no-self-update && rustup default stable
           cargo build --release --locked --manifest-path tui/Cargo.toml
           cp tui/target/release/riflay-tui build/macos/Build/Products/Release/Riflay.app/Contents/MacOS/
       - name: .dmg and .zip

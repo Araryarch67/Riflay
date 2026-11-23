@@ -3,7 +3,7 @@
 ///
 /// Nightly builds pass their version through `RIFLAY_VERSION` (tool/ci_version.sh), so About shows the
 /// exact nightly they run while a local build keeps the value below.
-const appVersion = String.fromEnvironment('RIFLAY_VERSION', defaultValue: '1.8.0');
+const appVersion = String.fromEnvironment('RIFLAY_VERSION', defaultValue: '1.8.1');
 
 /// A Nightly build (the `nightly` prerelease): its own app identity, so it installs beside the stable app.
 const isNightly = bool.fromEnvironment('RIFLAY_NIGHTLY');
