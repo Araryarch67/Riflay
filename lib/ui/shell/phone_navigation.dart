@@ -49,10 +49,11 @@ List<_TabInfo> get _tabItems => <_TabInfo>[
 
 /// A tab's icon. Downloads wears a progress ring while songs are being saved.
 class _TabIcon extends StatelessWidget {
-  const _TabIcon({required this.info, required this.selected, this.color});
+  const _TabIcon({required this.info, required this.selected, this.color, this.size = 24});
 
   final _TabInfo info;
   final bool selected;
+  final double size;
 
   /// Defaults to primary text when selected, secondary otherwise.
   final Color? color;
@@ -60,7 +61,7 @@ class _TabIcon extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = this.color ?? (selected ? AppColors.textPrimary : AppColors.textSecondary);
-    final icon = Icon(selected ? info.selected : info.icon, color: color, size: 24, key: ValueKey(selected));
+    final icon = Icon(selected ? info.selected : info.icon, color: color, size: size, key: ValueKey(selected));
     final swapped = AnimatedSwitcher(
       duration: LayoutPrefs.dur(const Duration(milliseconds: 180)),
       transitionBuilder: (child, anim) => ScaleTransition(scale: anim, child: child),
@@ -73,7 +74,7 @@ class _TabIcon extends StatelessWidget {
       builder: (context, _) {
         final progress = youtube.activeProgress;
         return SizedBox.square(
-          dimension: 24,
+          dimension: size,
           child: progress == null
               ? swapped
               : Padding(
@@ -1272,7 +1273,7 @@ class _TabButton extends StatelessWidget {
 /// A tab's name under or beside its icon. Large text grows it only so far, as Material's own navigation bar does,
 /// and a name still too wide for its tab shrinks to fit, so the icons all stay one size.
 class _TabLabel extends StatelessWidget {
-  const _TabLabel({required this.info, required this.selected, this.accent = false, this.color});
+  const _TabLabel({required this.info, required this.selected, this.accent = false, this.color, this.fontSize});
 
   final _TabInfo info;
   final bool selected;
@@ -1280,6 +1281,7 @@ class _TabLabel extends StatelessWidget {
   /// The selected name in the accent colour, for styles with no icon to carry it.
   final bool accent;
   final Color? color;
+  final double? fontSize;
 
   @override
   Widget build(BuildContext context) {
@@ -1287,7 +1289,7 @@ class _TabLabel extends StatelessWidget {
     final style = Theme.of(context).textTheme.labelSmall?.copyWith(
       color: color ?? (selected ? (accent ? colors.accent : colors.textPrimary) : colors.textSecondary),
       fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-      fontSize: accent ? 13 : null,
+      fontSize: fontSize ?? (accent ? 13 : null),
     );
     return MediaQuery.withClampedTextScaling(
       maxScaleFactor: 1.3,
@@ -1410,83 +1412,17 @@ Color _glassInk(AppColorsView colors) => switch (LayoutPrefs.instance.glassTint)
   GlassTint.theme => colors.textPrimary,
 };
 
-/// The open tab's bubble colour: the accent, kept bright on dark glass and deep on light glass. The accent follows
-/// the cover, and a dark cover's accent (a deep red, a navy) at a third of its strength vanished on the black glass.
+/// The open tab's pill colour: frosted glass a shade lighter than the bar on dark glass, a shade darker on light
+/// glass, faintly tinted by the theme's background so it belongs to the page instead of standing out as another
+/// colour.
 @visibleForTesting
-Color selectionBubble(Color accent, {required bool glassIsLight}) {
-  final hsl = HSLColor.fromColor(accent);
-  final lightness = glassIsLight ? hsl.lightness.clamp(0.28, 0.4) : hsl.lightness.clamp(0.7, 0.82);
-  return hsl.withLightness(lightness).toColor().withValues(alpha: glassIsLight ? 0.4 : 0.48);
-}
-
-/// The open tab's bubble as a drop of glass: a sheen across its upper half, a glint at the top left, a little shade
-/// low inside, and an edge of light brightest at the top left. Everything is drawn inside its bounds, so no stroke
-/// is cut flat by the tab's edges.
-class _BubbleGloss extends CustomPainter {
-  const _BubbleGloss({required this.light});
-
-  final bool light;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    if (size.isEmpty) return;
-    final rect = Offset.zero & size;
-    RRect stadium(Rect r) => RRect.fromRectAndRadius(r, Radius.circular(r.shortestSide / 2));
-    final body = stadium(rect);
-    canvas.save();
-    canvas.clipRRect(body);
-    canvas.drawRect(
-      rect,
-      Paint()
-        ..shader = LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            Colors.white.withValues(alpha: light ? 0.34 : 0.26),
-            Colors.white.withValues(alpha: 0),
-            Colors.transparent,
-            Colors.black.withValues(alpha: light ? 0.05 : 0.14),
-          ],
-          stops: const [0, 0.5, 0.62, 1],
-        ).createShader(rect),
-    );
-    final glint = Rect.fromCenter(
-      center: Offset(size.width * 0.22, size.height * 0.2),
-      width: size.width * 0.42,
-      height: size.height * 0.5,
-    );
-    canvas.drawOval(
-      glint,
-      Paint()
-        ..shader = RadialGradient(colors: [Colors.white.withValues(alpha: 0.3), Colors.white.withValues(alpha: 0)])
-            .createShader(glint),
-    );
-    canvas.restore();
-    // Its outline, dark on light glass and light on dark glass, so the shape reads over any page.
-    canvas.drawRRect(
-      stadium(rect.deflate(0.6)),
-      Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.2
-        ..color = (light ? Colors.black : Colors.white).withValues(alpha: light ? 0.14 : 0.2),
-    );
-    // The edge of light on top of it.
-    canvas.drawRRect(
-      stadium(rect.deflate(1.4)),
-      Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.2
-        ..shader = LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Colors.white.withValues(alpha: 0.7), Colors.white.withValues(alpha: 0)],
-          stops: const [0, 0.55],
-        ).createShader(rect),
-    );
-  }
-
-  @override
-  bool shouldRepaint(_BubbleGloss old) => old.light != light;
+Color selectionBubble(Color background, {required bool glassIsLight}) {
+  final hsl = HSLColor.fromColor(background);
+  return hsl
+      .withSaturation(math.min(hsl.saturation, 0.15))
+      .withLightness(glassIsLight ? 0.2 : 0.92)
+      .toColor()
+      .withValues(alpha: glassIsLight ? 0.1 : 0.16);
 }
 
 class _GlassButtonFace extends StatelessWidget {
@@ -1496,23 +1432,29 @@ class _GlassButtonFace extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (!active) return child;
-    // The selection bubble: a drop of the accent inside the bar, so the open tab shows on clear, light or black
-    // glass alike. Painted, not a LiquidGlass of its own: inside the bar's LiquidGlassLayer (Impeller, phones) that
-    // one melted into the bar's pill after its first frame and the open tab no longer showed. Inset from the tab's
-    // edges, so the bar's own edge never cuts it.
+    // The open tab's pill: plain frosted glass filling the tab, with a hairline edge so its shape reads on any page.
+    // Painted, not a LiquidGlass of its own: inside the bar's LiquidGlassLayer (Impeller, phones) that one melted
+    // into the bar's pill after its first frame and the open tab no longer showed. Inset, so the bar's edge never
+    // cuts it.
     final colors = AppColors.of(context);
     final light = glassIsLight(colors.light);
+    // Behind the tab, not around it: the pill's inset never squeezes the icon and name when the bar shrinks.
     return Stack(
       children: [
         Positioned.fill(
           child: Padding(
-            padding: const EdgeInsets.all(2),
+            // As wide as the tab, a little short of its height: room for a long name.
+            padding: const EdgeInsets.symmetric(vertical: 2),
             child: DecoratedBox(
               decoration: ShapeDecoration(
-                shape: const StadiumBorder(),
-                color: selectionBubble(colors.accent, glassIsLight: light),
+                // Round corners, not round ends: on a narrow phone a stadium's ends ate into a long name.
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(LayoutPrefs.radius(22)),
+                  side: BorderSide(color: (light ? Colors.black : Colors.white).withValues(alpha: light ? 0.08 : 0.1)),
+                ),
+                color: selectionBubble(colors.solidBackground, glassIsLight: light),
               ),
-              child: CustomPaint(painter: _BubbleGloss(light: light)),
+              child: const SizedBox.expand(),
             ),
           ),
         ),
@@ -1536,30 +1478,23 @@ class _Capsule extends StatelessWidget {
       child: AnimatedContainer(
         duration: LayoutPrefs.dur(const Duration(milliseconds: 220)),
         curve: Curves.easeOut,
-        height: 40,
-        padding: EdgeInsets.symmetric(horizontal: selected ? 10 : 0),
+        height: 48,
+        padding: EdgeInsets.symmetric(horizontal: selected ? 20 : 0),
         decoration: BoxDecoration(
           color: selected ? colors.accent : Colors.transparent,
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(24),
         ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _TabIcon(info: info, selected: selected, color: selected ? ink : colors.textSecondary),
-            if (selected && !LayoutPrefs.instance.hidePhoneNavLabels) ...[
-              const SizedBox(width: 6),
-              Flexible(
-                child: _TabLabel(info: info, selected: true, color: ink),
-              ),
-            ],
-          ],
+        // Icons only, a size up: the open tab's name beside its icon crowded the bar. Its name stays its tooltip.
+        child: Center(
+          widthFactor: 1,
+          child: _TabIcon(info: info, selected: selected, color: selected ? ink : colors.textSecondary, size: 28),
         ),
       ),
     );
   }
 }
 
-/// A Liquid glass tab: its icon over its name, the open one in the accent colour on a bubble of lighter glass.
+/// A Liquid glass tab: its icon over a small name, the open one in full ink on a pill of frosted glass.
 class _GlassTab extends StatelessWidget {
   const _GlassTab({required this.info, required this.selected, this.paintGlass = true});
 
@@ -1569,44 +1504,31 @@ class _GlassTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
-    // The open tab sits on the accent bubble ([_GlassButtonFace]): its icon and name in the glass's full ink there,
+    // The open tab sits on the frosted pill ([_GlassButtonFace]): its icon and name in the glass's full ink there,
     // the others a little softer.
     final ink = selected && paintGlass
         ? _glassInk(colors)
-        : (selected ? colors.accent : _glassInk(colors).withValues(alpha: 0.78));
-    final labels = !LayoutPrefs.instance.hidePhoneNavLabels;
-    final content = Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        _TabIcon(info: info, selected: selected, color: ink),
-        if (labels) ...[const SizedBox(height: 2), _TabLabel(info: info, selected: selected, color: ink)],
-      ],
+        : (selected ? colors.accent : _glassInk(colors).withValues(alpha: 0.6));
+    // A large icon over a small name: a name at full size crowded the bar and ran out of the open tab's pill.
+    final face = SizedBox.expand(
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _TabIcon(info: info, selected: selected, color: ink, size: 26),
+            if (!LayoutPrefs.instance.hidePhoneNavLabels)
+              // Kept off the pill's round corners: a name too long for that shrinks rather than runs out of it.
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 6),
+                child: _TabLabel(info: info, selected: selected, color: ink, fontSize: 9.5),
+              ),
+          ],
+        ),
+      ),
     );
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 2),
-      child: !(paintGlass && selected)
-          ? SizedBox.expand(child: Center(child: content))
-          // The bubble as wide as its icon and name with room on both sides, never wider than the tab: a name too
-          // long for it shrinks to fit inside rather than running into the bubble's round ends.
-          : LayoutBuilder(
-              builder: (context, box) => Center(
-                child: _GlassButtonFace(
-                  active: true,
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(
-                      minWidth: math.min(box.maxWidth, box.maxHeight),
-                      maxWidth: box.maxWidth,
-                      minHeight: box.maxHeight,
-                      maxHeight: box.maxHeight,
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
-                      child: Center(widthFactor: 1, child: content),
-                    ),
-                  ),
-                ),
-              ),
-            ),
+      child: paintGlass ? _GlassButtonFace(active: selected, child: face) : face,
     );
   }
 }

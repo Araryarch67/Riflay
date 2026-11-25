@@ -1,4 +1,7 @@
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 
 import '../../services/appearance.dart';
 import '../../services/language.dart';
@@ -91,10 +94,73 @@ class _PlayerStylesPageState extends State<PlayerStylesPage> {
   /// Whether a preset has been tried on since opening (nothing to restore otherwise).
   bool _tried = false;
 
+  /// Each preset's real Now Playing, pictured: the cards beside the one tried on show it instead of a drawing.
+  /// Only one look can be live at a time (the layout is the app's own), so each is put on once, out of sight, and
+  /// pictured.
+  final _shots = <String, ui.Image>{};
+  final _live = GlobalKey();
+
+  /// While each look is put on to be pictured, the middle card stays the look as it was. A swipe stops the
+  /// picturing: what is tried on then is the person's.
+  ui.Image? _freeze;
+  bool _warming = true;
+  int _warmRun = 0;
+  Future<void>? _warmStep;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _warm());
+  }
+
   @override
   void dispose() {
     _pages.dispose();
+    for (final image in _shots.values) {
+      image.dispose();
+    }
     super.dispose();
+  }
+
+  /// The live card as it looks now, once its covers have had time to come in.
+  Future<ui.Image?> _picture() async {
+    await WidgetsBinding.instance.endOfFrame;
+    await Future<void>.delayed(const Duration(milliseconds: 120));
+    await WidgetsBinding.instance.endOfFrame;
+    final boundary = _live.currentContext?.findRenderObject();
+    if (!mounted || boundary is! RenderRepaintBoundary) return null;
+    return boundary.toImage(pixelRatio: MediaQuery.devicePixelRatioOf(context).clamp(1.0, 2.0));
+  }
+
+  void _keepShot(String name, ui.Image? image) {
+    if (image == null) return;
+    if (!mounted) return image.dispose();
+    _shots.remove(name)?.dispose();
+    _shots[name] = image;
+  }
+
+  Future<void> _warm() async {
+    final run = _warmRun;
+    final here = _presets[_start].name;
+    _keepShot(here, await _picture());
+    if (!mounted || run != _warmRun) return;
+    setState(() => _freeze = _shots[here]);
+    var changed = false;
+    for (final preset in _presets) {
+      if (preset.name == here || preset.matches(_prefs)) continue;
+      changed = true;
+      await (_warmStep = preset.apply(_prefs));
+      final shot = await _picture();
+      if (!mounted || run != _warmRun) return shot?.dispose();
+      _keepShot(preset.name, shot);
+    }
+    if (changed) _restore();
+    await WidgetsBinding.instance.endOfFrame;
+    if (!mounted) return;
+    setState(() {
+      _freeze = null;
+      _warming = false;
+    });
   }
 
   /// Leaving any way but Set or Edit (Back, the system's back) puts the look as it was.
@@ -108,11 +174,23 @@ class _PlayerStylesPageState extends State<PlayerStylesPage> {
   }
 
   Future<void> _tryOn(int index) async {
+    if (_warming) {
+      _warmRun++;
+      await _warmStep;
+      if (!mounted) return;
+      _warming = false;
+      _freeze = null;
+      // The picturing may have left another look on: Back has to put the one from before back.
+      _tried = true;
+    }
     setState(() => _index = index);
     final preset = _presets[index];
     if (preset.matches(_prefs)) return;
     _tried = true;
     await preset.apply(_prefs);
+    final shot = await _picture();
+    // Still the one on screen: a newer swipe pictures its own.
+    if (mounted && _index == index) setState(() => _keepShot(preset.name, shot));
   }
 
   void _set() {
@@ -223,6 +301,8 @@ class _PlayerStylesPageState extends State<PlayerStylesPage> {
                           child: _StyleCard(
                             preset: _presets[i],
                             live: i == _index,
+                            liveKey: _live,
+                            shot: i == _index ? _freeze : _shots[_presets[i].name],
                             onTap: () => _pages.animateToPage(
                               i,
                               duration: LayoutPrefs.dur(const Duration(milliseconds: 280)),
@@ -263,12 +343,23 @@ class _PlayerStylesPageState extends State<PlayerStylesPage> {
   }
 }
 
-/// One preset: the real Now Playing (as a still preview) for the one tried on, its drawing for the others.
+/// One preset: the real Now Playing (as a still preview) for the one tried on, its picture for the others, and
+/// its drawing only while it has not been pictured yet.
 class _StyleCard extends StatelessWidget {
-  const _StyleCard({required this.preset, required this.live, required this.onTap});
+  const _StyleCard({
+    required this.preset,
+    required this.live,
+    required this.liveKey,
+    required this.shot,
+    required this.onTap,
+  });
 
   final PlayerPreset preset;
   final bool live;
+  final GlobalKey liveKey;
+
+  /// Over the live card: the look it is frozen on while the others are pictured.
+  final ui.Image? shot;
   final VoidCallback onTap;
 
   @override
@@ -289,9 +380,20 @@ class _StyleCard extends StatelessWidget {
           child: ClipRRect(
             borderRadius: BorderRadius.circular(32),
             child: live
-                ? const IgnorePointer(
-                    child: LivePreview(canvas: Size(390, 844), child: NowPlayingPage()),
+                ? Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      RepaintBoundary(
+                        key: liveKey,
+                        child: const IgnorePointer(
+                          child: LivePreview(canvas: Size(390, 844), child: NowPlayingPage()),
+                        ),
+                      ),
+                      if (shot case final image?) RawImage(image: image, fit: BoxFit.cover),
+                    ],
                   )
+                : shot != null
+                ? RawImage(image: shot, fit: BoxFit.cover)
                 : ColoredBox(
                     color: colors.elevated,
                     child: Column(

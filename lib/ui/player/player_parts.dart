@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:just_audio/just_audio.dart' show LoopMode;
+import 'package:liquid_glass_renderer/liquid_glass_renderer.dart' show LiquidGlassBlendGroup;
 
 import '../../models/track.dart';
 import '../../platform/host.dart';
@@ -948,13 +949,14 @@ class PlayerBottomButtons extends StatelessWidget {
     final c = PlayerScope.read(context);
     if (LayoutPrefs.instance.bottomRow == PlayerBottomRow.minimal) return _minimal(context, c, shell);
     // Chips: the five buttons as one capsule in five pieces a hairline apart (as the Share and Like pair), fully
-    // round only at its two ends; then More as its own white circle.
+    // round only at its two ends, each piece its own glass on glass presets; then More as its own white circle.
     return LayoutBuilder(
       builder: (context, box) {
+        final glass = LayoutPrefs.instance.playerGlassControls;
         const height = 48.0, gap = 2.0;
         final more = withMore ? height + 12 : 0.0;
         final width = math.min(64.0, (box.maxWidth - more - 4 * gap) / 5);
-        final colors = PlayerGlassSurface.colorsOf(context, enabled: LayoutPrefs.instance.playerGlassControls);
+        final colors = PlayerGlassSurface.colorsOf(context, enabled: glass);
         final outer = Radius.circular(height / 2);
         final inner = Radius.circular(math.min(height / 2, LayoutPrefs.radius(8)));
         Widget piece(int i, IconData icon, String tooltip, VoidCallback? onTap, {bool lit = false}) {
@@ -962,9 +964,12 @@ class PlayerBottomButtons extends StatelessWidget {
             borderRadius: BorderRadius.horizontal(left: i == 0 ? outer : inner, right: i == 4 ? outer : inner),
           );
           final ink = lit ? colors.accent : colors.textPrimary;
-          return Material(
-            // Each piece its own soft fill, on glass presets too: pieces a hairline apart, not one glass with lines.
-            color: lit ? colors.accent.withValues(alpha: 0.2) : colors.textPrimary.withValues(alpha: 0.14),
+          final button = Material(
+            // Each piece its own soft fill, the pieces a hairline apart; on glass the glass is its fill, and only a
+            // lit one is tinted.
+            color: lit
+                ? colors.accent.withValues(alpha: 0.2)
+                : (glass ? Colors.transparent : colors.textPrimary.withValues(alpha: 0.14)),
             shape: shape,
             clipBehavior: Clip.antiAlias,
             child: Tooltip(
@@ -977,6 +982,54 @@ class PlayerBottomButtons extends StatelessWidget {
                   child: Icon(icon, size: 22, color: onTap == null ? ink.withValues(alpha: 0.38) : ink),
                 ),
               ),
+            ),
+          );
+          if (!glass) return button;
+          // Each piece its own glass, exactly its own size. Glass takes one corner radius all round (and draws past
+          // any clip), so an end piece is three glasses made one: a circle at the capsule's end, a square-cornered
+          // band from the circle's centre (its edges meet the circle's top and bottom in a straight line, so no
+          // notch and no bulge), and a small-cornered piece giving the inner corners the middle pieces' radius.
+          if (!(i == 0 || i == 4)) return PlayerGlassSurface(radius: inner.x, child: button);
+          if (LayoutPrefs.lightweight) return PlayerGlassSurface(radius: 20, child: button);
+          final first = i == 0;
+          const fill = SizedBox.expand();
+          final cornerWidth = 2 * inner.x + 4;
+          Widget at({required double from, required double to, required Widget glass}) =>
+              Positioned(left: first ? from : width - to, width: to - from, top: 0, bottom: 0, child: glass);
+          return SizedBox(
+            width: width,
+            height: height,
+            child: Stack(
+              children: [
+                Positioned.fill(
+                  child: IgnorePointer(
+                    child: LiquidGlassBlendGroup(
+                      // Only a whisker: the shapes already meet edge to edge.
+                      blend: 1,
+                      child: Stack(
+                        children: [
+                          at(
+                            from: 0,
+                            to: height,
+                            glass: const PlayerGlassSurface(circle: true, child: fill),
+                          ),
+                          at(
+                            from: height / 2,
+                            to: width - inner.x,
+                            glass: const PlayerGlassSurface(radius: 0, child: fill),
+                          ),
+                          at(
+                            from: width - cornerWidth,
+                            to: width,
+                            glass: PlayerGlassSurface(radius: inner.x, child: fill),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                button,
+              ],
             ),
           );
         }

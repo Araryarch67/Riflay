@@ -7,8 +7,9 @@ import '../../services/ffmpeg.dart';
 import '../../services/flac_convert.dart';
 import '../../services/language.dart';
 import '../player_scope.dart';
+import '../widgets/controls.dart' show Artwork;
 import '../widgets/page_scaffold.dart';
-import 'sound_settings.dart' show SettingsCard, settingsMuted;
+import 'sound_settings.dart' show SettingsCard, SettingsIcon, SettingsSection, settingsMuted;
 
 /// Settings › Sound › Check lossless files: measures every FLAC / WAV / AIFF… on this device and lists the ones
 /// that aren't what they claim: made from an MP3 or AAC (a wall in the spectrum), "hi-res" upsampled from 44.1 /
@@ -65,29 +66,15 @@ class LosslessCheckPage extends StatelessWidget {
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // What it does and how to use it, before anything is pressed.
-                  SettingsCard(
-                    children: [
-                      ListTile(
-                        leading: const Icon(Icons.help_outline_rounded),
-                        title: Text(tr.losslessCheckHow, style: muted),
-                      ),
-                      if (files.isEmpty)
-                        ListTile(
-                          leading: const Icon(Icons.library_music_outlined),
-                          title: Text(tr.losslessCheckNoFiles),
-                        )
-                      else if (fetchesFfmpeg)
-                        ListTile(
-                          leading: const Icon(Icons.download_outlined),
-                          title: Text(tr.losslessCheckNeedsFfmpeg, style: muted),
-                        ),
-                    ],
+                  // What it does and how to use it, before anything is pressed: plain text, not a row to tap.
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
+                    child: Text(tr.losslessCheckHow, style: muted),
                   ),
                   SettingsCard(
                     children: [
                       ListTile(
-                        leading: const Icon(Icons.verified_outlined),
+                        leading: const SettingsIcon(Icons.verified_outlined),
                         title: Text(tr.losslessCheckFiles(checked, files.length)),
                         subtitle: Text(
                           progress == null ? tr.losslessCheckAbout : tr.measuringLoudness(progress.$1, progress.$2),
@@ -99,31 +86,52 @@ class LosslessCheckPage extends StatelessWidget {
                       ),
                       if (progress != null)
                         LinearProgressIndicator(value: progress.$2 == 0 ? null : progress.$1 / progress.$2),
+                      if (files.isEmpty)
+                        ListTile(
+                          leading: const SettingsIcon(Icons.library_music_outlined),
+                          title: Text(tr.losslessCheckNoFiles),
+                        )
+                      else if (fetchesFfmpeg)
+                        ListTile(
+                          leading: const SettingsIcon(Icons.download_outlined),
+                          title: Text(tr.losslessCheckNeedsFfmpeg, style: muted),
+                        ),
                     ],
                   ),
+                  const SizedBox(height: 28),
                   if (progress == null && checked > 0)
-                    SettingsCard(
-                      children: [
-                        if (found.isEmpty)
+                    if (found.isEmpty)
+                      SettingsCard(
+                        children: [
                           ListTile(
-                            leading: const Icon(Icons.check_circle_outline_rounded),
+                            leading: const SettingsIcon(Icons.check_circle_outline_rounded),
                             title: Text(tr.losslessCheckAllGood),
-                          )
-                        else ...[
-                          ListTile(
-                            leading: const Icon(Icons.report_outlined),
-                            title: Text(tr.losslessCheckFound(found.length)),
                           ),
-                          for (final (t, r) in found)
-                            ListTile(
-                              title: Text(t.title, maxLines: 1, overflow: TextOverflow.ellipsis),
-                              subtitle: Text('${t.artist} · ${reasonOf(r)}', style: muted),
-                              onTap: () =>
-                                  c.playList([for (final (t, _) in found) t], found.indexWhere((e) => e.$1 == t)),
-                            ),
                         ],
-                      ],
-                    ),
+                      )
+                    else
+                      SettingsSection(
+                        title: tr.losslessCheckFound(found.length),
+                        child: SettingsCard(
+                          children: [
+                            for (final (t, r) in found)
+                              ListTile(
+                                leading: Artwork(track: t, size: 44, radius: 8),
+                                title: Text(t.title, maxLines: 1, overflow: TextOverflow.ellipsis),
+                                subtitle: Text(
+                                  '${t.artist}\n${reasonOf(r)}',
+                                  style: muted,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                isThreeLine: true,
+                                trailing: const Icon(Icons.play_arrow_rounded),
+                                onTap: () =>
+                                    c.playList([for (final (t, _) in found) t], found.indexWhere((e) => e.$1 == t)),
+                              ),
+                          ],
+                        ),
+                      ),
                 ],
               );
             },

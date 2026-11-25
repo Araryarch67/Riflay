@@ -56,7 +56,17 @@ abstract final class PageMotion {
     if (disabled) return child;
     // Drive curve tweens directly: no per-build CurvedAnimation listeners to leak.
     Animation<double> curve(Curve c) => animation.drive(CurveTween(curve: c));
-    if (reduced) return FadeTransition(opacity: curve(Curves.easeOut), child: child);
+    // Pages are see-through over the blurred cover, so the page underneath has to go, or the two read as one
+    // stacked on the other: it fades out in the first half while the new one comes in.
+    Widget leaving(Widget body) => player
+        ? body
+        : FadeTransition(
+            opacity: secondary.drive(
+              Tween(begin: 1.0, end: 0.0).chain(CurveTween(curve: const Interval(0, 0.5, curve: Curves.easeOut))),
+            ),
+            child: body,
+          );
+    if (reduced) return leaving(FadeTransition(opacity: curve(Curves.easeOut), child: child));
     final ease = curve(const Cubic(0.22, 1, 0.36, 1));
     final fade = curve(const Interval(0, 0.8, curve: Curves.easeOutCubic));
     Widget slide(Offset from, {Widget? body}) => SlideTransition(
@@ -93,7 +103,22 @@ abstract final class PageMotion {
         style == PageMotionStyle.circularReveal ||
         style == PageMotionStyle.wipe ||
         style == PageMotionStyle.diamondReveal) {
-      return incoming;
+      return leaving(incoming);
+    }
+    if (!player) {
+      return leaving(
+        style == PageMotionStyle.slide
+            ? SlideTransition(
+                position: secondary.drive(
+                  Tween(
+                    begin: Offset.zero,
+                    end: const Offset(-0.035, 0),
+                  ).chain(CurveTween(curve: Curves.easeInOutCubic)),
+                ),
+                child: incoming,
+              )
+            : incoming,
+      );
     }
     final outgoing = secondary.drive(
       CurveTween(

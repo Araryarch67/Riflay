@@ -294,24 +294,26 @@ void main() {
     expect(indicator, findsNothing);
   });
   for (final (tab, label) in const [(PhoneTab.home, 'Home'), (PhoneTab.downloads, 'Downloads')]) {
-    testWidgets("the open tab's bubble holds its whole name, clear of its round ends: $label", (tester) async {
+    testWidgets("the open tab's icon and small name sit inside its pill: $label", (tester) async {
       await show(tester, const Size(360, 640), tab: tab);
-      final name = tester.getRect(find.text(label).last);
-      final bubbles = find.byWidgetPredicate(
+      final icon = tester.getRect(find.descendant(of: find.byTooltip(label), matching: find.byType(Icon)).first);
+      final pills = find.byWidgetPredicate(
         (w) =>
             w is DecoratedBox &&
             w.decoration is ShapeDecoration &&
-            (w.decoration as ShapeDecoration).shape is StadiumBorder,
+            (w.decoration as ShapeDecoration).shape is RoundedRectangleBorder,
       );
-      final bubble = tester
-          .widgetList(bubbles)
+      final pill = tester
+          .widgetList(pills)
           .map((w) => tester.getRect(find.byWidget(w)))
-          .firstWhere((r) => r.contains(name.center));
-      final round = bubble.height / 2;
-      expect(name.left, greaterThanOrEqualTo(bubble.left + round * 0.3), reason: 'not in the left round end');
-      expect(name.right, lessThanOrEqualTo(bubble.right - round * 0.3), reason: 'not in the right round end');
-      expect(name.top, greaterThan(bubble.top));
-      expect(name.bottom, lessThan(bubble.bottom));
+          .firstWhere((r) => r.contains(icon.center));
+      expect(pill.contains(icon.topLeft) && pill.contains(icon.bottomRight), isTrue);
+      final name = tester.getRect(find.descendant(of: find.byTooltip(label), matching: find.text(label)));
+      expect(
+        pill.deflate(4).contains(name.topLeft) && pill.deflate(4).contains(name.bottomRight),
+        isTrue,
+        reason: 'name in the pill, clear of its edge',
+      );
     });
   }
 
@@ -502,21 +504,21 @@ void main() {
     expect(selectedTab('Home'), findsOneWidget);
   });
 
-  test("the open tab's bubble stands out from black and clear glass whatever the cover's accent", () {
+  test("the open tab's pill shows, softly, on black and clear glass whatever the theme's background", () {
     double contrast(Color a, Color b) {
       final (x, y) = (a.computeLuminance(), b.computeLuminance());
       return (math.max(x, y) + 0.05) / (math.min(x, y) + 0.05);
     }
 
     const glass = Color(0xFF1A1A1A);
-    for (final accent in const [Color(0xFF5A0F12), Color(0xFF101F4A), Color(0xFFFF8048)]) {
-      final bubble = Color.alphaBlend(selectionBubble(accent, glassIsLight: false), glass);
-      expect(contrast(bubble, glass), greaterThan(2), reason: '$accent on black glass');
+    for (final bg in const [Color(0xFF000000), Color(0xFF101F4A), Color(0xFF5A0F12), Color(0xFFFF8048)]) {
+      final bubble = Color.alphaBlend(selectionBubble(bg, glassIsLight: false), glass);
+      expect(contrast(bubble, glass), greaterThan(1.4), reason: '$bg on black glass');
     }
     const clear = Color(0xFFF2F2F2);
-    for (final accent in const [Color(0xFFFFE08A), Color(0xFFFF8048)]) {
-      final bubble = Color.alphaBlend(selectionBubble(accent, glassIsLight: true), clear);
-      expect(contrast(bubble, clear), greaterThan(1.35), reason: '$accent on light glass');
+    for (final bg in const [Color(0xFFFFFFFF), Color(0xFFFFE08A), Color(0xFFFF8048)]) {
+      final bubble = Color.alphaBlend(selectionBubble(bg, glassIsLight: true), clear);
+      expect(contrast(bubble, clear), greaterThan(1.15), reason: '$bg on light glass');
     }
   });
 }
