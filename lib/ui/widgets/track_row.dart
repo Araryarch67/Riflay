@@ -67,6 +67,8 @@ class TrackRow extends StatefulWidget {
     this.pinned = false,
     this.onTogglePin,
     this.marquee = false,
+    this.slim = false,
+    this.menuItems,
   });
 
   final Track track;
@@ -87,6 +89,13 @@ class TrackRow extends StatefulWidget {
   final bool? currentOccurrence;
   final bool pinned;
   final VoidCallback? onTogglePin;
+
+  /// Cover and title first, as in the queue: no number, album, length or download button beside them.
+  final bool slim;
+
+  /// Entries of the host's own, at the top of the song's ⋯ menu (the queue's Skip once, Remove…), so one menu
+  /// does for both.
+  final List<PopupMenuEntry<void>> Function()? menuItems;
 
   /// Row bodies built, and hover-only leaf rebuilds, for tests.
   @visibleForTesting
@@ -144,7 +153,7 @@ class _TrackRowState extends State<TrackRow> {
     final selection = TrackSelectionScope.maybeOf(context);
 
     Widget? leading;
-    if (widget.index != null && wide) {
+    if (widget.index != null && wide && !widget.slim) {
       leading = SizedBox(
         width: 32,
         child: Center(
@@ -265,7 +274,7 @@ class _TrackRowState extends State<TrackRow> {
                 ],
               ),
             ),
-            if (wide && widget.showAlbum && shell.width > 900) ...[
+            if (wide && !widget.slim && widget.showAlbum && shell.width > 900) ...[
               const SizedBox(width: 16),
               Expanded(
                 flex: 4,
@@ -277,7 +286,7 @@ class _TrackRowState extends State<TrackRow> {
                 ),
               ),
             ],
-            if (wide)
+            if (wide && !widget.slim)
               SizedBox(
                 width: 56,
                 child: Text(
@@ -291,7 +300,8 @@ class _TrackRowState extends State<TrackRow> {
               ),
             // Streamed songs: download right here (ring while it runs, a check once saved). Under 300 px an
             // icon-only one; on a row too narrow even for that, only the menu has it.
-            if ((t.isRemote || t.monochromeId != null || t.extensionId != null) &&
+            if (!widget.slim &&
+                (t.isRemote || t.monochromeId != null || t.extensionId != null) &&
                 Features.downloads &&
                 downloadButtonFor(box.maxWidth) != RowDownload.none)
               downloadButtonFor(box.maxWidth) == RowDownload.compact
@@ -309,11 +319,21 @@ class _TrackRowState extends State<TrackRow> {
             if (wide)
               _Hovering(
                 hover: _hover,
-                child: TrackMenuButton(track: t, pinned: widget.pinned, onTogglePin: widget.onTogglePin),
+                child: TrackMenuButton(
+                  track: t,
+                  pinned: widget.pinned,
+                  onTogglePin: widget.onTogglePin,
+                  menuItems: widget.menuItems,
+                ),
                 builder: (context, hover, child) => Opacity(opacity: hover ? 1 : 0, child: child),
               )
             else
-              TrackMenuButton(track: t, pinned: widget.pinned, onTogglePin: widget.onTogglePin),
+              TrackMenuButton(
+                track: t,
+                pinned: widget.pinned,
+                onTogglePin: widget.onTogglePin,
+                menuItems: widget.menuItems,
+              ),
           ],
         ),
       ),
@@ -517,6 +537,7 @@ class TrackMenuButton extends StatelessWidget {
     this.color,
     this.nowPlaying = false,
     this.hide = const {},
+    this.menuItems,
   });
 
   static Future<void> _queued(BuildContext context, Future<void> change, String done, [VoidCallback? openQueue]) async {
@@ -581,6 +602,10 @@ class TrackMenuButton extends StatelessWidget {
   final Track track;
   final bool pinned;
   final VoidCallback? onTogglePin;
+
+  /// Entries of the host's own, at the top of this menu (the queue's Skip once, Remove…), so one menu does for
+  /// both.
+  final List<PopupMenuEntry<void>> Function()? menuItems;
   final bool visible;
   final Color? color;
 
@@ -695,7 +720,10 @@ class TrackMenuButton extends StatelessWidget {
                 PopupMenuItem(onTap: () => NowPlayingCover.handle(host, e.value), child: e.child),
             ],
           ];
+          final own = menuItems?.call() ?? const <PopupMenuEntry<void>>[];
           return [
+            ...own,
+            if (own.isNotEmpty) const PopupMenuDivider(),
             PopupMenuItem(
               enabled:
                   c.canQueue(track) &&

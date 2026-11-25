@@ -144,7 +144,9 @@ void main() {
     session.notifyListeners();
     await tester.pumpAndSettle();
     expect(find.text('playing'), findsOneWidget);
-    expect(find.byIcon(Icons.drag_handle_rounded), findsNWidgets(2));
+    // On a phone a queued song is held and dragged, with no handle taking room from its title.
+    expect(find.byType(ReorderableDelayedDragStartListener), findsNWidgets(2));
+    expect(find.byIcon(Icons.drag_handle_rounded), findsNothing);
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump(const Duration(milliseconds: 1));
@@ -153,7 +155,7 @@ void main() {
     c.dispose();
   });
 
-  testWidgets('phone queue drag keeps the row visible outside its route scope', (tester) async {
+  testWidgets('phone queue drag (hold, then drag) keeps the row visible outside its route scope', (tester) async {
     tester.view.physicalSize = const Size(400, 850);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
@@ -188,8 +190,8 @@ void main() {
     await tester.pumpAndSettle();
     final title = find.text('first');
     final before = tester.getSize(title);
-    final handle = find.byIcon(Icons.drag_handle_rounded).first;
-    final gesture = await tester.startGesture(tester.getCenter(handle), kind: PointerDeviceKind.touch);
+    final gesture = await tester.startGesture(tester.getCenter(title), kind: PointerDeviceKind.touch);
+    await tester.pump(kLongPressTimeout + const Duration(milliseconds: 50));
     await gesture.moveBy(const Offset(0, 20));
     await tester.pump(const Duration(milliseconds: 100));
     expect(tester.takeException(), isNull);

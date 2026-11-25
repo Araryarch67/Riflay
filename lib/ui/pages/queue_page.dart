@@ -67,50 +67,52 @@ class _QueuePageState extends State<QueuePage> {
       );
     }
 
-    Widget actions(int i) {
-      if (i >= sources.length) return const SizedBox.shrink();
+    // The queue's own choices, at the top of the song's ⋯ menu: one menu per row, so the title keeps the room.
+    List<PopupMenuEntry<void>> Function() queueMenu(int i) => () {
+      if (i >= sources.length) return const [];
       final source = sources[i];
-      return PopupMenuButton<String>(
-        tooltip: tr.queue,
-        icon: Icon(
-          c.skipping(source)
-              ? Icons.skip_next
-              : c.stopping(source)
-              ? Icons.stop_circle
-              : Icons.more_vert,
-        ),
-        onSelected: (value) async {
-          if (value == 'skip') {
-            c.toggleSkip(source);
-            return;
-          }
-          if (value == 'stop') {
-            c.toggleStop(source);
-            return;
-          }
-          final targets = sources.where((s) => s != source).toList();
-          final target = await pickListItem(context, tr.insertAfter, targets, (s) => (s.tag as Track).title);
-          if (target == null) return;
-          final seq = c.player.sequenceState;
-          final offset = (seq.currentIndex ?? -1) + 1;
-          final from = seq.sequence.indexOf(source) - offset, after = seq.sequence.indexOf(target) - offset;
-          if (from >= 0 && after >= 0) await c.moveInQueue(from, from < after ? after : after + 1);
-        },
-        itemBuilder: (_) => [
-          for (final (value, label, icon, checked) in [
-            ('skip', tr.skipOnce, Icons.skip_next_rounded, c.skipping(source)),
-            ('stop', tr.stopAfter, Icons.stop_circle_outlined, c.stopping(source)),
-            if (sources.length > 1) ('move', tr.insertAfter, Icons.low_priority_rounded, null),
-          ])
-            PopupMenuItem(
-              value: value,
-              child: Semantics(
-                checked: checked,
-                child: MenuRow(leading: Icon(checked == true ? Icons.check_rounded : icon), title: Text(label)),
-              ),
+      Future<void> moveAfter() async {
+        final targets = sources.where((s) => s != source).toList();
+        final target = await pickListItem(context, tr.insertAfter, targets, (s) => (s.tag as Track).title);
+        if (target == null) return;
+        final seq = c.player.sequenceState;
+        final offset = (seq.currentIndex ?? -1) + 1;
+        final from = seq.sequence.indexOf(source) - offset, after = seq.sequence.indexOf(target) - offset;
+        if (from >= 0 && after >= 0) await c.moveInQueue(from, from < after ? after : after + 1);
+      }
+
+      return [
+        for (final (label, icon, checked, action) in [
+          (tr.skipOnce, Icons.skip_next_rounded, c.skipping(source), () => c.toggleSkip(source)),
+          (tr.stopAfter, Icons.stop_circle_outlined, c.stopping(source), () => c.toggleStop(source)),
+          if (sources.length > 1) (tr.insertAfter, Icons.low_priority_rounded, null, moveAfter),
+          (tr.removeFromQueue, Icons.playlist_remove_rounded, null, () => remove(i)),
+        ])
+          PopupMenuItem<void>(
+            onTap: action,
+            child: Semantics(
+              checked: checked,
+              child: MenuRow(leading: Icon(checked == true ? Icons.check_rounded : icon), title: Text(label)),
             ),
-        ],
-      );
+          ),
+      ];
+    };
+
+    /// Skip once or Stop after, set on a song: a small mark by its menu (the menu itself no longer shows it).
+    Widget? mark(int i) {
+      if (i >= sources.length) return null;
+      final source = sources[i];
+      final icon = c.skipping(source)
+          ? Icons.skip_next_rounded
+          : c.stopping(source)
+          ? Icons.stop_circle_outlined
+          : null;
+      return icon == null
+          ? null
+          : Tooltip(
+              message: c.skipping(source) ? tr.skipOnce : tr.stopAfter,
+              child: Icon(icon, size: 18, color: AppColors.accent),
+            );
     }
 
     final entries = [for (final (i, t) in upNext.indexed) (place: i, track: t)];
@@ -175,7 +177,7 @@ class _QueuePageState extends State<QueuePage> {
                     onPressed: () async {
                       final clear = await confirmDialog(
                         context,
-                        title: tr.clearUpcomingQueue,
+                        title: tr.clearUpcomingQueueQuestion,
                         body: tr.clearUpcomingQueueBody,
                         confirmLabel: tr.clear,
                         destructive: true,
@@ -229,6 +231,7 @@ class _QueuePageState extends State<QueuePage> {
                   key: _playingRow,
                   track: current,
                   index: 1,
+                  slim: true,
                   currentOccurrence: true,
                   onTap: guest ? null : c.togglePlay,
                   // Titles and artists too long for the row slide by to be read whole (rows are narrow here).
@@ -247,7 +250,7 @@ class _QueuePageState extends State<QueuePage> {
             ),
             SliverPadding(
               padding: hPad,
-              // Dragged by the handle (or a long press) to play sooner or later; ✕ or a swipe takes one out.
+              // Dragged by the handle (held and dragged on a phone) to play sooner or later; the ⋯ menu or a swipe takes one out.
               sliver: guest
                   ? SliverList.builder(
                       itemCount: queued.length,
@@ -255,6 +258,7 @@ class _QueuePageState extends State<QueuePage> {
                         key: keys[queued[i]],
                         track: queued[i].track,
                         index: i + 2,
+                        slim: true,
                         currentOccurrence: false,
                         onTap: null,
                         marquee: true,
@@ -272,7 +276,8 @@ class _QueuePageState extends State<QueuePage> {
                         track: queued[i].track,
                         index: i + 2,
                         dragIndex: i,
-                        actions: actions(queued[i].place),
+                        menuItems: queueMenu(queued[i].place),
+                        mark: mark(queued[i].place),
                         eta: eta[queued[i].place],
                         onTap: () => c.playQueueItem(queued[i].track),
                         onRemove: () => remove(queued[i].place),
@@ -302,7 +307,8 @@ class _QueuePageState extends State<QueuePage> {
                   key: keys[autoplayed[i]],
                   track: autoplayed[i].track,
                   index: queued.length + i + 2,
-                  actions: actions(autoplayed[i].place),
+                  menuItems: queueMenu(autoplayed[i].place),
+                  mark: mark(autoplayed[i].place),
                   eta: eta[autoplayed[i].place],
                   onTap: () => c.playQueueItem(autoplayed[i].track),
                   onRemove: () => remove(autoplayed[i].place),
@@ -325,7 +331,9 @@ class SectionTitleSliver extends StatelessWidget {
   Widget build(BuildContext context) => SliverToBoxAdapter(child: SectionTitle(title));
 }
 
-/// A song in the queue: tap to play it now, ✕ or a swipe to take it out, and (in Next up) a handle to drag it.
+/// A song in the queue, its cover and title first: tap to play it now, the ⋯ menu for Skip once, Stop after,
+/// Insert after and Remove (with the song's own choices below), a swipe to take it out. In Next up it moves by its
+/// handle on a computer, or held and dragged on a phone; when it starts shows on a computer, where there is room.
 class _QueueRow extends StatelessWidget {
   const _QueueRow({
     super.key,
@@ -334,7 +342,8 @@ class _QueueRow extends StatelessWidget {
     required this.onTap,
     required this.onRemove,
     this.dragIndex,
-    required this.actions,
+    required this.menuItems,
+    this.mark,
     this.eta,
   });
 
@@ -345,53 +354,53 @@ class _QueueRow extends StatelessWidget {
 
   /// Its place in a reorderable list; null where songs can't be moved.
   final int? dragIndex;
-  final Widget actions;
+  final List<PopupMenuEntry<void>> Function() menuItems;
+  final Widget? mark;
   final String? eta;
 
   @override
   Widget build(BuildContext context) {
+    final compact = ShellScope.of(context).compact;
     final muted = AppColors.of(context).textSecondary;
-    final row = Row(
+    final song = TrackRow(
+      track: track,
+      index: index,
+      slim: true,
+      currentOccurrence: false,
+      onTap: onTap,
+      marquee: true,
+      menuItems: menuItems,
+    );
+    Widget row = Row(
       children: [
-        Expanded(
-          child: TrackRow(track: track, index: index, currentOccurrence: false, onTap: onTap, marquee: true),
-        ),
-        // When it starts, in a slot of its own width even when unknown, so the buttons after it line up row to row.
-        SizedBox(
-          width: 60,
-          child: eta == null
-              ? null
-              : FittedBox(
-                  fit: BoxFit.scaleDown,
-                  alignment: Alignment.centerRight,
-                  child: Text(
-                    eta!,
-                    textAlign: TextAlign.right,
-                    style: Theme.of(context).textTheme.labelSmall
-                        ?.copyWith(fontFeatures: const [FontFeature.tabularFigures()]),
-                  ),
-                ),
-        ),
-        actions,
-        IconButton(
-          tooltip: tr.removeFromQueue,
-          color: muted,
-          onPressed: onRemove,
-          icon: const Icon(Icons.close_rounded, size: 20),
-        ),
-        if (dragIndex case final i?)
-          ReorderableDragStartListener(
-            index: i,
-            child: Tooltip(
-              message: tr.dragToMove,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
-                child: Icon(Icons.drag_handle_rounded, color: muted),
-              ),
+        Expanded(child: song),
+        ?mark,
+        if (!compact && eta != null)
+          Padding(
+            padding: const EdgeInsets.only(left: 8),
+            child: Text(
+              eta!,
+              style: Theme.of(context).textTheme.labelSmall
+                  ?.copyWith(color: muted, fontFeatures: const [FontFeature.tabularFigures()]),
             ),
           ),
+        if (!compact)
+          if (dragIndex case final i?)
+            ReorderableDragStartListener(
+              index: i,
+              child: Tooltip(
+                message: tr.dragToMove,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+                  child: Icon(Icons.drag_handle_rounded, color: muted),
+                ),
+              ),
+            ),
       ],
     );
+    if (compact) {
+      if (dragIndex case final i?) row = ReorderableDelayedDragStartListener(index: i, child: row);
+    }
     return Dismissible(
       key: ValueKey('dismiss-${key.hashCode}'),
       direction: DismissDirection.endToStart,
