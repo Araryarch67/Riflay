@@ -114,7 +114,7 @@ class YoutubeAudioSource extends StreamAudioSource {
         key,
         metadata: info,
         length: info.size!,
-        download: (cancelled) => _ranged(info, 0, info.size!, info.size!, aborted: cancelled),
+        download: (cancelled, from) => _ranged(info, from, info.size!, info.size!, aborted: cancelled),
       );
     } on FileSystemException catch (e) {
       debugPrint('Temporary audio cache unavailable: $e');

@@ -75,7 +75,13 @@ class AudioStreamCache<T> {
   /// The folder this session's songs are in, once one was opened.
   Future<String?> folderPath() async => (await _folder)?.path;
 
-  CachedAudio<T>? find(String key) => _entries[key];
+  CachedAudio<T>? find(String key) {
+    final entry = _entries[key];
+    if (entry?._error == null) return entry;
+    // A download that gave up is never reused: until a restart, every play of the song failed at once.
+    forget(key);
+    return null;
+  }
 
   /// Drops [key] (a stream that wouldn't play), so the next request looks it up afresh.
   void forget(String key) => _entries.remove(key)?.retire();
@@ -84,9 +90,9 @@ class AudioStreamCache<T> {
     String key, {
     required T metadata,
     required int length,
-    required Stream<List<int>> Function(Future<void> cancelled) download,
+    required Stream<List<int>> Function(Future<void> cancelled, int from) download,
   }) {
-    if (_entries[key] case final entry?) return Future.value(entry);
+    if (find(key) case final entry?) return Future.value(entry);
     if (length <= 0 || length > maxSongBytes || (_wanted != null && !_wanted!.contains(key))) return Future.value();
     return _opening[key] ??= _open(key, metadata, length, download).whenComplete(() {
       _opening.remove(key);
@@ -97,7 +103,7 @@ class AudioStreamCache<T> {
     String key,
     T metadata,
     int length,
-    Stream<List<int>> Function(Future<void>) download,
+    Stream<List<int>> Function(Future<void>, int) download,
   ) async {
     final folder = await (_folder ??= _directory());
     if (_wanted != null && !_wanted!.contains(key)) return null;
@@ -151,7 +157,12 @@ class CachedAudio<T> {
   final File file;
   final int length;
   final T metadata;
-  final Stream<List<int>> Function(Future<void>) _download;
+  final Stream<List<int>> Function(Future<void>, int) _download;
+
+  /// How many times a download that dropped resumes where it stopped before it gives up. Each try has the
+  /// downloader's own reconnects and backoff, so a longer outage keeps the song buffering instead of ending it.
+  static int maxResumes = 3;
+  int _resumes = 0;
   void Function() _onDeleted;
   final _abort = Completer<void>();
   final _deleted = Completer<void>();
@@ -175,16 +186,26 @@ class CachedAudio<T> {
     RandomAccessFile? writer;
     try {
       writer = await file.open(mode: FileMode.write);
-      await for (final bytes in _download(_abort.future)) {
-        if (_abort.isCompleted) break;
-        final remaining = length - available;
-        if (bytes.length > remaining) throw StateError('Audio exceeds its advertised length');
-        await writer.writeFrom(bytes);
-        available += bytes.length;
-        _notify();
+      while (true) {
+        try {
+          await for (final bytes in _download(_abort.future, available)) {
+            if (_abort.isCompleted) break;
+            if (bytes.length > length - available) {
+              _error = StateError('Audio exceeds its advertised length');
+              return;
+            }
+            await writer.writeFrom(bytes);
+            available += bytes.length;
+            _notify();
+          }
+          if (!_abort.isCompleted && available != length) throw StateError('Audio ended before its advertised length');
+          complete = available == length;
+          return;
+        } catch (e) {
+          if (_abort.isCompleted || _resumes >= maxResumes) rethrow;
+          _resumes++;
+        }
       }
-      if (!_abort.isCompleted && available != length) throw StateError('Audio ended before its advertised length');
-      complete = available == length;
     } catch (e) {
       _error = e;
     } finally {
