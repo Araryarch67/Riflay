@@ -508,7 +508,12 @@ class SettingsPowerPage extends StatelessWidget {
     title: tr.settingsPower,
     crumbs: [_settingsCrumb],
     place: SettingsPlace.power,
-    child: SettingsCard(children: PowerSettings.rows(context)),
+    child: Column(
+      children: [
+        SettingsCard(children: PowerSettings.rows(context)),
+        if (SystemTray.offered) ...[const SizedBox(height: 28), const CloseWindowSection()],
+      ],
+    ),
   );
 }
 

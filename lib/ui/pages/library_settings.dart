@@ -12,6 +12,7 @@ import 'sound_settings.dart';
 import 'spotify_page.dart';
 import 'youtube_music_page.dart';
 import '../../services/language.dart';
+import '../widgets/how_to_steps.dart';
 
 /// Settings › Library & downloads › Library: keeping the music folders up to date, and finding songs you have twice.
 class LibrarySettings extends StatelessWidget {
@@ -105,6 +106,7 @@ class LibrarySettings extends StatelessWidget {
               title: tr.musicFolders,
               child: SettingsCard(
                 children: [
+                  if (shell.addFolder != null) HowToSteps(steps: [tr.howFolder1, tr.howFolder2, tr.howFolder3]),
                   if (shell.addFolder != null)
                     ListTile(
                       leading: const Icon(Icons.create_new_folder_outlined),

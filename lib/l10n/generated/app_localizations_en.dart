@@ -706,6 +706,56 @@ class AppLocalizationsEn extends AppLocalizations {
   String get greetingEvening => 'Good evening';
 
   @override
+  String get restoringBackup => 'Restoring the backup…';
+
+  @override
+  String get savingBackup => 'Saving the backup: settings, playlists and history…';
+
+  @override
+  String get howBackup3 => 'Riflay closes; open it again and your settings, playlists and history are back.';
+
+  @override
+  String get howBackup2 => 'On a new device, or after reinstalling, choose Restore a backup and pick that file.';
+
+  @override
+  String get howBackup1 =>
+      'Save a backup, and keep the file somewhere safe: cloud storage, a USB drive or another computer.';
+
+  @override
+  String get howFolder3 => 'With Keep the library up to date on, songs you put there later are added too.';
+
+  @override
+  String get howFolder2 => 'Riflay adds the songs in it to your Library, ready to play offline.';
+
+  @override
+  String get howFolder1 => 'Choose Add a folder and pick the folder your music is in.';
+
+  @override
+  String get howImport3 =>
+      'Riflay finds each song and puts the playlist in your Library. Changed your mind? Undo this import takes it back.';
+
+  @override
+  String get howImport2 => 'Paste it in the box above and press Import.';
+
+  @override
+  String get howImport1 =>
+      'Copy the playlist\'s link in the app or site it\'s on (Spotify, Apple Music, Deezer, TIDAL or NetEase Cloud Music), or pick an M3U file.';
+
+  @override
+  String get howItWorks => 'How it works';
+
+  @override
+  String get commandLineSubtitle =>
+      'Control Riflay from a terminal with riflay-cli, or play in one with riflay-tui. Run riflay-cli --help to see the commands.';
+
+  @override
+  String get commandLine => 'Command line';
+
+  @override
+  String get homeIntro =>
+      'Your songs and YouTube Music in one place. Add music from this device, search, or sign in to start.';
+
+  @override
   String get allSongs => 'All Songs';
 
   @override
@@ -4413,7 +4463,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String couldntPlay(String title) {
-    return 'Couldn\'t play $title';
+    return 'Couldn\'t play $title. Check your internet connection, or that the file is still there, then try again.';
   }
 
   @override
@@ -4444,7 +4494,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get saved => 'Saved';
 
   @override
-  String get couldntSaveChanges => 'Couldn\'t save the changes';
+  String get couldntSaveChanges =>
+      'Couldn\'t save the changes. Check there\'s free space on this device, then try again.';
+
+  @override
+  String get couldntSaveTags =>
+      'Couldn\'t save the tags. Check that the file isn\'t read-only or open in another app, then try again.';
 
   @override
   String get chooseCoverArt => 'Choose cover art';
@@ -4531,7 +4586,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dontSleepSubtitle => 'The computer stays awake while music plays. The screen can still turn off';
 
   @override
-  String get closeToTray => 'Close to tray';
+  String get closeToTray => 'Minimize to tray';
+
+  @override
+  String get closeSettings => 'Close settings';
+
+  @override
+  String get closeWindow => 'Close window';
 
   @override
   String get noTrayIcons => 'Your desktop doesn\'t show tray icons, so closing the window quits Riflay';
@@ -5792,6 +5853,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get clearUpcomingQueueBody => 'All upcoming songs will be removed. The current song stays in the player.';
 
   @override
+  String get clearUpcomingQueueQuestion => 'Clear upcoming queue?';
+
+  @override
   String get clearQueueFailed => 'Could not clear the queue. Try again.';
 
   @override
@@ -5814,6 +5878,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get undoImport => 'Undo this import';
+
+  @override
+  String get undoImportQuestion => 'Undo this import?';
 
   @override
   String get duplicatesCount => 'Duplicates';

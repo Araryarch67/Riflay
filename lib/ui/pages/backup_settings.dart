@@ -9,6 +9,7 @@ import '../../services/backup.dart';
 import '../../services/language.dart';
 import 'sound_settings.dart' show SettingTile, SettingsCard, settingsMuted;
 import '../widgets/app_dialog.dart';
+import '../widgets/how_to_steps.dart';
 
 /// Settings › Library & downloads › Backup & restore: settings, playlists and history in one file.
 class BackupSettings extends StatefulWidget {
@@ -21,10 +22,16 @@ class BackupSettings extends StatefulWidget {
 class _BackupSettingsState extends State<BackupSettings> {
   bool _busy = false;
 
+  /// What is being done while [_busy], shown under the two rows: a backup takes a moment on a big library.
+  String? _working;
+
   void _say(String m) => ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(content: Text(m)));
 
   Future<void> _save() async {
-    setState(() => _busy = true);
+    setState(() {
+      _busy = true;
+      _working = tr.savingBackup;
+    });
     try {
       final text = await Backup.create();
       final saved = await FilePicker.saveFile(
@@ -40,7 +47,12 @@ class _BackupSettingsState extends State<BackupSettings> {
       debugPrint('Backup: $e');
       if (mounted) _say(tr.couldntSaveBackup);
     } finally {
-      if (mounted) setState(() => _busy = false);
+      if (mounted) {
+        setState(() {
+          _busy = false;
+          _working = null;
+        });
+      }
     }
   }
 
@@ -71,13 +83,19 @@ class _BackupSettingsState extends State<BackupSettings> {
       confirmLabel: tr.restore,
     );
     if (ok != true || !mounted) return;
-    setState(() => _busy = true);
+    setState(() {
+      _busy = true;
+      _working = tr.restoringBackup;
+    });
     try {
       await Backup.restore(backup);
     } catch (e) {
       debugPrint('Restore: $e');
       if (mounted) {
-        setState(() => _busy = false);
+        setState(() {
+          _busy = false;
+          _working = null;
+        });
         _say(tr.couldntRestoreBackup);
       }
       return;
@@ -88,8 +106,9 @@ class _BackupSettingsState extends State<BackupSettings> {
     await showDialog<void>(
       context: context,
       barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        title: Text(tr.backupRestored),
+      builder: (context) => AppDialog(
+        title: tr.backupRestored,
+        width: DialogWidth.compact,
         content: Text(Host.isIOS ? tr.backupRestoredIos : tr.backupRestoredDesktop),
         actions: [FilledButton(onPressed: Host.isIOS ? null : () => exit(0), child: Text(tr.closeRiflay))],
       ),
@@ -119,6 +138,12 @@ class _BackupSettingsState extends State<BackupSettings> {
           subtitle: Text(tr.restoreABackupSubtitle, style: muted),
           control: TextButton(onPressed: _busy ? null : _restore, child: Text(tr.restore)),
         ),
+        if (_working case final working?)
+          ListTile(
+            leading: const SizedBox.square(dimension: 20, child: CircularProgressIndicator(strokeWidth: 2)),
+            title: Text(working),
+          ),
+        HowToSteps(steps: [tr.howBackup1, tr.howBackup2, tr.howBackup3]),
       ],
     );
   }

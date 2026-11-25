@@ -363,6 +363,14 @@ class HomePage extends StatelessWidget {
           ),
         ),
       ),
+      // With nothing in the library yet, what Home is for, under the greeting.
+      if (c.library.isEmpty)
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(pad, 0, pad, 16),
+            child: Text(tr.homeIntro, style: text.bodyMedium?.copyWith(color: AppColors.textSecondary)),
+          ),
+        ),
       for (final section in LayoutPrefs.instance.homeShown) ...sections[section]!,
       // The invitation to add songs stays even when YouTube Music's shelves are switched off.
       if (c.library.isEmpty && LayoutPrefs.instance.homeHidden.contains(HomeSection.discover))

@@ -14,23 +14,27 @@ void main() {
     await p.reset();
   });
 
-  test('optional tools are off by default and tint and track preferences reload independently', () async {
-    expect(ExtraFeature.values.where((feature) => feature.enabled), isEmpty);
-    await p.setExtraFeature(ExtraFeature.playlistSearch, true);
-    await p.setMiniGlassTint(GlassTint.black);
-    await p.setPlayerGlassTint(GlassTint.light);
-    await p.toggleTrackPin('liked', 'a');
-    await p.setLikedTrackOrder(['b', 'a']);
-    p.restore(const {});
-    expect(p.pinnedTracks, isEmpty);
-    await p.load();
-    expect(p.extraFeatures, {ExtraFeature.playlistSearch});
-    expect(p.glassTint, GlassTint.theme);
-    expect(p.miniGlassTint, GlassTint.black);
-    expect(p.playerGlassTint, GlassTint.light);
-    expect(p.pinnedTracks['liked'], {'a'});
-    expect(p.likedTrackOrder, ['b', 'a']);
-  });
+  test(
+    'optional tools are off by default but Undo removals, and tint and track preferences reload independently',
+    () async {
+      expect(ExtraFeature.values.where((feature) => feature.enabled), [ExtraFeature.undoRemoval]);
+      await p.setExtraFeature(ExtraFeature.undoRemoval, false);
+      await p.setExtraFeature(ExtraFeature.playlistSearch, true);
+      await p.setMiniGlassTint(GlassTint.black);
+      await p.setPlayerGlassTint(GlassTint.light);
+      await p.toggleTrackPin('liked', 'a');
+      await p.setLikedTrackOrder(['b', 'a']);
+      p.restore(const {});
+      expect(p.pinnedTracks, isEmpty);
+      await p.load();
+      expect(p.extraFeatures, {ExtraFeature.playlistSearch}, reason: 'Undo turned off stays off');
+      expect(p.glassTint, GlassTint.theme);
+      expect(p.miniGlassTint, GlassTint.black);
+      expect(p.playerGlassTint, GlassTint.light);
+      expect(p.pinnedTracks['liked'], {'a'});
+      expect(p.likedTrackOrder, ['b', 'a']);
+    },
+  );
   test('custom playlist order, pins, logo cover and expanded navigation persist', () async {
     await p.movePlaylist(['a', 'b', 'c'], 'c', -1);
     await p.togglePinnedPlaylist('b');

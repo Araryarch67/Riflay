@@ -381,7 +381,7 @@ class _JobRow extends StatelessWidget {
         ?job.quality,
         if (job.totalBytes != null) formatBytes(job.totalBytes!),
       ].join(' • '),
-      DownloadStatus.failed => job.error ?? tr.failed,
+      DownloadStatus.failed => job.error ?? tr.downloadFailedTryAgain,
       DownloadStatus.cancelled => tr.cancelled,
     };
     final statusColor = switch (job.status) {

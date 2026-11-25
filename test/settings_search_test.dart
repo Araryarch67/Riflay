@@ -220,11 +220,13 @@ void main() {
 
   onLinux('every row on a page of options is registered for search', (tester) async {
     final c = PlayerController();
-    // Rows that are things, not options: a watched folder, a Home section, an installed extension.
+    // Rows that are things, not options: a watched folder, a Home section, an installed extension, a how-to.
     bool listed(String title) =>
         HomeSection.values.any((s) => s.label == title) ||
         const {'YouTube Music', 'Last.fm', 'ListenBrainz'}.contains(title) ||
-        title == tr.noExtensionsYet;
+        title == tr.noExtensionsYet ||
+        // A task's steps, folded under a row: guidance, not an option.
+        title == tr.howItWorks;
     final missing = <String>[];
     for (final place in SettingsPlace.values.where((p) => p.available)) {
       await tester.pumpWidget(_app(c, [], home: place.page));

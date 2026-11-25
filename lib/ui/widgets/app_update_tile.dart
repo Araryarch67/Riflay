@@ -7,6 +7,7 @@ import '../pages/sound_settings.dart' show settingsMuted;
 import 'controls.dart' show formatBytes;
 import 'skeleton.dart';
 import '../../services/language.dart';
+import 'app_dialog.dart';
 
 /// An explicit check, followed by platform installation when a verified installer is available.
 class AppUpdateTile extends StatefulWidget {
@@ -152,19 +153,8 @@ class _AppUpdateTileState extends State<AppUpdateTile> {
 
     return PopScope(
       canPop: !_busy,
-      child: AlertDialog(
-        constraints: const BoxConstraints(maxWidth: 400),
-        scrollable: true,
-        icon: Center(
-          child: Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: _failed ? colors.errorContainer : colors.primaryContainer,
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Icon(icon, size: 32, color: _failed ? colors.onErrorContainer : colors.onPrimaryContainer),
-          ),
-        ),
+      child: AppDialog(
+        width: DialogWidth.compact,
         title: Text(tr.versionAvailable(_release!.version), textAlign: TextAlign.center),
         content: SizedBox(
           width: 352,
@@ -172,6 +162,19 @@ class _AppUpdateTileState extends State<AppUpdateTile> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              // In the part that scrolls, not over the title: on a small phone with large text the headline,
+              // badge and buttons together left the dialog no room.
+              Center(
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: _failed ? colors.errorContainer : colors.primaryContainer,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Icon(icon, size: 32, color: _failed ? colors.onErrorContainer : colors.onPrimaryContainer),
+                ),
+              ),
+              const SizedBox(height: 16),
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(

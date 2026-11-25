@@ -702,6 +702,53 @@ class AppLocalizationsJa extends AppLocalizations {
   String get greetingEvening => 'こんばんは';
 
   @override
+  String get restoringBackup => 'バックアップを復元中…';
+
+  @override
+  String get savingBackup => 'バックアップを保存中：設定・プレイリスト・履歴…';
+
+  @override
+  String get howBackup3 => 'Riflay が閉じます。もう一度開くと、設定・プレイリスト・履歴が戻ります。';
+
+  @override
+  String get howBackup2 => '新しい端末や再インストール後に「バックアップを復元」を選び、そのファイルを選びます。';
+
+  @override
+  String get howBackup1 => 'バックアップを保存して、クラウドや USB メモリ、別のパソコンなど安全な場所に置きます。';
+
+  @override
+  String get howFolder3 => '「ライブラリを最新に保つ」をオンにすると、あとから入れた曲も追加されます。';
+
+  @override
+  String get howFolder2 => 'フォルダ内の曲がライブラリに追加され、オフラインで再生できます。';
+
+  @override
+  String get howFolder1 => '「フォルダを追加」を選び、音楽が入っているフォルダを選びます。';
+
+  @override
+  String get howImport3 => 'Riflay が各曲を探して、プレイリストをライブラリに追加します。やめたいときは「この取り込みを元に戻す」で取り消せます。';
+
+  @override
+  String get howImport2 => '上の欄に貼り付けて「取り込む」を押します。';
+
+  @override
+  String get howImport1 =>
+      'Spotify・Apple Music・Deezer・TIDAL・NetEase Cloud Music のアプリやサイトでプレイリストのリンクをコピーするか、M3U ファイルを選びます。';
+
+  @override
+  String get howItWorks => '使い方';
+
+  @override
+  String get commandLineSubtitle =>
+      'riflay-cli でターミナルから Riflay を操作したり、riflay-tui でターミナル内で再生したりできます。riflay-cli --help でコマンドを確認できます。';
+
+  @override
+  String get commandLine => 'コマンドライン';
+
+  @override
+  String get homeIntro => 'この端末の曲と YouTube Music をひとつの場所で。音楽を追加するか、検索するか、ログインして始めましょう。';
+
+  @override
   String get allSongs => 'すべての曲';
 
   @override
@@ -4281,7 +4328,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String couldntPlay(String title) {
-    return '$title を再生できませんでした';
+    return '$title を再生できませんでした。インターネット接続、またはファイルがまだあるかを確認して、もう一度試してください。';
   }
 
   @override
@@ -4312,7 +4359,10 @@ class AppLocalizationsJa extends AppLocalizations {
   String get saved => '保存した';
 
   @override
-  String get couldntSaveChanges => '変更を保存できませんでした';
+  String get couldntSaveChanges => '変更を保存できませんでした。端末の空き容量を確認して、もう一度試してください。';
+
+  @override
+  String get couldntSaveTags => 'タグを保存できませんでした。ファイルが読み取り専用でないか、他のアプリで開かれていないかを確認して、もう一度試してください。';
 
   @override
   String get chooseCoverArt => 'ジャケット画像を選ぶ';
@@ -4399,7 +4449,13 @@ class AppLocalizationsJa extends AppLocalizations {
   String get dontSleepSubtitle => '音楽の再生中はパソコンをスリープさせない。画面は消えることがある';
 
   @override
-  String get closeToTray => 'トレイに閉じる';
+  String get closeToTray => 'トレイに最小化';
+
+  @override
+  String get closeSettings => '閉じるときの設定';
+
+  @override
+  String get closeWindow => 'ウィンドウを閉じる';
 
   @override
   String get noTrayIcons => 'このデスクトップはトレイアイコンを表示しないので、ウィンドウを閉じると Riflay が終了する';
@@ -5595,6 +5651,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get clearUpcomingQueueBody => '次に再生する曲をすべて削除します。現在の曲はプレーヤーに残ります。';
 
   @override
+  String get clearUpcomingQueueQuestion => '次に再生する曲をすべて削除しますか？';
+
+  @override
   String get clearQueueFailed => 'キューを消去できませんでした。もう一度お試しください。';
 
   @override
@@ -5617,6 +5676,9 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get undoImport => 'この取り込みを元に戻す';
+
+  @override
+  String get undoImportQuestion => 'この取り込みを元に戻しますか？';
 
   @override
   String get duplicatesCount => '重複';

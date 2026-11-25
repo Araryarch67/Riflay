@@ -113,6 +113,18 @@ class AboutSettings extends StatelessWidget {
                 onTap: () =>
                     Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const DownloadedToolsPage())),
               ),
+            // The command line ships with the desktop app; said here, or nobody finds it.
+            if (Host.isWindows || Host.isLinux || Host.isMacOS)
+              ListTile(
+                leading: const Icon(Icons.terminal_rounded),
+                title: Text(tr.commandLine),
+                subtitle: Text(tr.commandLineSubtitle, style: muted),
+                trailing: IconButton(
+                  tooltip: tr.copy,
+                  icon: const Icon(Icons.copy_rounded, size: 18),
+                  onPressed: () => Clipboard.setData(const ClipboardData(text: 'riflay-cli --help')),
+                ),
+              ),
             ListTile(
               leading: const Icon(Icons.info_outline_rounded),
               title: Text(tr.version),

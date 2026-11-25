@@ -8,14 +8,15 @@ import '../../services/power_policy.dart';
 import '../../services/stay_awake.dart';
 import '../../services/system_tray.dart';
 import '../pages/device_setup_page.dart';
-import '../pages/sound_settings.dart' show SettingTile, settingsMuted;
+import '../pages/sound_settings.dart' show SettingTile, SettingsCard, SettingsIcon, SettingsSection, settingsMuted;
+import 'app_dialog.dart' show DialogTag;
 import '../theme.dart';
 import 'menus.dart';
 import '../../services/language.dart';
 import 'frosted.dart';
 
 /// Settings › Performance & power: keeping the screen on, keeping a computer awake
-/// while music plays, closing to the tray (computers), and (Android) letting Riflay
+/// while music plays, what closing the window does (computers, [CloseWindowSection]), and (Android) letting Riflay
 /// run with the screen off.
 class PowerSettings {
   const PowerSettings._();
@@ -29,7 +30,6 @@ class PowerSettings {
       if (DeviceSetup.offered) const _CheckDeviceRow(),
       _ScreenRow(awake),
       if (StayAwake.isDesktop) _SleepRow(awake),
-      if (SystemTray.offered) const CloseToTrayRow(),
       if (BatteryExemption.supported) const BatteryTile(),
     ];
   }
@@ -140,24 +140,53 @@ class _SleepRow extends StatelessWidget {
   );
 }
 
-/// Computers: whether closing the window hides Riflay in the tray (see [SystemTray]).
-class CloseToTrayRow extends StatelessWidget {
-  const CloseToTrayRow({super.key});
+/// Computers: Close settings › Close window, what the window's close button does: hide Riflay in the tray or quit
+/// it (see [SystemTray]).
+class CloseWindowSection extends StatelessWidget {
+  const CloseWindowSection({super.key});
 
   @override
-  Widget build(BuildContext context) => ListenableBuilder(
-    listenable: Listenable.merge([CloseToTray.instance, SystemTray.available]),
-    builder: (context, _) {
-      // A desktop that shows no tray icons: the window has to close for real, so the switch can't help.
-      final noTray = SystemTray.available.value == false;
-      return SwitchListTile(
-        secondary: const Icon(Icons.move_to_inbox_outlined),
-        title: Text(tr.closeToTray),
-        subtitle: Text(noTray ? tr.noTrayIcons : tr.closeToTraySubtitle, style: settingsMuted(context)),
-        value: CloseToTray.instance.enabled && !noTray,
-        onChanged: noTray ? null : CloseToTray.instance.setEnabled,
-      );
-    },
+  Widget build(BuildContext context) => SettingsSection(
+    title: tr.closeSettings,
+    child: SettingsCard(
+      children: [
+        ListenableBuilder(
+          listenable: Listenable.merge([CloseToTray.instance, SystemTray.available]),
+          builder: (context, _) {
+            // A desktop that shows no tray icons: the window has to close for real, so there is no choice to make.
+            final noTray = SystemTray.available.value == false;
+            return RadioGroup<bool>(
+              groupValue: CloseToTray.instance.enabled && !noTray,
+              onChanged: (v) {
+                if (v != null && !noTray) CloseToTray.instance.setEnabled(v);
+              },
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  ListTile(
+                    leading: const SettingsIcon(Icons.close),
+                    title: Text(tr.closeWindow),
+                    subtitle: Text(noTray ? tr.noTrayIcons : tr.closeToTraySubtitle, style: settingsMuted(context)),
+                  ),
+                  RadioListTile<bool>(
+                    value: true,
+                    enabled: !noTray,
+                    title: Row(
+                      children: [
+                        Flexible(child: Text(tr.closeToTray)),
+                        const SizedBox(width: 8),
+                        DialogTag(tr.recommended),
+                      ],
+                    ),
+                  ),
+                  RadioListTile<bool>(value: false, enabled: !noTray, title: Text(tr.quitRiflay)),
+                ],
+              ),
+            );
+          },
+        ),
+      ],
+    ),
   );
 }
 

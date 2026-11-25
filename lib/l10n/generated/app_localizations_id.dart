@@ -707,6 +707,58 @@ class AppLocalizationsId extends AppLocalizations {
   String get greetingEvening => 'Selamat malam';
 
   @override
+  String get restoringBackup => 'Memulihkan cadangan…';
+
+  @override
+  String get savingBackup => 'Menyimpan cadangan: pengaturan, playlist, dan riwayat…';
+
+  @override
+  String get howBackup3 => 'Riflay akan ditutup; buka lagi dan pengaturan, playlist, serta riwayatmu kembali.';
+
+  @override
+  String get howBackup2 =>
+      'Di perangkat baru, atau setelah install ulang, pilih Pulihkan cadangan lalu pilih file itu.';
+
+  @override
+  String get howBackup1 =>
+      'Simpan cadangan, lalu taruh file-nya di tempat aman: penyimpanan cloud, flashdisk, atau komputer lain.';
+
+  @override
+  String get howFolder3 =>
+      'Dengan Jaga koleksi tetap terbaru menyala, lagu yang kamu taruh di sana nanti juga ikut ditambahkan.';
+
+  @override
+  String get howFolder2 => 'Riflay menambahkan lagu di folder itu ke Koleksi, siap diputar offline.';
+
+  @override
+  String get howFolder1 => 'Pilih Tambah folder, lalu pilih folder tempat musikmu.';
+
+  @override
+  String get howImport3 =>
+      'Riflay mencari setiap lagu dan menaruh playlist-nya di Koleksi. Berubah pikiran? Batalkan impor ini akan menghapusnya lagi.';
+
+  @override
+  String get howImport2 => 'Tempel di kolom di atas, lalu tekan Impor.';
+
+  @override
+  String get howImport1 =>
+      'Salin link playlist dari aplikasi atau situsnya (Spotify, Apple Music, Deezer, TIDAL, atau NetEase Cloud Music), atau pilih file M3U.';
+
+  @override
+  String get howItWorks => 'Cara kerjanya';
+
+  @override
+  String get commandLineSubtitle =>
+      'Kendalikan Riflay dari terminal dengan riflay-cli, atau putar musik di terminal dengan riflay-tui. Jalankan riflay-cli --help untuk melihat perintahnya.';
+
+  @override
+  String get commandLine => 'Baris perintah';
+
+  @override
+  String get homeIntro =>
+      'Lagu di perangkat ini dan YouTube Music dalam satu tempat. Tambahkan musik, cari lagu, atau masuk untuk mulai.';
+
+  @override
   String get allSongs => 'Semua Lagu';
 
   @override
@@ -4369,7 +4421,7 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String couldntPlay(String title) {
-    return 'Tidak bisa memutar $title';
+    return 'Tidak bisa memutar $title. Periksa koneksi internet, atau pastikan file-nya masih ada, lalu coba lagi.';
   }
 
   @override
@@ -4400,7 +4452,12 @@ class AppLocalizationsId extends AppLocalizations {
   String get saved => 'Disimpan';
 
   @override
-  String get couldntSaveChanges => 'Perubahan tidak bisa disimpan';
+  String get couldntSaveChanges =>
+      'Perubahan tidak bisa disimpan. Pastikan ruang penyimpanan masih cukup, lalu coba lagi.';
+
+  @override
+  String get couldntSaveTags =>
+      'Tag tidak bisa disimpan. Pastikan file-nya tidak read-only atau sedang dibuka aplikasi lain, lalu coba lagi.';
 
   @override
   String get chooseCoverArt => 'Pilih sampul';
@@ -4487,7 +4544,13 @@ class AppLocalizationsId extends AppLocalizations {
   String get dontSleepSubtitle => 'Komputer tetap bangun selama musik diputar. Layar tetap bisa mati';
 
   @override
-  String get closeToTray => 'Tutup ke tray';
+  String get closeToTray => 'Perkecil ke tray';
+
+  @override
+  String get closeSettings => 'Pengaturan tutup';
+
+  @override
+  String get closeWindow => 'Tutup jendela';
 
   @override
   String get noTrayIcons => 'Desktop-mu tidak menampilkan ikon tray, jadi menutup jendela akan keluar dari Riflay';
@@ -5723,6 +5786,9 @@ class AppLocalizationsId extends AppLocalizations {
       'Semua lagu berikutnya akan dihapus dari antrean. Lagu saat ini tetap ada di pemutar.';
 
   @override
+  String get clearUpcomingQueueQuestion => 'Hapus semua lagu berikutnya?';
+
+  @override
   String get clearQueueFailed => 'Antrean belum bisa dikosongkan. Coba lagi.';
 
   @override
@@ -5745,6 +5811,9 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get undoImport => 'Batalkan impor ini';
+
+  @override
+  String get undoImportQuestion => 'Batalkan impor ini?';
 
   @override
   String get duplicatesCount => 'Duplikat';

@@ -34,7 +34,7 @@ Future<void> showTagEditor(BuildContext context, Track track) async {
     messenger.showSnackBar(SnackBar(content: Text(tr.saved)));
   } catch (e) {
     debugPrint('Saving tags failed: $e');
-    messenger.showSnackBar(SnackBar(content: Text(tr.couldntSaveChanges)));
+    messenger.showSnackBar(SnackBar(content: Text(tr.couldntSaveTags)));
   }
 }
 

@@ -17,6 +17,7 @@ import 'widgets/item_picker.dart';
 import 'widgets/skeleton.dart';
 import '../services/language.dart';
 import 'widgets/app_dialog.dart';
+import 'widgets/how_to_steps.dart';
 
 Future<({List<Track> tracks, int total})> readLocalM3u(String file) async {
   final data = await _inspectM3u(file, {});
@@ -362,7 +363,7 @@ class _PlaylistImportDialogState extends State<PlaylistImportDialog> {
   Future<void> undoImport() async {
     final player = widget.player!;
     final where = result!;
-    if (!await confirmDialog(context, title: tr.undoImport, body: where.title, confirmLabel: tr.undo)) return;
+    if (!await confirmDialog(context, title: tr.undoImportQuestion, body: where.title, confirmLabel: tr.undo)) return;
     if (!mounted) return;
     setState(() => step = _Step.saving);
     try {
@@ -562,6 +563,8 @@ class _PlaylistImportDialogState extends State<PlaylistImportDialog> {
                 errorText: error ?? (link.text.trim().isNotEmpty && !valid ? tr.notAPlaylistLink : null),
               ),
             ),
+            const SizedBox(height: 8),
+            HowToSteps(inset: false, steps: [tr.howImport1, tr.howImport2, tr.howImport3]),
           ],
           _Step.review => [
             Text(

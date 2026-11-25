@@ -144,21 +144,28 @@ void main() {
     });
   });
 
-  group('Settings row', () {
-    Future<void> pump(WidgetTester tester) =>
-        tester.pumpWidget(const MaterialApp(home: Scaffold(body: CloseToTrayRow())));
+  group('Close window setting', () {
+    Future<void> pump(WidgetTester tester) => tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(body: SingleChildScrollView(child: CloseWindowSection())),
+      ),
+    );
 
-    testWidgets('switches Close to tray off and on', (tester) async {
+    bool? chosen(WidgetTester tester) => tester.widget<RadioGroup<bool>>(find.byType(RadioGroup<bool>)).groupValue;
+
+    testWidgets('picks Quit Riflay, then Minimize to tray, and keeps the choice', (tester) async {
       SystemTray.available.value = true;
       await pump(tester);
-      expect(tester.widget<SwitchListTile>(find.byType(SwitchListTile)).value, isTrue);
+      expect(chosen(tester), isTrue);
+      expect(find.text('Recommended'), findsOneWidget);
 
-      await tester.tap(find.text('Close to tray'));
+      await tester.tap(find.text('Quit Riflay'));
       await tester.pumpAndSettle();
       expect(CloseToTray.instance.enabled, isFalse);
-      expect(tester.widget<SwitchListTile>(find.byType(SwitchListTile)).value, isFalse);
+      expect(chosen(tester), isFalse);
+      expect((await SharedPreferences.getInstance()).getBool('window.closeToTray.v1'), isFalse);
 
-      await tester.tap(find.text('Close to tray'));
+      await tester.tap(find.text('Minimize to tray'));
       await tester.pumpAndSettle();
       expect(CloseToTray.instance.enabled, isTrue);
     });
@@ -166,10 +173,12 @@ void main() {
     testWidgets('explains a desktop without tray icons', (tester) async {
       SystemTray.available.value = false;
       await pump(tester);
-      final tile = tester.widget<SwitchListTile>(find.byType(SwitchListTile));
-      expect(tile.value, isFalse);
-      expect(tile.onChanged, isNull);
-      expect(find.textContaining('doesn\'t show tray icons'), findsOneWidget);
+      expect(chosen(tester), isFalse);
+      expect(
+        tester.widgetList<RadioListTile<bool>>(find.byType(RadioListTile<bool>)).every((t) => t.enabled == false),
+        isTrue,
+      );
+      expect(find.textContaining("doesn't show tray icons"), findsOneWidget);
     });
   });
 }

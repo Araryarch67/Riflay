@@ -206,10 +206,10 @@ class _CoverEditorState extends State<_CoverEditor> {
     final colors = Theme.of(context).colorScheme;
     return PopScope(
       canPop: !_saving,
-      child: AlertDialog(
-        scrollable: true,
-        title: Text(tr.changeCover),
-        insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      child: AppDialog(
+        title: tr.changeCover,
+        // The crop square and the dialog's own 24 px sides.
+        width: side + 48,
         content: SizedBox(
           width: side,
           child: Column(

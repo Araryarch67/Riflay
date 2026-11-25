@@ -711,7 +711,8 @@ class LayoutPrefs extends ChangeNotifier {
   Set<String> pinnedPlaylists = const {};
   Map<String, Set<String>> pinnedTracks = const {};
   List<String> likedTrackOrder = const [];
-  Set<ExtraFeature> extraFeatures = const {};
+  // Undo for a removed song is on from the start: a song taken out by mistake (a swipe) comes back.
+  Set<ExtraFeature> extraFeatures = const {ExtraFeature.undoRemoval};
   String? lastPlaylistChoice;
   Set<String> hiddenRecommendations = const {};
 
@@ -1054,10 +1055,9 @@ class LayoutPrefs extends ChangeNotifier {
           entry.key as String: (entry.value as List).whereType<String>().toSet(),
     };
     likedTrackOrder = (j['likedTrackOrder'] as List?)?.whereType<String>().toList() ?? const [];
-    extraFeatures = {
-      for (final key in (j['extraFeatures'] as List? ?? const []).whereType<String>())
-        ?ExtraFeature.values.asNameMap()[key],
-    };
+    extraFeatures = j['extraFeatures'] is List
+        ? {for (final key in (j['extraFeatures'] as List).whereType<String>()) ?ExtraFeature.values.asNameMap()[key]}
+        : d.extraFeatures;
     lastPlaylistChoice = j['lastPlaylistChoice'] as String?;
     hiddenRecommendations = (j['hiddenRecommendations'] as List?)?.whereType<String>().toSet() ?? const {};
     swipeDistance = (j['swipeDistance'] as num?)?.round().clamp(32, 120) ?? d.swipeDistance;

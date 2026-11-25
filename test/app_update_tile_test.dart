@@ -7,6 +7,8 @@ import 'package:riflay/ui/widgets/app_update_tile.dart';
 
 import 'app_updates_test.dart' show releaseJson, windowsReleaseJson;
 
+import 'package:riflay/ui/widgets/app_dialog.dart';
+
 class FakeUpdates extends AppUpdates {
   FakeUpdates() : super(android: true);
   int checks = 0;
@@ -103,7 +105,7 @@ void main() {
     expect(updates.checks, 0);
     await tester.tap(find.text('Not now'));
     await tester.pumpAndSettle();
-    expect(find.byType(AlertDialog), findsNothing);
+    expect(find.byType(AppDialog), findsNothing);
     expect(updates.downloads, 0);
   });
 
@@ -130,7 +132,7 @@ void main() {
     expect(tester.widget<TextButton>(find.widgetWithText(TextButton, 'Not now')).onPressed, isNull);
     await tester.binding.handlePopRoute();
     await tester.pump();
-    expect(find.byType(AlertDialog), findsOneWidget);
+    expect(find.byType(AppDialog), findsOneWidget);
     expect(updates.downloads, 1);
     pending.complete('/cache/app-updates/update.apk');
     await tester.pumpAndSettle();
@@ -142,7 +144,7 @@ void main() {
     expect(find.text('Complete the update in the Android installer'), findsOneWidget);
     await tester.tap(find.text('Not now'));
     await tester.pumpAndSettle();
-    expect(find.byType(AlertDialog), findsNothing);
+    expect(find.byType(AppDialog), findsNothing);
   });
 
   testWidgets('popup fits a small screen with enlarged text', (tester) async {

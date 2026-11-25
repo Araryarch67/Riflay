@@ -1425,6 +1425,96 @@ abstract class AppLocalizations {
   /// **'Good evening'**
   String get greetingEvening;
 
+  /// No description provided for @restoringBackup.
+  ///
+  /// In en, this message translates to:
+  /// **'Restoring the backup…'**
+  String get restoringBackup;
+
+  /// No description provided for @savingBackup.
+  ///
+  /// In en, this message translates to:
+  /// **'Saving the backup: settings, playlists and history…'**
+  String get savingBackup;
+
+  /// No description provided for @howBackup3.
+  ///
+  /// In en, this message translates to:
+  /// **'Riflay closes; open it again and your settings, playlists and history are back.'**
+  String get howBackup3;
+
+  /// No description provided for @howBackup2.
+  ///
+  /// In en, this message translates to:
+  /// **'On a new device, or after reinstalling, choose Restore a backup and pick that file.'**
+  String get howBackup2;
+
+  /// No description provided for @howBackup1.
+  ///
+  /// In en, this message translates to:
+  /// **'Save a backup, and keep the file somewhere safe: cloud storage, a USB drive or another computer.'**
+  String get howBackup1;
+
+  /// No description provided for @howFolder3.
+  ///
+  /// In en, this message translates to:
+  /// **'With Keep the library up to date on, songs you put there later are added too.'**
+  String get howFolder3;
+
+  /// No description provided for @howFolder2.
+  ///
+  /// In en, this message translates to:
+  /// **'Riflay adds the songs in it to your Library, ready to play offline.'**
+  String get howFolder2;
+
+  /// No description provided for @howFolder1.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose Add a folder and pick the folder your music is in.'**
+  String get howFolder1;
+
+  /// No description provided for @howImport3.
+  ///
+  /// In en, this message translates to:
+  /// **'Riflay finds each song and puts the playlist in your Library. Changed your mind? Undo this import takes it back.'**
+  String get howImport3;
+
+  /// No description provided for @howImport2.
+  ///
+  /// In en, this message translates to:
+  /// **'Paste it in the box above and press Import.'**
+  String get howImport2;
+
+  /// No description provided for @howImport1.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy the playlist\'s link in the app or site it\'s on (Spotify, Apple Music, Deezer, TIDAL or NetEase Cloud Music), or pick an M3U file.'**
+  String get howImport1;
+
+  /// No description provided for @howItWorks.
+  ///
+  /// In en, this message translates to:
+  /// **'How it works'**
+  String get howItWorks;
+
+  /// No description provided for @commandLineSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Control Riflay from a terminal with riflay-cli, or play in one with riflay-tui. Run riflay-cli --help to see the commands.'**
+  String get commandLineSubtitle;
+
+  /// No description provided for @commandLine.
+  ///
+  /// In en, this message translates to:
+  /// **'Command line'**
+  String get commandLine;
+
+  /// No description provided for @homeIntro.
+  ///
+  /// In en, this message translates to:
+  /// **'Your songs and YouTube Music in one place. Add music from this device, search, or sign in to start.'**
+  String get homeIntro;
+
   /// No description provided for @allSongs.
   ///
   /// In en, this message translates to:
@@ -7950,7 +8040,7 @@ abstract class AppLocalizations {
   /// No description provided for @couldntPlay.
   ///
   /// In en, this message translates to:
-  /// **'Couldn\'t play {title}'**
+  /// **'Couldn\'t play {title}. Check your internet connection, or that the file is still there, then try again.'**
   String couldntPlay(String title);
 
   /// No description provided for @ytSearchFailed.
@@ -8010,8 +8100,14 @@ abstract class AppLocalizations {
   /// No description provided for @couldntSaveChanges.
   ///
   /// In en, this message translates to:
-  /// **'Couldn\'t save the changes'**
+  /// **'Couldn\'t save the changes. Check there\'s free space on this device, then try again.'**
   String get couldntSaveChanges;
+
+  /// No description provided for @couldntSaveTags.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t save the tags. Check that the file isn\'t read-only or open in another app, then try again.'**
+  String get couldntSaveTags;
 
   /// No description provided for @chooseCoverArt.
   ///
@@ -8184,8 +8280,20 @@ abstract class AppLocalizations {
   /// No description provided for @closeToTray.
   ///
   /// In en, this message translates to:
-  /// **'Close to tray'**
+  /// **'Minimize to tray'**
   String get closeToTray;
+
+  /// No description provided for @closeSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Close settings'**
+  String get closeSettings;
+
+  /// No description provided for @closeWindow.
+  ///
+  /// In en, this message translates to:
+  /// **'Close window'**
+  String get closeWindow;
 
   /// No description provided for @noTrayIcons.
   ///
@@ -10281,6 +10389,12 @@ abstract class AppLocalizations {
   /// **'All upcoming songs will be removed. The current song stays in the player.'**
   String get clearUpcomingQueueBody;
 
+  /// No description provided for @clearUpcomingQueueQuestion.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear upcoming queue?'**
+  String get clearUpcomingQueueQuestion;
+
   /// No description provided for @clearQueueFailed.
   ///
   /// In en, this message translates to:
@@ -10328,6 +10442,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Undo this import'**
   String get undoImport;
+
+  /// No description provided for @undoImportQuestion.
+  ///
+  /// In en, this message translates to:
+  /// **'Undo this import?'**
+  String get undoImportQuestion;
 
   /// No description provided for @duplicatesCount.
   ///
