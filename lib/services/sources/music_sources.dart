@@ -14,12 +14,19 @@ class MusicSources extends ChangeNotifier {
 
   static final instance = MusicSources._();
 
-  // v2: every source off by default once (they left songs stuck fetching); v1 choices are dropped on first
-  // start ([_read]).
-  static const _soundcloudKey = 'sources.soundcloud.v2';
-  static const _monochromeKey = 'sources.monochrome.v2';
-  static const _smartMergeKey = 'sources.smartMerge.v2';
-  static const _oldKeys = ['sources.soundcloud.v1', 'sources.monochrome.v1', 'sources.smartMerge.v1'];
+  // Each version turns every source off once for everyone (v2: they left songs stuck fetching; v3: YouTube
+  // Music alone again); older choices are dropped on first start ([_read]).
+  static const _soundcloudKey = 'sources.soundcloud.v3';
+  static const _monochromeKey = 'sources.monochrome.v3';
+  static const _smartMergeKey = 'sources.smartMerge.v3';
+  static const _oldKeys = [
+    'sources.soundcloud.v1',
+    'sources.monochrome.v1',
+    'sources.smartMerge.v1',
+    'sources.soundcloud.v2',
+    'sources.monochrome.v2',
+    'sources.smartMerge.v2',
+  ];
   static const _cacheKey = 'sources.smartMergeCacheMb.v1';
 
   /// How much Smart merge keeps on disk of the songs it played (MB), so a song played again opens from there

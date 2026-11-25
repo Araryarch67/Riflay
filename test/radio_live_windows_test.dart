@@ -26,7 +26,7 @@ void main() {
       final messenger = TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
       const paths = MethodChannel('plugins.flutter.io/path_provider');
       messenger.setMockMethodCallHandler(paths, (_) async => directory.path);
-      SharedPreferences.setMockInitialValues({'discord.enabled': false, 'sources.smartMerge.v2': false});
+      SharedPreferences.setMockInitialValues({'discord.enabled': false, 'sources.smartMerge.v3': false});
       await MusicSources.instance.load();
       MediaKit.ensureInitialized(
         libmpv: File(

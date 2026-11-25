@@ -21,16 +21,18 @@ void main() {
 
   test('an update turns them all off once, whatever was set before; what is set after stays', () async {
     SharedPreferences.setMockInitialValues({
-      'sources.soundcloud.v1': true,
-      'sources.monochrome.v1': true,
-      'sources.smartMerge.v1': true,
+      for (final v in ['v1', 'v2']) ...{
+        'sources.soundcloud.$v': true,
+        'sources.monochrome.$v': true,
+        'sources.smartMerge.$v': true,
+      },
     });
     final s = MusicSources.instance..reset();
     await s.load();
     expect((s.soundcloud, s.monochrome, s.smartMerge), (false, false, false));
     final prefs = await SharedPreferences.getInstance();
     await Future<void>.delayed(Duration.zero);
-    expect(prefs.getKeys().where((k) => k.endsWith('.v1')), isEmpty, reason: 'the old choices are dropped');
+    expect(prefs.getKeys().where((k) => k.endsWith('.v1') || k.endsWith('.v2')), isEmpty, reason: 'the old choices are dropped');
 
     await s.setSmartMerge(true);
     s.reset();

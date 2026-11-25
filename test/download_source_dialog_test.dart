@@ -61,7 +61,7 @@ void main() {
   testWidgets('a failed alternate-source lookup never starts an unrequested YouTube download', (tester) async {
     SharedPreferences.setMockInitialValues({
       'discord.enabled': false,
-      'sources.monochrome.v2': true,
+      'sources.monochrome.v3': true,
       'library.v1': jsonEncode([]),
     });
     final player = PlayerController();
