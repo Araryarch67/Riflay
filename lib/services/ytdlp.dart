@@ -8,6 +8,7 @@ import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as p;
 
 import '../platform/host.dart';
+import '../platform/native_calls.dart' show currentAbi;
 import 'download_prefs.dart';
 import 'language.dart';
 import 'network_settings.dart';
@@ -79,9 +80,8 @@ class ResolvedVideo {
 /// Wraps the yt-dlp CLI, which keeps up with YouTube's anti-download changes
 /// (PO tokens, JS challenges) far faster than in-app extractors.
 ///
-/// Desktop only: prefers a yt-dlp on PATH (kept updated by the system package
-/// manager), otherwise downloads the official standalone release once into the
-/// app's support folder.
+/// Desktop only: prefers a recent yt-dlp on PATH ([recentRelease]), otherwise downloads the official standalone
+/// release into the app's support folder and keeps it up to date.
 abstract final class YtDlp {
   @visibleForTesting
   static LookupProcessRunner processes = LookupProcessRunner();
@@ -161,6 +161,8 @@ abstract final class YtDlp {
       ? 'yt-dlp.exe'
       : Host.isMacOS
       ? 'yt-dlp_macos'
+      : currentAbi == 'linux_arm64'
+      ? 'yt-dlp_linux_aarch64'
       : 'yt-dlp_linux';
 
   /// Path to a usable yt-dlp, downloading the official binary if none is installed.
@@ -172,13 +174,28 @@ abstract final class YtDlp {
     _generation++;
   }
 
+  /// Whether a yt-dlp reporting [version] (`2024.04.09`, nightlies `2025.06.25.232918`) is recent enough to use.
+  /// YouTube breaks releases within weeks, and distributions rarely update theirs: Ubuntu 24.04's apt yt-dlp is
+  /// 2024.04.09 and finds no formats at all, which a download showed as "Connection interrupted" until it failed.
+  @visibleForTesting
+  static bool recentRelease(String version, {DateTime? now}) {
+    final m = RegExp(r'^(\d{4})\.(\d{1,2})\.(\d{1,2})').firstMatch(version.trim());
+    if (m == null) return false;
+    final released = DateTime(int.parse(m[1]!), int.parse(m[2]!), int.parse(m[3]!));
+    return (now ?? DateTime.now()).difference(released) < const Duration(days: 60);
+  }
+
   static Future<String?> _findExecutable() async {
     final generation = _generation;
     if (!supported) return null;
+    // An old one on PATH is kept only for when our own copy can't be had.
+    String? stale;
     for (final candidate in ['yt-dlp', if (Host.isWindows) 'yt-dlp.exe']) {
       try {
         final r = await Process.run(candidate, ['--version']);
-        if (r.exitCode == 0) return candidate;
+        if (r.exitCode != 0) continue;
+        if (recentRelease('${r.stdout}')) return candidate;
+        stale ??= candidate;
       } catch (_) {
         // Not on PATH.
       }
@@ -186,7 +203,7 @@ abstract final class YtDlp {
     final local = File(p.join((await ExecutableStore.directory()).path, _releaseAsset));
     // Under 4 MB is a download cut short (older builds wrote straight to this path).
     final whole = local.existsSync() && local.lengthSync() > 4 << 20;
-    if (!whole && !await _download(local)) return null;
+    if (!whole && !await _download(local)) return stale;
     // YouTube changes break old yt-dlp releases within weeks; a copy of our own is
     // brought up to date in the background (the system's is the package manager's job).
     if (whole && DateTime.now().difference(local.statSync().modified) > const Duration(days: 14)) {

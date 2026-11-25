@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:http/http.dart' as http;
+import 'package:http/io_client.dart';
 
 /// Downloads [url] into [out] over several parallel HTTP range requests, and can carry on after an interruption.
 ///
@@ -31,7 +32,7 @@ Future<void> rangedDownload({
   Duration stateInterval = const Duration(seconds: 1),
   Duration retryDelay = const Duration(milliseconds: 300),
 }) async {
-  final client = http.Client();
+  final client = _clientFor(url);
   try {
     final total = totalBytes ?? await _probeLength(client, url, headers);
     final chunks = (total + chunkSize - 1) ~/ chunkSize;
@@ -148,6 +149,27 @@ Future<void> rangedDownload({
   } finally {
     client.close();
   }
+}
+
+/// A client that reaches [url]'s host over the address family the URL was issued to (googlevideo's `ip=`), when it
+/// names one. googlevideo answers 403 to a stream URL fetched from another address: on a host with both IPv4 and
+/// IPv6 (Fedora), a URL issued over IPv4 was fetched over IPv6 and every chunk failed.
+http.Client _clientFor(Uri url) {
+  final family = InternetAddress.tryParse(url.queryParameters['ip'] ?? '')?.type;
+  if (family == null) return http.Client();
+  return IOClient(
+    HttpClient()
+      ..connectionFactory = (uri, proxyHost, proxyPort) async {
+        // Through a proxy the proxy's address is the one YouTube sees.
+        if (proxyHost != null) return Socket.startConnect(proxyHost, proxyPort!);
+        // shortcut: only the first address of that family is tried; googlevideo hosts have one per family.
+        final address = (await InternetAddress.lookup(uri.host, type: family)).first;
+        // A looked-up address keeps the name, which TLS checks the certificate against.
+        return uri.scheme == 'https'
+            ? SecureSocket.startConnect(address, uri.port)
+            : Socket.startConnect(address, uri.port);
+      },
+  );
 }
 
 int _chunkLength(int index, int chunkSize, int total) {

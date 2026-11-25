@@ -206,4 +206,21 @@ void main() {
     expect(out.readAsBytesSync(), data);
     expect(server.ranges.toSet().length, 11);
   });
+
+  test('a URL issued to an address is fetched over that address family', () async {
+    // The server listens on IPv4 only; `localhost` has both families.
+    Future<void> fetch(String ip) => rangedDownload(
+      url: Uri.parse('http://localhost:${server.http.port}/a.webm?ip=$ip'),
+      out: out,
+      totalBytes: data.length,
+      chunkSize: chunk,
+      retryDelay: const Duration(milliseconds: 1),
+    );
+    await fetch('127.0.0.1');
+    expect(out.readAsBytesSync(), data);
+    server.ranges.clear();
+    // googlevideo would answer 403 here; this server can only be missed.
+    await expectLater(fetch('::1'), throwsA(isA<SocketException>()));
+    expect(server.ranges, isEmpty);
+  });
 }
