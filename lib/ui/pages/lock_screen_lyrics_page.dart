@@ -6,6 +6,7 @@ import 'package:liquid_glass_renderer/liquid_glass_renderer.dart';
 
 import '../../models/track.dart';
 import '../../services/language.dart';
+import '../../services/lyrics.dart';
 import '../../services/layout_prefs.dart';
 import '../../services/lock_screen_lyrics.dart';
 import '../player/player_glass.dart' show riflayGlass;
@@ -49,7 +50,10 @@ class _LockScreenLyricsPageState extends State<LockScreenLyricsPage> {
           final base = Theme.of(context);
           final scheme = ColorScheme.fromSeed(seedColor: accent, brightness: Brightness.dark);
           return Theme(
-            data: base.copyWith(colorScheme: scheme, iconTheme: base.iconTheme.copyWith(color: scheme.onSurface)),
+            data: base.copyWith(
+              colorScheme: scheme,
+              iconTheme: base.iconTheme.copyWith(color: scheme.onSurface),
+            ),
             child: Material(
               color: scheme.surface,
               child: Stack(
@@ -63,15 +67,8 @@ class _LockScreenLyricsPageState extends State<LockScreenLyricsPage> {
                         padding: const EdgeInsets.symmetric(horizontal: 20),
                         child: Column(
                           children: [
-                            const SizedBox(height: 28),
-                            const _Clock(),
-                            const SizedBox(height: 20),
-                            if (track != null) ...[
-                              _SongCard(track: track),
-                              const SizedBox(height: 8),
-                              Expanded(child: LyricsView(track: track)),
-                            ] else
-                              const Spacer(),
+                            const SizedBox(height: 24),
+                            Expanded(child: _Body(track: track)),
                             const SizedBox(height: 12),
                             const _Buttons(),
                             const SizedBox(height: 20),
@@ -201,9 +198,79 @@ class _Buttons extends StatelessWidget {
   }
 }
 
-/// The time and date, as the lock screen shows them, on a pane of glass, ticking over each minute.
+/// The clock and the song, then the lyrics once there are some. Without lyrics the clock is the lock screen's big
+/// one, hours over minutes; when they come it moves up into one line and the lyrics take the room.
+class _Body extends StatefulWidget {
+  const _Body({required this.track});
+
+  final Track? track;
+
+  @override
+  State<_Body> createState() => _BodyState();
+}
+
+class _BodyState extends State<_Body> {
+  bool _lyrics = false;
+  String? _for;
+
+  @override
+  void initState() {
+    super.initState();
+    _look();
+  }
+
+  @override
+  void didUpdateWidget(_Body old) {
+    super.didUpdateWidget(old);
+    if (old.track?.id != widget.track?.id) _look();
+  }
+
+  /// The same look the lyrics view makes (shared, so asked once): whether this song has words to show.
+  void _look() {
+    final t = widget.track;
+    _for = t?.id;
+    _lyrics = false;
+    if (t == null) return;
+    LyricsService.forTrack(t).then((l) {
+      if (mounted && _for == t.id) setState(() => _lyrics = !l.isEmpty && !l.instrumental);
+    }, onError: (Object _) {});
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = widget.track;
+    return Column(
+      children: [
+        AnimatedSwitcher(
+          duration: const Duration(milliseconds: 450),
+          switchInCurve: Curves.easeOutCubic,
+          switchOutCurve: Curves.easeInCubic,
+          transitionBuilder: (child, animation) => FadeTransition(
+            opacity: animation,
+            child: SizeTransition(sizeFactor: animation, alignment: Alignment.topCenter, child: child),
+          ),
+          child: _Clock(key: ValueKey(_lyrics), compact: _lyrics),
+        ),
+        if (t != null && _lyrics) ...[
+          const SizedBox(height: 16),
+          _SongCard(track: t),
+          const SizedBox(height: 8),
+          Expanded(child: LyricsView(track: t)),
+        ] else ...[
+          const Spacer(),
+          if (t != null) _SongCard(track: t),
+        ],
+      ],
+    );
+  }
+}
+
+/// The time, as a phone's lock screen draws it: big, hours over minutes in two of the cover's tones, the date over
+/// them; [compact], one line with the date beside it on a pane of glass. Ticks over each minute.
 class _Clock extends StatefulWidget {
-  const _Clock();
+  const _Clock({super.key, this.compact = false});
+
+  final bool compact;
 
   @override
   State<_Clock> createState() => _ClockState();
@@ -238,38 +305,51 @@ class _ClockState extends State<_Clock> {
     final scheme = Theme.of(context).colorScheme;
     final text = Theme.of(context).textTheme;
     final now = DateTime.now();
-    final time = l.formatTimeOfDay(
-      TimeOfDay.fromDateTime(now),
-      alwaysUse24HourFormat: MediaQuery.alwaysUse24HourFormatOf(context),
+    final h24 = MediaQuery.alwaysUse24HourFormatOf(context);
+    final hours = (h24 ? now.hour : (now.hour % 12 == 0 ? 12 : now.hour % 12)).toString().padLeft(2, '0');
+    final minutes = now.minute.toString().padLeft(2, '0');
+    final date = l.formatMediumDate(now);
+    // Figtree: round and plain, like a phone's own lock screen clock.
+    TextStyle digits(double size, Color color) => TextStyle(
+      fontFamily: 'Figtree',
+      fontSize: size,
+      fontWeight: FontWeight.w600,
+      height: 0.92,
+      letterSpacing: -size * 0.03,
+      color: color,
+      fontFeatures: const [FontFeature.tabularFigures()],
     );
-    return _Glass(
-      radius: 40,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(32, 22, 32, 20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            FittedBox(
-              fit: BoxFit.scaleDown,
-              child: Text(
-                time,
-                style: text.displayLarge?.copyWith(
-                  fontSize: 92,
-                  fontWeight: FontWeight.w300,
-                  color: scheme.primaryFixed,
-                  height: 1,
-                  shadows: [Shadow(color: scheme.primary.withValues(alpha: 0.5), blurRadius: 24)],
+    if (widget.compact) {
+      return _Glass(
+        radius: 32,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 14, 24, 14),
+          child: Row(
+            children: [
+              Text('$hours:$minutes', style: digits(48, scheme.primaryFixed)),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Text(
+                  l.formatFullDate(now),
+                  maxLines: 2,
+                  style: text.titleSmall?.copyWith(color: scheme.onSurface, fontWeight: FontWeight.w500),
                 ),
               ),
-            ),
-            const SizedBox(height: 10),
-            Text(
-              l.formatFullDate(now),
-              style: text.titleMedium?.copyWith(color: scheme.onSurface, fontWeight: FontWeight.w500),
-            ),
-          ],
+            ],
+          ),
         ),
-      ),
+      );
+    }
+    return Column(
+      children: [
+        Text(
+          date,
+          style: text.titleMedium?.copyWith(color: scheme.onSurface, fontWeight: FontWeight.w500),
+        ),
+        const SizedBox(height: 12),
+        Text(hours, style: digits(150, scheme.primaryFixed)),
+        Text(minutes, style: digits(150, scheme.tertiaryFixed)),
+      ],
     );
   }
 }
@@ -283,7 +363,11 @@ class _GlassLayer extends StatelessWidget {
   @override
   Widget build(BuildContext context) => LayoutPrefs.lightweight
       ? child
-      : LiquidGlassLayer(settings: riflayGlass(brightness: Brightness.dark), useBackdropGroup: true, child: child);
+      : LiquidGlassLayer(
+          settings: riflayGlass(brightness: Brightness.dark),
+          useBackdropGroup: true,
+          child: child,
+        );
 }
 
 /// Liquid glass over the blurred cover: the cover bends and catches light at its rim. Lightweight mode draws a plain
