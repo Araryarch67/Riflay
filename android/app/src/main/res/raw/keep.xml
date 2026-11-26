@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Resources Dart names as strings (the media notification's buttons and icon, the other notifications' icon):
+     no code references them, so a release build's resource shrinking removed them, and Android then refused every
+     playback state with "You must specify an icon resource id to build a CustomAction": no media notification. -->
+<resources xmlns:tools="http://schemas.android.com/tools"
+    tools:keep="@drawable/ic_notify_*,@drawable/ic_widget_*,@drawable/ic_stat_*,@mipmap/ic_launcher_monochrome" />

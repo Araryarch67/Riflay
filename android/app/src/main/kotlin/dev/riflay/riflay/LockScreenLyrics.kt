@@ -20,6 +20,13 @@ class LockScreenLyrics(private val activity: Activity, messenger: BinaryMessenge
     private val channel = MethodChannel(messenger, "riflay/lock_screen")
     private var enabled = false
     private var shown = false
+    private val keyguard = activity.getSystemService(KeyguardManager::class.java)
+
+    // Unlocking, told by the system itself: some phones (Xiaomi) never send USER_PRESENT to an app over the lock
+    // screen, which left the page up after unlocking.
+    private val lockState = if (Build.VERSION.SDK_INT >= 33) {
+        KeyguardManager.KeyguardLockedStateListener { locked -> if (!locked) hide() }
+    } else null
 
     private val receiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
@@ -38,6 +45,7 @@ class LockScreenLyrics(private val activity: Activity, messenger: BinaryMessenge
         // System broadcasts only: nothing else can send these.
         if (Build.VERSION.SDK_INT >= 33) activity.registerReceiver(receiver, filter, Context.RECEIVER_NOT_EXPORTED)
         else activity.registerReceiver(receiver, filter)
+        if (Build.VERSION.SDK_INT >= 33) keyguard?.addKeyguardLockedStateListener(activity.mainExecutor, lockState!!)
         channel.setMethodCallHandler { call, result ->
             when (call.method) {
                 // Dart: the setting is on and a song is playing. Pausing on the page leaves it up; it decides only
@@ -55,14 +63,17 @@ class LockScreenLyrics(private val activity: Activity, messenger: BinaryMessenge
                 }
                 // The lock screen's own unlock (PIN, fingerprint…); unlocking then hides the page.
                 "unlock" -> {
-                    if (Build.VERSION.SDK_INT >= 26) {
-                        activity.getSystemService(KeyguardManager::class.java)?.requestDismissKeyguard(activity, null)
-                    }
+                    if (Build.VERSION.SDK_INT >= 26) keyguard?.requestDismissKeyguard(activity, null)
                     result.success(null)
                 }
                 else -> result.notImplemented()
             }
         }
+    }
+
+    /// The app in front again (MainActivity.onResume): unlocked meanwhile, the page goes.
+    fun onResume() {
+        if (shown && keyguard?.isKeyguardLocked == false) hide()
     }
 
     private fun show() {
@@ -100,6 +111,7 @@ class LockScreenLyrics(private val activity: Activity, messenger: BinaryMessenge
 
     fun dispose() {
         hide()
+        if (Build.VERSION.SDK_INT >= 33) keyguard?.removeKeyguardLockedStateListener(lockState!!)
         try {
             activity.unregisterReceiver(receiver)
         } catch (_: IllegalArgumentException) {

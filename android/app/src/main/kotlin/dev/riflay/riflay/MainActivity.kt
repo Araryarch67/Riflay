@@ -156,6 +156,11 @@ class MainActivity : AudioServiceActivity() {
         }
     }
 
+    override fun onResume() {
+        super.onResume()
+        lockScreenLyrics?.onResume()
+    }
+
     // singleTask: a link opened while Riflay runs comes here. Dart is told, then takes it.
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
