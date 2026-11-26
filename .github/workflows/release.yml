@@ -570,31 +570,30 @@ jobs:
           print('\n'.join(lines))
           PY
           cat > guide.md <<'GUIDE'
-          **Coming from OpenMusic?** Riflay is its new name. On a computer, Riflay brings over your settings,
-          library, playlists, YouTube Music sign-in and downloads the first time it starts (the Windows installer
-          and the `.deb` also remove OpenMusic). On Android it installs as a new app: remove OpenMusic yourself,
-          and sign in again.
+          **Riflay**: one player for your own music and YouTube Music, with hi-fi sound on every device you own. Pick your file below and press play.
 
-          Downloads appear as each platform finishes building. A slower or failed build does not hold up the others.
+          Each platform's files show up the moment its build is done; a slow one never holds up the rest.
 
-          ### Which file?
+          ### Pick your file
 
-          **Android** (7.0 and later, up to Android 16): take **Riflay-android.apk**; it runs on every phone.
-          The smaller ones are for one kind of processor only: `arm64` fits almost every phone from the last
-          years; `arm32` only old 32-bit phones (newer phones refuse it as "not compatible"); `x86_64` is for
-          emulators and Chromebooks.
+          | You have | Take this |
+          |---|---|
+          | **Android** 7.0 to 16 | **`Riflay-android.apk`**: runs on every phone |
+          | **Windows** | **`Riflay-windows-x64-setup.exe`** installs it; the `.zip` runs without installing |
+          | **macOS** | **`Riflay-macos.dmg`**: drag Riflay to Applications; the `.zip` is the app alone |
+          | **Linux** | **`.AppImage`** runs anywhere; `.deb` Debian / Ubuntu; `.rpm` Fedora / openSUSE; `.pkg.tar.zst` Arch (`sudo pacman -U` it); `.tar.gz` the plain bundle |
+          | **iPhone / iPad** | **`Riflay-ios-unsigned.ipa`**: sideload it with AltStore or Sideloadly |
 
-          **Windows**: `Riflay-windows-x64-setup.exe` installs it; the `.zip` runs without installing.
-          **Linux**: the `.AppImage` runs anywhere; `.deb` for Debian / Ubuntu; `.rpm` for Fedora / openSUSE;
-          `.pkg.tar.zst` for Arch (`sudo pacman -U` it); `.tar.gz` is the plain bundle.
-          Each platform includes `SHA256SUMS-<platform>` immediately. The combined `SHA256SUMS` follows once all
-          platform uploads have finished.
-          With a package manager: `scoop bucket add riflay https://github.com/Araryarch67/scoop-riflay` then
-          `scoop install riflay/riflay` on Windows; `brew install --cask araryarch67/riflay/riflay` on Linux and macOS.
+          ### Or with a package manager
 
-          **macOS**: `Riflay-macos.dmg` (drag Riflay to Applications); the `.zip` is the app alone. It is not signed by
-          Apple: on first launch use System Settings › Privacy & Security › **Open Anyway**.
-          **iOS**: `Riflay-ios-unsigned.ipa`, for sideloading (AltStore, Sideloadly). It appears as soon as its build finishes.
+          - **Windows**: `scoop bucket add riflay https://github.com/Araryarch67/scoop-riflay`, then `scoop install riflay/riflay`
+          - **macOS / Linux**: `brew install --cask araryarch67/riflay/riflay`
+
+          ### Good to know
+
+          - The smaller Android files fit one kind of processor: `arm64` almost every phone from the last years, `arm32` only old 32-bit phones (newer ones refuse it as "not compatible"), `x86_64` emulators and Chromebooks.
+          - macOS: the app isn't signed by Apple. On first launch use System Settings › Privacy & Security › **Open Anyway**.
+          - Checksums: each platform comes with its `SHA256SUMS-<platform>`; the combined `SHA256SUMS` follows once every platform is up.
           GUIDE
           { cat changelog.md; echo; echo '---'; echo; cat guide.md; } > release.md
       - name: Prepare release notes
