@@ -10950,7 +10950,7 @@ abstract class AppLocalizations {
   /// No description provided for @spotifyCantPlay.
   ///
   /// In en, this message translates to:
-  /// **'Couldn\'t play from Spotify. Check that the account has Premium, then sign in again.'**
+  /// **'Couldn\'t play this song. Spotify plays songs only with Premium, and it wasn\'t found on YouTube Music.'**
   String get spotifyCantPlay;
 
   /// No description provided for @pasteYtOrScLink.

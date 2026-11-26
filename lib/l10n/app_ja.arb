@@ -1811,7 +1811,7 @@
   "soundcloudCantCast": "SoundCloudの曲はこのデバイスでのみ再生できます。",
   "spotifyCantCast": "Spotifyの曲はこのデバイスでのみ再生できます。",
   "spotifyTapToPlay": "プレイリストやアルバムをタップすると、Spotify Premiumでここで再生します。コピーするものにはチェックを。",
-  "spotifyCantPlay": "Spotifyから再生できませんでした。Premiumアカウントか確認して、もう一度サインインしてください。",
+  "spotifyCantPlay": "この曲を再生できませんでした。SpotifyはPremiumでのみ再生でき、YouTube Musicでも見つかりませんでした。",
   "pasteYtOrScLink": "YouTubeかSoundCloudのリンクを貼り付けて",
   "soundcloudUnplayable": "SoundCloudではこの曲をここで再生できません。",
   "soundcloudImportNote": "SoundCloudの曲はストリーミング再生。今すぐ再生するか、ライブラリに保存できる",

@@ -1,8 +1,11 @@
+// ignore_for_file: experimental_member_use
+
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import 'package:just_audio/just_audio.dart';
 import 'package:riflay/models/track.dart';
 import 'package:riflay/services/spotify_audio_source.dart';
 import 'package:riflay/services/spotify_bridge.dart';
@@ -36,6 +39,23 @@ class FakeBridge extends SpotifyBridge {
   @override
   Future<void> signIn({bool fresh = false}) async {
     if (fresh) freshSignIns++;
+  }
+}
+
+/// The same song from YouTube Music, as the player's fallback gives it.
+class FixedSource extends StreamAudioSource {
+  int asked = 0;
+
+  @override
+  Future<StreamAudioResponse> request([int? start, int? end]) async {
+    asked++;
+    return StreamAudioResponse(
+      sourceLength: 3,
+      contentLength: 3,
+      offset: 0,
+      contentType: 'audio/webm',
+      stream: Stream.value([1, 2, 3]),
+    );
   }
 }
 
@@ -93,7 +113,11 @@ void main() {
               // No uri: still importable by name, but nothing to play from Spotify.
               {
                 'itemV2': {
-                  'data': {'__typename': 'Track', 'name': 'Song B', 'artists': artists(['Cy'])},
+                  'data': {
+                    '__typename': 'Track',
+                    'name': 'Song B',
+                    'artists': artists(['Cy']),
+                  },
                 },
               },
             ],
@@ -125,7 +149,11 @@ void main() {
                 {
                   'track': {
                     '_uri': 'spotify:track:$_id',
-                    'data': {'__typename': 'Track', 'name': 'Liked', 'artists': artists(['Ada'])},
+                    'data': {
+                      '__typename': 'Track',
+                      'name': 'Liked',
+                      'artists': artists(['Ada']),
+                    },
                   },
                 },
               ],
@@ -148,7 +176,11 @@ void main() {
             'totalCount': 1,
             'items': [
               {
-                'track': {'uri': 'spotify:track:$_id', 'name': 'One', 'artists': artists(['Daft Punk'])},
+                'track': {
+                  'uri': 'spotify:track:$_id',
+                  'name': 'One',
+                  'artists': artists(['Daft Punk']),
+                },
               },
             ],
           },
@@ -239,6 +271,65 @@ void main() {
         client: MockClient((req) async => http.Response('', 404)),
       );
       await expectLater(source.request(), throwsA(isA<SpotifyBridgeError>()));
+    });
+
+    group('without Premium', () {
+      setUp(() => SpotifyAudioSource.failuresInARow = 0);
+
+      test('a song Spotify refuses plays from YouTube Music instead', () async {
+        final youtube = FixedSource();
+        final source = SpotifyAudioSource(
+          _id,
+          bridge: FakeBridge(),
+          client: MockClient((req) async => http.Response('', 502)),
+          fallback: () async => youtube,
+        );
+        expect((await source.request()).contentType, 'audio/webm');
+        // Later ranges of the song come from the same YouTube file.
+        await source.request(1);
+        expect(youtube.asked, 2);
+      });
+
+      test('after two refused songs the bridge is no longer asked', () async {
+        var asked = 0;
+        SpotifyAudioSource song() => SpotifyAudioSource(
+          _id,
+          bridge: FakeBridge(),
+          client: MockClient((req) async {
+            asked++;
+            return http.Response('', 502);
+          }),
+          fallback: () async => FixedSource(),
+        );
+        for (var i = 0; i < 3; i++) {
+          await song().request();
+        }
+        expect(asked, 2);
+      });
+
+      test('a song found nowhere fails, and one Spotify began never switches files', () async {
+        final nowhere = SpotifyAudioSource(
+          _id,
+          bridge: FakeBridge(),
+          client: MockClient((req) async => http.Response('', 404)),
+          fallback: () async => null,
+        );
+        await expectLater(nowhere.request(), throwsA(isA<SpotifyBridgeError>()));
+
+        var calls = 0;
+        final begun = SpotifyAudioSource(
+          _id,
+          bridge: FakeBridge(),
+          client: MockClient(
+            (req) async => ++calls == 1
+                ? http.Response.bytes(List.filled(10, 1), 200, headers: {'content-length': '10'})
+                : http.Response('', 502),
+          ),
+          fallback: () async => FixedSource(),
+        );
+        await begun.request();
+        await expectLater(begun.request(5), throwsA(isA<SpotifyBridgeError>()));
+      });
     });
   });
 }

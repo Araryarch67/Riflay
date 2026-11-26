@@ -45,6 +45,7 @@ import 'merged_download.dart';
 import 'smart_merge.dart';
 import 'manual_audio.dart';
 import 'playlist_covers.dart';
+import 'playlist_transfer.dart';
 import 'radio_queue.dart';
 import 'request_gate.dart';
 import 'sources/music_sources.dart';
@@ -932,6 +933,8 @@ class PlayerController extends ChangeNotifier {
       _retries = 0;
     }
     if (_retries >= playbackRetryDelays.length) return false;
+    // Each try already fell back to YouTube Music: more tries only keep the player waiting at 0:00.
+    if (track.spotifyId != null && _retries >= 2) return false;
     final delay = playbackRetryDelays[_retries++];
     _lastRetryAt = now;
     final attempt = _retries;
@@ -2597,6 +2600,13 @@ class PlayerController extends ChangeNotifier {
     }
   }
 
+  /// The same song on YouTube Music, for a Spotify song the account can't play (no Premium).
+  Future<YoutubeAudioSource?> _youtubeInstead(Track t, {required Track tag}) async {
+    final song = ForeignSong(title: t.title, artist: t.artist, duration: t.duration);
+    final hit = PlaylistTransfer.best(song, await searchYoutube('${t.title} ${t.artist.replaceAll(',', '')}'));
+    return hit == null ? null : YoutubeAudioSource(hit.videoId!, yt: youtube.client, tag: tag);
+  }
+
   AudioSource _sourceFor(Track t, {Track? tag}) {
     final source = _buildSourceFor(t, tag: tag);
     if (t.path != null) _audioTracks[source] = t;
@@ -2633,10 +2643,7 @@ class PlayerController extends ChangeNotifier {
         // A Monochrome stream picked before it became download-only plays YouTube instead.
         final available = chosen?.path != null && File(chosen!.path!).existsSync();
         if (available && !_smartMerge.gaveUpOn(t.videoId!)) {
-          _smartMerge.markUsed(
-            t.videoId!,
-            sound: (source: TrackSource.device, name: ''),
-          );
+          _smartMerge.markUsed(t.videoId!, sound: (source: TrackSource.device, name: ''));
           return _sourceFor(chosen, tag: identity);
         }
         // An explicit YouTube choice, a missing file or a failed override uses the
@@ -2663,7 +2670,13 @@ class PlayerController extends ChangeNotifier {
     }
     if (t.soundcloudId case final id?) return SoundcloudAudioSource(id, client: soundcloud, tag: identity);
     if (t.extensionId != null) return SpotiflacAudioSource(t);
-    if (t.spotifyId case final id?) return SpotifyAudioSource(id, tag: identity);
+    if (t.spotifyId case final id?) {
+      return SpotifyAudioSource(
+        id,
+        tag: identity,
+        fallback: () => _youtubeInstead(t, tag: identity),
+      );
+    }
     if (t.monochromeId case final id? when !id.startsWith('tracks:')) return MonochromeAudioSource(id, tag: identity);
     return t.isCueTrack
         ? ClippingAudioSource(child: AudioSource.uri(t.uri), start: t.start, end: t.end, tag: identity)

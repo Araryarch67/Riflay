@@ -6156,7 +6156,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get spotifyTapToPlay => 'Tap a playlist or album to play it here with Spotify Premium. Tick the ones to copy.';
 
   @override
-  String get spotifyCantPlay => 'Couldn\'t play from Spotify. Check that the account has Premium, then sign in again.';
+  String get spotifyCantPlay =>
+      'Couldn\'t play this song. Spotify plays songs only with Premium, and it wasn\'t found on YouTube Music.';
 
   @override
   String get pasteYtOrScLink => 'Paste a YouTube or SoundCloud link.';

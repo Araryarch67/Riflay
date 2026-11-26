@@ -5944,7 +5944,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get spotifyTapToPlay => 'プレイリストやアルバムをタップすると、Spotify Premiumでここで再生します。コピーするものにはチェックを。';
 
   @override
-  String get spotifyCantPlay => 'Spotifyから再生できませんでした。Premiumアカウントか確認して、もう一度サインインしてください。';
+  String get spotifyCantPlay => 'この曲を再生できませんでした。SpotifyはPremiumでのみ再生でき、YouTube Musicでも見つかりませんでした。';
 
   @override
   String get pasteYtOrScLink => 'YouTubeかSoundCloudのリンクを貼り付けて';

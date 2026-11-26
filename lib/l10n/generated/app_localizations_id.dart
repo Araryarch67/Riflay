@@ -6092,7 +6092,8 @@ class AppLocalizationsId extends AppLocalizations {
       'Ketuk playlist atau album untuk memutarnya di sini dengan Spotify Premium. Centang yang mau disalin.';
 
   @override
-  String get spotifyCantPlay => 'Tidak bisa memutar dari Spotify. Pastikan akunnya Premium, lalu masuk lagi.';
+  String get spotifyCantPlay =>
+      'Lagu ini tidak bisa diputar. Spotify hanya memutar lagu untuk akun Premium, dan lagunya tidak ketemu di YouTube Music.';
 
   @override
   String get pasteYtOrScLink => 'Tempel link YouTube atau SoundCloud.';
