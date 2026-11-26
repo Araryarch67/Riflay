@@ -57,6 +57,24 @@ void main() {
     expect(results, isEmpty);
   });
 
+  test('a local song whose artist YouTube Music writes another way still gets its radio', () async {
+    final local = Track(
+      id: 'king',
+      uri: Uri.file('/music/king.flac'),
+      title: 'KING',
+      artist: 'ときのそら',
+      duration: const Duration(milliseconds: 138453),
+    );
+    final match = song('ihREuw5PKs4', 'KING', 'TOKINOSORA', seconds: 139);
+    final related = song('related', 'Diva', 'TOKINOSORA');
+    final results = await RadioQueue.load(
+      local,
+      searchSongs: (_) async => [song('other-king', 'KING', 'Kanaria', seconds: 150), match],
+      upNext: (track) async => track == match ? [match, related] : fail('only the same title and length'),
+    );
+    expect(results, [related]);
+  });
+
   test('an empty video queue retries the same recording under a different YouTube Music ID', () async {
     final video = song('video', 'Title', 'Artist', seconds: 210);
     final audio = song('audio', 'Title', 'Artist', seconds: 210);

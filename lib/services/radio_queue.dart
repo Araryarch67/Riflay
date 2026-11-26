@@ -51,16 +51,23 @@ abstract final class RadioQueue {
     for (final track in results) {
       if (!track.isRemote || !setEquals(versions, DownloadMatches.versions(track.title))) continue;
       final credits = _artists(track);
-      if (credits.isEmpty || !credits.any(artists.contains)) continue;
+      final sameArtist = credits.any(artists.contains);
       final strictMatch = SmartMerge.same(seed, track);
       if (!strictMatch && _title(track) != title) continue;
       final sourceLength = seed.duration;
       final resultLength = track.duration;
       final difference = sourceLength == null || resultLength == null ? null : (sourceLength - resultLength).abs();
       if (difference != null && difference > const Duration(seconds: 8)) continue;
+      // The artist written another way (ときのそら on the file, TOKINOSORA on YouTube Music): the same title and
+      // length still name the song.
+      if (!sameArtist &&
+          (_title(track) != title || difference == null || difference > const Duration(seconds: 3))) {
+        continue;
+      }
       final score =
           (strictMatch ? 10.0 : 0.0) +
-          (credits.first == artists.first ? 4.0 : 0.0) +
+          (sameArtist ? 6.0 : 0.0) +
+          (sameArtist && credits.first == artists.first ? 4.0 : 0.0) +
           (difference == null ? 0.0 : 2 - difference.inMilliseconds / 4000);
       if (score <= bestScore) continue;
       bestScore = score;
