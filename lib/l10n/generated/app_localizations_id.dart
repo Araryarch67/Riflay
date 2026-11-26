@@ -2297,6 +2297,16 @@ class AppLocalizationsId extends AppLocalizations {
       'Baris yang sedang dinyanyikan menggantikan nama artis di notifikasi, layar kunci, dan layar mobil. Jika Pelafalan di lirik aktif, baris beraksara lain juga menampilkan cara bacanya';
 
   @override
+  String get lyricsOverLockScreen => 'Lirik di atas layar kunci';
+
+  @override
+  String get lyricsOverLockScreenSubtitle =>
+      'Saat layar mati ketika lagu diputar, liriknya tampil di atas layar kunci sampai kamu membuka kunci. Butuh izin \"Tampilkan di atas aplikasi lain\"; di Xiaomi juga \"Tampilkan di layar kunci\" di izin aplikasi';
+
+  @override
+  String get unlockPhone => 'Buka kunci';
+
+  @override
   String get visualizer => 'Visualizer';
 
   @override

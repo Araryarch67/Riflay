@@ -19,6 +19,8 @@ import 'l10n/generated/app_localizations.dart';
 import 'models/track.dart';
 import 'platform/network.dart';
 import 'platform/host.dart';
+import 'services/lock_screen_lyrics.dart';
+import 'ui/pages/lock_screen_lyrics_page.dart';
 import 'services/device_setup.dart';
 import 'services/app_updates.dart';
 import 'platform/web_audio.dart';
@@ -289,6 +291,25 @@ class _RiflayAppState extends State<RiflayApp> with WidgetsBindingObserver {
   final _messenger = GlobalKey<ScaffoldMessengerState>();
   final _navigator = GlobalKey<NavigatorState>();
 
+  /// The lyrics page over the lock screen: on top of everything while locked, gone once unlocked.
+  Route<void>? _lockRoute;
+  void _lockScreen() {
+    final nav = _navigator.currentState;
+    if (LockScreenLyrics.locked.value) {
+      if (_lockRoute != null || nav == null) return;
+      final route = _lockRoute = PageRouteBuilder<void>(
+        pageBuilder: (_, _, _) => const LockScreenLyricsPage(),
+        transitionDuration: Duration.zero,
+      );
+      nav.push(route).whenComplete(() {
+        if (identical(_lockRoute, route)) _lockRoute = null;
+      });
+    } else if (_lockRoute case final route?) {
+      _lockRoute = null;
+      if (route.isActive) nav?.removeRoute(route);
+    }
+  }
+
   /// The music video moved to another height to keep up with the connection: said once, briefly.
   void _videoQuality() {
     final change = VideoMode.instance.qualityChanged.value;
@@ -319,6 +340,7 @@ class _RiflayAppState extends State<RiflayApp> with WidgetsBindingObserver {
     widget.controller.addListener(_syncTint);
     _syncTint();
     VideoMode.instance.qualityChanged.addListener(_videoQuality);
+    LockScreenLyrics.locked.addListener(_lockScreen);
     MemoryTrim.schedule();
     unawaited(
       AppUpdates.checkAtStart((updates, release) {
@@ -331,6 +353,7 @@ class _RiflayAppState extends State<RiflayApp> with WidgetsBindingObserver {
 
   @override
   void dispose() {
+    LockScreenLyrics.locked.removeListener(_lockScreen);
     unawaited(DesktopCli.close());
     DesktopVisibility.instance.removeListener(_windowVisibilityChanged);
     DesktopVisibility.instance.stop();

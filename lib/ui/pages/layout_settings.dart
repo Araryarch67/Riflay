@@ -6,6 +6,7 @@ import '../../services/lyrics_translation.dart';
 import '../widgets/app_dialog.dart';
 import '../../services/layout_prefs.dart';
 import '../../services/media_session.dart';
+import '../../services/lock_screen_lyrics.dart';
 import '../../services/player_presets.dart';
 import '../../services/beta_features.dart';
 import '../../services/video_mode.dart';
@@ -474,6 +475,21 @@ class LyricsSettings extends StatelessWidget {
                     subtitle: Text(tr.lockScreenLyricsSubtitle, style: muted),
                     value: on,
                     onChanged: (v) => MediaSession.showLyrics.value = v,
+                  ),
+                ),
+              if (LockScreenLyrics.supported)
+                ValueListenableBuilder(
+                  valueListenable: LockScreenLyrics.enabled,
+                  builder: (context, on, _) => SwitchListTile(
+                    secondary: const Icon(Icons.screen_lock_portrait_rounded),
+                    title: Text(tr.lyricsOverLockScreen),
+                    subtitle: Text(tr.lyricsOverLockScreenSubtitle, style: muted),
+                    value: on,
+                    onChanged: (v) async {
+                      LockScreenLyrics.enabled.value = v;
+                      // Brought up from the background only with "Display over other apps".
+                      if (v && !await LockScreenLyrics.canOverlay()) await LockScreenLyrics.askOverlay();
+                    },
                   ),
                 ),
             ],

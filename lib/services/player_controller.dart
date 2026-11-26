@@ -35,6 +35,7 @@ import 'library_store.dart';
 import 'lyrics.dart';
 import 'lyrics_translation.dart';
 import 'media_session.dart';
+import 'lock_screen_lyrics.dart';
 import 'metadata.dart';
 import 'download_files.dart' show nameDownload;
 import 'mv_sidecar.dart';
@@ -1944,6 +1945,7 @@ class PlayerController extends ChangeNotifier {
     if (!Host.isWeb) unawaited(Metadata.probeTagTools().then((_) => notifyListeners()));
     unawaited(LyricsTranslation.load());
     unawaited(MediaSession.loadLyricsSetting());
+    unawaited(LockScreenLyrics.attach(this));
     unawaited(AudioAnalysis.load());
     unawaited(LyricsService.loadBetterLyricsKey());
     audio.addListener(notifyListeners);

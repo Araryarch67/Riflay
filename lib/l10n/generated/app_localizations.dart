@@ -4299,6 +4299,24 @@ abstract class AppLocalizations {
   /// **'The line being sung takes the artist\'s place in the notification, on the lock screen and on a car\'s display. With Pronunciation on in the lyrics, a line in another script shows how it\'s read too'**
   String get lockScreenLyricsSubtitle;
 
+  /// No description provided for @lyricsOverLockScreen.
+  ///
+  /// In en, this message translates to:
+  /// **'Lyrics over the lock screen'**
+  String get lyricsOverLockScreen;
+
+  /// No description provided for @lyricsOverLockScreenSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'When the screen goes off while a song plays, its lyrics show over the lock screen until you unlock. Needs \"Display over other apps\"; on Xiaomi also \"Show on lock screen\" in the app\'s permissions'**
+  String get lyricsOverLockScreenSubtitle;
+
+  /// No description provided for @unlockPhone.
+  ///
+  /// In en, this message translates to:
+  /// **'Unlock'**
+  String get unlockPhone;
+
   /// No description provided for @visualizer.
   ///
   /// In en, this message translates to:

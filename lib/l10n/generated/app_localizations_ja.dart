@@ -2250,6 +2250,16 @@ class AppLocalizationsJa extends AppLocalizations {
   String get lockScreenLyricsSubtitle => '通知やロック画面、車のディスプレイで、アーティスト名の代わりに今歌ってる行を出すよ。歌詞の「読み方」がオンなら、ほかの文字の行には読み方も付くよ';
 
   @override
+  String get lyricsOverLockScreen => 'ロック画面に歌詞を表示';
+
+  @override
+  String get lyricsOverLockScreenSubtitle =>
+      '曲の再生中に画面が消えると、ロックを解除するまでロック画面の上に歌詞を表示します。「他のアプリの上に重ねて表示」が必要です。Xiaomi ではアプリの権限の「ロック画面に表示」も必要です';
+
+  @override
+  String get unlockPhone => 'ロック解除';
+
+  @override
   String get visualizer => 'ビジュアライザー';
 
   @override

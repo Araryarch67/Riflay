@@ -22,6 +22,7 @@ class MainActivity : AudioServiceActivity() {
     private var multicastLock: WifiManager.MulticastLock? = null
     private var usbDac: UsbDac? = null
     private var appUpdater: AppUpdater? = null
+    private var lockScreenLyrics: LockScreenLyrics? = null
 
     // Settings > Appearance > Window opacity below 100%: the home-screen wallpaper shows behind the app.
     // A translucent window and a transparent Flutter surface cost frame time, so they are only used then.
@@ -67,6 +68,7 @@ class MainActivity : AudioServiceActivity() {
         // The process ends with the engine: mpv players left without Dart crash on their next event.
         EngineEnd.attach(applicationContext, flutterEngine)
         appUpdater = AppUpdater(this, flutterEngine.dartExecutor.binaryMessenger)
+        lockScreenLyrics = LockScreenLyrics(this, flutterEngine.dartExecutor.binaryMessenger)
         // The home-screen player: Dart sends it the song (not disposed with the activity, as the music isn't).
         PlayerWidget.attach(applicationContext, flutterEngine)
         // Share: Android's own share sheet (messaging apps, Nearby Share…) with the song's name and link.
@@ -183,6 +185,7 @@ class MainActivity : AudioServiceActivity() {
         multicastLock?.takeIf { it.isHeld }?.release()
         usbDac?.dispose()
         appUpdater?.dispose()
+        lockScreenLyrics?.dispose()
         super.onDestroy()
     }
 
