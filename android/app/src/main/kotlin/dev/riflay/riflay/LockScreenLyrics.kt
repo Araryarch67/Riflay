@@ -8,6 +8,8 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.net.Uri
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import android.provider.Settings
 import android.view.WindowManager
 import io.flutter.plugin.common.BinaryMessenger
@@ -22,16 +24,25 @@ class LockScreenLyrics(private val activity: Activity, messenger: BinaryMessenge
     private var shown = false
     private val keyguard = activity.getSystemService(KeyguardManager::class.java)
 
-    // Unlocking, told by the system itself: some phones (Xiaomi) never send USER_PRESENT to an app over the lock
-    // screen, which left the page up after unlocking.
-    private val lockState = if (Build.VERSION.SDK_INT >= 33) {
-        KeyguardManager.KeyguardLockedStateListener { locked -> if (!locked) hide() }
-    } else null
+    // Unlocking, looked for while the screen is on: some phones (Xiaomi) never send USER_PRESENT to an app over the
+    // lock screen, which left the page up after unlocking. (The system's lock-state listener takes a permission only
+    // system apps get.) Not while the screen is off: many phones lock a few seconds after it goes off.
+    private val handler = Handler(Looper.getMainLooper())
+    private val lookForUnlock = object : Runnable {
+        override fun run() {
+            if (!shown) return
+            if (keyguard?.isKeyguardLocked == false) hide() else handler.postDelayed(this, 500)
+        }
+    }
 
     private val receiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             when (intent.action) {
-                Intent.ACTION_SCREEN_OFF -> if (enabled) show()
+                Intent.ACTION_SCREEN_OFF -> {
+                    handler.removeCallbacks(lookForUnlock)
+                    if (enabled) show()
+                }
+                Intent.ACTION_SCREEN_ON -> if (shown) handler.post(lookForUnlock)
                 Intent.ACTION_USER_PRESENT -> hide()
             }
         }
@@ -40,12 +51,12 @@ class LockScreenLyrics(private val activity: Activity, messenger: BinaryMessenge
     init {
         val filter = IntentFilter().apply {
             addAction(Intent.ACTION_SCREEN_OFF)
+            addAction(Intent.ACTION_SCREEN_ON)
             addAction(Intent.ACTION_USER_PRESENT)
         }
         // System broadcasts only: nothing else can send these.
         if (Build.VERSION.SDK_INT >= 33) activity.registerReceiver(receiver, filter, Context.RECEIVER_NOT_EXPORTED)
         else activity.registerReceiver(receiver, filter)
-        if (Build.VERSION.SDK_INT >= 33) keyguard?.addKeyguardLockedStateListener(activity.mainExecutor, lockState!!)
         channel.setMethodCallHandler { call, result ->
             when (call.method) {
                 // Dart: the setting is on and a song is playing. Pausing on the page leaves it up; it decides only
@@ -95,6 +106,7 @@ class LockScreenLyrics(private val activity: Activity, messenger: BinaryMessenge
     private fun hide() {
         if (!shown) return
         shown = false
+        handler.removeCallbacks(lookForUnlock)
         setOverLock(false)
         channel.invokeMethod("unlocked", null)
     }
@@ -111,7 +123,6 @@ class LockScreenLyrics(private val activity: Activity, messenger: BinaryMessenge
 
     fun dispose() {
         hide()
-        if (Build.VERSION.SDK_INT >= 33) keyguard?.removeKeyguardLockedStateListener(lockState!!)
         try {
             activity.unregisterReceiver(receiver)
         } catch (_: IllegalArgumentException) {

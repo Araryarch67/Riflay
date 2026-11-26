@@ -307,7 +307,7 @@ class _SyncedLyricsViewState extends State<SyncedLyricsView> with _Extras {
   Widget build(BuildContext context) {
     final lines = widget.lyrics.lines;
     final style = _lineStyle(context);
-    final pad = _isCompact(context) ? 24.0 : 40.0;
+    final pad = _sidePad(context);
     final dim = LayoutPrefs.instance.dimUnsungLyrics;
     final unsung = dim ? AppColors.textMuted : AppColors.textPrimary.withValues(alpha: 0.75);
     if (LayoutPrefs.instance.lyricsLines == LyricsLines.focused) return _focused(style, unsung, pad);

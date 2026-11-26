@@ -401,7 +401,11 @@ class SeekBar extends StatefulWidget {
     this.desktopPlayer = false,
     this.overVideo = false,
     this.middle,
+    this.shape,
   });
+
+  /// Settings' progress bar shape when null.
+  final ProgressBarShape? shape;
 
   /// Over a music video full screen: always the thin bar, whatever shape the player uses. A preset's pill or wave
   /// was a block across the picture.
@@ -482,15 +486,16 @@ class _SeekBarState extends State<SeekBar> {
             // handle to fit under its buttons.
             final slim = widget.desktopPlayer && widget.compact;
             final video = widget.overVideo;
-            final pill = !video && parts && LayoutPrefs.instance.progressShape == ProgressBarShape.pill;
-            final thin = video || parts && LayoutPrefs.instance.progressShape == ProgressBarShape.thin;
+            final progressShape = widget.shape ?? LayoutPrefs.instance.progressShape;
+            final pill = !video && parts && progressShape == ProgressBarShape.pill;
+            final thin = video || parts && progressShape == ProgressBarShape.thin;
             final colors = AppColors.of(context);
             final wavy =
                 !video &&
                 !pill &&
-                LayoutPrefs.instance.progressShape == ProgressBarShape.wavy &&
+                progressShape == ProgressBarShape.wavy &&
                 !LayoutPrefs.lightweight;
-            final waveform = !video && LayoutPrefs.instance.progressShape == ProgressBarShape.waveform;
+            final waveform = !video && progressShape == ProgressBarShape.waveform;
             _wantBars(player.currentTrack, waveform && !LayoutPrefs.lightweight);
             final bars = waveform ? _bars : null;
             Widget sliderWith(MotionClock? clock) => MouseRegion(
@@ -621,9 +626,13 @@ class PlayButton extends StatelessWidget implements ColorFreeSelf {
     this.color,
     this.iconColor,
     this.loading = false,
+    this.shape,
   });
 
   final bool playing;
+
+  /// Settings' play button shape when null.
+  final PlayButtonShape? shape;
   final bool loading;
   final VoidCallback? onPressed;
   final double size;
@@ -640,7 +649,7 @@ class PlayButton extends StatelessWidget implements ColorFreeSelf {
     return ListenableBuilder(
       listenable: LayoutPrefs.instance,
       builder: (context, _) {
-        final shape = LayoutPrefs.instance.playButton;
+        final shape = this.shape ?? LayoutPrefs.instance.playButton;
         final fill = onPressed == null ? color.withValues(alpha: 0.4) : color;
         final spinning = playing && !loading && shape == PlayButtonShape.flower && LayoutPrefs.moves;
         return Tooltip(

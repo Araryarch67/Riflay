@@ -2,22 +2,20 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:liquid_glass_renderer/liquid_glass_renderer.dart';
 
 import '../../models/track.dart';
 import '../../services/language.dart';
-import '../../services/lyrics.dart';
-import '../../services/layout_prefs.dart';
+import '../../services/layout_prefs.dart' show PlayButtonShape, ProgressBarShape;
 import '../../services/lock_screen_lyrics.dart';
-import '../player/player_glass.dart' show riflayGlass;
+import '../../services/lyrics.dart';
 import '../player_scope.dart';
-import '../widgets/controls.dart' show AccentBuilder, Artwork;
+import '../widgets/controls.dart' show AccentBuilder, Artwork, PlayButton, SeekBar;
 import '../widgets/faded_cover.dart';
-import 'lyrics_page.dart' show LyricsView;
+import 'lyrics_page.dart' show LyricsInset, LyricsView;
 
-/// The lyrics over the lock screen (Android, [LockScreenLyrics]): over the song's cover, blurred, the time and date,
-/// the song, its lyrics following it and the three buttons, each on liquid glass in the cover's own colours. Back
-/// does nothing: the rest of the app stays behind the lock until the phone is unlocked.
+/// The lyrics over the lock screen (Android, [LockScreenLyrics]): the song's cover, blurred, and over it only type —
+/// the time, the song, its lyrics following it — and three quiet buttons, in the cover's own colours. Back does
+/// nothing: the rest of the app stays behind the lock until the phone is unlocked.
 class LockScreenLyricsPage extends StatefulWidget {
   const LockScreenLyricsPage({super.key});
 
@@ -59,34 +57,45 @@ class _LockScreenLyricsPageState extends State<LockScreenLyricsPage> {
               child: Stack(
                 fit: StackFit.expand,
                 children: [
-                  // The cover, blurred, is the whole background: the glass bends it.
-                  if (track != null) FadedCover(track: track, darken: 0.45, sharp: false),
-                  _GlassLayer(
-                    child: SafeArea(
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 20),
-                        child: Column(
-                          children: [
-                            const SizedBox(height: 24),
-                            Expanded(child: _Body(track: track)),
-                            const SizedBox(height: 12),
-                            const _Buttons(),
-                            const SizedBox(height: 20),
-                            _Glass(
-                              radius: 28,
-                              child: TextButton.icon(
-                                onPressed: LockScreenLyrics.unlock,
-                                icon: const Icon(Icons.lock_open_rounded),
-                                label: Text(tr.unlockPhone),
-                                style: TextButton.styleFrom(
-                                  foregroundColor: scheme.onSurface,
-                                  padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 16),
-                                ),
-                              ),
+                  if (track != null) FadedCover(track: track, darken: 0.55, sharp: false),
+                  // A slow fall into the dark at the foot, where the buttons sit.
+                  const DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [Color(0x00000000), Color(0x00000000), Color(0xB3000000)],
+                        stops: [0, 0.55, 1],
+                      ),
+                    ),
+                  ),
+                  SafeArea(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      child: Column(
+                        children: [
+                          const SizedBox(height: 28),
+                          Expanded(child: _Body(track: track)),
+                          const SizedBox(height: 12),
+                          // The player's wavy bar, always: the song moving along under the words.
+                          const Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 16),
+                            child: SeekBar(phonePlayer: true, shape: ProgressBarShape.wavy),
+                          ),
+                          const SizedBox(height: 8),
+                          const _Buttons(),
+                          const SizedBox(height: 20),
+                          TextButton.icon(
+                            onPressed: LockScreenLyrics.unlock,
+                            icon: const Icon(Icons.lock_open_rounded, size: 16),
+                            label: Text(tr.unlockPhone.toUpperCase()),
+                            style: TextButton.styleFrom(
+                              foregroundColor: scheme.onSurface.withValues(alpha: 0.7),
+                              textStyle: base.textTheme.labelMedium?.copyWith(letterSpacing: 2.4),
                             ),
-                            const SizedBox(height: 24),
-                          ],
-                        ),
+                          ),
+                          const SizedBox(height: 12),
+                        ],
                       ),
                     ),
                   ),
@@ -100,106 +109,8 @@ class _LockScreenLyricsPageState extends State<LockScreenLyricsPage> {
   );
 }
 
-class _SongCard extends StatelessWidget {
-  const _SongCard({required this.track});
-
-  final Track track;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final text = Theme.of(context).textTheme;
-    return _Glass(
-      radius: 28,
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Row(
-          children: [
-            Artwork(track: track, size: 56, radius: 16),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    track.title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: text.titleMedium?.copyWith(color: scheme.onSurface, fontWeight: FontWeight.w600),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    track.artist,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: text.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _Buttons extends StatelessWidget {
-  const _Buttons();
-
-  @override
-  Widget build(BuildContext context) {
-    final c = PlayerScope.read(context);
-    final scheme = Theme.of(context).colorScheme;
-    return PlayerSelect<bool>(
-      select: (c) => c.isPlaying,
-      builder: (context, playing, _) => Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          _Glass(
-            circle: true,
-            child: IconButton(
-              iconSize: 30,
-              padding: const EdgeInsets.all(16),
-              tooltip: tr.previous,
-              onPressed: c.previous,
-              icon: const Icon(Icons.skip_previous_rounded),
-            ),
-          ),
-          const SizedBox(width: 20),
-          // Material 3's large play button: a rounded square in the cover's colour, the glass tinted with it.
-          _Glass(
-            radius: 28,
-            tint: scheme.primaryContainer.withValues(alpha: 0.6),
-            child: SizedBox.square(
-              dimension: 84,
-              child: IconButton(
-                onPressed: c.togglePlay,
-                tooltip: playing ? tr.pause : tr.play,
-                color: scheme.onPrimaryContainer,
-                icon: Icon(playing ? Icons.pause_rounded : Icons.play_arrow_rounded, size: 44),
-              ),
-            ),
-          ),
-          const SizedBox(width: 20),
-          _Glass(
-            circle: true,
-            child: IconButton(
-              iconSize: 30,
-              padding: const EdgeInsets.all(16),
-              tooltip: tr.next,
-              onPressed: c.next,
-              icon: const Icon(Icons.skip_next_rounded),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 /// The clock and the song, then the lyrics once there are some. Without lyrics the clock is the lock screen's big
-/// one, hours over minutes; when they come it moves up into one line and the lyrics take the room.
+/// one, hours over minutes; when they come it settles into one line and the lyrics take the room.
 class _Body extends StatefulWidget {
   const _Body({required this.track});
 
@@ -240,33 +151,126 @@ class _BodyState extends State<_Body> {
   Widget build(BuildContext context) {
     final t = widget.track;
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         AnimatedSwitcher(
-          duration: const Duration(milliseconds: 450),
+          duration: const Duration(milliseconds: 500),
           switchInCurve: Curves.easeOutCubic,
           switchOutCurve: Curves.easeInCubic,
           transitionBuilder: (child, animation) => FadeTransition(
             opacity: animation,
             child: SizeTransition(sizeFactor: animation, alignment: Alignment.topCenter, child: child),
           ),
-          child: _Clock(key: ValueKey(_lyrics), compact: _lyrics),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: _Clock(key: ValueKey(_lyrics), compact: _lyrics),
+          ),
         ),
         if (t != null && _lyrics) ...[
-          const SizedBox(height: 16),
-          _SongCard(track: t),
-          const SizedBox(height: 8),
-          Expanded(child: LyricsView(track: t)),
+          const SizedBox(height: 20),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: _Song(track: t),
+          ),
+          const SizedBox(height: 4),
+          // Edge to edge of the page's margin: the sung line's highlight sits on it, its words in line with the clock.
+          Expanded(
+            child: LyricsInset(pad: 0, child: LyricsView(track: t)),
+          ),
         ] else ...[
           const Spacer(),
-          if (t != null) _SongCard(track: t),
+          if (t != null) _Song(track: t, centered: true),
         ],
       ],
     );
   }
 }
 
-/// The time, as a phone's lock screen draws it: big, hours over minutes in two of the cover's tones, the date over
-/// them; [compact], one line with the date beside it on a pane of glass. Ticks over each minute.
+/// The song as a caption: a small cover, the title, the artist under it.
+class _Song extends StatelessWidget {
+  const _Song({required this.track, this.centered = false});
+
+  final Track track;
+  final bool centered;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final text = Theme.of(context).textTheme;
+    final words = Column(
+      crossAxisAlignment: centered ? CrossAxisAlignment.center : CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          track.title,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: text.titleMedium?.copyWith(color: scheme.onSurface, fontWeight: FontWeight.w600),
+        ),
+        Text(
+          track.artist,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: text.bodyMedium?.copyWith(color: scheme.onSurface.withValues(alpha: 0.6)),
+        ),
+      ],
+    );
+    if (centered) return words;
+    return Row(
+      children: [
+        Artwork(track: track, size: 40, radius: 10),
+        const SizedBox(width: 14),
+        Expanded(child: words),
+      ],
+    );
+  }
+}
+
+class _Buttons extends StatelessWidget {
+  const _Buttons();
+
+  @override
+  Widget build(BuildContext context) {
+    final c = PlayerScope.read(context);
+    final scheme = Theme.of(context).colorScheme;
+    return PlayerSelect<bool>(
+      select: (c) => c.isPlaying,
+      builder: (context, playing, _) => Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          IconButton(
+            iconSize: 34,
+            color: scheme.onSurface,
+            tooltip: tr.previous,
+            onPressed: c.previous,
+            icon: const Icon(Icons.skip_previous_rounded),
+          ),
+          const SizedBox(width: 32),
+          // The app's flower play button, turning slowly while the song plays, in the cover's colour.
+          PlayButton(
+            playing: playing,
+            onPressed: c.togglePlay,
+            size: 84,
+            color: scheme.primaryFixed,
+            iconColor: scheme.onPrimaryFixed,
+            shape: PlayButtonShape.flower,
+          ),
+          const SizedBox(width: 32),
+          IconButton(
+            iconSize: 34,
+            color: scheme.onSurface,
+            tooltip: tr.next,
+            onPressed: c.next,
+            icon: const Icon(Icons.skip_next_rounded),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// The time, as a phone's lock screen draws it: big and bold, hours over minutes in two of the cover's tones, the
+/// date spaced out over them; [compact], one line with the date beside it. Ticks over each minute.
 class _Clock extends StatefulWidget {
   const _Clock({super.key, this.compact = false});
 
@@ -308,96 +312,37 @@ class _ClockState extends State<_Clock> {
     final h24 = MediaQuery.alwaysUse24HourFormatOf(context);
     final hours = (h24 ? now.hour : (now.hour % 12 == 0 ? 12 : now.hour % 12)).toString().padLeft(2, '0');
     final minutes = now.minute.toString().padLeft(2, '0');
-    final date = l.formatMediumDate(now);
-    // Figtree: round and plain, like a phone's own lock screen clock.
+    final date = Text(
+      l.formatMediumDate(now).toUpperCase(),
+      style: text.labelLarge?.copyWith(color: scheme.onSurface.withValues(alpha: 0.75), letterSpacing: 3),
+    );
+    // Figtree, bold: round and plain, like a phone's own lock screen clock.
     TextStyle digits(double size, Color color) => TextStyle(
       fontFamily: 'Figtree',
       fontSize: size,
       fontWeight: FontWeight.w600,
-      height: 0.92,
-      letterSpacing: -size * 0.03,
+      height: 0.9,
+      letterSpacing: -size * 0.02,
       color: color,
       fontFeatures: const [FontFeature.tabularFigures()],
     );
     if (widget.compact) {
-      return _Glass(
-        radius: 32,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(24, 14, 24, 14),
-          child: Row(
-            children: [
-              Text('$hours:$minutes', style: digits(48, scheme.primaryFixed)),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Text(
-                  l.formatFullDate(now),
-                  maxLines: 2,
-                  style: text.titleSmall?.copyWith(color: scheme.onSurface, fontWeight: FontWeight.w500),
-                ),
-              ),
-            ],
-          ),
-        ),
+      return Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          Text('$hours:$minutes', style: digits(64, scheme.primaryFixed)),
+          const SizedBox(width: 16),
+          Padding(padding: const EdgeInsets.only(bottom: 8), child: date),
+        ],
       );
     }
     return Column(
       children: [
-        Text(
-          date,
-          style: text.titleMedium?.copyWith(color: scheme.onSurface, fontWeight: FontWeight.w500),
-        ),
-        const SizedBox(height: 12),
-        Text(hours, style: digits(150, scheme.primaryFixed)),
-        Text(minutes, style: digits(150, scheme.tertiaryFixed)),
+        date,
+        const SizedBox(height: 16),
+        Text(hours, style: digits(156, scheme.primaryFixed)),
+        Text(minutes, style: digits(156, scheme.tertiaryFixed)),
       ],
-    );
-  }
-}
-
-/// One backdrop sample shared by the page's glass pieces (the renderer draws up to 16 to a layer).
-class _GlassLayer extends StatelessWidget {
-  const _GlassLayer({required this.child});
-
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) => LayoutPrefs.lightweight
-      ? child
-      : LiquidGlassLayer(
-          settings: riflayGlass(brightness: Brightness.dark),
-          useBackdropGroup: true,
-          child: child,
-        );
-}
-
-/// Liquid glass over the blurred cover: the cover bends and catches light at its rim. Lightweight mode draws a plain
-/// see-through panel instead.
-class _Glass extends StatelessWidget {
-  const _Glass({required this.child, this.radius = 24, this.circle = false, this.tint = const Color(0x40000000)});
-
-  final Widget child;
-  final double radius;
-  final bool circle;
-  final Color tint;
-
-  @override
-  Widget build(BuildContext context) {
-    final body = Material(type: MaterialType.transparency, child: child);
-    if (LayoutPrefs.lightweight) {
-      return DecoratedBox(
-        decoration: ShapeDecoration(
-          color: Color.alphaBlend(tint, Colors.black.withValues(alpha: 0.3)),
-          shape: circle ? const CircleBorder() : RoundedRectangleBorder(borderRadius: BorderRadius.circular(radius)),
-        ),
-        child: body,
-      );
-    }
-    return LiquidGlass.auto(
-      appearance: LiquidGlassAppearance.ios27Regular(brightness: Brightness.dark, tint: tint),
-      settings: riflayGlass(brightness: Brightness.dark),
-      useBackdropGroup: true,
-      shape: circle ? const LiquidOval() : LiquidRoundedSuperellipse(borderRadius: radius),
-      child: body,
     );
   }
 }

@@ -112,7 +112,7 @@ class _LyricsSkeleton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final size = _lineStyle(context)?.fontSize ?? 24;
-    final pad = _isCompact(context) ? 24.0 : 40.0;
+    final pad = _sidePad(context);
     // A real line: its text (1.25 × the size) and 8 px above and below.
     final bar = size * 0.72;
     final gap = size * 1.25 - bar + 16;
@@ -226,7 +226,7 @@ class _PlainLyricsState extends State<_PlainLyrics> with _Extras {
     return SmoothScroll(
       builder: (context, scroll) => ListView(
         controller: scroll,
-        padding: EdgeInsets.symmetric(horizontal: _isCompact(context) ? 24 : 40, vertical: 24),
+        padding: EdgeInsets.symmetric(horizontal: _sidePad(context), vertical: 24),
         children: [
           Padding(
             padding: const EdgeInsets.only(bottom: 16),

@@ -28,7 +28,7 @@ void main() {
     expect(find.byType(LockScreenLyricsPage), findsOneWidget, reason: 'the app stays behind the lock');
     expect(find.text('The app'), findsNothing);
 
-    await tester.tap(find.text('Unlock'));
+    await tester.tap(find.text('UNLOCK'));
     expect(calls, ['unlock']);
   });
 }

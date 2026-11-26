@@ -174,6 +174,21 @@ class LyricsPage extends StatelessWidget {
         );
 }
 
+/// A page that sets its own margins around the lyrics (the lock screen's): their side padding, in place of the
+/// lyrics page's own.
+class LyricsInset extends InheritedWidget {
+  const LyricsInset({super.key, required this.pad, required super.child});
+
+  final double pad;
+
+  @override
+  bool updateShouldNotify(LyricsInset old) => old.pad != pad;
+}
+
+/// The lyrics' side padding: the phone's or the desktop's, unless a [LyricsInset] sets it.
+double _sidePad(BuildContext context) =>
+    context.dependOnInheritedWidgetOfExactType<LyricsInset>()?.pad ?? (_isCompact(context) ? 24 : 40);
+
 /// Phone layout? Lyrics also work without the app shell around them (tests).
 bool _isCompact(BuildContext context) => context.dependOnInheritedWidgetOfExactType<ShellScope>()?.compact ?? false;
 
