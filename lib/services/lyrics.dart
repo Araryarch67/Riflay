@@ -1093,6 +1093,8 @@ abstract final class LyricsCache {
       if (DateTime.now().difference(at) > _maxAge) return null;
       if (j['source'] == 'Better Lyrics' && j['vocalSidesParsed'] != true) return null;
       final l = _fromJson(j);
+      // Kept before flickering lines were recognised as junk: looked up again.
+      if (l.synced && Lyrics.flickers(l.lines)) return null;
       return l.isEmpty ? null : l;
     } catch (e) {
       debugPrint('Lyrics cache: could not read: $e');
