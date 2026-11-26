@@ -17,7 +17,9 @@ if [[ -n "$release_tag" ]]; then
   [[ "$release_tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-rc[0-9]+)?$ ]] || { echo 'Invalid release tag' >&2; exit 1; }
   version=$(sed -nE 's/^version: ([^+ ]+).*/\1/p' pubspec.yaml)
   [[ "${release_tag#v}" == "$version" ]] || { echo 'Release tag differs from pubspec.yaml' >&2; exit 1; }
-  echo "--build-name=${release_tag#v} --build-number=$((10000 + GITHUB_RUN_NUMBER))"
+  # The build after the version in pubspec.yaml (1.9.0+126): the app compares it with the release's title.
+  build=$(grep -m1 '^version:' pubspec.yaml | cut -s -d+ -f2 | tr -d '[:space:]')
+  echo "--build-name=${release_tag#v} --build-number=$((10000 + GITHUB_RUN_NUMBER)) --dart-define=RIFLAY_BUILD=${build:-0}"
 elif [[ "${RIFLAY_NIGHTLY:-}" == true ]]; then
   # Nightly and stable APKs share the same package ID and signing key.
   version=$(sed -nE 's/^version: ([^+ ]+).*/\1/p' pubspec.yaml)

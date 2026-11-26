@@ -602,15 +602,18 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
+          # The title carries pubspec.yaml's build (v1.9.0+126): the app updates when it is higher than its own.
+          build=$(grep -m1 '^version:' pubspec.yaml | cut -s -d+ -f2 | tr -d '[:space:]')
+          title="$RIFLAY_RELEASE_TAG${build:++$build}"
           # A rerun updates the notes without turning an already published release back into a draft.
           if gh release view "$RIFLAY_RELEASE_TAG" > /dev/null 2>&1; then
-            gh release edit "$RIFLAY_RELEASE_TAG" --notes-file release.md
+            gh release edit "$RIFLAY_RELEASE_TAG" --title "$title" --notes-file release.md
           else
             # A release candidate (v1.3.0-rc1) is a pre-release: never the latest, so the app's update check and
             # the package managers keep offering the last stable version.
             prerelease=()
             [[ "$RIFLAY_RELEASE_TAG" == *-rc* ]] && prerelease=(--prerelease)
-            gh release create "$RIFLAY_RELEASE_TAG" --verify-tag --draft "${prerelease[@]}" --title "$RIFLAY_RELEASE_TAG" \
+            gh release create "$RIFLAY_RELEASE_TAG" --verify-tag --draft "${prerelease[@]}" --title "$title" \
               --notes-file release.md
           fi
 

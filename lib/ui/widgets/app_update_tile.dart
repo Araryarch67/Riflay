@@ -53,7 +53,7 @@ class _AppUpdateTileState extends State<AppUpdateTile> {
         setState(() => _message = tr.checkingUpdates);
         final release = await _updates.check();
         if (!mounted) return;
-        final newer = release.newerThan(_updates.installedVersion);
+        final newer = release.newerThan(_updates.installedVersion, build: _updates.installedBuild);
         setState(() {
           _reinstall =
               !newer && release.version == _updates.installedVersion && _updates.assetFor(release) != null;

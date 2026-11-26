@@ -18,6 +18,8 @@ void main() {
     final pubspec = File('pubspec.yaml').readAsStringSync();
     final version = RegExp(r'^version:\s*([^+\s]+)', multiLine: true).firstMatch(pubspec)!.group(1);
     expect(appVersion, version, reason: 'bump lib/app_version.dart with pubspec.yaml');
+    final build = RegExp(r'^version:\s*[^+\s]+\+(\d+)', multiLine: true).firstMatch(pubspec)!.group(1);
+    expect(appBuild, int.parse(build!), reason: 'bump appBuild in lib/app_version.dart with pubspec.yaml');
   });
 
   testWidgets('About shows the version, its details and the links', (tester) async {

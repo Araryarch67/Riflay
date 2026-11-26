@@ -24,8 +24,11 @@ class UpdateAsset {
 
 /// Stable release metadata; downloads are restricted to this repository.
 class AppRelease {
-  const AppRelease(this.version, this.url, this.assets);
+  const AppRelease(this.version, this.url, this.assets, {this.build});
   final String version;
+
+  /// The build after the version in the release's title (v1.9.0+126); null when the title has none.
+  final int? build;
   final Uri url;
   final List<UpdateAsset> assets;
 
@@ -55,11 +58,14 @@ class AppRelease {
       if (raw['browser_download_url'] != url.toString()) continue;
       assets.add(UpdateAsset(name, url, size, digest.substring(7).toLowerCase()));
     }
-    return AppRelease(tag.substring(1), page, List.unmodifiable(assets));
+    final titled = RegExp(r'^v(\d+\.\d+\.\d+)\+(\d+)$').firstMatch(json['name'] as String? ?? '');
+    final build = titled != null && titled[1] == tag.substring(1) ? int.parse(titled[2]!) : null;
+    return AppRelease(tag.substring(1), page, List.unmodifiable(assets), build: build);
   }
 
-  /// Use numeric components, so 1.10.0 is newer than 1.9.9.
-  bool newerThan(String installed) {
+  /// Use numeric components, so 1.10.0 is newer than 1.9.9. The same version is newer with a higher [build] than
+  /// the installed one (a release rebuilt with a fix: 1.9.0+126 over 1.9.0+125).
+  bool newerThan(String installed, {int? build}) {
     final match = RegExp(r'^(\d+)\.(\d+)\.(\d+)(?:[-+].*)?$').firstMatch(installed);
     if (match == null) throw const FormatException('Unknown installed version');
     final latest = version.split('.').map(int.parse).toList();
@@ -67,7 +73,8 @@ class AppRelease {
       final current = int.parse(match.group(i + 1)!);
       if (latest[i] != current) return latest[i] > current;
     }
-    return installed.contains('-');
+    if (installed.contains('-')) return true;
+    return build != null && this.build != null && this.build! > build;
   }
 
   /// Newer than [installed] by its patch number only (1.5.0 to 1.5.1): fixes, not worth interrupting for. It is
@@ -121,7 +128,7 @@ class AppUpdates {
     try {
       final release = await updates.check();
       final installerReady = updates.windowsInstaller && updates.assetFor(release) != null;
-      if (release.newerThan(updates.installedVersion) &&
+      if (release.newerThan(updates.installedVersion, build: updates.installedBuild) &&
           (installerReady || !release.patchAbove(updates.installedVersion))) {
         return found(updates, release);
       }
@@ -156,6 +163,7 @@ class AppUpdates {
   ({String path, UpdateAsset asset})? _verifiedSetup;
   bool get windowsInstaller => _windowsDirectory != null;
   String installedVersion = appVersion;
+  int installedBuild = appBuild;
   List<String> _abis = const [];
 
   Future<AppRelease> check() async {
@@ -212,7 +220,8 @@ class AppUpdates {
   /// [reinstall]: the version already installed, fetched again (a release that was rebuilt under the same number).
   Future<String> download(AppRelease release, void Function(double) progress, {bool reinstall = false}) async {
     final asset = assetFor(release);
-    final wanted = release.newerThan(installedVersion) || (reinstall && release.version == installedVersion);
+    final wanted =
+        release.newerThan(installedVersion, build: installedBuild) || (reinstall && release.version == installedVersion);
     if (asset == null || !wanted) throw StateError('No verified update for this device');
     if (!android) _verifiedSetup = null;
     final folder = Directory(p.join((await _cacheDirectory()).path, 'app-updates'));

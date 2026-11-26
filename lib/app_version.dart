@@ -5,6 +5,10 @@
 /// exact nightly they run while a local build keeps the value below.
 const appVersion = String.fromEnvironment('RIFLAY_VERSION', defaultValue: '1.9.0');
 
+/// The build after the version in `pubspec.yaml` (1.9.0+126 → 126): a release rebuilt under the same version gets a
+/// higher one, and the update check offers it. Release builds pass it through `RIFLAY_BUILD` (tool/ci_version.sh).
+const appBuild = int.fromEnvironment('RIFLAY_BUILD', defaultValue: 126);
+
 /// A Nightly build (the `nightly` prerelease): its own app identity, so it installs beside the stable app.
 const isNightly = bool.fromEnvironment('RIFLAY_NIGHTLY');
 

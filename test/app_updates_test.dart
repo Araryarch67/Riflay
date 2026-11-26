@@ -67,6 +67,16 @@ void main() {
     expect(release.newerThan('2.0.0'), isFalse);
   });
 
+  test('the same version is an update when the release title names a higher build', () {
+    final rebuilt = AppRelease.parse({...releaseJson(), 'name': 'v1.10.0+7'});
+    expect(rebuilt.build, 7);
+    expect(rebuilt.newerThan('1.10.0', build: 6), isTrue);
+    expect(rebuilt.newerThan('1.10.0', build: 7), isFalse);
+    expect(rebuilt.newerThan('1.10.0'), isFalse, reason: 'an unknown installed build is not older');
+    expect(AppRelease.parse({...releaseJson(), 'name': 'v1.10.0'}).newerThan('1.10.0', build: 6), isFalse);
+    expect(AppRelease.parse({...releaseJson(), 'name': 'v1.9.0+99'}).build, isNull, reason: 'another version');
+  });
+
   test('only a minor or major release pops up; a patch release waits in Settings', () {
     final release = AppRelease.parse(releaseJson()); // 1.10.0
     expect(release.patchAbove('1.9.9'), isFalse, reason: 'a minor release pops up');
