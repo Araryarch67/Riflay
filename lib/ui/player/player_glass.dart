@@ -4,6 +4,7 @@ import 'package:liquid_glass_renderer/liquid_glass_renderer.dart';
 import '../../services/appearance.dart';
 import '../../services/layout_prefs.dart';
 import '../theme.dart';
+import '../widgets/live_preview.dart';
 
 /// One backdrop sample for a Liquid preset's controls; sibling surfaces share it.
 class PlayerGlassLayer extends StatelessWidget {
@@ -13,7 +14,7 @@ class PlayerGlassLayer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (!LayoutPrefs.instance.playerGlassControls || LayoutPrefs.lightweight) return child;
+    if (!LayoutPrefs.instance.playerGlassControls || LayoutPrefs.lightweight || LivePreview.of(context)) return child;
     return LiquidGlassLayer(settings: _settings(context), useBackdropGroup: true, child: child);
   }
 }
@@ -133,10 +134,13 @@ class PlayerGlassSurface extends StatelessWidget {
   Widget build(BuildContext context) {
     if (!enabled || !LayoutPrefs.instance.playerGlassControls) return child;
     final corners = LayoutPrefs.radius(radius).clamp(0.0, radius);
-    if (LayoutPrefs.lightweight) {
+    // A style's preview is the player drawn small (scaled), and the glass renderer places its shapes unscaled: they
+    // landed off their buttons. There it is a plain see-through pane, in its place.
+    final preview = LivePreview.of(context);
+    if (LayoutPrefs.lightweight || preview) {
       final c = AppColors.of(context);
       return Material(
-        color: c.elevated,
+        color: preview ? (_lightGlass(context) ? const Color(0x40FFFFFF) : const Color(0x4D000000)) : c.elevated,
         shape: circle ? const CircleBorder() : RoundedRectangleBorder(borderRadius: BorderRadius.circular(corners)),
         clipBehavior: Clip.antiAlias,
         child: child,

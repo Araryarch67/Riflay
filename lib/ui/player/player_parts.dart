@@ -33,6 +33,7 @@ import 'player_glass.dart';
 import 'full_screen_player.dart' show ExpandedPanel, expandedPlayerPanel, showExpandedPlayer;
 import 'player_common.dart' show ArtistLinks;
 import '../widgets/frosted.dart';
+import '../widgets/live_preview.dart' show LivePreview;
 
 // The parts the player is assembled from (Settings › Look & feel › Now Playing). The phone builds its Now
 // Playing from them; the desktop's expanded player, side panel and bar take the ones that fit a wide window.
@@ -990,7 +991,7 @@ class PlayerBottomButtons extends StatelessWidget {
           // band from the circle's centre (its edges meet the circle's top and bottom in a straight line, so no
           // notch and no bulge), and a small-cornered piece giving the inner corners the middle pieces' radius.
           if (!(i == 0 || i == 4)) return PlayerGlassSurface(radius: inner.x, child: button);
-          if (LayoutPrefs.lightweight) return PlayerGlassSurface(radius: 20, child: button);
+          if (LayoutPrefs.lightweight || LivePreview.of(context)) return PlayerGlassSurface(radius: 20, child: button);
           final first = i == 0;
           const fill = SizedBox.expand();
           final cornerWidth = 2 * inner.x + 4;
