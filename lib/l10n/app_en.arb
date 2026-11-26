@@ -3604,6 +3604,7 @@
   "dsPosition": "Position",
   "dsPlaysFrom": "Plays from",
   "dsPlaysStream": "YouTube Music stream",
+  "dsPlaysSpotifyFallback": "YouTube Music stream (Spotify plays songs only with Premium)",
   "dsPlaysDownloaded": "Downloaded copy",
   "dsPlaysFile": "File on this device",
   "dsPlaysMerged": "{source} (Smart merge)",

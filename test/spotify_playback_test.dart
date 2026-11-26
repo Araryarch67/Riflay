@@ -285,6 +285,8 @@ void main() {
           fallback: () async => youtube,
         );
         expect((await source.request()).contentType, 'audio/webm');
+        // Detail stats says where the sound comes from.
+        expect(source.playingInstead, same(youtube));
         // Later ranges of the song come from the same YouTube file.
         await source.request(1);
         expect(youtube.asked, 2);

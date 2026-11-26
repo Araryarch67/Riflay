@@ -6597,6 +6597,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dsPlaysStream => 'YouTube Music stream';
 
   @override
+  String get dsPlaysSpotifyFallback => 'YouTube Music stream (Spotify plays songs only with Premium)';
+
+  @override
   String get dsPlaysDownloaded => 'Downloaded copy';
 
   @override

@@ -14,6 +14,7 @@ import '../../services/audio_engine.dart';
 import '../../services/language.dart';
 import '../../services/player_controller.dart';
 import '../../services/smart_merge.dart';
+import '../../services/spotify_audio_source.dart';
 import '../../services/youtube_audio_source.dart';
 import '../player/player_styles_page.dart';
 import '../theme.dart';
@@ -303,8 +304,14 @@ class _DetailStatsSheetState extends State<_DetailStatsSheet> {
     // own YouTube stream until one is found.
     final merged = track.videoId == null ? null : SmartMerge.instance.soundFrom(track.videoId!);
     final mergedStream = source is SmartMergeAudioSource && source.from != null;
-    final streaming = source is YoutubeAudioSource || (source is SmartMergeAudioSource && source.from == null);
-    final yt = track.videoId == null ? null : YoutubeAudioSource.statsOf(track.videoId!);
+    // A Spotify song the account can't play (no Premium) streams from YouTube Music instead.
+    final instead = source is SpotifyAudioSource ? source.playingInstead : null;
+    final videoId = track.videoId ?? (instead is YoutubeAudioSource ? instead.videoId : null);
+    final streaming =
+        source is YoutubeAudioSource ||
+        instead is YoutubeAudioSource ||
+        (source is SmartMergeAudioSource && source.from == null);
+    final yt = videoId == null ? null : YoutubeAudioSource.statsOf(videoId);
     final stream = streaming ? yt?.stream : null;
     final audio = c.audio;
     final level = audio.effectiveLeveling;
@@ -323,7 +330,9 @@ class _DetailStatsSheetState extends State<_DetailStatsSheet> {
           (t.dsPosition, '${formatDuration(position)} / ${formatDuration(duration)}'),
           (
             t.dsPlaysFrom,
-            streaming
+            track.spotifyId != null
+                ? (streaming ? t.dsPlaysSpotifyFallback : 'Spotify')
+                : streaming
                 ? t.dsPlaysStream
                 : mergedStream
                 ? t.dsPlaysMerged(source.from!.name)
@@ -333,8 +342,10 @@ class _DetailStatsSheetState extends State<_DetailStatsSheet> {
                 ? t.dsPlaysDownloaded
                 : t.dsPlaysFile,
           ),
-          if (track.videoId case final id?)
+          if (videoId case final id?)
             streaming ? (t.dsVideoIdItag, '$id / ${stream?.formatId ?? '-'}') : (t.dsVideoId, id)
+          else if (track.spotifyId case final id?)
+            ('Spotify ID', id)
           else
             (t.dsFile, (track.path ?? track.uri.toString()).split(RegExp(r'[/\\]')).last),
         ],

@@ -1946,6 +1946,7 @@
   "dsPosition": "再生位置",
   "dsPlaysFrom": "再生元",
   "dsPlaysStream": "YouTube Musicのストリーム",
+  "dsPlaysSpotifyFallback": "YouTube Musicのストリーム(SpotifyはPremiumでのみ再生できます)",
   "dsPlaysDownloaded": "ダウンロード済みのコピー",
   "dsPlaysFile": "このデバイスのファイル",
   "dsPlaysMerged": "{source}(スマートマージ)",

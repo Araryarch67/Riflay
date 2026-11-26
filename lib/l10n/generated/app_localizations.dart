@@ -11757,6 +11757,12 @@ abstract class AppLocalizations {
   /// **'YouTube Music stream'**
   String get dsPlaysStream;
 
+  /// No description provided for @dsPlaysSpotifyFallback.
+  ///
+  /// In en, this message translates to:
+  /// **'YouTube Music stream (Spotify plays songs only with Premium)'**
+  String get dsPlaysSpotifyFallback;
+
   /// No description provided for @dsPlaysDownloaded.
   ///
   /// In en, this message translates to:

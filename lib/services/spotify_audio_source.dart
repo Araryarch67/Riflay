@@ -27,6 +27,9 @@ class SpotifyAudioSource extends StreamAudioSource {
   final Future<StreamAudioSource?> Function()? fallback;
   Future<StreamAudioSource?>? _instead;
 
+  /// What plays in Spotify's place once [fallback] found it (Detail stats says where the sound comes from).
+  StreamAudioSource? playingInstead;
+
   /// Whether Spotify served this song a part: the rest must come from the same file.
   bool _served = false;
 
@@ -62,7 +65,7 @@ class SpotifyAudioSource extends StreamAudioSource {
         debugPrint('Spotify playback failed ($e); trying YouTube Music');
       }
     }
-    final instead = await (_instead ??= fallback!());
+    final instead = playingInstead = await (_instead ??= fallback!());
     if (instead == null) throw const SpotifyBridgeError('not on YouTube Music either');
     return instead.request(start, end);
   }

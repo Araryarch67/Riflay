@@ -1953,6 +1953,7 @@
   "dsPosition": "Posisi",
   "dsPlaysFrom": "Diputar dari",
   "dsPlaysStream": "Stream YouTube Music",
+  "dsPlaysSpotifyFallback": "Stream YouTube Music (Spotify hanya memutar lagu untuk akun Premium)",
   "dsPlaysDownloaded": "Salinan unduhan",
   "dsPlaysFile": "File di perangkat ini",
   "dsPlaysMerged": "{source} (Smart merge)",

@@ -6369,6 +6369,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get dsPlaysStream => 'YouTube Musicのストリーム';
 
   @override
+  String get dsPlaysSpotifyFallback => 'YouTube Musicのストリーム(SpotifyはPremiumでのみ再生できます)';
+
+  @override
   String get dsPlaysDownloaded => 'ダウンロード済みのコピー';
 
   @override

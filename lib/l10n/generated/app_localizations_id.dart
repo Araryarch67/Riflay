@@ -6528,6 +6528,9 @@ class AppLocalizationsId extends AppLocalizations {
   String get dsPlaysStream => 'Stream YouTube Music';
 
   @override
+  String get dsPlaysSpotifyFallback => 'Stream YouTube Music (Spotify hanya memutar lagu untuk akun Premium)';
+
+  @override
   String get dsPlaysDownloaded => 'Salinan unduhan';
 
   @override
