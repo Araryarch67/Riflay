@@ -1286,7 +1286,7 @@ checksum = "d902046e6a28a1e4c3cab97258a0ce11e994903f01c2d97a9447a0b3df85f4f6"
 
 [[package]]
 name = "riflay-tui"
-version = "1.8.7"
+version = "1.9.0"
 dependencies = [
  "image",
  "libloading",
