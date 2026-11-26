@@ -2260,6 +2260,12 @@ class AppLocalizationsJa extends AppLocalizations {
   String get unlockPhone => 'ロック解除';
 
   @override
+  String get youreOffline => 'オフラインです。ダウンロードしていない曲はインターネットに接続するまで再生できません。ダウンロード済みの曲は再生できます。';
+
+  @override
+  String get backOnline => 'オンラインに戻りました。';
+
+  @override
   String get visualizer => 'ビジュアライザー';
 
   @override

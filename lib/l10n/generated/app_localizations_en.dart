@@ -2313,6 +2313,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get unlockPhone => 'Unlock';
 
   @override
+  String get youreOffline =>
+      'You\'re offline. Songs that aren\'t downloaded can\'t play until you connect to the internet; downloaded songs still play.';
+
+  @override
+  String get backOnline => 'Back online.';
+
+  @override
   String get visualizer => 'Visualizer';
 
   @override

@@ -1067,6 +1067,8 @@
   "lyricsOverLockScreen": "Lyrics over the lock screen",
   "lyricsOverLockScreenSubtitle": "When the screen goes off while a song plays, its lyrics show over the lock screen until you unlock. Needs \"Display over other apps\"; on Xiaomi also \"Show on lock screen\" in the app's permissions",
   "unlockPhone": "Unlock",
+  "youreOffline": "You're offline. Songs that aren't downloaded can't play until you connect to the internet; downloaded songs still play.",
+  "backOnline": "Back online.",
   "visualizer": "Visualizer",
   "visualizerHint": "Shapes that move with the music",
   "pages": "Pages",

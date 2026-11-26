@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:riflay/services/player_controller.dart';
 import 'package:riflay/ui/pages/lock_screen_lyrics_page.dart';
-import 'package:riflay/ui/player_scope.dart';
 
 void main() {
   testWidgets('over the lock screen Back stays put, and Unlock asks the lock screen', (tester) async {

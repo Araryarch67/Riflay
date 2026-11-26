@@ -712,6 +712,8 @@
   "lyricsOverLockScreen": "Lirik di atas layar kunci",
   "lyricsOverLockScreenSubtitle": "Saat layar mati ketika lagu diputar, liriknya tampil di atas layar kunci sampai kamu membuka kunci. Butuh izin \"Tampilkan di atas aplikasi lain\"; di Xiaomi juga \"Tampilkan di layar kunci\" di izin aplikasi",
   "unlockPhone": "Buka kunci",
+  "youreOffline": "Kamu sedang offline. Lagu yang belum di-download tidak bisa diputar sampai tersambung ke internet; lagu yang sudah di-download tetap bisa.",
+  "backOnline": "Kembali online.",
   "visualizer": "Visualizer",
   "visualizerHint": "Bentuk yang bergerak mengikuti musik",
   "pages": "Halaman",

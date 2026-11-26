@@ -2307,6 +2307,13 @@ class AppLocalizationsId extends AppLocalizations {
   String get unlockPhone => 'Buka kunci';
 
   @override
+  String get youreOffline =>
+      'Kamu sedang offline. Lagu yang belum di-download tidak bisa diputar sampai tersambung ke internet; lagu yang sudah di-download tetap bisa.';
+
+  @override
+  String get backOnline => 'Kembali online.';
+
+  @override
   String get visualizer => 'Visualizer';
 
   @override

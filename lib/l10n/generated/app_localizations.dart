@@ -4317,6 +4317,18 @@ abstract class AppLocalizations {
   /// **'Unlock'**
   String get unlockPhone;
 
+  /// No description provided for @youreOffline.
+  ///
+  /// In en, this message translates to:
+  /// **'You\'re offline. Songs that aren\'t downloaded can\'t play until you connect to the internet; downloaded songs still play.'**
+  String get youreOffline;
+
+  /// No description provided for @backOnline.
+  ///
+  /// In en, this message translates to:
+  /// **'Back online.'**
+  String get backOnline;
+
   /// No description provided for @visualizer.
   ///
   /// In en, this message translates to:

@@ -36,6 +36,7 @@ import 'lyrics.dart';
 import 'lyrics_translation.dart';
 import 'media_session.dart';
 import 'lock_screen_lyrics.dart';
+import 'connection.dart';
 import 'metadata.dart';
 import 'download_files.dart' show nameDownload;
 import 'mv_sidecar.dart';
@@ -156,6 +157,7 @@ class PlayerController extends ChangeNotifier {
     );
     _subs.add(
       player.playerStateStream.listen((state) {
+        _watchStall(state);
         if (!state.playing) _saveQueue();
         if (state.processingState == ProcessingState.completed) {
           _saveLongPosition();
@@ -1114,12 +1116,39 @@ class PlayerController extends ChangeNotifier {
   /// the media keys and the system's Play button call this, and would otherwise do nothing.
   Future<void> play() async {
     if (_closingPlayer != null) return;
+    _sayIfOffline(currentTrack);
     _bluetoothResume = null;
     _bluetoothPause = null;
     if (!casting && player.audioSources.isNotEmpty && player.processingState == ProcessingState.completed) {
       await player.seek(Duration.zero, index: 0);
     }
     return _play();
+  }
+
+  /// Online or not, said as it changes: a streamed song stuck at 0:00 then has its reason on screen.
+  bool _wasOnline = true;
+  void _onlineChanged() {
+    final on = Connection.instance.online.value;
+    if (on == _wasOnline) return;
+    _wasOnline = on;
+    _errors.add(on ? tr.backOnline : tr.youreOffline);
+    notifyListeners();
+  }
+
+  /// Play pressed on a song that needs the internet while there is none.
+  void _sayIfOffline(Track? t) {
+    if (t != null && !Connection.instance.online.value && !isOffline(t)) _errors.add(tr.youreOffline);
+  }
+
+  /// A streamed song still loading after a few seconds: the connection is looked at again (a Wi-Fi with no
+  /// internet behind it says connected).
+  Timer? _stall;
+  void _watchStall(PlayerState state) {
+    _stall?.cancel();
+    final waiting = state.processingState == ProcessingState.loading || state.processingState == ProcessingState.buffering;
+    final t = currentTrack;
+    if (!waiting || !state.playing || t == null || isOffline(t)) return;
+    _stall = Timer(const Duration(seconds: 6), () => Connection.instance.check().ignore());
   }
 
   Future<void> pause() {
@@ -1946,6 +1975,8 @@ class PlayerController extends ChangeNotifier {
     unawaited(LyricsTranslation.load());
     unawaited(MediaSession.loadLyricsSetting());
     unawaited(LockScreenLyrics.attach(this));
+    Connection.instance.online.addListener(_onlineChanged);
+    Connection.instance.start();
     unawaited(AudioAnalysis.load());
     unawaited(LyricsService.loadBetterLyricsKey());
     audio.addListener(notifyListeners);
@@ -2778,6 +2809,7 @@ class PlayerController extends ChangeNotifier {
     if (tracks.isEmpty) return;
     _cancelledOpening = false;
     final selected = _playableQueueTrack(tracks[index.clamp(0, tracks.length - 1)]);
+    _sayIfOffline(selected);
     if (selected == null) {
       _errors.add(tr.spotiflacDownloadToPlay);
       return;
@@ -3541,6 +3573,8 @@ class PlayerController extends ChangeNotifier {
 
   @override
   void dispose() {
+    Connection.instance.online.removeListener(_onlineChanged);
+    _stall?.cancel();
     recentRadios.dispose();
     _writeQueue();
     _queueLifecycle?.dispose();
