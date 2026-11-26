@@ -70,6 +70,12 @@ class _FakePlayer extends ChangeNotifier implements MediaSessionPlayer {
   Future<void> stop() => _run('stop', () => set(_with(playing: false)));
   @override
   Future<void> seek(Duration position) => _run('seek ${position.inMilliseconds}', () => set(_with(position: position)));
+  @override
+  Future<void> toggleShuffle() => _run('shuffle');
+  @override
+  Future<void> cycleRepeat() => _run('repeat');
+  @override
+  Future<void> toggleLike() => _run('like');
 }
 
 /// An adapter that records what it is told, and lets the test press its buttons.
@@ -310,6 +316,21 @@ void main() {
       press(const MediaCommand.stop());
       await session.settled;
       expect(player.calls, ['play', 'next', 'previous', 'seek 42000', 'pause', 'stop']);
+    });
+
+    test('like, shuffle and repeat reach the player, and their state reaches the system', () async {
+      for (final kind in [MediaCommandKind.like, MediaCommandKind.shuffle, MediaCommandKind.repeat]) {
+        adapter.press!(MediaCommand(kind));
+        await session.settled;
+      }
+      expect(player.calls, ['like', 'shuffle', 'repeat']);
+      player.set(
+        const MediaSessionState(track: _song, canNext: true, shuffle: true, repeat: MediaRepeat.one, liked: true),
+      );
+      await session.settled;
+      expect(adapter.updates.last.shuffle, isTrue);
+      expect(adapter.updates.last.repeat, MediaRepeat.one);
+      expect(adapter.updates.last.liked, isTrue);
     });
 
     test('a seek past either end is kept to the song', () async {

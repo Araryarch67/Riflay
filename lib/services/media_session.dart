@@ -12,6 +12,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/track.dart';
 import '../platform/host.dart';
 import '../platform/network.dart';
+import 'language.dart';
 import 'lyrics.dart';
 import 'lyrics_translation.dart';
 import 'metadata.dart';
@@ -326,10 +327,39 @@ class MediaSession extends BaseAudioHandler with SeekHandler {
     final over = _closed || s.track == null;
     playbackState.add(
       PlaybackState(
+        // After the three standard buttons, so the small notification keeps those (androidCompactActionIndices).
+        // Android 13 and later show the first two of the rest beside them.
         controls: [
           MediaControl.skipToPrevious,
           if (playing) MediaControl.pause else MediaControl.play,
           MediaControl.skipToNext,
+          if (s.liked case final liked?)
+            MediaControl.custom(
+              androidIcon: liked ? 'drawable/ic_widget_favorite' : 'drawable/ic_widget_favorite_border',
+              label: liked ? tr.removeFromLiked : tr.addToLiked,
+              name: 'like',
+            ),
+          if (s.track != null) ...[
+            MediaControl.custom(
+              androidIcon: s.shuffle ? 'drawable/ic_widget_shuffle' : 'drawable/ic_notify_shuffle_off',
+              label: s.shuffle ? tr.disableShuffle : tr.enableShuffle,
+              name: 'shuffle',
+            ),
+            // The label says what a press does next: off → all → one → off.
+            MediaControl.custom(
+              androidIcon: switch (s.repeat) {
+                MediaRepeat.off => 'drawable/ic_notify_repeat_off',
+                MediaRepeat.all => 'drawable/ic_widget_repeat',
+                MediaRepeat.one => 'drawable/ic_widget_repeat_one',
+              },
+              label: switch (s.repeat) {
+                MediaRepeat.off => tr.enableRepeat,
+                MediaRepeat.all => tr.enableRepeatOne,
+                MediaRepeat.one => tr.disableRepeat,
+              },
+              name: 'repeat',
+            ),
+          ],
         ],
         systemActions: const {MediaAction.seek},
         androidCompactActionIndices: const [0, 1, 2],
@@ -414,4 +444,12 @@ class MediaSession extends BaseAudioHandler with SeekHandler {
 
   @override
   Future<void> skipToPrevious() async => _send(const MediaCommand.previous());
+
+  @override
+  Future<dynamic> customAction(String name, [Map<String, dynamic>? extras]) async => switch (name) {
+    'like' => _send(const MediaCommand(MediaCommandKind.like)),
+    'shuffle' => _send(const MediaCommand(MediaCommandKind.shuffle)),
+    'repeat' => _send(const MediaCommand(MediaCommandKind.repeat)),
+    _ => null,
+  };
 }

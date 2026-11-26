@@ -4,7 +4,10 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart' show AppLifecycleState;
 
 /// What the system (or a key) asks the player to do.
-enum MediaCommandKind { play, pause, togglePlayPause, next, previous, stop, seek }
+enum MediaCommandKind { play, pause, togglePlayPause, next, previous, stop, seek, shuffle, repeat, like }
+
+/// Repeat as the session shows it: off, the whole queue, or one song.
+enum MediaRepeat { off, all, one }
 
 /// Where a command came from. One physical press can arrive twice by two routes (a keyboard media key is seen by
 /// the focused window's shortcuts and by the system's media session), so duplicates are judged per route.
@@ -215,6 +218,9 @@ class MediaSessionState {
     this.speed = 1.0,
     this.canNext = false,
     this.canPrevious = false,
+    this.shuffle = false,
+    this.repeat = MediaRepeat.off,
+    this.liked,
   });
 
   static const empty = MediaSessionState();
@@ -229,6 +235,11 @@ class MediaSessionState {
   final double speed;
   final bool canNext;
   final bool canPrevious;
+  final bool shuffle;
+  final MediaRepeat repeat;
+
+  /// Whether the song is in Liked music; null when it can't be liked (not a YouTube Music song, signed out).
+  final bool? liked;
 
   Duration? get duration => track?.duration;
 
@@ -241,6 +252,9 @@ class MediaSessionState {
     speed: speed,
     canNext: canNext,
     canPrevious: canPrevious,
+    shuffle: shuffle,
+    repeat: repeat,
+    liked: liked,
   );
 
   /// The same as [other] but for where the song is (which moves on its own while playing).
@@ -250,7 +264,10 @@ class MediaSessionState {
       other.processing == processing &&
       other.speed == speed &&
       other.canNext == canNext &&
-      other.canPrevious == canPrevious;
+      other.canPrevious == canPrevious &&
+      other.shuffle == shuffle &&
+      other.repeat == repeat &&
+      other.liked == liked;
 
   @override
   bool operator ==(Object other) =>
@@ -260,12 +277,24 @@ class MediaSessionState {
       other.bufferedPosition == bufferedPosition;
 
   @override
-  int get hashCode => Object.hash(track, playing, processing, position, bufferedPosition, speed, canNext, canPrevious);
+  int get hashCode => Object.hash(
+    track,
+    playing,
+    processing,
+    position,
+    bufferedPosition,
+    speed,
+    canNext,
+    canPrevious,
+    shuffle,
+    repeat,
+    liked,
+  );
 
   @override
   String toString() =>
       'MediaSessionState($track, playing: $playing, ${processing.name}, at $position, x$speed, '
-      'next: $canNext, previous: $canPrevious)';
+      'next: $canNext, previous: $canPrevious, shuffle: $shuffle, repeat: ${repeat.name}, liked: $liked)';
 }
 
 /// The player as the media session sees it: what it is doing, and the commands it takes. Riflay's is
@@ -287,6 +316,13 @@ abstract class MediaSessionPlayer implements Listenable {
   Future<void> previous();
   Future<void> stop();
   Future<void> seek(Duration position);
+  Future<void> toggleShuffle();
+
+  /// Off → all → one → off.
+  Future<void> cycleRepeat();
+
+  /// In or out of Liked music (only when the state's `liked` isn't null).
+  Future<void> toggleLike();
 }
 
 /// One platform's media session: Windows SMTC, or audio_service (Android, iOS, macOS, Linux MPRIS, the web).
@@ -399,6 +435,12 @@ class MediaSessionService {
         if (to.isNegative) to = Duration.zero;
         if (end != null && end > Duration.zero && to > end) to = end;
         await _player.seek(to);
+      case MediaCommandKind.shuffle:
+        await _player.toggleShuffle();
+      case MediaCommandKind.repeat:
+        await _player.cycleRepeat();
+      case MediaCommandKind.like:
+        await _player.toggleLike();
     }
     // The system shows what happened, also when nothing did (Next at the end of the queue).
     _publish(force: true);

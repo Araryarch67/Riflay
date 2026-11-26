@@ -16,11 +16,18 @@ class PlayerControllerBinding implements MediaSessionPlayer {
 
   final PlayerController _c;
 
+  // The account too: a like from the app or YouTube Music changes the heart.
   @override
-  void addListener(VoidCallback listener) => _c.addListener(listener);
+  void addListener(VoidCallback listener) {
+    _c.addListener(listener);
+    _c.ytMusic.addListener(listener);
+  }
 
   @override
-  void removeListener(VoidCallback listener) => _c.removeListener(listener);
+  void removeListener(VoidCallback listener) {
+    _c.removeListener(listener);
+    _c.ytMusic.removeListener(listener);
+  }
 
   @override
   Stream<void> get discontinuities {
@@ -70,6 +77,13 @@ class PlayerControllerBinding implements MediaSessionPlayer {
       canNext: _c.hasNext,
       // Previous restarts the song when there is none before it.
       canPrevious: t != null,
+      shuffle: _c.shuffle,
+      repeat: switch (_c.loopMode) {
+        LoopMode.off => MediaRepeat.off,
+        LoopMode.all => MediaRepeat.all,
+        LoopMode.one => MediaRepeat.one,
+      },
+      liked: t != null && t.isRemote && _c.ytMusic.canEdit ? _c.ytMusic.isLiked(t) : null,
     );
   }
 
@@ -111,6 +125,19 @@ class PlayerControllerBinding implements MediaSessionPlayer {
 
   @override
   Future<void> seek(Duration position) => _c.seek(position);
+
+  @override
+  Future<void> toggleShuffle() => _c.toggleShuffle();
+
+  @override
+  Future<void> cycleRepeat() => _c.cycleLoopMode();
+
+  @override
+  Future<void> toggleLike() async {
+    final t = _c.currentTrack;
+    if (t == null || !t.isRemote || !_c.ytMusic.canEdit) return;
+    await _c.ytMusic.setLiked(t, !_c.ytMusic.isLiked(t));
+  }
 }
 
 /// Starts Riflay's media session for [c]: Windows SMTC on Windows, audio_service everywhere else (Android
