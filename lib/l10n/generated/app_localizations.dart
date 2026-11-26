@@ -10749,6 +10749,18 @@ abstract class AppLocalizations {
   /// **'SpotiFLAC is a download-only source, not a streaming source. Download songs first to play them from your library.'**
   String get spotiflacDownloadOnly;
 
+  /// No description provided for @monochromePreviewSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Show it as a source on Search. Its songs play a 1-minute preview; download them to play them in full.'**
+  String get monochromePreviewSubtitle;
+
+  /// No description provided for @monochromePreviewEnded.
+  ///
+  /// In en, this message translates to:
+  /// **'Preview ended. Download the song to play it in full.'**
+  String get monochromePreviewEnded;
+
   /// No description provided for @retryingDownload.
   ///
   /// In en, this message translates to:
@@ -12456,7 +12468,7 @@ abstract class AppLocalizations {
   /// No description provided for @sourcesAbout.
   ///
   /// In en, this message translates to:
-  /// **'Additional music services. Riflay plays from their servers. Each one is on until you turn it off.'**
+  /// **'Additional music services. Each one is off until you turn it on.'**
   String get sourcesAbout;
 
   /// No description provided for @sourceMonochromeSubtitle.
@@ -12498,7 +12510,7 @@ abstract class AppLocalizations {
   /// No description provided for @smartMergeSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Combines YouTube Music with better-quality audio of the same recording from your library or enabled playback sources. Keeps its cover, lyrics and video. Uses YouTube when no better audio is available. Choose a source manually from the song menu.'**
+  /// **'Plays a YouTube Music song from a lossless file of the same recording in your library, when you have one. Keeps its cover, lyrics and video. Uses YouTube otherwise. Choose a source manually from the song menu.'**
   String get smartMergeSubtitle;
 
   /// No description provided for @smartMergeToday.

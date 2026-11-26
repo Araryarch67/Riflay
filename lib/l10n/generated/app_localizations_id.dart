@@ -5983,6 +5983,13 @@ class AppLocalizationsId extends AppLocalizations {
       'SpotiFLAC hanya untuk mengunduh lagu, bukan sumber streaming. Unduh lagu terlebih dahulu untuk memutarnya dari koleksi.';
 
   @override
+  String get monochromePreviewSubtitle =>
+      'Tampilkan sebagai sumber di Pencarian. Lagunya diputar sebagai preview 1 menit; unduh untuk memutar lagu penuh.';
+
+  @override
+  String get monochromePreviewEnded => 'Preview selesai. Unduh lagu ini untuk memutarnya penuh.';
+
+  @override
   String get retryingDownload => 'Koneksi terputus. Mencoba lagi…';
 
   @override
@@ -6932,8 +6939,7 @@ class AppLocalizationsId extends AppLocalizations {
       'SoundCloud, Monochrome dan ekstensi SpotiFLAC: tempat lain untuk mencari dan memutar musik';
 
   @override
-  String get sourcesAbout =>
-      'Layanan musik tambahan. Riflay memutarnya langsung dari server mereka. Semuanya aktif sampai kamu mematikannya.';
+  String get sourcesAbout => 'Layanan musik tambahan. Semuanya mati sampai kamu menyalakannya.';
 
   @override
   String get sourceMonochromeSubtitle =>
@@ -6958,7 +6964,7 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get smartMergeSubtitle =>
-      'Memadukan YouTube Music dengan audio berkualitas lebih baik dari rekaman yang sama di library atau sumber pemutaran aktif. Sampul, lirik, dan video tetap dari YouTube. Jika audio yang lebih baik tidak tersedia, gunakan YouTube. Sumber juga bisa dipilih manual lewat menu lagu.';
+      'Memutar lagu YouTube Music dari file lossless rekaman yang sama di library, kalau ada. Sampul, lirik, dan video tetap dari YouTube. Jika tidak ada, gunakan YouTube. Sumber juga bisa dipilih manual lewat menu lagu.';
 
   @override
   String get smartMergeToday => 'Hari ini';

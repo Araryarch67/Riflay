@@ -7,8 +7,8 @@ import '../youtube_stream.dart';
 import '../youtube_audio_source.dart';
 import '../video_stream_cache.dart';
 
-/// Settings › Accounts & services › Music sources: the places Riflay looks besides YouTube Music. Each one is on
-/// until turned off.
+/// Settings › Accounts & services › Music sources: the places Riflay looks besides YouTube Music. Each service is
+/// off until turned on; Monochrome only downloads.
 class MusicSources extends ChangeNotifier {
   MusicSources._();
 
@@ -67,8 +67,9 @@ class MusicSources extends ChangeNotifier {
   bool soundcloud = false;
   bool monochrome = false;
 
-  /// A YouTube Music song plays its sound from the best place that has the same recording (see `SmartMerge`).
-  bool smartMerge = false;
+  /// A YouTube Music song plays from a lossless file of the same recording in the library (see `SmartMerge`). On
+  /// by default: it never waits on the network.
+  bool smartMerge = true;
 
   Future<void>? _loading;
 
@@ -81,7 +82,7 @@ class MusicSources extends ChangeNotifier {
     YoutubeStream.configurePlayback(audioCap, dataSaver);
     soundcloud = p.getBool(_soundcloudKey) ?? false;
     monochrome = p.getBool(_monochromeKey) ?? false;
-    smartMerge = p.getBool(_smartMergeKey) ?? false;
+    smartMerge = p.getBool(_smartMergeKey) ?? true;
     for (final old in _oldKeys) {
       if (p.containsKey(old)) p.remove(old).ignore();
     }
@@ -131,6 +132,7 @@ class MusicSources extends ChangeNotifier {
   @visibleForTesting
   void reset() {
     _loading = null;
-    soundcloud = monochrome = smartMerge = false;
+    soundcloud = monochrome = false;
+    smartMerge = true;
   }
 }

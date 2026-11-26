@@ -7,7 +7,6 @@ import '../../services/download_matches.dart';
 import '../../services/language.dart';
 import '../../services/manual_audio.dart';
 import '../../services/player_controller.dart';
-import '../../services/sources/music_sources.dart';
 import 'frosted.dart';
 
 Future<void> showAudioSourcePicker(BuildContext context, Track track) {
@@ -33,11 +32,7 @@ class _AudioSourcePicker extends StatefulWidget {
 
 class _AudioSourcePickerState extends State<_AudioSourcePicker> {
   String _query = '';
-  List<Track> _remote = [];
-  bool _searching = false;
-  bool _failed = false;
   bool _saving = false;
-  int _searchRevision = 0;
   late List<Track> _local;
 
   @override
@@ -59,38 +54,12 @@ class _AudioSourcePickerState extends State<_AudioSourcePicker> {
     }
   }
 
-  Future<void> _search() async {
-    final revision = ++_searchRevision;
-    setState(() {
-      _searching = true;
-      _failed = false;
-    });
-    try {
-      final result = await widget.controller.monochrome
-          .search(_query.trim().isEmpty ? '${widget.track.title} ${widget.track.artist}' : _query.trim())
-          .timeout(const Duration(seconds: 15));
-      if (mounted && revision == _searchRevision) {
-        setState(() {
-          _remote = result;
-          _searching = false;
-        });
-      }
-    } catch (_) {
-      if (mounted && revision == _searchRevision) {
-        setState(() {
-          _failed = true;
-          _searching = false;
-        });
-      }
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final selected = widget.controller.audioChoice(widget.track);
     final query = _query.toLowerCase().trim();
     final local = _local.where((t) => query.isEmpty || '${t.title} ${t.artist}'.toLowerCase().contains(query)).toList();
-    final choices = [...local, ..._remote];
+    final choices = local;
     final text = Theme.of(context).textTheme;
     Widget mode(String label, IconData icon, bool checked, VoidCallback action) => ListTile(
       leading: Icon(icon),
@@ -126,24 +95,9 @@ class _AudioSourcePickerState extends State<_AudioSourcePicker> {
                     prefixIcon: const Icon(Icons.search_rounded),
                     hintText: tr.audioSourceSearch,
                   ),
-                  onChanged: (value) => setState(() {
-                    _query = value;
-                    _remote = [];
-                    _failed = false;
-                    _searchRevision++;
-                    _searching = false;
-                  }),
-                  onSubmitted: MusicSources.instance.monochrome ? (_) => _search() : null,
+                  onChanged: (value) => setState(() => _query = value),
                 ),
               ),
-              if (MusicSources.instance.monochrome)
-                TextButton.icon(
-                  onPressed: _searching || _saving ? null : _search,
-                  icon: const Icon(Icons.search_rounded),
-                  label: Text(tr.audioSourceSearchMonochrome),
-                ),
-              if (_searching) const LinearProgressIndicator(),
-              if (_failed) Padding(padding: const EdgeInsets.all(8), child: Text(tr.downloadMatchFailed)),
               Expanded(
                 child: choices.isEmpty
                     ? Center(child: Text(tr.audioSourceEmpty))
@@ -152,12 +106,12 @@ class _AudioSourcePickerState extends State<_AudioSourcePicker> {
                         itemBuilder: (context, index) {
                           final track = choices[index];
                           return ListTile(
-                            leading: Icon(track.path != null ? Icons.library_music_outlined : Icons.cloud_outlined),
+                            leading: const Icon(Icons.library_music_outlined),
                             title: Text(track.title, maxLines: 1, overflow: TextOverflow.ellipsis),
                             subtitle: Text(
                               [
                                 track.artist,
-                                track.path != null ? tr.yourLibrary : 'Monochrome',
+                                tr.yourLibrary,
                                 ?track.qualityLabel,
                               ].join(' · '),
                               maxLines: 2,

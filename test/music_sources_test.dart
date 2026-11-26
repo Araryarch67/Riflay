@@ -8,12 +8,13 @@ void main() {
     MusicSources.instance.reset();
   });
 
-  test('every optional source is off until turned on, and stays as set', () async {
+  test('services are off until turned on, library-only Smart merge is on, and each stays as set', () async {
     final s = MusicSources.instance;
     await s.load();
-    expect((s.soundcloud, s.monochrome, s.smartMerge), (false, false, false));
+    expect((s.soundcloud, s.monochrome, s.smartMerge), (false, false, true));
     await s.setSoundcloud(true);
     await s.setMonochrome(true);
+    await s.setSmartMerge(false);
     s.reset();
     await s.load();
     expect((s.soundcloud, s.monochrome, s.smartMerge), (true, true, false));
@@ -29,14 +30,14 @@ void main() {
     });
     final s = MusicSources.instance..reset();
     await s.load();
-    expect((s.soundcloud, s.monochrome, s.smartMerge), (false, false, false));
+    expect((s.soundcloud, s.monochrome, s.smartMerge), (false, false, true));
     final prefs = await SharedPreferences.getInstance();
     await Future<void>.delayed(Duration.zero);
     expect(prefs.getKeys().where((k) => k.endsWith('.v1') || k.endsWith('.v2')), isEmpty, reason: 'the old choices are dropped');
 
-    await s.setSmartMerge(true);
+    await s.setSmartMerge(false);
     s.reset();
     await s.load();
-    expect((s.soundcloud, s.monochrome, s.smartMerge), (false, false, true));
+    expect((s.soundcloud, s.monochrome, s.smartMerge), (false, false, false));
   });
 }

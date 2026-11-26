@@ -5841,6 +5841,12 @@ class AppLocalizationsJa extends AppLocalizations {
   String get spotiflacDownloadOnly => 'SpotiFLACはダウンロード専用で、ストリーミングには対応していません。先に曲をダウンロードしてから、ライブラリで再生してください。';
 
   @override
+  String get monochromePreviewSubtitle => '検索のソースとして表示します。曲は1分間のプレビューで再生され、ダウンロードすると全体を再生できます。';
+
+  @override
+  String get monochromePreviewEnded => 'プレビューが終わりました。曲全体を再生するにはダウンロードしてください。';
+
+  @override
   String get retryingDownload => '接続が切れました。再試行しています…';
 
   @override
@@ -6772,7 +6778,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get topicSourcesSummary => 'SoundCloud、Monochrome、SpotiFLAC拡張機能:検索と再生に使える追加のソース';
 
   @override
-  String get sourcesAbout => '追加の音楽サービス。Riflayは各サービスのサーバーから直接再生する。どれもオフにするまでオン。';
+  String get sourcesAbout => '追加の音楽サービス。どれもオンにするまでオフ。';
 
   @override
   String get sourceMonochromeSubtitle => '検索の「すべて」にMonochromeの音楽を表示。利用可能な場合はFLACで再生';
@@ -6794,7 +6800,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get smartMergeSubtitle =>
-      'YouTube Musicの曲を、ライブラリや有効な再生ソースにある同じ録音の高音質な音声と組み合わせます。カバー、歌詞、動画はそのままです。高音質な音源がなければYouTubeを使います。曲メニューから音声ソースを手動で選ぶこともできます。';
+      'ライブラリに同じ録音のロスレスファイルがあれば、YouTube Musicの曲をそのファイルで再生します。カバー、歌詞、動画はそのままです。なければYouTubeを使います。曲メニューから音声ソースを手動で選ぶこともできます。';
 
   @override
   String get smartMergeToday => '今日';

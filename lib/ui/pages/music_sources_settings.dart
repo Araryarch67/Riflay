@@ -56,7 +56,7 @@ class _MusicSourcesSettingsState extends State<MusicSourcesSettings> {
               SwitchListTile(
                 secondary: const MonochromeMark(size: 24),
                 title: Text(tr.sourceInSearch(tr.sourceMonochrome)),
-                subtitle: Text(tr.sourceSearchToggleSubtitle, style: muted),
+                subtitle: Text(tr.monochromePreviewSubtitle, style: muted),
                 value: _sources.monochrome,
                 onChanged: _sources.setMonochrome,
               ),

@@ -178,6 +178,7 @@ class PlayerController extends ChangeNotifier {
     _subs.add(player.positionDiscontinuityStream.listen((_) => _updatePresence(force: true)));
     // Plays count towards the YouTube Music history (signed in, setting on).
     _subs.add(ytMusic.reportPlaysOf(player, secondTicks(), () => currentTrack));
+    _subs.add(secondTicks().listen(_endPreview));
     // Lets a song's music-video formats be looked up ahead with its audio ones.
     YoutubeStream.musicVideoIdLookup = (id) async => (await ytMusic.musicVideo(id))?.videoId;
     YtDlp.accountCookies = () => ytMusic.downloadCookies;
@@ -999,6 +1000,19 @@ class PlayerController extends ChangeNotifier {
     return true;
   }
 
+  /// How much of a Monochrome song plays before it is downloaded: it is a download source, not a streaming one.
+  static const previewLength = Duration(minutes: 1);
+
+  @visibleForTesting
+  void endPreviewAt(Duration position) => _endPreview(position);
+
+  void _endPreview(Duration position) {
+    if (casting || position < previewLength || currentTrack?.monochromeId == null) return;
+    // Back to its start, paused: Play hears the preview again instead of stopping at once.
+    unawaited(pause().then((_) => player.seek(Duration.zero)));
+    _errors.add(tr.monochromePreviewEnded);
+  }
+
   /// Keeps only the current and next song cached, and starts the next download.
   /// Untagged sources (for example an audio-engine probe) are not queue tracks.
   void _prefetchNext() {
@@ -1013,7 +1027,7 @@ class PlayerController extends ChangeNotifier {
     for (final s in seq.sequence.skip(at + 1).take(1)) {
       if (s.tag case final Track t when t.isRemote && downloadedCopy(t) == null) {
         if (_manualAudio.choice(t.videoId!) case final choice?) {
-          if (choice.track == null) _resolveAhead(t.videoId!);
+          if (choice.track?.path == null) _resolveAhead(t.videoId!);
           continue;
         }
         final local = _smartMerge.local(t, _views.library, (
@@ -2584,14 +2598,12 @@ class PlayerController extends ChangeNotifier {
       if (webAudioUri(t.videoId!) case final uri?) return AudioSource.uri(uri, tag: identity);
       if (_manualAudio.choice(t.videoId!) case final choice?) {
         final chosen = choice.track;
-        final available = chosen != null && (chosen.path == null || File(chosen.path!).existsSync());
+        // A Monochrome stream picked before it became download-only plays YouTube instead.
+        final available = chosen?.path != null && File(chosen!.path!).existsSync();
         if (available && !_smartMerge.gaveUpOn(t.videoId!)) {
           _smartMerge.markUsed(
             t.videoId!,
-            sound: (
-              source: chosen.path != null ? TrackSource.device : TrackSource.monochrome,
-              name: chosen.path != null ? '' : monochrome.name,
-            ),
+            sound: (source: TrackSource.device, name: ''),
           );
           return _sourceFor(chosen, tag: identity);
         }
@@ -2692,6 +2704,8 @@ class PlayerController extends ChangeNotifier {
 
   Track? _playableQueueTrack(Track track) {
     if (_unavailableExtensionRecent(track)) return null;
+    // A downloaded Monochrome song plays in full from its file; otherwise only its preview ([previewLength]).
+    if (track.monochromeId != null) return downloadedCopy(track) ?? track;
     return track.extensionId == null ? track : downloadedCopy(track);
   }
 

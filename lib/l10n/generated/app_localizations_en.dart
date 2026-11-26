@@ -6050,6 +6050,13 @@ class AppLocalizationsEn extends AppLocalizations {
       'SpotiFLAC is a download-only source, not a streaming source. Download songs first to play them from your library.';
 
   @override
+  String get monochromePreviewSubtitle =>
+      'Show it as a source on Search. Its songs play a 1-minute preview; download them to play them in full.';
+
+  @override
+  String get monochromePreviewEnded => 'Preview ended. Download the song to play it in full.';
+
+  @override
   String get retryingDownload => 'Connection interrupted. Retrying…';
 
   @override
@@ -7001,8 +7008,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'SoundCloud, Monochrome and SpotiFLAC extensions: more places to search and play from';
 
   @override
-  String get sourcesAbout =>
-      'Additional music services. Riflay plays from their servers. Each one is on until you turn it off.';
+  String get sourcesAbout => 'Additional music services. Each one is off until you turn it on.';
 
   @override
   String get sourceMonochromeSubtitle => 'Monochrome\'s music catalog, in FLAC when available, on search\'s All';
@@ -7025,7 +7031,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get smartMergeSubtitle =>
-      'Combines YouTube Music with better-quality audio of the same recording from your library or enabled playback sources. Keeps its cover, lyrics and video. Uses YouTube when no better audio is available. Choose a source manually from the song menu.';
+      'Plays a YouTube Music song from a lossless file of the same recording in your library, when you have one. Keeps its cover, lyrics and video. Uses YouTube otherwise. Choose a source manually from the song menu.';
 
   @override
   String get smartMergeToday => 'Today';

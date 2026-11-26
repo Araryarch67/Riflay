@@ -662,7 +662,7 @@ void main() {
     expect(_merge(const []).local(song, [kyapi], 1), same(kyapi));
   });
 
-  test('off once turned off; the streaming sources are asked only when one is on', () async {
+  test('off once turned off; Monochrome never streams into it, only the library', () async {
     SharedPreferences.setMockInitialValues({'sources.smartMerge.v3': false, 'sources.monochrome.v3': false});
     final sources = MusicSources.instance..reset();
     await sources.load();
@@ -672,7 +672,7 @@ void main() {
     expect(SmartMerge.instance.wants(song), isTrue, reason: 'the library is always there');
     expect(SmartMerge.instance.streams(song), isFalse, reason: 'Monochrome is still off');
     await sources.setMonochrome(true);
-    expect(SmartMerge.instance.streams(song), isTrue);
+    expect(SmartMerge.instance.streams(song), isFalse, reason: 'Monochrome only previews and downloads');
     expect(SmartMerge.instance.wants(_mono('tracks:track:1')), isFalse, reason: 'only YouTube Music songs');
     sources.reset();
     await sources.load();

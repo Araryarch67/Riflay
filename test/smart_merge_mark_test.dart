@@ -81,34 +81,4 @@ void main() {
     expect(tester.widget<MergedSourceMark>(find.byType(MergedSourceMark)).lossier, isFalse);
     expect(find.byIcon(Icons.close_rounded), findsOneWidget);
   });
-
-  testWidgets('on its way the mark turns a ring where the × goes; held back by a limit it turns red', (tester) async {
-    await show(tester);
-    SmartMerge.instance.markWaiting('abcdefghijk', true);
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 700));
-    expect(tester.widget<MergedSourceMark>(find.byType(MergedSourceMark)).state, MergeMarkState.waiting);
-    expect(find.byType(CircularProgressIndicator), findsOneWidget);
-
-    SmartMerge.instance.markLimited('abcdefghijk');
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 700));
-    final mark = tester.widget<MergedSourceMark>(find.byType(MergedSourceMark));
-    expect(mark.state, MergeMarkState.limited);
-    expect(find.byIcon(Icons.hourglass_bottom_rounded), findsOneWidget);
-    final fill = tester
-        .widgetList<DecoratedBox>(
-          find.descendant(of: find.byType(MergedSourceMark), matching: find.byType(DecoratedBox)),
-        )
-        .map((b) => (b.decoration as ShapeDecoration).color)
-        .first;
-    final scheme = Theme.of(tester.element(find.byType(MergedSourceMark))).colorScheme;
-    expect(fill, scheme.errorContainer, reason: 'red while the source is limiting requests');
-
-    // Merged at last: the limit and the wait are over.
-    SmartMerge.instance.markUsed('abcdefghijk', sound: (source: TrackSource.monochrome, name: 'Monochrome'));
-    await tester.pumpAndSettle();
-    expect(tester.widget<MergedSourceMark>(find.byType(MergedSourceMark)).state, MergeMarkState.merged);
-    expect(find.byIcon(Icons.close_rounded), findsOneWidget);
-  });
 }

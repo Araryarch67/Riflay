@@ -121,7 +121,8 @@ class SmartMerge {
     this.downloads = true,
     this.remembers = false,
     this.patience = const Duration(seconds: 8),
-  }) : providers = providers ?? [MonochromeMerge()],
+    // Library files only: streaming a better sound (Monochrome) left songs buffering and switching mid-play.
+  }) : providers = providers ?? const [],
        _enabled = enabled ?? (() => MusicSources.instance.smartMerge);
 
   static final instance = SmartMerge(
