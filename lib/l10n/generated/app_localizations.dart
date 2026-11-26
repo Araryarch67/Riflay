@@ -4329,6 +4329,552 @@ abstract class AppLocalizations {
   /// **'Back online.'**
   String get backOnline;
 
+  /// No description provided for @poster.
+  ///
+  /// In en, this message translates to:
+  /// **'Poster'**
+  String get poster;
+
+  /// No description provided for @makePoster.
+  ///
+  /// In en, this message translates to:
+  /// **'Make a poster'**
+  String get makePoster;
+
+  /// No description provided for @choosePhoto.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a photo'**
+  String get choosePhoto;
+
+  /// No description provided for @posterPhoto.
+  ///
+  /// In en, this message translates to:
+  /// **'Photo'**
+  String get posterPhoto;
+
+  /// No description provided for @posterAddSong.
+  ///
+  /// In en, this message translates to:
+  /// **'Add song'**
+  String get posterAddSong;
+
+  /// No description provided for @posterDepth.
+  ///
+  /// In en, this message translates to:
+  /// **'Depth'**
+  String get posterDepth;
+
+  /// No description provided for @posterLight.
+  ///
+  /// In en, this message translates to:
+  /// **'Light'**
+  String get posterLight;
+
+  /// No description provided for @posterDark.
+  ///
+  /// In en, this message translates to:
+  /// **'Dark'**
+  String get posterDark;
+
+  /// No description provided for @posterGlass.
+  ///
+  /// In en, this message translates to:
+  /// **'Glass'**
+  String get posterGlass;
+
+  /// No description provided for @posterCoverColour.
+  ///
+  /// In en, this message translates to:
+  /// **'Cover colour'**
+  String get posterCoverColour;
+
+  /// No description provided for @posterSize.
+  ///
+  /// In en, this message translates to:
+  /// **'Size'**
+  String get posterSize;
+
+  /// No description provided for @posterRotate.
+  ///
+  /// In en, this message translates to:
+  /// **'Rotate'**
+  String get posterRotate;
+
+  /// No description provided for @posterTilt.
+  ///
+  /// In en, this message translates to:
+  /// **'Tilt'**
+  String get posterTilt;
+
+  /// No description provided for @posterTurn.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn'**
+  String get posterTurn;
+
+  /// No description provided for @posterThickness.
+  ///
+  /// In en, this message translates to:
+  /// **'Thickness'**
+  String get posterThickness;
+
+  /// No description provided for @posterProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'Progress'**
+  String get posterProgress;
+
+  /// No description provided for @posterFindingYou.
+  ///
+  /// In en, this message translates to:
+  /// **'Finding you in the photo…'**
+  String get posterFindingYou;
+
+  /// No description provided for @posterNoCutout.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t find a person in this photo. The cards stay over it.'**
+  String get posterNoCutout;
+
+  /// No description provided for @posterEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a photo and some songs to start'**
+  String get posterEmpty;
+
+  /// No description provided for @posterHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Drag a card to move it, pinch to resize and turn it, tap it for more'**
+  String get posterHint;
+
+  /// No description provided for @posterCaption.
+  ///
+  /// In en, this message translates to:
+  /// **'My songs, on Riflay'**
+  String get posterCaption;
+
+  /// No description provided for @posterWatermarkHint.
+  ///
+  /// In en, this message translates to:
+  /// **'The Riflay mark at the foot of the poster'**
+  String get posterWatermarkHint;
+
+  /// No description provided for @posterLock.
+  ///
+  /// In en, this message translates to:
+  /// **'Lock'**
+  String get posterLock;
+
+  /// No description provided for @posterUnlock.
+  ///
+  /// In en, this message translates to:
+  /// **'Unlock'**
+  String get posterUnlock;
+
+  /// No description provided for @posterLockedHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Locked: unlock it in Layers to change it'**
+  String get posterLockedHint;
+
+  /// No description provided for @posterResume.
+  ///
+  /// In en, this message translates to:
+  /// **'Go on with your last poster?'**
+  String get posterResume;
+
+  /// No description provided for @posterContinue.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue'**
+  String get posterContinue;
+
+  /// No description provided for @posterStartNew.
+  ///
+  /// In en, this message translates to:
+  /// **'Start new'**
+  String get posterStartNew;
+
+  /// No description provided for @posterLeaveTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Leave the poster?'**
+  String get posterLeaveTitle;
+
+  /// No description provided for @posterLeaveBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Your edits are kept as a draft. Open Poster again to go on with it.'**
+  String get posterLeaveBody;
+
+  /// No description provided for @posterKeepEditing.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep editing'**
+  String get posterKeepEditing;
+
+  /// No description provided for @posterLeave.
+  ///
+  /// In en, this message translates to:
+  /// **'Leave'**
+  String get posterLeave;
+
+  /// No description provided for @redo.
+  ///
+  /// In en, this message translates to:
+  /// **'Redo'**
+  String get redo;
+
+  /// No description provided for @posterBrightness.
+  ///
+  /// In en, this message translates to:
+  /// **'Brightness'**
+  String get posterBrightness;
+
+  /// No description provided for @posterContrast.
+  ///
+  /// In en, this message translates to:
+  /// **'Contrast'**
+  String get posterContrast;
+
+  /// No description provided for @posterSaturation.
+  ///
+  /// In en, this message translates to:
+  /// **'Saturation'**
+  String get posterSaturation;
+
+  /// No description provided for @posterWarmth.
+  ///
+  /// In en, this message translates to:
+  /// **'Warmth'**
+  String get posterWarmth;
+
+  /// No description provided for @posterFade.
+  ///
+  /// In en, this message translates to:
+  /// **'Fade'**
+  String get posterFade;
+
+  /// No description provided for @posterVignette.
+  ///
+  /// In en, this message translates to:
+  /// **'Vignette'**
+  String get posterVignette;
+
+  /// No description provided for @posterFilterOriginal.
+  ///
+  /// In en, this message translates to:
+  /// **'Original'**
+  String get posterFilterOriginal;
+
+  /// No description provided for @posterFilterVivid.
+  ///
+  /// In en, this message translates to:
+  /// **'Vivid'**
+  String get posterFilterVivid;
+
+  /// No description provided for @posterFilterWarm.
+  ///
+  /// In en, this message translates to:
+  /// **'Warm'**
+  String get posterFilterWarm;
+
+  /// No description provided for @posterFilterCool.
+  ///
+  /// In en, this message translates to:
+  /// **'Cool'**
+  String get posterFilterCool;
+
+  /// No description provided for @posterFilterMono.
+  ///
+  /// In en, this message translates to:
+  /// **'Mono'**
+  String get posterFilterMono;
+
+  /// No description provided for @posterFilterFaded.
+  ///
+  /// In en, this message translates to:
+  /// **'Faded'**
+  String get posterFilterFaded;
+
+  /// No description provided for @posterFilterFilm.
+  ///
+  /// In en, this message translates to:
+  /// **'Film'**
+  String get posterFilterFilm;
+
+  /// No description provided for @posterSongs.
+  ///
+  /// In en, this message translates to:
+  /// **'Songs'**
+  String get posterSongs;
+
+  /// No description provided for @posterLayout.
+  ///
+  /// In en, this message translates to:
+  /// **'Layout'**
+  String get posterLayout;
+
+  /// No description provided for @posterStepPhoto.
+  ///
+  /// In en, this message translates to:
+  /// **'Start with a photo of you. Riflay finds you in it, so cards can stand behind you.'**
+  String get posterStepPhoto;
+
+  /// No description provided for @posterFoundYou.
+  ///
+  /// In en, this message translates to:
+  /// **'Found you. Cards can now go behind you (Layers).'**
+  String get posterFoundYou;
+
+  /// No description provided for @posterStepSongs.
+  ///
+  /// In en, this message translates to:
+  /// **'The songs on your poster. Add up to 8.'**
+  String get posterStepSongs;
+
+  /// No description provided for @posterStepLayout.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick a layout: every card is placed in one tap.'**
+  String get posterStepLayout;
+
+  /// No description provided for @posterStepLayoutEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a song first, then pick a layout.'**
+  String get posterStepLayoutEmpty;
+
+  /// No description provided for @posterStepLayers.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap a layer to pick it. Drag the handle to change what is in front.'**
+  String get posterStepLayers;
+
+  /// No description provided for @posterStepCanvas.
+  ///
+  /// In en, this message translates to:
+  /// **'The poster\'s size, and the Riflay mark at its foot.'**
+  String get posterStepCanvas;
+
+  /// No description provided for @posterCutOut.
+  ///
+  /// In en, this message translates to:
+  /// **'Cut out of the photo'**
+  String get posterCutOut;
+
+  /// No description provided for @posterBackground.
+  ///
+  /// In en, this message translates to:
+  /// **'Background'**
+  String get posterBackground;
+
+  /// No description provided for @posterHide.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide'**
+  String get posterHide;
+
+  /// No description provided for @posterShow.
+  ///
+  /// In en, this message translates to:
+  /// **'Show'**
+  String get posterShow;
+
+  /// No description provided for @posterOpacity.
+  ///
+  /// In en, this message translates to:
+  /// **'Opacity'**
+  String get posterOpacity;
+
+  /// No description provided for @posterDuplicate.
+  ///
+  /// In en, this message translates to:
+  /// **'Duplicate'**
+  String get posterDuplicate;
+
+  /// No description provided for @posterPosition.
+  ///
+  /// In en, this message translates to:
+  /// **'Position'**
+  String get posterPosition;
+
+  /// No description provided for @posterLook.
+  ///
+  /// In en, this message translates to:
+  /// **'Look'**
+  String get posterLook;
+
+  /// No description provided for @posterMore.
+  ///
+  /// In en, this message translates to:
+  /// **'More'**
+  String get posterMore;
+
+  /// No description provided for @posterFlat.
+  ///
+  /// In en, this message translates to:
+  /// **'Make flat'**
+  String get posterFlat;
+
+  /// No description provided for @posterFit.
+  ///
+  /// In en, this message translates to:
+  /// **'Fit'**
+  String get posterFit;
+
+  /// No description provided for @posterPresets.
+  ///
+  /// In en, this message translates to:
+  /// **'Presets'**
+  String get posterPresets;
+
+  /// No description provided for @posterWatermark.
+  ///
+  /// In en, this message translates to:
+  /// **'Watermark'**
+  String get posterWatermark;
+
+  /// No description provided for @posterPresetScatter.
+  ///
+  /// In en, this message translates to:
+  /// **'Scatter'**
+  String get posterPresetScatter;
+
+  /// No description provided for @posterPresetStack.
+  ///
+  /// In en, this message translates to:
+  /// **'Stack'**
+  String get posterPresetStack;
+
+  /// No description provided for @posterPresetGrid.
+  ///
+  /// In en, this message translates to:
+  /// **'Grid'**
+  String get posterPresetGrid;
+
+  /// No description provided for @posterPresetFan.
+  ///
+  /// In en, this message translates to:
+  /// **'Fan'**
+  String get posterPresetFan;
+
+  /// No description provided for @posterPresetSpotlight.
+  ///
+  /// In en, this message translates to:
+  /// **'Spotlight'**
+  String get posterPresetSpotlight;
+
+  /// No description provided for @posterPresetCascade.
+  ///
+  /// In en, this message translates to:
+  /// **'Cascade'**
+  String get posterPresetCascade;
+
+  /// No description provided for @posterPresetFloat.
+  ///
+  /// In en, this message translates to:
+  /// **'Float 3D'**
+  String get posterPresetFloat;
+
+  /// No description provided for @posterCard.
+  ///
+  /// In en, this message translates to:
+  /// **'Song card'**
+  String get posterCard;
+
+  /// No description provided for @posterYou.
+  ///
+  /// In en, this message translates to:
+  /// **'You'**
+  String get posterYou;
+
+  /// No description provided for @posterYouNone.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a photo of yourself to cut you out'**
+  String get posterYouNone;
+
+  /// No description provided for @posterYouHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Cut out of the photo. Cards above you stand in front, cards below stand behind'**
+  String get posterYouHint;
+
+  /// No description provided for @posterPhotoNone.
+  ///
+  /// In en, this message translates to:
+  /// **'No photo yet'**
+  String get posterPhotoNone;
+
+  /// No description provided for @posterPhotoHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Drag the photo to move it, pinch or slide to zoom'**
+  String get posterPhotoHint;
+
+  /// No description provided for @posterLayers.
+  ///
+  /// In en, this message translates to:
+  /// **'Layers'**
+  String get posterLayers;
+
+  /// No description provided for @posterForward.
+  ///
+  /// In en, this message translates to:
+  /// **'Bring forward'**
+  String get posterForward;
+
+  /// No description provided for @posterBackward.
+  ///
+  /// In en, this message translates to:
+  /// **'Send backward'**
+  String get posterBackward;
+
+  /// No description provided for @posterZoom.
+  ///
+  /// In en, this message translates to:
+  /// **'Zoom'**
+  String get posterZoom;
+
+  /// No description provided for @posterReplacePhoto.
+  ///
+  /// In en, this message translates to:
+  /// **'Replace'**
+  String get posterReplacePhoto;
+
+  /// No description provided for @posterCanvas.
+  ///
+  /// In en, this message translates to:
+  /// **'Canvas'**
+  String get posterCanvas;
+
+  /// No description provided for @posterShapeStory.
+  ///
+  /// In en, this message translates to:
+  /// **'Story'**
+  String get posterShapeStory;
+
+  /// No description provided for @posterShapePortrait.
+  ///
+  /// In en, this message translates to:
+  /// **'Instagram post'**
+  String get posterShapePortrait;
+
+  /// No description provided for @posterShapeSquare.
+  ///
+  /// In en, this message translates to:
+  /// **'Square'**
+  String get posterShapeSquare;
+
+  /// No description provided for @posterShapeLandscape.
+  ///
+  /// In en, this message translates to:
+  /// **'Landscape'**
+  String get posterShapeLandscape;
+
   /// No description provided for @visualizer.
   ///
   /// In en, this message translates to:

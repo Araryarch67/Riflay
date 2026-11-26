@@ -2320,6 +2320,279 @@ class AppLocalizationsEn extends AppLocalizations {
   String get backOnline => 'Back online.';
 
   @override
+  String get poster => 'Poster';
+
+  @override
+  String get makePoster => 'Make a poster';
+
+  @override
+  String get choosePhoto => 'Choose a photo';
+
+  @override
+  String get posterPhoto => 'Photo';
+
+  @override
+  String get posterAddSong => 'Add song';
+
+  @override
+  String get posterDepth => 'Depth';
+
+  @override
+  String get posterLight => 'Light';
+
+  @override
+  String get posterDark => 'Dark';
+
+  @override
+  String get posterGlass => 'Glass';
+
+  @override
+  String get posterCoverColour => 'Cover colour';
+
+  @override
+  String get posterSize => 'Size';
+
+  @override
+  String get posterRotate => 'Rotate';
+
+  @override
+  String get posterTilt => 'Tilt';
+
+  @override
+  String get posterTurn => 'Turn';
+
+  @override
+  String get posterThickness => 'Thickness';
+
+  @override
+  String get posterProgress => 'Progress';
+
+  @override
+  String get posterFindingYou => 'Finding you in the photo…';
+
+  @override
+  String get posterNoCutout => 'Couldn\'t find a person in this photo. The cards stay over it.';
+
+  @override
+  String get posterEmpty => 'Add a photo and some songs to start';
+
+  @override
+  String get posterHint => 'Drag a card to move it, pinch to resize and turn it, tap it for more';
+
+  @override
+  String get posterCaption => 'My songs, on Riflay';
+
+  @override
+  String get posterWatermarkHint => 'The Riflay mark at the foot of the poster';
+
+  @override
+  String get posterLock => 'Lock';
+
+  @override
+  String get posterUnlock => 'Unlock';
+
+  @override
+  String get posterLockedHint => 'Locked: unlock it in Layers to change it';
+
+  @override
+  String get posterResume => 'Go on with your last poster?';
+
+  @override
+  String get posterContinue => 'Continue';
+
+  @override
+  String get posterStartNew => 'Start new';
+
+  @override
+  String get posterLeaveTitle => 'Leave the poster?';
+
+  @override
+  String get posterLeaveBody => 'Your edits are kept as a draft. Open Poster again to go on with it.';
+
+  @override
+  String get posterKeepEditing => 'Keep editing';
+
+  @override
+  String get posterLeave => 'Leave';
+
+  @override
+  String get redo => 'Redo';
+
+  @override
+  String get posterBrightness => 'Brightness';
+
+  @override
+  String get posterContrast => 'Contrast';
+
+  @override
+  String get posterSaturation => 'Saturation';
+
+  @override
+  String get posterWarmth => 'Warmth';
+
+  @override
+  String get posterFade => 'Fade';
+
+  @override
+  String get posterVignette => 'Vignette';
+
+  @override
+  String get posterFilterOriginal => 'Original';
+
+  @override
+  String get posterFilterVivid => 'Vivid';
+
+  @override
+  String get posterFilterWarm => 'Warm';
+
+  @override
+  String get posterFilterCool => 'Cool';
+
+  @override
+  String get posterFilterMono => 'Mono';
+
+  @override
+  String get posterFilterFaded => 'Faded';
+
+  @override
+  String get posterFilterFilm => 'Film';
+
+  @override
+  String get posterSongs => 'Songs';
+
+  @override
+  String get posterLayout => 'Layout';
+
+  @override
+  String get posterStepPhoto => 'Start with a photo of you. Riflay finds you in it, so cards can stand behind you.';
+
+  @override
+  String get posterFoundYou => 'Found you. Cards can now go behind you (Layers).';
+
+  @override
+  String get posterStepSongs => 'The songs on your poster. Add up to 8.';
+
+  @override
+  String get posterStepLayout => 'Pick a layout: every card is placed in one tap.';
+
+  @override
+  String get posterStepLayoutEmpty => 'Add a song first, then pick a layout.';
+
+  @override
+  String get posterStepLayers => 'Tap a layer to pick it. Drag the handle to change what is in front.';
+
+  @override
+  String get posterStepCanvas => 'The poster\'s size, and the Riflay mark at its foot.';
+
+  @override
+  String get posterCutOut => 'Cut out of the photo';
+
+  @override
+  String get posterBackground => 'Background';
+
+  @override
+  String get posterHide => 'Hide';
+
+  @override
+  String get posterShow => 'Show';
+
+  @override
+  String get posterOpacity => 'Opacity';
+
+  @override
+  String get posterDuplicate => 'Duplicate';
+
+  @override
+  String get posterPosition => 'Position';
+
+  @override
+  String get posterLook => 'Look';
+
+  @override
+  String get posterMore => 'More';
+
+  @override
+  String get posterFlat => 'Make flat';
+
+  @override
+  String get posterFit => 'Fit';
+
+  @override
+  String get posterPresets => 'Presets';
+
+  @override
+  String get posterWatermark => 'Watermark';
+
+  @override
+  String get posterPresetScatter => 'Scatter';
+
+  @override
+  String get posterPresetStack => 'Stack';
+
+  @override
+  String get posterPresetGrid => 'Grid';
+
+  @override
+  String get posterPresetFan => 'Fan';
+
+  @override
+  String get posterPresetSpotlight => 'Spotlight';
+
+  @override
+  String get posterPresetCascade => 'Cascade';
+
+  @override
+  String get posterPresetFloat => 'Float 3D';
+
+  @override
+  String get posterCard => 'Song card';
+
+  @override
+  String get posterYou => 'You';
+
+  @override
+  String get posterYouNone => 'Add a photo of yourself to cut you out';
+
+  @override
+  String get posterYouHint => 'Cut out of the photo. Cards above you stand in front, cards below stand behind';
+
+  @override
+  String get posterPhotoNone => 'No photo yet';
+
+  @override
+  String get posterPhotoHint => 'Drag the photo to move it, pinch or slide to zoom';
+
+  @override
+  String get posterLayers => 'Layers';
+
+  @override
+  String get posterForward => 'Bring forward';
+
+  @override
+  String get posterBackward => 'Send backward';
+
+  @override
+  String get posterZoom => 'Zoom';
+
+  @override
+  String get posterReplacePhoto => 'Replace';
+
+  @override
+  String get posterCanvas => 'Canvas';
+
+  @override
+  String get posterShapeStory => 'Story';
+
+  @override
+  String get posterShapePortrait => 'Instagram post';
+
+  @override
+  String get posterShapeSquare => 'Square';
+
+  @override
+  String get posterShapeLandscape => 'Landscape';
+
+  @override
   String get visualizer => 'Visualizer';
 
   @override

@@ -1,18 +1,11 @@
-import 'dart:io';
-import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 
 import '../widgets/top_bar_surface.dart';
 
-import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
-import 'package:path/path.dart' as p;
-import 'package:path_provider/path_provider.dart';
 
 import '../../models/track.dart';
-import '../../platform/browser_files.dart';
-import '../../platform/host.dart';
 import '../../services/language.dart';
 import '../../services/listening_stats.dart';
 import '../../services/listening_streak.dart';
@@ -25,82 +18,9 @@ import '../widgets/controls.dart';
 import '../widgets/faded_cover.dart';
 import '../widgets/streak_badge.dart';
 
+import '../card_export.dart';
+
 part 'wrap/lyric_card.dart';
-
-/// A shown card (a Wrap card, a lyric card) as a PNG, at three times its size.
-Future<Uint8List> _renderCard(GlobalKey key) async {
-  final boundary = key.currentContext?.findRenderObject() as RenderRepaintBoundary?;
-  if (boundary == null) throw StateError('card not on screen');
-  final image = await boundary.toImage(pixelRatio: 3);
-  final ByteData? data;
-  try {
-    data = await image.toByteData(format: ui.ImageByteFormat.png);
-  } finally {
-    image.dispose();
-  }
-  final bytes = data?.buffer.asUint8List();
-  if (bytes == null) throw StateError('no image');
-  return bytes;
-}
-
-/// Saves a card to Downloads (the app's documents where there is none; the browser's downloads on the web);
-/// the saved file's name, or null if it failed.
-Future<String?> _saveCard(
-  BuildContext context,
-  Future<Uint8List> Function() render,
-  String fileName, {
-  bool quiet = false,
-}) async {
-  final messenger = ScaffoldMessenger.of(context);
-  try {
-    final bytes = await render();
-    if (BrowserFiles.available) {
-      BrowserFiles.save(bytes, fileName, mime: 'image/png');
-      if (!quiet) messenger.showSnackBar(SnackBar(content: Text(tr.savedFile(fileName))));
-      return fileName;
-    }
-    final dir = await getDownloadsDirectory() ?? await getApplicationDocumentsDirectory();
-    final file = File(p.join(dir.path, fileName));
-    await file.writeAsBytes(bytes, flush: true);
-    if (!quiet) messenger.showSnackBar(SnackBar(content: Text(tr.savedFile(p.basename(file.path)))));
-    return p.basename(file.path);
-  } catch (e) {
-    debugPrint('Saving a card failed: $e');
-    messenger.showSnackBar(SnackBar(content: Text(tr.couldntSaveImage)));
-    return null;
-  }
-}
-
-/// The phone's share sheet with a card and a caption. A computer has none: the card is saved and the caption
-/// copied, to paste beside it.
-Future<void> _shareCard(
-  BuildContext context,
-  Future<Uint8List> Function() render,
-  String fileName, {
-  required String caption,
-  required String subject,
-}) async {
-  final messenger = ScaffoldMessenger.of(context);
-  if (Host.isAndroid) {
-    try {
-      final bytes = await render();
-      // The cache's shared/ folder: the one the share sheet may lend out (res/xml/update_file_paths.xml).
-      final dir = Directory(p.join((await getTemporaryDirectory()).path, 'shared'))..createSync(recursive: true);
-      final file = File(p.join(dir.path, fileName));
-      await file.writeAsBytes(bytes, flush: true);
-      final shown = await const MethodChannel('riflay/share')
-          .invokeMethod<bool>('share', {'text': caption, 'subject': subject, 'file': file.path, 'mime': 'image/png'});
-      if (shown ?? false) return;
-    } catch (e) {
-      debugPrint('Sharing a card failed: $e');
-    }
-  }
-  if (!context.mounted) return;
-  final name = await _saveCard(context, render, fileName, quiet: true);
-  if (name == null) return;
-  await Clipboard.setData(ClipboardData(text: caption));
-  messenger.showSnackBar(SnackBar(content: Text(tr.savedCaptionCopied(name))));
-}
 
 /// Riflay Wrap: a month as a story. Swipe, tap or use the arrow keys to move on.
 class WrapPage extends StatelessWidget {
@@ -187,7 +107,7 @@ class _WrapStoryState extends State<WrapStory> {
     return '${tr.wrapSoFar(d.month.label)} $day';
   }
 
-  Future<Uint8List> _render() => _renderCard(_keys[_index]);
+  Future<Uint8List> _render() => renderCard(_keys[_index]);
 
   String get _fileName => 'Riflay Wrap ${_fileTitle(widget.data)} ${_index + 1}.png';
 
@@ -198,9 +118,9 @@ class _WrapStoryState extends State<WrapStory> {
         '${d.bestStreak >= 2 ? ' ${tr.wrapCaptionStreak(d.bestStreak)}' : ''}';
   }
 
-  Future<String?> _save({bool quiet = false}) => _saveCard(context, _render, _fileName, quiet: quiet);
+  Future<String?> _save({bool quiet = false}) => saveCard(context, _render, _fileName, quiet: quiet);
 
-  Future<void> _share() => _shareCard(context, _render, _fileName, caption: _caption, subject: 'Riflay Wrap');
+  Future<void> _share() => shareCard(context, _render, _fileName, caption: _caption, subject: 'Riflay Wrap');
 
   @override
   Widget build(BuildContext context) {

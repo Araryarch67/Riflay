@@ -185,6 +185,13 @@ class _SearchSourceButtonState extends State<SearchSourceButton> {
     builder: (context, source, _) {
       final available = SearchSource.available;
       final colors = Theme.of(context).colorScheme;
+      // In the phone's bottom bar there is no room under the button: the menu was pushed back up over it and the
+      // search field. There it opens above.
+      final box = context.findRenderObject() as RenderBox?;
+      final top = box != null && box.hasSize ? box.localToGlobal(Offset.zero).dy : 0.0;
+      final above = top > MediaQuery.sizeOf(context).height / 2;
+      final items =
+          available.where((s) => s != SearchSource.extensions).length + Spotiflac.instance.searchProviders.length;
       final ink = widget.color ?? colors.onSurfaceVariant;
       return Row(
         mainAxisSize: MainAxisSize.min,
@@ -202,7 +209,9 @@ class _SearchSourceButtonState extends State<SearchSourceButton> {
             shape: RoundedRectangleBorder(borderRadius: searchSurfaceCorners(20)),
             clipBehavior: Clip.antiAlias,
             menuPadding: const EdgeInsets.symmetric(vertical: 6),
-            position: PopupMenuPosition.under,
+            position: above ? PopupMenuPosition.over : PopupMenuPosition.under,
+            // The menu's own height (48 a row, 6 above and below) and a gap: its foot just over the button.
+            offset: above ? Offset(0, -(items * 48.0 + 12 + 8)) : Offset.zero,
             icon: Icon(Icons.inventory_2_outlined, color: ink),
             onSelected: (choice) async {
               final (service, pluginId) = choice;

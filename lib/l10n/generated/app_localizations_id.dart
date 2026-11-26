@@ -2314,6 +2314,281 @@ class AppLocalizationsId extends AppLocalizations {
   String get backOnline => 'Kembali online.';
 
   @override
+  String get poster => 'Poster';
+
+  @override
+  String get makePoster => 'Buat poster';
+
+  @override
+  String get choosePhoto => 'Pilih foto';
+
+  @override
+  String get posterPhoto => 'Foto';
+
+  @override
+  String get posterAddSong => 'Tambah lagu';
+
+  @override
+  String get posterDepth => 'Depth';
+
+  @override
+  String get posterLight => 'Terang';
+
+  @override
+  String get posterDark => 'Gelap';
+
+  @override
+  String get posterGlass => 'Kaca';
+
+  @override
+  String get posterCoverColour => 'Warna cover';
+
+  @override
+  String get posterSize => 'Ukuran';
+
+  @override
+  String get posterRotate => 'Putar';
+
+  @override
+  String get posterTilt => 'Miring';
+
+  @override
+  String get posterTurn => 'Hadap';
+
+  @override
+  String get posterThickness => 'Tebal';
+
+  @override
+  String get posterProgress => 'Progres';
+
+  @override
+  String get posterFindingYou => 'Mencari kamu di foto…';
+
+  @override
+  String get posterNoCutout => 'Tidak ada orang yang ditemukan di foto ini. Kartu tetap di atasnya.';
+
+  @override
+  String get posterEmpty => 'Tambahkan foto dan beberapa lagu untuk mulai';
+
+  @override
+  String get posterHint =>
+      'Geser kartu untuk memindahkan, cubit untuk mengubah ukuran dan memutar, ketuk untuk lainnya';
+
+  @override
+  String get posterCaption => 'Lagu-laguku, di Riflay';
+
+  @override
+  String get posterWatermarkHint => 'Tanda Riflay di bagian bawah poster';
+
+  @override
+  String get posterLock => 'Kunci';
+
+  @override
+  String get posterUnlock => 'Buka kunci';
+
+  @override
+  String get posterLockedHint => 'Terkunci: buka kuncinya di Layer untuk mengubahnya';
+
+  @override
+  String get posterResume => 'Lanjutkan poster terakhirmu?';
+
+  @override
+  String get posterContinue => 'Lanjutkan';
+
+  @override
+  String get posterStartNew => 'Mulai baru';
+
+  @override
+  String get posterLeaveTitle => 'Keluar dari poster?';
+
+  @override
+  String get posterLeaveBody => 'Editanmu tersimpan sebagai draft. Buka Poster lagi untuk melanjutkannya.';
+
+  @override
+  String get posterKeepEditing => 'Tetap edit';
+
+  @override
+  String get posterLeave => 'Keluar';
+
+  @override
+  String get redo => 'Ulangi';
+
+  @override
+  String get posterBrightness => 'Kecerahan';
+
+  @override
+  String get posterContrast => 'Kontras';
+
+  @override
+  String get posterSaturation => 'Saturasi';
+
+  @override
+  String get posterWarmth => 'Kehangatan';
+
+  @override
+  String get posterFade => 'Pudar';
+
+  @override
+  String get posterVignette => 'Vinyet';
+
+  @override
+  String get posterFilterOriginal => 'Asli';
+
+  @override
+  String get posterFilterVivid => 'Vivid';
+
+  @override
+  String get posterFilterWarm => 'Hangat';
+
+  @override
+  String get posterFilterCool => 'Dingin';
+
+  @override
+  String get posterFilterMono => 'Mono';
+
+  @override
+  String get posterFilterFaded => 'Pudar';
+
+  @override
+  String get posterFilterFilm => 'Film';
+
+  @override
+  String get posterSongs => 'Lagu';
+
+  @override
+  String get posterLayout => 'Tata letak';
+
+  @override
+  String get posterStepPhoto =>
+      'Mulai dengan fotomu. Riflay mencari kamu di foto, supaya kartu bisa ada di belakangmu.';
+
+  @override
+  String get posterFoundYou => 'Kamu ditemukan. Sekarang kartu bisa ada di belakangmu (Layer).';
+
+  @override
+  String get posterStepSongs => 'Lagu-lagu di postermu. Tambah sampai 8.';
+
+  @override
+  String get posterStepLayout => 'Pilih tata letak: semua kartu tersusun dengan sekali ketuk.';
+
+  @override
+  String get posterStepLayoutEmpty => 'Tambahkan lagu dulu, lalu pilih tata letak.';
+
+  @override
+  String get posterStepLayers => 'Ketuk layer untuk memilih. Seret pegangannya untuk mengatur mana yang di depan.';
+
+  @override
+  String get posterStepCanvas => 'Ukuran poster, dan tanda Riflay di bawahnya.';
+
+  @override
+  String get posterCutOut => 'Dipotong dari foto';
+
+  @override
+  String get posterBackground => 'Latar';
+
+  @override
+  String get posterHide => 'Sembunyikan';
+
+  @override
+  String get posterShow => 'Tampilkan';
+
+  @override
+  String get posterOpacity => 'Opacity';
+
+  @override
+  String get posterDuplicate => 'Duplikat';
+
+  @override
+  String get posterPosition => 'Posisi';
+
+  @override
+  String get posterLook => 'Gaya';
+
+  @override
+  String get posterMore => 'Lainnya';
+
+  @override
+  String get posterFlat => 'Datarkan';
+
+  @override
+  String get posterFit => 'Pas layar';
+
+  @override
+  String get posterPresets => 'Preset';
+
+  @override
+  String get posterWatermark => 'Watermark';
+
+  @override
+  String get posterPresetScatter => 'Tersebar';
+
+  @override
+  String get posterPresetStack => 'Tumpuk';
+
+  @override
+  String get posterPresetGrid => 'Grid';
+
+  @override
+  String get posterPresetFan => 'Kipas';
+
+  @override
+  String get posterPresetSpotlight => 'Sorotan';
+
+  @override
+  String get posterPresetCascade => 'Cascade';
+
+  @override
+  String get posterPresetFloat => 'Melayang 3D';
+
+  @override
+  String get posterCard => 'Kartu lagu';
+
+  @override
+  String get posterYou => 'Kamu';
+
+  @override
+  String get posterYouNone => 'Tambahkan fotomu untuk memotong dirimu';
+
+  @override
+  String get posterYouHint => 'Dipotong dari foto. Kartu di atasmu ada di depan, kartu di bawahmu ada di belakang';
+
+  @override
+  String get posterPhotoNone => 'Belum ada foto';
+
+  @override
+  String get posterPhotoHint => 'Geser foto untuk memindah, cubit atau geser slider untuk zoom';
+
+  @override
+  String get posterLayers => 'Layer';
+
+  @override
+  String get posterForward => 'Maju';
+
+  @override
+  String get posterBackward => 'Mundur';
+
+  @override
+  String get posterZoom => 'Zoom';
+
+  @override
+  String get posterReplacePhoto => 'Ganti';
+
+  @override
+  String get posterCanvas => 'Kanvas';
+
+  @override
+  String get posterShapeStory => 'Story';
+
+  @override
+  String get posterShapePortrait => 'Post Instagram';
+
+  @override
+  String get posterShapeSquare => 'Persegi';
+
+  @override
+  String get posterShapeLandscape => 'Lanskap';
+
+  @override
   String get visualizer => 'Visualizer';
 
   @override

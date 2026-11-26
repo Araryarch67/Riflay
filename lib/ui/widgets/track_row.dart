@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import 'glass_toast.dart';
 
+import '../poster/poster_editor.dart';
 import '../../services/artist_channels.dart';
 import '../../services/language.dart';
 import '../../models/track.dart';
@@ -743,6 +744,11 @@ class TrackMenuButton extends StatelessWidget {
               PopupMenuItem(
                 onTap: () => shareTrack(host, track),
                 child: MenuRow(leading: const Icon(Icons.share_outlined), title: Text(tr.share)),
+              ),
+            if (!hide.contains(TrackMenuEntry.share))
+              PopupMenuItem(
+                onTap: () => showPosterEditor(host, songs: [track]),
+                child: MenuRow(leading: const Icon(Icons.photo_library_outlined), title: Text(tr.makePoster)),
               ),
             if (!hide.contains(TrackMenuEntry.addToPlaylist))
               PopupMenuItem(

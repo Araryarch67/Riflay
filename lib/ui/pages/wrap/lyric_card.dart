@@ -90,9 +90,9 @@ class _LyricCardPageState extends State<LyricCardPage> {
                   FilledButton.tonalIcon(
                     onPressed: _text.isEmpty
                         ? null
-                        : () => _shareCard(
+                        : () => shareCard(
                             context,
-                            () => _renderCard(_card),
+                            () => renderCard(_card),
                             _fileName,
                             caption: _caption,
                             subject: 'Riflay Lyrics',
@@ -102,7 +102,7 @@ class _LyricCardPageState extends State<LyricCardPage> {
                   ),
                   const SizedBox(width: 12),
                   TextButton.icon(
-                    onPressed: _text.isEmpty ? null : () => _saveCard(context, () => _renderCard(_card), _fileName),
+                    onPressed: _text.isEmpty ? null : () => saveCard(context, () => renderCard(_card), _fileName),
                     icon: const Icon(Icons.download_rounded, size: 18),
                     label: Text(tr.saveImage),
                   ),

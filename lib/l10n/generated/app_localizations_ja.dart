@@ -2266,6 +2266,279 @@ class AppLocalizationsJa extends AppLocalizations {
   String get backOnline => 'オンラインに戻りました。';
 
   @override
+  String get poster => 'ポスター';
+
+  @override
+  String get makePoster => 'ポスターを作る';
+
+  @override
+  String get choosePhoto => '写真を選ぶ';
+
+  @override
+  String get posterPhoto => '写真';
+
+  @override
+  String get posterAddSong => '曲を追加';
+
+  @override
+  String get posterDepth => '奥行き';
+
+  @override
+  String get posterLight => 'ライト';
+
+  @override
+  String get posterDark => 'ダーク';
+
+  @override
+  String get posterGlass => 'ガラス';
+
+  @override
+  String get posterCoverColour => 'カバーの色';
+
+  @override
+  String get posterSize => 'サイズ';
+
+  @override
+  String get posterRotate => '回転';
+
+  @override
+  String get posterTilt => '傾き';
+
+  @override
+  String get posterTurn => '向き';
+
+  @override
+  String get posterThickness => '厚み';
+
+  @override
+  String get posterProgress => '進行';
+
+  @override
+  String get posterFindingYou => '写真の中のあなたを探しています…';
+
+  @override
+  String get posterNoCutout => 'この写真に人物が見つかりませんでした。カードは写真の上に置かれます。';
+
+  @override
+  String get posterEmpty => '写真と曲を追加して始めましょう';
+
+  @override
+  String get posterHint => 'カードをドラッグで移動、ピンチでサイズと向きを変更、タップでその他';
+
+  @override
+  String get posterCaption => '私の曲、Riflay で';
+
+  @override
+  String get posterWatermarkHint => 'ポスター下部の Riflay マーク';
+
+  @override
+  String get posterLock => 'ロック';
+
+  @override
+  String get posterUnlock => 'ロック解除';
+
+  @override
+  String get posterLockedHint => 'ロック中：レイヤーでロックを解除すると変更できます';
+
+  @override
+  String get posterResume => '前回のポスターの続きをしますか？';
+
+  @override
+  String get posterContinue => '続ける';
+
+  @override
+  String get posterStartNew => '新しく作る';
+
+  @override
+  String get posterLeaveTitle => 'ポスターを閉じますか？';
+
+  @override
+  String get posterLeaveBody => '編集内容は下書きとして保存されます。ポスターを開くと続きから再開できます。';
+
+  @override
+  String get posterKeepEditing => '編集を続ける';
+
+  @override
+  String get posterLeave => '閉じる';
+
+  @override
+  String get redo => 'やり直す';
+
+  @override
+  String get posterBrightness => '明るさ';
+
+  @override
+  String get posterContrast => 'コントラスト';
+
+  @override
+  String get posterSaturation => '彩度';
+
+  @override
+  String get posterWarmth => '暖かさ';
+
+  @override
+  String get posterFade => 'フェード';
+
+  @override
+  String get posterVignette => 'ビネット';
+
+  @override
+  String get posterFilterOriginal => 'オリジナル';
+
+  @override
+  String get posterFilterVivid => 'ビビッド';
+
+  @override
+  String get posterFilterWarm => 'ウォーム';
+
+  @override
+  String get posterFilterCool => 'クール';
+
+  @override
+  String get posterFilterMono => 'モノクロ';
+
+  @override
+  String get posterFilterFaded => 'フェード';
+
+  @override
+  String get posterFilterFilm => 'フィルム';
+
+  @override
+  String get posterSongs => '曲';
+
+  @override
+  String get posterLayout => 'レイアウト';
+
+  @override
+  String get posterStepPhoto => 'まずあなたの写真を。Riflay が写真の中のあなたを見つけ、カードを後ろに置けるようにします。';
+
+  @override
+  String get posterFoundYou => '見つかりました。カードをあなたの後ろに置けます（レイヤー）。';
+
+  @override
+  String get posterStepSongs => 'ポスターの曲。8 曲まで追加できます。';
+
+  @override
+  String get posterStepLayout => 'レイアウトを選ぶと、すべてのカードが一度に並びます。';
+
+  @override
+  String get posterStepLayoutEmpty => 'まず曲を追加してから、レイアウトを選んでください。';
+
+  @override
+  String get posterStepLayers => 'レイヤーをタップで選択。ハンドルをドラッグして前後を変更。';
+
+  @override
+  String get posterStepCanvas => 'ポスターのサイズと、下の Riflay マーク。';
+
+  @override
+  String get posterCutOut => '写真から切り抜き';
+
+  @override
+  String get posterBackground => '背景';
+
+  @override
+  String get posterHide => '非表示';
+
+  @override
+  String get posterShow => '表示';
+
+  @override
+  String get posterOpacity => '不透明度';
+
+  @override
+  String get posterDuplicate => '複製';
+
+  @override
+  String get posterPosition => '位置';
+
+  @override
+  String get posterLook => 'スタイル';
+
+  @override
+  String get posterMore => 'その他';
+
+  @override
+  String get posterFlat => '平らにする';
+
+  @override
+  String get posterFit => '全体表示';
+
+  @override
+  String get posterPresets => 'プリセット';
+
+  @override
+  String get posterWatermark => 'ウォーターマーク';
+
+  @override
+  String get posterPresetScatter => '散らす';
+
+  @override
+  String get posterPresetStack => '重ねる';
+
+  @override
+  String get posterPresetGrid => 'グリッド';
+
+  @override
+  String get posterPresetFan => '扇';
+
+  @override
+  String get posterPresetSpotlight => 'スポットライト';
+
+  @override
+  String get posterPresetCascade => 'カスケード';
+
+  @override
+  String get posterPresetFloat => '3D で浮かぶ';
+
+  @override
+  String get posterCard => '曲カード';
+
+  @override
+  String get posterYou => 'あなた';
+
+  @override
+  String get posterYouNone => '自分の写真を追加すると切り抜けます';
+
+  @override
+  String get posterYouHint => '写真から切り抜いたもの。上のカードは前に、下のカードは後ろに表示されます';
+
+  @override
+  String get posterPhotoNone => '写真はまだありません';
+
+  @override
+  String get posterPhotoHint => 'ドラッグで移動、ピンチかスライダーでズーム';
+
+  @override
+  String get posterLayers => 'レイヤー';
+
+  @override
+  String get posterForward => '前面へ';
+
+  @override
+  String get posterBackward => '背面へ';
+
+  @override
+  String get posterZoom => 'ズーム';
+
+  @override
+  String get posterReplacePhoto => '置き換え';
+
+  @override
+  String get posterCanvas => 'キャンバス';
+
+  @override
+  String get posterShapeStory => 'ストーリー';
+
+  @override
+  String get posterShapePortrait => 'Instagram 投稿';
+
+  @override
+  String get posterShapeSquare => '正方形';
+
+  @override
+  String get posterShapeLandscape => '横長';
+
+  @override
   String get visualizer => 'ビジュアライザー';
 
   @override

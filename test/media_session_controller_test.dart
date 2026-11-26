@@ -258,13 +258,21 @@ void main() {
     expect(sent.length, before);
   });
 
-  test('swiping the app away pauses and puts the session away', () async {
+  test('swiping the app away keeps a playing song going in its notification; a paused song is put away', () async {
     await c.play();
     await session.settled;
     await nextPress();
+    final calls = c.calls.length;
     await handler.onTaskRemoved();
     await session.settled;
-    expect(c.calls.last, 'pause');
+    expect(c.calls.length, calls, reason: 'nothing is paused');
+    expect(handler.playbackState.value.playing, isTrue);
+    expect(handler.playbackState.value.processingState, isNot(AudioProcessingState.idle));
+
+    await c.pause();
+    await session.settled;
+    await handler.onTaskRemoved();
+    await session.settled;
     expect(handler.playbackState.value.processingState, AudioProcessingState.idle);
   });
 }

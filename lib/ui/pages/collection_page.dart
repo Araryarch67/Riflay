@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../poster/poster_editor.dart';
 import '../../models/track.dart';
 import '../../platform/features.dart';
 import '../../services/artist_channels.dart';
@@ -354,6 +355,13 @@ class _CollectionPageState extends State<CollectionPage> {
                         },
                       ),
                       ...actions,
+                      // A poster of this playlist, mix or album: its first songs on it, the rest to add from.
+                      if (tracks.isNotEmpty)
+                        IconButton(
+                          tooltip: tr.makePoster,
+                          onPressed: () => showPosterEditor(context, songs: tracks.take(4).toList(), pool: tracks),
+                          icon: const Icon(Icons.photo_library_outlined),
+                        ),
                       // An artist (yours, or a YouTube Music one with Follow): all of their songs into a playlist.
                       if (!addAll && isArtistPage && tracks.isNotEmpty)
                         IconButton(

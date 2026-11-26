@@ -437,12 +437,12 @@ class MediaSession extends BaseAudioHandler with SeekHandler {
   @override
   Future<void> stop() async => _send(const MediaCommand.stop());
 
-  /// The app was swiped away from Recents. Closing it stops the music and
-  /// takes the notification down; leaving it with Home keeps playing.
+  /// The app was swiped away from Recents. A song playing plays on, its notification still there to control it,
+  /// as music apps do; a paused one's session is put away and the notification goes.
   @override
   Future<void> onTaskRemoved() async {
+    if (_state.playing) return;
     _closed = true;
-    _send(const MediaCommand.pause());
     _publishState();
   }
 
