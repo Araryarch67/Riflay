@@ -18,12 +18,12 @@ void main() {
   tearDown(() async => root.delete(recursive: true));
 
   test('finds all downloaded variants and partial files with locations and sizes', () async {
-    for (final name in ['ffmpeg', 'ffmpeg.exe', 'yt-dlp.exe', 'yt-dlp_linux', 'yt-dlp_macos', 'ffmpeg.part']) {
+    for (final name in ['ffmpeg', 'ffmpeg.exe', 'yt-dlp.exe', 'yt-dlp_linux', 'yt-dlp_linux_aarch64', 'yt-dlp_macos', 'ffmpeg.part']) {
       await File('${bin.path}/$name').writeAsString('tool');
     }
     await File('${bin.path}/notes.txt').writeAsString('keep');
     final files = await tools.scan();
-    expect(files, hasLength(6));
+    expect(files, hasLength(7));
     expect(files.every((file) => file.bytes == 4 && file.path.startsWith(bin.path)), isTrue);
     expect(files.map((file) => file.name).toSet(), {'FFmpeg', 'yt-dlp'});
   });

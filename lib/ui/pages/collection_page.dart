@@ -604,8 +604,9 @@ class _CollectionPageState extends State<CollectionPage> {
           track: track,
           title: track.title,
           subtitle: track.artist,
-          onTap: video && Features.videoMode ? watch : () => shell.playAndOpen(play),
-          onPlay: video && Features.videoMode ? watch : play,
+          // Desktop plays it like any song: the side panel already shows the video when video mode is on.
+          onTap: video && Features.videoMode && shell.compact ? watch : () => shell.playAndOpen(play),
+          onPlay: video && Features.videoMode && shell.compact ? watch : play,
         );
       },
     );

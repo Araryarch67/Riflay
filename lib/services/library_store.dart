@@ -19,6 +19,9 @@ abstract final class LibraryStore {
   static const _movedKey = 'library.file.v1';
   static const _name = 'library.json';
 
+  @visibleForTesting
+  static List<Track> readFile(File file) => _read(file);
+
   static Future<File?> _file() async {
     try {
       return await PrivateFiles.file(_name);
@@ -42,7 +45,7 @@ abstract final class LibraryStore {
     final file = await _file();
     if (file == null) return [];
     try {
-      return await inBackground(() => file.existsSync() ? _decode(file.readAsStringSync()) : <Track>[]);
+      return await inBackground(() => file.existsSync() ? _read(file) : <Track>[]);
     } catch (e) {
       debugPrint('Library file unreadable, starting empty: $e');
       return [];
@@ -87,6 +90,26 @@ abstract final class LibraryStore {
     } catch (e) {
       debugPrint('Saving the library failed: $e');
       return false;
+    }
+  }
+
+  /// The songs in [file]. Any it can't read are left out, and the file is first copied aside
+  /// (`library.json.unreadable`): the next save would write over them.
+  static List<Track> _read(File file) {
+    final json = file.readAsStringSync();
+    try {
+      return _decode(json);
+    } catch (_) {
+      file.copySync('${file.path}.unreadable');
+      final tracks = <Track>[];
+      for (final j in jsonDecode(json) as List) {
+        try {
+          tracks.add(Track.fromJson((j as Map).cast<String, dynamic>()));
+        } catch (e) {
+          debugPrint('Library: left out an unreadable song: $e');
+        }
+      }
+      return tracks;
     }
   }
 

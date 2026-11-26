@@ -145,11 +145,11 @@ abstract final class Backup {
   static Future<void> restore(BackupSummary backup, {PlayHistory? history}) async {
     final j = backup.data;
     final prefs = await SharedPreferences.getInstance();
-    for (final key in prefs.getKeys().toList()) {
-      if (_backedUp(key)) await prefs.remove(key);
-    }
+    final restored = <String>{};
+    // The backup's values first, then what it doesn't have goes: stopped halfway, nothing is lost yet.
     for (final MapEntry(:key, :value) in (j['prefs'] as Map).entries) {
       if (key is! String || !_backedUp(key) || value is! Map || value.length != 1) continue;
+      restored.add(key);
       switch (value.entries.single) {
         case MapEntry(key: 'b', value: final bool v):
           await prefs.setBool(key, v);
@@ -162,6 +162,9 @@ abstract final class Backup {
         case MapEntry(key: 'l', value: final List<dynamic> v):
           await prefs.setStringList(key, v.whereType<String>().toList());
       }
+    }
+    for (final key in prefs.getKeys().toList()) {
+      if (_backedUp(key) && !restored.contains(key)) await prefs.remove(key);
     }
     if (j['history'] case final String text) await (history ?? PlayHistory.instance).replaceWith(text);
     if (j['lyrics'] case final Map<String, dynamic> lyrics) {

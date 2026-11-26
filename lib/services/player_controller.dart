@@ -1867,11 +1867,21 @@ class PlayerController extends ChangeNotifier {
     }
     _recentIds = prefs.getStringList(_recentKey) ?? [];
     recentRadios.value = recentRadiosFrom(prefs.getString(_recentRadiosKey));
+    final savedPlaylists = prefs.getString(_playlistsKey);
     try {
-      _playlists = [
-        for (final j in jsonDecode(prefs.getString(_playlistsKey) ?? '[]') as List)
-          UserPlaylist.fromJson((j as Map).cast()),
-      ];
+      // A playlist that can't be read is left out, not all of them; the saved text is kept aside first, since
+      // the next save writes over it.
+      final kept = <UserPlaylist>[];
+      final all = jsonDecode(savedPlaylists ?? '[]') as List;
+      for (final j in all) {
+        try {
+          kept.add(UserPlaylist.fromJson((j as Map).cast()));
+        } catch (e) {
+          debugPrint('Leaving out an unreadable playlist: $e');
+        }
+      }
+      if (kept.length != all.length) await prefs.setString('$_playlistsKey.unreadable', savedPlaylists!);
+      _playlists = kept;
       if (Host.isIOS) {
         final moved = await folders;
         _playlists = [for (final p in _playlists) p.copyWith(tracks: IosFolders.repoint(p.tracks, moved))];
@@ -1883,6 +1893,9 @@ class PlayerController extends ChangeNotifier {
       };
     } catch (e) {
       debugPrint('Ignoring unreadable playlists: $e');
+      if (_playlists.isEmpty && savedPlaylists != null) {
+        await prefs.setString('$_playlistsKey.unreadable', savedPlaylists);
+      }
     }
     final blockedRecents = {
       for (final id in _recentIds)
@@ -2266,7 +2279,21 @@ class PlayerController extends ChangeNotifier {
 
   /// Writes new tags into [track]'s file and refreshes it in the library.
   Future<void> editTags(Track track, TagEdit edit) async {
-    final updated = await Metadata.writeTags(track, edit);
+    // Windows can't replace a file that is open: the playing song lets go of it while it is rewritten.
+    final state = player.sequenceState;
+    final index = state.currentIndex;
+    final release = Host.isWindows && track.path != null && index != null && currentAudioTrack?.path == track.path;
+    final position = player.position, playing = player.playing;
+    if (release) await player.stop();
+    final Track updated;
+    try {
+      updated = await Metadata.writeTags(track, edit);
+    } finally {
+      if (release && !_disposed) {
+        await _load([for (final s in state.sequence) s.tag as Track], index, position: position);
+        if (playing) unawaited(_play());
+      }
+    }
     final i = _library.indexWhere((t) => t.id == track.id);
     if (i >= 0) {
       _replaceAt(i, updated);

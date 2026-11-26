@@ -105,6 +105,22 @@ void main() {
     expect(starts, [0, 2, 4]);
   });
 
+  test('a long song that drops many times keeps resuming as long as each try brings bytes', () async {
+    var tries = 0;
+    final entry = await cache.open(
+      'long',
+      metadata: 'opus',
+      length: 10,
+      download: (_, from) async* {
+        tries++;
+        yield [from];
+        if (from + 1 < 10) throw const SocketException('connection dropped');
+      },
+    );
+    expect(await entry!.read(0, 10).expand((bytes) => bytes).toList(), List.generate(10, (i) => i));
+    expect(tries, greaterThan(CachedAudio.maxResumes + 1));
+  });
+
   test('a download that gave up is started over by the next play, not failed for the rest of the session', () async {
     var downloads = 0;
     Stream<List<int>> offline(Future<void> _, int _) async* {

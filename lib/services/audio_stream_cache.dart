@@ -159,7 +159,7 @@ class CachedAudio<T> {
   final T metadata;
   final Stream<List<int>> Function(Future<void>, int) _download;
 
-  /// How many times a download that dropped resumes where it stopped before it gives up. Each try has the
+  /// How many times in a row a download that dropped resumes where it stopped before it gives up. Each try has the
   /// downloader's own reconnects and backoff, so a longer outage keeps the song buffering instead of ending it.
   static int maxResumes = 3;
   int _resumes = 0;
@@ -196,6 +196,7 @@ class CachedAudio<T> {
             }
             await writer.writeFrom(bytes);
             available += bytes.length;
+            _resumes = 0; // the limit is drops in a row, not per song
             _notify();
           }
           if (!_abort.isCompleted && available != length) throw StateError('Audio ended before its advertised length');

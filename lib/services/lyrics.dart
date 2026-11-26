@@ -136,6 +136,21 @@ class Lyrics {
     return distinct * 2 >= sung.length;
   }
 
+  /// Lines flashing by faster than anyone sings: uploads that fake word timing by repeating a line every
+  /// fraction of a second, which played as the same words looping.
+  static bool flickers(List<LyricLine> lines) {
+    final sung = [
+      for (final l in lines)
+        if (l.text.trim().isNotEmpty) l.time,
+    ];
+    if (sung.length < 4) return false;
+    var quick = 0;
+    for (var i = 1; i < sung.length; i++) {
+      if (sung[i] - sung[i - 1] < const Duration(milliseconds: 300)) quick++;
+    }
+    return quick * 3 > sung.length - 1;
+  }
+
   /// Timed [lines] when they can be followed, otherwise the same words as plain text.
   static Lyrics _timedOrPlain(List<LyricLine> lines, {String? plain, required String source}) {
     if (_followable(lines)) return Lyrics(lines: lines, plain: plain, source: source);
@@ -544,7 +559,8 @@ abstract final class LyricsService {
       asked++;
       try {
         final l = await source().timeout(sourceTimeout);
-        return l == null ? null : Lyrics._checked(l);
+        // Flickering lines are junk, not lyrics: another source (or another upload) gets the turn.
+        return l == null || (l.synced && Lyrics.flickers(l.lines)) ? null : Lyrics._checked(l);
       } catch (e) {
         debugPrint('Lyrics source failed: $e');
         errors.add(e);
@@ -872,8 +888,12 @@ abstract final class LyricsService {
         }),
         headers: _headers,
       );
-      if (res.statusCode == 200) return _fromJson(jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>);
-      if (res.statusCode != 404) throw HttpException('lrclib ${res.statusCode}');
+      if (res.statusCode == 200) {
+        final exact = jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>;
+        if (!_flickering(exact)) return _fromJson(exact);
+      } else if (res.statusCode != 404) {
+        throw HttpException('lrclib ${res.statusCode}');
+      }
     }
 
     // Otherwise search and pick the closest length, preferring synced lyrics.
@@ -882,7 +902,10 @@ abstract final class LyricsService {
       headers: _headers,
     );
     if (res.statusCode != 200) throw HttpException('lrclib ${res.statusCode}');
-    final results = (jsonDecode(utf8.decode(res.bodyBytes)) as List).cast<Map<String, dynamic>>();
+    final results = [
+      for (final r in (jsonDecode(utf8.decode(res.bodyBytes)) as List).cast<Map<String, dynamic>>())
+        if (!_flickering(r)) r,
+    ];
     if (results.isEmpty) return null;
     double score(Map<String, dynamic> r) {
       final d = (r['duration'] as num?)?.toDouble();
@@ -895,6 +918,12 @@ abstract final class LyricsService {
     if (seconds != null && score(best.first) > 30) return null;
     return _fromJson(best.first);
   }
+
+  /// An LRCLIB upload whose timed lines flicker ([Lyrics.flickers]); its plain text is the same junk.
+  static bool _flickering(Map<String, dynamic> j) => switch (j['syncedLyrics']) {
+    final String synced when synced.trim().isNotEmpty => Lyrics.flickers(Lyrics.parse(synced, source: 'LRCLIB').lines),
+    _ => false,
+  };
 
   static Lyrics? _fromJson(Map<String, dynamic> j) {
     if (j['instrumental'] == true) return const Lyrics(instrumental: true, source: 'LRCLIB');

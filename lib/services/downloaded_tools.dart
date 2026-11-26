@@ -32,6 +32,7 @@ class DownloadedTools {
     'ffmpeg.exe': 'FFmpeg',
     'yt-dlp.exe': 'yt-dlp',
     'yt-dlp_linux': 'yt-dlp',
+    'yt-dlp_linux_aarch64': 'yt-dlp',
     'yt-dlp_macos': 'yt-dlp',
   };
 

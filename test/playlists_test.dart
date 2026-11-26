@@ -18,6 +18,17 @@ void main() {
     (_) async => Directory.systemTemp.path,
   );
 
+  test('an unreadable playlist is left out, the others load, and the saved text is kept aside', () async {
+    final good = {'id': 'p1', 'name': 'Good', 'tracks': <Object>[]};
+    final saved = jsonEncode([good, 42]);
+    SharedPreferences.setMockInitialValues({'library.v1': '[]', 'playlists.v1': saved, 'discord.enabled': false});
+    final c = PlayerController();
+    addTearDown(c.dispose);
+    await c.load();
+    expect(c.playlists.map((p) => p.name), ['Good']);
+    expect((await SharedPreferences.getInstance()).getString('playlists.v1.unreadable'), saved);
+  });
+
   test('Riflay playlists mix local and YouTube songs, and persist', () async {
     final local = Track.fromUri(Uri.file('/music/Band - Local Song.flac'));
     SharedPreferences.setMockInitialValues({
