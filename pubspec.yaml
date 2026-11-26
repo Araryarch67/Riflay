@@ -143,6 +143,7 @@ flutter:
     - assets/audio/hrir_kemar_71_48k.wav
     - assets/audio/HRIR-NOTICE.txt
     - assets/fonts/OFL.txt
+    - assets/fonts/SpaceGrotesk-OFL.txt
     # Windows taskbar thumbnail buttons (lib/services/taskbar_buttons.dart): white glyphs, 16–48 px.
     - assets/taskbar/
     # The tray icon on computers (lib/platform/tray_io.dart): PNG for Linux and macOS, ICO for Windows.
