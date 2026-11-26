@@ -122,6 +122,8 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
+  # A stand-in audio engine for tests that press Play (already in the app through just_audio).
+  just_audio_platform_interface: ^4.6.0
   integration_test:
     sdk: flutter
   # The screenshots' app folders in a temporary place (integration_test/readme_screenshots_test.dart).

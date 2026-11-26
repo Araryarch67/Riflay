@@ -2518,6 +2518,10 @@ class PlayerController extends ChangeNotifier {
   bool _restoringQueue = false;
   bool _queueSaveScheduled = false;
 
+  /// The restored queue isn't opened yet. just_audio forgets its starting song once anything seeks the idle player
+  /// (the bar, Next), and Play then opened the first song in the queue instead of the one on screen.
+  bool _restoredIdle = false;
+
   Future<void> _restoreQueue(SharedPreferences prefs) async {
     _queuePrefs = prefs;
     try {
@@ -2547,6 +2551,7 @@ class PlayerController extends ChangeNotifier {
       // Populate the idle playlist. The media engine opens it only when the listener presses Play.
       await player.setAudioSources([for (final track in tracks) _sourceFor(track)], preload: false);
       await player.seek(position, index: index);
+      _restoredIdle = true;
     } catch (e) {
       debugPrint('Restoring playback queue failed: $e');
       if (player.audioSources.isEmpty) {
@@ -3236,6 +3241,15 @@ class PlayerController extends ChangeNotifier {
       final generation = _playbackRetryGeneration;
       if (_soundcloudExpired) await _refreshSoundcloud();
       if (_disposed || generation != _playbackRetryGeneration) return;
+      if (_restoredIdle) {
+        _restoredIdle = false;
+        final state = player.sequenceState;
+        final index = state.currentIndex;
+        if (player.processingState == ProcessingState.idle && index != null) {
+          // Opened here at the song and spot on screen, not where just_audio would start.
+          unawaited(_load([for (final s in state.sequence) s.tag as Track], index, position: player.position));
+        }
+      }
       return player.play();
     }
     if (cast.loadedKey != currentTrack?.id) return _castCurrent(play: true);

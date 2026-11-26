@@ -163,9 +163,10 @@ class _DetailStatsSheetState extends State<_DetailStatsSheet> {
     _reportFor = track.id;
     _report = null;
     _measuring = false;
-    if (AudioAnalysis.fileOf(track) == null || !AudioAnalysis.supported) return;
+    if ((AudioAnalysis.fileOf(track) == null && track.videoId == null) || !AudioAnalysis.supported) return;
     _measuring = true;
-    AudioAnalysis.of(track, spectrogram: true)
+    // A stream is fetched once more to be measured, where prefetching is allowed (not on mobile data).
+    AudioAnalysis.of(track, spectrogram: true, streams: true)
         .then((r) {
           if (mounted && _reportFor == track.id) {
             _report = r;

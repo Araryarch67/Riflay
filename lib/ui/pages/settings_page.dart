@@ -654,6 +654,26 @@ class SettingsTopicPage extends StatelessWidget {
   }
 }
 
+/// A page one step below a topic (Check lossless files, under Output & quality): the same frame and breadcrumb.
+class SettingsSubpage extends StatelessWidget {
+  const SettingsSubpage({super.key, required this.topic, required this.title, required this.child});
+
+  final SettingsTopic topic;
+  final String title;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => _SettingsFrame(
+    title: title,
+    crumbs: [
+      _settingsCrumb,
+      _Crumb(topic.group.label, SettingsGroupPage(group: topic.group), topic.group.location),
+      _Crumb(topic.label, SettingsTopicPage(section: topic), topic.location),
+    ],
+    child: child,
+  );
+}
+
 class _AccountSettings extends StatelessWidget {
   const _AccountSettings();
 

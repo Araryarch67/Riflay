@@ -8,7 +8,7 @@ import '../../services/flac_convert.dart';
 import '../../services/language.dart';
 import '../player_scope.dart';
 import '../widgets/controls.dart' show Artwork;
-import '../widgets/page_scaffold.dart';
+import 'settings_page.dart' show SettingsSubpage, SettingsTopic;
 import 'sound_settings.dart' show SettingsCard, SettingsIcon, SettingsSection, settingsMuted;
 
 /// Settings › Sound › Check lossless files: measures every FLAC / WAV / AIFF… on this device and lists the ones
@@ -39,105 +39,102 @@ class LosslessCheckPage extends StatelessWidget {
       for (final t in c.library)
         if (FlacConvert.isLosslessFile(t) && AudioAnalysis.fileOf(t) != null) t,
     ];
-    return PageScaffold(
+    return SettingsSubpage(
+      topic: SettingsTopic.advanced,
       title: tr.losslessCheck,
-      slivers: [
-        SliverToBoxAdapter(
-          child: ValueListenableBuilder(
-            valueListenable: AudioAnalysis.scan,
-            builder: (context, progress, _) {
-              final found = progress == null ? AudioAnalysis.suspiciousOf(files) : const <(Track, AudioReport)>[];
-              final checked = AudioAnalysis.checkedOf(files);
-              // Windows reads the files with ffmpeg: fetched once, on Check, where it isn't here yet.
-              final fetchesFfmpeg = !AudioAnalysis.supported && Host.isWindows && Ffmpeg.available;
-              final canRun = files.isNotEmpty && (AudioAnalysis.supported || fetchesFfmpeg);
-              Future<void> run() async {
-                if (fetchesFfmpeg) {
-                  try {
-                    await Ffmpeg.executable();
-                  } catch (e) {
-                    debugPrint('Lossless check: no ffmpeg: $e');
-                    return;
-                  }
-                }
-                await AudioAnalysis.scanAll(files, bits: true);
+      child: ValueListenableBuilder(
+        valueListenable: AudioAnalysis.scan,
+        builder: (context, progress, _) {
+          final found = progress == null ? AudioAnalysis.suspiciousOf(files) : const <(Track, AudioReport)>[];
+          final checked = AudioAnalysis.checkedOf(files);
+          // Windows reads the files with ffmpeg: fetched once, on Check, where it isn't here yet.
+          final fetchesFfmpeg = !AudioAnalysis.supported && Host.isWindows && Ffmpeg.available;
+          final canRun = files.isNotEmpty && (AudioAnalysis.supported || fetchesFfmpeg);
+          Future<void> run() async {
+            if (fetchesFfmpeg) {
+              try {
+                await Ffmpeg.executable();
+              } catch (e) {
+                debugPrint('Lossless check: no ffmpeg: $e');
+                return;
               }
+            }
+            await AudioAnalysis.scanAll(files, bits: true);
+          }
 
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // What it does and how to use it, before anything is pressed: plain text, not a row to tap.
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
+                child: Text(tr.losslessCheckHow, style: muted),
+              ),
+              SettingsCard(
                 children: [
-                  // What it does and how to use it, before anything is pressed: plain text, not a row to tap.
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
-                    child: Text(tr.losslessCheckHow, style: muted),
+                  ListTile(
+                    leading: const SettingsIcon(Icons.verified_outlined),
+                    title: Text(tr.losslessCheckFiles(checked, files.length)),
+                    subtitle: Text(
+                      progress == null ? tr.losslessCheckAbout : tr.measuringLoudness(progress.$1, progress.$2),
+                      style: muted,
+                    ),
+                    trailing: progress == null
+                        ? FilledButton.tonal(onPressed: canRun ? run : null, child: Text(tr.losslessCheckRun))
+                        : OutlinedButton(onPressed: AudioAnalysis.stopScan, child: Text(tr.stop)),
                   ),
+                  if (progress != null)
+                    LinearProgressIndicator(value: progress.$2 == 0 ? null : progress.$1 / progress.$2),
+                  if (files.isEmpty)
+                    ListTile(
+                      leading: const SettingsIcon(Icons.library_music_outlined),
+                      title: Text(tr.losslessCheckNoFiles),
+                    )
+                  else if (fetchesFfmpeg)
+                    ListTile(
+                      leading: const SettingsIcon(Icons.download_outlined),
+                      title: Text(tr.losslessCheckNeedsFfmpeg, style: muted),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 28),
+              if (progress == null && checked > 0)
+                if (found.isEmpty)
                   SettingsCard(
                     children: [
                       ListTile(
-                        leading: const SettingsIcon(Icons.verified_outlined),
-                        title: Text(tr.losslessCheckFiles(checked, files.length)),
-                        subtitle: Text(
-                          progress == null ? tr.losslessCheckAbout : tr.measuringLoudness(progress.$1, progress.$2),
-                          style: muted,
-                        ),
-                        trailing: progress == null
-                            ? FilledButton.tonal(onPressed: canRun ? run : null, child: Text(tr.losslessCheckRun))
-                            : OutlinedButton(onPressed: AudioAnalysis.stopScan, child: Text(tr.stop)),
+                        leading: const SettingsIcon(Icons.check_circle_outline_rounded),
+                        title: Text(tr.losslessCheckAllGood),
                       ),
-                      if (progress != null)
-                        LinearProgressIndicator(value: progress.$2 == 0 ? null : progress.$1 / progress.$2),
-                      if (files.isEmpty)
-                        ListTile(
-                          leading: const SettingsIcon(Icons.library_music_outlined),
-                          title: Text(tr.losslessCheckNoFiles),
-                        )
-                      else if (fetchesFfmpeg)
-                        ListTile(
-                          leading: const SettingsIcon(Icons.download_outlined),
-                          title: Text(tr.losslessCheckNeedsFfmpeg, style: muted),
-                        ),
                     ],
-                  ),
-                  const SizedBox(height: 28),
-                  if (progress == null && checked > 0)
-                    if (found.isEmpty)
-                      SettingsCard(
-                        children: [
+                  )
+                else
+                  SettingsSection(
+                    title: tr.losslessCheckFound(found.length),
+                    child: SettingsCard(
+                      children: [
+                        for (final (t, r) in found)
                           ListTile(
-                            leading: const SettingsIcon(Icons.check_circle_outline_rounded),
-                            title: Text(tr.losslessCheckAllGood),
+                            leading: Artwork(track: t, size: 44, radius: 8),
+                            title: Text(t.title, maxLines: 1, overflow: TextOverflow.ellipsis),
+                            subtitle: Text(
+                              '${t.artist}\n${reasonOf(r)}',
+                              style: muted,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            isThreeLine: true,
+                            trailing: const Icon(Icons.play_arrow_rounded),
+                            onTap: () =>
+                                c.playList([for (final (t, _) in found) t], found.indexWhere((e) => e.$1 == t)),
                           ),
-                        ],
-                      )
-                    else
-                      SettingsSection(
-                        title: tr.losslessCheckFound(found.length),
-                        child: SettingsCard(
-                          children: [
-                            for (final (t, r) in found)
-                              ListTile(
-                                leading: Artwork(track: t, size: 44, radius: 8),
-                                title: Text(t.title, maxLines: 1, overflow: TextOverflow.ellipsis),
-                                subtitle: Text(
-                                  '${t.artist}\n${reasonOf(r)}',
-                                  style: muted,
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                isThreeLine: true,
-                                trailing: const Icon(Icons.play_arrow_rounded),
-                                onTap: () =>
-                                    c.playList([for (final (t, _) in found) t], found.indexWhere((e) => e.$1 == t)),
-                              ),
-                          ],
-                        ),
-                      ),
-                ],
-              );
-            },
-          ),
-        ),
-      ],
+                      ],
+                    ),
+                  ),
+            ],
+          );
+        },
+      ),
     );
   }
 }
