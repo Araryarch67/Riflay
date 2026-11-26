@@ -2,10 +2,13 @@ import 'dart:convert';
 import 'dart:math';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:just_audio_platform_interface/just_audio_platform_interface.dart';
 import 'package:riflay/models/track.dart';
 import 'package:riflay/services/player_controller.dart';
 import 'package:riflay/services/radio_queue.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import 'fake_audio_platform.dart';
 
 Track _song(String id, {String artist = 'Artist', String? album, String? title, String? sourceUrl}) => Track(
   id: id,
@@ -159,6 +162,19 @@ void main() {
         await Future<void>.delayed(const Duration(milliseconds: 10));
       }
       expect(c.queue.map((t) => t.id).take(3), ['seed', 'rec1', 'mate']);
+    });
+
+    test('with autoplay on, playing a local song fills the queue after it by itself', () async {
+      JustAudioPlatform.instance = FakeAudioPlatform();
+      prefs(autoplay: true);
+      final c = PlayerController(radioLookup: (_) async => [online])..libraryRadioRandom = Random(1);
+      addTearDown(c.dispose);
+      await c.load();
+      await c.playList([seed], 0);
+      for (var i = 0; i < 50 && c.queue.length < 2; i++) {
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+      }
+      expect(c.queue.map((t) => t.id).take(2), ['seed', 'rec1']);
     });
 
     test('autoplay off leaves a local queue alone', () async {
