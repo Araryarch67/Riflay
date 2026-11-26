@@ -2760,6 +2760,8 @@
   "couldntUpdateRiflay": "Couldn't update Riflay. Try again",
   "installUpdate": "Install update",
   "checkForUpdates": "Check for updates",
+  "reinstallLatestVersion": "Reinstall latest version",
+  "@reinstallLatestVersion": {"description": "Settings › About: puts the version already installed on again (shown when it is the latest release)."},
   "downloadUpdate": "Download update",
   "getUpdate": "Get update",
   "spotifySignInExpired": "Your Spotify sign-in has expired. Sign in again.",

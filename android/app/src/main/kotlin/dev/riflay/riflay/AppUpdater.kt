@@ -47,7 +47,8 @@ class AppUpdater(private val activity: Activity, messenger: BinaryMessenger) {
             ?: throw IllegalArgumentException("Invalid APK")
         require(archive.packageName == activity.packageName) { "Wrong application" }
         val current = installed()
-        require(version(archive) > version(current)) { "Update must have a newer version code" }
+        // The same version code too: Reinstall latest version puts a rebuilt release over itself. Never older.
+        require(version(archive) >= version(current)) { "Update must not be an older version code" }
         val expected = signers(current)
         if (expected.isEmpty() || signers(archive) != expected) throw SignatureMismatch()
         return file

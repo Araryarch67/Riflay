@@ -1481,6 +1481,7 @@
   "couldntUpdateRiflay": "Tidak bisa memperbarui Riflay. Coba lagi",
   "installUpdate": "Pasang pembaruan",
   "checkForUpdates": "Periksa pembaruan",
+  "reinstallLatestVersion": "Pasang ulang versi terbaru",
   "downloadUpdate": "Unduh pembaruan",
   "getUpdate": "Dapatkan pembaruan",
   "spotifySignInExpired": "Sesi masuk Spotify-mu sudah habis. Masuk lagi.",

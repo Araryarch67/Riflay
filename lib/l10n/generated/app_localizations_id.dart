@@ -4937,6 +4937,9 @@ class AppLocalizationsId extends AppLocalizations {
   String get checkForUpdates => 'Periksa pembaruan';
 
   @override
+  String get reinstallLatestVersion => 'Pasang ulang versi terbaru';
+
+  @override
   String get downloadUpdate => 'Unduh pembaruan';
 
   @override

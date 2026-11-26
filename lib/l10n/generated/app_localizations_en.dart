@@ -4986,6 +4986,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get checkForUpdates => 'Check for updates';
 
   @override
+  String get reinstallLatestVersion => 'Reinstall latest version';
+
+  @override
   String get downloadUpdate => 'Download update';
 
   @override

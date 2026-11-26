@@ -8931,6 +8931,12 @@ abstract class AppLocalizations {
   /// **'Check for updates'**
   String get checkForUpdates;
 
+  /// Settings › About: puts the version already installed on again (shown when it is the latest release).
+  ///
+  /// In en, this message translates to:
+  /// **'Reinstall latest version'**
+  String get reinstallLatestVersion;
+
   /// No description provided for @downloadUpdate.
   ///
   /// In en, this message translates to:

@@ -1474,6 +1474,7 @@
   "couldntUpdateRiflay": "Riflay を更新できませんでした。もう一度試してください",
   "installUpdate": "アップデートをインストール",
   "checkForUpdates": "アップデートを確認",
+  "reinstallLatestVersion": "最新バージョンを再インストール",
   "downloadUpdate": "アップデートをダウンロード",
   "getUpdate": "アップデートを入手",
   "spotifySignInExpired": "Spotify のログインが切れました。もう一度ログインしてください。",

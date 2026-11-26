@@ -216,6 +216,22 @@ void main() {
     );
   }
 
+  test('Reinstall fetches the version already installed, and only that one', () async {
+    final folder = Directory.systemTemp.createTempSync('riflay-update-test-');
+    addTearDown(() => folder.deleteSync(recursive: true));
+    final updates = AppUpdates(
+      android: true,
+      cacheDirectory: () async => folder,
+      client: MockClient((_) async => http.Response.bytes([1, 2, 3, 4], 200)),
+    )..installedVersion = '1.10.0';
+    addTearDown(updates.dispose);
+    final same = AppRelease.parse(releaseJson());
+    await expectLater(updates.download(same, (_) {}), throwsStateError, reason: 'not an update');
+    expect(File(await updates.download(same, (_) {}, reinstall: true)).readAsBytesSync(), [1, 2, 3, 4]);
+    final older = AppRelease.parse(releaseJson(version: '1.9.0'));
+    await expectLater(updates.download(older, (_) {}, reinstall: true), throwsStateError, reason: 'never older');
+  });
+
   test('an installed update leaves no APK behind: the next start deletes it', () async {
     final temp = Directory.systemTemp.createTempSync('riflay-updates-');
     addTearDown(() => temp.deleteSync(recursive: true));

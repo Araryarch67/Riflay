@@ -4825,6 +4825,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get checkForUpdates => 'アップデートを確認';
 
   @override
+  String get reinstallLatestVersion => '最新バージョンを再インストール';
+
+  @override
   String get downloadUpdate => 'アップデートをダウンロード';
 
   @override

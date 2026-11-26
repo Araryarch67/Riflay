@@ -138,12 +138,18 @@ class MediaSession extends BaseAudioHandler with SeekHandler {
   Timer? _nextLine;
   String? _shownLine;
   bool? _shownPlaying;
+  bool _shownOver = false;
 
   /// Swiped away from Recents: the session is put away until something plays.
   bool _closed = false;
 
   /// Shows [s]: the song when it changed (and looks up its lyrics), then the playback state.
   void show(MediaSessionState s) {
+    // No song for a moment while still playing or loading (a new queue opening): the last one stays. Shown as
+    // over, Android stopped the service and the notification went with it.
+    if (s.track == null && _shownTrack != null && !_closed && (s.playing || s.processing == MediaProcessing.loading)) {
+      s = s.copyWith(track: _shownTrack);
+    }
     _state = s;
     final changedSong = s.track?.id != _shownTrack?.id;
     if (s.track != _shownTrack) _publishItem(s.track);
@@ -319,12 +325,16 @@ class MediaSession extends BaseAudioHandler with SeekHandler {
     // Android's service forgets the song when it's stopped and started again,
     // which left a notification with only the app's name. Starting to play
     // sends the song along every time.
-    if (playing && _shownPlaying != true && mediaItem.value != null) mediaItem.add(mediaItem.value);
-    _shownPlaying = playing;
     // Idle tells Android the session is over: it stops the service and takes
     // the notification down. Only when nothing is left to play, not when the
     // player is idle for a moment between or after songs.
     final over = _closed || s.track == null;
+    // Back from over too: the service that comes up again has no song either.
+    if (playing && (_shownPlaying != true || _shownOver) && !over && mediaItem.value != null) {
+      mediaItem.add(mediaItem.value);
+    }
+    _shownPlaying = playing;
+    _shownOver = over;
     playbackState.add(
       PlaybackState(
         // After the three standard buttons, so the small notification keeps those (androidCompactActionIndices).

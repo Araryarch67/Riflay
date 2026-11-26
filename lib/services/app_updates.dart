@@ -209,9 +209,11 @@ class AppUpdates {
     return removed;
   }
 
-  Future<String> download(AppRelease release, void Function(double) progress) async {
+  /// [reinstall]: the version already installed, fetched again (a release that was rebuilt under the same number).
+  Future<String> download(AppRelease release, void Function(double) progress, {bool reinstall = false}) async {
     final asset = assetFor(release);
-    if (asset == null || !release.newerThan(installedVersion)) throw StateError('No verified update for this device');
+    final wanted = release.newerThan(installedVersion) || (reinstall && release.version == installedVersion);
+    if (asset == null || !wanted) throw StateError('No verified update for this device');
     if (!android) _verifiedSetup = null;
     final folder = Directory(p.join((await _cacheDirectory()).path, 'app-updates'));
     await folder.create(recursive: true);

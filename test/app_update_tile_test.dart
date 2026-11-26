@@ -17,6 +17,7 @@ class FakeUpdates extends AppUpdates {
   bool fail = false;
   String currentVersion = '1.9.9';
   Completer<String>? pendingDownload;
+  bool reinstalled = false;
 
   @override
   Future<AppRelease> check() async {
@@ -27,8 +28,9 @@ class FakeUpdates extends AppUpdates {
   }
 
   @override
-  Future<String> download(AppRelease release, void Function(double) progress) async {
+  Future<String> download(AppRelease release, void Function(double) progress, {bool reinstall = false}) async {
     downloads++;
+    reinstalled = reinstall;
     progress(0.5);
     if (fail) throw const FormatException('Bad APK');
     if (pendingDownload != null) return pendingDownload!.future;
@@ -72,7 +74,7 @@ void main() {
     expect(updates.installs, 1);
   });
 
-  testWidgets('an up-to-date install can check again without offering a download', (tester) async {
+  testWidgets('an up-to-date install offers to reinstall that version, not an update', (tester) async {
     final updates = FakeUpdates()..currentVersion = '1.10.0';
     await tester.pumpWidget(
       MaterialApp(
@@ -82,8 +84,11 @@ void main() {
     await tester.tap(find.text('Check for updates'));
     await tester.pumpAndSettle();
     expect(find.text("You're using the latest version"), findsOneWidget);
-    expect(find.text('Check for updates'), findsOneWidget);
     expect(find.text('Download update'), findsNothing);
+    await tester.tap(find.text('Reinstall latest version'));
+    await tester.pumpAndSettle();
+    expect(updates.downloads, 1);
+    expect(updates.reinstalled, isTrue);
   });
 
   testWidgets('the popup from the check at start offers the found release, and Not now closes it', (tester) async {

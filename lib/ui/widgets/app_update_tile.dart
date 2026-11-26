@@ -26,6 +26,9 @@ class AppUpdateTile extends StatefulWidget {
 class _AppUpdateTileState extends State<AppUpdateTile> {
   late final _updates = widget.updates ?? AppUpdates();
   late AppRelease? _release = widget.release;
+
+  /// The latest release is the version installed: it can be put on again (a rebuilt release, a broken install).
+  bool _reinstall = false;
   bool _busy = false;
   double? _progress;
   String? _path;
@@ -50,9 +53,12 @@ class _AppUpdateTileState extends State<AppUpdateTile> {
         setState(() => _message = tr.checkingUpdates);
         final release = await _updates.check();
         if (!mounted) return;
+        final newer = release.newerThan(_updates.installedVersion);
         setState(() {
-          _release = release.newerThan(_updates.installedVersion) ? release : null;
-          _message = _release == null ? tr.latestVersion : tr.versionAvailable(release.version);
+          _reinstall =
+              !newer && release.version == _updates.installedVersion && _updates.assetFor(release) != null;
+          _release = newer || _reinstall ? release : null;
+          _message = newer ? tr.versionAvailable(release.version) : tr.latestVersion;
         });
       } else if (_updates.assetFor(_release!) == null) {
         if (!await launchUrl(_release!.url, mode: LaunchMode.externalApplication)) {
@@ -66,7 +72,7 @@ class _AppUpdateTileState extends State<AppUpdateTile> {
           });
           final path = await _updates.download(_release!, (progress) {
             if (mounted) setState(() => _progress = progress);
-          });
+          }, reinstall: _reinstall);
           if (!mounted) return;
           setState(() {
             _path = path;
@@ -107,6 +113,8 @@ class _AppUpdateTileState extends State<AppUpdateTile> {
   Widget build(BuildContext context) {
     final label = _release == null
         ? tr.checkForUpdates
+        : _reinstall && _path == null
+        ? tr.reinstallLatestVersion
         : _path != null || _updates.windowsInstaller && _updates.assetFor(_release!) != null
         ? tr.installUpdate
         : _updates.assetFor(_release!) != null
