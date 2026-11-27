@@ -1145,7 +1145,8 @@ class PlayerController extends ChangeNotifier {
   Timer? _stall;
   void _watchStall(PlayerState state) {
     _stall?.cancel();
-    final waiting = state.processingState == ProcessingState.loading || state.processingState == ProcessingState.buffering;
+    final waiting =
+        state.processingState == ProcessingState.loading || state.processingState == ProcessingState.buffering;
     final t = currentTrack;
     if (!waiting || !state.playing || t == null || isOffline(t)) return;
     _stall = Timer(const Duration(seconds: 6), () => Connection.instance.check().ignore());

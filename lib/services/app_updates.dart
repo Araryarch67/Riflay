@@ -221,7 +221,8 @@ class AppUpdates {
   Future<String> download(AppRelease release, void Function(double) progress, {bool reinstall = false}) async {
     final asset = assetFor(release);
     final wanted =
-        release.newerThan(installedVersion, build: installedBuild) || (reinstall && release.version == installedVersion);
+        release.newerThan(installedVersion, build: installedBuild) ||
+        (reinstall && release.version == installedVersion);
     if (asset == null || !wanted) throw StateError('No verified update for this device');
     if (!android) _verifiedSetup = null;
     final folder = Directory(p.join((await _cacheDirectory()).path, 'app-updates'));

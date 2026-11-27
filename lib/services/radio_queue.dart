@@ -60,8 +60,7 @@ abstract final class RadioQueue {
       if (difference != null && difference > const Duration(seconds: 8)) continue;
       // The artist written another way (ときのそら on the file, TOKINOSORA on YouTube Music): the same title and
       // length still name the song.
-      if (!sameArtist &&
-          (_title(track) != title || difference == null || difference > const Duration(seconds: 3))) {
+      if (!sameArtist && (_title(track) != title || difference == null || difference > const Duration(seconds: 3))) {
         continue;
       }
       final score =
