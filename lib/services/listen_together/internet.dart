@@ -113,22 +113,28 @@ Uri internetJoinLink(String code) =>
 
 /// Everything derived from a code: where the room is and the key that opens its messages.
 class InternetRoomKeys {
-  InternetRoomKeys._(this.room, this.key);
+  InternetRoomKeys._(this.room, this.key, this._base);
 
-  factory InternetRoomKeys.of(String code) {
+  factory InternetRoomKeys.of(String code) => InternetRoomKeys.fromSecret(utf8.encode(code));
+
+  /// The same derivation for any shared secret. [label] and [base] keep one feature's rooms and keys apart from
+  /// another's even if a secret ever repeated; Riflay Connect uses its own.
+  factory InternetRoomKeys.fromSecret(
+    List<int> secret, {
+    String label = 'riflay-listen-v1',
+    String base = 'riflay/l1',
+  }) {
     final room = crypto.sha256
-        .convert(utf8.encode('riflay-listen-v1/topic/$code'))
+        .convert([...utf8.encode('$label/topic/'), ...secret])
         .bytes
         .map((b) => b.toRadixString(16).padLeft(2, '0'))
         .join()
         .substring(0, 32);
     final kdf = HKDFKeyDerivator(SHA256Digest())
-      ..init(
-        HkdfParameters(Uint8List.fromList(utf8.encode(code)), 32, utf8.encode('riflay-listen-v1'), utf8.encode('key')),
-      );
+      ..init(HkdfParameters(Uint8List.fromList(secret), 32, utf8.encode(label), utf8.encode('key')));
     final key = Uint8List(32);
     kdf.deriveKey(null, 0, key, 0);
-    return InternetRoomKeys._(room, key);
+    return InternetRoomKeys._(room, key, '$base/$room');
   }
 
   /// 32 hex characters, the random-looking part of every topic.
@@ -137,7 +143,10 @@ class InternetRoomKeys {
   /// AES-256 key.
   final Uint8List key;
 
-  String get _base => 'riflay/l1/$room';
+  final String _base;
+
+  /// `<base>/<suffix>`: Riflay Connect lays out its own topics under the same room prefix.
+  String topic(String suffix) => '$_base/$suffix';
   String get presenceTopic => '$_base/p';
   String toGuestTopic(String peerId) => '$_base/t/$peerId';
   String fromGuestTopic(String peerId) => '$_base/g/$peerId';
@@ -198,14 +207,14 @@ abstract final class InternetCrypto {
   }
 }
 
-String _randomId([int length = 12]) {
+String randomInternetId([int length = 12]) {
   final r = Random.secure();
   return [for (var i = 0; i < length; i++) r.nextInt(36).toRadixString(36)].join();
 }
 
 /// One TLS connection to a broker.
-class _Link {
-  _Link._(this._client);
+class InternetLink {
+  InternetLink._(this._client);
 
   final MqttClient _client;
   final messages = StreamController<(String, Uint8List)>.broadcast();
@@ -219,7 +228,7 @@ class _Link {
 
   /// Throws when the broker can't be reached or refuses. [will] (topic) is cleared (empty, retained) if the
   /// connection dies without a goodbye.
-  static Future<_Link> open(
+  static Future<InternetLink> open(
     InternetBroker broker, {
     String? will,
     Duration timeout = const Duration(seconds: 10),
@@ -229,7 +238,7 @@ class _Link {
             broker.host,
             tlsPort: broker.port,
             wssPort: broker.wssPort,
-            clientId: 'riflay-${_randomId(16)}',
+            clientId: 'riflay-${randomInternetId(16)}',
           )
           ..keepAlivePeriod = 30
           ..autoReconnect = false
@@ -240,7 +249,7 @@ class _Link {
       message = message.withWillTopic(will).withWillMessage('').withWillQos(MqttQos.atLeastOnce).withWillRetain();
     }
     client.connectionMessage = message;
-    final link = _Link._(client);
+    final link = InternetLink._(client);
     client.onDisconnected = link._onDown;
     try {
       await client.connect().timeout(timeout);
@@ -329,7 +338,7 @@ class InternetHostTransport implements ListenHostTransport {
 
   final _peers = StreamController<ListenPeer>.broadcast();
   final _open = <String, _InternetPeer>{};
-  _Link? _link;
+  InternetLink? _link;
   InternetRoomKeys? _keys;
   String? _code;
   Timer? _presence;
@@ -356,7 +365,7 @@ class InternetHostTransport implements ListenHostTransport {
       final code = newInternetCode(index, _random);
       final keys = InternetRoomKeys.of(code);
       try {
-        _link = await _Link.open(internetBrokers[index], will: keys.presenceTopic);
+        _link = await InternetLink.open(internetBrokers[index], will: keys.presenceTopic);
         _code = code;
         _keys = keys;
         break;
@@ -430,7 +439,7 @@ class InternetGuestConnection implements ListenGuestConnection {
     _link.down.then((_) => _end());
   }
 
-  final _Link _link;
+  final InternetLink _link;
   final InternetRoomKeys _keys;
   final String _peerId;
   final _in = StreamController<String>();
@@ -445,10 +454,10 @@ class InternetGuestConnection implements ListenGuestConnection {
     final broker = brokerForCode(code);
     if (broker == null) throw const InternetRoomNotFound();
     final keys = InternetRoomKeys.of(code);
-    final peerId = _randomId();
-    final _Link link;
+    final peerId = randomInternetId();
+    final InternetLink link;
     try {
-      link = await _Link.open(broker, timeout: timeout);
+      link = await InternetLink.open(broker, timeout: timeout);
     } catch (e) {
       debugPrint('Listen together (internet): ${broker.host}: $e');
       throw const InternetUnreachable();

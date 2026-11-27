@@ -12,7 +12,13 @@ String listenQrPayload(String code) => listenCodeFromQr(code) ?? (throw Argument
 
 /// Reads an imported QR image on platforms with or without camera scanning.
 /// Returns null for unrelated QR codes, invalid images, and images without a QR.
-String? listenCodeFromImage(Uint8List bytes) {
+String? listenCodeFromImage(Uint8List bytes) => switch (qrTextFromImage(bytes)) {
+  final text? => listenCodeFromQr(text),
+  null => null,
+};
+
+/// The text of the QR in an image, whatever it says (Riflay Connect reads its own link from it).
+String? qrTextFromImage(Uint8List bytes) {
   try {
     final decoded = img.decodeImage(bytes);
     if (decoded == null) return null;
@@ -26,7 +32,7 @@ String? listenCodeFromImage(Uint8List bytes) {
     final pixels = image.convert(numChannels: 4).getBytes(order: img.ChannelOrder.abgr);
     final source = RGBLuminanceSource(image.width, image.height, pixels.buffer.asInt32List());
     final result = QRCodeReader().decode(BinaryBitmap(HybridBinarizer(source)));
-    return listenCodeFromQr(result.text);
+    return result.text;
   } catch (_) {
     return null;
   }

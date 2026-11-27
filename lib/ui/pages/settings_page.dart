@@ -25,6 +25,7 @@ import 'backup_settings.dart';
 import 'storage_settings.dart';
 import 'search/search_input.dart';
 import 'about_settings.dart';
+import 'connect_page.dart';
 import 'listen_together_page.dart';
 import 'layout_settings.dart';
 import 'library_settings.dart';
@@ -467,6 +468,12 @@ class _SettingsGroups extends StatelessWidget {
           title: tr.listenTogether,
           summary: tr.listenTogetherSummary,
           onTap: () => shell.open(const ListenTogetherPage(), location: Locations.listen),
+        ),
+        _SettingsRow(
+          icon: Icons.settings_remote_rounded,
+          title: tr.connectTitle,
+          summary: tr.connectSummary,
+          onTap: () => shell.open(const ConnectPage(), location: Locations.settingsTopic('connect')),
         ),
         if (hasKeyboardShortcuts)
           _SettingsRow(

@@ -7700,4 +7700,132 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get karaokeMusic => '伴奏';
+
+  @override
+  String get connectTitle => 'Riflay Connect';
+
+  @override
+  String get connectSummary => '別の端末からパソコンの Riflay を操作します';
+
+  @override
+  String get connectIntro => 'スマホや別のパソコンから、このパソコンの再生・一時停止・キュー追加ができます。音楽はこのパソコンに残り、コマンドと再生情報だけが暗号化されてインターネットを通ります。';
+
+  @override
+  String get connectThisComputer => 'このパソコン';
+
+  @override
+  String get connectAllow => 'リモート操作を許可';
+
+  @override
+  String get connectAllowSubtitle => 'Riflay を開いている間、ペアリング済みの端末が再生を操作できます。';
+
+  @override
+  String get connectUnreachable => 'サーバーに接続できません。再試行しています…';
+
+  @override
+  String get connectPairDevice => '端末をペアリング';
+
+  @override
+  String get connectPairingCode => 'ペアリングコード';
+
+  @override
+  String get connectPairingHowTo => 'もう一方の端末で Riflay Connect を開き、このコードを入力するか QR コードを読み取ってください。コードは一度だけ使え、5 分で無効になります。';
+
+  @override
+  String get connectPairingQrSemantics => 'ペアリングコードの QR コード';
+
+  @override
+  String get connectCancelPairing => 'ペアリングを中止';
+
+  @override
+  String connectRequest(String name) {
+    return '$name がこのパソコンの Riflay を操作しようとしています。';
+  }
+
+  @override
+  String get connectDeny => '許可しない';
+
+  @override
+  String get connectPairedDevices => 'ペアリング済みの端末';
+
+  @override
+  String get connectNoControllers => 'まだペアリングされた端末はありません。';
+
+  @override
+  String get connectActiveNow => '接続中';
+
+  @override
+  String get connectRevoke => 'アクセスを取り消す';
+
+  @override
+  String get connectControlTitle => 'パソコンを操作';
+
+  @override
+  String get connectControlIntro => 'パソコンで「設定 › Riflay Connect」を開き、リモート操作をオンにして「端末をペアリング」を選び、表示されたコードをここに入力してください。';
+
+  @override
+  String get connectPair => 'ペアリング';
+
+  @override
+  String get connectWaitingConfirm => 'パソコンでの確認を待っています…';
+
+  @override
+  String get connectYourComputers => 'あなたのパソコン';
+
+  @override
+  String get connectForget => '削除';
+
+  @override
+  String get connectConnected => '接続済み';
+
+  @override
+  String get connectConnecting => '接続中…';
+
+  @override
+  String get connectDisconnected => '未接続。再試行しています…';
+
+  @override
+  String get connectStopControlling => '操作をやめる';
+
+  @override
+  String get connectNothingPlaying => '再生中の曲はありません';
+
+  @override
+  String get connectAddHere => 'この端末で再生中の曲を追加';
+
+  @override
+  String get connectAddHint => '今のところ、他のパソコンのキューに追加できるのは YouTube の曲だけです。';
+
+  @override
+  String get connectRepeatOff => 'リピートなし';
+
+  @override
+  String get connectRepeatAll => '全曲リピート';
+
+  @override
+  String get connectRepeatOne => '1 曲リピート';
+
+  @override
+  String get connectShuffle => 'シャッフル';
+
+  @override
+  String get connectBadCode => 'ペアリングコードではありません。確認してもう一度お試しください。';
+
+  @override
+  String get connectPairUnreachable => 'サーバーに接続できません。インターネット接続を確認してください。';
+
+  @override
+  String get connectPairNotFound => 'パソコンから応答がありません。コードと、パソコンの画面にまだ表示されているかを確認してください。';
+
+  @override
+  String get connectPairDenied => 'パソコンで許可されませんでした。';
+
+  @override
+  String get connectRevokedNotice => 'この端末はパソコンから削除されました。';
+
+  @override
+  String get notAConnectQr => 'この QR コードは Riflay Connect のペアリングコードではありません。';
+
+  @override
+  String get connectQrHowTo => 'もう一方の端末の Riflay で Riflay Connect を開き、「QR コードを読み取る」を選んでください。';
 }

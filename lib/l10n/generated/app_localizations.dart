@@ -14198,6 +14198,258 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Music'**
   String get karaokeMusic;
+
+  /// No description provided for @connectTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Riflay Connect'**
+  String get connectTitle;
+
+  /// No description provided for @connectSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'Control Riflay on a computer from another device'**
+  String get connectSummary;
+
+  /// No description provided for @connectIntro.
+  ///
+  /// In en, this message translates to:
+  /// **'Play, pause and queue songs on a computer from your phone or another computer. The music stays on that computer; only commands and what\'s playing travel over the internet, encrypted.'**
+  String get connectIntro;
+
+  /// No description provided for @connectThisComputer.
+  ///
+  /// In en, this message translates to:
+  /// **'This computer'**
+  String get connectThisComputer;
+
+  /// No description provided for @connectAllow.
+  ///
+  /// In en, this message translates to:
+  /// **'Allow remote control'**
+  String get connectAllow;
+
+  /// No description provided for @connectAllowSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Paired devices can control playback while Riflay is open.'**
+  String get connectAllowSubtitle;
+
+  /// No description provided for @connectUnreachable.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t reach the servers. Trying again…'**
+  String get connectUnreachable;
+
+  /// No description provided for @connectPairDevice.
+  ///
+  /// In en, this message translates to:
+  /// **'Pair a device'**
+  String get connectPairDevice;
+
+  /// No description provided for @connectPairingCode.
+  ///
+  /// In en, this message translates to:
+  /// **'Pairing code'**
+  String get connectPairingCode;
+
+  /// No description provided for @connectPairingHowTo.
+  ///
+  /// In en, this message translates to:
+  /// **'On the other device, open Riflay Connect and enter this code or scan the QR code. The code works once and expires in 5 minutes.'**
+  String get connectPairingHowTo;
+
+  /// No description provided for @connectPairingQrSemantics.
+  ///
+  /// In en, this message translates to:
+  /// **'QR code with the pairing code'**
+  String get connectPairingQrSemantics;
+
+  /// No description provided for @connectCancelPairing.
+  ///
+  /// In en, this message translates to:
+  /// **'Stop pairing'**
+  String get connectCancelPairing;
+
+  /// No description provided for @connectRequest.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} wants to control Riflay on this computer.'**
+  String connectRequest(String name);
+
+  /// No description provided for @connectDeny.
+  ///
+  /// In en, this message translates to:
+  /// **'Don\'t allow'**
+  String get connectDeny;
+
+  /// No description provided for @connectPairedDevices.
+  ///
+  /// In en, this message translates to:
+  /// **'Paired devices'**
+  String get connectPairedDevices;
+
+  /// No description provided for @connectNoControllers.
+  ///
+  /// In en, this message translates to:
+  /// **'No device is paired yet.'**
+  String get connectNoControllers;
+
+  /// No description provided for @connectActiveNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Active now'**
+  String get connectActiveNow;
+
+  /// No description provided for @connectRevoke.
+  ///
+  /// In en, this message translates to:
+  /// **'Revoke access'**
+  String get connectRevoke;
+
+  /// No description provided for @connectControlTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Control a computer'**
+  String get connectControlTitle;
+
+  /// No description provided for @connectControlIntro.
+  ///
+  /// In en, this message translates to:
+  /// **'On the computer, open Settings › Riflay Connect, turn on remote control and choose Pair a device. Then enter its code here.'**
+  String get connectControlIntro;
+
+  /// No description provided for @connectPair.
+  ///
+  /// In en, this message translates to:
+  /// **'Pair'**
+  String get connectPair;
+
+  /// No description provided for @connectWaitingConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for the computer to confirm…'**
+  String get connectWaitingConfirm;
+
+  /// No description provided for @connectYourComputers.
+  ///
+  /// In en, this message translates to:
+  /// **'Your computers'**
+  String get connectYourComputers;
+
+  /// No description provided for @connectForget.
+  ///
+  /// In en, this message translates to:
+  /// **'Forget'**
+  String get connectForget;
+
+  /// No description provided for @connectConnected.
+  ///
+  /// In en, this message translates to:
+  /// **'Connected'**
+  String get connectConnected;
+
+  /// No description provided for @connectConnecting.
+  ///
+  /// In en, this message translates to:
+  /// **'Connecting…'**
+  String get connectConnecting;
+
+  /// No description provided for @connectDisconnected.
+  ///
+  /// In en, this message translates to:
+  /// **'Not connected. Trying again…'**
+  String get connectDisconnected;
+
+  /// No description provided for @connectStopControlling.
+  ///
+  /// In en, this message translates to:
+  /// **'Stop controlling'**
+  String get connectStopControlling;
+
+  /// No description provided for @connectNothingPlaying.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing is playing'**
+  String get connectNothingPlaying;
+
+  /// No description provided for @connectAddHere.
+  ///
+  /// In en, this message translates to:
+  /// **'Add the song playing on this device'**
+  String get connectAddHere;
+
+  /// No description provided for @connectAddHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Only YouTube songs can be added to another computer\'s queue for now.'**
+  String get connectAddHint;
+
+  /// No description provided for @connectRepeatOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Repeat off'**
+  String get connectRepeatOff;
+
+  /// No description provided for @connectRepeatAll.
+  ///
+  /// In en, this message translates to:
+  /// **'Repeat all'**
+  String get connectRepeatAll;
+
+  /// No description provided for @connectRepeatOne.
+  ///
+  /// In en, this message translates to:
+  /// **'Repeat one'**
+  String get connectRepeatOne;
+
+  /// No description provided for @connectShuffle.
+  ///
+  /// In en, this message translates to:
+  /// **'Shuffle'**
+  String get connectShuffle;
+
+  /// No description provided for @connectBadCode.
+  ///
+  /// In en, this message translates to:
+  /// **'That isn\'t a pairing code. Check it and try again.'**
+  String get connectBadCode;
+
+  /// No description provided for @connectPairUnreachable.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t reach the servers. Check your internet connection.'**
+  String get connectPairUnreachable;
+
+  /// No description provided for @connectPairNotFound.
+  ///
+  /// In en, this message translates to:
+  /// **'No answer from the computer. Check the code, and that it is still showing it.'**
+  String get connectPairNotFound;
+
+  /// No description provided for @connectPairDenied.
+  ///
+  /// In en, this message translates to:
+  /// **'The computer didn\'t allow it.'**
+  String get connectPairDenied;
+
+  /// No description provided for @connectRevokedNotice.
+  ///
+  /// In en, this message translates to:
+  /// **'This device was removed from the computer.'**
+  String get connectRevokedNotice;
+
+  /// No description provided for @notAConnectQr.
+  ///
+  /// In en, this message translates to:
+  /// **'That QR code is not a Riflay Connect pairing code.'**
+  String get notAConnectQr;
+
+  /// No description provided for @connectQrHowTo.
+  ///
+  /// In en, this message translates to:
+  /// **'In Riflay on the other device, open Riflay Connect and choose Scan QR code.'**
+  String get connectQrHowTo;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

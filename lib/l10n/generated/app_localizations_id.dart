@@ -7883,4 +7883,135 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get karaokeMusic => 'Musik';
+
+  @override
+  String get connectTitle => 'Riflay Connect';
+
+  @override
+  String get connectSummary => 'Kendalikan Riflay di komputer dari perangkat lain';
+
+  @override
+  String get connectIntro =>
+      'Putar, jeda, dan atur antrean di komputer dari ponsel atau komputer lain. Musiknya tetap di komputer itu; hanya perintah dan info lagu yang lewat internet, terenkripsi.';
+
+  @override
+  String get connectThisComputer => 'Komputer ini';
+
+  @override
+  String get connectAllow => 'Izinkan kendali jarak jauh';
+
+  @override
+  String get connectAllowSubtitle => 'Perangkat yang dipasangkan bisa mengendalikan pemutaran selama Riflay terbuka.';
+
+  @override
+  String get connectUnreachable => 'Tidak bisa menjangkau server. Mencoba lagi…';
+
+  @override
+  String get connectPairDevice => 'Pasangkan perangkat';
+
+  @override
+  String get connectPairingCode => 'Kode pairing';
+
+  @override
+  String get connectPairingHowTo =>
+      'Di perangkat lain, buka Riflay Connect lalu masukkan kode ini atau pindai kode QR. Kode hanya berlaku sekali dan kedaluwarsa dalam 5 menit.';
+
+  @override
+  String get connectPairingQrSemantics => 'Kode QR berisi kode pairing';
+
+  @override
+  String get connectCancelPairing => 'Batalkan pairing';
+
+  @override
+  String connectRequest(String name) {
+    return '$name ingin mengendalikan Riflay di komputer ini.';
+  }
+
+  @override
+  String get connectDeny => 'Jangan izinkan';
+
+  @override
+  String get connectPairedDevices => 'Perangkat terpasang';
+
+  @override
+  String get connectNoControllers => 'Belum ada perangkat yang dipasangkan.';
+
+  @override
+  String get connectActiveNow => 'Aktif sekarang';
+
+  @override
+  String get connectRevoke => 'Cabut akses';
+
+  @override
+  String get connectControlTitle => 'Kendalikan komputer';
+
+  @override
+  String get connectControlIntro =>
+      'Di komputer, buka Pengaturan › Riflay Connect, aktifkan kendali jarak jauh lalu pilih Pasangkan perangkat. Setelah itu masukkan kodenya di sini.';
+
+  @override
+  String get connectPair => 'Pasangkan';
+
+  @override
+  String get connectWaitingConfirm => 'Menunggu konfirmasi dari komputer…';
+
+  @override
+  String get connectYourComputers => 'Komputer Anda';
+
+  @override
+  String get connectForget => 'Lupakan';
+
+  @override
+  String get connectConnected => 'Terhubung';
+
+  @override
+  String get connectConnecting => 'Menghubungkan…';
+
+  @override
+  String get connectDisconnected => 'Tidak terhubung. Mencoba lagi…';
+
+  @override
+  String get connectStopControlling => 'Berhenti mengendalikan';
+
+  @override
+  String get connectNothingPlaying => 'Tidak ada yang diputar';
+
+  @override
+  String get connectAddHere => 'Tambahkan lagu yang diputar di perangkat ini';
+
+  @override
+  String get connectAddHint => 'Untuk saat ini hanya lagu YouTube yang bisa ditambahkan ke antrean komputer lain.';
+
+  @override
+  String get connectRepeatOff => 'Ulangi mati';
+
+  @override
+  String get connectRepeatAll => 'Ulangi semua';
+
+  @override
+  String get connectRepeatOne => 'Ulangi satu lagu';
+
+  @override
+  String get connectShuffle => 'Acak';
+
+  @override
+  String get connectBadCode => 'Itu bukan kode pairing. Periksa lalu coba lagi.';
+
+  @override
+  String get connectPairUnreachable => 'Tidak bisa menjangkau server. Periksa koneksi internet Anda.';
+
+  @override
+  String get connectPairNotFound => 'Komputer tidak menjawab. Periksa kodenya dan pastikan masih tampil di komputer.';
+
+  @override
+  String get connectPairDenied => 'Komputer tidak mengizinkannya.';
+
+  @override
+  String get connectRevokedNotice => 'Perangkat ini dihapus dari komputer.';
+
+  @override
+  String get notAConnectQr => 'Kode QR itu bukan kode pairing Riflay Connect.';
+
+  @override
+  String get connectQrHowTo => 'Di Riflay pada perangkat lain, buka Riflay Connect lalu pilih Pindai kode QR.';
 }

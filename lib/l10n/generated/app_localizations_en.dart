@@ -7944,4 +7944,135 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get karaokeMusic => 'Music';
+
+  @override
+  String get connectTitle => 'Riflay Connect';
+
+  @override
+  String get connectSummary => 'Control Riflay on a computer from another device';
+
+  @override
+  String get connectIntro =>
+      'Play, pause and queue songs on a computer from your phone or another computer. The music stays on that computer; only commands and what\'s playing travel over the internet, encrypted.';
+
+  @override
+  String get connectThisComputer => 'This computer';
+
+  @override
+  String get connectAllow => 'Allow remote control';
+
+  @override
+  String get connectAllowSubtitle => 'Paired devices can control playback while Riflay is open.';
+
+  @override
+  String get connectUnreachable => 'Couldn\'t reach the servers. Trying again…';
+
+  @override
+  String get connectPairDevice => 'Pair a device';
+
+  @override
+  String get connectPairingCode => 'Pairing code';
+
+  @override
+  String get connectPairingHowTo =>
+      'On the other device, open Riflay Connect and enter this code or scan the QR code. The code works once and expires in 5 minutes.';
+
+  @override
+  String get connectPairingQrSemantics => 'QR code with the pairing code';
+
+  @override
+  String get connectCancelPairing => 'Stop pairing';
+
+  @override
+  String connectRequest(String name) {
+    return '$name wants to control Riflay on this computer.';
+  }
+
+  @override
+  String get connectDeny => 'Don\'t allow';
+
+  @override
+  String get connectPairedDevices => 'Paired devices';
+
+  @override
+  String get connectNoControllers => 'No device is paired yet.';
+
+  @override
+  String get connectActiveNow => 'Active now';
+
+  @override
+  String get connectRevoke => 'Revoke access';
+
+  @override
+  String get connectControlTitle => 'Control a computer';
+
+  @override
+  String get connectControlIntro =>
+      'On the computer, open Settings › Riflay Connect, turn on remote control and choose Pair a device. Then enter its code here.';
+
+  @override
+  String get connectPair => 'Pair';
+
+  @override
+  String get connectWaitingConfirm => 'Waiting for the computer to confirm…';
+
+  @override
+  String get connectYourComputers => 'Your computers';
+
+  @override
+  String get connectForget => 'Forget';
+
+  @override
+  String get connectConnected => 'Connected';
+
+  @override
+  String get connectConnecting => 'Connecting…';
+
+  @override
+  String get connectDisconnected => 'Not connected. Trying again…';
+
+  @override
+  String get connectStopControlling => 'Stop controlling';
+
+  @override
+  String get connectNothingPlaying => 'Nothing is playing';
+
+  @override
+  String get connectAddHere => 'Add the song playing on this device';
+
+  @override
+  String get connectAddHint => 'Only YouTube songs can be added to another computer\'s queue for now.';
+
+  @override
+  String get connectRepeatOff => 'Repeat off';
+
+  @override
+  String get connectRepeatAll => 'Repeat all';
+
+  @override
+  String get connectRepeatOne => 'Repeat one';
+
+  @override
+  String get connectShuffle => 'Shuffle';
+
+  @override
+  String get connectBadCode => 'That isn\'t a pairing code. Check it and try again.';
+
+  @override
+  String get connectPairUnreachable => 'Couldn\'t reach the servers. Check your internet connection.';
+
+  @override
+  String get connectPairNotFound => 'No answer from the computer. Check the code, and that it is still showing it.';
+
+  @override
+  String get connectPairDenied => 'The computer didn\'t allow it.';
+
+  @override
+  String get connectRevokedNotice => 'This device was removed from the computer.';
+
+  @override
+  String get notAConnectQr => 'That QR code is not a Riflay Connect pairing code.';
+
+  @override
+  String get connectQrHowTo => 'In Riflay on the other device, open Riflay Connect and choose Scan QR code.';
 }
