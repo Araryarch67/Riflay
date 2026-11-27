@@ -14408,6 +14408,336 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No bookmarks yet.'**
   String get bookmarksEmpty;
+
+  /// No description provided for @connectTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Riflay Connect'**
+  String get connectTitle;
+
+  /// No description provided for @connectSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'Control Riflay on a computer from another device'**
+  String get connectSummary;
+
+  /// No description provided for @connectIntro.
+  ///
+  /// In en, this message translates to:
+  /// **'Play, pause and queue songs on a computer from your phone or another computer. The music stays on that computer; only commands and what\'s playing travel over the internet, encrypted.'**
+  String get connectIntro;
+
+  /// No description provided for @connectThisComputer.
+  ///
+  /// In en, this message translates to:
+  /// **'This computer'**
+  String get connectThisComputer;
+
+  /// No description provided for @connectAllow.
+  ///
+  /// In en, this message translates to:
+  /// **'Allow remote control'**
+  String get connectAllow;
+
+  /// No description provided for @connectAllowSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Paired devices can control playback while Riflay is open.'**
+  String get connectAllowSubtitle;
+
+  /// No description provided for @connectUnreachable.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t reach the servers. Trying again…'**
+  String get connectUnreachable;
+
+  /// No description provided for @connectPairDevice.
+  ///
+  /// In en, this message translates to:
+  /// **'Pair a device'**
+  String get connectPairDevice;
+
+  /// No description provided for @connectPairingCode.
+  ///
+  /// In en, this message translates to:
+  /// **'Pairing code'**
+  String get connectPairingCode;
+
+  /// No description provided for @connectPairingHowTo.
+  ///
+  /// In en, this message translates to:
+  /// **'On the other device, open Riflay Connect and enter this code or scan the QR code. The code works once and expires in 5 minutes.'**
+  String get connectPairingHowTo;
+
+  /// No description provided for @connectPairingQrSemantics.
+  ///
+  /// In en, this message translates to:
+  /// **'QR code with the pairing code'**
+  String get connectPairingQrSemantics;
+
+  /// No description provided for @connectCancelPairing.
+  ///
+  /// In en, this message translates to:
+  /// **'Stop pairing'**
+  String get connectCancelPairing;
+
+  /// No description provided for @connectRequest.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} wants to control Riflay on this computer.'**
+  String connectRequest(String name);
+
+  /// No description provided for @connectDeny.
+  ///
+  /// In en, this message translates to:
+  /// **'Don\'t allow'**
+  String get connectDeny;
+
+  /// No description provided for @connectPairedDevices.
+  ///
+  /// In en, this message translates to:
+  /// **'Paired devices'**
+  String get connectPairedDevices;
+
+  /// No description provided for @connectNoControllers.
+  ///
+  /// In en, this message translates to:
+  /// **'No device is paired yet.'**
+  String get connectNoControllers;
+
+  /// No description provided for @connectActiveNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Active now'**
+  String get connectActiveNow;
+
+  /// No description provided for @connectRevoke.
+  ///
+  /// In en, this message translates to:
+  /// **'Revoke access'**
+  String get connectRevoke;
+
+  /// No description provided for @connectControlTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Control a computer'**
+  String get connectControlTitle;
+
+  /// No description provided for @connectControlIntro.
+  ///
+  /// In en, this message translates to:
+  /// **'On the computer, open Settings › Riflay Connect, turn on remote control and choose Pair a device. Then enter its code here.'**
+  String get connectControlIntro;
+
+  /// No description provided for @connectPair.
+  ///
+  /// In en, this message translates to:
+  /// **'Pair'**
+  String get connectPair;
+
+  /// No description provided for @connectWaitingConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for the computer to confirm…'**
+  String get connectWaitingConfirm;
+
+  /// No description provided for @connectYourComputers.
+  ///
+  /// In en, this message translates to:
+  /// **'Your computers'**
+  String get connectYourComputers;
+
+  /// No description provided for @connectForget.
+  ///
+  /// In en, this message translates to:
+  /// **'Forget'**
+  String get connectForget;
+
+  /// No description provided for @connectConnected.
+  ///
+  /// In en, this message translates to:
+  /// **'Connected'**
+  String get connectConnected;
+
+  /// No description provided for @connectConnecting.
+  ///
+  /// In en, this message translates to:
+  /// **'Connecting…'**
+  String get connectConnecting;
+
+  /// No description provided for @connectDisconnected.
+  ///
+  /// In en, this message translates to:
+  /// **'Not connected. Trying again…'**
+  String get connectDisconnected;
+
+  /// No description provided for @connectStopControlling.
+  ///
+  /// In en, this message translates to:
+  /// **'Stop controlling'**
+  String get connectStopControlling;
+
+  /// No description provided for @connectNothingPlaying.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing is playing'**
+  String get connectNothingPlaying;
+
+  /// No description provided for @connectAddHere.
+  ///
+  /// In en, this message translates to:
+  /// **'Add the song playing on this device'**
+  String get connectAddHere;
+
+  /// No description provided for @connectAddHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Only YouTube songs can be added to another computer\'s queue for now.'**
+  String get connectAddHint;
+
+  /// No description provided for @connectRepeatOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Repeat off'**
+  String get connectRepeatOff;
+
+  /// No description provided for @connectRepeatAll.
+  ///
+  /// In en, this message translates to:
+  /// **'Repeat all'**
+  String get connectRepeatAll;
+
+  /// No description provided for @connectRepeatOne.
+  ///
+  /// In en, this message translates to:
+  /// **'Repeat one'**
+  String get connectRepeatOne;
+
+  /// No description provided for @connectShuffle.
+  ///
+  /// In en, this message translates to:
+  /// **'Shuffle'**
+  String get connectShuffle;
+
+  /// No description provided for @connectBadCode.
+  ///
+  /// In en, this message translates to:
+  /// **'That isn\'t a pairing code. Check it and try again.'**
+  String get connectBadCode;
+
+  /// No description provided for @connectPairUnreachable.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t reach the servers. Check your internet connection.'**
+  String get connectPairUnreachable;
+
+  /// No description provided for @connectPairNotFound.
+  ///
+  /// In en, this message translates to:
+  /// **'No answer from the computer. Check the code, and that it is still showing it.'**
+  String get connectPairNotFound;
+
+  /// No description provided for @connectPairDenied.
+  ///
+  /// In en, this message translates to:
+  /// **'The computer didn\'t allow it.'**
+  String get connectPairDenied;
+
+  /// No description provided for @connectRevokedNotice.
+  ///
+  /// In en, this message translates to:
+  /// **'This device was removed from the computer.'**
+  String get connectRevokedNotice;
+
+  /// No description provided for @notAConnectQr.
+  ///
+  /// In en, this message translates to:
+  /// **'That QR code is not a Riflay Connect pairing code.'**
+  String get notAConnectQr;
+
+  /// No description provided for @connectQrHowTo.
+  ///
+  /// In en, this message translates to:
+  /// **'In Riflay on the other device, open Riflay Connect and choose Scan QR code.'**
+  String get connectQrHowTo;
+
+  /// No description provided for @connectShareTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Shared music'**
+  String get connectShareTitle;
+
+  /// No description provided for @connectShareSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'Share albums, artists and playlists with a paired device'**
+  String get connectShareSummary;
+
+  /// No description provided for @connectShareIntro.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick what to share. Only names, artists, years and song titles are sent, never files or where they are stored. The other person can look but not change anything, and you can stop sharing at any time. Both devices must be connected.'**
+  String get connectShareIntro;
+
+  /// No description provided for @connectShareByYou.
+  ///
+  /// In en, this message translates to:
+  /// **'Shared by you'**
+  String get connectShareByYou;
+
+  /// No description provided for @connectShareWithYou.
+  ///
+  /// In en, this message translates to:
+  /// **'Shared with you'**
+  String get connectShareWithYou;
+
+  /// No description provided for @connectShareNothingYet.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing is shared with you yet.'**
+  String get connectShareNothingYet;
+
+  /// No description provided for @connectShareNoneOnDevice.
+  ///
+  /// In en, this message translates to:
+  /// **'There are no albums, artists or playlists on this device to share.'**
+  String get connectShareNoneOnDevice;
+
+  /// No description provided for @connectShareOffline.
+  ///
+  /// In en, this message translates to:
+  /// **'Not connected. Showing what was received last.'**
+  String get connectShareOffline;
+
+  /// No description provided for @connectShareLoading.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading songs…'**
+  String get connectShareLoading;
+
+  /// No description provided for @connectShareSaveCopy.
+  ///
+  /// In en, this message translates to:
+  /// **'Save a copy'**
+  String get connectShareSaveCopy;
+
+  /// No description provided for @connectShareCopies.
+  ///
+  /// In en, this message translates to:
+  /// **'Your copies'**
+  String get connectShareCopies;
+
+  /// No description provided for @connectShareCopiesHint.
+  ///
+  /// In en, this message translates to:
+  /// **'A copy is yours to rename or remove. It no longer follows the person who shared it.'**
+  String get connectShareCopiesHint;
+
+  /// No description provided for @connectShareReadOnly.
+  ///
+  /// In en, this message translates to:
+  /// **'Shared by {name}. You can look, not change.'**
+  String connectShareReadOnly(String name);
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {
