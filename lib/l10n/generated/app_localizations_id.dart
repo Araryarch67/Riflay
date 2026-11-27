@@ -5712,6 +5712,17 @@ class AppLocalizationsId extends AppLocalizations {
       'Mode bit-perfect aktif, jadi equalizer dilewati. Matikan di Pengaturan › Suara › Output & kualitas.';
 
   @override
+  String get eqCompareA => 'A · EQ nyala';
+
+  @override
+  String get eqCompareB => 'B · EQ mati';
+
+  @override
+  String eqCompareNote(String db) {
+    return 'Bandingkan dengan volume yang sama: B diturunkan $db dB.';
+  }
+
+  @override
   String get eqHint => 'Pilih preset atau geser slider. Ketuk frekuensi untuk menyetelnya.';
 
   @override

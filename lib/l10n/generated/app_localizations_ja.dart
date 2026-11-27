@@ -5583,6 +5583,17 @@ class AppLocalizationsJa extends AppLocalizations {
   String get eqBitPerfectNote => 'Bit-perfect モードがオンなので、イコライザーは使われない。「設定 › サウンド › 出力と音質」でオフにしてね。';
 
   @override
+  String get eqCompareA => 'A · EQオン';
+
+  @override
+  String get eqCompareB => 'B · EQオフ';
+
+  @override
+  String eqCompareNote(String db) {
+    return '同じ音量で比較：Bを$db dB下げている。';
+  }
+
+  @override
   String get eqHint => 'プリセットを選ぶか、スライダーをドラッグしてね。周波数をタップすると細かく調整できる。';
 
   @override

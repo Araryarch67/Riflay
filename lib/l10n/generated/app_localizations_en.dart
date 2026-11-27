@@ -5762,6 +5762,17 @@ class AppLocalizationsEn extends AppLocalizations {
       'Bit-perfect mode is on, so the equalizer is bypassed. Turn it off in Settings › Sound › Output & quality.';
 
   @override
+  String get eqCompareA => 'A · EQ on';
+
+  @override
+  String get eqCompareB => 'B · EQ off';
+
+  @override
+  String eqCompareNote(String db) {
+    return 'Compare with the same loudness: B is turned down $db dB.';
+  }
+
+  @override
   String get eqHint => 'Pick a preset or drag the sliders. Tap a frequency to fine-tune it.';
 
   @override

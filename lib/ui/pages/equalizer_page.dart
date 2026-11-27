@@ -101,6 +101,30 @@ class EqualizerPanel extends StatelessWidget {
                 ),
                 const SizedBox(height: 12),
                 Text(audio.bitPerfect ? tr.eqBitPerfectNote : tr.eqHint, style: muted),
+                // A/B: the EQ against the song as it is, at matched loudness.
+                if (audio.eqEnabled && !audio.bitPerfect) ...[
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      SegmentedButton<bool>(
+                        showSelectedIcon: false,
+                        segments: [
+                          ButtonSegment(value: false, label: Text(tr.eqCompareA)),
+                          ButtonSegment(value: true, label: Text(tr.eqCompareB)),
+                        ],
+                        selected: {audio.abBypass},
+                        onSelectionChanged: (v) => audio.setAbBypass(v.first),
+                      ),
+                      if (audio.abBypass && audio.abTrim < 0)
+                        Expanded(
+                          child: Padding(
+                            padding: const EdgeInsets.only(left: 12),
+                            child: Text(tr.eqCompareNote(audio.abTrim.abs().toStringAsFixed(1)), style: muted),
+                          ),
+                        ),
+                    ],
+                  ),
+                ],
               ],
             ),
           ),
@@ -133,7 +157,7 @@ class EqualizerPanel extends StatelessWidget {
               children: [
                 AnimatedOpacity(
                   duration: const Duration(milliseconds: 200),
-                  opacity: on ? 1 : 0.45,
+                  opacity: on && !audio.abBypass ? 1 : 0.45,
                   child: SizedBox(
                     height: wide ? 300 : 260,
                     child: Row(
@@ -274,7 +298,7 @@ class _BandSlider extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
-    final enabled = audio.eqEnabled && !audio.bitPerfect;
+    final enabled = audio.eqEnabled && !audio.bitPerfect && !audio.abBypass;
     return Column(
       children: [
         Text(
