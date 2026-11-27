@@ -1096,6 +1096,11 @@ class AudioEngine extends ChangeNotifier {
       pitch = ((j['pitch'] as num?)?.round() ?? pitch).clamp(-12, 12);
       virtualSpeakers = j['virtualSpeakers'] as bool? ?? virtualSpeakers;
       surroundUpmix = j['surroundUpmix'] as bool? ?? surroundUpmix;
+      bassManagement = j['bassManagement'] as bool? ?? bassManagement;
+      bassCrossover = ((j['bassCrossover'] as num?)?.toDouble() ?? defaultBassCrossover).clamp(
+        minBassCrossover,
+        maxBassCrossover,
+      );
       passthrough = j['passthrough'] as bool? ?? passthrough;
       crossfeedRange = ((j['crossfeedRange'] as num?)?.toDouble() ?? 0.5).clamp(0, 1);
       virtualSpeakerGain = ((j['virtualSpeakerGain'] as num?)?.toDouble() ?? 0).clamp(-12, 6);
@@ -1191,6 +1196,8 @@ class AudioEngine extends ChangeNotifier {
       'crossfeedRange': crossfeedRange,
       'virtualSpeakerGain': virtualSpeakerGain,
       'surroundUpmix': surroundUpmix,
+      'bassManagement': bassManagement,
+      'bassCrossover': bassCrossover,
       'passthrough': passthrough,
       'convolutionGain': convolutionGain,
       'mono': mono.name,
@@ -1291,6 +1298,8 @@ class AudioEngine extends ChangeNotifier {
   }
 
   Future<void> setSurroundUpmix(bool v) => _set(() => surroundUpmix = v);
+  Future<void> setBassManagement(bool v) => _set(() => bassManagement = v);
+  Future<void> setBassCrossover(double v) => _set(() => bassCrossover = v.clamp(minBassCrossover, maxBassCrossover));
   Future<void> setPassthrough(bool v) => _set(() => passthrough = v, reopen: true);
 
   /// [passthrough] where it can reach a receiver: not through Direct USB's pipe, nor in a browser.
@@ -1528,6 +1537,35 @@ class AudioEngine extends ChangeNotifier {
   static const upmixFilter =
       'pan=7.1|FL=c0|FR=c1|SL=0.35*c0-0.35*c1|SR=0.35*c1-0.35*c0|BL=0.25*c0-0.25*c1|BR=0.25*c1-0.25*c0';
 
+  /// Bass management: the sound below [bassCrossover] goes to the subwoofer (LFE), the main speakers keep the rest.
+  bool bassManagement = false;
+  double bassCrossover = defaultBassCrossover;
+  static const defaultBassCrossover = 80.0;
+  static const minBassCrossover = 40.0, maxBassCrossover = 200.0;
+
+  /// It adds an LFE channel (2.1), which only a stereo song can be split into: Virtual speakers and mono
+  /// leave two channels, a 5.1 / 7.1 song already has its own LFE, and bit-perfect and Direct USB take the
+  /// song untouched. Karaoke's 4-channel stems are stereo again by the time this runs.
+  bool get bassManagementActive =>
+      bassManagement &&
+      !bitPerfect &&
+      !directUsbActive &&
+      !monoActive &&
+      !virtualSpeakersActive &&
+      ((sourceChannels ?? 2) <= 2 || karaokeActive);
+
+  /// Stereo into 2.1 at [hz]: Linkwitz-Riley 4th order (two cascaded 2nd-order Butterworth), so the two sides add
+  /// back to a flat response at the crossover. The sub gets left and right at half each, so it can't clip.
+  @visibleForTesting
+  static String bassManagementFilter(double hz) {
+    final f = hz.clamp(minBassCrossover, maxBassCrossover).toStringAsFixed(1);
+    final lp = 'lowpass=f=$f:poles=2', hp = 'highpass=f=$f:poles=2';
+    return 'aformat=channel_layouts=stereo,asplit[a][b];'
+        '[a]$hp,$hp[main];'
+        '[b]pan=mono|c0=0.5*c0+0.5*c1,$lp,$lp[sub];'
+        '[main][sub]join=inputs=2:channel_layout=2.1:map=0.0-FL|0.1-FR|1.0-LFE';
+  }
+
   /// Virtual speakers already feed each ear the other side, the way crossfeed does.
   bool get crossfeedActive => crossfeed > 0 && !bitPerfect && !monoActive && !virtualSpeakersActive;
   bool get convolutionActive => convolution && impulsePath != null && !bitPerfect;
@@ -1668,6 +1706,8 @@ class AudioEngine extends ChangeNotifier {
         '@crossfeed:lavfi=[crossfeed=strength=${n(0.1 + crossfeed * 0.6)}:range=${n(crossfeedRange)}]',
       // After the stereo stages: what's left is one channel.
       if (monoActive) _monoChain,
+      // After every stereo-only stage (it makes a third channel), before the gain stages.
+      if (bassManagementActive) _lavfi('bass', bassManagementFilter(bassCrossover)),
       // After the stages that add gain, so none can clip what it lowered.
       if (_volumeActive) '@volume:lavfi=[volume=volume=${_volume.toStringAsFixed(6)}:precision=double]',
       // Past the volume: at a lower level nothing reaches full scale, and it has nothing to do.

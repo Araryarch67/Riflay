@@ -7309,6 +7309,19 @@ class AppLocalizationsId extends AppLocalizations {
       'Lagu stereo mengisi ruang 7.1 di sekelilingmu: vokal tetap di depan, suasananya pindah ke samping dan belakang. Lagu 5.1 / 7.1, termasuk Dolby Atmos, selalu dapat tiap kanal di tempatnya.';
 
   @override
+  String get bassManagement => 'Bass management';
+
+  @override
+  String get bassManagementSubtitle =>
+      'Mengirim bass di bawah crossover ke subwoofer dan sisanya ke speaker utama. Butuh output dengan kanal subwoofer (2.1 atau lebih); hanya untuk lagu stereo.';
+
+  @override
+  String get bassCrossover => 'Frekuensi crossover';
+
+  @override
+  String get bassCrossoverBody => 'Suara di bawah frekuensi ini dikirim ke subwoofer. 80 Hz adalah pilihan yang umum.';
+
+  @override
   String get passthrough => 'Dolby Atmos';
 
   @override

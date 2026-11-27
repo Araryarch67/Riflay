@@ -13197,6 +13197,30 @@ abstract class AppLocalizations {
   /// **'Stereo songs fill a 7.1 room around you: the voice stays in front, the space moves to the sides and back. 5.1 / 7.1 songs, Dolby Atmos too, always get each channel in its place.'**
   String get surroundUpmixSubtitle;
 
+  /// No description provided for @bassManagement.
+  ///
+  /// In en, this message translates to:
+  /// **'Bass management'**
+  String get bassManagement;
+
+  /// No description provided for @bassManagementSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Sends the bass below the crossover to the subwoofer and the rest to the main speakers. Needs an output with a subwoofer channel (2.1 or more); stereo songs only.'**
+  String get bassManagementSubtitle;
+
+  /// No description provided for @bassCrossover.
+  ///
+  /// In en, this message translates to:
+  /// **'Crossover frequency'**
+  String get bassCrossover;
+
+  /// No description provided for @bassCrossoverBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Below this, the sound goes to the subwoofer. 80 Hz is the usual choice.'**
+  String get bassCrossoverBody;
+
   /// No description provided for @passthrough.
   ///
   /// In en, this message translates to:
