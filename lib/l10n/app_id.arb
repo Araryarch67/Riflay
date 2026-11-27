@@ -2361,5 +2361,15 @@
   "karaokeFailed": "Lagu ini gagal dipisah.",
   "karaokeUnavailable": "Karaoke belum tersedia di iPhone dan iPad.",
   "karaokeVocals": "Vokal",
-  "karaokeMusic": "Musik"
+  "karaokeMusic": "Musik",
+  "audiobook": "Buku audio / podcast",
+  "audiobookOn": "Ingat posisi dan kecepatan",
+  "audiobookHint": "Dilanjutkan dari tempat berhenti, dengan kecepatan yang kamu atur untuk buku ini.",
+  "audiobookSpeed": "Kecepatan buku ini",
+  "audiobookBack": "Mundur 15 dtk",
+  "audiobookForward": "Maju 30 dtk",
+  "bookmarks": "Bookmark",
+  "bookmarkAdd": "Bookmark di sini",
+  "bookmarkNote": "Catatan (opsional)",
+  "bookmarksEmpty": "Belum ada bookmark."
 }

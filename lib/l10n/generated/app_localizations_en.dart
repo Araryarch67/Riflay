@@ -7944,4 +7944,34 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get karaokeMusic => 'Music';
+
+  @override
+  String get audiobook => 'Audiobook / podcast';
+
+  @override
+  String get audiobookOn => 'Remember place and speed';
+
+  @override
+  String get audiobookHint => 'Picks up where you stopped, at the speed you set for this book.';
+
+  @override
+  String get audiobookSpeed => 'Speed for this book';
+
+  @override
+  String get audiobookBack => 'Back 15 s';
+
+  @override
+  String get audiobookForward => 'Forward 30 s';
+
+  @override
+  String get bookmarks => 'Bookmarks';
+
+  @override
+  String get bookmarkAdd => 'Bookmark here';
+
+  @override
+  String get bookmarkNote => 'Note (optional)';
+
+  @override
+  String get bookmarksEmpty => 'No bookmarks yet.';
 }

@@ -7883,4 +7883,34 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get karaokeMusic => 'Musik';
+
+  @override
+  String get audiobook => 'Buku audio / podcast';
+
+  @override
+  String get audiobookOn => 'Ingat posisi dan kecepatan';
+
+  @override
+  String get audiobookHint => 'Dilanjutkan dari tempat berhenti, dengan kecepatan yang kamu atur untuk buku ini.';
+
+  @override
+  String get audiobookSpeed => 'Kecepatan buku ini';
+
+  @override
+  String get audiobookBack => 'Mundur 15 dtk';
+
+  @override
+  String get audiobookForward => 'Maju 30 dtk';
+
+  @override
+  String get bookmarks => 'Bookmark';
+
+  @override
+  String get bookmarkAdd => 'Bookmark di sini';
+
+  @override
+  String get bookmarkNote => 'Catatan (opsional)';
+
+  @override
+  String get bookmarksEmpty => 'Belum ada bookmark.';
 }

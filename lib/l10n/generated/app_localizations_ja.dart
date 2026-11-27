@@ -7700,4 +7700,34 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get karaokeMusic => '伴奏';
+
+  @override
+  String get audiobook => 'オーディオブック / ポッドキャスト';
+
+  @override
+  String get audiobookOn => '位置と速度を記憶';
+
+  @override
+  String get audiobookHint => '止めた場所から、この本に設定した速度で再開します。';
+
+  @override
+  String get audiobookSpeed => 'この本の速度';
+
+  @override
+  String get audiobookBack => '15秒戻る';
+
+  @override
+  String get audiobookForward => '30秒進む';
+
+  @override
+  String get bookmarks => 'ブックマーク';
+
+  @override
+  String get bookmarkAdd => 'ここにブックマーク';
+
+  @override
+  String get bookmarkNote => 'メモ（任意）';
+
+  @override
+  String get bookmarksEmpty => 'ブックマークはまだありません。';
 }

@@ -14198,6 +14198,66 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Music'**
   String get karaokeMusic;
+
+  /// No description provided for @audiobook.
+  ///
+  /// In en, this message translates to:
+  /// **'Audiobook / podcast'**
+  String get audiobook;
+
+  /// No description provided for @audiobookOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Remember place and speed'**
+  String get audiobookOn;
+
+  /// No description provided for @audiobookHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Picks up where you stopped, at the speed you set for this book.'**
+  String get audiobookHint;
+
+  /// No description provided for @audiobookSpeed.
+  ///
+  /// In en, this message translates to:
+  /// **'Speed for this book'**
+  String get audiobookSpeed;
+
+  /// No description provided for @audiobookBack.
+  ///
+  /// In en, this message translates to:
+  /// **'Back 15 s'**
+  String get audiobookBack;
+
+  /// No description provided for @audiobookForward.
+  ///
+  /// In en, this message translates to:
+  /// **'Forward 30 s'**
+  String get audiobookForward;
+
+  /// No description provided for @bookmarks.
+  ///
+  /// In en, this message translates to:
+  /// **'Bookmarks'**
+  String get bookmarks;
+
+  /// No description provided for @bookmarkAdd.
+  ///
+  /// In en, this message translates to:
+  /// **'Bookmark here'**
+  String get bookmarkAdd;
+
+  /// No description provided for @bookmarkNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Note (optional)'**
+  String get bookmarkNote;
+
+  /// No description provided for @bookmarksEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No bookmarks yet.'**
+  String get bookmarksEmpty;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {
