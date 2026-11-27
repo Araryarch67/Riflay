@@ -23,7 +23,6 @@ import 'now_playing_page.dart' show BlurredCover;
 import 'player_common.dart';
 import 'player_glass.dart';
 import 'player_parts.dart';
-import 'player_styles_page.dart';
 import '../../services/language.dart';
 
 /// Desktop expanded player: the cover art (and lyrics beside it, if asked)
@@ -172,159 +171,155 @@ class _FullScreenPlayerState extends State<FullScreenPlayer> {
       track: track,
       builder: (context, accent) => PlayerGlassBackdrop(
         color: AppColors.sink(accent, 0.75),
-        child: GestureDetector(
-          // Holding the player opens Styles, the presets side by side.
-          onLongPress: () => openPlayerStyles(context),
-          child: AnimatedContainer(
-            duration: LayoutPrefs.dur(const Duration(milliseconds: 500)),
-            color: AppColors.sink(accent, 0.75),
-            child: Stack(
-              children: [
-                // Music video: the blurred cover first, the video over it once it plays, then a dimming for the text.
-                // Lightweight keeps the plain colour.
-                if (Appearance.instance.nowPlaying == NowPlayingBackground.video && !LayoutPrefs.lightweight) ...[
-                  if (track != null && LayoutPrefs.instance.playerCover != PlayerCover.logo)
-                    Positioned.fill(
-                      child: _UnlessVideo(
-                        track: track,
-                        child: RepaintBoundary(child: BlurredCover(track: track)),
-                      ),
-                    ),
-                  Positioned.fill(child: VideoBackground(track: track)),
+        child: AnimatedContainer(
+          duration: LayoutPrefs.dur(const Duration(milliseconds: 500)),
+          color: AppColors.sink(accent, 0.75),
+          child: Stack(
+            children: [
+              // Music video: the blurred cover first, the video over it once it plays, then a dimming for the text.
+              // Lightweight keeps the plain colour.
+              if (Appearance.instance.nowPlaying == NowPlayingBackground.video && !LayoutPrefs.lightweight) ...[
+                if (track != null && LayoutPrefs.instance.playerCover != PlayerCover.logo)
                   Positioned.fill(
-                    child: IgnorePointer(
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            colors: [
-                              AppColors.solidBackground.withValues(alpha: 0.55),
-                              AppColors.solidBackground.withValues(alpha: 0.82),
-                              AppColors.solidBackground,
-                            ],
-                            stops: const [0, 0.6, 1],
-                          ),
-                        ),
-                      ),
+                    child: _UnlessVideo(
+                      track: track,
+                      child: RepaintBoundary(child: BlurredCover(track: track)),
                     ),
                   ),
-                ],
-                Padding(
-                  // Top: the title bar that slides in over the window; the picture behind still fills it.
-                  padding: EdgeInsets.only(
-                    top: MediaQuery.paddingOf(context).top,
-                    bottom: MediaQuery.paddingOf(context).bottom,
-                  ),
-                  child: Column(
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(32, 20, 20, 0),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: PlayerFromLabel(from: from, album: track?.album, classic: true),
-                            ),
-                            // Queue, volume etc. are in the player bar right below.
-                            // Always there, even with nothing playing: Lyrics is never hidden.
-                            _PanelButtons(hasTrack: track != null),
-                            const SizedBox(width: 4),
-                            ValueListenableBuilder(
-                              valueListenable: windowFullScreen,
-                              builder: (context, full, _) => IconButton(
-                                tooltip: full ? tr.exitFullScreen : tr.closeExpandedPlayer,
-                                onPressed: () => showExpandedPlayer(false),
-                                icon: Icon(full ? Icons.fullscreen_exit_rounded : Icons.close_fullscreen_rounded),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Expanded(
-                        child: track == null
-                            ? Center(child: Text(tr.nothingIsPlaying, style: text.titleMedium))
-                            : ListenableBuilder(
-                                // The Song / Video switch and the room it takes.
-                                listenable: Listenable.merge([
-                                  expandedPlayerPanel,
-                                  VideoMode.instance,
-                                  LayoutPrefs.instance,
-                                ]),
-                                builder: (context, _) => LayoutBuilder(
-                                  builder: (context, box) {
-                                    final panel = expandedPlayerPanel.value;
-                                    if (panel == ExpandedPanel.none) {
-                                      return _cover(context, track, next, box, widthShare: 0.5);
-                                    }
-                                    final side = panel == ExpandedPanel.lyrics
-                                        ? Padding(
-                                            padding: const EdgeInsets.only(top: 8),
-                                            child: Column(
-                                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                                              children: [
-                                                Align(
-                                                  alignment: Alignment.centerRight,
-                                                  child: Padding(
-                                                    padding: const EdgeInsets.only(right: 20),
-                                                    child: LyricsExtrasButtons(key: ValueKey(track.id), track: track),
-                                                  ),
-                                                ),
-                                                Expanded(child: LyricsView(track: track)),
-                                              ],
-                                            ),
-                                          )
-                                        // Scrolls when the bands and presets don't fit the height.
-                                        : const SingleChildScrollView(
-                                            padding: EdgeInsets.only(top: 8, bottom: 16),
-                                            child: EqualizerPanel(pad: 20),
-                                          );
-                                    // Too narrow for both: the panel alone.
-                                    if (box.maxWidth < 900) return side;
-                                    return Row(
-                                      children: [
-                                        Expanded(
-                                          flex: 5,
-                                          child: LayoutBuilder(
-                                            builder: (context, half) =>
-                                                _cover(context, track, next, half, widthShare: 0.8),
-                                          ),
-                                        ),
-                                        Expanded(flex: 6, child: side),
-                                      ],
-                                    );
-                                  },
-                                ),
-                              ),
-                      ),
-                      if (track != null)
-                        const Padding(
-                          padding: EdgeInsets.fromLTRB(32, 8, 32, 16),
-                          child: AudioVisualizer(linearOnly: true),
-                        ),
-                    ],
-                  ),
-                ),
-                // Tells first-timers how to get out, then fades away.
-                Positioned(
-                  top: 20,
-                  left: 0,
-                  right: 0,
+                Positioned.fill(child: VideoBackground(track: track)),
+                Positioned.fill(
                   child: IgnorePointer(
-                    child: Center(
-                      child: AnimatedOpacity(
-                        opacity: _hint && windowFullScreen.value ? 1 : 0,
-                        duration: const Duration(milliseconds: 400),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                          decoration: BoxDecoration(color: AppColors.menu, borderRadius: BorderRadius.circular(8)),
-                          child: Text(tr.pressEscToExit, style: text.bodyMedium),
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            AppColors.solidBackground.withValues(alpha: 0.55),
+                            AppColors.solidBackground.withValues(alpha: 0.82),
+                            AppColors.solidBackground,
+                          ],
+                          stops: const [0, 0.6, 1],
                         ),
                       ),
                     ),
                   ),
                 ),
               ],
-            ),
+              Padding(
+                // Top: the title bar that slides in over the window; the picture behind still fills it.
+                padding: EdgeInsets.only(
+                  top: MediaQuery.paddingOf(context).top,
+                  bottom: MediaQuery.paddingOf(context).bottom,
+                ),
+                child: Column(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(32, 20, 20, 0),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: PlayerFromLabel(from: from, album: track?.album, classic: true),
+                          ),
+                          // Queue, volume etc. are in the player bar right below.
+                          // Always there, even with nothing playing: Lyrics is never hidden.
+                          _PanelButtons(hasTrack: track != null),
+                          const SizedBox(width: 4),
+                          ValueListenableBuilder(
+                            valueListenable: windowFullScreen,
+                            builder: (context, full, _) => IconButton(
+                              tooltip: full ? tr.exitFullScreen : tr.closeExpandedPlayer,
+                              onPressed: () => showExpandedPlayer(false),
+                              icon: Icon(full ? Icons.fullscreen_exit_rounded : Icons.close_fullscreen_rounded),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Expanded(
+                      child: track == null
+                          ? Center(child: Text(tr.nothingIsPlaying, style: text.titleMedium))
+                          : ListenableBuilder(
+                              // The Song / Video switch and the room it takes.
+                              listenable: Listenable.merge([
+                                expandedPlayerPanel,
+                                VideoMode.instance,
+                                LayoutPrefs.instance,
+                              ]),
+                              builder: (context, _) => LayoutBuilder(
+                                builder: (context, box) {
+                                  final panel = expandedPlayerPanel.value;
+                                  if (panel == ExpandedPanel.none) {
+                                    return _cover(context, track, next, box, widthShare: 0.5);
+                                  }
+                                  final side = panel == ExpandedPanel.lyrics
+                                      ? Padding(
+                                          padding: const EdgeInsets.only(top: 8),
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                                            children: [
+                                              Align(
+                                                alignment: Alignment.centerRight,
+                                                child: Padding(
+                                                  padding: const EdgeInsets.only(right: 20),
+                                                  child: LyricsExtrasButtons(key: ValueKey(track.id), track: track),
+                                                ),
+                                              ),
+                                              Expanded(child: LyricsView(track: track)),
+                                            ],
+                                          ),
+                                        )
+                                      // Scrolls when the bands and presets don't fit the height.
+                                      : const SingleChildScrollView(
+                                          padding: EdgeInsets.only(top: 8, bottom: 16),
+                                          child: EqualizerPanel(pad: 20),
+                                        );
+                                  // Too narrow for both: the panel alone.
+                                  if (box.maxWidth < 900) return side;
+                                  return Row(
+                                    children: [
+                                      Expanded(
+                                        flex: 5,
+                                        child: LayoutBuilder(
+                                          builder: (context, half) =>
+                                              _cover(context, track, next, half, widthShare: 0.8),
+                                        ),
+                                      ),
+                                      Expanded(flex: 6, child: side),
+                                    ],
+                                  );
+                                },
+                              ),
+                            ),
+                    ),
+                    if (track != null)
+                      const Padding(
+                        padding: EdgeInsets.fromLTRB(32, 8, 32, 16),
+                        child: AudioVisualizer(linearOnly: true),
+                      ),
+                  ],
+                ),
+              ),
+              // Tells first-timers how to get out, then fades away.
+              Positioned(
+                top: 20,
+                left: 0,
+                right: 0,
+                child: IgnorePointer(
+                  child: Center(
+                    child: AnimatedOpacity(
+                      opacity: _hint && windowFullScreen.value ? 1 : 0,
+                      duration: const Duration(milliseconds: 400),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                        decoration: BoxDecoration(color: AppColors.menu, borderRadius: BorderRadius.circular(8)),
+                        child: Text(tr.pressEscToExit, style: text.bodyMedium),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ),

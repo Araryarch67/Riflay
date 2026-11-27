@@ -17,8 +17,9 @@ import '../widgets/top_bar_surface.dart';
 import 'now_playing_page.dart';
 
 /// Opens [PlayerStylesPage] over Now Playing (holding the player).
+/// Styles are the phone player's looks: in a wide window (the desktop's player) it opens nothing.
 Future<void> openPlayerStyles(BuildContext context) async {
-  if (LivePreview.of(context)) return;
+  if (LivePreview.of(context) || !ShellScope.of(context).compact) return;
   // Over the whole window, with the player's and the shell's scopes carried along for the Now Playing it draws.
   final shell = ShellScope.of(context);
   final player = PlayerScope.read(context);
