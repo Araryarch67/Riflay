@@ -10,6 +10,8 @@ import '../widgets/page_scaffold.dart';
 import '../../services/language.dart';
 import '../widgets/app_dialog.dart';
 import '../widgets/auto_eq_picker.dart';
+import '../../services/layout_prefs.dart';
+import 'sound_settings.dart' show SettingsCard, SettingsIcon;
 import 'audio_lab_page.dart';
 
 /// Ten-band equalizer with presets. Each band's frequency and width can be
@@ -27,8 +29,10 @@ class EqualizerPage extends StatelessWidget {
   }
 }
 
-/// The equalizer itself (switch, presets, bands, reset), shared by [EqualizerPage] and the
-/// expanded player's side panel. It listens to the audio engine on its own and does not scroll.
+/// The equalizer itself, shared by [EqualizerPage] and the expanded player's side panel, laid out as Material 3
+/// settings: a tonal card with the switch and what plays, the presets, the bands on a card of their own (a 0 dB
+/// line, the scale, each band's gain over it, Reset at its foot), and the tools as the settings pages' grouped list.
+/// It listens to the audio engine on its own and does not scroll.
 class EqualizerPanel extends StatelessWidget {
   const EqualizerPanel({super.key, this.pad = 24});
 
@@ -37,118 +41,225 @@ class EqualizerPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final audio = PlayerScope.of(context).audio;
-    final text = Theme.of(context).textTheme;
     return ListenableBuilder(
       listenable: audio,
-      builder: (context, _) => Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Padding(
-            padding: EdgeInsets.fromLTRB(pad, 0, pad, 4),
-            child: Row(
+      builder: (context, _) =>
+          LayoutBuilder(builder: (context, box) => _panel(context, audio, wide: box.maxWidth >= 600)),
+    );
+  }
+
+  Widget _panel(BuildContext context, AudioEngine audio, {required bool wide}) {
+    final text = Theme.of(context).textTheme;
+    final scheme = Theme.of(context).colorScheme;
+    final on = audio.eqEnabled && !audio.bitPerfect;
+    final muted = text.bodyMedium?.copyWith(color: scheme.onSurfaceVariant);
+    final now = !audio.eqEnabled
+        ? tr.off
+        : audio.eqPreset == 'Custom'
+        ? (audio.eqProfile ?? tr.custom)
+        : eqPresetLabel(audio.eqPreset);
+    final chips = [
+      for (final name in eqPresets.keys)
+        ChoiceChip(
+          label: Text(eqPresetLabel(name)),
+          selected: audio.eqEnabled && audio.eqPreset == name,
+          onSelected: audio.bitPerfect ? null : (_) => audio.applyPreset(name),
+        ),
+      if (audio.eqPreset == 'Custom')
+        ChoiceChip(label: Text(audio.eqProfile ?? tr.custom), selected: audio.eqEnabled, onSelected: (_) {}),
+    ];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // The switch, and what plays now.
+        Padding(
+          padding: EdgeInsets.symmetric(horizontal: pad),
+          child: _Surface(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Expanded(
-                  child: Text(tr.equalizer, style: text.headlineMedium?.copyWith(fontWeight: FontWeight.w800)),
+                Row(
+                  children: [
+                    const SettingsIcon(Icons.equalizer_rounded),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(tr.equalizer, style: text.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
+                          Text(
+                            now,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: text.bodyMedium?.copyWith(color: on ? scheme.primary : scheme.onSurfaceVariant),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Switch(value: audio.eqEnabled, onChanged: audio.bitPerfect ? null : audio.setEqEnabled),
+                  ],
                 ),
-                Switch(value: audio.eqEnabled, onChanged: audio.bitPerfect ? null : audio.setEqEnabled),
+                const SizedBox(height: 12),
+                Text(audio.bitPerfect ? tr.eqBitPerfectNote : tr.eqHint, style: muted),
               ],
             ),
           ),
-          Padding(
-            padding: EdgeInsets.fromLTRB(pad, 0, pad, 16),
-            child: Text(
-              audio.bitPerfect ? tr.eqBitPerfectNote : tr.eqHint,
-              style: text.bodyMedium?.copyWith(color: AppColors.textSecondary),
-            ),
-          ),
+        ),
+        _Subheader(tr.eqPresets, pad: pad),
+        // One row a phone scrolls sideways; a wide panel has room for them all.
+        if (wide)
           Padding(
             padding: EdgeInsets.symmetric(horizontal: pad),
-            child: Wrap(
-              spacing: 8,
-              runSpacing: 8,
+            child: Wrap(spacing: 8, runSpacing: 8, children: chips),
+          )
+        else
+          SizedBox(
+            height: 40,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              padding: EdgeInsets.symmetric(horizontal: pad),
+              itemCount: chips.length,
+              separatorBuilder: (_, _) => const SizedBox(width: 8),
+              itemBuilder: (_, i) => chips[i],
+            ),
+          ),
+        _Subheader(tr.eqBands, pad: pad),
+        Padding(
+          padding: EdgeInsets.symmetric(horizontal: pad),
+          child: _Surface(
+            padding: const EdgeInsets.fromLTRB(8, 16, 16, 12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                for (final name in eqPresets.keys)
-                  ChoiceChip(
-                    label: Text(eqPresetLabel(name)),
-                    selected: audio.eqEnabled && audio.eqPreset == name,
-                    onSelected: audio.bitPerfect ? null : (_) => audio.applyPreset(name),
+                AnimatedOpacity(
+                  duration: const Duration(milliseconds: 200),
+                  opacity: on ? 1 : 0.45,
+                  child: SizedBox(
+                    height: wide ? 300 : 260,
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // The scale, beside the bands: their tracks run from +12 at the top to -12 at the foot.
+                        Padding(
+                          padding: const EdgeInsets.only(top: 22, bottom: 34),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              for (final db in const ['+12', '0', '-12'])
+                                Text(db, style: text.labelSmall?.copyWith(color: scheme.onSurfaceVariant)),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Stack(
+                            children: [
+                              // The 0 dB line, through the middle of the tracks.
+                              Positioned.fill(
+                                top: 22,
+                                bottom: 34,
+                                child: Center(child: Container(height: 1, color: scheme.outlineVariant)),
+                              ),
+                              Row(
+                                children: [
+                                  for (var i = 0; i < audio.bands.length; i++)
+                                    Expanded(
+                                      child: _BandSlider(index: i, band: audio.bands[i], audio: audio),
+                                    ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                if (audio.eqPreset == 'Custom')
-                  ChoiceChip(label: Text(audio.eqProfile ?? tr.custom), selected: audio.eqEnabled, onSelected: (_) {}),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        audio.preamp < 0 ? tr.eqHeadroom(audio.preamp.toStringAsFixed(1)) : tr.eqTapBandHint,
+                        style: text.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+                      ),
+                    ),
+                    FilledButton.tonalIcon(
+                      onPressed: audio.bitPerfect ? null : () => audio.applyPreset('Flat'),
+                      icon: const Icon(Icons.restart_alt_rounded, size: 18),
+                      label: Text(tr.reset),
+                    ),
+                  ],
+                ),
               ],
             ),
           ),
-          Padding(
-            padding: EdgeInsets.fromLTRB(pad - 16, 12, pad - 16, 0),
-            // Its own Material: the expanded player's side panel paints a background under it.
-            child: Material(
-              type: MaterialType.transparency,
-              child: ListTile(
-                leading: const Icon(Icons.headphones_rounded),
+        ),
+        _Subheader(tr.eqTools, pad: pad),
+        Padding(
+          padding: EdgeInsets.symmetric(horizontal: pad),
+          // Its own Material in each row (SettingsCard's): the expanded player's side panel paints a background.
+          child: SettingsCard(
+            children: [
+              ListTile(
+                leading: const SettingsIcon(Icons.headphones_rounded),
                 title: Text(tr.autoEq),
-                subtitle: Text(
-                  audio.eqProfile ?? tr.autoEqPick,
-                  style: text.bodyMedium?.copyWith(color: AppColors.textSecondary),
-                ),
+                subtitle: Text(audio.eqProfile ?? tr.autoEqPick, style: muted),
                 trailing: const Icon(Icons.chevron_right_rounded),
                 enabled: !audio.bitPerfect,
                 onTap: () => showAutoEqPicker(context),
               ),
-            ),
-          ),
-          Padding(
-            padding: EdgeInsets.symmetric(horizontal: pad - 16),
-            child: Material(
-              type: MaterialType.transparency,
-              child: ListTile(
-                leading: const Icon(Icons.science_outlined),
+              ListTile(
+                leading: const SettingsIcon(Icons.science_outlined),
                 title: Text(tr.audioLab),
-                subtitle: Text(tr.audioLabTile, style: text.bodyMedium?.copyWith(color: AppColors.textSecondary)),
+                subtitle: Text(tr.audioLabTile, style: muted),
                 trailing: const Icon(Icons.chevron_right_rounded),
                 enabled: !audio.bitPerfect,
                 onTap: () => openAudioLab(context),
               ),
-            ),
+            ],
           ),
-          AnimatedOpacity(
-            duration: const Duration(milliseconds: 200),
-            opacity: audio.eqEnabled && !audio.bitPerfect ? 1 : 0.4,
-            child: Padding(
-              padding: EdgeInsets.fromLTRB(pad - 8, 24, pad - 8, 0),
-              child: SizedBox(
-                height: 300,
-                child: Row(
-                  children: [
-                    for (var i = 0; i < audio.bands.length; i++)
-                      Expanded(
-                        child: _BandSlider(index: i, band: audio.bands[i], audio: audio),
-                      ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-          Padding(
-            padding: EdgeInsets.fromLTRB(pad, 16, pad, 0),
-            child: Row(
-              children: [
-                if (audio.preamp < 0)
-                  Expanded(
-                    child: Text(
-                      tr.eqHeadroom(audio.preamp.toStringAsFixed(1)),
-                      style: text.bodySmall?.copyWith(color: AppColors.textMuted),
-                    ),
-                  )
-                else
-                  const Spacer(),
-                TextButton(onPressed: audio.bitPerfect ? null : () => audio.applyPreset('Flat'), child: Text(tr.reset)),
-              ],
-            ),
-          ),
-        ],
-      ),
+        ),
+        const SizedBox(height: 16),
+      ],
     );
   }
+}
+
+/// A section's name over its content, as Material 3 lists name theirs: small, in the primary colour.
+class _Subheader extends StatelessWidget {
+  const _Subheader(this.label, {required this.pad});
+
+  final String label;
+  final double pad;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: EdgeInsets.fromLTRB(pad + 4, 24, pad, 8),
+    child: Text(
+      label,
+      style: Theme.of(context).textTheme.titleSmall
+          ?.copyWith(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w600),
+    ),
+  );
+}
+
+/// A tonal card, as the settings pages' groups are drawn (their colour and Settings › Layout › Corners).
+class _Surface extends StatelessWidget {
+  const _Surface({required this.child, this.padding = const EdgeInsets.all(16)});
+
+  final Widget child;
+  final EdgeInsets padding;
+
+  @override
+  Widget build(BuildContext context) => Material(
+    color: AppColors.elevated,
+    borderRadius: LayoutPrefs.corner(24),
+    clipBehavior: Clip.antiAlias,
+    child: Padding(padding: padding, child: child),
+  );
 }
 
 String _freq(double f) => f >= 1000 ? '${(f / 1000).toStringAsFixed(f % 1000 == 0 ? 0 : 1)}k' : f.toStringAsFixed(0);
@@ -168,7 +279,13 @@ class _BandSlider extends StatelessWidget {
       children: [
         Text(
           '${band.gain > 0 ? '+' : ''}${band.gain.toStringAsFixed(band.gain % 1 == 0 ? 0 : 1)}',
-          style: text.labelSmall?.copyWith(color: AppColors.textSecondary),
+          style: text.labelSmall?.copyWith(
+            color: band.gain == 0
+                ? Theme.of(context).colorScheme.onSurfaceVariant
+                : Theme.of(context).colorScheme.primary,
+            fontWeight: band.gain == 0 ? null : FontWeight.w700,
+            fontFeatures: const [FontFeature.tabularFigures()],
+          ),
         ),
         Expanded(
           child: RotatedBox(
@@ -213,11 +330,14 @@ class _BandSlider extends StatelessWidget {
               // Log scale: equal slider travel per octave.
               Slider(value: _log(f), min: _log(20), max: _log(20000), onChanged: (v) => setState(() => f = _exp(v))),
               Text(
-                'Width: ${q < 1
-                    ? 'wide'
-                    : q > 3
-                    ? 'narrow'
-                    : 'medium'} (Q ${q.toStringAsFixed(2)})',
+                tr.eqBandWidth(
+                  q < 1
+                      ? tr.eqWidthWide
+                      : q > 3
+                      ? tr.eqWidthNarrow
+                      : tr.eqWidthMedium,
+                  q.toStringAsFixed(2),
+                ),
               ),
               Slider(value: q, min: 0.3, max: 8, onChanged: (v) => setState(() => q = v)),
             ],

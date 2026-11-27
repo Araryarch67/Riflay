@@ -2386,6 +2386,32 @@ class AppLocalizationsEn extends AppLocalizations {
   String get audioLab => 'Audio Lab';
 
   @override
+  String get eqPresets => 'Presets';
+
+  @override
+  String get eqBands => 'Bands';
+
+  @override
+  String get eqTools => 'Tools';
+
+  @override
+  String get eqTapBandHint => 'Tap a band\'s frequency to move it or change its width.';
+
+  @override
+  String eqBandWidth(String width, String q) {
+    return 'Width: $width (Q $q)';
+  }
+
+  @override
+  String get eqWidthWide => 'wide';
+
+  @override
+  String get eqWidthMedium => 'medium';
+
+  @override
+  String get eqWidthNarrow => 'narrow';
+
+  @override
   String get firewallBlocked =>
       'Windows Firewall is blocking Riflay, so friends on your Wi-Fi can\'t find or join this session. Refused it by mistake? Riflay can ask again.';
 

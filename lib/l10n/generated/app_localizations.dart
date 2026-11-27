@@ -4461,6 +4461,54 @@ abstract class AppLocalizations {
   /// **'Audio Lab'**
   String get audioLab;
 
+  /// No description provided for @eqPresets.
+  ///
+  /// In en, this message translates to:
+  /// **'Presets'**
+  String get eqPresets;
+
+  /// No description provided for @eqBands.
+  ///
+  /// In en, this message translates to:
+  /// **'Bands'**
+  String get eqBands;
+
+  /// No description provided for @eqTools.
+  ///
+  /// In en, this message translates to:
+  /// **'Tools'**
+  String get eqTools;
+
+  /// No description provided for @eqTapBandHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap a band\'s frequency to move it or change its width.'**
+  String get eqTapBandHint;
+
+  /// No description provided for @eqBandWidth.
+  ///
+  /// In en, this message translates to:
+  /// **'Width: {width} (Q {q})'**
+  String eqBandWidth(String width, String q);
+
+  /// No description provided for @eqWidthWide.
+  ///
+  /// In en, this message translates to:
+  /// **'wide'**
+  String get eqWidthWide;
+
+  /// No description provided for @eqWidthMedium.
+  ///
+  /// In en, this message translates to:
+  /// **'medium'**
+  String get eqWidthMedium;
+
+  /// No description provided for @eqWidthNarrow.
+  ///
+  /// In en, this message translates to:
+  /// **'narrow'**
+  String get eqWidthNarrow;
+
   /// No description provided for @firewallBlocked.
   ///
   /// In en, this message translates to:

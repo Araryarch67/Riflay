@@ -2332,6 +2332,32 @@ class AppLocalizationsJa extends AppLocalizations {
   String get audioLab => 'オーディオラボ';
 
   @override
+  String get eqPresets => 'プリセット';
+
+  @override
+  String get eqBands => 'バンド';
+
+  @override
+  String get eqTools => 'ツール';
+
+  @override
+  String get eqTapBandHint => 'バンドの周波数をタップすると、位置や幅を変えられます。';
+
+  @override
+  String eqBandWidth(String width, String q) {
+    return '幅: $width (Q $q)';
+  }
+
+  @override
+  String get eqWidthWide => '広い';
+
+  @override
+  String get eqWidthMedium => '普通';
+
+  @override
+  String get eqWidthNarrow => '狭い';
+
+  @override
   String get firewallBlocked =>
       'Windows ファイアウォールが Riflay をブロックしているため、同じ Wi-Fi の友達がこのセッションを見つけたり参加したりできません。間違って拒否しましたか? Riflay はもう一度確認できます。';
 

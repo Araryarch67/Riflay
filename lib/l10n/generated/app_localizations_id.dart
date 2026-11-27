@@ -2381,6 +2381,32 @@ class AppLocalizationsId extends AppLocalizations {
   String get audioLab => 'Audio Lab';
 
   @override
+  String get eqPresets => 'Preset';
+
+  @override
+  String get eqBands => 'Band';
+
+  @override
+  String get eqTools => 'Alat';
+
+  @override
+  String get eqTapBandHint => 'Ketuk frekuensi band untuk menggesernya atau mengubah lebarnya.';
+
+  @override
+  String eqBandWidth(String width, String q) {
+    return 'Lebar: $width (Q $q)';
+  }
+
+  @override
+  String get eqWidthWide => 'lebar';
+
+  @override
+  String get eqWidthMedium => 'sedang';
+
+  @override
+  String get eqWidthNarrow => 'sempit';
+
+  @override
   String get firewallBlocked =>
       'Windows Firewall memblokir Riflay, jadi teman di Wi-Fi yang sama tidak bisa menemukan atau bergabung ke sesi ini. Tidak sengaja menolaknya? Riflay bisa minta izin lagi.';
 
