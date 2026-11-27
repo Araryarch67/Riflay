@@ -2332,6 +2332,19 @@ class AppLocalizationsJa extends AppLocalizations {
   String get audioLab => 'オーディオラボ';
 
   @override
+  String get firewallBlocked =>
+      'Windows ファイアウォールが Riflay をブロックしているため、同じ Wi-Fi の友達がこのセッションを見つけたり参加したりできません。間違って拒否しましたか? Riflay はもう一度確認できます。';
+
+  @override
+  String get firewallAllow => 'ファイアウォールで許可';
+
+  @override
+  String get firewallAllowed => 'Riflay はファイアウォールで許可されました。同じ Wi-Fi の友達が参加できます。';
+
+  @override
+  String get firewallStillBlocked => 'まだブロックされています: 変更には管理者の許可が必要です。もう一度試して「はい」を選んでください。';
+
+  @override
   String get expandedMode => 'モード';
 
   @override

@@ -9,6 +9,7 @@ import '../../platform/host.dart';
 import '../../services/listen_together/listen_together.dart';
 import '../../services/listen_together/protocol.dart';
 import '../../services/listen_together/transport.dart';
+import '../../services/listen_together/windows_firewall.dart';
 import '../../services/player_controller.dart';
 import '../navigation.dart';
 import 'listen_qr.dart';
@@ -403,6 +404,7 @@ class _ListenTogetherPageState extends State<ListenTogetherPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        if (!internet) const FirewallNotice(),
         Text(internet ? tr.joinCodeAnywhere : tr.joinCodeWifi, style: muted),
         const SizedBox(height: 16),
         Row(
@@ -474,6 +476,7 @@ class _ListenTogetherPageState extends State<ListenTogetherPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        if (s.mode == ListenMode.wifi) const FirewallNotice(),
         Row(
           children: [
             Flexible(
@@ -536,6 +539,91 @@ class _ListenTogetherPageState extends State<ListenTogetherPage> {
     if (!mounted || code == null) return;
     _code.text = code;
     await _join(code);
+  }
+}
+
+/// On Windows, when the firewall blocks Riflay (its question refused, maybe by a slip, and never asked again): says
+/// friends on the Wi-Fi can't reach this session, and asks again, with Windows' administrator prompt.
+class FirewallNotice extends StatefulWidget {
+  const FirewallNotice({super.key});
+
+  @override
+  State<FirewallNotice> createState() => _FirewallNoticeState();
+}
+
+class _FirewallNoticeState extends State<FirewallNotice> {
+  bool _blocked = false, _asking = false, _declined = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (!WindowsFirewall.supported) return;
+    unawaited(
+      WindowsFirewall.blocks().then((blocked) {
+        if (mounted) setState(() => _blocked = blocked);
+      }),
+    );
+  }
+
+  Future<void> _allow() async {
+    setState(() {
+      _asking = true;
+      _declined = false;
+    });
+    final allowed = await WindowsFirewall.allow();
+    if (!mounted) return;
+    setState(() {
+      _asking = false;
+      _blocked = !allowed;
+      _declined = !allowed;
+    });
+    if (allowed) ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(content: Text(tr.firewallAllowed)));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_blocked) return const SizedBox.shrink();
+    final scheme = Theme.of(context).colorScheme;
+    final text = Theme.of(context).textTheme;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Material(
+        color: scheme.errorContainer,
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.shield_outlined, color: scheme.onErrorContainer),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      _declined ? tr.firewallStillBlocked : tr.firewallBlocked,
+                      style: text.bodyMedium?.copyWith(color: scheme.onErrorContainer),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Align(
+                alignment: AlignmentDirectional.centerEnd,
+                child: FilledButton.icon(
+                  onPressed: _asking ? null : _allow,
+                  icon: _asking
+                      ? const SizedBox.square(dimension: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                      : const Icon(Icons.admin_panel_settings_outlined),
+                  label: Text(tr.firewallAllow),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
 

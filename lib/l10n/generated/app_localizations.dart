@@ -4461,6 +4461,30 @@ abstract class AppLocalizations {
   /// **'Audio Lab'**
   String get audioLab;
 
+  /// No description provided for @firewallBlocked.
+  ///
+  /// In en, this message translates to:
+  /// **'Windows Firewall is blocking Riflay, so friends on your Wi-Fi can\'t find or join this session. Refused it by mistake? Riflay can ask again.'**
+  String get firewallBlocked;
+
+  /// No description provided for @firewallAllow.
+  ///
+  /// In en, this message translates to:
+  /// **'Allow through the firewall'**
+  String get firewallAllow;
+
+  /// No description provided for @firewallAllowed.
+  ///
+  /// In en, this message translates to:
+  /// **'Riflay is allowed through the firewall. Friends on your Wi-Fi can join now.'**
+  String get firewallAllowed;
+
+  /// No description provided for @firewallStillBlocked.
+  ///
+  /// In en, this message translates to:
+  /// **'Still blocked: Windows asks for an administrator\'s permission to change this. Try again and choose Yes.'**
+  String get firewallStillBlocked;
+
   /// No description provided for @expandedMode.
   ///
   /// In en, this message translates to:

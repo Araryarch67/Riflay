@@ -2381,6 +2381,21 @@ class AppLocalizationsId extends AppLocalizations {
   String get audioLab => 'Audio Lab';
 
   @override
+  String get firewallBlocked =>
+      'Windows Firewall memblokir Riflay, jadi teman di Wi-Fi yang sama tidak bisa menemukan atau bergabung ke sesi ini. Tidak sengaja menolaknya? Riflay bisa minta izin lagi.';
+
+  @override
+  String get firewallAllow => 'Izinkan lewat firewall';
+
+  @override
+  String get firewallAllowed =>
+      'Riflay sudah diizinkan lewat firewall. Teman di Wi-Fi yang sama sekarang bisa bergabung.';
+
+  @override
+  String get firewallStillBlocked =>
+      'Masih diblokir: Windows meminta izin administrator untuk mengubahnya. Coba lagi dan pilih Ya.';
+
+  @override
   String get expandedMode => 'Mode';
 
   @override
