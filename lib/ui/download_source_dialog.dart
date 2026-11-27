@@ -11,6 +11,7 @@ import '../services/spotiflac.dart';
 import 'download_options.dart';
 import 'widgets/app_dialog.dart';
 import 'widgets/controls.dart' show Artwork, formatDuration;
+import 'widgets/menus.dart';
 
 /// Metadata-only catalogues need an explicit audio provider, kept with the job
 /// so retries and browser verification continue using that same provider.
@@ -176,18 +177,17 @@ class _MatchDialogState extends State<_MatchDialog> {
         ),
         const SizedBox(height: 12),
         if (widget.source != 'monochrome' && qualityOptions.isNotEmpty)
-          DropdownMenu<String>(
-            selectOnly: true,
-            expandedInsets: EdgeInsets.zero,
-            initialSelection: quality,
-            label: Text(tr.spotiflacQuality),
-            dropdownMenuEntries: [
-              for (final option in qualityOptions)
-                DropdownMenuEntry(value: option['id'].toString(), label: (option['label'] ?? option['id']).toString()),
-            ],
-            onSelected: (value) {
-              if (value != null) setState(() => quality = value);
-            },
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            title: Text(tr.spotiflacQuality),
+            trailing: OptionPicker<String>(
+              value: quality,
+              options: [
+                for (final option in qualityOptions)
+                  (option['id'].toString(), (option['label'] ?? option['id']).toString()),
+              ],
+              onChanged: (value) => setState(() => quality = value),
+            ),
           ),
         if (loading) const LinearProgressIndicator(),
         if (failed) Text(tr.downloadMatchFailed),

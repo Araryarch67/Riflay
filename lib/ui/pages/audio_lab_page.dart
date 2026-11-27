@@ -16,6 +16,7 @@ import '../../services/language.dart';
 import '../../services/player_controller.dart';
 import '../theme.dart';
 import '../widgets/frosted.dart';
+import '../widgets/menus.dart';
 
 /// Opens the audio lab over whatever is showing (Settings or the expanded player's side panel).
 Future<void> openAudioLab(BuildContext context) {
@@ -517,21 +518,17 @@ class _AudioLabPageState extends State<AudioLabPage> {
       icon: Icons.adjust_rounded,
       title: tr.labTarget,
       children: [
-        DropdownButtonFormField<LabCurve?>(
-          key: ValueKey(_target),
-          initialValue: _target,
-          isExpanded: true,
-          decoration: const InputDecoration(filled: true, isDense: true),
-          borderRadius: BorderRadius.circular(16),
-          items: [
-            DropdownMenuItem(value: null, child: Text(tr.labNone)),
-            for (final t in _targets)
-              DropdownMenuItem(
-                value: t,
-                child: Text('${t.name} · ${t.source}', maxLines: 1, overflow: TextOverflow.ellipsis),
-              ),
-          ],
-          onChanged: _busy ? null : (t) => unawaited(_run(() => _loadTarget(t))),
+        LayoutBuilder(
+          // As wide as the card lets it be: the pill's own padding and arrow take about fifty points.
+          builder: (context, box) => Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: OptionPicker<LabCurve?>(
+              value: _target,
+              maxWidth: math.max(80, box.maxWidth - 56),
+              options: [(null, tr.labNone), for (final t in _targets) (t, '${t.name} · ${t.source}')],
+              onChanged: _busy ? null : (t) => unawaited(_run(() => _loadTarget(t))),
+            ),
+          ),
         ),
         const SizedBox(height: 8),
         Align(

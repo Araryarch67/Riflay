@@ -7,6 +7,7 @@ import '../../services/spotiflac.dart';
 import '../../services/layout_prefs.dart';
 import '../shell_scope.dart';
 import '../widgets/app_dialog.dart';
+import '../widgets/menus.dart';
 import '../widgets/page_scaffold.dart';
 import '../widgets/spotiflac_notice.dart';
 import 'sound_settings.dart' show SettingsCard, SettingsIcon, settingsHeading, settingsMuted;
@@ -213,18 +214,20 @@ class _SpotiflacPageState extends State<SpotiflacPage> {
                         value: values[field['key']] == true,
                         onChanged: (value) => update(() => values[field['key']] = value),
                       ),
-                      'select' => DropdownMenu<String>(
-                        selectOnly: true,
-                        expandedInsets: EdgeInsets.zero,
-                        initialSelection: (field['options'] as List? ?? []).contains(values[field['key']])
-                            ? values[field['key']] as String?
-                            : null,
-                        label: Text(field['label'].toString()),
-                        dropdownMenuEntries: [
-                          for (final option in field['options'] as List? ?? [])
-                            DropdownMenuEntry(value: option.toString(), label: option.toString()),
-                        ],
-                        onSelected: (value) => values[field['key']] = value,
+                      'select' => ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: Text(field['label'].toString()),
+                        subtitle: field['description'] is String ? Text(field['description']) : null,
+                        trailing: OptionPicker<String?>(
+                          value: (field['options'] as List? ?? []).contains(values[field['key']])
+                              ? values[field['key']] as String?
+                              : null,
+                          options: [
+                            for (final option in field['options'] as List? ?? [])
+                              (option.toString(), option.toString()),
+                          ],
+                          onChanged: (value) => update(() => values[field['key']] = value),
+                        ),
                       ),
                       _ => TextFormField(
                         initialValue: values[field['key']]?.toString() ?? '',
@@ -252,21 +255,17 @@ class _SpotiflacPageState extends State<SpotiflacPage> {
                     },
                   ),
                 if (qualityOptions.isNotEmpty)
-                  DropdownMenu<String>(
-                    selectOnly: true,
-                    expandedInsets: EdgeInsets.zero,
-                    initialSelection: quality,
-                    label: Text(tr.spotiflacQuality),
-                    dropdownMenuEntries: [
-                      for (final option in qualityOptions)
-                        DropdownMenuEntry(
-                          value: option['id'].toString(),
-                          label: (option['label'] ?? option['id']).toString(),
-                        ),
-                    ],
-                    onSelected: (value) {
-                      if (value != null) quality = value;
-                    },
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(tr.spotiflacQuality),
+                    trailing: OptionPicker<String>(
+                      value: quality,
+                      options: [
+                        for (final option in qualityOptions)
+                          (option['id'].toString(), (option['label'] ?? option['id']).toString()),
+                      ],
+                      onChanged: (value) => update(() => quality = value),
+                    ),
                   ),
                 if (fields.isEmpty && qualityOptions.isEmpty) Text(tr.spotiflacNoSettings),
               ],
