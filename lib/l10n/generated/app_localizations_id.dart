@@ -2381,6 +2381,9 @@ class AppLocalizationsId extends AppLocalizations {
   String get audioLab => 'Audio Lab';
 
   @override
+  String get labResponse => 'Respons frekuensi';
+
+  @override
   String get labTargetHeadphone => 'Pakai headphone lain sebagai target';
 
   @override
@@ -2412,7 +2415,7 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get labDragHint =>
-      'Seret titik band di grafik: ke samping untuk frekuensi, ke atas-bawah untuk gain. Roda mouse di atas grafik menyempitkan atau melebarkannya.';
+      'Seret titik band di grafik: ke samping untuk frekuensi, ke atas-bawah untuk gain. Ctrl + roda mouse menyempitkan atau melebarkannya.';
 
   @override
   String get audioLabTile => 'Lihat grafik respons dan setel ke Harman atau target lain';

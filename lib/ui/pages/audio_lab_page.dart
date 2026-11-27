@@ -264,20 +264,58 @@ class _AudioLabPageState extends State<AudioLabPage> {
     return ListenableBuilder(listenable: audio, builder: (context, _) => _page(context, audio));
   }
 
+  /// A section of the lab: a rounded tonal card, its icon in a tonal circle beside its title, [trailing] at the end.
+  Widget _card({required IconData icon, required String title, Widget? trailing, required List<Widget> children}) {
+    final scheme = Theme.of(context).colorScheme;
+    return Material(
+      color: scheme.surfaceContainerLow,
+      borderRadius: BorderRadius.circular(28),
+      clipBehavior: Clip.antiAlias,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                CircleAvatar(
+                  radius: 18,
+                  backgroundColor: scheme.secondaryContainer,
+                  foregroundColor: scheme.onSecondaryContainer,
+                  child: Icon(icon, size: 20),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    title,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+                  ),
+                ),
+                ?trailing,
+              ],
+            ),
+            const SizedBox(height: 14),
+            ...children,
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _page(BuildContext context, AudioEngine audio) {
     final scheme = Theme.of(context).colorScheme;
     final text = Theme.of(context).textTheme;
-    final muted = text.bodyMedium?.copyWith(color: AppColors.textSecondary);
+    final muted = text.bodyMedium?.copyWith(color: scheme.onSurfaceVariant);
+    final small = text.bodySmall?.copyWith(color: scheme.onSurfaceVariant);
     final bands = _draft ?? audio.bands;
     _picked = _picked.clamp(0, bands.length - 1);
-    final eq = AudioLab.response(audio.eqEnabled || _draft != null ? bands : const []);
+    // The bands' curve is drawn either way (faint while the equalizer is off); what the headphone becomes counts it
+    // only while it is on.
+    final applied = audio.eqEnabled || _draft != null;
+    final curve = AudioLab.response(bands);
+    final eq = applied ? curve : List.filled(curve.length, 0.0);
     final hp = _headphone, tg = _shownTarget;
-    final colours = (
-      headphone: scheme.primary,
-      target: scheme.onSurfaceVariant,
-      after: Colors.greenAccent.shade400,
-      eq: Colors.amberAccent.shade200,
-    );
+    final colours = (headphone: scheme.primary, target: scheme.outline, after: scheme.tertiary, eq: scheme.secondary);
     var worst = 0.0;
     if (hp != null && tg != null) {
       for (var i = 0; i < hp.length; i++) {
@@ -286,251 +324,288 @@ class _AudioLabPageState extends State<AudioLabPage> {
     }
     final locked = audio.bitPerfect;
     final band = bands[_picked];
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(tr.audioLab),
-        actions: [
-          IconButton(
-            tooltip: tr.labExport,
-            onPressed: () async {
-              await Clipboard.setData(ClipboardData(text: AudioLab.parametricText(bands)));
-              if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(tr.labCopied)));
-              }
-            },
-            icon: const Icon(Icons.content_copy_rounded),
-          ),
-          const SizedBox(width: 4),
-        ],
+    final wide = MediaQuery.sizeOf(context).width >= 900;
+
+    final graph = _card(
+      icon: Icons.show_chart_rounded,
+      title: _name ?? tr.labResponse,
+      trailing: IconButton.filledTonal(
+        tooltip: tr.labExport,
+        onPressed: () async {
+          await Clipboard.setData(ClipboardData(text: AudioLab.parametricText(bands)));
+          if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(tr.labCopied)));
+        },
+        icon: const Icon(Icons.content_copy_rounded),
       ),
+      children: [
+        AspectRatio(
+          aspectRatio: wide ? 2 : 1.45,
+          child: DecoratedBox(
+            decoration: BoxDecoration(color: scheme.surfaceContainerHighest, borderRadius: BorderRadius.circular(20)),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(4, 14, 14, 6),
+              child: _Graph(
+                headphone: hp,
+                target: tg,
+                eq: eq,
+                curve: curve,
+                applied: applied,
+                bands: bands,
+                picked: _picked,
+                colours: colours,
+                grid: scheme.outlineVariant,
+                label: text.labelSmall!.copyWith(color: scheme.onSurfaceVariant),
+                enabled: !locked,
+                onPick: (i) => setState(() => _picked = i),
+                onMove: _edit,
+                onEnd: () => unawaited(_settle()),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        Wrap(
+          spacing: 16,
+          runSpacing: 6,
+          children: [
+            if (hp != null) _Legend(colour: colours.headphone, label: _name ?? tr.labHeadphone),
+            if (tg != null) _Legend(colour: colours.target, label: _target!.name),
+            if (hp != null) _Legend(colour: colours.after, label: tr.labWithEq),
+            _Legend(colour: colours.eq, label: tr.equalizer),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Text(hp != null && tg != null ? tr.labGap(worst.toStringAsFixed(1)) : tr.labDragHint, style: small),
+        if (_error case final error?) ...[
+          const SizedBox(height: 8),
+          Text(error, style: muted?.copyWith(color: scheme.error)),
+        ],
+      ],
+    );
+
+    final equalizer = _card(
+      icon: Icons.equalizer_rounded,
+      title: tr.equalizer,
+      trailing: Switch(value: audio.eqEnabled, onChanged: locked ? null : (v) => audio.setEqEnabled(v)),
+      children: [
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: [
+              for (var i = 0; i < bands.length; i++)
+                Padding(
+                  padding: const EdgeInsets.only(right: 6),
+                  child: ChoiceChip(
+                    label: Text(_hz(bands[i].frequency)),
+                    selected: i == _picked,
+                    showCheckmark: false,
+                    onSelected: (_) => setState(() => _picked = i),
+                  ),
+                ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 8),
+        _Knob(
+          label: tr.labFrequency,
+          value: math.log(band.frequency / 20) / math.log(1000),
+          shown: '${_hz(band.frequency)}Hz',
+          enabled: !locked,
+          onChanged: (t) => _edit(_picked, band.copyWith(frequency: (20 * math.pow(1000, t)).roundToDouble())),
+          onEnd: () => unawaited(_settle()),
+        ),
+        _Knob(
+          label: tr.labGain,
+          value: (band.gain + 12) / 24,
+          shown: '${band.gain > 0 ? '+' : ''}${band.gain.toStringAsFixed(1)} dB',
+          enabled: !locked,
+          onChanged: (t) => _edit(_picked, band.copyWith(gain: ((t * 24 - 12) * 10).roundToDouble() / 10)),
+          onEnd: () => unawaited(_settle()),
+        ),
+        _Knob(
+          label: 'Q',
+          value: math.log(band.q / 0.3) / math.log(8 / 0.3),
+          shown: band.q.toStringAsFixed(2),
+          enabled: !locked,
+          onChanged: (t) => _edit(_picked, band.copyWith(q: (0.3 * math.pow(8 / 0.3, t) * 100).roundToDouble() / 100)),
+          onEnd: () => unawaited(_settle()),
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: FilledButton.icon(
+                onPressed: hp == null || tg == null || _busy || locked ? null : _fitToTarget,
+                icon: const Icon(Icons.auto_fix_high_rounded),
+                label: Text(tr.labFitTarget),
+              ),
+            ),
+            const SizedBox(width: 8),
+            FilledButton.tonal(onPressed: locked ? null : () => audio.applyPreset('Flat'), child: Text(tr.reset)),
+          ],
+        ),
+      ],
+    );
+
+    final headphone = _card(
+      icon: Icons.headphones_rounded,
+      title: tr.labHeadphone,
+      children: [
+        SegmentedButton<_Source>(
+          segments: [
+            const ButtonSegment(value: _Source.autoEq, label: Text('AutoEQ')),
+            const ButtonSegment(value: _Source.squig, label: Text('squig.link')),
+            ButtonSegment(value: _Source.file, label: Text(tr.labSourceFile)),
+          ],
+          selected: {_source},
+          showSelectedIcon: false,
+          onSelectionChanged: (s) => setState(() => _source = s.first),
+        ),
+        const SizedBox(height: 12),
+        if (_source == _Source.squig) ...[
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final site in AudioLab.squigSites)
+                ChoiceChip(
+                  label: Text(site.name),
+                  selected: _site.text.trim() == site.url,
+                  onSelected: _busy
+                      ? null
+                      : (_) {
+                          setState(() => _site.text = site.url);
+                          unawaited(_pickHeadphone());
+                        },
+                ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _site,
+            decoration: InputDecoration(
+              labelText: tr.labSite,
+              hintText: 'name.squig.link',
+              filled: true,
+              isDense: true,
+              prefixIcon: const Icon(Icons.public_rounded),
+            ),
+            keyboardType: TextInputType.url,
+            onChanged: (_) => setState(() {}),
+            onSubmitted: (_) => unawaited(_pickHeadphone()),
+          ),
+          const SizedBox(height: 12),
+        ],
+        Material(
+          color: scheme.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(20),
+          clipBehavior: Clip.antiAlias,
+          child: ListTile(
+            leading: Icon(_source == _Source.file ? Icons.upload_file_rounded : Icons.search_rounded),
+            title: Text(_name ?? (_source == _Source.file ? tr.labChooseFile : tr.labPick)),
+            subtitle: _from == null ? null : Text(_from!, style: small),
+            trailing: _busy
+                ? const SizedBox.square(dimension: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                : const Icon(Icons.chevron_right_rounded),
+            onTap: _busy ? null : () => unawaited(_source == _Source.file ? _pickFile() : _pickHeadphone()),
+          ),
+        ),
+      ],
+    );
+
+    final target = _card(
+      icon: Icons.adjust_rounded,
+      title: tr.labTarget,
+      children: [
+        DropdownButtonFormField<LabCurve?>(
+          key: ValueKey(_target),
+          initialValue: _target,
+          isExpanded: true,
+          decoration: const InputDecoration(filled: true, isDense: true),
+          borderRadius: BorderRadius.circular(16),
+          items: [
+            DropdownMenuItem(value: null, child: Text(tr.labNone)),
+            for (final t in _targets)
+              DropdownMenuItem(
+                value: t,
+                child: Text('${t.name} · ${t.source}', maxLines: 1, overflow: TextOverflow.ellipsis),
+              ),
+          ],
+          onChanged: _busy ? null : (t) => unawaited(_run(() => _loadTarget(t))),
+        ),
+        const SizedBox(height: 8),
+        Align(
+          alignment: AlignmentDirectional.centerStart,
+          child: FilledButton.tonalIcon(
+            onPressed: _busy || _source == _Source.file ? null : () => unawaited(_pickTargetHeadphone()),
+            icon: const Icon(Icons.compare_arrows_rounded),
+            label: Text(tr.labTargetHeadphone),
+          ),
+        ),
+        if (_inEar != null && _target?.inEar != null && _target!.inEar != _inEar) ...[
+          const SizedBox(height: 8),
+          Text(tr.labKindMismatch, style: small),
+        ],
+        if (_target != null) ...[
+          const SizedBox(height: 8),
+          _Knob(
+            label: tr.labBass,
+            value: (_bass + 6) / 18,
+            shown: '${_bass > 0 ? '+' : ''}${_bass.toStringAsFixed(1)} dB',
+            enabled: true,
+            onChanged: (t) => setState(() => _bass = ((t * 18 - 6) * 2).roundToDouble() / 2),
+          ),
+          _Knob(
+            label: tr.labTilt,
+            value: (_tilt + 1.5) / 3,
+            shown: '${_tilt > 0 ? '+' : ''}${_tilt.toStringAsFixed(1)} dB/oct',
+            enabled: true,
+            onChanged: (t) => setState(() => _tilt = ((t * 3 - 1.5) * 10).roundToDouble() / 10),
+          ),
+        ],
+      ],
+    );
+
+    return Scaffold(
+      appBar: AppBar(title: Text(tr.audioLab)),
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 860),
+            constraints: const BoxConstraints(maxWidth: 1100),
             child: ListView(
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
               children: [
-                Text(tr.audioLabSubtitle, style: muted),
-                const SizedBox(height: 16),
-                // The graph: the headphone, the target, the equalizer and what they make; the bands' points dragged.
-                AspectRatio(
-                  aspectRatio: 1.6,
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: scheme.surfaceContainerLow,
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(4, 12, 12, 4),
-                      child: _Graph(
-                        headphone: hp,
-                        target: tg,
-                        eq: eq,
-                        bands: bands,
-                        picked: _picked,
-                        colours: colours,
-                        grid: scheme.outlineVariant,
-                        label: text.labelSmall!.copyWith(color: AppColors.textSecondary),
-                        enabled: !locked,
-                        onPick: (i) => setState(() => _picked = i),
-                        onMove: _edit,
-                        onEnd: () => unawaited(_settle()),
-                      ),
-                    ),
-                  ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(4, 0, 4, 16),
+                  child: Text(tr.audioLabSubtitle, style: muted),
                 ),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 16,
-                  runSpacing: 4,
-                  children: [
-                    if (hp != null) _Legend(colour: colours.headphone, label: _name ?? tr.labHeadphone),
-                    if (tg != null) _Legend(colour: colours.target, label: _target!.name),
-                    if (hp != null) _Legend(colour: colours.after, label: tr.labWithEq),
-                    _Legend(colour: colours.eq, label: tr.equalizer),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  hp != null && tg != null ? tr.labGap(worst.toStringAsFixed(1)) : tr.labDragHint,
-                  style: text.bodySmall?.copyWith(color: AppColors.textMuted),
-                ),
-                if (_error case final error?) ...[
-                  const SizedBox(height: 8),
-                  Text(error, style: muted?.copyWith(color: scheme.error)),
-                ],
+                graph,
                 const SizedBox(height: 12),
-                // What the equalizer is doing, and doing it.
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: [
-                    FilterChip(
-                      label: Text(tr.labEqOn),
-                      selected: audio.eqEnabled,
-                      onSelected: locked ? null : (v) => audio.setEqEnabled(v),
-                    ),
-                    FilledButton.icon(
-                      onPressed: hp == null || tg == null || _busy || locked ? null : _fitToTarget,
-                      icon: const Icon(Icons.auto_fix_high_rounded),
-                      label: Text(tr.labFitTarget),
-                    ),
-                    OutlinedButton(onPressed: locked ? null : () => audio.applyPreset('Flat'), child: Text(tr.reset)),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                // The picked band, exactly.
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
+                if (wide)
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      for (var i = 0; i < bands.length; i++)
-                        Padding(
-                          padding: const EdgeInsets.only(right: 6),
-                          child: ChoiceChip(
-                            label: Text(_hz(bands[i].frequency)),
-                            selected: i == _picked,
-                            onSelected: (_) => setState(() => _picked = i),
-                          ),
+                      Expanded(child: equalizer),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [headphone, const SizedBox(height: 12), target],
                         ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 8),
-                _Knob(
-                  label: tr.labFrequency,
-                  value: math.log(band.frequency / 20) / math.log(1000),
-                  shown: '${_hz(band.frequency)}Hz',
-                  enabled: !locked,
-                  onChanged: (t) => _edit(_picked, band.copyWith(frequency: (20 * math.pow(1000, t)).roundToDouble())),
-                  onEnd: () => unawaited(_settle()),
-                ),
-                _Knob(
-                  label: tr.labGain,
-                  value: (band.gain + 12) / 24,
-                  shown: '${band.gain > 0 ? '+' : ''}${band.gain.toStringAsFixed(1)} dB',
-                  enabled: !locked,
-                  onChanged: (t) => _edit(_picked, band.copyWith(gain: ((t * 24 - 12) * 10).roundToDouble() / 10)),
-                  onEnd: () => unawaited(_settle()),
-                ),
-                _Knob(
-                  label: 'Q',
-                  value: math.log(band.q / 0.3) / math.log(8 / 0.3),
-                  shown: band.q.toStringAsFixed(2),
-                  enabled: !locked,
-                  onChanged: (t) =>
-                      _edit(_picked, band.copyWith(q: (0.3 * math.pow(8 / 0.3, t) * 100).roundToDouble() / 100)),
-                  onEnd: () => unawaited(_settle()),
-                ),
-                const SizedBox(height: 20),
-                Text(tr.labHeadphone, style: text.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
-                const SizedBox(height: 8),
-                SegmentedButton<_Source>(
-                  segments: [
-                    const ButtonSegment(value: _Source.autoEq, label: Text('AutoEQ')),
-                    const ButtonSegment(value: _Source.squig, label: Text('squig.link')),
-                    ButtonSegment(value: _Source.file, label: Text(tr.labSourceFile)),
-                  ],
-                  selected: {_source},
-                  onSelectionChanged: (s) => setState(() => _source = s.first),
-                ),
-                const SizedBox(height: 12),
-                if (_source == _Source.squig) ...[
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      for (final site in AudioLab.squigSites)
-                        ChoiceChip(
-                          label: Text(site.name),
-                          selected: _site.text.trim() == site.url,
-                          onSelected: _busy
-                              ? null
-                              : (_) {
-                                  setState(() => _site.text = site.url);
-                                  unawaited(_pickHeadphone());
-                                },
-                        ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  TextField(
-                    controller: _site,
-                    decoration: InputDecoration(
-                      labelText: tr.labSite,
-                      hintText: 'name.squig.link',
-                      isDense: true,
-                      prefixIcon: const Icon(Icons.public_rounded),
-                    ),
-                    keyboardType: TextInputType.url,
-                    onChanged: (_) => setState(() {}),
-                    onSubmitted: (_) => unawaited(_pickHeadphone()),
-                  ),
-                  const SizedBox(height: 8),
-                ],
-                Material(
-                  type: MaterialType.transparency,
-                  child: ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: const Icon(Icons.headphones_rounded),
-                    title: Text(_name ?? (_source == _Source.file ? tr.labChooseFile : tr.labPick)),
-                    subtitle: _from == null ? null : Text(_from!, style: muted),
-                    trailing: _busy
-                        ? const SizedBox.square(dimension: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                        : Icon(_source == _Source.file ? Icons.upload_file_rounded : Icons.search_rounded),
-                    onTap: _busy ? null : () => unawaited(_source == _Source.file ? _pickFile() : _pickHeadphone()),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Text(tr.labTarget, style: text.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
-                const SizedBox(height: 8),
-                DropdownButtonFormField<LabCurve?>(
-                  key: ValueKey(_target),
-                  initialValue: _target,
-                  isExpanded: true,
-                  decoration: const InputDecoration(isDense: true),
-                  items: [
-                    DropdownMenuItem(value: null, child: Text(tr.labNone)),
-                    for (final t in _targets)
-                      DropdownMenuItem(
-                        value: t,
-                        child: Text('${t.name} · ${t.source}', maxLines: 1, overflow: TextOverflow.ellipsis),
                       ),
-                  ],
-                  onChanged: _busy ? null : (t) => unawaited(_run(() => _loadTarget(t))),
-                ),
-                Align(
-                  alignment: AlignmentDirectional.centerStart,
-                  child: TextButton.icon(
-                    onPressed: _busy || _source == _Source.file ? null : () => unawaited(_pickTargetHeadphone()),
-                    icon: const Icon(Icons.compare_arrows_rounded),
-                    label: Text(tr.labTargetHeadphone),
-                  ),
-                ),
-                if (_inEar != null && _target?.inEar != null && _target!.inEar != _inEar) ...[
-                  const SizedBox(height: 6),
-                  Text(tr.labKindMismatch, style: text.bodySmall?.copyWith(color: AppColors.textMuted)),
+                    ],
+                  )
+                else ...[
+                  equalizer,
+                  const SizedBox(height: 12),
+                  headphone,
+                  const SizedBox(height: 12),
+                  target,
                 ],
-                if (_target != null) ...[
-                  const SizedBox(height: 8),
-                  _Knob(
-                    label: tr.labBass,
-                    value: (_bass + 6) / 18,
-                    shown: '${_bass > 0 ? '+' : ''}${_bass.toStringAsFixed(1)} dB',
-                    enabled: true,
-                    onChanged: (t) => setState(() => _bass = ((t * 18 - 6) * 2).roundToDouble() / 2),
-                  ),
-                  _Knob(
-                    label: tr.labTilt,
-                    value: (_tilt + 1.5) / 3,
-                    shown: '${_tilt > 0 ? '+' : ''}${_tilt.toStringAsFixed(1)} dB/oct',
-                    enabled: true,
-                    onChanged: (t) => setState(() => _tilt = ((t * 3 - 1.5) * 10).roundToDouble() / 10),
-                  ),
-                ],
-                const SizedBox(height: 24),
-                Text(tr.labCredits, style: text.bodySmall?.copyWith(color: AppColors.textMuted)),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(4, 20, 4, 0),
+                  child: Text(tr.labCredits, style: small),
+                ),
               ],
             ),
           ),
@@ -605,13 +680,15 @@ class _Legend extends StatelessWidget {
 
 typedef _Colours = ({Color headphone, Color target, Color after, Color eq});
 
-/// The graph, with the bands' points: tap one to pick it, drag it to move it (sideways the frequency, up and down
-/// the gain), the mouse wheel over it to narrow or widen it.
+/// The graph, with the bands' points: tap near one to pick it, drag it to move it (sideways the frequency, up and
+/// down the gain), Ctrl and the mouse wheel to narrow or widen it.
 class _Graph extends StatelessWidget {
   const _Graph({
     required this.headphone,
     required this.target,
     required this.eq,
+    required this.curve,
+    required this.applied,
     required this.bands,
     required this.picked,
     required this.colours,
@@ -624,7 +701,8 @@ class _Graph extends StatelessWidget {
   });
 
   final List<double>? headphone, target;
-  final List<double> eq;
+  final List<double> eq, curve;
+  final bool applied;
   final List<EqBand> bands;
   final int picked;
   final _Colours colours;
@@ -658,9 +736,16 @@ class _Graph extends StatelessWidget {
         return best;
       }
 
+      // How near a point a touch must start to take it: elsewhere the touch scrolls the page.
+      bool near(Offset global) {
+        final at = (context.findRenderObject()! as RenderBox).globalToLocal(global);
+        return bands.any((b) => (Offset(x(b.frequency), y(b.gain)) - at).distance < 32);
+      }
+
       return Listener(
+        // Ctrl and the wheel narrow or widen the picked band; the wheel alone scrolls the page, as anywhere else.
         onPointerSignal: (e) {
-          if (!enabled || e is! PointerScrollEvent) return;
+          if (!enabled || e is! PointerScrollEvent || !HardwareKeyboard.instance.isControlPressed) return;
           GestureBinding.instance.pointerSignalResolver.register(e, (e) {
             final b = bands[picked];
             final q = (b.q * math.exp(-(e as PointerScrollEvent).scrollDelta.dy / 800)).clamp(0.3, 8.0);
@@ -668,35 +753,42 @@ class _Graph extends StatelessWidget {
             onEnd();
           });
         },
-        // Taken at the touch, not after it has moved a little: in the scrolling page, a drag up or down had been
-        // the page's scroll instead of the point's.
         child: RawGestureDetector(
           behavior: HitTestBehavior.opaque,
           gestures: {
-            if (enabled)
-              ImmediateMultiDragGestureRecognizer:
-                  GestureRecognizerFactoryWithHandlers<ImmediateMultiDragGestureRecognizer>(
-                    ImmediateMultiDragGestureRecognizer.new,
-                    (r) => r.onStart = (global) {
-                      final box = context.findRenderObject()! as RenderBox;
-                      final index = nearest(box.globalToLocal(global));
-                      onPick(index);
-                      return _PointDrag(
-                        onUpdate: (global) {
-                          final at = box.globalToLocal(global);
-                          final b = bands[index];
-                          onMove(
-                            index,
-                            b.copyWith(
-                              frequency: freqAt(at.dx).roundToDouble(),
-                              gain: (gainAt(at.dy) * 10).roundToDouble() / 10,
-                            ),
-                          );
-                        },
-                        onEnd: onEnd,
-                      );
-                    },
-                  ),
+            if (enabled) ...{
+              // A tap anywhere picks the nearest band.
+              TapGestureRecognizer: GestureRecognizerFactoryWithHandlers<TapGestureRecognizer>(
+                TapGestureRecognizer.new,
+                (r) => r.onTapUp = (d) => onPick(nearest(d.localPosition)),
+              ),
+              // A drag started on a point is taken at once (in the scrolling page a drag up or down had been the
+              // page's scroll); one started anywhere else is left to the page.
+              _PointRecognizer: GestureRecognizerFactoryWithHandlers<_PointRecognizer>(
+                () => _PointRecognizer(near),
+                (r) => r
+                  ..near = near
+                  ..onStart = (global) {
+                    final box = context.findRenderObject()! as RenderBox;
+                    final index = nearest(box.globalToLocal(global));
+                    onPick(index);
+                    return _PointDrag(
+                      onUpdate: (global) {
+                        final at = box.globalToLocal(global);
+                        final b = bands[index];
+                        onMove(
+                          index,
+                          b.copyWith(
+                            frequency: freqAt(at.dx).roundToDouble(),
+                            gain: (gainAt(at.dy) * 10).roundToDouble() / 10,
+                          ),
+                        );
+                      },
+                      onEnd: onEnd,
+                    );
+                  },
+              ),
+            },
           },
           child: MouseRegion(
             cursor: enabled ? SystemMouseCursors.precise : MouseCursor.defer,
@@ -709,6 +801,16 @@ class _Graph extends StatelessWidget {
       );
     },
   );
+}
+
+/// Drags that start on a band's point only.
+class _PointRecognizer extends ImmediateMultiDragGestureRecognizer {
+  _PointRecognizer(this.near);
+
+  bool Function(Offset global) near;
+
+  @override
+  bool isPointerAllowed(PointerDownEvent event) => near(event.position) && super.isPointerAllowed(event);
 }
 
 /// One finger dragging a band's point.
@@ -794,7 +896,7 @@ class _GraphPainter extends CustomPainter {
       curve(h, g.colours.headphone.withValues(alpha: 0.85), 2);
       curve([for (var i = 0; i < h.length; i++) h[i] + g.eq[i]], g.colours.after, 2.5);
     }
-    curve(g.eq, g.colours.eq.withValues(alpha: 0.9), 1.5);
+    curve(g.curve, g.colours.eq.withValues(alpha: g.applied ? 0.95 : 0.35), 1.5);
     // The bands' points, the picked one bigger and ringed.
     for (var i = 0; i < g.bands.length; i++) {
       final b = g.bands[i];

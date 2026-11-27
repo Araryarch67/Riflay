@@ -2332,6 +2332,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get audioLab => 'オーディオラボ';
 
   @override
+  String get labResponse => '周波数特性';
+
+  @override
   String get labTargetHeadphone => '別のヘッドホンをターゲットにする';
 
   @override
@@ -2362,7 +2365,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get labTilt => '傾き';
 
   @override
-  String get labDragHint => 'グラフ上のバンドの点をドラッグ: 横で周波数、縦でゲイン。グラフ上のマウスホイールで幅を変えられます。';
+  String get labDragHint => 'グラフ上のバンドの点をドラッグ: 横で周波数、縦でゲイン。Ctrl とマウスホイールで幅を変えられます。';
 
   @override
   String get audioLabTile => '特性グラフを見て Harman などのターゲットに調整';

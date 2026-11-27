@@ -4461,6 +4461,12 @@ abstract class AppLocalizations {
   /// **'Audio Lab'**
   String get audioLab;
 
+  /// No description provided for @labResponse.
+  ///
+  /// In en, this message translates to:
+  /// **'Frequency response'**
+  String get labResponse;
+
   /// No description provided for @labTargetHeadphone.
   ///
   /// In en, this message translates to:
@@ -4524,7 +4530,7 @@ abstract class AppLocalizations {
   /// No description provided for @labDragHint.
   ///
   /// In en, this message translates to:
-  /// **'Drag a band\'s point on the graph: sideways for its frequency, up and down for its gain. The mouse wheel over the graph narrows or widens it.'**
+  /// **'Drag a band\'s point on the graph: sideways for its frequency, up and down for its gain. Ctrl and the mouse wheel narrow or widen it.'**
   String get labDragHint;
 
   /// No description provided for @audioLabTile.

@@ -190,4 +190,31 @@ const other = { files: ["not a target"] };
     expect(lines[1], 'Filter 1: ON PK Fc 105 Hz Gain 4.0 dB Q 0.70');
     expect(lines[2], 'Filter 2: ON PK Fc 3000 Hz Gain -2.5 dB Q 2.00');
   });
+
+  testWidgets('a drag on the graph away from the points scrolls the page and leaves the equalizer alone', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1080, 2340);
+    tester.view.devicePixelRatio = 2.75;
+    addTearDown(tester.view.reset);
+    final c = PlayerController();
+    addTearDown(() async => tester.runAsync(() async => c.dispose()));
+    await tester.pumpWidget(
+      PlayerScope(
+        controller: c,
+        child: const MaterialApp(home: AudioLabPage()),
+      ),
+    );
+    await tester.pump();
+    final graph = tester.getRect(
+      find.byWidgetPredicate((w) => w is CustomPaint && w.painter.runtimeType.toString() == '_GraphPainter'),
+    );
+    final before = [for (final b in c.audio.bands) b.gain];
+    final scroll = tester.state<ScrollableState>(find.byType(Scrollable).first);
+    // Low on the graph, far below the bands' points on the 0 dB line.
+    await tester.dragFrom(Offset(graph.center.dx, graph.bottom - 30), const Offset(0, -200));
+    await tester.pumpAndSettle();
+    expect(scroll.position.pixels, greaterThan(50), reason: 'the page scrolled');
+    expect([for (final b in c.audio.bands) b.gain], before);
+  });
 }
